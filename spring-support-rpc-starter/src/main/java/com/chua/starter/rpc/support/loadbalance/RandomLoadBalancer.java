@@ -30,6 +30,7 @@ public class RandomLoadBalancer implements RpcLoadBalancer {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "random";

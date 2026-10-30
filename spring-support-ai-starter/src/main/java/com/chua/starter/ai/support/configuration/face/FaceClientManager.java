@@ -559,6 +559,11 @@ public class FaceClientManager {
         return fallback;
     }
 
+    /**
+     * build Pipeline
+     * @param vectorStorageForPipeline 参数
+     * @return 返回值
+    */
     private FacePipeline buildPipeline(VectorStorage vectorStorageForPipeline) {
         // detector 为空 = 人脸检测未启用：ONNX 模型未配置时该模型并不存在，
         // 此时不构建管线（与 buildLiveness() 的空值语义一致），调用方按「未开启」处理。

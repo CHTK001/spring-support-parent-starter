@@ -28,9 +28,10 @@ public class RagStatusController {
     private final RagClientManager ragClientManager;
 
     /**
+    /**
      * 获取 RAG 配置状态
-     */
-    @GetMapping("/status")
+     * @return 返回值
+    */
     public ReturnResult<Map<String, Object>> getRagStatus() {
         Map<String, Object> status = new HashMap<>();
 

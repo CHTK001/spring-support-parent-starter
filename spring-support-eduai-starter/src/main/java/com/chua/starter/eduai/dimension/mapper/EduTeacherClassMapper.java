@@ -2,10 +2,8 @@ package com.chua.starter.eduai.dimension.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.eduai.dimension.entity.EduTeacherClass;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -24,7 +22,6 @@ public interface EduTeacherClassMapper extends BaseMapper<EduTeacherClass> {
      * @param teacherId 教师标识
      * @return 班级标识列表
      */
-    @Select("SELECT teacher_class_class_id FROM edu_teacher_class WHERE teacher_class_teacher_id = #{teacherId}")
     List<Long> selectClassIdsByTeacher(@Param("teacherId") Long teacherId);
 
     /**
@@ -33,6 +30,5 @@ public interface EduTeacherClassMapper extends BaseMapper<EduTeacherClass> {
      * @param teacherId 教师标识
      * @return 删除行数
      */
-    @Delete("DELETE FROM edu_teacher_class WHERE teacher_class_teacher_id = #{teacherId}")
     int deleteByTeacherId(@Param("teacherId") Long teacherId);
 }

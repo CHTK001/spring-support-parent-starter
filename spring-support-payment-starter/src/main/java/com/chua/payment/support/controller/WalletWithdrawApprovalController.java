@@ -73,10 +73,10 @@ public class WalletWithdrawApprovalController {
     @PostMapping("/{id}/approve")
     /**
      * 审批通过
-     *
      * @param id 标识
      * @param request 请求
-     */
+     * @return 返回值
+    */
     public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
         if (denied != null) {

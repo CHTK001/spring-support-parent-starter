@@ -214,13 +214,10 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
     }
 
     /**
-     * 探活 {@code GET /v1/models}（Bearer key）。
-     *
-     * <p>{@code ChannelHttp} 对非 2xx 抛的 {@code ApiException} 消息形态为
-     * {@code "渠道上游返回非 2xx: ... -> " + 状态码}，据此区分「401/403 凭据/额度」
-     * 与「网络失败」（网络失败消息形态 {@code "渠道 HTTP 请求失败: ..."}，
-     * 不含状态码，见 {@code ChannelHttp.execute}）。</p>
-     */
+     * 探活 {@code GET /v1/models}（Bearer key）。 <p>{@code ChannelHttp} 对非 2xx 抛的 {@code ApiException} 消息形态为 {@code "渠道上游返回非 2xx: ... -> " + 状态码}，据此区分「401/403 凭据/额度」 与「网络失败」（网络失败消息形态 {@code "渠道 HTTP 请求失败: ..."}， 不含状态码，见 {@code ChannelHttp.execute}）。</p>
+     * @param apiKey 字符串
+     * @return 返回值
+    */
     private ProbeResult probe(String apiKey) {
         try {
             ChannelHttp.getJson(API_BASE + MODELS_PATH, authHeaders(apiKey));
@@ -234,7 +231,11 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
         }
     }
 
-    /** 响应体是否含额度类型名（额度错误可能带 401/403 状态码）。 */
+    /**
+     * contains Usage Limit Type
+     * @param detail 字符串
+     * @return 返回值
+    */
     private static boolean containsUsageLimitType(String detail) {
         if (detail == null) {
             return false;
@@ -244,6 +245,11 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
                 || detail.contains("FreeTierError");
     }
 
+    /**
+     * auth Headers
+     * @param apiKey 字符串
+     * @return 返回值
+    */
     private static Map<String, String> authHeaders(String apiKey) {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + apiKey);
@@ -251,6 +257,12 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
         return headers;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -258,7 +270,11 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
         return result;
     }
 
-    /** 脱敏 key：只露尾 4 位（{@code public} 原样）。 */
+    /**
+     * mask Key
+     * @param key 字符串
+     * @return 返回值
+    */
     private static String maskKey(String key) {
         String trimmed = key == null ? "" : key.trim();
         if (trimmed.length() <= 4 || ANONYMOUS_KEY.equals(trimmed)) {
@@ -267,11 +283,23 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
         return "..." + trimmed.substring(trimmed.length() - 4);
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -280,6 +308,11 @@ public class OpencodeAccountChannelAuthManager implements AccountChannelAuthMana
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

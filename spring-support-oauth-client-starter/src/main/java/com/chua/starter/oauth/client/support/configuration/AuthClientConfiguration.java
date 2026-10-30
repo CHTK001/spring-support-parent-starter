@@ -262,6 +262,9 @@ public class AuthClientConfiguration
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -300,6 +303,8 @@ public class AuthClientConfiguration
     @Override
     /**
      * 添加参数解析器
+     * @param resolvers 参数
+     * @return 返回值
     */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         // 使用 Spring Bean 确保白名单更新能被感知
@@ -317,6 +322,9 @@ public class AuthClientConfiguration
     @Override
     /**
      * Post处理Beandefinitionregistry
+     * @param registry 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         BeanDefinitionBuilder definitionBuilder1 = BeanDefinitionBuilder.genericBeanDefinition(WebRequest.class);
@@ -327,6 +335,9 @@ public class AuthClientConfiguration
     @Override
     /**
      * Post处理Bean工厂
+     * @param beanFactory 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         OauthClientRuntimeContext.setBeanFactory(beanFactory);

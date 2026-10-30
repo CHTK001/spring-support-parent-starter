@@ -101,6 +101,9 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     @Override
     /**
      * Post处理Beandefinitionregistry
+     * @param beanDefinitionRegistry 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
         /**
@@ -533,6 +536,9 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     @Override
     /**
      * Post处理Bean工厂
+     * @param configurableListableBeanFactory 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
     }
@@ -540,6 +546,9 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -549,6 +558,8 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     @Override
     /**
      * 设置环境
+     * @param environment 参数
+     * @return 返回值
     */
     public void setEnvironment(Environment environment) {
         this.environment = environment;

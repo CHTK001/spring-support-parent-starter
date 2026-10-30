@@ -12,6 +12,8 @@ public class JsonMediaTypeHandler implements MediaTypeHandler {
     @Override
     /**
      * asbytearray
+     * @param o 对象
+     * @return 返回值
     */
     public byte[] asByteArray(Object o) {
         return Json.toJSONBytes(o);

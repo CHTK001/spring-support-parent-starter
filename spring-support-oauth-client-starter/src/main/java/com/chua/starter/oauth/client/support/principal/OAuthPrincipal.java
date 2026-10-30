@@ -167,6 +167,7 @@ public class OAuthPrincipal implements Principal {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         String name = userResume != null ? userResume.getUsername() : "anonymous";
@@ -433,6 +434,7 @@ public class OAuthPrincipal implements Principal {
     @Override
     /**
      * 转为字符串
+     * @return 返回值
     */
     public String toString() {
         return "OAuthPrincipal{" +
@@ -448,6 +450,8 @@ public class OAuthPrincipal implements Principal {
     @Override
     /**
      * 判断相等
+     * @param obj 对象
+     * @return 返回值
     */
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -471,6 +475,7 @@ public class OAuthPrincipal implements Principal {
     @Override
     /**
      * 哈希编码
+     * @return 返回值
     */
     public int hashCode() {
         int result = userResume != null ? userResume.hashCode() : 0;

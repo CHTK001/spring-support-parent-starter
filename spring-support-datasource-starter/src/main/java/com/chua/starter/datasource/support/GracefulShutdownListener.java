@@ -71,9 +71,11 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
 
     /**
      * 尝试以多种方式关闭数据源
-     * @param name 名称
      * @param dataSource 数据源
-     */
+     * @param name 名称
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void closeDataSource(String name, DataSource dataSource) throws Exception {
         if (dataSource == null) {
             return;
@@ -114,11 +116,13 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
     }
 
     /**
+    /**
      * 通过反射尝试关闭特定连接池
-     * @param name 名称
      * @param dataSource 数据源
-     */
-    @SuppressWarnings("JavaReflectionMemberAccess")
+     * @param name 名称
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void closeByReflection(String name, DataSource dataSource) throws Exception {
         Class<?> clazz = dataSource.getClass();
 

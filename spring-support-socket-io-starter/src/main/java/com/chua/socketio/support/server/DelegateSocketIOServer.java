@@ -38,6 +38,8 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
         this.stop();
@@ -46,6 +48,8 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         Configuration configuration = getConfiguration();

@@ -73,6 +73,9 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -141,6 +144,8 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     @Override
     /**
      * 获取缓存
+     * @param name 字符串
+     * @return 返回值
     */
     public Cache getCache(String name) {
         if (name == null || name.isEmpty()) {
@@ -197,6 +202,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     @Override
     /**
      * 获取缓存名称
+     * @return 返回值
     */
     public Collection<String> getCacheNames() {
         if (cacheManagers.isEmpty()) {

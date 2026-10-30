@@ -32,10 +32,10 @@ public enum OnboardingStatus {
 
     /**
      * 开通状态
-     *
      * @param code 编码
      * @param description 描述
-     */
+     * @return 返回值
+    */
     OnboardingStatus(String code, String description) {
         this.code = code;
         this.description = description;

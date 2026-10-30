@@ -216,6 +216,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 发送
+     * @param destination 字符串
+     * @param payload 对象
+     * @return 返回值
     */
     public SendResult send(String destination, Object payload) {
         return dlqMessageTemplate.send(getDlqDestination(destination), payload);
@@ -224,6 +227,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 发送异步
+     * @param destination 字符串
+     * @param payload 对象
+     * @return 返回值
     */
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
         return dlqMessageTemplate.sendAsync(getDlqDestination(destination), payload);
@@ -232,6 +238,11 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 发送
+     * @param Map<String 参数
+     * @param destination 字符串
+     * @param headers 参数
+     * @param payload 对象
+     * @return 返回值
     */
     public SendResult send(String destination, Object payload, Map<String, Object> headers) {
         Map<String, Object> dlqHeaders = new ConcurrentHashMap<>(headers != null ? headers : Map.of());
@@ -243,6 +254,10 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 发送延迟
+     * @param delay 参数
+     * @param destination 字符串
+     * @param payload 对象
+     * @return 返回值
     */
     public SendResult sendDelayed(String destination, Object payload, Duration delay) {
         return dlqMessageTemplate.sendDelayed(getDlqDestination(destination), payload, delay);
@@ -251,6 +266,9 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param destination 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, MessageHandler handler) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), handler);
@@ -259,6 +277,10 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param destination 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), handler, autoAck);
@@ -267,6 +289,10 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param destination 字符串
+     * @param group 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, String group, MessageHandler handler) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler);
@@ -275,6 +301,11 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param destination 字符串
+     * @param group 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler, autoAck);
@@ -283,6 +314,8 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 取消订阅
+     * @param destination 字符串
+     * @return 返回值
     */
     public void unsubscribe(String destination) {
         dlqMessageTemplate.unsubscribe(getDlqDestination(destination));
@@ -291,6 +324,11 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param concurrency 整数
+     * @param destination 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), handler, autoAck, concurrency);
@@ -299,6 +337,12 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 订阅
+     * @param autoAck 布尔值
+     * @param concurrency 整数
+     * @param destination 字符串
+     * @param group 字符串
+     * @param handler 参数
+     * @return 返回值
     */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler, autoAck, concurrency);
@@ -307,6 +351,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 获取类型
+     * @return 返回值
     */
     public String getType() {
         return "dead-letter";
@@ -315,6 +360,7 @@ public class DeadLetterTemplate implements MessageTemplate {
     @Override
     /**
      * 是否连接
+     * @return 返回值
     */
     public boolean isConnected() {
         return dlqMessageTemplate.isConnected();

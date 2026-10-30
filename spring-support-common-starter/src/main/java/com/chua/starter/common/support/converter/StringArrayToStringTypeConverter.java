@@ -12,6 +12,8 @@ public class StringArrayToStringTypeConverter implements Converter<String[], Str
     @Override
     /**
      * 转换
+     * @param source 参数
+     * @return 返回值
     */
     public String convert(String[] source) {
         return java.lang.String.join(",", source);

@@ -269,9 +269,10 @@ public class UrlQpsReporter {
 
         /**
          * urlstats。
-         * @param url url
          * @param method 方法
-         */
+         * @param url url
+         * @return 返回值
+        */
         UrlStats(String url, String method) {
             this.url = url;
             this.method = method;

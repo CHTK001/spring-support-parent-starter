@@ -71,9 +71,9 @@ public record ProjectPlacementContext(
 
     /**
      * 依赖库目录（为空时取 {@code lib}）。
-     *
+     * @param defaultDir 字符串
      * @return 依赖库目录
-     */
+    */
     public String libDirOr(String defaultDir) {
         return libDir.isEmpty() ? defaultDir : libDir;
     }

@@ -109,6 +109,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 保存任务规格 (新建或按任务键更新)
+     * @param spec 参数
+     * @return 返回值
     */
     public boolean save(JobSpec spec) {
         if (spec == null || spec.getJobKey() == null || spec.getJobKey().isBlank()) {
@@ -164,6 +166,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 按任务键读取定义
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public JobDefinition find(String jobKey) {
         return jobKey == null ? null : table.get(jobKey.trim());
@@ -172,6 +176,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 按任务键读取运行态
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public JobRuntime runtime(String jobKey) {
         JobDefinition definition = find(jobKey);
@@ -182,6 +188,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * Page任务运行态
+     * @param query 查询
+     * @return 返回值
     */
     public PageResult<JobRuntime> page(JobQuery query) {
         JobQuery condition = query == null ? new JobQuery() : query;
@@ -221,6 +229,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 按分组列出运行态快照
+     * @param group 字符串
+     * @return 返回值
     */
     public List<JobRuntime> listGroup(String group) {
         List<JobRuntime> rows = new ArrayList<>();
@@ -239,6 +249,10 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 改调度配置并立即生效
+     * @param jobKey 字符串
+     * @param scheduleTime 字符串
+     * @param scheduleType 字符串
+     * @return 返回值
     */
     public boolean updateSchedule(String jobKey, String scheduleType, String scheduleTime) {
         JobDefinition definition = find(jobKey);
@@ -253,6 +267,9 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 启停自动调度
+     * @param enabled 布尔值
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean changeStatus(String jobKey, boolean enabled) {
         JobDefinition definition = find(jobKey);
@@ -267,6 +284,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 删除任务
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public boolean remove(String jobKey) {
         if (jobKey == null || jobKey.isBlank()) {
@@ -282,6 +301,8 @@ public class InMemoryJobRepository implements JobRepository {
     @Override
     /**
      * 失效本地触发器缓存与已派发时刻记录
+     * @param jobKey 字符串
+     * @return 返回值
     */
     public void refresh(String jobKey) {
         if (jobKey == null || jobKey.isBlank()) {

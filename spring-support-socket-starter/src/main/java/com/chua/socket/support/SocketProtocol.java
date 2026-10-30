@@ -37,7 +37,8 @@ public enum SocketProtocol {
     /**
      * Socket协议。
      * @param value 值
-     */
+     * @return 返回值
+    */
     SocketProtocol(String value) {
         this.value = value;
     }

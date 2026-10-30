@@ -222,7 +222,11 @@ public class WebSearchService {
 
     /**
      * 安全调用某个付费搜索源，异常或未实现时返回空列表（不抛出）。
-     */
+     * @param count 统计数量
+     * @param p 字符串
+     * @param query 查询
+     * @return 返回值
+    */
     private List<WebResult> safePaid(String p, String query, int count) {
         try {
             return switch (p) {
@@ -324,7 +328,9 @@ public class WebSearchService {
 
     /**
      * 安全执行搜索调用，异常时返回空列表。
-     */
+     * @param c 参数
+     * @return 返回值
+    */
     private List<WebResult> safeCall(Callable<List<WebResult>> c) {
         try {
             return c.call();
@@ -336,7 +342,11 @@ public class WebSearchService {
 
     /**
      * 博查搜索。
-     */
+     * @param count 统计数量
+     * @param query 查询
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private List<WebResult> bocha(String query, int count) throws Exception {
         String key = extractApiKey(sysAiGlobalSettingService.getValue("search", "bocha").orElse(null));
         if (key == null || key.isBlank()) {
@@ -369,7 +379,11 @@ public class WebSearchService {
 
     /**
      * Tavily 搜索。
-     */
+     * @param count 统计数量
+     * @param query 查询
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private List<WebResult> tavily(String query, int count) throws Exception {
         String key = extractApiKey(sysAiGlobalSettingService.getValue("search", "tavily").orElse(null));
         if (key == null || key.isBlank()) {
@@ -398,7 +412,11 @@ public class WebSearchService {
 
     /**
      * Bing 网页结果兜底。
-     */
+     * @param count 统计数量
+     * @param query 查询
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private List<WebResult> bing(String query, int count) throws Exception {
         String url = "https://cn.bing.com/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
                 + "&setlang=zh-CN&count=" + Math.max(count, 10);
@@ -444,12 +462,12 @@ public class WebSearchService {
     }
 
     /**
-     * 360 搜索网页结果兜底。
-     *
-     * <p>360 搜索（so.com）服务端渲染完整、对标准 HTTP 客户端友好，结果准确度高；
-     * 真实目标地址存于链接的 {@code data-mdurl} 属性，翻页参数为 {@code pn}。
-     * 逐页抓取并去重，累计到期望数量。</p>
-     */
+     * 360 搜索网页结果兜底。 <p>360 搜索（so.com）服务端渲染完整、对标准 HTTP 客户端友好，结果准确度高； 真实目标地址存于链接的 {@code data-mdurl} 属性，翻页参数为 {@code pn}。 逐页抓取并去重，累计到期望数量。</p>
+     * @param count 统计数量
+     * @param query 查询
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private List<WebResult> so360(String query, int count) throws Exception {
         String enc = URLEncoder.encode(query, StandardCharsets.UTF_8);
         List<WebResult> out = new ArrayList<>();
@@ -480,7 +498,12 @@ public class WebSearchService {
 
     /**
      * 解析一页 360 搜索结果，累计普通网页结果（跳过短视频、快资讯聚合与导航页）。
-     */
+     * @param count 统计数量
+     * @param html 字符串
+     * @param out 参数
+     * @param seen 参数
+     * @return 返回值
+    */
     private void parse360Page(String html, List<WebResult> out, Set<String> seen, int count) {
         String[] blocks = html.split("<li[^>]*class=\"[^\"]*res-list");
         for (int i = 1; i < blocks.length && out.size() < count; i++) {
@@ -509,7 +532,10 @@ public class WebSearchService {
 
     /**
      * 返回正则首次匹配的第一个分组，无匹配时返回 {@code null}。
-     */
+     * @param input 字符串
+     * @param regex 字符串
+     * @return 返回值
+    */
     private static String firstGroup(String input, String regex) {
         Matcher m = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL).matcher(input);
         return m.find() ? m.group(1) : null;
@@ -517,7 +543,9 @@ public class WebSearchService {
 
     /**
      * 从存储值提取 apiKey，兼容 {@code {apiKey=xxx}} 与 JSON 两种格式。
-     */
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static String extractApiKey(String raw) {
         if (raw == null) {
             return null;
@@ -528,7 +556,9 @@ public class WebSearchService {
 
     /**
      * 去除 HTML 标签并还原常见实体。
-     */
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String clean(String s) {
         if (s == null) {
             return "";

@@ -55,6 +55,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 获取协议类型
+     * @return 返回值
     */
     public ProtocolType getProtocolType() {
         if (protocol == null) {
@@ -71,6 +72,9 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 发布
+     * @param message 对象
+     * @param topic 字符串
+     * @return 返回值
     */
     public void publish(String topic, Object message) {
         for (String sessionId : sessions.keySet()) {
@@ -87,6 +91,10 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 发送
+     * @param clientId 字符串
+     * @param message 对象
+     * @param topic 字符串
+     * @return 返回值
     */
     public void send(String clientId, String topic, Object message) {
         /**
@@ -101,6 +109,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 获取连接客户端
+     * @return 返回值
     */
     public List<String> getConnectedClients() {
         return List.copyOf(sessions.keySet());
@@ -109,6 +118,8 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 获取客户端metadata
+     * @param clientId 字符串
+     * @return 返回值
     */
     public Map<String, Object> getClientMetadata(String clientId) {
         SyncSession session = sessions.get(clientId);
@@ -118,6 +129,8 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 添加监听器
+     * @param listener 参数
+     * @return 返回值
     */
     public void addListener(SyncServerListener listener) {
         if (listener != null) {
@@ -128,6 +141,8 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     @Override
     /**
      * 移除监听器
+     * @param listener 参数
+     * @return 返回值
     */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);

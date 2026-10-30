@@ -160,10 +160,12 @@ public class AiConfiguration {
 
     /**
      * 全局 Agent 注册中心。
+    /**
+     * 全局 Agent 注册中心。
+     * @param agentProviderFactory 参数
      * @return Agentregistry的结果
-     */
+    */
     @Bean
-    @ConditionalOnMissingBean
     public AgentRegistry agentRegistry(AgentProviderFactory agentProviderFactory) {
         log.info("[AiConfiguration] 创建 AgentRegistry");
         /**

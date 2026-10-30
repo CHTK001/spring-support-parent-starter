@@ -19,6 +19,9 @@ public class FreemarkerEnvironmentPostProcessor implements EnvironmentPostProces
     @Override
     /**
      * Post处理环境
+     * @param application 参数
+     * @param environment 参数
+     * @return 返回值
     */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();

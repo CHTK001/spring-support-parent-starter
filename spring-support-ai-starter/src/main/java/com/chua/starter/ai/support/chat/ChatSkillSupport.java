@@ -451,7 +451,9 @@ public class ChatSkillSupport {
 
     /**
      * 去掉开头的 YAML frontmatter，返回正文（无 frontmatter 时原样返回）。
-     */
+     * @param text 字符串
+     * @return 返回值
+    */
     private static String stripFrontmatter(String text) {
         String t = text.stripLeading();
         if (!t.startsWith("---")) {

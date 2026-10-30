@@ -15,6 +15,14 @@ public class MybatisP6SpyLogger implements MessageFormattingStrategy {
     @Override
     /**
      * 格式化消息
+     * @param category 字符串
+     * @param connectionId 整数
+     * @param elapsed 长整数
+     * @param now 字符串
+     * @param prepared 字符串
+     * @param sql 字符串
+     * @param url 字符串
+     * @return 返回值
     */
     public String formatMessage(int connectionId, String now, long elapsed, String category, String prepared, String sql, String url) {
         if (StringUtils.isNotBlank(sql)) {

@@ -102,7 +102,11 @@ public class DataSourceScriptBeanPostProcessor implements BeanPostProcessor, Pri
     @Override
     /**
      * Post处理之后initialization
-     */
+     * @param bean 对象
+     * @param beanName 字符串
+     * @return 返回值
+     * @throws BeansException 异常
+    */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         // 只有数据源才需要脚本配置：必须把 properties() 放在类型判断之内。
         // 否则容器里每个 bean 初始化时都会去解析 DataSourceScriptProperties，

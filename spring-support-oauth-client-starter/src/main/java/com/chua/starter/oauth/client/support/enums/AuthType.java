@@ -132,10 +132,10 @@ public enum AuthType {
 
     /**
      * 构造函数
-     *
-     * @param code        认证类型编码
+     * @param code 认证类型编码
      * @param description 认证类型描述
-     */
+     * @return 返回值
+    */
     AuthType(String code, String description) {
         this.code = code;
         this.description = description;

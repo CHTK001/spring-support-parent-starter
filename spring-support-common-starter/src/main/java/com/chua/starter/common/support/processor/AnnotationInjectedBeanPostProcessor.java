@@ -357,10 +357,11 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
      * @param annotation 注解
      * @param bean Bean
      * @param beanName Bean名称
-     * @param injectedType injected类型
      * @param injectedElement injectedelement
+     * @param injectedType injected类型
      * @return 获取injected对象的结果
-     */
+     * @throws Exception 异常
+    */
     protected Object getInjectedObject(A annotation, Object bean, String beanName, Class<?> injectedType, InjectionMetadata.InjectedElement injectedElement) throws Exception {
         String cacheKey = this.buildInjectedObjectCacheKey(annotation, bean, beanName, injectedType, injectedElement);
         Object injectedObject = this.injectedObjectsCache.get(cacheKey);

@@ -48,6 +48,8 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
     @Override
     /**
      * onapplication事件
+     * @param event 参数
+     * @return 返回值
     */
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (event.getApplicationContext() != this.applicationContext) {

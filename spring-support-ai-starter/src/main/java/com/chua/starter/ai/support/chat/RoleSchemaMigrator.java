@@ -94,7 +94,12 @@ public class RoleSchemaMigrator implements ApplicationRunner {
 
     /**
      * 判断指定列是否已存在。
-     */
+     * @param catalog 字符串
+     * @param column 字符串
+     * @param connection 参数
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private boolean columnExists(Connection connection, String catalog, String column) throws Exception {
         final String sql = "SELECT 1 FROM information_schema.COLUMNS "
                 + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'sys_ai_role' AND COLUMN_NAME = ?";

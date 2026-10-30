@@ -58,6 +58,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * page薪酬
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
     */
     public AliyunAlipayPayResponse pagePay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
@@ -89,6 +92,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * wap薪酬
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
     */
     public AliyunAlipayPayResponse wapPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
@@ -120,6 +126,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * app薪酬
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
     */
     public AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
@@ -150,6 +159,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * 查询订单
+     * @param orderNo 字符串
+     * @param properties 参数
+     * @return 返回值
     */
     public AliyunAlipayTradeQueryResponse queryOrder(AliyunAlipayProperties properties, String orderNo) {
         try {
@@ -180,6 +192,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * 关闭订单
+     * @param orderNo 字符串
+     * @param properties 参数
+     * @return 返回值
     */
     public boolean closeOrder(AliyunAlipayProperties properties, String orderNo) {
         try {
@@ -200,6 +215,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * 退税
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
     */
     public AliyunAlipayRefundResponse refund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request) {
         try {
@@ -236,6 +254,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * 查询退税
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
     */
     public AliyunAlipayRefundResponse queryRefund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request) {
         try {
@@ -325,6 +346,9 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     @Override
     /**
      * 调动
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
     */
     public AliyunAlipayTransferResponse transfer(AliyunAlipayProperties properties, AliyunAlipayTransferRequest request) {
         try {

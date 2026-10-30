@@ -93,6 +93,15 @@ public final class OcrImagePreprocessor {
 
         private final double cy;
 
+        /**
+         * Result
+         * @param angleRad 双精度数
+         * @param cx 双精度数
+         * @param cy 双精度数
+         * @param data 参数
+         * @param scale 双精度数
+         * @return 返回值
+        */
         Result(byte[] data, double scale, double angleRad, double cx, double cy) {
             this.data = data;
             this.scale = scale;
@@ -227,6 +236,11 @@ public final class OcrImagePreprocessor {
         }
     }
 
+    /**
+     * passthrough
+     * @param imageData 参数
+     * @return 返回值
+    */
     private static Result passthrough(byte[] imageData) {
         return new Result(imageData, 1.0d, 0.0d, 0.0d, 0.0d);
     }
@@ -241,6 +255,13 @@ public final class OcrImagePreprocessor {
         return passthrough(imageData);
     }
 
+    /**
+     * resize
+     * @param h 整数
+     * @param src 参数
+     * @param w 整数
+     * @return 返回值
+    */
     private static BufferedImage resize(BufferedImage src, int w, int h) {
         BufferedImage out = new BufferedImage(Math.max(1, w), Math.max(1, h), BufferedImage.TYPE_INT_RGB);
         Graphics2D g = out.createGraphics();
@@ -289,7 +310,12 @@ public final class OcrImagePreprocessor {
 
     /**
      * 给定角度下的行投影方差（越大表示文字行越整齐）。
-     */
+     * @param angleRad 双精度数
+     * @param gray 参数
+     * @param h 整数
+     * @param w 整数
+     * @return 返回值
+    */
     private static double projectionVariance(int[] gray, int w, int h, double angleRad) {
         double cos = Math.cos(angleRad);
         double sin = Math.sin(angleRad);
@@ -325,6 +351,12 @@ public final class OcrImagePreprocessor {
         return var;
     }
 
+    /**
+     * rotate
+     * @param angleRad 双精度数
+     * @param src 参数
+     * @return 返回值
+    */
     private static BufferedImage rotate(BufferedImage src, double angleRad) {
         int w = src.getWidth();
         int h = src.getHeight();
@@ -345,7 +377,9 @@ public final class OcrImagePreprocessor {
 
     /**
      * 对比度拉伸：按 2% / 98% 分位把灰度拉满，按同一比例作用到各通道。
-     */
+     * @param src 参数
+     * @return 返回值
+    */
     private static BufferedImage stretchContrast(BufferedImage src) {
         int w = src.getWidth();
         int h = src.getHeight();
@@ -395,6 +429,11 @@ public final class OcrImagePreprocessor {
         return out;
     }
 
+    /**
+     * median Denoise
+     * @param src 参数
+     * @return 返回值
+    */
     private static BufferedImage medianDenoise(BufferedImage src) {
         int w = src.getWidth();
         int h = src.getHeight();
@@ -425,6 +464,11 @@ public final class OcrImagePreprocessor {
         return out;
     }
 
+    /**
+     * otsu Binarize
+     * @param src 参数
+     * @return 返回值
+    */
     private static BufferedImage otsuBinarize(BufferedImage src) {
         int w = src.getWidth();
         int h = src.getHeight();
@@ -475,10 +519,20 @@ public final class OcrImagePreprocessor {
         return out;
     }
 
+    /**
+     * clamp
+     * @param v 整数
+     * @return 返回值
+    */
     private static int clamp(int v) {
         return v < 0 ? 0 : Math.min(v, 255);
     }
 
+    /**
+     * encode Png
+     * @param image 参数
+     * @return 返回值
+    */
     private static byte[] encodePng(BufferedImage image) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();

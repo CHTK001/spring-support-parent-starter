@@ -38,6 +38,7 @@ public class FileHandler implements SyncMessageHandler {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "fileHandler";
@@ -46,6 +47,8 @@ public class FileHandler implements SyncMessageHandler {
     @Override
     /**
      * 支持
+     * @param topic 字符串
+     * @return 返回值
     */
     public boolean supports(String topic) {
         return MonitorTopics.FILE_REQUEST.equals(topic);
@@ -54,6 +57,11 @@ public class FileHandler implements SyncMessageHandler {
     @Override
     /**
      * 处理
+     * @param Map<String 参数
+     * @param data 参数
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String operation = getString(data, "operation");
@@ -94,9 +102,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 列出目录内容
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理列表的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleList(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean includeHidden = getBoolean(data, "includeHidden", false);
@@ -121,9 +131,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 获取文件树
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理树的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleTree(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         int maxDepth = getInt(data, "maxDepth", 3);
@@ -140,9 +152,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 获取文件信息
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理信息的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleInfo(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         File file = new File(path);
@@ -156,9 +170,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 读取文件内容
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理读取的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleRead(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         long offset = getLong(data, "offset", 0);
@@ -193,9 +209,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 写入文件内容
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理写入的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleWrite(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         String contentBase64 = getString(data, "content");
@@ -225,9 +243,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 删除文件或目录
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理删除的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleDelete(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean recursive = getBoolean(data, "recursive", false);
@@ -249,9 +269,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 创建目录
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理mkdir的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleMkdir(Map<String, Object> data) throws IOException {
         String path = getString(data, "path");
         boolean recursive = getBoolean(data, "recursive", true);
@@ -264,9 +286,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 重命名文件
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理rename的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleRename(Map<String, Object> data) throws IOException {
         String oldPath = getString(data, "oldPath");
         String newName = getString(data, "newName");
@@ -284,9 +308,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 复制文件
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理副本的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleCopy(Map<String, Object> data) throws IOException {
         String sourcePath = getString(data, "sourcePath");
         String targetPath = getString(data, "targetPath");
@@ -315,9 +341,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 移动文件
+     * @param Map<String 参数
      * @param data 数据
      * @return 处理move的结果
-     */
+     * @throws IOException 异常
+    */
     private Object handleMove(Map<String, Object> data) throws IOException {
         String sourcePath = getString(data, "sourcePath");
         String targetPath = getString(data, "targetPath");
@@ -441,10 +469,11 @@ public class FileHandler implements SyncMessageHandler {
 
     /**
      * 复制目录
-     *
      * @param source 源
      * @param target Target
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void copyDirectory(File source, File target) throws IOException {
         if (!target.exists()) {
             target.mkdirs();

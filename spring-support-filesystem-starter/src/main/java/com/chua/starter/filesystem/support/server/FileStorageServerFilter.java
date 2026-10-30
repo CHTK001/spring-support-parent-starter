@@ -45,7 +45,6 @@ import com.chua.starter.filesystem.support.spi.FileStorageUrlPreviewProvider;
 import com.chua.starter.filesystem.support.spi.FileStorageRemoteReader;
 import com.chua.starter.filesystem.support.spi.RemoteFileRequest;
 import com.chua.starter.filesystem.support.spi.RemoteFileResult;
-import com.chua.starter.filesystem.support.log.FileLogStore;
 import com.chua.filestorage.support.spi.FileStorageFilterSetting;
 import com.chua.filestorage.support.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -465,6 +464,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     @Override
     /**
      * 执行过滤
+     * @param chain 参数
+     * @param request 参数
+     * @param response 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void doFilter(ServerRequest request, ServerResponse response, com.chua.common.support.network.server.filter.ServerFilterChain chain) throws Exception {
         // 简单透传
@@ -474,6 +478,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     @Override
     /**
      * 绑定路径模式：空 表示 Access 过滤器，每次请求都触发
+     * @return 返回值
     */
     public String supportPath() {
         return null;
@@ -482,6 +487,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     @Override
     /**
      * 过滤器执行顺序：数值越小越先执行
+     * @return 返回值
     */
     public int getOrder() {
         return 100;
@@ -489,20 +495,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
     @Override
     /**
-     * 响应式执行过滤（包装：记录文件操作日志）。
+     * 响应式执行过滤。
      *
-     * <p>原处理体拆为
-     * {@link #doFilterInternal(ServerRequest, ServerResponse, ReactiveFilterChain)}，
-     * 本方法只负责计时并在完成时把请求记入 {@link FileLogStore}，
-     * 不改变任何文件操作语义。</p>
-    */
+     * @param request  请求
+     * @param response 响应
+     * @param chain    过滤器链
+     * @return 异步阶段
+     */
     public CompletionStage<Void> doFilter(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
-        long startMillis = System.currentTimeMillis();
         CompletionStage<Void> stage = doFilterInternal(request, response, chain);
-        if (stage == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return stage.whenComplete((ignored, error) -> recordFileLog(request, response, startMillis, error));
+        return stage == null ? CompletableFuture.completedFuture(null) : stage;
     }
 
     /**
@@ -646,90 +648,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             log.error("文件存储过滤器处理失败: {} {} - {}", method, path, e.getMessage(), e);
             return error(response, 500, "Internal Error: " + e.getMessage());
         }
-    }
-
-    /**
-     * 记录一条文件操作日志（请求完成后回调）。
-     *
-     * <p>操作类型由「HTTP 方法 + 文件管理动作」推断：有 {@code action}
-     * 参数（mkdir/rename/copy/move/unzip/zip 等）按动作归类；
-     * 否则按方法归类（GET 有对象键=下载、无键=列目录）。</p>
-     *
-     * <p>日志写入失败绝不影响业务：任何异常都被吞掉。</p>
-     *
-     * @param request     请求（记录方法/路径/动作参数）
-     * @param response    响应（取最终状态码）
-     * @param startMillis 请求开始时间（毫秒）
-     * @param error       处理异常（可为 {@code null}）
-     */
-    private void recordFileLog(ServerRequest request, ServerResponse response,
-                               long startMillis, Throwable error) {
-        try {
-            if (request == null) {
-                return;
-            }
-            String method = String.valueOf(request.getMethod());
-            if ("OPTIONS".equalsIgnoreCase(method)) {
-                return;
-            }
-            String path = request.getPath();
-            Map<String, String> params = request.getParams();
-            String action = params == null ? null : params.get("action");
-            String operation = classifyFileOperation(method, path, action);
-            int status = response == null ? 0 : response.getStatus();
-            long duration = System.currentTimeMillis() - startMillis;
-            String detail = error == null ? null : String.valueOf(error.getMessage());
-            FileLogStore.getInstance().record(operation, path, status, duration, detail);
-        } catch (Exception e) {
-            // 日志失败不影响业务
-            log.debug("[filesystem] 记录操作日志失败，已忽略: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * 由「HTTP 方法 + 文件管理动作」推断日志操作类型。
-     *
-     * @param method HTTP 方法
-     * @param path   请求路径
-     * @param action 文件管理动作参数（可为 {@code null}）
-     * @return 操作类型码（如 UPLOAD / DOWNLOAD / DELETE / MKDIR / RENAME）
-     */
-    private static String classifyFileOperation(String method, String path, String action) {
-        if (action != null && !action.isBlank()) {
-            return switch (action) {
-                case "mkdir" -> "MKDIR";
-                case "mkfile" -> "MKFILE";
-                case "rename" -> "RENAME";
-                case "copy" -> "COPY";
-                case "move" -> "MOVE";
-                case "zip" -> "ZIP";
-                case "unzip" -> "UNZIP";
-                case "setConfig" -> "SET_CONFIG";
-                default -> action.toUpperCase(java.util.Locale.ROOT);
-            };
-        }
-        String up = method == null ? "" : method.toUpperCase(java.util.Locale.ROOT);
-        return switch (up) {
-            case "GET" -> hasObjectKey(path) ? "DOWNLOAD" : "LIST";
-            case "HEAD" -> "HEAD";
-            case "PUT", "POST" -> "UPLOAD";
-            case "DELETE" -> "DELETE";
-            default -> up;
-        };
-    }
-
-    /**
-     * 判断路径是否带对象键（第二段之后有内容即为有键）。
-     *
-     * @param path 请求路径（如 {@code /local/a.txt} 或 {@code /local}）
-     * @return 有对象键返回 true
-     */
-    private static boolean hasObjectKey(String path) {
-        if (path == null) {
-            return false;
-        }
-        String p = path.startsWith("/") ? path.substring(1) : path;
-        return p.indexOf('/') >= 0;
     }
 
     /**
@@ -1087,14 +1005,38 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         */
         final boolean once;
 
+        /**
+         * One Time Entry
+         * @param bucket 字符串
+         * @param createTime 长整数
+         * @param key 字符串
+         * @return 返回值
+        */
         OneTimeEntry(String bucket, String key, long createTime) {
             this(bucket, key, createTime, DEFAULT_ONE_TIME_TTL_MILLIS, true);
         }
 
+        /**
+         * One Time Entry
+         * @param bucket 字符串
+         * @param createTime 长整数
+         * @param key 字符串
+         * @param ttlMillis 长整数
+         * @return 返回值
+        */
         OneTimeEntry(String bucket, String key, long createTime, long ttlMillis) {
             this(bucket, key, createTime, ttlMillis, true);
         }
 
+        /**
+         * One Time Entry
+         * @param bucket 字符串
+         * @param createTime 长整数
+         * @param key 字符串
+         * @param once 布尔值
+         * @param ttlMillis 长整数
+         * @return 返回值
+        */
         OneTimeEntry(String bucket, String key, long createTime, long ttlMillis, boolean once) {
             this.bucket = bucket;
             this.key = key;
@@ -1858,10 +1800,24 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
+    /**
+     * keep
+     * @param after 参数
+     * @param before 参数
+     * @return 返回值
+    */
     private byte[] keep(byte[] before, byte[] after) {
         return (after == null || after.length == 0) ? before : after;
     }
 
+    /**
+     * resize Of
+     * @param bytes 参数
+     * @param format 格式化
+     * @param op 参数
+     * @param size 获取数量
+     * @return 返回值
+    */
     private byte[] resizeOf(ImageOperation op, byte[] bytes, String format, String size) {
         if (size == null || size.isBlank()) {
             return null;
@@ -1892,6 +1848,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return op.resize(bytes, format, width, height, scale).block();
     }
 
+    /**
+     * crop Of
+     * @param bytes 参数
+     * @param crop 字符串
+     * @param format 格式化
+     * @param op 参数
+     * @return 返回值
+    */
     private byte[] cropOf(ImageOperation op, byte[] bytes, String format, String crop) {
         if (crop == null || crop.isBlank()) {
             return null;
@@ -1914,6 +1878,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
+    /**
+     * parse File Ops
+     * @param request 参数
+     * @return 返回值
+    */
     private FileOperationSetting parseFileOps(ServerRequest request) {
         try {
             ServiceProvider<FileStorageFileSetting> provider = ServiceProvider.of(FileStorageFileSetting.class);
@@ -1932,7 +1901,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /** 常用图片扩展名（决定是否走图片处理管线） */
+    /**
+     * is Image Ext
+     * @param ext 字符串
+     * @return 返回值
+    */
     private static boolean isImageExt(String ext) {
         return switch (ext) {
             case "jpg", "jpeg", "png", "gif", "bmp", "webp", "wbmp" -> true;
@@ -1940,6 +1913,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         };
     }
 
+    /**
+     * norm Format
+     * @param f 字符串
+     * @return 返回值
+    */
     private static String normFormat(String f) {
         if (f == null || f.isBlank()) {
             return null;
@@ -1956,6 +1934,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return ImageIO.getImageWritersByFormatName(s).hasNext() ? s : null;
     }
 
+    /**
+     * op Output Format
+     * @param fileName 字符串
+     * @param request 参数
+     * @return 返回值
+    */
     private String opOutputFormat(String fileName, ServerRequest request) {
         Map<String, String> params = request.getParams();
         String requested = params == null ? null : normFormat(params.get("format"));
@@ -4764,10 +4748,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
 
     /**
      * 将远程文件读取结果写入 HTTP 响应。
-     *
      * @param response HTTP 响应
-     * @param result   远程文件读取结果
-     */
+     * @param result 远程文件读取结果
+     * @return 返回值
+    */
     private CompletionStage<Void> writeRemoteResult(ServerResponse response, RemoteFileResult result) {
         String fileName = result.fileName() != null ? result.fileName() : "remote";
         response.setStatus(200)

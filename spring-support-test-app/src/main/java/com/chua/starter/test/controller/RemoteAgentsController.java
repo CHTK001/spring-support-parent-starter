@@ -37,11 +37,11 @@ public class RemoteAgentsController {
     private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
+    /**
      * 读取被控端列表。
-     *
      * @return 被控端列表（无则空数组）
-     */
-    @GetMapping
+     * @throws IOException 异常
+    */
     public List<Map<String, Object>> list() throws IOException {
         if (Files.exists(CONFIG_FILE)) {
             return objectMapper.readValue(CONFIG_FILE.toFile(), objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
@@ -50,12 +50,13 @@ public class RemoteAgentsController {
     }
 
     /**
+    /**
      * 保存被控端列表（持久化到本地文件）。
-     *
+     * @param List<Map<String 参数
      * @param agents 被控端列表
      * @return 保存结果
-     */
-    @PostMapping
+     * @throws IOException 异常
+    */
     public Map<String, Object> save(@RequestBody List<Map<String, Object>> agents) throws IOException {
         Files.write(CONFIG_FILE, objectMapper.writeValueAsBytes(agents));
         Map<String, Object> result = new HashMap<>();

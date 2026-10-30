@@ -600,10 +600,10 @@ public class DataSourceScriptProperties {
 
         /**
          * 构造器
-         *
-         * @param suffix 版本类型后缀标识
          * @param priority 版本类型优先级
-         */
+         * @param suffix 版本类型后缀标识
+         * @return 返回值
+        */
         ReleaseType(String suffix, int priority) {
             this.suffix = suffix;
             this.priority = priority;

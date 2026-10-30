@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration.paper;
+package com.chua.starter.eduai.ai.paper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,8 +21,8 @@ import java.io.ByteArrayOutputStream;
  * <p>故按「照度背景极差」判据分流：均匀 → 仅归一到训练尺度；不均 → 照度校正 + 提尺度。
  * 只用 JDK 的 {@link BufferedImage}；任何失败都回退原图，绝不让预处理成为新的故障点。</p>
  *
- * <p>属于 AI 模块的图片能力：输入是「一张待识别的卷面图」，与具体业务规则无关，
- * 业务模块只按配置开关决定是否启用。</p>
+ * <p>属于阅卷业务的图片预处理规则（判据与目标尺度都是按试卷实测调出来的），
+ * 故归 eduai 业务模块，而不是 AI 基础包。</p>
  *
  * @since 4.0.0.44
  * @author CH
@@ -221,8 +221,8 @@ public final class PaperImagePreprocessor {
     /**
      * 编码为 PNG 字节。
      *
-     * @param img       图
-     * @param fallback  编码失败时的回退值
+     * @param img      图
+     * @param fallback 编码失败时的回退值
      * @return PNG 字节
      */
     private static byte[] encode(BufferedImage img, byte[] fallback) {

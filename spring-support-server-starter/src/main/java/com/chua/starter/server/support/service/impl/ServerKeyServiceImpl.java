@@ -116,6 +116,14 @@ public class ServerKeyServiceImpl implements ServerKeyService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * generate
+     * @param name 字符串
+     * @param password 设置认证密码
+     * @param remark 字符串
+     * @param type 字符串
+     * @return 返回值
+    */
     public ReturnResult<MsServerKey> generate(String name, String type, String password, String remark) {
         if (name == null || name.isBlank()) {
             return ReturnResult.error("密钥名称不能为空");

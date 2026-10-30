@@ -169,6 +169,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * create Release
+     * @param release 释放
+     * @return 返回值
+    */
     public ReturnResult<MsServerRelease> createRelease(MsServerRelease release) {
         fillHostInfo(release);
         release.setCreateTime(LocalDateTime.now());
@@ -179,6 +184,12 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * update Release
+     * @param id 长整数
+     * @param release 释放
+     * @return 返回值
+    */
     public ReturnResult<MsServerRelease> updateRelease(Long id, MsServerRelease release) {
         MsServerRelease exists = releaseMapper.selectById(id);
         if (exists == null) {
@@ -197,6 +208,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Release
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<Void> deleteRelease(Long id) {
         // 删除发布下的所有项目
         projectMapper.delete(new LambdaQueryWrapper<MsServerProject>()
@@ -225,6 +241,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * create Project
+     * @param project 参数
+     * @return 返回值
+    */
     public ReturnResult<MsServerProject> createProject(MsServerProject project) {
         project.setCreateTime(LocalDateTime.now());
         project.setUpdateTime(LocalDateTime.now());
@@ -242,6 +263,12 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * update Project
+     * @param id 长整数
+     * @param project 参数
+     * @return 返回值
+    */
     public ReturnResult<MsServerProject> updateProject(Long id, MsServerProject project) {
         MsServerProject exists = projectMapper.selectById(id);
         if (exists == null) {
@@ -353,6 +380,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Project
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<Void> deleteProject(Long id) {
         projectMapper.deleteById(id);
         return ReturnResult.success();
@@ -562,7 +594,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(rows);
     }
 
-    /** epoch 秒字符串 -> 毫秒；非法返回 null */
+    /**
+     * parse Epoch Seconds
+     * @param raw 字符串
+     * @return 返回值
+    */
     private Long parseEpochSeconds(String raw) {
         try {
             return Long.parseLong(raw.trim()) * 1000L;
@@ -571,7 +607,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /** 数字字符串 -> Long；空或非法返回 null */
+    /**
+     * parse Long Or Null
+     * @param raw 字符串
+     * @return 返回值
+    */
     private Long parseLongOrNull(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
@@ -585,7 +625,10 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     /**
      * 构造「列出 backups/ 备份记录」命令，输出每行 name|epochSeconds|size|kind
-     */
+     * @param pf 参数
+     * @param projectPath 字符串
+     * @return 返回值
+    */
     private String backupListCommand(ProjectPlatformProvider pf, String projectPath) {
         return pf.listBackups(projectPath);
     }
@@ -1508,6 +1551,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @SuppressWarnings("unchecked")
+    /**
+     * git Pull And Deploy
+     * @param id 长整数
+     * @return 返回值
+    */
     public ReturnResult<String> gitPullAndDeploy(Long id) {
         // 与普通升级共用同一条链路：类型决定投放与重启，这里只声明「包来自 Git 构建」。
         Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
@@ -2089,11 +2137,11 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     /**
-     * 幂等注入 VARS 托管块：已存在则替换，不存在则前插
-     */
-    /**
-     * 幂等注入 VARS 托管块：已存在则替换，不存在则前置
-     */
+     * 幂等注入 VARS 托管块：已存在则替换，不存在则前插 幂等注入 VARS 托管块：已存在则替换，不存在则前置
+     * @param block 字符串
+     * @param script 字符串
+     * @return 返回值
+    */
     private String injectVarsBlock(String script, String block) {
         Matcher m = VARS_BLOCK_RE.matcher(script);
         if (m.find()) {
@@ -2104,7 +2152,9 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     /**
      * 根据主机ID回填主机IP，保证发布卡片主机信息完整
-     */
+     * @param release 释放
+     * @return 返回值
+    */
     private void fillHostInfo(MsServerRelease release) {
         if (release == null || release.getHostId() == null) {
             return;
@@ -2123,11 +2173,11 @@ public class ReleaseServiceImpl implements ReleaseService {
             Pattern.compile("# >>> VARS \\(auto-managed\\) >>>[\\s\\S]*?# <<< VARS \\(auto-managed\\) <<<\\n?");
 
     /**
-     * 执行前解析变量托管块中的占位符，支持：
-     * ${key:default} 默认值、${now(pattern)} 日期格式化、${uuid}、${random(n)}、${upper/lower/length} 等。
-     * 仅处理托管块，避免误改脚本中正常的 shell / PowerShell 语法；
-     * 无法解析的占位符保留原样（交给 shell），不中断执行。
-     */
+     * 执行前解析变量托管块中的占位符，支持： ${key:default} 默认值、${now(pattern)} 日期格式化、${uuid}、${random(n)}、${upper/lower/length} 等。 仅处理托管块，避免误改脚本中正常的 shell / PowerShell 语法； 无法解析的占位符保留原样（交给 shell），不中断执行。
+     * @param pf 参数
+     * @param script 字符串
+     * @return 返回值
+    */
     private String resolveScriptPlaceholders(String script, ProjectPlatformProvider pf) {
         if (script == null) {
             return null;
@@ -2160,22 +2210,23 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     /**
-     * 构建执行命令。
-     * Linux：bash（cd path && script）；Windows：PowerShell（Set-Location 后执行，PS4.0 不支持 &&）。
-     */
+     * 构建执行命令。 Linux：bash（cd path && script）；Windows：PowerShell（Set-Location 后执行，PS4.0 不支持 &&）。
+     * @param pf 参数
+     * @param projectPath 字符串
+     * @param script 字符串
+     * @return 返回值
+    */
     private String buildCommand(ProjectPlatformProvider pf, String projectPath, String script) {
         return pf.wrap(projectPath, resolveScriptPlaceholders(script, pf));
     }
 
     /**
-     * 构造「生成 SpringBoot 专属外部配置」步骤：
-     * 写入项目目录下 config/application.properties，Spring Boot 会自动加载
-     * （file:./config/ 的优先级高于 jar 内 application.properties，实现覆盖）。
-     *
-     * @param windows 是否 Windows
+     * 构造「生成 SpringBoot 专属外部配置」步骤： 写入项目目录下 config/application.properties，Spring Boot 会自动加载 （file:./config/ 的优先级高于 jar 内 application.properties，实现覆盖）。
+     * @param pf 参数
      * @param project 项目
+     * @param windows 是否 Windows
      * @return 步骤；无配置项时返回 null
-     */
+    */
     private ProjectStep springConfigStep(ProjectPlatformProvider pf, MsServerProject project) {
         List<EnvVar> entries = readEnvList(project.getAppConfig());
         if (entries.isEmpty()) {
@@ -2262,12 +2313,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         return !"WINDOWS".equalsIgnoreCase(host.getServerHostOsType());
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
     // ---------- 升级配置辅助 ----------
 
+    /**
+     * default Global Config
+     * @return 返回值
+    */
     private Map<String, Object> defaultGlobalConfig() {
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("autoBackup", true);
@@ -2278,6 +2338,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         return m;
     }
 
+    /**
+     * read Cfg
+     * @param defValue 对象
+     * @param key 字符串
+     * @return 返回值
+    */
     private Object readCfg(String key, Object defValue) {
         MsServerConfig cfg = serverConfigMapper.selectOne(
                 new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
@@ -2291,6 +2357,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
+    /**
+     * bool Cfg
+     * @param Map<String 参数
+     * @param cfg 参数
+     * @param defValue 布尔值
+     * @param key 字符串
+     * @return 返回值
+    */
     private boolean boolCfg(Map<String, Object> cfg, String key, boolean defValue) {
         Object v = cfg.get(key);
         if (v == null) {
@@ -2299,6 +2373,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         return Boolean.parseBoolean(String.valueOf(v));
     }
 
+    /**
+     * str Cfg
+     * @param Map<String 参数
+     * @param cfg 参数
+     * @param defValue 字符串
+     * @param key 字符串
+     * @return 返回值
+    */
     private String strCfg(Map<String, Object> cfg, String key, String defValue) {
         Object v = cfg.get(key);
         return v == null ? defValue : String.valueOf(v);
@@ -2306,12 +2388,24 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     // ---------- 升级包处理 ----------
 
+    /**
+     * is Archive
+     * @param name 字符串
+     * @return 返回值
+    */
     private boolean isArchive(String name) {
         String n = name.toLowerCase();
         return n.endsWith(".tar.gz") || n.endsWith(".tgz") || n.endsWith(".tar")
                 || n.endsWith(".zip") || n.endsWith(".gz");
     }
 
+    /**
+     * extract Command
+     * @param packagePath 字符串
+     * @param pf 参数
+     * @param projectPath 字符串
+     * @return 返回值
+    */
     private String extractCommand(ProjectPlatformProvider pf, String projectPath, String packagePath) {
         return pf.extract(projectPath, packagePath);
     }
@@ -2418,6 +2512,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         return null;
     }
 
+    /**
+     * place Command
+     * @param mainEntry 字符串
+     * @param packagePath 字符串
+     * @param pf 参数
+     * @param projectPath 字符串
+     * @return 返回值
+    */
     private String placeCommand(ProjectPlatformProvider pf, String projectPath, String packagePath, String mainEntry) {
         return pf.place(projectPath, packagePath, mainEntry);
     }
@@ -2485,6 +2587,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     // ---------- 系统服务（Linux systemd）----------
 
+    /**
+     * read String List
+     * @param json 字符串
+     * @return 返回值
+    */
     private List<String> readStringList(String json) {
         if (isBlank(json)) {
             return Collections.emptyList();
@@ -2525,6 +2632,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         return out;
     }
 
+    /**
+     * read Env List
+     * @param json 字符串
+     * @return 返回值
+    */
     private List<EnvVar> readEnvList(String json) {
         if (isBlank(json)) {
             return Collections.emptyList();
@@ -2562,6 +2674,12 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * copy Projects
+     * @param projectIds 参数
+     * @param releaseIds 参数
+     * @return 返回值
+    */
     public ReturnResult<Map<String, Object>> copyProjects(List<Long> projectIds, List<Long> releaseIds) {
         if (projectIds == null || projectIds.isEmpty()) {
             return ReturnResult.error("请选择要复制的项目");
@@ -2766,7 +2884,10 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     /**
      * 构造 Git 客户端（含 token 认证），供轮询与发布共用。
-     */
+     * @param project 参数
+     * @param workspace 路径
+     * @return 返回值
+    */
     private GitClient.Builder buildGitClient(MsServerProject project, Path workspace) {
         GitClient.Builder builder = GitClient.builder()
                 .remoteUrl(project.getGitUrl().trim())

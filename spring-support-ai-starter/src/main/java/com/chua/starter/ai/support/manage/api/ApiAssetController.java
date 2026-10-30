@@ -23,15 +23,13 @@ import java.util.LinkedHashMap;
 public class ApiAssetController {
 
     /**
-     * Logo 资源。前端（Agentlogo.ts）请求带子目录的多段路径（如 brand/nomi.SVG、
-     * tools/coding/codex.SVG），单段 {名称} 无法匹配会导致 404 裂图，这里用
-     * /logos/** 接住全部层级；类路径 无对应文件时返回首字母兜底 SVG。
-     * 直接写 httpservlet响应：全局消息转换器不含二进制/SVG 转换器，
-     * 返回 Resource/byte[] 会报 "No 转换器 ... preset 内容-类型"。
+    /**
+     * Logo 资源。前端（Agentlogo.ts）请求带子目录的多段路径（如 brand/nomi.SVG、 tools/coding/codex.SVG），单段 {名称} 无法匹配会导致 404 裂图，这里用 /logos/** 接住全部层级；类路径 无对应文件时返回首字母兜底 SVG。 直接写 httpservlet响应：全局消息转换器不含二进制/SVG 转换器， 返回 Resource/byte[] 会报 "No 转换器 ... preset 内容-类型"。
      * @param request 请求
      * @param response 响应
-     */
-    @GetMapping("/logos/**")
+     * @return 返回值
+     * @throws java.io.IOException 异常
+    */
     public void getLogo(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         String uri = request.getRequestURI();
         String name = uri.substring(uri.indexOf("/logos/") + "/logos/".length());
@@ -86,9 +84,11 @@ public class ApiAssetController {
 
     /**
      * 写入SVG。
-     * @param response 响应
      * @param bytes bytes
-     */
+     * @param response 响应
+     * @return 返回值
+     * @throws java.io.IOException 异常
+    */
     private void writeSvg(jakarta.servlet.http.HttpServletResponse response, byte[] bytes) throws java.io.IOException {
         response.setContentType("image/svg+xml");
         response.setContentLength(bytes.length);

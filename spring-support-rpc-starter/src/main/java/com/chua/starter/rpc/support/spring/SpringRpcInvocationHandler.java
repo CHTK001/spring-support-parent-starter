@@ -95,6 +95,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     @Override
     /**
      * 调用
+     * @param args 参数
+     * @param method 参数
+     * @param proxy 对象
+     * @return 返回值
+     * @throws Throwable 异常
     */
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
  // 处理对象方法

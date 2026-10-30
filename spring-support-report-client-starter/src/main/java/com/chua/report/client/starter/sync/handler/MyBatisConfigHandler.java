@@ -46,6 +46,9 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -54,6 +57,7 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "myBatisConfigHandler";
@@ -62,6 +66,8 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     @Override
     /**
      * 支持
+     * @param topic 字符串
+     * @return 返回值
     */
     public boolean supports(String topic) {
         return MonitorTopics.MYBATIS_CONFIG.equals(topic);
@@ -70,6 +76,11 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     @Override
     /**
      * 处理
+     * @param Map<String 参数
+     * @param data 参数
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action");

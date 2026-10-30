@@ -116,7 +116,9 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     /**
      * 获取商户
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public MerchantVO getMerchant(Long id) {
         return convertToVO(requireMerchant(id));
     }
@@ -124,7 +126,12 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     /**
      * 分页查询商户列表
-     */
+     * @param merchantName 字符串
+     * @param page 整数
+     * @param size 获取数量
+     * @param status 整数
+     * @return 返回值
+    */
     public Page<MerchantVO> listMerchants(int page, int size, String merchantName, Integer status) {
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(merchantName)) {
@@ -145,9 +152,9 @@ public class MerchantServiceImpl implements MerchantService {
     @Transactional(rollbackFor = Exception.class)
     /**
      * 激活商户
-     *
      * @param id 标识
-     */
+     * @return 返回值
+    */
     public boolean activateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.ACTIVE.getCode());
@@ -158,9 +165,9 @@ public class MerchantServiceImpl implements MerchantService {
     @Transactional(rollbackFor = Exception.class)
     /**
      * 停用商户
-     *
      * @param id 标识
-     */
+     * @return 返回值
+    */
     public boolean deactivateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.DISABLED.getCode());
@@ -169,9 +176,9 @@ public class MerchantServiceImpl implements MerchantService {
 
     /**
      * 获取商户，不存在时抛出异常
-     *
      * @param id 标识
-     */
+     * @return 返回值
+    */
     private Merchant requireMerchant(Long id) {
         Merchant merchant = merchantMapper.selectById(id);
         if (merchant == null) {
@@ -182,8 +189,8 @@ public class MerchantServiceImpl implements MerchantService {
 
     /**
      * 生成商户号
-     *
-     */
+     * @return 返回值
+    */
     private String generateMerchantNo() {
         return "M" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }

@@ -189,6 +189,8 @@ public class StaticProtocol extends AbstractProtocol {
     @Override
     /**
      * 认证用户编码
+     * @param appKeySecret 参数
+     * @return 返回值
     */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         log.warn("[StaticProtocol]静态协议不支持AppKey认证 - appId: {}",

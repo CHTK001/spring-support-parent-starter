@@ -397,6 +397,8 @@ public class Version implements Comparable<Version> {
     @Override
     /**
      * 判断相等
+     * @param o 对象
+     * @return 返回值
     */
     public boolean equals(Object o) {
         if (this == o) {
@@ -412,6 +414,7 @@ public class Version implements Comparable<Version> {
     @Override
     /**
      * 哈希编码
+     * @return 返回值
     */
     public int hashCode() {
         return Objects.hash(major, minor, patch, prerelease);
@@ -420,6 +423,7 @@ public class Version implements Comparable<Version> {
     @Override
     /**
      * 转为字符串
+     * @return 返回值
     */
     public String toString() {
         return original;

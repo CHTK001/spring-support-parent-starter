@@ -403,10 +403,19 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
 
     // ── 私有辅助 ──
 
+    /**
+     * form Headers
+     * @return 返回值
+    */
     private static Map<String, String> formHeaders() {
         return Map.of("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
     }
 
+    /**
+     * auth Headers
+     * @param accessToken 字符串
+     * @return 返回值
+    */
     private static Map<String, String> authHeaders(String accessToken) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", "Bearer " + (accessToken == null ? "" : accessToken.trim()));
@@ -416,6 +425,12 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         return headers;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -423,14 +438,21 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         return result;
     }
 
-    /** PKCE code_verifier：43~128 位 URL-safe 随机字节（Base64URL 无填充）。 */
+    /**
+     * code Verifier
+     * @return 返回值
+    */
     private static String codeVerifier() {
         byte[] raw = new byte[48];
         new SecureRandom().nextBytes(raw);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
     }
 
-    /** S256：SHA-256(verifier) 的 Base64URL 无填充。 */
+    /**
+     * s256Challenge
+     * @param verifier 字符串
+     * @return 返回值
+    */
     private static String s256Challenge(String verifier) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
@@ -441,6 +463,11 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         }
     }
 
+    /**
+     * form Encode
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String formEncode(String value) {
         try {
             return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
@@ -449,16 +476,34 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         }
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * data Of
+     * @param Map<String 参数
+     * @param payload 参数
+     * @return 返回值
+    */
     private static Map<String, Object> dataOf(Map<String, Object> payload) {
         return payload.get("data") instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -467,10 +512,20 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();
@@ -485,7 +540,11 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
         return null;
     }
 
-    /** 时间值归一为毫秒（数字 <1e12 视为秒；ISO 字符串按 Instant 解析）。 */
+    /**
+     * to Millis
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toMillis(Object value) {
         if (value instanceof Number number && number.doubleValue() > 0) {
             double v = number.doubleValue();

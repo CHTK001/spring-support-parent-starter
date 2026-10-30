@@ -39,10 +39,10 @@ public enum SyncHookNotify {
 
     /**
      * 构造通知时机。
-     *
-     * @param code  存储编码
+     * @param code 存储编码
      * @param label 中文说明
-     */
+     * @return 返回值
+    */
     SyncHookNotify(String code, String label) {
         this.code = code;
         this.label = label;

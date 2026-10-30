@@ -665,6 +665,11 @@ public class NginxManageServiceImpl implements NginxManageService {
         return new NginxCommandResultVO(false, "语法检查失败", r.stdout(), r.stderr());
     }
 
+    /**
+     * is Privilege Only Test Failure
+     * @param merged 字符串
+     * @return 返回值
+    */
     private boolean isPrivilegeOnlyTestFailure(String merged) {
         if (!SYNTAX_OK.matcher(merged).find()) {
             return false;
@@ -1827,6 +1832,10 @@ public class NginxManageServiceImpl implements NginxManageService {
         // 两边必须一致：否则会出现「在运行但取不到 PID」，
         // 界面拿不到主进程与运行时长，表现与「进程真没起」一样。
         String match = """
+                /**
+                 * match_conf
+                 * @return 返回值
+                */
                 match_conf() {
                   [ -n "$pat" ] || return 0
                   case "$args" in *"$pat"*) return 0 ;; esac

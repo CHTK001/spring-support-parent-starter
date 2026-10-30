@@ -113,7 +113,9 @@ public class MultipartFileUtils {
     /**
      * 递归删除文件或目录
      * @param file 文件
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
             File[] files = file.listFiles();

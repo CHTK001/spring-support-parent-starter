@@ -400,7 +400,9 @@ public class HostFileController {
 
     /**
      * 是否为文件系统根：Windows 盘符根（C:\、C:、C:/）或类 Unix 根（/）。
-     */
+     * @param path 字符串
+     * @return 返回值
+    */
     private static boolean isRootPath(String path) {
         if ("/".equals(path)) {
             return true;
@@ -410,7 +412,9 @@ public class HostFileController {
 
     /**
      * 取路径最后一段作为文件/目录名。
-     */
+     * @param path 字符串
+     * @return 返回值
+    */
     private static String baseName(String path) {
         if (path == null) {
             return "";

@@ -370,7 +370,11 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
 
     // ── 私有辅助 ──
 
-    /** 解析注册/续期响应（{success,data} 信封或裸响应，字段驼峰），归一为本模块凭据 Map。 */
+    /**
+     * parse Cline Token Response
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseClineTokenResponse(String response) {
         Map<String, Object> result = new LinkedHashMap<>();
         Map<String, Object> payload = parseJson(response);
@@ -406,6 +410,14 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return result;
     }
 
+    /**
+     * model Entry
+     * @param Map<? 参数
+     * @param entry 参数
+     * @param free 布尔值
+     * @param id 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> modelEntry(String id, Map<?, ?> entry, boolean free) {
         Map<String, Object> model = new LinkedHashMap<>();
         model.put("id", id);
@@ -417,6 +429,10 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return model;
     }
 
+    /**
+     * client Headers
+     * @return 返回值
+    */
     private static Map<String, String> clientHeaders() {
         Map<String, String> headers = new HashMap<>(CLIENT_HEADERS);
         headers.put("Content-Type", "application/json");
@@ -424,11 +440,19 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return headers;
     }
 
+    /**
+     * form Headers
+     * @return 返回值
+    */
     private static Map<String, String> formHeaders() {
         return Map.of("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
     }
 
-    /** 带 {@code workos:} 前缀令牌的鉴权头（前缀必须保留，剥掉即 401）。 */
+    /**
+     * auth Headers
+     * @param accessToken 字符串
+     * @return 返回值
+    */
     private static Map<String, String> authHeaders(String accessToken) {
         String token = accessToken == null ? "" : accessToken.trim();
         if (token.isEmpty()) {
@@ -441,6 +465,12 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return headers;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -448,18 +478,33 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return result;
     }
 
-    /** 从 payload 里读 expires_in（秒/毫秒），归一为毫秒上限。 */
+    /**
+     * poll Expiry Ms
+     * @param Map<String 参数
+     * @param payload 参数
+     * @return 返回值
+    */
     private static long pollExpiryMs(Map<String, Object> payload) {
         Long ms = toMillis(payload.get("expires_in"));
         return ms != null ? ms : DEVICE_EXPIRES_MS;
     }
 
+    /**
+     * poll Interval Ms
+     * @param Map<String 参数
+     * @param payload 参数
+     * @return 返回值
+    */
     private static long pollIntervalMs(Map<String, Object> payload) {
         Long ms = toMillis(payload.get("interval"));
         return ms != null ? ms : POLL_INTERVAL_MS;
     }
 
-    /** 时间值归一为毫秒（数字 <1e12 视为秒；ISO 字符串按 Date.parse）。 */
+    /**
+     * to Millis
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toMillis(Object value) {
         if (value instanceof Number number && number.doubleValue() > 0) {
             double v = number.doubleValue();
@@ -472,6 +517,11 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * 编码
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
@@ -495,6 +545,14 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return lower.contains("authorization_pending") || lower.contains("slow_down");
     }
 
+    /**
+     * copy If Present
+     * @param Map<String 参数
+     * @param from 参数
+     * @param key 字符串
+     * @param to 参数
+     * @return 返回值
+    */
     private static void copyIfPresent(Map<String, Object> from, Map<String, Object> to, String key) {
         Object value = from.get(key);
         if (value != null) {
@@ -502,18 +560,34 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
     /** 读 {success,data} 信封的 data；无信封时返回 null（调用方回退顶层）。 */
-    @SuppressWarnings("unchecked")
+    /**
+     * data Of
+     * @param Map<String 参数
+     * @param payload 参数
+     * @return 返回值
+    */
     private static Map<String, Object> dataOf(Map<String, Object> payload) {
         return payload.get("data") instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
     }
 
-    /** 读字符串字段（容忍缺失/非字符串），返回可选值。 */
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -522,10 +596,20 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();

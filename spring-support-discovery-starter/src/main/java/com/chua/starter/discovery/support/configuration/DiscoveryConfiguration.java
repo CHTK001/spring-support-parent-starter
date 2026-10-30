@@ -59,6 +59,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     @Override
     /**
      * 设置环境
+     * @param environment 参数
+     * @return 返回值
     */
     public void setEnvironment(Environment environment) {
       this.environment = environment;
@@ -67,6 +69,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     @Override
     /**
      * Post处理Beandefinitionregistry
+     * @param registry 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
@@ -252,6 +257,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         @Override
         /**
          * 获取对象
+         * @return 返回值
+         * @throws Exception 异常
         */
         public ServiceDiscovery getObject() throws Exception {
             return serviceDiscovery;
@@ -265,6 +272,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
         /**
          * 开始
+         * @return 返回值
+         * @throws Exception 异常
         */
         public void start() throws Exception {
             serviceDiscovery.start();
@@ -275,6 +284,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                         @Override
                         /**
                          * 监听
+                         * @param discovery 参数
+                         * @param event 参数
+                         * @param s 字符串
+                         * @return 返回值
                         */
                         public void listen(String s, Discovery discovery, Event event) {
                             DiscoveryConfiguration.log.info("[Discovery] 服务变更: {} -> {}", highlight(discovery.getUriSpec()), event);
@@ -287,6 +300,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         @Override
         /**
          * 关闭
+         * @return 返回值
+         * @throws Exception 异常
         */
         public void close() throws Exception {
             serviceDiscovery.close();

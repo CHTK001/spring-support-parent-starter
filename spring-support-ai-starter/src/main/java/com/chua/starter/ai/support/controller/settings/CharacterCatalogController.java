@@ -267,7 +267,9 @@ public class CharacterCatalogController {
 
     /**
      * 解析 frontmatter 中的内联列表（支持 [a, b] 与带引号元素）。
-     */
+     * @param raw 字符串
+     * @return 返回值
+    */
     private List<String> splitInlineList(String raw) {
         List<String> out = new ArrayList<>();
         if (raw == null || raw.isBlank()) {
@@ -294,7 +296,8 @@ public class CharacterCatalogController {
 
     /**
      * 内置技能 id → 友好名称映射。
-     */
+     * @return 返回值
+    */
     private Map<String, String> builtinSkillNameMap() {
         Map<String, String> map = new HashMap<>();
         try {
@@ -311,6 +314,11 @@ public class CharacterCatalogController {
         return map;
     }
 
+    /**
+     * parse Frontmatter
+     * @param frontmatter 字符串
+     * @return 返回值
+    */
     private Map<String, String> parseFrontmatter(String frontmatter) {
         Map<String, String> map = new LinkedHashMap<>();
         for (String line : frontmatter.split("\n")) {

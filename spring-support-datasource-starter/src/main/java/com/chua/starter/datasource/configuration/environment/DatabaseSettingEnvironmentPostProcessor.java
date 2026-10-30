@@ -130,6 +130,9 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     @Override
     /**
      * Post处理环境
+     * @param application 参数
+     * @param environment 参数
+     * @return 返回值
     */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         if (!Boolean.parseBoolean(environment.getProperty(ENABLED_KEY, "true"))) {
@@ -198,10 +201,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 打开Connection
-     *
      * @param connectionInfo connection信息
      * @return 打开connection的结果
-     */
+     * @throws Exception 异常
+    */
     private Connection openConnection(ConnectionInfo connectionInfo) throws Exception {
         if (StringUtils.hasText(connectionInfo.driverClassName())) {
             ReflectUtils.forName(connectionInfo.driverClassName());
@@ -217,9 +220,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * Ensure分组Table
-     *
      * @param connection connection
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void ensureGroupTable(Connection connection) throws SQLException {
         if (tableExists(connection, GROUP_TABLE)) {
             return;
@@ -236,9 +240,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * ensuresettingtable
-     *
      * @param connection connection
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void ensureSettingTable(Connection connection) throws SQLException {
         if (tableExists(connection, SETTING_TABLE)) {
             addMissingSettingColumns(connection);
@@ -273,11 +278,11 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 读取表的列名（小写），按 tableExists 同样的大小写候选逐一尝试
-     *
      * @param connection connection
      * @param tableName table名称
      * @return 列名列表（小写）
-     */
+     * @throws SQLException 异常
+    */
     private List<String> columnNames(Connection connection, String tableName) throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
         String catalog = connection.getCatalog();
@@ -298,11 +303,11 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * Table是否存在
-     *
      * @param connection connection
      * @param tableName table名称
      * @return tableExists的结果
-     */
+     * @throws SQLException 异常
+    */
     private boolean tableExists(Connection connection, String tableName) throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
         String catalog = connection.getCatalog();
@@ -326,9 +331,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 参见默认群体
-     *
      * @param connection connection
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void seedDefaultGroups(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting_group (
@@ -386,9 +392,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 参见默认settings
-     *
      * @param connection connection
-     */
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private void seedDefaultSettings(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting (
@@ -459,10 +466,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 加载startupsettings
-     *
      * @param connection connection
      * @return 加载startupsettings的结果
-     */
+     * @throws SQLException 异常
+    */
     private Map<String, Object> loadStartupSettings(Connection connection) throws SQLException {
         String sql = """
                 SELECT sys_setting_name, sys_setting_value
@@ -523,10 +530,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 创建分组tablesql
-     *
      * @param connection connection
      * @return 创建群体tablesql的结果
-     */
+     * @throws SQLException 异常
+    */
     private String createGroupTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_group_id");
         return """
@@ -587,10 +594,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * 创建settingtablesql
-     *
      * @param connection connection
      * @return 创建settingtablesql的结果
-     */
+     * @throws SQLException 异常
+    */
     private String createSettingTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_id");
         return """
@@ -626,11 +633,11 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
 
     /**
      * autoincrementcolumn
-     *
-     * @param connection connection
      * @param columnName column名称
+     * @param connection connection
      * @return autoIncrementColumn的结果
-     */
+     * @throws SQLException 异常
+    */
     private String autoIncrementColumn(Connection connection, String columnName) throws SQLException {
         String database = connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
         if (database.contains("sqlite")) {
@@ -645,6 +652,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return ConfigDataEnvironmentPostProcessor.ORDER + 110;

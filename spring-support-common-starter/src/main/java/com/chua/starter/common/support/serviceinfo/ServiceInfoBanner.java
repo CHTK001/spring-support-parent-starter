@@ -348,7 +348,8 @@ final class ServiceInfoBanner {
         /**
          * 文本row。
          * @param line 线
-         */
+         * @return 返回值
+        */
         TextRow(Line line) {
             this.line = line;
         }
@@ -370,7 +371,8 @@ final class ServiceInfoBanner {
         /**
          * dividerrow。
          * @param label 标签
-         */
+         * @return 返回值
+        */
         DividerRow(String label) {
             this.label = label;
         }

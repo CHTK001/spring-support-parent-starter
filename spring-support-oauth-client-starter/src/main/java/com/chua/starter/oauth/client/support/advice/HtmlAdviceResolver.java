@@ -35,6 +35,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
     @Override
     /**
      * 类型
+     * @return 返回值
     */
     public String type() {
         return MediaType.TEXT_HTML_VALUE;
@@ -43,6 +44,11 @@ public class HtmlAdviceResolver implements AdviceResolver {
     @Override
     /**
      * 解析
+     * @param message 字符串
+     * @param response 参数
+     * @param status 整数
+     * @return 返回值
+     * @throws IOException 异常
     */
     public Object resolve(HttpServletResponse response, Integer status, String message) throws IOException {
         return null;
@@ -51,6 +57,7 @@ public class HtmlAdviceResolver implements AdviceResolver {
     @Override
     /**
      * 是否HTML
+     * @return 返回值
     */
     public boolean isHtml() {
         return true;

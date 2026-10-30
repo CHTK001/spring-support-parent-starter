@@ -52,7 +52,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     @Override
     /**
      * 是否支持该通道
-     */
+     * @param channelSubType 字符串
+     * @param channelType 字符串
+     * @return 返回值
+    */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && "JSAPI".equalsIgnoreCase(channelSubType);
@@ -61,7 +64,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     @Override
     /**
      * 发起支付
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (!StringUtils.hasText(request.payerOpenId())) {
             throw new PaymentException("微信 JSAPI 支付必须提供 payerOpenId");
@@ -77,7 +83,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     @Override
     /**
      * 查询支付结果
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryJsapiOrder(buildProperties(channel), orderNo);
 
@@ -90,7 +99,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     @Override
     /**
      * 关闭订单
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeJsapiOrder(buildProperties(channel), orderNo);
     }
@@ -98,7 +110,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     @Override
     /**
      * 申请退款
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         TencentWechatRefundResponse response = gateway(providerSpi(channel, null)).refund(buildProperties(channel), buildRefundRequest(channel, request));
 
@@ -111,7 +126,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     @Override
     /**
      * 查询退款结果
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         TencentWechatRefundResponse response = gateway(providerSpi(channel, null)).queryRefund(buildProperties(channel), buildRefundRequest(channel, request));
 

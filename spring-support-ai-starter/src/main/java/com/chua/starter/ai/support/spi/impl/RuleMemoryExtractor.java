@@ -165,11 +165,11 @@ public class RuleMemoryExtractor implements MemoryExtractor {
 
         /**
          * 构造规则并预编译匹配式。
-         *
-         * @param kind       记忆种类
          * @param importance 默认重要度
-         * @param regex      匹配式文本
-         */
+         * @param kind 记忆种类
+         * @param regex 匹配式文本
+         * @return 返回值
+        */
         Rule(String kind, double importance, String regex) {
             this(kind, importance, Pattern.compile(regex));
         }

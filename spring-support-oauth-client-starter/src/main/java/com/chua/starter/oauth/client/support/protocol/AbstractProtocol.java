@@ -371,6 +371,10 @@ public abstract class AbstractProtocol implements Protocol {
     @Override
     /**
      * Approve
+     * @param cookies 参数
+     * @param subProtocol 字符串
+     * @param token 字符串
+     * @return 返回值
     */
     public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
         // 已吊销令牌的判定必须【先于】认证缓存读取：
@@ -447,6 +451,11 @@ public abstract class AbstractProtocol implements Protocol {
     @Override
     /**
      * Upgrade
+     * @param cookies 参数
+     * @param refreshToken 字符串
+     * @param token 字符串
+     * @param upgradeType 参数
+     * @return 返回值
     */
     public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");

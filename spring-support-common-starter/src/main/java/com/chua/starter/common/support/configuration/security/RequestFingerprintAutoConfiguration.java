@@ -537,10 +537,11 @@ public class RequestFingerprintAutoConfiguration {
         private final byte[] cachedBody;
         /**
          * 构造
-         *
-         * @param request 原请求
          * @param maxBytes 最大读取字节数（<=0 表示不限制）
-         */
+         * @param request 原请求
+         * @return 返回值
+         * @throws java.io.IOException 异常
+        */
         CachedBodyHttpServletRequest(HttpServletRequest request, long maxBytes) throws java.io.IOException {
             super(request);
             java.io.InputStream is = request.getInputStream();
@@ -561,6 +562,7 @@ public class RequestFingerprintAutoConfiguration {
         @Override
         /**
          * 获取输入流
+         * @return 返回值
         */
         public ServletInputStream getInputStream() {
             final java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(cachedBody);
@@ -574,6 +576,7 @@ public class RequestFingerprintAutoConfiguration {
         @Override
         /**
          * 获取Reader
+         * @return 返回值
         */
         public java.io.BufferedReader getReader() {
             return new java.io.BufferedReader(new java.io.InputStreamReader(getInputStream(), StandardCharsets.UTF_8));

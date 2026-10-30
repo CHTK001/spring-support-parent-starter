@@ -518,6 +518,12 @@ public class SyncTaskRunLogBuffer {
             this.runTime = LocalDateTime.now().format(RUN_TIME);
         }
 
+        /**
+         * 添加
+         * @param level 字符串
+         * @param message 字符串
+         * @return 返回值
+        */
         private void add(String level, String message) {
             synchronized (this) {
                 if (lines.size() < MAX_LINES_PER_RUN) {
@@ -532,6 +538,12 @@ public class SyncTaskRunLogBuffer {
             }
         }
 
+        /**
+         * snapshot
+         * @param costMs 长整数
+         * @param status 字符串
+         * @return 返回值
+        */
         private SyncTaskRunLogVO snapshot(String status, Long costMs) {
             synchronized (this) {
                 return new SyncTaskRunLogVO(trigger, status, runTime, costMs, List.copyOf(lines));

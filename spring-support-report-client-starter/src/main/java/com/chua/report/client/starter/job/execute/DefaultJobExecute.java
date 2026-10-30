@@ -31,6 +31,9 @@ public class DefaultJobExecute implements JobExecute {
     @Override
     /**
      * 运行
+     * @param request 参数
+     * @param triggerParam 参数
+     * @return 返回值
     */
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
         log.debug("开始执行任务, 任务ID: {}, 处理器: {}", triggerParam.jobId(), triggerParam.executorHandler());

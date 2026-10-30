@@ -208,6 +208,14 @@ public class ProjectTaskService {
         volatile long endTime;
         final List<String> logs = Collections.synchronizedList(new ArrayList<>());
 
+        /**
+         * Task State
+         * @param operation 字符串
+         * @param projectId 长整数
+         * @param serviceNameWrite 参数
+         * @param taskId 字符串
+         * @return 返回值
+        */
         TaskState(String taskId, Long projectId, String operation, ServiceNameWrite serviceNameWrite) {
             this.taskId = taskId;
             this.projectId = projectId;
@@ -231,6 +239,13 @@ public class ProjectTaskService {
         private final SshClients.Handle sshHandle;
         private final Long hostId;
 
+        /**
+         * Log Session
+         * @param hostId 长整数
+         * @param sshHandle 参数
+         * @param streamHandle 参数
+         * @return 返回值
+        */
         LogSession(AutoCloseable streamHandle, SshClients.Handle sshHandle, Long hostId) {
             this.streamHandle = streamHandle;
             this.sshHandle = sshHandle;
@@ -302,7 +317,12 @@ public class ProjectTaskService {
 
     /**
      * 后台执行任务
-     */
+     * @param finishStatus 字符串
+     * @param hostId 长整数
+     * @param state 参数
+     * @param steps 参数
+     * @return 返回值
+    */
     private void run(Long hostId, List<ProjectStep> steps, String finishStatus, TaskState state) {
         SshClients.Handle handle = null;
         try {
@@ -566,21 +586,33 @@ public class ProjectTaskService {
 
     /**
      * 推送一行实时日志
-     */
+     * @param line 字符串
+     * @param projectId 长整数
+     * @param sessionId 字符串
+     * @return 返回值
+    */
     private void pushLogLine(String sessionId, Long projectId, String line) {
         pushService.pushLog(new LogPushVO(sessionId, projectId, "LINE", line == null ? "" : line, null), sessionId);
     }
 
     /**
      * 推送日志会话控制消息（连接/错误）
-     */
+     * @param message 字符串
+     * @param projectId 长整数
+     * @param sessionId 字符串
+     * @param status 字符串
+     * @return 返回值
+    */
     private void pushLogControl(String sessionId, Long projectId, String status, String message) {
         pushService.pushLog(new LogPushVO(sessionId, projectId, status, null, message), sessionId);
     }
 
     /**
      * 构造实时日志命令
-     */
+     * @param logPath 字符串
+     * @param osType 字符串
+     * @return 返回值
+    */
     private String buildTailCommand(String osType, String logPath) {
         String path = logPath == null ? "" : logPath.trim();
         if ("WINDOWS".equalsIgnoreCase(osType)) {
@@ -651,7 +683,10 @@ public class ProjectTaskService {
 
     /**
      * 追加日志到缓冲（限制上限）
-     */
+     * @param line 字符串
+     * @param state 参数
+     * @return 返回值
+    */
     private void appendLog(TaskState state, String line) {
         synchronized (state.logs) {
             state.logs.add(line == null ? "" : line);
@@ -663,7 +698,10 @@ public class ProjectTaskService {
 
     /**
      * 输出一行「编排横幅」日志：落缓冲 + 推 LOG（不计入步骤 stdout，不参与 PID 解析）
-     */
+     * @param line 字符串
+     * @param state 参数
+     * @return 返回值
+    */
     private void logBanner(TaskState state, String line) {
         appendLog(state, line);
         emit(state, PHASE_LOG, null, line, null, null);
@@ -671,7 +709,9 @@ public class ProjectTaskService {
 
     /**
      * 将多行命令压缩为单行预览（折叠空白、限制长度），便于终端展示正在执行的命令
-     */
+     * @param cmd 字符串
+     * @return 返回值
+    */
     private String compactCommand(String cmd) {
         String one = cmd == null ? "" : cmd.trim().replaceAll("\\s+", " ");
         if (one.length() > 200) {
@@ -682,7 +722,9 @@ public class ProjectTaskService {
 
     /**
      * 时长格式化：<60s 显示 Ns；<60m 显示 MmSs；否则 HhMm
-     */
+     * @param ms 长整数
+     * @return 返回值
+    */
     private String fmtDuration(long ms) {
         long s = Math.max(0, ms / 1000);
         if (s < 60) {
@@ -700,14 +742,20 @@ public class ProjectTaskService {
 
     /**
      * 按权重计算进度百分比
-     */
+     * @param accWeight 整数
+     * @param totalWeight 整数
+     * @return 返回值
+    */
     private int percent(int accWeight, int totalWeight) {
         return Math.max(0, Math.min(100, (int) Math.round(accWeight * 100.0 / totalWeight)));
     }
 
     /**
      * 更新项目状态
-     */
+     * @param projectId 长整数
+     * @param status 字符串
+     * @return 返回值
+    */
     private void updateProjectStatus(Long projectId, String status) {
         MsServerProject project = projectMapper.selectById(projectId);
         if (project == null) {

@@ -587,17 +587,10 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
     }
 
     /**
-     * 补阅卷任务的学生姓名（列表展示「学号 + 姓名」）。
-     *
-     * <p>姓名不在 {@code edu_marking_task} 上，来源两级：
-     * ① 答题卡 content 的 {@code recognizedStudent.name}——任意卷扫描时
-     * 模型/正则从卷头「姓名」栏抽取，任务上只存了学号（或匿名标记）；
-     * ② 按学号查 {@code edu_student.student_name}（题库/后台建档的学生）。
-     * 任意卷的学号常是卷面手写串，② 查不到属正常，此时只显示学号。</p>
-     *
-     * <p>同页任务按学号合并查一次学生表，避免 N+1；答题卡按 id 逐个取
-     * （一页 10~20 条，且只有有答题卡的任务才查）。</p>
-     */
+     * 补阅卷任务的学生姓名（列表展示「学号 + 姓名」）。 <p>姓名不在 {@code edu_marking_task} 上，来源两级： ① 答题卡 content 的 {@code recognizedStudent.name}——任意卷扫描时 模型/正则从卷头「姓名」栏抽取，任务上只存了学号（或匿名标记）； ② 按学号查 {@code edu_student.student_name}（题库/后台建档的学生）。 任意卷的学号常是卷面手写串，② 查不到属正常，此时只显示学号。</p> <p>同页任务按学号合并查一次学生表，避免 N+1；答题卡按 id 逐个取 （一页 10~20 条，且只有有答题卡的任务才查）。</p>
+     * @param tasks 参数
+     * @return 返回值
+    */
     private void fillStudentNames(List<EduMarkingTask> tasks) {
         if (tasks == null || tasks.isEmpty()) {
             return;
@@ -632,11 +625,10 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
     }
 
     /**
-     * 读答题卡 content 里卷面识别的姓名（{@code recognizedStudent.name}）。
-     *
-     * <p>与阅卷详情接口同源（{@code getMarkingStructure} 的
-     * {@code recognizedStudent}），此处只取姓名做列表展示。</p>
-     */
+     * 读答题卡 content 里卷面识别的姓名（{@code recognizedStudent.name}）。 <p>与阅卷详情接口同源（{@code getMarkingStructure} 的 {@code recognizedStudent}），此处只取姓名做列表展示。</p>
+     * @param answerSheetId 长整数
+     * @return 返回值
+    */
     private String recognizedName(Long answerSheetId) {
         EduAnswerSheet sheet = answerSheetMapper.selectById(answerSheetId);
         if (sheet == null || !StringUtils.hasText(sheet.getAnswerSheetContent())) {

@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.ai.support.entity.SysAiPromptForm;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 
 /**
  * 提示词形态定义映射器。
@@ -29,11 +27,6 @@ public interface SysAiPromptFormMapper extends BaseMapper<SysAiPromptForm> {
      * @param formKey 形态标识
      * @return 形态行；不存在返回 null
      */
-    @Select("SELECT sys_ai_prompt_form_id AS id, user_id AS userId, form_key AS formKey, "
-            + "form_name AS formName, form_icon AS formIcon, form_description AS formDescription, "
-            + "sys_ai_prompt_form_builtin AS builtin, form_sort AS sort, "
-            + "sys_ai_prompt_form_status AS status, sys_ai_prompt_form_delete AS deleted "
-            + "FROM sys_ai_prompt_form WHERE user_id = #{userId} AND form_key = #{formKey} LIMIT 1")
     SysAiPromptForm selectIncludingDeleted(@Param("userId") String userId, @Param("formKey") String formKey);
 
     /**
@@ -49,10 +42,6 @@ public interface SysAiPromptFormMapper extends BaseMapper<SysAiPromptForm> {
      * @param sort        排序
      * @return 影响行数
      */
-    @Update("UPDATE sys_ai_prompt_form SET form_name = #{name}, form_icon = #{icon}, "
-            + "form_description = #{description}, form_sort = #{sort}, "
-            + "sys_ai_prompt_form_status = 1, sys_ai_prompt_form_delete = 0 "
-            + "WHERE sys_ai_prompt_form_id = #{id}")
     int revive(@Param("id") Integer id, @Param("name") String name, @Param("icon") String icon,
-               @Param("description") String description, @Param("sort") Integer sort);
+                @Param("description") String description, @Param("sort") Integer sort);
 }

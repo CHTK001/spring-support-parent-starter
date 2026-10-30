@@ -24,6 +24,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     @Override
     /**
      * 获取数据源类型
+     * @return 返回值
     */
     public Class<BasicDataSource> getDataSourceType() {
         return BasicDataSource.class;
@@ -32,6 +33,8 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     @Override
     /**
      * 获取属性
+     * @param dataSource 参数
+     * @return 返回值
     */
     public Map<String, Object> getProperties(BasicDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
@@ -70,6 +73,10 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     @Override
     /**
      * 设置属性
+     * @param Map<String 参数
+     * @param dataSource 参数
+     * @param properties 参数
+     * @return 返回值
     */
     public void setProperties(BasicDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
@@ -78,6 +85,10 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     @Override
     /**
      * 设置财产
+     * @param dataSource 参数
+     * @param name 字符串
+     * @param value 对象
+     * @return 返回值
     */
     public void setProperty(BasicDataSource dataSource, String name, Object value) {
         if (value == null) {
@@ -122,6 +133,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     @Override
     /**
      * 获取财产名称mapping
+     * @return 返回值
     */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
@@ -130,6 +142,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return 20;

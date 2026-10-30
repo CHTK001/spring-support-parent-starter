@@ -71,6 +71,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 保存
+     * @param clientId 字符串
+     * @param session 参数
+     * @return 返回值
     */
     public SocketSession save(String clientId, SocketSession session) {
         if (session instanceof SocketIOSession ioSession) {
@@ -82,6 +85,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 移除
+     * @param clientId 字符串
+     * @param session 参数
+     * @return 返回值
     */
     public void remove(String clientId, SocketSession session) {
         List<SocketIOSession> sessions = sessionCache.get(clientId);
@@ -97,6 +103,8 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 获取会话
+     * @param sessionId 字符串
+     * @return 返回值
     */
     public SocketSession getSession(String sessionId) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
@@ -112,6 +120,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 发送
+     * @param event 字符串
+     * @param msg 字符串
+     * @param sessionId 字符串
+     * @return 返回值
     */
     public void send(String sessionId, String event, String msg) {
         SocketSession session = getSession(sessionId);
@@ -123,6 +135,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * Broadcast
+     * @param event 字符串
+     * @param msg 字符串
+     * @return 返回值
     */
     public void broadcast(String event, String msg) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
@@ -145,6 +160,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 发送转为用户
+     * @param event 字符串
+     * @param msg 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public void sendToUser(String userId, String event, String msg) {
         for (List<SocketIOSession> sessions : sessionCache.values()) {
@@ -165,6 +184,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 获取online会话
+     * @return 返回值
     */
     public List<SocketSession> getOnlineSessions() {
         List<SocketSession> result = new java.util.ArrayList<>();
@@ -177,6 +197,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 获取online会话
+     * @param roomId 字符串
+     * @param type 字符串
+     * @return 返回值
     */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         List<SocketIOSession> sessions = sessionCache.get(type);
@@ -202,6 +225,8 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 获取online用户
+     * @param type 字符串
+     * @return 返回值
     */
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new java.util.ArrayList<>();
@@ -224,6 +249,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
     @Override
     /**
      * 获取Online计算数量
+     * @return 返回值
     */
     public int getOnlineCount() {
         int count = 0;

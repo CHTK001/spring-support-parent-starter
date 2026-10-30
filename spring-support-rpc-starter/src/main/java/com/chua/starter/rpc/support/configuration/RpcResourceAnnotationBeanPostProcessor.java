@@ -77,6 +77,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     @Override
     /**
      * Post处理Bean工厂
+     * @param beanFactory 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
@@ -121,6 +124,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     @Override
     /**
      * Post处理合并Beandefinition
+     * @param beanDefinition 参数
+     * @param beanName 字符串
+     * @param beanType 参数
+     * @return 返回值
     */
     public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
         if(!rpcProperties.isEnable()) {
@@ -148,6 +155,11 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     @Override
     /**
      * Post处理属性
+     * @param bean 对象
+     * @param beanName 字符串
+     * @param pvs 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
         if(!rpcProperties.isEnable()) {
@@ -180,6 +192,13 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     @Override
     /**
      * 执行获取injectedBean
+     * @param attributes 参数
+     * @param bean 对象
+     * @param beanName 字符串
+     * @param injectedElement 参数
+     * @param injectedType 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType, AnnotatedInjectElement injectedElement) throws Exception {
         if(!rpcProperties.isEnable()) {
@@ -200,9 +219,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     /**
      * prepareinjection
-     *
      * @param metadata metadata
-     */
+     * @return 返回值
+     * @throws BeansException 异常
+    */
     protected void prepareInjection(AnnotatedInjectionMetadata metadata) throws BeansException {
         try {
             for (AnnotatedFieldElement fieldElement : metadata.getFieldElements()) {
@@ -242,13 +262,14 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
     /**
      * 注册引用Bean
-     *
-     * @param propertyName 财产名称
-     * @param injectedType injected类型
+     * @param Map<String 参数
      * @param attributes attributes
+     * @param injectedType injected类型
      * @param member member
+     * @param propertyName 财产名称
      * @return 注册引用Bean的结果
-     */
+     * @throws BeansException 异常
+    */
     public String registerReferenceBean(String propertyName, Class<?> injectedType, Map<String, Object> attributes, Member member) throws BeansException {
 
         boolean renameable = true;
@@ -321,6 +342,8 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     @Override
     /**
      * 设置环境
+     * @param environment 参数
+     * @return 返回值
     */
     public void setEnvironment(Environment environment) {
         super.setEnvironment(environment);

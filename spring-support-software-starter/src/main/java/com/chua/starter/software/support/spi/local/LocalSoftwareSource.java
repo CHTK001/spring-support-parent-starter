@@ -41,6 +41,8 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * 支持
+     * @param source 参数
+     * @return 返回值
     */
     public boolean support(SoftSource source) {
         return source != null && source.getSourceType() == 3;
@@ -49,6 +51,8 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * 获取software列表
+     * @param source 参数
+     * @return 返回值
     */
     public List<SoftSoftware> fetchSoftwareList(SoftSource source) {
         if (!support(source)) {
@@ -65,6 +69,9 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * 获取softwaredetail
+     * @param softwareCode 字符串
+     * @param source 参数
+     * @return 返回值
     */
     public SoftSoftware fetchSoftwareDetail(SoftSource source, String softwareCode) {
         // 本地软件源暂不支持通过编码获取详情（可后续实现）
@@ -74,6 +81,10 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * Install
+     * @param installPath 字符串
+     * @param software 参数
+     * @param source 参数
+     * @return 返回值
     */
     public SoftwareSourceResult install(SoftSource source, SoftSoftware software, String installPath) {
         // 本地软件已经安装，视为成功
@@ -83,6 +94,10 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * Uninstall
+     * @param installPath 字符串
+     * @param software 参数
+     * @param source 参数
+     * @return 返回值
     */
     public SoftwareSourceResult uninstall(SoftSource source, SoftSoftware software, String installPath) {
         // 本地软件卸实际指从管理列表移除，实际卸载交由系统处理
@@ -92,6 +107,11 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * 更新
+     * @param installPath 字符串
+     * @param software 参数
+     * @param source 参数
+     * @param targetVersion 字符串
+     * @return 返回值
     */
     public SoftwareSourceResult update(SoftSource source, SoftSoftware software, String targetVersion, String installPath) {
         // 本地软件版本更新由系统负责，这里仅标记为最新
@@ -102,6 +122,9 @@ public class LocalSoftwareSource implements SoftwareSource {
     @Override
     /**
      * 获取latest版本
+     * @param softwareCode 字符串
+     * @param source 参数
+     * @return 返回值
     */
     public String getLatestVersion(SoftSource source, String softwareCode) {
         // 返回当前版本作为最新版本

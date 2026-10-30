@@ -418,10 +418,10 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler implements Su
 
     /**
      * 解析 WS 握手 URL 的查询参数
-     *
      * @param wsSession WS 会话
      * @return 参数表
-     */
+     * @throws IOException 异常
+    */
     private Map<String, String> parseQuery(WebSocketSession wsSession) throws IOException {
         URI uri = wsSession.getUri();
         Map<String, String> params = new java.util.HashMap<>();

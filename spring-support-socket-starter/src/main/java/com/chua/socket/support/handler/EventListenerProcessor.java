@@ -153,10 +153,11 @@ public class EventListenerProcessor {
 
         /**
          * 调用
-         *
-         * @param session 会话
          * @param data 数据
-         */
+         * @param session 会话
+         * @return 返回值
+         * @throws Exception 异常
+        */
         public void invoke(SocketSession session, Object data) throws Exception {
             Class<?>[] paramTypes = method.getParameterTypes();
             

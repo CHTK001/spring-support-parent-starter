@@ -241,6 +241,8 @@ public class MultiDataSource implements DataSource {
             @Override
             /**
              * 创建
+             * @return 返回值
+             * @throws Exception 异常
             */
             public Connection create() throws Exception {
                 try {
@@ -260,6 +262,8 @@ public class MultiDataSource implements DataSource {
             @Override
             /**
              * Wrap
+             * @param obj 参数
+             * @return 返回值
             */
             public PooledObject<Connection> wrap(Connection obj) {
                 return new DefaultPooledObject<>(obj);
@@ -271,6 +275,8 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 获取Connection
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public Connection getConnection() throws SQLException {
         try {
@@ -293,6 +299,10 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 获取Connection
+     * @param password 设置认证密码
+     * @param username 设置用户名
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public Connection getConnection(String username, String password) throws SQLException {
         return getConnection();
@@ -309,6 +319,9 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 是否包装器for
+     * @param iface 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
@@ -317,6 +330,8 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 获取记录日志Writer
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public PrintWriter getLogWriter() throws SQLException {
         return printWriter;
@@ -325,6 +340,9 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 设置记录日志Writer
+     * @param out 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setLogWriter(PrintWriter out) throws SQLException {
         this.printWriter = out;
@@ -333,6 +351,9 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 设置login超时
+     * @param seconds 整数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setLoginTimeout(int seconds) throws SQLException {
         this.seconds = seconds;
@@ -341,6 +362,8 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 获取login超时
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public int getLoginTimeout() throws SQLException {
         return seconds;
@@ -349,6 +372,8 @@ public class MultiDataSource implements DataSource {
     @Override
     /**
      * 获取父日志记录器
+     * @return 返回值
+     * @throws SQLFeatureNotSupportedException 异常
     */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
  // 数据源接口要求返回Java.util.日志.日志记录器，但实际使用SLF4J

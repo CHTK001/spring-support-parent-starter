@@ -22,9 +22,9 @@ public class PaymentAccountPrincipalResolver {
 
     /**
      * 解析当前登录用户
-     *
      * @param request 请求
-     */
+     * @return 返回值
+    */
     public UserResume resolve(HttpServletRequest request) {
         if (request instanceof OAuthHttpServletRequestWrapper wrapper && wrapper.isAuthenticated()) {
             OAuthPrincipal principal = wrapper.getOAuthPrincipal();

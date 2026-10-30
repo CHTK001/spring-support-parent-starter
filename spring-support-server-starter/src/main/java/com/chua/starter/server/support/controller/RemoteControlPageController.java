@@ -142,6 +142,11 @@ public class RemoteControlPageController {
                         return;
                       }
                       keys.forEach((k) => client.sendKeyEvent(1, k.keysym));
+                      /**
+                       * set Timeout
+                       * @param ( 参数
+                       * @return 返回值
+                      */
                       setTimeout(() => {
                         for (let i = keys.length - 1; i >= 0; i--) client.sendKeyEvent(0, keys[i].keysym);
                       }, 60);

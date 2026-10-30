@@ -236,7 +236,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
 
     /**
      * v3 度量字段：从 information_schema.columns 取列定义。
-     */
+     * @param database 字符串
+     * @param measurement 字符串
+     * @param target 参数
+     * @return 返回值
+    */
     private List<InfluxdbFieldVO> v3MeasurementFields(InfluxdbClient.Target target, String database, String measurement) {
         String sql = "SELECT column_name, data_type FROM information_schema.columns"
                 + " WHERE table_name = '" + measurement.replace("'", "''") + "'";
@@ -256,7 +260,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
 
     /**
      * v2 Flux 度量字段：用 schema.tagKeys / schema.fieldKeys 过滤 _measurement。
-     */
+     * @param bucket 字符串
+     * @param measurement 字符串
+     * @param target 参数
+     * @return 返回值
+    */
     private List<InfluxdbFieldVO> fluxMeasurementFields(InfluxdbClient.Target target, String bucket, String measurement) {
         List<InfluxdbFieldVO> result = new ArrayList<>();
         Set<String> seen = new HashSet<>();
@@ -283,7 +291,11 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
 
     /**
      * v1 InfluxQL 度量字段：SHOW COLUMNS FROM measurement。
-     */
+     * @param database 字符串
+     * @param measurement 字符串
+     * @param target 参数
+     * @return 返回值
+    */
     private List<InfluxdbFieldVO> influxqlMeasurementFields(InfluxdbClient.Target target, String database, String measurement) {
         List<JsonObject> rows = client.v1Query(target, database, "SHOW COLUMNS FROM " + sqlIdentifier(measurement));
         List<InfluxdbFieldVO> result = new ArrayList<>();

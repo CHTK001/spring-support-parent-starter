@@ -213,10 +213,11 @@ public class DatabaseMappingLoader implements InitializingBean {
 
         /**
          * database数据同步字段mapping。
+         * @param converter 转换器
          * @param sourceField 源字段
          * @param targetField Target字段
-         * @param converter 转换器
-         */
+         * @return 返回值
+        */
         DatabaseDataSyncFieldMapping(String sourceField, String targetField, String converter) {
             this.sourceField = sourceField;
             this.targetField = targetField;
@@ -226,6 +227,7 @@ public class DatabaseMappingLoader implements InitializingBean {
         @Override
         /**
          * 源字段
+         * @return 返回值
         */
         public String sourceField() {
             return sourceField;
@@ -234,6 +236,7 @@ public class DatabaseMappingLoader implements InitializingBean {
         @Override
         /**
          * Target字段
+         * @return 返回值
         */
         public String targetField() {
             return targetField;
@@ -242,6 +245,7 @@ public class DatabaseMappingLoader implements InitializingBean {
         @Override
         /**
          * 转换器
+         * @return 返回值
         */
         public String converter() {
             return converter;

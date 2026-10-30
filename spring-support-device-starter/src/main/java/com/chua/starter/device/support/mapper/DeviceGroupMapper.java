@@ -4,16 +4,25 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.device.support.entity.DeviceGroup;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
 @Mapper
 public interface DeviceGroupMapper extends BaseMapper<DeviceGroup> {
 
-    @Select("SELECT COUNT(*) FROM device_group_device WHERE group_id = #{groupId}")
+    /**
+     * 统计某分组下的设备数量。
+     *
+     * @param groupId 分组标识
+     * @return 设备数量
+     */
     int countDevices(@Param("groupId") String groupId);
 
-    @Select("SELECT group_id FROM device_group_device WHERE device_id = #{deviceId}")
+    /**
+     * 查询设备所在的全部组标识。
+     *
+     * @param deviceId 设备标识
+     * @return 组标识列表
+     */
     List<String> findGroupIdsByDeviceId(@Param("deviceId") String deviceId);
 }

@@ -36,6 +36,8 @@ public class UrlQpsConfiguration implements WebMvcConfigurer {
     @Override
     /**
      * 添加拦截器
+     * @param registry 参数
+     * @return 返回值
     */
     public void addInterceptors(InterceptorRegistry registry) {
         ReportProperties.UrlQps urlQpsConfig = reportProperties.getUrlQps();

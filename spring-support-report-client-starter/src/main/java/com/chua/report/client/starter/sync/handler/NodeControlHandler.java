@@ -67,6 +67,9 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -75,6 +78,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "nodeControlHandler";
@@ -83,6 +87,8 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     @Override
     /**
      * 支持
+     * @param topic 字符串
+     * @return 返回值
     */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_RESTART.equals(topic) 
@@ -92,6 +98,11 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     @Override
     /**
      * 处理
+     * @param Map<String 参数
+     * @param data 参数
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", topic);

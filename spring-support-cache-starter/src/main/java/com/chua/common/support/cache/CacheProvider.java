@@ -106,9 +106,10 @@ public interface CacheProvider {
 
             /**
              * 缓存entry。
-             * @param value 值
              * @param ttlSeconds ttlseconds
-             */
+             * @param value 值
+             * @return 返回值
+            */
             CacheEntry(Object value, long ttlSeconds) {
                 this.value = value;
                 this.expireAt = ttlSeconds > 0 ? System.currentTimeMillis() + ttlSeconds * 1000 : 0;
@@ -132,6 +133,9 @@ public interface CacheProvider {
         @Override
         /**
          * 放入
+         * @param key 字符串
+         * @param value 对象
+         * @return 返回值
         */
         public void put(String key, Object value) {
             /**
@@ -146,6 +150,10 @@ public interface CacheProvider {
         @Override
         /**
          * 放入
+         * @param key 字符串
+         * @param ttlSeconds 长整数
+         * @param value 对象
+         * @return 返回值
         */
         public void put(String key, Object value, long ttlSeconds) {
             if (key != null && value != null) {
@@ -156,6 +164,9 @@ public interface CacheProvider {
         @Override
         /**
          * 获取
+         * @param key 字符串
+         * @param type 参数
+         * @return 返回值
         */
         public Object get(String key, Class<?> type) {
             if (key == null) {
@@ -175,6 +186,8 @@ public interface CacheProvider {
         @Override
         /**
          * 移除
+         * @param key 字符串
+         * @return 返回值
         */
         public void remove(String key) {
             if (key != null) {
@@ -230,6 +243,9 @@ public interface CacheProvider {
         @Override
         /**
          * 放入
+         * @param key 字符串
+         * @param value 对象
+         * @return 返回值
         */
         public void put(String key, Object value) {
             /**

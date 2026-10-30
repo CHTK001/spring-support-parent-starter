@@ -1833,6 +1833,11 @@ public class ServerHostServiceImpl implements ServerHostService {
         return osType != null && "WINDOWS".equalsIgnoreCase(osType.trim()) ? 0 : 1;
     }
 
+    /**
+     * apply Os Type
+     * @param host 设置主机地址
+     * @return 返回值
+    */
     private void applyOsType(MsServerHost host) {
         String raw = host.getServerHostOsType();
         String platform = HostPlatforms.normalize(raw);

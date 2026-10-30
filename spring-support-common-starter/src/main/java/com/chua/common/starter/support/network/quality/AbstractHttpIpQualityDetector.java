@@ -68,6 +68,8 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     @Override
     /**
      * Detect
+     * @param ip 字符串
+     * @return 返回值
     */
     public IpQuality detect(String ip) {
         if (ip == null || ip.isEmpty()) {
@@ -115,6 +117,8 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     @Override
     /**
      * Detect
+     * @param ips 参数
+     * @return 返回值
     */
     public IpQuality[] detect(String[] ips) {
         if (ips == null || ips.length == 0) {

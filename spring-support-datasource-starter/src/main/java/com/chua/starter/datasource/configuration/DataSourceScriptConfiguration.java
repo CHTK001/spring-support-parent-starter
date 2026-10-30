@@ -362,10 +362,10 @@ public class DataSourceScriptConfiguration {
 
         /**
          * 构造函数
-         *
-         * @param ds                         数据源对象
          * @param dataSourceScriptProperties 数据源脚本配置属性
-         */
+         * @param ds 数据源对象
+         * @return 返回值
+        */
         FlywayLikePopulator(DataSource ds, DataSourceScriptProperties dataSourceScriptProperties) {
             this.ds = ds;
             this.jdbc = new JdbcTemplate(ds);
@@ -1544,20 +1544,10 @@ public class DataSourceScriptConfiguration {
         }
 
         /**
-         * 迁移旧版版本表的主键：{@code PRIMARY KEY (version)} → {@code UNIQUE (script_name, version)}。
-         *
-         * <p><b>为什么必须迁移</b>：旧版把「版本号」当单列主键，而版本号在不同模块间会重复
-         * （各模块都用自己的 V1.0 / V2.0）。于是第二个模块的脚本记账必然撞
-         * {@code Duplicate entry '2.0' for key 'PRIMARY'}，脚本明明执行成功却记不上账，
-         * 下次启动还会重跑。新版建表语句用的是 {@code UNIQUE (script_name, version)}，
-         * 与「按脚本名+版本记账」的语义一致。</p>
-         *
-         * <p>做法：删掉旧主键 → 加复合唯一键 → 给历史数据补一个不冲突的 script_name。
-         * 补名规则是「同名记录保留原名、冲突者加版本后缀」，保证历史记录仍能被
-         * {@code findScriptExecutionRecord} 按（脚本名+版本）查到。</p>
-         *
-         * <p>安全豁免：表名与列名均来自部署配置并经 {@link SqlName} 校验，不含用户可控值。</p>
-         */
+         * 迁移旧版版本表的主键：{@code PRIMARY KEY (version)} → {@code UNIQUE (script_name, version)}。 <p><b>为什么必须迁移</b>：旧版把「版本号」当单列主键，而版本号在不同模块间会重复 （各模块都用自己的 V1.0 / V2.0）。于是第二个模块的脚本记账必然撞 {@code Duplicate entry '2.0' for key 'PRIMARY'}，脚本明明执行成功却记不上账， 下次启动还会重跑。新版建表语句用的是 {@code UNIQUE (script_name, version)}， 与「按脚本名+版本记账」的语义一致。</p> <p>做法：删掉旧主键 → 加复合唯一键 → 给历史数据补一个不冲突的 script_name。 补名规则是「同名记录保留原名、冲突者加版本后缀」，保证历史记录仍能被 {@code findScriptExecutionRecord} 按（脚本名+版本）查到。</p> <p>安全豁免：表名与列名均来自部署配置并经 {@link SqlName} 校验，不含用户可控值。</p>
+         * @param tableName 字符串
+         * @return 返回值
+        */
         private void migrateLegacyVersionPrimaryKey(String tableName) {
             try {
                 // 先看是否真的存在「version 单列主键」：存在 PRIMARY 约束且列只有 version
@@ -1947,14 +1937,28 @@ public class DataSourceScriptConfiguration {
             return DigestUtils.md5DigestAsHex(res.getInputStream());
         }
 
+        /**
+         * version Table
+         * @return 返回值
+        */
         private String versionTable() {
             return SqlName.check(dataSourceScriptProperties.getVersionTable(), "脚本版本表名");
         }
 
+        /**
+         * version Column Prefix
+         * @param tableName 字符串
+         * @return 返回值
+        */
         private String versionColumnPrefix(String tableName) {
             return SqlName.checkSimple(extractTablePrefix(tableName), "脚本版本列前缀");
         }
 
+        /**
+         * checked Column Prefix
+         * @param columnPrefix 字符串
+         * @return 返回值
+        */
         private String checkedColumnPrefix(String columnPrefix) {
             if (columnPrefix == null || columnPrefix.isEmpty()) {
                 return "";

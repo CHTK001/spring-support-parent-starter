@@ -169,7 +169,8 @@ public class TsharkCaptureService {
 
     /**
      * 取 SSE 注册表；未装配时返回 null（推送静默跳过）。
-     */
+     * @return 返回值
+    */
     private TsharkPacketStreamRegistry streamRegistry() {
         return this.streamRegistryProvider.getIfAvailable();
     }
@@ -330,7 +331,11 @@ public class TsharkCaptureService {
         return out;
     }
 
-    /** 下拉排序权重：越小越靠前。 */
+    /**
+     * rank Of
+     * @param i 参数
+     * @return 返回值
+    */
     private static int rankOf(TsharkInterfaceVO i) {
         if (i.loopback()) {
             return 3;
@@ -375,7 +380,11 @@ public class TsharkCaptureService {
         }
     }
 
-    /** null → 空串（别处习惯用空串表示「没有」）。 */
+    /**
+     * blank To Empty
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String blankToEmpty(String s) {
         return s == null ? "" : s.trim();
     }
@@ -1130,17 +1139,10 @@ public class TsharkCaptureService {
     );
 
     /**
-     * 协议名归一化：把 tshark 的原始协议名收敛成少数几个规范名。
-     *
-     * <p><strong>为什么要归一</strong>：{@code _ws.col.Protocol} 给的是最内层协议，
-     * 且带版本后缀 —— TLS 握手是 {@code TLSv1.2}、MQTT 是 {@code MQTTv3.1.1}、
-     * HTTP/2 是 {@code HTTP2}。直接入库的话「协议分布」饼图会把 TLSv1.2 / TLSv1.3 /
-     * MQTTv3.1.1 各切成一瓣，一个 TLS 会话在图上碎成好几块，既不好看也不便于
-     * 判断谁占大头。</p>
-     *
-     * <p>归一放在<b>入库时</b>而不是展示层：协议统计是按库里的 protocol 聚合的，
-     * 只在前端换显示的话图表仍然是碎的。</p>
-     */
+     * 协议名归一化：把 tshark 的原始协议名收敛成少数几个规范名。 <p><strong>为什么要归一</strong>：{@code _ws.col.Protocol} 给的是最内层协议， 且带版本后缀 —— TLS 握手是 {@code TLSv1.2}、MQTT 是 {@code MQTTv3.1.1}、 HTTP/2 是 {@code HTTP2}。直接入库的话「协议分布」饼图会把 TLSv1.2 / TLSv1.3 / MQTTv3.1.1 各切成一瓣，一个 TLS 会话在图上碎成好几块，既不好看也不便于 判断谁占大头。</p> <p>归一放在<b>入库时</b>而不是展示层：协议统计是按库里的 protocol 聚合的， 只在前端换显示的话图表仍然是碎的。</p>
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static String simplifyProtocol(String raw) {
         if (raw == null || raw.isBlank()) {
             return "OTHER";
@@ -1304,6 +1306,12 @@ public class TsharkCaptureService {
                 && eq(p.getDestIp(), cIp) && eq(p.getDestPort(), cPort));
     }
 
+    /**
+     * eq
+     * @param a 对象
+     * @param b 对象
+     * @return 返回值
+    */
     private static boolean eq(Object a, Object b) {
         return a == null ? b == null : a.equals(b);
     }
@@ -1561,7 +1569,12 @@ public class TsharkCaptureService {
         return pick(steps, ordered);
     }
 
-    /** 在下标列表里等距抽 max 个（含首尾），保证抽样不偏科也不丢失边界。 */
+    /**
+     * sample Evenly
+     * @param idx 参数
+     * @param max 整数
+     * @return 返回值
+    */
     private static List<Integer> sampleEvenly(List<Integer> idx, int max) {
         if (idx.size() <= max) {
             return new ArrayList<>(idx);
@@ -1574,6 +1587,12 @@ public class TsharkCaptureService {
         return out;
     }
 
+    /**
+     * pick
+     * @param idx 参数
+     * @param steps 参数
+     * @return 返回值
+    */
     private static List<TsharkHandshakeVO.Step> pick(List<TsharkHandshakeVO.Step> steps, List<Integer> idx) {
         List<TsharkHandshakeVO.Step> out = new ArrayList<>(idx.size());
         for (Integer i : idx) {
@@ -1582,6 +1601,11 @@ public class TsharkCaptureService {
         return out;
     }
 
+    /**
+     * is Http Request Line
+     * @param info 字符串
+     * @return 返回值
+    */
     private static boolean isHttpRequestLine(String info) {
         if (info == null) {
             return false;
@@ -1596,6 +1620,12 @@ public class TsharkCaptureService {
                 || up.startsWith("PATCH ");
     }
 
+    /**
+     * ms Between
+     * @param from 参数
+     * @param to 参数
+     * @return 返回值
+    */
     private static Long msBetween(LocalDateTime from, LocalDateTime to) {
         if (from == null || to == null) {
             return null;
@@ -1862,7 +1892,9 @@ public class TsharkCaptureService {
 
     /**
      * 取首行（tshark 的报错文案常带换行，全塞进一条消息会很难读）。
-     */
+     * @param s 字符串
+     * @return 返回值
+    */
     private static String firstLine(String s) {
         int i = s.indexOf('\n');
         return i < 0 ? s : s.substring(0, i);

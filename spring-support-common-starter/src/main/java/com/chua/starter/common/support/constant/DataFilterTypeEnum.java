@@ -56,10 +56,10 @@ public enum DataFilterTypeEnum {
     CUSTOM(6, "自定义");
     /**
      * 构造函数
-     *
      * @param code Integer
      * @param label 字符串
-     */
+     * @return 返回值
+    */
     DataFilterTypeEnum(Integer code, String label) {
         this.code = code;
         this.label = label;

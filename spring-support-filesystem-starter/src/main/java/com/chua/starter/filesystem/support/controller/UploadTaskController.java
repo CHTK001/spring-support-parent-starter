@@ -2,7 +2,6 @@ package com.chua.starter.filesystem.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.logger.ModuleLog;
-import com.chua.starter.filesystem.support.log.FileLogStore;
 import com.chua.starter.filesystem.support.task.UploadTaskManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -73,7 +72,11 @@ public class UploadTaskController {
         this.syncMaxBytes = Math.max(properties.getTaskSyncMaxMb(), 0) * 1024L * 1024L;
     }
 
-    /** 解析实际 bucket：未显式指定时回退到默认存储名，保证「桶路径」列有值。 */
+    /**
+     * resolve Bucket
+     * @param bucket 字符串
+     * @return 返回值
+    */
     private String resolveBucket(String bucket) {
         if (bucket != null && !bucket.isBlank()) {
             return bucket;
@@ -111,9 +114,6 @@ public class UploadTaskController {
                 request.chunkSize() == null ? 0 : request.chunkSize(),
                 request.provider(),
                 request.bucket());
-        FileLogStore.getInstance().record("TASK_CREATE",
-                request.fileName(), 200, 0,
-                "taskId=" + task.getTaskId() + " size=" + task.getTotalSize());
         return ReturnResult.ok(toMap(task));
     }
 
@@ -252,10 +252,6 @@ public class UploadTaskController {
         if (task == null) {
             return ReturnResult.illegal("任务不存在或状态不允许完成");
         }
-        FileLogStore.getInstance().record("TASK_COMPLETE",
-                task.getFileName(), 200, 0,
-                "taskId=" + task.getTaskId() + " state=" + task.getState().name()
-                        + (task.getObjectKey() == null ? "" : " key=" + task.getObjectKey()));
         return ReturnResult.ok(toMap(task));
     }
 
@@ -360,9 +356,6 @@ public class UploadTaskController {
         if (task == null) {
             return ReturnResult.illegal("任务不存在");
         }
-        FileLogStore.getInstance().record("TASK_CANCEL",
-                task.getFileName(), 200, 0,
-                "taskId=" + task.getTaskId());
         return ReturnResult.ok(toMap(task));
     }
 
@@ -379,14 +372,14 @@ public class UploadTaskController {
         if (!existed) {
             return ReturnResult.illegal("任务不存在");
         }
-        FileLogStore.getInstance().record("TASK_DELETE",
-                taskId, 200, 0, "taskId=" + taskId);
         return ReturnResult.ok(true);
     }
 
     /**
      * 任务快照转 Map（避免为响应单独建 DTO 的样板）。
-     */
+     * @param task 参数
+     * @return 返回值
+    */
     private Map<String, Object> toMap(UploadTaskManager.UploadTask task) {
         Map<String, Object> map = new java.util.HashMap<>();
         map.put("taskId", task.getTaskId());

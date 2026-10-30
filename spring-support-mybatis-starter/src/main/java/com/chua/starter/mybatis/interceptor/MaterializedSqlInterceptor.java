@@ -134,7 +134,8 @@ public class MaterializedSqlInterceptor implements Interceptor {
      * @param invocation invocation
      * @param request 请求
      * @return intercept查询的结果
-     */
+     * @throws Throwable 异常
+    */
     private Object interceptQuery(Invocation invocation, MaterializedSqlRequest request) throws Throwable {
         MaterializedSqlRoute route = materializedSqlRouter.route(request);
         if (!route.isRouted()) {

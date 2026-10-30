@@ -62,6 +62,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * Approve
+     * @param cookie 参数
+     * @param subProtocol 字符串
+     * @param token 字符串
+     * @return 返回值
     */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
  // 使用令牌内省端点验证令牌
@@ -71,6 +75,8 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * 认证用户编码
+     * @param appKeySecret 参数
+     * @return 返回值
     */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
  // o认证 2.0 使用 客户端_凭证 模式，凭据来自客户端配置
@@ -98,6 +104,12 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * 获取access令牌
+     * @param Map<String 参数
+     * @param authType 参数
+     * @param ext 参数
+     * @param password 设置认证密码
+     * @param username 设置用户名
+     * @return 返回值
     */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         log.debug("OAuth2 获取访问令牌 - username: {}, authType: {}", username, authType);
@@ -136,6 +148,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * Logout
+     * @param logoutType 参数
+     * @param uid 字符串
+     * @param userResult 参数
+     * @return 返回值
     */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         log.debug("OAuth2 登出 - uid: {}, logoutType: {}", uid, logoutType);
@@ -182,6 +198,10 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * 创建temporary令牌
+     * @param Map<String 参数
+     * @param ext 参数
+     * @param sourceToken 字符串
+     * @return 返回值
     */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
  // o认证 2.0 标准不直接支持临时令牌，返回不支持
@@ -197,6 +217,8 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * 获取online状态
+     * @param uid 字符串
+     * @return 返回值
     */
     public OnlineStatus getOnlineStatus(String uid) {
         return OnlineStatus.defaultStatus();
@@ -205,6 +227,8 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     /**
      * 获取online用户
+     * @param query 查询
+     * @return 返回值
     */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         return OnlineUserResult.empty();

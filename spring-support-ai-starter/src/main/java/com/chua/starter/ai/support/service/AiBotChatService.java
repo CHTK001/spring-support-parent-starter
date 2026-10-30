@@ -337,9 +337,11 @@ public class AiBotChatService {
     }
 
     /**
+    /**
      * 从 Meta Webhook 回调体中提取所有 phone_number_id。
-     */
-    @SuppressWarnings("unchecked")
+     * @param body 字符串
+     * @return 返回值
+    */
     private Set<String> extractWhatsAppPhoneNumberIds(String body) {
         Set<String> ids = new LinkedHashSet<>();
         try {
@@ -408,7 +410,8 @@ public class AiBotChatService {
      * @param bot 机器人
      * @param client 客户端
      * @param message 消息
-     */
+     * @return 返回值
+    */
     private String handleMessage(SysAiBotBinding bot, BotClient client, BotInboundMessage message) {
         String content = message.getContent();
         String fromUser = message.getFromUser();
@@ -925,7 +928,10 @@ public class AiBotChatService {
 
     /**
      * 加载绑定并校验可读。
-     */
+     * @param bindingId 长整数
+     * @param caller 参数
+     * @return 返回值
+    */
     private SysAiBotBinding loadBinding(Long bindingId, AiBotCaller caller) {
         SysAiBotBinding binding = botBindingMapper.selectById(bindingId);
         if (binding == null) {
@@ -937,7 +943,10 @@ public class AiBotChatService {
 
     /**
      * 该会话是否为群聊（看是否存在 fromGroup=1 的消息）。
-     */
+     * @param botId 字符串
+     * @param chatId 字符串
+     * @return 返回值
+    */
     private boolean isGroupConversation(String botId, String chatId) {
         Long cnt = botMessageMapper.selectCount(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -949,7 +958,10 @@ public class AiBotChatService {
 
     /**
      * 取该会话最近一条入站消息的作者（wechat 群被动回复需发给作者）。
-     */
+     * @param botId 字符串
+     * @param chatId 字符串
+     * @return 返回值
+    */
     private String lastInboundAuthor(String botId, String chatId) {
         List<SysAiBotMessage> ins = botMessageMapper.selectList(
                 Wrappers.<SysAiBotMessage>lambdaQuery()
@@ -1647,9 +1659,11 @@ public class AiBotChatService {
     }
 
     /**
-     * 规整 AI 调用失败原因：异常 message 为空、仅分隔符或为裸全限定类名时，
-     * 回退为可读提示，避免出现「AI 回复失败： : com.xxx.Client」这类残缺文案。
-     */
+     * 规整 AI 调用失败原因：异常 message 为空、仅分隔符或为裸全限定类名时， 回退为可读提示，避免出现「AI 回复失败： : com.xxx.Client」这类残缺文案。
+     * @param e 可抛出异常
+     * @param fallback 字符串
+     * @return 返回值
+    */
     private String describeAiError(Throwable e, String fallback) {
         if (e == null) {
             return fallback;
@@ -1980,14 +1994,26 @@ public class AiBotChatService {
          */
         private String fallbackReason;
 
+        /**
+         * get Requested Model
+         * @return 返回值
+        */
         public String getRequestedModel() {
             return requestedModel;
         }
 
+        /**
+         * get Used Model
+         * @return 返回值
+        */
         public String getUsedModel() {
             return usedModel;
         }
 
+        /**
+         * get Fallback Reason
+         * @return 返回值
+        */
         public String getFallbackReason() {
             return fallbackReason;
         }

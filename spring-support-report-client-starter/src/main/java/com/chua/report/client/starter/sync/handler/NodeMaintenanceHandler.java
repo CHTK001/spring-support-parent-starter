@@ -83,6 +83,9 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     @Override
     /**
      * 设置application上下文
+     * @param applicationContext 参数
+     * @return 返回值
+     * @throws BeansException 异常
     */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -91,6 +94,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "nodeMaintenanceHandler";
@@ -99,6 +103,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     @Override
     /**
      * 支持
+     * @param topic 字符串
+     * @return 返回值
     */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_BACKUP.equals(topic)
@@ -109,6 +115,11 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     @Override
     /**
      * 处理
+     * @param Map<String 参数
+     * @param data 参数
+     * @param sessionId 字符串
+     * @param topic 字符串
+     * @return 返回值
     */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", topic);
@@ -639,13 +650,13 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
     /**
      * 执行jarupgrade
-     *
-     * @param upgradeFile upgrade文件
-     * @param currentArtifact 当前artifact
      * @param applicationHome applicationHome
+     * @param currentArtifact 当前artifact
      * @param packageType 包类型
+     * @param upgradeFile upgrade文件
      * @return 执行jarupgrade的结果
-     */
+     * @throws IOException 异常
+    */
     private RollbackSnapshot executeJarUpgrade(Path upgradeFile, Path currentArtifact, Path applicationHome, PackageType packageType) throws IOException {
         String rollbackId = createRollbackId();
         Path rollbackDir = getRollbackDirectory().resolve(rollbackId);
@@ -669,13 +680,13 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
     /**
      * 执行Arch Linux Linux Linuxupgrade
-     *
-     * @param upgradeFile upgrade文件
      * @param applicationHome applicationHome
      * @param currentArtifact 当前artifact
      * @param packageType 包类型
+     * @param upgradeFile upgrade文件
      * @return 执行Arch Linuxupgrade的结果
-     */
+     * @throws IOException 异常
+    */
     private RollbackSnapshot executeArchiveUpgrade(Path upgradeFile, Path applicationHome, Path currentArtifact, PackageType packageType) throws IOException {
         String rollbackId = createRollbackId();
         Path rollbackDir = getRollbackDirectory().resolve(rollbackId);
@@ -716,9 +727,10 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
     /**
      * Restore回滚Snapshot
-     *
      * @param snapshot snapshot
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void restoreRollbackSnapshot(RollbackSnapshot snapshot) throws IOException {
         List<RollbackEntry> entries = new ArrayList<>(snapshot.entries());
         Collections.reverse(entries);
@@ -749,11 +761,11 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
     /**
      * 创建回滚Entry
-     *
-     * @param target Target
      * @param backupPath backup路径
+     * @param target Target
      * @return 创建rollbackentry的结果
-     */
+     * @throws IOException 异常
+    */
     private RollbackEntry createRollbackEntry(Path target, Path backupPath) throws IOException {
         boolean existedBefore = Files.exists(target);
         String backupPathValue = null;
@@ -777,12 +789,12 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
     /**
      * 读取Arch Linux Linux Linuxpayloads
-     *
-     * @param archiveFile Arch Linux Linux Linux文件
      * @param applicationHome applicationHome
+     * @param archiveFile Arch Linux Linux Linux文件
      * @param packageType 包类型
      * @return 读取Arch Linuxpayloads的结果
-     */
+     * @throws IOException 异常
+    */
     private Map<Path, byte[]> readArchivePayloads(Path archiveFile, Path applicationHome, PackageType packageType) throws IOException {
         Map<String, byte[]> entries = new LinkedHashMap<>();
 
@@ -972,10 +984,11 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
 
     /**
      * cleanup空目录
-     *
      * @param start 启动
      * @param stopAt 停止at
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void cleanupEmptyDirectories(Path start, Path stopAt) throws IOException {
         Path current = start;
         while (current != null && stopAt != null && current.startsWith(stopAt) && !current.equals(stopAt)) {
@@ -1155,7 +1168,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         /**
          * 包类型。
          * @param displayName display名称
-         */
+         * @return 返回值
+        */
         PackageType(String displayName) {
             this.displayName = displayName;
         }

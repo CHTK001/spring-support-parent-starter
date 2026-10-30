@@ -31,7 +31,8 @@ public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerT
     @Override
     /**
      * 列出全部调度任务
-     */
+     * @return 返回值
+    */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentTaskSchedulerManager.listTasks();
     }
@@ -39,7 +40,10 @@ public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerT
     @Override
     /**
      * 更新任务配置
-     */
+     * @param dto 参数
+     * @param taskKey 字符串
+     * @return 返回值
+    */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         return paymentTaskSchedulerManager.updateTask(taskKey, dto);
     }
@@ -47,7 +51,9 @@ public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerT
     @Override
     /**
      * 手动触发任务
-     */
+     * @param taskKey 字符串
+     * @return 返回值
+    */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         return paymentTaskSchedulerManager.triggerTask(taskKey);
     }

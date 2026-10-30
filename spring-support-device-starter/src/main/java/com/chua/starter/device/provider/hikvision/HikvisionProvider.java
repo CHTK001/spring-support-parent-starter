@@ -95,6 +95,7 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 获取供应商
+     * @return 返回值
     */
     public String getVendor() {
         return VENDOR;
@@ -103,6 +104,8 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 支持
+     * @param info 参数
+     * @return 返回值
     */
     public boolean support(DeviceConnectInfo info) {
         return VENDOR.equalsIgnoreCase(info.vendor());
@@ -111,6 +114,8 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 连接
+     * @param info 参数
+     * @return 返回值
     */
     public DeviceSession connect(DeviceConnectInfo info) {
         log.info("海康设备连接: authType={}, platformType={}, deviceSerial={}",
@@ -202,6 +207,7 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 获取组织
+     * @return 返回值
     */
     public List<OrganizationNode> fetchOrganizations() {
  // 组织同步需在已连接的 打开api 会话上下文中执行，由业务层调用 会话 后再行实现。
@@ -211,7 +217,9 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 按凭据建连后的会话语境拉取设备目录（cloud-yao OpenAPI：厂商侧组织维度设备列表）
-     */
+     * @param session 参数
+     * @return 返回值
+    */
     public List<VendorDevice> fetchDevices(DeviceSession session) {
         if (session instanceof HikvisionCloudYaoSession yao) {
             try {
@@ -227,7 +235,9 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 按凭据建连后的会话语境拉取组织树（cloud-yao OpenAPI：厂商侧组织列表）
-     */
+     * @param session 参数
+     * @return 返回值
+    */
     public List<OrganizationNode> fetchOrganizations(DeviceSession session) {
         if (session instanceof HikvisionCloudYaoSession yao) {
             try {
@@ -243,7 +253,9 @@ public class HikvisionProvider implements DeviceProvider {
     @Override
     /**
      * 按凭据建连后的会话语境拉取人员列表（cloud-yao OpenAPI：厂商侧组织维度人员列表）
-     */
+     * @param session 参数
+     * @return 返回值
+    */
     public List<DevicePerson> fetchPersons(DeviceSession session) {
         if (session instanceof HikvisionCloudYaoSession yao) {
             try {

@@ -127,6 +127,8 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     @Override
     /**
      * 注册webSocket处理器
+     * @param registry 参数
+     * @return 返回值
     */
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         WebSocketSessionManager sessionManager = webSocketSessionManager();

@@ -84,6 +84,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 之后connectionestablished
+     * @param session 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
  // 从 URI 中解析 客户端id（如 /ws/webrtc -> webrtc）
@@ -102,6 +105,10 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 之后connection关闭
+     * @param session 参数
+     * @param status 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String sessionId = session.getId();
@@ -144,6 +151,10 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 处理文本消息
+     * @param message 参数
+     * @param session 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
@@ -171,6 +182,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 保存
+     * @param clientId 字符串
+     * @param session 参数
+     * @return 返回值
     */
     public SocketSession save(String clientId, SocketSession session) {
         if (session instanceof RSocketSessionImpl impl) {
@@ -183,6 +197,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 移除
+     * @param clientId 字符串
+     * @param session 参数
+     * @return 返回值
     */
     public void remove(String clientId, SocketSession session) {
         List<RSocketSessionImpl> sessions = sessionCache.get(clientId);
@@ -199,6 +216,8 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 获取会话
+     * @param sessionId 字符串
+     * @return 返回值
     */
     public SocketSession getSession(String sessionId) {
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
@@ -214,6 +233,10 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 发送
+     * @param event 字符串
+     * @param msg 字符串
+     * @param sessionId 字符串
+     * @return 返回值
     */
     public void send(String sessionId, String event, String msg) {
         SocketSession session = getSession(sessionId);
@@ -225,6 +248,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * Broadcast
+     * @param event 字符串
+     * @param msg 字符串
+     * @return 返回值
     */
     public void broadcast(String event, String msg) {
         String message = createMessage(event, msg);
@@ -242,6 +268,10 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 发送转为用户
+     * @param event 字符串
+     * @param msg 字符串
+     * @param userId 字符串
+     * @return 返回值
     */
     public void sendToUser(String userId, String event, String msg) {
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
@@ -262,6 +292,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 获取online会话
+     * @return 返回值
     */
     public List<SocketSession> getOnlineSessions() {
         List<SocketSession> result = new java.util.ArrayList<>();
@@ -274,6 +305,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 获取online会话
+     * @param roomId 字符串
+     * @param type 字符串
+     * @return 返回值
     */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         List<RSocketSessionImpl> sessions = sessionCache.get(type);
@@ -299,6 +333,8 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 获取online用户
+     * @param type 字符串
+     * @return 返回值
     */
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new java.util.ArrayList<>();
@@ -321,6 +357,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /**
      * 获取Online计算数量
+     * @return 返回值
     */
     public int getOnlineCount() {
         int count = 0;

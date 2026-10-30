@@ -186,6 +186,8 @@ public class SocketConfiguration {
         @Override
         /**
          * 之后属性设置
+         * @return 返回值
+         * @throws Exception 异常
         */
         public void afterPropertiesSet() throws Exception {
             if (!properties.isAutoStart()) {
@@ -210,6 +212,8 @@ public class SocketConfiguration {
         @Override
         /**
          * 销毁
+         * @return 返回值
+         * @throws Exception 异常
         */
         public void destroy() throws Exception {
             for (Map.Entry<String, SocketSessionTemplate> entry : templates.entrySet()) {

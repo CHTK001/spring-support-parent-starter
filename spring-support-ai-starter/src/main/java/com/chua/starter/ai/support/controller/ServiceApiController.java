@@ -209,6 +209,11 @@ public class ServiceApiController {
         return Map.of("ok", true, "token", token);
     }
 
+    /**
+     * parse Long Or Null
+     * @param o 对象
+     * @return 返回值
+    */
     private Long parseLongOrNull(Object o) {
         if (o == null) {
             return null;
@@ -225,6 +230,11 @@ public class ServiceApiController {
         }
     }
 
+    /**
+     * parse Date Time
+     * @param o 对象
+     * @return 返回值
+    */
     private java.time.LocalDateTime parseDateTime(Object o) {
         if (o == null) {
             return null;

@@ -19,6 +19,10 @@ public class LocalMailMockConfig {
 
     @Bean
     @ConditionalOnMissingBean
+    /**
+     * java Mail Sender
+     * @return 返回值
+    */
     public JavaMailSender javaMailSender() {
         return new JavaMailSender() {
             @Override

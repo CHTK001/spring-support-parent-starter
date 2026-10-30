@@ -33,6 +33,8 @@ public class TokenRequestHandlerMethodArgumentResolver extends UserRequestHandle
     @Override
     /**
      * 支持参数
+     * @param parameter 参数
+     * @return 返回值
     */
     public boolean supportsParameter(MethodParameter parameter) {
         return super.supportsParameter(parameter, TokenValue.class);
@@ -41,6 +43,12 @@ public class TokenRequestHandlerMethodArgumentResolver extends UserRequestHandle
     @Override
     /**
      * 解析参数
+     * @param binderFactory 参数
+     * @param mavContainer 参数
+     * @param methodParameter 参数
+     * @param webRequest 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
         TokenValue requestValue = methodParameter.getParameterAnnotation(TokenValue.class);

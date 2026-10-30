@@ -24,6 +24,12 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
     @Override
     /**
      * 设置non空参数
+     * @param i 整数
+     * @param jdbcType 参数
+     * @param parameter 参数
+     * @param ps 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public void setNonNullParameter(PreparedStatement ps, int i, List<String> parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, Joiner.on(",").omitEmptyStrings().trimResults().join(parameter));
@@ -32,6 +38,10 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
     @Override
     /**
      * 获取空结果
+     * @param columnName 字符串
+     * @param rs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public List<String> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String string = rs.getString(columnName);
@@ -41,6 +51,10 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
     @Override
     /**
      * 获取空结果
+     * @param columnIndex 整数
+     * @param rs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public List<String> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String string = rs.getString(columnIndex);
@@ -50,6 +64,10 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
     @Override
     /**
      * 获取空结果
+     * @param columnIndex 整数
+     * @param cs 参数
+     * @return 返回值
+     * @throws SQLException 异常
     */
     public List<String> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String string = cs.getString(columnIndex);

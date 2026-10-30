@@ -26,9 +26,10 @@ public class IpQualityProbe {
 
     /**
      * Main
-     *
      * @param args 参数
-     */
+     * @return 返回值
+     * @throws Exception 异常
+    */
     public static void main(String[] args) throws Exception {
         CommandLine cli = CommandLine.parse(args)
                 .program("IpQualityProbe")
@@ -53,6 +54,8 @@ public class IpQualityProbe {
 
     /**
      * 运行with默认
+     * @return 返回值
+     * @throws Exception 异常
     */
     private void runWithDefaults() throws Exception {
         /**
@@ -65,10 +68,11 @@ public class IpQualityProbe {
 
     /**
      * 运行withips
-     *
      * @param binPath bin路径
      * @param testIps 测试ips
-     */
+     * @return 返回值
+     * @throws Exception 异常
+    */
     private void runWithIps(String binPath, String[] testIps) throws Exception {
         IP2ProxyLiteIpQualityDetector detector = new IP2ProxyLiteIpQualityDetector(Path.of(binPath));
         for (String ip : testIps) {

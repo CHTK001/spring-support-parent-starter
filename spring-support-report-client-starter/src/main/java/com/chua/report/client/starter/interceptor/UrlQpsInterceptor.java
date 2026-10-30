@@ -27,6 +27,10 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
     @Override
     /**
      * Pre处理
+     * @param handler 对象
+     * @param request 参数
+     * @param response 参数
+     * @return 返回值
     */
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         // 记录请求开始时间

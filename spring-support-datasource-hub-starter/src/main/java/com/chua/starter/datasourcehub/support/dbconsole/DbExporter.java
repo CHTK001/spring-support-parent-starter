@@ -226,6 +226,13 @@ public final class DbExporter {
         return out.toString();
     }
 
+    /**
+     * read Columns
+     * @param conn 参数
+     * @param table 字符串
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private static List<String> readColumns(Connection conn, String table) throws SQLException {
         List<String> columns = new ArrayList<>();
         for (String[] scope : new String[][]{{conn.getCatalog(), conn.getSchema()}, {null, null}}) {
@@ -244,6 +251,13 @@ public final class DbExporter {
         return columns;
     }
 
+    /**
+     * read Ddl
+     * @param conn 参数
+     * @param table 字符串
+     * @return 返回值
+     * @throws SQLException 异常
+    */
     private static String readDdl(Connection conn, String table) throws SQLException {
         String quoted = SqlName.quoteMysql(table, "表名");
         try (java.sql.Statement st = conn.createStatement();

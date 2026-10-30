@@ -139,11 +139,12 @@ public class SeataAutoConfiguration {
         }
 
         /**
+        /**
          * 通过反射创建 Seata 数据源代理
          * @param dataSource 数据源
          * @return 创建数据源代理的结果
-         */
-        @SuppressWarnings("unchecked")
+         * @throws Exception 异常
+        */
         private DataSource createDataSourceProxy(DataSource dataSource) throws Exception {
             Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
             return (DataSource) ReflectUtils.instantiate(proxyClass, dataSource);

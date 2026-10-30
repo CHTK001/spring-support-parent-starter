@@ -75,7 +75,10 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     /**
      * 获取钱包账户
-     */
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public WalletAccountVO getAccount(Long merchantId, Long userId) {
         WalletAccount account = findAccount(merchantId, userId);
         if (account == null) {
@@ -503,7 +506,11 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     /**
      * 分页查询钱包账户
-     */
+     * @param merchantId 长整数
+     * @param pageNum 整数
+     * @param pageSize 整数
+     * @return 返回值
+    */
     public Page<WalletAccount> pageAccounts(int pageNum, int pageSize, Long merchantId) {
         LambdaQueryWrapper<WalletAccount> wrapper = new LambdaQueryWrapper<WalletAccount>()
                 .orderByDesc(WalletAccount::getCreatedAt);
@@ -556,7 +563,12 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     /**
      * 获取账户流水日志
-     */
+     * @param bizNo 字符串
+     * @param bizType 字符串
+     * @param merchantId 长整数
+     * @param userId 长整数
+     * @return 返回值
+    */
     public WalletAccountLog getLog(String bizType, Long merchantId, Long userId, String bizNo) {
         LambdaQueryWrapper<WalletAccountLog> wrapper = new LambdaQueryWrapper<WalletAccountLog>()
                 .eq(WalletAccountLog::getBizType, bizType)
@@ -802,26 +814,26 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     /**
      * 金额统一保留两位小数
-     *
      * @param value 金额
-     */
+     * @return 返回值
+    */
     private BigDecimal scale(BigDecimal value) {
         return value == null ? zeroAmount() : value.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
      * 零金额
-     *
-     */
+     * @return 返回值
+    */
     private BigDecimal zeroAmount() {
         return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
      * 生成业务单号
-     *
      * @param prefix 前缀
-     */
+     * @return 返回值
+    */
     private String generateBizNo(String prefix) {
         return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }

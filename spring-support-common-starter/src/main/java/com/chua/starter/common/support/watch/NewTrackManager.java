@@ -26,10 +26,10 @@ public class NewTrackManager {
 
     /**
      * 调用
-     *
      * @param callable callable
      * @return invoke的结果
-     */
+     * @throws Exception 异常
+    */
     public static Object invoke(Callable<?> callable) throws Exception {
         return callable.call();
     }

@@ -199,6 +199,11 @@ public interface AiReidService {
          */
         private final String label;
 
+        /**
+         * Match Type
+         * @param label 字符串
+         * @return 返回值
+        */
         MatchType(String label) {
             this.label = label;
         }

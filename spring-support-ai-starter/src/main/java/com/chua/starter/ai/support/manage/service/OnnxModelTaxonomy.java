@@ -200,10 +200,21 @@ public final class OnnxModelTaxonomy {
         };
     }
 
+    /**
+     * lower
+     * @param modelId 字符串
+     * @return 返回值
+    */
     private static String lower(String modelId) {
         return String.valueOf(modelId == null ? "" : modelId).toLowerCase();
     }
 
+    /**
+     * has
+     * @param id 字符串
+     * @param tokens 参数
+     * @return 返回值
+    */
     private static boolean has(String id, String... tokens) {
         for (String t : tokens) {
             if (id.contains(t)) {

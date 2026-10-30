@@ -71,6 +71,11 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
 
     @Override
     @Transactional
+    /**
+     * 创建
+     * @param req 参数
+     * @return 返回值
+    */
     public void create(DeviceGroupRequest req) {
         if (req.getGroupName() == null || req.getGroupName().isBlank()) {
             throw new IllegalArgumentException("分组名称不能为空");
@@ -85,6 +90,12 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
 
     @Override
     @Transactional
+    /**
+     * 更新
+     * @param groupId 字符串
+     * @param req 参数
+     * @return 返回值
+    */
     public void update(String groupId, DeviceGroupRequest req) {
         LambdaUpdateWrapper<DeviceGroup> uw = new LambdaUpdateWrapper<>();
         uw.eq(DeviceGroup::getGroupId, groupId);
@@ -117,6 +128,11 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
 
     @Override
     @Transactional
+    /**
+     * 删除
+     * @param groupId 字符串
+     * @return 返回值
+    */
     public void delete(String groupId) {
         // 递归清理：先删所有子孙分组及其设备关联，再删自身
         Set<String> ids = new HashSet<>();
@@ -128,7 +144,12 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
         }
     }
 
-    /** 收集某分组的所有子孙分组ID */
+    /**
+     * collect Descendants
+     * @param groupId 字符串
+     * @param out 参数
+     * @return 返回值
+    */
     private void collectDescendants(String groupId, Set<String> out) {
         LambdaQueryWrapper<DeviceGroup> q = new LambdaQueryWrapper<>();
         q.eq(DeviceGroup::getGroupParent, groupId);
@@ -141,6 +162,12 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
 
     @Override
     @Transactional
+    /**
+     * assign Devices
+     * @param deviceIds 参数
+     * @param groupId 字符串
+     * @return 返回值
+    */
     public void assignDevices(String groupId, List<String> deviceIds) {
         // 先清空该分组原设备
         gdMapper.deleteByGroupId(groupId);
@@ -175,6 +202,12 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
 
     @Override
     @Transactional
+    /**
+     * assign Device Groups
+     * @param deviceId 字符串
+     * @param groupIds 参数
+     * @return 返回值
+    */
     public void assignDeviceGroups(String deviceId, List<String> groupIds) {
         LambdaQueryWrapper<DeviceGroupDevice> q = new LambdaQueryWrapper<>();
         q.eq(DeviceGroupDevice::getDeviceId, deviceId);

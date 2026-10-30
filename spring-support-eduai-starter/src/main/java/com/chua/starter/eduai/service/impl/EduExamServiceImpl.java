@@ -29,6 +29,10 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
     @Override
     /**
      * Page查询
+     * @param exam 参数
+     * @param page 长整数
+     * @param pageSize 长整数
+     * @return 返回值
     */
     public PageResult<EduExam> pageQuery(EduExam exam, long page, long pageSize) {
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();

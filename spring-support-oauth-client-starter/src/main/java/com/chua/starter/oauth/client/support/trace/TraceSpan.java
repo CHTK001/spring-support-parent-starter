@@ -122,6 +122,7 @@ public class TraceSpan {
     @Override
     /**
      * 转为字符串
+     * @return 返回值
     */
     public String toString() {
         return String.format("[%s] %s: %dms", spanId, spanName, getCostMs());

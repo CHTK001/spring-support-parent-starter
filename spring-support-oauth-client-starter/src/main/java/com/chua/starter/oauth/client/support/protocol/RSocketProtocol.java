@@ -92,6 +92,10 @@ public class RSocketProtocol extends AbstractProtocol {
     @Override
     /**
      * Approve
+     * @param cookie 参数
+     * @param subProtocol 字符串
+     * @param token 字符串
+     * @return 返回值
     */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
  // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
@@ -119,6 +123,8 @@ public class RSocketProtocol extends AbstractProtocol {
     @Override
     /**
      * 认证用户编码
+     * @param appKeySecret 参数
+     * @return 返回值
     */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         JsonObject jsonObject = createAppKeyAuthenticationData(appKeySecret);
@@ -217,6 +223,10 @@ public class RSocketProtocol extends AbstractProtocol {
     @Override
     /**
      * Logout
+     * @param logoutType 参数
+     * @param uid 字符串
+     * @param userResult 参数
+     * @return 返回值
     */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         JsonObject jsonObject = new JsonObject();
@@ -240,6 +250,10 @@ public class RSocketProtocol extends AbstractProtocol {
     @Override
     /**
      * 创建temporary令牌
+     * @param Map<String 参数
+     * @param ext 参数
+     * @param sourceToken 字符串
+     * @return 返回值
     */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();

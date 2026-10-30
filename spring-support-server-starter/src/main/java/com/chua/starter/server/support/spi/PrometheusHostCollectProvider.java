@@ -121,10 +121,10 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
 
     /**
      * 拉取指标文本
-     *
      * @param url 端点
      * @return 指标文本
-     */
+     * @throws Exception 异常
+    */
     private String fetchBody(String url) throws Exception {
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
         conn.setConnectTimeout(5000);

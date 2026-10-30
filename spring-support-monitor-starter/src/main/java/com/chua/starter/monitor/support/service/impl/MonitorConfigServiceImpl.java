@@ -51,6 +51,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     /**
      * 获取字符串
+     * @param defaultValue 字符串
+     * @param key 字符串
+     * @return 返回值
     */
     public String getString(String key, String defaultValue) {
         Optional<MsMonitorConfig> opt = Optional.ofNullable(findByKey(key).getData());
@@ -60,6 +63,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     /**
      * 获取Int
+     * @param defaultValue 整数
+     * @param key 字符串
+     * @return 返回值
     */
     public int getInt(String key, int defaultValue) {
         try {
@@ -72,6 +78,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     /**
      * 获取Long
+     * @param defaultValue 长整数
+     * @param key 字符串
+     * @return 返回值
     */
     public long getLong(String key, long defaultValue) {
         try {
@@ -84,6 +93,9 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     /**
      * 获取布尔值
+     * @param defaultValue 布尔值
+     * @param key 字符串
+     * @return 返回值
     */
     public boolean getBoolean(String key, boolean defaultValue) {
         String val = getString(key);
@@ -110,6 +122,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override
     /**
      * 列表全部
+     * @return 返回值
     */
     public List<MsMonitorConfig> listAll() { return configMapper.selectList(null); }
 

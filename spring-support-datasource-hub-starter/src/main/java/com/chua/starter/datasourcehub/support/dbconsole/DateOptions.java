@@ -29,7 +29,10 @@ public record DateOptions(
         char timeSeparator
 ) {
 
-    /** 默认：年-月-日、斜杠、冒号（与 Navicat 默认一致） */
+    /**
+     * defaults
+     * @return 返回值
+    */
     public static DateOptions defaults() {
         return new DateOptions("YMD", "YMD", '/', '/', ':');
     }
@@ -194,10 +197,21 @@ public record DateOptions(
         return new int[]{y, m, d};
     }
 
+    /**
+     * split On
+     * @param separator 参数
+     * @param text 字符串
+     * @return 返回值
+    */
     private static String[] splitOn(String text, char separator) {
         return text.split(java.util.regex.Pattern.quote(String.valueOf(separator)), -1);
     }
 
+    /**
+     * number
+     * @param text 字符串
+     * @return 返回值
+    */
     private static Integer number(String text) {
         String value = text == null ? "" : text.trim();
         if (value.isEmpty() || !value.matches("\\d{1,6}")) {
@@ -206,6 +220,12 @@ public record DateOptions(
         return Integer.valueOf(value);
     }
 
+    /**
+     * order
+     * @param fallback 字符串
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String order(String value, String fallback) {
         String v = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
         return switch (v) {

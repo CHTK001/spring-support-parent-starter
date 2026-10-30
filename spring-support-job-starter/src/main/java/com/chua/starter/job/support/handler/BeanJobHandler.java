@@ -76,6 +76,7 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 名称
+     * @return 返回值
     */
     public String name() {
         return name;
@@ -84,6 +85,7 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * Desc
+     * @return 返回值
     */
     public String desc() {
         return desc == null ? "" : desc;
@@ -92,6 +94,8 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 执行
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void execute() throws Exception {
         log.debug("[job] execute handler={} target={}#{}",
@@ -102,6 +106,8 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 初始化
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void init() throws Exception {
         if (initMethod == null) {
@@ -114,6 +120,8 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
         if (destroyMethod == null) {

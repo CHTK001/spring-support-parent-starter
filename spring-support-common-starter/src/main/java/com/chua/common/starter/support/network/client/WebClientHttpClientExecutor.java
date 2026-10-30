@@ -42,6 +42,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /**
      * 获取名称
+     * @return 返回值
     */
     public String getName() {
         return "webclient";
@@ -50,6 +51,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /**
      * 是否可用
+     * @return 返回值
     */
     public boolean isAvailable() {
         return ReflectUtils.forName("org.springframework.web.reactive.function.client.WebClient") != null;
@@ -58,6 +60,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return 50;
@@ -66,6 +69,9 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /**
      * 执行
+     * @param request 参数
+     * @return 返回值
+     * @throws Exception 异常
     */
     public ClientResponse execute(ClientRequest request) throws Exception {
         WebClient.RequestBodySpec spec = buildSpec(request);
@@ -79,6 +85,8 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /**
      * 执行异步
+     * @param request 参数
+     * @return 返回值
     */
     public Mono<ClientResponse> executeAsync(ClientRequest request) {
         WebClient.RequestBodySpec spec = buildSpec(request);
@@ -91,6 +99,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /**
      * 支持版本
+     * @return 返回值
     */
     public List<HttpVersion> supportedVersions() {
         return List.of(HttpVersion.HTTP_1_1, HttpVersion.HTTP_2);

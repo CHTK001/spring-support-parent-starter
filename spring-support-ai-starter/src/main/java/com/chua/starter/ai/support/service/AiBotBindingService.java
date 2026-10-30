@@ -637,6 +637,13 @@ public class AiBotBindingService {
         return bindFeishu(appId, appSecret, null, null);
     }
 
+    /**
+     * bind Feishu
+     * @param appId 字符串
+     * @param appSecret 字符串
+     * @param ownerKey 字符串
+     * @return 返回值
+    */
     public Long bindFeishu(String appId, String appSecret, String ownerKey) {
         return bindFeishu(appId, appSecret, null, ownerKey);
     }
@@ -709,6 +716,13 @@ public class AiBotBindingService {
         return bindQq(appId, appSecret, null, null);
     }
 
+    /**
+     * bind Qq
+     * @param appId 字符串
+     * @param appSecret 字符串
+     * @param ownerKey 字符串
+     * @return 返回值
+    */
     public Long bindQq(String appId, String appSecret, String ownerKey) {
         return bindQq(appId, appSecret, null, ownerKey);
     }

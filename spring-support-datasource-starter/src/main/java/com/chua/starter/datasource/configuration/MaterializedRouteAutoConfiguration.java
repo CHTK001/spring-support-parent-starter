@@ -108,6 +108,9 @@ public class MaterializedRouteAutoConfiguration {
         @Override
         /**
          * Matches
+         * @param context 参数
+         * @param metadata 参数
+         * @return 返回值
         */
         public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
             return MaterializedRouteProperties.bind(context.getEnvironment()).isEnabled();

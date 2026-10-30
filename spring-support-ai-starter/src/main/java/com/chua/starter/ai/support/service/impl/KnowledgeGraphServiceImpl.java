@@ -275,6 +275,12 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete By Knowledge Point
+     * @param docPath 字符串
+     * @param knowledgeBaseId 字符串
+     * @return 返回值
+    */
     public void deleteByKnowledgePoint(String knowledgeBaseId, String docPath) {
         if (!StringUtils.hasText(knowledgeBaseId)) {
             return;
@@ -289,6 +295,11 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete By Knowledge Base
+     * @param knowledgeBaseId 字符串
+     * @return 返回值
+    */
     public void deleteByKnowledgeBase(String knowledgeBaseId) {
         if (!StringUtils.hasText(knowledgeBaseId)) {
             return;
@@ -1243,6 +1254,11 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * collapse Duplicate Graph
+     * @param knowledgeBaseId 字符串
+     * @return 返回值
+    */
     public int collapseDuplicateGraph(String knowledgeBaseId) {
         if (!StringUtils.hasText(knowledgeBaseId)) {
             return 0;
@@ -1337,12 +1353,24 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Entity
+     * @param knowledgeBaseId 字符串
+     * @param uid 字符串
+     * @return 返回值
+    */
     public boolean deleteEntity(String knowledgeBaseId, String uid) {
         return deleteEntities(knowledgeBaseId, List.of(uid)) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Entities
+     * @param knowledgeBaseId 字符串
+     * @param uids 参数
+     * @return 返回值
+    */
     public int deleteEntities(String knowledgeBaseId, Collection<String> uids) {
         if (!StringUtils.hasText(knowledgeBaseId) || uids == null || uids.isEmpty()) {
             return 0;
@@ -1407,12 +1435,24 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Relation
+     * @param knowledgeBaseId 字符串
+     * @param uid 字符串
+     * @return 返回值
+    */
     public boolean deleteRelation(String knowledgeBaseId, String uid) {
         return deleteRelations(knowledgeBaseId, List.of(uid)) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * delete Relations
+     * @param knowledgeBaseId 字符串
+     * @param uids 参数
+     * @return 返回值
+    */
     public int deleteRelations(String knowledgeBaseId, Collection<String> uids) {
         if (!StringUtils.hasText(knowledgeBaseId) || uids == null || uids.isEmpty()) {
             return 0;

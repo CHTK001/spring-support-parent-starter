@@ -31,9 +31,9 @@ public enum Position {
 
     /**
      * 构造函数
-     *
      * @param value 整数值
-     */
+     * @return 返回值
+    */
     Position(int value) {
         this.value = value;
     }

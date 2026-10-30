@@ -48,7 +48,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     @Override
     /**
      * 任务标识
-     */
+     * @return 返回值
+    */
     public String taskKey() {
         return "payment-notify-cleanup";
     }
@@ -56,7 +57,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     @Override
     /**
      * 任务名称
-     */
+     * @return 返回值
+    */
     public String taskName() {
         return "回调异常清理";
     }
@@ -64,7 +66,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     @Override
     /**
      * 默认 cron 表达式
-     */
+     * @return 返回值
+    */
     public String defaultCron() {
         return "0 0 2 * * ?";
     }
@@ -72,7 +75,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     @Override
     /**
      * 任务说明
-     */
+     * @return 返回值
+    */
     public String description() {
         return "清理已解决且超过保留期的回调异常记录";
     }

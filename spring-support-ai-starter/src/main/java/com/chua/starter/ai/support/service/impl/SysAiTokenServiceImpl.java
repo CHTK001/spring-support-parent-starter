@@ -52,6 +52,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 列表
+     * @return 返回值
     */
     public List<SysAiToken> list() {
         return sysAiTokenMapper.selectList(
@@ -64,6 +65,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 列表by分组标识
+     * @param groupId 整数
+     * @return 返回值
     */
     public List<SysAiToken> listByGroupId(Integer groupId) {
         if (groupId == null) {
@@ -80,6 +83,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 保存
+     * @param token 参数
+     * @return 返回值
     */
     public SysAiToken save(SysAiToken token) {
         if (StringUtils.isBlank(token.getKey())) {
@@ -137,6 +142,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 查找by令牌Key
+     * @param tokenKey 字符串
+     * @return 返回值
     */
     public SysAiToken findByTokenKey(String tokenKey) {
         if (StringUtils.isBlank(tokenKey)) {
@@ -154,6 +161,9 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 验证
+     * @param groupId 整数
+     * @param tokenKey 字符串
+     * @return 返回值
     */
     public SysAiToken verify(String tokenKey, Integer groupId) {
         SysAiToken token = findByTokenKey(tokenKey);
@@ -179,6 +189,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 获取分组idby令牌Key
+     * @param tokenKey 字符串
+     * @return 返回值
     */
     public Integer getGroupIdByTokenKey(String tokenKey) {
         SysAiToken token = findByTokenKey(tokenKey);
@@ -239,6 +251,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 校验rate限制
+     * @param tokenKey 字符串
+     * @return 返回值
     */
     public boolean checkRateLimit(String tokenKey) {
         SysAiToken token = findByTokenKey(tokenKey);
@@ -278,6 +292,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     /**
      * 校验rate限制by分组
+     * @param groupId 整数
+     * @return 返回值
     */
     public boolean checkRateLimitByGroup(Integer groupId) {
         if (groupId == null) {

@@ -28,10 +28,10 @@ public enum ChannelStatus {
 
     /**
      * 渠道状态
-     *
      * @param code 编码
      * @param description 描述
-     */
+     * @return 返回值
+    */
     ChannelStatus(int code, String description) {
         this.code = code;
         this.description = description;

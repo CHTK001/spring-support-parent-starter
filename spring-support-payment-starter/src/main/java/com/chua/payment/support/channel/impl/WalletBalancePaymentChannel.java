@@ -43,7 +43,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     @Override
     /**
      * 是否支持该通道
-     */
+     * @param channelSubType 字符串
+     * @param channelType 字符串
+     * @return 返回值
+    */
     public boolean supports(String channelType, String channelSubType) {
         return "WALLET".equalsIgnoreCase(channelType) && "BALANCE".equalsIgnoreCase(channelSubType);
     }
@@ -51,7 +54,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     @Override
     /**
      * 发起支付
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (request.userId() == null) {
             throw new PaymentException("钱包支付必须提供 userId");
@@ -72,7 +78,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     @Override
     /**
      * 查询支付结果
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         WalletAccountLog log = walletAccountService.getLog("PAY", channel.getMerchantId(), null, orderNo);
         PaymentResult result = new PaymentResult(log != null,
@@ -88,7 +97,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     @Override
     /**
      * 申请退款
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         if (request.userId() == null) {
             throw new PaymentException("钱包退款缺少用户上下文");
@@ -109,7 +121,10 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     @Override
     /**
      * 查询退款结果
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         WalletAccountLog log = walletAccountService.getLog("REFUND", channel.getMerchantId(), null, request.refundNo());
         RefundResult result = new RefundResult(log != null, request.refundNo(),

@@ -39,10 +39,10 @@ public enum ServerType {
 
     /**
      * 构造方法
-     *
      * @param code 编码
      * @param desc 描述
-     */
+     * @return 返回值
+    */
     ServerType(String code, String desc) {
         this.code = code;
         this.desc = desc;

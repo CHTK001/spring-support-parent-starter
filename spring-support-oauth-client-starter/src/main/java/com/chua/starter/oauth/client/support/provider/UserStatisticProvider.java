@@ -168,6 +168,11 @@ public class UserStatisticProvider {
         response.addHeader("Set-Cookie", header.toString());
     }
 
+    /**
+     * url Encode
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String urlEncode(String value) {
         return java.net.URLEncoder.encode(String.valueOf(value), StandardCharsets.UTF_8);
     }

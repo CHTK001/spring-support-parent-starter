@@ -373,10 +373,10 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
 
     /**
      * 按最大长度截断文本
-     *
-     * @param text 文本
      * @param maxLength 最大长度
-     */
+     * @param text 文本
+     * @return 返回值
+    */
     private String abbreviate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;
@@ -402,10 +402,10 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
 
     /**
      * 统一异常抛出：受检异常包装为 PaymentException
-     *
-     * @param throwable 异常
      * @param taskKey 任务标识
-     */
+     * @param throwable 异常
+     * @return 返回值
+    */
     private RuntimeException rethrow(Throwable throwable, String taskKey) {
         if (throwable instanceof RuntimeException runtimeException) {
             return runtimeException;

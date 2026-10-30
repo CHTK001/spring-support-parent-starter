@@ -56,7 +56,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 是否支持该通道
-     */
+     * @param channelSubType 字符串
+     * @param channelType 字符串
+     * @return 返回值
+    */
     public boolean supports(String channelType, String channelSubType) {
         return "COMPOSITE".equalsIgnoreCase(channelType) && "AGGREGATE_ROUTE".equalsIgnoreCase(channelSubType);
     }
@@ -64,7 +67,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 创建订单
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public OrderCreateResult createOrder(MerchantChannel channel, OrderCreateRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).createOrder(targetChannel, request);
@@ -73,7 +79,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 发起支付
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).pay(targetChannel, request);
@@ -82,7 +91,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 查询支付结果
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).query(targetChannel, orderNo);
@@ -91,7 +103,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 关闭订单
-     */
+     * @param channel 参数
+     * @param orderNo 字符串
+     * @return 返回值
+    */
     public boolean close(MerchantChannel channel, String orderNo) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).close(targetChannel, orderNo);
@@ -100,7 +115,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 申请退款
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).refund(targetChannel, request);
@@ -109,7 +127,10 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     @Override
     /**
      * 查询退款结果
-     */
+     * @param channel 参数
+     * @param request 参数
+     * @return 返回值
+    */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).queryRefund(targetChannel, request);

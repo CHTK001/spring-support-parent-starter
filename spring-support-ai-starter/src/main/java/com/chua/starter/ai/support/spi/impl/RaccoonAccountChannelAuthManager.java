@@ -253,10 +253,19 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
 
     // ── 私有辅助 ──
 
+    /**
+     * json Headers
+     * @return 返回值
+    */
     private static Map<String, String> jsonHeaders() {
         return Map.of("Content-Type", "application/json", "Accept", "application/json");
     }
 
+    /**
+     * auth Headers
+     * @param accessToken 字符串
+     * @return 返回值
+    */
     private static Map<String, String> authHeaders(String accessToken) {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("Authorization", "Bearer " + (accessToken == null ? "" : accessToken.trim()));
@@ -265,6 +274,12 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         return headers;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -272,13 +287,20 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         return result;
     }
 
-    /** 扫码 code：16 字节随机 hex（服务端接受任意自造 code 进入 pending）。 */
+    /**
+     * qr Code
+     * @return 返回值
+    */
     private static String qrCode() {
         byte[] raw = new byte[16];
         new SecureRandom().nextBytes(raw);
         return HexFormat.of().formatHex(raw);
     }
 
+    /**
+     * qr Appname Encoded
+     * @return 返回值
+    */
     private static String qrAppnameEncoded() {
         try {
             return java.net.URLEncoder.encode(QR_APPNAME, java.nio.charset.StandardCharsets.UTF_8);
@@ -287,11 +309,23 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         }
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -300,10 +334,20 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();
@@ -318,7 +362,11 @@ public class RaccoonAccountChannelAuthManager implements AccountChannelAuthManag
         return null;
     }
 
-    /** 时间值归一为毫秒（数字 <1e12 视为秒；ISO 字符串按 Instant 解析）。 */
+    /**
+     * to Millis
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toMillis(Object value) {
         if (value instanceof Number number && number.doubleValue() > 0) {
             double v = number.doubleValue();

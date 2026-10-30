@@ -295,7 +295,12 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
 
     // ==================== wb2api 网关调用 ====================
 
-    /** 管理登录：POST /admin/login {key}，Origin 必须等于网关 origin。 */
+    /**
+     * admin Login
+     * @param adminKey 字符串
+     * @param gateway 字符串
+     * @return 返回值
+    */
     private Map<String, Object> adminLogin(String gateway, String adminKey) {
         String body = "{\"key\":\"" + jsonEscape(adminKey) + "\"}";
         HttpResponse<String> resp = send("POST", gateway + "/admin/login", body,
@@ -319,7 +324,14 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return out;
     }
 
-    /** 发起浏览器授权：POST /admin/oauth {realm}。 */
+    /**
+     * oauth Start
+     * @param Map<String 参数
+     * @param gateway 字符串
+     * @param realm 字符串
+     * @param session 参数
+     * @return 返回值
+    */
     private Map<String, Object> oauthStart(String gateway, String realm, Map<String, Object> session) {
         String body = "{\"realm\":\"" + jsonEscape(realm) + "\"}";
         HttpResponse<String> resp = send("POST", gateway + "/admin/oauth", body,
@@ -330,7 +342,13 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return parseBody(resp);
     }
 
-    /** 轮询授权流：POST /admin/oauth/{flowId}/poll（console 对外路由，内部转 GET core）。 */
+    /**
+     * oauth Poll
+     * @param cookie 字符串
+     * @param flowId 字符串
+     * @param gateway 字符串
+     * @return 返回值
+    */
     private Map<String, Object> oauthPoll(String gateway, String flowId, String cookie) {
         HttpResponse<String> resp = send("POST", gateway + "/admin/oauth/" + urlEncode(flowId) + "/poll",
                 "{}", Map.of("Content-Type", "application/json", "Origin", gateway,
@@ -338,7 +356,13 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return parseBody(resp);
     }
 
-    /** 取网关 API Key：POST /admin/access（管理会话）。 */
+    /**
+     * admin Access
+     * @param cookie 字符串
+     * @param csrf 字符串
+     * @param gateway 字符串
+     * @return 返回值
+    */
     private String adminAccess(String gateway, String cookie, String csrf) {
         HttpResponse<String> resp = send("POST", gateway + "/admin/access", "{}",
                 Map.of("Content-Type", "application/json", "Origin", gateway,
@@ -349,7 +373,12 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return key == null ? "" : String.valueOf(key);
     }
 
-    /** 网关任务列表：GET /admin/tasks（管理会话）。 */
+    /**
+     * admin Tasks
+     * @param cookie 字符串
+     * @param gateway 字符串
+     * @return 返回值
+    */
     private List<Map<String, Object>> adminTasks(String gateway, String cookie) {
         HttpResponse<String> resp = send("GET", gateway + "/admin/tasks", null,
                 Map.of("Cookie", cookie), null, 30);
@@ -369,7 +398,14 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return out;
     }
 
-    /** 立即执行网关任务：POST /admin/tasks/{id}/runs（管理会话，需 request_id）。 */
+    /**
+     * admin Task Run
+     * @param cookie 字符串
+     * @param csrf 字符串
+     * @param gateway 字符串
+     * @param taskId 字符串
+     * @return 返回值
+    */
     private Map<String, Object> adminTaskRun(String gateway, String taskId, String cookie, String csrf) {
         String requestId = "wb2a-" + System.currentTimeMillis() + "-" + (int) (Math.random() * 1000);
         HttpResponse<String> resp = send("POST", gateway + "/admin/tasks/" + urlEncode(taskId) + "/runs",
@@ -380,7 +416,13 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return parseBody(resp);
     }
 
-    /** 公开 API GET（Bearer API Key）。 */
+    /**
+     * get V1
+     * @param apiKey 字符串
+     * @param gateway 字符串
+     * @param path 字符串
+     * @return 返回值
+    */
     private String getV1(String gateway, String path, String apiKey) {
         HttpResponse<String> resp = send("GET", gateway + path, null,
                 Map.of("Authorization", "Bearer " + apiKey), null, 30);
@@ -438,7 +480,11 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         }
     }
 
-    /** 解析响应体为 Map（非法 JSON 返回 null）。 */
+    /**
+     * parse Body
+     * @param response 参数
+     * @return 返回值
+    */
     private Map<String, Object> parseBody(HttpResponse<String> response) {
         try {
             return Json.getJsonObject(response.body());
@@ -449,7 +495,12 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
 
     // ==================== 工具 ====================
 
-    /** 读取可覆盖配置：系统属性 {@code chua.workbuddy.<key>} → 环境变量 {@code WORKBUDDY_<KEY_UPPER>} → 默认。 */
+    /**
+     * cfg
+     * @param fallback 字符串
+     * @param key 字符串
+     * @return 返回值
+    */
     private static String cfg(String key, String fallback) {
         String value = System.getProperty("chua.workbuddy." + key);
         if (value == null || value.isBlank()) {
@@ -460,6 +511,13 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return (value == null || value.isBlank()) ? fallback : value;
     }
 
+    /**
+     * build Credential
+     * @param apiKey 字符串
+     * @param gateway 字符串
+     * @param realm 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> buildCredential(String apiKey, String gateway, String realm) {
         Map<String, Object> credential = new LinkedHashMap<>(5);
         credential.put("access_token", apiKey);
@@ -469,6 +527,12 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return credential;
     }
 
+    /**
+     * extract Cookie Value
+     * @param name 字符串
+     * @param setCookie 字符串
+     * @return 返回值
+    */
     private static String extractCookieValue(String setCookie, String name) {
         if (setCookie == null) {
             return null;
@@ -483,6 +547,11 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return null;
     }
 
+    /**
+     * count Models
+     * @param body 字符串
+     * @return 返回值
+    */
     private static String countModels(String body) {
         if (body == null || body.isBlank()) {
             return "0";
@@ -496,6 +565,11 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         }
     }
 
+    /**
+     * json Escape
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String jsonEscape(String value) {
         if (value == null) {
             return "";
@@ -503,6 +577,11 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
+    /**
+     * url Encode
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String urlEncode(String value) {
         try {
             return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
@@ -511,6 +590,11 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         }
     }
 
+    /**
+     * truncate
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String truncate(String value) {
         if (value == null) {
             return "";
@@ -518,10 +602,22 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return value.length() > 200 ? value.substring(0, 200) + "…" : value;
     }
 
+    /**
+     * string Of
+     * @param value 对象
+     * @return 返回值
+    */
     private static String stringOf(Object value) {
         return value == null ? "" : String.valueOf(value);
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         if (source == null) {
             return "";
@@ -530,6 +626,11 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         return value == null ? "" : String.valueOf(value);
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

@@ -83,9 +83,10 @@ public enum InstallStatus {
 
     /**
      * install状态。
-     * @param value 值
      * @param name 名称
-     */
+     * @param value 值
+     * @return 返回值
+    */
     InstallStatus(int value, String name) {
         this.value = value;
         this.name = name;

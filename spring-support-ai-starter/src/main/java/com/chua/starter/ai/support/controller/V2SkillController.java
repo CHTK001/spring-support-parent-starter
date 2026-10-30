@@ -367,12 +367,21 @@ public class V2SkillController {
 
     // ─────────────────────────── 内部实现 ───────────────────────────
 
+    /**
+     * success Result
+     * @return 返回值
+    */
     private ReturnResult<Map<String, Object>> successResult() {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         return ReturnResult.ok(result);
     }
 
+    /**
+     * install Result
+     * @param skillId 字符串
+     * @return 返回值
+    */
     private ReturnResult<Map<String, Object>> installResult(String skillId) {
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
@@ -381,6 +390,11 @@ public class V2SkillController {
         return ReturnResult.ok(result);
     }
 
+    /**
+     * 查找
+     * @param id 字符串
+     * @return 返回值
+    */
     private ChatSkillSupport.InstalledSkill find(String id) {
         for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
             if (skill.name().equals(id)) {
@@ -390,13 +404,20 @@ public class V2SkillController {
         throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + id);
     }
 
+    /**
+     * find Item
+     * @param id 字符串
+     * @return 返回值
+    */
     private Map<String, Object> findItem(String id) {
         return toItem(find(id));
     }
 
     /**
      * 把内部技能对象转成前端期望的结构：{id,basePath,manifest,contentHash,source,enabled}。
-     */
+     * @param skill 参数
+     * @return 返回值
+    */
     private Map<String, Object> toItem(ChatSkillSupport.InstalledSkill skill) {
         Map<String, Object> front = parseFrontmatter(skill.content());
         Map<String, Object> manifest = new LinkedHashMap<>();
@@ -426,7 +447,9 @@ public class V2SkillController {
 
     /**
      * 解析 SKILL.md 顶部 YAML frontmatter（轻量实现，仅取常用标量与 tags）。
-     */
+     * @param content 字符串
+     * @return 返回值
+    */
     private Map<String, Object> parseFrontmatter(String content) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (content == null) {
@@ -524,7 +547,10 @@ public class V2SkillController {
 
     /**
      * 把块标量正文拼成文本：折叠标量(>)按语义合并为单行，字面标量(|)保留换行。
-     */
+     * @param fold 参数
+     * @param lines 参数
+     * @return 返回值
+    */
     private static String joinBlock(char fold, List<String> lines) {
         List<String> trimmed = new ArrayList<>(lines);
         // 去掉首尾空行
@@ -556,7 +582,10 @@ public class V2SkillController {
 
     /**
      * 解析描述：块标量解析失败（值为 > / | 或空）时回退到目录正文提炼的描述。
-     */
+     * @param fallback 字符串
+     * @param parsed 对象
+     * @return 返回值
+    */
     private static String resolveDescription(Object parsed, String fallback) {
         if (parsed != null) {
             String s = parsed.toString().trim();
@@ -569,7 +598,11 @@ public class V2SkillController {
 
     /**
      * 解压 ZIP 到 user 目录并返回技能名。
-     */
+     * @param force 布尔值
+     * @param zipBytes 参数
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private String extractZip(byte[] zipBytes, boolean force) throws IOException {
         Map<String, byte[]> entries = new LinkedHashMap<>();
         try (ZipInputStream zis = new ZipInputStream(new java.io.ByteArrayInputStream(zipBytes), StandardCharsets.UTF_8)) {
@@ -647,7 +680,10 @@ public class V2SkillController {
 
     /**
      * 从 ZIP 字节中定位最浅层的 SKILL.md 并返回其完整文本（不落盘）。
-     */
+     * @param zipBytes 参数
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private String readSkillMdFromZip(byte[] zipBytes) throws IOException {
         Map<String, byte[]> entries = new LinkedHashMap<>();
         try (ZipInputStream zis = new ZipInputStream(new java.io.ByteArrayInputStream(zipBytes), StandardCharsets.UTF_8)) {
@@ -680,7 +716,9 @@ public class V2SkillController {
 
     /**
      * 去掉 SKILL.md 顶部 YAML frontmatter，返回正文；无 frontmatter 时原样返回。
-     */
+     * @param content 字符串
+     * @return 返回值
+    */
     private String stripFrontmatter(String content) {
         if (content == null) {
             return "";
@@ -701,6 +739,13 @@ public class V2SkillController {
         return bodyStart < 0 ? "" : text.substring(bodyStart + 1).stripLeading();
     }
 
+    /**
+     * 下载
+     * @param urlStr 字符串
+     * @return 返回值
+     * @throws IOException 异常
+     * @throws InterruptedException 异常
+    */
     private byte[] download(String urlStr) throws IOException, InterruptedException {
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(15))
@@ -719,6 +764,11 @@ public class V2SkillController {
         return response.body();
     }
 
+    /**
+     * delete Recursively
+     * @param path 路径
+     * @return 返回值
+    */
     private static boolean deleteRecursively(Path path) {
         if (!Files.exists(path)) {
             return true;
@@ -738,10 +788,20 @@ public class V2SkillController {
         return allDeleted && !Files.exists(path);
     }
 
+    /**
+     * depth
+     * @param name 字符串
+     * @return 返回值
+    */
     private static int depth(String name) {
         return name.split("/").length;
     }
 
+    /**
+     * sanitize
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static String sanitize(String raw) {
         if (raw == null || raw.isBlank()) {
             return "skill-" + Integer.toHexString(System.identityHashCode(new Object()));
@@ -755,6 +815,11 @@ public class V2SkillController {
         return cleaned;
     }
 
+    /**
+     * unquote
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String unquote(String value) {
         if (value.length() >= 2
                 && ((value.startsWith("\"") && value.endsWith("\""))
@@ -764,6 +829,12 @@ public class V2SkillController {
         return value;
     }
 
+    /**
+     * str
+     * @param fallback 字符串
+     * @param value 对象
+     * @return 返回值
+    */
     private static String str(Object value, String fallback) {
         if (value == null) {
             return fallback == null ? "" : fallback;
@@ -772,6 +843,11 @@ public class V2SkillController {
         return s.isEmpty() && fallback != null ? fallback : s;
     }
 
+    /**
+     * parse Bool
+     * @param raw 字符串
+     * @return 返回值
+    */
     private static boolean parseBool(String raw) {
         if (raw == null) {
             return false;
@@ -780,6 +856,11 @@ public class V2SkillController {
         return v.equals("true") || v.equals("1") || v.equals("yes") || v.equals("on");
     }
 
+    /**
+     * sha1
+     * @param input 字符串
+     * @return 返回值
+    */
     private static String sha1(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-1");

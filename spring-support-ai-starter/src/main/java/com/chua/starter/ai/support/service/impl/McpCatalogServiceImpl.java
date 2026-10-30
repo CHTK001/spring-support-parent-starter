@@ -212,7 +212,9 @@ public class McpCatalogServiceImpl implements McpCatalogService {
 
     /**
      * 构造远程 streamable HTTP transport。
-     */
+     * @param url 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> remote(String url) {
         Map<String, Object> t = new LinkedHashMap<>();
         t.put("type", "streamable_http");
@@ -222,7 +224,12 @@ public class McpCatalogServiceImpl implements McpCatalogService {
 
     /**
      * 构造本机 stdio transport（npx -y pkg ...）。Windows 使用 npx.cmd 以保证可被进程解析。
-     */
+     * @param Map<String 参数
+     * @param env 参数
+     * @param extra 参数
+     * @param pkg 字符串
+     * @return 返回值
+    */
     private Map<String, Object> stdio(String pkg, List<String> extra, Map<String, String> env) {
         Map<String, Object> t = new LinkedHashMap<>();
         t.put("type", "stdio");
@@ -268,10 +275,19 @@ public class McpCatalogServiceImpl implements McpCatalogService {
 
     // ============================ 开关 / SPI ============================
 
+    /**
+     * is Online Enabled
+     * @param src 字符串
+     * @return 返回值
+    */
     private boolean isOnlineEnabled(String src) {
         return globalSettingService.getBoolean(GROUP, "online_" + src, false);
     }
 
+    /**
+     * online Providers
+     * @return 返回值
+    */
     private Map<String, SkillOnlineProvider> onlineProviders() {
         try {
             Map<String, SkillOnlineProvider> map =
@@ -283,10 +299,19 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         }
     }
 
+    /**
+     * is Windows
+     * @return 返回值
+    */
     private static boolean isWindows() {
         return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
     }
 
+    /**
+     * str
+     * @param o 对象
+     * @return 返回值
+    */
     private static String str(Object o) {
         return o == null ? "" : String.valueOf(o);
     }

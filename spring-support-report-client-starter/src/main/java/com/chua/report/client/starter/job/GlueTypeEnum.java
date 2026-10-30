@@ -72,11 +72,12 @@ public enum GlueTypeEnum {
 
     /**
      * 胶水类型enum。
+     * @param cmd CMD
      * @param desc desc
      * @param isScript 是否script
-     * @param cmd CMD
      * @param suffix 后缀
-     */
+     * @return 返回值
+    */
     GlueTypeEnum(String desc, boolean isScript, String cmd, String suffix) {
         this.desc = desc;
         this.isScript = isScript;

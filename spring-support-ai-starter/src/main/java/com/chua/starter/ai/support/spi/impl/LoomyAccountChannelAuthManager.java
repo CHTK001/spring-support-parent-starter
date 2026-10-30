@@ -372,7 +372,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return postAccount("/login/thirdAccount/bind/auth", param);
     }
 
-    /** 微信第 4 步（bind=1 时走）：跳过绑定，直接换 session。 */
+    /**
+     * bind Skip
+     * @param rcode 字符串
+     * @return 返回值
+    */
     private Map<String, Object> bindSkip(String rcode) {
         Map<String, Object> param = new LinkedHashMap<>();
         param.put("rcode", rcode);
@@ -395,7 +399,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
                 + "#wechat_redirect";
     }
 
-    /** 拼微信二维码图片地址。 */
+    /**
+     * build Wechat Qr Image Url
+     * @param uuid 字符串
+     * @return 返回值
+    */
     private static String buildWechatQrImageUrl(String uuid) {
         return "https://open.weixin.qq.com/connect/qrcode/" + URLEncoder.encode(uuid, StandardCharsets.UTF_8);
     }
@@ -466,7 +474,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
-    /** 按魔数识别图片格式；未知返回 null。 */
+    /**
+     * detect Image Mime
+     * @param bytes 参数
+     * @return 返回值
+    */
     private static String detectImageMime(byte[] bytes) {
         if (bytes.length >= 3 && (bytes[0] & 0xff) == 0xff && (bytes[1] & 0xff) == 0xd8
                 && (bytes[2] & 0xff) == 0xff) {
@@ -535,12 +547,13 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
-    /** 发一次讯飞账号端点请求并拆信封。
-     *
-     * <p>body 序列化一次、签名与发送共用；HTTP 恒 200，成败读 body 的
-     * {@code code}（成功 {@code 000000}，容忍数字/字符串两种形态），
-     * 失败透传 {@code desc}。</p>
-     */
+    /**
+     * <p>body 序列化一次、签名与发送共用；HTTP 恒 200，成败读 body 的 {@code code}（成功 {@code 000000}，容忍数字/字符串两种形态）， 失败透传 {@code desc}。</p>
+     * @param Map<String 参数
+     * @param param 参数
+     * @param path 字符串
+     * @return 返回值
+    */
     private Map<String, Object> postAccount(String path, Map<String, Object> param) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("base", accountBase());
@@ -562,7 +575,12 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return payload.get("data") instanceof Map<?, ?> data ? (Map<String, Object>) data : Map.of();
     }
 
-    /** 读信封 code（容忍数字/字符串两种下发形态），缺失返回空串。 */
+    /**
+     * read Code
+     * @param Map<String 参数
+     * @param payload 参数
+     * @return 返回值
+    */
     private static String readCode(Map<String, Object> payload) {
         Object value = payload.get("code");
         if (value instanceof String s) {
@@ -574,7 +592,13 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return "";
     }
 
-    /** 读宽松字符串（容忍数字下发的字段，如 msgid / desc）。 */
+    /**
+     * read Loose String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readLooseString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -586,7 +610,10 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
-    /** 账号请求体 base 段（appid/modelid/version/devid/ua/traceid，traceid 每次新生成）。 */
+    /**
+     * account Base
+     * @return 返回值
+    */
     private Map<String, Object> accountBase() {
         Map<String, Object> base = new LinkedHashMap<>();
         base.put("appid", loomCfg("app_id", APP_ID));
@@ -620,12 +647,12 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
     }
 
     /**
-     * 讯飞账号 HMAC-SHA1 签名头（逐字节复刻 {@code loomy-sign.ts}）。
-     *
-     * <p>待签名字符串 9 段 {@code \n} 连接：
-     * {@code METHOD\nESCAPED_PATH\nESCAPED_QUERY\nContent-MD5\nContent-Type\nDate\nNonce\n\n}
-     * —— 后两段（x-* 头）恒为空串，故字符串以两个换行结尾，<b>不能去掉尾随换行</b>。</p>
-     */
+     * 讯飞账号 HMAC-SHA1 签名头（逐字节复刻 {@code loomy-sign.ts}）。 <p>待签名字符串 9 段 {@code \n} 连接： {@code METHOD\nESCAPED_PATH\nESCAPED_QUERY\nContent-MD5\nContent-Type\nDate\nNonce\n\n} —— 后两段（x-* 头）恒为空串，故字符串以两个换行结尾，<b>不能去掉尾随换行</b>。</p>
+     * @param body 字符串
+     * @param method 字符串
+     * @param path 字符串
+     * @return 返回值
+    */
     private Map<String, String> signHeaders(String method, String path, String body) {
         String date = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
                 .format(java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME);
@@ -653,7 +680,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return headers;
     }
 
-    /** Content-MD5（base64）；空 body 返回<b>空串</b>而非空串的 md5（与官方 sign.js 一致）。 */
+    /**
+     * content Md5
+     * @param body 字符串
+     * @return 返回值
+    */
     private static String contentMd5(String body) {
         if (body == null || body.isEmpty()) {
             return "";
@@ -666,7 +697,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
-    /** RFC3986 转义：URLEncoder + 补转 {@code ! ' ( ) *}，与 JS 侧 {@code encodeURIComponent} 对齐。 */
+    /**
+     * escape Rfc3986
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String escapeRfc3986(String value) {
         return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8)
                 .replace("!", "%21")
@@ -676,7 +711,11 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
                 .replace("*", "%2A");
     }
 
-    /** 构建 ESCAPED_PATH：补前导 {@code /}、剥末尾 {@code /}，逐段转义。 */
+    /**
+     * escaped Path
+     * @param path 字符串
+     * @return 返回值
+    */
     private static String escapedPath(String path) {
         String clean = path.startsWith("/") ? path : "/" + path;
         if (clean.length() > 1 && clean.endsWith("/")) {
@@ -694,7 +733,12 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return sb.toString();
     }
 
-    /** HMAC-SHA1 摘要 base64。 */
+    /**
+     * hmac Sha1 Base64
+     * @param data 字符串
+     * @param secret 字符串
+     * @return 返回值
+    */
     private static String hmacSha1Base64(String data, String secret) {
         try {
             Mac mac = Mac.getInstance("HmacSHA1");
@@ -705,6 +749,12 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         }
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -712,11 +762,23 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return result;
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -725,10 +787,20 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
+    /**
+     * to Long
+     * @param value 对象
+     * @return 返回值
+    */
     private static Long toLong(Object value) {
         if (value instanceof Number n) {
             return n.longValue();

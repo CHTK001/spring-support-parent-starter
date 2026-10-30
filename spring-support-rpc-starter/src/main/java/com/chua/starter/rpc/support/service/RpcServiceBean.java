@@ -54,6 +54,8 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     @Override
     /**
      * 之后属性设置
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void afterPropertiesSet() throws Exception {
         /**

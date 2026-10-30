@@ -23,6 +23,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     @Override
     /**
      * 获取数据源类型
+     * @return 返回值
     */
     public Class<HikariDataSource> getDataSourceType() {
         return HikariDataSource.class;
@@ -31,6 +32,8 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     @Override
     /**
      * 获取属性
+     * @param dataSource 参数
+     * @return 返回值
     */
     public Map<String, Object> getProperties(HikariDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
@@ -86,6 +89,10 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     @Override
     /**
      * 设置属性
+     * @param Map<String 参数
+     * @param dataSource 参数
+     * @param properties 参数
+     * @return 返回值
     */
     public void setProperties(HikariDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
@@ -94,6 +101,10 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     @Override
     /**
      * 设置财产
+     * @param dataSource 参数
+     * @param name 字符串
+     * @param value 对象
+     * @return 返回值
     */
     public void setProperty(HikariDataSource dataSource, String name, Object value) {
         if (value == null) {
@@ -144,6 +155,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     @Override
     /**
      * 获取财产名称mapping
+     * @return 返回值
     */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
@@ -152,6 +164,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     @Override
     /**
      * 获取订单
+     * @return 返回值
     */
     public int getOrder() {
         return 10;

@@ -195,7 +195,12 @@ public final class DbStructureDiff {
         return snapshot(conn, catalog, filter);
     }
 
-    /** 把 catalog 还原（异常也还原，否则连接被留在一个意外的库上） */
+    /**
+     * restore Catalog
+     * @param conn 参数
+     * @param original 字符串
+     * @return 返回值
+    */
     private static void restoreCatalog(Connection conn, String original) {
         if (original == null || original.isBlank()) {
             return;
@@ -441,12 +446,20 @@ public final class DbStructureDiff {
         }
     }
 
-    /** 外键的「身份」：名 + 列集 + 被引用表列。名不同但定义相同也算已存在 */
+    /**
+     * foreign Key Identity
+     * @param f 参数
+     * @return 返回值
+    */
     private static String foreignKeyIdentity(ForeignKeySnapshot f) {
         return f.name() + "|" + f.fromColumns() + "|" + f.refTable() + "|" + f.refColumns();
     }
 
-    /** 外键级联动作 */
+    /**
+     * rule
+     * @param code 整数
+     * @return 返回值
+    */
     private static String rule(int code) {
         return switch (code) {
             case 1 -> "CASCADE";
@@ -457,7 +470,12 @@ public final class DbStructureDiff {
         };
     }
 
-    /** 建索引 DDL */
+    /**
+     * index Ddl
+     * @param s 参数
+     * @param table 字符串
+     * @return 返回值
+    */
     private static String indexDdl(String table, IndexSnapshot s) {
         return "CREATE " + (s.unique() ? "UNIQUE " : "") + "INDEX " + q(s.name())
                 + " ON " + q(table) + " (" + s.columns() + ");";
@@ -468,7 +486,12 @@ public final class DbStructureDiff {
         return SqlName.quoteMysql(name, "标识符");
     }
 
-    /** 空值与空白视为相同 */
+    /**
+     * eq
+     * @param a 字符串
+     * @param b 字符串
+     * @return 返回值
+    */
     private static boolean eq(String a, String b) {
         return Objects.equals(a == null ? "" : a.trim(), b == null ? "" : b.trim());
     }

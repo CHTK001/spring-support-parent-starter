@@ -379,6 +379,14 @@ public class WorkbenchServiceImpl implements WorkbenchService {
          */
         final Long hostId;
 
+        /**
+         * Exec Session
+         * @param handle 处理
+         * @param hostId 长整数
+         * @param sessionId 字符串
+         * @param terminal 启动终端连接
+         * @return 返回值
+        */
         ExecSession(String sessionId, SshClient.TerminalOperation terminal, SshClients.Handle handle, Long hostId) {
             this.sessionId = sessionId;
             this.terminal = terminal;

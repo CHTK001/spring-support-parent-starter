@@ -370,6 +370,10 @@ public class SyncServerInstance {
         @Override
         /**
          * on客户端连接
+         * @param clientId 字符串
+         * @param java.util.Map<String 参数
+         * @param metadata 参数
+         * @return 返回值
         */
         public void onClientConnected(String clientId, java.util.Map<String, Object> metadata) {
             log.info("[SyncServer:{}] 客户端连接: clientId={}", instanceConfig.getName(), clientId);
@@ -381,6 +385,8 @@ public class SyncServerInstance {
         @Override
         /**
          * on客户端断开连接
+         * @param clientId 字符串
+         * @return 返回值
         */
         public void onClientDisconnected(String clientId) {
             ClientInfo clientInfo = clientInfoMap.remove(clientId);
@@ -400,6 +406,10 @@ public class SyncServerInstance {
         @Override
         /**
          * on消息
+         * @param clientId 字符串
+         * @param message 对象
+         * @param topic 字符串
+         * @return 返回值
         */
         public void onMessage(String clientId, String topic, Object message) {
             /**
@@ -414,6 +424,9 @@ public class SyncServerInstance {
         @Override
         /**
          * On记录错误
+         * @param cause 可抛出异常
+         * @param clientId 字符串
+         * @return 返回值
         */
         public void onError(String clientId, Throwable cause) {
             log.error("[SyncServer:{}] 客户端错误: clientId={}", instanceConfig.getName(), clientId, cause);

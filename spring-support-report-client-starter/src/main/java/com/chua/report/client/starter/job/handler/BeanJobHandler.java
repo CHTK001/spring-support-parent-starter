@@ -62,6 +62,8 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 执行
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void execute() throws Exception {
         log.debug("开始执行Bean任务: {}#{}", target.getClass().getSimpleName(), method.getName());
@@ -78,6 +80,8 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 初始化
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void init() throws Exception {
         if (initMethod != null) {
@@ -90,6 +94,8 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 销毁
+     * @return 返回值
+     * @throws Exception 异常
     */
     public void destroy() throws Exception {
         if (destroyMethod != null) {
@@ -102,6 +108,7 @@ public class BeanJobHandler implements JobHandler {
     @Override
     /**
      * 转为字符串
+     * @return 返回值
     */
     public String toString() {
         return super.toString() + "[" + target.getClass().getSimpleName() + "#" + method.getName() + "]";

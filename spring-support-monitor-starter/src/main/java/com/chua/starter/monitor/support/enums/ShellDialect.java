@@ -39,10 +39,10 @@ public enum ShellDialect {
 
     /**
      * 构造方法
-     *
      * @param code 解释器名称
      * @param desc 描述
-     */
+     * @return 返回值
+    */
     ShellDialect(String code, String desc) {
         this.code = code;
         this.desc = desc;

@@ -261,6 +261,11 @@ public class ImageSearchStore {
                 continue;
             }
             if (library.insert(account, vid, item.getName(), item.getThumb(), item.getImageFile(),
+                    /**
+                     * meta Of
+                     * @param item.getTags() 参数
+                     * @return 返回值
+                    */
                     joinTags(item.getTags()), item.getWidth(), item.getHeight(), metaOf(item))) {
                 created++;
             }
@@ -651,6 +656,11 @@ public class ImageSearchStore {
         // 特征模型名 / 原图字节数进 meta 列，够排查「为什么认不出」即可。
         if (!library.insert(account, vectorId(id), item.getName(), item.getThumb(),
                 item.getImageFile(), joinTags(item.getTags()), item.getWidth(), item.getHeight(),
+                /**
+                 * meta Of
+                 * @param item 参数
+                 * @return 返回值
+                */
                 metaOf(item))) {
             // DB 是权威，写不进去就等于这次上传没成立：内存、原图、向量一并撤销，
             // 否则三处就此分叉，界面与库里的量对不上。
@@ -1230,42 +1240,87 @@ public class ImageSearchStore {
          */
         private String featureModel;
 
+        /**
+         * get Id
+         * @return 返回值
+        */
         public long getId() {
             return id;
         }
 
+        /**
+         * set Id
+         * @param id 长整数
+         * @return 返回值
+        */
         public void setId(long id) {
             this.id = id;
         }
 
+        /**
+         * get Name
+         * @return 返回值
+        */
         public String getName() {
             return name;
         }
 
+        /**
+         * set Name
+         * @param name 字符串
+         * @return 返回值
+        */
         public void setName(String name) {
             this.name = name;
         }
 
+        /**
+         * get Tags
+         * @return 返回值
+        */
         public List<String> getTags() {
             return tags;
         }
 
+        /**
+         * set Tags
+         * @param tags 参数
+         * @return 返回值
+        */
         public void setTags(List<String> tags) {
             this.tags = tags;
         }
 
+        /**
+         * get Thumb
+         * @return 返回值
+        */
         public String getThumb() {
             return thumb;
         }
 
+        /**
+         * set Thumb
+         * @param thumb 字符串
+         * @return 返回值
+        */
         public void setThumb(String thumb) {
             this.thumb = thumb;
         }
 
+        /**
+         * get Image File
+         * @return 返回值
+        */
         public String getImageFile() {
             return imageFile;
         }
 
+        /**
+         * set Image File
+         * @param imageFile 字符串
+         * @return 返回值
+        */
         public void setImageFile(String imageFile) {
             this.imageFile = imageFile;
         }
@@ -1281,50 +1336,104 @@ public class ImageSearchStore {
          */
         private Long sizeBytes;
 
+        /**
+         * get Size Bytes
+         * @return 返回值
+        */
         public Long getSizeBytes() {
             return sizeBytes;
         }
 
+        /**
+         * set Size Bytes
+         * @param sizeBytes 长整数
+         * @return 返回值
+        */
         public void setSizeBytes(Long sizeBytes) {
             this.sizeBytes = sizeBytes;
         }
 
+        /**
+         * get Width
+         * @return 返回值
+        */
         public int getWidth() {
             return width;
         }
 
+        /**
+         * set Width
+         * @param width 整数
+         * @return 返回值
+        */
         public void setWidth(int width) {
             this.width = width;
         }
 
+        /**
+         * get Height
+         * @return 返回值
+        */
         public int getHeight() {
             return height;
         }
 
+        /**
+         * set Height
+         * @param height 整数
+         * @return 返回值
+        */
         public void setHeight(int height) {
             this.height = height;
         }
 
+        /**
+         * get Created At
+         * @return 返回值
+        */
         public long getCreatedAt() {
             return createdAt;
         }
 
+        /**
+         * set Created At
+         * @param createdAt 长整数
+         * @return 返回值
+        */
         public void setCreatedAt(long createdAt) {
             this.createdAt = createdAt;
         }
 
+        /**
+         * get Vector
+         * @return 返回值
+        */
         public float[] getVector() {
             return vector;
         }
 
+        /**
+         * set Vector
+         * @param vector 参数
+         * @return 返回值
+        */
         public void setVector(float[] vector) {
             this.vector = vector;
         }
 
+        /**
+         * get Feature Model
+         * @return 返回值
+        */
         public String getFeatureModel() {
             return featureModel;
         }
 
+        /**
+         * set Feature Model
+         * @param featureModel 字符串
+         * @return 返回值
+        */
         public void setFeatureModel(String featureModel) {
             this.featureModel = featureModel;
         }

@@ -450,17 +450,11 @@ public class SettingsController {
     }
 
     /**
-     * 用户覆盖写入后发布配置变更事件，使依赖该分组的缓存/派生实例失效。
-     *
-     * <p><b>为什么放到独立线程发布：</b>本应用的 {@code FaceClientManager}、
-     * {@code RagClientManager} 持有全局单例并按事件重建，而它们读取配置走
-     * {@code GlobalSettingReader}（用户覆盖优先）。若在请求线程直接发布，
-     * 重建会把「发起人这一名用户的覆盖」固化成全局实例，等于把个人配置泄漏给所有人。
-     * 换到无请求身份的新线程发布，重建只读到全局配置，行为与管理员改全局时一致；
-     * 用户级差异仍由消费端按请求身份实时解析。</p>
-     *
+     * 用户覆盖写入后发布配置变更事件，使依赖该分组的缓存/派生实例失效。 <p><b>为什么放到独立线程发布：</b>本应用的 {@code FaceClientManager}、 {@code RagClientManager} 持有全局单例并按事件重建，而它们读取配置走 {@code GlobalSettingReader}（用户覆盖优先）。若在请求线程直接发布， 重建会把「发起人这一名用户的覆盖」固化成全局实例，等于把个人配置泄漏给所有人。 换到无请求身份的新线程发布，重建只读到全局配置，行为与管理员改全局时一致； 用户级差异仍由消费端按请求身份实时解析。</p>
      * @param group 设置分组名称
-     */
+     * @param userId 字符串
+     * @return 返回值
+    */
     private void publishUserSettingsChanged(String group, String userId) {
         if (group == null || group.isBlank()) {
             return;

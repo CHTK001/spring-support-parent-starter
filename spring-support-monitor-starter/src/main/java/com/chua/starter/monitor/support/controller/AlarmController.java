@@ -291,6 +291,10 @@ public class AlarmController {
     @Operation(summary = "告警事件实时推送（SSE）",
             description = "建连即回 ready，之后推送 alarm 事件；需配合 GET /event 拉取历史")
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    /**
+     * stream
+     * @return 返回值
+    */
     public ResponseEntity<SseEmitter> stream() {
         return ResponseEntity.ok()
                 .contentType(MediaType.TEXT_EVENT_STREAM)

@@ -75,6 +75,11 @@ public final class DbImportExcel {
         return DbExcelSheetReader.read(bytes, sheetName);
     }
 
+    /**
+     * require Available
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private static void requireAvailable() throws IOException {
         if (!available()) {
             throw new IOException("当前实例未装配 Excel 解析能力（需要 classpath 上有 Apache POI），"

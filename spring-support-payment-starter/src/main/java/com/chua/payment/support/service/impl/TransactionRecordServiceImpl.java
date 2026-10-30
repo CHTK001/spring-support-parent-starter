@@ -37,7 +37,9 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     @Override
     /**
      * 根据主键获取交易流水
-     */
+     * @param id 长整数
+     * @return 返回值
+    */
     public TransactionRecord getById(Long id) {
         return transactionRecordMapper.selectById(id);
     }

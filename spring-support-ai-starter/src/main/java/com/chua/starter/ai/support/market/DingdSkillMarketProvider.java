@@ -84,6 +84,10 @@ public class DingdSkillMarketProvider implements SkillMarketProvider {
         return matched;
     }
 
+    /**
+     * ensure Cache
+     * @return 返回值
+    */
     private List<SkillMarketEntry> ensureCache() {
         List<SkillMarketEntry> snapshot = cache;
         if (snapshot != null && !snapshot.isEmpty() && System.currentTimeMillis() - cacheAt < CACHE_TTL) {
@@ -101,6 +105,10 @@ public class DingdSkillMarketProvider implements SkillMarketProvider {
         }
     }
 
+    /**
+     * 获取
+     * @return 返回值
+    */
     private List<SkillMarketEntry> fetch() {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(MARKET_URL))
@@ -131,6 +139,11 @@ public class DingdSkillMarketProvider implements SkillMarketProvider {
         }
     }
 
+    /**
+     * map Node
+     * @param node 参数
+     * @return 返回值
+    */
     private SkillMarketEntry mapNode(JsonNode node) {
         if (node == null || node.path("id").asText(null) == null) {
             return null;

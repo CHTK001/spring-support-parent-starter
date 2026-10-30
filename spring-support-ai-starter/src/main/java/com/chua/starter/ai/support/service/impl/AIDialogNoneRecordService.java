@@ -20,6 +20,8 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     @Override
     /**
      * 创建Dialog
+     * @param name 字符串
+     * @return 返回值
     */
     public AIDialog createDialog(String name) {
         /**
@@ -34,6 +36,8 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     @Override
     /**
      * 删除Dialog
+     * @param dialogId 长整数
+     * @return 返回值
     */
     public void deleteDialog(Long dialogId) {
         // no-op
@@ -42,6 +46,7 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     @Override
     /**
      * 列表dialog
+     * @return 返回值
     */
     public List<AIDialog> listDialog() {
         return Collections.emptyList();
@@ -50,6 +55,8 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     @Override
     /**
      * 获取dialog消息
+     * @param dialogId 长整数
+     * @return 返回值
     */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         return Collections.emptyList();
@@ -58,6 +65,9 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     @Override
     /**
      * 添加消息
+     * @param dialogId 长整数
+     * @param message 参数
+     * @return 返回值
     */
     public void addMessage(Long dialogId, ChatMessage message) {
         // no-op

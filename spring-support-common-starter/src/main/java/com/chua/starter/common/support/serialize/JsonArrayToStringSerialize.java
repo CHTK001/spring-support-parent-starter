@@ -22,6 +22,11 @@ public class JsonArrayToStringSerialize extends JsonSerializer<Object[]> {
         @Override
     /**
      * 序列化
+     * @param gen 参数
+     * @param serializers 参数
+     * @param value 参数
+     * @return 返回值
+     * @throws IOException 异常
     */
     public void serialize(Object[] value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         if (log.isTraceEnabled()) {

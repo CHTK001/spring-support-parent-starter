@@ -662,10 +662,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
      * 写 JSON 响应
+     * @param body 主体
      * @param response 响应
      * @param status 状态
-     * @param body 主体
-     */
+     * @return 返回值
+     * @throws IOException 异常
+    */
     private void writeResponse(HttpServletResponse response, int status, Object body) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");

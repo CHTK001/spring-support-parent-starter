@@ -85,6 +85,11 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
             $totalMemKb=[long]$os.TotalVisibleMemorySize
             $freeMemKbRaw=[long]$os.FreePhysicalMemory
             $diskTotal=0.0; $diskUsed=0.0
+            /**
+             * foreach
+             * @param $ldisks 参数
+             * @return 返回值
+            */
             foreach($d in $ldisks){ $sz=[double]$d.Size; $fr=[double]$d.FreeSpace; $diskTotal+=$sz; $diskUsed+=($sz-$fr) }
             $threadCount=[int](($allp | Measure-Object -Property ThreadCount -Sum).Sum)
             $pkg=''; if(Test-Path 'C:\\ProgramData\\chocolatey\\bin\\choco.exe'){$pkg='choco'} elseif(Get-Command winget -ErrorAction SilentlyContinue){$pkg='winget'}
@@ -93,6 +98,11 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
             $uptime=[int]((Get-Date)-$os.LastBootUpTime).TotalSeconds
             $netAdapters=@(Get-CimInstance Win32_PerfFormattedData_Tcpip_NetworkInterface)
             $netRx=0.0; $netTx=0.0; $netBw=0.0
+            /**
+             * if
+             * @param $netAdapters 参数
+             * @return 返回值
+            */
             foreach($ni in $netAdapters){ if($ni.Name -match 'isatap|loopback|teredo|6to4'){continue}; $netRx+=[double]$ni.BytesReceivedPersec; $netTx+=[double]$ni.BytesSentPersec; if([double]$ni.CurrentBandwidth -gt $netBw){$netBw=[double]$ni.CurrentBandwidth} }
             $netRxKb=[math]::Round($netRx/1KB,1)
             $netTxKb=[math]::Round($netTx/1KB,1)
@@ -194,7 +204,10 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
 
     /**
      * 执行一条已组装好的 PowerShell 命令行（记录退出码与错误用于诊断）。
-     */
+     * @param command 字符串
+     * @param host 设置主机地址
+     * @return 返回值
+    */
     private PsResult runCommand(MsServerHost host, String command) {
         try {
             com.chua.ssh.support.client.SshClient.ExecResult r = sshCache().execResult(host, command);
@@ -211,9 +224,11 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
     }
 
     /**
-     * 超长脚本：以无 BOM 的 UTF-8 写入临时文件，经 SFTP 上传，再用一条短 EncodedCommand
-     * 显式以 UTF-8 读入并 Invoke-Expression，规避 cmd 长度上限与 -File 的编码/版本差异。
-     */
+     * 超长脚本：以无 BOM 的 UTF-8 写入临时文件，经 SFTP 上传，再用一条短 EncodedCommand 显式以 UTF-8 读入并 Invoke-Expression，规避 cmd 长度上限与 -File 的编码/版本差异。
+     * @param body 字符串
+     * @param host 设置主机地址
+     * @return 返回值
+    */
     private PsResult execViaFile(MsServerHost host, String body) {
         String uuid = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         String remote = "C:/Windows/Temp/ms-run-" + uuid + ".ps1";
@@ -250,6 +265,11 @@ $cpuP=0; try{ $cpuP=[math]::Round((Get-CimInstance Win32_PerfFormattedData_PerfO
         }
     }
 
+    /**
+     * csv Split
+     * @param line 字符串
+     * @return 返回值
+    */
     private List<String> csvSplit(String line) {
         List<String> out = new ArrayList<>();
         StringBuilder cur = new StringBuilder();

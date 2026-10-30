@@ -277,14 +277,11 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
     // ── 私有辅助 ──
 
     /**
-     * 解析 Google token 端点响应，归一为凭据 Map。
-     *
-     * <p>三种失败形态都要给能定位问题的文案（原版口径）：
-     * 解析不了 / {@code error} 字段 / 缺 {@code access_token}。</p>
-     *
-     * @param response 响应体
+     * 解析 Google token 端点响应，归一为凭据 Map。 <p>三种失败形态都要给能定位问题的文案（原版口径）： 解析不了 / {@code error} 字段 / 缺 {@code access_token}。</p>
      * @param previousRefreshToken 旧 refresh_token（响应未轮换时保留）
-     */
+     * @param response 响应体
+     * @return 返回值
+    */
     private Map<String, Object> parseTokenGrant(String response, String previousRefreshToken) {
         Map<String, Object> payload = parseJson(response);
         String errorCode = readString(payload, "error");
@@ -332,7 +329,11 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         return credential;
     }
 
-    /** 从 OIDC id_token 解出 sub / email（base64url 第二段 JSON）。 */
+    /**
+     * identity From Id Token
+     * @param idToken 字符串
+     * @return 返回值
+    */
     private static Map<String, String> identityFromIdToken(String idToken) {
         try {
             String[] parts = idToken.split("\\.");
@@ -358,7 +359,11 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         }
     }
 
-    /** 解析粘贴回来的回调 URL 的 query 参数（{@code code}/{@code state}/{@code error}）。 */
+    /**
+     * parse Callback Url
+     * @param rawUrl 字符串
+     * @return 返回值
+    */
     private static Map<String, String> parseCallbackUrl(String rawUrl) {
         String trimmed = rawUrl.trim();
         int queryIndex = trimmed.indexOf('?');
@@ -382,6 +387,12 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         return result;
     }
 
+    /**
+     * status
+     * @param detail 字符串
+     * @param state 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> status(String state, String detail) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("state", state);
@@ -389,6 +400,12 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         return result;
     }
 
+    /**
+     * form String
+     * @param Map<String 参数
+     * @param form 参数
+     * @return 返回值
+    */
     private static String formString(Map<String, String> form) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : form.entrySet()) {
@@ -400,14 +417,32 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         return sb.toString();
     }
 
+    /**
+     * 编码
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String encode(String value) {
         return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    /**
+     * 解码
+     * @param value 字符串
+     * @return 返回值
+    */
     private static String decode(String value) {
         return java.net.URLDecoder.decode(value, java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    /**
+     * copy If Present
+     * @param Map<String 参数
+     * @param from 参数
+     * @param key 字符串
+     * @param to 参数
+     * @return 返回值
+    */
     private static void copyIfPresent(Map<String, Object> from, Map<String, Object> to, String key) {
         Object value = from.get(key);
         if (value != null) {
@@ -415,12 +450,21 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         }
     }
 
+    /**
+     * parse Json
+     * @param response 字符串
+     * @return 返回值
+    */
     private static Map<String, Object> parseJson(String response) {
         Map<String, Object> map = Json.getJsonObject(response);
         return map != null ? map : new LinkedHashMap<>();
     }
 
-    /** RFC3339 / ISO 字符串 → 毫秒；解析失败返回 null（不判过期）。 */
+    /**
+     * parse Instant
+     * @param value 字符串
+     * @return 返回值
+    */
     private static Long parseInstant(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -432,6 +476,13 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         }
     }
 
+    /**
+     * read String
+     * @param Map<String 参数
+     * @param key 字符串
+     * @param source 参数
+     * @return 返回值
+    */
     private static String readString(Map<String, Object> source, String key) {
         Object value = source == null ? null : source.get(key);
         if (value instanceof String s && !s.isBlank()) {
@@ -440,6 +491,11 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
         return null;
     }
 
+    /**
+     * is Blank
+     * @param value 字符串
+     * @return 返回值
+    */
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

@@ -282,6 +282,11 @@ public class ArthasServiceImpl implements ArthasService {
         boolean windows;
     }
 
+    /**
+     * prepare Context
+     * @param project 参数
+     * @return 返回值
+    */
     private OperationContext prepareContext(MsServerProject project) {
         MsServerRelease release = releaseMapper.selectById(project.getReleaseId());
         if (release == null) {
@@ -301,7 +306,11 @@ public class ArthasServiceImpl implements ArthasService {
         return ctx;
     }
 
-    /** 检查 jvmArgs 中是否包含 Arthas javaagent */
+    /**
+     * is Arthas In Jvm Args
+     * @param jvmArgsJson 字符串
+     * @return 返回值
+    */
     private boolean isArthasInJvmArgs(String jvmArgsJson) {
         if (jvmArgsJson == null || jvmArgsJson.trim().isEmpty()) {
             return false;
@@ -309,7 +318,12 @@ public class ArthasServiceImpl implements ArthasService {
         return jvmArgsJson.contains("arthas");
     }
 
-    /** 构建查询 telnet 端口是否监听的命令 */
+    /**
+     * build Port Check Command
+     * @param ctx 参数
+     * @param port 设置端口号
+     * @return 返回值
+    */
     private String buildPortCheckCommand(OperationContext ctx, int port) {
         if (ctx.windows) {
             return String.format("netstat -ano | findstr :%d | findstr LISTENING", port);
@@ -317,7 +331,13 @@ public class ArthasServiceImpl implements ArthasService {
         return String.format("ss -tlnp | grep :%d", port);
     }
 
-    /** 构建等待 telnet 端口监听的命令（shell 内部轮询，最多 maxSeconds 秒） */
+    /**
+     * build Port Wait Command
+     * @param ctx 参数
+     * @param maxSeconds 整数
+     * @param port 设置端口号
+     * @return 返回值
+    */
     private String buildPortWaitCommand(OperationContext ctx, int port, int maxSeconds) {
         if (ctx.windows) {
             return String.format(
@@ -330,9 +350,11 @@ public class ArthasServiceImpl implements ArthasService {
                 maxSeconds, port);
     }
 
-    /** 构建查询项目 JVM PID 的命令。
-     *  启动脚本会生成 {@code app.pid} 文件，优先读取；
-     *  若 pid 文件不存在（如手动启动），回退到 {@code ps | grep} 方式。 */
+    /**
+     * 启动脚本会生成 {@code app.pid} 文件，优先读取；
+     * @param ctx 参数
+     * @return 返回值
+    */
     private String buildPidQueryCommand(OperationContext ctx) {
         String appName = ctx.project.getProjectName();
         String path = ctx.project.getProjectPath();
@@ -350,7 +372,11 @@ public class ArthasServiceImpl implements ArthasService {
                 pidFile, pidFile, search);
     }
 
-    /** 从命令输出中提取 PID */
+    /**
+     * extract Pid
+     * @param output 字符串
+     * @return 返回值
+    */
     private String extractPid(String output) {
         if (output == null || output.trim().isEmpty()) {
             return null;
@@ -373,7 +399,14 @@ public class ArthasServiceImpl implements ArthasService {
         return null;
     }
 
-    /** 构建 Arthas attach 命令 */
+    /**
+     * build Attach Command
+     * @param ctx 参数
+     * @param jarPath 字符串
+     * @param pid 字符串
+     * @param telnetPort 整数
+     * @return 返回值
+    */
     private String buildAttachCommand(OperationContext ctx, String jarPath, String pid, int telnetPort) {
         int httpPort = telnetPort + 1;
         if (ctx.windows) {
@@ -388,25 +421,42 @@ public class ArthasServiceImpl implements ArthasService {
                 jarPath, pid, telnetPort, httpPort, pid);
     }
 
-    /** 构建 Arthas shutdown 命令（通过 telnet 发送 stop） */
+    /**
+     * build Shutdown Command
+     * @param ctx 参数
+     * @return 返回值
+    */
     private String buildShutdownCommand(OperationContext ctx) {
         return buildTelnetScriptCommand(ctx, "stop", 5);
     }
 
-    /** 构建 Arthas 命令执行命令（通过 telnet 发送命令） */
+    /**
+     * build Exec Command
+     * @param command 字符串
+     * @param ctx 参数
+     * @return 返回值
+    */
     private String buildExecCommand(OperationContext ctx, String command) {
         return buildTelnetScriptCommand(ctx, command, 8);
     }
 
-    /** 构建 Arthas 终端输出获取命令（通过 telnet 发送 history） */
+    /**
+     * build Console Command
+     * @param ctx 参数
+     * @param lines 整数
+     * @return 返回值
+    */
     private String buildConsoleCommand(OperationContext ctx, int lines) {
         return buildTelnetScriptCommand(ctx, "history", 5);
     }
 
     /**
-     * 构建通过 SSH 执行 Python telnet 脚本的命令。
-     * 将 Python 脚本写入临时文件，然后执行。
-     */
+     * 构建通过 SSH 执行 Python telnet 脚本的命令。 将 Python 脚本写入临时文件，然后执行。
+     * @param command 字符串
+     * @param ctx 参数
+     * @param readSeconds 双精度数
+     * @return 返回值
+    */
     private String buildTelnetScriptCommand(OperationContext ctx, String command, double readSeconds) {
         String safeCmd = shellQuote(command);
         return "cat > /tmp/arthas_telnet.py << 'ARTHAS_PY_EOF'\n"
@@ -415,7 +465,11 @@ public class ArthasServiceImpl implements ArthasService {
                 + "python3 /tmp/arthas_telnet.py 127.0.0.1 " + DEFAULT_TELNET_PORT + " " + safeCmd + " " + readSeconds;
     }
 
-    /** Shell 单引号转义 */
+    /**
+     * shell Quote
+     * @param s 字符串
+     * @return 返回值
+    */
     private String shellQuote(String s) {
         return "'" + s.replace("'", "'\\''") + "'";
     }

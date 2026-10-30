@@ -142,7 +142,8 @@ public class PaymentCallbackUrlResolver {
 
     /**
      * 规范化基础地址：去掉末尾多余的斜杠
-     */
+     * @return 返回值
+    */
     private String normalizedBaseUrl() {
         String baseUrl = paymentGlobalConfigService.getConfigEntity().getPaymentNotifyBaseUrl();
         if (!StringUtils.hasText(baseUrl)) {

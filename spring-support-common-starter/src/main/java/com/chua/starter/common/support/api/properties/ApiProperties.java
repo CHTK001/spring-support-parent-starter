@@ -320,7 +320,8 @@ import java.util.Map;
         /**
          * platform类型。
          * @param value 值
-         */
+         * @return 返回值
+        */
         PlatformType(String value) {
             this.value = value;
         }

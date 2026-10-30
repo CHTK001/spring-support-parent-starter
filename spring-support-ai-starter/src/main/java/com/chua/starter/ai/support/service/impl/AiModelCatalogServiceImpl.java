@@ -59,6 +59,7 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     @Override
     /**
      * 列表模型bycapability
+     * @return 返回值
     */
     public Map<String, List<String>> listModelsByCapability() {
         if (cached != null) {
@@ -159,6 +160,8 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     @Override
     /**
      * 列表模型
+     * @param capability 字符串
+     * @return 返回值
     */
     public List<String> listModels(String capability) {
         return listModelsByCapability().getOrDefault(capability, List.of());
@@ -167,6 +170,7 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
     @Override
     /**
      * 列表capabilities
+     * @return 返回值
     */
     public List<String> listCapabilities() {
         return new ArrayList<>(listModelsByCapability().keySet());

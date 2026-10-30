@@ -85,6 +85,7 @@ public class DahuaProvider implements DeviceProvider {
     @Override
     /**
      * 获取供应商
+     * @return 返回值
     */
     public String getVendor() {
         return VENDOR;
@@ -93,6 +94,8 @@ public class DahuaProvider implements DeviceProvider {
     @Override
     /**
      * 支持
+     * @param info 参数
+     * @return 返回值
     */
     public boolean support(DeviceConnectInfo info) {
         return VENDOR.equalsIgnoreCase(info.vendor());
@@ -101,6 +104,8 @@ public class DahuaProvider implements DeviceProvider {
     @Override
     /**
      * 连接
+     * @param info 参数
+     * @return 返回值
     */
     public DeviceSession connect(DeviceConnectInfo info) {
         log.info("大华设备连接: authType={}, platformType={}, deviceSerial={}",
@@ -184,6 +189,7 @@ public class DahuaProvider implements DeviceProvider {
     @Override
     /**
      * 获取组织
+     * @return 返回值
     */
     public List<OrganizationNode> fetchOrganizations() {
  // 组织同步需在已连接的 打开api 会话上下文中执行，由业务层处理。
