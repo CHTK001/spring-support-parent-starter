@@ -374,7 +374,7 @@ public class ApiProviderController {
             items.add(toProviderResponse(p, models, connections));
         }
 
-    // 注入已注册的智能体模型作为虚拟提供者
+        // 注入已注册的智能体模型作为虚拟提供者
         List<String> registeredAgentModels = new ArrayList<>(chatClientRegistry.getRegisteredAgentModels());
         if (!registeredAgentModels.isEmpty()) {
             Map<String, Object> agentProvider = buildAgentProvider(registeredAgentModels);
