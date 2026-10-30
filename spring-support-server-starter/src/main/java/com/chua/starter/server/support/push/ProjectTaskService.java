@@ -778,11 +778,14 @@ public class ProjectTaskService {
      * <p>升级健康检查失败时，中转会按 {@code autoRollback} 自动回滚并以非 0 退出——
      * 这是「操作失败但服务正常」的典型场景：远端实际在跑回滚后的旧版本，库里却可能
      * 仍留着升级前的旧 PID / runningSince（甚至过期 PID），列表页展示与端口属主对不上。
-     * 本方法只处理日志能给出确定结论的两类失败，其余保持原状（宁可不动，也不写错）：</p>
+     * 本方法只处理日志能给出确定结论的失败，其余保持原状（宁可不动，也不写错）：</p>
      * <ul>
      *   <li>回滚成功（{@code rollback ok} + {@code rolled back to previous version}）：
      *       回写 running 与日志中最后一个 {@code running pid=}；</li>
-     *   <li>回滚本身失败（{@code rollback failed}）：新旧版本都没起来，回写 stopped 并清空 PID。</li>
+     *   <li>回滚本身失败（{@code rollback failed}）：新旧版本都没起来，回写 stopped 并清空 PID；</li>
+     *   <li>投放失败后的止损（{@code 已用最新备份还原}）：重新拉起成功则回写 running + PID，
+     *       未拉起则回写 stopped；</li>
+     *   <li>升级后状态校验失败（{@code 启动后状态校验未通过}）：进程没起来，回写 stopped 并清空 PID。</li>
      * </ul>
      *
      * @param state 任务运行状态（含日志缓冲）
@@ -797,24 +800,51 @@ public class ProjectTaskService {
         }
         boolean rolledBack = false;
         boolean rollbackFailed = false;
+        boolean restoreAttempted = false;
+        boolean restoreRestarted = false;
+        boolean verifyFailed = false;
         for (String line : logs) {
             String t = line == null ? "" : line;
             if (t.contains("rolled back to previous version")) {
                 rolledBack = true;
-            } else if (t.contains("rollback failed")) {
+            }
+            if (t.contains("rollback failed")) {
                 rollbackFailed = true;
             }
+            if (t.contains("启动后状态校验未通过")) {
+                verifyFailed = true;
+            }
+            if (t.contains("已用最新备份还原") || t.contains("还原备份失败")) {
+                restoreAttempted = true;
+            }
+            if (t.contains("已重新拉起服务")) {
+                restoreRestarted = true;
+            }
         }
-        if (!rolledBack && !rollbackFailed) {
+        if (!rolledBack && !rollbackFailed && !restoreAttempted && !verifyFailed) {
             return;
         }
-        // 同样走显式 set：rollbackFailed 分支要把 pid/runningSince 置空，
+        // 结论优先级：回滚失败 > 回滚成功 > 投放失败后的还原重启 > 状态校验失败。
+        // 投放失败（H/J 等）走 restoreAndRestart：文件已还原且服务已重新拉起时，
+        // 项目实际是 running，必须回写真实 PID，否则库里留着升级前的旧 PID。
+        boolean running;
+        if (rollbackFailed) {
+            running = false;
+        } else if (rolledBack) {
+            running = true;
+        } else if (restoreAttempted) {
+            running = restoreRestarted;
+        } else {
+            // 升级后状态校验未通过：启动脚本退出码为 0 但进程没起来，必须回置 stopped
+            running = false;
+        }
+        // 同样走显式 set：需要把 pid/runningSince 置空时，
         // updateById 会跳过 null 字段而清不掉。
         LambdaUpdateWrapper<MsServerProject> update = new LambdaUpdateWrapper<MsServerProject>()
                 .eq(MsServerProject::getId, state.projectId)
                 .set(MsServerProject::getUpdateTime, LocalDateTime.now());
         String pid;
-        if (rollbackFailed) {
+        if (!running) {
             pid = null;
             update.set(MsServerProject::getStatus, "stopped")
                     .set(MsServerProject::getPid, null)
@@ -827,7 +857,7 @@ public class ProjectTaskService {
         }
         projectMapper.update(null, update);
         log.info("[task] {} 失败后回写项目运行态: status={} pid={}", state.taskId,
-                rollbackFailed ? "stopped" : "running", pid);
+                running ? "running" : "stopped", pid);
     }
 
     /**

@@ -6,6 +6,8 @@ import com.chua.starter.server.support.provider.project.PosixProjectPlatformProv
 import com.chua.starter.server.support.provider.project.WindowsProjectPlatformProvider;
 import com.chua.starter.server.support.provider.service.LaunchdSystemServiceProvider;
 import com.chua.starter.server.support.provider.service.WindowsSystemServiceProvider;
+import com.chua.starter.server.support.spi.ProjectPlacement;
+import com.chua.starter.server.support.spi.ProjectPlacementContext;
 import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.util.ProjectScripts;
@@ -201,6 +203,30 @@ public final class ReleaseScriptProbe {
         check("A11 敏感性对照：自安全模式带 [s] 前缀且不含裸字面量",
                 sb.stop().contains("[s]moke\\.jar") && !sb.stop().contains("pgrep -f 'smoke\\.jar'"),
                 sb.stop());
+
+        // J：分离式 mainEntry 是启动脚本（run.sh），jar 包必须投到 app.jar，
+        // 否则 run.sh 被 jar 覆盖（实测报 PK: not found，项目直接起不来）
+        ProjectPlacement sepMain = TYPES.resolveOrGeneric("separated")
+                .placements(new ProjectPlacementContext(LINUX, "run.sh", "", "/data/uploads/pkg.jar",
+                        false, false, false, "", "main"))
+                .get(0);
+        check("A12 separated 主包投放为 app.jar（不覆盖 run.sh）",
+                "app.jar".equals(sepMain.fileName()), sepMain.fileName());
+        ProjectPlacement sepBin = TYPES.resolveOrGeneric("separated")
+                .placements(new ProjectPlacementContext(LINUX, "run.sh", "", "/data/uploads/pkg.bin",
+                        false, false, false, "", "main"))
+                .get(0);
+        check("A12b separated 非 jar 包仍按 mainEntry 投放（run.sh）",
+                "run.sh".equals(sepBin.fileName()), sepBin.fileName());
+
+        // L：PID 文件位置随类型不同，static/nginx 由 nginx 写到 logs/nginx.pid
+        check("A13 static/nginx 的 PID 文件为 logs/nginx.pid，Java 系为 app.pid",
+                "logs/nginx.pid".equals(TYPES.resolveOrGeneric("static").pidFile())
+                        && "logs/nginx.pid".equals(TYPES.resolveOrGeneric("nginx").pidFile())
+                        && "app.pid".equals(TYPES.resolveOrGeneric("springboot").pidFile()),
+                "static=" + TYPES.resolveOrGeneric("static").pidFile()
+                        + " nginx=" + TYPES.resolveOrGeneric("nginx").pidFile()
+                        + " springboot=" + TYPES.resolveOrGeneric("springboot").pidFile());
     }
 
     // ==================== B. Windows 内置模板 ====================
