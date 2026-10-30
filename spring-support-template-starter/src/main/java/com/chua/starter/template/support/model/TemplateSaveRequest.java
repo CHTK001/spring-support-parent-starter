@@ -1,5 +1,6 @@
 package com.chua.starter.template.support.model;
 
+import com.chua.starter.template.support.entity.TemplateInfo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
