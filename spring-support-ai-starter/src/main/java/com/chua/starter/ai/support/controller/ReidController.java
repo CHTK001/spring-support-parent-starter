@@ -39,7 +39,8 @@ import java.util.stream.Collectors;
  * AI 人脸重识别控制器。
  *
  * <p>提供跨摄像头/跨帧重识别的对外接口：观测一帧（自动归并轨迹）、以图搜人、
- * 轨迹查询与清理，以及 {@code reid} 分组配置管理。</p>
+ * 轨迹查询与清理，以及人脸组的配置管理——人脸重识别管线与人脸识别共享 {@code face}
+ * 分组的模型与归并参数，不再使用第二套配置分组。</p>
  *
  * <p><b>鉴权口径：登录即可用</b>，与 {@code FaceController} 一致 ——
  * 轨迹按账号隔离（见 {@code AiReidServiceImpl}），每个账号只看到自己的观测记录。</p>
@@ -58,9 +59,10 @@ import java.util.stream.Collectors;
 public class ReidController {
 
     /**
-     * 配置分组。
+     * 配置分组：人脸重识别管线与人脸识别共享 {@code face} 分组，
+     * 不再新建独立的 {@code reid} 配置分组。
      */
-    private static final String GROUP = "reid";
+    private static final String GROUP = "face";
 
     /**
      * 人脸重识别服务。
@@ -246,12 +248,16 @@ public class ReidController {
     }
 
     /**
-     * 获取重识别配置项定义与当前值。
+     * 获取人脸组配置项定义与当前值。
+     *
+     * <p>人脸重识别管线与人脸识别共享 {@code face} 分组（检测/特征模型、归并阈值、
+     * 时间窗、容量、保留时长、向量库与特征维度都在同一组），
+     * 此处暴露的即是该组的全部字段。</p>
      *
      * @return 配置列表（field/value/valueType/description/sort）
      */
     @Permission("admin")
-    @Operation(summary = "获取重识别配置", description = "返回 reid 分组全部配置项及当前值")
+    @Operation(summary = "获取重识别配置", description = "返回 face 分组全部配置项及当前值（重识别管线与人脸识别共享同一组）")
     @GetMapping("/config")
     public ReturnResult<List<Map<String, Object>>> config() {
         List<Map<String, Object>> fields = new ArrayList<>();
@@ -282,7 +288,7 @@ public class ReidController {
     }
 
     /**
-     * 更新重识别配置（逐字段写入全局层，触发热重建）。
+     * 更新重识别配置（逐字段写入人脸组，触发热重建）。
      *
      * <p><b>不用 {@code replace} 整组替换。</b>整组替换在缺字段/类型不符时会抛
      * {@code S0512C0000 数据处理异常}（实测），且会把未提交的字段一并清空。
@@ -296,7 +302,7 @@ public class ReidController {
      * @return 更新结果
      */
     @Permission("admin")
-    @Operation(summary = "更新重识别配置", description = "逐字段写入 reid 全局配置并触发热重建（已有实时归并状态会被重置）")
+    @Operation(summary = "更新重识别配置", description = "逐字段写入 face 全局配置并触发热重建（已有实时归并状态会被重置）")
     @PutMapping("/config")
     public ReturnResult<?> update(@RequestBody Map<String, Object> body) {
         Object raw = body == null ? null : body.getOrDefault("fields", body);
@@ -313,7 +319,7 @@ public class ReidController {
             settingService.upsertValue(GROUP, field, String.valueOf(value), null);
             updated++;
         }
-        log.info("[ReidConfig] reid 分组已更新 {} 项配置，热重建生效", updated);
+        log.info("[ReidConfig] face 分组已更新 {} 项配置，热重建生效", updated);
         return ReturnResult.ok("人脸重识别配置已更新（" + updated + " 项）");
     }
 

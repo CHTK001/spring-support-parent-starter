@@ -1,8 +1,8 @@
 package com.chua.starter.ai.support.configuration.reid;
 
 import com.chua.common.support.utils.StringUtils;
-import com.chua.deeplearning.support.face.FacePipeline;
 import com.chua.deeplearning.support.face.FaceDetector;
+import com.chua.deeplearning.support.face.FacePipeline;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
 import com.chua.deeplearning.support.reid.DefaultPersonTrack;
 import com.chua.deeplearning.support.reid.FaceReidPipeline;
@@ -20,14 +20,16 @@ import java.math.BigDecimal;
 /**
  * 人脸重识别客户端管理器。
  *
- * <p>管理 {@code reid} 分组配置对应的运行实例：检测管线（复用
- * {@link FaceClientManager} 的共享实例，不重复加载 ONNX 模型）、特征提取器与跨帧轨迹管理器。</p>
+ * <p>管理 {@code face} 分组配置对应的运行实例：检测管线（复用
+ * {@link FaceClientManager} 的共享实例，不重复加载 ONNX 模型）、特征提取器与跨帧轨迹管理器。
+ * 人脸重识别管线与人脸识别<span style="font-style:italic">&#32;</span>使用同一批 ONNX 模型（检测 + 特征），
+ * 检测管线直接取 {@link FaceClientManager} 已构建好的单例，模型只加载一次。</p>
  *
  * <p><b>模型共享。</b>重识别与人脸识别用的是同一批 ONNX 模型（SCRFD 检测 + ArcFace 特征）。
  * 检测管线直接取 {@link FaceClientManager} 已构建好的单例 —— 那些 ONNX 模型才是重的部分，
  * 管线本身只是轻量包装，因此共用毫无代价；而各建一份会让同一个模型在内存里出现两次。</p>
  *
- * <p><b>配置热更新。</b>{@code reid} 分组变更后 {@link #rebuild()} 重建轨迹管理器与特征提取器。
+ * <p><b>配置热更新。</b>{@code face} 分组变更后 {@link #rebuild()} 重建轨迹管理器与特征提取器。
  * 注意：轨迹管理器重建会<b>清空已有轨迹</b> —— 因为归并阈值/时间窗变了之后，
  * 旧轨迹与新参数的语义不再一致，留着会得出「昨天的人今天还在场」的荒谬结论。</p>
  *
@@ -40,9 +42,10 @@ import java.math.BigDecimal;
 public class ReidClientManager {
 
     /**
-     * 配置分组。
+     * 配置分组：人脸重识别管线与人脸识别共享 {@code face} 分组，
+     * 不再新建独立的 {@code reid} 配置分组。
      */
-    private static final String GROUP = "reid";
+    private static final String GROUP = "face";
 
     /**
      * 默认同人判定阈值。
@@ -55,7 +58,7 @@ public class ReidClientManager {
     private static final float DEFAULT_DETECTOR_THRESHOLD = 0.3f;
 
     /**
-     * 默认人脸识别分流阈值：检测置信度 ≥ 此值走人脸识别，否则走重识别。
+     * 默认人脸识别分流阈值：检测置信度 >= 此值走人脸识别，否则走重识别。
      */
     private static final float DEFAULT_FACE_THRESHOLD = 0.5f;
 
@@ -179,8 +182,8 @@ public class ReidClientManager {
      * 当前生效的**低阈值**检测管线（重识别专用）。
      *
      * <p>与 {@link #currentDetector()} 的区别只在<b>检测置信度阈值</b>：
-     * 本管线用 {@code reid.detector_threshold}（默认 0.3），尽量多检出；
-     * 人脸识别那条链路用 face 组的阈值（默认 0.5），宁可漏检也不误检。</p>
+     * 本管线用 {@code face.reid_detector_threshold}（默认 0.3），尽量多检出；
+     * 人脸识别那条链路用本分组的检测阈值（默认 0.5），宁可漏检也不误检。</p>
      *
      * @return 低阈值检测管线；未就绪时返回 {@code null}
      */
@@ -190,7 +193,11 @@ public class ReidClientManager {
     }
 
     /**
-     * 人脸识别分流阈值：检测置信度 ≥ 此值走人脸识别，否则走重识别。
+     * 人脸识别分流阈值。
+     *
+     * <p><b>检测到的脸的置信度：</b>= 此值的人脸走人脸识别（1:N 定库检索，清晰人脸），
+     * < 此值的人脸走重识别（跨帧轨迹，模糊/远处/侧脸）—— 两者基于同一批检测框，
+     * 只是由：<b>是否清晰</b> 分流到不同的回答方式。</p>
      *
      * @return 分流阈值
      */
@@ -219,7 +226,7 @@ public class ReidClientManager {
     }
 
     /**
-     * 全局配置变更监听：reid 分组更新后热重建。
+     * 全局配置变更监听：人脸分组更新后热重建。
      *
      * @param event 配置变更事件
      */
@@ -230,10 +237,10 @@ public class ReidClientManager {
         }
         if (event.userScoped()) {
             // 共享实例只承载全局配置：按触发者身份重建会把他的模型烘进共享实例、串掉其他用户。
-            log.debug("[ReidClientManager] 收到用户级 reid 配置写入，共享实例不重建");
+            log.debug("[ReidClientManager] 收到用户级 face 配置写入，共享实例不重建");
             return;
         }
-        log.info("[ReidClientManager] 收到 reid 分组配置变更，开始热重建");
+        log.info("[ReidClientManager] 收到 face 分组配置变更，开始热重建");
         rebuild();
     }
 
@@ -257,34 +264,25 @@ public class ReidClientManager {
     /**
      * 按当前配置构建重识别实例。
      *
+     * <p><b>检测与特征都取 {@code face} 分组的配置。</b>重识别与共用的「人脸检测 + 人脸特征」
+     * 管线共享同一批 ONNX 模型：检测管线复用 {@link FaceClientManager} 的单例，
+     * 特征提取器由本类依 {@code feature_model} 重新构建，轨迹由业务侧为每个账号另建。</p>
+     *
      * <p>本管理器只负责<b>共享</b>的部分：检测管线与特征提取器。
      * 轨迹是按账号隔离的状态，由业务侧用 {@link #newTrack()} 为每个账号单独创建 ——
      * 管理器里不放任何账号的轨迹。</p>
      */
     private void build() {
+        // 检测管线：trunk 走 {@link FaceClientManager#currentPipeline()}（已按 face 分组加载）
+        // ；face 分组没配检测模型时返回 null，能力自然未启用。
         FacePipeline sharedDetector = faceClientManager.currentPipeline();
-        if (sharedDetector == null) {
-            // 人脸识别分组没配检测模型时，用 reid 分组自己的 detector_model 兜底。
-            //
-            // <p>不兜底会有一个很别扭的现象：重识别配置页明明提供了「检测模型」下拉，
-            // 用户选了它、保存成功、页面也显示已配置，能力却依然是 available=false ——
-            // 因为检测管线实际取的是 face 分组的单例。实测部署时正是如此：
-            // 只配 reid 分组不生效，必须额外去配人脸识别分组才可用。</p>
-            //
-            // <p>共享 face 的单例仍是首选（那些 ONNX 模型是重的，能复用就不重复加载），
-            // 只有在它为 null 时才自建。</p>
-            sharedDetector = buildOwnDetector();
-        }
         if (sharedDetector == null) {
             log.info("[Reid] 人脸检测模型未配置，重识别能力未启用");
             return;
         }
+        // 特征模型就是 face 分组的 feature_model（不再额外留空重试）：两者用同一批模型，
+        // 用户只需配一次；都为空本方法不会走到—— face 检测没配则直接在上文返回了。
         String featureModel = settingReader.getStr(GROUP, "feature_model");
-        if (StringUtils.isBlank(featureModel)) {
-            // 特征模型留空时回落到人脸识别分组的配置：两者用同一批模型，
-            // 用户通常只需要配一次；都为空才说明该能力未启用。
-            featureModel = settingReader.getStr("face", "feature_model");
-        }
         if (StringUtils.isBlank(featureModel)) {
             log.info("[Reid] 人脸特征模型未配置，重识别能力未启用");
             return;
@@ -304,11 +302,12 @@ public class ReidClientManager {
         // 业务侧会用各自账号的轨迹管理器另建管线。
         this.track = newTrack();
         this.pipeline = new FaceReidPipeline(this.lowThresholdDetector, extractor, this.track);
-        log.info("[Reid] 重识别实例就绪: 特征模型={}, 阈值={}, 归并窗口={}s, 容量={}, 检测阈值={}, 识别分流={}",
+        log.info("[Reid] 重识别实例就绪: 特征模型={}, 阈值={}, 归并窗口={}s, 容量={}, 低阈值检测={},"
+                        + " 识别分流={}",
                 featureModel, readThreshold(),
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS),
                 settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS),
-                readDetectorThreshold(), faceThreshold());
+                readLowDetectorThreshold(), faceThreshold());
     }
 
     /**
@@ -329,18 +328,15 @@ public class ReidClientManager {
      * @return 低阈值检测管线
      */
     private FacePipeline buildLowThresholdDetector(FacePipeline sharedDetector) {
-        float threshold = readDetectorThreshold();
+        float threshold = readLowDetectorThreshold();
         String detectorModel = settingReader.getStr(GROUP, "detector_model");
-        if (StringUtils.isBlank(detectorModel)) {
-            detectorModel = settingReader.getStr("face", "detector_model");
-        }
         if (StringUtils.isBlank(detectorModel)) {
             // 没有独立的检测模型名：无法自建低阈值管线，退回共享的。
             log.debug("[Reid] 未配置独立检测模型，低阈值检测退回共享管线（阈值 {}）", threshold);
             return sharedDetector;
         }
         try {
-            // minConfidence 是检测之后的置信度过滤：把「框的置信度 ≥ 阈值」这一层
+            // minConfidence 是检测之后的置信度过滤：把「框的置信度 >= 阈值」这一层
             // 放到管线里做，于是低阈值管线与共享管线共用同一个 ONNX 翻译器，
             // 只是各用一个置信度下限。
             //
@@ -364,38 +360,13 @@ public class ReidClientManager {
     }
 
     /**
-     * 读取检测置信度阈值（低阈值）。
+     * 读取重识别专用的低阈值检测置信度阈值。
      *
      * @return 阈值
      */
-    private float readDetectorThreshold() {
-        BigDecimal value = settingReader.getDecimalOrNull(GROUP, "detector_threshold");
+    private float readLowDetectorThreshold() {
+        BigDecimal value = settingReader.getDecimalOrNull(GROUP, "reid_detector_threshold");
         return value == null ? DEFAULT_DETECTOR_THRESHOLD : value.floatValue();
-    }
-
-    /**
-     * 用 reid 分组自己的 {@code detector_model} 构建检测管线。
-     *
-     * <p>只在 {@link FaceClientManager#currentPipeline()} 为空时调用 —— 共享实例可用时
-     * 优先复用它，避免同一份 ONNX 检测模型被加载两遍。</p>
-     *
-     * @return 检测管线；未配置或构建失败返回 {@code null}
-     */
-    private FacePipeline buildOwnDetector() {
-        String detectorModel = settingReader.getStr(GROUP, "detector_model");
-        if (StringUtils.isBlank(detectorModel)) {
-            return null;
-        }
-        try {
-            FaceDetector ownDetector = FaceDetector.create(detectorModel);
-            FacePipeline ownPipeline = FacePipeline.builder().detector(ownDetector).build();
-            log.info("[Reid] 人脸识别分组未配置检测模型，改用 reid 分组自建: {}", detectorModel);
-            return ownPipeline;
-        } catch (Exception ex) {
-            log.warn("[Reid] 按 reid 分组的 detector_model={} 构建检测管线失败: {}",
-                    detectorModel, ex.getMessage());
-            return null;
-        }
     }
 
     /**
@@ -421,15 +392,19 @@ public class ReidClientManager {
     /**
      * 构建重识别配置摘要（供日志/健康检查）。
      *
+     * <p>检测与特征模型取自 {@code face} 分组（重识别管线共用同一批模型），
+     * 摘要里把检测模型也带上，这样前端「检测模型 已配/未配」行才能显示对。</p>
+     *
      * @return 摘要
      */
     public String configSummary() {
-        return "reid{feature=" + settingReader.getStr(GROUP, "feature_model")
+        return "face-reid{detector=" + settingReader.getStr(GROUP, "detector_model")
+                + ", feature=" + settingReader.getStr(GROUP, "feature_model")
                 + ", threshold=" + readThreshold()
                 + ", gap=" + settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS) + "s"
                 + ", maxTracks=" + settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS)
                 + ", device=" + settingReader.getStr(GROUP, "device")
-                + ", detectThreshold=" + readDetectorThreshold()
+                + ", detectThreshold=" + readLowDetectorThreshold()
                 + ", faceThreshold=" + faceThreshold()
                 + ", available=" + available() + "}";
     }

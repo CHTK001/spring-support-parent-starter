@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 与"维护缓存一致性"的复杂度相比不值得省。</p>
  *
  * <p><b>双路分流：清晰人脸走人脸识别，模糊人脸走重识别。</b>两者<b>一起运行</b>，
- * 由检测置信度分界（{@code reid.face_threshold}，默认 0.5）：</p>
+ * 由检测置信度分界（{@code face.face_threshold}，默认 0.5）：</p>
  * <pre>
  * 场景图 ──低阈值检测(0.3)──► 多张人脸框
  *                              │
@@ -68,7 +68,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * 两条路<b>互不影响</b>。</p>
  *
  * <p><b>模型共享、状态隔离</b>：检测与特征模型由 {@link ReidClientManager} 单例持有
- * （ONNX 模型不重复加载），轨迹管理器与底库数据按账号隔离。</p>
+ * （ONNX 模型不重复加载），轨迹管理器与底库数据按账号隔离。重识别管线的配置（检测/特征模型、
+ * 归并阈值与时间窗、向量库与特征维度）与人脸识别共享 {@code face} 分组，
+ * 不设第二套配置分组。</p>
  *
  * @author CH
  * @since 4.0.0.43
@@ -78,10 +80,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class AiReidServiceImpl implements AiReidService {
 
-    /**
-     * 配置分组。
-     */
-    private static final String GROUP = "reid";
+    // 重识别的配置与人脸识别共享人脸组（face）：检测/特征模型、归并阈值与时间窗
+    // 都在同一组里，这里不再建第二套。
+    private static final String GROUP = "face";
 
     /**
      * 默认 TopK。
@@ -153,7 +154,7 @@ public class AiReidServiceImpl implements AiReidService {
         int cleared = tracks.size();
         tracks.clear();
         pipelines.clear();
-        log.info("[Reid] reid 分组配置变更，已重置 {} 个账号的实时归并状态（底库数据保留）", cleared);
+        log.info("[Reid] face 分组配置变更，已重置 {} 个账号的实时归并状态（底库数据保留）", cleared);
     }
 
     @Override
@@ -163,7 +164,7 @@ public class AiReidServiceImpl implements AiReidService {
         String resolvedGroup = AiLibraryGroups.normalize(group);
         FaceReidPipeline pipeline = pipelineFor(account, resolvedGroup);
         if (pipeline == null) {
-            throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置 reid 分组的检测模型与特征模型");
+            throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置人脸组的检测模型与特征模型");
         }
         String resolvedCamera = StringUtils.isNotBlank(cameraId)
                 ? cameraId
@@ -320,7 +321,7 @@ public class AiReidServiceImpl implements AiReidService {
         String primary = wanted.getFirst();
         FaceReidPipeline pipeline = pipelineFor(account, primary);
         if (pipeline == null) {
-            throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置 reid 分组的检测模型与特征模型");
+            throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置人脸组的检测模型与特征模型");
         }
         int limit = topK <= 0 ? settingReader.getInt(GROUP, "top_k", DEFAULT_TOP_K) : topK;
         double threshold = settingReader.getDouble(GROUP, "match_threshold", 0.5d);
