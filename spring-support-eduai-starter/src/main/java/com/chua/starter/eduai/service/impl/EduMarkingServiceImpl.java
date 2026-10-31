@@ -2505,6 +2505,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     /**
      * 顶部 AI 总体评语：优先取已保存字段，否则由各题 AI 评语汇总。
      *
+     * 注意不要用逐题拼接贪便宜：一百多判的 "第 X 题：与标准答案一致" 既不可读也没有总结价值。
+     * 改成一相一的汇总摘要（题量、分数、一致/接近/偏差的数量、偏差题号一览）。
+     *
      * @param questions 题目列表
      * @param content   答题卡结构内容
      * @return 总体评语；没有可展示内容时返回 null
@@ -2524,19 +2527,157 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
             return null;
         }
-        StringBuilder builder = new StringBuilder();
+        // 多题：逐题拼接的 "第 X 题：与标准答案一致" 不等于总结，压缩成一句话摘要。
+        return buildOverallComment(questions);
+    }
+
+    /**
+     * 各题 AI 评语的一句话汇总摘要（不是逐题拼接）。
+     *
+     * <p>把 `questions` 里每一行的 AI 评语按一口细分：与标准答案一致 / 接近标准答案
+     * / 与标准答案不一致 / 未判分或拿不到 AI 评语的占位行（"识别失败，请老师补录"、"未作答"、
+     * "人工复核"），加上整卷的 AI 评分（少数题的全分、多分/少分）是一支兜底不写死的合成。</p>
+     *
+     * <p>未判分/拿不到评语的占位行只计"待核对"，不会和已判错的题混在一起报成偏差。</p>
+     *
+     * @param questions 题目列表
+     * @return 汇聚后的评语正文；一条读的都提不出来时返回 null
+     */
+    private String buildOverallComment(List<Map<String, Object>> questions) {
+        int total = 0;
+        int maxScore = 0;
+        int gained = 0;
+        int exact = 0;
+        int partial = 0;
+        int wrong = 0;
+        int unknown = 0;
+        List<String> wrongNos = new ArrayList<>();
         for (Map<String, Object> q : questions) {
-            Object comment = q.get("comment");
-            if (!(comment instanceof CharSequence c) || StringUtils.isBlank(c.toString())) {
+            total++;
+            maxScore += safeInt(q.get("maxScore"));
+            gained += safeInt(q.get("score"));
+            // "识别失败，请老师..." 与 "未作答"、"人工复核" 都不是一个真实判分结果。
+            String text = q.get("comment") instanceof CharSequence ? String.valueOf(q.get("comment")).trim() : "";
+            if (text.isEmpty() || isUngradedComment(text)) {
+                unknown++;
                 continue;
             }
-            if (builder.length() > 0) {
-                builder.append('；');
+            if (text.contains("不一致") || text.contains("错误") || text.contains("不给分")) {
+                wrong++;
+                addWrongNo(wrongNos, q);
+            } else if (text.contains("相似") || text.contains("误差")) {
+                partial++;
+            } else if (text.contains("一致") || text.contains("正确")) {
+                exact++;
+            } else {
+                // 模型自由文本评语：不背和标准答案不一致的锅，计入未归类。
+                unknown++;
             }
-            String no = q.get("no") == null ? "" : String.valueOf(q.get("no")).trim();
-            builder.append("第").append(no).append("题：").append(c.toString().trim());
         }
-        return builder.length() == 0 ? null : builder.toString();
+        // 一条 AI 评语也没有（全部是占位行）→ 没有可总结的内容。
+        if (total == unknown) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("本卷共 ").append(total).append(" 题，AI 评分 ").append(gained).append(" 分（满分 ").append(maxScore).append(" 分）：");
+        boolean head = false;
+        if (exact > 0) {
+            sb.append(exact).append(" 题与标准答案一致");
+            head = true;
+        }
+        if (partial > 0) {
+            if (head) sb.append("，");
+            sb.append(partial).append(" 题与标准答案接近");
+            head = true;
+        }
+        if (wrong > 0) {
+            if (head) sb.append("，");
+            sb.append(wrong).append(" 题与标准答案不一致");
+            head = true;
+        }
+        if (!head) {
+            sb.append("暂无可汇总的 AI 评语");
+        } else {
+            sb.append("。");
+        }
+        if (!wrongNos.isEmpty()) {
+            sb.append(" 第 ").append(String.join("、", wrongNos)).append(" 题偏差最明显。");
+        }
+        if (unknown > 0) {
+            sb.append("（另有 ").append(unknown).append(" 题未获取到 AI 评语）。");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 题号归一：`1.` / `第1题` / `10.5` → `1` / `10`，摘要里只展示纯数字题号。
+     */
+    private static String summaryNo(Map<String, Object> q) {
+        Object no = q.get("no");
+        if (no == null) {
+            return "";
+        }
+        String text = String.valueOf(no).trim();
+        if (text.isEmpty()) {
+            return "";
+        }
+        String digits = text.replaceAll("[^0-9]", "");
+        return digits.isEmpty() ? text : digits;
+    }
+
+    /**
+     * 获取一条归一无效的题号（去重 + 控制数量，避免摘要尾行太长）。
+     */
+    private static void addWrongNo(List<String> wrongNos, Map<String, Object> q) {
+        if (wrongNos.size() >= MAX_WRONG_EXHIBIT) {
+            return;
+        }
+        String no = summaryNo(q);
+        if (no.isEmpty() || wrongNos.contains(no)) {
+            return;
+        }
+        wrongNos.add(no);
+    }
+
+    /** 摘要里展示偏差题号的数量上限（超过的只写“第 N 题”/$...  tail） */
+    private static final int MAX_WRONG_EXHIBIT = 10;
+    /** 不是 AI 判分结果、而是占位/未判分的评语："未作答"、"未填写"、"识别失败"、
+     * "暂未可用"/"模型未给出判定依据"、"人工复核"、"不给分"——读起来是平级评价条件的提示。 */
+    private static final String[] UNGRADED_HINTS = {
+            "未作答", "未填写", "识别失败", "未给出判定", "人工复核", "暂不可用", "不给分",
+    };
+
+    private static boolean isUngradedComment(String text) {
+        if (text == null) {
+            return false;
+        }
+        for (String hint : UNGRADED_HINTS) {
+            if (text.contains(hint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 安全的数字采集（null / 字符串 / MAC 数字串都能采，采不到就 0，不抛异常）。
+     */
+    private static int safeInt(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Number n) {
+            return n.intValue();
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty()) {
+            return 0;
+        }
+        try {
+            return (int) Math.round(Double.parseDouble(text));
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**
