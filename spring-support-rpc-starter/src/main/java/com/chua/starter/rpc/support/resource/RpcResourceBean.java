@@ -1,6 +1,7 @@
 package com.chua.starter.rpc.support.resource;
 
 import com.chua.common.support.network.rpc.RpcClient;
+import com.chua.common.support.network.rpc.RpcType;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
 import com.chua.starter.rpc.support.interceptor.RpcInterceptor;
@@ -119,6 +120,11 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     private volatile RpcClient degradeClient;
 
     /**
+     * 降级代理（懒初始化，远端真正失败后才创建）
+     */
+    private volatile T degradeProxy;
+
+    /**
      * 获取 标识
      *
      * @return ID
@@ -138,17 +144,88 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
         try {
-            return intercept((T) rpcClient.get(interfaceClass));
+            T remote = (T) rpcClient.get(interfaceClass);
+            return intercept(withFailover(remote));
         } catch (Throwable e) {
-            // 远端 RPC 不可用时，降级到 degrade 指定的提供者直调本地 Bean
-            log.warn("[RPC] 远端调用失败，尝试降级到 {} provider: {}", degrade, e.getMessage(), e);
-            RpcClient client = getDegradeClient();
-            if (client == null) {
-                log.error("[RPC] 降级客户端创建失败，回退原始异常: {}", e.getMessage(), e);
+            if (!isDegradeEnabled()) {
                 throw e;
             }
-            return intercept((T) client.get(interfaceClass));
+            // 远端 RPC 不可用时，降级到 degrade 指定的提供者直调本地 Bean
+            log.warn("[RPC] 远端调用失败，尝试降级到 {} provider: {}", degrade, e.getMessage());
+            try {
+                RpcClient client = getDegradeClient();
+                if (client == null) {
+                    log.error("[RPC] 降级客户端创建失败，回退原始异常: {}", e.getMessage());
+                    throw e;
+                }
+                return intercept((T) client.get(interfaceClass));
+            } catch (Throwable de) {
+                if (de != e) {
+                    de.addSuppressed(e);
+                }
+                throw de;
+            }
         }
+    }
+
+    /**
+     * 为已创建的远程代理加一层「调用期降级」包装
+     * <p>
+     * 创建阶段就失败的情况由 {@link #getObject()} 的 catch 处理；
+     * 这里处理代理创建成功、调用时才失败的情况（如 JSON-RPC 每次调用才发 HTTP）。
+     * </p>
+     *
+     * @param remote 远程协议代理
+     * @return 带调用期降级的代理；无需降级时返回原对象
+     */
+    @SuppressWarnings("unchecked")
+    private T withFailover(T remote) {
+        if (!isDegradeEnabled() || (rpcProperties != null && rpcProperties.getType() == RpcType.SPRINGBEAN)) {
+            return remote;
+        }
+        ClassLoader loader = classLoader != null ? classLoader : interfaceClass.getClassLoader();
+        return (T) ReflectUtils.newProxy(loader, new Class<?>[]{interfaceClass},
+                new RpcFailoverInvocationHandler(remote, this));
+    }
+
+    /**
+     * 获取（懒创建的）降级代理
+     * <p>
+     * 只有远端真的失败时才创建，避免在远端健康时因为本地没有实现而提前抛错。
+     * </p>
+     *
+     * @return 降级代理；降级客户端不可用时返回 {@code null}
+     * @throws Exception 降级代理创建失败（{@code exception=true} 且无本地 Bean）
+     */
+    @SuppressWarnings("unchecked")
+    synchronized Object getDegradeProxy() throws Exception {
+        if (degradeProxy != null) {
+            return degradeProxy;
+        }
+        RpcClient client = getDegradeClient();
+        if (client == null) {
+            return null;
+        }
+        degradeProxy = (T) client.get(interfaceClass);
+        return degradeProxy;
+    }
+
+    /**
+     * 降级提供者名称（用于日志）
+     *
+     * @return 降级提供者名称
+     */
+    String getDegradeName() {
+        return StringUtils.hasText(degrade) ? degrade : "springbean";
+    }
+
+    /**
+     * 是否启用降级
+     *
+     * @return true 表示启用
+     */
+    private boolean isDegradeEnabled() {
+        return !"none".equalsIgnoreCase(degrade);
     }
 
     /**
