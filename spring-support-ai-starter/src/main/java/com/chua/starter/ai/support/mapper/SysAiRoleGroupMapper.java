@@ -6,6 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 角色分组映射器
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface SysAiRoleGroupMapper extends BaseMapper<SysAiRoleGroup> {

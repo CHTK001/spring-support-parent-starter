@@ -28,6 +28,8 @@ import java.util.Map;
  * @see com.chua.common.support.network.rpc.RpcResource
  * @since 4.0.0.51
  * @Revision 4.0.0.51
+ *
+ * @author CH
  */
 @Slf4j
 @Service

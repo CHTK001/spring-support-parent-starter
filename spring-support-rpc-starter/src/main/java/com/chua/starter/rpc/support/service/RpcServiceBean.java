@@ -2,6 +2,7 @@ package com.chua.starter.rpc.support.service;
 
 import com.chua.common.support.network.rpc.RpcServer;
 import com.chua.common.support.network.rpc.RpcType;
+import com.chua.starter.rpc.support.exception.RpcServiceException;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.rpc.support.spring.SpringBeanRpcServer;
@@ -87,12 +88,12 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     private void export() {
         try {
             rpcServer.register(getInterfaceName(), getRef());
-        } catch (RuntimeException e) {
-            // 远端不可用时暴露本地 Bean（degrade provider）
-            handleExportFailure(e);
-            // exception=true（默认）时仍然抛出，exception=false 时静默保留本地 Bean
-            if (isException()) {
-                throw e;
+        } catch (Exception | LinkageError e) {
+            // 远端不可用（含注册中心依赖缺失导致的 LinkageError）时暴露本地 Bean（degrade provider）
+            boolean degraded = handleExportFailure(e);
+            // 已有降级实现时不阻断启动；降级不可用且 exception=true 时才抛出
+            if (!degraded && isException()) {
+                throw asRuntimeException(e);
             }
         }
     }
@@ -101,17 +102,29 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
      * 处理远端导出失败，按 {@code degrade} 注册本地 Bean
      *
      * @param e 远端导出异常
+     * @return true 表示降级提供者可用（已按 degrade 暴露本地 Bean）
      */
-    private void handleExportFailure(RuntimeException e) {
+    private boolean handleExportFailure(Throwable e) {
         if (!isDegradeEnabled()) {
             log.warn("[RPC] 远端导出失败，未配置 degrade: {}", e.getMessage(), e);
-            return;
+            return false;
         }
-        try {
-            registerLocalBean();
-        } catch (Throwable ignore) {
-            log.debug("[RPC] 本地 Bean 注册失败: {}", e.getMessage(), ignore);
+        log.warn("[RPC] 远端导出失败，降级到 {} provider: {}", getDegrade(), e.getMessage(), e);
+        registerLocalBean();
+        return true;
+    }
+
+    /**
+     * 将导出失败转换为可抛出的运行时异常
+     *
+     * @param e 远端导出异常
+     * @return 原始运行时异常，或包装后的 {@link RpcServiceException}
+     */
+    private RuntimeException asRuntimeException(Throwable e) {
+        if (e instanceof RuntimeException runtimeException) {
+            return runtimeException;
         }
+        return new RpcServiceException(getInterfaceName(), "export", e);
     }
 
     /**

@@ -39,6 +39,9 @@ import java.io.IOException;
  *   <li><b>X-XSS-Protection 置 0</b>：该头在现代浏览器已废弃，
  *       开启反而可能引入旧的 XSS 过滤器绕过问题（见 OWASP 建议）。</li>
  * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ConditionalOnProperty(name = "plugin.api.security.header.enable", matchIfMissing = true, havingValue = "true")

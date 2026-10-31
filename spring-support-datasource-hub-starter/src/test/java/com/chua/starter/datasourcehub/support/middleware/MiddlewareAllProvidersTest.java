@@ -18,6 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>不在此断言 Redis / Nacos：它们由主应用的明文依赖决定是否在树里，
  * datasource-hub 本身不引它们 —— 这正是「默认带 vs 按需带」的分界线。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 class MiddlewareAllProvidersTest {
 

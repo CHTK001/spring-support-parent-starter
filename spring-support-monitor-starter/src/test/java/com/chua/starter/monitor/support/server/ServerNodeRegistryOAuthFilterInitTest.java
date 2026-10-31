@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code plugin.oauth.file-storage.private-buckets}，节点 config 未显式写
  * {@code privateBuckets} 时自动挂载的过滤器私有桶恒为空，文件服务实际按公共桶运行，
  * 无令牌请求仍能访问目录与文件。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("服务管理节点 OAuth 过滤器初始化")
 class ServerNodeRegistryOAuthFilterInitTest {

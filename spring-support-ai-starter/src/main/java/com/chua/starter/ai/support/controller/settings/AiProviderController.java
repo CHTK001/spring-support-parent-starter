@@ -16,6 +16,9 @@ import java.util.Map;
 
 /**
  * 模型供应商控制器
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Tag(name = "AI 设置 - 模型供应商")
 @RestController

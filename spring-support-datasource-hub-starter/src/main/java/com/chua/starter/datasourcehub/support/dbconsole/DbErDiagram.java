@@ -168,7 +168,7 @@ public final class DbErDiagram {
     /**
      * 把 JDBC 的表名匹配模式转成正则。
      *
-     * <p>{@code %} ��配任意长度、{@code _} 匹配单字符，其余按字面量。
+     * <p>{@code %} 匹配任意长度、{@code _} 匹配单字符，其余按字面量。
      * 直接用 {@code String.matches} 是错的：{@code _} 会被当正则量词，
      * 而表名里出现 {@code + . ( ) [ ]} 等字符时会抛
      * {@code PatternSyntaxException}，把「列个表」变成 500。</p>

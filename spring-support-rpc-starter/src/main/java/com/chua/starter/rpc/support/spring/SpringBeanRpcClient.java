@@ -7,10 +7,14 @@ import com.chua.common.support.network.rpc.RpcRegistryConfig;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.spring.support.configuration.SpringBeanUtils;
+import com.chua.starter.rpc.support.resource.RpcResourceBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -134,14 +138,25 @@ public class SpringBeanRpcClient implements RpcClient, ApplicationContextAware {
         try {
             // getBeanByType: BeanDefinition 继承链上的所有可赋值 Bean
             String[] names = context.getBeanNamesForType(targetType);
-            if (names.length == 0) {
+            // 排除 @RpcResource 注册的远程引用占位（RpcResourceBean 是 FactoryBean，
+            // 其 decorated definition 让 getBeanNamesForType 也返回它），否则
+            // getBean -> RpcResourceBean.getObject() -> 降级 client.get() 会回到本方法，形成自引用
+            List<String> candidates = new ArrayList<>(names.length);
+            for (String name : names) {
+                if (isRpcReference(context, name)) {
+                    log.debug("[SpringBean RPC] 跳过 RPC 引用占位 Bean: {}", name);
+                    continue;
+                }
+                candidates.add(name);
+            }
+            if (candidates.isEmpty()) {
                 log.debug("[SpringBean RPC] 未找到匹配的本地 Bean: {}", targetType.getName());
                 return null;
             }
-            if (names.length == 1) {
-                return context.getBean(names[0], targetType);
+            if (candidates.size() == 1) {
+                return context.getBean(candidates.get(0), targetType);
             }
-            for (String name : names) {
+            for (String name : candidates) {
                 Object bean = context.getBean(name, targetType);
                 if (bean != null) {
                     return bean;
@@ -153,6 +168,28 @@ public class SpringBeanRpcClient implements RpcClient, ApplicationContextAware {
             log.debug("[SpringBean RPC] 本地 Bean 解析异常: {}", targetType.getName(), e);
             return null;
         }
+    }
+
+    /**
+     * 判断 Bean 是否由 @RpcResource 注册的远程引用占位（{@link RpcResourceBean} FactoryBean）暴露
+     * <p>
+     * 这类 Bean 的实例来自远端 RPC 或其降级客户端，并非本地真实实现，
+     * 参与本地 Bean 解析会导致「代理解析自己」的循环。
+     *
+     * @param context 上下文
+     * @param name    Bean 名称
+     * @return true 表示远程引用占位
+     */
+    private boolean isRpcReference(ApplicationContext context, String name) {
+        if (!(context instanceof ConfigurableApplicationContext configurableContext)) {
+            return false;
+        }
+        ConfigurableListableBeanFactory beanFactory = configurableContext.getBeanFactory();
+        if (!beanFactory.containsBeanDefinition(name)) {
+            return false;
+        }
+        BeanDefinition definition = beanFactory.getBeanDefinition(name);
+        return RpcResourceBean.class.getName().equals(definition.getBeanClassName());
     }
 
     /**

@@ -22,6 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>回归缺陷：底层过滤器只实现同步 {@link ServerFilter} 时，{@link
  * DelegatingServerFilter} 曾在反应式链中直接放行，导致显式声明的 OAuth
  * 等同步过滤器被静默跳过。此处锁住“同步过滤器必须执行”，无论其是否调用后续链。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("DelegatingServerFilter: 同步过滤器反应式桥接")
 class DelegatingServerFilterReactiveBridgeTest {

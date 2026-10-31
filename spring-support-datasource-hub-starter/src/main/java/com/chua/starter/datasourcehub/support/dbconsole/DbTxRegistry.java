@@ -97,7 +97,7 @@ public class DbTxRegistry {
      * 为事务开一条**独占**连接。
      *
      * <p><b>这里绝对不能用 {@code datasourceService.connection(id)}</b>：那返回的是
-     * 按数据源缓存、并在 TTL 内被所有请求复用的<b>同一��物理连接</b>，
+     * 按数据源缓存、并在 TTL 内被所有请求复用的<b>同一个物理连接</b>，
      * 而且 {@code close()} 被屏蔽成空操作。对它做 {@code setAutoCommit(false)}
      * 会把**这个数据源上所有并发请求**一起拖进同一个事务，而且因为连接从不真正
      * 关闭，{@code autoCommit} 也永远不会恢复 —— 表现为事务结束后所有普通请求

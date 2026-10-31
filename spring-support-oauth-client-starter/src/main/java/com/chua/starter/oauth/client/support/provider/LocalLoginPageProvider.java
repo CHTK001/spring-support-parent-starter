@@ -42,6 +42,8 @@ import java.nio.charset.StandardCharsets;
  * </ul>
  *
  * @since 4.0.0.42
+ *
+ * @author CH
  */
 @Slf4j
 @RestController

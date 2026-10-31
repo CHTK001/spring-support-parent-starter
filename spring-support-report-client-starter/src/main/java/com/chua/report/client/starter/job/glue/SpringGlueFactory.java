@@ -15,6 +15,9 @@ import java.lang.reflect.Modifier;
 
 /**
  * @作者 CH
+ *
+ * @author CH
+ * @since 4.0.0.51
 */
 public class SpringGlueFactory extends GlueFactory{
     /**
