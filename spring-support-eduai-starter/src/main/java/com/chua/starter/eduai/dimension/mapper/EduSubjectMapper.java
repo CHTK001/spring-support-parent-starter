@@ -18,12 +18,14 @@ import java.util.List;
 public interface EduSubjectMapper extends BaseMapper<EduSubject> {
 
     /**
-     * 列表学科（XML 语句 listSubjects：启用状态 + 学段模糊匹配 + 归属隔离，按排序号升序）。
+     * 列表学科（XML 语句 listSubjects：可选包含停用 + 学段模糊匹配 + 归属隔离，按排序号升序）。
      *
-     * @param gradeLevel 学段，为空时不限学段
-     * @param scope      归属隔离参数
+     * @param gradeLevel      学段，为空时不限学段
+     * @param includeDisabled 为 true 时包含停用学科（管理端全量列表），否则仅启用学科（下拉等场景）
+     * @param scope           归属隔离参数
      * @return 学科列表
      */
     List<EduSubject> listSubjects(@Param("gradeLevel") String gradeLevel,
+                                  @Param("includeDisabled") Boolean includeDisabled,
                                   @Param("scope") EduUserContext.OwnerScope scope);
 }

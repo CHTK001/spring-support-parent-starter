@@ -255,6 +255,14 @@ public class WorldSimChatController {
         String[] resolved = resolveModelQualified(member, role);
         String model = resolved[0];
         String providerId = resolved[1];
+        if (model == null || model.isBlank()) {
+            // 没有可用模型时不能把 null 一路带进 ChatClient 解析：那条路径最终会把
+            // null 模型交给 AgentScope，报成「未配置主 ChatClient」，与真实原因
+            //（模型管理里没有任何启用模型）相差十万八千里。这里直接给出可操作提示。
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "未配置可用的对话模型：请在「设置中心 → 模型管理」启用一个模型，"
+                            + "或在「系统设置 → 对话路由」选择默认模型");
+        }
 
         AiChatRequest request = new AiChatRequest();
         request.setModel(model);
@@ -489,6 +497,15 @@ public class WorldSimChatController {
      * @return 返回值
     */
     private void saveAiMessage(Long worldId, Long sceneId, SysAiWorldNpc member, Streamed streamed) {
+        // 模型调用失败/被限流时 text 为空。这种「空 AI 消息」一旦落库，会以一条
+        // 空白气泡留在历史里，并进入下一轮的上下文（CONTEXT_LIMIT 条），
+        // 让模型以为角色说过一句空话。宁可少一条记录，也不要写脏数据。
+        if (streamed == null || streamed.text() == null || streamed.text().isBlank()) {
+            log.warn("[WorldSim] 跳过落库：本轮 AI 输出为空 worldId={} npcId={} model={}",
+                    worldId, member == null ? null : member.getId(),
+                    streamed == null ? null : qualify(streamed.providerId(), streamed.model()));
+            return;
+        }
         SysAiRole role = roleMapper.selectById(member.getRoleId());
         SysAiWorldMessage m = new SysAiWorldMessage();
         m.setWorldId(worldId);
@@ -803,16 +820,22 @@ public class WorldSimChatController {
         req.setStream(false);
         req.setUseSkill(false);
         req.setPrompt(prompt);
-        String fallbackTitle = "世界继续运转";
-        String fallbackContent = "世界在继续运转，一切如常。";
+        // 回落文案必须能一眼看出「这不是 AI 生成的情节」。
+        // 此前回落用的是「世界继续运转 / 世界在继续运转，一切如常。」，与真实生成的
+        // 事件在库里长得一模一样，验收时以为链路是通的，实际模型一次都没成功调用。
+        String fallbackTitle = "（AI 未生成）世界继续运转";
+        String fallbackContent = "本轮未能取得模型输出，世界按原样继续运转。请检查模型配置后再推进一次。";
         String fallbackWeather = world.getWeather();
         try {
             AiChatResult res = aiChatFacadeService.callForResult(req);
             if (res == null || !res.success() || res.text() == null) {
+                log.warn("[WorldSim] advance 未取得模型输出 model={} providerId={}，本轮写入回落事件",
+                        m[0], m[1]);
                 return new WorldAdvanceResult(fallbackTitle, fallbackContent, fallbackWeather, List.of());
             }
             JsonNode root = parseJsonObject(res.text());
             if (root == null) {
+                log.warn("[WorldSim] advance 模型输出不是 JSON model={}，本轮写入回落事件", m[0]);
                 return new WorldAdvanceResult(fallbackTitle, fallbackContent, fallbackWeather, List.of());
             }
             String title = root.has("title") && root.get("title").isTextual()
@@ -1013,11 +1036,20 @@ public class WorldSimChatController {
         try {
             boolean numeric = prefix.chars().allMatch(Character::isDigit);
             if (numeric) {
-                return prefix;
-            }
-            com.chua.starter.ai.support.manage.store.SysAiProvider p = providerMapper.selectById(prefix);
-            if (p != null && Boolean.TRUE.equals(p.getEnabled())) {
-                return prefix;
+                // 数字前缀也必须在供应商表里真实存在且启用，才认作「已解析」。
+                // 此前直接 return prefix，于是一个早已被删掉的供应商 ID 也能让
+                // route.providerResolved=true，把「配置过期」伪装成「路由成功」。
+                com.chua.starter.ai.support.manage.store.SysAiProvider numericProvider =
+                        providerMapper.selectById(prefix);
+                if (numericProvider != null && Boolean.TRUE.equals(numericProvider.getEnabled())) {
+                    return prefix;
+                }
+                log.warn("[WorldSim] 模型限定名前缀 {} 不是已启用的供应商，改为按模型名重新解析", prefix);
+            } else {
+                com.chua.starter.ai.support.manage.store.SysAiProvider p = providerMapper.selectById(prefix);
+                if (p != null && Boolean.TRUE.equals(p.getEnabled())) {
+                    return prefix;
+                }
             }
             for (com.chua.starter.ai.support.manage.store.SysAiProvider cand : providerMapper.selectList(null)) {
                 if (cand.getName() != null && cand.getName().equalsIgnoreCase(prefix)
@@ -1063,21 +1095,57 @@ public class WorldSimChatController {
      * @return 返回值
     */
     private String[] resolveDefaultQualified() {
-        String[][] keys = {{"runtime", "default_model"}, {"models", "defaultChatModelId"}, {"runtime", "default_chat_model"}};
+        // 取值顺序与 EffectiveChatModelResolver 一致，但**保留原始的「供应商:模型」限定名**。
+        //
+        // 为什么不直接取 resolver.candidates() 的返回值：它把候选归一化成「模型管理里
+        // 命中的那一种写法」，而模型表的 model 列只存裸模型名，于是限定名
+        // pollinations-local:openai-fast 会被归一成 openai-fast，供应商前缀丢失，
+        // SSE 的 route.providerResolved 变成 false（明明配了供应商却报未解析）。
+        //
+        // 这里改为：按同一优先级逐层读原始配置值，先校验「模型管理里存在且已启用」
+        // （isAvailable 会试原样与去前缀两种写法），校验通过才采用，并保留前缀。
+        //
+        // 校验这一步是之前缺失的关键：配置行被删掉后，永久 Redis 缓存仍会返回旧限定名
+        // 1789547286889:agnes-3.0-flash，供应商早已不存在，世界模拟每次对话都把它当默认
+        // 模型发出去，错误还被包装成「未配置主 ChatClient」，完全看不出真因。
+        String[][] keys = {
+                {"bot", "default_model"},
+                {"runtime", "default_model"},
+                {"models", "defaultChatModelId"},
+                {"runtime", "default_chat_model"}
+        };
         for (String[] k : keys) {
             String v = globalSettingService.getValue(k[0], k[1])
                     .map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
-            if (v != null) {
-                String providerId = extractProviderId(v);
-                int idx = v.indexOf(':');
-                String bare = idx >= 0 ? v.substring(idx + 1).trim() : v;
-                if (!bare.isEmpty()) {
-                    return new String[]{bare, providerId};
-                }
+            if (v == null) {
+                continue;
             }
+            if (!effectiveChatModelResolver.isAvailable(v)) {
+                log.warn("[WorldSim] 默认模型配置 {}/{}={} 未在模型管理中启用，跳过",
+                        k[0], k[1], v);
+                continue;
+            }
+            int idx = v.indexOf(':');
+            String bare = idx >= 0 ? v.substring(idx + 1).trim() : v;
+            if (bare.isEmpty()) {
+                continue;
+            }
+            return new String[]{bare, extractProviderId(v)};
         }
-        String resolved = effectiveChatModelResolver.resolve(null);
-        return new String[]{resolved, null};
+        // 配置层没有可用值时，交给统一解析器在候选链里挑（可能来自显式模型或 yaml）
+        for (String candidate : effectiveChatModelResolver.candidates(null)) {
+            if (candidate == null || candidate.isBlank()) {
+                continue;
+            }
+            String value = candidate.trim();
+            int idx = value.indexOf(':');
+            String bare = idx >= 0 ? value.substring(idx + 1).trim() : value;
+            if (bare.isEmpty()) {
+                continue;
+            }
+            return new String[]{bare, extractProviderId(value)};
+        }
+        return new String[]{null, null};
     }
 
     /**
