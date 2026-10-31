@@ -32,7 +32,6 @@
   <properties>
     <!-- 作为内部 starter 被依赖模块使用时默认跳过 fat-jar repackage，保留原始 jar 结构；
              需要可执行包时构建传 -Dspring-boot.repackage.skip=false，产物为 *-exec.jar，主构件不受影响 -->
-    <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
     <!-- 网页正文提取（知识库按网址采集：去脚本/样式/导航，还原 HTML 实体） -->
     <jsoup.version>1.23.2</jsoup.version>
   </properties>
@@ -398,7 +397,6 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
           <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
-          <skip>${spring-boot.repackage.skip}</skip>
           <!-- 可执行包另挂 exec 分类符，绝不替换主构件：库坐标下必须始终是薄 jar，否则按类路径引本模块的进程解析不到 com/chua/... 根路径类 -->
           <classifier>exec</classifier>
         </configuration>
