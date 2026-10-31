@@ -1,7 +1,9 @@
 package com.chua.starter.ai.support.util;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * AI 底库分组工具类。
@@ -49,10 +51,12 @@ public final class AiLibraryGroups {
     }
 
     /**
-     * 解析逗号分隔的分组字符串为列表（不去重、保序、空值归一化为 default）。
+     * 解析逗号分隔的分组字符串为列表（按首次出现去重、保序、空值归一化为 default）。
      *
      * <p>典型用法：前端传 {@code groups=groupA,groupB} → 这里拿到 {@code ["groupA","groupB"]}。
      * 空串/未传 → {@code ["default"]}（只查默认组，**不等于**查全部）。</p>
+     *
+     * <p>同一次检索不要重复踩同一个分组，超过 {@link #MAX_GROUPS} 按首次出现截断。</p>
      *
      * @param csv 逗号分隔的分组名字符串（可空）
      * @return 分组名列表（至少 1 项）
@@ -62,11 +66,16 @@ public final class AiLibraryGroups {
             return List.of(DEFAULT);
         }
         String[] parts = csv.split(",");
-        List<String> out = new ArrayList<>(parts.length);
+        // 按首次出现去重保序；空串 / 空白段归一化为 default（不是空名）
+        Set<String> seen = new LinkedHashSet<>();
         for (String p : parts) {
-            out.add(normalize(p));
+            String g = normalize(p);
+            if (!seen.contains(g) && seen.size() < MAX_GROUPS) {
+                seen.add(g);
+            }
         }
-        return out;
+        // 清理后可能全部是空白段（被归一化为 default），此时只留 default
+        return new ArrayList<>(seen.isEmpty() ? Set.of(DEFAULT) : seen);
     }
 
     /**

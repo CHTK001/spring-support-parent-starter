@@ -203,7 +203,7 @@ plugin:
       #
       # [开发环境] 本地联调 / 浏览器验收所需的登录口令（仅在 --spring.profiles.active=local
       # 时生效；生产 by "on-profile: !local" 文档段由远程 OAuth 接管，此处不传世）
-      user: "admin:admin123"
+      user: "admin:admin123;simon:a12345678;sara:a12345678"
     # 框架内置默认白名单混有历史应用专用路径（/api/extensions/**、/v2/usage/** 等），
     # 本应用按自身路由显式放行，不继承
     use-default-whitelist: false
