@@ -4,6 +4,7 @@ import com.chua.common.support.network.rpc.RpcProtocolConfig;
 import com.chua.common.support.network.rpc.RpcRegistryConfig;
 import com.chua.common.support.network.rpc.RpcServer;
 import com.chua.common.support.network.rpc.RpcService;
+import com.chua.common.support.network.rpc.RpcType;
 import com.chua.starter.common.support.utils.SpringCompatUtils;
 import com.chua.starter.rpc.support.annotation.AnnotationPropertyValuesAdapter;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
@@ -130,6 +131,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     */
     private RpcServer rpcServer;
 
+    /**
+     * 当前上下文是否导出了 @RpcService 服务。
+     * <p>纯消费端不导出任何服务，无需启动服务端（JSON 协议会真正监听端口）。</p>
+     */
+    private boolean hasServiceBean;
+
 
     @Override
     /**
@@ -194,8 +201,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
 
  // 启动 RPC 服务端（Dubbo/SOFA 在 注册() 时已导出，此处为 JSON 等
- // 需要显式 之后属性设置() 才能启动监听服务的实现提供兜底）
-        if (rpcServer != null) {
+ // 需要显式 之后属性设置() 才能启动监听服务的实现提供兜底）。
+ // 纯消费端没有导出任何服务，不启动服务端，避免 JSON 等协议白白占用端口。
+        if (rpcServer != null && hasServiceBean) {
             rpcServer.afterPropertiesSet();
         }
     }
@@ -265,21 +273,39 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         sb.append("[RPC] ├─ 类型: ").append(highlight(rpcProperties.getType().name())).append("\n");
         sb.append("[RPC] ├─ 应用名: ").append(highlight(rpcProperties.getApplicationName())).append("\n");
         sb.append("[RPC] ├─ 状态: [").append(enabled()).append("]\n");
-        
+
+        // springbean / none 不产生网络通信：注册中心与远端协议配置均不生效，
+        // 直接打印配置项会让人误以为仍在使用 dubbo 等远端协议。
+        boolean localOnly = rpcProperties.getType() == RpcType.SPRINGBEAN
+                || rpcProperties.getType() == RpcType.NONE;
+
         // 注册中心
-        if (rpcProperties.getRegistry() != null && !rpcProperties.getRegistry().isEmpty()) {
+        if (localOnly) {
+            sb.append("[RPC] ├─ 注册中心: 无（本地 Bean 直调，无网络传输）\n");
+        } else if (rpcProperties.getRegistry() != null && !rpcProperties.getRegistry().isEmpty()) {
             sb.append("[RPC] ├─ 注册中心:\n");
             for (var reg : rpcProperties.getRegistry()) {
                 sb.append("[RPC] │  └─ ").append(address(reg.getAddress())).append("\n");
             }
         }
-        
+
         // 协议
-        if (rpcProperties.getProtocols() != null && !rpcProperties.getProtocols().isEmpty()) {
+        if (localOnly) {
+            sb.append("[RPC] └─ 协议: 本地 Bean 直调（无网络传输）\n");
+        } else if (rpcProperties.getProtocols() != null && !rpcProperties.getProtocols().isEmpty()) {
             sb.append("[RPC] └─ 协议:\n");
             for (var protocol : rpcProperties.getProtocols()) {
-                sb.append("[RPC]    └─ ").append(protocol.name()).append("://")
-                        .append(address(protocol.host(), protocol.port())).append("\n");
+                String protocolName = StringUtils.hasText(protocol.name())
+                        ? protocol.name() : rpcProperties.getType().name().toLowerCase();
+                Integer port = protocol.port();
+                String endpoint;
+                if (StringUtils.hasText(protocol.host())) {
+                    endpoint = port != null ? protocol.host() + ":" + port : protocol.host();
+                } else {
+                    endpoint = port != null ? String.valueOf(port) : "default";
+                }
+                sb.append("[RPC]    └─ ").append(protocolName).append("://")
+                        .append(address(endpoint)).append("\n");
             }
         }
         sb.append("[RPC] ════════════════════════════════════════");
@@ -542,6 +568,8 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
      * @param serviceInterface 服务接口
      */
     private void registerServiceBeanDefinition(String serviceBeanName, AbstractBeanDefinition serviceBeanDefinition, String serviceInterface) {
+ // 本上下文负责导出服务，需要启动 RPC 服务端
+        this.hasServiceBean = true;
  // 检查 服务 Bean
         if (registry.containsBeanDefinition(serviceBeanName)) {
             BeanDefinition existingDefinition = registry.getBeanDefinition(serviceBeanName);
