@@ -147,9 +147,6 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
             T remote = (T) rpcClient.get(interfaceClass);
             return intercept(withFailover(remote));
         } catch (Throwable e) {
-            if (!isDegradeEnabled()) {
-                throw e;
-            }
             // 远端 RPC 不可用时，降级到 degrade 指定的提供者直调本地 Bean
             log.warn("[RPC] 远端调用失败，尝试降级到 {} provider: {}", degrade, e.getMessage());
             try {
@@ -180,7 +177,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
      */
     @SuppressWarnings("unchecked")
     private T withFailover(T remote) {
-        if (!isDegradeEnabled() || (rpcProperties != null && rpcProperties.getType() == RpcType.SPRINGBEAN)) {
+        if (rpcProperties != null && rpcProperties.getType() == RpcType.SPRINGBEAN) {
             return remote;
         }
         ClassLoader loader = classLoader != null ? classLoader : interfaceClass.getClassLoader();
@@ -217,15 +214,6 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
      */
     String getDegradeName() {
         return StringUtils.hasText(degrade) ? degrade : "springbean";
-    }
-
-    /**
-     * 是否启用降级
-     *
-     * @return true 表示启用
-     */
-    private boolean isDegradeEnabled() {
-        return !"none".equalsIgnoreCase(degrade);
     }
 
     /**
