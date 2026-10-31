@@ -6,7 +6,7 @@
     <select id="listSubjects" resultType="com.chua.starter.eduai.dimension.entity.EduSubject">
         SELECT s.* FROM edu_subject s
         <where>
-            <if test="includeDisabled == null or !includeDisabled">
+            <if test="includeDisabled != true">
                 s.subject_status = 1
             </if>
             <if test="gradeLevel != null and gradeLevel != ''">
