@@ -14,7 +14,8 @@ spring:
       # crypto-starter 密钥块完整性校验需口令，本地联调无密钥环境排除
       - com.chua.crypto.support.spring.CryptoAutoConfiguration
       # job-starter 依赖 JobMapper（mybatis 表映射），monitor 本地联调无该表排除
-      - com.chua.starter.job.support.JobAutoConfiguration
+      # 改为显式管理：V2.0__init_all_job.sql 已在 report 库建表（_version=V2.0__init_all_job）
+      # - com.chua.starter.job.support.JobAutoConfiguration
   ai:
     generate:
       enabled: false
