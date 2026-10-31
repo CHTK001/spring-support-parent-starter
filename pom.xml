@@ -169,6 +169,8 @@
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
+        <module>spring-support-cdp-starter</module>          <!-- CDP 调试模块：Chrome DevTools Protocol 代用/Debug 控制台 -->
+
 
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
