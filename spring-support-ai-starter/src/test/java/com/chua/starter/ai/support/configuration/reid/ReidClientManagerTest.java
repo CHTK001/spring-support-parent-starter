@@ -22,7 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * 人脸重识别配置链路测试。
  *
- * <p>锁住两端：{@link ReidGlobalSettingProvider} 的设置项声明，与
+ * <p>锁住两端：{@link com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider}
+ * 的设置项声明（reid 与 face 共用 face 分组，不再有独立的 reid 分组），与
  * {@link ReidClientManager} 的装配——尤其是「配置了却没装配」这个最常见的坑
  * （页面保存成功、运行时不生效，且没有任何报错）。</p>
  *
@@ -48,12 +49,13 @@ class ReidClientManagerTest {
     @Test
     @DisplayName("设置项声明：模型留空、轨迹参数有默认值")
     void providerDeclaresItems() {
-        List<GlobalSettingProvider.SettingItem> items = new ReidGlobalSettingProvider().getItems();
+        List<GlobalSettingProvider.SettingItem> items =
+                new com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider().getItems();
 
         GlobalSettingProvider.SettingItem detector = find(items, "detector_model");
         GlobalSettingProvider.SettingItem feature = find(items, "feature_model");
-        assertNotNull(detector, "reid 分组必须声明 detector_model");
-        assertNotNull(feature, "reid 分组必须声明 feature_model");
+        assertNotNull(detector, "face 分组必须声明 detector_model");
+        assertNotNull(feature, "face 分组必须声明 feature_model");
         assertEquals("", detector.defaultValue(), "检测模型默认留空：未配置即该能力未启用");
         assertEquals("", feature.defaultValue(), "特征模型默认留空：未配置即该能力未启用");
 
@@ -70,14 +72,15 @@ class ReidClientManagerTest {
     }
 
     /**
-     * 分组标识：必须是 reid（配置分组与前端/后端约定一致）。
+     * 分组标识：reid 已并入 face 分组（配置分组与前端/后端约定一致）。
      */
     @Test
-    @DisplayName("分组标识为 reid")
-    void providerUsesReidGroup() {
-        ReidGlobalSettingProvider provider = new ReidGlobalSettingProvider();
-        assertEquals("reid", provider.group());
-        assertEquals("人脸重识别", provider.groupName());
+    @DisplayName("配置分组为 face")
+    void providerUsesFaceGroup() {
+        com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider provider =
+                new com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider();
+        assertEquals("face", provider.group());
+        assertEquals("人脸识别", provider.groupName());
     }
 
     /**

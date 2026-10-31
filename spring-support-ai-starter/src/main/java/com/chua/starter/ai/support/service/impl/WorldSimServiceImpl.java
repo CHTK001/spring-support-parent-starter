@@ -156,7 +156,10 @@ public class WorldSimServiceImpl implements WorldSimService {
     @Override
     public List<Map<String, Object>> listWorlds() {
         String userId = AiUserContext.requireUserId();
-        Cache cache = cache();
+        // 必须写进同名列表缓存：失效端 evictWorldList()/evictActCaches() 走的是 listCache()
+        // （aiWorldList）。此前这里误用 cache()（aiWorldView），导致列表条目写进视图缓存、
+        // 却从不被失效 —— 新建世界不出现、推进时间后列表仍是旧时间，直到 30 分钟 TTL 到期。
+        Cache cache = listCache();
         String key = "list:" + userId;
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> cached = cache.get(key, List.class);
@@ -782,10 +785,20 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @return 返回值
     */
     private void evictWorld(Long worldId) {
-        if (worldId == null || cache() == null) {
+        if (worldId == null) {
             return;
         }
-        cache().evict(worldId + ":" + AiUserContext.requireUserId());
+        String userId = AiUserContext.requireUserId();
+        Cache view = cache();
+        if (view != null) {
+            view.evict(worldId + ":" + userId);
+        }
+        // 列表行的场景数 / NPC 数 / 最近事件标题 / 名称都来自同一批写接口，
+        // 只失效视图会让列表卡在旧快照上（新建世界看不见、加 NPC 后人物数不变）。
+        Cache list = listCache();
+        if (list != null) {
+            list.evict("list:" + userId);
+        }
     }
 
     /**

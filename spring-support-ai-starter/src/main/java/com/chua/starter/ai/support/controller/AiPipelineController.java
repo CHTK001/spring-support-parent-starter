@@ -210,6 +210,13 @@ public class AiPipelineController {
         result.add(pipeline("face", "人脸识别", "face", "face",
                 List.of("detect", "face-recognize"), List.of("eye-detect", "smile-detect", "face-quality", "liveness"),
                 "人脸检测+识别管线，检测/识别模型必填，眼睛/微笑/质量/活体可选", "/capabilities/face", "face"));
+        // 人脸重识别：管线逻辑共享 face 分组的检测/特征模型与归并参数（track_threshold 等），
+        // 配置分组与「人脸识别」合并，不再为 reid 新建独立分组。
+        result.add(pipeline("face-reid", "人脸重识别", "face", "face-reid",
+                List.of("detect", "face-recognize"), List.of(),
+                "人脸检测+跨帧重识别管线：检测与特征模型同人脸识别，归并阈值/时间窗/容量/保留时长等"
+                        + "参数与 pipelines/face 共用于 face 分组",
+                "/capabilities/face-reid", "face"));
         result.add(pipeline("image", "图片识别", "image", "image",
                 List.of("classify", "image-detect"), List.of("segment", "enhance", "captioning", "depth",
                         "image-quality", "pedestrian", "plate-detect", "plate-recognize", "feature"),

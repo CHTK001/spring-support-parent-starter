@@ -13,6 +13,11 @@ import java.util.List;
  * {@link com.chua.starter.ai.support.service.SysAiGlobalSettingService#replace} 写入后，
  * {@code FaceClientManager.rebuild()} 热重建运行实例，实时生效。</p>
  *
+ * <p><b>人脸重识别（{@code face-reid} 管线）共享本分组。</b>检测与特征模型走 {@code face}，
+ * 重识别独有的轨迹归并参数（归并阈值、时间窗、容量、保留时长、检测分流阈值、低阈值检测
+ * 与默认摄像头）也写在这里——<b>重识别不需要第二套配置分组</b>，配置页与系统设置的
+ * 「人脸重识别配置」tab 都落到本分组。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -53,7 +58,9 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
      * 人脸模块全部配置项。
      *
      * <p>核心链路（必填）：detector / feature / vector_storage / vector_algorithm / 阈值 / topK。
-     * 辅助能力（选填）：活体 / 质量 / 动漫 / 超分 / 修复 / 属性 / 表情 / 关键点 / 换脸检测。</p>
+     * 辅助能力（选填）：活体 / 质量 / 动漫 / 超分 / 修复 / 属性 / 表情 / 关键点 / 换脸检测。
+     * <p>额外的人脸重识别参数：轨道合并阈值与时间窗、容量/保留时长、检测分流标记、
+     * 重识别专用低阈值检测与默认摄像头标识。</p>
      *
      * @return 配置项列表
      */
@@ -92,7 +99,23 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("landmark_enabled", "false", "BOOLEAN", "是否启用关键点定位", 27),
                 new SettingItem("deepfake_model", "", "STRING", "换脸检测模型", 19),
                 new SettingItem("deepfake_enabled", "false", "BOOLEAN", "是否启用换脸检测", 28),
-                new SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 20)
+                new SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 20),
+                // ---- 人脸重识别（face-reid 管线）专属参数 ----
+                // 由 FaceReidPipeline 消费（同一次低阈值检测，按 face_threshold 分流
+                // 到人脸识别或跨帧轨迹），参数全部落在 face 分组，不再新建 reid 分组。
+                new SettingItem("face_threshold", "0.5", "NUMBER",
+                        "人脸/重识别分流阈值：检测置信度不低于此值走人脸识别，低于此值走重识别", 32),
+                new SettingItem("reid_detector_threshold", "0.3", "NUMBER",
+                        "重识别低阈值检测置信度（尽量多检出模糊/远处人脸；只影响重识别观测，不改动人脸识别的高标准检测）", 33),
+                new SettingItem("track_threshold", "0.5", "NUMBER",
+                        "同人判定阈值（余弦相似度，越高越严格，ArcFace 通常要求相邻观测的相似度足够高）", 34),
+                new SettingItem("track_gap_seconds", "30", "NUMBER",
+                        "跨帧归并时间窗（秒）；超过此时长不再并入同一轨迹", 35),
+                new SettingItem("track_max_tracks", "10000", "NUMBER",
+                        "轨迹容量上限（超出淘汰最久未出现的轨迹）", 36),
+                new SettingItem("track_ttl_seconds", "0", "NUMBER",
+                        "轨迹保留时长（秒）；0 表示永久保留", 37),
+                new SettingItem("default_camera_id", "", "STRING", "默认摄像头标识（未指定时使用）", 38)
         );
     }
 }

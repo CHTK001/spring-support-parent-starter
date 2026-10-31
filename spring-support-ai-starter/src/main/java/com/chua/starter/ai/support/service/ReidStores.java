@@ -46,6 +46,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *       快照只承担「向量重建的来源」这一件事，不重复落盘元数据。</li>
  * </ul>
  *
+ * <p><b>与人脸管线的关系。</b>向量库本身的配置（向量存储、比较算法、特征维度）
+ * 与检测/特征模型一样归属于 {@code face} 分组（管线配置分组），
+ * 但向量的落盘路径仍走 {@code reid} 目录冻结，两者不冲突。</p>
+ *
  * <p><b>模型不重复加载</b>：本类不碰 ONNX，只管向量；特征由
  * {@link com.chua.starter.ai.support.configuration.reid.ReidClientManager} 共享的
  * 特征提取器产出。</p>
@@ -79,9 +83,10 @@ public class ReidStores {
     private static final String BASE_DIR_PROPERTY = "reid.store.dir";
 
     /**
-     * 配置分组名
+     * 配置分组名：向量库的配置（vector_storage / vector_algorithm / feature_dimension）
+     * 与检测/特征模型同归属人脸组（管线共享同一组，底库目录仍走 reid）。
      */
-    private static final String GROUP = "reid";
+    private static final String GROUP = "face";
 
     /**
      * 默认特征维度
