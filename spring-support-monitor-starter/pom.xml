@@ -47,6 +47,13 @@
             <artifactId>spring-support-docker-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket，
+             经 AutoConfiguration.imports 自动装配 com.chua.starter.cdp.config.CdpAutoConfiguration） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cdp-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- 接码 / 临时邮箱 SPI（临时账号功能）：随机虚拟号码 + 临时邮箱的创建与短信/邮件读取。
              经 server-starter 已传递，此处显式声明保证编译期契约稳定 -->
         <dependency>
