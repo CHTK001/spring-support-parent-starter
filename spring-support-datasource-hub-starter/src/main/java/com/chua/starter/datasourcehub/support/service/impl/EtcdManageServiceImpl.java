@@ -203,7 +203,7 @@ public class EtcdManageServiceImpl implements EtcdManageService {
         List<EtcdMemberVO> result = new ArrayList<>(raw.size());
         for (JsonObject member : raw) {
             // ID / name 是**明文 JSON 字符串**，不是 base64（key/value 才是 base64）。
-            // 早先对它们套了 base64 解码，成员名直接变成乱码（实测 'default' → 'u�ں['）。
+            // 早先对它们套了 base64 解码，成员名直接变成乱码（实测 'default' → 'u乱码['）。
             String id = trim(str(member.get("ID")));
             String name = trim(str(member.get("name")));
             String peers = joinUrls(member.getJsonArray("peerURLs"));
