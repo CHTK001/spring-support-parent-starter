@@ -25,6 +25,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code _+数字} 后缀，{@code tshark-123} 不会被误分组。关闭时必须用本类自留的原生
  * Hikari 实例，{@link DataSourceContextSupport#DATA_SOURCE_MAP} 里存的是 SQL 监控
  * 启用时包装过的实例，直接 close 包装对象并不能释放连接池。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Component

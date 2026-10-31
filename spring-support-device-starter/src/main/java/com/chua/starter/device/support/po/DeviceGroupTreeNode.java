@@ -6,6 +6,9 @@ import java.util.List;
 
 /**
  * 设备分组树节点
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Data
 public class DeviceGroupTreeNode {

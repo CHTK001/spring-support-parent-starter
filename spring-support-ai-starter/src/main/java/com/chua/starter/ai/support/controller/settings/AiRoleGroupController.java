@@ -16,6 +16,9 @@ import java.util.List;
  *
  * <p>{@code sys_ai_role_group} 是全局共享表，没有用户维度列，因此读取对所有登录用户开放，
  * 新增/更新/删除仅管理员可执行。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Tag(name = "AI 设置 - 角色分组")
 @RestController

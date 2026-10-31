@@ -20,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>这是「宿主不依赖具体中间件」架构的第二层验证：单实现能发现只是起点，
  * 多实现并存且互不串号才是真实场景（Kafka / InfluxDB / ZooKeeper 同时在 classpath 上）。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 class MiddlewareMultiProviderTest {
 

@@ -18,6 +18,9 @@ import java.util.List;
  * 一台设备可以同时出现在多个分组里。</p>
  *
  * <p>接口前缀与其他设备接口一致：{@code /api/device/group}</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @RestController
 @RequestMapping("/api/device/group")

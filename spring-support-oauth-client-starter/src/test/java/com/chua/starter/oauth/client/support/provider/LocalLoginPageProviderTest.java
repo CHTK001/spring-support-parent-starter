@@ -14,6 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>覆盖三件套里「纯函数可测」的两件：回跳地址归一化与 HTML 转义。
  * 第三件（登录成功写会话 Cookie）依赖协议与响应对象，在
  * {@code OAuthServerFilter*} 的鉴权链路测试中覆盖读的一侧。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("LocalLoginPageProvider: 回跳归一化与 HTML 转义")
 class LocalLoginPageProviderTest {

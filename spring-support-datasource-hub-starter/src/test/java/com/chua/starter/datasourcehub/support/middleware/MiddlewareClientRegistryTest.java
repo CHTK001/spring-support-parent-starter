@@ -28,6 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p><b>这是整套架构的验收核心</b>：宿主不依赖任何具体中间件，
  * 装没装实现完全由 classpath 决定，行为必须都可预期。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 class MiddlewareClientRegistryTest {
 
