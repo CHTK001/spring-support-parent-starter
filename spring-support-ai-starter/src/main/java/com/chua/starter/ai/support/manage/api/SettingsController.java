@@ -490,10 +490,13 @@ public class SettingsController {
         // SYSTEM_DEFAULT 必须能传到前端——实测 2026-09-30 那批一次性种子（onnx 等）从来没人配过，
         // 界面上只显示「继承全局：onnx」会把系统默认说成别人配的。
         Map<String, Object> origins = new LinkedHashMap<>();
+        boolean admin = AiUserContext.isAdmin();
         for (Map<String, Object> item : userSettingService.listMerged(userId, group)) {
             String field = String.valueOf(item.get("field"));
             boolean overridden = Boolean.TRUE.equals(item.get("overridden"));
-            result.put(field, overridden || !isSecretField(field) ? item.get("value") : MASKED);
+            // 凭据类字段管理员或用户自己覆盖过才能回显原值，否则回掩码，避免把全局密钥外发给普通用户
+            result.put(field, valueIsVisible(overridden, admin, field)
+                    ? item.get("value") : MASKED);
             Object origin = item.get("origin");
             if (origin != null) {
                 Map<String, Object> meta = new LinkedHashMap<>(2);
@@ -533,6 +536,22 @@ public class SettingsController {
         log.info("[用户覆盖设置] user={} 撤销分组 {} 的 {} 项覆盖", userId, group, deleted);
         publishUserSettingsChanged(group, userId);
         return ApiResult.ok(userSettingService.listMerged(userId, group));
+    }
+
+    /**
+     * 判断凭据类字段的原始值是否向当前用户回显。
+     *
+     * <p>管理员或用户自己覆盖的凭据字段回显原值；其他凭据字段一律回显掩码，
+     * 避免把全局密钥外发给普通用户——管理台上的令牌经了鉴权后，普通用户的视野被
+     * 限制在自己的覆盖层和只读全局层上。</p>
+     *
+     * @param overridden 是否由该用户自行覆盖
+     * @param admin      是否管理员
+     * @param field      字段名
+     * @return true 回显原始值
+     */
+    private static boolean valueIsVisible(boolean overridden, boolean admin, String field) {
+        return overridden || admin || !isSecretField(field);
     }
 
     /**
