@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
  * 该路径在开发态经前端代理、在独立部署态由后端直接提供，均可达。</p>
  *
  * @since 4.0.0.42
+ *
+ * @author CH
  */
 @Slf4j
 @Tag(name = "AI - 角色头像")

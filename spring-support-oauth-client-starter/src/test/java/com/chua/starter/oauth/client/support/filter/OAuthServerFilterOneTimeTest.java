@@ -34,6 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>修复后：只有「消费」（{@code GET /ot/{token}}）免鉴权（那时令牌本身已是凭证，
  * 且只有鉴权通过的人才签得出令牌），「签发」（{@code POST /ot}）按目标桶走常规鉴权。
  * 这正是把令牌从查询参数换到一次性票据所依赖的前提 —— 票据本身必须是可信的。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("OAuthServerFilter: /ot 一次性链接鉴权")
 class OAuthServerFilterOneTimeTest {

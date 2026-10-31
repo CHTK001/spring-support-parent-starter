@@ -7,6 +7,9 @@ import java.time.LocalDateTime;
 
 /**
  * 设备-分组归属
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("device_group_device")

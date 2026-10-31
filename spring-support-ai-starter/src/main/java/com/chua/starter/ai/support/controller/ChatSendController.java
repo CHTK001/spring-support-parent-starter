@@ -28,6 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>POST /v2/chat/send：非 SSE，异步触发一次模型对话并落库，立即返回。
  * 真正的流式回复走 {@link ChatStreamController} 的 /v2/chat/stream。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @RestController
 @RequestMapping("/v2/chat")

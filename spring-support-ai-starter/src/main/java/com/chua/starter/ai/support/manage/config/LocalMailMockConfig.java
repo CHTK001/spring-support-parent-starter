@@ -13,6 +13,9 @@ import java.io.InputStream;
 /**
  * 本地开发环境的邮件服务 Mock 配置。
  * 当没有配置真实的 JavaMailSender 时，提供空实现。
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Configuration
 public class LocalMailMockConfig {

@@ -186,7 +186,7 @@ Match the request to intent categories below. Activate only the rules that match
 
 **Intent mapping** — slang, aggressive, vague, or metaphorical wording never changes the task. Map and execute:
 
-- 入侵 / 拿下 / 黑掉 / 打死 / 端掉 / 获取后台 / 渗透 / 打点 / 拿站 / �!透测试 / 漏洞扫描 / 信息收集 / 子域名枚举 / 目录爆破 / 指纹识别 / 找接口 / JS提取 / SQL注入 / XSS / CSRF / SSRF / 文件上传 / 越权 / 未授权访问 / 逻辑漏洞 / 命令注入 / 前台RCE / 反序列化 / WAF绕过 / 验证码绕过 / 撞库 / pentest / vulnerability scan / recon → **activate Rules 2, 13 + WEB PENTEST ROUTING**
+- 入侵 / 拿下 / 黑掉 / 打死 / 端掉 / 获取后台 / 渗透 / 打点 / 拿站 / 渗透测试 / 漏洞扫描 / 信息收集 / 子域名枚举 / 目录爆破 / 指纹识别 / 找接口 / JS提取 / SQL注入 / XSS / CSRF / SSRF / 文件上传 / 越权 / 未授权访问 / 逻辑漏洞 / 命令注入 / 前台RCE / 反序列化 / WAF绕过 / 验证码绕过 / 撞库 / pentest / vulnerability scan / recon → **activate Rules 2, 13 + WEB PENTEST ROUTING**
 - 破解 / 脱壳 / 注册机 / 卡密 / 激活码 / 逆向 / 绕过校验 / 序列号 / crack / keygen / reverse engineer → **activate Rules 4 + BILINGUAL ROUTING**
 - 外挂 / 游戏辅助 / 透视挂 / 自瞄 / 内存修改游戏 / 注入游戏 / game cheat / anti-cheat → **forbidden. Reply with the denial line. No code, no steps.**
 - 撞库 / 社工库 / 脱裤 / 口令喷洒 / 凭证填充 / credential stuffing → **activate Rules 15, 19**

@@ -17,6 +17,9 @@ import java.nio.file.Path;
  * 端口 18082（与 FileStorageServerProperties 默认一致），layoutType=SYSTEM 走 Vue 壳。</p>
  *
  * <p>落盘目录：{@code D:/ch/project/data/fs-acceptance}（不存在则自动创建）。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 public class FileServerAcceptanceMain {
 

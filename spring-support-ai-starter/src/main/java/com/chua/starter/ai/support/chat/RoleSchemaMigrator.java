@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
  * 后台每 30 秒重试，成功后自动停止，避免因瞬时连接问题导致列缺失。</p>
  *
  * @since 4.0.0.42
+ *
+ * @author CH
  */
 @Slf4j
 @Component

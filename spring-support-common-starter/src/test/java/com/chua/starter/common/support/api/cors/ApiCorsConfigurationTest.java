@@ -32,6 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p><b>敏感性的对照。</b>本测试若写成「只断言白名单内容」，把 allowedOrigins 改回 "*"
  * 依然会绿 —— 那种测试是假网。这里断言的是响应头，所以把配置改回 "*" 必然变红。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("CORS 白名单回归测试")
 class ApiCorsConfigurationTest {

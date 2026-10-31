@@ -16,6 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Access-Control-Allow-Credentials} 而未直接可利用，但这是一颗定时炸弹 ——
  * 只要后续任何一处为了「修跨域报错」补上该头，任意站点即可读取用户私有桶内容。
  * 跨域白名单这类逻辑一旦被改回反射，测试必须立刻失败。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("OAuthServerFilter: 跨域来源白名单")
 class OAuthServerFilterCorsTest {

@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 
 /**
  * 角色分组实体，对应表 sys_ai_role_group
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_role_group")

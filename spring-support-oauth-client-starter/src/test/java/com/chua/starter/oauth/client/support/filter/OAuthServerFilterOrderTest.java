@@ -11,6 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>回归缺陷：文件存储节点描述会通过 DelegatingServerFilter 把业务插件
  * order 覆盖为默认 0，原 order=50 在反应式链上排到文件存储网关之后，
  * 私有桶尚未鉴权就返回 200。安全鉴权必须排在所有业务插件之前。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("OAuthServerFilter: 鉴权执行顺序")
 class OAuthServerFilterOrderTest {

@@ -14,6 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>本 starter 被所有服务共用，内置默认白名单是「隐式生效且难以察觉」的信任边界：
  * 任何应用只要注册了同名路由就会被静默关闭鉴权。下面每条断言对应一个已被移除的
  * 历史遗留条目，防止有人在「修跨域 / 修登录」时顺手把它加回来。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("AuthClientProperties: 内置默认白名单守卫")
 class AuthClientPropertiesWhitelistTest {

@@ -22,6 +22,9 @@ import com.chua.starter.oauth.client.support.credential.CredentialProvider;
  *
  * <p><b>降级</b>：容器 Bean 尚未就绪时该字段为 {@code null}，源码编译器会跳过并告警，
  * 登录回落到 oauth 内置逻辑，而不是抛异常把整个登录面打挂。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
  */
 @SourceSpi
 public class EduCredentialExtensions {
