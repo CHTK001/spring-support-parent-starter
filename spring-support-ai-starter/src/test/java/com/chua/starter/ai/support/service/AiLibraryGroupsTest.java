@@ -40,15 +40,15 @@ class AiLibraryGroupsTest {
         assertEquals(List.of("default"), AiLibraryGroups.parse("default"));
         assertEquals(List.of("a", "b"), AiLibraryGroups.parse("a,b"));
         assertEquals(List.of("a", "b", "c"), AiLibraryGroups.parse("a,b,c"));
-        assertEquals(List.of("a", "b", "c"), AiLibraryGroups.parse("b,a,c,a"));
+        assertEquals(List.of("b", "a", "c"), AiLibraryGroups.parse("b,a,c,a"), "按首次出现去重保序");
         assertEquals(List.of("a", "b"), AiLibraryGroups.parse("a,a,b"));
     }
 
     @Test
     @DisplayName("空白段与同义组被归一化到 default / 同名组")
     void whitespaceSegmentsNormalizeToDefault() {
-        assertEquals(List.of("default", "a"), AiLibraryGroups.parse(", a ," + "default"));
-        assertEquals(List.of("a"), AiLibraryGroups.parse("a,,b"));
+        assertEquals(List.of("default", "a"), AiLibraryGroups.parse(", a ," + "default"), "首段空白归一化为 default");
+        assertEquals(List.of("a", "default", "b"), AiLibraryGroups.parse("a,,b"), "空白段归一化为 default");
         assertEquals(List.of("a", "b"), AiLibraryGroups.parse("a , b"));
     }
 
@@ -61,7 +61,7 @@ class AiLibraryGroupsTest {
         }
         List<String> parsed = AiLibraryGroups.parse(String.join(",", parts));
         assertEquals(AiLibraryGroups.MAX_GROUPS, parsed.size());
-        assertTrue(parsed.get(parsed.size() - 1).equals("u"));
+        assertTrue(parsed.get(parsed.size() - 1).equals("p"), "截断到前 16 组：a..p");
     }
 
     @Test
