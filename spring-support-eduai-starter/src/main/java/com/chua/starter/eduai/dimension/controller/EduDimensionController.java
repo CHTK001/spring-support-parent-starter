@@ -85,9 +85,11 @@ public class EduDimensionController {
      * @param false false
      * @return 列表主题的结果
      * @param gradeLevel grade级别，不允许为 null
+     * @param includeDisabled 是否包含停用学科（管理端传 true，下拉等场景保持仅启用）
      */
-    public ReturnResult<List<EduSubject>> listSubjects(@RequestParam(required = false) String gradeLevel) {
-        return ReturnResult.ok(dimensionService.listSubjects(gradeLevel));
+    public ReturnResult<List<EduSubject>> listSubjects(@RequestParam(required = false) String gradeLevel,
+                                                       @RequestParam(required = false, defaultValue = "false") boolean includeDisabled) {
+        return ReturnResult.ok(dimensionService.listSubjects(gradeLevel, includeDisabled));
     }
 
     @Operation(summary = "保存学科")

@@ -169,7 +169,21 @@ public class EduDimensionService {
      * @return 返回值
     */
     public List<EduSubject> listSubjects(String gradeLevel) {
-        return subjectMapper.listSubjects(gradeLevel, EduUserContext.ownerScope());
+        return subjectMapper.listSubjects(gradeLevel, false, EduUserContext.ownerScope());
+    }
+
+    /**
+     * list Subjects（可选包含停用）
+     * @param gradeLevel 字符串
+     * @param includeDisabled 是否包含停用学科
+     * @return 返回值
+    */
+    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
+            cacheNames = CACHE_SUBJECTS,
+            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '') + ':' + #includeDisabled",
+            unless = "#result == null")
+    public List<EduSubject> listSubjects(String gradeLevel, boolean includeDisabled) {
+        return subjectMapper.listSubjects(gradeLevel, includeDisabled, EduUserContext.ownerScope());
     }
 
     /**
