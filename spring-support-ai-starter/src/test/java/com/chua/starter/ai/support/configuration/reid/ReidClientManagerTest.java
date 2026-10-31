@@ -5,10 +5,13 @@ import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.deeplearning.support.face.FacePipeline;
 import com.chua.deeplearning.support.reid.PersonTrack;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.face.FaceClientManager;
+import com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,13 +25,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * 人脸重识别配置链路测试。
  *
- * <p>锁住两端：{@link com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider}
- * 的设置项声明（reid 与 face 共用 face 分组，不再有独立的 reid 分组），与
- * {@link ReidClientManager} 的装配——尤其是「配置了却没装配」这个最常见的坑
- * （页面保存成功、运行时不生效，且没有任何报错）。</p>
+ * <p>锁住两端：{@link FaceGlobalSettingProvider} 的设置项声明（检测/特征模型、归并参数、
+ * 向量库与维度全部落在 {@code face} 分组），与 {@link ReidClientManager} 的装配——
+ * 尤其是「配置了却没装配」这个最常见的坑（页面保存成功、运行时不生效，且没有任何报错）。</p>
  *
- * <p>管线构建只做图编排：detector/feature 用占位名（none），
- * 不实例化权重、不触发下载，全程离线可跑。</p>
+ * <p><b>重识别不再单立配置分组。</b>人的轨迹参数、人脸分组的检测模型与特征模型
+ * 全部在 {@code face} 分组里，{@code ReidClientManager} 直接读 {@code face}，
+ * 不再回落到另一个重识别分组。</p>
+ *
+ * <p>管线构建只做图编排：detector/feature 用占位名（none），不实例化权重、不触发下载，
+ * 全程离线可跑。</p>
  *
  * @author CH
  * @since 4.0.0.43
@@ -45,12 +51,14 @@ class ReidClientManagerTest {
 
     /**
      * 设置项声明：模型类默认留空（未配置即未启用），轨迹类参数有合理默认值。
+     *
+     * <p>重识别的归并参数与人脸检测/特征模型同属一个组（face），都在这份声明里。</p>
      */
     @Test
     @DisplayName("设置项声明：模型留空、轨迹参数有默认值")
     void providerDeclaresItems() {
         List<GlobalSettingProvider.SettingItem> items =
-                new com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider().getItems();
+                new FaceGlobalSettingProvider().getItems();
 
         GlobalSettingProvider.SettingItem detector = find(items, "detector_model");
         GlobalSettingProvider.SettingItem feature = find(items, "feature_model");
@@ -65,6 +73,12 @@ class ReidClientManagerTest {
         assertEquals("10000", find(items, "track_max_tracks").defaultValue(), "轨迹容量默认值");
         assertEquals("0", find(items, "track_ttl_seconds").defaultValue(), "保留时长默认 0=永久");
 
+        // 重识别自己的参数：分流阈值、低阈值检测、默认摄像头
+        assertEquals("0.5", find(items, "face_threshold").defaultValue(), "人脸/重识别分流阈值默认值");
+        assertEquals("0.3", find(items, "reid_detector_threshold").defaultValue(),
+                "重识别低阈值检测置信度默认值");
+        assertEquals("", find(items, "default_camera_id").defaultValue(), "默认摄像头留空");
+
         // 每个设置项都要有说明，否则前端渲染出来是裸字段名
         for (GlobalSettingProvider.SettingItem item : items) {
             assertNotNull(item.description(), "配置项缺少说明: " + item.field());
@@ -72,15 +86,28 @@ class ReidClientManagerTest {
     }
 
     /**
-     * 分组标识：reid 已并入 face 分组（配置分组与前端/后端约定一致）。
+     * 分组标识：人脸重识别管线与人脸识别共享 face 分组。
      */
     @Test
-    @DisplayName("配置分组为 face")
+    @DisplayName("face 分组提供者不在 reid 分组注册")
     void providerUsesFaceGroup() {
-        com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider provider =
-                new com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider();
+        FaceGlobalSettingProvider provider = new FaceGlobalSettingProvider();
         assertEquals("face", provider.group());
         assertEquals("人脸识别", provider.groupName());
+    }
+
+    /**
+     * 回归：{@code reid} 分组提供者类已物理删除，不能再有重识别的独立分组。
+     */
+    @Test
+    @DisplayName("不再存在 reid 分组设置提供者")
+    void reidGroupProviderIsGone() {
+        try {
+            Class.forName("com.chua.starter.ai.support.configuration.reid.ReidGlobalSettingProvider");
+            throw new AssertionError("reid 分组提供者不应存在，删除的 SPI 声明又被创建了？");
+        } catch (ClassNotFoundException expected) {
+            // 正常：类不存在，说明配置分组确实只剩 face
+        }
     }
 
     /**
@@ -90,8 +117,7 @@ class ReidClientManagerTest {
     @Test
     @DisplayName("未配置模型：能力未启用但不报错")
     void blankModelDisablesCapability() {
-        // 刻意用空读取器：模型一个都没配，才是真正的「未配置」场景。
-        // （用 baseReader 的话 reid 会回落到 face 分组，能力其实可用，断言就不成立了）
+        // 刻意用空读取器：face 分组一个模型都没配，才是真正的「未配置」场景。
         MapSettingReader empty = new MapSettingReader();
         ReidClientManager manager = new ReidClientManager(empty, faceManager(empty));
 
@@ -101,26 +127,29 @@ class ReidClientManagerTest {
     }
 
     /**
-     * 配置路径：detector/feature 都配了 → 管线必须真的构建出来。
+     * 配置路径：face 分组的 detector/feature 都配了 → 管线必须真的构建出来。
      *
      * <p>这是本用例最核心的断言：若装配链路断了，页面会显示「保存成功」，
      * 但运行时拿不到管线，重识别永远不可用且无任何报错。</p>
      */
     @Test
-    @DisplayName("配置检测与特征模型：管线构建成功")
+    @DisplayName("face 分组配置检测与特征模型：管线构建成功")
     void configuredModelBuildsPipeline() {
         ReidClientManager manager = new ReidClientManager(baseReader(), faceManager(baseReader()));
 
         assertTrue(manager.available(), "模型已配置应报告能力可用");
         assertNotNull(manager.currentPipeline(), "模型已配置必须构建出重识别管线（配置要生效）");
         assertNotNull(manager.currentFeatureExtractor(), "特征提取器必须装配");
+        // 摘要必须带上检测模型（前端「检测模型/特征模型」行靠它显示，不是「未配置」）
+        assertTrue(manager.configSummary().contains("detector=none"),
+                "配置摘要应带出 face 分组的检测模型；实际=" + manager.configSummary());
     }
 
     /**
-     * 轨迹管理器：按当前配置新建，且归并参数正确透传。
+     * 轨迹管理者：按当前配置新建，且归并参数正确透传。
      */
     @Test
-    @DisplayName("newTrack 按当前配置新建轨迹管理器")
+    @DisplayName("newTrack 按当前配置新建轨迹管理者")
     void newTrackHonoursConfig() {
         MapSettingReader reader = baseReader()
                 .put("track_threshold", "0.88")
@@ -129,7 +158,7 @@ class ReidClientManagerTest {
         ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
 
         PersonTrack track = manager.newTrack();
-        assertNotNull(track, "必须能新建轨迹管理器");
+        assertNotNull(track, "必须能新建轨迹管理者");
 
         // 阈值 0.88：余弦 0.8 < 0.88 → 不应合并（说明阈值确实透传了）
         track.observe("cam-A", "f1", new float[]{1, 0}, 1000L);
@@ -172,76 +201,77 @@ class ReidClientManagerTest {
     }
 
     /**
-     * 默认摄像头标识：未配置返回空。
+     * 低阈值检测阈值：`face.reid_detector_threshold` 取不到时回退代码默认 0.3。
      */
     @Test
-    @DisplayName("默认摄像头未配置时返回空")
-    void defaultCameraIdDefaultsToNull() {
+    @DisplayName("低阈值检测按 face 分组配置生效")
+    void lowThresholdDetectorHonoursConfig() {
+        MapSettingReader reader = baseReader();
+        ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
+        assertTrue(manager.configSummary().contains("detectThreshold=0.3"),
+                "摘要应带出 face 分组的低阈值检测默认置信度；实际=" + manager.configSummary());
+
+        // 把重识别低阈值调高到 0.8，摘要随新值走
+        MapSettingReader upgraded = reader.put("reid_detector_threshold", "0.8");
+        ReidClientManager raised = new ReidClientManager(upgraded, faceManager(upgraded));
+        assertTrue(raised.configSummary().contains("detectThreshold=0.8"),
+                "重设后摘要应带出新值；实际=" + raised.configSummary());
+    }
+
+    /**
+     * 人脸/重识别分流阈值：clearFace 的分界来自 face 分组的 {@code face_threshold}。
+     */
+    @Test
+    @DisplayName("分流阈值 face_threshold 按 face 分组读取")
+    void faceThresholdHonoursConfig() {
         ReidClientManager manager = new ReidClientManager(baseReader(), faceManager(baseReader()));
-        assertNull(manager.defaultCameraId());
+        assertEquals(0.5f, manager.faceThreshold(), "分流阈值默认 0.5");
+
+        ReidClientManager raised = new ReidClientManager(
+                baseReader().put("face_threshold", "0.9"), faceManager(baseReader().put("face_threshold", "0.9")));
+        assertEquals(0.9f, raised.faceThreshold(), "分流阈值应在 face 分组生效");
     }
 
     /**
-     * 回落语义：reid 分组留空时回落到 face 分组（两者用同一批模型，用户只需配一次）。
+     * 默认摄像头标识：配置时回送，未配置时回 null。
      */
     @Test
-    @DisplayName("reid 分组留空：回落到 face 分组的模型")
-    void fallsBackToFaceGroupModels() {
-        // face 分组配了模型、reid 分组留空
-        MapSettingReader reader = faceOnlyReader();
-        ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
+    @DisplayName("默认摄像头标识按 face 分组读取")
+    void defaultCameraIdHonoursConfig() {
+        MapSettingReader unset = new MapSettingReader();
+        assertNull(new ReidClientManager(unset, faceManager(unset)).defaultCameraId());
 
-        assertTrue(manager.available(), "face 分组配了模型时，reid 应回落可用（不必配两遍）");
-        assertNotNull(manager.currentPipeline());
+        MapSettingReader reader = baseReader().put("default_camera_id", "Camera-1");
+        assertEquals("Camera-1", new ReidClientManager(reader, faceManager(reader)).defaultCameraId());
     }
 
     /**
-     * 反向兜底：face 分组没配检测模型、但 reid 分组自己配了 → 能力必须可用。
-     *
-     * <p>这是部署实测踩到的坑：重识别配置页提供了「检测模型」下拉，用户选了它、
-     * 保存成功、页面显示已配置，但能力始终 available=false —— 因为检测管线取的是
-     * face 分组的共享单例。用户得额外再去配一遍人脸识别分组才能用，而界面上
-     * 完全看不出这层依赖。</p>
+     * 热更新：重新读同一组，配置变更后旧管线必须被置换。
      */
     @Test
-    @DisplayName("face 分组未配检测模型：用 reid 分组自己的 detector_model 兜底")
-    void buildsOwnDetectorWhenFaceGroupUnset() {
-        MapSettingReader reader = new MapSettingReader()
-                .putFor("reid", "detector_model", "none")
-                .putFor("reid", "feature_model", "none");
-        // faceManager 复用同一个 reader：face 分组读不到 detector_model，其管线为 null
+    @DisplayName("热重建后追踪容量按新配置生效")
+    void rebuildHonoursNewConfig() {
+        MapSettingReader reader = baseReader().put("track_max_tracks", "2");
         ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
 
-        assertNull(faceManager(reader).currentPipeline(),
-                "前提：face 分组不应构建出检测管线（本用例要验证的是 reid 自建）");
-        assertTrue(manager.available(), "reid 分组自己配了检测模型时应可用");
-        assertNotNull(manager.currentPipeline(), "必须用 reid 分组的 detector_model 构建出管线");
+        // 跑一次：同一次读数里脱离了容量上限（旧管线的旧快照）
+        manager.rebuild();
+        PersonTrack track = manager.newTrack();
+        track.observe("cam-A", "f1", new float[]{1, 0}, 1000L);
+        track.observe("cam-A", "f2", new float[]{0, 1}, 2000L);
+        track.observe("cam-A", "f3", new float[]{0, 0, 1}, 3000L);
+
+        assertEquals(2, track.trackCount(), "重建后应用新配置的容量上限");
     }
 
     /**
-     * 两边都没配 → 依然不可用（不因新增兜底逻辑而误报可用）。
+     * 公共管线（非 reid）的声明也要面对：该取不可到的字段不偷换。
      */
     @Test
-    @DisplayName("两个分组都没配检测模型：保持不可用")
-    void staysUnavailableWhenNoDetectorAnywhere() {
-        MapSettingReader reader = new MapSettingReader();
-        ReidClientManager manager = new ReidClientManager(reader, faceManager(reader));
-
-        assertFalse(manager.available(), "无任何检测模型配置时应保持不可用");
-        assertNull(manager.currentPipeline());
-    }
-
-    /**
-     * 构造只读 face 分组的读取器（reid 分组留空）。
-     *
-     * @return 设置读取器
-     */
-    private static MapSettingReader faceOnlyReader() {
-        MapSettingReader reader = new MapSettingReader();
-        reader.values.put("detector_model", "none");
-        reader.values.put("feature_model", "none");
-        reader.faceOnly = true;
-        return reader;
+    @DisplayName("面管线的 detector 漫游不串味：面管线读面分组")
+    void facePipelineKeepsItsOwnGroup() {
+        FaceClientManager face = faceManager(baseReader().put("detector_model", "none"));
+        assertNotNull(face.currentPipeline(), "detector_model 配了时 face 管线必须构建（reid 直接复用此单例）");
     }
 
     /**
@@ -252,7 +282,7 @@ class ReidClientManagerTest {
      * @return 设置项；不存在返回 null
      */
     private static GlobalSettingProvider.SettingItem find(List<GlobalSettingProvider.SettingItem> items,
-                                                           String field) {
+                                                          String field) {
         return items.stream()
                 .filter(item -> field.equals(item.field()))
                 .findFirst()
@@ -260,10 +290,7 @@ class ReidClientManagerTest {
     }
 
     /**
-     * 构造 reid 分组设置：检测与特征模型都用占位名 none。
-     *
-     * <p>{@code none} 是注册表里的占位模型：能建出管线但不加载权重，
-     * 因此测试全程离线。</p>
+     * 按当前 face 分组配置构建 lighting 读取器。
      *
      * @return 设置读取器
      */
@@ -282,40 +309,137 @@ class ReidClientManagerTest {
      * @param reader 设置读取器
      * @return 人脸客户端管理器
      */
-    private static com.chua.starter.ai.support.configuration.face.FaceClientManager faceManager(
-            GlobalSettingReader reader) {
-        return new com.chua.starter.ai.support.configuration.face.FaceClientManager(reader, null);
+    private static FaceClientManager faceManager(GlobalSettingReader reader) {
+        return new FaceClientManager(reader, null);
     }
 
     /**
      * 按内存键值模拟全局设置的读取器（不落库、不读缓存、不触发用户覆盖）。
      */
-    private static final class MapSettingReader extends GlobalSettingReader {
+    private static final class MapSettingReader implements GlobalSettingReader {
 
         /**
-         * 字段 → 值。
+         * face 分组下的字段 → 值。
          */
         private final Map<String, String> values = new HashMap<>();
 
         /**
-         * 只在 face 分组返回取值（模拟「reid 分组留空、回落 face」）。
-         */
-        private boolean faceOnly;
-
-        /**
-         * 分组 → (字段 → 值)。用于表达「两个分组的键同名但值不同」的场景，
-         * 例如「face 分组没配检测模型、reid 分组配了」——用单一 {@link #values}
-         * 表达不了这种差异。
+         * 分组 → 字段 → 值（表达「两组同名不同值」的场景）。
          */
         private final Map<String, Map<String, String>> groupValues = new HashMap<>();
 
-        private MapSettingReader() {
-            // 第 4 参 = YAML 覆盖层：双轨无 yaml 语义，传 null
-            super(null, null, null, null);
+        @Override
+        public String getStr(String group, String field) {
+            return valueOf(group, field);
+        }
+
+        @Override
+        public String getStrAs(String userId, String group, String field) {
+            return getStr(group, field);
+        }
+
+        @Override
+        public String getStrDirect(String group, String field) {
+            return getStr(group, field);
+        }
+
+        @Override
+        public boolean getBool(String group, String field, boolean defaultValue) {
+            String v = getStr(group, field);
+            return v == null ? defaultValue : Boolean.parseBoolean(v);
+        }
+
+        @Override
+        public int getInt(String group, String field, int defaultValue) {
+            return intValueOf(group, field, defaultValue);
+        }
+
+        @Override
+        public Integer getIntOrNull(String group, String field) {
+            String v = valueOf(group, field);
+            try {
+                return v == null ? null : Integer.valueOf(v);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        @Override
+        public Long getLongOrNull(String group, String field) {
+            String v = valueOf(group, field);
+            try {
+                return v == null ? null : Long.valueOf(v);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        @Override
+        public BigDecimal getDecimalOrNull(String group, String field) {
+            String v = valueOf(group, field);
+            try {
+                return v == null ? null : new BigDecimal(v);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        @Override
+        public double getDouble(String group, String field, double defaultValue) {
+            String v = valueOf(group, field);
+            try {
+                return v == null ? defaultValue : Double.parseDouble(v);
+            } catch (Exception e) {
+                return defaultValue;
+            }
         }
 
         /**
-         * 登记一个字段值（链式）。
+         * 分组专属值优先，其次 face 分组，再其次全局（同组）覆盖。
+         *
+         * @param group 分组
+         * @param field 字段名
+         * @return 值，未配置返回 null
+         */
+        private String valueOf(String group, String field) {
+            // 组专属
+            Map<String, String> own = groupValues.get(group);
+            if (own != null && own.containsKey(field)) {
+                return own.get(field);
+            }
+            // 所有其他分组统一读到 face 分组的值（模拟 reid 管线统一走 face 分组）
+            return values.get(field);
+        }
+
+        /**
+         * 解析整型，解析失败时回退默认值。
+         *
+         * @param group 分组
+         * @param field 字段名
+         * @param defaultValue 默认值
+         * @return 整数值
+         */
+        private int intValueOf(String group, String field, int defaultValue) {
+            String v = valueOf(group, field);
+            try {
+                return StringUtilsIsBlank(v) ? defaultValue : Integer.parseInt(v);
+            } catch (Exception e) {
+                return defaultValue;
+            }
+        }
+
+        /**
+         * 字符串判空。
+         *
+         * @param value 值
+         * @return 空则 true
+         */
+        private static boolean StringUtilsIsBlank(String value) {
+            return value == null || value.isBlank();
+        }
+
+        /**
+         * 登记 face 分组的字段值（链式）。
          *
          * @param field 字段名
          * @param value 值
@@ -327,7 +451,7 @@ class ReidClientManagerTest {
         }
 
         /**
-         * 登记某分组下的字段值（链式）。
+         * 登记某分组的字段值（链式）。
          *
          * @param group 分组名
          * @param field 字段名
@@ -337,26 +461,6 @@ class ReidClientManagerTest {
         private MapSettingReader putFor(String group, String field, String value) {
             groupValues.computeIfAbsent(group, k -> new HashMap<>()).put(field, value);
             return this;
-        }
-
-        @Override
-        public String getStr(String group, String field) {
-            // 分组专属值优先：它表达的是「该分组确实配了这个键」
-            Map<String, String> own = groupValues.get(group);
-            if (own != null && own.containsKey(field)) {
-                return own.get(field);
-            }
-            if (faceOnly) {
-                // 只在 face 分组取值：reid 分组读不到 → 触发后端的回落逻辑
-                return "face".equals(group) ? values.get(field) : null;
-            }
-            // reid 分组优先，其次回落 face 分组（两者用同一批模型）。
-            // values 为空时两个分组都取不到 —— 这才是真正的「模型未配置」场景。
-            String value = "reid".equals(group) ? values.get(field) : null;
-            if (value == null && "face".equals(group)) {
-                value = values.get(field);
-            }
-            return value;
         }
     }
 }

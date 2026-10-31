@@ -100,12 +100,18 @@ public class ChatClientHotUpdater {
 
             String providerIdStr = parts[0];
             String modelName = parts[1];
-            Long providerId = Long.parseLong(providerIdStr);
 
-            // 3. 从数据库读取厂商配置
-            SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId);
+            // 3. 从数据库读取厂商配置。
+            //
+            //    供应商 ID 不一定都是数字：新式供应商走 sys_ai_provider，ID 可以是
+            //    pollinations-local 这类字符串。此前这里无条件 Long.parseLong，遇到
+            //    非数字 ID 直接抛 NumberFormatException，整个「刷新默认 chat ChatClient」
+            //    在启动期就失败（日志里只有 For input string: "xxx"），默认客户端始终
+            //    建不出来。解析失败时不再抛异常，转交 ModelClientResolver 走统一路径。
+            Long providerId = parseProviderIdOrNull(providerIdStr);
+            SysAiManufacturer manufacturer = providerId == null ? null : manufacturerMapper.selectById(providerId);
             if (manufacturer == null) {
-                log.warn("[ChatClientHotUpdater] 厂商不存在: id={}", providerId);
+                registerFromProviderTable(defaultModelId, providerIdStr, modelName, capability);
                 return;
             }
 
@@ -165,6 +171,60 @@ public class ChatClientHotUpdater {
         } catch (Exception e) {
             log.error("[ChatClientHotUpdater] 刷新默认 {} ChatClient 失败: {}", capability, e.getMessage(), e);
         }
+    }
+
+    /**
+     * 解析供应商 ID 前缀。
+     *
+     * <p>只有纯数字才转 {@link Long}（旧式厂商表主键）；其余形态（如
+     * {@code pollinations-local}）返回 {@code null}，由调用方改用新式供应商路径。</p>
+     *
+     * @param raw ID 前缀
+     * @return 数字 ID；非数字或空时返回 {@code null}
+     */
+    private static Long parseProviderIdOrNull(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String value = raw.trim();
+        for (int i = 0; i < value.length(); i++) {
+            if (!Character.isDigit(value.charAt(i))) {
+                return null;
+            }
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 从新式供应商表（{@code sys_ai_provider}）注册默认客户端。
+     *
+     * <p>默认模型配成 {@code <providerId>:<model>} 且 providerId 不是数字时走这里：
+     * 由 {@link ModelClientResolver} 统一完成供应商解析、密钥收集与客户端构建，
+     * 与主对话链路同源，避免热更新器维护第二套构建逻辑而漂移。</p>
+     *
+     * @param qualifiedModel 完整限定名
+     * @param providerId     供应商 ID
+     * @param modelName      模型名
+     * @param capability     能力标识
+     */
+    private void registerFromProviderTable(String qualifiedModel, String providerId,
+                                           String modelName, String capability) {
+        ChatClient chatClient = modelClientResolver.resolve(qualifiedModel);
+        if (chatClient == null) {
+            log.warn("[ChatClientHotUpdater] 默认 {} 模型 {} 未能构建客户端（供应商 {} 未启用或缺密钥）",
+                    capability, qualifiedModel, providerId);
+            return;
+        }
+        chatClientRegistry.register(providerId, modelName, chatClient, capability);
+        if ("chat".equals(capability)) {
+            chatClientRegistry.setDefault(chatClient);
+        }
+        log.info("[ChatClientHotUpdater] 默认 {} ChatClient 已更新（provider 表）: provider={}, model={}",
+                capability, providerId, modelName);
     }
 
     /**

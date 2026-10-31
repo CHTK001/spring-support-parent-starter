@@ -2,11 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.eduai.dimension.mapper.EduSubjectMapper">
 
-    <!-- 列表学科：启用状态 + 学段模糊匹配 + 归属隔离，按排序号升序 -->
+    <!-- 列表学科：默认仅启用；includeDisabled=true 时连停用一起返回（管理端恢复入口依赖全量） -->
     <select id="listSubjects" resultType="com.chua.starter.eduai.dimension.entity.EduSubject">
         SELECT s.* FROM edu_subject s
         <where>
-            s.subject_status = 1
+            <if test="includeDisabled == null or !includeDisabled">
+                s.subject_status = 1
+            </if>
             <if test="gradeLevel != null and gradeLevel != ''">
                 AND s.subject_grade_levels LIKE CONCAT('%', #{gradeLevel}, '%')
             </if>
