@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -148,9 +149,11 @@ class OcrCorrectorWiringTest {
     /**
      * 按内存键值模拟 ocr 分组全局设置的读取器（不落库、不读缓存、不触发用户覆盖）。
      *
-     * <p>基类的 getBool / getDecimalOrNull 均经由 getStr 取值，覆盖 getStr 即可。</p>
+     * <p>实现 {@code GlobalSettingReader} 接口的全部方法：V 值来自本类，
+     * group 限定为 ocr，留给管制层（group 不为 ocr）读取时返回 null，
+     * 确保管线构建时只读到测试设定的值。</p>
      */
-    private static final class MapSettingReader extends GlobalSettingReader {
+    private static final class MapSettingReader implements GlobalSettingReader {
 
         /**
          * 字段 → 值
@@ -158,9 +161,6 @@ class OcrCorrectorWiringTest {
         private final Map<String, String> values = new HashMap<>();
 
         private MapSettingReader() {
-            // 第 4 参 = YAML 覆盖层（plugin.ai.settings.*）：本测试双轨无 yaml 语义，
-            // 传 null —— 读取器的 yamlValueOf 对 null 判空即跳过，链路行为与从前一致
-            super(null, null, null, null);
         }
 
         /**
@@ -175,9 +175,85 @@ class OcrCorrectorWiringTest {
             return this;
         }
 
+        /**
+         * 只取 ocr 分组的值，其余分组一律返回 空。
+         *
+         * @param group 分组
+         * @param field 字段名
+         * @return 值，未配置时返回 空
+         */
+        private String value(String group, String field) {
+            return "ocr".equals(group) ? values.get(field) : null;
+        }
+
+        /**
+         * 将该分组的值拆入数值缺口（false / 0 / 空）。
+         *
+         * @param group   分组
+         * @param field   字段名
+         * @return 整数值
+         */
+        private int parseIntOrNull(String group, String field) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? 0 : Integer.parseInt(v);
+        }
+
+        /**
+         * 基础字符串读取器。
+         *
+         * @param group 分组
+         * @param field 字段名
+         * @return 值，未配置时返回 空
+         */
         @Override
         public String getStr(String group, String field) {
-            return "ocr".equals(group) ? values.get(field) : null;
+            return value(group, field);
+        }
+
+        @Override
+        public String getStrAs(String userId, String group, String field) {
+            return value(group, field);
+        }
+
+        @Override
+        public String getStrDirect(String group, String field) {
+            return value(group, field);
+        }
+
+        @Override
+        public boolean getBool(String group, String field, boolean defaultValue) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? defaultValue : Boolean.parseBoolean(v);
+        }
+
+        @Override
+        public int getInt(String group, String field, int defaultValue) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? defaultValue : Integer.parseInt(v);
+        }
+
+        @Override
+        public Integer getIntOrNull(String group, String field) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? null : Integer.parseInt(v);
+        }
+
+        @Override
+        public Long getLongOrNull(String group, String field) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? null : Long.parseLong(v);
+        }
+
+        @Override
+        public BigDecimal getDecimalOrNull(String group, String field) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? null : new BigDecimal(v);
+        }
+
+        @Override
+        public double getDouble(String group, String field, double defaultValue) {
+            String v = value(group, field);
+            return v == null || v.isBlank() ? defaultValue : Double.parseDouble(v);
         }
     }
 }
