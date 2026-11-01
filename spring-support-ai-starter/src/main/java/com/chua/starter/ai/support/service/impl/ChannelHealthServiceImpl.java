@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.manage.mapper.ChannelHealthMapper;
@@ -816,7 +817,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @return 健康记录行
      */
-    private ChannelHealth initOrCreate三ation(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
+    private ChannelHealth initOrCreate(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
         ChannelHealth h = channelHealthMapper.selectById(connectionId);
         if (h != null) return h;
         if (provider == null || conn == null) {

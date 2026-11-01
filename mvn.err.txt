@@ -1,0 +1,27 @@
+﻿[ERROR] spring-support-datasource-starter .................. FAILURE [02:10 min]
+[ERROR] BUILD FAILURE
+[ERROR] Failed to execute goal on project spring-support-datasource-starter: Could not resolve dependencies for project com.chua:spring-support-datasource-starter:jar:4.0.0.51
+[ERROR] dependency: com.chua:spring-support-common-starter:jar:4.0.0.50 (compile)
+[ERROR] 	prefixes: Path com/chua/spring-support-common-starter/4.0.0.50/spring-support-common-starter-4.0.0.50.jar NOT allowed from central
+[ERROR] dependency: com.chua:utils-support-flyway-starter:jar:4.0.0.51 (compile)
+[ERROR] 	prefixes: Path com/chua/utils-support-flyway-starter/4.0.0.51/utils-support-flyway-starter-4.0.0.51.jar NOT allowed from central
+[ERROR] dependency: com.chua:utils-support-h2-starter:jar:4.0.0.51 (compile?)
+[ERROR] 	prefixes: Path com/chua/utils-support-h2-starter/4.0.0.51/utils-support-h2-starter-4.0.0.51.jar NOT allowed from central
+[ERROR] dependency: com.chua:utils-support-sqlite-starter:jar:4.0.0.51 (compile?)
+[ERROR] 	prefixes: Path com/chua/utils-support-sqlite-starter/4.0.0.51/utils-support-sqlite-starter-4.0.0.51.jar NOT allowed from central
+[ERROR] dependency: com.chua:utils-support-shardingv5-starter:jar:4.0.0.50 (compile?)
+[ERROR] 	prefixes: Path com/chua/utils-support-shardingv5-starter/4.0.0.50/utils-support-shardingv5-starter-4.0.0.50.jar NOT allowed from central
+[ERROR] dependency: com.chua:utils-support-calcite-starter:jar:4.0.0.50 (compile?)
+[ERROR] 	prefixes: Path com/chua/utils-support-calcite-starter/4.0.0.50/utils-support-calcite-starter-4.0.0.50.jar NOT allowed from central
+[ERROR] dependency: com.chua:utils-support-datasource-starter:jar:4.0.0.50 (compile?)
+[ERROR] 	prefixes: Path com/chua/utils-support-datasource-starter/4.0.0.50/utils-support-datasource-starter-4.0.0.50.jar NOT allowed from central
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :spring-support-datasource-starter
