@@ -380,6 +380,16 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     /**
+     * 该凭据下可巡检的设备（有 IP 或序列号，且未停用/报废）
+     * @param credentialId 凭据 ID
+     * @return 可巡检设备列表
+     */
+    public List<DeviceInfo> listCheckableDevicesByCredentialId(String credentialId) {
+        return deviceInfoMapper.selectCheckableDevicesByCredentialId(credentialId);
+    }
+
+    @Override
+    /**
      * 同步组织
     */
     public void syncOrganization() {
