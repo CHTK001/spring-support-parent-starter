@@ -17,6 +17,7 @@ import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
 import com.chua.starter.monitor.support.tshark.TsharkSqliteSourceRegistry;
+import com.chua.starter.monitor.support.config.TsharkInstallProperties;
 import lombok.extern.slf4j.Slf4j;
 import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
@@ -141,6 +142,17 @@ public class TsharkCaptureService {
      */
     private static final int HANDSHAKE_MAX_STEPS = 500;
 
+    /**
+     * 协议还原回填批次大小：-T json 通道逐包拿到的记录攒起，每 {@code RESTORE_BATCH} 条
+     * 按帧号对回 SQLite 行做一次 {@code CASE WHEN frame_no = ? THEN ?} 批量更新。
+     */
+    private static final int RESTORE_BATCH = 250;
+
+    /**
+     * tshark 解析时额外开启 json 通道的开关。
+     */
+    private final TsharkInstallProperties installProperties;
+
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
     private final MsTsharkPacketMapper packetMapper; // 数据包映射器
@@ -164,13 +176,23 @@ public class TsharkCaptureService {
                                 MonitorPushService pushService,
                                 ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider,
                                 TsharkRuntime tsharkRuntime,
-                                TsharkSqliteSourceRegistry sqliteRegistry) {
+                                TsharkSqliteSourceRegistry sqliteRegistry,
+                                TsharkInstallProperties installProperties) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
         this.pushService = pushService;
         this.streamRegistryProvider = streamRegistryProvider;
         this.tsharkRuntime = tsharkRuntime;
         this.sqliteRegistry = sqliteRegistry;
+        this.installProperties = installProperties;
+    }
+
+    /**
+     * 是否启用 tshark json 通道回填（rawData / restoredText）。
+     * @return 开关
+     */
+    private boolean restoreJsonEnabled() {
+        return this.installProperties != null && this.installProperties.isJsonRestore();
     }
 
     /**
