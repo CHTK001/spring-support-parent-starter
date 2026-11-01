@@ -104,6 +104,50 @@ public class JobProperties {
     private final ManageConfig manage = new ManageConfig();
 
     /**
+     * 查询缓存配置。
+     *
+     * <h3>通过 {@code plugin.job.cache.*} 控制</h3>
+     * <ul>
+     *   <li><b>关闭（默认）</b>: 每次拍次真实查库（{@code selectDbNow} 取相位 +
+     *   {@code selectList} 扫候选行），每拍 2 次查询，行为与历史完全一致；</li>
+     *   <li><b>开启</b>: {@code findDue} 的扫描结果连同相位（数据库时间）按 TTL 跨拍次复用，
+     *   每拍查询压到 0~1 次，但相位（扫描窗与错过判定）最多滞后 TTL。</li>
+     * </ul>
+     *
+     * <h3>代价说明</h3>
+     * <p>开启后每拍 <b>不重新读数据库时钟</b>，所以：
+     * 扫描窗的上界（{@code now + preReadMs}）在 TTL 内不更新；
+     * 速度快elps 1 秒内的错过判定（misfire）可能少触发一次；
+     * 跳过分支（{@code persistSkippedSlot}）写入的 {@code last_time/next_time}
+     * 是滞后为 TTL 的相位，下一拍从每个槽位重新算起时仍自洽。</p>
+     * <p>如果您需要严格的相位精度，请保持关闭；如果您需要尽可能削减扫描读库，请开启。</p>
+     *
+     * @since 4.0.0.51
+     * @author CH
+     */
+    @Data
+    public static class CacheConfig {
+
+        /**
+         * 是否启用查询缓存（默认关闭，行为与历史一致）
+         */
+        private boolean enabled = false;
+
+        /**
+         * 扫描结果缓存有效期（毫秒），默认 5000
+         *
+         * <p>与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号： قيمة候选窗口越宽，
+         * 这个窗口的扫描结果越稳定，越值得复用。</p>
+         */
+        private long ttlMs = 5000L;
+    }
+
+    /**
+     * 查询缓存配置
+     */
+    private final CacheConfig cache = new CacheConfig();
+
+    /**
      * 当前角色是否为 调度器
      *
      * @return 是 调度器 返回 true

@@ -17,6 +17,19 @@ import java.util.Map;
 public interface MsTsharkPacketMapper extends BaseMapper<MsTsharkPacket> {
 
     /**
+     * 按会话 + 帧号列表有选填义的回写（-T json 通道的回填用）。
+     *
+     * <p>一批帧号一起写， {@code CASE WHEN} 结构，SQLite 里 {@code IN} 子句不会超过
+     * 驱动上限（规约 32767，这里每批 250），每批只要一次往返。</p>
+     *
+     * @param sessionId 会话标识
+     * @param frames    待回填的信息
+     * @return 更新的行数
+     */
+    int updateBatchRawRestored(@Param("sessionId") Long sessionId,
+                               @Param("frames") List<PacketRestoreFrame> frames);
+
+    /**
      * 按会话聚合协议统计（SQL 层聚合，不再全量加载报文）。
      *
      * @param sessionId 会话标识
