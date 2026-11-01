@@ -102,6 +102,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-api-support-collect-starter</artifactId>
+            <version>4.0.0.42</version>
         </dependency>
 
         <!-- 深度学习/AI推理 -->
