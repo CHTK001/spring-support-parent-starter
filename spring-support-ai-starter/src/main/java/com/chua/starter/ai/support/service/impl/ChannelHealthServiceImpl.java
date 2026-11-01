@@ -5,6 +5,7 @@ import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.manage.mapper.ChannelHealthMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -49,7 +50,6 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     private final SysAiProviderMapper providerMapper;
     private final SysAiProviderConnectionMapper connectionMapper;
     private final GlobalSettingReader settingReader;
-    private final ApplicationEventPublisher eventPublisher;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -365,7 +365,10 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                 }
             }
         }
-        log.info("[ChannelHealthProbe] $([char]0x75C0 [char]0x9054 [char]0x9488 [char]0x5B8C [char]0x5B8C [char]0x6210) connections={}", probed);\n        Set<String> down = downConnections();\n        if (!down.isEmpty()) log.warn("[ChannelHealthProbe] 通道探针下线 channels={}", down);\n        eventPublisher.publishEvent(new ChannelHealthProbeEvent(this, down, probed, true));robed);
+        Set<String> down = downConnections();
+        if (!down.isEmpty()) log.warn("[ChannelHealthProbe] 通道探针下线 channels={}", down);
+        eventPublisher.publishEvent(new ChannelHealthProbeEvent(this, down, probed, true));
+        log.info("[ChannelHealthProbe] 渠道探针完成 connections={}", probed);
         return probed;
     }
 
@@ -488,7 +491,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     // ==================== HTTP 探针 ====================
 
     /**
-     * HTTP 探针：{@code GET {baseUrl}/v1/models}（API Key / Bearer / 无认证），
+     * HTTP 探针：{ @code GET {baseUrl}/v1/models}（API Key / Bearer / 无认证），
      * 探活成功 → ONLINE，失败 → WARNING / DOWN
      *
      * @param provider 供应商
@@ -814,7 +817,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @return 健康记录行
      */
-    private ChannelHealth initOrCreate(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
+    private ChannelHealth initOrCreate三aption(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
         ChannelHealth h = channelHealthMapper.selectById(connectionId);
         if (h != null) return h;
         if (provider == null || conn == null) {
