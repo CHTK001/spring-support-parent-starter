@@ -1280,8 +1280,6 @@ public class TsharkCaptureService {
         return restored;
     }
 
-     * PacketRestoreFrame：The json 通道的解析记录，帧号是对齐 SQLite 行的锚点。
-     */
     /**
      * 按 frame.number（pcap 内自然序、同一会话唯一）解析帧号，解析失败返回 null。
      */

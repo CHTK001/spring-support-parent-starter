@@ -202,23 +202,23 @@
     <!-- 构建期将本模块 db/init 下的脚本合并为一份完整 init.sql（输出到 target，不入库） -->
     <build>
         <plugins>
-            <plugin>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-flyway-maven-plugin</artifactId>
-                <version>${project.version}</version>
-                <executions>
-                    <execution>
-                        <id>generate-module-init-sql</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>generate-init-sql</goal>
-                        </goals>
-                        <configuration>
-                            <mode>initdata</mode>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+<!--             <plugin> -->
+<!--                 <groupId>com.chua</groupId> -->
+<!--                 <artifactId>utils-support-flyway-maven-plugin</artifactId> -->
+<!--                 <version>${project.version}</version> -->
+<!--                 <executions> -->
+<!--                     <execution> -->
+<!--                         <id>generate-module-init-sql</id> -->
+<!--                         <phase>generate-resources</phase> -->
+<!--                         <goals> -->
+<!--                             <goal>generate-init-sql</goal> -->
+<!--                         </goals> -->
+<!--                         <configuration> -->
+<!--                             <mode>initdata</mode> -->
+<!--                         </configuration> -->
+<!--                     </execution> -->
+<!--                 </executions> -->
+<!--             </plugin> -->
         </plugins>
     </build>
 
