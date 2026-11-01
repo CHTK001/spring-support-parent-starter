@@ -125,6 +125,20 @@ public interface DatasourceService {
     Connection connection(Long datasourceId) throws Exception;
 
     /**
+     * 新建一条独立的 JDBC 连接（不缓存、不屏蔽 close）。
+     *
+     * <p>与 {@link #connection(Long)} 的区别：本方法每次返回**新的物理连接**，
+     * 调用方拥有完整所有权，用完可以真正关闭。Calcite 的 {@code JdbcSchema} 对
+     * {@code getConnection()} 返回的连接用后即关 —— 共享 TTL 连接会被它关掉
+     * （H2 报 {@code object already closed}），联邦成员必须走这条「按次新建」的路。</p>
+     *
+     * @param datasourceId 数据源 ID，null/0 表示应用默认主数据源
+     * @return 新连接，调用方负责关闭
+     * @throws Exception 数据源不存在、类型不受支持或连接失败
+     */
+    Connection newConnection(Long datasourceId) throws Exception;
+
+    /**
      * 解析 JDBC 连接三元组（URL / 账号 / 明文口令 / 驱动类名）。
      *
      * <p>供需要自行建连、且只接受 URL 与账号口令的调用方使用（例如数据同步的 源 与 Sink）。
