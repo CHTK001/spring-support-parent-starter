@@ -1704,17 +1704,6 @@
     -->
     <repositories>
         <repository>
-            <id>projectlombok.org</id>
-            <name>Project Lombok Edge Releases</name>
-            <url>https://projectlombok.org/edge-releases</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-        <repository>
             <id>central</id>
             <name>Maven Central</name>
             <url>https://repo.maven.apache.org/maven2</url>
