@@ -124,13 +124,19 @@ public class DataSourceScriptConfiguration {
      */
     boolean tryMigrateWithSpiFlyway(DataSource ds, String beanName) {
         try {
+            List<String> locations = splitLocations(dataSourceScriptProperties.getScriptPath());
+            // 诊断日志：实际绑定的 scriptPath 与拆分后的 location 列表；
+            // locations 为空直接解释 "SPI Flyway 0 个脚本" 的根因。
+            log.info("DataSource [{}] SPI Flyway scriptPath='{}', locations={}",
+                    beanName, dataSourceScriptProperties.getScriptPath(), locations);
             List<Flyway> extensions = ServiceProvider.of(Flyway.class)
                     .getNewExtensions(Flyway.SPI_NAME, ds);
+            boolean anyScript = false;
             for (Flyway flyway : extensions) {
                 if (flyway == null) {
                     continue;
                 }
-                for (String location : splitLocations(dataSourceScriptProperties.getScriptPath())) {
+                for (String location : locations) {
                     flyway.location(location);
                 }
                 flyway.separator(dataSourceScriptProperties.getVersionSeparator());
@@ -141,7 +147,18 @@ public class DataSourceScriptConfiguration {
                 log.info("DataSource [{}] SPI Flyway 迁移完成，执行结构 {} 个脚本、数据 {} 个脚本",
                         beanName, initCount, initDataCount);
                 logSkippedStatements(beanName, flyway);
-                return true;
+                if (initCount > 0 || initDataCount > 0) {
+                    anyScript = true;
+                    return true;
+                }
+                // 没有执行任何脚本不是成功：scriptPath 未正确绑定（为空）或类路径下未匹配到
+                // db/init 资源时，SPI Flyway 内部不报错、静默返回 0 ，这里继续验证下一个扩展。
+                log.warn("DataSource [{}] SPI Flyway 扩展未扫描到有效脚本", beanName);
+            }
+            if (!anyScript) {
+                // 所有扩展都返回 0 个脚本：SPI Flyway 对 "空扫描" 声称成功，但内置兜底
+                // 迁移器同样扫描这个 classpath，坚持把活交给它。
+                log.warn("DataSource [{}] SPI Flyway 未扫描到任何有效脚本，回退到内置迁移器", beanName);
             }
         } catch (Exception e) {
             log.warn("DataSource [{}] SPI Flyway 不可用，回退内置迁移器: {}", beanName, e.getMessage());
