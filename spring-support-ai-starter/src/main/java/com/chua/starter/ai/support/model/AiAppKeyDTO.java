@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
  * appKey DTO，字段命名与前端面板对齐。
@@ -105,6 +106,51 @@ public class AiAppKeyDTO implements Serializable {
      * 最大值USE
     */
     private Long maxUse;
+
+    /**
+     * 账户余额（元）
+     */
+    @Schema(description = "账户余额（元）")
+    /**
+     * 余额
+     */
+    private BigDecimal balance;
+
+    /**
+     * 套餐 ID（面板层 SQL 行=`sys_ai_app_key_plan_id`，0=无套餐）
+     */
+    @Schema(description = "套餐 ID")
+    /**
+     * 套餐标识
+     */
+    private Long planId;
+
+    /**
+     * 是否允许透支（前端显示）
+     */
+    @Schema(description = "是否允许透支")
+    /**
+     * 是否透支
+     */
+    private Boolean overdraftEnabled;
+
+    /**
+     * 每分钟单价
+     */
+    @Schema(description = "每分钟单价")
+    /**
+     * 每分钟价格
+     */
+    private BigDecimal minuteRate;
+
+    /**
+     * 累计费用
+     */
+    @Schema(description = "累计费用")
+    /**
+     * 总消费金额
+     */
+    private BigDecimal totalCost;
 
     /**
      * 过期时间

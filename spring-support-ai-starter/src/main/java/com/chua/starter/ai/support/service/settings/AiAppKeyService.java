@@ -1,8 +1,10 @@
 package com.chua.starter.ai.support.service.settings;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -36,6 +38,71 @@ public interface AiAppKeyService {
      * @return 操作结果（data 为更新后的 appKey DTO）
      */
     ReturnResult<AiAppKeyDTO> update(Long appKeyId, AiAppKeyDTO appKey);
+
+    /**
+     * 查询 appKey 余额。
+     *
+     * @param appKeyId appKey 主键
+     * @return 操作结果（data 为余额）
+     */
+    ReturnResult<BigDecimal> getBalance(Long appKeyId);
+
+    /**
+     * 为 appKey 充值（增加余额 + 记流水 RECHARGE）。
+     *
+     * @param appKeyId appKey 主键
+     * @param amount   充值金额
+     * @param remark   备注
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    ReturnResult<AiAppKeyDTO> recharge(Long appKeyId, BigDecimal amount, String remark);
+
+    /**
+     * 扣减 appKey 余额（结算/调整，记流水 CONSUME）。
+     *
+     * <p>余额不足且不允许透支时拒绝。</p>
+     *
+     * @param appKeyId appKey 主键
+     * @param amount   扣减金额
+     * @param remark   备注
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    ReturnResult<AiAppKeyDTO> deduct(Long appKeyId, BigDecimal amount, String remark);
+
+    /**
+     * 查询 appKey 充值/消费流水。
+     *
+     * @param appKeyId appKey 主键
+     * @return 操作结果（data 为流水列表）
+     */
+    ReturnResult<List<SysAiAppKeyTopupLog>> topupLogs(Long appKeyId);
+
+    /**
+     * 更新套餐。
+     *
+     * @param appKeyId appKey 主键
+     * @param planId   套餐 ID（0=无套餐）
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    ReturnResult<AiAppKeyDTO> updatePlan(Long appKeyId, Long planId);
+
+    /**
+     * 更新透支开关。
+     *
+     * @param appKeyId appKey 主键
+     * @param enabled  是否允许透支
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    ReturnResult<AiAppKeyDTO> updateOverdraft(Long appKeyId, Boolean enabled);
+
+    /**
+     * 更新每分钟单价。
+     *
+     * @param appKeyId appKey 主键
+     * @param minuteRate 每分钟单价
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    ReturnResult<AiAppKeyDTO> updateRate(Long appKeyId, BigDecimal minuteRate);
 
     /**
      * 删除 appKey（逻辑删除）。

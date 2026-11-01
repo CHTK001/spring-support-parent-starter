@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
+import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
@@ -12,6 +13,7 @@ import com.chua.starter.ai.support.entity.settings.SysAiGroup;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
+import com.chua.starter.ai.support.mapper.SysAiAppKeyTopupLogMapper;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
@@ -21,8 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,6 +63,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * 分组映射器
     */
     private final AiGroupMapper groupMapper;
+    /**
+     * 充值/消费流水映射器
+     */
+    private final SysAiAppKeyTopupLogMapper topupLogMapper;
 
     /**
      * 查询 appKey：仅本人名下（管理员在业务数据侧与普通账号同权）。
@@ -232,6 +240,214 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
+     * 查询 appKey 余额。
+     *
+     * @param appKeyId appKey 主键
+     * @return 操作结果（data 为余额）
+     */
+    @Override
+    public ReturnResult<BigDecimal> getBalance(Long appKeyId) {
+        requireWritableAppKey(appKeyId);
+        SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
+        return ReturnResult.ok(entity != null && entity.getBalance() != null
+                ? entity.getBalance() : BigDecimal.ZERO);
+    }
+
+    /**
+     * 充值（增加余额 + 记 RECHARGE 流水）。
+     *
+     * @param appKeyId appKey 主键
+     * @param amount   充值金额
+     * @param remark   备注
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<AiAppKeyDTO> recharge(Long appKeyId, BigDecimal amount, String remark) {
+        SysAiAppKey entity = requireWritableAppKey(appKeyId);
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return ReturnResult.error("充值金额须正数");
+        }
+        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
+        BigDecimal balanceAfter = balanceBefore.add(amount);
+        int updated = appKeyMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysAiAppKey>()
+                        .eq(SysAiAppKey::getId, appKeyId.intValue())
+                        .set(SysAiAppKey::getBalance, balanceAfter));
+        if (updated > 0) {
+            topupLogMapper.insert(topupLog(entity, SysAiAppKeyTopupLog.Types.RECHARGE, amount,
+                    balanceBefore, balanceAfter, remark));
+        }
+        return updated > 0
+                ? ReturnResult.ok(toDto(appKeyMapper.selectById(appKeyId.intValue()),
+                resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())))
+                : ReturnResult.error("充值失败");
+    }
+
+    /**
+     * 扣减 appKey 余额（结算/调整，记 CONSUME 流水）。
+     *
+     * @param appKeyId appKey 主键
+     * @param amount   扣减金额
+     * @param remark   备注
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<AiAppKeyDTO> deduct(Long appKeyId, BigDecimal amount, String remark) {
+        SysAiAppKey entity = requireWritableAppKey(appKeyId);
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return ReturnResult.error("扣减金额须正数");
+        }
+        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
+        if (!canDeduct(balanceBefore, entity.getOverdraftEnabled())) {
+            return ReturnResult.error("余额不足且不允许透支，无法扣减");
+        }
+        BigDecimal balanceAfter = balanceBefore.subtract(amount);
+        int updated = appKeyMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysAiAppKey>()
+                        .eq(SysAiAppKey::getId, appKeyId.intValue())
+                        .set(SysAiAppKey::getBalance, balanceAfter)
+                        .set(SysAiAppKey::getTotalCost, entity.getTotalCost() != null
+                                ? entity.getTotalCost().add(amount) : amount));
+        if (updated > 0) {
+            topupLogMapper.insert(topupLog(entity, SysAiAppKeyTopupLog.Types.CONSUME, amount,
+                    balanceBefore, balanceAfter, remark));
+        }
+        return updated > 0
+                ? ReturnResult.ok(toDto(appKeyMapper.selectById(appKeyId.intValue()),
+                resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())))
+                : ReturnResult.error("扣减失败");
+    }
+
+    /**
+     * 查询 appKey 充值/消费流水（按流水时间倒序，前 100 条）。
+     *
+     * @param appKeyId appKey 主键
+     * @return 操作结果（data 为流水列表）
+     */
+    @Override
+    public ReturnResult<List<SysAiAppKeyTopupLog>> topupLogs(Long appKeyId) {
+        requireWritableAppKey(appKeyId);
+        SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
+        if (entity == null) {
+            return ReturnResult.error("AppKey 不存在");
+        }
+        List<SysAiAppKeyTopupLog> logs = topupLogMapper.selectByAppKey(entity.getAppKey());
+        return ReturnResult.ok(logs != null ? logs : new ArrayList<>());
+    }
+
+    /**
+     * 更新套餐（按主键）。
+     *
+     * @param appKeyId appKey 主键
+     * @param planId   套餐 ID（0=无套餐）
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<AiAppKeyDTO> updatePlan(Long appKeyId, Long planId) {
+        requireWritableAppKey(appKeyId);
+        int updated = appKeyMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysAiAppKey>()
+                        .eq(SysAiAppKey::getId, appKeyId.intValue())
+                        .set(SysAiAppKey::getPlanId, planId));
+        SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
+        return updated > 0
+                ? ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())))
+                : ReturnResult.error("套餐更新失败");
+    }
+
+    /**
+     * 更新透支开关（按主键）。
+     *
+     * @param appKeyId appKey 主键
+     * @param enabled  是否允许透支
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<AiAppKeyDTO> updateOverdraft(Long appKeyId, Boolean enabled) {
+        requireWritableAppKey(appKeyId);
+        int updated = appKeyMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysAiAppKey>()
+                        .eq(SysAiAppKey::getId, appKeyId.intValue())
+                        .set(SysAiAppKey::getOverdraftEnabled, Boolean.TRUE.equals(enabled) ? 1 : 0));
+        SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
+        return updated > 0
+                ? ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())))
+                : ReturnResult.error("透支开关更新失败");
+    }
+
+    /**
+     * 更新每分钟单价（按主键）。
+     *
+     * @param appKeyId   appKey 主键
+     * @param minuteRate 每分钟单价
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<AiAppKeyDTO> updateRate(Long appKeyId, BigDecimal minuteRate) {
+        requireWritableAppKey(appKeyId);
+        if (minuteRate == null || minuteRate.compareTo(BigDecimal.ZERO) < 0) {
+            return ReturnResult.error("每分钟单价须正数");
+        }
+        int updated = appKeyMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysAiAppKey>()
+                        .eq(SysAiAppKey::getId, appKeyId.intValue())
+                        .set(SysAiAppKey::getMinuteRate, minuteRate));
+        SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
+        return updated > 0
+                ? ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())))
+                : ReturnResult.error("单价更新失败");
+    }
+
+    /**
+     * 能否扣费（辅助方法）：余额为负且不允许透支 = 不可扣费。
+     */
+    private boolean canDeduct(BigDecimal balance, Integer overdraftEnabled) {
+        if (balance == null) {
+            balance = BigDecimal.ZERO;
+        }
+        return balance.compareTo(BigDecimal.ZERO) >= 0 || Boolean.TRUE.equals(overdraftEnabled);
+    }
+
+    /**
+     * 组装一条充值/消费流水记录。
+     *
+     * @param entity        appKey 实体
+     * @param type          流水类型
+     * @param amount        金额
+     * @param balanceBefore 变动前余额
+     * @param balanceAfter  变动后余额
+     * @param remark        备注
+     * @return 流水记录
+     */
+    private SysAiAppKeyTopupLog topupLog(SysAiAppKey entity, String type, BigDecimal amount,
+                                         BigDecimal balanceBefore, BigDecimal balanceAfter, String remark) {
+        SysAiAppKeyTopupLog log = new SysAiAppKeyTopupLog();
+        log.setAppKeyId(entity.getId().longValue());
+        log.setAppKey(entity.getAppKey());
+        log.setType(type);
+        log.setAmount(amount);
+        log.setBalanceBefore(balanceBefore);
+        log.setBalanceAfter(balanceAfter);
+        log.setRemark(remark);
+        return log;
+    }
+
+    /**
      * 写出口归属校验：只认归属人本身，管理员对他人数据只读。
      *
      * @param appKeyId appKey 主键
@@ -310,6 +526,11 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         dto.setGroupName(groupName);
         dto.setUseCount(entity.getUseCount());
         dto.setMaxUse(entity.getMaxUse());
+        dto.setBalance(entity.getBalance());
+        dto.setPlanId(entity.getPlanId());
+        dto.setOverdraftEnabled(entity.getOverdraftEnabled());
+        dto.setMinuteRate(entity.getMinuteRate());
+        dto.setTotalCost(entity.getTotalCost());
         dto.setExpireTime(entity.getExpireDatetime() != null
                 ? entity.getExpireDatetime().format(FORMATTER) : null);
         dto.setEnabled(entity.getEnabled() != null
@@ -342,6 +563,11 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         entity.setStatus(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
         entity.setUseCount(dto.getUseCount());
         entity.setMaxUse(dto.getMaxUse());
+        entity.setBalance(dto.getBalance());
+        entity.setPlanId(dto.getPlanId());
+        entity.setOverdraftEnabled(Boolean.TRUE.equals(dto.getOverdraftEnabled()) ? 1 : 0);
+        entity.setMinuteRate(dto.getMinuteRate());
+        entity.setTotalCost(dto.getTotalCost());
         if (dto.getExpireTime() != null && !dto.getExpireTime().isBlank()) {
             entity.setExpireDatetime(LocalDateTime.parse(dto.getExpireTime(), FORMATTER));
         } else if (dto.getMaxUse() == null) {
