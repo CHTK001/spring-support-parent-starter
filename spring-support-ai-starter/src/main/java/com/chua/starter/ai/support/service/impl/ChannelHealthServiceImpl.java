@@ -16,6 +16,7 @@ import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -48,6 +49,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     private final SysAiProviderMapper providerMapper;
     private final SysAiProviderConnectionMapper connectionMapper;
     private final GlobalSettingReader settingReader;
+    private final ApplicationEventPublisher eventPublisher;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
