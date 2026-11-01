@@ -3,7 +3,6 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.mapper.ChannelHealthMapper;
@@ -51,7 +50,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     private final GlobalSettingReader settingReader;
 
     /**
-     * 持股健康探针分组
+     * 渠道健康探针分组
      */
     private static final String GROUP = "health";
 
@@ -92,37 +91,30 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * 默认探针间隔秒数
      */
     private static final int DEFAULT_INTERVAL_SEC = 60;
-
     /**
-     * 最小探针间隔秒数（30s），已对间隔＋开关联测，低于最小值一律取最小
+     * 最小探针间隔秒数（30s）
      */
     private static final int MIN_INTERVAL_SEC = 30;
-
     /**
      * 默认连续失败至下线数
      */
     private static final int DEFAULT_FAILURE_TO_DOWN = 3;
-
     /**
      * 默认连续成功至恢复数
      */
     private static final int DEFAULT_DOWN_TO_RECOVER = 2;
-
     /**
      * 默认延迟警告门限（毫秒）
      */
     private static final int DEFAULT_WARNING_LATENCY_MS = 3000;
-
     /**
      * 默认探针超时秒数
      */
     private static final int DEFAULT_TIMEOUT_SEC = 10;
-
     /**
      * 探针 URL 的模型列表端点
      */
     private static final String PROBE_PATH = "/v1/models";
-
     /**
      * 404 回退的源站根路径探针
      */
@@ -199,7 +191,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     /**
      * 命中限流状态码
      *
-     * @return 状态码（默认 429）
+     * @return 状态码
      */
     @Override
     public int rateLimitedStatus() {
@@ -263,12 +255,12 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     @Override
     public ChannelHealth state(String connectionId) {
         return Optional.ofNullable(channelHealthMapper.selectById(connectionId))
-                .orElseGet(this::empty);
+                .orElseGet(() -> channelState(connectionId));
     }
 
-    private ChannelHealth empty() {
+    private ChannelHealth channelState(String connectionId) {
         ChannelHealth h = new ChannelHealth();
-        h.setId("unknown");
+        h.setId(connectionId);
         h.setState(STATE_UNKNOWN);
         return h;
     }
@@ -326,7 +318,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         List<ChannelHealth> list = listByProvider(providerId);
         stat.put("total", list.size());
         for (ChannelHealth h : list) {
-            stat.merge(h.getState() == null ? STATE_UNKNOWN : h.getState(), 1, Integer::max);
+            stat.merge(h.getState() == null ? STATE_UNKNOWN : h.getState(), 1, Integer::sum);
         }
         return stat;
     }
@@ -341,9 +333,10 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public ChannelHealth probe(String connectionId) {
-        checkConnection(connectionId);
+        SysAiProviderConnection conn = connection(connectionId);
+        SysAiProvider provider = provider(conn.getProviderId());
         try {
-            probeConnection(providerId(connectionId), connectionId);
+            probeConnection(provider, conn);
         } catch (Exception e) {
             markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage()), null, null);
         }
@@ -361,7 +354,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         for (SysAiProvider provider : providers()) {
             for (SysAiProviderConnection conn : connections(provider)) {
                 try {
-                    probeConnection(provider, conn);
+                    probeConnection(provider,(conn));
                     probed++;
                 } catch (Exception e) {
                     log.warn("[ChannelHealthProbe] 探针失败 provider={} connection={} : {}",
@@ -369,8 +362,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                 }
             }
         }
-        log.info("[ChannelHealthProbe] 探针完成 provider={} connections={}",
-                "all", probed);
+        log.info("[ChannelHealthProbe] 探针完成 connections={}", probed);
         return probed;
     }
 
@@ -382,31 +374,31 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public int probeByProvider(String providerId) {
-        SysAiProvider provider = providerMapper.selectById(providerId);
-        if (provider == null) return 0;
+        SysAiProvider provider = provider(providerId);
         int probed = 0;
-        try {
-            for (SysAiProviderConnection conn : connections(provider)) {
+        for (SysAiProviderConnection conn : connections(provider)) {
+            try {
                 probeConnection(provider, conn);
                 probed++;
+            } catch (Exception e) {
+                log.warn("[ChannelHealthProbe] 探针失败 provider={} connection={} : {}",
+                        providerId, conn.getConnectionId(), e.getMessage());
             }
-        } catch (Exception e) {
-            log.warn("[ChannelHealthProbe] 探针失败 provider={} : {}", providerId, e.getMessage());
         }
         return probed;
     }
 
     /**
-     * 收集整理全部数据者（供应者）
+     * 已启用的供应商
      *
-     * @return 全部已启用供应商
+     * @return 供应商列表
      */
     private List<SysAiProvider> providers() {
         return providerMapper.selectList(new LambdaQueryWrapper<SysAiProvider>().eq(SysAiProvider::getEnabled, true));
     }
 
     /**
-     * 整理连接（按配置文件）
+     * 连接列表
      *
      * @param provider 供应商
      * @return 连接列表
@@ -418,10 +410,10 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     }
 
     /**
-     * 按连接标识解析供应商 + 连接
+     * 按连接标识解析连接
      *
      * @param connectionId 连接标识
-     * @return [provider, connection]
+     * @return 连接
      */
     private SysAiProviderConnection connection(String connectionId) {
         SysAiProviderConnection conn = connectionMapper.selectById(connectionId);
@@ -494,7 +486,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
 
     /**
      * HTTP 探针：{@code GET {baseUrl}/v1/models}（API Key / Bearer / 无认证），
-     * 探活成功 → {@code ONLINE}，失败 → {@code WARNING} / {@code DOWN}
+     * 探活成功 → ONLINE，失败 → WARNING / DOWN
      *
      * @param provider 供应商
      * @param conn 连接
@@ -575,17 +567,30 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         markFailure(connectionId, status, error, null, null);
     }
 
+    /**
+     * 设定该连接的探针间隔（0 = 走全局设置，否则 30/60/300）
+     *
+     * @param connectionId 连接标识
+     * @param interval 间隔秒数（30/60/300）
+     */
     @Override
     public void updateInterval(String connectionId, int interval) {
-        ChannelHealth h = initOrCreate(connectionId, null, null);
-        h.setIntervalSeconds(interval);
+        SysAiProviderConnection conn = connection(connectionId);
+        ChannelHealth h = initOrCreate(connectionId, null, conn);
+        h.setIntervalSeconds(Math.max(0, interval));
         h.setUpdatedAt(System.currentTimeMillis());
         saveHealth(h);
     }
 
+    /**
+     * 重置连接的健康状态（启动后手动复位）
+     *
+     * @param connectionId 连接标识
+     */
     @Override
     public void resetState(String connectionId) {
-        ChannelHealth h = initOrCreate(connectionId, null, null);
+        SysAiProviderConnection conn = connection(connectionId);
+        ChannelHealth h = initOrCreate(connectionId, null, conn);
         h.setState(STATE_UNKNOWN);
         h.setFailures(0L);
         h.setSuccesses(0L);
@@ -626,7 +631,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                       SysAiProvider provider, SysAiProviderConnection conn) {
         ChannelHealth h = initOrCreate(connectionId, provider, conn);
 
-        boolean rateLimited = status >= 200 && status < 300 ? false : isRateLimited(status);
+        boolean rateLimited = isRateLimited(status);
         boolean wasDown = STATE_DOWN.equals(h.getState());
         boolean wasRateLimited = STATE_RATE_LIMITED.equals(h.getState());
 
@@ -650,7 +655,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             // 指数加权平均延迟
             int avg = Optional.ofNullable(h.getAverageLatency()).orElse(0);
             int count = h.getSuccesses();
-            h.setAverageLatency(avg == 0 ? latency : (int) Math.round(avg * (count - 1) % count) + latency / count);
+            h.setAverageLatency(avg == 0 ? latency : (int) Math.round(((long) avg * (count - 1) + latency) / count));
             if (wasDown) {
                 // 恢复：连续成功达阈值
                 h.setState(h.getConsecutiveSuccesses() >= downToRecover() ? STATE_ONLINE : STATE_DOWN);
@@ -702,7 +707,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     // ==================== 辅助 ====================
 
     /**
-     * 取来源站地址，connection 覆盖，取不到 supplier 地址
+     * 取来源站地址，connection 覆盖 supplier
      *
      * @param conn 连接
      * @param provider 供应商
@@ -731,7 +736,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     /**
      * 构建模型列表端点
      *
-     * @param baseUrl 原站
+     * @param baseUrl 源站
      * @return 探针地址
      */
     private static String modelsUrl(String baseUrl) {
@@ -739,7 +744,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         if (url.endsWith("/v1beta/openai/")) return url + "models";
         if (url.endsWith("/v1beta/openai")) return url + "/models";
         if (url.matches(".*(/v1|/v1-beta|/v2|/v3|/v1beta)$")) return url + "/models";
-        return url + "/v1/models";
+        return url + PROBE_PATH;
     }
 
     /**
@@ -763,6 +768,39 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     private boolean isRateLimited(int status) {
         return status == rateLimitedStatus();
+    }
+
+    /**
+     * 渠道鉴权 SPI 实现（懒加载，幂等）
+     *
+     * @param providerId 供应商标识
+     * @return SPI 实现；未找到返回 null
+     */
+    private AccountChannelAuthManager manager(String providerId) {
+        Map<String, AccountChannelAuthManager> managers = channelManagers();
+        // platform → channel 映射：SPI 的 channel() 通常就是 providerId（如 cline/qoder/trae/gemini）
+        String channel = null;
+        for (Map.Entry<String, AccountChannelAuthManager> e : managers.entrySet()) {
+            if (e.getValue() != null && providerId.equalsIgnoreCase(e.getValue().channel())) {
+                channel = e.getKey();
+                break;
+            }
+        }
+        return channel == null ? null : managers.get(channel);
+    }
+
+    private Map<String, AccountChannelAuthManager> channelManagers() {
+        Map<String, AccountChannelAuthManager> local = channelManagers;
+        if (local == null) {
+            synchronized (this) {
+                local = channelManagers;
+                if (local == null) {
+                    local = ServiceProvider.of(AccountChannelAuthManager.class).list();
+                    channelManagers = local;
+                }
+            }
+        }
+        return local;
     }
 
     /**
@@ -799,16 +837,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     }
 
     private void saveHealth(ChannelHealth h) {
-        ChannelHealth existing = channelHealthMapper.selectById(h.getId());
-        if (sameId(h)) {
-            // 不存在则按 TableName 建表
+        if (channelHealthMapper.selectCount(
+                new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getId, h.getId())) == 0) {
             channelHealthMapper.insert(h);
         } else {
             channelHealthMapper.updateById(h);
         }
-    }
-
-    private boolean sameId(ChannelHealth h) {
-        return false;
     }
 }
