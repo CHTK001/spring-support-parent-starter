@@ -182,4 +182,22 @@ public class NgrokProperties {
      * 仅在 {@link #mode} = {@code forward} 且 {@link #type} = {@code http} 时生效。
      */
     private String extraLocalPorts;
+
+    /**
+     * 启动时是否按本配置文件自动建立默认隧道。【选填】默认 {@code true}（保持原有行为）。
+     * <p>设为 {@code false} 时模块（含管理接口与持久化映射）仍然启用，只是不在启动期
+     * 用 {@code server.port} 自动建隧道 —— 适合「从页面按需映射端口」的部署方式。</p>
+     */
+    private boolean autoStart = true;
+
+    /**
+     * 启动时是否恢复上次标记为「自动启动」的持久化映射。【选填】默认 {@code true}。
+     */
+    private boolean autoStartStored = true;
+
+    /**
+     * 映射持久化目录。【选填】默认 {@code ~/.chua/tunnel/ngrok}。
+     * <p>一条映射一个 JSON 文件，不使用数据库；目录可指向挂载盘做备份。</p>
+     */
+    private String storeDir;
 }
