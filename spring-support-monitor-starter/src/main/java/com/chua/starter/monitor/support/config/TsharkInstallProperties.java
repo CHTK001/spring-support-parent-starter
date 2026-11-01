@@ -87,6 +87,15 @@ public class TsharkInstallProperties {
      * {@code ms_tshark_packet_restored} 列。</p>
      *
      * <p>这不是只有 HTTP 才有的能力——DNS、TLS、SSH、FTP、SMTP、MQTT、数据库协议...
+      * 所有带还原器的协议都会有各自的还原结果。页面上「协议还原」这块，离线导入一样能显示。</p>
+      *
+      * <p>代价是一次额外完整解析（文件越大越明显）。生产侧只要本地有 tshark 就一直开着；
+      * 不需要协议还原时可以关。</p>
+      *
+      * @since 4.0.0.52
+      */
+    private boolean jsonRestore = true;
+
     /**
      * 是否启用 tshark json 通道回填。
      *
