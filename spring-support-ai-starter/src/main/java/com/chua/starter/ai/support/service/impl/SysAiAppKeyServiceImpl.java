@@ -54,6 +54,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
      * SYSAIAPP密钥映射器
     */
     private final SysAiAppKeyMapper sysAiAppKeyMapper;
+    /**
+     * 充值/消费流水映射器
+     */
+    private final SysAiAppKeyTopupLogMapper sysAiAppKeyTopupLogMapper;
 
     @Override
     @Cacheable(
