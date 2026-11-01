@@ -179,6 +179,70 @@ cloudflared 启动超时（40000ms），未输出公网地址
 
 ---
 
+## 9. 隧道管理工作台
+
+在监控管理应用（`vue-support-monitor-starter`）侧新增了 **内网穿透** 菜单（`pages/tunnel`）。配置不入库，而是以 `<store-dir>/<id>.json` 的形式持久化到本地目录，每个映射各占一个文件；页面通过 SSE 实时拿到隧道启动 / 停止 / 公网地址的变化。
+
+### 9.1 持久化存储
+
+| 配置项 | 说明 | 默认值 |
+|------|------|------|
+| `plugin.ngrok.store-dir` | ngrok 映射配置文件存放目录 | `~/.chua/tunnel/ngrok` |
+| `plugin.cloudflared.store-dir` | Cloudflare Tunnel 映射配置文件存放目录 | `~/.chua/tunnel/cloudflared` |
+
+例如：
+
+```yaml
+plugin:
+  cloudflared:
+    store-dir: ~/.chua/tunnel/cloudflared
+```
+
+在 `~/.chua/tunnel/cloudflared` 下会生成：
+
+```
+~/.chua/tunnel/cloudflared
+├── 1a2b3c4d-1234-5678-9abc-def012345678.json
+└── 2b3c4d5e-...json
+```
+
+每个文件包含该映射的完整台账信息（如 `id`、`name`、`localPort`、`mode`、`token`、`provider`、`enabled`、`autoStart`、`remark`）。创建会新建文件，更新回写，删除删除文件。页面通过 SSE 实时接收后端广播的变化，看到的永远是磁盘上的实际状态。
+
+### 9.2 自动启动
+
+> 监控管理应用（`spring-support-monitor-starter`）集成两个模块，其 `application.yml` 内已把自动启动关掉：
+
+```yaml
+plugin:
+  cloudflared:
+    auto-start: false
+```
+
+开启 `auto-start`（配合目录里已保存的映射与 `enabled` 标记）后，应用启动时 `autoStartStored` 会把存储的每个启用的映射拉起。页面「启动 / 停止」按钮与 SSE 推送联动，下一秒就能收到表现。
+
+### 9.3 实时状态（SSE）
+
+`/ms/tunnel/{ngrok|cloudflared}/stream` 是 `TunnelStatusStream` 产出的 SSE 端点：连接时即推送当前快照，后续按 **1.5 秒** 一次的固定频率广播最新的完整快照。页面的 `onMounted` 发起连接，断线自动重连（见页面 `connectSSE`）。
+
+```
+event: tunnels
+data: [{ "id": "...", "name": "测试映射", "localPort": 8080, "mode": "quick",
+        "running": true, "publicUrls": ["https://abc.trycloudflare.com"], "error": "" }]
+```
+
+### 9.4 REST 接口
+
+```
+GET  /ms/tunnel/{ngrok|cloudflared}             隧道列表（台账 + 运行状态）
+GET  /ms/tunnel/{ngrok|cloudflared}/{id}        隧道详情
+POST /ms/tunnel/{ngrok|cloudflared}             创建隧道
+PUT  /ms/tunnel/{ngrok|cloudflared}/{id}        更新隧道
+DELETE /ms/tunnel/{ngrok|cloudflared}/{id}      删除隧道
+POST /ms/tunnel/{ngrok|cloudflared}/{id}/start  启动隧道
+POST /ms/tunnel/{ngrok|cloudflared}/{id}/stop   停止隧道
+GET  /ms/tunnel/{ngrok|cloudflared}/stream      SSE 实时推送
+```
+
 ## 8. 作者
 
 CH <ch@chua.com>
