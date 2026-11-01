@@ -689,7 +689,6 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     private ClientResponse send(String url, String header, String proxy, int timeoutSec) throws Exception {
         try {
             HttpClientFactory builder = HttpClientFactory.of(url);
-            builder.path("");
             if (StringUtils.isNotBlank(header)) {
                 builder.authorization(header);
             }
@@ -701,8 +700,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                     log.warn("[ChannelHealth] 代理地址解析失败 {}: {}", proxy, e.getMessage());
                 }
             }
-            builder.connectTimeout(timeoutSec, TimeUnit.SECONDS);
-            builder.readTimeout(timeoutSec, TimeUnit.SECONDS);
+            builder.connectTimeout(TimeUnit.SECONDS.toMillis(timeoutSec));
+            builder.readTimeout(TimeUnit.SECONDS.toMillis(timeoutSec));
             return builder.get();
         } catch (Exception e) {
             log.warn("[ChannelHealth] 探针失败 {}: {}", url, e.getMessage());
@@ -817,7 +816,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @return 健康记录行
      */
-    private ChannelHealth initOrCreate三aption(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
+    private ChannelHealth initOrCreate三ation(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
         ChannelHealth h = channelHealthMapper.selectById(connectionId);
         if (h != null) return h;
         if (provider == null || conn == null) {
