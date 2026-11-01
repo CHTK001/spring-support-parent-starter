@@ -31,6 +31,14 @@ public enum ApiErrorCode {
     UNAUTHORIZED("UNAUTHORIZED", 401),
 
     /**
+     * 余额/额度不足（如 appKey 余额耗尽 且透支关闭，前端提示充值）
+     * @param "INSUFFICIENT_BALANCE" "INSUFFICIENT_BALANCE"
+     * @param 402 402
+     * @return INSUFFICIENT_BALANCE的结果
+     */
+    INSUFFICIENT_BALANCE("INSUFFICIENT_BALANCE", 402),
+
+    /**
      * 上游请求超时（前端提示检查网络/代理）
      * @param "TIMEOUT" "超时"
      * @param 504 504
