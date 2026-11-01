@@ -85,6 +85,18 @@ public class DeviceChannelServiceImpl implements DeviceChannelService {
 
     @Override
     /**
+     * 全部通道（一次取回，调用方自行按设备分组）
+     * @return 通道列表
+     */
+    public List<DeviceChannel> listAllChannels() {
+        LambdaQueryWrapper<DeviceChannel> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(DeviceChannel::getDeviceChannelDeviceId);
+        wrapper.orderByAsc(DeviceChannel::getDeviceChannelSort);
+        return channelMapper.selectList(wrapper);
+    }
+
+    @Override
+    /**
      * toggle状态
      * @param id 字符串
      * @param status 字符串

@@ -49,6 +49,15 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
         List<DeviceInfo> devices = deviceService.listDevices(null);
         List<DeviceTopologyNode> nodes = new ArrayList<>();
         List<DeviceTopologyEdge> edges = new ArrayList<>();
+        // 通道一次取回，按设备分组后在内存里取（避免每台设备查一次造成 N+1）
+        Map<String, List<DeviceChannel>> channelsByDevice = new LinkedHashMap<>(devices.size() / 2 + 1);
+        if (!devices.isEmpty()) {
+            for (DeviceChannel channel : channelService.listAllChannels()) {
+                channelsByDevice
+                        .computeIfAbsent(channel.getDeviceChannelDeviceId(), key -> new ArrayList<>())
+                        .add(channel);
+            }
+        }
         // 区域 id → 节点（同一区域只建一个 area 节点）
         Map<String, DeviceTopologyNode> areaNodes = new LinkedHashMap<>(devices.size() / 2 + 1);
         // 网段 id → 节点（同区同网段的多台设备共享一节点，按区 + 网段二段隔离）
@@ -67,15 +76,9 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
                 areaNodes.put(areaId, areaNode);
                 nodes.add(areaNode);
             }
-            // 网段：未解析 IP 的设备挂在区域下；同区同网段共享一节点
+            // 网段：未解析 IP 的设备直接挂在区域下；同区同网段共享一节点（无网段就不建网段节点）
             String cidr = cidrOf(device.getDeviceInfoIp());
             String subnetId = subnetIdOf(areaGroup, cidr);
-            DeviceTopologyNode subnetNode = subnetNodes.get(subnetId);
-            if (subnetNode == null) {
-                subnetNode = subnetNode(subnetId, cidr, areaGroup);
-                subnetNodes.put(subnetId, subnetNode);
-                nodes.add(subnetNode);
-            }
             DeviceTopologyNode deviceNode = new DeviceTopologyNode(
                     "device:" + device.getDeviceInfoId(),
                     device.getDeviceInfoName(),
@@ -89,11 +92,17 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
                 edges.add(new DeviceTopologyEdge(areaId, deviceNode.id()));
             } else {
                 // 有网段：区域 -> 网段 -> 设备
+                DeviceTopologyNode subnetNode = subnetNodes.get(subnetId);
+                if (subnetNode == null) {
+                    subnetNode = subnetNode(subnetId, cidr, areaGroup);
+                    subnetNodes.put(subnetId, subnetNode);
+                    nodes.add(subnetNode);
+                }
                 edges.add(new DeviceTopologyEdge(areaId, subnetNode.id()));
                 edges.add(new DeviceTopologyEdge(subnetNode.id(), deviceNode.id()));
             }
             // 通道（NVR 的子相机）作为设备的子节点
-            for (DeviceChannel channel : channelService.listChannels(device.getDeviceInfoId())) {
+            for (DeviceChannel channel : channelsByDevice.getOrDefault(device.getDeviceInfoId(), List.of())) {
                 // 通道的联机态随设备（NVR 下挂的通道相机）
                 DeviceTopologyNode channelNode = new DeviceTopologyNode(
                         "channel:" + channel.getDeviceChannelId(),

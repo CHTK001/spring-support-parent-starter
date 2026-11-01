@@ -122,6 +122,15 @@ public interface DeviceService {
     List<DeviceInfo> listByCredentialId(String credentialId);
 
     /**
+     * 按凭据查询「可巡检」的设备：有 IP 或序列号，且未被停用/报废。
+     * <p>在离线检测只探测这些设备，避免对已停用设备持续建连。</p>
+     *
+     * @param credentialId 凭据 ID
+     * @return 可巡检设备列表
+     */
+    List<DeviceInfo> listCheckableDevicesByCredentialId(String credentialId);
+
+    /**
      * 同步组织树
      * <p>从各厂商平台拉取最新组织树，更新本地数据库。</p>
      */
