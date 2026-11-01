@@ -43,6 +43,64 @@ public interface ChannelHealthService {
      */
     String STATE_RATE_LIMITED = "RATE_LIMITED";
 
+    // ==================== 设置读取（探针任务+控制器共享） ====================
+
+    /**
+     * 探针总开关（默认开）
+     *
+     * @return true 表示启用
+     */
+    boolean enabled();
+
+    /**
+     * 探针间隔秒数（最小 30 秒）
+     *
+     * @return 间隔秒数
+     */
+    int intervalSec();
+
+    /**
+     * 连续失败至下线数
+     *
+     * @return 失败次数阈值
+     */
+    int failureToDown();
+
+    /**
+     * 连续成功至恢复数
+     *
+     * @return 成功次数阈值
+     */
+    int downToRecover();
+
+    /**
+     * 延迟警告门限（毫秒）
+     *
+     * @return 毫秒数
+     */
+    int warningLatencyMs();
+
+    /**
+     * 探针超时秒数
+     *
+     * @return 秒数
+     */
+    int probeTimeoutSec();
+
+    /**
+     * 命中限流状态码
+     *
+     * @return 状态码
+     */
+    int rateLimitedStatus();
+
+    /**
+     * 404 是否回退到源站根路径探针
+     *
+     * @return true 表示回退
+     */
+    boolean rootFallback();
+
     /**
      * 列出全部渠道的健康状态（按 provider → connection 维度）。
      *
