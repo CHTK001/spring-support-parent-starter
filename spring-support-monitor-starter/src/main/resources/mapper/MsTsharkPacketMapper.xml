@@ -43,6 +43,29 @@
     </select>
 
     <!--
+        按 会话 + 帧号 批量回填 raw 与还原（-T json 通道用）：
+        每批 250 帧一次 CASE WHEN 结构，对回 SQLite 行，一次往返。
+    -->
+    <update id="updateBatchRawRestored">
+        UPDATE ms_tshark_packet SET
+        ms_tshark_packet_raw = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN #{f.rawData}
+        </foreach>
+        END,
+        ms_tshark_packet_restored = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN #{f.restoredText}
+        </foreach>
+        END
+        WHERE ms_tshark_packet_session_id = #{sessionId}
+        AND ms_tshark_packet_frame_no IN
+        <foreach item="f" collection="frames" open="(" separator="," close=")">
+            #{f.frameNo}
+        </foreach>
+    </update>
+
+    <!--
         常见异常诊断计数（SQL 层一次扫描聚合成单行，各列含义见 TsharkAnomalyVO）。
         <p>命中条件都挂在 ms_tshark_packet_info（tshark Info 列）与协议列上：
         TCP 重传 / 乱序 / 零窗口 / 连接重置在 Info 里有固定的方括号标记

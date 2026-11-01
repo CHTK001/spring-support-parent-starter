@@ -84,6 +84,29 @@ public class MybatisJobRepository implements JobRepository {
      */
     private final String defaultGroup;
 
+    /**
+     * 扫描结果缓存（配置为开启时才装配，否则就是 null：每拍都真实查库，与历史行为一致）。
+     *
+     * <p>存的是"相位 + 候选行"，命中时拍次级的查询只补读：
+     * 到期行写回前必须主键批读（避免 stale 乐观条件让派发静默失败），
+     * 没有到期行的一拍查询量为 0（比每拍 2 次查询少 1 次）。写侧入口一律清缓存。</p>
+     */
+    private ScanCache scanCache;
+
+    /**
+     * 带查询缓存配置的构造器。
+     *
+     * @param jobMapper   作业映射器
+     * @param defaultGroup 未指定分组时的落地分组
+     * @param cache        缓存配置（未开启时不装配缓存）
+     */
+    public MybatisJobRepository(JobMapper jobMapper, String defaultGroup, JobProperties.CacheConfig cache) {
+        this.jobMapper = jobMapper;
+        this.defaultGroup = defaultGroup;
+        // 没开缓存就是每拍真实查库；TTL 小于等于 0 永远不活 = 等效关了。
+        this.scanCache = (cache == null || !cache.isEnabled()) ? null : new ScanCache(cache.getTtlMs());
+    }
+
     @Override
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount) {
         return findDue(now, preReadMs, preReadCount, null);

@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
+import com.chua.starter.monitor.support.model.PacketRestoreFrame;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
