@@ -354,7 +354,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         for (SysAiProvider provider : providers()) {
             for (SysAiProviderConnection conn : connections(provider)) {
                 try {
-                    probeConnection(provider,(conn));
+                    probeConnection(provider, conn);
                     probed++;
                 } catch (Exception e) {
                     log.warn("[ChannelHealthProbe] 探针失败 provider={} connection={} : {}",
