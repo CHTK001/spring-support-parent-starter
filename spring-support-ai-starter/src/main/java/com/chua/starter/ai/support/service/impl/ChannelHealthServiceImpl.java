@@ -342,7 +342,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         try {
             probeConnection(provider, conn);
         } catch (Exception e) {
-            markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage()), null, null);
+            markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage(), ""), null, null);
         }
         return getState(connectionId);
     }
@@ -452,7 +452,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             if ("oauth".equals(scheme)) probeOauth(provider, conn, h);
             else probeHttp(provider, conn, h);
         } catch (Exception e) {
-            markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage()), null, null);
+            markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage(), ""), null, null);
         }
     }
 
@@ -485,7 +485,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             if ("valid".equals(state)) markSuccess(connectionId, 200, (int) latency, provider, conn);
             else markFailure(connectionId, 0, "auth status: " + state, provider, conn);
         } catch (Exception e) {
-            markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage()), null, null);
+            markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage(), ""), null, null);
         }
     }
 
@@ -523,7 +523,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                 status = resp.getStatusCode();
             }
         } catch (Exception e) {
-            error = StringUtils.defaultString(e.getMessage());
+            error = StringUtils.defaultString(e.getMessage(), "");
         }
         int latency = (int) (System.currentTimeMillis() - start);
         if (error != null) {
