@@ -13,8 +13,8 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.service.ChannelHealthService;
-import com.chua.starter.ai.support.spring.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
@@ -23,6 +23,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -535,6 +537,22 @@ public class ModelClientResolver {
             return result.isEmpty() ? null : result;
         }
         return null;
+    }
+
+    /**
+     * 渠道健康探针完成：失效路由与客户端缓存，令下线的连接立即从路由表剔除。
+     *
+     * <p>默认路由缓存 5 分钟（TTL），探针完成时主动失效可把下线/恢复窗口从小时级压到秒级。</p>
+     *
+     * @param event 探针完成事件
+     */
+    @EventListener
+    public void onChannelHealthProbe(ChannelHealthProbeEvent event) {
+        // 失效缓存
+        cache.clear();
+        routeCache.clear();
+        log.info("[ModelClientResolver] 渠道探针完成 失效缓存 down={} probed={} scheduled={}",
+                event.downConnections(), event.probed(), event.scheduled());
     }
 
     /**
