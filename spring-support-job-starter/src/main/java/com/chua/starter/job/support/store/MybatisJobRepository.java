@@ -116,6 +116,28 @@ public class MybatisJobRepository implements JobRepository {
 
     @Override
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount, String group) {
+        // 查询缓存命中：相位 + 扫描结果来自同一查询条件的上一拍扫描，跨拍次复用（最多省掉 2 次查库）；
+        // 未开缓存 / 缓存过期 / 未命中：由实路去读库，并把扫描结果存起来备下一拍复用。
+        if (scanCache != null) {
+            ScanCache.ScanEntry entry = scanCache.get(group, preReadMs, preReadCount);
+            if (entry != null) {
+                return scanDueFromCache(entry, now, preReadMs, preReadCount, group);
+            }
+        }
+        return realtimeScan(now, preReadMs, preReadCount, group);
+    }
+
+    /**
+     * 实路：每拍两次查库（数据库时钟 + 候选行扫描），扫描结果记录进缓存，
+     * 下一拍（TTL 内）命中时，这 2 次查库被跳过，没有到期行的 scan 拍查询量归 0。
+     *
+     * @param now 拍次（传入后会被数据库时钟覆盖）
+     * @param preReadMs 预读时间窗
+     * @param preReadCount 每拍扫描上限
+     * @param group 扫描分组
+     * @return 到期任务
+     */
+    private List<JobDefinition> realtimeScan(long now, long preReadMs, int preReadCount, String group) {
         // 分发模式不参与扫描：远程行同样由本节点 Leader 经同步通道下发到在线执行器，
         // LOCAL/REMOTE 只影响展示归属，不再决定"能不能跑"。
         var query = Wrappers.<JobEntity>lambdaQuery()
@@ -135,18 +157,99 @@ public class MybatisJobRepository implements JobRepository {
                 .orderByAsc(JobEntity::getSysJobId)
                 .last("LIMIT " + Math.max(preReadCount, 1));
         List<JobEntity> candidates = jobMapper.selectList(query);
-
+        // 扫描结果记入缓存：无论调出多少行，下拍如有能复用（没有到期行的一拍查询量直接归零）
+        scanCache.put(group, preReadMs, preReadCount, now, candidates);
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
+        return executeScanLoop(candidates, now, null, preReadMs, preReadCount);
+    }
 
+    /**
+     * 缓存命中：跨拍次复用相位与候选行，仅对当前到期的行做主键批读。
+     *
+     * <p>缓存给出的相位是上一拍（或之前 TTL 秒内）扫描时实路查到的数据库时钟：每拍少读时钟查询
+     * （最少 0 次），代价是扫描窗上界（{@code now + preReadMs}）在 TTL 内保持不变，接近到点但快到的任务
+     * 最多顺延 TTL 秒才被派发，触发判定（misfire）也随滞后最多退一步 —— 这个精度权衡由
+     * {@code plugin.job.cache.ttl-ms} 控制，关闭它回退为严格实路。</p>
+     *
+     * <p><b>到期行必须主键批读</b>：候选行是过去拍的，一旦有人（本拍或其他扫描器）把
+     * {@code last_time/next_time} 写回，拿旧行下乐观条件永远匹配 0 行，任务在窗口内不再派发
+     * 直到 TTL 重建。把到期的行捏出来，只用一次 {@code WHERE id IN (...)} 批读回新鲜行，
+     * 没到期的行继续用缓存行（不做无意义的逐读）。</p>
+     *
+     * @param entry 扫描结果
+     * @return 到期任务
+     */
+    private List<JobDefinition> scanDueFromCache(ScanCache.ScanEntry entry, long now, long preReadMs, int preReadCount, String group) {
+        // 这里不使用调用方传入的 {@code now}：缓存给出的相位（上一拍的数据库时间）已经足够
+        // 触发整拍扫描，只需把相位倒给循环。
+        long phase = entry.dbNowMs();
+        long upperBound = phase + Math.max(preReadMs, 0L);
+        List<JobEntity> candidates = entry.candidates();
+        if (candidates == null || candidates.isEmpty()) {
+            return List.of();
+        }
+        // Phase 1：用缓存行判断哪些已经到期
+        List<Object> dueIds = new ArrayList<>();
+        for (JobEntity entity : candidates) {
+            String key = stateKey(entity);
+            if (key == null) {
+                continue;
+            }
+            long nextFire = nextFireMs(entity, key, phase);
+            if (nextFire < 0L) {
+                continue;
+            }
+            if (nextFire <= upperBound && entity.getSysJobId() != null) {
+                dueIds.add(entity.getSysJobId());
+            }
+        }
+        // Phase 2：一次主键批读（k 行只读 1 次查询，0 行一次都不读）
+        Map<String, JobEntity> freshByStateKey = new HashMap<>();
+        if (!dueIds.isEmpty()) {
+            List<JobEntity> freshRows = jobMapper.selectList(
+                    Wrappers.<JobEntity>lambdaQuery().in(JobEntity::getSysJobId, dueIds));
+            for (JobEntity r : freshRows) {
+                String key = stateKey(r);
+                if (key != null) {
+                    freshByStateKey.put(key, r);
+                }
+            }
+        }
+        // Phase 3：将到期行逐行替换成新鲜行（非到期行保持缓存行），进入循环
+        return executeScanLoop(candidates, phase, freshByStateKey, preReadMs, preReadCount);
+    }
+
+    /**
+     * 扫描候选行，输出到期任务列表。
+     *
+     * <p>这正是实路扫描里的那一段：实路传入 {@code null}（候选行即新鲜行），
+     * 缓存命中时传入新鲜行 Map（到期的行被逐行重读），<b>行为与实路完全一致</b>。</p>
+     *
+     * @param candidates 候选行（可能有新鲜行覆盖）
+     * @param now 相位（数据库时钟）
+     * @param freshByStateKey 主键批读回的新鲜行，按状态键映射
+     * @param preReadMs 预读时间窗
+     * @param preReadCount 每拍扫描上限
+     * @return 到期任务
+     */
+    private List<JobDefinition> executeScanLoop(List<JobEntity> candidates, long now, Map<String, JobEntity> freshByStateKey, long preReadMs, int preReadCount) {
+        long upperBound = now + Math.max(preReadMs, 0L);
         List<JobDefinition> due = new ArrayList<>();
         for (JobEntity entity : candidates) {
             String key = stateKey(entity);
             if (key == null) {
                 continue;
             }
-            long nextFire = nextFireMs(entity, key, now);
+            // 维系到期行：用主键批读回的新鲜行替换（写回与乐观条件必须基于最新行），
+            // 没有新鲜行的继续用缓存行（行为与实路相同）
+            JobEntity target = freshByStateKey == null || freshByStateKey.isEmpty() ? entity : freshByStateKey.get(key);
+            if (target == null) {
+                target = entity;
+            }
+
+            long nextFire = nextFireMs(target, key, now);
             if (nextFire < 0L) {
                 continue;
             }
@@ -155,15 +258,15 @@ public class MybatisJobRepository implements JobRepository {
                 // 基线同样要走 lastFireBaseline: Leader 切换后进程内 map 是空的, 只读 map 会让
                 // missed 恒为 false, 故障切换期间错过的槽位就再也不会被识别为 misfire。
                 // 基线为 0 表示"从未触发过"（新任务）, 此时不能算 missed, 否则首拍就会被当成错过。
-                long previous = lastFireBaseline(entity, key);
+                long previous = lastFireBaseline(target, key);
                 boolean missed = previous > 0L && previous < nextFire && now - nextFire > 1000L;
                 // 默认（未配置）保持历史行为补跑一次；显式 DO_NOTHING 时错过的触发不补跑，
                 // 只推进派发序列与展示用下次时刻，避免重启后集中补跑风暴。
                 boolean doNothing = JobSpec.MISFIRE_DO_NOTHING.equalsIgnoreCase(
-                        trimToNull(entity.getSysJobExecuteMisfireStrategy()));
+                        trimToNull(target.getSysJobExecuteMisfireStrategy()));
                 if (missed && doNothing) {
                     log.info("[job] misfire 跳过 job={} expected={} now={} skipped={} strategy=DO_NOTHING",
-                            key, nextFire, now, missedSlotsBetween(entity, key, nextFire, now));
+                            key, nextFire, now, missedSlotsBetween(target, key, nextFire, now));
                     // 跳过的同时把基线一次推过 now：错过的槽位**不再逐个跳**，否则每个槽位要占掉
                     // 一个扫描拍次（leader 单秒扫描），落后一小时、周期 30 秒的任务就要空转 120 拍。
                     // 必须同时推进持久化基线, 否则派发序列不前进:
@@ -172,8 +275,8 @@ public class MybatisJobRepository implements JobRepository {
                     // ② 跳过分支只写 next_time 不写 last_time, 持久化基线仍停在被跳过的槽位,
                     //    于是换个进程重算 nextFire 仍是同一个过期槽位 —— 该任务就永久不再触发,
                     //    表现为日志里反复出现同一 expected 的「misfire 跳过」。
-                    long skipTo = nextFireAfter(entity, key, now, now);
-                    if (skipTo > 0L && persistSkippedSlot(entity, now, skipTo)) {
+                    long skipTo = nextFireAfter(target, key, now, now);
+                    if (skipTo > 0L && persistSkippedSlot(target, now, skipTo)) {
                         // 进程内基线必须与落库的 last_time 保持一致（都是 now），不能记成 skipTo:
                         // 记成 skipTo 会让下一拍从 skipTo 之后起算, 于是 skipTo 这个槽位既没触发
                         // 也没被跳过, 永远轮不到 —— 任务再也不跑。
@@ -186,7 +289,7 @@ public class MybatisJobRepository implements JobRepository {
                 }
                 if (missed) {
                     log.warn("[job] misfire 补发 1 次并跳过历史槽位 job={} expected={} now={} skipped={}",
-                            key, nextFire, now, missedSlotsBetween(entity, key, nextFire, now));
+                            key, nextFire, now, missedSlotsBetween(target, key, nextFire, now));
                 }
                 // 落库的两个时刻语义必须与扫描谓词自洽：
                 // last_time 是下一次计算的基线来源（lastFireBaseline 直接读它），
@@ -202,9 +305,9 @@ public class MybatisJobRepository implements JobRepository {
                 // 风暴长度 ≈（now − 基线）÷ 周期。取 now 之后，下一拍的基线已经追平，
                 // 算出的下一个槽位落在未来，只剩正常的预读提前派发。
                 long baseline = missed ? now : nextFire;
-                long pushed = nextFireAfter(entity, key, baseline, now);
-                if (persistFireTimes(entity, baseline, pushed)) {
-                    due.add(toDefinition(entity));
+                long pushed = nextFireAfter(target, key, baseline, now);
+                if (persistFireTimes(target, baseline, pushed)) {
+                    due.add(toDefinition(target));
                     lastFireMs.put(key, baseline);
                 }
             }
@@ -269,6 +372,8 @@ public class MybatisJobRepository implements JobRepository {
         } catch (Exception ex) {
             log.warn("[job] 注解任务持久化失败 name={} cause={}", definition.getName(), ex.getMessage());
         }
+        // 注解侧写入也可能是新台账/调度配置变更：清掉扫描缓存，让下一拍重查
+        scanCache.clear();
     }
 
     @Override
@@ -612,6 +717,8 @@ public class MybatisJobRepository implements JobRepository {
         String key = jobKey.trim();
         triggerCache.remove(key);
         lastFireMs.remove(key);
+        // 任何写侧出口都可能改变扫描行：一律清掉扫描缓存，让下一拍用新相位重查
+        scanCache.clear();
         // 序列键是台账主键，只能按任务键反查出行才删得掉；含已删除行，避免留下无人认领的缓存。
         List<JobEntity> rows = jobMapper.selectList(Wrappers.<JobEntity>lambdaQuery()
                 .select(JobEntity::getSysJobId, JobEntity::getSysJobName)
