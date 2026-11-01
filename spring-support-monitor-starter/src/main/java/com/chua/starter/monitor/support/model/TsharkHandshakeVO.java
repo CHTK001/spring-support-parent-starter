@@ -49,10 +49,12 @@ public record TsharkHandshakeVO(
      * @param phase     所处阶段：TCP / TLS / HTTP / DATA / CLOSE
      * @param retransmission 是否为重传 / 乱序 / 重复 ACK
      * @param reset     是否带 RST（连接被重置）
+     * @param restored  该包的协议还原明文（HTTP / TLS / SSH / DNS / FTP / SMTP / MQTT ...，
+     *                  未必有 — 取决于是否开启了 -T json 回填通道与还原器是否命中）
      */
     public record Step(Long packetId, String time, boolean fromClient, String flags,
                        String seq, String ack, Integer length, String info, long relativeMs,
-                       String phase, boolean retransmission, boolean reset) {
+                       String phase, boolean retransmission, boolean reset, String restored) {
     }
 
     /**

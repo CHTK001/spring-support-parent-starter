@@ -107,10 +107,13 @@ public class TsharkCaptureService {
      * 11 帧长 · 12 人可读摘要。IPv4/IPv6 与 TCP/UDP 成对给出，某层不存在时该列为空串，
      * 由 {@code firstNonBlank} 取非空的那个。</p>
      *
-     * <p><strong>第 0 列 {@code frame.number} 是增量解析的游标，不入库</strong>：
+     * <p><strong>第 0 列 {@code frame.number} 是 pcap 内自然递增的帧号</strong>：
      * 抓包期间要一边写 pcap 一边把新包读出来推给前端，尾随循环靠
-     * {@code -Y "frame.number > N"} 只取新增的帧。没有单调帧号就没法判断「哪些是新的」，
-     * 只能整份重读，那样既慢又会重复入库。</p>
+     * {@code -Y "frame.number > N"} 只取新增的帧。它不仅需要用来判定「哪些是新的」、
+     * 已经是唯一键落进 {@code ms_tshark_packet_frame_no}（与注册表里
+     * {@code idx_tshark_packet_frame_no} 配套），也是后续 -T json 通道回填
+     * {@code rawData} / {@code restoredText} 时对齐 SQLite 行的锚点——
+     * 同一份文件两个通道顺序相同，按帧号对结果不会被弄混。</p>
      *
      * <p>用 {@code _ws.col.Info} 而非 {@code -x} 的十六进制展开：前者就是 tshark
      * 「Info」列（如 {@code GET /ms/... HTTP/1.1}），正是实体里「人可读摘要」要的东西。</p>
@@ -1194,8 +1197,103 @@ public class TsharkCaptureService {
                 }
             }
             p.waitFor(60L, TimeUnit.SECONDS);
+            // 骨架落成，回填完整协议层 JSON 与协议还原：离线导入 / 实时抓包归同一条通道
+            this.restorePacketPayloads(sessionId, filePath);
         } catch (Exception e) {
             log.error("parse pcap failed, session={}", sessionId, e);
+        }
+    }
+
+    /**
+     * 用 tshark 的 {@code -T json} 通道回填报文的 {@code rawData} / {@code restoredText}。
+     *
+     * <p><b>做了什么</b>：{-T fields} 只给协议列、IP、端口、长度与 Info 摘要，包不住每一层协议
+     * 实际长的样子，所以离线导回的抓包在「协议还原」上一直是空的。这里额外跑一次
+     * {@code tshark -T json -x}，逐包把完整 JSON 交给 {@code PacketParserService} 解析——
+     * 不是只有 HTTP 才能还原：DNS / TLS / SSH / FTP / SMTP / MQTT / Redis / Kafka / SQL ...
+     * 所有带还原器的协议各自出结果，写入报文表的 {@code ms_tshark_packet_raw}（完整 JSON）
+     * 与 {@code ms_tshark_packet_restored}（还原出的明文，第一命中优先）。</p>
+     *
+     * <p><b>为什么用第二遍 tshark</b>：-T fields 与 -T json 只能二选一，前者不产出十六进制展开的
+     * payload（还原器要的是原始字节），后者才把每层协议完整包起来。</p>
+     *
+     * <p><b>如何对齐</b>：按帧号。-T fields 已经把 frame.number 存进
+     * {@code ms_tshark_packet_frame_no}，-T json 通道的 {@code PacketMeta.frameNumber()}
+     * 是同一个 tshark 输出里的同一个帧号——第二条链与第一条链顺序一致，借
+     * {@code CASE WHEN ms_tshark_packet_frame_no = ? THEN ?} 的批量更新精确对回 SQLite 行。</p>
+     *
+     * <p><b>内存与失败</b>：每包整份 JSON 展开后可能几十 KB 起，逐包攒到 {@code RESTORE_BATCH}
+     * 条发一次更新，绝不吃满整份文件。<b>失败只记日志</b>：tshark 不在 / 输出不是 JSON
+     * / 超时止于一次 warn，已入库骨架报文不受影响。</p>
+     *
+     * @param sessionId 会话标识
+     * @param filePath  pcap 路径
+     * @return 还原成功的包数；未启用 / 无文件 / 失败时返回 -1
+     */
+    private long restorePacketPayloads(Long sessionId, Path filePath) {
+        if (!restoreJsonEnabled()) {
+            return -1L;
+        }
+        if (filePath == null || !Files.exists(filePath) || Files.size(filePath) == 0L) {
+            return -1L;
+        }
+        long restored = 0L;
+        try {
+            // stderr 不能并到 stdout 上：tshark 的告警行混进 JSON 数组，整份文件就废了
+            Path stderr = Files.createTempFile("tshark-restore", ".log");
+            ProcessBuilder pb = new ProcessBuilder(bin(), "-r", filePath.toString(), "-T", "json", "-x");
+            pb.redirectError(stderr.toFile());
+            Process p = pb.start();
+            try {
+                List<PacketRestoreFrame> batch = new ArrayList<>(RESTORE_BATCH);
+                try (JsonParser parser = new ObjectMapper().getFactory().createParser(p.getInputStream())) {
+                    if (parser.nextToken() == JsonToken.START_ARRAY) {
+                        while (parser.nextToken() == JsonToken.START_OBJECT) {
+                            PacketRecord record = PacketParserService.parseNode(new ObjectMapper().readTree(parser));
+                            if (record != null) {
+                                batch.add(new PacketRestoreFrame(record.meta().frameNumber(),
+                                        record.rawData(), record.restoredText()));
+                                if (batch.size() >= RESTORE_BATCH) {
+                                    restored += this.withPacketDb(sessionId,
+                                            () -> this.packetMapper.updateBatchRawRestored(sessionId, batch));
+                                    batch.clear();
+                                }
+                            }
+                        }
+                    }
+                    if (!batch.isEmpty()) {
+                        restored += this.withPacketDb(sessionId,
+                                () -> this.packetMapper.updateBatchRawRestored(sessionId, batch));
+                    }
+                }
+                p.waitFor(60L, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.debug("json restore aborted session={} reason={}", sessionId, e.getMessage());
+            } finally {
+                Files.deleteIfExists(stderr);
+            }
+        } catch (Exception e) {
+            log.warn("restore packets from json failed session={}", sessionId, e);
+            return -1L;
+        }
+        log.info("restore packets from json session={} packets={}", sessionId, restored);
+        return restored;
+    }
+
+     * PacketRestoreFrame：The json 通道的解析记录，帧号是对齐 SQLite 行的锚点。
+     */
+    /**
+     * 按 frame.number（pcap 内自然序、同一会话唯一）解析帧号，解析失败返回 null。
+     */
+    private static Long parseFrameNo(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("frame number is not a number: {}", value);
+            return null;
         }
     }
 
@@ -1477,7 +1575,9 @@ public class TsharkCaptureService {
                     p.getPacketTime() == null ? null : p.getPacketTime().format(hhmm),
                     eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort),
                     flags, extractAfter(info, "Seq="), extractAfter(info, "Ack="),
-                    p.getPacketLength(), info, relMs, phase, retransmission, reset));
+                    p.getPacketLength(), info, relMs, phase, retransmission, reset,
+                    // 每个包自己的协议还原明文（来自 -T json 通道的回填）：有还原器命中的协议会非空
+                    p.getRestoredText()));
         }
 
         // 握手判定：第一个 SYN（不带 ACK）定客户端方向，其后 SYN+ACK 与裸 ACK
@@ -1825,7 +1925,11 @@ public class TsharkCaptureService {
             }
             MsTsharkPacket packet = new MsTsharkPacket();
             packet.setSessionId(sessionId);
-            // cols[0] 是 frame.number，只作增量游标不入库；其余整体右移一位
+            // cols[0] 是 frame.number（pcap 内自然递增的帧号），入库为 ms_tshark_packet_frame_no。
+            // 两个点：（1）它是对齐 -T json 通道回填记录的锚点——同一份文件两个通道顺序相同，
+            // 按帧号对回 SQLite 行，不会被弄混；（2）它让注册表里的那枚
+            // idx_tshark_packet_frame_no 有了实际意义。
+            packet.setFrameNo(parseFrameNo(cols[0]));
             packet.setPacketTime(epochToDateTime(cols[1]));
             packet.setProtocol(simplifyProtocol(blankToNull(cols[2])));
             // IPv4 / IPv6 各取第一个非空；端口同理（TCP 优先，其次 UDP）
