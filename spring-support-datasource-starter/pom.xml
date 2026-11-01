@@ -67,7 +67,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-flyway-starter</artifactId>
-            <version></version>
+            <version>${utils.version}</version>
         </dependency>
 
         <!-- Spring Boot JDBC支持 - 提供数据库访问和事务管理功能 -->
@@ -99,7 +99,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-h2-starter</artifactId>
-            <version></version>
+            <version>${utils.version}</version>
             <optional>true</optional>
         </dependency>
 
@@ -107,7 +107,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-sqlite-starter</artifactId>
-            <version></version>
+            <version>${utils.version}</version>
             <optional>true</optional>
         </dependency>
 
