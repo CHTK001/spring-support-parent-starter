@@ -33,8 +33,8 @@
 | 凭据 | `ProviderCredentialController` + `device_provider_credential` | 同厂商多套、默认套、启用、阈值 |
 | 通道/预置位/门禁/事件 | `ChannelController`、`PtzController`、`AccessController`、`EventController` | 基础 CRUD 与查询 |
 | 视频 | `VideoController` | 返回厂商 HLS/FLV 地址、回放地址 |
-| 定时 | `scheduler/DeviceScheduler` | 每秒触发，按设备阈值判离线 |
-| 前端 | `pages/device` | 设备树 + 概览/地图/通道/视频/云台/门禁/事件 8 个页签 |
+| 定时 | `scheduler/DeviceScheduleManager` | `TimeScheduler` 5 秒 tick：4 个全局任务 + 每套凭据 3 个任务（开关/间隔见凭据高级配置） |
+| 前端 | `pages/device` | 设备树 + 概览/地图/通道/视频/云台/门禁/事件 8 个页签；机房拓扑 `DeviceTopoView`；定时任务 `DeviceTaskView` |
 | 前端播放 | `ReVideo.vue` | hls.js + flv.js，原生 video |
 
 ### 1.2 关键缺口
@@ -356,7 +356,12 @@ public interface DeviceRealtimePublisher {
 
 ## 9. 定时任务与时间轮（需求 3.2–3.4）
 
-### 9.1 现状问题
+> **已落地**：`DeviceScheduleManager`（common-starter `TimeScheduler`）+ `device_task_state`（任务名 / 间隔 / 运行态 / 最后执行）。
+> 全局任务 4 个（`deviceOfflineCheck` / `deviceEventPoll` / `deviceSync` / `deviceAccessExtract`）；
+> 凭据级任务 3 个（`offlineDetect_{credId}` / `deviceSync_{credId}` / `orgSync_{credId}`），由
+> `device_provider_credential` 的高级配置驱动，默认全部关闭。下文 `device_task_config` 为原始设计提案，实现上以 `device_task_state` + 凭据配置落位。
+
+### 9.1 现状问题（已解决）
 
 - `DeviceScheduler` 每秒执行，内部 `listCheckableDevices()` 全表查。
 - 只有离线检测，事件轮询在 `DeviceEventService` 的 `@Scheduled`，两套调度并存。
