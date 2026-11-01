@@ -1584,24 +1584,24 @@
                  扫描范围是本模块自身目录，因此 packaging=pom 的父工程不会产出聚合脚本；
                  也不跨模块，已退出 reactor 但目录仍在的模块不会被卷入。
                  execution id 与 spring-support-datasource-starter 自带的同名，由 Maven 合并为一次执行。 -->
-            <plugin>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-flyway-maven-plugin</artifactId>
-                <version>4.0.0.50</version>
-                <executions>
-                    <execution>
-                        <id>generate-module-init-sql</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>generate-init-sql</goal>
-                        </goals>
-                        <configuration>
-                            <mode>initdata</mode>
-                            <failIfNoScripts>false</failIfNoScripts>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+<!--             <plugin> -->
+<!--                 <groupId>com.chua</groupId> -->
+<!--                 <artifactId>utils-support-flyway-maven-plugin</artifactId> -->
+<!--                 <version>4.0.0.50</version> -->
+<!--                 <executions> -->
+<!--                     <execution> -->
+<!--                         <id>generate-module-init-sql</id> -->
+<!--                         <phase>generate-resources</phase> -->
+<!--                         <goals> -->
+<!--                             <goal>generate-init-sql</goal> -->
+<!--                         </goals> -->
+<!--                         <configuration> -->
+<!--                             <mode>initdata</mode> -->
+<!--                             <failIfNoScripts>false</failIfNoScripts> -->
+<!--                         </configuration> -->
+<!--                     </execution> -->
+<!--                 </executions> -->
+<!--             </plugin> -->
         </plugins>
     </build>
 
