@@ -107,7 +107,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-sqlite-starter</artifactId>
-            <version>4.0.0.42</version>
+            <version>${utils.version}</version>
             <optional>true</optional>
         </dependency>
 
