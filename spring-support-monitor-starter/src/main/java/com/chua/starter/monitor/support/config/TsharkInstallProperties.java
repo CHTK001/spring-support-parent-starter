@@ -76,4 +76,23 @@ public class TsharkInstallProperties {
      * 单次下载 + 解压 + 自检的总体超时（秒）。
      */
     private int timeoutSeconds = 600;
+
+    /**
+     * 是否在解析 pcap 时，额外启用 tshark json 通道回填 {@code rawData}（完整协议层 JSON）
+     * 与 {@code restoredText}（协议还原出的明文）。
+     *
+     * <p>开启后，{-T fields} 保障的骨架落成之后，服务端会再跑一次 {@code tshark -T json -x}：
+     * 逐包取出完整 JSON（写入 {@code rawData}，包含 payload 展开的十六进制），
+     * 再调用 {@code PacketParserService} 把每一层协议的报文还原成明文写进报文表
+     * {@code ms_tshark_packet_restored} 列。</p>
+     *
+     * <p>这不是只有 HTTP 才有的能力——DNS、TLS、SSH、FTP、SMTP、MQTT、数据库协议...
+     * 所有带还原器的协议都会有各自的还原结果。页面上「协议还原」这块，离线导入一样能显示。</p>
+     *
+     * <p>代价是一次额外完整解析（文件越大越明显）。生产侧只要本地有 tshark 就一直开着；
+     * 不需要协议还原时可以关。</p>
+     *
+     * @since 4.0.0.52
+     */
+    private boolean jsonRestore = true;
 }
