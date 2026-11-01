@@ -340,4 +340,157 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         }
         return null;
     }
+
+    @Override
+    public BigDecimal getBalance(String appKey) {
+        SysAiAppKey entity = queryAppKeyUncached(appKey);
+        return entity != null && entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
+    }
+
+    @Override
+    public boolean isBillable(String appKey) {
+        SysAiAppKey entity = queryAppKeyUncached(appKey);
+        if (entity == null) {
+            return false;
+        }
+        BigDecimal balance = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
+        if (balance.compareTo(BigDecimal.ZERO) < 0
+                && !Boolean.TRUE.equals(entity.getOverdraftEnabled())) {
+            log.warn("[SysAiAppKey] AppKey {} 余额不足({}) 且不允许透支，拒绝计量计费请求",
+                    entity.getAppKey(), balance);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 能否扣费（辅助方法）：余额为负且不允许透支 = 不可扣费。
+     */
+    private boolean canDeduct(BigDecimal balance, Integer overdraftEnabled) {
+        if (balance == null) {
+            balance = BigDecimal.ZERO;
+        }
+        if (balance.compareTo(BigDecimal.ZERO) < 0 && !Boolean.TRUE.equals(overdraftEnabled)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "'sys:ai:app-key:' + #appKey")
+    @Transactional(rollbackFor = Exception.class)
+    public int recharge(String appKey, BigDecimal amount, String remark) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0;
+        }
+        SysAiAppKey entity = queryAppKeyUncached(appKey);
+        if (entity == null) {
+            return 0;
+        }
+        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
+        BigDecimal balanceAfter = balanceBefore.add(amount);
+        int updated = sysAiAppKeyMapper.update(
+                null,
+                Wrappers.lambdaUpdate(SysAiAppKey.class)
+                        .eq(SysAiAppKey::getAppKey, appKey)
+                        .set(SysAiAppKey::getBalance, balanceAfter));
+        if (updated > 0) {
+            appendTopupLog(entity, appKey, SysAiAppKeyTopupLog.Types.RECHARGE, amount,
+                    balanceBefore, balanceAfter, remark);
+        }
+        return updated;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "'sys:ai:app-key:' + #appKey")
+    @Transactional(rollbackFor = Exception.class)
+    public int deduct(String appKey, BigDecimal amount, String remark) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0;
+        }
+        SysAiAppKey entity = queryAppKeyUncached(appKey);
+        if (entity == null) {
+            return 0;
+        }
+        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
+        if (!canDeduct(balanceBefore, entity.getOverdraftEnabled())) {
+            log.warn("[SysAiAppKey] AppKey {} 余额不足({}) 且不允许透支，拒绝扣费", entity.getAppKey(), balanceBefore);
+            return 0;
+        }
+        BigDecimal balanceAfter = balanceBefore.subtract(amount);
+        int updated = sysAiAppKeyMapper.update(
+                null,
+                Wrappers.lambdaUpdate(SysAiAppKey.class)
+                        .eq(SysAiAppKey::getAppKey, appKey)
+                        .set(SysAiAppKey::getBalance, balanceAfter)
+                        .set(SysAiAppKey::getTotalCost, entity.getTotalCost() != null
+                                ? entity.getTotalCost().add(amount) : amount));
+        if (updated > 0) {
+            appendTopupLog(entity, appKey, SysAiAppKeyTopupLog.Types.CONSUME, amount.negate(),
+                    balanceBefore, balanceAfter, remark);
+        }
+        return updated;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "'sys:ai:app-key:' + #appKey")
+    public boolean updatePlan(String appKey, Long planId) {
+        return sysAiAppKeyMapper.update(
+                null,
+                Wrappers.lambdaUpdate(SysAiAppKey.class)
+                        .eq(SysAiAppKey::getAppKey, appKey)
+                        .set(SysAiAppKey::getPlanId, planId)) > 0;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "'sys:ai:app-key:' + #appKey")
+    public boolean updateOverdraft(String appKey, boolean enabled) {
+        return sysAiAppKeyMapper.update(
+                null,
+                Wrappers.lambdaUpdate(SysAiAppKey.class)
+                        .eq(SysAiAppKey::getAppKey, appKey)
+                        .set(SysAiAppKey::getOverdraftEnabled, enabled ? 1 : 0)) > 0;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "'sys:ai:app-key:' + #appKey")
+    public boolean updateRate(String appKey, BigDecimal minuteRate) {
+        return sysAiAppKeyMapper.update(
+                null,
+                Wrappers.lambdaUpdate(SysAiAppKey.class)
+                        .eq(SysAiAppKey::getAppKey, appKey)
+                        .set(SysAiAppKey::getMinuteRate, minuteRate)) > 0;
+    }
+
+    @Override
+    public List<SysAiAppKeyTopupLog> topupLogs(String appKey) {
+        if (StringUtils.isBlank(appKey)) {
+            return Collections.emptyList();
+        }
+        return sysAiAppKeyTopupLogMapper.selectByAppKey(appKey);
+    }
+
+    /**
+     * 向流水表追加一条账目记录。
+     *
+     * @param entity        appKey 实体
+     * @param appKey        appKey
+     * @param type          流水类型
+     * @param amount        金额
+     * @param balanceBefore 变动前余额
+     * @param balanceAfter  变动后余额
+     * @param remark        备注
+     */
+    private void appendTopupLog(SysAiAppKey entity, String appKey, String type, BigDecimal amount,
+                                BigDecimal balanceBefore, BigDecimal balanceAfter, String remark) {
+        SysAiAppKeyTopupLog log = new SysAiAppKeyTopupLog();
+        log.setAppKeyId(entity.getId().longValue());
+        log.setAppKey(appKey);
+        log.setType(type);
+        log.setAmount(amount);
+        log.setBalanceBefore(balanceBefore);
+        log.setBalanceAfter(balanceAfter);
+        log.setRemark(remark);
+        sysAiAppKeyTopupLogMapper.insert(log);
+    }
 }

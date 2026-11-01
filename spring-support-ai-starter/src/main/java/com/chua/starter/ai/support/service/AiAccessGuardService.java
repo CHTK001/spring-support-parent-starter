@@ -33,4 +33,15 @@ public interface AiAccessGuardService {
      * @return 校验是否通过
      */
     boolean verifyBearerToken(String auth, String remoteAddr);
+
+    /**
+     * 计费维度检查：余额/透支是否允许发起新的请求。
+     *
+     * <p>余额为负且不允许透支时，调用方（{@code BaseAiController}）回 HTTP 402 并提示充值；
+     * 不拦截余额充足、退款/透支生效的 Key。</p>
+     *
+     * @param appKey appKey 值
+     * @return 允许发起请求返回 true
+     */
+    boolean isBillable(String appKey);
 }
