@@ -40,6 +40,21 @@
             <artifactId>spring-support-job-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 端口映射：ngrok / Cloudflare Tunnel 两个独立模块，经 AutoConfiguration.imports
+             自动装配 /ms/tunnel/ngrok 与 /ms/tunnel/cloudflared（含 SSE 实时状态 /stream）。
+             映射配置持久化到本地文件目录（plugin.*.store-dir），不依赖数据库；
+             运行时默认 auto-start=false，由页面按需启停，避免监控进程启动即暴露公网端口。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-ngrok-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cloudflared-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Docker 独立模块（容器/镜像/网络/卷/镜像库/模板），
              经 AutoConfiguration.imports 自动装配 /ms/server/docker 接口 -->
         <dependency>

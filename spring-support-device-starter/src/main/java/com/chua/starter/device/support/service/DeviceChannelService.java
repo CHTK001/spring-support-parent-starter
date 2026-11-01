@@ -52,6 +52,14 @@ public interface DeviceChannelService {
     List<DeviceChannel> listChannels(String deviceId);
 
     /**
+     * 全部通道（整表拼接场景用，例如机房拓扑：一次取回后在内存里按设备分组，
+     * 避免按设备逐个查询造成 N+1）。
+     *
+     * @return 通道列表（按设备 ID、排序号升序）
+     */
+    List<DeviceChannel> listAllChannels();
+
+    /**
      * 启用/禁用通道
      *
      * @param id     通道 标识

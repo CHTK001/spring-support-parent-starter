@@ -34,6 +34,12 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- 管理接口（/ms/tunnel/cloudflared）用；非 Web 应用可不引入 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>

@@ -9,10 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
@@ -88,6 +91,10 @@ public class NgrokAutoConfiguration {
     @EventListener
     public void onApplicationReady(ApplicationReadyEvent event) {
         if (client != null) {
+            return;
+        }
+        if (!properties.isAutoStart()) {
+            log.info("[Ngrok] plugin.ngrok.auto-start=false，跳过启动期默认隧道（管理接口仍可用）");
             return;
         }
         int localPort = resolveLocalPort(event);
@@ -517,5 +524,40 @@ public class NgrokAutoConfiguration {
         return registry -> {
             registry.registerFlag("ngrok", "内网穿透", true, "ngrok隧道模块");
         };
+    }
+
+    /**
+     * 端口映射编排服务（页面创建的多端口映射）。
+     *
+     * @param resourceLoader 资源加载器（读取私有部署 CA 证书）
+     * @return 编排服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public NgrokTunnelService ngrokTunnelService(ObjectProvider<ResourceLoader> resourceLoader) {
+        return new NgrokTunnelService(properties, resourceLoader.getIfAvailable());
+    }
+
+    /**
+     * Web 环境下的映射管理接口。
+     *
+     * <p>非 Web 应用不注册控制器；管理接口与启动期默认隧道共用同一份配置。</p>
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
+    public static class NgrokTunnelWebConfiguration {
+
+        /**
+         * 注册映射管理接口。
+         *
+         * @param service 编排服务
+         * @return 控制器
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public NgrokTunnelController ngrokTunnelController(NgrokTunnelService service) {
+            return new NgrokTunnelController(service);
+        }
     }
 }
