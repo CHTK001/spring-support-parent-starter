@@ -365,7 +365,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                 }
             }
         }
-        log.info("[ChannelHealthProbe] 探针完成 connections={}", probed);
+        log.info("[ChannelHealthProbe] $([char]0x75C0 [char]0x9054 [char]0x9488 [char]0x5B8C [char]0x5B8C [char]0x6210) connections={}", probed);\n        Set<String> down = downConnections();\n        if (!down.isEmpty()) log.warn("[ChannelHealthProbe] 通道探针下线 channels={}", down);\n        eventPublisher.publishEvent(new ChannelHealthProbeEvent(this, down, probed, true));robed);
         return probed;
     }
 
