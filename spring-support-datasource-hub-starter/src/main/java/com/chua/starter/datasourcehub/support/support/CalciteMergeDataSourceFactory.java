@@ -10,15 +10,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.calcite.adapter.jdbc.JdbcSchema;
+import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.schema.SchemaPlus;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -168,14 +174,54 @@ public class CalciteMergeDataSourceFactory {
     }
 
     /**
-     * 装配并直接取一条连接（供探测/控制台复用）。
+     * 装配并直接取一条兼容双引号标识符的 Calcite 连接（供探测/控制台复用）。
+     *
+     * <p>不能复用 {@link CalciteDataSourceCreator}：它在 utils 仓库里硬编码
+     * {@code lex=MYSQL}，该方言把 {@code "schema"."table"} 的双引号当字符串字面量，
+     * 跨库 SQL 在 parse 期就报 {@code Encountered "\""}。这里自建连接并改用
+     * {@code lex=MYSQL_ANSI}（MySQL 函数集 + 双引号标识符），逐成员注册
+     * JDBC schema 后再返回。</p>
      *
      * @param row 合并记录
      * @return 已打开的 Calcite 连接
      * @throws SQLException 建连失败
      */
-    public java.sql.Connection openConnection(MsDatasource row) throws SQLException {
-        return assemble(row).getConnection();
+    public Connection openConnection(MsDatasource row) throws SQLException {
+        String error = validateMembers(row);
+        if (error != null) {
+            throw new IllegalStateException(error);
+        }
+        List<Long> ids = memberIds(row);
+        Properties props = new Properties();
+        props.setProperty("lex", "MYSQL_ANSI");
+        props.setProperty("fun", "mysql");
+        Connection connection = DriverManager.getConnection("jdbc:calcite:", props);
+        try {
+            CalciteConnection calciteConn = connection.unwrap(CalciteConnection.class);
+            SchemaPlus rootSchema = calciteConn.getRootSchema();
+            Set<String> used = new LinkedHashSet<>();
+            for (Long id : ids) {
+                String schemaName = schemaName(used, row, id);
+                DataSource memberDs = toDataSource(id);
+                if (memberDs == null) {
+                    throw new IllegalStateException("成员数据源连接不可用: " + id);
+                }
+                JdbcSchema jdbcSchema = JdbcSchema.create(rootSchema, schemaName, memberDs, null, null);
+                rootSchema.add(schemaName, jdbcSchema);
+                used.add(schemaName);
+                log.debug("[calcite] 合并 {} -> schema {}", id, schemaName);
+            }
+            return connection;
+        } catch (Exception e) {
+            try {
+                connection.close();
+            } catch (Exception ignored) {
+            }
+            if (e instanceof java.sql.SQLException) {
+                throw (java.sql.SQLException) e;
+            }
+            throw new java.sql.SQLException("Calcite 联邦连接装配失败: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -213,37 +259,50 @@ public class CalciteMergeDataSourceFactory {
     }
 
     /**
-     * 经 {@link DatasourceService#connection(Long)} 建连并包装为 DataSource。
-     * @param id 长整数
-     * @return 返回值
-    */
+     * 成员的 DataSource 适配：Calcite 需要 {@link DataSource#getConnection()}。
+     *
+     * <p>不能复用 {@link DatasourceService#connection(Long)} 的共享 TTL 连接：
+     * Calcite 的 {@code JdbcSchema} 对 {@code getConnection()} 返回的连接**用后即关**
+     * （元数据枚举、推下执行都会 close），共享连接会被它关掉 —— H2 底层报
+     * {@code object already closed [90007]}，双 schema JOIN 因此失败（本地复现 +
+     * 远端线上同链路）。这里每次 {@code getConnection} 都经
+     * {@link DatasourceService#newConnection(Long)} 新建物理连接，关掉不影响他人。</p>
+     *
+     * @param id 成员数据源 ID
+     * @return 每次返回新连接的 DataSource；建连失败抛 SQLException（懒加载，查询期才感知）
+     */
     private DataSource toDataSource(Long id) {
-        try {
-            java.sql.Connection connection = datasourceServiceProvider.getObject().connection(id);
-            return new SingleConnectionDataSource(connection);
-        } catch (Exception e) {
-            log.warn("[calcite] 成员建连失败 id={} reason={}", id, e.getMessage());
-            return null;
-        }
+        return new FreshConnectionDataSource(datasourceServiceProvider, id);
     }
 
     /**
-     * 单连接 DataSource 适配：Calcite 需要 {@link DataSource#getConnection()}。
+     * 每次 {@link #getConnection()} 新建物理连接的 DataSource 适配。
      *
-     * <p>{@code DatasourceService.connection(id)} 返回的是「屏蔽 close 的空闲 TTL 缓存」连接，
-     * 这里把它包成 DataSource 交给 Calcite —— 每次 {@code getConnection} 返回同一底层连接。
-     * 调用方（控制台）用完需关闭外层 DataSource 包装，底层连接受 TTL 清扫保护。</p>
+     * <p>{@code newConnection(id)} 每次返回新连接、不缓存、不屏蔽 close，
+     * 所有权完整交给 Calcite —— 它用完即关，下次 {@code getConnection} 再建。</p>
      */
-    public record SingleConnectionDataSource(java.sql.Connection delegate) implements DataSource {
+    public record FreshConnectionDataSource(
+            ObjectProvider<DatasourceService> serviceProvider, Long datasourceId) implements DataSource {
 
-        @Override
-        public java.sql.Connection getConnection() {
-            return delegate;
+        private java.sql.Connection open() throws SQLException {
+            try {
+                return serviceProvider.getObject().newConnection(datasourceId);
+            } catch (SQLException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new java.sql.SQLException(
+                        "成员数据源建连失败: " + datasourceId + " reason=" + e.getMessage(), e);
+            }
         }
 
         @Override
-        public java.sql.Connection getConnection(String username, String password) {
-            return delegate;
+        public java.sql.Connection getConnection() throws SQLException {
+            return open();
+        }
+
+        @Override
+        public java.sql.Connection getConnection(String username, String password) throws SQLException {
+            return open();
         }
 
         @Override

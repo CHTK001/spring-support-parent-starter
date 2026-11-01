@@ -1113,6 +1113,37 @@ public class DatasourceServiceImpl implements DatasourceService {
         return cachedJdbcConnection(row.getId(), url, props, driverJarOf(row));
     }
 
+    @Override
+    public Connection newConnection(Long datasourceId) throws Exception {
+        if (datasourceId == null || datasourceId == DatasourceHubConstants.DEFAULT_DATASOURCE_ID) {
+            DataSource defaultDataSource = defaultDataSourceProvider.getIfAvailable();
+            if (defaultDataSource == null) {
+                throw new IllegalStateException("未配置默认数据源");
+            }
+            return defaultDataSource.getConnection();
+        }
+        MsDatasource row = datasourceMapper.selectById(datasourceId);
+        if (row == null) {
+            throw new IllegalStateException("数据源不存在: " + datasourceId);
+        }
+        // Calcite 合并记录没有自身的主机/库名/凭证：建连是「按成员装配联邦 schema」。
+        if (DatasourceHubConstants.isCalciteType(row.getDatasourceType())) {
+            return calciteMergeFactoryProvider.getObject().openConnection(row);
+        }
+        if (!DatasourceHubConstants.isJdbcFamily(row.getDatasourceType())) {
+            throw new UnsupportedOperationException("非 JDBC 数据源类型: " + row.getDatasourceType());
+        }
+        String url = resolveJdbcUrl(row);
+        url = applyTunnel(row, url);
+        Properties props = buildJdbcProps(row, url);
+        java.io.File driverJar = driverJarOf(row);
+        Connection fresh = driverJar == null
+                ? DriverManager.getConnection(url, props)
+                : JdbcDriverSupport.connect(driverJar, requireDriverClassName(datasourceId), url, props);
+        log.debug("[datasource-hub] 新建独立 JDBC 连接: id={} url={}", datasourceId, url);
+        return fresh;
+    }
+
     /**
      * 取该数据源引用的驱动 jar 文件；没配就返回 null（走内置驱动）。
      * @param row 数据源台账
