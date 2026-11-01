@@ -179,6 +179,19 @@ public class ScanCache {
     }
 
     /**
+     * 记录一次扫描结果（按条件 + 时钟 + 候选行），供之后 TTL 秒内的拍次复用。
+     *
+     * @param group 扫描分组
+     * @param preReadMs 预读时间窗
+     * @param preReadCount 每拍扫描上限
+     * @param dbNowMs 扫描时使用的数据库时钟
+     * @param candidates 扫描结果
+     */
+    public void put(String group, long preReadMs, int preReadCount, long dbNowMs, List<JobEntity> candidates) {
+        put(new ScanCacheKey(group, preReadMs, preReadCount), dbNowMs, candidates);
+    }
+
+    /**
      * 失效全部扫描结果（写侧出口调用）。
      */
     public void clear() {
