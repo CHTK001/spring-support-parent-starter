@@ -7,10 +7,13 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.util.StringUtils;
@@ -71,6 +74,10 @@ public class CloudflaredAutoConfiguration {
     @EventListener
     public void onApplicationReady(ApplicationReadyEvent event) {
         if (client != null) {
+            return;
+        }
+        if (!properties.isAutoStart()) {
+            log.info("[Cloudflared] plugin.cloudflared.auto-start=false，跳过启动期默认隧道（管理接口仍可用）");
             return;
         }
         int localPort = resolveLocalPort(event);
@@ -222,5 +229,37 @@ public class CloudflaredAutoConfiguration {
         return registry -> {
             registry.registerFlag("cloudflared", "内网穿透", true, "cloudflared隧道模块");
         };
+    }
+
+    /**
+     * 端口映射编排服务（页面创建的多端口映射）。
+     *
+     * @return 编排服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CloudflaredTunnelService cloudflaredTunnelService() {
+        return new CloudflaredTunnelService(properties);
+    }
+
+    /**
+     * Web 环境下的映射管理接口。
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
+    public static class CloudflaredTunnelWebConfiguration {
+
+        /**
+         * 注册映射管理接口。
+         *
+         * @param service 编排服务
+         * @return 控制器
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public CloudflaredTunnelController cloudflaredTunnelController(CloudflaredTunnelService service) {
+            return new CloudflaredTunnelController(service);
+        }
     }
 }

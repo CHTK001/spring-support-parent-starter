@@ -545,7 +545,7 @@ public class DeviceScheduleManager {
      */
     private Runnable body(CredentialTask source, String credId) {
         return switch (source) {
-            case OFFLINE_DETECT -> () -> doOfflineCheck(deviceService.listByCredentialId(credId));
+            case OFFLINE_DETECT -> () -> doOfflineCheck(deviceService.listCheckableDevicesByCredentialId(credId));
             case DEVICE_SYNC -> () -> syncService.syncDevicesByCredential(credId);
             case ORG_SYNC -> () -> syncService.syncOrganizationsByCredential(credId);
         };
