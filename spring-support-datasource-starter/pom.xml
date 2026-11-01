@@ -205,7 +205,7 @@
 <!--             <plugin> -->
 <!--                 <groupId>com.chua</groupId> -->
 <!--                 <artifactId>utils-support-flyway-maven-plugin</artifactId> -->
-            <version></version>
+<!--                 <version></version> -->
 <!--                 <executions> -->
 <!--                     <execution> -->
 <!--                         <id>generate-module-init-sql</id> -->
