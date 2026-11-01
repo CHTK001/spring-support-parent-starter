@@ -48,6 +48,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     private final SysAiProviderMapper providerMapper;
     private final SysAiProviderConnectionMapper connectionMapper;
     private final GlobalSettingReader settingReader;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 渠道健康探针分组
