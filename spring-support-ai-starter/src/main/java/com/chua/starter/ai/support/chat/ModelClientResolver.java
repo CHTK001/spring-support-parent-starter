@@ -13,6 +13,8 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.service.ChannelHealthService;
+import com.chua.starter.ai.support.spring.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
@@ -85,6 +87,11 @@ public class ModelClientResolver {
      * 渠道路由缓存：key = ownerScope
      */
     private final Map<String, CachedRoutes> routeCache = new ConcurrentHashMap<>();
+
+    /**
+     * 渠道健康探针服务：通道隔离（剔除下线的连接）
+     */
+    private final ChannelHealthService channelHealthService;
 
     /**
      * 按（可能带 providerId 前缀的）模型名解析可用对话客户端。
@@ -297,6 +304,16 @@ public class ModelClientResolver {
     }
 
     /**
+     * 本连接是否已下线（通道探针连续失败达到阈值后自动下线）
+     *
+     * @param conn 连接
+     * @return true 表示已下线（路由层应剔除）
+     */
+    private boolean isDown(SysAiProviderConnection conn) {
+        return channelHealthService.isDown(conn.getConnectionId());
+    }
+
+    /**
      * 收集供应商级与其全部连接级凭证中的密钥（去重、保序），并按归属作用域过滤连接。
      *
      * <p>归属规则：</p>
@@ -331,6 +348,9 @@ public class ModelClientResolver {
             }
             List<SysAiProviderConnection> connections = connectionMapper.selectList(wrapper);
             for (SysAiProviderConnection conn : connections) {
+                if (isDown(conn)) {
+                    continue;
+                }
                 keys.addAll(ProviderCredentials.apiKeys(conn.getCredentials()));
             }
         } catch (Exception e) {
@@ -392,10 +412,13 @@ public class ModelClientResolver {
                 if (connections.isEmpty()) {
                     continue;
                 }
-                // 聚合同一渠道的所有账号
+                // 聚合同一渠道的所有账号（剔除下线的连接）
                 List<String> apiKeys = new ArrayList<>();
                 RouteTarget template = null;
                 for (SysAiProviderConnection conn : connections) {
+                    if (isDown(conn)) {
+                        continue;
+                    }
                     RouteTarget target = spi.toRouteTarget(conn.getCredentials());
                     if (target == null) {
                         continue;
