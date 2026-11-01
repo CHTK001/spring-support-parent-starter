@@ -1701,7 +1701,7 @@
          2. åº”ä½¿ç”¨settings.xmlä¸­çš„<servers>é…ç½®å‡­è¯
          3. å¯é€šè¿‡-Då‚æ•°æˆ–profileè¦†ç›–ä»“åº“URL
          4. IDå¿…é¡»ä¸Žsettings.xmlä¸­çš„server idä¸€è‡´
-        </repository>
+    <repositories>
         <repository>
             <id>central</id>
             <name>Maven Central</name>
