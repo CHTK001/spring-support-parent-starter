@@ -222,6 +222,11 @@ plugin:
       # install-dir: /data/app/tshark
       # 下载 + 解压 + 自检的总超时（秒）
       timeout-seconds: 600
+      # 是否再跑一次 tshark -T json -x：把每包完整协议层 JSON（rawData）与
+      # 协议还原出的明文（restoredText，HTTP / TLS / DNS / SSH / FTP / SMTP / MQTT / 数据库协议...）
+      # 回写到报文表，让离线导入与实时抓包的「协议还原」显示完整。生产默认开启，
+      # 嫌解析慢或不需要时可以设为 false
+      json-restore: true
 
 logging:
   level:
