@@ -34,7 +34,7 @@
 | 通道/预置位/门禁/事件 | `ChannelController`、`PtzController`、`AccessController`、`EventController` | 基础 CRUD 与查询 |
 | 视频 | `VideoController` | 返回厂商 HLS/FLV 地址、回放地址 |
 | 定时 | `scheduler/DeviceScheduleManager` | `TimeScheduler` 5 秒 tick：4 个全局任务 + 每套凭据 3 个任务（开关/间隔见凭据高级配置） |
-| 前端 | `pages/device` | 设备树 + 概览/地图/通道/视频/云台/门禁/事件 8 个页签；机房拓扑 `DeviceTopoView`；定时任务 `DeviceTaskView` |
+| 前端 | `pages/device` | 设备资产（设备列表/分组管理/机房拓扑 三页签）+ 厂商接入（接入凭据/厂商任务 两页签）；定时任务按凭据管理，分布到两页内 |
 | 前端播放 | `ReVideo.vue` | hls.js + flv.js，原生 video |
 
 ### 1.2 关键缺口
@@ -56,6 +56,18 @@
 > 补充：`DeviceProvider` 的 Javadoc 写“由 `META-INF/services/...` 注册”，实际实现是 Spring `@Component`。两者混用会让第三方 jar 接入方式不明确，方案里统一为 **Spring Bean 注册**，并在文档中改掉错误注释。
 
 ---
+
+### 1.3 页面导航（重构后）
+
+菜单与页签关系如下：
+
+| 一级菜单 | 路由 | 页面内容 |
+|---|---|---|
+| 设备资产 | `/device` | 设备列表、分组管理、机房拓扑（`?tab=list|groups|topo`）。旧菜单项已在页面内收敛为页签。
+| 厂商接入 | `/device/provider` | 接入凭据、厂商任务（`?tab=tasks`）。定时任务按厂商凭据管理，全局任务在所有凭据之上。
+
+- 旧独立菜单（设备分组、机房拓扑、定时任务）已收起为页签：`/device/groups` 进 `?tab=groups`，`/device/topo` 进 `?tab=topo`，`/device/tasks` 进 `?tab=tasks`（`showLink: false, isVisible: 0`），不再作为一级菜单出现。
+- 视频墙/向导、门禁/停车场、大屏、同步中心仍在待接入清单中，不在设备资产或厂商接入菜单内。
 
 ## 2. 需求逐条对照
 

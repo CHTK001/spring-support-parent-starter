@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -156,6 +157,36 @@ public class SysAiAppKey {
      */
     @TableField("sys_ai_app_key_total_tokens")
     private Long totalTokens; // total令牌
+
+    /**
+     * 账户余额（元），充值扣费的记账列
+     */
+    @TableField("sys_ai_app_key_balance")
+    private BigDecimal balance; // balance
+
+    /**
+     * 所属套餐 ID（0 = 无套餐）
+     */
+    @TableField("sys_ai_app_key_plan_id")
+    private Long planId; // planId
+
+    /**
+     * 是否允许透支（0=不允许，1=允许）：余额不足时允许负债仍放行，否则计费守卫拦截
+     */
+    @TableField("sys_ai_app_key_overdraft_enabled")
+    private Integer overdraftEnabled; // overdraftEnabled
+
+    /**
+     * 每分钟单价，按供应商/套餐定价，用于消费计费
+     */
+    @TableField("sys_ai_app_key_minute_rate")
+    private BigDecimal minuteRate; // minuteRate
+
+    /**
+     * 累计费用，消费扣费时累加
+     */
+    @TableField("sys_ai_app_key_total_cost")
+    private BigDecimal totalCost; // totalCost
 
     /**
      * 授权范围

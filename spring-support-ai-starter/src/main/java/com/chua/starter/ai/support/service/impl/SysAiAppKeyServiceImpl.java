@@ -6,16 +6,21 @@ import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.util.KeyGenerator;
+import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;
+import com.chua.starter.ai.support.mapper.SysAiAppKeyTopupLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;

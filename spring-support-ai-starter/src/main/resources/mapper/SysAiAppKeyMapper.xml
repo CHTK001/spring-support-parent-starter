@@ -29,6 +29,11 @@
         <result property="maxUse" column="sys_ai_app_key_max_use"/>
         <result property="maxTokens" column="sys_ai_app_key_max_tokens"/>
         <result property="totalTokens" column="sys_ai_app_key_total_tokens"/>
+        <result property="balance" column="sys_ai_app_key_balance"/>
+        <result property="planId" column="sys_ai_app_key_plan_id"/>
+        <result property="overdraftEnabled" column="sys_ai_app_key_overdraft_enabled"/>
+        <result property="minuteRate" column="sys_ai_app_key_minute_rate"/>
+        <result property="totalCost" column="sys_ai_app_key_total_cost"/>
         <result property="scope" column="sys_ai_app_key_scope"/>
         <result property="remark" column="sys_ai_app_key_remark"/>
         <result property="createName" column="create_name"/>
