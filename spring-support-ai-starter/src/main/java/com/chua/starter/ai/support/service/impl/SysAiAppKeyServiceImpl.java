@@ -483,14 +483,14 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
      */
     private void appendTopupLog(SysAiAppKey entity, String appKey, String type, BigDecimal amount,
                                 BigDecimal balanceBefore, BigDecimal balanceAfter, String remark) {
-        SysAiAppKeyTopupLog log = new SysAiAppKeyTopupLog();
-        log.setAppKeyId(entity.getId().longValue());
-        log.setAppKey(appKey);
-        log.setType(type);
-        log.setAmount(amount);
-        log.setBalanceBefore(balanceBefore);
-        log.setBalanceAfter(balanceAfter);
-        log.setRemark(remark);
-        sysAiAppKeyTopupLogMapper.insert(log);
+        SysAiAppKeyTopupLog topupLog = new SysAiAppKeyTopupLog();
+        topupLog.setAppKeyId(entity.getId().longValue());
+        topupLog.setAppKey(appKey);
+        topupLog.setType(type);
+        topupLog.setAmount(amount);
+        topupLog.setBalanceBefore(balanceBefore);
+        topupLog.setBalanceAfter(balanceAfter);
+        topupLog.setRemark(remark);
+        sysAiAppKeyTopupLogMapper.insert(topupLog);
     }
 }

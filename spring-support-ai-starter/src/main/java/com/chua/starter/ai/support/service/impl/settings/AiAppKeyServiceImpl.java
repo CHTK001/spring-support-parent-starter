@@ -436,15 +436,15 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      */
     private SysAiAppKeyTopupLog topupLog(SysAiAppKey entity, String type, BigDecimal amount,
                                          BigDecimal balanceBefore, BigDecimal balanceAfter, String remark) {
-        SysAiAppKeyTopupLog log = new SysAiAppKeyTopupLog();
-        log.setAppKeyId(entity.getId().longValue());
-        log.setAppKey(entity.getAppKey());
-        log.setType(type);
-        log.setAmount(amount);
-        log.setBalanceBefore(balanceBefore);
-        log.setBalanceAfter(balanceAfter);
-        log.setRemark(remark);
-        return log;
+        SysAiAppKeyTopupLog record = new SysAiAppKeyTopupLog();
+        record.setAppKeyId(entity.getId().longValue());
+        record.setAppKey(entity.getAppKey());
+        record.setType(type);
+        record.setAmount(amount);
+        record.setBalanceBefore(balanceBefore);
+        record.setBalanceAfter(balanceAfter);
+        record.setRemark(remark);
+        return record;
     }
 
     /**

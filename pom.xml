@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Parent Starter - 企业级Spring Boot应用支持框架
 
@@ -557,76 +557,76 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-common-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-cache-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-datasource-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-mybatis-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- 认证和安全模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-oauth-client-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-console-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- 缓存和存储模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-redis-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-filesystem-minio-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-filesystem-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- API文档模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-swagger-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-swagger2-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- 消息队列模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-queue-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             
@@ -643,43 +643,43 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-socket-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-socket-websocket-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-socket-io-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-socket-rsocket-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-socket-sse-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-rpc-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-sync-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- 搜索和数据处理模块 - spring-support-elasticsearch-starter 已删除, 由 utils-support-springboot-starter 提供 ES 能力 (如有) -->
@@ -690,34 +690,34 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-discovery-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-configcenter-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- 数据检索服务化（天气 / 定位 / 台风） -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-datasearch-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- 监控和上报模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-report-client-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- Docker 独立模块：依赖 server-starter（主机台账/凭据/SSH 连接池） -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-docker-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             
@@ -726,13 +726,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-tencent-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-aliyun-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
 <!-- 容错和策略模块 -->
@@ -743,94 +743,86 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ssh-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-osgi-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-bundle-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- 定时任务模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-job-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <!-- AI深度学习模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ai-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- UEBA 用户实体行为分析模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ueba-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- 消息推送模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-message-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- 统一模板库：hiprint 绘制模板 + 消息模板 + 组卷模板 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-template-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-proxy-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-api-support-common-configuration-starter</artifactId>
-                <version>4.0.0.50</version>
-            </dependency>
+<version>4.0.0.42</version>
 
             <!-- 采集平台模块（/v2/collect/**）。
                  与上面同属跨 reactor 声明：artifact 由 spring-support-api-starter 构建产出，
                  版本号与本 reactor 同步为 4.0.0.51，故可用 ${project.version}。
                  引入方需先把该 artifact install 到本地仓库（它不在本 reactor 模块树内）。 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-api-support-collect-starter</artifactId>
-                <version>4.0.0.50</version>
-            </dependency>
+<version>4.0.0.42</version>
 
             <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-report-server-start</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-unified-client-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-unified-server-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             -->
 
@@ -846,7 +838,6 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-extension-starter</artifactId>
-                <version>${utils.version}</version>
             </dependency>
 
             <dependency>
@@ -1024,7 +1015,7 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-circuit-breaker-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             -->
 
@@ -1046,7 +1037,7 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-oauth-server-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             -->
 
@@ -1054,7 +1045,7 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-webjar-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             -->
 
@@ -1066,7 +1057,7 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-monitor-client-starter</artifactId>
-                <version>4.0.0.50</version>
+                <version>${project.version}</version>
             </dependency>
             -->
 
@@ -1588,7 +1579,7 @@
 <!--             <plugin> -->
 <!--                 <groupId>com.chua</groupId> -->
 <!--                 <artifactId>utils-support-flyway-maven-plugin</artifactId> -->
-<!--                 <version>4.0.0.50</version> -->
+<!--                 <version>${project.version}</version> -->
 <!--                 <executions> -->
 <!--                     <execution> -->
 <!--                         <id>generate-module-init-sql</id> -->
@@ -1704,7 +1695,6 @@
          4. ID必须与settings.xml中的server id一致
     -->
     <repositories>
-
         <repository>
             <id>central</id>
             <name>Maven Central</name>
