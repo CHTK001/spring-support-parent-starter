@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiAppKeyTopupLogMapper">
+
+    <!-- 流水实体为无前缀风格（type/amount/balanceBefore/balanceAfter...），DB 列为 sys_ai_app_key_topup_log_* 前缀风格 -->
+
+    <resultMap id="topupLogResultMap" type="com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog">
+        <id property="id" column="sys_ai_app_key_topup_log_id"/>
+        <result property="appKeyId" column="sys_ai_app_key_topup_log_app_key_id"/>
+        <result property="appKey" column="sys_ai_app_key_topup_log_app_key"/>
+        <result property="type" column="sys_ai_app_key_topup_log_type"/>
+        <result property="amount" column="sys_ai_app_key_topup_log_amount"/>
+        <result property="balanceBefore" column="sys_ai_app_key_topup_log_balance_before"/>
+        <result property="balanceAfter" column="sys_ai_app_key_topup_log_balance_after"/>
+        <result property="remark" column="sys_ai_app_key_topup_log_remark"/>
+        <result property="createdAt" column="sys_ai_app_key_topup_log_created_at"/>
+    </resultMap>
+
+    <select id="selectByAppKey" resultMap="topupLogResultMap">
+        SELECT `sys_ai_app_key_topup_log_id`,
+               `sys_ai_app_key_topup_log_app_key_id`,
+               `sys_ai_app_key_topup_log_app_key`,
+               `sys_ai_app_key_topup_log_type`,
+               `sys_ai_app_key_topup_log_amount`,
+               `sys_ai_app_key_topup_log_balance_before`,
+               `sys_ai_app_key_topup_log_balance_after`,
+               `sys_ai_app_key_topup_log_remark`,
+               `sys_ai_app_key_topup_log_created_at`
+        FROM `sys_ai_app_key_topup_log`
+        WHERE `sys_ai_app_key_topup_log_app_key` = #{appKey}
+        ORDER BY `sys_ai_app_key_topup_log_created_at` DESC
+    </select>
+
+</mapper>
