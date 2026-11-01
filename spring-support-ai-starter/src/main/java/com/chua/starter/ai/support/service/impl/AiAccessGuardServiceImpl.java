@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.service.AiAccessGuardService;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -87,6 +89,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             if (!isGroupRateLimited(appKey)) {
                 return false;
             }
+            checkBillable(appKey);
         }
         return passed;
     }
@@ -119,8 +122,32 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             if (!isGroupRateLimited(token)) {
                 return false;
             }
+            // 计费守卫：余额耗尽且不允许透支 → 抛出 402
+            checkBillable(token);
         }
         return passed;
+    }
+
+    /**
+     * 计费守卫：检验 appKey 的额度是否允许发起新请求。
+     *
+     * @param appKey appKey
+     * @throws ApiException INSUFFICIENT_BALANCE（402），余额不足且不允许透支时
+     */
+    private void checkBillable(String appKey) {
+        if (!isBillable(appKey)) {
+            throw new ApiException(ApiErrorCode.INSUFFICIENT_BALANCE,
+                    "AppKey 余额不足，请充值后使用");
+        }
+    }
+
+    @Override
+    public boolean isBillable(String appKey) {
+        if (StringUtils.isBlank(appKey) || !isAppKeyEnabled()) {
+            return true;
+        }
+        // 只读计量：余额为负且不允许透支 = 不可计量
+        return sysAiAppKeyService.isBillable(appKey);
     }
 
     /**
