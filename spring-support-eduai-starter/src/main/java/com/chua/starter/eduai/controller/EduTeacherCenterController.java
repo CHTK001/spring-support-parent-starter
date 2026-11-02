@@ -12,7 +12,6 @@ import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
 import com.chua.starter.eduai.model.vo.MarkingStatsVO;
-import com.chua.starter.eduai.model.vo.MarkingDashboardStatsVO;
 import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
 import com.chua.starter.eduai.service.IEduPaperService;
@@ -278,18 +277,6 @@ public class EduTeacherCenterController {
     @GetMapping("/marking/stats/{taskId}")
     public ReturnResult<MarkingStatsVO> markingStats(@PathVariable String taskId) {
         return ReturnResult.ok(teacherCenterService.markingStats(taskId));
-    }
-
-    /**
-     * 阅卷总览统计报表（当前账号归属范围内）。
-     *
-     * @return 阅卷总览统计：任务状态分布、老师完成状态、得分率分布、
-     *         错题 TOP 榜与订正率
-     */
-    @Operation(summary = "阅卷总览统计")
-    @GetMapping("/marking/dashboard-stats")
-    public ReturnResult<MarkingDashboardStatsVO> markingDashboardStats() {
-        return ReturnResult.ok(teacherCenterService.markingDashboardStats());
     }
 
     /**
