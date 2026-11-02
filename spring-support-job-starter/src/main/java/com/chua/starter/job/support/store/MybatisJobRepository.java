@@ -116,6 +116,18 @@ public class MybatisJobRepository implements JobRepository {
         return findDue(now, preReadMs, preReadCount, null);
     }
 
+    /**
+     * 失效扫描缓存；未装配缓存（默认关闭）时是无操作。
+     *
+     * <p>写侧出口（保存、改调度、启停、删除、注销、同步 next_time、refresh）都要走这里：
+     * 缓存可能为 {@code null}，直接 {@code scanCache.clear()} 会在默认配置下抛 NPE。</p>
+     */
+    private void invalidateScanCache() {
+        if (scanCache != null) {
+            scanCache.clear();
+        }
+    }
+
     @Override
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount, String group) {
         // 查询缓存命中：相位 + 扫描结果来自同一查询条件的上一拍扫描，跨拍次复用（最多省掉 2 次查库）；
@@ -723,7 +735,7 @@ public class MybatisJobRepository implements JobRepository {
         triggerCache.remove(key);
         lastFireMs.remove(key);
         // 任何写侧出口都可能改变扫描行：一律清掉扫描缓存，让下一拍用新相位重查
-        scanCache.clear();
+        invalidateScanCache();
         // 序列键是台账主键，只能按任务键反查出行才删得掉；含已删除行，避免留下无人认领的缓存。
         List<JobEntity> rows = jobMapper.selectList(Wrappers.<JobEntity>lambdaQuery()
                 .select(JobEntity::getSysJobId, JobEntity::getSysJobName)
