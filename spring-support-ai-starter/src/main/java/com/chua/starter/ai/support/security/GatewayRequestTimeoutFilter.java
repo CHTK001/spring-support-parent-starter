@@ -155,15 +155,22 @@ public class GatewayRequestTimeoutFilter extends AbstractGatewaySecurityFilter {
                 expired = true;
                 HttpServletResponse raw = (HttpServletResponse) getResponse();
                 String body = "{\"error\":\"Gateway Timeout\",\"timeout\":" + timeoutMillis + "}";
+                byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
                 try {
                     raw.setStatus(HttpServletResponse.SC_GATEWAY_TIMEOUT);
                     raw.setContentType("application/json;charset=UTF-8");
                     raw.setCharacterEncoding(StandardCharsets.UTF_8.name());
-                    raw.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
+                    // 必须显式给长度：不设 Content-Length 时容器会退化成 chunked，
+                    // 客户端要等到「最后一个数据块」才认为响应结束 —— 而那个块要等
+                    // 控制器跑完才会来，等于把 504 又拖回了控制器耗时（实测 2s 阈值
+                    // 仍然在 6s 才到客户端）。长度一给，客户端读完这几个字节就立刻结束。
+                    raw.setContentLength(bytes.length);
+                    raw.getOutputStream().write(bytes);
                     raw.flushBuffer();
                 } catch (IllegalStateException stateException) {
                     // 下游已先拿了 Writer：改用字符流写，避免输出流/字符流模式冲突
                     try {
+                        raw.setContentLength(bytes.length);
                         raw.getWriter().write(body);
                         raw.flushBuffer();
                     } catch (IOException e) {
