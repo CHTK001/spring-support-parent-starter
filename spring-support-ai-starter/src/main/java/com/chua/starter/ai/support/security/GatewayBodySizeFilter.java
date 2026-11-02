@@ -8,7 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
+import jakarta.servlet.ReadListener;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -150,7 +150,7 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
         }
 
         @Override
-        public void setReadListener(Logger listener) {
+        public void setReadListener(ReadListener listener) {
             throw new UnsupportedOperationException("read in blocking mode");
         }
     }
