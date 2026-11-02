@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service;
 import com.chua.deeplearning.support.reid.PersonTrack;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI 人脸重识别服务接口。
@@ -55,6 +56,23 @@ public interface AiReidService {
     default ObserveResult observe(String group, String cameraId, String sourceId, byte[] imageData) {
         return observe(group, cameraId, sourceId, imageData, null, null);
     }
+
+    /**
+     * 登记（加入重识别底库）：检测人脸 → 裁剪 → 提特征 → 写底库。
+     *
+     * <p>把「观测来的临时人」变成底库里的正式行：登记后它将直接出现在底库列表里，
+     * 并能被「以图搜人」按向量搜到。</p>
+     *
+     * <p><b>只接受单人脸。</b>多于 1 张人脸时拒绝并提示裁剪后重试，
+     * 避免登记了其中一块而用户毫不知情。</p>
+     *
+     * @param group     分组名（空值按默认组 {@code default}）
+     * @param id        人员标识（底库行的向量标识）
+     * @param imageData 图片字节
+     * @param metadata  元数据（可含 `name` 展示名、`cameraId` 摄像头、`lat`/`lng` 经纬度；`group` 可选且以参数为准）
+     * @return 是否登记成功
+     */
+    boolean enroll(String group, String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
      * 以图搜人：在已有轨迹中检索最相似的人。
