@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.network.client.ClientResponse;
+import com.chua.common.support.network.client.HttpClientBuilder;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.spi.ServiceProvider;
@@ -256,7 +257,6 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param connectionId 连接标识
      * @return 健康状态
      */
-    @Override
     public ChannelHealth state(String connectionId) {
         return Optional.ofNullable(channelHealthMapper.selectById(connectionId))
                 .orElseGet(() -> channelState(connectionId));
@@ -379,7 +379,6 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param providerId 供应商标识
      * @return 探针完成的连接数
      */
-    @Override
     public int probeByProvider(String providerId) {
         SysAiProvider provider = provider(providerId);
         int probed = 0;
@@ -661,7 +660,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             h.setConsecutiveFailures(0);
             // 指数加权平均延迟
             int avg = Optional.ofNullable(h.getAverageLatency()).orElse(0);
-            int count = h.getSuccesses();
+            long count = h.getSuccesses();
             h.setAverageLatency(avg == 0 ? latency : (int) Math.round(((long) avg * (count - 1) + latency) / count));
             if (wasDown) {
                 // 恢复：连续成功达阈值
@@ -689,7 +688,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
 
     private ClientResponse send(String url, String header, String proxy, int timeoutSec) throws Exception {
         try {
-            HttpClientFactory builder = HttpClientFactory.of(url);
+            HttpClientBuilder builder = HttpClientFactory.of(url);
             if (StringUtils.isNotBlank(header)) {
                 builder.authorization(header);
             }

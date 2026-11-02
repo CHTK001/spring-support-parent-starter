@@ -35,9 +35,13 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ngrok-starter</artifactId>
-            <version>${utils.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.ngrok</groupId>
