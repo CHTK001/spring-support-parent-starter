@@ -25,6 +25,8 @@ import com.chua.starter.ai.support.entity.settings.SysAiModel;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
@@ -38,6 +40,8 @@ import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.ChannelCircuitService;
+import com.chua.starter.ai.support.service.ChannelHealthService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -105,6 +109,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
     private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
+    private final ChannelCircuitService channelCircuitService; // 请求级熔断器（fail-closed）
+    private final ChannelHealthService channelHealthService; // 渠道健康状态（人工熔断开关）
     private final AgentProviderFactory agentProviderFactory;
 
     /**
@@ -129,6 +135,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * 无身份线程使用的桶名。刻意与任何真实 userId 区分开（真实 userId 不会等于此常量）。
      */
     private static final String SYSTEM_ALIAS_BUCKET = "\u0000system";
+
+    /**
+     * 本次解析命中的 DB 供应商（线程级，仅用于熔断判据）。
+     *
+     * <p>为什么不把提供商作为返回值传递：{@code resolveChatClient} 有十余处调用方，
+     * 改动签名会波及整条链路，而熔断只需要「这次到底走了哪个供应商」。用线程局部变量
+     * 在解析时落一次，调用方用完 {@link #clearResolvedProvider()} 清理；线程池复用下
+     * 必须清理，否则会把上一条请求的供应商带进下一条。</p>
+     */
+    private static final ThreadLocal<SysAiProvider> RESOLVED_PROVIDER = new ThreadLocal<>();
     private final Map<String, CachedDbClient> dbClientCache = new ConcurrentHashMap<>(); // db客户端缓存
 
     /**
@@ -154,7 +170,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return AiChatResult.failed(request.getModel(),
                     "No available ChatClient for model: " + request.getModel());
         }
+        // 熔断守卫：熔断打开时本地拒绝，不向上游发请求（fail-closed）
+        try {
+            guardCircuit(request);
+        } finally {
+            // 判据已用完，清理线程局部（熔断打开时会抛异常，同样必须清理）
+            RESOLVED_PROVIDER.remove();
+        }
         ChatClient configured = maybeWrapAgent(configureClient(client, request), request);
+        String providerId = circuitProviderId(request);
+        String model = request.getModel();
         try {
             long start = System.currentTimeMillis();
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
@@ -172,9 +197,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
              * @param response 响应
              */
             recordUsage(configured, callTypeOf(request), response, AiUserContext.currentUserId());
+            channelCircuitService.recordSuccess(providerId, model);
             String text = response != null && response.getText() != null ? response.getText() : "";
             return AiChatResult.ok(text, resolveUsedModel(configured, request, usage), usage);
         } catch (Exception e) {
+            channelCircuitService.recordFailure(providerId, model, e.getMessage());
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
             return AiChatResult.failed(request.getModel(), e.getMessage());
         } finally {
@@ -182,7 +209,58 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (configured instanceof AgentChatClient agentClient) {
                 agentClient.close();
             }
+            RESOLVED_PROVIDER.remove();
         }
+    }
+
+    /**
+     * 熔断守卫：判定本次请求是否允许打到上游。
+     *
+     * <p>两条 fail-closed 判据：</p>
+     * <ol>
+     *   <li>请求级熔断器对该「供应商 + 模型」已打开（连续失败达阈值）；</li>
+     *   <li>该供应商配置了连接，但全部不可路由（探针 {@code DOWN} 或人工强制熔断）。</li>
+     * </ol>
+     *
+     * <p>命中任一条即抛 {@link ApiErrorCode#SERVICE_UNAVAILABLE}（503），
+     * 由 {@code AiApiExceptionAdvice} 转成带可操作提示的响应。抛业务异常而不是返回
+     * 失败文本，是因为调用方（OpenAI 兼容网关）需要的是 HTTP 语义上的「暂时不可用」，
+     * 好让客户端退避重试，而不是把错误当成回复内容展示给终端用户。</p>
+     *
+     * @param request 对话请求
+     * @throws ApiException 熔断打开 / 全部通道下线时
+     */
+    private void guardCircuit(AiChatRequest request) {
+        String model = request.getModel();
+        String providerId = circuitProviderId(request);
+        if (!channelCircuitService.allowRoute(providerId, model)) {
+            throw new ApiException(ApiErrorCode.SERVICE_UNAVAILABLE,
+                    "模型 " + model + " 连续失败触发熔断，请稍后重试");
+        }
+        SysAiProvider provider = RESOLVED_PROVIDER.get();
+        if (provider != null) {
+            ModelClientResolver.ConnectionAvailability availability =
+                    modelClientResolver.availability(provider, ModelClientResolver.ownerScopeOf(provider));
+            if (availability.allDown()) {
+                throw new ApiException(ApiErrorCode.SERVICE_UNAVAILABLE,
+                        "供应商 " + provider.getProviderId()
+                                + " 的全部通道已熔断/下线，请稍后重试或检查渠道健康");
+            }
+        }
+    }
+
+    /**
+     * 熔断统计使用的供应商标识。
+     *
+     * @param request 对话请求
+     * @return 供应商标识；未知时返回空（熔断器单独归桶）
+     */
+    private String circuitProviderId(AiChatRequest request) {
+        String providerId = request.getProviderId();
+        if (providerId == null || providerId.isBlank()) {
+            providerId = request.getProvider();
+        }
+        return providerId;
     }
 
     /**
@@ -314,12 +392,18 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
         ChatClient configured;
+        String circuitProvider;
+        String circuitModel;
         try {
             ChatClient client = resolveChatClient(request);
             if (client == null) {
                 emitter.completeWithError(new IllegalStateException("No available ChatClient for model: " + request.getModel()));
                 return emitter;
             }
+            // 熔断守卫：熔断打开时本地拒绝（SSE 通道也要走同一判据）
+            guardCircuit(request);
+            circuitProvider = circuitProviderId(request);
+            circuitModel = request.getModel();
             configured = maybeWrapAgent(configureClient(client, request), request);
         } catch (Throwable e) {
             // 组装阶段（含 Agent 包装 / SPI 实例化）异常必须显式记录并经错误回调下发，
@@ -338,6 +422,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 log.debug("[ai] 下发错误失败，已忽略: {}", cbEx.getMessage());
             }
             return emitter;
+        } finally {
+            RESOLVED_PROVIDER.remove();
         }
         StringBuilder fullResponse = new StringBuilder(256); // 回复长度不可预估
         final com.chua.common.support.ai.AiUsage[] lastUsage = new com.chua.common.support.ai.AiUsage[1];
@@ -466,10 +552,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             if (configured instanceof AgentChatClient agentClient) {
                                 agentClient.close();
                             }
+                            channelCircuitService.recordSuccess(circuitProvider, circuitModel);
                             emitter.complete();
                         },
                         error -> {
                             log.error("[AiChat] stream error: model={}", request.getModel(), error);
+                            channelCircuitService.recordFailure(circuitProvider, circuitModel, error.getMessage());
                             if (onError != null) {
                                 try {
                                     onError.accept(error);
@@ -486,6 +574,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 );
             } catch (Throwable e) {
                 log.error("[AiChat] stream failed: model={}", request.getModel(), e);
+                channelCircuitService.recordFailure(circuitProvider, circuitModel, e.getMessage());
                 if (onError != null) {
                     try {
                         onError.accept(e);
@@ -506,9 +595,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     @Override
     public ChatClient prepareConfigured(AiChatRequest request) {
-        ChatClient base = resolveChatClient(request);
-        if (base == null) {
-            return null;
+        ChatClient base;
+        try {
+            base = resolveChatClient(request);
+            if (base == null) {
+                return null;
+            }
+            guardCircuit(request);
+        } finally {
+            // 熔断判据已用完，必须清理线程局部，避免污染后续请求
+            RESOLVED_PROVIDER.remove();
         }
         return maybeWrapAgent(configureClient(base, request), request);
     }
@@ -526,11 +622,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         "No available ChatClient for model: " + request.getModel()));
                 return emitter;
             }
+            guardCircuit(request);
             configured = maybeWrapAgent(configureClient(client, request), request);
         } catch (Throwable e) {
             log.error("[AiChat] resume组装失败 model={}", request.getModel(), e);
             emitter.completeWithError(e);
             return emitter;
+        } finally {
+            RESOLVED_PROVIDER.remove();
         }
 
         if (!(configured instanceof AgentChatClient wrapper)) {
@@ -686,6 +785,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @return 底层 对话客户端，找不到返回 空
      */
     private ChatClient resolveChatClient(AiChatRequest request) {
+        // 每次解析先复位，避免线程池复用把上一条请求的供应商带进熔断判据
+        RESOLVED_PROVIDER.remove();
         String model = resolveModelAlias(request.getModel());
         if (model != null && !model.equals(request.getModel())) {
             log.info("[AiChat] 模型别名映射: {} -> {}", request.getModel(), model);
@@ -719,6 +820,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 if (freeProvider != null) {
                     ChatClient freeClient = getCachedDbClient(freeProvider, model);
                     if (freeClient != null) {
+                        RESOLVED_PROVIDER.set(freeProvider);
                         return freeClient;
                     }
                 }
@@ -727,6 +829,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (dbProvider != null) {
                 ChatClient dbClient = getCachedDbClient(dbProvider, model);
                 if (dbClient != null) {
+                    RESOLVED_PROVIDER.set(dbProvider);
                     if (request.getProvider() == null || request.getProvider().isBlank()) {
                         request.setProvider(dbProvider.getProviderId());
                     }

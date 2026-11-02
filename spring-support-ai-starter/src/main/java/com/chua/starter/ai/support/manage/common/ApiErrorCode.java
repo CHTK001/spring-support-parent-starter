@@ -121,6 +121,19 @@ public enum ApiErrorCode {
     UPSTREAM_ERROR("UPSTREAM_ERROR", 502),
 
     /**
+     * 无可用上游通道（熔断打开或全部通道已下线）。
+     *
+     * <p>与 {@link #UPSTREAM_ERROR} 区分：502 表示上游给了错误响应，503 表示网关
+     * <b>根本没有向上游发请求</b>——故障关闭（fail-closed），请求在本地就被拒绝，
+     * 客户端应稍后重试而不是去检查自身参数。</p>
+     *
+     * @param "SERVICE_UNAVAILABLE" "SERVICE_UNAVAILABLE"
+     * @param 503 503
+     * @return 服务不可用的结果
+     */
+    SERVICE_UNAVAILABLE("SERVICE_UNAVAILABLE", 503),
+
+    /**
      * AI 调用失败（如编剧生成失败、没有可用的对话模型）
      * @param "AI_ERROR" "AI_ERROR"
      * @param 500 500

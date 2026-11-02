@@ -1,0 +1,12 @@
+# 任务仓库 SPI（com.chua.starter.job.support.dispatch.JobRepository）
+#
+# 键的选择对应「仓库从哪读」：
+#   in-memory 内存仓库：单机 / 调试场景，进程内维护任务表与触发器（本文件唯一可无参实例化的实现）
+#   mybatis   MyBatis-Plus 仓库：读 sys_job 表。它需要 JobMapper 等构造参数，
+#             由 JobAutoConfiguration 显式装配，不走 SPI 带参实例化（故不在此登记，
+#             避免「键存在但取不到实例」的假象）
+#
+# 接入方自定义仓库时新增一行 alias=实现类全限定名；实现类请提供无参构造器（或用简单值类型作参数），
+# 因为 SPI 的带参实例化按实参运行时类型挑构造器，JDK 动态代理的 Mapper 匹配不到声明类型。
+in-memory=com.chua.starter.job.support.dispatch.InMemoryJobRepository
+memory=com.chua.starter.job.support.dispatch.InMemoryJobRepository

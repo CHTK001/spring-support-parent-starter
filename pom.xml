@@ -741,17 +741,17 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-api-support-common-configuration-starter</artifactId>
-                <version>${project.version}</version>
+                <version>4.0.0.42</version>
             </dependency>
 
             <!-- 采集平台模块（/v2/collect/**）。
-                 与上面同属跨 reactor 声明：artifact 由 spring-support-api-starter 构建产出，
-                 版本号与本 reactor 同步为 4.0.0.51，故可用 ${project.version}。
-                 引入方需先把该 artifact install 到本地仓库（它不在本 reactor 模块树内）。 -->
+                 跨 reactor 声明：该 artifact 由另一个仓库（spring-api-support）构建发布，
+                 本 reactor 只消费已 install 到本地仓库的 4.0.0.42 版本，
+                 因此不能跟随 ${project.version}。 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-api-support-collect-starter</artifactId>
-                <version>${project.version}</version>
+                <version>4.0.0.42</version>
             </dependency>
 
             <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
@@ -1229,6 +1229,16 @@
     </dependencyManagement>
     <!-- 构建配置 -->
     <build>
+        <!-- os-maven-plugin 必须在所有模块的构建环境中注册，
+             否则 ${os.detected.classifier} 在「上游模块声明、下游模块解析」的传递依赖里不会被插值，
+             会变成字面量 ${os.detected.classifier} 导致依赖解析失败。 -->
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${os-maven-plugin.version}</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

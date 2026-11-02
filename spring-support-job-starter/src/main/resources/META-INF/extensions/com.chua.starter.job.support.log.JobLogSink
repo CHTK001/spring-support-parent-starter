@@ -1,0 +1,12 @@
+# 执行日志落点 SPI（com.chua.starter.job.support.log.JobLogSink）
+#
+# 键的选择对应「日志落到哪」：
+#   stdout 控制台：无外部依赖，未接 MyBatis-Plus 时的兜底档（无参构造）
+#   file   文件：每个任务每次执行一个文件，需要 basePath 参数
+#           （SPI 带参实例化：getNewExtension("file", basePath)）
+#
+# MybatisJobLogSink（写 sys_job_log 表）需要 JobLogMapper / JobMapper，由 JobAutoConfiguration 显式装配，
+# 不在此登记；AsyncLogWriter 需要一组 sink，同样由装配侧组合。
+stdout=com.chua.starter.job.support.log.StdoutJobLogSink
+console=com.chua.starter.job.support.log.StdoutJobLogSink
+file=com.chua.starter.job.support.log.FileJobLogSink
