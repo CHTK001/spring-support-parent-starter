@@ -150,8 +150,19 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
         }
 
         @Override
+        public boolean isFinished() {
+            return stream.available() == 0;
+        }
+
+        @Override
         public void setReadListener(ReadListener listener) {
             throw new UnsupportedOperationException("read in blocking mode");
+        }
+
+        /** 字节数组回放流读满即为完成（显示不可读）：{@code ByteArrayInputStream} 耗尽时返回 true */
+        @Override
+        public boolean isFinished() {
+            return stream.available() == 0;
         }
     }
 }
