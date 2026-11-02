@@ -16,6 +16,7 @@ import com.chua.starter.job.support.log.FileJobLogSink;
 import com.chua.starter.job.support.log.JobLogRepository;
 import com.chua.starter.job.support.log.JobLogSink;
 import com.chua.starter.job.support.log.LocalJobLogBinder;
+import com.chua.starter.job.support.log.NoopJobLogRepository;
 import com.chua.starter.job.support.log.StdoutJobLogSink;
 import com.chua.starter.job.support.loop.JobLeaderLoop;
 import com.chua.starter.job.support.manage.JobGovernanceService;
@@ -240,8 +241,7 @@ public class JobAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnMissingClass("com.baomidou.mybatisplus.core.mapper.BaseMapper")
     public JobLogRepository emptyJobLogRepository() {
-        return new JobLogRepository() {
-        };
+        return NoopJobLogRepository.INSTANCE;
     }
 
     /**
