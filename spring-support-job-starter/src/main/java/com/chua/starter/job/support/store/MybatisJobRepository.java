@@ -159,8 +159,11 @@ public class MybatisJobRepository implements JobRepository {
                 .orderByAsc(JobEntity::getSysJobId)
                 .last("LIMIT " + Math.max(preReadCount, 1));
         List<JobEntity> candidates = jobMapper.selectList(query);
-        // 扫描结果记入缓存：无论调出多少行，下拍如有能复用（没有到期行的一拍查询量直接归零）
-        scanCache.put(group, preReadMs, preReadCount, now, candidates);
+        // 扫描结果记入缓存：无论调出多少行，下拍如有能复用（没有到期行的一拍查询量直接归零）：
+        // 未装配缓存（plugin.job.cache.enabled=false，默认）时不入缓存，本拍行为与历史完全一致。
+        if (scanCache != null) {
+            scanCache.put(group, preReadMs, preReadCount, now, candidates);
+        }
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
@@ -375,7 +378,7 @@ public class MybatisJobRepository implements JobRepository {
             log.warn("[job] 注解任务持久化失败 name={} cause={}", definition.getName(), ex.getMessage());
         }
         // 注解侧写入也可能是新台账/调度配置变更：清掉扫描缓存，让下一拍重查
-        scanCache.clear();
+        invalidateScanCache();
     }
 
     @Override
