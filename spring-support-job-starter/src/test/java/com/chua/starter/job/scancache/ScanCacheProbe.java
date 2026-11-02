@@ -1,5 +1,9 @@
 package com.chua.starter.job.scancache;
 
+import com.chua.starter.job.support.JobProperties;
+import com.chua.starter.job.support.cache.JobScanCache;
+import com.chua.starter.job.support.cache.JobScanCaches;
+import com.chua.starter.job.support.cache.NoopScanCache;
 import com.chua.starter.job.support.cache.ScanCache;
 import com.chua.starter.job.support.store.JobEntity;
 
@@ -7,20 +11,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 扫描结果缓存（{@code ScanCache}）的契约探针。
+ * 扫描结果缓存（{@link JobScanCache} SPI）的契约探针。
  *
  * <p>这类探针<b>不需要 MySQL / Spring 容器</b>，只验证缓存自身的语义：
- * 命中、过期、条件隔离、失效、以及「同一查询条件不会每拍新增一条」。</p>
+ * 命中、过期、条件隔离、失效、「同一查询条件不会每拍新增一条」，以及
+ * 「缓存档 / 非缓存档」两档 SPI 实现是否各就各位。</p>
  *
  * <p>运行方式（纯 JDK，无 JUnit）：</p>
  * <pre>
  * java -cp "target/classes;target/test-classes" com.chua.starter.job.scancache.ScanCacheProbe
  * </pre>
  *
- * <p>之所以要这个探针：缓存关闭（{@code plugin.job.cache.enabled=false}，默认）时
- * {@code MybatisJobRepository.scanCache} 是 {@code null}，任何直接 {@code scanCache.put/clear}
- * 都会在<b>每一拍</b>抛 NPE；而 {@code ScanCacheKey} 若漏了 {@code equals/hashCode}，
- * 每次 {@code findDue} 新建的 key 永远命不中，map 每拍还会多一条永不释放的条目。
+ * <p>之所以要这个探针：缓存关闭（{@code plugin.job.cache.enabled=false}，默认）时装的应当是
+ * {@link NoopScanCache}，它若退化成 {@code null} 则每次 {@code clear()/put()} 都在<b>每一拍</b>
+ * 抛 NPE；而 {@code ScanCacheKey} 若漏了 {@code equals/hashCode}，每次 {@code findDue}
+ * 新建的 key 永远命不中，map 每拍还会多一条永不释放的条目。
  * 这两条都只能在没有数据库的情况下验证。</p>
  *
  * @since 4.0.0.51
@@ -55,6 +60,15 @@ public class ScanCacheProbe {
         say("F. TTL <= 0 永远不活（等效关闭，与 MybatisJobRepository 的注释一致）");
         caseNonPositiveTtl();
 
+        say("G. 非缓存档（NoopScanCache）必须永不命中且写入即丢弃");
+        caseNoopSemantics();
+
+        say("H. 配置 -> SPI 键的映射：enabled=false / ttl<=0 走非缓存，否则走缓存");
+        caseConfigMapping();
+
+        say("I. SPI 注册文件里两档键都必须可取到实现");
+        caseSpiRegistration();
+
         System.out.println();
         System.out.println("==== 结果: passed=" + passed + " failed=" + failed + " ====");
         if (failed > 0) {
@@ -69,7 +83,7 @@ public class ScanCacheProbe {
         ScanCache cache = new ScanCache(5000L);
         List<JobEntity> rows = rows(2);
         cache.put("payment", 5000L, 10, 1_000_000L, rows);
-        ScanCache.ScanEntry hit = cache.get("payment", 5000L, 10);
+        JobScanCache.ScanEntry hit = cache.get("payment", 5000L, 10);
         check("A1 同一条件在 TTL 内命中", hit != null, "hit=" + hit);
         check("A2 命中的是上一次扫描的候选行", hit != null && hit.candidates().size() == 2,
                 hit == null ? "hit=null" : "size=" + hit.candidates().size());
@@ -84,11 +98,11 @@ public class ScanCacheProbe {
         ScanCache cache = new ScanCache(0L);
         cache.put("payment", 5000L, 10, 1_000_000L, rows(1));
         // buildAtMs 与 now 至少差几毫秒，0ms 的 TTL 一定过期；偶尔同一毫秒时再等一拍
-        ScanCache.ScanEntry first = cache.get("payment", 5000L, 10);
+        JobScanCache.ScanEntry first = cache.get("payment", 5000L, 10);
         if (first != null) {
             sleep(5);
         }
-        ScanCache.ScanEntry after = cache.get("payment", 5000L, 10);
+        JobScanCache.ScanEntry after = cache.get("payment", 5000L, 10);
         check("B1 TTL=0 时不命中（等效关闭）", after == null, "after=" + after);
     }
 
@@ -151,6 +165,69 @@ public class ScanCacheProbe {
         ScanCache negative = new ScanCache(-1L);
         negative.put("payment", 5000L, 10, 1_000_000L, rows(1));
         check("F1 负 TTL 不命中", negative.get("payment", 5000L, 10) == null, "负 TTL 竟命中");
+        ScanCache nullTtl = new ScanCache((Long) null);
+        nullTtl.put("payment", 5000L, 10, 1_000_000L, rows(1));
+        check("F2 null TTL 不命中（SPI 无参构造的兜底值）", nullTtl.get("payment", 5000L, 10) == null,
+                "null TTL 竟命中");
+    }
+
+    /**
+     * G. 非缓存档：永不命中、写入即丢弃、失效是空操作。
+     *
+     * <p>这条守的是「默认关闭时不是 {@code null}」：{@code clear/put} 必须能无条件调用。</p>
+     */
+    private static void caseNoopSemantics() {
+        JobScanCache noop = new NoopScanCache();
+        noop.put("payment", 5000L, 10, 1_000_000L, rows(2));
+        check("G1 非缓存档写入后仍不命中", noop.get("payment", 5000L, 10) == null, "noop 竟命中");
+        check("G2 非缓存档条数恒为 0", noop.size() == 0, "size=" + noop.size());
+        check("G3 非缓存档 TTL 恒为 0", noop.ttlMs() == 0L, "ttl=" + noop.ttlMs());
+        check("G4 非缓存档 caching() 为 false", !noop.caching(), "caching=" + noop.caching());
+        noop.clear();
+        noop.remove(noop.newKey("payment", 5000L, 10));
+        check("G5 非缓存档 clear/remove 不抛异常（写侧出口可无条件调用）", true, "");
+    }
+
+    /**
+     * H. 配置映射：默认关闭与非正 TTL 走非缓存档，开启且 TTL 为正才走缓存档。
+     */
+    private static void caseConfigMapping() {
+        JobProperties.CacheConfig disabled = new JobProperties.CacheConfig();
+        disabled.setEnabled(false);
+        check("H1 默认配置（关闭）解析为非缓存档", !JobScanCaches.resolve(disabled).caching(),
+                "caching=" + JobScanCaches.resolve(disabled).caching());
+
+        JobProperties.CacheConfig enabled = new JobProperties.CacheConfig();
+        enabled.setEnabled(true);
+        enabled.setTtlMs(5000L);
+        JobScanCache caching = JobScanCaches.resolve(enabled);
+        check("H2 开启且 TTL>0 解析为缓存档", caching.caching(), "caching=" + caching.caching());
+        check("H3 缓存档带回配置的 TTL", caching.ttlMs() == 5000L, "ttl=" + caching.ttlMs());
+
+        JobProperties.CacheConfig zeroTtl = new JobProperties.CacheConfig();
+        zeroTtl.setEnabled(true);
+        zeroTtl.setTtlMs(0L);
+        check("H4 开启但 TTL=0 落到非缓存档（恒不活 = 没开）",
+                !JobScanCaches.resolve(zeroTtl).caching(),
+                "caching=" + JobScanCaches.resolve(zeroTtl).caching());
+
+        check("H5 配置为 null 落到非缓存档（不抛 NPE）", !JobScanCaches.resolve(null).caching(), "");
+    }
+
+    /**
+     * I. SPI 注册：两档键都能从 {@code META-INF/extensions} 取到实现。
+     *
+     * <p>这条守的是「换实现只改注册文件」的承诺：键写错时 {@link JobScanCaches} 会兜底成
+     * 本地 {@code new}，功能仍可用，但接入方自定义的实现会被静默忽略 —— 所以注册本身要验证。</p>
+     */
+    private static void caseSpiRegistration() {
+        JobScanCache none = JobScanCaches.resolveNoop();
+        check("I1 键 none 取到非缓存档", none != null && !none.caching(),
+                "impl=" + (none == null ? "null" : none.getClass().getSimpleName()));
+
+        JobScanCache memory = JobScanCaches.resolveMemory(5000L);
+        check("I2 键 memory 取到缓存档", memory != null && memory.caching() && memory.ttlMs() == 5000L,
+                memory == null ? "null" : "impl=" + memory.getClass().getSimpleName() + " ttl=" + memory.ttlMs());
     }
 
     // ------------------------------------------------------------------ 基础设施
@@ -177,7 +254,7 @@ public class ScanCacheProbe {
      *
      * @param hit 命中结果
      */
-    private static void checkSilently(ScanCache.ScanEntry hit) {
+    private static void checkSilently(JobScanCache.ScanEntry hit) {
         if (hit == null) {
             failed++;
         }

@@ -1,0 +1,11 @@
+# 片段合成 SPI（com.chua.starter.job.support.glue.GlueSynthesizer）
+#
+# 每个脚本引擎一条合成规则：片段 -> 完整脚本。键 = GlueTypes.engineOf(glueType) 的返回值。
+#   java    包一层 public class + @Job 入口方法（用户只写方法体）
+#   default 透传：语言本身允许裸语句（Groovy 等），原样下发；也是取不到引擎时的兜底
+#
+# 新增脚本引擎时新增一行 alias=实现类全限定名，并让实现类 supports() 认得该引擎名。
+java=com.chua.starter.job.support.glue.JavaGlueSynthesizer
+default=com.chua.starter.job.support.glue.PassThroughGlueSynthesizer
+plain=com.chua.starter.job.support.glue.PassThroughGlueSynthesizer
+passthrough=com.chua.starter.job.support.glue.PassThroughGlueSynthesizer

@@ -1,0 +1,8 @@
+# 执行日志查询侧 SPI（com.chua.starter.job.support.log.JobLogRepository）
+#
+# 键的选择对应「日志从哪查」：
+#   none    空实现：没有日志表时返回空页 / 0 条 / 0 行清理，不抛异常（默认档，无参构造）
+#   mybatis MyBatis-Plus 查询：读 sys_job_log。它需要 JobLogMapper / JobMapper 构造参数，
+#           由 JobAutoConfiguration 显式装配，不在此登记
+none=com.chua.starter.job.support.log.NoopJobLogRepository
+noop=com.chua.starter.job.support.log.NoopJobLogRepository

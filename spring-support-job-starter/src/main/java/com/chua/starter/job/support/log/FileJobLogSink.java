@@ -1,5 +1,6 @@
 package com.chua.starter.job.support.log;
 
+import com.chua.common.support.spi.annotations.Spi;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import java.time.format.DateTimeFormatter;
  * @since 4.0.0.42
  * @author CH
  */
+@Spi("file")
 @Slf4j
 public class FileJobLogSink implements JobLogSink {
 

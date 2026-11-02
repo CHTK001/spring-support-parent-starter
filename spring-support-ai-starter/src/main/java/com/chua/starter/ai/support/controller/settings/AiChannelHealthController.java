@@ -2,6 +2,8 @@ package com.chua.starter.ai.support.controller.settings;
 
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.ChannelHealth;
+import com.chua.starter.ai.support.model.ChannelCircuitSnapshot;
+import com.chua.starter.ai.support.service.ChannelCircuitService;
 import com.chua.starter.ai.support.service.ChannelHealthService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +37,11 @@ import java.util.Map;
 public class AiChannelHealthController {
 
     private final ChannelHealthService channelHealthService;
+
+    /**
+     * 请求级熔断器（按供应商 + 模型统计真实对话失败）
+     */
+    private final ChannelCircuitService channelCircuitService;
 
     /**
      * 全部渠道健康状态列表
@@ -115,5 +122,86 @@ public class AiChannelHealthController {
         Integer interval = body.get("interval");
         channelHealthService.updateInterval(connectionId, interval == null ? 0 : Math.max(0, interval));
         return ApiResult.ok(true);
+    }
+
+    // ==================== 人工熔断开关 ====================
+
+    /**
+     * 设定单连接的人工熔断状态。
+     *
+     * <p>请求体：{@code {"state":"OPEN","reason":"..."}}</p>
+     * <ul>
+     *   <li>{@code AUTO} — 跟随探针状态（默认）；</li>
+     *   <li>{@code OPEN} — 强制熔断，路由层立即剔除该连接（不发上游请求）；</li>
+     *   <li>{@code CLOSED} — 强制放行，即使探针判定 DOWN 也继续路由（排障用）。</li>
+     * </ul>
+     *
+     * @param connectionId 连接标识
+     * @param body         请求体（state / reason）
+     * @return 变更后的状态行
+     */
+    @Operation(summary = "设定人工熔断开关")
+    @PutMapping("/{connectionId}/circuit")
+    @Permission("admin")
+    public ApiResult<ChannelHealth> updateCircuit(
+            @Parameter(hidden = true) @PathVariable String connectionId,
+            @RequestBody Map<String, String> body) {
+        String state = body.get("state");
+        String reason = body.get("reason");
+        return ApiResult.ok(channelHealthService.updateCircuitState(connectionId, state, reason));
+    }
+
+    /**
+     * 查询单连接的人工熔断状态。
+     *
+     * @param connectionId 连接标识
+     * @return 状态行（含 circuitState / circuitReason / circuitUpdatedAt）
+     */
+    @Operation(summary = "查询人工熔断开关")
+    @GetMapping("/{connectionId}/circuit")
+    public ApiResult<ChannelHealth> circuit(
+            @Parameter(hidden = true) @PathVariable String connectionId) {
+        return ApiResult.ok(channelHealthService.getState(connectionId));
+    }
+
+    // ==================== 请求级熔断状态 ====================
+
+    /**
+     * 请求级熔断状态列表（按「供应商 + 模型」维度）。
+     *
+     * @return 熔断快照列表
+     */
+    @Operation(summary = "请求级熔断状态列表")
+    @GetMapping("/circuit")
+    public ApiResult<List<ChannelCircuitSnapshot>> circuitSnapshots() {
+        return ApiResult.ok(channelCircuitService.snapshots());
+    }
+
+    /**
+     * 复位单个「供应商 + 模型」的熔断。
+     *
+     * @param providerId 供应商标识
+     * @param model      模型名
+     * @return 复位前是否存在该条目
+     */
+    @Operation(summary = "复位单个熔断条目")
+    @PostMapping("/circuit/{providerId}/{model}/reset")
+    @Permission("admin")
+    public ApiResult<Boolean> resetCircuit(
+            @Parameter(hidden = true) @PathVariable String providerId,
+            @Parameter(hidden = true) @PathVariable String model) {
+        return ApiResult.ok(channelCircuitService.reset(providerId, model));
+    }
+
+    /**
+     * 复位全部熔断条目（运维操作）。
+     *
+     * @return 被复位的条目数
+     */
+    @Operation(summary = "复位全部熔断条目")
+    @PostMapping("/circuit/reset")
+    @Permission("admin")
+    public ApiResult<Integer> resetAllCircuits() {
+        return ApiResult.ok(channelCircuitService.resetAll());
     }
 }

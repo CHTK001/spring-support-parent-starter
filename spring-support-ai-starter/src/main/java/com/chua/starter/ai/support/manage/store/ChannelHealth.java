@@ -68,6 +68,24 @@ public class ChannelHealth implements Serializable {
     private String state = "UNKNOWN";
 
     /**
+     * 人工熔断状态（AUTO 跟随探针 / OPEN 强制熔断 / CLOSED 强制放行）
+     */
+    @TableField("circuit_state")
+    private String circuitState = "AUTO";
+
+    /**
+     * 人工熔断/放行的原因说明
+     */
+    @TableField("circuit_reason")
+    private String circuitReason;
+
+    /**
+     * 人工熔断状态变更时间（毫秒）
+     */
+    @TableField("circuit_updated_at")
+    private Long circuitUpdatedAt;
+
+    /**
      * 累计失败次数
      */
     @TableField("failures")

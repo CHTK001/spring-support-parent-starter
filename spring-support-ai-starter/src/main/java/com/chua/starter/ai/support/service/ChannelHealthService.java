@@ -43,6 +43,19 @@ public interface ChannelHealthService {
      */
     String STATE_RATE_LIMITED = "RATE_LIMITED";
 
+    /**
+     * 人工熔断状态常量（{@code sys_ai_channel_health.circuit_state}）
+     */
+    String CIRCUIT_AUTO = "AUTO";
+    /**
+     * 人工强制熔断
+     */
+    String CIRCUIT_OPEN = "OPEN";
+    /**
+     * 人工强制放行
+     */
+    String CIRCUIT_CLOSED = "CLOSED";
+
     // ==================== 设置读取（探针任务+控制器共享） ====================
 
     /**
@@ -131,6 +144,34 @@ public interface ChannelHealthService {
      * @return true 表示连线已下
      */
     boolean isDown(String connectionId);
+
+    /**
+     * 该连接是否可路由（综合探针状态与人工熔断开关）。
+     *
+     * <p>判定优先级：</p>
+     * <ol>
+     *   <li>人工 {@code circuit_state=OPEN} → 不可路由（强制熔断，覆盖探针结论）；</li>
+     *   <li>人工 {@code circuit_state=CLOSED} → 可路由（强制放行，排障用）；</li>
+     *   <li>{@code AUTO} → 跟随探针：{@code DOWN} 不可路由，其余可路由。</li>
+     * </ol>
+     *
+     * <p>与 {@link #isDown(String)} 分开：后者只回答「探针认为它死了吗」，
+     * 供探针自身的状态机与统计使用；路由层一律用本方法，避免人工开关被忽略。</p>
+     *
+     * @param connectionId 连接标识
+     * @return true 表示可路由
+     */
+    boolean isRoutable(String connectionId);
+
+    /**
+     * 设定人工熔断状态（管理页/接口的强制下线与强制放行）。
+     *
+     * @param connectionId 连接标识
+     * @param state        {@code AUTO} / {@code OPEN} / {@code CLOSED}
+     * @param reason       原因说明，可为空
+     * @return 设定后的状态行
+     */
+    ChannelHealth updateCircuitState(String connectionId, String state, String reason);
 
     /**
      * 连接是否可用（在线 / 警告 / 未探测均可用，DOWN 与 RATE_LIMITED 不可用）。

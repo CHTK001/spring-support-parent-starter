@@ -305,13 +305,17 @@ public class ModelClientResolver {
     }
 
     /**
-     * 本连接是否已下线（通道探针连续失败达到阈值后自动下线）
+     * 本连接是否可路由（综合探针状态与人工熔断开关）。
+     *
+     * <p>优先用 {@link ChannelHealthService#isRoutable(String)}：它同时考虑
+     * 探针状态（{@code DOWN} 剔除）与人工开关（{@code OPEN} 强制剔除、{@code CLOSED}
+     * 强制放行），运维在页面上点「强制下线」能立即生效，而不是等探针下一轮。</p>
      *
      * @param conn 连接
-     * @return true 表示已下线（路由层应剔除）
+     * @return true 表示可路由
      */
     private boolean isDown(SysAiProviderConnection conn) {
-        return channelHealthService.isDown(conn.getConnectionId());
+        return !channelHealthService.isRoutable(conn.getConnectionId());
     }
 
     /**
@@ -358,6 +362,69 @@ public class ModelClientResolver {
             log.debug("[ModelClientResolver] 查询连接凭证失败: {}", e.getMessage());
         }
         return new ArrayList<>(keys);
+    }
+
+    /**
+     * 供应商连接的可用性统计（熔断的「故障关闭」判据）。
+     *
+     * <p>{@code total > 0 && routable == 0} 表示该供应商配置了连接、但全部不可路由
+     * （探针判定 {@code DOWN} 或人工强制熔断）。此时网关不应向上游发请求，直接 503。</p>
+     *
+     * <p>{@code total == 0} 不算故障关闭：供应商可能只用供应商级凭证（不配连接），
+     * 这类配置仍然可以正常调用。</p>
+     *
+     * @param provider   供应商
+     * @param ownerScope 归属作用域
+     * @return 可用性统计；查询失败时返回 {@code total=0}（放行）
+     */
+    public ConnectionAvailability availability(SysAiProvider provider, String ownerScope) {
+        try {
+            LambdaQueryWrapper<SysAiProviderConnection> wrapper =
+                    new LambdaQueryWrapper<SysAiProviderConnection>()
+                            .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
+            if ("_free".equals(ownerScope) || "_sys".equals(ownerScope)) {
+                wrapper.isNull(SysAiProviderConnection::getUserId);
+            } else {
+                boolean admin = AiUserContext.isAdmin();
+                String userId = ownerScope;
+                wrapper.and(w -> {
+                    w.eq(SysAiProviderConnection::getUserId, userId);
+                    if (admin) {
+                        w.or().isNull(SysAiProviderConnection::getUserId);
+                    }
+                });
+            }
+            List<SysAiProviderConnection> connections = connectionMapper.selectList(wrapper);
+            int routable = 0;
+            for (SysAiProviderConnection conn : connections) {
+                if (!isDown(conn)) {
+                    routable++;
+                }
+            }
+            return new ConnectionAvailability(connections.size(), routable);
+        } catch (Exception e) {
+            log.debug("[ModelClientResolver] 统计可用连接失败 provider={}: {}",
+                    provider.getProviderId(), e.getMessage());
+            return new ConnectionAvailability(0, 0);
+        }
+    }
+
+    /**
+     * 连接可用性统计。
+     *
+     * @param total    连接总数
+     * @param routable 可路由连接数
+     */
+    public record ConnectionAvailability(int total, int routable) {
+
+        /**
+         * 是否全部不可路由（存在连接但一个都用不了）。
+         *
+         * @return true 表示应故障关闭
+         */
+        public boolean allDown() {
+            return total > 0 && routable == 0;
+        }
     }
 
     /**
