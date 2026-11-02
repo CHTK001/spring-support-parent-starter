@@ -176,7 +176,7 @@ async function loginToken() {
 
   const unexpectedErr = errs.filter((x) => !/Failed to load resource|ResizeObserver|vite|favicon/i.test(x));
   record('no unexpected JS errors', unexpectedErr.length === 0, JSON.stringify(unexpectedErr.slice(0, 4)));
-  const harmless = ['/typhoon-api/TyhoonActivity', '/v2/edu/teacher/marking/dashboard-stats'];
+  const harmless = ['/typhoon-api/TyhoonActivity'];
   const filteredBad = badResp.filter((x) => !harmless.some((h) => x.includes(h)));
   record('no unexpected HTTP >= 400', filteredBad.length === 0, JSON.stringify(filteredBad.slice(0, 5)));
 
