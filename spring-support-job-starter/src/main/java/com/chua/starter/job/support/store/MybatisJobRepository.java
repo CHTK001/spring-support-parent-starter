@@ -8,7 +8,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.task.scheduler.Trigger;
 import com.chua.starter.job.support.JobProperties;
-import com.chua.starter.job.support.cache.ScanCache;
+import com.chua.starter.job.support.cache.JobScanCache;
+import com.chua.starter.job.support.cache.JobScanCaches;
 import com.chua.starter.job.support.dispatch.JobDefinition;
 import com.chua.starter.job.support.dispatch.JobQuery;
 import com.chua.starter.job.support.dispatch.JobRepository;
@@ -89,26 +90,26 @@ public class MybatisJobRepository implements JobRepository {
     private final String defaultGroup;
 
     /**
-     * 扫描结果缓存（配置为开启时才装配，否则就是 null：每拍都真实查库，与历史行为一致）。
+     * 扫描结果缓存扩展点（{@link JobScanCache}）。
      *
-     * <p>存的是"相位 + 候选行"，命中时拍次级的查询只补读：
-     * 到期行写回前必须主键批读（避免 stale 乐观条件让派发静默失败），
-     * 没有到期行的一拍查询量为 0（比每拍 2 次查询少 1 次）。写侧入口一律清缓存。</p>
+     * <p>配置为关闭时装配的是 {@code NoopScanCache}（永不命中、写入即丢弃），
+     * 而不是 {@code null}：写侧出口不必逐个判空，实路行为仍与历史逐字一致。
+     * 开启时装配 {@code ScanCache}，命中只补读到期行。</p>
      */
-    private ScanCache scanCache;
+    private JobScanCache scanCache;
 
     /**
      * 带查询缓存配置的构造器。
      *
-     * @param jobMapper   作业映射器
+     * @param jobMapper    作业映射器
      * @param defaultGroup 未指定分组时的落地分组
-     * @param cache        缓存配置（未开启时不装配缓存）
+     * @param cache        缓存配置（未开启时装配非缓存实现）
      */
     public MybatisJobRepository(JobMapper jobMapper, String defaultGroup, JobProperties.CacheConfig cache) {
         this.jobMapper = jobMapper;
         this.defaultGroup = defaultGroup;
-        // 没开缓存就是每拍真实查库；TTL 小于等于 0 永远不活 = 等效关了。
-        this.scanCache = (cache == null || !cache.isEnabled()) ? null : new ScanCache(cache.getTtlMs());
+        // 没开缓存就是每拍真实查库；TTL 小于等于 0 永远不活 = 等效关了，统一落到非缓存档。
+        this.scanCache = JobScanCaches.resolve(cache);
     }
 
     @Override
@@ -117,26 +118,22 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 失效扫描缓存；未装配缓存（默认关闭）时是无操作。
+     * 失效扫描缓存；非缓存实现（默认关闭）时是无操作。
      *
      * <p>写侧出口（保存、改调度、启停、删除、注销、同步 next_time、refresh）都要走这里：
-     * 缓存可能为 {@code null}，直接 {@code scanCache.clear()} 会在默认配置下抛 NPE。</p>
+     * 缓存实现由 SPI 提供，非缓存档的 {@code clear()} 本身就是空操作，调用方无需判空。</p>
      */
     private void invalidateScanCache() {
-        if (scanCache != null) {
-            scanCache.clear();
-        }
+        scanCache.clear();
     }
 
     @Override
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount, String group) {
         // 查询缓存命中：相位 + 扫描结果来自同一查询条件的上一拍扫描，跨拍次复用（最多省掉 2 次查库）；
-        // 未开缓存 / 缓存过期 / 未命中：由实路去读库，并把扫描结果存起来备下一拍复用。
-        if (scanCache != null) {
-            ScanCache.ScanEntry entry = scanCache.get(group, preReadMs, preReadCount);
-            if (entry != null) {
-                return scanDueFromCache(entry, now, preReadMs, preReadCount, group);
-            }
+        // 非缓存档 / 缓存过期 / 未命中：由实路去读库，并把扫描结果存起来备下一拍复用。
+        JobScanCache.ScanEntry entry = scanCache.get(group, preReadMs, preReadCount);
+        if (entry != null) {
+            return scanDueFromCache(entry, now, preReadMs, preReadCount, group);
         }
         return realtimeScan(now, preReadMs, preReadCount, group);
     }
@@ -172,10 +169,8 @@ public class MybatisJobRepository implements JobRepository {
                 .last("LIMIT " + Math.max(preReadCount, 1));
         List<JobEntity> candidates = jobMapper.selectList(query);
         // 扫描结果记入缓存：无论调出多少行，下拍如有能复用（没有到期行的一拍查询量直接归零）：
-        // 未装配缓存（plugin.job.cache.enabled=false，默认）时不入缓存，本拍行为与历史完全一致。
-        if (scanCache != null) {
-            scanCache.put(group, preReadMs, preReadCount, now, candidates);
-        }
+        // 非缓存档（plugin.job.cache.enabled=false，默认）的 put 是空操作，本拍行为与历史完全一致。
+        scanCache.put(group, preReadMs, preReadCount, now, candidates);
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
@@ -205,7 +200,7 @@ public class MybatisJobRepository implements JobRepository {
      * @param entry 扫描结果
      * @return 到期任务
      */
-    private List<JobDefinition> scanDueFromCache(ScanCache.ScanEntry entry, long now, long preReadMs, int preReadCount, String group) {
+    private List<JobDefinition> scanDueFromCache(JobScanCache.ScanEntry entry, long now, long preReadMs, int preReadCount, String group) {
         // 这里不使用调用方传入的 {@code now}：缓存给出的相位（上一拍的数据库时间）已经足够
         // 触发整拍扫描，只需把相位倒给循环。
         long phase = entry.dbNowMs();

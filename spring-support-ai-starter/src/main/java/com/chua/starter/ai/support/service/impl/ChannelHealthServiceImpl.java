@@ -130,6 +130,15 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     private volatile Map<String, AccountChannelAuthManager> channelManagers;
 
+    /**
+     * 可路由判定的 1 秒本地快照（路由解析每请求每连接调用一次，避免打爆 DB）
+     */
+    private final com.github.benmanes.caffeine.cache.Cache<String, Boolean> routableCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .expireAfterWrite(1, TimeUnit.SECONDS)
+                    .maximumSize(4096)
+                    .build();
+
     // ==================== 设置读取 ====================
 
     /**
@@ -290,6 +299,102 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     public boolean isHealthy(String connectionId) {
         String s = state(connectionId).getState();
         return !STATE_DOWN.equals(s) && !STATE_RATE_LIMITED.equals(s);
+    }
+
+    /**
+     * 综合探针状态与人工熔断开关，判定该连接是否可路由。
+     *
+     * <p>路由解析（{@link com.chua.starter.ai.support.chat.ModelClientResolver}）在每次
+     * 建客户端时对每个连接调用本方法，因此结果做 1 秒本地快照：探针轮询本身是 30 秒级，
+     * 人工开关 1 秒生效对运维完全够用，而每条请求的数据库往返被摊薄到接近 0。</p>
+     *
+     * @param connectionId 连接标识
+     * @return true 表示可路由
+     */
+    @Override
+    public boolean isRoutable(String connectionId) {
+        if (StringUtils.isBlank(connectionId)) {
+            return true;
+        }
+        Boolean cached = routableCache.getIfPresent(connectionId);
+        if (cached != null) {
+            return cached;
+        }
+        boolean routable = computeRoutable(connectionId);
+        routableCache.put(connectionId, routable);
+        return routable;
+    }
+
+    /**
+     * 实际判定（无缓存）。
+     *
+     * @param connectionId 连接标识
+     * @return true 表示可路由
+     */
+    private boolean computeRoutable(String connectionId) {
+        try {
+            ChannelHealth h = state(connectionId);
+            String circuit = h.getCircuitState();
+            if (CIRCUIT_OPEN.equalsIgnoreCase(circuit)) {
+                return false;
+            }
+            if (CIRCUIT_CLOSED.equalsIgnoreCase(circuit)) {
+                return true;
+            }
+            return !STATE_DOWN.equals(h.getState()) && !STATE_RATE_LIMITED.equals(h.getState());
+        } catch (Exception e) {
+            // 判定失败放行：熔断器/探针自身不得成为故障点
+            log.warn("[ChannelHealth] 路由判定失败 connection={}，放行: {}", connectionId, e.getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * 设定人工熔断状态。
+     *
+     * @param connectionId 连接标识
+     * @param state        AUTO / OPEN / CLOSED（大小写不敏感，非法值按 AUTO 处理）
+     * @param reason       原因说明，可为空
+     * @return 设定后的状态行
+     */
+    @Override
+    public ChannelHealth updateCircuitState(String connectionId, String state, String reason) {
+        SysAiProviderConnection conn = connection(connectionId);
+        String normalized = normalizeCircuitState(state);
+        ChannelHealth h = initOrCreate(connectionId, null, conn);
+        long now = System.currentTimeMillis();
+        String previous = h.getCircuitState();
+        h.setCircuitState(normalized);
+        h.setCircuitReason(StringUtils.isBlank(reason) ? null : reason.trim());
+        h.setCircuitUpdatedAt(now);
+        h.setUpdatedAt(now);
+        saveHealth(h);
+        routableCache.invalidate(connectionId);
+        log.info("[ChannelHealth] 人工熔断开关 connection={} {} -> {} 原因={}",
+                connectionId, previous, normalized, h.getCircuitReason());
+        // 失效路由缓存，令强制下线/放行立即生效（否则最多等 5 分钟 TTL）
+        eventPublisher.publishEvent(new ChannelHealthProbeEvent(this, downConnections(), 0, false));
+        return h;
+    }
+
+    /**
+     * 归一化人工熔断状态。
+     *
+     * @param state 原始值
+     * @return AUTO / OPEN / CLOSED
+     */
+    private static String normalizeCircuitState(String state) {
+        if (StringUtils.isBlank(state)) {
+            return CIRCUIT_AUTO;
+        }
+        String value = state.trim().toUpperCase();
+        if (CIRCUIT_OPEN.equals(value)) {
+            return CIRCUIT_OPEN;
+        }
+        if (CIRCUIT_CLOSED.equals(value)) {
+            return CIRCUIT_CLOSED;
+        }
+        return CIRCUIT_AUTO;
     }
 
     /**
@@ -610,6 +715,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         h.setAverageLatency(null);
         h.setUpdatedAt(System.currentTimeMillis());
         saveHealth(h);
+        routableCache.invalidate(connectionId);
     }
 
     private void markSuccess(String connectionId, int status, int latency,
@@ -682,6 +788,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             else h.setState(STATE_WARNING);
         }
         saveHealth(h);
+        routableCache.invalidate(connectionId);
     }
 
     // ==================== 探针执行 ====================

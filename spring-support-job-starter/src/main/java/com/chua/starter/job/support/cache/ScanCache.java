@@ -1,14 +1,14 @@
 package com.chua.starter.job.support.cache;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.job.support.store.JobEntity;
 
 /**
- * 任务扫描结果缓存。
+ * 任务扫描结果缓存的默认（缓存）实现。
  *
  * <p>{@code JobLeaderLoop} 每拍通过 {@code repository.findDue(now, preReadMs, preReadCount, group)}
  * 查询到期任务；每拍至少两次查库：
@@ -31,138 +31,48 @@ import com.chua.starter.job.support.store.JobEntity;
  * <p>缓存行是从上一次扫描读到的行；一旦有派人把 {@code sys_job_trigger_last_time/next_time}
  * 写回，候选行的乐观条件就不再是 PB 值，还拿缓存行去下条件，写回永远匹配 0 行，
  * 调度就越推越死（任务在窗口内不再被派发，直到 TTL 重建）。
- * 所以命中时只取 *到期* 的行，用一条 {@code WHERE id IN (...)} 按主键批读最新行
- * 再下乐观条件，确保滚动与实时查询语义一致。</p>
+ * 所以命中时只取 *到期* 的行，按主键逐行回捞最新行再下乐观条件，
+ * 确保滚动与实时查询语义一致。</p>
  *
  * <h3>失效</h3>
  * <p>所有写侧出口（保存、改调度时间、启停、删除、注销（upsert）、同步 next_time）都失效扫描缓存，
- * 让任何状态变更都在下一拍用新相位重新扫描，不在缓存行上漂移。**
+ * 让任何状态变更都在下一拍用新相位重新扫描，不在缓存行上漂移。</p>
+ *
+ * <p>本实现是 {@link JobScanCache} 的 {@code memory} 键；对偶的
+ * {@link NoopScanCache}（{@code none}）是「不缓存」那一档，两者由同一个 SPI 点选择。
+ * 默认实现刻意留给 {@code none}：本类需要 TTL 才能构造，把它当兜底会让
+ * 「键写错」退化成「取不到实现」。</p>
  *
  * @since 4.0.0.51
  * @author CH
  */
-public class ScanCache {
+@Spi({"memory", "ttl"})
+public class ScanCache implements JobScanCache {
 
     /**
-     * 缓存键：查询条件与扫描结果一一对应。
-     *
-     * @param group     扫描分组
-     * @param preReadMs 预读时间窗
-     * @param preReadCount 单拍扫描行数上限
+     * 缓存有效期（毫秒）
      */
-    public static class ScanCacheKey {
-
-        private final String group;
-        private final long preReadMs;
-        private final int preReadCount;
-
-        ScanCacheKey(String group, long preReadMs, int preReadCount) {
-            this.group = group;
-            this.preReadMs = preReadMs;
-            this.preReadCount = preReadCount;
-        }
-
-        String group() {
-            return group;
-        }
-
-        long preReadMs() {
-            return preReadMs;
-        }
-
-        int preReadCount() {
-            return preReadCount;
-        }
-
-        /**
-         * 查询条件相等即同一个缓存键。
-         *
-         * <p><b>必须实现</b>：本类是 {@link ConcurrentHashMap} 的键，而每次 {@code findDue}
-         * 都会新建一个 key 实例。若按对象身份比较，{@link #get} 永远命不中，
-         * 并且每拍都会往 map 里插入一个永不释放的新条目（内存只增不减）。</p>
-         */
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof ScanCacheKey)) {
-                return false;
-            }
-            ScanCacheKey other = (ScanCacheKey) o;
-            return preReadMs == other.preReadMs
-                    && preReadCount == other.preReadCount
-                    && java.util.Objects.equals(group, other.group);
-        }
-
-        @Override
-        public int hashCode() {
-            return java.util.Objects.hash(group, preReadMs, preReadCount);
-        }
-    }
-
-    /**
-     * 一条扫描结果。
-     *
-     * @param key      查询条件
-     * @param dbNowMs  扫描时使用的数据库时钟
-     * @param buildAtMs 缓存生成时刻（系统时钟）
-     * @param candidates 候选行
-     */
-    public static class ScanEntry {
-
-        private final ScanCacheKey key;
-        private final long dbNowMs;
-        private final long buildAtMs;
-        private final List<JobEntity> candidates;
-
-        ScanEntry(ScanCacheKey key, long dbNowMs, long buildAtMs, List<JobEntity> candidates) {
-            this.key = key;
-            this.dbNowMs = dbNowMs;
-            this.buildAtMs = buildAtMs;
-            this.candidates = candidates;
-        }
-
-        public ScanCacheKey key() {
-            return key;
-        }
-
-        public long dbNowMs() {
-            return dbNowMs;
-        }
-
-        public long buildAtMs() {
-            return buildAtMs;
-        }
-
-        public List<JobEntity> candidates() {
-            return candidates;
-        }
-
-        /**
-         * 缓存是否仍然活着（在 TTL 窗内）：活着才允许跨拍次复用。
-         *
-         * @param now     系统时钟
-         * @param ttlMs   缓存有效期
-         * @return 过期返回 false
-         */
-        boolean alive(long now, long ttlMs) {
-            return candidates != null && now - buildAtMs <= ttlMs;
-        }
-    }
-
     private final long ttlMs;
+
+    /**
+     * 查询条件 &rarr; 扫描结果
+     */
     private final Map<ScanCacheKey, ScanEntry> cache = new ConcurrentHashMap<>();
 
     /**
      * 以毫秒为单位的缓存有效期创建；过期后候选行和相位要重新查库。
      *
-     * @param ttlMs 扫描结果缓存有效期（毫秒）；小于等于 0 永远悬挂，实际等于未启用
+     * <p>参数刻意用包装类型 {@link Long}：SPI 的带参实例化按「实参运行时类型」挑构造器
+     * （{@code long} 实参的类型是 {@code Long}，而 {@code long.class} 不接受 {@code Long}），
+     * 声明成 {@code Long} 才能让 {@code getNewExtension("memory", ttlMs)} 命中。</p>
+     *
+     * @param ttlMs 扫描结果缓存有效期（毫秒）；null 或小于等于 0 时永远不活，实际等于未启用
      */
-    public ScanCache(long ttlMs) {
-        this.ttlMs = ttlMs;
+    public ScanCache(Long ttlMs) {
+        this.ttlMs = ttlMs == null ? 0L : ttlMs;
     }
 
+    @Override
     public ScanCacheKey newKey(String group, long preReadMs, int preReadCount) {
         return new ScanCacheKey(group, preReadMs, preReadCount);
     }
@@ -170,16 +80,18 @@ public class ScanCache {
     /**
      * 取命中广播的扫描结果；已过期或不存在对应查询条件的扫描结果不命中。
      *
-     * @param group 扫描分组
-     * @param preReadMs 预读时间窗
+     * @param group        扫描分组
+     * @param preReadMs    预读时间窗
      * @param preReadCount 每拍扫描上限
      * @return 命中返回扫描结果，未命中返回 null
      */
+    @Override
     public ScanEntry get(String group, long preReadMs, int preReadCount) {
         return get(newKey(group, preReadMs, preReadCount));
     }
 
-    private ScanEntry get(ScanCacheKey key) {
+    @Override
+    public ScanEntry get(ScanCacheKey key) {
         if (key == null) {
             return null;
         }
@@ -191,12 +103,13 @@ public class ScanCache {
     }
 
     /**
-     * 记录一次扫描结果（按条件 + 时钟 + 候选行），供之后 TTL 秒内的拍次复用。
+     * 记录一次扫描结果（按条件 + 时钟 + 候选行），供之后 TTL 内的拍次复用。
      *
-     * @param key 查询条件
-     * @param dbNowMs 扫描时使用的数据库时钟
+     * @param key        查询条件
+     * @param dbNowMs    扫描时使用的数据库时钟
      * @param candidates 扫描结果
      */
+    @Override
     public void put(ScanCacheKey key, long dbNowMs, List<JobEntity> candidates) {
         if (key == null) {
             return;
@@ -205,14 +118,15 @@ public class ScanCache {
     }
 
     /**
-     * 记录一次扫描结果（按条件 + 时钟 + 候选行），供之后 TTL 秒内的拍次复用。
+     * 记录一次扫描结果（按条件 + 时钟 + 候选行），供之后 TTL 内的拍次复用。
      *
-     * @param group 扫描分组
-     * @param preReadMs 预读时间窗
+     * @param group        扫描分组
+     * @param preReadMs    预读时间窗
      * @param preReadCount 每拍扫描上限
-     * @param dbNowMs 扫描时使用的数据库时钟
-     * @param candidates 扫描结果
+     * @param dbNowMs      扫描时使用的数据库时钟
+     * @param candidates   扫描结果
      */
+    @Override
     public void put(String group, long preReadMs, int preReadCount, long dbNowMs, List<JobEntity> candidates) {
         put(new ScanCacheKey(group, preReadMs, preReadCount), dbNowMs, candidates);
     }
@@ -220,6 +134,7 @@ public class ScanCache {
     /**
      * 失效全部扫描结果（写侧出口调用）。
      */
+    @Override
     public void clear() {
         cache.clear();
     }
@@ -229,8 +144,11 @@ public class ScanCache {
      *
      * @param key 查询条件
      */
+    @Override
     public void remove(ScanCacheKey key) {
-        cache.remove(key);
+        if (key != null) {
+            cache.remove(key);
+        }
     }
 
     /**
@@ -238,6 +156,7 @@ public class ScanCache {
      *
      * @return 条数
      */
+    @Override
     public int size() {
         return cache.size();
     }
@@ -247,6 +166,7 @@ public class ScanCache {
      *
      * @return TTL 毫秒数
      */
+    @Override
     public long ttlMs() {
         return ttlMs;
     }

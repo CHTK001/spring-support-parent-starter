@@ -1,0 +1,14 @@
+# 扫描结果缓存 SPI（com.chua.starter.job.support.cache.JobScanCache）
+#
+# 两档实现由同一个扩展点选择，对应 plugin.job.cache.enabled 的开与关：
+#   none   非缓存：永不命中、写入即丢弃，等价于每拍真实查库（默认档）
+#   memory 缓存：按「分组 + 预读窗 + 扫描上限」缓存 ttl-ms，命中时复用相位
+#
+# 接入方自定义实现（例如 Redis / 多节点共享扫描结果）时新增一行 alias=实现类全限定名 即可，
+# 实现类需满足 JobScanCache 的契约：值必须是扫描时的候选行（命中方不得直接写回），
+# clear() 是写侧出口的唯一失效手段。
+none=com.chua.starter.job.support.cache.NoopScanCache
+noop=com.chua.starter.job.support.cache.NoopScanCache
+off=com.chua.starter.job.support.cache.NoopScanCache
+memory=com.chua.starter.job.support.cache.ScanCache
+ttl=com.chua.starter.job.support.cache.ScanCache

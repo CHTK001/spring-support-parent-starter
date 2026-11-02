@@ -62,8 +62,11 @@ public class HealthGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("channel_health_down_to_recover", "2", "NUMBER", "连续成功次数达到阈值则从 DOWN 恢复为 ONLINE", 4),
                 new SettingItem("channel_health_warning_latency_ms", "3000", "NUMBER", "探针延迟警告阈值（毫秒），超时无损但标记 WARNING", 5),
                 new SettingItem("channel_health_probe_timeout_sec", "10", "NUMBER", "探针请求超时秒数（连接+读取），应小于探针间隔", 6),
-                new SettingItem("channel_health_rate_limited_status", "429", "NUMBER", "命中上游限流的状态码（命中后标记 RATE_LIMITED，不计入连续失败）", 7),
-                new SettingItem("channel_health_probe_root_fallback", "true", "BOOLEAN", "探针 404 时回退到源站根路径（/），区分端点错误与通道不可达", 8)
+                new SettingItem("channel_health_rate_limited_status", "429", "NUMBER", "命中上游限流的状态码（命中后标记 RATE_LIMITED，不计入连续失败）", 8),
+                new SettingItem("channel_health_probe_root_fallback", "true", "BOOLEAN", "探针 404 时回退到源站根路径（/），区分端点错误与通道不可达", 9),
+                new SettingItem("channel_circuit_enabled", "true", "BOOLEAN", "请求级熔断总开关：开启后连续失败达到阈值即暂时拒绝路由（fail-closed）", 10),
+                new SettingItem("channel_circuit_failure_threshold", "3", "NUMBER", "同一「供应商::模型」连续失败达到阈值触发熔断，默认 3", 11),
+                new SettingItem("channel_circuit_open_seconds", "30", "NUMBER", "熔断打开后的冷却秒数，冷却结束放行一次试探请求（半开）", 12)
         );
     }
 }
