@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.configuration.security;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.core.AiConfiguration;
 import com.chua.starter.ai.support.security.GatewayBodySizeFilter;
 import com.chua.starter.ai.support.security.GatewayConnectionBudgetFilter;
 import com.chua.starter.ai.support.security.GatewayHealthCheckFilter;
@@ -59,7 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since 4.0.0.52
  */
 @Slf4j
-@AutoConfiguration
+@AutoConfiguration(after = AiConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnClass(Filter.class)
 @ConditionalOnProperty(prefix = "plugin.ai.security", name = "enabled", havingValue = "true", matchIfMissing = true)
