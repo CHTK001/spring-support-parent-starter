@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
  * 收尾并取消看门狗，因此本过滤器只覆盖「同步处理耗时」。SSE 的流时长由
  * {@code SseEmitter} 自身超时与上游 {@code FailoverTimeouts}（首包/整体）负责，两者不重叠。</p>
  *
- * <h2>开销</summary>
+ * <h2>开销</h2>
  * <p>每个命中请求一次 {@code schedule} + 一次 {@code cancel}（JDK 的
  * {@link java.util.concurrent.ScheduledThreadPoolExecutor} 支持取消即移除），没有额外线程。
  * 十亿级吞吐下这层会被 NIO 通道层的定时轮替代，当前阶段先保证功能正确。</p>
