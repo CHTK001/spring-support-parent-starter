@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Datasource Starter - 数据源配置和管理模块
 
@@ -67,7 +67,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-flyway-starter</artifactId>
-            <version>${project.version}</version>
+            <version>${utils.version}</version>
         </dependency>
 
         <!-- Spring Boot JDBC支持 - 提供数据库访问和事务管理功能 -->
@@ -99,7 +99,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-h2-starter</artifactId>
-            <version>${project.version}</version>
+            <version>${utils.version}</version>
             <optional>true</optional>
         </dependency>
 
@@ -107,7 +107,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-sqlite-starter</artifactId>
-            <version>${project.version}</version>
+            <version>${utils.version}</version>
             <optional>true</optional>
         </dependency>
 
@@ -202,23 +202,23 @@
     <!-- 构建期将本模块 db/init 下的脚本合并为一份完整 init.sql（输出到 target，不入库） -->
     <build>
         <plugins>
-            <plugin>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-flyway-maven-plugin</artifactId>
-                <version>${project.version}</version>
-                <executions>
-                    <execution>
-                        <id>generate-module-init-sql</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>generate-init-sql</goal>
-                        </goals>
-                        <configuration>
-                            <mode>initdata</mode>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
+<!--             <plugin> -->
+<!--                 <groupId>com.chua</groupId> -->
+<!--                 <artifactId>utils-support-flyway-maven-plugin</artifactId> -->
+<!--                 <version></version> -->
+<!--                 <executions> -->
+<!--                     <execution> -->
+<!--                         <id>generate-module-init-sql</id> -->
+<!--                         <phase>generate-resources</phase> -->
+<!--                         <goals> -->
+<!--                             <goal>generate-init-sql</goal> -->
+<!--                         </goals> -->
+<!--                         <configuration> -->
+<!--                             <mode>initdata</mode> -->
+<!--                         </configuration> -->
+<!--                     </execution> -->
+<!--                 </executions> -->
+<!--             </plugin> -->
         </plugins>
     </build>
 

@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.security;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
