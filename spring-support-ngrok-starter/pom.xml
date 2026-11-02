@@ -41,7 +41,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ngrok-starter</artifactId>
-            <version>${project.version}</version>
+            <version>${utils.version}</version>
         </dependency>
         <dependency>
             <groupId>com.ngrok</groupId>
