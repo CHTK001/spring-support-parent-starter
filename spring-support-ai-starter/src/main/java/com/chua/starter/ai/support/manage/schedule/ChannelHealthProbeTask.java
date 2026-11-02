@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.scheduling.support.CronTrigger;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -66,12 +66,12 @@ public class ChannelHealthProbeTask implements SchedulingConfigurer {
      * @param triggerContext 触发器上下文
      * @return 下次执行时间
      */
-    private Date nextTriggerTime(TriggerContext triggerContext) {
+    private Instant nextTriggerTime(TriggerContext triggerContext) {
         long intervalSec = channelHealthService.intervalSec();
-        Date last = triggerContext.lastScheduledExecutionTime();
+        Instant last = triggerContext.lastScheduledExecution();
         if (last == null) {
-            return Date.from(java.time.Instant.now().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec)));
+            return Instant.now().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec));
         }
-        return Date.from(last.toInstant().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec)));
+        return last.plusMillis(TimeUnit.SECONDS.toMillis(intervalSec));
     }
 }

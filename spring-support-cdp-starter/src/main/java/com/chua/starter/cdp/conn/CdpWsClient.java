@@ -37,7 +37,7 @@ import java.util.function.Consumer;
  * <p>JSON-RPC 协议约定：</p>
  * <ul>
  *   <li>调用：{"id":1,"method":"Page.navigate","params":{...}}，回复：{"id":1,"result":{...}} 或 {"id":1,"error":{...}}；</li>
- *   <li>事件：{"method":"Runtime.consoleAPI","params":{...}}；</li>
+ *   <li>事件：{"method":"Runtime.consoleAPI","params":{...}} 或 {"id":...};</li>
  *   <li>没有 sessionId 的命令广播到浏览器级（browser），有 sessionId 的命令发到页面级（page）。</li>
  * </ul>
  *
@@ -60,17 +60,17 @@ public class CdpWsClient implements AutoCloseable {
     /**
      * 已经发出但未收到回复的命令
      */
-    private final Map<Long, CompletableFuture<Map<String, Object>>> pending = new ConcurrentHashMap<>();
+    private final Map<Long, CompletableFuture<Map<String, Object>>> pending;
 
     /**
      * 事件监听器（method -> listeners）
      */
-    private final Map<String, List<Consumer<Map<String, Object>>>> handlers = new ConcurrentHashMap<>();
+    private final Map<String, List<Consumer<Map<String, Object>>>> handlers;
 
     /**
      * 序列号
      */
-    private final AtomicLong sequence = new AtomicLong();
+    private final AtomicLong sequence;
 
     /**
      * 是否正在关闭（杀掉未完成的调用）
@@ -80,12 +80,16 @@ public class CdpWsClient implements AutoCloseable {
     /**
      * 本地发送锁
      */
-    private final Object sendLock = new Object();
+    private final Object sendLock;
 
     /**
      * @param socket 已经连接好的 WebSocket
      */
     CdpWsClient(WebSocket socket) {
+        pending = new ConcurrentHashMap<>();
+        handlers = new ConcurrentHashMap<>();
+        sequence = new AtomicLong();
+        sendLock = new Object();
         this.socket = socket;
     }
 
@@ -128,13 +132,13 @@ public class CdpWsClient implements AutoCloseable {
         pending.put(id, future);
         try {
             synchronized (sendLock) {
-                socket.sendText(Json.toJson(message), true).join();
+                socket.sendText(Json.toJson(message, new String[0]), true).join();
             }
             Map<String, Object> result = future.get(
                     (timeout == null ? Duration.ofSeconds(30) : timeout).toMillis(), TimeUnit.MILLISECONDS);
             Object error = result.get("__error");
             if (error != null) {
-                throw new IllegalStateException("CDP " + method + " failed: " + Json.toJson(error));
+                throw new IllegalStateException("CDP " + method + " failed: " + Json.toJson(error, new String[0]));
             }
             return result;
         } catch (InterruptedException e) {
@@ -284,9 +288,10 @@ public class CdpWsClient implements AutoCloseable {
         /**
          * 面板分段文本（前一个是长文本的片段）
          */
-        private final StringBuilder buffer = new StringBuilder();
+        private final StringBuilder buffer;
 
         private Listener(AtomicReference<CdpWsClient> reference) {
+            this.buffer = new StringBuilder();
             this.reference = reference;
         }
 
@@ -313,7 +318,7 @@ public class CdpWsClient implements AutoCloseable {
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
             CdpWsClient client = reference.get();
-            if (client != null && client.closing) {
+            if (client != null && client.isClosing()) {
                 return;
             }
             log.warn("[cdp] WebSocket error: {}", error.getMessage(), error);

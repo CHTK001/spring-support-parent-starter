@@ -76,7 +76,7 @@ public class SysAiAppKeyTopupLog {
     /**
      * 流水类型常量
      */
-    interface Types {
+    public interface Types {
         /**
          * 充值
          */

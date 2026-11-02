@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.starter.ai.support.entity.SysAiAppKey;
+import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;
 
 import java.math.BigDecimal;
 import java.util.List;

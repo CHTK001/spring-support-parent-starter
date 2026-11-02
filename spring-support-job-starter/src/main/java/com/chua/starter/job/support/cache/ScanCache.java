@@ -97,19 +97,19 @@ public class ScanCache {
             this.candidates = candidates;
         }
 
-        ScanCacheKey key() {
+        public ScanCacheKey key() {
             return key;
         }
 
-        long dbNowMs() {
+        public long dbNowMs() {
             return dbNowMs;
         }
 
-        long buildAtMs() {
+        public long buildAtMs() {
             return buildAtMs;
         }
 
-        List<JobEntity> candidates() {
+        public List<JobEntity> candidates() {
             return candidates;
         }
 
