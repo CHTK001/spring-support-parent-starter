@@ -225,8 +225,13 @@ public class MybatisJobRepository implements JobRepository {
         // Phase 2：一次主键批读（k 行只读 1 次查询，0 行一次都不读）
         Map<String, JobEntity> freshByStateKey = new HashMap<>();
         if (!dueIds.isEmpty()) {
+            // 批读要带上与实路同样的存活谓词：候选行来自上一拍，期间可能已被别的节点停用/删除，
+            // 只按主键回捞会把"已停用的行"重新派发出去，等于缓存绕过了启停与软删除。
             List<JobEntity> freshRows = jobMapper.selectList(
-                    Wrappers.<JobEntity>lambdaQuery().in(JobEntity::getSysJobId, dueIds));
+                    Wrappers.<JobEntity>lambdaQuery()
+                            .in(JobEntity::getSysJobId, dueIds)
+                            .eq(JobEntity::getSysJobTriggerStatus, 1)
+                            .eq(JobEntity::getSysJobIsDeleted, 0));
             for (JobEntity r : freshRows) {
                 String key = stateKey(r);
                 if (key != null) {
@@ -259,11 +264,18 @@ public class MybatisJobRepository implements JobRepository {
             if (key == null) {
                 continue;
             }
-            // 维系到期行：用主键批读回的新鲜行替换（写回与乐观条件必须基于最新行），
-            // 没有新鲜行的继续用缓存行（行为与实路相同）
-            JobEntity target = freshByStateKey == null || freshByStateKey.isEmpty() ? entity : freshByStateKey.get(key);
-            if (target == null) {
+            // 维系到期行：用主键批读回的新鲜行替换（写回与乐观条件必须基于最新行）。
+            // 缓存命中且该行没被批读回来，说明它在上一拍之后被停用/删除了：必须整行跳过，
+            // 不能退回缓存行去派发，否则缓存成了绕过启停与软删除的后门。
+            JobEntity target;
+            if (freshByStateKey == null) {
+                // 实路：候选行本身就是新鲜行
                 target = entity;
+            } else {
+                target = freshByStateKey.get(key);
+                if (target == null) {
+                    continue;
+                }
             }
 
             long nextFire = nextFireMs(target, key, now);
