@@ -1,7 +1,6 @@
 package com.chua.starter.ai.support.security;
 
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 网关并发数（在途连接）预算过滤器。
+ * 网关并发数（在途连接）预算过滤器（顺序第四）。
  *
  * <p>每个 APPKey 维护一个在途计数器：进入时加 1，超预算则 429 拒绝；退出时减 1
  * （SSE 这类长连接会在整条流期间持续占住预算，正是我们想限制的）。</p>
@@ -22,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * （也不能用 {@code null} 做 map key —— {@link ConcurrentHashMap} 会直接抛 NPE）。</p>
  *
  * <h2>为什么覆盖 doFilterInternal</h2>
- * <p>这里必须在 {@code finally} 里归还预算，而基类模板要求「判定阶段不得调用链」。
+ * <p>名额必须在 {@code finally} 里归还，而基类模板要求「判定阶段不得调用链」。
  * 覆盖后仍遵守基类三条约定：判定异常放行、链只走一次、下游异常不吞。</p>
  *
  * @author CH
@@ -30,15 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter {
-
-    /**
-     * 公钥：并发开关
-     */
-    private static final String FIELD_BUDGET_ENABLED = "security_connection_budget_enabled";
-    /**
-     * 公钥：单 Key 最大在途并发
-     */
-    private static final String FIELD_BUDGET_MAX = "security_connection_budget_max";
 
     /**
      * 未携带 APPKey 的流量共用这个哨兵 Key
@@ -53,17 +43,17 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
     /**
      * 构造器注入：安全设置唯一来源。
      *
-     * @param globalSettingReader 全局设置读取器
+     * @param settings 安全设置快照
      */
-    public GatewayConnectionBudgetFilter(GlobalSettingReader globalSettingReader) {
-        super(globalSettingReader);
+    public GatewayConnectionBudgetFilter(SecuritySettings settings) {
+        super(settings);
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         Lease lease = acquire(request, response);
-        if (lease.rejected()) {
+        if (lease.rejected) {
             return;
         }
         try {
@@ -78,19 +68,19 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
      *
      * @param request  请求
      * @param response 响应
-     * @return 租约（{@link Lease#rejected()} 为 true 表示已写完 429，不得再进链）
+     * @return 租约；{@code rejected=true} 表示已写完 429，不得再进链
      */
     private Lease acquire(HttpServletRequest request, HttpServletResponse response) {
         AtomicInteger counter = null;
         String key = null;
         try {
             if (!applies(request)
-                    || !globalSettingReader().getBool("security", FIELD_BUDGET_ENABLED, true)) {
-                return Lease.pass();
+                    || !settings().getBool("security_connection_budget_enabled", true)) {
+                return Lease.PASS;
             }
-            int max = globalSettingReader().getInt("security", FIELD_BUDGET_MAX, 64);
+            int max = settings().getInt("security_connection_budget_max", 64);
             if (max <= 0) {
-                return Lease.pass();
+                return Lease.PASS;
             }
             String appKey = StringUtils.trimToNull(resolveAppKey(request));
             key = appKey == null ? ANONYMOUS_KEY : appKey;
@@ -98,17 +88,17 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
             if (counter.incrementAndGet() > max) {
                 counter.decrementAndGet();
                 log.warn("[GatewayConnectionBudgetFilter] 在途并发超限 key={} max={}", key, max);
-                rejectTooMany(request, response, String.valueOf(max));
+                rejectTooMany(response, max);
                 return Lease.REJECTED;
             }
-            return new Lease(key, counter);
+            return new Lease(key, counter, false);
         } catch (Exception e) {
             log.warn("[GatewayConnectionBudgetFilter] 拦截判定异常，已放行: {}", e.getMessage());
-            // 已加过计数器就立刻退回，避免预算被自己吞掉
+            // 已经加过计数器就立刻退回，避免预算被自己吞掉
             if (counter != null) {
                 counter.decrementAndGet();
             }
-            return Lease.pass();
+            return Lease.PASS;
         }
     }
 
@@ -121,8 +111,7 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
         if (lease.counter == null) {
             return;
         }
-        int remaining = lease.counter.decrementAndGet();
-        if (remaining <= 0) {
+        if (lease.counter.decrementAndGet() <= 0) {
             // 归零后移除，避免每个历史 APPKey 常驻一个计数器
             inFlight.remove(lease.key, lease.counter);
         }
@@ -130,7 +119,7 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
 
     @Override
     protected boolean reject(HttpServletRequest request, HttpServletResponse response) {
-        // 并发预算必须在 finally 里归还，逻辑在 doFilterInternal 里，这里不参与模板
+        // 名额必须在 finally 里归还，逻辑在 doFilterInternal 里，这里不参与模板
         return false;
     }
 
@@ -140,37 +129,34 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
     private static final class Lease {
 
         /**
-         * 已拒答的租约：不再进入过滤器链
+         * 已拒答：不再进入过滤器链
          */
         private static final Lease REJECTED = new Lease(null, null, true);
 
         /**
-         * 已放行但未占名额的租约（开关关闭、未超限以外的降级路径）
+         * 已放行但未占名额（开关关闭、不限制、判定降级）
          */
         private static final Lease PASS = new Lease(null, null, false);
 
+        /**
+         * 计数的键
+         */
         private final String key;
 
+        /**
+         * 在途计数器
+         */
         private final AtomicInteger counter;
 
+        /**
+         * 是否已拒答
+         */
         private final boolean rejected;
-
-        private Lease(String key, AtomicInteger counter) {
-            this(key, counter, false);
-        }
 
         private Lease(String key, AtomicInteger counter, boolean rejected) {
             this.key = key;
             this.counter = counter;
             this.rejected = rejected;
-        }
-
-        static Lease pass() {
-            return PASS;
-        }
-
-        boolean rejected() {
-            return rejected;
         }
     }
 }

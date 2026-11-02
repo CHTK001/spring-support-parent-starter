@@ -1,6 +1,5 @@
 package com.chua.starter.ai.support.security;
 
-import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletOutputStream;
@@ -44,25 +43,11 @@ import java.util.concurrent.TimeUnit;
  * 收尾并取消看门狗，因此本过滤器只覆盖「同步处理耗时」。SSE 的流时长由
  * {@code SseEmitter} 自身超时与上游 {@code FailoverTimeouts}（首包/整体）负责，两者不重叠。</p>
  *
- * <h2>开销</h2>
- * <p>每个命中请求一次 {@code schedule} + 一次 {@code cancel}（JDK 的
- * {@link java.util.concurrent.ScheduledThreadPoolExecutor} 支持取消即移除），没有额外线程。
- * 十亿级吞吐下这层会被 NIO 通道层的定时轮替代，当前阶段先保证功能正确。</p>
- *
  * @author CH
  * @since 4.0.0.52
  */
 @Slf4j
 public class GatewayRequestTimeoutFilter extends AbstractGatewaySecurityFilter {
-
-    /**
-     * 公钥：逐请求超时开关
-     */
-    private static final String FIELD_TIMEOUT_ENABLED = "security_request_timeout_enabled";
-    /**
-     * 公钥：逐请求最大处理时间（毫秒）
-     */
-    private static final String FIELD_TIMEOUT_MILLIS = "security_request_timeout_millis";
 
     /**
      * 超时看门狗：整机共享，只做定时回调
@@ -72,12 +57,11 @@ public class GatewayRequestTimeoutFilter extends AbstractGatewaySecurityFilter {
     /**
      * 构造器注入。
      *
-     * @param globalSettingReader 全局设置读取器
-     * @param watchdog            超时看门狗调度器
+     * @param settings 安全设置快照
+     * @param watchdog 超时看门狗调度器
      */
-    public GatewayRequestTimeoutFilter(GlobalSettingReader globalSettingReader,
-                                       ScheduledExecutorService watchdog) {
-        super(globalSettingReader);
+    public GatewayRequestTimeoutFilter(SecuritySettings settings, ScheduledExecutorService watchdog) {
+        super(settings);
         this.watchdog = watchdog;
     }
 
@@ -86,12 +70,11 @@ public class GatewayRequestTimeoutFilter extends AbstractGatewaySecurityFilter {
             throws ServletException, IOException {
         long timeoutMillis;
         try {
-            if (!applies(request)
-                    || !globalSettingReader().getBool("security", FIELD_TIMEOUT_ENABLED, true)) {
+            if (!applies(request) || !settings().getBool("security_request_timeout_enabled", true)) {
                 chain.doFilter(request, response);
                 return;
             }
-            timeoutMillis = globalSettingReader().getInt("security", FIELD_TIMEOUT_MILLIS, 60_000);
+            timeoutMillis = settings().getInt("security_request_timeout_millis", 60_000);
             if (timeoutMillis <= 0) {
                 chain.doFilter(request, response);
                 return;
@@ -179,7 +162,7 @@ public class GatewayRequestTimeoutFilter extends AbstractGatewaySecurityFilter {
                     raw.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
                     raw.flushBuffer();
                 } catch (IllegalStateException stateException) {
-                    // 下游已先拿了 Writer：改用字符流写，避免模式冲突
+                    // 下游已先拿了 Writer：改用字符流写，避免输出流/字符流模式冲突
                     try {
                         raw.getWriter().write(body);
                         raw.flushBuffer();

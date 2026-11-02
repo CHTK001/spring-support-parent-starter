@@ -1,6 +1,5 @@
 package com.chua.starter.ai.support.security;
 
-import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
@@ -15,7 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 /**
- * 网关请求体大小限制过滤器（对应 Sub2API 的 body size guard）。
+ * 网关请求体大小限制过滤器（顺序第五，对应 Sub2API 的 body size guard）。
  *
  * <h2>三条判定路径</h2>
  * <ol>
@@ -38,15 +37,6 @@ import java.io.IOException;
 public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
 
     /**
-     * 公钥：请求体开关
-     */
-    private static final String FIELD_BODY_ENABLED = "security_body_limit_enabled";
-    /**
-     * 公钥：最大请求体字节数
-     */
-    private static final String FIELD_BODY_MAX_BYTES = "security_body_limit_max_bytes";
-
-    /**
      * 一次性读取的块大小
      */
     private static final int READ_BUFFER = 4096;
@@ -54,10 +44,10 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
     /**
      * 构造器注入：安全设置唯一来源。
      *
-     * @param globalSettingReader 全局设置读取器
+     * @param settings 安全设置快照
      */
-    public GatewayBodySizeFilter(GlobalSettingReader globalSettingReader) {
-        super(globalSettingReader);
+    public GatewayBodySizeFilter(SecuritySettings settings) {
+        super(settings);
     }
 
     /**
@@ -74,15 +64,14 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
             throws ServletException, IOException {
         byte[] replayable = null;
         try {
-            if (applies(request)
-                    && globalSettingReader().getBool("security", FIELD_BODY_ENABLED, true)) {
-                int maxBytes = globalSettingReader().getInt("security", FIELD_BODY_MAX_BYTES, 8_388_608);
+            if (applies(request) && settings().getBool("security_body_limit_enabled", true)) {
+                int maxBytes = settings().getInt("security_body_limit_max_bytes", 8_388_608);
                 if (maxBytes > 0) {
                     long contentLength = request.getContentLengthLong();
                     if (contentLength > maxBytes) {
                         log.warn("[GatewayBodySizeFilter] 请求体超限 {} > {}: {}", contentLength, maxBytes,
                                 request.getRequestURI());
-                        rejectBodySize(request, response, String.valueOf(maxBytes));
+                        rejectBodySize(response, maxBytes);
                         return;
                     }
                     if (contentLength < 0) {
@@ -91,7 +80,7 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
                         if (body.length > maxBytes) {
                             log.warn("[GatewayBodySizeFilter] 分块请求体超限 > {}: {}", maxBytes,
                                     request.getRequestURI());
-                            rejectBodySize(request, response, String.valueOf(maxBytes));
+                            rejectBodySize(response, maxBytes);
                             return;
                         }
                         replayable = body;
@@ -99,8 +88,8 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
                 }
             }
         } catch (Exception e) {
-            // 判定异常：放行。正文已经被消费过就无法回放，此时直接放行会让下游读空，
-            // 因此只在「还没消费正文」时降级；已消费的情况见下方 replayable 判定
+            // 判定异常：放行。若正文已被消费则无法回放，下游会读到空正文 —— 但相比直接
+            // 500 拒掉整条请求，放行仍是有损但可用的降级
             log.warn("[GatewayBodySizeFilter] 拦截判定异常，已放行: {}", e.getMessage());
         }
         if (replayable != null) {
@@ -120,7 +109,7 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
      * 一次性读完请求体（最多 {@code limit + 1} 字节）。
      *
      * @param request 请求
-     * @param limit   上限（函数会多读 1 字节以判断是否超限）
+     * @param limit   上限（函数会多读若干字节以判断是否超限）
      * @return 读到的字节
      * @throws IOException IO 异常
      */
@@ -132,6 +121,7 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
         while ((read = in.read(buf, 0, buf.length)) > 0) {
             out.write(buf, 0, read);
             if (out.size() > limit) {
+                // 已确认超限，剩下的不必再读
                 break;
             }
         }
