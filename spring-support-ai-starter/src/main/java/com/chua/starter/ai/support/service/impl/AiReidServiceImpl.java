@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.vector.Vector;
 import com.chua.common.support.vector.VectorStorage;
+import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FacePipeline;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
@@ -17,6 +18,7 @@ import com.chua.starter.ai.support.entity.SysAiFaceLibrary;
 import com.chua.starter.ai.support.service.AiReidService;
 import com.chua.starter.ai.support.service.FaceLibraryLinkService;
 import com.chua.starter.ai.support.service.FaceStores;
+import com.chua.starter.ai.support.service.MultiFaceEnrollException;
 import com.chua.starter.ai.support.service.ReidLibraryLinkService;
 import com.chua.starter.ai.support.service.ReidStores;
 import com.chua.starter.ai.support.util.AiLibraryGroups;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -310,6 +313,77 @@ public class AiReidServiceImpl implements AiReidService {
         }
     }
 
+    /**
+     * 登记（加入重识别底库）：检测人脸 → 裁剪 → 提特征 → 写底库。
+     *
+     * <p>把「观测来的临时人」变成底库里的正式行：登记后它将直接出现在底库列表里，
+     * 并能被「以图搜人」按向量搜到。</p>
+     *
+     * <p><b>只接受单人脸</b>：多于 1 张人脸时拒绝并提示裁剪后重试，避免登记了中间人
+     * 而用户毫不知情。</p>
+     *
+     * <p>特征管线与 {@link FaceStores#enrollFromImage(String, String, byte[], Map)} 同路径
+     * （detect → crop → liveness → align → feature），只把落点换到重识别底库连动层
+     * （{@code sys_ai_reid_library} + 重识别向量库）—— 检测/特征模型由 {@link ReidClientManager}
+     * 共享人脸组（face）加载，模型不重复加载。</p>
+     *
+     * @param group     分组名（空值按默认组 {@code default}）
+     * @param id        人员标识（底库行的向量标识）
+     * @param imageData 图片字节
+     * @param metadata  元数据（可含 `name` 展示名 / `cameraId` 摄像头 / `lat` `lng` 经纬度）
+     * @return 是否登记成功
+     */
+    @Override
+    public boolean enroll(String group, String id, byte[] imageData, Map<String, Object> metadata) {
+        String account = AiUserContext.requireUserId();
+        String resolvedGroup = AiLibraryGroups.normalize(group);
+
+        FacePipeline detector = clientManager.currentLowThresholdDetector();
+        if (detector == null) {
+            throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置人脸组的检测模型与特征模型");
+        }
+        // 先取特征再写底库：只有先取出特征，才能写底库行与向量（与 FaceStores.enrollFromImage 同路径）
+        FaceFeaturePipelineResult result = detector.extractFeatureWithMeta(imageData);
+        if (result == null || result.feature() == null || result.feature().length == 0) {
+            log.warn("[Reid] 登记失败：未提取到人脸特征: id={}", id);
+            return false;
+        }
+        if (result.faceCount() > 1) {
+            throw new MultiFaceEnrollException(result.faceCount());
+        }
+        float[] feature = result.feature();
+
+        // 元数据归一化（以已解析的分组为准）与展示字段
+        Map<String, Object> meta = metadata == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(metadata);
+        meta.put("group", resolvedGroup);
+        // 没传展示名就用标识符兜底，否则列表里没有名
+        String name = strOf(meta, "name");
+        if (name == null) {
+            name = id;
+        }
+        // 没传摄像头就按当前组的配置走默认值
+        String cameraId = strOf(meta, "cameraId");
+        if (StringUtils.isBlank(cameraId)) {
+            cameraId = clientManager.defaultCameraId();
+        }
+        BigDecimal lat = numberOf(meta.get("lat"));
+        BigDecimal lng = numberOf(meta.get("lng"));
+
+        // 先写 DB 行与向量（向量失败则回滚 DB 行，不留下半拉数据）
+        boolean ok = library.insert(account, id, null, cameraId, name, meta,
+                base64Of(result.faceImage()), lat, lng,
+                reidStores.currentVectorStorage(resolvedGroup), feature);
+        if (!ok) {
+            log.warn("[Reid] 登记落库失败: id={}", id);
+            return false;
+        }
+        // 向量已入库 → 记进本分组快照，供进程启动后重建 jvector 索引
+        reidStores.remember(resolvedGroup, id, feature);
+        log.info("[Reid] 登记成功: id={} group={} cameraId={}", id, resolvedGroup, cameraId);
+        return true;
+    }
+
     @Override
     public List<ReidHit> search(List<String> groups, byte[] imageData, int topK) {
         String account = AiUserContext.requireUserId();
@@ -539,6 +613,56 @@ public class AiReidServiceImpl implements AiReidService {
             return n.doubleValue();
         }
         return 0d;
+    }
+
+    /**
+     * 取元数据里的字符串字段。
+     *
+     * @param metadata 元数据；可为空
+     * @param key      键
+     * @return 字符串值；不存在返回 {@code null}
+     */
+    private static String strOf(Map<String, Object> metadata, String key) {
+        if (metadata == null) {
+            return null;
+        }
+        Object value = metadata.get(key);
+        return value == null ? null : String.valueOf(value);
+    }
+
+    /**
+     * 取元数据里的数值字段（经纬度用）。
+     *
+     * @param value 原始值（Integer/Long/Double 或字符串）
+     * @return 数值；不支持返回 {@code null}
+     */
+    private static BigDecimal numberOf(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number n) {
+            return new BigDecimal(String.valueOf(n));
+        }
+        String s = String.valueOf(value).trim();
+        if (s.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(s);
+        } catch (Exception ex) {
+            log.debug("[Reid] 数值转换失败: {} -> {}", value, ex.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 图片字节转 base64（缩略图入库用）。
+     *
+     * @param data 图片字节；空返回 {@code null}
+     * @return base64 字符串
+     */
+    private static String base64Of(byte[] data) {
+        return data == null || data.length == 0 ? null : Base64.getEncoder().encodeToString(data);
     }
 
     @Override
