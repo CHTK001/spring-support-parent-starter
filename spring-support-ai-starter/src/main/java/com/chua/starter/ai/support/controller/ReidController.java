@@ -8,6 +8,7 @@ import com.chua.deeplearning.support.feature.FeatureExtractor;
 import com.chua.deeplearning.support.reid.PersonTrack;
 import com.chua.starter.ai.support.configuration.reid.ReidClientManager;
 import com.chua.starter.ai.support.service.AiReidService;
+import com.chua.starter.ai.support.service.MultiFaceEnrollException;
 import com.chua.starter.ai.support.service.ReidLibraryLinkService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.util.AiLibraryGroups;
@@ -111,6 +112,46 @@ public class ReidController {
         } catch (IOException e) {
             log.warn("[Reid] 读取上传文件失败: {}", e.getMessage());
             return ReturnResult.error("读取上传文件失败");
+        }
+    }
+
+    /**
+     * 重识别登记入库（把一张照片登记入重识别底库）。
+     *
+     * <p>登记管线：detect → crop → liveness → align → feature → 写
+     * {@code sys_ai_reid_library} + 重识别向量库。</p>
+     *
+     * <p><b>底库只支持单人脸</b>，检出多于一张时拒绝并返回原因</p>
+     *
+     * @param group    分组名；不传/空 = 默认组 default
+     * @param id       人员标识（底库行的向量标识）
+     * @param file     图片文件
+     * @param metadata 附加元数据（JSON）
+     * @return 登记结果
+     */
+    @Operation(summary = "重识别登记", description = "登记管线：detect→crop→liveness→align→feature→入库；底库只支持单人脸，检出多于一张时拒绝并返回原因")
+    @PostMapping("/enroll")
+    public ReturnResult<?> enroll(@RequestParam(value = "group", required = false) String group,
+                                  @RequestParam("id") String id,
+                                  @RequestParam("file") MultipartFile file,
+                                  @RequestParam(value = "metadata", required = false) String metadata) {
+        if (id == null || id.isBlank()) {
+            return ReturnResult.error("人员 ID 不能为空");
+        }
+        if (file == null || file.isEmpty()) {
+            return ReturnResult.error("上传文件不能为空");
+        }
+        try {
+            Map<String, Object> meta = parseMetadata(metadata);
+            boolean success = reidService.enroll(group, id, file.getBytes(), meta);
+            return success ? ReturnResult.ok("已登记") : ReturnResult.error("登记失败");
+        } catch (MultiFaceEnrollException e) {
+            // 可预期的业务分支：多脸照片。不打 ERROR 全栈（不是故障），只回明确原因
+            log.info("[Reid] 拒绝多脸登记: id={} -> {}", id, e.getMessage());
+            return ReturnResult.error(e.getMessage());
+        } catch (Exception e) {
+            log.error("[Reid] 重识别登记失败", e);
+            return ReturnResult.error("重识别登记失败: " + e.getMessage());
         }
     }
 
@@ -352,6 +393,25 @@ public class ReidController {
             return Integer.parseInt(String.valueOf(obj));
         } catch (Exception e) {
             return 0;
+        }
+    }
+
+    /**
+     * 解析可选的 metadata JSON（登记用）。
+     *
+     * @param json JSON 对象字符串，空或非法时返回空 映射
+     * @return 元数据 映射
+     */
+    private static Map<String, Object> parseMetadata(String json) {
+        if (null == json || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                    });
+        } catch (Exception e) {
+            return Map.of();
         }
     }
 }
