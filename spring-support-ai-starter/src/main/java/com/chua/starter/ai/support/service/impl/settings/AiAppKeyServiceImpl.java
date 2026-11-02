@@ -528,7 +528,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         dto.setMaxUse(entity.getMaxUse());
         dto.setBalance(entity.getBalance());
         dto.setPlanId(entity.getPlanId());
-        dto.setOverdraftEnabled(entity.getOverdraftEnabled());
+        dto.setOverdraftEnabled(entity.getOverdraftEnabled() != null && entity.getOverdraftEnabled() == 1);
         dto.setMinuteRate(entity.getMinuteRate());
         dto.setTotalCost(entity.getTotalCost());
         dto.setExpireTime(entity.getExpireDatetime() != null

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.task.scheduler.Trigger;
+import com.chua.starter.job.support.JobProperties;
 import com.chua.starter.job.support.cache.ScanCache;
 import com.chua.starter.job.support.dispatch.JobDefinition;
 import com.chua.starter.job.support.dispatch.JobQuery;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
