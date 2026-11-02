@@ -21,7 +21,8 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
-import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Optional;
 
@@ -89,7 +90,8 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         long costTime = System.currentTimeMillis() - startTime;
         // 获取当前时间
         Date currentTime = new Date();
-        String formattedTime = new SimpleDateFormat(DATE_FORMAT_PATTERN).format(currentTime);
+        String formattedTime = DateTimeFormatter.ofPattern(DATE_FORMAT_PATTERN)
+                .format(currentTime.toInstant().atZone(ZoneId.systemDefault()));
         // 获取用户名
         String username = getUsername();
         String displayUsername = StringUtils.isNotBlank(username) ? username : ANONYMOUS_USER;

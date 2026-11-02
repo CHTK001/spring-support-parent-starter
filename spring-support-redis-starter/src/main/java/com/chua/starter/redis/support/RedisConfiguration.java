@@ -210,6 +210,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         objectMapper.registerModule(new JavaTimeModule());
         // 统一设置日期格式为 yyyy-MM-dd HH:mm:ss
         objectMapper.setDateFormat(new SimpleDateFormat(DATE_FORMAT_PATTERN));
+        // [P3C-1.2 B2] Jackson setDateFormat 只接受 DateFormat，不能使用 DateTimeFormatter
         return objectMapper;
     }
 
@@ -295,6 +296,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
         om.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         // 统一设置日期格式为 yyyy-MM-dd HH:mm:ss
         om.setDateFormat(new SimpleDateFormat(DATE_FORMAT_PATTERN));
+        // [P3C-1.2 B2] Jackson setDateFormat 只接受 DateFormat，不能使用 DateTimeFormatter
         return om;
     }
 

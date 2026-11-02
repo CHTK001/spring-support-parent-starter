@@ -11,7 +11,8 @@ import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 /**
@@ -96,8 +97,8 @@ public class JobFileAppender {
     public static String makeLogFileName(Date triggerDate, long logId) {
 
  // 文件路径/yyyy-MM-dd
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); // avoid 并发 problem, 能否 not be 静态
-        File logFilePath = new File(getLogPath(), sdf.format(triggerDate));
+        DateTimeFormatter sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        File logFilePath = new File(getLogPath(), sdf.format(triggerDate.toInstant().atZone(ZoneId.systemDefault())));
         if (!logFilePath.exists()) {
             logFilePath.mkdir();
         }
