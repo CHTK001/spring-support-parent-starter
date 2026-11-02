@@ -16,17 +16,13 @@ import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduMarkingResultMapper;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
-import com.chua.starter.eduai.mapper.EduQuestionMapper;
-import com.chua.starter.eduai.mapper.EduWrongQuestionMapper;
 import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduMarkingResult;
 import com.chua.starter.eduai.model.EduMarkingTask;
-import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.EduWrongQuestion;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
 import com.chua.starter.eduai.model.vo.MarkingStatsVO;
-import com.chua.starter.eduai.model.vo.MarkingDashboardStatsVO;
 import com.chua.starter.eduai.service.IEduTeacherCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.PageBounds;
@@ -463,126 +459,6 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
                 .markedCount(marked.size())
                 .completionRate(submitted.isEmpty() ? 0.0 : Math.round((double) marked.size() / submitted.size() * 10000.0) / 10000.0)
                 .classStats(java.util.Collections.emptyList())
-                .build();
-    }
-
-    @Override
-    public MarkingDashboardStatsVO markingDashboardStats() {
-        requireTeacher();
-        String me = EduUserContext.requireUserId();
-        // 任务状态与老师完成状态：本人归属范围内的阅卷任务
-        List<EduMarkingTask> tasks = markingTaskMapper.selectList(
-                new QueryWrapper<EduMarkingTask>()
-                        .eq("marking_task_owner_user_id", me)
-                        .orderByDesc("marking_task_id"));
-        List<MarkingDashboardStatsVO.NamedCount> taskStatus = new java.util.ArrayList<>();
-        taskStatus.add(MarkingDashboardStatsVO.NamedCount.builder().name("排队中").count(0).build());
-        taskStatus.add(MarkingDashboardStatsVO.NamedCount.builder().name("处理中").count(0).build());
-        taskStatus.add(MarkingDashboardStatsVO.NamedCount.builder().name("已完成").count(0).build());
-        taskStatus.add(MarkingDashboardStatsVO.NamedCount.builder().name("失败").count(0).build());
-        long teacherDone = 0;
-        for (EduMarkingTask t : tasks) {
-            int status = t.getMarkingTaskStatus() == null ? 0 : t.getMarkingTaskStatus();
-            if (status == 0) {
-                taskStatus.get(0).setCount(taskStatus.get(0).getCount() + 1);
-            } else if (status == 1) {
-                taskStatus.get(1).setCount(taskStatus.get(1).getCount() + 1);
-            } else if (status == 2) {
-                taskStatus.get(2).setCount(taskStatus.get(2).getCount() + 1);
-            } else {
-                taskStatus.get(3).setCount(taskStatus.get(3).getCount() + 1);
-            }
-            if (Integer.valueOf(1).equals(t.getMarkingTaskTeacherFinished())) {
-                teacherDone++;
-            }
-        }
-        List<MarkingDashboardStatsVO.NamedCount> teacherFinished = new java.util.ArrayList<>();
-        teacherFinished.add(MarkingDashboardStatsVO.NamedCount.builder().name("待完成").count(tasks.size() - teacherDone).build());
-        teacherFinished.add(MarkingDashboardStatsVO.NamedCount.builder().name("已完成").count(teacherDone).build());
-
-        // 得分率分布：按本人任务的每个结果行算得分率，分三档（<60% / 60~80% / >=80%）
-        List<String> taskIds = tasks.stream()
-                .filter(t -> t.getMarkingTaskTaskId() != null)
-                .map(EduMarkingTask::getMarkingTaskTaskId)
-                .toList();
-        long rateLow = 0;
-        long rateMid = 0;
-        long rateHigh = 0;
-        if (!taskIds.isEmpty()) {
-            List<EduMarkingResult> results = markingResultMapper.selectList(
-                    new QueryWrapper<EduMarkingResult>()
-                            .in("marking_result_task_id", taskIds));
-            for (EduMarkingResult r : results) {
-                if (r.getMarkingResultQuestionId() == null || r.getMarkingResultQuestionId() <= 0) {
-            continue;
-        }
-                int finalScore = r.getMarkingResultTeacherScore() != null
-                        ? r.getMarkingResultTeacherScore()
-                        : (r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
-                int maxScore = parseDetailMaxScore(r.getMarkingResultDetail());
-                if (maxScore <= 0) {
-            continue;
-        }
-                double rate = (double) finalScore / maxScore;
-                if (rate < 0.6) {
-                    rateLow++;
-                } else if (rate < 0.8) {
-                    rateMid++;
-                } else {
-                    rateHigh++;
-                }
-            }
-        }
-        List<MarkingDashboardStatsVO.NamedCount> scoreRate = new java.util.ArrayList<>();
-        scoreRate.add(MarkingDashboardStatsVO.NamedCount.builder().name("<60%").count(rateLow).build());
-        scoreRate.add(MarkingDashboardStatsVO.NamedCount.builder().name("60%~80%").count(rateMid).build());
-        scoreRate.add(MarkingDashboardStatsVO.NamedCount.builder().name(">=80%").count(rateHigh).build());
-
-        // 错题 TOP 榜与订正率：本人归属范围内错题，按题聚合错误次数
-        List<EduWrongQuestion> wrongs = wrongQuestionMapper.selectList(
-                new QueryWrapper<EduWrongQuestion>()
-                        .eq("wrong_question_owner_user_id", me)
-                        .orderByDesc("wrong_question_last_wrong_time"));
-        int wrongTotal = wrongs.size();
-        long corrected = wrongs.stream()
-                .filter(w -> Integer.valueOf(1).equals(w.getWrongQuestionCorrected()))
-                .count();
-        Map<Long, Integer> wrongByQuestion = new LinkedHashMap<>();
-        for (EduWrongQuestion w : wrongs) {
-            if (w.getWrongQuestionQuestionId() == null || w.getWrongQuestionQuestionId() <= 0) {
-            continue;
-        }
-            wrongByQuestion.merge(w.getWrongQuestionQuestionId(),
-                    w.getWrongQuestionWrongCount() == null ? 1 : w.getWrongQuestionWrongCount(), Integer::sum);
-        }
-        List<MarkingDashboardStatsVO.WrongTopRow> wrongTop = new java.util.ArrayList<>();
-        if (!wrongByQuestion.isEmpty()) {
-            List<Long> topIds = wrongByQuestion.entrySet().stream()
-                    .sorted(java.util.Map.Entry.<Long, Integer>comparingByValue().reversed())
-                    .limit(10)
-                    .map(java.util.Map.Entry::getKey)
-                    .toList();
-            Map<Long, EduQuestion> questionMap = questionMapper.selectBatchIds(topIds).stream()
-                    .collect(java.util.stream.Collectors.toMap(EduQuestion::getQuestionId, q -> q, (a, b) -> a));
-            for (Long qid : topIds) {
-                EduQuestion q = questionMap.get(qid);
-                wrongTop.add(MarkingDashboardStatsVO.WrongTopRow.builder()
-                        .questionId(qid)
-                        .stem(q == null ? null : q.getQuestionStem())
-                        .subject(q == null ? null : q.getQuestionSubject())
-                        .wrongCount(wrongByQuestion.getOrDefault(qid, 0))
-                        .build());
-            }
-        }
-        return MarkingDashboardStatsVO.builder()
-                .taskTotal(tasks.size())
-                .taskStatus(taskStatus)
-                .teacherFinished(teacherFinished)
-                .scoreRateDistribution(scoreRate)
-                .wrongTop(wrongTop)
-                .wrongTotal(wrongTotal)
-                .correctedCount((int) corrected)
-                .correctedRate(wrongTotal == 0 ? 0.0 : Math.round(corrected * 10000.0 / wrongTotal) / 10000.0)
                 .build();
     }
 
