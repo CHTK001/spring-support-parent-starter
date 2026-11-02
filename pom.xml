@@ -773,11 +773,7 @@
             -->
             <!-- ========== Utils Support 工具类模块依赖 ========== -->
             <!-- 微服务框架支持 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-mica-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
+            <!-- utils-support-mica-starter 已移除：无源码、无构建产出、无 any 模块依赖 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-extension-starter</artifactId>
@@ -788,11 +784,7 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- 网络通信框架 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-netty-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
+            <!-- utils-support-netty-starter 已移除：无源码、无构建产出、无模块依赖 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-deeplearning-starter</artifactId>
@@ -843,23 +835,14 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- 消息总线支持 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-zbus-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
+            <!-- utils-support-zbus-starter 已移除：无源码、无构建产出、无模块依赖 -->
             <!-- Spring框架扩展工具 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-spring-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
-            <!-- Shell命令执行工具 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-shell-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
+            <!-- Shell命令执行工具：utils-support-shell-starter 已移除（无源码/无产出/无模块依赖） -->
             <!-- Hibernate ORM框架支持 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -919,11 +902,7 @@
               因此从未触发下载，全仓构建一直是绿的。一旦哪个模块引用它就会直接失败。
               参数名模块确需使用时，请用正确坐标 jackson-module-parameter-names。
             -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-guava-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
+            <!-- utils-support-guava-starter å·²ç§»é™¤ï¼šæ— æºç /æ— æž„å»ºäº§å‡º/æ— æ¨¡å—ä¾èµ– -->
             <!-- RPC远程调用框架 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -993,11 +972,7 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- Nginx配置管理工具 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-nginx-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
+            <!-- utils-support-nginx-starter å·²ç§»é™¤ï¼šæ— æºç /æ— æž„å»ºäº§å‡º/æ— æ¨¡å—ä¾èµ– -->
             <!-- GeoIP2地理位置查询工具 -->
             <dependency>
                 <groupId>com.chua</groupId>
