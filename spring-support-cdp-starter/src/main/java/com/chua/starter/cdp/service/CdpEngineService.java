@@ -430,13 +430,17 @@ public class CdpEngineService {
 
     /**
      * 创建目标
+     *
+     * <p>如果浏览器已停止（如 {@code stop()} 之后），先自动恢复浏览器，再创建页面。</p>
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> createTarget(Map<String, Object> params) {
         if (browserClient == null) {
-            throw new IllegalStateException("浏览器未启动");
+            // 停止后重新创建目标：自动恢复浏览器（start() 本身幂等）
+            start();
         }
-        return (Map<String, Object>) browserClient.call("Target.createTarget", params, properties.getCommandTimeout());
+        return (Map<String, Object>) browserClient.call("Target.createTarget", params,
+                properties.getCommandTimeout());
     }
 
     /**
@@ -528,6 +532,8 @@ public class CdpEngineService {
         result.put("version", version);
         result.put("targetCount", targetCount());
         result.putAll(runtime);
+        // 以状态字段为准（stop() 会把 runtime.state 写为 "stopped"，优先保证大小写规范）
+        result.put("state", state);
         return result;
     }
 
