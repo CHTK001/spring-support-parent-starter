@@ -71,7 +71,10 @@ public class JacksonConfiguration {
     */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
     /**
-     * 创建线程安全使用的日期格式化实例
+     * 创建线程安全使用的日期格式化实例。
+     * <p>[P3C-1.2 B2 豁免] 必须返回 {@code SimpleDateFormat}（Java 版 SimpleDateFormat），因为 Jackson
+     * {@link com.fasterxml.jackson.databind.ObjectMapper#setDateFormat(DateFormat)} 只接受 {@code DateFormat}，
+     * 无法使用 {@code DateTimeFormatter}。</p>
      *
      * @return 新的日期格式化实例
      */
@@ -131,6 +134,7 @@ public class JacksonConfiguration {
             log.debug("[Jackson配置]启用全类型序列化 (forEverything=true)");
         }
         SimpleDateFormat simpleDateFormat = newSimpleDateFormat();
+        /* [P3C-1.2 B2] Jackson setDateFormat 只接受 DateFormat，不能替换为 DateTimeFormatter */
         objectMapper.setDateFormat(simpleDateFormat);
         if (log.isDebugEnabled()) {
             log.debug("[Jackson配置]日期格式: {}", simpleDateFormat.toPattern());
