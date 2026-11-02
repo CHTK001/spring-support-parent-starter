@@ -207,19 +207,16 @@ public class MybatisJobRepository implements JobRepository {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
-        // Phase 1：用缓存行判断哪些已经到期
+        // Phase 1：判定哪些已经到期。判据与实路 SQL 谓词保持一致（next_time 为空/0/<=上界），
+        // 而不是用触发器现算 nextFire：缓存行是上一拍读到的，next_time 才是落库的派发进度，
+        // 用现算值判定会让「SQL 已选入但触发器算到未来」的行漏派发（实路不会漏）。
         List<Object> dueIds = new ArrayList<>();
         for (JobEntity entity : candidates) {
-            String key = stateKey(entity);
-            if (key == null) {
-                continue;
-            }
-            long nextFire = nextFireMs(entity, key, phase);
-            if (nextFire < 0L) {
-                continue;
-            }
-            if (nextFire <= upperBound && entity.getSysJobId() != null) {
-                dueIds.add(entity.getSysJobId());
+            Long nextTime = entity.getSysJobTriggerNextTime();
+            if (nextTime == null || nextTime == 0L || nextTime <= upperBound) {
+                if (entity.getSysJobId() != null) {
+                    dueIds.add(entity.getSysJobId());
+                }
             }
         }
         // Phase 2：一次主键批读（k 行只读 1 次查询，0 行一次都不读）
