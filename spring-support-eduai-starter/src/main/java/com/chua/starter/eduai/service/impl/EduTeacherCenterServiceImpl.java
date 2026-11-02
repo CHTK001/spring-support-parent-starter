@@ -19,7 +19,6 @@ import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduMarkingResult;
 import com.chua.starter.eduai.model.EduMarkingTask;
-import com.chua.starter.eduai.model.EduWrongQuestion;
 import com.chua.starter.eduai.model.dto.TeacherBindDTO;
 import com.chua.starter.eduai.model.vo.HomeworkCompletionVO;
 import com.chua.starter.eduai.model.vo.MarkingStatsVO;
@@ -108,16 +107,6 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
      * 老师端不再按 class_owner_user_id 自建班级）
      */
     private final EduTeacherClassMapper teacherClassMapper;
-
-    /**
-     * 错题：总览统计的订正率与错题 TOP 榜
-     */
-    private final EduWrongQuestionMapper wrongQuestionMapper;
-
-    /**
-     * 题目：错题 TOP 榜补题干 / 学科
-     */
-    private final EduQuestionMapper questionMapper;
 
     @Override
     public Map<String, Object> me() {

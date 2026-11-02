@@ -164,7 +164,7 @@ const record = (name, ok, detail) => {
 
   const unexpectedErr = errs.filter((x) => !/Failed to load resource|ResizeObserver|vite|favicon/i.test(x));
   record('no unexpected JS errors', unexpectedErr.length === 0, JSON.stringify(unexpectedErr.slice(0, 4)));
-  const harmless = ['/typhoon-api/TyhoonActivity', '/v2/edu/teacher/marking/dashboard-stats', '/v2/edu/dimension/dropdown'];
+  const harmless = ['/typhoon-api/TyhoonActivity', '/v2/edu/dimension/dropdown'];
   record('no unexpected HTTP >= 400', badResp.filter((x) => !harmless.some((h) => x.includes(h))).length === 0,
     JSON.stringify(badResp.filter((x) => !harmless.some((h) => x.includes(h))).slice(0, 5)));
 
