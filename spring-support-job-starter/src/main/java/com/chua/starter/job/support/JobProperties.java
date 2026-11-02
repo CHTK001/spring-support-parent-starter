@@ -138,7 +138,7 @@ public class JobProperties {
         /**
          * 扫描结果缓存有效期（毫秒），默认 5000
          *
-          * <p>允许阈值与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号：候选窗口越宽，
+         * <p>允许阈值与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号：候选窗口越宽，
          * 这个窗口的扫描结果越稳定，越值得复用。</p>
          */
         private long ttlMs = 5000L;
