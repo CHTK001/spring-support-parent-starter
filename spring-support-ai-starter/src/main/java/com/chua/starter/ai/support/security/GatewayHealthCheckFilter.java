@@ -1,6 +1,5 @@
 package com.chua.starter.ai.support.security;
 
-import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.IOException;
 
 /**
- * 网关健康检查过滤器。
+ * 网关健康检查过滤器（顺序第一）。
  *
  * <p>把健康检查路径（{@code security_health_paths}，默认 {@code /healthz /ping /readyz}）
  * 从整条拦截链中剥离：直接回 200，不进入后续的 IP / 限流 / 并发 / 包体 / 超时过滤器与
@@ -28,10 +27,10 @@ public class GatewayHealthCheckFilter extends AbstractGatewaySecurityFilter {
     /**
      * 构造器注入：安全设置唯一来源。
      *
-     * @param globalSettingReader 全局设置读取器
+     * @param settings 安全设置快照
      */
-    public GatewayHealthCheckFilter(GlobalSettingReader globalSettingReader) {
-        super(globalSettingReader);
+    public GatewayHealthCheckFilter(SecuritySettings settings) {
+        super(settings);
     }
 
     @Override
