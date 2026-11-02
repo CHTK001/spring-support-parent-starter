@@ -24,6 +24,19 @@ import java.io.IOException;
  *   /v2/ai/**  AI 管理出口
  * </pre>
  *
+ * <h2>模板方法</h2>
+ * <p>{@link #doFilterInternal} 固定为「判定 → 要么拒答、要么放行一次」，子类只实现
+ * {@link #reject}；这样有三个强制保证：</p>
+ * <ol>
+ *   <li><b>过滤器链只会被调用一次</b>。历史上把 {@code chain.doFilter} 放进
+ *       {@code try} 里，catch 兜底再放行一次，等于一个请求走了两遍链（Controller
+ *       执行两次、SSE 起两条流），是线上最难查的一类事故；</li>
+ *   <li><b>拦截器自身异常一律放行</b>（fail-open）。设置表未初始化、Redis 抖动
+ *       都不能让网关整片 500；</li>
+ *   <li><b>下游异常不被吞</b>。放行只有 {@code chain.doFilter} 一条路径，异常原样
+ *       交给 Spring 的 {@code HandlerExceptionResolver} / {@code ApiException} 处理器。</li>
+ * </ol>
+ *
  * @author CH
  * @since 4.0.0.52
  */
@@ -42,6 +55,16 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
      * 公钥：健康检查路径（空格分隔）
      */
     private static final String FIELD_SECURITY_HEALTH_PATHS = "security_health_paths";
+
+    /**
+     * 未配置生效路径时的内置前缀：OpenAI 兼容网关 + AI 管理出口
+     */
+    private static final String DEFAULT_PATH_PREFIXES = "/v2/v1/,/v2/v1beta/,/v2/ai/";
+
+    /**
+     * 未配置健康检查路径时的内置清单
+     */
+    private static final String DEFAULT_HEALTH_PATHS = "/healthz /ping /readyz";
 
     /**
      * 目录前缀：全局设置读取器，安全分组的开关与配额全部走这里
@@ -65,6 +88,59 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
     protected GlobalSettingReader globalSettingReader() {
         return globalSettingReader;
     }
+
+    /**
+     * 统一拦截骨架：判定命中后只做一次「拒答或放行」。
+     *
+     * <p>子类若需要包装请求/响应（包装后仍要把包装对象传下去），可以覆盖本方法，
+     * 但必须遵守同样的三条约定：链只走一次、判定异常放行、下游异常不吞。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     * @param chain    过滤器链
+     * @throws ServletException Servlet 异常
+     * @throws IOException      IO 异常
+     */
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        boolean intercepted;
+        try {
+            intercepted = applies(request) && reject(request, response);
+        } catch (Exception e) {
+            // 拦截器自身异常：放行。设置表未初始化、Redis 抖动都不该让网关整片 500
+            log.warn("[{}] 拦截判定异常，已放行: {}", getClass().getSimpleName(), e.getMessage());
+            intercepted = false;
+        }
+        if (!intercepted) {
+            chain.doFilter(request, response);
+        }
+    }
+
+    /**
+     * 该请求是否进入本过滤器的判定范围。
+     *
+     * <p>默认是「总开关开启 + 路径命中网关前缀」。健康检查过滤器需要覆盖本方法：
+     * 探针路径（{@code /healthz}）根本不在 {@code /v2/v1/} 前缀下。</p>
+     *
+     * @param request 请求
+     * @return 需要判定返回 true
+     */
+    protected boolean applies(HttpServletRequest request) {
+        return enabled() && matches(request);
+    }
+
+    /**
+     * 拦截判定：返回 true 表示已经写完拒答响应，过滤器链不再继续。
+     *
+     * <p>实现里只做判定与写响应，<b>绝不能调用 {@code chain.doFilter}</b>。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     * @return 已拒答返回 true
+     * @throws Exception 判定异常（基类捕获后放行）
+     */
+    protected abstract boolean reject(HttpServletRequest request, HttpServletResponse response) throws Exception;
 
     /**
      * 开关（全局）是否开启。
@@ -92,7 +168,7 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
         String path = request.getRequestURI();
         if (!StringUtils.hasText(prefixString)) {
             // 未配置时守护 OpenAI 兼容网关 + AI 管理出口两个前缀
-            prefixString = "/v2/v1/,/v2/v1beta/,/v2/ai/";
+            prefixString = DEFAULT_PATH_PREFIXES;
         }
         for (String prefix : prefixString.split(",")) {
             String p = prefix.trim();
@@ -113,7 +189,7 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
         String paths = globalSettingReader().getStr("security", FIELD_SECURITY_HEALTH_PATHS);
         String path = request.getRequestURI();
         if (!StringUtils.hasText(paths)) {
-            paths = "/healthz /ping /readyz";
+            paths = DEFAULT_HEALTH_PATHS;
         }
         for (String p : paths.split(" +")) {
             if (StringUtils.hasText(p) && StringUtils.equals(path, p.trim())) {
@@ -140,7 +216,8 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
         if (token.startsWith("Bearer ")) {
             token = token.substring("Bearer ".length()).trim();
         } else {
-            token = null; // 不认的非 Bearer 格式（Basic/Token）直接放行给认证过滤器
+            // 不认的非 Bearer 格式（Basic/Token）交回下游认证守卫
+            token = null;
         }
         return StringUtils.hasText(token) ? token : null;
     }
@@ -154,7 +231,8 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
      */
     protected void rejectTooMany(HttpServletRequest request, HttpServletResponse response, String limit) {
         try {
-            response.setStatus(429);  // 429 在该 jakarta.servlet-api 版本的常量中缺失（verify: javap HttpServletResponse）
+            // 429 在该 jakarta.servlet-api 版本的常量中缺失（verify: javap HttpServletResponse）
+            response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(
                     "{\"error\":\"Too Many Requests\",\"limit\":" + limit + "}");
@@ -218,41 +296,5 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
         } catch (IOException e) {
             log.error("[AbstractGatewaySecurityFilter] IP ACL 拒答写失败: {}", e.getMessage());
         }
-    }
-
-    /**
-     * 兜底放行：当 {@code GlobalSettingReader} 不可用（设置表未初始化等）或读写异常时
-     * 直接放行，避免拦截器本身停机。
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param chain    过滤器链
-     */
-    protected void safePass(HttpServletRequest request, HttpServletResponse response, FilterChain chain) {
-        try {
-            chain.doFilter(request, response);
-        } catch (ServletException | IOException ex) {
-            log.error("[AbstractGatewaySecurityFilter] 过滤器链执行失败，放行: {}", ex.getMessage());
-        }
-    }
-
-    /**
-     * 按前缀列表做路径判断的工具（方便子类用 Akka 风格扩展）。
-     *
-     * @param prefixString 前缀列表
-     * @param path         请求路径
-     * @return 命中的前缀
-     */
-    protected static String matchPrefix(String prefixString, String path) {
-        if (!StringUtils.hasText(prefixString)) {
-            prefixString = "/v2/v1/,/v2/v1beta/,/v2/ai/";
-        }
-        for (String prefix : prefixString.split(",")) {
-            String p = prefix.trim();
-            if (StringUtils.hasText(p) && path.startsWith(p)) {
-                return p;
-            }
-        }
-        return null;
     }
 }
