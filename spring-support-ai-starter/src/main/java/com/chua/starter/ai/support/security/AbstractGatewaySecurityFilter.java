@@ -154,12 +154,30 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
      */
     protected void rejectTooMany(HttpServletRequest request, HttpServletResponse response, String limit) {
         try {
-            response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
+            response.setStatus(429);  // 429 在该 jakarta.servlet-api 版本的常量中缺失（verify: javap HttpServletResponse）
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(
                     "{\"error\":\"Too Many Requests\",\"limit\":" + limit + "}");
         } catch (IOException e) {
             log.error("[AbstractGatewaySecurityFilter] 429 拒答写失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 请求体过大拒答：记录日志并写出 413，不能进入下游 Handler。
+     *
+     * @param request  请求
+     * @param response 响应
+     * @param limit    限制大小
+     */
+    protected void rejectBodySize(HttpServletRequest request, HttpServletResponse response, String limit) {
+        try {
+            response.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                    "{\"error\":\"Request Body Too Large\",\"limit\":" + limit + "}");
+        } catch (IOException e) {
+            log.error("[AbstractGatewaySecurityFilter] 413 拒答写失败: {}", e.getMessage());
         }
     }
 
