@@ -182,6 +182,28 @@ public abstract class AbstractGatewaySecurityFilter extends OncePerRequestFilter
     }
 
     /**
+     * 请求超时拒答：看门狗抢在控制器之前把 504 写出去。
+     *
+     * <p>控制器仍在跑，随后写出会被丢弃 —— 调用方看到的是及时的 504，而不是等到
+     * 连接超时。与 {@link #rejectTooMany} 一致，按 JSON 写出，不走 {@code sendError}
+     * （那个会交给容器的错误页，拿不到本项目统一的错误结构）。</p>
+     *
+     * @param request       请求
+     * @param response      响应
+     * @param timeoutMillis 超时阈值（毫秒）
+     */
+    protected void rejectTimeout(HttpServletRequest request, HttpServletResponse response, long timeoutMillis) {
+        try {
+            response.setStatus(HttpServletResponse.SC_GATEWAY_TIMEOUT);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                    "{\"error\":\"Gateway Timeout\",\"timeout\":" + timeoutMillis + "}");
+        } catch (IOException e) {
+            log.error("[AbstractGatewaySecurityFilter] 504 拒答写失败: {}", e.getMessage());
+        }
+    }
+
+    /**
      * IP ACL 拒答。
      *
      * @param request  请求
