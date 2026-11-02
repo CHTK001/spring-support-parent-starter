@@ -172,6 +172,38 @@ spring-support-job-starter/
 
 ## 扩展点
 
+本模块的可替换组件统一走仓库的 SPI 机制（`utils-support-common-starter`）：
+
+- 接口 + 实现类上标 `@Spi({"key1", "key2"})`，兜底实现另标 `@SpiDefault`；
+- 注册文件放在 `src/main/resources/META-INF/extensions/<接口全限定名>`，内容为 `key=实现类全限定名`；
+- 取实现用 `ServiceProvider.of(接口.class)`，按 key 取不到时回落 `@SpiDefault`。
+
+| 扩展点 | 已注册的键 | 实现 | 默认（`@SpiDefault`） |
+|--------|-----------|------|----------------------|
+| `cache.JobScanCache` | `memory` / `ttl`、`none` / `noop` / `off` | `ScanCache`（按 TTL 缓存）、`NoopScanCache`（不缓存） | `NoopScanCache` |
+| `dispatch.JobRepository` | `in-memory` / `memory` | `InMemoryJobRepository` | 无 |
+| `log.JobLogSink` | `stdout` / `console`、`file` | `StdoutJobLogSink`、`FileJobLogSink` | `StdoutJobLogSink` |
+| `log.JobLogRepository` | `none` / `noop` | `NoopJobLogRepository`（空页 / 0 条 / 0 删除） | `NoopJobLogRepository` |
+| `glue.GlueSynthesizer` | `java`、`default` / `plain` / `passthrough` | `JavaGlueSynthesizer`、`PassThroughGlueSynthesizer` | `PassThroughGlueSynthesizer` |
+| `cluster.LeaderElectionResolver` | `in-memory`、`mysql`、`redis` | `InMemoryLeaderElectionResolver`、`MysqlLeaderElectionResolver`、`RedisLeaderElectionResolver` | 无 |
+
+自定义实现只需实现接口、加 `@Spi("你的键")`，并在自己的
+`META-INF/extensions/<接口全限定名>` 里追加一行；`SyncClient / SyncServer` 直接复用
+`utils-support-common-starter` 的协议实现。
+
+几条约定：
+
+- **键取到了但实例化失败会静默返回 null**，上层再兜底 `new`。所以注册文件里的类必须有可用的
+  构造器：无参，或参数类型与取值方式匹配（`String` / 包装类型等具体类型；MyBatis Mapper 这类
+  JDK 动态代理匹配不到接口构造器）。`SpiRegistrationProbe` 专门验证这一点。
+- **依赖容器注入的实现不登记**：`MybatisJobRepository` / `MybatisJobLogSink` /
+  `MybatisJobLogRepository` 需要 Mapper，`AsyncLogWriter` 需要 sink 列表，都由
+  `JobAutoConfiguration` 装配，不进 SPI 注册表。
+- **Spring 装配尚未改走 SPI**：`JobAutoConfiguration` 里仍是直接 `new` + `@ConditionalOnMissingBean`，
+  本轮的改动只是把可替换点抽成 SPI 面。因此 `plugin.job.cache.enabled=true` 目前只在
+  直接使用 `JobScanCaches` 的路径上生效（`JobAutoConfiguration` 构造 `MybatisJobRepository`
+  时还没接入），接入时改一处装配即可。
+
 ### 1. 真实选主 (多 Scheduler 节点)
 
 默认实现 `InMemoryLeaderElectionResolver` 仅在单机或调试场景生效;
@@ -183,9 +215,9 @@ classpath 含 MyBatis-Plus 时自动切换为 `MysqlLeaderElectionResolver`,
 - `release(group, nodeId)`: 主动释放
 - `renew(group, nodeId, leaseSeconds)`: 续约(由 `ClusterElectionHeartbeat` 自动调用)
 
-扩展第三方选主(Redis SETNX / etcd lease / ZooKeeper):实现
-`com.chua.starter.job.support.cluster.LeaderElectionResolver` 接口并注册为 Spring `@Primary`,
-本模块自动让 Spring 容器接走。
+扩展第三方选主(etcd lease / ZooKeeper):实现
+`com.chua.starter.job.support.cluster.LeaderElectionResolver` 接口并加 `@Spi`,
+或直接注册为 Spring `@Primary` 让容器接走。
 
 ### 2. 真实持久化任务仓库
 
@@ -196,7 +228,8 @@ classpath 含 MyBatis-Plus 时自动切换为 `MysqlLeaderElectionResolver`,
 ### 3. 真实日志落库
 
 实现 `JobLogSink` 接口替换默认 `StdoutJobLogSink`,
-从 `JOB_LOG_EVENT` 写入 `sys_job_log` 表。MyBatis-Plus 版本自带 `MybatisJobLogSink`。
+从 `JOB_LOG_EVENT` 写入 `sys_job_log` 表。MyBatis-Plus 版本自带 `MybatisJobLogSink`;
+纯文件落库用已注册的 `file` 键（构造参数 `basePath`）。
 
 ### 4. 真实同步 SPI
 
