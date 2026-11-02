@@ -73,6 +73,32 @@ public class ScanCache {
         int preReadCount() {
             return preReadCount;
         }
+
+        /**
+         * 查询条件相等即同一个缓存键。
+         *
+         * <p><b>必须实现</b>：本类是 {@link ConcurrentHashMap} 的键，而每次 {@code findDue}
+         * 都会新建一个 key 实例。若按对象身份比较，{@link #get} 永远命不中，
+         * 并且每拍都会往 map 里插入一个永不释放的新条目（内存只增不减）。</p>
+         */
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof ScanCacheKey)) {
+                return false;
+            }
+            ScanCacheKey other = (ScanCacheKey) o;
+            return preReadMs == other.preReadMs
+                    && preReadCount == other.preReadCount
+                    && java.util.Objects.equals(group, other.group);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(group, preReadMs, preReadCount);
+        }
     }
 
     /**
