@@ -90,6 +90,12 @@
       <artifactId>org.eclipse.jgit</artifactId>
       <version>7.8.0.202609011348-r</version>
     </dependency>
+    <!-- 终端 PTY：pty4j 在 Windows 走 ConPTY、Unix 走原生 libpty，支撑 vim/top 等交互式程序 -->
+    <dependency>
+      <groupId>org.jetbrains.pty4j</groupId>
+      <artifactId>pty4j</artifactId>
+      <version>0.14.0</version>
+    </dependency>
     <!-- OpenAI 兼容协议 ChatClient（OpenAI/SiliconFlow/SenseTime/GitHub/Gitee） -->
     <dependency>
       <groupId>com.chua</groupId>
