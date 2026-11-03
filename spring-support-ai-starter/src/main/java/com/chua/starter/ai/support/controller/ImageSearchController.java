@@ -219,16 +219,41 @@ public class ImageSearchController {
     }
 
     /**
+     * 列出当前账号以图搜图底库中已存在的分组名。
+     *
+     * <p>供前端渲染分组切换/筛选：组名此前只能由用户手打，打错就等于查一个空库，
+     * 界面看不出哪里错了。默认组恒定在列（空库也有得选）。</p>
+     *
+     * @return {@code groups}：分组名列表（去重、已排序，至少含默认组 default）
+     */
+    @Operation(summary = "图像分组列表", description = "枚举当前账号已存在的以图搜图分组名；至少含默认组 default")
+    @GetMapping("/groups")
+    public ReturnResult<Map<String, Object>> groups() {
+        try {
+            String account = AiUserContext.requireUserId();
+            // TreeSet 一举满足「去重 + 排序」；默认组先放进去，保证空库也能选到它
+            Set<String> collected = new TreeSet<>(imageSearchStores.listGroups(account));
+            collected.add(AiLibraryGroups.DEFAULT);
+            return ReturnResult.ok(Map.of("groups", List.copyOf(collected)));
+        } catch (Exception e) {
+            log.error("[ImageSearch] 分组列表查询失败", e);
+            return ReturnResult.error("分组列表查询失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 从底库删除一条记录。
      *
      * @param id 记录标识
+     * @param group 分组名；不传/空 = 默认组 default
      * @return true 表示删除成功
      */
     @Operation(summary = "删除图片", description = "按标识从底库删除一条记录")
     @DeleteMapping("/{id}")
-    public ReturnResult<Boolean> delete(@PathVariable("id") long id) {
+    public ReturnResult<Boolean> delete(@PathVariable("id") long id,
+                                        @RequestParam(value = "group", required = false) String group) {
         try {
-            boolean removed = imageSearchStores.remove(id);
+            boolean removed = storeOf(group).remove(id);
             if (!removed) {
                 return ReturnResult.error("记录不存在: " + id);
             }
@@ -291,6 +316,19 @@ public class ImageSearchController {
             return MediaType.IMAGE_GIF;
         }
         return MediaType.IMAGE_JPEG;
+    }
+
+    /**
+     * 按请求参数解析当前登录账号的底库（不传/空 = 默认组 default）。
+     *
+     * <p>底库按（账号, 分组）隔离，每个分组各有自己的目录、快照与向量索引。
+     * 这里的每个接口只操作当前账号的指定分组——同账号不同分组的底库互不可见。</p>
+     *
+     * @param group 分组名，空值按默认组
+     * @return 该账号该分组的底库实例
+     */
+    private ImageSearchStore storeOf(String group) {
+        return imageSearchStores.storeOf(AiUserContext.requireUserId(), AiLibraryGroups.normalize(group));
     }
 
     /**
