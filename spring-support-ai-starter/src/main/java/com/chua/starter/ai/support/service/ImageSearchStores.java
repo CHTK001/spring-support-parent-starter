@@ -349,15 +349,21 @@ public class ImageSearchStores {
     }
 
     /**
-     * 取指定账号的底库实例，不存在时创建并加载。
+     * 取指定账号的指定分组底库实例，不存在时懒建。
+     *
+     * <p>底库按（账号, 分组）隔离：各自一个目录（{@code <base>/<账号>/<分组>/imagesearch}）、
+     * 各自一份快照与 id 水位、各自一套特征抽取器与向量索引。这里沿用了
+     * {@link #load()} 的同一套创建逻辑，确保「磁盘上已存在」与「首次被访问」
+     * 对同一个（账号, 分组）给出同一种结果。</p>
      *
      * @param account 账号标识
-     * @param group   分组名
+     * @param group   分组名（空值按默认组）
      * @return 底库实例
      */
-    private ImageSearchStore storeOf(String account, String group) {
-        Path dir = accountDir(account, group).resolve(STORE_LEAF);
-        return accounts.computeIfAbsent(account + "\0" + group, k -> create(account, group, dir, Files.isDirectory(dir)));
+    public ImageSearchStore storeOf(String account, String group) {
+        String normalized = AiLibraryGroups.normalize(group);
+        Path dir = accountDir(account, normalized).resolve(STORE_LEAF);
+        return accounts.computeIfAbsent(account + "\0" + normalized, k -> create(account, normalized, dir, Files.isDirectory(dir)));
     }
 
     /**
