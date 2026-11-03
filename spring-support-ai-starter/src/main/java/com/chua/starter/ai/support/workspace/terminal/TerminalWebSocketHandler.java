@@ -644,7 +644,39 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
          * @throws IOException 启动失败
          */
         private void start() throws IOException {
-            String[] command = buildShellCommand();
+            PtyProcess ptyProcess;
+            try {
+                ptyProcess = createProcess(buildShellCommand());
+            } catch (IOException firstError) {
+                // 主 shell 不可用时逐级回退（Windows：pwsh → powershell → cmd），保证终端仍可用
+                if (!isWindows()) {
+                    throw firstError;
+                }
+                String[] fallback = buildWindowsFallbackCommand();
+                log.warn("[terminal-ws] shell 启动失败，回退 {}: {}", fallback[0], messageOf(firstError));
+                try {
+                    ptyProcess = createProcess(fallback);
+                } catch (IOException secondError) {
+                    log.warn("[terminal-ws] 回退 shell 启动失败，再回退 {}: {}",
+                            CMD_EXECUTABLE, messageOf(secondError));
+                    ptyProcess = createProcess(new String[]{CMD_EXECUTABLE});
+                }
+            }
+            this.process = ptyProcess;
+            this.stdin = ptyProcess.getOutputStream();
+            this.readerThread = Thread.ofVirtual()
+                    .name("ai-terminal-io-" + chatSessionId + "-")
+                    .start(this::readLoop);
+        }
+
+        /**
+         * 按指定命令创建 PTY 进程。
+         *
+         * @param command 命令
+         * @return PTY 进程
+         * @throws IOException 启动失败
+         */
+        private PtyProcess createProcess(String[] command) throws IOException {
             PtyProcessBuilder builder = new PtyProcessBuilder(command)
                     .setEnvironment(buildEnvironment())
                     .setDirectory(cwd.toString())
@@ -655,28 +687,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             if (isWindows()) {
                 builder.setUseWinConPty(true);
             }
-            PtyProcess ptyProcess;
-            try {
-                ptyProcess = builder.start();
-            } catch (IOException firstError) {
-                // PowerShell 缺失或 ConPTY 不可用时回退到 cmd，保证终端仍可用
-                if (!isWindows()) {
-                    throw firstError;
-                }
-                log.warn("[terminal-ws] PowerShell 启动失败，回退 cmd: {}", messageOf(firstError));
-                ptyProcess = new PtyProcessBuilder(new String[]{CMD_EXECUTABLE})
-                        .setEnvironment(buildEnvironment())
-                        .setDirectory(cwd.toString())
-                        .setInitialColumns(columns)
-                        .setInitialRows(rows)
-                        .setRedirectErrorStream(true)
-                        .start();
-            }
-            this.process = ptyProcess;
-            this.stdin = ptyProcess.getOutputStream();
-            this.readerThread = Thread.ofVirtual()
-                    .name("ai-terminal-io-" + chatSessionId + "-")
-                    .start(this::readLoop);
+            return builder.start();
         }
 
         /**
@@ -847,7 +858,10 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
          * @return shell 名称
          */
         private String shellName() {
-            return isWindows() ? POWERSHELL_EXECUTABLE : BASH_EXECUTABLE;
+            if (isWindows()) {
+                return isExecutableOnPath(PWSH_EXECUTABLE) ? PWSH_EXECUTABLE : POWERSHELL_EXECUTABLE;
+            }
+            return Files.isExecutable(Paths.get(BASH_EXECUTABLE)) ? BASH_EXECUTABLE : SH_EXECUTABLE;
         }
     }
 }
