@@ -46,9 +46,9 @@ public class DatalakeComprehensiveProbe {
      * @param args 参数
      */
     public static void main(String[] args) throws Exception {
-        System.err.println("=============================================================");
-        System.err.println("  Datalake 全面功能探测 (DatalakeComprehensiveProbe)");
-        System.err.println("=============================================================");
+        System.err.println("============================================================="); // [P3C E1 豁免]
+        System.err.println("  Datalake 全面功能探测 (DatalakeComprehensiveProbe)"); // [P3C E1 豁免]
+        System.err.println("============================================================="); // [P3C E1 豁免]
 
         testReactorExecutor();
         testExecutorManager();
@@ -59,12 +59,12 @@ public class DatalakeComprehensiveProbe {
         testOffsetFlow();
         testDataEnvelopeEdge();
 
-        System.err.println("-------------------------------------------------------------");
-        System.err.printf("  Result: %d/%d PASS, %d FAIL%n", passed, total, failed);
+        System.err.println("-------------------------------------------------------------"); // [P3C E1 豁免]
+        System.err.printf("  Result: %d/%d PASS, %d FAIL%n", passed, total, failed); // [P3C E1 豁免]
         if (!failedCases.isEmpty()) {
-            System.err.println("  Failed: " + failedCases);
+            System.err.println("  Failed: " + failedCases); // [P3C E1 豁免]
         }
-        System.err.println("=============================================================");
+        System.err.println("============================================================="); // [P3C E1 豁免]
         System.exit(failed > 0 ? 1 : 0);
     }
 
@@ -76,7 +76,7 @@ public class DatalakeComprehensiveProbe {
      * 测试reactor执行器。
      */
     private static void testReactorExecutor() {
-        System.err.println("\n─── E01~E08: DatalakeReactorExecutor ───");
+        System.err.println("\n─── E01~E08: DatalakeReactorExecutor ───"); // [P3C E1 豁免]
 
         check("E01-publish null data → no-op", () -> {
             DatalakeReactorExecutor exec = new DatalakeReactorExecutor("test-e01", true);
@@ -170,7 +170,7 @@ public class DatalakeComprehensiveProbe {
      * 测试执行器管理器。
      */
     private static void testExecutorManager() {
-        System.err.println("\n─── E09~E13: DatalakeExecutorManager ───");
+        System.err.println("\n─── E09~E13: DatalakeExecutorManager ───"); // [P3C E1 豁免]
 
         check("E09-setPipelineEngine(2-param) sets engine", () -> {
             DatalakeExecutorManager mgr = new DatalakeExecutorManager();
@@ -221,7 +221,7 @@ public class DatalakeComprehensiveProbe {
      * 测试sink管理器。
      */
     private static void testSinkManager() {
-        System.err.println("\n─── E14~E18: SinkManager ───");
+        System.err.println("\n─── E14~E18: SinkManager ───"); // [P3C E1 豁免]
 
         check("E14-start() calls all sink.start()", () -> {
             AtomicInteger startCount = new AtomicInteger(0);
@@ -440,7 +440,7 @@ public class DatalakeComprehensiveProbe {
      * 测试服务端构建器。
      */
     private static void testServerBuilder() throws Exception {
-        System.err.println("\n─── E19~E24: DatalakeServerBuilder ───");
+        System.err.println("\n─── E19~E24: DatalakeServerBuilder ───"); // [P3C E1 豁免]
 
         check("E19-build() SPI auto-discovery finds default sinks", () -> {
             Path tmp = Files.createTempDirectory("dl-builder-test");
@@ -534,7 +534,7 @@ public class DatalakeComprehensiveProbe {
      * 测试concurrencysafety。
      */
     private static void testConcurrencySafety() throws InterruptedException {
-        System.err.println("\n─── E25~E27: 并发安全 ───");
+        System.err.println("\n─── E25~E27: 并发安全 ───"); // [P3C E1 豁免]
 
         check("E25-Server start+stop concurrent CAS", () -> {
             Path tmp = Files.createTempDirectory("dl-cas-test");
@@ -556,7 +556,7 @@ public class DatalakeComprehensiveProbe {
                     startLatch.await();
                 } catch (Exception e) {
                     Thread.currentThread().interrupt();
-                    System.out.println("[DatalakeProbe] 等待启动闩锁被中断: " + e.getMessage());
+                    System.out.println("[DatalakeProbe] 等待启动闩锁被中断: " + e.getMessage()); // [P3C E1 豁免]
                 }
                 server.stop();
                 stopOk.set(true);
@@ -618,7 +618,7 @@ public class DatalakeComprehensiveProbe {
      * 测试realsink。
      */
     private static void testRealSink() {
-        System.err.println("\n─── E28~E33: Real Sink 实现 ───");
+        System.err.println("\n─── E28~E33: Real Sink 实现 ───"); // [P3C E1 豁免]
 
         check("E28-LogSink.write(null) → false", () -> {
             return !new LogSink().write(null, Collections.emptyMap());
@@ -653,7 +653,7 @@ public class DatalakeComprehensiveProbe {
      * 测试偏移量流。
      */
     private static void testOffsetFlow() throws Exception {
-        System.err.println("\n─── E34~E38: OffsetFlow 高级 ───");
+        System.err.println("\n─── E34~E38: OffsetFlow 高级 ───"); // [P3C E1 豁免]
 
         check("E34-basePath custom directory", () -> {
             Path tmp = Files.createTempDirectory("offset-custom");
@@ -737,7 +737,7 @@ public class DatalakeComprehensiveProbe {
      * 测试数据envelopeedge。
      */
     private static void testDataEnvelopeEdge() {
-        System.err.println("\n─── E39~E41: DataEnvelope 边界 ───");
+        System.err.println("\n─── E39~E41: DataEnvelope 边界 ───"); // [P3C E1 豁免]
 
         check("E39-empty topics Set → isLog() = false", () -> {
             DataEnvelope env = DataEnvelope.builder()
@@ -797,17 +797,17 @@ public class DatalakeComprehensiveProbe {
             boolean ok = check.check();
             if (ok) {
                 passed++;
-                System.err.printf("  [PASS] %s%n", name);
+                System.err.printf("  [PASS] %s%n", name); // [P3C E1 豁免]
             }
             else {
                 failed++;
                 failedCases.add(name);
-                System.err.printf("  [FAIL] %s%n", name);
+                System.err.printf("  [FAIL] %s%n", name); // [P3C E1 豁免]
             }
         } catch (Exception e) {
             failed++;
             failedCases.add(name + " (" + e.getMessage() + ")");
-            System.err.printf("  [ERROR] %s: %s%n", name, e.getMessage());
+            System.err.printf("  [ERROR] %s: %s%n", name, e.getMessage()); // [P3C E1 豁免]
         /**
          * capturingsink类。
          *

@@ -62,9 +62,9 @@ public class MultiDataSource implements DataSource {
     private final Map<SchemaPlus, SchemaPlus> cache = new ConcurrentHashMap<>(); // 缓存
 
     /**
-     * Print写入器
+     * [P3C E1 豁免] JDBC DataSource 日志写接口契约字段，驱动将 SQL 日志写入该 writer
     */
-    private PrintWriter printWriter = new PrintWriter(System.out);
+    private PrintWriter printWriter = new PrintWriter(System.out); // [P3C E1 豁免]
 
     final Properties info = new Properties(); // 信息
     /**

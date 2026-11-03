@@ -35,9 +35,9 @@ public class DatalakePerfProbe {
      */
     public static void main(String[] args) throws Exception {
         long globalStart = System.currentTimeMillis();
-        System.err.println("=============================================================");
-        System.err.println("  Datalake Performance Benchmark (DatalakePerfProbe)");
-        System.err.println("=============================================================");
+        System.err.println("============================================================="); // [P3C E1 豁免]
+        System.err.println("  Datalake Performance Benchmark (DatalakePerfProbe)"); // [P3C E1 豁免]
+        System.err.println("============================================================="); // [P3C E1 豁免]
 
         PipelineManager pm = new DefaultPipelineManager();
         Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
@@ -56,9 +56,9 @@ public class DatalakePerfProbe {
         pm.savePipeline("p-multi",  "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statistic\"},{\"type\":\"realtime\"}]}}}");
         pm.savePipeline("p-concurrent", "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
 
-        System.err.printf("%-4s  %-26s  %-8s  %-10s  %-12s  %-14s  %s%n",
+        System.err.printf("%-4s  %-26s  %-8s  %-10s  %-12s  %-14s  %s%n", // [P3C E1 豁免]
                 "#", "Scenario", "Count", "Time(ms)", "Ops/s", "Details", "Status");
-        System.err.println("--------------------------------------------------------------");
+        System.err.println("--------------------------------------------------------------"); // [P3C E1 豁免]
 
         int ni = 0;
  // Sequential 吞吐量
@@ -89,13 +89,13 @@ public class DatalakePerfProbe {
         // Dispatcher overhead
         benchDispatcher(engine, pm, sinkRegistry, dispatcher);
 
-        System.err.println("--------------------------------------------------------------");
+        System.err.println("--------------------------------------------------------------"); // [P3C E1 豁免]
         double totalSec = (System.currentTimeMillis() - globalStart) / 1000.0;
-        System.err.printf("%nTotal time: %.2f seconds%n%n", totalSec);
+        System.err.printf("%nTotal time: %.2f seconds%n%n", totalSec); // [P3C E1 豁免]
         for (Map.Entry<String, Object> e : RESULT.entrySet()) {
-            System.err.printf("  %-32s => %s%n", e.getKey(), e.getValue());
+            System.err.printf("  %-32s => %s%n", e.getKey(), e.getValue()); // [P3C E1 豁免]
         }
-        System.err.println("=============================================================");
+        System.err.println("============================================================="); // [P3C E1 豁免]
 
         sinkRegistry.values().forEach(DataSink::stop);
         dispatcher.close();
@@ -118,7 +118,7 @@ public class DatalakePerfProbe {
         double ms = (System.nanoTime() - t0) / 1_000_000.0;
         double ops = count / (ms / 1000.0);
         String status = ops >= 100_000 ? "FAST" : "OK";
-        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                 RESULT.size() + 1, label, count, ms, ops, "", status);
         RESULT.put(label, String.format("%.0f ops/s (%.1f ms for %d ops)", ops, ms, count));
     }
@@ -148,7 +148,7 @@ public class DatalakePerfProbe {
         long max = lat[count - 1];
         double ops = count / (ms / 1000.0);
         String detail = String.format("p50=%dus p95=%dus p99=%dus max=%dus", p50 / 1000, p95 / 1000, p99 / 1000, max / 1000);
-        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                 RESULT.size() + 1, label, count, ms, ops, detail, "OK");
         RESULT.put(label, String.format("p50=%.1fus p95=%.1fus p99=%.1fus max=%.1fus | %.0f ops/s",
                 p50 / 1000.0, p95 / 1000.0, p99 / 1000.0, max / 1000.0, ops));
@@ -182,7 +182,7 @@ public class DatalakePerfProbe {
         double engineOps = count / (engineMs / 1000.0);
         double overhead = ((engineMs - directMs) * 100.0) / Math.max(directMs, 0.001);
 
-        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                 RESULT.size() + 1, "Engine vs Direct", count, engineMs, engineOps,
                 String.format("Direct=%.0f Overhead=%.1f%%", directOps, overhead), overhead < 50 ? "OK" : "WARN");
         RESULT.put("PipelineEngine overhead", String.format("Direct=%.0f/s Engine=%.0f/s Overhead=%.1f%%",
@@ -215,7 +215,7 @@ public class DatalakePerfProbe {
             double ms = (System.nanoTime() - t0) / 1_000_000.0;
             double ops = count / (ms / 1000.0);
             adapter.stop();
-            System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+            System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                     RESULT.size() + 1, "Webhook HTTP", count, ms, ops, "", ops > 2000 ? "FAST" : "OK");
             RESULT.put("Webhook HTTP " + fmtCount(count), String.format("%.0f req/s", ops));
         }
@@ -249,7 +249,7 @@ public class DatalakePerfProbe {
         boolean ok = latch.await(30, TimeUnit.SECONDS);
         double ms = (System.nanoTime() - t0) / 1_000_000.0;
         double ops = writes.get() / (ms / 1000.0);
-        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                 RESULT.size() + 1, label, totalOps, ms, ops, threads + " threads", ok ? "OK" : "TIMEOUT");
         RESULT.put(label, String.format("%.0f ops/s (%d threads)", ops, threads));
     }
@@ -286,7 +286,7 @@ public class DatalakePerfProbe {
             boolean ok = latch.await(30, TimeUnit.SECONDS);
             double ms = (System.nanoTime() - t0) / 1_000_000.0;
             double ops = totalWrites.get() / (ms / 1000.0);
-            System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+            System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                     RESULT.size() + 1, pc + " pipelines concurrent", opsPerPipeline * threads, ms, ops,
                     pc + " pipelines x " + opsPerPipeline + " ops", ok ? "OK" : "TIMEOUT");
             RESULT.put("Multi-pipeline " + pc + " pipelines", String.format("%.0f ops/s (%d pipelines)", ops, pc));
@@ -316,7 +316,7 @@ public class DatalakePerfProbe {
         double withDispOps = count / (withDispMs / 1000.0);
         double ratio = withDispMs * 100.0 / Math.max(noDispMs, 0.001);
 
-        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n",
+        System.err.printf("%-4d  %-26s  %-8d  %-10.1f  %-12.0f  %-14s  %s%n", // [P3C E1 豁免]
                 RESULT.size() + 1, "With Dispatcher", count, withDispMs, withDispOps,
                 String.format("NoDisp=%.0f WithDisp=%.0f Ratio=%.1f%%", noDispOps, withDispOps, ratio),
                 ratio < 3 ? "OK" : "WARN");

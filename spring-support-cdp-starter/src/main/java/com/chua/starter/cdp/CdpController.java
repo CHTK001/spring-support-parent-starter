@@ -7,7 +7,6 @@ import com.chua.starter.cdp.service.CdpEngineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -216,21 +215,27 @@ public class CdpController {
     /**
      * 截取页面
      *
-     * <p>返回标准 CDP {@code Page.captureScreenshot} 的结果：{@code {"screenshotData": "base64..."}}。</p>
+     * <p>CDP {@code Page.captureScreenshot} 的返回值是 {@code {"data": "base64..."}}，
+     * 这里直接取 {@code data} 字段。</p>
+     *
+     * <p>注意：不能声明 {@code produces = text/plain}。本接口返回的是 {@code ReturnResult}
+     * 包装体（需要按 JSON 序列化），声明 text/plain 会让 {@code ReturnResult} 找不到对应
+     * 的 HttpMessageConverter，请求直接以 500「No converter for [ReturnResult]」失败——
+     * 前端就表现为「截屏点了没反应」。</p>
      *
      * @param targetId 页面标识
      * @param fullPage 是否长页面
      * @return base64 图片数据
      */
     @Operation(summary = "页面截屏")
-    @PostMapping(value = "/targets/{targetId}/screenshot", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping("/targets/{targetId}/screenshot")
     public ReturnResult<String> screenshot(@PathVariable String targetId,
                                             @RequestParam(defaultValue = "false") boolean fullPage) {
         try {
-            Map<String, Object> result = engine.pageCall(targetId, "Page.captureScreenshot",
-                    Map.of("format", "png", "fullPage", fullPage));
-            Object raw = result.get("screenshotData");
-            return ReturnResult.ok(raw == null ? null : String.valueOf(raw));
+            // Page.captureScreenshot 没有 fullPage 参数，整页要自己量内容尺寸放进 clip，
+            // 见 CdpEngineService#captureScreenshot
+            String data = engine.captureScreenshot(targetId, fullPage);
+            return ReturnResult.ok(data);
         } catch (Exception e) {
             return ReturnResult.error("截屏失败: " + e.getMessage());
         }

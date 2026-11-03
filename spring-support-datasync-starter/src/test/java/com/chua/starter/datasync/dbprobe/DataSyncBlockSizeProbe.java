@@ -38,11 +38,11 @@ public final class DataSyncBlockSizeProbe {
         tmp.toFile().deleteOnExit();
 
         long[] blockSizes = {1L << 20, 8L << 20, 64L << 20, 256L << 20};
-        System.err.println("=========================================================================");
-        System.err.println("Chronicle mmap blockSize 压测 (" + ROWS + " 行, batch=" + BATCH + ")");
-        System.err.println("=========================================================================");
-        System.err.printf("%-14s %-10s %-14s %-18s %-10s%n", "blockSize", "大小", "耗时(ms)", "吞吐(行/s)", "完成");
-        System.err.println("-------------------------------------------------------------------------");
+        System.err.println("========================================================================="); // [P3C E1 豁免]
+        System.err.println("Chronicle mmap blockSize 压测 (" + ROWS + " 行, batch=" + BATCH + ")"); // [P3C E1 豁免]
+        System.err.println("========================================================================="); // [P3C E1 豁免]
+        System.err.printf("%-14s %-10s %-14s %-18s %-10s%n", "blockSize", "大小", "耗时(ms)", "吞吐(行/s)", "完成"); // [P3C E1 豁免]
+        System.err.println("-------------------------------------------------------------------------"); // [P3C E1 豁免]
 
         List<Map<String, Object>> data = new ArrayList<>(BATCH);
         for (int i = 0; i < BATCH; i++) {
@@ -61,7 +61,7 @@ public final class DataSyncBlockSizeProbe {
             // 清理旧队列
             tmp.toFile().listFiles(f -> f.getName().contains("queue"))[0].delete();
         }
-        System.err.println("=========================================================================");
+        System.err.println("========================================================================="); // [P3C E1 豁免]
     }
 
     /**
@@ -96,7 +96,7 @@ public final class DataSyncBlockSizeProbe {
             long tp = count.get() * 1000L / Math.max(1, ms);
 
             String label = blockSize >= 1 << 20 ? (blockSize >> 20) + "MB" : (blockSize >> 10) + "KB";
-            System.err.printf("%-14s %-10s %-14d %-18s %-10s%n",
+            System.err.printf("%-14s %-10s %-14d %-18s %-10s%n", // [P3C E1 豁免]
                     label, (blockSize >> 20) + "MB", ms,
                     tp == 0 ? "?" : String.format("%,d", tp), ok ? "PASS" : "FAIL(" + count.get() + ")");
         } finally {

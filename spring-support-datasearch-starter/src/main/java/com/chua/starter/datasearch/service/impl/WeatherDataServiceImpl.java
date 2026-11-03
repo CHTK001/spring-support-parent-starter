@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasearch.service.impl;
 
 import com.chua.common.support.datasearch.geocode.spi.GeocodeProvider;
@@ -75,11 +76,13 @@ public class WeatherDataServiceImpl implements WeatherDataService {
         }
         String clientIp = clientIp(request, providers.getFirst());
         for (LocationProvider provider : providers) {
-            LocationInfo info = clientIp == null ? provider.locateSelf() : provider.locateIp(clientIp);
-            // 内网/回环地址查不到归属地，退回服务器自身定位
-            if (info == null && clientIp != null) {
-                info = provider.locateSelf();
+            // 客户端 IP 不能由服务端"猜"（猜的是自己的地址；把服务器地址当客户端地址是顶栏天气显示
+            // 错城市的原因），因此 IP 不可确认（内网/回环）或查不到归属地时直接返回 空，由调用方走
+            // 浏览器定位/IP 定位/配置，而不是退回服务器自身定位。
+            if (clientIp == null) {
+                break;
             }
+            LocationInfo info = provider.locateIp(clientIp);
             LocationVO vo = toLocation(info, provider.name());
             if (vo != null) {
                 return vo;

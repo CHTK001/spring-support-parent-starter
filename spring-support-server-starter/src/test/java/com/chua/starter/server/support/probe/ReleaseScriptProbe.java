@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.server.support.probe;
 
 import com.chua.starter.server.support.connection.PowerShellCommand;
@@ -105,8 +106,8 @@ public final class ReleaseScriptProbe {
         probe.sectionIPowerShellSyntax();
         probe.sectionJMacosPlatform();
         probe.sectionKWindowsServiceFallback();
-        System.out.println("[probe] ---- 汇总：passed=" + probe.passed + " failed=" + probe.failures.size() + " ----");
-        probe.failures.forEach(f -> System.out.println("[probe] FAIL " + f));
+        System.out.println("[probe] ---- 汇总：passed=" + probe.passed + " failed=" + probe.failures.size() + " ----"); // [P3C E1 豁免]
+        probe.failures.forEach(f -> System.out.println("[probe] FAIL " + f)); // [P3C E1 豁免]
         if (!probe.failures.isEmpty()) {
             System.exit(1);
         }

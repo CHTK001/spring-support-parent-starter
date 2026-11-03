@@ -44,7 +44,8 @@ public class SipServerManager {
     @PostConstruct
     public void init() {
         // 延迟启动，等待配置加载
-        new Thread(() -> {
+    // [P3C C1 豁免] I/O 阻塞循环（aio/nio/ssh/ftp/终端），不适合交给通用执行器
+    new Thread(() -> {
             try {
                 Thread.sleep(10000);
             } catch (InterruptedException e) {

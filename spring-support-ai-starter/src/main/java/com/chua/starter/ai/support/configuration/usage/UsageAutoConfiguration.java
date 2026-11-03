@@ -119,12 +119,14 @@ public class UsageAutoConfiguration {
      * @param settingReader setting读取
      * @param pricingService pricing服务
      * @param syncLogMapper 用量同步日志 映射器
+     * @param modelMetricsService 模型指标库服务（回填本地平均输出速度）
      */
     public UsageAggregationTask usageAggregationTask(SysAiUsageMapper usageMapper,
                                                      SysAiUsageDailyMapper dailyMapper,
                                                      GlobalSettingReader settingReader,
                                                      SysAiPricingService pricingService,
-                                                     SysAiUsageSyncLogMapper syncLogMapper) {
+                                                     SysAiUsageSyncLogMapper syncLogMapper,
+                                                     SysAiModelMetricsService modelMetricsService) {
         /**
          * usageaggregation任务。
          * @param settingReader setting读取
@@ -132,8 +134,10 @@ public class UsageAutoConfiguration {
          * @param dailyMapper daily映射器
          * @param pricingService pricing服务
          * @param syncLogMapper 同步日志映射器
+         * @param modelMetricsService 模型指标服务
          * @return usageaggregation任务的结果
          */
-        return new UsageAggregationTask(settingReader, usageMapper, dailyMapper, pricingService, syncLogMapper);
+        return new UsageAggregationTask(settingReader, usageMapper, dailyMapper, pricingService, syncLogMapper,
+                modelMetricsService);
     }
 }

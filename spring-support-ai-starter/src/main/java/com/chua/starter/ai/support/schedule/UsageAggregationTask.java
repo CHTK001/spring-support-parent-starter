@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
+import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -141,6 +142,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 用量同步日志 映射器（落库持久化）
      */
     private final SysAiUsageSyncLogMapper syncLogMapper;
+
+    /**
+     * 模型指标库服务（按 provider+model 回填本地平均输出速度）
+     */
+    private final SysAiModelMetricsService sysAiModelMetricsService;
 
     /**
      * 日汇总表历史自愈是否已在本进程内检查过（置位后不再重复触发全量回填）。
@@ -1034,6 +1040,18 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             totalAggregated += row.totalCalls() != null ? row.totalCalls() : 0;
             log.debug("[UsageAggregation] 汇总: date={}, group={}, provider={}, model={}, calls={}",
                     row.statDate(), row.groupName(), row.provider(), row.model(), row.totalCalls());
+        }
+
+        // 按 provider+model 回填本地平均输出速度：有本地用量的写平均值，无本地用量的
+        // 保持 NULL（前端/计费回退到 Artificial Analysis 输出速度）——
+        // 不抛异常，避免一次回填失败拖垮整次聚合。
+        try {
+            int backfilled = sysAiModelMetricsService.syncAvgOutputSpeedTps();
+            if (backfilled > 0) {
+                log.info("[UsageAggregation] 本地平均输出速度回填完成：{} 行", backfilled);
+            }
+        } catch (Throwable e) {
+            log.warn("[UsageAggregation] 回填本地平均输出速度失败: {}", e.getMessage());
         }
 
         log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", dayStart, dayEnd, totalAggregated);

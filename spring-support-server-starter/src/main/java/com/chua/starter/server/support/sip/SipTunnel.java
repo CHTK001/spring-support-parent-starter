@@ -375,17 +375,20 @@ public class SipTunnel {
      * <p>支持 {@code --config xxx.properties} 方式从外部配置文件读取参数，
      * 否则按 {@code server|provider|visit} 位置参数解析。</p>
      *
+    /**
+     * CLI 入口：输出隧道用法与参数格式（P3C E1 豁免：CLI 程序的标准输出契约）
+     *
      * @param args 命令行参数
      * @throws Exception 启动异常
      */
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
-            System.out.println("SIP Tunnel - 内网穿透隧道");
-            System.out.println("用法:");
-            System.out.println("  server <controlPort> <secret>");
-            System.out.println("  provider <serverHost> <serverPort> <providerId> <secret> <services>");
-            System.out.println("  visit <serverHost> <serverPort> <providerId> <service> <localPort> <secret>");
-            System.out.println("  --config <config.properties>  从外部配置文件读取参数");
+            System.out.println("SIP Tunnel - 内网穿透隧道"); // [P3C E1 豁免]
+            System.out.println("用法:"); // [P3C E1 豁免]
+            System.out.println("  server <controlPort> <secret>"); // [P3C E1 豁免]
+            System.out.println("  provider <serverHost> <serverPort> <providerId> <secret> <services>"); // [P3C E1 豁免]
+            System.out.println("  visit <serverHost> <serverPort> <providerId> <service> <localPort> <secret>"); // [P3C E1 豁免]
+            System.out.println("  --config <config.properties>  从外部配置文件读取参数"); // [P3C E1 豁免]
             return;
         }
 
@@ -413,7 +416,7 @@ public class SipTunnel {
                         cfg.getProperty("service", "rdp"),
                         Integer.parseInt(cfg.getProperty("local.port", "13389")),
                         cfg.getProperty("secret", ""));
-                default -> System.out.println("未知 role: " + role);
+                default -> System.out.println("未知 role: " + role); // [P3C E1 豁免]
             }
             return;
         }
@@ -423,7 +426,7 @@ public class SipTunnel {
             case "provider" -> startProvider(args[1], Integer.parseInt(args[2]), args[3], args[4], args[5]);
             case "visit" -> startVisit(args[1], Integer.parseInt(args[2]), args[3], args[4],
                     Integer.parseInt(args[5]), args[6]);
-            default -> System.out.println("未知模式: " + args[0]);
+            default -> System.out.println("未知模式: " + args[0]); // [P3C E1 豁免]
         }
     }
 }

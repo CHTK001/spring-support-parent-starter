@@ -117,6 +117,8 @@ public class CharacterAvatarController {
      * @return 图片字节流
      * @throws IOException 异常
     */
+    @Operation(summary = "读取角色头像")
+    @GetMapping("/{id}/avatar")
     public ResponseEntity<byte[]> getAvatar(@PathVariable Integer id) throws IOException {
         final Path dir = avatarDirectory();
         final Path file = findFile(dir, id);

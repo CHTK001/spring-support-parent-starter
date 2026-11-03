@@ -792,6 +792,7 @@ public class TsharkCaptureService {
             // 尾随循环：抓包进程还活着的时候，每 1 秒把**已经写进 pcap 的新帧**读出来入库并推送。
             // 没有它的话，抓包过程中数据库与 SSE 永远是空的 —— 页面只能等抓包结束才见数据，
             // 用户看到的就是「一直在抓但 0 包」。
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             Thread tail = new Thread(() -> tailParseLoop(sessionId, proc, filePath), "tshark-tail-" + sessionId);
             tail.setDaemon(true);
             tail.start();

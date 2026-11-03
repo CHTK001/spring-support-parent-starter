@@ -1,15 +1,13 @@
 package com.chua.starter.socket.websocket.session;
 
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.WebSocketSession;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.WebSocketSession;
 
 /**
  * webSocket 会话管理器
@@ -19,11 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 public class WebSocketSessionManager {
-
-    /**
-     * 日志
-    */
-    private static final Logger log = LoggerFactory.getLogger(WebSocketSessionManager.class);
 
     /**
      * 所有会话：会话标识 -> 会话

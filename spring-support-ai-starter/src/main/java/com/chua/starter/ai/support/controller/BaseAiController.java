@@ -1,8 +1,10 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.manage.LocalTrustAuthFilter;
 import com.chua.starter.ai.support.service.AiAccessGuardService;
+import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -91,6 +94,15 @@ public abstract class BaseAiController {
     protected ObjectMapper objectMapper;
 
     /**
+     * AppKey 模型范围解析（分组清单 ∩ Key 限定模型），与服务实例端口共用同一份判定
+     */
+    @Autowired
+    /**
+     * AppKey模型范围
+    */
+    protected AppKeyModelScope appKeyModelScope;
+
+    /**
      * Bearer 令牌 鉴权校验。
      *
      * <p>从请求头 {@code Authorization} 中提取 Bearer Token，
@@ -160,8 +172,97 @@ public abstract class BaseAiController {
     }
 
     /**
-     * 查询 REST API 开关是否启用。
+     * 当前请求的 appKey 允许调用的模型范围。
      *
+     * <p>三态语义与 {@link AppKeyModelScope} 一致：{@code null} 不限制、空集一个都不许、
+     * 非空只许集合内。以下情况一律返回 {@code null}（不做模型收敛）：</p>
+     * <ul>
+     *   <li>本地信任模式（Tauri / 本地开发）置位了免鉴权标记；</li>
+     *   <li>没带 Bearer 凭证，或凭证不是 appKey（内部调用、老登录态）。</li>
+     * </ul>
+     *
+     * @param request HTTP 请求
+     * @return 允许的模型集合；{@code null} 表示不限制
+     */
+    protected Set<String> requestModelScope(HttpServletRequest request) {
+        if (Boolean.TRUE.equals(request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR))) {
+            return null;
+        }
+        String appKey = resolveAppKey(request);
+        if (StringUtils.isBlank(appKey)) {
+            return null;
+        }
+        SysAiAppKey row;
+        try {
+            // 实时查：停用 / 改分组 / 改限定模型后必须立刻生效，不能等缓存过期
+            row = sysAiAppKeyService.getByAppKeyLive(appKey);
+        } catch (Exception e) {
+            log.warn("[ai] 读取 appKey 失败，本次不做模型收敛: {}", e.getMessage());
+            return null;
+        }
+        if (row == null) {
+            return null;
+        }
+        return appKeyModelScope.resolve(row);
+    }
+
+    /**
+     * 校验请求模型是否越过 appKey 的模型范围。
+     *
+     * <p>越权用 403 而不是 401：凭证是有效的，只是不许用这个模型；401 会让客户端
+     * 以为 Key 失效而直接停用配置，排查方向也会跑偏。</p>
+     *
+     * @param request HTTP 请求
+     * @param model   本次请求的模型名，可为 null
+     * @return 允许调用返回 {@code null}；越权返回可直接回给客户端的错误文案
+     */
+    protected String modelScopeViolation(HttpServletRequest request, String model) {
+        Set<String> scope = requestModelScope(request);
+        if (AppKeyModelScope.allows(scope, model)) {
+            return null;
+        }
+        if (scope.isEmpty()) {
+            return "该 AppKey 未分配任何模型，请联系管理员在分组或 Key 上配置可用模型";
+        }
+        String wanted = model == null || model.isBlank() ? "（未指定模型）" : model.trim();
+        return "该 AppKey 不允许调用模型 " + wanted + "，可用模型：" + String.join(",", scope);
+    }
+
+    /**
+     * 模型越权的 JSON 响应（OpenAI 错误体形状）。
+     *
+     * @param message 越权说明，不能为 null
+     * @return 403 响应实体
+     */
+    protected ResponseEntity<Map<String, Object>> modelNotAllowedResponse(String message) {
+        return ResponseEntity.status(403).body(Map.of(
+                "error", Map.of("message", message, "type", "model_not_allowed")));
+    }
+
+    /**
+     * 模型越权的 SSE 响应（流式请求在开流前就拦下，客户端能立刻拿到原因）。
+     *
+     * @param message 越权说明，不能为 null
+     * @return SSE 发射器
+     */
+    protected SseEmitter modelNotAllowedEmitter(String message) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
+        CompletableFuture.runAsync(() -> {
+            try {
+                emitter.send(SseEmitter.event()
+                        .data(Map.of("error", Map.of("message", message, "type", "model_not_allowed")),
+                                MediaType.APPLICATION_JSON));
+                emitter.send(SseEmitter.event().name("done").data("[DONE]", MediaType.TEXT_PLAIN));
+                emitter.complete();
+            } catch (IOException ex) {
+                emitter.completeWithError(ex);
+            }
+        });
+        return emitter;
+    }
+
+    /**
+     * 查询 REST API 开关是否启用。     *
      * <p>从全局设置中读取 {@code runtime.openaiRestEnabled} 配置项，
      * 未配置时默认启用。</p>
      *

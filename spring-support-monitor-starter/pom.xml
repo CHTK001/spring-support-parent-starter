@@ -16,7 +16,7 @@
     <properties>
         <!-- 本模块既独立启动也被宿主当库依赖：默认跳过 fat-jar repackage，保证库坐标下是薄 jar；
              需要可执行包时构建传 -Dspring-boot.repackage.skip=false，产物为 *-exec.jar，不替换主构件 -->
-        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
+        <spring-boot.repackage.skip>false</spring-boot.repackage.skip>
         <!-- 网页解析（HTTP-HTML 数据源）；与 spring-support-ai-starter 保持同版本，避免同进程内两份 -->
         <jsoup.version>1.23.2</jsoup.version>
     </properties>
@@ -68,13 +68,6 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-cdp-starter</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <!-- 接码 / 临时邮箱 SPI（临时账号功能）：随机虚拟号码 + 临时邮箱的创建与短信/邮件读取。
-             经 server-starter 已传递，此处显式声明保证编译期契约稳定 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-datasearch-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->
         <dependency>
@@ -386,7 +379,9 @@
                                         <include name="extensions/**"/>
                                     </fileset>
                                 </copy>
-                                <zip destfile="${exec.jar}" update="true">
+                                <!-- keepcompression 保留原 jar 中已有条目的压缩方式；薄 jar 中的 nested jar 是 STORED
+                                     的（loader 要求不解压），必须继续 STORED，否则重新 deflate 后 loader 拒绝加载 -->
+                                <zip destfile="${exec.jar}" update="true" keepcompression="true">
                                     <zipfileset dir="${work.dir}/BOOT-INF/classes/META-INF" prefix="BOOT-INF/classes/META-INF">
                                         <include name="spring/**"/>
                                         <include name="extensions/**"/>

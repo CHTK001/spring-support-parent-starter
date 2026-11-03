@@ -13,7 +13,7 @@ import com.chua.starter.server.support.mapper.MsServerProjectMapper;
 import com.chua.starter.server.support.service.ReleaseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnClass(JobOperator.class)
+@ConditionalOnBean(JobOperator.class)
 public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
 
     /**

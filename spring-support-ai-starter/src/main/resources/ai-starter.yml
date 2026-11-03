@@ -360,3 +360,6 @@ server:
 # 部署环境如需固定位置，用环境变量 NOMIFUN_SKILLS_ROOT 覆盖，不要写死某台机器的绝对路径。
 nomifun:
   skills-root: ${NOMIFUN_SKILLS_ROOT:./skills}
+  # Agent 技能根目录：Agent 生态提供的离线技能统一存放处（默认用户主目录下的 .agents/skills）。
+  # 角色目录不存在/无技能时扫描静默跳过；用环境变量 NOMIFUN_SKILLS_AGENT_ROOT 覆盖。
+  skills-agent-root: ${NOMIFUN_SKILLS_AGENT_ROOT:~/.agents/skills}

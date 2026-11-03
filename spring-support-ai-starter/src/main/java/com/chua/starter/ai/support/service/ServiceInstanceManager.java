@@ -1,9 +1,11 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.service;
 
 import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.ai.agent.AgentTrace;
 import com.chua.common.support.ai.chat.ChatTool;
 import com.chua.common.support.ai.chat.ChatToolCallData;
+import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
 import com.chua.starter.ai.support.entity.SysAiServiceInstance;
 import com.chua.starter.ai.support.entity.SysAiServiceToken;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -30,6 +33,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -57,6 +61,16 @@ public class ServiceInstanceManager {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
+     * AppKey 服务：服务实例的鉴权、模型范围、额度与计量一律以 appKey 为准。
+     */
+    private final SysAiAppKeyService appKeyService;
+
+    /**
+     * 模型范围解析（分组清单 ∩ Key 限定模型），与网关共用同一份判定
+     */
+    private final AppKeyModelScope modelScope;
+
+    /**
      * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
      */
     private final EffectiveChatModelResolver effectiveChatModelResolver;
@@ -68,11 +82,13 @@ public class ServiceInstanceManager {
      * 创建服务实例管理器。
      *
      * @param instanceMapper 服务实例数据访问器
-     * @param tokenMapper 服务令牌数据访问器
+     * @param tokenMapper 服务令牌数据访问器（老数据只读兼容）
      * @param accessLogMapper 访问日志数据访问器
      * @param registry 聊天客户端注册表
      * @param facade 聊天调用门面
      * @param globalSettingService 全局设置服务
+     * @param appKeyService appKey 服务
+     * @param modelScope 模型范围解析器
      * @param effectiveChatModelResolver 生效对话模型解析器
      */
     public ServiceInstanceManager(SysAiServiceInstanceMapper instanceMapper,
@@ -81,6 +97,8 @@ public class ServiceInstanceManager {
                                   ChatClientRegistry registry,
                                   AiChatFacadeService facade,
                                   SysAiGlobalSettingService globalSettingService,
+                                  SysAiAppKeyService appKeyService,
+                                  AppKeyModelScope modelScope,
                                   EffectiveChatModelResolver effectiveChatModelResolver) {
         this.instanceMapper = instanceMapper;
         this.tokenMapper = tokenMapper;
@@ -88,6 +106,8 @@ public class ServiceInstanceManager {
         this.registry = registry;
         this.facade = facade;
         this.globalSettingService = globalSettingService;
+        this.appKeyService = appKeyService;
+        this.modelScope = modelScope;
         this.effectiveChatModelResolver = effectiveChatModelResolver;
     }
 
@@ -221,42 +241,44 @@ public class ServiceInstanceManager {
         String path = exchange.getRequestURI().getPath();
 
         switch (kind) {
-            case "openai_models":
-                if (authenticate(inst, exchange) == null) {
+            case "openai_models": {
+                Caller caller = authenticate(inst, exchange);
+                if (caller == null) {
                     return;
                 }
-                handleModelsList(exchange, "openai");
+                handleModelsList(exchange, "openai", caller);
                 return;
+            }
             case "openai_chat": {
-                SysAiServiceToken token = authenticate(inst, exchange);
-                if (token == null) {
+                Caller caller = authenticate(inst, exchange);
+                if (caller == null) {
                     return;
                 }
-                handleOpenAiChat(inst, exchange, token);
+                handleOpenAiChat(inst, exchange, caller);
                 return;
             }
             case "cc_messages": {
-                SysAiServiceToken token = authenticate(inst, exchange);
-                if (token == null) {
+                Caller caller = authenticate(inst, exchange);
+                if (caller == null) {
                     return;
                 }
-                handleCcMessages(inst, exchange, token);
+                handleCcMessages(inst, exchange, caller);
                 return;
             }
             case "cc_count_tokens": {
-                SysAiServiceToken token = authenticate(inst, exchange);
-                if (token == null) {
+                Caller caller = authenticate(inst, exchange);
+                if (caller == null) {
                     return;
                 }
                 handleCcCountTokens(exchange);
                 return;
             }
             case "gemini": {
-                SysAiServiceToken token = authenticate(inst, exchange);
-                if (token == null) {
+                Caller caller = authenticate(inst, exchange);
+                if (caller == null) {
                     return;
                 }
-                handleGemini(inst, exchange, method, path, token);
+                handleGemini(inst, exchange, method, path, caller);
                 return;
             }
             default:
@@ -271,19 +293,24 @@ public class ServiceInstanceManager {
      *
      * @param inst     服务实例配置，不能为 null
      * @param exchange 当前 HTTP 交换对象，不能为 null
-     * @param token    已通过鉴权的访问令牌，不能为 null
+     * @param caller   已通过鉴权的调用方（appKey 优先），不能为 null
      * @throws IOException 读取请求体或回写响应失败时抛出
      */
-    private void handleOpenAiChat(SysAiServiceInstance inst, HttpExchange exchange, SysAiServiceToken token) throws IOException {
+    private void handleOpenAiChat(SysAiServiceInstance inst, HttpExchange exchange, Caller caller) throws IOException {
         Map<String, Object> body = readJsonBody(exchange);
         boolean wantStream = Boolean.TRUE.equals(body.get("stream"));
         List<Map<String, Object>> messages = parseOpenAiMessages(body.get("messages"));
         String model = str(body.get("model"));
 
         AiChatRequest request = buildRequest(inst, body, messages, model);
+        bindAppKey(request, caller);
         String id = "chatcmpl-" + uuid8();
         long created = System.currentTimeMillis() / 1000;
         String effModel = effectiveModel(model);
+        // 调用方的模型范围（appKey 分组 / 限定模型）先拦越权，再决定是否开流（开流后响应头已发，无法改判）
+        if (!assertModelAllowed(caller, effModel, exchange)) {
+            return;
+        }
 
         if (wantStream) {
             openSse(exchange, "text/event-stream");
@@ -295,10 +322,10 @@ public class ServiceInstanceManager {
             delta.put("content", "");
             first.put("choices", List.of(choiceDelta(0, delta, null)));
             st.writeSseData(first);
-            runFacade(inst, request, exchange, st, "openai", id, effModel, body, token);
+            runFacade(inst, request, exchange, st, "openai", id, effModel, body, caller);
         } else {
             StreamState st = new StreamState(exchange);
-            runFacade(inst, request, exchange, st, "openai_nonstream", id, effModel, body, token);
+            runFacade(inst, request, exchange, st, "openai_nonstream", id, effModel, body, caller);
         }
     }
 
@@ -512,10 +539,10 @@ public class ServiceInstanceManager {
      *
      * @param inst     服务实例配置，不能为 null
      * @param exchange 当前 HTTP 交换对象，不能为 null
-     * @param token    已通过鉴权的访问令牌，不能为 null
+     * @param caller   已通过鉴权的调用方（appKey 优先），不能为 null
      * @throws IOException 读取请求体或回写响应失败时抛出
      */
-    private void handleCcMessages(SysAiServiceInstance inst, HttpExchange exchange, SysAiServiceToken token) throws IOException {
+    private void handleCcMessages(SysAiServiceInstance inst, HttpExchange exchange, Caller caller) throws IOException {
         Map<String, Object> body = readJsonBody(exchange);
         boolean wantStream = Boolean.TRUE.equals(body.get("stream"));
         List<Map<String, Object>> messages = parseCcMessages(body);
@@ -523,8 +550,12 @@ public class ServiceInstanceManager {
 
         AiChatRequest request = buildRequest(inst, body, messages, model);
         applyCcTools(request, body);
+        bindAppKey(request, caller);
         String id = "msg_" + uuid8();
         String effModel = effectiveModel(model);
+        if (!assertModelAllowed(caller, effModel, exchange)) {
+            return;
+        }
 
         if (wantStream) {
             openSse(exchange, "text/event-stream");
@@ -545,10 +576,10 @@ public class ServiceInstanceManager {
             ms.put("message", startMsg);
             st.writeSseEvent("message_start", ms);
             st.writeSseEvent("ping", Map.of("type", "ping"));
-            runFacade(inst, request, exchange, st, "cc", id, effModel, body, token);
+            runFacade(inst, request, exchange, st, "cc", id, effModel, body, caller);
         } else {
             StreamState st = new StreamState(exchange);
-            runFacade(inst, request, exchange, st, "cc_nonstream", id, effModel, body, token);
+            runFacade(inst, request, exchange, st, "cc_nonstream", id, effModel, body, caller);
         }
     }
 
@@ -1080,31 +1111,35 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，不能为 null
      * @param method   HTTP 方法名，不能为 null
      * @param path     请求路径，用于识别模型名与生成动作
-     * @param token    已通过鉴权的访问令牌，不能为 null
+     * @param caller   已通过鉴权的调用方（appKey 优先），不能为 null
      * @throws IOException 读取请求体或回写响应失败时抛出
      */
     private void handleGemini(SysAiServiceInstance inst, HttpExchange exchange, String method, String path,
-                              SysAiServiceToken token)
+                              Caller caller)
             throws IOException {
         boolean stream = path.endsWith(":streamGenerateContent");
         boolean generate = stream || path.endsWith(":generateContent");
         if ("GET".equalsIgnoreCase(method) && !generate) {
-            handleModelsList(exchange, "gemini");
+            handleModelsList(exchange, "gemini", caller);
             return;
         }
         Map<String, Object> body = readJsonBody(exchange);
         String pathModel = extractGeminiModel(path);
         List<Map<String, Object>> messages = parseGeminiContents(body);
         AiChatRequest request = buildRequest(inst, body, messages, pathModel);
+        bindAppKey(request, caller);
         String effModel = effectiveModel(pathModel);
+        if (!assertModelAllowed(caller, effModel, exchange)) {
+            return;
+        }
 
         if (stream) {
             openSse(exchange, "text/event-stream");
             StreamState st = new StreamState(exchange);
-            runFacade(inst, request, exchange, st, "gemini", null, effModel, body, token);
+            runFacade(inst, request, exchange, st, "gemini", null, effModel, body, caller);
         } else {
             StreamState st = new StreamState(exchange);
-            runFacade(inst, request, exchange, st, "gemini_nonstream", null, effModel, body, token);
+            runFacade(inst, request, exchange, st, "gemini_nonstream", null, effModel, body, caller);
         }
     }
 
@@ -1216,12 +1251,22 @@ public class ServiceInstanceManager {
     /**
      * 输出模型列表，按 flavor 分别渲染 Gemini {@code models[]} 或 OpenAI {@code data[]} 结构。
      *
+     * <p>令牌绑定了模型清单时，列表只回这些模型 —— 客户端（Cherry Studio 之类）常用
+     * {@code /v1/models} 做下拉，若照旧全量返回，用户选到一个没权限的模型再被 403，
+     * 体验与「按模型授权」的语义都不对。</p>
+     *
      * @param exchange 当前 HTTP 交换对象，不能为 null
      * @param flavor   协议风味，取值为 {@code gemini} 或其他（按 OpenAI 结构输出）
+     * @param caller   已鉴权的调用方，可为 null（视为不限制模型）
      */
-    private void handleModelsList(HttpExchange exchange, String flavor) {
+    private void handleModelsList(HttpExchange exchange, String flavor, Caller caller) {
         try {
             List<String> models = new ArrayList<>(registry.getModels());
+            // /models 必须与 /chat/completions 同一口径：调用方看不到的模型，也不许出现在清单里
+            Set<String> scope = allowedModels(caller);
+            if (scope != null) {
+                models.removeIf(m -> !AppKeyModelScope.contains(scope, m));
+            }
             Object payload;
             if ("gemini".equals(flavor)) {
                 List<Map<String, Object>> items = new ArrayList<>();
@@ -1338,7 +1383,7 @@ public class ServiceInstanceManager {
 
     private void runFacade(SysAiServiceInstance inst, AiChatRequest request, HttpExchange exchange,
                            StreamState st, String mode, String id, String effModel,
-                           Map<String, Object> reqBody, SysAiServiceToken token) {
+                           Map<String, Object> reqBody, Caller caller) {
         long start = System.currentTimeMillis();
         final long chunkCreated = System.currentTimeMillis() / 1000;
         UserResume resume = new UserResume();
@@ -1445,8 +1490,8 @@ public class ServiceInstanceManager {
                             }
                             try {
                                 writeAccessLog(inst, exchange, effModel, modeToProtocol(mode),
-                                        200, usage, System.currentTimeMillis() - start);
-                                consumeQuota(token, totalOf(usage));
+                                        200, usage, System.currentTimeMillis() - start, caller);
+                                consumeQuota(caller, totalOf(usage), true);
                             } catch (Exception e) {
                                 log.warn("[ServiceInstance] 完成日志/额度回填失败: {}", e.getMessage());
                             }
@@ -1461,8 +1506,8 @@ public class ServiceInstanceManager {
                                             "error", Map.of("message", error.getMessage(), "type", "upstream_error")));
                                 }
                                 writeAccessLog(inst, exchange, effModel, modeToProtocol(mode),
-                                        502, null, System.currentTimeMillis() - start);
-                                consumeQuota(token, null);
+                                        502, null, System.currentTimeMillis() - start, caller);
+                                consumeQuota(caller, null, false);
                             } catch (Exception e) {
                                 log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                             }
@@ -1537,7 +1582,7 @@ public class ServiceInstanceManager {
     }
 
     private void writeAccessLog(SysAiServiceInstance inst, HttpExchange exchange, String model,
-                                String protocol, int status, AiUsage usage, long latency) {
+                                String protocol, int status, AiUsage usage, long latency, Caller caller) {
         try {
             SysAiServiceAccessLog logRow = new SysAiServiceAccessLog();
             logRow.setInstanceId(inst.getInstanceId());
@@ -1554,6 +1599,10 @@ public class ServiceInstanceManager {
             logRow.setLatencyMs(latency);
             logRow.setClientIp(clientIp(exchange));
             logRow.setUserId(inst.getUserId());
+            // 凭证归属：谁花的这笔账要能查得出来（老令牌没有 appKey，留空）
+            if (caller != null && caller.appKey != null) {
+                logRow.setAppKey(caller.appKey);
+            }
             accessLogMapper.insert(logRow);
         } catch (Exception e) {
             log.warn("[ServiceInstance] 访问日志写入失败: {}", e.getMessage());
@@ -1563,25 +1612,133 @@ public class ServiceInstanceManager {
     // ==================== 鉴权 ====================
 
     /**
-     * 校验请求携带的访问令牌：存在性、启用状态、有效期与请求/Token 额度。
+     * 调用方身份：<b>appKey 是唯一正式凭证</b>，老的实例服务令牌只做只读兼容。
+     *
+     * <p>为什么统一到 appKey：服务实例对外暴露的 {@code /v1/models}、{@code /v1/chat/completions}、
+     * {@code /v1/messages}、Gemini 生成，必须与网关 {@code /v2/v1/*} 同一套口径——同一个凭证、
+     * 同一份模型范围（分组 + 限定模型）、同一本额度账（次数 / Token / 余额）、同一套用量归集。
+     * 否则「控制台签发的 Key 能用什么模型」和「用量看板里这笔调用算谁的」会各说各话。</p>
+     *
+     * <p>{@code sys_ai_service_token} 已停止签发：老 Key 继续可用（模型范围取 {@code model_ids}、
+     * 额度取 {@code expires_at / max_requests / max_tokens}），但新 Key 一律走 appKey。</p>
+     */
+    private static final class Caller {
+        /** appKey 值（正式凭证）；老令牌调用时为 null */
+        private final String appKey;
+        /** appKey 行（含分组 / 限定模型 / 额度列）；老令牌调用时为 null */
+        private final SysAiAppKey appKeyRow;
+        /** 老的实例服务令牌；appKey 调用时为 null */
+        private final SysAiServiceToken legacyToken;
+
+        private Caller(String appKey, SysAiAppKey appKeyRow, SysAiServiceToken legacyToken) {
+            this.appKey = appKey;
+            this.appKeyRow = appKeyRow;
+            this.legacyToken = legacyToken;
+        }
+
+        static Caller ofAppKey(SysAiAppKey row) {
+            return new Caller(row.getAppKey(), row, null);
+        }
+
+        static Caller ofLegacy(SysAiServiceToken token) {
+            return new Caller(null, null, token);
+        }
+
+        boolean isAppKey() {
+            return appKey != null;
+        }
+    }
+
+    /**
+     * 校验请求携带的凭证：<b>先按 appKey</b>（sys_ai_app_key），不行再按老的实例令牌。
+     *
+     * <p>两种凭证的错误码刻意保持一致（{@code token_expired} / {@code request_quota_exhausted} /
+     * {@code token_quota_exhausted}），客户端一套处理逻辑即可；余额不足单独回 402
+     * {@code insufficient_balance}，与网关的计费守卫同语义。</p>
      *
      * @param inst     服务实例配置，不能为 null
-     * @param exchange 当前 HTTP 交换对象，用于提取令牌与回写错误
-     * @return 校验通过的令牌实体；校验失败时已回写 401 并返回 null
+     * @param exchange 当前 HTTP 交换对象，用于提取凭证与回写错误
+     * @return 校验通过的调用方；校验失败时已回写错误并返回 null
      */
-    private SysAiServiceToken authenticate(SysAiServiceInstance inst, HttpExchange exchange) {
+    private Caller authenticate(SysAiServiceInstance inst, HttpExchange exchange) {
         String presented = extractPresentedToken(exchange);
         if (presented == null || presented.isBlank()) {
-            tryWriteError(exchange, 401, "authentication_error", "无效或缺失的访问令牌");
+            tryWriteError(exchange, 401, "authentication_error", "无效或缺失的 AppKey");
             return null;
         }
+        // ① appKey：实时查（不走缓存），否则停用/超额要等缓存过期才生效
+        SysAiAppKey row = appKeyService.getByAppKeyLive(presented);
+        if (row != null) {
+            return authenticateAppKey(row, exchange);
+        }
+        // ② 老的实例服务令牌（只读兼容，控制台已不再签发）
+        Caller legacy = authenticateLegacyToken(inst, presented, exchange);
+        if (legacy != null) {
+            return legacy;
+        }
+        tryWriteError(exchange, 401, "authentication_error", "无效或缺失的 AppKey");
+        return null;
+    }
+
+    /**
+     * 校验 appKey：停用、过期、次数、Token 总量、IP 白名单、余额逐条判定。
+     *
+     * @param row      appKey 行，不能为 null
+     * @param exchange 当前 HTTP 交换对象
+     * @return 校验通过的调用方；失败时已回写错误并返回 null
+     */
+    private Caller authenticateAppKey(SysAiAppKey row, HttpExchange exchange) {
+        if (row.getStatus() == null || row.getStatus() != 1) {
+            tryWriteError(exchange, 401, "appkey_disabled", "该 AppKey 已停用");
+            return null;
+        }
+        if (appKeyExpired(row)) {
+            tryWriteError(exchange, 401, "token_expired", "该 AppKey 已过期");
+            return null;
+        }
+        Long maxUse = row.getMaxUse();
+        long used = row.getUseCount() == null ? 0L : row.getUseCount();
+        if (maxUse != null && maxUse > 0 && used >= maxUse) {
+            tryWriteError(exchange, 401, "request_quota_exhausted",
+                    "该 AppKey 请求次数已用尽（上限 " + maxUse + "，已用 " + used + "）");
+            return null;
+        }
+        Long maxTokens = row.getMaxTokens();
+        long usedTokens = row.getTotalTokens() == null ? 0L : row.getTotalTokens();
+        if (maxTokens != null && maxTokens > 0 && usedTokens >= maxTokens) {
+            tryWriteError(exchange, 401, "token_quota_exhausted",
+                    "该 AppKey Token 余额已用尽（总量 " + maxTokens + "，已消耗 " + usedTokens + "）");
+            return null;
+        }
+        if (!ipAllowed(row, exchange)) {
+            tryWriteError(exchange, 403, "ip_not_allowed", "客户端 IP 不在该 AppKey 的白名单内");
+            return null;
+        }
+        BigDecimal balance = row.getBalance();
+        boolean overdraft = row.getOverdraftEnabled() != null && row.getOverdraftEnabled() == 1;
+        if (balance != null && balance.compareTo(BigDecimal.ZERO) < 0 && !overdraft) {
+            tryWriteError(exchange, 402, "insufficient_balance",
+                    "该 AppKey 余额不足（" + balance.toPlainString() + "），请充值后使用");
+            return null;
+        }
+        return Caller.ofAppKey(row);
+    }
+
+    /**
+     * 校验老的实例服务令牌（存在性、启用、过期、次数、余额）。
+     *
+     * @param inst       服务实例配置
+     * @param presented  请求携带的令牌
+     * @param exchange   当前 HTTP 交换对象
+     * @return 校验通过的调用方；令牌不存在时返回 null（由调用方回 401）
+     */
+    private Caller authenticateLegacyToken(SysAiServiceInstance inst, String presented, HttpExchange exchange) {
         List<SysAiServiceToken> matched = tokenMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiServiceToken>()
                         .eq(SysAiServiceToken::getInstanceId, inst.getInstanceId())
                         .eq(SysAiServiceToken::getEnabled, 1)
                         .eq(SysAiServiceToken::getToken, presented));
         if (matched.isEmpty()) {
-            tryWriteError(exchange, 401, "authentication_error", "无效或缺失的访问令牌");
             return null;
         }
         SysAiServiceToken t = matched.get(0);
@@ -1590,24 +1747,132 @@ public class ServiceInstanceManager {
             tryWriteError(exchange, 401, "token_expired", "访问令牌已过期");
             return null;
         }
-        if (t.getMaxRequests() != null
-                && nz(t.getUsedRequests()) >= t.getMaxRequests()) {
+        if (t.getMaxRequests() != null && nz(t.getUsedRequests()) >= t.getMaxRequests()) {
             tryWriteError(exchange, 401, "request_quota_exhausted", "访问令牌请求次数已用尽");
             return null;
         }
-        if (t.getMaxTokens() != null
-                && nz(t.getUsedTokens()) >= t.getMaxTokens()) {
-            tryWriteError(exchange, 401, "token_quota_exhausted", "访问令牌Token额度已用尽");
+        if (t.getMaxTokens() != null && nz(t.getUsedTokens()) >= t.getMaxTokens()) {
+            tryWriteError(exchange, 401, "token_quota_exhausted",
+                    "访问令牌余额已用尽（总量 " + t.getMaxTokens() + "，已消耗 " + nz(t.getUsedTokens()) + "）");
             return null;
         }
-        return t;
+        return Caller.ofLegacy(t);
     }
 
     /**
-     * 从请求头提取访问令牌，依次尝试 Authorization Bearer、x-goog-api-key、x-api-key。
+     * appKey 是否已过期：{@code expire_datetime} 为准，缺省时看 {@code expire_time}。
+     *
+     * <p>{@code expire_time} 在库里两种写法都出现过（秒 / 毫秒），按量级判定：
+     * 大于 1e11 当毫秒，否则当秒。判断错一位就是「全部 Key 都过期」，所以这里不做假设。</p>
+     */
+    private boolean appKeyExpired(SysAiAppKey row) {
+        LocalDateTime dt = row.getExpireDatetime();
+        if (dt != null) {
+            return dt.isBefore(LocalDateTime.now());
+        }
+        Long raw = row.getExpireTime();
+        if (raw == null || raw <= 0) {
+            return false;
+        }
+        long deadline = raw > 100_000_000_000L ? raw : raw * 1000L;
+        return System.currentTimeMillis() > deadline;
+    }
+
+    /**
+     * 客户端 IP 是否在该 appKey 的白名单内（空白名单 = 不限制）。
+     *
+     * @param row      appKey 行
+     * @param exchange 当前 HTTP 交换对象
+     * @return 允许返回 true
+     */
+    private boolean ipAllowed(SysAiAppKey row, HttpExchange exchange) {
+        String whitelist = row.getIpWhitelist();
+        if (whitelist == null || whitelist.isBlank()) {
+            return true;
+        }
+        String ip = clientIp(exchange);
+        for (String part : whitelist.split(",")) {
+            String v = part.trim();
+            if (v.isEmpty()) {
+                continue;
+            }
+            if ("*".equals(v) || v.equals(ip)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 把 appKey 注入到请求参数：底层用量落库据此把这次调用归到该 appKey 名下。
+     *
+     * @param request 对话请求，不能为 null
+     * @param caller  调用方，可为 null（老令牌无 appKey）
+     */
+    private void bindAppKey(AiChatRequest request, Caller caller) {
+        if (caller == null || caller.appKey == null || request == null) {
+            return;
+        }
+        Map<String, Object> params = request.getParameters();
+        if (params == null) {
+            params = new LinkedHashMap<>();
+            request.setParameters(params);
+        }
+        params.put("_appKey", caller.appKey);
+    }
+
+    /**
+     * 计算调用方允许调用的模型集合；返回 {@code null} 表示不限制（全量）。
+     *
+     * <p>appKey 的范围 = 所属分组的模型清单 ∩ Key 上的限定模型；老令牌取 {@code model_ids}。
+     * 推导逻辑与网关共用 {@link AppKeyModelScope}，避免两个入口判定不一致。</p>
+     *
+     * @param caller 调用方，可为 null
+     * @return 允许的模型集合；{@code null} 表示不限制；空集合表示一个都不许
+     */
+    private Set<String> allowedModels(Caller caller) {
+        if (caller == null) {
+            return null;
+        }
+        if (caller.isAppKey()) {
+            return modelScope.resolve(caller.appKeyRow);
+        }
+        return AppKeyModelScope.parseCsv(caller.legacyToken.getModelIds());
+    }
+
+    /**
+     * 校验请求的模型是否在调用方的模型范围内。
+     *
+     * <p>越权回 403 {@code model_not_allowed}：401 会让客户端以为凭证失效，而这里凭证是好的，
+     * 只是不允许用这个模型。范围为空（一个模型都没分配）时同样拒绝，并明确说出来。</p>
+     *
+     * @param caller   调用方，可为 null（不限制）
+     * @param model    本次请求实际生效的模型名，可为 null 或空白
+     * @param exchange 当前 HTTP 交换对象，用于回写错误
+     * @return 允许调用时返回 true；越权时已回写 403 并返回 false
+     */
+    private boolean assertModelAllowed(Caller caller, String model, HttpExchange exchange) {
+        Set<String> scope = allowedModels(caller);
+        if (AppKeyModelScope.allows(scope, model)) {
+            return true;
+        }
+        String wanted = model == null ? "" : model.trim();
+        if (scope.isEmpty()) {
+            tryWriteError(exchange, 403, "model_not_allowed",
+                    "该 AppKey 未分配任何模型，请联系管理员在分组或 Key 上配置可用模型");
+            return false;
+        }
+        tryWriteError(exchange, 403, "model_not_allowed",
+                "该 AppKey 不允许调用模型 " + (wanted.isEmpty() ? "（未指定模型）" : wanted)
+                        + "，可用模型：" + String.join(",", scope));
+        return false;
+    }
+
+    /**
+     * 从请求头提取凭证，依次尝试 Authorization Bearer、x-goog-api-key、x-api-key。
      *
      * @param exchange 当前 HTTP 交换对象，不能为 null
-     * @return 去除首尾空白的令牌；三个请求头都缺失时返回 null
+     * @return 去除首尾空白的凭证；三个请求头都缺失时返回 null
      */
     private String extractPresentedToken(HttpExchange exchange) {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
@@ -1622,26 +1887,42 @@ public class ServiceInstanceManager {
     }
 
     /**
-     * 令牌额度回填：每次请求终结（成功/失败）请求次数 +1；成功时按总 Token 累加。
-     * 使用 SQL 原子自增，避免并发计数竞争。
+     * 额度回填：每次请求终结（成功/失败）计一次调用；成功且拿到用量时累加 Token 消耗。
      *
-     * @param t           已鉴权的令牌实体，可为 null（此时直接返回）
-     * @param totalTokens 本次请求消耗的总 Token 数，可为 null 或非正数，此时只累加请求次数
+     * <p>appKey：走 {@code SysAiAppKeyService} 的原子自增（{@code use_count} / {@code total_tokens}
+     * + {@code last_used_time}），与网关同一本账；老令牌：沿用服务令牌表的两列。</p>
+     *
+     * @param caller      已鉴权的调用方，可为 null（此时直接返回）
+     * @param totalTokens 本次请求消耗的总 Token 数，可为 null 或非正数
+     * @param success     本次请求是否成功
      */
-    private void consumeQuota(SysAiServiceToken t, Long totalTokens) {
-        if (t == null || t.getTokenId() == null) {
+    private void consumeQuota(Caller caller, Long totalTokens, boolean success) {
+        if (caller == null) {
             return;
         }
         try {
             long addTokens = totalTokens != null && totalTokens > 0 ? totalTokens : 0L;
+            if (caller.isAppKey()) {
+                // 失败也计一次（与按次数配额的口径一致：请求已经发出去了）
+                appKeyService.updateUseInfoByAppKey(caller.appKey);
+                if (addTokens > 0) {
+                    appKeyService.updateTokenQuotaByAppKey(caller.appKey, addTokens);
+                }
+                return;
+            }
+            SysAiServiceToken t = caller.legacyToken;
+            if (t == null || t.getTokenId() == null) {
+                return;
+            }
             String sql = "used_requests = used_requests + 1"
-                    + (addTokens > 0 ? ", used_tokens = used_tokens + " + addTokens : "");
+                    + (addTokens > 0 ? ", used_tokens = used_tokens + " + addTokens : "")
+                    + (success ? ", last_used_at = NOW()" : "");
             com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SysAiServiceToken> uw =
                     new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
             uw.eq(SysAiServiceToken::getTokenId, t.getTokenId()).setSql(sql);
             tokenMapper.update(null, uw);
         } catch (Exception e) {
-            log.warn("[ServiceInstance] 令牌额度回填失败: {}", e.getMessage());
+            log.warn("[ServiceInstance] 额度回填失败: {}", e.getMessage());
         }
     }
 

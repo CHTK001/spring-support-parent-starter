@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.common.support.converter;
 import com.chua.starter.common.support.api.encode.ApiResponseEncodeRegister;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -99,9 +100,29 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
             return;
         }
 
+        if (null == o) {
+            return;
+        }
+
         HttpServletRequest request = RequestUtils.getRequest();
         if (null == request) {
-            log.warn("[消息转换器]无法获取 HttpServletRequest, 跳过写入");
+            // 异步线程（SSE 推送、定时任务、@Async）没有请求上下文，无法做加密协商。
+            //
+            // 此处此前只打一条 warn 就 return —— 等于把整段响应体丢掉。实际表现是
+            // 隧道页 /ms/tunnel/{provider}/stream 只有「订阅瞬间」那一帧带数据，
+            // 之后每一帧都是空的 `data:`：订阅帧跑在 Servlet 请求线程上（能取到
+            // request，走下面的委托分支正常写出），而后续帧跑在推送调度线程上，
+            // 走到这里被静默吞掉。因为本转换器排在转换器链首位，Spring 选中它之后
+            // 就没有别的转换器再去写这段 payload 了。
+            //
+            // 数据不该因为「没有请求」而消失：与下面 Accept 分支一样委托给普通
+            // 转换器写出（异步响应此时头已提交，registerAccept 设置 contentType
+            // 对已提交响应无副作用）。
+            if (log.isDebugEnabled()) {
+                log.debug("[消息转换器]无请求上下文（异步响应），委托普通转换器写出, 对象类型: {}",
+                        o.getClass().getName());
+            }
+            registerAccept(outputMessage, o);
             return;
         }
         String string = request.getHeader("access-control-no-data");
@@ -151,6 +172,39 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
             }
         }
         log.warn("[消息转换器]未找到合适的转换器处理类型: {}", aClass.getName());
+    }
+
+    /**
+     * 用普通转换器写出对象，但不修改响应头。
+     *
+     * <p>异步响应（SSE / {@code StreamingResponseBody}）的响应头在第一次写出时
+     * 就已提交，之后再 {@code setContentType} 会被 Tomcat 拒绝或破坏已发出的
+     * 分块边界。所以这里只挑「当前已提交的 Content-Type」对应的转换器写出，
+     * 不碰 {@link HttpOutputMessage#getHeaders()}。</p>
+     *
+     * @param outputMessage 输出消息
+     * @param o             待写出对象
+     * @throws IOException 写出失败
+     */
+    private void writeWithoutHeaderMutation(HttpOutputMessage outputMessage, Object o) throws IOException {
+        Class<?> aClass = o.getClass();
+        MediaType contentType = outputMessage.getHeaders().getContentType();
+        for (HttpMessageConverter<?> messageConverter : messageConverters) {
+            if (null != contentType) {
+                if (messageConverter.canWrite(aClass, contentType)) {
+                    ((HttpMessageConverter) messageConverter).write(o, null, outputMessage);
+                    return;
+                }
+                continue;
+            }
+            for (MediaType supportedMediaType : messageConverter.getSupportedMediaTypes(aClass)) {
+                if (messageConverter.canWrite(aClass, supportedMediaType)) {
+                    ((HttpMessageConverter) messageConverter).write(o, null, outputMessage);
+                    return;
+                }
+            }
+        }
+        log.warn("[消息转换器]异步响应未找到合适的转换器处理类型: {}", aClass.getName());
     }
 
     /**

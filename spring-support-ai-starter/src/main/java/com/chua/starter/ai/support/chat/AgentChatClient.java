@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.agent.Agent;
@@ -43,6 +44,11 @@ public class AgentChatClient implements ChatClient {
      * 关闭钩子：释放 Agent 运行时私有的资源（如 MCP 连接），由构建方注入
      */
     private Runnable closeHook;
+
+    /**
+     * 当前正在跑的流订阅；{@link #interrupt()} 用它立刻掐断本客户端的执行。
+     */
+    private volatile reactor.core.Disposable currentStream;
 
     /**
      * 创建 Agent对话客户端 实例
@@ -223,6 +229,7 @@ public class AgentChatClient implements ChatClient {
                     }
                 }
         );
+        this.currentStream = disposable;
     }
 
     /**
@@ -257,7 +264,7 @@ public class AgentChatClient implements ChatClient {
                 new com.chua.common.support.ai.AiUsage[1];
         final java.util.concurrent.atomic.AtomicBoolean finished =
                 new java.util.concurrent.atomic.AtomicBoolean(false);
-        agent.resumeStream(replyId, decisions, feedback).subscribe(
+        reactor.core.Disposable disposable = agent.resumeStream(replyId, decisions, feedback).subscribe(
                 event -> {
                     try {
                         if (event == null || event.getType() == null) {
@@ -352,6 +359,7 @@ public class AgentChatClient implements ChatClient {
                     }
                 }
         );
+        this.currentStream = disposable;
     }
 
     @Override
@@ -364,6 +372,32 @@ public class AgentChatClient implements ChatClient {
                 .description("Agent 运行时模型，通过路由自动委派给合适的子 Agent")
                 .capabilities(List.of("chat", "tools", "skills", "routing"))
                 .build());
+    }
+
+    /**
+     * 中断当前执行：这是「停止」按钮真正能停住的那一层。
+     *
+     * <p>只关闭帧槽（SSE/WS）不会让正在跑的 Agent 停下来——opencode 实现是一个
+     * 子进程，帧槽关了它照样在后台调模型、写日志、占端口。这里做两件事：</p>
+     * <ol>
+     *   <li>{@link Agent#interrupt()}：把中断信号交给 Agent 实现——
+     *       opencode 强杀子进程、agentscope 关闭当前 Harness、langchain4j 跳出 ReAct 循环</li>
+     *   <li>取消本客户端持有的订阅：立刻停止向上层继续推送事件</li>
+     * </ol>
+     */
+    public void interrupt() {
+        Agent target = this.agent;
+        if (target != null) {
+            try {
+                target.interrupt();
+            } catch (Exception e) {
+                log.warn("[AgentChatClient] 中断 Agent 失败: {}", e.getMessage());
+            }
+        }
+        reactor.core.Disposable disposable = this.currentStream;
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+        }
     }
 
     @Override

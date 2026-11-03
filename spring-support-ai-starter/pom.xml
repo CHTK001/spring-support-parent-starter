@@ -84,6 +84,12 @@
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- Git 操作：仅引入 JGit 本体，避免 git-starter 传递依赖拉低现有 utils 版本 -->
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+      <version>7.8.0.202609011348-r</version>
+    </dependency>
     <!-- OpenAI 兼容协议 ChatClient（OpenAI/SiliconFlow/SenseTime/GitHub/Gitee） -->
     <dependency>
       <groupId>com.chua</groupId>
@@ -240,6 +246,13 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
+    </dependency>
+    <!-- 渠道管理模块（账号类渠道鉴权 /api/channels、渠道健康探针 /v2/channels、
+         渠道定时签到与探针、AccountChannelAuthManager SPI 及其 14 个实现）。
+         依赖方向固定为 ai-starter → channel-starter，本模块不再反向依赖。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-channel-starter</artifactId>
     </dependency>
     <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
     <dependency>

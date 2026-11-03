@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasync.dbprobe;
 import com.chua.common.support.concurrent.dispatcher.DispatcherConfig;
 import com.chua.common.support.concurrent.dispatcher.provider.InMemoryDispatcherProvider;
@@ -45,13 +46,13 @@ public final class DataSyncModeCompareProbe {
                 }
             }
         }
-        System.err.println("========================================================================");
-        System.err.println("三种派发模式吞吐对比 (10万行, batch=1000)");
-        System.err.println("========================================================================\n");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("三种派发模式吞吐对比 (10万行, batch=1000)"); // [P3C E1 豁免]
+        System.err.println("========================================================================\n"); // [P3C E1 豁免]
         testDirect("1. 直连派发 (directDispatch=true)");
         testChronicle("2. Chronicle pub/sub (directDispatch=false)");
         testInMemory("3. InMemory pub/sub (InMemoryDispatcherProvider)");
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
     }
     /**
      * 测试direct
@@ -102,7 +103,7 @@ public final class DataSyncModeCompareProbe {
             server.stop();
             report(label, ms, sink.count.get());
         } catch (Exception e) {
-            System.err.printf("%-45s %s (Java 25 不兼容)%n", label, e.getClass().getSimpleName());
+            System.err.printf("%-45s %s (Java 25 不兼容)%n", label, e.getClass().getSimpleName()); // [P3C E1 豁免]
         }
     }
     /**
@@ -140,7 +141,7 @@ public final class DataSyncModeCompareProbe {
      */
     static void report(String label, long ms, long count) {
         long tp = count * 1000L / Math.max(1, ms);
-        System.err.printf("%-45s %5dms  %,d 行/s  rows=%d%n", label, ms, tp, count);
+        System.err.printf("%-45s %5dms  %,d 行/s  rows=%d%n", label, ms, tp, count); // [P3C E1 豁免]
     }
     static final class CountSink implements DataSyncAgentSink {
         final String id;

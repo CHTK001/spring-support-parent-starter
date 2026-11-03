@@ -284,6 +284,7 @@ public class GogoSshShellServer {
             // bundle: 命令不依赖 Gogo 会话（框架 API 直通）——直接用通道输出流启动会话循环，
             // 规避二次创建会话在 gogo 运行时下的阻塞/抖动
             PrintStream console = new PrintStream(out, true);
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             Thread thread = new Thread(() -> runLoop(console), "gogo-ssh-shell");
             thread.setDaemon(true);
             thread.start();

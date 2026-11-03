@@ -288,7 +288,7 @@ final class TimerSink implements DataSyncAgentSink {
                      * @param list 列表
                      */
                     persist(list);
-                    System.out.println("[LOAD-PROBE] " + sinkId + " 轮次#" + rounds.sum() + " 写入 " + counter.sum()
+                    System.out.println("[LOAD-PROBE] " + sinkId + " 轮次#" + rounds.sum() + " 写入 " + counter.sum() // [P3C E1 豁免]
                             + " 行, " + ms + "ms, thread=" + Thread.currentThread().getName());
                 });
     }
@@ -312,7 +312,7 @@ final class TimerSink implements DataSyncAgentSink {
                         java.nio.file.StandardOpenOption.APPEND);
             }
         } catch (Exception e) {
-            System.out.println("[LOAD-PROBE] 落盘失败: " + sinkId + " -> " + e.getMessage());
+            System.out.println("[LOAD-PROBE] 落盘失败: " + sinkId + " -> " + e.getMessage()); // [P3C E1 豁免]
         }
     }
 

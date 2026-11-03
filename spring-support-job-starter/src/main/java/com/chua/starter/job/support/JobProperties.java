@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.support;
 
 import lombok.Data;
@@ -115,13 +116,11 @@ public class JobProperties {
      * </ul>
      *
      * <h3>代价说明</h3>
-     * <p>开启后每拍 <b>不重新读数据库时钟</b>，所以：</p>
-     * <ul>
-     *   <li>扫描窗的上界（{@code now + preReadMs}）在 TTL 内不更新；</li>
-     *   <li>1 秒内的错过判定（misfire）可能少触发一次；</li>
-     *   <li>扫描窗的上界和错过判定（misfire）最多滚后约 TTL 秒；</li>
-     *   <li>相位就是滞后为 TTL 的相位，下一拍从每个槽位重新算起时仍自洽。</li>
-     * </ul>
+     * <p>开启后每拍 <b>不重新读数据库时钟</b>，所以：
+     * 扫描窗的上界（{@code now + preReadMs}）在 TTL 内不更新；
+     * 速度快elps 1 秒内的错过判定（misfire）可能少触发一次；
+      * 扫描窗的上界和错过判定（misfire）最多滚后约 TTL 秒；
+     * 是滞后为 TTL 的相位，下一拍从每个槽位重新算起时仍自洽。</p>
      * <p>如果您需要严格的相位精度，请保持关闭；如果您需要尽可能削减扫描读库，请开启。</p>
      *
      * @since 4.0.0.51
@@ -138,7 +137,7 @@ public class JobProperties {
         /**
          * 扫描结果缓存有效期（毫秒），默认 5000
          *
-         * <p>允许阈值与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号：候选窗口越宽，
+          * <p>允许阈值与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号：候选窗口越宽，
          * 这个窗口的扫描结果越稳定，越值得复用。</p>
          */
         private long ttlMs = 5000L;

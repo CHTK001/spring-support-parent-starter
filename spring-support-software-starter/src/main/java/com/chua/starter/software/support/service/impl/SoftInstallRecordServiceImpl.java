@@ -14,6 +14,9 @@ import com.chua.starter.software.support.mapper.SoftInstallRecordMapper;
 import com.chua.starter.software.support.mapper.SoftSoftwareMapper;
 import com.chua.starter.software.support.pojo.install.InstallDetailResponse;
 import com.chua.starter.software.support.pojo.install.InstallRequest;
+import com.chua.starter.software.support.realtime.InstallProgressDispatcher;
+import com.chua.starter.software.support.realtime.InstallProgressEvent;
+import com.chua.starter.software.support.realtime.InstallProgressPublisher;
 import com.chua.starter.software.support.service.SoftInstallRecordService;
 import com.chua.starter.software.support.service.SoftSoftwareService;
 import com.chua.starter.software.support.service.SoftSourceService;
@@ -21,6 +24,7 @@ import com.chua.starter.software.support.spi.SoftwareSource;
 import com.chua.starter.software.support.spi.SoftwareSourceResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -71,6 +75,14 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
      */
     private final TransactionTemplate transactionTemplate;
 
+    /**
+     * 安装进度发布器
+     *
+     * <p>用 {@link ObjectProvider} 延迟解析：本模块可脱离实时通道独立启动（如单独跑
+     * {@code SoftStarterApplication}），缺 Bean 时退化为静默跳过，不允许因推送失败打断安装。</p>
+     */
+    private final ObjectProvider<InstallProgressPublisher> progressPublisherProvider;
+
     @Override
     /**
      * Install
@@ -112,6 +124,9 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             record.setInstallRecordStartTime(LocalDateTime.now());
             record.setInstallRecordInstallPath(request.installPath());
             installRecordMapper.insert(record);
+            // 先播一帧 0%：发起人的页面可能在请求返回前就已经在等进度，
+            // 不必等到第一个 updateProgress 才开始显示
+            publishProgress(record, "开始安装");
 
             try {
                 // 模拟进度
@@ -175,8 +190,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         return transactionTemplate.execute(status -> {
             record.setInstallRecordStatus(InstallStatus.UNINSTALLING.getValue());
             record.setInstallRecordOperation("uninstall");
+            record.setInstallRecordProgress(0);
             record.setInstallRecordStartTime(LocalDateTime.now());
+            record.setInstallRecordErrorMessage(null);
             installRecordMapper.updateById(record);
+            publishProgress(record, "开始卸载");
 
             try {
                 /**
@@ -236,8 +254,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             record.setInstallRecordStatus(InstallStatus.UPDATING.getValue());
             record.setInstallRecordOperation("update");
             record.setInstallRecordTargetVersion(targetVersion);
+            record.setInstallRecordProgress(0);
             record.setInstallRecordStartTime(LocalDateTime.now());
+            record.setInstallRecordErrorMessage(null);
             installRecordMapper.updateById(record);
+            publishProgress(record, "开始更新");
 
             try {
                 /**
@@ -259,6 +280,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
                 record.setInstallRecordErrorMessage(e.getMessage());
                 record.setInstallRecordEndTime(LocalDateTime.now());
                 installRecordMapper.updateById(record);
+                publishProgress(record, e.getMessage());
                 return ReturnResult.illegal("更新失败: " + e.getMessage());
             }
         });
@@ -282,7 +304,53 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         }
         record.setInstallRecordProgress(progress);
         installRecordMapper.updateById(record);
+        publishProgress(record, message);
         return ReturnResult.ok(true);
+    }
+
+    /**
+     * 推送一帧安装进度
+     *
+     * <p>推送失败只意味着页面看不到这一帧，不能让已经落库的状态被回滚或把接口变成 500，
+     * 因此这里吞掉所有异常（分发器内部另有兜底，这里再兜一层是防止 SPI 实现违规抛出）。</p>
+     *
+     * <p><b>为什么等到事务提交再推</b>：安装流程跑在 {@code transactionTemplate} 里，
+     * 如果在事务内直接广播「安装完成 100%」，而随后的落库语句失败导致事务回滚，
+     * 前端会看到一个数据库里并不存在的成功状态，刷新列表又变回失败——这种前后矛盾
+     * 比晚几百毫秒更糟。因此在事务活跃时把事件快照挂到提交回调上，
+     * 回滚则整帧丢弃，不做「先说成功再撤回」。</p>
+     *
+     * @param record  安装记录（进度推送的载荷来源）
+     * @param message 进度说明，可为 {@code null}
+     */
+    private void publishProgress(SoftInstallRecord record, String message) {
+        if (record == null) {
+            return;
+        }
+        InstallProgressPublisher publisher;
+        try {
+            publisher = progressPublisherProvider.getIfAvailable();
+        } catch (Exception e) {
+            // 容器里出现了多个 InstallProgressPublisher（业务方自建实现与本模块兜底并存）时，
+            // getIfAvailable 会抛 NoUniqueBeanDefinitionException。这里退化为「这一帧不发」，
+            // 而不是让一次可用的安装因为装配歧义变成接口 500。
+            log.warn("[Software][Progress] 进度发布器装配歧义，跳过本帧: recordId={}, reason={}",
+                    record.getInstallRecordId(), e.getMessage());
+            return;
+        }
+        if (publisher == null) {
+            return;
+        }
+        InstallProgressEvent event;
+        try {
+            // 先快照：事务提交前记录对象还可能被后续 set 改掉（如完成安装时回填版本号）
+            event = InstallProgressEvent.of(record, message);
+        } catch (Exception e) {
+            log.warn("[Software][Progress] 进度事件构造失败: recordId={}, reason={}",
+                    record.getInstallRecordId(), e.getMessage());
+            return;
+        }
+        new InstallProgressDispatcher(publisher).dispatch(event);
     }
 
     @Override
@@ -306,6 +374,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         long endEpoch = record.getInstallRecordEndTime().toEpochSecond(java.time.ZoneOffset.ofHours(8));
         record.setInstallRecordDuration((endEpoch - startEpoch) * 1000);
         installRecordMapper.updateById(record);
+        publishProgress(record, "安装完成");
         return ReturnResult.ok(true);
     }
 
@@ -328,6 +397,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         record.setInstallRecordErrorMessage(errorMessage);
         record.setInstallRecordEndTime(LocalDateTime.now());
         installRecordMapper.updateById(record);
+        publishProgress(record, errorMessage);
         return ReturnResult.ok(false);
     }
 
@@ -352,6 +422,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         long endEpoch = record.getInstallRecordEndTime().toEpochSecond(java.time.ZoneOffset.ofHours(8));
         record.setInstallRecordDuration((endEpoch - startEpoch) * 1000);
         installRecordMapper.updateById(record);
+        publishProgress(record, "卸载完成");
         return ReturnResult.ok(true);
     }
 
@@ -374,6 +445,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         record.setInstallRecordErrorMessage(errorMessage);
         record.setInstallRecordEndTime(LocalDateTime.now());
         installRecordMapper.updateById(record);
+        publishProgress(record, errorMessage);
         return ReturnResult.ok(false);
     }
 

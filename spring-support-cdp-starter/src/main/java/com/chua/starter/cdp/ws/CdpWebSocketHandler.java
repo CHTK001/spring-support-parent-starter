@@ -68,11 +68,14 @@ public class CdpWebSocketHandler extends TextWebSocketHandler {
         // 开始接管控制台 / 网络 / 页面事件
         engine.subscribeAll(msg -> {
             try {
-                broadcast(Json.toJson(Map.of(
-                        "event", "Push",
-                        "method", msg.get("method"),
-                        "params", msg.get("params"),
-                        "targetId", msg.get("targetId"))));
+                // 用 LinkedHashMap 逐字段放入：Map.of 不接受 null 值，
+                // 一旦某个事件没有 targetId 就直接抛 NPE，整条推送会被静默丢掉。
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("event", "Push");
+                payload.put("method", msg.get("method"));
+                payload.put("params", msg.get("params"));
+                payload.put("targetId", msg.get("targetId"));
+                broadcast(Json.toJson(payload));
             } catch (Exception e) {
                 log.warn("[cdp] 推送事件失败: {}", e.getMessage());
             }

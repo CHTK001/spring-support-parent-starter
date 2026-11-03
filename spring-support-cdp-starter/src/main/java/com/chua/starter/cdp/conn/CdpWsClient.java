@@ -78,6 +78,14 @@ public class CdpWsClient implements AutoCloseable {
     private volatile boolean closing;
 
     /**
+     * 连接是否已经断开（浏览器被关掉、进程崩溃、端口被回收）
+     *
+     * <p>断开后所有 {@code call} 都会以 {@code Output closed} 直接失败，
+     * 上层必须先看到这个标记再重建连接，否则界面只会显示「操作处理失败」。</p>
+     */
+    private volatile boolean closed;
+
+    /**
      * 本地发送锁
      */
     private final Object sendLock;
@@ -175,6 +183,20 @@ public class CdpWsClient implements AutoCloseable {
      */
     public boolean isClosing() {
         return closing;
+    }
+
+    /**
+     * 连接是否已经断开（不可再发送）
+     */
+    public boolean isClosed() {
+        return closed || closing;
+    }
+
+    /**
+     * 主动标记为已断开（由上层在重建连接前调用）
+     */
+    public void markClosed() {
+        closed = true;
     }
 
     /**
@@ -318,10 +340,25 @@ public class CdpWsClient implements AutoCloseable {
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
             CdpWsClient client = reference.get();
-            if (client != null && client.isClosing()) {
-                return;
+            if (client != null) {
+                client.closed = true;
+                if (client.isClosing()) {
+                    return;
+                }
             }
             log.warn("[cdp] WebSocket error: {}", error.getMessage(), error);
+        }
+
+        @Override
+        public java.util.concurrent.CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+            CdpWsClient client = reference.get();
+            if (client != null) {
+                client.closed = true;
+                if (!client.isClosing()) {
+                    log.warn("[cdp] WebSocket 连接已断开: code={} reason={}", statusCode, reason);
+                }
+            }
+            return null;
         }
     }
 }
