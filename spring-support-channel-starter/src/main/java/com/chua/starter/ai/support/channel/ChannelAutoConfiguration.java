@@ -11,6 +11,7 @@ import com.chua.starter.channel.tempaccount.TempAccountStreamRegistry;
 import com.chua.starter.channel.template.MessageTemplateController;
 import com.chua.starter.channel.template.MessageTemplateService;
 import com.chua.starter.channel.web.ChatChannelController;
+import com.chua.starter.channel.web.ImageChannelController;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -63,6 +64,8 @@ import org.springframework.context.annotation.FilterType;
                 "com.chua.starter.channel.tempaccount",
                 // 免登录对话渠道（ChatClient SPI）：/api/channels/{channel}/chat
                 "com.chua.starter.channel.web",
+                // 文生图渠道（ImageChannelProvider SPI）：/api/channels/{channel}/images
+                // 与对话控制器同包，白名单里显式登记两个实现类
                 // 短信 / 邮件消息模板：/api/channels/templates
                 "com.chua.starter.channel.template"
         },
@@ -79,6 +82,7 @@ import org.springframework.context.annotation.FilterType;
                         TempAccountService.class,
                         TempAccountStreamRegistry.class,
                         ChatChannelController.class,
+                        ImageChannelController.class,
                         MessageTemplateController.class,
                         MessageTemplateService.class
                 })
@@ -100,6 +104,7 @@ public class ChannelAutoConfiguration {
      */
     public ChannelAutoConfiguration() {
         log.info("[channel] 渠道管理模块已装配：账号鉴权 /api/channels、免登录对话 /api/channels/{channel}/chat、"
-                + "消息模板 /api/channels/templates、健康探针 /v2/channels、临时账号 /api/channels/temp-accounts、定时签到与探针");
+                + "文生图 /api/channels/{channel}/images、消息模板 /api/channels/templates、"
+                + "健康探针 /v2/channels、临时账号 /api/channels/temp-accounts、定时签到与探针");
     }
 }

@@ -80,6 +80,21 @@
       <artifactId>utils-support-datasearch-starter</artifactId>
       <version>${utils.version}</version>
     </dependency>
+    <!-- 免登录对话 / 文生图渠道的 ChatClient 实现：
+         duckduckgo（duck / duckduckgo 别名）与 trae（trae / trae-cn / trae-global 别名，
+         复用 Trae IDE 本地登录态，另含文生图 tool_text_to_image 协议）。
+         渠道侧只按扩展名解析，缺失时优雅降级为「空模型 + 明确提示」，
+         因此宿主工程如不需要可在自己的 pom 里排除这两个依赖 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-duckduckgo-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-trae-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
     <!-- 单元测试：Spi 实现的报文/签名回归探针 -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.channel.ChannelRegistry;
 import com.chua.starter.channel.spi.AccountType;
 import com.chua.starter.channel.spi.ChatChannelProvider;
+import com.chua.starter.channel.spi.ImageChannelProvider;
 import com.chua.starter.channel.spi.TemporaryAccountProvider;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
@@ -192,6 +193,13 @@ public class ApiChannelAuthController {
             }
             items.add(buildChatChannelSummary(chat));
         }
+        // 文生图渠道（ChatClient#generateImage 包装）：同样无 provider 行、无连接
+        for (ImageChannelProvider image : ChannelRegistry.imageChannels().values()) {
+            if (image == null || image.channel() == null || !seen.add(image.channel())) {
+                continue;
+            }
+            items.add(buildImageChannelSummary(image));
+        }
         return ApiResult.ok(items);
     }
 
@@ -268,6 +276,56 @@ public class ApiChannelAuthController {
         } catch (Exception e) {
             // 未引入对应 ChatClient 模块（或实例化失败）时保持空模型清单，渠道卡片仍可见
             log.warn("[ChannelAuth] 免登录对话渠道 {} 模型清单读取失败: {}", impl.channel(), e.getMessage());
+        }
+        summary.put("models", models);
+        // 文生图能力：Trae 这类客户端同时能出图，前端据此打「可出图」标
+        summary.put("supportsImage", impl.supportsImage());
+        return summary;
+    }
+
+    /**
+     * 文生图渠道（ImageChannelProvider）的摘要。
+     *
+     * <p>与免登录对话渠道同构：无绑定流程、无连接行，{@code providerId} 恒为 {@code null}、
+     * {@code accountTypes} 为空集合；模型字段改由渠道声明的出图模型填充。
+     * 前端据 {@code kind=IMAGE} 渲染「提示词 + 画面参数 + 画廊」面板。</p>
+     *
+     * @param impl 文生图渠道实现
+     * @return 摘要
+     */
+    private Map<String, Object> buildImageChannelSummary(ImageChannelProvider impl) {
+        Map<String, Object> summary = new LinkedHashMap<>(14);
+        summary.put("channel", impl.channel());
+        summary.put("displayName", impl.displayName());
+        summary.put("loginMethod", "none");
+        summary.put("kind", impl.kind().name());
+        summary.put("accountTypes", List.of());
+        summary.put("supportsCheckin", false);
+        summary.put("providerId", null);
+        summary.put("enabled", true);
+        summary.put("priority", impl.priority());
+        summary.put("chatClient", false);
+        summary.put("imageClient", true);
+        summary.put("connections", List.of());
+
+        List<Map<String, Object>> models = new ArrayList<>();
+        try {
+            List<Map<String, Object>> raw = impl.listModels();
+            if (raw != null) {
+                for (Map<String, Object> item : raw) {
+                    if (item == null || item.get("id") == null) {
+                        continue;
+                    }
+                    Map<String, Object> model = new LinkedHashMap<>(4);
+                    model.put("model", item.get("id"));
+                    model.put("enabled", true);
+                    model.put("alias", item.get("name"));
+                    models.add(model);
+                }
+            }
+        } catch (Exception e) {
+            // 模型清单读取失败不影响渠道卡片展示
+            log.warn("[ChannelAuth] 文生图渠道 {} 模型清单读取失败: {}", impl.channel(), e.getMessage());
         }
         summary.put("models", models);
         return summary;

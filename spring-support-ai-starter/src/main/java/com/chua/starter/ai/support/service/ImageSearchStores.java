@@ -290,9 +290,9 @@ public class ImageSearchStores {
             return;
         }
         if (event.userScoped()) {
-            // 用户级变更只淘汰当前账号+分组的实例（旧版只有 default 组，无需逐组淘汰）
+            // 用户级变更只淘汰当前账号默认组的实例：以图搜图按账号默认组运行
             String account = AiUserContext.requireUserId();
-            String group = AiLibraryGroups.normalize(AiUserContext.requireGroupId());
+            String group = AiLibraryGroups.DEFAULT;
             String key = account + "\0" + group;
             ImageSearchStore removed = accounts.remove(key);
             if (removed != null) {
@@ -330,9 +330,7 @@ public class ImageSearchStores {
      * @return 底库实例
      */
     private ImageSearchStore current() {
-        String account = AiUserContext.requireUserId();
-        String group = AiLibraryGroups.normalize(AiUserContext.requireGroupId());
-        return storeOf(account, group);
+        return storeOf(AiUserContext.requireUserId(), AiLibraryGroups.DEFAULT);
     }
 
     /**
