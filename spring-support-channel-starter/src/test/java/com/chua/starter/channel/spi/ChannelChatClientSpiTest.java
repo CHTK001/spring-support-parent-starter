@@ -61,6 +61,7 @@ class ChannelChatClientSpiTest {
         Assertions.assertTrue(chatChannels.get("chat-trae").supportsImage(), "Trae 对话渠道应声明可出图");
 
         Map<String, ImageChannelProvider> imageChannels = ChannelRegistry.imageChannels();
+        Assertions.assertNotNull(imageChannels.get("image-duckduckgo"), "image-duckduckgo 渠道未注册");
         Assertions.assertNotNull(imageChannels.get("image-pollinations"), "image-pollinations 渠道未注册");
         Assertions.assertNotNull(imageChannels.get("image-trae"), "image-trae 渠道未注册");
         Assertions.assertTrue(imageChannels.get("image-pollinations").priority()

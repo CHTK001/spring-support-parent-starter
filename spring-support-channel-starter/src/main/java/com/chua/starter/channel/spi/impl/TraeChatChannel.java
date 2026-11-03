@@ -64,13 +64,13 @@ public class TraeChatChannel implements ChatChannelProvider {
     }
 
     /**
-     * 优先级：高于 DuckDuckGo，因为 Trae 复用本机已登录账号、模型质量更稳定。
+     * 优先级：低于 DuckDuckGo（后者完全零配置），因为 Trae 需要本机已有登录态或手填 JWT。
      *
-     * @return {@code 60}
+     * @return {@code 40}
      */
     @Override
     public int priority() {
-        return 60;
+        return 40;
     }
 
     /**
