@@ -25,10 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -760,25 +758,6 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         private String shellName() {
             return isWindows() ? POWERSHELL_EXECUTABLE : BASH_EXECUTABLE;
         }
-    }
-
-    /**
-     * 保留命令列表构造入口，便于后续按配置切换 shell。
-     *
-     * @param command 命令列表
-     * @return 命令数组
-     */
-    private String[] toArray(List<String> command) {
-        return command.toArray(new String[0]);
-    }
-
-    /**
-     * 构建默认命令列表。
-     *
-     * @return 命令列表
-     */
-    private List<String> defaultCommand() {
-        return new ArrayList<>(List.of(buildShellCommand()));
     }
 }
 
