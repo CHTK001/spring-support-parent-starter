@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -97,6 +98,14 @@ public class WorkspacePathResolver {
         if (!workspace.startsWith(basePath)) {
             log.warn("[Workspace] 工作目录越界，已拒绝: {}", workspace);
             throw new ApiException(ApiErrorCode.FORBIDDEN, "工作目录越界");
+        }
+        // 与对话链路（AiChatFacadeServiceImpl#resolveSessionWorkspace）同口径：
+        // 首次打开终端 / Git 时账号目录可能还不存在，这里统一建好，避免 PTY 因 cwd 不存在而启动失败
+        try {
+            Files.createDirectories(workspace);
+        } catch (IOException e) {
+            log.warn("[Workspace] 创建账号工作目录失败 path={} error={}", workspace, e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建账号工作目录失败");
         }
         return workspace;
     }
