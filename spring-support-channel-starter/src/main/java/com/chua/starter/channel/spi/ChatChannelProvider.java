@@ -3,6 +3,7 @@ package com.chua.starter.channel.spi;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ModelDefinition;
+import com.chua.common.support.ai.generation.ImageGenerationResult;
 import com.chua.common.support.spi.ServiceProvider;
 
 import java.util.ArrayList;
@@ -52,17 +53,73 @@ public interface ChatChannelProvider extends ChannelProvider {
     }
 
     /**
-     * 新建一个底层对话客户端（调用方负责 {@link ChatClient#close()}）。
+     * 按指定配置新建底层对话客户端（如渠道页填了 JWT / baseUrl，可临时覆盖默认配置）。
      *
+     * @param setting 客户端配置
      * @return 对话客户端
      * @throws IllegalStateException 对应 ChatClient 扩展未注册时抛出
      */
-    default ChatClient newClient() {
-        ChatClient client = ServiceProvider.of(ChatClient.class).getNewExtension(extension(), setting());
+    default ChatClient chatClient(ChatClientSetting setting) {
+        ChatClient client = ServiceProvider.of(ChatClient.class).getNewExtension(extension(), setting);
         if (client == null) {
             throw new IllegalStateException("未注册的 ChatClient 扩展: " + extension());
         }
         return client;
+    }
+
+    /**
+     * 获取底层对话客户端（<b>渠道对外的标准入口</b>：上层拿到即可直接对话 / 拉模型，无需知道扩展名）。
+     *
+     * <p>每次调用新建一个客户端实例，调用方负责 {@link ChatClient#close()}
+     * ——免登录实现普遍无连接复用语义，短生命周期最安全。</p>
+     *
+     * @return 对话客户端
+     * @throws IllegalStateException 对应 ChatClient 扩展未注册时抛出
+     */
+    default ChatClient chatClient() {
+        return chatClient(setting());
+    }
+
+    /**
+     * 新建一个底层对话客户端（历史方法名，等价于 {@link #chatClient()}）。
+     *
+     * @return 对话客户端
+     * @deprecated 语义易与「连接池新实例」混淆，改用 {@link #chatClient()}
+     */
+    @Deprecated
+    default ChatClient newClient() {
+        return chatClient();
+    }
+
+    /**
+     * 该渠道是否具备文生图能力（底层 ChatClient 实现了 {@code generateImage}）。
+     *
+     * <p>默认 {@code false}：仅当渠道实现明确声明时才在列表里打「文生图」标，
+     * 避免把不支持出图的客户端误报成多模态。</p>
+     *
+     * @return 是否支持文生图
+     */
+    default boolean supportsImage() {
+        return false;
+    }
+
+    /**
+     * 用该渠道生成图片（{@link #supportsImage()} 为 {@code false} 的渠道不要调用）。
+     *
+     * @param prompt  提示词
+     * @param ratio   宽高比
+     * @param n       张数
+     * @param width   宽度（0 表示按 ratio）
+     * @param height  高度（0 表示按 ratio）
+     * @return 生成结果
+     */
+    default ImageGenerationResult generateImage(String prompt, String ratio, int n, int width, int height) {
+        ChatClient client = chatClient();
+        try {
+            return client.generateImage(prompt, ratio, n, width, height, null, null);
+        } finally {
+            closeQuietly(client);
+        }
     }
 
     /**
@@ -74,7 +131,7 @@ public interface ChatChannelProvider extends ChannelProvider {
      * @return 模型列表（每项含 {@code id} / {@code name} / 可选 {@code contextWindow}）
      */
     default List<Map<String, Object>> listModels() {
-        ChatClient client = newClient();
+        ChatClient client = chatClient();
         try {
             List<ModelDefinition> definitions = client.models();
             if (definitions == null || definitions.isEmpty()) {
@@ -107,7 +164,7 @@ public interface ChatChannelProvider extends ChannelProvider {
      * @throws Exception 上游调用失败
      */
     default String chat(String prompt, String model, String system) throws Exception {
-        ChatClient client = newClient();
+        ChatClient client = chatClient();
         try {
             if (model != null && !model.isBlank()) {
                 client.model(model);
