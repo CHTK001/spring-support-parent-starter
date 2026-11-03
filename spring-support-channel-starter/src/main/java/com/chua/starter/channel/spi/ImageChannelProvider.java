@@ -105,6 +105,11 @@ public interface ImageChannelProvider extends ChannelProvider {
     default ImageGenerationResult generate(String prompt, String ratio, int n, int width, int height, String model) {
         ChatClient client = chatClient();
         try {
+            // ChatClient#generateImage 没有 model 形参，模型必须通过 client.model(...) 注入；
+            // 此前直接传 null 会导致前端选的模型完全不生效（请求成功但永远走默认模型）
+            if (model != null && !model.isBlank()) {
+                client.model(model.trim());
+            }
             return client.generateImage(prompt, ratio, Math.max(1, n), width, height, null, null);
         } finally {
             closeQuietly(client);

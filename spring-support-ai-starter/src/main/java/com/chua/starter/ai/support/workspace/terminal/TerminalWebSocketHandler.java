@@ -121,19 +121,19 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      * Windows PowerShell 7 可执行文件。
      *
      * <p>存在时优先使用：实测 PowerShell 5.1 在部分 Windows 版本（如 10.0.18363）
-     * 于 ConPTY 下启动会卡住不输出提示符，而 PowerShell 7 正常。</p>
+     * 于 ConPTY 下启动会卡住且不输出提示符，而 PowerShell 7 正常。</p>
      */
     private static final String PWSH_EXECUTABLE = "pwsh.exe";
-
-    /**
-     * Windows PowerShell 可执行文件
-     */
-    private static final String POWERSHELL_EXECUTABLE = "powershell.exe";
 
     /**
      * Windows 命令提示符可执行文件
      */
     private static final String CMD_EXECUTABLE = "cmd.exe";
+
+    /**
+     * Windows 命令提示符 UTF-8 参数：无 pwsh 时用它兜底，并切到 65001 页保证中文输出
+     */
+    private static final String CMD_UTF8_ARGUMENT = "chcp 65001>nul";
 
     /**
      * Unix bash 路径
@@ -144,13 +144,6 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      * Unix 兜底 shell 路径
      */
     private static final String SH_EXECUTABLE = "/bin/sh";
-
-    /**
-     * PowerShell 启动时的 UTF-8 初始化脚本
-     */
-    private static final String POWERSHELL_UTF8_SCRIPT =
-            "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
-                    + "$OutputEncoding=[System.Text.Encoding]::UTF8";
 
     /**
      * 事件名：终端启动
@@ -420,8 +413,9 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     /**
      * 构建当前平台的交互式 shell 命令。
      *
-     * <p>Windows 优先 PowerShell 7（{@code pwsh.exe}），无可执行文件时退回
-     * PowerShell 5.1，两者都不可用时由 {@link PtySession#start()} 回退 {@code cmd.exe}。</p>
+     * <p>Windows 优先 PowerShell 7（{@code pwsh.exe}）：实测 PowerShell 5.1 在部分
+     * Windows 版本于 ConPTY 下启动会卡住不输出提示符，因此没有 pwsh 时直接用
+     * {@code cmd.exe} 并按 UTF-8 代码页运行，而不是冒险启动 5.1。</p>
      *
      * @return 命令数组
      */
@@ -430,15 +424,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             if (isExecutableOnPath(PWSH_EXECUTABLE)) {
                 return new String[]{PWSH_EXECUTABLE, "-NoLogo", "-NoProfile", "-NoExit"};
             }
-            // PowerShell 5.1 默认按控制台代码页输出，先切 UTF-8 再进入交互
-            return new String[]{
-                    POWERSHELL_EXECUTABLE,
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NoExit",
-                    "-Command",
-                    POWERSHELL_UTF8_SCRIPT
-            };
+            return buildWindowsFallbackCommand();
         }
         if (Files.isExecutable(Paths.get(BASH_EXECUTABLE))) {
             return new String[]{BASH_EXECUTABLE, "-l"};
@@ -447,22 +433,12 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 构建 Windows 下的回退命令。
+     * 构建 Windows 下的兜底命令（cmd + UTF-8 代码页）。
      *
-     * @return 回退命令数组
+     * @return 兜底命令数组
      */
     private String[] buildWindowsFallbackCommand() {
-        if (isExecutableOnPath(PWSH_EXECUTABLE)) {
-            return new String[]{
-                    POWERSHELL_EXECUTABLE,
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NoExit",
-                    "-Command",
-                    POWERSHELL_UTF8_SCRIPT
-            };
-        }
-        return new String[]{CMD_EXECUTABLE};
+        return new String[]{CMD_EXECUTABLE, "/K", CMD_UTF8_ARGUMENT};
     }
 
     /**
@@ -648,19 +624,13 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             try {
                 ptyProcess = createProcess(buildShellCommand());
             } catch (IOException firstError) {
-                // 主 shell 不可用时逐级回退（Windows：pwsh → powershell → cmd），保证终端仍可用
+                // 主 shell 不可用时回退 cmd + UTF-8，保证终端仍可用
                 if (!isWindows()) {
                     throw firstError;
                 }
                 String[] fallback = buildWindowsFallbackCommand();
                 log.warn("[terminal-ws] shell 启动失败，回退 {}: {}", fallback[0], messageOf(firstError));
-                try {
-                    ptyProcess = createProcess(fallback);
-                } catch (IOException secondError) {
-                    log.warn("[terminal-ws] 回退 shell 启动失败，再回退 {}: {}",
-                            CMD_EXECUTABLE, messageOf(secondError));
-                    ptyProcess = createProcess(new String[]{CMD_EXECUTABLE});
-                }
+                ptyProcess = createProcess(fallback);
             }
             this.process = ptyProcess;
             this.stdin = ptyProcess.getOutputStream();
@@ -859,7 +829,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
          */
         private String shellName() {
             if (isWindows()) {
-                return isExecutableOnPath(PWSH_EXECUTABLE) ? PWSH_EXECUTABLE : POWERSHELL_EXECUTABLE;
+                return isExecutableOnPath(PWSH_EXECUTABLE) ? PWSH_EXECUTABLE : CMD_EXECUTABLE;
             }
             return Files.isExecutable(Paths.get(BASH_EXECUTABLE)) ? BASH_EXECUTABLE : SH_EXECUTABLE;
         }

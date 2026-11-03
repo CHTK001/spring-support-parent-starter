@@ -96,4 +96,19 @@ class ChannelChatClientSpiTest {
         Assertions.assertFalse(models.isEmpty());
         Assertions.assertTrue(models.stream().anyMatch(model -> "flux".equals(model.get("id"))));
     }
+
+    /**
+     * 文生图按张计费：请求张数超上限必须在发起网络调用之前被拒绝。
+     *
+     * <p>该断言不依赖登录态与网络 —— 校验发生在 {@code TraeChatClient#generateImage} 入口，
+     * 早于任何 HTTP 请求与费用产生。</p>
+     */
+    @Test
+    void traeImageChannelRejectsTooManyImages() {
+        ImageChannelProvider trae = ChannelRegistry.imageChannels().get("image-trae");
+        Assertions.assertNotNull(trae, "image-trae 渠道未注册");
+        IllegalArgumentException error = Assertions.assertThrows(IllegalArgumentException.class,
+                () -> trae.generate("a cat", "1:1", 50, 0, 0, null));
+        Assertions.assertTrue(error.getMessage().contains("单次最多"), error.getMessage());
+    }
 }
