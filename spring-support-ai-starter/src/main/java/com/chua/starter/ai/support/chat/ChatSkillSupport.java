@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -39,6 +40,12 @@ public class ChatSkillSupport {
      */
     @Value("${nomifun.skills-root:./skills}")
     private String skillsRoot; // skills根
+
+    /**
+     * Agent 技能根目录（Agent 生态提供的离线技能，如 ~/.agents/skills）
+     */
+    @Value("${nomifun.skills-agent-root:~/.agents/skills}")
+    private String skillsAgentRoot; // agent技能根
 
     /**
      * 技能设置分组
@@ -165,12 +172,8 @@ public class ChatSkillSupport {
         }
         Set<String> disabled = disabledNames();
         List<InstalledSkill> scanned = new ArrayList<>();
-        for (String subdir : List.of("builtin", "user")) {
-            Path dir = Paths.get(skillsRoot).resolve(subdir);
-            if (!Files.isDirectory(dir)) {
-                continue;
-            }
-            try (Stream<Path> stream = Files.list(dir)) {
+        for (ScanTarget target : scanTargets()) {
+            try (Stream<Path> stream = Files.list(target.dir)) {
                 List<Path> children = stream.filter(Files::isDirectory).sorted().toList();
                 for (Path child : children) {
                     Path md = skillMark(child);
@@ -178,15 +181,14 @@ public class ChatSkillSupport {
                         continue;
                     }
                     String name = child.getFileName().toString();
-                    boolean custom = "user".equals(subdir);
-                    String id = skillId(custom, name);
+                    String id = skillId(target.source, name);
                     String content = readContent(md);
                     scanned.add(new InstalledSkill(name, content, describe(content), iconOf(content),
-                            child.toAbsolutePath().toString(), custom,
+                            child.toAbsolutePath().toString(), target.source,
                             !disabled.contains(id) && !disabled.contains(name)));
                 }
             } catch (IOException e) {
-                log.debug("[ChatSkill] 扫描技能目录失败: {}", dir, e);
+                log.debug("[ChatSkill] 扫描技能目录失败: {}", target.dir, e);
             }
         }
         cached = scanned;
@@ -195,15 +197,60 @@ public class ChatSkillSupport {
     }
 
     /**
+     * 全部待扫描的来源与目录。
+     *
+     * @return 来源扫描目标清单
+     */
+    private List<ScanTarget> scanTargets() {
+        List<ScanTarget> result = new ArrayList<>();
+        result.add(new ScanTarget(Paths.get(skillsRoot).resolve("builtin"), "builtin"));
+        result.add(new ScanTarget(Paths.get(skillsRoot).resolve("user"), "user"));
+        Path agentRoot = resolveAgentRoot();
+        if (agentRoot != null && Files.isDirectory(agentRoot)) {
+            result.add(new ScanTarget(agentRoot, "agent"));
+        }
+        return result;
+    }
+
+    /**
+     * 把配置中的 Agent 技能根目录转成可扫描的路径（支持 ~ 展开与空值禁用）。
+     *
+     * @return 技能根目录，未配置/不存在返回 null
+     */
+    private Path resolveAgentRoot() {
+        String root = skillsAgentRoot == null ? null : skillsAgentRoot.strip();
+        if (root == null || root.isEmpty()) {
+            return null;
+        }
+        if (root.startsWith("~")) {
+            root = Paths.get(System.getProperty("user.home", ".")).resolve(root.substring(1)).toString();
+        }
+        try {
+            return Paths.get(root);
+        } catch (InvalidPathException e) {
+            log.warn("[ChatSkill] 无法解析 Agent 技能根目录 {}: {}", skillsAgentRoot, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * 组装技能限定标识。
      *
-     * @param custom 是否用户安装
+     * @param source 技能来源（builtin / user / agent）
      * @param name   技能名
-     * @return {@code user:<name>} 或 {@code builtin:<name>}
+     * @return {@code builtin:<name>} / {@code user:<name>} / {@code agent:<name>}
      */
-    private static String skillId(boolean custom, String name) {
-        return (custom ? "user" : "builtin") + ":" + name;
+    private static String skillId(String source, String name) {
+        return source + ":" + name;
     }
+
+    /**
+     * 一个来源扫描目标：目录 + 来源标签。
+     *
+     * @param dir    技能目录
+     * @param source 技能来源（builtin/user/agent）
+     */
+    private record ScanTarget(Path dir, String source) {}
 
     /**
      * 切换技能启用状态。
@@ -480,19 +527,19 @@ public class ChatSkillSupport {
      * @param description 从正文提炼的描述
      * @param icon        frontmatter 中声明的图标（图片地址或图标名，可空）
      * @param location    技能目录绝对路径
-     * @param custom      是否用户安装（false 表示内置）
+     * @param source      技能来源（builtin 内置 / user 用户安装 / agent Agent 生态技能）
      * @param enabled     是否参与对话注入
      */
     public record InstalledSkill(String name, String content, String description, String icon, String location,
-                                 boolean custom, boolean enabled) {
+                                 String source, boolean enabled) {
 
         /**
          * 技能限定标识，用于唯一定位同名技能。
          *
-         * @return {@code user:<name>} 或 {@code builtin:<name>}
+         * @return {@code builtin:<name>} / {@code user:<name>} / {@code agent:<name>}
          */
         public String id() {
-            return skillId(custom, name);
+            return skillId(source, name);
         }
     }
 }

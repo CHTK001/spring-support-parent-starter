@@ -51,6 +51,22 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-common-starter</artifactId>
     </dependency>
+    <!-- 实时推送（可选，编译期需要 SocketSessionTemplate 类型；运行时按 @ConditionalOnClass 装配）。
+         宿主启用 socket 时，把安装进度广播到全局 socket 连接；
+         未引入时由 SoftwareRealtimeConfiguration 的空实现兜底，模块仍可独立运行 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-socket-starter</artifactId>
+      <version>${project.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <!-- 测试：安装进度事件与发布器的纯逻辑校验（不依赖 Spring 容器与数据库） -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
     </dependencies>
   <build>
     <plugins>

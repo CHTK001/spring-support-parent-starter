@@ -305,7 +305,7 @@ public class V2SkillController {
     @PostMapping("/{id}/uninstall")
     public ReturnResult<Map<String, Object>> uninstall(@PathVariable("id") String id) {
         ChatSkillSupport.InstalledSkill skill = find(id);
-        if (!skill.custom()) {
+        if (!"user".equals(skill.source())) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "内置技能不可卸载");
         }
         Path target = Paths.get(skillsRoot).resolve("user").resolve(id);
@@ -439,8 +439,8 @@ public class V2SkillController {
         item.put("basePath", skill.location());
         item.put("manifest", manifest);
         item.put("contentHash", sha1(skill.content()));
-        // 内置→system；用户安装→global（可卸载）
-        item.put("source", skill.custom() ? "global" : "system");
+        // 内置/Agent→system；用户安装→global（可卸载）
+        item.put("source", "user".equals(skill.source()) ? "global" : "system");
         item.put("enabled", skill.enabled());
         return item;
     }

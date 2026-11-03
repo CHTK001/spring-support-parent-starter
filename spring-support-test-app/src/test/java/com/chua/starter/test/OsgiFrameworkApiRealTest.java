@@ -110,12 +110,12 @@ class OsgiFrameworkApiRealTest {
                     .forEach(OsgiBundle::uninstall);
         } catch (Exception e) {
             // 清理阶段失败不影响断言结果，仅记录
-            System.out.println("[OsgiFrameworkApiRealTest] 卸载测试 bundle 失败: " + e.getMessage());
+            System.out.println("[OsgiFrameworkApiRealTest] 卸载测试 bundle 失败: " + e.getMessage()); // [P3C E1 豁免]
         }
         try {
             osgiLauncher.setAutoStartInstalledBundles(true);
         } catch (Exception e) {
-            System.out.println("[OsgiFrameworkApiRealTest] 恢复自动启动开关失败: " + e.getMessage());
+            System.out.println("[OsgiFrameworkApiRealTest] 恢复自动启动开关失败: " + e.getMessage()); // [P3C E1 豁免]
         }
     }
 

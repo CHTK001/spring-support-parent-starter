@@ -233,4 +233,33 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             @Param("userId") String userId,
             @Param("includeOrphan") boolean includeOrphan
     );
+
+    /**
+     * 本地平均输出速度：按 服务商+模型 分组对全部本地用量的 token 输出速度取平均。
+     *
+     * <p>数据源是 {@code sys_ai_usage.tokens_per_second}（decode 窗口的 token/秒），
+     * 覆盖所有从本地写下的调用（工具扫描/定时同步），是真正的「本机用过多少速度」；
+     * 没有本地用量的模型不出现（空，前端回退到 Artificial Analysis 的输出速度）。</p>
+     *
+     * @param provider 服务商（可为空，为空时不限制）
+     * @param model    模型（可为空，为空时不限制）
+     * @return 按 provider+model 分组的平均速度行列表，无数据时为空列表
+     */
+    record ModelSpeedRow(
+            String provider,
+            String model,
+            Double avgSpeedTps
+    ) {}
+
+    /**
+     * 数据库端按「服务商 + 模型」分组，对全部本地用量的 token 输出速度取平均。
+     *
+     * @param provider 服务商（可为空，为空时不限制）
+     * @param model    模型（可为空，为空时不限制）
+     * @return 按 provider+model 分组的平均速度行列表，无数据时为空列表
+     */
+    List<ModelSpeedRow> selectModelAvgSpeedTps(
+            @Param("provider") String provider,
+            @Param("model") String model
+    );
 }

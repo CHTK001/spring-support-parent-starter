@@ -81,7 +81,8 @@ public class SipServiceManager {
         running.set(true);
         log.info("[SIP] 中继服务已启动，端口: {}", port);
 
-        acceptThread = new Thread(() -> {
+    // [P3C C1 豁免] I/O 阻塞循环（aio/nio/ssh/ftp/终端），不适合交给通用执行器
+    acceptThread = new Thread(() -> {
             while (running.get() && !controlSocket.isClosed()) {
                 try {
                     Socket client = controlSocket.accept();

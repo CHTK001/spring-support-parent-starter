@@ -88,9 +88,9 @@ public final class DatalakeRemoteToLocalProbe {
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
 
-        System.err.println("========================================================================");
-        System.err.println("Datalake 远程→本地全链路探针 (10 项验证)");
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("Datalake 远程→本地全链路探针 (10 项验证)"); // [P3C E1 豁免]
+        System.err.println("========================================================================"); // [P3C E1 豁免]
 
         // ━━━━━━━━ 1. 生成 CSV 源数据（模拟远程数据源）━━━━━━━━
         Path csvPath = WORK_DIR.resolve("remote-source.csv");
@@ -214,10 +214,10 @@ public final class DatalakeRemoteToLocalProbe {
             boolean rtOk = RT_WRITES.size() >= 50;
             boolean jdbcOk = JDBC_WRITES.size() >= 50;
 
-            System.err.println("    LogSink 写入: " + LOG_WRITES.size() + " 条");
-            System.err.println("    StatisticSink 写入: " + STATS_WRITES.size() + " 条");
-            System.err.println("    RealTimeSink 写入: " + RT_WRITES.size() + " 条");
-            System.err.println("    JdbcSink 写入: " + JDBC_WRITES.size() + " 条");
+            System.err.println("    LogSink 写入: " + LOG_WRITES.size() + " 条"); // [P3C E1 豁免]
+            System.err.println("    StatisticSink 写入: " + STATS_WRITES.size() + " 条"); // [P3C E1 豁免]
+            System.err.println("    RealTimeSink 写入: " + RT_WRITES.size() + " 条"); // [P3C E1 豁免]
+            System.err.println("    JdbcSink 写入: " + JDBC_WRITES.size() + " 条"); // [P3C E1 豁免]
 
             return logOk && statsOk && rtOk && jdbcOk;
         });
@@ -231,8 +231,8 @@ public final class DatalakeRemoteToLocalProbe {
             String last = LOG_WRITES.get(LOG_WRITES.size() - 1);
             boolean firstOk = first.contains("user_1") || first.contains("id=1");
             boolean lastOk = first.contains("user_50") || last.contains("user_50") || last.contains("id=50");
-            System.err.println("    首条: " + first.substring(0, Math.min(80, first.length())));
-            System.err.println("    末条: " + last.substring(0, Math.min(80, last.length())));
+            System.err.println("    首条: " + first.substring(0, Math.min(80, first.length()))); // [P3C E1 豁免]
+            System.err.println("    末条: " + last.substring(0, Math.min(80, last.length()))); // [P3C E1 豁免]
             return firstOk; // 至少首条正确即可
         });
 
@@ -248,13 +248,13 @@ public final class DatalakeRemoteToLocalProbe {
         offsetFlow.close();
 
         // ━━━━━━━━ 汇总 ━━━━━━━━
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
         int total = PASS.get() + FAIL.get();
-        System.err.printf("Datalake 远程→本地全链路探针: %d/%d PASS%n", PASS.get(), total);
+        System.err.printf("Datalake 远程→本地全链路探针: %d/%d PASS%n", PASS.get(), total); // [P3C E1 豁免]
         if (FAIL.get() > 0) {
-            System.err.printf("FAIL: %d 项%n", FAIL.get());
+            System.err.printf("FAIL: %d 项%n", FAIL.get()); // [P3C E1 豁免]
         }
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
         System.exit(FAIL.get() > 0 ? 1 : 0);
     }
 
@@ -268,14 +268,14 @@ public final class DatalakeRemoteToLocalProbe {
             boolean result = check.getAsBoolean();
             if (result) {
                 PASS.incrementAndGet();
-                System.err.printf("  [PASS] %s%n", name);
+                System.err.printf("  [PASS] %s%n", name); // [P3C E1 豁免]
             } else {
                 FAIL.incrementAndGet();
-                System.err.printf("  [FAIL] %s%n", name);
+                System.err.printf("  [FAIL] %s%n", name); // [P3C E1 豁免]
             }
         } catch (Exception e) {
             FAIL.incrementAndGet();
-            System.err.printf("  [FAIL] %s (exception: %s)%n", name, e.getMessage());
+            System.err.printf("  [FAIL] %s (exception: %s)%n", name, e.getMessage()); // [P3C E1 豁免]
         }
     }
 }

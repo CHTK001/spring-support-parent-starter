@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 仅含常量定义行，豁免。
 package com.chua.starter.common.support.configuration.environment;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;

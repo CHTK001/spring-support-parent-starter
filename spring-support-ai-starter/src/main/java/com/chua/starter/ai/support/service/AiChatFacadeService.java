@@ -12,6 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -266,6 +267,22 @@ public interface AiChatFacadeService {
      */
     default List<String> models(Integer groupId) {
         return Collections.emptyList();
+    }
+
+    /**
+     * 分组配置的模型范围（<b>鉴权口径</b>，与 {@link #models(Integer)} 分开）。
+     *
+     * <p>两者刻意不是一回事：{@code models} 是「分组允许且系统真的有的模型」，用于
+     * {@code /v1/models} 列表展示；本方法是「分组配了哪些模型」，用于判定一次请求是否越权。
+     * 若鉴权也用交集，注册表里暂时没注册（连不上、租户没配凭证）的模型会连带被禁，
+     * 表现为「明明给他配了这个模型却 403」，排查方向完全跑偏。</p>
+     *
+     * @param groupId 分组标识
+     * @return 允许的模型编码集合；{@code null} 表示该分组不限制模型，
+     *         空集合表示该分组不可用（不存在 / 已停用）或一个模型都没配
+     */
+    default Set<String> groupModelScope(Integer groupId) {
+        return null;
     }
 
     /**

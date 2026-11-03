@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.hotsport.support.service;
 
 import com.chua.runtime.apm.storage.ApmStorage;
@@ -860,6 +861,10 @@ public class ApmQueryService {
                             + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
                     v.put("displayName", (span.getClassName() == null ? "" : span.getClassName())
                             + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
+                    // 标准 OTel 字段：平台无关的 SpanKind + 语义属性集合
+                    v.put("kind", span.getKind() == null ? "INTERNAL" : span.getKind().name());
+                    v.put("attributes", span.getAttributes() == null ? new LinkedHashMap<String, String>() : span.getAttributes());
+                    v.put("resource", span.getResource() == null ? new LinkedHashMap<String, String>() : span.getResource());
                     views.add(v);
                 }
             } catch (Exception e) {
@@ -879,10 +884,17 @@ public class ApmQueryService {
             String op = e.getOperation() != null ? e.getOperation() : "?";
             String cls = attr(e, "class.name", null);
             String mtd = attr(e, "method.name", null);
+            // 标准 OTel 字段：由真实传输记录派生 Kind + 语义属性
+            String protocol = e.getProtocol();
+            String kind = "http".equalsIgnoreCase(protocol) ? "SERVER" : "CLIENT";
+            String peer = e.getTargetHost() != null && !e.getTargetHost().isBlank()
+                    ? String.valueOf(e.getTargetPort() > 0
+                            ? e.getTargetHost() + ":" + e.getTargetPort() : e.getTargetHost())
+                    : (cls != null ? cls : "?");
             Map<String, Object> v = new LinkedHashMap<>();
             v.put("className", cls);
             v.put("methodName", mtd);
-            v.put("phase", e.getProtocol() != null ? e.getProtocol().toLowerCase() : "http");
+            v.put("phase", protocol != null ? protocol.toLowerCase() : "http");
             v.put("durationMs", e.getDuration());
             v.put("selfTimeMs", e.getDuration());
             v.put("error", e.getStatus() == StatusCode.ERROR);
@@ -894,6 +906,10 @@ public class ApmQueryService {
             v.put("operation", op);
             // HTTP 请求记录没有类/方法语义，展示名直接用真实操作串（如 GET /api/apm/stats）
             v.put("displayName", op);
+            v.put("kind", kind);
+            v.put("attributes",
+                    e.getAttributes() != null ? e.getAttributes() : new LinkedHashMap<String, String>());
+            v.put("peer", peer);
             views.add(v);
         }
         return views;
@@ -1004,14 +1020,16 @@ public class ApmQueryService {
             sw.put("spanId", span.get("spanId"));
             sw.put("parentSpanId", span.get("parentSpanId"));
             sw.put("operationName", span.get("operation"));
-            sw.put("spanType", span.get("parentSpanId") == null ? "Entry" : "Local");
+            sw.put("spanType", spanTypeOf(span.get("kind")));
             sw.put("spanLayer", span.get("phase") == null ? "Unknown" : span.get("phase"));
             sw.put("startTime", span.get("startTime"));
             sw.put("endTime", span.get("endTime"));
             sw.put("isError", Boolean.TRUE.equals(span.get("error")));
             sw.put("logs", Boolean.TRUE.equals(span.get("error"))
                     ? String.valueOf(span.get("operation")) + " 失败" : null);
-            sw.put("peer", span.get("className"));
+            sw.put("peer", span.get("peer") == null
+                    ? peerOf(span.get("attributes"), span.get("className"))
+                    : span.get("peer").toString());
             spans.add(sw);
         }
         List<Map<String, Object>> result = new ArrayList<>();
@@ -1023,6 +1041,51 @@ public class ApmQueryService {
             result.add(segment);
         }
         return result;
+    }
+
+    /**
+     * 把 OTel SpanKind 映射为 SkyWalking 操作类型（Entry / Exit / Local）。
+     *
+     * @param kind OTel 阶段标识
+     * @return Entry / Exit / Local
+     */
+    private String spanTypeOf(Object kind) {
+        if (kind == null) {
+            return "Local";
+        }
+        String k = kind.toString();
+        if ("SERVER".equals(k) || "CONSUMER".equals(k)) {
+            return "Entry";
+        }
+        if ("CLIENT".equals(k) || "PRODUCER".equals(k)) {
+            return "Exit";
+        }
+        return "Local";
+    }
+
+    /**
+     * 从语义属性解析对端标识：peer.name / peer.addr / http.endpoint，缺失时回退到类名。
+     *
+     * @param attributes 标准属性
+     * @param className  类名
+     * @return 对端标识
+     */
+    private String peerOf(Object attributes, Object className) {
+        String peer = null;
+        if (attributes instanceof Map) {
+            Map<String, String> a = (Map<String, String>) attributes;
+            String name = a.get("net.peer.name");
+            if (name == null) {
+                name = a.get("net.peer.addr");
+            }
+            if (name != null && name.trim().length() > 0) {
+                peer = name;
+            }
+        }
+        if (peer == null) {
+            peer = className == null ? null : className.toString();
+        }
+        return peer;
     }
 
     /**

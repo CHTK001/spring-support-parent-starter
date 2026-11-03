@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
+import com.chua.starter.ai.support.model.AiAppKeyQuotaDTO;
 import com.chua.starter.ai.support.model.AiAppKeyRechargeDTO;
 import com.chua.starter.ai.support.model.AiAppKeyPropertyDTO;
 import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;
@@ -246,5 +247,24 @@ public class AiAppKeyController {
             return ReturnResult.error("每分钟单价须正数");
         }
         return appKeyService.updateRate(appKeyId, dto.getMinuteRate());
+    }
+
+    /**
+     * 调整 AppKey 额度（次数 / Token 上限，可清零已用）。
+     *
+     * <p>台账上的「续量」「重置」都走这里：{@code maxUse} / {@code maxTokens} 为
+     * {@code null} 表示不改动、{@code 0} 表示不限、正数为新上限；{@code resetUsed}
+     * 为 true 时把已用次数与已耗 Token 清零。</p>
+     *
+     * @param appKeyId appKey 主键
+     * @param dto      额度调整请求
+     * @return 操作结果（data 为更新后的 AppKey DTO）
+     */
+    @Operation(summary = "AppKey 额度调整")
+    @PostMapping("/{appKeyId}/quota")
+    public ReturnResult<AiAppKeyDTO> quota(
+            @Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
+            @Parameter(description = "次数/Token 上限与清零标记") @RequestBody AiAppKeyQuotaDTO dto) {
+        return appKeyService.updateQuota(appKeyId, dto);
     }
 }

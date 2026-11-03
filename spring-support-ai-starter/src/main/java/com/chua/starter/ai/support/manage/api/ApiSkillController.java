@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.annotations.Permission;
@@ -782,7 +783,7 @@ public class ApiSkillController {
                     skill.description(),
                     skill.icon(),
                     skill.location(),
-                    skill.custom() ? "custom" : "builtin",
+                    sourceOf(skill.source()),
                     skill.enabled(),
                     skill.content().length()));
         }
@@ -806,7 +807,7 @@ public class ApiSkillController {
         String source = body.get("source") == null ? "" : String.valueOf(body.get("source")).trim();
         List<ChatSkillSupport.InstalledSkill> matched = chatSkillSupport.skills().stream()
                 .filter(skill -> skill.name().equals(name))
-                .filter(skill -> source.isEmpty() || source.equals(skill.custom() ? "custom" : "builtin"))
+                .filter(skill -> source.isEmpty() || source.equals(sourceOf(skill.source())))
                 .toList();
         if (matched.isEmpty()) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillName);
@@ -2831,5 +2832,15 @@ public class ApiSkillController {
         } catch (Exception e) {
             return Map.of();
         }
+    }
+
+    /**
+     * 把内部来源标签转成 API 侧使用的来源值。
+     *
+     * @param source 内部来源（builtin/user/agent）
+     * @return 来源值：用户安装→custom，其余→builtin
+     */
+    private static String sourceOf(String source) {
+        return source.equals("user") ? "custom" : "builtin";
     }
 }

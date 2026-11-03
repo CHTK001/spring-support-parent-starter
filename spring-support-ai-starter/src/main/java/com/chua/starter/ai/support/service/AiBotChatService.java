@@ -233,6 +233,7 @@ public class AiBotChatService {
         runningBots.put(bot.getBotId(), client);
         if (client instanceof ILinkBotClient ilink) {
             // iLink 长轮询阻塞，放独立线程
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             new Thread(() -> {
                 try {
                     ilink.startPolling();

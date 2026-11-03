@@ -64,6 +64,17 @@ public interface SysAiAppKeyService {
     SysAiAppKey getByAppKey(String appKey);
 
     /**
+     * 按 appKey 实时查询（<b>绕过缓存</b>）。
+     *
+     * <p>鉴权与额度判定必须看最新库值：{@code getByAppKey} 带分钟级缓存，
+     * 停用 / 改额度后最多要等一个缓存周期才生效，配额场景不能接受。</p>
+     *
+     * @param appKey appKey
+     * @return AppKey 实体；不存在返回 {@code null}
+     */
+    SysAiAppKey getByAppKeyLive(String appKey);
+
+    /**
      * 获取群体idbyappKey。
      * @param appKey appKey
      * @return 获取群体idbyappKey的结果

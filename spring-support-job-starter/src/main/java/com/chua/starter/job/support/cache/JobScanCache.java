@@ -15,7 +15,7 @@ import java.util.Objects;
  *   <li>{@link NoopScanCache} &mdash; <b>非缓存</b>。永不适配，{@code put} 丢弃，{@code size} 恒 0，
  *       等价于历史行为（每拍真实查库）。它是本扩展点的 {@code none} 键；</li>
  *   <li>{@link ScanCache} &mdash; <b>缓存</b>。按「分组 + 预读窗 + 扫描上限」缓存 TTL，
- *       命中时连相位（数据库时钟）一起复用。它是本扩展点的 {@code memory} 键。</li>
+ *       命中时连相位（数据库时钟）一起复用。它是本扩展点的 {@code memory} 键与默认实现。</li>
  * </ul>
  *
  * <p>注册文件：{@code META-INF/extensions/com.chua.starter.job.support.cache.JobScanCache}。

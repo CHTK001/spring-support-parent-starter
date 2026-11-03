@@ -81,6 +81,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
+    public SysAiAppKey getByAppKeyLive(String appKey) {
+        return queryAppKeyUncached(appKey);
+    }
+
+    @Override
     /**
      * 列表
      * @return 返回值

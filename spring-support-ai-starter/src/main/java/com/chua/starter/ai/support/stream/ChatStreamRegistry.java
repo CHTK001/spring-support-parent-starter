@@ -36,6 +36,60 @@ public class ChatStreamRegistry {
     private final Map<String, ActiveChat> active = new ConcurrentHashMap<>();
 
     /**
+     * sessionId -> 本轮 Agent 的中断动作。
+     *
+     * <p>停止会话时必须有这一环：关帧槽只是“不再往前端推”，
+     * 在跑的 Agent（opencode 子进程、agentscope Harness、langchain4j 循环）本身不会停。
+     * 由构建侧在每轮开始时绑定，停止或轮次结束时解除。</p>
+     */
+    private final Map<String, Runnable> interrupters = new ConcurrentHashMap<>();
+
+    /**
+     * 绑定本轮 Agent 的中断动作。
+     *
+     * @param sessionId   会话标识，为 null 时忽略
+     * @param interrupter 中断动作（通常是 {@code AgentChatClient::interrupt}），为 null 时忽略
+     */
+    public void bindInterrupter(String sessionId, Runnable interrupter) {
+        if (sessionId != null && interrupter != null) {
+            interrupters.put(sessionId, interrupter);
+        }
+    }
+
+    /**
+     * 解除绑定（仅当当前绑定就是这一个动作时才移除，避免误删下一轮的新绑定）。
+     *
+     * @param sessionId   会话标识
+     * @param interrupter 当初绑定的中断动作
+     */
+    public void unbindInterrupter(String sessionId, Runnable interrupter) {
+        if (sessionId != null && interrupter != null) {
+            interrupters.remove(sessionId, interrupter);
+        }
+    }
+
+    /**
+     * 中断指定会话正在跑的 Agent。
+     *
+     * @param sessionId 会话标识
+     * @return true 表示确实发出了中断
+     */
+    public boolean interruptAgent(String sessionId) {
+        Runnable action = sessionId == null ? null : interrupters.remove(sessionId);
+        if (action == null) {
+            return false;
+        }
+        try {
+            action.run();
+            log.info("[ChatStream] 已中断会话执行 sessionId={}", sessionId);
+            return true;
+        } catch (Exception e) {
+            log.warn("[ChatStream] 中断会话执行失败 sessionId={}: {}", sessionId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 登记活跃轮次。
      *
      * @param sessionId   会话标识，不允许为 null
@@ -56,6 +110,7 @@ public class ChatStreamRegistry {
     public void remove(String sessionId) {
         if (sessionId != null) {
             active.remove(sessionId);
+            interrupters.remove(sessionId);
         }
     }
 
@@ -87,6 +142,8 @@ public class ChatStreamRegistry {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "无权停止他人会话的流式输出");
         }
         ChatFrameSink sink = chat.sink();
+        // 先真正停掉在执行的那一轮：只关帧槽的话，子进程/循环还在后台空转
+        interruptAgent(sessionId);
         sink.markCancelled();
         try {
             sink.sendEvent(java.util.Map.of("type", "finish", "finishReason", "stop"));

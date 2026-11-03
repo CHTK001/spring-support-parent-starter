@@ -272,4 +272,33 @@
         ORDER BY statDate, totalTokens DESC
     </select>
 
+    <!--
+        本地平均输出速度：按 服务商+模型 分组，对全部本地用量的 token 输出速度取平均。
+        数据源是 sys_ai_usage.tokens_per_second（解码窗口的 token/秒）：
+        它覆盖所有从本地写下的调用（工具扫描/定时同步），是真正的「本机用过多少速度」；
+        没有本地用量的模型不出现（调用方按 modelKey 关联时自然缺失，前端回退到
+        Artificial Analysis 的输出速度）。
+    -->
+    <select id="selectModelAvgSpeedTps" resultType="com.chua.starter.ai.support.mapper.SysAiUsageMapper$ModelSpeedRow">
+        SELECT
+            sys_ai_usage_provider AS provider,
+            sys_ai_usage_model AS model,
+            AVG(sys_ai_usage_tokens_per_second) AS avgSpeedTps
+        FROM sys_ai_usage
+        <where>
+            <if test="provider != null and provider != ''">
+                AND sys_ai_usage_provider = #{provider}
+            </if>
+            <if test="model != null and model != ''">
+                AND sys_ai_usage_model = #{model}
+            </if>
+            <!--
+                只算真正测到了速度的调用：tokens_per_second 为 NULL 的记录被 AVG
+                自动跳过，不会把没有实测样本的调用拉低。
+            -->
+            AND sys_ai_usage_tokens_per_second IS NOT NULL
+        </where>
+        GROUP BY sys_ai_usage_provider, sys_ai_usage_model
+    </select>
+
 </mapper>

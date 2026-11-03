@@ -140,6 +140,23 @@ public final class AuthSessionUtils {
     }
 
     /**
+     * 设置租户标识
+     *
+     * <p>与 {@link #getTenantId()} 成对使用。按租户切库的数据源过滤器直接读这个会话属性，
+     * 因此身份建立时必须单独写一份，不能只依赖 {@code userInfo} 里的字段——
+     * 读不到就回退主库，等于把租户请求放进平台共享库。</p>
+     *
+     * @param tenantId 租户标识
+     */
+    public static void setTenantId(String tenantId) {
+        HttpServletRequest request = getRequest();
+        if (request == null) {
+            return;
+        }
+        request.getSession().setAttribute(SESSION_TENANT_ID, tenantId);
+    }
+
+    /**
      * 获取用户信息
      *
      * @param target 目标类型，例如：用户结果.类

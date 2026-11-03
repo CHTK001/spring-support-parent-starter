@@ -73,6 +73,7 @@ public final class ConsoleOutput {
      */
     public static String read(Process process, long timeoutMs) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
         Thread pump = new Thread(() -> pump(process, buffer), "console-output-pump");
         pump.setDaemon(true);
         pump.start();

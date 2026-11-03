@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service.settings;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
+import com.chua.starter.ai.support.model.AiAppKeyQuotaDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -103,6 +104,19 @@ public interface AiAppKeyService {
      * @return 操作结果（data 为更新后的 appKey DTO）
      */
     ReturnResult<AiAppKeyDTO> updateRate(Long appKeyId, BigDecimal minuteRate);
+
+    /**
+     * 调整额度：改次数/Token 上限，并可清零已用。
+     *
+     * <p>{@code maxUse} / {@code maxTokens} 为 {@code null} 表示该项不改动，{@code 0}
+     * 表示「不限」（写回 NULL），正数表示新的上限。{@code resetUsed} 为 true 时把已用
+     * 次数与已耗 Token 清零。台账的「续量」「重置」都走这里。</p>
+     *
+     * @param appKeyId appKey 主键
+     * @param quota    额度调整请求
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    ReturnResult<AiAppKeyDTO> updateQuota(Long appKeyId, AiAppKeyQuotaDTO quota);
 
     /**
      * 删除 appKey（逻辑删除）。

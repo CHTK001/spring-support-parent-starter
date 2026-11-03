@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasourcehub.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
@@ -683,7 +684,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             throw new java.sql.SQLException("数据库名不合法");
         }
         String original = currentDatabase(conn);
-        if (!original.isBlank() && database.equalsIgnoreCase(original)) {
+        if (original != null && !original.isBlank() && database.equalsIgnoreCase(original)) {
             return new SchemaScope(conn, original);
         }
         // original 为空 = 读不到当前会话库（未知）。此时**一律走切换**：
@@ -704,9 +705,9 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         // 校验必须是**权威**读数：读不到（空串）说明无法确认，就报错。
         // 绝不能因为"读不到"就放行 —— 那等于在不确定的库里执行用户 SQL，
         // 且用户看到的仍是成功响应。宁可报「无法确认」，也不能静默跑错库。
-        if (after.isBlank() || !database.equalsIgnoreCase(after)) {
+        if (after == null || after.isBlank() || !database.equalsIgnoreCase(after)) {
             throw new java.sql.SQLException("无法确认已切换到数据库 " + database
-                    + "（切换前=" + (original.isBlank() ? "未知" : original) + "）");
+                    + "（切换前=" + (original == null || original.isBlank() ? "未知" : original) + "）");
         }
         return new SchemaScope(conn, original);
     }
@@ -749,9 +750,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             // 驱动不支持 schema，退回 catalog
         }
         try {
-            return conn.getCatalog();
+            String catalog = conn.getCatalog();
+            return catalog == null ? "" : catalog;
         } catch (java.sql.SQLException ignored) {
-            return null;
+            return "";
         }
     }
 

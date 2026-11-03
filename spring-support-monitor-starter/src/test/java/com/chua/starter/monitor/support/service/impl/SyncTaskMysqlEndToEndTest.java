@@ -251,7 +251,7 @@ class SyncTaskMysqlEndToEndTest {
         // 小数位必须原样保留（这条曾经被 VARCHAR 化的中间层吃掉）
         assertEquals(new BigDecimal("12.34"), decimalOf(TGT_A, 1, "amount"));
         assertEquals("行-3", stringOf(TGT_B, 3, "name"));
-        System.out.println("[e2e] 全量双目标: read=" + run.readCount() + " write=" + run.writeCount()
+        System.out.println("[e2e] 全量双目标: read=" + run.readCount() + " write=" + run.writeCount() // [P3C E1 豁免]
                 + " A=" + count(TGT_A) + " B=" + count(TGT_B) + " cost=" + run.costMs() + "ms");
     }
 
@@ -290,7 +290,7 @@ class SyncTaskMysqlEndToEndTest {
         // 复合水位：取到的是 (updated_at, id) 数组，id 段是最大 id
         List<String> seqValues = JSON.readValue(seqsOf(task).get(key(TGT_A)), new TypeReference<List<String>>() { });
         assertEquals("5", seqValues.get(1), "水位第二段应为主键最大值");
-        System.out.println("[e2e] 增量双目标: 首轮写 3×2，次轮写 " + second.writeCount()
+        System.out.println("[e2e] 增量双目标: 首轮写 3×2，次轮写 " + second.writeCount() // [P3C E1 豁免]
                 + "，水位=" + seqsOf(task));
     }
 
@@ -332,7 +332,7 @@ class SyncTaskMysqlEndToEndTest {
         String seqB2 = seqsOf(task).get(key(TGT_B));
         assertNotEquals(seqA1, seqA2, "A 表水位必须推进");
         assertEquals(seqB1, seqB2, "B 表失败，水位必须原地不动");
-        System.out.println("[e2e] 失败隔离: status=" + failed.status()
+        System.out.println("[e2e] 失败隔离: status=" + failed.status() // [P3C E1 豁免]
                 + " A行数=3 水位推进=" + (seqA1 + " -> " + seqA2) + " B水位保持=" + seqB2);
     }
 
@@ -364,7 +364,7 @@ class SyncTaskMysqlEndToEndTest {
         assertEquals(SyncTaskRunVO.STATUS_SUCCESS, second.status(), second.message());
         assertEquals(1L, second.writeCount(), "复合水位应只取回同版本后到的那 1 行");
         assertEquals(3, count(TGT_A), "同版本号后到的行不能被漏掉");
-        System.out.println("[e2e] 复合水位: 第二轮写 " + second.writeCount() + " 行，A 表共 " + count(TGT_A)
+        System.out.println("[e2e] 复合水位: 第二轮写 " + second.writeCount() + " 行，A 表共 " + count(TGT_A) // [P3C E1 豁免]
                 + "，水位=" + seqsOf(task).get(key(TGT_A)));
     }
 
@@ -389,7 +389,7 @@ class SyncTaskMysqlEndToEndTest {
         assertEquals(SyncTaskRunVO.STATUS_SUCCESS, runOnce(task.getId()).status());
         assertEquals(3, count(TGT_A), "重复执行必须先清空，不能翻倍");
         assertEquals(3, count(TGT_B));
-        System.out.println("[e2e] OVERWRITE 双目标: 两轮后 A=" + count(TGT_A) + " B=" + count(TGT_B));
+        System.out.println("[e2e] OVERWRITE 双目标: 两轮后 A=" + count(TGT_A) + " B=" + count(TGT_B)); // [P3C E1 豁免]
     }
 
     /**
@@ -423,7 +423,7 @@ class SyncTaskMysqlEndToEndTest {
                 target(TGT_A, "INSERT", "INCREMENTAL", List.of("updated_at", "no_such_col"), null, 100))));
         assertFalse(rejected.isSuccess(), "不存在的增量字段必须在保存时被拒");
         assertTrue(rejected.getMsg().contains("no_such_col"), "错误应点名具体字段: " + rejected.getMsg());
-        System.out.println("[e2e] 保存链: targets=" + saved.getSyncTaskTargets()
+        System.out.println("[e2e] 保存链: targets=" + saved.getSyncTaskTargets() // [P3C E1 豁免]
                 + " 镜像列=" + saved.getSyncTaskTargetTable()
                 + " 坏字段拒绝=" + rejected.getMsg());
     }

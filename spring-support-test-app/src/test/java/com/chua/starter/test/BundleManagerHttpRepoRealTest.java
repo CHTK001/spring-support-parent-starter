@@ -121,7 +121,8 @@ class BundleManagerHttpRepoRealTest {
                 return thread;
             }));
             SERVER.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> SERVER.stop(0), "test-http-repo-stop"));
+        // [P3C C1 豁免] 关闭钩子必须由 JVM 创建独立线程
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> SERVER.stop(0), "test-http-repo-stop"));
         } catch (Exception e) {
             throw new IllegalStateException("HTTP 伪 Maven 仓库准备失败", e);
         }

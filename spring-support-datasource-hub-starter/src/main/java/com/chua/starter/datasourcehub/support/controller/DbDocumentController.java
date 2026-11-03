@@ -128,7 +128,7 @@ public class DbDocumentController {
             @RequestParam Long datasourceId,
             @RequestParam(required = false) String database,
             @RequestParam(required = false, defaultValue = "markdown") String format,
-            @RequestParam(required = false, defaultValue = "DEFAULT") String template,
+            @RequestParam(required = false, defaultValue = "SCREW") String template,
             @RequestParam(required = false) String tables) throws Exception {
 
         String fmt = format == null || format.isBlank() ? "markdown" : format.trim().toLowerCase(Locale.ROOT);
@@ -216,7 +216,7 @@ public class DbDocumentController {
             @RequestParam Long datasourceId,
             @RequestParam(required = false) String database,
             @RequestParam(required = false, defaultValue = "markdown") String format,
-            @RequestParam(required = false, defaultValue = "DEFAULT") String template,
+            @RequestParam(required = false, defaultValue = "SCREW") String template,
             @RequestParam(required = false) String tables) throws Exception {
 
         String fmt = format == null || format.isBlank() ? "markdown" : format.trim().toLowerCase(Locale.ROOT);

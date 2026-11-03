@@ -163,8 +163,11 @@ public class CloudflaredTunnelService {
             return toView(record);
         }
         errors.remove(id);
-        CloudflareTunnelClient client = buildClient(record);
+        CloudflareTunnelClient client = null;
         try {
+            // 与 ngrok 侧同理：构建客户端也在 try 内。缺失 Token / 非法模式等
+            // 前置校验在 buildClient 中抛出，若留在 try 外，「错误信息」列会一直是空。
+            client = buildClient(record);
             client.start();
             clients.put(id, client);
             startedAt.put(id, System.currentTimeMillis());
@@ -351,6 +354,9 @@ public class CloudflaredTunnelService {
      * @param client 客户端
      */
     private static void closeQuietly(CloudflareTunnelClient client) {
+        if (null == client) {
+            return;
+        }
         try {
             client.close();
         } catch (Exception e) {

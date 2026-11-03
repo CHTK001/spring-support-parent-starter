@@ -108,14 +108,14 @@ public final class DataSyncExcelJdbcProbe {
         failed += runJdbcBigBatch();
         failed += runExcelCellTypes();
 
-        System.out.println();
-        System.out.println("[EXCEL-JDBC-PROBE] ===== 汇总 =====");
-        System.out.println("[EXCEL-JDBC-PROBE] 通过场景=" + (17 - failed) + "/17, 失败场景=" + failed);
+        System.out.println(); // [P3C E1 豁免]
+        System.out.println("[EXCEL-JDBC-PROBE] ===== 汇总 ====="); // [P3C E1 豁免]
+        System.out.println("[EXCEL-JDBC-PROBE] 通过场景=" + (17 - failed) + "/17, 失败场景=" + failed); // [P3C E1 豁免]
         if (failed > 0) {
-            System.out.println("[EXCEL-JDBC-PROBE] 结果: FAIL");
+            System.out.println("[EXCEL-JDBC-PROBE] 结果: FAIL"); // [P3C E1 豁免]
             System.exit(1);
         }
-        System.out.println("[EXCEL-JDBC-PROBE] 结果: PASS");
+        System.out.println("[EXCEL-JDBC-PROBE] 结果: PASS"); // [P3C E1 豁免]
     }
 
     /**
@@ -221,16 +221,16 @@ public final class DataSyncExcelJdbcProbe {
         Map<String, Object> head = readBack.getFirst();
         if (!(head.get("id") instanceof Number) || ((Number) head.get("id")).longValue() != 0L
                 || !"user0".equals(head.get("name"))) {
-            System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检失败(首行): " + head);
+            System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检失败(首行): " + head); // [P3C E1 豁免]
             return 1;
         }
         java.util.Map<String, Object> tail = readBack.get(readBack.size() - 1);
         if (!(tail.get("id") instanceof Number) || ((Number) tail.get("id")).longValue() != 4999L
                 || !"user4999".equals(tail.get("name"))) {
-            System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检失败(末行): " + tail);
+            System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检失败(末行): " + tail); // [P3C E1 豁免]
             return 1;
         }
-        System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检通过: 首行=" + head + " 末行=" + tail);
+        System.out.println("[EXCEL-JDBC-PROBE] excel 内容抽检通过: 首行=" + head + " 末行=" + tail); // [P3C E1 豁免]
         return verify(name, "读回 Excel 行数=", rows, readBack.size());
     }
 
@@ -253,7 +253,7 @@ public final class DataSyncExcelJdbcProbe {
         long first = drive(name, full, sink);
         long firstCount = count("dst_inc");
         if (first != 3000 || firstCount != 3000) {
-            System.out.println("[EXCEL-JDBC-PROBE] 首轮同步异常: 源=" + first + ", 目标=" + firstCount);
+            System.out.println("[EXCEL-JDBC-PROBE] 首轮同步异常: 源=" + first + ", 目标=" + firstCount); // [P3C E1 豁免]
             return 1;
         }
 
@@ -273,10 +273,10 @@ public final class DataSyncExcelJdbcProbe {
         incSink.close();
         long incCount = count("dst_inc");
         boolean ok = firstCount == 3000 && added == 2000 && incCount == 5000;
-        System.out.println("[EXCEL-JDBC-PROBE] 增量源行数=" + added + ", 增量后总行数=" + incCount
+        System.out.println("[EXCEL-JDBC-PROBE] 增量源行数=" + added + ", 增量后总行数=" + incCount // [P3C E1 豁免]
                 + ", 首轮=" + firstCount + " => " + (ok ? "PASS" : "FAIL"));
         if (!ok) {
-            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
+            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name); // [P3C E1 豁免]
             return 1;
         }
         return 0;
@@ -297,7 +297,7 @@ public final class DataSyncExcelJdbcProbe {
                     .append(20 + i % 40).append('\t').append((i * 7) % 100 + 1).append('\n');
         }
         Files.writeString(tsv, sb.toString(), StandardCharsets.UTF_8);
-        System.out.println("[EXCEL-JDBC-PROBE] TSV 种子已生成: " + tsv);
+        System.out.println("[EXCEL-JDBC-PROBE] TSV 种子已生成: " + tsv); // [P3C E1 豁免]
 
         DataSyncAgentSource source = new TsvDataSyncAgentSource("tsv-src", "tsv-input", tsv.toString());
         String insert = "INSERT INTO dst_tsv (id, name, age, score) VALUES (?, ?, ?, ?)";
@@ -335,11 +335,11 @@ public final class DataSyncExcelJdbcProbe {
         boolean headOk = readBack.size() == rows
                 && "user0".equals(head.get("name"))
                 && "user4999".equals(tail.get("name"));
-        System.out.println("[EXCEL-JDBC-PROBE] CSV 转 Excel 抽检: 读回=" + readBack.size()
+        System.out.println("[EXCEL-JDBC-PROBE] CSV 转 Excel 抽检: 读回=" + readBack.size() // [P3C E1 豁免]
                 + ", 首行name=" + head.get("name") + ", 末行name=" + tail.get("name")
                 + " => " + (headOk ? "PASS" : "FAIL"));
         if (!headOk) {
-            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
+            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name); // [P3C E1 豁免]
             return 1;
         }
         return 0;
@@ -365,7 +365,7 @@ public final class DataSyncExcelJdbcProbe {
 
         long rows = drive(name, source, sink);
         long lines = Files.readAllLines(csvOut, StandardCharsets.UTF_8).size();
-        System.out.println("[EXCEL-JDBC-PROBE] excel 转 csv 文件行数=" + lines + ", 源=" + rows);
+        System.out.println("[EXCEL-JDBC-PROBE] excel 转 csv 文件行数=" + lines + ", 源=" + rows); // [P3C E1 豁免]
         return verify(name, "CSV 数据行数=", rows, lines);
     }
 
@@ -391,12 +391,12 @@ public final class DataSyncExcelJdbcProbe {
                 && "user0".equals(sheet0.getFirst().get("name"))
                 && "bob0".equals(sheet1.getFirst().get("name"))
                 && sheet1.size() == sheetByName.size();
-        System.out.println("[EXCEL-JDBC-PROBE] 多sheet抽检: sheet0=" + sheet0.size()
+        System.out.println("[EXCEL-JDBC-PROBE] 多sheet抽检: sheet0=" + sheet0.size() // [P3C E1 豁免]
                 + ", sheet1(索引)=" + sheet1.size() + ", sheet1(名称)=" + sheetByName.size()
                 + ", 首行=" + sheet0.getFirst().get("name") + "/" + sheet1.getFirst().get("name")
                 + " => " + (ok ? "PASS" : "FAIL"));
         if (!ok) {
-            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
+            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name); // [P3C E1 豁免]
             return 1;
         }
         return 0;
@@ -430,7 +430,7 @@ public final class DataSyncExcelJdbcProbe {
                 .readAll();
         long readMs = System.currentTimeMillis() - start;
         boolean ok = readBack.size() == big && "user0".equals(readBack.getFirst().get("name"));
-        System.out.println("[EXCEL-JDBC-PROBE] 10万行: 写出=" + writeMs + "ms, 读回=" + readMs
+        System.out.println("[EXCEL-JDBC-PROBE] 10万行: 写出=" + writeMs + "ms, 读回=" + readMs // [P3C E1 豁免]
                 + "ms, 行数=" + readBack.size() + " => " + (ok ? "PASS" : "FAIL"));
         return ok ? 0 : 1;
     }
@@ -485,7 +485,7 @@ public final class DataSyncExcelJdbcProbe {
         // 数据完整性以「唯一 id 数 == 源行数」为准，重复不影响下游幂等写入场景）
         long unique = received.stream().map(m -> m.get("id")).distinct().count();
         boolean ok = unique == ROWS && "user0".equals(received.getFirst().get("name"));
-        System.out.println("[EXCEL-JDBC-PROBE] chronicle 收到=" + received.size() + "/" + ROWS
+        System.out.println("[EXCEL-JDBC-PROBE] chronicle 收到=" + received.size() + "/" + ROWS // [P3C E1 豁免]
                 + " 唯一=" + unique + (received.size() > ROWS ? " [存在重复投递,已知问题]" : "")
                 + " => " + (ok ? "PASS(幂等)" : "FAIL"));
         executor.stop();
@@ -512,7 +512,7 @@ public final class DataSyncExcelJdbcProbe {
                 new DelimitedDataSyncAgentSource("full", "in", csv.toString(), ",");
         List<Map<String, Object>> all = full.read(Map.of()).collectList().block();
         if (all.size() != fileRows) {
-            System.out.println("[EXCEL-JDBC-PROBE] 全量读取异常: " + all.size());
+            System.out.println("[EXCEL-JDBC-PROBE] 全量读取异常: " + all.size()); // [P3C E1 豁免]
             return 1;
         }
 
@@ -521,7 +521,7 @@ public final class DataSyncExcelJdbcProbe {
         List<Map<String, Object>> last = tail.read(Map.of("offset", (Object) 50)).collectList().block();
         List<Map<String, Object>> beyond = tail.read(Map.of("offset", (Object) 99)).collectList().block();
         boolean ok = last.size() == 51 && beyond.size() == 2;
-        System.out.println("[EXCEL-JDBC-PROBE] 全量=" + all.size() + ", 跳50剩=" + last.size()
+        System.out.println("[EXCEL-JDBC-PROBE] 全量=" + all.size() + ", 跳50剩=" + last.size() // [P3C E1 豁免]
                 + ", 跳99剩=" + beyond.size() + " => " + (ok ? "PASS" : "FAIL"));
 
         Path offsetDir = WORK_DIR.resolve("offsets");
@@ -529,10 +529,10 @@ public final class DataSyncExcelJdbcProbe {
         storage.write(new SyncDataOffset("tail", 99, System.currentTimeMillis(), "mapping-1"));
         SyncDataOffset loaded = storage.read("tail", null);
         boolean persistOk = loaded != null && "99".equals(String.valueOf(loaded.offsetValue()));
-        System.out.println("[EXCEL-JDBC-PROBE] 偏移量持久化读回=" + loaded
+        System.out.println("[EXCEL-JDBC-PROBE] 偏移量持久化读回=" + loaded // [P3C E1 豁免]
                 + " => " + (persistOk ? "PASS" : "FAIL"));
         if (!ok || !persistOk) {
-            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
+            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name); // [P3C E1 豁免]
             return 1;
         }
         return 0;
@@ -576,7 +576,7 @@ public final class DataSyncExcelJdbcProbe {
         List<Map<String, Object>> rows = source.read(Map.of()).collectList().block();
         ok = ok && rows.size() == ROWS;
         agent.stop();
-        System.out.println("[EXCEL-JDBC-PROBE] agent装配/生命周期: sources=" + agent.sources().size()
+        System.out.println("[EXCEL-JDBC-PROBE] agent装配/生命周期: sources=" + agent.sources().size() // [P3C E1 豁免]
                 + ", sinks=" + agent.sinks().size() + ", 读到=" + rows.size()
                 + " => " + (ok ? "PASS" : "FAIL"));
         return ok ? 0 : 1;
@@ -639,7 +639,7 @@ public final class DataSyncExcelJdbcProbe {
         Path excel = WORK_DIR.resolve("types.xlsx");
         Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
         if (wbClass == null) {
-            System.out.println("[SKIP] Apache POI not on classpath");
+            System.out.println("[SKIP] Apache POI not on classpath"); // [P3C E1 豁免]
             return 0;
         }
         /**
@@ -719,7 +719,7 @@ public final class DataSyncExcelJdbcProbe {
                 wbClass.getMethod("write", java.io.OutputStream.class).invoke(wb, fos);
             }
         }
-        System.out.println("[EXCEL-JDBC-PROBE] 单元格类型种子已生成: " + excel);
+        System.out.println("[EXCEL-JDBC-PROBE] 单元格类型种子已生成: " + excel); // [P3C E1 豁免]
 
         List<Map<String, Object>> rows = new ExcelFileSource("types-src", "in", excel.toString()).readAll();
         Map<String, Object> r = rows.getFirst();
@@ -728,7 +728,7 @@ public final class DataSyncExcelJdbcProbe {
                 && Boolean.TRUE.equals(r.get("bool"));
         Object dateVal = r.get("date");
         Object formulaVal = r.get("formula");
-        System.out.println("[EXCEL-JDBC-PROBE] 单元格类型抽检: str=" + r.get("str")
+        System.out.println("[EXCEL-JDBC-PROBE] 单元格类型抽检: str=" + r.get("str") // [P3C E1 豁免]
                 + "(class " + (r.get("str") == null ? "-" : r.get("str").getClass().getSimpleName()) + ")"
                 + ", num=" + r.get("num")
                 + "(class " + (r.get("num") == null ? "-" : r.get("num").getClass().getSimpleName()) + ")"
@@ -775,7 +775,7 @@ public final class DataSyncExcelJdbcProbe {
         List<Map<String, Object>> readBack = new ExcelFileSource("rt-rb", "rt-rb-input", out.toString())
                 .readAll();
         if (readBack.size() != rows) {
-            System.out.println("[EXCEL-JDBC-PROBE] 读回行数不一致: " + readBack.size() + " vs 源=" + rows);
+            System.out.println("[EXCEL-JDBC-PROBE] 读回行数不一致: " + readBack.size() + " vs 源=" + rows); // [P3C E1 豁免]
             return 1;
         }
         String insert = "INSERT INTO dst_round (id, name, age, score) VALUES (?, ?, ?, ?)";
@@ -790,7 +790,7 @@ public final class DataSyncExcelJdbcProbe {
         rtSink.close();
         long back = count("dst_round");
         if (back != rows) {
-            System.out.println("[EXCEL-JDBC-PROBE] 回写数据库行数不一致: " + back);
+            System.out.println("[EXCEL-JDBC-PROBE] 回写数据库行数不一致: " + back); // [P3C E1 豁免]
             return 1;
         }
 
@@ -814,10 +814,10 @@ public final class DataSyncExcelJdbcProbe {
                 }
             }
             boolean ok = checked == rows && mismatch == 0;
-            System.out.println("[EXCEL-JDBC-PROBE] 往返比对: 检查=" + checked + ", 不一致=" + mismatch
+            System.out.println("[EXCEL-JDBC-PROBE] 往返比对: 检查=" + checked + ", 不一致=" + mismatch // [P3C E1 豁免]
                     + " => " + (ok ? "PASS" : "FAIL"));
             if (!ok) {
-                System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
+                System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name); // [P3C E1 豁免]
                 return 1;
             }
         }
@@ -833,11 +833,11 @@ public final class DataSyncExcelJdbcProbe {
      * @return 源行数
      */
     private static long drive(String name, DataSyncAgentSource source, DataSyncAgentSink sink) {
-        System.out.println();
-        System.out.println("[EXCEL-JDBC-PROBE] ==== " + name + " ====");
+        System.out.println(); // [P3C E1 豁免]
+        System.out.println("[EXCEL-JDBC-PROBE] ==== " + name + " ===="); // [P3C E1 豁免]
         List<Map<String, Object>> rows = source.read(Map.of()).collectList().block();
         long n = rows.size();
-        System.out.println("[EXCEL-JDBC-PROBE] 源读取行数=" + n);
+        System.out.println("[EXCEL-JDBC-PROBE] 源读取行数=" + n); // [P3C E1 豁免]
         sink.write(Flux.fromIterable(rows));
         /**
          * sleep。
@@ -863,10 +863,10 @@ public final class DataSyncExcelJdbcProbe {
      */
     private static int verify(String name, String label, long source, long target) {
         boolean ok = source == target;
-        System.out.println("[EXCEL-JDBC-PROBE] " + label + target + ", 源=" + source + " => "
+        System.out.println("[EXCEL-JDBC-PROBE] " + label + target + ", 源=" + source + " => " // [P3C E1 豁免]
                 + (ok ? "PASS" : "FAIL"));
         if (!ok) {
-            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name);
+            System.out.println("[EXCEL-JDBC-PROBE] 场景失败: " + name); // [P3C E1 豁免]
             return 1;
         }
         return 0;
@@ -905,7 +905,7 @@ public final class DataSyncExcelJdbcProbe {
             st.executeBatch();
             c.commit();
         }
-        System.out.println("[EXCEL-JDBC-PROBE] H2 就绪: src_user=" + ROWS + " 行");
+        System.out.println("[EXCEL-JDBC-PROBE] H2 就绪: src_user=" + ROWS + " 行"); // [P3C E1 豁免]
     }
 
     /**
@@ -940,7 +940,7 @@ public final class DataSyncExcelJdbcProbe {
                     .append('\n');
         }
         Files.writeString(path, sb.toString(), StandardCharsets.UTF_8);
-        System.out.println("[EXCEL-JDBC-PROBE] CSV 种子已生成: " + path);
+        System.out.println("[EXCEL-JDBC-PROBE] CSV 种子已生成: " + path); // [P3C E1 豁免]
     }
 
     /**
@@ -962,7 +962,7 @@ public final class DataSyncExcelJdbcProbe {
         WriteBuilder wb = fs.write(path.toFile()).withHeader(true);
         wb.write(rows);
         wb.finish();
-        System.out.println("[EXCEL-JDBC-PROBE] Excel 种子已生成: " + path);
+        System.out.println("[EXCEL-JDBC-PROBE] Excel 种子已生成: " + path); // [P3C E1 豁免]
     }
 
     /**
@@ -974,7 +974,7 @@ public final class DataSyncExcelJdbcProbe {
     private static void writeMultiSheetExcel(Path path) throws Exception {
         Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
         if (wbClass == null) {
-            System.out.println("[SKIP] Apache POI not on classpath");
+            System.out.println("[SKIP] Apache POI not on classpath"); // [P3C E1 豁免]
             return;
         }
         /**
@@ -1006,7 +1006,7 @@ public final class DataSyncExcelJdbcProbe {
                 wbClass.getMethod("write", java.io.OutputStream.class).invoke(wb, fos);
             }
         }
-        System.out.println("[EXCEL-JDBC-PROBE] 多sheet种子已生成: " + path);
+        System.out.println("[EXCEL-JDBC-PROBE] 多sheet种子已生成: " + path); // [P3C E1 豁免]
     }
 
     /**
@@ -1197,7 +1197,7 @@ public final class DataSyncExcelJdbcProbe {
                 WriteBuilder wb = fs.write(new java.io.File(filePath)).withHeader(true);
                 wb.write(list);
                 wb.finish();
-                System.out.println("[EXCEL-JDBC-PROBE] Excel 写出完成: " + filePath + ", 行数=" + list.size());
+                System.out.println("[EXCEL-JDBC-PROBE] Excel 写出完成: " + filePath + ", 行数=" + list.size()); // [P3C E1 豁免]
             });
         }
 

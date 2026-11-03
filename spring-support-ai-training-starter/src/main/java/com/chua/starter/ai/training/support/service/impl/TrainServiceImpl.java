@@ -88,6 +88,7 @@ public class TrainServiceImpl implements TrainService {
                 task.getDataPath());
 
         // 异步训练线程（引擎回调 → 领域监听器更新进度 + 平台外发生命周期事件）
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
         Thread trainThread = new Thread(() -> {
             TrainListener taskListener = task.createListener();
             TrainListener wired = wire(task, taskListener);

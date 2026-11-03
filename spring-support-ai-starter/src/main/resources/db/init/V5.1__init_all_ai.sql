@@ -404,6 +404,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session_compression` (
   `sys_ai_compression_message_count` BIGINT DEFAULT 0 COMMENT '',
   `sys_ai_compression_from_message_id` INT DEFAULT NULL COMMENT 'ID',
   `sys_ai_compression_context` LONGTEXT COMMENT '',
+  `sys_ai_compression_baseline` LONGTEXT DEFAULT NULL COMMENT '首次压缩结果（压缩验证基线）',
   `create_name` VARCHAR(255) DEFAULT NULL COMMENT '',
   `create_by` INT DEFAULT NULL COMMENT 'ID',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
@@ -1339,6 +1340,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model_metrics` (
     `sys_ai_model_metrics_openai_compatible` TINYINT(1) NULL COMMENT '是否兼容 OpenAI 协议',
     `sys_ai_model_metrics_intelligence_index_estimated` TINYINT(1) NULL COMMENT '智能指数是否为估算值',
     `sys_ai_model_metrics_output_speed_tps`      DOUBLE        NULL COMMENT '输出速度 token/秒',
+    `sys_ai_model_metrics_avg_output_speed_tps`  DOUBLE        NULL COMMENT '本地平均输出速度 token/秒',
     `sys_ai_model_metrics_latency_first_token`   DOUBLE        NULL COMMENT '首 token 延迟（秒）',
     `sys_ai_model_metrics_context_window`        BIGINT        NULL COMMENT '上下文窗口 token',
     `sys_ai_model_metrics_icon_url`              VARCHAR(512)  NULL COMMENT '模型图标',
@@ -2179,3 +2181,20 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_metric` (
     PRIMARY KEY (`sys_ai_provider_metric_id`),
     UNIQUE KEY `uk_sys_ai_provider_metric_provider` (`sys_ai_provider_metric_provider`)
 ) COMMENT='AI 厂商指标系数表';
+
+-- =====================================================================
+-- 存量库补列：sys_ai_model_metrics.avg_output_speed_tps
+--
+-- 本地平均输出速度：按 provider+model 对全部 sys_ai_usage.tokens_per_second
+-- 取 AVG，由 UsageAggregationTask 定时回填（历史均值，非 Artificial Analysis
+-- 源指标，不入指标快照，也不进手动锁定字段集）。
+-- 类型 DOUBLE NULL：无本地用量的模型保持 NULL，前端/计费回退到 AA 输出速度。
+-- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
+-- 可反复执行，重复运行只走 SELECT 1 分支。
+-- =====================================================================
+SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model_metrics'
+          AND COLUMN_NAME = 'sys_ai_model_metrics_avg_output_speed_tps'),
+        'SELECT 1',
+        'ALTER TABLE `sys_ai_model_metrics` ADD COLUMN `sys_ai_model_metrics_avg_output_speed_tps` DOUBLE NULL COMMENT ''本地平均输出速度 token/秒'''));
+PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;

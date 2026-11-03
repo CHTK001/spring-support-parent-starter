@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.utils.StringUtils;
@@ -184,6 +185,15 @@ public class AiProtocolController extends BaseAiController {
         }
         boolean stream = adapter.stream(servletRequest, body);
         String model = modelOf(adapter, body);
+        // 模型范围闸门：appKey 只能用「分组清单 ∩ 限定模型」内的模型；流式也必须在开流前拦
+        String violation = modelScopeViolation(servletRequest, model);
+        if (violation != null) {
+            log.warn("[ai] {} 协议模型越权: model={}", adapter.family(), model);
+            if (stream) {
+                return modelNotAllowedEmitter(violation);
+            }
+            return ResponseEntity.status(403).body(adapter.failure(model, violation));
+        }
         // 流式模式
         if (stream) {
             return adapter.stream(body, model, servletRequest);
