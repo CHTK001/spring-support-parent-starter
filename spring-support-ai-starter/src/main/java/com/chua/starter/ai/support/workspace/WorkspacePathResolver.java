@@ -57,6 +57,11 @@ public class WorkspacePathResolver {
     private static final String AGENT_DIRECTORY = "agent";
 
     /**
+     * 账号终端会话存储目录名（与 agent 同级，避免终端日志混进被 Git 管理的工作区）
+     */
+    private static final String TERMINAL_DIRECTORY = "terminal";
+
+    /**
      * Git 元数据目录名
      */
     private static final String GIT_DIRECTORY = ".git";
@@ -82,17 +87,7 @@ public class WorkspacePathResolver {
      * @return 账号工作目录绝对路径
      */
     public Path agentWorkspace(String userId) {
-        String base;
-        try {
-            base = globalSettingService.getValue(SETTING_GROUP, SETTING_WORKSPACE_BASE).orElse(null);
-        } catch (Exception e) {
-            log.warn("[Workspace] 读取工作目录基路径失败: {}", e.getMessage());
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取工作目录配置失败");
-        }
-        if (base == null || base.isBlank()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "未配置工作目录基路径（系统设置 - workspaceBaseDir）");
-        }
-        Path basePath = Paths.get(base.trim()).toAbsolutePath().normalize();
+        Path basePath = workspaceBase();
         String account = safeSegment(Objects.toString(userId, DEFAULT_ACCOUNT));
         Path workspace = basePath.resolve(account).resolve(AGENT_DIRECTORY).normalize();
         if (!workspace.startsWith(basePath)) {
@@ -108,6 +103,60 @@ public class WorkspacePathResolver {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建账号工作目录失败");
         }
         return workspace;
+    }
+
+    /**
+     * 解析当前登录账号的终端会话存储目录。
+     *
+     * @return 终端会话存储目录绝对路径
+     */
+    public Path terminalStorage() {
+        return terminalStorage(AiUserContext.currentUserId());
+    }
+
+    /**
+     * 解析指定账号的终端会话存储目录。
+     *
+     * <p>目录与 {@code agent} 同级（{@code <基路径>/<账号>/terminal}），不放进用户工作区：
+     * 工作区可能被 Git 管理或被整体打包下载，终端输出日志不应成为业务文件。</p>
+     *
+     * @param userId 账号标识
+     * @return 终端会话存储目录绝对路径
+     */
+    public Path terminalStorage(String userId) {
+        Path basePath = workspaceBase();
+        String account = safeSegment(Objects.toString(userId, DEFAULT_ACCOUNT));
+        Path directory = basePath.resolve(account).resolve(TERMINAL_DIRECTORY).normalize();
+        if (!directory.startsWith(basePath)) {
+            log.warn("[Workspace] 终端存储目录越界，已拒绝: {}", directory);
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "终端存储目录越界");
+        }
+        try {
+            Files.createDirectories(directory);
+        } catch (IOException e) {
+            log.warn("[Workspace] 创建终端存储目录失败 path={} error={}", directory, e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建终端存储目录失败");
+        }
+        return directory;
+    }
+
+    /**
+     * 读取并校验工作目录基路径（系统设置 {@code system.workspaceBaseDir}）。
+     *
+     * @return 基路径绝对路径
+     */
+    private Path workspaceBase() {
+        String base;
+        try {
+            base = globalSettingService.getValue(SETTING_GROUP, SETTING_WORKSPACE_BASE).orElse(null);
+        } catch (Exception e) {
+            log.warn("[Workspace] 读取工作目录基路径失败: {}", e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取工作目录配置失败");
+        }
+        if (base == null || base.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "未配置工作目录基路径（系统设置 - workspaceBaseDir）");
+        }
+        return Paths.get(base.trim()).toAbsolutePath().normalize();
     }
 
     /**
