@@ -5,6 +5,9 @@ import com.chua.starter.ai.support.workspace.WorkspacePathResolver;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pty4j.PtyProcess;
+import com.pty4j.PtyProcessBuilder;
+import com.pty4j.WinSize;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,42 +17,43 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 工作区终端 WebSocket 处理器（端点 {@code /ws/terminal}）。
  *
- * <p>协议与 {@code @repo/core SocketTemplate} 保持一致：客户端发送
- * {@code {event,data}}，服务端按事件回包。</p>
+ * <p>基于 pty4j 的真实伪终端：Windows 使用 ConPTY、Unix 使用原生 libpty，
+ * 因此 {@code vim}、{@code top}、{@code git rebase -i} 等交互式程序可正常使用，
+ * 环境变量与进程状态在同一终端会话内持续保留。</p>
  *
- * <p>支持的事件：</p>
+ * <p>协议与 {@code @repo/core SocketTemplate} 保持一致：客户端发送 {@code {event,data}}，
+ * 服务端按事件回包。</p>
+ *
+ * <p>客户端事件：</p>
  * <ul>
- *   <li>{@code terminal.start}：{@code data:{sessionId}}，建立终端并返回工作目录；</li>
- *   <li>{@code terminal.input}：{@code data:{command}}，执行一条命令并流式返回输出；</li>
- *   <li>{@code terminal.stop}：终止当前命令；</li>
+ *   <li>{@code terminal.start}：{@code data:{sessionId,cols,rows}}，启动或重启终端；</li>
+ *   <li>{@code terminal.input}：{@code data:{data}}，写入原始按键/粘贴文本；</li>
+ *   <li>{@code terminal.resize}：{@code data:{cols,rows}}，同步终端尺寸；</li>
+ *   <li>{@code terminal.stop}：销毁当前终端进程；</li>
  *   <li>{@code ping}：心跳。</li>
  * </ul>
  *
- * <p>服务端事件：{@code terminal.ready}、{@code terminal.command}、{@code terminal.data}、
- * {@code terminal.exit}、{@code terminal.error}、{@code pong}。</p>
- *
- * <p>说明：当前实现为“行式命令终端”，每条命令独立进程执行并跟踪 {@code cd} 目录，
- * 因此命令状态（环境变量、交互式程序）不会跨命令保留；这是无 PTY 依赖下更稳妥的工程实现。</p>
+ * <p>服务端事件：{@code terminal.ready}、{@code terminal.output}、{@code terminal.exit}、
+ * {@code terminal.stopped}、{@code terminal.error}、{@code pong}。输出为原始终端字节流
+ * （含 ANSI 控制序列），由前端 xterm.js 直接渲染。</p>
  *
  * @author CH
  * @since 4.0.0.51
@@ -60,34 +64,111 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TerminalWebSocketHandler extends TextWebSocketHandler {
 
     /**
-     * 单条命令最大输出字节数
+     * 默认终端列数
      */
-    private static final long MAX_OUTPUT_BYTES = 5L * 1024L * 1024L;
+    private static final int DEFAULT_COLUMNS = 120;
 
     /**
-     * 单条命令超时时间（秒）
+     * 默认终端行数
      */
-    private static final long COMMAND_TIMEOUT_SECONDS = 600L;
+    private static final int DEFAULT_ROWS = 32;
 
     /**
-     * 读取线程等待时间（秒）
+     * 终端列数下限
      */
-    private static final long READER_JOIN_SECONDS = 10L;
+    private static final int MIN_COLUMNS = 20;
 
     /**
-     * 命令最大长度
+     * 终端列数上限
      */
-    private static final int MAX_COMMAND_LENGTH = 4000;
+    private static final int MAX_COLUMNS = 500;
 
     /**
-     * 标准输出流名称
+     * 终端行数下限
      */
-    private static final String STREAM_STDOUT = "stdout";
+    private static final int MIN_ROWS = 5;
 
     /**
-     * 标准错误流名称
+     * 终端行数上限
      */
-    private static final String STREAM_STDERR = "stderr";
+    private static final int MAX_ROWS = 200;
+
+    /**
+     * PTY 输出读取缓冲字符数
+     */
+    private static final int READ_BUFFER_SIZE = 8192;
+
+    /**
+     * 单次写入 PTY 的最大字符数（防止单帧粘贴过大拖垮服务端）
+     */
+    private static final int MAX_INPUT_CHARS = 64 * 1024;
+
+    /**
+     * 等待读取线程结束的秒数
+     */
+    private static final long READER_JOIN_SECONDS = 5L;
+
+    /**
+     * 终端类型环境变量值
+     */
+    private static final String TERM_VALUE = "xterm-256color";
+
+    /**
+     * 颜色终端环境变量值
+     */
+    private static final String COLORTERM_VALUE = "truecolor";
+
+    /**
+     * Windows PowerShell 可执行文件
+     */
+    private static final String POWERSHELL_EXECUTABLE = "powershell.exe";
+
+    /**
+     * Windows 命令提示符可执行文件
+     */
+    private static final String CMD_EXECUTABLE = "cmd.exe";
+
+    /**
+     * Unix bash 路径
+     */
+    private static final String BASH_EXECUTABLE = "/bin/bash";
+
+    /**
+     * Unix 兜底 shell 路径
+     */
+    private static final String SH_EXECUTABLE = "/bin/sh";
+
+    /**
+     * PowerShell 启动时的 UTF-8 初始化脚本
+     */
+    private static final String POWERSHELL_UTF8_SCRIPT =
+            "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
+                    + "$OutputEncoding=[System.Text.Encoding]::UTF8";
+
+    /**
+     * 事件名：终端启动
+     */
+    private static final String EVENT_START = "terminal.start";
+
+    /**
+     * 事件名：终端输入
+     */
+    private static final String EVENT_INPUT = "terminal.input";
+
+    /**
+     * 事件名：终端尺寸变化
+     */
+    private static final String EVENT_RESIZE = "terminal.resize";
+
+    /**
+     * 事件名：终端停止
+     */
+    private static final String EVENT_STOP = "terminal.stop";
+
+    /**
+     * 事件名：心跳
+     */
+    private static final String EVENT_PING = "ping";
 
     /**
      * 工作目录解析器
@@ -100,21 +181,9 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
 
     /**
-     * WS 会话 id -> 终端连接
+     * WS 会话 id -> PTY 会话
      */
-    private final Map<String, TerminalConnection> connections = new ConcurrentHashMap<>();
-
-    /**
-     * 命令执行线程池（虚拟线程，避免阻塞平台线程）
-     */
-    private final ThreadPoolExecutor commandExecutor = new ThreadPoolExecutor(
-            0,
-            64,
-            60L,
-            TimeUnit.SECONDS,
-            new SynchronousQueue<>(),
-            Thread.ofVirtual().name("ai-terminal-", 0).factory(),
-            new ThreadPoolExecutor.AbortPolicy());
+    private final Map<String, PtySession> sessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -128,20 +197,39 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             String event = root.path("event").asText("");
             JsonNode data = root.path("data");
             switch (event) {
-                case "ping" -> send(session, "pong", new LinkedHashMap<>());
-                case "terminal.start" -> handleStart(session, data);
-                case "terminal.input" -> handleInput(session, data);
-                case "terminal.stop" -> handleStop(session);
+                case EVENT_PING -> send(session, "pong", new LinkedHashMap<>());
+                case EVENT_START -> handleStart(session, data);
+                case EVENT_INPUT -> handleInput(session, data);
+                case EVENT_RESIZE -> handleResize(session, data);
+                case EVENT_STOP -> handleStop(session);
                 default -> log.debug("[terminal-ws] 未识别事件: {}", event);
             }
         } catch (Exception e) {
-            log.warn("[terminal-ws] 处理消息异常: {}", e.getMessage());
-            sendError(session, null, "终端消息处理失败：" + messageOf(e));
+            log.warn("[terminal-ws] 处理消息异常: {}", messageOf(e));
+            sendError(session, "终端消息处理失败：" + messageOf(e));
+        }
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        PtySession ptySession = sessions.remove(session.getId());
+        if (ptySession != null) {
+            ptySession.close();
+        }
+        log.info("[terminal-ws] 连接已关闭 id={} status={}", session.getId(), status);
+    }
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) {
+        log.warn("[terminal-ws] 传输异常 id={} error={}", session.getId(), messageOf(exception));
+        PtySession ptySession = sessions.remove(session.getId());
+        if (ptySession != null) {
+            ptySession.close();
         }
     }
 
     /**
-     * 建立终端会话。
+     * 启动或重启 PTY 终端。
      *
      * @param session WS 会话
      * @param data    请求数据
@@ -149,391 +237,203 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     private void handleStart(WebSocketSession session, JsonNode data) {
         String sessionId = data.path("sessionId").asText("");
         if (sessionId.isBlank()) {
-            sendError(session, null, "sessionId 不能为空");
+            sendError(session, "sessionId 不能为空");
             return;
         }
+        int columns = clamp(data.path("cols").asInt(DEFAULT_COLUMNS), MIN_COLUMNS, MAX_COLUMNS);
+        int rows = clamp(data.path("rows").asInt(DEFAULT_ROWS), MIN_ROWS, MAX_ROWS);
+
         UserResume resume = (UserResume) session.getAttributes().get(AiUserContext.RESUME_ATTRIBUTE);
-        AtomicReference<Path> workspaceRef = new AtomicReference<>();
-        AtomicReference<Path> sessionRootRef = new AtomicReference<>();
-        AtomicReference<String> errorRef = new AtomicReference<>();
+        Path[] directories = new Path[2];
+        String[] error = new String[1];
         AiUserContext.runWith(resume, () -> {
             try {
-                workspaceRef.set(pathResolver.agentWorkspace());
-                sessionRootRef.set(pathResolver.sessionWorkspace(sessionId));
+                directories[0] = pathResolver.agentWorkspace();
+                directories[1] = pathResolver.sessionWorkspace(sessionId);
             } catch (Exception e) {
-                errorRef.set(messageOf(e));
+                error[0] = messageOf(e);
             }
         });
-        if (errorRef.get() != null || workspaceRef.get() == null || sessionRootRef.get() == null) {
-            sendError(session, null, errorRef.get() == null ? "无法解析工作目录" : errorRef.get());
+        if (error[0] != null) {
+            sendError(session, error[0]);
             return;
         }
-        TerminalConnection previous = connections.remove(session.getId());
+
+        PtySession previous = sessions.remove(session.getId());
         if (previous != null) {
-            previous.stop();
+            previous.close();
         }
-        TerminalConnection connection = new TerminalConnection(
-                sessionId,
-                workspaceRef.get(),
-                sessionRootRef.get()
-        );
-        connections.put(session.getId(), connection);
+
+        PtySession ptySession = new PtySession(session, sessionId, directories[0], directories[1], columns, rows);
+        try {
+            ptySession.start();
+        } catch (IOException e) {
+            log.warn("[terminal-ws] PTY 启动失败 id={} error={}", session.getId(), messageOf(e));
+            sendError(session, "终端启动失败：" + messageOf(e));
+            return;
+        }
+        sessions.put(session.getId(), ptySession);
+
         Map<String, Object> ready = new LinkedHashMap<>();
         ready.put("sessionId", sessionId);
-        ready.put("cwd", connection.cwd().toString());
-        ready.put("workspace", connection.workspaceRoot().toString());
-        ready.put("shell", shellName());
+        ready.put("cwd", ptySession.cwd().toString());
+        ready.put("workspace", ptySession.workspaceRoot().toString());
+        ready.put("shell", ptySession.shellName());
+        ready.put("cols", columns);
+        ready.put("rows", rows);
         send(session, "terminal.ready", ready);
-        log.info("[terminal-ws] 终端就绪 id={} session={} cwd={}",
-                session.getId(), sessionId, connection.cwd());
+        log.info("[terminal-ws] 终端就绪 id={} session={} cwd={} shell={}",
+                session.getId(), sessionId, ptySession.cwd(), ptySession.shellName());
     }
 
     /**
-     * 执行命令。
+     * 向 PTY 写入原始按键。
      *
      * @param session WS 会话
      * @param data    请求数据
      */
     private void handleInput(WebSocketSession session, JsonNode data) {
-        TerminalConnection connection = connections.get(session.getId());
-        if (connection == null) {
-            sendError(session, null, "终端尚未初始化，请先发送 terminal.start");
+        PtySession ptySession = sessions.get(session.getId());
+        if (ptySession == null) {
+            sendError(session, "终端尚未初始化，请先发送 terminal.start");
             return;
         }
-        String command = data.path("command").asText("");
-        String normalized = command.trim();
-        if (normalized.isEmpty()) {
+        String text = data.path("data").asText("");
+        if (text.isEmpty()) {
             return;
         }
-        if (normalized.length() > MAX_COMMAND_LENGTH) {
-            sendError(session, null, "命令过长，最多 4000 字符");
+        if (text.length() > MAX_INPUT_CHARS) {
+            sendError(session, "单次输入过长，请分批粘贴");
             return;
         }
-        if (!connection.running().compareAndSet(false, true)) {
-            sendError(session, null, "上一条命令仍在执行，请先停止或等待完成");
-            return;
-        }
-        long sequence = connection.nextSequence();
-        try {
-            if (isChangeDirectory(normalized)) {
-                handleChangeDirectory(session, connection, normalized, sequence);
-                return;
-            }
-            sendCommand(session, connection, normalized, sequence);
-            commandExecutor.execute(() -> execute(session, connection, normalized, sequence));
-        } catch (Exception e) {
-            connection.running().set(false);
-            sendError(session, sequence, "启动命令失败：" + messageOf(e));
-        }
+        ptySession.write(text);
     }
 
     /**
-     * 停止当前命令。
+     * 同步终端尺寸。
+     *
+     * @param session WS 会话
+     * @param data    请求数据
+     */
+    private void handleResize(WebSocketSession session, JsonNode data) {
+        PtySession ptySession = sessions.get(session.getId());
+        if (ptySession == null) {
+            return;
+        }
+        int columns = clamp(data.path("cols").asInt(DEFAULT_COLUMNS), MIN_COLUMNS, MAX_COLUMNS);
+        int rows = clamp(data.path("rows").asInt(DEFAULT_ROWS), MIN_ROWS, MAX_ROWS);
+        ptySession.resize(columns, rows);
+    }
+
+    /**
+     * 终止当前 PTY 进程。
      *
      * @param session WS 会话
      */
     private void handleStop(WebSocketSession session) {
-        TerminalConnection connection = connections.get(session.getId());
-        if (connection == null) {
+        PtySession ptySession = sessions.get(session.getId());
+        if (ptySession == null) {
+            sendError(session, "终端尚未初始化");
             return;
         }
-        connection.stop();
-        send(session, "terminal.stopped", new LinkedHashMap<>());
+        ptySession.stop();
     }
 
     /**
-     * 执行一条外部命令并流式输出。
-     *
-     * @param session    WS 会话
-     * @param connection 终端连接
-     * @param command    命令
-     * @param sequence   序号
-     */
-    private void execute(WebSocketSession session, TerminalConnection connection, String command, long sequence) {
-        long startedAt = System.currentTimeMillis();
-        Process process = null;
-        CompletableFuture<Void> stdoutPump = null;
-        CompletableFuture<Void> stderrPump = null;
-        try {
-            ProcessBuilder builder = buildProcess(command);
-            builder.directory(connection.cwd().toFile());
-            builder.environment().put("TERM", "dumb");
-            builder.environment().put("NO_COLOR", "1");
-            builder.environment().put("CLICOLOR", "0");
-            builder.environment().put("PYTHONUNBUFFERED", "1");
-            process = builder.start();
-            connection.attach(process);
-            InputStream stdout = process.getInputStream();
-            InputStream stderr = process.getErrorStream();
-            stdoutPump = CompletableFuture.runAsync(
-                    () -> pump(session, connection, sequence, STREAM_STDOUT, stdout), commandExecutor);
-            stderrPump = CompletableFuture.runAsync(
-                    () -> pump(session, connection, sequence, STREAM_STDERR, stderr), commandExecutor);
-            boolean finished = process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                killProcess(process);
-                sendError(session, sequence, "命令执行超时（600 秒），已终止");
-            }
-            awaitPump(stdoutPump);
-            awaitPump(stderrPump);
-            int exitCode = -1;
-            try {
-                if (process.isAlive()) {
-                    killProcess(process);
-                }
-                exitCode = process.exitValue();
-            } catch (Exception ignored) {
-                // 进程被强制终止时以 -1 表示
-            }
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("seq", sequence);
-            result.put("code", exitCode);
-            result.put("cwd", connection.cwd().toString());
-            result.put("durationMs", System.currentTimeMillis() - startedAt);
-            send(session, "terminal.exit", result);
-        } catch (Exception e) {
-            log.warn("[terminal-ws] 命令执行失败 session={}: {}", connection.sessionId(), e.getMessage());
-            sendError(session, sequence, "命令执行失败：" + messageOf(e));
-        } finally {
-            if (stdoutPump != null) {
-                stdoutPump.cancel(true);
-            }
-            if (stderrPump != null) {
-                stderrPump.cancel(true);
-            }
-            if (process != null) {
-                killProcess(process);
-            }
-            connection.running().set(false);
-        }
-    }
-
-    /**
-     * 处理目录切换。
-     *
-     * @param session    WS 会话
-     * @param connection 终端连接
-     * @param command    命令
-     * @param sequence   序号
-     */
-    private void handleChangeDirectory(WebSocketSession session,
-                                       TerminalConnection connection,
-                                       String command,
-                                       long sequence) {
-        try {
-            String target = command.replaceFirst("(?i)^(cd|sl|set-location)(\\s+|$)", "").trim();
-            if ((target.startsWith("\"") && target.endsWith("\""))
-                    || (target.startsWith("'") && target.endsWith("'"))) {
-                target = target.substring(1, target.length() - 1);
-            }
-            Path next;
-            if (target.isEmpty() || "~".equals(target)) {
-                next = connection.workspaceRoot();
-            } else if (target.startsWith("~/")) {
-                next = connection.workspaceRoot().resolve(target.substring(2)).normalize();
-            } else {
-                next = connection.cwd().resolve(target).normalize();
-            }
-            if (!next.startsWith(connection.workspaceRoot())) {
-                throw new IllegalArgumentException("目录不能超出工作区");
-            }
-            if (!Files.isDirectory(next)) {
-                throw new IllegalArgumentException("目录不存在：" + target);
-            }
-            connection.changeCwd(next);
-            sendCommand(session, connection, command, sequence);
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("seq", sequence);
-            result.put("code", 0);
-            result.put("cwd", next.toString());
-            result.put("durationMs", 0L);
-            send(session, "terminal.exit", result);
-        } catch (Exception e) {
-            sendError(session, sequence, messageOf(e));
-        } finally {
-            connection.running().set(false);
-        }
-    }
-
-    /**
-     * 构造平台命令。
-     *
-     * @param command 用户命令
-     * @return 进程构造器
-     */
-    private ProcessBuilder buildProcess(String command) {
-        if (isWindows()) {
-            String script = "$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; " + command;
-            return new ProcessBuilder(
-                    "powershell.exe",
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    script);
-        }
-        return new ProcessBuilder("/bin/bash", "-lc", command);
-    }
-
-    /**
-     * 读取进程输出并逐块下发。
-     *
-     * @param session    WS 会话
-     * @param connection 终端连接
-     * @param sequence   序号
-     * @param streamName 流名称
-     * @param stream     输入流
-     */
-    private void pump(WebSocketSession session,
-                      TerminalConnection connection,
-                      long sequence,
-                      String streamName,
-                      InputStream stream) {
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(stream, StandardCharsets.UTF_8), 8192)) {
-            char[] buffer = new char[2048];
-            int length;
-            while ((length = reader.read(buffer)) != -1) {
-                if (connection.outputBytes().addAndGet(length) > MAX_OUTPUT_BYTES) {
-                    sendError(session, sequence, "输出超过 5MB，已终止命令");
-                    connection.stop();
-                    break;
-                }
-                Map<String, Object> data = new LinkedHashMap<>();
-                data.put("seq", sequence);
-                data.put("stream", streamName);
-                data.put("data", new String(buffer, 0, length));
-                send(session, "terminal.data", data);
-            }
-        } catch (Exception e) {
-            if (session.isOpen()) {
-                log.debug("[terminal-ws] 读取输出结束 session={}: {}", connection.sessionId(), e.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        TerminalConnection connection = connections.remove(session.getId());
-        if (connection != null) {
-            connection.stop();
-        }
-        log.info("[terminal-ws] 连接关闭 id={} status={}", session.getId(), status);
-    }
-
-    /**
-     * 关闭命令线程池。
+     * 关闭全部终端（应用停止时调用）。
      */
     @PreDestroy
     public void shutdown() {
-        connections.values().forEach(TerminalConnection::stop);
-        connections.clear();
-        commandExecutor.shutdownNow();
+        sessions.values().forEach(ptySession -> ptySession.close());
+        sessions.clear();
+        log.info("[terminal-ws] 全部终端已关闭");
     }
 
     /**
-     * 发送命令开始事件。
+     * 数值裁剪。
      *
-     * @param session    WS 会话
-     * @param connection 终端连接
-     * @param command    命令
-     * @param sequence   序号
+     * @param value 原始值
+     * @param min   下限
+     * @param max   上限
+     * @return 裁剪后的值
      */
-    private void sendCommand(WebSocketSession session,
-                             TerminalConnection connection,
-                             String command,
-                             long sequence) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("seq", sequence);
-        data.put("command", command);
-        data.put("cwd", connection.cwd().toString());
-        send(session, "terminal.command", data);
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     /**
-     * 发送错误事件。
+     * 发送服务端事件。
      *
      * @param session WS 会话
-     * @param seq     序号
+     * @param event   事件名
+     * @param data    事件数据
+     */
+    private void send(WebSocketSession session, String event, Map<String, Object> data) {
+        if (!session.isOpen()) {
+            return;
+        }
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("event", event);
+            payload.put("data", data);
+            synchronized (session) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+            }
+        } catch (Exception e) {
+            log.debug("[terminal-ws] 发送事件失败 event={} error={}", event, messageOf(e));
+        }
+    }
+
+    /**
+     * 发送终端错误事件。
+     *
+     * @param session WS 会话
      * @param message 错误信息
      */
-    private void sendError(WebSocketSession session, Long seq, String message) {
+    private void sendError(WebSocketSession session, String message) {
         Map<String, Object> data = new LinkedHashMap<>();
-        if (seq != null) {
-            data.put("seq", seq);
-        }
         data.put("message", message);
         send(session, "terminal.error", data);
     }
 
     /**
-     * 发送一条 {event,data} 消息。
+     * 异常信息提取。
      *
-     * @param session WS 会话
-     * @param event   事件
-     * @param data    数据
+     * @param throwable 异常
+     * @return 异常信息
      */
-    private void send(WebSocketSession session, String event, Object data) {
-        if (!session.isOpen()) {
-            return;
+    private String messageOf(Throwable throwable) {
+        if (throwable == null) {
+            return "未知错误";
         }
-        try {
-            Map<String, Object> envelope = new LinkedHashMap<>();
-            envelope.put("event", event);
-            envelope.put("data", data);
-            TextMessage message = new TextMessage(objectMapper.writeValueAsString(envelope));
-            synchronized (session) {
-                session.sendMessage(message);
-            }
-        } catch (Exception e) {
-            log.debug("[terminal-ws] 发送失败 event={}: {}", event, e.getMessage());
-        }
+        String message = throwable.getMessage();
+        return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
     }
 
     /**
-     * 等待读取线程结束。
+     * 构建当前平台的交互式 shell 命令。
      *
-     * @param future 读取任务
+     * @return 命令数组
      */
-    private void awaitPump(CompletableFuture<Void> future) {
-        try {
-            future.get(READER_JOIN_SECONDS, TimeUnit.SECONDS);
-        } catch (Exception ignored) {
-            // 读取超时或中断时由 finally 统一回收进程
+    private String[] buildShellCommand() {
+        if (isWindows()) {
+            // PowerShell 5.1 默认按控制台代码页输出，先切 UTF-8 再进入交互
+            return new String[]{
+                    POWERSHELL_EXECUTABLE,
+                    "-NoLogo",
+                    "-NoExit",
+                    "-Command",
+                    POWERSHELL_UTF8_SCRIPT
+            };
         }
+        if (Files.isExecutable(Paths.get(BASH_EXECUTABLE))) {
+            return new String[]{BASH_EXECUTABLE, "-l"};
+        }
+        return new String[]{SH_EXECUTABLE, "-l"};
     }
 
     /**
-     * 强制终止进程及其子进程。
-     *
-     * @param process 进程
-     */
-    private void killProcess(Process process) {
-        if (process == null || !process.isAlive()) {
-            return;
-        }
-        try {
-            process.descendants().forEach(ProcessHandle::destroyForcibly);
-        } catch (Exception ignored) {
-            // 子进程回收失败时继续终止主进程
-        }
-        process.destroyForcibly();
-    }
-
-    /**
-     * 判断是否为目录切换命令。
-     *
-     * @param command 命令
-     * @return 是否 cd 类命令
-     */
-    private boolean isChangeDirectory(String command) {
-        return command.matches("(?i)^(cd|sl|set-location)(\\s+.*)?$");
-    }
-
-    /**
-     * 判断当前是否为 Windows。
+     * 当前平台是否为 Windows。
      *
      * @return 是否 Windows
      */
@@ -542,36 +442,38 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 返回终端 Shell 名称。
+     * 构建 PTY 环境变量。
      *
-     * @return Shell 名称
+     * @return 环境变量
      */
-    private String shellName() {
-        return isWindows() ? "PowerShell" : "bash";
+    private Map<String, String> buildEnvironment() {
+        Map<String, String> environment = new HashMap<>(System.getenv());
+        environment.put("TERM", TERM_VALUE);
+        environment.put("COLORTERM", COLORTERM_VALUE);
+        // 去掉会关闭颜色的变量，保证 git / ls 等命令输出可读
+        environment.remove("NO_COLOR");
+        environment.remove("CLICOLOR");
+        environment.put("CLICOLOR_FORCE", "1");
+        return environment;
     }
 
     /**
-     * 提取异常提示。
-     *
-     * @param e 异常
-     * @return 提示文本
-     */
-    private String messageOf(Exception e) {
-        return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-    }
-
-    /**
-     * 单个 WebSocket 连接的终端状态。
+     * 单个 WS 连接对应的 PTY 终端会话。
      *
      * @author CH
      * @since 4.0.0.51
      */
-    private static final class TerminalConnection {
+    private final class PtySession {
+
+        /**
+         * WS 会话
+         */
+        private final WebSocketSession webSocketSession;
 
         /**
          * 聊天会话标识
          */
-        private final String sessionId;
+        private final String chatSessionId;
 
         /**
          * 账号工作目录
@@ -579,52 +481,257 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         private final Path workspaceRoot;
 
         /**
-         * 当前执行目录
+         * 终端初始工作目录
          */
-        private volatile Path cwd;
+        private final Path cwd;
 
         /**
-         * 当前命令进程
+         * 初始列数
          */
-        private final AtomicReference<Process> process = new AtomicReference<>();
+        private int columns;
 
         /**
-         * 是否有命令正在执行
+         * 初始行数
          */
-        private final AtomicBoolean running = new AtomicBoolean(false);
+        private int rows;
 
         /**
-         * 命令序号
+         * PTY 进程
          */
-        private final AtomicLong sequence = new AtomicLong(0L);
+        private volatile PtyProcess process;
 
         /**
-         * 当前命令累计输出字节数
+         * 写入 PTY 的输入流
          */
-        private final AtomicLong outputBytes = new AtomicLong(0L);
+        private volatile OutputStream stdin;
 
         /**
-         * 构造终端连接。
+         * 是否正在主动停止
+         */
+        private volatile boolean stopping;
+
+        /**
+         * 是否已结束
+         */
+        private volatile boolean finished;
+
+        /**
+         * 是否静默关闭（重启或连接断开时不向前端广播事件）
+         */
+        private volatile boolean silent;
+
+        /**
+         * 读取 PTY 输出的线程
+         */
+        private volatile Thread readerThread;
+
+        /**
+         * 构造 PTY 会话。
          *
-         * @param sessionId     聊天会话标识
-         * @param workspaceRoot 账号工作目录
-         * @param cwd           当前执行目录
+         * @param webSocketSession WS 会话
+         * @param chatSessionId    聊天会话标识
+         * @param workspaceRoot    账号工作目录
+         * @param cwd              终端初始工作目录
+         * @param columns          初始列数
+         * @param rows             初始行数
          */
-        private TerminalConnection(String sessionId,
-                                   Path workspaceRoot,
-                                   Path cwd) {
-            this.sessionId = sessionId;
+        private PtySession(WebSocketSession webSocketSession,
+                           String chatSessionId,
+                           Path workspaceRoot,
+                           Path cwd,
+                           int columns,
+                           int rows) {
+            this.webSocketSession = webSocketSession;
+            this.chatSessionId = chatSessionId;
             this.workspaceRoot = workspaceRoot;
             this.cwd = cwd;
+            this.columns = columns;
+            this.rows = rows;
         }
 
         /**
-         * 获取聊天会话标识。
+         * 启动 PTY 进程与读取线程。
          *
-         * @return 聊天会话标识
+         * @throws IOException 启动失败
          */
-        private String sessionId() {
-            return sessionId;
+        private void start() throws IOException {
+            String[] command = buildShellCommand();
+            PtyProcessBuilder builder = new PtyProcessBuilder(command)
+                    .setEnvironment(buildEnvironment())
+                    .setDirectory(cwd.toString())
+                    .setInitialColumns(columns)
+                    .setInitialRows(rows)
+                    .setRedirectErrorStream(true)
+                    .setWindowsAnsiColorEnabled(true);
+            if (isWindows()) {
+                builder.setUseWinConPty(true);
+            }
+            PtyProcess ptyProcess;
+            try {
+                ptyProcess = builder.start();
+            } catch (IOException firstError) {
+                // PowerShell 缺失或 ConPTY 不可用时回退到 cmd，保证终端仍可用
+                if (!isWindows()) {
+                    throw firstError;
+                }
+                log.warn("[terminal-ws] PowerShell 启动失败，回退 cmd: {}", messageOf(firstError));
+                ptyProcess = new PtyProcessBuilder(new String[]{CMD_EXECUTABLE})
+                        .setEnvironment(buildEnvironment())
+                        .setDirectory(cwd.toString())
+                        .setInitialColumns(columns)
+                        .setInitialRows(rows)
+                        .setRedirectErrorStream(true)
+                        .start();
+            }
+            this.process = ptyProcess;
+            this.stdin = ptyProcess.getOutputStream();
+            this.readerThread = Thread.ofVirtual()
+                    .name("ai-terminal-io-" + chatSessionId + "-")
+                    .start(this::readLoop);
+        }
+
+        /**
+         * 读取 PTY 输出并推送给前端。
+         */
+        private void readLoop() {
+            try (Reader reader = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)) {
+                char[] buffer = new char[READ_BUFFER_SIZE];
+                int length;
+                while ((length = reader.read(buffer)) != -1) {
+                    Map<String, Object> data = new LinkedHashMap<>();
+                    data.put("data", new String(buffer, 0, length));
+                    send(webSocketSession, "terminal.output", data);
+                }
+            } catch (IOException e) {
+                if (!stopping) {
+                    log.debug("[terminal-ws] 读取 PTY 输出结束 session={} error={}", chatSessionId, messageOf(e));
+                }
+            } finally {
+                finish();
+            }
+        }
+
+        /**
+         * 进程结束后的收尾：广播退出事件并清理引用。
+         */
+        private void finish() {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            PtyProcess current = process;
+            int exitCode = -1;
+            if (current != null) {
+                try {
+                    exitCode = current.waitFor();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            if (silent) {
+                closeStdin();
+                return;
+            }
+            if (stopping) {
+                send(webSocketSession, "terminal.stopped", new LinkedHashMap<>());
+            } else {
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("code", exitCode);
+                send(webSocketSession, "terminal.exit", data);
+            }
+            closeStdin();
+        }
+
+        /**
+         * 写入原始按键。
+         *
+         * @param text 按键文本
+         */
+        private void write(String text) {
+            OutputStream outputStream = stdin;
+            if (outputStream == null || finished) {
+                sendError(webSocketSession, "终端进程已结束，请重新启动终端");
+                return;
+            }
+            try {
+                outputStream.write(text.getBytes(StandardCharsets.UTF_8));
+                outputStream.flush();
+            } catch (IOException e) {
+                sendError(webSocketSession, "终端写入失败：" + messageOf(e));
+            }
+        }
+
+        /**
+         * 同步终端尺寸。
+         *
+         * @param newColumns 新列数
+         * @param newRows    新行数
+         */
+        private void resize(int newColumns, int newRows) {
+            if (this.columns == newColumns && this.rows == newRows) {
+                return;
+            }
+            this.columns = newColumns;
+            this.rows = newRows;
+            PtyProcess current = process;
+            if (current == null || finished) {
+                return;
+            }
+            try {
+                current.setWinSize(new WinSize(newColumns, newRows));
+            } catch (Exception e) {
+                log.debug("[terminal-ws] 调整终端尺寸失败 error={}", messageOf(e));
+            }
+        }
+
+        /**
+         * 主动停止终端进程。
+         */
+        private void stop() {
+            if (stopping || finished) {
+                return;
+            }
+            stopping = true;
+            PtyProcess current = process;
+            if (current != null && current.isAlive()) {
+                current.destroy();
+            }
+        }
+
+        /**
+         * 关闭终端并释放资源（重启、连接断开、应用停止时使用，不向前端广播事件）。
+         */
+        private void close() {
+            silent = true;
+            stopping = true;
+            PtyProcess current = process;
+            if (current != null && current.isAlive()) {
+                current.destroy();
+            }
+            Thread thread = readerThread;
+            if (thread != null) {
+                try {
+                    thread.join(READER_JOIN_SECONDS * 1000L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            closeStdin();
+        }
+
+        /**
+         * 关闭输入流。
+         */
+        private void closeStdin() {
+            OutputStream outputStream = stdin;
+            stdin = null;
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
+                } catch (IOException ignored) {
+                    // 关闭失败不影响终端销毁
+                }
+            }
         }
 
         /**
@@ -637,74 +744,41 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         }
 
         /**
-         * 获取当前目录。
+         * 获取终端初始工作目录。
          *
-         * @return 当前目录
+         * @return 终端初始工作目录
          */
         private Path cwd() {
             return cwd;
         }
 
         /**
-         * 切换当前目录。
+         * 获取 shell 名称。
          *
-         * @param cwd 新目录
+         * @return shell 名称
          */
-        private void changeCwd(Path cwd) {
-            this.cwd = cwd;
-        }
-
-        /**
-         * 获取执行状态。
-         *
-         * @return 执行状态
-         */
-        private AtomicBoolean running() {
-            return running;
-        }
-
-        /**
-         * 获取输出字节计数。
-         *
-         * @return 输出字节计数
-         */
-        private AtomicLong outputBytes() {
-            return outputBytes;
-        }
-
-        /**
-         * 分配下一个命令序号。
-         *
-         * @return 命令序号
-         */
-        private long nextSequence() {
-            outputBytes.set(0L);
-            return sequence.incrementAndGet();
-        }
-
-        /**
-         * 绑定当前进程。
-         *
-         * @param process 进程
-         */
-        private void attach(Process process) {
-            this.process.set(process);
-        }
-
-        /**
-         * 终止当前命令。
-         */
-        private void stop() {
-            Process current = process.getAndSet(null);
-            if (current == null || !current.isAlive()) {
-                return;
-            }
-            try {
-                current.descendants().forEach(ProcessHandle::destroyForcibly);
-            } catch (Exception ignored) {
-                // 子进程回收失败时继续终止主进程
-            }
-            current.destroyForcibly();
+        private String shellName() {
+            return isWindows() ? POWERSHELL_EXECUTABLE : BASH_EXECUTABLE;
         }
     }
+
+    /**
+     * 保留命令列表构造入口，便于后续按配置切换 shell。
+     *
+     * @param command 命令列表
+     * @return 命令数组
+     */
+    private String[] toArray(List<String> command) {
+        return command.toArray(new String[0]);
+    }
+
+    /**
+     * 构建默认命令列表。
+     *
+     * @return 命令列表
+     */
+    private List<String> defaultCommand() {
+        return new ArrayList<>(List.of(buildShellCommand()));
+    }
 }
+
