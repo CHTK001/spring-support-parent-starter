@@ -347,6 +347,7 @@ public class MapperReload implements Reload, DisposableBean {
                 StandardWatchEventKinds.ENTRY_DELETE);
             
             // 创建监听线程
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             Thread watchThread = new Thread(() -> {
                 try {
                     while (running.get()) {

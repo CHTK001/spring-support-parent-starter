@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,10 +28,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.chua.common.support.utils.StringUtils;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * AI 对话聊天控制器。
@@ -87,6 +92,11 @@ public class AIChatController extends BaseAiController {
      * SYSAI全局设置服务
     */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
+    /**
+     * AI 异步任务线程池（压缩任务交由其执行，不阻塞回复输出）
+     */
+    @Autowired
+    protected Executor taskExecutor;
 
     // ==================== 会话管理 ====================
 
@@ -241,112 +251,164 @@ public class AIChatController extends BaseAiController {
     }
 
     /**
-     * 将历史消息压缩为摘要并写入会话压缩上下文表。
+     * 压缩开关默认值（自动启用）
+     */
+    private static final boolean AUTO_COMPRESSION_DEFAULT = true;
+
+    /**
+     * 压缩异步默认值（不阻塞回复输出）
+     */
+    private static final boolean ASYNC_COMPRESSION_DEFAULT = false;
+
+    /**
+     * 压缩触发余量百分比默认值（上下文超 80% 时触发）
+     */
+    private static final int HEADROOM_PERCENT_DEFAULT = 20;
+
+    /**
+     * 压缩模式默认值（all / threshold）
+     */
+    private static final String MODE_DEFAULT = "all";
+
+    /**
+     * 压缩模型默认值（空=使用内置默认）
+     */
+    private static final String MODEL_ID_DEFAULT = "";
+
+    /**
+     * 压缩后保留的最近上下文令牌上限默认值
+     */
+    private static final int RECENT_TOKEN_LIMIT_DEFAULT = 30_000;
+
+    /**
+     * 压缩验证默认值（首次压缩结果作为基线融合）
+     */
+    private static final boolean VALIDATE_DEFAULT = true;
+
+    /**
+     * 默认模型上下文窗口大小（tokens）
+     */
+    private static final int DEFAULT_MODEL_WINDOW = 128_000;
+
+    /**
+     * 压缩开关：是否启用自动上下文压缩。
+     * <p>关闭时任何历史长度都不触发压缩。</p>
      *
-     * <p>规则：会话累计达到 {@code chat_compress_trigger_rounds} 轮后才触发压缩，
-     * 保留最近 {@code chat_compress_retain_rounds} 轮原始对话，之前的历史压缩为摘要，
-     * 以「摘要 + 最近 N 轮原始对话」拼接后作为后续聊天上下文落库。</p>
-     *
-     * <p>阈值与保留轮数均可通过全局设置（runtime 分组）配置：
-     * <ul>
-     *   <li>{@code chat_compress_trigger_rounds} — 触发压缩的累计轮数，默认 100</li>
-     *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
-     * </ul></p>
-     *
-     * @param dialogId     会话 标识
+     * @param dialogId 会话标识
      * @param currentModel 本轮对话实际使用的模型，未配置专用压缩模型时摘要按该模型生成
      */
     private void compressAndSaveContext(Long dialogId, String currentModel) {
+        CompressionSettings settings;
+        try {
+            settings = readCompressionSettings();
+        } catch (Exception e) {
+            log.warn("[AIChat] 读取压缩设置失败，使用默认值: {}", e.getMessage());
+            settings = new CompressionSettings(AUTO_COMPRESSION_DEFAULT, ASYNC_COMPRESSION_DEFAULT,
+                    HEADROOM_PERCENT_DEFAULT, MODE_DEFAULT, MODEL_ID_DEFAULT,
+                    RECENT_TOKEN_LIMIT_DEFAULT, VALIDATE_DEFAULT);
+        }
+        if (!settings.auto()) {
+            return;
+        }
+        if (settings.async() && taskExecutor != null) {
+            // 不阻塞回复输出，压缩交给后台线程池处理
+            taskExecutor.execute(() -> compress(contextOf(dialogId, currentModel, settings)));
+            return;
+        }
+        compress(contextOf(dialogId, currentModel, settings));
+    }
+
+    /**
+     * 压缩上下文承载体。
+     *
+     * @param dialogId 会话标识
+     * @param currentModel 本轮对话实际使用的模型，未配置专用压缩模型时摘要按该模型生成
+     * @param settings 压缩设置
+     * @return 承载体
+     */
+    private CompressionContext contextOf(Long dialogId, String currentModel, CompressionSettings settings) {
+        return new CompressionContext(dialogId, currentModel, settings,
+                aiSessionCompressionService.getBySessionId(dialogId));
+    }
+
+    /**
+     * 执行压缩。
+     *
+     * @param ctx 承载体
+     */
+    private void compress(CompressionContext ctx) {
+        Long dialogId = ctx.dialogId;
+        String currentModel = ctx.currentModel;
+        CompressionSettings settings = ctx.settings;
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
             if (history == null || history.isEmpty()) {
                 return;
             }
-            // 读取压缩配置
-            String compressType = getStringSetting("chat_compress_type", "rounds");
-            int triggerRounds = parseIntSetting("chat_compress_trigger_rounds", 100);
-            int tokenThresholdPercent = parseIntSetting("chat_compress_token_threshold", 80);
-            int retainRounds = parseIntSetting("chat_compress_retain_rounds", 6);
-
-            if (triggerRounds <= 0) {
-                triggerRounds = 100;
-            }
-            if (tokenThresholdPercent <= 0) {
-                tokenThresholdPercent = 80;
-            }
-            if (retainRounds <= 0) {
-                retainRounds = 6;
-            }
-            int retainCount = retainRounds * 2;
-
-            // 检查是否需要触发压缩
-            boolean shouldCompress = false;
-
-            if ("rounds".equals(compressType) || "both".equals(compressType)) {
-                // 按轮数触发
-                if (history.size() > triggerRounds * 2) {
-                    shouldCompress = true;
-                }
-            }
-
-            if ("tokens".equals(compressType) || "both".equals(compressType)) {
-                // 按上下文阈值触发（估算 token 数 ≈ 字符数 / 4）
-                int totalChars = 0;
-                for (ChatMessage msg : history) {
-                    if (msg.getContent() != null) {
-                        totalChars += msg.getContent().length();
-                    }
-                }
-                // 假设模型窗口 128K tokens，估算阈值
-                int estimatedTokens = totalChars / 4;
-                int maxTokens = 128000; // 默认模型窗口
-                double usagePercent = (double) estimatedTokens / maxTokens * 100;
-                if (usagePercent > tokenThresholdPercent) {
-                    shouldCompress = true;
-                }
-            }
-
-            // 未达到触发条件时不压缩
-            if (!shouldCompress) {
+            // 估算当前历史令牌用量，结合余量百分比判断是否触发
+            int historyTokens = historyTokens(history);
+            // 预算：上下文占用超过 100-headroomPercent% 时触发
+            int budget = DEFAULT_MODEL_WINDOW * (100 - settings.headroomPercent()) / 100;
+            if (historyTokens <= budget) {
+                log.debug("[AIChat] 会话 {} 上下文 {} tokens 未达触发阈值 {}，跳过压缩", dialogId, historyTokens, budget);
                 return;
             }
-            // 保留尾部已覆盖全部历史时没有可摘要的头部，强行切片会越界
-            if (retainCount >= history.size()) {
+            // 保留最近消息的令牌上限：threshold 模式只压缩超出余量的部分，保留整个预算；
+            // all 模式保留 fixed recentTokenLimit 条最近消息。
+            int retainTokens = "threshold".equalsIgnoreCase(settings.mode()) ? budget : settings.recentTokenLimit();
+            // 拆分历史：保留窗口（最近消息）与摘要头（需压缩的历史）
+            List<ChatMessage> retained = new ArrayList<>();
+            List<ChatMessage> head = new ArrayList<>();
+            int retainedTokensTotal = 0;
+            for (int i = history.size() - 1; i >= 0; i--) {
+                ChatMessage msg = history.get(i);
+                int tokens = messageTokens(msg);
+                if (retainedTokensTotal + tokens > retainTokens) {
+                    head.add(msg);
+                } else {
+                    retainedTokensTotal += tokens;
+                    retained.add(msg);
+                }
+            }
+            if (head.isEmpty()) {
+                // 没有可压缩的头部历史
                 return;
             }
-            List<ChatMessage> head = new ArrayList<>(history.subList(0, history.size() - retainCount));
-            List<ChatMessage> retained = new ArrayList<>(history.subList(history.size() - retainCount, history.size()));
-            // 头部（超出最近 N 轮的）压缩为摘要
-            StringBuilder summary = new StringBuilder();
+            // 倒置：头部的消息按从旧到新排列
+            Collections.reverse(head);
+            // 被摘要覆盖的最后一条消息（分界点）：压缩记录读它来跳过已摘要的历史
+            Long fromMessageId = null;
+            for (int i = head.size() - 1; i >= 0; i--) {
+                if (head.get(i).getId() != null) {
+                    fromMessageId = head.get(i).getId();
+                    break;
+                }
+            }
+            StringBuilder headText = new StringBuilder();
             for (ChatMessage msg : head) {
-                String role = msg.getRole() != null ? msg.getRole() : "user";
-                String content = msg.getContent();
-                if (content != null && !content.isEmpty()) {
-                    summary.append("[").append(role).append("]: ").append(content).append("\n");
-                }
+                append(headText, msg);
             }
-            
-            // 调用 AI 模型生成真正的摘要
-            String aiSummary = generateSummaryWithAI(summary.toString(), dialogId, currentModel);
-            
-            // 拼接：AI 摘要 + 最近 N 轮原始对话
-            StringBuilder context = new StringBuilder();
-            if (aiSummary != null && !aiSummary.isEmpty()) {
-                context.append("[Compressed Context]\n").append(aiSummary);
-            } else if (summary.length() > 0) {
+            // 首次压缩或验证未开启时，基线为空
+            String baseline = ctx.existing != null ? ctx.existing.getSysAiCompressionBaseline() : null;
+            String summary;
+            if (settings.validate() && baseline != null && !baseline.isBlank() && !headText.isEmpty()) {
+                // 融合基线：把首次压缩结果作为关键信息基线送进摘要模型
+                summary = generateSummary(dialogId, buildFusedPrompt(baseline, headText.toString()), currentModel, settings.modelId());
+            } else if (!headText.isEmpty()) {
+                summary = generateSummary(dialogId, headText.toString(), currentModel, settings.modelId());
+            } else {
+                summary = null;
+            }
+            if (summary == null || summary.isBlank()) {
                 // 降级：如果 AI 摘要失败，用原始截断
-                context.append("[Compressed Context]\n")
-                        .append(summary.length() > SUMMARY_MAX_LENGTH ? summary.substring(0, SUMMARY_MAX_LENGTH) : summary);
+                log.warn("[AIChat] 会话 {} 压缩摘要生成失败，降级为原文截断", dialogId);
+                summary = headText.length() > SUMMARY_MAX_LENGTH ? headText.substring(0, SUMMARY_MAX_LENGTH) : headText.toString();
             }
+            // 拼接：摘要 + 保留的最近消息
+            StringBuilder context = new StringBuilder();
+            context.append("[Compressed Context]\n").append(summary);
             for (ChatMessage msg : retained) {
-                String role = msg.getRole() != null ? msg.getRole() : "user";
-                String content = msg.getContent();
-                if (content != null && !content.isEmpty()) {
-                    context.append("[").append(role).append("]: ").append(content).append("\n");
-                }
-            }
-            if (context.length() == 0) {
-                return;
+                append(context, msg);
             }
             // 上下文上限，防止无限膨胀
             String finalContext = context.length() > COMPRESSED_CONTEXT_MAX_LENGTH
@@ -356,45 +418,213 @@ public class AIChatController extends BaseAiController {
             compression.setSysAiSessionId(dialogId);
             compression.setSysAiCompressionMessageCount((long) history.size());
             compression.setSysAiCompressionContext(finalContext);
+            // 首次压缩把结果永久存为基线，后续压缩保留基线不变
+            String existingBaseline = ctx.existing() != null ? ctx.existing().getSysAiCompressionBaseline() : null;
+            compression.setSysAiCompressionBaseline(settings.validate()
+                    ? (baseline == null || baseline.isBlank() ? finalContext : existingBaseline)
+                    : (baseline == null ? finalContext : baseline));
+            if (fromMessageId != null) {
+                compression.setSysAiCompressionFromMessageId(fromMessageId.intValue());
+            }
             aiSessionCompressionService.saveOrUpdate(compression);
-            log.info("[AIChat] 会话 {} 压缩上下文已保存：摘要头 {} 条，保留最近 {} 轮（{} 条），消息总数 {}",
-                    dialogId, head.size(), retainRounds, retained.size(), history.size());
+            log.info("[AIChat] 会话 {} 压缩上下文已保存：摘要头 {} 条，保留最近 {} 条（~{} tokens），消息总数 {}，基线{}",
+                    dialogId, head.size(), retained.size(), retainedTokensTotal, history.size(),
+                    compression.getSysAiCompressionBaseline() == null ? "无" : "有");
         } catch (Exception e) {
             log.warn("[AIChat] 会话 {} 压缩上下文保存失败: {}", dialogId, e.getMessage());
         }
     }
 
     /**
-     * 从全局设置读取整数配置，解析失败或未配置时返回默认值。
+     * 向文本追加一条消息（角色 + 内容），换行间隔。
      *
-     * @param field        配置字段名（runtime 分组）
-     * @param defaultValue 默认值
-     * @return 配置值
+     * @param sb 文本
+     * @param msg 消息
      */
-    private int parseIntSetting(String field, int defaultValue) {
-        return sysAiGlobalSettingService.getValue("runtime", field)
-                .map(value -> {
-                    try {
-                        return Integer.parseInt(value.trim());
-                    } catch (NumberFormatException ignored) {
-                        return defaultValue;
-                    }
-                })
-                .orElse(defaultValue);
+    private static void append(StringBuilder sb, ChatMessage msg) {
+        String role = msg.getRole() != null ? msg.getRole() : "user";
+        String content = msg.getContent();
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+        sb.append("[").append(role).append("]: ").append(content).append("\n");
+    }
+
+    /**
+     * 压缩历史消息令牌估算（旧有循环拆线为按条估算）。
+     *
+     * @param history 历史消息
+     * @return 估算令牌数
+     */
+    private static int historyTokens(List<ChatMessage> history) {
+        int tokens = 0;
+        for (ChatMessage msg : history) {
+            tokens += messageTokens(msg);
+        }
+        return tokens;
+    }
+
+    /**
+     * 估算单条消息的令牌数。
+     *
+     * <p>中日韩字符按 2 token 计（约占另外还有 1 token），其余按 1 token 计。
+     * 只用于触发条件判定，不追求精确。</p>
+     *
+     * @param msg 消息
+     * @return 估算令牌数
+     */
+    private static int messageTokens(ChatMessage msg) {
+        String content = msg.getContent();
+        if (content == null || content.isEmpty()) {
+            return 0;
+        }
+        int tokens = 0;
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            tokens += (c >= 0x1100) ? 2 : 1;
+        }
+        return tokens;
+    }
+
+    /**
+     * 融合基线与历史文本：基线（首次压缩结果）作为关键信息锚点。
+     *
+     * @param baseline 首次压缩结果
+     * @param historyText 历史文本
+     * @return 融合后的提示文本
+     */
+    private static String buildFusedPrompt(String baseline, String historyText) {
+        return "以下是首次压缩时的会话摘要（关键信息锚点，输出新摘要时必须保留其中的事实）：\n"
+                + baseline + "\n\n以下是需要压缩的新增历史文本：\n" + historyText;
+    }
+
+    /**
+     * 压缩设置承载体。
+     *
+     * @param auto 是否启用自动上下文压缩
+     * @param async 是否异步压缩
+     * @param headroomPercent 压缩触发余量百分比
+     * @param mode 压缩模式（all / threshold）
+     * @param modelId 生成摘要用的压缩模型
+     * @param recentTokenLimit 压缩后保留的最近上下文令牌上限
+     * @param validate 是否把首次压缩结果作为基线融合进后续摘要
+     */
+    private record CompressionSettings(boolean auto, boolean async, int headroomPercent, String mode,
+                                       String modelId, int recentTokenLimit, boolean validate) {
+    }
+
+    /**
+     * 压缩上下文承载体。
+     *
+     * @param dialogId 会话标识
+     * @param currentModel 本轮对话实际使用的模型
+     * @param settings 压缩设置
+     */
+    private record CompressionContext(Long dialogId, String currentModel, CompressionSettings settings,
+                                        SysAiSessionCompression existing) {
+    }
+
+    /**
+     * 从 runtime 分组读取压缩设置。
+     *
+     * @return 压缩设置
+     */
+    private CompressionSettings readCompressionSettings() {
+        return new CompressionSettings(
+                getBooleanSetting("auto", AUTO_COMPRESSION_DEFAULT),
+                getBooleanSetting("async", ASYNC_COMPRESSION_DEFAULT),
+                getIntegerSetting("headroomPercent", HEADROOM_PERCENT_DEFAULT),
+                firstNonBlank(getValueSetting("mode"), MODE_DEFAULT),
+                firstNonBlank(getValueSetting("modelId"), MODEL_ID_DEFAULT),
+                getIntegerSetting("recentTokenLimit", RECENT_TOKEN_LIMIT_DEFAULT),
+                getBooleanSetting("validate", VALIDATE_DEFAULT));
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String value : values) {
+            if (StringUtils.isNotBlank(value)) return value;
+        }
+        return null;
     }
 
     /**
      * 从全局设置读取字符串配置，未配置时返回默认值。
      *
-     * @param field        配置字段名（runtime 分组）
+     * @param field 配置字段名（runtime 分组）
      * @param defaultValue 默认值
      * @return 配置值
      */
-    private String getStringSetting(String field, String defaultValue) {
-        return sysAiGlobalSettingService.getValue("runtime", field)
-                .map(value -> value.trim())
-                .filter(value -> !value.isEmpty())
-                .orElse(defaultValue);
+    private String getValueSetting(String field) {
+        return sysAiGlobalSettingService.getValue("runtime", field).map(String::trim).orElse(null);
+    }
+
+    private static boolean getBooleanSetting(String field, boolean defaultValue) {
+        String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
+        if (value == null) return defaultValue;
+        return !"false".equalsIgnoreCase(value) && !"0".equalsIgnoreCase(value);
+    }
+
+    private static int getIntegerSetting(String field, int defaultValue) {
+        String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
+        if (value == null || value.trim().isEmpty()) return defaultValue;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 调用 AI 模型生成对话摘要。
+     * <p>模型取自 {@code runtime.modelId}，未配置时回退到 {@code runtime.compression_model}，
+     * 再回退到本轮对话使用的模型；压缩指令作为系统提示词，历史文本超过指定长度时先截断再送入模型。</p>
+     *
+     * @param dialogId 会话 ID
+     * @param historyText 历史对话文本
+     * @param currentModel 本轮对话使用的模型，作为压缩模型未配置时的回退
+     * @param modelId 用户配置的压缩模型，优先使用
+     * @return 生成的摘要；无可用模型、返回空白或调用异常时返回 null，由调用方降级为原文截断
+     */
+    private String generateSummary(Long dialogId, String historyText, String currentModel, String modelId) {
+        if (historyText == null || historyText.isEmpty()) {
+            return null;
+        }
+        try {
+            // 压缩模型优先级：runtime.modelId > runtime.compression_model > 本轮对话模型
+            String compressionModel = firstNonBlank(modelId, getStringSetting("compression_model", ""),
+                    currentModel == null ? "" : currentModel.trim());
+            if (compressionModel == null || compressionModel.isEmpty()) {
+                log.warn("[AIChat] 会话 {} 无可用的摘要生成模型，跳过压缩", dialogId);
+                return null;
+            }
+            String input = historyText.length() > SUMMARY_INPUT_MAX_LENGTH
+                    ? historyText.substring(0, SUMMARY_INPUT_MAX_LENGTH)
+                    : historyText;
+            AiChatRequest chatRequest = new AiChatRequest();
+            chatRequest.setModel(compressionModel);
+            chatRequest.setSystemPrompt(SUMMARY_SYSTEM_PROMPT);
+            chatRequest.setPrompt(input);
+            chatRequest.setStream(false);
+            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
+            Object error = result == null ? null : result.get("error");
+            if (error != null) {
+                log.warn("[Compression] 会话 {} 摘要模型 {} 调用失败，降级为原文截断: {}", dialogId, compressionModel, error);
+                return null;
+            }
+            Object text = result == null ? null : result.get("text");
+            String summary = text == null ? "" : text.toString().trim();
+            if (summary.isEmpty()) {
+                log.warn("[Compression] 会话 {} 摘要模型未返回内容，降级为原文截断", dialogId);
+                return null;
+            }
+            log.info("[Compression] 会话 {} AI 摘要完成：模型 {}，历史 {} 字符 → 摘要 {} 字符",
+                    dialogId, compressionModel, input.length(), summary.length());
+            return summary;
+        } catch (Exception e) {
+            log.warn("[Compression] AI 摘要生成失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -411,54 +641,6 @@ public class AIChatController extends BaseAiController {
             return requestedModel.trim();
         }
         return getStringSetting("default_model", "");
-    }
-
-    /**
-     * 调用 AI 模型生成对话摘要。
-     * <p>模型取自 {@code runtime.compression_model}，未配置时回退到本轮对话使用的模型；
-     * 压缩指令作为系统提示词，历史文本超过 {@link #SUMMARY_INPUT_MAX_LENGTH} 时先截断再送入模型。
-     *
-     * @param historyText  历史对话文本
-     * @param dialogId     会话 ID
-     * @param currentModel 本轮对话使用的模型，作为压缩模型未配置时的回退
-     * @return 生成的摘要；无可用模型、返回空白或调用异常时返回 null，由调用方降级为原文截断
-     */
-    private String generateSummaryWithAI(String historyText, Long dialogId, String currentModel) {
-        if (historyText == null || historyText.isEmpty()) {
-            return null;
-        }
-        try {
-            // 压缩模型优先取专用配置，未配置则沿用本轮对话模型
-            String compressionModel = getStringSetting("compression_model", "");
-            String summaryModel = !compressionModel.isEmpty() ? compressionModel
-                    : (currentModel == null ? "" : currentModel.trim());
-            String input = historyText.length() > SUMMARY_INPUT_MAX_LENGTH
-                    ? historyText.substring(0, SUMMARY_INPUT_MAX_LENGTH)
-                    : historyText;
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(summaryModel);
-            chatRequest.setSystemPrompt(SUMMARY_SYSTEM_PROMPT);
-            chatRequest.setPrompt(input);
-            chatRequest.setStream(false);
-            Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            Object error = result == null ? null : result.get("error");
-            if (error != null) {
-                log.warn("[Compression] 会话 {} 摘要模型 {} 调用失败，降级为原文截断: {}", dialogId, summaryModel, error);
-                return null;
-            }
-            Object text = result == null ? null : result.get("text");
-            String summary = text == null ? "" : text.toString().trim();
-            if (summary.isEmpty()) {
-                log.warn("[Compression] 会话 {} 摘要模型未返回内容，降级为原文截断", dialogId);
-                return null;
-            }
-            log.info("[Compression] 会话 {} AI 摘要完成：模型 {}，历史 {} 字符 → 摘要 {} 字符",
-                    dialogId, summaryModel.isEmpty() ? "默认模型" : summaryModel, input.length(), summary.length());
-            return summary;
-        } catch (Exception e) {
-            log.warn("[Compression] AI 摘要生成失败: {}", e.getMessage());
-            return null;
-        }
     }
 }
 

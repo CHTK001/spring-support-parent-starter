@@ -144,6 +144,9 @@
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
         <module>spring-support-cdp-starter</module>          <!-- CDP 调试模块：Chrome DevTools Protocol 代用/Debug 控制台 -->
 
+        <!-- 渠道管理模块（账号类渠道鉴权 / 渠道健康探针 / 渠道定时任务）：
+             必须排在 ai-starter 之前——ai-starter 单向依赖本模块，reactor 才能按此顺序构建 -->
+        <module>spring-support-channel-starter</module>
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
         <!-- AI训练平台模块 -->
@@ -714,6 +717,12 @@
                 <artifactId>spring-support-ai-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <!-- 渠道管理模块（账号类渠道鉴权 / 渠道健康探针 / 渠道定时任务） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-channel-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <!-- UEBA 用户实体行为分析模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -741,17 +750,17 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-api-support-common-configuration-starter</artifactId>
-                <version>4.0.0.42</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- 采集平台模块（/v2/collect/**）。
-                 跨 reactor 声明：该 artifact 由另一个仓库（spring-api-support）构建发布，
-                 本 reactor 只消费已 install 到本地仓库的 4.0.0.42 版本，
-                 因此不能跟随 ${project.version}。 -->
+                 与上面同属跨 reactor 声明：artifact 由 spring-support-api-starter 构建产出，
+                 版本号与本 reactor 同步为 4.0.0.51，故可用 ${project.version}。
+                 引入方需先把该 artifact install 到本地仓库（它不在本 reactor 模块树内）。 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-api-support-collect-starter</artifactId>
-                <version>4.0.0.42</version>
+                <version>${project.version}</version>
             </dependency>
 
             <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
@@ -773,7 +782,11 @@
             -->
             <!-- ========== Utils Support 工具类模块依赖 ========== -->
             <!-- 微服务框架支持 -->
-            <!-- utils-support-mica-starter 已移除：无源码、无构建产出、无 any 模块依赖 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-mica-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-extension-starter</artifactId>
@@ -784,7 +797,11 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- 网络通信框架 -->
-            <!-- utils-support-netty-starter 已移除：无源码、无构建产出、无模块依赖 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-netty-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-deeplearning-starter</artifactId>
@@ -835,14 +852,23 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- 消息总线支持 -->
-            <!-- utils-support-zbus-starter 已移除：无源码、无构建产出、无模块依赖 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-zbus-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <!-- Spring框架扩展工具 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-spring-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
-            <!-- Shell命令执行工具：utils-support-shell-starter 已移除（无源码/无产出/无模块依赖） -->
+            <!-- Shell命令执行工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-shell-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <!-- Hibernate ORM框架支持 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -902,7 +928,11 @@
               因此从未触发下载，全仓构建一直是绿的。一旦哪个模块引用它就会直接失败。
               参数名模块确需使用时，请用正确坐标 jackson-module-parameter-names。
             -->
-            <!-- utils-support-guava-starter å·²ç§»é™¤ï¼šæ— æºç /æ— æž„å»ºäº§å‡º/æ— æ¨¡å—ä¾èµ– -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-guava-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <!-- RPC远程调用框架 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -972,7 +1002,11 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- Nginx配置管理工具 -->
-            <!-- utils-support-nginx-starter å·²ç§»é™¤ï¼šæ— æºç /æ— æž„å»ºäº§å‡º/æ— æ¨¡å—ä¾èµ– -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nginx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
             <!-- GeoIP2地理位置查询工具 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -1229,16 +1263,6 @@
     </dependencyManagement>
     <!-- 构建配置 -->
     <build>
-        <!-- os-maven-plugin 必须在所有模块的构建环境中注册，
-             否则 ${os.detected.classifier} 在「上游模块声明、下游模块解析」的传递依赖里不会被插值，
-             会变成字面量 ${os.detected.classifier} 导致依赖解析失败。 -->
-        <extensions>
-            <extension>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>${os-maven-plugin.version}</version>
-            </extension>
-        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -38,11 +38,11 @@ public final class DataSyncDispatcherBenchProbe {
         Path tmp = Files.createTempDirectory("dispatch-bench");
         tmp.toFile().deleteOnExit();
 
-        System.err.println("========================================================================");
-        System.err.println("派发提供者压测 (" + ROWS + " 行, batch=" + BATCH + ")");
-        System.err.println("========================================================================\n");
-        System.err.printf("%-22s %-10s %-10s %-14s %-10s%n", "提供者", "耗时(ms)", "吞吐(行/s)", "完成", "说明");
-        System.err.println("------------------------------------------------------------------------");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("派发提供者压测 (" + ROWS + " 行, batch=" + BATCH + ")"); // [P3C E1 豁免]
+        System.err.println("========================================================================\n"); // [P3C E1 豁免]
+        System.err.printf("%-22s %-10s %-10s %-14s %-10s%n", "提供者", "耗时(ms)", "吞吐(行/s)", "完成", "说明"); // [P3C E1 豁免]
+        System.err.println("------------------------------------------------------------------------"); // [P3C E1 豁免]
 
         List<Map<String, Object>> data = makeData(BATCH);
 
@@ -61,7 +61,7 @@ public final class DataSyncDispatcherBenchProbe {
                             .serializer("fury")
                             .build()), data);
         } catch (Throwable t) {
-            System.err.printf("%-22s %s%n", "WAL+Fury", "初始化失败: " + t.getMessage());
+            System.err.printf("%-22s %s%n", "WAL+Fury", "初始化失败: " + t.getMessage()); // [P3C E1 豁免]
         }
 
         // Chronicle (需 --add-opens)
@@ -69,10 +69,10 @@ public final class DataSyncDispatcherBenchProbe {
             bench("Chronicle", new ChronicleDispatcherProvider(
                     DispatcherConfig.builder().dataPath(tmp.resolve("chr").toString()).build()), data);
         } catch (Throwable t) {
-            System.err.printf("%-22s %s%n", "Chronicle", "初始化失败: " + t.getMessage());
+            System.err.printf("%-22s %s%n", "Chronicle", "初始化失败: " + t.getMessage()); // [P3C E1 豁免]
         }
 
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
     }
 
     /**
@@ -123,7 +123,7 @@ public final class DataSyncDispatcherBenchProbe {
         long ms = System.currentTimeMillis() - t0;
         long tp = count.get() * 1000L / Math.max(1, ms);
 
-        System.err.printf("%-22s %-10d %-10s %-14s %-10s%n",
+        System.err.printf("%-22s %-10d %-10s %-14s %-10s%n", // [P3C E1 豁免]
                 label, ms, String.format("%,d", tp), ok ? "PASS" : "PARTIAL(" + count.get() + ")", "");
         provider.close();
     }

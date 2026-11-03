@@ -46,12 +46,12 @@ public final class DataSyncSerialBenchProbe {
             data.add(row);
         }
 
-        System.err.println("========================================================================");
-        System.err.println("序列化实现基准 — List<Map> × " + ROWS + " 行 (6 字段)");
-        System.err.println("========================================================================\n");
-        System.err.printf("%-16s %-8s %-12s %-12s %-12s %-16s%n",
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("序列化实现基准 — List<Map> × " + ROWS + " 行 (6 字段)"); // [P3C E1 豁免]
+        System.err.println("========================================================================\n"); // [P3C E1 豁免]
+        System.err.printf("%-16s %-8s %-12s %-12s %-12s %-16s%n", // [P3C E1 豁免]
                 "实现", "大小(B)", "序列化(ops/s)", "反序列化(ops/s)", "平均(ops/s)", "往返");
-        System.err.println("------------------------------------------------------------------------");
+        System.err.println("------------------------------------------------------------------------"); // [P3C E1 豁免]
 
         // 1. Jackson (当前实现)
         benchJackson(data);
@@ -61,22 +61,22 @@ public final class DataSyncSerialBenchProbe {
         try {
             benchBinary("fury", new ForySerialization(), data);
         } catch (Throwable t) {
-            System.err.println("fury: " + t.getMessage());
+            System.err.println("fury: " + t.getMessage()); // [P3C E1 豁免]
         }
         // 4. Protobuf (protostuff)
         try {
             benchBinary("protobuf", new ProtobufSerialization(), data);
         } catch (Throwable t) {
-            System.err.println("protobuf: " + t.getMessage());
+            System.err.println("protobuf: " + t.getMessage()); // [P3C E1 豁免]
         }
         // 5. Kryo
         try {
             benchKryo(data);
         } catch (Throwable t) {
-            System.err.println("kryo: " + t.getMessage());
+            System.err.println("kryo: " + t.getMessage()); // [P3C E1 豁免]
         }
 
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
     }
 
     /**
@@ -220,7 +220,7 @@ public final class DataSyncSerialBenchProbe {
         long serOps = bestOf(ser, MEASURE_MS, ROUNDS);
         long desOps = bestOf(des, MEASURE_MS, ROUNDS);
         long avg = (serOps + desOps) / 2;
-        System.err.printf("%-16s %,8d %,12d %,12d %,12d %s%n",
+        System.err.printf("%-16s %,8d %,12d %,12d %,12d %s%n", // [P3C E1 豁免]
                 label, size, serOps, desOps, avg, ok ? "[OK]" : "[FAIL]");
     }
 

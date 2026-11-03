@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiAgentMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.store.SysAiAgent;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.SysAiAgentService;
@@ -54,6 +55,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final SysAiProviderMapper providerMapper; // 提供者映射器
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentRegistry agentRegistry; // Agentregistry
+    private final AgentManager agentManager; // 运行时 Agent 管理器（按 id 运维）
     private final ChatClientRegistry chatClientRegistry; // 对话客户端registry
     private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService; // 全局设置（持久化编排图）
     private final AgentProviderFactory agentProviderFactory;
@@ -162,6 +164,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     public void deleteAgent(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
         agentRegistry.unregister(agent.getName());
+        // 运行时托管也要一起撤掉并关闭：库里删了但实例还在跑，是最难查的那类泄漏。
+        agentManager.destroy(agentId);
         agentMapper.delete(new LambdaQueryWrapper<SysAiAgent>()
                 .eq(SysAiAgent::getParentId, agentId));
         agentMapper.deleteById(agentId);
@@ -656,6 +660,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             }
 
             agentRegistry.registerInstance(agentName, agentInstance, new String[]{"custom"}, new String[]{"chat", "tools", "skills", "routing"});
+            // 同时按业务 id 纳入运行时托管：接口与管理页按 agentId 就能拿到这个实例，
+            // 并对它做中断（interrupt）与状态查看——只按 name 索引是查不到的。
+            agentManager.register(agent.getAgentId(), agentInstance);
             log.info("[Agent] 已构建并注册 Agent: name={}, mode={}, subAgents={}",
                     agentName, mode, subs.size());
         } catch (Exception e) {

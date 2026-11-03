@@ -36,6 +36,7 @@ public class TavernController {
      * list Groups
      * @return 返回值
     */
+    @GetMapping("/groups")
     public List<Map<String, Object>> listGroups() {
         return tavernService.listGroups();
     }
@@ -47,6 +48,7 @@ public class TavernController {
      * @param body 参数
      * @return 返回值
     */
+    @PostMapping("/groups")
     public SysAiTavernGroup createGroup(@RequestBody Map<String, String> body) {
         return tavernService.createGroup(body == null ? null : body.get("name"));
     }
@@ -59,6 +61,7 @@ public class TavernController {
      * @param id 长整数
      * @return 返回值
     */
+    @PutMapping("/groups/{id}")
     public SysAiTavernGroup updateGroup(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return tavernService.updateGroup(id, body);
     }
@@ -69,6 +72,7 @@ public class TavernController {
      * @param id 长整数
      * @return 返回值
     */
+    @DeleteMapping("/groups/{id}")
     public void deleteGroup(@PathVariable Long id) {
         tavernService.deleteGroup(id);
     }
@@ -79,6 +83,7 @@ public class TavernController {
      * @param id 长整数
      * @return 返回值
     */
+    @GetMapping("/groups/{id}/members")
     public List<Map<String, Object>> listMembers(@PathVariable Long id) {
         return tavernService.listMembers(id);
     }
@@ -91,6 +96,7 @@ public class TavernController {
      * @param id 长整数
      * @return 返回值
     */
+    @PostMapping("/groups/{id}/members")
     public SysAiTavernMember addMember(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return tavernService.addMember(id, body);
     }
@@ -101,6 +107,7 @@ public class TavernController {
      * @param memberId 长整数
      * @return 返回值
     */
+    @DeleteMapping("/members/{id}")
     public void removeMember(@PathVariable Long memberId) {
         tavernService.removeMember(memberId);
     }
@@ -113,6 +120,7 @@ public class TavernController {
      * @param memberId 长整数
      * @return 返回值
     */
+    @PutMapping("/members/{id}")
     public SysAiTavernMember updateMember(@PathVariable Long memberId, @RequestBody Map<String, Object> body) {
         return tavernService.updateMember(memberId, body);
     }
@@ -123,6 +131,7 @@ public class TavernController {
      * @param id 长整数
      * @return 返回值
     */
+    @GetMapping("/groups/{id}/messages")
     public List<SysAiTavernMessage> listMessages(@PathVariable Long id) {
         return tavernService.listMessages(id);
     }

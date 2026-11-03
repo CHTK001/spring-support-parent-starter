@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.scancache;
 
 import com.chua.starter.job.support.JobProperties;
@@ -69,8 +70,8 @@ public class ScanCacheProbe {
         say("I. SPI 注册文件里两档键都必须可取到实现");
         caseSpiRegistration();
 
-        System.out.println();
-        System.out.println("==== 结果: passed=" + passed + " failed=" + failed + " ====");
+        System.out.println(); // [P3C E1 豁免]
+        System.out.println("==== 结果: passed=" + passed + " failed=" + failed + " ===="); // [P3C E1 豁免]
         if (failed > 0) {
             throw new IllegalStateException("扫描缓存探针失败 " + failed + " 条");
         }
@@ -266,8 +267,8 @@ public class ScanCacheProbe {
      * @param text 标题
      */
     private static void say(String text) {
-        System.out.println();
-        System.out.println("--- " + text);
+        System.out.println(); // [P3C E1 豁免]
+        System.out.println("--- " + text); // [P3C E1 豁免]
     }
 
     /**
@@ -280,10 +281,10 @@ public class ScanCacheProbe {
     private static void check(String desc, boolean condition, String detail) {
         if (condition) {
             passed++;
-            System.out.println("  [PASS] " + desc);
+            System.out.println("  [PASS] " + desc); // [P3C E1 豁免]
         } else {
             failed++;
-            System.out.println("  [FAIL] " + desc + "  细节：" + detail);
+            System.out.println("  [FAIL] " + desc + "  细节：" + detail); // [P3C E1 豁免]
         }
     }
 

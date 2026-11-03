@@ -78,9 +78,18 @@ public class CdpProperties {
     private Duration launchTimeout = Duration.ofSeconds(120);
 
     /**
-     * 页面级 CDP 命令超时，单位 ms
+     * 页面级 CDP 命令超时
+     *
+     * <p>{@code Page.captureScreenshot} 在真实页面上会做整页栅格化，840×808 的一屏
+     * 大约要 1~3 秒，整页更高；30 秒对截屏偏紧（实测偶发超时），因此单列一个更宽的
+     * 截屏超时。</p>
      */
     private Duration commandTimeout = Duration.ofSeconds(30);
+
+    /**
+     * 截屏超时（整页栅格化比普通命令慢得多）
+     */
+    private Duration screenshotTimeout = Duration.ofSeconds(60);
 
     /**
      * 用户级额外参数，给浏览器命令行追加 `--xxx`
@@ -93,7 +102,7 @@ public class CdpProperties {
     private String wsPath = "/ws/cdp";
 
     /**
-     * 是否启用控制台事件订阅（`Runtime.consoleAPI`），默认开
+     * 是否启用控制台事件订阅（`Runtime.consoleAPICalled`），默认开
      */
     private boolean enableConsole = true;
 

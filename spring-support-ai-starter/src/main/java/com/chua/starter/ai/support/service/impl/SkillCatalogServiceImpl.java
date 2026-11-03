@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -63,10 +64,16 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     private final ChatSkillSupport chatSkillSupport;
 
     /**
-     * 技能根目录
+     * 技能根目录（项目内置 + 用户安装）
      */
     @Value("${nomifun.skills-root:./skills}")
     private String skillsRoot;
+
+    /**
+     * Agent 技能根目录（Agent 生态提供的离线技能，如 ~/.agents/skills）
+     */
+    @Value("${nomifun.skills-agent-root:~/.agents/skills}")
+    private String skillsAgentRoot;
 
     /**
      * 本地快照：工具键 → 技能条目
@@ -269,46 +276,101 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     @Override
     public List<Map<String, Object>> listBuiltin() {
         List<Map<String, Object>> result = new ArrayList<>();
+        // 项目捆绑的内置技能（技能根目录下的 builtin 子目录）
         Path builtinRoot = Paths.get(skillsRoot).resolve("builtin");
-        if (!Files.isDirectory(builtinRoot)) {
+        result.addAll(listBuiltinsFrom(builtinRoot, "", "builtin"));
+        // Agent 生态技能（用户主目录下的 .agents/skills），同目展示、独立来源标记
+        Path agentRoot = resolveAgentRoot();
+        if (agentRoot != null && Files.isDirectory(agentRoot)) {
+            result.addAll(listBuiltinsFrom(agentRoot, "agent:", "agent"));
+        }
+        return result;
+    }
+
+    /**
+     * 把配置中的 Agent 技能根目录转成可扫描的路径（支持 ~ 展开与空值禁用）。
+     *
+     * @return 技能根目录，未配置/不存在返回 null
+     */
+    private Path resolveAgentRoot() {
+        String root = skillsAgentRoot == null ? null : skillsAgentRoot.strip();
+        if (root == null || root.isEmpty()) {
+            log.info("[SkillCatalog] 未配置 Agent 技能根目录，跳过扫描");
+            return null;
+        }
+        try {
+            if (root.startsWith("~")) {
+                // `~` 展开为用户主目录；别的地方约定写法为 `~/.agents/skills`，展开时要去掉主目录后面紧跟的 `/`，
+                // 否则 Windows 下 Path.resolve 会把它当成根相对路径处理，得到 `C:\.agents\skills` 而不是 `C:\Users\*.agents\skills`
+                String sub = root.substring(1).replaceFirst("^/{1,2}", "");
+                if (sub.isEmpty()) {
+                    log.warn("[SkillCatalog] Agent 技能根目录未指定子路径，跳过扫描");
+                    return null;
+                }
+                root = Paths.get(System.getProperty("user.home", "."))
+                        .resolve(sub)
+                        .toString();
+            }
+            return Paths.get(root);
+        } catch (InvalidPathException e) {
+            log.warn("[SkillCatalog] 无法解析 Agent 技能根目录 {}: {}", skillsAgentRoot, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 扫描单个技能目录，产出 {id, source, name, description, labels, version} 等字段。
+     *
+     * @param root    技能根目录；dir 为 null 时为空结果（目录不存在时不抛异常）
+     * @param idPrefix id 前缀（项目内置为空，Agent 为 agent:）
+     * @param source  来源标签
+     * @return 技能条目清单
+     */
+    private List<Map<String, Object>> listBuiltinsFrom(Path root, String idPrefix, String source) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (root == null || !Files.isDirectory(root)) {
             return result;
         }
-        try (Stream<Path> stream = Files.list(builtinRoot)) {
+        try (Stream<Path> stream = Files.list(root)) {
             List<Path> dirs = stream.filter(Files::isDirectory).sorted().toList();
             for (Path dir : dirs) {
                 Path md = dir.resolve("SKILL.md");
                 if (!Files.isRegularFile(md)) {
                     md = dir.resolve("skill.md");
                 }
-                String id = dir.getFileName().toString();
+                String id = idPrefix + dir.getFileName().toString();
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("id", id);
+                item.put("source", source);
                 item.put("builtin", true);
-                String category = BUILTIN_CATEGORY.getOrDefault(id, "内置工具");
+                String idOrName = dir.getFileName().toString();
+                String category = BUILTIN_CATEGORY.getOrDefault(idOrName, "内置工具");
                 List<String> labels = new ArrayList<>();
                 labels.add(category);
                 item.put("labels", labels);
+                item.put("category", category);
                 if (Files.isRegularFile(md)) {
                     try {
                         String content = Files.readString(md);
                         Map<String, String> front = parseSimpleFrontmatter(content);
-                        item.put("name", front.getOrDefault("title", id));
+                        // 项目内置以 title 为准，Agent 技能没有 title 则取 name（两者均未声明时取目录名）
+                        item.put("name", front.getOrDefault("title", front.getOrDefault("name", idOrName)));
                         item.put("description", front.getOrDefault("description", ""));
                         if (front.get("version") != null) {
                             item.put("version", front.get("version"));
                         }
                     } catch (IOException e) {
-                        item.put("name", id);
+                        item.put("name", idOrName);
                         item.put("description", "");
                     }
                 } else {
-                    item.put("name", id);
+                    item.put("name", idOrName);
                     item.put("description", "");
                 }
                 result.add(item);
             }
         } catch (IOException e) {
-            log.warn("[SkillCatalog] 扫描内置技能失败: {}", e.getMessage());
+            log.warn("[SkillCatalog] 扫描{}技能失败: {}", source, e.getMessage());
         }
         return result;
     }

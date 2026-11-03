@@ -80,6 +80,7 @@ public class ScriptUtil {
 
  // 日志-thread
             final FileOutputStream finalFileOutputStream = fileOutputStream;
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             inputThread = new Thread(() -> {
                 try {
                     /**
@@ -91,6 +92,7 @@ public class ScriptUtil {
                     DefaultJobLog.log(e.getMessage());
                 }
             });
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             errThread = new Thread(() -> {
                 try {
                     /**

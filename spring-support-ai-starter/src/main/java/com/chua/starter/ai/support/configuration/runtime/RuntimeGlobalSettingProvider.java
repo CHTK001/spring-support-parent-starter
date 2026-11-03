@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.configuration.runtime;
 
 import com.chua.common.support.ai.rag.GlobalSettingProvider;
@@ -94,13 +95,31 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("max_tokens", "16384", "NUMBER", "默认最大输出 tokens（agent 写大文件需要足够余量，过小会截断工具参数）", 12),
                 new SettingItem("timeout_millis", "30000", "NUMBER", "请求超时时间（毫秒）", 13),
                 new SettingItem("input_optimization_enabled", "false", "BOOLEAN", "是否启用对话输入自动优化", 14),
-                new SettingItem("context_compression_enabled", "false", "BOOLEAN", "是否启用上下文压缩", 15),
-                new SettingItem("context_compression_threshold", "12", "NUMBER", "上下文压缩消息数阈值", 16),
-                new SettingItem("context_compression_retain_messages", "6", "NUMBER", "压缩后保留最近消息数", 17),
+                // ==================== 压缩开关 ====================
+                new SettingItem("auto", "true", "BOOLEAN",
+                        "是否启用自动上下文压缩（每次对话回复后，达到触发条件时自动压缩历史）", 24, true),
+                new SettingItem("async", "false", "BOOLEAN",
+                        "是否异步压缩（true 时不阻塞回复输出，后台线程池执行；关闭时同步压缩）", 25, true),
+                // ==================== 压缩阈值 ====================
+                new SettingItem("headroomPercent", "20", "NUMBER",
+                        "压缩触发余量百分比（当前上下文占用超过 100-headroomPercent% 时触发，默认 20），比“压缩模型窗口”更贴合大窗口模型",
+                        26, true),
+                // ==================== 压缩模式 ====================
+                new SettingItem("mode", "all", "STRING",
+                        "压缩模式：all=压缩超过余量的全部历史文本，threshold=仅压缩超出余量的那部分历史文本", 27, true),
+                // ==================== 压缩模型 ====================
+                new SettingItem("modelId", "", "STRING",
+                        "生成摘要用的压缩模型（空=使用默认压缩模型，与 `compression_model` 语义相同）", 28),
+                // ==================== 压缩保留 ====================
+                new SettingItem("recentTokenLimit", "30000", "NUMBER",
+                        "压缩后保留的最近上下文令牌上限（超出部分强制压缩到摘要），默认 30000", 29, true),
+                // ==================== 压缩验证 ====================
+                new SettingItem("validate", "true", "BOOLEAN",
+                        "压缩前是否把首次压缩结果作为基线融合进后续摘要（避免关键信息在多次压缩中丢失）", 30, true),
                 new SettingItem("protocol_server_enabled", "false", "BOOLEAN", "是否启用聚合协议服务（独立端口，提供 OpenAI/Claude/Gemini 三协议端点）", 18),
                 new SettingItem("protocol_server_port", "8090", "NUMBER", "聚合协议服务端口（OpenAI/Claude/Gemini 三协议统一入口）", 19),
                 new SettingItem("protocol_server_host", "0.0.0.0", "STRING", "聚合协议服务绑定地址", 20),
-                new SettingItem("extra_headers", "", "JSON", "自定义请求头（JSON 格式，如 {\"X-Custom\": \"value\"}）", 21),
+                new SettingItem("extra_headers", "", "JSON", "自定义请求头（JSON 格式，如 {\\\"X-Custom\\\": \\\"value\\\"}）", 21),
                 // ==================== Agent 工具权限 ====================
                 // 管理员专属：普通账号不得看到、不得修改。默认 false 表示普通账号的 agent 不启用任何工具。
                 // 管理员自己的工具能力不受本开关影响。

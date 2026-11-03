@@ -20,17 +20,18 @@ import java.util.stream.Stream;
 
 /**
  * 以图搜图底库的**门面**：按当前登录账号把请求路由到该账号自己的
- * {@link ImageSearchStore}。
+ * {@link ImageSearchStore}，异常时按分组路由到所请求的那一组。
  *
  * <p><b>为什么要有这一层。</b>底库原本是全局一份：所有账号共用同一个目录、
- * 同一份快照、同一套向量索引，A 账号上传的图 B 账号能检索到，删除也会互相
- * 影响。改成按账号隔离后，「谁是当前账号」这件事必须在每个入口解析一次，
- * 而解析口径必须唯一（都在 {@link AiUserContext}），否则迟早分叉。</p>
+ * 同一份快照、同一套向量索引，A 账号的图 B 账号能检索到，删除也会互相
+ * 影响。改成按账号 + 分组隔离后，「谁是当前账号」「属于哪个分组」这两件事必须在
+ * 每个入口解析一次，而解析口径必须唯一（都在 {@link AiUserContext} 与
+ * {@link com.chua.starter.ai.support.util.AiLibraryGroups}），否则迟早分叉。</p>
  *
- * <p><b>目录规则</b>：{@code <base>/<账号>/imagesearch}，其中 base 取系统属性
- * {@code image.search.store.dir}，未设置时为进程工作目录。远端服务的工作目录是
- * {@code /opt/ai-starter/runtime}，因此静态账号 admin 的底库落在
- * {@code /opt/ai-starter/runtime/admin/imagesearch/}。</p>
+ * <p><b>目录规则</b>：{@code <base>/<账号>/<分组>/imagesearch}（分组默认取
+ * {@code default}），其中 base 取系统属性 {@code image.search.store.dir}，未设置时
+ * 为进程工作目录。远端服务的工作目录是 {@code /opt/ai-starter/runtime}，因此静态
+ * 账号 admin 的默认组底库落在 {@code /opt/ai-starter/runtime/admin/default/imagesearch/}。</p>
  *
  * <p><b>账号标识</b>：静态账号（本地开发/无外部认证中心时使用）的 userId 就是
  * 用户名，见 {@code StaticTempLogin#issue}，跨登录稳定；因此目录名可读且可区分。</p>
@@ -41,7 +42,7 @@ import java.util.stream.Stream;
  * 对同一份数据给出不同结果。</p>
  *
  * @author CH
- * @since 4.0.0.42
+ * @since 4.0.0.45
  */
 @Slf4j
 @Component
@@ -63,10 +64,16 @@ public class ImageSearchStores {
      */
     private static final String LEGACY_OWNER = "admin";
 
+    /** 旧布局数据的归属分组。底库改造前是全局一份，归入 admin 的默认组 */
+    private static final String LEGACY_GROUP = "default";
+
+    /** 设置分组名（用于过滤设置变更事件，与 {@link ImageSearchStore#GROUP} 同源） */
+    private static final String GROUP = "image_search";
+
     /** 底库根目录的系统属性名（沿用旧名，语义由「底库目录」变为「底库根目录」） */
     private static final String BASE_DIR_PROPERTY = "image.search.store.dir";
 
-    /** 账号 -> 该账号的底库实例 */
+    /** 账号 -> 该账号的底库实例（按（账号, 分组）拆分：key = {@code account + "\0" + group}） */
     private final Map<String, ImageSearchStore> accounts = new ConcurrentHashMap<>();
 
     private final GlobalSettingReader settingReader;
@@ -85,7 +92,7 @@ public class ImageSearchStores {
      * 启动时加载磁盘上已有的全部账号底库。
      *
      * <p>只读目录、不建目录：某个账号从没上传过图就不该因为一次启动而凭空多出
-     * 一个空目录。真正需要写入时由 {@link #storeOf(String)} 建。</p>
+     * 一个空目录。真正需要写入时由 {@link #storeOf(String, String)} 建。</p>
      */
     @PostConstruct
     public void load() {
@@ -104,11 +111,18 @@ public class ImageSearchStores {
                     .toList();
             for (Path accountDir : dirs) {
                 String account = accountDir.getFileName().toString();
-                try {
-                    accounts.computeIfAbsent(account, a -> create(a, accountDir.resolve(STORE_LEAF), true));
-                    loaded++;
-                } catch (Exception ex) {
-                    log.warn("[ImageSearch] 账号 '{}' 底库加载失败，跳过: {}", account, ex.getMessage());
+                try (Stream<Path> groups = Files.list(accountDir)) {
+                    List<Path> groupDirs = groups
+                            .filter(Files::isDirectory)
+                            .filter(g -> Files.isDirectory(g.resolve(STORE_LEAF)))
+                            .sorted()
+                            .toList();
+                    for (Path groupDir : groupDirs) {
+                        String group = groupDir.getFileName().toString();
+                        accounts.computeIfAbsent(account + "\0" + group,
+                                k -> create(account, group, groupDir.resolve(STORE_LEAF), true));
+                        loaded++;
+                    }
                 }
             }
         } catch (IOException ex) {
@@ -276,14 +290,14 @@ public class ImageSearchStores {
             return;
         }
         if (event.userScoped()) {
-            String userId = event.userId();
-            if (userId == null || userId.isBlank()) {
-                return;
-            }
-            ImageSearchStore removed = accounts.remove(userId);
+            // 用户级变更只淘汰当前账号+分组的实例（旧版只有 default 组，无需逐组淘汰）
+            String account = AiUserContext.requireUserId();
+            String group = AiLibraryGroups.normalize(AiUserContext.requireGroupId());
+            String key = account + "\0" + group;
+            ImageSearchStore removed = accounts.remove(key);
             if (removed != null) {
                 shutdownStore(removed, "图像设置变更（用户级）");
-                log.info("[ImageSearch] 图像设置变更（用户级），已失效账号 '{}' 的底库实例", userId);
+                log.info("[ImageSearch] 图像设置变更（用户级），已失效账号 '{}' 的底库实例", account);
             }
             return;
         }
@@ -317,39 +331,38 @@ public class ImageSearchStores {
      */
     private ImageSearchStore current() {
         String account = AiUserContext.requireUserId();
-        return storeOf(account);
+        String group = AiLibraryGroups.normalize(AiUserContext.requireGroupId());
+        return storeOf(account, group);
     }
 
     /**
      * 取指定账号的底库实例，不存在时创建并加载。
      *
      * @param account 账号标识
+     * @param group   分组名
      * @return 底库实例
      */
-    private ImageSearchStore storeOf(String account) {
-        Path dir = accountDir(account).resolve(STORE_LEAF);
-        return accounts.computeIfAbsent(account, a -> create(a, dir, Files.isDirectory(dir)));
+    private ImageSearchStore storeOf(String account, String group) {
+        Path dir = accountDir(account, group).resolve(STORE_LEAF);
+        return accounts.computeIfAbsent(account + "\0" + group, k -> create(account, group, dir, Files.isDirectory(dir)));
     }
 
     /**
      * 创建并加载一个账号的底库实例。
      *
      * @param account 账号标识
+     * @param group   分组名
      * @param dir     底库目录
      * @param existing 该目录是否在磁盘上已存在（已存在才需要读快照，新建目录无需尝试）
      * @return 底库实例
      */
-    private ImageSearchStore create(String account, Path dir, boolean existing) {
-        ImageSearchStore store = new ImageSearchStore(account, dir, settingReader, library, keywordExtractor);
-        if (existing) {
-            store.load();
-        }
-        return store;
+    private ImageSearchStore create(String account, String group, Path dir, boolean existing) {
+        return new AccountImageSearch(account, group, dir, settingReader, library, keywordExtractor);
     }
 
     /**
      * 兼容旧版单目录布局：把 {@code <base>/image-search-store} 自动归位到
-     * {@code <base>/admin/imagesearch}。
+     * {@code <base>/admin/default/imagesearch}。
      *
      * <p><b>为什么需要。</b>目录改名后，任何仍按旧路径读写的构建（回滚旧包、
      * 或其它会话并发发上去的旧版本）会去找 {@code ./image-search-store}，找不到就
@@ -365,7 +378,7 @@ public class ImageSearchStores {
      */
     private void adoptLegacyLayout(Path base) {
         Path legacy = base.resolve(LEGACY_DIR);
-        Path target = base.resolve(LEGACY_OWNER).resolve(STORE_LEAF);
+        Path target = base.resolve(LEGACY_OWNER).resolve(LEGACY_GROUP).resolve(STORE_LEAF);
         try {
             if (!Files.isDirectory(legacy) || !Files.isRegularFile(legacy.resolve("index.json"))) {
                 return;
@@ -425,13 +438,14 @@ public class ImageSearchStores {
     }
 
     /**
-     * 某账号的目录（{@code <base>/<账号>}）。
+     * 某账号的目录（{@code <base>/<账号>/<分组>}）。
      *
      * @param account 账号标识
+     * @param group   分组名
      * @return 账号目录
      */
-    private Path accountDir(String account) {
-        return baseDir().resolve(sanitize(account));
+    private Path accountDir(String account, String group) {
+        return baseDir().resolve(sanitize(account)).resolve(sanitize(group));
     }
 
     /**
@@ -442,14 +456,14 @@ public class ImageSearchStores {
      * {@code _unknown}，宁可归到一个显式的兜底目录，也不要让
      * {@code Paths.resolve} 把写入引到根目录之外。</p>
      *
-     * @param account 原始账号标识
+     * @param name 原始标识
      * @return 可安全作为单级目录名的字符串
      */
-    private static String sanitize(String account) {
-        if (account == null || account.isBlank()) {
+    private static String sanitize(String name) {
+        if (name == null || name.isBlank()) {
             return "_unknown";
         }
-        String s = account.trim()
+        String s = name.trim()
                 .replace("\\", "_")
                 .replace("/", "_")
                 .replace(":", "_")
@@ -462,5 +476,30 @@ public class ImageSearchStores {
         s = s.replace("..", "_");
         s = s.replaceAll("^[.\\s]+|[.\\s]+$", "");
         return s.isBlank() ? "_unknown" : s;
+    }
+
+    /**
+     * 按（账号, 分组）隔离的底库实例。
+     *
+     * <p>结构与 {@link FaceStores.AccountFace} 对齐：账号标识、分组名、底库目录
+     * 全部作为实例字段持有，构造时完成目录创建与快照加载。它不参与任何跨账号共享，
+     * 每个（账号, 分组）组合拥有唯一的目录、唯一的向量索引和唯一的一份快照。</p>
+     *
+     * @since 4.0.0.45
+     */
+    private static final class AccountImageSearch extends ImageSearchStore {
+
+        /**
+         * @param account 账号标识
+         * @param group   分组名
+         * @param dir     底库目录
+         * @param settingReader 设置读取器
+         * @param library 底库元数据与向量的联动层
+         * @param keywordExtractor 图片关键词提取器
+         */
+        AccountImageSearch(String account, String group, Path dir, GlobalSettingReader settingReader,
+                           ImageLibraryLinkService library, ImageKeywordExtractor keywordExtractor) {
+            super(account, group, dir, settingReader, library, keywordExtractor);
+        }
     }
 }

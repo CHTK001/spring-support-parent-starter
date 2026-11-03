@@ -85,6 +85,18 @@ public class SysAiSessionCompression {
     private String sysAiCompressionContext;
 
     /**
+      * 首次压缩结果（压缩验证基线）
+      *
+      * <p>开启压缩验证（validate=true）时，首次压缩的结果永久保留在此列；
+      * 后续每次压缩前都会把基线随历史文本一并送入摘要模型，使关键信息在多次压缩中不丢失。</p>
+      */
+    @TableField("sys_ai_compression_baseline")
+    /**
+      * sysaicompression基线
+      */
+    private String sysAiCompressionBaseline;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.ledger;
 
 import com.baomidou.mybatisplus.annotation.DbType;
@@ -94,7 +95,7 @@ public final class LedgerSemanticsProbe {
         }
 
         log.info("[probe] ---- 汇总：passed={} failed={} ----", passed, failed);
-        System.out.println("PROBE_RESULT passed=" + passed + " failed=" + failed);
+        System.out.println("PROBE_RESULT passed=" + passed + " failed=" + failed); // [P3C E1 豁免]
         if (failed > 0) {
             System.exit(1);
         }
@@ -458,8 +459,8 @@ public final class LedgerSemanticsProbe {
      * @param text 标题
      */
     private static void say(String text) {
-        System.out.println();
-        System.out.println("--- " + text);
+        System.out.println(); // [P3C E1 豁免]
+        System.out.println("--- " + text); // [P3C E1 豁免]
     }
 
     /**
@@ -472,10 +473,10 @@ public final class LedgerSemanticsProbe {
     private static void check(String desc, boolean condition, String detail) {
         if (condition) {
             passed++;
-            System.out.println("  [PASS] " + desc);
+            System.out.println("  [PASS] " + desc); // [P3C E1 豁免]
         } else {
             failed++;
-            System.out.println("  [FAIL] " + desc + "  细节：" + detail);
+            System.out.println("  [FAIL] " + desc + "  细节：" + detail); // [P3C E1 豁免]
         }
     }
 

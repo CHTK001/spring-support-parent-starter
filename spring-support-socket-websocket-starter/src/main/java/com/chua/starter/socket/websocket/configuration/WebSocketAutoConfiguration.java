@@ -5,11 +5,12 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.socket.websocket.handler.DelegatingWebSocketHandler;
 import com.chua.starter.socket.websocket.handler.WebSocketMessageHandler;
 import com.chua.starter.socket.websocket.properties.WebSocketProperties;
+import com.chua.starter.socket.websocket.room.RoomService;
+import com.chua.starter.socket.websocket.room.RoomProperties;
+import com.chua.starter.socket.websocket.room.RoomWebSocketHandler;
 import com.chua.starter.socket.websocket.session.WebSocketSessionManager;
 import com.chua.starter.socket.websocket.template.WebSocketTemplate;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -42,11 +43,6 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @EnableConfigurationProperties(WebSocketProperties.class)
 @ConditionalOnProperty(prefix = WebSocketProperties.PREFIX, name = "enable", havingValue = "true")
 public class WebSocketAutoConfiguration implements WebSocketConfigurer {
-
-    /**
-     * 日志
-    */
-    private static final Logger log = LoggerFactory.getLogger(WebSocketAutoConfiguration.class);
 
     @Autowired
     /**
@@ -111,6 +107,39 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     }
 
     @Bean
+    @ConditionalOnMissingBean(RoomService.class)
+    /**
+     * 房间信令引擎
+     *
+     * @param properties 房间属性
+     * @param webSocketTemplate 信令下发模板
+     * @return 房间信令引擎的结果
+     */
+    public RoomService roomService(RoomProperties properties, WebSocketTemplate webSocketTemplate) {
+        /**
+         * 房间信令引擎。
+         */
+        return new RoomService(properties, webSocketTemplate);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    /**
+     * 房间信令 WebSocket 处理器（委托给 RoomService）
+     *
+     * @param roomService 房间信令引擎
+     * @param webSocketTemplate 信令下发模板
+     * @return 房间信令 WebSocket 处理器的结果
+     */
+    public RoomWebSocketHandler roomWebSocketHandler(RoomService roomService, WebSocketTemplate webSocketTemplate) {
+        /**
+         * 房间信令 WebSocket 处理器。
+         */
+        return new RoomWebSocketHandler(roomService, webSocketTemplate);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     /**
      * 创建webSocket容器
      *

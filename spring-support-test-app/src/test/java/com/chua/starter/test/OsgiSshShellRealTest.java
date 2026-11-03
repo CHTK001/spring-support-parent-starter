@@ -235,7 +235,7 @@ class OsgiSshShellRealTest {
                 try {
                     session.disconnect();
                 } catch (Exception e) {
-                    System.out.println("[OsgiSshShellRealTest] 关闭错误密码会话失败: " + e.getMessage());
+                    System.out.println("[OsgiSshShellRealTest] 关闭错误密码会话失败: " + e.getMessage()); // [P3C E1 豁免]
                 }
             }
         }, "错误密码的 SSH 连接应被拒绝");

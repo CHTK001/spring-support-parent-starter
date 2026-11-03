@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.ai.chat.ModelDefinition;
@@ -5,6 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.AiModelCatalogService;
+import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -111,6 +114,15 @@ public class AiOpenaiController extends BaseAiController {
  // 解析分组 标识 与 appKey
         Integer groupId = resolveGroupId(servletRequest);
         String appKey = resolveAppKey(servletRequest);
+        // 模型范围闸门：appKey 只能调用「分组清单 ∩ 限定模型」内的模型，流式也要在开流前拦
+        String violation = modelScopeViolation(servletRequest, request.getModel());
+        if (violation != null) {
+            log.warn("[ai] chat/completions 模型越权: appKey={}, model={}", appKey, request.getModel());
+            if (Boolean.TRUE.equals(request.getStream())) {
+                return modelNotAllowedEmitter(violation);
+            }
+            return modelNotAllowedResponse(violation);
+        }
         // 流式模式
         if (Boolean.TRUE.equals(request.getStream())) {
             return aiChatFacadeService.stream(convertToChatRequest(request, groupId, appKey));
@@ -146,6 +158,12 @@ public class AiOpenaiController extends BaseAiController {
         if (!authCheck(servletRequest)) {
             return authErrorResponse();
         }
+        // 模型范围闸门
+        String violation = modelScopeViolation(servletRequest, request.getModel());
+        if (violation != null) {
+            log.warn("[ai] completions 模型越权: model={}", request.getModel());
+            return modelNotAllowedResponse(violation);
+        }
         // 执行对话
         try {
             AiChatRequest chatRequest = convertCompletionToChatRequest(request);
@@ -179,11 +197,16 @@ public class AiOpenaiController extends BaseAiController {
         }
         // 解析分组并查询模型
         Integer groupId = resolveGroupId(servletRequest);
+        // 与 /chat/completions 同一口径：调用方调不通的模型不许出现在下拉里
+        Set<String> scope = requestModelScope(servletRequest);
         List<ModelDefinition> modelDefinitions = aiChatFacadeService.modelDefinitions(groupId);
         List<Map<String, Object>> data = new ArrayList<>();
         if (!modelDefinitions.isEmpty()) {
             // 优先使用详细模型定义
             for (ModelDefinition def : modelDefinitions) {
+                if (!AppKeyModelScope.allows(scope, def.getId())) {
+                    continue;
+                }
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("id", def.getId());
                 row.put("object", "model");
@@ -199,6 +222,9 @@ public class AiOpenaiController extends BaseAiController {
  // 回退到模型 标识 列表
             List<String> modelIds = aiChatFacadeService.models(groupId);
             for (String id : modelIds) {
+                if (!AppKeyModelScope.allows(scope, id)) {
+                    continue;
+                }
                 data.add(Map.of(
                         "id", id,
                         "object", "model",
@@ -248,9 +274,13 @@ public class AiOpenaiController extends BaseAiController {
         }
         // 查询分组可用模型
         Integer groupId = resolveGroupId(servletRequest);
+        Set<String> scope = requestModelScope(servletRequest);
         List<String> modelIds = aiChatFacadeService.models(groupId);
         List<Map<String, Object>> data = new ArrayList<>();
         for (String id : modelIds) {
+            if (!AppKeyModelScope.allows(scope, id)) {
+                continue;
+            }
             data.add(Map.of("id", id, "object", "model"));
         }
         return ResponseEntity.ok(Map.of("object", "list", "data", data));

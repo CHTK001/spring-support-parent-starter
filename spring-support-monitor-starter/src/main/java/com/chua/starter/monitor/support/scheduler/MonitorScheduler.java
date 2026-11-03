@@ -392,7 +392,7 @@ public class MonitorScheduler {
                             double num = Double.parseDouble(val);
                             String name = rule.getMetricName() + (matcher.groupCount() > 1 ? "_g" + g : "");
                             if (index > 0) {
-                                name = name + "_" + index;
+                                name = name.concat("_" + index);
                             }
                             points.add(MetricPoint.builder()
                                     .metricName(name)

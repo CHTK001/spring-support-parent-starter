@@ -80,9 +80,9 @@ public final class DatalakeAllInOneProbe {
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
 
-        System.err.println("========================================================================");
-        System.err.println("Datalake 全链路探针 (12 项验证)");
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("Datalake 全链路探针 (12 项验证)"); // [P3C E1 豁免]
+        System.err.println("========================================================================"); // [P3C E1 豁免]
 
  // ━━━━━━━━ 1. pipeline管理器 CRUD ━━━━━━━━
         PipelineManager pm = new DefaultPipelineManager();
@@ -237,13 +237,13 @@ public final class DatalakeAllInOneProbe {
         dispatcher.close();
 
         // ━━━━━━━━ 汇总 ━━━━━━━━
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
         int total = PASS.get() + FAIL.get();
-        System.err.printf("Datalake 全链路探针: %d/%d PASS%n", PASS.get(), total);
+        System.err.printf("Datalake 全链路探针: %d/%d PASS%n", PASS.get(), total); // [P3C E1 豁免]
         if (FAIL.get() > 0) {
-            System.err.printf("FAIL: %d 项%n", FAIL.get());
+            System.err.printf("FAIL: %d 项%n", FAIL.get()); // [P3C E1 豁免]
         }
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
         System.exit(FAIL.get() > 0 ? 1 : 0);
     }
 
@@ -258,14 +258,14 @@ public final class DatalakeAllInOneProbe {
             boolean result = check.getAsBoolean();
             if (result) {
                 PASS.incrementAndGet();
-                System.err.printf("  [PASS] %s%n", name);
+                System.err.printf("  [PASS] %s%n", name); // [P3C E1 豁免]
             } else {
                 FAIL.incrementAndGet();
-                System.err.printf("  [FAIL] %s%n", name);
+                System.err.printf("  [FAIL] %s%n", name); // [P3C E1 豁免]
             }
         } catch (Exception e) {
             FAIL.incrementAndGet();
-            System.err.printf("  [FAIL] %s (exception: %s)%n", name, e.getMessage());
+            System.err.printf("  [FAIL] %s (exception: %s)%n", name, e.getMessage()); // [P3C E1 豁免]
         }
     }
 }

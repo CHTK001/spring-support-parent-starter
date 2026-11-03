@@ -182,8 +182,13 @@ public class NgrokTunnelService {
             return toView(record);
         }
         errors.remove(id);
-        NgrokClient client = buildClient(record);
+        NgrokClient client = null;
         try {
+            // 构建客户端也在 try 内：authtoken 缺失等前置校验会在这里抛出。
+            // 此前 buildClient 在 try 之外，这类失败只体现在 HTTP 响应的 msg 上，
+            // 不会写进 errors，于是列表里该行的「错误信息」列永远是空的 ——
+            // 用户点启动失败后，界面上完全看不到失败原因。
+            client = buildClient(record);
             client.connect();
             openTunnel(client, record);
             clients.put(id, client);
@@ -488,6 +493,9 @@ public class NgrokTunnelService {
      * @param client 客户端
      */
     private static void closeQuietly(NgrokClient client) {
+        if (null == client) {
+            return;
+        }
         try {
             client.close();
         } catch (Exception e) {

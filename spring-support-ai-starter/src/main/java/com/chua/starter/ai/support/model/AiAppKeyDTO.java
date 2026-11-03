@@ -184,4 +184,34 @@ public class AiAppKeyDTO implements Serializable {
      */
     @Schema(description = "归属用户")
     private String owner;
+
+    /**
+     * Token 总量上限（按余额计费的「总量」；为空表示不限）
+     */
+    @Schema(description = "Token 总量上限")
+    private Long maxTokens;
+
+    /**
+     * 已消耗 Token 累计
+     */
+    @Schema(description = "已消耗 Token")
+    private Long totalTokens;
+
+    /**
+     * 最近使用时间（yyyy-MM-dd HH:mm:ss）
+     */
+    @Schema(description = "最近使用时间")
+    private String lastUsedTime;
+
+    /**
+     * IP 白名单（逗号分隔，为空表示不限）
+     */
+    @Schema(description = "IP 白名单")
+    private String ipWhitelist;
+
+    /**
+     * 备注
+     */
+    @Schema(description = "备注")
+    private String remark;
 }

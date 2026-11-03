@@ -255,6 +255,17 @@ public class SysAiModelMetrics implements Serializable {
     private BigDecimal outputSpeedTps; // 输出速度
 
     /**
+     * 本地平均输出速度（token/秒）
+     *
+     * <p>由用量聚合任务按 provider+model 对全量本地用量的 {@code tokens_per_second}
+     * 取平均计算得出，不来自 Artificial Analysis 指标源：
+     * 不入手动锁定字段集、不入指标快照白名单，无本地用量的模型保持空（前端回退
+     * 到 {@link #outputSpeedTps}）。</p>
+     */
+    @TableField("sys_ai_model_metrics_avg_output_speed_tps")
+    private BigDecimal avgOutputSpeedTps; // 本地平均输出速度
+
+    /**
      * 首 token 延迟（秒）
      */
     @TableField("sys_ai_model_metrics_latency_first_token")

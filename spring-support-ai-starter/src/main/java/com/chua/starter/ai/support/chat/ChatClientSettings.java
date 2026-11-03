@@ -75,6 +75,41 @@ public class ChatClientSettings {
     private int contextCompressionRetainMessages;
 
     /**
+     * 是否启用自动上下文压缩（runtime `auto`）
+     */
+    private boolean auto;
+
+    /**
+     * 是否异步压缩，true 时压缩不阻塞回复输出（runtime `async`）
+     */
+    private boolean async;
+
+    /**
+     * 压缩触发余量百分比（runtime `headroomPercent`）
+     */
+    private Integer headroomPercent;
+
+    /**
+     * 压缩模式（all / threshold，runtime `mode`）
+     */
+    private String mode;
+
+    /**
+     * 生成摘要时使用的压缩模型（runtime `modelId`）
+     */
+    private String modelId;
+
+    /**
+     * 压缩后保留的最近上下文令牌上限（runtime `recentTokenLimit`）
+     */
+    private Integer recentTokenLimit;
+
+    /**
+     * 是否把首次压缩结果作为基线融合进后续摘要（runtime `validate`）
+     */
+    private boolean validate;
+
+    /**
      * 基础连接设置
      */
     private ChatClientSetting baseSetting;
@@ -101,12 +136,21 @@ public class ChatClientSettings {
      * @param contextCompressionThreshold       上下文压缩触发阈值
      * @param contextCompressionRetainMessages  上下文压缩保留消息条数
      * @param baseSetting                       基础连接设置
+     * @param auto                              是否启用自动上下文压缩
+     * @param async                             是否异步压缩
+     * @param headroomPercent                   压缩触发余量百分比
+     * @param mode                              压缩模式（all / threshold）
+     * @param modelId                           生成摘要时使用的压缩模型
+     * @param recentTokenLimit                  压缩后保留的最近上下文令牌上限
+     * @param validate                          是否把首次压缩结果作为基线融合进后续摘要
      */
     public ChatClientSettings(String factory, String provider, String defaultModel, String compressionModel,
                               String systemPrompt, Double temperature, Integer maxTokens, Long timeoutMillis,
                               boolean inputOptimizationEnabled, boolean contextCompressionEnabled,
                               int contextCompressionThreshold, int contextCompressionRetainMessages,
-                              ChatClientSetting baseSetting) {
+                              ChatClientSetting baseSetting,
+                              boolean auto, boolean async, Integer headroomPercent, String mode,
+                              String modelId, Integer recentTokenLimit, boolean validate) {
         this.factory = factory;
         this.provider = provider;
         this.defaultModel = defaultModel;
@@ -120,6 +164,13 @@ public class ChatClientSettings {
         this.contextCompressionThreshold = contextCompressionThreshold;
         this.contextCompressionRetainMessages = contextCompressionRetainMessages;
         this.baseSetting = baseSetting;
+        this.auto = auto;
+        this.async = async;
+        this.headroomPercent = headroomPercent;
+        this.mode = mode;
+        this.modelId = modelId;
+        this.recentTokenLimit = recentTokenLimit;
+        this.validate = validate;
     }
 
     /**
@@ -226,6 +277,41 @@ public class ChatClientSettings {
          * 上下文压缩保留消息条数
          */
         private int contextCompressionRetainMessages;
+
+        /**
+         * 是否启用自动上下文压缩
+         */
+        private boolean auto;
+
+        /**
+         * 是否异步压缩
+         */
+        private boolean async;
+
+        /**
+         * 压缩触发余量百分比
+         */
+        private Integer headroomPercent;
+
+        /**
+         * 压缩模式（all / threshold）
+         */
+        private String mode;
+
+        /**
+         * 生成摘要时使用的压缩模型
+         */
+        private String modelId;
+
+        /**
+         * 压缩后保留的最近上下文令牌上限
+         */
+        private Integer recentTokenLimit;
+
+        /**
+         * 是否把首次压缩结果作为基线融合进后续摘要
+         */
+        private boolean validate;
 
         /**
          * 基础连接设置
@@ -365,6 +451,83 @@ public class ChatClientSettings {
         }
 
         /**
+         * 设置是否启用自动上下文压缩。
+         *
+         * @param auto 是否启用自动上下文压缩
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder auto(boolean auto) {
+            this.auto = auto;
+            return this;
+        }
+
+        /**
+         * 设置是否异步压缩。
+         *
+         * @param async 是否异步压缩
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder async(boolean async) {
+            this.async = async;
+            return this;
+        }
+
+        /**
+         * 设置压缩触发余量百分比。
+         *
+         * @param headroomPercent 压缩触发余量百分比
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder headroomPercent(Integer headroomPercent) {
+            this.headroomPercent = headroomPercent;
+            return this;
+        }
+
+        /**
+         * 设置压缩模式。
+         *
+         * @param mode 压缩模式（all / threshold）
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder mode(String mode) {
+            this.mode = mode;
+            return this;
+        }
+
+        /**
+         * 设置生成摘要时使用的压缩模型。
+         *
+         * @param modelId 生成摘要时使用的压缩模型
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder modelId(String modelId) {
+            this.modelId = modelId;
+            return this;
+        }
+
+        /**
+         * 设置压缩后保留的最近上下文令牌上限。
+         *
+         * @param recentTokenLimit 压缩后保留的最近上下文令牌上限
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder recentTokenLimit(Integer recentTokenLimit) {
+            this.recentTokenLimit = recentTokenLimit;
+            return this;
+        }
+
+        /**
+         * 设置是否把首次压缩结果作为基线融合进后续摘要。
+         *
+         * @param validate 是否把首次压缩结果作为基线融合进后续摘要
+         * @return 当前 构建器
+         */
+        public ChatClientSettingsBuilder validate(boolean validate) {
+            this.validate = validate;
+            return this;
+        }
+
+        /**
          * 设置基础连接设置。
          *
          * @param baseSetting 基础连接设置
@@ -383,7 +546,8 @@ public class ChatClientSettings {
         public ChatClientSettings build() {
             return new ChatClientSettings(factory, provider, defaultModel, compressionModel, systemPrompt,
                     temperature, maxTokens, timeoutMillis, inputOptimizationEnabled, contextCompressionEnabled,
-                    contextCompressionThreshold, contextCompressionRetainMessages, baseSetting);
+                    contextCompressionThreshold, contextCompressionRetainMessages, baseSetting,
+                    auto, async, headroomPercent, mode, modelId, recentTokenLimit, validate);
         }
     }
 }

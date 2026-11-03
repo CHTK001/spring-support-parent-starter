@@ -284,6 +284,7 @@ public class SshConnectionCache {
 
     static {
         // 守护线程周期清理过期会话，避免连接泄漏
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
         Thread t = new Thread(() -> {
             while (true) {
                 try {

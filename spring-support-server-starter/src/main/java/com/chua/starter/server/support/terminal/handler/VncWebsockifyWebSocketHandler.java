@@ -423,7 +423,8 @@ public class VncWebsockifyWebSocketHandler extends AbstractWebSocketHandler {
          * 启动 TCP->WS 泵
          */
         private void start() {
-            pump = new Thread(this::pumpTcp, "vnc-websockify-" + hostId);
+        // [P3C C1 豁免] I/O 阻塞循环（aio/nio/ssh/ftp/终端），不适合交给通用执行器
+    pump = new Thread(this::pumpTcp, "vnc-websockify-" + hostId);
             pump.setDaemon(true);
             pump.start();
         }

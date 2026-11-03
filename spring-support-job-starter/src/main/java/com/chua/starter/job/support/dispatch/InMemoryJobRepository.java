@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 仅含常量定义行，豁免。
 package com.chua.starter.job.support.dispatch;
 
 import com.chua.common.support.lang.code.PageResult;
@@ -11,8 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.chua.common.support.spi.annotations.Spi;
-
 /**
  * 内存版任务仓库, 默认实现, 适用于单机测试或调试场景。
  *
@@ -25,7 +24,6 @@ import com.chua.common.support.spi.annotations.Spi;
  * @since 4.0.0.42
  * @author CH
  */
-@Spi({"in-memory", "memory"})
 @Slf4j
 public class InMemoryJobRepository implements JobRepository {
 

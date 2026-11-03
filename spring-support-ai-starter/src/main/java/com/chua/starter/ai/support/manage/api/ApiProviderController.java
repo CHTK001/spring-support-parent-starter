@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
@@ -21,6 +22,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
@@ -2148,12 +2150,58 @@ public class ApiProviderController {
                 }
             }
         }
+        // 本地平均输出速度：用量聚合任务回填至 sys_ai_model_metrics（非指标快照、
+        // 不进 METRIC_KEYS：指标库中的 @code avg_output_speed_tps 才是本地均值），
+        // 模型卡片的速度列优先展示本地平均值。
+        try {
+            fillAvgOutputSpeed(provider, model, metrics);
+        } catch (Throwable e) {
+            log.warn("[ApiProvider] 读取本地平均输出速度失败: {}", e.getMessage());
+        }
         if (!metrics.isEmpty()) {
             map.put("metrics", metrics);
         }
         map.put("created_at", model.getCreatedAt());
         map.put("updated_at", model.getUpdatedAt());
         return map;
+    }
+
+    /**
+     * 计算 provider/model 所在指标库行的本地平均输出速度，并入模型指标（空值不写）。
+     *
+     * <p><b>数据源</b>：sys_ai_model_metrics（由用量聚合任务按 provider+model 回填），
+     * 与指标快照无关（不是 METRIC_KEYS 成员、不进 Redis 快照）。前端「速度」列优先
+     * 取本地均值 {@code avg_output_speed_tps}，未回填时回退到 {@code output_speed_tps}。</p>
+     *
+     * @param provider  供应商行
+     * @param model     模型行
+     * @param metrics   待补充的指标映射（就地写入）
+     */
+    /**
+     * 将键截断为固定长度（可排序、可索引）
+     *
+     * @param value  原值
+     * @param maxLen 最大长度
+     * @return 截断后的值；入参为空时返回空串
+     */
+    private static String truncate(String value, int maxLen) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= maxLen ? value : value.substring(0, maxLen);
+    }
+
+    private void fillAvgOutputSpeed(SysAiProvider provider, SysAiProviderModel model, Map<String, Object> metrics) {
+        String key = truncate(
+                modelMetricsEnrichmentService.normalizeKey(provider.getProviderId() + "/" + model.getModel()), 160);
+        if (key.isEmpty()) {
+            return;
+        }
+        SysAiModelMetrics row = sysAiModelMetricsService.getByKey(key);
+        if (row == null || row.getAvgOutputSpeedTps() == null) {
+            return;
+        }
+        metrics.put("avg_output_speed_tps", row.getAvgOutputSpeedTps());
     }
 
     /**

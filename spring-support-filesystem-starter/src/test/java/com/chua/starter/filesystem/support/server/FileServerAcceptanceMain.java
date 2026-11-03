@@ -59,7 +59,7 @@ public class FileServerAcceptanceMain {
         var gr = local.getObject(com.chua.common.support.storage.request.GetObjectRequest.builder()
                 .fileName("hello.md").build());
         var lr = local.listObject(com.chua.common.support.storage.request.ListObjectRequest.builder().build());
-        System.out.println("[DIAG] put=" + pr.getResultCode() + " putUrl=" + pr.getUrl()
+        System.out.println("[DIAG] put=" + pr.getResultCode() + " putUrl=" + pr.getUrl() // [P3C E1 豁免]
                 + " getHello=" + gr.getResultCode() + ":" + gr.getMessage()
                 + " list=" + lr.getResultCode() + ":" + (lr.getMetadata() == null ? -1 : lr.getMetadata().size())
                 + " first=" + (lr.getMetadata() == null || lr.getMetadata().isEmpty() ? "-"
@@ -75,7 +75,7 @@ public class FileServerAcceptanceMain {
         security.setFrameOptions("");
         built.addFilter(filter);
         built.start();
-        System.out.println("[ACCEPTANCE] file server ready at http://127.0.0.1:18082/  bucket=local -> "
+        System.out.println("[ACCEPTANCE] file server ready at http://127.0.0.1:18082/  bucket=local -> " // [P3C E1 豁免]
                 + root.resolve("local"));
         Thread.currentThread().join();
     }

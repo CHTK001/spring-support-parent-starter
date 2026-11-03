@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.chat.ChatClientSetting;
@@ -136,6 +137,14 @@ public final class ChatClientSettingsResolver {
                 .contextCompressionEnabled(getBoolean(sysAiGlobalSettingService, "context_compression_enabled", false))
                 .contextCompressionThreshold(getInteger(sysAiGlobalSettingService, "context_compression_threshold", 12))
                 .contextCompressionRetainMessages(getInteger(sysAiGlobalSettingService, "context_compression_retain_messages", 6))
+                // ==================== 上下文压缩 runtime 组（新） ====================
+                .auto(getBoolean(sysAiGlobalSettingService, "auto", true))
+                .async(getBoolean(sysAiGlobalSettingService, "async", false))
+                .headroomPercent(getInteger(sysAiGlobalSettingService, "headroomPercent", 20))
+                .mode(firstNonBlank(getValue(sysAiGlobalSettingService, "mode"), "all"))
+                .modelId(getValue(sysAiGlobalSettingService, "modelId"))
+                .recentTokenLimit(getInteger(sysAiGlobalSettingService, "recentTokenLimit", 30000))
+                .validate(getBoolean(sysAiGlobalSettingService, "validate", true))
                 .baseSetting(setting)
                 .build();
     }

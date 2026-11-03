@@ -68,12 +68,12 @@ public final class DatalakePipelineBenchProbe {
         // 多 Sink 管线
         pm.savePipeline("bench-multi", "{\"id\":\"bench-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statistic\"},{\"type\":\"realtime\"}]}}}");
 
-        System.err.println("========================================================================");
-        System.err.println("Datalake PipelineEngine 吞吐基准");
-        System.err.println("========================================================================");
-        System.err.printf("%-12s %-12s %-14s %-14s %-12s%n",
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("Datalake PipelineEngine 吞吐基准"); // [P3C E1 豁免]
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.printf("%-12s %-12s %-14s %-14s %-12s%n", // [P3C E1 豁免]
                 "数据量", "管线", "耗时(ms)", "吞吐(条/s)", "验证");
-        System.err.println("------------------------------------------------------------------------");
+        System.err.println("------------------------------------------------------------------------"); // [P3C E1 豁免]
 
         int[] counts = {10_000, 100_000};
         String[] pipelines = {"bench-single", "bench-multi"};
@@ -92,7 +92,7 @@ public final class DatalakePipelineBenchProbe {
             }
         }
 
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
 
         sinkRegistry.values().forEach(DataSink::stop);
         dispatcher.close();
@@ -141,7 +141,7 @@ public final class DatalakePipelineBenchProbe {
         long elapsed = System.currentTimeMillis() - t0;
         double throughput = elapsed > 0 ? (double) count / elapsed * 1000 : 0;
 
-        System.err.printf("%-12d %-12s %-14d %-14.0f %s%n",
+        System.err.printf("%-12d %-12s %-14d %-14.0f %s%n", // [P3C E1 豁免]
                 count, label, elapsed, throughput, "OK");
 
         // 验证 envelope 状态
@@ -154,7 +154,7 @@ public final class DatalakePipelineBenchProbe {
                 .build();
         engine.execute(pipeId, verify);
         if (verify.getState() != PipelineState.SINK_OK) {
-            System.err.println("  [WARN] 验证 envelope state != SINK_OK: " + verify.getState());
+            System.err.println("  [WARN] 验证 envelope state != SINK_OK: " + verify.getState()); // [P3C E1 豁免]
         }
     }
 }

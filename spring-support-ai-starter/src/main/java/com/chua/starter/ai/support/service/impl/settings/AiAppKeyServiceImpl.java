@@ -16,6 +16,7 @@ import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyTopupLogMapper;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
+import com.chua.starter.ai.support.model.AiAppKeyQuotaDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
@@ -123,6 +124,13 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         SysAiAppKey entity = toEntity(dto);
         entity.setUserId(AiUserContext.requireUserId());
         LocalDateTime now = LocalDateTime.now();
+        if (entity.getAppKey() == null || entity.getAppKey().isBlank()) {
+            // Key 值由服务端签发：前端生成的串既可能撞车，也可能短得离谱。
+            // 形如 sk-<24 hex>，服务实例与网关都用它做 Bearer 凭证。
+            String generated = "sk-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+            entity.setAppKey(generated);
+            entity.setSecret(generated);
+        }
         if (entity.getStatus() == null) {
             entity.setStatus(1);
         }
@@ -154,8 +162,29 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         requireWritableAppKey(appKeyId);
         SysAiAppKey entity = toEntity(dto);
         entity.setId(appKeyId.intValue());
-        entity.setDeleted(0);
-        appKeyMapper.updateById(entity);
+        // 显式 set 而不是 updateById：updateById 会跳过 null，导致「清空分组 / 去掉模型限制 /
+        // 改为永不过期」这三类操作静默失效（前端提交了空值，库里还留着老值）。
+        LambdaUpdateWrapper<SysAiAppKey> wrapper = new LambdaUpdateWrapper<SysAiAppKey>()
+                .eq(SysAiAppKey::getId, appKeyId.intValue())
+                .set(SysAiAppKey::getName, entity.getName())
+                .set(SysAiAppKey::getProviderId, entity.getProviderId())
+                .set(SysAiAppKey::getGroupId, entity.getGroupId())
+                .set(SysAiAppKey::getModel, entity.getModel())
+                .set(SysAiAppKey::getMaxUse, entity.getMaxUse())
+                .set(SysAiAppKey::getMaxTokens, entity.getMaxTokens())
+                .set(SysAiAppKey::getIpWhitelist, entity.getIpWhitelist())
+                .set(SysAiAppKey::getRemark, entity.getRemark())
+                .set(SysAiAppKey::getExpireDatetime, entity.getExpireDatetime());
+        if (entity.getAppKey() != null && !entity.getAppKey().isBlank()) {
+            // Key 值不可清空：改动等于换一把钥匙，仅在显式提交新值时才写
+            wrapper.set(SysAiAppKey::getAppKey, entity.getAppKey())
+                    .set(SysAiAppKey::getSecret, entity.getSecret());
+        }
+        if (dto.getEnabled() != null) {
+            wrapper.set(SysAiAppKey::getEnabled, entity.getEnabled())
+                    .set(SysAiAppKey::getStatus, entity.getStatus());
+        }
+        appKeyMapper.update(null, wrapper);
         SysAiAppKey updated = appKeyMapper.selectById(appKeyId.intValue());
         return ReturnResult.ok(toDto(updated, resolveProvider(updated.getProviderId()),
                 resolveGroup(updated.getGroupId())));
@@ -414,6 +443,46 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
+     * 调整额度：改次数/Token 上限，并可清零已用。
+     *
+     * <p>上限用「{@code null} 不改动 / {@code 0} 不限 / 正数新上限」三态表达，是因为
+     * MyBatis-Plus 的 {@code updateById} 会跳过 null 字段：想让「改为不限」生效，必须显式
+     * set SQL NULL，否则用户把上限清空后库里还留着老值，看起来改了其实没改。</p>
+     *
+     * @param appKeyId appKey 主键
+     * @param quota    额度调整请求
+     * @return 操作结果（data 为更新后的 appKey DTO）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<AiAppKeyDTO> updateQuota(Long appKeyId, AiAppKeyQuotaDTO quota) {
+        if (quota == null) {
+            return ReturnResult.illegal("额度参数不能为空");
+        }
+        requireWritableAppKey(appKeyId);
+        LambdaUpdateWrapper<SysAiAppKey> wrapper = new LambdaUpdateWrapper<SysAiAppKey>()
+                .eq(SysAiAppKey::getId, appKeyId.intValue());
+        if (quota.getMaxUse() != null) {
+            wrapper.setSql(quota.getMaxUse() > 0
+                    ? "sys_ai_app_key_max_use = " + quota.getMaxUse()
+                    : "sys_ai_app_key_max_use = NULL");
+        }
+        if (quota.getMaxTokens() != null) {
+            wrapper.setSql(quota.getMaxTokens() > 0
+                    ? "sys_ai_app_key_max_tokens = " + quota.getMaxTokens()
+                    : "sys_ai_app_key_max_tokens = NULL");
+        }
+        if (Boolean.TRUE.equals(quota.getResetUsed())) {
+            wrapper.set(SysAiAppKey::getUseCount, 0L)
+                    .set(SysAiAppKey::getTotalTokens, 0L);
+        }
+        appKeyMapper.update(null, wrapper);
+        SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
+        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())));
+    }
+
+    /**
      * 能否扣费（辅助方法）：余额为负且不允许透支 = 不可扣费。
      */
     private boolean canDeduct(BigDecimal balance, Integer overdraftEnabled) {
@@ -536,6 +605,14 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         dto.setEnabled(entity.getEnabled() != null
                 ? entity.getEnabled()
                 : entity.getStatus() != null && entity.getStatus() == 1);
+        dto.setMaxTokens(entity.getMaxTokens());
+        dto.setTotalTokens(entity.getTotalTokens());
+        dto.setIpWhitelist(entity.getIpWhitelist());
+        dto.setRemark(entity.getRemark());
+        dto.setLastUsedTime(entity.getLastUsedTime() != null
+                ? LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(entity.getLastUsedTime()),
+                java.time.ZoneId.systemDefault()).format(FORMATTER)
+                : null);
         dto.setCreatedAt(entity.getCreateTime() != null ? entity.getCreateTime().format(FORMATTER) : null);
         dto.setOwner(entity.getUserId());
         return dto;
@@ -559,10 +636,15 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (dto.getGroupId() != null) {
             entity.setGroupId(dto.getGroupId().intValue());
         }
-        entity.setEnabled(dto.getEnabled());
-        entity.setStatus(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
+        if (dto.getEnabled() != null) {
+            entity.setEnabled(dto.getEnabled());
+            entity.setStatus(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
+        }
         entity.setUseCount(dto.getUseCount());
         entity.setMaxUse(dto.getMaxUse());
+        entity.setMaxTokens(dto.getMaxTokens());
+        entity.setIpWhitelist(dto.getIpWhitelist());
+        entity.setRemark(dto.getRemark());
         entity.setBalance(dto.getBalance());
         entity.setPlanId(dto.getPlanId());
         entity.setOverdraftEnabled(Boolean.TRUE.equals(dto.getOverdraftEnabled()) ? 1 : 0);

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.server.support.terminal.handler;
 
 import com.chua.common.support.lang.code.ReturnResult;
@@ -152,7 +153,8 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler implements Su
                     WebSocketSessions.firstNonBlank(operator, spec.username()), resolveClientIp(wsSession));
             var tokenSession = new GuacdSession(tunnelId, wsSession, tokenTunnel, null,
                     tokenRecord == null ? null : tokenRecord.getId(), tokenProtocolName, null);
-            Thread tokenReader = new Thread(() -> pumpGuacdToBrowser(tokenSession), "guac-reader-" + tunnelId);
+        // [P3C C1 豁免] I/O 阻塞循环（aio/nio/ssh/ftp/终端），不适合交给通用执行器
+    Thread tokenReader = new Thread(() -> pumpGuacdToBrowser(tokenSession), "guac-reader-" + tunnelId);
             tokenReader.setDaemon(true);
             tokenSession.setReaderThread(tokenReader);
             tokenSession.setLastActiveTime(LocalDateTime.now());
@@ -256,7 +258,8 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler implements Su
         // 组装会话并启动 guacd -> 浏览器方向的读线程
         var session = new GuacdSession(tunnelId, wsSession, tunnel, hostId,
                 record == null ? null : record.getId(), protocolType.name().toLowerCase(), null);
-        Thread readerThread = new Thread(() -> pumpGuacdToBrowser(session), "guac-reader-" + tunnelId);
+    // [P3C C1 豁免] I/O 阻塞循环（aio/nio/ssh/ftp/终端），不适合交给通用执行器
+    Thread readerThread = new Thread(() -> pumpGuacdToBrowser(session), "guac-reader-" + tunnelId);
         readerThread.setDaemon(true);
         session.setReaderThread(readerThread); // 写回引用，供 关闭() 中断
         session.setLastActiveTime(LocalDateTime.now());

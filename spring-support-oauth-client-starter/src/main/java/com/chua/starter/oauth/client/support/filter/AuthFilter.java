@@ -390,6 +390,14 @@ public class AuthFilter implements Filter {
         session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "userId"));
         session.setAttribute("userResume", userResume);
         session.setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResume);
+
+ // 存储租户标识到会话
+ // 必须在这里单独写一份：按租户切库的数据源过滤器读的是会话属性 tenantId，
+ // 只写 userInfo 时它能取到，但一旦 AuthService 实现被替换 / 取不到用户上下文，
+ // 就只能拿到空的 tenantId 而回退主库——那是把租户请求放进平台共享库。
+        if (userResume.getTenantId() != null) {
+            session.setAttribute(AuthSessionUtils.SESSION_TENANT_ID, userResume.getTenantId());
+        }
         
  // 存储浏览器指纹到会话
         if (userResume.getFingerprint() != null) {

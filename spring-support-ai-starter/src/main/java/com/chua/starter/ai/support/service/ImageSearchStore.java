@@ -33,16 +33,21 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * <b>单个账号</b>的以图搜图底库：图像特征向量的存取与相似度检索。
+ * <b>单个账号的单个分组</b>的以图搜图底库：图像特征向量的存取与相似度检索。
  *
- * <p><b>本类不是 Spring Bean</b>：每个账号各有一个实例，由
- * {@link ImageSearchStores} 按当前登录账号创建与持有。账号之间在**磁盘与内存
- * 两个维度都隔离**——各自一个目录（{@code <base>/<账号>/imagesearch}）、
+ * <p><b>本类不是 Spring Bean</b>：每个（账号, 分组）各有一个实柱，由
+ * {@link ImageSearchStores} 按当前登录账号与分组创建与持有。账号与分组之间在**磁盘与内存
+ * 两个维度都隔离**——各自一个目录（{@code <base>/<账号>/<分组>/imagesearch}）、
  * 各自一份快照与 id 水位、各自一套特征抽取器与向量索引。因此 A 账号看不到
- * B 账号的图，删除也不会互相影响。</p>
+ * B 账号的图，修改也不会互相影响。</p>
  *
- * <p>账号的解析口径统一走 {@link com.chua.starter.ai.support.util.AiUserContext}，
- * 静态账号的 userId 就是用户名（见 {@code StaticTempLogin}），跨登录稳定。</p>
+ * <p>账号与分组的解析口径统一走 {@link com.chua.starter.ai.support.util.AiUserContext}，
+ * 静态账号的 userId 就是用户名（见 {@code StaticTempLogin}），跨登录稳定。
+ * 分组默认取 {@code default}，见 {@link com.chua.starter.ai.support.util.AiLibraryGroups}。</p>
+ *
+ * <p><b>向量标识带分组</b>：{@code image-search-<分组>-<id>}，
+ * 由 {@link #vectorId(long)} / {@link #parseId(String)} 负责编解，
+ * 保证同账号下不同分组的底库即使存于同一台 jvector 也不混用向量。</p>
  *
  * <p><b>向量存储按配置选择</b>：读取 {@code image_search.vector_storage_engine}
  * （缺省 {@code jvector}），通过 {@link VectorStorageProvider#create} 构建，
@@ -56,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 另外落一份 JSON 快照，启动时据此重建向量索引，使底库可跨重启保留。</p>
  *
  * @author CH
- * @since 4.0.0.42
+ * @since 4.0.0.45
  */
 @Slf4j
 public class ImageSearchStore {
@@ -67,7 +72,12 @@ public class ImageSearchStore {
     private static final String DEFAULT_STORAGE = "jvector";
     /** 缩略图最长边（前端以 base64 内联展示，不宜过大） */
     private static final int THUMB_MAX_EDGE = 240;
-    /** 向量标识前缀（避免与其它业务在共享存储中撞键） */
+    /** 向量标识前缀（避免与其它业务在共享存储中撞键）。
+     *
+     * <p>拼接后完整格式为 {@code image-search-<分组>-<id>}，其中分组来自
+     * 本实例持有的 {@link #group}。同账号多分组必须靠它区分，否则 jvector
+     * 会把不同分组的向量写在一起。</p>
+     */
     private static final String VECTOR_ID_PREFIX = "image-search-";
     /** 归一化前的最小模长，避免除零 */
     private static final double MIN_NORM = 1e-12d;
@@ -75,7 +85,10 @@ public class ImageSearchStore {
     /** 本实例所属账号（用于日志与向量标识前缀区分） */
     private final String account;
 
-    /** 本账号的底库目录（{@code <base>/<账号>/imagesearch}） */
+    /** 本分组名（用于向量标识前缀与底库隔离：同账号下不同的分组落不同的目录与索引） */
+    private final String group;
+
+    /** 本账号的底库目录（{@code <base>/<账号>/<分组>/imagesearch}） */
     private final Path dir;
 
     private final GlobalSettingReader settingReader;
@@ -98,17 +111,19 @@ public class ImageSearchStore {
     private final ImageKeywordExtractor keywordExtractor;
 
     /**
-     * 构造一个账号的底库实例。
+     * 构造一个账号一个分组的底库实例。
      *
      * @param account       账号标识（即 userId）
+     * @param group         分组名（同一个账号可拥有多组底库）
      * @param dir           该账号的底库目录，已由调用方解析并确保位于 base 之下
      * @param settingReader 全局设置读取器（特征模型 / 向量引擎等为全局配置）
      * @param library       底库元数据与向量的联动层
      * @param keywordExtractor 图片关键词提取器
      */
-    ImageSearchStore(String account, Path dir, GlobalSettingReader settingReader,
+    ImageSearchStore(String account, String group, Path dir, GlobalSettingReader settingReader,
                      ImageLibraryLinkService library, ImageKeywordExtractor keywordExtractor) {
         this.account = account;
+        this.group = group;
         this.dir = dir;
         this.settingReader = settingReader;
         this.library = library;
@@ -122,6 +137,15 @@ public class ImageSearchStore {
      */
     String account() {
         return account;
+    }
+
+    /**
+     * 本实例所属分组。
+     *
+     * @return 分组名
+     */
+    String group() {
+        return group;
     }
 
     /** 当前生效的特征模型标识（空表示未配置） */
@@ -152,10 +176,10 @@ public class ImageSearchStore {
     private volatile String storageModel = "";
 
     /**
-     * 本账号的底库目录。
+     * 本实例所属账号的分组合一目录。
      *
      * <p>由 {@link ImageSearchStores} 在创建实例时解析并注入，形如
-     * {@code <base>/<账号>/imagesearch}；base 可用系统属性
+     * {@code <base>/<账号>/<分组>/imagesearch}；base 可用系统属性
      * {@code image.search.store.dir} 覆盖，缺省为进程工作目录。
      * 目录只在这里取，别处一律经 {@link #storeDir()} 派生，
      * 避免再出现「某个文件悄悄落到别处」的分叉。</p>
@@ -182,9 +206,9 @@ public class ImageSearchStore {
     /**
      * 底库快照文件路径。
      *
-     * <p>落在本账号目录下：{@code <base>/<账号>/imagesearch/index.json}。
-     * 远端服务的工作目录是 {@code /opt/ai-starter/runtime}，故 admin 账号的
-     * 快照为 {@code /opt/ai-starter/runtime/admin/imagesearch/index.json}。</p>
+     * <p>落在本实例目录下：{@code <base>/<账号>/<分组>/imagesearch/index.json}。
+     * 远端服务的工作目录是 {@code /opt/ai-starter/runtime}，故 admin 账号
+     * default 分组的快照为 {@code /opt/ai-starter/runtime/admin/default/imagesearch/index.json}。</p>
      *
      * @return 快照文件路径
      */
@@ -253,14 +277,14 @@ public class ImageSearchStore {
             }
             all = new ArrayList<>(images.values());
         }
-        java.util.Set<String> existing = library.listExistingVectorIds(account);
+        java.util.Set<String> existing = library.listExistingVectorIds(account, group);
         int created = 0;
         for (StoredImage item : all) {
             String vid = vectorId(item.getId());
             if (existing.contains(vid)) {
                 continue;
             }
-            if (library.insert(account, vid, item.getName(), item.getThumb(), item.getImageFile(),
+            if (library.insert(account, group, vid, item.getName(), item.getThumb(), item.getImageFile(),
                     /**
                      * meta Of
                      * @param item.getTags() 参数
@@ -271,8 +295,8 @@ public class ImageSearchStore {
             }
         }
         if (created > 0) {
-            log.info("[ImageSearch] 账号 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
-                    account, created, all.size());
+            log.info("[ImageSearch] 账号 '{}' 分组 '{}' 存量档案补建入库: {} 条（底库共 {} 条）",
+                    account, group, created, all.size());
         }
     }
 
@@ -654,7 +678,7 @@ public class ImageSearchStore {
         // DB 权威：元数据入库。原图只存**相对文件名** —— 底库目录随 face.store.dir
         // 配置变化，存绝对路径等于把一次配置变更变成一次全量数据损坏。
         // 特征模型名 / 原图字节数进 meta 列，够排查「为什么认不出」即可。
-        if (!library.insert(account, vectorId(id), item.getName(), item.getThumb(),
+        if (!library.insert(account, group, vectorId(id), item.getName(), item.getThumb(),
                 item.getImageFile(), joinTags(item.getTags()), item.getWidth(), item.getHeight(),
                 /**
                  * meta Of
@@ -994,7 +1018,7 @@ public class ImageSearchStore {
         // DB 行：DB 化之前入库的图片没有 DB 行，那也算删除成功。
         // 真的 DB 出错则把快照还原 —— 否则列表已看不到这张图，DB 里那行还在，
         // 日后按 DB 统计又把它算回来。
-        if (!library.deleteMeta(account, vectorId(id))) {
+        if (!library.deleteMeta(account, group, vectorId(id))) {
             synchronized (images) {
                 images.put(id, removedItem);
             }
@@ -1071,27 +1095,48 @@ public class ImageSearchStore {
     }
 
     /**
-     * 向量标识（带业务前缀，避免共享存储中撞键）。
+     * 向量标识（带业务前缀与分组名，避免同账号下不同分组在共享存储中撞键）。
+     *
+     * <p>格式：{@code image-search-<分组>-<id>}，其中 <分组> 为本实例所属分组。
+     * 同一账号的多个分组各自维护一套向量索引，必须由标识前缀区分，否则
+     * jvector 会把不同分组的向量写在一起。</p>
      *
      * @param id 记录标识
      * @return 向量标识
      */
-    private static String vectorId(long id) {
-        return VECTOR_ID_PREFIX + id;
+    private String vectorId(long id) {
+        return VECTOR_ID_PREFIX + group + "-" + id;
     }
 
     /**
      * 从向量标识解析记录标识。
      *
+     * <p>格式 {@code image-search-<分组>-<id>}：脱去前缀后，最后一段
+     * {@code -id} 才是记录标识（分组含连字符时解析仍成立，因为只把最后一段当 id）。
+     * 不是本业务前缀的标识一律放过。</p>
+     *
+     * <p>做过旧版标识（{@code image-search-<id>}）的过渡兼容：脱入前缀后
+     * 若不包含连字符段或只剩分段，则按老格式把整段当 id。</p>
+     *
      * @param vectorId 向量标识
      * @return 记录标识；非本业务前缀时返回 空
      */
-    private static Long parseId(String vectorId) {
+    private Long parseId(String vectorId) {
         if (vectorId == null || !vectorId.startsWith(VECTOR_ID_PREFIX)) {
             return null;
         }
+        String rest = vectorId.substring(VECTOR_ID_PREFIX.length());
+        int last = rest.lastIndexOf('-');
+        if (last <= 0 || last == rest.length() - 1) {
+            // 老格式：没有分组-标识分段，整段就是 id
+            try {
+                return Long.parseLong(rest);
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        }
         try {
-            return Long.parseLong(vectorId.substring(VECTOR_ID_PREFIX.length()));
+            return Long.parseLong(rest.substring(last + 1));
         } catch (NumberFormatException ex) {
             return null;
         }

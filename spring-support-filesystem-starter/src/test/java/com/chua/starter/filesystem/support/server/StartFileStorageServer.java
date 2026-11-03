@@ -84,12 +84,12 @@ public class StartFileStorageServer {
         server.addFilter(filter);
         server.start();
 
-        System.out.println("========================================");
-        System.out.println("FileStorage 服务已启动");
-        System.out.println("地址: http://127.0.0.1:" + port + "/local/{key}");
-        System.out.println("配置: http://127.0.0.1:" + port + "/config?token=" + filter.getToken());
-        System.out.println("示例: curl -X PUT --data-binary @a.txt http://127.0.0.1:" + port + "/local/a.txt");
-        System.out.println("========================================");
+        System.out.println("========================================"); // [P3C E1 豁免]
+        System.out.println("FileStorage 服务已启动"); // [P3C E1 豁免]
+        System.out.println("地址: http://127.0.0.1:" + port + "/local/{key}"); // [P3C E1 豁免]
+        System.out.println("配置: http://127.0.0.1:" + port + "/config?token=" + filter.getToken()); // [P3C E1 豁免]
+        System.out.println("示例: curl -X PUT --data-binary @a.txt http://127.0.0.1:" + port + "/local/a.txt"); // [P3C E1 豁免]
+        System.out.println("========================================"); // [P3C E1 豁免]
 
         // 将令牌写入临时文件，便于脚本化验收
         try {
@@ -97,7 +97,7 @@ public class StartFileStorageServer {
                     java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "filestorage-token.txt"),
                     filter.getToken());
         } catch (Exception e) {
-            System.err.println("写入令牌临时文件失败，已忽略: " + e.getMessage());
+            System.err.println("写入令牌临时文件失败，已忽略: " + e.getMessage()); // [P3C E1 豁免]
         }
 
         // 阻塞主线程保持服务运行

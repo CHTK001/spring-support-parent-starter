@@ -16,6 +16,27 @@ spring:
       # job-starter 依赖 JobMapper（mybatis 表映射），monitor 本地联调无该表排除
       # 改为显式管理：V2.0__init_all_job.sql 已在 report 库建表（_version=V2.0__init_all_job）
       # - com.chua.starter.job.support.JobAutoConfiguration
+
+  # ===========================================
+  # CDP 调试中心（spring-support-cdp-starter，monitor 的依赖）
+  # ===========================================
+  # 刻意写在这里而不是靠命令行：CDP 是 monitor 能力的一部分，不是外挂进程。
+  # monitor 启动时 CdpAutoConfiguration 自动装配（pom 已依赖该 starter），
+  # 于是同一进程内同时提供：
+  #   REST      /ms/cdp/**   （状态 / 目标 / DOM / 截屏 / 求值）
+  #   WebSocket /ws/cdp      （前端 pages/debug 的实时通道）
+  # 前端只需把 /ms/cdp 与 /ws/cdp 代理到本服务端口（dev 下 MS_API_TARGET 指向这里）。
+  #
+  # enabled=false 时整块能力关闭（Controller 仍注册，但不会拉起浏览器）。
+  cdp:
+    enabled: true
+    # Chromium 调试端口（宿主机 127.0.0.1:端口 承载 DevTools HTTP + WS）
+    port: 9222
+    # 无头启动：服务器上没有显示器时唯一可用形态
+    headless: true
+    # 前端实时通道路径，须与 pages/debug 的 CDP_WS_PATH 一致
+    ws-path: /ws/cdp
+
   ai:
     generate:
       enabled: false

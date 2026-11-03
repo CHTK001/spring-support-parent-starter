@@ -1,34 +1,24 @@
 package com.chua.starter.ai.support.security;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.servlet.ReadListener;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 /**
- * 网关请求体大小限制过滤器（顺序第五，对应 Sub2API 的 body size guard）。
+ * 网关请求体大小限流过滤器。
  *
- * <h2>三条判定路径</h2>
- * <ol>
- *   <li><b>带 Content-Length</b>：只读头部，零额外开销 —— 超限直接 413，未超限原样放行；</li>
- *   <li><b>无 Content-Length（分块传输）</b>：读满 {@code limit + 1} 字节后再判，
- *       超限 413，未超限把已读内容回放给下游；</li>
- *   <li><b>限制 &lt;= 0</b>：视为不限制，直接放行。</li>
- * </ol>
- *
- * <h2>为什么必须回放</h2>
- * <p>分块请求一旦为了测量大小而消费了 {@code ServletInputStream}，下游就读不到正文了。
- * 因此这条路径必须用 {@link ReplayingRequestWrapper} 把已读字节退回给下游，
- * 并同步修正 {@code getContentLength} / {@code getContentLengthLong}，否则框架仍按
- * -1 处理，容易把 JSON 正文解析成空。</p>
+ * <p>带 {@code Content-Length} 的请求：只检查头部，零额外开销；<br>
+ * 分块传输（无 {@code Content-Length}）：一次性读完，超过限制拒绝，不超过则回放给下游。</p>
  *
  * @author CH
  * @since 4.0.0.52
@@ -37,104 +27,83 @@ import java.io.IOException;
 public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
 
     /**
-     * 一次性读取的块大小
-     */
-    private static final int READ_BUFFER = 4096;
-
-    /**
      * 构造器注入：安全设置唯一来源。
      *
-     * @param settings 安全设置快照
+     * @param globalSettingReader 全局设置读取器
      */
-    public GatewayBodySizeFilter(SecuritySettings settings) {
-        super(settings);
+    public GatewayBodySizeFilter(GlobalSettingReader globalSettingReader) {
+        super(globalSettingReader);
     }
 
-    /**
-     * 本过滤器需要在判定阶段消费正文，因此覆盖模板：判定完成后再决定用原请求还是回放请求进链。
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param chain    过滤器链
-     * @throws ServletException Servlet 异常
-     * @throws IOException      IO 异常
-     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        byte[] replayable = null;
         try {
-            if (applies(request) && settings().getBool("security_body_limit_enabled", true)) {
-                int maxBytes = settings().getInt("security_body_limit_max_bytes", 8_388_608);
-                if (maxBytes > 0) {
-                    long contentLength = request.getContentLengthLong();
-                    if (contentLength > maxBytes) {
-                        log.warn("[GatewayBodySizeFilter] 请求体超限 {} > {}: {}", contentLength, maxBytes,
-                                request.getRequestURI());
-                        rejectBodySize(response, maxBytes);
-                        return;
-                    }
-                    if (contentLength < 0) {
-                        // 分块传输：读满 limit + 1 再判，未超限则回放
-                        byte[] body = readBody(request, maxBytes);
-                        if (body.length > maxBytes) {
-                            log.warn("[GatewayBodySizeFilter] 分块请求体超限 > {}: {}", maxBytes,
-                                    request.getRequestURI());
-                            rejectBodySize(response, maxBytes);
-                            return;
-                        }
-                        replayable = body;
-                    }
-                }
+            // 总开关关闭 / 路径未命中 → 放行
+            if (!enabled() || !matches(request)) {
+                safePass(request, response, chain);
+                return;
             }
+            int maxBytes = globalSettingReader().getInt("security", "security_body_limit_max_bytes", 8_388_608);
+            if (maxBytes <= 0) {
+                safePass(request, response, chain);
+                return;
+            }
+            int contentLength = request.getContentLength();
+            if (contentLength > maxBytes) {
+                // 已知长度且超限：直接 413，不进下游
+                rejectBodySize(request, response, String.valueOf(maxBytes));
+                return;
+            }
+            if (contentLength > 0) {
+                // 已知长度、未超限：只有一位字节的放大，不掉用包装器
+                safePass(request, response, chain);
+                return;
+            }
+            // 无 Content-Length（分块流）：先读满再判断，再回放
+            byte[] body = readBody(request, maxBytes + 1);
+            if (body.length > maxBytes) {
+                rejectBodySize(request, response, String.valueOf(maxBytes));
+                return;
+            }
+            chain.doFilter(new ReplayingRequestWrapper(request, body), response);
         } catch (Exception e) {
-            // 判定异常：放行。若正文已被消费则无法回放，下游会读到空正文 —— 但相比直接
-            // 500 拒掉整条请求，放行仍是有损但可用的降级
-            log.warn("[GatewayBodySizeFilter] 拦截判定异常，已放行: {}", e.getMessage());
+            log.warn("[GatewayBodySizeFilter] 拦截异常，放行: {}", e.getMessage());
         }
-        if (replayable != null) {
-            chain.doFilter(new ReplayingRequestWrapper(request, replayable), response);
-            return;
-        }
-        chain.doFilter(request, response);
-    }
-
-    @Override
-    protected boolean reject(HttpServletRequest request, HttpServletResponse response) {
-        // 正文限制需要回放包装，逻辑在 doFilterInternal 里，这里不参与模板
-        return false;
+        safePass(request, response, chain);
     }
 
     /**
-     * 一次性读完请求体（最多 {@code limit + 1} 字节）。
+     * 一次性读完请求体（受限），用于分块传输的提前检测。
      *
      * @param request 请求
-     * @param limit   上限（函数会多读若干字节以判断是否超限）
-     * @return 读到的字节
-     * @throws IOException IO 异常
+     * @param limit   最大可读的字节数 + 1（超过则刚好截断在 limit）
+     * @return 读到的所有字节
      */
     private static byte[] readBody(HttpServletRequest request, int limit) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(Math.min(limit + 1, 65_536));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         ServletInputStream in = request.getInputStream();
-        byte[] buf = new byte[READ_BUFFER];
-        int read;
+        byte[] buf = new byte[4096];
+        int read = 0;
+        int total = 0;
         while ((read = in.read(buf, 0, buf.length)) > 0) {
+            total += read;
             out.write(buf, 0, read);
-            if (out.size() > limit) {
-                // 已确认超限，剩下的不必再读
+            if (total >= limit) {
                 break;
             }
         }
+        in.close();
         return out.toByteArray();
     }
 
     /**
-     * 把读入内存的请求体回放给下游。
+     * 把读入内存的请求体回放给下游：对 {@code getContentLength()} 做静态回放。
      */
     private static final class ReplayingRequestWrapper extends HttpServletRequestWrapper {
 
         /**
-         * 已读请求体
+         * 请求体
          */
         private final byte[] body;
 
@@ -144,17 +113,12 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
         }
 
         @Override
-        public ServletInputStream getInputStream() {
+        public ServletInputStream getInputStream() throws IOException {
             return new ReplayingServletInputStream(body);
         }
 
         @Override
         public int getContentLength() {
-            return body.length;
-        }
-
-        @Override
-        public long getContentLengthLong() {
             return body.length;
         }
     }
@@ -164,9 +128,6 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
      */
     private static final class ReplayingServletInputStream extends ServletInputStream {
 
-        /**
-         * 内存副本
-         */
         private final ByteArrayInputStream stream;
 
         ReplayingServletInputStream(byte[] body) {
@@ -179,13 +140,12 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
         }
 
         @Override
-        public int read(byte[] buffer, int offset, int length) {
-            return stream.read(buffer, offset, length);
+        public int read(byte[] bbuf, int off, int len) {
+            return stream.read(bbuf, off, len);
         }
 
         @Override
         public boolean isReady() {
-            // 全部在内存里，永远「已就绪」
             return true;
         }
 
@@ -196,18 +156,7 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
 
         @Override
         public void setReadListener(ReadListener listener) {
-            if (listener == null) {
-                return;
-            }
-            // 数据已完整在内存中：立即以非阻塞语义通知读就绪与读完
-            try {
-                if (!isFinished()) {
-                    listener.onDataAvailable();
-                }
-                listener.onAllDataRead();
-            } catch (IOException e) {
-                listener.onError(e);
-            }
+            throw new UnsupportedOperationException("read in blocking mode");
         }
     }
 }

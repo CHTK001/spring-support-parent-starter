@@ -41,7 +41,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ngrok-starter</artifactId>
-            <version>${utils.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.ngrok</groupId>
@@ -65,4 +65,13 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
+    <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+    </build>
 </project>

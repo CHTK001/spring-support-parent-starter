@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService.MetricsRecord;
 import lombok.RequiredArgsConstructor;
@@ -90,6 +91,11 @@ public class SysAiModelMetricsService {
     private final AiModelMetricsEnrichmentService enrichment;
 
     /**
+     * 用量 映射器（按 provider+model 取本地平均输出速度）
+     */
+    private final SysAiUsageMapper usageMapper;
+
+    /**
      * 指标源全量同步：指标源全量记录 → 插入/更新，行内锁定字段跳过。
      *
      * @return 处理的记录条数
@@ -137,6 +143,53 @@ public class SysAiModelMetricsService {
     public SysAiModelMetrics getByKey(String key) {
         return metricsMapper.selectOne(new LambdaQueryWrapper<SysAiModelMetrics>()
                 .eq(SysAiModelMetrics::getModelKey, key).last("limit 1"));
+    }
+
+    /**
+     * 用量回填：按 服务商+模型 对全部本地用量的 token 输出速度取平均，写入
+     * {@code sys_ai_model_metrics.avg_output_speed_tps}（归一化键关联：
+     * {@code provider/model} → normalizeKey）。
+     * <p>
+     * 无本地用量的模型不出现（行保持 NULL，前端/计费回退到系统的
+     * {@code output_speed_tps}）。</p>
+     *
+     * @return 回填的指标数
+     */
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    @Transactional(rollbackFor = Exception.class)
+    public int syncAvgOutputSpeedTps() {
+        List<SysAiUsageMapper.ModelSpeedRow> rows = usageMapper.selectModelAvgSpeedTps(null, null);
+        if (rows == null || rows.isEmpty()) {
+            log.info("[ModelMetrics] 无本地用量记录，avg_output_speed_tps 不回填");
+            return 0;
+        }
+        long now = System.currentTimeMillis();
+        int updated = 0;
+        for (SysAiUsageMapper.ModelSpeedRow row : rows) {
+            String provider = row.provider();
+            String model = row.model();
+            if (provider == null || provider.isBlank() || model == null || model.isBlank()) {
+                continue;
+            }
+            // 归一化键：provider/model → 取最后一段 / 并合并非字母数字字符（与指标源同口径）
+            String key = truncate(enrichment.normalizeKey(provider + "/" + model), 160);
+            if (key.isEmpty()) {
+                continue;
+            }
+            SysAiModelMetrics cur = getByKey(key);
+            if (cur == null) {
+                continue;
+            }
+            LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
+            uw.eq(SysAiModelMetrics::getId, cur.getId());
+            uw.set(SysAiModelMetrics::getAvgOutputSpeedTps, BigDecimal.valueOf(row.avgSpeedTps()));
+            uw.set(SysAiModelMetrics::getUpdateTime, now);
+            if (metricsMapper.update(null, uw) > 0) {
+                updated++;
+            }
+        }
+        log.info("[ModelMetrics] 本地平均输出速度回填完成：{} 行（原始分组 {} 组）", updated, rows.size());
+        return updated;
     }
 
     /**

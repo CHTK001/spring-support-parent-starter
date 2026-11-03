@@ -86,6 +86,19 @@ public class SysAiImageLibrary {
     private String userId;
 
     /**
+     * 管理方的分组成员（多分组隔离）。
+     *
+     * <p>与 {@link SysAiFaceLibrary} 的 {@code groupName} 同义；
+     * 分组列建成之前写入的行是 {@code NULL}，语义上属于默认组
+     * {@code default}，查询时按 {@link com.chua.starter.ai.support.util.AiLibraryGroups}
+     * 的 NULL 口径兜底。</p>
+     *
+     * @since 4.0.0.45
+     */
+    @TableField("sys_ai_image_library_group")
+    private String groupName;
+
+    /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_image_library_status")

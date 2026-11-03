@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasync.dbprobe;
 
 import com.chua.datasync.agent.support.DataSyncAgentSink;
@@ -43,25 +44,25 @@ public final class DataSyncStressProbe {
         int[] rows = {100_000_000};
         int[] batches = {1000};
 
-        System.err.println("========================================================================");
-        System.err.println("数据同步完整管线压测 (全链路 + 手动单遍触发)");
-        System.err.println("========================================================================");
-        System.err.printf("%-12s %-10s %-12s %-14s %-12s %-16s%n",
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.println("数据同步完整管线压测 (全链路 + 手动单遍触发)"); // [P3C E1 豁免]
+        System.err.println("========================================================================"); // [P3C E1 豁免]
+        System.err.printf("%-12s %-10s %-12s %-14s %-12s %-16s%n", // [P3C E1 豁免]
                 "行数", "batch", "耗时(ms)", "吞吐(行/s)", "sink批数", "数据校验");
-        System.err.println("------------------------------------------------------------------------");
+        System.err.println("------------------------------------------------------------------------"); // [P3C E1 豁免]
 
         for (int rowCount : rows) {
             Path csv = WORK_DIR.resolve("stress-" + rowCount + ".csv");
             if (!Files.exists(csv)) {
                 long t0 = System.currentTimeMillis();
                 generateCsv(csv, rowCount);
-                System.err.println("[STRESS] 生成 " + rowCount + " 行 CSV: " + (System.currentTimeMillis() - t0) + "ms");
+                System.err.println("[STRESS] 生成 " + rowCount + " 行 CSV: " + (System.currentTimeMillis() - t0) + "ms"); // [P3C E1 豁免]
             }
             for (int batch : batches) {
                 runFullPipeline(csv, rowCount, batch);
             }
         }
-        System.err.println("========================================================================");
+        System.err.println("========================================================================"); // [P3C E1 豁免]
     }
 
     /**
@@ -98,7 +99,7 @@ public final class DataSyncStressProbe {
         long t0 = System.currentTimeMillis();
         server.schedulerManager().trigger(id);
         long triggerMs = System.currentTimeMillis() - t0;
-        System.err.println("[TIMING] trigger 返回耗时: " + triggerMs + "ms");
+        System.err.println("[TIMING] trigger 返回耗时: " + triggerMs + "ms"); // [P3C E1 豁免]
         long start = System.currentTimeMillis();
         boolean done = sink.done.await(180, TimeUnit.SECONDS);
         long elapsedMs = System.currentTimeMillis() - start;
@@ -107,7 +108,7 @@ public final class DataSyncStressProbe {
         long tp = (sink.count.get() > 0) ? (sink.count.get() * 1000L / Math.max(1L, elapsedMs)) : 0L;
         long batches = sink.batches.get();
         boolean ok = done && sink.count.get() == totalRows;
-        System.err.printf("%-12d %-10d %-12d %-14d %-12d %-16s%n",
+        System.err.printf("%-12d %-10d %-12d %-14d %-12d %-16s%n", // [P3C E1 豁免]
                 totalRows, batchSize, elapsedMs, tp, batches, ok ? "PASS" : "FAIL(" + sink.count.get() + ")");
     }
 
@@ -177,7 +178,7 @@ public final class DataSyncStressProbe {
             totalDispatchMs.addAndGet(cost);
             lastBatchMs = System.currentTimeMillis();
             if (cost > 100) {
-                System.err.println("[SLOW] batch=" + b + " cost=" + cost + "ms count=" + count.get());
+                System.err.println("[SLOW] batch=" + b + " cost=" + cost + "ms count=" + count.get()); // [P3C E1 豁免]
             }
         }
 

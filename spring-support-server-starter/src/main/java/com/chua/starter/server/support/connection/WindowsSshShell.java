@@ -185,17 +185,26 @@ public class WindowsSshShell {
         }
         String command = PowerShellCommand.encoded(shell, psCommand);
         SshClients.Handle handle = null;
+        boolean broken = false;
         try {
             handle = connectionManager.borrow(host, cred);
             SshClient.ExecResult r = handle.client().exec().command(command).execute();
             return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (WindowsSshExecException e) {
+            broken = true;
             throw e;
         } catch (Exception e) {
+            broken = true;
             throw new WindowsSshExecException("OpenSSH 执行失败: " + rootMessage(e), e);
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
+            }
+            if (broken) {
+                // 执行异常说明这条池化连接已不可信（如 sshd 重启后死会话），
+                // 不作废，后续请求会继续复用它，表现和 `ExecServiceImpl.execViaSsh` 里那样，
+                // 下一次 `borrow` 才会重建连接。
+                connectionManager.invalidate(host.getId());
             }
         }
     }
@@ -626,17 +635,25 @@ public class WindowsSshShell {
     */
     private Result runRaw(MsServerHost host, SshCredential cred, String command) {
         SshClients.Handle handle = null;
+        boolean broken = false;
         try {
             handle = connectionManager.borrow(host, cred);
             SshClient.ExecResult r = handle.client().exec().command(command).execute();
             return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (WindowsSshExecException e) {
+            broken = true;
             throw e;
         } catch (Exception e) {
+            broken = true;
             throw new WindowsSshExecException("OpenSSH 执行失败: " + rootMessage(e), e);
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
+            }
+            if (broken) {
+                // 执行异常说明这条池化连接已不可信（如 sshd 重启后的死会话），及其
+                // 后任何借出都复用它、永远报 `open failed`。作废后下次 borrow 重建。
+                connectionManager.invalidate(host.getId());
             }
         }
     }
@@ -721,15 +738,21 @@ public class WindowsSshShell {
         }
         String command = PowerShellCommand.encoded(shell, psCommand);
         SshClients.Handle handle = null;
+        boolean broken = false;
         try {
             handle = connectionManager.borrow(host, cred);
             SshClient.ExecResult r = handle.client().exec().command(command).stream(onLine, onLine);
             return new Result(r.exitCode(), r.stdout(), r.stderr());
         } catch (Exception e) {
+            broken = true;
             throw new WindowsSshExecException("OpenSSH 流式执行失败: " + rootMessage(e), e);
         } finally {
             if (handle != null) {
                 connectionManager.release(host.getId());
+            }
+            if (broken) {
+                // 执行异常说明这条池化连接已不可信，作废后下次 borrow 重建。
+                connectionManager.invalidate(host.getId());
             }
         }
     }
@@ -749,6 +772,7 @@ public class WindowsSshShell {
         String command = powershell(psCommand);
         AtomicReference<SshClients.Handle> handleRef = new AtomicReference<>();
         AtomicReference<SshClient.StreamHandle> streamRef = new AtomicReference<>();
+// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
         Thread worker = new Thread(() -> {
             try {
                 SshClients.Handle handle = connectionManager.borrow(host, cred);

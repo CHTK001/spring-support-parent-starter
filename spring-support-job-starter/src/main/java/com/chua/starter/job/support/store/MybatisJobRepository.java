@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 仅含常量定义行，豁免。
 package com.chua.starter.job.support.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -8,8 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.task.scheduler.Trigger;
 import com.chua.starter.job.support.JobProperties;
-import com.chua.starter.job.support.cache.JobScanCache;
-import com.chua.starter.job.support.cache.JobScanCaches;
+import com.chua.starter.job.support.cache.ScanCache;
 import com.chua.starter.job.support.dispatch.JobDefinition;
 import com.chua.starter.job.support.dispatch.JobQuery;
 import com.chua.starter.job.support.dispatch.JobRepository;
@@ -90,26 +90,26 @@ public class MybatisJobRepository implements JobRepository {
     private final String defaultGroup;
 
     /**
-     * 扫描结果缓存扩展点（{@link JobScanCache}）。
+     * 扫描结果缓存（配置为开启时才装配，否则就是 null：每拍都真实查库，与历史行为一致）。
      *
-     * <p>配置为关闭时装配的是 {@code NoopScanCache}（永不命中、写入即丢弃），
-     * 而不是 {@code null}：写侧出口不必逐个判空，实路行为仍与历史逐字一致。
-     * 开启时装配 {@code ScanCache}，命中只补读到期行。</p>
+     * <p>存的是"相位 + 候选行"，命中时拍次级的查询只补读：
+     * 到期行写回前必须主键批读（避免 stale 乐观条件让派发静默失败），
+     * 没有到期行的一拍查询量为 0（比每拍 2 次查询少 1 次）。写侧入口一律清缓存。</p>
      */
-    private JobScanCache scanCache;
+    private ScanCache scanCache;
 
     /**
      * 带查询缓存配置的构造器。
      *
-     * @param jobMapper    作业映射器
+     * @param jobMapper   作业映射器
      * @param defaultGroup 未指定分组时的落地分组
-     * @param cache        缓存配置（未开启时装配非缓存实现）
+     * @param cache        缓存配置（未开启时不装配缓存）
      */
     public MybatisJobRepository(JobMapper jobMapper, String defaultGroup, JobProperties.CacheConfig cache) {
         this.jobMapper = jobMapper;
         this.defaultGroup = defaultGroup;
-        // 没开缓存就是每拍真实查库；TTL 小于等于 0 永远不活 = 等效关了，统一落到非缓存档。
-        this.scanCache = JobScanCaches.resolve(cache);
+        // 没开缓存就是每拍真实查库；TTL 小于等于 0 永远不活 = 等效关了。
+        this.scanCache = (cache == null || !cache.isEnabled()) ? null : new ScanCache(cache.getTtlMs());
     }
 
     @Override
@@ -117,23 +117,15 @@ public class MybatisJobRepository implements JobRepository {
         return findDue(now, preReadMs, preReadCount, null);
     }
 
-    /**
-     * 失效扫描缓存；非缓存实现（默认关闭）时是无操作。
-     *
-     * <p>写侧出口（保存、改调度、启停、删除、注销、同步 next_time、refresh）都要走这里：
-     * 缓存实现由 SPI 提供，非缓存档的 {@code clear()} 本身就是空操作，调用方无需判空。</p>
-     */
-    private void invalidateScanCache() {
-        scanCache.clear();
-    }
-
     @Override
     public List<JobDefinition> findDue(long now, long preReadMs, int preReadCount, String group) {
         // 查询缓存命中：相位 + 扫描结果来自同一查询条件的上一拍扫描，跨拍次复用（最多省掉 2 次查库）；
-        // 非缓存档 / 缓存过期 / 未命中：由实路去读库，并把扫描结果存起来备下一拍复用。
-        JobScanCache.ScanEntry entry = scanCache.get(group, preReadMs, preReadCount);
-        if (entry != null) {
-            return scanDueFromCache(entry, now, preReadMs, preReadCount, group);
+        // 未开缓存 / 缓存过期 / 未命中：由实路去读库，并把扫描结果存起来备下一拍复用。
+        if (scanCache != null) {
+            ScanCache.ScanEntry entry = scanCache.get(group, preReadMs, preReadCount);
+            if (entry != null) {
+                return scanDueFromCache(entry, now, preReadMs, preReadCount, group);
+            }
         }
         return realtimeScan(now, preReadMs, preReadCount, group);
     }
@@ -168,9 +160,12 @@ public class MybatisJobRepository implements JobRepository {
                 .orderByAsc(JobEntity::getSysJobId)
                 .last("LIMIT " + Math.max(preReadCount, 1));
         List<JobEntity> candidates = jobMapper.selectList(query);
-        // 扫描结果记入缓存：无论调出多少行，下拍如有能复用（没有到期行的一拍查询量直接归零）：
-        // 非缓存档（plugin.job.cache.enabled=false，默认）的 put 是空操作，本拍行为与历史完全一致。
-        scanCache.put(group, preReadMs, preReadCount, now, candidates);
+        // 扫描结果记入缓存：无论调出多少行，下拍如有能复用（没有到期行的一拍查询量直接归零）
+        // 判空：plugin.job.cache.enabled 默认 false，此时不装配缓存（见构造器），
+        // 这里必须跳过写缓存，否则每一拍扫描都 NPE（ScanCache 为 null 时无缓存可用）。
+        if (scanCache != null) {
+            scanCache.put(group, preReadMs, preReadCount, now, candidates);
+        }
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
@@ -185,22 +180,15 @@ public class MybatisJobRepository implements JobRepository {
      * 最多顺延 TTL 秒才被派发，触发判定（misfire）也随滞后最多退一步 —— 这个精度权衡由
      * {@code plugin.job.cache.ttl-ms} 控制，关闭它回退为严格实路。</p>
      *
-     * <p><b>到期行必须回捞新鲜行</b>：候选行是过去拍的，一旦有人（本拍或其他扫描器）把
+     * <p><b>到期行必须主键批读</b>：候选行是过去拍的，一旦有人（本拍或其他扫描器）把
      * {@code last_time/next_time} 写回，拿旧行下乐观条件永远匹配 0 行，任务在窗口内不再派发
-     * 直到 TTL 重建。所以先用缓存行算出「确实到期」的行，只为这些行各做一次
-     * {@code WHERE id = ... AND trigger_status=1 AND is_deleted=0} 回捞；
-     * 没到期的行根本不查库。回捞不到的行（已停用/删除/已被别人推进）直接跳过，
-     * 绝不退回缓存行去派发。</p>
-     *
-     * <p>为什么不是一条 {@code WHERE id IN (...)}：{@code sys_job_id} 在库里不保证唯一
-     * （注释里写明「没有默认值也没有自增（生产是雪花 id）」），按主键 {@code IN} 批读
-     * 再用 {@code stateKey} 建 Map 会让同 id 的多行互相覆盖、错行被派发。
-     * 逐行回捞与实路「一行一行下条件」的语义完全一致。</p>
+     * 直到 TTL 重建。把到期的行捏出来，只用一次 {@code WHERE id IN (...)} 批读回新鲜行，
+     * 没到期的行继续用缓存行（不做无意义的逐读）。</p>
      *
      * @param entry 扫描结果
      * @return 到期任务
      */
-    private List<JobDefinition> scanDueFromCache(JobScanCache.ScanEntry entry, long now, long preReadMs, int preReadCount, String group) {
+    private List<JobDefinition> scanDueFromCache(ScanCache.ScanEntry entry, long now, long preReadMs, int preReadCount, String group) {
         // 这里不使用调用方传入的 {@code now}：缓存给出的相位（上一拍的数据库时间）已经足够
         // 触发整拍扫描，只需把相位倒给循环。
         long phase = entry.dbNowMs();
@@ -209,53 +197,35 @@ public class MybatisJobRepository implements JobRepository {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
-        // Phase 1/2 合并：先用缓存行判断「算出来确实到期」（与实路 executeScanLoop 同一判据：
-        // 重算 nextFire 后只要 <= 上界才派发），只有到期的行才花一次回捞换新鲜行。
-        // 不能直接看 next_time 列：实路对 SQL 选入的每一行都会重算 nextFire，
-        // 只按 next_time 判会让「SQL 选入但触发器算到未来」的行被多派发一次。
+        // Phase 1：用缓存行判断哪些已经到期
+        List<Object> dueIds = new ArrayList<>();
+        for (JobEntity entity : candidates) {
+            String key = stateKey(entity);
+            if (key == null) {
+                continue;
+            }
+            long nextFire = nextFireMs(entity, key, phase);
+            if (nextFire < 0L) {
+                continue;
+            }
+            if (nextFire <= upperBound && entity.getSysJobId() != null) {
+                dueIds.add(entity.getSysJobId());
+            }
+        }
+        // Phase 2：一次主键批读（k 行只读 1 次查询，0 行一次都不读）
         Map<String, JobEntity> freshByStateKey = new HashMap<>();
-        for (JobEntity cached : candidates) {
-            String key = stateKey(cached);
-            if (key == null || cached.getSysJobId() == null) {
-                continue;
-            }
-            // 用缓存行先算出到期，只有到期的才值得花一次回捞换新鲜行
-            long cachedNextFire = nextFireMs(cached, key, phase);
-            if (cachedNextFire < 0L || cachedNextFire > upperBound) {
-                continue;
-            }
-            // 回捞与实路同源：带上存活谓词。候选行来自上一拍，期间可能已被别的节点停用/删除，
-            // 只按主键回捞会把已停用的行重新派发出去，等于缓存绕过启停与软删除。
-            JobEntity fresh = selectFreshDueById(cached.getSysJobId(), key);
-            if (fresh != null) {
-                freshByStateKey.put(key, fresh);
+        if (!dueIds.isEmpty()) {
+            List<JobEntity> freshRows = jobMapper.selectList(
+                    Wrappers.<JobEntity>lambdaQuery().in(JobEntity::getSysJobId, dueIds));
+            for (JobEntity r : freshRows) {
+                String key = stateKey(r);
+                if (key != null) {
+                    freshByStateKey.put(key, r);
+                }
             }
         }
-        // Phase 3：把到期行逐行替换成新鲜行（非到期行保持缓存行），进入循环；
-        // 新鲜行缺失（已停用/删除/已被别人推进）的行由循环直接跳过，不再退回缓存行派发。
+        // Phase 3：将到期行逐行替换成新鲜行（非到期行保持缓存行），进入循环
         return executeScanLoop(candidates, phase, freshByStateKey, preReadMs, preReadCount);
-    }
-
-    /**
-     * 按主键回捞单行新鲜数据，并校验它仍处于可派发状态。
-     *
-     * @param jobId 台账主键
-     * @param key   派发序列键（仅用于日志）
-     * @return 新鲜行；已停用/删除/不存在时返回 null
-     */
-    private JobEntity selectFreshDueById(Long jobId, String key) {
-        try {
-            List<JobEntity> rows = jobMapper.selectList(Wrappers.<JobEntity>lambdaQuery()
-                    .eq(JobEntity::getSysJobId, jobId)
-                    .eq(JobEntity::getSysJobTriggerStatus, 1)
-                    .eq(JobEntity::getSysJobIsDeleted, 0)
-                    .last("LIMIT 1"));
-            return rows == null || rows.isEmpty() ? null : rows.get(0);
-        } catch (Exception ex) {
-            // 批读失败按"拿不到新鲜行"处理：宁可本拍不派发，也不拿陈旧行去写回（会匹配 0 行）
-            log.warn("[job] 缓存命中回捞新鲜行失败 job={} cause={}", key, ex.getMessage());
-            return null;
-        }
     }
 
     /**
@@ -279,18 +249,11 @@ public class MybatisJobRepository implements JobRepository {
             if (key == null) {
                 continue;
             }
-            // 维系到期行：用主键批读回的新鲜行替换（写回与乐观条件必须基于最新行）。
-            // 缓存命中且该行没被批读回来，说明它在上一拍之后被停用/删除了：必须整行跳过，
-            // 不能退回缓存行去派发，否则缓存成了绕过启停与软删除的后门。
-            JobEntity target;
-            if (freshByStateKey == null) {
-                // 实路：候选行本身就是新鲜行
+            // 维系到期行：用主键批读回的新鲜行替换（写回与乐观条件必须基于最新行），
+            // 没有新鲜行的继续用缓存行（行为与实路相同）
+            JobEntity target = freshByStateKey == null || freshByStateKey.isEmpty() ? entity : freshByStateKey.get(key);
+            if (target == null) {
                 target = entity;
-            } else {
-                target = freshByStateKey.get(key);
-                if (target == null) {
-                    continue;
-                }
             }
 
             long nextFire = nextFireMs(target, key, now);
@@ -417,7 +380,10 @@ public class MybatisJobRepository implements JobRepository {
             log.warn("[job] 注解任务持久化失败 name={} cause={}", definition.getName(), ex.getMessage());
         }
         // 注解侧写入也可能是新台账/调度配置变更：清掉扫描缓存，让下一拍重查
-        invalidateScanCache();
+        // 判空：缓存未装配（默认 enabled=false）时无缓存可清，直接跳过。
+        if (scanCache != null) {
+            scanCache.clear();
+        }
     }
 
     @Override
@@ -762,7 +728,10 @@ public class MybatisJobRepository implements JobRepository {
         triggerCache.remove(key);
         lastFireMs.remove(key);
         // 任何写侧出口都可能改变扫描行：一律清掉扫描缓存，让下一拍用新相位重查
-        invalidateScanCache();
+        // 判空：缓存未装配（默认 enabled=false）时无缓存可清，直接跳过。
+        if (scanCache != null) {
+            scanCache.clear();
+        }
         // 序列键是台账主键，只能按任务键反查出行才删得掉；含已删除行，避免留下无人认领的缓存。
         List<JobEntity> rows = jobMapper.selectList(Wrappers.<JobEntity>lambdaQuery()
                 .select(JobEntity::getSysJobId, JobEntity::getSysJobName)
