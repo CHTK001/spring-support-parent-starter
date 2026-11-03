@@ -72,4 +72,14 @@ public class DuckDuckGoChatChannel implements ChatChannelProvider {
     public int priority() {
         return 50;
     }
+
+    /**
+     * DuckDuckGo 客户端在同一条 SSE 流上支持 {@code GenerateImage} 委派，故也声明可出图。
+     *
+     * @return {@code true}
+     */
+    @Override
+    public boolean supportsImage() {
+        return true;
+    }
 }
