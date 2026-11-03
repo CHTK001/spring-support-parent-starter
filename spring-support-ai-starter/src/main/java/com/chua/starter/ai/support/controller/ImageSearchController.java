@@ -4,6 +4,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.service.ImageSearchStore;
 import com.chua.starter.ai.support.service.ImageSearchStores;
+import com.chua.starter.ai.support.util.AiLibraryGroups;
+import com.chua.starter.ai.support.util.AiUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * 以图搜图控制器。
@@ -107,12 +111,14 @@ public class ImageSearchController {
      *
      * @param file 图片文件
      * @param name 展示名，缺省取文件名
+     * @param group 分组名；不传/空 = 默认组 default（**同一条记录属于且只属于一个分组**）
      * @return 入库记录标识与名称
      */
     @Operation(summary = "加入图片库", description = "上传图片并提取特征后写入底库")
     @PostMapping("/index")
     public ReturnResult<Map<String, Object>> index(@RequestParam("file") MultipartFile file,
-                                                   @RequestParam(value = "name", required = false) String name) {
+                                                   @RequestParam(value = "name", required = false) String name,
+                                                   @RequestParam(value = "group", required = false) String group) {
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
         }
@@ -123,7 +129,7 @@ public class ImageSearchController {
             if (shown == null || shown.isBlank()) {
                 shown = file.getOriginalFilename();
             }
-            ImageSearchStore.StoredImage saved = imageSearchStores.add(shown, data, vector);
+            ImageSearchStore.StoredImage saved = storeOf(group).add(shown, data, vector);
             if (saved == null) {
                 // 入库过程中某一步失败且已回滚完（内存 / 原图 / 向量 / DB 行都撤了）。
                 // 不显式判空的话，下面 saved.getId() 会抛 NPE，被外层 catch 包装成
