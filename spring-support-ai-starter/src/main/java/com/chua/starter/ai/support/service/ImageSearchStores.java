@@ -270,6 +270,21 @@ public class ImageSearchStores {
         return current().dimension();
     }
 
+    /**
+     * 列出某账号底库中已存的分组名（DB 权威）。
+     *
+     * <p>口径来自 {@link ImageLibraryLinkService#listGroups(String)}：按账号查所有分组时，
+     * 历史 {@code NULL} 行已在联动层归一化为 {@code default}，**不含常见兜底**——
+     * 调用方（{@code /groups}）负责把默认组 {@code default} 补入选项，空库时
+     * 用户也必须能选到它。</p>
+     *
+     * @param account 账号标识
+     * @return 分组名集合（已去重；排序交给 {@code TreeSet} 调用方）
+     */
+    public java.util.Set<String> listGroups(String account) {
+        return library.listGroups(account);
+    }
+
     // ==================== 内部：账号解析 ====================
 
     /**
