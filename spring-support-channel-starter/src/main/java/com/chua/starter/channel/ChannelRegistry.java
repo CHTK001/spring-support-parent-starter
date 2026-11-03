@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
 import com.chua.starter.channel.spi.ChannelKind;
 import com.chua.starter.channel.spi.ChannelProvider;
 import com.chua.starter.channel.spi.ChatChannelProvider;
+import com.chua.starter.channel.spi.ImageChannelProvider;
 import com.chua.starter.channel.spi.TemporaryAccountProvider;
 
 import java.util.ArrayList;
@@ -16,10 +17,11 @@ import java.util.Map;
 /**
  * 渠道注册表门面 —— 收敛「多 SPI root」的枚举逻辑。
  *
- * <p>类型化改造后，渠道实现分布在三个 SPI 注册 root 上：</p>
+ * <p>类型化改造后，渠道实现分布在四个 SPI 注册 root 上：</p>
  * <ul>
  *   <li>AI 渠道：{@code com.chua.starter.ai.support.spi.AccountChannelAuthManager}（kind=AI，固定账号）</li>
  *   <li>免登录对话渠道：{@link ChatChannelProvider}（kind=CHAT，复用 ChatClient SPI）</li>
+ *   <li>文生图渠道：{@link ImageChannelProvider}（kind=IMAGE，复用 ChatClient#generateImage）</li>
  *   <li>短信 / 邮件渠道：{@link TemporaryAccountProvider}（临时账号）</li>
  * </ul>
  *
@@ -75,6 +77,39 @@ public final class ChannelRegistry {
             return matched;
         }
         for (ChatChannelProvider provider : channels.values()) {
+            if (provider != null && provider.channel() != null
+                    && provider.channel().equalsIgnoreCase(channel)) {
+                return provider;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 全部文生图渠道实现（按 {@code channel()} 去重，保持注册顺序）。
+     *
+     * @return 渠道标识 → 文生图渠道实现
+     */
+    public static Map<String, ImageChannelProvider> imageChannels() {
+        return dedup(ServiceProvider.of(ImageChannelProvider.class).list());
+    }
+
+    /**
+     * 按渠道标识取文生图渠道（大小写不敏感）。
+     *
+     * @param channel 渠道标识
+     * @return 渠道实现；未注册时返回 {@code null}
+     */
+    public static ImageChannelProvider imageOf(String channel) {
+        if (channel == null || channel.isBlank()) {
+            return null;
+        }
+        Map<String, ImageChannelProvider> channels = imageChannels();
+        ImageChannelProvider matched = channels.get(channel);
+        if (matched != null) {
+            return matched;
+        }
+        for (ImageChannelProvider provider : channels.values()) {
             if (provider != null && provider.channel() != null
                     && provider.channel().equalsIgnoreCase(channel)) {
                 return provider;
@@ -144,7 +179,7 @@ public final class ChannelRegistry {
     }
 
     /**
-     * 全部渠道（AI + 免登录对话 + 短信 + 邮件），供列表接口按种类打标。
+     * 全部渠道（AI + 免登录对话 + 文生图 + 短信 + 邮件），供列表接口按种类打标。
      *
      * @return 渠道实现列表
      */
@@ -152,6 +187,7 @@ public final class ChannelRegistry {
         List<ChannelProvider> result = new ArrayList<>();
         result.addAll(aiChannels().values());
         result.addAll(chatChannels().values());
+        result.addAll(imageChannels().values());
         result.addAll(temporaryChannels().values());
         return result;
     }

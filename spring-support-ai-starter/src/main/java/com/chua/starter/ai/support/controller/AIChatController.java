@@ -311,8 +311,10 @@ public class AIChatController extends BaseAiController {
             return;
         }
         if (settings.async() && taskExecutor != null) {
-            // 不阻塞回复输出，压缩交给后台线程池处理
-            taskExecutor.execute(() -> compress(contextOf(dialogId, currentModel, settings)));
+            // 不阻塞回复输出，压缩交给后台线程池处理；
+            // settings 为 lambda 的参数，必须是（有效）最终量，先复制一份
+            final CompressionSettings asyncSettings = settings;
+            taskExecutor.execute(() -> compress(contextOf(dialogId, currentModel, asyncSettings)));
             return;
         }
         compress(contextOf(dialogId, currentModel, settings));
@@ -559,13 +561,25 @@ public class AIChatController extends BaseAiController {
         return sysAiGlobalSettingService.getValue("runtime", field).map(String::trim).orElse(null);
     }
 
-    private static boolean getBooleanSetting(String field, boolean defaultValue) {
+    /**
+     * 从全局设置读取字符串配置，未配置时返回默认值。
+     *
+     * @param field 配置字段名（runtime 分组）
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
+    private String getStringSetting(String field, String defaultValue) {
+        String value = getValueSetting(field);
+        return StringUtils.isNotBlank(value) ? value : defaultValue;
+    }
+
+    private boolean getBooleanSetting(String field, boolean defaultValue) {
         String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
         if (value == null) return defaultValue;
         return !"false".equalsIgnoreCase(value) && !"0".equalsIgnoreCase(value);
     }
 
-    private static int getIntegerSetting(String field, int defaultValue) {
+    private int getIntegerSetting(String field, int defaultValue) {
         String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
         if (value == null || value.trim().isEmpty()) return defaultValue;
         try {

@@ -23,6 +23,14 @@ public enum ChannelKind {
     CHAT,
 
     /**
+     * 文生图渠道：复用 {@code ChatClient#generateImage} 能力，按提示词出图。
+     *
+     * <p>与 {@link #CHAT} 同属「免登录」范畴，但产出物是图片而非文本，
+     * 前端渲染、参数（宽高比 / 张数）与对话面板完全不同，故单独成类。</p>
+     */
+    IMAGE,
+
+    /**
      * 短信接码渠道：领取临时虚拟号码并读取其收到的短信。
      */
     SMS,

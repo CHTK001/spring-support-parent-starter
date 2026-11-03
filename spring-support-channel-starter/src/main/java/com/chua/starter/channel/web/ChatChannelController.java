@@ -1,5 +1,7 @@
 package com.chua.starter.channel.web;
 
+import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
@@ -73,8 +75,11 @@ public class ChatChannelController {
     /**
      * 使用该渠道的某个模型发起一次同步对话。
      *
-     * <p>请求体：{@code {prompt: string, model?: string, system?: string}}。
+     * <p>请求体：{@code {prompt: string, model?: string, system?: string, token?: string}}。
      * 返回体：{@code {ok, channel, model, answer}}。</p>
+     *
+     * <p>{@code token} 用于需要登录态的渠道（如 Trae）：只在本请求内生效，
+     * 不写入渠道配置；缺省时由渠道自己从本机登录态里解析。</p>
      *
      * @param channel 渠道标识
      * @param body    对话参数
@@ -90,9 +95,12 @@ public class ChatChannelController {
         }
         String model = text(body, "model");
         String system = text(body, "system");
+        String token = text(body, "token");
         long startedAt = System.currentTimeMillis();
         try {
-            String answer = impl.chat(prompt, model, system);
+            String answer = token.isBlank()
+                    ? impl.chat(prompt, model, system)
+                    : chatWithToken(impl, token, prompt, model, system);
             Map<String, Object> payload = new LinkedHashMap<>(6);
             payload.put("ok", true);
             payload.put("channel", impl.channel());
@@ -104,6 +112,39 @@ public class ChatChannelController {
             log.warn("[channel-chat] 渠道 {} 试对话失败: {}", impl.channel(), e.getMessage());
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
                     "渠道试对话失败：" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+        }
+    }
+
+    /**
+     * 使用请求体临时携带的 token 发起对话。
+     *
+     * @param impl    渠道实现
+     * @param token   临时令牌（如 Trae 的 JWT）
+     * @param prompt  用户输入
+     * @param model   模型标识
+     * @param system  系统提示词
+     * @return 完整回答
+     */
+    private String chatWithToken(ChatChannelProvider impl, String token,
+            String prompt, String model, String system) {
+        ChatClient client = impl.chatClient(ChatClientSetting.builder()
+                .provider(impl.extension())
+                .appKey(token)
+                .build());
+        try {
+            if (model != null && !model.isBlank()) {
+                client.model(model);
+            }
+            if (system != null && !system.isBlank()) {
+                client.system(system);
+            }
+            return client.chatSync(prompt);
+        } finally {
+            try {
+                client.close();
+            } catch (Exception ignored) {
+                // 释放资源失败不改变调用结果
+            }
         }
     }
 
@@ -121,11 +162,12 @@ public class ChatChannelController {
             if (impl == null) {
                 continue;
             }
-            Map<String, Object> item = new LinkedHashMap<>(4);
+            Map<String, Object> item = new LinkedHashMap<>(5);
             item.put("channel", impl.channel());
             item.put("displayName", impl.displayName());
             item.put("extension", impl.extension());
             item.put("priority", impl.priority());
+            item.put("supportsImage", impl.supportsImage());
             channels.add(item);
         }
         payload.put("channels", channels);

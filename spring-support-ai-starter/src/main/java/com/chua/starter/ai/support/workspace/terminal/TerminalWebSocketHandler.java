@@ -173,7 +173,6 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             previous.stop();
         }
         TerminalConnection connection = new TerminalConnection(
-                session,
                 sessionId,
                 workspaceRef.get(),
                 sessionRootRef.get()
@@ -570,11 +569,6 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     private static final class TerminalConnection {
 
         /**
-         * WS 会话
-         */
-        private final WebSocketSession session;
-
-        /**
          * 聊天会话标识
          */
         private final String sessionId;
@@ -612,28 +606,16 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         /**
          * 构造终端连接。
          *
-         * @param session       WS 会话
          * @param sessionId     聊天会话标识
          * @param workspaceRoot 账号工作目录
          * @param cwd           当前执行目录
          */
-        private TerminalConnection(WebSocketSession session,
-                                   String sessionId,
+        private TerminalConnection(String sessionId,
                                    Path workspaceRoot,
                                    Path cwd) {
-            this.session = session;
             this.sessionId = sessionId;
             this.workspaceRoot = workspaceRoot;
             this.cwd = cwd;
-        }
-
-        /**
-         * 获取 WS 会话。
-         *
-         * @return WS 会话
-         */
-        private WebSocketSession session() {
-            return session;
         }
 
         /**
