@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -115,6 +116,14 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      * 颜色终端环境变量值
      */
     private static final String COLORTERM_VALUE = "truecolor";
+
+    /**
+     * Windows PowerShell 7 可执行文件。
+     *
+     * <p>存在时优先使用：实测 PowerShell 5.1 在部分 Windows 版本（如 10.0.18363）
+     * 于 ConPTY 下启动会卡住不输出提示符，而 PowerShell 7 正常。</p>
+     */
+    private static final String PWSH_EXECUTABLE = "pwsh.exe";
 
     /**
      * Windows PowerShell 可执行文件
@@ -411,14 +420,21 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     /**
      * 构建当前平台的交互式 shell 命令。
      *
+     * <p>Windows 优先 PowerShell 7（{@code pwsh.exe}），无可执行文件时退回
+     * PowerShell 5.1，两者都不可用时由 {@link PtySession#start()} 回退 {@code cmd.exe}。</p>
+     *
      * @return 命令数组
      */
     private String[] buildShellCommand() {
         if (isWindows()) {
+            if (isExecutableOnPath(PWSH_EXECUTABLE)) {
+                return new String[]{PWSH_EXECUTABLE, "-NoLogo", "-NoProfile", "-NoExit"};
+            }
             // PowerShell 5.1 默认按控制台代码页输出，先切 UTF-8 再进入交互
             return new String[]{
                     POWERSHELL_EXECUTABLE,
                     "-NoLogo",
+                    "-NoProfile",
                     "-NoExit",
                     "-Command",
                     POWERSHELL_UTF8_SCRIPT
@@ -428,6 +444,51 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             return new String[]{BASH_EXECUTABLE, "-l"};
         }
         return new String[]{SH_EXECUTABLE, "-l"};
+    }
+
+    /**
+     * 构建 Windows 下的回退命令。
+     *
+     * @return 回退命令数组
+     */
+    private String[] buildWindowsFallbackCommand() {
+        if (isExecutableOnPath(PWSH_EXECUTABLE)) {
+            return new String[]{
+                    POWERSHELL_EXECUTABLE,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NoExit",
+                    "-Command",
+                    POWERSHELL_UTF8_SCRIPT
+            };
+        }
+        return new String[]{CMD_EXECUTABLE};
+    }
+
+    /**
+     * 判断可执行文件是否存在于 PATH 中。
+     *
+     * @param executable 可执行文件名（如 {@code pwsh.exe}）
+     * @return 是否存在
+     */
+    private boolean isExecutableOnPath(String executable) {
+        String path = System.getenv("PATH");
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        for (String entry : path.split(java.io.File.pathSeparator)) {
+            if (entry == null || entry.isBlank()) {
+                continue;
+            }
+            try {
+                if (Files.isRegularFile(Paths.get(entry.trim(), executable))) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+                // 单个 PATH 条目非法不影响整体判断
+            }
+        }
+        return false;
     }
 
     /**
@@ -442,10 +503,18 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     /**
      * 构建 PTY 环境变量。
      *
+     * <p>继承服务进程环境以保证 shell 可用，但剔除密钥类变量：终端对普通账号开放，
+     * 不能把服务端凭据（数据库密码、模型 API Key 等）暴露给任意登录用户。</p>
+     *
      * @return 环境变量
      */
     private Map<String, String> buildEnvironment() {
-        Map<String, String> environment = new HashMap<>(System.getenv());
+        Map<String, String> environment = new HashMap<>();
+        System.getenv().forEach((key, value) -> {
+            if (!isSensitiveEnvironment(key)) {
+                environment.put(key, value);
+            }
+        });
         environment.put("TERM", TERM_VALUE);
         environment.put("COLORTERM", COLORTERM_VALUE);
         // 去掉会关闭颜色的变量，保证 git / ls 等命令输出可读
@@ -453,6 +522,28 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         environment.remove("CLICOLOR");
         environment.put("CLICOLOR_FORCE", "1");
         return environment;
+    }
+
+    /**
+     * 判断环境变量名是否属于凭据类（不向终端会话透传）。
+     *
+     * @param name 环境变量名
+     * @return 是否凭据类
+     */
+    private boolean isSensitiveEnvironment(String name) {
+        if (name == null) {
+            return true;
+        }
+        String upper = name.toUpperCase(Locale.ROOT);
+        return upper.contains("PASSWORD")
+                || upper.contains("PASSWD")
+                || upper.contains("SECRET")
+                || upper.contains("TOKEN")
+                || upper.contains("CREDENTIAL")
+                || upper.contains("API_KEY")
+                || upper.contains("APIKEY")
+                || upper.contains("ACCESS_KEY")
+                || upper.contains("PRIVATE_KEY");
     }
 
     /**
