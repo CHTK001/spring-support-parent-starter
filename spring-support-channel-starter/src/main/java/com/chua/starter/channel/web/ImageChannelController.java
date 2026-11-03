@@ -46,18 +46,39 @@ import java.util.Map;
 public class ImageChannelController {
 
     /**
+     * 单次请求允许的最大出图张数。
+     *
+     * <p>出图是按张计费 / 耗时线性增长的同步调用（Trae 单张约 8.8 积分），必须在 API 边界
+     * 收口：请求体里的 {@code n} 由外部可控，若直接透传，一个 {@code n=50} 的请求就能造成
+     * 几分钟阻塞和真实费用。前端也只会给 1~4 张的选项。</p>
+     */
+    private static final int MAX_IMAGES_PER_REQUEST = 4;
+
+    /**
      * 读取文生图渠道的可选模型。
      *
+     * <p>模型清单异常（如宿主未引入对应 ChatClient 模块）不返回 500：
+     * 与对话渠道一致，降级为空列表 + 原因，前端据此展示占位提示。</p>
+     *
      * @param channel 渠道标识（如 {@code image-pollinations}）
-     * @return {@code {ok, channel, models}}
+     * @return {@code {ok, channel, models, available, reason}}
      */
     @GetMapping("/{channel}/image-models")
     public ApiResult<Map<String, Object>> models(@PathVariable("channel") String channel) {
         ImageChannelProvider impl = require(channel);
-        Map<String, Object> payload = new LinkedHashMap<>(4);
+        Map<String, Object> payload = new LinkedHashMap<>(8);
         payload.put("ok", true);
         payload.put("channel", impl.channel());
-        payload.put("models", impl.listModels());
+        try {
+            List<Map<String, Object>> models = impl.listModels();
+            payload.put("models", models == null ? List.of() : models);
+            payload.put("available", true);
+        } catch (IllegalStateException e) {
+            log.warn("[channel-image] 渠道 {} 模型清单不可用: {}", impl.channel(), e.getMessage());
+            payload.put("models", List.of());
+            payload.put("available", false);
+            payload.put("reason", e.getMessage());
+        }
         return ApiResult.ok(payload);
     }
 
@@ -82,14 +103,14 @@ public class ImageChannelController {
         String ratio = text(body, "ratio");
         String model = text(body, "model");
         String token = text(body, "token");
-        int n = intOf(body, "n", 1);
+        int n = clampImages(intOf(body, "n", 1));
         int width = intOf(body, "width", 0);
         int height = intOf(body, "height", 0);
         long startedAt = System.currentTimeMillis();
         try {
             ImageGenerationResult result = token.isBlank()
                     ? impl.generate(prompt, ratio, n, width, height, model)
-                    : generateWithToken(impl, token, prompt, ratio, n, width, height);
+                    : generateWithToken(impl, token, prompt, ratio, n, width, height, model);
             Map<String, Object> payload = new LinkedHashMap<>(5);
             payload.put("ok", true);
             payload.put("channel", impl.channel());
@@ -123,7 +144,14 @@ public class ImageChannelController {
             item.put("displayName", impl.displayName());
             item.put("extension", impl.extension());
             item.put("priority", impl.priority());
-            item.put("models", impl.listModels());
+            // 单个渠道的模型清单异常（如底层 ChatClient 未引入）不应拖垮整个列表接口
+            try {
+                List<Map<String, Object>> models = impl.listModels();
+                item.put("models", models == null ? List.of() : models);
+            } catch (RuntimeException e) {
+                log.warn("[channel-image] 渠道 {} 模型清单不可用: {}", impl.channel(), e.getMessage());
+                item.put("models", List.of());
+            }
             channels.add(item);
         }
         payload.put("channels", channels);
@@ -140,21 +168,26 @@ public class ImageChannelController {
      * @param n       张数
      * @param width   宽度
      * @param height  高度
+     * @param model   出图模型，可为空
      * @return 生成结果
      */
     private ImageGenerationResult generateWithToken(ImageChannelProvider impl, String token,
-            String prompt, String ratio, int n, int width, int height) {
+            String prompt, String ratio, int n, int width, int height, String model) {
         String extension = impl.extension();
         if (extension == null || extension.isBlank()) {
             // 不依赖 ChatClient 的渠道（如直连图床），token 无意义，回落默认实现
-            return impl.generate(prompt, ratio, n, width, height, null);
+            return impl.generate(prompt, ratio, n, width, height, model);
         }
         ChatClient client = impl.chatClient(ChatClientSetting.builder()
                 .provider(extension)
                 .appKey(token)
                 .build());
         try {
-            return client.generateImage(prompt, ratio, Math.max(1, n), width, height, null, null);
+            // 模型通过 client.model(...) 注入（generateImage 本身没有 model 形参）
+            if (model != null && !model.isBlank()) {
+                client.model(model.trim());
+            }
+            return client.generateImage(prompt, ratio, n, width, height, null, null);
         } finally {
             try {
                 client.close();
@@ -167,6 +200,10 @@ public class ImageChannelController {
     /**
      * 把生成结果压平成前端可直接渲染的列表。
      *
+     * <p>各实现给的 URL 字段并不一致（例如 Trae 只回一个签名地址、部分实现只给缩略图），
+     * 这里做一次兜底：原图 → 预览图 → 缩略图依次取第一个非空值；三者都为空的条目直接跳过，
+     * 避免前端渲染出一堆坏图。</p>
+     *
      * @param result 生成结果
      * @return 图片列表
      */
@@ -176,16 +213,39 @@ public class ImageChannelController {
             if (image == null) {
                 continue;
             }
+            String url = firstNonBlank(image.oriUrl(), image.rawUrl(), image.thumbUrl());
+            if (url.isEmpty()) {
+                continue;
+            }
+            String thumb = firstNonBlank(image.thumbUrl(), image.oriUrl(), image.rawUrl());
             Map<String, Object> item = new LinkedHashMap<>(6);
             item.put("key", image.key());
-            item.put("url", image.oriUrl());
-            item.put("thumbUrl", image.thumbUrl());
+            item.put("url", url);
+            item.put("thumbUrl", thumb.isEmpty() ? url : thumb);
             item.put("width", image.width());
             item.put("height", image.height());
             item.put("format", image.format());
             images.add(item);
         }
         return images;
+    }
+
+    /**
+     * 取第一个非空白字符串。
+     *
+     * @param values 候选值
+     * @return 第一个非空值；全为空时返回空串
+     */
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 
     /**
@@ -215,6 +275,19 @@ public class ImageChannelController {
         }
         Object value = body.get(key);
         return value == null ? "" : value.toString();
+    }
+
+    /**
+     * 把张数收敛到 {@code [1, MAX_IMAGES_PER_REQUEST]}。
+     *
+     * <p>非正数（含负数、0）按 1 处理，超上限按上限处理：出图是同步计费调用，
+     * 必须保证「任何请求都不会被放大成几十张」。</p>
+     *
+     * @param n 请求里的张数
+     * @return 合法张数
+     */
+    private static int clampImages(int n) {
+        return Math.max(1, Math.min(MAX_IMAGES_PER_REQUEST, n));
     }
 
     /**
