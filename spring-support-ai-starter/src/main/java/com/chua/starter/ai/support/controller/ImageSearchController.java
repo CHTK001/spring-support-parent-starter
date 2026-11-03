@@ -154,19 +154,21 @@ public class ImageSearchController {
      *
      * @param file 查询图片
      * @param topK 返回条数上限；不传则取 {@code image_search.search_top_k} 配置
+     * @param group 分组名；不传/空 = 默认组 default（**不等于查全部**）
      * @return 命中列表，按相似度降序；每项含 id/name/tags/thumbnail/score
      */
     @Operation(summary = "以图搜图", description = "上传查询图，返回底库中相似度最高的若干张")
     @PostMapping("/search")
     public ReturnResult<List<Map<String, Object>>> search(@RequestParam("file") MultipartFile file,
-                                                          @RequestParam(value = "topK", required = false) Integer topK) {
+                                                          @RequestParam(value = "topK", required = false) Integer topK,
+                                                           @RequestParam(value = "group", required = false) String group) {
         if (file == null || file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
             int k = resolveTopK(topK);
             float[] query = imageSearchStores.extract(file.getBytes());
-            List<ImageSearchStore.Match> matches = imageSearchStores.search(query, k, minSimilarity());
+            List<ImageSearchStore.Match> matches = storeOf(group).search(query, k, minSimilarity());
             List<Map<String, Object>> out = new ArrayList<>(matches.size());
             for (ImageSearchStore.Match m : matches) {
                 out.add(toItem(m.image(), m.score()));
@@ -184,15 +186,17 @@ public class ImageSearchController {
      * @param page    页码，从 1 开始
      * @param size    每页条数
      * @param keyword 名称关键词，可为空
+     * @param group    分组名；不传/空 = 默认组 default（**不等于查全部**）
      * @return 含 records 风格字段的 {@code items} 与 {@code total}
      */
     @Operation(summary = "图片库列表", description = "分页查看底库图片（不含原始特征值）")
     @GetMapping("/list")
     public ReturnResult<Map<String, Object>> list(@RequestParam(value = "page", defaultValue = "1") int page,
                                                   @RequestParam(value = "size", defaultValue = "24") int size,
-                                                  @RequestParam(value = "keyword", required = false) String keyword) {
+                                                  @RequestParam(value = "keyword", required = false) String keyword,
+                                                   @RequestParam(value = "group", required = false) String group) {
         try {
-            Map<String, Object> raw = imageSearchStores.list(page, size, keyword);
+            Map<String, Object> raw = storeOf(group).list(page, size, keyword);
             Object items = raw.get("items");
             List<Map<String, Object>> out = new ArrayList<>();
             if (items instanceof List<?> list) {
