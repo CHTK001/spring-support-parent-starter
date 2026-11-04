@@ -184,7 +184,7 @@ public class AiProtocolController extends BaseAiController {
             return ResponseEntity.badRequest().body(adapter.failure(null, "请求体不能为空"));
         }
         boolean stream = adapter.stream(servletRequest, body);
-        String model = modelOf(adapter, body);
+        String model = modelOf(adapter, servletRequest, body);
         // 模型范围闸门：appKey 只能用「分组清单 ∩ 限定模型」内的模型；流式也必须在开流前拦
         String violation = modelScopeViolation(servletRequest, model);
         if (violation != null) {
