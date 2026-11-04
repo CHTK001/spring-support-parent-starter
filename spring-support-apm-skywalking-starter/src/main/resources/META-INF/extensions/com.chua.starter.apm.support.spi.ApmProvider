@@ -1,0 +1,2 @@
+# ApmProvider SPI 注册：名称=实现类
+skywalking=com.chua.starter.apm.skywalking.SkywalkingApmProvider

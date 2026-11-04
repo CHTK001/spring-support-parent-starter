@@ -107,6 +107,10 @@ Spring Support Parent Starter
 │   └── spring-support-message-starter         # 消息推送
 ├── 🤖 AI 深度学习模块
 │   └── spring-support-ai-starter              # 图像检测、OCR、版面分析、人脸特征等
+├── 🛰️ APM 观测模块
+│   ├── spring-support-apm-starter           # APM 基础模块（SPI + REST 双模式）
+│   ├── spring-support-apm-skywalking-starter # SkyWalking APM 扩展
+│   └── spring-support-apm-hotspot-starter   # 自研 hotspot agent 扩展
 ├── 🔍 搜索和数据处理模块
 │   └── spring-support-elasticsearch-starter   # Elasticsearch搜索引擎
 ├── 🌐 服务发现和配置模块
