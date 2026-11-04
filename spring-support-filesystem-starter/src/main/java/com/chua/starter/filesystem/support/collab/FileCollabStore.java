@@ -136,6 +136,44 @@ public class FileCollabStore {
     }
 
     /**
+     * 当前账号对某份协同文档是否有可写权限（可看即可编辑）。
+     *
+     * <p>与终端共享 {@code TerminalShareStore.canWrite} <b>同一口径</b>：
+     * 公开 = 全员可写；私有 = 仅创建者与被授权用户可写。前端据 {@code canWrite}
+     * 决定「权限 / 重命名 / 删除」等入口是否可用，后端在每个写接口再校验一次。</p>
+     *
+     * @param collab 协同文档（null 视为无权限）
+     * @param userId 当前用户标识
+     * @return true = 可写
+     */
+    public static boolean canWrite(FileCollab collab, String userId) {
+        if (collab == null) {
+            return false;
+        }
+        if (collab.visibility() == Visibility.PUBLIC) {
+            return true;
+        }
+        if (userId == null || userId.isBlank()) {
+            return false;
+        }
+        return collab.owner().equals(userId) || collab.allowedUserIds().contains(userId);
+    }
+
+    /**
+     * 当前账号是否是某份协同文档的创建者（权限变更 / 删除的归属判定）。
+     *
+     * <p>归属与可写是两件事：被授权用户能编辑内容，但不能反向改授权名单、
+     * 也不能删掉别人的文档 —— 与终端共享「仅发起者可改权限 / 取消共享」一致。</p>
+     *
+     * @param collab 协同文档（null 视为非创建者）
+     * @param userId 当前用户标识
+     * @return true = 创建者
+     */
+    public static boolean isOwner(FileCollab collab, String userId) {
+        return collab != null && userId != null && !userId.isBlank() && collab.owner().equals(userId);
+    }
+
+    /**
      * 列出可见的协同文档（新→旧）。
      *
      * <p>可见规则：公开文档全员可见；私有文档仅创建者与被授权用户可见。</p>
@@ -160,9 +198,7 @@ public class FileCollabStore {
         String kw = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase();
         List<FileCollab> result = new ArrayList<>();
         for (FileCollab c : collabs.values()) {
-            if (c.visibility() != Visibility.PUBLIC
-                    && !c.owner().equals(userId)
-                    && !c.allowedUserIds().contains(userId)) {
+            if (!canWrite(c, userId)) {
                 continue;
             }
             if (!dir.isEmpty() && !dir.equals(c.path())) {

@@ -87,4 +87,18 @@
           AND sys_ai_app_key_delete = 0
     </update>
 
+    <!--
+        原子扣费：余额减少、累计费用增加，一条 SQL 完成，避免并发下丢失更新。
+        「余额不为负」与「是否允许透支」的判断也放在 WHERE 里，与扣减在同一行锁内完成：
+        余额已为负且未开透支时受影响行数为 0，调用方据此判定「没扣成」。
+    -->
+    <update id="deductBalance">
+        UPDATE sys_ai_app_key
+        SET sys_ai_app_key_balance = COALESCE(sys_ai_app_key_balance, 0) - #{amount},
+            sys_ai_app_key_total_cost = COALESCE(sys_ai_app_key_total_cost, 0) + #{amount}
+        WHERE sys_ai_app_key_app_key = #{appKey}
+          AND sys_ai_app_key_delete = 0
+          AND (COALESCE(sys_ai_app_key_balance, 0) &gt;= 0 OR COALESCE(sys_ai_app_key_overdraft_enabled, 0) = 1)
+    </update>
+
 </mapper>

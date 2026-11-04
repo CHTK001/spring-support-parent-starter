@@ -73,29 +73,6 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
 
     @Override
     /**
-     * 验证appKey
-     * @param appKey 字符串
-     * @param appSecret 字符串
-     * @param clientIp 字符串
-     * @return 返回值
-    */
-    public boolean verifyAppKey(String appKey, String appSecret, String clientIp) {
-        if (!isAppKeyEnabled()) {
-            return true;
-        }
-        boolean passed = sysAiAppKeyService.verify(appKey, appSecret, clientIp);
-        if (passed) {
-            sysAiAppKeyService.updateUseInfoByAppKey(appKey);
-            if (!isGroupRateLimited(appKey)) {
-                return false;
-            }
-            checkBillable(appKey);
-        }
-        return passed;
-    }
-
-    @Override
-    /**
      * 验证bearer令牌
      * @param authorizationHeader 字符串
      * @param clientIp 字符串

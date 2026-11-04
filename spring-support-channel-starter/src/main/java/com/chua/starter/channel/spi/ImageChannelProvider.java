@@ -30,6 +30,14 @@ import java.util.Set;
 public interface ImageChannelProvider extends ChannelProvider {
 
     /**
+     * 单次生成允许的最大张数。
+     *
+     * <p>文生图按张计费、耗时随张数线性增长，API 边界与 SPI 入口共用同一个上限，
+     * 避免「控制器收了 4 张、SPI 直调却能要 50 张」的口径分叉。</p>
+     */
+    int MAX_IMAGES_PER_CALL = 4;
+
+    /**
      * 底层 {@code ChatClient} SPI 扩展名（如 {@code trae}）。
      *
      * <p>为 {@code null} 表示该渠道不依赖 ChatClient 扩展（例如纯 URL 拼装的免登录图床），
@@ -103,6 +111,15 @@ public interface ImageChannelProvider extends ChannelProvider {
      * @return 生成结果
      */
     default ImageGenerationResult generate(String prompt, String ratio, int n, int width, int height, String model) {
+        // 先校验入参，再解析底层客户端：出图是按张计费的同步调用，参数不合法时必须立刻拒绝，
+        // 不能因为宿主恰好缺某个 ChatClient 扩展就把它伪装成「渠道不可用」（IllegalStateException）。
+        if (prompt == null || prompt.isBlank()) {
+            throw new IllegalArgumentException("prompt 不能为空");
+        }
+        if (n > MAX_IMAGES_PER_CALL) {
+            throw new IllegalArgumentException("文生图按张计费，单次最多 " + MAX_IMAGES_PER_CALL
+                    + " 张，当前请求 n=" + n);
+        }
         ChatClient client = chatClient();
         try {
             // ChatClient#generateImage 没有 model 形参，模型必须通过 client.model(...) 注入；

@@ -105,7 +105,7 @@ public class FileCollabController {
                 owner, vis, users, path, type);
         MODULE_LOG.info("创建协同文档: {} owner={} visibility={} users={} path={} type={}",
                 collab.id(), owner, vis, users, collab.path(), collab.type());
-        return ReturnResult.ok(toMap(collab));
+        return ReturnResult.ok(toMap(collab, owner));
     }
 
     /**
@@ -127,23 +127,25 @@ public class FileCollabController {
             @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword) {
         String uid = userId == null || userId.isBlank() ? "anonymous" : userId;
         return ReturnResult.ok(collabStore.list(uid, path, keyword)
-                .stream().map(FileCollabController::toMap).toList());
+                .stream().map(c -> toMap(c, uid)).toList());
     }
 
     /**
      * 协同文档详情（含当前快照与版本）。
      *
-     * @param id 协同文档号
+     * @param id     协同文档号
+     * @param userId 当前用户标识（用于计算 canWrite / isOwner）
      * @return 文档详情
      */
     @Operation(summary = "协同文档详情")
     @GetMapping("/{id}")
-    public ReturnResult<Map<String, Object>> detail(@PathVariable("id") String id) {
+    public ReturnResult<Map<String, Object>> detail(@PathVariable("id") String id,
+                                                    @RequestParam(value = "userId", required = false) String userId) {
         FileCollabStore.FileCollab collab = collabStore.get(id);
         if (collab == null) {
             return ReturnResult.illegal("协同文档不存在");
         }
-        return ReturnResult.ok(toMap(collab));
+        return ReturnResult.ok(toMap(collab, userId));
     }
 
     /**
@@ -163,6 +165,7 @@ public class FileCollabController {
      * 已显式声明 {@code text/plain} 规避。</p>
      *
      * @param id               协同文档号
+     * @param userId           当前用户标识（写权限校验）
      * @param expectedVersion  期望的当前版本
      * @param request          HTTP 请求（读原始 body 为快照 JSON）
      * @return 更新后的文档；版本冲突返回错误提示
@@ -171,8 +174,17 @@ public class FileCollabController {
     @PutMapping("/{id}/snapshot")
     public ReturnResult<Map<String, Object>> saveSnapshot(
             @PathVariable("id") String id,
+            @RequestParam(value = "userId", required = false, defaultValue = "") String userId,
             @RequestParam(value = "expectedVersion", required = false, defaultValue = "0") long expectedVersion,
             jakarta.servlet.http.HttpServletRequest request) {
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        // 写权限先于读 body：无权限不该白白消费一次请求体，也避免半途失败留下歧义
+        if (!FileCollabStore.canWrite(exist, userId)) {
+            return ReturnResult.illegal("没有该协同文档的编辑权限，请联系创建者授权");
+        }
         String body;
         try (java.io.InputStream in = request.getInputStream()) {
             body = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
@@ -188,13 +200,17 @@ public class FileCollabController {
             // 冲突也算一次保存尝试（仅 MODULE_LOG 记录，不再写入文件操作日志）
             return ReturnResult.error("版本冲突：本地快照已过期，请刷新后重试（当前版本 " + current.version() + "）");
         }
-        return ReturnResult.ok(toMap(updated));
+        return ReturnResult.ok(toMap(updated, userId));
     }
 
     /**
-     * 更新可见性与授权用户。
+     * 更新可见性与授权用户（仅创建者可改）。
+     *
+     * <p>与终端共享一致：被授权用户能编辑内容，但不能反向改授权名单，
+     * 否则一次授权就能扩散成「自己给自己加人」。</p>
      *
      * @param id         协同文档号
+     * @param userId     操作者用户标识
      * @param visibility 可见性：public / private
      * @param userIds    私有时的授权用户（逗号分隔；公开时忽略）
      * @return 更新后的文档
@@ -203,8 +219,16 @@ public class FileCollabController {
     @PutMapping("/{id}/access")
     public ReturnResult<Map<String, Object>> updateAccess(
             @PathVariable("id") String id,
+            @RequestParam(value = "userId", required = false, defaultValue = "") String userId,
             @RequestParam(value = "visibility", required = false, defaultValue = "public") String visibility,
             @RequestParam(value = "userIds", required = false, defaultValue = "") String userIds) {
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        if (!FileCollabStore.isOwner(exist, userId)) {
+            return ReturnResult.illegal("只有创建者可以修改协同权限");
+        }
         FileCollabStore.Visibility vis = "private".equalsIgnoreCase(visibility)
                 ? FileCollabStore.Visibility.PRIVATE : FileCollabStore.Visibility.PUBLIC;
         Set<String> users = parseUserIds(userIds);
@@ -212,26 +236,35 @@ public class FileCollabController {
         if (updated == null) {
             return ReturnResult.illegal("协同文档不存在");
         }
-        return ReturnResult.ok(toMap(updated));
+        return ReturnResult.ok(toMap(updated, userId));
     }
 
     /**
-     * 删除协同文档。
+     * 删除协同文档（仅创建者可删）。
      *
-     * @param id 协同文档号
+     * @param id     协同文档号
+     * @param userId 操作者用户标识
      * @return 删除结果
      */
     @Operation(summary = "删除协同文档")
     @DeleteMapping("/{id}")
-    public ReturnResult<Boolean> delete(@PathVariable("id") String id) {
-        boolean removed = collabStore.delete(id);
-        return ReturnResult.ok(removed);
+    public ReturnResult<Boolean> delete(@PathVariable("id") String id,
+                                        @RequestParam(value = "userId", required = false, defaultValue = "") String userId) {
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.ok(false);
+        }
+        if (!FileCollabStore.isOwner(exist, userId)) {
+            return ReturnResult.illegal("只有创建者可以删除该协同文档");
+        }
+        return ReturnResult.ok(collabStore.delete(id));
     }
 
     /**
-     * 重命名协同文档。
+     * 重命名协同文档（可写即可改名）。
      *
      * @param id       协同文档号
+     * @param userId   当前用户标识
      * @param fileName 新展示文件名（含扩展名）
      * @return 更新后的文档
      */
@@ -239,15 +272,23 @@ public class FileCollabController {
     @PutMapping("/{id}/rename")
     public ReturnResult<Map<String, Object>> rename(
             @PathVariable("id") String id,
+            @RequestParam(value = "userId", required = false, defaultValue = "") String userId,
             @RequestParam(value = "fileName", required = false, defaultValue = "") String fileName) {
         if (fileName == null || fileName.isBlank()) {
             return ReturnResult.illegal("fileName 不能为空");
+        }
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        if (!FileCollabStore.canWrite(exist, userId)) {
+            return ReturnResult.illegal("没有该协同文档的编辑权限，请联系创建者授权");
         }
         FileCollabStore.FileCollab updated = collabStore.rename(id, fileName);
         if (updated == null) {
             return ReturnResult.illegal("协同文档不存在");
         }
-        return ReturnResult.ok(toMap(updated));
+        return ReturnResult.ok(toMap(updated, userId));
     }
 
     /**
@@ -262,12 +303,20 @@ public class FileCollabController {
     public ReturnResult<Map<String, Object>> copy(
             @PathVariable("id") String id,
             @RequestParam(value = "userId", required = false, defaultValue = "anonymous") String userId) {
-        FileCollabStore.FileCollab copy = collabStore.duplicate(id,
-                userId == null || userId.isBlank() ? "anonymous" : userId);
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("源协同文档不存在");
+        }
+        String uid = userId == null || userId.isBlank() ? "anonymous" : userId;
+        // 复制要读到源内容，按写权限判定（与终端共享 canWrite 同口径）
+        if (!FileCollabStore.canWrite(exist, uid)) {
+            return ReturnResult.illegal("没有该协同文档的编辑权限，请联系创建者授权");
+        }
+        FileCollabStore.FileCollab copy = collabStore.duplicate(id, uid);
         if (copy == null) {
             return ReturnResult.illegal("源协同文档不存在");
         }
-        return ReturnResult.ok(toMap(copy));
+        return ReturnResult.ok(toMap(copy, uid));
     }
 
     /**
@@ -416,10 +465,15 @@ public class FileCollabController {
     /**
      * 协同文档转 Map（前端统一结构）。
      *
+     * <p>额外下发 {@code canWrite} / {@code isOwner}：字段口径与终端共享
+     * {@code TerminalShareController#toMap} 完全一致，前端据此决定「权限 /
+     * 重命名 / 删除」等入口是否可用，而不是自己再猜一遍规则。</p>
+     *
      * @param collab 协同文档
+     * @param userId 当前用户标识（用于计算权限位；null/空 = 匿名）
      * @return Map 快照
      */
-    private static Map<String, Object> toMap(FileCollabStore.FileCollab collab) {
+    private static Map<String, Object> toMap(FileCollabStore.FileCollab collab, String userId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", collab.id());
         m.put("bucket", collab.bucket());
@@ -436,6 +490,8 @@ public class FileCollabController {
         m.put("snapshot", collab.snapshot() == null ? "" : collab.snapshot());
         // 文件大小：快照 UTF-8 字节数（卡片展示用）
         m.put("size", bytesOf(collab.snapshot()));
+        m.put("canWrite", FileCollabStore.canWrite(collab, userId));
+        m.put("isOwner", FileCollabStore.isOwner(collab, userId));
         return m;
     }
 }

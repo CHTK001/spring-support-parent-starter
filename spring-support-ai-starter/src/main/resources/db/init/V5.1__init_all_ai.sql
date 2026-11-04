@@ -1500,12 +1500,12 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
 -- =====================================================================
 -- [二] 增量并入的表结构
 -- =====================================================================
--- 以下九张表原先只由已删除的增量脚本建立，或仅由运行期 Java 侧 DDL 落库，
+-- 以下八张表原先只由已删除的增量脚本建立，或仅由运行期 Java 侧 DDL 落库，
 -- 全新库上不会自动就位，故在此补齐为正式建表语句。
 --   sys_ai_tavern_group / _member / _message   源自 V4.0.0.48
 --   sys_ai_prompt_form / sys_ai_role_prompt    源自 V4.0.0.49
 --   sys_ai_session_trace                       源自 V4.0.0.51
---   sys_ai_service_token / _access_log         源自 V4.0.0.52
+--   sys_ai_service_access_log                  源自 V4.0.0.52
 --   sys_ai_memory                              运行期由 SysAiMemoryStore 的
 --                                               幂等 DDL 自证存在，这里同结构建表
 
@@ -1636,33 +1636,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session_trace` (
     -- 按区间配对开始/结束
     KEY `sys_ai_session_trace_span` (`span_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI会话执行轨迹（点事件 + 可选区间，供甘特图回放）';
-
--- ---------------------------------------------------------------------
--- sys_ai_service_token（原 V4.0.0.52__add_ai_service_token_and_access_log.sql，已并入本文件）
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `sys_ai_service_token` (
-    `token_id`       BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `instance_id`    VARCHAR(64)  DEFAULT NULL COMMENT '所属服务实例标识（sys_ai_service_instance.instance_id）',
-    `token`          VARCHAR(128) DEFAULT NULL COMMENT '访问令牌明文（对外服务请求头 Bearer 携带）',
-    `token_name`     VARCHAR(128) DEFAULT NULL COMMENT '令牌名称',
-    `enabled`        TINYINT      DEFAULT 1 COMMENT '是否启用：1 启用，0 停用',
-    `user_id`        VARCHAR(64)  DEFAULT NULL COMMENT '所属用户ID（创建者）',
-    `create_time`    DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `token_type`     VARCHAR(32)  DEFAULT NULL COMMENT '令牌类型：permanent 永久 / temporary 临时',
-    `expires_at`     DATETIME     DEFAULT NULL COMMENT '过期时间（仅临时令牌）；为空表示不过期',
-    `max_requests`   BIGINT       DEFAULT NULL COMMENT '最大请求次数；为空表示不限',
-    `used_requests`  BIGINT       DEFAULT 0 COMMENT '已用请求次数',
-    `max_tokens`     BIGINT       DEFAULT NULL COMMENT '最大可用 Token 数量；为空表示不限',
-    `used_tokens`    BIGINT       DEFAULT 0 COMMENT '已用 Token 数量',
-    PRIMARY KEY (`token_id`),
-    -- 鉴权主路径：instance_id + enabled + token 等值命中
-    KEY `sys_ai_service_token_auth` (`instance_id`, `enabled`, `token`),
-    -- 令牌列表按实例筛选
-    KEY `sys_ai_service_token_instance` (`instance_id`),
-    -- 配额清理等按令牌定位
-    UNIQUE KEY `sys_ai_service_token_token` (`token`),
-    KEY `sys_ai_service_token_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对外服务访问令牌（鉴权/配额）';
 
 -- ---------------------------------------------------------------------
 -- sys_ai_service_access_log（原 V4.0.0.52__add_ai_service_token_and_access_log.sql，已并入本文件）
