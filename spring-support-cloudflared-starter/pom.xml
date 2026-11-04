@@ -45,6 +45,12 @@
             <artifactId>spring-support-common-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 内网穿透标准 starter：提供 TunnelProvider SPI 与统一入口 /ms/tunnel -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-tunnel-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations</artifactId>

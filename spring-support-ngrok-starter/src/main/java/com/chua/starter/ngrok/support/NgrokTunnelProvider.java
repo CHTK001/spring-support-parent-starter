@@ -12,7 +12,6 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -165,9 +164,6 @@ public class NgrokTunnelProvider implements TunnelProvider {
         } catch (RuntimeException e) {
             closeQuietly(client);
             throw e;
-        } catch (IOException | UncheckedIOException e) {
-            closeQuietly(client);
-            throw new IllegalStateException(e.getMessage(), e);
         }
     }
 

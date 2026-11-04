@@ -129,7 +129,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                         "是否允许普通账号调用工具（关闭时普通账号的 agent 不启用任何工具；管理员不受影响）",
                         22, true),
                 new SettingItem(FIELD_AGENT_IMPL, DEFAULT_AGENT_IMPL, "STRING",
-                        "Agent 引擎实现（agentscope / opencode）", 23, true)
+                        "Agent 引擎实现（agentscope / opencode-server；旧值 opencode 自动映射为 opencode-server）", 23, true)
         );
     }
 }
