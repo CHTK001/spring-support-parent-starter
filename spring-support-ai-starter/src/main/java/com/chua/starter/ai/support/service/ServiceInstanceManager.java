@@ -1263,10 +1263,7 @@ public class ServiceInstanceManager {
         try {
             List<String> models = new ArrayList<>(registry.getModels());
             // /models 必须与 /chat/completions 同一口径：调用方看不到的模型，也不许出现在清单里
-            Set<String> scope = allowedModels(caller);
-            if (scope != null) {
-                models.removeIf(m -> !AppKeyModelScope.contains(scope, m));
-            }
+            models = new ArrayList<>(AppKeyModelScope.filter(allowedModels(caller), models));
             Object payload;
             if ("gemini".equals(flavor)) {
                 List<Map<String, Object>> items = new ArrayList<>();
@@ -1761,7 +1758,11 @@ public class ServiceInstanceManager {
     }
 
     /**
-     * 把 appKey 注入到请求参数：底层用量落库据此把这次调用归到该 appKey 名下。
+     * 把 appKey 注入到请求参数 {@code _appKey}：对话门面据此把本次调用的 Token 用量
+     * 记到这把 Key 的账上（{@code total_tokens} 自增）。
+     *
+     * <p>网关侧三个控制器做的是同一件事。这条链路是「按 Token 总量」配额唯一的增长来源 ——
+     * 少了这一步，配额永远不会涨，用户超额也拦不住。</p>
      *
      * @param request 对话请求，不能为 null
      * @param caller  调用方，可为 null（老令牌无 appKey）
@@ -1844,13 +1845,18 @@ public class ServiceInstanceManager {
     }
 
     /**
-     * 额度回填：每次请求终结（成功/失败）计一次调用；成功且拿到用量时累加 Token 消耗。
+     * 额度回填：每次请求终结（成功/失败）计一次调用。
      *
-     * <p>appKey：走 {@code SysAiAppKeyService} 的原子自增（{@code use_count} / {@code total_tokens}
-     * + {@code last_used_time}），与网关同一本账；老令牌：沿用服务令牌表的两列。</p>
+     * <p>Token 消耗<b>不在这里累计</b>：真实用量只有在对话门面拿到 {@code usage} 时才存在，
+     * 门面（{@code AiChatFacadeServiceImpl#accumulateAppKeyTokens}）是 Token 记账的唯一权威，
+     * 网关与实例端口都经过它。此处若再累加一次，同一笔调用会被记成两倍 —— 用户会看到额度
+     * 莫名双倍消耗，且永远先于真实用量触碰上限。</p>
+     *
+     * <p>请求次数则相反：只有本类知道「请求已经发出去了」（包括上游失败的那一次），
+     * 所以计次留在这里，与网关「鉴权即计次」的口径一致。</p>
      *
      * @param caller      已鉴权的调用方，可为 null（此时直接返回）
-     * @param totalTokens 本次请求消耗的总 Token 数，可为 null 或非正数
+     * @param totalTokens 本次请求消耗的总 Token 数（由门面记账，此处仅用于老令牌）
      * @param success     本次请求是否成功
      */
     private void consumeQuota(Caller caller, Long totalTokens, boolean success) {
@@ -1862,9 +1868,6 @@ public class ServiceInstanceManager {
             if (caller.isAppKey()) {
                 // 失败也计一次（与按次数配额的口径一致：请求已经发出去了）
                 appKeyService.updateUseInfoByAppKey(caller.appKey);
-                if (addTokens > 0) {
-                    appKeyService.updateTokenQuotaByAppKey(caller.appKey, addTokens);
-                }
                 return;
             }
             SysAiServiceToken t = caller.legacyToken;

@@ -766,6 +766,17 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <!-- 系统管理模块（/v2/user/** / /v2/third/** / /v2/captcha / /v2/sms / /v2/cache /
+                 /v2/announcement / /manage/* / /monitor/*）：pages/system 路由的后端接口全部由
+                 spring-api-support-common-system-starter 提供。monitor 应用是这些页面的宿主，
+                 artifact 由 spring-support-api-starter 构建产出，版本号与本 reactor 同步为 4.0.0.51，
+                 故可用 ${project.version}。引入方需先把该 artifact install 到本地仓库（它不在本 reactor 模块树内）。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-api-support-common-system-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
             <dependency>
                 <groupId>com.chua</groupId>

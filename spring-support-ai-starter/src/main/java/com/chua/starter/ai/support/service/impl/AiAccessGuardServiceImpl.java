@@ -102,6 +102,26 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
      * @return 返回值
     */
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
+        return verifyBearer(authorizationHeader, clientIp, true);
+    }
+
+    @Override
+    public boolean verifyBearerTokenReadOnly(String authorizationHeader, String clientIp) {
+        return verifyBearer(authorizationHeader, clientIp, false);
+    }
+
+    /**
+     * Bearer 令牌校验的公共实现。
+     *
+     * <p>身份、限流、余额守卫与 {@link #verifyBearerToken} 完全同口径，唯一变量是
+     * {@code countUse}：只读端点（模型获取）不消耗「按次数」配额。</p>
+     *
+     * @param authorizationHeader Authorization 头
+     * @param clientIp            客户端 IP
+     * @param countUse            是否把本次请求计入「按次数」配额
+     * @return 校验是否通过
+     */
+    private boolean verifyBearer(String authorizationHeader, String clientIp, boolean countUse) {
  // 与 验证appKey 保持一致：app_Key_已启用 关闭时免鉴权（仅当管理员显式关闭）
         if (!isAppKeyEnabled()) {
             return true;
@@ -117,7 +137,10 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
         boolean passed = BEARER_TOKEN_CACHE.get(cacheKey, k ->
                 sysAiAppKeyService.verifyAppKeyOnly(token, clientIp));
         if (passed) {
-            sysAiAppKeyService.updateUseInfoByAppKey(token);
+            // 只读端点（模型获取）不烧「按次数」配额：客户端探测模型列表不该算一次调用
+            if (countUse) {
+                sysAiAppKeyService.updateUseInfoByAppKey(token);
+            }
  // 限流检查有副作用（更新 rate数量），不并入 Caffeine 缓存
             if (!isGroupRateLimited(token)) {
                 return false;

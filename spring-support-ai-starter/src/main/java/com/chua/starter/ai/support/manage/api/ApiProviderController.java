@@ -3036,6 +3036,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * <p>{@code default} 键是兜底路由，不是可选择的模型，返回时剔除。
      * 未配置 {@code routes} 时返回空清单 + 提示，不抛错。</p>
      *
+     * <p>每行补充路由表节点提供的上游信息（provider / baseUrl / authScheme）；
+     * 语义交给前端的 {@code describeFetchRow} 渲染成行内小字，让用户看到这一行
+     * 实际走哪个上游通道，而不是只看到裸路由键。</p>
+     *
      * @param extra 供应商扩展配置（{@code extra.routes}）
      * @return { models: [...], hint?: 字符串 }；形态与其它供应商拉取一致
      */
@@ -3043,16 +3047,24 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         Map<String, RouteTarget> routes = ProviderRouteTargets.fromExtra(extra);
         List<Map<String, Object>> models = new ArrayList<>(8);
         if (routes != null) {
-            for (String key : routes.keySet()) {
+            for (Map.Entry<String, RouteTarget> entry : routes.entrySet()) {
+                String key = entry.getKey();
                 // default 是兜底路由，不作为可选模型暴露
                 if ("default".equalsIgnoreCase(key)) {
                     continue;
                 }
-                Map<String, Object> m = new LinkedHashMap<>(4);
+                RouteTarget target = entry.getValue();
+                Map<String, Object> m = new LinkedHashMap<>(7);
+                // 路由表节点信息：这一行实际路由到的上游提供商（后端状态色、
+                // 前端通道徽标都靠它，不是裸路由键）
                 m.put("id", key);
                 m.put("name", key);
+                m.put("provider", target.getProvider());
+                m.put("baseUrl", target.getBaseUrl());
+                m.put("authScheme", target.getAuthScheme());
                 m.put("tasks", inferTasks(key));
                 m.put("traits", List.of("streaming"));
+                m.put("description", describeRouteTarget(key, target));
                 models.add(m);
             }
         }
@@ -3063,6 +3075,33 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             out.put("hint", "未配置模型路由（extra.routes），请在供应商配置中补充后重试");
         }
         return out;
+    }
+
+    /**
+     * 免费渠道行内描述：这条路由通往的上游 provider 与地址。
+     *
+     * <p>文本直接落到模型行的 {@code description} 字段，前端 {@code describeFetchRow}
+     * 取到它后在模型名下方渲染一行小字；没有描述信息时返回空串，前端不渲染。</p>
+     *
+     * @param key    路由键（线程缺失 provider 时的兜底标识）
+     * @param target 路由目标
+     * @return 描述文本（provider · baseUrl，鉴权方案存在时一并给出）
+     */
+    private String describeRouteTarget(String key, RouteTarget target) {
+        if (target == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(target.getProvider() != null ? target.getProvider() : key);
+        String baseUrl = target.getBaseUrl();
+        if (baseUrl != null && !baseUrl.isBlank()) {
+            sb.append(" · ").append(baseUrl);
+        }
+        String scheme = target.getAuthScheme();
+        if (scheme != null && !scheme.isBlank() && !"none".equalsIgnoreCase(scheme)) {
+            sb.append(" · ").append(scheme);
+        }
+        return sb.toString();
     }
 
     /**
