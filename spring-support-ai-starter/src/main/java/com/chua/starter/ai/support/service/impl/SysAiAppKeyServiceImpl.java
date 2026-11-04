@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
+import com.chua.starter.ai.support.service.AppKeyQuotaGate;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.util.KeyGenerator;
 import com.chua.starter.ai.support.entity.SysAiAppKeyTopupLog;

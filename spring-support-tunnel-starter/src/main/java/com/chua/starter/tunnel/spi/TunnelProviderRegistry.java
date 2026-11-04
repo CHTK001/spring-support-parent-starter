@@ -51,7 +51,7 @@ public class TunnelProviderRegistry {
                         + provider.getClass().getName() + "）");
             }
             log.info("[Tunnel] 注册提供方 {}（{}），可用={}",
-                    key, provider.classList(), provider.isAvailable());
+                    key, provider.getClass().getSimpleName(), provider.isAvailable());
         }
         if (providers.isEmpty()) {
             log.warn("[Tunnel] 未发现任何 TunnelProvider 实现：请引入 spring-support-ngrok-starter "
