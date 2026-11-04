@@ -190,52 +190,22 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-     * 校验 appKey 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
+     * 校验 appKey 记录自身有效性（存在、启用、未过期、次数上限、Token 总量、IP 白名单）。
      *
-     * @param dbAppKey appKey 记录
+     * <p>判定本身交给 {@link AppKeyQuotaGate}：这是与「服务实例端口」共用的唯一口径，
+     * 两处各写一遍曾导致「网关永不过期、实例已过期」这类不一致。</p>
+     *
+     * @param dbAppKey appKey 记录，可为 null
      * @param ip       客户端 IP
      * @return 是否有效
      */
     private boolean isValidAppKey(SysAiAppKey dbAppKey, String ip) {
-        if (dbAppKey == null) {
-            return false;
+        AppKeyQuotaGate.Deny deny = AppKeyQuotaGate.check(dbAppKey, ip);
+        if (!deny.denied()) {
+            return true;
         }
-        if (dbAppKey.getStatus() == null || dbAppKey.getStatus() != STATUS_ENABLED) {
-            return false;
-        }
-        if (isExpired(dbAppKey)) {
-            return false;
-        }
- // 次数上限强制校验：达到 最大use 后拒绝放行（配额限制）
-        Long maxUse = dbAppKey.getMaxUse();
-        if (maxUse != null && maxUse > 0) {
-            Long used = dbAppKey.getUseCount() == null ? 0L : dbAppKey.getUseCount();
-            if (used >= maxUse) {
-                log.warn("[SysAiAppKey] AppKey {} 已达次数上限({}/{})，拒绝访问",
-                        dbAppKey.getAppKey(), used, maxUse);
-                return false;
-            }
-        }
- // 令牌 总量配额校验：达到 最大令牌 后拒绝放行
-        Long maxTokens = dbAppKey.getMaxTokens();
-        if (maxTokens != null && maxTokens > 0) {
-            Long totalTokens = dbAppKey.getTotalTokens() == null ? 0L : dbAppKey.getTotalTokens();
-            if (totalTokens >= maxTokens) {
-                log.warn("[SysAiAppKey] AppKey {} 已达 Token 配额上限({}/{})，拒绝访问",
-                        dbAppKey.getAppKey(), totalTokens, maxTokens);
-                return false;
-            }
-        }
-        String whitelist = dbAppKey.getIpWhitelist();
-        if (StringUtils.isNotBlank(whitelist) && StringUtils.isNotBlank(ip)) {
-            boolean allowed = Arrays.stream(whitelist.split(","))
-                    .map(String::trim)
-                    .anyMatch(it -> "*".equals(it) || it.equals(ip));
-            if (!allowed) {
-                return false;
-            }
-        }
-        return true;
+        log.warn("[SysAiAppKey] AppKey {} 校验未通过: {}", dbAppKey != null ? dbAppKey.getAppKey() : null, deny);
+        return false;
     }
 
     @Override
