@@ -132,7 +132,7 @@ public class PollinationsImageChannel implements ImageChannelProvider {
         }
         int[] size = resolveSize(ratio, width, height);
         String effectiveModel = model == null || model.isBlank() ? DEFAULT_MODEL : model.trim();
-        int count = Math.max(1, Math.min(n, 4));
+        int count = Math.max(1, Math.min(n, MAX_IMAGES_PER_CALL));
         List<ImageGenerationResult.GeneratedImage> images = new ArrayList<>(count);
         String encodedPrompt = encode(prompt.trim());
         long seed = Math.abs(System.nanoTime() % 1_000_000_000L);

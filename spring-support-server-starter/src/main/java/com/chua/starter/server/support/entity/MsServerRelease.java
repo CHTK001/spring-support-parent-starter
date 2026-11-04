@@ -48,6 +48,28 @@ public class MsServerRelease {
     private String backgroundImage;
 
     /**
+     * 是否启用 SkyWalking（发布级 APM 注入开关）
+     * <p>发布下所有项目共享同一份 agent 与 OAP 地址；项目级 APM 配置优先。</p>
+     */
+    private Boolean swEnabled;
+
+    /**
+     * SkyWalking agent jar 路径（目标主机上的绝对路径）
+     */
+    private String swJarPath;
+
+    /**
+     * SkyWalking service_name 前缀
+     * <p>组装后的 service_name 为「<b>前缀-项目名</b>」，前缀为空则只取项目名。</p>
+     */
+    private String swServiceNamePrefix;
+
+    /**
+     * OAP 集群地址（collector.backend_service，如 oap:11800）
+     */
+    private String swBackendService;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

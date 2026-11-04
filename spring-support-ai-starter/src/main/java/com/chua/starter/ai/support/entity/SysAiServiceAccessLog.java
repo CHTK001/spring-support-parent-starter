@@ -30,7 +30,7 @@ public class SysAiServiceAccessLog {
     private Long latencyMs;
     private String clientIp;
     private String userId;
-    /** 本次调用使用的 AppKey（服务实例以 appKey 鉴权；老令牌调用留空） */
+    /** 本次调用使用的 AppKey（服务实例与网关统一按 AppKey 鉴权） */
     private String appKey;
     private LocalDateTime createTime;
 }

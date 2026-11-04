@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiAppKey;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -54,4 +55,19 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
      * @param @Param("appKey" @参数("app键"
      */
     void addTokenQuota(@Param("appKey") String appKey, @Param("tokens") long tokens);
+
+    /**
+     * 原子扣费：余额减去金额、累计费用加上金额。
+     *
+     * <p>为什么必须一条 SQL 完成：先查余额再写回余额，是两个并发请求各自读到同一个
+     * 「变动前余额」，后写的那个把先写的扣减整笔覆盖掉 —— 用户并发打两句话只扣了一次钱。
+     * 把「是否可扣」也放进 {@code WHERE}，判断与写入就在同一行锁里完成。</p>
+     *
+     * <p>返回 0 表示没有扣成：Key 不存在 / 已删除 / 余额已为负且未开透支。</p>
+     *
+     * @param appKey appKey 值
+     * @param amount 扣减金额（正数）
+     * @return 受影响行数（1 = 扣费成功）
+     */
+    int deductBalance(@Param("appKey") String appKey, @Param("amount") BigDecimal amount);
 }

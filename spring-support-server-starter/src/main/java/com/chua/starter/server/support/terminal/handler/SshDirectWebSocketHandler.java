@@ -86,6 +86,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     private final TerminalSessionService terminalSessionService;
 
     /**
+     * 终端共享记录存储器（按共享记录的可见性判定加入者是否有写权限）
+     */
+    private final com.chua.starter.server.support.share.TerminalShareStore shareStore;
+
+    /**
      * 活跃直连会话：WS 会话 标识 -> 桥接上下文
     */
     private final Map<String, Bridge> bridges = new ConcurrentHashMap<>();
@@ -230,12 +235,16 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     @Override
     protected void handleBinaryMessage(WebSocketSession wsSession, BinaryMessage message) {
-        // 共享成员：仅当前控制者可写入远端 伪终端（观察者只读）
+        // 共享成员：只要共享记录授予写权限（公开 / 发起者 / 被授权用户）即可写入远端 伪终端。
+        // 与文件协同同一判定口径 —— 被邀请用户是「协同操作」，不是只读观看。
         String roomId = memberRoom.get(wsSession.getId());
         if (roomId != null) {
             ShareRoom room = rooms.get(roomId);
-            if (room == null || room.operation == null
-                    || !wsSession.getId().equals(room.controllerId)) {
+            if (room == null) {
+                return;
+            }
+            ShareMember member = room.members.get(wsSession.getId());
+            if (room.operation == null || member == null || !member.writable) {
                 return;
             }
             ByteBuffer buffer = message.getPayload();
@@ -243,6 +252,8 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             buffer.get(bytes);
             try {
                 room.touch();
+                // 协同输入：把这次写入方登记为控制者（PTY 只有一套窗口尺寸，尺寸跟随最后操作者）
+                room.controllerId = wsSession.getId();
                 room.operation.sendRaw(new String(bytes, StandardCharsets.UTF_8));
             } catch (IOException e) {
                 log.warn("[terminal-ssh] 共享输入写入失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
@@ -402,10 +413,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     }
 
         /**
-     * 加入共享房间：房间不存在则创建（建 SSH + PTY），存在则作为观察者 attach。
+     * 加入共享房间：房间不存在则创建（建 SSH + PTY），存在则作为协同成员 attach。
      *
-     * <p>创建者即房间 owner（首控）；后续进入者一律观察者，可请求控制。
-     * 主机必须与房间一致，防止串台。</p>
+     * <p>创建者即房间 owner；后续进入者按共享记录判定权限（与文件协同同口径：
+     * 公开全员可协同操作，私有仅发起者与被授权用户），无权限者直接拒绝，
+     * 不会拿到一个「看着能动、实际写不进去」的假终端。主机必须与房间一致，防止串台。</p>
      *
      * @param wsSession WS 会话
      * @param params    握手参数
@@ -413,6 +425,20 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      * @param hostId    目标主机 标识
      */
     private void joinSharedRoom(WebSocketSession wsSession, Map<String, String> params, String roomId, Long hostId) {
+        // 权限判定与文件协同同口径：公开全员可协同操作；私有仅发起者与被授权用户。
+        // 无权限者一律拒绝 —— 与「私有文档未授权看不到」同一语义，不给假终端。
+        // 必须在建房间之前判：先建 SSH 再拒绝会白占一条连接与一个远端 PTY。
+        String userId = params.get("userId");
+        com.chua.starter.server.support.share.TerminalShareStore.TerminalShare share =
+                shareStore.byRoom(roomId);
+        boolean writable = share != null
+                && com.chua.starter.server.support.share.TerminalShareStore.canWrite(share, userId);
+        if (!writable) {
+            reject(wsSession, share == null
+                    ? "该共享终端不存在或已取消"
+                    : "无权加入该共享终端，请联系发起者授权");
+            return;
+        }
         ShareRoom room = rooms.get(roomId);
         if (room == null) {
             room = createShareRoom(wsSession, params, roomId, hostId);
@@ -425,14 +451,14 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         }
         String user = params.get("user");
         String name = WebSocketSessions.firstNonBlank(user, "访客-" + wsSession.getId().substring(0, Math.min(6, wsSession.getId().length())));
-        ShareMember member = new ShareMember(wsSession, name);
+        ShareMember member = new ShareMember(wsSession, name, writable);
         room.members.put(wsSession.getId(), member);
         memberRoom.put(wsSession.getId(), roomId);
         // 加入者先收到房间全量状态，再广播他人「有新人加入」
         sendText(wsSession, room.toRoomStateJson(member));
         broadcastText(room, room.toMemberJoinJson(member), wsSession.getId());
-        log.info("[terminal-ssh] 共享成员加入 roomId={} sessionId={} name={} 人数={}",
-                roomId, wsSession.getId(), name, room.members.size());
+        log.info("[terminal-ssh] 共享成员加入 roomId={} sessionId={} name={} userId={} 人数={}",
+                roomId, wsSession.getId(), name, userId, room.members.size());
     }
 
     /**
@@ -599,13 +625,15 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         if (payload.contains("\"resize\"")) {
-            // 尺寸调整仅当前控制者生效（PTY 只有一套窗口尺寸）
-            if (wsSession.getId().equals(room.controllerId)) {
+            // 尺寸调整：任一可协同操作的成员都能调（PTY 只有一套窗口尺寸，跟随最后操作者）
+            ShareMember self = room.members.get(wsSession.getId());
+            if (self != null && self.writable) {
                 int nextCols = readInt(payload, "cols", room.cols);
                 int nextRows = readInt(payload, "rows", room.rows);
                 if (nextCols > 0 && nextRows > 0) {
                     room.cols = nextCols;
                     room.rows = nextRows;
+                    room.controllerId = wsSession.getId();
                     room.resize(nextCols, nextRows);
                 }
             }
@@ -1045,7 +1073,8 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             StringBuilder sb = new StringBuilder(128);
             sb.append("{\"c\":\"room\",\"roomId\":\"").append(roomId)
                     .append("\",\"id\":\"").append(self.wsSession.getId())
-                    .append("\",\"controller\":")
+                    .append("\",\"writable\":").append(self.writable)
+                    .append(",\"controller\":")
                     .append(controllerId == null ? "null" : "\"" + controllerId + "\"")
                     .append(",\"members\":[");
             boolean first = true;
@@ -1057,6 +1086,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                 sb.append("{\"id\":\"").append(m.wsSession.getId())
                         .append("\",\"name\":\"").append(WebSocketSessions.escapeJson(m.name))
                         .append("\",\"owner\":").append(ownerSessionId.equals(m.wsSession.getId()))
+                        .append(",\"writable\":").append(m.writable)
                         .append('}');
             }
             sb.append("]}");
@@ -1087,7 +1117,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     /**
-     * 共享房间成员载体：浏览器 WS 会话 + 显示名。
+     * 共享房间成员载体：浏览器 WS 会话 + 显示名 + 写权限。
      */
     private static final class ShareMember {
 
@@ -1102,14 +1132,26 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         private final String name;
 
         /**
+         * 是否可协同操作（写远端 伪终端）。
+         *
+         * <p>由共享记录判定：公开共享一律可写；私有共享仅发起者与被授权用户可写。
+         * 与文件协同同一口径 —— 私有文档未授权者根本看不到，私有终端未授权者
+         * 在 {@link #joinSharedRoom} 就被拒绝，进不来。此标记是第二道闸：
+         * 即便准入判定漏了，写入也会被丢弃。</p>
+         */
+        private final boolean writable;
+
+        /**
          * 构造成员
          *
          * @param wsSession WS 会话
          * @param name      显示名
+         * @param writable  是否可协同操作
          */
-        private ShareMember(WebSocketSession wsSession, String name) {
+        private ShareMember(WebSocketSession wsSession, String name, boolean writable) {
             this.wsSession = wsSession;
             this.name = name;
+            this.writable = writable;
         }
     }
 }

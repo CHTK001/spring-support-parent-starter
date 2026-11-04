@@ -6,12 +6,15 @@ import com.chua.common.support.apm.OtnlQuery;
 import com.chua.common.support.apm.OtnlScope;
 import com.chua.common.support.apm.OtnlTraceState;
 import com.chua.common.support.apm.model.OtnlHealth;
+import com.chua.common.support.apm.model.OtnlTopology;
 import com.chua.starter.apm.support.ApmRegistry;
 import com.chua.starter.apm.support.model.ApmDescriptor;
 import com.chua.starter.apm.support.properties.ApmProperties;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -35,10 +38,17 @@ import java.util.Map;
  *   <tr><td>{@code GET /traces?service=&state=&pageNum=&pageSize=}</td><td>链路列表</td></tr>
  *   <tr><td>{@code GET /trace/{traceId}}</td><td>链路详情（含 Span）</td></tr>
  *   <tr><td>{@code GET /topology?service=}</td><td>服务拓扑</td></tr>
+ *   <tr><td>{@code GET /topology/multi?services=a,b}</td><td>多服务合并拓扑（对比页）</td></tr>
  *   <tr><td>{@code GET /metrics?name=&scope=&service=&instance=&endpoint=}</td><td>指标时序</td></tr>
  *   <tr><td>{@code GET /metric-definitions?scope=}</td><td>指标定义（下拉框）</td></tr>
  *   <tr><td>{@code GET /alarms?keyword=}</td><td>告警</td></tr>
+ *   <tr><td>{@code GET /alerts?keyword=}</td><td>告警（{@code /alarms} 的别名，前端 Alert 页语义）</td></tr>
  *   <tr><td>{@code GET /logs?service=&keyword=}</td><td>日志</td></tr>
+ *   <tr><td>{@code GET /profiles?service=&endpoint=}</td><td>性能剖析任务列表</td></tr>
+ *   <tr><td>{@code GET /profiles/{taskId}/segments}</td><td>剖析任务采样到的链路片段</td></tr>
+ *   <tr><td>{@code GET /profiles/{taskId}/analysis}</td><td>剖析结果（线程栈树）</td></tr>
+ *   <tr><td>{@code GET /metrics-batch?names=&services=&scope=}</td><td>批量指标（多实体对比）</td></tr>
+ *   <tr><td>{@code GET /infra-3d?minutes=}</td><td>全局拓扑 + 分层信息（3D 基础设施图）</td></tr>
  * </table>
  *
  * @author CH
@@ -56,6 +66,31 @@ public class ApmDispatcher {
      * 链路列表路径前缀
      */
     private static final String TRACE_DETAIL_PREFIX = "/trace/";
+
+    /**
+     * 剖析片段路径前缀（{@code /profiles/{taskId}/segments}）
+     */
+    private static final String PROFILE_SEGMENTS_PREFIX = "/profiles/";
+
+    /**
+     * 剖析片段路径后缀
+     */
+    private static final String PROFILE_SEGMENTS_SUFFIX = "/segments";
+
+    /**
+     * 剖析分析路径前缀（与片段共用 {@code /profiles/} 前缀）
+     */
+    private static final String PROFILE_ANALYSIS_PREFIX = "/profiles/";
+
+    /**
+     * 剖析分析路径后缀
+     */
+    private static final String PROFILE_ANALYSIS_SUFFIX = "/analysis";
+
+    /**
+     * 批量指标单次最多返回的曲线数（对比页上限，防止误点出几百条）
+     */
+    private static final int MAX_BATCH_SERIES = 24;
 
     private final ApmRegistry registry;
     private final ApmProperties properties;
@@ -140,6 +175,15 @@ public class ApmDispatcher {
             return withEngine(OtnlEngine.CAP_TOPOLOGY,
                     engine -> engine.topology(query(request.params())));
         }
+        if ("/topology/multi".equals(path)) {
+            return withEngine(OtnlEngine.CAP_TOPOLOGY, engine -> {
+                List<String> names = split(request.params(), "services");
+                if (names.isEmpty()) {
+                    throw new IllegalArgumentException("缺少必填参数: services");
+                }
+                return engine.multiTopology(names, query(request.params()));
+            });
+        }
         if ("/metrics".equals(path)) {
             return withEngine(OtnlEngine.CAP_METRICS, engine -> {
                 String name = required(request, "name");
@@ -158,11 +202,165 @@ public class ApmDispatcher {
             return withEngine(OtnlEngine.CAP_ALARMS,
                     engine -> engine.alarms(query(request.params())));
         }
+        if ("/alerts".equals(path)) {
+            // 前端「告警分析」页与本接口同源；单独开别名是为了让能力判断能落到 CAP_ALERTS
+            return withEngine(OtnlEngine.CAP_ALERTS,
+                    engine -> engine.alarms(query(request.params())));
+        }
         if ("/logs".equals(path)) {
             return withEngine(OtnlEngine.CAP_LOGS,
                     engine -> engine.logs(query(request.params())));
         }
+        if ("/profiles".equals(path)) {
+            return withEngine(OtnlEngine.CAP_PROFILES,
+                    engine -> engine.profileTasks(query(request.params())));
+        }
+        if (path.startsWith(PROFILE_SEGMENTS_PREFIX) && path.endsWith(PROFILE_SEGMENTS_SUFFIX)) {
+            String taskId = middle(path, PROFILE_SEGMENTS_PREFIX, PROFILE_SEGMENTS_SUFFIX);
+            if (taskId.isBlank()) {
+                return ApmResult.fail("缺少剖析任务 ID");
+            }
+            return withEngine(OtnlEngine.CAP_PROFILES, engine -> engine.profiledSegments(taskId));
+        }
+        if (path.startsWith(PROFILE_ANALYSIS_PREFIX) && path.endsWith(PROFILE_ANALYSIS_SUFFIX)) {
+            String taskId = middle(path, PROFILE_ANALYSIS_PREFIX, PROFILE_ANALYSIS_SUFFIX);
+            if (taskId.isBlank()) {
+                return ApmResult.fail("缺少剖析任务 ID");
+            }
+            return withEngine(OtnlEngine.CAP_PROFILES, engine -> engine.profileAnalysis(taskId));
+        }
+        if ("/metrics-batch".equals(path)) {
+            return withEngine(OtnlEngine.CAP_METRICS, engine -> metricsBatch(engine, request.params()));
+        }
+        if ("/infra-3d".equals(path)) {
+            return withEngine(OtnlEngine.CAP_TOPOLOGY, engine -> infra3d(engine, request.params()));
+        }
         return ApmResult.fail("未知的 APM 接口: " + path);
+    }
+
+    /**
+     * 批量指标：指标名 × 实体 的笛卡尔组合（对比页一次拿多曲线）
+     * <p>
+     * 两个参数都可传多个（逗号分隔）：{@code names=service_cpm,service_resp_time&services=a,b}
+     * 会得到 4 条曲线。上限 {@value #MAX_BATCH_SERIES} 条，防止一次点选把 OAP 打穿。
+     * </p>
+     *
+     * @param engine 引擎
+     * @param params 参数
+     * @return 时序列表
+     */
+    private Object metricsBatch(OtnlEngine engine, Map<String, String> params) {
+        List<String> names = split(params, "names");
+        if (names.isEmpty()) {
+            String single = text(params, "name");
+            if (single != null) {
+                names = List.of(single);
+            }
+        }
+        if (names.isEmpty()) {
+            throw new IllegalArgumentException("缺少必填参数: names");
+        }
+        List<String> services = split(params, "services");
+        if (services.isEmpty()) {
+            String single = text(params, "service");
+            services = List.of(single == null ? "" : single);
+        }
+        OtnlQuery base = query(params);
+        OtnlScope scope = scope(params);
+        String instance = base.instanceName();
+        String endpoint = base.endpointName();
+        List<OtnlMetricQuery> queries = new ArrayList<>();
+        outer:
+        for (String name : names) {
+            for (String service : services) {
+                queries.add(new OtnlMetricQuery(name, scope,
+                        service == null || service.isBlank() ? null : service,
+                        instance, endpoint,
+                        base.startTime(), base.endTime(),
+                        base.step() == null || base.step().isBlank() ? "MINUTE" : base.step()));
+                if (queries.size() >= MAX_BATCH_SERIES) {
+                    break outer;
+                }
+            }
+        }
+        return engine.metricsBatch(queries);
+    }
+
+    /**
+     * 3D 基础设施图数据：全局拓扑 + 按层聚合
+     * <p>
+     * 只做一次 {@code getGlobalTopology}，把每个节点归到它的第一个 layer 上；
+     * 图上的坐标一律由前端算（后端给不出有物理意义的坐标），这里只保证
+     * 「同一层的节点进同一个分组」。
+     * </p>
+     *
+     * @param engine 引擎
+     * @param params 参数
+     * @return 3D 图数据
+     */
+    private Object infra3d(OtnlEngine engine, Map<String, String> params) {
+        OtnlTopology topology = engine.topology(query(params).withService(null));
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        Map<String, Integer> layerCount = new LinkedHashMap<>();
+        if (topology != null && topology.nodes() != null) {
+            for (OtnlTopology.OtnlTopologyNode node : topology.nodes()) {
+                String layer = node.layer() == null || node.layer().isBlank() ? "UNKNOWN" : node.layer();
+                layerCount.merge(layer, 1, Integer::sum);
+                Map<String, Object> item = new LinkedHashMap<>(8);
+                item.put("id", node.id());
+                item.put("name", node.name());
+                item.put("type", node.type());
+                item.put("layer", layer);
+                item.put("real", node.real());
+                nodes.add(item);
+            }
+        }
+        List<Map<String, Object>> layers = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : layerCount.entrySet()) {
+            Map<String, Object> item = new LinkedHashMap<>(2);
+            item.put("name", entry.getKey());
+            item.put("count", entry.getValue());
+            layers.add(item);
+        }
+        Map<String, Object> payload = new LinkedHashMap<>(4);
+        payload.put("nodes", nodes);
+        payload.put("calls", topology == null || topology.calls() == null ? List.of() : topology.calls());
+        payload.put("layers", layers);
+        return payload;
+    }
+
+    /**
+     * 取路径中间段（{@code /profiles/{id}/analysis} → {@code {id}}）
+     *
+     * @param path   路径
+     * @param prefix 前缀
+     * @param suffix 后缀
+     * @return 中间段
+     */
+    private String middle(String path, String prefix, String suffix) {
+        return path.substring(prefix.length(), Math.max(prefix.length(), path.length() - suffix.length()));
+    }
+
+    /**
+     * 逗号分隔参数
+     *
+     * @param params 参数
+     * @param name   参数名
+     * @return 非空值列表
+     */
+    private List<String> split(Map<String, String> params, String name) {
+        String value = text(params, name);
+        if (value == null) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (String item : value.split(",")) {
+            String trimmed = item.trim();
+            if (!trimmed.isEmpty()) {
+                result.add(trimmed);
+            }
+        }
+        return result;
     }
 
     /**

@@ -20,6 +20,7 @@ import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
+import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -37,6 +38,7 @@ import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.AppKeyBilling;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
@@ -54,6 +56,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -92,6 +95,22 @@ import java.util.stream.Collectors;
 public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     private static final long SSE_TIMEOUT_MILLIS = 60_000L; // sse超时millis
+    /**
+     * 美元汇率配置项（用量分组）：1 美元兑换的人民币数量。
+     */
+    private static final String FIELD_RATE_USD = "usage_rate_usd";
+    /**
+     * 欧元汇率配置项（用量分组）。
+     */
+    private static final String FIELD_RATE_EUR = "usage_rate_eur";
+    /**
+     * 美元汇率兜底值：与 {@code UsageGlobalSettingProvider} 的默认值保持一致。
+     */
+    private static final BigDecimal DEFAULT_RATE_USD = new BigDecimal("7.1");
+    /**
+     * 欧元汇率兜底值。
+     */
+    private static final BigDecimal DEFAULT_RATE_EUR = new BigDecimal("7.8");
 
     private final ChatClientRegistry chatClientRegistry; // 对话客户端registry
     private final SysAiGroupMapper sysAiGroupMapper; // sysAI群体映射器
@@ -1685,7 +1704,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
         }
-        accumulateAppKeyTokens(appKey, usage);
+        settleAppKeyUsage(appKey, usage);
     }
 
     /**
@@ -1735,26 +1754,42 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
         }
-        accumulateAppKeyTokens(appKey, usage);
+        settleAppKeyUsage(appKey, usage);
     }
 
     /**
-     * 把本次调用的 Token 累计到 appKey 台账（「按 Token 总量」配额的唯一写入口）。
+     * 把本次调用的 Token 用量与费用结算到 appKey 台账。
      *
      * <p>为什么必须在这里累计：网关侧 {@code _appKey} 过去只被<b>写入</b>请求参数，全仓库
      * 没有任何读取方 —— 于是「按 Token 总量」这把配额在网关上从来不会增长，用户把额度用光
      * 也不会被拦，只有服务实例端口自己 {@code consumeQuota} 时才涨。同一把 Key 走两个入口
      * 得到两种用量，这正是「明明超了还能用」的来源。</p>
      *
-     * <p>累计失败只记日志、不影响本轮回复：答案已经生成，账可以补，回复不能重来。</p>
+     * <p>费用与用量明细同口径（{@link AppKeyBilling}）：单价来自 {@code sys_ai_pricing}，
+     * USD / EUR 定价按全局设置里的汇率折成人民币再扣，因为余额列记的是「元」。
+     * 只有已进入预付模式的 Key（充值过 / 花过钱 / 开了透支）才扣 —— 否则历史 Key
+     * 会在一句话之后被计费守卫锁死，见 {@link AppKeyBilling#metered}。</p>
+     *
+     * <p>结算失败只记日志、不影响本轮回复：答案已经生成，账可以补，回复不能重来。</p>
      *
      * @param appKey 本次调用所属 appKey，可为 空（控制台直连、未带 Key 的调用）
      * @param usage  用量，可为 空
      */
-    private void accumulateAppKeyTokens(String appKey, com.chua.common.support.ai.AiUsage usage) {
+    private void settleAppKeyUsage(String appKey, com.chua.common.support.ai.AiUsage usage) {
         if (appKey == null || appKey.isBlank() || usage == null) {
             return;
         }
+        accumulateAppKeyTokens(appKey, usage);
+        chargeAppKeyBalance(appKey, usage);
+    }
+
+    /**
+     * 累计 Token 总量（「按 Token 总量」配额的唯一写入口）。
+     *
+     * @param appKey appKey
+     * @param usage  用量
+     */
+    private void accumulateAppKeyTokens(String appKey, com.chua.common.support.ai.AiUsage usage) {
         try {
             // totalTokens 缺失时退回 input+output：部分 SPI 客户端只填分项
             long tokens = 0L;
@@ -1775,6 +1810,86 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             log.warn("[AppKey] Token 配额累计失败 appKey={} tokens={}: {}",
                     appKey, usage.getTotalTokens(), e.getMessage());
+        }
+    }
+
+    /**
+     * 按本次调用费用扣减 appKey 余额（充值余额的实际消耗入口）。
+     *
+     * <p>为什么扣费挂在这里而不是网关：费用只有在拿到 {@code usage} 之后才成立，
+     * 而 {@code usage} 由门面统一收集 —— 网关、实例端口、控制台直连都经过这同一处。
+     * 扣减本身交给 {@code SysAiAppKeyService#deduct}（减余额 + 累加累计费用 + 记 CONSUME 流水）。</p>
+     *
+     * <p>扣不动（余额不足且未开透支）只记日志、不回滚回复：这一轮已经答完了，
+     * 下一轮由计费守卫回 402 —— 先答复用户，再拦下一次，与「按次数」配额的边界口径一致。</p>
+     *
+     * @param appKey appKey
+     * @param usage  用量
+     */
+    private void chargeAppKeyBalance(String appKey, com.chua.common.support.ai.AiUsage usage) {
+        try {
+            // 预付闸：未充值且从未花过钱的 Key 免计量，避免把全站历史 Key 一次扣成负数
+            if (!AppKeyBilling.metered(sysAiAppKeyService.getByAppKeyLive(appKey))) {
+                return;
+            }
+            // 先用用量自带的金额（服务商返回值最准），没有才查定价
+            AppKeyBilling.Charge charge = AppKeyBilling.usageCost(usage);
+            if (!charge.positive()) {
+                charge = AppKeyBilling.chargeOf(usage, latestPricing(usage));
+            }
+            BigDecimal amount = AppKeyBilling.toCny(charge, settingRate(FIELD_RATE_USD, DEFAULT_RATE_USD),
+                    settingRate(FIELD_RATE_EUR, DEFAULT_RATE_EUR));
+            if (amount.signum() <= 0) {
+                return;
+            }
+            String remark = "对话 " + (usage.getModel() != null ? usage.getModel() : "-")
+                    + " " + (usage.getTotalTokens() != null ? usage.getTotalTokens() : 0) + " tokens";
+            if (sysAiAppKeyService.deduct(appKey, amount, remark) <= 0) {
+                log.warn("[AppKey] 扣费未落账 appKey={} 金额={}：余额不足且未开启透支", appKey, amount.toPlainString());
+            }
+        } catch (Exception e) {
+            log.warn("[AppKey] 余额扣减失败 appKey={}: {}", appKey, e.getMessage());
+        }
+    }
+
+    /**
+     * 查本次调用的最新定价；provider / model 缺失时返回 null（不猜价）。
+     *
+     * @param usage 用量
+     * @return 定价记录，可为 null
+     */
+    private SysAiPricing latestPricing(com.chua.common.support.ai.AiUsage usage) {
+        String provider = usage.getProvider();
+        String model = usage.getModel();
+        if (provider == null || provider.isBlank() || model == null || model.isBlank()) {
+            return null;
+        }
+        try {
+            return sysAiPricingService.getLatestPricing(provider, model);
+        } catch (Exception e) {
+            log.debug("[AppKey] 取价失败 provider={} model={}: {}", provider, model, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 读取全局设置里的汇率（用量分组）。
+     *
+     * @param field    字段名
+     * @param fallback 未配置或非法时使用的默认汇率
+     * @return 汇率
+     */
+    private BigDecimal settingRate(String field, BigDecimal fallback) {
+        try {
+            return globalSettingService.getValue("global", field)
+                    .map(String::trim)
+                    .filter(v -> !v.isEmpty())
+                    .map(BigDecimal::new)
+                    .filter(v -> v.signum() > 0)
+                    .orElse(fallback);
+        } catch (Exception e) {
+            log.debug("[AppKey] 汇率读取失败，用默认值 {}={}: {}", field, fallback, e.getMessage());
+            return fallback;
         }
     }
 

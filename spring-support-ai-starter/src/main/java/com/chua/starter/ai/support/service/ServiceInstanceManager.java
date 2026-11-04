@@ -8,10 +8,8 @@ import com.chua.common.support.ai.chat.ChatToolCallData;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
 import com.chua.starter.ai.support.entity.SysAiServiceInstance;
-import com.chua.starter.ai.support.entity.SysAiServiceToken;
 import com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper;
 import com.chua.starter.ai.support.mapper.SysAiServiceInstanceMapper;
-import com.chua.starter.ai.support.mapper.SysAiServiceTokenMapper;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
@@ -28,7 +26,6 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,7 +51,6 @@ public class ServiceInstanceManager {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final SysAiServiceInstanceMapper instanceMapper;
-    private final SysAiServiceTokenMapper tokenMapper;
     private final SysAiServiceAccessLogMapper accessLogMapper;
     private final ChatClientRegistry registry;
     private final AiChatFacadeService facade;
@@ -82,7 +78,6 @@ public class ServiceInstanceManager {
      * 创建服务实例管理器。
      *
      * @param instanceMapper 服务实例数据访问器
-     * @param tokenMapper 服务令牌数据访问器（老数据只读兼容）
      * @param accessLogMapper 访问日志数据访问器
      * @param registry 聊天客户端注册表
      * @param facade 聊天调用门面
@@ -92,7 +87,6 @@ public class ServiceInstanceManager {
      * @param effectiveChatModelResolver 生效对话模型解析器
      */
     public ServiceInstanceManager(SysAiServiceInstanceMapper instanceMapper,
-                                  SysAiServiceTokenMapper tokenMapper,
                                   SysAiServiceAccessLogMapper accessLogMapper,
                                   ChatClientRegistry registry,
                                   AiChatFacadeService facade,
@@ -101,7 +95,6 @@ public class ServiceInstanceManager {
                                   AppKeyModelScope modelScope,
                                   EffectiveChatModelResolver effectiveChatModelResolver) {
         this.instanceMapper = instanceMapper;
-        this.tokenMapper = tokenMapper;
         this.accessLogMapper = accessLogMapper;
         this.registry = registry;
         this.facade = facade;
@@ -242,7 +235,7 @@ public class ServiceInstanceManager {
 
         switch (kind) {
             case "openai_models": {
-                Caller caller = authenticate(inst, exchange);
+                Caller caller = authenticate(exchange);
                 if (caller == null) {
                     return;
                 }
@@ -250,7 +243,7 @@ public class ServiceInstanceManager {
                 return;
             }
             case "openai_chat": {
-                Caller caller = authenticate(inst, exchange);
+                Caller caller = authenticate(exchange);
                 if (caller == null) {
                     return;
                 }
@@ -258,7 +251,7 @@ public class ServiceInstanceManager {
                 return;
             }
             case "cc_messages": {
-                Caller caller = authenticate(inst, exchange);
+                Caller caller = authenticate(exchange);
                 if (caller == null) {
                     return;
                 }
@@ -266,7 +259,7 @@ public class ServiceInstanceManager {
                 return;
             }
             case "cc_count_tokens": {
-                Caller caller = authenticate(inst, exchange);
+                Caller caller = authenticate(exchange);
                 if (caller == null) {
                     return;
                 }
@@ -274,7 +267,7 @@ public class ServiceInstanceManager {
                 return;
             }
             case "gemini": {
-                Caller caller = authenticate(inst, exchange);
+                Caller caller = authenticate(exchange);
                 if (caller == null) {
                     return;
                 }
@@ -1251,7 +1244,7 @@ public class ServiceInstanceManager {
     /**
      * 输出模型列表，按 flavor 分别渲染 Gemini {@code models[]} 或 OpenAI {@code data[]} 结构。
      *
-     * <p>令牌绑定了模型清单时，列表只回这些模型 —— 客户端（Cherry Studio 之类）常用
+     * <p>AppKey 限定了模型清单时，列表只回这些模型 —— 客户端（Cherry Studio 之类）常用
      * {@code /v1/models} 做下拉，若照旧全量返回，用户选到一个没权限的模型再被 403，
      * 体验与「按模型授权」的语义都不对。</p>
      *
@@ -1488,7 +1481,7 @@ public class ServiceInstanceManager {
                             try {
                                 writeAccessLog(inst, exchange, effModel, modeToProtocol(mode),
                                         200, usage, System.currentTimeMillis() - start, caller);
-                                consumeQuota(caller, totalOf(usage), true);
+                                consumeQuota(caller, true);
                             } catch (Exception e) {
                                 log.warn("[ServiceInstance] 完成日志/额度回填失败: {}", e.getMessage());
                             }
@@ -1504,7 +1497,7 @@ public class ServiceInstanceManager {
                                 }
                                 writeAccessLog(inst, exchange, effModel, modeToProtocol(mode),
                                         502, null, System.currentTimeMillis() - start, caller);
-                                consumeQuota(caller, null, false);
+                                consumeQuota(caller, false);
                             } catch (Exception e) {
                                 log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
                             }
@@ -1596,7 +1589,7 @@ public class ServiceInstanceManager {
             logRow.setLatencyMs(latency);
             logRow.setClientIp(clientIp(exchange));
             logRow.setUserId(inst.getUserId());
-            // 凭证归属：谁花的这笔账要能查得出来（老令牌没有 appKey，留空）
+            // 凭证归属：谁花的这笔账要能查得出来
             if (caller != null && caller.appKey != null) {
                 logRow.setAppKey(caller.appKey);
             }
@@ -1609,69 +1602,49 @@ public class ServiceInstanceManager {
     // ==================== 鉴权 ====================
 
     /**
-     * 调用方身份：<b>appKey 是唯一正式凭证</b>，老的实例服务令牌只做只读兼容。
+     * 调用方身份：<b>appKey 是唯一凭证</b>。
      *
      * <p>为什么统一到 appKey：服务实例对外暴露的 {@code /v1/models}、{@code /v1/chat/completions}、
      * {@code /v1/messages}、Gemini 生成，必须与网关 {@code /v2/v1/*} 同一套口径——同一个凭证、
      * 同一份模型范围（分组 + 限定模型）、同一本额度账（次数 / Token / 余额）、同一套用量归集。
      * 否则「控制台签发的 Key 能用什么模型」和「用量看板里这笔调用算谁的」会各说各话。</p>
-     *
-     * <p>{@code sys_ai_service_token} 已停止签发：老 Key 继续可用（模型范围取 {@code model_ids}、
-     * 额度取 {@code expires_at / max_requests / max_tokens}），但新 Key 一律走 appKey。</p>
      */
     private static final class Caller {
-        /** appKey 值（正式凭证）；老令牌调用时为 null */
+        /** appKey 值（唯一凭证） */
         private final String appKey;
-        /** appKey 行（含分组 / 限定模型 / 额度列）；老令牌调用时为 null */
+        /** appKey 行（含分组 / 限定模型 / 额度列） */
         private final SysAiAppKey appKeyRow;
-        /** 老的实例服务令牌；appKey 调用时为 null */
-        private final SysAiServiceToken legacyToken;
 
-        private Caller(String appKey, SysAiAppKey appKeyRow, SysAiServiceToken legacyToken) {
+        private Caller(String appKey, SysAiAppKey appKeyRow) {
             this.appKey = appKey;
             this.appKeyRow = appKeyRow;
-            this.legacyToken = legacyToken;
         }
 
         static Caller ofAppKey(SysAiAppKey row) {
-            return new Caller(row.getAppKey(), row, null);
-        }
-
-        static Caller ofLegacy(SysAiServiceToken token) {
-            return new Caller(null, null, token);
-        }
-
-        boolean isAppKey() {
-            return appKey != null;
+            return new Caller(row.getAppKey(), row);
         }
     }
 
     /**
-     * 校验请求携带的凭证：<b>先按 appKey</b>（sys_ai_app_key），不行再按老的实例令牌。
+     * 校验请求携带的凭证：只按 appKey（sys_ai_app_key）判定。
      *
-     * <p>两种凭证的错误码刻意保持一致（{@code token_expired} / {@code request_quota_exhausted} /
+     * <p>错误码与网关保持一套（{@code token_expired} / {@code request_quota_exhausted} /
      * {@code token_quota_exhausted}），客户端一套处理逻辑即可；余额不足单独回 402
      * {@code insufficient_balance}，与网关的计费守卫同语义。</p>
      *
-     * @param inst     服务实例配置，不能为 null
      * @param exchange 当前 HTTP 交换对象，用于提取凭证与回写错误
      * @return 校验通过的调用方；校验失败时已回写错误并返回 null
      */
-    private Caller authenticate(SysAiServiceInstance inst, HttpExchange exchange) {
+    private Caller authenticate(HttpExchange exchange) {
         String presented = extractPresentedToken(exchange);
         if (presented == null || presented.isBlank()) {
             tryWriteError(exchange, 401, "authentication_error", "无效或缺失的 AppKey");
             return null;
         }
-        // ① appKey：实时查（不走缓存），否则停用/超额要等缓存过期才生效
+        // 实时查（不走缓存），否则停用/超额要等缓存过期才生效
         SysAiAppKey row = appKeyService.getByAppKeyLive(presented);
         if (row != null) {
             return authenticateAppKey(row, exchange);
-        }
-        // ② 老的实例服务令牌（只读兼容，控制台已不再签发）
-        Caller legacy = authenticateLegacyToken(inst, presented, exchange);
-        if (legacy != null) {
-            return legacy;
         }
         tryWriteError(exchange, 401, "authentication_error", "无效或缺失的 AppKey");
         return null;
@@ -1723,41 +1696,6 @@ public class ServiceInstanceManager {
     }
 
     /**
-     * 校验老的实例服务令牌（存在性、启用、过期、次数、余额）。
-     *
-     * @param inst       服务实例配置
-     * @param presented  请求携带的令牌
-     * @param exchange   当前 HTTP 交换对象
-     * @return 校验通过的调用方；令牌不存在时返回 null（由调用方回 401）
-     */
-    private Caller authenticateLegacyToken(SysAiServiceInstance inst, String presented, HttpExchange exchange) {
-        List<SysAiServiceToken> matched = tokenMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiServiceToken>()
-                        .eq(SysAiServiceToken::getInstanceId, inst.getInstanceId())
-                        .eq(SysAiServiceToken::getEnabled, 1)
-                        .eq(SysAiServiceToken::getToken, presented));
-        if (matched.isEmpty()) {
-            return null;
-        }
-        SysAiServiceToken t = matched.get(0);
-        LocalDateTime now = LocalDateTime.now();
-        if (t.getExpiresAt() != null && t.getExpiresAt().isBefore(now)) {
-            tryWriteError(exchange, 401, "token_expired", "访问令牌已过期");
-            return null;
-        }
-        if (t.getMaxRequests() != null && nz(t.getUsedRequests()) >= t.getMaxRequests()) {
-            tryWriteError(exchange, 401, "request_quota_exhausted", "访问令牌请求次数已用尽");
-            return null;
-        }
-        if (t.getMaxTokens() != null && nz(t.getUsedTokens()) >= t.getMaxTokens()) {
-            tryWriteError(exchange, 401, "token_quota_exhausted",
-                    "访问令牌余额已用尽（总量 " + t.getMaxTokens() + "，已消耗 " + nz(t.getUsedTokens()) + "）");
-            return null;
-        }
-        return Caller.ofLegacy(t);
-    }
-
-    /**
      * 把 appKey 注入到请求参数 {@code _appKey}：对话门面据此把本次调用的 Token 用量
      * 记到这把 Key 的账上（{@code total_tokens} 自增）。
      *
@@ -1765,10 +1703,10 @@ public class ServiceInstanceManager {
      * 少了这一步，配额永远不会涨，用户超额也拦不住。</p>
      *
      * @param request 对话请求，不能为 null
-     * @param caller  调用方，可为 null（老令牌无 appKey）
+     * @param caller  调用方，可为 null
      */
     private void bindAppKey(AiChatRequest request, Caller caller) {
-        if (caller == null || caller.appKey == null || request == null) {
+        if (caller == null || request == null) {
             return;
         }
         Map<String, Object> params = request.getParameters();
@@ -1782,7 +1720,7 @@ public class ServiceInstanceManager {
     /**
      * 计算调用方允许调用的模型集合；返回 {@code null} 表示不限制（全量）。
      *
-     * <p>appKey 的范围 = 所属分组的模型清单 ∩ Key 上的限定模型；老令牌取 {@code model_ids}。
+     * <p>appKey 的范围 = 所属分组的模型清单 ∩ Key 上的限定模型。
      * 推导逻辑与网关共用 {@link AppKeyModelScope}，避免两个入口判定不一致。</p>
      *
      * @param caller 调用方，可为 null
@@ -1792,10 +1730,7 @@ public class ServiceInstanceManager {
         if (caller == null) {
             return null;
         }
-        if (caller.isAppKey()) {
-            return modelScope.resolve(caller.appKeyRow);
-        }
-        return AppKeyModelScope.parseCsv(caller.legacyToken.getModelIds());
+        return modelScope.resolve(caller.appKeyRow);
     }
 
     /**
@@ -1855,32 +1790,16 @@ public class ServiceInstanceManager {
      * <p>请求次数则相反：只有本类知道「请求已经发出去了」（包括上游失败的那一次），
      * 所以计次留在这里，与网关「鉴权即计次」的口径一致。</p>
      *
-     * @param caller      已鉴权的调用方，可为 null（此时直接返回）
-     * @param totalTokens 本次请求消耗的总 Token 数（由门面记账，此处仅用于老令牌）
-     * @param success     本次请求是否成功
+     * @param caller  已鉴权的调用方，可为 null（此时直接返回）
+     * @param success 本次请求是否成功
      */
-    private void consumeQuota(Caller caller, Long totalTokens, boolean success) {
+    private void consumeQuota(Caller caller, boolean success) {
         if (caller == null) {
             return;
         }
         try {
-            long addTokens = totalTokens != null && totalTokens > 0 ? totalTokens : 0L;
-            if (caller.isAppKey()) {
-                // 失败也计一次（与按次数配额的口径一致：请求已经发出去了）
-                appKeyService.updateUseInfoByAppKey(caller.appKey);
-                return;
-            }
-            SysAiServiceToken t = caller.legacyToken;
-            if (t == null || t.getTokenId() == null) {
-                return;
-            }
-            String sql = "used_requests = used_requests + 1"
-                    + (addTokens > 0 ? ", used_tokens = used_tokens + " + addTokens : "")
-                    + (success ? ", last_used_at = NOW()" : "");
-            com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SysAiServiceToken> uw =
-                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<>();
-            uw.eq(SysAiServiceToken::getTokenId, t.getTokenId()).setSql(sql);
-            tokenMapper.update(null, uw);
+            // 失败也计一次（与按次数配额的口径一致：请求已经发出去了）
+            appKeyService.updateUseInfoByAppKey(caller.appKey);
         } catch (Exception e) {
             log.warn("[ServiceInstance] 额度回填失败: {}", e.getMessage());
         }
@@ -1894,25 +1813,6 @@ public class ServiceInstanceManager {
      */
     private static long nz(Long v) {
         return v == null ? 0L : v;
-    }
-
-    /**
-     * 计算用量总 Token 数，优先取总数字段，缺失时由输入 + 输出相加。
-     *
-     * @param usage 用量快照，可为 null
-     * @return 总 Token 数；用量为 null 或计算结果非正数时返回 null
-     */
-    private static Long totalOf(AiUsage usage) {
-        if (usage == null) {
-            return null;
-        }
-        if (usage.getTotalTokens() != null) {
-            return usage.getTotalTokens().longValue();
-        }
-        int p = usage.getInputTokens() != null ? usage.getInputTokens() : 0;
-        int c = usage.getOutputTokens() != null ? usage.getOutputTokens() : 0;
-        long t = (long) p + c;
-        return t > 0 ? t : null;
     }
 
     /**
