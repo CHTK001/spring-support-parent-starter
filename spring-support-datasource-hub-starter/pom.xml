@@ -191,6 +191,14 @@
             <version>5.13.0</version>
         </dependency>
 
+        <!-- SkyWalking 控制台：查询走 OAP GraphQL（端口 12800），鉴权与地址
+             按数据源行动态注入（见 SkywalkingManageServiceImpl） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-skywalking-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
