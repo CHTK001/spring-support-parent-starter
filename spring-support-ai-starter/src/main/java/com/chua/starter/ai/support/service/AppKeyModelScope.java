@@ -170,4 +170,45 @@ public class AppKeyModelScope {
     public static boolean allows(Set<String> scope, String model) {
         return scope == null || contains(scope, model);
     }
+
+    /**
+     * 按范围过滤模型清单 —— {@code /v1/models}、{@code /v1/cc/switch/models}、
+     * {@code /v1beta/models} 等「模型获取」端点的统一实现。
+     *
+     * <p>为什么必须走这里：调用方调不通的模型不许出现在下拉里，否则客户端会先挑一个
+     * 界面上列出来的模型、再被 403 打回，用户看到的是「明明能用却报错」。这类过滤
+     * 一旦各处自己写 if，就一定会漏掉某个端点（历史实现里 {@code cc/switch/status} 就漏了）。</p>
+     *
+     * @param scope  允许的模型集合，{@code null} 表示不限制
+     * @param items  待过滤的原始清单，可为 null
+     * @param codeOf 从元素取出模型编码的函数，不能为 null
+     * @param <T>    元素类型
+     * @return 过滤后的清单（不修改入参；{@code null} 入参返回空列表）
+     */
+    public static <T> List<T> filter(Set<String> scope, List<T> items, Function<T, String> codeOf) {
+        if (items == null || items.isEmpty()) {
+            return new ArrayList<>();
+        }
+        if (scope == null) {
+            return new ArrayList<>(items);
+        }
+        List<T> out = new ArrayList<>(items.size());
+        for (T item : items) {
+            if (allows(scope, codeOf.apply(item))) {
+                out.add(item);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 按范围过滤模型编码清单。
+     *
+     * @param scope  允许的模型集合，{@code null} 表示不限制
+     * @param models 模型编码清单，可为 null
+     * @return 过滤后的清单
+     */
+    public static List<String> filter(Set<String> scope, List<String> models) {
+        return filter(scope, models, Function.identity());
+    }
 }
