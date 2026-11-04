@@ -60,7 +60,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class TerminalWebSocketHandler extends TextWebSocketHandler {
+public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
 
     /**
      * 默认终端列数
