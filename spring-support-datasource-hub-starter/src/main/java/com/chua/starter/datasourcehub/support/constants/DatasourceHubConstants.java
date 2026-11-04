@@ -48,6 +48,15 @@ public final class DatasourceHubConstants {
     public static final String DS_TYPE_CALCITE = "calcite";
 
     /**
+     * skywalking 类型标识。
+     *
+     * <p>字段约定与其它类型一致：{@code host}/{@code port} 为 OAP 地址，
+     * 端口默认 {@value #SKYWALKING_DEFAULT_PORT}；{@code username}/{@code password}
+     * 用于 OAP 鉴权（开通鉴权时）。</p>
+     */
+    public static final String DS_TYPE_SKYWALKING = "skywalking";
+
+    /**
      * 支持的数据源类型
      */
     public static final List<String> DS_TYPES = List.of(
@@ -165,15 +174,6 @@ public final class DatasourceHubConstants {
      * Elasticsearch 默认 HTTP 端口
      */
     public static final int ELASTICSEARCH_DEFAULT_PORT = 9200;
-
-    /**
-     * skywalking 类型标识。
-     *
-     * <p>字段约定与其它类型一致：{@code host}/{@code port} 为 OAP 地址，
-     * 端口默认 {@value #SKYWALKING_DEFAULT_PORT}；{@code username}/{@code password}
-     * 用于 OAP 鉴权（开通鉴权时）。</p>
-     */
-    public static final String DS_TYPE_SKYWALKING = "skywalking";
 
     /**
      * prometheus 类型标识。

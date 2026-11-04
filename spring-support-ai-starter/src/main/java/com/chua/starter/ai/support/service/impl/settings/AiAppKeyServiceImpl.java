@@ -488,12 +488,20 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
 
     /**
      * 能否扣费（辅助方法）：余额为负且不允许透支 = 不可扣费。
+     *
+     * <p>透支列在库里是 {@code int}（1 = 允许），必须按 {@code Integer} 判定；
+     * 原先写的 {@code Boolean.TRUE.equals(Integer)} 恒为 false，等于「允许透支」永远不生效，
+     * 与 {@code AppKeyQuotaGate#checkBillable} 的口径相反。</p>
+     *
+     * @param balance          当前余额，可为 null（按 0 处理）
+     * @param overdraftEnabled 透支开关（1 = 允许）
+     * @return 允许扣费返回 true
      */
     private boolean canDeduct(BigDecimal balance, Integer overdraftEnabled) {
         if (balance == null) {
             balance = BigDecimal.ZERO;
         }
-        return balance.compareTo(BigDecimal.ZERO) >= 0 || Boolean.TRUE.equals(overdraftEnabled);
+        return balance.compareTo(BigDecimal.ZERO) >= 0 || Integer.valueOf(1).equals(overdraftEnabled);
     }
 
     /**

@@ -82,15 +82,6 @@ public interface SysAiAppKeyService {
     Integer getGroupIdByAppKey(String appKey);
 
     /**
-     * 验证。
-     * @param appKey appKey
-     * @param secret secret
-     * @param ip ip
-     * @return 验证的结果
-     */
-    boolean verify(String appKey, String secret, String ip);
-
-    /**
      * 仅校验 appKey 是否有效（状态、过期、IP 白名单）。
      * <p>用于 Bearer/Header 单项凭证鉴权场景，AppKey 即完整凭证，不要求额外的 secret。</p>
      *

@@ -681,3 +681,26 @@ other:
   home:
     # 首页右侧自定义布局按钮（默认开启）
     customLayoutButton: true
+  # 加载动画（部署侧接管，默认关闭）
+  #
+  # 四个动画：wave 海浪 / dots 三个圆点 / rings 科技圆圈 / dino 像素恐龙
+  # （none = 无动画，只留遮罩）
+  #
+  # enable: false —— 默认，完全不接管：行为和没有这一段配置时一模一样，
+  #                 用户在「主题配置 · 外观 · 加载动画」里自选，选择存在 localStorage。
+  # enable: true  —— 部署侧锁定：动画 / 尺寸 / 主色全部由这里决定，
+  #                 主题配置里的选择器置灰（改不动，避免"点了却没反应"）。
+  #
+  # 注意首屏时序：public/loader.js 在 app.yaml 被拉取之前就已执行完，
+  # 所以部署配置无法同步影响**当次**首屏。启动后会把值写进 localStorage，
+  # 从下一次刷新开始首屏与应用内完全一致（应用内的遮罩当次启动即生效）。
+  #
+  # 字段：
+  #   animation  动画键（默认 wave；历史键 default / spin / dinoGame 等会自动折叠）
+  #   size       首屏动画基准边长 px（8~512，默认 96）；应用内仍按调用点档位
+  #   color      动画主色（#hex / rgb() / hsl()，默认 #406eeb）；首屏与应用内都用它
+  loaderConfig:
+    enable: false
+    animation: "wave"
+    size: 96
+    color: "#406eeb"

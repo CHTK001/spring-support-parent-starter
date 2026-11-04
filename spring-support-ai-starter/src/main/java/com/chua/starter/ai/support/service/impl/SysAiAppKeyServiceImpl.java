@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
+import com.chua.starter.ai.support.service.AppKeyBilling;
 import com.chua.starter.ai.support.service.AppKeyQuotaGate;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.util.KeyGenerator;
@@ -148,22 +149,6 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         }
  // 使用 mybatis-Plus 内置 删除byid：@table逻辑 逻辑删除（设置 删除=1）
         return sysAiAppKeyMapper.deleteById(id) > 0;
-    }
-
-    @Override
-    /**
-     * 验证
-     * @param appKey 字符串
-     * @param ip 字符串
-     * @param secret 字符串
-     * @return 返回值
-    */
-    public boolean verify(String appKey, String secret, String ip) {
-        SysAiAppKey dbAppKey = queryAppKeyUncached(appKey);
-        if (!isValidAppKey(dbAppKey, ip)) {
-            return false;
-        }
-        return StringUtils.equals(secret, dbAppKey.getSecret());
     }
 
     @Override
@@ -314,19 +299,6 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         return true;
     }
 
-    /**
-     * 能否扣费（辅助方法）：余额为负且不允许透支 = 不可扣费。
-     */
-    private boolean canDeduct(BigDecimal balance, Integer overdraftEnabled) {
-        if (balance == null) {
-            balance = BigDecimal.ZERO;
-        }
-        if (balance.compareTo(BigDecimal.ZERO) < 0 && !Boolean.TRUE.equals(overdraftEnabled)) {
-            return false;
-        }
-        return true;
-    }
-
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, key = "'sys:ai:app-key:' + #appKey")
     @Transactional(rollbackFor = Exception.class)
@@ -359,27 +331,26 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
+        BigDecimal charged = AppKeyBilling.normalize(amount);
+        if (charged.signum() <= 0) {
+            return 0;
+        }
         SysAiAppKey entity = queryAppKeyUncached(appKey);
         if (entity == null) {
             return 0;
         }
-        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
-        if (!canDeduct(balanceBefore, entity.getOverdraftEnabled())) {
-            log.warn("[SysAiAppKey] AppKey {} 余额不足({}) 且不允许透支，拒绝扣费", entity.getAppKey(), balanceBefore);
+        // 扣减与「能否扣」由同一条 SQL 在行锁内完成：两个并发请求不会各自读到同一个
+        // 变动前余额、把对方的扣减覆盖掉（详见 SysAiAppKeyMapper#deductBalance）
+        int updated = sysAiAppKeyMapper.deductBalance(appKey, charged);
+        if (updated <= 0) {
+            log.warn("[SysAiAppKey] AppKey {} 余额已为负({}) 且不允许透支，拒绝扣费",
+                    appKey, entity.getBalance());
             return 0;
         }
-        BigDecimal balanceAfter = balanceBefore.subtract(amount);
-        int updated = sysAiAppKeyMapper.update(
-                null,
-                Wrappers.lambdaUpdate(SysAiAppKey.class)
-                        .eq(SysAiAppKey::getAppKey, appKey)
-                        .set(SysAiAppKey::getBalance, balanceAfter)
-                        .set(SysAiAppKey::getTotalCost, entity.getTotalCost() != null
-                                ? entity.getTotalCost().add(amount) : amount));
-        if (updated > 0) {
-            appendTopupLog(entity, appKey, SysAiAppKeyTopupLog.Types.CONSUME, amount.negate(),
-                    balanceBefore, balanceAfter, remark);
-        }
+        // 同一事务内回读自己的写入：流水的前后余额才与真实账面对得上
+        BigDecimal balanceAfter = getBalance(appKey);
+        appendTopupLog(entity, appKey, SysAiAppKeyTopupLog.Types.CONSUME, charged.negate(),
+                balanceAfter.add(charged), balanceAfter, remark);
         return updated;
     }
 

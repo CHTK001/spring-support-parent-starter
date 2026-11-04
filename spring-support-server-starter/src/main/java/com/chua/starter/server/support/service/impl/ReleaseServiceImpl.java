@@ -60,11 +60,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -201,10 +203,118 @@ public class ReleaseServiceImpl implements ReleaseService {
         exists.setHostIp(release.getHostIp() == null ? exists.getHostIp() : release.getHostIp());
         exists.setDescription(release.getDescription() == null ? exists.getDescription() : release.getDescription());
         exists.setBackgroundImage(release.getBackgroundImage() == null ? exists.getBackgroundImage() : release.getBackgroundImage());
+        // 发布级 SkyWalking 配置：先留快照再合并。
+        // 若「先合并再比较」，比较的其实是「合并后的自己」与「本次提交值」，只要调用方把四项都带上
+        // （前端保存即如此）就永远判等 —— 同步永远不会触发，等于这条触发点从未生效过。
+        Boolean previousSwEnabled = exists.getSwEnabled();
+        String previousSwJarPath = exists.getSwJarPath();
+        String previousSwPrefix = exists.getSwServiceNamePrefix();
+        String previousSwBackend = exists.getSwBackendService();
+        exists.setSwEnabled(release.getSwEnabled() == null ? exists.getSwEnabled() : release.getSwEnabled());
+        exists.setSwJarPath(release.getSwJarPath() == null ? exists.getSwJarPath() : release.getSwJarPath());
+        exists.setSwServiceNamePrefix(release.getSwServiceNamePrefix() == null ? exists.getSwServiceNamePrefix() : release.getSwServiceNamePrefix());
+        exists.setSwBackendService(release.getSwBackendService() == null ? exists.getSwBackendService() : release.getSwBackendService());
+        // 发布级 SkyWalking 配置变更后需要同步到该发布下的已有项目
+        boolean swChanged = !Objects.equals(previousSwEnabled, exists.getSwEnabled())
+                || !Objects.equals(previousSwJarPath, exists.getSwJarPath())
+                || !Objects.equals(previousSwPrefix, exists.getSwServiceNamePrefix())
+                || !Objects.equals(previousSwBackend, exists.getSwBackendService());
         fillHostInfo(exists);
         exists.setUpdateTime(LocalDateTime.now());
         releaseMapper.updateById(exists);
+        if (swChanged) {
+            syncReleaseApm(exists);
+        }
         return ReturnResult.ok(exists);
+    }
+
+    /**
+     * 发布级 SkyWalking 配置变更后，同步到该发布下的全部项目。
+     *
+     * <p>同步只碰「发布自己写进去的那套参数」：开关/地址/路径失效时清理这些参数行，
+     * 重新生效时写回新的覆盖项；项目自己声明的 APM（自研 agent、自有 OAP 地址）一律不动。</p>
+     *
+     * <p><b>为什么需要归属判定</b>：注入是把三条参数<b>复制</b>进项目 jvmArgs，落库后发布侧
+     * 就没有任何记录能区分「这是我注入的」还是「项目自己填的」。若按「只要项目里有
+     * {@code -Dskywalking.*} 就跳过」，关闭开关时永远清不掉（清空分支变成死代码）；
+     * 若反过来「有就清」，则会把项目自研 agent 一起删掉。故按发布自身的特征做归属判定：
+     * agent jar 路径一致，或「前缀 + OAP 地址」同时命中 —— 两者都来自本发布配置，
+     * 项目自己配置的 APM 几乎不可能同时满足。</p>
+     *
+     * @param release 发布
+     */
+    private void syncReleaseApm(MsServerRelease release) {
+        if (release == null) {
+            return;
+        }
+        List<MsServerProject> projects = projectMapper.selectList(
+                new LambdaQueryWrapper<MsServerProject>().eq(MsServerProject::getReleaseId, release.getId()));
+        if (projects.isEmpty()) {
+            return;
+        }
+        boolean enabled = Boolean.TRUE.equals(release.getSwEnabled());
+        boolean ready = !isBlank(release.getSwJarPath()) && !isBlank(release.getSwBackendService());
+        boolean inject = enabled && ready;
+        for (MsServerProject project : projects) {
+            List<String> args = readStringList(project.getJvmArgs());
+            boolean declared = args.stream().anyMatch(this::isApmArg);
+            if (declared && !injectedByRelease(release, project, args)) {
+                // 项目自己声明的 APM：发布级永远不覆盖、也不清理
+                continue;
+            }
+            List<String> out = new ArrayList<>(inject
+                    ? apmArgs(release, project)
+                    : Collections.<String>emptyList());
+            for (String arg : args) {
+                if (!isApmArg(arg)) {
+                    out.add(arg);
+                }
+            }
+            if (out.equals(args)) {
+                // 结论与现状一致：不写库，避免无谓的 updateById 与 updateTime 抖动
+                continue;
+            }
+            project.setJvmArgs(writeArgs(out));
+            project.setUpdateTime(LocalDateTime.now());
+            projectMapper.updateById(project);
+        }
+    }
+
+    /**
+     * 判断项目里的 APM 参数是否由本发布注入（用于「同步/清理」的范围界定）。
+     *
+     * @param release 发布
+     * @param project 项目
+     * @param args    项目当前参数
+     * @return 属于本发布注入时为 {@code true}
+     */
+    private boolean injectedByRelease(MsServerRelease release, MsServerProject project, List<String> args) {
+        String jar = release.getSwJarPath();
+        if (!isBlank(jar) && args.contains("-javaagent:" + jar)) {
+            return true;
+        }
+        // jar 路径被改空时退化为「service_name 与 OAP 地址同时命中」：
+        // 前缀为空时 service_name 就是项目名，与项目自研配置无法区分，故此种情况不做归属判定
+        // （宁可留着让用户手动清理，也不误删项目自研 agent）。
+        String prefix = release.getSwServiceNamePrefix();
+        String backend = release.getSwBackendService();
+        return !isBlank(prefix) && !isBlank(backend)
+                && args.contains("-Dskywalking.agent.service_name=" + serviceNameOf(release, project))
+                && args.contains("-Dskywalking.collector.backend_service=" + backend);
+    }
+
+    /**
+     * 发布级 APM 注入的三条参数（顺序固定：agent → service_name → backend）。
+     *
+     * @param release 发布
+     * @param project 项目
+     * @return 参数列表
+     */
+    private List<String> apmArgs(MsServerRelease release, MsServerProject project) {
+        return Arrays.asList(
+                "-javaagent:" + release.getSwJarPath(),
+                "-Dskywalking.agent.service_name=" + serviceNameOf(release, project),
+                "-Dskywalking.collector.backend_service=" + release.getSwBackendService());
     }
 
     @Override
@@ -256,10 +366,77 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (project.getEnabled() == null) {
             project.setEnabled(true);
         }
+        // 发布级 SkyWalking APM 注入（项目级 APM 选项优先，不会被覆盖）
+        applyReleaseApm(project);
         // 四个脚本留空时用内置通用模板（含占位符）补全，用户无需手写
         applyDefaultScripts(project);
         projectMapper.insert(project);
         return ReturnResult.ok(project);
+    }
+
+    /**
+     * 把发布级 SkyWalking APM 配置合入项目 JVM 参数。
+     *
+     * <p>项目级 APM 选项（已写在 jvmArgs 的 {@code -javaagent:} / {@code -Dskywalking.*}）
+     * 始终优先：只有项目「尚未声明 APM」时，才把发布的 agent 路径、service_name 前缀
+     * 与 OAP 地址追加到 jvmArgs 中，项目无需手工配置即可在启动时采集调用链。</p>
+     *
+     * @param project 项目（releaseId 必填）
+     */
+    private void applyReleaseApm(MsServerProject project) {
+        if (project.getReleaseId() == null) {
+            return;
+        }
+        MsServerRelease release = releaseMapper.selectById(project.getReleaseId());
+        // 未开启 / 缺少 jar 路径 / 缺少 OAP 地址时不注入
+        if (release == null || !Boolean.TRUE.equals(release.getSwEnabled())
+                || isBlank(release.getSwJarPath()) || isBlank(release.getSwBackendService())) {
+            return;
+        }
+        List<String> args = readStringList(project.getJvmArgs());
+        if (args.stream().anyMatch(this::isApmArg)) {
+            return;
+        }
+        List<String> out = new ArrayList<>(apmArgs(release, project));
+        out.addAll(args);
+        project.setJvmArgs(writeArgs(out));
+    }
+
+    /**
+     * 把参数列表序列化为 JSON 字符串。
+     *
+     * <p>使用 {@code ObjectMapper.writeValueAsString} 时受检异常必须处理；序列化和项目经理 APM 参数
+     * 脱落无关，抛错时按「原样」回写。</p>
+     */
+    private String writeArgs(List<String> args) {
+        try {
+            return JSON.writeValueAsString(args);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("[release] JVM 参数序列化失败，按原样回写: {}", args);
+            return String.valueOf(args);
+        }
+    }
+
+    /**
+     * 是否 APM 参数（已由项目自行声明）
+     */
+    private boolean isApmArg(String arg) {
+        return arg.startsWith("-javaagent:") || arg.startsWith("-Dskywalking.");
+    }
+
+    /**
+     * service_name 拼装：前缀（如有）- 项目名称
+     *
+     * @param release 发布
+     * @param project 项目
+     * @return 服务名
+     */
+    private String serviceNameOf(MsServerRelease release, MsServerProject project) {
+        String prefix = release.getSwServiceNamePrefix();
+        String name = project.getProjectName();
+        if (isBlank(prefix)) return name;
+        if (isBlank(name)) return prefix;
+        return prefix + "-" + name;
     }
 
     @Override
@@ -2712,6 +2889,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                 copy.setServiceName(null);
                 copy.setCreateTime(LocalDateTime.now());
                 copy.setUpdateTime(LocalDateTime.now());
+                // 复制到的目标发布级 SkyWalking APM（源项目自己的 APM 选项优先保留）
+                applyReleaseApm(copy);
                 if (copy.getScheduleEnabled() == null) {
                     copy.setScheduleEnabled(false);
                 }

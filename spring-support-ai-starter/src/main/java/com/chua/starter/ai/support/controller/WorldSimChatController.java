@@ -901,9 +901,10 @@ public class WorldSimChatController {
     */
     private String nextTimeLabel(String current, int tick) {
         String[] parts = {"上午", "下午", "傍晚", "深夜"};
-        int day = (tick + 3) / 4; // 每 4 tick 一天
-        String part = parts[(tick - 1) % 4];
-        return "第 " + (day < 1 ? 1 : day) + " 天 " + part;
+        // 初始（tick=0）为「第 1 天 上午」，每推进一次前进一个时段，每 4 个时段一天
+        int day = tick / 4 + 1;
+        String part = parts[tick % 4];
+        return "第 " + day + " 天 " + part;
     }
 
     /* ============================================================================

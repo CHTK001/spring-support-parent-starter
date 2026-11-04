@@ -51,8 +51,10 @@ public class ImageChannelController {
      * <p>出图是按张计费 / 耗时线性增长的同步调用（Trae 单张约 8.8 积分），必须在 API 边界
      * 收口：请求体里的 {@code n} 由外部可控，若直接透传，一个 {@code n=50} 的请求就能造成
      * 几分钟阻塞和真实费用。前端也只会给 1~4 张的选项。</p>
+     *
+     * <p>与 SPI 入口共用 {@link ImageChannelProvider#MAX_IMAGES_PER_CALL}，避免两处上限不一致。</p>
      */
-    private static final int MAX_IMAGES_PER_REQUEST = 4;
+    private static final int MAX_IMAGES_PER_REQUEST = ImageChannelProvider.MAX_IMAGES_PER_CALL;
 
     /**
      * 读取文生图渠道的可选模型。
