@@ -107,6 +107,10 @@ Spring Support Parent Starter
 │   └── spring-support-message-starter         # Message push
 ├── 🤖 AI / Deep Learning
 │   └── spring-support-ai-starter              # Image detection, OCR, layout analysis, face features
+├── 🛰️ APM Observation Modules
+│   ├── spring-support-apm-starter           # APM core module (SPI + REST dual mode)
+│   ├── spring-support-apm-skywalking-starter # SkyWalking APM extension
+│   └── spring-support-apm-hotspot-starter   # Self-developed hotspot agent extension
 ├── 🔍 Search & Data Processing
 │   └── spring-support-elasticsearch-starter   # Elasticsearch search engine
 ├── 🌐 Service Discovery & Config

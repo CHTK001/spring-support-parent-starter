@@ -166,6 +166,9 @@
         <module>spring-support-agent-starter</module>
         <!-- APM 热点观测模块（REST 暴露 APM 数据 + 自注入 Agent + 前端静态托管） -->
         <module>spring-support-hotsport-starter</module>
+<module>spring-support-apm-starter</module>            <!-- APM 基础模块：ApmProvider SPI + 统一 REST（嵌入/独立双模式） -->
+<module>spring-support-apm-skywalking-starter</module> <!-- APM 扩展：SkyWalking -->
+<module>spring-support-apm-hotspot-starter</module>    <!-- APM 扩展：自研 hotspot agent -->
     </modules>
     <!-- 项目属性配置 -->
     <properties>

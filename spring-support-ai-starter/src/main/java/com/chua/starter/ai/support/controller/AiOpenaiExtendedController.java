@@ -75,6 +75,25 @@ public class AiOpenaiExtendedController extends BaseAiController {
         this.aiChatFacadeService = aiChatFacadeService;
     }
 
+    /**
+     * 组装扩展协议请求：注入 {@code _appKey}（Token 记账归属），供门面累计配额。
+     *
+     * @param model          本次调用的模型名
+     * @param prompt         提示词
+     * @param servletRequest HTTP 请求
+     * @return 组装好的对话请求
+     */
+    private AiChatRequest buildExtendedRequest(String model, String prompt, HttpServletRequest servletRequest) {
+        AiChatRequest chatRequest = new AiChatRequest();
+        chatRequest.setModel(model);
+        chatRequest.setPrompt(prompt);
+        String appKey = resolveAppKey(servletRequest);
+        if (appKey != null && !appKey.isBlank()) {
+            chatRequest.setParameters(new LinkedHashMap<>(Map.of("_appKey", appKey)));
+        }
+        return chatRequest;
+    }
+
  // ==================== 打开AI 镜像 Generation ====================
 
     /**
@@ -97,9 +116,13 @@ public class AiOpenaiExtendedController extends BaseAiController {
         try {
             String prompt = (String) request.getOrDefault("prompt", "");
             String model = (String) request.getOrDefault("model", "dall-e-3");
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(model);
-            chatRequest.setPrompt(prompt);
+            // 模型范围闸门与 /chat/completions 同口径：少了这一步，带「限定模型」的 Key
+            // 只要改调图片接口就能绕开限制，并且这条调用也不会被记到 Key 的 Token 账上
+            String violation = modelScopeViolation(servletRequest, model);
+            if (violation != null) {
+                return modelNotAllowedResponse(violation);
+            }
+            AiChatRequest chatRequest = buildExtendedRequest(model, prompt, servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
             Map<String, Object> body = imageResponse();
             if (result != null && result.get("text") != null) {
@@ -148,9 +171,13 @@ public class AiOpenaiExtendedController extends BaseAiController {
             ));
         }
         try {
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(model != null ? model : "dall-e-2");
-            chatRequest.setPrompt("Edit image: " + prompt);
+            String effModel = model != null ? model : "dall-e-2";
+            // 模型范围闸门：扩展端点与 /chat/completions 同口径，否则「限定模型」形同虚设
+            String violation = modelScopeViolation(servletRequest, effModel);
+            if (violation != null) {
+                return modelNotAllowedResponse(violation);
+            }
+            AiChatRequest chatRequest = buildExtendedRequest(effModel, "Edit image: " + prompt, servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
             return ResponseEntity.ok(imageEditVariationResponse(n, result));
         } catch (Exception ex) {
@@ -189,9 +216,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
             ));
         }
         try {
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(model != null ? model : "dall-e-2");
-            chatRequest.setPrompt("Generate variations of image");
+            String effModel = model != null ? model : "dall-e-2";
+            String violation = modelScopeViolation(servletRequest, effModel);
+            if (violation != null) {
+                return modelNotAllowedResponse(violation);
+            }
+            AiChatRequest chatRequest = buildExtendedRequest(effModel, "Generate variations of image", servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
             return ResponseEntity.ok(imageEditVariationResponse(n, result));
         } catch (Exception ex) {
@@ -230,9 +260,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
             ));
         }
         try {
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(model);
-            chatRequest.setPrompt("Transcribe audio: " + (prompt != null ? prompt : ""));
+            String violation = modelScopeViolation(servletRequest, model);
+            if (violation != null) {
+                return modelNotAllowedResponse(violation);
+            }
+            AiChatRequest chatRequest = buildExtendedRequest(model,
+                    "Transcribe audio: " + (prompt != null ? prompt : ""), servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
             String text = result != null ? (String) result.get("text") : "";
             return ResponseEntity.ok(Map.of("text", text));
@@ -272,9 +305,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
             ));
         }
         try {
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(model);
-            chatRequest.setPrompt("Translate audio to English: " + (prompt != null ? prompt : ""));
+            String violation = modelScopeViolation(servletRequest, model);
+            if (violation != null) {
+                return modelNotAllowedResponse(violation);
+            }
+            AiChatRequest chatRequest = buildExtendedRequest(model,
+                    "Translate audio to English: " + (prompt != null ? prompt : ""), servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
             String text = result != null ? (String) result.get("text") : "";
             return ResponseEntity.ok(Map.of("text", text));
@@ -305,10 +341,11 @@ public class AiOpenaiExtendedController extends BaseAiController {
         try {
             String input = (String) request.getOrDefault("input", "");
             String model = (String) request.getOrDefault("model", "text-moderation-latest");
-            AiChatRequest chatRequest = new AiChatRequest();
-            chatRequest.setModel(model);
-            chatRequest.setPrompt("Moderate: " + input);
-            aiChatFacadeService.call(chatRequest);
+            String violation = modelScopeViolation(servletRequest, model);
+            if (violation != null) {
+                return modelNotAllowedResponse(violation);
+            }
+            aiChatFacadeService.call(buildExtendedRequest(model, "Moderate: " + input, servletRequest));
             return ResponseEntity.ok(moderationResponse());
         } catch (Exception ex) {
             return serverError("Moderation failed: " + ex.getMessage());
