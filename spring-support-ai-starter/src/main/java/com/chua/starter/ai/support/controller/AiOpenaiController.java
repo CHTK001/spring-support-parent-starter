@@ -203,10 +203,7 @@ public class AiOpenaiController extends BaseAiController {
         List<Map<String, Object>> data = new ArrayList<>();
         if (!modelDefinitions.isEmpty()) {
             // 优先使用详细模型定义
-            for (ModelDefinition def : modelDefinitions) {
-                if (!AppKeyModelScope.allows(scope, def.getId())) {
-                    continue;
-                }
+            for (ModelDefinition def : AppKeyModelScope.filter(scope, modelDefinitions, ModelDefinition::getId)) {
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("id", def.getId());
                 row.put("object", "model");
@@ -220,11 +217,7 @@ public class AiOpenaiController extends BaseAiController {
             }
         } else {
  // 回退到模型 标识 列表
-            List<String> modelIds = aiChatFacadeService.models(groupId);
-            for (String id : modelIds) {
-                if (!AppKeyModelScope.allows(scope, id)) {
-                    continue;
-                }
+            for (String id : AppKeyModelScope.filter(scope, aiChatFacadeService.models(groupId))) {
                 data.add(Map.of(
                         "id", id,
                         "object", "model",
@@ -275,12 +268,8 @@ public class AiOpenaiController extends BaseAiController {
         // 查询分组可用模型
         Integer groupId = resolveGroupId(servletRequest);
         Set<String> scope = requestModelScope(servletRequest);
-        List<String> modelIds = aiChatFacadeService.models(groupId);
         List<Map<String, Object>> data = new ArrayList<>();
-        for (String id : modelIds) {
-            if (!AppKeyModelScope.allows(scope, id)) {
-                continue;
-            }
+        for (String id : AppKeyModelScope.filter(scope, aiChatFacadeService.models(groupId))) {
             data.add(Map.of("id", id, "object", "model"));
         }
         return ResponseEntity.ok(Map.of("object", "list", "data", data));
@@ -359,9 +348,10 @@ public class AiOpenaiController extends BaseAiController {
         String key = buildCcModelKey(groupId);
         String currentModel = sysAiGlobalSettingService.getValue(CC_SETTING_GROUP, key)
                 .orElse(null);
-        List<String> available = aiChatFacadeService.models(groupId);
+        // 可用列表与 /cc/switch/models 同口径：只列这把 Key 真能调的模型
+        Set<String> scope = requestModelScope(servletRequest);
         List<Map<String, Object>> data = new ArrayList<>();
-        for (String id : available) {
+        for (String id : AppKeyModelScope.filter(scope, aiChatFacadeService.models(groupId))) {
             data.add(Map.of("id", id, "object", "model"));
         }
         return ResponseEntity.ok(Map.of(
