@@ -52,7 +52,7 @@ public final class DatasourceHubConstants {
      */
     public static final List<String> DS_TYPES = List.of(
             "jdbc", "redis", "influxdb", "neo4j", "nacos", "zookeeper", "kafka", "nginx", "etcd", "prometheus", "mongodb",
-            "elasticsearch", DS_TYPE_CLICKHOUSE, DS_TYPE_DUCKDB);
+            "elasticsearch", DS_TYPE_CLICKHOUSE, DS_TYPE_DUCKDB, DS_TYPE_SKYWALKING);
 
     /**
      * 走 JDBC 协议的类型集合。
@@ -167,6 +167,15 @@ public final class DatasourceHubConstants {
     public static final int ELASTICSEARCH_DEFAULT_PORT = 9200;
 
     /**
+     * skywalking 类型标识。
+     *
+     * <p>字段约定与其它类型一致：{@code host}/{@code port} 为 OAP 地址，
+     * 端口默认 {@value #SKYWALKING_DEFAULT_PORT}；{@code username}/{@code password}
+     * 用于 OAP 鉴权（开通鉴权时）。</p>
+     */
+    public static final String DS_TYPE_SKYWALKING = "skywalking";
+
+    /**
      * prometheus 类型标识。
      *
      * <p>字段约定与其它类型略有不同，接线时按此理解：</p>
@@ -192,6 +201,11 @@ public final class DatasourceHubConstants {
     public static final String PROMETHEUS_DEFAULT_CONFIG_ROOT = "/etc/prometheus";
 
     /**
+     * SkyWalking OAP 默认 HTTP 端口
+     */
+    public static final int SKYWALKING_DEFAULT_PORT = 12800;
+
+    /**
      * 各类型的默认端口（未填端口时使用）
      */
     public static final Map<String, Integer> DS_DEFAULT_PORTS = Map.ofEntries(
@@ -208,7 +222,8 @@ public final class DatasourceHubConstants {
             Map.entry(DS_TYPE_KAFKA, KAFKA_DEFAULT_PORT),
             Map.entry(DS_TYPE_ELASTICSEARCH, ELASTICSEARCH_DEFAULT_PORT),
             // clickhouse-jdbc 走 HTTP 协议，默认端口是 8123（不是原生 TCP 的 9000）
-            Map.entry(DS_TYPE_CLICKHOUSE, 8123));
+            Map.entry(DS_TYPE_CLICKHOUSE, 8123),
+            Map.entry(DS_TYPE_SKYWALKING, SKYWALKING_DEFAULT_PORT));
 
     /**
      * 完整 JDBC 连接串前缀，库名字段以此开头时按原样连接
