@@ -96,6 +96,13 @@ public class AuthClientProperties {
      *       服务都会直接泄露凭据。绝不能作为默认值。</li>
      *   <li>{@code /api/auth/user} —— 当前登录用户信息，未登录也返回即身份信息泄露。</li>
      *   <li>{@code /api/settings/client} —— 客户端配置。</li>
+     *   <li>{@code /v1/models}、{@code /v1/chat/**}、{@code /v1/completions}、
+     *       {@code /v1/embeddings}、{@code /v1/cc/**} —— AI 协议端点。<b>这些端点的凭证是
+     *       业务 AppKey（{@code sys_ai_app_key}），不是登录令牌</b>；把它们写进免鉴权清单，
+     *       等于让所有使用本 starter 的服务在 AI 路由上完全匿名，AppKey 校验形同虚设。
+     *       正确做法是由各应用在自己的 {@code plugin.oauth.whitelist} 中显式声明
+     *       （如 {@code /v2/v1/**}）并把 AppKey 校验交给控制器 / 服务实例端口，
+     *       或开启 {@code plugin.oauth.ai-app-key.enabled} 让鉴权层直接校验 AppKey。</li>
      * </ul>
      *
      * <p>保留 {@code /v1/sys/setting} 是有意的：它正是前端启动时拉取远程配置的入口，
@@ -115,11 +122,6 @@ public class AuthClientProperties {
             "/v1/sys/setting",
             "/static/**",
             "/v1/file/**",
-            "/v1/models",
-            "/v1/chat/**",
-            "/v1/completions",
-            "/v1/embeddings",
-            "/v1/cc/**",
             "/**/*.html",
             "/v3/api-docs/**",
             "/**/node/receive_push",
@@ -127,7 +129,6 @@ public class AuthClientProperties {
             "/api/auth/status",
               "/api/extensions/**",
               "/api/workshop/**",
-              "/v2/v1/**",
               "/v2/usage/**",
              "/api/terminals",
             "/api/terminals/**"

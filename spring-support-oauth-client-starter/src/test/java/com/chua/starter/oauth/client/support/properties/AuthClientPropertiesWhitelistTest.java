@@ -31,7 +31,15 @@ class AuthClientPropertiesWhitelistTest {
             "/api/providers/**/credentials",
             // 当前登录用户信息：未登录也应 401
             "/api/auth/user",
-            "/api/settings/client"
+            "/api/settings/client",
+            // AI 协议端点：凭证是业务 AppKey（sys_ai_app_key），不是登录令牌。
+            // 放进来等于对所有使用本 starter 的服务匿名开放，AppKey 校验形同虚设。
+            "/v1/models",
+            "/v1/chat/**",
+            "/v1/completions",
+            "/v1/embeddings",
+            "/v1/cc/**",
+            "/v2/v1/**"
     );
 
     @Test
@@ -41,6 +49,21 @@ class AuthClientPropertiesWhitelistTest {
         for (String path : FORBIDDEN) {
             assertFalse(effective.contains(path),
                     path + " 不得作为内置默认白名单；确需放行的应用请在自己的 plugin.oauth.whitelist 中显式声明");
+        }
+    }
+
+    @Test
+    @DisplayName("AI 协议端点必须走 AppKey 校验，内置白名单不得兜住任何一条")
+    void aiProtocolEndpointsAreNeverWhitelisted() {
+        // 用 Ant 语义判定，而不是只比对字符串：这样连「加一条 /v1/** 或 /v2/** 图省事」
+        // 的写法也会被挡住。凭证是业务 AppKey（sys_ai_app_key），不是登录令牌。
+        org.springframework.util.AntPathMatcher matcher = new org.springframework.util.AntPathMatcher();
+        List<String> effective = new AuthClientProperties().getEffectiveWhitelist();
+        for (String uri : List.of("/v1/models", "/v1/chat/completions", "/v1/completions",
+                "/v1/embeddings", "/v1/cc/switch/models", "/v2/v1/models", "/v2/v1/chat/completions",
+                "/v2/v1beta/models")) {
+            assertFalse(effective.stream().anyMatch(p -> matcher.match(p, uri)),
+                    uri + " 不得被内置默认白名单放行：AI 服务接口必须按 AppKey 校验");
         }
     }
 
