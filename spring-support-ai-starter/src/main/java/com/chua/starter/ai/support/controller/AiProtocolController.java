@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -597,6 +601,38 @@ public class AiProtocolController extends BaseAiController {
     }
 
     // ==================== Gemini ====================
+
+    /**
+     * Gemini 模型列表 —— 「模型获取」在 Gemini 协议里就是这条 GET。
+     *
+     * <p>与 {@code /v1/models}、{@code /v1/cc/switch/models} 同口径：先鉴权，再按
+     * 「分组清单 ∩ Key 限定模型」过滤，只列这把 Key 真能调的模型。缺了这条端点，
+     * Gemini SDK 的模型探测会直接 404/405，客户端只能盲猜模型名。</p>
+     *
+     * @param servletRequest HTTP 请求
+     * @return Gemini 形状的模型列表 {@code {"models":[{"name":"models/xxx",...}]}}
+     */
+    @Operation(summary = "Gemini Models", description = "获取支持的模型列表")
+    @GetMapping("/v1beta/models")
+    public ResponseEntity<Map<String, Object>> geminiModels(HttpServletRequest servletRequest) {
+        if (!restEnabled()) {
+            return ResponseEntity.ok(Map.of("models", List.of()));
+        }
+        if (!authCheck(servletRequest)) {
+            return ResponseEntity.status(401).body(Map.of("error",
+                    Map.of("code", 401, "message", "AI AppKey 校验失败", "status", "UNAUTHENTICATED")));
+        }
+        Integer groupId = resolveGroupId(servletRequest);
+        Set<String> scope = requestModelScope(servletRequest);
+        List<Map<String, Object>> models = new ArrayList<>();
+        for (String id : AppKeyModelScope.filter(scope, aiChatFacadeService.models(groupId))) {
+            models.add(Map.of(
+                    "name", "models/" + id,
+                    "displayName", id,
+                    "supportedGenerationMethods", List.of("generateContent", "streamGenerateContent")));
+        }
+        return ResponseEntity.ok(Map.of("models", models));
+    }
 
     /**
      * Gemini 协议入口。
