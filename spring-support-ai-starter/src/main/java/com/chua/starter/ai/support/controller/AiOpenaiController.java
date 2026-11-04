@@ -191,8 +191,8 @@ public class AiOpenaiController extends BaseAiController {
         if (!restEnabled()) {
             return ResponseEntity.ok(Map.of("object", "list", "data", List.of()));
         }
-        // 鉴权校验
-        if (!authCheck(servletRequest)) {
+        // 鉴权校验：只读端点，不消耗「按次数」配额
+        if (!authCheckReadOnly(servletRequest)) {
             return authErrorResponse();
         }
         // 解析分组并查询模型
@@ -261,8 +261,8 @@ public class AiOpenaiController extends BaseAiController {
         if (!restEnabled()) {
             return ResponseEntity.ok(Map.of("object", "list", "data", List.of()));
         }
-        // 鉴权校验
-        if (!authCheck(servletRequest)) {
+        // 鉴权校验：只读端点，不消耗「按次数」配额
+        if (!authCheckReadOnly(servletRequest)) {
             return authErrorResponse();
         }
         // 查询分组可用模型
@@ -339,8 +339,8 @@ public class AiOpenaiController extends BaseAiController {
         if (!restEnabled()) {
             return ResponseEntity.ok(Map.of("status", "disabled", "message", "CC Switch 服务未启用"));
         }
-        // 鉴权校验
-        if (!authCheck(servletRequest)) {
+        // 鉴权校验：只读端点，不消耗「按次数」配额
+        if (!authCheckReadOnly(servletRequest)) {
             return authErrorResponse();
         }
         // 查询当前模型与可用列表

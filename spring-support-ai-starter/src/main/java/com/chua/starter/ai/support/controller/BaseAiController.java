@@ -122,6 +122,25 @@ public abstract class BaseAiController {
     }
 
     /**
+     * 只读端点的 Bearer 令牌 鉴权（模型获取用）。
+     *
+     * <p>与 {@link #authCheck} 的唯一区别：<b>不消耗「按次数」配额</b>。客户端会周期性
+     * 探测模型列表（SDK 初始化、切换模型、重连），这不是一次推理调用，不该烧额度；
+     * 身份、到期、Token 总量、IP、限流、余额一律照查。</p>
+     *
+     * @param request HTTP 请求
+     * @return 校验通过返回 {@code true}，否则返回 {@code false}
+     */
+    protected boolean authCheckReadOnly(HttpServletRequest request) {
+        Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
+        if (Boolean.TRUE.equals(trusted)) {
+            return true;
+        }
+        String auth = request.getHeader("Authorization");
+        return aiAccessGuardService.verifyBearerTokenReadOnly(auth, request.getRemoteAddr());
+    }
+
+    /**
      * 从 授权 请求头中提取 Bearer 令牌。
      *
      * @param request HTTP 请求

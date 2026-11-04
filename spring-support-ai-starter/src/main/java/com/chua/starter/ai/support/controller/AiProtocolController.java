@@ -618,7 +618,7 @@ public class AiProtocolController extends BaseAiController {
         if (!restEnabled()) {
             return ResponseEntity.ok(Map.of("models", List.of()));
         }
-        if (!authCheck(servletRequest)) {
+        if (!authCheckReadOnly(servletRequest)) {
             return ResponseEntity.status(401).body(Map.of("error",
                     Map.of("code", 401, "message", "AI AppKey 校验失败", "status", "UNAUTHENTICATED")));
         }

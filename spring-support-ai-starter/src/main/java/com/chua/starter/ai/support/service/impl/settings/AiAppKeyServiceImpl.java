@@ -175,6 +175,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
                 .set(SysAiAppKey::getIpWhitelist, entity.getIpWhitelist())
                 .set(SysAiAppKey::getRemark, entity.getRemark())
                 .set(SysAiAppKey::getExpireDatetime, entity.getExpireDatetime());
+        if (dto.getOverdraftEnabled() != null) {
+            // 只在显式提交时写：老客户端不带这个字段，不能被这次保存悄悄改成「不允许透支」
+            wrapper.set(SysAiAppKey::getOverdraftEnabled, entity.getOverdraftEnabled());
+        }
         if (entity.getAppKey() != null && !entity.getAppKey().isBlank()) {
             // Key 值不可清空：改动等于换一把钥匙，仅在显式提交新值时才写
             wrapper.set(SysAiAppKey::getAppKey, entity.getAppKey())

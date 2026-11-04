@@ -163,6 +163,18 @@
             <artifactId>spring-support-swagger-starter</artifactId>
         </dependency>
 
+        <!-- 系统管理 API（pages/system 的后端接口提供者）：
+             /v2/user、/v2/third/login、/v2/captcha、/v2/sms、/v2/cache、/v2/announcement、
+             /manage/*、/monitor/* 等全部由 spring-api-support-common-system-starter 提供；
+             monitor 应用是 pages/system 的宿主，必须显式引入。
+             传递依赖：common-service-starter + common-entity-starter（实体/建表
+             V1.0__init_*.sql 由 datasource-starter 的 FlywayLike 机制在 report 库执行）。
+             artifact 由 spring-support-api-starter 构建，不在本 reactor 模块树内。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-api-support-common-system-starter</artifactId>
+        </dependency>
+
         <!-- 工具 -->
         <dependency>
             <groupId>com.chua</groupId>
