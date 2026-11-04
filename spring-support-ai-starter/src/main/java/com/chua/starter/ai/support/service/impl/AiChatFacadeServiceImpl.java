@@ -38,6 +38,7 @@ import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.util.ProviderCredentials;
@@ -107,6 +108,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentProviderFactory agentProviderFactory;
     private final ChatStreamRegistry chatStreamRegistry; // 活跃流注册表：停止会话时中断在执行的那一轮
+    private final SysAiAppKeyService sysAiAppKeyService; // appKey 台账：Token 总量配额的唯一累计写入口
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -172,7 +174,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
              * @param "chat" "对话"
              * @param response 响应
              */
-            recordUsage(configured, callTypeOf(request), response, AiUserContext.currentUserId());
+            recordUsage(configured, callTypeOf(request), response, AiUserContext.currentUserId(), appKeyOf(request));
             String text = response != null && response.getText() != null ? response.getText() : "";
             return AiChatResult.ok(text, resolveUsedModel(configured, request, usage), usage);
         } catch (Exception e) {
@@ -346,6 +348,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         final long[] firstTokenAt = new long[] { 0L };
         // 请求线程内捕获身份：流式回调整时在别的线程执行，届时取不到上下文
         final String usageUserId = AiUserContext.currentUserId();
+        // appKey 同理必须在请求线程快照：回调里 request 参数仍可读，但口径统一在这里取
+        final String usageAppKey = appKeyOf(request);
         // 思考开关在请求线程快照：推理模型可能默认产出 reasoning，
         // 未开启深度思考时必须在回调里丢弃，避免前端仍渲染思考块
         final boolean forwardThinking = Boolean.TRUE.equals(request.getThink());
@@ -448,7 +452,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                     if (lastUsage[0].getProvider() == null) {
                                         lastUsage[0].setProvider(request.getProvider());
                                     }
-                                    recordStreamUsage(lastUsage[0], usageUserId, request.getUsageSource());
+                                    recordStreamUsage(lastUsage[0], usageUserId, request.getUsageSource(), usageAppKey);
                                 } catch (Throwable e) {
                                     // 计量落库失败不得连带丢弃回复：本轮答案已经生成
                                     log.error("[AiChat] 流式计量落库失败: model={}, userId={}",
@@ -545,6 +549,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         final long start = System.currentTimeMillis();
         final long[] firstTokenAt = {0L};
         final String usageUserId = AiUserContext.currentUserId();
+        final String usageAppKey = appKeyOf(request);
         final boolean forwardThinking = Boolean.TRUE.equals(request.getThink());
 
         CompletableFuture.runAsync(AiUserContext.capturing(() -> {
@@ -607,7 +612,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                     if (lastUsage[0].getProvider() == null) {
                                         lastUsage[0].setProvider(request.getProvider());
                                     }
-                                    recordStreamUsage(lastUsage[0], usageUserId, request.getUsageSource());
+                                    recordStreamUsage(lastUsage[0], usageUserId, request.getUsageSource(), usageAppKey);
                                 } catch (Throwable e) {
                                     log.error("[AiChat] resume计量落库失败: model={}", request.getModel(), e);
                                 }
@@ -1652,8 +1657,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param userId 字符串
      * @return 返回值
     */
-    private void recordUsage(ChatClient client, String callType, ChatSyncResponse response, String userId) {
-        recordUsage(client, callType, response != null ? response.getUsage() : null, userId);
+    private void recordUsage(ChatClient client, String callType, ChatSyncResponse response, String userId, String appKey) {
+        recordUsage(client, callType, response != null ? response.getUsage() : null, userId, appKey);
     }
 
     /**
@@ -1663,7 +1668,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param usage usage
      * @param userId 归属用户标识
      */
-    private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage, String userId) {
+    private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage, String userId, String appKey) {
         if (usage == null) {
             return;
         }
@@ -1680,6 +1685,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
         }
+        accumulateAppKeyTokens(appKey, usage);
     }
 
     /**
@@ -1689,8 +1695,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param userId 请求线程捕获的归属用户标识
      * @return 返回值
     */
-    private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId, String source) {
-        recordUsage(usage, "chat_stream", userId, source);
+    private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId, String source, String appKey) {
+        recordUsage(usage, "chat_stream", userId, source, appKey);
     }
 
     /**
@@ -1700,7 +1706,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param userId 归属用户标识
      */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId) {
-        recordUsage(usage, callType, userId, null);
+        recordUsage(usage, callType, userId, null, null);
     }
 
     /**
@@ -1711,7 +1717,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param userId 字符串
      * @return 返回值
     */
-    private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId, String source) {
+    private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId, String source, String appKey) {
         if (usage == null) {
             return;
         }
@@ -1729,6 +1735,65 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
         }
+        accumulateAppKeyTokens(appKey, usage);
+    }
+
+    /**
+     * 把本次调用的 Token 累计到 appKey 台账（「按 Token 总量」配额的唯一写入口）。
+     *
+     * <p>为什么必须在这里累计：网关侧 {@code _appKey} 过去只被<b>写入</b>请求参数，全仓库
+     * 没有任何读取方 —— 于是「按 Token 总量」这把配额在网关上从来不会增长，用户把额度用光
+     * 也不会被拦，只有服务实例端口自己 {@code consumeQuota} 时才涨。同一把 Key 走两个入口
+     * 得到两种用量，这正是「明明超了还能用」的来源。</p>
+     *
+     * <p>累计失败只记日志、不影响本轮回复：答案已经生成，账可以补，回复不能重来。</p>
+     *
+     * @param appKey 本次调用所属 appKey，可为 空（控制台直连、未带 Key 的调用）
+     * @param usage  用量，可为 空
+     */
+    private void accumulateAppKeyTokens(String appKey, com.chua.common.support.ai.AiUsage usage) {
+        if (appKey == null || appKey.isBlank() || usage == null) {
+            return;
+        }
+        try {
+            // totalTokens 缺失时退回 input+output：部分 SPI 客户端只填分项
+            long tokens = 0L;
+            if (usage.getTotalTokens() != null) {
+                tokens = usage.getTotalTokens();
+            } else {
+                if (usage.getInputTokens() != null) {
+                    tokens += usage.getInputTokens();
+                }
+                if (usage.getOutputTokens() != null) {
+                    tokens += usage.getOutputTokens();
+                }
+            }
+            if (tokens <= 0L) {
+                return;
+            }
+            sysAiAppKeyService.updateTokenQuotaByAppKey(appKey, tokens);
+        } catch (Exception e) {
+            log.warn("[AppKey] Token 配额累计失败 appKey={} tokens={}: {}",
+                    appKey, usage.getTotalTokens(), e.getMessage());
+        }
+    }
+
+    /**
+     * 取本次调用所属 appKey（网关在请求参数里注入 {@code _appKey}）。
+     *
+     * @param request 对话请求，可为 空
+     * @return appKey；未携带时返回 null
+     */
+    private static String appKeyOf(AiChatRequest request) {
+        if (request == null || request.getParameters() == null) {
+            return null;
+        }
+        Object v = request.getParameters().get("_appKey");
+        if (v == null) {
+            return null;
+        }
+        String s = String.valueOf(v).trim();
+        return s.isEmpty() ? null : s;
     }
 
     /**
