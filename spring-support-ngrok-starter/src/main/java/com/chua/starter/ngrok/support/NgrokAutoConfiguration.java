@@ -527,37 +527,18 @@ public class NgrokAutoConfiguration {
     }
 
     /**
-     * 端口映射编排服务（页面创建的多端口映射）。
+     * 内网穿透提供方实现（SPI）。
+     *
+     * <p>注册为 Bean 后由 {@code spring-support-tunnel-starter} 的
+     * {@code TunnelProviderRegistry} 自动收集，统一入口 {@code /ms/tunnel}
+     * 即刻可用——本模块不再自带 Controller 与编排 Service。</p>
      *
      * @param resourceLoader 资源加载器（读取私有部署 CA 证书）
-     * @return 编排服务
+     * @return 提供方实现
      */
     @Bean
     @ConditionalOnMissingBean
-    public NgrokTunnelService ngrokTunnelService(ObjectProvider<ResourceLoader> resourceLoader) {
-        return new NgrokTunnelService(properties, resourceLoader.getIfAvailable());
-    }
-
-    /**
-     * Web 环境下的映射管理接口。
-     *
-     * <p>非 Web 应用不注册控制器；管理接口与启动期默认隧道共用同一份配置。</p>
-     */
-    @Configuration(proxyBeanMethods = false)
-    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-    @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
-    public static class NgrokTunnelWebConfiguration {
-
-        /**
-         * 注册映射管理接口。
-         *
-         * @param service 编排服务
-         * @return 控制器
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public NgrokTunnelController ngrokTunnelController(NgrokTunnelService service) {
-            return new NgrokTunnelController(service);
-        }
+    public NgrokTunnelProvider ngrokTunnelProvider(ObjectProvider<ResourceLoader> resourceLoader) {
+        return new NgrokTunnelProvider(properties, resourceLoader.getIfAvailable());
     }
 }

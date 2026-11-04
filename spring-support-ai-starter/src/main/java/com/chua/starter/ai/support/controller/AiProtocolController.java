@@ -212,15 +212,67 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
-     * 从协议适配器取模型名（{@code toString} 的公共封装）。
+     * 从协议适配器取模型名：请求体优先，取不到再看 URL 路径。
      *
-     * @param adapter 协议适配器
-     * @param body    原始请求体
-     * @return 模型名
+     * <p>为什么必须看路径：Gemini 的模型名<b>不在请求体里</b>，
+     * 而在 {@code /v1beta/models/{model}:generateContent} 上。只看 body 会得到 null，
+     * 于是「有模型范围的 Key 调 Gemini 一律 403」，请求本身也没带对模型。</p>
+     *
+     * @param adapter        协议适配器
+     * @param servletRequest HTTP 请求
+     * @param body           原始请求体
+     * @return 模型名，都取不到时返回 null
      */
-    private String modelOf(ProtocolAdapter adapter, Object body) {
+    private String modelOf(ProtocolAdapter adapter, HttpServletRequest servletRequest, Object body) {
         Map<String, Object> m = (Map<String, Object>) body;
-        return m == null ? null : adapter.modelOf(m);
+        String fromBody = m == null ? null : adapter.modelOf(m);
+        if (fromBody != null && !fromBody.isBlank()) {
+            return fromBody.trim();
+        }
+        return modelFromPath(servletRequest);
+    }
+
+    /**
+     * 从 URL 路径中解析模型名（Gemini 口径：{@code /v1beta/models/{model}:{action}}）。
+     *
+     * @param servletRequest HTTP 请求，可为 null
+     * @return 模型名；路径里没有 {@code /models/} 段时返回 null
+     */
+    static String modelFromPath(HttpServletRequest servletRequest) {
+        return servletRequest == null ? null : modelFromPath(servletRequest.getRequestURI());
+    }
+
+    /**
+     * 从 URI 字符串解析模型名，供单元测试直接调用。
+     *
+     * @param uri 请求 URI，可为 null
+     * @return 模型名；无法解析时返回 null
+     */
+    static String modelFromPath(String uri) {
+        if (uri == null) {
+            return null;
+        }
+        String marker = "/models/";
+        int idx = uri.indexOf(marker);
+        if (idx < 0) {
+            return null;
+        }
+        String tail = uri.substring(idx + marker.length());
+        int cut = tail.length();
+        int colon = tail.indexOf(':');
+        if (colon >= 0 && colon < cut) {
+            cut = colon;
+        }
+        int slash = tail.indexOf('/');
+        if (slash >= 0 && slash < cut) {
+            cut = slash;
+        }
+        int query = tail.indexOf('?');
+        if (query >= 0 && query < cut) {
+            cut = query;
+        }
+        String model = tail.substring(0, cut).trim();
+        return model.isEmpty() ? null : model;
     }
 
     // ==================== Claude 消息 ====================
@@ -698,7 +750,12 @@ public class AiProtocolController extends BaseAiController {
      */
     private AiChatRequest buildGeminiChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
         AiChatRequest request = new AiChatRequest();
-        request.setModel(toString(body.get("model")));
+        // 模型名优先取请求体，Gemini 正式调用则来自路径 /v1beta/models/{model}:xxx
+        String model = toString(body.get("model"));
+        if (model == null || model.isBlank()) {
+            model = modelFromPath(servletRequest);
+        }
+        request.setModel(model);
         request.setPrompt(extractGeminiPrompt(body));
         /**
          * apply群体。
