@@ -286,34 +286,13 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     
 
     /**
-     * 是否Expired
+     * 是否已过期（历史私有入口，判定已收口到 {@link AppKeyQuotaGate#expired}）。
      *
      * @param appKey appKey
      * @return 是否expired的结果
      */
     private boolean isExpired(SysAiAppKey appKey) {
-        Long expireTime = resolveExpireTime(appKey);
-        if (expireTime == null) {
-            return false;
-        }
-        return System.currentTimeMillis() / MILLIS_PER_SECOND > expireTime;
-    }
-
-    /**
-     * 解析expire时间
-     *
-     * @param appKey appKey
-     * @return resolveexpire时间的结果
-     */
-    private Long resolveExpireTime(SysAiAppKey appKey) {
-        if (appKey == null) {
-            return null;
-        }
-        if (appKey.getExpireTime() != null) {
-            return java.time.Instant.ofEpochMilli(appKey.getExpireTime())
-                    .atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
-        }
-        return null;
+        return AppKeyQuotaGate.expired(appKey, System.currentTimeMillis());
     }
 
     @Override
@@ -325,14 +304,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     public boolean isBillable(String appKey) {
         SysAiAppKey entity = queryAppKeyUncached(appKey);
-        if (entity == null) {
-            return false;
-        }
-        BigDecimal balance = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
-        if (balance.compareTo(BigDecimal.ZERO) < 0
-                && !Boolean.TRUE.equals(entity.getOverdraftEnabled())) {
+        AppKeyQuotaGate.Deny deny = AppKeyQuotaGate.checkBillable(entity);
+        if (deny.denied()) {
             log.warn("[SysAiAppKey] AppKey {} 余额不足({}) 且不允许透支，拒绝计量计费请求",
-                    entity.getAppKey(), balance);
+                    appKey, entity != null ? entity.getBalance() : null);
             return false;
         }
         return true;
