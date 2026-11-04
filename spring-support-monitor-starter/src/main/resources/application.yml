@@ -136,6 +136,11 @@ plugin:
       # 登录页挂载/登录态落地前拉取默认配置，不带有效令牌；不放行会 403 被前端误判登录失效
       # （同 eduai 先例 spring-support-eduai-starter application.yml）。详见 AuthFilter 白名单机制。
       - /v2/setting/default
+      # 登录页挂载/登录态落地前拉取三方登录来源，不带有效令牌；不放行会 403 被前端误判登录失效。
+      # 本端点由 common-service 的 SysSettingController 提供并标注 @TokenForIgnore，monitor 未
+      # 引入 common-service（无对应 Controller），放行后走不到控制器，统一退回 404 "资源不存在"，
+      # 前端 loadProviders 已 catch 404/403，不会触发 403 会话失效链。
+      - /v2/setting/sso/providers
     # 文件服务器私有桶（逗号分隔，* 表示全部）：由服务管理节点自动挂载的 OAuthServerFilter 执行鉴权；
     # enable=false 或留空时文件服务器按公共桶运行；/ot 一次性链接本身即凭证，始终放行
     file-storage:
