@@ -1,9 +1,0 @@
-  PASS  教师登录
-  PASS  切到阅卷工作台   [tab=1 in=true]
-VISIBLE_ROWS_0 [{"taskNo":"a7ca82869ff94551bf877052d5705455","teacherFinish":"待完成","statusFailed":false},{"taskNo":"65ef6e727ecf4c0b999c99bcddc8898e","teacherFinish":"待完成","statusFailed":false},{"taskNo":"0f2e0b92d5134f75bf5e8acbd08c4223","teacherFinish":"待完成","statusFailed":false},{"taskNo":"67e67ffe75dc493b8bf50d954a2eaaf4","teacherFinish":"待完成","statusFailed":true},{"taskNo":"8f093e7543264d1b8b88b7c8c6ae3bae","teacherFinish":"待完成","statusFailed":false},{"taskNo":"43fd6b0627654fd89fcf5dab4918938b","teacherFinish":"待完成","statusFailed":false}]
-  PASS  列表加载出未完成任务   [todo=9]
-  PASS  勾选两行待完成任务   [["a7ca82869ff94551bf877052d5705455","65ef6e727ecf4c0b999c99bcddc8898e"]]
-  PASS  批量完成后所选任务进入已完成列表   [before=0]
-  PASS  批量撤销后所选任务回到待完成/未完成列表
-  PASS  无意外 HTTP>=400   [[]]
-RESULT_JSON {"failed":0,"checks":[{"name":"教师登录","ok":true,"detail":""},{"name":"切到阅卷工作台","ok":true,"detail":"tab=1 in=true"},{"name":"列表加载出未完成任务","ok":true,"detail":"todo=9"},{"name":"勾选两行待完成任务","ok":true,"detail":"[\"a7ca82869ff94551bf877052d5705455\",\"65ef6e727ecf4c0b999c99bcddc8898e\"]"},{"name":"批量完成后所选任务进入已完成列表","ok":true,"detail":"before=0"},{"name":"批量撤销后所选任务回到待完成/未完成列表","ok":true,"detail":""},{"name":"无意外 HTTP>=400","ok":true,"detail":"[]"}]}
