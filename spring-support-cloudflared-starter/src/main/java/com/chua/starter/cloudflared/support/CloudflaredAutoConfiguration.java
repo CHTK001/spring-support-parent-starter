@@ -232,34 +232,17 @@ public class CloudflaredAutoConfiguration {
     }
 
     /**
-     * 端口映射编排服务（页面创建的多端口映射）。
+     * 内网穿透提供方实现（SPI）。
      *
-     * @return 编排服务
+     * <p>注册为 Bean 后由 {@code spring-support-tunnel-starter} 的
+     * {@code TunnelProviderRegistry} 自动收集，统一入口 {@code /ms/tunnel}
+     * 即刻可用——本模块不再自带 Controller 与编排 Service。</p>
+     *
+     * @return 提供方实现
      */
     @Bean
     @ConditionalOnMissingBean
-    public CloudflaredTunnelService cloudflaredTunnelService() {
-        return new CloudflaredTunnelService(properties);
-    }
-
-    /**
-     * Web 环境下的映射管理接口。
-     */
-    @Configuration(proxyBeanMethods = false)
-    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-    @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
-    public static class CloudflaredTunnelWebConfiguration {
-
-        /**
-         * 注册映射管理接口。
-         *
-         * @param service 编排服务
-         * @return 控制器
-         */
-        @Bean
-        @ConditionalOnMissingBean
-        public CloudflaredTunnelController cloudflaredTunnelController(CloudflaredTunnelService service) {
-            return new CloudflaredTunnelController(service);
-        }
+    public CloudflaredTunnelProvider cloudflaredTunnelProvider() {
+        return new CloudflaredTunnelProvider(properties);
     }
 }
