@@ -1,0 +1,2 @@
+# ApmProvider SPI 注册：名称=实现类
+hotspot=com.chua.starter.apm.hotspot.HotspotApmProvider

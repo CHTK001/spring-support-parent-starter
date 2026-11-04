@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.51</version>
+    </parent>
+
+    <artifactId>spring-support-apm-hotspot-starter</artifactId>
+    <description>APM 扩展模块：自研 hotspot agent 提供者（复用 utils-support-runtime-apm 的 OtnlEngine）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-apm-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 自研 agent（TraceHandler 与 HotspotOtnlEngine 都在这里） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-apm</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>
