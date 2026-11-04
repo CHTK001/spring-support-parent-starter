@@ -1688,40 +1688,41 @@ public class ServiceInstanceManager {
      * @return 校验通过的调用方；失败时已回写错误并返回 null
      */
     private Caller authenticateAppKey(SysAiAppKey row, HttpExchange exchange) {
-        if (row.getStatus() == null || row.getStatus() != 1) {
-            tryWriteError(exchange, 401, "appkey_disabled", "该 AppKey 已停用");
-            return null;
+        // 判定口径与网关同一份（AppKeyQuotaGate），这里只负责把它翻译成实例端口的错误体，
+        // 不再各自维护一套「先判什么后判什么」——两套口径曾导致网关永不过期、实例已过期的鬼故事。
+        AppKeyQuotaGate.Deny deny = AppKeyQuotaGate.check(row, clientIp(exchange));
+        if (deny == AppKeyQuotaGate.Deny.NONE) {
+            // 余额是计费口径，排在身份与额度之后：先确认「这把 Key 还能用」，再说「还付得起」
+            deny = AppKeyQuotaGate.checkBillable(row);
         }
-        if (appKeyExpired(row)) {
-            tryWriteError(exchange, 401, "token_expired", "该 AppKey 已过期");
-            return null;
+        switch (deny) {
+            case NONE:
+                return Caller.ofAppKey(row);
+            case DISABLED:
+                tryWriteError(exchange, 401, "appkey_disabled", "该 AppKey 已停用");
+                return null;
+            case EXPIRED:
+                tryWriteError(exchange, 401, "token_expired", "该 AppKey 已过期");
+                return null;
+            case USE_EXHAUSTED:
+                tryWriteError(exchange, 401, "request_quota_exhausted",
+                        "该 AppKey 请求次数已用尽（上限 " + row.getMaxUse() + "，已用 " + nz(row.getUseCount()) + "）");
+                return null;
+            case TOKEN_EXHAUSTED:
+                tryWriteError(exchange, 401, "token_quota_exhausted",
+                        "该 AppKey Token 余额已用尽（总量 " + row.getMaxTokens() + "，已消耗 " + nz(row.getTotalTokens()) + "）");
+                return null;
+            case IP_NOT_ALLOWED:
+                tryWriteError(exchange, 403, "ip_not_allowed", "客户端 IP 不在该 AppKey 的白名单内");
+                return null;
+            case INSUFFICIENT_BALANCE:
+                BigDecimal balance = row.getBalance();
+                tryWriteError(exchange, 402, "insufficient_balance",
+                        "该 AppKey 余额不足（" + (balance != null ? balance.toPlainString() : "0") + "），请充值后使用");
+                return null;
+            default:
+                return null;
         }
-        Long maxUse = row.getMaxUse();
-        long used = row.getUseCount() == null ? 0L : row.getUseCount();
-        if (maxUse != null && maxUse > 0 && used >= maxUse) {
-            tryWriteError(exchange, 401, "request_quota_exhausted",
-                    "该 AppKey 请求次数已用尽（上限 " + maxUse + "，已用 " + used + "）");
-            return null;
-        }
-        Long maxTokens = row.getMaxTokens();
-        long usedTokens = row.getTotalTokens() == null ? 0L : row.getTotalTokens();
-        if (maxTokens != null && maxTokens > 0 && usedTokens >= maxTokens) {
-            tryWriteError(exchange, 401, "token_quota_exhausted",
-                    "该 AppKey Token 余额已用尽（总量 " + maxTokens + "，已消耗 " + usedTokens + "）");
-            return null;
-        }
-        if (!ipAllowed(row, exchange)) {
-            tryWriteError(exchange, 403, "ip_not_allowed", "客户端 IP 不在该 AppKey 的白名单内");
-            return null;
-        }
-        BigDecimal balance = row.getBalance();
-        boolean overdraft = row.getOverdraftEnabled() != null && row.getOverdraftEnabled() == 1;
-        if (balance != null && balance.compareTo(BigDecimal.ZERO) < 0 && !overdraft) {
-            tryWriteError(exchange, 402, "insufficient_balance",
-                    "该 AppKey 余额不足（" + balance.toPlainString() + "），请充值后使用");
-            return null;
-        }
-        return Caller.ofAppKey(row);
     }
 
     /**
