@@ -2,11 +2,15 @@ package com.chua.starter.ai.support.service;
 
 import com.chua.starter.ai.support.entity.SysAiAppKey;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * AppKey 的模型范围解析：<b>所属分组的模型清单 ∩ Key 上的限定模型</b>。
@@ -33,17 +37,27 @@ import java.util.Set;
 public class AppKeyModelScope {
 
     /**
-     * 对话门面：分组 → 模型清单的唯一来源（含分组停用判定）
+     * 分组 → 模型清单的唯一来源（含分组停用判定）
      */
-    private final AiChatFacadeService facade;
+    private final GroupModelScopeProvider groupScopeProvider;
 
     /**
-     * 创建模型范围解析器。
+     * 创建模型范围解析器（生产装配：直接取对话门面的分组口径）。
      *
      * @param facade 对话门面，不能为 null
      */
+    @Autowired
     public AppKeyModelScope(AiChatFacadeService facade) {
-        this.facade = facade;
+        this(facade::groupModelScope);
+    }
+
+    /**
+     * 创建模型范围解析器（可注入任意分组口径，便于逐条覆盖判定规则）。
+     *
+     * @param groupScopeProvider 分组范围提供者，不能为 null
+     */
+    public AppKeyModelScope(GroupModelScopeProvider groupScopeProvider) {
+        this.groupScopeProvider = groupScopeProvider;
     }
 
     /**
@@ -95,7 +109,7 @@ public class AppKeyModelScope {
             return null;
         }
         try {
-            Set<String> scope = facade.groupModelScope(groupId);
+            Set<String> scope = groupScopeProvider.groupModelScope(groupId);
             if (scope == null) {
                 return null;
             }

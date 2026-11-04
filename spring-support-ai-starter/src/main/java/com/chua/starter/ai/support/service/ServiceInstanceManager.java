@@ -1761,50 +1761,6 @@ public class ServiceInstanceManager {
     }
 
     /**
-     * appKey 是否已过期：{@code expire_datetime} 为准，缺省时看 {@code expire_time}。
-     *
-     * <p>{@code expire_time} 在库里两种写法都出现过（秒 / 毫秒），按量级判定：
-     * 大于 1e11 当毫秒，否则当秒。判断错一位就是「全部 Key 都过期」，所以这里不做假设。</p>
-     */
-    private boolean appKeyExpired(SysAiAppKey row) {
-        LocalDateTime dt = row.getExpireDatetime();
-        if (dt != null) {
-            return dt.isBefore(LocalDateTime.now());
-        }
-        Long raw = row.getExpireTime();
-        if (raw == null || raw <= 0) {
-            return false;
-        }
-        long deadline = raw > 100_000_000_000L ? raw : raw * 1000L;
-        return System.currentTimeMillis() > deadline;
-    }
-
-    /**
-     * 客户端 IP 是否在该 appKey 的白名单内（空白名单 = 不限制）。
-     *
-     * @param row      appKey 行
-     * @param exchange 当前 HTTP 交换对象
-     * @return 允许返回 true
-     */
-    private boolean ipAllowed(SysAiAppKey row, HttpExchange exchange) {
-        String whitelist = row.getIpWhitelist();
-        if (whitelist == null || whitelist.isBlank()) {
-            return true;
-        }
-        String ip = clientIp(exchange);
-        for (String part : whitelist.split(",")) {
-            String v = part.trim();
-            if (v.isEmpty()) {
-                continue;
-            }
-            if ("*".equals(v) || v.equals(ip)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * 把 appKey 注入到请求参数：底层用量落库据此把这次调用归到该 appKey 名下。
      *
      * @param request 对话请求，不能为 null
