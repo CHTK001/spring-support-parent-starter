@@ -178,3 +178,27 @@ deploy/
 # ASCII-only on purpose: the rest of this file is GB18030, mixing UTF-8 would corrupt it.
 !spring-support-ai-starter/deploy/
 !spring-support-hotsport-starter/deploy/
+
+# block: added by cleanup script 2026-11-04 10:30
+# ===== exceptions: dev snapshot / build / runtime junk must never enter git history =====
+*.out
+*.err
+*.err.txt
+*.jsonl
+*.tmp
+*.tmp.*
+**/.agentscope/**
+**/.tmp-*
+**/mft-*.out
+**/mft-*.err
+**/build0*.out
+**/build*.err.log
+**/heapdump*
+**/*_dump*
+**/*.md5
+**/checksum*
+**/_sweep.marker
+site-builder/
+pmt_proxy/
+node_modules/.tmp/
+
