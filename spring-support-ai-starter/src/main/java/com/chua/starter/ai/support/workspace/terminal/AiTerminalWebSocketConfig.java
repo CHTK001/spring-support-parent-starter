@@ -13,6 +13,9 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
  * 工作区终端 WebSocket 配置：注册 {@code /ws/terminal}。
  *
  * <p>与聊天 WebSocket 共用同一套握手身份校验，登录用户才能建立终端。</p>
+ * <p>注意：本类不与其他模块（如 {@code server-starter} 的
+ * {@code TerminalWebSocketConfig}）共享@Bean 名称，否则在使用了 AI 与服务模块的宿主应用中
+ * 报 {@code ConflictingBeanDefinitionException}。</p>
  *
  * @author CH
  * @since 4.0.0.51
@@ -20,7 +23,7 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 @Configuration
 @EnableWebSocket
 @RequiredArgsConstructor
-public class TerminalWebSocketConfig implements WebSocketConfigurer {
+public class AiTerminalWebSocketConfig implements WebSocketConfigurer {
 
     /**
      * WebSocket 文本帧上限（字节）：终端整段粘贴可能一次发送数万字符，
@@ -34,9 +37,9 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
     private static final int MAX_BINARY_MESSAGE_BUFFER_SIZE = 256 * 1024;
 
     /**
-     * 终端 WS 处理器
+     * 终端 WS 处理器（已重命名，不在容器内与 server-starter 终端 WS 处理器同名）
      */
-    private final TerminalWebSocketHandler terminalHandler;
+    private final AiTerminalWebSocketHandler terminalHandler;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {

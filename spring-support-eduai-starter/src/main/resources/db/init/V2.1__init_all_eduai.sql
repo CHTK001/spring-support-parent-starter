@@ -1009,6 +1009,7 @@ CREATE TABLE IF NOT EXISTS edu_marking_task (
     update_by INT DEFAULT NULL,
     marking_task_teacher_finished TINYINT DEFAULT 0 COMMENT '老师是否已点「阅卷完成」: 0-未完成 1-已完成',
     marking_task_teacher_finish_time DATETIME COMMENT '老师点「阅卷完成」的时间',
+    marking_task_satisfaction INT COMMENT 'AI评分满意度',
     UNIQUE KEY uk_edu_marking_task_task_id (marking_task_task_id),
     KEY edu_marking_task_status (marking_task_status)
 ) COMMENT '阅卷任务（异步：创建任务→后台处理→可重启续跑）';
@@ -1262,6 +1263,17 @@ SET @sql_mark_fin_time := IF(@has_mark_fin_time > 0, 'SELECT 1',
 PREPARE stmt_mark_fin_time FROM @sql_mark_fin_time;
 EXECUTE stmt_mark_fin_time;
 DEALLOCATE PREPARE stmt_mark_fin_time;
+
+-- ---------- edu_marking_task：完成度 AI 评分（实体 + Mapper 均已引用） ----------
+SET @has_mark_satisfaction := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_satisfaction'
+);
+SET @sql_mark_satisfaction := IF(@has_mark_satisfaction > 0, 'SELECT 1',
+    'ALTER TABLE edu_marking_task ADD COLUMN marking_task_satisfaction INT COMMENT ''AI评分满意度''');
+PREPARE stmt_mark_satisfaction FROM @sql_mark_satisfaction;
+EXECUTE stmt_mark_satisfaction;
+DEALLOCATE PREPARE stmt_mark_satisfaction;
 
 -- ---------- edu_wrong_question：试卷ID / 来源任务 / 订正状态 ----------
 SET @has_wq_paper := (

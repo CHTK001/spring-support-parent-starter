@@ -973,6 +973,7 @@ public class WorldSimServiceImpl implements WorldSimService {
                 // 推进一个（或全部已完成）：null 表示 assets 已全部就位
                 Map<String, Object> progress = tryAdvanceAsset(worldId, actNo, script, act);
                 if (progress == null) {
+                    // 素材已全部就位（全部 OK / NO_PROMPT）：直接进入出演阶段
                     act.setStage(ACT_STATUS_PLAYING);
                     act.setStatus(ACT_STATUS_PLAYING);
                     act.setProgress(0);
@@ -980,7 +981,9 @@ public class WorldSimServiceImpl implements WorldSimService {
                 act.setUpdateTime(LocalDateTime.now());
                 actMapper.updateById(act);
                 out.put("act", actRow(act));
-                out.putAll(progress);
+                if (progress != null) {
+                    out.putAll(progress);
+                }
             }
             case ACT_STATUS_PLAYING -> {
                 // ── 表演：逐场景生成叙述（一镜到底），完成后标记可重播
@@ -1272,7 +1275,14 @@ public class WorldSimServiceImpl implements WorldSimService {
         out.put("pending", materials.size() - done);
 
         // 全部落在 OK / NO_PROMPT 上：进入下一阶段（表演）
-        if (target == null) return inProgress ? out : null;
+        // 注意：NO_PROMPT 的素材头此前只在内存里改了 status，没有写回剧本，
+        // 前端因此拿不到素材状态（素材区一片空白）。这里先落盘再返回。
+        if (target == null) {
+            if (inProgress) return out;
+            for (Material m : materials) m.persist();
+            storyStore.writeAct(worldId, actNo, Json.toJson(json));
+            return null;
+        }
         if (inProgress) {
             // 有任务还在生成中，不能叠新的，由服务端生命周期调遣
             return out;
@@ -1512,12 +1522,24 @@ public class WorldSimServiceImpl implements WorldSimService {
         return String.valueOf(o);
     }
 
-    /** 场景列表 */
+    /** 场景列表（返回剧本 JSON 树里的活动节点，写回即落盘） */
     private List<Map<String, Object>> sceneList(Object o) {
         if (o == null || !(o instanceof List<?> l)) return new ArrayList<>();
         List<Map<String, Object>> out = new ArrayList<>();
         for (Object item : l) {
-            if (item instanceof Map<?, ?> m) {
+            if (!(item instanceof Map<?, ?> m)) continue;
+            boolean stringKeys = true;
+            for (Object k : m.keySet()) {
+                if (!(k instanceof String)) {
+                    stringKeys = false;
+                    break;
+                }
+            }
+            if (stringKeys) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> live = (Map<String, Object>) m;
+                out.add(live);
+            } else {
                 Map<String, Object> copy = new LinkedHashMap<>();
                 for (Map.Entry<?, ?> e : m.entrySet()) {
                     copy.put(String.valueOf(e.getKey()), e.getValue());
