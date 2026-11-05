@@ -23,6 +23,7 @@ public final class VirtualThreadSchedulers {
      * 虚拟线程执行器：每个任务一个虚拟线程
      */
     private static final ExecutorService VIRTUAL_EXECUTOR =
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-collect-").factory());
 

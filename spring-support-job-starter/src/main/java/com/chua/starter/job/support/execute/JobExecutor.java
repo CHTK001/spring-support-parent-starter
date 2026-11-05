@@ -784,6 +784,7 @@ public class JobExecutor {
      * @return ExecutorService
      */
     public static ExecutorService defaultExecutor() {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         return java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
     }
 
@@ -796,6 +797,7 @@ public class JobExecutor {
      * @return ThreadPoolExecutor
      */
     public static ThreadPoolExecutor platformExecutor() {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         return new ThreadPoolExecutor(
                 DEFAULT_CORE_SIZE,
                 DEFAULT_MAX_SIZE,
@@ -804,5 +806,4 @@ public class JobExecutor {
                 new java.util.concurrent.LinkedBlockingQueue<>(DEFAULT_QUEUE_CAPACITY),
                 namedThreadFactory(),
                 new ThreadPoolExecutor.AbortPolicy());
-    }
-}
+    }}

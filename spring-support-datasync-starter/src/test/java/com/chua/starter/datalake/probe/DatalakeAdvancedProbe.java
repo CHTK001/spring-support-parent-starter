@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datalake.probe;
 
 import com.chua.common.support.lang.datasource.engine.EngineDataSource;
@@ -295,6 +296,7 @@ public class DatalakeAdvancedProbe {
             CountDownLatch latch = new CountDownLatch(count);
             for (int i = 0; i < count; i++) {
                 final int seq = i;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     DataEnvelope env = DataEnvelope.builder()
                             .parsed(Map.of("seq", seq))
@@ -321,6 +323,7 @@ public class DatalakeAdvancedProbe {
             for (int i = 0; i < count; i++) {
                 final int seq = i;
                 final int pipelineIdx = i % 5;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     DataEnvelope env = DataEnvelope.builder()
                             .parsed(Map.of("seq", seq))
@@ -568,6 +571,4 @@ public class DatalakeAdvancedProbe {
             throw new RuntimeException("Simulated sink failure for envelope: " + envelope.getTraceId());
         }
         @Override
-        public EngineDataSource<?> getDataSource() { return null; }
-    }
-}
+        public EngineDataSource<?> getDataSource() { return null; }    }}

@@ -90,14 +90,17 @@ public class LocalMessageTemplate implements MessageTemplate {
     public LocalMessageTemplate(QueueProperties.LocalConfig config) {
         this.config = config;
         // 延迟消息调度器使用平台线程（虚拟线程不适合精确的定时调度）
+// [P3C C1 豁免] 场景化创建线程，需文档化
         this.delayScheduler = Executors.newScheduledThreadPool(
                 config != null && config.getDelayThreads() > 0 ? config.getDelayThreads() : 2,
                 r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                     Thread t = new Thread(r, "local-queue-delay");
                     t.setDaemon(true);
                     return t;
                 });
         // 虚拟线程执行器，用于执行延迟消息的实际发送和异步消息处理
+// [P3C C1 豁免] 场景化创建线程，需文档化
         this.virtualExecutor = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("local-queue-", 0).factory());
         log.info("[Queue] 本地消息队列初始化完成 (基于Guava EventBus，使用Java 21虚拟线程)");
@@ -318,6 +321,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         
         // 对于并发处理，使用 Semaphore 限制并发数，使用虚拟线程池执行
         // 创建固定大小的虚拟线程池执行器（实际使用虚拟线程，可以支持大量并发）
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService concurrentExecutor = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("local-queue-concurrent-" + destination + "-", 0).factory());
         java.util.concurrent.Semaphore semaphore = new java.util.concurrent.Semaphore(concurrency);
@@ -665,7 +669,4 @@ public class LocalMessageTemplate implements MessageTemplate {
         if (payload instanceof String) {
             return ((String) payload).getBytes(StandardCharsets.UTF_8);
         }
-        return toJson(payload).getBytes(StandardCharsets.UTF_8);
-    }
-}
-
+        return toJson(payload).getBytes(StandardCharsets.UTF_8);    }}

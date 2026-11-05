@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.test;
 
 import com.chua.common.support.objects.ObjectContext;
@@ -115,7 +116,9 @@ class BundleManagerHttpRepoRealTest {
             SERVER = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             SERVER.createContext("/", BundleManagerHttpRepoRealTest::serveRepoFile);
             // 守护线程执行器：避免 HttpServer 的非守护线程阻塞测试 JVM 退出
+// [P3C C1 豁免] 场景化创建线程，需文档化
             SERVER.setExecutor(Executors.newSingleThreadExecutor(runnable -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread thread = new Thread(runnable, "test-http-repo");
                 thread.setDaemon(true);
                 return thread;
@@ -311,6 +314,4 @@ class BundleManagerHttpRepoRealTest {
             });
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        }
-    }
-}
+        }    }}

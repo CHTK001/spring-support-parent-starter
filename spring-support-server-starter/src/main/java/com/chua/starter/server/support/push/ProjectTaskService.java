@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.server.support.push;
 
 import com.chua.common.support.lang.code.ReturnResult;
@@ -109,7 +110,9 @@ public class ProjectTaskService {
     /**
      * 任务线程池（守护线程，含可能长时间阻塞的 follow 会话）
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService taskPool = Executors.newCachedThreadPool(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "project-task");
         t.setDaemon(true);
         return t;
@@ -957,6 +960,4 @@ public class ProjectTaskService {
                 }
             }
         });
-        taskPool.shutdownNow();
-    }
-}
+        taskPool.shutdownNow();    }}

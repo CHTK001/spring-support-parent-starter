@@ -69,7 +69,9 @@ public class TavernChatController {
      * <p>主回复与触发了随机发言的成员在这条 SSE 里并行流式输出，
      * 不能让线程池线程阻止 JVM 退出。</p>
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private static final ExecutorService TAVERN_CHAT_POOL = Executors.newCachedThreadPool(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "tavern-chat-reply");
         t.setDaemon(true);
         return t;
@@ -678,5 +680,4 @@ public class TavernChatController {
     */
     private static String str(Object v) {
         return v == null ? null : String.valueOf(v);
-    }
-}
+    }}

@@ -10,8 +10,6 @@ import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
 import com.chua.starter.monitor.support.model.NetworkConfigVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
-import com.chua.starter.monitor.support.spi.impl.PosixHostOperations;
-import com.chua.starter.monitor.support.spi.impl.WindowsHostOperations;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
 
@@ -59,14 +57,10 @@ public abstract class HostOperations {
      * @return 平台能力集，永不为 null
      */
     public static HostOperations of(SystemInfoProvider channel, MsServerHost host) {
-        String platform = channel.platform(host);
-        if (platform == null || platform.isEmpty()) {
-            // 台账未填平台时沿用控制端平台，与该调用点改造前的兜底口径一致
-            platform = Platforms.normalize(System.getProperty("os.name"));
-        }
-        return Platforms.WINDOWS.equals(platform)
-                ? new WindowsHostOperations(channel, host)
-                : new PosixHostOperations(channel, host);
+        // 平台 → 实现的映射全部交给 SPI（HostOperationsProvider 扩展点）：
+        // 这里曾经是 `Windows ? WindowsHostOperations : PosixHostOperations` 的三元判断，
+        // 新增平台就得改这个方法；现在新增平台只加一个实现类并登记扩展点即可。
+        return HostOperationsRegistry.resolve(channel, host);
     }
 
     /**

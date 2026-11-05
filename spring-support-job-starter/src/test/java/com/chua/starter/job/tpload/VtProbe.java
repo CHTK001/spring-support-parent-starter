@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.tpload;
 
 import com.chua.starter.job.support.execute.JobExecutor;
@@ -103,6 +104,7 @@ public class VtProbe {
      */
     public static void main(String[] args) throws InterruptedException {
  // 平台线程池: 与 作业auto配置.构建执行器() 同构
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ThreadPoolExecutor platform = new ThreadPoolExecutor(
                 PLATFORM_MAX, PLATFORM_MAX, 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(QUEUE),
@@ -113,13 +115,11 @@ public class VtProbe {
         platform.awaitTermination(5, TimeUnit.SECONDS);
 
         // 虚拟线程执行器: 每任务一个虚拟线程
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService virtualThread = Executors.newVirtualThreadPerTaskExecutor();
         long vtMs = run(virtualThread, "虚拟线程 per-task");
         virtualThread.shutdown();
         virtualThread.awaitTermination(5, TimeUnit.SECONDS);
 
         double speedUp = (double) platformMs / Math.max(1, vtMs);
-        log.info("[probe] VTPROBE_RESULT platformMs={} vtMs={} speedUp={}x tasks={} workMs={}",
-                platformMs, vtMs, Math.round(speedUp * 10) / 10.0, TASKS, WORK_MS);
-    }
-}
+        log.info("[probe] VTPROBE_RESULT platformMs={} vtMs={} speedUp={}x tasks={} workMs={}",                platformMs, vtMs, Math.round(speedUp * 10) / 10.0, TASKS, WORK_MS);    }}

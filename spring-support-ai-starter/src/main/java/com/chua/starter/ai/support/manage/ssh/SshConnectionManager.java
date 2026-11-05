@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.manage.ssh;
 
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
@@ -79,7 +80,9 @@ public class SshConnectionManager {
     /**
      * 异步拨号线程池（守护线程，避免阻塞请求线程）
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService dialExecutor = Executors.newSingleThreadExecutor(runnable -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread thread = new Thread(runnable, "ssh-dial");
         thread.setDaemon(true);
         return thread;
@@ -350,6 +353,4 @@ public class SshConnectionManager {
      * @return 随机 UUID
      */
     static String newTraceId() {
-        return UUID.randomUUID().toString();
-    }
-}
+        return UUID.randomUUID().toString();    }}

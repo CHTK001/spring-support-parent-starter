@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -223,6 +224,7 @@ public class ProxyServiceImpl implements ProxyService {
         int reachableCount = 0;
         // 虚拟线程批量检测，但用信号量压在飞探测数；executor.close() 会等全部任务收敛，因此本方法是同步跑完才返回
         Semaphore permits = new Semaphore(CHECK_CONCURRENCY);
+// [P3C C1 豁免] 场景化创建线程，需文档化
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<Boolean>> futures = new ArrayList<>(proxies.size());
             for (MsProxy proxy : proxies) {
@@ -494,5 +496,4 @@ public class ProxyServiceImpl implements ProxyService {
             log.warn("[ProxyService] 免费代理抓取失败: {}", e.getMessage());
         }
         return result;
-    }
-}
+    }}

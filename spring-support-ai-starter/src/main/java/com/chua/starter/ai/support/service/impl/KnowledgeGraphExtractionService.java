@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.starter.ai.support.model.KnowledgeGraphExtractionDTO;
@@ -105,6 +106,7 @@ public class KnowledgeGraphExtractionService {
     /**
      * 抽取线程池：有界队列 + 调用方执行，避免批量导入时无限堆积任务。
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService executor = new ThreadPoolExecutor(
             1, 2, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(256),
@@ -379,5 +381,4 @@ public class KnowledgeGraphExtractionService {
             thread.setDaemon(true);
             return thread;
         }
-    }
-}
+    }}

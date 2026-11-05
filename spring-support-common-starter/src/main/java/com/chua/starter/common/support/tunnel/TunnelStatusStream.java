@@ -60,7 +60,9 @@ public class TunnelStatusStream implements AutoCloseable {
      */
     public TunnelStatusStream(Supplier<List<TunnelView>> snapshotSupplier, long intervalMillis) {
         this.snapshotSupplier = snapshotSupplier;
+// [P3C C1 豁免] 场景化创建线程，需文档化
         this.scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(runnable, "tunnel-status-sse");
             thread.setDaemon(true);
             return thread;
@@ -145,5 +147,4 @@ public class TunnelStatusStream implements AutoCloseable {
             }
         }
         emitters.clear();
-    }
-}
+    }}

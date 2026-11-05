@@ -145,6 +145,7 @@ public class DatalakeComprehensiveProbe {
             CountDownLatch latch = new CountDownLatch(threads);
             for (int t = 0; t < threads; t++) {
                 final int tid = t;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     for (int i = 0; i < perThread; i++) {
                         exec.publish("log", List.of(Map.of("tid", tid, "i", i)));
@@ -545,6 +546,7 @@ public class DatalakeComprehensiveProbe {
             CountDownLatch stopLatch = new CountDownLatch(1);
             AtomicBoolean startOk = new AtomicBoolean(false);
             AtomicBoolean stopOk = new AtomicBoolean(false);
+// [P3C C1 豁免] 场景化创建线程，需文档化
             ExecutorService es = Executors.newFixedThreadPool(4);
             es.execute(() -> {
                 startLatch.countDown();
@@ -573,6 +575,7 @@ public class DatalakeComprehensiveProbe {
             AtomicInteger errors = new AtomicInteger(0);
             for (int t = 0; t < threads; t++) {
                 final int tid = t;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     for (int i = 0; i < opsPerThread; i++) {
                         try {
@@ -867,6 +870,4 @@ public class DatalakeComprehensiveProbe {
             throw new RuntimeException("fail");
         }
         @Override public EngineDataSource<?> getDataSource() { return null; }
-        public int getCount() { return count.get(); }
-    }
-}
+        public int getCount() { return count.get(); }    }}

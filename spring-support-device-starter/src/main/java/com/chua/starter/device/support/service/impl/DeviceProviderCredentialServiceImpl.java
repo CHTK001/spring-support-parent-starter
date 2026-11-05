@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -371,5 +372,4 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
             next.setDeviceCredentialUpdatedAt(LocalDateTime.now());
             credentialMapper.updateById(next);
         }
-    }
-}
+    }}

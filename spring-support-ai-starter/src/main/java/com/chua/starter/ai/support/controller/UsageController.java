@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -346,7 +347,9 @@ public class UsageController {
     /**
      * 异步执行器
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final java.util.concurrent.ExecutorService taskExecutor = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "usage-task-executor");
         t.setDaemon(true);
         return t;
@@ -626,6 +629,4 @@ public class UsageController {
      * @return 归属用户标识；跨账号放行时为 null
      */
     private String currentScopeUserId() {
-        return AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();
-    }
-}
+        return AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();    }}
