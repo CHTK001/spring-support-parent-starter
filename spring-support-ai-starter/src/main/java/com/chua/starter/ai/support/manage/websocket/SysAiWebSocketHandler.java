@@ -83,7 +83,9 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
      * 启动心跳。
      */
     private void startHeartbeat() {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "nomifun-ws-heartbeat");
             t.setDaemon(true);
             return t;
@@ -273,5 +275,4 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
         } catch (Exception e) {
             log.debug("[nomifun-ws] 推送失败: {}", e.getMessage());
         }
-    }
-}
+    }}

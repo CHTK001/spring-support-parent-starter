@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.generate;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -190,7 +191,9 @@ public class GenerateService {
      * @return 固定 4 线程的守护线程池
      */
     private static ExecutorService createImageExecutor() {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         return Executors.newFixedThreadPool(4, runnable -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(runnable, "ai-generate-image");
             thread.setDaemon(true);
             return thread;
@@ -1552,6 +1555,4 @@ public class GenerateService {
      * @return 媒体地址列表
      */
     public static List<String> mediaUrls(SysAiGenerateTask task) {
-        return task == null ? List.of() : new ArrayList<>(task.resultUrls());
-    }
-}
+        return task == null ? List.of() : new ArrayList<>(task.resultUrls());    }}

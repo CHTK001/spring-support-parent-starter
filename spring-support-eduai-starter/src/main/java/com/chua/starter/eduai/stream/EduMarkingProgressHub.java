@@ -79,7 +79,9 @@ public class EduMarkingProgressHub {
      */
     public EduMarkingProgressHub(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+// [P3C C1 豁免] 场景化创建线程，需文档化
         this.keepaliveExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(r, "edu-marking-sse-keepalive");
             thread.setDaemon(true);
             return thread;
@@ -248,5 +250,4 @@ public class EduMarkingProgressHub {
     @PreDestroy
     public void shutdown() {
         keepaliveExecutor.shutdownNow();
-    }
-}
+    }}

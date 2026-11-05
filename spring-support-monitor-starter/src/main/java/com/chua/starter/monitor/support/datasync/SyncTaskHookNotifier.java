@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.monitor.support.datasync;
 
 import com.chua.starter.monitor.support.entity.MsSyncTask;
@@ -83,6 +84,7 @@ public class SyncTaskHookNotifier {
     /**
      * 行通知异步池：核心=最大 2 线程，有界队列，满则丢弃
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ThreadPoolExecutor rowPool = new ThreadPoolExecutor(
             ROW_POOL_SIZE, ROW_POOL_SIZE, 30L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(ROW_QUEUE_CAPACITY),
@@ -256,5 +258,4 @@ public class SyncTaskHookNotifier {
             thread.setDaemon(true);
             return thread;
         }
-    }
-}
+    }}

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.common.support.log;
 import com.chua.common.support.constant.NumberConstant;
 import com.chua.common.support.utils.CollectionUtils;
@@ -59,6 +60,7 @@ public class ParameterLogFilter implements Filter {
         public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS"); // 日期时间formatter
     private final LogProperties logProperties; // 日志属性
     private final ApplicationContext applicationContext; // application上下文
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor(); // 接口服务日志
     
     /**
@@ -431,5 +433,4 @@ public class ParameterLogFilter implements Filter {
                 sb.append("║ (请求体过长，共 ").append(body.length()).append(" 字符)\n");
             }
         }
-    }
-}
+    }}

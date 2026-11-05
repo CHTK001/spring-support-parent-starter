@@ -14,6 +14,7 @@ import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.LocalSystemInfoService;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
+import com.chua.starter.monitor.support.spi.HostOperationsRegistry;
 import com.chua.starter.monitor.support.support.ConsoleOutput;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -213,13 +214,10 @@ public class LocalOshiProvider implements SystemInfoProvider {
 
     @Override
     public String exec(MsServerHost host, String cmd) {
-        // 经 shell 执行：管控端下发的命令普遍带管道、&& 与引号
-        String[] shell;
-        if (Platforms.WINDOWS.equals(platform(host))) {
-            shell = new String[]{"cmd.exe", "/c", "chcp 65001 >nul && " + cmd};
-        } else {
-            shell = new String[]{"/bin/sh", "-c", cmd};
-        }
+        // 经 shell 执行：管控端下发的命令普遍带管道、&& 与引号。
+        // 用哪个 shell 由平台能力集 SPI 决定（Windows 走 cmd.exe 并切 UTF-8 代码页，
+        // POSIX 走 /bin/sh），本方法不再自己判断平台。
+        String[] shell = HostOperationsRegistry.localShell(platform(host), cmd);
         try {
             ProcessBuilder builder = new ProcessBuilder(shell);
             builder.redirectErrorStream(true);

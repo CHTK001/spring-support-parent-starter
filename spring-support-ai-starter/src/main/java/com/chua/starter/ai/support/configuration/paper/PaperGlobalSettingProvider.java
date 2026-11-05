@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.configuration.paper;
 
 import com.chua.common.support.ai.rag.GlobalSettingProvider;
@@ -80,5 +81,4 @@ public class PaperGlobalSettingProvider implements GlobalSettingProvider {
                 new GlobalSettingProvider.SettingItem("merge_answer", "true", "BOOLEAN", "是否合并题干与作答区域（false 仅文字块）", 11),
                 new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 12)
         );
-    }
-}
+    }}

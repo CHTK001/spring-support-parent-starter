@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Import;
 
 /**
  * 教育AI模块自动配置
@@ -44,6 +45,7 @@ import org.springframework.context.annotation.ComponentScan;
  * @author CH
  * @since 4.0.0
  */
+@Import(EduAiCachePrimaryConfiguration.class)
 public class EduAiAutoConfiguration {
 
     /**

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasourcehub.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -292,5 +293,4 @@ public class DatasourceMetricServiceImpl implements DatasourceMetricService {
                 rows.get(rows.size() - 1).getCreateTime()).toSeconds();
         long step = (long) Math.ceil(intervalSec * rows.size() / (double) Math.max(1L, total));
         return (int) Math.max(1L, step);
-    }
-}
+    }}

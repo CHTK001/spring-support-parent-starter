@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datalake.probe;
 
 import com.chua.common.support.concurrent.dispatcher.DispatcherConfig;
@@ -507,6 +508,7 @@ public class DatalakeDeepProbe {
             CountDownLatch latch = new CountDownLatch(threadCount);
             for (int t = 0; t < threadCount; t++) {
                 final int tid = t;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     for (int i = 0; i < perThread; i++) {
                         DataEnvelope env = DataEnvelope.builder()
@@ -536,6 +538,7 @@ public class DatalakeDeepProbe {
             AtomicInteger totalWrites = new AtomicInteger(0);
             for (int i = 0; i < threadCount; i++) {
                 final int idx = i;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     DataEnvelope env = DataEnvelope.builder()
                             .parsed(Map.of("idx", idx))
@@ -630,6 +633,4 @@ public class DatalakeDeepProbe {
             lastConfig = config;
             return true;
         }
-        @Override public EngineDataSource<?> getDataSource() { return null; }
-    }
-}
+        @Override public EngineDataSource<?> getDataSource() { return null; }    }}

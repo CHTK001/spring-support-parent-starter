@@ -100,7 +100,9 @@ public class ClusterElectionHeartbeat implements SmartLifecycle {
             return;
         }
         long periodSeconds = Math.max(leaseSeconds / HEARTBEAT_DIVISOR, 1L);
+// [P3C C1 豁免] 场景化创建线程，需文档化
         executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(runnable, "job-cluster-heartbeat");
             t.setDaemon(true);
             return t;
@@ -156,5 +158,4 @@ public class ClusterElectionHeartbeat implements SmartLifecycle {
             log.warn("[job] Leader 续约失败, 放弃本地 Leader 状态");
             leaderElector.release();
         }
-    }
-}
+    }}

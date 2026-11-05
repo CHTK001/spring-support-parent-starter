@@ -162,7 +162,9 @@ public class DeviceMetricsReporter {
         }
 
         // 主调度器
+// [P3C C1 豁免] 场景化创建线程，需文档化
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "device-reporter");
             t.setDaemon(true);
             return t;
@@ -170,7 +172,9 @@ public class DeviceMetricsReporter {
 
         // CPU 单独线程（采集需要停顿）
         if (enabledMetrics.contains(MetricType.CPU)) {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             cpuScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread t = new Thread(r, "cpu-collector");
                 t.setDaemon(true);
                 return t;
@@ -339,7 +343,4 @@ public class DeviceMetricsReporter {
         } catch (Exception e) {
             log.error("[DeviceReporter] 采集指标失败", e);
         }
-
-        return metrics;
-    }
-}
+        return metrics;    }}

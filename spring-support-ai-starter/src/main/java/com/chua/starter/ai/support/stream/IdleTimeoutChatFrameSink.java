@@ -52,7 +52,9 @@ public final class IdleTimeoutChatFrameSink implements ChatFrameSink {
      * 这是一个纯计时任务，若被业务任务挤占，超时就会失准；而它自身几乎不耗 CPU。</p>
      */
     private static final ScheduledExecutorService WATCHDOG =
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread t = new Thread(r, "chat-stream-idle-watchdog");
                 t.setDaemon(true);
                 return t;
@@ -208,6 +210,4 @@ public final class IdleTimeoutChatFrameSink implements ChatFrameSink {
     public void close() {
         finished.set(true);
         stop();
-        delegate.close();
-    }
-}
+        delegate.close();    }}

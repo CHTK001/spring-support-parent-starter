@@ -114,11 +114,13 @@ public class ApiChannelAuthController {
      * <p>⚠️ 不用 Spring 的公共 task executor：单次 {@code pollLogin} 可能阻塞在
      * 上游 HTTP 上（最长 15s 连接超时），放在公共池里会挤占其它异步任务。</p>
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private static final ExecutorService SSE_EXECUTOR = Executors.newCachedThreadPool(new java.util.concurrent.ThreadFactory() {
         private final AtomicInteger SEQ = new AtomicInteger();
 
         @Override
         public Thread newThread(Runnable r) {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "channel-sse-login-" + SEQ.incrementAndGet());
             t.setDaemon(true);
             return t;
@@ -1758,5 +1760,4 @@ public class ApiChannelAuthController {
             }
         }
         return new LinkedHashMap<>();
-    }
-}
+    }}

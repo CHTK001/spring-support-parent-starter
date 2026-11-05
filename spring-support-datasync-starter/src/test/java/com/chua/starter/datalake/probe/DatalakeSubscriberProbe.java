@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datalake.probe;
 
 import com.chua.common.support.concurrent.offset.OffsetFlow;
@@ -491,6 +492,7 @@ public class DatalakeSubscriberProbe {
                 AtomicInteger success = new AtomicInteger(0);
                 for (int i = 0; i < 10; i++) {
                     final int seq = i;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                     Executors.newSingleThreadExecutor().execute(() -> {
                         try {
                             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
@@ -637,5 +639,4 @@ public class DatalakeSubscriberProbe {
         }
         @Override
         public EngineDataSource<?> getDataSource() { return null; }
-    }
-}
+    }}

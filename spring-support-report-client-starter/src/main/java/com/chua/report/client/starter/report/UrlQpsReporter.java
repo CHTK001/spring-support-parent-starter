@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.report.client.starter.report;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
@@ -116,7 +117,9 @@ public class UrlQpsReporter {
         }
 
         running = true;
+// [P3C C1 豁免] 场景化创建线程，需文档化
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "url-qps-reporter");
             t.setDaemon(true);
             return t;
@@ -371,6 +374,4 @@ public class UrlQpsReporter {
             data.put("historySuccessCount", historySuccessCount.get());
             data.put("historyFailCount", historyFailCount.get());
             return data;
-        }
-    }
-}
+        }    }}

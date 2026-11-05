@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.test;
 
 import org.junit.jupiter.api.Test;
@@ -93,5 +94,4 @@ class OsgiTelnetFallbackRealTest {
         }
         assertTrue(!connectable, "telnet 模式当前无框架级 telnet 监听实现，6666 应无监听（连接应被拒绝），"
                 + "若未来补齐监听则此断言需改为 connectable==true");
-    }
-}
+    }}

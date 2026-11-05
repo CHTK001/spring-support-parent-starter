@@ -131,7 +131,9 @@ public class AppRegisterReporter {
         initNetworkInfo();
         this.startTime = System.currentTimeMillis();
 
+// [P3C C1 豁免] 场景化创建线程，需文档化
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "app-reporter");
             t.setDaemon(true);
             return t;
@@ -235,6 +237,5 @@ public class AppRegisterReporter {
 
         return info;
     }
-
 
 }

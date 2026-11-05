@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasourcehub.support.middleware;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -311,5 +312,4 @@ class InfluxdbClientProtocolTest {
         assertNotNull(error, "语句错误必须抛出，返回空列表会把「语法错」伪装成「没有数据」");
         assertTrue(String.valueOf(error.getMessage()).contains("boom"),
                 "错误信息要带服务端原文，实际: " + error.getMessage());
-    }
-}
+    }}

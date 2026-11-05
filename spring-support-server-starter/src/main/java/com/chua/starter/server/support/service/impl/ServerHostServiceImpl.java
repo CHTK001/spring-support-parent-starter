@@ -202,6 +202,7 @@ public class ServerHostServiceImpl implements ServerHostService {
      * 端口扫描后台执行器：扫描为阻塞式 native 调用，用虚拟线程承载不占用平台线程
      */
     private final ExecutorService portScanExecutor =
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("port-scan-").factory());
 
     /**
@@ -1082,6 +1083,7 @@ public class ServerHostServiceImpl implements ServerHostService {
      * 批量同步虚拟线程执行器（SSH 探测为阻塞 IO，虚拟线程并发最合适）
      */
     private static final java.util.concurrent.ExecutorService SYNC_EXECUTOR =
+// [P3C C1 豁免] 场景化创建线程，需文档化
             java.util.concurrent.Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-sync-").factory());
 
@@ -2000,5 +2002,4 @@ public class ServerHostServiceImpl implements ServerHostService {
      */
     private boolean isNotBlank(String value) {
         return value != null && !value.isBlank();
-    }
-}
+    }}

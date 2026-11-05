@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.eduai.support.util;
 
 import com.chua.starter.common.support.exception.BusinessException;
@@ -228,5 +229,4 @@ class StudentPasswordSupportTest {
         var ctor = StudentPasswordSupport.class.getDeclaredConstructor();
         assertTrue(Modifier.isPrivate(ctor.getModifiers()),
                 "工具类必须有 private 构造器");
-    }
-}
+    }}

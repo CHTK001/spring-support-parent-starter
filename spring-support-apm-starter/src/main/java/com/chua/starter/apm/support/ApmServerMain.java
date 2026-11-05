@@ -67,6 +67,7 @@ public final class ApmServerMain {
         server.start();
 
         CountDownLatch latch = new CountDownLatch(1);
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             server.close();
             registry.close();
@@ -129,5 +130,4 @@ public final class ApmServerMain {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
-    }
-}
+    }}

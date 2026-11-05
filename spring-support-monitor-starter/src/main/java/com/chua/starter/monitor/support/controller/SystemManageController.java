@@ -71,9 +71,14 @@ import java.util.stream.Collectors;
 public class SystemManageController {
 
     /**
-     * 是否 Windows 系统
+     * 管控机自身平台标识
+     *
+     * <p>本机描述（{@link #localHost()}）也要带平台：通道与平台能力集都按它路由。
+     * 以前这里写成 {@code IS_WINDOWS ? WINDOWS : LINUX} 的三元判断，macOS /
+     * BSD 全被当成 Linux；{@code Platforms.normalize} 按 os.name 归一，
+     * 新增系统只要归一逻辑认识它，本方法一行都不用改。</p>
      */
-    private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
+    private static final String LOCAL_PLATFORM = Platforms.normalize(System.getProperty("os.name"));
     /**
      * 关键词检索时的扫描窗口：必须远大于单页条数，否则过滤发生在截断之后，命中项只要排在窗口外就会返回空列表
      */
@@ -125,7 +130,7 @@ public class SystemManageController {
         host.setServerHostName("localhost");
         host.setServerHostAddress("127.0.0.1");
         host.setServerHostCollectMode(HostCollectType.LOCAL.getCode());
-        host.setServerHostOsType(IS_WINDOWS ? Platforms.WINDOWS : Platforms.LINUX);
+        host.setServerHostOsType(LOCAL_PLATFORM);
         return host;
     }
 

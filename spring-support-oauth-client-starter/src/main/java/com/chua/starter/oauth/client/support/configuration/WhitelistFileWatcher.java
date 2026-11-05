@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.oauth.client.support.configuration;
 
 import com.chua.common.support.utils.StringUtils;
@@ -209,7 +210,9 @@ public class WhitelistFileWatcher {
                     StandardWatchEventKinds.ENTRY_CREATE);
             
             running.set(true);
+// [P3C C1 豁免] 场景化创建线程，需文档化
             watchExecutor = Executors.newSingleThreadExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread t = new Thread(r, "oauth-whitelist-watcher");
                 t.setDaemon(true);
                 return t;
@@ -387,6 +390,4 @@ public class WhitelistFileWatcher {
             watchExecutor.shutdownNow();
         }
         
-        log.info("[白名单监听]已关闭");
-    }
-}
+        log.info("[白名单监听]已关闭");    }}

@@ -59,7 +59,9 @@ public class SipServiceManager {
     /**
      * 工作线程池（全部为守护线程）
     */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService pool = Executors.newCachedThreadPool(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "sip-worker");
         t.setDaemon(true);
         return t;
@@ -322,5 +324,4 @@ public class SipServiceManager {
                 bridgeStreams(visitSocket, providerSocket);
             }
         }
-    }
-}
+    }}

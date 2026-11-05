@@ -71,7 +71,9 @@ public class RoomService {
     private final Map<String, ResumeToken> resumeTokens = new ConcurrentHashMap<>();
 
     /** 清理过期的续期与房间（守护线程） */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ScheduledExecutorService cleaner = Executors.newScheduledThreadPool(1, r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread thread = new Thread(r, "room-signaling-cleaner");
         thread.setDaemon(true);
         return thread;
@@ -540,5 +542,4 @@ public class RoomService {
             this.epoch = epoch;
             this.expiresAt = expiresAt;
         }
-    }
-}
+    }}

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.tpload;
 
 import com.chua.starter.job.support.execute.JobExecutor;
@@ -64,6 +65,7 @@ public class PoolMaxProbe {
      * @param args 命令行参数 (忽略)
      */
     public static void main(String[] args) throws InterruptedException {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ThreadPoolExecutor pool = new ThreadPoolExecutor(
                 CORE, MAX, 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(QUEUE),
@@ -107,6 +109,4 @@ public class PoolMaxProbe {
         log.info("[probe] 拒绝任务 rejected={} (期望={})", rejected.get(),
                 Math.max(0, TASKS - (MAX + QUEUE)));
         log.info("[probe] POOLMAX_RESULT largestPoolSize={} activeMax={} rejected={} core={} max={} queue={}",
-                pool.getLargestPoolSize(), ACTIVE_MAX.get(), rejected.get(), CORE, MAX, QUEUE);
-    }
-}
+                pool.getLargestPoolSize(), ACTIVE_MAX.get(), rejected.get(), CORE, MAX, QUEUE);    }}
