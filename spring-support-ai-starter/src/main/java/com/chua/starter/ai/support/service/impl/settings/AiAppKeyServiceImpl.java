@@ -301,16 +301,13 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return ReturnResult.error("充值金额须正数");
         }
-        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
-        BigDecimal balanceAfter = balanceBefore.add(amount);
-        int updated = appKeyMapper.update(
-                null,
-                new LambdaUpdateWrapper<SysAiAppKey>()
-                        .eq(SysAiAppKey::getId, appKeyId.intValue())
-                        .set(SysAiAppKey::getBalance, balanceAfter));
+        // 自增而不是「读余额 + 算新值 + 整字段写回」：并发的扣费才不会把本次充值覆盖掉
+        int updated = appKeyMapper.rechargeBalanceById(appKeyId.intValue(), amount);
         if (updated > 0) {
+            // 同一事务内回读自己的写入：流水的前后余额才与真实账面对得上
+            BigDecimal balanceAfter = currentBalance(appKeyId);
             topupLogMapper.insert(topupLog(entity, SysAiAppKeyTopupLog.Types.RECHARGE, amount,
-                    balanceBefore, balanceAfter, remark));
+                    balanceAfter.subtract(amount), balanceAfter, remark));
         }
         return updated > 0
                 ? ReturnResult.ok(toDto(appKeyMapper.selectById(appKeyId.intValue()),
@@ -334,27 +331,18 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return ReturnResult.error("扣减金额须正数");
         }
-        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
-        if (!canDeduct(balanceBefore, entity.getOverdraftEnabled())) {
+        // 「余额不为负 / 允许透支」的判断与扣减在同一条 SQL 内完成：并发下不会各自
+        // 读到同一个变动前余额、把对方的扣减覆盖掉
+        int updated = appKeyMapper.deductBalanceById(appKeyId.intValue(), amount);
+        if (updated <= 0) {
             return ReturnResult.error("余额不足且不允许透支，无法扣减");
         }
-        BigDecimal balanceAfter = balanceBefore.subtract(amount);
-        int updated = appKeyMapper.update(
-                null,
-                new LambdaUpdateWrapper<SysAiAppKey>()
-                        .eq(SysAiAppKey::getId, appKeyId.intValue())
-                        .set(SysAiAppKey::getBalance, balanceAfter)
-                        .set(SysAiAppKey::getTotalCost, entity.getTotalCost() != null
-                                ? entity.getTotalCost().add(amount) : amount));
-        if (updated > 0) {
-            topupLogMapper.insert(topupLog(entity, SysAiAppKeyTopupLog.Types.CONSUME, amount,
-                    balanceBefore, balanceAfter, remark));
-        }
-        return updated > 0
-                ? ReturnResult.ok(toDto(appKeyMapper.selectById(appKeyId.intValue()),
+        BigDecimal balanceAfter = currentBalance(appKeyId);
+        topupLogMapper.insert(topupLog(entity, SysAiAppKeyTopupLog.Types.CONSUME, amount,
+                balanceAfter.add(amount), balanceAfter, remark));
+        return ReturnResult.ok(toDto(appKeyMapper.selectById(appKeyId.intValue()),
                 resolveProvider(entity.getProviderId()),
-                resolveGroup(entity.getGroupId())))
-                : ReturnResult.error("扣减失败");
+                resolveGroup(entity.getGroupId())));
     }
 
     /**
@@ -487,21 +475,17 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 能否扣费（辅助方法）：余额为负且不允许透支 = 不可扣费。
+     * 回读当前余额（同一事务内读到自己刚写入的值）。
      *
-     * <p>透支列在库里是 {@code int}（1 = 允许），必须按 {@code Integer} 判定；
-     * 原先写的 {@code Boolean.TRUE.equals(Integer)} 恒为 false，等于「允许透支」永远不生效，
-     * 与 {@code AppKeyQuotaGate#checkBillable} 的口径相反。</p>
+     * <p>流水里的「变动前 / 变动后余额」必须是账面上的真实值，而不是应用侧算出来的拟值：
+     * 余额已被原子 SQL 改动后，只有回读才能保证流水与余额对得上。</p>
      *
-     * @param balance          当前余额，可为 null（按 0 处理）
-     * @param overdraftEnabled 透支开关（1 = 允许）
-     * @return 允许扣费返回 true
+     * @param appKeyId appKey 主键
+     * @return 当前余额，行不存在或为空时返回 0
      */
-    private boolean canDeduct(BigDecimal balance, Integer overdraftEnabled) {
-        if (balance == null) {
-            balance = BigDecimal.ZERO;
-        }
-        return balance.compareTo(BigDecimal.ZERO) >= 0 || Integer.valueOf(1).equals(overdraftEnabled);
+    private BigDecimal currentBalance(Long appKeyId) {
+        SysAiAppKey latest = appKeyMapper.selectById(appKeyId.intValue());
+        return latest != null && latest.getBalance() != null ? latest.getBalance() : BigDecimal.ZERO;
     }
 
     /**

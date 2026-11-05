@@ -70,4 +70,41 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
      * @return 受影响行数（1 = 扣费成功）
      */
     int deductBalance(@Param("appKey") String appKey, @Param("amount") BigDecimal amount);
+
+    /**
+     * 原子充值：余额加上金额。
+     *
+     * <p>与 {@link #deductBalance} 成对：先查余额再整字段写回，会让并发的充值/扣费
+     * 互相覆盖（只留下一笔的效果），一条 SQL 自增才能保证每笔都在前一笔之后结算。</p>
+     *
+     * <p>返回 0 表示没有充成：Key 不存在 / 已删除。</p>
+     *
+     * @param appKey appKey 值
+     * @param amount 充值金额（正数）
+     * @return 受影响行数（1 = 充值成功）
+     */
+    int rechargeBalance(@Param("appKey") String appKey, @Param("amount") BigDecimal amount);
+
+    /**
+     * 原子充值（按主键）：余额加上金额。
+     *
+     * <p>控制台按 appKey 主键操作，与运行时按 appKey 值的链路共用同一套原子语义。</p>
+     *
+     * @param id     主键
+     * @param amount 充值金额（正数）
+     * @return 受影响行数（1 = 充值成功）
+     */
+    int rechargeBalanceById(@Param("id") Integer id, @Param("amount") BigDecimal amount);
+
+    /**
+     * 原子扣费（按主键）：余额减少、累计费用增加。
+     *
+     * <p>{@code WHERE} 里的「余额不为负或允许透支」与扣减在同一行锁内完成，
+     * 返回 0 即表示没扣成。</p>
+     *
+     * @param id     主键
+     * @param amount 扣减金额（正数）
+     * @return 受影响行数（1 = 扣费成功）
+     */
+    int deductBalanceById(@Param("id") Integer id, @Param("amount") BigDecimal amount);
 }

@@ -101,4 +101,34 @@
           AND (COALESCE(sys_ai_app_key_balance, 0) &gt;= 0 OR COALESCE(sys_ai_app_key_overdraft_enabled, 0) = 1)
     </update>
 
+    <!--
+        原子充值：余额自增，一条 SQL 完成，避免与并发扣费互相覆盖余额。
+    -->
+    <update id="rechargeBalance">
+        UPDATE sys_ai_app_key
+        SET sys_ai_app_key_balance = COALESCE(sys_ai_app_key_balance, 0) + #{amount}
+        WHERE sys_ai_app_key_app_key = #{appKey}
+          AND sys_ai_app_key_delete = 0
+    </update>
+
+    <!--
+        原子充值（按主键）：与控制台按 appKey 值的链路同一语义。
+    -->
+    <update id="rechargeBalanceById">
+        UPDATE sys_ai_app_key
+        SET sys_ai_app_key_balance = COALESCE(sys_ai_app_key_balance, 0) + #{amount}
+        WHERE sys_ai_app_key_id = #{id}
+    </update>
+
+    <!--
+        原子扣费（按主键）：「余额不为负 / 允许透支」与扣减在同一行锁内完成。
+    -->
+    <update id="deductBalanceById">
+        UPDATE sys_ai_app_key
+        SET sys_ai_app_key_balance = COALESCE(sys_ai_app_key_balance, 0) - #{amount},
+            sys_ai_app_key_total_cost = COALESCE(sys_ai_app_key_total_cost, 0) + #{amount}
+        WHERE sys_ai_app_key_id = #{id}
+          AND (COALESCE(sys_ai_app_key_balance, 0) &gt;= 0 OR COALESCE(sys_ai_app_key_overdraft_enabled, 0) = 1)
+    </update>
+
 </mapper>

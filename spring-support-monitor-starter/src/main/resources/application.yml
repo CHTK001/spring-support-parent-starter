@@ -17,6 +17,15 @@ spring:
       # 改为显式管理：V2.0__init_all_job.sql 已在 report 库建表（_version=V2.0__init_all_job）
       # - com.chua.starter.job.support.JobAutoConfiguration
 
+  # 多 starter 对同名 BeanDefinition 的注册冲突：
+  #   - aiCacheManager（spring-support-ai-starter 的 Caffeine 与 system-starter 的 NoOp 回退）
+  #   - tunnelController（server-starter 的 @RestController 与 tunnel-starter 的统一 API）
+  # 解决原则：系统模块的兜底 bean（无则 NoOp）后注册时自动取代自己，AI 模块的
+  # Caffeine aiCacheManager 应当胜出；非同名但同类型者（tunnel）通过
+  # 修改 tunnel-starter 的 bean 名消除碰撞。
+  main:
+    allow-bean-definition-overriding: true
+
   # ===========================================
   # CDP 调试中心（spring-support-cdp-starter，monitor 的依赖）
   # ===========================================

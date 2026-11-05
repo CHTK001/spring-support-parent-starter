@@ -306,21 +306,23 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             return 0;
         }
+        BigDecimal credited = AppKeyBilling.normalize(amount);
+        if (credited.signum() <= 0) {
+            return 0;
+        }
         SysAiAppKey entity = queryAppKeyUncached(appKey);
         if (entity == null) {
             return 0;
         }
-        BigDecimal balanceBefore = entity.getBalance() != null ? entity.getBalance() : BigDecimal.ZERO;
-        BigDecimal balanceAfter = balanceBefore.add(amount);
-        int updated = sysAiAppKeyMapper.update(
-                null,
-                Wrappers.lambdaUpdate(SysAiAppKey.class)
-                        .eq(SysAiAppKey::getAppKey, appKey)
-                        .set(SysAiAppKey::getBalance, balanceAfter));
-        if (updated > 0) {
-            appendTopupLog(entity, appKey, SysAiAppKeyTopupLog.Types.RECHARGE, amount,
-                    balanceBefore, balanceAfter, remark);
+        // 自增而不是「读余额 + 算新值 + 整字段写回」：并发的扣费才不会把本次充值覆盖掉
+        int updated = sysAiAppKeyMapper.rechargeBalance(appKey, credited);
+        if (updated <= 0) {
+            return 0;
         }
+        // 同一事务内回读自己的写入：流水的前后余额才与真实账面对得上
+        BigDecimal balanceAfter = getBalance(appKey);
+        appendTopupLog(entity, appKey, SysAiAppKeyTopupLog.Types.RECHARGE, credited,
+                balanceAfter.subtract(credited), balanceAfter, remark);
         return updated;
     }
 
