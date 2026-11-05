@@ -128,7 +128,10 @@ spring-support-common-starter/src/main/resources/IP2PROXY-LITE-PX2.MMDB
 # ============================================================
 # 临时/构建/运行残留全量收口（跨子模块通用）
 # ============================================================
-*.log
+# Build artifacts (exit markers, jansi probe logs, classpath dumps)
+build-*.txt
+BUILD_DONE.txt
+*.cp.txt
 replay_pid*
 hs_err*
 thread-dump*
@@ -142,11 +145,9 @@ target.bak*/
 .playwright-report/
 playwright-report/
 __pycache__/
-osgi-cache/
 .turbo/
 .data/
 .cache/
-.workbuddy/
 .clinerules
 miniapps/
 skills/
@@ -182,7 +183,6 @@ deploy/
 # block: added by cleanup script 2026-11-04 10:30
 # ===== exceptions: dev snapshot / build / runtime junk must never enter git history =====
 *.out
-*.err
 *.err.txt
 *.jsonl
 *.tmp
