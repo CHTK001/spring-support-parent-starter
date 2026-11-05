@@ -138,7 +138,7 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
      */
     @Override
     public InputOptimizeResponse optimize(InputOptimizeRequest request) {
-        String input = StringUtils.defaultString(request.getInput(), "");
+        String input = StringUtils.defaultString(request.input(), "");
         if (StringUtils.isBlank(input)) {
             return InputOptimizeResponse.of(input, input, "", 0L);
         }
@@ -152,7 +152,7 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
         long start = System.currentTimeMillis();
         try {
             // 解析优化模型（可能为 <providerId>:<model>）：请求 > input.optimizer_model > runtime.default_model
-            String qualifiedModel = request.getModel();
+            String qualifiedModel = request.model();
             if (StringUtils.isBlank(qualifiedModel)) {
                 qualifiedModel = globalSettingReader.getStr(GROUP, "optimizer_model");
             }
@@ -171,13 +171,13 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
             }
 
             // 解析提示词：请求 > 全局配置 > 场景内置默认 > 通用内置默认
-            String template = request.getSystemPrompt();
+            String template = request.systemPrompt();
             if (StringUtils.isBlank(template)) {
                 template = globalSettingReader.getStr(GROUP, "optimizer_prompt");
             }
             if (StringUtils.isBlank(template)) {
                 template = SCENE_PROMPTS.get(
-                        StringUtils.defaultString(request.getScene(), "").trim().toLowerCase(Locale.ROOT));
+                        StringUtils.defaultString(request.scene(), "").trim().toLowerCase(Locale.ROOT));
             }
             if (StringUtils.isBlank(template)) {
                 template = DEFAULT_OPTIMIZE_PROMPT;

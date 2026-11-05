@@ -47,7 +47,7 @@ public class InputOptimizeController {
     @Operation(summary = "输入优化", description = "使用配置的优化模型改写输入文本，返回优化后内容与使用模型")
     @PostMapping("/optimize")
     public ReturnResult<InputOptimizeResponse> optimize(@RequestBody InputOptimizeRequest request) {
-        if (request == null || request.getInput() == null || request.getInput().isBlank()) {
+        if (request == null || request.input() == null || request.input().isBlank()) {
             return ReturnResult.error("输入内容不能为空");
         }
         return ReturnResult.ok(inputOptimizeService.optimize(request));
