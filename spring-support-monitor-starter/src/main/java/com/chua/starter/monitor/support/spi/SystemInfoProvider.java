@@ -196,8 +196,8 @@ public interface SystemInfoProvider {
      */
     default DiskUsageNodeVO diskUsage(MsServerHost host, String path, int depth) {
         int maxDepth = depth <= 0 ? DISK_USAGE_DEPTH : Math.min(depth, 8);
-        boolean windows = Platforms.isWindows(platform(host));
-        char sep = windows ? '\\' : '/';
+        // 分隔符由平台能力集 SPI 给出（Windows 反斜杠、POSIX 斜杠），本方法不判断系统
+        char sep = HostOperationsRegistry.pathSeparator(platform(host));
         long[] scanned = {0L};
         return walkUsage(host, path, maxDepth, sep, scanned);
     }
@@ -374,7 +374,8 @@ public interface SystemInfoProvider {
      * @return shell 方言，不为 null
      */
     default ShellDialect shellDialect(MsServerHost host) {
-        return Platforms.isWindows(platform(host)) ? ShellDialect.CMD : ShellDialect.SH;
+        // 方言同样由平台能力集 SPI 决定；SSH / WinRM 通道自行覆盖为 PowerShell
+        return HostOperationsRegistry.shellDialect(platform(host));
     }
 
     /**

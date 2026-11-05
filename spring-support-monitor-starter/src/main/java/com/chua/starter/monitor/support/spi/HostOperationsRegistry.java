@@ -83,6 +83,70 @@ public final class HostOperationsRegistry {
      * @return 可直接交给 {@link ProcessBuilder} 的 argv
      */
     public static String[] localShell(String platform, String cmd) {
+        HostOperationsProvider provider = providerOf(platform);
+        return provider == null ? new String[]{"/bin/sh", "-c", cmd} : provider.localShell(cmd);
+    }
+
+    /**
+     * 目标主机路径分隔符。
+     *
+     * @param platform 目标主机平台标识
+     * @return 路径分隔符
+     */
+    public static char pathSeparator(String platform) {
+        HostOperationsProvider provider = providerOf(platform);
+        return provider == null ? '/' : provider.pathSeparator();
+    }
+
+    /**
+     * 目标主机 shell 方言。
+     *
+     * @param platform 目标主机平台标识
+     * @return shell 方言，未命中时按 POSIX sh
+     */
+    public static com.chua.starter.monitor.support.enums.ShellDialect shellDialect(String platform) {
+        HostOperationsProvider provider = providerOf(platform);
+        return provider == null
+                ? com.chua.starter.monitor.support.enums.ShellDialect.SH
+                : provider.shellDialect();
+    }
+
+    /**
+     * 本机平台的专属服务枚举（Windows 走 {@code Win32_Service}，POSIX 为 null 由 OSHI 兜底）。
+     *
+     * @return 服务行，本平台不提供时为 null
+     */
+    public static java.util.List<com.chua.starter.monitor.support.model.ServiceRowVO> localServices() {
+        HostOperationsProvider provider = local();
+        return provider == null ? null : provider.localServices();
+    }
+
+    /**
+     * 本机平台的专属端口占用采集。
+     *
+     * @return 端口占用行，本平台不提供时为 null
+     */
+    public static java.util.List<com.chua.starter.monitor.support.model.NetProcessRowVO> localNetConnections() {
+        HostOperationsProvider provider = local();
+        return provider == null ? null : provider.localNetConnections();
+    }
+
+    /**
+     * 管控机本机平台对应的实现。
+     *
+     * @return 命中的实现，未登记任何实现时为 null
+     */
+    private static HostOperationsProvider local() {
+        return providerOf(Platforms.normalize(System.getProperty("os.name")));
+    }
+
+    /**
+     * 按平台标识取实现：精确匹配优先，否则取兜底实现。
+     *
+     * @param platform 平台标识，可为 null
+     * @return 命中的实现，两者都没有时为 null
+     */
+    private static HostOperationsProvider providerOf(String platform) {
         String key = Platforms.normalize(platform);
         HostOperationsProvider fallback = null;
         for (HostOperationsProvider provider : providers()) {
@@ -94,11 +158,11 @@ public final class HostOperationsRegistry {
             }
             for (String candidate : provider.platforms()) {
                 if (key.equals(Platforms.normalize(candidate))) {
-                    return provider.localShell(cmd);
+                    return provider;
                 }
             }
         }
-        return fallback == null ? new String[]{"/bin/sh", "-c", cmd} : fallback.localShell(cmd);
+        return fallback;
     }
 
     /**

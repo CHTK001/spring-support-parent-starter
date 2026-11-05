@@ -10,6 +10,7 @@ import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.LocalSystemInfoService;
+import com.chua.starter.monitor.support.spi.HostOperationsRegistry;
 import com.chua.starter.monitor.support.spi.RowNormalizer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,17 +61,6 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
-
-    /**
-     * 本机是否 Windows，决定服务枚举走 Win32_Service 还是 OSHI
-     */
-    private static final boolean IS_WINDOWS =
-            System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
-
-    /**
-     * PowerShell 输出的 Base64 负载
-     */
-    private static final Pattern BASE64_PAYLOAD = Pattern.compile("[A-Za-z0-9+/]{40,}={0,2}");
 
     /**
      * 启动时间展示格式
@@ -480,11 +470,10 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
 
     @Override
     public List<ServiceRowVO> getServices() {
-        if (IS_WINDOWS) {
-            List<ServiceRowVO> rows = windowsServiceRows();
-            if (rows != null) {
-                return rows;
-            }
+        // 平台专属枚举交给 SPI：Windows 实现走 Win32_Service，POSIX 返回 null 由 OSHI 兜底
+        List<ServiceRowVO> platformRows = HostOperationsRegistry.localServices();
+        if (platformRows != null && !platformRows.isEmpty()) {
+            return platformRows;
         }
         List<ServiceRowVO> result = new ArrayList<>();
         try {
@@ -542,8 +531,12 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 log.warn("OSHI 网络连接采集失败: {}", t.getMessage());
             }
         }
-        if (result.isEmpty() && IS_WINDOWS) {
-            result.addAll(powerShellNetTcpConnections());
+        if (result.isEmpty()) {
+            // 同上：平台专属补采（Windows 的 Get-NetTCPConnection），POSIX 实现返回 null 不参与
+            List<NetProcessRowVO> platformRows = HostOperationsRegistry.localNetConnections();
+            if (platformRows != null) {
+                result.addAll(platformRows);
+            }
         }
         return result;
     }
@@ -695,95 +688,6 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
         } catch (Exception e) {
             return 0;
         }
-    }
-
-    /**
-     * 用 Win32_Service 枚举 Windows 服务，取回真正的服务键与启动类型。
-     *
-     * <p>脚本经 Base64(UTF-16LE) 用 -EncodedCommand 传入：PowerShell 5.1 会二次解析 -Command 的命令行，
-     * 内层引号被吞后脚本以退出码 1 结束且无输出。输出侧同样以 Base64(UTF-8) 回传，绕开控制台代码页。</p>
-     *
-     * @return 服务行；非 Windows 或执行失败返回 null，由调用方回落 OSHI
-     */
-    private List<ServiceRowVO> windowsServiceRows() {
-        String ps = "$t=[char]9; $rows=@(Get-CimInstance -ClassName Win32_Service | ForEach-Object { "
-                + "$_.Name + $t + $_.DisplayName + $t + $_.State + $t + $_.StartMode + $t + $_.ProcessId }); "
-                + "[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($rows -join \"`n\")))";
-        Process process = null;
-        try {
-            process = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive",
-                    "-EncodedCommand", encodePowerShell(ps)).redirectErrorStream(true).start();
-            String out = new String(readAll(process.getInputStream()), StandardCharsets.UTF_8);
-            if (!process.waitFor(60, TimeUnit.SECONDS)) {
-                log.warn("Win32_Service 枚举超时，回落 OSHI");
-                return null;
-            }
-            String payload = longestBase64(out);
-            if (payload == null) {
-                log.warn("Win32_Service 枚举失败 exit={} out={}，回落 OSHI", process.exitValue(),
-                        out.length() > 300 ? out.substring(0, 300) : out);
-                return null;
-            }
-            String text = new String(Base64.getDecoder().decode(payload), StandardCharsets.UTF_8);
-            List<ServiceRowVO> rows = new ArrayList<>();
-            for (String line : text.split("\n")) {
-                String[] p = line.split("\t", -1);
-                if (p.length < 5 || p[0].trim().isEmpty()) {
-                    continue;
-                }
-                long pid;
-                try {
-                    pid = Long.parseLong(p[4].trim());
-                } catch (NumberFormatException e) {
-                    pid = 0L;
-                }
-                rows.add(new ServiceRowVO(
-                        p[0].trim(),
-                        p[1].trim(),
-                        p[2].trim().toUpperCase(Locale.ROOT),
-                        p[3].trim(),
-                        pid));
-            }
-            return rows.isEmpty() ? null : rows;
-        } catch (Throwable t) {
-            log.warn("Win32_Service 枚举异常，回落 OSHI: {}", t.getMessage());
-            return null;
-        } finally {
-            if (process != null) {
-                process.destroy();
-            }
-        }
-    }
-
-    /**
-     * OSHI 不可用时的 PowerShell 网络连接回落采集。
-     *
-     * @return 端口占用行，采集失败返回空列表
-     */
-    private List<NetProcessRowVO> powerShellNetTcpConnections() {
-        List<NetProcessRowVO> rows = new ArrayList<>();
-        try {
-            Process p = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command",
-                    "Get-NetTCPConnection -State Listen,Established | Select-Object LocalAddress,LocalPort,"
-                            + "RemoteAddress,RemotePort,State,OwningProcess | ConvertTo-Json -Depth 3")
-                    .redirectErrorStream(true).start();
-            String json = new String(readAll(p.getInputStream()), Charset.defaultCharset()).trim();
-            p.waitFor();
-            if (!json.startsWith("[")) {
-                return rows;
-            }
-            com.fasterxml.jackson.databind.JsonNode root =
-                    new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-            for (com.fasterxml.jackson.databind.JsonNode node : root) {
-                rows.add(NetProcessRowVO.of("tcp", node.path("LocalAddress").asText(),
-                        node.path("LocalPort").asInt(), node.path("RemoteAddress").asText(),
-                        node.path("RemotePort").asInt(), node.path("State").asText().toUpperCase(Locale.ROOT),
-                        node.path("OwningProcess").asInt(), ""));
-            }
-        } catch (Throwable t) {
-            log.warn("PowerShell 网络连接采集失败: {}", t.getMessage());
-        }
-        return rows;
     }
 
     /**
@@ -1031,53 +935,6 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
     }
 
     /**
-     * 生成 PowerShell -EncodedCommand 参数（Base64 of UTF-16LE）。
-     *
-     * @param script PowerShell 脚本
-     * @return 编码后的参数值
-     */
-    private static String encodePowerShell(String script) {
-        return Base64.getEncoder().encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
-    }
-
-    /**
-     * 取文本中最长的纯 Base64 串，即脚本负载。
-     *
-     * @param text 子进程合并输出
-     * @return Base64 负载，不存在返回 null
-     */
-    private static String longestBase64(String text) {
-        if (text == null || text.isEmpty()) {
-            return null;
-        }
-        Matcher matcher = BASE64_PAYLOAD.matcher(text);
-        String best = null;
-        while (matcher.find()) {
-            if (best == null || matcher.group().length() > best.length()) {
-                best = matcher.group();
-            }
-        }
-        return best;
-    }
-
-    /**
-     * 读干输入流。
-     *
-     * @param in 输入流
-     * @return 原始字节
-     * @throws IOException 读取失败
-     */
-    private static byte[] readAll(InputStream in) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        byte[] buf = new byte[8192];
-        int len;
-        while ((len = in.read(buf)) > 0) {
-            bos.write(buf, 0, len);
-        }
-        return bos.toByteArray();
-    }
-
-    /**
      * 取本机主机名，作为 OSHI 缺失时的回退值。
      *
      * @return 主机名，取不到返回空串
@@ -1090,3 +947,4 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
         }
     }
 }
+
