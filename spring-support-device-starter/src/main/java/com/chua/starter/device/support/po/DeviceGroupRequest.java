@@ -1,18 +1,15 @@
 package com.chua.starter.device.support.po;
 
-import lombok.Data;
-
 /**
  * 设备分组 - 创建/更新请求
  *
  * @author CH
  * @since 4.0.0.51
  */
-@Data
-public class DeviceGroupRequest {
-
-    private String groupName;
-    private String groupParent;
-    private Integer groupOrder;
-    private String groupRemark;
+public record DeviceGroupRequest(
+        String groupName,
+        String groupParent,
+        Integer groupOrder,
+        String groupRemark
+) {
 }
