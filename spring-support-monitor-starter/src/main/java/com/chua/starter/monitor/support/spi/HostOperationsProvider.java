@@ -61,4 +61,49 @@ public interface HostOperationsProvider {
     default String[] localShell(String cmd) {
         return new String[]{"/bin/sh", "-c", cmd};
     }
+
+    /**
+     * 路径分隔符。
+     *
+     * <p>目录占用统计要按分隔符切分并回拼路径，凭这一点就能识别盘符与 UNC 路径；
+     * 分隔符属于平台事实，因此放在平台实现里，采集方法不再自己判断系统。</p>
+     *
+     * @return 路径分隔符，POSIX 族为 {@code '/'}
+     */
+    default char pathSeparator() {
+        return '/';
+    }
+
+    /**
+     * 目标主机执行命令时实际使用的 shell 方言。
+     *
+     * <p>调用方据此决定命令怎么写（能否用 {@code &&}、管道是否传播退出码）；
+     * 默认按 POSIX sh。</p>
+     *
+     * @return shell 方言
+     */
+    default com.chua.starter.monitor.support.enums.ShellDialect shellDialect() {
+        return com.chua.starter.monitor.support.enums.ShellDialect.SH;
+    }
+
+    /**
+     * 平台专属的本地服务枚举（仅管控机本机采集用）。
+     *
+     * <p>典型场景：OSHI 在 Windows 上只能拿到服务名与状态，启动方式要靠
+     * {@code Win32_Service} 补；命令因此落在 Windows 实现里，采集服务只问 SPI 要结果。</p>
+     *
+     * @return 服务行；本平台不提供时返回 null（由调用方回退 OSHI）
+     */
+    default java.util.List<com.chua.starter.monitor.support.model.ServiceRowVO> localServices() {
+        return null;
+    }
+
+    /**
+     * 平台专属的本地端口占用采集（仅管控机本机采集用）。
+     *
+     * @return 端口占用行；本平台不提供时返回 null
+     */
+    default java.util.List<com.chua.starter.monitor.support.model.NetProcessRowVO> localNetConnections() {
+        return null;
+    }
 }

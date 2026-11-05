@@ -30,6 +30,46 @@ public class WindowsHostOperationsProvider implements HostOperationsProvider {
     }
 
     /**
+     * 服务枚举回退到 {@code Win32_Service}：OSHI 在 Windows 上取不到启动方式。
+     *
+     * @return 服务行，失败为 null
+     */
+    @Override
+    public java.util.List<com.chua.starter.monitor.support.model.ServiceRowVO> localServices() {
+        return WindowsLocalProbe.services();
+    }
+
+    /**
+     * 端口占用回退到 {@code Get-NetTCPConnection}：OSHI 在 Windows 上常缺进程归属。
+     *
+     * @return 端口占用行
+     */
+    @Override
+    public java.util.List<com.chua.starter.monitor.support.model.NetProcessRowVO> localNetConnections() {
+        return WindowsLocalProbe.netConnections();
+    }
+
+    /**
+     * Windows 路径分隔符为反斜杠，目录占用统计据此识别盘符与 UNC 路径。
+     *
+     * @return {@code '\\'}
+     */
+    @Override
+    public char pathSeparator() {
+        return '\\';
+    }
+
+    /**
+     * 本机（Agent / 本机通道）下发命令走 cmd.exe。
+     *
+     * @return {@link ShellDialect#CMD}
+     */
+    @Override
+    public com.chua.starter.monitor.support.enums.ShellDialect shellDialect() {
+        return com.chua.starter.monitor.support.enums.ShellDialect.CMD;
+    }
+
+    /**
      * 本机命令经 cmd.exe 执行，并先把代码页切到 UTF-8：
      * 不切的话中文路径/中文回显会被按 GBK 解码成乱码。
      *
