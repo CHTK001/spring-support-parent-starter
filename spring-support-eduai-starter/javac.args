@@ -1,1 +1,0 @@
--d target\classes -cp @cp.txt src\main\java\com\chua\starter\eduai\configuration\EduAiAutoConfiguration.java src\main\java\com\chua\starter\eduai\configuration\EduAiCachePrimaryConfiguration.java
