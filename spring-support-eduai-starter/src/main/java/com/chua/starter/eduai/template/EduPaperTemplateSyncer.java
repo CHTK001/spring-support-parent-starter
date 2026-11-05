@@ -147,19 +147,18 @@ public class EduPaperTemplateSyncer implements SourceSyncer {
      * @return 注册请求
      */
     private static TemplateSourceRequest request(EduPaperTemplate template) {
-        TemplateSourceRequest request = new TemplateSourceRequest();
-        request.setSource(SOURCE);
-        request.setSourceId(String.valueOf(template.getTemplateId()));
-        request.setProviderId(template.getOwnerUserId());
-        request.setName(template.getTemplateName());
-        request.setSubtitle(template.getTemplateStyle());
-        request.setLanguage("json");
-        request.setType("document");
-        request.setStatus(template.getTemplateStatus() != null && template.getTemplateStatus() == 1
-                ? "online" : "offline");
-        request.setRemark(template.getTemplateStyle());
-        request.setContent(content(template));
-        return request;
+        return new TemplateSourceRequest(
+            SOURCE,
+            String.valueOf(template.getTemplateId()),
+            template.getOwnerUserId(),
+            template.getTemplateName(),
+            template.getTemplateStyle(),
+            "json",
+            "document",
+            template.getTemplateStatus() != null && template.getTemplateStatus() == 1
+                ? "online" : "offline",
+            template.getTemplateStyle(),
+            content(template));
     }
 
     /**
