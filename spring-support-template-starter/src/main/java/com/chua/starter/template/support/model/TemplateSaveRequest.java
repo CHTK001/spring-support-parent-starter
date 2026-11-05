@@ -1,7 +1,6 @@
 package com.chua.starter.template.support.model;
 
 import com.chua.starter.template.support.entity.TemplateInfo;
-import lombok.Data;
 
 import java.time.LocalDateTime;
 
@@ -15,41 +14,49 @@ import java.time.LocalDateTime;
  * @since 4.0.0.52
  * @author CH
  */
-@Data
-public class TemplateSaveRequest {
+public record TemplateSaveRequest(
 
     /** 模板 ID（编辑时必填） */
-    private String id;
+    String id,
 
     /** 模板名称 */
-    private String name;
+    String name,
 
     /** 模板副标题 */
-    private String subtitle;
+    String subtitle,
 
     /** 模板语言：html / vue / jsx / json */
-    private String language;
+    String language,
 
     /** 模板类型：document / sms / email / label / other */
-    private String type;
+    String type,
 
     /** 模板状态：draft / online / offline */
-    private String status;
+    String status,
 
     /** 备注 */
-    private String remark;
+    String remark,
 
     /** 模板来源：hiprint / message / paper（创建时默认 hiprint） */
-    private String source = "hiprint";
+    String source,
 
     /** 模板 JSON 描述（设计器产物） */
-    private String content;
+    String content,
 
     /** 创建者 */
-    private String creator;
+    String creator,
 
     /** 最后修改者 */
-    private String modifier;
+    String modifier) {
+
+    /**
+     * 来源默认值：创建时未指定来源则回落为 hiprint
+     */
+    public TemplateSaveRequest {
+        if (source == null) {
+            source = "hiprint";
+        }
+    }
 
     /**
      * 构造模板实体
@@ -59,14 +66,14 @@ public class TemplateSaveRequest {
     public TemplateInfo toEntity(String id) {
         TemplateInfo template = new TemplateInfo();
         template.setTemplateInfoId(id);
-        template.setTemplateInfoName(name);
-        template.setTemplateInfoSubtitle(subtitle);
-        template.setTemplateInfoLanguage(language);
-        template.setTemplateInfoType(type);
-        template.setTemplateInfoStatus(status);
-        template.setTemplateInfoRemark(remark);
-        template.setTemplateInfoContent(content);
-        template.setTemplateInfoSource(source);
+        template.setTemplateInfoName(name());
+        template.setTemplateInfoSubtitle(subtitle());
+        template.setTemplateInfoLanguage(language());
+        template.setTemplateInfoType(type());
+        template.setTemplateInfoStatus(status());
+        template.setTemplateInfoRemark(remark());
+        template.setTemplateInfoContent(content());
+        template.setTemplateInfoSource(source());
         template.setTemplateInfoDeleted(0);
         template.setTemplateInfoUpdatedAt(LocalDateTime.now());
         return template;

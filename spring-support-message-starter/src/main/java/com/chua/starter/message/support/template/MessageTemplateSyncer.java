@@ -159,19 +159,18 @@ public class MessageTemplateSyncer implements SourceSyncer {
      * @return 注册请求
      */
     private static TemplateSourceRequest request(SysMessageTemplate template, SysMessageProvider provider) {
-        TemplateSourceRequest request = new TemplateSourceRequest();
-        request.setSource(SOURCE);
-        request.setSourceId(String.valueOf(template.getSysMessageTemplateId()));
-        request.setProviderId(provider == null ? null : String.valueOf(provider.getSysMessageProviderId()));
-        request.setName(template.getSysMessageTemplateName());
-        request.setSubtitle(template.getSysMessageTemplateCode());
-        request.setLanguage("html");
-        request.setType(mapType(template.getSysMessageTemplateType()));
-        request.setStatus(template.getSysMessageTemplateStatus() != null && template.getSysMessageTemplateStatus() == 1
-                ? "online" : "offline");
-        request.setRemark(template.getSysMessageTemplateRemark());
-        request.setContent(template.getSysMessageTemplateContent());
-        return request;
+        return new TemplateSourceRequest(
+            SOURCE,
+            String.valueOf(template.getSysMessageTemplateId()),
+            provider == null ? null : String.valueOf(provider.getSysMessageProviderId()),
+            template.getSysMessageTemplateName(),
+            template.getSysMessageTemplateCode(),
+            "html",
+            mapType(template.getSysMessageTemplateType()),
+            template.getSysMessageTemplateStatus() != null && template.getSysMessageTemplateStatus() == 1
+                ? "online" : "offline",
+            template.getSysMessageTemplateRemark(),
+            template.getSysMessageTemplateContent());
     }
 
     /**

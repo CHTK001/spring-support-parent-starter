@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.filesystem.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
@@ -33,10 +34,10 @@ class FileServerConfigControllerTest {
         ReturnResult<FileServerConfigResponse> result = controller.serverConfig();
 
         FileServerConfigResponse config = result.getData();
-        assertThat(config.getMode()).isEqualTo("embedded");
-        assertThat(config.getServer()).isEqualTo("/fs");
-        assertThat(config.getPathPrefix()).isEqualTo("/fs");
-        assertThat(config.getBucket()).isEqualTo("local");
+        assertThat(config.mode()).isEqualTo("embedded");
+        assertThat(config.server()).isEqualTo("/fs");
+        assertThat(config.pathPrefix()).isEqualTo("/fs");
+        assertThat(config.bucket()).isEqualTo("local");
     }
 
     /**
@@ -52,9 +53,9 @@ class FileServerConfigControllerTest {
         ReturnResult<FileServerConfigResponse> result = controller.serverConfig();
 
         FileServerConfigResponse config = result.getData();
-        assertThat(config.getMode()).isEqualTo("embedded");
-        assertThat(config.getServer()).isEqualTo("/system/api/fs");
-        assertThat(config.getPathPrefix()).isEqualTo("/fs");
+        assertThat(config.mode()).isEqualTo("embedded");
+        assertThat(config.server()).isEqualTo("/system/api/fs");
+        assertThat(config.pathPrefix()).isEqualTo("/fs");
     }
 
     /**
@@ -70,9 +71,9 @@ class FileServerConfigControllerTest {
         FileServerConfigController controller = controller(server, storage, "");
         FileServerConfigResponse config = controller.serverConfig().getData();
 
-        assertThat(config.getMode()).isEqualTo("embedded");
-        assertThat(config.getServer()).isEqualTo("/");
-        assertThat(config.getPathPrefix()).isEmpty();
+        assertThat(config.mode()).isEqualTo("embedded");
+        assertThat(config.server()).isEqualTo("/");
+        assertThat(config.pathPrefix()).isEmpty();
     }
 
     /**
@@ -89,10 +90,10 @@ class FileServerConfigControllerTest {
 
         FileServerConfigResponse config = controller(server, storage, "/system/api").serverConfig().getData();
 
-        assertThat(config.getMode()).isEqualTo("standalone");
-        assertThat(config.getServer()).isEqualTo("http://127.0.0.1:18080");
-        assertThat(config.getPathPrefix()).isEqualTo("/fs");
-        assertThat(config.getBucket()).isEqualTo("local");
+        assertThat(config.mode()).isEqualTo("standalone");
+        assertThat(config.server()).isEqualTo("http://127.0.0.1:18080");
+        assertThat(config.pathPrefix()).isEqualTo("/fs");
+        assertThat(config.bucket()).isEqualTo("local");
     }
 
     /**
@@ -110,7 +111,7 @@ class FileServerConfigControllerTest {
 
         FileServerConfigResponse config = controller(server, storage, "").serverConfig().getData();
 
-        assertThat(config.getServer()).isEqualTo("http://192.168.50.198:28080");
+        assertThat(config.server()).isEqualTo("http://192.168.50.198:28080");
     }
 
     /**
@@ -120,5 +121,4 @@ class FileServerConfigControllerTest {
                                                          FileStorageProperties storage,
                                                          String contextPath) {
         return new FileServerConfigController(server, storage, contextPath);
-    }
-}
+    }}

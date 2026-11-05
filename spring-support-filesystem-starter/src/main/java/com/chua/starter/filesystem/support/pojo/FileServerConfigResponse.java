@@ -1,7 +1,5 @@
 package com.chua.starter.filesystem.support.pojo;
 
-import lombok.Data;
-
 /**
  * 文件服务器运行期配置（前端进入文件管理页前拉取）。
  *
@@ -20,41 +18,25 @@ import lombok.Data;
  * @author CH
  * @since 4.0.0.42
  */
-@Data
-public class FileServerConfigResponse {
+public record FileServerConfigResponse(
 
     /**
      * 部署形态：embedded / standalone
      */
-    private String mode;
+    String mode,
 
     /**
      * 文件服务器地址：embedded=相对路径，standalone=完整 http://host:port
      */
-    private String server;
+    String server,
 
     /**
      * 内置形态路径前缀（如 /fs）
      */
-    private String pathPrefix;
+    String pathPrefix,
 
     /**
      * 默认存储桶（默认 provider 名）
      */
-    private String bucket;
-
-    /**
-     * 构造运行期配置。
-     *
-     * @param mode       部署形态
-     * @param server     文件服务器地址
-     * @param pathPrefix 内置形态路径前缀
-     * @param bucket     默认存储桶
-     */
-    public FileServerConfigResponse(String mode, String server, String pathPrefix, String bucket) {
-        this.mode = mode;
-        this.server = server;
-        this.pathPrefix = pathPrefix;
-        this.bucket = bucket;
-    }
+    String bucket) {
 }

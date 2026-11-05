@@ -104,12 +104,12 @@ public class TemplateServiceImpl implements TemplateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TemplateInfo registerTemplate(TemplateSourceRequest request) {
-        if (request == null || StringUtils.isBlank(request.getSource())
-                || StringUtils.isBlank(request.getSourceId())) {
+        if (request == null || StringUtils.isBlank(request.source())
+                || StringUtils.isBlank(request.sourceId())) {
             throw new IllegalArgumentException("来源模板注册必须指定 source & sourceId");
         }
-        String source = request.getSource();
-        String sourceId = request.getSourceId();
+        String source = request.source();
+        String sourceId = request.sourceId();
         TemplateInfo existing = templateInfoMapper.selectOne(
                 Wrappers.<TemplateInfo>lambdaQuery()
                         .eq(TemplateInfo::getTemplateInfoSource, source)
