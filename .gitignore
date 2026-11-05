@@ -166,13 +166,13 @@ deploy-monitor-8112.sh
 # AI starter 杩愯鏃舵暟鎹洰褰曪紙浜鸿劯搴曞簱绱㈠紩绛夛紝闈炴簮鐮侊級
 spring-support-ai-starter/admin/
 
-# 会话重定向产生的 maven 构建日志（构建产物，非源码）
+# 浼氳瘽閲嶅畾鍚戜骇鐢熺殑 maven 鏋勫缓鏃ュ織锛堟瀯寤轰骇鐗╋紝闈炴簮鐮侊級
 build-out.txt
 build-out2.txt
 build-out*.txt
 spring-support-ai-starter/data/generate-media/
 
-# 本轮新增：本地构建日志与一次性运维脚本不入库
+# 鏈疆鏂板锛氭湰鍦版瀯寤烘棩蹇椾笌涓�娆℃�ц繍缁磋剼鏈笉鍏ュ簱
 build-p*.txt
 deploy/
 # ai-starter deploy scripts are source (lifecycle + incremental release), not one-off ops.
