@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.spi.impl;
 
 import org.junit.jupiter.api.DisplayName;
@@ -110,5 +111,4 @@ class LoomyBindAuthHmacTest {
         mac.init(new SecretKeySpec(
                 LoomyAccountChannelAuthManager.ACCESS_KEY_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
         return Base64.getEncoder().encodeToString(mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8)));
-    }
-}
+    }}

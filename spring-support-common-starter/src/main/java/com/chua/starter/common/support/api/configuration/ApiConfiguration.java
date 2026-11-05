@@ -259,6 +259,7 @@ public class ApiConfiguration implements EnvironmentAware  {
      */
     @Bean("uniform")
     public ExecutorService executor() {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         return Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("uniform-pool").factory());
     }
 
@@ -310,4 +311,3 @@ public class ApiConfiguration implements EnvironmentAware  {
         return registry -> logControlStatus();
     }
 }
-

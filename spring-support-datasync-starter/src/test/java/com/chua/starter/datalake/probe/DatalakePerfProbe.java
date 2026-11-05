@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datalake.probe;
 
 import com.chua.common.support.concurrent.dispatcher.DispatcherConfig;
@@ -238,6 +239,7 @@ public class DatalakePerfProbe {
         long t0 = System.nanoTime();
         for (int t = 0; t < threads; t++) {
             final int tid = t;
+// [P3C C1 豁免] 场景化创建线程，需文档化
             Executors.newSingleThreadExecutor().execute(() -> {
                 for (int i = 0; i < perThread; i++) {
                     engine.execute(pipeId, buildEnv(pipeId, tid * perThread + i));
@@ -274,6 +276,7 @@ public class DatalakePerfProbe {
             long t0 = System.nanoTime();
             for (int t = 0; t < threads; t++) {
                 final int tid = t;
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Executors.newSingleThreadExecutor().execute(() -> {
                     for (int i = 0; i < opsPerPipeline; i++) {
                         int pid = (tid * opsPerPipeline + i) % pc;
@@ -385,6 +388,4 @@ public class DatalakePerfProbe {
             count.incrementAndGet();
             return true;
         }
-        @Override public EngineDataSource<?> getDataSource() { return null; }
-    }
-}
+        @Override public EngineDataSource<?> getDataSource() { return null; }    }}

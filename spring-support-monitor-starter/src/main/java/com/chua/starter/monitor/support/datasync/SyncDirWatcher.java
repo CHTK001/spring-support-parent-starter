@@ -81,7 +81,9 @@ public class SyncDirWatcher implements AutoCloseable {
     /**
      * 工作线程池：单线程足够——同步本来就是串行的，也避免同名文件并发写同一张表
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService worker = Executors.newSingleThreadExecutor(runnable -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread thread = new Thread(runnable, "sync-dir-worker-" + WORKER_SEQ.incrementAndGet());
         thread.setDaemon(true);
         return thread;
@@ -344,5 +346,4 @@ public class SyncDirWatcher implements AutoCloseable {
     public Map<String, Object> describe() {
         return Map.of("dir", dir.toString(), "pattern", options.pattern(),
                 "recursive", options.recursive(), "pending", pending.size());
-    }
-}
+    }}

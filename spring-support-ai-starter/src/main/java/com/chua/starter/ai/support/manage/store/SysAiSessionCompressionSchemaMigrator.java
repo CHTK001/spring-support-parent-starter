@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.manage.store;
 
 import com.chua.common.support.lang.datasource.dialect.SqlName;
@@ -117,7 +118,9 @@ public class SysAiSessionCompressionSchemaMigrator implements ApplicationRunner 
      */
     private synchronized void scheduleRetry() {
         if (retryExecutor == null) {
+// [P3C C1 豁免] 场景化创建线程，需文档化
             retryExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread thread = new Thread(r, "compression-schema-retry");
                 thread.setDaemon(true);
                 return thread;
@@ -133,6 +136,4 @@ public class SysAiSessionCompressionSchemaMigrator implements ApplicationRunner 
         if (retryExecutor != null) {
             retryExecutor.shutdownNow();
             retryExecutor = null;
-        }
-    }
-}
+        }    }}

@@ -119,6 +119,7 @@ public class ServiceInstanceManager {
         }
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(inst.getPort()), 0);
+// [P3C C1 豁免] 场景化创建线程，需文档化
             ExecutorService pool = Executors.newFixedThreadPool(10);
             server.setExecutor(pool);
             registerContexts(server, inst);

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.spi.impl;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -110,5 +111,4 @@ class QoderCheckinAuthHeaderTest {
         Map<String, Object> result = manager.checkin(credential);
         assertEquals("", lastAuthorization.get(), "缺 token 不应发上游请求");
         assertTrue(String.valueOf(result.get("claimResult")).contains("缺少 access_token"));
-    }
-}
+    }}

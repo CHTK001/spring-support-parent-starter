@@ -408,6 +408,7 @@ public class DispatchGuardProbe {
         AtomicInteger runs = new AtomicInteger();
         List<String> skipped = Collections.synchronizedList(new ArrayList<>());
         JobHandler handler = blockingHandler(MARK + "-SKIP", release, runs);
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
         JobExecutor jobExecutor = newJobExecutor(pool, "SKIP", skipped, handler);
         try {
@@ -433,6 +434,7 @@ public class DispatchGuardProbe {
         AtomicInteger runs2 = new AtomicInteger();
         List<String> skipped2 = Collections.synchronizedList(new ArrayList<>());
         CountDownLatch hold = new CountDownLatch(1);
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService pool2 = Executors.newVirtualThreadPerTaskExecutor();
         JobExecutor again = newJobExecutor(pool2, "SKIP", skipped2,
                 blockingHandler(MARK + "-SKIP", hold, runs2));
@@ -457,6 +459,7 @@ public class DispatchGuardProbe {
         AtomicInteger runs = new AtomicInteger();
         List<String> skipped = Collections.synchronizedList(new ArrayList<>());
         JobHandler handler = blockingHandler(MARK + "-ALLOW", release, runs);
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
         JobExecutor jobExecutor = newJobExecutor(pool, "ALLOW", skipped, handler);
         try {
@@ -481,8 +484,10 @@ public class DispatchGuardProbe {
         CountDownLatch hold = new CountDownLatch(1);
         // 池只有一个 worker 且用 SynchronousQueue: 先把 worker 占住, 之后任何提交都无处可去而被拒。
         // core/max 必须是正数, ThreadPoolExecutor 不接受 0
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ThreadPoolExecutor full = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                 new SynchronousQueue<>(), r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
                     Thread t = new Thread(r);
                     t.setDaemon(true);
                     return t;
@@ -771,8 +776,4 @@ public class DispatchGuardProbe {
      */
     private static void report() {
         log.info("[probe] DISPATCHGUARD_RESULT passed={} failed={}", passed, failed);
-        if (failed > 0) {
-            System.exit(1);
-        }
-    }
-}
+        if (failed > 0) {            System.exit(1);        }    }}

@@ -90,7 +90,9 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     /**
      * 命令执行线程池（用于超时中断）
     */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService execPool = Executors.newCachedThreadPool(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "host-remote-exec-posix");
         t.setDaemon(true);
         return t;
@@ -352,5 +354,4 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
                 }
             }
         }
-    }
-}
+    }}

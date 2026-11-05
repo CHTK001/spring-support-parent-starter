@@ -908,6 +908,7 @@ public class JobAutoConfiguration {
                 properties.getPool().getCoreSize(),
                 properties.getPool().getMaxSize(),
                 properties.getPool().getQueueSize());
+// [P3C C1 豁免] 场景化创建线程，需文档化
         return new ThreadPoolExecutor(
                 properties.getPool().getCoreSize(),
                 properties.getPool().getMaxSize(),

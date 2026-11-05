@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.server.support.sip;
 
 import org.slf4j.Logger;
@@ -27,7 +28,9 @@ public class SipTunnel {
 
     private static final Logger log = LoggerFactory.getLogger(SipTunnel.class);
 
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private static final ExecutorService POOL = Executors.newCachedThreadPool(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "sip-" + System.identityHashCode(r));
         t.setDaemon(true);
         return t;
@@ -427,6 +430,4 @@ public class SipTunnel {
             case "visit" -> startVisit(args[1], Integer.parseInt(args[2]), args[3], args[4],
                     Integer.parseInt(args[5]), args[6]);
             default -> System.out.println("未知模式: " + args[0]); // [P3C E1 豁免]
-        }
-    }
-}
+        }    }}

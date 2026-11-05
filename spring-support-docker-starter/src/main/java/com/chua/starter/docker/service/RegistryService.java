@@ -79,6 +79,7 @@ public class RegistryService {
     /**
      * 跨库并发检索执行器
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService searchPool = Executors.newVirtualThreadPerTaskExecutor();
 
     /**

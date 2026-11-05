@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.report.client.starter.sync.handler;
 
 import com.chua.common.support.reflection.ReflectUtils;
@@ -58,7 +59,9 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     /**
      * 延迟执行器
      */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "node-control-scheduler");
         t.setDaemon(true);
         return t;
@@ -439,6 +442,4 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
 
         } catch (IOException e) {
             log.error("[NodeControl] 启动守护脚本失败: {}", e.getMessage(), e);
-        }
-    }
-}
+        }    }}

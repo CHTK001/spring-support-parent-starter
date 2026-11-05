@@ -82,6 +82,25 @@
             <artifactId>spring-support-device-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- APM 观测：统一 REST /api/apm/v1（ApmServlet，嵌入宿主 8082 同端口，
+             plugin.apm.mode=embedded 默认），前端 pages/apm 的唯一数据源。
+             两个引擎 starter 必须同时引入：skywalking 走远端 OAP GraphQL，
+             hotspot 走进程内 runtime agent，两者缺一则 plugin.apm.type 指定时报「引擎未引入」。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-apm-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-apm-skywalking-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-apm-hotspot-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>

@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
@@ -124,8 +125,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
     /**
      * 单线程序列足够：agent 操作是低频运维动作
     */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
         AtomicInteger seq = new AtomicInteger();
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread thread = new Thread(runnable, "agent-deploy-" + seq.incrementAndGet());
         thread.setDaemon(true);
         return thread;
@@ -1394,6 +1397,4 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             } catch (Exception e) {
                 throw new IllegalStateException("上传 " + remote + " 失败: " + e.getMessage(), e);
             }
-        }
-    }
-}
+        }    }}

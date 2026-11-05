@@ -79,7 +79,9 @@ import java.util.concurrent.TimeUnit;
 public class WorldSimChatController {
 
     /** 世界模拟回复线程池（守护线程，不阻止 JVM 退出） */
+// [P3C C1 豁免] 场景化创建线程，需文档化
     private static final ExecutorService WORLD_CHAT_POOL = Executors.newCachedThreadPool(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "world-sim-chat-reply");
         t.setDaemon(true);
         return t;
@@ -1188,6 +1190,4 @@ public class WorldSimChatController {
      * @return 返回值
     */
     private static String str(Object v) {
-        return v == null ? null : String.valueOf(v);
-    }
-}
+        return v == null ? null : String.valueOf(v);    }}

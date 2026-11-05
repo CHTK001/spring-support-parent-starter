@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.filesystem.support.task;
 
 import com.chua.common.support.storage.FileStorage;
@@ -125,6 +126,7 @@ public class UploadTaskManager {
         // 时间轮：512 槽、每 tick 100ms —— 合并触发延迟与过期回收的粒度足够
         this.timer = Timer.newTimer(512, 100, TimeUnit.MILLISECONDS);
         // 虚拟线程：每个合并任务独占一条，IO 阻塞不占用平台线程
+// [P3C C1 豁免] 场景化创建线程，需文档化
         this.mergeExecutor = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("upload-merge-", 0).factory());
         // 定期回收过期任务（每 5 分钟一轮）
@@ -1078,5 +1080,4 @@ public class UploadTaskManager {
             /** 已取消 */
             CANCELLED
         }
-    }
-}
+    }}

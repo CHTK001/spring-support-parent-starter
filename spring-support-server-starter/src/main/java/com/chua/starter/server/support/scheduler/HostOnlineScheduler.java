@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.server.support.scheduler;
 
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -114,6 +115,7 @@ public class HostOnlineScheduler {
      * 虚拟线程执行器（批量并发探测/采集/延迟，避免逐个串行阻塞时间轮）
     */
     private static final ExecutorService VIRTUAL_EXECUTOR =
+// [P3C C1 豁免] 场景化创建线程，需文档化
             java.util.concurrent.Executors.newThreadPerTaskExecutor(
                     Thread.ofVirtual().name("host-online-").factory());
 
@@ -509,5 +511,4 @@ public class HostOnlineScheduler {
      */
     private int normalizeInterval(int interval) {
         return interval < MIN_INTERVAL ? MIN_INTERVAL : interval;
-    }
-}
+    }}

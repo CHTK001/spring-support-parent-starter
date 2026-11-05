@@ -1,3 +1,4 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.tpload;
 
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,7 @@ public class VtLimitProbe {
      * 运行阻塞型场景。
      */
     private static void runBlock() throws InterruptedException {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService vt = Executors.newVirtualThreadPerTaskExecutor();
         CountDownLatch done = new CountDownLatch(BLOCK_TASKS);
         AtomicInteger active = new AtomicInteger(0);
@@ -83,6 +85,7 @@ public class VtLimitProbe {
      * 运行 CPU 密集型场景。
      */
     private static void runCpu() throws InterruptedException {
+// [P3C C1 豁免] 场景化创建线程，需文档化
         ExecutorService vt = Executors.newVirtualThreadPerTaskExecutor();
         CountDownLatch done = new CountDownLatch(CPU_TASKS);
         AtomicInteger active = new AtomicInteger(0);
@@ -128,7 +131,4 @@ public class VtLimitProbe {
         runBlock();
         /**
          * 运行cpu。
-         */
-        runCpu();
-    }
-}
+         */        runCpu();    }}
