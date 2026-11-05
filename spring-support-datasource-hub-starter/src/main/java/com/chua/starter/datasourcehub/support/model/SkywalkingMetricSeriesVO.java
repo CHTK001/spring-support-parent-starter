@@ -9,7 +9,7 @@ import java.util.List;
  * @param scope  作用域
  * @param label  实体展示名（服务名 / 实例名 / 端点名）
  * @param unit   单位
- * @param values 数据点（时间戳 + 值）
+ * @param points 数据点（时间戳 + 值）
  * @author CH
  * @since 4.0.0.51
  */
@@ -17,7 +17,7 @@ public record SkywalkingMetricSeriesVO(String name,
                                        String scope,
                                        String label,
                                        String unit,
-                                       List<MetricPointVO> values) {
+                                       List<MetricPointVO> points) {
 
     /**
      * 单个数据点

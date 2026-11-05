@@ -112,14 +112,18 @@ public class TunnelAutoConfiguration {
 
         /**
          * 注册统一接口。
+         * <p>
+         * 不能使用 bean 名 {@code tunnelController}（与 server-starter 组件扫描得到的
+         * {@code @RestController TunnelController} 同名——实际是 /ms/tunnel/** 与
+         * /ms/server/host/{hostId}/tunnel 两个独立端点集，需要兼容共存），
+         * 所以这里的统一接口换一个名称。条件不再存在，本模块就是统一端点的提供者。
          *
          * @param service    编排服务
          * @param properties 统一配置
          * @return 控制器
          */
         @Bean
-        @ConditionalOnMissingBean
-        public TunnelController tunnelController(TunnelService service, TunnelProperties properties) {
+        public TunnelController tunnelApiController(TunnelService service, TunnelProperties properties) {
             return new TunnelController(service, properties);
         }
     }

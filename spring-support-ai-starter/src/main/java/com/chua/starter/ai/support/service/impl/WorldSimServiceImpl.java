@@ -1057,6 +1057,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "幕次尚未演完，无法结文");
         }
         act.setStatus(ACT_STATUS_FINISHED);
+        // 阶段也必须落成 finished：前端标签与按钮可用性都读 stage，
+        // 只改 status 会让结文后仍显示「可重播」且重播/结文按钮保持可点。
+        act.setStage(ACT_STATUS_FINISHED);
         act.setEnded(1);
         act.setUpdateTime(LocalDateTime.now());
         actMapper.updateById(act);

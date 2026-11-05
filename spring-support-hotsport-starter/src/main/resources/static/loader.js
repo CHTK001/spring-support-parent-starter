@@ -15,7 +15,14 @@
   var LOADER_CONTAINER_ID = "app-loader";
   var LOADER_SHELL_CLASS = "sys-loader-shell";
   var GLOBAL_LOADER_STORAGE_KEY = "sys-loader-style";
-  /* 部署侧接管时由应用启动后写入（下次刷新生效）：尺寸 px / 主色 */
+  /*
+   * 部署侧接管（app.yaml other.loaderConfig）的键：由应用启动后写入，下次刷新生效。
+   *
+   * 动画刻意**不复用** sys-loader-style：那个键是用户在主题配置里的选择，
+   * 复用会让「打开锁定」覆盖掉用户的选择，「关掉锁定」后也回不去。
+   * 三个键都按「带 appCode 的键优先、全局键兜底」读（与 sys-loader-style 同一口径）。
+   */
+  var LOADER_DEPLOY_ANIMATION_KEY = "sys-loader-animation";
   var LOADER_SIZE_KEY = "sys-loader-size";
   var LOADER_COLOR_KEY = "sys-loader-color";
   var LOADER_SIZE_DEFAULT = 96;
@@ -23,10 +30,22 @@
   var LOADER_SHELL_STYLE_TEXT =
     ".sys-loader-shell{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%}";
 
+  /* 读部署侧键：先带 appCode 的，再全局（只在应用起来之前可能拿不到 appCode） */
+  function readDeployKey(baseKey) {
+    var appCode = resolveLoaderAppCode();
+    if (appCode) {
+      var scoped = localStorage.getItem(baseKey + ":" + appCode);
+      if (scoped) {
+        return scoped;
+      }
+    }
+    return localStorage.getItem(baseKey);
+  }
+
   /* 首屏尺寸：默认与应用内 lg 档（96px）一致，刷新时观感连贯；
      部署侧 other.loaderConfig 接管时由下面的 resolveBootSize 读配置值。 */
   function resolveBootSize() {
-    var raw = localStorage.getItem(LOADER_SIZE_KEY);
+    var raw = readDeployKey(LOADER_SIZE_KEY);
     var size = parseInt(raw || "", 10);
     if (!isFinite(size) || size < 8 || size > 512) {
       return LOADER_SIZE_DEFAULT;
@@ -36,7 +55,7 @@
 
   /* 首屏主色：只认 #hex / rgb() / hsl()，避免把任意字符串拼进 CSS（注入面） */
   function resolveBootColor() {
-    var raw = (localStorage.getItem(LOADER_COLOR_KEY) || "").trim();
+    var raw = (readDeployKey(LOADER_COLOR_KEY) || "").trim();
     var safe =
       /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw) ||
       /^(?:rgb|hsl)a?\(\s*[\d.%\s,/+-]+\)$/i.test(raw);
@@ -157,19 +176,19 @@
     "@keyframes sla-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}" +
     "@keyframes sla-core{0%,100%{transform:scale(.72);opacity:.6}50%{transform:scale(1.12);opacity:1}}" +
     ".sla-wave{width:var(--sla-s,64px);height:var(--sla-s,64px);font-size:calc(var(--sla-s,64px)/6.4);border-radius:1.7em;overflow:hidden;background:color-mix(in srgb,var(--sla-c,#406eeb) 7%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sla-c,#406eeb) 15%,transparent)}" +
-    ".sla-wave__sea{position:absolute;left:0;right:0;bottom:0;height:30%;animation:sla-rise 8s cubic-bezier(.45,0,.55,1) infinite alternate}" +
+    ".sla-wave__sea{position:absolute;left:0;right:0;bottom:0;height:30%;animation:sla-rise 4.2s cubic-bezier(.45,0,.55,1) infinite alternate}" +
     ".sla-wave.is-determinate .sla-wave__sea{animation:none;height:calc(12% + var(--sla-level,0)*0.54%)}" +
     ".sla-wave__layer{position:absolute;left:0;right:0;top:0;bottom:0}" +
     ".sla-wave__fill{position:absolute;left:0;right:0;top:-1px;bottom:-45%}" +
-    ".sla-wave__cap{position:absolute;left:0;bottom:100%;width:200%;height:1.35em;animation:sla-drift 13s linear infinite;will-change:transform}" +
+    ".sla-wave__cap{position:absolute;left:0;bottom:100%;width:200%;height:1.35em;animation:sla-drift 5.5s linear infinite;will-change:transform}" +
     ".sla-wave__cap svg{display:block;width:100%;height:100%}" +
     ".sla-wave__layer--back{transform:translateY(-.48em)}" +
-    ".sla-wave__layer--back .sla-wave__cap{animation-duration:19s;animation-direction:reverse}" +
+    ".sla-wave__layer--back .sla-wave__cap{animation-duration:8s;animation-direction:reverse}" +
     ".sla-wave__layer--back .sla-wave__fill{background:color-mix(in srgb,var(--sla-c,#406eeb) 34%,white)}" +
     ".sla-wave__layer--back .sla-wave__cap{color:color-mix(in srgb,var(--sla-c,#406eeb) 34%,white)}" +
     ".sla-wave__layer--front .sla-wave__fill{background:linear-gradient(180deg,color-mix(in srgb,var(--sla-c,#406eeb) 62%,white) 0%,var(--sla-c,#406eeb) 44%,color-mix(in srgb,var(--sla-c,#406eeb) 72%,#0b1a4d) 100%)}" +
     ".sla-wave__layer--front .sla-wave__cap{color:color-mix(in srgb,var(--sla-c,#406eeb) 62%,white)}" +
-    ".sla-wave__layer--front .sla-wave__fill::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.26;mix-blend-mode:screen;filter:blur(.12em);background:linear-gradient(99deg,transparent 38%,rgba(255,255,255,.55) 47%,transparent 56%),linear-gradient(99deg,transparent 64%,rgba(255,255,255,.38) 72%,transparent 80%);animation:sla-caustic 15s ease-in-out infinite alternate}" +
+    ".sla-wave__layer--front .sla-wave__fill::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.26;mix-blend-mode:screen;filter:blur(.12em);background:linear-gradient(99deg,transparent 38%,rgba(255,255,255,.55) 47%,transparent 56%),linear-gradient(99deg,transparent 64%,rgba(255,255,255,.38) 72%,transparent 80%);animation:sla-caustic 6s ease-in-out infinite alternate}" +
     "@keyframes sla-rise{0%{height:27%}100%{height:67%}}" +
     "@keyframes sla-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}" +
     "@keyframes sla-caustic{from{transform:translateX(-14%)}to{transform:translateX(14%)}}" +
@@ -197,9 +216,10 @@
     ".sla-dots i{animation-duration:2.4s}" +
     ".sla-rings i:nth-child(1){animation-duration:2.8s}" +
     ".sla-rings i:nth-child(2){animation-duration:2s}" +
-    ".sla-wave__sea{animation-duration:14s}" +
-    ".sla-wave__cap{animation-duration:22s}" +
-    ".sla-wave__layer--back .sla-wave__cap{animation-duration:30s}" +
+    ".sla-wave__sea{animation-duration:8.4s}" +
+    ".sla-wave__cap{animation-duration:11s}" +
+    ".sla-wave__layer--back .sla-wave__cap{animation-duration:16s}" +
+    ".sla-wave__layer--front .sla-wave__fill::after{animation-duration:12s}" +
     ".sla-dino__runner{animation-duration:1.9s}" +
     ".sla-dino__cactus{animation-duration:2.6s}" +
     ".sla-dino__ground{animation-duration:2.6s}" +
@@ -370,8 +390,12 @@
     });
   }
 
-  /* 读取用户选择：先读带 appCode 的键，再退回全局键，最后兜底默认（海浪） */
+  /* 读取动画：部署侧锁定值 > 用户选择（带 appCode 的键 > 全局键）> 默认海浪 */
   function resolveLoaderType() {
+    var deployed = normalizeKey(readDeployKey(LOADER_DEPLOY_ANIMATION_KEY));
+    if (deployed) {
+      return deployed;
+    }
     var scoped = normalizeKey(localStorage.getItem(resolveLoaderStorageKey()));
     if (scoped) {
       return scoped;
