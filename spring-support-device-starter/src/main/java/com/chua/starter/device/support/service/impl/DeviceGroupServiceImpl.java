@@ -77,14 +77,14 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
      * @return 返回值
     */
     public void create(DeviceGroupRequest req) {
-        if (req.getGroupName() == null || req.getGroupName().isBlank()) {
+        if (req.groupName() == null || req.groupName().isBlank()) {
             throw new IllegalArgumentException("分组名称不能为空");
         }
         DeviceGroup g = new DeviceGroup();
-        g.setGroupName(req.getGroupName().trim());
-        g.setGroupParent(req.getGroupParent() == null || req.getGroupParent().isBlank() ? null : req.getGroupParent());
-        g.setGroupOrder(req.getGroupOrder() != null ? req.getGroupOrder() : 0);
-        g.setGroupRemark(req.getGroupRemark());
+        g.setGroupName(req.groupName().trim());
+        g.setGroupParent(req.groupParent() == null || req.groupParent().isBlank() ? null : req.groupParent());
+        g.setGroupOrder(req.groupOrder() != null ? req.groupOrder() : 0);
+        g.setGroupRemark(req.groupRemark());
         groupMapper.insert(g);
     }
 
@@ -99,17 +99,17 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
     public void update(String groupId, DeviceGroupRequest req) {
         LambdaUpdateWrapper<DeviceGroup> uw = new LambdaUpdateWrapper<>();
         uw.eq(DeviceGroup::getGroupId, groupId);
-        if (req.getGroupName() != null) {
-            uw.set(DeviceGroup::getGroupName, req.getGroupName());
+        if (req.groupName() != null) {
+            uw.set(DeviceGroup::getGroupName, req.groupName());
         }
-        if (req.getGroupOrder() != null) {
-            uw.set(DeviceGroup::getGroupOrder, req.getGroupOrder());
+        if (req.groupOrder() != null) {
+            uw.set(DeviceGroup::getGroupOrder, req.groupOrder());
         }
-        if (req.getGroupRemark() != null) {
-            uw.set(DeviceGroup::getGroupRemark, req.getGroupRemark());
+        if (req.groupRemark() != null) {
+            uw.set(DeviceGroup::getGroupRemark, req.groupRemark());
         }
-        if (req.getGroupParent() != null) {
-            String parent = req.getGroupParent().isBlank() ? null : req.getGroupParent();
+        if (req.groupParent() != null) {
+            String parent = req.groupParent().isBlank() ? null : req.groupParent();
             if (parent != null) {
                 if (parent.equals(groupId)) {
                     throw new IllegalArgumentException("上级分组不能是自身");
