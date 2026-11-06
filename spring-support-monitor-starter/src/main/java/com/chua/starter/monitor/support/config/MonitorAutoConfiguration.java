@@ -31,6 +31,23 @@ import javax.sql.DataSource;
 public class MonitorAutoConfiguration {
 
     /**
+     * 数据搜索接口的控制器冲突消歧器。
+     * <p>
+     * 宿主同时装入了旧版 system/service 控制器（ {@code /v2/holiday/get}、 {@code /v2/ip/lookup}）
+     * 与 datasearch 版的新控制器，同路径双映射在 {@code AuthFilter#isPass()} 中引发
+     * {@code Ambiguous handler methods mapped} 异常，构造 403 拦截点，使 HEAD 探测被前端判为
+     * "未实现"并把流量切到第三方。用注册中心级别的后处理移走旧的，关掉歧义源头。
+     * </p>
+     *
+     * @return DatasearchConflictResolve 冲突消歧器
+     * @see DatasearchConflictResolve
+     */
+    @Bean
+    public DatasearchConflictResolve datasearchConflictResolve() {
+        return new DatasearchConflictResolve();
+    }
+
+    /**
      * 建表脚本初始化器。
      * <p>
      * 框架的 datasource 插件会额外注册多个 DataSource Bean，Spring Boot 的
@@ -46,7 +63,7 @@ public class MonitorAutoConfiguration {
      */
     @Bean
     public ApplicationDataSourceScriptDatabaseInitializer monitorSchemaInitializer(DataSource dataSource,
-                                                                                  SqlInitializationProperties properties) {
+                                                                                   SqlInitializationProperties properties) {
         return new ApplicationDataSourceScriptDatabaseInitializer(dataSource, properties);
     }
 

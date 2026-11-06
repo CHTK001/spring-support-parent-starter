@@ -7,6 +7,7 @@ import com.chua.starter.cdp.service.CdpEngineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,6 +54,25 @@ public class CdpController {
      * CDP 引擎服务
      */
     private final CdpEngineService engine;
+
+    /**
+     * 全局事件 SSE 广播器（调试中心唯一事件流）
+     */
+    private final CdpEventSseBroker sseBroker;
+
+    /**
+     * 全局事件流（SSE）：调试中心唯一的一条实时事件通道
+     *
+     * <p>把 Console / Network / Page / Target 事件以 {@code {"event":"Push",...}} 帧推送，
+     * 前端只连这一个 SSE，不再定时轮询后端。CDP 指令仍走 WebSocket {@code /ws/cdp}。</p>
+     *
+     * @return 事件流 emitter
+     */
+    @Operation(summary = "全局事件流（SSE）")
+    @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter events() {
+        return sseBroker.subscribe();
+    }
 
     /**
      * 浏览器状态

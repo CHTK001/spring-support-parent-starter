@@ -105,7 +105,7 @@ public class FileCollabController {
                 owner, vis, users, path, type);
         MODULE_LOG.info("创建协同文档: {} owner={} visibility={} users={} path={} type={}",
                 collab.id(), owner, vis, users, collab.path(), collab.type());
-        return ReturnResult.ok(toMap(collab, owner));
+        return ReturnResult.ok(toSummaryMap(collab, owner));
     }
 
     /**
@@ -126,8 +126,35 @@ public class FileCollabController {
             @RequestParam(value = "path", required = false, defaultValue = "") String path,
             @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword) {
         String uid = userId == null || userId.isBlank() ? "anonymous" : userId;
+        // 摘要（不含快照）：见 toSummaryMap 的说明 —— 列表带上内容会让打开页变成
+        // 「把库里所有协同文档都下载一遍」
         return ReturnResult.ok(collabStore.list(uid, path, keyword)
-                .stream().map(c -> toMap(c, uid)).toList());
+                .stream().map(c -> toSummaryMap(c, uid)).toList());
+    }
+
+    /**
+     * 协同文档版本号（轮询专用，响应只有几十字节）。
+     *
+     * <p>协同编辑器此前每 15s 调一次详情接口做「版本变了没」的检查，而详情接口
+     * 每次都把整份快照传回来 —— 编辑期间等于每 15s 白下载一次全文并解析一遍，
+     * 大文档上就是周期性卡顿。这里给一个只回 {@code version/updatedAt} 的轻量接口，
+     * 只有版本真的变了才去取全文。</p>
+     *
+     * @param id 协同文档号
+     * @return {@code {id, version, updatedAt}}；文档不存在返回错误
+     */
+    @Operation(summary = "协同文档版本号（轻量轮询）")
+    @GetMapping("/{id}/version")
+    public ReturnResult<Map<String, Object>> version(@PathVariable("id") String id) {
+        FileCollabStore.FileCollab collab = collabStore.get(id);
+        if (collab == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", collab.id());
+        m.put("version", collab.version());
+        m.put("updatedAt", collab.updatedAt());
+        return ReturnResult.ok(m);
     }
 
     /**
@@ -200,7 +227,7 @@ public class FileCollabController {
             // 冲突也算一次保存尝试（仅 MODULE_LOG 记录，不再写入文件操作日志）
             return ReturnResult.error("版本冲突：本地快照已过期，请刷新后重试（当前版本 " + current.version() + "）");
         }
-        return ReturnResult.ok(toMap(updated, userId));
+        return ReturnResult.ok(toSummaryMap(updated, userId));
     }
 
     /**
@@ -236,7 +263,7 @@ public class FileCollabController {
         if (updated == null) {
             return ReturnResult.illegal("协同文档不存在");
         }
-        return ReturnResult.ok(toMap(updated, userId));
+        return ReturnResult.ok(toSummaryMap(updated, userId));
     }
 
     /**
@@ -288,7 +315,7 @@ public class FileCollabController {
         if (updated == null) {
             return ReturnResult.illegal("协同文档不存在");
         }
-        return ReturnResult.ok(toMap(updated, userId));
+        return ReturnResult.ok(toSummaryMap(updated, userId));
     }
 
     /**
@@ -316,7 +343,7 @@ public class FileCollabController {
         if (copy == null) {
             return ReturnResult.illegal("源协同文档不存在");
         }
-        return ReturnResult.ok(toMap(copy, uid));
+        return ReturnResult.ok(toSummaryMap(copy, uid));
     }
 
     /**
@@ -396,6 +423,10 @@ public class FileCollabController {
      * <p>实现说明：本协同为轻量级（快照式），SSE 只做「变更通知」，
      * 不承载编辑操作本身——客户端收到 {@code changed} 后拉最新快照重放。</p>
      *
+     * <p><b>变更通知从哪来</b>：{@link FileCollabStore} 在每次写入成功后广播
+     * {@link FileCollabStore.CollabChange}，本端点把它转成 SSE 事件推给订阅者。
+     * 订阅时按 id 过滤：同一条流只关心自己打开的那个文档。</p>
+     *
      * @param id 协同文档号
      * @return SSE 流
      */
@@ -417,11 +448,35 @@ public class FileCollabController {
         };
         com.chua.common.support.task.timer.TimerTask pingHandle =
                 uploadTaskManager.heartbeat(pinger, PING_INTERVAL_SECONDS);
+        // 变更通知：存储层写入成功后回调这里，转成 changed 事件
+        java.util.function.Consumer<FileCollabStore.CollabChange> changeListener = change -> {
+            if (change == null || !id.equals(change.id())) {
+                return;
+            }
+            try {
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("id", change.id());
+                payload.put("version", change.version());
+                payload.put("updatedAt", change.updatedAt());
+                payload.put("kind", change.kind());
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                        .name("changed").data(payload));
+            } catch (Exception e) {
+                // 连接已断：让 emitter 走完，onCompletion 会清理监听器
+                emitter.complete();
+            }
+        };
+        collabStore.addListener(changeListener);
         Runnable cleanup = () -> {
             try {
                 uploadTaskManager.cancelHeartbeat(pingHandle);
             } catch (Exception ignored) {
                 // 取消句柄失败可忽略
+            }
+            try {
+                collabStore.removeListener(changeListener);
+            } catch (Exception ignored) {
+                // 移除监听器失败可忽略
             }
         };
         emitter.onCompletion(cleanup);
@@ -474,6 +529,28 @@ public class FileCollabController {
      * @return Map 快照
      */
     private static Map<String, Object> toMap(FileCollabStore.FileCollab collab, String userId) {
+        Map<String, Object> m = toSummaryMap(collab, userId);
+        m.put("snapshot", collab.snapshot() == null ? "" : collab.snapshot());
+        return m;
+    }
+
+    /**
+     * 协同文档转「摘要 Map」（<b>不含快照</b>）。
+     *
+     * <p><b>为什么列表必须用摘要。</b>此前 {@code /list} 用的是含快照的完整结构，
+     * 于是打开协同管理页要把**每一个**协同文档的整份内容都传下来：一个 Univer 工作簿
+     * 快照动辄几百 KB，十几个文档就是几 MB 的 JSON —— 打开慢、内存高、Vue 还要接管
+     * 这些大字符串。列表本身只需要元信息（名称/时间/版本/大小/权限），
+     * 内容由「打开/预览/下载」时按 id 单独取（{@code GET /v1/file-collab/{id}}）。</p>
+     *
+     * <p>同理，{@code create/save/rename/access/copy} 的响应也走摘要：调用方只用
+     * {@code id}/{@code version}，把刚存上去的快照再回传一遍等于把保存流量翻倍。</p>
+     *
+     * @param collab 协同文档
+     * @param userId 当前用户标识（用于计算权限位；null/空 = 匿名）
+     * @return Map 摘要（含 size，不含 snapshot）
+     */
+    private static Map<String, Object> toSummaryMap(FileCollabStore.FileCollab collab, String userId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", collab.id());
         m.put("bucket", collab.bucket());
@@ -487,8 +564,7 @@ public class FileCollabController {
         m.put("version", collab.version());
         m.put("path", collab.path());
         m.put("type", collab.type());
-        m.put("snapshot", collab.snapshot() == null ? "" : collab.snapshot());
-        // 文件大小：快照 UTF-8 字节数（卡片展示用）
+        // 文件大小：快照 UTF-8 字节数（卡片展示用；不需要把内容传下去）
         m.put("size", bytesOf(collab.snapshot()));
         m.put("canWrite", FileCollabStore.canWrite(collab, userId));
         m.put("isOwner", FileCollabStore.isOwner(collab, userId));

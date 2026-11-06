@@ -15,35 +15,36 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 支持
- *
- * @author CH
- * @since 4.0.0
- */
+   * 支持
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class SupportInjector extends DefaultSqlInjector implements DisposableBean {
 
-    /**
-     * MyBatis属性
-    */
+      /**
+       * MyBatis属性
+      */
     private MybatisPlusProperties mybatisProperties;
     private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>(); // 缓存
-    private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>(); // 缓存抽象方法
+    private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>(); 
+         // 缓存抽象方法
 
-    /**
-     * 创建 支持injector 实例
-     * @param mybatisProperties MyBatis属性
-     */
+      /**
+       * 创建 支持injector 实例
+       * @param mybatisProperties MyBatis属性
+       */
     public SupportInjector(MybatisPlusProperties mybatisProperties) {
         this.mybatisProperties = mybatisProperties;
     }
 
     @Override
-    /**
-     * 获取方法列表
-     * @param mapperClass 参数
-     * @param tableInfo 参数
-     * @return 返回值
-    */
+      /**
+       * 获取方法列表
+       * @param mapperClass 参数
+       * @param tableInfo 参数
+       * @return 返回值
+      */
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
         List<AbstractMethod> list = new ArrayList<>();
 
@@ -74,12 +75,12 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return list;
     }
 
-    /**
-     * 获取记号笔
-     *
-     * @param sqlMethodProperties SQL方法属性
-     * @return 获取记号笔的结果
-     */
+      /**
+       * 获取记号笔
+       *
+       * @param sqlMethodProperties SQL方法属性
+       * @return 获取记号笔的结果
+       */
     private SqlMethodMarker getMarker(MybatisPlusProperties.SqlMethodProperties sqlMethodProperties) {
         MybatisPlusProperties.SqlMethodType type = sqlMethodProperties.getType();
         return type == MybatisPlusProperties.SqlMethodType.FILE ?
@@ -88,23 +89,23 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     @Override
-    /**
-     * 销毁
-     * @return 返回值
-     * @throws Exception 异常
-    */
+      /**
+       * 销毁
+       * @return 返回值
+       * @throws Exception 异常
+      */
     public void destroy() throws Exception {
         for (SqlMethodMarker sqlMethodMarker : cache.values()) {
             sqlMethodMarker.destroy();
         }
     }
 
-    /**
-     * Refresh
-     *
-     * @param name 名称
-     * @return refresh的结果
-     */
+      /**
+       * Refresh
+       *
+       * @param name 名称
+       * @return refresh的结果
+       */
     public String refresh(String name) {
         for (SqlMethodMarker marker : cache.values()) {
             marker.refresh(name);
@@ -112,11 +113,11 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return "刷新成功";
     }
 
-    /**
-     * refresh全部
-     *
-     * @return refresh全部的结果
-     */
+      /**
+       * refresh全部
+       *
+       * @return refresh全部的结果
+       */
     public String refreshAll() {
         for (SqlMethodMarker marker : cache.values()) {
             if (marker instanceof MysqlSqlMethodMarker mysqlMarker) {

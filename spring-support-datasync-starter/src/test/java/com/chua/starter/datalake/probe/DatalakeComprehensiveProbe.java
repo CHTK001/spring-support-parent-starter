@@ -65,7 +65,7 @@ public class DatalakeComprehensiveProbe {
             System.err.println("  Failed: " + failedCases); // [P3C E1 豁免]
         }
         System.err.println("============================================================="); // [P3C E1 豁免]
-        System.exit(failed > 0 ? 1 : 0);
+        throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
     }
 
     // ═══════════════════════════════════════════════════════════════

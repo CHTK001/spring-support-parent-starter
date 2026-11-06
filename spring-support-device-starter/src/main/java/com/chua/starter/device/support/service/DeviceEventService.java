@@ -34,9 +34,18 @@ public interface DeviceEventService {
     List<DeviceEventRecord> queryEvents(String deviceId, EventType type, LocalDateTime start, LocalDateTime end);
 
     /**
-     * 轮询所有在线设备的事件
-     * <p>由设备时间轮调度器（{@code deviceEventPoll} 任务）驱动，间隔在
-     * {@code device_task_state.interval} 配置。</p>
+     * 轮询所有在线设备的事件（保留给手工全量入口）
+     * <p>定时触发已下沉到凭据级任务 {@code eventPoll_{credentialId}}。</p>
      */
     void pollAllDevices();
+
+    /**
+     * 只轮询某套凭据名下设备的事件。
+     *
+     * <p>事件轮询是每套厂商凭据实例独立的能力：按凭据查出设备，只处理这些设备的
+     * 在线会话，不触碰其他厂商/凭据的设备。</p>
+     *
+     * @param credentialId 凭据 ID
+     */
+    void pollDevicesByCredential(String credentialId);
 }

@@ -27,69 +27,69 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * POSIX 系主机远程操作实现（SSH + SFTP）
- * <p>
- * 覆盖 Linux/macOS/FreeBSD/AIX/Solaris：这些系统的 shell 语义、路径分隔符、
- * 归档工具基本一致，故由同一实现声明多个 {@link #osTypes()}。
- * 同时作为 {@link #fallback()} 兜底实现，处理未登记的系统类型（会打告警日志）。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
- */
+   * POSIX 系主机远程操作实现（SSH + SFTP）
+   * <p>
+   * 覆盖 Linux/macOS/FreeBSD/AIX/Solaris：这些系统的 shell 语义、路径分隔符、
+   * 归档工具基本一致，故由同一实现声明多个 {@link #osTypes()}。
+   * 同时作为 {@link #fallback()} 兜底实现，处理未登记的系统类型（会打告警日志）。
+   * </p>
+   *
+   * @author CH
+   * @since 4.0.0.42
+   */
 @Slf4j
 @Spi(value = "posix", order = 100)
 public class PosixSshHostRemoteProvider implements HostRemoteProvider {
 
-    /**
-     * 覆盖的 POSIX 系系统类型
-    */
+      /**
+       * 覆盖的 POSIX 系系统类型
+      */
     private static final List<String> OS_TYPES = List.of("LINUX", "MACOS", "FREEBSD", "AIX", "SOLARIS");
 
-    /**
-     * 命令执行默认超时（秒）：避免远端命令挂起拖死部署线程
-    */
+      /**
+       * 命令执行默认超时（秒）：避免远端命令挂起拖死部署线程
+      */
     private static final int DEFAULT_TIMEOUT_SECONDS = 120;
 
-    /**
-     * 健康探测最短超时（秒）
-    */
+      /**
+       * 健康探测最短超时（秒）
+      */
     private static final int MIN_HEALTH_TIMEOUT_SECONDS = 10;
 
-    /**
-     * HTTP 探测超时上限（秒）
-    */
+      /**
+       * HTTP 探测超时上限（秒）
+      */
     private static final int HTTP_PROBE_MAX_SECONDS = 10;
 
-    /**
-     * 默认 SSH 端口
-    */
+      /**
+       * 默认 SSH 端口
+      */
     private static final int DEFAULT_SSH_PORT = 22;
 
-    /**
-     * 连接超时（秒）
-    */
+      /**
+       * 连接超时（秒）
+      */
     private static final int CONNECT_TIMEOUT_SECONDS = 8;
 
-    /**
-     * 远端临时目录
-    */
+      /**
+       * 远端临时目录
+      */
     private static final String TEMP_DIR = "/tmp";
 
-    /**
-     * 路径分隔符
-    */
+      /**
+       * 路径分隔符
+      */
     private static final String SEPARATOR = "/";
 
-    /**
-     * SSH 连接缓存管理器
-    */
+      /**
+       * SSH 连接缓存管理器
+      */
     @Autowired
     private ConnectionManager connectionManager;
 
-    /**
-     * 命令执行线程池（用于超时中断）
-    */
+      /**
+       * 命令执行线程池（用于超时中断）
+      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
     private final ExecutorService execPool = Executors.newCachedThreadPool(r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
@@ -129,7 +129,7 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
                 return future.get(timeout, TimeUnit.SECONDS);
             } catch (TimeoutException te) {
                 future.cancel(true);
-                // 超时后连接状态不可信：立即关闭，避免污染连接缓存
+                  // 超时后连接状态不可信：立即关闭，避免污染连接缓存
                 borrowed.client().close();
                 throw new IllegalStateException("命令执行超时(>" + timeout + "s): " + command);
             }
@@ -141,8 +141,8 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
                 connectionManager.release(host.getId());
             }
             if (broken) {
-                // 池里这条已经不可信，直接作废：否则同一主机后续命令会一直撞死连接，
-                // 要等到下一次心跳巡检才被清掉
+                  // 池里这条已经不可信，直接作废：否则同一主机后续命令会一直撞死连接，
+                  // 要等到下一次心跳巡检才被清掉
                 connectionManager.invalidate(host.getId());
             }
         }
@@ -170,7 +170,8 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     }
 
     @Override
-    public RemoteExecResult extract(MsServerHost host, SshCredential credential, String archivePath, String fileName, String dir) throws Exception {
+    public RemoteExecResult extract(MsServerHost host, SshCredential credential, String archivePath, String fileName, String dir
+        ) throws Exception {
         String name = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
         String quotedDir = quotePath(dir);
         String quotedArchive = quotePath(archivePath);
@@ -209,12 +210,12 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     public RemoteLogChunk tail(MsServerHost host, SshCredential credential, String file, Long cursor, int lines) throws Exception {
         long startCursor = cursor == null ? 0L : Math.max(0L, cursor);
         long size = fileSize(host, credential, file);
-        // 日志轮转/截断：文件比上次记录的光标还小 → 当作新文件从头拉取，避免光标越界读不到内容
+          // 日志轮转/截断：文件比上次记录的光标还小 → 当作新文件从头拉取，避免光标越界读不到内容
         if (size >= 0 && startCursor > size) {
             startCursor = 0L;
         }
         String command = startCursor > 0
-                // 增量：tail -c +N 从第 N 字节开始读取
+                  // 增量：tail -c +N 从第 N 字节开始读取
                 ? "tail -c +" + (startCursor + 1) + " " + quotePath(file) + " 2>/dev/null"
                 : "tail -n " + lines + " " + quotePath(file) + " 2>/dev/null";
         String output = exec(host, credential, command, 0).stdout();
@@ -224,7 +225,8 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     }
 
     @Override
-    public RemoteExecResult healthCheck(MsServerHost host, SshCredential credential, HostHealthType type, String target, int timeoutSeconds) throws Exception {
+    public RemoteExecResult healthCheck(MsServerHost host, SshCredential credential, HostHealthType type, String target
+        , int timeoutSeconds) throws Exception {
         int timeout = Math.max(timeoutSeconds, MIN_HEALTH_TIMEOUT_SECONDS);
         String command = switch (type == null ? HostHealthType.PORT : type) {
             case PORT -> "ss -tlnp 2>/dev/null | grep -q ':" + target + "'";
@@ -245,34 +247,34 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
             return Double.NaN;
         }
         if (type == HostMetricType.PORT_ALIVE && !key.chars().allMatch(Character::isDigit)) {
-            // 端口号非数字时直接判为无数据：避免把任意串拼进 shell（注入风险）
+              // 端口号非数字时直接判为无数据：避免把任意串拼进 shell（注入风险）
             return Double.NaN;
         }
         String command = switch (type) {
-            // 按命令行关键字匹配 PID 后累加 RSS（ps -o rss= 单位为 KB）换算 MB；无匹配输出 -1
+              // 按命令行关键字匹配 PID 后累加 RSS（ps -o rss= 单位为 KB）换算 MB；无匹配输出 -1
             case PROCESS_MEM_MB -> "pids=$(pgrep -f " + quotePath(key) + " 2>/dev/null); "
-                    + "if [ -n \"$pids\" ]; then ps -o rss= $pids | awk '{s+=$1} END {print int(s/1024)+0}'; else echo -1; fi";
-            // ps -o pcpu= 为进程自启动以来的平均 CPU 占用率，与 Windows 侧口径保持一致（平均而非瞬时）
+                      + "if [ -n \"$pids\" ]; then ps -o rss= $pids | awk '{s+=$1} END {print int(s/1024)+0}'; else echo -1; fi";
+              // ps -o pcpu= 为进程自启动以来的平均 CPU 占用率，与 Windows 侧口径保持一致（平均而非瞬时）
             case PROCESS_CPU -> "pids=$(pgrep -f " + quotePath(key) + " 2>/dev/null); "
-                    + "if [ -n \"$pids\" ]; then ps -o pcpu= $pids | awk '{s+=$1} END {printf \"%.1f\", s}'; else echo -1; fi";
-            // ss 优先、netstat 兜底：AIX/Solaris/FreeBSD 上 ss 不一定存在
+                      + "if [ -n \"$pids\" ]; then ps -o pcpu= $pids | awk '{s+=$1} END {printf \"%.1f\", s}'; else echo -1; fi";
+              // ss 优先、netstat 兜底：AIX/Solaris/FreeBSD 上 ss 不一定存在
             case PORT_ALIVE -> "(ss -tln 2>/dev/null || netstat -tln 2>/dev/null) | grep -q ':" + key + "' && echo 1 || echo 0";
             case HTTP_CODE -> "curl -s -o /dev/null -w '%{http_code}' --max-time "
-                    + Math.min(timeout, HTTP_PROBE_MAX_SECONDS) + " http://" + key + " 2>/dev/null || echo 0";
+                      + Math.min(timeout, HTTP_PROBE_MAX_SECONDS) + " http://" + key + " 2>/dev/null || echo 0";
         };
         return parseMetric(exec(host, credential, command, timeout).stdout());
     }
 
-    /**
-     * 解析指标采集输出
-     * <p>
-     * 取首个空白分隔的数值；输出为空、非数值或负值（-1 表示目标不存在）时返回
-     * {@link Double#NaN} 表示本轮无数据。
-     * </p>
-     *
-     * @param output 命令标准输出
-     * @return 指标数值
-     */
+      /**
+       * 解析指标采集输出
+       * <p>
+       * 取首个空白分隔的数值；输出为空、非数值或负值（-1 表示目标不存在）时返回
+       * {@link Double#NaN} 表示本轮无数据。
+       * </p>
+       *
+       * @param output 命令标准输出
+       * @return 指标数值
+       */
     private double parseMetric(String output) {
         if (output == null || output.isBlank()) {
             return Double.NaN;
@@ -310,18 +312,18 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
         if (path == null) {
             return "''";
         }
-        // POSIX 单引号包裹：内部单引号用 '\'' 断开再续，防止目录含空格/特殊字符导致命令注入
+          // POSIX 单引号包裹：内部单引号用 '\'' 断开再续，防止目录含空格/特殊字符导致命令注入
         return "'" + path.replace("'", "'\\''") + "'";
     }
 
-    /**
-     * 构建并连接 SFTP 客户端（凭据装配后立即清理私钥临时文件）
-     *
-     * @param host       主机
-     * @param credential 凭据
-     * @return 已连接的 SFTP 客户端（调用方负责关闭）
-     * @throws IOException 连接失败时抛出
-     */
+      /**
+       * 构建并连接 SFTP 客户端（凭据装配后立即清理私钥临时文件）
+       *
+       * @param host       主机
+       * @param credential 凭据
+       * @return 已连接的 SFTP 客户端（调用方负责关闭）
+       * @throws IOException 连接失败时抛出
+       */
     private SftpClient buildConnectedSftp(MsServerHost host, SshCredential credential) throws IOException {
         var builder = SftpClient.builder()
                 .host(host.getServerHostAddress())
@@ -332,7 +334,7 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
         Path tempKey = null;
         try {
             if (credential.hasKey()) {
-                // 底层库仅支持路径方式加载私钥：落盘受限临时文件，装配后立即删除
+                  // 底层库仅支持路径方式加载私钥：落盘受限临时文件，装配后立即删除
                 tempKey = Files.createTempFile("ms-host-remote-key-", ".pem");
                 Files.writeString(tempKey, credential.privateKey());
                 builder.privateKey(tempKey.toString());
@@ -350,7 +352,7 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
                 try {
                     Files.deleteIfExists(tempKey);
                 } catch (IOException ignored) {
-                    // 临时私钥清理失败不影响主流程
+                      // 临时私钥清理失败不影响主流程
                 }
             }
         }

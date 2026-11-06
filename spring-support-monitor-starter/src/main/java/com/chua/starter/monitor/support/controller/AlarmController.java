@@ -88,14 +88,16 @@ public class AlarmController {
     }
 
     /**
-     * 策略列表
+     * 策略列表（可按归属主机过滤）
      *
-     * @return 列表
+     * at param hostId 归属主机 过滤，可为空（空=全部策略）
+     * at return 列表
      */
     @Operation(summary = "策略列表")
     @GetMapping("/policy")
-    public ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies() {
-        return alarmEngineService.listPolicies();
+    public ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies(
+@RequestParam(name = "hostId", required = false) Long hostId) {
+        return alarmEngineService.listPolicies(hostId);
     }
 
     /**

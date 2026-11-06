@@ -4,6 +4,7 @@ package com.chua.starter.monitor.support.spi.impl;
 import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
+import com.chua.starter.monitor.support.model.MountRowVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -135,6 +136,54 @@ final class WindowsProfileRows {
                     size <= 0 ? "" : Math.round((size - remaining) * 100.0 / size) + "%",
                     label);
         });
+    }
+
+    /**
+     * {@code Win32_LogicalDisk} → 挂载行（盘符即挂载点）。
+     *
+     * <p>Windows 没有 Linux 那种「设备挂到目录」的挂载表，盘符就是挂载点，
+     * 因此 source 用设备号（{@code C:}），target 用 {@code C:\} 形式。
+     * 没有盘符的卷 target 留空，页面显示为未挂载。</p>
+     *
+     * @param json 命令输出
+     * @return 挂载行列表，解析失败为空列表
+     */
+    static List<MountRowVO> logicalDisks(String json) {
+        return rows(json, node -> {
+            String device = text(node, "DeviceID");
+            String label = text(node, "VolumeName");
+            long size = number(node, "Size");
+            long free = number(node, "FreeSpace");
+            long used = size <= 0 ? -1L : Math.max(0L, size - free);
+            double usage = size <= 0 ? -1D : Math.round(used * 1000.0 / size) / 10.0;
+            return new MountRowVO(
+                    device.isEmpty() ? label : device,
+                    device.isEmpty() ? "" : device + "\\",
+                    text(node, "FileSystem"),
+                    driveTypeText(number(node, "DriveType")),
+                    size,
+                    used,
+                    free,
+                    usage,
+                    device);
+        });
+    }
+
+    /**
+     * 盘类型数字转可读文本。
+     *
+     * @param type {@code Win32_LogicalDisk.DriveType}
+     * @return 0=未知 / 2=可移动 / 3=本地固定 / 4=网络 / 5=光驱 / 6=内存盘
+     */
+    private static String driveTypeText(long type) {
+        return switch ((int) type) {
+            case 2 -> "可移动";
+            case 3 -> "本地固定";
+            case 4 -> "网络驱动器";
+            case 5 -> "光驱";
+            case 6 -> "内存盘";
+            default -> "未知类型";
+        };
     }
 
     /**

@@ -22,36 +22,39 @@ import java.util.Base64;
 import java.util.List;
 
 /**
- * 主机网络服务实现：Windows 经 PowerShell（Get-NetAdapter / NetIPConfiguration /
- * NetIPAddress / DnsClient）读取与下发，统一以 -EncodedCommand 编码，
- * 兼容本机(cmd)、agent(cmd)、SSH/WinRM(已在 PowerShell 内) 各通道。
- *
- * @author CH
- * @since 4.0.0.42
- */
+   * 主机网络服务实现：Windows 经 PowerShell（Get-NetAdapter / NetIPConfiguration /
+   * NetIPAddress / DnsClient）读取与下发，统一以 -EncodedCommand 编码，
+   * 兼容本机(cmd)、agent(cmd)、SSH/WinRM(已在 PowerShell 内) 各通道。
+   *
+   * @author CH
+   * @since 4.0.0.42
+   */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class HostNetworkServiceImpl implements HostNetworkService {
 
-    /**
-     * Windows 平台标识
-     */
+      /**
+       * Windows 平台标识
+       */
     private static final String WINDOWS = "WINDOWS";
 
-    /**
-     * 读取网卡信息的 PowerShell 脚本（{0}=网卡名/描述/索引）
-     */
+      /**
+       * 读取网卡信息的 PowerShell 脚本（{0}=网卡名/描述/索引）
+       */
     private static final String PS_READ = """
             $want='%s'
             $ProgressPreference='SilentlyContinue'
             try{
               $ErrorActionPreference='Stop'
-              $a=Get-NetAdapter | Where-Object { $_.Name -eq $want -or $_.InterfaceDescription -eq $want -or ("$($_.ifIndex)" -eq $want) } | Select-Object -First 1
+              $a=Get-NetAdapter | Where-Object { $_.Name -eq $want -or $_.InterfaceDescription -eq $want -or ("$($_.ifIndex)" -eq $want
+                  ) } | Select-Object -First 1
               if($null -eq $a){ 'NOTFOUND'; exit }
               $ip=Get-NetIPConfiguration -InterfaceIndex $a.ifIndex
-              $v4=@(Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.PrefixOrigin -ne 'WellKnown' })
-              $v6=@(Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv6 -ErrorAction SilentlyContinue | Where-Object { $_.PrefixOrigin -ne 'WellKnown' })
+              $v4=@(Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_
+                  .PrefixOrigin -ne 'WellKnown' })
+              $v6=@(Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv6 -ErrorAction SilentlyContinue | Where-Object { $_
+                  .PrefixOrigin -ne 'WellKnown' })
               $dns=@((Get-DnsClientServerAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4).ServerAddresses)
               $gw=@()
               if($ip -and $ip.IPv4DefaultGateway){ $gw=@($ip.IPv4DefaultGateway.NextHop) }
@@ -68,22 +71,23 @@ public class HostNetworkServiceImpl implements HostNetworkService {
             }catch{ 'ERR: '+$_.Exception.Message }
             """;
 
-    /**
-     * 列出全部可见网卡的 PowerShell 脚本（输出 JSON 数组；单网卡时为对象，Java 侧归一）
-     */
+      /**
+       * 列出全部可见网卡的 PowerShell 脚本（输出 JSON 数组；单网卡时为对象，Java 侧归一）
+       */
     private static final String PS_LIST = """
             try{
               $ErrorActionPreference='Stop'
               $ProgressPreference='SilentlyContinue'
               $list=@()
-              /**
-               * in
-               * @param (Get-NetAdapter) 参数
-               * @return 返回值
-              */
+                /**
+                 * in
+                 * @param (Get-NetAdapter) 参数
+                 * @return 返回值
+                */
               foreach($a in (Get-NetAdapter)){
                 $v4=@()
-                try { $v4=@((Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress) } catch { $v4=@() }
+                try { $v4=@((Get-NetIPAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where
+                     -Object { $_.PrefixOrigin -ne 'WellKnown' }).IPAddress) } catch { $v4=@() }
                 $o=[ordered]@{
                   name=$a.Name; ifIndex=$a.ifIndex; description=$a.InterfaceDescription;
                   status=$a.Status; mac=$a.MacAddress; speed=$a.LinkSpeed; mtu=$a.MtuSize;
@@ -94,19 +98,19 @@ public class HostNetworkServiceImpl implements HostNetworkService {
               ConvertTo-Json -InputObject $list -Depth 6 -Compress
             }catch{ 'ERR: '+$_.Exception.Message }
             """;
-    /**
-     * 主机台账映射器
-     */
+      /**
+       * 主机台账映射器
+       */
     private final MsServerHostMapper hostMapper;
 
-    /**
-     * 采集通道路由器
-     */
+      /**
+       * 采集通道路由器
+       */
     private final SystemInfoProviderRouter providerRouter;
 
-    /**
-     * JSON 解析
-     */
+      /**
+       * JSON 解析
+       */
     private final ObjectMapper objectMapper;
 
     @Override
@@ -155,7 +159,7 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         try {
             JsonNode node = objectMapper.readTree(extractJson(out));
             List<NetworkAdapterDetailVO> result = new ArrayList<>();
-            // 单网卡时 ConvertTo-Json 输出对象，统一包成数组遍历
+              // 单网卡时 ConvertTo-Json 输出对象，统一包成数组遍历
             if (node.isArray()) {
                 for (JsonNode item : node) {
                     result.add(toLightVO(item));
@@ -169,12 +173,12 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         }
     }
 
-    /**
-     * 列表 JSON 节点转轻量网卡 VO。
-     *
-     * @param node 节点
-     * @return VO
-     */
+      /**
+       * 列表 JSON 节点转轻量网卡 VO。
+       *
+       * @param node 节点
+       * @return VO
+       */
     private static NetworkAdapterDetailVO toLightVO(JsonNode node) {
         NetworkAdapterDetailVO vo = new NetworkAdapterDetailVO();
         vo.setName(text(node, "name"));
@@ -201,7 +205,7 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         vo.setIfIndex(node.path("ifIndex").asInt(0));
         boolean dhcp = node.path("dhcp").asBoolean(false);
         vo.setDhcp(dhcp);
-        // 首个 IPv4 地址拆出地址与前缀
+          // 首个 IPv4 地址拆出地址与前缀
         List<String> v4 = toStringList(node.get("ipv4"));
         if (!v4.isEmpty()) {
             String first = v4.get(0);
@@ -223,7 +227,7 @@ public class HostNetworkServiceImpl implements HostNetworkService {
             if (dns.size() > 1) {
                 vo.setDnsAlternate(dns.get(1));
             }
-            // 静态 IP 且有 DNS，视为手工 DNS；DHCP 下默认自动
+              // 静态 IP 且有 DNS，视为手工 DNS；DHCP 下默认自动
             vo.setDnsDhcp(dhcp);
         } else {
             vo.setDnsDhcp(true);
@@ -322,14 +326,14 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         return ReturnResult.error("IPv4 下发无明确结果（命令可能未生效）: " + out);
     }
 
-    /**
-     * 读取网卡原始 JSON（含平台校验）。
-     *
-     * @param hostId      主机 ID
-     * @param adapterName 网卡名
-     * @return JSON 节点
-     * @throws IllegalStateException 主机不存在/非 Windows/通道异常
-     */
+      /**
+       * 读取网卡原始 JSON（含平台校验）。
+       *
+       * @param hostId      主机 ID
+       * @param adapterName 网卡名
+       * @return JSON 节点
+       * @throws IllegalStateException 主机不存在/非 Windows/通道异常
+       */
     private JsonNode readAdapter(Long hostId, String adapterName) {
         MsServerHost host = hostMapper.selectById(hostId);
         if (host == null) {
@@ -363,14 +367,14 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         }
     }
 
-    /**
-     * 以 -EncodedCommand 方式执行 PowerShell 脚本（各通道通用）。
-     *
-     * @param provider 采集通道
-     * @param host     目标主机
-     * @param psBody   PowerShell 脚本体
-     * @return 标准输出（已 trim）
-     */
+      /**
+       * 以 -EncodedCommand 方式执行 PowerShell 脚本（各通道通用）。
+       *
+       * @param provider 采集通道
+       * @param host     目标主机
+       * @param psBody   PowerShell 脚本体
+       * @return 标准输出（已 trim）
+       */
     private String runPs(SystemInfoProvider provider, MsServerHost host, String psBody) {
         String encoded = Base64.getEncoder().encodeToString(psBody.getBytes(StandardCharsets.UTF_16LE));
         String cli = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + encoded;
@@ -378,26 +382,26 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         try {
             out = provider.exec(host, cli);
         } catch (RuntimeException e) {
-            // 通道执行失败（主机下线/SSH 拒绝/凭据错误）一律走 ERR: 业务错误口径，
-            // 与其余调用点保持一致，避免 IllegalStateException 冒泡成 HTTP 409。
+              // 通道执行失败（主机下线/SSH 拒绝/凭据错误）一律走 ERR: 业务错误口径，
+              // 与其余调用点保持一致，避免 IllegalStateException 冒泡成 HTTP 409。
             return "ERR: " + trim(e.getMessage());
         }
         return out == null ? "" : out.trim();
     }
 
-    /**
-     * PowerShell 单引号字符串转义（单引号翻倍）。
-     *
-     * @param value 原值
-     * @return 转义后值
-     */
-    /**
-     * 从可能被 CLIXML/进度记录污染的输出中提取 JSON 片段
-     * （首个 '[' 或 '{' 到末个 ']' 或 '}'）。
-     *
-     * @param out 原始输出
-     * @return JSON 子串
-     */
+      /**
+       * PowerShell 单引号字符串转义（单引号翻倍）。
+       *
+       * @param value 原值
+       * @return 转义后值
+       */
+      /**
+       * 从可能被 CLIXML/进度记录污染的输出中提取 JSON 片段
+       * （首个 '[' 或 '{' 到末个 ']' 或 '}'）。
+       *
+       * @param out 原始输出
+       * @return JSON 子串
+       */
     private static String extractJson(String out) {
         if (out == null) {
             return "";
@@ -414,33 +418,33 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         return (start >= 0 && end >= start) ? out.substring(start, end + 1) : out.trim();
     }
 
-    /**
-     * ps Escape
-     * @param value 字符串
-     * @return 返回值
-    */
+      /**
+       * ps Escape
+       * @param value 字符串
+       * @return 返回值
+      */
     private static String psEscape(String value) {
         return value == null ? "" : value.replace("'", "''");
     }
 
-    /**
-     * 读取 JsonNode 文本并归一。
-     *
-     * @param node 节点
-     * @param key  字段
-     * @return 文本
-     */
+      /**
+       * 读取 JsonNode 文本并归一。
+       *
+       * @param node 节点
+       * @param key  字段
+       * @return 文本
+       */
     private static String text(JsonNode node, String key) {
         JsonNode v = node.get(key);
         return v == null || v.isNull() ? "" : v.asText("");
     }
 
-    /**
-     * JSON 数组节点转字符串列表。
-     *
-     * @param array 数组节点
-     * @return 列表
-     */
+      /**
+       * JSON 数组节点转字符串列表。
+       *
+       * @param array 数组节点
+       * @return 列表
+       */
     private static List<String> toStringList(JsonNode array) {
         List<String> list = new ArrayList<>();
         if (array != null && array.isArray()) {
@@ -453,12 +457,12 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         return list;
     }
 
-    /**
-     * null 安全 trim。
-     *
-     * @param value 原值
-     * @return trim 后值
-     */
+      /**
+       * null 安全 trim。
+       *
+       * @param value 原值
+       * @return trim 后值
+       */
     private static String trim(String value) {
         return value == null ? "" : value.trim();
     }

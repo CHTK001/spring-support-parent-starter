@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-parent-starter</artifactId>
+    <version>4.0.0.51</version>
+  </parent>
+  <artifactId>spring-support-lowcode-starter</artifactId>
+  <description>低代码表单管理（目录 / 表单 / 页面 / 版本发布）</description>
+  <dependencies>
+    <!-- MyBatis Plus 集成（含 SysBase / MybatisPlusConfiguration / 公共查询组件） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-mybatis-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasource-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- 返回结果 ReturnResult / ReturnPageResult 来源，避免方向传导 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-common-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <!-- Swagger 注解：API 文档 -->
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- 正式嵌入式数据库适配：默认 h2 配置支持低代码模块免外部数据库启动 -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- 表达式求值 / SQL 只读判定等纯内存单元测试 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- 集成验证：真起 Spring 上下文 + H2(MySQL 模式) 回放本模块 DDL，验证发布/回滚/版本快照链路 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
+</project>

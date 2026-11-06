@@ -113,7 +113,7 @@ public class HostRealtimePushConfiguration {
                 if (alarmEngine != null && host.getId() != null) {
                     try {
                         long delay = host.getServerHostDelayMs() == null ? -1 : host.getServerHostDelayMs();
-                        alarmEngine.evaluate(host.getId(), host.getServerHostName(),
+                        alarmEngine.evaluateHost(host.getId(), host.getServerHostName(),
                                 METRIC_HOST_DELAY_MS, delay);
                     } catch (Exception e) {
                         log.debug("[monitor] 延迟告警评估跳过 hostId={}: {}", host.getId(), e.getMessage());
@@ -127,7 +127,7 @@ public class HostRealtimePushConfiguration {
                     AlarmEngineService alarmEngine = alarmEngineProvider.getIfAvailable();
                     if (alarmEngine != null && host.getId() != null) {
                         // 离线(0)/在线(1)均上送，由规则条件（LT 1）判定离线告警
-                        alarmEngine.evaluate(host.getId(), host.getServerHostName(),
+                        alarmEngine.evaluateHost(host.getId(), host.getServerHostName(),
                                 METRIC_HOST_ONLINE, online ? 1 : 0);
                     }
                 } catch (Exception e) {
@@ -146,15 +146,15 @@ public class HostRealtimePushConfiguration {
                 }
                 try {
                     if (snapshot.getServerHostCpuUsage() != null) {
-                        alarmEngine.evaluate(snapshot.getId(), snapshot.getServerHostName(),
+                        alarmEngine.evaluateHost(snapshot.getId(), snapshot.getServerHostName(),
                                 METRIC_HOST_CPU_USAGE, snapshot.getServerHostCpuUsage());
                     }
                     if (snapshot.getServerHostMemUsage() != null) {
-                        alarmEngine.evaluate(snapshot.getId(), snapshot.getServerHostName(),
+                        alarmEngine.evaluateHost(snapshot.getId(), snapshot.getServerHostName(),
                                 METRIC_HOST_MEM_USAGE, snapshot.getServerHostMemUsage());
                     }
                     if (snapshot.getServerHostDiskUsage() != null) {
-                        alarmEngine.evaluate(snapshot.getId(), snapshot.getServerHostName(),
+                        alarmEngine.evaluateHost(snapshot.getId(), snapshot.getServerHostName(),
                                 METRIC_HOST_DISK_USAGE, snapshot.getServerHostDiskUsage());
                     }
                 } catch (Exception e) {

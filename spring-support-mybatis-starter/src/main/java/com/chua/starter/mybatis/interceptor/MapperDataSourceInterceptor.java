@@ -21,34 +21,37 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 支持在 MyBatis 映射器 上解析 @DS。
- *
- * @since 2026/4/2
- */
+   * 支持在 MyBatis 映射器 上解析 @DS。
+   *
+   * @since 2026/4/2
+   */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class}),
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis.mapping.BoundSql.class}),
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session
+            .RowBounds.class, org.apache.ibatis.session.ResultHandler.class}),
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session
+            .RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis
+            .mapping.BoundSql.class}),
 })
 /**
- * 映射器数据源拦截器类。
- *
- * @author CH
- * @since 4.0.0
- */
+   * 映射器数据源拦截器类。
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class MapperDataSourceInterceptor implements Interceptor {
-    /**
-     * 日志
-    */
+      /**
+       * 日志
+      */
     private static final Logger log = LoggerFactory.getLogger(MapperDataSourceInterceptor.class);
 
-    /**
-     * Application上下文
-    */
+      /**
+       * Application上下文
+      */
     private final ApplicationContext applicationContext;
-    /**
-     * 属性
-    */
+      /**
+       * 属性
+      */
     private final MultiDataSourceSettingProperties properties;
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>(); // 映射器数据源缓存
 
@@ -80,18 +83,18 @@ public class MapperDataSourceInterceptor implements Interceptor {
             log.debug("[MyBatis][DS] Mapper 数据源切换失败: {}", ex.getMessage());
             throw ex;
         } finally {
-            /**
-             * restore数据源。
-             * @param originalDataSource 原始数据源
-             */
+              /**
+               * restore数据源。
+               * @param originalDataSource 原始数据源
+               */
             restoreDataSource(originalDataSource);
         }
     }
 
-    /**
-     * restore数据源。
-     * @param originalDataSource 原始数据源
-     */
+      /**
+       * restore数据源。
+       * @param originalDataSource 原始数据源
+       */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -101,11 +104,11 @@ public class MapperDataSourceInterceptor implements Interceptor {
         DataSourceContextSupport.setDbType(DataSourceContextSupport.DEFAULT_DATASOURCE);
     }
 
-    /**
-     * resolve映射器数据源。
-     * @param statementId 对账单标识
-     * @return resolve映射器数据源的结果
-     */
+      /**
+       * resolve映射器数据源。
+       * @param statementId 对账单标识
+       * @return resolve映射器数据源的结果
+       */
     private String resolveMapperDataSource(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {

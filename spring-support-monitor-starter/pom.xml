@@ -40,9 +40,18 @@
             <artifactId>spring-support-job-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 端口映射：ngrok / Cloudflare Tunnel 两个独立模块，经 AutoConfiguration.imports
-             自动装配 /ms/tunnel/ngrok 与 /ms/tunnel/cloudflared（含 SSE 实时状态 /stream）。
-             映射配置持久化到本地文件目录（plugin.*.store-dir），不依赖数据库；
+        <!-- 端口映射：统一入口 /ms/tunnel 由 tunnel-starter 提供（SPI：TunnelProvider +
+             统一控制器 + 文件存储 + 启停编排）；ngrok / cloudflared 只是 SPI 实现。
+             这里必须显式声明 tunnel-starter，不能只靠两个实现的传递依赖拿编排层 ——
+             传递依赖随时可能因实现模块重构而消失，页面就会 404。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-tunnel-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 端口映射的两种 SPI 实现：AutoConfiguration.imports 自动注册为 TunnelProvider，
+             由 tunnel-starter 统一装配，浏览器只认 /ms/tunnel 一套接口（provider 只是字段）。
+             映射配置持久化到 ~/.chua/tunnel/<provider>/<id>.json，不依赖数据库；
              运行时默认 auto-start=false，由页面按需启停，避免监控进程启动即暴露公网端口。 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -176,6 +185,15 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- 账号与渠道管理（统一账号 /api/accounts、AppKey、Cookie 池、免登录对话与文生图渠道）：
+             monitor 的「账号资产」页与渠道管理页都直接用本模块的接口与表，
+             必选依赖直接按 Spring Bean / REST 调用，不经 SPI 转发。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-account-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- 文档 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -192,6 +210,22 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-api-support-common-system-starter</artifactId>
+        </dependency>
+
+        <!-- 证书管理（ACME）：证书页 /monitor/api/v1/cert/** 与主机资产共用本进程。
+             只取该模块的 acme 控制器/服务/mapper（见 AcmeEmbeddedConfiguration），
+             与主后端同名的其它 Bean 不会被扫描。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-api-support-monitor-starter</artifactId>
+            <exclusions>
+                <!-- 证书模块不需要 SSO 服务端：该 starter 会注册 EnableAuthServerConfiguration，
+                     要求 OauthProtocolServersProperties，而主后端用的是另一套静态口令登录，注入即启动失败 -->
+                <exclusion>
+                    <groupId>com.chua</groupId>
+                    <artifactId>spring-api-support-oauth-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- 工具 -->

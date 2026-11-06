@@ -81,7 +81,7 @@ public class DeviceProviderCredential {
     private String deviceCredentialRemark;
 
     /**
-     * 在离线检测开关：该凭据维度的设备是否由时间轮自动探测（不开则不参与自动检测，改用全局的 {@code deviceOfflineCheck}）
+     * 在离线检测开关：该凭据维度的设备是否由时间轮自动探测（能力位 DEVICE）
      */
     @TableField("device_credential_offline_detect_enabled")
     private Boolean deviceCredentialOfflineDetectEnabled;
@@ -91,6 +91,18 @@ public class DeviceProviderCredential {
      */
     @TableField("device_credential_offline_detect_interval")
     private Integer deviceCredentialOfflineDetectInterval;
+
+    /**
+     * 事件轮询开关：该凭据实例是否独立拉取厂商事件（能力位 EVENT）
+     */
+    @TableField("device_credential_event_poll_enabled")
+    private Boolean deviceCredentialEventPollEnabled;
+
+    /**
+     * 事件轮询间隔（秒）
+     */
+    @TableField("device_credential_event_poll_interval")
+    private Integer deviceCredentialEventPollInterval;
 
     /**
      * 设备自动同步开关：该凭据维度是否由时间轮自动拉取设备目录

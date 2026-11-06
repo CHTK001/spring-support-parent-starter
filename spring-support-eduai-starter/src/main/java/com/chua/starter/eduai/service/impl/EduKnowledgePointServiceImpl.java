@@ -27,58 +27,59 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 知识点服务实现
- *
- * @since 4.0.0.42
- * @author CH
- */
+   * 知识点服务实现
+   *
+   * @since 4.0.0.42
+   * @author CH
+   */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointMapper, EduKnowledgePoint> implements IEduKnowledgePointService {
+                public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointMapper, EduKnowledgePoint
+                    > implements IEduKnowledgePointService {
 
-    /**
-     * 附件条目 Mapper
-     */
+      /**
+       * 附件条目 Mapper
+       */
     private final EduKnowledgeFileMapper knowledgeFileMapper;
 
     @Override
-    /**
-     * 列表树
-     * @param grade 字符串
-     * @param gradeLevel 字符串
-     * @param subject 字符串
-     * @return 返回值
-    */
+      /**
+       * 列表树
+       * @param grade 字符串
+       * @param gradeLevel 字符串
+       * @param subject 字符串
+       * @return 返回值
+      */
     public List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade) {
         List<EduKnowledgePoint> list = baseMapper.selectTree(subject, gradeLevel, grade,
                 EduUserContext.ownerScope());
 
-        // 转换为 VO 列表
+          // 转换为 VO 列表
         List<KnowledgePointVO> voList = list.stream().map(this::toVO).collect(Collectors.toList());
-        // 按父节点分组
+          // 按父节点分组
         Map<Long, List<KnowledgePointVO>> groupMap = voList.stream()
                 .collect(Collectors.groupingBy(vo -> vo.knowledgePointParentId() == null ? 0L : vo.knowledgePointParentId()));
 
         List<KnowledgePointVO> tree = new ArrayList<>();
- // 构建树形结构，根节点 父标识 为 0
-        /**
-         * 构建children。
-         * @param 0L 0L
-         * @param groupMap 群体映射
-         * @param tree 树
-         */
+   // 构建树形结构，根节点 父标识 为 0
+          /**
+           * 构建children。
+           * @param 0L 0L
+           * @param groupMap 群体映射
+           * @param tree 树
+           */
         buildChildren(0L, groupMap, tree);
         return tree;
     }
 
-    /**
-     * 递归构建子节点
-     *
-     * @param parentId 父节点标识
-     * @param groupMap 按父节点分组的集合
-     * @param target   目标集合
-     */
+      /**
+       * 递归构建子节点
+       *
+       * @param parentId 父节点标识
+       * @param groupMap 按父节点分组的集合
+       * @param target   目标集合
+       */
     private void buildChildren(Long parentId, Map<Long, List<KnowledgePointVO>> groupMap, List<KnowledgePointVO> target) {
         List<KnowledgePointVO> children = groupMap.get(parentId);
         if (children == null) {
@@ -86,10 +87,10 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         }
         for (KnowledgePointVO vo : children) {
             List<KnowledgePointVO> subChildren = new ArrayList<>();
-            /**
-             * 构建children。
-             * @param vo.getId( vo.获取标识(
-             */
+              /**
+               * 构建children。
+               * @param vo.getId( vo.获取标识(
+               */
             buildChildren(vo.knowledgePointId(), groupMap, subChildren);
             target.add(vo.withChildren(subChildren));
         }
@@ -97,12 +98,12 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 保存知识point
-     *
-     * @param dto dto
-     * @return 保存知识point的结果
-     */
+      /**
+       * 保存知识point
+       *
+       * @param dto dto
+       * @return 保存知识point的结果
+       */
     public Long saveKnowledgePoint(KnowledgePointSaveDTO dto) {
         EduKnowledgePoint entity = new EduKnowledgePoint();
         entity.setKnowledgePointName(dto.knowledgePointName());
@@ -122,7 +123,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         entity.setKnowledgePointFileSize(dto.knowledgePointFileSize());
 
         if (dto.knowledgePointId() != null && dto.knowledgePointId() > 0) {
-            // 更新：校验归属并锁定原归属
+              // 更新：校验归属并锁定原归属
             EduKnowledgePoint exists = baseMapper.selectById(dto.knowledgePointId());
             if (exists == null) {
                 throw new BusinessException("知识点不存在");
@@ -136,7 +137,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
             log.info("更新知识点成功，ID: {}", dto.knowledgePointId());
             return dto.knowledgePointId();
         } else {
-            // 新增
+              // 新增
             entity.setOwnerUserId(EduUserContext.requireUserId());
             entity.setKnowledgePointStatus(dto.knowledgePointStatus() != null ? dto.knowledgePointStatus() : 1);
             entity.setCreateTime(LocalDateTime.now());
@@ -149,35 +150,35 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 删除知识point
-     *
-     * @param id 标识
-     * @return 删除知识point的结果
-     */
+      /**
+       * 删除知识point
+       *
+       * @param id 标识
+       * @return 删除知识point的结果
+       */
     public boolean deleteKnowledgePoint(Long id) {
         EduKnowledgePoint exists = baseMapper.selectById(id);
         if (exists == null) {
-            /**
-             * 业务异常。
-             * @param "知识点不存在" "知识点不存在"
-             * @return 业务异常的结果
-             */
+              /**
+               * 业务异常。
+               * @param "知识点不存在" "知识点不存在"
+               * @return 业务异常的结果
+               */
             throw new BusinessException("知识点不存在");
         }
         EduUserContext.checkWritable(exists.getOwnerUserId());
-        // 逻辑删除：状态置为停用
+          // 逻辑删除：状态置为停用
         exists.setKnowledgePointStatus(0);
         exists.setUpdateTime(LocalDateTime.now());
         int rows = baseMapper.updateById(exists);
 
-        // 级联停用子节点
+          // 级联停用子节点
         List<EduKnowledgePoint> children = baseMapper.selectEnabledChildren(id);
         for (EduKnowledgePoint child : children) {
-            /**
-             * 删除知识point。
-             * @param child.getKnowledgePointId( 子.获取知识pointid(
-             */
+              /**
+               * 删除知识point。
+               * @param child.getKnowledgePointId( 子.获取知识pointid(
+               */
             deleteKnowledgePoint(child.getKnowledgePointId());
         }
         log.info("删除知识点，ID: {}", id);
@@ -216,11 +217,11 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * bind File
-     * @param dto 参数
-     * @return 返回值
-    */
+      /**
+       * bind File
+       * @param dto 参数
+       * @return 返回值
+      */
     public Long bindFile(KnowledgeFileBindDTO dto) {
         if (dto.knowledgePointId() == null || dto.knowledgePointId() <= 0) {
             throw new BusinessException("缺少所属卡片标识");
@@ -248,11 +249,11 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * delete File
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * delete File
+       * @param id 长整数
+       * @return 返回值
+      */
     public boolean deleteFile(Long id) {
         EduKnowledgeFile exists = knowledgeFileMapper.selectById(id);
         if (exists == null) {
@@ -266,12 +267,12 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         return rows > 0;
     }
 
-    /**
-     * 校验卡片可读并返回实体
-     *
-     * @param knowledgePointId 卡片标识
-     * @return 卡片实体
-     */
+      /**
+       * 校验卡片可读并返回实体
+       *
+       * @param knowledgePointId 卡片标识
+       * @return 卡片实体
+       */
     private EduKnowledgePoint requireCardReadable(Long knowledgePointId) {
         EduKnowledgePoint card = baseMapper.selectById(knowledgePointId);
         if (card == null || card.getKnowledgePointStatus() == null || card.getKnowledgePointStatus() != 1) {
@@ -281,12 +282,12 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         return card;
     }
 
-    /**
-     * 校验卡片可写并返回实体
-     *
-     * @param knowledgePointId 卡片标识
-     * @return 卡片实体
-     */
+      /**
+       * 校验卡片可写并返回实体
+       *
+       * @param knowledgePointId 卡片标识
+       * @return 卡片实体
+       */
     private EduKnowledgePoint requireCardWritable(Long knowledgePointId) {
         EduKnowledgePoint card = baseMapper.selectById(knowledgePointId);
         if (card == null) {
@@ -296,12 +297,12 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         return card;
     }
 
-    /**
-     * 实体转 VO
-     *
-     * @param entity 实体
-     * @return VO
-     */
+      /**
+       * 实体转 VO
+       *
+       * @param entity 实体
+       * @return VO
+       */
     private KnowledgePointVO toVO(EduKnowledgePoint entity) {
         KnowledgePointVO vo = new KnowledgePointVO(
                 entity.getKnowledgePointId(),
@@ -326,12 +327,12 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         return vo;
     }
 
-    /**
-     * 附件实体转 VO
-     *
-     * @param entity 实体
-     * @return VO
-     */
+      /**
+       * 附件实体转 VO
+       *
+       * @param entity 实体
+       * @return VO
+       */
     private KnowledgeFileVO toFileVO(EduKnowledgeFile entity) {
         return new KnowledgeFileVO(
                 entity.getKnowledgeFileId(),

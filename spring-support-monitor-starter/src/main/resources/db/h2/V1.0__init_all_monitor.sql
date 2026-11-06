@@ -278,7 +278,9 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_policy (
     ms_monitor_alarm_policy_name     VARCHAR(64)  NOT NULL                COMMENT '策略名称',
     ms_monitor_alarm_policy_enabled  TINYINT      NOT NULL DEFAULT 1      COMMENT '启用状态 1启用 0停用',
     ms_monitor_alarm_policy_remark   VARCHAR(255) NULL                    COMMENT '备注',
-    PRIMARY KEY (id)
+    ms_server_host_id                BIGINT       NULL                    COMMENT '归属主机ID(ms_server_host.id),空为全局',
+    PRIMARY KEY (id),
+    KEY `idx_ms_monitor_alarm_policy_host` (ms_server_host_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警策略';
 
 -- ----------------------------------------------------------

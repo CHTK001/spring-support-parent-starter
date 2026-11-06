@@ -23,43 +23,44 @@ import org.springframework.util.StringUtils;
 import java.util.UUID;
 
 /**
- * 商户服务实现，负责商户的增删改查、激活与停用操作。
- *
- * @author CH
- * @since 4.0.0.50
- */
+   * 商户服务实现，负责商户的增删改查、激活与停用操作。
+   *
+   * @author CH
+   * @since 4.0.0.50
+   */
 @Service
 @RequiredArgsConstructor
 public class MerchantServiceImpl implements MerchantService {
 
-    /**
-     * 商户映射器
-     */
+      /**
+       * 商户映射器
+       */
     private final MerchantMapper merchantMapper;
-    /**
-     * 商户渠道映射器
-     */
+      /**
+       * 商户渠道映射器
+       */
     private final MerchantChannelMapper merchantChannelMapper;
-    /**
-     * 支付订单映射器
-     */
+      /**
+       * 支付订单映射器
+       */
     private final PaymentOrderMapper paymentOrderMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 创建商户
-     *
-     * @param dto dto
-     * @return 创建出的商户视图对象
-     */
+      /**
+       * 创建商户
+       *
+       * @param dto dto
+       * @return 创建出的商户视图对象
+       */
     public MerchantVO createMerchant(MerchantDTO dto) {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);
         merchant.setMerchantNo(generateMerchantNo());
         merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.paymentWalletEnabled()));
         merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.paymentAutoCloseEnabled()));
-        merchant.setPaymentAutoCloseMinutes(dto.paymentAutoCloseMinutes() != null && dto.paymentAutoCloseMinutes() > 0 ? dto.paymentAutoCloseMinutes() : 30);
+        merchant.setPaymentAutoCloseMinutes(dto.paymentAutoCloseMinutes() != null && dto.paymentAutoCloseMinutes() > 0 ? dto
+            .paymentAutoCloseMinutes() : 30);
         merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.paymentSplitTableEnabled()));
         merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.paymentProfitSharingEnabled()));
         merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.paymentCouponEnabled()));
@@ -70,19 +71,20 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 更新商户
-     *
-     * @param id 标识
-     * @param dto dto
-     * @return 更新后的商户视图对象
-     */
+      /**
+       * 更新商户
+       *
+       * @param id 标识
+       * @param dto dto
+       * @return 更新后的商户视图对象
+       */
     public MerchantVO updateMerchant(Long id, MerchantDTO dto) {
         Merchant merchant = requireMerchant(id);
         BeanUtils.copyProperties(dto, merchant);
         merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.paymentWalletEnabled()));
         merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.paymentAutoCloseEnabled()));
-        merchant.setPaymentAutoCloseMinutes(dto.paymentAutoCloseMinutes() != null && dto.paymentAutoCloseMinutes() > 0 ? dto.paymentAutoCloseMinutes() : merchant.getPaymentAutoCloseMinutes());
+        merchant.setPaymentAutoCloseMinutes(dto.paymentAutoCloseMinutes() != null && dto.paymentAutoCloseMinutes() > 0 ? dto
+            .paymentAutoCloseMinutes() : merchant.getPaymentAutoCloseMinutes());
         merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.paymentSplitTableEnabled()));
         merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.paymentProfitSharingEnabled()));
         merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.paymentCouponEnabled()));
@@ -92,12 +94,12 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 删除商户
-     *
-     * @param id 标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除商户
+       *
+       * @param id 标识
+       * @return 是否删除成功
+       */
     public boolean deleteMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         long channelCount = merchantChannelMapper.selectCount(new LambdaQueryWrapper<MerchantChannel>()
@@ -115,24 +117,24 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
-    /**
-     * 获取商户
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * 获取商户
+       * @param id 长整数
+       * @return 返回值
+      */
     public MerchantVO getMerchant(Long id) {
         return convertToVO(requireMerchant(id));
     }
 
     @Override
-    /**
-     * 分页查询商户列表
-     * @param merchantName 字符串
-     * @param page 整数
-     * @param size 获取数量
-     * @param status 整数
-     * @return 返回值
-    */
+      /**
+       * 分页查询商户列表
+       * @param merchantName 字符串
+       * @param page 整数
+       * @param size 获取数量
+       * @param status 整数
+       * @return 返回值
+      */
     public Page<MerchantVO> listMerchants(int page, int size, String merchantName, Integer status) {
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(merchantName)) {
@@ -151,11 +153,11 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 激活商户
-     * @param id 标识
-     * @return 返回值
-    */
+      /**
+       * 激活商户
+       * @param id 标识
+       * @return 返回值
+      */
     public boolean activateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.ACTIVE.getCode());
@@ -164,22 +166,22 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 停用商户
-     * @param id 标识
-     * @return 返回值
-    */
+      /**
+       * 停用商户
+       * @param id 标识
+       * @return 返回值
+      */
     public boolean deactivateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.DISABLED.getCode());
         return merchantMapper.updateById(merchant) > 0;
     }
 
-    /**
-     * 获取商户，不存在时抛出异常
-     * @param id 标识
-     * @return 返回值
-    */
+      /**
+       * 获取商户，不存在时抛出异常
+       * @param id 标识
+       * @return 返回值
+      */
     private Merchant requireMerchant(Long id) {
         Merchant merchant = merchantMapper.selectById(id);
         if (merchant == null) {
@@ -188,20 +190,20 @@ public class MerchantServiceImpl implements MerchantService {
         return merchant;
     }
 
-    /**
-     * 生成商户号
-     * @return 返回值
-    */
+      /**
+       * 生成商户号
+       * @return 返回值
+      */
     private String generateMerchantNo() {
         return "M" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
-    /**
-     * 转换为视图对象
-     *
-     * @param merchant 商户
-     * @return 转换后的商户视图对象
-     */
+      /**
+       * 转换为视图对象
+       *
+       * @param merchant 商户
+       * @return 转换后的商户视图对象
+       */
     private MerchantVO convertToVO(Merchant merchant) {
         return new MerchantVO(
                 merchant.getId(),

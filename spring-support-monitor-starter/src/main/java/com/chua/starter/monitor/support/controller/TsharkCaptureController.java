@@ -124,6 +124,26 @@ public class TsharkCaptureController {
     }
 
     /**
+     * tshark 全局事件流（运行时状态 + 会话变化）。
+     *
+     * <p>一条连接同时承载两类事件，页面因此不需要轮询 {@code /status}，也不需要
+     * 定时重拉会话列表：</p>
+     * <ul>
+     *   <li>{@code ready} / {@code progress}：载荷是 {@link TsharkRuntimeStatus}，
+     *       建连即回一帧当前状态；</li>
+     *   <li>{@code session}：某个会话被新建 / 停止 / 解析完成 / 删除时推送会话实体。</li>
+     * </ul>
+     *
+     * @return SSE 连接
+     */
+    @Operation(summary = "tshark 全局事件流")
+    @GetMapping("/stream")
+    public ResponseEntity<SseEmitter> globalStream() {
+        SseEmitter emitter = this.installStreamRegistry.subscribe(this.tsharkRuntime.status());
+        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
+    }
+
+    /**
      * 列出可用网卡
      *
      * <p>带友好名与本机 IPv4，并把承载默认出口的那张排在最前 —— Windows 上 tshark 只给

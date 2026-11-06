@@ -204,6 +204,17 @@ public interface ChannelHealthService {
     int probeAll();
 
     /**
+     * 按渠道（平台标识）触发探针：遍历该渠道下全部启用供应商的连接并逐个探活。
+     *
+     * <p>供按渠道独立间隔的定时任务使用：不同渠道的探针节奏可以不同
+     * （如免费额度渠道探得勤、付费渠道探得稀），因此需要 batching 粒度到渠道。</p>
+     *
+     * @param channel 渠道平台标识（如 {@code workbuddy}、{@code cline}）
+     * @return 探针完成的连接数；该渠道无启用供应商时返回 0
+     */
+    int probeByChannel(String channel);
+
+    /**
      * 记录一次成功探活（含 HTTP 状态码与延迟）
      *
      * @param connectionId 连接标识

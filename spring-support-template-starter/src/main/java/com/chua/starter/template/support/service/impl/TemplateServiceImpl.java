@@ -15,8 +15,12 @@ import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
 import com.chua.starter.template.support.model.TemplateSourceRequest;
+import com.chua.starter.template.support.model.TemplateSourceDetail;
 import com.chua.starter.template.support.printer.PrinterConfig;
+import com.chua.starter.template.support.service.ProviderSource;
+import com.chua.starter.template.support.service.ProviderSourceRegistry;
 import com.chua.starter.template.support.service.TemplateService;
+import com.chua.starter.template.support.util.TemplateContentParams;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,10 +48,18 @@ public class TemplateServiceImpl implements TemplateService {
      */
     private final TemplatePrinterMapper templatePrinterMapper;
 
+    /**
+     * 来源提供商注册表：固定模板（message / paper）的完整信息在来源模块里，
+     * 这里按来源反查维护它的模块（见 {@link ProviderSource#detail}）。
+     */
+    private final ProviderSourceRegistry providerSourceRegistry;
+
     public TemplateServiceImpl(TemplateInfoMapper templateInfoMapper,
-                               TemplatePrinterMapper templatePrinterMapper) {
+                               TemplatePrinterMapper templatePrinterMapper,
+                               ProviderSourceRegistry providerSourceRegistry) {
         this.templateInfoMapper = templateInfoMapper;
         this.templatePrinterMapper = templatePrinterMapper;
+        this.providerSourceRegistry = providerSourceRegistry;
     }
 
     @Override
@@ -164,6 +176,93 @@ public class TemplateServiceImpl implements TemplateService {
         payload.setContent(template.getTemplateInfoContent());
         payload.setMode(TemplateDesignerPayload.Mode.design);
         return payload;
+    }
+
+    @Override
+    public TemplateSourceDetail detail(String id) {
+        TemplateInfo row = id == null ? null : templateInfoMapper.selectById(id);
+        if (row == null || Integer.valueOf(1).equals(row.getTemplateInfoDeleted())) {
+            throw new IllegalArgumentException("模板不存在: " + id);
+        }
+        String source = row.getTemplateInfoSource();
+        boolean fixed = isFixedSource(source);
+        if (!fixed) {
+            // 自定义模板：库内行就是完整答案，没有三方模板 ID 与推送渠道
+            return new TemplateSourceDetail(
+                    row.getTemplateInfoId(),
+                    row.getTemplateInfoName(),
+                    source,
+                    false,
+                    row.getTemplateInfoSourceId(),
+                    row.getTemplateInfoSourceCode(),
+                    row.getTemplateInfoProvider(),
+                    null,
+                    null,
+                    row.getTemplateInfoType(),
+                    row.getTemplateInfoContent(),
+                    TemplateContentParams.of(row.getTemplateInfoContent()),
+                    row.getTemplateInfoRemark());
+        }
+        // 固定模板：向来源模块补问（归属账号 / 推送渠道 / 三方模板 ID / 占位符）
+        ProviderSource owner = providerSourceRegistry.sourceOf(source);
+        TemplateSourceDetail fromSource = owner == null
+                ? null
+                : owner.detail(row.getTemplateInfoProvider(), row.getTemplateInfoSourceId());
+        if (fromSource != null) {
+            // 来源模块只认识自己的行，主键与库内状态一律以库内行为准
+            return new TemplateSourceDetail(
+                    row.getTemplateInfoId(),
+                    pick(fromSource.name(), row.getTemplateInfoName()),
+                    source,
+                    true,
+                    pick(fromSource.sourceId(), row.getTemplateInfoSourceId()),
+                    pick(fromSource.sourceCode(), row.getTemplateInfoSourceCode()),
+                    pick(fromSource.providerId(), row.getTemplateInfoProvider()),
+                    fromSource.providerName(),
+                    fromSource.channel(),
+                    pick(fromSource.contentType(), row.getTemplateInfoType()),
+                    pick(fromSource.content(), row.getTemplateInfoContent()),
+                    fromSource.params(),
+                    pick(fromSource.remark(), row.getTemplateInfoRemark()));
+        }
+        // 来源模块未上线（或已不认识该行）：只能用库内影子信息回答，
+        // 渠道与账号名称拿不到就留空，不猜。
+        log.info("[Template] 来源 {} 未提供模板详情，回落库内信息: id={}", source, id);
+        return new TemplateSourceDetail(
+                row.getTemplateInfoId(),
+                row.getTemplateInfoName(),
+                source,
+                true,
+                row.getTemplateInfoSourceId(),
+                row.getTemplateInfoSourceCode(),
+                row.getTemplateInfoProvider(),
+                null,
+                null,
+                row.getTemplateInfoType(),
+                row.getTemplateInfoContent(),
+                TemplateContentParams.of(row.getTemplateInfoContent()),
+                row.getTemplateInfoRemark());
+    }
+
+    /**
+     * 是否固定模板（三方同步）
+     *
+     * @param source 来源标识
+     * @return {@code true} = 内容归三方维护
+     */
+    private static boolean isFixedSource(String source) {
+        return "message".equalsIgnoreCase(source) || "paper".equalsIgnoreCase(source);
+    }
+
+    /**
+     * 取第一个非空值（来源侧的答案优先，缺失时回落库内影子信息）
+     *
+     * @param first  来源侧的答案
+     * @param second 库内影子信息
+     * @return 非空的那个，都为空返回 {@code null}
+     */
+    private static String pick(String first, String second) {
+        return first != null && !first.trim().isEmpty() ? first : second;
     }
 
     @Override

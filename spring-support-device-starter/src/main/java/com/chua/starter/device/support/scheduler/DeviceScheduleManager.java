@@ -8,14 +8,15 @@ import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.entity.DeviceTaskState;
 import com.chua.starter.device.support.service.DeviceAccessRecordService;
 import com.chua.starter.device.support.service.DeviceEventService;
-import com.chua.starter.device.support.service.DeviceProviderConfigService;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceStatusService;
 import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.support.service.DeviceTaskStateService;
+import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
+import com.chua.starter.device.spi.model.DeviceCapability;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +38,12 @@ import java.util.concurrent.TimeUnit;
  *
  * <h3>任务分类</h3>
  * <ul>
- *   <li>全局任务：<code>deviceOfflineCheck</code>（在离线检测）/ <code>deviceEventPoll</code>（事件轮询）/
- *   <code>deviceSync</code>（厂商目录同步）/ <code>deviceAccessExtract</code>（门禁记录抽取）；</li>
- *   <li>凭据级任务：每套提供商凭据稀释出 3 个任务，名称为
- *   <code>offlineDetect_{credId}</code>/<code>deviceSync_{credId}</code>/<code>orgSync_{credId}</code>，
- *   行为由 {@link DeviceProviderCredential} 的高级配置驱动（开关 + 间隔秒），默认全部关闭。</li>
+ *   <li>仍由时间轮统一调度的任务：<code>deviceAccessExtract</code>（门禁记录抽取）；</li>
+ *   <li>凭据级任务：每套提供商凭据独立拥有 4 个任务，名称为
+ *   <code>offlineDetect_{credId}</code>/<code>eventPoll_{credId}</code>/
+ *   <code>deviceSync_{credId}</code>/<code>orgSync_{credId}</code>，
+ *   行为由 {@link DeviceProviderCredential} 的能力配置驱动（开关 + 间隔秒），默认为关闭；
+ *   在离线检测/事件轮询/设备同步/组织同步都不再有全局入口，哪套凭据开启就只跑哪套。</li>
  * </ul>
  *
  * @since 4.0.0.42
@@ -53,17 +55,15 @@ import java.util.concurrent.TimeUnit;
 public class DeviceScheduleManager {
 
     /**
-     * 全局任务名
+     * 仍由时间轮统一调度的任务名
      */
-    private static final String TASK_OFFLINE_CHECK = "deviceOfflineCheck";
-    private static final String TASK_EVENT_POLL = "deviceEventPoll";
-    private static final String TASK_DEVICE_SYNC = "deviceSync";
     private static final String TASK_ACCESS_EXTRACT = "deviceAccessExtract";
 
     /**
      * 凭据级任务前缀（任务名 = 前缀 + '_' + 凭据 ID）
      */
     private static final String PREFIX_OFFLINE_DETECT = "offlineDetect";
+    private static final String PREFIX_EVENT_POLL = "eventPoll";
     private static final String PREFIX_DEVICE_SYNC = "deviceSync";
     private static final String PREFIX_ORG_SYNC = "orgSync";
 
@@ -80,7 +80,6 @@ public class DeviceScheduleManager {
     private static final int MAX_RECOVERY_PER_CYCLE = 20;
 
     private final DeviceTaskStateService taskStateService;
-    private final DeviceProviderConfigService providerConfigService;
     private final DeviceService deviceService;
     private final DeviceStatusService statusService;
     private final DeviceSessionManager sessionManager;
@@ -88,6 +87,8 @@ public class DeviceScheduleManager {
     private final DeviceSyncService syncService;
     private final DeviceAccessRecordService accessRecordService;
     private final DeviceProviderCredentialService credentialService;
+    /** 厂商 SPI：凭据能不能开某项能力，以厂商描述符的能力位为准 */
+    private final List<DeviceProvider> deviceProviders;
 
     private TimeScheduler timeScheduler;
     /** 全局 Tick 注册表（任务名 → 注册的定时任务） */
@@ -99,15 +100,12 @@ public class DeviceScheduleManager {
     public void start() {
         try {
             timeScheduler = TimeScheduler.of();
-            // 4 个全局 tick：间隔 SCHEDULE_INTERVAL_SEC 秒
-            tick(TASK_OFFLINE_CHECK, this::executeOfflineCheck);
-            tick(TASK_EVENT_POLL, this::executeEventPoll);
-            tick(TASK_DEVICE_SYNC, this::executeDeviceSync);
+            // 仅保留仍属于平台级的 tick（门禁记录抽取）；其余能力全部下沉到凭据级
             tick(TASK_ACCESS_EXTRACT, this::executeAccessExtract);
-            // 全部凭据的 Tick（从 `device_provider_credential` 的高级配置取开关与间隔）
+            // 全部凭据的 Tick（从 `device_provider_credential` 的能力配置取开关与间隔）
             refresh();
-            log.info("设备定时调度器已启动，tick 间隔 {} 秒（{} / {} / {} / {}）",
-                    SCHEDULE_INTERVAL_SEC, TASK_OFFLINE_CHECK, TASK_EVENT_POLL, TASK_DEVICE_SYNC, TASK_ACCESS_EXTRACT);
+            log.info("设备定时调度器已启动，tick 间隔 {} 秒（{}）；凭据级任务按实例独立注册",
+                    SCHEDULE_INTERVAL_SEC, TASK_ACCESS_EXTRACT);
         } catch (Exception e) {
             log.error("设备定时调度器启动失败", e);
         }
@@ -198,7 +196,7 @@ public class DeviceScheduleManager {
     }
 
     /**
-     * 按凭据重注册 3 个 Tick。
+     * 按凭据重注册 4 个 Tick。
      * <p>先撤掉该凭据名下的旧 Tick，再按最新配置判定：凭据停用、开关关闭、
      * 间隔为空或非正数时不注册任务。</p>
      *
@@ -213,7 +211,7 @@ public class DeviceScheduleManager {
             String taskName = source.name(credId);
             // 先撤旧的：配置改成关闭时也必须落地，而不是留着旧 Tick 继续跑
             cancel(taskName, credentialTasks);
-            if (!source.acts(credential)) {
+            if (!acts(source, credential)) {
                 continue;
             }
             // 间隔：凭据高级配置为准（>0），未配置时回落到状态行（任务页改过）/ 默认 30 秒
@@ -240,7 +238,7 @@ public class DeviceScheduleManager {
      */
     private void tickCredential(CredentialTask source, String credId) {
         DeviceProviderCredential credential = credentialService.get(credId);
-        if (credential == null || !source.acts(credential)) {
+        if (credential == null || !acts(source, credential)) {
             return;
         }
         String taskName = source.name(credId);
@@ -270,10 +268,6 @@ public class DeviceScheduleManager {
             return runTracked(taskName, body(source, credId));
         }
         return switch (taskName) {
-            case TASK_OFFLINE_CHECK ->
-                    runTracked(taskName, () -> doOfflineCheck(providerConfigService.listCheckableDevices()));
-            case TASK_EVENT_POLL -> runTracked(taskName, () -> eventService.pollAllDevices());
-            case TASK_DEVICE_SYNC -> runTracked(taskName, () -> syncService.syncDevices(null));
             case TASK_ACCESS_EXTRACT -> runTracked(taskName, () -> {
                 LocalDateTime end = LocalDateTime.now();
                 accessRecordService.extractRecent(end.minusMinutes(10), end);
@@ -364,23 +358,6 @@ public class DeviceScheduleManager {
     }
 
     /**
-     * 离线检测（全局）
-     */
-    private void executeOfflineCheck() {
-        if (!taskStateService.shouldRun(TASK_OFFLINE_CHECK)) {
-            return;
-        }
-        if (!taskStateService.markRunning(TASK_OFFLINE_CHECK)) {
-            return;
-        }
-        try {
-            doOfflineCheck(providerConfigService.listCheckableDevices());
-        } finally {
-            taskStateService.markFinished(TASK_OFFLINE_CHECK);
-        }
-    }
-
-    /**
      * 设备离线检测
      */
     private void doOfflineCheck(List<DeviceInfo> devices) {
@@ -407,36 +384,6 @@ public class DeviceScheduleManager {
                 sessionManager.unregister(device.getDeviceInfoId());
                 log.warn("设备离线: id={}, ip={}", device.getDeviceInfoId(), device.getDeviceInfoIp());
             }
-        }
-    }
-
-    /** 事件轮询 */
-    private void executeEventPoll() {
-        if (!taskStateService.shouldRun(TASK_EVENT_POLL)) {
-            return;
-        }
-        if (!taskStateService.markRunning(TASK_EVENT_POLL)) {
-            return;
-        }
-        try {
-            eventService.pollAllDevices();
-        } finally {
-            taskStateService.markFinished(TASK_EVENT_POLL);
-        }
-    }
-
-    /** 设备目录同步（全部厂商） */
-    private void executeDeviceSync() {
-        if (!taskStateService.shouldRun(TASK_DEVICE_SYNC)) {
-            return;
-        }
-        if (!taskStateService.markRunning(TASK_DEVICE_SYNC)) {
-            return;
-        }
-        try {
-            syncService.syncDevices(null);
-        } finally {
-            taskStateService.markFinished(TASK_DEVICE_SYNC);
         }
     }
 
@@ -495,26 +442,37 @@ public class DeviceScheduleManager {
     }
 
     /**
-     * 凭据级任务分类（开关 + 间隔）
+     * 凭据级任务分类（能力位 + 开关 + 间隔）。
+     *
+     * <p>能力位来自厂商描述符：厂商没这个能力时，即使凭据开关被打开也不注册任务，
+     * 避免生成永远拉不到数据的空转任务。</p>
      */
     private enum CredentialTask {
-        OFFLINE_DETECT(PREFIX_OFFLINE_DETECT, "在离线检测", DeviceProviderCredential::getDeviceCredentialOfflineDetectEnabled,
+        OFFLINE_DETECT(PREFIX_OFFLINE_DETECT, "在离线检测", DeviceCapability.DEVICE,
+                DeviceProviderCredential::getDeviceCredentialOfflineDetectEnabled,
                 DeviceProviderCredential::getDeviceCredentialOfflineDetectInterval),
-        DEVICE_SYNC(PREFIX_DEVICE_SYNC, "设备自动同步", DeviceProviderCredential::getDeviceCredentialDeviceSyncEnabled,
+        EVENT_POLL(PREFIX_EVENT_POLL, "事件轮询", DeviceCapability.EVENT,
+                DeviceProviderCredential::getDeviceCredentialEventPollEnabled,
+                DeviceProviderCredential::getDeviceCredentialEventPollInterval),
+        DEVICE_SYNC(PREFIX_DEVICE_SYNC, "设备自动同步", DeviceCapability.DEVICE,
+                DeviceProviderCredential::getDeviceCredentialDeviceSyncEnabled,
                 DeviceProviderCredential::getDeviceCredentialDeviceSyncInterval),
-        ORG_SYNC(PREFIX_ORG_SYNC, "组织自动同步", DeviceProviderCredential::getDeviceCredentialOrgSyncEnabled,
+        ORG_SYNC(PREFIX_ORG_SYNC, "组织自动同步", DeviceCapability.ORG,
+                DeviceProviderCredential::getDeviceCredentialOrgSyncEnabled,
                 DeviceProviderCredential::getDeviceCredentialOrgSyncInterval);
 
         private final String prefix;
         private final String description;
+        private final DeviceCapability capability;
         private final java.util.function.Function<DeviceProviderCredential, Boolean> enabled;
         private final java.util.function.Function<DeviceProviderCredential, Integer> interval;
 
-        CredentialTask(String prefix, String description,
+        CredentialTask(String prefix, String description, DeviceCapability capability,
                        java.util.function.Function<DeviceProviderCredential, Boolean> enabled,
                        java.util.function.Function<DeviceProviderCredential, Integer> interval) {
             this.prefix = prefix;
             this.description = description;
+            this.capability = capability;
             this.enabled = enabled;
             this.interval = interval;
         }
@@ -542,11 +500,42 @@ public class DeviceScheduleManager {
     }
 
     /**
+     * 凭据是否该跑某任务：凭据开关开启、且厂商描述符声明了对应能力位。
+     *
+     * @param source     任务来源
+     * @param credential 凭据
+     * @return 是否注册/执行
+     */
+    private boolean acts(CredentialTask source, DeviceProviderCredential credential) {
+        return source.acts(credential)
+                && supports(credential.getDeviceCredentialVendor(), source.capability);
+    }
+
+    /**
+     * 厂商是否声明了某项能力。
+     *
+     * @param vendor     厂商标识
+     * @param capability 能力位
+     * @return 支持才返回 {@code true}
+     */
+    private boolean supports(String vendor, DeviceCapability capability) {
+        if (vendor == null || deviceProviders == null) {
+            return false;
+        }
+        return deviceProviders.stream()
+                .filter(provider -> vendor.equalsIgnoreCase(provider.getVendor()))
+                .findFirst()
+                .map(provider -> provider.descriptor().capabilities().contains(capability))
+                .orElse(false);
+    }
+
+    /**
      * 凭据级任务体：按来源把任务要求成可执行的 Runnable
      */
     private Runnable body(CredentialTask source, String credId) {
         return switch (source) {
             case OFFLINE_DETECT -> () -> doOfflineCheck(deviceService.listCheckableDevicesByCredentialId(credId));
+            case EVENT_POLL -> () -> eventService.pollDevicesByCredential(credId);
             case DEVICE_SYNC -> () -> syncService.syncDevicesByCredential(credId);
             case ORG_SYNC -> () -> syncService.syncOrganizationsByCredential(credId);
         };

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.collect.mapper.CollectRecordMapper">
+
+    <!-- 按流程、节点和业务主键查询已有记录的主键。 -->
+    <select id="selectIdByKey" parameterType="java.util.Map" resultType="java.lang.Long">
+        SELECT collect_record_id
+        FROM collect_record
+        WHERE collect_record_flow_id = #{flowId}
+          AND collect_record_node_id = #{nodeId}
+          AND collect_record_key = #{key}
+        LIMIT 1
+    </select>
+
+    <!-- 统计指定流程内相同业务主键的记录数。 -->
+    <select id="countByFlowKey" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM collect_record
+        WHERE collect_record_flow_id = #{flowId}
+          AND collect_record_key = #{key}
+    </select>
+
+    <!-- 统计跨流程相同业务主键的记录数。 -->
+    <select id="countByKey" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM collect_record
+        WHERE collect_record_key = #{key}
+    </select>
+
+</mapper>

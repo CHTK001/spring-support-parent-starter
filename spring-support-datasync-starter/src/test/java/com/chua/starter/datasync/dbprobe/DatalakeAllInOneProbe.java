@@ -29,55 +29,55 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 数据湖 全链路探针：服务端 生命周期 + Pipeline CRUD + 4 Sink 写入 + Envelope 追踪。
- *
- * <p>验证项（12 项）：
- * <ol>
- *   <li>PipelineManager CRUD（save/get/delete/ids）</li>
- *   <li>PipelineEngine 执行（单 Sink）</li>
- *   <li>PipelineEngine 执行（多 Sink）</li>
- *   <li>LogSink 写入</li>
- *   <li>StatisticSink 写入</li>
- *   <li>RealTimeSink 写入</li>
- *   <li>JdbcSink 写入</li>
- *   <li>DataEnvelope trace 追踪</li>
- *   <li>DataEnvelope state 流转</li>
- *   <li>DataEnvelope isLog 判定</li>
- *   <li>SinkManager start/stop</li>
- *   <li>DatalakeServer start/stop 生命周期</li>
- * </ol>
- *
- * @author CH
- * @since 4.0.0.42
- */
+   * 数据湖 全链路探针：服务端 生命周期 + Pipeline CRUD + 4 Sink 写入 + Envelope 追踪。
+   *
+   * <p>验证项（12 项）：
+   * <ol>
+   *   <li>PipelineManager CRUD（save/get/delete/ids）</li>
+   *   <li>PipelineEngine 执行（单 Sink）</li>
+   *   <li>PipelineEngine 执行（多 Sink）</li>
+   *   <li>LogSink 写入</li>
+   *   <li>StatisticSink 写入</li>
+   *   <li>RealTimeSink 写入</li>
+   *   <li>JdbcSink 写入</li>
+   *   <li>DataEnvelope trace 追踪</li>
+   *   <li>DataEnvelope state 流转</li>
+   *   <li>DataEnvelope isLog 判定</li>
+   *   <li>SinkManager start/stop</li>
+   *   <li>DatalakeServer start/stop 生命周期</li>
+   * </ol>
+   *
+   * @author CH
+   * @since 4.0.0.42
+   */
 public final class DatalakeAllInOneProbe {
 
-    /**
-     * Work dir
-    */
+      /**
+       * Work dir
+      */
     private static final Path WORK_DIR = Path.of("target/datalake-probe");
 
-    /**
-     * 通过 数量
-    */
+      /**
+       * 通过 数量
+      */
     private static final AtomicInteger PASS = new AtomicInteger(0);
 
-    /**
-     * 失败 数量
-    */
+      /**
+       * 失败 数量
+      */
     private static final AtomicInteger FAIL = new AtomicInteger(0);
 
-    /**
-     * 写入记录（线程安全）
-    */
+      /**
+       * 写入记录（线程安全）
+      */
     private static final CopyOnWriteArrayList<String> WRITE_LOG = new CopyOnWriteArrayList<>();
 
-    /**
-     * 入口。
-     *
-     * @param args 命令行参数
-     * @throws Exception 异常
-     */
+      /**
+       * 入口。
+       *
+       * @param args 命令行参数
+       * @throws Exception 异常
+       */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
 
@@ -85,7 +85,7 @@ public final class DatalakeAllInOneProbe {
         System.err.println("Datalake 全链路探针 (12 项验证)"); // [P3C E1 豁免]
         System.err.println("========================================================================"); // [P3C E1 豁免]
 
- // ━━━━━━━━ 1. pipeline管理器 CRUD ━━━━━━━━
+   // ━━━━━━━━ 1. pipeline管理器 CRUD ━━━━━━━━
         PipelineManager pm = new DefaultPipelineManager();
         check("PipelineManager.savePipeline", () -> {
             pm.savePipeline("p1", "{\"id\":\"p1\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
@@ -105,17 +105,17 @@ public final class DatalakeAllInOneProbe {
             return pm.getPipeline("p2") == null;
         });
 
-        // ━━━━━━━━ 2-4. Sink 注册 + 写入 ━━━━━━━━
+          // ━━━━━━━━ 2-4. Sink 注册 + 写入 ━━━━━━━━
         Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
         sinkRegistry.put("log", new LogSink());
         sinkRegistry.put("statistic", new StatisticSink());
         sinkRegistry.put("realtime", new RealTimeSink());
         sinkRegistry.put("jdbc", new JdbcSink());
 
-        // 启动所有 Sink
+          // 启动所有 Sink
         sinkRegistry.values().forEach(DataSink::start);
 
- // ━━━━━━━━ 5. 日志sink 写入 ━━━━━━━━
+   // ━━━━━━━━ 5. 日志sink 写入 ━━━━━━━━
         check("LogSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("msg", "hello-log"))
@@ -129,7 +129,7 @@ public final class DatalakeAllInOneProbe {
             return ok;
         });
 
- // ━━━━━━━━ 6. statisticsink 写入 ━━━━━━━━
+   // ━━━━━━━━ 6. statisticsink 写入 ━━━━━━━━
         check("StatisticSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("metric", "cpu_usage", "value", 72.5))
@@ -141,7 +141,7 @@ public final class DatalakeAllInOneProbe {
             return sinkRegistry.get("statistic").write(env, Map.of());
         });
 
- // ━━━━━━━━ 7. real时间sink 写入 ━━━━━━━━
+   // ━━━━━━━━ 7. real时间sink 写入 ━━━━━━━━
         check("RealTimeSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("event", "user_login", "userId", "u-123"))
@@ -154,7 +154,7 @@ public final class DatalakeAllInOneProbe {
             return sinkRegistry.get("realtime").write(env, Map.of());
         });
 
- // ━━━━━━━━ 8. jdbcsink 写入 ━━━━━━━━
+   // ━━━━━━━━ 8. jdbcsink 写入 ━━━━━━━━
         check("JdbcSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("table", "users", "action", "insert"))
@@ -166,7 +166,7 @@ public final class DatalakeAllInOneProbe {
             return sinkRegistry.get("jdbc").write(env, Map.of());
         });
 
- // ━━━━━━━━ 9. sink管理器 启动/停止 ━━━━━━━━
+   // ━━━━━━━━ 9. sink管理器 启动/停止 ━━━━━━━━
         check("SinkManager.start/stop", () -> {
             com.chua.datalake.support.manager.SinkManager sm =
                     new com.chua.datalake.support.manager.SinkManager(sinkRegistry);
@@ -175,7 +175,7 @@ public final class DatalakeAllInOneProbe {
             return true;
         });
 
- // ━━━━━━━━ 10. dispatcher提供者 + pipelineengine ━━━━━━━━
+   // ━━━━━━━━ 10. dispatcher提供者 + pipelineengine ━━━━━━━━
         String dispatchPath = WORK_DIR.resolve("dispatch").toString();
         DispatcherConfig cfg = DispatcherConfig.builder().dataPath(dispatchPath).build();
         DispatcherProvider dispatcher = new ChronicleDispatcherProvider(cfg);
@@ -183,7 +183,7 @@ public final class DatalakeAllInOneProbe {
 
         PipelineEngine engine = new DefaultPipelineEngine(pm, sinkRegistry, dispatcher);
 
-        // 单 Sink 管线
+          // 单 Sink 管线
         pm.savePipeline("engine-single", "{\"id\":\"engine-single\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
         check("PipelineEngine.execute (single sink)", () -> {
             DataEnvelope env = DataEnvelope.builder()
@@ -197,7 +197,7 @@ public final class DatalakeAllInOneProbe {
             return env.getState() == PipelineState.SINK_OK;
         });
 
-        // 多 Sink 管线
+          // 多 Sink 管线
         pm.savePipeline("engine-multi", "{\"id\":\"engine-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statistic\"},{\"type\":\"realtime\"}]}}}");
         check("PipelineEngine.execute (multi sink)", () -> {
             DataEnvelope env = DataEnvelope.builder()
@@ -211,7 +211,7 @@ public final class DatalakeAllInOneProbe {
             return env.getState() == PipelineState.SINK_OK;
         });
 
- // ━━━━━━━━ 11. 数据envelope 追踪 追踪 ━━━━━━━━
+   // ━━━━━━━━ 11. 数据envelope 追踪 追踪 ━━━━━━━━
         check("DataEnvelope.addTrace", () -> {
             DataEnvelope env = new DataEnvelope(Map.of("x", 1));
             env.addTrace("step-1");
@@ -220,7 +220,7 @@ public final class DatalakeAllInOneProbe {
                     && env.getTrace().getFirst().equals("step-1");
         });
 
- // ━━━━━━━━ 12. 数据envelope 是否日志 判定 ━━━━━━━━
+   // ━━━━━━━━ 12. 数据envelope 是否日志 判定 ━━━━━━━━
         check("DataEnvelope.isLog", () -> {
             DataEnvelope logEnv = DataEnvelope.builder()
                     .parsed(Map.of())
@@ -233,11 +233,11 @@ public final class DatalakeAllInOneProbe {
             return logEnv.isLog() && !dataEnv.isLog();
         });
 
-        // ━━━━━━━━ 清理 ━━━━━━━━
+          // ━━━━━━━━ 清理 ━━━━━━━━
         sinkRegistry.values().forEach(DataSink::stop);
         dispatcher.close();
 
-        // ━━━━━━━━ 汇总 ━━━━━━━━
+          // ━━━━━━━━ 汇总 ━━━━━━━━
         System.err.println("========================================================================"); // [P3C E1 豁免]
         int total = PASS.get() + FAIL.get();
         System.err.printf("Datalake 全链路探针: %d/%d PASS%n", PASS.get(), total); // [P3C E1 豁免]
@@ -245,15 +245,15 @@ public final class DatalakeAllInOneProbe {
             System.err.printf("FAIL: %d 项%n", FAIL.get()); // [P3C E1 豁免]
         }
         System.err.println("========================================================================"); // [P3C E1 豁免]
-        System.exit(FAIL.get() > 0 ? 1 : 0);
+        throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
     }
 
-    /**
-     * 断言检查。
-     *
-     * @param name  检查项名称
-     * @param check 检查逻辑
-     */
+      /**
+       * 断言检查。
+       *
+       * @param name  检查项名称
+       * @param check 检查逻辑
+       */
     private static void check(String name, java.util.function.BooleanSupplier check) {
         try {
             boolean result = check.getAsBoolean();

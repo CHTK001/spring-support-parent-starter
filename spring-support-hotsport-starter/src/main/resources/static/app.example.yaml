@@ -36,6 +36,8 @@ routeConfig:
     - /prometheus/embed/**
     # Nginx 控制台免登录嵌入页（OAuth 网关放行对应 API：/ms/monitor/nginx/dashboard/embed/**）
     - /nginx/embed/**
+    # 学生登录页：学生本身没有后台账号，未登录直开必须能停留（否则会被推回管理端 /login）
+    - /edu/student-login
   # 登录页路径
   loginPath: /login
   # 首页路径（layout 重定向目标）
@@ -431,6 +433,22 @@ messageConfig:
   readUrl: /v2/message/sys-message/read
 
 # ===========================================
+# ApmConfig APM 观测（前端表现层）
+# ===========================================
+# 「本服务器有没有 APM」由后端 GET /api/apm/v1/status 探测决定，本配置只管前端：
+#   没装 APM 时页面仍可访问，由 ApmGate 渲染降级视图并列出候选引擎与原因。
+apmConfig:
+  # 是否在菜单里展示 APM 观测分组（false=隐藏菜单，路由仍可直达）
+  enable: true
+  # 预期引擎：skywalking / opentelemetry / hotspot；留空不校验
+  # 与探测结果不一致时页面顶部会提示，但不改数据源（结论以服务端为准）
+  engine: ""
+  # 接口前缀，必须与后端 plugin.apm.path 一致
+  baseUrl: /api/apm/v1
+  # 状态探测缓存（毫秒）：多页面同时挂载时靠它把请求合并成一次
+  statusTtl: 15000
+
+# ===========================================
 # MonitorConfig 全局异常监控
 # ===========================================
 monitorConfig:
@@ -683,12 +701,14 @@ other:
     customLayoutButton: true
   # 加载动画（部署侧接管，默认关闭）
   #
-  # 四个动画：wave 海浪 / dots 三个圆点 / rings 科技圆圈 / dino 像素恐龙
-  # （none = 无动画，只留遮罩）
+  # 十个动画：dots 三个圆点 / rings 科技圆圈 / dino 像素恐龙 /
+  #           ripple 水波涟漪 / orbit 双轨环绕 / bars 音量柱 /
+  #           matrix 点阵 / conveyor 传送带 / pillars 柱阵 / cards 卡片翻动
+  # （none = 无动画，只留遮罩）。全部是纯 CSS，首屏与应用内都能用。
   #
   # enable: false —— 默认，完全不接管：行为和没有这一段配置时一模一样，
   #                 用户在「主题配置 · 外观 · 加载动画」里自选，选择存在 localStorage。
-  # enable: true  —— 部署侧锁定：动画 / 尺寸 / 主色全部由这里决定，
+  # enable: true  —— 部署侧锁定：动画 / 尺寸 / 速度 / 主色全部由这里决定，
   #                 主题配置里的选择器置灰（改不动，避免"点了却没反应"）。
   #
   # 注意首屏时序：public/loader.js 在 app.yaml 被拉取之前就已执行完，
@@ -696,11 +716,39 @@ other:
   # 从下一次刷新开始首屏与应用内完全一致（应用内的遮罩当次启动即生效）。
   #
   # 字段：
-  #   animation  动画键（默认 wave；历史键 default / spin / dinoGame 等会自动折叠）
-  #   size       首屏动画基准边长 px（8~512，默认 96）；应用内仍按调用点档位
+  #   animation  动画键（默认 dots；历史键 default / spin / dinoGame 等会自动折叠）
+  #   size       首屏动画基准边长 px（8~512）
+  #              · 写单个数字（96）：宽窄屏同值（历史写法）
+  #              · 写对象：narrow 窄屏（<768px）/ wide 宽屏（≥768px），手机桌面各一档
+  #              应用内仍按调用点档位，不受这里影响
   #   color      动画主色（#hex / rgb() / hsl()，默认 #406eeb）；首屏与应用内都用它
+  #              仅当 adaptColor 为 false 时生效
+  #   speed      速度倍率（0.5~3，默认 1 = 原速）；所有动画时长都按它同步缩放
+  #   adaptColor 主色是否跟随主题主色 --el-color-primary（默认 false）：
+  #              true 时忽略 color，换主题不用重新配 loader
   loaderConfig:
     enable: false
-    animation: "wave"
-    size: 96
+    animation: "dots"
+    size:
+      narrow: 96
+      wide: 96
     color: "#406eeb"
+    speed: 1
+    adaptColor: false
+  # 空状态样式（ReEmpty；主题配置里仅 admin / superadmin 可见可改）
+  #
+  # 作用范围：只影响**没有显式传 layout** 的 <ReEmpty>。
+  #          业务里写死 <ReEmpty layout="plot"> 的永远按业务写法来，不会被这里覆盖。
+  #
+  # enable: false —— 一律回落 el-empty（与没有这段配置时逐字一致）
+  # layout        "el" 经典 el-empty / "modern" 现代扁平空状态 / "plot" hairline 动画图
+  # hairline      "plot" 时用哪款图形（默认 plot）。可选键：
+  #               plot / phosphor / slow / terrain / riffle / stack / branches /
+  #               drawer / vault / turntable / sieve / query
+  #               （完整清单见 packages/ui/src/components/ReEmpty/figures.ts）
+  #
+  # 抽屉里切换后写回用户配置（自动持久化），列表与表格的默认空状态即时跟着变。
+  emptyState:
+    enable: true
+    layout: "el"
+    hairline: "plot"

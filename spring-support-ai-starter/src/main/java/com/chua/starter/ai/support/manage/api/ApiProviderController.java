@@ -1429,23 +1429,42 @@ public class ApiProviderController {
 
     /**
      * 用指定 Key 调上游 /模型，判定该 Key 是否有效（只读、不改库）。
+     *
+     * <p>入参字段名是 {@code apiUrl / apiKey / protocol}（可选 {@code proxy}、
+     * {@code auth_scheme / auth_header / auth_prefix}）。同时兼容旧前端的
+     * {@code url}：历史版本发的是 url，而后端只读 apiUrl，会被判成「地址为空」
+     * 直接返回失败 —— 测试请求根本不出网，看起来却像是「测了但没报错」。</p>
+     *
      * @param body 请求体，不允许为 null
      * @return Api结果 对象
      */
     @Permission("admin")
     @PostMapping("/providers/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
-        String apiUrl = (String) body.get("apiUrl");
-        String apiKey = (String) body.get("apiKey");
-        String protocol = (String) body.getOrDefault("protocol", "openai");
-        String proxy = (String) body.get("proxy");
+        String apiUrl = str(body, "apiUrl");
+        if (apiUrl == null) {
+            // 兼容旧字段名 url（前端迁移期两种都可能出现）
+            apiUrl = str(body, "url");
+        }
+        if (apiUrl != null) {
+            apiUrl = apiUrl.trim();
+        }
+        String apiKey = str(body, "apiKey");
+        if (apiKey != null) {
+            apiKey = apiKey.trim();
+        }
+        String protocol = str(body, "protocol");
+        if (protocol == null) {
+            protocol = "openai";
+        }
+        String proxy = str(body, "proxy");
         Map<String, Object> out = new LinkedHashMap<>(4);
-        if (apiUrl == null || apiUrl.isEmpty()) {
+        if (apiUrl == null) {
             out.put("success", false);
             out.put("message", "API地址不能为空");
             return ApiResult.ok(out);
         }
-        if (apiKey == null || apiKey.isEmpty()) {
+        if (apiKey == null) {
             out.put("success", false);
             out.put("message", "API Key不能为空");
             return ApiResult.ok(out);
@@ -1536,9 +1555,15 @@ public class ApiProviderController {
             List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey,
                     (platform != null && platform.toLowerCase().contains("gemini")), proxy, auth);
             r.put("latency_ms", System.currentTimeMillis() - latencyStart);
-            if (models == null) {
+            // 只有「真的解析出模型条目」才算 Key 有效。
+            // 上游返回 200 但 body 不是模型列表（网关错误页 / 200 包着的 error JSON /
+            // 反代登录页 HTML）时 parse 会得到空列表，若按 models != null 判成功，
+            // 任意 Key 都能「测通」—— 必须连空列表一起判失败。
+            if (models == null || models.isEmpty()) {
                 r.put("ok", false);
-                r.put("error", "无法从上游拉取模型（401/404/网络），key 可能无效");
+                r.put("error", models == null
+                        ? "无法从上游拉取模型（401/404/网络），key 可能无效"
+                        : "上游模型列表为空，无法确认 key 有效");
             } else {
                 r.put("ok", true);
                 r.put("model_count", models.size());

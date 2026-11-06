@@ -109,7 +109,7 @@ public final class ReleaseScriptProbe {
         System.out.println("[probe] ---- 汇总：passed=" + probe.passed + " failed=" + probe.failures.size() + " ----"); // [P3C E1 豁免]
         probe.failures.forEach(f -> System.out.println("[probe] FAIL " + f)); // [P3C E1 豁免]
         if (!probe.failures.isEmpty()) {
-            System.exit(1);
+            throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
         }
     }
 

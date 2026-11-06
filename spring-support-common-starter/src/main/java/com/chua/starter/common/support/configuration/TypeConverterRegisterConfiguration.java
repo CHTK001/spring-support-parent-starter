@@ -18,49 +18,49 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 转换器
- *
- * @author CH
- * @since 4.0.0
- */
+   * 转换器
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class TypeConverterRegisterConfiguration {
 
-    /**
-     * 日志
-     */
+      /**
+       * 日志
+       */
     private static final System.Logger LOG = System.getLogger(TypeConverterRegisterConfiguration.class.getName());
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(ConfigurableConversionService.class)
-    /**
-     * 类型转换器registry
-     *
-     * @param conversionService 转换服务
-     * @return 类型转换器registry的结果
-     */
+      /**
+       * 类型转换器registry
+       *
+       * @param conversionService 转换服务
+       * @return 类型转换器registry的结果
+       */
     public TypeConverterRegistry typeConverterRegistry(ConfigurableConversionService conversionService) {
-        /**
-         * 类型转换器registry。
-         * @param conversionService 转换服务
-         * @return 类型转换器registry的结果
-         */
+          /**
+           * 类型转换器registry。
+           * @param conversionService 转换服务
+           * @return 类型转换器registry的结果
+           */
         return new TypeConverterRegistry(conversionService);
     }
 
-    /**
-     * 类型转换器registry类。
-     *
-     * @author CH
-     * @since 4.0.0
-     */
+      /**
+       * 类型转换器registry类。
+       *
+       * @author CH
+       * @since 4.0.0
+       */
     public static class TypeConverterRegistry {
 
         @SuppressWarnings({"unchecked", "rawtypes"})
-        /**
-         * 创建 类型转换器registry 实例
-         * @param conversionService 转换服务
-         */
+          /**
+           * 创建 类型转换器registry 实例
+           * @param conversionService 转换服务
+           */
         public TypeConverterRegistry(ConfigurableConversionService conversionService) {
             conversionService.addConverter(new StringToLongTypeConverter());
             conversionService.addConverter(new StringToDateTypeConverter());
@@ -69,7 +69,8 @@ public class TypeConverterRegisterConfiguration {
             conversionService.addConverter(new StringToLocalDateTimeTypeConverter());
             conversionService.addConverter(new StringArrayToStringTypeConverter());
 
-            Map<String, com.chua.common.support.converter.definition.TypeConverter> list = ServiceProvider.of(com.chua.common.support.converter.definition.TypeConverter.class).list();
+            Map<String, com.chua.common.support.converter.definition.TypeConverter> list = ServiceProvider.of(com.chua.common.support
+                .converter.definition.TypeConverter.class).list();
             for (com.chua.common.support.converter.definition.TypeConverter converter : list.values()) {
                 try {
                     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -83,33 +84,33 @@ public class TypeConverterRegisterConfiguration {
                         conversionService.removeConvertible(String.class, Enum.class);
                         conversionService.addConverter(new ConditionalGenericConverter() {
                             @Override
-                            /**
-                             * Matches
-                             * @param sourceType 参数
-                             * @param targetType 参数
-                             * @return 返回值
-                            */
+                              /**
+                               * Matches
+                               * @param sourceType 参数
+                               * @param targetType 参数
+                               * @return 返回值
+                              */
                             public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return true;
                             }
 
                             @Override
-                            /**
-                             * 获取转换类型
-                             * @return 返回值
-                            */
+                              /**
+                               * 获取转换类型
+                               * @return 返回值
+                              */
                             public Set<GenericConverter.ConvertiblePair> getConvertibleTypes() {
                                 return Collections.singleton(new GenericConverter.ConvertiblePair(String.class, Enum.class));
                             }
 
                             @Override
-                            /**
-                             * 转换
-                             * @param source 对象
-                             * @param sourceType 参数
-                             * @param targetType 参数
-                             * @return 返回值
-                            */
+                              /**
+                               * 转换
+                               * @param source 对象
+                               * @param sourceType 参数
+                               * @param targetType 参数
+                               * @return 返回值
+                              */
                             public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return converter.convert(source);
                             }

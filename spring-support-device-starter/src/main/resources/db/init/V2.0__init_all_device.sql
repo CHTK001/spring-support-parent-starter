@@ -680,6 +680,26 @@ PREPARE stmt_cred_offline_detect_interval FROM @sql_cred_offline_detect_interval
 EXECUTE stmt_cred_offline_detect_interval;
 DEALLOCATE PREPARE stmt_cred_offline_detect_interval;
 
+SET @has_cred_event_poll_enabled := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_event_poll_enabled'
+);
+SET @sql_cred_event_poll_enabled := IF(@has_cred_event_poll_enabled > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_event_poll_enabled TINYINT DEFAULT 0 COMMENT ''该凭据实例的事件轮询开关'' AFTER device_credential_offline_detect_interval');
+PREPARE stmt_cred_event_poll_enabled FROM @sql_cred_event_poll_enabled;
+EXECUTE stmt_cred_event_poll_enabled;
+DEALLOCATE PREPARE stmt_cred_event_poll_enabled;
+
+SET @has_cred_event_poll_interval := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_event_poll_interval'
+);
+SET @sql_cred_event_poll_interval := IF(@has_cred_event_poll_interval > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_event_poll_interval INT COMMENT ''该凭据实例的事件轮询间隔（秒）'' AFTER device_credential_event_poll_enabled');
+PREPARE stmt_cred_event_poll_interval FROM @sql_cred_event_poll_interval;
+EXECUTE stmt_cred_event_poll_interval;
+DEALLOCATE PREPARE stmt_cred_event_poll_interval;
+
 SET @has_cred_device_sync_enabled := (
     SELECT COUNT(*) FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_device_sync_enabled'

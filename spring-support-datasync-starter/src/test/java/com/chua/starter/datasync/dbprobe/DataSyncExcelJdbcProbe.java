@@ -114,7 +114,7 @@ public final class DataSyncExcelJdbcProbe {
         System.out.println("[EXCEL-JDBC-PROBE] 通过场景=" + (17 - failed) + "/17, 失败场景=" + failed); // [P3C E1 豁免]
         if (failed > 0) {
             System.out.println("[EXCEL-JDBC-PROBE] 结果: FAIL"); // [P3C E1 豁免]
-            System.exit(1);
+            throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
         }
         System.out.println("[EXCEL-JDBC-PROBE] 结果: PASS"); // [P3C E1 豁免]
     }

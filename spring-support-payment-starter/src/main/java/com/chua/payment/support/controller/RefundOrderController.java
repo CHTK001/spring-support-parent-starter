@@ -26,34 +26,34 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 退款单管理控制器
- * @author CH
- * @since 4.0.0
- */
+   * 退款单管理控制器
+   * @author CH
+   * @since 4.0.0
+   */
 @Tag(name = "退款管理", description = "支付退款单相关接口")
 @RestController
 @RequestMapping("/refund")
 @RequiredArgsConstructor
 public class RefundOrderController {
 
-    /**
-     * 退款单服务
-     */
+      /**
+       * 退款单服务
+       */
     private final PaymentRefundOrderService paymentRefundOrderService;
-    /**
-     * 支付订单服务
-     */
+      /**
+       * 支付订单服务
+       */
     private final PaymentOrderService paymentOrderService;
 
     @Operation(summary = "查询退款单")
     @GetMapping("/{id}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
-    /**
-     * 按id获取
-     *
-     * @param id 标识
-     * @return 按id获取的结果
-     */
+      /**
+       * 按id获取
+       *
+       * @param id 标识
+       * @return 按id获取的结果
+       */
     public Result<RefundOrderVO> getById(@PathVariable Long id) {
         return Result.success(paymentRefundOrderService.getDetail(id));
     }
@@ -61,12 +61,12 @@ public class RefundOrderController {
     @Operation(summary = "查询订单的退款单列表")
     @GetMapping("/order/{orderId}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
-    /**
-     * 按订单标识查询列表
-     *
-     * @param orderId 订单标识
-     * @return 按订单id查询列表的结果
-     */
+      /**
+       * 按订单标识查询列表
+       *
+       * @param orderId 订单标识
+       * @return 按订单id查询列表的结果
+       */
     public Result<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
         return Result.success(paymentRefundOrderService.listVoByOrderId(orderId));
     }
@@ -74,28 +74,29 @@ public class RefundOrderController {
     @Operation(summary = "分页查询退款单")
     @GetMapping("/page")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
-    /**
-     * 分页查询
-     *
-     */
+      /**
+       * 分页查询
+       *
+       */
     public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
                                                   @RequestParam(required = false) String orderNo,
                                                   @RequestParam(required = false) String refundNo,
                                                   @RequestParam(required = false) String status) {
-        Page<RefundOrderVO> page = paymentRefundOrderService.page(new RefundOrderQueryRequest(pageNum, pageSize, merchantId, orderNo, refundNo, status));
+        Page<RefundOrderVO> page = paymentRefundOrderService.page(new RefundOrderQueryRequest(pageNum, pageSize, merchantId, orderNo
+            , refundNo, status));
         return Result.success(PageResult.of(page));
     }
 
     @Operation(summary = "标记退款成功")
     @PutMapping("/{id}/success")
     @Permission(value = "payment:refund:success", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /**
-     * 标记退款成功
-     * @param id 标识
-     * @param dto dto
-     */
+      /**
+       * 标记退款成功
+       * @param id 标识
+       * @param dto dto
+       */
     public Result<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
@@ -111,11 +112,11 @@ public class RefundOrderController {
     @Operation(summary = "标记退款失败")
     @PutMapping("/{id}/fail")
     @Permission(value = "payment:refund:fail", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    /**
-     * 标记退款失败
-     * @param id 标识
-     * @param dto dto
-     */
+      /**
+       * 标记退款失败
+       * @param id 标识
+       * @param dto dto
+       */
     public Result<Boolean> markRefundFail(@PathVariable Long id,
                                           @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);

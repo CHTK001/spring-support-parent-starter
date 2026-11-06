@@ -36,103 +36,103 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 映射器 XML文件热重载加载器
- * <p>
- * 支持监听文件系统中的映射器 XML文件变化，自动重新加载到MyBatis配置中。
- * 支持类路径资源和本地文件系统资源的加载和监听。
- * </p>
- *
- * @author CH
- * @since 4.0.0
- */
+   * 映射器 XML文件热重载加载器
+   * <p>
+   * 支持监听文件系统中的映射器 XML文件变化，自动重新加载到MyBatis配置中。
+   * 支持类路径资源和本地文件系统资源的加载和监听。
+   * </p>
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class MapperReload implements Reload, DisposableBean {
-    /**
-     * 日志
-    */
+      /**
+       * 日志
+      */
     private static final Logger log = LoggerFactory.getLogger(MapperReload.class);
 
-    /**
-     * 资源模式匹配解析器
-     */
+      /**
+       * 资源模式匹配解析器
+       */
     final PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
     
-    /**
-     * 文件资源映射表，Key为文件名，值为资源对象
-     */
+      /**
+       * 文件资源映射表，Key为文件名，值为资源对象
+       */
     private final Map<String, Resource> fileResources = new ConcurrentHashMap<>();
     
-    /**
-     * SQL会话工厂列表
-     */
+      /**
+       * SQL会话工厂列表
+       */
     private final List<SqlSessionFactory> sqlSessionFactories;
     
-    /**
-     * MyBatis Plus配置属性
-     */
+      /**
+       * MyBatis Plus配置属性
+       */
     private final MybatisPlusProperties mybatisProperties;
 
-    /**
-     * 文件监听服务映射表，Key为目录路径，值为watch服务
-     */
+      /**
+       * 文件监听服务映射表，Key为目录路径，值为watch服务
+       */
     private final Map<String, WatchService> watchServiceMap = new ConcurrentHashMap<>();
     
-    /**
-     * 监听线程映射表，Key为目录路径，值为监听线程
-     */
+      /**
+       * 监听线程映射表，Key为目录路径，值为监听线程
+       */
     private final Map<String, Thread> watchThreadMap = new ConcurrentHashMap<>();
     
-    /**
-     * 运行状态标志
-     */
+      /**
+       * 运行状态标志
+       */
     private final AtomicBoolean running = new AtomicBoolean(true);
     
-    /**
-     * 监听执行器
-     */
+      /**
+       * 监听执行器
+       */
     private ExecutorService watchExecutor;
 
-    /**
-     * 构造函数
-     *
-     * @param sqlSessionFactories SQL会话工厂列表
-     * @param mybatisProperties MyBatis Plus配置属性
-     */
+      /**
+       * 构造函数
+       *
+       * @param sqlSessionFactories SQL会话工厂列表
+       * @param mybatisProperties MyBatis Plus配置属性
+       */
     public MapperReload(List<SqlSessionFactory> sqlSessionFactories, MybatisPlusProperties mybatisProperties) {
         this.sqlSessionFactories = sqlSessionFactories;
         this.mybatisProperties = mybatisProperties;
     }
 
 
-    /**
-     * 初始化方法，在属性设置后调用
-     * <p>
-     * 加载所有映射器 XML资源，并根据配置决定是否启动文件监听
-     * </p>
-     *
-     * @throws Exception 初始化异常
-     */
+      /**
+       * 初始化方法，在属性设置后调用
+       * <p>
+       * 加载所有映射器 XML资源，并根据配置决定是否启动文件监听
+       * </p>
+       *
+       * @throws Exception 初始化异常
+       */
     @Override
     public void afterPropertiesSet() throws Exception {
         watchExecutor = ThreadUtils.newStaticThreadPool();
         watchExecutor.execute(() -> {
             try {
- // 加载默认类路径资源
-                /**
-                 * 加载类路径resources。
-                 */
+   // 加载默认类路径资源
+                  /**
+                   * 加载类路径resources。
+                   */
                 loadClasspathResources();
                 
-                // 加载配置的目录资源
-                /**
-                 * 加载configured目录。
-                 */
+                  // 加载配置的目录资源
+                  /**
+                   * 加载configured目录。
+                   */
                 loadConfiguredDirectories();
                 
                 MybatisPlusProperties.ReloadType reloadType = mybatisProperties.getReloadType();
                 if (reloadType == MybatisPlusProperties.ReloadType.AUTO) {
-                    /**
-                     * 监听器。
-                     */
+                      /**
+                       * 监听器。
+                       */
                     listener();
                 }
             } catch (Exception e) {
@@ -141,12 +141,12 @@ public class MapperReload implements Reload, DisposableBean {
         });
     }
 
-    /**
-     * 加载类路径中的映射器 XML资源
-     * <p>
-     * 扫描类路径下所有以映射器.xml结尾的文件并加载到资源映射表中
-     * </p>
-     */
+      /**
+       * 加载类路径中的映射器 XML资源
+       * <p>
+       * 扫描类路径下所有以映射器.xml结尾的文件并加载到资源映射表中
+       * </p>
+       */
     private void loadClasspathResources() {
         try {
             Resource[] resources = patternResolver.getResources("classpath*:**/*Mapper.xml");
@@ -161,12 +161,12 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 加载配置的目录资源
-     * <p>
-     * 根据配置的目录列表，加载类路径或本地文件系统中的映射器 XML文件
-     * </p>
-     */
+      /**
+       * 加载配置的目录资源
+       * <p>
+       * 根据配置的目录列表，加载类路径或本地文件系统中的映射器 XML文件
+       * </p>
+       */
     private void loadConfiguredDirectories() {
         List<MybatisPlusProperties.ReloadDirectory> directories = mybatisProperties.getReloadDirectories();
         if (directories == null || directories.isEmpty()) {
@@ -182,21 +182,21 @@ public class MapperReload implements Reload, DisposableBean {
                     continue;
                 }
 
- // 判断是类路径路径还是本地路径
+   // 判断是类路径路径还是本地路径
                 if (path.startsWith("classpath") || path.startsWith("classpath*")) {
-                    /**
-                     * 加载类路径模式。
-                     * @param path 路径
-                     * @param pattern 模式
-                     */
+                      /**
+                       * 加载类路径模式。
+                       * @param path 路径
+                       * @param pattern 模式
+                       */
                     loadClasspathPattern(path, pattern);
                 } else {
-                    /**
-                     * 加载本地目录。
-                     * @param path 路径
-                     * @param pattern 模式
-                     * @param directory.isWatchEnabled( 目录.是否watch已启用(
-                     */
+                      /**
+                       * 加载本地目录。
+                       * @param path 路径
+                       * @param pattern 模式
+                       * @param directory.isWatchEnabled( 目录.是否watch已启用(
+                       */
                     loadLocalDirectory(path, pattern, directory.isWatchEnabled());
                 }
             } catch (Exception e) {
@@ -205,12 +205,12 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 加载类路径模式资源
-     *
-     * @param classpathPattern 类路径路径模式
-     * @param filePattern 文件匹配模式
-     */
+      /**
+       * 加载类路径模式资源
+       *
+       * @param classpathPattern 类路径路径模式
+       * @param filePattern 文件匹配模式
+       */
     private void loadClasspathPattern(String classpathPattern, String filePattern) {
         try {
             String fullPattern = classpathPattern;
@@ -232,13 +232,13 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 加载本地目录资源
-     *
-     * @param localPath 本地目录路径
-     * @param filePattern 文件匹配模式（glob格式）
-     * @param watchEnabled 是否启用监听（暂未使用）
-     */
+      /**
+       * 加载本地目录资源
+       *
+       * @param localPath 本地目录路径
+       * @param filePattern 文件匹配模式（glob格式）
+       * @param watchEnabled 是否启用监听（暂未使用）
+       */
     private void loadLocalDirectory(String localPath, String filePattern, boolean watchEnabled) {
         try {
             Path directoryPath = Paths.get(localPath);
@@ -247,7 +247,7 @@ public class MapperReload implements Reload, DisposableBean {
                 return;
             }
 
-            // 递归查找匹配的文件
+              // 递归查找匹配的文件
             PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + filePattern);
             Files.walk(directoryPath)
                     .filter(Files::isRegularFile)
@@ -268,40 +268,40 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 启动文件监听
-     * <p>
-     * 只监听本地文件系统中的文件，jar包中的资源无法监听。
-     * 为每个文件所在的目录创建watch服务，监听文件修改和删除事件。
-     * </p>
-     */
+      /**
+       * 启动文件监听
+       * <p>
+       * 只监听本地文件系统中的文件，jar包中的资源无法监听。
+       * 为每个文件所在的目录创建watch服务，监听文件修改和删除事件。
+       * </p>
+       */
     private void listener() {
         for (Map.Entry<String, Resource> entry : fileResources.entrySet()) {
             Resource resource = entry.getValue();
             
-            // 只监听文件系统中的资源
+              // 只监听文件系统中的资源
             if (resource instanceof FileSystemResource) {
                 try {
                     File file = resource.getFile();
-                    /**
-                     * 注册。
-                     * @param file 文件
-                     */
+                      /**
+                       * 注册。
+                       * @param file 文件
+                       */
                     register(file);
                 } catch (IOException e) {
                     log.debug("无法获取文件对象，跳过监听: {}", entry.getKey(), e);
                 }
             } else {
- // 检查是否是文件系统URI（开发环境中的类路径资源可能是文件系统）
+   // 检查是否是文件系统URI（开发环境中的类路径资源可能是文件系统）
                 try {
                     URI uri = resource.getURI();
                     if ("file".equals(uri.getScheme())) {
                         File file = new File(uri);
                         if (file.exists() && file.isFile()) {
-                            /**
-                             * 注册。
-                             * @param file 文件
-                             */
+                              /**
+                               * 注册。
+                               * @param file 文件
+                               */
                             register(file);
                         }
                     }
@@ -312,11 +312,11 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 注册文件监听
-     *
-     * @param source 源文件
-     */
+      /**
+       * 注册文件监听
+       *
+       * @param source 源文件
+       */
     private void register(File source) {
         File parentFile = source.getParentFile();
         String parentPath = parentFile.getAbsolutePath();
@@ -331,23 +331,23 @@ public class MapperReload implements Reload, DisposableBean {
         });
     }
 
-    /**
-     * 创建热重载监听器
-     *
-     * @param path 监听路径
-     * @return 热重载监听器，创建失败返回null
-     */
+      /**
+       * 创建热重载监听器
+       *
+       * @param path 监听路径
+       * @return 热重载监听器，创建失败返回null
+       */
     private HotReloadWatcher createHotReloadWatcher(String path) {
         try {
             Path watchPath = Paths.get(path);
             WatchService watchService = FileSystems.getDefault().newWatchService();
             
-            // 注册文件修改和删除事件
+              // 注册文件修改和删除事件
             watchPath.register(watchService, 
                 StandardWatchEventKinds.ENTRY_MODIFY,
                 StandardWatchEventKinds.ENTRY_DELETE);
             
-            // 创建监听线程
+              // 创建监听线程
 // [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
             Thread watchThread = new Thread(() -> {
                 try {
@@ -365,14 +365,14 @@ public class MapperReload implements Reload, DisposableBean {
                                 WatchEvent<Path> ev = (WatchEvent<Path>) event;
                                 Path fileName = ev.context();
                                 
-                                // 只处理 XML 文件
+                                  // 只处理 XML 文件
                                 if (fileName.toString().endsWith(".xml")) {
                                     String mapperXml = fileName.toString();
                                     log.debug("Detected file change: {}", mapperXml);
-                                    /**
-                                     * reload。
-                                     * @param mapperXml 映射器xml
-                                     */
+                                      /**
+                                       * reload。
+                                       * @param mapperXml 映射器xml
+                                       */
                                     reload(mapperXml);
                                 }
                             }
@@ -394,12 +394,12 @@ public class MapperReload implements Reload, DisposableBean {
             watchThread.setDaemon(true);
             watchThread.start();
             
-            /**
-             * hotreloadwatcher。
-             * @param watchService watch服务
-             * @param watchThread watchthread
-             * @return HotReloadWatcher的结果
-             */
+              /**
+               * hotreloadwatcher。
+               * @param watchService watch服务
+               * @param watchThread watchthread
+               * @return HotReloadWatcher的结果
+               */
             return new HotReloadWatcher(watchService, watchThread);
         } catch (IOException e) {
             log.error("Failed to create watch service for path: {}", path, e);
@@ -407,66 +407,66 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 热重载监听器
-     * 封装 watch服务 和监听线程
-     * @author CH
-     * @since 4.0.0
-     */
+      /**
+       * 热重载监听器
+       * 封装 watch服务 和监听线程
+       * @author CH
+       * @since 4.0.0
+       */
     private static class HotReloadWatcher {
-        /**
-         * 文件监听服务
-         */
+          /**
+           * 文件监听服务
+           */
         private final WatchService watchService;
         
-        /**
-         * 监听线程
-         */
+          /**
+           * 监听线程
+           */
         private final Thread watchThread;
 
-        /**
-         * 构造函数
-         *
-         * @param watchService 文件监听服务
-         * @param watchThread 监听线程
-         */
+          /**
+           * 构造函数
+           *
+           * @param watchService 文件监听服务
+           * @param watchThread 监听线程
+           */
         public HotReloadWatcher(WatchService watchService, Thread watchThread) {
             this.watchService = watchService;
             this.watchThread = watchThread;
         }
 
-        /**
-         * 获取文件监听服务
-         *
-         * @return 文件监听服务
-         */
+          /**
+           * 获取文件监听服务
+           *
+           * @return 文件监听服务
+           */
         public WatchService getWatchService() {
             return watchService;
         }
 
-        /**
-         * 获取监听线程
-         *
-         * @return 监听线程
-         */
+          /**
+           * 获取监听线程
+           *
+           * @return 监听线程
+           */
         public Thread getWatchThread() {
             return watchThread;
         }
     }
 
-    /**
-     * 重新加载指定的映射器 XML文件
-     *
-     * @param mapperXml 映射器 XML文件名或路径
-     * @return 重载结果信息
-     */
+      /**
+       * 重新加载指定的映射器 XML文件
+       *
+       * @param mapperXml 映射器 XML文件名或路径
+       * @return 重载结果信息
+       */
     @Override
     public String reload(String mapperXml) {
-        // 支持文件名或完整路径
+          // 支持文件名或完整路径
         String filename = mapperXml.endsWith(".xml") ? mapperXml : mapperXml + ".xml";
         Resource resource = fileResources.get(filename);
         
-        // 如果按文件名找不到，尝试按路径查找
+          // 如果按文件名找不到，尝试按路径查找
         if (resource == null) {
             for (Resource res : fileResources.values()) {
                 try {
@@ -476,7 +476,7 @@ public class MapperReload implements Reload, DisposableBean {
                         break;
                     }
                 } catch (IOException e) {
-                    // 忽略
+                      // 忽略
                 }
             }
         }
@@ -486,11 +486,11 @@ public class MapperReload implements Reload, DisposableBean {
         }
 
         try {
-            /**
-             * reload。
-             * @param sqlSessionFactories SQL会话工厂
-             * @param resource resource
-             */
+              /**
+               * reload。
+               * @param sqlSessionFactories SQL会话工厂
+               * @param resource resource
+               */
             reload(sqlSessionFactories, resource);
             return String.format("重载成功: %s", filename);
         } catch (RuntimeException e) {
@@ -499,11 +499,11 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 列出所有已加载的映射器 XML文件信息
-     *
-     * @return 文件信息列表
-     */
+      /**
+       * 列出所有已加载的映射器 XML文件信息
+       *
+       * @return 文件信息列表
+       */
     @Override
     public List<FileInfo> listFiles() {
         List<FileInfo> fileInfoList = new ArrayList<>();
@@ -520,7 +520,7 @@ public class MapperReload implements Reload, DisposableBean {
                 URI uri = resource.getURI();
                 path = uri.toString();
 
-                // 判断资源类型和是否可监听
+                  // 判断资源类型和是否可监听
                 String scheme = uri.getScheme();
                 if ("file".equals(scheme)) {
                     type = "FILE";
@@ -530,7 +530,7 @@ public class MapperReload implements Reload, DisposableBean {
                     watchable = false;
                 } else {
                     type = "CLASSPATH";
-                    // 类路径资源如果在文件系统中，可以监听
+                      // 类路径资源如果在文件系统中，可以监听
                     try {
                         File file = resource.getFile();
                         watchable = file.exists();
@@ -550,17 +550,17 @@ public class MapperReload implements Reload, DisposableBean {
         return fileInfoList;
     }
 
-    /**
-     * 重新加载映射器 XML资源到所有SQL会话工厂
-     * <p>
-     * 先清理旧的映射器配置（结果映射、sqlfragments、mapped对账单），
-     * 然后重新解析XML文件并加载到配置中。
-     * </p>
-     *
-     * @param sqlSessionFactories SQL会话工厂列表
-     * @param resource 映射器 XML资源
-     * @throws RuntimeException 重载异常
-     */
+      /**
+       * 重新加载映射器 XML资源到所有SQL会话工厂
+       * <p>
+       * 先清理旧的映射器配置（结果映射、sqlfragments、mapped对账单），
+       * 然后重新解析XML文件并加载到配置中。
+       * </p>
+       *
+       * @param sqlSessionFactories SQL会话工厂列表
+       * @param resource 映射器 XML资源
+       * @throws RuntimeException 重载异常
+       */
     @SuppressWarnings("ALL")
     private void reload(List<SqlSessionFactory> sqlSessionFactories, Resource resource) throws RuntimeException {
         for (SqlSessionFactory sqlSessionFactory : sqlSessionFactories) {
@@ -577,7 +577,8 @@ public class MapperReload implements Reload, DisposableBean {
 
                 Map<String, ResultMap> resultMaps = (Map<String, ResultMap>) getFieldValue(targetConfiguration, tClass, "resultMaps");
                 Map<String, XNode> sqlFragmentsMaps = (Map<String, XNode>) getFieldValue(targetConfiguration, tClass, "sqlFragments");
-                Map<String, MappedStatement> mappedStatementMaps = (Map<String, MappedStatement>) getFieldValue(targetConfiguration, tClass, "mappedStatements");
+                Map<String, MappedStatement> mappedStatementMaps = (Map<String, MappedStatement>) getFieldValue(targetConfiguration
+                    , tClass, "mappedStatements");
 
                 XPathParser parser = new XPathParser(resource.getInputStream(), true, targetConfiguration.getVariables(), new XMLMapperEntityResolver());
                 XNode mapperXnode = parser.evalNode("/mapper");
@@ -613,16 +614,16 @@ public class MapperReload implements Reload, DisposableBean {
         }
     }
 
-    /**
-     * 根据反射获取配置对象中属性值
-     *
-     * @param targetConfiguration 配置对象
-     * @param aClass 目标类型
-     * @param field 字段名
-     * @return 字段值
-     */
+      /**
+       * 根据反射获取配置对象中属性值
+       *
+       * @param targetConfiguration 配置对象
+       * @param aClass 目标类型
+       * @param field 字段名
+       * @return 字段值
+       */
     public static Object getFieldValue(Configuration targetConfiguration, Class<?> aClass, String field) {
-        // [P3C 1.10] 改走 ReflectUtils.getField，底层已处理 setAccessible
+          // [P3C 1.10] 改走 ReflectUtils.getField，底层已处理 setAccessible
         Object value = ReflectUtils.getField(targetConfiguration, field);
         if (value == null) {
             log.error("反射获取字段失败: {}.{}", aClass.getSimpleName(), field);
@@ -630,19 +631,19 @@ public class MapperReload implements Reload, DisposableBean {
         return value;
     }
 
-    /**
-     * 销毁方法，关闭所有监听服务和线程
-     * <p>
-     * 停止运行标志，关闭所有watch服务，等待监听线程结束，清理资源
-     * </p>
-     *
-     * @throws Exception 销毁异常
-     */
+      /**
+       * 销毁方法，关闭所有监听服务和线程
+       * <p>
+       * 停止运行标志，关闭所有watch服务，等待监听线程结束，清理资源
+       * </p>
+       *
+       * @throws Exception 销毁异常
+       */
     @Override
     public void destroy() throws Exception {
         running.set(false);
         
- // 关闭所有 watch服务
+   // 关闭所有 watch服务
         for (Map.Entry<String, WatchService> entry : watchServiceMap.entrySet()) {
             try {
                 entry.getValue().close();
@@ -651,7 +652,7 @@ public class MapperReload implements Reload, DisposableBean {
             }
         }
         
-        // 等待所有监听线程结束
+          // 等待所有监听线程结束
         for (Map.Entry<String, Thread> entry : watchThreadMap.entrySet()) {
             try {
                 Thread thread = entry.getValue();
@@ -668,7 +669,7 @@ public class MapperReload implements Reload, DisposableBean {
         watchServiceMap.clear();
         watchThreadMap.clear();
         
-        // 关闭线程池
+          // 关闭线程池
         if (watchExecutor != null) {
             watchExecutor.shutdown();
         }

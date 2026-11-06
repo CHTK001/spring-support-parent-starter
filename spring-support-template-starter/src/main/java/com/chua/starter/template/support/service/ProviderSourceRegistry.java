@@ -75,6 +75,19 @@ public class ProviderSourceRegistry {
     }
 
     /**
+     * 反查某个来源标识由哪个来源模块维护
+     *
+     * <p>与 {@link #ownerOf(String)} 的区别：这条按「来源」（message / paper）查，
+     * 用于模板详情这种手上只有 {@code template_info_source} 的场景。</p>
+     *
+     * @param source 来源标识
+     * @return 来源，未注册返回 {@code null}
+     */
+    public ProviderSource sourceOf(String source) {
+        return source == null ? null : sourceMap.get(source.trim());
+    }
+
+    /**
      * 反查某个提供商由哪个来源维护
      *
      * @param providerId 提供商 ID

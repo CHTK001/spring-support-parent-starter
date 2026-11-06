@@ -22,34 +22,34 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 数据湖 pipelineengine 吞吐基准：测量 pipelineengine.执行 在不同数据量下的吞吐。
- *
- * <p>测试矩阵：
- * <ul>
- *   <li>10K / 100K / 1M 条</li>
- *   <li>单 Sink (log) / 多 Sink (log+statistic+realtime)</li>
- * </ul>
- *
- * @author CH
- * @since 4.0.0.42
- */
+   * 数据湖 pipelineengine 吞吐基准：测量 pipelineengine.执行 在不同数据量下的吞吐。
+   *
+   * <p>测试矩阵：
+   * <ul>
+   *   <li>10K / 100K / 1M 条</li>
+   *   <li>单 Sink (log) / 多 Sink (log+statistic+realtime)</li>
+   * </ul>
+   *
+   * @author CH
+   * @since 4.0.0.42
+   */
 public final class DatalakePipelineBenchProbe {
 
-    /**
-     * Work dir
-    */
+      /**
+       * Work dir
+      */
     private static final Path WORK_DIR = Path.of("target/datalake-bench");
 
-    /**
-     * 入口。
-     *
-     * @param args 命令行参数
-     * @throws Exception 异常
-     */
+      /**
+       * 入口。
+       *
+       * @param args 命令行参数
+       * @throws Exception 异常
+       */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
 
-        // ━━━━━━━━ 初始化 ━━━━━━━━
+          // ━━━━━━━━ 初始化 ━━━━━━━━
         PipelineManager pm = new DefaultPipelineManager();
         Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
         sinkRegistry.put("log", new LogSink());
@@ -64,9 +64,9 @@ public final class DatalakePipelineBenchProbe {
 
         PipelineEngine engine = new DefaultPipelineEngine(pm, sinkRegistry, dispatcher);
 
-        // 单 Sink 管线
+          // 单 Sink 管线
         pm.savePipeline("bench-single", "{\"id\":\"bench-single\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
-        // 多 Sink 管线
+          // 多 Sink 管线
         pm.savePipeline("bench-multi", "{\"id\":\"bench-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statistic\"},{\"type\":\"realtime\"}]}}}");
 
         System.err.println("========================================================================"); // [P3C E1 豁免]
@@ -82,13 +82,13 @@ public final class DatalakePipelineBenchProbe {
 
         for (int i = 0; i < pipelines.length; i++) {
             for (int count : counts) {
-                /**
-                 * 运行bench。
-                 * @param engine engine
-                 * @param pipelines[i] pipelines[i]
-                 * @param pipelineLabels[i] pipeline标签[i]
-                 * @param count 数量
-                 */
+                  /**
+                   * 运行bench。
+                   * @param engine engine
+                   * @param pipelines[i] pipelines[i]
+                   * @param pipelineLabels[i] pipeline标签[i]
+                   * @param count 数量
+                   */
                 runBench(engine, pipelines[i], pipelineLabels[i], count);
             }
         }
@@ -97,20 +97,19 @@ public final class DatalakePipelineBenchProbe {
 
         sinkRegistry.values().forEach(DataSink::stop);
         dispatcher.close();
-        System.exit(0);
     }
 
-    /**
-     * 运行单次基准测试。
-     *
-     * @param engine  管线引擎
-     * @param pipeId  管线 标识
-     * @param label   管线标签
-     * @param count   数据条数
-     * @throws Exception 异常
-     */
+      /**
+       * 运行单次基准测试。
+       *
+       * @param engine  管线引擎
+       * @param pipeId  管线 标识
+       * @param label   管线标签
+       * @param count   数据条数
+       * @throws Exception 异常
+       */
     private static void runBench(PipelineEngine engine, String pipeId, String label, int count) throws Exception {
-        // 预热 100 条
+          // 预热 100 条
         for (int i = 0; i < 100; i++) {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("i", i, "v", "warmup"))
@@ -122,7 +121,7 @@ public final class DatalakePipelineBenchProbe {
             engine.execute(pipeId, env);
         }
 
-        // 正式测试
+          // 正式测试
         AtomicLong writeCount = new AtomicLong(0);
         long t0 = System.currentTimeMillis();
 
@@ -145,7 +144,7 @@ public final class DatalakePipelineBenchProbe {
         System.err.printf("%-12d %-12s %-14d %-14.0f %s%n", // [P3C E1 豁免]
                 count, label, elapsed, throughput, "OK");
 
-        // 验证 envelope 状态
+          // 验证 envelope 状态
         DataEnvelope verify = DataEnvelope.builder()
                 .parsed(Map.of("check", true))
                 .pipelineId(pipeId)

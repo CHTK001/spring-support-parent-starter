@@ -23,7 +23,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
- // 导入 com.fasterxml.jackson.module.paramnames.参数名称module;
+   // 导入 com.fasterxml.jackson.module.paramnames.参数名称module;
 // 由 Spring Boot 自动提供，无需手动引入
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -46,71 +46,71 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Jackson配置
- *
- * @since 2024/7/19
- * @author CH
- */
+   * Jackson配置
+   *
+   * @since 2024/7/19
+   * @author CH
+   */
 @EnableConfigurationProperties(JacksonProperties.class)
 @SuppressWarnings({"removal"})
 public class JacksonConfiguration {
-    /**
-     * 日志
-    */
+      /**
+       * 日志
+      */
     private static final Logger log = LoggerFactory.getLogger(JacksonConfiguration.class);
-    /**
-     * 日期_时间_formatter
-    */
+      /**
+       * 日期_时间_formatter
+      */
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    /**
-     * 日期_formatter
-    */
+      /**
+       * 日期_formatter
+      */
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    /**
-     * 时间_formatter
-    */
+      /**
+       * 时间_formatter
+      */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-    /**
-     * 创建线程安全使用的日期格式化实例。
-     * <p>[P3C-1.2 B2 豁免] 必须返回 {@code SimpleDateFormat}（Java 版 SimpleDateFormat），因为 Jackson
-     * {@link com.fasterxml.jackson.databind.ObjectMapper#setDateFormat(DateFormat)} 只接受 {@code DateFormat}，
-     * 无法使用 {@code DateTimeFormatter}。</p>
-     *
-     * @return 新的日期格式化实例
-     */
+      /**
+       * 创建线程安全使用的日期格式化实例。
+       * <p>[P3C-1.2 B2 豁免] 必须返回 {@code SimpleDateFormat}（Java 版 SimpleDateFormat），因为 Jackson
+       * {@link com.fasterxml.jackson.databind.ObjectMapper#setDateFormat(DateFormat)} 只接受 {@code DateFormat}，
+       * 无法使用 {@code DateTimeFormatter}。</p>
+       *
+       * @return 新的日期格式化实例
+       */
     private static SimpleDateFormat newSimpleDateFormat() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     }
 
-    /**
-     * 创建对象映射器
-     *
-     * @param forEverything foreverything
-     * @return 创建对象映射器的结果
-     */
+      /**
+       * 创建对象映射器
+       *
+       * @param forEverything foreverything
+       * @return 创建对象映射器的结果
+       */
     public static ObjectMapper createObjectMapper(boolean forEverything) {
         return createObjectMapper(forEverything, false);
     }
 
-    /**
-     * 创建对象映射器
-     *
-     * @param forEverything foreverything
-     * @param includeNull include空
-     * @return 创建对象映射器的结果
-     */
+      /**
+       * 创建对象映射器
+       *
+       * @param forEverything foreverything
+       * @param includeNull include空
+       * @return 创建对象映射器的结果
+       */
     public static ObjectMapper createObjectMapper(boolean forEverything, boolean includeNull) {
         log.trace("[Jackson配置]开始创建 ObjectMapper, forEverything={}, includeNull={}", forEverything, includeNull);
         ObjectMapper objectMapper = JsonMapper.builder()
-                // 反序列化时对字段名的大小写不敏感
+                  // 反序列化时对字段名的大小写不敏感
                 .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                // 不存在的字段时，不会抛出异常
+                  // 不存在的字段时，不会抛出异常
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                // 当找不解析类型（含子类），不会抛异常，继续尝试反序列化
+                  // 当找不解析类型（含子类），不会抛异常，继续尝试反序列化
                 .configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false)
-                // 忽略序列化和反序列化的大小写
+                  // 忽略序列化和反序列化的大小写
                 .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
-                // 当找不到类型,会序列化成空对象
+                  // 当找不到类型,会序列化成空对象
                 .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
                 .configure(SerializationFeature.FAIL_ON_UNWRAPPED_TYPE_IDENTIFIERS, false)
                 .configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
@@ -134,7 +134,7 @@ public class JacksonConfiguration {
             log.debug("[Jackson配置]启用全类型序列化 (forEverything=true)");
         }
         SimpleDateFormat simpleDateFormat = newSimpleDateFormat();
-        /* [P3C-1.2 B2] Jackson setDateFormat 只接受 DateFormat，不能替换为 DateTimeFormatter */
+          /* [P3C-1.2 B2] Jackson setDateFormat 只接受 DateFormat，不能替换为 DateTimeFormatter */
         objectMapper.setDateFormat(simpleDateFormat);
         if (log.isDebugEnabled()) {
             log.debug("[Jackson配置]日期格式: {}", simpleDateFormat.toPattern());
@@ -170,7 +170,7 @@ public class JacksonConfiguration {
         if(log.isDebugEnabled()) {
             log.debug("[Jackson配置]时区: {}", TimeZone.getDefault().getID());
         }
- // 对象映射器.设置财产名称strategy(财产名称strategy.SNAKE_大小写);
+   // 对象映射器.设置财产名称strategy(财产名称strategy.SNAKE_大小写);
         objectMapper.registerModule(new SimpleModule().addSerializer(new NullValueSerializer(null)));
         if(log.isDebugEnabled()) {
             log.debug("[Jackson配置]注册 NullValueSerializer: {}", NullValueSerializer.class.getName());
@@ -178,9 +178,9 @@ public class JacksonConfiguration {
 
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new Jdk8Module());
- // jsonmixinmodule 基于 Jackson 3 (tools.jackson), 此处使用 Jackson 2 对象映射器, 不注册
- // 参数名称module 由 Spring Boot 自动注册，无需手动添加
- // 对象映射器.注册module(新 参数名称module());
+   // jsonmixinmodule 基于 Jackson 3 (tools.jackson), 此处使用 Jackson 2 对象映射器, 不注册
+   // 参数名称module 由 Spring Boot 自动注册，无需手动添加
+   // 对象映射器.注册module(新 参数名称module());
         if (log.isTraceEnabled()) {
             log.trace("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}",
                     JavaTimeModule.class.getName(),
@@ -194,12 +194,12 @@ public class JacksonConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /**
-     * 默认对象映射器
-     *
-     * @param jacksonProperties jackson属性
-     * @return 默认对象映射器的结果
-     */
+      /**
+       * 默认对象映射器
+       *
+       * @param jacksonProperties jackson属性
+       * @return 默认对象映射器的结果
+       */
     public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
         log.debug("[Jackson配置]创建默认 ObjectMapper Bean, includeNull={}", jacksonProperties.isIncludeNull());
         ObjectMapper objectMapper = createObjectMapper(false, jacksonProperties.isIncludeNull());
@@ -209,12 +209,12 @@ public class JacksonConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /**
-     * 对象映射器构建器
-     *
-     * @param objectMapper 对象映射器
-     * @return 对象映射器构建器的结果
-     */
+      /**
+       * 对象映射器构建器
+       *
+       * @param objectMapper 对象映射器
+       * @return 对象映射器构建器的结果
+       */
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
         log.debug("[Jackson配置]创建 Jackson2ObjectMapperBuilder, 使用 ObjectMapper: {}", objectMapper.getClass().getName());
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
@@ -223,48 +223,48 @@ public class JacksonConfiguration {
         return builder;
     }
 
-    /**
-     * transient字段ignoring反序列化器类。
-     *
-     * @author CH
-     * @since 4.0.0
-     */
+      /**
+       * transient字段ignoring反序列化器类。
+       *
+       * @author CH
+       * @since 4.0.0
+       */
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
-        /**
-         * 串行版本UID
-        */
+          /**
+           * 串行版本UID
+          */
         private static final long serialVersionUID = 1L;
 
-        /**
-         * 创建 transient字段ignoring反序列化器 实例
-        */
+          /**
+           * 创建 transient字段ignoring反序列化器 实例
+          */
         public TransientFieldIgnoringDeserializer() {
-            /**
-             * 父。
-             * @param Object.class 对象.类
-             */
+              /**
+               * 父。
+               * @param Object.class 对象.类
+               */
             super(Object.class);
         }
 
         @Override
-        /**
-         * 反序列化
-         * @param ctxt 参数
-         * @param p 参数
-         * @return 返回值
-         * @throws IOException 异常
-        */
+          /**
+           * 反序列化
+           * @param ctxt 参数
+           * @param p 参数
+           * @return 返回值
+           * @throws IOException 异常
+          */
         public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             return p.readValuesAs(Object.class);
         }
     }
 
-    /**
-     * 空字段deserializationproblem处理器类。
-     *
-     * @author CH
-     * @since 4.0.0
-     */
+      /**
+       * 空字段deserializationproblem处理器类。
+       *
+       * @author CH
+       * @since 4.0.0
+       */
     static class NullableFieldsDeserializationProblemHandler extends DeserializationProblemHandler {
 
         static Table<String, Class<?>, Class<? extends JacksonProblemHandler>> NULLABLE_FIELDS = HashBasedTable.create(); // 空字段
@@ -275,17 +275,18 @@ public class JacksonConfiguration {
         }
 
         @Override
-        /**
-         * 处理unexpected令牌
-         * @param ctxt 参数
-         * @param failureMsg 字符串
-         * @param p 参数
-         * @param t 参数
-         * @param targetType 参数
-         * @return 返回值
-         * @throws IOException 异常
-        */
-        public Object handleUnexpectedToken(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg) throws IOException {
+          /**
+           * 处理unexpected令牌
+           * @param ctxt 参数
+           * @param failureMsg 字符串
+           * @param p 参数
+           * @param t 参数
+           * @param targetType 参数
+           * @return 返回值
+           * @throws IOException 异常
+          */
+        public Object handleUnexpectedToken(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p
+            , String failureMsg) throws IOException {
             Class<?> targetRawClass = targetType.getRawClass();
             String name = t.name();
             try {

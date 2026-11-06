@@ -2,10 +2,14 @@ package com.chua.starter.message.support.template;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.message.support.entity.SysMessageProvider;
+import com.chua.starter.message.support.entity.SysMessageTemplate;
 import com.chua.starter.message.support.mapper.SysMessageProviderMapper;
+import com.chua.starter.message.support.mapper.SysMessageTemplateMapper;
 import com.chua.starter.template.support.model.TemplateProviderInfo;
 import com.chua.starter.template.support.model.TemplateProviderSyncResult;
+import com.chua.starter.template.support.model.TemplateSourceDetail;
 import com.chua.starter.template.support.service.ProviderSource;
+import com.chua.starter.template.support.util.TemplateContentParams;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -37,8 +41,74 @@ public class MessageProviderSource implements ProviderSource {
 
     private final SysMessageProviderMapper providerMapper;
 
-    public MessageProviderSource(SysMessageProviderMapper providerMapper) {
+    /** 消息模板表：按来源行 ID 取回模板详情（三方模板 ID / 内容 / 类型） */
+    private final SysMessageTemplateMapper templateMapper;
+
+    public MessageProviderSource(SysMessageProviderMapper providerMapper,
+                                 SysMessageTemplateMapper templateMapper) {
         this.providerMapper = providerMapper;
+        this.templateMapper = templateMapper;
+    }
+
+    /**
+     * 按来源行取回消息模板详情
+     *
+     * <p>字段按 {@code MessageRequest}（发送一条模板消息要什么）对齐：
+     * {@code sourceCode} → templateId、{@code type} → contentType、
+     * {@code content} → content、{@code params} → templateParams 的键；
+     * {@code channel} 与发送时同一套解析规则（厂家优先，其次提供商类型）。</p>
+     *
+     * @param providerId 提供商 ID（可为空，为空时取模板自身记录的提供商）
+     * @param sourceId   来源行 ID（sys_message_template_id）
+     * @return 模板详情，取不到返回 {@code null}
+     */
+    @Override
+    public TemplateSourceDetail detail(String providerId, String sourceId) {
+        Integer templateRowId = parseId(sourceId);
+        if (templateRowId == null) {
+            return null;
+        }
+        SysMessageTemplate template = templateMapper.selectById(templateRowId);
+        if (template == null) {
+            return null;
+        }
+        Integer providerRowId = parseId(providerId);
+        if (providerRowId == null) {
+            providerRowId = template.getSysMessageProviderId();
+        }
+        SysMessageProvider provider = providerRowId == null ? null : providerMapper.selectById(providerRowId);
+        String content = template.getSysMessageTemplateContent();
+        return new TemplateSourceDetail(
+                null,
+                template.getSysMessageTemplateName(),
+                SOURCE,
+                true,
+                String.valueOf(template.getSysMessageTemplateId()),
+                template.getSysMessageTemplateCode(),
+                provider == null ? providerId : String.valueOf(provider.getSysMessageProviderId()),
+                provider == null ? null : provider.getSysMessageProviderName(),
+                resolveChannel(provider),
+                template.getSysMessageTemplateType(),
+                content,
+                TemplateContentParams.of(content),
+                template.getSysMessageTemplateRemark());
+    }
+
+    /**
+     * 解析渠道标识
+     *
+     * <p>与消息模块发送时的规则保持一致：优先厂家编码，其次提供商类型
+     * （见 {@code SysMessageServiceImpl#resolveChannel}）。</p>
+     *
+     * @param provider 消息提供商
+     * @return 渠道标识；无提供商时返回 {@code null}
+     */
+    private static String resolveChannel(SysMessageProvider provider) {
+        if (provider == null) {
+            return null;
+        }
+        String vender = provider.getSysMessageProviderVender();
+        return vender != null && !vender.trim().isEmpty() ? vender : provider.getSysMessageProviderType();
     }
 
     @Override

@@ -501,6 +501,41 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     }
 
     /**
+     * 按渠道（平台标识）触发探针：遍历该渠道下全部启用供应商的连接并逐个探活。
+     *
+     * <p>按渠道独立间隔的定时任务（时间轮）用此入口，避免每次都全量探一遍：
+     * 不同渠道的上游限流阈值与凭据寿命不同，探针节奏本就应该分开。</p>
+     *
+     * @param channel 渠道平台标识
+     * @return 探针完成的连接数
+     */
+    @Override
+    public int probeByChannel(String channel) {
+        if (StringUtils.isBlank(channel)) {
+            return 0;
+        }
+        int probed = 0;
+        for (SysAiProvider provider : providers()) {
+            if (!channel.equalsIgnoreCase(provider.getPlatform())) {
+                continue;
+            }
+            for (SysAiProviderConnection conn : connections(provider)) {
+                try {
+                    probeConnection(provider, conn);
+                    probed++;
+                } catch (Exception e) {
+                    log.warn("[ChannelHealthProbe] 探针失败 channel={} connection={} : {}",
+                            channel, conn.getConnectionId(), e.getMessage());
+                }
+            }
+        }
+        if (probed > 0) {
+            log.debug("[ChannelHealthProbe] 按渠道探针完成 channel={} connections={}", channel, probed);
+        }
+        return probed;
+    }
+
+    /**
      * 已启用的供应商
      *
      * @return 供应商列表

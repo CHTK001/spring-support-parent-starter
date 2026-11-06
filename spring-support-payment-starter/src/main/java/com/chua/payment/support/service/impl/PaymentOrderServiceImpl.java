@@ -63,77 +63,77 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 支付订单服务实现，负责订单创建、支付、退款、状态流转等核心业务。
- *
- * @author CH
- * @since 4.0.0.50
- */
+   * 支付订单服务实现，负责订单创建、支付、退款、状态流转等核心业务。
+   *
+   * @author CH
+   * @since 4.0.0.50
+   */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class PaymentOrderServiceImpl implements PaymentOrderService {
 
-    /**
-     * 订单映射器
-     */
+      /**
+       * 订单映射器
+       */
     private final PaymentOrderMapper orderMapper;
-    /**
-     * 商户映射器
-     */
+      /**
+       * 商户映射器
+       */
     private final MerchantMapper merchantMapper;
-    /**
-     * 商户渠道映射器
-     */
+      /**
+       * 商户渠道映射器
+       */
     private final MerchantChannelMapper merchantChannelMapper;
-    /**
-     * 订单状态机服务
-     */
+      /**
+       * 订单状态机服务
+       */
     private final OrderStateMachineService stateMachineService;
-    /**
-     * 订单状态日志服务
-     */
+      /**
+       * 订单状态日志服务
+       */
     private final OrderStateLogService orderStateLogService;
-    /**
-     * 交易流水服务
-     */
+      /**
+       * 交易流水服务
+       */
     private final TransactionRecordService transactionRecordService;
-    /**
-     * 支付渠道注册表
-     */
+      /**
+       * 支付渠道注册表
+       */
     private final PaymentChannelRegistry paymentChannelRegistry;
-    /**
-     * 支付退款单服务
-     */
+      /**
+       * 支付退款单服务
+       */
     private final PaymentRefundOrderService paymentRefundOrderService;
-    /**
-     * 支付回调地址解析器
-     */
+      /**
+       * 支付回调地址解析器
+       */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
-    /**
-     * 商户支付配置服务
-     */
+      /**
+       * 商户支付配置服务
+       */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
-    /**
-     * 事件发布器
-     */
+      /**
+       * 事件发布器
+       */
     private final ApplicationEventPublisher eventPublisher;
-    /**
-     * JSON 序列化器
-     */
+      /**
+       * JSON 序列化器
+       */
     private final ObjectMapper objectMapper;
-    /**
-     * 用户 OpenId 解析器
-     */
+      /**
+       * 用户 OpenId 解析器
+       */
     private final UserOpenIdResolver userOpenIdResolver;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 创建支付订单
-     *
-     * @param dto dto
-     * @return 创建支付订单的结果
-     */
+      /**
+       * 创建支付订单
+       *
+       * @param dto dto
+       * @return 创建支付订单的结果
+       */
     public OrderVO createOrder(OrderCreateDTO dto) {
         if (dto.merchantId() == null) {
             throw new PaymentException("商户ID不能为空");
@@ -150,12 +150,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         String businessOrderNo = StringUtils.hasText(dto.businessOrderNo()) ? dto.businessOrderNo() : orderNo;
         PaymentOrder existing = findActiveOrderByBusinessOrderNo(dto.merchantId(), businessOrderNo);
         if (existing != null) {
-            /**
-             * 校验为同一笔业务订单
-             * @param existing 已存在的订单
-             * @param dto dto
-             * @param channel 渠道
-             */
+              /**
+               * 校验为同一笔业务订单
+               * @param existing 已存在的订单
+               * @param dto dto
+               * @param channel 渠道
+               */
             assertSameBusinessOrder(existing, dto, channel);
             return convertToVO(existing);
         }
@@ -199,12 +199,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         } catch (DuplicateKeyException e) {
             PaymentOrder duplicated = findActiveOrderByBusinessOrderNo(dto.merchantId(), businessOrderNo);
             if (duplicated != null) {
-                /**
-                 * 校验为同一笔业务订单
-                 * @param duplicated 重复的订单
-                 * @param dto dto
-                 * @param channel 渠道
-                 */
+                  /**
+                   * 校验为同一笔业务订单
+                   * @param duplicated 重复的订单
+                   * @param dto dto
+                   * @param channel 渠道
+                   */
                 assertSameBusinessOrder(duplicated, dto, channel);
                 return convertToVO(duplicated);
             }
@@ -231,11 +231,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /**
-     * 获取订单
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * 获取订单
+       * @param id 长整数
+       * @return 返回值
+      */
     public OrderVO getOrder(Long id) {
         return convertToVO(requireOrder(id));
     }
@@ -268,29 +268,29 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /**
-     * 查询订单状态日志
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * 查询订单状态日志
+       * @param id 长整数
+       * @return 返回值
+      */
     public List<OrderStateLogVO> listOrderLogs(Long id) {
-        /**
-         * 先确认订单存在
-         * @param id 标识
-         */
+          /**
+           * 先确认订单存在
+           * @param id 标识
+           */
         requireOrder(id);
         return orderStateLogService.listByOrderId(id).stream().map(this::convertLogToVO).toList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 发起支付
-     *
-     * @param id 标识
-     * @param dto dto
-     * @return 发起支付的结果
-     */
+      /**
+       * 发起支付
+       *
+       * @param id 标识
+       * @param dto dto
+       * @return 发起支付的结果
+       */
     public PaymentResult payOrder(Long id, OrderPayDTO dto) {
         merchantPaymentConfigService.checkCanPayOrder(id);
 
@@ -298,21 +298,21 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
         String operator = defaultOperator(dto != null ? dto.operator() : null);
-        /**
-         * 确保订单进入支付中状态
-         * @param order 订单
-         * @param operator 操作人
-         */
+          /**
+           * 确保订单进入支付中状态
+           * @param order 订单
+           * @param operator 操作人
+           */
         ensurePaying(order, operator);
 
-        // 零金额订单：跳过渠道支付，直接标记成功
+          // 零金额订单：跳过渠道支付，直接标记成功
         if (order.getOrderAmount().compareTo(BigDecimal.ZERO) == 0) {
-            /**
-             * 标记支付成功
-             * @param id 标识
-             * @param BigDecimal.ZERO 零金额
-             * @param order.getOrderNo() 订单号
-             */
+              /**
+               * 标记支付成功
+               * @param id 标识
+               * @param BigDecimal.ZERO 零金额
+               * @param order.getOrderNo() 订单号
+               */
             paySuccess(id, BigDecimal.ZERO, "ZERO_AMOUNT_" + order.getOrderNo(), operator);
             PaymentResult result = new PaymentResult(true, null, "零金额订单已自动支付成功", null,
                     null, null, null, null, null, "PAID", null);
@@ -353,42 +353,42 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             return result;
         }
         if ("FAILED".equals(result.status())) {
-            /**
-             * 标记支付失败
-             * @param id 标识
-             * @param firstNonBlank(result.message() 渠道返回的失败原因
-             */
+              /**
+               * 标记支付失败
+               * @param id 标识
+               * @param firstNonBlank(result.message() 渠道返回的失败原因
+               */
             payFail(id, firstNonBlank(result.message(), "支付失败"), operator);
             return result;
         }
         if ("CANCELLED".equals(result.status())) {
-            /**
-             * 取消订单
-             * @param id 标识
-             * @param operator 操作人
-             * @param firstNonBlank(result.message() 渠道返回的关闭原因
-             */
+              /**
+               * 取消订单
+               * @param id 标识
+               * @param operator 操作人
+               * @param firstNonBlank(result.message() 渠道返回的关闭原因
+               */
             cancelOrder(id, operator, firstNonBlank(result.message(), "订单已关闭"));
             return result;
         }
         recordTransaction(latest,
                 "PAY",
                 latest.getOrderAmount(),
-                /**
-                 * 流水状态取支付结果对应的状态
-                 * @param result 支付结果
-                 */
+                  /**
+                   * 流水状态取支付结果对应的状态
+                   * @param result 支付结果
+                   */
                 transactionStatusOfPaymentResult(result),
                 result.tradeNo(),
-                /**
-                 * 安全序列化
-                 * @param request 请求
-                 */
+                  /**
+                   * 安全序列化
+                   * @param request 请求
+                   */
                 safeJson(request),
-                /**
-                 * 安全序列化
-                 * @param result 支付结果
-                 */
+                  /**
+                   * 安全序列化
+                   * @param result 支付结果
+                   */
                 safeJson(result),
                 "真实支付发起");
         return result;
@@ -396,37 +396,37 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 同步订单状态
-     *
-     * @param id 标识
-     * @return 同步后的订单
-     */
+      /**
+       * 同步订单状态
+       *
+       * @param id 标识
+       * @return 同步后的订单
+       */
     public OrderVO syncOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
         PaymentChannel paymentChannel = paymentChannelRegistry.getChannel(order.getChannelType(), order.getChannelSubType());
         PaymentResult result = paymentChannel.query(channel, order.getOrderNo());
         if ("PAID".equals(result.status())) {
-            /**
-             * 标记支付成功
-             * @param id 标识
-             * @param result.paidAmount() 渠道返回的实付金额
-             */
+              /**
+               * 标记支付成功
+               * @param id 标识
+               * @param result.paidAmount() 渠道返回的实付金额
+               */
             paySuccess(id, result.paidAmount(), result.tradeNo(), "channel-sync");
         } else if ("FAILED".equals(result.status())) {
-            /**
-             * 标记支付失败
-             * @param id 标识
-             * @param firstNonBlank(result.message() 渠道返回的失败原因
-             */
+              /**
+               * 标记支付失败
+               * @param id 标识
+               * @param firstNonBlank(result.message() 渠道返回的失败原因
+               */
             payFail(id, firstNonBlank(result.message(), "渠道返回支付失败"), "channel-sync");
         } else if ("CANCELLED".equals(result.status()) && canCancelByState(requireOrder(id).getStatus())) {
-            /**
-             * 取消订单
-             * @param id 标识
-             * @param firstNonBlank(result.message() 渠道返回的关闭原因
-             */
+              /**
+               * 取消订单
+               * @param id 标识
+               * @param firstNonBlank(result.message() 渠道返回的关闭原因
+               */
             cancelOrder(id, "channel-sync", firstNonBlank(result.message(), "渠道返回订单关闭"));
         }
         return convertToVO(requireOrder(id));
@@ -434,13 +434,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 启动支付
-     *
-     * @param id 标识
-     * @param operator 操作人
-     * @return 是否启动成功
-     */
+      /**
+       * 启动支付
+       *
+       * @param id 标识
+       * @param operator 操作人
+       * @return 是否启动成功
+       */
     public boolean startPay(Long id, String operator) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.PAYING.name().equals(order.getStatus()) || isPaidState(order.getStatus())) {
@@ -451,11 +451,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
         OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.PAY, defaultOperator(operator));
         if (transitionResult == OrderTransitionResult.APPLIED) {
-            /**
-             * 记录发起支付流水
-             * @param order 订单
-             * @param order.getOrderAmount() 订单金额
-             */
+              /**
+               * 记录发起支付流水
+               * @param order 订单
+               * @param order.getOrderAmount() 订单金额
+               */
             recordTransaction(order, "PAY", order.getOrderAmount(), 2, null, null, null, "发起支付");
         }
         return true;
@@ -463,63 +463,63 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 标记支付成功
-     *
-     * @param id 标识
-     * @param paidAmount 实付金额
-     * @param thirdPartyOrderNo 第三方订单号
-     * @param operator 操作人
-     * @return 是否处理成功
-     */
+      /**
+       * 标记支付成功
+       *
+       * @param id 标识
+       * @param paidAmount 实付金额
+       * @param thirdPartyOrderNo 第三方订单号
+       * @param operator 操作人
+       * @return 是否处理成功
+       */
     public boolean paySuccess(Long id, BigDecimal paidAmount, String thirdPartyOrderNo, String operator) {
         PaymentOrder order = requireOrder(id);
         if (isPaidState(order.getStatus())) {
-            /**
-             * 幂等回填支付成功信息
-             * @param order 订单
-             * @param paidAmount 实付金额
-             * @param thirdPartyOrderNo 第三方订单号
-             */
+              /**
+               * 幂等回填支付成功信息
+               * @param order 订单
+               * @param paidAmount 实付金额
+               * @param thirdPartyOrderNo 第三方订单号
+               */
             backfillPaymentSuccess(order, paidAmount, thirdPartyOrderNo);
             return true;
         }
         if (!(OrderState.PENDING.name().equals(order.getStatus()) || OrderState.PAYING.name().equals(order.getStatus()))) {
             throw new PaymentException("当前订单状态不允许标记支付成功");
         }
-        /**
-         * 确保订单进入支付中状态
-         * @param order 订单
-         * @param defaultOperator(operator) 默认操作人
-         */
+          /**
+           * 确保订单进入支付中状态
+           * @param order 订单
+           * @param defaultOperator(operator) 默认操作人
+           */
         ensurePaying(order, defaultOperator(operator));
         order = requireOrder(id);
         if (isPaidState(order.getStatus())) {
-            /**
-             * 幂等回填支付成功信息
-             * @param order 订单
-             * @param paidAmount 实付金额
-             * @param thirdPartyOrderNo 第三方订单号
-             */
+              /**
+               * 幂等回填支付成功信息
+               * @param order 订单
+               * @param paidAmount 实付金额
+               * @param thirdPartyOrderNo 第三方订单号
+               */
             backfillPaymentSuccess(order, paidAmount, thirdPartyOrderNo);
             return true;
         }
         OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.PAY_SUCCESS, defaultOperator(operator));
         PaymentOrder latest = requireOrder(id);
-        /**
-         * 幂等回填支付成功信息
-         * @param latest 最新订单
-         * @param paidAmount 实付金额
-         * @param thirdPartyOrderNo 第三方订单号
-         */
+          /**
+           * 幂等回填支付成功信息
+           * @param latest 最新订单
+           * @param paidAmount 实付金额
+           * @param thirdPartyOrderNo 第三方订单号
+           */
         backfillPaymentSuccess(latest, paidAmount, thirdPartyOrderNo);
         latest = requireOrder(id);
         if (transitionResult == OrderTransitionResult.APPLIED) {
-            /**
-             * 记录支付成功流水
-             * @param latest 最新订单
-             * @param latest.getPaidAmount() 实付金额
-             */
+              /**
+               * 记录支付成功流水
+               * @param latest 最新订单
+               * @param latest.getPaidAmount() 实付金额
+               */
             recordTransaction(latest, "PAY", latest.getPaidAmount(), 1, thirdPartyOrderNo, null, null, "支付成功");
             eventPublisher.publishEvent(new PaymentSuccessEvent(
                 this, null, latest.getMerchantId(), latest.getId(),
@@ -532,58 +532,58 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 标记支付失败
-     *
-     * @param id 标识
-     * @param reason 失败原因
-     * @param operator 操作人
-     * @return 是否处理成功
-     */
+      /**
+       * 标记支付失败
+       *
+       * @param id 标识
+       * @param reason 失败原因
+       * @param operator 操作人
+       * @return 是否处理成功
+       */
     public boolean payFail(Long id, String reason, String operator) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.FAILED.name().equals(order.getStatus())) {
-            /**
-             * 幂等回填备注
-             * @param order 订单
-             * @param reason 失败原因
-             */
+              /**
+               * 幂等回填备注
+               * @param order 订单
+               * @param reason 失败原因
+               */
             backfillRemark(order, reason);
             return true;
         }
         if (!(OrderState.PENDING.name().equals(order.getStatus()) || OrderState.PAYING.name().equals(order.getStatus()))) {
             throw new PaymentException("当前订单状态不允许标记支付失败");
         }
-        /**
-         * 确保订单进入支付中状态
-         * @param order 订单
-         * @param defaultOperator(operator) 默认操作人
-         */
+          /**
+           * 确保订单进入支付中状态
+           * @param order 订单
+           * @param defaultOperator(operator) 默认操作人
+           */
         ensurePaying(order, defaultOperator(operator));
         order = requireOrder(id);
         if (OrderState.FAILED.name().equals(order.getStatus())) {
-            /**
-             * 幂等回填备注
-             * @param order 订单
-             * @param reason 失败原因
-             */
+              /**
+               * 幂等回填备注
+               * @param order 订单
+               * @param reason 失败原因
+               */
             backfillRemark(order, reason);
             return true;
         }
         OrderTransitionResult transitionResult = sendStateEvent(order.getId(), OrderEvent.PAY_FAIL, defaultOperator(operator));
         PaymentOrder latest = requireOrder(id);
-        /**
-         * 幂等回填备注
-         * @param latest 最新订单
-         * @param reason 失败原因
-         */
+          /**
+           * 幂等回填备注
+           * @param latest 最新订单
+           * @param reason 失败原因
+           */
         backfillRemark(latest, reason);
         if (transitionResult == OrderTransitionResult.APPLIED) {
-            /**
-             * 记录支付失败流水
-             * @param latest 最新订单
-             * @param latest.getOrderAmount() 订单金额
-             */
+              /**
+               * 记录支付失败流水
+               * @param latest 最新订单
+               * @param latest.getOrderAmount() 订单金额
+               */
             recordTransaction(latest, "PAY", latest.getOrderAmount(), 0, null, null, reason, "支付失败");
         }
         return true;
@@ -591,85 +591,85 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 取消订单（不退款）
-     *
-     * @param id 标识
-     * @param operator 操作人
-     * @param reason 取消原因
-     * @return 取消订单的结果
-     */
+      /**
+       * 取消订单（不退款）
+       *
+       * @param id 标识
+       * @param operator 操作人
+       * @param reason 取消原因
+       * @return 取消订单的结果
+       */
     public boolean cancelOrder(Long id, String operator, String reason) {
         return cancelOrder(id, operator, reason, false);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 取消订单
-     *
-     * @param id 标识
-     * @param operator 操作人
-     * @param reason 取消原因
-     * @param refund 是否退款
-     * @return 取消订单的结果
-     */
+      /**
+       * 取消订单
+       *
+       * @param id 标识
+       * @param operator 操作人
+       * @param reason 取消原因
+       * @param refund 是否退款
+       * @return 取消订单的结果
+       */
     public boolean cancelOrder(Long id, String operator, String reason, boolean refund) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.CANCELLED.name().equals(order.getStatus())) {
-            /**
-             * 幂等回填备注
-             * @param order 订单
-             * @param reason 取消原因
-             */
+              /**
+               * 幂等回填备注
+               * @param order 订单
+               * @param reason 取消原因
+               */
             backfillRemark(order, reason);
             return true;
         }
 
-        // 不退款取消：仅 PENDING/PAYING 可取消
+          // 不退款取消：仅 PENDING/PAYING 可取消
         if (!refund) {
             if (!canCancelByState(order.getStatus())) {
                 throw new PaymentException("当前订单状态不允许取消");
             }
-            /**
-             * 先关闭渠道侧订单
-             * @param order 订单
-             */
+              /**
+               * 先关闭渠道侧订单
+               * @param order 订单
+               */
             closeChannelOrder(order);
-            /**
-             * 发送状态机取消事件
-             * @param order.getId() 订单标识
-             */
+              /**
+               * 发送状态机取消事件
+               * @param order.getId() 订单标识
+               */
             sendStateEvent(order.getId(), OrderEvent.CANCEL, defaultOperator(operator));
             PaymentOrder latest = requireOrder(id);
-            /**
-             * 幂等回填备注
-             * @param latest 最新订单
-             * @param reason 取消原因
-             */
+              /**
+               * 幂等回填备注
+               * @param latest 最新订单
+               * @param reason 取消原因
+               */
             backfillRemark(latest, reason);
             return true;
         }
 
-        // === 退款取消 ===
+          // === 退款取消 ===
         if (OrderState.PENDING.name().equals(order.getStatus()) || OrderState.PAYING.name().equals(order.getStatus())) {
-            // 未支付订单：直接取消，无需退款
-            /**
-             * 先关闭渠道侧订单
-             * @param order 订单
-             */
+              // 未支付订单：直接取消，无需退款
+              /**
+               * 先关闭渠道侧订单
+               * @param order 订单
+               */
             closeChannelOrder(order);
-            /**
-             * 发送状态机取消事件
-             * @param order.getId() 订单标识
-             */
+              /**
+               * 发送状态机取消事件
+               * @param order.getId() 订单标识
+               */
             sendStateEvent(order.getId(), OrderEvent.CANCEL, defaultOperator(operator));
             PaymentOrder latest = requireOrder(id);
-            /**
-             * 幂等回填备注
-             * @param latest 最新订单
-             * @param reason 取消原因
-             */
+              /**
+               * 幂等回填备注
+               * @param latest 最新订单
+               * @param reason 取消原因
+               */
             backfillRemark(latest, reason);
             return true;
         }
@@ -678,7 +678,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             throw new PaymentException("当前订单状态不允许退款取消");
         }
 
-        // 发起退款
+          // 发起退款
         if (paymentRefundOrderService.hasProcessingRefund(order.getId())) {
             throw new PaymentException("存在处理中退款单，请稍后再试");
         }
@@ -687,11 +687,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 ? order.getPaidAmount() : order.getOrderAmount();
         String operatorVal = defaultOperator(operator);
 
-        // 先标记为退款中
-        /**
-         * 发送状态机退款事件
-         * @param order.getId() 订单标识
-         */
+          // 先标记为退款中
+          /**
+           * 发送状态机退款事件
+           * @param order.getId() 订单标识
+           */
         sendStateEvent(order.getId(), OrderEvent.REFUND, operatorVal);
 
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
@@ -718,24 +718,24 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         String thirdPartyRefundNo = firstNonBlank(result.tradeNo(), result.refundNo());
 
         if ("REFUNDED".equals(result.status())) {
-            // 退款成功：标记退款成功，再补 CANCELLED
+              // 退款成功：标记退款成功，再补 CANCELLED
             BigDecimal actualAmount = result.refundAmount() != null ? result.refundAmount() : refundAmount;
             paymentRefundOrderService.markRefunded(new MarkRefundedDTO(refundNo, actualAmount, thirdPartyRefundNo,
                     responsePayload, operatorVal, "取消退款成功"));
             PaymentOrder latestOrder = requireOrder(id);
             BigDecimal totalRefunded = aggregateRefundedAmount(latestOrder);
-            /**
-             * 同步退款累计金额
-             * @param latestOrder 最新订单
-             * @param totalRefunded 累计已退金额
-             */
+              /**
+               * 同步退款累计金额
+               * @param latestOrder 最新订单
+               * @param totalRefunded 累计已退金额
+               */
             syncRefundAggregate(latestOrder, totalRefunded);
-            // 直接更新为 CANCELLED（不走状态机，因为订单流已定义 CANCELLED 状态）
-            /**
-             * 强制设置订单状态
-             * @param id 标识
-             * @param OrderState.CANCELLED.name() 已取消状态名称
-             */
+              // 直接更新为 CANCELLED（不走状态机，因为订单流已定义 CANCELLED 状态）
+              /**
+               * 强制设置订单状态
+               * @param id 标识
+               * @param OrderState.CANCELLED.name() 已取消状态名称
+               */
             forceOrderStatus(id, OrderState.CANCELLED.name());
             orderStateLogService.log(new OrderStateLogRequest(id, OrderState.REFUNDED.name(), OrderState.CANCELLED.name(),
                     "CANCEL", operatorVal, "退款方式取消"));
@@ -747,12 +747,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if ("FAILED".equals(result.status())) {
             paymentRefundOrderService.markFailed(refundNo, responsePayload, operatorVal,
                     firstNonBlank(result.message(), "取消退款失败"));
-            // 退款失败：回退为 PAID
-            /**
-             * 强制设置订单状态
-             * @param id 标识
-             * @param OrderState.PAID.name() 已支付状态名称
-             */
+              // 退款失败：回退为 PAID
+              /**
+               * 强制设置订单状态
+               * @param id 标识
+               * @param OrderState.PAID.name() 已支付状态名称
+               */
             forceOrderStatus(id, OrderState.PAID.name());
             orderStateLogService.log(new OrderStateLogRequest(id, OrderState.REFUNDING.name(), OrderState.PAID.name(),
                     "REFUND_FAIL", operatorVal,
@@ -760,7 +760,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             throw new PaymentException("取消退款失败: " + result.message());
         }
 
-        // 异步退款处理中：标记退款处理中
+          // 异步退款处理中：标记退款处理中
         paymentRefundOrderService.markProcessing(refundNo, thirdPartyRefundNo, responsePayload,
                 firstNonBlank(result.message(), "取消退款发起"));
         recordTransaction(order, "REFUND", refundAmount, 2, thirdPartyRefundNo,
@@ -770,49 +770,49 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 完成订单
-     *
-     * @param id 标识
-     * @param operator 操作人
-     * @return 是否完成成功
-     */
+      /**
+       * 完成订单
+       *
+       * @param id 标识
+       * @param operator 操作人
+       * @return 是否完成成功
+       */
     public boolean completeOrder(Long id, String operator) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.COMPLETED.name().equals(order.getStatus())) {
-            /**
-             * 幂等回填完成时间
-             * @param order 订单
-             */
+              /**
+               * 幂等回填完成时间
+               * @param order 订单
+               */
             backfillCompleteTime(order);
             return true;
         }
         if (!OrderState.PAID.name().equals(order.getStatus())) {
             throw new PaymentException("当前订单状态不允许完成");
         }
-        /**
-         * 发送状态机完成事件
-         * @param order.getId() 订单标识
-         */
+          /**
+           * 发送状态机完成事件
+           * @param order.getId() 订单标识
+           */
         sendStateEvent(order.getId(), OrderEvent.COMPLETE, defaultOperator(operator));
         PaymentOrder latest = requireOrder(id);
-        /**
-         * 幂等回填完成时间
-         * @param latest 最新订单
-         */
+          /**
+           * 幂等回填完成时间
+           * @param latest 最新订单
+           */
         backfillCompleteTime(latest);
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 发起退款
-     *
-     * @param id 标识
-     * @param dto dto
-     * @return 发起退款的结果
-     */
+      /**
+       * 发起退款
+       *
+       * @param id 标识
+       * @param dto dto
+       * @return 发起退款的结果
+       */
     public boolean refundOrder(Long id, RefundApplyDTO dto) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.REFUNDED.name().equals(order.getStatus())) {
@@ -831,11 +831,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
 
         BigDecimal currentRefunded = aggregateRefundedAmount(order);
-        /**
-         * 同步退款累计金额
-         * @param order 订单
-         * @param currentRefunded 当前累计已退金额
-         */
+          /**
+           * 同步退款累计金额
+           * @param order 订单
+           * @param currentRefunded 当前累计已退金额
+           */
         syncRefundAggregate(order, currentRefunded);
         order = requireOrder(id);
         BigDecimal refundAmount = dto != null && dto.refundAmount() != null ? dto.refundAmount() : refundableAmount(order, currentRefunded);
@@ -857,11 +857,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
 
         PaymentOrder latest = requireOrder(id);
-        /**
-         * 幂等回填备注
-         * @param latest 最新订单
-         * @param dto.refundReason() 退款原因
-         */
+          /**
+           * 幂等回填备注
+           * @param latest 最新订单
+           * @param dto.refundReason() 退款原因
+           */
         backfillRemark(latest, dto != null ? dto.refundReason() : null);
 
         String refundNo = generateRefundNo();
@@ -905,10 +905,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         recordTransaction(latest,
                 "REFUND",
                 refundAmount,
-                /**
-                 * 流水状态取退款结果对应的状态
-                 * @param result 退款结果
-                 */
+                  /**
+                   * 流水状态取退款结果对应的状态
+                   * @param result 退款结果
+                   */
                 transactionStatusOfRefundResult(result),
                 thirdPartyRefundNo,
                 requestPayload,
@@ -919,48 +919,49 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 标记退款成功
-     *
-     * @param id 标识
-     * @param refundAmount 退款金额
-     * @param operator 操作人
-     * @return 标记结果
-     */
+      /**
+       * 标记退款成功
+       *
+       * @param id 标识
+       * @param refundAmount 退款金额
+       * @param operator 操作人
+       * @return 标记结果
+       */
     public boolean refundSuccess(Long id, BigDecimal refundAmount, String operator) {
         PaymentOrder order = requireOrder(id);
         PaymentRefundOrder refundOrder = resolveManualRefundOrder(order, refundAmount, defaultOperator(operator), "手动标记退款成功");
         if (refundOrder == null) {
-            /**
-             * 同步退款累计金额
-             * @param order 订单
-             * @param aggregateRefundedAmount(order) 累计已退金额
-             */
+              /**
+               * 同步退款累计金额
+               * @param order 订单
+               * @param aggregateRefundedAmount(order) 累计已退金额
+               */
             syncRefundAggregate(order, aggregateRefundedAmount(order));
             return true;
         }
-        return refundSuccess(new RefundSuccessDTO(refundOrder.getRefundNo(), refundAmount, refundOrder.getThirdPartyRefundNo(), operator, null, "手动标记退款成功"));
+        return refundSuccess(new RefundSuccessDTO(refundOrder.getRefundNo(), refundAmount, refundOrder.getThirdPartyRefundNo(), operator
+            , null, "手动标记退款成功"));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 标记退款失败
-     *
-     * @param id 标识
-     * @param reason 失败原因
-     * @param operator 操作人
-     * @return 标记结果
-     */
+      /**
+       * 标记退款失败
+       *
+       * @param id 标识
+       * @param reason 失败原因
+       * @param operator 操作人
+       * @return 标记结果
+       */
     public boolean refundFail(Long id, String reason, String operator) {
         PaymentOrder order = requireOrder(id);
         PaymentRefundOrder refundOrder = resolveManualRefundOrder(order, null, defaultOperator(operator), reason);
         if (refundOrder == null) {
-            /**
-             * 幂等回填备注
-             * @param order 订单
-             * @param reason 失败原因
-             */
+              /**
+               * 幂等回填备注
+               * @param order 订单
+               * @param reason 失败原因
+               */
             backfillRemark(order, reason);
             return true;
         }
@@ -969,18 +970,18 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 标记退款成功
-     *
-     * @param refundNo 退款单号
-     * @param refundAmount 退款金额
-     * @param thirdPartyRefundNo 第三方退款单号
-     * @param operator 操作人
-     * @param responsePayload 响应报文
-     * @param remark 备注
-     * @param dto dto
-     * @return 标记结果
-     */
+      /**
+       * 标记退款成功
+       *
+       * @param refundNo 退款单号
+       * @param refundAmount 退款金额
+       * @param thirdPartyRefundNo 第三方退款单号
+       * @param operator 操作人
+       * @param responsePayload 响应报文
+       * @param remark 备注
+       * @param dto dto
+       * @return 标记结果
+       */
     public boolean refundSuccess(RefundSuccessDTO dto) {
         PaymentRefundOrder refundOrder = requireRefundOrder(dto.refundNo());
         boolean alreadyRefunded = RefundOrderStatus.REFUNDED.name().equals(refundOrder.getStatus());
@@ -992,30 +993,30 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 amount,
                 dto.thirdPartyRefundNo(),
                 dto.responsePayload(),
-                /**
-                 * 默认操作人
-                 * @param dto.operator() 操作人
-                 */
+                  /**
+                   * 默认操作人
+                   * @param dto.operator() 操作人
+                   */
                 defaultOperator(dto.operator()),
                 firstNonBlank(dto.remark(), refundOrder.getReason())));
 
         PaymentOrder order = requireOrder(refundOrder.getOrderId());
         BigDecimal totalRefunded = aggregateRefundedAmount(order);
-        /**
-         * 同步退款累计金额
-         * @param order 订单
-         * @param totalRefunded 累计已退金额
-         */
+          /**
+           * 同步退款累计金额
+           * @param order 订单
+           * @param totalRefunded 累计已退金额
+           */
         syncRefundAggregate(order, totalRefunded);
         PaymentOrder latestOrder = requireOrder(order.getId());
         String targetStatus = resolveOrderStatusAfterRefundSuccess(latestOrder, totalRefunded);
-        /**
-         * 必要时改变订单状态
-         * @param latestOrder 最新订单
-         * @param targetStatus 目标状态
-         * @param OrderEvent.REFUND_SUCCESS 退款成功事件
-         * @param dto.operator() 操作人
-         */
+          /**
+           * 必要时改变订单状态
+           * @param latestOrder 最新订单
+           * @param targetStatus 目标状态
+           * @param OrderEvent.REFUND_SUCCESS 退款成功事件
+           * @param dto.operator() 操作人
+           */
         changeOrderStatusIfNecessary(latestOrder, targetStatus, OrderEvent.REFUND_SUCCESS, dto.operator(), firstNonBlank(dto.remark(), "退款成功"));
         latestOrder = requireOrder(order.getId());
         if (!alreadyRefunded) {
@@ -1023,10 +1024,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                     "REFUND",
                     latestRefundOrder.getRefundAmount(),
                     1,
-                    /**
-                     * 依次取本地第三方退款号与回调传入的退款号
-                     * @param latestRefundOrder.getThirdPartyRefundNo() 本地第三方退款号
-                     */
+                      /**
+                       * 依次取本地第三方退款号与回调传入的退款号
+                       * @param latestRefundOrder.getThirdPartyRefundNo() 本地第三方退款号
+                       */
                     firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), dto.thirdPartyRefundNo()),
                     latestRefundOrder.getRequestPayload(),
                     dto.responsePayload(),
@@ -1035,10 +1036,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 this, null, latestOrder.getMerchantId(), latestOrder.getId(),
                 latestOrder.getOrderNo(), latestRefundOrder.getId(), latestRefundOrder.getRefundNo(),
                 latestOrder.getUserId(), latestRefundOrder.getRefundAmount(),
-                 /**
-                 * 依次取本地第三方退款号与回调传入的退款号
-                 * @param latestRefundOrder.getThirdPartyRefundNo() 本地第三方退款号
-                  */
+                   /**
+                   * 依次取本地第三方退款号与回调传入的退款号
+                   * @param latestRefundOrder.getThirdPartyRefundNo() 本地第三方退款号
+                    */
                  firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), dto.thirdPartyRefundNo()),
                 latestOrder.getChannelType(), latestOrder.getChannelSubType()
             ));
@@ -1048,51 +1049,51 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 标记退款失败
-     *
-     * @param refundNo 退款单号
-     * @param responsePayload 响应报文
-     * @param operator 操作人
-     * @param reason 失败原因
-     * @return 标记结果
-     */
+      /**
+       * 标记退款失败
+       *
+       * @param refundNo 退款单号
+       * @param responsePayload 响应报文
+       * @param operator 操作人
+       * @param reason 失败原因
+       * @return 标记结果
+       */
     public boolean refundFail(String refundNo, String responsePayload, String operator, String reason) {
         PaymentRefundOrder refundOrder = requireRefundOrder(refundNo);
         boolean alreadyFailed = RefundOrderStatus.FAILED.name().equals(refundOrder.getStatus());
         PaymentRefundOrder latestRefundOrder = paymentRefundOrderService.markFailed(refundNo,
                 responsePayload,
-                /**
-                 * 默认操作人
-                 * @param operator 操作人
-                 */
+                  /**
+                   * 默认操作人
+                   * @param operator 操作人
+                   */
                 defaultOperator(operator),
                 firstNonBlank(reason, refundOrder.getReason(), "退款失败"));
 
         PaymentOrder order = requireOrder(refundOrder.getOrderId());
         BigDecimal totalRefunded = aggregateRefundedAmount(order);
-        /**
-         * 同步退款累计金额
-         * @param order 订单
-         * @param totalRefunded 累计已退金额
-         */
+          /**
+           * 同步退款累计金额
+           * @param order 订单
+           * @param totalRefunded 累计已退金额
+           */
         syncRefundAggregate(order, totalRefunded);
         PaymentOrder latestOrder = requireOrder(order.getId());
         String targetStatus = resolveOrderStatusAfterRefundFailure(latestOrder, totalRefunded, latestRefundOrder);
-        /**
-         * 必要时改变订单状态
-         * @param latestOrder 最新订单
-         * @param targetStatus 目标状态
-         * @param OrderEvent.REFUND_FAIL 退款失败事件
-         * @param operator 操作人
-         */
+          /**
+           * 必要时改变订单状态
+           * @param latestOrder 最新订单
+           * @param targetStatus 目标状态
+           * @param OrderEvent.REFUND_FAIL 退款失败事件
+           * @param operator 操作人
+           */
         changeOrderStatusIfNecessary(latestOrder, targetStatus, OrderEvent.REFUND_FAIL, operator, firstNonBlank(reason, "退款失败"));
         latestOrder = requireOrder(order.getId());
-        /**
-         * 幂等回填备注
-         * @param latestOrder 最新订单
-         * @param reason 失败原因
-         */
+          /**
+           * 幂等回填备注
+           * @param latestOrder 最新订单
+           * @param reason 失败原因
+           */
         backfillRemark(latestOrder, reason);
         if (!alreadyFailed) {
             recordTransaction(latestOrder,
@@ -1109,12 +1110,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 删除订单
-     *
-     * @param id 标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除订单
+       *
+       * @param id 标识
+       * @return 是否删除成功
+       */
     public boolean deleteOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         if (!(OrderState.PENDING.name().equals(order.getStatus())
@@ -1128,45 +1129,45 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /**
-     * 生成订单号
-     * @return 返回值
-    */
+      /**
+       * 生成订单号
+       * @return 返回值
+      */
     public String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 超时关闭订单
-     *
-     * @param id 标识
-     */
+      /**
+       * 超时关闭订单
+       *
+       * @param id 标识
+       */
     public void timeoutOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         if (!OrderState.PENDING.name().equals(order.getStatus())) {
             return;
         }
-        /**
-         * 发送状态机超时事件
-         * @param order.getId() 订单标识
-         */
+          /**
+           * 发送状态机超时事件
+           * @param order.getId() 订单标识
+           */
         sendStateEvent(order.getId(), OrderEvent.TIMEOUT, "system");
         PaymentOrder latest = requireOrder(id);
-        /**
-         * 幂等回填备注
-         * @param latest 最新订单
-         */
+          /**
+           * 幂等回填备注
+           * @param latest 最新订单
+           */
         backfillRemark(latest, "支付超时自动取消");
     }
 
-    /**
-     * 获取活跃状态的商户
-     *
-     * @param merchantId 商户标识
-     * @return 获取到的活跃商户
-     */
+      /**
+       * 获取活跃状态的商户
+       *
+       * @param merchantId 商户标识
+       * @return 获取到的活跃商户
+       */
     private Merchant requireActiveMerchant(Long merchantId) {
         Merchant merchant = merchantMapper.selectById(merchantId);
         if (merchant == null) {
@@ -1178,27 +1179,27 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return merchant;
     }
 
-    /**
-     * 获取订单，不存在或已删除时抛出异常
-     *
-     * @param id 标识
-     * @return 获取到的订单
-     */
+      /**
+       * 获取订单，不存在或已删除时抛出异常
+       *
+       * @param id 标识
+       * @return 获取到的订单
+       */
     private PaymentOrder requireOrder(Long id) {
         PaymentOrder order = orderMapper.selectById(id);
         if (order == null || Integer.valueOf(1).equals(order.getDeleted())) {
-            // Converter 未覆盖 Boolean→Int 转换，删除标记比较场景，保留手写转换（规避四方对象配置）
+              // Converter 未覆盖 Boolean→Int 转换，删除标记比较场景，保留手写转换（规避四方对象配置）
             throw new PaymentException("订单不存在");
         }
         return order;
     }
 
-    /**
-     * 获取退款单，不存在时抛出异常
-     *
-     * @param refundNo 退款单号
-     * @return 获取到的退款单
-     */
+      /**
+       * 获取退款单，不存在时抛出异常
+       *
+       * @param refundNo 退款单号
+       * @return 获取到的退款单
+       */
     private PaymentRefundOrder requireRefundOrder(String refundNo) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getByRefundNo(refundNo);
         if (refundOrder == null) {
@@ -1207,12 +1208,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return refundOrder;
     }
 
-    /**
-     * 获取已启用的渠道
-     *
-     * @param channelId 渠道标识
-     * @return 获取到的已启用渠道
-     */
+      /**
+       * 获取已启用的渠道
+       *
+       * @param channelId 渠道标识
+       * @return 获取到的已启用渠道
+       */
     private MerchantChannel requireEnabledChannel(Long channelId) {
         if (channelId == null) {
             throw new PaymentException("订单未绑定支付方式");
@@ -1227,12 +1228,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return channel;
     }
 
-    /**
-     * 解析支付渠道
-     *
-     * @param dto dto
-     * @return 解析出的支付渠道
-     */
+      /**
+       * 解析支付渠道
+       *
+       * @param dto dto
+       * @return 解析出的支付渠道
+       */
     private MerchantChannel resolveChannel(OrderCreateDTO dto) {
         MerchantChannel channel;
         if (dto.channelId() != null) {
@@ -1266,13 +1267,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return resolveEffectiveChannel(channel, dto.merchantId());
     }
 
-    /**
-     * 解析运营配置（COMPOSITE/AGGREGATE_ROUTE）指向的实际渠道
-     *
-     * @param channel 渠道
-     * @param merchantId 商户标识
-     * @return 解析出的实际生效渠道
-     */
+      /**
+       * 解析运营配置（COMPOSITE/AGGREGATE_ROUTE）指向的实际渠道
+       *
+       * @param channel 渠道
+       * @param merchantId 商户标识
+       * @return 解析出的实际生效渠道
+       */
     private MerchantChannel resolveEffectiveChannel(MerchantChannel channel, Long merchantId) {
         if (channel == null || !"COMPOSITE".equalsIgnoreCase(channel.getChannelType())
                 || !"AGGREGATE_ROUTE".equalsIgnoreCase(channel.getChannelSubType())) {
@@ -1300,23 +1301,24 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
         if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
             throw new PaymentException("运营配置目标渠道当前版本不可执行: "
-                    + targetChannel.getChannelType() + "/" + targetChannel.getChannelSubType());
+                      + targetChannel.getChannelType() + "/" + targetChannel.getChannelSubType());
         }
         return targetChannel;
     }
 
-    /**
-     * 解析运营配置的目标渠道标识
-     *
-     * @param channel 渠道
-     * @return 解析出的目标渠道标识
-     */
+      /**
+       * 解析运营配置的目标渠道标识
+       *
+       * @param channel 渠道
+       * @return 解析出的目标渠道标识
+       */
     private Long resolveRouteChannelId(MerchantChannel channel) {
         if (!StringUtils.hasText(channel.getExtConfig())) {
             return null;
         }
         try {
-            java.util.Map<String, Object> config = objectMapper.readValue(channel.getExtConfig(), new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+            java.util.Map<String, Object> config = objectMapper.readValue(channel.getExtConfig(), new com.fasterxml.jackson.core.type
+                .TypeReference<java.util.Map<String, Object>>() {
             });
             return parseLong(config.get("targetChannelId"), config.get("defaultChannelId"));
         } catch (Exception e) {
@@ -1324,12 +1326,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
-    /**
-     * 解析长整型值
-     *
-     * @param values 候选值
-     * @return 解析出的长整型值
-     */
+      /**
+       * 解析长整型值
+       *
+       * @param values 候选值
+       * @return 解析出的长整型值
+       */
     private Long parseLong(Object... values) {
         if (values == null) {
             return null;
@@ -1353,13 +1355,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return null;
     }
 
-    /**
-     * 按业务订单号查找未删除的订单
-     *
-     * @param merchantId 商户标识
-     * @param businessOrderNo 业务订单号
-     * @return 查找到的订单
-     */
+      /**
+       * 按业务订单号查找未删除的订单
+       *
+       * @param merchantId 商户标识
+       * @param businessOrderNo 业务订单号
+       * @return 查找到的订单
+       */
     private PaymentOrder findActiveOrderByBusinessOrderNo(Long merchantId, String businessOrderNo) {
         if (merchantId == null || !StringUtils.hasText(businessOrderNo)) {
             return null;
@@ -1370,13 +1372,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 .last("limit 1"));
     }
 
-    /**
-     * 校验已存在订单与本次请求属于同一笔业务订单
-     *
-     * @param existing 已存在的订单
-     * @param dto dto
-     * @param channel 渠道
-     */
+      /**
+       * 校验已存在订单与本次请求属于同一笔业务订单
+       *
+       * @param existing 已存在的订单
+       * @param dto dto
+       * @param channel 渠道
+       */
     private void assertSameBusinessOrder(PaymentOrder existing, OrderCreateDTO dto, MerchantChannel channel) {
         if (!existing.getMerchantId().equals(dto.merchantId())) {
             throw new PaymentException("业务订单号已存在但商户不一致");
@@ -1394,30 +1396,30 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
-    /**
-     * 确保订单进入支付中状态
-     *
-     * @param order 订单
-     * @param operator 操作人
-     */
+      /**
+       * 确保订单进入支付中状态
+       *
+       * @param order 订单
+       * @param operator 操作人
+       */
     private void ensurePaying(PaymentOrder order, String operator) {
         if (OrderState.PENDING.name().equals(order.getStatus())) {
-            /**
-             * 启动支付
-             * @param order.getId() 订单标识
-             */
+              /**
+               * 启动支付
+               * @param order.getId() 订单标识
+               */
             startPay(order.getId(), operator);
         }
     }
 
-    /**
-     * 发送状态机事件，流转被拒绝时抛出异常
-     *
-     * @param orderId 订单标识
-     * @param event 事件
-     * @param operator 操作人
-     * @return 状态机事件发送结果
-     */
+      /**
+       * 发送状态机事件，流转被拒绝时抛出异常
+       *
+       * @param orderId 订单标识
+       * @param event 事件
+       * @param operator 操作人
+       * @return 状态机事件发送结果
+       */
     private OrderTransitionResult sendStateEvent(Long orderId, OrderEvent event, String operator) {
         OrderTransitionResult result = stateMachineService.sendEvent(orderId, event, operator);
         if (result == OrderTransitionResult.REJECTED) {
@@ -1426,12 +1428,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return result;
     }
 
-    /**
-     * 解析订单过期分钟数
-     * @param dto dto
-     * @param merchant 商户
-     * @return 返回值
-    */
+      /**
+       * 解析订单过期分钟数
+       * @param dto dto
+       * @param merchant 商户
+       * @return 返回值
+      */
     private int resolveExpireMinutes(OrderCreateDTO dto, Merchant merchant) {
         if (dto.expireMinutes() != null && dto.expireMinutes() > 0) {
             return dto.expireMinutes();
@@ -1444,14 +1446,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 30;
     }
 
-    /**
-     * 解析或创建人工操作对应的退款单
-     *
-     * @param order 订单
-     * @param refundAmount 退款金额
-     * @param operator 操作人
-     * @param reason 失败或退款原因
-     */
+      /**
+       * 解析或创建人工操作对应的退款单
+       *
+       * @param order 订单
+       * @param refundAmount 退款金额
+       * @param operator 操作人
+       * @param reason 失败或退款原因
+       */
     private PaymentRefundOrder resolveManualRefundOrder(PaymentOrder order,
                                                         BigDecimal refundAmount,
                                                         String operator,
@@ -1474,9 +1476,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             amount = resolvedPaidAmount(order);
         }
         return paymentRefundOrderService.createRefundOrder(new CreateRefundOrderDTO(order,
-                /**
-                 * 生成退款单号
-                 */
+                  /**
+                   * 生成退款单号
+                   */
                 generateRefundNo(),
                 amount,
                 reason,
@@ -1484,76 +1486,76 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 null));
     }
 
-    /**
-     * 汇总已退款金额
-     *
-     * @param order 订单
-     * @return 累计已退金额
-     */
+      /**
+       * 汇总已退款金额
+       *
+       * @param order 订单
+       * @return 累计已退金额
+       */
     private BigDecimal aggregateRefundedAmount(PaymentOrder order) {
         BigDecimal refundedFromOrder = nullToZero(order.getRefundAmount());
         BigDecimal refundedFromRefundOrder = paymentRefundOrderService.sumRefundedAmount(order.getId());
         return refundedFromOrder.compareTo(refundedFromRefundOrder) >= 0 ? refundedFromOrder : refundedFromRefundOrder;
     }
 
-    /**
-     * 计算可退金额
-     *
-     * @param order 订单
-     * @return 可退金额
-     */
+      /**
+       * 计算可退金额
+       *
+       * @param order 订单
+       * @return 可退金额
+       */
     private BigDecimal refundableAmount(PaymentOrder order) {
         return refundableAmount(order, aggregateRefundedAmount(order));
     }
 
-    /**
-     * 计算可退金额
-     *
-     * @param order 订单
-     * @param refundedAmount 已退金额
-     * @return 可退金额
-     */
+      /**
+       * 计算可退金额
+       *
+       * @param order 订单
+       * @param refundedAmount 已退金额
+       * @return 可退金额
+       */
     private BigDecimal refundableAmount(PaymentOrder order, BigDecimal refundedAmount) {
         BigDecimal refundable = resolvedPaidAmount(order).subtract(nullToZero(refundedAmount));
         return refundable.compareTo(BigDecimal.ZERO) > 0 ? refundable : BigDecimal.ZERO;
     }
 
-    /**
-     * 取实付金额，未支付时退回订单金额
-     * @param order 订单
-     * @return 返回值
-    */
+      /**
+       * 取实付金额，未支付时退回订单金额
+       * @param order 订单
+       * @return 返回值
+      */
     private BigDecimal resolvedPaidAmount(PaymentOrder order) {
         BigDecimal paidAmount = nullToZero(order.getPaidAmount());
         return paidAmount.compareTo(BigDecimal.ZERO) > 0 ? paidAmount : nullToZero(order.getOrderAmount());
     }
 
-    /**
-     * 空值转零
-     *
-     * @param value 值
-     * @return 空值返回零，否则原样返回
-     */
+      /**
+       * 空值转零
+       *
+       * @param value 值
+       * @return 空值返回零，否则原样返回
+       */
     private BigDecimal nullToZero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    /**
-     * 判断当前状态是否允许直接取消
-     *
-     * @param status 订单状态
-     * @return 是否允许取消
-     */
+      /**
+       * 判断当前状态是否允许直接取消
+       *
+       * @param status 订单状态
+       * @return 是否允许取消
+       */
     private boolean canCancelByState(String status) {
         return OrderState.PENDING.name().equals(status) || OrderState.PAYING.name().equals(status);
     }
 
-    /**
-     * 判断是否为已支付及之后的成功态
-     *
-     * @param status 订单状态
-     * @return 是否为已支付态
-     */
+      /**
+       * 判断是否为已支付及之后的成功态
+       *
+       * @param status 订单状态
+       * @return 是否为已支付态
+       */
     private boolean isPaidState(String status) {
         return OrderState.PAID.name().equals(status)
                 || OrderState.COMPLETED.name().equals(status)
@@ -1561,13 +1563,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 || OrderState.REFUNDED.name().equals(status);
     }
 
-    /**
-     * 幂等回填支付成功信息
-     *
-     * @param order 订单
-     * @param paidAmount 实付金额
-     * @param thirdPartyOrderNo 第三方订单号
-     */
+      /**
+       * 幂等回填支付成功信息
+       *
+       * @param order 订单
+       * @param paidAmount 实付金额
+       * @param thirdPartyOrderNo 第三方订单号
+       */
     private void backfillPaymentSuccess(PaymentOrder order, BigDecimal paidAmount, String thirdPartyOrderNo) {
         if (order == null) {
             return;
@@ -1588,20 +1590,20 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             order.setPayTime(LocalDateTime.now());
             changed = true;
         }
-        /**
-         * 有变更时才更新订单
-         * @param order 订单
-         * @param changed 是否发生变更
-         */
+          /**
+           * 有变更时才更新订单
+           * @param order 订单
+           * @param changed 是否发生变更
+           */
         updateOrderIfChanged(order, changed);
     }
 
-    /**
-     * 同步退款累计金额与退款时间
-     *
-     * @param order 订单
-     * @param refundAmount 累计已退金额
-     */
+      /**
+       * 同步退款累计金额与退款时间
+       *
+       * @param order 订单
+       * @param refundAmount 累计已退金额
+       */
     private void syncRefundAggregate(PaymentOrder order, BigDecimal refundAmount) {
         if (order == null) {
             return;
@@ -1616,21 +1618,21 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             order.setRefundTime(LocalDateTime.now());
             changed = true;
         }
-        /**
-         * 有变更时才更新订单
-         * @param order 订单
-         * @param changed 是否发生变更
-         */
+          /**
+           * 有变更时才更新订单
+           * @param order 订单
+           * @param changed 是否发生变更
+           */
         updateOrderIfChanged(order, changed);
     }
 
-    /**
-     * 计算退款成功后的订单状态
-     *
-     * @param order 订单
-     * @param refundedAmount 累计已退金额
-     * @return 退款成功后的订单状态
-     */
+      /**
+       * 计算退款成功后的订单状态
+       *
+       * @param order 订单
+       * @param refundedAmount 累计已退金额
+       * @return 退款成功后的订单状态
+       */
     private String resolveOrderStatusAfterRefundSuccess(PaymentOrder order, BigDecimal refundedAmount) {
         BigDecimal paidAmount = resolvedPaidAmount(order);
         if (paidAmount.compareTo(BigDecimal.ZERO) > 0 && nullToZero(refundedAmount).compareTo(paidAmount) >= 0) {
@@ -1639,13 +1641,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return OrderState.REFUNDING.name();
     }
 
-    /**
-     * 计算退款失败后的订单状态
-     *
-     * @param order 订单
-     * @param refundedAmount 累计已退金额
-     * @param refundOrder 退款单
-     */
+      /**
+       * 计算退款失败后的订单状态
+       *
+       * @param order 订单
+       * @param refundedAmount 累计已退金额
+       * @param refundOrder 退款单
+       */
     private String resolveOrderStatusAfterRefundFailure(PaymentOrder order,
                                                         BigDecimal refundedAmount,
                                                         PaymentRefundOrder refundOrder) {
@@ -1662,24 +1664,24 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return OrderState.PAID.name();
     }
 
-    /**
-     * 判断是否为允许回退的退款基准状态
-     *
-     * @param status 订单状态
-     * @return 是否为退款基准状态
-     */
+      /**
+       * 判断是否为允许回退的退款基准状态
+       *
+       * @param status 订单状态
+       * @return 是否为退款基准状态
+       */
     private boolean isRefundBaseState(String status) {
         return OrderState.PAID.name().equals(status) || OrderState.COMPLETED.name().equals(status);
     }
 
-    /**
-     * 必要时以乐观锁方式改变订单状态并记录日志
-     * @param order 订单
-     * @param targetStatus 目标状态
-     * @param event 事件
-     * @param operator 操作人
-     * @param remark 备注
-     */
+      /**
+       * 必要时以乐观锁方式改变订单状态并记录日志
+       * @param order 订单
+       * @param targetStatus 目标状态
+       * @param event 事件
+       * @param operator 操作人
+       * @param remark 备注
+       */
     private void changeOrderStatusIfNecessary(PaymentOrder order,
                                               String targetStatus,
                                               OrderEvent event,
@@ -1707,58 +1709,58 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 fromState.name(),
                 toState.name(),
                 event.name(),
-                /**
-                 * 默认操作人
-                 * @param operator 操作人
-                 */
+                  /**
+                   * 默认操作人
+                   * @param operator 操作人
+                   */
                 defaultOperator(operator),
                 StringUtils.hasText(remark)
                         ? remark
                         : String.format("Status change: %s -> %s", fromState.getDescription(), toState.getDescription())));
     }
 
-    /**
-     * 幂等回填订单完成时间
-     *
-     * @param order 订单
-     */
+      /**
+       * 幂等回填订单完成时间
+       *
+       * @param order 订单
+       */
     private void backfillCompleteTime(PaymentOrder order) {
         if (order == null || order.getCompleteTime() != null) {
             return;
         }
         order.setCompleteTime(LocalDateTime.now());
-        /**
-         * 有变更时才更新订单
-         * @param order 订单
-         * @param true 存在变更
-         */
+          /**
+           * 有变更时才更新订单
+           * @param order 订单
+           * @param true 存在变更
+           */
         updateOrderIfChanged(order, true);
     }
 
-    /**
-     * 幂等回填订单备注
-     *
-     * @param order 订单
-     * @param remark 备注
-     */
+      /**
+       * 幂等回填订单备注
+       *
+       * @param order 订单
+       * @param remark 备注
+       */
     private void backfillRemark(PaymentOrder order, String remark) {
         if (order == null || !StringUtils.hasText(remark) || StringUtils.hasText(order.getRemark())) {
             return;
         }
         order.setRemark(remark);
-        /**
-         * 有变更时才更新订单
-         * @param order 订单
-         * @param true 存在变更
-         */
+          /**
+           * 有变更时才更新订单
+           * @param order 订单
+           * @param true 存在变更
+           */
         updateOrderIfChanged(order, true);
     }
 
-    /**
-     * 关闭渠道侧订单，失败仅告警不影响本地状态流转
-     *
-     * @param order 订单
-     */
+      /**
+       * 关闭渠道侧订单，失败仅告警不影响本地状态流转
+       *
+       * @param order 订单
+       */
     private void closeChannelOrder(PaymentOrder order) {
         MerchantChannel channel = order.getChannelId() != null ? merchantChannelMapper.selectById(order.getChannelId()) : null;
         if (channel != null && StringUtils.hasText(order.getChannelType())) {
@@ -1771,12 +1773,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
-    /**
-     * 强制设置订单状态（不经过状态机，仅用于取消退款等特殊流转）
-     *
-     * @param orderId 订单标识
-     * @param targetStatus 目标状态
-     */
+      /**
+       * 强制设置订单状态（不经过状态机，仅用于取消退款等特殊流转）
+       *
+       * @param orderId 订单标识
+       * @param targetStatus 目标状态
+       */
     private void forceOrderStatus(Long orderId, String targetStatus) {
         orderMapper.update(null, new LambdaUpdateWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getId, orderId)
@@ -1784,53 +1786,53 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 .set(PaymentOrder::getStatus, targetStatus));
     }
 
-    /**
-     * 有变更时才更新订单
-     *
-     * @param order 订单
-     * @param changed 是否发生变更
-     */
+      /**
+       * 有变更时才更新订单
+       *
+       * @param order 订单
+       * @param changed 是否发生变更
+       */
     private void updateOrderIfChanged(PaymentOrder order, boolean changed) {
         if (changed) {
             orderMapper.updateById(order);
         }
     }
 
-    /**
-     * 取默认操作人
-     *
-     * @param operator 操作人
-     * @return 操作人，缺省为 system
-     */
+      /**
+       * 取默认操作人
+       *
+       * @param operator 操作人
+       * @return 操作人，缺省为 system
+       */
     private String defaultOperator(String operator) {
         return StringUtils.hasText(operator) ? operator : "system";
     }
 
-    /**
-     * 生成退款单号
-     *
-     * @return 生成的退款单号
-     */
+      /**
+       * 生成退款单号
+       *
+       * @return 生成的退款单号
+       */
     private String generateRefundNo() {
         return "REF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
-    /**
-     * 基础订单查询条件封装
-     *
-     * @return 基础订单查询条件
-     */
+      /**
+       * 基础订单查询条件封装
+       *
+       * @return 基础订单查询条件
+       */
     private LambdaQueryWrapper<PaymentOrder> baseOrderWrapper() {
         return new LambdaQueryWrapper<PaymentOrder>()
                 .and(wrapper -> wrapper.isNull(PaymentOrder::getDeleted).or().eq(PaymentOrder::getDeleted, 0));
     }
 
-    /**
-     * 返回第一个非空白值
-     *
-     * @param values 候选值
-     * @return 第一个非空白值
-     */
+      /**
+       * 返回第一个非空白值
+       *
+       * @param values 候选值
+       * @return 第一个非空白值
+       */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -1840,17 +1842,17 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return null;
     }
 
-    /**
-     * 记录交易流水
-     * @param order 订单
-     * @param transactionType 交易类型
-     * @param amount 金额
-     * @param status 流水状态
-     * @param thirdPartyTransactionNo 第三方流水号
-     * @param requestPayload 请求报文
-     * @param responsePayload 响应报文
-     * @param remark 备注
-     */
+      /**
+       * 记录交易流水
+       * @param order 订单
+       * @param transactionType 交易类型
+       * @param amount 金额
+       * @param status 流水状态
+       * @param thirdPartyTransactionNo 第三方流水号
+       * @param requestPayload 请求报文
+       * @param responsePayload 响应报文
+       * @param remark 备注
+       */
     private void recordTransaction(PaymentOrder order,
                                    String transactionType,
                                    BigDecimal amount,
@@ -1876,12 +1878,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         transactionRecordService.createRecord(record);
     }
 
-    /**
-     * 流水状态取支付结果对应的状态
-     *
-     * @param result 支付结果
-     * @return 支付结果对应的流水状态
-     */
+      /**
+       * 流水状态取支付结果对应的状态
+       *
+       * @param result 支付结果
+       * @return 支付结果对应的流水状态
+       */
     private Integer transactionStatusOfPaymentResult(PaymentResult result) {
         if ("PAID".equals(result.status())) {
             return 1;
@@ -1892,12 +1894,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 2;
     }
 
-    /**
-     * 流水状态取退款结果对应的状态
-     *
-     * @param result 退款结果
-     * @return 退款结果对应的流水状态
-     */
+      /**
+       * 流水状态取退款结果对应的状态
+       *
+       * @param result 退款结果
+       * @return 退款结果对应的流水状态
+       */
     private Integer transactionStatusOfRefundResult(RefundResult result) {
         if ("REFUNDED".equals(result.status())) {
             return 1;
@@ -1908,11 +1910,11 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 2;
     }
 
-    /**
-     * 安全序列化，失败时退回字符串表示
-     * @param value 值
-     * @return 返回值
-    */
+      /**
+       * 安全序列化，失败时退回字符串表示
+       * @param value 值
+       * @return 返回值
+      */
     private String safeJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -1921,12 +1923,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
-    /**
-     * 转换为视图对象
-     *
-     * @param order 订单
-     * @return 转换后的订单视图对象
-     */
+      /**
+       * 转换为视图对象
+       *
+       * @param order 订单
+       * @return 转换后的订单视图对象
+       */
     private OrderVO convertToVO(PaymentOrder order) {
         Merchant merchant = merchantMapper.selectById(order.getMerchantId());
         MerchantChannel channel = order.getChannelId() != null ? merchantChannelMapper.selectById(order.getChannelId()) : null;
@@ -1963,12 +1965,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 order.getUpdatedAt());
     }
 
-    /**
-     * 转换状态日志为视图对象
-     *
-     * @param log 日志
-     * @return 转换后的日志视图对象
-     */
+      /**
+       * 转换状态日志为视图对象
+       *
+       * @param log 日志
+       * @return 转换后的日志视图对象
+       */
     private OrderStateLogVO convertLogToVO(OrderStateLog log) {
         return new OrderStateLogVO(
                 log.getId(),

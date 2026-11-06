@@ -253,13 +253,9 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-    <!-- 渠道管理模块（账号类渠道鉴权 /api/channels、渠道健康探针 /v2/channels、
-         渠道定时签到与探针、AccountChannelAuthManager SPI 及其 14 个实现）。
-         依赖方向固定为 ai-starter → channel-starter，本模块不再反向依赖。 -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-channel-starter</artifactId>
-    </dependency>
+    <!-- 账号与渠道管理模块不是本模块的必选依赖：AI 侧的渠道鉴权 / 健康探针
+         已在本模块内（com.chua.starter.ai.support.*），渠道对话统一走 utils 的 ChatClient SPI。
+         spring-support-account-starter 由宿主（monitor 等）显式引入，AI 核心不反向依赖。 -->
     <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
     <dependency>
       <groupId>com.chua</groupId>

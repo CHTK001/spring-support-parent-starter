@@ -221,7 +221,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
                 log.warn("[NodeControl] RestartEndpoint 不可用，使用退出方式重启: {}", e.getMessage());
                 // 退出应用，依赖外部进程管理器重启
                 int exitCode = SpringApplication.exit(ctx, () -> 0);
-                System.exit(exitCode);
+                throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
             }
         } else {
             log.error("[NodeControl] ApplicationContext 类型不支持重启操作");
@@ -238,10 +238,9 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
         if (applicationContext instanceof ConfigurableApplicationContext ctx) {
             int exitCode = SpringApplication.exit(ctx, () -> 0);
             log.info("[NodeControl] 应用关闭，退出码: {}", exitCode);
-            System.exit(exitCode);
+            throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
         } else {
             log.error("[NodeControl] ApplicationContext 类型不支持关闭操作");
-            System.exit(0);
         }
     }
 

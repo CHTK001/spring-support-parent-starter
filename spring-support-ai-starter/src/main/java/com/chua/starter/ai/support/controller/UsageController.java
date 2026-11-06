@@ -46,12 +46,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 用量控制器
- * 提供用量查询和统计接口
- *
- * @since 4.0.0.42
- * @author CH
- */
+   * AI 用量控制器
+   * 提供用量查询和统计接口
+   *
+   * @since 4.0.0.42
+   * @author CH
+   */
 @Slf4j
 @RestController
 @RequestMapping("/v2/usage")
@@ -59,59 +59,59 @@ import java.util.Map;
 @Tag(name = "AI 用量", description = "查询 AI 调用用量统计")
 public class UsageController {
 
-    /**
-     * 用量服务
-     */
+      /**
+       * 用量服务
+       */
     private final SysAiUsageService usageService;
 
-    /**
-     * 用量同步日志 映射器（持久化日志分页查询）
-     */
+      /**
+       * 用量同步日志 映射器（持久化日志分页查询）
+       */
     private final SysAiUsageSyncLogMapper syncLogMapper;
 
-    /**
-     * 用量维度聚合服务（导出与用量分布表共用同一口径）
-     */
+      /**
+       * 用量维度聚合服务（导出与用量分布表共用同一口径）
+       */
     private final AiUsageService usageSummaryService;
 
-    /**
-     * 用量/定价对账服务
-     */
+      /**
+       * 用量/定价对账服务
+       */
     private final UsagePricingReconService reconService;
 
-    /**
-     * 服务商 Mapper：/usage/providers 返回 id→name 映射，
-     * 供用量明细「服务商」列把雪花 id（如 1791352877398）翻译成中文名。
-     * 直接注入 Mapper（与 AiChatFacadeServiceImpl 同一用法），不另起 Service。
-     */
+      /**
+       * 服务商 Mapper：/usage/providers 返回 id→name 映射，
+       * 供用量明细「服务商」列把雪花 id（如 1791352877398）翻译成中文名。
+       * 直接注入 Mapper（与 AiChatFacadeServiceImpl 同一用法），不另起 Service。
+       */
     private final SysAiProviderMapper sysAiProviderMapper;
 
-    /**
-     * 用量实时推送中枢（合并推送，不在业务线程上直接发网络包）。
-     */
+      /**
+       * 用量实时推送中枢（合并推送，不在业务线程上直接发网络包）。
+       */
     private final UsageLiveStreamHub liveStreamHub;
 
-    /**
-     * Spring 应用上下文，用于收集容器中的用量解析器实现。
-     */
+      /**
+       * Spring 应用上下文，用于收集容器中的用量解析器实现。
+       */
     @Autowired
     private ApplicationContext applicationContext;
 
-    /**
-     * 分页查询 AI 用量明细。
-     *
-     * @param groupName 用量分组名称，为空时不限定
-     * @param provider 服务商名称，为空时不限定
-     * @param model 模型名称，为空时不限定
-     * @param startTime 统计开始时间，为空时不限定
-     * @param endTime 统计结束时间，为空时不限定
-     * @param page 页码，从 1 开始
-     * @param size 每页条数
-     * @return AI 用量分页结果
-     */
+      /**
+       * 分页查询 AI 用量明细。
+       *
+       * @param groupName 用量分组名称，为空时不限定
+       * @param provider 服务商名称，为空时不限定
+       * @param model 模型名称，为空时不限定
+       * @param startTime 统计开始时间，为空时不限定
+       * @param endTime 统计结束时间，为空时不限定
+       * @param page 页码，从 1 开始
+       * @param size 每页条数
+       * @return AI 用量分页结果
+       */
     @Operation(summary = "用量列表",
             description = "分页查询用量明细。口径：所有账号都只查本人具名明细（管理员不跨账号）；"
-                    + "管理员额外可见无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
+                      + "管理员额外可见无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
     @GetMapping("/list")
     public ReturnResult<AiUsagePageVO<SysAiUsage>> list(
             @RequestParam(required = false) String groupName,
@@ -126,19 +126,19 @@ public class UsageController {
         return ReturnResult.ok(AiUsagePageVO.of(p));
     }
 
-    /**
-     * 汇总查询 AI 用量统计。
-     *
-     * @param groupName 用量分组名称，为空时不限定
-     * @param provider 服务商名称，为空时不限定
-     * @param model 模型名称，为空时不限定
-     * @param startTime 统计开始时间，为空时不限定
-     * @param endTime 统计结束时间，为空时不限定
-     * @return AI 用量统计结果
-     */
+      /**
+       * 汇总查询 AI 用量统计。
+       *
+       * @param groupName 用量分组名称，为空时不限定
+       * @param provider 服务商名称，为空时不限定
+       * @param model 模型名称，为空时不限定
+       * @param startTime 统计开始时间，为空时不限定
+       * @param endTime 统计结束时间，为空时不限定
+       * @return AI 用量统计结果
+       */
     @Operation(summary = "用量统计",
             description = "汇总统计。口径：所有账号都只统计本人具名明细（管理员不跨账号）；"
-                    + "管理员额外计入无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
+                      + "管理员额外计入无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
     @GetMapping("/statistics")
     public ReturnResult<AiUsageStatisticsVO> statistics(
             @RequestParam(required = false) String groupName,
@@ -161,15 +161,15 @@ public class UsageController {
         ));
     }
 
-    /**
-     * 查询 AI 用量趋势。
-     *
-     * @param provider 服务商名称，为空时不限定
-     * @param model 模型名称，为空时不限定
-     * @param startTime 趋势开始时间，为空时不限定
-     * @param endTime 趋势结束时间，为空时不限定
-     * @return 按天或按小时聚合的用量趋势
-     */
+      /**
+       * 查询 AI 用量趋势。
+       *
+       * @param provider 服务商名称，为空时不限定
+       * @param model 模型名称，为空时不限定
+       * @param startTime 趋势开始时间，为空时不限定
+       * @param endTime 趋势结束时间，为空时不限定
+       * @return 按天或按小时聚合的用量趋势
+       */
     @Operation(summary = "用量趋势", description = "按天聚合返回 Token 使用趋势；普通用户只看本人明细的按天聚合")
     @GetMapping("/trend")
     public ReturnResult<List<AiUsageTrendPointVO>> trend(
@@ -178,7 +178,7 @@ public class UsageController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
         String userId = currentScopeUserId();
-        // 单日范围（今天 / 起止同一天）按小时分桶，其余按天
+          // 单日范围（今天 / 起止同一天）按小时分桶，其余按天
         boolean singleDay = startTime != null && endTime != null
                 && startTime.toLocalDate().equals(endTime.toLocalDate());
         if (singleDay) {
@@ -200,18 +200,18 @@ public class UsageController {
         return ReturnResult.ok(result);
     }
 
-    /**
-     * 查询「按天 × 按模型」的用量聚合（每日模型堆叠柱状图的数据源）。
-     *
-     * <p>与 {@code /trend} 的区别：{@code /trend} 把同一天所有模型合并成一个点，
-     * 拿不到「某天各模型分别占多少」；本接口保留模型维度，一天返回多行，
-     * 前端归并成同一根柱内的分段，从而做到「一天一个柱、一个模型一种颜色、
-     * 分段高度按用量占比」。</p>
-     *
-     * @param startTime 开始时间（可为空）
-     * @param endTime   结束时间（可为空）
-     * @return 按天升序、同天内按令牌降序的聚合点列表
-     */
+      /**
+       * 查询「按天 × 按模型」的用量聚合（每日模型堆叠柱状图的数据源）。
+       *
+       * <p>与 {@code /trend} 的区别：{@code /trend} 把同一天所有模型合并成一个点，
+       * 拿不到「某天各模型分别占多少」；本接口保留模型维度，一天返回多行，
+       * 前端归并成同一根柱内的分段，从而做到「一天一个柱、一个模型一种颜色、
+       * 分段高度按用量占比」。</p>
+       *
+       * @param startTime 开始时间（可为空）
+       * @param endTime   结束时间（可为空）
+       * @return 按天升序、同天内按令牌降序的聚合点列表
+       */
     @Operation(summary = "用量模型趋势", description = "按天+模型聚合；一天多行，前端归并为同一根柱内的分段")
     @GetMapping("/model-trend")
     public ReturnResult<List<AiUsageModelTrendPointVO>> modelTrend(
@@ -220,21 +220,21 @@ public class UsageController {
         return ReturnResult.ok(usageService.getDailyModelTrend(startTime, endTime, currentScopeUserId()));
     }
 
-    /**
-     * 订阅**实时**用量（Token 计算量）。
-     *
-     * <p>用途：让用量页在不动筛选、不点刷新的情况下也能看到 Token 数在长。
-     * 页面此前只在切筛选时拉一次快照，一次真实调用完全看不出来 —— 用户盯着
-     * 不动的数字，无从判断系统到底在不在跑。</p>
-     *
-     * <p>事件：连接建立先推一帧 {@code snapshot}，之后有新调用时按秒推 {@code update}。
-     * 载荷是**重算后的全量快照**而不是增量，前端直接替换即可；即使丢帧也只会
-     * 慢一拍，不会越错越偏。</p>
-     *
-     * @param startTime 起始时间（含），可为空
-     * @param endTime   结束时间（不含），可为空
-     * @return SSE 通道
-     */
+      /**
+       * 订阅**实时**用量（Token 计算量）。
+       *
+       * <p>用途：让用量页在不动筛选、不点刷新的情况下也能看到 Token 数在长。
+       * 页面此前只在切筛选时拉一次快照，一次真实调用完全看不出来 —— 用户盯着
+       * 不动的数字，无从判断系统到底在不在跑。</p>
+       *
+       * <p>事件：连接建立先推一帧 {@code snapshot}，之后有新调用时按秒推 {@code update}。
+       * 载荷是**重算后的全量快照**而不是增量，前端直接替换即可；即使丢帧也只会
+       * 慢一拍，不会越错越偏。</p>
+       *
+       * @param startTime 起始时间（含），可为空
+       * @param endTime   结束时间（不含），可为空
+       * @return SSE 通道
+       */
     @Permission("admin")
     @Operation(summary = "SSE订阅实时用量", description = "按秒合并推送 Token/调用量快照；页面无需刷新即可看到用量增长")
     @GetMapping(value = "/live/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -244,32 +244,32 @@ public class UsageController {
         return liveStreamHub.subscribe(startTime, endTime, currentScopeUserId());
     }
 
-    /**
-     * 查询已注册的用量数据源解析器。
-     *
-     * @return 用量数据源解析器列表
-     */
+      /**
+       * 查询已注册的用量数据源解析器。
+       *
+       * @return 用量数据源解析器列表
+       */
     @Operation(summary = "用量数据源列表", description = "返回已注册的 UsageParser SPI 实现列表（静态目录，登录即可读）")
     @GetMapping("/parsers")
     public ReturnResult<List<AiUsageParserVO>> parsers() {
         Map<String, UsageParser> allParsers = new LinkedHashMap<>();
 
-        // 1. 优先从 Spring 容器收集系统默认的用量解析器
+          // 1. 优先从 Spring 容器收集系统默认的用量解析器
         try {
             Map<String, UsageParser> springBeans = applicationContext.getBeansOfType(UsageParser.class);
             for (UsageParser parser : springBeans.values()) {
                 allParsers.putIfAbsent(parser.name(), parser);
             }
         } catch (Throwable e) {
-            // 必须捕获 Throwable 而非 Exception：解析器是 SPI 插件，任一实现类初始化失败抛的是
-            // ExceptionInInitializerError（Error 分支），catch (Exception) 抓不住，
-            // 会让整个目录接口 500。实测 GooseUsageParser 因 APPDATA 环境变量缺失即触发此路径
-            // （2026-09-29，GET /v2/usage/parsers 返回 S9999C0000）。
-            // 插件装载是「尽力而为」，一个坏实现应被降级跳过，而不是拖垮整个接口。
+              // 必须捕获 Throwable 而非 Exception：解析器是 SPI 插件，任一实现类初始化失败抛的是
+              // ExceptionInInitializerError（Error 分支），catch (Exception) 抓不住，
+              // 会让整个目录接口 500。实测 GooseUsageParser 因 APPDATA 环境变量缺失即触发此路径
+              // （2026-09-29，GET /v2/usage/parsers 返回 S9999C0000）。
+              // 插件装载是「尽力而为」，一个坏实现应被降级跳过，而不是拖垮整个接口。
             log.warn("[Usage] 收集 Spring UsageParser 失败: {}", e.toString());
         }
 
-        // 2. 再收集 SPI 注册的外部工具解析器（opencode/codex 等）
+          // 2. 再收集 SPI 注册的外部工具解析器（opencode/codex 等）
         try {
             Map<String, UsageParser> spiParsers = ServiceProvider.of(UsageParser.class).list();
             if (spiParsers != null) {
@@ -278,17 +278,17 @@ public class UsageController {
                 }
             }
         } catch (Throwable e) {
-            // 同上：SPI 插件类初始化失败抛的是 Error，catch (Exception) 抓不住。
+              // 同上：SPI 插件类初始化失败抛的是 Error，catch (Exception) 抓不住。
             log.warn("[Usage] SPI 收集 UsageParser 失败: {}", e.toString());
         }
 
         List<AiUsageParserVO> result = new ArrayList<>();
         for (Map.Entry<String, UsageParser> e : allParsers.entrySet()) {
-            // 跳过名称或实现为空的扫描条目，避免空指针异常
+              // 跳过名称或实现为空的扫描条目，避免空指针异常
             if (e.getKey() == null || e.getValue() == null) {
                 continue;
             }
-            // 单条读取名称也要兜底：这里的异常一旦逃出去同样是整个接口 500
+              // 单条读取名称也要兜底：这里的异常一旦逃出去同样是整个接口 500
             try {
                 result.add(new AiUsageParserVO(e.getKey(), e.getValue().getClass().getSimpleName(), true));
             } catch (Throwable ex) {
@@ -298,16 +298,16 @@ public class UsageController {
         return ReturnResult.ok(result);
     }
 
-    /**
-     * 服务商 id→名称映射。
-     *
-     * <p>背景：用量明细的 provider 字段混装两种值 —— 模型服务商名（agnes/openai…）
-     * 与服务商实例雪花 id（如 1791352877398）。后者前端无法翻译，只能裸显数字。
-     * 本接口返回 sys_ai_provider 全表 id/name/platform，供前端回填映射，未命中
-     * 或查询失败时前端兜底显示原始值，不弹错。</p>
-     *
-     * @return 服务商映射列表，每项含 id / name / platform
-     */
+      /**
+       * 服务商 id→名称映射。
+       *
+       * <p>背景：用量明细的 provider 字段混装两种值 —— 模型服务商名（agnes/openai…）
+       * 与服务商实例雪花 id（如 1791352877398）。后者前端无法翻译，只能裸显数字。
+       * 本接口返回 sys_ai_provider 全表 id/name/platform，供前端回填映射，未命中
+       * 或查询失败时前端兜底显示原始值，不弹错。</p>
+       *
+       * @return 服务商映射列表，每项含 id / name / platform
+       */
     @Operation(summary = "服务商映射", description = "返回服务商 id→名称映射，供用量明细翻译 provider")
     @GetMapping("/providers")
     public ReturnResult<List<Map<String, Object>>> usageProviders() {
@@ -327,26 +327,26 @@ public class UsageController {
                 }
             }
         } catch (Throwable e) {
-            // 映射是"尽力而为"的辅助数据：失败返回空列表，前端兜底显示原始 provider，
-            // 绝不能让用量页因为一个映射接口 500。
+              // 映射是"尽力而为"的辅助数据：失败返回空列表，前端兜底显示原始 provider，
+              // 绝不能让用量页因为一个映射接口 500。
             log.warn("[Usage] 服务商映射查询失败，返回空列表: {}", e.toString());
         }
         return ReturnResult.ok(result);
     }
 
-    /**
-     * 全量同步任务 Future（用于取消前一次任务）
-     */
+      /**
+       * 全量同步任务 Future（用于取消前一次任务）
+       */
     private volatile java.util.concurrent.Future<?> aggregateAllFuture;
 
-    /**
-     * 定时聚合任务 Future
-     */
+      /**
+       * 定时聚合任务 Future
+       */
     private volatile java.util.concurrent.Future<?> aggregateFuture;
 
-    /**
-     * 异步执行器
-     */
+      /**
+       * 异步执行器
+       */
 // [P3C C1 豁免] 场景化创建线程，需文档化
     private final java.util.concurrent.ExecutorService taskExecutor = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
@@ -355,11 +355,11 @@ public class UsageController {
         return t;
     });
 
-    /**
-     * 异步触发用量同步与聚合。
-     *
-     * @return 触发结果
-     */
+      /**
+       * 异步触发用量同步与聚合。
+       *
+       * @return 触发结果
+       */
     @Permission("admin")
     @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与当天日汇总表聚合（异步执行）")
     @PostMapping("/trigger")
@@ -376,16 +376,16 @@ public class UsageController {
         return ReturnResult.ok("已触发同步聚合（后台执行）");
     }
 
-    /**
-     * 异步执行当天用量聚合。
-     *
-     * @return 触发结果
-     */
+      /**
+       * 异步执行当天用量聚合。
+       *
+       * @return 触发结果
+       */
     @Permission("admin")
     @Operation(summary = "仅执行当天聚合", description = "跳过外部同步，仅对当天已有明细数据执行日汇总（异步执行）")
     @PostMapping("/aggregate")
     public ReturnResult<String> aggregate() {
-        // 取消前一次任务
+          // 取消前一次任务
         if (aggregateFuture != null && !aggregateFuture.isDone()) {
             aggregateFuture.cancel(true);
             log.info("[UsageAggregate] 已取消前一次聚合任务");
@@ -401,16 +401,16 @@ public class UsageController {
         return ReturnResult.ok("已触发当天聚合（后台执行）");
     }
 
-    /**
-     * 异步执行历史用量全量聚合。
-     *
-     * @return 触发结果
-     */
+      /**
+       * 异步执行历史用量全量聚合。
+       *
+       * @return 触发结果
+       */
     @Permission("admin")
     @Operation(summary = "手动全量同步", description = "对全部历史用量明细执行全量聚合回填日汇总表（异步执行，重复点击会取消前一次任务）")
     @PostMapping("/aggregate-all")
     public ReturnResult<String> aggregateAll() {
-        // 取消前一次任务
+          // 取消前一次任务
         if (aggregateAllFuture != null && !aggregateAllFuture.isDone()) {
             aggregateAllFuture.cancel(true);
             log.info("[UsageAggregateAll] 已取消前一次全量同步任务");
@@ -429,11 +429,11 @@ public class UsageController {
         return ReturnResult.ok("已触发全量同步（后台执行，重复点击会取消前一次任务）");
     }
 
-    /**
-     * 取消正在执行的全量聚合任务。
-     *
-     * @return 取消结果
-     */
+      /**
+       * 取消正在执行的全量聚合任务。
+       *
+       * @return 取消结果
+       */
     @Permission("admin")
     @Operation(summary = "取消全量同步任务", description = "取消正在执行的全量同步任务")
     @PostMapping("/aggregate-all/cancel")
@@ -446,11 +446,11 @@ public class UsageController {
         return ReturnResult.ok("没有正在执行的全量同步任务");
     }
 
-    /**
-     * 查询当前聚合任务状态。
-     *
-     * @return 聚合任务状态
-     */
+      /**
+       * 查询当前聚合任务状态。
+       *
+       * @return 聚合任务状态
+       */
     @Permission("admin")
     @Operation(summary = "查询同步任务状态", description = "查询当前是否有正在执行的同步任务")
     @GetMapping("/task-status")
@@ -458,11 +458,11 @@ public class UsageController {
         return ReturnResult.ok(currentTaskStatus());
     }
 
-    /**
-     * 当前聚合任务运行状态。
-     *
-     * @return 任务状态
-     */
+      /**
+       * 当前聚合任务运行状态。
+       *
+       * @return 任务状态
+       */
     private AiUsageTaskStatusVO currentTaskStatus() {
         return new AiUsageTaskStatusVO(
                 aggregateFuture != null && !aggregateFuture.isDone(),
@@ -470,37 +470,39 @@ public class UsageController {
         );
     }
 
-    /**
-     * SSE 推送任务状态
-     */
-    private final List<org.springframework.web.servlet.mvc.method.annotation.SseEmitter> sseEmitors = new java.util.concurrent.CopyOnWriteArrayList<>();
+      /**
+       * SSE 推送任务状态
+       */
+    private final List<org.springframework.web.servlet.mvc.method.annotation.SseEmitter> sseEmitors = new java.util.concurrent
+        .CopyOnWriteArrayList<>();
 
-    /**
-     * 创建任务状态事件流并推送当前状态。
-     *
-     * @return 服务器推送事件流
-     */
+      /**
+       * 创建任务状态事件流并推送当前状态。
+       *
+       * @return 服务器推送事件流
+       */
     @Permission("admin")
     @Operation(summary = "SSE订阅任务状态", description = "通过SSE实时推送任务状态变化")
     @GetMapping(value = "/task-status/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter taskStatusStream() {
-        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(0L);
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method
+            .annotation.SseEmitter(0L);
         sseEmitors.add(emitter);
         emitter.onCompletion(() -> sseEmitors.remove(emitter));
         emitter.onTimeout(() -> sseEmitors.remove(emitter));
         emitter.onError(e -> sseEmitors.remove(emitter));
-        // 立即推送一次当前状态
+          // 立即推送一次当前状态
         try {
             emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event().name("status").data(currentTaskStatus()));
         } catch (Exception e) {
-            // 忽略
+              // 忽略
         }
         return emitter;
     }
 
-    /**
-     * 广播任务状态变化
-     */
+      /**
+       * 广播任务状态变化
+       */
     private void broadcastTaskStatus() {
         if (sseEmitors.isEmpty()) {
             return;
@@ -515,11 +517,11 @@ public class UsageController {
         }
     }
 
-    /**
-     * 查询最近一次同步聚合日志。
-     *
-     * @return 同步日志列表
-     */
+      /**
+       * 查询最近一次同步聚合日志。
+       *
+       * @return 同步日志列表
+       */
     @Permission("admin")
     @Operation(summary = "获取同步日志", description = "查看最近一次定时同步聚合的日志")
     @GetMapping("/logs")
@@ -527,14 +529,14 @@ public class UsageController {
         return ReturnResult.ok(UsageAggregationTask.getSyncLogs());
     }
 
-    /**
-     * 分页查询持久化的用量同步日志。
-     *
-     * @param page 页码，从 1 开始
-     * @param size 每页条数，最大为 200
-     * @param level 日志级别，为空时不限定
-     * @return 用量同步日志分页结果
-     */
+      /**
+       * 分页查询持久化的用量同步日志。
+       *
+       * @param page 页码，从 1 开始
+       * @param size 每页条数，最大为 200
+       * @param level 日志级别，为空时不限定
+       * @return 用量同步日志分页结果
+       */
     @Permission("admin")
     @Operation(summary = "用量同步日志（持久化分页）", description = "从 sys_ai_usage_sync_log 表分页查询历史同步日志")
     @GetMapping("/sync-logs")
@@ -560,15 +562,15 @@ public class UsageController {
         return ReturnResult.ok(reconService.reconcile(startTime, endTime));
     }
 
-    /**
-     * 导出用量分布为 CSV 文件。
-     *
-     * @param model 模型名称，为空时不限定
-     * @param startTime 导出开始时间，为空时不限定
-     * @param endTime 导出结束时间，为空时不限定
-     * @param response HTTP 响应对象
-     * @throws IOException 写入响应失败时抛出
-     */
+      /**
+       * 导出用量分布为 CSV 文件。
+       *
+       * @param model 模型名称，为空时不限定
+       * @param startTime 导出开始时间，为空时不限定
+       * @param endTime 导出结束时间，为空时不限定
+       * @param response HTTP 响应对象
+       * @throws IOException 写入响应失败时抛出
+       */
     @Operation(summary = "导出用量分布",
             description = "按 分组+服务商+模型 聚合导出 CSV，与用量分布表同口径；普通用户仅导出本人数据")
     @GetMapping(value = "/export", produces = "text/csv;charset=UTF-8")
@@ -582,7 +584,7 @@ public class UsageController {
         response.setHeader("Content-Disposition", "attachment; filename=\"usage.csv\"");
         Writer writer = response.getWriter();
         StringBuilder line = new StringBuilder();
-        // Excel 会按本地编码猜 CSV，前置 BOM 才能稳定识别为 UTF-8
+          // Excel 会按本地编码猜 CSV，前置 BOM 才能稳定识别为 UTF-8
         writer.write('\uFEFF');
         writer.write("group,provider,model,calls,promptTokens,completionTokens,totalTokens,cost\n");
         for (AiUsageDTO row : rows) {
@@ -600,12 +602,12 @@ public class UsageController {
         writer.flush();
     }
 
-    /**
-     * CSV 单元格转义：含分隔符、引号或换行时整体加引号，内部引号翻倍。
-     *
-     * @param value 原值（可为空）
-     * @return 转义后的单元格文本
-     */
+      /**
+       * CSV 单元格转义：含分隔符、引号或换行时整体加引号，内部引号翻倍。
+       *
+       * @param value 原值（可为空）
+       * @return 转义后的单元格文本
+       */
     private String csvCell(String value) {
         if (value == null) {
             return "";
@@ -617,16 +619,16 @@ public class UsageController {
         return '"' + value.replace("\"", "\"\"") + '"';
     }
 
-    /**
-     * 当前请求的用量统计口径：仅跨账号放行时返回 {@code null}（看全量），否则返回本人 ID。
-     *
-     * <p><b>注意与「无主数据」是两回事</b>：这里决定的是「能否读他人的具名数据」，
-     * 恒为本人 ID（{@code canAccessOthersData()} 恒 false，管理员也不跨账号）。
-     * 至于 {@code user_id IS NULL} 的无主明细（定时同步的外部工具用量，约占全量 Token 三分之一），
-     * 由各查询的 {@code includeOrphan} 开关单独决定，仅管理员为 true。
-     * 两者叠加的结果是：管理员看到「自己的 + 无主的」，但看不到 alice / bob 的具名数据。</p>
-     *
-     * @return 归属用户标识；跨账号放行时为 null
-     */
+      /**
+       * 当前请求的用量统计口径：仅跨账号放行时返回 {@code null}（看全量），否则返回本人 ID。
+       *
+       * <p><b>注意与「无主数据」是两回事</b>：这里决定的是「能否读他人的具名数据」，
+       * 恒为本人 ID（{@code canAccessOthersData()} 恒 false，管理员也不跨账号）。
+       * 至于 {@code user_id IS NULL} 的无主明细（定时同步的外部工具用量，约占全量 Token 三分之一），
+       * 由各查询的 {@code includeOrphan} 开关单独决定，仅管理员为 true。
+       * 两者叠加的结果是：管理员看到「自己的 + 无主的」，但看不到 alice / bob 的具名数据。</p>
+       *
+       * @return 归属用户标识；跨账号放行时为 null
+       */
     private String currentScopeUserId() {
         return AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();    }}

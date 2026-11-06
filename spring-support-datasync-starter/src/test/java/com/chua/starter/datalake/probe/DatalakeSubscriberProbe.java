@@ -80,7 +80,7 @@ public class DatalakeSubscriberProbe {
         log.info("═══════════════════════════════════════════════════════");
 
         if (failed > 0) {
-            System.exit(1);
+            throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
         }
     }
 

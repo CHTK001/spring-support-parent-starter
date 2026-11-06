@@ -9,12 +9,15 @@ import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.DiskUsageNodeVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
+import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
 import com.chua.starter.monitor.support.model.FileEntryVO;
 import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
 import com.chua.starter.monitor.support.model.HostInfoVO;
+import com.chua.starter.monitor.support.model.InodeUsageVO;
+import com.chua.starter.monitor.support.model.MountRowVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkConfigVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
@@ -22,6 +25,7 @@ import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
+import com.chua.starter.monitor.support.model.SystemConfigItemVO;
 import com.chua.starter.server.support.entity.MsServerHost;
 
 import java.io.InputStream;
@@ -520,6 +524,101 @@ public interface SystemInfoProvider {
         } catch (Exception e) {
             return -1L;
         }
+    }
+
+    /**
+     * 根文件系统 inode 使用情况。
+     *
+     * <p>平台差异（{@code df -i} vs Windows 无 inode）收在 {@link HostOperations} 的平台子类里；
+     * 取不到时返回 {@link InodeUsageVO#unknown()}，不抛异常——状态条缺一个值不该让整页采集失败。</p>
+     *
+     * @param host 目标主机
+     * @return inode 使用情况
+     */
+    default InodeUsageVO inodeUsage(MsServerHost host) {
+        try {
+            return HostOperations.of(this, host).inodeUsage();
+        } catch (Exception e) {
+            return InodeUsageVO.unknown();
+        }
+    }
+
+    /**
+     * 挂载盘列表。
+     *
+     * @param host 目标主机
+     * @return 挂载行列表，永不为 null
+     */
+    default List<MountRowVO> mounts(MsServerHost host) {
+        return HostOperations.of(this, host).mounts();
+    }
+
+    /**
+     * 挂载设备 / 卷。
+     *
+     * @param host   目标主机
+     * @param source 设备或卷标识
+     * @param target 挂载点 / 盘符
+     * @param fsType 文件系统类型，可为空
+     * @return 动作结果
+     */
+    default HostActionVO mount(MsServerHost host, String source, String target, String fsType) {
+        return HostOperations.of(this, host).mount(source, target, fsType);
+    }
+
+    /**
+     * 卸载挂载点 / 盘符。
+     *
+     * @param host   目标主机
+     * @param target 挂载点 / 盘符
+     * @return 动作结果
+     */
+    default HostActionVO unmount(MsServerHost host, String target) {
+        return HostOperations.of(this, host).unmount(target);
+    }
+
+    /**
+     * 已删除但仍被进程占用的文件。
+     *
+     * @param host 目标主机
+     * @return 采集结果，永不为 null
+     */
+    default DeletedFilesVO deletedFiles(MsServerHost host) {
+        return HostOperations.of(this, host).deletedFiles();
+    }
+
+    /**
+     * 释放已删除文件占用的空间（截断描述符，不杀进程）。
+     *
+     * @param host 目标主机
+     * @param pid  持有进程 ID
+     * @param fd   文件描述符编号
+     * @return 动作结果
+     */
+    default HostActionVO releaseDeletedFile(MsServerHost host, long pid, int fd) {
+        return HostOperations.of(this, host).releaseDeletedFile(pid, fd);
+    }
+
+    /**
+     * 主机系统配置项。
+     *
+     * @param host 目标主机
+     * @return 配置项列表，永不为 null
+     */
+    default List<SystemConfigItemVO> systemConfigs(MsServerHost host) {
+        return HostOperations.of(this, host).systemConfigs();
+    }
+
+    /**
+     * 修改主机系统配置项。
+     *
+     * @param host  目标主机
+     * @param key   配置键
+     * @param value 新值
+     * @return 动作结果
+     */
+    default HostActionVO applySystemConfig(MsServerHost host, String key, String value) {
+        return HostOperations.of(this, host).applySystemConfig(key, value);
     }
 
     /**

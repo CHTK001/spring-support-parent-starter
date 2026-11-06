@@ -8,6 +8,7 @@ import com.chua.starter.server.support.model.vo.ProjectTaskSnapshotVO;
 import com.chua.starter.server.support.model.vo.ProjectBackupVO;
 import com.chua.starter.server.support.push.ProjectTaskService;
 import com.chua.starter.server.support.schedule.ReleaseScheduleService;
+import com.chua.starter.server.support.service.ProjectOpLogService;
 import com.chua.starter.server.support.service.ReleaseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +37,7 @@ public class ReleaseController {
 
     private final ReleaseService releaseService;
     private final ProjectTaskService projectTaskService;
+    private final ProjectOpLogService projectOpLogService;
     private final ObjectProvider<ReleaseScheduleService> releaseScheduleServiceProvider;
 
     /**
@@ -318,13 +320,15 @@ public class ReleaseController {
     /**
      * 开启项目实时日志。
      *
-     * @param id 项目标识
+     * @param id       项目标识
+     * @param clientId 发布管理 SSE 客户端标识（实时日志按它定向推送）
      * @return 实时日志会话标识
      */
     @Operation(summary = "开启实时日志（返回sessionId）")
     @PostMapping("/project/{id}/log/start")
-    public ReturnResult<String> startProjectLog(@PathVariable Long id) {
-        return releaseService.startProjectLog(id);
+    public ReturnResult<String> startProjectLog(@PathVariable Long id,
+                                                @RequestParam(required = false) String clientId) {
+        return releaseService.startProjectLog(id, clientId);
     }
 
     /**
@@ -349,6 +353,32 @@ public class ReleaseController {
     @GetMapping("/task/{taskId}")
     public ReturnResult<ProjectTaskSnapshotVO> getTaskSnapshot(@PathVariable String taskId) {
         return projectTaskService.getSnapshot(taskId);
+    }
+
+    /**
+     * 分页查询项目操作日志。
+     *
+     * @param projectId 项目标识（可空）
+     * @param releaseId 发布标识（可空）
+     * @param operation 操作类型（可空）
+     * @param status    状态（可空，RUNNING/SUCCESS/FAILED）
+     * @param keyword   项目名关键字（可空）
+     * @param page      页码
+     * @param pageSize  每页条数
+     * @return 分页结果
+     */
+    @Operation(summary = "分页查询项目操作日志")
+    @GetMapping("/op-log/page")
+    public ReturnResult<com.baomidou.mybatisplus.core.metadata.IPage<
+            com.chua.starter.server.support.entity.MsServerProjectOpLog>> opLogPage(
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) Long releaseId,
+            @RequestParam(required = false) String operation,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return projectOpLogService.page(projectId, releaseId, operation, status, keyword, page, pageSize);
     }
 
     // ==================== 软件仓库 ====================

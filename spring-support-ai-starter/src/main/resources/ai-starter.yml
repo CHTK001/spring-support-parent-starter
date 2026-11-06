@@ -258,6 +258,11 @@ plugin:
   filesystem:
     enable: true
     dir-list: false
+    # 协同文档：内存态读写 + 定时整库落盘（防进程重启丢内容）
+    # persist-path 缺省为 data/file-collab/collab-store.json（相对进程工作目录）
+    collab:
+      persist-enable: true
+      persist-seconds: 30
   oauth:
     enable: true
     protocol: http

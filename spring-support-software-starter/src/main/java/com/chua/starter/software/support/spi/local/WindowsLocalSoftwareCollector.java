@@ -66,9 +66,9 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
         try {
-            Process process = Runtime.getRuntime().exec(
-                    new String[]{"reg", "query", baseKey}
-            );
+            Process process = new ProcessBuilder(
+                    "reg", "query", baseKey
+            ).start();
             String output = new String(process.getInputStream().readAllBytes(), "GBK");
             Matcher matcher = UNINSTALL_KEY.matcher(output);
             while (matcher.find()) {
@@ -92,9 +92,9 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
      */
     private SoftSoftware readSoftwareInfo(String key) {
         try {
-            Process process = Runtime.getRuntime().exec(
-                    new String[]{"reg", "query", key}
-            );
+            Process process = new ProcessBuilder(
+                    "reg", "query", key
+            ).start();
             String output = new String(process.getInputStream().readAllBytes(), "GBK");
 
             String displayName = extractValue(output, "DisplayName");

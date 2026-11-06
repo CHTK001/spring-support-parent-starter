@@ -76,90 +76,90 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 /**
- * 文件存储服务器过滤器。
- *
- * <p>基于 {@link ServerFilter} SPI 的 REST 文件存储网关，将 HTTP 请求映射到
- * {@link FileStorage} 操作。路径规则：{@code /{storageName}/{objectKey}}，
- * 其中 storage名称 通过 {@link #addFileStorage(String, FileStorage)} 注册；
- * 未注册的路径将放行给后续过滤器链。</p>
- *
- * <p>支持的 HTTP 方法：</p>
- * <ul>
- *   <li>{@code GET /{name}} — 列出对象（JSON）</li>
- *   <li>{@code GET /{name}/{key}} — 下载/预览对象（支持 Range 分段、远程文件透传）</li>
- *   <li>{@code HEAD /{name}/{key}} — 检查对象是否存在</li>
- *   <li>{@code PUT|POST /{name}/{key}} — 上传对象（请求体为原始文件内容）</li>
- *   <li>{@code DELETE /{name}/{key}} — 删除对象（目录递归删除）</li>
- *   <li>{@code POST /{name}?action=mkdir|mkfile|rename|copy|move|unzip} — 文件管理动作（KodExplorer 风格）</li>
- *   <li>{@code GET /{name}?action=zip&sources=} — 打包下载 ZIP</li>
- *   <li>{@code POST /{name}?action=setConfig&token=} — 管理员动态修改行为开关（实时生效）</li>
- * </ul>
- *
- * <p>行为开关由 {@link FileStorageSetting} 控制：
- * 打开download（允许附件下载）、打开preview（允许内联预览）、打开范围（支持分段下载）、
- * 打开watermark（附加水印响应头）、打开远程文件（允许以 http(s) 开头的 键 远程拉取）。</p>
- *
- * @since 2024/12/28
- * @author CH
- */
+   * 文件存储服务器过滤器。
+   *
+   * <p>基于 {@link ServerFilter} SPI 的 REST 文件存储网关，将 HTTP 请求映射到
+   * {@link FileStorage} 操作。路径规则：{@code /{storageName}/{objectKey}}，
+   * 其中 storage名称 通过 {@link #addFileStorage(String, FileStorage)} 注册；
+   * 未注册的路径将放行给后续过滤器链。</p>
+   *
+   * <p>支持的 HTTP 方法：</p>
+   * <ul>
+   *   <li>{@code GET /{name}} — 列出对象（JSON）</li>
+   *   <li>{@code GET /{name}/{key}} — 下载/预览对象（支持 Range 分段、远程文件透传）</li>
+   *   <li>{@code HEAD /{name}/{key}} — 检查对象是否存在</li>
+   *   <li>{@code PUT|POST /{name}/{key}} — 上传对象（请求体为原始文件内容）</li>
+   *   <li>{@code DELETE /{name}/{key}} — 删除对象（目录递归删除）</li>
+   *   <li>{@code POST /{name}?action=mkdir|mkfile|rename|copy|move|unzip} — 文件管理动作（KodExplorer 风格）</li>
+   *   <li>{@code GET /{name}?action=zip&sources=} — 打包下载 ZIP</li>
+   *   <li>{@code POST /{name}?action=setConfig&token=} — 管理员动态修改行为开关（实时生效）</li>
+   * </ul>
+   *
+   * <p>行为开关由 {@link FileStorageSetting} 控制：
+   * 打开download（允许附件下载）、打开preview（允许内联预览）、打开范围（支持分段下载）、
+   * 打开watermark（附加水印响应头）、打开远程文件（允许以 http(s) 开头的 键 远程拉取）。</p>
+   *
+   * @since 2024/12/28
+   * @author CH
+   */
 @Slf4j
 public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilter {
 
-    /**
-     * 单张图片允许解码的最大像素数（宽 × 高）。
-     *
-     * <p>取值 8000 万：约等于 10000×8000，足够覆盖绝大多数印刷与摄影原件；
-     * 一张 ARGB {@code BufferedImage} 需 4 字节/像素，即峰值约 320MB，
-     * 在 {@code -Xmx1g} 下留出了余量。超过此值（例如 30000×30000 的压缩炸弹）
-     * 一律在解码前拒绝，避免单个请求把堆打满。</p>
-     */
+      /**
+       * 单张图片允许解码的最大像素数（宽 × 高）。
+       *
+       * <p>取值 8000 万：约等于 10000×8000，足够覆盖绝大多数印刷与摄影原件；
+       * 一张 ARGB {@code BufferedImage} 需 4 字节/像素，即峰值约 320MB，
+       * 在 {@code -Xmx1g} 下留出了余量。超过此值（例如 30000×30000 的压缩炸弹）
+       * 一律在解码前拒绝，避免单个请求把堆打满。</p>
+       */
     private static final long MAX_PREVIEW_PIXELS = 80_000_000L;
 
-    /** 响应头：图片处理是否真正执行（{@code applied} / {@code skipped}）。 */
+      /** 响应头：图片处理是否真正执行（{@code applied} / {@code skipped}）。 */
     private static final String HEADER_IMAGE_OP = "X-FileStorage-ImageOp";
 
-    /** 响应头：跳过的原因码（如 {@code pixel-budget-exceeded:30000x30000}）。 */
+      /** 响应头：跳过的原因码（如 {@code pixel-budget-exceeded:30000x30000}）。 */
     private static final String HEADER_IMAGE_OP_REASON = "X-FileStorage-ImageOp-Reason";
 
-    /**
-     * 响应头：{@code ?format=pdf} 的转换结果。
-     *
-     * <p>取值 {@code pdf}（转换成功，响应体是 PDF）或 {@code unavailable}
-     * （没有匹配的转换器）。客户端据此区分「拿到了 PDF」与「没转成」，
-     * 避免把原始 Office 字节当成 PDF 去渲染。</p>
-     */
+      /**
+       * 响应头：{@code ?format=pdf} 的转换结果。
+       *
+       * <p>取值 {@code pdf}（转换成功，响应体是 PDF）或 {@code unavailable}
+       * （没有匹配的转换器）。客户端据此区分「拿到了 PDF」与「没转成」，
+       * 避免把原始 Office 字节当成 PDF 去渲染。</p>
+       */
     private static final String HEADER_CONVERT = "X-FileStorage-Convert";
 
-    /** ZIP 容器魔数（OOXML / ODF 都是 ZIP） */
+      /** ZIP 容器魔数（OOXML / ODF 都是 ZIP） */
     private static final byte[] ZIP_MAGIC = {(byte) 0x50, (byte) 0x4B, 0x03, (byte) 0x04};
 
-    /** OLE2 复合文档魔数（传统 .doc / .xls / .ppt） */
+      /** OLE2 复合文档魔数（传统 .doc / .xls / .ppt） */
     private static final byte[] OLE2_MAGIC = {
             (byte) 0xD0, (byte) 0xCF, (byte) 0x11, (byte) 0xE0,
             (byte) 0xA1, (byte) 0xB1, (byte) 0x1A, (byte) 0xE1
     };
 
-    /**
-     * RTF 文件头 {@code {\rtf}（{@code { \ r t f}）。
-     *
-     * <p>RTF 是纯文本，**既不落在 ZIP 也不落在 OLE2** 闸门里。若不在容器闸门
-     * 里单独放行，它会在到达 Aspose 之前就被挡掉 —— 实测表现为
-     * {@code ?format=pdf} 直接 {@code conv=unavailable}（876 B 的 SPI 提示页），
-     * 而同样的文件交给 Aspose.Words 能转出中文完整的 17 KB PDF。
-     * 而 SPI 预览对 RTF 会把中文的 Unicode 转义（反斜杠 u 加四位十六进制）
-     * 抽成 {@code ???}。</p>
-     */
+      /**
+       * RTF 文件头 {@code {\rtf}（{@code { \ r t f}）。
+       *
+       * <p>RTF 是纯文本，**既不落在 ZIP 也不落在 OLE2** 闸门里。若不在容器闸门
+       * 里单独放行，它会在到达 Aspose 之前就被挡掉 —— 实测表现为
+       * {@code ?format=pdf} 直接 {@code conv=unavailable}（876 B 的 SPI 提示页），
+       * 而同样的文件交给 Aspose.Words 能转出中文完整的 17 KB PDF。
+       * 而 SPI 预览对 RTF 会把中文的 Unicode 转义（反斜杠 u 加四位十六进制）
+       * 抽成 {@code ???}。</p>
+       */
     private static final byte[] RTF_MAGIC = {
             (byte) 0x7B, (byte) 0x5C, (byte) 0x72, (byte) 0x74, (byte) 0x66
     };
 
-    /**
-     * 判断字节是否以指定魔数开头。
-     *
-     * @param data  待判定字节
-     * @param magic 魔数
-     * @return 以魔数开头返回 true
-     */
+      /**
+       * 判断字节是否以指定魔数开头。
+       *
+       * @param data  待判定字节
+       * @param magic 魔数
+       * @return 以魔数开头返回 true
+       */
     private static boolean startsWith(byte[] data, byte[] magic) {
         if (data == null || data.length < magic.length) {
             return false;
@@ -172,27 +172,27 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return true;
     }
 
-    /**
-     * 纯文本源格式白名单：容器闸门里没有魔数可挡，靠扩展名放行。
-     *
-     * <p>CSV 是纯文本，既不是 ZIP 也不是 OLE2，放默认闸门会被当成垃圾字节
-     * 挡掉（{@code X-FileStorage-Convert: unavailable}）。但纯文本扩展名
-     * 不能无条件放行，否则任意二进制改名成 {@code .csv} 也会喂给 Aspose。
-     * 这里配合 {@link #looksLikeText(byte[])} 做内容校验：扩展名 + 内容
-     * 双命中才放行。</p>
-     */
+      /**
+       * 纯文本源格式白名单：容器闸门里没有魔数可挡，靠扩展名放行。
+       *
+       * <p>CSV 是纯文本，既不是 ZIP 也不是 OLE2，放默认闸门会被当成垃圾字节
+       * 挡掉（{@code X-FileStorage-Convert: unavailable}）。但纯文本扩展名
+       * 不能无条件放行，否则任意二进制改名成 {@code .csv} 也会喂给 Aspose。
+       * 这里配合 {@link #looksLikeText(byte[])} 做内容校验：扩展名 + 内容
+       * 双命中才放行。</p>
+       */
     private static final java.util.Set<String> TEXT_CONVERT_SOURCES =
             java.util.Set.of("csv", "tsv");
 
-    /**
-     * 粗判字节是否为纯文本（UTF-8/GBK/GB18030/Latin-1 友好）。
-     *
-     * <p>只看前 4KB：含 NUL 直接判二进制；其余按「可显示字符比例」判定，
-     * 中文 CSV（GBK 编码）高字节多，不能按 ASCII 比例卡。</p>
-     *
-     * @param data 待判定字节
-     * @return 疑似纯文本返回 true
-     */
+      /**
+       * 粗判字节是否为纯文本（UTF-8/GBK/GB18030/Latin-1 友好）。
+       *
+       * <p>只看前 4KB：含 NUL 直接判二进制；其余按「可显示字符比例」判定，
+       * 中文 CSV（GBK 编码）高字节多，不能按 ASCII 比例卡。</p>
+       *
+       * @param data 待判定字节
+       * @return 疑似纯文本返回 true
+       */
     private static boolean looksLikeText(byte[] data) {
         if (data == null || data.length == 0) {
             return false;
@@ -211,56 +211,56 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return suspicious * 10 < len;
     }
 
-    /**
-     * 存储映射
-     */
+      /**
+       * 存储映射
+       */
     private final Map<String, FileStorage> storageMap = new ConcurrentHashMap<>();
 
-    /**
-     * 文件存储设置
-     */
+      /**
+       * 文件存储设置
+       */
     private final FileStorageSetting setting;
 
-    /**
-     * 配置热更新回调（用于把私有桶变更同步给 OAuth 鉴权过滤器）
-     */
+      /**
+       * 配置热更新回调（用于把私有桶变更同步给 OAuth 鉴权过滤器）
+       */
     private volatile java.util.function.Consumer<FileStorageSetting> configListener;
 
-    /**
-     * 统一预览入口壳缓存（classpath static/preview/index.html，懒加载）。
-     *
-     * <p>预览 HTML 不再由后端拼装：所有原本输出服务端预览页（Markdown / SPI /
-     * JSONHero）的位置统一返回这份前端入口，由 file-viewer（274 格式）在
-     * 浏览器内完成渲染。入口通过注入的 {@code window.__FILE_PREVIEW_BOOT__}
-     * 引导参数取得短时效预览令牌直链，自行拉取原始字节。</p>
-     */
+      /**
+       * 统一预览入口壳缓存（classpath static/preview/index.html，懒加载）。
+       *
+       * <p>预览 HTML 不再由后端拼装：所有原本输出服务端预览页（Markdown / SPI /
+       * JSONHero）的位置统一返回这份前端入口，由 file-viewer（274 格式）在
+       * 浏览器内完成渲染。入口通过注入的 {@code window.__FILE_PREVIEW_BOOT__}
+       * 引导参数取得短时效预览令牌直链，自行拉取原始字节。</p>
+       */
     private volatile String previewShellCache;
 
-    /**
-     * 预览令牌有效期上限（毫秒）：入口壳注入的字节直链是「短时效预览令牌」，
-     * 即便一次性链接全局 TTL 配得很长，预览令牌也不超过这个窗口。
-     */
+      /**
+       * 预览令牌有效期上限（毫秒）：入口壳注入的字节直链是「短时效预览令牌」，
+       * 即便一次性链接全局 TTL 配得很长，预览令牌也不超过这个窗口。
+       */
     private static final long PREVIEW_TOKEN_TTL_MILLIS = 5 * 60 * 1000L;
 
-    /**
-     * 一次性访问链接：令牌 → 条目（阅后即焚）
-     */
+      /**
+       * 一次性访问链接：令牌 → 条目（阅后即焚）
+       */
     private final ConcurrentHashMap<String, OneTimeEntry> oneTimeMap = new ConcurrentHashMap<>();
 
-    /**
-     * 一次性链接默认有效期（毫秒）
-     *
-     * <p>原先是 {@code static final} 硬编码常量，管理员无法调整。现改为读
-     * {@link FileStorageSetting#getOneTimeTtlMs()}，改配置后立即生效（热更新）。
-     * 配置值非正时回退到 10 分钟，避免把链接生成成出生即死。</p>
-     */
+      /**
+       * 一次性链接默认有效期（毫秒）
+       *
+       * <p>原先是 {@code static final} 硬编码常量，管理员无法调整。现改为读
+       * {@link FileStorageSetting#getOneTimeTtlMs()}，改配置后立即生效（热更新）。
+       * 配置值非正时回退到 10 分钟，避免把链接生成成出生即死。</p>
+       */
     private static final long DEFAULT_ONE_TIME_TTL_MILLIS = 10 * 60 * 1000L;
 
-    /**
-     * 取当前生效的一次性链接默认有效期
-     *
-     * @return 毫秒数；配置缺失或非正时返回 10 分钟
-     */
+      /**
+       * 取当前生效的一次性链接默认有效期
+       *
+       * @return 毫秒数；配置缺失或非正时返回 10 分钟
+       */
     private long oneTimeTtlMillis() {
         if (setting == null) {
             return DEFAULT_ONE_TIME_TTL_MILLIS;
@@ -269,86 +269,86 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return v > 0 ? v : DEFAULT_ONE_TIME_TTL_MILLIS;
     }
 
-    /**
-     * 一次性链接清理阈值：最近清理后新增多少条触发一次清扫
-     */
+      /**
+       * 一次性链接清理阈值：最近清理后新增多少条触发一次清扫
+       */
     private static final int ONE_TIME_CLEAN_THRESHOLD = 128;
 
-    /**
-     * 上一次清扫后新增的一次性链接计数
-     */
+      /**
+       * 上一次清扫后新增的一次性链接计数
+       */
     private volatile int oneTimeSinceClean;
 
-    /**
-     * 文件管理动作：新建目录
-     */
+      /**
+       * 文件管理动作：新建目录
+       */
     private static final String ACTION_MKDIR = "mkdir";
 
-    /**
-     * 文件管理动作：新建文件
-     */
+      /**
+       * 文件管理动作：新建文件
+       */
     private static final String ACTION_MKFILE = "mkfile";
 
-    /**
-     * 文件管理动作：重命名
-     */
+      /**
+       * 文件管理动作：重命名
+       */
     private static final String ACTION_RENAME = "rename";
 
-    /**
-     * 文件管理动作：复制（粘贴）
-     */
+      /**
+       * 文件管理动作：复制（粘贴）
+       */
     private static final String ACTION_COPY = "copy";
 
-    /**
-     * 文件管理动作：剪切（移动粘贴）
-     */
+      /**
+       * 文件管理动作：剪切（移动粘贴）
+       */
     private static final String ACTION_MOVE = "move";
 
-    /**
-     * 文件管理动作：打包下载
-     */
+      /**
+       * 文件管理动作：打包下载
+       */
     private static final String ACTION_ZIP = "zip";
 
-    /**
-     * 文件管理动作：解压
-     */
+      /**
+       * 文件管理动作：解压
+       */
     private static final String ACTION_UNZIP = "unzip";
 
-    /**
-     * 文件管理动作：管理员动态修改行为配置（实时生效）
-     */
+      /**
+       * 文件管理动作：管理员动态修改行为配置（实时生效）
+       */
     private static final String ACTION_SET_CONFIG = "setConfig";
 
-    /**
-     * 动作配置令牌参数名（setConfig 管理员校验）
-     */
+      /**
+       * 动作配置令牌参数名（setConfig 管理员校验）
+       */
     private static final String PARAM_TOKEN = "token";
 
-    /**
-     * {@link #updateConfig(Map)} 接受的布尔参数名。
-     *
-     * <p>与 {@code ServerNodeRegistry} 侧服务管理 schema（{@code fileStorageParams}）一一对应。</p>
-     */
+      /**
+       * {@link #updateConfig(Map)} 接受的布尔参数名。
+       *
+       * <p>与 {@code ServerNodeRegistry} 侧服务管理 schema（{@code fileStorageParams}）一一对应。</p>
+       */
     private static final Set<String> BOOLEAN_PARAM_KEYS = Set.of(
             "openPreview", "openDownload", "openRange", "openWatermark", "openWebjars",
             "openRemoteFile", "layout", "showFormat", "showSize", "showTime",
             "openPathGuard", "imageFilterEnabled");
 
-    /**
-     * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
-     */
+      /**
+       * {@link #updateConfig(Map)} 接受的字符串参数名（枚举值在落位时校验）。
+       */
     private static final Set<String> STRING_PARAM_KEYS =
             Set.of("watermark", "layoutType", "imageFilter", "filterChain", "thirdUrlPreview", "fileSettingKey");
 
-    /**
-     * 路径穿透防护需要筛查的文件动作参数名（取值与对象路径同源，是穿越的另一入口）。
-     */
+      /**
+       * 路径穿透防护需要筛查的文件动作参数名（取值与对象路径同源，是穿越的另一入口）。
+       */
     private static final Set<String> PATH_GUARD_PARAM_KEYS = Set.of("path", "name", "target", "sources", "inner");
 
-    /**
-     * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
-     * 用 Class.forName 加载以避免 utils-support-image-starter 缺失时编译/类加载失败）
-     */
+      /**
+       * 图片滤镜 SPI 接口及已知子接口类名（具体滤镜分散注册在多级接口下，
+       * 用 Class.forName 加载以避免 utils-support-image-starter 缺失时编译/类加载失败）
+       */
     private static final String[] IMAGE_FILTER_SPI_CLASSES = {
             "com.chua.common.support.image.filter.ImageFilter",
             "com.chua.image.support.filter.AbstractImageFilter",
@@ -356,74 +356,74 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             "com.chua.image.support.filter.ImageGaussianBlurFilter"
     };
 
-    /**
-     * 列表查询上限（管理动作递归遍历使用）
-     */
+      /**
+       * 列表查询上限（管理动作递归遍历使用）
+       */
     private static final int LIST_LIMIT = Integer.MAX_VALUE;
 
-    /**
-     * 复制/移动多源键分隔符（换行符，合法文件名不可能包含）
-     */
+      /**
+       * 复制/移动多源键分隔符（换行符，合法文件名不可能包含）
+       */
     private static final String SOURCES_SEPARATOR = "\n";
 
-    /**
-     * 同名冲突时追加的副本后缀（KodExplorer / Windows 资源管理器风格）
-     */
+      /**
+       * 同名冲突时追加的副本后缀（KodExplorer / Windows 资源管理器风格）
+       */
     private static final String COPY_SUFFIX = " - 副本";
 
-    /**
-     * 多对象打包下载的默认压缩包名
-     */
+      /**
+       * 多对象打包下载的默认压缩包名
+       */
     private static final String DEFAULT_ZIP_NAME = "download.zip";
 
-    /**
-     * ZIP 媒体类型
-     */
+      /**
+       * ZIP 媒体类型
+       */
     private static final String CONTENT_TYPE_ZIP = "application/zip;charset=UTF-8";
 
-    /**
-     * 空字节内容（新建空文件/目录占位）
-     */
+      /**
+       * 空字节内容（新建空文件/目录占位）
+       */
     private static final byte[] EMPTY_BYTES = new byte[0];
 
-    /**
-     * 系统配置访问令牌（每次服务启动随机生成，访问 /配置 时校验）
-     */
+      /**
+       * 系统配置访问令牌（每次服务启动随机生成，访问 /配置 时校验）
+       */
     private final String token;
 
-    /**
-     * 创建 文件storage服务端过滤器 实例
-     * @param setting setting
-     */
+      /**
+       * 创建 文件storage服务端过滤器 实例
+       * @param setting setting
+       */
     public FileStorageServerFilter(FileStorageSetting setting) {
         this.setting = setting == null ? FileStorageSetting.builder().build() : setting;
         this.token = generateToken();
         log.info("文件服务器管理员令牌: {}（系统配置弹窗/配置页使用，每次启动随机生成）", token);
     }
 
-    /**
-     * 注册配置热更新回调（setConfig 成功后触发，用于同步 OAuth 鉴权过滤器的私有桶）。
-     *
-     * @param configListener 回调（入参为最新配置）
-     */
+      /**
+       * 注册配置热更新回调（setConfig 成功后触发，用于同步 OAuth 鉴权过滤器的私有桶）。
+       *
+       * @param configListener 回调（入参为最新配置）
+       */
     public void setConfigListener(java.util.function.Consumer<FileStorageSetting> configListener) {
         this.configListener = configListener;
     }
 
-    /**
-     * 获取系统配置访问令牌。
-     *
-     * @return 令牌
-     */
+      /**
+       * 获取系统配置访问令牌。
+       *
+       * @return 令牌
+       */
     public String getToken() {
         return token;
     }
 
-    /**
-     * 生成随机访问令牌（每次服务启动不同）。
-     *
-     * @return 32 位十六进制令牌
-     */
+      /**
+       * 生成随机访问令牌（每次服务启动不同）。
+       *
+       * @return 32 位十六进制令牌
+       */
     private static String generateToken() {
         byte[] bytes = new byte[16];
         new java.security.SecureRandom().nextBytes(bytes);
@@ -434,94 +434,95 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return sb.toString();
     }
 
-    /**
-     * 添加存储实例
-     *
-     * @param name    存储名称
-     * @param storage 存储实例
-     */
+      /**
+       * 添加存储实例
+       *
+       * @param name    存储名称
+       * @param storage 存储实例
+       */
     public void addFileStorage(String name, FileStorage storage) {
         storageMap.put(name, storage);
     }
 
-    /**
-     * 当前行为配置（两种装配形态共享同一份 setting，便于 OAuth 私有桶等联动）。
-     *
-     * @return 文件存储配置
-     */
+      /**
+       * 当前行为配置（两种装配形态共享同一份 setting，便于 OAuth 私有桶等联动）。
+       *
+       * @return 文件存储配置
+       */
     public FileStorageSetting getSetting() {
         return setting;
     }
 
-    /**
-     * 移除存储实例
-     *
-     * @param name 存储名称
-     */
+      /**
+       * 移除存储实例
+       *
+       * @param name 存储名称
+       */
     public void removeFileStorage(String name) {
         storageMap.remove(name);
     }
 
     @Override
-    /**
-     * 执行过滤
-     * @param chain 参数
-     * @param request 参数
-     * @param response 参数
-     * @return 返回值
-     * @throws Exception 异常
-    */
-    public void doFilter(ServerRequest request, ServerResponse response, com.chua.common.support.network.server.filter.ServerFilterChain chain) throws Exception {
-        // 简单透传
+      /**
+       * 执行过滤
+       * @param chain 参数
+       * @param request 参数
+       * @param response 参数
+       * @return 返回值
+       * @throws Exception 异常
+      */
+    public void doFilter(ServerRequest request, ServerResponse response, com.chua.common.support.network.server.filter
+        .ServerFilterChain chain) throws Exception {
+          // 简单透传
         chain.doFilter(request, response);
     }
 
     @Override
-    /**
-     * 绑定路径模式：空 表示 Access 过滤器，每次请求都触发
-     * @return 返回值
-    */
+      /**
+       * 绑定路径模式：空 表示 Access 过滤器，每次请求都触发
+       * @return 返回值
+      */
     public String supportPath() {
         return null;
     }
 
     @Override
-    /**
-     * 过滤器执行顺序：数值越小越先执行
-     * @return 返回值
-    */
+      /**
+       * 过滤器执行顺序：数值越小越先执行
+       * @return 返回值
+      */
     public int getOrder() {
         return 100;
     }
 
     @Override
-    /**
-     * 响应式执行过滤。
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param chain    过滤器链
-     * @return 异步阶段
-     */
+      /**
+       * 响应式执行过滤。
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param chain    过滤器链
+       * @return 异步阶段
+       */
     public CompletionStage<Void> doFilter(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
         CompletionStage<Void> stage = doFilterInternal(request, response, chain);
         return stage == null ? CompletableFuture.completedFuture(null) : stage;
     }
 
-    /**
-     * 响应式执行过滤（原处理体）。
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param chain    过滤器链
-     * @return 异步阶段
-     */
+      /**
+       * 响应式执行过滤（原处理体）。
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param chain    过滤器链
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doFilterInternal(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
-        // CORS 由框架 CorsFilter 统一负责（其 order 最小，最先执行）：开关与白名单来自
-        // plugin.filesystem.storage-server.cors.*（默认开启、允许携带凭据），
-        // 由 FileStorageServerLauncher 注入。此处不再重复设置，避免两处真相。
-        // 这里只兜底处理「非预检」的裸 OPTIONS（真正的预检带 Access-Control-Request-Method，
-        // 已在框架 CorsFilter 里 204 结束，不会走到这里）。
+          // CORS 由框架 CorsFilter 统一负责（其 order 最小，最先执行）：开关与白名单来自
+          // plugin.filesystem.storage-server.cors.*（默认开启、允许携带凭据），
+          // 由 FileStorageServerLauncher 注入。此处不再重复设置，避免两处真相。
+          // 这里只兜底处理「非预检」的裸 OPTIONS（真正的预检带 Access-Control-Request-Method，
+          // 已在框架 CorsFilter 里 204 结束，不会走到这里）。
         if (request.getMethod() == HttpMethod.OPTIONS) {
             response.setStatus(204)
                     .setHeader("Allow", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
@@ -530,9 +531,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
 
         String path = request.getPath();
-        // 路径穿透防护（系统配置「水印与安全 → 路径穿透防护」，默认开启）：
-        // 统一筛查请求路径与文件动作参数中的 ..、反斜杠（Windows 下的穿越通道）、NUL 字节
-        // 与双重编码（%252e%252e）。对象键级的 sanitizeKey 防护始终生效，与本开关无关。
+          // 路径穿透防护（系统配置「水印与安全 → 路径穿透防护」，默认开启）：
+          // 统一筛查请求路径与文件动作参数中的 ..、反斜杠（Windows 下的穿越通道）、NUL 字节
+          // 与双重编码（%252e%252e）。对象键级的 sanitizeKey 防护始终生效，与本开关无关。
         if (setting.isOpenPathGuard()) {
             String guardHit = checkPathGuard(path, request.getParams());
             if (guardHit != null) {
@@ -546,11 +547,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String bucket = segments.getFirst();
 
-        // 一次性访问链接：GET /ot/{token}（消费）/ POST /ot?bucket=&key=（创建）
+          // 一次性访问链接：GET /ot/{token}（消费）/ POST /ot?bucket=&key=（创建）
         if ("ot".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             return handleOneTime(request, response, segments);
         }
-        // 系统配置端点：GET /config?token=xxx（未注册存储名时才接管）
+          // 系统配置端点：GET /config?token=xxx（未注册存储名时才接管）
         if ("config".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             if (request.getMethod() != HttpMethod.GET) {
                 return error(response, 405, "Method Not Allowed");
@@ -558,10 +559,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return handleConfig(request, response);
         }
 
-        // 前端壳静态资源（宿主无关）：Spring Boot 部署时 Spring 也会 serve classpath
-        // static/**（同路径双服务无害）；裸 ServerBuilder 部署靠这里，否则预览入口页
-        // /preview/ 与构建产物 /assets/** 会 404。受 openWebjars 开关管辖（同类语义：
-        // 前端资源服务总开关）。
+          // 前端壳静态资源（宿主无关）：Spring Boot 部署时 Spring 也会 serve classpath
+          // static/**（同路径双服务无害）；裸 ServerBuilder 部署靠这里，否则预览入口页
+          // /preview/ 与构建产物 /assets/** 会 404。受 openWebjars 开关管辖（同类语义：
+          // 前端资源服务总开关）。
         if (setting.isOpenWebjars()) {
             String assetPath = resolveStaticAssetPath(path);
             if (assetPath != null) {
@@ -569,11 +570,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
         }
 
-        // 预览页同源静态资源：各 preview provider 生成的 HTML 引用 /preview-vendor/**
-        // （Univer 表格 / pdf.js / highlight.js / mammoth 等前端库），按约定由本服务以
-        // classpath:/static/preview-vendor 同源提供，避免依赖公网 CDN。
-        // 必须放在下面"未注册存储放行"之前——否则会被当成 bucket=preview-vendor 一路 passthrough
-        // 出去，最终 404，预览整条链路（样式/脚本全部加载不到）就废了。
+          // 预览页同源静态资源：各 preview provider 生成的 HTML 引用 /preview-vendor/**
+          // （Univer 表格 / pdf.js / highlight.js / mammoth 等前端库），按约定由本服务以
+          // classpath:/static/preview-vendor 同源提供，避免依赖公网 CDN。
+          // 必须放在下面"未注册存储放行"之前——否则会被当成 bucket=preview-vendor 一路 passthrough
+          // 出去，最终 404，预览整条链路（样式/脚本全部加载不到）就废了。
         if (PREVIEW_VENDOR_PREFIX.equalsIgnoreCase(bucket)) {
             return servePreviewVendor(request, response, path);
         }
@@ -582,37 +583,37 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (storage == null) {
             if (storageMap.isEmpty()) {
                 return error(response, 503, "No FileStorage bucket registered: file-storage filter has no storage backend. "
-                        + "Ensure a FileStorage bean exists in the container, or fileStorageTemplate.getStorageMap() is non-empty.");
+                          + "Ensure a FileStorage bean exists in the container, or fileStorageTemplate.getStorageMap() is non-empty.");
             }
-            // 未注册的存储路径放行，交由后续链路处理
+              // 未注册的存储路径放行，交由后续链路处理
             return passthrough(request, response, chain);
         }
 
- // 远程文件透传：路径形如 /{bucket}/http:/主机/路径 或 /{bucket}/https:/主机/路径
-        // （框架返回的路径已解码，远程地址被拆散为多段，此处按前缀重组还原）
+   // 远程文件透传：路径形如 /{bucket}/http:/主机/路径 或 /{bucket}/https:/主机/路径
+          // （框架返回的路径已解码，远程地址被拆散为多段，此处按前缀重组还原）
         if (setting.isOpenRemoteFile() && segments.size() > 2
                 && ("http:".equals(segments.get(1)) || "https:".equals(segments.get(1)))) {
             String remoteUrl = segments.get(1) + "//" + String.join("/", segments.subList(2, segments.size()));
             return handleRemoteFile(request, response, remoteUrl);
         }
 
- // SSH 远程文件透传：路径形如 /{bucket}/ssh:/主机:端口/路径
-        // 凭据走 query 参数（user/password），避免出现在 URL 路径中
+   // SSH 远程文件透传：路径形如 /{bucket}/ssh:/主机:端口/路径
+          // 凭据走 query 参数（user/password），避免出现在 URL 路径中
         if (setting.isOpenRemoteFile() && segments.size() > 2
                 && "ssh:".equals(segments.get(1))) {
             String sshUrl = segments.get(1) + "//" + String.join("/", segments.subList(2, segments.size()));
             return handleRemoteSshFile(request, response, sshUrl);
         }
 
- // 提取对象 键（第二段之后的所有路径段），并做 URL 解码与穿越防护
+   // 提取对象 键（第二段之后的所有路径段），并做 URL 解码与穿越防护
         String rawKey = segments.size() > 1 ? String.join("/", segments.subList(1, segments.size())) : "";
         String key = sanitizeKey(rawKey);
         if (key == null) {
             return error(response, 400, "Invalid object key");
         }
 
-        // 文件管理动作（KodExplorer 风格）：mkdir/mkfile/rename/copy/move/zip/unzip
-        // 参数走 query：POST /{bucket}?action=mkdir、GET /{bucket}?action=zip&sources=...
+          // 文件管理动作（KodExplorer 风格）：mkdir/mkfile/rename/copy/move/zip/unzip
+          // 参数走 query：POST /{bucket}?action=mkdir、GET /{bucket}?action=zip&sources=...
         Map<String, String> params = request.getParams();
         String action = params == null ? null : params.get("action");
         if (action != null && !action.isEmpty()) {
@@ -622,8 +623,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         HttpMethod method = request.getMethod();
         try {
             if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
-                // 三方 URL 预览：?url=<base64 编码的 http(s) 地址>，受第三方 URL 预览能力（SPI 实现）控制。
-                // 放在 key 判定之前——调用方无需真实对象键，形如 GET /{bucket}/?url=...&preview=true
+                  // 三方 URL 预览：?url=<base64 编码的 http(s) 地址>，受第三方 URL 预览能力（SPI 实现）控制。
+                  // 放在 key 判定之前——调用方无需真实对象键，形如 GET /{bucket}/?url=...&preview=true
                 String thirdUrl = params == null ? null : params.get("url");
                 if (method == HttpMethod.GET && thirdUrl != null && !thirdUrl.isEmpty()) {
                     return handleThirdUrlPreview(request, response, bucket, thirdUrl);
@@ -651,29 +652,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 发送错误响应并返回已完成阶段。
-     *
-     * @param response 响应
-     * @param status   HTTP 状态码
-     * @param message  错误信息
-     * @return 已完成的异步阶段
-     */
+      /**
+       * 发送错误响应并返回已完成阶段。
+       *
+       * @param response 响应
+       * @param status   HTTP 状态码
+       * @param message  错误信息
+       * @return 已完成的异步阶段
+       */
     private CompletionStage<Void> error(ServerResponse response, int status, String message) {
         response.sendError(status, message);
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 处理系统配置查看请求：获取 /配置?令牌=xxx。
-     *
-     * <p>token 校验失败返回 403；成功渲染完整配置页（设置项、注册存储、
-     * SPI 预览提供者、运行时环境）。</p>
-     *
-     * @param request  请求
-     * @param response 响应
-     * @return 异步阶段
-     */
+      /**
+       * 处理系统配置查看请求：获取 /配置?令牌=xxx。
+       *
+       * <p>token 校验失败返回 403；成功渲染完整配置页（设置项、注册存储、
+       * SPI 预览提供者、运行时环境）。</p>
+       *
+       * @param request  请求
+       * @param response 响应
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleConfig(ServerRequest request, ServerResponse response) {
         Map<String, String> params = request.getParams();
         String tokenParam = params == null ? null : params.get("token");
@@ -691,33 +692,33 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 渲染配置页登录入口（未携带 令牌 时）。
-     * @param response 响应
-     * @return render配置login的结果
-     */
+      /**
+       * 渲染配置页登录入口（未携带 令牌 时）。
+       * @param response 响应
+       * @return render配置login的结果
+       */
     private CompletionStage<Void> renderConfigLogin(ServerResponse response) {
         String html = "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
-                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                + "<title>系统配置</title><style>"
-                + "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f6f8;"
-                + "display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;color:#24292f}"
-                + ".card{background:#fff;border:1px solid #e1e4e8;border-radius:12px;padding:2rem;width:340px;"
-                + "box-shadow:0 4px 24px rgba(0,0,0,.06)}"
-                + "h1{font-size:1.2rem;margin:0 0 .25rem}.sub{color:#6e7781;font-size:.85rem;margin-bottom:1.25rem}"
-                + "input{width:100%;box-sizing:border-box;padding:.6rem .75rem;border:1px solid #d0d7de;"
-                + "border-radius:8px;font-size:.9rem;margin-bottom:.75rem}"
-                + "button{width:100%;background:#0969da;color:#fff;border:none;padding:.6rem;border-radius:8px;"
-                + "font-size:.9rem;cursor:pointer}"
-                + "button:hover{background:#0858c0}.hint{color:#8b949e;font-size:.75rem;margin-top:.75rem}"
-                + "</style></head><body>"
-                + "<div class=\"card\"><h1>\u2699\uFE0F 系统配置</h1>"
-                + "<div class=\"sub\">请输入访问令牌</div>"
-                + "<input type=\"password\" id=\"t\" placeholder=\"访问令牌\">"
-                + "<button onclick=\"location.href='/config?token='+encodeURIComponent(document.getElementById('t').value)\">"
-                + "\u786E\u8BA4</button>"
-                + "<div class=\"hint\">令牌由服务启动时随机生成，查看启动日志获取。</div>"
-                + "</div></body></html>";
+                  + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                  + "<title>系统配置</title><style>"
+                  + "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f6f8;"
+                  + "display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;color:#24292f}"
+                  + ".card{background:#fff;border:1px solid #e1e4e8;border-radius:12px;padding:2rem;width:340px;"
+                  + "box-shadow:0 4px 24px rgba(0,0,0,.06)}"
+                  + "h1{font-size:1.2rem;margin:0 0 .25rem}.sub{color:#6e7781;font-size:.85rem;margin-bottom:1.25rem}"
+                  + "input{width:100%;box-sizing:border-box;padding:.6rem .75rem;border:1px solid #d0d7de;"
+                  + "border-radius:8px;font-size:.9rem;margin-bottom:.75rem}"
+                  + "button{width:100%;background:#0969da;color:#fff;border:none;padding:.6rem;border-radius:8px;"
+                  + "font-size:.9rem;cursor:pointer}"
+                  + "button:hover{background:#0858c0}.hint{color:#8b949e;font-size:.75rem;margin-top:.75rem}"
+                  + "</style></head><body>"
+                  + "<div class=\"card\"><h1>\u2699\uFE0F 系统配置</h1>"
+                  + "<div class=\"sub\">请输入访问令牌</div>"
+                  + "<input type=\"password\" id=\"t\" placeholder=\"访问令牌\">"
+                  + "<button onclick=\"location.href='/config?token='+encodeURIComponent(document.getElementById('t').value)\">"
+                  + "\u786E\u8BA4</button>"
+                  + "<div class=\"hint\">令牌由服务启动时随机生成，查看启动日志获取。</div>"
+                  + "</div></body></html>";
         response.setStatus(200)
                 .setContentType("text/html;charset=UTF-8")
                 .setBody(html.getBytes(StandardCharsets.UTF_8))
@@ -725,10 +726,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 构建配置页 HTML：展示全部配置项。
-     * @return 构建配置page的结果
-     */
+      /**
+       * 构建配置页 HTML：展示全部配置项。
+       * @return 构建配置page的结果
+       */
     private String buildConfigPage() {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">");
@@ -749,7 +750,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         sb.append("<h1>\u2699\uFE0F 系统配置</h1>");
         sb.append("<div class=\"sub\">文件存储服务器运行时配置（token 已校验）</div>");
 
-        // 1. 基础设置
+          // 1. 基础设置
         sb.append("<h2>\u57FA\u7840\u8BBE\u7F6E (FileStorageSetting)</h2><table>");
         appendConfigRow(sb, "openPreview", String.valueOf(setting.isOpenPreview()));
         appendConfigRow(sb, "openDownload", String.valueOf(setting.isOpenDownload()));
@@ -772,7 +773,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         appendConfigRow(sb, "访问令牌(token)", "<code>" + escapeHtml(token) + "</code>");
         sb.append("</table>");
 
-        // 2. 存储桶
+          // 2. 存储桶
         sb.append("<h2>\u6CE8\u518C\u5B58\u50A8 (buckets)</h2><table>");
         if (storageMap.isEmpty()) {
             appendConfigRow(sb, "无", "-");
@@ -784,13 +785,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         sb.append("</table>");
 
-        // 3. 预览通道说明（原 SPI HTML 提供者已下线：预览页统一由前端入口接管）
+          // 3. 预览通道说明（原 SPI HTML 提供者已下线：预览页统一由前端入口接管）
         sb.append("<h2>\u9884\u89C8\u901A\u9053</h2><table>");
         appendConfigRow(sb, "预览页", "前端统一入口（static/preview/index.html，file-viewer 274 格式）");
         appendConfigRow(sb, "字节直链", "/ot/{token}?preview=true&raw=true（短时效预览令牌，强制 inline）");
         sb.append("</table>");
 
-        // 4. 运行时环境
+          // 4. 运行时环境
         sb.append("<h2>\u8FD0\u884C\u65F6\u73AF\u5883</h2><table>");
         appendConfigRow(sb, "Java Version", System.getProperty("java.version"));
         appendConfigRow(sb, "Java Vendor", System.getProperty("java.vendor"));
@@ -803,12 +804,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return sb.toString();
     }
 
-    /**
-     * 追加配置row。
-     * @param sb sb
-     * @param key 键
-     * @param value 值
-     */
+      /**
+       * 追加配置row。
+       * @param sb sb
+       * @param key 键
+       * @param value 值
+       */
     private void appendConfigRow(StringBuilder sb, String key, String value) {
         sb.append("<tr><th>").append(escapeHtml(key)).append("</th><td>");
         if (value == null) {
@@ -819,29 +820,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         sb.append("</td></tr>");
     }
 
-    // ==================== 一次性访问链接（阅后即焚） ====================
+      // ==================== 一次性访问链接（阅后即焚） ====================
 
-    /**
-     * 处理访问链接。
-     *
-     * <p>创建参数：{@code POST /ot?bucket=xxx&key=yyy&type=once|expiry&expires=600}</p>
-     * <ul>
-     *   <li>{@code type=once}（默认）— 一次性，访问即销毁，无论过期时间</li>
-     *   <li>{@code type=expiry} — 限时链接，有效期内可多次访问，到期失效</li>
-     *   <li>{@code expires} — 有效期（秒），缺省用配置的 {@link #oneTimeTtlMillis()}</li>
-     * </ul>
-     * <p>消费：{@code GET /ot/{token}} — 返回文件内容（一次性模式同时销毁）</p>
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param segments 路径段
-     * @return 异步阶段
-     */
+      /**
+       * 处理访问链接。
+       *
+       * <p>创建参数：{@code POST /ot?bucket=xxx&key=yyy&type=once|expiry&expires=600}</p>
+       * <ul>
+       *   <li>{@code type=once}（默认）— 一次性，访问即销毁，无论过期时间</li>
+       *   <li>{@code type=expiry} — 限时链接，有效期内可多次访问，到期失效</li>
+       *   <li>{@code expires} — 有效期（秒），缺省用配置的 {@link #oneTimeTtlMillis()}</li>
+       * </ul>
+       * <p>消费：{@code GET /ot/{token}} — 返回文件内容（一次性模式同时销毁）</p>
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param segments 路径段
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleOneTime(ServerRequest request, ServerResponse response, List<String> segments) {
         HttpMethod method = request.getMethod();
         try {
             if (method == HttpMethod.POST) {
-                // 创建链接
+                  // 创建链接
                 Map<String, String> params = request.getParams();
                 String bucket = params == null ? null : params.get("bucket");
                 String key = params == null ? null : params.get("key");
@@ -860,55 +861,82 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 if (!exist.isExists()) {
                     return error(response, 404, "Object not found: " + key);
                 }
- // 读取 类型 和 expires
+   // 读取 类型 和 expires
                 String type = params == null ? "once" : params.getOrDefault("type", "once");
                 boolean once = !"expiry".equalsIgnoreCase(type);
                 long ttl = parseOneTimeExpiry(params == null ? null : params.get("expires"));
                 String token = generateOneTimeToken();
-                oneTimeMap.put(token, new OneTimeEntry(bucket, key, System.currentTimeMillis(), ttl, once));
+                // share=true：用户主动创建的分享链接，可被列举与吊销。
+                // 内部预览令牌（mintPreviewToken）共享同一张表但 share=false，
+                // 列表接口必须把它们过滤掉，否则等于把内部令牌暴露给用户。
+                oneTimeMap.put(token, new OneTimeEntry(bucket, key, System.currentTimeMillis(), ttl, once, true, type));
                 maybeCleanOneTime();
 
-                String json = "{\"token\":\"" + token + "\",\"url\":\"/ot/" + token + "\""
-                        + ",\"type\":\"" + (once ? "once" : "expiry") + "\""
-                        + ",\"expires\":\"" + ttl + "ms\"}";
+                // 返回的 url 必须带 ?preview=true。
+                // 不带 preview 时文档类（docx/xlsx/pdf…）会直出原始字节，浏览器不认 MIME 只能下载，
+                // 用户拿到的链接「打不开、看不见内容」；preview=true 与 /{bucket}/{key} 预览
+                // 走同一条渲染通道，图片/文本仍内联，文档类进统一预览壳。
+                String json = "{\"token\":\"" + token + "\",\"url\":\"/ot/" + token + "?preview=true\""
+                          + ",\"type\":\"" + (once ? "once" : "expiry") + "\""
+                          + ",\"expires\":\"" + ttl + "ms\""
+                          + ",\"bucket\":\"" + escapeJson(bucket) + "\""
+                          + ",\"key\":\"" + escapeJson(key) + "\"}";
                 response.setStatus(200)
                         .setContentType("application/json;charset=UTF-8")
                         .setBody(json)
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
+            if (method == HttpMethod.GET && segments.size() == 1) {
+                // 链接管理：列举当前有效的分享链接（只含 share=true，且未过期）
+                return listOneTimeLinks(response);
+            }
+            if (method == HttpMethod.DELETE && segments.size() == 2) {
+                // 链接管理：吊销指定分享链接
+                String token = segments.get(1);
+                OneTimeEntry entry = oneTimeMap.get(token);
+                if (entry == null || !entry.share) {
+                    return error(response, 404, "Link not found or already revoked");
+                }
+                oneTimeMap.remove(token);
+                response.setStatus(200)
+                        .setContentType("application/json;charset=UTF-8")
+                        .setBody("{\"token\":\"" + escapeJson(token) + "\",\"revoked\":true}")
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
             if (method == HttpMethod.GET && segments.size() == 2) {
-                // 消费链接
+                  // 消费链接
                 String token = segments.get(1);
                 OneTimeEntry entry = oneTimeMap.get(token);
                 if (entry == null) {
                     return error(response, 410, "Link expired or already consumed");
                 }
-                // 检查过期
+                  // 检查过期
                 if (System.currentTimeMillis() - entry.createTime > entry.ttlMillis) {
                     oneTimeMap.remove(token);
                     return error(response, 410, "Link expired");
                 }
-                // 一次性模式：访问后立即销毁
+                  // 一次性模式：访问后立即销毁
                 if (entry.once) {
                     oneTimeMap.remove(token);
                 }
- // 限时模式：不移除，保持 映射 中供多次访问
+   // 限时模式：不移除，保持 映射 中供多次访问
 
                 FileStorage storage = storageMap.get(entry.bucket);
                 if (storage == null) {
                     return error(response, 404, "Storage not found: " + entry.bucket);
                 }
-                // 「消费」与直读走**同一条**渲染通道，而不是在这里复刻一份。
-                //
-                // 一次性链接是浏览器无法带请求头时的替身（<img> / iframe / window.open），
-                // 用途与 /{bucket}/{key} 完全重合，所以能力必须完全一致：预览内联渲染、
-                // 图片处理、format=pdf / format=json / format=archive / format=cad、
-                // inner= 包内下钻、render=server、download 附件、config 文件级配置。
-                // 早期版本在这里自己读字节自己吐，于是每加一条通道就要补一次 ——
-                // ?preview 与 ?download 都是这样漏掉的，而漏掉的直接后果是
-                // 前端为了凑功能又把访问令牌塞回 URL，令牌泄漏又回来了。
-                // 委托给 handleGet 后，两条路径共用一份实现，不可能再分叉。
+                  // 「消费」与直读走**同一条**渲染通道，而不是在这里复刻一份。
+                  //
+                  // 一次性链接是浏览器无法带请求头时的替身（<img> / iframe / window.open），
+                  // 用途与 /{bucket}/{key} 完全重合，所以能力必须完全一致：预览内联渲染、
+                  // 图片处理、format=pdf / format=json / format=archive / format=cad、
+                  // inner= 包内下钻、render=server、download 附件、config 文件级配置。
+                  // 早期版本在这里自己读字节自己吐，于是每加一条通道就要补一次 ——
+                  // ?preview 与 ?download 都是这样漏掉的，而漏掉的直接后果是
+                  // 前端为了凑功能又把访问令牌塞回 URL，令牌泄漏又回来了。
+                  // 委托给 handleGet 后，两条路径共用一份实现，不可能再分叉。
                 response.setHeader("X-OneTime", entry.once ? "once" : "expiry");
                 response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
                 return handleGet(storage, request, entry.bucket, response, entry.key);
@@ -921,10 +949,70 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 生成一次性访问令牌。
+     * 列举当前有效的分享链接。
      *
-     * @return 16 字节十六进制令牌
+     * <p>只返回用户主动创建的链接（{@code share=true}）：内部预览令牌
+     * （{@link #mintPreviewToken}）与分享链接共用同一张表，必须过滤，
+     * 否则等于把内部令牌泄漏给前端。</p>
+     *
+     * <p>过期条目顺手清理，保证列表与「打开链接」的判定一致。</p>
+     *
+     * @param response 响应
+     * @return 异步阶段
      */
+    private CompletionStage<Void> listOneTimeLinks(ServerResponse response) {
+        long now = System.currentTimeMillis();
+        // 先清理过期条目，避免列表里出现点开就是 410 的死链
+        oneTimeMap.entrySet().removeIf(e -> {
+            OneTimeEntry v = e.getValue();
+            return v.share && now - v.createTime > v.ttlMillis;
+        });
+        java.util.List<Map.Entry<String, OneTimeEntry>> entries =
+                new java.util.ArrayList<>(oneTimeMap.entrySet());
+        entries.sort((a, b) -> Long.compare(b.getValue().createTime, a.getValue().createTime));
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (Map.Entry<String, OneTimeEntry> e : entries) {
+            OneTimeEntry v = e.getValue();
+            if (!v.share) {
+                continue;
+            }
+            long remaining = v.ttlMillis - (now - v.createTime);
+            if (remaining <= 0) {
+                continue;
+            }
+            if (!first) {
+                sb.append(',');
+            }
+            first = false;
+            String key = v.key;
+            String name = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+            sb.append("{\"token\":\"").append(escapeJson(e.getKey())).append('"')
+                    .append(",\"name\":\"").append(escapeJson(name)).append('"')
+                    .append(",\"key\":\"").append(escapeJson(key)).append('"')
+                    .append(",\"bucket\":\"").append(escapeJson(v.bucket)).append('"')
+                    .append(",\"type\":\"").append(escapeJson(v.shareType == null ? (v.once ? "once" : "expiry") : v.shareType)).append('"')
+                    .append(",\"once\":").append(v.once)
+                    .append(",\"createTime\":").append(v.createTime)
+                    .append(",\"expiresAt\":").append(v.createTime + v.ttlMillis)
+                    .append(",\"remainingMs\":").append(remaining)
+                    .append(",\"url\":\"/ot/").append(escapeJson(e.getKey())).append("?preview=true\"")
+                    .append('}');
+        }
+        sb.append(']');
+        response.setStatus(200)
+                .setContentType("application/json;charset=UTF-8")
+                .setHeader("Cache-Control", "no-store")
+                .setBody(sb.toString())
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+      /**
+       * 生成一次性访问令牌。
+       *
+       * @return 16 字节十六进制令牌
+       */
     private static String generateOneTimeToken() {
         byte[] bytes = new byte[16];
         new java.security.SecureRandom().nextBytes(bytes);
@@ -935,15 +1023,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return sb.toString();
     }
 
-    /**
-     * 解析一次性链接过期时长。
-     *
-     * <p>支持秒数（expires=60）或带单位的时长（30s/5m/2h/1d）；
-     * 未传或非法值时使用配置的默认有效期 {@link #oneTimeTtlMillis()}。</p>
-     *
-     * @param expires 原始参数
-     * @return 过期毫秒数
-     */
+      /**
+       * 解析一次性链接过期时长。
+       *
+       * <p>支持秒数（expires=60）或带单位的时长（30s/5m/2h/1d）；
+       * 未传或非法值时使用配置的默认有效期 {@link #oneTimeTtlMillis()}。</p>
+       *
+       * @param expires 原始参数
+       * @return 过期毫秒数
+       */
     private long parseOneTimeExpiry(String expires) {
         if (expires == null || expires.isEmpty()) {
             return oneTimeTtlMillis();
@@ -968,9 +1056,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 惰性清扫过期的一次性链接（避免每次创建都全量遍历）。
-     */
+      /**
+       * 惰性清扫过期的一次性链接（避免每次创建都全量遍历）。
+       */
     private void maybeCleanOneTime() {
         if (++oneTimeSinceClean < ONE_TIME_CLEAN_THRESHOLD) {
             return;
@@ -981,80 +1069,106 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 now - e.getValue().createTime > e.getValue().ttlMillis);
     }
 
-    /**
-     * 链接条目（支持一次性 / 限时两种模式）。
-     */
+      /**
+       * 链接条目（支持一次性 / 限时两种模式）。
+       */
     private static final class OneTimeEntry {
-        /**
-         * 存储桶
-        */
+          /**
+           * 存储桶
+          */
         final String bucket;
-        /**
-         * 对象 键
-        */
+          /**
+           * 对象 键
+          */
         final String key;
-        /**
-         * 创建时间戳
-        */
+          /**
+           * 创建时间戳
+          */
         final long createTime;
-        /**
-         * 自定义过期时长（毫秒）
-        */
+          /**
+           * 自定义过期时长（毫秒）
+          */
         final long ttlMillis;
-        /**
-         * true=一次性（访问即销毁），false=限时（到期失效，可多次访问）
-        */
+          /**
+           * true=一次性（访问即销毁），false=限时（到期失效，可多次访问）
+          */
         final boolean once;
+          /**
+           * true=用户创建的分享链接（可列举/吊销），false=内部预览令牌（不对外暴露）
+          */
+        final boolean share;
+          /**
+           * 创建时用户选择的状态（once / expiry），用于链接管理展示
+          */
+        final String shareType;
 
-        /**
-         * One Time Entry
-         * @param bucket 字符串
-         * @param createTime 长整数
-         * @param key 字符串
-         * @return 返回值
-        */
+          /**
+           * One Time Entry
+           * @param bucket 字符串
+           * @param createTime 长整数
+           * @param key 字符串
+           * @return 返回值
+          */
         OneTimeEntry(String bucket, String key, long createTime) {
-            this(bucket, key, createTime, DEFAULT_ONE_TIME_TTL_MILLIS, true);
+            this(bucket, key, createTime, DEFAULT_ONE_TIME_TTL_MILLIS, true, false, null);
         }
 
-        /**
-         * One Time Entry
-         * @param bucket 字符串
-         * @param createTime 长整数
-         * @param key 字符串
-         * @param ttlMillis 长整数
-         * @return 返回值
-        */
+          /**
+           * One Time Entry
+           * @param bucket 字符串
+           * @param createTime 长整数
+           * @param key 字符串
+           * @param ttlMillis 长整数
+           * @return 返回值
+          */
         OneTimeEntry(String bucket, String key, long createTime, long ttlMillis) {
-            this(bucket, key, createTime, ttlMillis, true);
+            this(bucket, key, createTime, ttlMillis, true, false, null);
         }
 
-        /**
-         * One Time Entry
-         * @param bucket 字符串
-         * @param createTime 长整数
-         * @param key 字符串
-         * @param once 布尔值
-         * @param ttlMillis 长整数
-         * @return 返回值
-        */
+          /**
+           * One Time Entry
+           * @param bucket 字符串
+           * @param createTime 长整数
+           * @param key 字符串
+           * @param once 布尔值
+           * @param ttlMillis 长整数
+           * @return 返回值
+          */
         OneTimeEntry(String bucket, String key, long createTime, long ttlMillis, boolean once) {
+            this(bucket, key, createTime, ttlMillis, once, false, null);
+        }
+
+          /**
+           * One Time Entry
+           * @param bucket 字符串
+           * @param key 字符串
+           * @param createTime 长整数
+           * @param ttlMillis 长整数
+           * @param once 布尔值
+           * @param share 布尔值
+           * @param shareType 字符串
+           * @return 返回值
+          */
+        OneTimeEntry(String bucket, String key, long createTime, long ttlMillis,
+                     boolean once, boolean share, String shareType) {
             this.bucket = bucket;
             this.key = key;
             this.createTime = createTime;
             this.ttlMillis = ttlMillis;
             this.once = once;
+            this.share = share;
+            this.shareType = shareType;
         }
     }
 
-    /**
-     * 放行请求至后续过滤器链。
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param chain    过滤器链
-     * @return 异步阶段
-     */
+      /**
+       * 放行请求至后续过滤器链。
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param chain    过滤器链
+       * @return 异步阶段
+       */
     private CompletionStage<Void> passthrough(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
         try {
             return chain.doFilter(request, response);
@@ -1063,24 +1177,24 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 处理对象列表请求（存储桶根目录）。
-     *
-     * <p>layout 开启时返回 HTML 文件列表页面；关闭时目录访问直接返回 404。</p>
-     *
-     * @param storage  存储实例
-     * @param bucket   存储名
-     * @param response 响应
-     * @return 异步阶段
-     * @param request 请求
-     */
+      /**
+       * 处理对象列表请求（存储桶根目录）。
+       *
+       * <p>layout 开启时返回 HTML 文件列表页面；关闭时目录访问直接返回 404。</p>
+       *
+       * @param storage  存储实例
+       * @param bucket   存储名
+       * @param response 响应
+       * @return 异步阶段
+       * @param request 请求
+       */
     private CompletionStage<Void> handleList(FileStorage storage, ServerRequest request, String bucket, ServerResponse response) {
         if (!setting.isLayout()) {
             return error(response, 404, "Not Found");
         }
         applyWatermarkHeader(response);
-        // 分页参数（?limit/offset 可选）：仅枚举排序（不 stat）后按窗口切片，
-        // 大目录（如瓦片图目录）不再整目录逐项 stat。
+          // 分页参数（?limit/offset 可选）：仅枚举排序（不 stat）后按窗口切片，
+          // 大目录（如瓦片图目录）不再整目录逐项 stat。
         int limit = intParam(request, "limit", Integer.MAX_VALUE);
         int offset = intParam(request, "offset", 0);
         ListObjectResult result = storage.listObject(ListObjectRequest.builder()
@@ -1094,33 +1208,34 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
 /**
- * 写出对象列表响应。
- *
- * <p>layout 开启时：</p>
- * <ul>
- *   <li>{@code ?format=json}、{@code Accept: application/json} 或
- *       {@code X-Requested-With: XMLHttpRequest} → JSON（供 Vue API）</li>
- *   <li>SYSTEM 布局：浏览器直接访问 → 重定向到 {@code /fs/?bucket=X&dir=Y}，由 Vue 独立 UI 处理</li>
- *   <li>SIMPLE 布局：服务端渲染的简单列表</li>
- * </ul>
- *
- * @param bucket 存储名
- * @param dir    目录路径
- * @param result 列表结果
- * @param request 请求
- * @param response 响应
- * @return 异步阶段
- */
-    private CompletionStage<Void> writeList(String bucket, String dir, ListObjectResult result, ServerRequest request, ServerResponse response) {
+   * 写出对象列表响应。
+   *
+   * <p>layout 开启时：</p>
+   * <ul>
+   *   <li>{@code ?format=json}、{@code Accept: application/json} 或
+   *       {@code X-Requested-With: XMLHttpRequest} → JSON（供 Vue API）</li>
+   *   <li>SYSTEM 布局：浏览器直接访问 → 重定向到 {@code /fs/?bucket=X&dir=Y}，由 Vue 独立 UI 处理</li>
+   *   <li>SIMPLE 布局：服务端渲染的简单列表</li>
+   * </ul>
+   *
+   * @param bucket 存储名
+   * @param dir    目录路径
+   * @param result 列表结果
+   * @param request 请求
+   * @param response 响应
+   * @return 异步阶段
+   */
+    private CompletionStage<Void> writeList(String bucket, String dir, ListObjectResult result, ServerRequest request
+        , ServerResponse response) {
         if (!setting.isLayout()) {
             return error(response, 404, "Not Found");
         }
         Map<String, String> params = request.getParams();
- // ?配置（标志式）→ 返回 bucket 公开配置 JSON
+   // ?配置（标志式）→ 返回 bucket 公开配置 JSON
         if (params != null && params.containsKey("config") && !"false".equalsIgnoreCase(params.get("config"))) {
             return writeBucketConfig(bucket, response);
         }
-        // ?tree=true → 目录树 JSON（KodExplorer 式左侧文件树）
+          // ?tree=true → 目录树 JSON（KodExplorer 式左侧文件树）
         if (params != null && ("true".equalsIgnoreCase(params.get("tree")))) {
             FileStorage storage = storageMap.get(bucket);
             if (storage == null) {
@@ -1128,35 +1243,35 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
             return writeTree(storage, bucket, response);
         }
-        // ?format=capabilities（Vue 管理配置：真实 SPI 能力列表）
+          // ?format=capabilities（Vue 管理配置：真实 SPI 能力列表）
         if (params != null && "capabilities".equalsIgnoreCase(params.get("format"))) {
             return writeCapabilities(response);
         }
-        // ?format=json（Vue API 目录列表）
+          // ?format=json（Vue API 目录列表）
         if (params != null && "json".equalsIgnoreCase(params.get("format"))) {
             return writeJsonList(bucket, dir, result, response);
         }
-        // 浏览器导航 → 按布局类型分流：SYSTEM=Vue 独立构建；SIMPLE=服务端简单列表
+          // 浏览器导航 → 按布局类型分流：SYSTEM=Vue 独立构建；SIMPLE=服务端简单列表
         return renderLayoutPage(bucket, dir, result.getMetadata(), response);
     }
 
-    /**
-     * 执行 URL 上的文件处理操作。
-     *
-     * <p>顺序：自动旋正 → 裁剪 → 旋转 → 翻转 → 缩放 → 灰度 → 模糊 → 锐化 → 水印 → 质量编码。
-     * 每步独立降级：失败只 warn 并跳过；空结果视为「这步把图画没了」而保留上一步，
-     * 绝不返回 0 字节。</p>
-     *
-     * @param data     原始字节
-     * @param fileName 文件名
-     * @param request  请求
-     * @return 处理后的字节；非图片或无操作时返回 {@code null}（交回原流程）
-     */
+      /**
+       * 执行 URL 上的文件处理操作。
+       *
+       * <p>顺序：自动旋正 → 裁剪 → 旋转 → 翻转 → 缩放 → 灰度 → 模糊 → 锐化 → 水印 → 质量编码。
+       * 每步独立降级：失败只 warn 并跳过；空结果视为「这步把图画没了」而保留上一步，
+       * 绝不返回 0 字节。</p>
+       *
+       * @param data     原始字节
+       * @param fileName 文件名
+       * @param request  请求
+       * @return 处理后的字节；非图片或无操作时返回 {@code null}（交回原流程）
+       */
     private ImageOpResult applyFileOperations(byte[] data, String fileName, ServerRequest request) {
         FileOperationSetting ops = parseFileOps(request);
         boolean hasUrlOps = ops != null && ops.hasOperation();
-        // 图片处理步骤（系统配置「图片滤镜」+「全局滤镜链」）：对每张图片强制生效；
-        // 与 URL 参数叠加时步骤在后（URL 参数是一次性诉求，配置是全局强制策略）
+          // 图片处理步骤（系统配置「图片滤镜」+「全局滤镜链」）：对每张图片强制生效；
+          // 与 URL 参数叠加时步骤在后（URL 参数是一次性诉求，配置是全局强制策略）
         List<FilterChainStep> chain = resolveGlobalFilterChain();
         if (!hasUrlOps && chain.isEmpty()) {
             log.debug("[FileStorage] 无图片处理操作，透传原图: {}", fileName);
@@ -1167,30 +1282,30 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String ext = simpleExtOf(fileName);
         if (ext == null || !isImageExt(ext)) {
-            // 带了处理参数却碰上白名单外的扩展名（tiff/ico/…），也必须说一声。
-            // 修复前这里直接 return null，客户端拿到的响应里连 imageop 头都没有，
-            // 与「处理成功」完全无法区分。
+              // 带了处理参数却碰上白名单外的扩展名（tiff/ico/…），也必须说一声。
+              // 修复前这里直接 return null，客户端拿到的响应里连 imageop 头都没有，
+              // 与「处理成功」完全无法区分。
             return ImageOpResult.skipped("unsupported-image-ext:" + (ext == null ? "none" : ext));
         }
-        // extensions 文件里 ImageOperation 只注册了具名扩展 jdk=，没有无名默认项，
-        // 因此必须按名字取；FileStorageFileSetting 有无名默认项，两种取法都成立。
+          // extensions 文件里 ImageOperation 只注册了具名扩展 jdk=，没有无名默认项，
+          // 因此必须按名字取；FileStorageFileSetting 有无名默认项，两种取法都成立。
         ImageOperation imageOperation = ServiceProvider.of(ImageOperation.class).getExtension("jdk");
         if (imageOperation == null) {
             log.warn("[FileStorage] 未找到 ImageOperation SPI，跳过图片处理");
             return ImageOpResult.skipped("no-image-operation-spi");
         }
-        // 解码预算闸门：必须在任何 ImageIO.read / operations 之前跑。
-        // 压缩炸弹（30000x30000 全零 PNG，压缩后 2.6MB、解压后 2.7GB）会
-        // 直接把 RSS 顶到堆上限以上，一个请求就能打满 -Xmx1g。这里只读文件头
-        // （ImageReader.getWidth/Height 不解像素），命中就在分配像素缓冲前拒绝。
+          // 解码预算闸门：必须在任何 ImageIO.read / operations 之前跑。
+          // 压缩炸弹（30000x30000 全零 PNG，压缩后 2.6MB、解压后 2.7GB）会
+          // 直接把 RSS 顶到堆上限以上，一个请求就能打满 -Xmx1g。这里只读文件头
+          // （ImageReader.getWidth/Height 不解像素），命中就在分配像素缓冲前拒绝。
         String budget = guardPixelBudget(data);
         if (budget != null) {
             log.warn("[FileStorage] 图片像素数超预算，跳过处理: {} ({})", fileName, budget);
             return ImageOpResult.skipped(budget);
         }
-        // 中间一律用 PNG：无损，避免每一步都做一次有损 JPEG 转码叠加失真，
-        // 也避免「输入已是 jpeg、末尾再转 jpeg」时读到自己写的字节。
-        // 目标格式只在末尾一次性转码（见下方 encode 收尾）。
+          // 中间一律用 PNG：无损，避免每一步都做一次有损 JPEG 转码叠加失真，
+          // 也避免「输入已是 jpeg、末尾再转 jpeg」时读到自己写的字节。
+          // 目标格式只在末尾一次性转码（见下方 encode 收尾）。
         String target = opOutputFormat(fileName, request);
         if (target == null) {
             return ImageOpResult.passThrough();
@@ -1238,8 +1353,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                         .text(ops.getWatermarkText()).opacity(0.5f).position("center").build();
                 cur = keep(cur, imageOperation.watermark(cur, format, p).block());
             }
-            // 图片处理步骤（选中滤镜 + 全局滤镜链）逐项应用。
-            // 在 URL 操作之后执行：URL 参数是调用方的一次性诉求，配置是运维的全局强制策略。
+              // 图片处理步骤（选中滤镜 + 全局滤镜链）逐项应用。
+              // 在 URL 操作之后执行：URL 参数是调用方的一次性诉求，配置是运维的全局强制策略。
             for (FilterChainStep step : chain) {
                 byte[] chained = applyFilterChainStep(imageOperation, cur, format, step);
                 if (chained != null) {
@@ -1247,19 +1362,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                     chainApplied.add(step.id());
                 }
             }
-            // 转码收尾：把无损中间结果一次性转到目标格式。
-            // 早期版本把 format 同时当「中间编码格式」和「最终输出格式」，导致
-            // ① 每步都做有损 JPEG 转码、叠加失真；② 无几何/滤镜操作时 cur 仍是源文件
-            // 原始 PNG 字节，Content-Type 却被标成 image/jpeg，客户端按 JPEG 解码直接失败；
-            // ③ quality 完全没参与编码。
+              // 转码收尾：把无损中间结果一次性转到目标格式。
+              // 早期版本把 format 同时当「中间编码格式」和「最终输出格式」，导致
+              // ① 每步都做有损 JPEG 转码、叠加失真；② 无几何/滤镜操作时 cur 仍是源文件
+              // 原始 PNG 字节，Content-Type 却被标成 image/jpeg，客户端按 JPEG 解码直接失败；
+              // ③ quality 完全没参与编码。
             boolean needEncode = ops.getFormat() != null || ops.getQuality() != null || !"png".equals(target)
                     || !chainApplied.isEmpty();
             if (needEncode) {
                 byte[] encoded = encode(cur, target, ops.getQuality());
                 if (encoded == null) {
-                    // 转码失败：保留上一步字节，Content-Type 由 detectFormat 按实际内容判定。
-                    // 早期版本只 log.warn 就返回，客户端拿到的仍是 200 + 原图，
-                    // 表现为「要了 JPEG 却拿到 PNG」且无任何提示——必须带原因回去。
+                      // 转码失败：保留上一步字节，Content-Type 由 detectFormat 按实际内容判定。
+                      // 早期版本只 log.warn 就返回，客户端拿到的仍是 200 + 原图，
+                      // 表现为「要了 JPEG 却拿到 PNG」且无任何提示——必须带原因回去。
                     log.warn("[FileStorage] 转码到 {} 失败，回退上一步结果", target);
                     return ImageOpResult.of(cur, "transcode-failed:" + target).withChain(chainSummary(chainApplied));
                 }
@@ -1272,24 +1387,24 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return ImageOpResult.applied(cur).withChain(chainSummary(chainApplied));
     }
 
-    /**
-     * 解析当前生效的图片处理步骤：系统配置「图片滤镜」→「全局滤镜链」，按此顺序叠加。
-     *
-     * <p>前半段是「图片滤镜」选中项：选中即对每张图片生效，无需再开滤镜链开关，
-     * 但只下发后台图片管线真正支持处理的滤镜（见
-     * {@link FileStorageImageFilterProvider#isServerSide()}），其余由前端按 CSS 兜底。</p>
-     *
-     * <p>后半段是「全局滤镜链」：开关关闭或无配置时为空；条目格式
-     * {@code id:key=value,key=value;id2}，id 写入时已校验属于后台 SPI 能力，
-     * 这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
-     *
-     * @return 图片处理步骤列表（可能为空）
-     */
+      /**
+       * 解析当前生效的图片处理步骤：系统配置「图片滤镜」→「全局滤镜链」，按此顺序叠加。
+       *
+       * <p>前半段是「图片滤镜」选中项：选中即对每张图片生效，无需再开滤镜链开关，
+       * 但只下发后台图片管线真正支持处理的滤镜（见
+       * {@link FileStorageImageFilterProvider#isServerSide()}），其余由前端按 CSS 兜底。</p>
+       *
+       * <p>后半段是「全局滤镜链」：开关关闭或无配置时为空；条目格式
+       * {@code id:key=value,key=value;id2}，id 写入时已校验属于后台 SPI 能力，
+       * 这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
+       *
+       * @return 图片处理步骤列表（可能为空）
+       */
     private List<FilterChainStep> resolveGlobalFilterChain() {
         List<FilterChainStep> steps = new ArrayList<>();
-        // 系统配置「图片滤镜」：选中即对每张图片生效，先于「全局滤镜链」执行。
-        // 只有后台图片管线真正支持处理的滤镜才生成步骤；不支持的（反色/怀旧/鲜艳）
-        // 由前端按 CSS 兜底，这里不下发无法执行的步骤，避免日志被 WARN 刷满。
+          // 系统配置「图片滤镜」：选中即对每张图片生效，先于「全局滤镜链」执行。
+          // 只有后台图片管线真正支持处理的滤镜才生成步骤；不支持的（反色/怀旧/鲜艳）
+          // 由前端按 CSS 兜底，这里不下发无法执行的步骤，避免日志被 WARN 刷满。
         FileStorageImageFilterProvider filter = resolveImageFilterProvider(setting.getImageFilter());
         if (filter != null && filter.isServerSide()) {
             String pathParam = filter.getPathParam();
@@ -1308,15 +1423,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return steps;
     }
 
-    /**
-     * 解析滤镜链紧凑串（{@code id:key=value,key=value;id2}）为步骤列表。
-     *
-     * <p>关闭开关或无配置时返回空列表；条目格式 {@code id:key=value,key=value}，
-     * id 写入时已校验属于后台 SPI 能力，这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
-     *
-     * @param chain 滤镜链紧凑串
-     * @return 滤镜步骤列表（可能为空）
-     */
+      /**
+       * 解析滤镜链紧凑串（{@code id:key=value,key=value;id2}）为步骤列表。
+       *
+       * <p>关闭开关或无配置时返回空列表；条目格式 {@code id:key=value,key=value}，
+       * id 写入时已校验属于后台 SPI 能力，这里只做解析不做校验（配置可被系统属性/直连热改）。</p>
+       *
+       * @param chain 滤镜链紧凑串
+       * @return 滤镜步骤列表（可能为空）
+       */
     private List<FilterChainStep> parseFilterChainText(String chain) {
         List<FilterChainStep> steps = new ArrayList<>();
         if (chain == null || chain.isBlank()) {
@@ -1355,21 +1470,21 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return steps;
     }
 
-    /**
-     * 应用单个全局滤镜步骤（映射到 JDK 图片管线，中间格式固定 png）。
-     *
-     * <p>映射：size/resize→缩放；gray/grayscale→灰度；blur/gaussianBlur→模糊(radius)；
-     * sharpen/usm→锐化(radius)；bright/brightness→亮度(brightness)；rotate→旋转(angle)；
-     * flip→翻转(direction)；autoOrient→EXIF 旋正；watermark/textWatermark→文本水印。
-     * JDK 管线不支持的滤镜（negative/sepia/pixel/mosaic/tile/contrast/imageWatermark 等）
-     * 记 WARN 并跳过；返回 null 表示本步未产生新字节。</p>
-     *
-     * @param imageOperation 图片操作 SPI
-     * @param cur            当前字节（PNG 中间格式）
-     * @param format         中间格式（固定 png）
-     * @param step           链步骤
-     * @return 处理后的字节；跳过或失败返回 null
-     */
+      /**
+       * 应用单个全局滤镜步骤（映射到 JDK 图片管线，中间格式固定 png）。
+       *
+       * <p>映射：size/resize→缩放；gray/grayscale→灰度；blur/gaussianBlur→模糊(radius)；
+       * sharpen/usm→锐化(radius)；bright/brightness→亮度(brightness)；rotate→旋转(angle)；
+       * flip→翻转(direction)；autoOrient→EXIF 旋正；watermark/textWatermark→文本水印。
+       * JDK 管线不支持的滤镜（negative/sepia/pixel/mosaic/tile/contrast/imageWatermark 等）
+       * 记 WARN 并跳过；返回 null 表示本步未产生新字节。</p>
+       *
+       * @param imageOperation 图片操作 SPI
+       * @param cur            当前字节（PNG 中间格式）
+       * @param format         中间格式（固定 png）
+       * @param step           链步骤
+       * @return 处理后的字节；跳过或失败返回 null
+       */
     private byte[] applyFilterChainStep(ImageOperation imageOperation, byte[] cur, String format, FilterChainStep step) {
         String id = step.id();
         Map<String, String> params = step.params();
@@ -1436,23 +1551,23 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 序列化已执行的滤镜链摘要（响应头 {@code X-FileStorage-Filter-Chain}）。
-     *
-     * @param applied 已成功应用的滤镜 id 列表
-     * @return 逗号分隔摘要；空列表返回 null
-     */
+      /**
+       * 序列化已执行的滤镜链摘要（响应头 {@code X-FileStorage-Filter-Chain}）。
+       *
+       * @param applied 已成功应用的滤镜 id 列表
+       * @return 逗号分隔摘要；空列表返回 null
+       */
     private static String chainSummary(List<String> applied) {
         return applied == null || applied.isEmpty() ? null : String.join(",", applied);
     }
 
-    /**
-     * 宽松解析浮点参数（失败回退默认值）。
-     *
-     * @param text     文本
-     * @param fallback 默认值
-     * @return 解析结果
-     */
+      /**
+       * 宽松解析浮点参数（失败回退默认值）。
+       *
+       * @param text     文本
+       * @param fallback 默认值
+       * @return 解析结果
+       */
     private static Float floatOr(String text, Float fallback) {
         try {
             return text == null || text.isBlank() ? fallback : Float.parseFloat(text.trim());
@@ -1461,13 +1576,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 宽松解析整数参数（失败回退默认值）。
-     *
-     * @param text     文本
-     * @param fallback 默认值
-     * @return 解析结果
-     */
+      /**
+       * 宽松解析整数参数（失败回退默认值）。
+       *
+       * @param text     文本
+       * @param fallback 默认值
+       * @return 解析结果
+       */
     private static Integer intOr(String text, int fallback) {
         try {
             return text == null || text.isBlank() ? fallback : Integer.parseInt(text.trim());
@@ -1476,29 +1591,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 全局滤镜链步骤。
-     *
-     * @param id     滤镜 id（来自 FileStorageFilterSetting SPI 能力，已小写）
-     * @param params 键值参数（键已小写）
-     */
+      /**
+       * 全局滤镜链步骤。
+       *
+       * @param id     滤镜 id（来自 FileStorageFilterSetting SPI 能力，已小写）
+       * @param params 键值参数（键已小写）
+       */
     private record FilterChainStep(String id, Map<String, String> params) {
     }
 
-    /**
-     * 解码前的像素预算闸门（压缩炸弹防护）。
-     *
-     * <p>只读图片文件头拿宽高，<b>不解码像素</b>，因此对 30000x30000 这种
-     * 压缩后仅 2.6MB、解压后 2.7GB 的输入也能零成本拒绝。反过来，若等到
-     * {@code ImageIO.read} 之后再判断，{@code BufferedImage} 已经分配完了，
-     * 判断毫无意义——这正是修复前单个炸弹请求就把 RSS 顶到 1.2GB 的原因。</p>
-     *
-     * <p>头信息读不出来（截断/纯文本冒充）不拦：那类输入本来也解不出像素，
-     * 交给后面的操作自然失败并走「跳过」分支，不必在这里误伤。</p>
-     *
-     * @param data 源字节
-     * @return 超预算时返回原因码，未超或读不出头返回 {@code null}
-     */
+      /**
+       * 解码前的像素预算闸门（压缩炸弹防护）。
+       *
+       * <p>只读图片文件头拿宽高，<b>不解码像素</b>，因此对 30000x30000 这种
+       * 压缩后仅 2.6MB、解压后 2.7GB 的输入也能零成本拒绝。反过来，若等到
+       * {@code ImageIO.read} 之后再判断，{@code BufferedImage} 已经分配完了，
+       * 判断毫无意义——这正是修复前单个炸弹请求就把 RSS 顶到 1.2GB 的原因。</p>
+       *
+       * <p>头信息读不出来（截断/纯文本冒充）不拦：那类输入本来也解不出像素，
+       * 交给后面的操作自然失败并走「跳过」分支，不必在这里误伤。</p>
+       *
+       * @param data 源字节
+       * @return 超预算时返回原因码，未超或读不出头返回 {@code null}
+       */
     private String guardPixelBudget(byte[] data) {
         try (var ios = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
             if (ios == null) {
@@ -1529,17 +1644,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 按目标格式与质量重新编码。
-     *
-     * <p>质量参数只对 JPEG 有意义（走 ImageWriteParam 显式压缩模式），
-     * PNG/WEBP 等由 ImageIO 自身决定，属预期行为。</p>
-     *
-     * @param src     源字节
-     * @param format  目标格式
-     * @param quality 1-100，为空时用 ImageIO 默认
-     * @return 编码后字节；失败返回 {@code null} 交回上一步
-     */
+      /**
+       * 按目标格式与质量重新编码。
+       *
+       * <p>质量参数只对 JPEG 有意义（走 ImageWriteParam 显式压缩模式），
+       * PNG/WEBP 等由 ImageIO 自身决定，属预期行为。</p>
+       *
+       * @param src     源字节
+       * @param format  目标格式
+       * @param quality 1-100，为空时用 ImageIO 默认
+       * @return 编码后字节；失败返回 {@code null} 交回上一步
+       */
     private byte[] encode(byte[] src, String format, Integer quality) {
         try {
             var image = ImageIO.read(new ByteArrayInputStream(src));
@@ -1577,71 +1692,71 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /** 传统二进制同族扩展名归一到主扩展名（Aspose 转换器只登记主扩展名，如 ppt/pptx）。 */
+      /** 传统二进制同族扩展名归一到主扩展名（Aspose 转换器只登记主扩展名，如 ppt/pptx）。 */
     private static final Map<String, String> LEGACY_EXT_ALIAS = Map.of(
             "pot", "ppt",
             "pps", "ppt",
             "ppa", "ppt"
     );
 
-    /**
-     * 把可转换的文档转成 PDF。
-     *
-     * <p>走 {@code FileConvertSystem} SPI（实现在 utils-support-aspose-starter）：
-     * aspose-word 覆盖 doc/docx/wps，aspose-excel 覆盖 xls/xlsx/csv，
-     * aspose-ppt 覆盖 ppt/pptx。找不到匹配实现时 {@code ConvertSupport.convert()}
-     * 抛 {@code UnsupportedOperationException}，这里统一收敛为 {@code null}
-     * （表示「转不了」，不是「转换出错」）。</p>
-     *
-     * <p>已经是 PDF 的直接原样返回，不再走一遍转换。</p>
-     *
-     * @param data     源字节
-     * @param fileName 文件名（决定源格式）
-     * @return PDF 字节；不可转换或转换失败返回 {@code null}
-     */
+      /**
+       * 把可转换的文档转成 PDF。
+       *
+       * <p>走 {@code FileConvertSystem} SPI（实现在 utils-support-aspose-starter）：
+       * aspose-word 覆盖 doc/docx/wps，aspose-excel 覆盖 xls/xlsx/csv，
+       * aspose-ppt 覆盖 ppt/pptx。找不到匹配实现时 {@code ConvertSupport.convert()}
+       * 抛 {@code UnsupportedOperationException}，这里统一收敛为 {@code null}
+       * （表示「转不了」，不是「转换出错」）。</p>
+       *
+       * <p>已经是 PDF 的直接原样返回，不再走一遍转换。</p>
+       *
+       * @param data     源字节
+       * @param fileName 文件名（决定源格式）
+       * @return PDF 字节；不可转换或转换失败返回 {@code null}
+       */
     private byte[] convertToPdf(byte[] data, String fileName) {
         return convertDocumentTo(data, fileName, "pdf");
     }
 
-    /**
-     * 把 Office 文档转换成指定的目标格式。
-     *
-     * <p>走 {@code FileConvertSystem} SPI（实现在 utils-support-aspose-starter）：
-     * aspose-word 覆盖 doc/docx/wps（目标含 docx），aspose-excel 覆盖 xls/xlsx/csv
-     * （目标含 xlsx），aspose-ppt 覆盖 ppt/pptx。找不到匹配实现时
-     * {@code ConvertSupport.convert()} 抛 {@code UnsupportedOperationException}，
-     * 这里统一收敛为 {@code null}（表示「转不了」，不是「转换出错」）。</p>
-     *
-     * <p>用于「客户端组件吃不下、服务端也没有 HTML 渲染器」的传统二进制文档：
-     * 与其退回 PDF 交给浏览器阅读器，不如转成 OOXML（doc→docx / xls→xlsx），
-     * 复用前端的 {@code @vue-office/*} 组件，保真度更高、还能分页/表格交互。</p>
-     *
-     * @param data     源字节
-     * @param fileName 文件名（决定源格式）
-     * @param target   目标格式（如 {@code pdf} / {@code docx} / {@code xlsx}）
-     * @return 转换后的字节；不可转换或转换失败返回 {@code null}
-     */
+      /**
+       * 把 Office 文档转换成指定的目标格式。
+       *
+       * <p>走 {@code FileConvertSystem} SPI（实现在 utils-support-aspose-starter）：
+       * aspose-word 覆盖 doc/docx/wps（目标含 docx），aspose-excel 覆盖 xls/xlsx/csv
+       * （目标含 xlsx），aspose-ppt 覆盖 ppt/pptx。找不到匹配实现时
+       * {@code ConvertSupport.convert()} 抛 {@code UnsupportedOperationException}，
+       * 这里统一收敛为 {@code null}（表示「转不了」，不是「转换出错」）。</p>
+       *
+       * <p>用于「客户端组件吃不下、服务端也没有 HTML 渲染器」的传统二进制文档：
+       * 与其退回 PDF 交给浏览器阅读器，不如转成 OOXML（doc→docx / xls→xlsx），
+       * 复用前端的 {@code @vue-office/*} 组件，保真度更高、还能分页/表格交互。</p>
+       *
+       * @param data     源字节
+       * @param fileName 文件名（决定源格式）
+       * @param target   目标格式（如 {@code pdf} / {@code docx} / {@code xlsx}）
+       * @return 转换后的字节；不可转换或转换失败返回 {@code null}
+       */
     private byte[] convertDocumentTo(byte[] data, String fileName, String target) {
         String src = simpleExtOf(fileName);
         if (src == null) {
             return null;
         }
         src = src.toLowerCase(Locale.ROOT);
-        // 传统二进制的「模板 / 放映」扩展名与正文同族（同一 OLE2 容器、同一 Aspose 加载器），
-        // 但转换器按扩展名匹配：aspose-ppt 只登记 ppt/pptx，pot/pps 会被判成「无匹配实现」
-        // 而走 unavailable —— 前端拿到 convert=unavailable 只能显示空白面板（实测 .pot 空白）。
-        // 故先归一为族内主扩展名再转换（.pot/.pps 与 .ppt 字节同构，加载器一致）。
+          // 传统二进制的「模板 / 放映」扩展名与正文同族（同一 OLE2 容器、同一 Aspose 加载器），
+          // 但转换器按扩展名匹配：aspose-ppt 只登记 ppt/pptx，pot/pps 会被判成「无匹配实现」
+          // 而走 unavailable —— 前端拿到 convert=unavailable 只能显示空白面板（实测 .pot 空白）。
+          // 故先归一为族内主扩展名再转换（.pot/.pps 与 .ppt 字节同构，加载器一致）。
         src = LEGACY_EXT_ALIAS.getOrDefault(src, src);
         if (target.equalsIgnoreCase(src)) {
             return data;
         }
-        // 容器闸门：源必须是 ZIP（OOXML/ODF）或 OLE2（传统二进制）容器。
-        // 实测纯垃圾字节（4 字节循环 500 次）交给 Aspose.Words 不会抛异常，
-        // 而是**产出一个空白文档**并返回 200——调用方拿到的是静默错误的结果。
-        // 这里先按魔数挡掉，让它走 unavailable 分支。
-        // RTF 是纯文本，不在上述两类容器里，单独放行（见 RTF_MAGIC 注释）。
-        // CSV/TSV 同理是纯文本：扩展名在白名单内且内容通过 looksLikeText 才放行，
-        // 避免任意二进制改名后喂给 Aspose。
+          // 容器闸门：源必须是 ZIP（OOXML/ODF）或 OLE2（传统二进制）容器。
+          // 实测纯垃圾字节（4 字节循环 500 次）交给 Aspose.Words 不会抛异常，
+          // 而是**产出一个空白文档**并返回 200——调用方拿到的是静默错误的结果。
+          // 这里先按魔数挡掉，让它走 unavailable 分支。
+          // RTF 是纯文本，不在上述两类容器里，单独放行（见 RTF_MAGIC 注释）。
+          // CSV/TSV 同理是纯文本：扩展名在白名单内且内容通过 looksLikeText 才放行，
+          // 避免任意二进制改名后喂给 Aspose。
         if (!startsWith(data, ZIP_MAGIC) && !startsWith(data, OLE2_MAGIC) && !startsWith(data, RTF_MAGIC)
                 && !(TEXT_CONVERT_SOURCES.contains(src) && looksLikeText(data))) {
             log.warn("[FileStorage] 源不是文档容器，跳过转 {}: {}", target, fileName);
@@ -1661,17 +1776,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 把文档转成目标格式并作为预览响应返回。
-     *
-     * @param data     源字节
-     * @param fileName 原文件名
-     * @param target   目标格式（{@code docx} / {@code xlsx}）
-     * @param download 是否按附件下载
-     * @param response 响应
-     * @return 转换成功返回已完成的 stage；不可转换返回 {@code null}
-     *         （调用方继续走原通道），同时写 {@code X-FileStorage-Convert: unavailable}
-     */
+      /**
+       * 把文档转成目标格式并作为预览响应返回。
+       *
+       * @param data     源字节
+       * @param fileName 原文件名
+       * @param target   目标格式（{@code docx} / {@code xlsx}）
+       * @param download 是否按附件下载
+       * @param response 响应
+       * @return 转换成功返回已完成的 stage；不可转换返回 {@code null}
+       *         （调用方继续走原通道），同时写 {@code X-FileStorage-Convert: unavailable}
+       */
     private CompletionStage<Void> serveConvertedDocument(byte[] data, String fileName, String target,
                                                          boolean download, ServerResponse response) {
         byte[] converted = convertDocumentTo(data, fileName, target);
@@ -1690,28 +1805,28 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 把文件名扩展名换成指定后缀，用于转换后的下载名。
-     *
-     * @param fileName 原文件名
-     * @param ext      目标扩展名（不带点）
-     * @return 换好扩展名的文件名；原文件名无扩展名时直接追加
-     */
+      /**
+       * 把文件名扩展名换成指定后缀，用于转换后的下载名。
+       *
+       * @param fileName 原文件名
+       * @param ext      目标扩展名（不带点）
+       * @return 换好扩展名的文件名；原文件名无扩展名时直接追加
+       */
     private static String withExtension(String fileName, String ext) {
         int dot = fileName.lastIndexOf('.');
         return dot > 0 ? fileName.substring(0, dot) + "." + ext : fileName + "." + ext;
     }
 
-    /**
-     * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
-    /**
-     * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
-     *
-     * @param bytes    响应体
-     * @param fileName 原文件名
-     * @param request  请求
-     * @return 实际格式；无法识别时回退到「URL 指定的格式 → 原扩展名 → jpeg」
-     */
+      /**
+       * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
+      /**
+       * 按字节实际内容判定图片格式，保证 Content-Type 与响应体一致。
+       *
+       * @param bytes    响应体
+       * @param fileName 原文件名
+       * @param request  请求
+       * @return 实际格式；无法识别时回退到「URL 指定的格式 → 原扩展名 → jpeg」
+       */
     private String detectFormat(byte[] bytes, String fileName, ServerRequest request) {
         if (bytes != null && bytes.length > 3) {
             int b0 = bytes[0] & 0xFF;
@@ -1739,91 +1854,91 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return ext == null ? "jpeg" : ext;
     }
 
-    /**
-     * 图片处理结果。
-     *
-     * <p>存在的唯一理由：让「处理失败、按原图兜底」这件事<b>可观测</b>。
-     * 修复前 {@code applyFileOperations} 失败时只 {@code return null}，
-     * 调用方继续往下走到「客户端直渲染/服务端渲染」分支，最后吐出原始字节 +
-     * HTTP 200，客户端无法区分「处理成功」和「压根没处理」。实测后果是
-     * {@code ?format=jpeg} 在 30000x30000 输入上返回 image/png 原图，
-     * 2.6MB 一字节没少，用户完全无感。</p>
-     *
-     * @param data    最终响应字节（可能被处理过，也可能是原图）
-     * @param applied 是否真的执行了处理；false 表示走了兜底
-     * @param reason  跳过原因码，{@link #passThrough()} 时为 {@code null}
-     */
+      /**
+       * 图片处理结果。
+       *
+       * <p>存在的唯一理由：让「处理失败、按原图兜底」这件事<b>可观测</b>。
+       * 修复前 {@code applyFileOperations} 失败时只 {@code return null}，
+       * 调用方继续往下走到「客户端直渲染/服务端渲染」分支，最后吐出原始字节 +
+       * HTTP 200，客户端无法区分「处理成功」和「压根没处理」。实测后果是
+       * {@code ?format=jpeg} 在 30000x30000 输入上返回 image/png 原图，
+       * 2.6MB 一字节没少，用户完全无感。</p>
+       *
+       * @param data    最终响应字节（可能被处理过，也可能是原图）
+       * @param applied 是否真的执行了处理；false 表示走了兜底
+       * @param reason  跳过原因码，{@link #passThrough()} 时为 {@code null}
+       */
     private record ImageOpResult(byte[] data, boolean applied, String reason, String chain) {
 
-        /**
-         * 全部处理成功。
-         *
-         * @param data 处理后字节
-         * @return 结果
-         */
+          /**
+           * 全部处理成功。
+           *
+           * @param data 处理后字节
+           * @return 结果
+           */
         static ImageOpResult applied(byte[] data) {
             return new ImageOpResult(data, true, null, null);
         }
 
-        /**
-         * 请求没带任何处理参数，不是失败。
-         *
-         * @return 结果
-         */
+          /**
+           * 请求没带任何处理参数，不是失败。
+           *
+           * @return 结果
+           */
         static ImageOpResult passThrough() {
             return new ImageOpResult(null, false, null, null);
         }
 
-        /**
-         * 带了参数但处理没能执行。
-         *
-         * @param reason 原因码
-         * @return 结果
-         */
+          /**
+           * 带了参数但处理没能执行。
+           *
+           * @param reason 原因码
+           * @return 结果
+           */
         static ImageOpResult skipped(String reason) {
             return new ImageOpResult(null, false, reason, null);
         }
 
-        /**
-         * 处理中途失败，吐出已算出的字节并带上原因。
-         *
-         * @param data   兜底字节
-         * @param reason 原因码
-         * @return 结果
-         */
+          /**
+           * 处理中途失败，吐出已算出的字节并带上原因。
+           *
+           * @param data   兜底字节
+           * @param reason 原因码
+           * @return 结果
+           */
         static ImageOpResult of(byte[] data, String reason) {
             return new ImageOpResult(data, false, reason, null);
         }
 
-        /**
-         * 附加已执行的全局滤镜链摘要（用于响应头 {@code X-FileStorage-Filter-Chain}）。
-         *
-         * @param chainSummary 链摘要（如 {@code "size,gray"}）；无链时 null
-         * @return 带链摘要的结果
-         */
+          /**
+           * 附加已执行的全局滤镜链摘要（用于响应头 {@code X-FileStorage-Filter-Chain}）。
+           *
+           * @param chainSummary 链摘要（如 {@code "size,gray"}）；无链时 null
+           * @return 带链摘要的结果
+           */
         ImageOpResult withChain(String chainSummary) {
             return new ImageOpResult(data, applied, reason, chainSummary);
         }
     }
 
-    /**
-     * keep
-     * @param after 参数
-     * @param before 参数
-     * @return 返回值
-    */
+      /**
+       * keep
+       * @param after 参数
+       * @param before 参数
+       * @return 返回值
+      */
     private byte[] keep(byte[] before, byte[] after) {
         return (after == null || after.length == 0) ? before : after;
     }
 
-    /**
-     * resize Of
-     * @param bytes 参数
-     * @param format 格式化
-     * @param op 参数
-     * @param size 获取数量
-     * @return 返回值
-    */
+      /**
+       * resize Of
+       * @param bytes 参数
+       * @param format 格式化
+       * @param op 参数
+       * @param size 获取数量
+       * @return 返回值
+      */
     private byte[] resizeOf(ImageOperation op, byte[] bytes, String format, String size) {
         if (size == null || size.isBlank()) {
             return null;
@@ -1854,14 +1969,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return op.resize(bytes, format, width, height, scale).block();
     }
 
-    /**
-     * crop Of
-     * @param bytes 参数
-     * @param crop 字符串
-     * @param format 格式化
-     * @param op 参数
-     * @return 返回值
-    */
+      /**
+       * crop Of
+       * @param bytes 参数
+       * @param crop 字符串
+       * @param format 格式化
+       * @param op 参数
+       * @return 返回值
+      */
     private byte[] cropOf(ImageOperation op, byte[] bytes, String format, String crop) {
         if (crop == null || crop.isBlank()) {
             return null;
@@ -1884,15 +1999,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * parse File Ops
-     * @param request 参数
-     * @return 返回值
-    */
+      /**
+       * parse File Ops
+       * @param request 参数
+       * @return 返回值
+      */
     private FileOperationSetting parseFileOps(ServerRequest request) {
         try {
             ServiceProvider<FileStorageFileSetting> provider = ServiceProvider.of(FileStorageFileSetting.class);
-            // 配置的实现优先；缺失/未知时回退内置 jdk，避免一次配置失误让 URL 参数整体失效
+              // 配置的实现优先；缺失/未知时回退内置 jdk，避免一次配置失误让 URL 参数整体失效
             String key = setting.getFileSettingKey();
             FileStorageFileSetting fileSetting = key == null || key.isBlank()
                     ? provider.getNewExtension("jdk")
@@ -1907,11 +2022,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * is Image Ext
-     * @param ext 字符串
-     * @return 返回值
-    */
+      /**
+       * is Image Ext
+       * @param ext 字符串
+       * @return 返回值
+      */
     private static boolean isImageExt(String ext) {
         return switch (ext) {
             case "jpg", "jpeg", "png", "gif", "bmp", "webp", "wbmp" -> true;
@@ -1919,11 +2034,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         };
     }
 
-    /**
-     * norm Format
-     * @param f 字符串
-     * @return 返回值
-    */
+      /**
+       * norm Format
+       * @param f 字符串
+       * @return 返回值
+      */
     private static String normFormat(String f) {
         if (f == null || f.isBlank()) {
             return null;
@@ -1940,12 +2055,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return ImageIO.getImageWritersByFormatName(s).hasNext() ? s : null;
     }
 
-    /**
-     * op Output Format
-     * @param fileName 字符串
-     * @param request 参数
-     * @return 返回值
-    */
+      /**
+       * op Output Format
+       * @param fileName 字符串
+       * @param request 参数
+       * @return 返回值
+      */
     private String opOutputFormat(String fileName, ServerRequest request) {
         Map<String, String> params = request.getParams();
         String requested = params == null ? null : normFormat(params.get("format"));
@@ -1953,16 +2068,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return requested != null ? requested : normFormat(ext == null ? "jpeg" : ext);
     }
 
-    /**
-     * 递归构建目录树 JSON（深度受限，避免超大桶卡死）。
-     *
-     * <p>{@code GET /{bucket}?tree=true} — 返回全量目录树：
-     * {@code [{name,path,children:[...]}]}，仅含目录。</p>
-     * @param storage storage
-     * @param bucket bucket
-     * @param response 响应
-     * @return 写入树的结果
-     */
+      /**
+       * 递归构建目录树 JSON（深度受限，避免超大桶卡死）。
+       *
+       * <p>{@code GET /{bucket}?tree=true} — 返回全量目录树：
+       * {@code [{name,path,children:[...]}]}，仅含目录。</p>
+       * @param storage storage
+       * @param bucket bucket
+       * @param response 响应
+       * @return 写入树的结果
+       */
     private CompletionStage<Void> writeTree(FileStorage storage, String bucket, ServerResponse response) {
         StringBuilder root = new StringBuilder();
         root.append("[");
@@ -1975,14 +2090,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 递归构建树的一个分支（追加到 sb）。
-     * @param storage storage
-     * @param bucket bucket
-     * @param parentPath 父路径
-     * @param sb sb
-     * @param depth 深度
-     */
+      /**
+       * 递归构建树的一个分支（追加到 sb）。
+       * @param storage storage
+       * @param bucket bucket
+       * @param parentPath 父路径
+       * @param sb sb
+       * @param depth 深度
+       */
     private void buildTreeBranch(FileStorage storage, String bucket, String parentPath, StringBuilder sb, int depth) {
         if (depth > 12) {
             return;
@@ -2014,15 +2129,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 返回 bucket 公开配置 JSON（供 Vue 前端渲染用，无需 令牌）。
-     *
-     * <p>包含存储类型、功能开关、布局类型等，不含敏感字段（如完整 token）。
-     * 用法：{@code GET /{bucket}?格式化=配置}</p>
-     * @param bucket bucket
-     * @param response 响应
-     * @return 写入bucket配置的结果
-     */
+      /**
+       * 返回 bucket 公开配置 JSON（供 Vue 前端渲染用，无需 令牌）。
+       *
+       * <p>包含存储类型、功能开关、布局类型等，不含敏感字段（如完整 token）。
+       * 用法：{@code GET /{bucket}?格式化=配置}</p>
+       * @param bucket bucket
+       * @param response 响应
+       * @return 写入bucket配置的结果
+       */
     private CompletionStage<Void> writeBucketConfig(String bucket, ServerResponse response) {
         FileStorage storage = storageMap.get(bucket);
         if (storage == null) {
@@ -2032,29 +2147,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         String wm = setting.getWatermark();
 
         String json = "{\"bucket\":\"" + escapeJson(bucket) + "\""
-                + ",\"storage\":\"" + escapeJson(storageType) + "\""
-                + ",\"openPreview\":" + setting.isOpenPreview()
-                + ",\"openDownload\":" + setting.isOpenDownload()
-                + ",\"openRange\":" + setting.isOpenRange()
-                + ",\"openWatermark\":" + setting.isOpenWatermark()
-                + ",\"openWebjars\":" + setting.isOpenWebjars()
-                + ",\"openRemoteFile\":" + setting.isOpenRemoteFile()
-                + ",\"thirdUrlPreview\":\"" + escapeJson(setting.getThirdUrlPreview() == null ? "NONE" : setting.getThirdUrlPreview()) + "\""
-                + ",\"watermark\":" + (wm == null ? "null" : "\"" + escapeJson(wm) + "\"")
-                + ",\"layout\":" + setting.isLayout()
-                + ",\"layoutType\":\"" + escapeJson(setting.getLayoutType() == null ? "" : setting.getLayoutType()) + "\""
-                + ",\"showFormat\":" + setting.isShowFormat()
-                + ",\"showSize\":" + setting.isShowSize()
-                + ",\"showTime\":" + setting.isShowTime()
-                + ",\"imageFilter\":\"" + escapeJson(setting.getImageFilter() == null ? "NONE" : setting.getImageFilter()) + "\""
-                + ",\"fileSettingKey\":\"" + escapeJson(setting.getFileSettingKey() == null ? "jdk" : setting.getFileSettingKey()) + "\""
-                + ",\"openPathGuard\":" + setting.isOpenPathGuard()
-                + ",\"imageFilterEnabled\":" + setting.isImageFilterEnabled()
-                + ",\"filterChain\":" + (setting.getFilterChain() == null ? "null" : "\"" + escapeJson(setting.getFilterChain()) + "\"")
-                + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
-                + ",\"privateBuckets\":" + privateBucketsJson()
-                + ",\"oneTimeTtlMs\":" + oneTimeTtlMillis()
-                + "}";
+                  + ",\"storage\":\"" + escapeJson(storageType) + "\""
+                  + ",\"openPreview\":" + setting.isOpenPreview()
+                  + ",\"openDownload\":" + setting.isOpenDownload()
+                  + ",\"openRange\":" + setting.isOpenRange()
+                  + ",\"openWatermark\":" + setting.isOpenWatermark()
+                  + ",\"openWebjars\":" + setting.isOpenWebjars()
+                  + ",\"openRemoteFile\":" + setting.isOpenRemoteFile()
+                  + ",\"thirdUrlPreview\":\"" + escapeJson(setting.getThirdUrlPreview() == null ? "NONE" : setting.getThirdUrlPreview()) + "\""
+                  + ",\"watermark\":" + (wm == null ? "null" : "\"" + escapeJson(wm) + "\"")
+                  + ",\"layout\":" + setting.isLayout()
+                  + ",\"layoutType\":\"" + escapeJson(setting.getLayoutType() == null ? "" : setting.getLayoutType()) + "\""
+                  + ",\"showFormat\":" + setting.isShowFormat()
+                  + ",\"showSize\":" + setting.isShowSize()
+                  + ",\"showTime\":" + setting.isShowTime()
+                  + ",\"imageFilter\":\"" + escapeJson(setting.getImageFilter() == null ? "NONE" : setting.getImageFilter()) + "\""
+                  + ",\"fileSettingKey\":\"" + escapeJson(setting.getFileSettingKey() == null ? "jdk" : setting.getFileSettingKey()) + "\""
+                  + ",\"openPathGuard\":" + setting.isOpenPathGuard()
+                  + ",\"imageFilterEnabled\":" + setting.isImageFilterEnabled()
+                  + ",\"filterChain\":" + (setting.getFilterChain() == null ? "null" : "\"" + escapeJson(setting.getFilterChain()) + "\"")
+                  + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
+                  + ",\"privateBuckets\":" + privateBucketsJson()
+                  + ",\"oneTimeTtlMs\":" + oneTimeTtlMillis()
+                  + "}";
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
                 .setBody(json)
@@ -2062,11 +2177,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 私有桶集合的 JSON 数组文本。
-     *
-     * @return JSON 数组，如 ["local"]
-     */
+      /**
+       * 私有桶集合的 JSON 数组文本。
+       *
+       * @return JSON 数组，如 ["local"]
+       */
     private String privateBucketsJson() {
         java.util.Set<String> buckets = setting.getPrivateBuckets();
         if (buckets == null || buckets.isEmpty()) {
@@ -2084,54 +2199,54 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return sb.append(']').toString();
     }
 
-    /**
-     * 输出 SPI 真实支持的能力列表（供 Vue 管理配置动态渲染）。
-     *
-     * <p>用法：{@code GET /{bucket}?format=capabilities}，返回结构：</p>
-     * <pre>{@code
-     * {
-     *   "fileSettingCapabilities": [{"spi":"jdk","label":"JDK 内置","description":"…","capabilities":["size","format"]}],
-     *   "filterSettingCapabilities": [{"spi":"JDK","capabilities":["grayscale"]}],
-     *   "imageFilters": [{"name":"GRAYSCALE","label":"灰度","css":"grayscale(1)",
-     *                    "path":"grayscale=1","server":true}],
-     *   "urlPreviewers": [{"name":"NONE","label":"关闭","description":"不处理外部地址",
-     *                     "supported":false},
-     *                     {"name":"SERVER","label":"后台","description":"…","supported":true}]
-     * }
-     * }</pre>
-     *
-     * <p>四类能力均通过 SPI 实时发现，前端不硬编码：</p>
-     * <ul>
-     *   <li>{@code imageFilters[].path} 是图片路径参数，选中该滤镜后前端把它拼进
-     *       图片地址，图片渲染因此先走滤镜；</li>
-     *   <li>{@code imageFilters[].server} 为 true 时该滤镜由后台图片管线执行，前端
-     *       不再叠加 CSS 滤镜；</li>
-     *   <li>{@code urlPreviewers[].supported} 为 true 的实现才真正放行 {@code ?url=}。</li>
-     * </ul>
-     *
-     * @param response 响应
-     * @return 写入能力列表的结果
-     */
+      /**
+       * 输出 SPI 真实支持的能力列表（供 Vue 管理配置动态渲染）。
+       *
+       * <p>用法：{@code GET /{bucket}?format=capabilities}，返回结构：</p>
+       * <pre>{@code
+       * {
+       *   "fileSettingCapabilities": [{"spi":"jdk","label":"JDK 内置","description":"…","capabilities":["size","format"]}],
+       *   "filterSettingCapabilities": [{"spi":"JDK","capabilities":["grayscale"]}],
+       *   "imageFilters": [{"name":"GRAYSCALE","label":"灰度","css":"grayscale(1)",
+       *                    "path":"grayscale=1","server":true}],
+       *   "urlPreviewers": [{"name":"NONE","label":"关闭","description":"不处理外部地址",
+       *                     "supported":false},
+       *                     {"name":"SERVER","label":"后台","description":"…","supported":true}]
+       * }
+       * }</pre>
+       *
+       * <p>四类能力均通过 SPI 实时发现，前端不硬编码：</p>
+       * <ul>
+       *   <li>{@code imageFilters[].path} 是图片路径参数，选中该滤镜后前端把它拼进
+       *       图片地址，图片渲染因此先走滤镜；</li>
+       *   <li>{@code imageFilters[].server} 为 true 时该滤镜由后台图片管线执行，前端
+       *       不再叠加 CSS 滤镜；</li>
+       *   <li>{@code urlPreviewers[].supported} 为 true 的实现才真正放行 {@code ?url=}。</li>
+       * </ul>
+       *
+       * @param response 响应
+       * @return 写入能力列表的结果
+       */
     private CompletionStage<Void> writeCapabilities(ServerResponse response) {
         StringBuilder sb = new StringBuilder(1024);
         sb.append("{");
-        // 文件级 URL 参数能力（FileStorageFileSetting SPI）
+          // 文件级 URL 参数能力（FileStorageFileSetting SPI）
         sb.append("\"fileSettingCapabilities\":[");
         appendFileSettingGroups(sb);
         sb.append("]");
-        // 全局滤镜能力（FileStorageFilterSetting SPI）
+          // 全局滤镜能力（FileStorageFilterSetting SPI）
         sb.append(",\"filterSettingCapabilities\":[");
         appendFilterSettingGroups(sb);
         sb.append("]");
-        // 图片滤镜实现（ImageFilter SPI 及子 SPI，含 @SpiDescribe 中文标签）
+          // 图片滤镜实现（ImageFilter SPI 及子 SPI，含 @SpiDescribe 中文标签）
         sb.append(",\"imageFilters\":[");
         appendImageFilters(sb);
         sb.append("]");
-        // 三方 URL 预览能力实现（FileStorageUrlPreviewProvider SPI）
+          // 三方 URL 预览能力实现（FileStorageUrlPreviewProvider SPI）
         sb.append(",\"urlPreviewers\":[");
         appendUrlPreviewers(sb);
         sb.append("]");
-        // 远程文件读取器实现（FileStorageRemoteReader SPI）
+          // 远程文件读取器实现（FileStorageRemoteReader SPI）
         sb.append(",\"remoteReaders\":[");
         appendRemoteReaders(sb);
         sb.append("]");
@@ -2143,11 +2258,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 追加文件级 URL 参数能力分组（一个 SPI 实现对应一个分组）。
-     *
-     * @param sb JSON 构造器
-     */
+      /**
+       * 追加文件级 URL 参数能力分组（一个 SPI 实现对应一个分组）。
+       *
+       * @param sb JSON 构造器
+       */
     private void appendFileSettingGroups(StringBuilder sb) {
         try {
             ServiceProvider<FileStorageFileSetting> provider = ServiceProvider.of(FileStorageFileSetting.class);
@@ -2170,29 +2285,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 构造单个文件级能力分组。
-     *
-     * <p>先在独立构造器里拼完整段 JSON，成功后才交给外层——某个 SPI 实现的
-     * {@link FileStorageFileSetting#capabilities()} 抛错（例如本地原生库加载失败）时
-     * 只跳过该分组，不能把已经写出的 {@code "capabilities":[} 留在响应里。</p>
-     *
-     * @param provider SPI 提供者
-     * @param name     SPI 实现名（注册表内部通常为大写）
-     * @return 分组 JSON；实现不可用时返回 {@code null}
-     */
+      /**
+       * 构造单个文件级能力分组。
+       *
+       * <p>先在独立构造器里拼完整段 JSON，成功后才交给外层——某个 SPI 实现的
+       * {@link FileStorageFileSetting#capabilities()} 抛错（例如本地原生库加载失败）时
+       * 只跳过该分组，不能把已经写出的 {@code "capabilities":[} 留在响应里。</p>
+       *
+       * @param provider SPI 提供者
+       * @param name     SPI 实现名（注册表内部通常为大写）
+       * @return 分组 JSON；实现不可用时返回 {@code null}
+       */
     private String buildFileSettingGroup(ServiceProvider<FileStorageFileSetting> provider, String name) {
         try {
             FileStorageFileSetting instance = provider.getExtension(name);
             if (instance == null) {
                 return null;
             }
-            // 展示名/说明由 SPI 自己提供，前端下拉直接用；缺失时回退到 SPI 名
+              // 展示名/说明由 SPI 自己提供，前端下拉直接用；缺失时回退到 SPI 名
             String label = instance.getLabel() == null || instance.getLabel().isBlank()
                     ? name : instance.getLabel();
             String description = instance.getDescription() == null ? "" : instance.getDescription();
             List<String> capabilities = instance.capabilities();
-            // SPI 注册表内部以大写为键，对外统一用小写 SPI 名（与默认配置 fileSettingKey=jdk 一致）
+              // SPI 注册表内部以大写为键，对外统一用小写 SPI 名（与默认配置 fileSettingKey=jdk 一致）
             StringBuilder group = new StringBuilder(160);
             group.append("{\"spi\":\"").append(escapeJson(name.toLowerCase(Locale.ROOT))).append("\"")
                     .append(",\"label\":\"").append(escapeJson(label)).append("\"")
@@ -2207,11 +2322,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 收集全部 URL 参数能力实现名（{@code FileStorageFileSetting} SPI，用于配置写入校验）。
-     *
-     * @return 实现名集合（保持 SPI 发现顺序；SPI 缺失时至少包含内置 {@code jdk}）
-     */
+      /**
+       * 收集全部 URL 参数能力实现名（{@code FileStorageFileSetting} SPI，用于配置写入校验）。
+       *
+       * @return 实现名集合（保持 SPI 发现顺序；SPI 缺失时至少包含内置 {@code jdk}）
+       */
     private Set<String> resolveFileSettingNames() {
         Set<String> names = new LinkedHashSet<>();
         try {
@@ -2230,11 +2345,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return names;
     }
 
-    /**
-     * 追加全局滤镜能力分组（一个 SPI 实现对应一个分组）。
-     *
-     * @param sb JSON 构造器
-     */
+      /**
+       * 追加全局滤镜能力分组（一个 SPI 实现对应一个分组）。
+       *
+       * @param sb JSON 构造器
+       */
     private void appendFilterSettingGroups(StringBuilder sb) {
         ServiceProvider<FileStorageFilterSetting> provider;
         Set<String> names;
@@ -2271,14 +2386,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 追加图片滤镜实现列表。
-     *
-     * <p>具体滤镜分散注册在 {@link #IMAGE_FILTER_SPI_CLASSES} 列出的多级 SPI 接口下，
-     * 逐级 ServiceProvider 发现并按扩展名去重；标签优先取 {@link SpiDescribe} 的中文描述。</p>
-     *
-     * @param sb JSON 构造器
-     */
+      /**
+       * 追加图片滤镜实现列表。
+       *
+       * <p>具体滤镜分散注册在 {@link #IMAGE_FILTER_SPI_CLASSES} 列出的多级 SPI 接口下，
+       * 逐级 ServiceProvider 发现并按扩展名去重；标签优先取 {@link SpiDescribe} 的中文描述。</p>
+       *
+       * @param sb JSON 构造器
+       */
     private void appendImageFilters(StringBuilder sb) {
         Set<String> seenFilters = resolveImageFilterNames();
         Map<String, String> cssMap = resolveImageFilterCss();
@@ -2291,10 +2406,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             String upper = name.toUpperCase(Locale.ROOT);
             sb.append("{\"name\":\"").append(escapeJson(name)).append("\"");
             sb.append(",\"label\":\"").append(escapeJson(resolveFilterLabel(name))).append("\"");
-            // CSS 预览值同样来自后台 SPI（FileStorageImageFilterProvider#getCssFilter），未知则为空串
+              // CSS 预览值同样来自后台 SPI（FileStorageImageFilterProvider#getCssFilter），未知则为空串
             sb.append(",\"css\":\"").append(escapeJson(cssMap.getOrDefault(upper, ""))).append("\"");
-            // 图片路径参数与执行侧：path 拼进图片地址即「渲染先走滤镜」；
-            // server 为 true 时前台不再叠加 CSS，避免同一滤镜作用两次。
+              // 图片路径参数与执行侧：path 拼进图片地址即「渲染先走滤镜」；
+              // server 为 true 时前台不再叠加 CSS，避免同一滤镜作用两次。
             FileStorageImageFilterProvider instance = resolveImageFilterProvider(name);
             String path = instance == null || instance.getPathParam() == null ? "" : instance.getPathParam();
             boolean serverSide = instance != null && instance.isServerSide();
@@ -2303,18 +2418,18 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 向 JSON 构造器追加三方 URL 预览能力实现列表（{@code FileStorageUrlPreviewProvider} SPI）。
-     *
-     * <p>每项携带 {@code supported}：只有它为 true 的实现（内置为 {@code SERVER}，即后台拉取）
-     * 被选中时才真正放行 {@code ?url=}，前端据此提示「选择后台才支持」。</p>
-     *
-     * <p>按实现名去重：{@code META-INF/extensions} 可能出现重复注册（多个 jar 各带一份
-     * 登记），不去重时前端下拉会出现两条一模一样的「后台」，选中后写回配置仍只有一个值——
-     * 界面看起来像有两个能力，实际是同一个，属于纯误导。</p>
-     *
-     * @param sb JSON 构造器
-     */
+      /**
+       * 向 JSON 构造器追加三方 URL 预览能力实现列表（{@code FileStorageUrlPreviewProvider} SPI）。
+       *
+       * <p>每项携带 {@code supported}：只有它为 true 的实现（内置为 {@code SERVER}，即后台拉取）
+       * 被选中时才真正放行 {@code ?url=}，前端据此提示「选择后台才支持」。</p>
+       *
+       * <p>按实现名去重：{@code META-INF/extensions} 可能出现重复注册（多个 jar 各带一份
+       * 登记），不去重时前端下拉会出现两条一模一样的「后台」，选中后写回配置仍只有一个值——
+       * 界面看起来像有两个能力，实际是同一个，属于纯误导。</p>
+       *
+       * @param sb JSON 构造器
+       */
     private void appendUrlPreviewers(StringBuilder sb) {
         Set<String> seen = new LinkedHashSet<>();
         int index = 0;
@@ -2345,11 +2460,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 追加远程文件读取器实现列表（{@code FileStorageRemoteReader} SPI）。
-     *
-     * @param sb JSON 构造器
-     */
+      /**
+       * 追加远程文件读取器实现列表（{@code FileStorageRemoteReader} SPI）。
+       *
+       * @param sb JSON 构造器
+       */
     private void appendRemoteReaders(StringBuilder sb) {
         Set<String> seen = new LinkedHashSet<>();
         int index = 0;
@@ -2381,14 +2496,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 收集图片滤镜的前端 CSS 预览值（{@code FileStorageImageFilterProvider} SPI）。
-     *
-     * <p>名称统一大写以匹配 {@code imageFilters} 列表；同一名称多个实现时取首个。
-     * 前端据 {@code css} 在后台不处理该滤镜时做即时预览。</p>
-     *
-     * @return 滤镜名（大写）→ CSS 值；SPI 缺失时为空表
-     */
+      /**
+       * 收集图片滤镜的前端 CSS 预览值（{@code FileStorageImageFilterProvider} SPI）。
+       *
+       * <p>名称统一大写以匹配 {@code imageFilters} 列表；同一名称多个实现时取首个。
+       * 前端据 {@code css} 在后台不处理该滤镜时做即时预览。</p>
+       *
+       * @return 滤镜名（大写）→ CSS 值；SPI 缺失时为空表
+       */
     private Map<String, String> resolveImageFilterCss() {
         Map<String, String> cssMap = new LinkedHashMap<>();
         try {
@@ -2408,15 +2523,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return cssMap;
     }
 
-    /**
-     * 按滤镜名取图片滤镜 SPI 实现（名称匹配 {@link FileStorageImageFilterProvider#getName()}）。
-     *
-     * <p>SPI 的注册键与 {@code getName()} 并不相同（前者形如 {@code image-filter-grayscale}），
-     * 因此必须遍历实现逐个比对名称，不能直接 {@code getExtension(name)}。</p>
-     *
-     * @param name 滤镜名（大小写不敏感；{@code NONE} 或空值返回 null）
-     * @return 实现实例；找不到返回 null
-     */
+      /**
+       * 按滤镜名取图片滤镜 SPI 实现（名称匹配 {@link FileStorageImageFilterProvider#getName()}）。
+       *
+       * <p>SPI 的注册键与 {@code getName()} 并不相同（前者形如 {@code image-filter-grayscale}），
+       * 因此必须遍历实现逐个比对名称，不能直接 {@code getExtension(name)}。</p>
+       *
+       * @param name 滤镜名（大小写不敏感；{@code NONE} 或空值返回 null）
+       * @return 实现实例；找不到返回 null
+       */
     private FileStorageImageFilterProvider resolveImageFilterProvider(String name) {
         if (name == null || name.isBlank() || "NONE".equalsIgnoreCase(name.trim())) {
             return null;
@@ -2437,24 +2552,24 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return null;
     }
 
-    /**
-     * 取当前配置选中的第三方 URL 预览能力实现。
-     *
-     * <p>配置值写的是 SPI 实现的 {@link FileStorageUrlPreviewProvider#getName()}
-     * （如 {@code SERVER} / {@code NONE}），同样需要遍历实现比对名称。</p>
-     *
-     * @return 实现实例；未配置、值为 NONE 或找不到实现时返回 null
-     */
+      /**
+       * 取当前配置选中的第三方 URL 预览能力实现。
+       *
+       * <p>配置值写的是 SPI 实现的 {@link FileStorageUrlPreviewProvider#getName()}
+       * （如 {@code SERVER} / {@code NONE}），同样需要遍历实现比对名称。</p>
+       *
+       * @return 实现实例；未配置、值为 NONE 或找不到实现时返回 null
+       */
     private FileStorageUrlPreviewProvider resolveThirdUrlPreviewProvider() {
         return resolveUrlPreviewProvider(setting.getThirdUrlPreview());
     }
 
-    /**
-     * 按名称取第三方 URL 预览能力实现。
-     *
-     * @param name 实现名（大小写不敏感；{@code NONE} 或空值返回 null）
-     * @return 实现实例；找不到返回 null
-     */
+      /**
+       * 按名称取第三方 URL 预览能力实现。
+       *
+       * @param name 实现名（大小写不敏感；{@code NONE} 或空值返回 null）
+       * @return 实现实例；找不到返回 null
+       */
     private FileStorageUrlPreviewProvider resolveUrlPreviewProvider(String name) {
         if (name == null || name.isBlank() || "NONE".equalsIgnoreCase(name.trim())) {
             return null;
@@ -2475,11 +2590,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return null;
     }
 
-    /**
-     * 收集全部第三方 URL 预览能力实现名（用于配置写入校验）。
-     *
-     * @return 实现名集合（保持 SPI 发现顺序）
-     */
+      /**
+       * 收集全部第三方 URL 预览能力实现名（用于配置写入校验）。
+       *
+       * @return 实现名集合（保持 SPI 发现顺序）
+       */
     private Set<String> resolveUrlPreviewProviderNames() {
         Set<String> names = new LinkedHashSet<>();
         try {
@@ -2497,11 +2612,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return names;
     }
 
-    /**
-     * 收集全部图片滤镜 SPI 扩展名（跨 {@link #IMAGE_FILTER_SPI_CLASSES} 多级接口去重）。
-     *
-     * @return 扩展名集合（SPI 名称统一为大写，保持发现顺序）
-     */
+      /**
+       * 收集全部图片滤镜 SPI 扩展名（跨 {@link #IMAGE_FILTER_SPI_CLASSES} 多级接口去重）。
+       *
+       * @return 扩展名集合（SPI 名称统一为大写，保持发现顺序）
+       */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Set<String> resolveImageFilterNames() {
         Set<String> seenFilters = new LinkedHashSet<>();
@@ -2521,13 +2636,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return seenFilters;
     }
 
-    /**
-     * 解析滤镜中文标签：在多级 SPI 接口下查找该扩展名对应的实现实例，
-     * 优先读取实现类上的 {@link SpiDescribe} 注解，缺失时回退为扩展名。
-     *
-     * @param name 扩展名
-     * @return 中文标签或扩展名
-     */
+      /**
+       * 解析滤镜中文标签：在多级 SPI 接口下查找该扩展名对应的实现实例，
+       * 优先读取实现类上的 {@link SpiDescribe} 注解，缺失时回退为扩展名。
+       *
+       * @param name 扩展名
+       * @return 中文标签或扩展名
+       */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private String resolveFilterLabel(String name) {
         for (String spiClassName : IMAGE_FILTER_SPI_CLASSES) {
@@ -2552,12 +2667,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return name;
     }
 
-    /**
-     * 向 JSON 构造器追加字符串数组元素（不含外层方括号，null 安全）。
-     *
-     * @param sb JSON 构造器
-     * @param values 字符串列表
-     */
+      /**
+       * 向 JSON 构造器追加字符串数组元素（不含外层方括号，null 安全）。
+       *
+       * @param sb JSON 构造器
+       * @param values 字符串列表
+       */
     private void appendStringArray(StringBuilder sb, List<String> values) {
         if (values == null) {
             return;
@@ -2572,17 +2687,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 返回文件级公开配置 JSON（`?config=true`，与 preview/download 平级）。
-     *
-     * <p>包含文件名、大小、内容类型、预览类型、功能开关等，不读文件体。
-     * 用法：{@code GET /{bucket}/{键}?配置=true}</p>
-     * @param bucket bucket
-     * @param key 键
-     * @param result 结果
-     * @param response 响应
-     * @return 写入对象配置的结果
-     */
+      /**
+       * 返回文件级公开配置 JSON（`?config=true`，与 preview/download 平级）。
+       *
+       * <p>包含文件名、大小、内容类型、预览类型、功能开关等，不读文件体。
+       * 用法：{@code GET /{bucket}/{键}?配置=true}</p>
+       * @param bucket bucket
+       * @param key 键
+       * @param result 结果
+       * @param response 响应
+       * @return 写入对象配置的结果
+       */
     private CompletionStage<Void> writeObjectConfig(String bucket, String key, GetObjectResult result, ServerResponse response) {
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
         String filePath = key.contains("/") ? key.substring(0, key.lastIndexOf('/')) : "";
@@ -2608,19 +2723,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
 
         String json = "{\"bucket\":\"" + escapeJson(bucket) + "\""
-                + ",\"key\":\"" + escapeJson(key) + "\""
-                + ",\"fileName\":\"" + escapeJson(fileName) + "\""
-                + ",\"filePath\":\"" + escapeJson(filePath) + "\""
-                + ",\"extension\":\"" + escapeJson(ext) + "\""
-                + ",\"contentType\":\"" + escapeJson(resolveContentType(fileName)) + "\""
-                + ",\"kind\":\"" + kind + "\""
-                + ",\"size\":" + size
-                + ",\"lastModified\":" + lastModified
-                + ",\"openPreview\":" + setting.isOpenPreview()
-                + ",\"openDownload\":" + setting.isOpenDownload()
-                + ",\"openRange\":" + setting.isOpenRange()
-                + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
-                + "}";
+                  + ",\"key\":\"" + escapeJson(key) + "\""
+                  + ",\"fileName\":\"" + escapeJson(fileName) + "\""
+                  + ",\"filePath\":\"" + escapeJson(filePath) + "\""
+                  + ",\"extension\":\"" + escapeJson(ext) + "\""
+                  + ",\"contentType\":\"" + escapeJson(resolveContentType(fileName)) + "\""
+                  + ",\"kind\":\"" + kind + "\""
+                  + ",\"size\":" + size
+                  + ",\"lastModified\":" + lastModified
+                  + ",\"openPreview\":" + setting.isOpenPreview()
+                  + ",\"openDownload\":" + setting.isOpenDownload()
+                  + ",\"openRange\":" + setting.isOpenRange()
+                  + ",\"private\":" + (setting.getPrivateBuckets() != null && setting.getPrivateBuckets().contains(bucket))
+                  + "}";
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
                 .setBody(json)
@@ -2628,11 +2743,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 根据扩展名推断预览类型（与前端 种类的 保持一致）。
-     * @param ext ext
-     * @return resolvepreview种类的结果
-     */
+      /**
+       * 根据扩展名推断预览类型（与前端 种类的 保持一致）。
+       * @param ext ext
+       * @return resolvepreview种类的结果
+       */
     private static String resolvePreviewKind(String ext) {
         String e = ext == null ? "" : ext.toLowerCase();
         if (e.matches("png|jpg|jpeg|gif|svg|webp|bmp|ico")) {
@@ -2644,7 +2759,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if ("pdf".equals(e)) {
             return "pdf";
         }
-        if (e.matches("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|xmind|rtf|epub|mobi|azw|azw3|prc|xps|oxps|pages|numbers|key|djvu|djv")) {
+        if (e.matches
+            ("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|xmind|rtf|epub|mobi|azw|azw3|prc|xps|oxps|pages|numbers|key|djvu|djv")) {
             return "office";
         }
         if (e.matches("mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v|3gp")) {
@@ -2662,14 +2778,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return "unknown";
     }
 
-    /**
-     * 输出 JSON 格式的目录列表（供 Vue API 使用，不渲染 HTML 页面）。
-     * @param bucket bucket
-     * @param dir dir
-     * @param result 结果
-     * @param response 响应
-     * @return 写入json列表的结果
-     */
+      /**
+       * 输出 JSON 格式的目录列表（供 Vue API 使用，不渲染 HTML 页面）。
+       * @param bucket bucket
+       * @param dir dir
+       * @param result 结果
+       * @param response 响应
+       * @return 写入json列表的结果
+       */
     private CompletionStage<Void> writeJsonList(String bucket, String dir, ListObjectResult result, ServerResponse response) {
         StringBuilder json = new StringBuilder();
         json.append("{\"bucket\":\"").append(escapeJson(bucket)).append("\"")
@@ -2678,7 +2794,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         List<Metadata> items = result.getMetadata();
         json.append(items == null ? 0 : items.size())
                 .append(",\"total\":")
-                // 分页后 count 只是本页条数；total 是目录全部条目数（旧实现为空时回退本页条数）
+                  // 分页后 count 只是本页条数；total 是目录全部条目数（旧实现为空时回退本页条数）
                 .append(result.getTotal() > 0 ? result.getTotal() : (items == null ? 0 : items.size()));
         if (items != null && !items.isEmpty()) {
             json.append(",\"items\":[");
@@ -2703,34 +2819,34 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 写出压缩包条目清单 JSON（{@code ?format=archive}）。
-     *
-     * <p>与 {@code ?preview=true} 的服务端渲染是<b>并列</b>的两条通道而非替代关系：
-     * 服务端渲染把整个浏览器页面交给 iframe（独立文档，拿不到主应用的
-     * Element Plus / koi 主题变量）；本接口只回数据，由主应用内的 Vue 组件
-     * 渲染，才能真正跟随系统主题与暗色模式。</p>
-     *
-     * <p>结构：</p>
-     * <pre>{@code
-     * {
-     *   "name": "施工图3-2-804.zip",
-     *   "extension": "zip",
-     *   "archiveSize": 2867200,
-     *   "fileCount": 15, "dirCount": 2, "totalSize": 8912896,
-     *   "compressRate": 68,
-     *   "entries": [
-     *     {"path":"现场照片/IMG_1.jpg","name":"IMG_1.jpg","directory":false,
-     *      "size":243558,"compressedSize":201234,"modified":1753936260000}
-     *   ]
-     * }
-     * }</pre>
-     *
-     * @param fileName 压缩包文件名
-     * @param data     压缩包字节内容
-     * @param response 响应
-     * @return 异步阶段
-     */
+      /**
+       * 写出压缩包条目清单 JSON（{@code ?format=archive}）。
+       *
+       * <p>与 {@code ?preview=true} 的服务端渲染是<b>并列</b>的两条通道而非替代关系：
+       * 服务端渲染把整个浏览器页面交给 iframe（独立文档，拿不到主应用的
+       * Element Plus / koi 主题变量）；本接口只回数据，由主应用内的 Vue 组件
+       * 渲染，才能真正跟随系统主题与暗色模式。</p>
+       *
+       * <p>结构：</p>
+       * <pre>{@code
+       * {
+       *   "name": "施工图3-2-804.zip",
+       *   "extension": "zip",
+       *   "archiveSize": 2867200,
+       *   "fileCount": 15, "dirCount": 2, "totalSize": 8912896,
+       *   "compressRate": 68,
+       *   "entries": [
+       *     {"path":"现场照片/IMG_1.jpg","name":"IMG_1.jpg","directory":false,
+       *      "size":243558,"compressedSize":201234,"modified":1753936260000}
+       *   ]
+       * }
+       * }</pre>
+       *
+       * @param fileName 压缩包文件名
+       * @param data     压缩包字节内容
+       * @param response 响应
+       * @return 异步阶段
+       */
     private CompletionStage<Void> writeArchiveEntries(String fileName, byte[] data, ServerResponse response) {
         String ext = simpleExtOf(fileName);
         ArchivePreviewProvider.ArchiveScan scan;
@@ -2738,8 +2854,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             scan = ArchivePreviewProvider.scan(data, ext);
         } catch (Exception e) {
             log.warn("压缩包条目解析失败[{}]: {}", fileName, e.getMessage());
-            // 回可读 JSON 而不是纯文本 422：前端 isScanResponse 会据此给出
-            // 「这不是可识别的压缩包」错误态；纯文本错误页只能整体弹成加载失败。
+              // 回可读 JSON 而不是纯文本 422：前端 isScanResponse 会据此给出
+              // 「这不是可识别的压缩包」错误态；纯文本错误页只能整体弹成加载失败。
             String reason = e.getMessage() == null ? "压缩包解析失败" : e.getMessage();
             String err = "{\"error\":\"" + escapeJson(reason) + "\",\"entries\":[]}";
             response.setStatus(422)
@@ -2752,8 +2868,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 
         long archiveSize = data.length;
         long totalSize = scan.totalSize();
-        // 压缩率 = 压缩后体积 / 解压后总体积（%），是压缩包语境下的通行口径。
-        // totalSize 为 0（空包）时无法计算，如实回 0，不做除零兜底成 100%。
+          // 压缩率 = 压缩后体积 / 解压后总体积（%），是压缩包语境下的通行口径。
+          // totalSize 为 0（空包）时无法计算，如实回 0，不做除零兜底成 100%。
         int compressRate = totalSize > 0 ? (int) Math.round(archiveSize * 100.0d / totalSize) : 0;
 
         StringBuilder json = new StringBuilder(1024 + scan.entries().size() * 160);
@@ -2775,7 +2891,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                     .append(",\"name\":\"").append(escapeJson(item.name())).append("\"")
                     .append(",\"directory\":").append(item.directory())
                     .append(",\"size\":").append(Math.max(0L, item.size()))
-                    // compressedSize 为 -1 表示归档未记录该值；原样透出由前端显示为 "-"
+                      // compressedSize 为 -1 表示归档未记录该值；原样透出由前端显示为 "-"
                     .append(",\"compressedSize\":").append(item.compressedSize())
                     .append(",\"modified\":").append(item.modified())
                     .append("}");
@@ -2789,52 +2905,52 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 写出 CAD 图纸信息 JSON（{@code ?format=cad}）。
-     *
-     * <p>与 {@code ?preview=true} 的服务端渲染并列的第二条通道：后者把整张页面交给
-     * iframe（独立文档，读不到主应用的 Element Plus / koi 主题变量）；本接口只回
-     * 结构化数据 + 内联 SVG，由主应用内的 Vue 面板渲染，从而跟随系统主题与暗色模式。</p>
-     *
-     * <p>DXF 返回完整图形（纯 Java 解析转 SVG）；DWG 只返回头部信息——其图元几何
-     * 无法在 Java 内解析，这不是实现取舍而是格式的硬约束（Autodesk 私有二进制格式）。
-     * 两条路径结构不同，故用 {@code renderable} 明确告知前端能否出图。</p>
-     *
-     * <p>结构：</p>
-     * <pre>{@code
-     * {
-     *   "name": "施工图.dxf", "extension": "dxf",
-     *   "size": 204800, "renderable": true,
-     *   "svg": "<svg .../>",          // 仅 renderable=true 时有值
-     *   "acadVersion": "AC1027", "units": "米",
-     *   "entityCount": 5, "layerCount": 4, "layers": {"0": 2, "WALL": 1},
-     *   "width": 100, "height": 50,
-     *   "unsupported": ["INSERT"],   // 跳过的实体类型，如实告知用户
-     *   "versionLabel": "AutoCAD 2013-2017", "versionCode": "AC1027"
-     * }
-     * }</pre>
-     *
-     * <p>带 {@code inner} 时（{@code ?format=cad&inner=包内路径}）先从压缩包中取出该条目
-     * 再解析，{@code fileName} 会被替换为条目路径；条目取不到时返回 404 + 可读 JSON，
-     * 而不是让整个预览面板炸成白屏。</p>
-     *
-     * @param fileName  文件名（传入 inner 时为压缩包名）
-     * @param data      文件字节（传入 inner 时为压缩包字节）
-     * @param innerPath 包内条目路径，null 或空表示不按下钻处理
-     * @param response  响应
-     * @return 异步阶段
-     */
+      /**
+       * 写出 CAD 图纸信息 JSON（{@code ?format=cad}）。
+       *
+       * <p>与 {@code ?preview=true} 的服务端渲染并列的第二条通道：后者把整张页面交给
+       * iframe（独立文档，读不到主应用的 Element Plus / koi 主题变量）；本接口只回
+       * 结构化数据 + 内联 SVG，由主应用内的 Vue 面板渲染，从而跟随系统主题与暗色模式。</p>
+       *
+       * <p>DXF 返回完整图形（纯 Java 解析转 SVG）；DWG 只返回头部信息——其图元几何
+       * 无法在 Java 内解析，这不是实现取舍而是格式的硬约束（Autodesk 私有二进制格式）。
+       * 两条路径结构不同，故用 {@code renderable} 明确告知前端能否出图。</p>
+       *
+       * <p>结构：</p>
+       * <pre>{@code
+       * {
+       *   "name": "施工图.dxf", "extension": "dxf",
+       *   "size": 204800, "renderable": true,
+       *   "svg": "<svg .../>",          // 仅 renderable=true 时有值
+       *   "acadVersion": "AC1027", "units": "米",
+       *   "entityCount": 5, "layerCount": 4, "layers": {"0": 2, "WALL": 1},
+       *   "width": 100, "height": 50,
+       *   "unsupported": ["INSERT"],   // 跳过的实体类型，如实告知用户
+       *   "versionLabel": "AutoCAD 2013-2017", "versionCode": "AC1027"
+       * }
+       * }</pre>
+       *
+       * <p>带 {@code inner} 时（{@code ?format=cad&inner=包内路径}）先从压缩包中取出该条目
+       * 再解析，{@code fileName} 会被替换为条目路径；条目取不到时返回 404 + 可读 JSON，
+       * 而不是让整个预览面板炸成白屏。</p>
+       *
+       * @param fileName  文件名（传入 inner 时为压缩包名）
+       * @param data      文件字节（传入 inner 时为压缩包字节）
+       * @param innerPath 包内条目路径，null 或空表示不按下钻处理
+       * @param response  响应
+       * @return 异步阶段
+       */
     private CompletionStage<Void> writeCadInfo(String fileName, byte[] data, String innerPath,
                                                ServerResponse response) {
-        // 压缩包下钻：?format=cad&inner=包内路径 时解析的是「条目」而不是压缩包本体。
-        // 不支持 inner 的话包内 DXF 只能落回 ?preview=true 的 SPI 通道并被三维提供者抢走，
-        // 同一张图在顶层和包内会呈现成两套完全不同的界面。
+          // 压缩包下钻：?format=cad&inner=包内路径 时解析的是「条目」而不是压缩包本体。
+          // 不支持 inner 的话包内 DXF 只能落回 ?preview=true 的 SPI 通道并被三维提供者抢走，
+          // 同一张图在顶层和包内会呈现成两套完全不同的界面。
         if (innerPath != null && !innerPath.isEmpty()) {
             byte[] entryBytes = extractArchiveEntry(data, fileName, innerPath);
             if (entryBytes == null) {
                 String err = "{\"name\":\"" + escapeJson(innerPath)
-                        + "\",\"renderable\":false,\"error\":\"压缩包内条目不存在："
-                        + escapeJson(innerPath) + "\"}";
+                          + "\",\"renderable\":false,\"error\":\"压缩包内条目不存在："
+                          + escapeJson(innerPath) + "\"}";
                 response.setStatus(404)
                         .setHeader("X-FileStorage-Preview", "cad-json")
                         .setContentType("application/json;charset=UTF-8")
@@ -2842,7 +2958,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
-            // 条目名用包内路径，面板标题能看清它在压缩包里的位置
+              // 条目名用包内路径，面板标题能看清它在压缩包里的位置
             return writeCadInfo(innerPath, entryBytes, null, response);
         }
 
@@ -2875,19 +2991,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 追加 DXF 字段（图形 + 统计）
-     *
-     * @param json  JSON 构造器
-     * @param data  DXF 字节
-     * @throws IOException 解析失败
-     */
+      /**
+       * 追加 DXF 字段（图形 + 统计）
+       *
+       * @param json  JSON 构造器
+       * @param data  DXF 字节
+       * @throws IOException 解析失败
+       */
     private void appendDxfJson(StringBuilder json, byte[] data) throws IOException {
         DxfDocument doc = DxfParser.create().parse(data);
         String svg = DxfSvgRenderer.create().render(doc, 1600);
         json.append(",\"renderable\":true")
-                // SVG 以 JSON 字符串内联：省一次请求，且描边走 currentColor，
-                // 前端只需把 SVG 塞进容器即可继承主题色（暗色模式零成本适配）
+                  // SVG 以 JSON 字符串内联：省一次请求，且描边走 currentColor，
+                  // 前端只需把 SVG 塞进容器即可继承主题色（暗色模式零成本适配）
                 .append(",\"svg\":\"").append(escapeJson(svg)).append("\"")
                 .append(",\"acadVersion\":\"").append(escapeJson(doc.header().acadVersion())).append("\"")
                 .append(",\"units\":\"").append(escapeJson(doc.header().unitsLabel())).append("\"")
@@ -2916,21 +3032,21 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         json.append("]");
     }
 
-    /**
-     * 追加 DWG 字段（仅头部信息，不含图形）
-     *
-     * @param json JSON 构造器
-     * @param data DWG 字节
-     * @throws IOException 解析失败
-     */
+      /**
+       * 追加 DWG 字段（仅头部信息，不含图形）
+       *
+       * @param json JSON 构造器
+       * @param data DWG 字节
+       * @throws IOException 解析失败
+       */
     private void appendDwgJson(StringBuilder json, byte[] data) throws IOException {
         DwgHeaderInfo info = DwgHeaderParser.create().parse(data);
         json.append(",\"renderable\":false")
-                // 版本代码为空 = 头部连 AC10xx / MC0.0 都对不上，说明这**根本不是 DWG**。
-                // 实测桶里那个 .dwg 与那个坏 .docx 的前 6 字节完全相同（402128152a2d…），
-                // 是同一批上传损坏，而不是「DWG 版本不认识」。
-                // 前端据此区分「文件损坏，请重新上传」与「真 DWG 但几何需外部转换器」——
-                // 混为一谈会让用户以为是格式兼容性问题，白折腾。
+                  // 版本代码为空 = 头部连 AC10xx / MC0.0 都对不上，说明这**根本不是 DWG**。
+                  // 实测桶里那个 .dwg 与那个坏 .docx 的前 6 字节完全相同（402128152a2d…），
+                  // 是同一批上传损坏，而不是「DWG 版本不认识」。
+                  // 前端据此区分「文件损坏，请重新上传」与「真 DWG 但几何需外部转换器」——
+                  // 混为一谈会让用户以为是格式兼容性问题，白折腾。
                 .append(",\"notDwg\":").append(info.versionCode().isEmpty())
                 .append(",\"versionLabel\":\"").append(escapeJson(info.versionLabel())).append("\"")
                 .append(",\"versionCode\":\"").append(escapeJson(info.versionCode())).append("\"")
@@ -2939,15 +3055,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .append(",\"unsupported\":[]");
     }
 
-    /**
-     * 格式化浮点数：NaN / 无限值归零，保留最多 4 位小数。
-     *
-     * <p>图形范围退化为一点（无图元）时会算出 NaN，直接写进 JSON 会让前端
-     * JSON.parse 失败，因此这里统一兜底为 0。</p>
-     *
-     * @param v 数值
-     * @return 可安全写入 JSON 的数值文本
-     */
+      /**
+       * 格式化浮点数：NaN / 无限值归零，保留最多 4 位小数。
+       *
+       * <p>图形范围退化为一点（无图元）时会算出 NaN，直接写进 JSON 会让前端
+       * JSON.parse 失败，因此这里统一兜底为 0。</p>
+       *
+       * @param v 数值
+       * @return 可安全写入 JSON 的数值文本
+       */
     private String fmtDouble(double v) {
         if (Double.isNaN(v) || Double.isInfinite(v)) {
             return "0";
@@ -2959,22 +3075,22 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return s.endsWith(".") ? s.substring(0, s.length() - 1) : s;
     }
 
-    /**
-     * 渲染文件列表页面。
-     *
-     * <p>按 {@link FileStorageSetting#getLayoutType()} 分流：</p>
-     * <ul>
-     *   <li>SYSTEM — 返回 Vue 独立构建壳页面（classpath {@code static/index.html}），
-     *       交互由前端通过 REST API 完成（{@code ?format=json} / {@code ?config}）</li>
-     *   <li>SIMPLE — 服务端渲染的简单文件列表树</li>
-     * </ul>
-     *
-     * @param bucket 存储名
-     * @param dir    当前目录路径
-     * @param items  列表项
-     * @param response 响应
-     * @return 异步阶段
-     */
+      /**
+       * 渲染文件列表页面。
+       *
+       * <p>按 {@link FileStorageSetting#getLayoutType()} 分流：</p>
+       * <ul>
+       *   <li>SYSTEM — 返回 Vue 独立构建壳页面（classpath {@code static/index.html}），
+       *       交互由前端通过 REST API 完成（{@code ?format=json} / {@code ?config}）</li>
+       *   <li>SIMPLE — 服务端渲染的简单文件列表树</li>
+       * </ul>
+       *
+       * @param bucket 存储名
+       * @param dir    当前目录路径
+       * @param items  列表项
+       * @param response 响应
+       * @return 异步阶段
+       */
     private CompletionStage<Void> renderLayoutPage(String bucket, String dir, List<Metadata> items, ServerResponse response) {
         if (resolveLayoutType() == FileStorageSetting.LayoutType.SYSTEM) {
             String html = readVueShell();
@@ -2987,7 +3103,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                     .end();
             return CompletableFuture.completedFuture(null);
         }
- // 简单：服务端渲染简单列表
+   // 简单：服务端渲染简单列表
         String html = buildSimpleLayoutHtml(bucket, dir, items);
         response.setStatus(200)
                 .setContentType("text/html;charset=UTF-8")
@@ -2996,17 +3112,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 读取 Vue 前端壳页面（类路径 静态/索引.HTML），带懒缓存。
-     *
-     * @return HTML 内容，缺失返回 空
-     */
+      /**
+       * 读取 Vue 前端壳页面（类路径 静态/索引.HTML），带懒缓存。
+       *
+       * @return HTML 内容，缺失返回 空
+       */
     private volatile String vueShellCache;
 
-    /**
-     * 读取vueshell。
-     * @return 读取vueshell的结果
-     */
+      /**
+       * 读取vueshell。
+       * @return 读取vueshell的结果
+       */
     private String readVueShell() {
         String cached = vueShellCache;
         if (cached != null) {
@@ -3027,10 +3143,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    /**
-     * 解析配置的布局类型，非法值回退为 简单。
-     * @return resolvelayout类型的结果
-     */
+      /**
+       * 解析配置的布局类型，非法值回退为 简单。
+       * @return resolvelayout类型的结果
+       */
     private FileStorageSetting.LayoutType resolveLayoutType() {
         try {
             return FileStorageSetting.LayoutType.valueOf(
@@ -3040,15 +3156,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
     }
 
-    // ==================== 布局渲染 ====================
+      // ==================== 布局渲染 ====================
 
-    /**
-     * 构建简单layouthtml。
-     * @param bucket bucket
-     * @param dir dir
-     * @param items items
-     * @return 构建简单layouthtml的结果
-     */
+      /**
+       * 构建简单layouthtml。
+       * @param bucket bucket
+       * @param dir dir
+       * @param items items
+       * @return 构建简单layouthtml的结果
+       */
     private String buildSimpleLayoutHtml(String bucket, String dir, List<Metadata> items) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">");
@@ -3083,19 +3199,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         return sb.toString();
     }
 
-    /**
-     * 系统 布局：类 macOS 查找 的文件管理器。
-     *
-     * <p>顶部半透明毛玻璃工具栏（交通灯 + 标题 + 列表/大图视图切换 + 搜索 + 配置入口）、
-     * 左侧边栏（收藏 + 存储桶）、路径栏面包屑、列表/大图双视图、
-     * 行右键菜单（预览/下载/一次性链接/复制/删除）与预览对话框。</p>
-     *
-     * <p>使用 text block 模板 + 占位符替换渲染，避免字符串拼接。</p>
-     * @param bucket bucket
-     * @param dir dir
-     * @param items items
-     * @return 构建系统layouthtml的结果
-     */
+      /**
+       * 系统 布局：类 macOS 查找 的文件管理器。
+       *
+       * <p>顶部半透明毛玻璃工具栏（交通灯 + 标题 + 列表/大图视图切换 + 搜索 + 配置入口）、
+       * 左侧边栏（收藏 + 存储桶）、路径栏面包屑、列表/大图双视图、
+       * 行右键菜单（预览/下载/一次性链接/复制/删除）与预览对话框。</p>
+       *
+       * <p>使用 text block 模板 + 占位符替换渲染，避免字符串拼接。</p>
+       * @param bucket bucket
+       * @param dir dir
+       * @param items items
+       * @return 构建系统layouthtml的结果
+       */
     private String buildSystemLayoutHtml(String bucket, String dir, List<Metadata> items) {
         String pathbar = buildFinderPathbar(bucket, dir);
         String sidebar = buildFinderSidebar(bucket);
@@ -3111,9 +3227,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .replace("{{SCRIPT}}", script);
     }
 
-    /**
-     * 查找 布局模板（文本 block）。
-     */
+      /**
+       * 查找 布局模板（文本 block）。
+       */
     private static final String SYSTEM_LAYOUT_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -3125,36 +3241,44 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
 :root{--accent:#0a84ff;--text:#1d1d1f;--muted:#86868b;--line:rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;background:#f5f5f7;color:var(--text);display:flex;flex-direction:column;overflow:hidden}
-.toolbar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(250,250,252,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
+                body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;background:#f5f5f7;color
+                    :var(--text);display:flex;flex-direction:column;overflow:hidden}
+                .toolbar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(250,250,252,.72)
+                    ;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var
+                    (--line)}
 .tf-lights{display:flex;gap:8px}
 .tf-lights i{width:12px;height:12px;border-radius:50%;display:block}
 .tf-lights i:nth-child(1){background:#ff5f57}.tf-lights i:nth-child(2){background:#febc2e}
 .tf-lights i:nth-child(3){background:#28c840}
 .tf-title{font-size:13px;font-weight:600;white-space:nowrap}
-.tf-btn{display:flex;gap:4px;align-items:center;border:none;background:transparent;padding:5px;border-radius:6px;cursor:pointer;color:var(--muted)}
+                .tf-btn{display:flex;gap:4px;align-items:center;border:none;background:transparent;padding:5px;border-radius:6px;cursor
+                    :pointer;color:var(--muted)}
 .tf-btn:hover{background:rgba(0,0,0,.07)}
 .tf-btn.active{color:var(--accent);background:rgba(10,132,255,.12)}
 .tf-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tf-search{margin-left:auto;display:flex;align-items:center;gap:8px}
-.tf-search input{border:none;outline:none;background:rgba(120,120,128,.12);border-radius:8px;padding:5px 12px;font-size:12px;width:160px;font-family:inherit}
+                .tf-search input{border:none;outline:none;background:rgba(120,120,128,.12);border-radius:8px;padding:5px 12px;font-size
+                    :12px;width:160px;font-family:inherit}
 .tf-search input:focus{background:#fff;box-shadow:0 0 0 3px rgba(10,132,255,.25)}
 .tf-search a{color:var(--muted);text-decoration:none;font-size:16px}
 .tf-search a:hover{color:var(--accent)}
 .body{flex:1;display:flex;overflow:hidden}
 .sidebar{width:180px;flex-shrink:0;padding:12px 8px;overflow-y:auto;background:rgba(255,255,255,.45);border-right:1px solid var(--line)}
 .side-group{font-size:11px;color:var(--muted);padding:10px 10px 4px;letter-spacing:.02em}
-.side-item{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--text);text-decoration:none;margin-bottom:1px}
+                .side-item{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:6px;font-size:13px;cursor:pointer
+                    ;color:var(--text);text-decoration:none;margin-bottom:1px}
 .side-item:hover{background:rgba(0,0,0,.05)}
 .side-item.active{background:rgba(10,132,255,.14);color:#0040dd;font-weight:500}
 .side-item svg{flex-shrink:0}
 .content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
-.pathbar{flex-shrink:0;display:flex;align-items:center;gap:4px;padding:8px 16px;background:rgba(250,250,252,.6);border-bottom:1px solid var(--line);font-size:12px}
+                .pathbar{flex-shrink:0;display:flex;align-items:center;gap:4px;padding:8px 16px;background:rgba(250,250,252,.6);border
+                     -bottom:1px solid var(--line);font-size:12px}
 .pathbar a{color:var(--accent);text-decoration:none;padding:2px 6px;border-radius:5px}
 .pathbar a:hover{background:rgba(10,132,255,.1)}
 .pathbar .sep{color:#c7c7cc}
 .list{flex:1;overflow-y:auto;padding:6px 10px 18px}
-.lrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;text-decoration:none;color:var(--text);font-size:13px;min-height:38px}
+                .lrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;text-decoration:none
+                    ;color:var(--text);font-size:13px;min-height:38px}
 .lrow:hover{background:rgba(0,0,0,.045)}
 .lrow.selected{background:rgba(10,132,255,.16)}
 .lrow .l-ico{width:26px;text-align:center;flex-shrink:0;font-size:17px}
@@ -3169,19 +3293,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
 .grid .lrow:hover{background:rgba(0,0,0,.05)}
 .grid .lrow.selected{background:rgba(10,132,255,.18);outline:1.5px solid var(--accent)}
 .grid .lrow .l-ico{width:auto;font-size:40px;line-height:1}
-.grid .lrow .l-name{flex:none;width:100%;font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+                .grid .lrow .l-name{flex:none;width:100%;font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit
+                     -box-orient:vertical;overflow:hidden}
 .grid .lrow .l-size,.grid .lrow .l-time{width:auto;text-align:center;font-size:11px}
 .grid .lrow .l-time{display:none}
-.ctx{position:fixed;z-index:999;min-width:160px;background:rgba(250,250,252,.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);border-radius:10px;padding:5px;box-shadow:0 8px 30px rgba(0,0,0,.18);display:none;font-size:13px}
+                .ctx{position:fixed;z-index:999;min-width:160px;background:rgba(250,250,252,.92);backdrop-filter:saturate(180%) blur
+                    (20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border:1px solid var(--line);border-radius:10px;padding:5px;box
+                     -shadow:0 8px 30px rgba(0,0,0,.18);display:none;font-size:13px}
 .ctx.show{display:block}
 .ctx-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer}
 .ctx-item:hover{background:rgba(10,132,255,.12)}
 .ctx-item.danger{color:#e02424}.ctx-item.danger:hover{background:rgba(224,36,36,.1)}
 .ctx-sep{height:1px;background:var(--line);margin:4px 6px}
-.pv-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+                .pv-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content
+                    :center;backdrop-filter:blur(4px)}
 .pv-mask.show{display:flex}
-.pv-dialog{background:#fff;border-radius:12px;max-width:88vw;max-height:88vh;width:900px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.pv-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-size:14px}
+                .pv-dialog{background:#fff;border-radius:12px;max-width:88vw;max-height:88vh;width:900px;display:flex;flex-direction
+                    :column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+                .pv-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom
+                    :1px solid var(--line);font-size:14px}
 .pv-head b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px}
 .pv-head button{border:none;background:transparent;font-size:15px;cursor:pointer;color:#86868b;padding:4px 8px;border-radius:6px}
 .pv-head button:hover{background:rgba(0,0,0,.06)}
@@ -3189,7 +3319,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
 .pv-body iframe{width:100%;height:72vh;border:none;background:#fff}
 .pv-body img{max-width:100%;display:block;margin:0 auto}
 .pv-body video{max-width:100%}.pv-body audio{width:100%;padding:20px}
-.pv-body pre{padding:16px;font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;word-break:break-all;color:#24292f;background:#fff;margin:0}
+                .pv-body pre{padding:16px;font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;word-break:break-all;color
+                    :#24292f;background:#fff;margin:0}
 .ot-row{display:flex;gap:8px;padding:8px 4px}
 .ot-row input{flex:1;padding:.55rem .75rem;border:1px solid #d0d7de;border-radius:8px;font-size:13px;background:#fff;color:#24292f}
 .ot-row button{background:#0a84ff;color:#fff;border:none;border-radius:8px;padding:0 16px;cursor:pointer;font-size:13px}
@@ -3200,8 +3331,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
 <div class="toolbar">
   <div class="tf-lights"><i></i><i></i><i></i></div>
   <div class="tf-title">{{BUCKET}}</div>
-  <button class="tf-btn active" id="viewList" title="标准列表"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg></button>
-  <button class="tf-btn" id="viewGrid" title="大图模式"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+  <button class="tf-btn active" id="viewList" title="标准列表"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/>
+      <rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg></button>
+  <button class="tf-btn" id="viewGrid" title="大图模式"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x
+       ="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height
+       ="7" rx="1.5"/></svg></button>
   <div class="tf-search">
     <input type="search" id="search" placeholder="搜索当前目录">
     <a href="/config" title="系统配置">⚙️</a>
@@ -3235,12 +3369,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
 </html>
 """;
 
-    /**
-     * 构建路径栏（面包屑）。
-     * @param bucket bucket
-     * @param dir dir
-     * @return 构建查找pathbar的结果
-     */
+      /**
+       * 构建路径栏（面包屑）。
+       * @param bucket bucket
+       * @param dir dir
+       * @return 构建查找pathbar的结果
+       */
     private String buildFinderPathbar(String bucket, String dir) {
         StringBuilder sb = new StringBuilder();
         sb.append("<a href=\"/").append(encodePathSeg(bucket)).append("\">").append(escapeAttr(bucket)).append("</a>");
@@ -3259,11 +3393,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
         return sb.toString();
     }
 
-    /**
-     * 构建左侧边栏：收藏 + 存储桶。
-     * @param bucket bucket
-     * @return 构建查找sidebar的结果
-     */
+      /**
+       * 构建左侧边栏：收藏 + 存储桶。
+       * @param bucket bucket
+       * @return 构建查找sidebar的结果
+       */
     private String buildFinderSidebar(String bucket) {
         StringBuilder sb = new StringBuilder();
         sb.append("<div class=\"side-group\">\u6536\u85CF</div>");
@@ -3273,13 +3407,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
         return sb.toString();
     }
 
-    /**
-     * 构建文件列表行（标准列表 / 大图网格共用）。
-     * @param bucket bucket
-     * @param dir dir
-     * @param items items
-     * @return 构建查找rows的结果
-     */
+      /**
+       * 构建文件列表行（标准列表 / 大图网格共用）。
+       * @param bucket bucket
+       * @param dir dir
+       * @param items items
+       * @return 构建查找rows的结果
+       */
     private String buildFinderRows(String bucket, String dir, List<Metadata> items) {
         StringBuilder sb = new StringBuilder();
         if (dir != null && !dir.isEmpty()) {
@@ -3324,11 +3458,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Robot
         return sb.toString();
     }
 
-    /**
-     * Finder 前端脚本：视图切换、右键菜单（预览对话框/下载/一次性链接/复制/删除）、搜索过滤。
-     * @param bucket bucket
-     * @return 构建查找script的结果
-     */
+      /**
+       * Finder 前端脚本：视图切换、右键菜单（预览对话框/下载/一次性链接/复制/删除）、搜索过滤。
+       * @param bucket bucket
+       * @return 构建查找script的结果
+       */
     private String buildFinderScript(String bucket) {
         return """
 (function(){
@@ -3414,7 +3548,8 @@ if(kind==='image'){body.innerHTML='<img src="'+href+'">';}
 else if(kind==='video'){body.innerHTML='<video src="'+href+'" controls autoplay></video>';}
 else if(kind==='audio'){body.innerHTML='<audio src="'+href+'" controls autoplay></audio>';}
 else if(kind==='text'){
-  fetch(href).then(function(r){return r.text()}).then(function(t){body.innerHTML='<pre>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</pre>';}).catch(function(){body.innerHTML='<pre>加载失败</pre>';});
+  fetch(href).then(function(r){return r.text()}).then(function(t){body.innerHTML='<pre>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')+'</pre>';}).catch(function(){body.innerHTML='<pre>加载失败</pre>';});
 }else{
   var sep=href.indexOf('?')<0?'?':'&';
   body.innerHTML='<iframe src="'+href+sep+'preview=true"></iframe>';
@@ -3448,10 +3583,12 @@ else if(act==='preview'){openPreview(href,name);}
 else if(act==='download'){var ds=href.indexOf('?')<0?'?':'&';window.open(href+ds+'download=true','_blank');}
 else if(act==='onetime'){openOnetime(r);}
 else if(act==='copy'){try{navigator.clipboard.writeText(location.origin+href).then(function(){},function(){});}catch(err){}}
-else if(act==='delete'){if(!confirm('确认删除 '+name+' ?'))return;fetch(href,{method:'DELETE'}).then(function(res){if(res.ok){location.reload();}else{alert('删除失败 HTTP '+res.status);}});}});
+                else if(act==='delete'){if(!confirm('确认删除 '+name+' ?'))return;fetch(href,{method:'DELETE'}).then(function(res){if(res.ok
+                    ){location.reload();}else{alert('删除失败 HTTP '+res.status);}});}});
 var viewMode=localStorage.getItem('filestorage.view')||'list';
 var btnList=document.getElementById('viewList'),btnGrid=document.getElementById('viewGrid');
-function applyView(m){viewMode=m;localStorage.setItem('filestorage.view',m);list.classList.toggle('grid',m==='grid');if(btnList&&btnGrid){btnList.classList.toggle('active',m!=='grid');btnGrid.classList.toggle('active',m==='grid');}}
+                function applyView(m){viewMode=m;localStorage.setItem('filestorage.view',m);list.classList.toggle('grid',m==='grid');if
+                    (btnList&&btnGrid){btnList.classList.toggle('active',m!=='grid');btnGrid.classList.toggle('active',m==='grid');}}
 if(btnList) {
     btnList.addEventListener('click',function(){applyView('list')});
 }
@@ -3460,32 +3597,36 @@ if(btnGrid) {
 }
 applyView(viewMode);
 var rows=document.querySelectorAll('.lrow');
-rows.forEach(function(r){r.addEventListener('click',function(){rows.forEach(function(x){x.classList.remove('selected')});r.classList.add('selected');});});
+                rows.forEach(function(r){r.addEventListener('click',function(){rows.forEach(function(x){x.classList.remove('selected')})
+                    ;r.classList.add('selected');});});
 var search=document.getElementById('search');
-if(search){search.addEventListener('input',function(){var q=search.value.toLowerCase();rows.forEach(function(r){if(!r.dataset||r.dataset.nav==='parent')return;var n=(r.dataset.name||'').toLowerCase();r.style.display=n.indexOf(q)>=0?'':'none';});});}
+                if(search){search.addEventListener('input',function(){var q=search.value.toLowerCase();rows.forEach(function(r){if(!r
+                    .dataset||r.dataset.nav==='parent')return;var n=(r.dataset.name||'').toLowerCase();r.style.display=n.indexOf(q)>=0?''
+                    :'none';});});}
 })();
 """;
     }
 
-    /**
-     * macOS 风格蓝色文件夹 SVG（内联，避免外部依赖）。
-     *
-     * @return mac 文件夹 SVG 字符串
-     */
+      /**
+       * macOS 风格蓝色文件夹 SVG（内联，避免外部依赖）。
+       *
+       * @return mac 文件夹 SVG 字符串
+       */
     private String macFolderSvg() {
         return "<svg width=\"16\" height=\"16\" viewBox=\"0 0 32 32\" fill=\"none\">"
-                + "<path d=\"M4 8.5C4 6.6 5.6 5 7.5 5H13l2.5 2.5H24.5C26.4 7.5 28 9.1 28 11v12.5c0 1.9-1.6 3.5-3.5 3.5h-17A3.5 3.5 0 0 1 4 23.5V8.5Z\" fill=\"#7FB3F7\"/>"
-                + "<path d=\"M4 13h24v10.5c0 1.9-1.6 3.5-3.5 3.5h-17A3.5 3.5 0 0 1 4 23.5V13Z\" fill=\"#4A90E2\"/>"
-                + "</svg>";
+                  + "<path d=\"M4 8.5C4 6.6 5.6 5 7.5 5H13l2.5 2.5H24.5C26.4 7.5 28 9.1 28 11v12.5c0 1.9-1.6 3.5-3.5 3.5h-17A3.5 3"
+                  + ".5 0 0 1 4 23.5V8.5Z\" fill=\"#7FB3F7\"/>"
+                  + "<path d=\"M4 13h24v10.5c0 1.9-1.6 3.5-3.5 3.5h-17A3.5 3.5 0 0 1 4 23.5V13Z\" fill=\"#4A90E2\"/>"
+                  + "</svg>";
     }
 
-    /**
-     * 渲染Breadcrumb。
-     *
-     * @param sb 方法入参 sb
-     * @param bucket 方法入参 bucket
-     * @param dir 目录，不允许为 null
-     */
+      /**
+       * 渲染Breadcrumb。
+       *
+       * @param sb 方法入参 sb
+       * @param bucket 方法入参 bucket
+       * @param dir 目录，不允许为 null
+       */
     private void renderBreadcrumb(StringBuilder sb, String bucket, String dir) {
         sb.append("<div class=\"topbar\">");
         sb.append("<span class=\"logo\">\uD83D\uDCC1 文件存储</span>");
@@ -3499,37 +3640,37 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 sb.append("<span class=\"sep\">/</span>");
                 sb.append("<a href=\"/").append(encodePathSeg(bucket)).append("/")
                         .append(encodePathFull(acc.toString())).append("/\">")
-                        /**
-                         * renderentries简单。
-                         * @param sb sb
-                         * @param bucket bucket
-                         * @param dir dir
-                         * @param items items
-                         * @param m m
-                         * @return 构建href的结果
-                         */
+                          /**
+                           * renderentries简单。
+                           * @param sb sb
+                           * @param bucket bucket
+                           * @param dir dir
+                           * @param items items
+                           * @param m m
+                           * @return 构建href的结果
+                           */
                         .append(escapeAttr(seg)).append("</a>");
                 acc.append("/");
             }
         }
         sb.append("</div></div>");
-    /**
-     * renderentries简单。
-     * @param sb sb
-     * @param bucket bucket
-     * @param dir dir
-     * @param items items
-     */
+      /**
+       * renderentries简单。
+       * @param sb sb
+       * @param bucket bucket
+       * @param dir dir
+       * @param items items
+       */
     }
 
-    /**
-     * 渲染EntriesSimple。
-     *
-     * @param sb 方法入参 sb
-     * @param bucket 方法入参 bucket
-     * @param dir 目录，不允许为 null
-     * @param items 方法入参 items
-     */
+      /**
+       * 渲染EntriesSimple。
+       *
+       * @param sb 方法入参 sb
+       * @param bucket 方法入参 bucket
+       * @param dir 目录，不允许为 null
+       * @param items 方法入参 items
+       */
     private void renderEntriesSimple(StringBuilder sb, String bucket, String dir, List<Metadata> items) {
         sb.append("<div class=\"panel\">");
         if (dir != null && !dir.isEmpty()) {
@@ -3569,14 +3710,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         sb.append("</div>");
     }
 
-    /**
-     * 构建Href。
-     *
-     * @param bucket 方法入参 bucket
-     * @param dir 目录，不允许为 null
-     * @param m 方法入参 m
-     * @return 结果字符串
-     */
+      /**
+       * 构建Href。
+       *
+       * @param bucket 方法入参 bucket
+       * @param dir 目录，不允许为 null
+       * @param m 方法入参 m
+       * @return 结果字符串
+       */
     private String buildHref(String bucket, String dir, Metadata m) {
         StringBuilder sb = new StringBuilder("/");
         sb.append(encodePathSeg(bucket));
@@ -3586,21 +3727,21 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         sb.append("/").append(encodePathSeg(m.getName()));
         if (m.isDirectory()) {
             sb.append("/");
-        /**
-         * 文件icon。
-         * @param m m
-         * @return 文件icon的结果
-         */
+          /**
+           * 文件icon。
+           * @param m m
+           * @return 文件icon的结果
+           */
         }
         return sb.toString();
     }
 
-    /**
-     * 文件Icon。
-     *
-     * @param m 方法入参 m
-     * @return 结果字符串
-     */
+      /**
+       * 文件Icon。
+       *
+       * @param m 方法入参 m
+       * @return 结果字符串
+       */
     private String fileIcon(Metadata m) {
         if (m.isDirectory()) {
             return "\uD83D\uDCC1";
@@ -3626,22 +3767,22 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
         if (name.matches(".*\\.(txt|md|log|json|xml|html|css|java|py|js|ts|go|c|h|cpp|sql|sh)$")) {
             return "\uD83D\uDD8C";
-        /**
-         * 格式化大小。
-         * @param bytes bytes
-         * @return 格式化大小的结果
-         * @param millis millis
-         */
+          /**
+           * 格式化大小。
+           * @param bytes bytes
+           * @return 格式化大小的结果
+           * @param millis millis
+           */
         }
         return "\uD83D\uDCC4";
     }
 
-    /**
-     * 格式化大小。
-     *
-     * @param bytes 字节数组，不允许为 null
-     * @return 结果字符串
-     */
+      /**
+       * 格式化大小。
+       *
+       * @param bytes 字节数组，不允许为 null
+       * @return 结果字符串
+       */
     private String formatSize(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
@@ -3656,33 +3797,33 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return String.format("%.1f %s", size, units[i]);
     }
 
-    /**
-     * 格式化时间。
-     *
-     * @param millis 毫秒数，不允许为 null
-     * @return 结果字符串
-     */
+      /**
+       * 格式化时间。
+       *
+       * @param millis 毫秒数，不允许为 null
+       * @return 结果字符串
+       */
     private String formatTime(long millis) {
         java.time.Instant instant = java.time.Instant.ofEpochMilli(millis);
         java.time.ZoneId zone = java.time.ZoneId.systemDefault();
         java.time.LocalDateTime dt = java.time.LocalDateTime.ofInstant(instant, zone);
         return String.format("%04d-%02d-%02d %02d:%02d",
                 dt.getYear(), dt.getMonthValue(), dt.getDayOfMonth(),
-                /**
-                 * encode路径seg。
-                 * @param s s
-                 * @return encode路径seg的结果
-                 * @param path 路径
-                 */
+                  /**
+                   * encode路径seg。
+                   * @param s s
+                   * @return encode路径seg的结果
+                   * @param path 路径
+                   */
                 dt.getHour(), dt.getMinute());
     }
 
-    /**
-     * 编码路径Seg。
-     *
-     * @param s 方法入参 s
-     * @return 结果字符串
-     */
+      /**
+       * 编码路径Seg。
+       *
+       * @param s 方法入参 s
+       * @return 结果字符串
+       */
     private String encodePathSeg(String s) {
         try {
             return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
@@ -3691,12 +3832,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 编码路径Full。
-     *
-     * @param path 路径，不允许为 null
-     * @return 结果字符串
-     */
+      /**
+       * 编码路径Full。
+       *
+       * @param path 路径，不允许为 null
+       * @return 结果字符串
+       */
     private String encodePathFull(String path) {
         String[] parts = path.split("/", -1);
         StringBuilder sb = new StringBuilder();
@@ -3711,12 +3852,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return sb.toString();
     }
 
-    /**
-     * escapeHtml。
-     *
-     * @param s 方法入参 s
-     * @return 结果字符串
-     */
+      /**
+       * escapeHtml。
+       *
+       * @param s 方法入参 s
+       * @return 结果字符串
+       */
     private String escapeHtml(String s) {
         if (s == null) {
             return "";
@@ -3728,28 +3869,28 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .replace("'", "&#39;");
     }
 
-    /** 预览页同源静态资源的前缀（preview provider 生成的 HTML 按此路径引用前端库） */
+      /** 预览页同源静态资源的前缀（preview provider 生成的 HTML 按此路径引用前端库） */
     private static final String PREVIEW_VENDOR_PREFIX = "preview-vendor";
 
-    /** 预览静态资源在 classpath 下的根（随本模块打包在 resources/static 下） */
+      /** 预览静态资源在 classpath 下的根（随本模块打包在 resources/static 下） */
     private static final String PREVIEW_VENDOR_CLASSPATH = "static/preview-vendor/";
 
-    /**
-     * 提供预览页同源静态资源。
-     *
-     * <p>{@code UniverPreviewProvider} / {@code PdfViewerPreviewProvider} / {@code CodePreviewProvider}
-     * 生成的预览 HTML 会引用 {@code /preview-vendor/**}（Univer 表格、pdf.js、highlight.js、mammoth 等
-     * 前端库），并约定由宿主服务**同源**提供，从而不依赖公网 CDN。这些文件随本模块打包在
-     * {@code resources/static/preview-vendor} 下，这里按请求路径从 classpath 取出返回。</p>
-     *
-     * <p>路径收敛：只读取 {@code static/preview-vendor/} 下的文件，并拦截 {@code ..} 穿越，
-     * 避免把 classpath 上任意资源变成可下载的静态文件。</p>
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param path     请求路径，形如 {@code /preview-vendor/univer/sheets-core.css}
-     * @return 异步阶段
-     */
+      /**
+       * 提供预览页同源静态资源。
+       *
+       * <p>{@code UniverPreviewProvider} / {@code PdfViewerPreviewProvider} / {@code CodePreviewProvider}
+       * 生成的预览 HTML 会引用 {@code /preview-vendor/**}（Univer 表格、pdf.js、highlight.js、mammoth 等
+       * 前端库），并约定由宿主服务**同源**提供，从而不依赖公网 CDN。这些文件随本模块打包在
+       * {@code resources/static/preview-vendor} 下，这里按请求路径从 classpath 取出返回。</p>
+       *
+       * <p>路径收敛：只读取 {@code static/preview-vendor/} 下的文件，并拦截 {@code ..} 穿越，
+       * 避免把 classpath 上任意资源变成可下载的静态文件。</p>
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param path     请求路径，形如 {@code /preview-vendor/univer/sheets-core.css}
+       * @return 异步阶段
+       */
     private CompletionStage<Void> servePreviewVendor(ServerRequest request, ServerResponse response, String path) {
         if (request.getMethod() != HttpMethod.GET && request.getMethod() != HttpMethod.HEAD) {
             return error(response, 405, "Method Not Allowed");
@@ -3776,35 +3917,35 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 处理对象下载/预览请求。
-     *
-     * <p>当 Key 对应对象不存在而作为目录存在时（或路径以 {@code /} 结尾），
-     * 自动回退为该目录的对象列表 JSON，实现类资源管理器的路径式目录浏览。</p>
-     *
-     * <p>支持 Range 分段（openRange）、附件下载（openDownload + download=true 参数）、
-     * 内联预览（打开preview）、水印响应头（打开watermark）、远程文件拉取（打开远程文件）。</p>
-     *
-     * @param storage  存储实例
-     * @param request  请求
-     * @param bucket   存储名
-     * @param response 响应
-     * @param key      对象 键
-     * @return 异步阶段
-     */
+      /**
+       * 处理对象下载/预览请求。
+       *
+       * <p>当 Key 对应对象不存在而作为目录存在时（或路径以 {@code /} 结尾），
+       * 自动回退为该目录的对象列表 JSON，实现类资源管理器的路径式目录浏览。</p>
+       *
+       * <p>支持 Range 分段（openRange）、附件下载（openDownload + download=true 参数）、
+       * 内联预览（打开preview）、水印响应头（打开watermark）、远程文件拉取（打开远程文件）。</p>
+       *
+       * @param storage  存储实例
+       * @param request  请求
+       * @param bucket   存储名
+       * @param response 响应
+       * @param key      对象 键
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleGet(FileStorage storage, ServerRequest request, String bucket, ServerResponse response, String key) {
         applyWatermarkHeader(response);
-        // 目录访问意图：路径以 / 结尾，或显式 ?format=json（前端 Vue API 拉目录列表的统一约定）。
-        // ?format=json 必须一并识别——否则 GET /{bucket}/{子目录}?format=json 会落到下面的
-        // "读对象"分支，读内容时抛"是一个目录"，最终把"点进文件夹"变成 500。
+          // 目录访问意图：路径以 / 结尾，或显式 ?format=json（前端 Vue API 拉目录列表的统一约定）。
+          // ?format=json 必须一并识别——否则 GET /{bucket}/{子目录}?format=json 会落到下面的
+          // "读对象"分支，读内容时抛"是一个目录"，最终把"点进文件夹"变成 500。
         boolean directoryIntent = request.getPath().endsWith("/") || wantsJsonListing(request);
 
-        // 远程文件透传：Key 为完整 http(s) 地址时直接拉取
+          // 远程文件透传：Key 为完整 http(s) 地址时直接拉取
         if (setting.isOpenRemoteFile() && (key.startsWith("http://") || key.startsWith("https://"))) {
             return handleRemoteFile(request, response, key);
         }
 
-        // SSH 远程文件透传：Key 为 ssh:// 地址时通过 SPI 读取
+          // SSH 远程文件透传：Key 为 ssh:// 地址时通过 SPI 读取
         if (setting.isOpenRemoteFile() && key.startsWith("ssh://")) {
             return handleRemoteSshFile(request, response, key);
         }
@@ -3812,7 +3953,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         GetObjectResult result = storage.getObject(key);
         if ((result.getResultCode() != ObjectResult.ResultCode.SUCCESS || result.getInputStream() == null)
                 && !directoryIntent) {
-            // 对象不存在时尝试按目录回退列出
+              // 对象不存在时尝试按目录回退列出
             ListObjectResult list = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
                     .limit(intParam(request, "limit", Integer.MAX_VALUE))
@@ -3822,16 +3963,16 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                     && list.getMetadata() != null && !list.getMetadata().isEmpty()) {
                 return writeList(bucket, key, list, request, response);
             }
-            // 空目录列举结果为空：通过存在性探测确认目录本身存在，返回空列表而非 404
+              // 空目录列举结果为空：通过存在性探测确认目录本身存在，返回空列表而非 404
             if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS && objectExists(storage, key)) {
                 return writeList(bucket, key, list, request, response);
             }
             return error(response, 404, "Object Not Found: " + key);
         }
         if (directoryIntent) {
-            // 显式目录访问：直接列出。
-            // 空目录要返回空列表而非 404（前端据此显示"空目录"）；但"列表为空"同时也可能是
-            // 路径根本不存在，故必须再用存在性探测区分，否则访问不存在的目录会被当成空目录。
+              // 显式目录访问：直接列出。
+              // 空目录要返回空列表而非 404（前端据此显示"空目录"）；但"列表为空"同时也可能是
+              // 路径根本不存在，故必须再用存在性探测区分，否则访问不存在的目录会被当成空目录。
             ListObjectResult list = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
                     .limit(intParam(request, "limit", Integer.MAX_VALUE))
@@ -3845,7 +3986,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return error(response, 404, "Directory Not Found: " + key);
         }
 
- // 配置 访问模式（与 preview/download 平级）：返回文件级配置 JSON
+   // 配置 访问模式（与 preview/download 平级）：返回文件级配置 JSON
         if (boolParam(request, "config")) {
             return writeObjectConfig(bucket, key, result, response);
         }
@@ -3854,9 +3995,9 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         try (InputStream in = result.getInputStream()) {
             data = in.readAllBytes();
         } catch (Exception e) {
-            // 读不出内容，多半是因为该 key 其实是目录（部分存储对目录的 getObject 也返回 SUCCESS）。
-            // 兜底再尝试按目录列出：只有列出【非空子项】才认定为目录——空结果不足以区分
-            // "空目录"与"文件本身损坏"，此时如实报错，避免把真实读取失败伪装成空目录。
+              // 读不出内容，多半是因为该 key 其实是目录（部分存储对目录的 getObject 也返回 SUCCESS）。
+              // 兜底再尝试按目录列出：只有列出【非空子项】才认定为目录——空结果不足以区分
+              // "空目录"与"文件本身损坏"，此时如实报错，避免把真实读取失败伪装成空目录。
             ListObjectResult fallback = storage.listObject(ListObjectRequest.builder()
                     .filePath(key)
                     .limit(intParam(request, "limit", Integer.MAX_VALUE))
@@ -3870,84 +4011,84 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return error(response, 500, "Read Object Failed");
         }
 
-        // raw=true（预览域字节直吐）只允许经由一次性/限时令牌（/ot/{token}）发起：
-        // 入口壳注入给前端的字节直链就是这种短时效令牌，直连对象 URL 不放行 raw，
-        // 避免「预览临时下载链路」变成任何人可用的常驻字节通道。
+          // raw=true（预览域字节直吐）只允许经由一次性/限时令牌（/ot/{token}）发起：
+          // 入口壳注入给前端的字节直链就是这种短时效令牌，直连对象 URL 不放行 raw，
+          // 避免「预览临时下载链路」变成任何人可用的常驻字节通道。
         boolean tokenConsumed = request.getPath() != null && request.getPath().startsWith("/ot/");
         return serveObjectContent(request, response, data, key, bucket, tokenConsumed ? "token" : null);
     }
 
-    /**
-     * 输出对象内容：按访问开关与 {@code ?preview/?download/?raw/?format=} 参数分发预览/下载。
-     *
-     * <p>从 {@link #handleGet} 抽出的尾段——本地对象与三方 URL 预览
-     * （{@link #handleThirdUrlPreview}）必须走**同一套**分发：转换通道
-     * （format=pdf/docx/xlsx）、压缩包/CAD 结构查询、图片处理、客户端直渲染
-     * 回吐、raw 字节直链、统一入口壳、Range、内联兜底与 unsupported 提示页。</p>
-     *
-     * <p>预览 HTML 不再由后端拼装（原 Markdown / SPI / JSONHero 通道已删除）：
-     * 浏览器不能内联、前端组件也没接管的格式，统一返回前端预览入口壳
-     * （classpath {@code static/preview/index.html}），由 file-viewer 在浏览器内
-     * 渲染 274 种格式。壳内通过注入的短时效预览令牌直链（{@code /ot/{token}?raw=true}）
-     * 拉取原始字节——即便 {@code openDownload} 关闭也能完成预览，且不会产生
-     * 常驻的字节下载通道。</p>
-     *
-     * @param request    请求
-     * @param response   响应
-     * @param data       对象内容字节
-     * @param key        对象键（仅用于取文件名）
-     * @param bucket     存储桶名（入口壳签发预览令牌用）
-     * @param rawChannel raw 字节直吐的放行来源：null=不允许；
-     *                   "token"=经 {@code /ot/{token}} 消费；
-     *                   "third"=三方 URL 预览会话
-     * @return 异步阶段
-     */
+      /**
+       * 输出对象内容：按访问开关与 {@code ?preview/?download/?raw/?format=} 参数分发预览/下载。
+       *
+       * <p>从 {@link #handleGet} 抽出的尾段——本地对象与三方 URL 预览
+       * （{@link #handleThirdUrlPreview}）必须走**同一套**分发：转换通道
+       * （format=pdf/docx/xlsx）、压缩包/CAD 结构查询、图片处理、客户端直渲染
+       * 回吐、raw 字节直链、统一入口壳、Range、内联兜底与 unsupported 提示页。</p>
+       *
+       * <p>预览 HTML 不再由后端拼装（原 Markdown / SPI / JSONHero 通道已删除）：
+       * 浏览器不能内联、前端组件也没接管的格式，统一返回前端预览入口壳
+       * （classpath {@code static/preview/index.html}），由 file-viewer 在浏览器内
+       * 渲染 274 种格式。壳内通过注入的短时效预览令牌直链（{@code /ot/{token}?raw=true}）
+       * 拉取原始字节——即便 {@code openDownload} 关闭也能完成预览，且不会产生
+       * 常驻的字节下载通道。</p>
+       *
+       * @param request    请求
+       * @param response   响应
+       * @param data       对象内容字节
+       * @param key        对象键（仅用于取文件名）
+       * @param bucket     存储桶名（入口壳签发预览令牌用）
+       * @param rawChannel raw 字节直吐的放行来源：null=不允许；
+       *                   "token"=经 {@code /ot/{token}} 消费；
+       *                   "third"=三方 URL 预览会话
+       * @return 异步阶段
+       */
     private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data,
                                                      String key, String bucket, String rawChannel) {
-        // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
-        // 参数支持标志式写法（?preview 等价 ?preview=true）
+          // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
+          // 参数支持标志式写法（?preview 等价 ?preview=true）
         boolean wantPreview = boolParam(request, "preview");
         boolean wantDownload = boolParam(request, "download");
-        // raw=true：预览域的原始字节直吐（inline）。入口壳内嵌态经短时效令牌
-        // 拉字节渲染用；不属于附件下载语义，因此不要求 openDownload 开启。
-        // rawChannel：null=不允许 raw；"token"=经 /ot/{token} 消费；
-        // "third"=三方 URL 预览会话（内容不在本存储，字节直链按会话重放）。
+          // raw=true：预览域的原始字节直吐（inline）。入口壳内嵌态经短时效令牌
+          // 拉字节渲染用；不属于附件下载语义，因此不要求 openDownload 开启。
+          // rawChannel：null=不允许 raw；"token"=经 /ot/{token} 消费；
+          // "third"=三方 URL 预览会话（内容不在本存储，字节直链按会话重放）。
         boolean wantRaw = boolParam(request, "raw") && rawChannel != null;
         boolean download;
         if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
-            // 严格模式：预览与下载均关闭 → 拒绝所有请求
+              // 严格模式：预览与下载均关闭 → 拒绝所有请求
             return error(response, 403, "Access Denied: preview/download disabled");
         }
         if (wantPreview && !setting.isOpenPreview()) {
-            // 显式要预览但预览被关闭：必须明确拒绝，**不能悄悄改成下载**。
-            // 客户端拿到 200 + attachment 会以为服务端出错了，或直接弹出一个
-            // 用户毫无预期的下载——两者都比一句 403 更糟。
+              // 显式要预览但预览被关闭：必须明确拒绝，**不能悄悄改成下载**。
+              // 客户端拿到 200 + attachment 会以为服务端出错了，或直接弹出一个
+              // 用户毫无预期的下载——两者都比一句 403 更糟。
             return error(response, 403, "Access Denied: preview disabled");
         }
         if (wantDownload && !setting.isOpenDownload()) {
             return error(response, 403, "Access Denied: download disabled");
         }
         if (wantPreview || wantRaw) {
-            // 显式 ?preview=true / ?raw=true 且 openPreview 已启用 → 内联
+              // 显式 ?preview=true / ?raw=true 且 openPreview 已启用 → 内联
             download = false;
         } else if (wantDownload) {
-            // 显式 ?download=true → 附件下载
+              // 显式 ?download=true → 附件下载
             download = true;
         } else {
-            // 无 ?preview 也无 ?download：按开关决定默认行为。
-            // 这里**必须**看 openPreview——此前固定 inline，导致「只开下载」
-            // 的桶用一个裸 URL 就能内联预览，等于开关形同虚设。
+              // 无 ?preview 也无 ?download：按开关决定默认行为。
+              // 这里**必须**看 openPreview——此前固定 inline，导致「只开下载」
+              // 的桶用一个裸 URL 就能内联预览，等于开关形同虚设。
             download = !setting.isOpenPreview();
         }
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
 
-        // ?format=pdf：把 Office 文档转成 PDF 再返回（走 FileConvertSystem SPI，
-        // 实现在 utils-support-aspose-starter）。
-        //
-        // 必须放在「客户端直渲染」分支**之前**：docx/xlsx/pptx 会被
-        // resolveClientRenderer 判成 client 并直接回吐原始字节，转换分支永远命中不了
-        // ——实测 ?format=pdf 一直无效就是这个原因（当时 classpath 上也确实没有任何
-        // FileConvertSystem 实现）。也正因为如此，这里不能只加 SPI 依赖就完事。
+          // ?format=pdf：把 Office 文档转成 PDF 再返回（走 FileConvertSystem SPI，
+          // 实现在 utils-support-aspose-starter）。
+          //
+          // 必须放在「客户端直渲染」分支**之前**：docx/xlsx/pptx 会被
+          // resolveClientRenderer 判成 client 并直接回吐原始字节，转换分支永远命中不了
+          // ——实测 ?format=pdf 一直无效就是这个原因（当时 classpath 上也确实没有任何
+          // FileConvertSystem 实现）。也正因为如此，这里不能只加 SPI 依赖就完事。
         if (stringParam(request, "format", "pdf")) {
             byte[] pdf = convertToPdf(data, fileName);
             if (pdf != null) {
@@ -3960,18 +4101,18 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
-            // 转不了（该格式没有匹配的转换器，或转换本身失败）：带原因继续走原通道，
-            // 让客户端能区分「拿到了 PDF」与「没转成」，而不是把原始 Office 字节
-            // 当成 PDF 塞进 PDF 阅读器。
+              // 转不了（该格式没有匹配的转换器，或转换本身失败）：带原因继续走原通道，
+              // 让客户端能区分「拿到了 PDF」与「没转成」，而不是把原始 Office 字节
+              // 当成 PDF 塞进 PDF 阅读器。
             log.warn("[FileStorage] ?format=pdf 转换不可用: {}", fileName);
             response.setHeader(HEADER_CONVERT, "unavailable");
         }
 
-        // ?format=docx：把传统二进制 Word（.doc / .wps 等）转成 docx 再返回。
-        //
-        // 场景：@vue-office/docx 只认 OOXML，遇到真 OLE2 的 .doc 解析不了；
-        // 前端请求本参数拿转换后的 docx，继续用客户端组件渲染（保真度与交互
-        // 都优于服务端拼的 HTML 或转 PDF）。转换器仍是 FileConvertSystem SPI。
+          // ?format=docx：把传统二进制 Word（.doc / .wps 等）转成 docx 再返回。
+          //
+          // 场景：@vue-office/docx 只认 OOXML，遇到真 OLE2 的 .doc 解析不了；
+          // 前端请求本参数拿转换后的 docx，继续用客户端组件渲染（保真度与交互
+          // 都优于服务端拼的 HTML 或转 PDF）。转换器仍是 FileConvertSystem SPI。
         CompletionStage<Void> docxStage = stringParam(request, "format", "docx")
                 ? serveConvertedDocument(data, fileName, "docx", download, response)
                 : null;
@@ -3979,7 +4120,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return docxStage;
         }
 
-        // ?format=xlsx：把传统二进制 Excel（.xls 等）转成 xlsx 再返回，同上。
+          // ?format=xlsx：把传统二进制 Excel（.xls 等）转成 xlsx 再返回，同上。
         CompletionStage<Void> xlsxStage = stringParam(request, "format", "xlsx")
                 ? serveConvertedDocument(data, fileName, "xlsx", download, response)
                 : null;
@@ -3987,29 +4128,29 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return xlsxStage;
         }
 
-        // 压缩包结构查询（?format=archive）：返回条目清单 JSON，供主应用内的 Vue 组件渲染。
-        // 与 ?preview=true 是并列的另一条通道——后者把整个页面交给 iframe（独立文档，
-        // 拿不到主应用的 Element Plus / koi 主题变量），本接口只回数据。
-        // 放在访问模式判定之前：它是纯数据查询，与 openPreview / openDownload 开关无关。
+          // 压缩包结构查询（?format=archive）：返回条目清单 JSON，供主应用内的 Vue 组件渲染。
+          // 与 ?preview=true 是并列的另一条通道——后者把整个页面交给 iframe（独立文档，
+          // 拿不到主应用的 Element Plus / koi 主题变量），本接口只回数据。
+          // 放在访问模式判定之前：它是纯数据查询，与 openPreview / openDownload 开关无关。
         if (stringParam(request, "format", "archive")) {
             return writeArchiveEntries(fileName, data, response);
         }
 
-        // CAD 图纸查询（?format=cad）：DXF 出图形，DWG 只出头信息
+          // CAD 图纸查询（?format=cad）：DXF 出图形，DWG 只出头信息
         if (stringParam(request, "format", "cad")) {
             return writeCadInfo(fileName, data, request.getParams().get("inner"), response);
         }
 
         response.setHeader("Content-Disposition", buildDisposition(download, fileName));
 
-        // 显式 ?preview=true 时按渲染通道分流处理
+          // 显式 ?preview=true 时按渲染通道分流处理
         if (!download && wantPreview) {
-            // 图片处理（?preview&size=/crop=/rotate=/flip=/grayscale=/blur=/sharpen=/watermarkText=/quality=）：
-            // 此前 spring 侧只上报能力（?format=capabilities），从不执行，URL 参数全部静默失效。
+              // 图片处理（?preview&size=/crop=/rotate=/flip=/grayscale=/blur=/sharpen=/watermarkText=/quality=）：
+              // 此前 spring 侧只上报能力（?format=capabilities），从不执行，URL 参数全部静默失效。
             ImageOpResult imageProcessed = applyFileOperations(data, fileName, request);
             if (imageProcessed != null && imageProcessed.data() != null) {
-                // Content-Type 必须与实际字节一致：encode 失败会回退到上一步的字节，
-                // 此时若仍按目标格式声明，浏览器会按错误格式解码。
+                  // Content-Type 必须与实际字节一致：encode 失败会回退到上一步的字节，
+                  // 此时若仍按目标格式声明，浏览器会按错误格式解码。
                 String servedFormat = detectFormat(imageProcessed.data(), fileName, request);
                 response.setStatus(200)
                         .setContentType(MimeTypeUtils.getMimeType(servedFormat))
@@ -4018,7 +4159,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 if (imageProcessed.reason() != null) {
                     response.setHeader(HEADER_IMAGE_OP_REASON, imageProcessed.reason());
                 }
-                // 全局滤镜链摘要（系统配置「图片处理」）：便于调用方确认链是否真的执行
+                  // 全局滤镜链摘要（系统配置「图片处理」）：便于调用方确认链是否真的执行
                 if (imageProcessed.chain() != null) {
                     response.setHeader("X-FileStorage-Filter-Chain", imageProcessed.chain());
                 }
@@ -4026,14 +4167,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return CompletableFuture.completedFuture(null);
             }
             if (imageProcessed != null && imageProcessed.reason() != null) {
-                // 请求带了处理参数、但服务端决定不处理（例如超像素预算）。
-                // 不能无声吐原图：客户端需要知道「我要的转码没生效」。
+                  // 请求带了处理参数、但服务端决定不处理（例如超像素预算）。
+                  // 不能无声吐原图：客户端需要知道「我要的转码没生效」。
                 response.setHeader(HEADER_IMAGE_OP, "skipped")
                         .setHeader(HEADER_IMAGE_OP_REASON, imageProcessed.reason());
             }
-            // 压缩包下钻：?preview&inner=包内路径 时提取条目。
-            // raw 会话直吐条目原始字节（入口壳内嵌态渲染条目用）；其余统一交
-            // 入口壳接管（壳内经 bytesUrl 携带 inner 再次取条目字节做客户端渲染）。
+              // 压缩包下钻：?preview&inner=包内路径 时提取条目。
+              // raw 会话直吐条目原始字节（入口壳内嵌态渲染条目用）；其余统一交
+              // 入口壳接管（壳内经 bytesUrl 携带 inner 再次取条目字节做客户端渲染）。
             String innerPath = request.getParams().get("inner");
             if (innerPath != null && !innerPath.isEmpty()) {
                 byte[] entryBytes = extractArchiveEntry(data, fileName, innerPath);
@@ -4064,7 +4205,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 if (entryShell != null) {
                     return entryShell;
                 }
-                // 壳缺失兜底：条目按内容类型内联（保留给未部署前端入口的部署形态）
+                  // 壳缺失兜底：条目按内容类型内联（保留给未部署前端入口的部署形态）
                 response.setStatus(200)
                         .setHeader("X-FileStorage-Preview", "inner-raw")
                         .setHeader("Content-Disposition", buildDisposition(false, entryName))
@@ -4073,8 +4214,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
-            // raw 字节直吐（预览域）：短时效令牌会话取原始字节，供统一入口壳
-            // 在浏览器内渲染。任何格式都直吐本体，不做任何服务端转换。
+              // raw 字节直吐（预览域）：短时效令牌会话取原始字节，供统一入口壳
+              // 在浏览器内渲染。任何格式都直吐本体，不做任何服务端转换。
             if (wantRaw) {
                 response.setStatus(200)
                         .setHeader(ClientPreviewSupport.HEADER_PREVIEW, ClientPreviewSupport.CHANNEL_SERVER)
@@ -4085,8 +4226,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
-            // 客户端直渲染：docx / xlsx / xls / pdf / pptx 直接回吐原始字节，
-            // 由前端组件在浏览器内解析，避免服务端 LibreOffice / Aspose 转换开销。
+              // 客户端直渲染：docx / xlsx / xls / pdf / pptx 直接回吐原始字节，
+              // 由前端组件在浏览器内解析，避免服务端 LibreOffice / Aspose 转换开销。
             String clientRenderer = resolveClientRenderer(request, fileName, data);
             if (clientRenderer != null) {
                 response.setStatus(200)
@@ -4097,14 +4238,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
-            // 统一入口壳接管：后端不再拼装任何预览 HTML（原 Markdown / SPI /
-            // JSONHero 通道已删除）。壳内嵌态经注入的短时效令牌拉原始字节，
-            // 由 file-viewer（274 格式）在浏览器内完成渲染——即便 openDownload
-            // 关闭也能预览，且不会产生常驻的字节下载通道。
-            //
-            // 分流边界：图片 / 音视频**不得**进壳——缩略图 <img src=?preview=true>
-            // 与 <video>/<audio> 标签需要直吐字节；它们仅在显式 render=server
-            // （管理页 forceServer 兜底、入口 render=server）时走壳。
+              // 统一入口壳接管：后端不再拼装任何预览 HTML（原 Markdown / SPI /
+              // JSONHero 通道已删除）。壳内嵌态经注入的短时效令牌拉原始字节，
+              // 由 file-viewer（274 格式）在浏览器内完成渲染——即便 openDownload
+              // 关闭也能预览，且不会产生常驻的字节下载通道。
+              //
+              // 分流边界：图片 / 音视频**不得**进壳——缩略图 <img src=?preview=true>
+              // 与 <video>/<audio> 标签需要直吐字节；它们仅在显式 render=server
+              // （管理页 forceServer 兜底、入口 render=server）时走壳。
             boolean forceServer = ClientPreviewSupport.CHANNEL_SERVER
                     .equalsIgnoreCase(request.getParam(ClientPreviewSupport.PARAM_RENDER));
             String previewType = resolveContentType(fileName);
@@ -4118,11 +4259,11 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                     return shellStage;
                 }
             }
-            // 壳缺失（前端入口未部署）或媒体内联类型：落回下方 inline / unsupported
-            // 兜底，保证不白屏、缩略图/媒体标签不坏
+              // 壳缺失（前端入口未部署）或媒体内联类型：落回下方 inline / unsupported
+              // 兜底，保证不白屏、缩略图/媒体标签不坏
         }
 
- // 范围 分段下载
+   // 范围 分段下载
         String range = request.getHeader("Range");
         if (setting.isOpenRange() && range != null && range.startsWith("bytes=")) {
             long[] offsets = parseRange(range, data.length);
@@ -4140,8 +4281,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
 
         String inlineType = resolveContentType(fileName);
         if (wantPreview && !isBrowserInlineType(inlineType)) {
-            // 浏览器不能内联渲染的类型（exe/dll/msi/iso 等）：给 HTML 提示页，
-            // 既不把二进制丢进 iframe，也避免浏览器直接触发下载
+              // 浏览器不能内联渲染的类型（exe/dll/msi/iso 等）：给 HTML 提示页，
+              // 既不把二进制丢进 iframe，也避免浏览器直接触发下载
             return writeUnsupportedPreview(fileName, inlineType, response);
         }
         response.setStatus(200)
@@ -4152,51 +4293,51 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /* ==================== 统一预览入口壳（前端 file-viewer 接管） ==================== */
+      /* ==================== 统一预览入口壳（前端 file-viewer 接管） ==================== */
 
-    /**
-     * 组装入口壳引导参数里的字节直链（{@code bytesUrl}）。
-     *
-     * <p>两条来源：</p>
-     * <ul>
-     *   <li>{@code rawChannel="token"} —— 现场签发一枚<b>短时效预览令牌</b>
-     *       （expiry 模式可多次读，TTL 取一次性链接配置与 5 分钟的较小值），
-     *       直链形如 {@code /ot/{token}?preview=true&raw=true}。即便
-     *       {@code openDownload} 关闭，预览也能拿到原始字节，且令牌过期后
-     *       直链即失效，不会留下常驻下载通道；</li>
-     *   <li>{@code rawChannel="third"} —— 三方 URL 预览会话：内容不在本存储，
-     *       无法令牌化，直链按当前会话原样重放（服务端重新拉取远端）。</li>
-     * </ul>
-     *
-     * @param rawChannel raw 放行来源（null / "token" / "third"）
-     * @param bucket     存储桶名
-     * @param key        对象键
-     * @param innerPath  压缩包内条目路径（无则 null）
-     * @param request    请求
-     * @return 字节直链（相对路径，与入口壳同源）
-     */
+      /**
+       * 组装入口壳引导参数里的字节直链（{@code bytesUrl}）。
+       *
+       * <p>两条来源：</p>
+       * <ul>
+       *   <li>{@code rawChannel="token"} —— 现场签发一枚<b>短时效预览令牌</b>
+       *       （expiry 模式可多次读，TTL 取一次性链接配置与 5 分钟的较小值），
+       *       直链形如 {@code /ot/{token}?preview=true&raw=true}。即便
+       *       {@code openDownload} 关闭，预览也能拿到原始字节，且令牌过期后
+       *       直链即失效，不会留下常驻下载通道；</li>
+       *   <li>{@code rawChannel="third"} —— 三方 URL 预览会话：内容不在本存储，
+       *       无法令牌化，直链按当前会话原样重放（服务端重新拉取远端）。</li>
+       * </ul>
+       *
+       * @param rawChannel raw 放行来源（null / "token" / "third"）
+       * @param bucket     存储桶名
+       * @param key        对象键
+       * @param innerPath  压缩包内条目路径（无则 null）
+       * @param request    请求
+       * @return 字节直链（相对路径，与入口壳同源）
+       */
     private String buildShellBytesUrl(String rawChannel, String bucket, String key,
                                       String innerPath, ServerRequest request) {
         String suffix = innerPath == null ? "" : "&inner=" + urlEncodeUtf8(innerPath);
         if ("third".equals(rawChannel)) {
-            // 三方会话重放：当前路径 + 预览/raw 参数（去掉本次请求里的 render 等，
-            // 只保留预览语义，保证拿到的是字节而非壳）
+              // 三方会话重放：当前路径 + 预览/raw 参数（去掉本次请求里的 render 等，
+              // 只保留预览语义，保证拿到的是字节而非壳）
             return request.getPath() + "?preview=true&raw=true" + suffix;
         }
         return "/ot/" + mintPreviewToken(bucket, key) + "?preview=true&raw=true" + suffix;
     }
 
-    /**
-     * 签发一枚短时效预览令牌（expiry 模式，可多次读）。
-     *
-     * <p>TTL 取「一次性链接全局配置」与 {@link #PREVIEW_TOKEN_TTL_MILLIS}（5 分钟）
-     * 的较小值：预览令牌的生命窗口必须短于分享语义的一次性链接，防止入口壳
-     * 里的字节直链被长期转发。</p>
-     *
-     * @param bucket 存储桶名
-     * @param key    对象键
-     * @return 令牌字符串
-     */
+      /**
+       * 签发一枚短时效预览令牌（expiry 模式，可多次读）。
+       *
+       * <p>TTL 取「一次性链接全局配置」与 {@link #PREVIEW_TOKEN_TTL_MILLIS}（5 分钟）
+       * 的较小值：预览令牌的生命窗口必须短于分享语义的一次性链接，防止入口壳
+       * 里的字节直链被长期转发。</p>
+       *
+       * @param bucket 存储桶名
+       * @param key    对象键
+       * @return 令牌字符串
+       */
     private String mintPreviewToken(String bucket, String key) {
         String token = generateOneTimeToken();
         long ttl = Math.min(oneTimeTtlMillis(), PREVIEW_TOKEN_TTL_MILLIS);
@@ -4205,36 +4346,36 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return token;
     }
 
-    /**
-     * 输出统一预览入口壳（前端 file-viewer 接管全部预览渲染）。
-     *
-     * <p>壳为 classpath {@code static/preview/index.html}（pages/filesystem
-     * 前端独立入口 preview.html 的构建产物）。响应时在 {@code </head>} 前注入
-     * 引导脚本：</p>
-     * <pre>{@code
-     * window.__FILE_PREVIEW_BOOT__ = {
-     *   bytesUrl: "/ot/{token}?preview=true&raw=true[&inner=...]",
-     *   fileName: "report.docx",
-     *   size: 10240,
-     *   inner: "包内路径或空",
-     *   bucket: "local",
-     *   key: "docs/report.docx"
-     * };
-     * }</pre>
-     *
-     * <p>入口检测到 {@code __FILE_PREVIEW_BOOT__} 即进入「内嵌态」：直接取
-     * {@code bytesUrl} 拉原始字节并用 file-viewer 渲染，**不再解析地址栏参数、
-     * 不再 iframe 嵌套**——这同时打破了「壳里再嵌壳」的循环。</p>
-     *
-     * @param bytesUrl  字节直链（{@link #buildShellBytesUrl} 组装）
-     * @param fileName  文件名（渲染器按扩展名选择）
-     * @param size      文件大小（字节，仅展示用）
-     * @param innerPath 压缩包内条目路径（无则 null）
-     * @param bucket    存储桶名（专用面板经票据取数用）
-     * @param key       对象键（同上；三方 URL 预览场景为文件名，票据不可用时入口自行降级）
-     * @param response  响应
-     * @return 已提交响应返回阶段；壳缺失返回 {@code null}（调用方落回旧兜底）
-     */
+      /**
+       * 输出统一预览入口壳（前端 file-viewer 接管全部预览渲染）。
+       *
+       * <p>壳为 classpath {@code static/preview/index.html}（pages/filesystem
+       * 前端独立入口 preview.html 的构建产物）。响应时在 {@code </head>} 前注入
+       * 引导脚本：</p>
+       * <pre>{@code
+       * window.__FILE_PREVIEW_BOOT__ = {
+       *   bytesUrl: "/ot/{token}?preview=true&raw=true[&inner=...]",
+       *   fileName: "report.docx",
+       *   size: 10240,
+       *   inner: "包内路径或空",
+       *   bucket: "local",
+       *   key: "docs/report.docx"
+       * };
+       * }</pre>
+       *
+       * <p>入口检测到 {@code __FILE_PREVIEW_BOOT__} 即进入「内嵌态」：直接取
+       * {@code bytesUrl} 拉原始字节并用 file-viewer 渲染，**不再解析地址栏参数、
+       * 不再 iframe 嵌套**——这同时打破了「壳里再嵌壳」的循环。</p>
+       *
+       * @param bytesUrl  字节直链（{@link #buildShellBytesUrl} 组装）
+       * @param fileName  文件名（渲染器按扩展名选择）
+       * @param size      文件大小（字节，仅展示用）
+       * @param innerPath 压缩包内条目路径（无则 null）
+       * @param bucket    存储桶名（专用面板经票据取数用）
+       * @param key       对象键（同上；三方 URL 预览场景为文件名，票据不可用时入口自行降级）
+       * @param response  响应
+       * @return 已提交响应返回阶段；壳缺失返回 {@code null}（调用方落回旧兜底）
+       */
     private CompletionStage<Void> servePreviewShell(String bytesUrl, String fileName, long size,
                                                     String innerPath, String bucket, String key,
                                                     ServerResponse response) {
@@ -4243,13 +4384,13 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             return null;
         }
         String boot = "<script>window.__FILE_PREVIEW_BOOT__={"
-                + "bytesUrl:" + jsonString(bytesUrl) + ","
-                + "fileName:" + jsonString(fileName) + ","
-                + "size:" + size + ","
-                + "inner:" + jsonString(innerPath == null ? "" : innerPath) + ","
-                + "bucket:" + jsonString(bucket == null ? "" : bucket) + ","
-                + "key:" + jsonString(key == null ? "" : key)
-                + "};</script>";
+                  + "bytesUrl:" + jsonString(bytesUrl) + ","
+                  + "fileName:" + jsonString(fileName) + ","
+                  + "size:" + size + ","
+                  + "inner:" + jsonString(innerPath == null ? "" : innerPath) + ","
+                  + "bucket:" + jsonString(bucket == null ? "" : bucket) + ","
+                  + "key:" + jsonString(key == null ? "" : key)
+                  + "};</script>";
         String html = injectBootScript(shell, boot);
         response.setStatus(200)
                 .setHeader(ClientPreviewSupport.HEADER_PREVIEW, ClientPreviewSupport.CHANNEL_SERVER)
@@ -4261,9 +4402,9 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /* ==================== 前端壳静态资源（宿主无关） ==================== */
+      /* ==================== 前端壳静态资源（宿主无关） ==================== */
 
-    /** 静态资源 MIME 映射（覆盖前端构建产物与渲染器资源） */
+      /** 静态资源 MIME 映射（覆盖前端构建产物与渲染器资源） */
     private static final Map<String, String> STATIC_MIME_TYPES = Map.ofEntries(
             Map.entry("js", "application/javascript"),
             Map.entry("mjs", "application/javascript"),
@@ -4285,20 +4426,20 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             Map.entry("map", "application/json"),
             Map.entry("txt", "text/plain"));
 
-    /** 长缓存（immutable）类型：带 hash 的构建产物与 WASM/字体 */
+      /** 长缓存（immutable）类型：带 hash 的构建产物与 WASM/字体 */
     private static final java.util.Set<String> STATIC_IMMUTABLE_EXTS = java.util.Set.of(
             "js", "mjs", "css", "wasm", "woff", "woff2", "ttf", "otf");
 
-    /**
-     * 请求路径 → classpath 静态资源映射（白名单前缀，未命中返回 null 交给后续分发）。
-     *
-     * <p>覆盖统一预览入口页（{@code /preview/} → static/preview/index.html）、
-     * Vite 构建产物（{@code /assets/**}）、file-viewer 渲染器资源
-     * （{@code /vendor/**}、{@code /wasm/**}）与渲染器资产清单。</p>
-     *
-     * @param path 请求路径
-     * @return classpath 资源路径；不在白名单内返回 {@code null}
-     */
+      /**
+       * 请求路径 → classpath 静态资源映射（白名单前缀，未命中返回 null 交给后续分发）。
+       *
+       * <p>覆盖统一预览入口页（{@code /preview/} → static/preview/index.html）、
+       * Vite 构建产物（{@code /assets/**}）、file-viewer 渲染器资源
+       * （{@code /vendor/**}、{@code /wasm/**}）与渲染器资产清单。</p>
+       *
+       * @param path 请求路径
+       * @return classpath 资源路径；不在白名单内返回 {@code null}
+       */
     private static String resolveStaticAssetPath(String path) {
         if (path == null || path.isEmpty()) {
             return null;
@@ -4316,17 +4457,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return null;
     }
 
-    /**
-     * 输出 classpath 静态资源（仅 GET/HEAD）。
-     *
-     * <p>缓存策略：带 hash 的构建产物（js/css/wasm/字体）immutable 一年；
-     * 其余 no-cache（如资产清单）。资源缺失回 404，交由调用方兜底。</p>
-     *
-     * @param classpath classpath 资源路径（{@link #resolveStaticAssetPath} 映射结果）
-     * @param request   请求
-     * @param response  响应
-     * @return 异步阶段
-     */
+      /**
+       * 输出 classpath 静态资源（仅 GET/HEAD）。
+       *
+       * <p>缓存策略：带 hash 的构建产物（js/css/wasm/字体）immutable 一年；
+       * 其余 no-cache（如资产清单）。资源缺失回 404，交由调用方兜底。</p>
+       *
+       * @param classpath classpath 资源路径（{@link #resolveStaticAssetPath} 映射结果）
+       * @param request   请求
+       * @param response  响应
+       * @return 异步阶段
+       */
     private CompletionStage<Void> writeStaticAsset(String classpath, ServerRequest request, ServerResponse response) {
         if (request.getMethod() != HttpMethod.GET && request.getMethod() != HttpMethod.HEAD) {
             return error(response, 405, "Method Not Allowed");
@@ -4358,11 +4499,11 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 读取统一预览入口壳（classpath static/preview/index.html），带懒缓存。
-     *
-     * @return 壳 HTML；未部署（前端入口未构建/未拷贝）返回 {@code null}
-     */
+      /**
+       * 读取统一预览入口壳（classpath static/preview/index.html），带懒缓存。
+       *
+       * @return 壳 HTML；未部署（前端入口未构建/未拷贝）返回 {@code null}
+       */
     private String readPreviewShell() {        String cached = previewShellCache;
         if (cached != null) {
             return cached;
@@ -4382,14 +4523,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 把引导脚本注入壳 HTML：优先插到 {@code </head>} 前，其次 {@code <body>} 后，
-     * 都找不到（极简壳）时整体前置——引导脚本必须先于入口 bundle 执行。
-     *
-     * @param shell 壳 HTML
-     * @param boot  引导 {@code <script>} 片段
-     * @return 注入后的 HTML
-     */
+      /**
+       * 把引导脚本注入壳 HTML：优先插到 {@code </head>} 前，其次 {@code <body>} 后，
+       * 都找不到（极简壳）时整体前置——引导脚本必须先于入口 bundle 执行。
+       *
+       * @param shell 壳 HTML
+       * @param boot  引导 {@code <script>} 片段
+       * @return 注入后的 HTML
+       */
     private static String injectBootScript(String shell, String boot) {
         String lower = shell.toLowerCase(Locale.ROOT);
         int idx = lower.indexOf("</head>");
@@ -4406,12 +4547,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return boot + shell;
     }
 
-    /**
-     * 输出 JS 字符串字面量（带引号，转义反斜杠/引号/控制字符）。
-     *
-     * @param value 原始值
-     * @return 可安全内联进 {@code <script>} 的字符串字面量
-     */
+      /**
+       * 输出 JS 字符串字面量（带引号，转义反斜杠/引号/控制字符）。
+       *
+       * @param value 原始值
+       * @return 可安全内联进 {@code <script>} 的字符串字面量
+       */
     private static String jsonString(String value) {
         StringBuilder sb = new StringBuilder(value.length() + 2);
         sb.append('"');
@@ -4438,12 +4579,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return sb.toString();
     }
 
-    /**
-     * UTF-8 URL 编码（查询参数值用）。
-     *
-     * @param value 原始值
-     * @return 编码后的值；编码不支持时返回原值
-     */
+      /**
+       * UTF-8 URL 编码（查询参数值用）。
+       *
+       * @param value 原始值
+       * @return 编码后的值；编码不支持时返回原值
+       */
     private static String urlEncodeUtf8(String value) {
         try {
             return URLEncoder.encode(value, StandardCharsets.UTF_8.name());
@@ -4452,14 +4593,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 判断该 Content-Type 能否由浏览器内联渲染。
-     *
-     * <p>不能内联的类型走 {@link #writeUnsupportedPreview}，避免「一预览就下载」。</p>
-     *
-     * @param contentType 响应内容类型
-     * @return true 表示浏览器可内联显示
-     */
+      /**
+       * 判断该 Content-Type 能否由浏览器内联渲染。
+       *
+       * <p>不能内联的类型走 {@link #writeUnsupportedPreview}，避免「一预览就下载」。</p>
+       *
+       * @param contentType 响应内容类型
+       * @return true 表示浏览器可内联显示
+       */
     private static boolean isBrowserInlineType(String contentType) {
         if (contentType == null || contentType.isBlank()) {
             return false;
@@ -4471,33 +4612,33 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 || ct.contains("opendocument") || ct.contains("officedocument");
     }
 
-    /**
-     * 输出「暂不支持在线预览」的 HTML 提示页。
-     *
-     * <p>替代把不可内联的二进制直接回给浏览器（会变成下载）。页面给出文件名、
-     * 扩展名与 Content-Type，并在允许下载时提供下载入口。</p>
-     *
-     * @param fileName    文件名
-     * @param contentType 响应内容类型
-     * @param response    响应
-     * @return 异步阶段
-     */
-    /**
-     * 按扩展名给出「用哪个本地软件打开」的建议。
-     *
-     * <p>不支持预览时只说「下载后用对应软件打开」等于没说 —— 用户仍然不知道用哪个。
-     * 这里按格式给出**具体软件名**，把提示变成可执行的动作。取不到对应项时返回通用引导，
-     * 不做「猜一个软件」这种可能误导的事。</p>
-     *
-     * @param ext 小写扩展名（可为 null / 空）
-     * @return 建议软件文本
-     */
+      /**
+       * 输出「暂不支持在线预览」的 HTML 提示页。
+       *
+       * <p>替代把不可内联的二进制直接回给浏览器（会变成下载）。页面给出文件名、
+       * 扩展名与 Content-Type，并在允许下载时提供下载入口。</p>
+       *
+       * @param fileName    文件名
+       * @param contentType 响应内容类型
+       * @param response    响应
+       * @return 异步阶段
+       */
+      /**
+       * 按扩展名给出「用哪个本地软件打开」的建议。
+       *
+       * <p>不支持预览时只说「下载后用对应软件打开」等于没说 —— 用户仍然不知道用哪个。
+       * 这里按格式给出**具体软件名**，把提示变成可执行的动作。取不到对应项时返回通用引导，
+       * 不做「猜一个软件」这种可能误导的事。</p>
+       *
+       * @param ext 小写扩展名（可为 null / 空）
+       * @return 建议软件文本
+       */
     private String openWithHint(String ext) {
         if (ext == null || ext.isEmpty()) {
             return "能打开该格式的本地软件";
         }
         switch (ext) {
-            // WPS 系（国内办公常见）
+              // WPS 系（国内办公常见）
             case "wps":
             case "wpt":
             case "et":
@@ -4505,26 +4646,26 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             case "dps":
             case "dpt":
                 return "WPS Office";
-            // CAD / 制图
+              // CAD / 制图
             case "dwg":
             case "dwt":
             case "dws":
             case "dxf":
             case "dgn":
                 return "AutoCAD、中望 CAD、浩辰 CAD，或 CAD 看图王";
-            // Visio / 流程图
+              // Visio / 流程图
             case "vsd":
             case "vsdx":
             case "vssx":
             case "vstx":
             case "vdx":
                 return "Microsoft Visio，或 draw.io（免安装、可直接打开 .vsd/.vsdx）";
-            // Apple iWork
+              // Apple iWork
             case "pages":
             case "numbers":
             case "key":
                 return "macOS 上的 Pages / Numbers / Keynote，或 iCloud 网页版";
-            // Microsoft 其他
+              // Microsoft 其他
             case "one":
                 return "Microsoft OneNote";
             case "pub":
@@ -4533,7 +4674,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return "Microsoft Project";
             case "xps":
                 return "Windows 自带的 XPS Viewer";
-            // 图片类
+              // 图片类
             case "heic":
             case "heif":
                 return "Windows「照片」应用（需装 HEIF 图像扩展）或 macOS「预览」";
@@ -4554,21 +4695,21 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             case "psd":
             case "psb":
                 return "Adobe Photoshop，或 GIMP（开源、免费）";
-            // 设计稿
+              // 设计稿
             case "sketch":
                 return "macOS 上的 Sketch";
             case "fig":
                 return "Figma（网页版可直接打开）";
             case "xd":
                 return "Adobe XD";
-            // 电子书
+              // 电子书
             case "mobi":
             case "azw":
             case "azw3":
                 return "Kindle 阅读器，或 Calibre（开源、可互转格式）";
             case "djvu":
                 return "WinDjView、DjView";
-            // 办公套件旧版 / 其他
+              // 办公套件旧版 / 其他
             case "odg":
                 return "LibreOffice Draw（开源、免费）";
             case "sxw":
@@ -4580,7 +4721,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return "한글(Hangul) 或 LibreOffice";
             case "wpd":
                 return "Corel WordPerfect";
-            // 压缩 / 媒体
+              // 压缩 / 媒体
             case "cab":
             case "lzh":
             case "lha":
@@ -4589,7 +4730,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             case "ape":
             case "flac2":
                 return "VLC、foobar2000";
-            // 数据 / 列式存储
+              // 数据 / 列式存储
             case "avro":
             case "orc":
                 return "DuckDB、Spark 或 Pandas 等数据工具";
@@ -4598,14 +4739,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 生成「不支持预览」页面。
-     *
-     * @param fileName    文件名
-     * @param contentType 响应内容类型
-     * @param response    响应
-     * @return 异步阶段
-     */
+      /**
+       * 生成「不支持预览」页面。
+       *
+       * @param fileName    文件名
+       * @param contentType 响应内容类型
+       * @param response    响应
+       * @return 异步阶段
+       */
     private CompletionStage<Void> writeUnsupportedPreview(String fileName, String contentType, ServerResponse response) {
         String ext = simpleExtOf(fileName);
         String extLabel = ext == null || ext.isEmpty() ? "（无扩展名）" : "." + ext.toUpperCase(Locale.ROOT);
@@ -4657,24 +4798,24 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 处理远程文件拉取。
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param remoteUrl 远程地址
-     * @return 异步阶段
-     */
-    /**
-     * 处理远程文件拉取。
-     *
-     * <p>使用直连方式（不走系统代理），避免本机代理拦截内网地址导致拉取失败。</p>
-     *
-     * @param request  请求
-     * @param response 响应
-     * @param remoteUrl 远程地址
-     * @return 异步阶段
-     */
+      /**
+       * 处理远程文件拉取。
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param remoteUrl 远程地址
+       * @return 异步阶段
+       */
+      /**
+       * 处理远程文件拉取。
+       *
+       * <p>使用直连方式（不走系统代理），避免本机代理拦截内网地址导致拉取失败。</p>
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param remoteUrl 远程地址
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleRemoteFile(ServerRequest request, ServerResponse response, String remoteUrl) {
         try {
             java.net.HttpURLConnection connection = (java.net.HttpURLConnection)
@@ -4697,18 +4838,18 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * SSH 远程文件读取：通过 {@link FileStorageRemoteReader} SPI 读取远程主机文件。
-     *
-     * <p>URL 格式：{@code ssh://host:port/path}，凭据走 query 参数
-     * （{@code user} / {@code password}）。实现方必须为每次请求新建连接，
-     * 用完即关——MINA SSHD 的临时密钥交换保证每次加密参数不同。</p>
-     *
-     * @param request   请求
-     * @param response  响应
-     * @param sshUrl    SSH 地址（{@code ssh://host:port/path}）
-     * @return 异步阶段
-     */
+      /**
+       * SSH 远程文件读取：通过 {@link FileStorageRemoteReader} SPI 读取远程主机文件。
+       *
+       * <p>URL 格式：{@code ssh://host:port/path}，凭据走 query 参数
+       * （{@code user} / {@code password}）。实现方必须为每次请求新建连接，
+       * 用完即关——MINA SSHD 的临时密钥交换保证每次加密参数不同。</p>
+       *
+       * @param request   请求
+       * @param response  响应
+       * @param sshUrl    SSH 地址（{@code ssh://host:port/path}）
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleRemoteSshFile(ServerRequest request, ServerResponse response, String sshUrl) {
         try {
             FileStorageRemoteReader reader = resolveRemoteReader("ssh://");
@@ -4716,7 +4857,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return error(response, 403, "SSH remote read disabled");
             }
 
-            // 解析 ssh://host:port/path
+              // 解析 ssh://host:port/path
             String withoutScheme = sshUrl.substring("ssh://".length());
             int slashIdx = withoutScheme.indexOf('/');
             String hostPort = slashIdx >= 0 ? withoutScheme.substring(0, slashIdx) : withoutScheme;
@@ -4741,7 +4882,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return error(response, 400, "Missing 'user' parameter");
             }
 
-            // 私钥认证优先于密码认证（主机管理实体存储的是 agent key 私钥）
+              // 私钥认证优先于密码认证（主机管理实体存储的是 agent key 私钥）
             if (privateKey != null && !privateKey.isBlank()) {
                 RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username, null, privateKey, path, null);
                 RemoteFileResult result = reader.readRemote(rfRequest);
@@ -4758,12 +4899,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 将远程文件读取结果写入 HTTP 响应。
-     * @param response HTTP 响应
-     * @param result 远程文件读取结果
-     * @return 返回值
-    */
+      /**
+       * 将远程文件读取结果写入 HTTP 响应。
+       * @param response HTTP 响应
+       * @param result 远程文件读取结果
+       * @return 返回值
+      */
     private CompletionStage<Void> writeRemoteResult(ServerResponse response, RemoteFileResult result) {
         String fileName = result.fileName() != null ? result.fileName() : "remote";
         response.setStatus(200)
@@ -4773,12 +4914,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 按协议前缀解析远程文件读取器 SPI 实现。
-     *
-     * @param protocolPrefix 协议前缀（如 {@code ssh://}）
-     * @return 匹配的实现；未找到返回 null
-     */
+      /**
+       * 按协议前缀解析远程文件读取器 SPI 实现。
+       *
+       * @param protocolPrefix 协议前缀（如 {@code ssh://}）
+       * @return 匹配的实现；未找到返回 null
+       */
     private FileStorageRemoteReader resolveRemoteReader(String protocolPrefix) {
         try {
             ServiceProvider<FileStorageRemoteReader> provider =
@@ -4798,30 +4939,30 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return null;
     }
 
-    /**
-     * 三方 URL 预览：{@code ?url=<base64 编码的 http(s) 地址>}。
-     *
-     * <p>面向外部系统集成：外部系统把远端地址 base64 编码后拼进查询串，本服务解码、
-     * 拉取内容，然后走与本地对象**完全相同**的预览分发（{@link #serveObjectContent}）——
-     * format 转换、客户端直渲染、Markdown/SPI 页面、Range、内联兜底全部复用，
-     * 调用方只需 {@code GET /{bucket}/?url=...&preview=true}。</p>
-     *
-     * <p>安全约束：</p>
-     * <ul>
-     *   <li>受<b>第三方 URL 预览能力</b>控制：配置值取自
-     *       {@code FileStorageUrlPreviewProvider} SPI 实现名，只有选中声明
-     *       {@code supportsUrlPreview()} 的实现（内置为 {@code SERVER}，即后台拉取）才放行，
-     *       未配置或选到其它实现一律 403——避免无意间开放任意地址拉取（SSRF 面）；</li>
-     *   <li>解码后仅允许 {@code http://} / {@code https://}，其余协议拒绝（400）；</li>
-     *   <li>拉取走直连（不走系统代理），超时与 {@link #handleRemoteFile} 一致。</li>
-     * </ul>
-     *
-     * @param request    请求
-     * @param response   响应
-     * @param bucket     发起请求的存储桶名（入口壳签发预览令牌用）
-     * @param encodedUrl base64 编码后的远端地址
-     * @return 异步阶段
-     */
+      /**
+       * 三方 URL 预览：{@code ?url=<base64 编码的 http(s) 地址>}。
+       *
+       * <p>面向外部系统集成：外部系统把远端地址 base64 编码后拼进查询串，本服务解码、
+       * 拉取内容，然后走与本地对象**完全相同**的预览分发（{@link #serveObjectContent}）——
+       * format 转换、客户端直渲染、Markdown/SPI 页面、Range、内联兜底全部复用，
+       * 调用方只需 {@code GET /{bucket}/?url=...&preview=true}。</p>
+       *
+       * <p>安全约束：</p>
+       * <ul>
+       *   <li>受<b>第三方 URL 预览能力</b>控制：配置值取自
+       *       {@code FileStorageUrlPreviewProvider} SPI 实现名，只有选中声明
+       *       {@code supportsUrlPreview()} 的实现（内置为 {@code SERVER}，即后台拉取）才放行，
+       *       未配置或选到其它实现一律 403——避免无意间开放任意地址拉取（SSRF 面）；</li>
+       *   <li>解码后仅允许 {@code http://} / {@code https://}，其余协议拒绝（400）；</li>
+       *   <li>拉取走直连（不走系统代理），超时与 {@link #handleRemoteFile} 一致。</li>
+       * </ul>
+       *
+       * @param request    请求
+       * @param response   响应
+       * @param bucket     发起请求的存储桶名（入口壳签发预览令牌用）
+       * @param encodedUrl base64 编码后的远端地址
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleThirdUrlPreview(ServerRequest request, ServerResponse response,
                                                         String bucket, String encodedUrl) {
         FileStorageUrlPreviewProvider provider = resolveThirdUrlPreviewProvider();
@@ -4830,7 +4971,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
         String remoteUrl;
         try {
-            // 兼容标准与 URL-safe 两种 base64 字母表（外部系统编码方式不可控）
+              // 兼容标准与 URL-safe 两种 base64 字母表（外部系统编码方式不可控）
             byte[] decoded;
             try {
                 decoded = java.util.Base64.getDecoder().decode(encodedUrl);
@@ -4857,26 +4998,26 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             log.warn("三方 URL 预览拉取失败: {} - {}", remoteUrl, e.getMessage());
             return error(response, 502, "Remote Fetch Failed: " + e.getMessage());
         }
-        // 取路径最后一段作为文件名（扩展名决定后续分发通道）；根路径等无名场景兜底 index
+          // 取路径最后一段作为文件名（扩展名决定后续分发通道）；根路径等无名场景兜底 index
         String path = URI.create(remoteUrl).getPath();
         String fileName = path == null ? "" : path.substring(path.lastIndexOf('/') + 1);
         if (fileName.isEmpty()) {
             fileName = "index";
         }
         applyWatermarkHeader(response);
-        // 三方 URL 预览会话内允许 raw=true：入口壳签发的字节直链按当前会话
-        // 原样重放（服务端重新拉取远端），与令牌消费同权，仍受 openPreview 约束。
+          // 三方 URL 预览会话内允许 raw=true：入口壳签发的字节直链按当前会话
+          // 原样重放（服务端重新拉取远端），与令牌消费同权，仍受 openPreview 约束。
         return serveObjectContent(request, response, data, fileName, bucket, "third");
     }
 
-    /**
-     * 处理存在性检查请求。
-     *
-     * @param storage  存储实例
-     * @param response 响应
-     * @param key      对象 键
-     * @return 异步阶段
-     */
+      /**
+       * 处理存在性检查请求。
+       *
+       * @param storage  存储实例
+       * @param response 响应
+       * @param key      对象 键
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleExist(FileStorage storage, ServerResponse response, String key) {
         ExistObjectResult result = storage.existObject(ExistObjectRequest.builder()
                 .fileName(key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key)
@@ -4890,15 +5031,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 处理对象上传请求。
-     *
-     * @param storage  存储实例
-     * @param request  请求
-     * @param response 响应
-     * @param key      对象 键
-     * @return 异步阶段
-     */
+      /**
+       * 处理对象上传请求。
+       *
+       * @param storage  存储实例
+       * @param request  请求
+       * @param response 响应
+       * @param key      对象 键
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handlePut(FileStorage storage, ServerRequest request, ServerResponse response, String key) {
         if (key.isEmpty()) {
             return error(response, 400, "Object key is required");
@@ -4920,28 +5061,28 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .build());
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             return error(response, 500, "Put Object Failed: "
-                        + (result.getMessage() == null ? "" : result.getMessage()));
+                          + (result.getMessage() == null ? "" : result.getMessage()));
         }
         String url = result.getUrl() != null ? result.getUrl() : result.getKey();
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
                 .setBody("{\"status\":\"SUCCESS\",\"key\":\"" + escapeJson(key) + "\",\"url\":\""
-                        + escapeJson(url == null ? "" : url) + "\"}")
+                          + escapeJson(url == null ? "" : url) + "\"}")
                 .end();
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 处理对象删除请求。
-     *
-     * <p>对象直接删除；目录递归列出全部子对象后自底向上删除
-     * （本地文件系统不允许删除非空目录）。</p>
-     *
-     * @param storage  存储实例
-     * @param response 响应
-     * @param key      对象 键
-     * @return 异步阶段
-     */
+      /**
+       * 处理对象删除请求。
+       *
+       * <p>对象直接删除；目录递归列出全部子对象后自底向上删除
+       * （本地文件系统不允许删除非空目录）。</p>
+       *
+       * @param storage  存储实例
+       * @param response 响应
+       * @param key      对象 键
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleDelete(FileStorage storage, ServerResponse response, String key) {
         if (key.isEmpty()) {
             return error(response, 400, "Object key is required");
@@ -4958,60 +5099,60 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /* ================== 文件管理动作（KodExplorer 风格） ================== */
+      /* ================== 文件管理动作（KodExplorer 风格） ================== */
 
-    /**
-     * 文件动作业务异常：携带 HTTP 状态码，由动作入口统一转换为错误响应。
-     *
-     * @author CH
-     */
+      /**
+       * 文件动作业务异常：携带 HTTP 状态码，由动作入口统一转换为错误响应。
+       *
+       * @author CH
+       */
     private static final class FileActionException extends RuntimeException {
 
-        /**
-         * HTTP 状态码
-         */
+          /**
+           * HTTP 状态码
+           */
         private final int status;
 
-        /**
-         * 创建动作异常
-         *
-         * @param status  HTTP 状态码
-         * @param message 错误信息
-         */
+          /**
+           * 创建动作异常
+           *
+           * @param status  HTTP 状态码
+           * @param message 错误信息
+           */
         private FileActionException(int status, String message) {
             super(message);
             this.status = status;
         }
 
-        /**
-         * 获取 HTTP 状态码
-         *
-         * @return HTTP 状态码
-         */
+          /**
+           * 获取 HTTP 状态码
+           *
+           * @return HTTP 状态码
+           */
         private int getStatus() {
             return status;
         }
     }
 
-    /**
-     * 文件管理动作统一入口。
-     *
-     * <p>参数约定（query，框架已做 URL 解码）：</p>
-     * <ul>
-     *   <li>{@code mkdir/mkfile}：{@code path} 父目录（可空）、{@code name} 名称</li>
-     *   <li>{@code rename}：{@code path}、{@code name} 原名称、{@code newName} 新名称</li>
-     *   <li>{@code copy/move}：{@code sources} 源键（多个以换行分隔）、{@code target} 目标目录</li>
-     *   <li>{@code zip}：{@code sources} 源键（GET，直接返回 application/zip 流）</li>
-     *   <li>{@code unzip}：{@code path}、{@code name} 压缩包名、{@code target} 解压目标目录（可空，默认当前目录）</li>
-     * </ul>
-     *
-     * @param storage  存储实例
-     * @param request  请求
-     * @param response 响应
-     * @param action   动作名称
-     * @param params   查询参数
-     * @return 异步阶段
-     */
+      /**
+       * 文件管理动作统一入口。
+       *
+       * <p>参数约定（query，框架已做 URL 解码）：</p>
+       * <ul>
+       *   <li>{@code mkdir/mkfile}：{@code path} 父目录（可空）、{@code name} 名称</li>
+       *   <li>{@code rename}：{@code path}、{@code name} 原名称、{@code newName} 新名称</li>
+       *   <li>{@code copy/move}：{@code sources} 源键（多个以换行分隔）、{@code target} 目标目录</li>
+       *   <li>{@code zip}：{@code sources} 源键（GET，直接返回 application/zip 流）</li>
+       *   <li>{@code unzip}：{@code path}、{@code name} 压缩包名、{@code target} 解压目标目录（可空，默认当前目录）</li>
+       * </ul>
+       *
+       * @param storage  存储实例
+       * @param request  请求
+       * @param response 响应
+       * @param action   动作名称
+       * @param params   查询参数
+       * @return 异步阶段
+       */
     private CompletionStage<Void> handleAction(FileStorage storage, ServerRequest request, ServerResponse response,
                                                String action, Map<String, String> params) {
         try {
@@ -5044,9 +5185,9 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         } catch (FileActionException e) {
             return error(response, e.getStatus(), e.getMessage());
         } catch (IllegalArgumentException e) {
-            // 配置值非法（layoutType / imageFilter / thirdUrlPreview / filterChain 校验失败）
-            // 属于调用方错误，不该记成 500：日志里一条 ERROR 栈顶是这种 400，
-            // 排查时会被当成服务故障，而实际只是前端传了个不存在的枚举值。
+              // 配置值非法（layoutType / imageFilter / thirdUrlPreview / filterChain 校验失败）
+              // 属于调用方错误，不该记成 500：日志里一条 ERROR 栈顶是这种 400，
+              // 排查时会被当成服务故障，而实际只是前端传了个不存在的枚举值。
             log.warn("文件管理动作参数非法: action={} - {}", action, e.getMessage());
             return error(response, 400, e.getMessage());
         } catch (Exception e) {
@@ -5055,32 +5196,32 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 校验动作请求必须为 POST。
-     *
-     * @param request 请求
-     */
+      /**
+       * 校验动作请求必须为 POST。
+       *
+       * @param request 请求
+       */
     private void requirePost(ServerRequest request) {
         if (request.getMethod() != HttpMethod.POST) {
             throw new FileActionException(405, "Method Not Allowed: action requires POST");
         }
     }
 
-    /**
-     * 管理员动态修改行为配置（实时生效，无需重启）。
-     *
-     * <p>请求体为 JSON，支持部分更新（缺省字段保持原值）：
-     * {@code {"openPreview":true,"openDownload":true,"openRange":true,"openWatermark":false,
-     * "openWebjars":true,"openRemoteFile":false,"layout":true,"layoutType":"SYSTEM","watermark":"文本"}}。
-     * 必须通过 {@code ?token=} 携带系统配置访问令牌（{@link #getToken()}，每次服务启动随机生成），
-     * 令牌不符返回 403。修改直接写入共享的 {@link FileStorageSetting} 实例，
-     * 由于所有请求均实时读取该实例，新配置对后续请求立即生效。</p>
-     *
-     * @param request  请求（读取 JSON 请求体）
-     * @param response 响应
-     * @param params   查询参数（token）
-     * @return 异步阶段
-     */
+      /**
+       * 管理员动态修改行为配置（实时生效，无需重启）。
+       *
+       * <p>请求体为 JSON，支持部分更新（缺省字段保持原值）：
+       * {@code {"openPreview":true,"openDownload":true,"openRange":true,"openWatermark":false,
+       * "openWebjars":true,"openRemoteFile":false,"layout":true,"layoutType":"SYSTEM","watermark":"文本"}}。
+       * 必须通过 {@code ?token=} 携带系统配置访问令牌（{@link #getToken()}，每次服务启动随机生成），
+       * 令牌不符返回 403。修改直接写入共享的 {@link FileStorageSetting} 实例，
+       * 由于所有请求均实时读取该实例，新配置对后续请求立即生效。</p>
+       *
+       * @param request  请求（读取 JSON 请求体）
+       * @param response 响应
+       * @param params   查询参数（token）
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doSetConfig(ServerRequest request, ServerResponse response,
                                               Map<String, String> params) {
         requirePost(request);
@@ -5113,8 +5254,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         applyStringSetting("fileSettingKey", extractString(body, "fileSettingKey"));
         applyStringSetting("filterChain", extractString(body, "filterChain"));
         applyStringSetting("thirdUrlPreview", extractString(body, "thirdUrlPreview"));
-        // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
-        // 避免传 0 把链接生成成出生即死，也避免传超大值让过期链接永不回收。
+          // 链接默认有效期热更新：前端传毫秒数。校验为正并限制在 1 秒 ~ 30 天，
+          // 避免传 0 把链接生成成出生即死，也避免传超大值让过期链接永不回收。
         String ttlText = extractScalar(body, "oneTimeTtlMs");
         if (ttlText != null && !ttlText.isBlank()) {
             long ttl;
@@ -5128,7 +5269,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
             setting.setOneTimeTtlMs(ttl);
         }
-        // 访问权限热更新：private=true/false 针对 URL 中的当前桶；privateBuckets 直接替换全部私有桶
+          // 访问权限热更新：private=true/false 针对 URL 中的当前桶；privateBuckets 直接替换全部私有桶
         Boolean privateFlag = extractBoolean(body, "private");
         if (privateFlag != null) {
             String bucketName = resolveBucketName(request);
@@ -5152,8 +5293,8 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             setting.setPrivateBuckets(buckets);
         }
         log.info("管理员动态更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
-                        + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
-                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}, fileSettingKey={}, privateBuckets={}",
+                          + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
+                          + "showFormat={}, showSize={}, showTime={}, imageFilter={}, fileSettingKey={}, privateBuckets={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
                 setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.getThirdUrlPreview(),
                 setting.isLayout(), setting.getLayoutType(),
@@ -5163,21 +5304,21 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return writeActionSuccess(response, "\"configUpdated\":true");
     }
 
-    /**
-     * 服务管理热更新入口：把节点过滤器参数就地落到共享 {@link FileStorageSetting}。
-     *
-     * <p>由 {@code ServerNodeRegistry#hotUpdateFilterParams} 调用，对应 HTTP
-     * {@code POST /ms/monitor/server/{id}/filters/{i}/params}。本类原先<b>没有</b>覆写本方法，
-     * 于是落到接口的空默认实现：参数已落库、前端也提示「已热更新」，运行中的过滤器却毫无变化
-     * （表现为「必须停→起才生效」）。覆写后与管理员配置页共用同一套校验。</p>
-     *
-     * <p>仅接受服务管理 schema 声明的参数（{@code openPreview/openDownload/openRange/
-     * openWatermark/openRemoteFile/thirdUrlPreview/openWebjars/watermark/layout/showFormat/showSize/showTime/
-     * layoutType/imageFilter}）；{@code privateBuckets}、{@code oneTimeTtlMs} 等属管理员令牌页面
-     * 的能力，不在此入口开放。未知键只记 WARN 后忽略，不抛错——避免历史遗留参数导致整次热更新失败。</p>
-     *
-     * @param config 新参数（值为字符串或布尔，键大小写敏感）
-     */
+      /**
+       * 服务管理热更新入口：把节点过滤器参数就地落到共享 {@link FileStorageSetting}。
+       *
+       * <p>由 {@code ServerNodeRegistry#hotUpdateFilterParams} 调用，对应 HTTP
+       * {@code POST /ms/monitor/server/{id}/filters/{i}/params}。本类原先<b>没有</b>覆写本方法，
+       * 于是落到接口的空默认实现：参数已落库、前端也提示「已热更新」，运行中的过滤器却毫无变化
+       * （表现为「必须停→起才生效」）。覆写后与管理员配置页共用同一套校验。</p>
+       *
+       * <p>仅接受服务管理 schema 声明的参数（{@code openPreview/openDownload/openRange/
+       * openWatermark/openRemoteFile/thirdUrlPreview/openWebjars/watermark/layout/showFormat/showSize/showTime/
+       * layoutType/imageFilter}）；{@code privateBuckets}、{@code oneTimeTtlMs} 等属管理员令牌页面
+       * 的能力，不在此入口开放。未知键只记 WARN 后忽略，不抛错——避免历史遗留参数导致整次热更新失败。</p>
+       *
+       * @param config 新参数（值为字符串或布尔，键大小写敏感）
+       */
     @Override
     public void updateConfig(Map<String, Object> config) {
         if (config == null || config.isEmpty()) {
@@ -5192,21 +5333,21 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             if (BOOLEAN_PARAM_KEYS.contains(key)) {
                 String flag = String.valueOf(raw).trim();
                 if (flag.isEmpty()) {
-                    // 布尔键不接受空串：无法判定用户意图，按「本次不带该键」处理
+                      // 布尔键不接受空串：无法判定用户意图，按「本次不带该键」处理
                     continue;
                 }
                 applyBooleanSetting(key, parseBooleanText(flag));
             } else if (STRING_PARAM_KEYS.contains(key)) {
-                // 字符串键不过滤空串：空串是「清空该配置」的合法语义（管理员配置页即如此），
-                // 若一并跳过，用户将永远无法通过服务管理清除水印文本。
+                  // 字符串键不过滤空串：空串是「清空该配置」的合法语义（管理员配置页即如此），
+                  // 若一并跳过，用户将永远无法通过服务管理清除水印文本。
                 applyStringSetting(key, raw instanceof String text ? text : String.valueOf(raw));
             } else {
                 log.warn("文件存储过滤器热更新忽略未知参数: {}={}", key, raw);
             }
         }
         log.info("服务管理热更新文件存储配置: openPreview={}, openDownload={}, openRange={}, "
-                        + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
-                        + "showFormat={}, showSize={}, showTime={}, imageFilter={}",
+                          + "openWatermark={}, openRemoteFile={}, thirdUrlPreview={}, layout={}, layoutType={}, "
+                          + "showFormat={}, showSize={}, showTime={}, imageFilter={}",
                 setting.isOpenPreview(), setting.isOpenDownload(), setting.isOpenRange(),
                 setting.isOpenWatermark(), setting.isOpenRemoteFile(), setting.getThirdUrlPreview(),
                 setting.isLayout(),
@@ -5215,12 +5356,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         notifyConfigChanged();
     }
 
-    /**
-     * 落位单个布尔参数（{@code value} 为 {@code null} 表示本次不带该键，保持原值）。
-     *
-     * @param key   参数名
-     * @param value 布尔值，可为 {@code null}
-     */
+      /**
+       * 落位单个布尔参数（{@code value} 为 {@code null} 表示本次不带该键，保持原值）。
+       *
+       * @param key   参数名
+       * @param value 布尔值，可为 {@code null}
+       */
     private void applyBooleanSetting(String key, Boolean value) {
         if (value == null) {
             return;
@@ -5242,16 +5383,16 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 落位单个字符串参数并做枚举校验（{@code value} 为 {@code null} 表示本次不带该键）。
-     *
-     * <p>非法枚举值抛 {@link IllegalArgumentException}：服务管理侧的调用方
-     * （{@code ServerNodeRegistry#hotUpdateFilterParams}）会把它作为热更新失败上报，
-     * 从而在落库之前中止，不会把非法值写进节点定义。</p>
-     *
-     * @param key   参数名（watermark / layoutType / imageFilter / fileSettingKey / filterChain / thirdUrlPreview）
-     * @param value 参数值，可为 {@code null}
-     */
+      /**
+       * 落位单个字符串参数并做枚举校验（{@code value} 为 {@code null} 表示本次不带该键）。
+       *
+       * <p>非法枚举值抛 {@link IllegalArgumentException}：服务管理侧的调用方
+       * （{@code ServerNodeRegistry#hotUpdateFilterParams}）会把它作为热更新失败上报，
+       * 从而在落库之前中止，不会把非法值写进节点定义。</p>
+       *
+       * @param key   参数名（watermark / layoutType / imageFilter / fileSettingKey / filterChain / thirdUrlPreview）
+       * @param value 参数值，可为 {@code null}
+       */
     private void applyStringSetting(String key, String value) {
         if (value == null) {
             return;
@@ -5268,10 +5409,10 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
             case "imageFilter" -> {
                 String upper = value.trim().toUpperCase(Locale.ROOT);
-                // 原图固定合法；其余取值必须是 ImageFilter SPI 真实注册的扩展名
+                  // 原图固定合法；其余取值必须是 ImageFilter SPI 真实注册的扩展名
                 if (!"NONE".equals(upper) && !resolveImageFilterNames().contains(upper)) {
                     throw new IllegalArgumentException("imageFilter 不支持的滤镜: " + value
-                            + "，可用值: NONE/" + String.join("/", resolveImageFilterNames()));
+                              + "，可用值: NONE/" + String.join("/", resolveImageFilterNames()));
                 }
                 setting.setImageFilter(upper);
             }
@@ -5279,25 +5420,25 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 String wanted = value.trim();
                 if (wanted.isEmpty()) {
                     throw new IllegalArgumentException("fileSettingKey 不能为空，可用值: "
-                            + String.join("/", resolveFileSettingNames()));
+                              + String.join("/", resolveFileSettingNames()));
                 }
                 String matched = resolveFileSettingNames().stream()
                         .filter(n -> n.equalsIgnoreCase(wanted))
                         .findFirst()
                         .orElseThrow(() -> new IllegalArgumentException("fileSettingKey 不支持的实现: " + value
-                                + "，可用值: " + String.join("/", resolveFileSettingNames())));
+                                  + "，可用值: " + String.join("/", resolveFileSettingNames())));
                 setting.setFileSettingKey(matched);
             }
             case "filterChain" -> setting.setFilterChain(normalizeFilterChain(value));
             case "thirdUrlPreview" -> {
                 String upper = value.trim().toUpperCase(Locale.ROOT);
-                // 关闭固定合法；其余取值必须是 URL 预览能力 SPI 真实注册的实现名。
-                // 注意「实现存在」≠「支持 ?url=」：不支持处理的实现选进来只会 403，
-                // 具体放行判定在 handleThirdUrlPreview。
+                  // 关闭固定合法；其余取值必须是 URL 预览能力 SPI 真实注册的实现名。
+                  // 注意「实现存在」≠「支持 ?url=」：不支持处理的实现选进来只会 403，
+                  // 具体放行判定在 handleThirdUrlPreview。
                 Set<String> names = resolveUrlPreviewProviderNames();
                 if (!"NONE".equals(upper) && !names.contains(upper)) {
                     throw new IllegalArgumentException("thirdUrlPreview 不支持的预览能力: " + value
-                            + "，可用值: NONE/" + String.join("/", names));
+                              + "，可用值: NONE/" + String.join("/", names));
                 }
                 setting.setThirdUrlPreview(upper);
             }
@@ -5305,17 +5446,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 解析并规范化全局滤镜链配置。
-     *
-     * <p>格式 {@code id:key=value,key=value;id2}；id 必须命中后端
-     * {@code FileStorageFilterSetting} SPI 能力列表（大小写不敏感，统一落小写），
-     * 非法 id 直接抛 {@link IllegalArgumentException}（服务管理侧据此中止热更新，
-     * 管理员配置页则把错误消息回显给用户）。</p>
-     *
-     * @param value 原始链配置串；null 表示本次不带该键，空白串表示清空
-     * @return 规范化后的链配置串；清空时返回 null
-     */
+      /**
+       * 解析并规范化全局滤镜链配置。
+       *
+       * <p>格式 {@code id:key=value,key=value;id2}；id 必须命中后端
+       * {@code FileStorageFilterSetting} SPI 能力列表（大小写不敏感，统一落小写），
+       * 非法 id 直接抛 {@link IllegalArgumentException}（服务管理侧据此中止热更新，
+       * 管理员配置页则把错误消息回显给用户）。</p>
+       *
+       * @param value 原始链配置串；null 表示本次不带该键，空白串表示清空
+       * @return 规范化后的链配置串；清空时返回 null
+       */
     private String normalizeFilterChain(String value) {
         if (value == null) {
             return null;
@@ -5347,7 +5488,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             }
             if (!supported.contains(id)) {
                 throw new IllegalArgumentException("filterChain 不支持的滤镜: " + id
-                        + "，可用值: " + String.join("/", supported));
+                          + "，可用值: " + String.join("/", supported));
             }
             entries.add(params == null || params.isEmpty() ? id : id + ":" + params);
             if (entries.size() > 32) {
@@ -5357,14 +5498,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return entries.isEmpty() ? null : String.join(";", entries);
     }
 
-    /**
-     * 收集后台 {@code FileStorageFilterSetting} SPI 的全部能力 id（小写去重）。
-     *
-     * <p>与 {@code ?format=capabilities} 下发的是同一来源，保证「滤镜列表来自后台 SPI」
-     * 与写入校验一致：管理界面能选到的 id，写入必然通过。</p>
-     *
-     * @return 能力 id 集合（SPI 缺失时为空集）
-     */
+      /**
+       * 收集后台 {@code FileStorageFilterSetting} SPI 的全部能力 id（小写去重）。
+       *
+       * <p>与 {@code ?format=capabilities} 下发的是同一来源，保证「滤镜列表来自后台 SPI」
+       * 与写入校验一致：管理界面能选到的 id，写入必然通过。</p>
+       *
+       * @return 能力 id 集合（SPI 缺失时为空集）
+       */
     private Set<String> resolveFilterSettingCapabilities() {
         Set<String> ids = new LinkedHashSet<>();
         try {
@@ -5386,16 +5527,16 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return ids;
     }
 
-    /**
-     * 路径穿透筛查：命中危险片段时返回原因描述，否则返回 null。
-     *
-     * <p>覆盖：NUL 字节、反斜杠（Windows 分隔符穿越）、{@code ..} 段与双重编码
-     * （{@code %252e%252e}）；{@code sources} 等多值参数按换行拆分逐段判定。</p>
-     *
-     * @param path   已解码的请求路径
-     * @param params 查询参数（文件动作参数 path/name/target/sources/inner 同查）
-     * @return 命中的危险片段描述；未命中返回 null
-     */
+      /**
+       * 路径穿透筛查：命中危险片段时返回原因描述，否则返回 null。
+       *
+       * <p>覆盖：NUL 字节、反斜杠（Windows 分隔符穿越）、{@code ..} 段与双重编码
+       * （{@code %252e%252e}）；{@code sources} 等多值参数按换行拆分逐段判定。</p>
+       *
+       * @param path   已解码的请求路径
+       * @param params 查询参数（文件动作参数 path/name/target/sources/inner 同查）
+       * @return 命中的危险片段描述；未命中返回 null
+       */
     private String checkPathGuard(String path, Map<String, String> params) {
         String hit = findTraversal(path);
         if (hit != null) {
@@ -5416,14 +5557,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return null;
     }
 
-    /**
-     * 在文本中查找穿越特征（按 /、CR、LF 拆分后逐段判定，并做一次再解码）。
-     *
-     * <p>包可见：单测直接调用钉住检测矩阵，避免必须构造完整 HTTP 请求。</p>
-     *
-     * @param text 待查文本
-     * @return 命中的片段（{@code ..} / 反斜杠 / NUL）；未命中返回 null
-     */
+      /**
+       * 在文本中查找穿越特征（按 /、CR、LF 拆分后逐段判定，并做一次再解码）。
+       *
+       * <p>包可见：单测直接调用钉住检测矩阵，避免必须构造完整 HTTP 请求。</p>
+       *
+       * @param text 待查文本
+       * @return 命中的片段（{@code ..} / 反斜杠 / NUL）；未命中返回 null
+       */
     static String findTraversal(String text) {
         if (text == null || text.isEmpty()) {
             return null;
@@ -5438,7 +5579,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (hit != null) {
             return hit;
         }
-        // 双重编码：路径已被框架解过一次，这里再解一次看是否变成 .. 或反斜杠
+          // 双重编码：路径已被框架解过一次，这里再解一次看是否变成 .. 或反斜杠
         try {
             String once = URLDecoder.decode(text, StandardCharsets.UTF_8.name());
             if (!once.equals(text)) {
@@ -5448,17 +5589,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return scanTraversalSegments(once);
             }
         } catch (Exception ignore) {
-            // 非法转义序列按原文处理
+              // 非法转义序列按原文处理
         }
         return null;
     }
 
-    /**
-     * 按 /、CR、LF 拆分并检查 {@code ..} 段。
-     *
-     * @param text 文本
-     * @return 命中返回 {@code ..}；否则返回 null
-     */
+      /**
+       * 按 /、CR、LF 拆分并检查 {@code ..} 段。
+       *
+       * @param text 文本
+       * @return 命中返回 {@code ..}；否则返回 null
+       */
     private static String scanTraversalSegments(String text) {
         for (String segment : text.split("[/\r\n]")) {
             if ("..".equals(segment.trim())) {
@@ -5468,22 +5609,22 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return null;
     }
 
-    /**
-     * 宽松解析布尔文本：仅 {@code true/false} 视为布尔，其余按 {@code false} 处理。
-     *
-     * <p>服务管理侧参数统一以字符串传递（{@code Map<String, String>}），这里不抛错，
-     * 避免一个笔误值让整次热更新失败。</p>
-     *
-     * @param text 参数文本
-     * @return 布尔值
-     */
+      /**
+       * 宽松解析布尔文本：仅 {@code true/false} 视为布尔，其余按 {@code false} 处理。
+       *
+       * <p>服务管理侧参数统一以字符串传递（{@code Map<String, String>}），这里不抛错，
+       * 避免一个笔误值让整次热更新失败。</p>
+       *
+       * @param text 参数文本
+       * @return 布尔值
+       */
     private Boolean parseBooleanText(String text) {
         return Boolean.parseBoolean(text);
     }
 
-    /**
-     * 通知配置热更新（同步私有桶给 OAuth 鉴权过滤器）。
-     */
+      /**
+       * 通知配置热更新（同步私有桶给 OAuth 鉴权过滤器）。
+       */
     private void notifyConfigChanged() {
         java.util.function.Consumer<FileStorageSetting> listener = this.configListener;
         if (listener == null) {
@@ -5496,52 +5637,52 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 解析请求路径中的桶名（第一段）。
-     *
-     * @param request 当前请求
-     * @return 桶名，无法解析时返回 空
-     */
+      /**
+       * 解析请求路径中的桶名（第一段）。
+       *
+       * @param request 当前请求
+       * @return 桶名，无法解析时返回 空
+       */
     private String resolveBucketName(ServerRequest request) {
         List<String> segments = splitPath(request.getPath());
         return segments.isEmpty() ? null : segments.getFirst();
     }
 
-    /**
-     * 从 JSON 文本中提取布尔字段值（轻量解析，避免引入额外依赖）。
-     *
-     * @param json JSON 文本
-     * @param key  字段名
-     * @return 字段值；字段不存在返回 null
-     */
+      /**
+       * 从 JSON 文本中提取布尔字段值（轻量解析，避免引入额外依赖）。
+       *
+       * @param json JSON 文本
+       * @param key  字段名
+       * @return 字段值；字段不存在返回 null
+       */
     private static Boolean extractBoolean(String json, String key) {
         Matcher matcher = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(true|false)").matcher(json);
         return matcher.find() ? Boolean.parseBoolean(matcher.group(1)) : null;
     }
 
-    /**
-     * 从 JSON 文本中提取字符串字段值（支持 \" \\ \n \t \r \/ 转义）。
-     *
-     * @param json JSON 文本
-     * @param key  字段名
-     * @return 字段值（已反转义）；字段不存在返回 null
-     */
+      /**
+       * 从 JSON 文本中提取字符串字段值（支持 \" \\ \n \t \r \/ 转义）。
+       *
+       * @param json JSON 文本
+       * @param key  字段名
+       * @return 字段值（已反转义）；字段不存在返回 null
+       */
     private static String extractString(String json, String key) {
         Matcher matcher = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
         return matcher.find() ? unescapeJson(matcher.group(1)) : null;
     }
 
-    /**
-     * 从 JSON 文本中提取标量字段，数字与字符串都吃。
-     *
-     * <p>{@link #extractString} 的正则要求值带引号（{@code "key":"v"}），
-     * 传 {@code {"oneTimeTtlMs":180000}} 这种**裸数字**时永远匹配不上、返回 null，
-     * 于是配置改不动。数值型配置项统一走这里。</p>
-     *
-     * @param json JSON 文本
-     * @param key  字段名
-     * @return 字段值的字面文本；字段不存在返回 null
-     */
+      /**
+       * 从 JSON 文本中提取标量字段，数字与字符串都吃。
+       *
+       * <p>{@link #extractString} 的正则要求值带引号（{@code "key":"v"}），
+       * 传 {@code {"oneTimeTtlMs":180000}} 这种**裸数字**时永远匹配不上、返回 null，
+       * 于是配置改不动。数值型配置项统一走这里。</p>
+       *
+       * @param json JSON 文本
+       * @param key  字段名
+       * @return 字段值的字面文本；字段不存在返回 null
+       */
     private static String extractScalar(String json, String key) {
         Matcher quoted = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
         if (quoted.find()) {
@@ -5551,12 +5692,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return bare.find() ? bare.group(1) : null;
     }
 
-    /**
-     * 反转义 JSON 字符串中的常见转义序列。
-     *
-     * @param raw 原始转义文本
-     * @return 反转义后的文本
-     */
+      /**
+       * 反转义 JSON 字符串中的常见转义序列。
+       *
+       * @param raw 原始转义文本
+       * @return 反转义后的文本
+       */
     private static String unescapeJson(String raw) {
         StringBuilder sb = new StringBuilder(raw.length());
         for (int i = 0; i < raw.length(); i++) {
@@ -5593,15 +5734,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return sb.toString();
     }
 
-    /**
-     * 新建目录 / 新建空文件。
-     *
-     * @param storage   存储实例
-     * @param response  响应
-     * @param params    查询参数
-     * @param directory true=目录；false=空文件
-     * @return 异步阶段
-     */
+      /**
+       * 新建目录 / 新建空文件。
+       *
+       * @param storage   存储实例
+       * @param response  响应
+       * @param params    查询参数
+       * @param directory true=目录；false=空文件
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doCreate(FileStorage storage, ServerResponse response,
                                            Map<String, String> params, boolean directory) {
         String path = normalizePathParam(params.get("path"));
@@ -5618,14 +5759,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return writeActionSuccess(response, "\"created\":\"" + escapeJson(key) + "\"");
     }
 
-    /**
-     * 重命名（同目录改名；目录递归搬运）。
-     *
-     * @param storage  存储实例
-     * @param response 响应
-     * @param params   查询参数
-     * @return 异步阶段
-     */
+      /**
+       * 重命名（同目录改名；目录递归搬运）。
+       *
+       * @param storage  存储实例
+       * @param response 响应
+       * @param params   查询参数
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doRename(FileStorage storage, ServerResponse response, Map<String, String> params) {
         String path = normalizePathParam(params.get("path"));
         String name = requireValidName(params.get("name"));
@@ -5644,20 +5785,20 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         copyRecursively(storage, source, target);
         deleteRecursively(storage, source);
         return writeActionSuccess(response, "\"renamed\":\"" + escapeJson(source) + "\",\"target\":\""
-                + escapeJson(target) + "\"");
+                  + escapeJson(target) + "\"");
     }
 
-    /**
-     * 复制 / 剪切（移动）一个或多个对象到目标目录。
-     *
-     * <p>同名冲突时自动按"名称 - 副本(n).扩展名"重命名；移动到自身或自身子目录时拒绝。</p>
-     *
-     * @param storage  存储实例
-     * @param response 响应
-     * @param params   查询参数
-     * @param move     true=移动（复制后删除源）；false=仅复制
-     * @return 异步阶段
-     */
+      /**
+       * 复制 / 剪切（移动）一个或多个对象到目标目录。
+       *
+       * <p>同名冲突时自动按"名称 - 副本(n).扩展名"重命名；移动到自身或自身子目录时拒绝。</p>
+       *
+       * @param storage  存储实例
+       * @param response 响应
+       * @param params   查询参数
+       * @param move     true=移动（复制后删除源）；false=仅复制
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doCopyOrMove(FileStorage storage, ServerResponse response,
                                                Map<String, String> params, boolean move) {
         List<String> sources = parseSources(params.get("sources"));
@@ -5693,17 +5834,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return writeActionSuccess(response, "\"count\":" + count + ",\"keys\":[" + keys + "]");
     }
 
-    /**
-     * 将一个或多个对象打包为 ZIP 下载。
-     *
-     * <p>单个源时压缩包名为"源名称.zip"（文件则去掉原扩展名）；多个源时为 {@code download.zip}。
-     * ZIP 条目按源的相对结构组织。</p>
-     *
-     * @param storage  存储实例
-     * @param response 响应
-     * @param params   查询参数
-     * @return 异步阶段
-     */
+      /**
+       * 将一个或多个对象打包为 ZIP 下载。
+       *
+       * <p>单个源时压缩包名为"源名称.zip"（文件则去掉原扩展名）；多个源时为 {@code download.zip}。
+       * ZIP 条目按源的相对结构组织。</p>
+       *
+       * @param storage  存储实例
+       * @param response 响应
+       * @param params   查询参数
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doZip(FileStorage storage, ServerResponse response, Map<String, String> params) {
         List<String> sources = parseSources(params.get("sources"));
         String zipName;
@@ -5722,7 +5863,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 if (meta == null) {
                     throw new FileActionException(404, "对象不存在: " + source);
                 }
-                // 单文件直接以文件名作为条目（前缀为空）；其余情况以各自名称作为根条目
+                  // 单文件直接以文件名作为条目（前缀为空）；其余情况以各自名称作为根条目
                 String prefix = (sources.size() == 1 && !meta.isDirectory()) ? "" : baseName(source) + "/";
                 appendZipEntry(storage, source, prefix, zos);
             }
@@ -5739,14 +5880,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 解压 ZIP 到目标目录（默认压缩包所在目录），覆盖同名对象。
-     *
-     * @param storage  存储实例
-     * @param response 响应
-     * @param params   查询参数
-     * @return 异步阶段
-     */
+      /**
+       * 解压 ZIP 到目标目录（默认压缩包所在目录），覆盖同名对象。
+       *
+       * @param storage  存储实例
+       * @param response 响应
+       * @param params   查询参数
+       * @return 异步阶段
+       */
     private CompletionStage<Void> doUnzip(FileStorage storage, ServerResponse response, Map<String, String> params) {
         String path = normalizePathParam(params.get("path"));
         String name = requireValidName(params.get("name"));
@@ -5786,17 +5927,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             throw new FileActionException(500, "解压失败: " + e.getMessage());
         }
         return writeActionSuccess(response, "\"entries\":" + count + ",\"target\":\""
-                + escapeJson(targetDir) + "\"");
+                  + escapeJson(targetDir) + "\"");
     }
 
-    /* ---------- 文件管理动作：SPI 组合原语 ---------- */
+      /* ---------- 文件管理动作：SPI 组合原语 ---------- */
 
-    /**
-     * 创建目录（键以 {@code /} 结尾的零字节占位约定，本地存储落盘为真实目录）。
-     *
-     * @param storage 存储实例
-     * @param key     目录键
-     */
+      /**
+       * 创建目录（键以 {@code /} 结尾的零字节占位约定，本地存储落盘为真实目录）。
+       *
+       * @param storage 存储实例
+       * @param key     目录键
+       */
     private void createDirectory(FileStorage storage, String key) {
         PutObjectResult result = storage.putObject(PutObjectRequest.builder()
                 .fileName(baseName(key) + "/")
@@ -5806,14 +5947,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         ensurePutSuccess(result, "创建目录失败: " + key);
     }
 
-    /**
-     * 写入字节内容到指定键。
-     *
-     * @param storage 存储实例
-     * @param key     对象键
-     * @param bytes   内容字节
-     * @param errMsg  失败提示
-     */
+      /**
+       * 写入字节内容到指定键。
+       *
+       * @param storage 存储实例
+       * @param key     对象键
+       * @param bytes   内容字节
+       * @param errMsg  失败提示
+       */
     private void putBytes(FileStorage storage, String key, byte[] bytes, String errMsg) {
         PutObjectResult result = storage.putObject(PutObjectRequest.builder()
                 .fileName(baseName(key))
@@ -5823,42 +5964,42 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         ensurePutSuccess(result, errMsg);
     }
 
-    /**
-     * 校验写入结果。
-     *
-     * @param result 写入结果
-     * @param errMsg 失败提示
-     */
+      /**
+       * 校验写入结果。
+       *
+       * @param result 写入结果
+       * @param errMsg 失败提示
+       */
     private void ensurePutSuccess(PutObjectResult result, String errMsg) {
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             throw new FileActionException(500, errMsg + (result.getMessage() == null ? "" : ": " + result.getMessage()));
         }
     }
 
-    /**
-     * 请求是否显式要求"目录列表 JSON"。
-     *
-     * <p>前端（Vue API）统一用 {@code ?format=json} 拉目录列表。这个约定此前只在桶根生效：
-     * 子目录路径会落到 {@link #handleGet} 的"读对象"分支，读内容时抛"是一个目录"，
-     * 最终把"点进文件夹"变成 500 Internal Server Error。</p>
-     *
-     * <p>与"路径以 {@code /} 结尾"同等对待即可：两者都是"我要看这个目录里有什么"。</p>
-     *
-     * @param request 请求
-     * @return true 表示要求目录列表
-     */
+      /**
+       * 请求是否显式要求"目录列表 JSON"。
+       *
+       * <p>前端（Vue API）统一用 {@code ?format=json} 拉目录列表。这个约定此前只在桶根生效：
+       * 子目录路径会落到 {@link #handleGet} 的"读对象"分支，读内容时抛"是一个目录"，
+       * 最终把"点进文件夹"变成 500 Internal Server Error。</p>
+       *
+       * <p>与"路径以 {@code /} 结尾"同等对待即可：两者都是"我要看这个目录里有什么"。</p>
+       *
+       * @param request 请求
+       * @return true 表示要求目录列表
+       */
     private static boolean wantsJsonListing(ServerRequest request) {
         Map<String, String> params = request.getParams();
         return params != null && "json".equalsIgnoreCase(params.get("format"));
     }
 
-    /**
-     * 判断对象是否存在。
-     *
-     * @param storage 存储实例
-     * @param key     对象键
-     * @return 存在返回 true
-     */
+      /**
+       * 判断对象是否存在。
+       *
+       * @param storage 存储实例
+       * @param key     对象键
+       * @return 存在返回 true
+       */
     private boolean objectExists(FileStorage storage, String key) {
         if (key == null || key.isEmpty()) {
             return false;
@@ -5870,16 +6011,16 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return result.getResultCode() == ObjectResult.ResultCode.SUCCESS && result.isExists();
     }
 
-    /**
-     * 查询单个对象元数据。
-     *
-     * <p>优先从父目录列表中匹配（可区分目录/文件）；存储实现语义不一致导致父列表缺失时，
-     * 通过存在性 + 目标路径列举结果兜底判断。对象不存在返回 {@code null}。</p>
-     *
-     * @param storage 存储实例
-     * @param key     对象键
-     * @return 元数据；不存在返回 null
-     */
+      /**
+       * 查询单个对象元数据。
+       *
+       * <p>优先从父目录列表中匹配（可区分目录/文件）；存储实现语义不一致导致父列表缺失时，
+       * 通过存在性 + 目标路径列举结果兜底判断。对象不存在返回 {@code null}。</p>
+       *
+       * @param storage 存储实例
+       * @param key     对象键
+       * @return 元数据；不存在返回 null
+       */
     private Metadata stat(FileStorage storage, String key) {
         if (key == null || key.isEmpty()) {
             return null;
@@ -5913,13 +6054,13 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .build();
     }
 
-    /**
-     * 流式复制单个文件对象。
-     *
-     * @param storage 存储实例
-     * @param source  源键
-     * @param target  目标键
-     */
+      /**
+       * 流式复制单个文件对象。
+       *
+       * @param storage 存储实例
+       * @param source  源键
+       * @param target  目标键
+       */
     private void copyFile(FileStorage storage, String source, String target) {
         GetObjectResult get = storage.getObject(source);
         if (get.getResultCode() != ObjectResult.ResultCode.SUCCESS || get.getInputStream() == null) {
@@ -5937,13 +6078,13 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 递归复制对象（目录先建目录再逐项复制，文件直接流式复制）。
-     *
-     * @param storage 存储实例
-     * @param source  源键
-     * @param target  目标键
-     */
+      /**
+       * 递归复制对象（目录先建目录再逐项复制，文件直接流式复制）。
+       *
+       * @param storage 存储实例
+       * @param source  源键
+       * @param target  目标键
+       */
     private void copyRecursively(FileStorage storage, String source, String target) {
         Metadata meta = stat(storage, source);
         if (meta == null) {
@@ -5966,12 +6107,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 递归删除对象（目录自底向上删除全部子对象后删除自身）。
-     *
-     * @param storage 存储实例
-     * @param key     对象键
-     */
+      /**
+       * 递归删除对象（目录自底向上删除全部子对象后删除自身）。
+       *
+       * @param storage 存储实例
+       * @param key     对象键
+       */
     private void deleteRecursively(FileStorage storage, String key) {
         Metadata meta = stat(storage, key);
         if (meta != null && meta.isDirectory()) {
@@ -5989,18 +6130,18 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         DeleteObjectResult result = storage.deleteObject(key);
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             throw new FileActionException(500, "删除对象失败: " + key
-                    + (result.getMessage() == null ? "" : ": " + result.getMessage()));
+                      + (result.getMessage() == null ? "" : ": " + result.getMessage()));
         }
     }
 
-    /**
-     * 在目标目录中生成不冲突的名称，冲突时按"名称 - 副本(n).扩展名"递增。
-     *
-     * @param storage 存储实例
-     * @param dir     目标目录
-     * @param name    期望名称
-     * @return 可用名称
-     */
+      /**
+       * 在目标目录中生成不冲突的名称，冲突时按"名称 - 副本(n).扩展名"递增。
+       *
+       * @param storage 存储实例
+       * @param dir     目标目录
+       * @param name    期望名称
+       * @return 可用名称
+       */
     private String uniqueName(FileStorage storage, String dir, String name) {
         if (!objectExists(storage, joinKey(dir, name))) {
             return name;
@@ -6021,15 +6162,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         throw new FileActionException(409, "同名对象过多，无法生成副本名称: " + name);
     }
 
-    /**
-     * 递归向 ZIP 输出流追加对象。
-     *
-     * @param storage 存储实例
-     * @param key     当前对象键
-     * @param prefix  ZIP 内前缀（目录条目带尾斜杠；根文件为空串）
-     * @param zos     ZIP 输出流
-     * @throws IOException 读写 ZIP 流失败时抛出
-     */
+      /**
+       * 递归向 ZIP 输出流追加对象。
+       *
+       * @param storage 存储实例
+       * @param key     当前对象键
+       * @param prefix  ZIP 内前缀（目录条目带尾斜杠；根文件为空串）
+       * @param zos     ZIP 输出流
+       * @throws IOException 读写 ZIP 流失败时抛出
+       */
     private void appendZipEntry(FileStorage storage, String key, String prefix, ZipOutputStream zos) throws IOException {
         Metadata meta = stat(storage, key);
         if (meta == null) {
@@ -6047,7 +6188,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             zos.closeEntry();
             return;
         }
-        // 显式写入目录条目（保证空目录也能保留在压缩包中）
+          // 显式写入目录条目（保证空目录也能保留在压缩包中）
         String dirEntry = prefix + baseName(key) + "/";
         zos.putNextEntry(new ZipEntry(dirEntry));
         zos.closeEntry();
@@ -6063,14 +6204,14 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /* ---------- 文件管理动作：参数与键工具 ---------- */
+      /* ---------- 文件管理动作：参数与键工具 ---------- */
 
-    /**
-     * 解析多源键参数（换行分隔），逐项做路径穿越校验。
-     *
-     * @param raw 原始参数值
-     * @return 规范化后的键列表
-     */
+      /**
+       * 解析多源键参数（换行分隔），逐项做路径穿越校验。
+       *
+       * @param raw 原始参数值
+       * @return 规范化后的键列表
+       */
     private List<String> parseSources(String raw) {
         if (raw == null || raw.isBlank()) {
             throw new FileActionException(400, "参数 sources 不能为空");
@@ -6088,12 +6229,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return sources;
     }
 
-    /**
-     * 规范化查询参数中的目录路径（允许空串表示桶根目录）。
-     *
-     * @param raw 原始参数值
-     * @return 规范化后的路径
-     */
+      /**
+       * 规范化查询参数中的目录路径（允许空串表示桶根目录）。
+       *
+       * @param raw 原始参数值
+       * @return 规范化后的路径
+       */
     private String normalizePathParam(String raw) {
         if (raw == null || raw.isBlank()) {
             return "";
@@ -6101,12 +6242,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return normalizeObjectKey(raw);
     }
 
-    /**
-     * 规范化对象键：反斜杠转正斜杠、去掉首尾斜杠、拒绝 {@code ..} 与盘符等危险片段。
-     *
-     * @param raw 原始键
-     * @return 规范化后的键
-     */
+      /**
+       * 规范化对象键：反斜杠转正斜杠、去掉首尾斜杠、拒绝 {@code ..} 与盘符等危险片段。
+       *
+       * @param raw 原始键
+       * @return 规范化后的键
+       */
     private String normalizeObjectKey(String raw) {
         if (raw == null) {
             return "";
@@ -6129,12 +6270,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return value;
     }
 
-    /**
-     * 读取并校验名称参数（不允许包含路径分隔符与文件系统非法字符）。
-     *
-     * @param raw 原始参数值
-     * @return 合法名称
-     */
+      /**
+       * 读取并校验名称参数（不允许包含路径分隔符与文件系统非法字符）。
+       *
+       * @param raw 原始参数值
+       * @return 合法名称
+       */
     private String requireValidName(String raw) {
         if (raw == null || raw.isBlank()) {
             throw new FileActionException(400, "名称不能为空");
@@ -6148,12 +6289,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return name;
     }
 
-    /**
-     * 规范化 ZIP 条目名，防止 Zip Slip 目录穿越。
-     *
-     * @param entryName 原始条目名
-     * @return 安全的相对条目名；非法条目抛出异常
-     */
+      /**
+       * 规范化 ZIP 条目名，防止 Zip Slip 目录穿越。
+       *
+       * @param entryName 原始条目名
+       * @return 安全的相对条目名；非法条目抛出异常
+       */
     private String normalizeZipEntry(String entryName) {
         String value = entryName.replace('\\', '/');
         while (value.startsWith("/")) {
@@ -6167,13 +6308,13 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
-    /**
-     * 拼接父目录与名称。
-     *
-     * @param parent 父目录（空串表示桶根）
-     * @param name   名称
-     * @return 完整对象键
-     */
+      /**
+       * 拼接父目录与名称。
+       *
+       * @param parent 父目录（空串表示桶根）
+       * @param name   名称
+       * @return 完整对象键
+       */
     private String joinKey(String parent, String name) {
         if (parent == null || parent.isEmpty()) {
             return name;
@@ -6181,35 +6322,35 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return parent + "/" + name;
     }
 
-    /**
-     * 取对象键的父目录部分。
-     *
-     * @param key 对象键
-     * @return 父目录（根下对象返回空串）
-     */
+      /**
+       * 取对象键的父目录部分。
+       *
+       * @param key 对象键
+       * @return 父目录（根下对象返回空串）
+       */
     private String parentOf(String key) {
         int index = key.lastIndexOf('/');
         return index < 0 ? "" : key.substring(0, index);
     }
 
-    /**
-     * 取对象键的末段名称。
-     *
-     * @param key 对象键
-     * @return 名称
-     */
+      /**
+       * 取对象键的末段名称。
+       *
+       * @param key 对象键
+       * @return 名称
+       */
     private String baseName(String key) {
         int index = key.lastIndexOf('/');
         return index < 0 ? key : key.substring(index + 1);
     }
 
-    /**
-     * 写出文件管理动作成功响应。
-     *
-     * @param response 响应
-     * @param detail   额外 JSON 字段（不含外层花括号）
-     * @return 已完成阶段
-     */
+      /**
+       * 写出文件管理动作成功响应。
+       *
+       * @param response 响应
+       * @param detail   额外 JSON 字段（不含外层花括号）
+       * @return 已完成阶段
+       */
     private CompletionStage<Void> writeActionSuccess(ServerResponse response, String detail) {
         response.setStatus(200)
                 .setContentType("application/json;charset=UTF-8")
@@ -6218,15 +6359,15 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return CompletableFuture.completedFuture(null);
     }
 
-    /**
-     * 依据设置追加水印响应头。
-     *
-     * <p>HTTP 响应头仅允许 ASCII 可打印字符，水印值含中文等非 ASCII 字符时
-     * JDK HttpServer 会直接抛出 {@code Illegal character found in header}（500），
-     * 因此统一按 UTF-8 百分号编码输出，消费方使用百分号解码还原。</p>
-     *
-     * @param response 响应
-     */
+      /**
+       * 依据设置追加水印响应头。
+       *
+       * <p>HTTP 响应头仅允许 ASCII 可打印字符，水印值含中文等非 ASCII 字符时
+       * JDK HttpServer 会直接抛出 {@code Illegal character found in header}（500），
+       * 因此统一按 UTF-8 百分号编码输出，消费方使用百分号解码还原。</p>
+       *
+       * @param response 响应
+       */
     private void applyWatermarkHeader(ServerResponse response) {
         if (setting.isOpenWatermark() && setting.getWatermark() != null) {
             String encoded = URLEncoder.encode(setting.getWatermark(), StandardCharsets.UTF_8);
@@ -6234,13 +6375,13 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 解析 范围 请求头。
-     *
-     * @param range     范围 头值（bytes=启动-结束 格式）
-     * @param totalSize 数据总长度
-     * @return [start, 结束] 区间（结束 为排他上界），格式非法返回 空
-     */
+      /**
+       * 解析 范围 请求头。
+       *
+       * @param range     范围 头值（bytes=启动-结束 格式）
+       * @param totalSize 数据总长度
+       * @return [start, 结束] 区间（结束 为排他上界），格式非法返回 空
+       */
     private long[] parseRange(String range, int totalSize) {
         try {
             String spec = range.substring("bytes=".length());
@@ -6249,7 +6390,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
             long end = parts.length > 1 && !parts[1].isEmpty()
                     ? Long.parseLong(parts[1].trim()) : totalSize - 1;
             if (start == -1) {
-                // 后缀区间：bytes=-N 表示最后 N 字节
+                  // 后缀区间：bytes=-N 表示最后 N 字节
                 start = Math.max(0, totalSize - end);
                 end = totalSize - 1;
             }
@@ -6262,22 +6403,22 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 规范化对象 键。
-     *
-     * <p>执行 URL 解码，拒绝包含 {@code ..}、{@code :} 等危险片段的路径穿越 Key。
-     * http(s) 开头的远程地址仅在 打开远程文件 开启时放行。</p>
-     *
-     * @param rawKey 原始 键
-     * @return 规范化后的 键，非法时返回 空
-     */
+      /**
+       * 规范化对象 键。
+       *
+       * <p>执行 URL 解码，拒绝包含 {@code ..}、{@code :} 等危险片段的路径穿越 Key。
+       * http(s) 开头的远程地址仅在 打开远程文件 开启时放行。</p>
+       *
+       * @param rawKey 原始 键
+       * @return 规范化后的 键，非法时返回 空
+       */
     private String sanitizeKey(String rawKey) {
         if (rawKey == null || rawKey.isEmpty()) {
             return "";
         }
         try {
             String decoded = URLDecoder.decode(rawKey, StandardCharsets.UTF_8.name());
- // 远程地址仅受 打开远程文件 开关控制
+   // 远程地址仅受 打开远程文件 开关控制
             if (decoded.startsWith("http://") || decoded.startsWith("https://")) {
                 return setting.isOpenRemoteFile() ? decoded : null;
             }
@@ -6292,16 +6433,16 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 解析布尔查询参数（标志式语义）。
-     *
-     * <p>{@code ?preview}、{@code ?preview=true}、{@code ?preview=1} 均视为 true；
-     * {@code ?preview=false}、{@code ?preview=0} 视为 false；参数缺省为 false。</p>
-     *
-     * @param request 请求
-     * @param name    参数名
-     * @return 参数开启状态
-     */
+      /**
+       * 解析布尔查询参数（标志式语义）。
+       *
+       * <p>{@code ?preview}、{@code ?preview=true}、{@code ?preview=1} 均视为 true；
+       * {@code ?preview=false}、{@code ?preview=0} 视为 false；参数缺省为 false。</p>
+       *
+       * @param request 请求
+       * @param name    参数名
+       * @return 参数开启状态
+       */
     private boolean boolParam(ServerRequest request, String name) {
         Map<String, String> params = request.getParams();
         if (!params.containsKey(name)) {
@@ -6314,17 +6455,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return false;
     }
 
-    /**
-     * 读取整型查询参数。
-     *
-     * <p>{@code ?limit=200} / {@code ?offset=400} 这类分页参数：解析失败、
-     * 取值为负数或未提供时返回 {@code defaultValue}，绝不抛异常。</p>
-     *
-     * @param request      请求
-     * @param name         参数名
-     * @param defaultValue 缺省/非法取值时的回落值
-     * @return 解析后的整型取值
-     */
+      /**
+       * 读取整型查询参数。
+       *
+       * <p>{@code ?limit=200} / {@code ?offset=400} 这类分页参数：解析失败、
+       * 取值为负数或未提供时返回 {@code defaultValue}，绝不抛异常。</p>
+       *
+       * @param request      请求
+       * @param name         参数名
+       * @param defaultValue 缺省/非法取值时的回落值
+       * @return 解析后的整型取值
+       */
     private int intParam(ServerRequest request, String name, int defaultValue) {
         Map<String, String> params = request.getParams();
         if (params == null) {
@@ -6342,17 +6483,17 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 判断查询参数是否取到指定值（大小写不敏感，null 安全）。
-     *
-     * <p>与 {@link #boolParam} 的标志式语义互补：这里比对具体取值，
-     * 用于 {@code ?format=json} / {@code ?format=capabilities} 这类互斥分支。</p>
-     *
-     * @param request 请求
-     * @param name    参数名
-     * @param value   期望取值
-     * @return true 表示参数存在且取值匹配
-     */
+      /**
+       * 判断查询参数是否取到指定值（大小写不敏感，null 安全）。
+       *
+       * <p>与 {@link #boolParam} 的标志式语义互补：这里比对具体取值，
+       * 用于 {@code ?format=json} / {@code ?format=capabilities} 这类互斥分支。</p>
+       *
+       * @param request 请求
+       * @param name    参数名
+       * @param value   期望取值
+       * @return true 表示参数存在且取值匹配
+       */
     private boolean stringParam(ServerRequest request, String name, String value) {
         Map<String, String> params = request.getParams();
         if (params == null) {
@@ -6361,20 +6502,20 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return value.equalsIgnoreCase(params.get(name));
     }
 
-    /**
-     * 从压缩包字节中取出指定条目。
-     *
-     * <p>{@code ?preview&inner=}（通用下钻）与 {@code ?format=cad&inner=}（CAD 下钻）
-     * 共用同一套提取与安全校验，避免两条通道对同一条目的存在性判断出现分歧。</p>
-     *
-     * <p>安全校验拒绝路径穿越（{@code ..}）、反斜杠、绝对路径与盘符：条目路径来自
-     * URL 查询参数，不做校验就等于把压缩包内的任意路径读取能力暴露给调用方。</p>
-     *
-     * @param archiveData 压缩包字节
-     * @param fileName    压缩包文件名（用于推断归档类型与扩展名候选）
-     * @param innerPath   包内条目路径
-     * @return 条目字节；路径非法或条目不存在时返回 null
-     */
+      /**
+       * 从压缩包字节中取出指定条目。
+       *
+       * <p>{@code ?preview&inner=}（通用下钻）与 {@code ?format=cad&inner=}（CAD 下钻）
+       * 共用同一套提取与安全校验，避免两条通道对同一条目的存在性判断出现分歧。</p>
+       *
+       * <p>安全校验拒绝路径穿越（{@code ..}）、反斜杠、绝对路径与盘符：条目路径来自
+       * URL 查询参数，不做校验就等于把压缩包内的任意路径读取能力暴露给调用方。</p>
+       *
+       * @param archiveData 压缩包字节
+       * @param fileName    压缩包文件名（用于推断归档类型与扩展名候选）
+       * @param innerPath   包内条目路径
+       * @return 条目字节；路径非法或条目不存在时返回 null
+       */
     private byte[] extractArchiveEntry(byte[] archiveData, String fileName, String innerPath) {
         if (innerPath == null
                 || innerPath.isEmpty()
@@ -6394,51 +6535,51 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return null;
     }
 
-    /**
-     * 构建压缩包条目下钻失败提示页。
-     *
-     * @param message 提示信息
-     * @return 完整 HTML 页面
-     */
+      /**
+       * 构建压缩包条目下钻失败提示页。
+       *
+       * @param message 提示信息
+       * @return 完整 HTML 页面
+       */
     private String buildInnerMessagePage(String message) {
         return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
-                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                + "<style>body{margin:0;padding:48px 24px;background:#f8f9fa;color:#1a1a2e;"
-                + "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center}"
-                + ".box{display:inline-block;background:#fff;border:1px solid #e5e7eb;border-radius:12px;"
-                + "padding:28px 36px;max-width:560px}"
-                + ".msg{font-size:14px;color:#374151;margin-bottom:16px;word-break:break-all}"
-                + "a{color:#2563eb;text-decoration:none;font-size:14px}"
-                + "</style></head><body><div class=\"box\">"
-                + "<div class=\"msg\">" + escapeHtml(message) + "</div>"
-                + "<a href=\"javascript:history.back()\">返回压缩包列表</a>"
-                + "</div></body></html>";
+                  + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                  + "<style>body{margin:0;padding:48px 24px;background:#f8f9fa;color:#1a1a2e;"
+                  + "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center}"
+                  + ".box{display:inline-block;background:#fff;border:1px solid #e5e7eb;border-radius:12px;"
+                  + "padding:28px 36px;max-width:560px}"
+                  + ".msg{font-size:14px;color:#374151;margin-bottom:16px;word-break:break-all}"
+                  + "a{color:#2563eb;text-decoration:none;font-size:14px}"
+                  + "</style></head><body><div class=\"box\">"
+                  + "<div class=\"msg\">" + escapeHtml(message) + "</div>"
+                  + "<a href=\"javascript:history.back()\">返回压缩包列表</a>"
+                  + "</div></body></html>";
     }
 
-    /**
-     * 取文件名末段扩展名（小写、不含点）。
-     *
-     * <p>刻意只取末段：返回值会作为 {@link #buildExtCandidates} 的兜底候选，
-     * 若在此处提前合并为复合扩展名（如 {@code tar.gz}），会挤掉 {@code gz}
-     * 这一单段兜底候选，导致压缩包条目识别回退。</p>
-     *
-     * @param fileName 文件名
-     * @return 扩展名；无扩展名时返回空串
-     */
+      /**
+       * 取文件名末段扩展名（小写、不含点）。
+       *
+       * <p>刻意只取末段：返回值会作为 {@link #buildExtCandidates} 的兜底候选，
+       * 若在此处提前合并为复合扩展名（如 {@code tar.gz}），会挤掉 {@code gz}
+       * 这一单段兜底候选，导致压缩包条目识别回退。</p>
+       *
+       * @param fileName 文件名
+       * @return 扩展名；无扩展名时返回空串
+       */
     private static String simpleExtOf(String fileName) {
         return fileName.contains(".")
                 ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
     }
 
-    /**
-     * 构建扩展名候选列表。
-     * <p>双段复合后缀（如 {@code tar.gz}、{@code tar.bz2}）排在前面，
-     * 末段单扩展名（如 {@code gz}）作为兜底，保证复合格式优先命中专属 Provider。</p>
-     *
-     * @param fileName 文件名
-     * @param simpleExt 末段扩展名（小写）
-     * @return 扩展名候选列表，至少包含末段扩展名
-     */
+      /**
+       * 构建扩展名候选列表。
+       * <p>双段复合后缀（如 {@code tar.gz}、{@code tar.bz2}）排在前面，
+       * 末段单扩展名（如 {@code gz}）作为兜底，保证复合格式优先命中专属 Provider。</p>
+       *
+       * @param fileName 文件名
+       * @param simpleExt 末段扩展名（小写）
+       * @return 扩展名候选列表，至少包含末段扩展名
+       */
     private List<String> buildExtCandidates(String fileName, String simpleExt) {
         List<String> candidates = new ArrayList<>();
         String lowerName = fileName.toLowerCase(Locale.ROOT);
@@ -6456,27 +6597,27 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return candidates;
     }
 
-    /**
-     * 转义 HTML 属性中的特殊字符。
-     *
-     * @param s 原始字符串
-     * @return 转义后的字符串
-     */
+      /**
+       * 转义 HTML 属性中的特殊字符。
+       *
+       * @param s 原始字符串
+       * @return 转义后的字符串
+       */
     private static String escapeAttr(String s) {
         return s.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;");
     }
 
-    /**
-     * 构建 内容-Disposition 头。
-     *
-     * <p>ASCII 文件名直接使用 {@code filename}；含非 ASCII 字符时按 RFC 5987
-     * 追加 {@code filename*=UTF-8''} 编码形式，同时提供 ASCII 回退，
-     * 避免非法响应头导致服务端异常。</p>
-     *
-     * @param download true 表示附件下载（attachment），false 表示内联预览（inline）
-     * @param fileName 文件名
-     * @return Content-Disposition 头值
-     */
+      /**
+       * 构建 内容-Disposition 头。
+       *
+       * <p>ASCII 文件名直接使用 {@code filename}；含非 ASCII 字符时按 RFC 5987
+       * 追加 {@code filename*=UTF-8''} 编码形式，同时提供 ASCII 回退，
+       * 避免非法响应头导致服务端异常。</p>
+       *
+       * @param download true 表示附件下载（attachment），false 表示内联预览（inline）
+       * @param fileName 文件名
+       * @return Content-Disposition 头值
+       */
     private String buildDisposition(boolean download, String fileName) {
         String type = download ? "attachment" : "inline";
         boolean ascii = fileName.chars().allMatch(c -> c > 31 && c < 127);
@@ -6492,12 +6633,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         }
     }
 
-    /**
-     * 按扩展名推断 内容-类型。
-     *
-     * @param fileName 文件名
-     * @return Content-Type
-     */
+      /**
+       * 按扩展名推断 内容-类型。
+       *
+       * @param fileName 文件名
+       * @return Content-Type
+       */
     private String resolveContentType(String fileName) {
         String lower = fileName.toLowerCase();
         if (lower.endsWith(".txt") || lower.endsWith(".log") || lower.endsWith(".md")) {
@@ -6611,7 +6752,7 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         if (lower.endsWith(".djvu") || lower.endsWith(".djv")) {
             return "image/vnd.djvu";
         }
-        // .key 不定制：它同时是 PGP/许可证私钥的常用扩展名，交给通用二进制即可
+          // .key 不定制：它同时是 PGP/许可证私钥的常用扩展名，交给通用二进制即可
         if (lower.endsWith(".rtf")) {
             return "application/rtf";
         }
@@ -6636,23 +6777,23 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return "application/octet-stream";
     }
 
-    /**
-     * 判定本次预览请求应交由客户端直渲染，并解析出对应的渲染器标识。
-     *
-     * <p>命中条件：未显式指定 {@code render=server}，且扩展名在
-     * {@link ClientPreviewSupport} 的客户端可渲染清单内（docx / xlsx / xls / pdf / pptx）。
-     * 传统 {@code .doc} / {@code .ppt}（OLE2 复合文档）与 {@code .odt} 系列
-     * 不在清单内，将继续走服务端 SPI / 转换链路。</p>
-     *
-     * <p>对 {@code doc / xls / ppt} 这类传统扩展名，额外按<b>内容魔数</b>嗅探：
-     * 若文件实际是 OOXML（扩展名写着 doc、内容其实是 docx），则按真实类型
-     * 交给客户端组件渲染，避免误入 POI 二进制解析而失败。</p>
-     *
-     * @param request  请求对象，用于读取 {@code render} 参数
-     * @param fileName 文件名（用于推断扩展名）
-     * @param content  文件字节（用于魔数嗅探；可为 {@code null}）
-     * @return 客户端渲染器标识；应走服务端渲染时返回 {@code null}
-     */
+      /**
+       * 判定本次预览请求应交由客户端直渲染，并解析出对应的渲染器标识。
+       *
+       * <p>命中条件：未显式指定 {@code render=server}，且扩展名在
+       * {@link ClientPreviewSupport} 的客户端可渲染清单内（docx / xlsx / xls / pdf / pptx）。
+       * 传统 {@code .doc} / {@code .ppt}（OLE2 复合文档）与 {@code .odt} 系列
+       * 不在清单内，将继续走服务端 SPI / 转换链路。</p>
+       *
+       * <p>对 {@code doc / xls / ppt} 这类传统扩展名，额外按<b>内容魔数</b>嗅探：
+       * 若文件实际是 OOXML（扩展名写着 doc、内容其实是 docx），则按真实类型
+       * 交给客户端组件渲染，避免误入 POI 二进制解析而失败。</p>
+       *
+       * @param request  请求对象，用于读取 {@code render} 参数
+       * @param fileName 文件名（用于推断扩展名）
+       * @param content  文件字节（用于魔数嗅探；可为 {@code null}）
+       * @return 客户端渲染器标识；应走服务端渲染时返回 {@code null}
+       */
     private String resolveClientRenderer(ServerRequest request, String fileName, byte[] content) {
         if (!ClientPreviewSupport.isClientPreferred(request.getParam(ClientPreviewSupport.PARAM_RENDER))) {
             return null;
@@ -6660,12 +6801,12 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
         return ClientPreviewSupport.rendererOfSniffed(content, ClientPreviewSupport.resolveExtension(fileName));
     }
 
-    /**
-     * 拆分请求路径为段列表。
-     *
-     * @param path 请求路径
-     * @return 非空的路径段列表
-     */
+      /**
+       * 拆分请求路径为段列表。
+       *
+       * @param path 请求路径
+       * @return 非空的路径段列表
+       */
     private List<String> splitPath(String path) {
         if (path == null) {
             return List.of();
@@ -6675,20 +6816,20 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 .toList();
     }
 
-    /**
-     * 转义 JSON 字符串中的特殊字符。
-     *
-     * <p>必须转义控制字符（换行、制表、0x00-0x1F）：JSON 字符串里出现裸控制字符
-     * 是<b>非法</b>的，前端 {@code JSON.parse} 会直接抛错，表现为「预览面板报错」
-     * 而不是「文件名显示错」。而文件名来自文件系统，Linux 下可以合法包含换行与
-     * 控制字节，DXF 解析出的图层名/文字同理，故这不是理论风险。</p>
-     *
-     * <p>对普通可打印字符的输出与旧的「仅处理 \\ 与 "」实现完全一致，
-     * 因此本方法所有既有调用点行为不变，只是不再产生非法 JSON。</p>
-     *
-     * @param value 原始字符串
-     * @return 转义后的字符串
-     */
+      /**
+       * 转义 JSON 字符串中的特殊字符。
+       *
+       * <p>必须转义控制字符（换行、制表、0x00-0x1F）：JSON 字符串里出现裸控制字符
+       * 是<b>非法</b>的，前端 {@code JSON.parse} 会直接抛错，表现为「预览面板报错」
+       * 而不是「文件名显示错」。而文件名来自文件系统，Linux 下可以合法包含换行与
+       * 控制字节，DXF 解析出的图层名/文字同理，故这不是理论风险。</p>
+       *
+       * <p>对普通可打印字符的输出与旧的「仅处理 \\ 与 "」实现完全一致，
+       * 因此本方法所有既有调用点行为不变，只是不再产生非法 JSON。</p>
+       *
+       * @param value 原始字符串
+       * @return 转义后的字符串
+       */
     private String escapeJson(String value) {
         if (value == null) {
             return "";

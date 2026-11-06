@@ -2,8 +2,10 @@ package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.support.entity.DeviceEventRecord;
+import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.mapper.DeviceEventRecordMapper;
 import com.chua.starter.device.support.service.DeviceEventService;
+import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceEvent;
@@ -37,6 +39,11 @@ public class DeviceEventServiceImpl implements DeviceEventService {
      * 设备会话管理器
      */
     private final DeviceSessionManager sessionManager;
+
+    /**
+     * 设备服务（按凭据列设备）
+     */
+    private final DeviceService deviceService;
 
     @Override
     /**
@@ -83,21 +90,45 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     @Override
     /**
      * 取出全部devices
-     * <p>由 {@code DeviceScheduleManager} 的时间轮任务 {@code deviceEventPoll} 驱动，
-     * 到期判断走 {device_task_state.interval}，不再使用 Spring {@code @Scheduled}。</p>
+     * <p>手工全量入口；定时驱动已改为按凭据的 {@link #pollDevicesByCredential(String)}。</p>
      */
     public void pollAllDevices() {
-        sessionManager.getAllSessions().forEach((deviceId, session) -> {
-            if (session.isOnline()) {
-                try {
-                    List<DeviceEvent> events = session.pollEvents(new TimeRange(
-                            LocalDateTime.now().minusMinutes(5),
-                            LocalDateTime.now()));
-                    events.forEach(this::saveEvent);
-                } catch (Exception e) {
-                    log.error("轮询设备事件失败: deviceId={}", deviceId, e);
-                }
+        sessionManager.getAllSessions().forEach((deviceId, session) -> pollSession(deviceId, session));
+    }
+
+    @Override
+    /**
+     * 只轮询该凭据名下设备的事件。
+     *
+     * @param credentialId 凭据 ID
+     */
+    public void pollDevicesByCredential(String credentialId) {
+        for (DeviceInfo device : deviceService.listByCredentialId(credentialId)) {
+            DeviceSession session = sessionManager.getSession(device.getDeviceInfoId());
+            if (session == null) {
+                continue;
             }
-        });
+            pollSession(device.getDeviceInfoId(), session);
+        }
+    }
+
+    /**
+     * 轮询一个设备会话并落库事件。
+     *
+     * @param deviceId 设备 ID（日志定位用）
+     * @param session  设备会话
+     */
+    private void pollSession(String deviceId, DeviceSession session) {
+        if (!session.isOnline()) {
+            return;
+        }
+        try {
+            List<DeviceEvent> events = session.pollEvents(new TimeRange(
+                    LocalDateTime.now().minusMinutes(5),
+                    LocalDateTime.now()));
+            events.forEach(this::saveEvent);
+        } catch (Exception e) {
+            log.error("轮询设备事件失败: deviceId={}", deviceId, e);
+        }
     }
 }

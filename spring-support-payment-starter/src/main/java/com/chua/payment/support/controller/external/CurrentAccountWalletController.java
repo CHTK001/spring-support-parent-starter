@@ -42,48 +42,48 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 当前用户钱包自助 API
- * <p>所有接口均校验当前用户身份，userId 从认证上下文获取，不允许客户端传入。
- *
- * @author CH
- * @since 4.0.0
- */
+   * 当前用户钱包自助 API
+   * <p>所有接口均校验当前用户身份，userId 从认证上下文获取，不允许客户端传入。
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 @RestController
 @RequestMapping("/account/wallet")
 @RequiredArgsConstructor
 public class CurrentAccountWalletController {
 
-    /**
-     * 钱包账户服务
-     */
+      /**
+       * 钱包账户服务
+       */
     private final WalletAccountService walletAccountService;
-    /**
-     * 钱包订单服务
-     */
+      /**
+       * 钱包订单服务
+       */
     private final WalletOrderService walletOrderService;
-    /**
-     * 钱包提现审批服务
-     */
+      /**
+       * 钱包提现审批服务
+       */
     private final WalletWithdrawApprovalService walletWithdrawApprovalService;
-    /**
-     * 支付全局配置映射
-     */
+      /**
+       * 支付全局配置映射
+       */
     private final PaymentGlobalConfigMapper paymentGlobalConfigMapper;
-    /**
-     * 支付订单映射器
-     */
+      /**
+       * 支付订单映射器
+       */
     private final PaymentOrderMapper paymentOrderMapper;
-    /**
-     * 登录主体解析器
-     */
+      /**
+       * 登录主体解析器
+       */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping
-    /**
-     * 获取钱包
-     * @param request 请求
-     * @param merchantId merchantid
-     */
+      /**
+       * 获取钱包
+       * @param request 请求
+       * @param merchantId merchantid
+       */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
@@ -94,15 +94,15 @@ public class CurrentAccountWalletController {
     }
 
     @GetMapping("/log/page")
-    /**
-     * 流水列表
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @param bizType 业务类型
-     * @param bizNo 业务单号
-     */
+      /**
+       * 流水列表
+       * @param request 请求
+       * @param pageNum pagenum
+       * @param pageSize page大小
+       * @param merchantId merchantid
+       * @param bizType 业务类型
+       * @param bizNo 业务单号
+       */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
@@ -113,20 +113,21 @@ public class CurrentAccountWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账户");
         }
-        Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null));
+        Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId
+            , bizType, bizNo, null, null));
         return Result.success(PageResult.of(page));
     }
 
     @GetMapping("/order/page")
-    /**
-     * 订单列表
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @param orderType 订单类型
-     * @param status 状态
-     */
+      /**
+       * 订单列表
+       * @param request 请求
+       * @param pageNum pagenum
+       * @param pageSize page大小
+       * @param merchantId merchantid
+       * @param orderType 订单类型
+       * @param status 状态
+       */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
@@ -142,11 +143,11 @@ public class CurrentAccountWalletController {
     }
 
     @PostMapping("/withdraw")
-    /**
-     * 提现
-     * @param request 请求
-     * @param dto dto
-     */
+      /**
+       * 提现
+       * @param request 请求
+       * @param dto dto
+       */
     public Result<WalletWithdrawApproval> withdraw(HttpServletRequest request,
                                                     @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
@@ -163,9 +164,9 @@ public class CurrentAccountWalletController {
             return Result.error("银行账号不能为空");
         }
 
-        // 强校验：用户标识与操作者强制等于当前用户（record 不可变，下方重建实例覆盖）
+          // 强校验：用户标识与操作者强制等于当前用户（record 不可变，下方重建实例覆盖）
 
-        // 优惠券抵扣提现校验
+          // 优惠券抵扣提现校验
         PaymentGlobalConfig globalConfig = paymentGlobalConfigMapper.selectOne(
                 new LambdaQueryWrapper<PaymentGlobalConfig>()
                         .eq(PaymentGlobalConfig::getConfigKey, "DEFAULT")
@@ -190,16 +191,16 @@ public class CurrentAccountWalletController {
             }
         }
 
-        // 生成提现流水号
+          // 生成提现流水号
         String withdrawNo = "WDW" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         WalletWithdrawDTO effectiveDto = new WalletWithdrawDTO(
                 dto.merchantId(), userId, withdrawNo, dto.notifyUrl(), dto.amount(),
                 dto.bankAccount(), dto.bankName(), dto.accountName(), String.valueOf(userId), dto.remark());
 
-        // 冻结余额（frozen 可用）
+          // 冻结余额（frozen 可用）
         walletAccountService.freezeForWithdraw(effectiveDto);
 
-        // 创建提现审批记录（PENDING），不再直接创建订单
+          // 创建提现审批记录（PENDING），不再直接创建订单
         WalletWithdrawApproval approval = walletWithdrawApprovalService.createApproval(
                 new CreateApprovalDTO(
                         dto.merchantId(), userId, dto.amount(),
@@ -209,13 +210,13 @@ public class CurrentAccountWalletController {
         return Result.success(approval);
     }
 
-    /**
-     * 用户主动取消提现申请（仅 PENDING 状态可取消）
-     *
-     * @param approvalId 审批标识
-     * @param reason 取消原因
-     * @param request 请求
-     */
+      /**
+       * 用户主动取消提现申请（仅 PENDING 状态可取消）
+       *
+       * @param approvalId 审批标识
+       * @param reason 取消原因
+       * @param request 请求
+       */
     @PostMapping("/withdraw/{approvalId}/cancel")
     public Result<Void> cancelWithdraw(@PathVariable Long approvalId,
                                        @RequestParam(required = false) String reason,
@@ -233,12 +234,12 @@ public class CurrentAccountWalletController {
             return Result.error("仅待审批的提现可以取消");
         }
 
-        // 解冻余额（frozen 可用）
+          // 解冻余额（frozen 可用）
         walletAccountService.cancelWithdraw(new WalletCancelWithdrawRequest(
                 approval.getMerchantId(), approval.getUserId(),
                 approval.getWithdrawNo(), approval.getAmount(), reason));
 
-        // 标记审批为已拒绝（用户主动取消）
+          // 标记审批为已拒绝（用户主动取消）
         walletWithdrawApprovalService.reject(approvalId, String.valueOf(userId),
                 "用户主动取消" + (StringUtils.hasText(reason) ? ": " + reason : ""));
 
@@ -246,11 +247,11 @@ public class CurrentAccountWalletController {
     }
 
     @PostMapping("/transfer")
-    /**
-     * 转账
-     * @param request 请求
-     * @param dto dto
-     */
+      /**
+       * 转账
+       * @param request 请求
+       * @param dto dto
+       */
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
@@ -270,7 +271,7 @@ public class CurrentAccountWalletController {
             return Result.error("不能转账给自己");
         }
 
-        // 强校验：从用户标识推导操作者，强制等于当前用户
+          // 强校验：从用户标识推导操作者，强制等于当前用户
         String transferNo = "TRF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         walletAccountService.transfer(new WalletTransferOpDTO(

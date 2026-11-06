@@ -81,4 +81,47 @@ public class MsTsharkPacket extends SysBase {
     @TableField("ms_tshark_packet_restored")
     @Schema(description = "协议还原文本")
     private String restoredText; // restored文本
+
+    /**
+     * HTTP 请求头（起始行 + 逐行头字段）。
+     *
+     * <p>解析期由 {@code -T fields} 的 {@code http.request.*} 列拼好入库：详情弹层只要
+     * 几行头，打开时再回头扫几百 MB 的 pcap 不划算。</p>
+     */
+    @TableField("ms_tshark_packet_http_req")
+    @Schema(description = "HTTP 请求头")
+    private String httpRequestHead; // HTTP 请求头
+
+    /**
+     * HTTP 响应头（状态行 + 逐行头字段）。
+     */
+    @TableField("ms_tshark_packet_http_resp")
+    @Schema(description = "HTTP 响应头")
+    private String httpResponseHead; // HTTP 响应头
+
+    /**
+     * HTTP 实体正文（已解码成文本；二进制以 `HEX ` 前缀给出十六进制预览）。
+     *
+     * <p>一个帧只有一个方向，所以正文跟随该帧是请求还是响应；前端按有没有
+     * 请求头 / 响应头把它归到对应一侧。解析期截断到固定长度，避免一个几 MB
+     * 的下载把 SQLite 行撑爆。</p>
+     */
+    @TableField("ms_tshark_packet_http_body")
+    @Schema(description = "HTTP 正文")
+    private String httpBody; // HTTP 正文
+
+    /** HTTP 实体类型，如 text/html / application/json */
+    @TableField("ms_tshark_packet_http_type")
+    @Schema(description = "HTTP 内容类型")
+    private String httpContentType; // HTTP 内容类型
+
+    /** HTTP 内容编码，如 gzip / br；解码后仍保留原值供核对 */
+    @TableField("ms_tshark_packet_http_encoding")
+    @Schema(description = "HTTP 内容编码")
+    private String httpContentEncoding; // HTTP 内容编码
+
+    /** HTTP 实体原始字节数（不是截断后的字符数） */
+    @TableField("ms_tshark_packet_http_size")
+    @Schema(description = "HTTP 正文长度(字节)")
+    private Integer httpContentLength; // HTTP 正文长度
 }

@@ -25,6 +25,7 @@ import com.chua.starter.server.support.model.vo.SoftwareUpgradeVO;
 import com.chua.starter.server.support.push.ProjectTaskService;
 import com.chua.starter.server.support.push.ProjectTaskService.ProjectStep;
 import com.chua.starter.server.support.service.ExecService;
+import com.chua.starter.server.support.service.ProjectOpLogService;
 import com.chua.starter.server.support.service.ReleaseService;
 import com.chua.starter.server.support.service.SftpService;
 import com.chua.starter.server.support.spi.PackageManagerProvider;
@@ -73,10 +74,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * 发布管理服务实现
- *
- * @author CH
- */
+   * 发布管理服务实现
+   *
+   * @author CH
+   */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -87,96 +88,100 @@ public class ReleaseServiceImpl implements ReleaseService {
     private final MsServerHostMapper hostMapper;
     private final ExecService execService;
     private final ProjectTaskService projectTaskService;
+      /**
+       * 项目操作日志（同步的增删改/复制直接记终态）
+       */
+    private final ProjectOpLogService projectOpLogService;
 
-    /**
-     * 备份保留数量：每次备份后只保留最新 N 个，清理更旧的，防止备份无限增长撑满磁盘
-     */
+      /**
+       * 备份保留数量：每次备份后只保留最新 N 个，清理更旧的，防止备份无限增长撑满磁盘
+       */
     private static final int MAX_BACKUPS = 10;
 
-    /**
-     * 启动参数里的业务端口：{@code --server.port=8112}
-     */
+      /**
+       * 启动参数里的业务端口：{@code --server.port=8112}
+       */
     private static final Pattern SERVER_PORT_ARG = Pattern.compile("--server\\.port=(\\d{1,5})");
 
-    /**
-     * 外部配置里的业务端口：{@code server.port=8112}
-     */
+      /**
+       * 外部配置里的业务端口：{@code server.port=8112}
+       */
     private static final Pattern SERVER_PORT_PROP = Pattern.compile("server\\.port\\s*=\\s*(\\d{1,5})");
-    /**
-     * SFTP 服务（拖拽升级上传安装包，Linux）
-     */
+      /**
+       * SFTP 服务（拖拽升级上传安装包，Linux）
+       */
     private final SftpService sftpService;
-    /**
-     * 软件仓库包管理器路由器（按操作系统/实际包管理器选择 SPI 实现）
-     */
+      /**
+       * 软件仓库包管理器路由器（按操作系统/实际包管理器选择 SPI 实现）
+       */
     private final PackageManagerRouter packageManagerRouter;
 
-    /**
-     * 系统服务挂载路由器（按操作系统选择 SPI 实现：systemd / launchd / 计划任务）
-     */
+      /**
+       * 系统服务挂载路由器（按操作系统选择 SPI 实现：systemd / launchd / 计划任务）
+       */
     private final SystemServiceProviderRegistry systemServiceRouter;
 
-    /**
-     * 平台命令路由器（按操作系统选择 SPI 实现：POSIX / Windows）。
-     * 备份/回滚/执行包装/变量块/外部配置/解压投放等平台命令一律经它取得，
-     * 业务层不再出现 tar/robocopy/powershell 等平台字面量与 windows 命令二选一。
-     */
+      /**
+       * 平台命令路由器（按操作系统选择 SPI 实现：POSIX / Windows）。
+       * 备份/回滚/执行包装/变量块/外部配置/解压投放等平台命令一律经它取得，
+       * 业务层不再出现 tar/robocopy/powershell 等平台字面量与 windows 命令二选一。
+       */
     private final ProjectPlatformProviderRegistry projectPlatformRouter;
 
-    /**
-     * 项目类型路由器（按项目类型选择 SPI 实现：内置脚本、升级投放、重启判定、包来源）。
-     * 与项目类型相关的分支一律经它取得，业务层不再出现类型字面量比较。
-     */
+      /**
+       * 项目类型路由器（按项目类型选择 SPI 实现：内置脚本、升级投放、重启判定、包来源）。
+       * 与项目类型相关的分支一律经它取得，业务层不再出现类型字面量比较。
+       */
     private final ProjectTypeProviderRegistry projectTypeRouter;
 
-    /**
-     * 系统配置 Mapper（读写升级全局/最近配置的原始 JSON）
-     */
+      /**
+       * 系统配置 Mapper（读写升级全局/最近配置的原始 JSON）
+       */
     private final MsServerConfigMapper serverConfigMapper;
 
-    /**
-     * JSON 序列化（升级配置解析）
-     */
+      /**
+       * JSON 序列化（升级配置解析）
+       */
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
             new com.fasterxml.jackson.databind.ObjectMapper();
 
     private static final String CFG_GLOBAL_KEY = "upgrade.global";
     private static final String CFG_LAST_KEY = "upgrade.last";
-    /** 项目级默认升级配置的键前缀（后接项目ID），不改表结构 */
+      /** 项目级默认升级配置的键前缀（后接项目ID），不改表结构 */
     private static final String CFG_PROJECT_PREFIX = "upgrade.project.";
 
-    /**
-     * 操作上下文：项目 + 目标主机
-     */
+      /**
+       * 操作上下文：项目 + 目标主机
+       */
     private static class OperationContext {
         private MsServerProject project;
         private Long hostId;
-        /** 目标主机（挂载服务时取运行账户，避免 unit 以 root 常驻） */
+          /** 目标主机（挂载服务时取运行账户，避免 unit 以 root 常驻） */
         private MsServerHost host;
-        /** 归一后的系统类型（HostPlatforms 取值域），系统服务挂载按此路由 SPI 实现 */
+          /** 归一后的系统类型（HostPlatforms 取值域），系统服务挂载按此路由 SPI 实现 */
         private String osType;
-        /** 目标主机是否为 Windows（决定命令按 PowerShell 还是 bash 构造） */
+          /** 目标主机是否为 Windows（决定命令按 PowerShell 还是 bash 构造） */
         private boolean windows;
     }
 
-    // ==================== 发布 CRUD ====================
+      // ==================== 发布 CRUD ====================
 
     @Override
     public ReturnResult<List<MsServerRelease>> listReleases() {
         List<MsServerRelease> releases = releaseMapper.selectList(
                 new LambdaQueryWrapper<MsServerRelease>().orderByDesc(MsServerRelease::getId));
-        // 回填主机IP，保证发布卡片主机信息完整
+          // 回填主机IP，保证发布卡片主机信息完整
         releases.forEach(this::fillHostInfo);
         return ReturnResult.list(releases);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * create Release
-     * @param release 释放
-     * @return 返回值
-    */
+      /**
+       * create Release
+       * @param release 释放
+       * @return 返回值
+      */
     public ReturnResult<MsServerRelease> createRelease(MsServerRelease release) {
         fillHostInfo(release);
         release.setCreateTime(LocalDateTime.now());
@@ -187,12 +192,12 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * update Release
-     * @param id 长整数
-     * @param release 释放
-     * @return 返回值
-    */
+      /**
+       * update Release
+       * @param id 长整数
+       * @param release 释放
+       * @return 返回值
+      */
     public ReturnResult<MsServerRelease> updateRelease(Long id, MsServerRelease release) {
         MsServerRelease exists = releaseMapper.selectById(id);
         if (exists == null) {
@@ -203,18 +208,19 @@ public class ReleaseServiceImpl implements ReleaseService {
         exists.setHostIp(release.getHostIp() == null ? exists.getHostIp() : release.getHostIp());
         exists.setDescription(release.getDescription() == null ? exists.getDescription() : release.getDescription());
         exists.setBackgroundImage(release.getBackgroundImage() == null ? exists.getBackgroundImage() : release.getBackgroundImage());
-        // 发布级 SkyWalking 配置：先留快照再合并。
-        // 若「先合并再比较」，比较的其实是「合并后的自己」与「本次提交值」，只要调用方把四项都带上
-        // （前端保存即如此）就永远判等 —— 同步永远不会触发，等于这条触发点从未生效过。
+          // 发布级 SkyWalking 配置：先留快照再合并。
+          // 若「先合并再比较」，比较的其实是「合并后的自己」与「本次提交值」，只要调用方把四项都带上
+          // （前端保存即如此）就永远判等 —— 同步永远不会触发，等于这条触发点从未生效过。
         Boolean previousSwEnabled = exists.getSwEnabled();
         String previousSwJarPath = exists.getSwJarPath();
         String previousSwPrefix = exists.getSwServiceNamePrefix();
         String previousSwBackend = exists.getSwBackendService();
         exists.setSwEnabled(release.getSwEnabled() == null ? exists.getSwEnabled() : release.getSwEnabled());
         exists.setSwJarPath(release.getSwJarPath() == null ? exists.getSwJarPath() : release.getSwJarPath());
-        exists.setSwServiceNamePrefix(release.getSwServiceNamePrefix() == null ? exists.getSwServiceNamePrefix() : release.getSwServiceNamePrefix());
+        exists.setSwServiceNamePrefix(release.getSwServiceNamePrefix() == null ? exists.getSwServiceNamePrefix() : release
+            .getSwServiceNamePrefix());
         exists.setSwBackendService(release.getSwBackendService() == null ? exists.getSwBackendService() : release.getSwBackendService());
-        // 发布级 SkyWalking 配置变更后需要同步到该发布下的已有项目
+          // 发布级 SkyWalking 配置变更后需要同步到该发布下的已有项目
         boolean swChanged = !Objects.equals(previousSwEnabled, exists.getSwEnabled())
                 || !Objects.equals(previousSwJarPath, exists.getSwJarPath())
                 || !Objects.equals(previousSwPrefix, exists.getSwServiceNamePrefix())
@@ -228,21 +234,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(exists);
     }
 
-    /**
-     * 发布级 SkyWalking 配置变更后，同步到该发布下的全部项目。
-     *
-     * <p>同步只碰「发布自己写进去的那套参数」：开关/地址/路径失效时清理这些参数行，
-     * 重新生效时写回新的覆盖项；项目自己声明的 APM（自研 agent、自有 OAP 地址）一律不动。</p>
-     *
-     * <p><b>为什么需要归属判定</b>：注入是把三条参数<b>复制</b>进项目 jvmArgs，落库后发布侧
-     * 就没有任何记录能区分「这是我注入的」还是「项目自己填的」。若按「只要项目里有
-     * {@code -Dskywalking.*} 就跳过」，关闭开关时永远清不掉（清空分支变成死代码）；
-     * 若反过来「有就清」，则会把项目自研 agent 一起删掉。故按发布自身的特征做归属判定：
-     * agent jar 路径一致，或「前缀 + OAP 地址」同时命中 —— 两者都来自本发布配置，
-     * 项目自己配置的 APM 几乎不可能同时满足。</p>
-     *
-     * @param release 发布
-     */
+      /**
+       * 发布级 SkyWalking 配置变更后，同步到该发布下的全部项目。
+       *
+       * <p>同步只碰「发布自己写进去的那套参数」：开关/地址/路径失效时清理这些参数行，
+       * 重新生效时写回新的覆盖项；项目自己声明的 APM（自研 agent、自有 OAP 地址）一律不动。</p>
+       *
+       * <p><b>为什么需要归属判定</b>：注入是把三条参数<b>复制</b>进项目 jvmArgs，落库后发布侧
+       * 就没有任何记录能区分「这是我注入的」还是「项目自己填的」。若按「只要项目里有
+       * {@code -Dskywalking.*} 就跳过」，关闭开关时永远清不掉（清空分支变成死代码）；
+       * 若反过来「有就清」，则会把项目自研 agent 一起删掉。故按发布自身的特征做归属判定：
+       * agent jar 路径一致，或「前缀 + OAP 地址」同时命中 —— 两者都来自本发布配置，
+       * 项目自己配置的 APM 几乎不可能同时满足。</p>
+       *
+       * @param release 发布
+       */
     private void syncReleaseApm(MsServerRelease release) {
         if (release == null) {
             return;
@@ -259,7 +265,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             List<String> args = readStringList(project.getJvmArgs());
             boolean declared = args.stream().anyMatch(this::isApmArg);
             if (declared && !injectedByRelease(release, project, args)) {
-                // 项目自己声明的 APM：发布级永远不覆盖、也不清理
+                  // 项目自己声明的 APM：发布级永远不覆盖、也不清理
                 continue;
             }
             List<String> out = new ArrayList<>(inject
@@ -271,7 +277,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 }
             }
             if (out.equals(args)) {
-                // 结论与现状一致：不写库，避免无谓的 updateById 与 updateTime 抖动
+                  // 结论与现状一致：不写库，避免无谓的 updateById 与 updateTime 抖动
                 continue;
             }
             project.setJvmArgs(writeArgs(out));
@@ -280,22 +286,22 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 判断项目里的 APM 参数是否由本发布注入（用于「同步/清理」的范围界定）。
-     *
-     * @param release 发布
-     * @param project 项目
-     * @param args    项目当前参数
-     * @return 属于本发布注入时为 {@code true}
-     */
+      /**
+       * 判断项目里的 APM 参数是否由本发布注入（用于「同步/清理」的范围界定）。
+       *
+       * @param release 发布
+       * @param project 项目
+       * @param args    项目当前参数
+       * @return 属于本发布注入时为 {@code true}
+       */
     private boolean injectedByRelease(MsServerRelease release, MsServerProject project, List<String> args) {
         String jar = release.getSwJarPath();
         if (!isBlank(jar) && args.contains("-javaagent:" + jar)) {
             return true;
         }
-        // jar 路径被改空时退化为「service_name 与 OAP 地址同时命中」：
-        // 前缀为空时 service_name 就是项目名，与项目自研配置无法区分，故此种情况不做归属判定
-        // （宁可留着让用户手动清理，也不误删项目自研 agent）。
+          // jar 路径被改空时退化为「service_name 与 OAP 地址同时命中」：
+          // 前缀为空时 service_name 就是项目名，与项目自研配置无法区分，故此种情况不做归属判定
+          // （宁可留着让用户手动清理，也不误删项目自研 agent）。
         String prefix = release.getSwServiceNamePrefix();
         String backend = release.getSwBackendService();
         return !isBlank(prefix) && !isBlank(backend)
@@ -303,13 +309,13 @@ public class ReleaseServiceImpl implements ReleaseService {
                 && args.contains("-Dskywalking.collector.backend_service=" + backend);
     }
 
-    /**
-     * 发布级 APM 注入的三条参数（顺序固定：agent → service_name → backend）。
-     *
-     * @param release 发布
-     * @param project 项目
-     * @return 参数列表
-     */
+      /**
+       * 发布级 APM 注入的三条参数（顺序固定：agent → service_name → backend）。
+       *
+       * @param release 发布
+       * @param project 项目
+       * @return 参数列表
+       */
     private List<String> apmArgs(MsServerRelease release, MsServerProject project) {
         return Arrays.asList(
                 "-javaagent:" + release.getSwJarPath(),
@@ -319,20 +325,20 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * delete Release
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * delete Release
+       * @param id 长整数
+       * @return 返回值
+      */
     public ReturnResult<Void> deleteRelease(Long id) {
-        // 删除发布下的所有项目
+          // 删除发布下的所有项目
         projectMapper.delete(new LambdaQueryWrapper<MsServerProject>()
                 .eq(MsServerProject::getReleaseId, id));
         releaseMapper.deleteById(id);
         return ReturnResult.success();
     }
 
-    // ==================== 项目 CRUD ====================
+      // ==================== 项目 CRUD ====================
 
     @Override
     public ReturnResult<List<MsServerProject>> listProjects(Long releaseId) {
@@ -341,7 +347,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                         .eq(MsServerProject::getReleaseId, releaseId)
                         .orderByDesc(MsServerProject::getEnabled)
                         .orderByDesc(MsServerProject::getId));
-        // 回填类型能力（不落库）：模型仓库等无常驻进程类型，前端据此隐藏启停并展示「已发布」
+          // 回填类型能力（不落库）：模型仓库等无常驻进程类型，前端据此隐藏启停并展示「已发布」
         for (MsServerProject project : projects) {
             ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
             project.setRuntimeProcess(type.runtimeProcess());
@@ -352,11 +358,11 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * create Project
-     * @param project 参数
-     * @return 返回值
-    */
+      /**
+       * create Project
+       * @param project 参数
+       * @return 返回值
+      */
     public ReturnResult<MsServerProject> createProject(MsServerProject project) {
         project.setCreateTime(LocalDateTime.now());
         project.setUpdateTime(LocalDateTime.now());
@@ -366,29 +372,31 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (project.getEnabled() == null) {
             project.setEnabled(true);
         }
-        // 发布级 SkyWalking APM 注入（项目级 APM 选项优先，不会被覆盖）
+          // 发布级 SkyWalking APM 注入（项目级 APM 选项优先，不会被覆盖）
         applyReleaseApm(project);
-        // 四个脚本留空时用内置通用模板（含占位符）补全，用户无需手写
+          // 四个脚本留空时用内置通用模板（含占位符）补全，用户无需手写
         applyDefaultScripts(project);
         projectMapper.insert(project);
+        recordSyncOp(project.getId(), project.getProjectName(), project.getReleaseId(),
+                "create", true, "创建成功");
         return ReturnResult.ok(project);
     }
 
-    /**
-     * 把发布级 SkyWalking APM 配置合入项目 JVM 参数。
-     *
-     * <p>项目级 APM 选项（已写在 jvmArgs 的 {@code -javaagent:} / {@code -Dskywalking.*}）
-     * 始终优先：只有项目「尚未声明 APM」时，才把发布的 agent 路径、service_name 前缀
-     * 与 OAP 地址追加到 jvmArgs 中，项目无需手工配置即可在启动时采集调用链。</p>
-     *
-     * @param project 项目（releaseId 必填）
-     */
+      /**
+       * 把发布级 SkyWalking APM 配置合入项目 JVM 参数。
+       *
+       * <p>项目级 APM 选项（已写在 jvmArgs 的 {@code -javaagent:} / {@code -Dskywalking.*}）
+       * 始终优先：只有项目「尚未声明 APM」时，才把发布的 agent 路径、service_name 前缀
+       * 与 OAP 地址追加到 jvmArgs 中，项目无需手工配置即可在启动时采集调用链。</p>
+       *
+       * @param project 项目（releaseId 必填）
+       */
     private void applyReleaseApm(MsServerProject project) {
         if (project.getReleaseId() == null) {
             return;
         }
         MsServerRelease release = releaseMapper.selectById(project.getReleaseId());
-        // 未开启 / 缺少 jar 路径 / 缺少 OAP 地址时不注入
+          // 未开启 / 缺少 jar 路径 / 缺少 OAP 地址时不注入
         if (release == null || !Boolean.TRUE.equals(release.getSwEnabled())
                 || isBlank(release.getSwJarPath()) || isBlank(release.getSwBackendService())) {
             return;
@@ -402,12 +410,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         project.setJvmArgs(writeArgs(out));
     }
 
-    /**
-     * 把参数列表序列化为 JSON 字符串。
-     *
-     * <p>使用 {@code ObjectMapper.writeValueAsString} 时受检异常必须处理；序列化和项目经理 APM 参数
-     * 脱落无关，抛错时按「原样」回写。</p>
-     */
+      /**
+       * 把参数列表序列化为 JSON 字符串。
+       *
+       * <p>使用 {@code ObjectMapper.writeValueAsString} 时受检异常必须处理；序列化和项目经理 APM 参数
+       * 脱落无关，抛错时按「原样」回写。</p>
+       */
     private String writeArgs(List<String> args) {
         try {
             return JSON.writeValueAsString(args);
@@ -417,20 +425,20 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 是否 APM 参数（已由项目自行声明）
-     */
+      /**
+       * 是否 APM 参数（已由项目自行声明）
+       */
     private boolean isApmArg(String arg) {
         return arg.startsWith("-javaagent:") || arg.startsWith("-Dskywalking.");
     }
 
-    /**
-     * service_name 拼装：前缀（如有）- 项目名称
-     *
-     * @param release 发布
-     * @param project 项目
-     * @return 服务名
-     */
+      /**
+       * service_name 拼装：前缀（如有）- 项目名称
+       *
+       * @param release 发布
+       * @param project 项目
+       * @return 服务名
+       */
     private String serviceNameOf(MsServerRelease release, MsServerProject project) {
         String prefix = release.getSwServiceNamePrefix();
         String name = project.getProjectName();
@@ -441,12 +449,12 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * update Project
-     * @param id 长整数
-     * @param project 参数
-     * @return 返回值
-    */
+      /**
+       * update Project
+       * @param id 长整数
+       * @param project 参数
+       * @return 返回值
+      */
     public ReturnResult<MsServerProject> updateProject(Long id, MsServerProject project) {
         MsServerProject exists = projectMapper.selectById(id);
         if (exists == null) {
@@ -490,7 +498,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         exists.setUploadAutoUpgrade(project.getUploadAutoUpgrade() == null ? exists.getUploadAutoUpgrade() : project.getUploadAutoUpgrade());
         exists.setGitPollEnabled(project.getGitPollEnabled() == null ? exists.getGitPollEnabled() : project.getGitPollEnabled());
         exists.setGitPollCron(project.getGitPollCron() == null ? exists.getGitPollCron() : project.getGitPollCron());
-        // 定时发布：开关或时间变化时重置状态；只接受未来时间，避免登记一个永远不会触发的 cron
+          // 定时发布：开关或时间变化时重置状态；只接受未来时间，避免登记一个永远不会触发的 cron
         boolean scheduleTouched = project.getScheduleEnabled() != null || project.getScheduleTime() != null;
         exists.setScheduleEnabled(project.getScheduleEnabled() == null ? exists.getScheduleEnabled() : project.getScheduleEnabled());
         exists.setScheduleTime(project.getScheduleTime() == null ? exists.getScheduleTime() : project.getScheduleTime());
@@ -501,28 +509,30 @@ public class ReleaseServiceImpl implements ReleaseService {
             }
             exists.setScheduleStatus(enabled ? "PENDING" : "NONE");
         }
-        // 四个脚本为空时用内置通用模板补全
+          // 四个脚本为空时用内置通用模板补全
         applyDefaultScripts(exists);
         exists.setUpdateTime(LocalDateTime.now());
         projectMapper.updateById(exists);
+        recordSyncOp(exists.getId(), exists.getProjectName(), exists.getReleaseId(),
+                "update", true, "修改成功");
         return ReturnResult.ok(exists);
     }
 
-    /**
-     * 生成内置四段脚本：与执行期（prepare→expandProjectScripts）走完全相同的模板与展开路径，
-     * 保证前端预览 / 一键生成与真正下发的脚本逐字一致。
-     *
-     * @param hostId      目标主机标识
-     * @param projectType 项目类型
-     * @param mainEntry   主入口
-     * @param projectPath 项目地址
-     * @param logPath     日志地址
-     * @param appName     应用名
-     * @param envVars     环境变量 JSON
-     * @param jvmArgs     JVM 参数 JSON
-     * @param cmdArgs     命令参数 JSON
-     * @return startScript/stopScript/restartScript/statusScript
-     */
+      /**
+       * 生成内置四段脚本：与执行期（prepare→expandProjectScripts）走完全相同的模板与展开路径，
+       * 保证前端预览 / 一键生成与真正下发的脚本逐字一致。
+       *
+       * @param hostId      目标主机标识
+       * @param projectType 项目类型
+       * @param mainEntry   主入口
+       * @param projectPath 项目地址
+       * @param logPath     日志地址
+       * @param appName     应用名
+       * @param envVars     环境变量 JSON
+       * @param jvmArgs     JVM 参数 JSON
+       * @param cmdArgs     命令参数 JSON
+       * @return startScript/stopScript/restartScript/statusScript
+       */
     @Override
     public ReturnResult<Map<String, String>> generateScripts(Long hostId, String projectType, String mainEntry,
             String projectPath, String logPath, String appName,
@@ -534,8 +544,8 @@ public class ReleaseServiceImpl implements ReleaseService {
         String osType = HostPlatforms.normalize(host.getServerHostOsType());
         boolean windows = HostPlatforms.WINDOWS.equals(osType);
         ProjectScripts.Scripts def = projectTypeRouter.resolveOrGeneric(projectType).scripts(windows, mainEntry);
-        // 用一个只承载上下文的临时项目走 materializeVars，使 envVars/jvmArgs/cmdArgs 的
-        // VARS 块与参数展开与执行期一致（前端拿到的即可直接执行，无需二次加工）。
+          // 用一个只承载上下文的临时项目走 materializeVars，使 envVars/jvmArgs/cmdArgs 的
+          // VARS 块与参数展开与执行期一致（前端拿到的即可直接执行，无需二次加工）。
         MsServerProject stub = new MsServerProject();
         stub.setProjectType(projectType);
         stub.setMainEntry(mainEntry);
@@ -558,22 +568,26 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * delete Project
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * delete Project
+       * @param id 长整数
+       * @return 返回值
+      */
     public ReturnResult<Void> deleteProject(Long id) {
+        MsServerProject exists = projectMapper.selectById(id);
         projectMapper.deleteById(id);
+        recordSyncOp(id, exists == null ? null : exists.getProjectName(),
+                exists == null ? null : exists.getReleaseId(), "delete", true, "删除成功");
         return ReturnResult.success();
     }
 
-    // ==================== 项目操作（异步任务） ====================
+      // ==================== 项目操作（异步任务） ====================
 
     @Override
     public ReturnResult<String> startProject(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
+            recordPrecheckFailure(id, "start", prepared.getMsg());
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
@@ -584,7 +598,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (isBlank(project.getStartScript())) {
             return ReturnResult.error("启动脚本未配置");
         }
-        // 幂等：已在运行则不再重复启动（避免重复拉起、覆盖 app.pid、产生孤儿进程）
+          // 幂等：已在运行则不再重复启动（避免重复拉起、覆盖 app.pid、产生孤儿进程）
         if (!isBlank(project.getStatusScript())) {
             ReturnResult<String> cur = statusProject(id);
             if (cur.isOk() && cur.getData() != null
@@ -610,6 +624,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     public ReturnResult<String> stopProject(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
+            recordPrecheckFailure(id, "stop", prepared.getMsg());
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
@@ -631,6 +646,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     public ReturnResult<String> restartProject(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
+            recordPrecheckFailure(id, "restart", prepared.getMsg());
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
@@ -664,6 +680,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     public ReturnResult<String> upgradeProject(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
+            recordPrecheckFailure(id, "upgrade", prepared.getMsg());
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
@@ -694,6 +711,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     public ReturnResult<String> backupProject(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
+            recordPrecheckFailure(id, "backup", prepared.getMsg());
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
@@ -701,6 +719,10 @@ public class ReleaseServiceImpl implements ReleaseService {
                 backupCommand(projectPlatformRouter.resolveOrPosix(prepared.getData().osType), project.getProjectPath()), 1));
         String taskId = projectTaskService.startTask(prepared.getData().hostId, project.getId(),
                 "backup", steps, null);
+        if (taskId == null) {
+            recordSyncOp(project.getId(), project.getProjectName(), project.getReleaseId(),
+                    "backup", false, "该项目有操作正在进行，请稍后再试");
+        }
         return task(taskId);
     }
 
@@ -708,6 +730,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     public ReturnResult<String> rollbackProject(Long id, String backupName) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
+            recordPrecheckFailure(id, "rollback", prepared.getMsg());
             return ReturnResult.error(prepared.getMsg());
         }
         MsServerProject project = prepared.getData().project;
@@ -723,8 +746,8 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (!isBlank(project.getStartScript())) {
             steps.add(new ProjectStep("启动服务", buildCommand(win, project.getProjectPath(), project.getStartScript()), 1));
             if (type.runtimeProcess()) {
-                // 回滚同样要回写 PID：旧实现只重启不读 pid，接口 pid=null、卡片显示「PID —」，
-                // 实际进程却已在跑（验收时 Git 回滚复现）。
+                  // 回滚同样要回写 PID：旧实现只重启不读 pid，接口 pid=null、卡片显示「PID —」，
+                  // 实际进程却已在跑（验收时 Git 回滚复现）。
                 steps.add(pidStep(win, project.getProjectPath(), type));
                 finishStatus = "running";
             }
@@ -753,7 +776,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                     if (!line.startsWith("backup_")) {
                         continue;
                     }
-                    // name|epochSeconds|size|kind
+                      // name|epochSeconds|size|kind
                     String[] parts = line.split("\\|", -1);
                     ProjectBackupVO vo = new ProjectBackupVO(
                             parts[0],
@@ -765,18 +788,18 @@ public class ReleaseServiceImpl implements ReleaseService {
                 }
             }
         }
-        // 最新备份在前
+          // 最新备份在前
         rows.sort((x, y) -> Long.compare(
                 y.time() == null ? 0L : y.time(),
                 x.time() == null ? 0L : x.time()));
         return ReturnResult.ok(rows);
     }
 
-    /**
-     * parse Epoch Seconds
-     * @param raw 字符串
-     * @return 返回值
-    */
+      /**
+       * parse Epoch Seconds
+       * @param raw 字符串
+       * @return 返回值
+      */
     private Long parseEpochSeconds(String raw) {
         try {
             return Long.parseLong(raw.trim()) * 1000L;
@@ -785,11 +808,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * parse Long Or Null
-     * @param raw 字符串
-     * @return 返回值
-    */
+      /**
+       * parse Long Or Null
+       * @param raw 字符串
+       * @return 返回值
+      */
     private Long parseLongOrNull(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
@@ -801,17 +824,17 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 构造「列出 backups/ 备份记录」命令，输出每行 name|epochSeconds|size|kind
-     * @param pf 参数
-     * @param projectPath 字符串
-     * @return 返回值
-    */
+      /**
+       * 构造「列出 backups/ 备份记录」命令，输出每行 name|epochSeconds|size|kind
+       * @param pf 参数
+       * @param projectPath 字符串
+       * @return 返回值
+      */
     private String backupListCommand(ProjectPlatformProvider pf, String projectPath) {
         return pf.listBackups(projectPath);
     }
 
-    // ==================== 日志 ====================
+      // ==================== 日志 ====================
 
     @Override
     public ReturnResult<String> getProjectLog(Long id) {
@@ -823,7 +846,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (isBlank(project.getLogPath())) {
             return ReturnResult.ok("未配置日志路径");
         }
-        // 按操作系统生成读取命令（由平台 SPI 提供：POSIX tail / Windows Get-Content -Tail）
+          // 按操作系统生成读取命令（由平台 SPI 提供：POSIX tail / Windows Get-Content -Tail）
         String logPath = project.getLogPath();
         String command = projectPlatformRouter.resolveOrPosix(prepared.getData().osType).tailLog(logPath, 100);
         ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
@@ -836,7 +859,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     @Override
-    public ReturnResult<String> startProjectLog(Long id) {
+    public ReturnResult<String> startProjectLog(Long id, String clientId) {
         ReturnResult<OperationContext> prepared = prepare(id);
         if (!prepared.isOk()) {
             return ReturnResult.error(prepared.getMsg());
@@ -846,7 +869,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("日志路径未配置");
         }
         String sessionId = projectTaskService.startLogTail(prepared.getData().hostId,
-                project.getId(), project.getLogPath());
+                project.getId(), project.getLogPath(), clientId);
         return ReturnResult.ok(sessionId);
     }
 
@@ -856,7 +879,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.success();
     }
 
-    // ==================== 软件仓库 ====================
+      // ==================== 软件仓库 ====================
 
     @Override
     public ReturnResult<List<SoftwarePackage>> searchSoftware(Long hostId, String keyword) {
@@ -879,7 +902,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         List<SoftwarePackage> packages = new ArrayList<>();
         if (result.getData() != null && !result.getData().isEmpty()) {
             com.chua.starter.server.support.entity.MsExecLog log = result.getData().get(0);
-            // 同样检查单条日志状态：SSH 凭据缺失时命令执行失败，输出为空
+              // 同样检查单条日志状态：SSH 凭据缺失时命令执行失败，输出为空
             if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
                 String reason = log.getMsExecLogError();
                 if (isBlank(reason)) {
@@ -896,9 +919,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(packages);
     }
 
-    /**
-     * 安装软件：构建包管理器安装命令，转为异步任务，实时进度经 socket 推送
-     */
+      /**
+       * 安装软件：构建包管理器安装命令，转为异步任务，实时进度经 socket 推送
+       */
     @Override
     public ReturnResult<String> installSoftware(Long hostId, String name) {
         MsServerHost host = hostMapper.selectById(hostId);
@@ -922,9 +945,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
-    /**
-     * 列出已安装软件：同步执行 provider 的 installed 命令并解析。
-     */
+      /**
+       * 列出已安装软件：同步执行 provider 的 installed 命令并解析。
+       */
     @Override
     public ReturnResult<List<SoftwarePackage>> listInstalledSoftware(Long hostId) {
         MsServerHost host = hostMapper.selectById(hostId);
@@ -950,10 +973,10 @@ public class ReleaseServiceImpl implements ReleaseService {
         List<SoftwarePackage> packages = new ArrayList<>();
         if (result.getData() != null && !result.getData().isEmpty()) {
             com.chua.starter.server.support.entity.MsExecLog log = result.getData().get(0);
-            // 必须检查单条日志的执行状态：runCommand 的 ReturnResult.isSuccess()
-            // 只表示 HTTP 层成功，不代表命令执行成功。SSH 凭据缺失、命令退出码非 0
-            // 等情况日志状态为 FAIL，输出为空——若不检查直接 parseInstalled("")
-            // 会返回空列表，前端显示「尚未安装任何软件」而非真实错误。
+              // 必须检查单条日志的执行状态：runCommand 的 ReturnResult.isSuccess()
+              // 只表示 HTTP 层成功，不代表命令执行成功。SSH 凭据缺失、命令退出码非 0
+              // 等情况日志状态为 FAIL，输出为空——若不检查直接 parseInstalled("")
+              // 会返回空列表，前端显示「尚未安装任何软件」而非真实错误。
             if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
                 String reason = log.getMsExecLogError();
                 if (isBlank(reason)) {
@@ -970,9 +993,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(packages);
     }
 
-    /**
-     * 卸载软件：构建包管理器卸载命令，转为异步任务
-     */
+      /**
+       * 卸载软件：构建包管理器卸载命令，转为异步任务
+       */
     @Override
     public ReturnResult<String> uninstallSoftware(Long hostId, String name) {
         MsServerHost host = hostMapper.selectById(hostId);
@@ -996,9 +1019,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
-    /**
-     * 升级软件到最新版：构建包管理器升级命令，转为异步任务
-     */
+      /**
+       * 升级软件到最新版：构建包管理器升级命令，转为异步任务
+       */
     @Override
     public ReturnResult<String> upgradeSoftware(Long hostId, String name) {
         MsServerHost host = hostMapper.selectById(hostId);
@@ -1022,14 +1045,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
-    /**
-     * 列出有可用更新的软件。
-     *
-     * <p>判断依据是包管理器自己的「可升级清单」（apt list --upgradable /
-     * dnf check-update / winget upgrade / choco outdated），而不是「仓库里有没有这个包」。
-     * 再把清单与已安装版本按包名合并，前端拿到的每一条都是「当前 → 候选」，
-     * 点下去一定会真的升级。</p>
-     */
+      /**
+       * 列出有可用更新的软件。
+       *
+       * <p>判断依据是包管理器自己的「可升级清单」（apt list --upgradable /
+       * dnf check-update / winget upgrade / choco outdated），而不是「仓库里有没有这个包」。
+       * 再把清单与已安装版本按包名合并，前端拿到的每一条都是「当前 → 候选」，
+       * 点下去一定会真的升级。</p>
+       */
     @Override
     public ReturnResult<List<SoftwareUpgradeVO>> listUpgradableSoftware(Long hostId) {
         MsServerHost host = hostMapper.selectById(hostId);
@@ -1054,7 +1077,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             MsExecLog log = result.getData().get(0);
             String output = log.getMsExecLogOutput();
             if (isBlank(output)) {
-                // 输出为空且执行失败：不能当成「没有更新」，否则用户永远看不到升级按钮
+                  // 输出为空且执行失败：不能当成「没有更新」，否则用户永远看不到升级按钮
                 if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
                     String reason = log.getMsExecLogError();
                     if (isBlank(reason)) {
@@ -1070,7 +1093,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.ok(new ArrayList<>());
         }
 
-        // 合并已安装版本：只保留确实装在这台机器上的包
+          // 合并已安装版本：只保留确实装在这台机器上的包
         Map<String, String> installedVersion = new LinkedHashMap<>();
         ReturnResult<List<SoftwarePackage>> installedResult = listInstalledSoftware(hostId);
         if (installedResult.isOk() && installedResult.getData() != null) {
@@ -1093,7 +1116,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             String current = installedVersion.get(key);
             String target = candidate.version();
             if (!isBlank(current) && !isBlank(target) && current.trim().equals(target.trim())) {
-                // 版本完全相同不是升级；包管理器偶尔会把刚更新的包列一次
+                  // 版本完全相同不是升级；包管理器偶尔会把刚更新的包列一次
                 continue;
             }
             upgrades.add(new SoftwareUpgradeVO(candidate.name(), current, target));
@@ -1101,12 +1124,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(upgrades);
     }
 
-    /**
-     * 查询某个软件包的依赖关系。
-     *
-     * <p>依赖是「读了才有」的信息，不预加载：软件列表动辄几百条，逐包跑
-     * {@code apt-cache depends} 会让页面打开变成分钟级。详情页展开时按需查一次。</p>
-     */
+      /**
+       * 查询某个软件包的依赖关系。
+       *
+       * <p>依赖是「读了才有」的信息，不预加载：软件列表动辄几百条，逐包跑
+       * {@code apt-cache depends} 会让页面打开变成分钟级。详情页展开时按需查一次。</p>
+       */
     @Override
     public ReturnResult<List<String>> softwareDependencies(Long hostId, String name) {
         MsServerHost host = hostMapper.selectById(hostId);
@@ -1139,7 +1162,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(provider.parseDependencies(output));
     }
 
-    // ==================== 状态检测 ====================
+      // ==================== 状态检测 ====================
 
     @Override
     public ReturnResult<String> statusProject(Long id) {
@@ -1161,7 +1184,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok("unknown");
     }
 
-    // ==================== 系统服务挂载 ====================
+      // ==================== 系统服务挂载 ====================
 
     @Override
     public ReturnResult<String> installService(Long id) {
@@ -1184,8 +1207,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                 : project.getServiceName();
         String command = provider.get().install(serviceContext, svc);
         List<ProjectStep> steps = List.of(new ProjectStep("挂载系统服务", command, 1));
-        // 服务名只在任务真正成功后才回写：旧实现在提交任务时就写库，
-        // 安装失败（如守护进程未拉起）会留下「库里有服务名、机器上没有服务」的假状态。
+          // 服务名只在任务真正成功后才回写：旧实现在提交任务时就写库，
+          // 安装失败（如守护进程未拉起）会留下「库里有服务名、机器上没有服务」的假状态。
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
                 "install-service", steps, null, new ProjectTaskService.ServiceNameWrite(svc));
         return task(taskId);
@@ -1209,20 +1232,20 @@ public class ReleaseServiceImpl implements ReleaseService {
                 : project.getServiceName();
         String command = provider.get().uninstall(serviceContext, svc);
         List<ProjectStep> steps = List.of(new ProjectStep("卸载系统服务", command, 1));
-        // 卸载失败（例如「自启脚本仍存在」）时不能清空库中服务名：那会让 UI 谎报未挂载。
+          // 卸载失败（例如「自启脚本仍存在」）时不能清空库中服务名：那会让 UI 谎报未挂载。
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
                 "uninstall-service", steps, null, new ProjectTaskService.ServiceNameWrite(null));
         return task(taskId);
     }
 
-    // ==================== 升级配置 ====================
+      // ==================== 升级配置 ====================
 
-    /**
-     * 装配系统服务挂载上下文：把项目实体与结构化变量转换为 SPI 输入
-     *
-     * @param ctx 操作上下文
-     * @return 挂载上下文
-     */
+      /**
+       * 装配系统服务挂载上下文：把项目实体与结构化变量转换为 SPI 输入
+       *
+       * @param ctx 操作上下文
+       * @return 挂载上下文
+       */
     private SystemServiceContext serviceContext(OperationContext ctx) {
         var env = new LinkedHashMap<String, String>();
         for (EnvVar e : readEnvList(ctx.project.getEnvVars())) {
@@ -1244,7 +1267,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 ctx.host == null ? "" : ctx.host.getServerHostAccount(),
                 Boolean.TRUE.equals(ctx.project.getAutostart()),
                 Boolean.TRUE.equals(ctx.project.getGuardian()),
-                // 前台常驻命令由项目类型 SPI 生成，平台实现不再持有项目类型分支
+                  // 前台常驻命令由项目类型 SPI 生成，平台实现不再持有项目类型分支
                 projectTypeRouter.resolveOrGeneric(ctx.project.getProjectType())
                         .posixForeground(ctx.project.getMainEntry()));
     }
@@ -1260,16 +1283,16 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(out);
     }
 
-    /**
-     * 汇总某个项目的「默认升级配置」。
-     *
-     * <p>项目默认 = 项目自身字段（部署类型 / 解压开关 / 模型上传目录）作为基线，
-     * 再被用户显式保存过的项目级配置覆盖。这样升级弹框按项目打开时，
-     * 显示的一定是这个项目自己的默认值，而不是上一次别的项目留下来的全局配置。</p>
-     *
-     * @param projectId 项目ID
-     * @return 项目默认升级配置
-     */
+      /**
+       * 汇总某个项目的「默认升级配置」。
+       *
+       * <p>项目默认 = 项目自身字段（部署类型 / 解压开关 / 模型上传目录）作为基线，
+       * 再被用户显式保存过的项目级配置覆盖。这样升级弹框按项目打开时，
+       * 显示的一定是这个项目自己的默认值，而不是上一次别的项目留下来的全局配置。</p>
+       *
+       * @param projectId 项目ID
+       * @return 项目默认升级配置
+       */
     @SuppressWarnings("unchecked")
     private Map<String, Object> projectUpgradeConfig(Long projectId) {
         Map<String, Object> cfg = new java.util.LinkedHashMap<>(defaultGlobalConfig());
@@ -1354,7 +1377,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 Map<String, Object> cfg = config == null
                         ? new java.util.LinkedHashMap<>()
                         : new java.util.LinkedHashMap<>(config);
-                // 批量升级只对一个项目下发一次：清掉可能残留的包路径判断，交给调用方显式传入
+                  // 批量升级只对一个项目下发一次：清掉可能残留的包路径判断，交给调用方显式传入
                 ReturnResult<String> r = runUpgrade(projectId, cfg);
                 row.put("ok", r.isOk());
                 row.put("taskId", r.isOk() ? r.getData() : null);
@@ -1370,7 +1393,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(results);
     }
 
-    // ==================== 按配置升级 ====================
+      // ==================== 按配置升级 ====================
 
     @Override
     public ReturnResult<String> runUpgrade(Long id, Map<String, Object> config) {
@@ -1392,9 +1415,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         String deployType = strCfg(cfg, "deployType", "");
         ProjectTypeProvider type = projectTypeRouter.resolveOrGeneric(project.getProjectType());
 
-        // 包来源由项目类型声明：Git 类型先构建，再走本类型正常的投放与重启。
-        // 构建必须放在任务线程里：克隆 + Maven 构建动辄几十秒，超过前端 HTTP 的 30s 超时，
-        // 放在请求线程会让 UI 拿不到 taskId（表现为「操作触发失败」且没有任务面板）。
+          // 包来源由项目类型声明：Git 类型先构建，再走本类型正常的投放与重启。
+          // 构建必须放在任务线程里：克隆 + Maven 构建动辄几十秒，超过前端 HTTP 的 30s 超时，
+          // 放在请求线程会让 UI 拿不到 taskId（表现为「操作触发失败」且没有任务面板）。
         String source = strCfg(cfg, "source", "").trim();
         boolean gitSource = ProjectTypeProvider.SOURCE_GIT.equalsIgnoreCase(source)
                 || (source.isEmpty() && isBlank(packagePath)
@@ -1406,8 +1429,8 @@ public class ReleaseServiceImpl implements ReleaseService {
             steps.add(cfgStep);
         }
         if (gitSource) {
-            // 构建产物路径要到构建结束才确定，先占住步骤位；成功后再把投放/重启步骤追加到同一个列表，
-            // 任务执行器按索引遍历，能继续执行追加进来的步骤。
+              // 构建产物路径要到构建结束才确定，先占住步骤位；成功后再把投放/重启步骤追加到同一个列表，
+              // 任务执行器按索引遍历，能继续执行追加进来的步骤。
             steps.add(new ProjectStep("拉取源码并构建", "", 8, () -> {
                 ReturnResult<String> built = prepareGitPackage(ctx);
                 if (!built.isOk()) {
@@ -1429,32 +1452,32 @@ public class ReleaseServiceImpl implements ReleaseService {
         return task(taskId);
     }
 
-    /**
-     * 追加「停服 → 备份 → 投放 → 重启/健康检查 → 记录 PID」步骤。
-     *
-     * <p>Git 类型要等构建成功后才能确定包路径，因此这段编排抽成方法，由调用方决定何时追加。</p>
-     *
-     * @param steps           步骤列表（直接追加）
-     * @param pf              平台命令提供者
-     * @param ctx             操作上下文
-     * @param project         项目
-     * @param type            项目类型实现
-     * @param packagePath     安装包路径；为空表示只重启不投放
-     * @param autoBackup      是否自动备份
-     * @param autoExtract     是否自动解压
-     * @param autoRestart     是否自动重启
-     * @param autoRollback    是否健康检查失败自动回滚
-     * @param uploadExtract   上传包是否解压
-     * @param uploadTargetDir 上传投放目录
-     * @param deployType      部署类型
-     */
+      /**
+       * 追加「停服 → 备份 → 投放 → 重启/健康检查 → 记录 PID」步骤。
+       *
+       * <p>Git 类型要等构建成功后才能确定包路径，因此这段编排抽成方法，由调用方决定何时追加。</p>
+       *
+       * @param steps           步骤列表（直接追加）
+       * @param pf              平台命令提供者
+       * @param ctx             操作上下文
+       * @param project         项目
+       * @param type            项目类型实现
+       * @param packagePath     安装包路径；为空表示只重启不投放
+       * @param autoBackup      是否自动备份
+       * @param autoExtract     是否自动解压
+       * @param autoRestart     是否自动重启
+       * @param autoRollback    是否健康检查失败自动回滚
+       * @param uploadExtract   上传包是否解压
+       * @param uploadTargetDir 上传投放目录
+       * @param deployType      部署类型
+       */
     private void appendDeploySteps(List<ProjectStep> steps, ProjectPlatformProvider pf, OperationContext ctx,
                                    MsServerProject project, ProjectTypeProvider type, String packagePath,
                                    boolean autoBackup, boolean autoExtract, boolean autoRestart,
                                    boolean autoRollback, boolean uploadExtract, String uploadTargetDir,
                                    String deployType) {
         String path = project.getProjectPath();
-        // 先停服：运行中的进程会占用目标文件（尤其 Windows 上 jar 被 JVM 锁），不先停则备份/投放/解压必失败
+          // 先停服：运行中的进程会占用目标文件（尤其 Windows 上 jar 被 JVM 锁），不先停则备份/投放/解压必失败
         if (!isBlank(project.getStopScript())) {
             steps.add(new ProjectStep("停止服务", buildCommand(pf, path, project.getStopScript()), 1));
         }
@@ -1474,13 +1497,13 @@ public class ReleaseServiceImpl implements ReleaseService {
                     deployType);
             steps.addAll(placementSteps(pf, ctx, type, pc));
         }
-        // 没有常驻进程的类型（模型仓库）无需重启，也没有可回写的 PID
+          // 没有常驻进程的类型（模型仓库）无需重启，也没有可回写的 PID
         if (!type.runtimeProcess()) {
             return;
         }
-        // 启动前补齐日志目录：首次发布时 logs/ 尚不存在，而启动脚本把标准输出重定向到
-        // logs/app.log，shell 在重定向阶段就失败、java 根本没起来，但脚本末尾的
-        // echo $! > app.pid 仍返回 0，任务于是报「成功」且状态 running（实测踩到）。
+          // 启动前补齐日志目录：首次发布时 logs/ 尚不存在，而启动脚本把标准输出重定向到
+          // logs/app.log，shell 在重定向阶段就失败、java 根本没起来，但脚本末尾的
+          // echo $! > app.pid 仍返回 0，任务于是报「成功」且状态 running（实测踩到）。
         String logFile = ProjectScripts.resolveLogFile(project.getLogPath(), path);
         String logDir = dirName(logFile);
         if (!isBlank(logDir)) {
@@ -1499,9 +1522,9 @@ public class ReleaseServiceImpl implements ReleaseService {
                 steps.add(new ProjectStep("启动服务",
                         buildCommand(pf, path, project.getStartScript()), 3));
             }
-            // 重启后必须由项目自己的状态脚本确认「真的在跑」：只看退出码不够，
-            // 启动脚本末尾的 echo 即使 java 没起来也会返回 0。自动回滚分支已内置健康检查，
-            // 这里不重复；autoRestart=false 时服务本就应停着，也不校验。
+              // 重启后必须由项目自己的状态脚本确认「真的在跑」：只看退出码不够，
+              // 启动脚本末尾的 echo 即使 java 没起来也会返回 0。自动回滚分支已内置健康检查，
+              // 这里不重复；autoRestart=false 时服务本就应停着，也不校验。
             if (!isBlank(project.getStatusScript())) {
                 steps.add(verifyRunningStep(pf, ctx, project, logFile));
             }
@@ -1509,18 +1532,18 @@ public class ReleaseServiceImpl implements ReleaseService {
         steps.add(pidStep(pf, path, type));
     }
 
-    /**
-     * 构造「校验运行状态」步骤：执行项目状态脚本，输出必须包含 {@code running}。
-     *
-     * <p>把「启动脚本返回 0」与「服务真的在跑」区分开：状态脚本是项目自己的判定依据
-     * （Java 用 {@code app.pid} + {@code kill -0}，Nginx 用 master pid），比任何通用猜测可靠。</p>
-     *
-     * @param pf      平台命令提供者
-     * @param ctx     操作上下文
-     * @param project 项目
-     * @param logFile 日志文件（失败提示用）
-     * @return 校验步骤
-     */
+      /**
+       * 构造「校验运行状态」步骤：执行项目状态脚本，输出必须包含 {@code running}。
+       *
+       * <p>把「启动脚本返回 0」与「服务真的在跑」区分开：状态脚本是项目自己的判定依据
+       * （Java 用 {@code app.pid} + {@code kill -0}，Nginx 用 master pid），比任何通用猜测可靠。</p>
+       *
+       * @param pf      平台命令提供者
+       * @param ctx     操作上下文
+       * @param project 项目
+       * @param logFile 日志文件（失败提示用）
+       * @return 校验步骤
+       */
     private ProjectStep verifyRunningStep(ProjectPlatformProvider pf, OperationContext ctx,
                                           MsServerProject project, String logFile) {
         String command = buildCommand(pf, project.getProjectPath(), project.getStatusScript());
@@ -1534,18 +1557,18 @@ public class ReleaseServiceImpl implements ReleaseService {
             String text = output == null ? "" : output.trim();
             if (!text.toLowerCase().contains("running")) {
                 throw new IllegalStateException("启动后状态校验未通过（状态脚本输出: "
-                        + (text.isEmpty() ? "空" : text) + "），请查看日志 " + logFile);
+                          + (text.isEmpty() ? "空" : text) + "），请查看日志 " + logFile);
             }
             return java.util.List.of("运行状态: " + text);
         });
     }
 
-    /**
-     * 取路径的父目录（兼容 / 与 \）。
-     *
-     * @param file 文件路径
-     * @return 父目录；无分隔符时返回空串
-     */
+      /**
+       * 取路径的父目录（兼容 / 与 \）。
+       *
+       * @param file 文件路径
+       * @return 父目录；无分隔符时返回空串
+       */
     private static String dirName(String file) {
         if (file == null || file.isBlank()) {
             return "";
@@ -1558,22 +1581,22 @@ public class ReleaseServiceImpl implements ReleaseService {
         return idx == 0 ? "/" : normalized.substring(0, idx);
     }
 
-    /**
-     * 按项目类型声明的投放计划生成步骤。
-     *
-     * <p>类型只声明「投到哪、叫什么、是否建目录、失败是否还原重启」，执行细节统一在这里：
-     * 优先 SFTP 重命名（同文件系统内即移动），SDK 不可用才回退平台命令。</p>
-     *
-     * <p>投放失败必须检查命令结果：{@code runCommand} 外层常常是成功的，真正的失败只体现在
-     * 退出码上。若忽略它，目标文件已被删除却仍报「步骤成功」，编排器会继续去重启，
-     * 最终表现为「健康检查超时、自动回滚也没跑」。</p>
-     *
-     * @param pf   平台命令提供者
-     * @param ctx  操作上下文
-     * @param type 项目类型实现
-     * @param pc   投放上下文
-     * @return 投放步骤
-     */
+      /**
+       * 按项目类型声明的投放计划生成步骤。
+       *
+       * <p>类型只声明「投到哪、叫什么、是否建目录、失败是否还原重启」，执行细节统一在这里：
+       * 优先 SFTP 重命名（同文件系统内即移动），SDK 不可用才回退平台命令。</p>
+       *
+       * <p>投放失败必须检查命令结果：{@code runCommand} 外层常常是成功的，真正的失败只体现在
+       * 退出码上。若忽略它，目标文件已被删除却仍报「步骤成功」，编排器会继续去重启，
+       * 最终表现为「健康检查超时、自动回滚也没跑」。</p>
+       *
+       * @param pf   平台命令提供者
+       * @param ctx  操作上下文
+       * @param type 项目类型实现
+       * @param pc   投放上下文
+       * @return 投放步骤
+       */
     private List<ProjectStep> placementSteps(ProjectPlatformProvider pf, OperationContext ctx,
                                              ProjectTypeProvider type, ProjectPlacementContext pc) {
         List<ProjectStep> steps = new ArrayList<>();
@@ -1587,20 +1610,20 @@ public class ReleaseServiceImpl implements ReleaseService {
                 String src = pc.packagePath().replace('\\', '/');
                 String dir = placement.targetDir().replace('\\', '/');
                 String dst = dir + "/" + placement.fileName();
-                // 源包与目标为同一文件时必须直接跳过：cp -f 会报「are the same file」，
-                // 随后的 SFTP rename 也会因源/目标相同而失败。典型场景：升级包就放在项目目录
-                // 且文件名与主入口一致（node2 批量升级实测）。文件已在目标位置，视为投放成功。
+                  // 源包与目标为同一文件时必须直接跳过：cp -f 会报「are the same file」，
+                  // 随后的 SFTP rename 也会因源/目标相同而失败。典型场景：升级包就放在项目目录
+                  // 且文件名与主入口一致（node2 批量升级实测）。文件已在目标位置，视为投放成功。
                 if (samePath(src, dst)) {
                     return java.util.List.of("源包与目标为同一文件，跳过复制: " + dst);
                 }
                 if (placement.createTargetDir()) {
-                    // 首次升级时 lib 目录往往还不存在，不建目录投放会失败
+                      // 首次升级时 lib 目录往往还不存在，不建目录投放会失败
                     sftpService.mkdir(ctx.hostId, null, dir);
                 }
-                // 投放必须是「复制」而不是「移动」：源包被移走后，同一个 packagePath
-                // 给第二个项目或二次升级就会报文件不存在（实测升级后上传目录里的包已消失），
-                // 而且 SDK 路径移动、命令回退路径复制，两条路径的副作用还不一致。
-                // 因此先走平台命令复制（cp -f / Copy-Item），源包始终保留。
+                  // 投放必须是「复制」而不是「移动」：源包被移走后，同一个 packagePath
+                  // 给第二个项目或二次升级就会报文件不存在（实测升级后上传目录里的包已消失），
+                  // 而且 SDK 路径移动、命令回退路径复制，两条路径的副作用还不一致。
+                  // 因此先走平台命令复制（cp -f / Copy-Item），源包始终保留。
                 ReturnResult<java.util.List<MsExecLog>> copied =
                         execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
                                 placeCommand(pf, dir, pc.packagePath(), placement.fileName()), 60, null);
@@ -1608,53 +1631,53 @@ public class ReleaseServiceImpl implements ReleaseService {
                     return java.util.List.of("已复制到 " + dst + "（保留源包）");
                 }
                 String cmdWhy = copied.isOk() ? "退出码非 0" : copied.getMsg();
-                // 命令通道不可用（如仅开 SFTP 的主机）才退回重命名：这条路径必然移动源包，
-                // 属于次优但唯一可行的手段，会在步骤日志里写明。
+                  // 命令通道不可用（如仅开 SFTP 的主机）才退回重命名：这条路径必然移动源包，
+                  // 属于次优但唯一可行的手段，会在步骤日志里写明。
                 ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
                 if (!mv.isOk()) {
-                    // 多数 SFTP 实现不支持覆盖式 rename（目标已存在的升级场景必然失败）：
-                    // 先删目标再 rename，仍走 SDK。
+                      // 多数 SFTP 实现不支持覆盖式 rename（目标已存在的升级场景必然失败）：
+                      // 先删目标再 rename，仍走 SDK。
                     sftpService.delete(ctx.hostId, null, dst, false);
                     mv = sftpService.rename(ctx.hostId, null, src, dst);
                 }
                 if (mv.isOk()) {
                     return java.util.List.of("命令投放不可用（" + cmdWhy + "），已回退 sftp rename（源包被移动）: "
-                            + src + " -> " + dst);
+                              + src + " -> " + dst);
                 }
-                // cp -f 是就地截断写入，失败时目标可能已被写坏，仍需按备份还原并重启止损
+                  // cp -f 是就地截断写入，失败时目标可能已被写坏，仍需按备份还原并重启止损
                 if (placement.restoreOnFailure()) {
                     String restoreNote = restoreAndRestart(pf, ctx, pc.projectPath(), ctx.project);
                     throw new IllegalStateException(placement.title() + "失败；" + restoreNote
-                            + "命令投放=" + cmdWhy + "；SFTP rename=" + mv.getMsg());
+                              + "命令投放=" + cmdWhy + "；SFTP rename=" + mv.getMsg());
                 }
                 throw new IllegalStateException(placement.title() + "失败: " + cmdWhy
-                        + "；SFTP rename=" + mv.getMsg());
+                          + "；SFTP rename=" + mv.getMsg());
             }));
         }
         return steps;
     }
 
-    /**
-     * 判断两个远端路径是否指向同一文件。
-     *
-     * <p>只做字面规范化（分隔符、重复斜杠、结尾斜杠），不访问目标机：
-     * 投放前就能识别「源包就是目标文件」的情况，避免 {@code cp} 报 same file。</p>
-     *
-     * @param a 路径 A
-     * @param b 路径 B
-     * @return 规范化后相等时为 {@code true}
-     */
+      /**
+       * 判断两个远端路径是否指向同一文件。
+       *
+       * <p>只做字面规范化（分隔符、重复斜杠、结尾斜杠），不访问目标机：
+       * 投放前就能识别「源包就是目标文件」的情况，避免 {@code cp} 报 same file。</p>
+       *
+       * @param a 路径 A
+       * @param b 路径 B
+       * @return 规范化后相等时为 {@code true}
+       */
     private static boolean samePath(String a, String b) {
         String x = normalizeRemotePath(a);
         return !x.isEmpty() && x.equals(normalizeRemotePath(b));
     }
 
-    /**
-     * 远端路径字面规范化。
-     *
-     * @param path 原始路径
-     * @return 统一使用 {@code /}、去掉重复与结尾斜杠后的路径
-     */
+      /**
+       * 远端路径字面规范化。
+       *
+       * @param path 原始路径
+       * @return 统一使用 {@code /}、去掉重复与结尾斜杠后的路径
+       */
     private static String normalizeRemotePath(String path) {
         if (path == null) {
             return "";
@@ -1695,8 +1718,8 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error(up.getMsg());
         }
         String remotePackage = up.getData();
-        // 上传配置：默认只上传不升级；仅当项目显式开启「上传后自动升级」时才走投放/重启。
-        // 显式指定 deployType 的调用（如「更新依赖包」只投 lib）本身就是一次升级动作，不受该开关限制。
+          // 上传配置：默认只上传不升级；仅当项目显式开启「上传后自动升级」时才走投放/重启。
+          // 显式指定 deployType 的调用（如「更新依赖包」只投 lib）本身就是一次升级动作，不受该开关限制。
         boolean autoUpgrade = Boolean.TRUE.equals(project.getUploadAutoUpgrade()) || !isBlank(deployTypeOverride);
         if (!autoUpgrade) {
             log.info("[发布] 项目 {} 未开启上传后自动升级，安装包已上传至 {}", project.getId(), remotePackage);
@@ -1707,7 +1730,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
                 : defaultGlobalConfig();
         cfg.put("packagePath", remotePackage);
-        // 注入项目自身的上传配置，覆盖全局默认
+          // 注入项目自身的上传配置，覆盖全局默认
         if (project.getUploadExtract() != null) {
             cfg.put("uploadExtract", project.getUploadExtract());
         }
@@ -1717,7 +1740,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (!isBlank(project.getDeployType())) {
             cfg.put("deployType", project.getDeployType());
         }
-        // 拖拽上传的调用方可以显式覆盖部署类型（典型：分离式项目「更新依赖包」只投 lib）
+          // 拖拽上传的调用方可以显式覆盖部署类型（典型：分离式项目「更新依赖包」只投 lib）
         if (!isBlank(deployTypeOverride)) {
             cfg.put("deployType", deployTypeOverride.trim().toLowerCase());
         }
@@ -1729,13 +1752,13 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @SuppressWarnings("unchecked")
-    /**
-     * git Pull And Deploy
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * git Pull And Deploy
+       * @param id 长整数
+       * @return 返回值
+      */
     public ReturnResult<String> gitPullAndDeploy(Long id) {
-        // 与普通升级共用同一条链路：类型决定投放与重启，这里只声明「包来自 Git 构建」。
+          // 与普通升级共用同一条链路：类型决定投放与重启，这里只声明「包来自 Git 构建」。
         Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
         Map<String, Object> cfg = global instanceof Map
                 ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
@@ -1744,20 +1767,20 @@ public class ReleaseServiceImpl implements ReleaseService {
         return runUpgrade(id, cfg);
     }
 
-    /**
-     * 拉取源码 → Maven 构建 → 上传产物，返回目标主机上的安装包绝对路径。
-     *
-     * <p>只负责「把包做出来」，不碰投放与重启：备份、投放、健康检查仍走
-     * {@link #runUpgrade(Long, Map)} 的统一编排，避免 Git 发布维护第二套发布流程。
-     * 管理端无需预装 Maven，缺失时自动下载。</p>
-     *
-     * @param ctx 操作上下文
-     * @return 目标主机上的安装包路径
-     */
+      /**
+       * 拉取源码 → Maven 构建 → 上传产物，返回目标主机上的安装包绝对路径。
+       *
+       * <p>只负责「把包做出来」，不碰投放与重启：备份、投放、健康检查仍走
+       * {@link #runUpgrade(Long, Map)} 的统一编排，避免 Git 发布维护第二套发布流程。
+       * 管理端无需预装 Maven，缺失时自动下载。</p>
+       *
+       * @param ctx 操作上下文
+       * @return 目标主机上的安装包路径
+       */
     private ReturnResult<String> prepareGitPackage(OperationContext ctx) {
         MsServerProject project = ctx.project;
 
-        // 1. 校验 Git 配置
+          // 1. 校验 Git 配置
         if (isBlank(project.getGitUrl())) {
             return ReturnResult.error("项目未配置 Git 仓库地址，请在项目配置中填写");
         }
@@ -1766,7 +1789,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("暂不支持 SSH 方式的 Git 仓库，请使用 HTTPS 地址（如 https://github.com/org/repo.git）");
         }
 
-        // 2. 创建本地工作区
+          // 2. 创建本地工作区
         Path workspace = Paths.get(System.getProperty("java.io.tmpdir"),
                 "git-deploy", String.valueOf(project.getId()));
         try {
@@ -1775,11 +1798,11 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("创建工作目录失败: " + e.getMessage());
         }
 
-        // 3. 克隆或拉取
+          // 3. 克隆或拉取
         boolean isClone = !Files.exists(workspace.resolve(".git"));
         try {
             if (isClone) {
-                // 清空旧工作区（可能残留上次失败的克隆）
+                  // 清空旧工作区（可能残留上次失败的克隆）
                 deleteDirectory(workspace.toFile());
                 Files.createDirectories(workspace);
                 log.info("[Git发布] 克隆仓库: {} -> {}", gitUrl, workspace);
@@ -1791,7 +1814,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                     builder.credentials("oauth2", project.getGitToken());
                 }
                 GitClient cloned = (GitClient) builder.build().cloneOp().execute();
-                // 切换到配置的分支
+                  // 切换到配置的分支
                 String branch = project.getGitBranch();
                 if (!isBlank(branch)) {
                     cloned.getGit().checkout().setName(branch).call();
@@ -1808,7 +1831,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                     builder.credentials("oauth2", project.getGitToken());
                 }
                 GitClient client = builder.build().open();
-                // 切换到配置的分支（如果不同）
+                  // 切换到配置的分支（如果不同）
                 String branch = project.getGitBranch();
                 if (!isBlank(branch)) {
                     String currentBranch = client.getRepository().getBranch();
@@ -1825,13 +1848,13 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("Git 操作失败: " + e.getMessage());
         }
 
-        // 4. 查找 pom.xml
+          // 4. 查找 pom.xml
         Path pomPath = findPomXml(workspace);
         if (pomPath == null) {
             return ReturnResult.error("未找到 pom.xml，该项目可能不是 Maven 项目");
         }
 
-        // 5. 确保 Maven 可用（自动检测 / 自动下载）
+          // 5. 确保 Maven 可用（自动检测 / 自动下载）
         try {
             ensureMavenAvailable(project);
         } catch (Exception e) {
@@ -1839,7 +1862,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("Maven 准备失败: " + e.getMessage());
         }
 
-        // 6. Maven 构建
+          // 6. Maven 构建
         String goalsStr = isBlank(project.getGitBuildGoals())
                 ? "clean,package" : project.getGitBuildGoals();
         String[] goals = goalsStr.split(",");
@@ -1864,14 +1887,14 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("Maven 构建失败: " + errors);
         }
 
-        // 7. 获取构建产物
+          // 7. 获取构建产物
         String artifactPath = buildResult.getMainArtifact();
         if (isBlank(artifactPath)) {
             return ReturnResult.error("Maven 构建完成但未找到产物（jar/war），请检查项目打包配置");
         }
         log.info("[Git发布] 构建产物: {}", artifactPath);
 
-        // 8. 上传到目标主机
+          // 8. 上传到目标主机
         if (isBlank(project.getProjectPath())) {
             return ReturnResult.error("项目地址未配置，无法上传构建产物");
         }
@@ -1905,7 +1928,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         String libDir = !isBlank(project.getLibDir()) ? project.getLibDir() : "lib";
         String libPath = (project.getProjectPath().endsWith("/")
                 ? project.getProjectPath() : project.getProjectPath() + "/") + libDir;
-        // 统计 lib 目录下的 jar 文件数
+          // 统计 lib 目录下的 jar 文件数
         String cmd = "find '" + libPath.replace("'", "'\\''") + "' -maxdepth 1 -name '*.jar' 2>/dev/null | wc -l";
         try {
             ReturnResult<java.util.List<MsExecLog>> result = execService.runCommand(
@@ -1924,19 +1947,19 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 查找工作区中的 pom.xml（根目录或一级子目录）
-     *
-     * @param workspace 工作区路径
-     * @return pom.xml 路径，未找到返回 null
-     */
+      /**
+       * 查找工作区中的 pom.xml（根目录或一级子目录）
+       *
+       * @param workspace 工作区路径
+       * @return pom.xml 路径，未找到返回 null
+       */
     private Path findPomXml(Path workspace) {
-        // 根目录
+          // 根目录
         Path rootPom = workspace.resolve("pom.xml");
         if (Files.exists(rootPom)) {
             return rootPom;
         }
-        // 一级子目录（兼容 monorepo / 项目在子目录中的场景）
+          // 一级子目录（兼容 monorepo / 项目在子目录中的场景）
         try (var entries = Files.list(workspace)) {
             return entries.filter(Files::isDirectory)
                     .map(dir -> dir.resolve("pom.xml"))
@@ -1948,12 +1971,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 将本地文件包装为 MultipartFile（供 SFTP 上传使用）
-     *
-     * @param file 本地文件
-     * @return MultipartFile 实例
-     */
+      /**
+       * 将本地文件包装为 MultipartFile（供 SFTP 上传使用）
+       *
+       * @param file 本地文件
+       * @return MultipartFile 实例
+       */
     private MultipartFile createMultipartFile(File file) {
         try {
             byte[] bytes = Files.readAllBytes(file.toPath());
@@ -2004,11 +2027,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 递归删除目录
-     *
-     * @param dir 目录
-     */
+      /**
+       * 递归删除目录
+       *
+       * @param dir 目录
+       */
     private void deleteDirectory(File dir) {
         if (dir == null || !dir.exists()) {
             return;
@@ -2022,15 +2045,15 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 确保 Maven 可用：优先使用项目配置的 mavenHome，其次检测系统环境，
-     * 都不可用时自动下载 Maven 到临时目录。
-     *
-     * @param project 项目（含 Maven 配置）
-     * @throws Exception 下载或解压失败
-     */
+      /**
+       * 确保 Maven 可用：优先使用项目配置的 mavenHome，其次检测系统环境，
+       * 都不可用时自动下载 Maven 到临时目录。
+       *
+       * @param project 项目（含 Maven 配置）
+       * @throws Exception 下载或解压失败
+       */
     private void ensureMavenAvailable(MsServerProject project) throws Exception {
-        // 1. 项目配置的 mavenHome
+          // 1. 项目配置的 mavenHome
         if (!isBlank(project.getMavenHome())) {
             File mh = new File(project.getMavenHome().trim());
             if (mh.exists() && new File(mh, "bin").exists()) {
@@ -2041,13 +2064,13 @@ public class ReleaseServiceImpl implements ReleaseService {
             log.warn("[Git发布] 项目配置的 Maven 路径无效: {}，尝试自动检测/下载", project.getMavenHome());
         }
 
-        // 2. 已设置的系统属性
+          // 2. 已设置的系统属性
         String sysHome = System.getProperty("maven.home");
         if (!isBlank(sysHome) && new File(sysHome).exists()) {
             return;
         }
 
-        // 3. 环境变量 MAVEN_HOME / M2_HOME
+          // 3. 环境变量 MAVEN_HOME / M2_HOME
         String envHome = System.getenv("MAVEN_HOME");
         if (isBlank(envHome)) {
             envHome = System.getenv("M2_HOME");
@@ -2057,7 +2080,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return;
         }
 
-        // 4. PATH 中查找 mvn
+          // 4. PATH 中查找 mvn
         String pathEnv = System.getenv("PATH");
         if (!isBlank(pathEnv)) {
             for (String dir : pathEnv.split(File.pathSeparator)) {
@@ -2071,32 +2094,32 @@ public class ReleaseServiceImpl implements ReleaseService {
             }
         }
 
-        // 5. 自动下载
+          // 5. 自动下载
         downloadMaven(project);
     }
 
-    /**
-     * 自动下载 Maven 到临时目录并设置 maven.home 系统属性
-     *
-     * @param project 项目（含 Maven 版本配置）
-     * @throws Exception 下载或解压失败
-     */
+      /**
+       * 自动下载 Maven 到临时目录并设置 maven.home 系统属性
+       *
+       * @param project 项目（含 Maven 版本配置）
+       * @throws Exception 下载或解压失败
+       */
     private void downloadMaven(MsServerProject project) throws Exception {
         String version = isBlank(project.getMavenVersion())
                 ? "3.9.9" : project.getMavenVersion().trim();
         String artifactName = "apache-maven-" + version;
         String archiveName = artifactName + "-bin.zip";
         String url = "https://archive.apache.org/dist/maven/maven-3/"
-                + version + "/binaries/" + archiveName;
+                  + version + "/binaries/" + archiveName;
 
         Path mavenRoot = Paths.get(System.getProperty("java.io.tmpdir"),
                 "git-deploy", "maven");
         Path archivePath = mavenRoot.resolve(archiveName);
         Path mavenHome = mavenRoot.resolve(artifactName);
 
-        // 已下载过则直接使用
+          // 已下载过则直接使用
         if (Files.exists(mavenHome.resolve("bin"))) {
-            // 确保 mvn 脚本有执行权限（旧版本下载的可能没有）
+              // 确保 mvn 脚本有执行权限（旧版本下载的可能没有）
             Path mvnScript = mavenHome.resolve("bin").resolve("mvn");
             if (Files.exists(mvnScript)) {
                 try {
@@ -2113,7 +2136,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         Files.createDirectories(mavenRoot);
         log.info("[Git发布] Maven 未检测到，自动下载: {}", url);
 
-        // 下载
+          // 下载
         HttpClient http = HttpClient.newHttpClient();
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -2126,7 +2149,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         log.info("[Git发布] Maven 下载完成: {} ({} bytes)", archivePath, Files.size(archivePath));
 
-        // 解压
+          // 解压
         log.info("[Git发布] 解压 Maven 到: {}", mavenRoot);
         try (ZipFile zip = new ZipFile(archivePath.toFile())) {
             Enumeration<? extends ZipEntry> entries = zip.entries();
@@ -2148,10 +2171,10 @@ public class ReleaseServiceImpl implements ReleaseService {
             }
         }
 
-        // 清理下载的压缩包
+          // 清理下载的压缩包
         Files.deleteIfExists(archivePath);
 
-        // Linux 下设置 mvn 脚本可执行权限（ZipFile 解压不保留 Unix 权限位）
+          // Linux 下设置 mvn 脚本可执行权限（ZipFile 解压不保留 Unix 权限位）
         Path mvnScript = mavenHome.resolve("bin").resolve("mvn");
         if (Files.exists(mvnScript)) {
             try {
@@ -2166,14 +2189,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         log.info("[Git发布] Maven 自动下载完成: {}", mavenHome);
     }
 
-    // ==================== 辅助 ====================
+      // ==================== 辅助 ====================
 
-    /**
-     * 加载并校验项目、发布、目标主机
-     *
-     * @param id 项目ID
-     * @return 操作上下文
-     */
+      /**
+       * 加载并校验项目、发布、目标主机
+       *
+       * @param id 项目ID
+       * @return 操作上下文
+       */
     private ReturnResult<OperationContext> prepare(Long id) {
         MsServerProject project = projectMapper.selectById(id);
         if (project == null) {
@@ -2187,14 +2210,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (targetHost == null) {
             return ReturnResult.error("目标主机不存在: " + release.getHostId());
         }
-        // 发布模块基于 OpenSSH 执行：主机须开启 SSH（Linux/macOS 默认开，Windows 默认关）
+          // 发布模块基于 OpenSSH 执行：主机须开启 SSH（Linux/macOS 默认开，Windows 默认关）
         Boolean sshOn = resolveSshEnabled(targetHost);
         if (!sshOn) {
             return ReturnResult.error("目标主机「" + targetHost.getServerHostName()
-                    + "」未开启 SSH（Windows 需启用 OpenSSH 并打开「开启 SSH」开关），无法执行发布操作");
+                      + "」未开启 SSH（Windows 需启用 OpenSSH 并打开「开启 SSH」开关），无法执行发布操作");
         }
-        // 执行前就地展开脚本占位符（__ENTRY__/__LOG__/__PATH__/__APPNAME__），
-        // 使内置模板保持通用、按项目字段即时生效
+          // 执行前就地展开脚本占位符（__ENTRY__/__LOG__/__PATH__/__APPNAME__），
+          // 使内置模板保持通用、按项目字段即时生效
         expandProjectScripts(project);
         OperationContext context = new OperationContext();
         context.project = project;
@@ -2205,11 +2228,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(context);
     }
 
-    /**
-     * 补齐项目四个脚本的默认模板：仅当对应脚本为空时用内置模板（占位符形式）填充
-     *
-     * @param project 项目
-     */
+      /**
+       * 补齐项目四个脚本的默认模板：仅当对应脚本为空时用内置模板（占位符形式）填充
+       *
+       * @param project 项目
+       */
     private void applyDefaultScripts(MsServerProject project) {
         MsServerRelease release = project.getReleaseId() == null ? null : releaseMapper.selectById(project.getReleaseId());
         MsServerHost host = (release != null && release.getHostId() != null)
@@ -2232,15 +2255,15 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * 就地展开项目四个脚本中的占位符（不落库，仅执行期生效）
-     *
-     * @param project 项目
-     */
+      /**
+       * 就地展开项目四个脚本中的占位符（不落库，仅执行期生效）
+       *
+       * @param project 项目
+       */
     private void expandProjectScripts(MsServerProject project) {
         ProjectPlatformProvider pf = projectPlatformRouter.resolveOrPosix(osTypeOfProject(project));
-        // 结构化变量（envVars/jvmArgs/cmdArgs）注入 VARS 块 + 展开 __JVMARGS__/__ARGS__，
-        // 使「API 创建 / 内置模板」的项目也能生效（此前仅前端保存时注入）
+          // 结构化变量（envVars/jvmArgs/cmdArgs）注入 VARS 块 + 展开 __JVMARGS__/__ARGS__，
+          // 使「API 创建 / 内置模板」的项目也能生效（此前仅前端保存时注入）
         String start = materializeVars(project.getStartScript(), project, pf);
         String restart = materializeVars(project.getRestartScript(), project, pf);
         project.setStartScript(ProjectScripts.apply(start,
@@ -2253,15 +2276,15 @@ public class ReleaseServiceImpl implements ReleaseService {
                 project.getMainEntry(), project.getProjectPath(), project.getLogPath(), project.getProjectName()));
     }
 
-    /**
-     * 判断项目目标主机是否 Windows（按所属发布绑定的主机）
-     */
-    /**
-     * 取项目目标主机归一后的系统类型（供平台 SPI 路由）。
-     *
-     * @param project 项目
-     * @return 系统类型（HostPlatforms 取值域）；主机缺失返回空串
-     */
+      /**
+       * 判断项目目标主机是否 Windows（按所属发布绑定的主机）
+       */
+      /**
+       * 取项目目标主机归一后的系统类型（供平台 SPI 路由）。
+       *
+       * @param project 项目
+       * @return 系统类型（HostPlatforms 取值域）；主机缺失返回空串
+       */
     private String osTypeOfProject(MsServerProject project) {
         MsServerRelease release = project.getReleaseId() == null ? null : releaseMapper.selectById(project.getReleaseId());
         MsServerHost host = (release != null && release.getHostId() != null)
@@ -2269,24 +2292,24 @@ public class ReleaseServiceImpl implements ReleaseService {
         return host == null ? "" : HostPlatforms.normalize(host.getServerHostOsType());
     }
 
-    /**
-     * 判断项目目标主机是否 Windows（按所属发布绑定的主机）
-     *
-     * @param project 项目
-     * @return 是否 Windows
-     */
+      /**
+       * 判断项目目标主机是否 Windows（按所属发布绑定的主机）
+       *
+       * @param project 项目
+       * @return 是否 Windows
+       */
     private boolean isWindowsProject(MsServerProject project) {
         return HostPlatforms.WINDOWS.equals(osTypeOfProject(project));
     }
 
-    /**
-     * 将 envVars/jvmArgs/cmdArgs 注入脚本：构建 VARS 托管块（幂等）并展开参数占位符
-     *
-     * @param script  脚本（可为空）
-     * @param project 项目（读取 envVars/jvmArgs/cmdArgs）
-     * @param pf      平台命令提供者（变量块与参数展开的平台差异由其负责）
-     * @return 注入后的脚本
-     */
+      /**
+       * 将 envVars/jvmArgs/cmdArgs 注入脚本：构建 VARS 托管块（幂等）并展开参数占位符
+       *
+       * @param script  脚本（可为空）
+       * @param project 项目（读取 envVars/jvmArgs/cmdArgs）
+       * @param pf      平台命令提供者（变量块与参数展开的平台差异由其负责）
+       * @return 注入后的脚本
+       */
     private String materializeVars(String script, MsServerProject project, ProjectPlatformProvider pf) {
         if (script == null || script.isEmpty()) {
             return script;
@@ -2314,12 +2337,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         return out;
     }
 
-    /**
-     * 幂等注入 VARS 托管块：已存在则替换，不存在则前插 幂等注入 VARS 托管块：已存在则替换，不存在则前置
-     * @param block 字符串
-     * @param script 字符串
-     * @return 返回值
-    */
+      /**
+       * 幂等注入 VARS 托管块：已存在则替换，不存在则前插 幂等注入 VARS 托管块：已存在则替换，不存在则前置
+       * @param block 字符串
+       * @param script 字符串
+       * @return 返回值
+      */
     private String injectVarsBlock(String script, String block) {
         Matcher m = VARS_BLOCK_RE.matcher(script);
         if (m.find()) {
@@ -2328,11 +2351,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         return block + script;
     }
 
-    /**
-     * 根据主机ID回填主机IP，保证发布卡片主机信息完整
-     * @param release 释放
-     * @return 返回值
-    */
+      /**
+       * 根据主机ID回填主机IP，保证发布卡片主机信息完整
+       * @param release 释放
+       * @return 返回值
+      */
     private void fillHostInfo(MsServerRelease release) {
         if (release == null || release.getHostId() == null) {
             return;
@@ -2343,19 +2366,20 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /** 变量托管块标记（与前端 ProjectsView 保持一致） */
+      /** 变量托管块标记（与前端 ProjectsView 保持一致） */
     private static final String VARS_BEGIN = "# >>> VARS (auto-managed) >>>";
     private static final String VARS_END = "# <<< VARS (auto-managed) <<<";
-    /** 变量托管块匹配（幂等替换用） */
+      /** 变量托管块匹配（幂等替换用） */
     private static final Pattern VARS_BLOCK_RE =
             Pattern.compile("# >>> VARS \\(auto-managed\\) >>>[\\s\\S]*?# <<< VARS \\(auto-managed\\) <<<\\n?");
 
-    /**
-     * 执行前解析变量托管块中的占位符，支持： ${key:default} 默认值、${now(pattern)} 日期格式化、${uuid}、${random(n)}、${upper/lower/length} 等。 仅处理托管块，避免误改脚本中正常的 shell / PowerShell 语法； 无法解析的占位符保留原样（交给 shell），不中断执行。
-     * @param pf 参数
-     * @param script 字符串
-     * @return 返回值
-    */
+      /**
+       * 执行前解析变量托管块中的占位符，支持： ${key:default} 默认值、${now(pattern)} 日期格式化、${uuid}、${random(n)}、${upper/lower/length
+          } 等。 仅处理托管块，避免误改脚本中正常的 shell / PowerShell 语法； 无法解析的占位符保留原样（交给 shell），不中断执行。
+       * @param pf 参数
+       * @param script 字符串
+       * @return 返回值
+      */
     private String resolveScriptPlaceholders(String script, ProjectPlatformProvider pf) {
         if (script == null) {
             return null;
@@ -2371,7 +2395,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         int eEnd = e + VARS_END.length();
         String block = script.substring(b, eEnd);
 
-        // 收集块内已定义的环境变量作为占位符上下文（KEY -> 原始值）
+          // 收集块内已定义的环境变量作为占位符上下文（KEY -> 原始值）
         Map<String, Object> ctx = new LinkedHashMap<>();
         Pattern pat = Pattern.compile(pf.envPattern());
         for (String line : block.split("\n")) {
@@ -2387,24 +2411,25 @@ public class ReleaseServiceImpl implements ReleaseService {
         return script.substring(0, b) + resolved + script.substring(eEnd);
     }
 
-    /**
-     * 构建执行命令。 Linux：bash（cd path && script）；Windows：PowerShell（Set-Location 后执行，PS4.0 不支持 &&）。
-     * @param pf 参数
-     * @param projectPath 字符串
-     * @param script 字符串
-     * @return 返回值
-    */
+      /**
+       * 构建执行命令。 Linux：bash（cd path && script）；Windows：PowerShell（Set-Location 后执行，PS4.0 不支持 &&）。
+       * @param pf 参数
+       * @param projectPath 字符串
+       * @param script 字符串
+       * @return 返回值
+      */
     private String buildCommand(ProjectPlatformProvider pf, String projectPath, String script) {
         return pf.wrap(projectPath, resolveScriptPlaceholders(script, pf));
     }
 
-    /**
-     * 构造「生成 SpringBoot 专属外部配置」步骤： 写入项目目录下 config/application.properties，Spring Boot 会自动加载 （file:./config/ 的优先级高于 jar 内 application.properties，实现覆盖）。
-     * @param pf 参数
-     * @param project 项目
-     * @param windows 是否 Windows
-     * @return 步骤；无配置项时返回 null
-    */
+      /**
+       * 构造「生成 SpringBoot 专属外部配置」步骤： 写入项目目录下 config/application.properties，Spring Boot 会自动加载 （file:./config/ 的优先级高于 jar 内 application
+          .properties，实现覆盖）。
+       * @param pf 参数
+       * @param project 项目
+       * @param windows 是否 Windows
+       * @return 步骤；无配置项时返回 null
+      */
     private ProjectStep springConfigStep(ProjectPlatformProvider pf, MsServerProject project) {
         List<EnvVar> entries = readEnvList(project.getAppConfig());
         if (entries.isEmpty()) {
@@ -2418,71 +2443,108 @@ public class ReleaseServiceImpl implements ReleaseService {
                 values.add(e.value == null ? "" : e.value);
             }
         }
-        // 必须在项目目录下执行：否则 config/application.properties 会写到 SSH 默认工作目录
+          // 必须在项目目录下执行：否则 config/application.properties 会写到 SSH 默认工作目录
         return new ProjectStep("生成项目配置",
                 pf.wrap(project.getProjectPath(), pf.springConfigScript(keys, values)), 1);
     }
 
-    /**
-     * 构造「读取 PID」步骤（启动 / 重启 / 升级 / 回滚的最后一步，其输出仅为 PID，供回写卡片）。
-     * 经平台包装后在项目目录下读取类型声明的 PID 文件（Java 为 app.pid，Nginx 为 logs/nginx.pid），
-     * 避免在 SSH 默认工作目录读到残留文件。
-     *
-     * @param pf          平台命令提供者
-     * @param projectPath 项目地址
-     * @param type        项目类型（决定 PID 文件位置）
-     * @return 步骤
-     */
+      /**
+       * 构造「读取 PID」步骤（启动 / 重启 / 升级 / 回滚的最后一步，其输出仅为 PID，供回写卡片）。
+       * 经平台包装后在项目目录下读取类型声明的 PID 文件（Java 为 app.pid，Nginx 为 logs/nginx.pid），
+       * 避免在 SSH 默认工作目录读到残留文件。
+       *
+       * @param pf          平台命令提供者
+       * @param projectPath 项目地址
+       * @param type        项目类型（决定 PID 文件位置）
+       * @return 步骤
+       */
     private ProjectStep pidStep(ProjectPlatformProvider pf, String projectPath, ProjectTypeProvider type) {
         String pidFile = type == null ? "app.pid" : type.pidFile();
         return new ProjectStep("记录PID", pf.wrap(projectPath, pf.readPid(pidFile)), 1);
     }
 
-    /**
-     * 构建备份命令（平台实现由 {@link ProjectPlatformProvider} 提供）。
-     *
-     * @param pf          平台命令提供者
-     * @param projectPath 项目地址
-     * @return 备份命令
-     */
+      /**
+       * 构建备份命令（平台实现由 {@link ProjectPlatformProvider} 提供）。
+       *
+       * @param pf          平台命令提供者
+       * @param projectPath 项目地址
+       * @return 备份命令
+       */
     private String backupCommand(ProjectPlatformProvider pf, String projectPath) {
         return pf.backup(projectPath, MAX_BACKUPS);
     }
 
-    /**
-     * 构建回滚命令（恢复指定/最新备份），平台实现由 {@link ProjectPlatformProvider} 提供。
-     *
-     * @param pf          平台命令提供者
-     * @param projectPath 项目地址
-     * @param backupName  备份名；为空表示最新
-     * @return 回滚命令
-     */
+      /**
+       * 构建回滚命令（恢复指定/最新备份），平台实现由 {@link ProjectPlatformProvider} 提供。
+       *
+       * @param pf          平台命令提供者
+       * @param projectPath 项目地址
+       * @param backupName  备份名；为空表示最新
+       * @return 回滚命令
+       */
     private String rollbackCommand(ProjectPlatformProvider pf, String projectPath, String backupName) {
         return pf.rollback(projectPath, backupName);
     }
 
-    /**
-     * 包装项目任务提交结果：项目已有操作在跑（startTask 返回 空）时给出明确提示，
-     * 避免并发「启动/停止/重启/升级」互相竞争、覆盖 app.pid 或产生孤儿进程。
-     *
-     * @param taskId 任务 标识（可能为 空）
-     * @return 成功返回 taskId；项目占用中返回错误
-     */
+      /**
+       * 包装项目任务提交结果：项目已有操作在跑（startTask 返回 空）时给出明确提示，
+       * 避免并发「启动/停止/重启/升级」互相竞争、覆盖 app.pid 或产生孤儿进程。
+       *
+       * @param taskId 任务 标识（可能为 空）
+       * @return 成功返回 taskId；项目占用中返回错误
+       */
     private ReturnResult<String> task(String taskId) {
         return taskId == null
                 ? ReturnResult.error("该项目有操作正在进行，请稍后再试")
                 : ReturnResult.ok(taskId);
     }
 
+      /**
+       * 记录一次同步项目操作的终态（失败只记日志，不影响操作结果）。
+       *
+       * @param projectId   项目标识
+       * @param projectName 项目名称
+       * @param releaseId   发布标识
+       * @param operation   操作类型（create/update/delete/copy/toggle/...）
+       * @param success     是否成功
+       * @param message     结果说明或失败原因
+       */
+    private void recordSyncOp(Long projectId, String projectName, Long releaseId,
+                              String operation, boolean success, String message) {
+        try {
+            projectOpLogService.recordOne(projectId, projectName, releaseId, operation, success, message);
+        } catch (Exception e) {
+            log.debug("[release] 记录操作日志失败: {}", e.getMessage());
+        }
+    }
+
     /**
-     * 字符串空白判断
-     */
-    /**
-     * 解析主机是否开启 SSH：显式设置取该值；未设置时非 Windows 视为开启、Windows 视为关闭
+     * 记录一次「还没建任务就失败」的项目操作（如主机未开 SSH 的前置校验）。
      *
-     * @param host 主机
-     * @return 是否开启
+     * <p>这类失败没有 taskId，若不在这里留痕，「所有项目操作都记日志」就漏掉了
+     * 用户最需要回看的场景：点了备份/回滚却只得到一个错误提示。</p>
+     *
+     * @param projectId 项目标识
+     * @param operation 操作类型
+     * @param message   失败原因
      */
+    private void recordPrecheckFailure(Long projectId, String operation, String message) {
+        MsServerProject project = projectId == null ? null : projectMapper.selectById(projectId);
+        recordSyncOp(projectId,
+                project == null ? null : project.getProjectName(),
+                project == null ? null : project.getReleaseId(),
+                operation, false, message);
+    }
+
+      /**
+       * 字符串空白判断
+       */
+      /**
+       * 解析主机是否开启 SSH：显式设置取该值；未设置时非 Windows 视为开启、Windows 视为关闭
+       *
+       * @param host 主机
+       * @return 是否开启
+       */
     private boolean resolveSshEnabled(MsServerHost host) {
         Integer v = host.getServerHostSshEnabled();
         if (v != null) {
@@ -2491,21 +2553,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         return !"WINDOWS".equalsIgnoreCase(host.getServerHostOsType());
     }
 
-    /**
-     * is Blank
-     * @param value 字符串
-     * @return 返回值
-    */
+      /**
+       * is Blank
+       * @param value 字符串
+       * @return 返回值
+      */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
-    // ---------- 升级配置辅助 ----------
+      // ---------- 升级配置辅助 ----------
 
-    /**
-     * default Global Config
-     * @return 返回值
-    */
+      /**
+       * default Global Config
+       * @return 返回值
+      */
     private Map<String, Object> defaultGlobalConfig() {
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("autoBackup", true);
@@ -2516,12 +2578,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         return m;
     }
 
-    /**
-     * read Cfg
-     * @param defValue 对象
-     * @param key 字符串
-     * @return 返回值
-    */
+      /**
+       * read Cfg
+       * @param defValue 对象
+       * @param key 字符串
+       * @return 返回值
+      */
     private Object readCfg(String key, Object defValue) {
         MsServerConfig cfg = serverConfigMapper.selectOne(
                 new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
@@ -2535,14 +2597,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /**
-     * bool Cfg
-     * @param Map<String 参数
-     * @param cfg 参数
-     * @param defValue 布尔值
-     * @param key 字符串
-     * @return 返回值
-    */
+      /**
+       * bool Cfg
+       * @param Map<String 参数
+       * @param cfg 参数
+       * @param defValue 布尔值
+       * @param key 字符串
+       * @return 返回值
+      */
     private boolean boolCfg(Map<String, Object> cfg, String key, boolean defValue) {
         Object v = cfg.get(key);
         if (v == null) {
@@ -2551,53 +2613,53 @@ public class ReleaseServiceImpl implements ReleaseService {
         return Boolean.parseBoolean(String.valueOf(v));
     }
 
-    /**
-     * str Cfg
-     * @param Map<String 参数
-     * @param cfg 参数
-     * @param defValue 字符串
-     * @param key 字符串
-     * @return 返回值
-    */
+      /**
+       * str Cfg
+       * @param Map<String 参数
+       * @param cfg 参数
+       * @param defValue 字符串
+       * @param key 字符串
+       * @return 返回值
+      */
     private String strCfg(Map<String, Object> cfg, String key, String defValue) {
         Object v = cfg.get(key);
         return v == null ? defValue : String.valueOf(v);
     }
 
-    // ---------- 升级包处理 ----------
+      // ---------- 升级包处理 ----------
 
-    /**
-     * is Archive
-     * @param name 字符串
-     * @return 返回值
-    */
+      /**
+       * is Archive
+       * @param name 字符串
+       * @return 返回值
+      */
     private boolean isArchive(String name) {
         String n = name.toLowerCase();
         return n.endsWith(".tar.gz") || n.endsWith(".tgz") || n.endsWith(".tar")
                 || n.endsWith(".zip") || n.endsWith(".gz");
     }
 
-    /**
-     * extract Command
-     * @param packagePath 字符串
-     * @param pf 参数
-     * @param projectPath 字符串
-     * @return 返回值
-    */
+      /**
+       * extract Command
+       * @param packagePath 字符串
+       * @param pf 参数
+       * @param projectPath 字符串
+       * @return 返回值
+      */
     private String extractCommand(ProjectPlatformProvider pf, String projectPath, String packagePath) {
         return pf.extract(projectPath, packagePath);
     }
 
-    /**
-     * 判断一批执行日志里是否存在失败项。
-     *
-     * <p>不能只看外层 {@code ReturnResult}：命令投放这类操作外层常常是成功的，
-     * 真正的失败只体现在每台主机的退出码上（真实踩过：SFTP 重命名失败后回退命令投放，
-     * 外层 ok 但退出码非 0，步骤却报了「成功」）。</p>
-     *
-     * @param logs 执行日志
-     * @return 有任一主机失败时为 {@code true}；日志为空按失败处理（无法确认成功）
-     */
+      /**
+       * 判断一批执行日志里是否存在失败项。
+       *
+       * <p>不能只看外层 {@code ReturnResult}：命令投放这类操作外层常常是成功的，
+       * 真正的失败只体现在每台主机的退出码上（真实踩过：SFTP 重命名失败后回退命令投放，
+       * 外层 ok 但退出码非 0，步骤却报了「成功」）。</p>
+       *
+       * @param logs 执行日志
+       * @return 有任一主机失败时为 {@code true}；日志为空按失败处理（无法确认成功）
+       */
     private static boolean anyExecFailed(java.util.List<MsExecLog> logs) {
         if (logs == null || logs.isEmpty()) {
             return true;
@@ -2610,19 +2672,19 @@ public class ReleaseServiceImpl implements ReleaseService {
         return false;
     }
 
-    /**
- * 投放失败后的止损：用最新备份还原文件并把服务重新拉起。
- *
- * <p>为什么必须连服务一起拉起：升级流程是「停服 → 备份 → 投放 → 重启并健康检查」，
- * 投放这步失败后整单中止，第 4 步不会执行。此时文件已还原但进程没起来，
- * 项目停在停止状态 —— 一次失败的升级把在跑的服务弄停，比升级失败本身更严重。</p>
- *
- * @param pf      平台
- * @param ctx     上下文（取 hostId）
- * @param path    项目地址
- * @param project 项目
- * @return 止损执行结果描述，用于拼进异常信息
- */
+      /**
+   * 投放失败后的止损：用最新备份还原文件并把服务重新拉起。
+   *
+   * <p>为什么必须连服务一起拉起：升级流程是「停服 → 备份 → 投放 → 重启并健康检查」，
+   * 投放这步失败后整单中止，第 4 步不会执行。此时文件已还原但进程没起来，
+   * 项目停在停止状态 —— 一次失败的升级把在跑的服务弄停，比升级失败本身更严重。</p>
+   *
+   * @param pf      平台
+   * @param ctx     上下文（取 hostId）
+   * @param path    项目地址
+   * @param project 项目
+   * @return 止损执行结果描述，用于拼进异常信息
+   */
     private String restoreAndRestart(ProjectPlatformProvider pf, OperationContext ctx, String path,
                                      MsServerProject project) {
         StringBuilder sb = new StringBuilder();
@@ -2641,8 +2703,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                 boolean startedOk = started.isOk() && !anyExecFailed(started.getData());
                 sb.append(startedOk ? "已重新拉起服务" : "重新拉起服务未成功");
                 if (startedOk) {
-                    // 把真实 PID 写进止损结果：任务虽然失败，服务其实在跑。任务服务据此回写
-                    // running + PID，否则库里留着升级前的旧 PID（验收时 node2 复现）。
+                      // 把真实 PID 写进止损结果：任务虽然失败，服务其实在跑。任务服务据此回写
+                      // running + PID，否则库里留着升级前的旧 PID（验收时 node2 复现）。
                     String pid = readProjectPid(pf, ctx, path, project);
                     if (pid != null) {
                         sb.append(" running pid=").append(pid);
@@ -2655,15 +2717,15 @@ public class ReleaseServiceImpl implements ReleaseService {
         return sb.toString();
     }
 
-    /**
-     * 读取项目当前 PID（失败还原重启后的状态对账用）。
-     *
-     * @param pf      平台命令提供者
-     * @param ctx     操作上下文（取 hostId）
-     * @param path    项目地址
-     * @param project 项目
-     * @return PID；读取失败或输出不是纯数字时返回 {@code null}
-     */
+      /**
+       * 读取项目当前 PID（失败还原重启后的状态对账用）。
+       *
+       * @param pf      平台命令提供者
+       * @param ctx     操作上下文（取 hostId）
+       * @param path    项目地址
+       * @param project 项目
+       * @return PID；读取失败或输出不是纯数字时返回 {@code null}
+       */
     private String readProjectPid(ProjectPlatformProvider pf, OperationContext ctx, String path,
                                   MsServerProject project) {
         try {
@@ -2690,43 +2752,43 @@ public class ReleaseServiceImpl implements ReleaseService {
         return null;
     }
 
-    /**
-     * place Command
-     * @param mainEntry 字符串
-     * @param packagePath 字符串
-     * @param pf 参数
-     * @param projectPath 字符串
-     * @return 返回值
-    */
+      /**
+       * place Command
+       * @param mainEntry 字符串
+       * @param packagePath 字符串
+       * @param pf 参数
+       * @param projectPath 字符串
+       * @return 返回值
+      */
     private String placeCommand(ProjectPlatformProvider pf, String projectPath, String packagePath, String mainEntry) {
         return pf.place(projectPath, packagePath, mainEntry);
     }
 
-    /**
-     * 重启后健康检测，失败则回滚（平台实现由 {@link ProjectPlatformProvider} 提供）。
-     *
-     * @param pf          平台命令提供者
-     * @param projectPath 项目地址
-     * @param project     项目
-     * @param restart     是否重启（false 时仅健康检查）
-     * @return 命令
-     */
+      /**
+       * 重启后健康检测，失败则回滚（平台实现由 {@link ProjectPlatformProvider} 提供）。
+       *
+       * @param pf          平台命令提供者
+       * @param projectPath 项目地址
+       * @param project     项目
+       * @param restart     是否重启（false 时仅健康检查）
+       * @return 命令
+       */
     private String guardedRestartCommand(ProjectPlatformProvider pf, String projectPath,
                                          MsServerProject project, boolean restart) {
         return pf.guardedRestart(projectPath, project.getRestartScript(), project.getStopScript(),
                 project.getStartScript(), project.getStatusScript(), restart, resolveHealthPort(project));
     }
 
-    /**
-     * 从项目配置里解析业务端口，供健康检查做端口探活。
-     *
-     * <p>解析顺序与「实际生效」一致：显式启动参数（{@code --server.port=}）优先于
-     * 外部配置文件里的 {@code server.port=}，两者都没有则返回 0（不做端口探活）。
-     * 解析失败一律返回 0 而不是抛错——端口只是增强判据，不能因为它让升级流程中断。</p>
-     *
-     * @param project 项目配置
-     * @return 端口号；无法确定时为 0
-     */
+      /**
+       * 从项目配置里解析业务端口，供健康检查做端口探活。
+       *
+       * <p>解析顺序与「实际生效」一致：显式启动参数（{@code --server.port=}）优先于
+       * 外部配置文件里的 {@code server.port=}，两者都没有则返回 0（不做端口探活）。
+       * 解析失败一律返回 0 而不是抛错——端口只是增强判据，不能因为它让升级流程中断。</p>
+       *
+       * @param project 项目配置
+       * @return 端口号；无法确定时为 0
+       */
     private int resolveHealthPort(MsServerProject project) {
         int port = firstPort(SERVER_PORT_ARG, project.getCmdArgs());
         if (port <= 0) {
@@ -2738,13 +2800,13 @@ public class ReleaseServiceImpl implements ReleaseService {
         return port;
     }
 
-    /**
-     * 取文本中第一个匹配到的合法端口号。
-     *
-     * @param pattern 端口正则（首个捕获组为端口）
-     * @param text    待解析文本，可为空
-     * @return 合法端口号；未匹配或越界时为 0
-     */
+      /**
+       * 取文本中第一个匹配到的合法端口号。
+       *
+       * @param pattern 端口正则（首个捕获组为端口）
+       * @param text    待解析文本，可为空
+       * @return 合法端口号；未匹配或越界时为 0
+       */
     private int firstPort(Pattern pattern, String text) {
         if (isBlank(text)) {
             return 0;
@@ -2757,46 +2819,46 @@ public class ReleaseServiceImpl implements ReleaseService {
                     return v;
                 }
             } catch (NumberFormatException ignored) {
-                // 超出 int 范围的数字串直接跳过，继续找下一个候选
+                  // 超出 int 范围的数字串直接跳过，继续找下一个候选
             }
         }
         return 0;
     }
 
-    // ---------- 系统服务（Linux systemd）----------
+      // ---------- 系统服务（Linux systemd）----------
 
-    /**
-     * read String List
-     * @param json 字符串
-     * @return 返回值
-    */
+      /**
+       * read String List
+       * @param json 字符串
+       * @return 返回值
+      */
     private List<String> readStringList(String json) {
         if (isBlank(json)) {
             return Collections.emptyList();
         }
         String text = json.trim();
-        // 正常来源是前端 JSON.stringify(string[])，即 JSON 数组；但手工写入或历史数据
-        // 往往是「--server.port=8112 --spring.profiles.active=prod」这样的裸串。
-        // 原实现遇到裸串时 JSON 解析抛错并静默返回空列表 —— 用户填了参数却毫无提示地被丢弃，
-        // 表现为「端口/参数没生效」，很难排查。此处改为：非 JSON 数组一律按空白切分。
+          // 正常来源是前端 JSON.stringify(string[])，即 JSON 数组；但手工写入或历史数据
+          // 往往是「--server.port=8112 --spring.profiles.active=prod」这样的裸串。
+          // 原实现遇到裸串时 JSON 解析抛错并静默返回空列表 —— 用户填了参数却毫无提示地被丢弃，
+          // 表现为「端口/参数没生效」，很难排查。此处改为：非 JSON 数组一律按空白切分。
         if (!text.startsWith("[")) {
             return splitArgs(text);
         }
         try {
             return JSON.readValue(text, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() { });
         } catch (Exception e) {
-            // JSON 数组解析失败同样不能静默丢参：剥掉括号与引号后按空白切分，并留下告警
+              // JSON 数组解析失败同样不能静默丢参：剥掉括号与引号后按空白切分，并留下告警
             log.warn("[release] 参数不是合法 JSON 数组，已按空白切分兜底: {}", text);
             return splitArgs(text.replaceAll("[\\[\\]\"]", " "));
         }
     }
 
-    /**
-     * 把裸参数串按空白切分为列表。
-     *
-     * @param text 参数串（如 {@code --server.port=8112 --spring.profiles.active=prod}）
-     * @return 非空参数项列表
-     */
+      /**
+       * 把裸参数串按空白切分为列表。
+       *
+       * @param text 参数串（如 {@code --server.port=8112 --spring.profiles.active=prod}）
+       * @return 非空参数项列表
+       */
     private List<String> splitArgs(String text) {
         if (isBlank(text)) {
             return Collections.emptyList();
@@ -2810,11 +2872,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         return out;
     }
 
-    /**
-     * read Env List
-     * @param json 字符串
-     * @return 返回值
-    */
+      /**
+       * read Env List
+       * @param json 字符串
+       * @return 返回值
+      */
     private List<EnvVar> readEnvList(String json) {
         if (isBlank(json)) {
             return Collections.emptyList();
@@ -2832,7 +2894,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    /** 环境变量键值（仅服务启动器内部使用） */
+      /** 环境变量键值（仅服务启动器内部使用） */
     private static final class EnvVar {
         private final String key;
         private final String value;
@@ -2843,21 +2905,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-    // ==================== 发布管理增强 ====================
+      // ==================== 发布管理增强 ====================
 
-    /**
-     * 页面布局在系统配置表中的键前缀
-     */
+      /**
+       * 页面布局在系统配置表中的键前缀
+       */
     private static final String CFG_LAYOUT_PREFIX = "ui.layout.";
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * copy Projects
-     * @param projectIds 参数
-     * @param releaseIds 参数
-     * @return 返回值
-    */
+      /**
+       * copy Projects
+       * @param projectIds 参数
+       * @param releaseIds 参数
+       * @return 返回值
+      */
     public ReturnResult<Map<String, Object>> copyProjects(List<Long> projectIds, List<Long> releaseIds) {
         if (projectIds == null || projectIds.isEmpty()) {
             return ReturnResult.error("请选择要复制的项目");
@@ -2871,12 +2933,15 @@ public class ReleaseServiceImpl implements ReleaseService {
             MsServerProject source = projectMapper.selectById(projectId);
             if (source == null) {
                 failed.add(Map.of("projectId", projectId, "reason", "项目不存在"));
+                recordSyncOp(projectId, null, null, "copy", false, "项目不存在");
                 continue;
             }
             for (Long releaseId : releaseIds) {
                 if (releaseId == null || releaseMapper.selectById(releaseId) == null) {
                     failed.add(Map.of("projectId", projectId, "releaseId", String.valueOf(releaseId),
                             "reason", "目标发布不存在"));
+                    recordSyncOp(projectId, source.getProjectName(), releaseId, "copy", false,
+                            "目标发布不存在");
                     continue;
                 }
                 MsServerProject copy = new MsServerProject();
@@ -2889,7 +2954,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 copy.setServiceName(null);
                 copy.setCreateTime(LocalDateTime.now());
                 copy.setUpdateTime(LocalDateTime.now());
-                // 复制到的目标发布级 SkyWalking APM（源项目自己的 APM 选项优先保留）
+                  // 复制到的目标发布级 SkyWalking APM（源项目自己的 APM 选项优先保留）
                 applyReleaseApm(copy);
                 if (copy.getScheduleEnabled() == null) {
                     copy.setScheduleEnabled(false);
@@ -2898,6 +2963,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                     copy.setScheduleStatus("NONE");
                 }
                 projectMapper.insert(copy);
+                recordSyncOp(copy.getId(), copy.getProjectName(), releaseId, "copy", true,
+                        "复制自项目 " + source.getProjectName());
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("sourceProjectId", projectId);
                 row.put("projectId", copy.getId());
@@ -2936,9 +3003,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         String base = "http://127.0.0.1:" + port;
         String command = "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/v3/api-docs; echo; "
-                + "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/swagger-ui/index.html; echo; "
-                + "curl -s -m 4 " + base + "/actuator/health; echo; "
-                + "curl -s -m 4 " + base + "/actuator/metrics; echo";
+                  + "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/swagger-ui/index.html; echo; "
+                  + "curl -s -m 4 " + base + "/actuator/health; echo; "
+                  + "curl -s -m 4 " + base + "/actuator/metrics; echo";
         ReturnResult<List<MsExecLog>> result = execService.runCommand(
                 Collections.singletonList(ctx.hostId), command, 30, null);
         if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
@@ -2979,7 +3046,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                     out.put("metrics", list.size() > 8 ? list.subList(0, 8) : list);
                 }
             } catch (Exception ignored) {
-                // 指标摘要只是增强信息，解析失败不影响按钮可用性
+                  // 指标摘要只是增强信息，解析失败不影响按钮可用性
             }
         }
         return ReturnResult.ok(out);
@@ -3062,12 +3129,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok();
     }
 
-    /**
-     * 构造 Git 客户端（含 token 认证），供轮询与发布共用。
-     * @param project 参数
-     * @param workspace 路径
-     * @return 返回值
-    */
+      /**
+       * 构造 Git 客户端（含 token 认证），供轮询与发布共用。
+       * @param project 参数
+       * @param workspace 路径
+       * @return 返回值
+      */
     private GitClient.Builder buildGitClient(MsServerProject project, Path workspace) {
         GitClient.Builder builder = GitClient.builder()
                 .remoteUrl(project.getGitUrl().trim())

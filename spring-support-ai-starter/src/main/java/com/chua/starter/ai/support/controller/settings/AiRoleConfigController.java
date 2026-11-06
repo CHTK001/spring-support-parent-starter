@@ -21,15 +21,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Roles 配置控制器，枚举本地/在线 RoleProvider 并支持开关。
- *
- * <p>本地 Provider 通过 Spring 注入的 {@link RoleOfflineProvider} Bean 加载；
- * 在线市场源通过 {@link RoleMarketSourceProvider} SPI 加载。
- * 开关状态持久化在 {@code sys_ai_global_setting} 的 roles 分组。</p>
- *
- * @since 4.0.0.43
- * @author CH
- */
+   * Roles 配置控制器，枚举本地/在线 RoleProvider 并支持开关。
+   *
+   * <p>本地 Provider 通过 Spring 注入的 {@link RoleOfflineProvider} Bean 加载；
+   * 在线市场源通过 {@link RoleMarketSourceProvider} SPI 加载。
+   * 开关状态持久化在 {@code sys_ai_global_setting} 的 roles 分组。</p>
+   *
+   * @since 4.0.0.43
+   * @author CH
+   */
 @Slf4j
 @RestController
 @RequestMapping("/v2/roles-config")
@@ -42,11 +42,11 @@ public class AiRoleConfigController {
     private final SysAiGlobalSettingService globalSettingService;
     private final List<RoleOfflineProvider> offlineProviders;
 
-    /**
-     * 获取所有 Roles Provider 配置（本地 + 在线）。
-     *
-     * @return Provider 列表
-     */
+      /**
+       * 获取所有 Roles Provider 配置（本地 + 在线）。
+       *
+       * @return Provider 列表
+       */
     @Permission("admin")
     @Operation(summary = "获取 Roles Provider 配置列表")
     @GetMapping
@@ -55,7 +55,7 @@ public class AiRoleConfigController {
         List<Map<String, Object>> localProviders = new ArrayList<>();
         List<Map<String, Object>> onlineProviders = new ArrayList<>();
 
-        // 本地 RoleOfflineProvider（Spring Bean 注入）
+          // 本地 RoleOfflineProvider（Spring Bean 注入）
         if (offlineProviders != null) {
             for (RoleOfflineProvider provider : offlineProviders) {
                 Map<String, Object> item = new LinkedHashMap<>();
@@ -73,7 +73,7 @@ public class AiRoleConfigController {
             }
         }
 
-        // 在线 RoleMarketSourceProvider
+          // 在线 RoleMarketSourceProvider
         try {
             Map<String, RoleMarketSourceProvider> marketProviders = ServiceProvider.of(RoleMarketSourceProvider.class).list();
             if (marketProviders != null) {
@@ -101,12 +101,12 @@ public class AiRoleConfigController {
         return result;
     }
 
-    /**
-     * 更新 Roles Provider 开关状态。
-     *
-     * @param config 配置 Map，key 为 provider key，value 为 boolean
-     * @return 更新后的配置
-     */
+      /**
+       * 更新 Roles Provider 开关状态。
+       *
+       * @param config 配置 Map，key 为 provider key，value 为 boolean
+       * @return 更新后的配置
+       */
     @Permission("admin")
     @Operation(summary = "更新 Roles Provider 开关")
     @PutMapping
@@ -119,13 +119,13 @@ public class AiRoleConfigController {
         return list();
     }
 
-    /**
-     * 是否Enabled。
-     *
-     * @param key 键，不允许为 null
-     * @param defaultValue default值（布尔开关）
-     * @return 是否成功（true 表示成功）
-     */
+      /**
+       * 是否Enabled。
+       *
+       * @param key 键，不允许为 null
+       * @param defaultValue default值（布尔开关）
+       * @return 是否成功（true 表示成功）
+       */
     private boolean isEnabled(String key, boolean defaultValue) {
         try {
             return globalSettingService.getBoolean(ROLES_GROUP, "provider_" + key + "_enabled", defaultValue);
@@ -134,15 +134,16 @@ public class AiRoleConfigController {
         }
     }
 
-    /**
-     * 设置Enabled。
-     *
-     * @param key 键，不允许为 null
-     * @param enabled enabled（布尔开关）
-     */
+      /**
+       * 设置Enabled。
+       *
+       * @param key 键，不允许为 null
+       * @param enabled enabled（布尔开关）
+       */
     private void setEnabled(String key, boolean enabled) {
         try {
-            globalSettingService.upsertValue(ROLES_GROUP, "provider_" + key + "_enabled", String.valueOf(enabled), "Roles Provider " + key + " enabled");
+            globalSettingService.upsertValue(ROLES_GROUP, "provider_" + key + "_enabled", String.valueOf(enabled), "Roles Provider " 
+                 + key + " enabled");
         } catch (Exception e) {
             log.warn("[RolesConfig] 保存 Provider 开关失败 key={}: {}", key, e.getMessage());
         }

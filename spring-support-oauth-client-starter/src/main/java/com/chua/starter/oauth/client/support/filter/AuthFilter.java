@@ -35,6 +35,8 @@ import org.springframework.web.servlet.HandlerExecutionChain;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -366,6 +368,22 @@ public class AuthFilter implements Filter {
         fallback.setUsername(AuthConstant.BUILTIN_ADMIN_USERNAME);
         fallback.setRoles(Sets.newHashSet(AuthConstant.SUPER_ADMIN, Constant.ADMIN));
         fallback.setPermission(Sets.newHashSet(Constant.ADMIN));
+        // 业务扩展信息必须补齐：@UserValue("sysUserId") / ("sysDeptId") 读的是 ext，
+        // 真实登录（SysLoginServiceImpl）也是把 sysUserId 放进 ext 的；
+        // 兜底身份若只设 userId，业务接口拿到的仍是 null。
+        Map<String, Object> ext = new HashMap<>(8);
+        ext.put("sysUserId", 1L);
+        ext.put("sysUserUsername", fallback.getUsername());
+        ext.put("sysUserNickname", "本地管理员");
+        fallback.setExt(ext);
+        // 兜底身份必须写全 @UserValue 实际读取的会话键：
+        // UserRequestHandlerMethodArgumentResolver#resolveUserResume 先取 "userResume"，
+        // 只写 SESSION_USER_INFO 时它找不到，只好像未认证一样回退去请求鉴权服务，
+        // 最终拿到 null —— 表现为接口 200 但业务层用户为空（如保存布局 userId 为 null 抛 NPE）。
+        HttpSession session = request.getSession();
+        session.setAttribute(AuthSessionUtils.SESSION_USERNAME, fallback.getUsername());
+        session.setAttribute(AuthSessionUtils.SESSION_USERID, fallback.getUserId());
+        session.setAttribute("userResume", fallback);
         AuthSessionUtils.setUserInfo(fallback);
     }
 

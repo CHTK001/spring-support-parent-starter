@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-parent-starter</artifactId>
+    <version>4.0.0.51</version>
+  </parent>
+  <artifactId>spring-support-collect-starter</artifactId>
+  <description>采集调度一体化平台（可视化流程编排 + 复用调度平台作业台账）</description>
+  <dependencies>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-api-support-common-system-starter</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.chua</groupId>
+          <artifactId>utils-support-armeria-starter</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-mybatis-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasource-starter</artifactId>
+    </dependency>
+    <!-- 数据源中心：SQL/入库节点统一从这里取数据源台账，不再自建 collect_datasource 台账 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasource-hub-starter</artifactId>
+      <version>${module.version}</version>
+    </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-job-starter</artifactId>
+        <!--
+          可选依赖：采集本体不依赖调度器。
+
+          排期能力收口在 com.chua.starter.collect.schedule.CollectFlowSchedulePort：
+          消费方引入 job-starter 时由 JobFlowSchedulePort 落到 sys_job 台账（行为不变）；
+          不引入时由 LocalOnlyFlowSchedulePort 兜底——流程照常设计、手动执行、看结果，
+          只是没有定时触发，启用排期会给出明确提示。
+
+          所以这里必须 optional，否则"只想要采集能力"的模块会被动继承整套调度引擎
+          （Leader 选举、sys_job_cluster、/v2/job 治理接口及其建表）。
+          需要定时的消费方显式声明 job-starter 依赖即可（本仓库的
+          spring-api-support-collect-scheduler-starter 就是这么做的）。
+        -->
+        <optional>true</optional>
+      </dependency>
+    <!-- 站内消息渠道（CollectStationNotifyChannel）走的是本模块已有的
+         spring-api-support-common-system-starter 消息中心（SysMessageService.broadcast
+         → sys_message），没有额外的消息中心依赖要引。
+         曾试过改接 spring-support-message-starter，已回退：它与 common-system-starter
+         各自带了一整套 SysMessage*（4 个 Mapper + 4 组 Service/Impl + 5 个 Controller 同名），
+         两者共存会让 Spring 上下文启动失败。渠道实现带 @ConditionalOnBean，
+         容器里没有消息中心时该渠道自动不出现在前端下拉里。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-crawler-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-common-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <!-- 脚本任务引擎：提供 common-starter ScriptProvider SPI 的 groovy 实现（ScriptFlow） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-groovy-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.groovy</groupId>
+      <artifactId>groovy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.23.2</version>
+    </dependency>
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations</artifactId>
+      <version>2.2.55</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- 正式嵌入式数据库适配：默认 h2 配置支持采集平台免外部数据库启动 -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- 表达式求值 / SQL 只读判定等纯内存单元测试 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
+</project>

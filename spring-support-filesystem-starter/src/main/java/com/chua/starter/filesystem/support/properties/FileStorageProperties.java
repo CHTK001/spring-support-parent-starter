@@ -105,6 +105,39 @@ public class FileStorageProperties {
      */
     private long taskSyncMaxMb = 5;
 
+    /**
+     * 协同文档持久化配置（内存态 + 定时落盘）
+     *
+     * <p>协同文档本身是内存态（快照式协同，读写都在内存里，编辑零阻塞），
+     * 这里配置的是「多久把整库刷到磁盘一次」，用于抗进程重启。</p>
+     */
+    private CollabPersistConfig collab = new CollabPersistConfig();
+
+    /**
+     * 协同文档落盘配置。
+     */
+    @Data
+    public static class CollabPersistConfig {
+
+        /**
+         * 是否启用定时落盘（默认启用；关掉则协同文档重启即丢）
+         */
+        private boolean persistEnable = true;
+
+        /**
+         * 落盘文件路径（默认 {@code data/file-collab/collab-store.json}，相对进程工作目录）
+         */
+        private String persistPath;
+
+        /**
+         * 落盘间隔（秒，默认 30）
+         *
+         * <p>间隔越小丢数据窗口越小、写盘越频繁；协同快照较大，30s 是「几乎无感 IO」
+         * 与「最多丢半分钟改动」之间的折中。</p>
+         */
+        private long persistSeconds = 30;
+    }
+
     // ==================== 功能开关 ====================
 
     /**

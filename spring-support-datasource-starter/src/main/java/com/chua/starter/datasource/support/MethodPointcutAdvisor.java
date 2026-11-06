@@ -15,28 +15,30 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * @author CH
- * @since 4.0.0
- */
+   * @author CH
+   * @since 4.0.0
+   */
 public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
-    /**
-     * 创建 方法pointcutadvisor 实例
-     * @param applicationContext application上下文
-     */
+      /**
+       * 创建 方法pointcutadvisor 实例
+       * @param applicationContext application上下文
+       */
     public MethodPointcutAdvisor(ApplicationContext applicationContext) {
-        MultiDataSourceSettingProperties multiDataSourceSettingProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MultiDataSourceSettingProperties.PRE, MultiDataSourceSettingProperties.class);
+        MultiDataSourceSettingProperties multiDataSourceSettingProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate
+            (MultiDataSourceSettingProperties.PRE, MultiDataSourceSettingProperties.class);
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
-            /**
-             * 调用
-             * @param invocation 参数
-             * @return 返回值
-             * @throws Throwable 异常
-            */
+              /**
+               * 调用
+               * @param invocation 参数
+               * @return 返回值
+               * @throws Throwable 异常
+              */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
-                if (AnnotatedElementUtils.hasAnnotation(method, DS.class) || AnnotatedElementUtils.hasAnnotation(invocation.getThis().getClass(), DS.class)) {
+                if (AnnotatedElementUtils.hasAnnotation(method, DS.class) || AnnotatedElementUtils.hasAnnotation(invocation.getThis()
+                    .getClass(), DS.class)) {
                     DynamicDataSourceAspect dynamicDataSourceAspect = new DynamicDataSourceAspect();
                     dynamicDataSourceAspect.setApplicationContext(applicationContext);
                     dynamicDataSourceAspect.beforeSwitchDS(invocation, multiDataSourceSettingProperties);
@@ -52,12 +54,12 @@ public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
     }
 
     @Override
-    /**
-     * Matches
-     * @param method 参数
-     * @param targetClass 参数
-     * @return 返回值
-    */
+      /**
+       * Matches
+       * @param method 参数
+       * @param targetClass 参数
+       * @return 返回值
+      */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;

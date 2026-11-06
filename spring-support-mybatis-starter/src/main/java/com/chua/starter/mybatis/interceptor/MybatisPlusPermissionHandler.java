@@ -23,29 +23,29 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * 数据权限处理器
- * 处理查询语句的数据权限过滤
- *
- * @author CH
- * @since 4.0.0
- */
+   * 数据权限处理器
+   * 处理查询语句的数据权限过滤
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
-    /**
-     * 日志
-    */
+      /**
+       * 日志
+      */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusPermissionHandler.class);
 
-    /**
-     * 创建_by
-    */
+      /**
+       * 创建_by
+      */
     private static final String CREATE_BY = "rule_create_by";
-    /**
-     * Dept_标识
-    */
+      /**
+       * Dept_标识
+      */
     private static final String DEPT_ID = "rule_dept_id";
-    /**
-     * No_数据
-    */
+      /**
+       * No_数据
+      */
     public static final NotEqualsTo NO_DATA = new NotEqualsTo();
     static {
         NO_DATA.setLeftExpression(new LongValue(1));
@@ -54,24 +54,24 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
 
     final MybatisPlusDataScopeProperties metaDataScopeProperties; // meta数据scope属性
 
-    /**
-     * 构造函数
-     *
-     * @param metaDataScopeProperties 数据权限配置属性
-     */
+      /**
+       * 构造函数
+       *
+       * @param metaDataScopeProperties 数据权限配置属性
+       */
     public MybatisPlusPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
         this.metaDataScopeProperties = metaDataScopeProperties;
     }
 
 
-    /**
-     * 处理查询语句，应用数据权限过滤
-     *
-     * @param plainSelect      查询对象
-     * @param where           当前查询条件
-     * @param mappedStatementId 映射器 方法全限定名
-     * @param currentUser     当前登录用户
-     */
+      /**
+       * 处理查询语句，应用数据权限过滤
+       *
+       * @param plainSelect      查询对象
+       * @param where           当前查询条件
+       * @param mappedStatementId 映射器 方法全限定名
+       * @param currentUser     当前登录用户
+       */
     @Override
     public void processSelect(PlainSelect plainSelect, Expression where, String mappedStatementId, CurrentUser currentUser) {
         try {
@@ -93,42 +93,42 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
                 if (dataScope != null) {
                     if (method.getName().equals(methodName) || (method.getName() + "_COUNT").equals(methodName)) {
                         DataFilterTypeEnum permission = dataScope.value() != null ? dataScope.value() : currentUser.getDataPermission();
-                        /**
-                         * 数据scope过滤器。
-                         * @param plainSelect plain选择
-                         * @param currentUser 当前用户
-                         * @param metaDataScopeProperties meta数据scope属性
-                         * @param where where
-                         * @param permission 权限
-                         */
+                          /**
+                           * 数据scope过滤器。
+                           * @param plainSelect plain选择
+                           * @param currentUser 当前用户
+                           * @param metaDataScopeProperties meta数据scope属性
+                           * @param where where
+                           * @param permission 权限
+                           */
                         dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, permission);
                     }
                     return;
                 }
             }
- // 如果没有找到 数据scope 注解，使用用户默认权限
-            /**
-             * 数据scope过滤器。
-             * @param plainSelect plain选择
-             * @param currentUser 当前用户
-             * @param metaDataScopeProperties meta数据scope属性
-             * @param where where
-             * @param currentUser.getDataPermission( 当前用户.获取数据权限(
-             */
+   // 如果没有找到 数据scope 注解，使用用户默认权限
+              /**
+               * 数据scope过滤器。
+               * @param plainSelect plain选择
+               * @param currentUser 当前用户
+               * @param metaDataScopeProperties meta数据scope属性
+               * @param where where
+               * @param currentUser.getDataPermission( 当前用户.获取数据权限(
+               */
             dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());
         } catch (Exception e) {
             log.error("处理数据权限时发生异常: mappedStatementId={}", mappedStatementId, e);
         }
     }
 
-    /**
-     * 构建过滤条件
-     *
-     * @param plainSelect       查询对象
-     * @param user              当前登录用户
-     * @param where             当前查询条件
-     * @param dataPermission    数据权限
-     */
+      /**
+       * 构建过滤条件
+       *
+       * @param plainSelect       查询对象
+       * @param user              当前登录用户
+       * @param where             当前查询条件
+       * @param dataPermission    数据权限
+       */
     public void dataScopeFilter(PlainSelect plainSelect,
                                 CurrentUser user,
                                 MybatisPlusDataScopeProperties dataScopeProperties,
@@ -142,19 +142,20 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
         String columnName = dataScopeProperties.getDeptIdColumn();
         WhereDeptChecker whereDeptChecker = new WhereDeptChecker(where, tableAlias, columnName);
         boolean whereHasDeptId = whereDeptChecker.check();
-        DeptRegister register = whereHasDeptId ? new WhereDeptRegister(plainSelect, where, user, dataPermission, dataScopeProperties, whereDeptChecker.getCurrentTable())
+        DeptRegister register = whereHasDeptId ? new WhereDeptRegister(plainSelect, where, user, dataPermission, dataScopeProperties
+            , whereDeptChecker.getCurrentTable())
                 : new SelectDeptRegister(plainSelect, where, user, dataPermission, dataScopeProperties);
 
         register.register();
     }
 
     @Override
-    /**
-     * 获取sqlsegment
-     * @param mappedStatementId 字符串
-     * @param where 参数
-     * @return 返回值
-    */
+      /**
+       * 获取sqlsegment
+       * @param mappedStatementId 字符串
+       * @param where 参数
+       * @return 返回值
+      */
     public Expression getSqlSegment(Expression where, String mappedStatementId) {
         return where;
     }

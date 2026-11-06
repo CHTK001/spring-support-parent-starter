@@ -202,20 +202,78 @@ public class ConnectionManager {
              */
             closeEntry(hostId, old);
         }
+        Exception failure;
         try {
-            var handle = SshClients.open(host.getServerHostAddress(),
-                    host.getServerHostPort(), credential,
-                    timeouts.connectSeconds(), timeouts.sessionSeconds(), timeouts.readSeconds());
-            handle.client().connect();
-            Entry entry = new Entry(handle, fp, now);
-            cache.put(hostId, entry);
-            return entry;
-        } catch (IOException e) {
-            int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0
-                    ? 22 : host.getServerHostPort();
-            throw new ConnectionException(
-                    "SSH 连接失败: " + host.getServerHostAddress() + ":" + port + "，" + rootReason(e), e);
+            return connect(host, credential, fp, now);
+        } catch (IOException | RuntimeException e) {
+            failure = e;
         }
+          // 口令认证被拒后按 OpenSSH 的习惯再试默认身份文件（~/.ssh/id_ed25519 等）：
+          // 网关类目标常常只开放 publickey，而台账身份里只有口令、没有私钥 ——
+          // 此时唯一还能走通的路径就是平台默认密钥已被目标 authorized_keys 放行。
+          // 只在「有口令但没私钥」且确属认证失败时触发，普通网络故障不会多连一次。
+        if (credential != null && credential.password() != null && !credential.hasKey()
+                && isAuthFailure(failure)) {
+            try {
+                log.info("[connection] 口令认证未通过，回退默认身份文件 hostId={} user={}", hostId, credential.username());
+                return connect(host, new SshCredential(credential.username(), null, null), fp, now);
+            } catch (IOException | RuntimeException retry) {
+                failure = retry;
+            }
+        }
+        int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0
+                ? 22 : host.getServerHostPort();
+        throw new ConnectionException(
+                "SSH 连接失败: " + host.getServerHostAddress() + ":" + port + "，" + rootReason(failure), failure);
+    }
+
+    /**
+     * 建立并缓存一个连接。
+     *
+     * @param host       主机
+     * @param credential 凭据
+     * @param fp         凭据指纹
+     * @param now        当前纳秒
+     * @return 缓存项
+     * @throws IOException 连接失败时抛出
+     */
+    private Entry connect(MsServerHost host, SshCredential credential, String fp, long now) throws IOException {
+        var handle = SshClients.open(host.getServerHostAddress(),
+                host.getServerHostPort(), credential,
+                timeouts.connectSeconds(), timeouts.sessionSeconds(), timeouts.readSeconds());
+        try {
+            handle.client().connect();
+        } catch (RuntimeException e) {
+              // 连接失败必须自己关闭：句柄尚未进入缓存，没有人会替它清理临时私钥文件
+            handle.close();
+            throw e;
+        }
+        Entry entry = new Entry(handle, fp, now);
+        cache.put(host.getId(), entry);
+        return entry;
+    }
+
+    /**
+     * 判断异常链是否属于认证失败（口令/公钥都不被目标接受）。
+     *
+     * @param e 原始异常
+     * @return true=认证失败
+     */
+    private static boolean isAuthFailure(Throwable e) {
+        Throwable t = e;
+        while (t != null) {
+            String msg = t.getMessage();
+            if (msg != null) {
+                String s = msg.toLowerCase(java.util.Locale.ROOT);
+                if (s.contains("no more authentication methods")
+                        || s.contains("auth fail")
+                        || s.contains("permission denied")) {
+                    return true;
+                }
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 
     /**

@@ -21,15 +21,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Skills 配置控制器，枚举本地/在线 SkillProvider 并支持开关。
- *
- * <p>本地 Provider 通过 {@link SkillOfflineProvider} SPI 加载；
- * 在线市场源通过 {@link SkillMarketSourceProvider} SPI 加载。
- * 开关状态持久化在 {@code sys_ai_global_setting} 的 skills 分组。</p>
- *
- * @since 4.0.0
- * @author CH
- */
+   * Skills 配置控制器，枚举本地/在线 SkillProvider 并支持开关。
+   *
+   * <p>本地 Provider 通过 {@link SkillOfflineProvider} SPI 加载；
+   * 在线市场源通过 {@link SkillMarketSourceProvider} SPI 加载。
+   * 开关状态持久化在 {@code sys_ai_global_setting} 的 skills 分组。</p>
+   *
+   * @since 4.0.0
+   * @author CH
+   */
 @Slf4j
 @RestController
 @RequestMapping("/v2/skills-config")
@@ -41,11 +41,11 @@ public class AiSkillsConfigController {
 
     private final SysAiGlobalSettingService globalSettingService;
 
-    /**
-     * 获取所有 Skills Provider 配置（本地 + 在线）。
-     *
-     * @return Provider 列表，每项含 key/name/type/enabled
-     */
+      /**
+       * 获取所有 Skills Provider 配置（本地 + 在线）。
+       *
+       * @return Provider 列表，每项含 key/name/type/enabled
+       */
     @Permission("admin")
     @Operation(summary = "获取 Skills Provider 配置列表")
     @GetMapping
@@ -54,7 +54,7 @@ public class AiSkillsConfigController {
         List<Map<String, Object>> localProviders = new ArrayList<>();
         List<Map<String, Object>> onlineProviders = new ArrayList<>();
 
-        // 本地 SkillOfflineProvider
+          // 本地 SkillOfflineProvider
         try {
             Map<String, SkillOfflineProvider> offlineProviders = ServiceProvider.of(SkillOfflineProvider.class).list();
             if (offlineProviders != null) {
@@ -76,7 +76,7 @@ public class AiSkillsConfigController {
             log.warn("[SkillsConfig] 加载本地 SkillOfflineProvider 失败: {}", e.getMessage());
         }
 
-        // 在线 SkillMarketSourceProvider
+          // 在线 SkillMarketSourceProvider
         try {
             Map<String, SkillMarketSourceProvider> marketProviders = ServiceProvider.of(SkillMarketSourceProvider.class).list();
             if (marketProviders != null) {
@@ -104,12 +104,12 @@ public class AiSkillsConfigController {
         return result;
     }
 
-    /**
-     * 更新 Skills Provider 开关状态。
-     *
-     * @param config 配置 Map，key 为 provider key，value 为 boolean
-     * @return 更新后的配置
-     */
+      /**
+       * 更新 Skills Provider 开关状态。
+       *
+       * @param config 配置 Map，key 为 provider key，value 为 boolean
+       * @return 更新后的配置
+       */
     @Permission("admin")
     @Operation(summary = "更新 Skills Provider 开关")
     @PutMapping
@@ -122,13 +122,13 @@ public class AiSkillsConfigController {
         return list();
     }
 
-    /**
-     * 是否Enabled。
-     *
-     * @param key 键，不允许为 null
-     * @param defaultValue default值（布尔开关）
-     * @return 是否成功（true 表示成功）
-     */
+      /**
+       * 是否Enabled。
+       *
+       * @param key 键，不允许为 null
+       * @param defaultValue default值（布尔开关）
+       * @return 是否成功（true 表示成功）
+       */
     private boolean isEnabled(String key, boolean defaultValue) {
         try {
             return globalSettingService.getBoolean(SKILLS_GROUP, "provider_" + key + "_enabled", defaultValue);
@@ -137,15 +137,16 @@ public class AiSkillsConfigController {
         }
     }
 
-    /**
-     * 设置Enabled。
-     *
-     * @param key 键，不允许为 null
-     * @param enabled enabled（布尔开关）
-     */
+      /**
+       * 设置Enabled。
+       *
+       * @param key 键，不允许为 null
+       * @param enabled enabled（布尔开关）
+       */
     private void setEnabled(String key, boolean enabled) {
         try {
-            globalSettingService.upsertValue(SKILLS_GROUP, "provider_" + key + "_enabled", String.valueOf(enabled), "Skills Provider " + key + " enabled");
+            globalSettingService.upsertValue(SKILLS_GROUP, "provider_" + key + "_enabled", String.valueOf(enabled), "Skills Provider " 
+                 + key + " enabled");
         } catch (Exception e) {
             log.warn("[SkillsConfig] 保存 Provider 开关失败 key={}: {}", key, e.getMessage());
         }

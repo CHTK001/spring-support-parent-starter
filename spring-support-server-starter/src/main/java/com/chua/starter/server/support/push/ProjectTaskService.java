@@ -2,6 +2,7 @@
 package com.chua.starter.server.support.push;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.text.json.Json;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.server.support.connection.ConnectionManager;
@@ -14,7 +15,9 @@ import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.model.vo.LogPushVO;
 import com.chua.starter.server.support.model.vo.ProjectTaskEventVO;
 import com.chua.starter.server.support.model.vo.ProjectTaskSnapshotVO;
+import com.chua.starter.server.support.service.ProjectOpLogService;
 import com.chua.starter.server.support.service.ServerHostService;
+import com.chua.starter.server.support.sse.ReleaseSseHub;
 import com.chua.starter.server.support.util.SshClients;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -106,6 +109,14 @@ public class ProjectTaskService {
     private final ConnectionManager connectionManager;
     private final WindowsSshShell windowsSshShell;
     private final ServerPushService pushService;
+    /**
+     * 发布管理全局 SSE 通道（任务帧主通道，替代页面级 Socket/Socket.IO 订阅）
+     */
+    private final ReleaseSseHub releaseSseHub;
+    /**
+     * 项目操作日志（任务起止都落库，日志管理面板经 SSE 即时刷新）
+     */
+    private final ProjectOpLogService projectOpLogService;
 
     /**
      * 任务线程池（守护线程，含可能长时间阻塞的 follow 会话）
@@ -241,18 +252,24 @@ public class ProjectTaskService {
          */
         private final SshClients.Handle sshHandle;
         private final Long hostId;
+        /**
+         * 发布管理 SSE 客户端标识；为空表示回退到 Socket 推送
+         */
+        private final String clientId;
 
         /**
          * Log Session
          * @param hostId 长整数
          * @param sshHandle 参数
          * @param streamHandle 参数
+         * @param clientId 发布管理 SSE 客户端标识
          * @return 返回值
         */
-        LogSession(AutoCloseable streamHandle, SshClients.Handle sshHandle, Long hostId) {
+        LogSession(AutoCloseable streamHandle, SshClients.Handle sshHandle, Long hostId, String clientId) {
             this.streamHandle = streamHandle;
             this.sshHandle = sshHandle;
             this.hostId = hostId;
+            this.clientId = clientId;
         }
     }
 
@@ -295,6 +312,7 @@ public class ProjectTaskService {
                 + "-" + System.currentTimeMillis() + "-" + seq.incrementAndGet();
         TaskState state = new TaskState(taskId, projectId, operation, serviceNameWrite);
         tasks.put(taskId, state);
+        recordOpLogStart(state);
         try {
             taskPool.execute(() -> run(hostId, steps, finishStatus, state));
         } catch (RuntimeException e) {
@@ -303,6 +321,8 @@ public class ProjectTaskService {
                 busyProjects.remove(projectId);
                 tasks.remove(taskId);
             }
+            finishOpLog(state, false, "任务提交失败: "
+                    + (e.getMessage() == null ? e.toString() : e.getMessage()));
             throw e;
         }
         return taskId;
@@ -475,6 +495,7 @@ public class ProjectTaskService {
             logBanner(state, "──── 「" + opLabelText + "」成功 · 总耗时 "
                     + fmtDuration(System.currentTimeMillis() - state.startTime) + pidInfo + " ────");
             emit(state, PHASE_COMPLETE, null, null, null, "操作成功");
+            finishOpLog(state, true, "操作成功");
         } catch (Throwable e) {
             // 捕获 Throwable（含 NoClassDefFoundError 等 Error），避免线程死亡后任务静默卡在 START
             state.success = false;
@@ -503,6 +524,7 @@ public class ProjectTaskService {
             } catch (Throwable ignoreReconcile) {
                 log.warn("[task] {} 失败后状态回写异常", state.taskId, ignoreReconcile);
             }
+            finishOpLog(state, false, state.message == null ? "执行失败" : state.message);
         } finally {
             if (handle != null) {
                 connectionManager.release(hostId);
@@ -525,6 +547,19 @@ public class ProjectTaskService {
      * @return sessionId
      */
     public String startLogTail(Long hostId, Long projectId, String logPath) {
+        return startLogTail(hostId, projectId, logPath, null);
+    }
+
+    /**
+     * 开启实时日志跟随（异步建立连接）
+     *
+     * @param hostId    主机标识
+     * @param projectId 项目标识
+     * @param logPath   日志文件路径
+     * @param clientId  发布管理 SSE 客户端标识；为 空 时回退到 Socket 推送
+     * @return sessionId
+     */
+    public String startLogTail(Long hostId, Long projectId, String logPath, String clientId) {
         String sessionId = "log-" + projectId + "-" + System.currentTimeMillis() + "-" + seq.incrementAndGet();
         taskPool.execute(() -> {
             SshClients.Handle sshHandle = null;
@@ -542,14 +577,14 @@ public class ProjectTaskService {
                 if (WindowsSshShell.isWindows(host)) {
                     // Windows 经 OpenSSH 持续跟随（Get-Content -Wait），follow 内部包 EncodedCommand
                     streamHandle = windowsSshShell.follow(host, rr.getData(), command,
-                            line -> pushLogLine(sessionId, projectId, line));
+                            line -> pushLogLine(sessionId, projectId, clientId, line));
                 } else {
                     sshHandle = connectionManager.borrow(host, rr.getData());
                     streamHandle = sshHandle.client().exec().command(command)
-                            .follow(line -> pushLogLine(sessionId, projectId, line));
+                            .follow(line -> pushLogLine(sessionId, projectId, clientId, line));
                 }
-                logSessions.put(sessionId, new LogSession(streamHandle, sshHandle, hostId));
-                pushLogControl(sessionId, projectId, "STARTED", "实时日志已连接");
+                logSessions.put(sessionId, new LogSession(streamHandle, sshHandle, hostId, clientId));
+                pushLogControl(sessionId, projectId, clientId, "STARTED", "实时日志已连接");
             } catch (Exception e) {
                 if (streamHandle != null) {
                     try {
@@ -561,7 +596,8 @@ public class ProjectTaskService {
                 if (sshHandle != null) {
                     connectionManager.release(hostId);
                 }
-                pushLogControl(sessionId, projectId, "ERROR", e.getMessage() == null ? "日志连接失败" : e.getMessage());
+                pushLogControl(sessionId, projectId, clientId, "ERROR",
+                        e.getMessage() == null ? "日志连接失败" : e.getMessage());
             }
         });
         return sessionId;
@@ -592,10 +628,21 @@ public class ProjectTaskService {
      * @param line 字符串
      * @param projectId 长整数
      * @param sessionId 字符串
+     * @param clientId 发布管理 SSE 客户端标识；为空回退 Socket
      * @return 返回值
     */
-    private void pushLogLine(String sessionId, Long projectId, String line) {
-        pushService.pushLog(new LogPushVO(sessionId, projectId, "LINE", line == null ? "" : line, null), sessionId);
+    private void pushLogLine(String sessionId, Long projectId, String clientId, String line) {
+        LogPushVO frame = new LogPushVO(sessionId, projectId, "LINE", line == null ? "" : line, null);
+        if (clientId == null || clientId.isBlank()) {
+            pushService.pushLog(frame, sessionId);
+            return;
+        }
+        // 实时日志只推给发起跟随的那个客户端，多标签页互不串台
+        try {
+            releaseSseHub.send(clientId, ReleaseSseHub.EVENT_PROJECT_LOG, Json.toJson(frame));
+        } catch (Exception e) {
+            log.debug("[task] 日志帧 SSE 推送失败 sessionId={}: {}", sessionId, e.getMessage());
+        }
     }
 
     /**
@@ -603,11 +650,21 @@ public class ProjectTaskService {
      * @param message 字符串
      * @param projectId 长整数
      * @param sessionId 字符串
+     * @param clientId 发布管理 SSE 客户端标识；为空回退 Socket
      * @param status 字符串
      * @return 返回值
     */
-    private void pushLogControl(String sessionId, Long projectId, String status, String message) {
-        pushService.pushLog(new LogPushVO(sessionId, projectId, status, null, message), sessionId);
+    private void pushLogControl(String sessionId, Long projectId, String clientId, String status, String message) {
+        LogPushVO frame = new LogPushVO(sessionId, projectId, status, null, message);
+        if (clientId == null || clientId.isBlank()) {
+            pushService.pushLog(frame, sessionId);
+            return;
+        }
+        try {
+            releaseSseHub.send(clientId, ReleaseSseHub.EVENT_PROJECT_LOG, Json.toJson(frame));
+        } catch (Exception e) {
+            log.debug("[task] 日志控制帧 SSE 推送失败 sessionId={}: {}", sessionId, e.getMessage());
+        }
     }
 
     /**
@@ -679,9 +736,48 @@ public class ProjectTaskService {
         if (message != null) {
             state.message = message;
         }
-        pushService.pushTask(new ProjectTaskEventVO(state.taskId, state.projectId, state.operation,
+        ProjectTaskEventVO frame = new ProjectTaskEventVO(state.taskId, state.projectId, state.operation,
                 phase, state.currentStep, state.progress, state.startTime, step, line, message,
-                state.finished ? state.endTime : null, state.finished ? state.success : null), state.taskId);
+                state.finished ? state.endTime : null, state.finished ? state.success : null);
+        pushService.pushTask(frame, state.taskId);
+        // 发布管理只保留一条全局 SSE：任务帧主通道，页面不再各自订阅 Socket.IO
+        try {
+            releaseSseHub.broadcast(ReleaseSseHub.EVENT_PROJECT_TASK, Json.toJson(frame));
+        } catch (Exception e) {
+            log.debug("[task] {} 任务帧 SSE 推送失败: {}", state.taskId, e.getMessage());
+        }
+    }
+
+    /**
+     * 记录一次任务开始（失败只记日志，不影响任务本身）。
+     *
+     * @param state 任务状态
+     */
+    private void recordOpLogStart(TaskState state) {
+        try {
+            MsServerProject project = state.projectId == null ? null : projectMapper.selectById(state.projectId);
+            projectOpLogService.recordStart(state.projectId,
+                    project == null ? null : project.getProjectName(),
+                    project == null ? null : project.getReleaseId(),
+                    state.operation, state.taskId);
+        } catch (Exception e) {
+            log.warn("[task] {} 记录操作日志失败: {}", state.taskId, e.getMessage());
+        }
+    }
+
+    /**
+     * 回填一次任务终态（失败只记日志，不影响任务结果）。
+     *
+     * @param state   任务状态
+     * @param success 是否成功
+     * @param message 结果说明或失败原因
+     */
+    private void finishOpLog(TaskState state, boolean success, String message) {
+        try {
+            projectOpLogService.recordFinish(state.taskId, success, message);
+        } catch (Exception e) {
+            log.warn("[task] {} 回填操作日志失败: {}", state.taskId, e.getMessage());
+        }
     }
 
     /**

@@ -45,22 +45,22 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * @author CH
- * @since 4.0.0
- */
+   * @author CH
+   * @since 4.0.0
+   */
 public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMethodArgumentResolver {
 
-    /**
-     * 日志
-     */
+      /**
+       * 日志
+       */
     private static final System.Logger LOG =
             System.getLogger(RequestParamsMapMethodArgumentResolver.class.getName());
     @Override
-    /**
-     * 支持参数
-     * @param parameter 参数
-     * @return 返回值
-    */
+      /**
+       * 支持参数
+       * @param parameter 参数
+       * @return 返回值
+      */
     public boolean supportsParameter(MethodParameter parameter) {
         RequestParamMapping requestParam = parameter.getParameterAnnotation(RequestParamMapping.class);
         boolean has = (requestParam != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
@@ -83,47 +83,49 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
     @Override
-    /**
-     * 解析参数
-     * @param parameter 参数
-     * @param mavContainer mav容器
-     * @param webRequest web请求
-     * @param binderFactory binder工厂
-     */
+      /**
+       * 解析参数
+       * @param parameter 参数
+       * @param mavContainer mav容器
+       * @param webRequest web请求
+       * @param binderFactory binder工厂
+       */
     public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
         return resolveArgumentValue(parameter, mavContainer, webRequest, binderFactory);
     }
 
-    /**
-     * 单个参数
-     *
-     * @param parameter
-     * @param mavContainer
-     * @param webRequest
-     * @param binderFactory
-     * @return
-     * @throws Exception
-     */
-    public Object resolveArgumentValue(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+      /**
+       * 单个参数
+       *
+       * @param parameter
+       * @param mavContainer
+       * @param webRequest
+       * @param binderFactory
+       * @return
+       * @throws Exception
+       */
+    public Object resolveArgumentValue(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest
+        , WebDataBinderFactory binderFactory) throws Exception {
         if (parameter.hasParameterAnnotation(RequestParamMapping.class)) {
             return resolveArgumentOne(parameter, mavContainer, webRequest, binderFactory);
         }
         return resolveArgumentObject(parameter, mavContainer, webRequest, binderFactory);
     }
 
-    /**
-     * 单个参数
-     *
-     * @param parameter
-     * @param mavContainer
-     * @param webRequest
-     * @param binderFactory
-     * @return
-     * @throws Exception
-     */
-    private Object resolveArgumentObject(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+      /**
+       * 单个参数
+       *
+       * @param parameter
+       * @param mavContainer
+       * @param webRequest
+       * @param binderFactory
+       * @return
+       * @throws Exception
+       */
+    private Object resolveArgumentObject(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest
+        , WebDataBinderFactory binderFactory) throws Exception {
         Object argument = super.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
         Parameter parameter1 = parameter.getParameter();
         Class<?> type = parameter1.getType();
@@ -139,13 +141,13 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    /**
-     * 执行注册
-     *
-     * @param instance instance
-     * @param field 字段
-     * @param argument 参数
-     */
+      /**
+       * 执行注册
+       *
+       * @param instance instance
+       * @param field 字段
+       * @param argument 参数
+       */
     private void doRegister(Object instance, Field field, Object argument) {
         String name = field.getName();
         Object value = null;
@@ -155,7 +157,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         } else {
             beanMap = new java.util.LinkedHashMap<>();
             try {
-                // 保留 getDeclaredFields 枚举，字段取值走 ReflectUtils（规约 1.10）
+                  // 保留 getDeclaredFields 枚举，字段取值走 ReflectUtils（规约 1.10）
                 java.lang.reflect.Field[] fields = argument.getClass().getDeclaredFields();
                 for (java.lang.reflect.Field f : fields) {
                     Object val = ReflectUtils.getField(argument, f.getName());
@@ -168,46 +170,47 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         value = beanMap.get(name);
         if (null == value) {
             if (field.isAnnotationPresent(RequestParamMapping.class)) {
-                /**
-                 * 执行请求参数mapping注册。
-                 * @param instance instance
-                 * @param field 字段
-                 * @param RequestParamMapping.class 请求参数mapping.类
-                 */
+                  /**
+                   * 执行请求参数mapping注册。
+                   * @param instance instance
+                   * @param field 字段
+                   * @param RequestParamMapping.class 请求参数mapping.类
+                   */
                 doRequestParamMappingRegister(instance, field, AnnotationUtils.getAnnotation(field, RequestParamMapping.class), beanMap);
                 return;
             }
             return;
         }
         if (field.isAnnotationPresent(RequestParamMapping.class)) {
-            /**
-             * 执行请求参数mapping注册。
-             * @param instance instance
-             * @param field 字段
-             * @param RequestParamMapping.class 请求参数mapping.类
-             */
+              /**
+               * 执行请求参数mapping注册。
+               * @param instance instance
+               * @param field 字段
+               * @param RequestParamMapping.class 请求参数mapping.类
+               */
             doRequestParamMappingRegister(instance, field, AnnotationUtils.getAnnotation(field, RequestParamMapping.class), beanMap);
             return;
         }
 
-        /**
-         * 设置。
-         * @param instance instance
-         * @param field 字段
-         * @param value 值
-         */
+          /**
+           * 设置。
+           * @param instance instance
+           * @param field 字段
+           * @param value 值
+           */
         set(instance, field, value);
     }
 
-    /**
-     * 执行请求参数mapping注册
-     *
-     * @param instance instance
-     * @param field 字段
-     * @param requestParamMapping 请求参数mapping
-     * @param beanMap Bean映射
-     */
-    private void doRequestParamMappingRegister(Object instance, Field field, RequestParamMapping requestParamMapping, Map<String, Object> beanMap) {
+      /**
+       * 执行请求参数mapping注册
+       *
+       * @param instance instance
+       * @param field 字段
+       * @param requestParamMapping 请求参数mapping
+       * @param beanMap Bean映射
+       */
+    private void doRequestParamMappingRegister(Object instance, Field field, RequestParamMapping requestParamMapping, Map<String, Object
+        > beanMap) {
         Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(requestParamMapping);
         String defaultValue = requestParamMapping.defaultValue();
         String[] name = (String[]) annotationAttributes.getOrDefault("name", new String[0]);
@@ -223,22 +226,22 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         if (null == value) {
             value = defaultValue;
         }
-        /**
-         * 设置。
-         * @param instance instance
-         * @param field 字段
-         * @param value 值
-         */
+          /**
+           * 设置。
+           * @param instance instance
+           * @param field 字段
+           * @param value 值
+           */
         set(instance, field, value);
     }
 
-    /**
-     * 设置
-     *
-     * @param instance instance
-     * @param field 字段
-     * @param o o
-     */
+      /**
+       * 设置
+       *
+       * @param instance instance
+       * @param field 字段
+       * @param o o
+       */
     private void set(Object instance, Field field, Object o) {
         if (null == o) {
             return;
@@ -256,20 +259,20 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
 
-    /**
-     * 解析参数one
-     * @param parameter 参数
-     * @param mavContainer mav容器
-     * @param webRequest web请求
-     * @param binderFactory binder工厂
-     * @param ServletException servlet异常
-     */
+      /**
+       * 解析参数one
+       * @param parameter 参数
+       * @param mavContainer mav容器
+       * @param webRequest web请求
+       * @param binderFactory binder工厂
+       * @param ServletException servlet异常
+       */
     public Object resolveArgumentOne(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
                                      NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws ServletException, IOException {
         ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);
 
         if (MultiValueMap.class.isAssignableFrom(parameter.getParameterType())) {
- // multi值映射
+   // multi值映射
             Class<?> valueType = resolvableType.as(MultiValueMap.class).getGeneric(1).resolve();
             if (valueType == MultipartFile.class) {
                 MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);
@@ -296,7 +299,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
                 return result;
             }
         } else {
- // Regular 映射
+   // Regular 映射
             Class<?> valueType = resolvableType.asMap().getGeneric(1).resolve();
             if (valueType == MultipartFile.class) {
                 MultipartRequest multipartRequest = MultipartResolutionDelegate.resolveMultipartRequest(webRequest);

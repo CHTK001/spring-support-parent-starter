@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Tailscale Starter - Tailscale Funnel 集成模块
+
+    将本机 Spring 服务（server.port）通过 Tailscale Funnel 暴露为公网地址。
+    基于 utils-support-tailscale-starter（tailscale CLI 进程管理），提供 Spring Boot 自动配置。
+
+    @author CH
+    @version 4.0.0.53
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.51</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>spring-support-tailscale-starter</artifactId>
+    <name>Spring Support Tailscale Starter</name>
+    <description>Spring Boot 集成 Tailscale：自动将本机 Spring 服务（server.port）通过 Tailscale Funnel 暴露为公网地址。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 内网穿透标准 starter：提供 TunnelProvider SPI 与统一入口 /ms/tunnel -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-tunnel-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+        <!-- Tailscale CLI 进程管理客户端 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-tailscale-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- 测试：统一入口 /ms/tunnel/providers 可查看 Tailscale 提供方
+             注意：本模块的 spring-boot-starter-web 仅在可选范围（optional），
+             因此测试上下文仍需显式引入，否则嵌入式 Tomcat（TomcatServletWebServerAutoConfiguration）
+             不注册 ServletWebServerFactory bean，@SpringBootTest(RANDOM_PORT) 启动失败。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

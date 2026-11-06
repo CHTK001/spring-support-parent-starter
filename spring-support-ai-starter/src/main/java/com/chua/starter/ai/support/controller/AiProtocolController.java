@@ -407,7 +407,8 @@ public class AiProtocolController extends BaseAiController {
                         .data("{\"type\":\"content_block_stop\",\"index\":0}", MediaType.APPLICATION_JSON));
                 // 发送消息增量事件
                 emitter.send(SseEmitter.event().name("message_delta")
-                        .data("{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":0}}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null}"
+                                + ",\"usage\":{\"output_tokens\":0}}", MediaType.APPLICATION_JSON));
                 // 发送消息结束事件
                 emitter.send(SseEmitter.event().name("message_stop")
                         .data("{\"type\":\"message_stop\"}", MediaType.APPLICATION_JSON));
@@ -553,7 +554,8 @@ public class AiProtocolController extends BaseAiController {
                 // 发送内容部分添加事件
                 emitter.send(SseEmitter.event().name("response.content_part.added")
                         .data("{\"type\":\"response.content_part.added\",\"item_id\":\"" + messageId
-                                + "\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}}", MediaType.APPLICATION_JSON));
+                                + "\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\""
+                                + ",\"annotations\":[]}}", MediaType.APPLICATION_JSON));
 
                 // 分块发送文本增量事件
                 if (text != null && !text.isEmpty()) {

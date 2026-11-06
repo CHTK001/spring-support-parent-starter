@@ -5,6 +5,7 @@ import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
 import com.chua.starter.template.support.model.TemplateSourceInfo;
+import com.chua.starter.template.support.model.TemplateSourceDetail;
 import com.chua.starter.template.support.entity.TemplateInfo;
 import com.chua.starter.template.support.printer.PrinterConfig;
 import com.chua.starter.template.support.service.SourceSyncerRegistry;
@@ -80,6 +81,22 @@ public class TemplateController {
     @GetMapping("/{id}")
     public TemplateInfo getTemplate(@PathVariable String id) {
         return templateService.getTemplate(id);
+    }
+
+    /**
+     * 模板详情（按模板 ID 取信息）
+     *
+     * <p>回答「拿到这个模板之后需要什么」：自定义模板给出设计器产物；固定模板
+     * （三方同步）给出三方模板 ID、归属账号、推送渠道与占位符参数，字段形态对齐
+     * MessagePush 发送一条模板消息所需的 MessageRequest（templateId / contentType /
+     * content / templateParams）。</p>
+     *
+     * @param id 模板 标识
+     * @return 模板详情
+     */
+    @GetMapping("/{id}/detail")
+    public TemplateSourceDetail templateDetail(@PathVariable String id) {
+        return templateService.detail(id);
     }
 
     /**

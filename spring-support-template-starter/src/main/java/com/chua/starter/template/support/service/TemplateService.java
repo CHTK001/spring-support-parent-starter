@@ -5,6 +5,7 @@ import com.chua.starter.template.support.model.TemplateDesignerPayload;
 import com.chua.starter.template.support.model.TemplatePageQuery;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
 import com.chua.starter.template.support.model.TemplateSourceRequest;
+import com.chua.starter.template.support.model.TemplateSourceDetail;
 import com.chua.starter.template.support.entity.TemplateInfo;
 import com.chua.starter.template.support.printer.PrinterConfig;
 
@@ -73,6 +74,18 @@ public interface TemplateService {
      * @return 设计器完整数据
      */
     TemplateDesignerPayload designer(String id);
+
+    /**
+     * 模板详情（按模板 ID 取信息）
+     *
+     * <p>自定义模板（hiprint）直接由库内行给出；固定模板（message / paper）会向
+     * 来源模块补问一次，拿到三方模板 ID、归属账号、推送渠道与占位符参数，
+     * 字段形态对齐 { MessageRequest}（发送一条模板消息所需的东西）。</p>
+     *
+     * @param id 模板 标识（template_info_id）
+     * @return 模板详情
+     */
+    TemplateSourceDetail detail(String id);
 
     /**
      * 把来源模块（消息 / 组卷）的模板行接入统一模板库，幂等注册

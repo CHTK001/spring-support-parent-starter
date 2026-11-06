@@ -282,4 +282,11 @@ public class WorldSimController {
     public SysAiWorldAct finishAct(@PathVariable Long id, @PathVariable Integer actNo) {
         return worldSimService.finishAct(id, actNo);
     }
+
+    /** 演出正文（只读）：不传 actNo 返回全部已演幕次，传了只看那一幕 */
+    @GetMapping("/worlds/{id}/story")
+    public List<Map<String, Object>> listStory(@PathVariable Long id,
+                                               @RequestParam(required = false) Integer actNo) {
+        return worldSimService.listStories(id, actNo);
+    }
 }

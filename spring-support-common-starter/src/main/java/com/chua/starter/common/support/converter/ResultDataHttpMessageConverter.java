@@ -13,27 +13,27 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 
 /**
- * Fastjson for Spring MVC 转换器.
- * <p>
- * Compatible fastjson 1.2.x
- *
- * @author VictorZeng
- * @see AbstractHttpMessageConverter
- * @see GenericHttpMessageConverter
- * @since 2.0.2
- * @author CH
- */
+   * Fastjson for Spring MVC 转换器.
+   * <p>
+   * Compatible fastjson 1.2.x
+   *
+   * @author VictorZeng
+   * @see AbstractHttpMessageConverter
+   * @see GenericHttpMessageConverter
+   * @since 2.0.2
+   * @author CH
+   */
 
 @SuppressWarnings({"removal"})
 public class ResultDataHttpMessageConverter
         extends MappingJackson2HttpMessageConverter {
     @Override
-    /**
-     * 是否可以写入
-     * @param clazz 参数
-     * @param mediaType 参数
-     * @return 返回值
-    */
+      /**
+       * 是否可以写入
+       * @param clazz 参数
+       * @param mediaType 参数
+       * @return 返回值
+      */
     public boolean canWrite(Class<?> clazz, MediaType mediaType) {
         if(
                null != mediaType && mediaType.includes(MediaType.APPLICATION_JSON)
@@ -46,16 +46,17 @@ public class ResultDataHttpMessageConverter
 
 
     @Override
-    /**
-     * 写入内部
-     * @param object 对象
-     * @param outputMessage 参数
-     * @param type 参数
-     * @return 返回值
-     * @throws HttpMessageNotWritableException 异常
-     * @throws IOException 异常
-    */
-    protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
+      /**
+       * 写入内部
+       * @param object 对象
+       * @param outputMessage 参数
+       * @param type 参数
+       * @return 返回值
+       * @throws HttpMessageNotWritableException 异常
+       * @throws IOException 异常
+      */
+    protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException
+        , HttpMessageNotWritableException {
         super.writeInternal(object, type, outputMessage);
     }
 }

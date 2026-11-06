@@ -52,6 +52,12 @@ public class TsharkSqliteSourceRegistry {
             "ms_tshark_packet_info TEXT," +
             "ms_tshark_packet_raw TEXT," +
             "ms_tshark_packet_restored TEXT," +
+            "ms_tshark_packet_http_req TEXT," +
+            "ms_tshark_packet_http_resp TEXT," +
+            "ms_tshark_packet_http_body TEXT," +
+            "ms_tshark_packet_http_type TEXT," +
+            "ms_tshark_packet_http_encoding TEXT," +
+            "ms_tshark_packet_http_size INTEGER," +
             "create_name TEXT," +
             "create_by INTEGER," +
             "create_time TEXT," +
@@ -162,6 +168,7 @@ public class TsharkSqliteSourceRegistry {
                     // 握手/对话窗口的 4 元组等值匹配
                     st.execute(INDEX_SESSION_PAIRS);
                 }
+                upgradeColumns(ds);
                 DataSourceContextSupport.addDatasource(dbName(sessionId), ds);
                 pools.put(sessionId, ds);
                 dbPaths.put(sessionId, dbPath);
@@ -170,6 +177,37 @@ public class TsharkSqliteSourceRegistry {
                 log.error("[tshark] SQLite 报文库初始化失败 sessionId={} db={}", sessionId, dbPath, e);
                 throw new IllegalStateException("初始化会话报文库失败: " + sessionId, e);
             }
+        }
+    }
+
+    /**
+     * 老库补列。
+     *
+     * <p>{@code CREATE TABLE IF NOT EXISTS} 不会给已存在的表加列，而每个会话的报文库
+     * 是独立 .db 文件、跨版本一直留着。新增的 HTTP 头 / 正文列必须在这里幂等补齐，
+     * 否则老会话一插入就报「no such column」，整场抓包的报文一条都进不来。</p>
+     *
+     * @param ds 该会话的 SQLite 连接池
+     */
+    private static void upgradeColumns(HikariDataSource ds) {
+        String[] added = {
+                "ms_tshark_packet_http_req TEXT",
+                "ms_tshark_packet_http_resp TEXT",
+                "ms_tshark_packet_http_body TEXT",
+                "ms_tshark_packet_http_type TEXT",
+                "ms_tshark_packet_http_encoding TEXT",
+                "ms_tshark_packet_http_size INTEGER"
+        };
+        try (Connection c = ds.getConnection()) {
+            for (String column : added) {
+                try (Statement st = c.createStatement()) {
+                    st.execute("ALTER TABLE ms_tshark_packet ADD COLUMN " + column);
+                } catch (Exception ignore) {
+                    // 列已存在：SQLite 的 ALTER TABLE 没有 IF NOT EXISTS，重复执行必然抛错，忽略
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[tshark] 升级报文库列失败 pool={} reason={}", ds.getPoolName(), e.getMessage());
         }
     }
 

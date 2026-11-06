@@ -142,6 +142,11 @@ public class ApmRegistry implements AutoCloseable {
             list.add(new ApmDescriptor.ApmCandidate(provider.name(), status.available(),
                     provider.mode(), status.version(), status.endpoint(), status.message()));
         }
+        if (!properties.isEnabled()) {
+            // 关掉就是关掉：present 仍为 true 会让前端渲染观测页，然后每个接口都报「模块已关闭」，
+            // 用户看到的是「页面在、数据没了」。这里提前降级，原因由 absenceReason() 给。
+            return ApmDescriptor.absent(false, absenceReason(), list);
+        }
         ApmProvider selected = current;
         if (selected == null) {
             return ApmDescriptor.absent(properties.isEnabled(), absenceReason(), list);
