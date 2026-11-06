@@ -70,9 +70,9 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
     private List<SoftSoftware> scanDpkg() {
         List<SoftSoftware> list = new ArrayList<>();
         try {
-            Process process = Runtime.getRuntime().exec(
-                    new String[]{"bash", "-c", "dpkg -l | grep '^ii' | awk '{print $2, $3}'"}
-            );
+            Process process = new ProcessBuilder(
+                    "bash", "-c", "dpkg -l | grep '^ii' | awk '{print $2, $3}'"
+            ).start();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
@@ -103,9 +103,9 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
     private List<SoftSoftware> scanRpm() {
         List<SoftSoftware> list = new ArrayList<>();
         try {
-            Process process = Runtime.getRuntime().exec(
-                    new String[]{"bash", "-c", "rpm -qa --qf '%{NAME} %{VERSION}\\n'"}
-            );
+            Process process = new ProcessBuilder(
+                    "bash", "-c", "rpm -qa --qf '%{NAME} %{VERSION}\\n'"
+            ).start();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;

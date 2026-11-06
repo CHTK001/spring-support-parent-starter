@@ -1,10 +1,19 @@
 package com.chua.starter.datasearch.configuration;
 
+import com.chua.starter.datasearch.controller.ExchangeRateV2Controller;
+import com.chua.starter.datasearch.controller.HolidayV2Controller;
+import com.chua.starter.datasearch.controller.IpLookupV2Controller;
 import com.chua.starter.datasearch.controller.LocationV2Controller;
 import com.chua.starter.datasearch.controller.TyphoonV2Controller;
 import com.chua.starter.datasearch.controller.WeatherV2Controller;
+import com.chua.starter.datasearch.service.ExchangeRateDataService;
+import com.chua.starter.datasearch.service.HolidayDataService;
+import com.chua.starter.datasearch.service.IpLookupDataService;
 import com.chua.starter.datasearch.service.TyphoonDataService;
 import com.chua.starter.datasearch.service.WeatherDataService;
+import com.chua.starter.datasearch.service.impl.ExchangeRateDataServiceImpl;
+import com.chua.starter.datasearch.service.impl.HolidayDataServiceImpl;
+import com.chua.starter.datasearch.service.impl.IpLookupDataServiceImpl;
 import com.chua.starter.datasearch.service.impl.TyphoonDataServiceImpl;
 import com.chua.starter.datasearch.service.impl.WeatherDataServiceImpl;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -16,9 +25,9 @@ import org.springframework.context.annotation.Bean;
 /**
  * 数据检索服务化自动配置。
  *
- * <p>天气 / 定位 / 台风三个控制器与两个数据服务由本配置注册，宿主引入依赖即生效，
- * 不要求 {@code @ComponentScan} 覆盖 {@code com.chua.starter.datasearch}（多数宿主只扫自己的
- * 子包，扫不到这里）。</p>
+ * <p>天气 / 定位 / 台风 / 汇率 / 节假日 / IP 归属地六个控制器与五个数据服务由本配置注册，
+ * 宿主引入依赖即生效，不要求 {@code @ComponentScan} 覆盖 {@code com.chua.starter.datasearch}
+ * （多数宿主只扫自己的子包，扫不到这里）。</p>
  *
  * <p>生效条件：</p>
  * <ul>
@@ -64,6 +73,39 @@ public class DataSearchServiceConfiguration {
     }
 
     /**
+     * 汇率数据服务（最新价 + 周期涨跌 + 周期极值）
+     *
+     * @return 汇率数据服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ExchangeRateDataService exchangeRateDataService() {
+        return new ExchangeRateDataServiceImpl();
+    }
+
+    /**
+     * 节假日数据服务（HolidayProvider SPI 归一成前端契约）
+     *
+     * @return 节假日数据服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public HolidayDataService holidayDataService() {
+        return new HolidayDataServiceImpl();
+    }
+
+    /**
+     * IP 归属地数据服务（本地 IP 库解析，无外呼）
+     *
+     * @return IP 归属地数据服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public IpLookupDataService ipLookupDataService() {
+        return new IpLookupDataServiceImpl();
+    }
+
+    /**
      * 顶栏天气接口
      *
      * @param weatherDataService 天气数据服务
@@ -97,5 +139,42 @@ public class DataSearchServiceConfiguration {
     @ConditionalOnMissingBean
     public TyphoonV2Controller typhoonV2Controller(TyphoonDataService typhoonDataService) {
         return new TyphoonV2Controller(typhoonDataService);
+    }
+
+    /**
+     * 顶栏汇率接口
+     *
+     * @param exchangeRateDataService 汇率数据服务
+     * @return 汇率控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ExchangeRateV2Controller exchangeRateV2Controller(
+            ExchangeRateDataService exchangeRateDataService) {
+        return new ExchangeRateV2Controller(exchangeRateDataService);
+    }
+
+    /**
+     * 节假日前台接口
+     *
+     * @param holidayDataService 节假日数据服务
+     * @return 节假日控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public HolidayV2Controller holidayV2Controller(HolidayDataService holidayDataService) {
+        return new HolidayV2Controller(holidayDataService);
+    }
+
+    /**
+     * IP 归属地接口
+     *
+     * @param ipLookupDataService IP 归属地数据服务
+     * @return IP 归属地控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public IpLookupV2Controller ipLookupV2Controller(IpLookupDataService ipLookupDataService) {
+        return new IpLookupV2Controller(ipLookupDataService);
     }
 }

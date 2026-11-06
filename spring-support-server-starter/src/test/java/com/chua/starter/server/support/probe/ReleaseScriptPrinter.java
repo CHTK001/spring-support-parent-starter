@@ -38,7 +38,6 @@ public final class ReleaseScriptPrinter {
     public static void main(String[] args) {
         if (args.length < 6) {
             System.err.println("usage: ReleaseScriptPrinter <linux|windows> <type> <entry> <path> <log> <appName> [port]"); // [P3C E1 豁免]
-            System.exit(2);
         }
         boolean windows = "linux".equalsIgnoreCase(args[0]) ? false : "windows".equalsIgnoreCase(args[0]);
         String type = args[1];

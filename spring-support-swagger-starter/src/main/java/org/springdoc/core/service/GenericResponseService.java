@@ -263,7 +263,8 @@ public class GenericResponseService implements ApplicationContextAware {
      * @param genericMapResponse the default generic API response
      * @return the 过滤器 和 enriched 响应
      */
-    private Map<String, ApiResponse> filterAndEnrichGenericMapResponseByDeclarations(HandlerMethod handlerMethod, Map<String, ApiResponse> genericMapResponse) {
+    private Map<String, ApiResponse> filterAndEnrichGenericMapResponseByDeclarations(
+            HandlerMethod handlerMethod, Map<String, ApiResponse> genericMapResponse) {
         if (operationService.getJavadocProvider() != null) {
             JavadocProvider javadocProvider = operationService.getJavadocProvider();
             for (Map.Entry<String, ApiResponse> genericResponse : genericMapResponse.entrySet()) {
@@ -328,7 +329,8 @@ public class GenericResponseService implements ApplicationContextAware {
                         JavadocProvider javadocProvider = operationService.getJavadocProvider();
                         methodAttributes.setJavadocReturn(javadocProvider.getMethodJavadocReturn(methodParameter.getMethod()));
                     }
-                    Map<String, ApiResponse> apiResponses = computeResponseFromDoc(components, methodParameter, apiResponsesOp, methodAttributes, springDocConfigProperties.isOpenapi31());
+                    Map<String, ApiResponse> apiResponses = computeResponseFromDoc(
+            components, methodParameter, apiResponsesOp, methodAttributes, springDocConfigProperties.isOpenapi31());
                     buildGenericApiResponses(components, methodParameter, apiResponsesOp, methodAttributes);
                     apiResponses.forEach(controllerAdviceInfoApiResponseMap::put);
                 }
@@ -349,7 +351,9 @@ public class GenericResponseService implements ApplicationContextAware {
      */
     private boolean isResponseEntityExceptionHandlerMethod(Method m) {
         if (AnnotatedElementUtils.hasAnnotation(m.getDeclaringClass(), ControllerAdvice.class)) {
-            return responseEntityExceptionHandlerClass != null && (responseEntityExceptionHandlerClass.isAssignableFrom(m.getDeclaringClass()) && ReflectionUtils.findMethod(responseEntityExceptionHandlerClass, m.getName(), m.getParameterTypes()) != null);
+            return responseEntityExceptionHandlerClass != null
+            && (responseEntityExceptionHandlerClass.isAssignableFrom(m.getDeclaringClass())
+            && ReflectionUtils.findMethod(responseEntityExceptionHandlerClass, m.getName(), m.getParameterTypes()) != null);
         }
         return false;
     }
@@ -367,7 +371,8 @@ public class GenericResponseService implements ApplicationContextAware {
     private Map<String, ApiResponse> computeResponseFromDoc(Components components, MethodParameter methodParameter, ApiResponses apiResponsesOp,
                                                             MethodAttributes methodAttributes, boolean openapi31) {
         // Parsing documentation, if present
-        Set<io.swagger.v3.oas.annotations.responses.ApiResponse> responsesArray = getApiResponses(Objects.requireNonNull(methodParameter.getMethod()));
+        Set<io.swagger.v3.oas.annotations.responses.ApiResponse> responsesArray = getApiResponses(
+            Objects.requireNonNull(methodParameter.getMethod()));
         if (!responsesArray.isEmpty()) {
             methodAttributes.setWithApiResponseDoc(true);
             for (io.swagger.v3.oas.annotations.responses.ApiResponse apiResponseAnnotations : responsesArray) {
@@ -414,7 +419,8 @@ public class GenericResponseService implements ApplicationContextAware {
  // 可用
             String httpCode = evaluateResponseStatus(methodParameter.getMethod(), Objects.requireNonNull(methodParameter.getMethod()).getClass(), true);
             if (Objects.nonNull(httpCode)) {
-                ApiResponse apiResponse = methodAttributes.getGenericMapResponse().containsKey(httpCode) ? methodAttributes.getGenericMapResponse().get(httpCode)
+                ApiResponse apiResponse = methodAttributes.getGenericMapResponse().containsKey(httpCode)
+            ? methodAttributes.getGenericMapResponse().get(httpCode)
                         : new ApiResponse();
                 buildApiResponses(components, methodParameter, apiResponsesOp, methodAttributes, httpCode, apiResponse, true);
             }
@@ -436,7 +442,8 @@ public class GenericResponseService implements ApplicationContextAware {
  // API 响应 at operation 和 @api响应 注解
             for (Map.Entry<String, ApiResponse> entry : apiResponsesOp.entrySet()) {
                 String httpCode = entry.getKey();
-                boolean methodAttributesCondition = !methodAttributes.isMethodOverloaded() || (methodAttributes.isMethodOverloaded() && isValidHttpCode(httpCode, methodParameter));
+                boolean methodAttributesCondition = !methodAttributes.isMethodOverloaded()
+            || (methodAttributes.isMethodOverloaded() && isValidHttpCode(httpCode, methodParameter));
                 if (!genericMapResponse.containsKey(httpCode) && methodAttributesCondition) {
                     ApiResponse apiResponse = entry.getValue();
                     buildApiResponses(components, methodParameter, apiResponsesOp, methodAttributes, httpCode, apiResponse, false);
@@ -444,13 +451,15 @@ public class GenericResponseService implements ApplicationContextAware {
             }
             if (AnnotatedElementUtils.hasAnnotation(methodParameter.getMethod(), ResponseStatus.class)) {
  // 处理 the 大小写 with @响应状态, if the specified 响应 是否 not already 处理 explicitly
-                String httpCode = evaluateResponseStatus(methodParameter.getMethod(), Objects.requireNonNull(methodParameter.getMethod()).getClass(), false);
+                String httpCode = evaluateResponseStatus(
+            methodParameter.getMethod(), Objects.requireNonNull(methodParameter.getMethod()).getClass(), false);
                 if (Objects.nonNull(httpCode) && !apiResponsesOp.containsKey(httpCode) && !apiResponsesOp.containsKey(ApiResponses.DEFAULT)) {
                     buildApiResponses(components, methodParameter, apiResponsesOp, methodAttributes, httpCode, new ApiResponse(), false);
                 }
             }
         } else {
-            String httpCode = evaluateResponseStatus(methodParameter.getMethod(), Objects.requireNonNull(methodParameter.getMethod()).getClass(), false);
+            String httpCode = evaluateResponseStatus(
+            methodParameter.getMethod(), Objects.requireNonNull(methodParameter.getMethod()).getClass(), false);
             if (Objects.nonNull(httpCode)) {
                 buildApiResponses(components, methodParameter, apiResponsesOp, methodAttributes, httpCode, new ApiResponse(), false);
             }
@@ -690,7 +699,8 @@ public class GenericResponseService implements ApplicationContextAware {
      */
     private ControllerAdviceBean getControllerAdviceBean(List<ControllerAdviceBean> controllerAdviceBeans, Object controllerAdvice) {
         return controllerAdviceBeans.stream()
-                .filter(controllerAdviceBean -> (controllerAdviceBean.getBeanType() != null && controllerAdviceBean.getBeanType().isAssignableFrom(controllerAdvice.getClass())))
+                .filter(controllerAdviceBean -> (controllerAdviceBean.getBeanType() != null
+            && controllerAdviceBean.getBeanType().isAssignableFrom(controllerAdvice.getClass())))
                 .findFirst()
                 .orElse(null);
     }
@@ -785,7 +795,8 @@ public class GenericResponseService implements ApplicationContextAware {
      * @return the 布尔值
      */
     private boolean isHttpCodePresent(String httpCode, Set<io.swagger.v3.oas.annotations.responses.ApiResponse> responseSet) {
-        return !responseSet.isEmpty() && responseSet.stream().anyMatch(apiResponseAnnotations -> httpCode.equals(apiResponseAnnotations.responseCode()));
+        return !responseSet.isEmpty() && responseSet.stream().anyMatch(
+            apiResponseAnnotations -> httpCode.equals(apiResponseAnnotations.responseCode()));
     }
 
     @Override

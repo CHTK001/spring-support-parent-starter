@@ -118,12 +118,13 @@ public interface ReleaseService {
     ReturnResult<String> getProjectLog(Long id);
 
     /**
-     * 开启实时日志（返回 sessionId，日志行经 socket 推送）
+     * 开启实时日志（返回 sessionId，日志行经发布管理全局 SSE 推送）
      *
-     * @param id 项目ID
+     * @param id       项目ID
+     * @param clientId 发布管理 SSE 客户端标识
      * @return sessionId
      */
-    ReturnResult<String> startProjectLog(Long id);
+    ReturnResult<String> startProjectLog(Long id, String clientId);
 
     /**
      * 停止实时日志

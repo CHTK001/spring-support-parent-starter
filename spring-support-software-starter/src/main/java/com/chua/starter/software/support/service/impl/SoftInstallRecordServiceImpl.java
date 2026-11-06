@@ -36,66 +36,67 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 安装记录表 服务 实现
- *
- * @since 2026/7/25
- * @author CH
- */
+   * 安装记录表 服务 实现
+   *
+   * @since 2026/7/25
+   * @author CH
+   */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordMapper, SoftInstallRecord> implements SoftInstallRecordService {
+                public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordMapper, SoftInstallRecord
+                    > implements SoftInstallRecordService {
 
-    /**
-     * 安装记录映射器
-     */
+      /**
+       * 安装记录映射器
+       */
     private final SoftInstallRecordMapper installRecordMapper;
 
-    /**
-     * 软件服务
-     */
+      /**
+       * 软件服务
+       */
     private final SoftSoftwareService softwareService;
 
-    /**
-     * 软件映射器(用于更新安装计数)
-     */
+      /**
+       * 软件映射器(用于更新安装计数)
+       */
     private final SoftSoftwareMapper softwareMapper;
 
-    /**
-     * 软件源服务
-     */
+      /**
+       * 软件源服务
+       */
     private final SoftSourceService sourceService;
 
-    /**
-     * 软件源SPI列表
-     */
+      /**
+       * 软件源SPI列表
+       */
     private final List<SoftwareSource> softwareSources;
 
-    /**
-     * 事务模板
-     */
+      /**
+       * 事务模板
+       */
     private final TransactionTemplate transactionTemplate;
 
-    /**
-     * 安装进度发布器
-     *
-     * <p>用 {@link ObjectProvider} 延迟解析：本模块可脱离实时通道独立启动（如单独跑
-     * {@code SoftStarterApplication}），缺 Bean 时退化为静默跳过，不允许因推送失败打断安装。</p>
-     */
+      /**
+       * 安装进度发布器
+       *
+       * <p>用 {@link ObjectProvider} 延迟解析：本模块可脱离实时通道独立启动（如单独跑
+       * {@code SoftStarterApplication}），缺 Bean 时退化为静默跳过，不允许因推送失败打断安装。</p>
+       */
     private final ObjectProvider<InstallProgressPublisher> progressPublisherProvider;
 
     @Override
-    /**
-     * Install
-     * @param request 参数
-     * @return 返回值
-    */
+      /**
+       * Install
+       * @param request 参数
+       * @return 返回值
+      */
     public ReturnResult<InstallDetailResponse> install(InstallRequest request) {
         SoftSoftware software = softwareService.getById(request.softwareId());
         if (software == null) {
             return ReturnResult.illegal("软件不存在");
         }
-        // 检查是否已安装
+          // 检查是否已安装
         SoftInstallRecord exist = getInstalledRecord(request.softwareId(), request.userId(), request.deviceId());
         if (exist != null && InstallStatus.INSTALLED.getValue() == exist.getInstallRecordStatus()) {
             return ReturnResult.illegal("软件已安装");
@@ -104,14 +105,14 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         if (source == null) {
             return ReturnResult.illegal("软件源不存在");
         }
-        // 获取安装源
+          // 获取安装源
         SoftwareSource installSource = getSoftwareSource(source);
         if (installSource == null) {
             return ReturnResult.illegal("不支持的软件源");
         }
 
         return transactionTemplate.execute(status -> {
-            // 创建安装记录
+              // 创建安装记录
             SoftInstallRecord record = new SoftInstallRecord();
             record.setInstallRecordId(IdUtils.fastUuid());
             record.setInstallRecordSoftwareId(request.softwareId());
@@ -125,37 +126,37 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             record.setInstallRecordStartTime(LocalDateTime.now());
             record.setInstallRecordInstallPath(request.installPath());
             installRecordMapper.insert(record);
-            // 先播一帧 0%：发起人的页面可能在请求返回前就已经在等进度，
-            // 不必等到第一个 updateProgress 才开始显示
+              // 先播一帧 0%：发起人的页面可能在请求返回前就已经在等进度，
+              // 不必等到第一个 updateProgress 才开始显示
             publishProgress(record, "开始安装");
 
             try {
-                // 模拟进度
-                /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  // 模拟进度
+                  /**
+                   * 更新进步。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 updateProgress(record.getInstallRecordId(), 30, "准备安装");
                 SoftwareSourceResult result = installSource.install(source, software, request.installPath());
-                /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 更新进步。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 updateProgress(record.getInstallRecordId(), 100, result.message());
-                /**
-                 * 完成install。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 完成install。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 completeInstall(record.getInstallRecordId());
-                // 更新软件安装计数
+                  // 更新软件安装计数
                 software.setSoftwareInstallCount(software.getSoftwareInstallCount() == null ? 1 : software.getSoftwareInstallCount() + 1);
                 softwareMapper.updateById(software);
                 return ReturnResult.ok(toDetailResponse(record, software));
             } catch (Exception e) {
-                /**
-                 * 失败install。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 失败install。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 failInstall(record.getInstallRecordId(), e.getMessage());
                 return ReturnResult.illegal("安装失败: " + e.getMessage());
             }
@@ -163,13 +164,13 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * Uninstall
-     * @param deviceId 字符串
-     * @param softwareId 字符串
-     * @param userId 字符串
-     * @return 返回值
-    */
+      /**
+       * Uninstall
+       * @param deviceId 字符串
+       * @param softwareId 字符串
+       * @param userId 字符串
+       * @return 返回值
+      */
     public ReturnResult<InstallDetailResponse> uninstall(String softwareId, String userId, String deviceId) {
         SoftSoftware software = softwareService.getById(softwareId);
         if (software == null) {
@@ -198,23 +199,23 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             publishProgress(record, "开始卸载");
 
             try {
-                /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 更新进步。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 updateProgress(record.getInstallRecordId(), 50, "正在卸载");
                 SoftwareSourceResult result = uninstallSource.uninstall(source, software, record.getInstallRecordInstallPath());
-                /**
-                 * 完成uninstall。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 完成uninstall。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 completeUninstall(record.getInstallRecordId());
                 return ReturnResult.ok(toDetailResponse(record, software));
             } catch (Exception e) {
-                /**
-                 * 失败uninstall。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 失败uninstall。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 failUninstall(record.getInstallRecordId(), e.getMessage());
                 return ReturnResult.illegal("卸载失败: " + e.getMessage());
             }
@@ -222,14 +223,14 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 更新版本
-     * @param deviceId 字符串
-     * @param softwareId 字符串
-     * @param targetVersion 字符串
-     * @param userId 字符串
-     * @return 返回值
-    */
+      /**
+       * 更新版本
+       * @param deviceId 字符串
+       * @param softwareId 字符串
+       * @param targetVersion 字符串
+       * @param userId 字符串
+       * @return 返回值
+      */
     public ReturnResult<InstallDetailResponse> updateVersion(String softwareId, String userId, String deviceId, String targetVersion) {
         SoftSoftware software = softwareService.getById(softwareId);
         if (software == null) {
@@ -262,16 +263,16 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             publishProgress(record, "开始更新");
 
             try {
-                /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 更新进步。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 updateProgress(record.getInstallRecordId(), 50, "正在更新");
                 SoftwareSourceResult result = softwareSourceImpl.update(source, software, targetVersion, record.getInstallRecordInstallPath());
-                /**
-                 * 完成install。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
-                 */
+                  /**
+                   * 完成install。
+                   * @param record.getInstallRecordId( record.获取installrecordid(
+                   */
                 completeInstall(record.getInstallRecordId());
                 record.setInstallRecordVersion(targetVersion);
                 installRecordMapper.updateById(record);
@@ -288,13 +289,13 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 更新进步
-     * @param message 字符串
-     * @param progress 整数
-     * @param recordId 字符串
-     * @return 返回值
-    */
+      /**
+       * 更新进步
+       * @param message 字符串
+       * @param progress 整数
+       * @param recordId 字符串
+       * @return 返回值
+      */
     public ReturnResult<Boolean> updateProgress(String recordId, Integer progress, String message) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -309,21 +310,21 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         return ReturnResult.ok(true);
     }
 
-    /**
-     * 推送一帧安装进度
-     *
-     * <p>推送失败只意味着页面看不到这一帧，不能让已经落库的状态被回滚或把接口变成 500，
-     * 因此这里吞掉所有异常（分发器内部另有兜底，这里再兜一层是防止 SPI 实现违规抛出）。</p>
-     *
-     * <p><b>为什么等到事务提交再推</b>：安装流程跑在 {@code transactionTemplate} 里，
-     * 如果在事务内直接广播「安装完成 100%」，而随后的落库语句失败导致事务回滚，
-     * 前端会看到一个数据库里并不存在的成功状态，刷新列表又变回失败——这种前后矛盾
-     * 比晚几百毫秒更糟。因此在事务活跃时把事件快照挂到提交回调上，
-     * 回滚则整帧丢弃，不做「先说成功再撤回」。</p>
-     *
-     * @param record  安装记录（进度推送的载荷来源）
-     * @param message 进度说明，可为 {@code null}
-     */
+      /**
+       * 推送一帧安装进度
+       *
+       * <p>推送失败只意味着页面看不到这一帧，不能让已经落库的状态被回滚或把接口变成 500，
+       * 因此这里吞掉所有异常（分发器内部另有兜底，这里再兜一层是防止 SPI 实现违规抛出）。</p>
+       *
+       * <p><b>为什么等到事务提交再推</b>：安装流程跑在 {@code transactionTemplate} 里，
+       * 如果在事务内直接广播「安装完成 100%」，而随后的落库语句失败导致事务回滚，
+       * 前端会看到一个数据库里并不存在的成功状态，刷新列表又变回失败——这种前后矛盾
+       * 比晚几百毫秒更糟。因此在事务活跃时把事件快照挂到提交回调上，
+       * 回滚则整帧丢弃，不做「先说成功再撤回」。</p>
+       *
+       * @param record  安装记录（进度推送的载荷来源）
+       * @param message 进度说明，可为 {@code null}
+       */
     private void publishProgress(SoftInstallRecord record, String message) {
         if (record == null) {
             return;
@@ -332,9 +333,9 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         try {
             publisher = progressPublisherProvider.getIfAvailable();
         } catch (Exception e) {
-            // 容器里出现了多个 InstallProgressPublisher（业务方自建实现与本模块兜底并存）时，
-            // getIfAvailable 会抛 NoUniqueBeanDefinitionException。这里退化为「这一帧不发」，
-            // 而不是让一次可用的安装因为装配歧义变成接口 500。
+              // 容器里出现了多个 InstallProgressPublisher（业务方自建实现与本模块兜底并存）时，
+              // getIfAvailable 会抛 NoUniqueBeanDefinitionException。这里退化为「这一帧不发」，
+              // 而不是让一次可用的安装因为装配歧义变成接口 500。
             log.warn("[Software][Progress] 进度发布器装配歧义，跳过本帧: recordId={}, reason={}",
                     record.getInstallRecordId(), e.getMessage());
             return;
@@ -344,7 +345,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         }
         InstallProgressEvent event;
         try {
-            // 先快照：事务提交前记录对象还可能被后续 set 改掉（如完成安装时回填版本号）
+              // 先快照：事务提交前记录对象还可能被后续 set 改掉（如完成安装时回填版本号）
             event = InstallProgressEvent.of(record, message);
         } catch (Exception e) {
             log.warn("[Software][Progress] 进度事件构造失败: recordId={}, reason={}",
@@ -355,11 +356,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 完成install
-     * @param recordId 字符串
-     * @return 返回值
-    */
+      /**
+       * 完成install
+       * @param recordId 字符串
+       * @return 返回值
+      */
     public ReturnResult<Boolean> completeInstall(String recordId) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -380,12 +381,12 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 失败install
-     * @param errorMessage 字符串
-     * @param recordId 字符串
-     * @return 返回值
-    */
+      /**
+       * 失败install
+       * @param errorMessage 字符串
+       * @param recordId 字符串
+       * @return 返回值
+      */
     public ReturnResult<Boolean> failInstall(String recordId, String errorMessage) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -403,11 +404,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 完成uninstall
-     * @param recordId 字符串
-     * @return 返回值
-    */
+      /**
+       * 完成uninstall
+       * @param recordId 字符串
+       * @return 返回值
+      */
     public ReturnResult<Boolean> completeUninstall(String recordId) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -428,12 +429,12 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 失败uninstall
-     * @param errorMessage 字符串
-     * @param recordId 字符串
-     * @return 返回值
-    */
+      /**
+       * 失败uninstall
+       * @param errorMessage 字符串
+       * @param recordId 字符串
+       * @return 返回值
+      */
     public ReturnResult<Boolean> failUninstall(String recordId, String errorMessage) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -451,11 +452,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 列表bysoftwareid
-     * @param softwareId 字符串
-     * @return 返回值
-    */
+      /**
+       * 列表bysoftwareid
+       * @param softwareId 字符串
+       * @return 返回值
+      */
     public List<SoftInstallRecord> listBySoftwareId(String softwareId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
                 .eq(SoftInstallRecord::getInstallRecordSoftwareId, softwareId)
@@ -463,11 +464,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 列表by用户标识
-     * @param userId 字符串
-     * @return 返回值
-    */
+      /**
+       * 列表by用户标识
+       * @param userId 字符串
+       * @return 返回值
+      */
     public List<SoftInstallRecord> listByUserId(String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
                 .eq(SoftInstallRecord::getInstallRecordUserId, userId)
@@ -475,11 +476,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 列表installedby用户标识
-     * @param userId 字符串
-     * @return 返回值
-    */
+      /**
+       * 列表installedby用户标识
+       * @param userId 字符串
+       * @return 返回值
+      */
     public List<SoftInstallRecord> listInstalledByUserId(String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
                 .eq(SoftInstallRecord::getInstallRecordUserId, userId)
@@ -487,13 +488,13 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 获取installedrecord
-     * @param deviceId 字符串
-     * @param softwareId 字符串
-     * @param userId 字符串
-     * @return 返回值
-    */
+      /**
+       * 获取installedrecord
+       * @param deviceId 字符串
+       * @param softwareId 字符串
+       * @param userId 字符串
+       * @return 返回值
+      */
     public SoftInstallRecord getInstalledRecord(String softwareId, String userId, String deviceId) {
         LambdaQueryWrapper<SoftInstallRecord> w = new LambdaQueryWrapper<>();
         w.eq(SoftInstallRecord::getInstallRecordSoftwareId, softwareId)
@@ -504,11 +505,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 获取installedsoftware标识
-     * @param userId 字符串
-     * @return 返回值
-    */
+      /**
+       * 获取installedsoftware标识
+       * @param userId 字符串
+       * @return 返回值
+      */
     public List<String> getInstalledSoftwareIds(String userId) {
         List<SoftInstallRecord> records = listInstalledByUserId(userId);
         if (CollectionUtils.isEmpty(records)) {
@@ -521,11 +522,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
-    /**
-     * 获取installdetail
-     * @param recordId 字符串
-     * @return 返回值
-    */
+      /**
+       * 获取installdetail
+       * @param recordId 字符串
+       * @return 返回值
+      */
     public ReturnResult<InstallDetailResponse> getInstallDetail(String recordId) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -538,12 +539,12 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         return ReturnResult.ok(toDetailResponse(record, software));
     }
 
-    /**
-     * 获取可用的软件源实现
-     *
-     * @param source 软件源配置
-     * @return 软件源实现，如果没有可用实现则返回null
-     */
+      /**
+       * 获取可用的软件源实现
+       *
+       * @param source 软件源配置
+       * @return 软件源实现，如果没有可用实现则返回null
+       */
     private SoftwareSource getSoftwareSource(SoftSource source) {
         for (SoftwareSource softwareSource : softwareSources) {
             if (softwareSource.support(source)) {
@@ -553,13 +554,13 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
         return null;
     }
 
-    /**
-     * 转换为详情响应对象
-     *
-     * @param record 安装记录
-     * @param software 软件信息
-     * @return 详情响应
-     */
+      /**
+       * 转换为详情响应对象
+       *
+       * @param record 安装记录
+       * @param software 软件信息
+       * @return 详情响应
+       */
     private InstallDetailResponse toDetailResponse(SoftInstallRecord record, SoftSoftware software) {
         InstallDetailResponse response = new InstallDetailResponse();
         response.setInstallRecordId(record.getInstallRecordId());

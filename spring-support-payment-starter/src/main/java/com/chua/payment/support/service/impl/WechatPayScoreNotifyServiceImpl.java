@@ -19,35 +19,35 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 微信支付分回调服务实现，处理微信支付分异步通知并触发订单状态变更。
- *
- * @author CH
- * @since 4.0.0.50
- */
+   * 微信支付分回调服务实现，处理微信支付分异步通知并触发订单状态变更。
+   *
+   * @author CH
+   * @since 4.0.0.50
+   */
 @Service
 public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreNotifyService {
 
-    /**
-     * 商户渠道映射器
-     */
+      /**
+       * 商户渠道映射器
+       */
     private final MerchantChannelMapper merchantChannelMapper;
-    /**
-     * 支付渠道网关注册表
-     */
+      /**
+       * 支付渠道网关注册表
+       */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
-    /**
-     * 微信支付分订单服务
-     */
+      /**
+       * 微信支付分订单服务
+       */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
-    /**
-     * 构造微信支付分回调服务。
-     * @param merchantChannelService 商户渠道服务
-     * @param objectMapper 对象映射器
-     * @param merchantChannelMapper 商户渠道映射器
-     * @param providerGatewayRegistry 支付渠道网关注册表
-     * @param wechatPayScoreOrderService 微信支付分订单服务
-     */
+      /**
+       * 构造微信支付分回调服务。
+       * @param merchantChannelService 商户渠道服务
+       * @param objectMapper 对象映射器
+       * @param merchantChannelMapper 商户渠道映射器
+       * @param providerGatewayRegistry 支付渠道网关注册表
+       * @param wechatPayScoreOrderService 微信支付分订单服务
+       */
     public WechatPayScoreNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                            ObjectMapper objectMapper,
                                            MerchantChannelMapper merchantChannelMapper,
@@ -61,23 +61,24 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /**
-     * 处理微信支付分通知
-     * @param channelId 渠道标识
-     * @param outOrderNo 出订单号
-     * @param serialNumber 平台证书序列号
-     * @param timestamp 时间戳
-     * @param nonce 随机字符串
-     * @param signature 签名值
-     * @param signType 签名类型
-     * @param body 请求主体
-     * @param dto dto
-     * @return 解析后的通知报文
-     */
+      /**
+       * 处理微信支付分通知
+       * @param channelId 渠道标识
+       * @param outOrderNo 出订单号
+       * @param serialNumber 平台证书序列号
+       * @param timestamp 时间戳
+       * @param nonce 随机字符串
+       * @param signature 签名值
+       * @param signType 签名类型
+       * @param body 请求主体
+       * @param dto dto
+       * @return 解析后的通知报文
+       */
     public TencentWechatPayScoreNotifyPayload handleNotify(WechatPayScoreNotifyDTO dto) {
         MerchantChannel channel = requireEnabledWechatChannel(dto.channelId());
         TencentWechatPayScoreNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
-                .parsePayScoreNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto.nonce(), dto.signature(), dto.signType(), dto.body()));
+                .parsePayScoreNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto
+                    .nonce(), dto.signature(), dto.signType(), dto.body()));
         if (StringUtils.hasText(dto.outOrderNo()) && StringUtils.hasText(payload.outOrderNo()) && !dto.outOrderNo().equals(payload.outOrderNo())) {
             throw new PaymentException("微信支付分回调路径出订单号和报文出订单号不一致");
         }
@@ -85,12 +86,12 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return payload;
     }
 
-    /**
-     * 获取已启用的微信渠道
-     *
-     * @param channelId 渠道标识
-     * @return 获取到的已启用微信渠道
-     */
+      /**
+       * 获取已启用的微信渠道
+       *
+       * @param channelId 渠道标识
+       * @return 获取到的已启用微信渠道
+       */
     private MerchantChannel requireEnabledWechatChannel(Long channelId) {
         MerchantChannel channel = merchantChannelMapper.selectById(channelId);
         if (channel == null) {
@@ -105,15 +106,15 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return channel;
     }
 
-    /**
-     * 构建微信通知请求对象
-     * @param serialNumber 平台证书序列号
-     * @param timestamp 时间戳
-     * @param nonce 随机字符串
-     * @param signature 签名值
-     * @param signType 签名类型
-     * @param body 请求主体
-     */
+      /**
+       * 构建微信通知请求对象
+       * @param serialNumber 平台证书序列号
+       * @param timestamp 时间戳
+       * @param nonce 随机字符串
+       * @param signature 签名值
+       * @param signType 签名类型
+       * @param body 请求主体
+       */
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,
                                                                 String timestamp,
                                                                 String nonce,
@@ -131,12 +132,12 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return request;
     }
 
-    /**
-     * 构建微信支付配置属性
-     *
-     * @param channel 渠道
-     * @return 构建出的微信支付配置属性
-     */
+      /**
+       * 构建微信支付配置属性
+       *
+       * @param channel 渠道
+       * @return 构建出的微信支付配置属性
+       */
     private TencentWechatPayProperties buildWechatProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "微信 AppId 不能为空"));

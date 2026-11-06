@@ -3,13 +3,17 @@ package com.chua.starter.monitor.support.spi;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
 import com.chua.starter.monitor.support.enums.ServiceAction;
 import com.chua.starter.monitor.support.enums.ShellDialect;
+import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
 import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
+import com.chua.starter.monitor.support.model.InodeUsageVO;
+import com.chua.starter.monitor.support.model.MountRowVO;
 import com.chua.starter.monitor.support.model.NetworkConfigVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
+import com.chua.starter.monitor.support.model.SystemConfigItemVO;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
 
@@ -265,6 +269,100 @@ public abstract class HostOperations {
      * @return 句柄数，取不到返回 -1
      */
     public abstract long handleCount();
+
+    /**
+     * 根文件系统的 inode 使用情况。
+     *
+     * <p>inode 用尽时即使磁盘还有空间也写不进去，是 Linux 上「磁盘没满但写失败」的常见原因，
+     * 所以底部状态条要单独看一个使用率。Windows 没有 inode 概念，默认返回
+     * {@link InodeUsageVO#unknown()}（各字段 -1，前端显示「—」）。</p>
+     *
+     * @return inode 使用情况，取不到时为 unknown
+     */
+    public InodeUsageVO inodeUsage() {
+        return InodeUsageVO.unknown();
+    }
+
+    /**
+     * 挂载盘列表（设备 / 挂载点 / 文件系统 / 容量）。
+     *
+     * <p>与 {@link #diskPartitions()} 的分工：分区看的是「一块盘多大、用了多少」，
+     * 挂载看的是「什么设备挂在哪个目录」，两者在 Linux 上并非一一对应（一个设备可以挂多处）。
+     * 平台不支持时返回空列表，不抛异常。</p>
+     *
+     * @return 挂载行列表，永不为 null
+     */
+    public List<MountRowVO> mounts() {
+        return List.of();
+    }
+
+    /**
+     * 挂载一个设备 / 卷。
+     *
+     * @param source 设备（Linux /dev/sdb1、UUID=...）或卷标识
+     * @param target 挂载点（Linux 目录、Windows 盘符）
+     * @param fsType 文件系统类型，空串表示由目标机自动识别
+     * @return 动作结果；平台不支持时返回失败并说明原因
+     */
+    public HostActionVO mount(String source, String target, String fsType) {
+        return HostActionVO.fail("当前平台不支持在系统内执行挂载");
+    }
+
+    /**
+     * 卸载一个挂载点 / 盘符。
+     *
+     * @param target 挂载点（Linux 目录、Windows 盘符）
+     * @return 动作结果；平台不支持时返回失败并说明原因
+     */
+    public HostActionVO unmount(String target) {
+        return HostActionVO.fail("当前平台不支持在系统内执行卸载");
+    }
+
+    /**
+     * 已删除但仍被进程占用的文件（deleted-but-open）。
+     *
+     * <p>默认返回「平台不支持」而不是空列表：空列表会被读成「这台机器没有这种文件」，
+     * 而实际往往是当前通道拿不到句柄信息。</p>
+     *
+     * @return 采集结果，永不为 null
+     */
+    public DeletedFilesVO deletedFiles() {
+        return DeletedFilesVO.unsupported("当前平台 / 采集通道不支持枚举已删除但仍被占用的文件");
+    }
+
+    /**
+     * 把已删除文件的描述符截断为 0，释放其占用的磁盘块（不杀进程）。
+     *
+     * @param pid 持有进程 ID
+     * @param fd  文件描述符编号
+     * @return 动作结果；平台不支持时返回失败并说明原因
+     */
+    public HostActionVO releaseDeletedFile(long pid, int fd) {
+        return HostActionVO.fail("当前平台不支持释放已删除文件");
+    }
+
+    /**
+     * 可热更新的主机系统配置项（句柄上限 / inotify 上限 / 端口队列等）。
+     *
+     * <p>只返回目标机真实存在、且本系统能读写的项：读不到的不编造，
+     * 不支持的不出现在列表里。默认返回空列表。</p>
+     *
+     * @return 配置项列表，永不为 null
+     */
+    public List<SystemConfigItemVO> systemConfigs() {
+        return List.of();
+    }
+
+    /**
+     * 修改一项系统配置（写后回读确认）。
+     *
+     * @param key   配置键（实现侧按白名单校验）
+     * @param value 新值
+     * @return 动作结果；不支持或校验失败时返回失败并说明原因
+     */
+    public HostActionVO applySystemConfig(String key, String value) {
+        return HostActionVO.fail("当前平台不支持在系统内修改该配置");
+    }
 
     /**
      * 从命令输出里取第一个整数。

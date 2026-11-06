@@ -101,4 +101,16 @@ public class MsMonitorAlarmRule implements Serializable {
     @TableField("ms_monitor_alarm_rule_enabled")
     @Schema(description = "启用状态 1启用 0停用", example = "1")
     private Integer msMonitorAlarmRuleEnabled; // ms监控报警器rule启用
+
+    /**
+     * 所属策略的归属主机（内存态，非表列）
+     * <p>
+     * 由 {at code AlarmEngineServiceImpl#reload()} 从策略表填充，供评估时判断
+     * 「这条规则属于哪台主机」；为空表示全局策略，对所有主机生效。
+     * 不映射数据库列：归属主机的唯一真相源是 {at code ms_monitor_alarm_policy}。
+     * </p>
+     */
+    @TableField(exist = false)
+    @Schema(description = "所属策略的归属主机ID(只读,空为全局)", example = "12")
+    private Long msMonitorAlarmRulePolicyHostId; // ms监控报警器rule策略主机标识
 }

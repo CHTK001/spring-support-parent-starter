@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.collect.mapper.CollectFlowMapper">
+
+    <!-- 记录流程最近一次开始时间，并将累计执行次数加一。 -->
+    <update id="markStarted" parameterType="java.util.Map">
+        UPDATE collect_flow
+        SET collect_flow_last_exec_time = #{begin},
+            collect_flow_exec_count = COALESCE(collect_flow_exec_count, 0) + 1
+        WHERE collect_flow_id = #{flowId}
+    </update>
+
+    <!-- 累加采集条数：增量写，不读旧值，避免并发收尾互相覆盖。 -->
+    <update id="addRecordCount" parameterType="java.util.Map">
+        UPDATE collect_flow
+        SET collect_flow_record_count = COALESCE(collect_flow_record_count, 0) + #{delta}
+        WHERE collect_flow_id = #{flowId}
+    </update>
+
+    <!-- 原子占用一个跨节点并发名额，达到上限时更新行数为 0。 -->
+    <update id="tryAcquireRunning" parameterType="java.util.Map">
+        UPDATE collect_flow
+        SET collect_flow_running = collect_flow_running + 1
+        WHERE collect_flow_id = #{flowId}
+          AND collect_flow_is_deleted = 0
+          AND collect_flow_running &lt; #{limit}
+    </update>
+
+    <!-- 释放一个跨节点并发名额，下限为 0。 -->
+    <update id="releaseRunning" parameterType="java.util.Map">
+        UPDATE collect_flow
+        SET collect_flow_running = CASE
+            WHEN collect_flow_running > 0 THEN collect_flow_running - 1
+            ELSE 0
+        END
+        WHERE collect_flow_id = #{flowId}
+    </update>
+
+    <!-- 读取当前跨节点运行中数量，流程不存在时返回 0。 -->
+    <select id="currentRunning" parameterType="java.util.Map" resultType="int">
+        SELECT COALESCE(collect_flow_running, 0)
+        FROM collect_flow
+        WHERE collect_flow_id = #{flowId}
+    </select>
+
+    <!--
+      按任务表重算并发计数，把计数器漂移彻底抹平。
+      计数器只在收尾里减一，进程被强杀就永久偏大；这里直接以任务表为准重算，
+      比「再减一」之类的补丁更可靠——重复执行结果幂等，多次对账也不会算错。
+      只触碰计数器非零或确有运行中任务的流程，避免每次启动全表写。
+    -->
+    <update id="resetRunningFromTasks" parameterType="java.util.Map">
+        UPDATE collect_flow
+        SET collect_flow_running = (
+                SELECT COUNT(1) FROM collect_task
+                WHERE collect_task.collect_task_flow_id = collect_flow.collect_flow_id
+                  AND collect_task.collect_task_status = 'RUNNING'
+            )
+        WHERE collect_flow_is_deleted = 0
+          AND (
+            COALESCE(collect_flow_running, 0) &lt;&gt; 0
+            OR EXISTS (
+                SELECT 1 FROM collect_task
+                WHERE collect_task.collect_task_flow_id = collect_flow.collect_flow_id
+                  AND collect_task.collect_task_status = 'RUNNING'
+            )
+          )
+    </update>
+
+</mapper>

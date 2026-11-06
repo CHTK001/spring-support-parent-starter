@@ -2,6 +2,7 @@ package com.chua.starter.template.support.service;
 
 import com.chua.starter.template.support.model.TemplateProviderInfo;
 import com.chua.starter.template.support.model.TemplateProviderSyncResult;
+import com.chua.starter.template.support.model.TemplateSourceDetail;
 
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +41,21 @@ public interface ProviderSource {
      */
     default List<TemplateProviderInfo> providers() {
         return Collections.emptyList();
+    }
+
+    /**
+     * 按来源行取回模板详情（含推送 / 渲染所需参数）
+     *
+     * <p>统一模板库只保存来源行的「影子」信息（名称 / 类型 / 状态 / 内容副本）。
+     * 需要完整信息（归属账号、推送渠道、内容类型、占位符）时由来源模块回答，
+     * 这样模板库这边就有一条「按模板 ID 取模板信息」的通路，而不必反向依赖业务模块。</p>
+     *
+     * @param providerId 提供商 ID（模板归属账号，可为空）
+     * @param sourceId   来源行 ID（如短信模板的 sys_message_template_id）
+     * @return 模板详情，来源模块不认识该行时返回 {@code null}
+     */
+    default TemplateSourceDetail detail(String providerId, String sourceId) {
+        return null;
     }
 
     /**

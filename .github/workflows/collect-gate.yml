@@ -1,0 +1,92 @@
+# 采集模块编译门禁：spring-support-collect-starter
+#
+# 覆盖范围：采集调度一体化平台（流程编排 + 执行 + 任务/结果/变量/函数 + 通知）。
+# 该 artifact 已随方案 A 从 spring-support-api-starter 迁入本 reactor（与 monitor/
+# datasource-hub 同级），这里维护它的改动。
+#
+# 与 monitor-gate.yml 相同的跨仓约束：采集模块的消费方 spring-api-support-common-system-starter
+#（/v2/user/**、/v2/sms/** 等）和所有 utils-support-* 都在独立仓里，不在本仓 reactor 内；
+# clean checkout 时必须从远端仓库（packages 阿里云私有库）解析，
+# 需要先配置（见下方 Configure Maven servers），未配置 Secrets 时 CI
+# 会在依赖解析阶段失败（属预期，不是门禁本身的问题）。
+name: Collect Gate
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - spring-support-collect-starter/**
+      - "pom.xml"
+      - ".github/workflows/**"
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - spring-support-collect-starter/**
+      - "pom.xml"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: collect-gate-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+permissions:
+  contents: read
+
+env:
+  TARGET_MODULES: >-
+    spring-support-collect-starter
+
+jobs:
+  gate:
+    name: Collect Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Show toolchain
+        run: |
+          java -version
+          mvn -v
+
+      # utils-support-* / spring-api-support-common-system-starter 不在本仓 reactor 内，
+      # clean 环境下必须从远端仓库解析；需要该仓的 deployment 服务的凭证。
+      - name: Configure Maven servers
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<'EOF'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+            <servers>
+              <server>
+                <id>2676178-release-jmLEdB</id>
+                <username>${{ secrets.ALIYUN_PACKAGES_USERNAME }}</username>
+                <password>${{ secrets.ALIYUN_PACKAGES_PASSWORD }}</password>
+              </server>
+              <server>
+                <id>2676178-snapshot-FwAJpk</id>
+                <username>${{ secrets.ALIYUN_PACKAGES_USERNAME }}</username>
+                <password>${{ secrets.ALIYUN_PACKAGES_PASSWORD }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+
+      - name: Compile collect module (+ in-reactor dependencies)
+        run: mvn -B test-compile -pl "${{ env.TARGET_MODULES }}" -am
+
+      - name: Upload failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collect-gate-log
+          path: |
+            **/target/*.log
+          if-no-files-found: ignore
+          retention-days: 7

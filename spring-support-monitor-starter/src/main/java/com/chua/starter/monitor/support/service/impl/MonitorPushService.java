@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.json.Json;
 import com.chua.starter.monitor.support.alarm.AlarmEventStreamRegistry;
+import com.chua.starter.monitor.support.tshark.TsharkInstallStreamRegistry;
 import com.chua.starter.queue.MessageTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -110,6 +111,14 @@ public class MonitorPushService {
     private final ObjectProvider<AlarmEventStreamRegistry> alarmStreamProvider;
 
     /**
+     * tshark 全局事件流（运行时状态 + 会话变化）。
+     *
+     * <p>会话变化原本只走 socket.io；抓包工作台的页面可能在 socket 未启用时收不到，
+     * 只能靠轮询兜底。这里额外广播到同一条 SSE，页面一条连接就能同步会话列表。</p>
+     */
+    private final ObjectProvider<TsharkInstallStreamRegistry> tsharkGlobalStreamProvider;
+
+    /**
      * 广播告警事件。
      *
      * <p>先走 SSE：这是不依赖消息队列的可靠通道，告警页优先从它收消息。
@@ -168,6 +177,35 @@ public class MonitorPushService {
      */
     public void pushTsharkSession(Serializable payload, Long sessionId) {
         broadcast(EVENT_TSHARK_SESSION, payload, sessionId == null ? null : String.valueOf(sessionId));
+          // 同一份会话变化也推给 SSE：抓包页据此刷新列表，不再轮询会话接口
+        TsharkInstallStreamRegistry registry = tsharkGlobalStreamProvider.getIfAvailable();
+        if (registry != null) {
+            try {
+                registry.broadcastSession(payload);
+            } catch (Exception e) {
+                log.debug("[push] tshark 会话 SSE 广播跳过: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 广播 tshark 会话已删除（会话实体已不存在，只发 id）。
+     *
+     * @param sessionId 被抓包会话标识
+     */
+    public void pushTsharkSessionDeleted(Long sessionId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", sessionId);
+        payload.put("deleted", true);
+        broadcast(EVENT_TSHARK_SESSION, payload, sessionId == null ? null : String.valueOf(sessionId));
+        TsharkInstallStreamRegistry registry = tsharkGlobalStreamProvider.getIfAvailable();
+        if (registry != null) {
+            try {
+                registry.broadcastSession(payload);
+            } catch (Exception e) {
+                log.debug("[push] tshark 会话删除 SSE 广播跳过: {}", e.getMessage());
+            }
+        }
     }
 
     /**

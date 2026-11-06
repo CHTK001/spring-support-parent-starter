@@ -39,146 +39,146 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 维度管理服务。
- *
- * <p>统一管理学段 (PRIMARY/JUNIOR/SENIOR/UNIVERSITY)、学科、年级、班级、学生、教师
- * 5 个维度的 CRUD。其中：</p>
- * <ul>
- *   <li>学科 / 班级 / 学生 / 教师 — 本地独立管理（教育域口径不一致）</li>
- *   <li>学生 / 教师 — 通过 {@code studentUserId} / {@code teacherUserId} 关联
- *       {@code spring-support-common-starter} 的用户体系（避免重复存储）</li>
- *   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
- * </ul>
- *
- * <p>只读接口走 {@code @Cacheable}（按 ownerScope + 过滤条件分键），写路径
- * {@code @CacheEvict} 全量清理，避免多用户串缓存。</p>
- *
- * @since 4.0.0.42
- * @author CH
- */
+   * 维度管理服务。
+   *
+   * <p>统一管理学段 (PRIMARY/JUNIOR/SENIOR/UNIVERSITY)、学科、年级、班级、学生、教师
+   * 5 个维度的 CRUD。其中：</p>
+   * <ul>
+   *   <li>学科 / 班级 / 学生 / 教师 — 本地独立管理（教育域口径不一致）</li>
+   *   <li>学生 / 教师 — 通过 {@code studentUserId} / {@code teacherUserId} 关联
+   *       {@code spring-support-common-starter} 的用户体系（避免重复存储）</li>
+   *   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
+   * </ul>
+   *
+   * <p>只读接口走 {@code @Cacheable}（按 ownerScope + 过滤条件分键），写路径
+   * {@code @CacheEvict} 全量清理，避免多用户串缓存。</p>
+   *
+   * @since 4.0.0.42
+   * @author CH
+   */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EduDimensionService {
 
-    /**
-     * 学科列表缓存名
-     */
+      /**
+       * 学科列表缓存名
+       */
     private static final String CACHE_SUBJECTS = "edu:dimension:subjects";
-    /**
-     * 年级列表缓存名
-     */
+      /**
+       * 年级列表缓存名
+       */
     private static final String CACHE_GRADES = "edu:dimension:grades";
-    /**
-     * 字典下拉缓存名
-     */
+      /**
+       * 字典下拉缓存名
+       */
     private static final String CACHE_DROPDOWN = "edu:dimension:dropdown";
 
-    /**
-     * 管理员代入学生的默认有效期（秒）
-     */
+      /**
+       * 管理员代入学生的默认有效期（秒）
+       */
     private static final int DEFAULT_IMPERSONATE_SECONDS = 300;
 
-    /**
-     * 管理员代入学生的默认可访问路径前缀：只放开学生端，不放开管理端。
-     *
-     * <p><b>为什么不止 {@code /v2/edu/student} 一个</b>：学生门户首屏除了
-     * {@code student/me}、{@code student/overview} 之外，还要拉
-     * {@code eduaiApi.funModules}（趣味学习模块列表，见
-     * {@code StudentPortalView} 第 185 行）。那个端点在
-     * {@code /v2/edu/fun/modules} 下，早期只放开 {@code /v2/edu/student}
-     * 一个前缀，导致代入后首屏直接 403「用户信息不存在/请重新登录」——
-     * 学生本人登录不受影响（只有临时令牌走路径校验），所以这个缺口很容易漏掉。</p>
-     *
-     * <p>匹配方式是 {@code startsWith} 前缀匹配（见
-     * {@code TemporaryToken.isPathAllowed}），故每个前缀都不带尾部斜杠。</p>
-     */
+      /**
+       * 管理员代入学生的默认可访问路径前缀：只放开学生端，不放开管理端。
+       *
+       * <p><b>为什么不止 {@code /v2/edu/student} 一个</b>：学生门户首屏除了
+       * {@code student/me}、{@code student/overview} 之外，还要拉
+       * {@code eduaiApi.funModules}（趣味学习模块列表，见
+       * {@code StudentPortalView} 第 185 行）。那个端点在
+       * {@code /v2/edu/fun/modules} 下，早期只放开 {@code /v2/edu/student}
+       * 一个前缀，导致代入后首屏直接 403「用户信息不存在/请重新登录」——
+       * 学生本人登录不受影响（只有临时令牌走路径校验），所以这个缺口很容易漏掉。</p>
+       *
+       * <p>匹配方式是 {@code startsWith} 前缀匹配（见
+       * {@code TemporaryToken.isPathAllowed}），故每个前缀都不带尾部斜杠。</p>
+       */
     private static final List<String> STUDENT_SCOPE_PATHS =
             List.of("/v2/edu/student", "/v2/edu/fun");
 
-    /**
-     * 学号生成时的最大重试次数。
-     *
-     * <p>并发建档时两个请求可能算出同一个顺序号，靠「插入前查重 → 递增重试」收敛。
-     * 超过该次数说明当年学生量异常或存在并发风暴，宁可报错也不给一个可能撞号的学号。</p>
-     */
+      /**
+       * 学号生成时的最大重试次数。
+       *
+       * <p>并发建档时两个请求可能算出同一个顺序号，靠「插入前查重 → 递增重试」收敛。
+       * 超过该次数说明当年学生量异常或存在并发风暴，宁可报错也不给一个可能撞号的学号。</p>
+       */
     private static final int MAX_STUDENT_NO_ATTEMPTS = 20;
 
-    /**
-     * 学号顺序号（本 JVM 原子发号；-1 表示尚未从库中取种）
-     */
+      /**
+       * 学号顺序号（本 JVM 原子发号；-1 表示尚未从库中取种）
+       */
     private long studentNoSequence = -1L;
 
-    /**
-     * {@link #studentNoSequence} 对应的年份；跨年重新从库中取种
-     */
+      /**
+       * {@link #studentNoSequence} 对应的年份；跨年重新从库中取种
+       */
     private int studentNoSequenceYear = 0;
 
-    /**
-     * Subjectmapper
-     */
+      /**
+       * Subjectmapper
+       */
     private final EduSubjectMapper subjectMapper;
-    /**
-     * Grademapper
-     */
+      /**
+       * Grademapper
+       */
     private final EduGradeMapper gradeMapper;
-    /**
-     * Classmapper
-     */
+      /**
+       * Classmapper
+       */
     private final EduClassMapper classMapper;
-    /**
-     * Studentmapper
-     */
+      /**
+       * Studentmapper
+       */
     private final EduStudentMapper studentMapper;
-    /**
-     * Teachermapper
-     */
+      /**
+       * Teachermapper
+       */
     private final EduTeacherMapper teacherMapper;
 
-    /**
-     * 教师班级配置：老师端数据范围。老师只能查看 / 操作
-     * 后台配置给自己的班级（布置、阅卷等教学功能），
-     * 班级本身由管理员统一维护，老师端不自建班级。
-     */
+      /**
+       * 教师班级配置：老师端数据范围。老师只能查看 / 操作
+       * 后台配置给自己的班级（布置、阅卷等教学功能），
+       * 班级本身由管理员统一维护，老师端不自建班级。
+       */
     private final EduTeacherClassMapper teacherClassMapper;
 
-    /**
-     * 学生学习进度：删除学生时连带清理，避免留下孤儿行
-     */
+      /**
+       * 学生学习进度：删除学生时连带清理，避免留下孤儿行
+       */
     private final EduStudentProgressMapper progressMapper;
 
-    /**
-     * 学生每日汇总：删除学生时连带清理
-     */
+      /**
+       * 学生每日汇总：删除学生时连带清理
+       */
     private final EduStudentDailyMapper dailyMapper;
 
-    // ==================== 学科 ====================
+      // ==================== 学科 ====================
 
-    /**
-     * 列表主题
-     *
-     * @param gradeLevel grade级别
-     * @return 列表主题的结果
-     */
+      /**
+       * 列表主题
+       *
+       * @param gradeLevel grade级别
+       * @return 列表主题的结果
+       */
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = CACHE_SUBJECTS,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '')",
             unless = "#result == null")
-    /**
-     * list Subjects
-     * @param gradeLevel 字符串
-     * @return 返回值
-    */
+      /**
+       * list Subjects
+       * @param gradeLevel 字符串
+       * @return 返回值
+      */
     public List<EduSubject> listSubjects(String gradeLevel) {
         return subjectMapper.listSubjects(gradeLevel, false, EduUserContext.ownerScope());
     }
 
-    /**
-     * list Subjects（可选包含停用）
-     * @param gradeLevel 字符串
-     * @param includeDisabled 是否包含停用学科
-     * @return 返回值
-    */
+      /**
+       * list Subjects（可选包含停用）
+       * @param gradeLevel 字符串
+       * @param includeDisabled 是否包含停用学科
+       * @return 返回值
+      */
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = CACHE_SUBJECTS,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '') + ':' + #includeDisabled",
@@ -187,20 +187,20 @@ public class EduDimensionService {
         return subjectMapper.listSubjects(gradeLevel, includeDisabled, EduUserContext.ownerScope());
     }
 
-    /**
-     * 保存学科。
-     *
-     * @param entity 学科实体
-     * @return 学科标识
-     */
+      /**
+       * 保存学科。
+       *
+       * @param entity 学科实体
+       * @return 学科标识
+       */
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_SUBJECTS, CACHE_DROPDOWN}, allEntries = true)
-    /**
-     * save Subject
-     * @param entity 参数
-     * @return 返回值
-    */
+      /**
+       * save Subject
+       * @param entity 参数
+       * @return 返回值
+      */
     public Long saveSubject(EduSubject entity) {
         if (!StringUtils.hasText(entity.getSubjectCode()) || !StringUtils.hasText(entity.getSubjectName())) {
             throw new BusinessException("学科编码与名称必填");
@@ -227,20 +227,20 @@ public class EduDimensionService {
         return entity.getSubjectId();
     }
 
-    /**
-     * 删除学科。
-     *
-     * @param id 学科标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除学科。
+       *
+       * @param id 学科标识
+       * @return 是否删除成功
+       */
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_SUBJECTS, CACHE_DROPDOWN}, allEntries = true)
-    /**
-     * delete Subject
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * delete Subject
+       * @param id 长整数
+       * @return 返回值
+      */
     public boolean deleteSubject(Long id) {
         if (id == null) {
             return false;
@@ -255,41 +255,41 @@ public class EduDimensionService {
         return rows > 0;
     }
 
-    // ==================== 年级 ====================
+      // ==================== 年级 ====================
 
-    /**
-     * 列表grades
-     *
-     * @param gradeLevel grade级别
-     * @return 列表grades的结果
-     */
+      /**
+       * 列表grades
+       *
+       * @param gradeLevel grade级别
+       * @return 列表grades的结果
+       */
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = CACHE_GRADES,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '')",
             unless = "#result == null")
-    /**
-     * list Grades
-     * @param gradeLevel 字符串
-     * @return 返回值
-    */
+      /**
+       * list Grades
+       * @param gradeLevel 字符串
+       * @return 返回值
+      */
     public List<EduGrade> listGrades(String gradeLevel) {
         return gradeMapper.listGrades(gradeLevel, EduUserContext.ownerScope());
     }
 
-    /**
-     * 保存年级。
-     *
-     * @param entity 年级实体
-     * @return 年级标识
-     */
+      /**
+       * 保存年级。
+       *
+       * @param entity 年级实体
+       * @return 年级标识
+       */
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_GRADES, CACHE_DROPDOWN}, allEntries = true)
-    /**
-     * save Grade
-     * @param entity 参数
-     * @return 返回值
-    */
+      /**
+       * save Grade
+       * @param entity 参数
+       * @return 返回值
+      */
     public Long saveGrade(EduGrade entity) {
         if (!StringUtils.hasText(entity.getGradeLevel()) || !StringUtils.hasText(entity.getGradeName())) {
             throw new BusinessException("学段与年级名称必填");
@@ -313,20 +313,20 @@ public class EduDimensionService {
         return entity.getGradeId();
     }
 
-    /**
-     * 删除年级。
-     *
-     * @param id 年级标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除年级。
+       *
+       * @param id 年级标识
+       * @return 是否删除成功
+       */
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = {CACHE_GRADES, CACHE_DROPDOWN}, allEntries = true)
-    /**
-     * delete Grade
-     * @param id 长整数
-     * @return 返回值
-    */
+      /**
+       * delete Grade
+       * @param id 长整数
+       * @return 返回值
+      */
     public boolean deleteGrade(Long id) {
         if (id == null) {
             return false;
@@ -341,33 +341,33 @@ public class EduDimensionService {
         return rows > 0;
     }
 
-    // ==================== 班级 ====================
+      // ==================== 班级 ====================
 
-    /**
-     * 列表类
-     *
-     * @param gradeLevel grade级别
-     * @param teacherId teacherid
-     * @return 列表类的结果
-     */
+      /**
+       * 列表类
+       *
+       * @param gradeLevel grade级别
+       * @param teacherId teacherid
+       * @return 列表类的结果
+       */
     public List<EduClass> listClasses(String gradeLevel, Long teacherId) {
         return classMapper.listClasses(gradeLevel, teacherId, EduUserContext.ownerScope());
     }
 
-    /**
-     * 保存班级。
-     *
-     * @param entity 班级实体
-     * @return 班级标识
-     */
+      /**
+       * 保存班级。
+       *
+       * @param entity 班级实体
+       * @return 班级标识
+       */
     @Transactional(rollbackFor = Exception.class)
     public Long saveClass(EduClass entity) {
         if (!StringUtils.hasText(entity.getClassName())) {
             throw new BusinessException("班级名称必填");
         }
-        // 班级编码允许留空：管理端「新增班级」表单一直写着「留空自动生成」，
-        // 但这里原先硬要求非空，导致从界面上建班必然失败（学生端绑定那条路径
-        // 自己在别处生成了编码，所以只有手工建班才会踩到）。
+          // 班级编码允许留空：管理端「新增班级」表单一直写着「留空自动生成」，
+          // 但这里原先硬要求非空，导致从界面上建班必然失败（学生端绑定那条路径
+          // 自己在别处生成了编码，所以只有手工建班才会踩到）。
         if (!StringUtils.hasText(entity.getClassCode())) {
             entity.setClassCode("CLS-" + System.currentTimeMillis());
         }
@@ -392,15 +392,15 @@ public class EduDimensionService {
         return entity.getClassId();
     }
 
-    /**
-     * 班级名称业务唯一校验。
-     *
-     * <p>表上有唯一索引 {@code uk_edu_class_name} 兜底，但那只会抛一条看不懂的
-     * {@code Duplicate entry}；这里先查一次并给出人话，编辑态要排除自己。</p>
-     *
-     * @param className  班级名（已 trim）
-     * @param excludeId  编辑时要排除的班级标识，新增传 null
-     */
+      /**
+       * 班级名称业务唯一校验。
+       *
+       * <p>表上有唯一索引 {@code uk_edu_class_name} 兜底，但那只会抛一条看不懂的
+       * {@code Duplicate entry}；这里先查一次并给出人话，编辑态要排除自己。</p>
+       *
+       * @param className  班级名（已 trim）
+       * @param excludeId  编辑时要排除的班级标识，新增传 null
+       */
     private void checkClassNameUnique(String className, Long excludeId) {
         Long same = classMapper.selectCount(new QueryWrapper<EduClass>()
                 .eq("class_name", className)
@@ -410,12 +410,12 @@ public class EduDimensionService {
         }
     }
 
-    /**
-     * 删除班级。
-     *
-     * @param id 班级标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除班级。
+       *
+       * @param id 班级标识
+       * @return 是否删除成功
+       */
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteClass(Long id) {
         if (id == null) {
@@ -431,17 +431,17 @@ public class EduDimensionService {
         return rows > 0;
     }
 
-    // ==================== 教师班级配置 ====================
+      // ==================== 教师班级配置 ====================
 
-    /**
-     * 教师已配置的班级列表（老师端数据范围）。
-     *
-     * <p>班级由管理员在后台统一维护，老师端「我的班级」完全来自本配置：
-     * 老师只能查看 / 操作配置给自己的班级。</p>
-     *
-     * @param teacherId 教师标识
-     * @return 已配置的启用班级，按班级 ID 升序；未配置时为空列表
-     */
+      /**
+       * 教师已配置的班级列表（老师端数据范围）。
+       *
+       * <p>班级由管理员在后台统一维护，老师端「我的班级」完全来自本配置：
+       * 老师只能查看 / 操作配置给自己的班级。</p>
+       *
+       * @param teacherId 教师标识
+       * @return 已配置的启用班级，按班级 ID 升序；未配置时为空列表
+       */
     public List<EduClass> listTeacherClasses(Long teacherId) {
         if (teacherId == null) {
             return List.of();
@@ -456,12 +456,12 @@ public class EduDimensionService {
                 .toList();
     }
 
-    /**
-     * 保存教师班级配置（全量替换）。
-     *
-     * @param teacherId 教师标识
-     * @param classIds  配置给该教师的班级标识列表（可空 = 清空）
-     */
+      /**
+       * 保存教师班级配置（全量替换）。
+       *
+       * @param teacherId 教师标识
+       * @param classIds  配置给该教师的班级标识列表（可空 = 清空）
+       */
     @Transactional(rollbackFor = Exception.class)
     public void saveTeacherClasses(Long teacherId, List<Long> classIds) {
         if (teacherId == null) {
@@ -492,32 +492,32 @@ public class EduDimensionService {
         log.info("[EduAi] 教师班级配置: teacherId={}, classes={}", teacherId, targets);
     }
 
-    // ==================== 学生 ====================
+      // ==================== 学生 ====================
 
-    /**
-     * 列表students
-     *
-     * @param classId 类标识
-     * @param gradeLevel grade级别
-     * @param grade grade
-     * @return 列表students的结果
-     */
+      /**
+       * 列表students
+       *
+       * @param classId 类标识
+       * @param gradeLevel grade级别
+       * @param grade grade
+       * @return 列表students的结果
+       */
     public List<EduStudent> listStudents(Long classId, String gradeLevel, String grade) {
         return studentMapper.listStudents(classId, gradeLevel, grade, EduUserContext.ownerScope());
     }
 
-    /**
-     * 分页查询学生档案：与 listStudents 同口径（在读 + 班级/学段/年级筛选 + 归属隔离），
-     * 另支持姓名 / 学号 / 绑定账号关键字。
-     *
-     * @param classId    班级标识，为空时不限定
-     * @param gradeLevel 学段，为空时不限学段
-     * @param grade      年级，为空时不限年级
-     * @param keyword    关键字（姓名 / 学号 / 绑定账号）
-     * @param pageNum    页码
-     * @param pageSize   每页条数
-     * @return 分页结果
-     */
+      /**
+       * 分页查询学生档案：与 listStudents 同口径（在读 + 班级/学段/年级筛选 + 归属隔离），
+       * 另支持姓名 / 学号 / 绑定账号关键字。
+       *
+       * @param classId    班级标识，为空时不限定
+       * @param gradeLevel 学段，为空时不限学段
+       * @param grade      年级，为空时不限年级
+       * @param keyword    关键字（姓名 / 学号 / 绑定账号）
+       * @param pageNum    页码
+       * @param pageSize   每页条数
+       * @return 分页结果
+       */
     public PageResult<EduStudent> pageStudents(Long classId, String gradeLevel, String grade,
                                                String keyword, Integer pageNum, Integer pageSize) {
         Page<EduStudent> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
@@ -546,15 +546,15 @@ public class EduDimensionService {
         return buildPageResult(result);
     }
 
-    /**
-     * 分页查询班级：启用状态 + 学段筛选 + 归属隔离。
-     *
-     * @param gradeLevel 学段，为空时不限学段
-     * @param keyword    班级名称 / 编码关键字
-     * @param pageNum    页码
-     * @param pageSize   每页条数
-     * @return 分页结果
-     */
+      /**
+       * 分页查询班级：启用状态 + 学段筛选 + 归属隔离。
+       *
+       * @param gradeLevel 学段，为空时不限学段
+       * @param keyword    班级名称 / 编码关键字
+       * @param pageNum    页码
+       * @param pageSize   每页条数
+       * @return 分页结果
+       */
     public PageResult<EduClass> pageClasses(String gradeLevel, String keyword,
                                             Integer pageNum, Integer pageSize) {
         Page<EduClass> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
@@ -572,7 +572,7 @@ public class EduDimensionService {
         }
         wrapper.orderByAsc("class_id");
         IPage<EduClass> result = classMapper.selectPage(page, wrapper);
-        // 每班学生数：分页行数少，逐班聚合可接受；归属与列表同口径
+          // 每班学生数：分页行数少，逐班聚合可接受；归属与列表同口径
         QueryWrapper<EduStudent> stuWrapper = new QueryWrapper<>();
         stuWrapper.eq("student_status", 1);
         if (scope.ownerPredicate() != null) {
@@ -585,15 +585,15 @@ public class EduDimensionService {
         return buildPageResult(result);
     }
 
-    /**
-     * 分页查询教师：在职状态 + 学科筛选 + 归属隔离。
-     *
-     * @param subjectCode 任教学科编码，为空时不限学科
-     * @param keyword     姓名 / 工号关键字
-     * @param pageNum     页码
-     * @param pageSize    每页条数
-     * @return 分页结果
-     */
+      /**
+       * 分页查询教师：在职状态 + 学科筛选 + 归属隔离。
+       *
+       * @param subjectCode 任教学科编码，为空时不限学科
+       * @param keyword     姓名 / 工号关键字
+       * @param pageNum     页码
+       * @param pageSize    每页条数
+       * @return 分页结果
+       */
     public PageResult<EduTeacher> pageTeachers(String subjectCode, String keyword,
                                                Integer pageNum, Integer pageSize) {
         Page<EduTeacher> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
@@ -611,7 +611,7 @@ public class EduDimensionService {
         }
         wrapper.orderByAsc("teacher_id");
         IPage<EduTeacher> result = teacherMapper.selectPage(page, wrapper);
-        // 配置班级数：走教师-班级关系表
+          // 配置班级数：走教师-班级关系表
         for (EduTeacher tea : result.getRecords()) {
             List<Long> ids = teacherClassMapper.selectClassIdsByTeacher(tea.getTeacherId());
             tea.setClassCount(ids == null ? 0 : ids.size());
@@ -619,7 +619,7 @@ public class EduDimensionService {
         return buildPageResult(result);
     }
 
-    /** 统一 PageResult 构建：维度分页只消费 data/total/pageNo/pageSize */
+      /** 统一 PageResult 构建：维度分页只消费 data/total/pageNo/pageSize */
     private <T> PageResult<T> buildPageResult(IPage<T> result) {
         return PageResult.<T>builder()
                 .pageNo((int) result.getCurrent())
@@ -630,21 +630,21 @@ public class EduDimensionService {
                 .build();
     }
 
-    /**
- * 保存学生。
- *
- * <p><b>学号一律由系统生成，不接受客户端传入</b>：学号是学生端的登录账号
- * （令牌里的 {@code userId} 就是学号），允许手填会带来撞号、
- * 「以为自己改学号结果登不上」等问题。编辑已有学生时，
- * 请求里带的学号会被忽略，一律以库中为准。</p>
- *
- * @param entity 学生实体
- * @return 学生标识
- */
+      /**
+   * 保存学生。
+   *
+   * <p><b>学号一律由系统生成，不接受客户端传入</b>：学号是学生端的登录账号
+   * （令牌里的 {@code userId} 就是学号），允许手填会带来撞号、
+   * 「以为自己改学号结果登不上」等问题。编辑已有学生时，
+   * 请求里带的学号会被忽略，一律以库中为准。</p>
+   *
+   * @param entity 学生实体
+   * @return 学生标识
+   */
     @Transactional(rollbackFor = Exception.class)
     public Long saveStudent(EduStudent entity) {
-        // 家长手机号非必填（没有也能建档，只是学生端不能用手机号登录），但填了就要合法：
-        // 后面要拿它当登录凭据，格式错的号码会让家长永远登不进来且查不出原因。
+          // 家长手机号非必填（没有也能建档，只是学生端不能用手机号登录），但填了就要合法：
+          // 后面要拿它当登录凭据，格式错的号码会让家长永远登不进来且查不出原因。
         String phone = normalizeParentPhone(entity.getStudentParentPhone());
         entity.setStudentParentPhone(phone);
         if (entity.getStudentId() != null && entity.getStudentId() > 0) {
@@ -654,8 +654,8 @@ public class EduDimensionService {
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
             entity.setOwnerUserId(exists.getOwnerUserId());
-            // 学号是登录身份，编辑时锁定：前端可能把整行数据回传，
-            // 不锁定就会让「改个姓名」把学号也改了，学生立刻登不进来。
+              // 学号是登录身份，编辑时锁定：前端可能把整行数据回传，
+              // 不锁定就会让「改个姓名」把学号也改了，学生立刻登不进来。
             entity.setStudentNo(exists.getStudentNo());
             entity.setStudentAccount(exists.getStudentAccount());
             applyPassword(entity, exists);
@@ -666,14 +666,14 @@ public class EduDimensionService {
             entity.setStudentStatus(1);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
-        // 登录账号默认取学号：学生端令牌里的 userId 就是学号，
-        // 两个字段必须一致，否则登录成功了学生端却定位不到自己的档案。
-        // 口令在循环内随学号一起设置：未填时**默认口令 = 学号**（用户预期），
-        // 并置「首次登录须改密」，学生登录后由引导改成自己的口令。
-        // 学号由系统生成并保证唯一。**并发下只靠「插入前查重」是不够的**：
-        // 两个请求可能同时查到同一个候选号、同时认为它可用，随后唯一索引会拒绝其中一个
-        // （实测 30 并发建档有 12 个 500「学号已存在」）。真正的收敛点在**插入失败后的重试**，
-        // 因此这里以唯一索引为最终保证，撞号就换一个再插。
+          // 登录账号默认取学号：学生端令牌里的 userId 就是学号，
+          // 两个字段必须一致，否则登录成功了学生端却定位不到自己的档案。
+          // 口令在循环内随学号一起设置：未填时**默认口令 = 学号**（用户预期），
+          // 并置「首次登录须改密」，学生登录后由引导改成自己的口令。
+          // 学号由系统生成并保证唯一。**并发下只靠「插入前查重」是不够的**：
+          // 两个请求可能同时查到同一个候选号、同时认为它可用，随后唯一索引会拒绝其中一个
+          // （实测 30 并发建档有 12 个 500「学号已存在」）。真正的收敛点在**插入失败后的重试**，
+          // 因此这里以唯一索引为最终保证，撞号就换一个再插。
         for (int attempt = 0; attempt < MAX_STUDENT_NO_ATTEMPTS; attempt++) {
             String studentNo = generateUniqueStudentNo();
             entity.setStudentId(null);
@@ -692,26 +692,26 @@ public class EduDimensionService {
         throw new BusinessException("学号生成失败，请稍后重试");
     }
 
-    /**
-     * 生成唯一学号。
-     *
-     * <p>格式：入学年份（4 位）+ 顺序号（6 位），例如 {@code 2026000001}。
-     * <b>并发正确性依赖三层</b>：① 本 JVM 内用 {@link #nextStudentNoSequence(int)}
-     * 原子发号，避免同进程并发算出同一个号；② 发号后用 {@code existsByStudentNo}
-     * 查重，兜住「号已被其它实例或其它入口占用」；③ 最终保证是库上 UNIQUE 约束 ——
-     * 插入撞号时由 {@link #saveStudent} 捕获 {@code DataIntegrityViolationException} 换号重试。</p>
-     *
-     * <p>只靠「查当年最大值 +1」在并发下必错：所有线程会算出同一个候选号
-     * （实测 30 并发建档时大量 500/400「学号已存在/生成失败」）。</p>
-     *
-     * @return 唯一学号
-     */
+      /**
+       * 生成唯一学号。
+       *
+       * <p>格式：入学年份（4 位）+ 顺序号（6 位），例如 {@code 2026000001}。
+       * <b>并发正确性依赖三层</b>：① 本 JVM 内用 {@link #nextStudentNoSequence(int)}
+       * 原子发号，避免同进程并发算出同一个号；② 发号后用 {@code existsByStudentNo}
+       * 查重，兜住「号已被其它实例或其它入口占用」；③ 最终保证是库上 UNIQUE 约束 ——
+       * 插入撞号时由 {@link #saveStudent} 捕获 {@code DataIntegrityViolationException} 换号重试。</p>
+       *
+       * <p>只靠「查当年最大值 +1」在并发下必错：所有线程会算出同一个候选号
+       * （实测 30 并发建档时大量 500/400「学号已存在/生成失败」）。</p>
+       *
+       * @return 唯一学号
+       */
     private String generateUniqueStudentNo() {
         int year = LocalDate.now().getYear();
         String prefix = String.valueOf(year);
         for (int attempt = 0; attempt < MAX_STUDENT_NO_ATTEMPTS; attempt++) {
             String candidate = prefix + String.format("%06d", nextStudentNoSequence(year));
-            // existsByStudentNo 返回 Integer（命中为 1、未命中为 null），不能直接当 boolean 用
+              // existsByStudentNo 返回 Integer（命中为 1、未命中为 null），不能直接当 boolean 用
             if (studentMapper.existsByStudentNo(candidate) == null) {
                 return candidate;
             }
@@ -719,15 +719,15 @@ public class EduDimensionService {
         throw new BusinessException("学号生成失败，请稍后重试");
     }
 
-    /**
-     * 原子发号：本 JVM 内保证每次返回不同的顺序号。
-     *
-     * <p>首次调用（或跨年）时从库中「当年最大号」起算；之后纯内存自增，不再每号查库。
-     * 跨实例仍可能发到同号，但那由库 UNIQUE 约束 + 插入重试兜底。</p>
-     *
-     * @param year 当年年份（学号前缀）
-     * @return 下一个顺序号
-     */
+      /**
+       * 原子发号：本 JVM 内保证每次返回不同的顺序号。
+       *
+       * <p>首次调用（或跨年）时从库中「当年最大号」起算；之后纯内存自增，不再每号查库。
+       * 跨实例仍可能发到同号，但那由库 UNIQUE 约束 + 插入重试兜底。</p>
+       *
+       * @param year 当年年份（学号前缀）
+       * @return 下一个顺序号
+       */
     private synchronized long nextStudentNoSequence(int year) {
         if (studentNoSequence < 0 || studentNoSequenceYear != year) {
             String prefix = String.valueOf(year);
@@ -747,16 +747,16 @@ public class EduDimensionService {
         return studentNoSequence++;
     }
 
-    /**
-     * 管理员重置学生口令。
-     *
-     * <p>与「学生自助改密」分开：管理员侧不需要校验旧口令，
-     * 但要校验归属，避免越权重置他人学生口令。</p>
-     *
-     * @param studentId 学生标识
-     * @param newPassword 新口令明文
-     * @return 是否成功
-     */
+      /**
+       * 管理员重置学生口令。
+       *
+       * <p>与「学生自助改密」分开：管理员侧不需要校验旧口令，
+       * 但要校验归属，避免越权重置他人学生口令。</p>
+       *
+       * @param studentId 学生标识
+       * @param newPassword 新口令明文
+       * @return 是否成功
+       */
     @Transactional(rollbackFor = Exception.class)
     public boolean resetStudentPassword(Long studentId, String newPassword) {
         if (studentId == null) {
@@ -772,24 +772,24 @@ public class EduDimensionService {
         var salt = StudentPasswordSupport.newSalt();
         exists.setStudentPwdSalt(salt);
         exists.setStudentPassword(StudentPasswordSupport.hash(newPassword, salt));
-        // 重置的同样是初始口令：学生下次登录应被引导改成自己的
+          // 重置的同样是初始口令：学生下次登录应被引导改成自己的
         exists.setStudentPwdMustChange(1);
         studentMapper.updateById(exists);
         log.info("[EduAi] 管理员重置学生口令 - 学号: {}", exists.getStudentNo());
         return true;
     }
 
-    /**
-     * 学生自助修改口令。
-     *
-     * <p>必须校验旧口令：学生端令牌本身可能因代入、令牌泄漏等原因被他人持有，
-     * 不校验旧口令等于任何拿到令牌的人都能改密码。</p>
-     *
-     * @param studentNo 学号（登录态 userId，即学号）
-     * @param oldPassword 旧口令明文
-     * @param newPassword 新口令明文
-     * @return 是否成功
-     */
+      /**
+       * 学生自助修改口令。
+       *
+       * <p>必须校验旧口令：学生端令牌本身可能因代入、令牌泄漏等原因被他人持有，
+       * 不校验旧口令等于任何拿到令牌的人都能改密码。</p>
+       *
+       * @param studentNo 学号（登录态 userId，即学号）
+       * @param oldPassword 旧口令明文
+       * @param newPassword 新口令明文
+       * @return 是否成功
+       */
     @Transactional(rollbackFor = Exception.class)
     public boolean changeOwnPassword(String studentNo, String oldPassword, String newPassword) {
         if (!StringUtils.hasText(studentNo)) {
@@ -816,27 +816,27 @@ public class EduDimensionService {
         var salt = StudentPasswordSupport.newSalt();
         student.setStudentPwdSalt(salt);
         student.setStudentPassword(StudentPasswordSupport.hash(newPassword, salt));
-        // 学生自己改过了，清掉「首次需引导改密」标记
+          // 学生自己改过了，清掉「首次需引导改密」标记
         student.setStudentPwdMustChange(0);
         studentMapper.updateById(student);
         log.info("[EduAi] 学生自助修改口令 - 学号: {}", studentNo);
         return true;
     }
 
-    /**
-     * 管理员代入指定学生：签发一个短期、只读、限定路径的临时令牌。
-     *
-     * <p>用途是排查「这个学生看到的是什么」：管理员不必索要学生密码，
-     * 也不必真的用学生账号登录，避免污染学生的学习记录。</p>
-     *
-     * <p>默认只允许访问学生端接口（{@link #STUDENT_SCOPE_PATHS}）。
-     * 开放管理端路径等于把管理员权限借出去，因此必须由调用方显式传入才会生效。</p>
-     *
-     * @param studentId     学生标识
-     * @param expireSeconds 有效期（秒）；为空用 {@value #DEFAULT_IMPERSONATE_SECONDS} 秒
-     * @param allowedUrls   允许访问的路径前缀；为空时收窄到学生端路径
-     * @return 含临时令牌的结果；无权、档案不存在或签发失败时返回对应错误码
-     */
+      /**
+       * 管理员代入指定学生：签发一个短期、只读、限定路径的临时令牌。
+       *
+       * <p>用途是排查「这个学生看到的是什么」：管理员不必索要学生密码，
+       * 也不必真的用学生账号登录，避免污染学生的学习记录。</p>
+       *
+       * <p>默认只允许访问学生端接口（{@link #STUDENT_SCOPE_PATHS}）。
+       * 开放管理端路径等于把管理员权限借出去，因此必须由调用方显式传入才会生效。</p>
+       *
+       * @param studentId     学生标识
+       * @param expireSeconds 有效期（秒）；为空用 {@value #DEFAULT_IMPERSONATE_SECONDS} 秒
+       * @param allowedUrls   允许访问的路径前缀；为空时收窄到学生端路径
+       * @return 含临时令牌的结果；无权、档案不存在或签发失败时返回对应错误码
+       */
     public LoginAuthResult impersonateStudent(Long studentId, Integer expireSeconds, List<String> allowedUrls) {
         if (!EduUserContext.isAdmin()) {
             throw new BusinessException("只有管理员可以代入学生身份");
@@ -848,8 +848,8 @@ public class EduDimensionService {
         if (student == null) {
             throw new BusinessException("学生不存在");
         }
-        // 管理员可越过归属过滤，但归属字段仍要带进令牌，
-        // 否则学生端接口按 owner 过滤时会查不到这个学生的数据
+          // 管理员可越过归属过滤，但归属字段仍要带进令牌，
+          // 否则学生端接口按 owner 过滤时会查不到这个学生的数据
         int seconds = expireSeconds == null || expireSeconds <= 0
                 ? DEFAULT_IMPERSONATE_SECONDS
                 : expireSeconds;
@@ -875,18 +875,18 @@ public class EduDimensionService {
         target.setRoles(Set.of(AuthConstant.STUDENT));
         target.setPermission(Collections.emptySet());
         target.setExt(ext);
-        // 归属字段随令牌带过去：学生端查进度/错题时按 owner 过滤，缺了就查不到
+          // 归属字段随令牌带过去：学生端查进度/错题时按 owner 过滤，缺了就查不到
         if (StringUtils.hasText(student.getOwnerUserId())) {
             ext.put("ownerUserId", student.getOwnerUserId());
         }
         LoginAuthResult result = AuthClientExecute.getInstance().createTemporaryTokenFor(target, seconds, scope);
         if (result == null || result.getCode() == null || result.getCode() != 200) {
             String message = result == null ? null : result.getMessage();
-            // 操作人自己的登录态已失效（令牌被新的登录顶掉、或已过期/被拉黑）时，
-            // 本地 3 分钟鉴权缓存仍会短暂放行本接口的鉴权，问题一路传到「服务端签发」
-            // 才暴露，服务端只会回一句「未认证」。若按普通业务错误提示，用户看到的是
-            // 一句莫名其妙的提示，且必须自己想到要重新登录才能恢复——
-            // 这里统一升级为 401 会话失效，走前端既有的「登录已过期，请重新登录」流程。
+              // 操作人自己的登录态已失效（令牌被新的登录顶掉、或已过期/被拉黑）时，
+              // 本地 3 分钟鉴权缓存仍会短暂放行本接口的鉴权，问题一路传到「服务端签发」
+              // 才暴露，服务端只会回一句「未认证」。若按普通业务错误提示，用户看到的是
+              // 一句莫名其妙的提示，且必须自己想到要重新登录才能恢复——
+              // 这里统一升级为 401 会话失效，走前端既有的「登录已过期，请重新登录」流程。
             if (isOperatorCredentialInvalid(result, message)) {
                 throw new OauthException("登录状态已失效，请重新登录", 401);
             }
@@ -894,18 +894,18 @@ public class EduDimensionService {
         return result;
     }
 
-    /**
-     * 判断签发失败是否源于「操作人（管理员）自己的登录态失效」。
-     *
-     * <p>签发代入令牌要把操作人的令牌作为源凭据送到鉴权服务端换取，服务端拒绝时
-     * 只会给出「未认证 / Token已失效」这类文案（业务码是通用错误码，不便于判定），
-     * 因此这里按消息与既有 401 码共同识别；「代入目标非法」「非管理员」等
-     * 业务性失败不在此列，仍按原错误返回。</p>
-     *
-     * @param result 服务端签发结果，可为 {@code null}
-     * @param message 失败提示，可为 {@code null}
-     * @return 是否属于操作人登录态失效
-     */
+      /**
+       * 判断签发失败是否源于「操作人（管理员）自己的登录态失效」。
+       *
+       * <p>签发代入令牌要把操作人的令牌作为源凭据送到鉴权服务端换取，服务端拒绝时
+       * 只会给出「未认证 / Token已失效」这类文案（业务码是通用错误码，不便于判定），
+       * 因此这里按消息与既有 401 码共同识别；「代入目标非法」「非管理员」等
+       * 业务性失败不在此列，仍按原错误返回。</p>
+       *
+       * @param result 服务端签发结果，可为 {@code null}
+       * @param message 失败提示，可为 {@code null}
+       * @return 是否属于操作人登录态失效
+       */
     private boolean isOperatorCredentialInvalid(LoginAuthResult result, String message) {
         if (result != null && result.getCode() != null && result.getCode() == 401) {
             return true;
@@ -917,39 +917,39 @@ public class EduDimensionService {
                 || message.contains("已被禁用") || message.contains("黑名单") || message.contains("数据异常");
     }
 
-    /**
-     * 处理登录口令：把表单里的明文转成摘要加盐写回实体。
-     *
-     * <p>更新场景下表单没提交新口令时，必须把库中既有的摘要与盐原样带回：
-     * 否则管理员改个姓名就会把学生的登录口令清空，且清空后没有任何提示。</p>
-     *
-     * @param entity 本次提交的实体
-     * @param exists 库中既有档案；新增时为 {@code null}
-     */
+      /**
+       * 处理登录口令：把表单里的明文转成摘要加盐写回实体。
+       *
+       * <p>更新场景下表单没提交新口令时，必须把库中既有的摘要与盐原样带回：
+       * 否则管理员改个姓名就会把学生的登录口令清空，且清空后没有任何提示。</p>
+       *
+       * @param entity 本次提交的实体
+       * @param exists 库中既有档案；新增时为 {@code null}
+       */
     private void applyPassword(EduStudent entity, EduStudent exists) {
         applyPassword(entity, exists, null);
     }
 
-    /**
-     * 处理登录口令（可指定「新增且未填口令」时的默认明文）。
-     *
-     * <p><b>默认口令 = 学号</b>：教师/管理员建档时通常不填口令，若因此留空，
-     * 学生永远登不进来（登录返回「密码错误」且查不出原因——实测用户反馈）。
-     * 未填时用学号作为初始口令，并置 {@code studentPwdMustChange=1}，
-     * 由学生端首次登录引导改成自己的口令。</p>
-     *
-     * @param entity     本次提交的实体
-     * @param exists     库中既有档案；新增时为 {@code null}
-     * @param defaultRaw 新增且未填口令时使用的默认明文（学号）；为 null 表示不设口令
-     */
+      /**
+       * 处理登录口令（可指定「新增且未填口令」时的默认明文）。
+       *
+       * <p><b>默认口令 = 学号</b>：教师/管理员建档时通常不填口令，若因此留空，
+       * 学生永远登不进来（登录返回「密码错误」且查不出原因——实测用户反馈）。
+       * 未填时用学号作为初始口令，并置 {@code studentPwdMustChange=1}，
+       * 由学生端首次登录引导改成自己的口令。</p>
+       *
+       * @param entity     本次提交的实体
+       * @param exists     库中既有档案；新增时为 {@code null}
+       * @param defaultRaw 新增且未填口令时使用的默认明文（学号）；为 null 表示不设口令
+       */
     private void applyPassword(EduStudent entity, EduStudent exists, String defaultRaw) {
         String raw = entity.getStudentPwdInput();
         if (!StringUtils.hasText(raw)) {
             if (exists != null) {
                 entity.setStudentPassword(exists.getStudentPassword());
                 entity.setStudentPwdSalt(exists.getStudentPwdSalt());
-                // 没改口令时要把「待引导改密」标记一并带回：否则管理员改个姓名
-                // 就会把该标记清掉，学生再也收不到首次改密引导。
+                  // 没改口令时要把「待引导改密」标记一并带回：否则管理员改个姓名
+                  // 就会把该标记清掉，学生再也收不到首次改密引导。
                 entity.setStudentPwdMustChange(exists.getStudentPwdMustChange());
                 return;
             }
@@ -963,21 +963,21 @@ public class EduDimensionService {
         entity.setStudentPwdSalt(salt);
         entity.setStudentPassword(StudentPasswordSupport.hash(raw, salt));
         entity.setStudentPwdInput(null);
-        // 管理员设/改的是**初始口令**，学生首次登录后要引导改成自己的口令
+          // 管理员设/改的是**初始口令**，学生首次登录后要引导改成自己的口令
         entity.setStudentPwdMustChange(1);
     }
 
-    /**
-     * 处理教师登录口令：把表单里的明文转成摘要加盐写回实体。
-     *
-     * <p>与学生同一形态与理由（见 {@link #applyPassword(EduStudent, EduStudent)}）：
-     * 更新场景下表单没提交新口令时，必须把库中既有的摘要与盐原样带回，
-     * 否则管理员改个姓名就会把教师的登录口令清空，教师立刻登不进来且没有任何提示。</p>
-     *
-     * @param entity     本次提交的实体
-     * @param exists     库中既有档案；新增时为 {@code null}
-     * @param defaultRaw 新增且未填口令时使用的默认明文（工号）；为 null 表示不设口令
-     */
+      /**
+       * 处理教师登录口令：把表单里的明文转成摘要加盐写回实体。
+       *
+       * <p>与学生同一形态与理由（见 {@link #applyPassword(EduStudent, EduStudent)}）：
+       * 更新场景下表单没提交新口令时，必须把库中既有的摘要与盐原样带回，
+       * 否则管理员改个姓名就会把教师的登录口令清空，教师立刻登不进来且没有任何提示。</p>
+       *
+       * @param entity     本次提交的实体
+       * @param exists     库中既有档案；新增时为 {@code null}
+       * @param defaultRaw 新增且未填口令时使用的默认明文（工号）；为 null 表示不设口令
+       */
     private void applyTeacherPassword(EduTeacher entity, EduTeacher exists, String defaultRaw) {
         String raw = entity.getTeacherPwdInput();
         if (!StringUtils.hasText(raw)) {
@@ -998,16 +998,16 @@ public class EduDimensionService {
         entity.setTeacherPwdInput(null);
     }
 
-    /**
-     * 归一化并校验家长手机号。
-     *
-     * <p>去掉分隔符（空格/短横线）后要求是 11 位、以 1 开头。空值（含全空格）
-     * 视为「未填」返回 null，而不是报错 —— 家长手机号是可选增强项，
-     * 不该因为没填就建不了档。</p>
-     *
-     * @param raw 表单原值
-     * @return 归一化后的 11 位号码；未填返回 null
-     */
+      /**
+       * 归一化并校验家长手机号。
+       *
+       * <p>去掉分隔符（空格/短横线）后要求是 11 位、以 1 开头。空值（含全空格）
+       * 视为「未填」返回 null，而不是报错 —— 家长手机号是可选增强项，
+       * 不该因为没填就建不了档。</p>
+       *
+       * @param raw 表单原值
+       * @return 归一化后的 11 位号码；未填返回 null
+       */
     private String normalizeParentPhone(String raw) {
         if (!StringUtils.hasText(raw)) {
             return null;
@@ -1019,12 +1019,12 @@ public class EduDimensionService {
         return digits;
     }
 
-    /**
-     * 删除学生。
-     *
-     * @param id 学生标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除学生。
+       *
+       * @param id 学生标识
+       * @return 是否删除成功
+       */
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteStudent(Long id) {
         if (id == null) {
@@ -1035,31 +1035,31 @@ public class EduDimensionService {
             return false;
         }
         EduUserContext.checkWritable(exists.getOwnerUserId());
-        // 连带清掉该学生的学习数据：进度与每日汇总都按 student_id 关联，
-        // 不一起删会留下查不到主人的孤儿行（验收时确实留下过 3 条进度 + 1 条日汇总）。
+          // 连带清掉该学生的学习数据：进度与每日汇总都按 student_id 关联，
+          // 不一起删会留下查不到主人的孤儿行（验收时确实留下过 3 条进度 + 1 条日汇总）。
         progressMapper.delete(new QueryWrapper<EduStudentProgress>().eq("student_id", id));
         dailyMapper.delete(new QueryWrapper<EduStudentDaily>().eq("student_id", id));
         return studentMapper.deleteById(id) > 0;
     }
 
-    // ==================== 教师 ====================
+      // ==================== 教师 ====================
 
-    /**
-     * 列表teachers
-     *
-     * @param subjectCode 主题编码
-     * @return 列表teachers的结果
-     */
+      /**
+       * 列表teachers
+       *
+       * @param subjectCode 主题编码
+       * @return 列表teachers的结果
+       */
     public List<EduTeacher> listTeachers(String subjectCode) {
         return teacherMapper.listTeachers(subjectCode, EduUserContext.ownerScope());
     }
 
-    /**
-     * 保存教师。
-     *
-     * @param entity 教师实体
-     * @return 教师标识
-     */
+      /**
+       * 保存教师。
+       *
+       * @param entity 教师实体
+       * @return 教师标识
+       */
     @Transactional(rollbackFor = Exception.class)
     public Long saveTeacher(EduTeacher entity) {
         if (!StringUtils.hasText(entity.getTeacherNo())) {
@@ -1072,8 +1072,8 @@ public class EduDimensionService {
             }
             EduUserContext.checkWritable(exists.getOwnerUserId());
             entity.setOwnerUserId(exists.getOwnerUserId());
-            // 工号是登录身份，编辑时锁定：前端把整行数据回传，
-            // 不锁定就会让「改个姓名」把工号也改了，教师立刻登不进来。
+              // 工号是登录身份，编辑时锁定：前端把整行数据回传，
+              // 不锁定就会让「改个姓名」把工号也改了，教师立刻登不进来。
             entity.setTeacherNo(exists.getTeacherNo());
             entity.setTeacherAccount(exists.getTeacherAccount());
             applyTeacherPassword(entity, exists, null);
@@ -1084,24 +1084,24 @@ public class EduDimensionService {
             entity.setTeacherStatus(1);
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
-        // 新增未填口令时默认口令 = 工号：建档时通常没人想到填口令，留空会让教师
-        // 永远登不进来（登录返回「口令错误」且查不出原因）。工号由管理员指定且唯一。
+          // 新增未填口令时默认口令 = 工号：建档时通常没人想到填口令，留空会让教师
+          // 永远登不进来（登录返回「口令错误」且查不出原因）。工号由管理员指定且唯一。
         applyTeacherPassword(entity, null, entity.getTeacherNo());
         teacherMapper.insert(entity);
         log.info("[EduAi] 新增教师: {} ({})", entity.getTeacherName(), entity.getTeacherNo());
         return entity.getTeacherId();
     }
 
-    /**
-     * 重置教师登录口令（管理端）。
-     *
-     * <p>与 {@link #resetStudentPassword(Long, String)} 同形：管理员在「学生管理 → 教师」
-     * 为教师设置一个可用口令，教师之后可自行登录老师端。</p>
-     *
-     * @param teacherId   教师标识
-     * @param newPassword 新口令明文
-     * @return 是否成功
-     */
+      /**
+       * 重置教师登录口令（管理端）。
+       *
+       * <p>与 {@link #resetStudentPassword(Long, String)} 同形：管理员在「学生管理 → 教师」
+       * 为教师设置一个可用口令，教师之后可自行登录老师端。</p>
+       *
+       * @param teacherId   教师标识
+       * @param newPassword 新口令明文
+       * @return 是否成功
+       */
     @Transactional(rollbackFor = Exception.class)
     public boolean resetTeacherPassword(Long teacherId, String newPassword) {
         if (teacherId == null) {
@@ -1121,12 +1121,12 @@ public class EduDimensionService {
         return teacherMapper.updateById(target) > 0;
     }
 
-    /**
-     * 删除教师。
-     *
-     * @param id 教师标识
-     * @return 是否删除成功
-     */
+      /**
+       * 删除教师。
+       *
+       * @param id 教师标识
+       * @return 是否删除成功
+       */
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteTeacher(Long id) {
         if (id == null) {
@@ -1140,23 +1140,23 @@ public class EduDimensionService {
         return teacherMapper.deleteById(id) > 0;
     }
 
-    /**
-     * 全量字典下拉：返回前端需要的 (学段枚举, 学科, 年级) 三元组。
-     * 用于考试/试卷表单的级联下拉。
-     * @author CH
-     * @since 4.0.0
-     * @return 获取dropdown的结果
-     */
+      /**
+       * 全量字典下拉：返回前端需要的 (学段枚举, 学科, 年级) 三元组。
+       * 用于考试/试卷表单的级联下拉。
+       * @author CH
+       * @since 4.0.0
+       * @return 获取dropdown的结果
+       */
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = CACHE_DROPDOWN,
             key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':'",
             unless = "#result == null")
-    /**
-     * get Dropdown
-     * @return 返回值
-    */
+      /**
+       * get Dropdown
+       * @return 返回值
+      */
     public DimensionDropdown getDropdown() {
-        // 学科 / 年级并行查询，缩短下拉首屏
+          // 学科 / 年级并行查询，缩短下拉首屏
         java.util.concurrent.CompletableFuture<List<EduSubject>> subjectsF =
                 java.util.concurrent.CompletableFuture.supplyAsync(() -> listSubjects(null));
         java.util.concurrent.CompletableFuture<List<EduGrade>> gradesF =
@@ -1186,112 +1186,112 @@ public class EduDimensionService {
         return dropdown;
     }
 
-    /**
-     * 字典下拉数据，封装学段、学科和年级选项。
-     */
+      /**
+       * 字典下拉数据，封装学段、学科和年级选项。
+       */
     public static class DimensionDropdown {
-        /**
-         * Gradelevels
-         */
+          /**
+           * Gradelevels
+           */
         private List<EnumOption> gradeLevels;
-        /**
-         * 主题
-         */
+          /**
+           * 主题
+           */
         private List<EduSubject> subjects;
-        /**
-         * Grades
-         */
+          /**
+           * Grades
+           */
         private List<EduGrade> grades;
-        /**
-         * 获取grade级别
-         *
-         * @return 获取grade级别的结果
-         */
+          /**
+           * 获取grade级别
+           *
+           * @return 获取grade级别的结果
+           */
         public List<EnumOption> getGradeLevels() { return gradeLevels; }
-        /**
-         * 设置grade级别
-         *
-         * @param gradeLevels grade级别
-         */
+          /**
+           * 设置grade级别
+           *
+           * @param gradeLevels grade级别
+           */
         public void setGradeLevels(List<EnumOption> gradeLevels) { this.gradeLevels = gradeLevels; }
-        /**
-         * 获取主题
-         *
-         * @return 获取主题的结果
-         */
+          /**
+           * 获取主题
+           *
+           * @return 获取主题的结果
+           */
         public List<EduSubject> getSubjects() { return subjects; }
-        /**
-         * 设置主题
-         *
-         * @param subjects 主题
-         */
+          /**
+           * 设置主题
+           *
+           * @param subjects 主题
+           */
         public void setSubjects(List<EduSubject> subjects) { this.subjects = subjects; }
-        /**
-         * 获取Grades
-         *
-         * @return 获取Grades的结果
-         */
+          /**
+           * 获取Grades
+           *
+           * @return 获取Grades的结果
+           */
         public List<EduGrade> getGrades() { return grades; }
-        /**
-         * 设置grades
-         *
-         * @param grades grades
-         * @author CH
-         * @since 4.0.0
-         */
+          /**
+           * 设置grades
+           *
+           * @param grades grades
+           * @author CH
+           * @since 4.0.0
+           */
         public void setGrades(List<EduGrade> grades) { this.grades = grades; }
     }
 
-    /**
-     * 字典下拉选项，封装枚举值和显示文本。
-     */
+      /**
+       * 字典下拉选项，封装枚举值和显示文本。
+       */
     public static class EnumOption {
-        /**
-         * 值
-         */
+          /**
+           * 值
+           */
         private String value;
-        /**
-         * 标签
-         */
+          /**
+           * 标签
+           */
         private String label;
-        /**
-         * 创建空的字典下拉选项。
-         */
+          /**
+           * 创建空的字典下拉选项。
+           */
         public EnumOption() {
         }
-        /**
-         * 创建字典下拉选项。
-         *
-         * @param value 选项值
-         * @param label 显示文本
-         */
+          /**
+           * 创建字典下拉选项。
+           *
+           * @param value 选项值
+           * @param label 显示文本
+           */
         public EnumOption(String value, String label) {
             this.value = value;
             this.label = label;
         }
-        /**
-         * 获取值
-         *
-         * @return 获取值的结果
-         */
+          /**
+           * 获取值
+           *
+           * @return 获取值的结果
+           */
         public String getValue() { return value; }
-        /**
-         * 设置值
-         *
-         * @param value 值
-         */
+          /**
+           * 设置值
+           *
+           * @param value 值
+           */
         public void setValue(String value) { this.value = value; }
-        /**
-         * 获取标签
-         *
-         * @return 获取标签的结果
-         */
+          /**
+           * 获取标签
+           *
+           * @return 获取标签的结果
+           */
         public String getLabel() { return label; }
-        /**
-         * 设置标签
-         *
-         * @param label 标签
-         */
+          /**
+           * 设置标签
+           *
+           * @param label 标签
+           */
         public void setLabel(String label) { this.label = label; }
     }
 }

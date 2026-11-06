@@ -8,20 +8,28 @@ import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduHanziMapper;
+import com.chua.starter.eduai.mapper.EduHanziTongjiaMapper;
 import com.chua.starter.eduai.model.EduHanzi;
+import com.chua.starter.eduai.model.EduHanziTongjia;
 import com.chua.starter.eduai.service.IEduHanziService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import com.chua.starter.eduai.support.util.GradeLevels;
 import com.chua.starter.eduai.support.util.PageBounds;
+import com.chua.starter.eduai.support.util.Pinyins;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 汉字基础数据服务实现。
@@ -29,11 +37,26 @@ import java.util.Objects;
  * <p>归属口径与其它 eduai 资源一致：管理员可见全部，普通用户可见「本人 + 系统预置（归属为空）」。
  * 唯一键是汉字本身，因此「按字查重后更新」保证重复提交不会撞唯一键。</p>
  *
+ * <p><b>检索口径（本轮补齐的两块能力）</b>：</p>
+ * <ul>
+ *   <li><b>拼音</b>：带声调、无声调、多音字任一读音都要能命中。
+ *       带调与多读音走 {@code hanzi_pinyin} 的包含匹配（该列允许逗号分隔多读音），
+ *       无声调走 {@link Pinyins#plain(String)} 归一化后再匹配。</li>
+ *   <li><b>通假字</b>：本字与借字双向可查。借字存在 {@code edu_hanzi_tongjia} 关联表里，
+ *       查询时先按借字反查本字 id，再并入主查询条件。</li>
+ * </ul>
+ *
  * @since 4.0.0.43
  * @author CH
  */
 @Service
+@RequiredArgsConstructor
 public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> implements IEduHanziService {
+
+    /**
+     * 通假字关联 Mapper（本字 → 借字，一对多）。
+     */
+    private final EduHanziTongjiaMapper tongjiaMapper;
 
     @Override
     public PageResult<EduHanzi> pageQuery(String keyword, String gradeLevel, Integer pageNum, Integer pageSize) {
@@ -44,9 +67,30 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
             wrapper.and(w -> w.isNull("hanzi_owner_user_id").or().eq("hanzi_owner_user_id", scope.ownerPredicate()));
         }
         if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like("hanzi_char", keyword)
-                    .or().like("hanzi_pinyin", keyword)
-                    .or().like("hanzi_meaning", keyword));
+            String kw = keyword.trim();
+            // 拼音检索的三种写法都要通吃（本轮实测缺陷：只 like 带调列，敲 zhong 查不到 zhòng）：
+            //   1) 带声调原样：zhòng / měi
+            //   2) 无声调：zhong / mei（用 Pinyins 归一化后比较）
+            //   3) 多音字任读音：hang / xing（hanzi_pinyin 允许逗号分隔多读音）
+            // 另外通假字借字也要能搜到本字：搜「悦」要命中「说」。
+            String plain = Pinyins.plain(kw);
+            List<Long> tongjiaOwners = findOwnersByTongjia(kw);
+            wrapper.and(w -> {
+                w.like("hanzi_char", kw)
+                        .or().like("hanzi_pinyin", kw)
+                        .or().like("hanzi_meaning", kw);
+                if (plain != null) {
+                    // 无声调匹配：把库里的读音在 SQL 侧归一化后比较。
+                    // 只在关键词里含拉丁字母时才加这条 —— 纯汉字关键词归一化后还是它自己，
+                    // 加上去只是白白多扫一遍列。
+                    if (containsLatin(plain)) {
+                        w.or().apply(normalizedPinyinLikeSql(), plain);
+                    }
+                }
+                if (!tongjiaOwners.isEmpty()) {
+                    w.or().in("hanzi_id", tongjiaOwners);
+                }
+            });
         }
         if (StringUtils.hasText(gradeLevel)) {
             // 前端下拉传 PRIMARY/JUNIOR 码值，库里存中文名，不归一化筛选恒为 0 条
@@ -54,13 +98,107 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
         }
         wrapper.orderByDesc("hanzi_id");
         IPage<EduHanzi> result = baseMapper.selectPage(page, wrapper);
+        List<EduHanzi> records = result.getRecords();
+        fillTongjia(records);
         return PageResult.<EduHanzi>builder()
                 .pageNo((int) result.getCurrent())
                 .pageSize((int) result.getSize())
                 .totalPages((int) result.getPages())
                 .total(result.getTotal())
-                .data(result.getRecords())
+                .data(records)
                 .build();
+    }
+
+    /**
+     * 「无声调读音包含匹配」的 SQL 片段。
+     *
+     * <p>库里 {@code hanzi_pinyin} 存带声调写法，检索键是无声调。两种做法：</p>
+     * <ol>
+     *   <li>加一列存归一化结果 —— 需要 ALTER，而 H2 与 MariaDB 没有共同的补列写法
+     *       （详见 V2.2 脚本头的说明），故放弃；</li>
+     *   <li>在 SQL 里现算 —— 用 REPLACE 链把声调符号逐个抹平再 LIKE。
+     *       代价是全表扫，但汉字库只有 3500 行、检索是人工触发，完全可接受。</li>
+     * </ol>
+     *
+     * <p>占位符顺序：第一个是「归一化后的关键词」（用于 LIKE），第二个同值
+     * （REPLACE 的匹配串由常量给出，不需要第二个参数，这里只保留一个占位）。
+     * 用 MyBatis-Plus 的 {@code apply} 而不是 {@code like}，因为需要包一层函数。</p>
+     *
+     * @return SQL 片段，两个 {@code {0}} 占位由调用方绑定
+     */
+    private static String normalizedPinyinLikeSql() {
+        String normalized = "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE("
+                + "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE("
+                + "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE("
+                + "REPLACE(hanzi_pinyin,' ','')"
+                + ",'ā','a'),'á','a'),'ǎ','a'),'à','a')"
+                + ",'ē','e'),'é','e'),'ě','e'),'è','e')"
+                + ",'ī','i'),'í','i'),'ǐ','i'),'ì','i')"
+                + ",'ō','o'),'ó','o'),'ǒ','o'),'ò','o')"
+                + ",'ū','u'),'ú','u'),'ǔ','u'),'ù','u')"
+                + ",'ǖ','v'),'ǘ','v'),'ǚ','v'),'ǜ','v')"
+                + ",'ü','v'),'ń','n'),'ň','n'),'ǹ','n'))";
+        return normalized + " LIKE CONCAT('%', {0}, '%')";
+    }
+
+    /**
+     * 关键词里是否含拉丁字母（决定要不要走拼音归一化分支）。
+     *
+     * @param text 关键词
+     * @return 含拉丁字母返回 true
+     */
+    private static boolean containsLatin(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 按借字反查本字 id（通假字双向检索）。
+     *
+     * @param keyword 关键字（可能是借字）
+     * @return 本字 id 列表，永不为 null
+     */
+    private List<Long> findOwnersByTongjia(String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return List.of();
+        }
+        List<EduHanziTongjia> hits = tongjiaMapper.selectList(
+                new QueryWrapper<EduHanziTongjia>().like("tongjia_char", keyword.trim()));
+        return hits.stream()
+                .map(EduHanziTongjia::getTongjiaHanziId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * 给当前页的汉字批量回填通假字（一次 IN 查询，不做 N+1）。
+     *
+     * @param records 当前页记录
+     */
+    private void fillTongjia(List<EduHanzi> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<Long> ids = records.stream().map(EduHanzi::getHanziId).filter(Objects::nonNull).toList();
+        if (ids.isEmpty()) {
+            return;
+        }
+        List<EduHanziTongjia> all = tongjiaMapper.selectList(
+                new QueryWrapper<EduHanziTongjia>().in("tongjia_hanzi_id", ids));
+        Map<Long, List<String>> byOwner = new HashMap<>();
+        for (EduHanziTongjia row : all) {
+            byOwner.computeIfAbsent(row.getTongjiaHanziId(), k -> new ArrayList<>()).add(row.getTongjiaChar());
+        }
+        for (EduHanzi hanzi : records) {
+            List<String> chars = byOwner.get(hanzi.getHanziId());
+            hanzi.setHanziTongjia(chars == null || chars.isEmpty() ? null : String.join(",", chars));
+        }
     }
 
     @Override
@@ -81,16 +219,21 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
             if (exists == null) {
                 throw new BusinessException("汉字不存在");
             }
-            return updateExisting(exists, entity);
+            Long id = updateExisting(exists, entity);
+            syncTongjia(id, entity.getHanziTongjia());
+            return id;
         }
         // 按字查重：唯一键保证一个字一条，重复提交同一个字则更新而不是新增
         EduHanzi same = findByChar(ch);
         if (same != null) {
-            return updateExisting(same, entity);
+            Long id = updateExisting(same, entity);
+            syncTongjia(id, entity.getHanziTongjia());
+            return id;
         }
         entity.setOwnerUserId(EduUserContext.requireUserId());
         try {
             save(entity);
+            syncTongjia(entity.getHanziId(), entity.getHanziTongjia());
             return entity.getHanziId();
         } catch (RuntimeException ex) {
             // 并发竞态：两个请求同时判定「库里没有这个字」，后落库的会撞唯一键。
@@ -108,7 +251,41 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
             if (raced == null) {
                 throw ex;
             }
-            return updateExisting(raced, entity);
+            Long id = updateExisting(raced, entity);
+            syncTongjia(id, entity.getHanziTongjia());
+            return id;
+        }
+    }
+
+    /**
+     * 同步通假字关联表（本字 → 借字，一对多）。
+     *
+     * <p>口径是「先清后建」：提交里没写的借字会被删掉，与页面表单的整体覆盖语义一致
+     * （用户在输入框里删掉一个借字，期望它真的消失，而不是留在库里继续被搜到）。</p>
+     *
+     * <p>提交值为 {@code null} 时**不动**关联表：那是「只改释义、没碰通假字」的调用方，
+     * 清空会让它们无意中丢掉已有通假数据。</p>
+     *
+     * @param hanziId 本字标识
+     * @param tongjia 借字串（逗号分隔），null 表示不改动
+     */
+    private void syncTongjia(Long hanziId, String tongjia) {
+        if (hanziId == null || tongjia == null) {
+            return;
+        }
+        tongjiaMapper.delete(new QueryWrapper<EduHanziTongjia>().eq("tongjia_hanzi_id", hanziId));
+        Set<String> chars = new LinkedHashSet<>();
+        for (String raw : tongjia.split("[,，;；、/|\\s]+")) {
+            String c = raw.trim();
+            if (!c.isEmpty()) {
+                chars.add(c);
+            }
+        }
+        for (String c : chars) {
+            EduHanziTongjia row = new EduHanziTongjia();
+            row.setTongjiaHanziId(hanziId);
+            row.setTongjiaChar(c);
+            tongjiaMapper.insert(row);
         }
     }
 
@@ -153,6 +330,8 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
             return false;
         }
         EduUserContext.checkWritable(exists.getOwnerUserId());
+        // 先删通假字关联：本字没了，借字记录没有意义，留着会让「搜借字命中已删本字」永远查不到行
+        tongjiaMapper.delete(new QueryWrapper<EduHanziTongjia>().eq("tongjia_hanzi_id", id));
         return removeById(id);
     }
 
@@ -390,6 +569,8 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
         item.put("hanziId", hanzi.getHanziId());
         item.put("char", hanzi.getHanziChar());
         item.put("pinyin", hanzi.getHanziPinyin());
+        item.put("pinyinAll", hanzi.getHanziPinyin());
+        item.put("tongjia", hanzi.getHanziTongjia());
         item.put("strokes", hanzi.getHanziStrokes());
         item.put("radical", hanzi.getHanziRadical());
         item.put("structure", hanzi.getHanziStructure());

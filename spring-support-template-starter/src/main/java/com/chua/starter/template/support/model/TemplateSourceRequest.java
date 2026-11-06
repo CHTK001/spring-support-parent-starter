@@ -19,6 +19,9 @@ public record TemplateSourceRequest(
     /** 来源行 ID（短信/组卷模板的主键 ID，String） */
     String sourceId,
 
+    /** 三方模板 ID（来源侧模板编码，如短信模板的 sys_message_template_code；自定义模板为 null） */
+    String sourceCode,
+
     /** 来源提供方（消息提供商 ID / 组卷归属用户 ID） */
     String providerId,
 
@@ -60,6 +63,7 @@ public record TemplateSourceRequest(
         template.setTemplateInfoContent(content());
         template.setTemplateInfoSource(source());
         template.setTemplateInfoSourceId(sourceId());
+        template.setTemplateInfoSourceCode(sourceCode());
         template.setTemplateInfoProvider(providerId());
         template.setTemplateInfoCreator(creator);
         template.setTemplateInfoModifier(creator);

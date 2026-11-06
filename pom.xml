@@ -147,9 +147,12 @@
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
         <module>spring-support-cdp-starter</module>          <!-- CDP 调试模块：Chrome DevTools Protocol 代用/Debug 控制台 -->
 
-        <!-- 渠道管理模块（账号类渠道鉴权 / 渠道健康探针 / 渠道定时任务）：
-             必须排在 ai-starter 之前——ai-starter 单向依赖本模块，reactor 才能按此顺序构建 -->
-        <module>spring-support-channel-starter</module>
+        <!-- 渠道管理模块（已下线，功能由 spring-support-account-starter 承接）：
+             spring-support-channel-starter 目录已删除，父 POM 中保留的 active 条目
+             会使 Maven 扫描时直接报 "Child module ... does not exist"，导致整个 reactor
+             无法启动（包括 spring-support-lowcode-starter 在内的全部模块）；
+             依赖管理条目已保留，需引用方自行改为 account-starter。 -->
+        <!-- <module>spring-support-channel-starter</module> -->
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
         <!-- AI训练平台模块 -->
@@ -169,7 +172,8 @@
 <module>spring-support-apm-starter</module>            <!-- APM 基础模块：ApmProvider SPI + 统一 REST（嵌入/独立双模式） -->
 <module>spring-support-apm-skywalking-starter</module> <!-- APM 扩展：SkyWalking -->
 <module>spring-support-apm-hotspot-starter</module>    <!-- APM 扩展：自研 hotspot agent -->
-    </modules>
+<module>spring-support-lowcode-starter</module>    <!-- 低代码表单管理：目录/表单/页面/版本设计器接入 -->
+</modules>
     <!-- 项目属性配置 -->
     <properties>
         <!-- Java版本配置 - 使用Java 25 LTS版本 -->
@@ -663,6 +667,25 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-datasearch-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- 采集平台模块（/v2/collect/**）。
+                 本身不在本 reactor 中构建（缺少 <module> 声明），当前的 jar 已经 install
+                 到本地 Windows 开发机仓库 D:/maven-repo（4.0.0.51）；
+                 若需要本地构建，把 <module>spring-support-collect-starter</module> 加入
+                 modules 列表即可，版本号由 ${project.version} 统一管理。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-collect-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- spring-api-support-monitor-starter：由 spring-support-api-starter 构建产出的
+                 独立 artifact，不在本 reactor 模块树中，需要先 install 到本地 Maven 仓库
+                 才能被 spring-support-monitor-starter 等 receiver 消费，
+                 目前本地仓库已有 4.0.0.51 版本。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-api-support-monitor-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <!-- 监控和上报模块 -->

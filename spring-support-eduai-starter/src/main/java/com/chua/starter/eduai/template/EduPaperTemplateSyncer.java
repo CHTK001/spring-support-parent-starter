@@ -150,6 +150,8 @@ public class EduPaperTemplateSyncer implements SourceSyncer {
         return new TemplateSourceRequest(
             SOURCE,
             String.valueOf(template.getTemplateId()),
+            // 组卷模板在来源侧没有独立的模板编码，三方模板 ID 就是来源行 ID
+            null,
             template.getOwnerUserId(),
             template.getTemplateName(),
             template.getTemplateStyle(),

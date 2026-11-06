@@ -54,16 +54,38 @@ public class ApmAutoConfiguration {
     }
 
     /**
-     * 统一路由器
+     * APM 设置读写入口。
+     * <p>
+     * 装配时先把设置文件里保存的值套回内存配置（{@link ApmRuntimeConfig#restore()}）：
+     * 界面上改过的开关/引擎/地址，进程重启后应当继续生效，否则「保存」就是个假动作。
+     * </p>
      *
      * @param registry   注册表
      * @param properties 配置
+     * @return 设置入口
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ApmRuntimeConfig apmRuntimeConfig(ApmRegistry registry, ApmProperties properties) {
+        ApmRuntimeConfig config = new ApmRuntimeConfig(properties, registry,
+                new ApmSettingsStore(properties.getSettingsFile()));
+        config.restore();
+        return config;
+    }
+
+    /**
+     * 统一路由器
+     *
+     * @param registry      注册表
+     * @param properties    配置
+     * @param runtimeConfig 设置入口
      * @return 路由器
      */
     @Bean
     @ConditionalOnMissingBean
-    public ApmDispatcher apmDispatcher(ApmRegistry registry, ApmProperties properties) {
-        return new ApmDispatcher(registry, properties);
+    public ApmDispatcher apmDispatcher(ApmRegistry registry, ApmProperties properties,
+                                       ApmRuntimeConfig runtimeConfig) {
+        return new ApmDispatcher(registry, properties, runtimeConfig);
     }
 
     /**

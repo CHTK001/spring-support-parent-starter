@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -208,9 +209,23 @@ public class CdpEngineService {
     private final Set<String> attachedPages = ConcurrentHashMap.newKeySet();
 
     /**
-     * 全局事件订阅者（通过 CDN 回传到每个 WS 前端）
+     * 已装过「页面级 all 事件分发器」的目标。
+     *
+     * <p>分发器是闭包，运行时动态读 {@link #globalSubscribers}，因此一个页面通道
+     * 只需装一次；{@link #subscribeAll} 每次 SSE 连接都会重新遍历 {@link #attachedPages}，
+     * 若不做幂等，同一个事件会被投递 N 次（实测每连一次 SSE 就多一份重复帧）。</p>
      */
-    private final Map<String, List<Consumer<Map<String, Object>>>> globalSubscribers = new ConcurrentHashMap<>();
+    private final Set<String> pageDispatchers = ConcurrentHashMap.newKeySet();
+
+    /**
+     * 全局事件订阅者（通过 CDN 回传到每个 WS 前端 / SSE 流）
+     *
+     * <p>用 {@link java.util.concurrent.CopyOnWriteArrayList}：订阅 / 退订与事件分发
+     * （{@code installXxxDispatcher} 里以 {@code new ArrayList<>(subs)} 快照遍历）会并发发生，
+     * 普通 {@code ArrayList} 在遍历时被改动会抛 {@code ConcurrentModificationException}，
+     * 直接吞掉整批事件。且必须在连接关闭时 {@link #unsubscribeAll} 移除，否则会无限堆积。</p>
+     */
+    private final Map<String, CopyOnWriteArrayList<Consumer<Map<String, Object>>>> globalSubscribers = new ConcurrentHashMap<>();
 
     /**
      * 开始一个浏览器
@@ -359,6 +374,7 @@ public class CdpEngineService {
             eventsSubscribed = false;
             browserSubscribed = false;
             attachedPages.clear();
+            pageDispatchers.clear();
             killProcessTree(process);
             killByDebugPort();
             process = null;
@@ -396,13 +412,33 @@ public class CdpEngineService {
      */
     public void subscribeAll(Consumer<Map<String, Object>> handler) {
         for (String method : EVENT_METHODS) {
-            globalSubscribers.computeIfAbsent(method, k -> new ArrayList<>()).add(handler);
+            // addIfAbsent：全局 SSE 广播器可能随多次连接重复 subscribeAll，
+            // 重复 add 会让同一条事件被推送 N 份（实测每连一次 SSE 就多一份重复帧）
+            globalSubscribers.computeIfAbsent(method, k -> new CopyOnWriteArrayList<>()).addIfAbsent(handler);
         }
         // 浏览器通道尚未建立 / 尚未安装分发器时，补装一次
         installBrowserDispatcher();
         for (String targetId : attachedPages) {
-            // 每个页面通道只装一次 all 分发器，重复调用无副作用
+            // installPageDispatcher 内部按 pageDispatchers 幂等，重复调用无副作用
             installPageDispatcher(targetId);
+        }
+    }
+
+    /**
+     * 注销一个全局订阅者（连接关闭 / SSE 断开时必须调用）
+     *
+     * <p>旧实现只在 {@code subscribeAll} 里 add，从不 remove：前端每刷新一次页面，
+     * WS 重连就往 {@link #globalSubscribers} 追加一个指向已关闭会话的 handler，
+     * 广播时不断抛异常、内存无限增长，也是「刷新后功能失效」的隐藏元凶之一。</p>
+     *
+     * @param handler {@link #subscribeAll} 时传入的同一个引用
+     */
+    public void unsubscribeAll(Consumer<Map<String, Object>> handler) {
+        if (handler == null) {
+            return;
+        }
+        for (List<Consumer<Map<String, Object>>> subs : globalSubscribers.values()) {
+            subs.remove(handler);
         }
     }
 
@@ -458,6 +494,12 @@ public class CdpEngineService {
     private void installPageDispatcher(String targetId) {
         CdpWsClient client = pageClients.get(targetId);
         if (client == null) {
+            return;
+        }
+        // 一个页面通道只装一次 all 分发器：分发器是闭包，运行时动态读 globalSubscribers，
+        // 订阅者增减都不需要重装。重复装会让同一条事件被投递多份。
+        // 页面通道重连时会从 pageDispatchers 移除该目标，届时可重新装。
+        if (!pageDispatchers.add(targetId)) {
             return;
         }
         client.on("all", msg -> {
@@ -721,6 +763,7 @@ public class CdpEngineService {
             eventsSubscribed = false;
             browserSubscribed = false;
             attachedPages.clear();
+            pageDispatchers.clear();
             killProcessTree(process);
             // Chromium 会脱离父子关系，必须再按调试端口清一次
             killByDebugPort();
@@ -844,6 +887,7 @@ public class CdpEngineService {
             }
         }
         attachedPages.remove(targetId);
+        pageDispatchers.remove(targetId);
         return result;
     }
 
@@ -861,9 +905,10 @@ public class CdpEngineService {
             return existing;
         }
         if (existing != null) {
-            // 通道已断：丢掉旧对象，重新连一次
+            // 通道已断：丢掉旧对象，重新连一次；分发器标记也要清，否则新通道装不上
             pageClients.remove(targetId, existing);
             attachedPages.remove(targetId);
+            pageDispatchers.remove(targetId);
         }
         CdpWsClient client = openPageClient(targetId);
         // 页面新开：把 Runtime/Network/Page 域与事件分发器接上

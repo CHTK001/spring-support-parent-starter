@@ -97,7 +97,7 @@ public final class LedgerSemanticsProbe {
         log.info("[probe] ---- 汇总：passed={} failed={} ----", passed, failed);
         System.out.println("PROBE_RESULT passed=" + passed + " failed=" + failed); // [P3C E1 豁免]
         if (failed > 0) {
-            System.exit(1);
+            throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
         }
     }
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.collect.mapper.CollectFlowVersionMapper">
+
+    <!--
+        查询某流程的最新版本号。
+    -->
+    <select id="maxVersionNo" resultType="int">
+        SELECT COALESCE(MAX(version_no), 0)
+        FROM collect_flow_version
+        WHERE collect_flow_id = #{flowId}
+    </select>
+
+</mapper>

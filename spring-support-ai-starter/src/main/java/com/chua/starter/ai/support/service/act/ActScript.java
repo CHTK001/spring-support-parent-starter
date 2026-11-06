@@ -60,6 +60,8 @@ public final class ActScript {
     public static final String SCENE_LINES = "lines";
     /** 场景 表演叙述 键 */
     public static final String SCENE_PLAY = "playText";
+    /** 场景 演员名 键（演出正文里用于标注「谁在场」，剧本里可能缺） */
+    public static final String SCENE_CAST = "cast";
 
     /** 过场 顺序 键 */
     public static final String TRANSITION_ORDER = "order";

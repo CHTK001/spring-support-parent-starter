@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.collect.mapper.CollectTaskMapper">
+
+    <!-- 分别累加任务执行节点数、抓取请求数和产出记录数。 -->
+    <update id="accumulate" parameterType="java.util.Map">
+        UPDATE collect_task
+        SET collect_task_node_count = COALESCE(collect_task_node_count, 0) + #{nodeCount},
+            collect_task_request_count = COALESCE(collect_task_request_count, 0) + #{requestCount},
+            collect_task_record_count = COALESCE(collect_task_record_count, 0) + #{recordCount}
+        WHERE collect_task_id = #{taskId}
+    </update>
+
+    <!--
+      收口僵尸任务：进程非正常退出时收尾不会执行，任务行会永远停在运行中。
+      判据只取开始时间与单任务超时上限，不看执行器标识，多节点下不会误伤别人真正在跑的任务。
+    -->
+    <update id="reapStaleRunning" parameterType="java.util.Map">
+        UPDATE collect_task
+        SET collect_task_status = #{status},
+            collect_task_end_time = #{endTime},
+            collect_task_error = #{error},
+            update_time = #{endTime}
+        WHERE collect_task_status = 'RUNNING'
+          AND collect_task_begin_time IS NOT NULL
+          AND collect_task_begin_time &lt; #{cutoff}
+    </update>
+
+</mapper>

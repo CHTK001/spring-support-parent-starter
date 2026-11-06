@@ -11,46 +11,47 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.lang.reflect.Parameter;
 
 /**
- * 用户信息
- *
- * @since 2022/7/25 16:48
- * @author CH
- */
+   * 用户信息
+   *
+   * @since 2022/7/25 16:48
+   * @author CH
+   */
 public class TokenRequestHandlerMethodArgumentResolver extends UserRequestHandlerMethodArgumentResolver {
 
-    /**
-     * 创建 令牌请求处理器方法参数解析器 实例
-     * @param webRequest web请求
-     */
+      /**
+       * 创建 令牌请求处理器方法参数解析器 实例
+       * @param webRequest web请求
+       */
     public TokenRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
-        /**
-         * 父。
-         * @param webRequest web请求
-         */
+          /**
+           * 父。
+           * @param webRequest web请求
+           */
         super(webRequest);
     }
 
     @Override
-    /**
-     * 支持参数
-     * @param parameter 参数
-     * @return 返回值
-    */
+      /**
+       * 支持参数
+       * @param parameter 参数
+       * @return 返回值
+      */
     public boolean supportsParameter(MethodParameter parameter) {
         return super.supportsParameter(parameter, TokenValue.class);
     }
 
     @Override
-    /**
-     * 解析参数
-     * @param binderFactory 参数
-     * @param mavContainer 参数
-     * @param methodParameter 参数
-     * @param webRequest 参数
-     * @return 返回值
-     * @throws Exception 异常
-    */
-    public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+      /**
+       * 解析参数
+       * @param binderFactory 参数
+       * @param mavContainer 参数
+       * @param methodParameter 参数
+       * @param webRequest 参数
+       * @return 返回值
+       * @throws Exception 异常
+      */
+    public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest
+        , WebDataBinderFactory binderFactory) throws Exception {
         TokenValue requestValue = methodParameter.getParameterAnnotation(TokenValue.class);
         Parameter parameter = methodParameter.getParameter();
         return resolveEmbeddedValuesAndExpressions(

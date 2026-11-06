@@ -23,41 +23,41 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 微信支付分订单控制器
- * @author CH
- * @since 4.0.0
- */
+   * 微信支付分订单控制器
+   * @author CH
+   * @since 4.0.0
+   */
 @Tag(name = "微信支付分", description = "微信支付分服务订单相关接口")
 @RestController
 @RequestMapping("/wechat/payscore/order")
 @RequiredArgsConstructor
 public class WechatPayScoreOrderController {
 
-    /**
-     * 微信支付分服务
-     */
+      /**
+       * 微信支付分服务
+       */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     @Operation(summary = "创建微信支付分订单")
     @PostMapping
-    /**
-     * 创建
-     *
-     * @param dto dto
-     * @return 创建的结果
-     */
+      /**
+       * 创建
+       *
+       * @param dto dto
+       * @return 创建的结果
+       */
     public Result<WechatPayScoreOrderVO> create(@RequestBody WechatPayScoreCreateDTO dto) {
         return Result.success(convert(wechatPayScoreOrderService.createOrder(dto)));
     }
 
     @Operation(summary = "查询微信支付分订单")
     @GetMapping("/{outOrderNo}")
-    /**
-     * 获取
-     *
-     * @param outOrderNo 商户订单号
-     * @return 获取的结果
-     */
+      /**
+       * 获取
+       *
+       * @param outOrderNo 商户订单号
+       * @return 获取的结果
+       */
     public Result<WechatPayScoreOrderVO> get(@PathVariable String outOrderNo) {
         WechatPayScoreOrder order = wechatPayScoreOrderService.getByOutOrderNo(outOrderNo);
         return order == null ? Result.error("微信支付分订单不存在") : Result.success(convert(order));
@@ -65,17 +65,18 @@ public class WechatPayScoreOrderController {
 
     @Operation(summary = "分页查询微信支付分订单")
     @GetMapping("/page")
-    /**
-     * 分页查询
-     *
-     */
+      /**
+       * 分页查询
+       *
+       */
     public Result<PageResult<WechatPayScoreOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
                                                           @RequestParam(required = false) Long merchantId,
                                                           @RequestParam(required = false) Long channelId,
                                                           @RequestParam(required = false) String openId,
                                                           @RequestParam(required = false) String state) {
-        Page<WechatPayScoreOrder> page = wechatPayScoreOrderService.page(new WechatPayScoreOrderQueryRequest(pageNum, pageSize, merchantId, channelId, openId, state));
+        Page<WechatPayScoreOrder> page = wechatPayScoreOrderService.page(new WechatPayScoreOrderQueryRequest(pageNum, pageSize
+            , merchantId, channelId, openId, state));
         Page<WechatPayScoreOrderVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(this::convert).toList());
         return Result.success(PageResult.of(voPage));
@@ -83,23 +84,23 @@ public class WechatPayScoreOrderController {
 
     @Operation(summary = "同步微信支付分订单状态")
     @PostMapping("/{outOrderNo}/sync")
-    /**
-     * 同步
-     *
-     * @param outOrderNo 商户订单号
-     * @return 同步的结果
-     */
+      /**
+       * 同步
+       *
+       * @param outOrderNo 商户订单号
+       * @return 同步的结果
+       */
     public Result<WechatPayScoreOrderVO> sync(@PathVariable String outOrderNo) {
         return Result.success(convert(wechatPayScoreOrderService.syncOrder(outOrderNo)));
     }
 
     @Operation(summary = "完结微信支付分订单")
     @PostMapping("/{outOrderNo}/complete")
-    /**
-     * 完结
-     * @param outOrderNo 商户订单号
-     * @param dto dto
-     */
+      /**
+       * 完结
+       * @param outOrderNo 商户订单号
+       * @param dto dto
+       */
     public Result<WechatPayScoreOrderVO> complete(@PathVariable String outOrderNo,
                                                   @RequestBody(required = false) WechatPayScoreCompleteDTO dto) {
         return Result.success(convert(wechatPayScoreOrderService.completeOrder(outOrderNo, dto)));
@@ -107,22 +108,22 @@ public class WechatPayScoreOrderController {
 
     @Operation(summary = "取消微信支付分订单")
     @PostMapping("/{outOrderNo}/cancel")
-    /**
-     * 取消
-     * @param outOrderNo 商户订单号
-     * @param dto dto
-     */
+      /**
+       * 取消
+       * @param outOrderNo 商户订单号
+       * @param dto dto
+       */
     public Result<WechatPayScoreOrderVO> cancel(@PathVariable String outOrderNo,
                                                 @RequestBody(required = false) WechatPayScoreCancelDTO dto) {
         return Result.success(convert(wechatPayScoreOrderService.cancelOrder(outOrderNo, dto)));
     }
 
-    /**
-     * 转换
-     *
-     * @param order 订单
-     * @return 转换的结果
-     */
+      /**
+       * 转换
+       *
+       * @param order 订单
+       * @return 转换的结果
+       */
     private WechatPayScoreOrderVO convert(WechatPayScoreOrder order) {
         return new WechatPayScoreOrderVO(
                 order.getId(),

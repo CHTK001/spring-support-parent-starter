@@ -248,7 +248,7 @@ CREATE TABLE IF NOT EXISTS edu_answer_sheet (
     answer_sheet_owner_user_id VARCHAR(64) COMMENT '归属用户 ID',
     KEY edu_answer_sheet_owner (answer_sheet_owner_user_id),
     answer_sheet_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '答题卡ID',
-    answer_sheet_exam_id BIGINT NOT NULL COMMENT '考试ID',
+    answer_sheet_exam_id BIGINT NULL COMMENT '考试ID（扫描阅卷未绑定考试时为空）',
     answer_sheet_student_id VARCHAR(64) NOT NULL COMMENT '学生ID',
     answer_sheet_content JSON COMMENT '答题内容（JSON）',
     answer_sheet_submit_time DATETIME COMMENT '提交时间',

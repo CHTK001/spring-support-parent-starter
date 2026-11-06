@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Spring Support Account Starter - 账号与渠道管理独立模块
+
+    本模块只负责两件事，各管各的数据，不依赖也不反向持有 AI 的表：
+    1. 渠道管理：免登录 ChatClient（/api/channels/{channel}/chat）、文生图、文生视频、
+       图生 3D、消息模板（/api/channels/templates）
+    2. 账号管理：统一账号（密钥 / 邮箱 / 短信）、外部访问密钥（AppKey）、Cookie 池，
+       供设备、模板等模块按 accountId 引用
+
+    依赖方向：本模块是可选能力，被设备 / 模板等必选模块直接引用；
+    AI 模块不依赖本模块，也不读写本模块的账号表 —— AI 自己维护 provider / 连接，
+    需要渠道增强时只按 {@code ChatClient} SPI 扩展名取用，两边保持解耦。
+
+    @author CH
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- 继承父项目配置 -->
+  <parent>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-parent-starter</artifactId>
+    <version>4.0.0.51</version>
+  </parent>
+  <!-- 项目基本信息 -->
+  <artifactId>spring-support-account-starter</artifactId>
+  <description>Spring Support框架账号与渠道管理模块，提供统一账号管理（密钥/邮箱/短信 + AppKey + Cookie 池）与免登录 ChatClient、文生图、文生视频、图生 3D 渠道能力</description>
+  <!-- 依赖配置 -->
+  <dependencies>
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Spring Support Common：@Permission 鉴权注解、ApiReturnFormatIgnore、Json 序列化 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-common-starter</artifactId>
+    </dependency>
+    <!-- OAuth 客户端：AiUserContext 读取当前登录用户（AuthSessionUtils / UserResume） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-oauth-client-starter</artifactId>
+    </dependency>
+    <!-- MyBatis Plus：渠道健康记录与提供商账号连接持久化 -->
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+    </dependency>
+    <!-- Spring Support MyBatis（审计基类与 Mapper 约定） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-mybatis-starter</artifactId>
+    </dependency>
+    <!-- Swagger Annotations（/v2/channels 接口文档） -->
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations</artifactId>
+    </dependency>
+    <!-- Web support（@RestController / SseEmitter） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- 自动配置注解（@AutoConfiguration / TransactionTemplate） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- 免登录对话 / 文生图渠道的 ChatClient 实现：
+         duckduckgo（duck / duckduckgo 别名）与 trae（trae / trae-cn / trae-global 别名，
+         复用 Trae IDE 本地登录态，另含文生图 tool_text_to_image 协议）。
+         渠道侧只按扩展名解析，缺失时优雅降级为「空模型 + 明确提示」，
+         因此宿主工程如不需要可在自己的 pom 里排除这两个依赖 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-duckduckgo-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-trae-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
+    <!-- 单元测试：Spi 实现的报文/签名回归探针 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- 单元测试：账号服务的归属隔离 / 默认互斥 / 掩码保留用 Mockito 打桩 Mapper -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <proc>full</proc>
+          <compilerArgs>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+          </compilerArgs>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- 本仓约定非 example 模块的回归探针以 *Probe 承载，声明 includes 会整体替换
+               surefire 默认模式，故四种默认模式必须一并保留。 -->
+          <includes>
+            <include>**/Test*.java</include>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+            <include>**/*TestCase.java</include>
+            <include>**/*Probe.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -256,7 +256,7 @@ public final class DatalakeRemoteToLocalProbe {
             System.err.printf("FAIL: %d 项%n", FAIL.get()); // [P3C E1 豁免]
         }
         System.err.println("========================================================================"); // [P3C E1 豁免]
-        System.exit(FAIL.get() > 0 ? 1 : 0);
+        throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
     }
 
     /**

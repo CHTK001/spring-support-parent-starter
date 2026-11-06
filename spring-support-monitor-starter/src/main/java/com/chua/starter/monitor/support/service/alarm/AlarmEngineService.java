@@ -33,6 +33,20 @@ public interface AlarmEngineService {
     void evaluate(Long monitorId, String monitorName, String metricName, double value);
 
     /**
+     * 评估主机自身指标（延迟/在线/CPU/内存/磁盘）
+     *
+     * <p>主机指标直接以主机 标识 作为评估目标：归属本主机的策略规则与全局策略规则都参与判定，
+     * 其他主机的策略规则不参与 —— 这样「告警策略属于每台主机」在主机链路上才真正生效，
+     * 不会出现 A 主机配的策略去管 B 主机。</p>
+     *
+     * at param hostId     服务器主机 标识（ms_server_host.id）
+     * at param hostName   主机名（冗余入事件）
+     * at param metricName 指标名（host.delay.ms 等）
+     * at param value      指标值
+     */
+    void evaluateHost(Long hostId, String hostName, String metricName, double value);
+
+    /**
      * 重新加载规则缓存（策略/规则 CRUD 后调用）
      */
     void reload();
@@ -117,7 +131,7 @@ public interface AlarmEngineService {
      *
      * @return 列表
      */
-    ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies();
+    ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies(Long hostId);
 
     // ==================== 规则 CRUD ====================
 

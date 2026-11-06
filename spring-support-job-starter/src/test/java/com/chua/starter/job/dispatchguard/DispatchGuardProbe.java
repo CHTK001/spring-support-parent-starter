@@ -776,4 +776,8 @@ public class DispatchGuardProbe {
      */
     private static void report() {
         log.info("[probe] DISPATCHGUARD_RESULT passed={} failed={}", passed, failed);
-        if (failed > 0) {            System.exit(1);        }    }}
+        if (failed > 0) {
+            throw new IllegalStateException("程序执行失败，请检查执行结果日志。");
+        }
+    }
+}

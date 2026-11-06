@@ -29,36 +29,36 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * 小程序钱包 API
- * <p>小程序使用 OAuth2 登录流程获取 Bearer Token，认证场景为 Web 端。
- *
- * @author CH
- * @since 4.0.0
- */
+   * 小程序钱包 API
+   * <p>小程序使用 OAuth2 登录流程获取 Bearer Token，认证场景为 Web 端。
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 @RestController
 @RequestMapping("/mp/wallet")
 @RequiredArgsConstructor
 public class MpWalletController {
 
-    /**
-     * 钱包账户服务
-     */
+      /**
+       * 钱包账户服务
+       */
     private final WalletAccountService walletAccountService;
-    /**
-     * 钱包订单服务
-     */
+      /**
+       * 钱包订单服务
+       */
     private final WalletOrderService walletOrderService;
-    /**
-     * 登录主体解析器
-     */
+      /**
+       * 登录主体解析器
+       */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping
-    /**
-     * 获取钱包
-     * @param request 请求
-     * @param merchantId merchantid
-     */
+      /**
+       * 获取钱包
+       * @param request 请求
+       * @param merchantId merchantid
+       */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
@@ -69,15 +69,15 @@ public class MpWalletController {
     }
 
     @GetMapping("/log/page")
-    /**
-     * 流水列表
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @param bizType 业务类型
-     * @param bizNo 业务单号
-     */
+      /**
+       * 流水列表
+       * @param request 请求
+       * @param pageNum pagenum
+       * @param pageSize page大小
+       * @param merchantId merchantid
+       * @param bizType 业务类型
+       * @param bizNo 业务单号
+       */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
@@ -88,20 +88,21 @@ public class MpWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账户");
         }
-        Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null));
+        Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId
+            , bizType, bizNo, null, null));
         return Result.success(PageResult.of(page));
     }
 
     @GetMapping("/order/page")
-    /**
-     * 订单列表
-     * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param merchantId merchantid
-     * @param orderType 订单类型
-     * @param status 状态
-     */
+      /**
+       * 订单列表
+       * @param request 请求
+       * @param pageNum pagenum
+       * @param pageSize page大小
+       * @param merchantId merchantid
+       * @param orderType 订单类型
+       * @param status 状态
+       */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
@@ -117,11 +118,11 @@ public class MpWalletController {
     }
 
     @PostMapping("/withdraw")
-    /**
-     * 提现
-     * @param request 请求
-     * @param dto dto
-     */
+      /**
+       * 提现
+       * @param request 请求
+       * @param dto dto
+       */
     public Result<WalletOrder> withdraw(HttpServletRequest request,
                                         @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
@@ -138,7 +139,7 @@ public class MpWalletController {
             return Result.error("银行账号不能为空");
         }
 
-        // 强校验：用户标识与操作者强制等于当前用户（record 不可变，重建实例覆盖）
+          // 强校验：用户标识与操作者强制等于当前用户（record 不可变，重建实例覆盖）
         WalletWithdrawDTO effectiveDto = new WalletWithdrawDTO(
                 dto.merchantId(), userId, dto.withdrawNo(), dto.notifyUrl(), dto.amount(),
                 dto.bankAccount(), dto.bankName(), dto.accountName(), String.valueOf(userId), dto.remark());
@@ -163,11 +164,11 @@ public class MpWalletController {
     }
 
     @PostMapping("/transfer")
-    /**
-     * 转账
-     * @param request 请求
-     * @param dto dto
-     */
+      /**
+       * 转账
+       * @param request 请求
+       * @param dto dto
+       */
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);

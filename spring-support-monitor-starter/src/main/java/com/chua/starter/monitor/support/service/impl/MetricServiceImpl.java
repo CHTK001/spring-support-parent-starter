@@ -130,11 +130,26 @@ public class MetricServiceImpl implements MetricService {
     @Transactional(rollbackFor = Exception.class)
     // 返回值是 ReturnResult<Void>，主机 id 只能从入参 CollectResult 取（用 #result 会抛 EL1008E）
     @org.springframework.cache.annotation.Caching(evict = {
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'cpu:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'memory:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'disk:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'network:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
-            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'jvm:' + #p0.monitor.id", condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null")
+            @org.springframework.cache.annotation.CacheEvict(
+                cacheNames = "monitor:metric:latest",
+                key = "'cpu:' + #p0.monitor.id",
+                condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(
+                cacheNames = "monitor:metric:latest",
+                key = "'memory:' + #p0.monitor.id",
+                condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(
+                cacheNames = "monitor:metric:latest",
+                key = "'disk:' + #p0.monitor.id",
+                condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(
+                cacheNames = "monitor:metric:latest",
+                key = "'network:' + #p0.monitor.id",
+                condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(
+                cacheNames = "monitor:metric:latest",
+                key = "'jvm:' + #p0.monitor.id",
+                condition = "#p0 != null && #p0.monitor != null && #p0.monitor.id != null")
     })
     /**
      * 写入collect结果
@@ -398,8 +413,10 @@ public class MetricServiceImpl implements MetricService {
             jdbcTemplate.update("DELETE FROM ms_monitor_metric_network WHERE ms_monitor_metric_network_collect_time < ?", cutoff);
             jdbcTemplate.update("DELETE FROM ms_monitor_metric_jvm WHERE ms_monitor_metric_jvm_collect_time < ?", cutoff);
             jdbcTemplate.update("DELETE FROM ms_monitor_redis_metric WHERE ms_monitor_redis_metric_collect_time < ?", cutoff);
-            int deletedStats = jdbcTemplate.update("DELETE FROM ms_monitor_metric_statistics WHERE ms_monitor_metric_statistics_hour_bucket < ?", cutoff);
-            int deletedRedisStats = jdbcTemplate.update("DELETE FROM ms_monitor_redis_metric_statistics WHERE ms_monitor_redis_metric_statistics_hour_bucket < ?", cutoff);
+            int deletedStats = jdbcTemplate.update(
+                "DELETE FROM ms_monitor_metric_statistics WHERE ms_monitor_metric_statistics_hour_bucket < ?", cutoff);
+            int deletedRedisStats = jdbcTemplate.update(
+                "DELETE FROM ms_monitor_redis_metric_statistics WHERE ms_monitor_redis_metric_statistics_hour_bucket < ?", cutoff);
             int deletedNginx = jdbcTemplate.update("DELETE FROM ms_monitor_nginx_metric WHERE ms_monitor_nginx_metric_collect_time < ?", cutoff);
             log.info("数据清理完成, 删除 {} 条指标, {} 条统计, {} 条 nginx 指标",
                     deleted, deletedStats + deletedRedisStats, deletedNginx);
@@ -443,7 +460,10 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
-    @Cacheable(cacheNames = "monitor:metric:latest", key = "'disk:' + #monitorId", unless = "#result == null || #result.data == null || #result.data.isEmpty()")
+    @Cacheable(
+        cacheNames = "monitor:metric:latest",
+        key = "'disk:' + #monitorId",
+        unless = "#result == null || #result.data == null || #result.data.isEmpty()")
     /**
      * 获取latestdisk
      *
@@ -717,7 +737,8 @@ public class MetricServiceImpl implements MetricService {
      * @param startTime 参数
      * @return 返回值
     */
-    public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
+    public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(
+        Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         boolean filtered = metricName != null && !metricName.isEmpty();
         List<MsMonitorMetric> stamps = metricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetric>()
@@ -751,7 +772,8 @@ public class MetricServiceImpl implements MetricService {
      * @param startTime 参数
      * @return 返回值
     */
-    public ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
+    public ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(
+        Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(statisticsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricStatistics>()
                         .eq(MsMonitorMetricStatistics::getMonitorId, monitorId)
@@ -770,7 +792,8 @@ public class MetricServiceImpl implements MetricService {
      * @param startTime 参数
      * @return 返回值
     */
-    public ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
+    public ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(
+        Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(redisMetricStatsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
                         .eq(MsMonitorRedisMetricStatistics::getMonitorId, monitorId)

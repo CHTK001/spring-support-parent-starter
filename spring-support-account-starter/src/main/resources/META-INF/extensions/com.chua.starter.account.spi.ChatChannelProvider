@@ -1,0 +1,2 @@
+com.chua.starter.account.spi.impl.DuckDuckGoChatChannel
+com.chua.starter.account.spi.impl.TraeChatChannel

@@ -150,6 +150,15 @@ public class TemplateInfo {
     private String templateInfoSourceId;
 
     /**
+     * 三方模板 ID（来源侧的模板编码，如短信模板的 sys_message_template_code）
+     *
+     * <p>固定模板（source=message/paper）才有：内容归三方，本系统按这个 ID 回查模板信息。
+     * 自定义模板（hiprint）为空。</p>
+     */
+    @TableField("template_info_source_code")
+    private String templateInfoSourceCode;
+
+    /**
      * 来源提供方（消息提供商 ID / 组卷归属用户 ID）
      */
     @TableField("template_info_provider")

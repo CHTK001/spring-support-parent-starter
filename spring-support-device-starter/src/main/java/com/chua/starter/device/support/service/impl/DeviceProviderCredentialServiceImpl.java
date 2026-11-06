@@ -149,6 +149,12 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         update.setDeviceCredentialOfflineDetectInterval(credential.getDeviceCredentialOfflineDetectInterval() != null
                 ? credential.getDeviceCredentialOfflineDetectInterval()
                 : existing.getDeviceCredentialOfflineDetectInterval());
+        update.setDeviceCredentialEventPollEnabled(credential.getDeviceCredentialEventPollEnabled() != null
+                ? credential.getDeviceCredentialEventPollEnabled()
+                : existing.getDeviceCredentialEventPollEnabled());
+        update.setDeviceCredentialEventPollInterval(credential.getDeviceCredentialEventPollInterval() != null
+                ? credential.getDeviceCredentialEventPollInterval()
+                : existing.getDeviceCredentialEventPollInterval());
         update.setDeviceCredentialDeviceSyncEnabled(credential.getDeviceCredentialDeviceSyncEnabled() != null
                 ? credential.getDeviceCredentialDeviceSyncEnabled()
                 : existing.getDeviceCredentialDeviceSyncEnabled());
@@ -296,6 +302,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
         if (c.getDeviceCredentialOfflineDetectEnabled() == null) {
             c.setDeviceCredentialOfflineDetectEnabled(false);
+        }
+        if (c.getDeviceCredentialEventPollEnabled() == null) {
+            c.setDeviceCredentialEventPollEnabled(false);
         }
         if (c.getDeviceCredentialDeviceSyncEnabled() == null) {
             c.setDeviceCredentialDeviceSyncEnabled(false);

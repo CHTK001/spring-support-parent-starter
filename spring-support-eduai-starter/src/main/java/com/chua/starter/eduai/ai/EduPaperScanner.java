@@ -308,22 +308,22 @@ public class EduPaperScanner {
                 continue;
             }
             var inlineSpans = findInlineItemSpans(line);
-            if (inlineSpans.size() >= 2 && fitsProgression(
-                    /**
-                     * 获取
-                     * @param inlineSpans.get(0)[1]) 参数
-                     * @return 返回值
-                    */
+            if (inlineSpans.size() >= 2
+                    && startsAtLineHead(line, inlineSpans.get(0)[0])
+                    && fitsProgression(
                     parseNoNum(line.substring(inlineSpans.get(0)[0], inlineSpans.get(0)[1])), lastNum)) {
                 // 行内多题只认「递进成立」的题号边界：作答里的算式数字（"80," "9," "1/8。"）
                 // 同样带「数字+分隔符」，逐个校验可避免整行作答被拆成幽灵题判 0；
-                // 被拒的边界不算新题，其内容自然并回上一题的作答区间
+                // 被拒的边界不算新题，其内容自然并回上一题的作答区间。
+                // 还必须从行首开始：解答题作答里的 "a=1，b=-2，c=-3，" 含多个
+                // 「数字+逗号」，且 1 会被当作「新大节」通过递进校验（实测外来卷第 22 题
+                // 因此被切成 27 题、Q22 作答只剩「(20分)」）——行首不是题号就不拆。
                 var bounds = new ArrayList<int[]>();
                 bounds.add(inlineSpans.get(0));
                 int prevNum = parseNoNum(line.substring(inlineSpans.get(0)[0], inlineSpans.get(0)[1]));
                 for (int k = 1; k < inlineSpans.size(); k++) {
                     int n = parseNoNum(line.substring(inlineSpans.get(k)[0], inlineSpans.get(k)[1]));
-                    if (fitsProgression(n, prevNum)) {
+                    if (fitsInlineProgression(n, prevNum)) {
                         bounds.add(inlineSpans.get(k));
                         prevNum = n;
                     }
@@ -354,7 +354,7 @@ public class EduPaperScanner {
                 no = line.trim();
                 lastNum = parseNoNum(no);
                 answer = new StringBuilder();
-            } else if (no != null) {
+            } else if (no != null && !isPageHeader(line)) {
                 if (answer.length() > 0) {
                     answer.append(' ');
                 }
@@ -421,6 +421,24 @@ public class EduPaperScanner {
             return true;
         }
         return n == 1 || n == lastNum + 1;
+    }
+
+    /**
+     * 同一行内相邻题号的递进校验：只能是「上一个 + 1」。
+     *
+     * <p>不允许 {@code n == 1} 开新大节 —— 大节标题绝不可能出现在一行中间。
+     * 实测解答题作答 {@code 22. 解：a=1，b=-2，c=-3，} 里的 {@code 1，} 会因
+     * 「等于 1 即新大节」被误判成新题号，把一题拆成多道幽灵题（外来卷 22 题变 27 题）。</p>
+     *
+     * @param n       本片段题号数字
+     * @param prevNum 上一个片段题号数字
+     * @return 是否作为同一行内的下一个题号边界
+     */
+    private static boolean fitsInlineProgression(int n, int prevNum) {
+        if (n < 0 || prevNum < 0) {
+            return true;
+        }
+        return n == prevNum + 1;
     }
 
     /**
@@ -549,18 +567,34 @@ public class EduPaperScanner {
                 continue;
             }
             var inlineSpans = findInlineItemSpans(line);
-            if (inlineSpans.size() >= 2) {
+            if (inlineSpans.size() >= 2 && startsAtLineHead(line, inlineSpans.get(0)[0])) {
                 // 一行多题（真实答题卡的选择题常见）：逐个切成独立题目，
                 // 否则 Q2/Q3 会被并进 Q1 的作答（实测 15 题只出 11 行）。
-                log.info("[EduScan] 一行识别到 {} 个题号，按题号切分: {}", inlineSpans.size(), line);
-                for (int k = 0; k < inlineSpans.size(); k++) {
-                    int contentStart = inlineSpans.get(k)[1];
-                    int contentEnd = k + 1 < inlineSpans.size() ? inlineSpans.get(k + 1)[0] : line.length();
-                    appendQuestion(list, no, answer);
-                    no = line.substring(inlineSpans.get(k)[0], inlineSpans.get(k)[1]).trim();
-                    answer = new StringBuilder(line.substring(contentStart, contentEnd).trim());
+                // 必须同时满足两条守卫：
+                // 1) 题号从行首开始——解答题作答 "a=1，b=-2，c=-3，" 里的数字也带分隔符，
+                //    不判行首会把一题作答拆成一串幽灵题（实测外来卷 22 题被切成 27 题）；
+                // 2) 相邻题号递进——{"22. 解：a=1，b=-2"} 虽从行首开始，1 却不是新题号。
+                var bounds = new ArrayList<int[]>();
+                bounds.add(inlineSpans.get(0));
+                int prevNum = parseNoNum(line.substring(inlineSpans.get(0)[0], inlineSpans.get(0)[1]));
+                for (int k = 1; k < inlineSpans.size(); k++) {
+                    int n = parseNoNum(line.substring(inlineSpans.get(k)[0], inlineSpans.get(k)[1]));
+                    if (fitsInlineProgression(n, prevNum)) {
+                        bounds.add(inlineSpans.get(k));
+                        prevNum = n;
+                    }
                 }
-                continue;
+                if (bounds.size() >= 2) {
+                    log.info("[EduScan] 一行识别到 {} 个题号，按题号切分: {}", bounds.size(), line);
+                    for (int k = 0; k < bounds.size(); k++) {
+                        int contentStart = bounds.get(k)[1];
+                        int contentEnd = k + 1 < bounds.size() ? bounds.get(k + 1)[0] : line.length();
+                        appendQuestion(list, no, answer);
+                        no = line.substring(bounds.get(k)[0], bounds.get(k)[1]).trim();
+                        answer = new StringBuilder(line.substring(contentStart, contentEnd).trim());
+                    }
+                    continue;
+                }
             }
             if (matcher.find()) {
                 appendQuestion(list, no, answer);
@@ -578,8 +612,9 @@ public class EduPaperScanner {
                 appendQuestion(list, no, answer);
                 no = loose.group().trim();
                 answer = new StringBuilder(line.substring(loose.end()).trim());
-            } else if (no != null) {
-                // 当前题的作答续行
+            } else if (no != null && !isPageHeader(line)) {
+                // 当前题的作答续行；翻页页头（卷名+页码 / 姓名班级学号栏）丢弃，
+                // 否则第 2 页页头会并进第 1 页最后一题的作答，稀释判分相似度。
                 if (answer.length() > 0) {
                     answer.append(' ');
                 }
@@ -651,7 +686,32 @@ public class EduPaperScanner {
             java.util.regex.Pattern.compile(
                     "(?i)(?:阅卷验收专用|扫描归档专用|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页\\s*[-—]\\s*阅卷验收专用"
                             + "|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页\\s*[-—/]\\s*(?:第\\s*)?(?:共\\s*)?(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页"
-                            + "|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页|(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*/\\s*(?:第\\s*)?(?:共\\s*)?(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页|共\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页)");
+                            + "|第\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页|(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*/\\s*(?:第\\s*)?"
+                            + "(?:共\\s*)?(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页"
+                            + "|共\\s*(?:\\d+|\\{page\\}|\\{t\\}|N)\\s*页)");
+
+    /**
+     * 翻页后的页头：卷名里的「答题卡（第 2 页 共 2 页）」与姓名/班级/学号栏。
+     *
+     * <p>多页答题卡的第 2 页页头紧跟在第 1 页最后一题之后；若按「当前题的续行」
+     * 并入，第 18 题作答会变成「5 九年级数学答题卡（第 2 页 共 2 页） 姓名：陈子涵…」，
+     * 既污染展示也稀释判分相似度。页头不是题号行，直接丢弃。</p>
+     */
+    private static final java.util.regex.Pattern PAGE_HEADER =
+            java.util.regex.Pattern.compile(
+                    "^\\s*(?:姓名|姓\\s*名|班级|班\\s*级|学号|学\\s*号|考号|考\\s*号|考场|座位号)\\s*[:：]"
+                            + "|答题卡.*第\\s*\\d+\\s*页"
+                            + "|第\\s*\\d+\\s*页\\s*[，,/]?\\s*共\\s*\\d+\\s*页");
+
+    /**
+     * 是否翻页页头（卷名 + 页码 / 姓名班级学号栏）。
+     *
+     * @param line 行文本
+     * @return 是页头时为 true
+     */
+    private static boolean isPageHeader(String line) {
+        return line != null && PAGE_HEADER.matcher(line).find();
+    }
 
     /**
      * 分值标注：{@code （每题5分）} / {@code (5分)} / {@code 每题X分} 等。
@@ -800,6 +860,22 @@ public class EduPaperScanner {
             from = Math.max(matcher.end(), matcher.start() + 1);
         }
         return spans;
+    }
+
+    /**
+     * 行内题号是否位于行首（仅允许前置空白）。
+     *
+     * <p>「一行多题」的真实版面必然以题号开头（{@code 1.B 2.A 3.C}）。解答题作答里的
+     * 算式（{@code a=1，b=-2，c=-3，}）同样带「数字+分隔符」，却不是题号边界；
+     * 只看「一行里有 2 个以上数字+分隔符」会把一题作答拆成多道幽灵题——实测外来卷
+     * 第 22 题因此被拆出 5 道假题，整卷从 22 题变 27 题，Q22 作答只剩「(20分)」。</p>
+     *
+     * @param line   行文本（已 trim）
+     * @param offset 首个题号片段的起始偏移
+     * @return 片段前只有空白时为 true
+     */
+    private static boolean startsAtLineHead(String line, int offset) {
+        return offset <= 0 || line.substring(0, offset).isBlank();
     }
 
     /**
@@ -1255,12 +1331,23 @@ public class EduPaperScanner {
         if (pick.find()) {
             return toHalfWidthUpper(pick.group(1));
         }
-        // 3) 判断题符号（题干里通常不会自带 √/×）
-        if (text.indexOf('√') >= 0 || text.indexOf('✓') >= 0) {
-            return "对";
+        // 1.6) 括号里的判定符号：（√）/（×）。放在纯符号判定之前：
+        //      题干+符号整段被合并时，「…（）（×）」仍能确定性取出判定。
+        var parenMark = java.util.regex.Pattern.compile("[（(]\\s*([√✓×✗])\\s*[）)]").matcher(text);
+        if (parenMark.find()) {
+            return "√✓".indexOf(parenMark.group(1)) >= 0 ? "对" : "错";
         }
-        if (text.indexOf('×') >= 0 || text.indexOf('✗') >= 0) {
-            return "错";
+        // 2.5) 整段作答只有一个判定符号（"√" / "×"）时才算判断题作答。
+        // 不能对整段文本做 contains 判定：数学解答题里的乘号 ×（如「800+4×30」）
+        // 会把整段作答归一成「错」，实测第 22 题因此被判 0 分。
+        String compact = text.replaceAll("\\s+", "");
+        if (compact.length() <= 4) {
+            if (compact.indexOf('√') >= 0 || compact.indexOf('✓') >= 0) {
+                return "对";
+            }
+            if (compact.indexOf('×') >= 0 || compact.indexOf('✗') >= 0) {
+                return "错";
+            }
         }
         return text;
     }

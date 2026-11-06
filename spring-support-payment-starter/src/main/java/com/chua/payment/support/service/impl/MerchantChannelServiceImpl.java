@@ -80,7 +80,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         MerchantChannel channel = new MerchantChannel();
         BeanUtils.copyProperties(dto, channel);
         channel.setExtConfig(normalizeExtConfig(dto.extConfig()));
-        channel.setChannelName(StringUtils.hasText(dto.channelName()) ? dto.channelName() : buildDefaultChannelName(dto.channelType(), dto.channelSubType()));
+        channel.setChannelName(
+            StringUtils.hasText(dto.channelName()) ? dto.channelName()
+                : buildDefaultChannelName(dto.channelType(), dto.channelSubType()));
         channel.setApiKey(encryptIfPresent(dto.apiKey()));
         channel.setPrivateKey(encryptIfPresent(dto.privateKey()));
         channel.setStatus(dto.status() != null ? dto.status() : ChannelStatus.DISABLED.getCode());
@@ -109,7 +111,9 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         Merchant merchant = requireMerchant(channel.getMerchantId());
         BeanUtils.copyProperties(dto, channel, "apiKey", "privateKey");
         channel.setExtConfig(normalizeExtConfig(channel.getExtConfig()));
-        channel.setChannelName(StringUtils.hasText(channel.getChannelName()) ? channel.getChannelName() : buildDefaultChannelName(channel.getChannelType(), channel.getChannelSubType()));
+        channel.setChannelName(
+            StringUtils.hasText(channel.getChannelName()) ? channel.getChannelName()
+                : buildDefaultChannelName(channel.getChannelType(), channel.getChannelSubType()));
         if (StringUtils.hasText(dto.apiKey())) {
             channel.setApiKey(encryptApiKey(dto.apiKey()));
         }
@@ -235,17 +239,23 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     */
     public List<PaymentMethodGuideVO> listCatalog() {
         List<PaymentMethodGuideVO> list = new ArrayList<>();
-        list.add(guide("WECHAT", "MINI_PROGRAM", "微信小程序支付开通", "微信支付", "https://pay.wechatpay.cn/", "https://pay.wechatpay.cn/static/applyment_guide/applyment_detail_miniapp.shtml", null,
+        list.add(guide(
+            "WECHAT", "MINI_PROGRAM", "微信小程序支付开通", "微信支付", "https://pay.wechatpay.cn/",
+            "https://pay.wechatpay.cn/static/applyment_guide/applyment_detail_miniapp.shtml", null,
                 "完成微信支付商户号、AppID 绑定与小程序收款接入。",
                 List.of("营业执照", "法人身份证", "结算账户", "小程序 AppID", "支付回调地址"),
                 List.of("申请微信支付商户号", "在商户平台绑定小程序 AppID", "配置 APIv3 密钥和证书", "配置支付回调地址", "在系统内录入配置"),
                 List.of("小程序支付要求前端具备 openId 获取链路", "商户号和 AppID 必须绑定")));
-        list.add(guide("WECHAT", "JSAPI", "微信 JSAPI 支付开通", "微信支付", "https://pay.wechatpay.cn/", "https://pay.wechatpay.cn/doc/v3/merchant/4012791877", null,
+        list.add(guide(
+            "WECHAT", "JSAPI", "微信 JSAPI 支付开通", "微信支付", "https://pay.wechatpay.cn/",
+            "https://pay.wechatpay.cn/doc/v3/merchant/4012791877", null,
                 "适用于公众号、服务号或嵌入式微信环境支付。",
                 List.of("营业执照", "法人信息", "微信公众号或服务号 AppID", "支付回调地址"),
                 List.of("申请微信支付商户号", "绑定公众号或服务号 AppID", "开通 JSAPI 权限", "配置 APIv3 密钥与平台证书", "回填系统配置"),
                 List.of("必须能获取用户 openId", "服务商模式需额外处理子商户授权")));
-        list.add(guide("WECHAT", "H5", "微信 H5 支付开通", "微信支付", "https://pay.wechatpay.cn/", "https://pay.wechatpay.cn/doc/v3/merchant/4012791841", null,
+        list.add(guide(
+            "WECHAT", "H5", "微信 H5 支付开通", "微信支付", "https://pay.wechatpay.cn/",
+            "https://pay.wechatpay.cn/doc/v3/merchant/4012791841", null,
                 "适用于手机浏览器网页支付，需要申请 H5 支付权限。",
                 List.of("营业执照", "域名", "ICP备案或截图", "经营场景说明", "回调地址"),
                 List.of("申请微信支付商户号", "在商户平台申请 H5 支付权限", "配置 H5 支付域名", "配置 APIv3 密钥", "录入系统配置"),
@@ -262,27 +272,37 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
                 List.of("申请商户号", "配置 Native 支付参数", "生成二维码并展示给用户扫码"),
                 List.of("Native 支付适合 PC 收银台和线下场景")));
 
-        list.add(guide("ALIPAY", "WEB", "支付宝电脑网站支付开通", "支付宝开放平台", "https://open.alipay.com/", "https://open.alipay.com/productDocument.htm", "https://open.alipay.com/support/supportCenter.htm",
+        list.add(guide(
+            "ALIPAY", "WEB", "支付宝电脑网站支付开通", "支付宝开放平台", "https://open.alipay.com/",
+            "https://open.alipay.com/productDocument.htm", "https://open.alipay.com/support/supportCenter.htm",
                 "适用于 PC 网站收款。",
                 List.of("企业支付宝账号", "网站域名", "应用公钥证书", "异步通知地址"),
                 List.of("在开放平台创建应用", "申请电脑网站支付产品能力", "配置公私钥和回调地址", "系统内录入应用参数"),
                 List.of("正式环境和沙箱环境网关不同")));
-        list.add(guide("ALIPAY", "WAP", "支付宝手机网站支付开通", "支付宝开放平台", "https://open.alipay.com/", "https://open.alipay.com/productDocument.htm", "https://open.alipay.com/support/supportCenter.htm",
+        list.add(guide(
+            "ALIPAY", "WAP", "支付宝手机网站支付开通", "支付宝开放平台", "https://open.alipay.com/",
+            "https://open.alipay.com/productDocument.htm", "https://open.alipay.com/support/supportCenter.htm",
                 "适用于手机浏览器网页支付。",
                 List.of("企业支付宝账号", "H5 域名", "应用公钥证书", "异步通知地址"),
                 List.of("创建应用", "申请手机网站支付", "配置回调和公私钥", "系统内录入网关参数"),
                 List.of("移动端网页支付和电脑网站支付是不同产品能力")));
-        list.add(guide("ALIPAY", "APP", "支付宝 APP 支付开通", "支付宝开放平台", "https://open.alipay.com/", "https://open.alipay.com/productDocument.htm", "https://open.alipay.com/support/supportCenter.htm",
+        list.add(guide(
+            "ALIPAY", "APP", "支付宝 APP 支付开通", "支付宝开放平台", "https://open.alipay.com/",
+            "https://open.alipay.com/productDocument.htm", "https://open.alipay.com/support/supportCenter.htm",
                 "适用于移动应用内唤起支付宝支付。",
                 List.of("企业支付宝账号", "应用包信息", "应用公钥证书", "回调地址"),
                 List.of("创建应用", "申请 APP 支付产品", "配置应用签名", "录入系统配置"),
                 List.of("需要客户端配合完成订单参数签名")));
-        list.add(guide("ALIPAY", "FACE_TO_FACE", "支付宝当面付开通", "支付宝开放平台", "https://open.alipay.com/", "https://open.alipay.com/paymentServicer/paymentServicer.htm", "https://open.alipay.com/support/supportCenter.htm",
+        list.add(guide(
+            "ALIPAY", "FACE_TO_FACE", "支付宝当面付开通", "支付宝开放平台", "https://open.alipay.com/",
+            "https://open.alipay.com/paymentServicer/paymentServicer.htm", "https://open.alipay.com/support/supportCenter.htm",
                 "适用于扫码收款、门店柜台码与 POS 场景。",
                 List.of("企业支付宝账号", "门店经营信息", "应用公钥证书", "回调地址"),
                 List.of("创建应用", "申请当面付能力", "作为服务商模式完成商户签约", "录入系统配置"),
                 List.of("服务商模式下运营需要商户授权")));
-        list.add(guide("ALIPAY", "SANDBOX", "支付宝沙箱调试", "支付宝开放平台", "https://open.alipay.com/", "https://open.alipay.com/support/supportCenter.htm", "https://os.alipayobjects.com/rmsportal/qzepRfDMREmzZQHMwXai.pdf",
+        list.add(guide(
+            "ALIPAY", "SANDBOX", "支付宝沙箱调试", "支付宝开放平台", "https://open.alipay.com/",
+            "https://open.alipay.com/support/supportCenter.htm", "https://os.alipayobjects.com/rmsportal/qzepRfDMREmzZQHMwXai.pdf",
                 "用于联调阶段的支付、退款、异步通知测试。",
                 List.of("沙箱应用测试账号", "沙箱网关", "沙箱密钥或证书"),
                 List.of("进入沙箱环境支持中心", "打开沙箱调试", "获取测试账号与测试应用参数", "系统内开启沙箱模式"),

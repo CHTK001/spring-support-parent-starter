@@ -14,29 +14,31 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Agent 接收端
- *
- * @author CH
- * @since 4.0.0.51
- */
+   * Agent 接收端
+   *
+   * @author CH
+   * @since 4.0.0.51
+   */
 @Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/ms/agent")
 public class AgentController {
 
-    /**
-     * 部署服务（提供 agent 包定位）
-    */
+      /**
+       * 部署服务（提供 agent 包定位）
+      */
     private final AgentDeployService deployService;
 
-    /**
-    /**
-     * 下载 agent 安装包（部署时由目标机自取） <p> Windows 走 WinRM 通道，单条命令行只有约 8KB，平台无法把 6MB 级的包推进去， 只能让目标机按 plugin.monitor.agent.jar-url 反向拉取这个端点。 </p> <p> 响应直接写入 {@code HttpServletResponse}（本方法返回 void）：包体以 {@code application/octet-stream} 流式下发，带 {@code Cache-Control: no-store}。 <b>定位不到 agent 包时返回 404</b>（{@code deployService.packageFile()} 抛异常 的分支），此时响应体不是包内容。 </p>
-     * @param response 响应容器，由容器注入；本方法直接写入其输出流并负责刷出
-     * @return 返回值
-     * @throws java.io.IOException 异常
-    */
+      /**
+      /**
+       * 下载 agent 安装包（部署时由目标机自取） <p> Windows 走 WinRM 通道，单条命令行只有约 8KB，平台无法把 6MB 级的包推进去， 只能让目标机按 plugin.monitor.agent.jar-url 反向拉取这个端点。 </p
+          > <p> 响应直接写入 {@code HttpServletResponse}（本方法返回 void）：包体以 {@code application/octet-stream} 流式下发，带 {@code Cache-Control: no-store}。 
+          <b>定位不到 agent 包时返回 404</b>（{@code deployService.packageFile()} 抛异常 的分支），此时响应体不是包内容。 </p>
+       * @param response 响应容器，由容器注入；本方法直接写入其输出流并负责刷出
+       * @return 返回值
+       * @throws java.io.IOException 异常
+      */
     public void packageFile(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         Path artifact;
         try {
@@ -55,21 +57,22 @@ public class AgentController {
         }
     }
 
-    /**
-    /**
-     * 下载 Agent tar.gz 结构: monitor-agent.jar + lib/*.jar + agent.yml + start.sh
-     * @param serverUrl 服务端URL，不允许为 null
-     * @return 响应实体 对象
-     * @throws IOException 异常
-    */
-    public ResponseEntity<FileSystemResource> download(@RequestParam(defaultValue = "http://localhost:8081") String serverUrl) throws IOException {
-        // 更新配置
+      /**
+      /**
+       * 下载 Agent tar.gz 结构: monitor-agent.jar + lib/*.jar + agent.yml + start.sh
+       * @param serverUrl 服务端URL，不允许为 null
+       * @return 响应实体 对象
+       * @throws IOException 异常
+      */
+    public ResponseEntity<FileSystemResource> download(@RequestParam(defaultValue = "http://localhost:8081") String serverUrl
+        ) throws IOException {
+          // 更新配置
         File distDir = new File("../../spring-api-starter/spring-api-support-monitor-agent/target");
         File cfgFile = new File(distDir, "agent.yml");
         String cfg = "server:\n  url: " + serverUrl + "\nagent:\n  port: 19876\n  token: default-token\n";
         Files.writeString(cfgFile.toPath(), cfg);
 
-        // 打 tar.gz
+          // 打 tar.gz
         File tarFile = File.createTempFile("monitor-agent-", ".tar.gz");
         try (FileOutputStream fos = new FileOutputStream(tarFile);
              java.util.zip.GZIPOutputStream gz = new java.util.zip.GZIPOutputStream(fos)) {
@@ -82,16 +85,16 @@ public class AgentController {
         return ResponseEntity.ok().headers(h).body(new FileSystemResource(tarFile));
     }
 
-    /**
-     * 添加转为Tar。
-     *
-     * @param os 方法入参 os
-     * @param dir 目录，不允许为 null
-     * @param base 方法入参 base
-     * @throws IOException 当执行过程不满足前置条件时
-     */
+      /**
+       * 添加转为Tar。
+       *
+       * @param os 方法入参 os
+       * @param dir 目录，不允许为 null
+       * @param base 方法入参 base
+       * @throws IOException 当执行过程不满足前置条件时
+       */
     private void addToTar(OutputStream os, File dir, String base) throws IOException {
-        // 简化：用 tar 命令
+          // 简化：用 tar 命令
         try {
             Process p = new ProcessBuilder("tar", "-czf", "-", "-C", dir.getParent(), dir.getName())
                     .redirectErrorStream(true).start();

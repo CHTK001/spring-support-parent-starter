@@ -162,9 +162,12 @@ public class MessageTemplateSyncer implements SourceSyncer {
         return new TemplateSourceRequest(
             SOURCE,
             String.valueOf(template.getSysMessageTemplateId()),
+            // 三方模板 ID：发送时用它作为 MessageRequest.templateId（见 SysMessageServiceImpl）
+            template.getSysMessageTemplateCode(),
             provider == null ? null : String.valueOf(provider.getSysMessageProviderId()),
             template.getSysMessageTemplateName(),
-            template.getSysMessageTemplateCode(),
+            // 副标题留空：以前这里塞的是模板编码，语义混淆，v2.4 起编码单列到 sourceCode
+            null,
             "html",
             mapType(template.getSysMessageTemplateType()),
             template.getSysMessageTemplateStatus() != null && template.getSysMessageTemplateStatus() == 1

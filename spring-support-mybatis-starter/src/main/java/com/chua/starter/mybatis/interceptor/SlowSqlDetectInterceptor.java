@@ -35,47 +35,48 @@ import java.util.regex.Matcher;
 import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
 
 /**
- * MyBatis 慢 SQL 检测拦截器。
- *
- * <p>拦截 Executor 的 query/update，统计耗时并在超过阈值时发布 {@link MybatisSlowSqlEvent}。</p>
- *
- * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
- *
- * @since 2026/4/27
- * @author CH
- */
+   * MyBatis 慢 SQL 检测拦截器。
+   *
+   * <p>拦截 Executor 的 query/update，统计耗时并在超过阈值时发布 {@link MybatisSlowSqlEvent}。</p>
+   *
+   * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
+   *
+   * @since 2026/4/27
+   * @author CH
+   */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler
+            .class, CacheKey.class, BoundSql.class}),
 })
 /**
- * SlowSQLDetectInterceptor类，提供相关能力。
- *
- * @author CH
- * @since 1.0.0
- */
+   * SlowSQLDetectInterceptor类，提供相关能力。
+   *
+   * @author CH
+   * @since 1.0.0
+   */
 public class SlowSqlDetectInterceptor implements Interceptor {
-    /**
-     * 日志
-    */
+      /**
+       * 日志
+      */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
 
-    /**
-     * 事件publisher
-    */
+      /**
+       * 事件publisher
+      */
     private final ApplicationEventPublisher eventPublisher;
-    /**
-     * 属性
-    */
+      /**
+       * 属性
+      */
     private final MybatisSlowSqlProperties properties;
 
-    /**
-     * 构造慢 SQL 检测拦截器。
-     *
-     * @param eventPublisher Spring 事件发布器
-     * @param properties     慢 SQL 配置
-     */
+      /**
+       * 构造慢 SQL 检测拦截器。
+       *
+       * @param eventPublisher Spring 事件发布器
+       * @param properties     慢 SQL 配置
+       */
     public SlowSqlDetectInterceptor(ApplicationEventPublisher eventPublisher,
                                    MybatisSlowSqlProperties properties) {
         this.eventPublisher = eventPublisher;
@@ -97,19 +98,19 @@ public class SlowSqlDetectInterceptor implements Interceptor {
                 try {
                     publishSlowSqlEvent(invocation, elapsed, error);
                 } catch (Exception e) {
-                    // 监控逻辑不可影响业务
+                      // 监控逻辑不可影响业务
                     log.debug("[MyBatis][SlowSQL] 发布事件失败: {}", e.getMessage());
                 }
             }
         }
     }
 
-    /**
-     * 发布slowsql事件。
-     * @param invocation invocation
-     * @param elapsedMs elapsedms
-     * @param error 错误
-     */
+      /**
+       * 发布slowsql事件。
+       * @param invocation invocation
+       * @param elapsedMs elapsedms
+       * @param error 错误
+       */
     private void publishSlowSqlEvent(Invocation invocation, long elapsedMs, Throwable error) {
         Object[] args = invocation.getArgs();
         if (args == null || args.length == 0 || !(args[0] instanceof MappedStatement ms)) {
@@ -160,21 +161,21 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * resolveboundsql。
-     * @param ms ms
-     * @param args 参数
-     * @param parameter 参数
-     * @return resolveBoundSql的结果
-     */
+      /**
+       * resolveboundsql。
+       * @param ms ms
+       * @param args 参数
+       * @param parameter 参数
+       * @return resolveBoundSql的结果
+       */
     private BoundSql resolveBoundSql(MappedStatement ms, Object[] args, Object parameter) {
- // MyBatis 的 查询 重载中，boundsql 可能已在参数中传入
-    /**
-     * sqlresolve结果类。
-     *
-     * @author CH
-     * @since 4.0.0
-     */
+   // MyBatis 的 查询 重载中，boundsql 可能已在参数中传入
+      /**
+       * sqlresolve结果类。
+       *
+       * @author CH
+       * @since 4.0.0
+       */
         if (args.length >= 6 && args[5] instanceof BoundSql bs) {
             return bs;
         }
@@ -182,13 +183,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     private static class SqlResolveResult {
-        /**
-         * SQL
-        */
+          /**
+           * SQL
+          */
         private final String sql;
-        /**
-         * 参数
-        */
+          /**
+           * 参数
+          */
         private final List<String> parameters;
 
         private SqlResolveResult(String sql, List<String> parameters) {
@@ -197,13 +198,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * 解析SQL。
-     *
-     * @param configuration 配置，不允许为 null
-     * @param boundSql boundSQL，不允许为 null
-     * @return SQL解析结果 对象
-     */
+      /**
+       * 解析SQL。
+       *
+       * @param configuration 配置，不允许为 null
+       * @param boundSql boundSQL，不允许为 null
+       * @return SQL解析结果 对象
+       */
     private SqlResolveResult resolveSql(Configuration configuration, BoundSql boundSql) {
         Object parameterObject = boundSql.getParameterObject();
         List<ParameterMapping> mappings = boundSql.getParameterMappings();
@@ -238,13 +239,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         return new SqlResolveResult(sql, list);
     }
 
-    /**
-     * truncate。
-     *
-     * @param value 值，不允许为 null
-     * @param maxLen 最大值Len，不允许为 null
-     * @return 结果字符串
-     */
+      /**
+       * truncate。
+       *
+       * @param value 值，不允许为 null
+       * @param maxLen 最大值Len，不允许为 null
+       * @return 结果字符串
+       */
     private String truncate(String value, int maxLen) {
         if (value == null) {
             return null;
@@ -259,12 +260,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         return value.substring(0, safeMax) + "...(truncated)";
     }
 
-    /**
-     * 获取Parameter值。
-     *
-     * @param obj 对象，不允许为 null
-     * @return 结果字符串
-     */
+      /**
+       * 获取Parameter值。
+       *
+       * @param obj 对象，不允许为 null
+       * @return 结果字符串
+       */
     private String getParameterValue(Object obj) {
         if (obj == null) {
             return "null";
@@ -285,7 +286,7 @@ public class SlowSqlDetectInterceptor implements Interceptor {
 
     @Override
     public void setProperties(Properties properties) {
-        // ignore
+          // ignore
     }
 }
 

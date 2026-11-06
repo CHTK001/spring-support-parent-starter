@@ -71,6 +71,5 @@ public final class DataSyncTickDebugProbe {
         Thread.sleep(5000);
         server.stop();
         log.info("[SUMMARY] 5s 窗口 write 次数={}（cron=0/1 理论 5~6 次）", hits.size());
-        System.exit(0);
     }
 }

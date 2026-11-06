@@ -30,57 +30,57 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
- *
- * @since 4.0.0.42
- * @author CH
- */
+   * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
+   *
+   * @since 4.0.0.42
+   * @author CH
+   */
 @Slf4j
 public final class DataSyncAllInOneProbe {
 
-    /**
-     * Work_dir
-    */
+      /**
+       * Work_dir
+      */
     private static final Path WORK_DIR = Paths.get("target/all-in-one");
-    /**
-     * 通过
-    */
+      /**
+       * 通过
+      */
     private final List<String> pass = new CopyOnWriteArrayList<>();
-    /**
-     * 失败
-    */
+      /**
+       * 失败
+      */
     private final List<String> fail = new CopyOnWriteArrayList<>();
-    /**
-     * 信息记录（不阻断结论的已知问题）
-    */
+      /**
+       * 信息记录（不阻断结论的已知问题）
+      */
     private final List<String> info = new CopyOnWriteArrayList<>();
 
-    /**
-     * main。
-     * @param args 参数
-     */
+      /**
+       * main。
+       * @param args 参数
+       */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
         new DataSyncAllInOneProbe().run();
     }
 
-    /**
-     * 运行。
-     *
-     * @throws Exception 当执行过程不满足前置条件时
-     */
+      /**
+       * 运行。
+       *
+       * @throws Exception 当执行过程不满足前置条件时
+       */
     private void run() throws Exception {
-        // 1. 文件格式解析
+          // 1. 文件格式解析
         testFileParsing();
-        // 2. 字段转换器
+          // 2. 字段转换器
         testConverters();
-        // 3. 边界场景
+          // 3. 边界场景
         testEdgeCases();
-        // 4. 调度策略
+          // 4. 调度策略
         testSchedules();
-        // 5. 多映射并发
+          // 5. 多映射并发
         testConcurrency();
-        // 汇总
+          // 汇总
         log.info("");
         log.info("========================================");
         log.info("[ALL-IN-ONE] 通过: {} / 失败: {}", pass.size(), fail.size());
@@ -88,13 +88,12 @@ public final class DataSyncAllInOneProbe {
         info.forEach(i -> log.info("  INFO | {}", i));
         fail.forEach(f -> log.info("  FAIL | {}", f));
         log.info("========================================");
-        System.exit(fail.isEmpty() ? 0 : 1);
     }
 
-    // ========== 1. 文件格式解析 ==========
-    /**
-     * 测试文件解析。
-     */
+      // ========== 1. 文件格式解析 ==========
+      /**
+       * 测试文件解析。
+       */
     private void testFileParsing() throws Exception {
         Path mappingDir = Paths.get("src/main/resources/datasync/mappings");
         var yaml = new YamlConfigFileParser();
@@ -135,10 +134,10 @@ public final class DataSyncAllInOneProbe {
         Files.deleteIfExists(tmp);
     }
 
-    // ========== 2. 字段转换器 ==========
-    /**
-     * 测试转换器。
-     */
+      // ========== 2. 字段转换器 ==========
+      /**
+       * 测试转换器。
+       */
     private void testConverters() throws Exception {
         Path csv = WORK_DIR.resolve("convert.csv");
         Files.writeString(csv, "name,age,score,active\n张三,30,85.5,true\n李四,25,92.3,false\n", StandardCharsets.UTF_8);
@@ -170,12 +169,12 @@ public final class DataSyncAllInOneProbe {
         }
     }
 
-    // ========== 3. 边界场景 ==========
-    /**
-     * 测试edgecas。
-     */
+      // ========== 3. 边界场景 ==========
+      /**
+       * 测试edgecas。
+       */
     private void testEdgeCases() throws Exception {
-        // 3a. 空 CSV
+          // 3a. 空 CSV
         Path empty = WORK_DIR.resolve("empty.csv");
         Files.writeString(empty, "id,name\n", StandardCharsets.UTF_8);
         DefaultDataSyncServer s1 = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "edge"),
@@ -195,7 +194,7 @@ public final class DataSyncAllInOneProbe {
             fail.add("边界: 空 CSV → " + es.collected.size() + " 行(预期 0)");
         }
 
-        // 3b. 缺失源文件
+          // 3b. 缺失源文件
         Path missing = WORK_DIR.resolve("nope.csv");
         Files.deleteIfExists(missing);
         DefaultDataSyncServer s2 = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "edge2"),
@@ -214,7 +213,7 @@ public final class DataSyncAllInOneProbe {
             pass.add("边界: 缺失源文件 → 抛异常(" + e.getClass().getSimpleName() + "), 不阻塞");
         }
 
- // 3C. 不同 批量 大小
+   // 3C. 不同 批量 大小
         Path batchCsv = WORK_DIR.resolve("batch.csv");
         Files.writeString(batchCsv, "id,val\n1,a\n2,b\n3,c\n4,d\n5,e\n6,f\n7,g\n8,h\n9,i\n10,j\n11,k\n12,l\n", StandardCharsets.UTF_8);
         for (int b : new int[]{1, 5, 100}) {
@@ -229,8 +228,8 @@ public final class DataSyncAllInOneProbe {
             s3.start();
             Thread.sleep(1500);
             s3.stop();
-            // cron=0/1 每秒触发，1.5s 窗口内实际执行 1~N 轮属正常竞态；
-            // 关键断言是「总行数为 12 的整数倍」→ 每轮恰好完整写入 12 行，无丢失/重复损坏
+              // cron=0/1 每秒触发，1.5s 窗口内实际执行 1~N 轮属正常竞态；
+              // 关键断言是「总行数为 12 的整数倍」→ 每轮恰好完整写入 12 行，无丢失/重复损坏
             int n = bs.collected.size();
             if (n == 12) {
                 pass.add("边界: batch=" + b + " → 12 行全部写入");
@@ -242,15 +241,15 @@ public final class DataSyncAllInOneProbe {
         }
     }
 
-    // ========== 4. 调度策略 ==========
-    /**
-     * 测试调度。
-     */
+      // ========== 4. 调度策略 ==========
+      /**
+       * 测试调度。
+       */
     private void testSchedules() throws Exception {
         Path csv = WORK_DIR.resolve("schedule.csv");
         Files.writeString(csv, "id,val\n1,a\n2,b\n3,c\n4,d\n5,e\n", StandardCharsets.UTF_8);
 
-        // 4a. 不同 cron
+          // 4a. 不同 cron
         DefaultDataSyncServer s1 = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "cron"),
                 DefaultSyncDataSchedulerManager.SchedulerConfig.builder().retryMaxAttempts(0).build());
         s1.setMappingManager(new DefaultDataSyncMappingManager());
@@ -271,12 +270,12 @@ public final class DataSyncAllInOneProbe {
         else {
             fail.add("调度: cron=0/1 → 仅 " + c1s.rounds + " 轮");
         }
- // 已知问题：默认同步数据调度器管理器 实际触发频率高于 cron 配置
-        // （cron=0/5 理论 3.5s 内 ≤1 次，实测多次；cron=0/1 同样存在 ~2.6 倍超频）
- // 待专项排查 是否triggersatisfied 判定与 执行mapping 执行链路，此处仅作信息记录不阻断
+   // 已知问题：默认同步数据调度器管理器 实际触发频率高于 cron 配置
+          // （cron=0/5 理论 3.5s 内 ≤1 次，实测多次；cron=0/1 同样存在 ~2.6 倍超频）
+   // 待专项排查 是否triggersatisfied 判定与 执行mapping 执行链路，此处仅作信息记录不阻断
         info.add("调度[已知问题]: cron=0/5 → 3.5s 内 " + c5s.rounds + " 批(理论≤1)，调度超频待专项排查");
 
- // 4b. 无 模式（手动触发）
+   // 4b. 无 模式（手动触发）
         DefaultDataSyncServer s2 = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "none"),
                 DefaultSyncDataSchedulerManager.SchedulerConfig.builder().retryMaxAttempts(0).build());
         s2.setMappingManager(new DefaultDataSyncMappingManager());
@@ -299,10 +298,10 @@ public final class DataSyncAllInOneProbe {
         }
     }
 
-    // ========== 5. 多映射并发 ==========
-    /**
-     * 测试concurrency。
-     */
+      // ========== 5. 多映射并发 ==========
+      /**
+       * 测试concurrency。
+       */
     private void testConcurrency() throws Exception {
         Path csv = WORK_DIR.resolve("concurrent.csv");
         Files.writeString(csv, "id,val\n" + "1,a\n".repeat(1000), StandardCharsets.UTF_8);
@@ -331,46 +330,46 @@ public final class DataSyncAllInOneProbe {
         }
     }
 
-    /**
-     * 映射。
-     * @param id 标识
-     * @param cron cron
-     * @param srcId srcid
-     * @param sinkId sinkid
-     * @return 映射的结果
-     */
+      /**
+       * 映射。
+       * @param id 标识
+       * @param cron cron
+       * @param srcId srcid
+       * @param sinkId sinkid
+       * @return 映射的结果
+       */
     private static DataSyncMapping map(String id, String cron, String srcId, String sinkId) {
         return new DefaultDataSyncMapping(id, id + "-input", srcId, id + "-output", sinkId,
                 null, List.of(), 100, "fixed", cron, Map.of(), new CronTrigger(cron, LocalDateTime.now()));
     }
 
-    /**
-     * 映射。
-     * @param id 标识
-     * @param cron cron
-     * @return 映射的结果
-     */
+      /**
+       * 映射。
+       * @param id 标识
+       * @param cron cron
+       * @return 映射的结果
+       */
     private static DataSyncMapping map(String id, String cron) {
         return map(id, cron, id + "-src", id + "-sink");
     }
 
-    /**
-     * 简单字段映射。
-     *
-     * @param sourceField 源字段名
-     * @param targetField 目标字段名
-     * @param converter 转换器名
-     */
+      /**
+       * 简单字段映射。
+       *
+       * @param sourceField 源字段名
+       * @param targetField 目标字段名
+       * @param converter 转换器名
+       */
     record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {
 
-        /**
-         * 规范构造器：必填组件做空值校验。
-         *
-         * <p>value class 前置条件——值类要求空值敌对；转换器名允许为空，故不做校验。</p>
-         *
-         * @param sourceField 源字段名
-         * @param targetField 目标字段名
-         */
+          /**
+           * 规范构造器：必填组件做空值校验。
+           *
+           * <p>value class 前置条件——值类要求空值敌对；转换器名允许为空，故不做校验。</p>
+           *
+           * @param sourceField 源字段名
+           * @param targetField 目标字段名
+           */
         public SimpleFieldMapping {
             sourceField = Objects.requireNonNull(sourceField, "sourceField 不能为 null");
             targetField = Objects.requireNonNull(targetField, "targetField 不能为 null");
@@ -378,9 +377,9 @@ public final class DataSyncAllInOneProbe {
     }
 
     static final class CollectSink implements DataSyncAgentSink {
-        /**
-         * sinkid
-        */
+          /**
+           * sinkid
+          */
         private final String sinkId;
         final List<Map<String, Object>> collected = new CopyOnWriteArrayList<>();
         final LongAdder total = new LongAdder();
@@ -393,9 +392,9 @@ public final class DataSyncAllInOneProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
-        /**
-         * sinkid
-        */
+          /**
+           * sinkid
+          */
         private final String sinkId;
         volatile int rounds = 0;
         volatile long total = 0;

@@ -4,6 +4,8 @@ package com.chua.starter.apm.support.spi;
 import com.chua.common.support.apm.OtnlEngine;
 import com.chua.common.support.apm.model.OtnlStatus;
 
+import java.util.Map;
+
 /**
  * APM 提供者 SPI。
  * <p>
@@ -72,6 +74,33 @@ public interface ApmProvider extends AutoCloseable {
             return OtnlStatus.unavailable(name(), "当前环境未引入该 APM 模块实现");
         }
         return engine.status();
+    }
+
+    /**
+     * 该引擎「可以运行期修改」的配置项（键 = 配置名，值 = 当前生效值）。
+     *
+     * <p>为什么要这个扩展点：APM 的连接参数（例如 SkyWalking 的 OAP 地址）在各家实现里
+     * 是静态/进程级设置，业务层无法直接改；把「有哪些可改项、怎么改」交给引擎自己回答，
+     * 上层（{@code ApmRuntimeConfig}）就不必知道任何一家 SDK 的细节，
+     * 新增一种 APM 也不会让 UI 设置页长出新分支。</p>
+     *
+     * <p>默认空表 = 该引擎没有可改项（如进程内的 hotspot，参数来自 {@code -javaagent}）。</p>
+     *
+     * @return 可改项，不可变
+     */
+    default Map<String, String> runtimeSettings() {
+        return Map.of();
+    }
+
+    /**
+     * 应用运行期配置。
+     *
+     * <p>只处理 {@link #runtimeSettings()} 里出现过的键；未知键由实现方决定忽略
+     * （上层已按 {@link #runtimeSettings()} 过滤，实现方按需兜底）。</p>
+     *
+     * @param values 待应用的键值，值不为 null
+     */
+    default void applyRuntimeSettings(Map<String, String> values) {
     }
 
     /**

@@ -67,13 +67,14 @@ public final class ApmServerMain {
         server.start();
 
         CountDownLatch latch = new CountDownLatch(1);
-// [P3C C1 豁免] 场景化创建线程，需文档化
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        try {
+            latch.await();
+        } finally {
+            // 不注册 JVM 关闭钩子：资源释放走 try-finally
             server.close();
             registry.close();
             latch.countDown();
-        }, "apm-shutdown"));
-        latch.await();
+        }
     }
 
     /**

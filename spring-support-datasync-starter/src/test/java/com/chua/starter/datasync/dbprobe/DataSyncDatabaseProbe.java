@@ -83,7 +83,6 @@ public class DataSyncDatabaseProbe {
             Thread.currentThread().interrupt();
         }
         server.stop();
-        System.exit(0);
     }
 
     /**

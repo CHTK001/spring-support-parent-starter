@@ -95,9 +95,9 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
      */
     private String getMdls(File app, String attribute) {
         try {
-            Process process = Runtime.getRuntime().exec(
-                    new String[]{"mdls", "-name", attribute, "-raw", app.getAbsolutePath()}
-            );
+            Process process = new ProcessBuilder(
+                    "mdls", "-name", attribute, "-raw", app.getAbsolutePath()
+            ).start();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String result = reader.readLine();

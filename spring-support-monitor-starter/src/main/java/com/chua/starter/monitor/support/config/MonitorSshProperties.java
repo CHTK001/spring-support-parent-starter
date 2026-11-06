@@ -26,7 +26,7 @@ public class MonitorSshProperties {
     /**
      * 会话（认证）超时（秒）：等待 session.auth() 完成的上限。
      */
-    private int sessionTimeoutSeconds = 15;
+    private int sessionTimeoutSeconds = 30;
 
     /**
      * 命令执行/读取超时（秒）：等待 exit-status/CLOSED 的上限，慢链路可调大。

@@ -1069,6 +1069,91 @@ public class WorldSimServiceImpl implements WorldSimService {
         return actMapper.selectById(act.getId());
     }
 
+    /**
+     * 演出正文（只读）：取用户侧故事片段，不触发任何生成。
+     *
+     * <p>故事片段在 {@link #advanceAct} 的表演阶段由 {@link #playStory} 写入，结构为
+     * <code>{actNo, worldId, title, status, progress, scenes:[{sceneId,name,playText,mediaImage,mediaVideo}]}</code>。
+     * 这里只做读取与补字段（舞台名、幕次阶段），保证前端一次拿到可直接排版的正文。</p>
+     */
+    @Override
+    public List<Map<String, Object>> listStories(Long worldId, Integer actNo) {
+        requireOwned(worldId);
+        String userId = AiUserContext.requireUserId();
+        List<Integer> nos = actNo != null
+                ? List.of(actNo)
+                : storyStore.storyActNumbers(worldId, userId);
+        Map<Integer, SysAiWorldAct> actByNo = new LinkedHashMap<>();
+        for (SysAiWorldAct a : actMapper.selectList(
+                new LambdaQueryWrapper<SysAiWorldAct>().eq(SysAiWorldAct::getWorldId, worldId))) {
+            if (a.getActNo() != null) {
+                actByNo.put(a.getActNo(), a);
+            }
+        }
+        Map<Long, String> sceneNames = new LinkedHashMap<>();
+        for (SysAiWorldScene s : sceneMapper.selectList(
+                new LambdaQueryWrapper<SysAiWorldScene>().eq(SysAiWorldScene::getWorldId, worldId))) {
+            sceneNames.put(s.getId(), s.getName());
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Integer no : nos) {
+            if (no == null) {
+                continue;
+            }
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("actNo", no);
+            SysAiWorldAct act = actByNo.get(no);
+            row.put("stage", act == null ? null : act.getStage());
+            String raw = storyStore.readStory(worldId, userId, no);
+            if (raw == null || raw.isBlank()) {
+                row.put("played", false);
+                out.add(row);
+                continue;
+            }
+            Map<String, Object> json;
+            try {
+                json = Json.fromJson(raw, Map.class);
+            } catch (Exception e) {
+                // 文件被手改坏时不让整页 500：按「未演出」处理，正文可等下一次演出覆盖
+                row.put("played", false);
+                row.put("broken", true);
+                out.add(row);
+                continue;
+            }
+            row.put("played", true);
+            row.put("title", str(json.get("title"), "未命名幕次"));
+            row.put("description", str(json.get("description"), ""));
+            row.put("progress", json.get("progress"));
+            List<Map<String, Object>> scenes = new ArrayList<>();
+            for (Map<String, Object> s : sceneList(json.get("scenes"))) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                Object sid = s.get(ActScript.SCENE_SCENE_ID);
+                m.put("sceneId", sid);
+                m.put("name", str(s.get(ActScript.SCENE_NAME), "场景"));
+                m.put("stageName", sceneNameById(sceneNames, sid));
+                m.put("playText", str(s.get(ActScript.SCENE_PLAY), ""));
+                m.put("mediaImage", s.get(ActScript.SCENE_MEDIA_IMAGE));
+                m.put("mediaVideo", s.get(ActScript.SCENE_MEDIA_VIDEO));
+                scenes.add(m);
+            }
+            row.put("scenes", scenes);
+            out.add(row);
+        }
+        return out;
+    }
+
+    /** 场景 ID（可能是 Integer/Long/String 的 JSON 值）→ 场景名，找不到返回 null */
+    private static String sceneNameById(Map<Long, String> names, Object rawId) {
+        if (rawId == null) {
+            return null;
+        }
+        try {
+            return names.get(Long.valueOf(String.valueOf(rawId).trim()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     /* ========================================================================
      * 明价值：编剧
      * ====================================================================== */
@@ -1399,15 +1484,20 @@ public class WorldSimServiceImpl implements WorldSimService {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "没有可表演的场景");
         }
         SysAiWorld world = worldMapper.selectById(worldId);
+        int order = 0;
         for (Map<String, Object> scene : scenes) {
+            order++;
             String name = str(scene.get(ActScript.SCENE_NAME), "场景");
+            String cast = npcsLabel(worldId, scene.get(ActScript.SCENE_NPCS));
+            // 演出正文里记下演员名：舞台需要标「这一幕有谁」，剧本原件里只有 npc id
+            scene.put(ActScript.SCENE_CAST, cast);
             String prompt =
                 "你是一位电影/话剧导演。请根据以下剧本场景生成一段不超过 300 字的表演叙述（对话 + 动作 + 神态），"
                 + "风格：古典历史剧；不要输出任何 JSON 与 HTML，只输出纯文本。"
                 + "\n\n【场景】" + name
                 + "\n【世界】" + (world == null ? "世界" : world.getName() + (world.getEra() == null ? "" : "（" + world.getEra() + "）"))
                 + "\n【画面描述】" + str(scene.get(ActScript.SCENE_DESC), "")
-                + "\n【演员与关系】" + npcsLabel(worldId, scene.get(ActScript.SCENE_NPCS));
+                + "\n【演员与关系】" + cast;
             AiChatRequest request = new AiChatRequest();
             request.setModel(scriptModel());
             request.setPrompt(prompt);
@@ -1416,7 +1506,8 @@ public class WorldSimServiceImpl implements WorldSimService {
             request.setMaxTokens(2000);
             AiChatResult result = aiChatFacadeService.callForResult(request);
             if (result.success() && result.text() != null && !result.text().isBlank()) {
-                scene.put(ActScript.SCENE_PLAY, result.text());
+                // 落「序 · 标题」再进正文：前端把首行当分场标题，正文不再重复标题
+                scene.put(ActScript.SCENE_PLAY, seqLabel(order) + " " + name + "\n" + result.text().trim());
             }
         }
         json.put(ActScript.ACT_STATUS, ACT_STATUS_PLAYING);
@@ -1439,6 +1530,10 @@ public class WorldSimServiceImpl implements WorldSimService {
             m.put("sceneId", s.get(ActScript.SCENE_SCENE_ID));
             m.put("name", str(s.get(ActScript.SCENE_NAME), "场景"));
             m.put("playText", str(s.get(ActScript.SCENE_PLAY), ""));
+            m.put("cast", s.get(ActScript.SCENE_CAST));
+            // 剧情概览用：画面描述与台词（观众在演出前先看得到这一幕要讲什么）
+            m.put("desc", s.get(ActScript.SCENE_DESC));
+            m.put("lines", s.get(ActScript.SCENE_LINES));
             m.put("mediaImage", s.get(ActScript.SCENE_MEDIA_IMAGE));
             m.put("mediaVideo", s.get(ActScript.SCENE_MEDIA_VIDEO));
             content.add(m);
@@ -1506,6 +1601,21 @@ public class WorldSimServiceImpl implements WorldSimService {
             if (r != null) sb.append(r.getName());
         }
         return sb.length() == 0 ? "-" : sb.toString();
+    }
+
+    /** 分场序号：1 → 一，11 → 十一（正文小标题用它，观众一眼看出场次递增） */
+    private static String seqLabel(int n) {
+        String[] digits = {"一", "二", "三", "四", "五", "六", "七", "八", "九"};
+        if (n <= 0) {
+            return "一";
+        }
+        if (n < 10) {
+            return digits[n - 1];
+        }
+        if (n < 20) {
+            return "十" + (n == 10 ? "" : digits[n - 11]);
+        }
+        return String.valueOf(n);
     }
 
     /** 安全转 Long */

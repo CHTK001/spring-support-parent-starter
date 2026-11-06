@@ -35,6 +35,14 @@ public class TsharkInstallStreamRegistry {
     public static final String EVENT_PROGRESS = "progress";
 
     /**
+     * 事件名：抓包会话变化（新建 / 停止 / 解析完成 / 删除），载荷就是会话实体。
+     *
+     * <p>同一个连接同时承载「运行时状态」与「会话列表变化」，页面不再轮询
+     * {@code /tshark/status} 或反复重拉会话列表。</p>
+     */
+    public static final String EVENT_SESSION = "session";
+
+    /**
      * 事件名：建连就绪。
      */
     public static final String EVENT_READY = "ready";
@@ -121,6 +129,32 @@ public class TsharkInstallStreamRegistry {
     }
 
     /**
+     * 广播一条抓包会话变化（全局，不按会话分组）。
+     *
+     * <p>会话列表是「所有打开的页面都要同步」的数据：某个页面新建 / 停止 / 删除会话，
+     * 其它页面立即重拉列表，不需要定时轮询。</p>
+     *
+     * @param payload 会话实体（或删除事件里的 {id, deleted:true}）
+     * @return 成功送达的连接数
+     */
+    public int broadcastSession(Object payload) {
+        if (subscribers.isEmpty()) {
+            return 0;
+        }
+        int delivered = 0;
+        for (SseEmitter emitter : subscribers) {
+            try {
+                sendJson(emitter, EVENT_SESSION, payload);
+                delivered++;
+            } catch (IOException | IllegalStateException e) {
+                log.debug("[tshark] 会话事件推送失败，摘除连接 reason={}", e.getMessage());
+                remove(emitter);
+            }
+        }
+        return delivered;
+    }
+
+    /**
      * 序列化后发送一帧。
      *
      * @param emitter 目标连接
@@ -128,8 +162,7 @@ public class TsharkInstallStreamRegistry {
      * @param payload 载荷
      * @throws IOException 序列化失败或连接已断
      */
-    private void sendJson(SseEmitter emitter, String event, Object payload) throws IOException {
-        byte[] json = objectMapper.writeValueAsBytes(payload);
+    private void sendJson(SseEmitter emitter, String event, Object payload) throws IOException {        byte[] json = objectMapper.writeValueAsBytes(payload);
         emitter.send(SseEmitter.event().name(event).data(json));
     }
 

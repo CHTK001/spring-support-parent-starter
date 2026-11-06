@@ -48,39 +48,40 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * MyBatis SQL 物理化拦截器。
- *
- * @since 2026/4/2
- */
+   * MyBatis SQL 物理化拦截器。
+   *
+   * @since 2026/4/2
+   */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
-        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
+        @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler
+            .class, CacheKey.class, BoundSql.class}),
 })
 /**
- * 物化SQL拦截器类。
- *
- * @author CH
- * @since 4.0.0
- */
+   * 物化SQL拦截器类。
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class MaterializedSqlInterceptor implements Interceptor {
-    /**
-     * 日志
-    */
+      /**
+       * 日志
+      */
     private static final Logger log = LoggerFactory.getLogger(MaterializedSqlInterceptor.class);
 
-    /**
-     * 无
-    */
+      /**
+       * 无
+      */
     private static final MaterializedRouteDefinition NONE = new MaterializedRouteDefinition(-1L, null);
 
-    /**
-     * 物化sqlrouter
-    */
+      /**
+       * 物化sqlrouter
+      */
     private final MaterializedSqlDataSourceRouter materializedSqlRouter;
-    /**
-     * 属性
-    */
+      /**
+       * 属性
+      */
     private final MaterializedRouteProperties properties;
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>(); // definition缓存
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>(); // refreshdefinition缓存
@@ -129,13 +130,13 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return result;
     }
 
-    /**
-     * intercept查询。
-     * @param invocation invocation
-     * @param request 请求
-     * @return intercept查询的结果
-     * @throws Throwable 异常
-    */
+      /**
+       * intercept查询。
+       * @param invocation invocation
+       * @param request 请求
+       * @return intercept查询的结果
+       * @throws Throwable 异常
+      */
     private Object interceptQuery(Invocation invocation, MaterializedSqlRequest request) throws Throwable {
         MaterializedSqlRoute route = materializedSqlRouter.route(request);
         if (!route.isRouted()) {
@@ -153,25 +154,25 @@ public class MaterializedSqlInterceptor implements Interceptor {
             return invocation.proceed();
         } catch (Throwable ex) {
             log.debug("[MyBatis][Materialized] 内存副本执行失败，回退源库: {}", ex.getMessage());
-            /**
-             * restore数据源。
-             * @param originalDataSource 原始数据源
-             */
+              /**
+               * restore数据源。
+               * @param originalDataSource 原始数据源
+               */
             restoreDataSource(originalDataSource);
             return invocation.proceed();
         } finally {
-            /**
-             * restore数据源。
-             * @param originalDataSource 原始数据源
-             */
+              /**
+               * restore数据源。
+               * @param originalDataSource 原始数据源
+               */
             restoreDataSource(originalDataSource);
         }
     }
 
-    /**
-     * restore数据源。
-     * @param originalDataSource 原始数据源
-     */
+      /**
+       * restore数据源。
+       * @param originalDataSource 原始数据源
+       */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -218,13 +219,13 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return builder.build();
     }
 
-    /**
-     * resolveboundsql。
-     * @param mappedStatement mapped对账单
-     * @param args 参数
-     * @param parameter 参数
-     * @return resolveBoundSql的结果
-     */
+      /**
+       * resolveboundsql。
+       * @param mappedStatement mapped对账单
+       * @param args 参数
+       * @param parameter 参数
+       * @return resolveBoundSql的结果
+       */
     private BoundSql resolveBoundSql(MappedStatement mappedStatement, Object[] args, Object parameter) {
         if (args.length == 6 && args[5] instanceof BoundSql boundSql) {
             return boundSql;
@@ -250,13 +251,13 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return builder.build();
     }
 
-    /**
-     * resolve参数。
-     * @param configuration 配置
-     * @param boundSql boundsql
-     * @param parameterObject 参数对象
-     * @return resolve参数的结果
-     */
+      /**
+       * resolve参数。
+       * @param configuration 配置
+       * @param boundSql boundsql
+       * @param parameterObject 参数对象
+       * @return resolve参数的结果
+       */
     private List<Object> resolveParameters(Configuration configuration, BoundSql boundSql, Object parameterObject) {
         List<Object> values = new ArrayList<>();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
@@ -286,11 +287,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return values;
     }
 
-    /**
-     * 解析tables。
-     * @param sql SQL
-     * @return 解析tables的结果
-     */
+      /**
+       * 解析tables。
+       * @param sql SQL
+       * @return 解析tables的结果
+       */
     private List<String> parseTables(String sql) {
         try {
             Statement statement = CCJSqlParserUtil.parse(sql);
@@ -302,11 +303,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * resolvedefinition。
-     * @param mappedStatement mapped对账单
-     * @return resolveDefinition的结果
-     */
+      /**
+       * resolvedefinition。
+       * @param mappedStatement mapped对账单
+       * @return resolveDefinition的结果
+       */
     private MaterializedRouteDefinition resolveDefinition(MappedStatement mappedStatement) {
         MaterializedRouteDefinition current = MaterializedRouteContext.get();
         if (current != null) {
@@ -317,11 +318,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return cached == NONE ? null : cached;
     }
 
-    /**
-     * resolverefreshdefinition。
-     * @param mappedStatement mapped对账单
-     * @return resolveRefreshDefinition的结果
-     */
+      /**
+       * resolverefreshdefinition。
+       * @param mappedStatement mapped对账单
+       * @return resolveRefreshDefinition的结果
+       */
     private MaterializedRouteDefinition resolveRefreshDefinition(MappedStatement mappedStatement) {
         MaterializedRouteDefinition current = MaterializedRefreshContext.get();
         if (current != null) {
@@ -332,11 +333,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return cached == NONE ? null : cached;
     }
 
-    /**
-     * resolvedefinition从映射器。
-     * @param statementId 对账单标识
-     * @return resolvedefinition从映射器的结果
-     */
+      /**
+       * resolvedefinition从映射器。
+       * @param statementId 对账单标识
+       * @return resolvedefinition从映射器的结果
+       */
     private MaterializedRouteDefinition resolveDefinitionFromMapper(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {
@@ -374,11 +375,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return NONE;
     }
 
-    /**
-     * resolverefreshdefinition从映射器。
-     * @param statementId 对账单标识
-     * @return resolverefreshdefinition从映射器的结果
-     */
+      /**
+       * resolverefreshdefinition从映射器。
+       * @param statementId 对账单标识
+       * @return resolverefreshdefinition从映射器的结果
+       */
     private MaterializedRouteDefinition resolveRefreshDefinitionFromMapper(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {

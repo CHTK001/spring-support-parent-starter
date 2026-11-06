@@ -3,6 +3,7 @@ package com.chua.starter.job.support.glue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
 import java.util.Map;
@@ -17,6 +18,10 @@ import java.util.Map;
  * <pre>{@code
  * // Groovy 脚本：objectContext 是执行器自动绑定的变量
  * def userService = objectContext.getBean('sysUserService')
+ *
+ * // 脚本里自己 new 的对象：字段注入不会自动发生，要显式装配
+ * def task = new MyTask()
+ * objectContext.inject(task)
  *
  * // Java 类片段：入口方法带一个 JobObjectContext 形参即可收到，
  * // 或者字段上写 @Autowired（由 JobScriptHost 经 AutowireCapableBeanFactory 装配）
@@ -115,6 +120,39 @@ public record JobObjectContext(
     public <T> Map<String, T> getBeansOfType(Class<T> type) {
         requireContainer("getBeansOfType(Class)");
         return applicationContext.getBeansOfType(type);
+    }
+
+    /**
+     * 对脚本里自己创建的对象做一次 Spring 字段装配，使 {@code @Autowired} 生效。
+     *
+     * <p>为什么需要这个方法：引擎只会自动装配「脚本类 / 片段类」本身，脚本正文里
+     * {@code new} 出来的对象不在容器管理范围内，字段全是 null。要在脚本里用自建对象上的
+     * 依赖，必须显式调用本方法：</p>
+     *
+     * <pre>{@code
+     * class MyTask {
+     *     @Autowired UserService userService
+     * }
+     * def task = new MyTask()
+     * objectContext.inject(task)   // 这一步之后 userService 才有值
+     * task.run()
+     * }</pre>
+     *
+     * <p>装配方式是按类型（{@code AUTOWIRE_BY_TYPE}），不按名：脚本里的字段名是作者自己起的，
+     * 按名装配会大量漏配。取不到的同类型 Bean 保持 null，不抛异常。</p>
+     *
+     * @param target 待装配对象，允许为 null
+     * @return 传入的同一个对象，便于链式书写；target 为 null 时返回 null
+     */
+    public Object inject(Object target) {
+        if (target == null || applicationContext == null) {
+            return target;
+        }
+        AutowireCapableBeanFactory factory = applicationContext.getAutowireCapableBeanFactory();
+        if (factory != null) {
+            factory.autowireBeanProperties(target, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false);
+        }
+        return target;
     }
 
     /**

@@ -124,8 +124,6 @@ class BundleManagerHttpRepoRealTest {
                 return thread;
             }));
             SERVER.start();
-        // [P3C C1 豁免] 关闭钩子必须由 JVM 创建独立线程
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> SERVER.stop(0), "test-http-repo-stop"));
         } catch (Exception e) {
             throw new IllegalStateException("HTTP 伪 Maven 仓库准备失败", e);
         }
@@ -149,7 +147,7 @@ class BundleManagerHttpRepoRealTest {
     }
 
     /**
-     * 清理本次安装的 bundle，避免污染同 JVM 内的其他用例。
+     * 清理本次安装的 bundle，避免污染同 JVM 内的其他用例；同时关闭 HTTP 伪仓库。
      */
     @AfterEach
     void cleanup() {
@@ -157,6 +155,11 @@ class BundleManagerHttpRepoRealTest {
             bundleManager.uninstall(BUNDLE_SYMBOLIC_NAME);
         } catch (Exception ignored) {
             // 未安装时忽略
+        } finally {
+            // 停止 HTTP 伪 Maven 仓库：释放端口，关闭守护线程，避免阻塞 JVM 退出
+            if (SERVER != null) {
+                SERVER.stop(0);
+            }
         }
     }
 

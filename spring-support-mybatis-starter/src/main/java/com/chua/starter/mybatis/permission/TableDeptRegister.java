@@ -34,75 +34,76 @@ import java.util.stream.Collectors;
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
 /**
- * 数据权限注册器
- * <p>支持多表关联场景，通过deptAlias和userAlias指定表别名</p>
- *
- * @author CH
- * @since 4.0.0
- */
+   * 数据权限注册器
+   * <p>支持多表关联场景，通过deptAlias和userAlias指定表别名</p>
+   *
+   * @author CH
+   * @since 4.0.0
+   */
 public class TableDeptRegister implements DeptRegister {
-    /**
-     * Dept_leader
-    */
+      /**
+       * Dept_leader
+      */
     private static final String DEPT_LEADER = "DEPT_LEADER";
-    /**
-     * Managed_dept_树_标识
-    */
+      /**
+       * Managed_dept_树_标识
+      */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
-    /**
-     * 表
-    */
+      /**
+       * 表
+      */
     private final Table table;
-    /**
-     * Where
-    */
+      /**
+       * Where
+      */
     private final Expression where;
-    /**
-     * 当前用户
-    */
+      /**
+       * 当前用户
+      */
     private final CurrentUser currentUser;
-    /**
-     * 数据权限
-    */
+      /**
+       * 数据权限
+      */
     private final DataFilterTypeEnum dataPermission;
-    /**
-     * 数据作用域属性
-    */
+      /**
+       * 数据作用域属性
+      */
     private final MybatisPlusDataScopeProperties dataScopeProperties;
-    /**
-     * deptid列
-    */
+      /**
+       * deptid列
+      */
     private final String deptIdColumn;
-    /**
-     * 创建by列
-    */
+      /**
+       * 创建by列
+      */
     private final String createByColumn;
-    /**
-     * depttreeid列
-    */
+      /**
+       * depttreeid列
+      */
     private final String deptTreeIdColumn;
-    /**
-     * Dept别名
-    */
+      /**
+       * Dept别名
+      */
     private final String deptAlias;
-    /**
-     * 用户别名
-    */
+      /**
+       * 用户别名
+      */
     private final String userAlias;
 
-    /**
-     * 构造函数
-     *
-     * @param table               表对象
-     * @param where               WHERE条件表达式
-     * @param currentUser         当前用户信息
-     * @param dataPermission      数据权限类型
-     * @param dataScopeProperties 数据权限配置
-     * @param deptAlias           部门表别名，用于多表关联场景
-     * @param userAlias           用户表别名，用于多表关联场景
-     */
-    public TableDeptRegister(Table table, Expression where, CurrentUser currentUser, DataFilterTypeEnum dataPermission, MybatisPlusDataScopeProperties dataScopeProperties, String deptAlias, String userAlias) {
+      /**
+       * 构造函数
+       *
+       * @param table               表对象
+       * @param where               WHERE条件表达式
+       * @param currentUser         当前用户信息
+       * @param dataPermission      数据权限类型
+       * @param dataScopeProperties 数据权限配置
+       * @param deptAlias           部门表别名，用于多表关联场景
+       * @param userAlias           用户表别名，用于多表关联场景
+       */
+    public TableDeptRegister(Table table, Expression where, CurrentUser currentUser, DataFilterTypeEnum dataPermission
+        , MybatisPlusDataScopeProperties dataScopeProperties, String deptAlias, String userAlias) {
         this.table = table;
         this.where = where;
         this.currentUser = currentUser;
@@ -115,12 +116,12 @@ public class TableDeptRegister implements DeptRegister {
         this.userAlias = userAlias;
     }
 
-    /**
-     * 注册数据权限过滤条件
-     * <p>根据数据权限类型创建相应的WHERE条件表达式</p>
-     *
-     * @return 权限过滤表达式，如果表信息不存在或表没有部门ID字段则返回null
-     */
+      /**
+       * 注册数据权限过滤条件
+       * <p>根据数据权限类型创建相应的WHERE条件表达式</p>
+       *
+       * @return 权限过滤表达式，如果表信息不存在或表没有部门ID字段则返回null
+       */
     @Override
     public Expression register() {
         TableInfo tableInfo = getTableInfo(table.getName());
@@ -133,13 +134,13 @@ public class TableDeptRegister implements DeptRegister {
         return createExpression(tableInfo);
     }
 
-    /**
-     * 创建权限过滤表达式
-     * <p>首先检查表是否有部门ID字段，如果没有则返回null（不进行权限过滤）</p>
-     *
-     * @param tableInfo 表信息
-     * @return 权限过滤表达式，如果表没有部门ID字段则返回null
-     */
+      /**
+       * 创建权限过滤表达式
+       * <p>首先检查表是否有部门ID字段，如果没有则返回null（不进行权限过滤）</p>
+       *
+       * @param tableInfo 表信息
+       * @return 权限过滤表达式，如果表没有部门ID字段则返回null
+       */
     private Expression createExpression(TableInfo tableInfo) {
         boolean deptIdFromTable = findDeptIdFromTable(tableInfo);
         if (!deptIdFromTable) {
@@ -149,11 +150,11 @@ public class TableDeptRegister implements DeptRegister {
         return createDeptWhere();
     }
 
-    /**
-     * 创建部门表达式
-     *
-     * @return 表达式，如果where为null则直接返回权限条件，否则返回AND组合
-     */
+      /**
+       * 创建部门表达式
+       *
+       * @return 表达式，如果where为null则直接返回权限条件，否则返回AND组合
+       */
     private Expression createDeptWhere() {
         if (hasManagedDeptLeaderScope()) {
             return combineWithWhere(createManagedDeptLeaderExpression());
@@ -179,8 +180,8 @@ public class TableDeptRegister implements DeptRegister {
         }
 
         if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
- // 使用 LIKE 前缀查询替代 查找_入_设置，可以利用索引
- // SQL: sys_dept_id 入 (选择 sys_dept_id 从 sys_dept WHERE sys_dept_树_id LIKE 'xxx%')
+   // 使用 LIKE 前缀查询替代 查找_入_设置，可以利用索引
+   // SQL: sys_dept_id 入 (选择 sys_dept_id 从 sys_dept WHERE sys_dept_树_id LIKE 'xxx%')
             if (StringUtils.isEmpty(currentUser.getDeptId())) {
                 return NO_DATA;
             }
@@ -191,14 +192,14 @@ public class TableDeptRegister implements DeptRegister {
             PlainSelect select = new PlainSelect();
             select.setSelectItems(Collections.singletonList(new SelectItem<>(new Column(deptIdColumn))));
 
-            // 使用配置的部门表
+              // 使用配置的部门表
             Table deptTable = new Table(dataScopeProperties.getTableName());
             select.setFromItem(deptTable);
 
- // 构建 LIKE 表达式: sys_dept_树_id LIKE '当前dept树id%'
+   // 构建 LIKE 表达式: sys_dept_树_id LIKE '当前dept树id%'
             LikeExpression likeExpression = new LikeExpression();
             likeExpression.setLeftExpression(new Column(deptTreeIdColumn));
- // 需要获取当前部门的 树_标识，这里用子查询
+   // 需要获取当前部门的 树_标识，这里用子查询
             PlainSelect treeIdSelect = new PlainSelect();
             treeIdSelect.setSelectItems(Collections.singletonList(new SelectItem<>(new Column(deptTreeIdColumn))));
             treeIdSelect.setFromItem(deptTable);
@@ -209,7 +210,7 @@ public class TableDeptRegister implements DeptRegister {
             ParenthesedSelect treeIdSubSelect = new ParenthesedSelect();
             treeIdSubSelect.setSelect(treeIdSelect);
 
- // 连接(子查询, '%')
+   // 连接(子查询, '%')
             net.sf.jsqlparser.expression.Function concatFunc = new net.sf.jsqlparser.expression.Function();
             concatFunc.setName("CONCAT");
             concatFunc.setParameters(new ExpressionList<>(treeIdSubSelect, new StringValue("%")));
@@ -230,19 +231,19 @@ public class TableDeptRegister implements DeptRegister {
         }
 
         if (DataFilterTypeEnum.CUSTOM == dataPermission) {
-            // 自定义权限: 本人数据 + 自定义部门数据
- // SQL: (创建_by = 用户id OR sys_dept_id 入 (dept标识))
+              // 自定义权限: 本人数据 + 自定义部门数据
+   // SQL: (创建_by = 用户id OR sys_dept_id 入 (dept标识))
             EqualsTo selfCondition = new EqualsTo();
             selfCondition.setLeftExpression(createUserColumn());
             selfCondition.setRightExpression(new StringValue(currentUser.getUserId()));
 
             if (StringUtils.isNotEmpty(currentUser.getDataPermissionRule())) {
-                // 有自定义部门列表
+                  // 有自定义部门列表
                 Expression deptInExpression = createInExpression();
                 OrExpression orExpression = new OrExpression(selfCondition, deptInExpression);
                 return combineWithWhere(orExpression);
             } else {
-                // 没有自定义部门，只看本人数据
+                  // 没有自定义部门，只看本人数据
                 return combineWithWhere(selfCondition);
             }
         }
@@ -250,20 +251,20 @@ public class TableDeptRegister implements DeptRegister {
         return NO_DATA;
     }
 
-    /**
-     * 是否拥有managedDeptLeadScope
-     *
-     * @return 是否包含managedDeptLeadScope的结果
-     */
+      /**
+       * 是否拥有managedDeptLeadScope
+       *
+       * @return 是否包含managedDeptLeadScope的结果
+       */
     private boolean hasManagedDeptLeaderScope() {
         return currentUser.hasRole(DEPT_LEADER) && !resolveManagedDeptTreeIds().isEmpty();
     }
 
-    /**
-     * 创建managedDeptLeadExpression
-     *
-     * @return 创建managedDeptLeadExpression的结果
-     */
+      /**
+       * 创建managedDeptLeadExpression
+       *
+       * @return 创建managedDeptLeadExpression的结果
+       */
     private Expression createManagedDeptLeaderExpression() {
         EqualsTo selfCondition = new EqualsTo();
         selfCondition.setLeftExpression(createUserColumn());
@@ -303,32 +304,32 @@ public class TableDeptRegister implements DeptRegister {
         return null == deptCondition ? selfCondition : new OrExpression(selfCondition, deptCondition);
     }
 
-    /**
-     * 将权限条件与现有WHERE条件组合
-     *
-     * @param permissionCondition 权限条件表达式
-     * @return 组合后的表达式
-     */
+      /**
+       * 将权限条件与现有WHERE条件组合
+       *
+       * @param permissionCondition 权限条件表达式
+       * @return 组合后的表达式
+       */
     private Expression combineWithWhere(Expression permissionCondition) {
         Expression normalizedPermissionCondition = wrapOrExpression(permissionCondition);
         if (null == where) {
             return normalizedPermissionCondition;
         }
-        /**
-         * 和expression。
-         * @param where where
-         * @param normalizedPermissionCondition normalized权限条件
-         * @return AndExpression的结果
-         */
+          /**
+           * 和expression。
+           * @param where where
+           * @param normalizedPermissionCondition normalized权限条件
+           * @return AndExpression的结果
+           */
         return new AndExpression(where, normalizedPermissionCondition);
     }
 
-    /**
-     * wraporexpression
-     *
-     * @param expression expression
-     * @return wrapOrExpression的结果
-     */
+      /**
+       * wraporexpression
+       *
+       * @param expression expression
+       * @return wrapOrExpression的结果
+       */
     private Expression wrapOrExpression(Expression expression) {
         if (!(expression instanceof OrExpression)) {
             return expression;
@@ -340,11 +341,11 @@ public class TableDeptRegister implements DeptRegister {
         }
     }
 
-    /**
-     * 匹配scoped别名
-     *
-     * @return 匹配scoped别名的结果
-     */
+      /**
+       * 匹配scoped别名
+       *
+       * @return 匹配scoped别名的结果
+       */
     private boolean matchesScopedAlias() {
         if (!hasScopedAlias()) {
             return true;
@@ -353,20 +354,20 @@ public class TableDeptRegister implements DeptRegister {
         return matchesAlias(currentAlias, deptAlias) || matchesAlias(currentAlias, userAlias);
     }
 
-    /**
-     * 是否拥有scoped别名
-     *
-     * @return 是否包含scoped别名的结果
-     */
+      /**
+       * 是否拥有scoped别名
+       *
+       * @return 是否包含scoped别名的结果
+       */
     private boolean hasScopedAlias() {
         return StringUtils.isNotEmpty(deptAlias) || StringUtils.isNotEmpty(userAlias);
     }
 
-    /**
-     * 当前table别名
-     *
-     * @return 当前table别名的结果
-     */
+      /**
+       * 当前table别名
+       *
+       * @return 当前table别名的结果
+       */
     private String currentTableAlias() {
         if (table.getAlias() != null && StringUtils.isNotEmpty(table.getAlias().getName())) {
             return table.getAlias().getName();
@@ -374,76 +375,76 @@ public class TableDeptRegister implements DeptRegister {
         return table.getName();
     }
 
-    /**
-     * 匹配别名
-     *
-     * @param currentAlias 当前别名
-     * @param expectedAlias 期望别名
-     * @return 匹配别名的结果
-     */
+      /**
+       * 匹配别名
+       *
+       * @param currentAlias 当前别名
+       * @param expectedAlias 期望别名
+       * @return 匹配别名的结果
+       */
     private boolean matchesAlias(String currentAlias, String expectedAlias) {
         return StringUtils.isNotEmpty(currentAlias)
                 && StringUtils.isNotEmpty(expectedAlias)
                 && currentAlias.equalsIgnoreCase(expectedAlias);
     }
 
-    /**
-     * 创建部门标识列，支持表别名
-     *
-     * @return 列对象
-     */
+      /**
+       * 创建部门标识列，支持表别名
+       *
+       * @return 列对象
+       */
     private Column createDeptColumn() {
         if (deptAlias != null && !deptAlias.isEmpty()) {
             Table aliasTable = new Table(deptAlias);
-            /**
-             * Column。
-             * @param aliasTable 别名table
-             * @param deptIdColumn deptidcolumn
-             * @return Column的结果
-             */
+              /**
+               * Column。
+               * @param aliasTable 别名table
+               * @param deptIdColumn deptidcolumn
+               * @return Column的结果
+               */
             return new Column(aliasTable, deptIdColumn);
         }
-        /**
-         * Column。
-         * @param table table
-         * @param deptIdColumn deptidcolumn
-         * @return Column的结果
-         */
+          /**
+           * Column。
+           * @param table table
+           * @param deptIdColumn deptidcolumn
+           * @return Column的结果
+           */
         return new Column(table, deptIdColumn);
     }
 
-    /**
-     * 创建用户标识列，支持表别名
-     *
-     * @return 列对象
-     */
+      /**
+       * 创建用户标识列，支持表别名
+       *
+       * @return 列对象
+       */
     private Column createUserColumn() {
         if (userAlias != null && !userAlias.isEmpty()) {
             Table aliasTable = new Table(userAlias);
-            /**
-             * Column。
-             * @param aliasTable 别名table
-             * @param createByColumn 创建bycolumn
-             * @return Column的结果
-             */
+              /**
+               * Column。
+               * @param aliasTable 别名table
+               * @param createByColumn 创建bycolumn
+               * @return Column的结果
+               */
             return new Column(aliasTable, createByColumn);
         }
-        /**
-         * Column。
-         * @param table table
-         * @param createByColumn 创建bycolumn
-         * @return Column的结果
-         */
+          /**
+           * Column。
+           * @param table table
+           * @param createByColumn 创建bycolumn
+           * @return Column的结果
+           */
         return new Column(table, createByColumn);
     }
 
-    /**
-     * 查找表是否有部门标识字段
-     * <p>用于判断是否需要应用数据权限过滤</p>
-     *
-     * @param tableInfo 表信息
-     * @return 如果表包含部门ID字段则返回true，否则返回false
-     */
+      /**
+       * 查找表是否有部门标识字段
+       * <p>用于判断是否需要应用数据权限过滤</p>
+       *
+       * @param tableInfo 表信息
+       * @return 如果表包含部门ID字段则返回true，否则返回false
+       */
     private boolean findDeptIdFromTable(TableInfo tableInfo) {
         if (tableInfo.getKeyColumn() != null && tableInfo.getKeyColumn().equalsIgnoreCase(deptIdColumn)) {
             return true;
@@ -457,27 +458,27 @@ public class TableDeptRegister implements DeptRegister {
     }
 
 
-    /**
-     * 创建入表达式，用于部门标识列表查询
-     *
-     * @return IN表达式
-     */
+      /**
+       * 创建入表达式，用于部门标识列表查询
+       *
+       * @return IN表达式
+       */
     private Expression createInExpression() {
         return new InExpression(
-                /**
-                 * 创建deptcolumn。
-                 */
+                  /**
+                   * 创建deptcolumn。
+                   */
                 createDeptColumn(),
                 new ExpressionList<>(Arrays.stream(currentUser.getDataPermissionRule().split(","))
                         .map(LongValue::new).collect(Collectors.toList()))
         );
     }
 
-    /**
-     * 解析managedDept树标识
-     *
-     * @return resolveManagedDept树标识的结果
-     */
+      /**
+       * 解析managedDept树标识
+       *
+       * @return resolveManagedDept树标识的结果
+       */
     private List<String> resolveManagedDeptTreeIds() {
         Map<String, Object> ext = currentUser.getExt();
         if (null == ext) {
@@ -514,12 +515,12 @@ public class TableDeptRegister implements DeptRegister {
         return Collections.emptyList();
     }
 
-    /**
-     * normalizeManagedDept树标识
-     *
-     * @param value 值
-     * @return normalizeManagedDept树id的结果
-     */
+      /**
+       * normalizeManagedDept树标识
+       *
+       * @param value 值
+       * @return normalizeManagedDept树id的结果
+       */
     private String normalizeManagedDeptTreeId(Object value) {
         if (null == value) {
             return null;

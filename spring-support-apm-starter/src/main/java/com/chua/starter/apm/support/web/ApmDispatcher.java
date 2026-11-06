@@ -8,6 +8,8 @@ import com.chua.common.support.apm.OtnlTraceState;
 import com.chua.common.support.apm.model.OtnlHealth;
 import com.chua.common.support.apm.model.OtnlTopology;
 import com.chua.starter.apm.support.ApmRegistry;
+import com.chua.starter.apm.support.config.ApmRuntimeConfig;
+import com.chua.starter.apm.support.config.ApmSettingsStore;
 import com.chua.starter.apm.support.model.ApmDescriptor;
 import com.chua.starter.apm.support.properties.ApmProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,8 @@ import java.util.Map;
  *   <tr><td>{@code GET /profiles/{taskId}/analysis}</td><td>剖析结果（线程栈树）</td></tr>
  *   <tr><td>{@code GET /metrics-batch?names=&services=&scope=}</td><td>批量指标（多实体对比）</td></tr>
  *   <tr><td>{@code GET /infra-3d?minutes=}</td><td>全局拓扑 + 分层信息（3D 基础设施图）</td></tr>
+ *   <tr><td>{@code GET /config}</td><td>APM 设置：开关/引擎/可热改项/需重启项</td></tr>
+ *   <tr><td>{@code POST /config?enabled=&type=&oapUrl=&action=}</td><td>保存 APM 设置（热改并落盘）</td></tr>
  * </table>
  *
  * @author CH
@@ -94,16 +98,30 @@ public class ApmDispatcher {
 
     private final ApmRegistry registry;
     private final ApmProperties properties;
+    private final ApmRuntimeConfig runtimeConfig;
 
     /**
-     * 构造路由器
+     * 构造路由器（自带设置存储：供独立模式等不经过 Spring 的场景使用）
      *
      * @param registry   注册表
      * @param properties 配置
      */
     public ApmDispatcher(ApmRegistry registry, ApmProperties properties) {
+        this(registry, properties,
+                new ApmRuntimeConfig(properties, registry, new ApmSettingsStore(properties.getSettingsFile())));
+    }
+
+    /**
+     * 构造路由器
+     *
+     * @param registry      注册表
+     * @param properties    配置
+     * @param runtimeConfig APM 设置读写入口（Spring 装配时与启动恢复共用同一份）
+     */
+    public ApmDispatcher(ApmRegistry registry, ApmProperties properties, ApmRuntimeConfig runtimeConfig) {
         this.registry = registry;
         this.properties = properties;
+        this.runtimeConfig = runtimeConfig;
     }
 
     /**
@@ -121,6 +139,20 @@ public class ApmDispatcher {
         if ("/status".equals(path) || "/".equals(path)) {
             // 状态接口必须永远可用，哪怕没有任何 APM
             return ApmResult.ok(registry.describe());
+        }
+        if ("/config".equals(path)) {
+            // 设置接口也必须在「模块关闭」时可用：关闭后要能重新打开
+            if ("GET".equals(method)) {
+                return ApmResult.ok(runtimeConfig.view());
+            }
+            try {
+                return ApmResult.ok(runtimeConfig.update(request.params()));
+            } catch (IllegalArgumentException e) {
+                return ApmResult.fail(e.getMessage());
+            } catch (Exception e) {
+                log.warn("[APM] 保存设置失败: {}", e.getMessage());
+                return ApmResult.fail("保存 APM 设置失败: " + e.getMessage());
+            }
         }
         if ("/capabilities".equals(path)) {
             ApmProviderHolder holder = requireEngine();
@@ -410,6 +442,11 @@ public class ApmDispatcher {
      * @return 载体
      */
     private ApmProviderHolder requireEngine() {
+        if (!properties.isEnabled()) {
+            // 开关关掉时不查引擎：前端据此区分「关闭」与「连不上」
+            return new ApmProviderHolder(null, null,
+                    "APM 模块已关闭（plugin.apm.enabled=false）：请到「APM 设置」里打开");
+        }
         ApmDescriptor descriptor = registry.describe();
         if (!descriptor.present()) {
             return new ApmProviderHolder(null, null, "APM 未启用：" + descriptor.message());

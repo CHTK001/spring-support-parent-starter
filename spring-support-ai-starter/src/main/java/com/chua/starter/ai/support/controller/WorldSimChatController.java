@@ -78,12 +78,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class WorldSimChatController {
 
-    /** 世界模拟回复线程池（守护线程，不阻止 JVM 退出） */
-// [P3C C1 豁免] 场景化创建线程，需文档化
+    /**
+     * 世界模拟回复线程池（守护线程，不阻止 JVM 退出）
+     */
     private static final ExecutorService WORLD_CHAT_POOL = Executors.newCachedThreadPool(r -> {
-// [P3C C1 豁免] 场景化创建线程，需文档化
-        Thread t = new Thread(r, "world-sim-chat-reply");
-        t.setDaemon(true);
+        Thread t = new Thread(r, "world-sim-chat-reply");        t.setDaemon(true);
         return t;
     });
 
@@ -92,6 +91,9 @@ public class WorldSimChatController {
 
     /** 主动补话概率（%） */
     private static final double INTERJECT_PROBABILITY = 25.0;
+
+    /** 观众派发一轮最多开多少位角色（防一次点播烧掉大量模型调用） */
+    private static final int SPECTATOR_SPEAKERS = 4;
 
     /** 关系好感度钳制区间 */
     private static final int AFFINITY_MIN = -100;
@@ -112,6 +114,9 @@ public class WorldSimChatController {
 
     /** 供应商查询：把模型限定名里的 providerId 补成可读供应商信息 */
     private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper providerMapper;
+
+    {
+    }
 
     /* ============================================================================
      * 场景对话 SSE
@@ -147,8 +152,15 @@ public class WorldSimChatController {
         }
 
         // 场景内 NPC 才是"在场"的回复候选
-        List<SysAiWorldNpc> sceneNpcs = listSceneNpcs(worldId, sceneId);
-        if (sceneNpcs.isEmpty()) {
+        List<SysAiWorldNpc> initialNpcs = listSceneNpcs(worldId, sceneId);
+        // 观众派发（content 为空）允许场景无人时自主演一小段，不再要求先布置角色
+        boolean spectatorTick = content.isBlank();
+        if (spectatorTick && initialNpcs.isEmpty()) {
+            // 场景空就取全场活跃角色，避免「点观看完全没反应」
+            initialNpcs = listActives(worldId);
+        }
+        final List<SysAiWorldNpc> sceneNpcs = initialNpcs;
+        if (sceneNpcs.isEmpty() && !spectatorTick) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "这个场景还没有角色，先去添加 NPC 或布置到场景");
         }
         List<SysAiWorldNpc> allNpcs = listAllNpcs(worldId);
@@ -157,20 +169,25 @@ public class WorldSimChatController {
         SysAiWorldNpc speaker = resolveSpeaker(world, scene, allNpcs, sceneNpcs, atRoleId, content);
         // lambda 捕获需要 effectively final，复制一份最终场景引用
         final SysAiWorldScene fScene = scene;
+        // 观众视角（userId 为空）：不落用户消息，全员回复都按「自主接话」生成，
+        // 这样「只点观看」的用户也能看到世界自己说话，而不必自己先说一句
+        final String userId = AiUserContext.currentUserId();
+        final boolean spectator = userId == null || userId.isBlank();
 
         // 2. 落库用户消息
-        String userId = AiUserContext.requireUserId();
-        SysAiWorldMessage userMsg = new SysAiWorldMessage();
-        userMsg.setWorldId(worldId);
-        userMsg.setSceneId(sceneId);
-        userMsg.setSpeakerType("user");
-        userMsg.setSpeakerId(userId);
-        userMsg.setSpeakerName("我");
-        userMsg.setContent(content);
-        userMsg.setAtRoleId(atRoleId);
-        userMsg.setUserId(userId);
-        userMsg.setCreateTime(LocalDateTime.now());
-        messageMapper.insert(userMsg);
+        if (!spectator) {
+            SysAiWorldMessage userMsg = new SysAiWorldMessage();
+            userMsg.setWorldId(worldId);
+            userMsg.setSceneId(sceneId);
+            userMsg.setSpeakerType("user");
+            userMsg.setSpeakerId(userId);
+            userMsg.setSpeakerName("我");
+            userMsg.setContent(content);
+            userMsg.setAtRoleId(atRoleId);
+            userMsg.setUserId(userId);
+            userMsg.setCreateTime(LocalDateTime.now());
+            messageMapper.insert(userMsg);
+        }
 
         // 3. 准备 SSE
         try {
@@ -184,19 +201,35 @@ public class WorldSimChatController {
 
             // 4. 组装本轮回复 NPC：主回复在前，触发了补话的 NPC 随后
             final String userPrompt = content;
+            // 观众派发：以在场角色最近一句为引子，让 AI 顺着演下去
+            final String cue = spectator ? spectatorCue(worldId, sceneId, content) : content;
             List<SysAiWorldNpc> speakers = new ArrayList<>();
             speakers.add(speaker);
-            for (SysAiWorldNpc n : sceneNpcs) {
-                if (n.getId().equals(speaker.getId())) {
-                    continue;
+            if (spectator) {
+                // 观众没有发言人，主回复本身就是「接话」，其余在场角色全部参与，
+                // 让这一幕有对话而非独白（上限 4 位，避免一次开太多模型调用）
+                for (SysAiWorldNpc n : sceneNpcs) {
+                    if (speakers.size() >= SPECTATOR_SPEAKERS) {
+                        break;
+                    }
+                    if (n.getId().equals(speaker.getId()) || !Boolean.TRUE.equals(n.getIsActive())) {
+                        continue;
+                    }
+                    speakers.add(n);
                 }
-                if (!Boolean.TRUE.equals(n.getIsActive())) {
-                    continue;
+            } else {
+                for (SysAiWorldNpc n : sceneNpcs) {
+                    if (n.getId().equals(speaker.getId())) {
+                        continue;
+                    }
+                    if (!Boolean.TRUE.equals(n.getIsActive())) {
+                        continue;
+                    }
+                    if (Math.random() * 100.0 >= INTERJECT_PROBABILITY) {
+                        continue;
+                    }
+                    speakers.add(n);
                 }
-                if (Math.random() * 100.0 >= INTERJECT_PROBABILITY) {
-                    continue;
-                }
-                speakers.add(n);
             }
 
             // 5. 并行流式回复
@@ -205,8 +238,14 @@ public class WorldSimChatController {
                 boolean isMain = replyNpc.getId().equals(speaker.getId());
                 WORLD_CHAT_POOL.submit(() -> {
                     try {
-                        String prompt = isMain ? userPrompt
-                                : "（场景里另一位角色刚说完话，用你自己的人设简短接一句，一两句话即可）";
+                        String prompt;
+                        if (isMain) {
+                            prompt = cue;
+                        } else if (spectator) {
+                            prompt = "（同一场景里另一位角色正在回应，接着他的话，用你的人设往下演一小段，两三句即可）";
+                        } else {
+                            prompt = "（场景里另一位角色刚说完话，用你自己的人设简短接一句，一两句话即可）";
+                        }
                         Streamed reply = streamOne(out, world, fScene, sceneNpcs, replyNpc, prompt);
                         saveAiMessage(worldId, sceneId, replyNpc, reply);
                         // 补话者的回应也计入关系演化（对主回复者好感 +0~2）
@@ -518,7 +557,10 @@ public class WorldSimChatController {
         m.setSpeakerName(displayName(member, role));
         m.setModelName(qualify(streamed.providerId(), streamed.model()));
         m.setContent(streamed.text());
-        m.setUserId(AiUserContext.currentUserId());
+        // 观众（只读账号）没有 userId：退回世界主人，否则这条消息在历史里永远查不到
+        String owner = AiUserContext.currentUserId();
+        m.setUserId(owner == null || owner.isBlank()
+                ? worldOwnerId(worldId) : owner);
         m.setCreateTime(LocalDateTime.now());
         messageMapper.insert(m);
     }
@@ -748,9 +790,72 @@ public class WorldSimChatController {
         out.put("event", event);
         out.put("participants", participants.stream()
                 .map(n -> displayName(n, roleMapper.selectById(n.getRoleId()))).toList());
+        // 时间推进也要进聊天区：只写事件的话，用户在消息流里什么都看不到
+        SysAiWorldMessage narrator = saveAdvanceMessage(worldId, event.getSceneId(), result, participants, world.getTimeLabel());
+        if (narrator != null) {
+            out.put("message", narrator);
+        }
         // 世界视图缓存失效（updateWorld/appendEvent 会失效，这里显式再失效一次）
         evictWorldView(worldId);
         return out;
+    }
+
+    /**
+     * 把「推进时间」的产出写成一条场景消息。
+     *
+     * <p>以前推进只落事件时间线，聊天区的人在推进后看到的是空的，只能切到右侧
+     * 时间线才知道发生了什么。用户形态是「只能看」，所以让演出直接落进正在看的场景，
+     * 发言者记为旁白（speaker_type=system：不进 NPC 的上下文发言者列表，也不触发回复）。</p>
+     *
+     * @param worldId     世界
+     * @param sceneId     发生的场景（取首位参与者所在场景）
+     * @param result      世界引擎产出
+     * @param participants 参与角色
+     * @param timeLabel   推进后的时间
+     * @return 落库的消息，未写（内容为空）时为 null
+     */
+    private SysAiWorldMessage saveAdvanceMessage(Long worldId, Long sceneId, WorldAdvanceResult result,
+                                                 List<SysAiWorldNpc> participants, String timeLabel) {
+        String title = result.title() == null ? "" : result.title().trim();
+        String body = result.content() == null ? "" : result.content().trim();
+        if (title.isEmpty() && body.isEmpty()) {
+            // 引擎空转时不写空气泡，避免聊天区出现一条「旁白：」
+            return null;
+        }
+        String cast = participants.stream()
+                .map(n -> displayName(n, roleMapper.selectById(n.getRoleId())))
+                .reduce((a, b) -> a + "、" + b).orElse("");
+        StringBuilder sb = new StringBuilder();
+        sb.append("【").append(timeLabel == null ? "" : timeLabel).append("】");
+        if (!title.isEmpty()) {
+            sb.append(title);
+        }
+        if (!body.isEmpty()) {
+            sb.append("\n").append(body);
+        }
+        if (!cast.isEmpty()) {
+            sb.append("\n—— ").append(cast);
+        }
+        SysAiWorldMessage m = new SysAiWorldMessage();
+        m.setWorldId(worldId);
+        m.setSceneId(sceneId);
+        m.setSpeakerType("system");
+        m.setSpeakerId("narrator");
+        m.setSpeakerName("旁白");
+        m.setContent(sb.toString());
+        // 落成真实的用户 id：只读观众没有 userId，写 "null" 字符串会让数据永远查不回来
+        String owner = AiUserContext.currentUserId();
+        m.setUserId(owner == null || owner.isBlank()
+                ? worldOwnerId(worldId) : owner);
+        m.setCreateTime(LocalDateTime.now());
+        messageMapper.insert(m);
+        return m;
+    }
+
+    /** 世界归属账号（观众派发的消息以世界主人身份落库，便于原主人登录后仍能回看） */
+    private String worldOwnerId(Long worldId) {
+        SysAiWorld w = worldMapper.selectById(worldId);
+        return w == null || w.getUserId() == null ? "local-admin-fallback" : w.getUserId();
     }
 
     /**
@@ -956,6 +1061,35 @@ public class WorldSimChatController {
             w.eq(SysAiWorldNpc::getSceneId, sceneId);
         }
         return npcMapper.selectList(w.orderByAsc(SysAiWorldNpc::getSort).orderByAsc(SysAiWorldNpc::getId));
+    }
+
+    /**
+     * 观众派发的引子：把「场景最近发生了什么」交给主回复角色，让 AI 自己往下演。
+     *
+     * <p>观众只有观看权，不能替角色说话；空提示词又会让模型无话可说。
+     * 这里取上一条消息（旁白或某位的台词）作为引子，没有历史时按场景开场。</p>
+     */
+    private String spectatorCue(Long worldId, Long sceneId, String hint) {
+        String seed = hint == null ? "" : hint.trim();
+        if (!seed.isEmpty()) {
+            return seed;
+        }
+        List<SysAiWorldMessage> last = messageMapper.selectList(
+                new LambdaQueryWrapper<SysAiWorldMessage>()
+                        .eq(SysAiWorldMessage::getWorldId, worldId)
+                        .eq(sceneId != null, SysAiWorldMessage::getSceneId, sceneId)
+                        .orderByDesc(SysAiWorldMessage::getId)
+                        .last("LIMIT 1"));
+        if (!last.isEmpty()) {
+            SysAiWorldMessage m = last.get(0);
+            String who = m.getSpeakerName() == null ? "" : m.getSpeakerName();
+            String text = m.getContent() == null ? "" : m.getContent().trim();
+            if (text.length() > 400) {
+                text = text.substring(text.length() - 400);
+            }
+            return "（上一刻：" + who + "——" + text + "）\n请顺着这个场面，以你的身份自然地往下接一两句或一个小动作。";
+        }
+        return "（这个场景刚刚安静下来，没有人在说话）\n请以你的身份先开口，做一件符合此地此刻的小事，让故事动起来。";
     }
 
     /**
@@ -1190,4 +1324,6 @@ public class WorldSimChatController {
      * @return 返回值
     */
     private static String str(Object v) {
-        return v == null ? null : String.valueOf(v);    }}
+        return v == null ? null : String.valueOf(v);
+    }
+}

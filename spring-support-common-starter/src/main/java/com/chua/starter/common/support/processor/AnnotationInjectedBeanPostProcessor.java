@@ -50,7 +50,9 @@ import java.util.concurrent.ConcurrentMap;
  * @author CH
  */
 @SuppressWarnings("ALL")
-public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
+public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation>
+        implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware,
+        EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
     /**
      * 缓存_大小
@@ -121,7 +123,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
     @Override
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-        Assert.isInstanceOf(ConfigurableListableBeanFactory.class, beanFactory, "AnnotationInjectedBeanPostProcessor requires a ConfigurableListableBeanFactory");
+        Assert.isInstanceOf(ConfigurableListableBeanFactory.class, beanFactory,
+            "AnnotationInjectedBeanPostProcessor requires a ConfigurableListableBeanFactory");
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
     }
 
@@ -160,7 +163,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                 if (annotation != null) {
                     if (Modifier.isStatic(field.getModifiers())) {
                         if (AnnotationInjectedBeanPostProcessor.this.logger.isWarnEnabled()) {
-                            AnnotationInjectedBeanPostProcessor.this.logger.warn("@" + AnnotationInjectedBeanPostProcessor.this.getAnnotationType().getName() + " is not supported on static fields: " + field);
+                            AnnotationInjectedBeanPostProcessor.this.logger.warn("@" + AnnotationInjectedBeanPostProcessor.this.getAnnotationType().getName()
+            + " is not supported on static fields: " + field);
                         }
 
                         return;
@@ -191,14 +195,16 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                     if (annotation != null && method.equals(org.springframework.util.ClassUtils.getMostSpecificMethod(method, beanClass))) {
                         if (Modifier.isStatic(method.getModifiers())) {
                             if (AnnotationInjectedBeanPostProcessor.this.logger.isWarnEnabled()) {
-                                AnnotationInjectedBeanPostProcessor.this.logger.warn("@" + AnnotationInjectedBeanPostProcessor.this.getAnnotationType().getSimpleName() + " annotation is not supported on static methods: " + method);
+                                AnnotationInjectedBeanPostProcessor.this.logger.warn("@" + AnnotationInjectedBeanPostProcessor.this.getAnnotationType().getSimpleName()
+            + " annotation is not supported on static methods: " + method);
                             }
 
                             return;
                         }
 
                         if (method.getParameterTypes().length == 0 && AnnotationInjectedBeanPostProcessor.this.logger.isWarnEnabled()) {
-                            AnnotationInjectedBeanPostProcessor.this.logger.warn("@" + AnnotationInjectedBeanPostProcessor.this.getAnnotationType().getSimpleName() + " annotation should only be used on methods with parameters: " + method);
+                            AnnotationInjectedBeanPostProcessor.this.logger.warn("@" + AnnotationInjectedBeanPostProcessor.this.getAnnotationType().getSimpleName()
+            + " annotation should only be used on methods with parameters: " + method);
                         }
 
                         PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, beanClass);
@@ -256,7 +262,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                          * @param clazz.getName( clazz.获取名称(
                          * @return illegal状态异常的结果
                          */
-                        throw new IllegalStateException("Failed to introspect object class [" + clazz.getName() + "] for annotation metadata: could not find class that it depends on", var9);
+                        throw new IllegalStateException("Failed to introspect object class [" + clazz.getName()
+            + "] for annotation metadata: could not find class that it depends on", var9);
                     }
                 }
             }
@@ -362,7 +369,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
      * @return 获取injected对象的结果
      * @throws Exception 异常
     */
-    protected Object getInjectedObject(A annotation, Object bean, String beanName, Class<?> injectedType, InjectionMetadata.InjectedElement injectedElement) throws Exception {
+    protected Object getInjectedObject(A annotation, Object bean, String beanName,
+            Class<?> injectedType, InjectionMetadata.InjectedElement injectedElement) throws Exception {
         String cacheKey = this.buildInjectedObjectCacheKey(annotation, bean, beanName, injectedType, injectedElement);
         Object injectedObject = this.injectedObjectsCache.get(cacheKey);
         if (injectedObject == null) {
@@ -551,7 +559,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
          * @param fieldElements 字段elements
          * @param methodElements 方法elements
          */
-        public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements, Collection<AnnotatedMethodElement> methodElements) {
+        public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements,
+            Collection<AnnotatedMethodElement> methodElements) {
             /**
              * 父。
              * @param targetClass 目标类

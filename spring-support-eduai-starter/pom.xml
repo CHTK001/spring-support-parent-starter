@@ -97,12 +97,11 @@
              @pages/collect 的采集器管理页，该页所有请求都打 /v2/collect/**，接口由本依赖提供。
              不加这条依赖时页面能加载出来，但每个请求都会 404。
 
-             该 artifact 由 spring-support-api-starter 构建产出，不在本 reactor 模块树内，
-             版本由父 pom 的 dependencyManagement 统一管理（4.0.0.42）。 -->
+             该 artifact 由 spring-support-parent-starter 构建产出，已在 reactor 模块树中，
+             版本由父 pom 的 dependencyManagement 统一管理，无需在本地仓库 install 即可消费。 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-api-support-collect-starter</artifactId>
-            <version>4.0.0.42</version>
+            <artifactId>spring-support-collect-starter</artifactId>
         </dependency>
 
         <!-- 深度学习/AI推理 -->

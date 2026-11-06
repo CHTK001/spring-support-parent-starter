@@ -58,28 +58,19 @@ public class CdpWebSocketHandler extends TextWebSocketHandler {
     private final Set<WebSocketSession> sessions = ConcurrentHashMap.newKeySet();
 
     /**
-     * 会话启动后：广播一条连接事件，并开始接管控制台 / 网络 / 页面事件
+     * 会话启动后：推送一条连接事件
+     *
+     * <p>CDP 事件（Console / Network / Page / Target）已统一收敛到
+     * {@link com.chua.starter.cdp.CdpController#events()} 的全局 SSE 流，
+     * 这里只保留「指令透传」（前端 -&gt; 浏览器 CDP 调用）与连接握手，
+     * 不再调用 {@code engine.subscribeAll}，避免 WS 与 SSE 双份推送，
+     * 也避免每个会话往 {@code globalSubscribers} 追加一个永不移除的 handler。</p>
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         sessions.add(session);
         // 推送一条 "connected" 事件
         send(session, Json.toJson(Map.of("event", "connected", "connectedAt", System.currentTimeMillis())));
-        // 开始接管控制台 / 网络 / 页面事件
-        engine.subscribeAll(msg -> {
-            try {
-                // 用 LinkedHashMap 逐字段放入：Map.of 不接受 null 值，
-                // 一旦某个事件没有 targetId 就直接抛 NPE，整条推送会被静默丢掉。
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("event", "Push");
-                payload.put("method", msg.get("method"));
-                payload.put("params", msg.get("params"));
-                payload.put("targetId", msg.get("targetId"));
-                broadcast(Json.toJson(payload));
-            } catch (Exception e) {
-                log.warn("[cdp] 推送事件失败: {}", e.getMessage());
-            }
-        });
         log.info("[cdp] 开发者面板已连接: {}", session.getId());
     }
 

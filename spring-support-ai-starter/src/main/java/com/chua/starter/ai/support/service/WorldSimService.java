@@ -118,6 +118,18 @@ public interface WorldSimService {
     /** 结文：replay -> finished */
     SysAiWorldAct finishAct(Long worldId, Integer actNo);
 
+    /**
+     * 演出正文：只读取出用户侧故事片段（观众看的「幕」），不触发任何生成。
+     *
+     * <p>actNo 为空时返回该用户在本世界演过的全部幕次，按幕次号升序。
+     * 没有演出记录时返回 {@code played=false} 的空壳，前端据此提示「等 AI 演出」。</p>
+     *
+     * @param worldId 世界
+     * @param actNo   幕次号，可空
+     * @return 演出正文列表
+     */
+    List<Map<String, Object>> listStories(Long worldId, Integer actNo);
+
     /** 使幕次维度的世界视图/列表缓存失效 */
     void evictActCaches(Long worldId);
 }

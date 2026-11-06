@@ -5,9 +5,11 @@ import com.chua.starter.monitor.support.enums.ServiceAction;
 import com.chua.starter.monitor.support.enums.ShellDialect;
 import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
+import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
+import com.chua.starter.monitor.support.model.MountRowVO;
 import com.chua.starter.monitor.support.model.NetworkConfigVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
 import com.chua.starter.monitor.support.spi.HostOperations;
@@ -137,6 +139,30 @@ public class WindowsHostOperations extends HostOperations {
     public List<DiskPartitionRowVO> diskPartitions() {
         return WindowsProfileRows.partitions(powershell(WindowsProfileScripts.VOLUMES));
     }
+
+    /* ---------- 挂载盘（卷 → 盘符） ---------- */
+
+    /**
+     * Windows 没有「挂载表」概念：盘符就是挂载点，{@code Win32_LogicalDisk} 的每一行即一条挂载。
+     *
+     * <p>没有盘符的卷（如恢复分区、未分配盘）无法作为挂载点使用，仍然列出并让
+     * target 留空，页面据此显示为「未挂载」。</p>
+     */
+    @Override
+    public List<MountRowVO> mounts() {
+        return WindowsProfileRows.logicalDisks(powershell(WindowsProfileScripts.LOGICAL_DISKS));
+    }
+
+    /**
+     * 已删除但仍被占用的文件：需要句柄枚举工具（handle.exe / NtQuerySystemInformation），
+     * 当前通道没有可靠实现，明确返回「不支持」，不要用空列表让用户误以为没有。
+     */
+    @Override
+    public DeletedFilesVO deletedFiles() {
+        return DeletedFilesVO.unsupported("Windows 暂不支持枚举已删除但仍被占用的文件："
+                + "需要管理员权限的句柄枚举工具（handle.exe / NtQuerySystemInformation），当前采集通道未接入");
+    }
+
 
     /* ---------- 环境变量（系统级 / Machine） ---------- */
 

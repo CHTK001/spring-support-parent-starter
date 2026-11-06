@@ -76,7 +76,7 @@ public class ScriptUtil {
             String[] cmdarrayFinal = cmdarray.toArray(new String[cmdarray.size()]);
 
  // 处理-执行
-            final Process process = Runtime.getRuntime().exec(cmdarrayFinal);
+            final Process process = new ProcessBuilder(cmdarrayFinal).start();
 
  // 日志-thread
             final FileOutputStream finalFileOutputStream = fileOutputStream;

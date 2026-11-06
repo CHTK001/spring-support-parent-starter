@@ -1,1 +1,2 @@
 custom=com.chua.openai.support.OpenAiChatClient
+workbuddy=com.chua.starter.ai.support.spi.impl.WorkBuddyChatClient

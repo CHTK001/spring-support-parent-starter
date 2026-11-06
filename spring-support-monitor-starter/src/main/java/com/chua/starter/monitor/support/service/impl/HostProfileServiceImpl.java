@@ -3,18 +3,24 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
+import com.chua.starter.monitor.support.model.HostActionVO;
 import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.HostMetricsVO;
 import com.chua.starter.monitor.support.model.HostProfileVO;
+import com.chua.starter.monitor.support.model.HostResourceSummaryVO;
+import com.chua.starter.monitor.support.model.InodeUsageVO;
+import com.chua.starter.monitor.support.model.MountRowVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
 import com.chua.starter.monitor.support.model.SectionPage;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
+import com.chua.starter.monitor.support.model.SystemConfigItemVO;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.HostProfileService;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
@@ -140,6 +146,23 @@ public class HostProfileServiceImpl implements HostProfileService {
             return ReturnResult.error("主机不存在: " + hostId);
         }
         return ReturnResult.ok(fromStored(host));
+    }
+
+    @Override
+    public ReturnResult<HostResourceSummaryVO> summary(Long hostId) {
+        return collect(hostId, (provider, host) -> {
+            InodeUsageVO inode = provider.inodeUsage(host);
+            // 进程 / 线程数要拉整张进程表，状态条不用这两个值，这里给 -1（前端显示「—」）
+            return new HostResourceSummaryVO(
+                    handleCount(provider, host),
+                    -1,
+                    -1,
+                    inode.used(),
+                    inode.total(),
+                    inode.percent(),
+                    inode.mount(),
+                    LocalDateTime.now().toString());
+        });
     }
 
     /**
@@ -303,6 +326,64 @@ public class HostProfileServiceImpl implements HostProfileService {
     @Override
     public ReturnResult<List<EnvVarVO>> env(Long hostId) {
         return collect(hostId, (provider, host) -> provider.env(host));
+    }
+
+    @Override
+    public ReturnResult<List<MountRowVO>> mounts(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.mounts(host));
+    }
+
+    @Override
+    public ReturnResult<String> mount(Long hostId, String source, String target, String fsType) {
+        return act(hostId, (provider, host) -> provider.mount(host, source, target, fsType));
+    }
+
+    @Override
+    public ReturnResult<String> unmount(Long hostId, String target) {
+        return act(hostId, (provider, host) -> provider.unmount(host, target));
+    }
+
+    @Override
+    public ReturnResult<List<SystemConfigItemVO>> systemConfigs(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.systemConfigs(host));
+    }
+
+    @Override
+    public ReturnResult<String> applySystemConfig(Long hostId, String key, String value) {
+        return act(hostId, (provider, host) -> provider.applySystemConfig(host, key, value));
+    }
+
+    @Override
+    public ReturnResult<DeletedFilesVO> deletedFiles(Long hostId) {
+        return collect(hostId, (provider, host) -> provider.deletedFiles(host));
+    }
+
+    @Override
+    public ReturnResult<String> releaseDeletedFile(Long hostId, long pid, int fd) {
+        return act(hostId, (provider, host) -> provider.releaseDeletedFile(host, pid, fd));
+    }
+
+    /**
+     * 统一执行一次主机写操作：动作结果由通道回查给出，服务层只转成对外响应。
+     *
+     * @param hostId 主机标识
+     * @param writer 写操作
+     * @return 成功时为结果说明，失败时为原因
+     */
+    private ReturnResult<String> act(Long hostId, BiFunction<SystemInfoProvider, MsServerHost, HostActionVO> writer) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        try {
+            HostActionVO result = writer.apply(providerRouter.route(host), host);
+            clearError(hostId);
+            return result.success() ? ReturnResult.ok(result.message()) : ReturnResult.error(result.message());
+        } catch (Exception e) {
+            String reason = cut(e.getMessage());
+            markError(hostId, reason);
+            return ReturnResult.error("通道不可达: " + reason);
+        }
     }
 
     /**
