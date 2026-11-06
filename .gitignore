@@ -62,6 +62,15 @@ sys
 *.sqlite
 *.sqlite3
 
+# H2 数据库文件及其备份/残留（*.db.old / *.db.bak / *.db.tmp 等）
+*.mv.db
+*.trace.db
+*.lock.db
+*.db.old
+*.db.bak
+*.db.tmp
+*.db.corrupt
+
 *.err
 
 # IDE/工具缓存
