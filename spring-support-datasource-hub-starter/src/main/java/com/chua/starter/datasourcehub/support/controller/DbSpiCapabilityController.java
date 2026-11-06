@@ -11,6 +11,7 @@ import com.chua.datasource.support.slowquery.SlowQueryManager;
 import com.chua.datasource.support.user.DataSourceAware;
 import com.chua.datasource.support.user.UserInfo;
 import com.chua.datasource.support.user.UserManager;
+import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.datasourcehub.support.service.DatasourceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -277,6 +278,7 @@ public class DbSpiCapabilityController {
      * @return 是否成功
      */
     @Operation(summary = "新建数据库用户")
+    @SysLog(name = "新建数据库用户")
     @PostMapping("users")
     public ReturnResult<Boolean> createUser(@RequestBody Map<String, Object> body) {
         Long datasourceId = toLong(body.get("datasourceId"));
@@ -315,6 +317,7 @@ public class DbSpiCapabilityController {
      * @return 是否成功
      */
     @Operation(summary = "修改数据库用户")
+    @SysLog(name = "修改数据库用户")
     @PutMapping("users")
     public ReturnResult<Boolean> updateUser(@RequestBody Map<String, Object> body) {
         Long datasourceId = toLong(body.get("datasourceId"));
@@ -350,6 +353,7 @@ public class DbSpiCapabilityController {
      * @return 是否成功
      */
     @Operation(summary = "删除数据库用户")
+    @SysLog(name = "删除数据库用户")
     @DeleteMapping("users")
     public ReturnResult<Boolean> deleteUser(@RequestBody Map<String, Object> body) {
         Long datasourceId = toLong(body.get("datasourceId"));
@@ -432,6 +436,7 @@ public class DbSpiCapabilityController {
      * @return 成功 / 失败计数与说明
      */
     @Operation(summary = "关闭数据库会话")
+    @SysLog(name = "关闭数据库会话")
     @PostMapping("process/kill")
     public ReturnResult<Map<String, Object>> killProcess(@RequestBody Map<String, Object> body) {
         String pid = text(body.get("pid"));
@@ -448,6 +453,7 @@ public class DbSpiCapabilityController {
      * @return 成功 / 失败计数与说明
      */
     @Operation(summary = "批量关闭数据库会话")
+    @SysLog(name = "批量关闭数据库会话")
     @PostMapping("processes/kill")
     public ReturnResult<Map<String, Object>> killProcesses(@RequestBody Map<String, Object> body) {
         List<String> pids = texts(body.get("pids"));
