@@ -1,0 +1,4 @@
+datasource-app=com.chua.starter.datasourcehub.support.spi.connector.impl.AppDatasourceConnector
+datasource-calcite=com.chua.starter.datasourcehub.support.spi.connector.impl.CalciteDatasourceConnector
+datasource-jdbc=com.chua.starter.datasourcehub.support.spi.connector.impl.JdbcDatasourceConnector
+datasource-socket=com.chua.starter.datasourcehub.support.spi.connector.impl.SocketDatasourceConnector
