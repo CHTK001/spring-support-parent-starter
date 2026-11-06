@@ -39,6 +39,10 @@ class DatasourceCreateValidateTest {
     /**
      * 仅用于反射调用 private 方法的最小实例：注入真实 {@link DatasourceHubProperties}
      * 以满足文件库路径白名单分支的读取，其余依赖不参与本测试。
+     *
+     * <p>第二个参数（连接扩展点路由器）传 null 是安全的：{@code validate} 是纯校验，
+     * 不建连、也不解析任何数据源。构造器签名随「建连收口到 SPI」调整过一个参数类型，
+     * 这里同步跟上，避免测试与被测类脱节。</p>
      */
     private static final class InstanceForValidate extends DatasourceServiceImpl {
         private InstanceForValidate() {
