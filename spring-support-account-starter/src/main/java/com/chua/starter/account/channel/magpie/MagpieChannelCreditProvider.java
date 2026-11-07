@@ -13,7 +13,8 @@ import java.util.Map;
 /**
  * Magpie 网关的配额 / 余额读数实现。
  *
- * <p>数据源是数据面 {@code GET /v1/magpie/quotas}，其响应为
+ * <p>数据源优先是管理面 {@code GET /api/usage/quotas}（含签到状态与插件账号），
+ * 未配页面 Key 或读到空时回落到数据面 {@code GET /v1/magpie/quotas}，其响应为
  * {@code {data:[Quota...]}}，每行对应 magpie 里的一张额度卡：</p>
  * <ul>
  *   <li>{@code kind=balance}：某个 key 的余额（{@code balance} 字符串，如 {@code "7"}）；</li>
@@ -67,6 +68,20 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
         Map<String, Object> result = new LinkedHashMap<>(10);
         String baseUrl = MagpieSupport.baseUrl(credentials);
         String gatewayKey = MagpieSupport.gatewayKey(credentials);
+        String pageKey = MagpieSupport.pageKey(credentials);
+
+        // 管理面的 /api/usage/quotas 比数据面多出签到状态与插件账号，
+        // 配了页面 Key 就优先用它；读不到或为空时回落到数据面，保持旧行为。
+        if (!MagpieSupport.isBlank(pageKey)) {
+            try {
+                List<Map<String, Object>> adminQuotas = MagpieAdminClient.adminQuotas(credentials, null, null);
+                if (!adminQuotas.isEmpty()) {
+                    return snapshot(adminQuotas);
+                }
+            } catch (Exception ignored) {
+                // 页面 Key 失效 / 管理面没开：继续走数据面
+            }
+        }
 
         List<Map<String, Object>> quotas;
         try {

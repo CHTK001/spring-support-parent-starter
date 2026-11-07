@@ -88,6 +88,12 @@
       <artifactId>utils-support-trae-starter</artifactId>
       <version>${utils.version}</version>
     </dependency>
+    <!-- 邮件收发：收信走 jakarta.mail(IMAP)，发信复用 utils 的 MessagePush SPI（EmailPush）。
+         账号模块只做编排，不自己实现 SMTP / IMAP 协议 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-email-starter</artifactId>
+    </dependency>
     <!-- 单元测试：Spi 实现的报文/签名回归探针 -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

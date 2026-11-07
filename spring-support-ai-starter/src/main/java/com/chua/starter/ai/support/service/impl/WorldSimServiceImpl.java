@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.controller.GenerateMediaController;
 import com.chua.starter.ai.support.entity.SysAiRole;
 import com.chua.starter.ai.support.entity.SysAiWorld;
 import com.chua.starter.ai.support.entity.SysAiWorldAct;
@@ -50,6 +51,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -1152,6 +1154,12 @@ public class WorldSimServiceImpl implements WorldSimService {
     private static final String MEDIA_IMAGE_TYPE = "image";
     /** 媒体生成类型：视频 */
     private static final String MEDIA_VIDEO_TYPE = "video";
+    /** 舞台形态：纯文本（不调用任何生成接口） */
+    private static final String SIM_MODE_TEXT = "text";
+    /** 舞台形态：每个场景出一张图 */
+    private static final String SIM_MODE_IMAGE = "image";
+    /** 舞台形态：整幕出一条视频 */
+    private static final String SIM_MODE_VIDEO = "video";
     /** 默认生成图片尺寸 */
     private static final String MEDIA_SIZE = "1024x1024";
     /** 默认视频尺寸（模型没声明尺寸时用它：竖屏短剧，舞台上占满一栏） */
@@ -1282,8 +1290,15 @@ public class WorldSimServiceImpl implements WorldSimService {
                 if (script == null || script.isBlank()) {
                     throw new ApiException(ApiErrorCode.INVALID_PARAM, "没有剧本可生成素材");
                 }
-                // 推进一个（或全部已完成）：null 表示 assets 已全部就位
-                Map<String, Object> progress = tryAdvanceAsset(worldId, actNo, script, act);
+                // 纯文本形态没有素材可等：不进素材循环，写完剧本直接开演。
+                // 走 tryAdvanceAsset 也能收敛（全部 NO_PROMPT → 返回 null），
+                // 但那要多一轮请求，且会在剧本里留下「无需求」的素材头，纯文本用户看着像出错。
+                String mode = mediaMode();
+                boolean needMedia = imageMediaEnabled() || videoMediaEnabled();
+                log.info("[WorldSim] 素材阶段 world={} act={} mode={} needMedia={}", worldId, actNo, mode, needMedia);
+                Map<String, Object> progress = needMedia
+                        ? tryAdvanceAsset(worldId, actNo, script, act)
+                        : null;
                 if (progress == null) {
                     // 素材已全部就位（全部 OK / NO_PROMPT）：直接进入出演阶段
                     act.setStage(ACT_STATUS_PLAYING);
@@ -1653,6 +1668,25 @@ public class WorldSimServiceImpl implements WorldSimService {
      * ====================================================================== */
 
     /**
+     * 把生成结果里的媒体值换成浏览器可访问的地址。
+     *
+     * <p>生成侧落盘后给的是 {@code media:} 句柄（或改造前的内联 base64），
+     * 直接塞进 {@code <img src>} / {@code <video src>} 会被浏览器当成未知协议，
+     * 表现为缩略图 404、视频报「播不出来」。句柄必须换成按任务取字节的媒体接口地址，
+     * 判断口径与生成页一致（{@link GenerateMediaStore#isStored}）。</p>
+     *
+     * @param task  任务行
+     * @param value 结果里的第 0 个地址
+     * @return 可播放地址
+     */
+    private static String playableUrl(SysAiGenerateTask task, String value) {
+        if (!GenerateMediaStore.isStored(value)) {
+            return value;
+        }
+        return GenerateMediaController.INLINE_PATH_PREFIX + task.getTaskId() + "/media/0";
+    }
+
+    /**
      * 道具就绪推进：每步只处理一个媒体素材（生成服务一次只能有一个任务在跑），
      * 返回 null 表示素材已全部就绪。
      *
@@ -1707,7 +1741,11 @@ public class WorldSimServiceImpl implements WorldSimService {
             mat.head().put("status", st);
             if ("SUCCESS".equals(task.getStatus())) {
                 List<String> urls = GenerateService.mediaUrls(task);
-                mat.head().put("url", urls == null || urls.isEmpty() ? null : urls.get(0));
+                String raw = urls == null || urls.isEmpty() ? null : urls.get(0);
+                // raw 是后端自用的原始值（media: 句柄），供图生视频取首帧；
+                // url 是给浏览器用的可播放地址
+                mat.head().put("raw", raw);
+                mat.head().put("url", raw == null ? null : playableUrl(task, raw));
                 // 成功必须落成 OK：素材就绪判断、图生视频取首帧、前端放映都只认 OK。
                 // 此前这里只写了 task 的 SUCCESS 字样，OK 从头到尾没人写过，
                 // 结果素材永远停在非终态、图生视频永远拿不到参考图、舞台永远退回文字演出。
@@ -1718,17 +1756,20 @@ public class WorldSimServiceImpl implements WorldSimService {
 
         boolean inProgress = false;
         Material target = null;
-        // 关了视频出片的部署：视频通道整体放行，只出场景图。
-        // 不这么做的话，每一个场景都会先建一次注定被拦掉的视频任务，素材阶段白白空转一圈。
+        // 三种形态互斥：视频 → 场景图 + 分镜视频；图片 → 只出场景图；文本 → 什么任务都不建。
+        //
+        // 文本形态必须在这里直接放行，而不是「建了任务再拦」：一个场景一张图要 70–90 秒，
+        // 只想看文字演出的用户会白白等上几分钟、还会照常产生费用。
         boolean videoEnabled = videoMediaEnabled();
+        boolean imageEnabled = imageMediaEnabled();
         // 按已有的失败记录收敛一遍：失败类型直接放行，不再为它建任务
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
             String st = String.valueOf(head.get("status"));
-            if (failedTypes.contains(String.valueOf(head.get("type")))) {
-                head.remove("taskId");
-                head.put("status", MEDIA_NO_PROMPT);
-            } else if (!videoEnabled && mat.video()) {
+            boolean typeOff = failedTypes.contains(String.valueOf(head.get("type")))
+                    || (!imageEnabled && !mat.video())
+                    || (!videoEnabled && mat.video());
+            if (typeOff) {
                 head.remove("taskId");
                 head.put("status", MEDIA_NO_PROMPT);
             }
@@ -1837,7 +1878,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             mat.head().put("status", st);
             if ("SUCCESS".equals(st)) {
                 List<String> urls = GenerateService.mediaUrls(task);
-                mat.head().put("url", urls == null || urls.isEmpty() ? null : urls.get(0));
+                String raw = urls == null || urls.isEmpty() ? null : urls.get(0);
+                mat.head().put("raw", raw);
+                mat.head().put("url", raw == null ? null : playableUrl(task, raw));
                 mat.head().put("status", MEDIA_OK);
             } else if ("FAILED".equals(st) || "CANCELED".equals(st)) {
                 // 同步失败（例如模型不支持该类型）：同样放行，别把整幕卡死
@@ -2006,13 +2049,47 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     /**
+     * 舞台播什么：文本 / 图 / 视频。
+     *
+     * <p>三选一是<b>互斥</b>的，选哪种就只产出哪种，不做「都生成、前端挑一个显示」——
+     * 那样纯文本形态也会为每幕跑一遍出图（一张 70–90 秒），
+     * 用户只想看文字演出，却要为一次都没看过的图等待与付费。</p>
+     *
+     * <p>取值：{@code text} / {@code image} / {@code video}；留空按 {@code video} 处理
+     * （与历史行为一致，老数据不改也能继续跑）。</p>
+     *
+     * @return 规范化后的形态
+     */
+    private String mediaMode() {
+        String mode = globalSettingReader.getStr("sim", "media_mode");
+        if (mode == null || mode.isBlank()) {
+            return SIM_MODE_VIDEO;
+        }
+        String v = mode.trim().toLowerCase(Locale.ROOT);
+        if (SIM_MODE_TEXT.equals(v) || SIM_MODE_IMAGE.equals(v)) {
+            return v;
+        }
+        return SIM_MODE_VIDEO;
+    }
+
+    /**
      * 舞台是否出视频。
      *
-     * @return true 表示素材阶段要为场景出视频；设置里选 image 时为 false
+     * @return true 表示素材阶段要为场景出视频；设置里选 image / text 时为 false
      */
     private boolean videoMediaEnabled() {
-        String mode = globalSettingReader.getStr("sim", "media_mode");
-        return mode == null || mode.isBlank() || "video".equalsIgnoreCase(mode.trim());
+        return SIM_MODE_VIDEO.equals(mediaMode());
+    }
+
+    /**
+     * 舞台是否出图。
+     *
+     * <p>纯文本形态返回 false：整幕不建任何生成任务，直接进表演。</p>
+     *
+     * @return true 表示要为场景出图
+     */
+    private boolean imageMediaEnabled() {
+        return !SIM_MODE_TEXT.equals(mediaMode());
     }
 
     /**
@@ -2533,7 +2610,10 @@ public class WorldSimServiceImpl implements WorldSimService {
             if (!MEDIA_OK.equals(String.valueOf(m.get("status")))) {
                 return null;
             }
-            Object url = m.get("url");
+            // 优先后端自用原始值（可能是 media: 句柄），它才是能读出字节的那个；
+            // url 给前端用的是 /v2/... 相对地址，后端取不到字节。
+            Object raw = m.get("raw");
+            Object url = raw != null && !String.valueOf(raw).isBlank() ? raw : m.get("url");
             return url == null || String.valueOf(url).isBlank() ? null : String.valueOf(url);
         }
 

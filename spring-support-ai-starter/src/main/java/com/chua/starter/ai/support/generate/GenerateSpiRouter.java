@@ -131,9 +131,7 @@ public final class GenerateSpiRouter {
             "zhipu", "baidu", "tencent-hunyuan", "modelscope", "zai", "amazon",
             "onnx", "pytorch", "safetensors", "mage", "ollama",
             // Moss 自有实现（MossImageClient，utils-support-mosi-starter）
-            "mosi",
-            // 本机验收用桩实现（generate/accept/AcceptImageClient）
-            "acceptimage"
+            "mosi"
     );
 
     /**
@@ -144,11 +142,8 @@ public final class GenerateSpiRouter {
      * {@code zhipu} 对应 {@code ZhipuVideoClient}。
      * {@code alibaba} 尚未落地实现，故<b>刻意不列入</b>——列进去前端会放出视频入口，
      * 用户提交后才失败。</p>
-     *
-     * <p>{@code acceptvideo} 是本机验收用的桩实现
-     * （{@code generate/accept/AcceptVideoClient}），供应商侧没有同名平台就不会被选中。</p>
      */
-    private static final Set<String> KNOWN_VIDEO_SPI = Set.of("openai", "agnes", "zhipu", "acceptvideo");
+    private static final Set<String> KNOWN_VIDEO_SPI = Set.of("openai", "agnes", "zhipu");
 
     /**
      * 工具类不允许实例化

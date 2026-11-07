@@ -49,6 +49,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class HostArchiveProbe {
 
     /**
+     * SSH 默认端口
+     */
+    private static final int SSH_PORT = 22;
+
+    /**
+     * RDP 默认端口
+     */
+    private static final int RDP_PORT = 3389;
+
+    /**
+     * 测试用杂项 TCP 端口（导出源主机）
+     */
+    private static final int TEST_PORT = 2222;
+
+    /**
+     * 采集团隔秒数（默认 1 小时）
+     */
+    private static final int COLLECT_INTERVAL_S = 3600;
+
+    /**
      * 初始化 MyBatis-Plus 的 lambda 列缓存，使条件包装器能在无 Spring 容器下渲染出列名与实参。
      */
     @BeforeAll
@@ -72,7 +92,7 @@ class HostArchiveProbe {
         host.setId(src.nextId());
         host.setServerHostName("prod-web");
         host.setServerHostAddress("10.0.0.11");
-        host.setServerHostPort(2222);
+        host.setServerHostPort(TEST_PORT);
         host.setServerHostOsType("LINUX");
         host.setServerHostSshEnabled(1);
         host.setServerHostAccount("root");
@@ -112,7 +132,7 @@ class HostArchiveProbe {
         assertEquals(1, first.bindingsCreated());
         assertTrue(first.warnings().isEmpty());
         assertEquals("10.0.0.11", dst.hosts.get(0).getServerHostAddress());
-        assertEquals(2222, dst.hosts.get(0).getServerHostPort());
+        assertEquals(TEST_PORT, dst.hosts.get(0).getServerHostPort());
         assertEquals("AESHEX_CIPHERTEXT", dst.identities.get(0).getMsServerIdentityPassword(),
                 "口令必须原样落库，不能二次加密");
     }
@@ -127,7 +147,7 @@ class HostArchiveProbe {
         host.setId(src.nextId());
         host.setServerHostName("db");
         host.setServerHostAddress("10.0.0.12");
-        host.setServerHostPort(22);
+        host.setServerHostPort(SSH_PORT);
         host.setServerHostOsType("LINUX");
         src.hosts.add(host);
 
@@ -175,7 +195,7 @@ class HostArchiveProbe {
         HostArchiveVO.HostItem linux = new HostArchiveVO.HostItem(null, null, "10.0.0.20", null,
                 null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null);
-        HostArchiveVO.HostItem windows = new HostArchiveVO.HostItem(null, null, "10.0.0.21", 3389,
+        HostArchiveVO.HostItem windows = new HostArchiveVO.HostItem(null, null, "10.0.0.21", RDP_PORT,
                 "WINDOWS", null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null);
         HostArchiveVO archive = new HostArchiveVO(HostArchiveVO.FORMAT, 1, "2026-11-07T00:00:00",
@@ -187,11 +207,11 @@ class HostArchiveProbe {
         MsServerHost first = dst.hosts.get(0);
         assertEquals("10.0.0.20", first.getServerHostName(), "缺名称时用地址兜底");
         assertEquals("LINUX", first.getServerHostOsType());
-        assertEquals(22, first.getServerHostPort());
+        assertEquals(SSH_PORT, first.getServerHostPort());
         assertEquals(1, first.getServerHostSshEnabled());
         assertEquals(0, first.getServerHostCollectEnabled());
         assertEquals("SCHEDULED", first.getServerHostCollectMode());
-        assertEquals(3600, first.getServerHostCollectInterval());
+        assertEquals(COLLECT_INTERVAL_S, first.getServerHostCollectInterval());
         assertEquals(1, first.getServerHostStatus());
         assertEquals(-1, first.getServerHostOnline());
         assertEquals(0, dst.hosts.get(1).getServerHostSshEnabled(), "Windows 默认关 SSH");
@@ -208,15 +228,15 @@ class HostArchiveProbe {
 
         HostArchiveVO archive = new HostArchiveVO(HostArchiveVO.FORMAT, 1, "2026-11-07T00:00:00",
                 null,
-                List.of(new HostArchiveVO.HostItem("h", null, "10.0.0.30", 22, "LINUX", null, null,
+                List.of(new HostArchiveVO.HostItem("h", null, "10.0.0.30", SSH_PORT, "LINUX", null, null,
                         null, null, null, null, null, 1, null, null, null, null, null, null, null,
                         null, null, null)),
                 List.of(new HostArchiveVO.IdentityItem("ghost@x", "PASSWORD", "x", "CIPHER", null,
                         null, null, null, null, null)),
                 List.of(
-                        new HostArchiveVO.BindingItem("10.0.0.30", 22, "missing-name", 1),
-                        new HostArchiveVO.BindingItem("10.0.0.99", 22, "ghost@x", 1),
-                        new HostArchiveVO.BindingItem("10.0.0.30", 22, "ghost@x", 1)));
+                        new HostArchiveVO.BindingItem("10.0.0.30", SSH_PORT, "missing-name", 1),
+                        new HostArchiveVO.BindingItem("10.0.0.99", SSH_PORT, "ghost@x", 1),
+                        new HostArchiveVO.BindingItem("10.0.0.30", SSH_PORT, "ghost@x", 1)));
 
         HostArchiveImportVO result = importer.importArchive(archive);
 
@@ -245,12 +265,12 @@ class HostArchiveProbe {
         ObjectMapper mapper = new ObjectMapper();
         HostArchiveVO archive = new HostArchiveVO(HostArchiveVO.FORMAT, 1, "2026-11-07T00:00:00",
                 "note",
-                List.of(new HostArchiveVO.HostItem("h", "c", "10.0.0.40", 22, "LINUX", null, null,
+                List.of(new HostArchiveVO.HostItem("h", "c", "10.0.0.40", SSH_PORT, "LINUX", null, null,
                         null, null, null, null, null, 1, null, null, null, null, null, null, null,
                         null, null, null)),
                 List.of(new HostArchiveVO.IdentityItem("h@root", "PASSWORD", "root", "CIPHERTEXT",
                         null, null, null, null, null, null)),
-                List.of(new HostArchiveVO.BindingItem("10.0.0.40", 22, "h@root", 1)));
+                List.of(new HostArchiveVO.BindingItem("10.0.0.40", SSH_PORT, "h@root", 1)));
         String json = mapper.writeValueAsString(archive);
         assertTrue(json.contains("\"password\":\"CIPHERTEXT\""), json);
 

@@ -79,7 +79,7 @@ import {
   createAccountAppKey,
   updateAccountAppKey,
   type SysAccountAppKey,
-} from '../../../api/account';
+} from '../../api/account';
 import { copyText } from '../../../shared/clipboard';
 
 const props = defineProps<{

@@ -64,10 +64,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -3166,15 +3168,35 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("behind", head.behind());
 
             // 分支：本地在前，远程去重（同一个分支名只保留一条，标 remote=true）
+            // jgit 的 getAllBranches 会把 refs/heads/main 与 refs/remotes/origin/main 都列出来，
+            // 而 remote 分支的 shortName 同样是 "main"，直接铺开会显示成两条一模一样的 main。
             List<Map<String, Object>> branches = new ArrayList<>();
-            for (var b : client.branch().listAll()) {
-                if ("HEAD".equals(b.shortName())) {
+            Set<String> localNames = new HashSet<>();
+            var allRefs = client.branch().listAll();
+            for (var b : allRefs) {
+                if (b.isRemote() || "HEAD".equals(b.shortName())) {
+                    continue;
+                }
+                localNames.add(b.shortName());
+                Map<String, Object> item = new LinkedHashMap<>(4);
+                item.put("name", b.shortName());
+                item.put("remote", false);
+                item.put("current", b.shortName().equals(branch));
+                branches.add(item);
+            }
+            for (var b : allRefs) {
+                if (!b.isRemote() || "HEAD".equals(b.shortName())) {
+                    continue;
+                }
+                String name = b.shortName();
+                if (localNames.contains(name)) {
+                    // 已有同名本地分支：远程那条不重复展示，本地分支的当前/落后状态已足够
                     continue;
                 }
                 Map<String, Object> item = new LinkedHashMap<>(4);
-                item.put("name", b.shortName());
-                item.put("remote", b.isRemote());
-                item.put("current", !b.isRemote() && b.shortName().equals(branch));
+                item.put("name", name);
+                item.put("remote", true);
+                item.put("current", false);
                 branches.add(item);
             }
             out.put("branches", branches);
@@ -3243,10 +3265,16 @@ public class ReleaseServiceImpl implements ReleaseService {
                 if (!clone && !client.status().execute().isClean()) {
                     return ReturnResult.error("工作区有未提交的改动，已停止拉取；请先在主机上处理或丢弃这些改动");
                 }
-                var result = client.pull(null, null);
                 out.put("branch", target);
-                out.put("updated", result.updated());
                 out.put("commit", client.head().commit());
+                if (clone) {
+                    // 刚克隆完，本地就是远端最新：再 pull 一次只会白跑一趟 fetch
+                    out.put("updated", true);
+                    out.put("message", "克隆完成");
+                    return ReturnResult.ok(out);
+                }
+                var result = client.pull(null, null);
+                out.put("updated", result.updated());
                 out.put("message", result.messages());
                 return ReturnResult.ok(out);
             }

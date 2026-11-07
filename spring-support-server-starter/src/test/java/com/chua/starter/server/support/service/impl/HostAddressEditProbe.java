@@ -25,6 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class HostAddressEditProbe {
 
     /**
+     * SSH 默认端口
+     */
+    private static final int SSH_PORT = 22;
+
+    /**
      * 编辑地址为含 @ 的字面量时应原样落库。
      */
     @Test
@@ -33,7 +38,7 @@ class HostAddressEditProbe {
         exists.setId(11L);
         exists.setServerHostName("rdp-test-198");
         exists.setServerHostAddress("192.168.50.198");
-        exists.setServerHostPort(22);
+        exists.setServerHostPort(SSH_PORT);
         exists.setServerHostOsType("WINDOWS");
         exists.setServerHostCollectMode("AGENT");
         exists.setServerHostRemoteMode("GUACD");

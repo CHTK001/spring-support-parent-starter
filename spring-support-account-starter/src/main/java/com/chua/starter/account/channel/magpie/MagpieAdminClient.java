@@ -165,6 +165,170 @@ public final class MagpieAdminClient {
     }
 
     /**
+     * 插件渠道的签到（{@code POST /api/usage/plugin-checkin}）。
+     *
+     * <p>与内置的 {@code /api/usage/{vendor}-checkin} 是两条路：插件接管内置 provider 后，
+     * 内置端点只查内置账号，必须改走这里并显式给出 provider。</p>
+     *
+     * @param credentials 连接凭据
+     * @param provider    插件提供的 provider id（如 {@code workbuddy}）
+     * @return magpie 返回的签到结果行；无账号时为空列表
+     */
+    public static List<Map<String, Object>> pluginCheckin(Map<String, Object> credentials, String provider) {
+        Map<String, Object> body = new LinkedHashMap<>(2);
+        body.put("Provider", provider);
+        String text = adminPost(credentials, MagpieSupport.PLUGIN_CHECKIN_PATH, Json.toJson(body));
+        return asMapList(parseAny(text));
+    }
+
+    /**
+     * 插件清单（{@code GET /api/plugins}），可选同时读市场。
+     *
+     * @param credentials 连接凭据
+     * @param market      true 时追加 {@code GET /api/plugins/market}（可能较慢）
+     * @return {@code {state:{...}, market:{...}}}
+     */
+    public static Map<String, Object> plugins(Map<String, Object> credentials, boolean market) {
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("state", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH)));
+        if (market) {
+            out.put("market", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH + "/market")));
+        }
+        return out;
+    }
+
+    /**
+     * 插件动作（{@code POST /api/plugins/{op}}）。
+     *
+     * @param credentials 连接凭据
+     * @param op          add / remove / update / upgrade / off / options / prefer / registry / mirror / check
+     * @param body        请求体
+     * @return 上游响应（新状态）
+     */
+    public static Map<String, Object> pluginAction(Map<String, Object> credentials, String op,
+                                                   Map<String, Object> body) {
+        String payload = body == null || body.isEmpty() ? "{}" : Json.toJson(body);
+        return parseObject(adminPost(credentials, MagpieSupport.PLUGIN_ACTION_PATH + op, payload));
+    }
+
+    /**
+     * 发起插件 provider 登录（{@code POST /api/plugin-signin}）。
+     *
+     * @param credentials 连接凭据
+     * @param body        {@code {provider, method, inputs, key, proxy, user}}
+     * @return 登录会话（含 {@code id} / {@code url} / {@code state}）
+     */
+    public static Map<String, Object> startPluginSignin(Map<String, Object> credentials, Map<String, Object> body) {
+        String payload = body == null || body.isEmpty() ? "{}" : Json.toJson(body);
+        return parseObject(adminPost(credentials, MagpieSupport.PLUGIN_SIGNIN_PATH, payload));
+    }
+
+    /**
+     * 发起内置 provider 登录（{@code POST /api/signin}）。
+     *
+     * @param credentials 连接凭据
+     * @param body        {@code {agent, site, proxy, user}}
+     * @return 登录会话（含 {@code id} / {@code url} / {@code state}）
+     */
+    public static Map<String, Object> startSignin(Map<String, Object> credentials, Map<String, Object> body) {
+        String payload = body == null || body.isEmpty() ? "{}" : Json.toJson(body);
+        return parseObject(adminPost(credentials, MagpieSupport.SIGNIN_PATH, payload));
+    }
+
+    /**
+     * 查询登录会话（{@code GET /api/signin/{id}}，内置与插件共用）。
+     *
+     * @param credentials 连接凭据
+     * @param id          会话 id
+     * @return 会话状态
+     */
+    public static Map<String, Object> signinStatus(Map<String, Object> credentials, String id) {
+        return parseObject(adminGet(credentials,
+                MagpieSupport.SIGNIN_PATH_PREFIX + URLEncoder.encode(id, StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * 取消登录会话（{@code POST /api/signin/{id}/cancel}）。
+     *
+     * @param credentials 连接凭据
+     * @param id          会话 id
+     */
+    public static void cancelSignin(Map<String, Object> credentials, String id) {
+        adminPost(credentials, MagpieSupport.SIGNIN_PATH_PREFIX
+                + URLEncoder.encode(id, StandardCharsets.UTF_8) + "/cancel", null);
+    }
+
+    /**
+     * 管理面额度卡（{@code GET /api/usage/quotas}）。
+     *
+     * <p>比数据面 {@code /v1/magpie/quotas} 多出签到状态与插件账号，按 provider / 账号
+     * 过滤在本方法里做（magpie 的 GET 不收过滤参数）。</p>
+     *
+     * @param credentials 连接凭据
+     * @param provider    只取该 provider（可空）
+     * @param user        只取该账号（可空）
+     * @return 配额行列表
+     */
+    public static List<Map<String, Object>> adminQuotas(Map<String, Object> credentials,
+                                                        String provider, String user) {
+        List<Map<String, Object>> rows = asMapList(parseAny(
+                adminGet(credentials, MagpieSupport.ADMIN_QUOTAS_PATH)));
+        return filterQuotas(rows, provider, user);
+    }
+
+    /**
+     * 让 magpie 重新读一张额度卡（{@code POST /api/usage/quotas/refresh}）。
+     *
+     * @param credentials 连接凭据
+     * @param provider    provider id（必填）
+     * @param user        账号（可空）
+     * @return 刷新后的全部配额行
+     */
+    public static List<Map<String, Object>> refreshQuota(Map<String, Object> credentials,
+                                                         String provider, String user) {
+        StringBuilder path = new StringBuilder(MagpieSupport.ADMIN_QUOTAS_PATH)
+                .append("/refresh?provider=")
+                .append(URLEncoder.encode(provider, StandardCharsets.UTF_8));
+        if (!MagpieSupport.isBlank(user)) {
+            path.append("&user=").append(URLEncoder.encode(user, StandardCharsets.UTF_8));
+        }
+        List<Map<String, Object>> rows = asMapList(parseAny(adminPost(credentials, path.toString(), null)));
+        return filterQuotas(rows, provider, user);
+    }
+
+    /**
+     * 按 provider / 账号过滤额度行。
+     *
+     * @param rows     原始行
+     * @param provider provider id（可空）
+     * @param user     账号（可空）
+     * @return 过滤后的行
+     */
+    private static List<Map<String, Object>> filterQuotas(List<Map<String, Object>> rows,
+                                                          String provider, String user) {
+        if (MagpieSupport.isBlank(provider)) {
+            return rows;
+        }
+        String wantedProvider = provider.trim();
+        String wantedUser = MagpieSupport.isBlank(user) ? null : user.trim();
+        List<Map<String, Object>> filtered = new ArrayList<>(rows.size());
+        for (Map<String, Object> row : rows) {
+            String rowProvider = String.valueOf(row.get("provider") == null ? "" : row.get("provider"));
+            if (!wantedProvider.equalsIgnoreCase(rowProvider)) {
+                continue;
+            }
+            if (wantedUser != null) {
+                String rowUser = String.valueOf(row.get("user") == null ? "" : row.get("user"));
+                if (!wantedUser.equalsIgnoreCase(rowUser)) {
+                    continue;
+                }
+            }
+            filtered.add(row);
+        }
+        return filtered;
+    }
+
+    /**
      * 读取模型，并把 magpie 的 {@code models:[{id,name}]} 归一成 {@code id} 列表。
      *
      * <p>{@code /api/provider/models} 的返回是

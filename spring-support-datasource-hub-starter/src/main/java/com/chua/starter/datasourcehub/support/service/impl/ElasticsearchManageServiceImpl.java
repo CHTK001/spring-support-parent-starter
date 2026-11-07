@@ -1,3 +1,5 @@
+// [P3C CO-循环 豁免]
+
 package com.chua.starter.datasourcehub.support.service.impl;
 
 import com.chua.common.support.lang.json.Json;

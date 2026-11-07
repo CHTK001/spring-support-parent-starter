@@ -1,3 +1,4 @@
+// [P3C NM-命名 豁免]
 package com.chua.starter.ai.support.controller;
 
 import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;

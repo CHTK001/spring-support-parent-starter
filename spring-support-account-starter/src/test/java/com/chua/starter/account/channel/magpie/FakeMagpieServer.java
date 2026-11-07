@@ -53,6 +53,16 @@ final class FakeMagpieServer implements AutoCloseable {
     private final AtomicReference<String> dataPlaneAuthorization = new AtomicReference<>("");
 
     /**
+     * 是否模拟「WorkBuddy 已被插件接管」（{@code move.state=plugin}）。
+     */
+    private volatile boolean workbuddyPlugin;
+
+    /**
+     * 是否提供管理面额度卡（默认关闭，让积分回落到数据面，保持老测试口径）。
+     */
+    private volatile boolean adminQuotas;
+
+    /**
      * 启动假服务。
      *
      * @throws IOException 端口绑定失败
@@ -111,6 +121,21 @@ final class FakeMagpieServer implements AutoCloseable {
     }
 
     /**
+     * 模拟 WorkBuddy 被插件接管：{@code /api/providers} 多一条
+     * {@code move.state=plugin} 的行，供签到分流测试使用。
+     */
+    void takeoverWorkbuddy() {
+        workbuddyPlugin = true;
+    }
+
+    /**
+     * 打开管理面额度卡（{@code /api/usage/quotas}）；默认关闭，积分走数据面。
+     */
+    void withAdminQuotas() {
+        adminQuotas = true;
+    }
+
+    /**
      * 停止假服务。
      */
     @Override
@@ -152,20 +177,42 @@ final class FakeMagpieServer implements AutoCloseable {
             lastBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         }
         switch (path) {
-            case "/api/providers" -> respond(exchange, 200, """
-                    {"vendors":["workbuddy","trae"],"providers":[
-                      {"id":"codex","name":"Codex","models":[{"id":"gpt-5","name":"GPT-5"}],
-                       "keyList":[{"id":"k1","key":"sk-secret"}]}
-                    ]}""");
+            case "/api/providers" -> respond(exchange, 200, providersBody());
             case "/api/provider/save" -> respond(exchange, 200, "{\"providers\":[]}");
             case "/api/provider/delete" -> respond(exchange, 200, "{\"providers\":[]}");
             case "/api/provider/models" -> respond(exchange, 200,
                     "{\"count\":2,\"dropped\":0,\"provider\":{\"models\":[{\"id\":\"alpha\"},{\"id\":\"beta\"}]}}");
             case "/api/usage/workbuddy-checkin" -> respond(exchange, 200,
                     "[{\"account\":\"a1\",\"message\":\"signed\"}]");
+            case "/api/usage/plugin-checkin" -> respond(exchange, 200,
+                    "[{\"account\":\"p1\",\"vendor\":\"workbuddy\",\"message\":\"plugin signed\"}]");
             case "/api/usage/trae-checkin",
                  "/api/usage/minimax-checkin",
                  "/api/usage/qoder-checkin" -> respond(exchange, 200, "[]");
+            case "/api/plugins" -> respond(exchange, 200, pluginsBody());
+            case "/api/plugins/market" -> respond(exchange, 200, """
+                    {"listings":[{"package":"@magpie-community/opencode-workbuddy-auth",
+                      "name":"WorkBuddy","providers":["workbuddy","workbuddy-ai"],
+                      "community":true,"replaces":"workbuddy"}],
+                     "state":{"plugins":[]}}""");
+            case "/api/plugins/add", "/api/plugins/remove", "/api/plugins/update",
+                 "/api/plugins/upgrade", "/api/plugins/off", "/api/plugins/options",
+                 "/api/plugins/prefer", "/api/plugins/registry", "/api/plugins/mirror",
+                 "/api/plugins/check" -> respond(exchange, 200, pluginsBody());
+            case "/api/plugin-signin", "/api/signin" -> respond(exchange, 200, """
+                    {"id":"s1","agent":"workbuddy","url":"https://example.test/auth",
+                     "state":"waiting","pasteCallback":true}""");
+            case "/api/signin/s1" -> respond(exchange, 200,
+                    "{\"id\":\"s1\",\"state\":\"done\",\"user\":\"alice\"}");
+            case "/api/signin/s1/cancel" -> respond(exchange, 200, "{}");
+            case "/api/usage/quotas" -> {
+                if (adminQuotas) {
+                    respond(exchange, 200, adminQuotasBody());
+                } else {
+                    respond(exchange, 404, "{\"error\":\"not found\"}");
+                }
+            }
+            case "/api/usage/quotas/refresh" -> respond(exchange, 200, adminQuotasBody());
             case "/v1/magpie/quotas" -> respond(exchange, 200, """
                     {"data":[
                       {"provider":"codex","kind":"balance","balance":"12"},
@@ -177,6 +224,49 @@ final class FakeMagpieServer implements AutoCloseable {
                     "{\"data\":[{\"id\":\"codex/gpt-5\",\"owned_by\":\"codex\"}]}");
             default -> respond(exchange, 404, "{\"error\":\"not found\"}");
         }
+    }
+
+    /**
+     * {@code /api/providers} 的响应：默认只有内置 codex；接管模式下补一条
+     * {@code move.state=plugin} 的 workbuddy。
+     *
+     * @return JSON 文本
+     */
+    private String providersBody() {
+        String takeover = workbuddyPlugin
+                ? "{\"id\":\"workbuddy\",\"name\":\"WorkBuddy\",\"move\":{\"state\":\"plugin\"},"
+                        + "\"pluginAccounts\":2}"
+                : "";
+        return """
+                {"vendors":["workbuddy","trae"],"providers":[
+                  {"id":"codex","name":"Codex","models":[{"id":"gpt-5","name":"GPT-5"}],
+                   "keyList":[{"id":"k1","key":"sk-secret"}]}%s
+                ]}""".formatted(takeover.isEmpty() ? "" : "," + takeover);
+    }
+
+    /**
+     * {@code /api/plugins} 的响应。
+     *
+     * @return JSON 文本
+     */
+    private static String pluginsBody() {
+        return """
+                {"plugins":[{"spec":"@magpie-community/opencode-workbuddy-auth",
+                   "off":false,"version":"0.2.24","latest":"0.2.24",
+                   "providers":["workbuddy","workbuddy-ai"],"moved":["workbuddy"],"error":""}],
+                 "bun":true,"bunVer":"1.1.0","mirror":false,
+                 "registry":"https://registry.npmjs.org"}""";
+    }
+
+    /**
+     * {@code /api/usage/quotas} 的响应。
+     *
+     * @return JSON 文本
+     */
+    private static String adminQuotasBody() {
+        return """
+                [{"provider":"workbuddy","kind":"subscription","plan":"pro","user":"alice",
+                  "windows":[{"name":"5h","remaining":10,"limit":20,"unit":"credit"}]}]""";
     }
 
     /**

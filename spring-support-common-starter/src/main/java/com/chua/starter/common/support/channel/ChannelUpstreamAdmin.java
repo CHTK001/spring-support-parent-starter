@@ -42,6 +42,29 @@ public interface ChannelUpstreamAdmin {
     }
 
     /**
+     * 是否支持插件管理（{@link #plugins} / {@link #pluginAction}）。
+     *
+     * <p>插件是网关自己的扩展机制，不是每个网关型渠道都有。默认 false，
+     * 前端据 {@code supportsPlugins} 决定是否显示「插件」页签，而不是猜渠道名。</p>
+     *
+     * @return true 表示 {@link #plugins} / {@link #pluginAction} 可用
+     */
+    default boolean supportsPlugins() {
+        return false;
+    }
+
+    /**
+     * 是否支持上游登录（{@link #startSignin} / {@link #signinStatus} / {@link #cancelSignin}）。
+     *
+     * <p>默认 false；前端据 {@code supportsSignin} 决定是否显示「登录」入口。</p>
+     *
+     * @return true 表示上游登录可用
+     */
+    default boolean supportsSignin() {
+        return false;
+    }
+
+    /**
      * 网关地址（展示用）：不发起上游调用，也不抛异常。
      *
      * <p>管理面不可用时前端仍需显示「网关是哪个」，故与 {@link #list} 分开。</p>
@@ -97,4 +120,110 @@ public interface ChannelUpstreamAdmin {
      * @throws ChannelException 动作不支持 / 上游调用失败
      */
     Map<String, Object> action(Map<String, Object> credentials, String action, Map<String, Object> payload);
+
+    /**
+     * 网关的插件清单 / 插件市场。
+     *
+     * <p>插件是网关侧的扩展（登录、签到、模型目录都可能由插件提供），
+     * 与 {@link #list} 的 provider 是两层：provider 是「被登录的上游」，
+     * 插件是「提供登录与维护逻辑的包」。默认不支持，网关型渠道按需覆盖。</p>
+     *
+     * @param credentials 网关连接凭据
+     * @param market      true 表示同时读取市场（较慢，可能访问 npm / GitHub）
+     * @return {@code {plugins:[...], market:[...]}}；不支持时抛异常
+     * @throws ChannelException 不支持 / 网关调用失败
+     */
+    default Map<String, Object> plugins(Map<String, Object> credentials, boolean market) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持插件管理");
+    }
+
+    /**
+     * 对网关插件执行动作（安装 / 卸载 / 升级 / 停用 / 改选项 / 换源）。
+     *
+     * <p>动作白名单由实现维护，避免路径段被拼成任意上游调用。</p>
+     *
+     * @param credentials 网关连接凭据
+     * @param op          动作名
+     * @param payload     请求体
+     * @return 上游响应
+     * @throws ChannelException 动作不支持 / 网关调用失败
+     */
+    default Map<String, Object> pluginAction(Map<String, Object> credentials, String op,
+                                             Map<String, Object> payload) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持插件管理");
+    }
+
+    /**
+     * 发起一次上游登录（内置 provider 或插件 provider）。
+     *
+     * <p>返回的登录会话由网关自己持有，凭据不经过本服务；调用方只拿
+     * {@code id} 与 {@code url} 去轮询 / 打开授权页。</p>
+     *
+     * @param credentials 网关连接凭据
+     * @param payload     {@code {provider, method, inputs, key, agent, plugin}}
+     * @return 登录会话（含 {@code id} / {@code url} / {@code state}）
+     * @throws ChannelException 不支持 / 网关调用失败
+     */
+    default Map<String, Object> startSignin(Map<String, Object> credentials, Map<String, Object> payload) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持上游登录");
+    }
+
+    /**
+     * 查询登录会话状态。
+     *
+     * @param credentials 网关连接凭据
+     * @param id          登录会话 id
+     * @return 会话状态（{@code state} 为 installing / waiting / done / failed / canceled）
+     * @throws ChannelException 不支持 / 会话不存在 / 网关调用失败
+     */
+    default Map<String, Object> signinStatus(Map<String, Object> credentials, String id) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持上游登录");
+    }
+
+    /**
+     * 取消登录会话。
+     *
+     * @param credentials 网关连接凭据
+     * @param id          登录会话 id
+     * @throws ChannelException 不支持 / 网关调用失败
+     */
+    default void cancelSignin(Map<String, Object> credentials, String id) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持上游登录");
+    }
+
+    /**
+     * 读取网关的额度 / 余额卡（管理面）。
+     *
+     * <p>与积分 SPI 的区别：这里直接返回网关原始卡片（含签到状态、插件账号），
+     * 供「上游」页签按 provider / 账号展示，不做单位归并。</p>
+     *
+     * @param credentials 网关连接凭据
+     * @param provider    只取该 provider（可空）
+     * @param user        只取该账号（可空，需同时给 provider）
+     * @return {@code {quotas:[...]}}
+     * @throws ChannelException 不支持 / 网关调用失败
+     */
+    default Map<String, Object> quotas(Map<String, Object> credentials, String provider, String user) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持额度读取");
+    }
+
+    /**
+     * 让网关重新读一次额度卡。
+     *
+     * @param credentials 网关连接凭据
+     * @param provider    要刷新的 provider（必填）
+     * @param user        要刷新的账号（可空）
+     * @return {@code {quotas:[...]}}
+     * @throws ChannelException 入参缺失 / 不支持 / 网关调用失败
+     */
+    default Map<String, Object> refreshQuota(Map<String, Object> credentials, String provider, String user) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持额度刷新");
+    }
 }

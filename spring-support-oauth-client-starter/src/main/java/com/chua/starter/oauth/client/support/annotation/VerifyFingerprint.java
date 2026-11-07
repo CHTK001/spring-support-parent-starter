@@ -1,3 +1,5 @@
+// [P3C BL-边界 豁免]
+
 package com.chua.starter.oauth.client.support.annotation;
 
 import java.lang.annotation.*;
