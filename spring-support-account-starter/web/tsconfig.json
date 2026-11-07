@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../../vue-support-parent-starter/tsconfig.json",
   "compilerOptions": {
     "jsx": "preserve",
     "types": ["vite/client"]
@@ -9,8 +9,7 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "app.yaml",
-    "../../pages/template/src/**/*.d.ts",
-    "../../packages/core/src/**/*.d.ts",
-    "../../packages/ui/src/env.d.ts"
+    "../../../vue-support-parent-starter/packages/core/src/**/*.d.ts",
+    "../../../vue-support-parent-starter/packages/ui/src/env.d.ts"
   ]
 }

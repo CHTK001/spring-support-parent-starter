@@ -127,6 +127,16 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <!-- Actuator 完整模块：swagger-starter 只带 spring-boot-actuator(+actuator-autoconfigure)，
+             Boot 4.1 已把 health / micrometer-metrics / micrometer-observation 拆成独立模块。
+             缺这几个模块时 HealthEndpoint 不注册，/actuator/health、/actuator/metrics 会落到
+             静态资源处理器，返回 "No static resource actuator/health"，大屏 Actuator 页签全空。
+             部署侧靠手工往 lib-extra 塞 jar 才能用，这里显式引入 starter 让打包自带。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- 网页解析：数据同步的 HTTP-HTML 源按 CSS 选择器抓表格行（MonitorHttpRowsSupport）。
              版本与 spring-support-ai-starter 保持一致；此前只由它传递进来，本模块直接 import 故显式声明 -->
         <dependency>

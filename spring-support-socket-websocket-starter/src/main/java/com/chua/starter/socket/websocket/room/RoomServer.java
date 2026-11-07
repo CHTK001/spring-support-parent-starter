@@ -45,6 +45,12 @@ public class RoomServer extends AbstractServer {
     /** 握手请求头上限（防止异常连接无限占用内存） */
     private static final int MAX_HANDSHAKE_BYTES = 16 * 1024;
 
+    /** 接收缓冲区下限（1 KB，避免内核参数被设得过小） */
+    private static final int MIN_BUFFER_SIZE = 1024;
+
+    /** backlog 下限（与 ServerSetting 默认值保持一致） */
+    private static final int DEFAULT_BACKLOG = 128;
+
     /** 连接 ID 前缀 */
     private static final String CONNECTION_ID_PREFIX = "room-";
 

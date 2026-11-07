@@ -43,7 +43,8 @@ import java.util.concurrent.TimeUnit;
  * <p>执行逻辑：</p>
  * <ol>
  *   <li>遍历 {@code ServiceProvider.of(AccountChannelAuthManager.class).list()}，
- *       仅保留 {@code supportsCheckin()==true} 的渠道实现；</li>
+ *       仅保留 {@code supportsCheckin()==true} 且 {@code supportsAutoCheckin()==true} 的渠道实现
+ *       （后者让自带签到定时器的网关，如 magpie，不被重复签到）；</li>
  *   <li>每个渠道取 {@code sys_ai_provider} 下所有 {@code enabled=true} 的
  *       {@code sys_ai_provider_connection} 行；</li>
  *   <li>逐账号串行调用 {@link AccountChannelAuthManager#checkin(Map)}（单条失败不中断批次）；</li>
@@ -163,7 +164,7 @@ public class ChannelCheckinTask implements SchedulingConfigurer {
         for (Map.Entry<String, AccountChannelAuthManager> entry : managers.entrySet()) {
             String channel = entry.getKey();
             AccountChannelAuthManager impl = entry.getValue();
-            if (!impl.supportsCheckin()) {
+            if (!impl.supportsCheckin() || !impl.supportsAutoCheckin()) {
                 continue;
             }
             totalChannels++;

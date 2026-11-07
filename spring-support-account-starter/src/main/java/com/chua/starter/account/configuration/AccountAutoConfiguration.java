@@ -2,6 +2,8 @@ package com.chua.starter.account.configuration;
 
 import com.chua.starter.account.template.MessageTemplateController;
 import com.chua.starter.account.template.MessageTemplateService;
+import com.chua.starter.account.mail.MailboxController;
+import com.chua.starter.account.mail.MailboxService;
 import com.chua.starter.account.manage.controller.AccountAppKeyController;
 import com.chua.starter.account.manage.controller.AccountController;
 import com.chua.starter.account.manage.controller.AccountCookieController;
@@ -46,7 +48,9 @@ import org.springframework.context.annotation.FilterType;
                 // 短信 / 邮件消息模板：/api/channels/templates
                 "com.chua.starter.account.template",
                 // 统一账号管理：/api/accounts
-                "com.chua.starter.account.manage"
+                "com.chua.starter.account.manage",
+                // 收 / 发信箱：/api/accounts/{accountId}/mailbox
+                "com.chua.starter.account.mail"
         },
         useDefaultFilters = false,
         includeFilters = @ComponentScan.Filter(
@@ -65,7 +69,9 @@ import org.springframework.context.annotation.FilterType;
                         SysAccountAppKeyServiceImpl.class,
                         SysAccountCookieServiceImpl.class,
                         AccountSecretCodec.class,
-                        AccountApiExceptionAdvice.class
+                        AccountApiExceptionAdvice.class,
+                        MailboxController.class,
+                        MailboxService.class
                 })
 )
 @MapperScan({

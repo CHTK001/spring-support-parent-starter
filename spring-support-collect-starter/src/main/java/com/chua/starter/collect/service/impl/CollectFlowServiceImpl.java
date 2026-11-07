@@ -606,6 +606,17 @@ public class CollectFlowServiceImpl extends ServiceImpl<CollectFlowMapper, Colle
      * @return 对账的流程数
      */
     public int restoreScheduling() {
+        // 进程在任务执行中被强杀（改流程、重启部署）时，收尾逻辑没机会跑，任务行会永久停在
+        // RUNNING。引擎的内存运行表随进程清空，但库里这行仍算「未结束」，启动闸门会以
+        // 「已有任务未结束」拒绝该流程，此后永远跑不起来。重启时统一收敛成 FAILURE。
+        int hanging = taskMapper.update(null, Wrappers.<CollectTask>lambdaUpdate()
+                .set(CollectTask::getCollectTaskStatus, CollectTaskStatus.FAILURE)
+                .set(CollectTask::getCollectTaskError,
+                        "服务重启时该任务仍在执行中，已标记为失败（可重新发起采集）")
+                .eq(CollectTask::getCollectTaskStatus, CollectTaskStatus.RUNNING));
+        if (hanging > 0) {
+            log.warn("[collect] 服务重启，{} 个未结束的任务已收敛为失败", hanging);
+        }
         int restored = 0;
         for (CollectFlow flow : list(Wrappers.<CollectFlow>lambdaQuery()
                 .eq(CollectFlow::getCollectFlowIsDeleted, 0))) {

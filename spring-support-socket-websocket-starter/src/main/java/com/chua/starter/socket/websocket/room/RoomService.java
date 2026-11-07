@@ -120,7 +120,9 @@ public class RoomService {
         room.setLastActiveAt(System.currentTimeMillis());
 
         // 续接旧连接（同房间/同代数/同端点/续练未过期）
-        ResumeToken token = resumeTokens.get(resumeToken);
+        // 注意：ConcurrentHashMap 不接受 null key，首次进房时 resumeToken 为空，
+        // 这里必须先判空，否则 hello 直接抛 NPE，welcome 永不下发。
+        ResumeToken token = (resumeToken == null || resumeToken.isEmpty()) ? null : resumeTokens.get(resumeToken);
         if (token != null && token.getEpoch().equals(room.getEpoch())) {
             SlotState alive = room.findSlot(token.getSlotId()).orElse(null);
             if (alive != null && alive.isActive()) {

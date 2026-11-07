@@ -360,7 +360,7 @@
             </ReButton>
             <ReButton show-text icon="EditPen" size="small" @click="openEdit(activeAccount)">编辑</ReButton>
             <ReButton
-              v-if="consoleUrlOf(activeAccount)"
+              v-if="hasMailbox(activeAccount)"
               show-text
               :icon="activeAccount.kind === 'EMAIL' ? 'Message' : 'ChatDotRound'"
               size="small"
@@ -585,7 +585,7 @@
       </div>
 
       <template #footer>
-        <ReButton v-if="detailConsoleUrl" @click="openConsole(activeAccount)">
+        <ReButton v-if="activeAccount && hasMailbox(activeAccount)" @click="openConsole(activeAccount)">
           {{ activeAccount?.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
         </ReButton>
         <ReButton :loading="verifyingId === activeAccount?.accountId" @click="onVerify(activeAccount)">校验凭据</ReButton>
@@ -643,7 +643,7 @@ import type {
 } from '@repo/ui/re-table';
 import ReTag from '@repo/ui/re-tag';
 
-import AccountFormDialog from '../../components/AccountFormDialog.vue';
+import AccountFormDialog from '../components/AccountFormDialog.vue';
 import MessageTemplateView from '../../template/views/MessageTemplateView.vue';
 import TemplateView from '../../template/views/TemplateView.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
@@ -665,8 +665,8 @@ import {
   type SysAccount,
   type SysAccountAppKey,
   type SysAccountCookie,
-} from '../../api/account';
-import { accountConsoleUrl } from '../../utils/accountLinks';
+} from '../api/account';
+import { accountConsoleUrl } from '../utils/accountLinks';
 import { confirmThen } from '../../shared/confirmThen';
 import { copyText } from '../../shared/clipboard';
 
@@ -948,8 +948,18 @@ const detailTitle = computed(() => {
   return `${kindLabel(activeAccount.value.kind)} · ${activeAccount.value.name || activeAccount.value.code || ''}`;
 });
 
-/** 详情的控制台地址（邮箱 / 短信） */
-const detailConsoleUrl = computed(() => (activeAccount.value ? accountConsoleUrl(activeAccount.value) : ''));
+/**
+ * 是否具备收发信箱（仅邮箱 / 短信账号）。
+ *
+ * <p>这里不再依赖「控制台地址能否解析」：邮箱与短信都能在应用内打开真实信箱，
+ * 所以只要种类对就允许进入；控制台地址只作为抽屉里的兜底提示。</p>
+ *
+ * @param row 账号
+ * @returns 是否可以打开信箱
+ */
+function hasMailbox(row: SysAccount | null | undefined): boolean {
+  return row?.kind === 'EMAIL' || row?.kind === 'SMS';
+}
 
 /** 类型专属配置展示行 */
 const configRows = computed(() => {
@@ -1152,7 +1162,6 @@ function onSaved(saved: SysAccount): void {
  */
 function accountMenu(ctx: ReTableContextMenuContext): ReTableContextMenuItem[] {
   const row = ctx.row as unknown as SysAccount;
-  const consoleUrl = accountConsoleUrl(row);
   const items: ReTableContextMenuItem[] = [
     { key: 'detail', label: '账号详情', icon: View },
     { key: 'edit', label: '编辑账号', icon: EditPen },
@@ -1164,7 +1173,7 @@ function accountMenu(ctx: ReTableContextMenuContext): ReTableContextMenuItem[] {
       label: row.kind === 'EMAIL' ? '打开邮箱' : '打开短信',
       icon: row.kind === 'EMAIL' ? Message : ChatDotRound,
       divided: true,
-      disabled: !consoleUrl,
+      disabled: !hasMailbox(row),
     });
   }
   items.push(
@@ -1214,18 +1223,21 @@ function onAccountMenuSelect(item: ReTableContextMenuItem, ctx: ReTableContextMe
 }
 
 /**
- * 打开邮箱 / 短信控制台。
+ * 打开收 / 发信箱。
+ *
+ * <p>不再跳向外部门户：邮箱走 IMAP 收信 + SMTP 发信，短信走 MessagePush，
+ * 全部在应用内抽屉里完成，因此这里只负责把账号交给抽屉。</p>
  *
  * @param row 账号
  */
 function openConsole(row: SysAccount | null): void {
   if (!row) return;
-  const url = accountConsoleUrl(row);
-  if (!url) {
-    message.warning('该账号没有可解析的控制台地址，可在编辑里填写「控制台地址」');
+  if (!hasMailbox(row)) {
+    message.warning('该账号种类没有收 / 发信箱');
     return;
   }
-  window.open(url, '_blank', 'noopener,noreferrer');
+  mailboxAccount.value = row;
+  mailboxVisible.value = true;
 }
 
 /**

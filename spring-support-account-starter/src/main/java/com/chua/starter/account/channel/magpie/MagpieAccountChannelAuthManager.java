@@ -194,13 +194,31 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
     /**
      * {@inheritDoc}
      *
-     * <p>对 magpie 管理面的四个签到端点各按一次（WorkBuddy CN / Trae CN / MiniMax CN / Qoder），
-     * 由 magpie 在自己那边选账号：</p>
+     * <p>magpie 自己就有每日签到定时器（{@code KeepPluginsCheckedIn} /
+     * {@code KeepWorkBuddyCheckedIn}，逐 provider 由 {@code settings.CheckinOff} 控制），
+     * 本服务再跑一遍只会重复打上游。因此自动签到任务跳过本渠道，
+     * 页面上的「立即签到」仍然走 {@link #checkin(Map)}。</p>
+     */
+    @Override
+    public boolean supportsAutoCheckin() {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>按 provider 是否已被插件接管分流：</p>
      * <ul>
+     *   <li>内置（未被接管）→ {@code POST /api/usage/{vendor}-checkin}；</li>
+     *   <li>已被插件接管（{@code move.state=plugin}）→
+     *       {@code POST /api/usage/plugin-checkin}，必须显式传 provider；</li>
      *   <li>某家没有账号 → 返回空列表，不算失败；</li>
      *   <li>某家已经签到过 → magpie 自己吞掉重复，仍返回结果行；</li>
-     *   <li>四家全部失败（页面没开 / 页面 Key 失效）→ 抛异常，把可操作的提示交给 UI。</li>
+     *   <li>全部失败（页面没开 / 页面 Key 失效）→ 抛异常，把可操作的提示交给 UI。</li>
      * </ul>
+     *
+     * <p>分流很关键：装 WorkBuddy 插件后内置 {@code workbuddy} 会被
+     * {@code provider.HandOver} 移交，此时再打内置端点只会查不到账号。</p>
      *
      * @param credentials 网关凭据
      * @return 更新后的凭据（并入 {@code checkin_message} / {@code checkin_at}）
@@ -210,15 +228,20 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
         Map<String, Object> updated = credentials == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(credentials);
         List<String> messages = new ArrayList<>(4);
+        Map<String, Boolean> pluginProviders = pluginProviderStates(credentials);
         int pressed = 0;
         int failed = 0;
         String lastError = null;
         for (String vendor : MagpieSupport.CHECKIN_VENDORS) {
             try {
-                int accounts = MagpieAdminClient.checkin(credentials, vendor).size();
+                boolean viaPlugin = Boolean.TRUE.equals(pluginProviders.get(vendor));
+                List<Map<String, Object>> rows = viaPlugin
+                        ? MagpieAdminClient.pluginCheckin(credentials, vendor)
+                        : MagpieAdminClient.checkin(credentials, vendor);
+                int accounts = rows.size();
                 if (accounts > 0) {
                     pressed++;
-                    messages.add(vendor + " 处理 " + accounts + " 个账号");
+                    messages.add(vendor + (viaPlugin ? "（插件）" : "") + " 处理 " + accounts + " 个账号");
                 }
             } catch (ChannelException e) {
                 failed++;
@@ -295,6 +318,37 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
     }
 
     // ── 私有辅助 ──
+
+    /**
+     * 读出哪些 provider 已被插件接管（{@code move.state=plugin}）。
+     *
+     * <p>读不到列表时返回空 Map：签到退回内置端点，行为与旧版一致，
+     * 真正的失败会由签到调用自己报出来。</p>
+     *
+     * @param credentials 网关凭据
+     * @return provider id → 是否插件接管
+     */
+    private static Map<String, Boolean> pluginProviderStates(Map<String, Object> credentials) {
+        Map<String, Boolean> states = new LinkedHashMap<>();
+        try {
+            for (Map<String, Object> provider : MagpieAdminClient.providers(credentials)) {
+                Object id = provider.get("id");
+                if (id == null) {
+                    continue;
+                }
+                boolean plugin = false;
+                Object move = provider.get("move");
+                if (move instanceof Map<?, ?> map) {
+                    Object state = map.get("state");
+                    plugin = state != null && "plugin".equalsIgnoreCase(String.valueOf(state));
+                }
+                states.put(String.valueOf(id), plugin);
+            }
+        } catch (Exception ignored) {
+            // 管理面不可用时退回内置端点，由签到调用给出可读错误
+        }
+        return states;
+    }
 
     /**
      * 探活结果。

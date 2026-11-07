@@ -6,6 +6,7 @@
  * {@code @account/web} 取页面，不必再各自维护模板库代码。</p>
  */
 export * from './template';
+export { default as AccountMessageTemplateSelect } from './template/components/MessageTemplateSelect.vue';
 
 export { default as AccountAssetsPage } from './account/views/ScAccountAssets.vue';
 export { default as AccountFormDialog } from './account/components/AccountFormDialog.vue';

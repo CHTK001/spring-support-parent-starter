@@ -61,6 +61,11 @@ public class FileCollabController {
     private static final int PING_INTERVAL_SECONDS = 30;
 
     /**
+     * 新格式快照前缀（office-engine 产出的真实 xlsx/docx 字节经 Base64 编码）
+     */
+    private static final String OOXML_SNAPSHOT_PREFIX = "ooxml1:";
+
+    /**
      * 创建控制器。
      *
      * @param collabStore       协同文档存储器
@@ -398,7 +403,12 @@ public class FileCollabController {
     }
 
     /**
-     * 快照 UTF-8 字节数（文件大小展示用）。
+     * 快照对应的真实文件字节数（文件大小展示用）。
+     *
+     * <p>office-engine 之后 excel / word 快照是 {@code ooxml1:<base64>}，
+     * 直接按字符串长度算会虚高约 33%（Base64 膨胀）；这里识别前缀后按解码长度算，
+     * 不真正解码，避免大快照逐个分配内存。历史格式（Univer JSON / HTML / 纯文本）
+     * 没有前缀，仍按 UTF-8 字符串长度。</p>
      *
      * @param snapshot 快照
      * @return 字节数
@@ -407,7 +417,29 @@ public class FileCollabController {
         if (snapshot == null) {
             return 0;
         }
+        if (snapshot.startsWith(OOXML_SNAPSHOT_PREFIX)) {
+            return base64DecodedLength(snapshot.substring(OOXML_SNAPSHOT_PREFIX.length()));
+        }
         return snapshot.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+    }
+
+    /**
+     * Base64 正文的解码后字节数（只算长度，不分配）。
+     *
+     * @param body Base64 字符串
+     * @return 解码后字节数
+     */
+    private static long base64DecodedLength(String body) {
+        if (body == null || body.isEmpty()) {
+            return 0;
+        }
+        int padding = 0;
+        if (body.endsWith("==")) {
+            padding = 2;
+        } else if (body.endsWith("=")) {
+            padding = 1;
+        }
+        return Math.max(0L, (long) body.length() * 3L / 4L - padding);
     }
 
     /**

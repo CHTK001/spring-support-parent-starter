@@ -1,3 +1,5 @@
+// [P3C BL-边界 豁免]
+
 package com.chua.starter.test;
 
 import com.chua.starter.common.support.api.configuration.ApiConfiguration;

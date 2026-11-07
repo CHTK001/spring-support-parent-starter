@@ -163,6 +163,9 @@ public class CollectOutputExecutor implements CollectShapeExecutor {
             }
         }
         if (!table.isEmpty() && !pending.isEmpty()) {
+            // 建表只补缺失列、不会放宽已存在的窄列：老表遇到本批更长的值时先放宽，
+            // 否则整批写入会以「值超出列长度」失败（与数据库节点同一口径）
+            jdbcSupport.widenTextColumns(node.param(DATASOURCE), table, pending);
             int inserted = jdbcSupport.insertBatch(node.param(DATASOURCE), table, pending);
             int skipped = Math.max(0, pending.size() - inserted);
             if (skipped > 0) {

@@ -93,7 +93,15 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="模板编码">
-              <el-input v-model="form.templateCode" placeholder="如 SMS_123456789" maxlength="128" />
+              <MessageTemplateSelect
+                v-model="form.templateCode"
+                kind="SMS"
+                allow-create
+                placeholder="选择模板，或直接输入运营商模板码"
+              />
+              <div class="field-hint">
+                可从「模板管理 → 消息模板」选择；运营商下发的模板码（如 SMS_123456789）可直接输入。
+              </div>
             </el-form-item>
           </el-col>
         </template>
@@ -148,6 +156,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { message } from '@repo/core';
 import type { FormInstance, FormRules } from 'element-plus';
 import ReDialog from '@repo/ui/re-dialog';
+import MessageTemplateSelect from '../../template/components/MessageTemplateSelect.vue';
 import {
   createAccount,
   updateAccount,

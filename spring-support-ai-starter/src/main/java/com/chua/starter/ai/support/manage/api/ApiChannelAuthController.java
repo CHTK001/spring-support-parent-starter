@@ -229,6 +229,14 @@ public class ApiChannelAuthController {
         summary.put("kind", "AI");
         summary.put("accountTypes", impl.accountTypes().stream().toList());
         summary.put("supportsCheckin", impl.supportsCheckin());
+        // magpie 有自己的每日签到定时器，自动签到任务不应重复跑
+        summary.put("supportsAutoCheckin", impl.supportsAutoCheckin());
+        // 网关型渠道（magpie）：上游 / 插件 / 登录 / 额度走管理面
+        ChannelUpstreamAdmin upstream = upstreamAdminOf(channel);
+        summary.put("supportsUpstream", upstream != null);
+        // 插件与上游登录是网关各自的能力，不能按渠道名硬编码
+        summary.put("supportsPlugins", upstream != null && upstream.supportsPlugins());
+        summary.put("supportsSignin", upstream != null && upstream.supportsSignin());
         // 能力标签：前端据此在渠道卡片右侧显示「积分 / 任务」入口。
         // 用独立 SPI 探测而不是问 AccountChannelAuthManager：签到与「看余额 / 做任务」
         // 是三件事，很多渠道只有其一（Cline 只有余额、Raccoon 只有自动发放）。
@@ -1563,13 +1571,27 @@ public class ApiChannelAuthController {
      * @return 实现
      */
     private ChannelUpstreamAdmin requireUpstreamAdmin(String channel) {
+        ChannelUpstreamAdmin admin = upstreamAdminOf(channel);
+        if (admin != null) {
+            return admin;
+        }
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED,
+                "渠道 " + channel + " 不支持上游 provider 管理");
+    }
+
+    /**
+     * 取网关上游管理实现，未注册返回 {@code null}（用于能力位判断）。
+     *
+     * @param channel 渠道标识
+     * @return 实现；无则 {@code null}
+     */
+    private ChannelUpstreamAdmin upstreamAdminOf(String channel) {
         for (ChannelUpstreamAdmin impl : upstreamAdmins().values()) {
             if (impl != null && impl.supports(channel)) {
                 return impl;
             }
         }
-        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED,
-                "渠道 " + channel + " 不支持上游 provider 管理");
+        return null;
     }
 
     /**
@@ -2104,6 +2126,207 @@ public class ApiChannelAuthController {
             throw channelFailure(e);
         }
         return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 网关插件清单（可选同时读市场）。
+     *
+     * <p>插件是网关侧的扩展：上游登录方式、签到、模型目录都可能来自插件。
+     * {@code market=true} 会访问 npm / GitHub，较慢，前端应单独触发。</p>
+     *
+     * @param channel      渠道标识
+     * @param connectionId 网关连接主键（可空）
+     * @param label        网关连接标签（可空）
+     * @param market       是否同时读市场
+     * @return { ok, channel, result: { plugins, bun, mirror, registry, listings? } }
+     */
+    @GetMapping("/{channel}/plugins")
+    public ApiResult<Map<String, Object>> listUpstreamPlugins(
+            @PathVariable("channel") String channel,
+            @RequestParam(value = "connectionId", required = false) String connectionId,
+            @RequestParam(value = "label", required = false) String label,
+            @RequestParam(value = "market", required = false, defaultValue = "false") boolean market) {
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin, connectionId, label);
+        Map<String, Object> result;
+        try {
+            result = admin.plugins(credentials, market);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 网关插件动作：安装 / 卸载 / 升级 / 停用 / 选项 / 换源。
+     *
+     * <p>{@code add} 首次会下载 Bun 再 npm 安装，magpie 自己给了 5 分钟超时；
+     * 调用方（前端）必须按长任务处理，不要按普通接口的短超时判失败。</p>
+     *
+     * @param channel 渠道标识
+     * @param op      动作名
+     * @param body    { connectionId?, label?, spec, off?, options?, provider? }
+     * @return { ok, channel, result }
+     */
+    @PostMapping("/{channel}/plugins/{op}")
+    public ApiResult<Map<String, Object>> upstreamPluginAction(
+            @PathVariable("channel") String channel,
+            @PathVariable("op") String op,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        Map<String, Object> result;
+        try {
+            result = admin.pluginAction(credentials, op, safeBody);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        String normalized = op == null ? "" : op.trim().toLowerCase();
+        // 插件动作等于在目标机执行 npm 安装 / 卸载，属于需要留痕的运维操作：
+        // 记到服务端日志，便于事后追溯是谁在什么时候装了什么。
+        log.info("[ChannelAuth] 插件动作 channel={} op={} spec={} off={}",
+                admin.channel(), normalized, asString(safeBody.get("spec")), safeBody.get("off"));
+        if (!"registry".equals(normalized) && !"mirror".equals(normalized)
+                && !"check".equals(normalized)) {
+            refreshMagpieRoutes();
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 管理面额度卡（含签到状态与插件账号）。
+     *
+     * @param channel      渠道标识
+     * @param connectionId 网关连接主键（可空）
+     * @param label        网关连接标签（可空）
+     * @param provider     只取该 provider（可空）
+     * @param user         只取该账号（可空）
+     * @return { ok, channel, result: { quotas:[...] } }
+     */
+    @GetMapping("/{channel}/quotas")
+    public ApiResult<Map<String, Object>> upstreamQuotas(
+            @PathVariable("channel") String channel,
+            @RequestParam(value = "connectionId", required = false) String connectionId,
+            @RequestParam(value = "label", required = false) String label,
+            @RequestParam(value = "provider", required = false) String provider,
+            @RequestParam(value = "user", required = false) String user) {
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin, connectionId, label);
+        Map<String, Object> result;
+        try {
+            result = admin.quotas(credentials, provider, user);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 让网关重新读一张额度卡。
+     *
+     * @param channel      渠道标识
+     * @param connectionId 网关连接主键（可空）
+     * @param label        网关连接标签（可空）
+     * @param provider     要刷新的 provider（必填）
+     * @param user         要刷新的账号（可空）
+     * @return { ok, channel, result: { quotas:[...] } }
+     */
+    @PostMapping("/{channel}/quotas/refresh")
+    public ApiResult<Map<String, Object>> refreshUpstreamQuota(
+            @PathVariable("channel") String channel,
+            @RequestParam(value = "connectionId", required = false) String connectionId,
+            @RequestParam(value = "label", required = false) String label,
+            @RequestParam("provider") String provider,
+            @RequestParam(value = "user", required = false) String user) {
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin, connectionId, label);
+        Map<String, Object> result;
+        try {
+            result = admin.refreshQuota(credentials, provider, user);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 发起一次上游登录（内置 provider 或插件 provider）。
+     *
+     * <p>登录会话由网关自己持有，凭据不经过本服务：这里只把
+     * {@code {id, url, state}} 交给前端，由前端打开授权页并轮询状态。</p>
+     *
+     * @param channel 渠道标识
+     * @param body    { connectionId?, label?, plugin?, provider?, method?, inputs?, key?, agent? }
+     * @return { ok, channel, result: { id, url, state, ... } }
+     */
+    @PostMapping("/{channel}/signin")
+    public ApiResult<Map<String, Object>> startUpstreamSignin(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        Map<String, Object> result;
+        try {
+            result = admin.startSignin(credentials, safeBody);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 查询登录会话状态（内置与插件共用一个轮询端点）。
+     *
+     * @param channel      渠道标识
+     * @param id           登录会话 id
+     * @param connectionId 网关连接主键（可空）
+     * @param label        网关连接标签（可空）
+     * @return { ok, channel, result: { state, url, user?, error? } }
+     */
+    @GetMapping("/{channel}/signin/{id}")
+    public ApiResult<Map<String, Object>> upstreamSigninStatus(
+            @PathVariable("channel") String channel,
+            @PathVariable("id") String id,
+            @RequestParam(value = "connectionId", required = false) String connectionId,
+            @RequestParam(value = "label", required = false) String label) {
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin, connectionId, label);
+        Map<String, Object> result;
+        try {
+            result = admin.signinStatus(credentials, id);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 取消登录会话。
+     *
+     * @param channel 渠道标识
+     * @param id      登录会话 id
+     * @param body    { connectionId?, label? }
+     * @return { ok, channel, result: {} }
+     */
+    @PostMapping("/{channel}/signin/{id}/cancel")
+    public ApiResult<Map<String, Object>> cancelUpstreamSignin(
+            @PathVariable("channel") String channel,
+            @PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        try {
+            admin.cancelSignin(credentials, id);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), new LinkedHashMap<>());
     }
 
     /**

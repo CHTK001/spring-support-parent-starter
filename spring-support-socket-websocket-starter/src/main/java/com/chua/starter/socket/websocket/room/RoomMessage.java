@@ -119,6 +119,80 @@ public class RoomMessage {
         return new RoomMessageBuilder(type);
     }
 
+    public String getType() {
+        return type;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public String getPayload() {
+        return payload;
+    }
+
+    public String getSlotId() {
+        return slotId;
+    }
+
+    public String getFromSlotId() {
+        return fromSlotId;
+    }
+
+    public String getPeerSessionId() {
+        return peerSessionId;
+    }
+
+    public String getPeerId() {
+        return peerId;
+    }
+
+    public String getOffererSlotId() {
+        return offererSlotId;
+    }
+
+    public Integer getPeerCount() {
+        return peerCount;
+    }
+
+    public Boolean getResumed() {
+        return resumed;
+    }
+
+    public Boolean getInitiator() {
+        return initiator;
+    }
+
+    public Long getEpoch() {
+        return epoch;
+    }
+
+    public String getResumeToken() {
+        return resumeToken;
+    }
+
+    /**
+     * 心跳协议版本（v3 内部格式，不下发到客户端）。
+     *
+     * @return 心跳协议版本
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getHeartbeatProtocol() {
+        return heartbeatProtocol;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public Long getRetryAfterMs() {
+        return retryAfterMs;
+    }
+
     /**
      * JSON 序列化
      */

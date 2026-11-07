@@ -84,7 +84,7 @@ import {
   createAccountCookie,
   updateAccountCookie,
   type SysAccountCookie,
-} from '../../../api/account';
+} from '../../api/account';
 
 const props = defineProps<{
   modelValue: boolean;

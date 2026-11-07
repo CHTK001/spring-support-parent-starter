@@ -27,6 +27,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FileCollabPersistenceTest {
 
     /**
+     * 落盘轮询间隔秒数（FileCollabPersistence 构造参数）
+     */
+    private static final int FLUSH_INTERVAL_SEC = 30;
+
+    /**
+     * 空闲检测休眠间隔毫秒
+     */
+    private static final int SLEEP_INTERVAL_MS = 20;
+
+    /**
      * 造一份协同文档（不落盘，只进内存）。
      *
      * @param store 存储器
@@ -55,12 +65,12 @@ class FileCollabPersistenceTest {
                 FileCollabStore.Visibility.PUBLIC, null, "", "text");
         store.saveSnapshot(pub.id(), "hello", 0);
 
-        FileCollabPersistence writer = new FileCollabPersistence(store, file, 30);
+        FileCollabPersistence writer = new FileCollabPersistence(store, file, FLUSH_INTERVAL_SEC);
         writer.flushNow();
         assertTrue(Files.exists(file), "落盘文件必须存在");
 
         FileCollabStore loaded = new FileCollabStore();
-        new FileCollabPersistence(loaded, file, 30).load();
+        new FileCollabPersistence(loaded, file, FLUSH_INTERVAL_SEC).load();
 
         assertEquals(2, loaded.size());
         FileCollabStore.FileCollab back = loaded.get(saved.id());
@@ -89,13 +99,13 @@ class FileCollabPersistenceTest {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
         seed(store);
-        FileCollabPersistence persistence = new FileCollabPersistence(store, file, 30);
+        FileCollabPersistence persistence = new FileCollabPersistence(store, file, FLUSH_INTERVAL_SEC);
 
         persistence.flushNow();
         long firstWrite = Files.getLastModifiedTime(file).toMillis();
 
         // 期间没有任何写入 → 再刷两次都不该碰文件
-        Thread.sleep(20);
+        Thread.sleep(SLEEP_INTERVAL_MS);
         persistence.flushIfDirty();
         persistence.flushNow();
         assertEquals(firstWrite, Files.getLastModifiedTime(file).toMillis(),
@@ -107,10 +117,10 @@ class FileCollabPersistenceTest {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
         seed(store);
-        new FileCollabPersistence(store, file, 30).flushNow();
+        new FileCollabPersistence(store, file, FLUSH_INTERVAL_SEC).flushNow();
 
         FileCollabStore loaded = new FileCollabStore();
-        new FileCollabPersistence(loaded, file, 30).load();
+        new FileCollabPersistence(loaded, file, FLUSH_INTERVAL_SEC).load();
         assertFalse(loaded.consumeDirty(), "装载后应与磁盘一致，脏标记必须是空的");
     }
 
@@ -123,7 +133,7 @@ class FileCollabPersistenceTest {
 
         FileCollabStore store = new FileCollabStore();
         seed(store);
-        FileCollabPersistence persistence = new FileCollabPersistence(store, file, 30);
+        FileCollabPersistence persistence = new FileCollabPersistence(store, file, FLUSH_INTERVAL_SEC);
 
         persistence.flushNow();
         assertFalse(Files.exists(file));
@@ -136,7 +146,7 @@ class FileCollabPersistenceTest {
         Files.writeString(file, "{ 这不是 JSON", StandardCharsets.UTF_8);
 
         FileCollabStore store = new FileCollabStore();
-        new FileCollabPersistence(store, file, 30).load();
+        new FileCollabPersistence(store, file, FLUSH_INTERVAL_SEC).load();
 
         assertEquals(0, store.size());
         boolean archived = Files.list(dir)
@@ -149,7 +159,7 @@ class FileCollabPersistenceTest {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
         seed(store);
-        new FileCollabPersistence(store, file, 30).flushNow();
+        new FileCollabPersistence(store, file, FLUSH_INTERVAL_SEC).flushNow();
 
         FileCollabStore other = new FileCollabStore();
         FileCollabPersistence disabled = new FileCollabPersistence(other, file, 1, false);

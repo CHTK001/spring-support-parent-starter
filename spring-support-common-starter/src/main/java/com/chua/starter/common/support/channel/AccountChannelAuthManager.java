@@ -172,6 +172,19 @@ public interface AccountChannelAuthManager {
     }
 
     /**
+     * 是否允许本服务代为自动签到。
+     *
+     * <p>有些网关（如 magpie）自己就带每日签到定时器，再由本服务跑一遍只会重复打上游、
+     * 甚至把 refresh token 用两次。这类渠道实现返回 {@code false}，{@code ChannelCheckinTask}
+     * 会跳过它；页面上「立即签到」按钮仍然可用。</p>
+     *
+     * @return true 表示由本服务的自动签到任务处理
+     */
+    default boolean supportsAutoCheckin() {
+        return true;
+    }
+
+    /**
      * 拉取当前账号可用模型。
      *
      * <p>默认返回空清单：保持既有实现零改动，支持在线拉取的渠道自行覆盖。</p>

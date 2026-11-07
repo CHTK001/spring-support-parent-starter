@@ -28,6 +28,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @SpringBootTest(classes = {LowcodeTestApplication.class, StubAuthConfiguration.class})
 class AuditFieldProbeTest {
 
+    /**
+     * 模拟登录用户 ID（审计列 stub 值）
+     */
+    private static final int STUB_USER_ID = 42;
+
     @Autowired
     private LowFormService formService;
 
@@ -71,7 +76,7 @@ class AuditFieldProbeTest {
 
             LowForm reloaded = formService.getById(saved.getLowFormId());
             assertEquals("张三", reloaded.getCreateName(), "create_name 应写入登录用户名");
-            assertEquals(42, reloaded.getCreateBy(), "create_by 应写入登录用户ID");
+            assertEquals(STUB_USER_ID, reloaded.getCreateBy(), "create_by 应写入登录用户ID");
 
             // 更新阶段换成另一个用户，验证 update_* 独立填充
             stub.setUser(StubAuthConfiguration.StubAuthService.user("李四", "7"));
@@ -84,7 +89,7 @@ class AuditFieldProbeTest {
             assertEquals("李四", updated.getUpdateName(), "update_name 应写入当前登录用户名");
             assertEquals(7, updated.getUpdateBy(), "update_by 应写入当前登录用户ID");
             assertEquals("张三", updated.getCreateName(), "create_name 不应被更新覆盖");
-            assertEquals(42, updated.getCreateBy(), "create_by 不应被更新覆盖");
+            assertEquals(STUB_USER_ID, updated.getCreateBy(), "create_by 不应被更新覆盖");
         } finally {
             stub.setUser(null);
         }

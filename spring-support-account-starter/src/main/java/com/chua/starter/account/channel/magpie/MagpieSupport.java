@@ -109,6 +109,41 @@ public final class MagpieSupport {
     static final String USAGE_PATH = "/api/usage/";
 
     /**
+     * 管理面插件清单 / 插件市场。
+     */
+    static final String PLUGINS_PATH = "/api/plugins";
+
+    /**
+     * 管理面插件动作前缀（{@code /api/plugins/add} 等）。
+     */
+    static final String PLUGIN_ACTION_PATH = "/api/plugins/";
+
+    /**
+     * 管理面插件登录（{@code POST /api/plugin-signin}）。
+     */
+    static final String PLUGIN_SIGNIN_PATH = "/api/plugin-signin";
+
+    /**
+     * 管理面内置 provider 登录（{@code POST /api/signin}）。
+     */
+    static final String SIGNIN_PATH = "/api/signin";
+
+    /**
+     * 管理面登录会话（{@code GET /api/signin/{id}}，插件登录共用）。
+     */
+    static final String SIGNIN_PATH_PREFIX = "/api/signin/";
+
+    /**
+     * 管理面额度卡（{@code GET /api/usage/quotas}，含签到状态与插件账号）。
+     */
+    static final String ADMIN_QUOTAS_PATH = "/api/usage/quotas";
+
+    /**
+     * 管理面插件签到（{@code POST /api/usage/plugin-checkin}，逐 provider）。
+     */
+    static final String PLUGIN_CHECKIN_PATH = "/api/usage/plugin-checkin";
+
+    /**
      * 读配额端点（{@code /v1/magpie/quotas}）。
      */
     static final String QUOTAS_PATH = "/v1/magpie/quotas";

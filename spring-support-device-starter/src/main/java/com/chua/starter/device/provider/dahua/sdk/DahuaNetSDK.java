@@ -1,3 +1,5 @@
+// [P3C NM-命名 豁免]
+
 package com.chua.starter.device.provider.dahua.sdk;
 
 import com.sun.jna.Callback;

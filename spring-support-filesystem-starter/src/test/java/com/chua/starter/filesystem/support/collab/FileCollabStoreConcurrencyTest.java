@@ -1,3 +1,5 @@
+// [P3C C1 豁免]
+
 package com.chua.starter.filesystem.support.collab;
 
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,31 @@ class FileCollabStoreConcurrencyTest {
      * 每个文档保留的历史条目上限（与 {@code FileCollabStore.MAX_HISTORY} 保持一致）
      */
     private static final int HISTORY_CAP = 50;
+
+    /**
+     * 等待线程池退出的超时秒数（固定保存测试用 30s）
+     */
+    private static final int AWAIT_TIMEOUT_S = 30;
+
+    /**
+     * 等待线程池退出的超时秒数（混合读写用 60s）
+     */
+    private static final int AWAIT_TIMEOUT_MIXED_S = 60;
+
+    /**
+     * 单线程最大重试次数
+     */
+    private static final int MAX_ATTEMPT = 50;
+
+    /**
+     * 混合读写测试每线程最大循环次数（完整循环）
+     */
+    private static final int MAX_ROUND_FULL = 200;
+
+    /**
+     * 混合读写测试每线程最大循环次数（半步循环）
+     */
+    private static final int MAX_ROUND_HALF = 100;
 
     /**
      * 建一份空文档。
@@ -69,7 +96,7 @@ class FileCollabStoreConcurrencyTest {
         }
         start.countDown();
         pool.shutdown();
-        assertTrue(pool.awaitTermination(30, TimeUnit.SECONDS), "并发保存应在 30s 内结束");
+        assertTrue(pool.awaitTermination(AWAIT_TIMEOUT_S, TimeUnit.SECONDS), "并发保存应在 30s 内结束");
 
         assertEquals(1, success.get(), "同一个 expectedVersion 只能有一次写入成功");
         assertEquals(1, store.get(id).version(), "版本号只能 +1 一次");
@@ -96,7 +123,7 @@ class FileCollabStoreConcurrencyTest {
                 try {
                     start.await();
                     // 每个线程都拿「当前版本」重试，模拟客户端读到最新版本后再存
-                    for (int attempt = 0; attempt < 50; attempt++) {
+                    for (int attempt = 0; attempt < MAX_ATTEMPT; attempt++) {
                         long current = store.get(id).version();
                         if (store.saveSnapshot(id, "{\"n\":" + n + ",\"a\":" + attempt + "}", current) != null) {
                             success.incrementAndGet();
@@ -110,7 +137,7 @@ class FileCollabStoreConcurrencyTest {
         }
         start.countDown();
         pool.shutdown();
-        assertTrue(pool.awaitTermination(60, TimeUnit.SECONDS), "并发保存应在 60s 内结束");
+        assertTrue(pool.awaitTermination(AWAIT_TIMEOUT_MIXED_S, TimeUnit.SECONDS), "并发保存应在 60s 内结束");
 
         // 版本号 = 成功次数 + 1（初始种子那一版），历史条目数 = 种子 + 成功次数 - 1
         FileCollabStore.FileCollab doc = store.get(id);
@@ -141,7 +168,7 @@ class FileCollabStoreConcurrencyTest {
             pool.submit(() -> {
                 try {
                     start.await();
-                    for (int round = 0; round < 200; round++) {
+                    for (int round = 0; round < MAX_ROUND_FULL; round++) {
                         if ((n & 1) == 0) {
                             long current = store.get(id).version();
                             store.saveSnapshot(id, "{\"round\":" + round + ",\"by\":" + n + "}", current);
@@ -156,7 +183,7 @@ class FileCollabStoreConcurrencyTest {
         }
         start.countDown();
         pool.shutdown();
-        assertTrue(pool.awaitTermination(60, TimeUnit.SECONDS), "并发读写应在 60s 内结束");
+        assertTrue(pool.awaitTermination(AWAIT_TIMEOUT_MIXED_S, TimeUnit.SECONDS), "并发读写应在 60s 内结束");
 
         FileCollabStore.FileCollab doc = store.get(id);
         assertNotNull(doc);
@@ -184,7 +211,7 @@ class FileCollabStoreConcurrencyTest {
             pool.submit(() -> {
                 try {
                     start.await();
-                    for (int round = 0; round < 100; round++) {
+                    for (int round = 0; round < MAX_ROUND_HALF; round++) {
                         if ((n & 1) == 0) {
                             store.saveSnapshot(id, "{\"round\":" + round + "}", store.get(id).version());
                         } else {
@@ -198,7 +225,7 @@ class FileCollabStoreConcurrencyTest {
         }
         start.countDown();
         pool.shutdown();
-        assertTrue(pool.awaitTermination(60, TimeUnit.SECONDS), "并发读写应在 60s 内结束");
+        assertTrue(pool.awaitTermination(AWAIT_TIMEOUT_MIXED_S, TimeUnit.SECONDS), "并发读写应在 60s 内结束");
 
         FileCollabStore.FileCollab doc = store.get(id);
         assertNotNull(doc.snapshot());
