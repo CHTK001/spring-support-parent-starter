@@ -12,12 +12,14 @@ import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
+import com.chua.starter.monitor.support.model.PacketHttpFrame;
 import com.chua.starter.monitor.support.model.PacketRestoreFrame;
 import com.chua.starter.monitor.support.model.TsharkAnomalyVO;
 import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.tshark.TsharkHttpStreamRestorer;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
 import com.chua.starter.monitor.support.tshark.TsharkSqliteSourceRegistry;
@@ -148,11 +150,36 @@ public class TsharkCaptureService {
             // 17-20 HTTP 响应：状态码 / 原因短语 / 版本 / 头行（多值）
             "http.response.code", "http.response.phrase", "http.response.version", "http.response.line",
             // 21-24 HTTP 实体：类型 / 内容编码 / 长度 / 正文（tshark 把 FT_BYTES 输出成十六进制）
-            "http.content_type", "http.content_encoding", "http.content_length", "http.file_data"
+            "http.content_type", "http.content_encoding", "http.content_length", "http.file_data",
+            // 25-28 TCP 重组原料：流号 / 绝对序列号 / 标志位 / 段载荷（十六进制）。
+            // 有了它们才能把被切碎的请求响应拼回来再做协议解析，而不是只看单帧的 http.* 字段
+            "tcp.stream", "tcp.seq_raw", "tcp.flags", "tcp.payload",
+            // 29-32 报文详情补充字段：网络层跳数（v4 TTL / v6 跳数上限）、TLS 域名、DNS 查询名。
+            // 都是「打开详情就想第一眼看到」的元信息，不必再展开几十 KB 的原始数据去找
+            "ip.ttl", "ipv6.hlim",
+            "tls.handshake.extensions_server_name",
+            "dns.qry.name"
     };
 
       /** {@link #TSHARK_FIELDS} 的列数；列数不足说明输出异常，该行丢弃 */
     private static final int TSHARK_FIELD_COUNT = TSHARK_FIELDS.length;
+
+      /** 列下标：TCP 流号 */
+    private static final int COL_TCP_STREAM = 25;
+      /** 列下标：TCP 绝对序列号（用于流重组定位字节） */
+    private static final int COL_TCP_SEQ_RAW = 26;
+      /** 列下标：TCP 标志位（SYN / FIN / RST 判定） */
+    private static final int COL_TCP_FLAGS = 27;
+      /** 列下标：TCP 段载荷十六进制（重组后交给 HTTP 解析） */
+    private static final int COL_TCP_PAYLOAD = 28;
+      /** 列下标：IPv4 TTL */
+    private static final int COL_IP_TTL = 29;
+      /** 列下标：IPv6 跳数上限（与 TTL 语义一致，取第一个非空） */
+    private static final int COL_IPV6_HLIM = 30;
+      /** 列下标：TLS SNI（握手扩展里的服务器名） */
+    private static final int COL_TLS_SNI = 31;
+      /** 列下标：DNS 查询名 */
+    private static final int COL_DNS_QUERY = 32;
 
       /** 会话来源：网卡实时抓包（{@code tshark -i} 抓出来的） */
     private static final String SOURCE_LIVE = "live";
@@ -165,6 +192,34 @@ public class TsharkCaptureService {
        * 只保留关键帧与首尾，并用 totalSteps / truncated 告知前端真实长度。
        */
     private static final int HANDSHAKE_MAX_STEPS = 500;
+
+      /**
+       * HTTP 事务配对时，同一 TCP 流里最多取回的带 HTTP 头的帧数。
+       *
+       * <p>一条长连接上可能有成百上千个请求，但详情面板只关心离当前帧最近的那一对；
+       * 限制规模避免长连 SSH / 下载流把整张表读进内存。</p>
+       */
+    private static final int HTTP_TX_MAX_FRAMES = 2000;
+
+      /**
+       * 没有 TCP 流号（老库 / 非标准解析）时的兜底窗口：以当前帧号为中心，
+       * 只在该范围内按四元组找请求 / 响应。
+       */
+    private static final long HTTP_TX_FRAME_WINDOW = 2000L;
+
+      /**
+       * HTTP 事务查询只取这些列：rawData 是几十 KB 的 tshark JSON，
+       * 配对用不上，全列 select 会把详情接口拖慢一个数量级。
+       */
+    private static final Set<String> HTTP_TX_COLUMNS = Set.of(
+            "id", "ms_tshark_packet_session_id", "ms_tshark_packet_time",
+            "ms_tshark_packet_frame_no", "ms_tshark_packet_source_ip", "ms_tshark_packet_dest_ip",
+            "ms_tshark_packet_source_port", "ms_tshark_packet_dest_port",
+            "ms_tshark_packet_protocol", "ms_tshark_packet_info", "ms_tshark_packet_tcp_stream",
+            "ms_tshark_packet_http_req", "ms_tshark_packet_http_resp", "ms_tshark_packet_http_body",
+            "ms_tshark_packet_http_type", "ms_tshark_packet_http_encoding", "ms_tshark_packet_http_size",
+            "ms_tshark_packet_http_method", "ms_tshark_packet_http_uri", "ms_tshark_packet_http_status",
+            "ms_tshark_packet_restored");
 
       /**
        * 协议还原回填批次大小：-T json 通道逐包拿到的记录攒起，每 {@code RESTORE_BATCH} 条
@@ -194,6 +249,14 @@ public class TsharkCaptureService {
        * <p>只在实时抓包的生命周期内有效；导入会话没有这一层过滤。</p>
        */
     private final Map<Long, String> displayFilters = new ConcurrentHashMap<>(); // 显示过滤
+
+      /**
+        * 每个会话一个「TCP 重组 + HTTP 协议还原」器。
+        *
+        * <p>必须跨解析批次保留：实时尾随每秒只读新增帧，一条响应可能上一批只有头、
+        * 下一批才有正文；每批新建一个还原器会把跨批消息截断。会话收尾后移除。</p>
+        */
+    private final Map<Long, TsharkHttpStreamRestorer> httpRestorers = new ConcurrentHashMap<>();
 
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
     private final MsTsharkPacketMapper packetMapper; // 数据包映射器
@@ -827,6 +890,7 @@ public class TsharkCaptureService {
         } finally {
             this.running.remove(sessionId);
             this.displayFilters.remove(sessionId);
+            this.httpRestorers.remove(sessionId);
         }
     }
 
@@ -924,6 +988,18 @@ public class TsharkCaptureService {
             }
         } catch (Exception e) {
             log.error("finalize imported pcap failed, session={}", sessionId, e);
+              // 二次兜底：回填本身失败（例如报文库读写异常）时也要把状态落成已停止，
+              // 否则页面永远停在「解析中」，用户既看不到结果也删不掉这条会话。
+            try {
+                MsTsharkSession fallback = new MsTsharkSession();
+                fallback.setId(sessionId);
+                fallback.setCaptureStatus(0);
+                this.sessionMapper.updateById(fallback);
+            } catch (Exception ignore) {
+                log.warn("clear imported session status failed, session={}", sessionId, ignore);
+            }
+        } finally {
+            this.httpRestorers.remove(sessionId);
         }
     }
 
@@ -1080,6 +1156,7 @@ public class TsharkCaptureService {
         }
         long maxSeen = afterFrame;
         long added = 0L;
+        TsharkHttpStreamRestorer restorer = this.httpRestorer(sessionId);
         try {
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
@@ -1105,8 +1182,13 @@ public class TsharkCaptureService {
                     if (this.savePacket(sessionId, cols, true)) {
                         added++;
                     }
+                      // 实时尾随同样做 TCP 重组，否则跨批次的响应正文只能看到半截。
+                      // 这里只取已切全的消息，不 flush：还在传输中的响应不能被截断。
+                    this.feedHttpRestorer(restorer, cols);
                 }
             }
+              // 每轮（约 1 秒）落一次，避免逐条事务都打一次 UPDATE
+            this.applyRestoredHttp(sessionId, restorer.drain());
             p.waitFor(20L, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.debug("增量解析失败 session={} reason={}", sessionId, e.getMessage());
@@ -1220,13 +1302,17 @@ public class TsharkCaptureService {
             Process p = pb.start();
             int batch = 0;
             int flushed = 0;
+            int lines = 0;
+            long lastFrame = already;
+            TsharkHttpStreamRestorer restorer = this.httpRestorer(sessionId);
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8), 0x100000)) {
                 String line;
                 while ((line = r.readLine()) != null) {
                     if (line.isBlank()) {
                         continue;
                     }
-                    if (this.savePacket(sessionId, line.split("\t", -1), push)) {
+                    String[] cols = line.split("\t", -1);
+                    if (this.savePacket(sessionId, cols, push)) {
                         batch++;
                           // 每 2000 条落一次包数：导入几十万包的 pcap 要好几十秒，
                           // 若等整份解析完才写包数，前端整段时间都停在 0，看着像卡死
@@ -1235,11 +1321,23 @@ public class TsharkCaptureService {
                             flushed = batch;
                         }
                     }
+                      // TCP 重组必须在报文行落库之后投喂：一条消息收全的那一帧
+                      // 可能正是当前帧，先写后回填才不会落空
+                    this.feedHttpRestorer(restorer, cols);
+                    Long frameNo = parseFrameNo(cols[0]);
+                    if (frameNo != null) {
+                        lastFrame = Math.max(lastFrame, frameNo);
+                    }
+                    if (++lines % 200 == 0) {
+                        this.applyRestoredHttp(sessionId, restorer.drain());
+                    }
                 }
             }
             if (batch > flushed) {
                 bumpPacketCount(sessionId, batch - flushed);
             }
+              // 解析收尾：把因空洞滞留、以及靠连接关闭界定的消息强制切出
+            this.applyRestoredHttp(sessionId, restorer.flush(lastFrame));
             if (batch > 0) {
                   // 解析收尾：前端据此重拉协议分布 / Top 流（逐包增量只够更新明细表）
                 TsharkPacketStreamRegistry registry = streamRegistry();
@@ -1363,6 +1461,305 @@ public class TsharkCaptureService {
             return null;
         }
     }
+
+      /**
+       * 取会话的 HTTP 流还原器（跨解析批次复用）。
+       *
+       * @param sessionId 会话标识
+       * @return 还原器
+       */
+    private TsharkHttpStreamRestorer httpRestorer(Long sessionId) {
+        return this.httpRestorers.computeIfAbsent(sessionId, k -> new TsharkHttpStreamRestorer());
+    }
+
+      /**
+       * 把一个报文行的 TCP 列投给流还原器。
+       *
+       * <p>只投 TCP 段（有 {@code tcp.seq_raw}）。非 TCP 行直接忽略，
+       * 免得把 UDP / ICMP 的端口当成连接。</p>
+       *
+       * @param restorer 还原器
+       * @param cols     按 {@link #TSHARK_FIELDS} 切出的列
+       */
+    private void feedHttpRestorer(TsharkHttpStreamRestorer restorer, String[] cols) {
+        if (restorer == null || cols.length < TSHARK_FIELD_COUNT) {
+            return;
+        }
+        Long seq = parseLongOrNull(cols[COL_TCP_SEQ_RAW]);
+        if (seq == null) {
+            return;
+        }
+        String rawPayload = cols[COL_TCP_PAYLOAD];
+        byte[] payload = rawPayload == null || rawPayload.isBlank() ? null : hexToBytes(rawPayload);
+        Long frameNo = parseFrameNo(cols[0]);
+        restorer.accept(frameNo == null ? 0L : frameNo,
+                firstNonBlank(cols[3], cols[4]),
+                parseIntOrNull(firstNonBlank(cols[5], cols[6])),
+                firstNonBlank(cols[7], cols[8]),
+                parseIntOrNull(firstNonBlank(cols[9], cols[10])),
+                blankToNull(cols[COL_TCP_STREAM]),
+                seq,
+                blankToNull(cols[COL_TCP_FLAGS]),
+                payload);
+    }
+
+      /**
+       * 把流还原结果按帧号回写到报文表。
+       *
+       * <p>同一帧可能同时收全一条请求与一条响应（同段合并发送），因此先按帧号合并，
+       * 再分批写：SQLite 的 {@code CASE WHEN} 每批 100 帧，参数数量远低于驱动上限。</p>
+       *
+       * @param sessionId 会话标识
+       * @param messages  还原消息
+       */
+    private void applyRestoredHttp(Long sessionId, List<TsharkHttpStreamRestorer.RestoredHttp> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        Map<Long, PacketHttpFrame> merged = new LinkedHashMap<>();
+        for (TsharkHttpStreamRestorer.RestoredHttp message : messages) {
+            if (message.frameNo() <= 0) {
+                continue;
+            }
+            // 归属帧取「消息起始帧」：起始行/头一定在这一帧，tshark 的 Info 也把这一帧标成 HTTP，
+            // 生命周期右栏据此配对请求/响应；收全帧往往只是 TCP 数据帧（Info 里没有 HTTP），
+            // 把正文挂到那里用户点了 HTTP 行反而看不到响应体
+            long primary = message.startFrame() > 0 ? message.startFrame() : message.frameNo();
+            PacketHttpFrame frame = merged.computeIfAbsent(primary, k -> {
+                PacketHttpFrame value = new PacketHttpFrame();
+                value.setFrameNo(k);
+                return value;
+            });
+            String head = normalizeHttpRestoredHead(message.head());
+            String bodyText = decodeHttpBody(message.body(), message.contentType(), message.encoding(),
+                    message.truncated());
+            if (message.request()) {
+                frame.setRequestHead(head);
+            } else {
+                frame.setResponseHead(head);
+            }
+            fillHttpStartLine(frame, message.request(), head);
+            if (bodyText != null) {
+                frame.setBody(bodyText);
+            }
+            if (message.contentType() != null && !message.contentType().isBlank()) {
+                frame.setContentType(message.contentType().trim());
+            }
+            if (message.encoding() != null && !message.encoding().isBlank()) {
+                frame.setContentEncoding(message.encoding().trim());
+            }
+            frame.setContentLength((int) Math.min(Integer.MAX_VALUE, Math.max(0L, message.bodyLength())));
+            frame.setRestoredText(restoredHttpText(message.request(), head, bodyText));
+            if (message.frameNo() != primary) {
+                // 收全帧（往往是 TCP 数据帧）也留一份头 + 还原文本：正文已经在起始帧上，
+                // 这里不重复，避免同一段正文在库里存两份
+                PacketHttpFrame done = merged.computeIfAbsent(message.frameNo(), k -> {
+                    PacketHttpFrame value = new PacketHttpFrame();
+                    value.setFrameNo(k);
+                    return value;
+                });
+                if (message.request()) {
+                    done.setRequestHead(head);
+                } else {
+                    done.setResponseHead(head);
+                }
+                fillHttpStartLine(done, message.request(), head);
+                done.setRestoredText(restoredHttpText(message.request(), head, null));
+            }
+        }
+        List<PacketHttpFrame> batch = new ArrayList<>(RESTORE_HTTP_BATCH);
+        for (PacketHttpFrame frame : merged.values()) {
+            batch.add(frame);
+            if (batch.size() >= RESTORE_HTTP_BATCH) {
+                flushRestoredHttp(sessionId, batch);
+                batch.clear();
+            }
+        }
+        if (!batch.isEmpty()) {
+            flushRestoredHttp(sessionId, batch);
+        }
+    }
+
+      /**
+       * 写一批 HTTP 还原结果。
+       *
+       * @param sessionId 会话标识
+       * @param batch     本批记录
+       */
+    private void flushRestoredHttp(Long sessionId, List<PacketHttpFrame> batch) {
+        try {
+            this.withPacketDb(sessionId,
+                    () -> this.packetMapper.updateBatchHttpRestored(sessionId, new ArrayList<>(batch)));
+        } catch (Exception e) {
+            log.debug("write restored http failed session={} reason={}", sessionId, e.getMessage());
+        }
+    }
+
+      /**
+       * 生成报文「协议还原」文本：标明来自 TCP 重组，再给完整头与正文。
+       *
+       * @param request  是否请求
+       * @param head     头部
+       * @param bodyText 正文
+       * @return 还原文本
+       */
+    private static String restoredHttpText(boolean request, String head, String bodyText) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[HTTP ").append(request ? "请求" : "响应").append(" · TCP 重组]\n");
+        if (head != null) {
+            sb.append(head);
+        }
+        if (bodyText != null && !bodyText.isBlank()) {
+            sb.append("\n\n").append(bodyText);
+        }
+        return sb.toString();
+    }
+
+      /**
+       * 规范化还原出的头部：CRLF 转 LF、去尾空白、限长。
+       *
+       * @param head 原始头部
+       * @return 规范化头部；空返回 null
+       */
+    private static String normalizeHttpRestoredHead(String head) {
+        if (head == null || head.isBlank()) {
+            return null;
+        }
+        return clipHttpHead(new StringBuilder(head.replace("\r\n", "\n").trim()));
+    }
+
+      /**
+       * 从 HTTP 起始行解析方法 / URI / 状态码并写进回写记录。
+       *
+       * <p>必须走还原出来的头，而不是逐帧的 {@code http.request.method}：请求行被 TCP
+       * 切在两个段里时，tshark 往往要到后一段才认出 HTTP，起始帧上那几个字段是空的。
+       * 用还原头解析才能保证「正文所在的那一帧」也带方法 / URI / 状态码。</p>
+       *
+       * @param frame   回写记录
+       * @param request true = 请求（方法 + URI）；false = 响应（状态码）
+       * @param head    HTTP 头
+       */
+    private static void fillHttpStartLine(PacketHttpFrame frame, boolean request, String head) {
+        String first = firstLineOf(head);
+        if (first.isBlank()) {
+            return;
+        }
+        String[] parts = first.trim().split("\\s+");
+        if (parts.length < 2) {
+            return;
+        }
+        if (request) {
+            frame.setHttpMethod(parts[0]);
+            frame.setHttpUri(parts[1]);
+        } else {
+            Integer code = parseIntOrNull(parts[1]);
+            if (code != null) {
+                frame.setHttpStatus(code);
+            }
+        }
+    }
+
+      /**
+       * 取文本第一行（HTTP 起始行）。
+       *
+       * @param text 文本
+       * @return 第一行；空文本返回空串
+       */
+    private static String firstLineOf(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        int eol = text.indexOf('\n');
+        return (eol < 0 ? text : text.substring(0, eol)).trim();
+    }
+
+      /**
+       * 取 HTTP 起始行里第 {@code index} 个空格分隔的 token。
+       *
+       * @param head  HTTP 头
+       * @param index 0 = 方法 / 协议版本；1 = URI / 状态码
+       * @return token；缺失返回 null
+       */
+    private static String startLineToken(String head, int index) {
+        String first = firstLineOf(head);
+        if (first.isEmpty()) {
+            return null;
+        }
+        String[] parts = first.split("\\s+");
+        return index < parts.length ? parts[index] : null;
+    }
+
+      /**
+       * 把 tshark 的 {@code tcp.flags} 十六进制值转成可读标志。
+       *
+       * <p>tshark {@code -T fields} 输出的是 {@code 0x0018} 这样的位掩码，直接摆到详情里
+       * 没人看得懂；转成 {@code PSH,ACK} 才符合 Wireshark 的标志列习惯。已经是文本形式
+       * （如人工写入的 {@code SYN,ACK}）时原样保留。</p>
+       *
+       * @param raw 原始标志位
+       * @return 可读标志；无标志返回 null
+       */
+    private static String tcpFlagsText(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String text = raw.trim();
+        int flags;
+        try {
+            flags = text.startsWith("0x") || text.startsWith("0X")
+                    ? Integer.parseInt(text.substring(2), 16) : Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return text;
+        }
+        List<String> parts = new ArrayList<>(8);
+        if ((flags & 0x01) != 0) {
+            parts.add("FIN");
+        }
+        if ((flags & 0x02) != 0) {
+            parts.add("SYN");
+        }
+        if ((flags & 0x04) != 0) {
+            parts.add("RST");
+        }
+        if ((flags & 0x08) != 0) {
+            parts.add("PSH");
+        }
+        if ((flags & 0x10) != 0) {
+            parts.add("ACK");
+        }
+        if ((flags & 0x20) != 0) {
+            parts.add("URG");
+        }
+        if ((flags & 0x40) != 0) {
+            parts.add("ECE");
+        }
+        if ((flags & 0x80) != 0) {
+            parts.add("CWR");
+        }
+        return parts.isEmpty() ? null : String.join(",", parts);
+    }
+
+      /**
+       * 解析 Long，失败返回 null。
+       *
+       * @param value 文本
+       * @return 值；空或非法返回 null
+       */
+    private static Long parseLongOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+      /**
+       * 每批回写的帧数。SQL 是 7 段 CASE WHEN，100 帧约 800 个参数，远低于 SQLite 上限。
+       */
+    private static final int RESTORE_HTTP_BATCH = 100;
 
       /**
        * 协议别名表：只放泛化规则覆盖不到的那些。键一律大写（查询前会 toUpperCase）。
@@ -2029,6 +2426,21 @@ public class TsharkCaptureService {
                 packet.setHttpContentLength(parseIntOrNull(cols[23]));
                 packet.setHttpBody(decodeHttpBody(cols[24], cols[21], cols[22]));
             }
+              // 详情面板的补充字段：传输层（流号 / 序列号 / 标志位）、网络层跳数、
+              // HTTP 起始行、TLS 域名、DNS 查询名。缺失的列留 null，前端按行隐藏。
+            if (cols.length > COL_TCP_FLAGS) {
+                packet.setTcpStream(parseIntOrNull(cols[COL_TCP_STREAM]));
+                packet.setTcpSeq(parseLongOrNull(cols[COL_TCP_SEQ_RAW]));
+                packet.setTcpFlags(tcpFlagsText(cols[COL_TCP_FLAGS]));
+                packet.setHttpMethod(firstNonBlank(blankToNull(cols[13]), startLineToken(httpHeads[0], 0)));
+                packet.setHttpUri(firstNonBlank(blankToNull(cols[14]), startLineToken(httpHeads[0], 1)));
+                packet.setHttpStatus(parseIntOrNull(firstNonBlank(cols[17], startLineToken(httpHeads[1], 1))));
+            }
+            if (cols.length > COL_DNS_QUERY) {
+                packet.setIpTtl(parseIntOrNull(firstNonBlank(cols[COL_IP_TTL], cols[COL_IPV6_HLIM])));
+                packet.setTlsSni(blankToNull(cols[COL_TLS_SNI]));
+                packet.setDnsQueryName(blankToNull(cols[COL_DNS_QUERY]));
+            }
               // 报文落库切到本会话的 SQLite 数据源；插入在 tail / runAsync 线程上执行，
               // ThreadLocal 上下文相互独立，finally 恢复调用前上下文（通常为 null）
             this.withPacketDb(sessionId, () -> {
@@ -2187,6 +2599,8 @@ public class TsharkCaptureService {
     private static final int HTTP_BODY_HEX_LIMIT = 48000;
       /** 正文解码后最多展示的字符数 */
     private static final int HTTP_BODY_TEXT_LIMIT = 16000;
+      /** 原始字节解码前最多取的字节数（256KB）：只影响展示，真实长度另存 */
+    private static final int HTTP_BODY_BYTES_LIMIT = 256 * 1024;
 
       /**
        * 把 {@code http.file_data} 的十六进制还原成可读正文。
@@ -2209,8 +2623,24 @@ public class TsharkCaptureService {
         if (truncated) {
             h = h.substring(0, HTTP_BODY_HEX_LIMIT);
         }
-        byte[] raw = hexToBytes(h);
-        if (raw.length == 0) {
+        return decodeHttpBody(hexToBytes(h), contentType, encoding, truncated);
+    }
+
+      /**
+       * 把原始实体字节解码成可读正文（TCP 重组路径直接用字节，不经过十六进制）。
+       *
+       * <p>顺序：按 Content-Encoding 解压（gzip / deflate）→ 按头里的 charset 解码 →
+       * 不可打印比例过高就退回十六进制预览。展示层只取前 {@link #HTTP_BODY_BYTES_LIMIT}
+       * 字节，避免在几 MB 实体上做字符集与可打印判定。</p>
+       *
+       * @param raw         实体原始字节
+       * @param contentType 头里的 Content-Type（取 charset）
+       * @param encoding    头里的 Content-Encoding（gzip / deflate / br）
+       * @param truncated   实体是否已被上游截断
+       * @return 可展示正文；没有返回 null
+       */
+    private static String decodeHttpBody(byte[] raw, String contentType, String encoding, boolean truncated) {
+        if (raw == null || raw.length == 0) {
             return null;
         }
         byte[] bytes = raw;
@@ -2221,6 +2651,10 @@ public class TsharkCaptureService {
             if (inf != null && inf.length > 0) {
                 bytes = inf;
             }
+        }
+        if (bytes.length > HTTP_BODY_BYTES_LIMIT) {
+            bytes = java.util.Arrays.copyOf(bytes, HTTP_BODY_BYTES_LIMIT);
+            truncated = true;
         }
         String text = new String(bytes, charsetOf(contentType));
         if (isProbablyBinary(text)) {
@@ -2515,6 +2949,217 @@ public class TsharkCaptureService {
     }
 
       /**
+       * 取某个报文所属的 HTTP 事务（请求方向 + 响应方向两帧）。
+       *
+       * <p><b>为什么需要这个接口：</b>一帧只能承载一个方向 —— 请求头和请求体在请求起始帧，
+       * 响应头和响应体在响应起始帧。详情抽屉只拿到当前帧时，用户看到的永远是「半条事务」：
+       * 点请求帧没有响应，点响应帧没有请求，点中间的数据分片更是一段都没有。这里按 TCP 流
+       * 把相邻的请求 / 响应配成一对，让「请求头 · 请求体 · 响应头 · 响应体」四段在一个
+       * 面板里同时出现。</p>
+       *
+       * <p>配对优先用 {@code tcp.stream}（同一四元组可能被复用成多条连接），老库没有流号
+       * 时退回四元组 + 帧号窗口。只取 HTTP 头非空的帧，且限制条数与列，避免长连接把
+       * 整条流读进内存、把 rawData 一起搬出来。</p>
+       *
+       * @param sessionId 会话 id（报文按会话分库）
+       * @param packetId  当前报文 id
+       * @return request / response 两帧（没有的方向为 null）
+       */
+    public ReturnResult<Map<String, Object>> httpTransaction(Long sessionId, Long packetId) {
+        MsTsharkPacket anchor = this.withPacketDb(sessionId, () -> this.packetMapper.selectById(packetId));
+        if (anchor == null) {
+            return ReturnResult.error("数据包不存在: " + packetId);
+        }
+        List<MsTsharkPacket> frames = this.withPacketDb(sessionId, () -> this.packetMapper.selectList(
+                buildHttpTransactionQuery(anchor, true).last("LIMIT " + HTTP_TX_MAX_FRAMES)));
+        if (frames.isEmpty() && anchor.getTcpStream() != null) {
+              // 老会话：流号列是后加的，历史行全为 null，按四元组兜底再找一次
+            frames = this.withPacketDb(sessionId, () -> this.packetMapper.selectList(
+                    buildHttpTransactionQuery(anchor, false).last("LIMIT " + HTTP_TX_MAX_FRAMES)));
+        }
+
+          // 按帧号升序把「请求帧 + 紧随其后的响应帧」配成事务。
+          //
+          // <p>同一段消息会在两帧上留痕：起始帧带「头 + 正文」，收全帧只补一份头
+          // （见 applyRestoredHttp）。如果直接把每一行都当成新消息，后出现的收全帧会把
+          // 起始帧覆盖掉，配对结果就成了「有头没正文」—— 这正是四段数据看起来缺了
+          // 请求体 / 响应体的原因。这里按「头文本相同即同一条消息」合并，并保留正文更
+          // 完整的那一帧。</p>
+        List<MsTsharkPacket[]> pairs = new ArrayList<>();
+        MsTsharkPacket pending = null;
+        for (MsTsharkPacket frame : frames) {
+            if (notBlank(frame.getHttpRequestHead())) {
+                if (pending != null && sameHttpHead(pending.getHttpRequestHead(), frame.getHttpRequestHead())) {
+                    pending = richerBody(pending, frame);
+                } else {
+                    pending = frame;
+                }
+            }
+            if (!notBlank(frame.getHttpResponseHead())) {
+                continue;
+            }
+            if (pending == null && !pairs.isEmpty()) {
+                  // 响应侧同样有「起始帧 + 收全帧」两份：头相同就并进上一对
+                MsTsharkPacket[] last = pairs.get(pairs.size() - 1);
+                if (last[1] != null && sameHttpHead(last[1].getHttpResponseHead(), frame.getHttpResponseHead())) {
+                    last[1] = richerBody(last[1], frame);
+                    continue;
+                }
+            }
+            pairs.add(new MsTsharkPacket[]{pending, frame});
+            pending = null;
+        }
+        MsTsharkPacket[] pick = null;
+        for (MsTsharkPacket[] pair : pairs) {
+            if (isSamePacket(pair[0], packetId) || isSamePacket(pair[1], packetId)) {
+                pick = pair;
+                break;
+            }
+        }
+        if (pick == null) {
+              // 当前是数据 / 握手 / 挥手帧：取请求帧号不晚于当前帧的最后一对，
+              // 这样点「响应体后面那个 ACK」也能看到刚发生的事务
+            for (MsTsharkPacket[] pair : pairs) {
+                if (pair[0] != null && pair[0].getFrameNo() != null && anchor.getFrameNo() != null
+                        && pair[0].getFrameNo() <= anchor.getFrameNo()) {
+                    pick = pair;
+                }
+            }
+        }
+        if (pick == null && !pairs.isEmpty()) {
+            pick = pairs.get(0);
+        }
+
+        MsTsharkPacket request = pick == null ? null : pick[0];
+        MsTsharkPacket response = pick == null ? null : pick[1];
+          // 没有成对时退回当前帧自己的方向：实时抓包里响应还没到时，至少先把请求显示出来
+        if (request == null && notBlank(anchor.getHttpRequestHead())) {
+            request = anchor;
+        }
+        if (response == null && notBlank(anchor.getHttpResponseHead())) {
+            response = anchor;
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("anchorId", packetId);
+        out.put("request", httpTxFrame(request));
+        out.put("response", httpTxFrame(response));
+        return ReturnResult.ok(out);
+    }
+
+      /**
+       * 构造 HTTP 事务查询：优先按 TCP 流号，退回按四元组 + 帧号窗口。
+       *
+       * @param anchor   当前报文
+       * @param byStream true = 按 tcp.stream（新库）；false = 按四元组（老库兜底）
+       * @return 查询条件
+       */
+    private static LambdaQueryWrapper<MsTsharkPacket> buildHttpTransactionQuery(MsTsharkPacket anchor, boolean byStream) {
+        LambdaQueryWrapper<MsTsharkPacket> w = new LambdaQueryWrapper<MsTsharkPacket>()
+                .eq(MsTsharkPacket::getSessionId, anchor.getSessionId());
+        if (byStream && anchor.getTcpStream() != null) {
+            w.eq(MsTsharkPacket::getTcpStream, anchor.getTcpStream());
+        } else {
+            w.and(q -> q
+                    .nested(a -> a.eq(MsTsharkPacket::getSourceIp, anchor.getSourceIp())
+                            .eq(MsTsharkPacket::getSourcePort, anchor.getSourcePort())
+                            .eq(MsTsharkPacket::getDestIp, anchor.getDestIp())
+                            .eq(MsTsharkPacket::getDestPort, anchor.getDestPort()))
+                    .or()
+                    .nested(b -> b.eq(MsTsharkPacket::getSourceIp, anchor.getDestIp())
+                            .eq(MsTsharkPacket::getSourcePort, anchor.getDestPort())
+                            .eq(MsTsharkPacket::getDestIp, anchor.getSourceIp())
+                            .eq(MsTsharkPacket::getDestPort, anchor.getSourcePort())));
+            if (anchor.getFrameNo() != null) {
+                w.ge(MsTsharkPacket::getFrameNo, Math.max(1L, anchor.getFrameNo() - HTTP_TX_FRAME_WINDOW))
+                        .le(MsTsharkPacket::getFrameNo, anchor.getFrameNo() + HTTP_TX_FRAME_WINDOW);
+            }
+        }
+        w.and(q -> q.isNotNull(MsTsharkPacket::getHttpRequestHead)
+                .or().isNotNull(MsTsharkPacket::getHttpResponseHead));
+        w.select(MsTsharkPacket.class, column -> HTTP_TX_COLUMNS.contains(column.getColumn()));
+        w.orderByAsc(MsTsharkPacket::getFrameNo).orderByAsc(MsTsharkPacket::getId);
+        return w;
+    }
+
+      /**
+       * 把一帧压成事务展示用的轻量结构（不带 rawData）。
+       *
+       * @param packet 报文；null 原样返回 null
+       * @return 前端可直接渲染的字段集合
+       */
+    private static Map<String, Object> httpTxFrame(MsTsharkPacket packet) {
+        if (packet == null) {
+            return null;
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", packet.getId());
+        m.put("frameNo", packet.getFrameNo());
+        m.put("packetTime", packet.getPacketTime());
+        m.put("protocol", packet.getProtocol());
+        m.put("sourceIp", packet.getSourceIp());
+        m.put("sourcePort", packet.getSourcePort());
+        m.put("destIp", packet.getDestIp());
+        m.put("destPort", packet.getDestPort());
+        m.put("packetInfo", packet.getPacketInfo());
+        m.put("httpRequestHead", packet.getHttpRequestHead());
+        m.put("httpResponseHead", packet.getHttpResponseHead());
+        m.put("httpBody", packet.getHttpBody());
+        m.put("httpContentType", packet.getHttpContentType());
+        m.put("httpContentEncoding", packet.getHttpContentEncoding());
+        m.put("httpContentLength", packet.getHttpContentLength());
+        m.put("httpMethod", packet.getHttpMethod());
+        m.put("httpUri", packet.getHttpUri());
+        m.put("httpStatus", packet.getHttpStatus());
+        m.put("restoredText", packet.getRestoredText());
+        return m;
+    }
+
+      /**
+       * 是否就是指定 id 的报文。
+       */
+    private static boolean isSamePacket(MsTsharkPacket packet, Long id) {
+        return packet != null && packet.getId() != null && packet.getId().equals(id);
+    }
+
+      /**
+       * 两段 HTTP 头是否描述同一条消息（起始帧与收全帧存的是同一份头）。
+       *
+       * @param a 头文本
+       * @param b 头文本
+       * @return 规范化后是否一致
+       */
+    private static boolean sameHttpHead(String a, String b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        return a.trim().equals(b.trim());
+    }
+
+      /**
+       * 同一消息的两份落点里取正文更完整的那一帧。
+       *
+       * <p>起始帧通常带正文，收全帧只补头；反过来（正文被拆到后续帧）时取后者。
+       * 两份都没有正文时保留先到的，保证 id / 帧号稳定。</p>
+       *
+       * @param a 先到的帧
+       * @param b 后到的帧
+       * @return 正文更完整的一帧
+       */
+    private static MsTsharkPacket richerBody(MsTsharkPacket a, MsTsharkPacket b) {
+        int la = a.getHttpBody() == null ? 0 : a.getHttpBody().length();
+        int lb = b.getHttpBody() == null ? 0 : b.getHttpBody().length();
+        return lb > la ? b : a;
+    }
+
+      /**
+       * 非空且非空白。
+       */
+    private static boolean notBlank(String value) {
+        return value != null && !value.isBlank();
+    }
+
+      /**
        * 协议stats。
        * @param sessionId 会话标识
        * @return 协议stats的结果
@@ -2605,6 +3250,7 @@ public class TsharkCaptureService {
         return ReturnResult.ok(result);
     }
 
+    /** addAnomaly 方法 */
     private static void addAnomaly(List<TsharkAnomalyVO> out, Map<String, Object> row, String key,
                                    String label, String severity, String filter) {
         Object v = row.get(key);
@@ -2634,6 +3280,7 @@ public class TsharkCaptureService {
             return ReturnResult.error("该会话正在抓包中，请先停止抓包再删除");
         }
         this.displayFilters.remove(sessionId);
+        this.httpRestorers.remove(sessionId);
         Process proc = this.running.get(sessionId);
         if (proc != null) {
             proc.destroy();

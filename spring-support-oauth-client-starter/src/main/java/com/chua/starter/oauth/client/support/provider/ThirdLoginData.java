@@ -30,6 +30,7 @@ import jakarta.validation.constraints.NotNull;
  *                  无 {@code @NotNull} 约束，允许为 {@code null}（此时按登录流程处理）；
  *                  取值被缓存为 {@code state + "_thirdType"}
  * @author CH
+ * @since 4.0.0.51
  */
 public record ThirdLoginData(@NotNull(message = "loginCode不能为空") String loginCode,
                               @NotNull(message = "callback不能为空") String callback,

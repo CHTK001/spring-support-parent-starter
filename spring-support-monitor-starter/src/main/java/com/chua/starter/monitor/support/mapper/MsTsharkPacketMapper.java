@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
+import com.chua.starter.monitor.support.model.PacketHttpFrame;
 import com.chua.starter.monitor.support.model.PacketRestoreFrame;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -29,6 +30,20 @@ public interface MsTsharkPacketMapper extends BaseMapper<MsTsharkPacket> {
      */
     int updateBatchRawRestored(@Param("sessionId") Long sessionId,
                                @Param("frames") List<PacketRestoreFrame> frames);
+
+    /**
+     * 按会话 + 帧号批量回写「TCP 重组 + HTTP 协议还原」结果。
+     *
+     * <p>与 {@link #updateBatchRawRestored} 同样按帧号对回 SQLite 行；不同点是
+     * 空值不覆盖旧值（{@code COALESCE}），因为请求帧只有请求头、响应帧只有响应头，
+     * 整行覆盖会把 tshark 逐帧字段兜底冲掉。</p>
+     *
+     * @param sessionId 会话标识
+     * @param frames    待回写的 HTTP 还原结果
+     * @return 更新的行数
+     */
+    int updateBatchHttpRestored(@Param("sessionId") Long sessionId,
+                                @Param("frames") List<PacketHttpFrame> frames);
 
     /**
      * 按会话聚合协议统计（SQL 层聚合，不再全量加载报文）。

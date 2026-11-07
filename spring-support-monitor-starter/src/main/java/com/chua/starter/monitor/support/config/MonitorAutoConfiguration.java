@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.config;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.monitor.support.tshark.cdp.config.CdpProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.autoconfigure.ApplicationDataSourceScriptDatabaseInitializer;
@@ -25,7 +26,10 @@ import javax.sql.DataSource;
  */
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.monitor.support")
-@EnableConfigurationProperties({MonitorInfluxProperties.class, MonitorTimeseriesProperties.class, SqlInitializationProperties.class})
+@EnableConfigurationProperties({
+    MonitorInfluxProperties.class, MonitorTimeseriesProperties.class,
+    SqlInitializationProperties.class, CdpProperties.class
+})
 @EnableScheduling
 @EnableTransactionManagement
 public class MonitorAutoConfiguration {

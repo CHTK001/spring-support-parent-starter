@@ -66,7 +66,7 @@ public class CredentialCipher {
              * @param e e
              * @return illegal状态异常的结果
              */
-            throw new IllegalStateException("凭据解密失败，请检查 plugin.server.support.credential-key 配置是否与加密时一致", e);
+            throw new IllegalStateException("凭据解密失败：当前环境的加密密钥与写入时不一致，请重新填写该账号口令", e);
         }
     }
 }

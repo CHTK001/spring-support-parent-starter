@@ -52,6 +52,22 @@ public interface CollectDesignerService {
     CollectPreviewVO previewFetch(String url, Integer timeoutMs);
 
     /**
+     * 设计期预览抓取（可指定是否用真实浏览器渲染）。
+     *
+     * <p>{@code render=false} 走 HTTP 直取，快、省资源，但拿到的是**未经 JS 执行**的原始
+     * 响应——SPA 页面里通常一个业务元素都没有。{@code render=true} 用内置 CDP 引擎开一个
+     * 真实 Chromium，等文档加载完成后再取 DOM，于是点选器能看到用户真正看到的页面。</p>
+     *
+     * <p>渲染模式要启动浏览器进程，单次开销在秒级，因此默认关闭；由前端按需勾选。</p>
+     *
+     * @param url       目标地址，仅允许 http/https，且拒绝内网地址
+     * @param timeoutMs 超时毫秒；空或非正数时用采集配置的默认请求超时
+     * @param render    是否用真实浏览器渲染后取 DOM
+     * @return 抓取结果（状态码、Content-Type、正文、是否渲染）
+     */
+    CollectPreviewVO previewFetch(String url, Integer timeoutMs, boolean render);
+
+    /**
      * 用自然语言描述生成流程 DSL（AI 生成）。
      *
      * <p>调用同机 ai-starter 生成，并走与保存相同的图校验（{@code normalizeDsl}）后才返回；

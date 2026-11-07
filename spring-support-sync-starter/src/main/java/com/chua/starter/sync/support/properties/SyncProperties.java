@@ -232,6 +232,20 @@ public class SyncProperties {
         private String protocol = "http";
 
         /**
+         * 服务发现名：非空时服务端启动后注册到发现中心。
+         *
+         * <p>客户端按同名查找，因此两端通常配置成同一个值。为空表示不注册。</p>
+         */
+        private String serviceName;
+
+        /**
+         * 业务分组标识（scatterId）：与服务端注册时写入的 scatterId 一致。
+         *
+         * <p>为空时回落到 serviceName。</p>
+         */
+        private String scatterId;
+
+        /**
          * 心跳开关
          */
         private boolean heartbeat = true;
@@ -337,6 +351,42 @@ public class SyncProperties {
         }
 
         /**
+         * 获取服务发现名
+         *
+         * @return 服务发现名，为空表示服务端不注册
+         */
+        public String getServiceName() {
+            return serviceName;
+        }
+
+        /**
+         * 设置服务发现名
+         *
+         * @param serviceName 服务发现名
+         */
+        public void setServiceName(String serviceName) {
+            this.serviceName = serviceName;
+        }
+
+        /**
+         * 获取业务分组标识
+         *
+         * @return scatterId，为空时回落到 serviceName
+         */
+        public String getScatterId() {
+            return scatterId;
+        }
+
+        /**
+         * 设置业务分组标识
+         *
+         * @param scatterId 业务分组标识
+         */
+        public void setScatterId(String scatterId) {
+            this.scatterId = scatterId;
+        }
+
+        /**
          * 是否心跳
          *
          * @return 是否心跳的结果
@@ -426,6 +476,8 @@ public class SyncProperties {
             target.host = source.host;
             target.port = source.port;
             target.protocol = source.protocol;
+            target.serviceName = source.serviceName;
+            target.scatterId = source.scatterId;
             target.heartbeat = source.heartbeat;
             target.heartbeatInterval = source.heartbeatInterval;
             target.connectTimeout = source.connectTimeout;
@@ -675,6 +727,21 @@ public class SyncProperties {
          * 格式：主机:端口 或 ws://主机:端口
          */
         private String serverAddress;
+
+        /**
+         * 服务发现名：非空时按该名称从发现中心解析服务端地址，解析不到才用 serverAddress / 服务端主机:端口。
+         *
+         * <p>取值与服务端注册时使用的 service-name 保持一致（默认就是本端注册的服务名），
+         * 两边相同才能互相找到。协议名（如 redis/nacos）由 discovery 的 bean 名决定，不在这里配置。</p>
+         */
+        private String discoveryName;
+
+        /**
+         * 业务分组标识（scatterId）：同一服务名下按业务集群隔离。
+         *
+         * <p>为空时回落到 discoveryName，保证零配置下客户端与服务端落在同一分组。</p>
+         */
+        private String scatterId;
 
         /**
          * 心跳开关
@@ -1090,6 +1157,42 @@ public class SyncProperties {
         }
 
         /**
+         * 获取服务发现名
+         *
+         * @return 服务发现名，为空表示不使用服务发现寻址
+         */
+        public String getDiscoveryName() {
+            return discoveryName;
+        }
+
+        /**
+         * 设置服务发现名
+         *
+         * @param discoveryName 服务发现名，需与服务端注册的 service-name 一致
+         */
+        public void setDiscoveryName(String discoveryName) {
+            this.discoveryName = discoveryName;
+        }
+
+        /**
+         * 获取业务分组标识
+         *
+         * @return scatterId，为空时回落到 discoveryName
+         */
+        public String getScatterId() {
+            return scatterId;
+        }
+
+        /**
+         * 设置业务分组标识
+         *
+         * @param scatterId 业务分组标识
+         */
+        public void setScatterId(String scatterId) {
+            this.scatterId = scatterId;
+        }
+
+        /**
          * 复制的
          *
          * @param source 源
@@ -1108,6 +1211,8 @@ public class SyncProperties {
             target.serverHost = source.serverHost;
             target.serverPort = source.serverPort;
             target.serverAddress = source.serverAddress;
+            target.discoveryName = source.discoveryName;
+            target.scatterId = source.scatterId;
             target.heartbeat = source.heartbeat;
             target.heartbeatInterval = source.heartbeatInterval;
             target.connectTimeout = source.connectTimeout;

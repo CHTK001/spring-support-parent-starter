@@ -7,6 +7,14 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+/**
+ * 设备分组与设备的关联 Mapper。
+ *
+ * <p>除通用 CRUD 外，提供按分组查询设备（按 device_order 排序）等关联查询。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
+ */
 @Mapper
 public interface DeviceGroupDeviceMapper extends BaseMapper<DeviceGroupDevice> {
 

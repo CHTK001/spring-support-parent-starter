@@ -56,6 +56,11 @@ public class ApmRuntimeConfig {
     private static final long MIN_DETECT_INTERVAL = 1_000L;
 
     /**
+     * 运行时快照 Map 默认容量
+     */
+    private static final int DEFAULT_MAP_CAPACITY = 16;
+
+    /**
      * 配置
      */
     private final ApmProperties properties;
@@ -209,7 +214,7 @@ public class ApmRuntimeConfig {
      */
     public Map<String, Object> view() {
         ApmDescriptor descriptor = registry.describe();
-        Map<String, Object> payload = new LinkedHashMap<>(16);
+        Map<String, Object> payload = new LinkedHashMap<>(DEFAULT_MAP_CAPACITY);
         payload.put("enabled", properties.isEnabled());
         payload.put("type", properties.getType() == null ? "" : properties.getType());
         payload.put("mode", properties.getMode());

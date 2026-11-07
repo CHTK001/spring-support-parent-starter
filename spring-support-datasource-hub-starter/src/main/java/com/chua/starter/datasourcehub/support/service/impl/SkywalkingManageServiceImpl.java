@@ -375,6 +375,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
         }
     }
 
+    /** recentAlarmCountSilently 方法 */
     private static int recentAlarmCountSilently(SkywalkingOtnlEngine engine) {
         try {
             OtnlQuery query = OtnlQuery.lastMinutes(RECENT_ALARM_MINUTES);
@@ -398,6 +399,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
         return result;
     }
 
+    /** trim 方法 */
     private static String trim(String value) {
         return value == null ? "" : value.trim();
     }

@@ -239,8 +239,10 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        * <p>表名与列名均为本类固定注册项，不接收外部标识符；值定义不属于 DDL 参数绑定范围。</p>
        */
     private static final Map<String, String> SOURCE_MISSING_COLUMNS = Map.of(
-            "ms_sync_task_source_type", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_type VARCHAR(16) NOT NULL DEFAULT 'JDBC' COMMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML'",
-            "ms_sync_task_source_path", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_path VARCHAR(512) DEFAULT NULL COMMENT '源定位：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址'",
+            "ms_sync_task_source_type", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_type VARCHAR(16) NOT NULL DEFAULT 'JDBC' CO" +
+                "MMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML'",
+            "ms_sync_task_source_path", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_path VARCHAR(512) DEFAULT NULL COMMENT '源定位" +
+                "：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址'",
             "ms_sync_task_source_options", "ALTER TABLE ms_sync_task ADD COLUMN ms_sync_task_source_options TEXT DEFAULT NULL COMMENT '输入源扩展选项 JSON'");
 
       /**
@@ -253,7 +255,8 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        */
     private static final Map<String, String> SOURCE_NULLABLE_COLUMNS = Map.of(
             "ms_sync_task_source_datasource_id",
-            "ALTER TABLE ms_sync_task MODIFY COLUMN ms_sync_task_source_datasource_id BIGINT DEFAULT NULL COMMENT '源数据源 ID(ms_datasource.id)，仅 JDBC 源使用'",
+            "ALTER TABLE ms_sync_task MODIFY COLUMN ms_sync_task_source_datasource_id BIGINT DEFAULT NULL COMMENT '源数据源 ID(ms_datas" +
+                "ource.id)，仅 JDBC 源使用'",
             "ms_sync_task_source_sql",
             "ALTER TABLE ms_sync_task MODIFY COLUMN ms_sync_task_source_sql TEXT DEFAULT NULL COMMENT '源读取 SQL，必须是 SELECT，仅 JDBC 源使用'");
 

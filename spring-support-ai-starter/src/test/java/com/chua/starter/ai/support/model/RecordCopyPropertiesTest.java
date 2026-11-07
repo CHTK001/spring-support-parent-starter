@@ -14,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  *
  * <p>录：AiBotBindingController.create/update() 里 {@code BeanUtils.copyProperties(body, entity)}
  * 实际上执行为记录体赋值，如果 record 的访问器不被 BeanWrapper 识别，这里会静默丢数据。</p>
+ * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("BeanUtils.copyProperties 对 record 的财产移植性")
 class RecordCopyPropertiesTest {

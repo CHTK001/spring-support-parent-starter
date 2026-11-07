@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
  * 本类只认 key，不关心它叫什么。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service

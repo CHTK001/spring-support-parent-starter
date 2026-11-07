@@ -24,6 +24,7 @@ import java.util.Map;
  * 与本接口要返回的普通 JSON 不一致。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @RestController

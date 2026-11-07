@@ -7,6 +7,7 @@ package com.chua.starter.server.support.entity;
  * @param summary 软件包描述
  * @param version 版本
  * @author CH
+ * @since 4.0.0.51
  */
 public record SoftwarePackage(
         String name,

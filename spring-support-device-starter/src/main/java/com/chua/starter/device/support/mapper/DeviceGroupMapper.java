@@ -7,6 +7,14 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+/**
+ * 设备分组 Mapper。
+ *
+ * <p>设备分组的持久化入口，继承 MyBatis-Plus 通用 CRUD。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
+ */
 @Mapper
 public interface DeviceGroupMapper extends BaseMapper<DeviceGroup> {
 

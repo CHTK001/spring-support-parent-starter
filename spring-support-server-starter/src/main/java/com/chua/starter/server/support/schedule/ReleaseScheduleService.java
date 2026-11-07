@@ -9,6 +9,7 @@ import java.util.Map;
  * 控制器通过 {@code ObjectProvider} 可选调用，保证发布模块本身仍可独立运行。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 public interface ReleaseScheduleService {
 

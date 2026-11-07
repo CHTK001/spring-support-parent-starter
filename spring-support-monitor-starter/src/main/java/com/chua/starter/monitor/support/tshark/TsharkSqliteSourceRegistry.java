@@ -58,6 +58,16 @@ public class TsharkSqliteSourceRegistry {
             "ms_tshark_packet_http_type TEXT," +
             "ms_tshark_packet_http_encoding TEXT," +
             "ms_tshark_packet_http_size INTEGER," +
+            // 详情面板用的明细列：传输层 / 网络层 + HTTP 起始行 / TLS 域名 / DNS 查询名
+            "ms_tshark_packet_tcp_stream INTEGER," +
+            "ms_tshark_packet_tcp_seq INTEGER," +
+            "ms_tshark_packet_tcp_flags TEXT," +
+            "ms_tshark_packet_ip_ttl INTEGER," +
+            "ms_tshark_packet_http_method TEXT," +
+            "ms_tshark_packet_http_uri TEXT," +
+            "ms_tshark_packet_http_status INTEGER," +
+            "ms_tshark_packet_tls_sni TEXT," +
+            "ms_tshark_packet_dns_query TEXT," +
             "create_name TEXT," +
             "create_by INTEGER," +
             "create_time TEXT," +
@@ -97,6 +107,13 @@ public class TsharkSqliteSourceRegistry {
     private static final String INDEX_FRAME_NO =
             "CREATE INDEX IF NOT EXISTS idx_tshark_packet_frame_no ON ms_tshark_packet" +
                     "(ms_tshark_packet_frame_no)";
+    /**
+     * 按 TCP 流号取一段连接：HTTP 事务配对只关心同一条流，
+     * 流号比四元组更准（同一四元组会被复用成多条连接）。
+     */
+    private static final String INDEX_TCP_STREAM =
+            "CREATE INDEX IF NOT EXISTS idx_tshark_packet_tcp_stream ON ms_tshark_packet" +
+                    "(ms_tshark_packet_session_id, ms_tshark_packet_tcp_stream)";
     private static final String INDEX_INFO =
             "CREATE INDEX IF NOT EXISTS idx_tshark_packet_info ON ms_tshark_packet" +
                     "(ms_tshark_packet_info)";
@@ -165,6 +182,7 @@ public class TsharkSqliteSourceRegistry {
                     st.execute(INDEX_LENGTH);
                     st.execute(INDEX_FRAME_NO);
                     st.execute(INDEX_INFO);
+                    st.execute(INDEX_TCP_STREAM);
                     // 握手/对话窗口的 4 元组等值匹配
                     st.execute(INDEX_SESSION_PAIRS);
                 }
@@ -196,7 +214,18 @@ public class TsharkSqliteSourceRegistry {
                 "ms_tshark_packet_http_body TEXT",
                 "ms_tshark_packet_http_type TEXT",
                 "ms_tshark_packet_http_encoding TEXT",
-                "ms_tshark_packet_http_size INTEGER"
+                "ms_tshark_packet_http_size INTEGER",
+                // 详情面板明细列：老会话的 .db 也要能补上，否则 select 全列直接报
+                // no such column，详情弹层一片空白
+                "ms_tshark_packet_tcp_stream INTEGER",
+                "ms_tshark_packet_tcp_seq INTEGER",
+                "ms_tshark_packet_tcp_flags TEXT",
+                "ms_tshark_packet_ip_ttl INTEGER",
+                "ms_tshark_packet_http_method TEXT",
+                "ms_tshark_packet_http_uri TEXT",
+                "ms_tshark_packet_http_status INTEGER",
+                "ms_tshark_packet_tls_sni TEXT",
+                "ms_tshark_packet_dns_query TEXT"
         };
         try (Connection c = ds.getConnection()) {
             for (String column : added) {
@@ -211,6 +240,7 @@ public class TsharkSqliteSourceRegistry {
         }
     }
 
+    /** buildConfig 方法 */
     private static HikariConfig buildConfig(Long sessionId, Path dbPath) {
         HikariConfig config = new HikariConfig();
         config.setPoolName(DS_PREFIX + sessionId);

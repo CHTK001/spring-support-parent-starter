@@ -131,6 +131,7 @@ class FileStorageDualModeLiveTest {
         }
     }
 
+    /** status 方法 */
     private static int status(HttpResponse<String> r) {
         return r.statusCode();
     }

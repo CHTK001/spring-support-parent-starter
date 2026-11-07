@@ -76,11 +76,28 @@ public class SyncServer implements InitializingBean, DisposableBean {
     private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>(); // 断开连接监听器
 
     /**
+     * 服务发现实例：非空且配置了 service-name 时，各实例启动后自动注册。
+     */
+    private final com.chua.common.support.network.discovery.ServiceDiscovery serviceDiscovery;
+
+    /**
      * 创建 同步服务端 实例
      * @param syncProperties 同步属性
      */
     public SyncServer(SyncProperties syncProperties) {
+        this(syncProperties, null);
+    }
+
+    /**
+     * 创建 同步服务端 实例，并接入服务发现。
+     *
+     * @param syncProperties   同步属性
+     * @param serviceDiscovery 服务发现实例，可为 null（不注册）
+     */
+    public SyncServer(SyncProperties syncProperties,
+                      com.chua.common.support.network.discovery.ServiceDiscovery serviceDiscovery) {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
+        this.serviceDiscovery = serviceDiscovery;
     }
 
     /**
@@ -131,6 +148,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
             }
 
             SyncServerInstance instance = new SyncServerInstance(config, syncProperties);
+            instance.setDiscovery(serviceDiscovery, syncProperties);
             /**
              * 注册处理器转为instance。
              * @param instance instance

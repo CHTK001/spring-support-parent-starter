@@ -58,7 +58,9 @@ public class AixHostDetectProvider implements HostDetectProvider {
                 host.setServerHostDiskGb(NumberUtils.toLong(disk));
             }
               // 网卡信息（ifconfig 全局 IPv4，AIX 输出含 inet 行）
-            String networks = execQuiet(handle, "ifconfig -a 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\"); if(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$2\"\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
+            String networks = execQuiet(handle, "ifconfig -a 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\");" +
+                " if(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$" +
+                "2\"\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
             if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
                 host.setServerHostNetworks(networks);
             }

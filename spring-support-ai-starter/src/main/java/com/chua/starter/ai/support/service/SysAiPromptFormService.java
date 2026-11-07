@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
  * 硬编码英文兜底。所以这里不允许删除 build，也不允许改它的 key / 中文名 / 删除标记。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service

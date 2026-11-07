@@ -64,6 +64,7 @@ import java.util.stream.Collectors;
    * 手工列举 schema-locations，正是为了绕开这个坑。</p>
    *
    * @author CH
+   * @since 4.0.0.51
    */
 @Slf4j
 @AutoConfiguration
@@ -1252,7 +1253,8 @@ public class DataSourceScriptConfiguration {
             }
 
             int updated = jdbc.update(
-                    String.format("UPDATE %s SET %sscript_type = ?, %sdescription = ?, %schecksum = ?, %ssuccess = ?, %sexecuted_on = CURRENT_TIMESTAMP WHERE %sscript_name = ? AND %sversion = ?",
+                    String.format("UPDATE %s SET %sscript_type = ?, %sdescription = ?, %schecksum = ?, %ssuccess = ?, %sexecuted_on = CURREN" +
+                        "T_TIMESTAMP WHERE %sscript_name = ? AND %sversion = ?",
                             safeTableName, columnPrefix, columnPrefix, columnPrefix, columnPrefix, columnPrefix, columnPrefix, columnPrefix),
                     scriptType, description, checksum, success, fileName, version);
             if (updated > 0) {

@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
  * 保证「在线检索」始终能拿到真实的实时网页结果。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service

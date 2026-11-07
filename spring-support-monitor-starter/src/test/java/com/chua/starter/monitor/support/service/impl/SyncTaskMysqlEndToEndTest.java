@@ -73,6 +73,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * 每轮 {@code TRUNCATE} 保证可重复执行。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("同步任务多目标：真 MySQL 端到端")
 class SyncTaskMysqlEndToEndTest {

@@ -28,11 +28,12 @@ public interface ManageAccountService {
     /**
      * 查询当前用户可见的账号。
      *
-     * @param kind    账号种类（可空）
-     * @param keyword 名称 / 编码 / 用户名模糊词（可空）
+     * @param kind       账号种类（可空）
+     * @param keyword    名称 / 编码 / 用户名模糊词（可空）
+     * @param channelKey 所属渠道标识（可空；传入时只回该渠道下的账号）
      * @return 账号列表（敏感字段已清空，仅保留 {@code hasSecret}）
      */
-    List<SysAccount> list(String kind, String keyword);
+    List<SysAccount> list(String kind, String keyword, String channelKey);
 
     /**
      * 按标识查询账号。

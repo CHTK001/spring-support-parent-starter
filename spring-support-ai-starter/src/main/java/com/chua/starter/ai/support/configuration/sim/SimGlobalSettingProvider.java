@@ -66,7 +66,18 @@ public class SimGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("story_mkdir", "true", "BOOLEAN",
                         "世界数据目录不存在时自动创建（true 时自动建目录；false 时写文件失败）", 2),
                 new SettingItem("story_max_acts", "64", "NUMBER",
-                        "单世界最大幕次（超过时禁止执笔新幕，只重播）", 3)
+                        "单世界最大幕次（超过时禁止执笔新幕，只重播）", 3),
+                // ==================== 舞台出片 ====================
+                // 一幕的「画面」怎么来：video = 让 AI 按分镜出视频（图生视频优先，失败退回文生视频），
+                // 舞台连播；image = 只出场景图，舞台用图文演出。关掉视频等于把每一幕省成一两张图。
+                new SettingItem("media_mode", "video", "STRING",
+                        "舞台出片方式：video = AI 生成分镜视频并连播；image = 只出场景图 + 文字演出", 4),
+                // 留空则由服务端在同类型（video）已启用的模型里自动挑一个：
+                // 写死一个模型名会让换供应商后整幕素材全失败。
+                new SettingItem("video_model", "", "STRING",
+                        "视频生成模型（留空自动挑一个可用的；选支持参考图的模型即可图生视频）", 5),
+                new SettingItem("image_model", "", "STRING",
+                        "图片生成模型（留空自动挑一个可用的；图生视频的首帧就来自它）", 6)
         );
     }
 }

@@ -323,6 +323,7 @@ public class ServiceInstanceManager {
         }
     }
 
+    /** writeOpenAiStream 方法 */
     private void writeOpenAiStream(StreamState st, String id, long created, String model,
                                    String text, String reasoning, boolean finish, AiUsage usage,
                                    Map<String, Object> reqBody) throws IOException {
@@ -1289,6 +1290,7 @@ public class ServiceInstanceManager {
 
     // ==================== 统一 Facade 调用与帧编排 ====================
 
+    /** buildRequest 方法 */
     private AiChatRequest buildRequest(SysAiServiceInstance inst, Map<String, Object> body,
                                        List<Map<String, Object>> messages, String model) {
         AiChatRequest request = new AiChatRequest();
@@ -1372,6 +1374,7 @@ public class ServiceInstanceManager {
         }
     }
 
+    /** runFacade 方法 */
     private void runFacade(SysAiServiceInstance inst, AiChatRequest request, HttpExchange exchange,
                            StreamState st, String mode, String id, String effModel,
                            Map<String, Object> reqBody, Caller caller) {

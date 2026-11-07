@@ -38,6 +38,7 @@ import java.util.Map;
  * 项目删除、关闭开关或应用启动全量同步时都会重新登记/撤销。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Component

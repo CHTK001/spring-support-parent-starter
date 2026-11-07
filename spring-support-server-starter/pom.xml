@@ -96,7 +96,13 @@
             <artifactId>utils-support-datasearch-starter</artifactId>
         </dependency>
 
-        <!-- Git 自动发布：GitClient + MavenClient 本地构建 -->
+        <!-- Git 自动发布 / Git 仓库面板：GitClient（clone/pull/分支/日志/状态） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-git-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <!-- MavenClient：Git 发布时本地构建 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-maven-starter</artifactId>

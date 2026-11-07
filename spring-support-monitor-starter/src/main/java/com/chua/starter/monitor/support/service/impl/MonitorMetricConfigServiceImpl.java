@@ -15,7 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 /**
+ * 监控指标配置服务实现。
+ *
+ * <p>维护指标采集项的增删改查；写操作清空该缓存区的全部条目，保证配置即时生效。</p>
+ *
  * @author CH
+ * @since 4.0.0.51
  */
 
 @Slf4j

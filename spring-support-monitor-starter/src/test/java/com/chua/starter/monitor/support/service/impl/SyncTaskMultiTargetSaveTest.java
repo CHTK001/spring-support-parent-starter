@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 传 null 可以避免为了一个纯逻辑测试去搭整套 Spring 上下文。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("同步任务多目标保存链")
 class SyncTaskMultiTargetSaveTest {

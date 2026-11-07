@@ -22,6 +22,7 @@ import java.util.Map;
  * 无需前端特例。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 public final class OnnxModelTaxonomy {
 

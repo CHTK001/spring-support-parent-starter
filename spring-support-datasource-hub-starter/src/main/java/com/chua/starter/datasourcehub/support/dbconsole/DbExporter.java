@@ -203,6 +203,7 @@ public final class DbExporter {
         return new SqlQuery(List.copyOf(columns), List.copyOf(rows));
     }
 
+    /** render 方法 */
     private static String render(String table, List<String> columns, List<Map<String, Object>> rows,
                                  ExportOptions option, Connection conn) throws Exception {
         return switch (option.format()) {
@@ -214,6 +215,7 @@ public final class DbExporter {
         };
     }
 
+    /** renderSql 方法 */
     private static String renderSql(String table, List<String> columns, List<Map<String, Object>> rows,
                                     ExportOptions option, Connection conn) throws Exception {
         StringBuilder out = new StringBuilder();

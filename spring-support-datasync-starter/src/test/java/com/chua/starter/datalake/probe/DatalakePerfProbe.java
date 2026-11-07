@@ -299,6 +299,7 @@ public class DatalakePerfProbe {
 
       // ── Dispatcher Overhead ────────────────────────────────────────
 
+    /** benchDispatcher 方法 */
     private static void benchDispatcher(PipelineEngine engine, PipelineManager pm,
                                          Map<String, DataSink> reg, DispatcherProvider dispatcher) {
         int count = 100_000;

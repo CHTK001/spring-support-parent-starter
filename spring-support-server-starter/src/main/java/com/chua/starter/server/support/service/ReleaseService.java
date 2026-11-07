@@ -12,6 +12,7 @@ import java.util.Map;
  * 发布管理服务
  *
  * @author CH
+ * @since 4.0.0.51
  */
 public interface ReleaseService {
 
@@ -309,6 +310,31 @@ public interface ReleaseService {
      * @return changed=true 表示已触发发布并返回 taskId；false 表示无更新
      */
     ReturnResult<Map<String, Object>> gitPollDeploy(Long id);
+
+    /**
+     * 查看项目 Git 仓库（已拉取的本地工作区）。
+     *
+     * <p>给「Git 仓库」面板用：当前分支、本地/远端提交、工作区改动、最近提交、分支列表。
+     * 全部由 {@code utils-support-git-starter} 的 {@code GitClient} 提供，
+     * 本模块不直接依赖 jgit。本地还没克隆时返回 {@code cloned=false}，
+     * 让界面能区分「没配 Git」与「配了但还没拉过」。</p>
+     *
+     * @param id 项目ID
+     * @return 仓库概览
+     */
+    ReturnResult<Map<String, Object>> gitRepository(Long id);
+
+    /**
+     * 拉取项目 Git 仓库（只更新本地工作区，不构建、不发布）。
+     *
+     * <p>与 {@link #gitPullAndDeploy(Long)} 的区别：那个是「拉取 + 构建 + 投放 + 重启」的完整发布，
+     * 这个是纯同步 —— 用户在仓库面板里只想先看看远端有什么，不该顺手把线上服务重启一遍。</p>
+     *
+     * @param id     项目ID
+     * @param branch 目标分支（空则用项目配置的分支 / 当前分支）
+     * @return 拉取结果（updated / message / 当前提交）
+     */
+    ReturnResult<Map<String, Object>> gitPull(Long id, String branch);
 
     /**
      * 读取页面布局配置（保存在 ms_server_config，key = ui.layout.{pageKey}）

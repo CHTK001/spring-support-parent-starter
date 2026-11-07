@@ -156,7 +156,8 @@ public class Project {
         this.dataSourceUrl = dataSourceProperties.getUrl();
         this.dataSourceDriver = dataSourceProperties.getDriverClassName();
         this.dataSourceUsername = dataSourceProperties.getUsername();
-        this.clientProtocolEndpointPort = StringUtils.defaultString(environment.resolvePlaceholders("${plugin.report.client.endpoint.port:}"), String.valueOf(NumberUtils.toInt(environment.resolvePlaceholders("${server.port:8080}")) + 10000));
+        this.clientProtocolEndpointPort = StringUtils.defaultString(environment.resolvePlaceholders("${plugin.report.client.endpoint.port:}"),
+            String.valueOf(NumberUtils.toInt(environment.resolvePlaceholders("${server.port:8080}")) + 10000));
         this.clientProtocolEndpointProtocol = environment.resolvePlaceholders("${plugin.report.client.endpoint.protocol:http}");
 
     }

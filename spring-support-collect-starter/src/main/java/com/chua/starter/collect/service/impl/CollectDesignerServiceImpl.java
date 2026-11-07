@@ -2,6 +2,9 @@
 package com.chua.starter.collect.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.browser.BrowserEngine;
+import com.chua.common.support.browser.BrowserOptions;
+import com.chua.common.support.browser.BrowserPage;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.spi.ServiceProvider;
@@ -34,6 +37,7 @@ import org.springframework.stereotype.Service;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -135,6 +139,11 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
 
     @Override
     public CollectPreviewVO previewFetch(String url, Integer timeoutMs) {
+        return previewFetch(url, timeoutMs, false);
+    }
+
+    @Override
+    public CollectPreviewVO previewFetch(String url, Integer timeoutMs, boolean render) {
         String target = url == null ? "" : url.trim();
         if (target.isEmpty()) {
             throw new IllegalArgumentException("预览抓取需要填写 URL");
@@ -153,6 +162,9 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
             throw new IllegalArgumentException("出于安全考虑，预览抓取不允许访问内网或本机地址: " + uri.getHost());
         }
         int timeout = timeoutMs == null || timeoutMs <= 0 ? properties.getRequestTimeoutMs() : timeoutMs;
+        if (render) {
+            return renderFetch(target, timeout);
+        }
         SpiderFetcher fetcher = ServiceProvider.of(SpiderFetcher.class).getNewExtension("http");
         if (fetcher == null) {
             fetcher = new HttpFetcher(timeout);
@@ -173,6 +185,54 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
             return new CollectPreviewVO(response.getStatusCode(), response.getContentType(), html.length(), html);
         } catch (Exception ex) {
             throw new IllegalStateException("预览抓取失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * 用真实浏览器渲染后取 DOM。
+     *
+     * <p>走 {@code BrowserEngine.cdp()}（common-starter 内置的轻量 CDP 引擎，只用 JDK，
+     * 不引 Playwright/Selenium），这样点选器看到的是执行完 JS 之后的页面——
+     * SPA 站点在 HTTP 直取下通常只有一个空壳 {@code <div id="app"></div>}。</p>
+     *
+     * <p>浏览器进程按次启停而不是常驻：预览是设计期的低频操作，常驻一个 Chromium 会白占
+     * 内存，而它又不像采集任务那样有稳定的调用频率可以摊薄启动成本。</p>
+     *
+     * @param target  目标地址
+     * @param timeout 超时毫秒
+     * @return 渲染后的抓取结果
+     */
+    private CollectPreviewVO renderFetch(String target, int timeout) {
+        BrowserOptions options = new BrowserOptions()
+                .setHeadless(true)
+                .setLaunchTimeout(Duration.ofMillis(timeout))
+                .setCommandTimeout(Duration.ofMillis(timeout));
+        String userAgent = properties.getUserAgent();
+        if (userAgent != null && !userAgent.isBlank()) {
+            options.setUserAgent(userAgent);
+        }
+        long started = System.currentTimeMillis();
+        try (BrowserEngine engine = BrowserEngine.cdp();
+             BrowserPage page = engine.openPage(options)) {
+            page.navigate(target);
+            String html = page.content();
+            long cost = System.currentTimeMillis() - started;
+            String body = html == null ? "" : html;
+            log.info("[collect] 预览渲染 {} → {} 字符 ({}ms)", target, body.length(), cost);
+            return new CollectPreviewVO(200, "text/html; charset=UTF-8", body.length(), body, true);
+        } catch (Exception ex) {
+            // 渲染失败时把原始响应一起带回去，让用户至少能看到页面内容，而不是一个空面板。
+            // 但仍要报错：只退回内容而不报错，「点了渲染却拿到没渲染的页面」比直接失败更难排查。
+            String fallbackHtml = "";
+            try {
+                fallbackHtml = previewFetch(target, timeout, false).html();
+            } catch (RuntimeException ignored) {
+                // 直取也失败：保持空正文，由下面的异常说明原因
+            }
+            log.warn("[collect] 预览渲染失败: {} - {}", target, ex.getMessage());
+            throw new IllegalStateException("浏览器渲染失败: " + ex.getMessage()
+                    + (fallbackHtml.isEmpty() ? "（HTTP 直取也未取到内容）"
+                    : "（HTTP 直取返回 " + fallbackHtml.length() + " 字符，可在关闭渲染后查看）"), ex);
         }
     }
 
@@ -284,7 +344,8 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
         return "你是数据采集平台的流程设计助手。根据用户需求生成可直接运行的采集流程 DSL，只输出一个 JSON 对象（不要 markdown 代码块、不要解释）。\n"
                 + "\nJSON 结构：\n"
                 + "{ \"name\": \"流程名\", \"threadCount\": 1, \"headers\": [], \"cookies\": [], \"variables\": [],\n"
-                + "  \"nodes\": [ { \"id\": \"n1\", \"shape\": \"start\", \"name\": \"开始\", \"x\": 60, \"y\": 80, \"params\": [ {\"name\": \"urls\", \"value\": \"https://example.com/\"} ] } ],\n"
+                + "  \"nodes\": [ { \"id\": \"n1\", \"shape\": \"start\", \"name\": \"开始\", \"x\": 60, \"y\": 80, \"params\": [ {\"name\":" +
+                    " \"urls\", \"value\": \"https://example.com/\"} ] } ],\n"
                 + "  \"edges\": [ { \"id\": \"e1\", \"from\": \"n1\", \"to\": \"n2\", \"condition\": \"\", \"exceptionFlow\": \"0\" } ] }\n"
                 + "\n规则：\n"
                 + "1. 每个节点给出 id/shape/name/x/y；x 从 60 起每列 +160，y 从 80 起每行 +120；节点 id 用 n1..n9，边 id 用 e1..e9。\n"
@@ -292,16 +353,26 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
                 + "3. 只能用下面列出的节点类型与参数名（参数名必须完全一致）；[必填] 参数必须提供 value。\n"
                 + "4. 用 ${变量名} 引用上游出参（request 默认出参 resp，其 JSON 解析对象为 respJson）。\n"
                 + "5. 抽取数据用 extract：mode=list + rowExpression（如 items）或 mode=single；fields 逐列声明解析方式。\n"
-                + "6. 录入业务数据必须配 database 节点（datasource=app，table 优先用用户给定的表名，用户没指定表名就按需求起一个业务表名，表不存在会自动创建，column:<字段>=${字段}）；只把结果留在采集平台查看/导出才用 output（采集平台）节点（写平台自身的采集结果表）。凡涉及入库、写表、存进业务表，都不能省略 database 节点。\n"
+                + "6. 录入业务数据必须配 database 节点（datasource=app，table 优先用用户给定的表名，用户没指定表名就按需求起一个业务表名，表不存在会自动创建，column:<字段>=${字段}）；只把结果留在采集平台查看/导出才" +
+                    "用 output（采集平台）节点（写平台自身的采集结果表）。凡涉及入库、写表、存进业务表，都不能省略 database 节点。\n"
                 + "\n节点类型与参数：\n" + shapes
                 + "\n一个结构示例（接口分页数据 → 抽取 → 入库 → 结束）：\n"
                 + "{\"name\":\"示例-GitHub 项目采集\",\"threadCount\":2,\"headers\":[],\"cookies\":[],\"variables\":[],\"nodes\":["
-                + "{\"id\":\"n1\",\"shape\":\"start\",\"name\":\"种子\",\"x\":60,\"y\":80,\"params\":[{\"name\":\"urls\",\"value\":\"https://api.github.com/...\"}]},"
-                + "{\"id\":\"n2\",\"shape\":\"request\",\"name\":\"调用接口\",\"x\":220,\"y\":80,\"params\":[{\"name\":\"url\",\"value\":\"${url}\"},{\"name\":\"method\",\"value\":\"GET\"},{\"name\":\"outputVariable\",\"value\":\"resp\"}]},"
-                + "{\"id\":\"n3\",\"shape\":\"extract\",\"name\":\"抽取字段\",\"x\":380,\"y\":80,\"params\":[{\"name\":\"source\",\"value\":\"${respJson}\"},{\"name\":\"mode\",\"value\":\"list\"},{\"name\":\"rowExpression\",\"value\":\"items\"}],\"fields\":[{\"name\":\"title\",\"parserType\":\"JSONPATH\",\"expression\":\".name\"}]},"
-                + "{\"id\":\"n4\",\"shape\":\"database\",\"name\":\"写入业务表\",\"x\":540,\"y\":80,\"params\":[{\"name\":\"source\",\"value\":\"${rows}\"},{\"name\":\"datasource\",\"value\":\"app\"},{\"name\":\"table\",\"value\":\"github_projects\"},{\"name\":\"column:title\",\"value\":\"${title}\"}]},"
+                + "{\"id\":\"n1\",\"shape\":\"start\",\"name\":\"种子\",\"x\":60,\"y\":80,\"params\":[{\"name\":\"urls\",\"value\":\"https://a" +
+                    "pi.github.com/...\"}]},"
+                + "{\"id\":\"n2\",\"shape\":\"request\",\"name\":\"调用接口\",\"x\":220,\"y\":80,\"params\":[{\"name\":\"url\",\"value\":\"${url" +
+                    "}\"},{\"name\":\"method\",\"value\":\"GET\"},{\"name\":\"outputVariable\",\"value\":\"resp\"}]},"
+                + "{\"id\":\"n3\",\"shape\":\"extract\",\"name\":\"抽取字段\",\"x\":380,\"y\":80,\"params\":[{\"name\":\"source\",\"value\":\"${" +
+                    "respJson}\"},{\"name\":\"mode\",\"value\":\"list\"},{\"name\":\"rowExpression\",\"value\":\"items\"}],\"fields\":[{\"name" +
+                    "\":\"title\",\"parserType\":\"JSONPATH\",\"expression\":\".name\"}]},"
+                + "{\"id\":\"n4\",\"shape\":\"database\",\"name\":\"写入业务表\",\"x\":540,\"y\":80,\"params\":[{\"name\":\"source\",\"value\":\"" +
+                    "${rows}\"},{\"name\":\"datasource\",\"value\":\"app\"},{\"name\":\"table\",\"value\":\"github_projects\"},{\"name\":\"col" +
+                    "umn:title\",\"value\":\"${title}\"}]},"
                 + "{\"id\":\"n5\",\"shape\":\"end\",\"name\":\"结束\",\"x\":700,\"y\":80,\"params\":[]}],"
-                + "\"edges\":[{\"id\":\"e1\",\"from\":\"n1\",\"to\":\"n2\",\"condition\":\"\",\"exceptionFlow\":\"0\"},{\"id\":\"e2\",\"from\":\"n2\",\"to\":\"n3\",\"condition\":\"\",\"exceptionFlow\":\"0\"},{\"id\":\"e3\",\"from\":\"n3\",\"to\":\"n4\",\"condition\":\"\",\"exceptionFlow\":\"0\"},{\"id\":\"e4\",\"from\":\"n4\",\"to\":\"n5\",\"condition\":\"\",\"exceptionFlow\":\"0\"}]}";
+                + "\"edges\":[{\"id\":\"e1\",\"from\":\"n1\",\"to\":\"n2\",\"condition\":\"\",\"exceptionFlow\":\"0\"},{\"id\":\"e2\",\"from" +
+                    "\":\"n2\",\"to\":\"n3\",\"condition\":\"\",\"exceptionFlow\":\"0\"},{\"id\":\"e3\",\"from\":\"n3\",\"to\":\"n4\",\"condit" +
+                    "ion\":\"\",\"exceptionFlow\":\"0\"},{\"id\":\"e4\",\"from\":\"n4\",\"to\":\"n5\",\"condition\":\"\",\"exceptionFlow\":\"0" +
+                    "\"}]}";
     }
 
     /**

@@ -5,7 +5,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.common.support.text.json.Json;
 
 import java.util.LinkedHashMap;
@@ -59,9 +59,16 @@ public class KiloAccountChannelAuthManager implements AccountChannelAuthManager 
         return "Kilo AI 免费池";
     }
 
+    /**
+     * 免鉴权登录方式。
+     *
+     * <p>Kilo 免费池既不需要 API key 也不需要授权页，用 {@code keyless} 明确表达，
+     * 前端据此不再渲染 key 输入框（返回 {@code api-key} 会让用户被要求填一个不存在的
+     * 凭据，误以为绑定失败）。</p>
+     */
     @Override
     public String loginMethod() {
-        return "api-key";
+        return "keyless";
     }
 
     /**
@@ -74,7 +81,7 @@ public class KiloAccountChannelAuthManager implements AccountChannelAuthManager 
     public Map<String, Object> startLogin() {
         Map<String, Object> handle = new LinkedHashMap<>();
         handle.put("handle", HANDLE_KEYLESS);
-        handle.put("loginMethod", "api-key");
+        handle.put("loginMethod", loginMethod());
         handle.put("startedAt", System.currentTimeMillis());
         return handle;
     }

@@ -22,6 +22,7 @@ import java.util.Map;
  * 返回「仅 @ 回复」门控与「随机回复」概率分支的实际决策结果。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Profile("local")

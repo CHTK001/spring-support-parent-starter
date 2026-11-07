@@ -135,9 +135,29 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
     private static final String SOURCE_FRANKFURTER = "frankfurter";
 
     /**
+     * er-api 全量表地址（免费、无需 Key，覆盖 UAH/VND 等 frankfurter 没有的币种）
+     */
+    private static final String ER_API_URL = "https://open.er-api.com/v6/latest/USD";
+
+    /**
+     * 全量表里的美元代码（交叉盘合成序列用）
+     */
+    private static final String USD = "USD";
+
+    /**
      * 复用 HTTP 客户端（HttpClientFactory 内部即全局单例）
      */
     private final HttpClient httpClient = HttpClientFactory.getClient();
+
+    /**
+     * er-api 全量表缓存（币种 → 1 USD 兑换数）
+     */
+    private volatile Map<String, Double> usdTable;
+
+    /**
+     * er-api 全量表装载时间（毫秒）
+     */
+    private volatile long usdTableLoadedAt;
 
     /**
      * 历史序列缓存：key 为「base|quotes|days」
@@ -158,13 +178,17 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
             latest = loadLatestFromFrankfurter(pairs);
             source = SOURCE_FRANKFURTER;
             if (latest.isEmpty()) {
+                latest = loadLatestFromErApi(pairs);
+                source = SOURCE_OPEN_EXCHANGE;
+            }
+            if (latest.isEmpty()) {
                 log.warn("[exchange-rate] 全部最新价数据源不可用");
                 return null;
             }
         }
 
-        Map<String, Map<String, Double>> history =
-                loadHistory(pairs, PERIOD_DAYS.get(effectivePeriod));
+        int periodDays = PERIOD_DAYS.get(effectivePeriod);
+        Map<String, Map<String, Double>> history = loadHistory(pairs, periodDays);
         List<ExchangeRateOverviewVO.Rate> rates = new ArrayList<>(pairs.size());
         List<String> resolvedSymbols = new ArrayList<>(pairs.size());
         for (Symbol pair : pairs) {
@@ -173,7 +197,10 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
                 // 单条取不到就跳过这一条：整块失败会让顶栏从「有 5 个币种」变成「无数据」
                 continue;
             }
-            rates.add(toRate(pair, rate, history));
+            // 历史序列按 base 分组，非 USD 基准的币对可能整条没有序列，
+            // 此时按「1 单位」口径退化成只有最新价，涨跌为 0、极值为自身
+            List<Double> closes = closesFor(pair, history, periodDays);
+            rates.add(toRate(pair, rate, closes));
             resolvedSymbols.add(pair.display());
         }
         if (rates.isEmpty()) {
@@ -187,12 +214,10 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
      *
      * @param pair    币种对
      * @param rate    最新价
-     * @param history 日期（升序）→ (币种 → 收盘价)
+     * @param closes  窗口内收盘价（升序）
      * @return 汇率点
      */
-    private ExchangeRateOverviewVO.Rate toRate(Symbol pair, double rate,
-                                               Map<String, Map<String, Double>> history) {
-        List<Double> closes = closesOf(pair, history);
+    private ExchangeRateOverviewVO.Rate toRate(Symbol pair, double rate, List<Double> closes) {
         double base = closes.isEmpty() ? rate : closes.getFirst();
         double change = rate - base;
         double changePercent = base == 0D ? 0D : change / base * PERCENT_BASE;
@@ -219,6 +244,77 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
             Double close = dayRates.get(pair.quote());
             if (close != null && Double.isFinite(close)) {
                 result.add(close);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 取某币种对的窗口收盘价；直接币对没有序列时按反向币对倒数推导。
+     *
+     * <p>frankfurter 的历史区间只覆盖其支持的币种表（UAH 这类不在表里），
+     * 因此 {@code CNY/UAH} 这类组合拿不到序列；先试反向 {@code UAH/CNY} 取倒数，
+     * 再试「双方各自兑 USD 的序列相除」，都拿不到就返回空，
+     * 调用方退化成「只有最新价」。</p>
+     *
+     * @param pair       币种对
+     * @param history    日期（升序）→ (币种 → 收盘价)
+     * @param periodDays 周期天数（反向序列装载用）
+     * @return 收盘价（升序）
+     */
+    private List<Double> closesFor(Symbol pair, Map<String, Map<String, Double>> history, int periodDays) {
+        List<Double> direct = closesOf(pair, history);
+        if (!direct.isEmpty()) {
+            return direct;
+        }
+        // 历史表只装载了请求里的 base 分组，反向序列按 quote 作 base 另行装载
+        Map<String, Map<String, Double>> inverseHistory =
+                loadHistory(pair.quote(), List.of(pair.base()), periodDays);
+        List<Double> inverse = closesOf(new Symbol(pair.quote(), pair.base()), inverseHistory);
+        if (!inverse.isEmpty()) {
+            return reciprocals(inverse);
+        }
+        // 两边都不支持 direct 序列时，用「各自兑 USD」的两条序列相除，覆盖 UAH/CNY 这类交叉盘
+        return crossCloses(pair, periodDays);
+    }
+
+    /**
+     * 用 {@code base/USD} 与 {@code quote/USD} 两条日序列相除，合成 {@code base/quote} 序列。
+     *
+     * @param pair       币种对
+     * @param periodDays 回看天数
+     * @return 收盘价（升序）；任一侧无序列时为空
+     */
+    private List<Double> crossCloses(Symbol pair, int periodDays) {
+        Map<String, Map<String, Double>> baseHistory = loadHistory(pair.base(), List.of(USD), periodDays);
+        Map<String, Map<String, Double>> quoteHistory = loadHistory(pair.quote(), List.of(USD), periodDays);
+        List<Double> result = new ArrayList<>(baseHistory.size());
+        for (Map.Entry<String, Map<String, Double>> day : baseHistory.entrySet()) {
+            Map<String, Double> quoteDay = quoteHistory.get(day.getKey());
+            if (quoteDay == null) {
+                continue;
+            }
+            Double from = day.getValue().get(USD);
+            Double to = quoteDay.get(USD);
+            if (from == null || to == null || from == 0D || !Double.isFinite(from) || !Double.isFinite(to)) {
+                continue;
+            }
+            result.add(to / from);
+        }
+        return result;
+    }
+
+    /**
+     * 序列取倒数（跳过 0 与非有限值）。
+     *
+     * @param values 原序列
+     * @return 倒数序列
+     */
+    private List<Double> reciprocals(List<Double> values) {
+        List<Double> result = new ArrayList<>(values.size());
+        for (double value : values) {
+            if (value != 0D && Double.isFinite(value)) {
+                result.add(1D / value);
             }
         }
         return result;
@@ -258,6 +354,53 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
             result.put(pair.display(), quote / base);
         }
         return result;
+    }
+
+    /**
+     * open.er-api.com 兜底取最新价（USD 基准全量表）。
+     *
+     * <p>frankfurter 只覆盖约 30 个币种，UAH、VND 这类常用币种直接 404；
+     * SPI 未注册时顶栏就会整条「自定义币对」都显示 `--`。这里补一条
+     * 免费全量表兜底，口径与 SPI 一致（USD 基准，from→to = toRate / fromRate）。</p>
+     *
+     * @param pairs 币种对
+     * @return 展示币种对 → 最新价；不可用时为 空
+     */
+    private Map<String, Double> loadLatestFromErApi(List<Symbol> pairs) {
+        Map<String, Double> result = new LinkedHashMap<>();
+        Map<String, Double> usdRates = loadUsdTable();
+        if (usdRates == null || usdRates.isEmpty()) {
+            return result;
+        }
+        for (Symbol pair : pairs) {
+            Double base = usdRates.get(pair.base());
+            Double quote = usdRates.get(pair.quote());
+            if (base == null || quote == null || base == 0D) {
+                continue;
+            }
+            result.put(pair.display(), quote / base);
+        }
+        return result;
+    }
+
+    /**
+     * 取 er-api 的 USD 基准全量表（带回 30 分钟内存缓存）。
+     *
+     * @return 币种 → 1 USD 兑换数；不可用时为 空
+     */
+    private Map<String, Double> loadUsdTable() {
+        long now = System.currentTimeMillis();
+        if (usdTable != null && now - usdTableLoadedAt < HISTORY_CACHE_MILLIS) {
+            return usdTable;
+        }
+        Map<String, Object> body = readExternal(ER_API_URL);
+        Map<String, Double> rates = ratesOf(body);
+        if (rates == null || rates.isEmpty()) {
+            return usdTable;
+        }
+        usdTable = rates;
+        usdTableLoadedAt = now;
+        return rates;
     }
 
     /**
@@ -371,13 +514,20 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
     }
 
     /**
-     * 取 latest 响应的 {@code rates} 节点（币种 → 汇率）。
+     * 取 latest 响应的换算表（币种 → 汇率）。
+     *
+     * <p>frankfurter 的换算表在 {@code rates} 节点下；er-api 的 {@code rates}
+     * 直接挂在顶层，此时 {@link #mapOf} 返回顶层对象，等价于 {@code rates} 本身。</p>
      *
      * @param body 响应体
      * @return 币种 → 汇率；缺失时为空
      */
     private Map<String, Double> ratesOf(Map<String, Object> body) {
         Map<String, Object> rates = mapOf(body, "rates");
+        if (rates == null) {
+            // er-api 的换算表直接挂在顶层
+            rates = mapOf(body, null);
+        }
         if (rates == null) {
             return null;
         }
@@ -388,15 +538,18 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
     /**
      * 取响应体里的对象节点（值不是对象时返回 空）。
      *
+     * <p>er-api 把换算表挂在 {@code rates} 下、元信息挂在 {@code result} 下，
+     * 只要顶层是对象就按「键 → 值」展开，调用方自己挑节点。</p>
+     *
      * @param body 响应体
-     * @param key  键名
+     * @param key  键名；为 空 时直接返回顶层对象
      * @return 对象节点
      */
     private Map<String, Object> mapOf(Map<String, Object> body, String key) {
         if (body == null) {
             return null;
         }
-        Object value = body.get(key);
+        Object value = key == null ? body : body.get(key);
         if (!(value instanceof Map<?, ?> map)) {
             return null;
         }
@@ -414,7 +567,16 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
      * @return 响应体对象；请求失败或非 2xx 时为 空
      */
     private Map<String, Object> read(String path) {
-        String url = FRANKFURTER_BASE + path;
+        return readExternal(FRANKFURTER_BASE + path);
+    }
+
+    /**
+     * 请求外部 JSON 接口并解析为对象。
+     *
+     * @param url 完整地址
+     * @return 响应体对象；请求失败或非 2xx 时为 空
+     */
+    private Map<String, Object> readExternal(String url) {
         try {
             ClientResponse response = httpClient.request(url, HttpMethod.GET)
                     .connectTimeout(TIMEOUT_MILLIS)

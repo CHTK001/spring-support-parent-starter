@@ -54,6 +54,7 @@ import java.util.Set;
  * 注册表里已不存在的模型行保留但标记为不可用，避免用户配置被静默删除。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  * 发布管理实体
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("ms_server_release")

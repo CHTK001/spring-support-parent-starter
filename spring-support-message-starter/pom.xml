@@ -47,10 +47,11 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
-        <!-- 消息模板 → 统一模板库（消息模板同时接入 template_info） -->
+        <!-- 消息模板 → 统一模板库（消息模板同时接入 template_info）；
+             模板管理已并入账号管理项目（spring-support-account-starter） -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-template-starter</artifactId>
+            <artifactId>spring-support-account-starter</artifactId>
             <version>4.0.0.51</version>
         </dependency>
 

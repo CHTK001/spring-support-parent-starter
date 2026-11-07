@@ -13,6 +13,7 @@ import java.util.Map;
  * <p>建群者即群主（真人），群成员是 AI 角色。所有数据按当前登录用户隔离。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 public interface TavernService {
 

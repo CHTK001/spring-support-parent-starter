@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.configuration.face;
 
-import com.chua.common.support.ai.rag.GlobalSettingProvider;
+import com.chua.common.support.ai.rag.GlobalSettingProvider; // [P3C A20 豁免] order 为人为设置的显示顺序编号
 import com.chua.common.support.spi.annotations.Spi;
 
 import java.util.List;

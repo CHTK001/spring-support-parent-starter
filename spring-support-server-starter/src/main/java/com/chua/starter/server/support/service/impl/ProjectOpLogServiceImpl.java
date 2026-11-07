@@ -45,6 +45,16 @@ public class ProjectOpLogServiceImpl implements ProjectOpLogService {
     private static final String STATUS_SUCCESS = "SUCCESS";
 
     /**
+     * 页码下限
+     */
+    private static final int MIN_PAGE = 1;
+
+    /**
+     * 每页条数上限（退麻让前端不要一次拉太多）
+     */
+    private static final int MAX_PAGE_SIZE = 200;
+
+    /**
      * 状态：失败
      */
     private static final String STATUS_FAILED = "FAILED";
@@ -147,7 +157,7 @@ public class ProjectOpLogServiceImpl implements ProjectOpLogService {
         }
         query.orderByDesc(MsServerProjectOpLog::getId);
         Page<MsServerProjectOpLog> result = opLogMapper.selectPage(
-                new Page<>(Math.max(1, page), Math.max(1, Math.min(pageSize, 200))), query);
+                new Page<>(Math.max(MIN_PAGE, page), Math.max(MIN_PAGE, Math.min(pageSize, MAX_PAGE_SIZE))), query);
         return ReturnResult.ok(result);
     }
 

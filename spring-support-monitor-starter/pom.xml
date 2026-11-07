@@ -71,12 +71,12 @@
             <artifactId>spring-support-docker-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket，
-             经 AutoConfiguration.imports 自动装配 com.chua.starter.cdp.config.CdpAutoConfiguration） -->
+        <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket）。
+             原 spring-support-cdp-starter 已并入本模块的 tshark 域（com.chua.starter.monitor.support.tshark.cdp），
+             由 MonitorAutoConfiguration 的组件扫描装配；这里只补它用到的 WebSocket 运行库 -->
         <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-cdp-starter</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
         <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->
         <dependency>
@@ -258,6 +258,14 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-io-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- P2P 房间信令节点：服务管理里的 ROOM 协议直接用 RoomServer（WebSocket 引擎 + 定向下发），
+             房间引擎 RoomService 与配置 RoomProperties 都在该模块内 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-websocket-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
 

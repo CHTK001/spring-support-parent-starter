@@ -144,7 +144,8 @@ public final class ProjectScripts {
       /**
        * Windows 状态脚本：仅以 app.pid 为准（SSH 会话内 WMI 枚举常被拒，故不走命令行匹配）
        */
-    private static final String WIN_STATUS = "if (Test-Path 'app.pid') { if (Get-Process -Id (Get-Content 'app.pid') -ErrorAction SilentlyContinue) { 'running' } else { 'stopped' } } else { 'stopped' }";
+    private static final String WIN_STATUS = "if (Test-Path 'app.pid') { if (Get-Process -Id (Get-Content 'app.pid') -ErrorAction SilentlyCo" +
+        "ntinue) { 'running' } else { 'stopped' } } else { 'stopped' }";
 
       /**
        * 由主入口名生成「不会匹配到脚本自身命令行」的进程匹配模式。

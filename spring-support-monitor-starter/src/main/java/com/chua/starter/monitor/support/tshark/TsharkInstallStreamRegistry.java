@@ -162,7 +162,8 @@ public class TsharkInstallStreamRegistry {
      * @param payload 载荷
      * @throws IOException 序列化失败或连接已断
      */
-    private void sendJson(SseEmitter emitter, String event, Object payload) throws IOException {        byte[] json = objectMapper.writeValueAsBytes(payload);
+    private void sendJson(SseEmitter emitter, String event,
+        Object payload) throws IOException {        byte[] json = objectMapper.writeValueAsBytes(payload);
         emitter.send(SseEmitter.event().name(event).data(json));
     }
 

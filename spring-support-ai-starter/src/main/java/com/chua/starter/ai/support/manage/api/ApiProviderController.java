@@ -26,6 +26,7 @@ import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.chat.MagpieRouteSource;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.common.support.annotations.Permission;
 import lombok.RequiredArgsConstructor;
@@ -95,6 +96,11 @@ public class ApiProviderController {
      * 提供商连接 映射器
      */
     private final SysAiProviderConnectionMapper connectionMapper;
+
+    /**
+     * Magpie 网关路由源：免费渠道的模型清单要并入网关当前动态模型
+     */
+    private final MagpieRouteSource magpieRouteSource;
 
     /**
      * 模型价格/指标快照服务（读取 Redis 缓存，含价格/延迟/速度/智能等指标）
@@ -3092,6 +3098,35 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 m.put("description", describeRouteTarget(key, target));
                 models.add(m);
             }
+        }
+        // Magpie 网关的模型目录由网关自己维护、不落库：拉取时并入当前可用模型。
+        // 与路由合并口径一致——已由 extra.routes 显式登记的 id 不重复添加。
+        java.util.Set<String> seenIds = new HashSet<>();
+        for (Map<String, Object> m : models) {
+            seenIds.add(String.valueOf(m.get("id")));
+        }
+        try {
+            for (Map<String, Object> row : magpieRouteSource.modelRows("_free")) {
+                String id = String.valueOf(row.get("id"));
+                if (!seenIds.add(id)) {
+                    continue;
+                }
+                Object upstream = row.get("provider");
+                Map<String, Object> m = new LinkedHashMap<>(7);
+                m.put("id", id);
+                m.put("name", row.get("name"));
+                m.put("provider", MagpieRouteSource.CHANNEL);
+                m.put("baseUrl", row.get("baseUrl"));
+                m.put("authScheme", "api_key");
+                m.put("tasks", inferTasks(id));
+                m.put("traits", List.of("streaming"));
+                m.put("description", "Magpie 网关"
+                        + (upstream == null ? "" : " · 上游 " + upstream)
+                        + (row.get("baseUrl") == null ? "" : " · " + row.get("baseUrl")));
+                models.add(m);
+            }
+        } catch (Exception e) {
+            log.debug("[Provider] 并入 Magpie 网关模型失败: {}", e.getMessage());
         }
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("models", models);

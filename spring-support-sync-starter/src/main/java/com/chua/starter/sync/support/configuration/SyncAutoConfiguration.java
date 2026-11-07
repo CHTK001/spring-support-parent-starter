@@ -22,6 +22,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.core.env.Environment;
 
+import java.util.List;
+
 /**
  * 同步协议自动配置
  * <p>
@@ -71,14 +73,15 @@ public class SyncAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @Conditional(SyncServerCondition.class)
-    public SyncServer syncServer(SyncProperties syncProperties) {
+    public SyncServer syncServer(SyncProperties syncProperties,
+                                 ObjectProvider<com.chua.common.support.network.discovery.ServiceDiscovery> discoveryProvider) {
         log.info("[Sync] 创建服务端");
         /**
          * 同步服务端。
          * @param syncProperties 同步属性
          * @return 同步服务端的结果
          */
-        return new SyncServer(syncProperties);
+        return new SyncServer(syncProperties, resolveServiceDiscovery(syncProperties, discoveryProvider));
     }
 
     /**
@@ -96,14 +99,47 @@ public class SyncAutoConfiguration {
     @Conditional(SyncClientCondition.class)
     public SyncClient syncClient(SyncProperties syncProperties,
                                  ObjectProvider<SyncClientInfoCustomizer> syncClientInfoCustomizerProvider,
-                                 ObjectProvider<SyncClientCustomizer> syncClientCustomizerProvider) {
+                                 ObjectProvider<SyncClientCustomizer> syncClientCustomizerProvider,
+                                 ObjectProvider<com.chua.common.support.network.discovery.ServiceDiscovery> discoveryProvider) {
         log.info("[Sync] 创建客户端");
         return new SyncClientWrapper(
                 syncProperties,
                 environment,
                 syncClientInfoCustomizerProvider.orderedStream().toList(),
-                syncClientCustomizerProvider.orderedStream().toList()
+                syncClientCustomizerProvider.orderedStream().toList(),
+                resolveServiceDiscovery(syncProperties, discoveryProvider)
         );
+    }
+
+    /**
+     * 选择同步通道要使用的服务发现实例。
+     *
+     * <p>容器里可能存在多个实现（如 {@code serviceDiscovery#redis} 与 {@code serviceDiscovery#nacos}）。
+     * 装配了 {@code @Primary} 的直接用主实例；没有主实例且只有一个时才用那一个；
+     * 有多个又没有主实例则无法判断，此时不接入发现并告警，让同步通道回落到显式地址，
+     * 避免「随便挑一个」导致注册到 A 中心却从 B 中心查。</p>
+     *
+     * @param syncProperties     同步配置
+     * @param discoveryProvider  服务发现提供器
+     * @return 选中的服务发现实例；不使用时返回 null
+     */
+    private com.chua.common.support.network.discovery.ServiceDiscovery resolveServiceDiscovery(
+            SyncProperties syncProperties,
+            ObjectProvider<com.chua.common.support.network.discovery.ServiceDiscovery> discoveryProvider) {
+        if (discoveryProvider == null) {
+            return null;
+        }
+        List<com.chua.common.support.network.discovery.ServiceDiscovery> candidates = discoveryProvider.orderedStream().toList();
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        if (candidates.size() > 1) {
+            log.warn("[Sync] 检测到 {} 个服务发现实例且未标记 @Primary，服务发现未接入，"
+                    + "同步通道将使用显式地址。请通过 spring.main.primary 或删除多余实现使其唯一",
+                    candidates.size());
+            return null;
+        }
+        return candidates.getFirst();
     }
 
     /**

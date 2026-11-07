@@ -67,7 +67,8 @@ public final class DatalakePipelineBenchProbe {
           // 单 Sink 管线
         pm.savePipeline("bench-single", "{\"id\":\"bench-single\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
           // 多 Sink 管线
-        pm.savePipeline("bench-multi", "{\"id\":\"bench-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statistic\"},{\"type\":\"realtime\"}]}}}");
+        pm.savePipeline("bench-multi", "{\"id\":\"bench-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statisti" +
+            "c\"},{\"type\":\"realtime\"}]}}}");
 
         System.err.println("========================================================================"); // [P3C E1 豁免]
         System.err.println("Datalake PipelineEngine 吞吐基准"); // [P3C E1 豁免]

@@ -295,6 +295,7 @@ public final class DbObjectDialect {
         return null;
     }
 
+    /** definitionFromMeta 方法 */
     private static String definitionFromMeta(Connection conn, String schema, String name, Category type)
             throws SQLException {
         String sql = switch (type) {

@@ -651,7 +651,8 @@ public class WindowsSshDelegate implements SystemInfoProvider {
     public boolean delete(MsServerHost host, String path) {
           // Remove-Item -Recurse 同时处理文件与非空目录，删完回检
         String q = psQuote(path);
-        String out = ps(host, "Remove-Item -Recurse -Force -LiteralPath " + q + " -ErrorAction SilentlyContinue; if(-not (Test-Path -LiteralPath " + q + ")){'OK'}");
+        String out = ps(host, "Remove-Item -Recurse -Force -LiteralPath " + q + " -ErrorAction SilentlyContinue; if(-not (Te" +
+            "st-Path -LiteralPath " + q + ")){'OK'}");
         return out != null && out.contains("OK");
     }
 

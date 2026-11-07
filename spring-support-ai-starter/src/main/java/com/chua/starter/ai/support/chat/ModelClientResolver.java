@@ -16,7 +16,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.service.ChannelHealthService;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -94,6 +94,11 @@ public class ModelClientResolver {
      * 渠道健康探针服务：通道隔离（剔除下线的连接）
      */
     private final ChannelHealthService channelHealthService;
+
+    /**
+     * Magpie 网关路由源：把网关动态模型并入免费渠道路由表（最低优先级）
+     */
+    private final MagpieRouteSource magpieRouteSource;
 
     /**
      * 按（可能带 providerId 前缀的）模型名解析可用对话客户端。
@@ -512,7 +517,21 @@ public class ModelClientResolver {
             merged.putAll(staticRoutes);
         }
         merged.putAll(dynamicRoutes);
+        // Magpie 网关：动态模型目录，最低优先级（不覆盖任何显式渠道路由）。
+        // 失败时返回空表，不影响其余路由。
+        try {
+            magpieRouteSource.routes(ownerScope).forEach(merged::putIfAbsent);
+        } catch (Exception e) {
+            log.debug("[ModelClientResolver] 合并 Magpie 路由失败: {}", e.getMessage());
+        }
         return merged;
+    }
+
+    /**
+     * 清空渠道路由缓存（magpie provider 增删改后调用，让新模型立即生效）。
+     */
+    public void invalidateRouteCache() {
+        routeCache.clear();
     }
 
     /**

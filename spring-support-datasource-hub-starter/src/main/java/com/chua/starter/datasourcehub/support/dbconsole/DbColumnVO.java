@@ -27,6 +27,8 @@ import java.util.List;
  * @param collation    列排序规则
  * @param enumValues   ENUM/SET 的取值
  * @param scale        小数位
+ * @author CH
+ * @since 4.0.0.51
  */
 public record DbColumnVO(
         String name,

@@ -179,6 +179,7 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         return dir.resolve(ACT_NAME_PREFIX + actNo + ACT_NAME_SUFFIX);
     }
 
+    /** writeFile 方法 */
     private boolean writeFile(Path path, String json) {
         try {
             tryEnsure(path.getParent());
@@ -190,6 +191,7 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         }
     }
 
+    /** readFile 方法 */
     private String readFile(Path path) {
         try {
             if (!Files.exists(path)) {
@@ -202,6 +204,7 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         }
     }
 
+    /** tryEnsure 方法 */
     private void tryEnsure(Path dir) {
         if (dir == null || Files.isDirectory(dir)) {
             return;

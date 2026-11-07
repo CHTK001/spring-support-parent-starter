@@ -35,7 +35,15 @@ public enum ServerNodeProtocol {
     /**
      * SIP 隧道服务器（单端口信令 + 数据平面，需要 令牌 认证）
      */
-    SIP("SIP", "sip", 19460, "sip", false, "SIP 隧道服务器");
+    SIP("SIP", "sip", 19460, "sip", false, "SIP 隧道服务器"),
+
+    /**
+     * P2P 房间信令服务器（WebSocket 协议，房间引擎 + 定向下发）
+     *
+     * <p>由 {@code ServerNodeRegistry} 直接构造 {@code RoomServer}（无 @Spi），
+     * 与 SIP 同路：节点落库 {@code ms_server_node}，可独立启停。</p>
+     */
+    ROOM("ROOM", "room", 18083, "room", false, "P2P 房间信令服务器");
 
     /**
      * 存储编码

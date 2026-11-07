@@ -31,6 +31,7 @@ import java.util.Map;
  * 本控制器只负责建立 SSE 响应、把帧写成裸 {@code data:} 字节。停止逻辑见 {@link ChatStreamRegistry}。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @RestController
 @RequestMapping("/v2/chat")

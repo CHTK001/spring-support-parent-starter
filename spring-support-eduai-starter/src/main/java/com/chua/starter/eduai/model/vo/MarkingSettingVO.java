@@ -74,4 +74,13 @@ public class MarkingSettingVO {
      */
     @Schema(description = "阅卷判分 System Prompt（空 = 使用内置默认）")
     private String markingPrompt = "";
+
+    /**
+     * 判分完成后是否自动结案（自动登记错题并置为「已完成」）。
+     *
+     * <p>默认关闭：关闭时判分结束停在「已判分」，仍需老师点「完成」；
+     * 打开后判分完成即按同一套口径收口，链路上不再有人工断点。</p>
+     */
+    @Schema(description = "判分完成后自动结案（自动登记错题并置为已完成）")
+    private boolean autoFinish = false;
 }

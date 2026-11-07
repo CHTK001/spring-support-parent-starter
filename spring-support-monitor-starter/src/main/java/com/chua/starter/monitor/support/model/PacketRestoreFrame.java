@@ -47,10 +47,12 @@ public class PacketRestoreFrame implements Serializable {
         this.rawData = rawData;
     }
 
+    /** getRestoredText 方法 */
     public String getRestoredText() {
         return this.restoredText;
     }
 
+    /** setRestoredText 方法 */
     public void setRestoredText(String restoredText) {
         this.restoredText = restoredText;
     }

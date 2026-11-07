@@ -113,6 +113,18 @@ public class MarkingSettingService {
     }
 
     /**
+     * 是否「判分完成即自动结案」。
+     *
+     * <p>打开后后台判分线程在把任务置为「已判分」之后，会立即按老师点「完成」的
+     * 同一套口径登记错题并置「已完成」；关闭时维持原行为，停在「已判分」等老师确认。</p>
+     *
+     * @return true 表示判分完成即自动结案
+     */
+    public boolean autoFinish() {
+        return resolved().isAutoFinish();
+    }
+
+    /**
      * 从全局设置表 + YAML 默认值合并出一份设置
      *
      * @return 设置
@@ -129,6 +141,7 @@ public class MarkingSettingService {
         setting.setExtractStrategy(normalizeStrategy(read("extract_strategy", defaultStrategy())));
         setting.setMatchMode(normalizeMatchMode(read("match_mode", MATCH_MODE_STRICT)));
         setting.setMarkingPrompt(read("marking_system_prompt", ""));
+        setting.setAutoFinish(readBool("auto_finish", false));
         // 兜底纠偏：页面上可能填了非法值（负数 / 0 / 倍数 <=1），判分前统一按默认规则纠正
         if (setting.getRetryTimes() < 0) {
             setting.setRetryTimes(defaults.getTimes());
