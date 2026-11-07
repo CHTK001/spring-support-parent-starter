@@ -51,7 +51,8 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
     private static final int MAX_LOOKBACK_HOURS = 24 * 7;
 
     /**
-     * 五个数值列后缀与输出行下标顺序：CPU / 内存 / 磁盘 / 磁盘读 / 磁盘写
+     * 五个基础数值列 + 两个网络收发列的后缀，顺序即输出行下标顺序：
+     * CPU / 内存 / 磁盘 / 磁盘读 / 磁盘写 / 网络收 / 网络发
      *
      * <p>这些是**指标名（数值列后缀）**，不是引擎的 target。引擎把 target 当表名，
      * 拼成 {@code SELECT {target}_{metricName} FROM {target}}，所以读曲线必须传
@@ -62,13 +63,18 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
      * 于是每次查询都变成 {@code SELECT ... FROM cpu_usage}（库中并无此表）：
      * 异常被逐指标 {@code catch} 吞掉，接口永远返回空数组且 code=00000，
      * 而库里其实一直在正常写入（实测 18 万行 / 4 台主机 / 秒级在写）。</p>
+     *
+     * <p>网络两列是 4.0.0.54 新增，老库缺列时逐指标 {@code catch} 会跳过它，
+     * 输出行该位为 null —— 前端按「无数据」处理，不会把老历史读成 0。</p>
      */
     private static final List<String> CURVE_TARGETS = List.of(
             "cpu_usage",
             "mem_usage",
             "disk_usage",
             "disk_read_kbs",
-            "disk_write_kbs");
+            "disk_write_kbs",
+            "net_rx_kbs",
+            "net_tx_kbs");
 
     /**
      * 时序引擎（读写与清理唯一入口）
@@ -84,7 +90,8 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
 
     @Override
     public void record(Long hostId, Double cpu, Double mem, Double disk,
-                       Double diskReadKbs, Double diskWriteKbs) {
+                       Double diskReadKbs, Double diskWriteKbs,
+                       Double netRxKbs, Double netTxKbs) {
         if (hostId == null || !seriesEngine.isAvailable()) {
             return;
         }
@@ -95,13 +102,28 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
         putIfNotNull(metrics, "disk_usage", disk);
         putIfNotNull(metrics, "disk_read_kbs", diskReadKbs);
         putIfNotNull(metrics, "disk_write_kbs", diskWriteKbs);
+        putIfNotNull(metrics, "net_rx_kbs", netRxKbs);
+        putIfNotNull(metrics, "net_tx_kbs", netTxKbs);
         if (metrics.isEmpty()) {
             return;
         }
+        long ts = System.currentTimeMillis();
         try {
-            seriesEngine.writeBatch(HOST_TABLE, hostId, metrics, System.currentTimeMillis());
+            seriesEngine.writeBatch(HOST_TABLE, hostId, metrics, ts);
         } catch (RuntimeException e) {
-            log.debug("[HostHistory] 写入主机指标历史失败 host={}: {}", hostId, e.getMessage());
+            // 老库还没加 net_rx_kbs / net_tx_kbs 时 INSERT 会因为未知列整条失败，
+            // 连 CPU/内存/磁盘的历史都一起丢掉。这里退化重试一次「不含网络列」，
+            // 保证升级顺序（先跑新代码、后执行迁移）不会造成历史断档。
+            metrics.remove("net_rx_kbs");
+            metrics.remove("net_tx_kbs");
+            if (metrics.isEmpty()) {
+                return;
+            }
+            try {
+                seriesEngine.writeBatch(HOST_TABLE, hostId, metrics, ts);
+            } catch (RuntimeException retry) {
+                log.debug("[HostHistory] 写入主机指标历史失败 host={}: {}", hostId, retry.getMessage());
+            }
         }
     }
 
@@ -118,7 +140,7 @@ public class HostMetricHistoryServiceImpl implements HostMetricHistoryService {
                     + ".." + MAX_LOOKBACK_HOURS + " 之间: " + hours);
         }
         String window = windowForHours(hours);
-        // ts → [cpu, mem, disk, read, write]，按时间升序
+        // ts → [cpu, mem, disk, read, write, netRx, netTx]，按时间升序
         TreeMap<Long, Double[]> merged = new TreeMap<>();
         for (int i = 0; i < CURVE_TARGETS.size(); i++) {
             List<List<Object>> curve;

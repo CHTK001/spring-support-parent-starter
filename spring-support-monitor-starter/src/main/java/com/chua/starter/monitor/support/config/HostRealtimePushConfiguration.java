@@ -211,6 +211,7 @@ public class HostRealtimePushConfiguration {
             monitorPushService.pushHostMetrics(host.getId(), host.getServerHostName(),
                     host.getServerHostCpuUsage(), host.getServerHostMemUsage(), host.getServerHostDiskUsage(),
                     host.getServerHostDiskReadKbs(), host.getServerHostDiskWriteKbs(),
+                    host.getServerHostNetRxKbs(), host.getServerHostNetTxKbs(),
                     host.getServerHostSoftware());
         } catch (Exception e) {
             log.debug("[monitor] 指标推送跳过 hostId={}: {}", host.getId(), e.getMessage());
@@ -219,7 +220,8 @@ public class HostRealtimePushConfiguration {
         try {
             hostMetricHistoryService.record(host.getId(), host.getServerHostCpuUsage(),
                     host.getServerHostMemUsage(), host.getServerHostDiskUsage(),
-                    host.getServerHostDiskReadKbs(), host.getServerHostDiskWriteKbs());
+                    host.getServerHostDiskReadKbs(), host.getServerHostDiskWriteKbs(),
+                    host.getServerHostNetRxKbs(), host.getServerHostNetTxKbs());
         } catch (Exception e) {
             log.debug("[monitor] 主机历史写入跳过 hostId={}: {}", host.getId(), e.getMessage());
         }

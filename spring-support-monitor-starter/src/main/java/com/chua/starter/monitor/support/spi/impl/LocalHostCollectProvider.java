@@ -103,6 +103,15 @@ public class LocalHostCollectProvider implements HostCollectProvider {
             host.setServerHostDiskWriteKbs(diskWrite);
             write.set(MsServerHost::getServerHostDiskReadKbs, diskRead);
             write.set(MsServerHost::getServerHostDiskWriteKbs, diskWrite);
+            // 网络收发（KB/s）：getHostInfo 内已经采过一次，直接复用同一帧，避免二次采样得到 0
+            if (info != null && info.getNetworkRxKb() != null && info.getNetworkTxKb() != null) {
+                double netRx = NumberUtils.round(info.getNetworkRxKb(), 1).doubleValue();
+                double netTx = NumberUtils.round(info.getNetworkTxKb(), 1).doubleValue();
+                host.setServerHostNetRxKbs(netRx);
+                host.setServerHostNetTxKbs(netTx);
+                write.set(MsServerHost::getServerHostNetRxKbs, netRx);
+                write.set(MsServerHost::getServerHostNetTxKbs, netTx);
+            }
             // 运行软件（非核心）：识别后 JSON 落库；单独 try/catch，软件识别失败/超时不拖垮核心指标采集
             long t5 = System.nanoTime();
             try {

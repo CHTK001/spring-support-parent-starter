@@ -138,6 +138,8 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     `ms_server_host_disk_usage` DECIMAL(5,2) NULL COMMENT '磁盘使用率%(探测结果)',
     `ms_server_host_disk_read_kbs` DECIMAL(10,2) NULL COMMENT '磁盘读取速率 KB/s(探测结果)',
     `ms_server_host_disk_write_kbs` DECIMAL(10,2) NULL COMMENT '磁盘写入速率 KB/s(探测结果)',
+    `ms_server_host_net_rx_kbs` DECIMAL(12,2) NULL COMMENT '网络接收速率 KB/s(探测结果)',
+    `ms_server_host_net_tx_kbs` DECIMAL(12,2) NULL COMMENT '网络发送速率 KB/s(探测结果)',
     `ms_server_host_software` TEXT NULL COMMENT '软件实例(JSON数组,进程识别结果)',
     ms_server_host_remote_protocol VARCHAR(16) NULL DEFAULT NULL COMMENT '远控协议: SSH/RDP/VNC, 空则按操作系统类型推断',
     ms_server_host_remote_port     INT          NULL DEFAULT NULL COMMENT '远控端口, 空则取协议默认端口(SSH 22/RDP 3389/VNC 5900)',

@@ -195,6 +195,8 @@ public class HostProfileServiceImpl implements HostProfileService {
         info.setDiskUsedGb(diskUsed);
         info.setDiskReadKbs(h.getServerHostDiskReadKbs());
         info.setDiskWriteKbs(h.getServerHostDiskWriteKbs());
+        info.setNetworkRxKb(h.getServerHostNetRxKbs());
+        info.setNetworkTxKb(h.getServerHostNetTxKbs());
         info.setPublicIp(h.getServerHostPublicIp());
         info.setPrivateIp(h.getServerHostPrivateIp());
         info.setMac(h.getServerHostMac());
@@ -214,6 +216,8 @@ public class HostProfileServiceImpl implements HostProfileService {
         metrics.setDiskPercent(round(diskPct));
         metrics.setDiskReadKbs(h.getServerHostDiskReadKbs() == null ? 0.0 : round(h.getServerHostDiskReadKbs()));
         metrics.setDiskWriteKbs(h.getServerHostDiskWriteKbs() == null ? 0.0 : round(h.getServerHostDiskWriteKbs()));
+        metrics.setNetworkRxKb(h.getServerHostNetRxKbs() == null ? 0.0 : round(h.getServerHostNetRxKbs()));
+        metrics.setNetworkTxKb(h.getServerHostNetTxKbs() == null ? 0.0 : round(h.getServerHostNetTxKbs()));
         metrics.setUptimeSec(h.getServerHostUptimeSec() == null ? 0L : h.getServerHostUptimeSec());
         metrics.setCollectTime(h.getServerHostLastCollectTime() == null ? null
                 : h.getServerHostLastCollectTime().toString());
@@ -652,6 +656,8 @@ public class HostProfileServiceImpl implements HostProfileService {
         host.setServerHostDiskUsage(metrics.getDiskPercent());
         host.setServerHostDiskReadKbs(metrics.getDiskReadKbs());
         host.setServerHostDiskWriteKbs(metrics.getDiskWriteKbs());
+        host.setServerHostNetRxKbs(metrics.getNetworkRxKb());
+        host.setServerHostNetTxKbs(metrics.getNetworkTxKb());
         // 软件实例：由进程列表按软件特征派生（同软件多实例按 PID），JSON 落库
         String softwareJson = deriveSoftware(provider, host);
         if (softwareJson != null) {

@@ -244,6 +244,20 @@ public class MsServerHost extends SysBase {
     private Double serverHostDiskWriteKbs; // 服务端主机磁盘写入速率
 
     /**
+     * 网络接收速率（KB/s，探测结果）
+     */
+    @TableField("ms_server_host_net_rx_kbs")
+    @Schema(description = "网络接收速率KB/s(探测结果)", example = "1024.00")
+    private Double serverHostNetRxKbs; // 服务端主机网络接收速率
+
+    /**
+     * 网络发送速率（KB/s，探测结果）
+     */
+    @TableField("ms_server_host_net_tx_kbs")
+    @Schema(description = "网络发送速率KB/s(探测结果)", example = "256.00")
+    private Double serverHostNetTxKbs; // 服务端主机网络发送速率
+
+    /**
      * 主机上运行的软件实例（JSON 数组，探测结果）
      */
     @TableField("ms_server_host_software")
