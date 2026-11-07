@@ -5,7 +5,7 @@
     size="980"
     append-to-body
     destroy-on-close
-    :show-footer="false"
+    footer-hidden
   >
     <div class="mailbox">
       <!-- 加载概览 -->

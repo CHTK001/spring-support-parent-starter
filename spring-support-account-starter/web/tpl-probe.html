@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>模板选择器探针</title>
+  </head>
+  <body>
+    <div id="probe" style="padding: 24px; max-width: 720px"></div>
+    <script type="module">
+      import { createApp, h, ref } from 'vue'
+      import ElementPlus from 'element-plus'
+      import 'element-plus/dist/index.css'
+      import MessageTemplateSelect from '/src/template/components/MessageTemplateSelect.vue'
+
+      const code = ref('')
+      const last = ref('')
+
+      const app = createApp({
+        setup() {
+          return () =>
+            h('div', [
+              h('h3', { style: 'margin:0 0 12px' }, '账号管理 · 短信模板编码'),
+              h(MessageTemplateSelect, {
+                modelValue: code.value,
+                'onUpdate:modelValue': (v) => (code.value = v),
+                kind: 'SMS',
+                allowCreate: true,
+                placeholder: '选择模板，或直接输入运营商模板码',
+                onChange: (tpl, c) => {
+                  last.value = tpl ? `完整模板：${tpl.templateName}（${c}）` : `手填/清空：${c || '(空)'}`
+                },
+              }),
+              h('p', { style: 'margin-top:16px;color:#666' }, `v-model = ${code.value || '(空)'}`),
+              h('p', { style: 'color:#666' }, last.value),
+            ])
+        },
+      })
+      app.use(ElementPlus)
+      app.mount('#probe')
+      window.__probeReady = true
+    </script>
+  </body>
+</html>
