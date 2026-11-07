@@ -140,12 +140,8 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         MsServerHost host = hostResult.getData();
-        // 本机不支持 SSH 远控（本机对自身 SSH 无意义），仅支持 VNC
-        if (host.getServerHostCollectMode() != null
-                && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim())) {
-            reject(wsSession, "本机不支持 SSH 远控，请使用 VNC");
-            return;
-        }
+        // 本机（采集方式 LOCAL）同样可以走 SSH：平台所在主机自己也可能开着 sshd。
+        // 这里不做「本机不支持 SSH」的一刀切，能不能连上交给真实握手结果说话。
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId, PROTOCOL);
         if (!resolved.isOk()) {
             reject(wsSession, resolved.getMsg());
@@ -480,11 +476,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             return null;
         }
         MsServerHost host = hostResult.getData();
-        if (host.getServerHostCollectMode() != null
-                && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim())) {
-            reject(wsSession, "本机不支持 SSH 远控，请使用 VNC");
-            return null;
-        }
+        // 同直连通道：本机也可能开着 sshd，不按采集方式拦截
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId, PROTOCOL);
         if (!resolved.isOk()) {
             reject(wsSession, resolved.getMsg());

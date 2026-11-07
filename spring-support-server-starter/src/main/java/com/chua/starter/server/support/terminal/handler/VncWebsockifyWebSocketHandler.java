@@ -116,22 +116,26 @@ public class VncWebsockifyWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         MsServerHost host = hostResult.getData();
-        // 本机：优先回环（VNC 服务通常只监听 127.0.0.1），再退物理网卡 IP；
-        // 端口在配置值之外顺带探测 5900-5910，避免「远控端口沿用了 SSH 端口」
-        // 或 VNC 服务换了显示号时直接把连接打到错误端口。
+        // 本机：物理网卡 → 台账地址 → 回环。端口在配置值之外顺带探测 5900-5910，
+        // 避免「远控端口沿用了 SSH 端口」或 VNC 服务换了显示号时打错端口。
         boolean isLocal = host.getServerHostCollectMode() != null
                 && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim());
         java.util.List<String> addresses = new java.util.ArrayList<>();
         if (isLocal) {
-            addresses.add("127.0.0.1");
+            // TightVNC 默认拒绝 loopback，在 RFB 层直接回
+            // "Sorry, loopback connections are not enabled"，而 TCP 能连上、
+            // 握手前发现不了；所以回环只作为「服务只监听 127.0.0.1」时的兜底。
             String lan = NetUtils.getPreferredLocalIp();
-            if (lan != null && !lan.isBlank() && !addresses.contains(lan)) {
+            if (lan != null && !lan.isBlank()) {
                 addresses.add(lan);
             }
         }
         String hostAddress = host.getServerHostAddress();
         if (hostAddress != null && !hostAddress.isBlank() && !addresses.contains(hostAddress)) {
             addresses.add(hostAddress);
+        }
+        if (isLocal) {
+            addresses.add("127.0.0.1");
         }
         java.util.List<Integer> ports = new java.util.ArrayList<>();
         int configuredPort = requestedPort != null && requestedPort > 0
