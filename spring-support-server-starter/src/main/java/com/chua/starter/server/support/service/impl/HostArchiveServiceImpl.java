@@ -70,6 +70,26 @@ public class HostArchiveServiceImpl implements HostArchiveService {
     private static final String DEFAULT_AUTH_TYPE = "PASSWORD";
 
     /**
+     * 本地 Map 默认容量
+     */
+    private static final int DEFAULT_CAPACITY = 16;
+
+    /**
+     * 采集间隔（秒）
+     */
+    private static final int DEFAULT_COLLECT_INTERVAL = 3600;
+
+    /**
+     * 在线检测间隔（秒）
+     */
+    private static final int DEFAULT_ONLINE_INTERVAL = 60;
+
+    /**
+     * 延迟检测间隔（秒）
+     */
+    private static final int DEFAULT_DELAY_INTERVAL = 60;
+
+    /**
      * 新建主机时固定取值：启用 / 在线状态未知
      */
     private static final int STATUS_ENABLED = 1;
@@ -83,8 +103,8 @@ public class HostArchiveServiceImpl implements HostArchiveService {
      * 迁移注意事项：随归档一起下发，前端原样展示。
      */
     private static final String ARCHIVE_NOTE =
-            "口令字段为 AES 密文，只能导入到 plugin.server.support.credential-key 相同的环境；"
-                    + "换密钥的环境导入后主机与绑定正常，但这些口令需重新填写。";
+            "口令字段为平台加密密文，只能导入到同一部署环境；"
+                    + "换环境导入后主机与绑定正常，但这些口令需重新填写。";
 
     private final MsServerHostMapper hostMapper;
 
@@ -98,14 +118,14 @@ public class HostArchiveServiceImpl implements HostArchiveService {
         List<MsServerIdentity> identities = identityMapper.selectList(null);
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(null);
 
-        Map<Long, MsServerHost> hostById = new HashMap<>(16);
+        Map<Long, MsServerHost> hostById = new HashMap<>(DEFAULT_CAPACITY);
         List<HostArchiveVO.HostItem> hostItems = new ArrayList<>(hosts.size());
         for (MsServerHost h : hosts) {
             hostById.put(h.getId(), h);
             hostItems.add(toHostItem(h));
         }
 
-        Map<Long, MsServerIdentity> identityById = new HashMap<>(16);
+        Map<Long, MsServerIdentity> identityById = new HashMap<>(DEFAULT_CAPACITY);
         List<HostArchiveVO.IdentityItem> identityItems = new ArrayList<>(identities.size());
         for (MsServerIdentity i : identities) {
             identityById.put(i.getId(), i);
@@ -142,7 +162,7 @@ public class HostArchiveServiceImpl implements HostArchiveService {
         }
 
         // 主机：address+port 去重
-        Map<String, Long> hostIdByKey = new HashMap<>(16);
+        Map<String, Long> hostIdByKey = new HashMap<>(DEFAULT_CAPACITY);
         int hostsCreated = 0;
         int hostsMatched = 0;
         for (HostArchiveVO.HostItem item : nullToEmpty(archive.hosts())) {
@@ -193,11 +213,11 @@ public class HostArchiveServiceImpl implements HostArchiveService {
             // 采集/检测类开关：没带就按平台默认，不能留 null 让定时任务读空指针
             host.setServerHostCollectEnabled(item.collectEnabled() == null ? 0 : item.collectEnabled());
             host.setServerHostCollectMode(isBlank(item.collectMode()) ? DEFAULT_COLLECT_MODE : item.collectMode());
-            host.setServerHostCollectInterval(item.collectInterval() == null ? 3600 : item.collectInterval());
+            host.setServerHostCollectInterval(item.collectInterval() == null ? DEFAULT_COLLECT_INTERVAL : item.collectInterval());
             host.setServerHostOnlineEnabled(1);
-            host.setServerHostOnlineInterval(60);
+            host.setServerHostOnlineInterval(DEFAULT_ONLINE_INTERVAL);
             host.setServerHostDelayEnabled(0);
-            host.setServerHostDelayInterval(60);
+            host.setServerHostDelayInterval(DEFAULT_DELAY_INTERVAL);
             host.setServerHostStatus(STATUS_ENABLED);
             host.setServerHostOnline(ONLINE_UNKNOWN);
             hostMapper.insert(host);
@@ -206,7 +226,7 @@ public class HostArchiveServiceImpl implements HostArchiveService {
         }
 
         // 身份：name 去重，口令密文原样写回
-        Map<String, Long> identityIdByName = new HashMap<>(16);
+        Map<String, Long> identityIdByName = new HashMap<>(DEFAULT_CAPACITY);
         int identitiesCreated = 0;
         int identitiesMatched = 0;
         for (HostArchiveVO.IdentityItem item : nullToEmpty(archive.identities())) {

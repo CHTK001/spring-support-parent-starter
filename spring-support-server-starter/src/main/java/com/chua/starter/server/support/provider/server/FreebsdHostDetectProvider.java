@@ -58,7 +58,9 @@ public class FreebsdHostDetectProvider implements HostDetectProvider {
                 host.setServerHostDiskGb(NumberUtils.toLong(disk));
             }
               // 网卡信息（ifconfig 全局 IPv4，BSD 无 ip 命令）
-            String networks = execQuiet(handle, "ifconfig 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\"); if(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$2\"\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
+            String networks = execQuiet(handle, "ifconfig 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\"); if" +
+                "(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$2\"" +
+                "\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
             if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
                 host.setServerHostNetworks(networks);
             }

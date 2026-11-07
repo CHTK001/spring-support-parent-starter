@@ -14,6 +14,8 @@ import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.filesystem.support.properties.FileStorageServerProperties;
 import com.chua.starter.monitor.support.entity.MsServerNode;
+import com.chua.starter.socket.websocket.room.RoomProperties;
+import com.chua.starter.socket.websocket.room.RoomServer;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
 import com.chua.starter.monitor.support.server.filter.DelegatingServerFilter;
@@ -432,7 +434,43 @@ public class ServerNodeRegistry {
             case HTTP_PROXY -> buildProxyServer(createProxyServer("http-proxy", setting, resolveBackend(config)), node, descriptors, managed);
             case TCP_PROXY -> buildProxyServer(createProxyServer("tcp-proxy", setting, resolveBackend(config)), node, descriptors, managed);
             case SIP -> buildSipServer(node, config, descriptors, managed);
+            case ROOM -> buildRoomServer(node, config, setting, descriptors, managed);
         };
+    }
+
+    /**
+     * 构建 P2P 房间信令服务器并挂载插件。
+     *
+     * <p>房间节点与 SIP 同路：不走 SPI，直接构造 {@code RoomServer}。
+     * 协议配置从节点 config 读取，缺省值由 {@code RoomProperties} 自己兜底：</p>
+     * <ul>
+     *   <li>{@code maxPeers} — 每房间最大端点数（默认 2）</li>
+     *   <li>{@code stunServer / turnServer / turnUser / turnPassword} — 下发给客户端的 ICE 配置</li>
+     *   <li>{@code leaseExpiresMs / removeEmptyRoomMs} — 端点续期与空房回收超时</li>
+     * </ul>
+     *
+     * @param node        节点定义
+     * @param config      协议配置
+     * @param setting     通用服务器配置
+     * @param descriptors 插件描述
+     * @param managed     托管过滤器收集器
+     * @return 服务器实例
+     */
+    private Server buildRoomServer(MsServerNode node, Map<String, Object> config, ServerSetting setting,
+                                   List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
+        RoomProperties properties = new RoomProperties();
+        // enable 只对「随宿主同端口装配」的 Spring WebSocket 生效；独立节点启动与否由节点状态决定
+        properties.setEnable(true);
+        applyInt(properties::setMaxPeers, config, "maxPeers");
+        applyString(properties::setStunServer, config, "stunServer");
+        applyString(properties::setTurnServer, config, "turnServer");
+        applyString(properties::setTurnUser, config, "turnUser");
+        applyString(properties::setTurnPassword, config, "turnPassword");
+        applyLong(properties.getTimeouts()::setLeaseExpiresMs, config, "leaseExpiresMs");
+        applyLong(properties.getTimeouts()::setRemoveEmptyRoomMs, config, "removeEmptyRoomMs");
+        RoomServer server = new RoomServer(setting, properties);
+        attachFilters(server, node, descriptors, setting, managed);
+        return server;
     }
 
     /**
@@ -1070,6 +1108,7 @@ public class ServerNodeRegistry {
             case HTTP, HTTP_PROXY -> "http";
             case TCP_PROXY -> "tcp";
             case SIP -> "sip";
+            case ROOM -> "ws";
         };
         return scheme + "://" + (node.getHost() == null || node.getHost().isBlank() ? "0.0.0.0" : node.getHost())
                 + ":" + (node.getPort() != null ? node.getPort() : protocol.getDefaultPort()) + "/";

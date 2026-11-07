@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
  * <p>以 formCode 为对外标识，running 期查询（/code）与渲染（/api）都依赖该编码，
  * 因此所有返回页面的接口以 formId 为参数，详情页/provider 查询以 formCode 为参数，
  * 保证了唯一性。</p>
+ * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service
@@ -167,6 +169,29 @@ public class LowFormServiceImpl extends ServiceImpl<LowFormMapper, LowForm> impl
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean changeStatus(Integer formId, Integer status) {
+        requireForm(formId);
+        if (status == null || (status != ENABLED && status != DISABLED)) {
+            throw new IllegalArgumentException("状态只能是 0(停用) 或 1(启用)");
+        }
+        LowForm update = new LowForm();
+        update.setLowFormId(formId);
+        update.setLowFormStatus(status);
+        return updateById(update);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean unpublish(Integer formId) {
+        requireForm(formId);
+        LowForm update = new LowForm();
+        update.setLowFormId(formId);
+        update.setLowFormPublishStatus(PUBLISH_UNPUBLISHED);
+        return updateById(update);
+    }
+
+    @Override
     public List<LowFormVersionVO> versions(Integer formId) {
         List<LowFormVersion> versions = formVersionMapper.selectList(Wrappers.<LowFormVersion>lambdaQuery()
                 .eq(LowFormVersion::getLowFormId, formId)
@@ -180,6 +205,10 @@ public class LowFormServiceImpl extends ServiceImpl<LowFormMapper, LowForm> impl
                 .eq(LowForm::getLowFormCode, formCode)
                 .eq(LowForm::getLowFormPublishStatus, PUBLISH_PUBLISHED));
         if (form == null) {
+            return null;
+        }
+        // 停用的表单对外不可见：停用语义必须同时约束运行期取数，否则「停用」只是列表上的一个标记。
+        if (form.getLowFormStatus() == null || form.getLowFormStatus() != ENABLED) {
             return null;
         }
         // 运行期只认发布快照：设计器改了已发布表单的 Schema 但没重新发布时，

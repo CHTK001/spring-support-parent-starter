@@ -51,7 +51,8 @@ class ConsoleRealTest {
            */
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:target/console-test.sqlite", "", "");
              Statement statement = connection.createStatement()) {
-            statement.execute("create table if not exists console_kv (k varchar(255) primary key, v varchar(1000), updated_at timestamp default current_timestamp)");
+            statement.execute("create table if not exists console_kv (k varchar(255) primary key, v varchar(1000), updated_at timestamp defa" +
+                "ult current_timestamp)");
             statement.execute("delete from console_kv where k='console.e2e.kv'");
             statement.execute("insert into console_kv(k, v) values('console.e2e.kv', 'from-sqlite')");
         } catch (Exception e) {

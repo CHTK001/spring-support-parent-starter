@@ -256,7 +256,8 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         StringBuilder ps = new StringBuilder();
         ps.append("$want='").append(psEscape(adapterName)).append("'\n");
         ps.append("try{\n $ErrorActionPreference='Stop'\n");
-        ps.append(" $a=Get-NetAdapter | Where-Object { $_.Name -eq $want -or $_.InterfaceDescription -eq $want -or (\"$($_.ifIndex)\" -eq $want) } | Select-Object -First 1\n");
+        ps.append(" $a=Get-NetAdapter | Where-Object { $_.Name -eq $want -or $_.InterfaceDescription -eq $want -or (\"$($_.ifIndex)\" -eq $w" +
+            "ant) } | Select-Object -First 1\n");
         ps.append(" if($null -eq $a){ 'NOTFOUND'; exit }\n");
         ps.append(" $idx=$a.ifIndex\n");
         if (dhcp) {
@@ -270,8 +271,10 @@ public class HostNetworkServiceImpl implements HostNetworkService {
             if (prefix < 1 || prefix > 128) {
                 return ReturnResult.error("子网前缀长度不合法(1-128)");
             }
-            ps.append(" Get-NetRoute -InterfaceIndex $idx -AddressFamily IPv4 | Where-Object { $_.DestinationPrefix -eq '0.0.0.0/0' } | Remove-NetRoute -Confirm:$false\n");
-            ps.append(" @(Get-NetIPAddress -InterfaceIndex $idx -AddressFamily IPv4 | Where-Object { $_.PrefixOrigin -ne 'WellKnown' }) | ForEach-Object { Remove-NetIPAddress -IPAddress $_.IPAddress -Confirm:$false }\n");
+            ps.append(" Get-NetRoute -InterfaceIndex $idx -AddressFamily IPv4 | Where-Object { $_.DestinationPrefix -eq '0.0.0.0/0' } | Remo" +
+                "ve-NetRoute -Confirm:$false\n");
+            ps.append(" @(Get-NetIPAddress -InterfaceIndex $idx -AddressFamily IPv4 | Where-Object { $_.PrefixOrigin -ne 'WellKnown' }) | Fo" +
+                "rEach-Object { Remove-NetIPAddress -IPAddress $_.IPAddress -Confirm:$false }\n");
             ps.append(" $p=@{ InterfaceIndex=$idx; IPAddress='").append(psEscape(addr))
               .append("'; PrefixLength=").append(prefix).append("; AddressFamily='IPv4' }\n");
             String gw = trim(config.getGateway());

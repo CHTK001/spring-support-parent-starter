@@ -5,6 +5,14 @@ import com.chua.starter.device.support.po.*;
 
 import java.util.List;
 
+/**
+ * 设备分组服务契约。
+ *
+ * <p>提供分组树查询、分组增删改，以及分组与设备关联的维护。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
+ */
 public interface DeviceGroupService {
 
     /** 查询分组树（用于左侧树） */

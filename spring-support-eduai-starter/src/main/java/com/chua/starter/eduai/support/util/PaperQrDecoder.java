@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
  *
  * @author CH
  * @version 4.0.0.42
+ * @since 4.0.0.51
  */
 public final class PaperQrDecoder {
 

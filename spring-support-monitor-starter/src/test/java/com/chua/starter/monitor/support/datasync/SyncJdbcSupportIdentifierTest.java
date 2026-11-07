@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 「归一化 → 精确匹配 → 回读真实名」这条链路的口径。
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @DisplayName("同步表名归一化与存在性判定")
 class SyncJdbcSupportIdentifierTest {

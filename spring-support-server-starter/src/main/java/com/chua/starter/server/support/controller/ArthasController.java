@@ -20,6 +20,7 @@ import java.util.Map;
  * <p>提供 Arthas 运行时 attach / detach / 命令执行 / 终端输出等管理接口。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Tag(name = "Arthas 管理")
 @RestController

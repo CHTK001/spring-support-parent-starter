@@ -67,6 +67,16 @@ public interface WorldSimService {
     /** 移除世界 NPC（级联删相关关系） */
     void removeNpc(Long id);
 
+    /**
+     * 让 AI 按世界现状自己造角色：起名、写人设、布置场景，并补上与现有角色的关系。
+     *
+     * @param worldId 世界ID
+     * @param count   要造几个（1~3，越界按边界取值）
+     * @param hint    倾向（可空，观众可给一句“我想要一个……的角色”）
+     * @return 新增的世界 NPC 展示行
+     */
+    List<Map<String, Object>> createNpcsByAi(Long worldId, Integer count, String hint);
+
     /* ---------------- 关系 ---------------- */
 
     /** 世界关系网（合并双方名字/头像） */

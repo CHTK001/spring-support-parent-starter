@@ -11,7 +11,13 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.ai.support.chat.MagpieRouteSource;
+import com.chua.starter.ai.support.chat.ModelClientResolver;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.ChannelCreditProvider;
+import com.chua.starter.common.support.channel.ChannelException;
+import com.chua.starter.common.support.channel.ChannelTaskProvider;
+import com.chua.starter.common.support.channel.ChannelUpstreamAdmin;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.text.json.Json;
@@ -91,6 +97,16 @@ public class ApiChannelAuthController {
     private final SysAiProviderModelMapper modelMapper;
 
     /**
+     * Magpie 网关路由源：上游 provider 增删改后立即失效路由缓存
+     */
+    private final MagpieRouteSource magpieRouteSource;
+
+    /**
+     * 模型客户端解析器：同上，清掉 5 分钟的 {@code routeCache}
+     */
+    private final ModelClientResolver modelClientResolver;
+
+    /**
      * 编程式事务：SSE 流程跑在独立线程池里，{@code @Transactional} 不生效，
      * 而 {@link #persistCredentials} 要连写 connection + provider 两行，
      * 中途失败会留下「有账号但渠道未启用」的半成品状态。
@@ -102,6 +118,21 @@ public class ApiChannelAuthController {
      * 缓存于启动期一次性加载，运行期渠道注册不变。
      */
     private volatile Map<String, AccountChannelAuthManager> channelManagers;
+
+    /**
+     * 积分查询实现（按 {@code @Spi} 别名为 key，懒加载）
+     */
+    private volatile Map<String, ChannelCreditProvider> creditProviders;
+
+    /**
+     * 任务实现（按 {@code @Spi} 别名为 key，懒加载）
+     */
+    private volatile Map<String, ChannelTaskProvider> taskProviders;
+
+    /**
+     * 网关上游管理实现（按 {@code @Spi} 别名为 key，懒加载）
+     */
+    private volatile Map<String, ChannelUpstreamAdmin> upstreamAdmins;
 
     /**
      * SSE 登录流的执行器（守护线程，按需创建，空闲回收）。
@@ -198,6 +229,11 @@ public class ApiChannelAuthController {
         summary.put("kind", "AI");
         summary.put("accountTypes", impl.accountTypes().stream().toList());
         summary.put("supportsCheckin", impl.supportsCheckin());
+        // 能力标签：前端据此在渠道卡片右侧显示「积分 / 任务」入口。
+        // 用独立 SPI 探测而不是问 AccountChannelAuthManager：签到与「看余额 / 做任务」
+        // 是三件事，很多渠道只有其一（Cline 只有余额、Raccoon 只有自动发放）。
+        summary.put("supportsCredit", creditProviderOf(channel) != null);
+        summary.put("supportsTask", taskProviderOf(channel) != null);
         summary.put("providerId", provider == null ? null : provider.getProviderId());
         summary.put("enabled", provider == null ? false : Boolean.TRUE.equals(provider.getEnabled()));
         // 进入优先级：同 kind 多渠道并存时，前端可据此提示「默认数据源」
@@ -229,6 +265,7 @@ public class ApiChannelAuthController {
                 cm.put("status", implStatusOf(c, impl));
                 cm.put("expiresAt", expiresAtOf(c));
                 cm.put("channel", channelOf(c, channel));
+                putCheckinInfo(cm, c);
                 conns.add(cm);
             }
         }
@@ -335,6 +372,8 @@ public class ApiChannelAuthController {
             handle = impl.startLogin();
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] start-login 上游异常 channel={} cause={}",
                     channel, e.getMessage());
@@ -378,6 +417,8 @@ public class ApiChannelAuthController {
             credentials = impl.pollLogin(handle);
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] poll 上游异常 channel={} cause={}", channel, e.getMessage());
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
@@ -537,6 +578,14 @@ public class ApiChannelAuthController {
                     sendEvent(emitter, "done", persisted);
                     emitter.complete();
                     return;
+                } catch (ChannelException e) {
+                    Map<String, Object> err = new LinkedHashMap<>(3);
+                    err.put("ok", false);
+                    err.put("code", e.getCode() == null ? "UPSTREAM_ERROR" : e.getCode());
+                    err.put("message", e.getMessage());
+                    sendEvent(emitter, "failed", err);
+                    emitter.complete();
+                    return;
                 } catch (ApiException e) {
                     Map<String, Object> err = new LinkedHashMap<>(3);
                     err.put("ok", false);
@@ -615,6 +664,8 @@ public class ApiChannelAuthController {
             refreshed = impl.refresh(current);
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] refresh 上游异常 channel={} label={} cause={}",
                     channel, conn.getLabel(), e.getMessage());
@@ -669,6 +720,8 @@ public class ApiChannelAuthController {
             afterCheckin = impl.checkin(current);
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] checkin 上游异常 channel={} label={} cause={}",
                     channel, conn.getLabel(), e.getMessage());
@@ -709,6 +762,152 @@ public class ApiChannelAuthController {
             "access_token", "refresh_token", "client_secret", "api_key", "uuid", "first_keyfrom");
 
     /**
+     * 单渠道、单账号的积分 / 余额查询（只读，不触发签到）。
+     *
+     * <p>与 {@code /checkin} 分开：签到是动作（每天一次），本接口是读数（随时可查）。
+     * 渠道管理页的「积分」页签靠它渲染，绝不能让「看一眼余额」等于「签到一次」。</p>
+     *
+     * @param channel 渠道标识
+     * @param body    请求体：{ connectionId（优先）或 label（兜底，为空取主账号） }
+     * @return { ok, channel, label, credit: {remain,total,unit,plan,packages,error} }
+     */
+    @PostMapping("/{channel}/credit")
+    public ApiResult<Map<String, Object>> creditChannel(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        ChannelCreditProvider provider = creditProviderOf(channel);
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        if (provider == null) {
+            out.put("ok", false);
+            out.put("channel", channel);
+            out.put("message", "渠道不支持积分查询: " + channel);
+            return ApiResult.ok(out);
+        }
+        String label = body == null ? null : asString(body.get("label"));
+        String connectionId = body == null ? null : asString(body.get("connectionId"));
+        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
+        if (conn == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+        }
+        Map<String, Object> credentials = conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+        Map<String, Object> credit = provider.credit(credentials);
+        out.put("ok", credit.get("error") == null);
+        out.put("channel", channel);
+        out.put("label", conn.getLabel());
+        out.put("credit", credit);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 单渠道、单账号的成长任务清单（只读）。
+     *
+     * @param channel 渠道标识
+     * @param body    请求体：{ connectionId（优先）或 label（兜底，为空取主账号） }
+     * @return { ok, channel, label, tasks: [ {code,title,current,target,acceptStatus,claimable,...} ] }
+     */
+    @PostMapping("/{channel}/tasks")
+    public ApiResult<Map<String, Object>> tasksChannel(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        ChannelTaskProvider provider = taskProviderOf(channel);
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        if (provider == null) {
+            out.put("ok", false);
+            out.put("channel", channel);
+            out.put("message", "渠道不支持成长任务: " + channel);
+            out.put("tasks", List.of());
+            return ApiResult.ok(out);
+        }
+        String label = body == null ? null : asString(body.get("label"));
+        String connectionId = body == null ? null : asString(body.get("connectionId"));
+        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
+        if (conn == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+        }
+        Map<String, Object> credentials = conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+        List<Map<String, Object>> tasks = provider.tasks(credentials);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("label", conn.getLabel());
+        out.put("tasks", tasks);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 领取单个任务奖励（唯一会产生上游副作用的端点）。
+     *
+     * @param channel 渠道标识
+     * @param body    请求体：{ connectionId 或 label, taskCode }
+     * @return { ok, channel, label, result: {ok,claimed,credit,message} }
+     */
+    @PostMapping("/{channel}/tasks/claim")
+    public ApiResult<Map<String, Object>> claimChannelTask(
+            @PathVariable("channel") String channel,
+            @RequestBody Map<String, Object> body) {
+        ChannelTaskProvider provider = taskProviderOf(channel);
+        if (provider == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "渠道不支持成长任务: " + channel);
+        }
+        String taskCode = body == null ? null : asString(body.get("taskCode"));
+        if (taskCode == null || taskCode.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "缺少 taskCode");
+        }
+        String label = body == null ? null : asString(body.get("label"));
+        String connectionId = body == null ? null : asString(body.get("connectionId"));
+        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
+        if (conn == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+        }
+        Map<String, Object> credentials = conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+        Map<String, Object> result = provider.claimTask(credentials, taskCode);
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        out.put("ok", Boolean.TRUE.equals(result.get("ok")));
+        out.put("channel", channel);
+        out.put("label", conn.getLabel());
+        out.put("result", result);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 一键做任务：报名未报名的 + 领取已达标的（幂等）。
+     *
+     * @param channel 渠道标识
+     * @param body    请求体：{ connectionId（优先）或 label }
+     * @return { ok, channel, label, summary: {accepted,claimed,credit,messages} }
+     */
+    @PostMapping("/{channel}/tasks/run")
+    public ApiResult<Map<String, Object>> runChannelTasks(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        ChannelTaskProvider provider = taskProviderOf(channel);
+        if (provider == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "渠道不支持成长任务: " + channel);
+        }
+        String label = body == null ? null : asString(body.get("label"));
+        String connectionId = body == null ? null : asString(body.get("connectionId"));
+        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
+        if (conn == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+        }
+        Map<String, Object> credentials = conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+        Map<String, Object> summary = provider.runTasks(credentials);
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("label", conn.getLabel());
+        out.put("summary", summary);
+        return ApiResult.ok(out);
+    }
+
+    /**
      * 单渠道、单账号（按 label 匹配）拉取可用模型列表。
      *
      * <p>成功时不直接写 {@code sys_ai_provider_model}；模型落库走
@@ -743,6 +942,8 @@ public class ApiChannelAuthController {
             models = impl.listModels(credentials);
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] list-models 上游异常 channel={} label={} cause={}",
                     channel, conn.getLabel(), e.getMessage());
@@ -800,6 +1001,8 @@ public class ApiChannelAuthController {
             rawModels = impl.listModels(credentials);
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] import-models 上游异常 channel={} label={} cause={}",
                     channel, conn.getLabel(), e.getMessage());
@@ -1070,7 +1273,39 @@ public class ApiChannelAuthController {
         cm.put("status", implStatusOf(c, impl));
         cm.put("expiresAt", expiresAtOf(c));
         cm.put("channel", channelOf(c, impl.channel()));
+        putCheckinInfo(cm, c);
         return cm;
+    }
+
+    /**
+     * 把「最近一次签到」的展示字段并进连接摘要。
+     *
+     * <p>签到结果由各 SPI 写在自己的连接凭据上（{@code checkin_at} /
+     * {@code checkin_message}），WorkBuddy、Trae、magpie 都按这个键名落库。
+     * 这两个键是纯展示信息，单独取出来回给前端，免得为了显示「上次签到」
+     * 把整份凭据 Map 暴露出去。</p>
+     *
+     * <p>缺失时不写键（而不是写 {@code null}），前端用 {@code v-if} 判断即可。</p>
+     *
+     * @param cm 连接摘要，就地写入 {@code checkinAt} / {@code checkinMessage}
+     * @param c  连接
+     */
+    private static void putCheckinInfo(Map<String, Object> cm, SysAiProviderConnection c) {
+        Map<String, Object> credentials = c == null ? null : c.getCredentials();
+        if (credentials == null || credentials.isEmpty()) {
+            return;
+        }
+        Long at = toEpochMillis(credentials.get("checkin_at"));
+        if (at != null) {
+            cm.put("checkinAt", at);
+        }
+        Object message = credentials.get("checkin_message");
+        if (message != null) {
+            String text = String.valueOf(message).trim();
+            if (!text.isEmpty()) {
+                cm.put("checkinMessage", text);
+            }
+        }
     }
 
     /**
@@ -1157,6 +1392,8 @@ public class ApiChannelAuthController {
             status = impl.status(credentials);
         } catch (ApiException e) {
             throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
         } catch (Exception e) {
             log.warn("[ChannelAuth] status 上游异常 channel={} label={} cause={}",
                     channel, conn.getLabel(), e.getMessage());
@@ -1221,6 +1458,138 @@ public class ApiChannelAuthController {
      */
     private static String ownerId() {
         return AiUserContext.requireUserId();
+    }
+
+    /**
+     * 积分查询 SPI 实现（按渠道标识，大小写不敏感）。
+     *
+     * @param channel 渠道标识
+     * @return 实现；不支持时返回 {@code null}
+     */
+    private ChannelCreditProvider creditProviderOf(String channel) {
+        if (channel == null || channel.isBlank()) {
+            return null;
+        }
+        for (Map.Entry<String, ChannelCreditProvider> entry : creditProviders().entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(channel)) {
+                return entry.getValue().supportsCredit() ? entry.getValue() : null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 任务 SPI 实现（按渠道标识，大小写不敏感）。
+     *
+     * @param channel 渠道标识
+     * @return 实现；不支持时返回 {@code null}
+     */
+    private ChannelTaskProvider taskProviderOf(String channel) {
+        if (channel == null || channel.isBlank()) {
+            return null;
+        }
+        for (Map.Entry<String, ChannelTaskProvider> entry : taskProviders().entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(channel)) {
+                return entry.getValue().supportsTask() ? entry.getValue() : null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 懒加载积分查询实现映射（幂等）。
+     *
+     * @return channel → 实现
+     */
+    private Map<String, ChannelCreditProvider> creditProviders() {
+        Map<String, ChannelCreditProvider> local = creditProviders;
+        if (local == null) {
+            synchronized (this) {
+                local = creditProviders;
+                if (local == null) {
+                    local = ServiceProvider.of(ChannelCreditProvider.class).list();
+                    creditProviders = local;
+                }
+            }
+        }
+        return local;
+    }
+
+    /**
+     * 懒加载任务实现映射（幂等）。
+     *
+     * @return channel → 实现
+     */
+    private Map<String, ChannelTaskProvider> taskProviders() {
+        Map<String, ChannelTaskProvider> local = taskProviders;
+        if (local == null) {
+            synchronized (this) {
+                local = taskProviders;
+                if (local == null) {
+                    local = ServiceProvider.of(ChannelTaskProvider.class).list();
+                    taskProviders = local;
+                }
+            }
+        }
+        return local;
+    }
+
+    /**
+     * 懒加载网关上游管理实现映射（幂等）。
+     *
+     * @return alias → 实现
+     */
+    private Map<String, ChannelUpstreamAdmin> upstreamAdmins() {
+        Map<String, ChannelUpstreamAdmin> local = upstreamAdmins;
+        if (local == null) {
+            synchronized (this) {
+                local = upstreamAdmins;
+                if (local == null) {
+                    local = ServiceProvider.of(ChannelUpstreamAdmin.class).list();
+                    upstreamAdmins = local;
+                }
+            }
+        }
+        return local;
+    }
+
+    /**
+     * 按渠道标识取网关上游管理实现，未注册抛 501。
+     *
+     * <p>同一实现会以「{@code @Spi} 别名」和「类简名」登记两次，故按
+     * {@link ChannelUpstreamAdmin#supports(String)} 匹配，而不是直接查 Map 键。</p>
+     *
+     * @param channel 渠道标识
+     * @return 实现
+     */
+    private ChannelUpstreamAdmin requireUpstreamAdmin(String channel) {
+        for (ChannelUpstreamAdmin impl : upstreamAdmins().values()) {
+            if (impl != null && impl.supports(channel)) {
+                return impl;
+            }
+        }
+        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED,
+                "渠道 " + channel + " 不支持上游 provider 管理");
+    }
+
+    /**
+     * 把 common 的渠道异常翻成本模块的契约异常，保留错误码与根因。
+     *
+     * <p>账号模块的实现抛的是 common 的 {@link ChannelException}；若不显式翻译，
+     * 会被 {@code catch (Exception)} 兜底成 {@code UPSTREAM_ERROR}（502），
+     * {@code INVALID_PARAM} / {@code NOT_FOUND} / {@code NOT_IMPLEMENTED} 全部丢失。</p>
+     *
+     * @param e 渠道异常
+     * @return 本模块的契约异常
+     */
+    private static ApiException channelFailure(ChannelException e) {
+        ApiErrorCode code;
+        try {
+            code = ApiErrorCode.valueOf(e.getCode());
+        } catch (RuntimeException ignored) {
+            code = ApiErrorCode.UPSTREAM_ERROR;
+        }
+        return new ApiException(code, e.getMessage(), e);
     }
 
     /**
@@ -1607,4 +1976,179 @@ public class ApiChannelAuthController {
             }
         }
         return new LinkedHashMap<>();
-    }}
+    }
+
+    // ==================== 网关上游 provider 管理 ====================
+
+    /**
+     * 网关型渠道的上游 provider 清单（如 magpie 管理面 {@code GET /api/providers}）。
+     *
+     * <p>只对声明了 {@link ChannelUpstreamAdmin} 的渠道开放：其它渠道没有
+     * 「网关内再挂 provider」这层。凭据一律脱敏返回，编辑时留空即表示保留原 key。</p>
+     *
+     * <p>网关管理面未开放 / 不可达时 {@code ok=false} + {@code message} 给出可操作原因，
+     * 前端据此提示，不影响数据面（对话 / 模型 / 配额）。</p>
+     *
+     * @param channel      渠道标识
+     * @param connectionId 网关连接主键（可空，缺省取主账号）
+     * @param label        网关连接标签（可空，兼容旧寻址）
+     * @return { ok, channel, baseUrl, pageUrl, manageable, providers, message }
+     */
+    @GetMapping("/{channel}/providers")
+    public ApiResult<Map<String, Object>> listUpstreamProviders(
+            @PathVariable("channel") String channel,
+            @RequestParam(value = "connectionId", required = false) String connectionId,
+            @RequestParam(value = "label", required = false) String label) {
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin, connectionId, label);
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("ok", true);
+        out.put("channel", admin.channel());
+        Map<String, Object> address = admin.describe(credentials);
+        out.put("baseUrl", address.get("baseUrl"));
+        out.put("pageUrl", address.get("pageUrl"));
+        try {
+            Map<String, Object> listed = admin.list(credentials);
+            Object providers = listed == null ? null : listed.get("providers");
+            out.put("providers", providers == null ? List.of() : providers);
+            out.put("manageable", true);
+        } catch (ChannelException e) {
+            out.put("ok", false);
+            out.put("manageable", false);
+            out.put("providers", List.of());
+            out.put("message", e.getMessage() == null ? "网关管理接口不可用" : e.getMessage());
+        }
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 新增 / 覆盖 / 重命名网关上游 provider。
+     *
+     * <p>请求体：{@code { connectionId?, label?, provider: {...}, isNew?, from? }}；
+     * {@code provider} 缺失时把请求体其余字段当作 provider 字段。具体的 body 形态
+     * 由渠道实现决定，本控制器只负责取凭据与转发。</p>
+     *
+     * @param channel 渠道标识
+     * @param body    请求体
+     * @return { ok, channel, result }
+     */
+    @PostMapping("/{channel}/providers")
+    public ApiResult<Map<String, Object>> saveUpstreamProvider(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        Map<String, Object> result;
+        try {
+            result = admin.save(credentials, safeBody);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        refreshMagpieRoutes();
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 删除网关上游 provider。
+     *
+     * <p>请求体：{@code { connectionId?, label?, id }}。</p>
+     *
+     * @param channel 渠道标识
+     * @param body    请求体
+     * @return { ok, channel, result }
+     */
+    @PostMapping("/{channel}/providers/delete")
+    public ApiResult<Map<String, Object>> deleteUpstreamProvider(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        Map<String, Object> result;
+        try {
+            result = admin.delete(credentials, asString(safeBody.get("id")));
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        refreshMagpieRoutes();
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 网关上游 provider 的分项动作（如 {@code detect} / {@code models} / {@code test}）。
+     *
+     * <p>前端用「拉模型」按钮一次性带出 provider 可用模型，避免用户手抄。
+     * 动作白名单由渠道实现维护，免得路径段被拼成任意上游调用。</p>
+     *
+     * @param channel 渠道标识
+     * @param action  动作名
+     * @param body    请求体（provider 字段）
+     * @return { ok, channel, result }
+     */
+    @PostMapping("/{channel}/providers/{action}")
+    public ApiResult<Map<String, Object>> upstreamProviderAction(
+            @PathVariable("channel") String channel,
+            @PathVariable("action") String action,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        Map<String, Object> result;
+        try {
+            result = admin.action(credentials, action, safeBody);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
+     * 取出该渠道实现对应的网关凭据。
+     *
+     * @param admin        已解析的渠道实现
+     * @param connectionId 连接主键（可空）
+     * @param label        连接标签（可空）
+     * @return 该连接的凭据（必然非空）
+     */
+    private Map<String, Object> requireUpstreamCredentials(ChannelUpstreamAdmin admin,
+                                                          String connectionId, String label) {
+        SysAiProviderConnection conn = findTargetConnection(admin.channel(), label, connectionId);
+        if (conn == null || conn.getCredentials() == null || conn.getCredentials().isEmpty()) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "尚未绑定 " + admin.channel() + " 网关，请先在「账号」页绑定网关地址与 key");
+        }
+        return conn.getCredentials();
+    }
+
+    /**
+     * 上游管理调用的统一返回信封。
+     *
+     * @param channel 渠道标识
+     * @param result  上游响应
+     * @return { ok, channel, result }
+     */
+    private static ApiResult<Map<String, Object>> upstreamResult(String channel, Map<String, Object> result) {
+        Map<String, Object> out = new LinkedHashMap<>(3);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("result", result == null ? new LinkedHashMap<>() : result);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 让 magpie 路由缓存立即失效（新增 / 删除 provider 后新模型马上可路由）。
+     */
+    private void refreshMagpieRoutes() {
+        try {
+            magpieRouteSource.invalidate();
+            modelClientResolver.invalidateRouteCache();
+        } catch (Exception e) {
+            log.debug("[ChannelAuth] 清理 magpie 路由缓存失败: {}", e.getMessage());
+        }
+    }
+
+}

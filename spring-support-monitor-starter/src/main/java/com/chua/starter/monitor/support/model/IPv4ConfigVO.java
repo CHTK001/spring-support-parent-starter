@@ -11,6 +11,7 @@ import lombok.Data;
  *
  * @author CH
  * @version 1.0.0
+ * @since 4.0.0.51
  */
 @Data
 @Schema(description = "IPv4 配置")

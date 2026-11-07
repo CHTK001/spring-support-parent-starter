@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
  * </ul>
  *
  * @author chua
+ * @since 4.0.0.51
  */
 class CollectExpressionTest {
 

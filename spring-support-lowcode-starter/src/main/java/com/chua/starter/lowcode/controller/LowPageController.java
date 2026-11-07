@@ -143,6 +143,31 @@ public class LowPageController {
     }
 
     /**
+     * 启用/停用页面。停用后运行期接口不再返回 Schema。
+     *
+     * @param pageId 页面ID
+     * @param status 0:停用, 1:启用
+     * @return 是否成功
+     */
+    @Operation(summary = "启用/停用页面")
+    @PostMapping("/status")
+    public ReturnResult<Boolean> changeStatus(@RequestParam Integer pageId, @RequestParam Integer status) {
+        return ReturnResult.ok(pageService.changeStatus(pageId, status));
+    }
+
+    /**
+     * 撤销发布：发布状态回到未发布，运行期立即取不到 Schema。
+     *
+     * @param pageId 页面ID
+     * @return 是否成功
+     */
+    @Operation(summary = "撤销发布")
+    @PostMapping("/unpublish")
+    public ReturnResult<Boolean> unpublish(@RequestParam Integer pageId) {
+        return ReturnResult.ok(pageService.unpublish(pageId));
+    }
+
+    /**
      * 页面的版本列表。
      *
      * @param pageId 页面ID

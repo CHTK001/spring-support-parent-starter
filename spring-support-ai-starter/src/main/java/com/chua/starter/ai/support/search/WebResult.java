@@ -7,6 +7,7 @@ package com.chua.starter.ai.support.search;
  * @param url     链接
  * @param snippet 摘要
  * @author CH
+ * @since 4.0.0.51
  */
 public record WebResult(String title, String url, String snippet) {
 }

@@ -3,7 +3,7 @@ package com.chua.starter.ai.support.spi.impl;
 
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;

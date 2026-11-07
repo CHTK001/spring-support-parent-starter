@@ -334,6 +334,23 @@ public class TsharkCaptureController {
     }
 
     /**
+     * 报文所属的 HTTP 事务（请求头 / 请求体 / 响应头 / 响应体）。
+     *
+     * <p>一帧只有一个方向，详情抽屉靠这个接口把同一条 TCP 流上的请求与响应配成一对，
+     * 四段数据才能同时展示。</p>
+     *
+     * @param sessionId 会话 ID
+     * @param id        数据包 ID
+     * @return request / response 两帧（缺席的一侧为 null）
+     */
+    @Operation(summary = "报文所属 HTTP 事务")
+    @GetMapping("/sessions/{sessionId}/packets/{id}/http-transaction")
+    public ReturnResult<Map<String, Object>> httpTransaction(@PathVariable Long sessionId,
+                                                             @PathVariable Long id) {
+        return this.tsharkCaptureService.httpTransaction(sessionId, id);
+    }
+
+    /**
      * 协议分布统计
      *
      * @param id 会话 ID

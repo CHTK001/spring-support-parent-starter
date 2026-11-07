@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
  * 酒馆群消息 Mapper
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface SysAiTavernMessageMapper extends BaseMapper<SysAiTavernMessage> {

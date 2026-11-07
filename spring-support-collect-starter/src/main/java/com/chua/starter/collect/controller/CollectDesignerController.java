@@ -83,15 +83,21 @@ public class CollectDesignerController {
      * <p>设计期拿不到运行期的抓取变量，所以单开这个只读出口。仅允许 http/https，
      * 且拒绝内网与本机地址（见 {@code CollectDesignerServiceImpl#blockedHost}）。</p>
      *
+     * <p>{@code render=true} 时用真实浏览器执行 JS 后取 DOM：SPA 站点在 HTTP 直取下
+     * 通常只有一个空壳，点选器无从下手。渲染要启浏览器进程，单次开销在秒级，默认关闭。</p>
+     *
      * @param url       目标地址
      * @param timeoutMs 超时毫秒，可空
-     * @return 抓取结果（状态码、Content-Type、正文原文）
+     * @param render    是否用真实浏览器渲染后取 DOM，默认 false
+     * @return 抓取结果（状态码、Content-Type、正文、是否渲染）
      */
     @Operation(summary = "预览抓取（元素拾取器用）")
     @GetMapping("/fetch-preview")
     public ReturnResult<CollectPreviewVO> fetchPreview(@RequestParam String url,
-                                                       @RequestParam(required = false) Integer timeoutMs) {
-        return ReturnResult.ok(designerService.previewFetch(url, timeoutMs));
+                                                       @RequestParam(required = false) Integer timeoutMs,
+                                                       @RequestParam(required = false, defaultValue = "false")
+                                                       boolean render) {
+        return ReturnResult.ok(designerService.previewFetch(url, timeoutMs, render));
     }
 
     /**

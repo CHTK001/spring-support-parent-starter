@@ -119,7 +119,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
         /**
          * 房间信令引擎。
          */
-        return new RoomService(properties, webSocketTemplate);
+        return new RoomService(properties, webSocketTemplate::send);
     }
 
     @Bean

@@ -39,6 +39,7 @@ import java.util.Map;
    * 支持命令执行（dashboard / thread / jvm 等）与终端输出查看。</p>
    *
    * @author CH
+   * @since 4.0.0.51
    */
 @Service
 @Slf4j
@@ -342,12 +343,14 @@ public class ArthasServiceImpl implements ArthasService {
     private String buildPortWaitCommand(OperationContext ctx, int port, int maxSeconds) {
         if (ctx.windows) {
             return String.format(
-                    "for /L %%i in (1,1,%d) do (netstat -ano | findstr :%d | findstr LISTENING >nul 2>&1 && (echo PORT_OPEN & exit /b 0) & (timeout /t 1 >nul)) ; echo PORT_CLOSED & exit /b 1",
+                    "for /L %%i in (1,1,%d) do (netstat -ano | findstr :%d | findstr LISTENING >nul 2>&1 && (echo PORT_OPEN & exit /b 0) & (" +
+                        "timeout /t 1 >nul)) ; echo PORT_CLOSED & exit /b 1",
                     maxSeconds, port);
         }
           // Linux: 内部循环检查端口，每秒一次
         return String.format(
-                "for i in $(seq 1 %d); do if ss -tlnp 2>/dev/null | grep -q ':%d'; then echo PORT_OPEN; exit 0; fi; sleep 1; done; echo PORT_CLOSED; exit 1",
+                "for i in $(seq 1 %d); do if ss -tlnp 2>/dev/null | grep -q ':%d'; then echo PORT_OPEN; exit 0; fi; sleep 1; done; ech" +
+                    "o PORT_CLOSED; exit 1",
                 maxSeconds, port);
     }
 
@@ -363,7 +366,8 @@ public class ArthasServiceImpl implements ArthasService {
         if (ctx.windows) {
               // Windows: 先读 pid 文件，不存在则用 wmic / PowerShell 查找
             return String.format(
-                    "if exist \"%s\" (type \"%s\") else (powershell -Command \"Get-CimInstance Win32_Process -Filter \\\"Name='java.exe'\\\" | Where-Object { $_.CommandLine -like '*%s*' } | Select-Object -ExpandProperty ProcessId\")",
+                    "if exist \"%s\" (type \"%s\") else (powershell -Command \"Get-CimInstance Win32_Process -Filter \\\"Name='java.exe'\\\"" +
+                        " | Where-Object { $_.CommandLine -like '*%s*' } | Select-Object -ExpandProperty ProcessId\")",
                     pidFile, pidFile, path != null ? path : appName);
         }
           // Linux: 先读 pid 文件，不存在则用 ps | grep 查找

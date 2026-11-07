@@ -71,7 +71,9 @@ public class MacosHostDetectProvider implements HostDetectProvider {
                 }
             }
               // 网卡信息（JSON 数组：[{"name":"en0","ip":"10.0.0.3"}]，ifconfig 全局 IPv4）
-            String networks = execQuiet(handle, "ifconfig 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\"); if(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$2\"\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
+            String networks = execQuiet(handle, "ifconfig 2>/dev/null | awk '/^[a-z]/{n=$1; sub(\":\",\"\",n)} /inet /{split($2,a,\".\"); if" +
+                "(a[1]!=\"127\" && a[1]!=\"169\"){printf \"{\\\"name\\\":\\\"\"n\"\\\",\\\"ip\\\":\\\"\"$2\"" +
+                "\\\"} \"}}' | tr ' ' ',' | sed 's/^,/[/;s/,$/]/'");
             if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
                 host.setServerHostNetworks(networks);
             }
@@ -81,7 +83,9 @@ public class MacosHostDetectProvider implements HostDetectProvider {
                 host.setServerHostCpuUsage(toRatio(cpuUsage));
             }
               // 内存使用率（%）（vm_stat 活跃/无线换算）
-            String memUsage = execQuiet(handle, "vm_stat 2>/dev/null | awk 'BEGIN{total=0;used=0} /page size/{ps=$8} /Pages free/{free=$3} /Pages active/{active=$3} /Pages inactive/{inactive=$3} /Pages wired/{wired=$4} END{used=(active+inactive+wired)*ps; total=used+free*ps; printf \"%.2f\", used/total*100}'");
+            String memUsage = execQuiet(handle, "vm_stat 2>/dev/null | awk 'BEGIN{total=0;used=0} /page size/{ps=$8} /Pages free/{free=$3} /" +
+                "Pages active/{active=$3} /Pages inactive/{inactive=$3} /Pages wired/{wired=$4} END{used=(ac" +
+                "tive+inactive+wired)*ps; total=used+free*ps; printf \"%.2f\", used/total*100}'");
             if (StringUtils.isNotBlank(memUsage) && isRatio(memUsage)) {
                 host.setServerHostMemUsage(toRatio(memUsage));
             }

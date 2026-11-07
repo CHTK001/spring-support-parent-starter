@@ -174,56 +174,67 @@ public class RoomMessage {
             return this;
         }
 
+        /** offererSlotId 方法 */
         public RoomMessageBuilder offererSlotId(String offererSlotId) {
             this.msg.offererSlotId = offererSlotId;
             return this;
         }
 
+        /** peerCount 方法 */
         public RoomMessageBuilder peerCount(Integer peerCount) {
             this.msg.peerCount = peerCount;
             return this;
         }
 
+        /** resumed 方法 */
         public RoomMessageBuilder resumed(Boolean resumed) {
             this.msg.resumed = resumed;
             return this;
         }
 
+        /** initiator 方法 */
         public RoomMessageBuilder initiator(Boolean initiator) {
             this.msg.initiator = initiator;
             return this;
         }
 
+        /** epoch 方法 */
         public RoomMessageBuilder epoch(Long epoch) {
             this.msg.epoch = epoch;
             return this;
         }
 
+        /** resumeToken 方法 */
         public RoomMessageBuilder resumeToken(String resumeToken) {
             this.msg.resumeToken = resumeToken;
             return this;
         }
 
+        /** reason 方法 */
         public RoomMessageBuilder reason(String reason) {
             this.msg.reason = reason;
             return this;
         }
 
+        /** retryAfterMs 方法 */
         public RoomMessageBuilder retryAfterMs(Long retryAfterMs) {
             this.msg.retryAfterMs = retryAfterMs;
             return this;
         }
 
+        /** heartbeatProtocol 方法 */
         public RoomMessageBuilder heartbeatProtocol(String heartbeatProtocol) {
             this.msg.heartbeatProtocol = heartbeatProtocol;
             return this;
         }
 
+        /** id 方法 */
         public RoomMessageBuilder id(String id) {
             this.msg.id = id;
             return this;
         }
 
+        /** build 方法 */
         public RoomMessage build() {
             return msg;
         }

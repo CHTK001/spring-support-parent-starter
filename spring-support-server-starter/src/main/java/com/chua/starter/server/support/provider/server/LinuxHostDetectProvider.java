@@ -84,7 +84,9 @@ public class LinuxHostDetectProvider implements HostDetectProvider {
                 }
             }
               // 网卡信息（JSON 数组：[{"name":"eth0","ip":"10.0.0.3"}]，取 IPv4 全局地址）
-            String networks = execQuiet(handle, "ip -o -4 addr show 2>/dev/null | awk 'NR==1{print \"[{\\\"name\\\":\\\"\"$2\"\\\",\\\"ip\\\":\\\"\"substr($4,1,index($4,\"/\")-1)\"\\\"}\"} NR>1{printf \",{\\\"name\\\":\\\"\"$2\"\\\",\\\"ip\\\":\\\"\"substr($4,1,index($4,\"/\")-1)\"\\\"}\"} END{print \"]\"}'");
+            String networks = execQuiet(handle, "ip -o -4 addr show 2>/dev/null | awk 'NR==1{print \"[{\\\"name\\\":\\\"\"$2\"\\\",\\\"ip" +
+                "\\\":\\\"\"substr($4,1,index($4,\"/\")-1)\"\\\"}\"} NR>1{printf \",{\\\"name\\\":\\\"\"$2\"" +
+                "\\\",\\\"ip\\\":\\\"\"substr($4,1,index($4,\"/\")-1)\"\\\"}\"} END{print \"]\"}'");
             if (StringUtils.isNotBlank(networks) && networks.startsWith("[")) {
                 host.setServerHostNetworks(networks);
             }

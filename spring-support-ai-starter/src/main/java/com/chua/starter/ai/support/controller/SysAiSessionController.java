@@ -20,6 +20,7 @@ import java.util.Map;
  * 会话管理 Controller
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @RestController
 @RequestMapping("/v2/sessions")

@@ -51,15 +51,17 @@ public class AccountController {
     /**
      * 账号列表。
      *
-     * @param kind    账号种类（可空）
-     * @param keyword 名称 / 编码 / 用户名模糊词（可空）
+     * @param kind       账号种类（可空）
+     * @param keyword    名称 / 编码 / 用户名模糊词（可空）
+     * @param channelKey 所属渠道标识（可空；渠道管理页按选中渠道过滤）
      * @return 账号列表
      */
     @GetMapping
     public ApiResult<List<SysAccount>> list(
             @RequestParam(value = "kind", required = false) String kind,
-            @RequestParam(value = "keyword", required = false) String keyword) {
-        return ApiResult.ok(accountService.list(kind, keyword));
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "channelKey", required = false) String channelKey) {
+        return ApiResult.ok(accountService.list(kind, keyword, channelKey));
     }
 
     /**

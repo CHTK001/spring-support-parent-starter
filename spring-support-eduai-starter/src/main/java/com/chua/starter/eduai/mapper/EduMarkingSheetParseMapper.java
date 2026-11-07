@@ -10,6 +10,7 @@ import java.util.List;
  * 试卷解析结果 Mapper。
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface EduMarkingSheetParseMapper extends BaseMapper<EduMarkingSheetParse> {

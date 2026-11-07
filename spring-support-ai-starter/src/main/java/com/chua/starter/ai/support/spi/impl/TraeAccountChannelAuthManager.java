@@ -5,7 +5,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.common.support.text.json.Json;
 
 import java.security.MessageDigest;
@@ -535,7 +535,7 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
      * @param uid 字符串
      * @return 返回值
     */
-    private static String checkinDeviceId(String uid) {
+    static String checkinDeviceId(String uid) {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
             byte[] hash = digest.digest(("trae-checkin-device-" + uid).getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -556,7 +556,7 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
      * @param uid 字符串
      * @return 返回值
     */
-    private static String checkinMarketUserId(String uid) {
+    static String checkinMarketUserId(String uid) {
         String seed = "trae-market-user-" + uid;
         byte[] bytes = seed.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         StringBuilder hex = new StringBuilder(32);
@@ -573,7 +573,7 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
      * @param uid 字符串
      * @return 返回值
     */
-    private static String checkinSessionId(String uid) {
+    static String checkinSessionId(String uid) {
         String seed = "trae-session-" + uid;
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

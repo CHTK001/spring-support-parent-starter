@@ -3,13 +3,11 @@ package com.chua.starter.socket.websocket.room;
 import com.chua.starter.socket.websocket.room.model.RoomSignal;
 import com.chua.starter.socket.websocket.room.model.RoomState;
 import com.chua.starter.socket.websocket.room.model.SlotState;
-import com.chua.starter.socket.websocket.template.WebSocketTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -58,8 +56,8 @@ public class RoomService {
     /** 信令信封序列化工具 */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 信令下发模板（通过 connectionId 路由） */
-    private final WebSocketTemplate sender;
+    /** 信令下发出口（通过 connectionId 路由） */
+    private final RoomSender sender;
 
     /** 活跃房间台账：房间编号 -> 房间状态 */
     private final Map<String, RoomState> rooms = new ConcurrentHashMap<>();
@@ -79,7 +77,7 @@ public class RoomService {
         return thread;
     });
 
-    public RoomService(RoomProperties properties, WebSocketTemplate sender) {
+    public RoomService(RoomProperties properties, RoomSender sender) {
         this.properties = properties;
         this.sender = sender;
     }
@@ -401,6 +399,7 @@ public class RoomService {
         updateSlotActive(room, slot, connectionId);
     }
 
+    /** updateSlotActive 方法 */
     private void updateSlotActive(RoomState room, SlotState slot, String connectionId) {
         slot.setConnectedAt(System.currentTimeMillis());
         slot.setLeaseExpiresAt(System.currentTimeMillis() + properties.getTimeouts().getLeaseExpiresMs());
@@ -409,6 +408,7 @@ public class RoomService {
         peers.replace(connectionId, new PeerSession(room, slot));
     }
 
+    /** leavePeer 方法 */
     private void leavePeer(RoomState room, String slotId) {
         String otherSlotId = room.getOtherSlotId(slotId);
         if (otherSlotId == null) {
@@ -454,6 +454,7 @@ public class RoomService {
         clearResumeToken(room, slotId);
     }
 
+    /** clearResumeToken 方法 */
     private void clearResumeToken(String connectionId) {
         PeerSession peer = peers.get(connectionId);
         if (peer != null) {
@@ -461,10 +462,12 @@ public class RoomService {
         }
     }
 
+    /** clearResumeToken 方法 */
     private void clearResumeToken(RoomState room, String slotId) {
         resumeTokens.values().removeIf(t -> t.getRoomId().equals(room.getRoomId()) && t.getSlotId().equals(slotId));
     }
 
+    /** emitResumeToken 方法 */
     private String emitResumeToken(RoomState room, String slotId) {
         long timestamp = System.currentTimeMillis();
         String raw = Base64.getEncoder().encodeToString((room.getRoomId() + ":" + slotId + ":" + room.getEpoch() + ":" + timestamp)
@@ -476,6 +479,7 @@ public class RoomService {
         return raw;
     }
 
+    /** findSlotByConnection 方法 */
     private SlotState findSlotByConnection(String connectionId) {
         PeerSession peer = peers.get(connectionId);
         if (peer == null || peer.slot() == null) {

@@ -6,6 +6,7 @@ package com.chua.starter.common.support.protocol.request;
  * @param success 成功
  * @param message 消息
  * @author CH
+ * @since 4.0.0.51
  */
 public record ServletResponse(boolean success, String message) {
 

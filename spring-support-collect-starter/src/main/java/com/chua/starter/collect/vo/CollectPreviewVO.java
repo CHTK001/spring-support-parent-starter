@@ -11,12 +11,30 @@ package com.chua.starter.collect.vo;
  * 渲染进 iframe 之前做（后端不承担这份职责，免得同一个页面在「落库」与「预览」两条路上
  * 拿到不同的内容）。</p>
  *
+ * <p>{@code rendered} 说明这份 HTML 的来源：{@code false} 是 HTTP 直取的原始响应，
+ * {@code true} 是真实浏览器执行完 JS 之后的 DOM。两者差别很大——SPA 的原始响应里
+ * 通常一个业务元素都没有，点选器在那种页面上什么也选不到，所以前端必须知道自己在看哪一种，
+ * 才能给出「这个页面需要开启 JS 渲染」这类正确提示。</p>
+ *
  * @param status      HTTP 状态码
  * @param contentType 响应 Content-Type，可能为空
  * @param length      正文字符数，便于前端提示「抓回来多少内容」而不必自己算
- * @param html        响应正文原文
+ * @param html        响应正文原文（{@code rendered=true} 时为渲染后的 outerHTML）
+ * @param rendered    是否经过真实浏览器渲染（执行了 JS）
  * @author CH
  * @since 4.0.0.42
  */
-public record CollectPreviewVO(int status, String contentType, int length, String html) {
+public record CollectPreviewVO(int status, String contentType, int length, String html, boolean rendered) {
+
+    /**
+     * 兼容旧调用：按「HTTP 直取」构造。
+     *
+     * @param status      HTTP 状态码
+     * @param contentType 响应 Content-Type
+     * @param length      正文字符数
+     * @param html        正文原文
+     */
+    public CollectPreviewVO(int status, String contentType, int length, String html) {
+        this(status, contentType, length, html, false);
+    }
 }

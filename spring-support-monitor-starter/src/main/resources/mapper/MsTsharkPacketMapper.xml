@@ -55,7 +55,71 @@
         END,
         ms_tshark_packet_restored = CASE ms_tshark_packet_frame_no
         <foreach item="f" collection="frames" separator=" ">
-            WHEN #{f.frameNo} THEN #{f.restoredText}
+            WHEN #{f.frameNo} THEN COALESCE(ms_tshark_packet_restored, #{f.restoredText})
+        </foreach>
+        END
+        WHERE ms_tshark_packet_session_id = #{sessionId}
+        AND ms_tshark_packet_frame_no IN
+        <foreach item="f" collection="frames" open="(" separator="," close=")">
+            #{f.frameNo}
+        </foreach>
+    </update>
+
+    <!--
+        按 会话 + 帧号 批量回写「TCP 重组 + HTTP 协议还原」结果：
+        请求帧只写请求头、响应帧只写响应头，空值一律 COALESCE 回旧值，
+        避免把另一侧的字段（以及 tshark 逐帧兜底）清掉。
+    -->
+    <update id="updateBatchHttpRestored">
+        UPDATE ms_tshark_packet SET
+        ms_tshark_packet_http_req = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.requestHead,jdbcType=VARCHAR}, ms_tshark_packet_http_req)
+        </foreach>
+        END,
+        ms_tshark_packet_http_resp = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.responseHead,jdbcType=VARCHAR}, ms_tshark_packet_http_resp)
+        </foreach>
+        END,
+        ms_tshark_packet_http_body = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.body,jdbcType=VARCHAR}, ms_tshark_packet_http_body)
+        </foreach>
+        END,
+        ms_tshark_packet_http_type = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.contentType,jdbcType=VARCHAR}, ms_tshark_packet_http_type)
+        </foreach>
+        END,
+        ms_tshark_packet_http_encoding = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.contentEncoding,jdbcType=VARCHAR}, ms_tshark_packet_http_encoding)
+        </foreach>
+        END,
+        ms_tshark_packet_http_size = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.contentLength,jdbcType=INTEGER}, ms_tshark_packet_http_size)
+        </foreach>
+        END,
+        ms_tshark_packet_http_method = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.httpMethod,jdbcType=VARCHAR}, ms_tshark_packet_http_method)
+        </foreach>
+        END,
+        ms_tshark_packet_http_uri = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.httpUri,jdbcType=VARCHAR}, ms_tshark_packet_http_uri)
+        </foreach>
+        END,
+        ms_tshark_packet_http_status = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.httpStatus,jdbcType=INTEGER}, ms_tshark_packet_http_status)
+        </foreach>
+        END,
+        ms_tshark_packet_restored = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.restoredText,jdbcType=VARCHAR}, ms_tshark_packet_restored)
         </foreach>
         END
         WHERE ms_tshark_packet_session_id = #{sessionId}

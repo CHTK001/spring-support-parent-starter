@@ -17,7 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 /**
+ * 监控配置服务实现。
+ *
+ * <p>按 key 读写监控配置项，读取带缓存、写入后按需失效，避免频繁打库。</p>
+ *
  * @author CH
+ * @since 4.0.0.51
  */
 
 @Slf4j

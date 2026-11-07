@@ -198,7 +198,8 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
             sb.append("  __owner=$(cat app.pid 2>/dev/null)\n");
             sb.append("  [ -n \"$__owner\" ] || return 1\n");
             sb.append("  if command -v ss >/dev/null 2>&1; then\n");
-            sb.append("    ss -ltnp 2>/dev/null | awk -v p=\":$__want \" -v o=\"pid=$__owner\" 'index($0,p) && index($0,o) { f=1 } END { exit(f?0:1) }'\n");
+            sb.append("    ss -ltnp 2>/dev/null | awk -v p=\":$__want \" -v o=\"pid=$__owner\" 'index($0,p) && index($0,o) { f=1 } E" +
+                "ND { exit(f?0:1) }'\n");
             sb.append("  elif command -v netstat >/dev/null 2>&1; then\n");
               // netstat 不带 -p 拿不到 pid；退回「端口存在即可」，属已知的弱化路径
             sb.append("    netstat -ltn 2>/dev/null | awk -v p=\":$__want\" '$4 ~ (p \"$\") { f=1 } END { exit(f?0:1) }'\n");

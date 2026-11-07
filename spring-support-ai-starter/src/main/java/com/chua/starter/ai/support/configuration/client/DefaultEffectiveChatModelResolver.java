@@ -18,6 +18,7 @@ import java.util.Optional;
  * 并以「模型管理」中的启用状态为准剔除不可用候选。
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Component

@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
  * 未 @ 时：开了自动路由就路由挑成员，否则回退到 {@code defaultMemberId}。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_tavern_group")

@@ -27,7 +27,10 @@ import java.util.List;
  * @since 4.0.0.45
  */
 @Tag(name = "Docker 模板", description = "容器模板 CRUD（docker run 配置）")
-@RestController
+// 显式 bean 名：template-starter 的 TemplateController(/api/template) 类名相同，
+// 两个 starter 被同一应用（monitor）同时引入时默认 bean 名都是 templateController，
+// 组件扫描会抛 ConflictingBeanDefinitionException 导致启动失败。
+@RestController("dockerTemplateController")
 @RequestMapping(ServerConstants.API_PREFIX + "/docker/templates")
 @RequiredArgsConstructor
 public class TemplateController {

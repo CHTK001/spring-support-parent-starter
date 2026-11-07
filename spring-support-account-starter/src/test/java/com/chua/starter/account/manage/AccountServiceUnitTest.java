@@ -249,7 +249,7 @@ class AccountServiceUnitTest {
         row.setSecret(secretCodec.encrypt("hidden"));
         when(accountMapper.selectList(any())).thenReturn(java.util.List.of(row));
 
-        SysAccount result = accountService.list(null, null).get(0);
+        SysAccount result = accountService.list(null, null, null).get(0);
 
         assertNull(result.getSecret());
         assertTrue(result.getHasSecret());

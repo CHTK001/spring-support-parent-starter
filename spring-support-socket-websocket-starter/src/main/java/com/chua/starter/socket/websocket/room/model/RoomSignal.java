@@ -100,70 +100,87 @@ public class RoomSignal {
         return slotId;
     }
 
+    /** setSlotId 方法 */
     public void setSlotId(String slotId) {
         this.slotId = slotId;
     }
 
+    /** getFromSlotId 方法 */
     public String getFromSlotId() {
         return fromSlotId;
     }
 
+    /** setFromSlotId 方法 */
     public void setFromSlotId(String fromSlotId) {
         this.fromSlotId = fromSlotId;
     }
 
+    /** getPeerSessionId 方法 */
     public String getPeerSessionId() {
         return peerSessionId;
     }
 
+    /** setPeerSessionId 方法 */
     public void setPeerSessionId(String peerSessionId) {
         this.peerSessionId = peerSessionId;
     }
 
+    /** getResumeToken 方法 */
     public String getResumeToken() {
         return resumeToken;
     }
 
+    /** setResumeToken 方法 */
     public void setResumeToken(String resumeToken) {
         this.resumeToken = resumeToken;
     }
 
+    /** getPeerId 方法 */
     public String getPeerId() {
         return peerId;
     }
 
+    /** setPeerId 方法 */
     public void setPeerId(String peerId) {
         this.peerId = peerId;
     }
 
+    /** getOffererSlotId 方法 */
     public String getOffererSlotId() {
         return offererSlotId;
     }
 
+    /** setOffererSlotId 方法 */
     public void setOffererSlotId(String offererSlotId) {
         this.offererSlotId = offererSlotId;
     }
 
+    /** getEpoch 方法 */
     public Long getEpoch() {
         return epoch;
     }
 
+    /** setEpoch 方法 */
     public void setEpoch(Long epoch) {
         this.epoch = epoch;
     }
 
+    /** getPayload 方法 */
     public String getPayload() {
         return payload;
     }
 
+    /** setPayload 方法 */
     public void setPayload(String payload) {
         this.payload = payload;
     }
 
+    /** getReason 方法 */
     public String getReason() {
         return reason;
     }
 
+    /** setReason 方法 */
     public void setReason(String reason) {
         this.reason = reason;
     }

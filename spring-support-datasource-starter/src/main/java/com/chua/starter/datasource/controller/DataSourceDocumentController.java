@@ -395,10 +395,12 @@ public class DataSourceDocumentController {
                 .append("<script src=\"https://unpkg.com/@relation-graph/vue3@3.0.13/dist/index.umd.js\"></script>")
                 .append("<style>")
                 .append("body{margin:0;font-family:-apple-system,Segoe UI,sans-serif;background:#0f172a;color:#e2e8f0}")
-                .append(".header{padding:12px 20px;border-bottom:1px solid #1e293b;background:#1e293b;display:flex;justify-content:space-between;align-items:center}")
+                .append(".header{padding:12px 20px;border-bottom:1px solid #1e293b;background:#1e293b;display:flex;justify-content:space-bet" +
+                    "ween;align-items:center}")
                 .append(".header h1{font-size:16px;margin:0;font-weight:600}")
                 .append(".meta{font-size:12px;color:#94a3b8}")
-                .append(".actions button{margin-left:8px;padding:4px 12px;background:#334155;color:#e2e8f0;border:1px solid #475569;border-radius:4px;cursor:pointer;font-size:12px}")
+                .append(".actions button{margin-left:8px;padding:4px 12px;background:#334155;color:#e2e8f0;border:1px solid #475569;border-r" +
+                    "adius:4px;cursor:pointer;font-size:12px}")
                 .append(".actions button:hover{background:#475569}")
                 .append("#graph{width:100vw;height:calc(100vh - 50px);background:#0f172a}")
                 .append(".node-card{width:100%;height:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;")

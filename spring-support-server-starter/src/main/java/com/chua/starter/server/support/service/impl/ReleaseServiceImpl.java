@@ -77,6 +77,7 @@ import java.util.zip.ZipFile;
    * 发布管理服务实现
    *
    * @author CH
+   * @since 4.0.0.51
    */
 @Service
 @Slf4j
@@ -3068,14 +3069,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         String commit = null;
         if (!changed) {
             try (GitClient client = buildGitClient(project, workspace).build()) {
-                client.open();
-                String branch = isBlank(project.getGitBranch()) ? "main" : project.getGitBranch().trim();
-                client.getGit().fetch().setRemote("origin").call();
-                org.eclipse.jgit.lib.ObjectId local = client.getRepository().resolve("HEAD");
-                org.eclipse.jgit.lib.ObjectId remote = client.getRepository()
-                        .resolve("refs/remotes/origin/" + branch);
-                commit = remote == null ? null : remote.getName();
-                changed = remote != null && (local == null || !local.equals(remote));
+                String branch = isBlank(project.getGitBranch()) ? null : project.getGitBranch().trim();
+                // fetch + 比对交给 git-starter 的 remote()：本模块不再直接碰 jgit 的 refs
+                com.chua.git.support.model.FetchResult fetched = client.remote().fetch(branch);
+                commit = fetched.remoteCommit();
+                changed = fetched.updated();
             } catch (Exception e) {
                 log.warn("[Git轮询] 项目 {} 检查更新失败: {}", id, e.getMessage());
                 return ReturnResult.error("Git 轮询失败: " + e.getMessage());
@@ -3127,6 +3125,149 @@ public class ReleaseServiceImpl implements ReleaseService {
             serverConfigMapper.updateById(cfg);
         }
         return ReturnResult.ok();
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> gitRepository(Long id) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        MsServerProject project = prepared.getData().project;
+        if (isBlank(project.getGitUrl())) {
+            return ReturnResult.error("项目未配置 Git 仓库地址，请在项目配置里填写 Git 仓库地址与分支");
+        }
+        Map<String, Object> out = new LinkedHashMap<>(16);
+        out.put("gitUrl", project.getGitUrl());
+        out.put("configuredBranch", isBlank(project.getGitBranch()) ? "" : project.getGitBranch().trim());
+        out.put("authType", isBlank(project.getGitAuthType()) ? "none" : project.getGitAuthType());
+        out.put("workspace", gitWorkspace(project).toString());
+        out.put("lastCommit", project.getGitLastCommit());
+        out.put("pollEnabled", Boolean.TRUE.equals(project.getGitPollEnabled()));
+        out.put("pollCron", project.getGitPollCron());
+
+        Path workspace = gitWorkspace(project);
+        if (!Files.exists(workspace.resolve(".git"))) {
+            // 没克隆过不是错误：界面要能说清「配了地址但还没拉过」
+            out.put("cloned", false);
+            out.put("message", "本地还没有该仓库的工作区，点「拉取」先克隆");
+            return ReturnResult.ok(out);
+        }
+        out.put("cloned", true);
+        try (GitClient client = buildGitClient(project, workspace).build()) {
+            client.open();
+            // HEAD / 分支 / 落后判断都走 SDK，本模块不直接碰 jgit 的 ObjectId 与 refs
+            var head = client.head();
+            String branch = head.branch();
+            out.put("branch", branch);
+            out.put("commit", head.commit());
+            out.put("shortCommit", head.shortCommit());
+            out.put("remoteCommit", head.remoteCommit());
+            out.put("behind", head.behind());
+
+            // 分支：本地在前，远程去重（同一个分支名只保留一条，标 remote=true）
+            List<Map<String, Object>> branches = new ArrayList<>();
+            for (var b : client.branch().listAll()) {
+                if ("HEAD".equals(b.shortName())) {
+                    continue;
+                }
+                Map<String, Object> item = new LinkedHashMap<>(4);
+                item.put("name", b.shortName());
+                item.put("remote", b.isRemote());
+                item.put("current", !b.isRemote() && b.shortName().equals(branch));
+                branches.add(item);
+            }
+            out.put("branches", branches);
+
+            // 工作区改动：有未提交改动时不能 pull，界面要能提前提示
+            var status = client.status().execute();
+            List<String> dirty = new ArrayList<>();
+            status.indexToWorkTree().forEach((kind, files) -> files.forEach(f -> dirty.add("staged " + kind + ": " + f)));
+            status.workTreeToIndex().forEach((kind, files) -> files.forEach(f -> dirty.add(kind + ": " + f)));
+            for (String f : status.untracked()) {
+                dirty.add("untracked: " + f);
+            }
+            out.put("clean", status.isClean());
+            out.put("changes", dirty.size() > 200 ? dirty.subList(0, 200) : dirty);
+            out.put("changeCount", dirty.size());
+
+            List<Map<String, Object>> commits = new ArrayList<>();
+            for (var entry : client.log().list(20)) {
+                Map<String, Object> item = new LinkedHashMap<>(8);
+                item.put("sha", entry.sha());
+                item.put("shortSha", entry.shortSha());
+                item.put("message", entry.message());
+                item.put("author", entry.author());
+                item.put("time", entry.commitTime());
+                commits.add(item);
+            }
+            out.put("commits", commits);
+            return ReturnResult.ok(out);
+        } catch (Exception e) {
+            log.warn("[Git仓库] 项目 {} 读取仓库信息失败: {}", id, e.getMessage());
+            return ReturnResult.error("读取 Git 仓库失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> gitPull(Long id, String branch) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        MsServerProject project = prepared.getData().project;
+        if (isBlank(project.getGitUrl())) {
+            return ReturnResult.error("项目未配置 Git 仓库地址");
+        }
+        Path workspace = gitWorkspace(project);
+        boolean clone = !Files.exists(workspace.resolve(".git"));
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("cloned", clone);
+        try {
+            if (clone) {
+                Files.createDirectories(workspace);
+                try (GitClient client = buildGitClient(project, workspace).build()) {
+                    client.cloneOp().execute();
+                }
+            }
+            try (GitClient client = buildGitClient(project, workspace).build()) {
+                client.open();
+                String target = isBlank(branch)
+                        ? (isBlank(project.getGitBranch()) ? client.head().branch() : project.getGitBranch().trim())
+                        : branch.trim();
+                String current = client.head().branch();
+                if (!target.equals(current)) {
+                    client.branch().checkout(target);
+                }
+                // 有未提交改动时 pull 会失败并可能留下半个工作区：先明确拒绝，让用户自己决定
+                if (!clone && !client.status().execute().isClean()) {
+                    return ReturnResult.error("工作区有未提交的改动，已停止拉取；请先在主机上处理或丢弃这些改动");
+                }
+                var result = client.pull(null, null);
+                out.put("branch", target);
+                out.put("updated", result.updated());
+                out.put("commit", client.head().commit());
+                out.put("message", result.messages());
+                return ReturnResult.ok(out);
+            }
+        } catch (Exception e) {
+            log.warn("[Git拉取] 项目 {} 失败: {}", id, e.getMessage());
+            return ReturnResult.error("Git 拉取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 项目的 Git 工作区目录。
+     *
+     * <p>与 Git 发布共用同一目录：发布链路先 clone 到这里，仓库面板读到的就是「已拉下来的那份」，
+     * 不会出现「面板显示没克隆、发布却说有更新」的两套状态。</p>
+     *
+     * @param project 项目
+     * @return 工作区路径
+     */
+    private Path gitWorkspace(MsServerProject project) {
+        return Paths.get(System.getProperty("java.io.tmpdir"),
+                "git-deploy", String.valueOf(project.getId()));
     }
 
       /**

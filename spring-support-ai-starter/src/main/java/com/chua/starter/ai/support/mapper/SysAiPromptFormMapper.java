@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Param;
  * 提示词形态定义映射器。
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface SysAiPromptFormMapper extends BaseMapper<SysAiPromptForm> {

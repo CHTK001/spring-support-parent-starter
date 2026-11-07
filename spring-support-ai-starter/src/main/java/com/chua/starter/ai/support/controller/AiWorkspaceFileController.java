@@ -35,6 +35,7 @@ import java.util.Objects;
  * 运行时却始终 404（同类的 tree 正常），怀疑旧类/缓存阴影，故独立成类规避。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @RestController

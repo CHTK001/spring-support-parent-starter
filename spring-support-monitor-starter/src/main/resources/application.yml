@@ -27,11 +27,11 @@ spring:
     allow-bean-definition-overriding: true
 
   # ===========================================
-  # CDP 调试中心（spring-support-cdp-starter，monitor 的依赖）
+  # CDP 调试中心（分析域 tshark 包内的 cdp 子包）
   # ===========================================
   # 刻意写在这里而不是靠命令行：CDP 是 monitor 能力的一部分，不是外挂进程。
-  # monitor 启动时 CdpAutoConfiguration 自动装配（pom 已依赖该 starter），
-  # 于是同一进程内同时提供：
+  # 原 spring-support-cdp-starter 已并入 com.chua.starter.monitor.support.tshark.cdp，
+  # 由 MonitorAutoConfiguration 的组件扫描装配，同一进程内同时提供：
   #   REST      /ms/cdp/**   （状态 / 目标 / DOM / 截屏 / 求值）
   #   WebSocket /ws/cdp      （前端 pages/debug 的实时通道）
   # 前端只需把 /ms/cdp 与 /ws/cdp 代理到本服务端口（dev 下 MS_API_TARGET 指向这里）。

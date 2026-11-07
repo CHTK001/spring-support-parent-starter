@@ -78,7 +78,12 @@ public class MarkingGlobalSettingProvider implements GlobalSettingProvider {
                 new GlobalSettingProvider.SettingItem("retry_max_backoff_millis", "20000", "NUMBER",
                         "退避上限毫秒（<=0 按 15000 处理）", 7),
                 new GlobalSettingProvider.SettingItem("retry_on_transient", "true", "BOOLEAN",
-                        "除限流外是否也重试瞬时故障（超时 / 502 / 503）", 8)
+                        "除限流外是否也重试瞬时故障（超时 / 502 / 503）", 8),
+                // 判分完成即自动结案：消除「判分结束还要老师点完成」这处人为断点。
+                // 沿用老师点完成时的同一套收口（错题登记 + 置已完成），默认关闭，
+                // 关闭时行为与原先完全一致。
+                new GlobalSettingProvider.SettingItem("auto_finish", "false", "BOOLEAN",
+                        "判分完成后自动结案（自动登记错题并置为已完成，无需老师点完成）", 9)
         );
     }
 }

@@ -124,4 +124,54 @@ public class MsTsharkPacket extends SysBase {
     @TableField("ms_tshark_packet_http_size")
     @Schema(description = "HTTP 正文长度(字节)")
     private Integer httpContentLength; // HTTP 正文长度
+
+    /**
+     * TCP 流编号（tshark {@code tcp.stream}）。
+     *
+     * <p>同一四元组在抓包期间可能被复用成多条连接，单靠 IP/端口分不开；
+     * 有了流号，HTTP 事务配对和「同一条流」的判定才不会串到上一条连接。</p>
+     */
+    @TableField("ms_tshark_packet_tcp_stream")
+    @Schema(description = "TCP 流编号")
+    private Integer tcpStream; // TCP 流编号
+
+    /** TCP 绝对序列号（{@code tcp.seq_raw}）：同一流内定位字节位置 */
+    @TableField("ms_tshark_packet_tcp_seq")
+    @Schema(description = "TCP 序列号")
+    private Long tcpSeq; // TCP 序列号
+
+    /** TCP 标志位（{@code tcp.flags}）：SYN / ACK / PSH / FIN / RST 的组合 */
+    @TableField("ms_tshark_packet_tcp_flags")
+    @Schema(description = "TCP 标志位")
+    private String tcpFlags; // TCP 标志位
+
+    /** IP 层跳数（IPv4 TTL / IPv6 跳数上限） */
+    @TableField("ms_tshark_packet_ip_ttl")
+    @Schema(description = "IP TTL / 跳数")
+    private Integer ipTtl; // IP TTL
+
+    /** HTTP 请求方法，如 GET / POST；仅请求帧有值 */
+    @TableField("ms_tshark_packet_http_method")
+    @Schema(description = "HTTP 请求方法")
+    private String httpMethod; // HTTP 请求方法
+
+    /** HTTP 请求 URI（含查询串）；仅请求帧有值 */
+    @TableField("ms_tshark_packet_http_uri")
+    @Schema(description = "HTTP 请求 URI")
+    private String httpUri; // HTTP 请求 URI
+
+    /** HTTP 响应状态码，如 200 / 404；仅响应帧有值 */
+    @TableField("ms_tshark_packet_http_status")
+    @Schema(description = "HTTP 响应状态码")
+    private Integer httpStatus; // HTTP 响应状态码
+
+    /** TLS 握手里的服务器名（SNI），用于在加密流量里识别访问的域名 */
+    @TableField("ms_tshark_packet_tls_sni")
+    @Schema(description = "TLS SNI")
+    private String tlsSni; // TLS SNI
+
+    /** DNS 查询名（多值时以逗号分隔），便于不展开原始数据就能看到问了哪个域名 */
+    @TableField("ms_tshark_packet_dns_query")
+    @Schema(description = "DNS 查询名")
+    private String dnsQueryName; // DNS 查询名
 }

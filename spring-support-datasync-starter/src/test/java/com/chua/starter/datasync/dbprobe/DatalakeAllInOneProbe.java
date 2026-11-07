@@ -198,7 +198,8 @@ public final class DatalakeAllInOneProbe {
         });
 
           // 多 Sink 管线
-        pm.savePipeline("engine-multi", "{\"id\":\"engine-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statistic\"},{\"type\":\"realtime\"}]}}}");
+        pm.savePipeline("engine-multi", "{\"id\":\"engine-multi\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"},{\"type\":\"statisti" +
+            "c\"},{\"type\":\"realtime\"}]}}}");
         check("PipelineEngine.execute (multi sink)", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("key", "val-multi"))

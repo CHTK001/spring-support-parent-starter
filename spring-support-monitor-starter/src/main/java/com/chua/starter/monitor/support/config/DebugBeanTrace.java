@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
  * 临时调试钩子: 输出每个 Bean 的创建类名(AFTER 为代理后类名),
  * 第一个没有匹配 AFTER 的 BEFORE 行就是 CGLIB 轮旋的目标 Bean.
  * 已退出，仅保留控制台调试回显（P3C E1 豁免）
+ * @author CH
+ * @since 4.0.0.51
  */
 @Component
 public class DebugBeanTrace implements BeanPostProcessor, Ordered {

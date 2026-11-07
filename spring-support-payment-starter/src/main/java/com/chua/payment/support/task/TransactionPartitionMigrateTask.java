@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 /**
  * 交易流水分表迁移任务
  * @author CH
+ * @since 4.0.0.51
  */
 
 @Component

@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
  * 数据异常时必须有个确定的兜底，否则整条提示词回退链会断。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_prompt_form")

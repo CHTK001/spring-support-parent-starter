@@ -72,4 +72,14 @@ public interface DeviceTaskStateService {
      * @return 是否新补种（已存在返回 {@code false}）
      */
     boolean seed(String name, int interval, String description);
+
+    /**
+     * 删除某套凭据名下的全部任务状态行
+     * <p>凭据级任务名统一为 {@code 前缀_凭据ID}（在离线检测、事件轮询、设备同步、组织同步），
+     * 凭据删除后这些行已无归属，留着只会在任务列表里留下永远不跑的空行。</p>
+     *
+     * @param credentialId 凭据 ID
+     * @return 删除的行数
+     */
+    int deleteByCredentialId(String credentialId);
 }

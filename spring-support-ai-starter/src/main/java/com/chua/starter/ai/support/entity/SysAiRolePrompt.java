@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
  * 本表用于承载 build / plan 的差异化配置；本表未命中时回退到那一列，历史角色行为不变。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_role_prompt")

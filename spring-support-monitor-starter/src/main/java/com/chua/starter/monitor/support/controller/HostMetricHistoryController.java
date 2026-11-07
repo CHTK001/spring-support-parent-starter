@@ -15,8 +15,9 @@ import java.util.List;
 /**
  * 主机内置指标历史查询接口（不依赖监控项）。
  *
- * <p>返回主机近 N 小时的 CPU / 内存 / 磁盘使用率，每行
- * {@code [时间戳ms, cpu, mem, disk]}，供主机监控详情页初始化基础数据与图表历史弹窗。</p>
+ * <p>返回主机近 N 小时的 CPU / 内存 / 磁盘使用率、磁盘 IO 与网络收发，每行
+ * {@code [时间戳ms, cpu, mem, disk, diskReadKbs, diskWriteKbs, netRxKbs, netTxKbs]}，
+ * 供主机监控详情页初始化基础数据与图表历史弹窗。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -37,7 +38,7 @@ public class HostMetricHistoryController {
      *
      * @param hostId 主机台账标识
      * @param hours  回溯小时数，默认 1
-     * @return data 为 [[ts, cpu, mem, disk], ...] 升序
+     * @return data 为 [[ts, cpu, mem, disk, diskReadKbs, diskWriteKbs, netRxKbs, netTxKbs], ...] 升序
      */
     @GetMapping("/{hostId}/metric-history")
     public ReturnResult<List<List<Object>>> metricHistory(

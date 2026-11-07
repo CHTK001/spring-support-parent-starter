@@ -8,6 +8,8 @@ import com.chua.starter.collect.dto.CollectDslDTO;
  * @param flowId   流程ID
  * @param flowName 流程名称，用于节点日志与摘要
  * @param dsl      流程图
+ * @author CH
+ * @since 4.0.0.51
  */
 public record CollectFlowRef(Integer flowId, String flowName, CollectDslDTO dsl) {
 }

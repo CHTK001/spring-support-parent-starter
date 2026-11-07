@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  * 会话分组实体，对应表 {@code sys_ai_session_group}。
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_session_group")

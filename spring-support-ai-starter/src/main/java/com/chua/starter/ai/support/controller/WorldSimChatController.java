@@ -142,7 +142,10 @@ public class WorldSimChatController {
             content = "";
         }
 
-        SysAiWorld world = requireOwned(worldId);
+        // 观众派发（content 为空）是只读路径：他人的公开世界也能旁观推进；
+        // 真人发言仍是写操作，必须世界主人且非只读账号。
+        boolean spectatorTick = content.isBlank();
+        SysAiWorld world = spectatorTick ? requireVisible(worldId) : requireOwned(worldId);
         SysAiWorldScene scene = null;
         if (sceneId != null) {
             scene = sceneMapper.selectById(sceneId);
@@ -154,7 +157,6 @@ public class WorldSimChatController {
         // 场景内 NPC 才是"在场"的回复候选
         List<SysAiWorldNpc> initialNpcs = listSceneNpcs(worldId, sceneId);
         // 观众派发（content 为空）允许场景无人时自主演一小段，不再要求先布置角色
-        boolean spectatorTick = content.isBlank();
         if (spectatorTick && initialNpcs.isEmpty()) {
             // 场景空就取全场活跃角色，避免「点观看完全没反应」
             initialNpcs = listActives(worldId);
@@ -1030,6 +1032,23 @@ public class WorldSimChatController {
         }
         if (!AiUserContext.requireUserId().equals(w.getUserId())) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "不可操作他人的世界");
+        }
+        return w;
+    }
+
+    /**
+     * 旁观可见：主人或已开演的公开世界。只用于 spectators 与只读查询。
+     * @param id 长整数
+     * @return 返回值
+     */
+    private SysAiWorld requireVisible(Long id) {
+        SysAiWorld w = worldMapper.selectById(id);
+        if (w == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "世界不存在");
+        }
+        String userId = AiUserContext.requireUserId();
+        if (!userId.equals(w.getUserId()) && !Integer.valueOf(1).equals(w.getStatus())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "这个世界还没开演，不能旁观");
         }
         return w;
     }

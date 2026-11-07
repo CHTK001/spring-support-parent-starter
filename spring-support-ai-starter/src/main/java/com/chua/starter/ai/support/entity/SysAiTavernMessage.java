@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
  * 让被回复的成员知道群里谁说过什么。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_tavern_message")

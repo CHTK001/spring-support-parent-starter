@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param size 备份大小（字节；Windows 目录镜像可能为 null）
  * @param kind 备份类型：file=压缩包；dir=目录镜像
  * @author CH
+ * @since 4.0.0.51
  */
 @Schema(description = "项目备份记录")
 public record ProjectBackupVO(

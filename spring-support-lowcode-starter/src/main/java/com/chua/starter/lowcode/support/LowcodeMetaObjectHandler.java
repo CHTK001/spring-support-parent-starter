@@ -5,8 +5,6 @@ import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
@@ -14,16 +12,16 @@ import java.time.LocalDateTime;
  * 低代码-审计字段自动填充。
  *
  * <p>实体全部继承自 {@link com.chua.starter.mybatis.pojo.SysBase}，审计列（create_name / create_by /
- * create_time / update_name / update_by / update_time）的自动回写交给本类。消费者若注册了自己的
- * {@link MetaObjectHandler}（通常是消费方统一获取登录用户的公共实现），{@link ConditionalOnMissingBean}
- * 会优先消费方的那一个。</p>
+ * create_time / update_name / update_by / update_time）的自动回写交给本类。</p>
+ *
+ * <p>本类不自己声明为组件：{@code @ConditionalOnMissingBean} 在组件扫描阶段判定不可靠
+ * （实测会整个 bean 不注册），因此由 {@code LowcodeAutoConfiguration} 用
+ * {@code @Bean + @ConditionalOnMissingBean} 装配，消费方注册了自己的实现时自动让位。</p>
  *
  * @author CH
  * @since 4.0.0.51
  */
 @Slf4j
-@Component
-@ConditionalOnMissingBean(MetaObjectHandler.class)
 public class LowcodeMetaObjectHandler implements MetaObjectHandler {
 
     /**
@@ -45,7 +43,7 @@ public class LowcodeMetaObjectHandler implements MetaObjectHandler {
         LocalDateTime now = LocalDateTime.now();
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
-        fillByUser(metaObject, now);
+        fillCreateUser(metaObject);
     }
 
     /**
@@ -57,26 +55,53 @@ public class LowcodeMetaObjectHandler implements MetaObjectHandler {
     public void updateFill(MetaObject metaObject) {
         LocalDateTime now = LocalDateTime.now();
         this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, now);
-        fillByUser(metaObject, now);
+        fillUpdateUser(metaObject);
     }
 
     /**
-     * 由当前登录用户填充审计列，用户不存在则静默跳过。
+     * 插入时填充创建人信息，用户不存在则静默跳过。
      *
      * @param metaObject 元对象
-     * @param now        搜索时间
      */
-    private void fillByUser(MetaObject metaObject, LocalDateTime now) {
-        if (!metaObject.hasSetter("createName") || !metaObject.hasSetter("createBy")) {
-            return;
-        }
-        AuthService authService = authServiceProvider == null ? null : authServiceProvider.getIfAvailable();
-        CurrentUser user = authService == null ? null : authService.getCurrentUser();
+    private void fillCreateUser(MetaObject metaObject) {
+        CurrentUser user = currentUser();
         if (user == null) {
             return;
         }
-        this.strictInsertFill(metaObject, "createName", String.class, user.getName());
-        this.strictInsertFill(metaObject, "createBy", Integer.class, toUserId(user.getUserId()));
+        if (metaObject.hasSetter("createName")) {
+            this.strictInsertFill(metaObject, "createName", String.class, user.getName());
+        }
+        if (metaObject.hasSetter("createBy")) {
+            this.strictInsertFill(metaObject, "createBy", Integer.class, toUserId(user.getUserId()));
+        }
+    }
+
+    /**
+     * 更新时填充更新人信息，用户不存在则静默跳过。
+     *
+     * @param metaObject 元对象
+     */
+    private void fillUpdateUser(MetaObject metaObject) {
+        CurrentUser user = currentUser();
+        if (user == null) {
+            return;
+        }
+        if (metaObject.hasSetter("updateName")) {
+            this.strictUpdateFill(metaObject, "updateName", String.class, user.getName());
+        }
+        if (metaObject.hasSetter("updateBy")) {
+            this.strictUpdateFill(metaObject, "updateBy", Integer.class, toUserId(user.getUserId()));
+        }
+    }
+
+    /**
+     * 当前登录用户，取不到返回 null。
+     *
+     * @return 当前用户
+     */
+    private CurrentUser currentUser() {
+        AuthService authService = authServiceProvider == null ? null : authServiceProvider.getIfAvailable();
+        return authService == null ? null : authService.getCurrentUser();
     }
 
     /**

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,6 +23,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
+
+    /**
+     * 凭据级任务名前缀，与 {@code DeviceScheduleManager.CredentialTask} 保持一致
+     */
+    private static final List<String> CREDENTIAL_TASK_PREFIXES = List.of(
+            "offlineDetect", "eventPoll", "deviceSync", "orgSync");
 
     /**
      * 任务状态 映射器
@@ -133,5 +140,27 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
         state.setDeviceTaskStateInterval(interval);
         state.setDeviceTaskStateDescription(description);
         return taskStateMapper.insert(state) > 0;
+    }
+
+    @Override
+    /**
+     * 删除某套凭据名下的全部任务状态行
+     * @param credentialId 凭据 ID
+     * @return 删除的行数
+    */
+    public int deleteByCredentialId(String credentialId) {
+        if (credentialId == null || credentialId.isEmpty()) {
+            return 0;
+        }
+        // 逐前缀精确匹配，避免 LIKE 下划线通配把别的凭据行一起带走
+        List<String> names = new ArrayList<>(CREDENTIAL_TASK_PREFIXES.size());
+        for (String prefix : CREDENTIAL_TASK_PREFIXES) {
+            names.add(prefix + "_" + credentialId);
+        }
+        LambdaQueryWrapper<DeviceTaskState> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(DeviceTaskState::getDeviceTaskStateName, names);
+        int removed = taskStateMapper.delete(wrapper);
+        log.info("清理凭据级任务状态行: credentialId={}, removed={}", credentialId, removed);
+        return removed;
     }
 }

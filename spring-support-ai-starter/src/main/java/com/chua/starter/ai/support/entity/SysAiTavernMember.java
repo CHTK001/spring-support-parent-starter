@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
  * 模型优先级：成员 model_override &gt; 角色 model &gt; 全局默认。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @TableName("sys_ai_tavern_member")

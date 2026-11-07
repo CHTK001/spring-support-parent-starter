@@ -31,6 +31,7 @@ import java.util.Set;
  * Bean 之前执行 —— 这与本类最初的职责诉求一致。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 public class DataSourceScriptBeanPostProcessor implements BeanPostProcessor, PriorityOrdered {

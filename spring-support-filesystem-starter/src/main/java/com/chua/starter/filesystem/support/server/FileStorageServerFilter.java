@@ -2760,7 +2760,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return "pdf";
         }
         if (e.matches
-            ("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|xmind|rtf|epub|mobi|azw|azw3|prc|xps|oxps|pages|numbers|key|djvu|djv")) {
+            ("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|x" +
+                "mind|rtf|epub|mobi|azw|azw3|prc|xps|oxps|pages|numbers|key|djvu|djv")) {
             return "office";
         }
         if (e.matches("mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v|3gp")) {
@@ -4759,7 +4760,8 @@ var search=document.getElementById('search');
                 .append("<style>")
                 .append("html,body{margin:0;height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;")
                 .append("background:#f5f7fa;color:#303133}")
-                .append(".wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;box-sizing:border-box}")
+                .append(".wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24p" +
+                    "x;box-sizing:border-box}")
                 .append(".ico{width:64px;height:64px;border-radius:16px;background:#fff;border:1px solid #dcdfe6;")
                 .append("display:flex;align-items:center;justify-content:center;font-size:26px;color:#909399}")
                 .append("h1{font-size:17px;font-weight:600;margin:0}")

@@ -117,7 +117,8 @@ public final class DataSyncAllInOneProbe {
         }
 
         Path tmp = WORK_DIR.resolve("test.properties");
-        Files.writeString(tmp, "mappingId=prop-test\ninputId=in\nsourceId=src\noutputId=out\nsinkId=snk\nbatch=10\ncronType=fixed\ncron=0/5 * * * * ?\n");
+        Files.writeString(tmp, "mappingId=prop-test\ninputId=in\nsourceId=src\noutputId=out\nsinkId=snk\nbatch=10\ncronType=fixe" +
+            "d\ncron=0/5 * * * * ?\n");
         boolean propOk = false;
         try {
             com.chua.starter.datasync.config.DataSyncConfigDefinition propDef = props.parse(tmp);

@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
  * <p>页面以 pageCode 为对外标识，running 期查询（/code）与渲染（/api）都依赖该编码，
  * 因此所有返回页面的接口以 pageId 为参数，详情页/provider 查询以 pageCode 为参数，
  * 保证了唯一性。</p>
+ * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service
@@ -167,6 +169,29 @@ public class LowPageServiceImpl extends ServiceImpl<LowFormPageMapper, LowFormPa
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean changeStatus(Integer pageId, Integer status) {
+        requirePage(pageId);
+        if (status == null || (status != ENABLED && status != DISABLED)) {
+            throw new IllegalArgumentException("状态只能是 0(停用) 或 1(启用)");
+        }
+        LowFormPage update = new LowFormPage();
+        update.setLowPageId(pageId);
+        update.setLowPageStatus(status);
+        return updateById(update);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean unpublish(Integer pageId) {
+        requirePage(pageId);
+        LowFormPage update = new LowFormPage();
+        update.setLowPageId(pageId);
+        update.setLowPagePublishStatus(PUBLISH_UNPUBLISHED);
+        return updateById(update);
+    }
+
+    @Override
     public List<LowFormPageVersionVO> versions(Integer pageId) {
         List<LowFormPageVersion> versions = pageVersionMapper.selectList(Wrappers.<LowFormPageVersion>lambdaQuery()
                 .eq(LowFormPageVersion::getLowPageId, pageId)
@@ -180,6 +205,10 @@ public class LowPageServiceImpl extends ServiceImpl<LowFormPageMapper, LowFormPa
                 .eq(LowFormPage::getLowPageCode, pageCode)
                 .eq(LowFormPage::getLowPagePublishStatus, PUBLISH_PUBLISHED));
         if (page == null) {
+            return null;
+        }
+        // 停用的页面对外不可见：停用语义必须同时约束运行期取数，否则「停用」只是列表上的一个标记。
+        if (page.getLowPageStatus() == null || page.getLowPageStatus() != ENABLED) {
             return null;
         }
         // 运行期只认发布快照：设计器改了已发布页面的 Schema 但没重新发布时，

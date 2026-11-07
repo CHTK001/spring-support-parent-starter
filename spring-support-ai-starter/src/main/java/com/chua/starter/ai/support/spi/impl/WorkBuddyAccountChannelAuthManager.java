@@ -5,7 +5,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.common.support.text.json.Json;
 import lombok.extern.slf4j.Slf4j;
 
@@ -575,59 +575,42 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
      */
     private List<String> autoTasks(Map<String, Object> credentials, String realm) {
         List<String> messages = new ArrayList<>(2);
-        List<Map<String, Object>> tasks;
-        try {
-            String body = ChannelHttp.getJson(
-                    billingOrigin(realm) + "/v2/activity/growth/tasks",
-                    billingHeaders(credentials, realm));
-            Map<String, Object> envelope = parseJson(body);
-            Integer code = toInt(envelope.get("code"));
-            if (code != null && code != 0) {
-                messages.add("任务列表获取失败: code=" + code);
-                return messages;
-            }
-            tasks = taskRows(envelope.get("data"));
-        } catch (ApiException e) {
-            messages.add("任务列表获取失败: " + ChannelHttp.truncate(e.getMessage()));
+        List<Map<String, Object>> tasks = taskList(credentials, realm);
+        if (tasks.isEmpty()) {
             return messages;
         }
         List<String> notAccepted = new ArrayList<>(4);
         List<String> claimable = new ArrayList<>(4);
         for (Map<String, Object> task : tasks) {
-            String taskCode = readString(task, "task_code");
-            if (isBlank(taskCode)) {
+            String taskCode = String.valueOf(task.get("code"));
+            if (isBlank(taskCode) || "null".equals(taskCode)) {
                 continue;
             }
-            String acceptStatus = readString(task, "accept_status");
-            if ("not_accepted".equalsIgnoreCase(acceptStatus) || isBlank(acceptStatus)) {
+            String acceptStatus = String.valueOf(task.getOrDefault("acceptStatus", ""));
+            if ("not_accepted".equalsIgnoreCase(acceptStatus) || acceptStatus.isBlank()) {
                 notAccepted.add(taskCode);
                 continue;
             }
             if ("claimed".equalsIgnoreCase(acceptStatus)) {
                 continue;
             }
-            long[] progress = taskProgress(task);
-            if (progress[1] > 0 && progress[0] >= progress[1]) {
+            if (Boolean.TRUE.equals(task.get("claimable"))) {
                 claimable.add(taskCode);
             }
         }
         if (!notAccepted.isEmpty()) {
             try {
-                acceptTasks(credentials, realm, notAccepted);
-                messages.add("已接受 " + notAccepted.size() + " 个成长任务");
+                int accepted = acceptTaskCodes(credentials, realm, notAccepted);
+                messages.add("已接受 " + accepted + " 个成长任务");
             } catch (ApiException e) {
                 messages.add("接受任务失败: " + ChannelHttp.truncate(e.getMessage()));
             }
         }
         int claimed = 0;
         for (String taskCode : claimable) {
-            try {
-                if (claimTask(credentials, realm, taskCode)) {
-                    claimed++;
-                }
-            } catch (ApiException e) {
-                log.debug("[workbuddy] 领取任务奖励失败 code={}: {}",
-                        taskCode, ChannelHttp.truncate(e.getMessage()));
+            Map<String, Object> result = claimTaskReward(credentials, realm, taskCode);
+            if (Boolean.TRUE.equals(result.get("claimed"))) {
+                claimed++;
             }
         }
         if (claimed > 0) {
@@ -637,13 +620,78 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
     }
 
     /**
-     * 接受成长任务（幂等）。
+     * 拉取成长任务清单（归一化为 {@code ChannelTaskProvider} 行契约）。
+     *
+     * @param credentials 凭据
+     * @param realm       账号域
+     * @return 任务行；失败返回空列表
+     */
+    public List<Map<String, Object>> taskList(Map<String, Object> credentials, String realm) {
+        try {
+            String body = ChannelHttp.getJson(
+                    billingOrigin(realm) + "/v2/activity/growth/tasks",
+                    billingHeaders(credentials, realm));
+            Map<String, Object> envelope = parseJson(body);
+            Integer code = toInt(envelope.get("code"));
+            if (code != null && code != 0) {
+                return List.of();
+            }
+            List<Map<String, Object>> rows = new ArrayList<>(8);
+            for (Map<String, Object> task : taskRows(envelope.get("data"))) {
+                String taskCode = readString(task, "task_code");
+                if (isBlank(taskCode)) {
+                    continue;
+                }
+                long[] progress = taskProgress(task);
+                String acceptStatus = readString(task, "accept_status");
+                boolean claimed = "claimed".equalsIgnoreCase(acceptStatus);
+                Map<String, Object> row = new LinkedHashMap<>(10);
+                row.put("code", taskCode);
+                String title = readString(task, "title");
+                row.put("title", isBlank(title) ? taskCode : title);
+                String description = firstNonBlank(
+                        readString(task, "description"), readString(task, "task_desc"));
+                if (!isBlank(description)) {
+                    row.put("description", description);
+                }
+                row.put("current", progress[0]);
+                row.put("target", progress[1]);
+                row.put("acceptStatus", isBlank(acceptStatus) ? "not_accepted" : acceptStatus);
+                row.put("claimable", !claimed && progress[1] > 0 && progress[0] >= progress[1]);
+                row.put("claimed", claimed);
+                Long credit = toLong(task.get("reward_credit"));
+                if (credit != null && credit > 0) {
+                    row.put("credit", credit);
+                }
+                Long energy = toLong(task.get("reward_energy"));
+                if (energy != null && energy > 0) {
+                    row.put("energy", energy);
+                }
+                String jumpUrl = readString(task, "jump_url");
+                if (!isBlank(jumpUrl)) {
+                    row.put("jumpUrl", jumpUrl);
+                }
+                rows.add(row);
+            }
+            return rows;
+        } catch (ApiException e) {
+            log.debug("[workbuddy] 任务清单拉取失败: {}", ChannelHttp.truncate(e.getMessage()));
+            return List.of();
+        }
+    }
+
+    /**
+     * 报名成长任务（幂等）。
      *
      * @param credentials 凭据
      * @param realm       账号域
      * @param taskCodes   任务码
+     * @return 受理条数
      */
-    private void acceptTasks(Map<String, Object> credentials, String realm, List<String> taskCodes) {
+    public int acceptTaskCodes(Map<String, Object> credentials, String realm, List<String> taskCodes) {
+        if (taskCodes == null || taskCodes.isEmpty()) {
+            return 0;
+        }
         Map<String, Object> request = new LinkedHashMap<>(1);
         request.put("task_codes", taskCodes);
         String body = ChannelHttp.postJson(
@@ -655,6 +703,7 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
                     "接受成长任务失败: code=" + code + " msg=" + readString(envelope, "msg"));
         }
+        return taskCodes.size();
     }
 
     /**
@@ -663,28 +712,55 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
      * @param credentials 凭据
      * @param realm       账号域
      * @param taskCode    任务码
-     * @return 本次是否新领到奖励
+     * @return 结果 {@code {ok, claimed, credit, energy, message}}
      */
-    private boolean claimTask(Map<String, Object> credentials, String realm, String taskCode) {
+    public Map<String, Object> claimTaskReward(Map<String, Object> credentials, String realm, String taskCode) {
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("ok", false);
+        result.put("claimed", false);
+        if (isBlank(taskCode)) {
+            result.put("message", "任务标识为空");
+            return result;
+        }
         Map<String, String> headers = billingHeaders(credentials, realm);
         headers.put("Origin", WEB_ORIGIN_CN);
         headers.put("Referer", WEB_ORIGIN_CN + "/profile/growth-center");
         headers.put("x-client-platform", "web");
-        String body = ChannelHttp.postJson(
-                webOrigin(realm) + "/activity/growth/tasks/" + urlEncode(taskCode) + "/claim",
-                null, headers);
-        Map<String, Object> envelope = parseJson(body);
-        Integer code = toInt(envelope.get("code"));
-        if (code != null && code != 0) {
-            return false;
+        try {
+            String body = ChannelHttp.postJson(
+                    webOrigin(realm) + "/activity/growth/tasks/" + urlEncode(taskCode) + "/claim",
+                    null, headers);
+            Map<String, Object> envelope = parseJson(body);
+            Integer code = toInt(envelope.get("code"));
+            if (code != null && code != 0) {
+                result.put("message", "领奖失败: code=" + code
+                        + " msg=" + readString(envelope, "msg"));
+                return result;
+            }
+            Map<String, Object> data = envelope.get("data") instanceof Map<?, ?> raw
+                    ? asMap(raw) : envelope;
+            // already_claimed=true 表示幂等重复领取，不算新增奖励
+            if (Boolean.TRUE.equals(data.get("already_claimed"))) {
+                result.put("ok", true);
+                result.put("message", "该任务奖励已领取过");
+                return result;
+            }
+            result.put("ok", true);
+            result.put("claimed", true);
+            Long credit = toLong(data.get("credit"));
+            if (credit != null) {
+                result.put("credit", credit);
+            }
+            Long energy = toLong(data.get("energy"));
+            if (energy != null) {
+                result.put("energy", energy);
+            }
+            result.put("message", "领奖成功");
+            return result;
+        } catch (ApiException e) {
+            result.put("message", "领奖失败: " + ChannelHttp.truncate(e.getMessage()));
+            return result;
         }
-        Map<String, Object> data = envelope.get("data") instanceof Map<?, ?> raw
-                ? asMap(raw) : envelope;
-        // already_claimed=true 表示幂等重复领取，不算新增奖励
-        if (Boolean.TRUE.equals(data.get("already_claimed"))) {
-            return false;
-        }
-        return true;
     }
 
     /**
@@ -940,6 +1016,42 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
     }
 
     /**
+     * 查询账号积分 / 余额快照（供 {@code ChannelCreditProvider} 复用）。
+     *
+     * <p>与 {@link #checkin(Map)} 分开：签到是「动作」，本方法是「读数」，
+     * 渠道页要能在不签到的情况下展示余额。</p>
+     *
+     * @param credentials 凭据
+     * @return 积分快照（{@code remain/total/unit/packages/updatedAt}）；失败带 {@code error}
+     */
+    public Map<String, Object> credit(Map<String, Object> credentials) {
+        Map<String, Object> result = new LinkedHashMap<>(8);
+        String accessToken = readString(credentials, "access_token");
+        if (isBlank(accessToken)) {
+            result.put("error", "凭据缺少 access_token");
+            return result;
+        }
+        String realm = credentialRealm(credentials);
+        long[] snapshot = balanceDetailed(credentials, realm);
+        if (snapshot == null) {
+            result.put("error", "上游未返回可用余额（个人资源包与企业配额均未命中）");
+            return result;
+        }
+        result.put("remain", snapshot[0]);
+        result.put("total", snapshot[1]);
+        result.put("unit", "credit");
+        result.put("realm", realm);
+        result.put("plan", "global".equals(realm) ? "WorkBuddy AI" : "WorkBuddy");
+        result.put("exceeded", snapshot[1] >= 0 && snapshot[0] <= 0);
+        result.put("updatedAt", System.currentTimeMillis());
+        List<Map<String, Object>> packages = balancePackages(credentials, realm);
+        if (!packages.isEmpty()) {
+            result.put("packages", packages);
+        }
+        return result;
+    }
+
+    /**
      * 查询账号余额（个人：{@code get-user-resource}；企业：{@code get-enterprise-user-usage}）。
      *
      * @param credentials 凭据
@@ -947,6 +1059,18 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
      * @return {@code [剩余, 总额]}；查询失败返回 {@code null}
      */
     private long[] balance(Map<String, Object> credentials, String realm) {
+        long[] snapshot = balanceDetailed(credentials, realm);
+        return snapshot == null ? null : new long[]{snapshot[0], snapshot[1]};
+    }
+
+    /**
+     * 余额明细查询（带原始资源包列表，供积分明细展示）。
+     *
+     * @param credentials 凭据
+     * @param realm       账号域
+     * @return {@code [剩余, 总额]}；失败返回 {@code null}
+     */
+    private long[] balanceDetailed(Map<String, Object> credentials, String realm) {
         try {
             Map<String, String> headers = billingHeaders(credentials, realm);
             if (!isBlank(readString(credentials, "enterprise_id"))) {
@@ -955,19 +1079,96 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
                         "{}", headers);
                 return enterpriseBalance(parseJson(body));
             }
-            Map<String, Object> request = new LinkedHashMap<>(6);
-            request.put("PageNumber", 1);
-            request.put("PageSize", 100);
-            request.put("ProductCode", "p_tcaca");
-            request.put("Status", List.of(0, 3));
             String body = ChannelHttp.postJson(
                     billingOrigin(realm) + "/v2/billing/meter/get-user-resource",
-                    Json.toJson(request), headers);
+                    Json.toJson(userResourceRequest()), headers);
             return personalBalance(parseJson(body));
         } catch (ApiException e) {
             log.debug("[workbuddy] 余额查询失败: {}", ChannelHttp.truncate(e.getMessage()));
             return null;
         }
+    }
+
+    /**
+     * 个人资源包明细（{@code Response.Data.Accounts[]} 逐条归一化）。
+     *
+     * @param credentials 凭据
+     * @param realm       账号域
+     * @return 明细列表；查询失败返回空
+     */
+    private List<Map<String, Object>> balancePackages(Map<String, Object> credentials, String realm) {
+        if (!isBlank(readString(credentials, "enterprise_id"))) {
+            return List.of();
+        }
+        try {
+            String body = ChannelHttp.postJson(
+                    billingOrigin(realm) + "/v2/billing/meter/get-user-resource",
+                    Json.toJson(userResourceRequest()), billingHeaders(credentials, realm));
+            Map<String, Object> envelope = parseJson(body);
+            if (!(envelope.get("Response") instanceof Map<?, ?> response)
+                    || !(response.get("Data") instanceof Map<?, ?> data)
+                    || !(data.get("Accounts") instanceof List<?> accounts)) {
+                return List.of();
+            }
+            List<Map<String, Object>> packages = new ArrayList<>(accounts.size());
+            for (Object item : accounts) {
+                if (!(item instanceof Map<?, ?> raw)) {
+                    continue;
+                }
+                Map<String, Object> account = asMap(raw);
+                long[] remainUsed = packageRemainUsed(account);
+                Map<String, Object> row = new LinkedHashMap<>(4);
+                String name = readString(account, "PackageName");
+                row.put("name", isBlank(name) ? "资源包" : name);
+                row.put("remain", remainUsed[0]);
+                row.put("size", remainUsed[1]);
+                String cycleEnd = readString(account, "CycleEndTime");
+                if (!isBlank(cycleEnd)) {
+                    row.put("expiresAt", cycleEnd);
+                }
+                packages.add(row);
+            }
+            return packages;
+        } catch (ApiException e) {
+            log.debug("[workbuddy] 资源包明细查询失败: {}", ChannelHttp.truncate(e.getMessage()));
+            return List.of();
+        }
+    }
+
+    /**
+     * 个人资源包查询请求体（与 panel 的 {@code UserResource} 同口径）。
+     *
+     * @return 请求体
+     */
+    private static Map<String, Object> userResourceRequest() {
+        Map<String, Object> request = new LinkedHashMap<>(6);
+        request.put("PageNumber", 1);
+        request.put("PageSize", 100);
+        request.put("ProductCode", "p_tcaca");
+        request.put("Status", List.of(0, 3));
+        return request;
+    }
+
+    /**
+     * 单资源包的 {@code [剩余, 总量]}（周期额度优先，缺省退总量）。
+     *
+     * @param account 资源包节点
+     * @return {@code [剩余, 总量]}
+     */
+    private static long[] packageRemainUsed(Map<String, Object> account) {
+        Long cycleRemain = toLong(account.get("CycleCapacityRemain"));
+        Long capacityRemain = toLong(account.get("CapacityRemain"));
+        Long cycleSize = toLong(account.get("CycleCapacitySize"));
+        Long capacitySize = toLong(account.get("CapacitySize"));
+        long remain = firstNonNull(cycleRemain, capacityRemain, 0L);
+        long size = firstNonNull(cycleSize, capacitySize, remain);
+        if (remain < 0) {
+            remain = 0L;
+        }
+        if (size < remain) {
+            size = remain;
+        }
+        return new long[]{remain, size};
     }
 
     /**
@@ -985,23 +1186,12 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         long remain = 0L;
         long total = 0L;
         for (Object item : accounts) {
-            if (!(item instanceof Map<?, ?> account)) {
+            if (!(item instanceof Map<?, ?> raw)) {
                 continue;
             }
-            Long cycleRemain = toLong(account.get("CycleCapacityRemain"));
-            Long capacityRemain = toLong(account.get("CapacityRemain"));
-            Long cycleSize = toLong(account.get("CycleCapacitySize"));
-            Long capacitySize = toLong(account.get("CapacitySize"));
-            long usedRemain = firstNonNull(cycleRemain, capacityRemain, 0L);
-            long usedSize = firstNonNull(cycleSize, capacitySize, usedRemain);
-            if (usedRemain < 0) {
-                usedRemain = 0L;
-            }
-            if (usedSize < usedRemain) {
-                usedSize = usedRemain;
-            }
-            remain += usedRemain;
-            total += usedSize;
+            long[] pair = packageRemainUsed(asMap(raw));
+            remain += pair[0];
+            total += pair[1];
         }
         return new long[]{remain, total};
     }
@@ -1125,6 +1315,26 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
      */
     private static String resolveRealm(String realm) {
         return "global".equalsIgnoreCase(realm == null ? "" : realm.trim()) ? "global" : "cn";
+    }
+
+    /**
+     * 账号域（供 {@code ChannelTaskProvider} 判定是否支持成长任务）。
+     *
+     * @param credentials 凭据
+     * @return {@code cn} / {@code global}
+     */
+    public String realmOf(Map<String, Object> credentials) {
+        return credentialRealm(credentials);
+    }
+
+    /**
+     * 是否 global 账号（global 无 CN 签到 / 成长任务体系）。
+     *
+     * @param credentials 凭据
+     * @return true 表示 global
+     */
+    public boolean isGlobalRealm(Map<String, Object> credentials) {
+        return "global".equals(credentialRealm(credentials));
     }
 
     /**

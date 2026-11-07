@@ -30,6 +30,7 @@ import java.util.List;
  * 实现由 {@code DefaultEffectiveChatModelResolver} 提供。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 public interface EffectiveChatModelResolver {
 

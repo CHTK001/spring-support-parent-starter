@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.mapper.DeviceProviderCredentialMapper;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
+import com.chua.starter.device.support.service.DeviceTaskStateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
 
     /** 提供商接入凭据 映射器 */
     private final DeviceProviderCredentialMapper credentialMapper;
+
+    /** 任务状态服务：凭据删除时同步清理其名下任务状态行 */
+    private final DeviceTaskStateService taskStateService;
 
     @Override
     public List<DeviceProviderCredential> list(String vendor) {
@@ -216,6 +220,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
             return;
         }
         credentialMapper.deleteById(id);
+        // 凭据名下 4 个凭据级任务（offlineDetect_/eventPoll_/deviceSync_/orgSync_）的状态行一并清掉，
+        // 否则任务列表会留一排永远不跑的空行
+        taskStateService.deleteByCredentialId(id);
         // 删掉的若正是默认套，把该厂商剩余启用套里最早的一套提为默认
         if (Boolean.TRUE.equals(existing.getDeviceCredentialIsDefault())) {
             promoteFallbackDefault(existing.getDeviceCredentialVendor());

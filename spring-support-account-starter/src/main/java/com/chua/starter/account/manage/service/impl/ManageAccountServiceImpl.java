@@ -81,10 +81,13 @@ public class ManageAccountServiceImpl implements ManageAccountService {
      * {@inheritDoc}
      */
     @Override
-    public List<SysAccount> list(String kind, String keyword) {
+    public List<SysAccount> list(String kind, String keyword, String channelKey) {
         LambdaQueryWrapper<SysAccount> wrapper = Wrappers.lambdaQuery();
         if (StringUtils.isNotBlank(kind)) {
             wrapper.eq(SysAccount::getKind, kind.trim());
+        }
+        if (StringUtils.isNotBlank(channelKey)) {
+            wrapper.eq(SysAccount::getChannelKey, channelKey.trim());
         }
         if (StringUtils.isNotBlank(keyword)) {
             String like = keyword.trim();

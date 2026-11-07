@@ -181,7 +181,8 @@ public class EduDimensionService {
       */
     @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MINUTES,
             cacheNames = CACHE_SUBJECTS,
-            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '') + ':' + #includeDisabled",
+            key = "T(com.chua.starter.eduai.support.util.EduUserContext).ownerScope().ownerPredicate() + ':' + (#gradeLevel ?: '') + '" +
+                ":' + #includeDisabled",
             unless = "#result == null")
     public List<EduSubject> listSubjects(String gradeLevel, boolean includeDisabled) {
         return subjectMapper.listSubjects(gradeLevel, includeDisabled, EduUserContext.ownerScope());

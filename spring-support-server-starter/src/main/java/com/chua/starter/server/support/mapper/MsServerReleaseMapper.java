@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
  * 发布管理 Mapper
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface MsServerReleaseMapper extends BaseMapper<MsServerRelease> {

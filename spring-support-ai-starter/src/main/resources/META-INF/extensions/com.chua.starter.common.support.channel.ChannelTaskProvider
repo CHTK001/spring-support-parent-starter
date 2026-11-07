@@ -1,0 +1,5 @@
+com.chua.starter.ai.support.spi.impl.LobsteraiChannelTaskProvider
+com.chua.starter.ai.support.spi.impl.QoderChannelTaskProvider
+com.chua.starter.ai.support.spi.impl.QoderCnChannelTaskProvider
+com.chua.starter.ai.support.spi.impl.TraeChannelTaskProvider
+com.chua.starter.ai.support.spi.impl.WorkBuddyChannelTaskProvider

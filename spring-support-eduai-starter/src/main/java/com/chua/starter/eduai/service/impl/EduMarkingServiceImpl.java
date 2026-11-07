@@ -64,6 +64,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -241,6 +242,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     @Autowired(required = false)
     private MarkingSettingService markingSettingService;
+
+    /**
+     * 编程式事务模板：自动结案跑在后台判分线程里。
+     *
+     * <p>为什么不用 {@code @Transactional}：{@code processTask} 由本类内部方法直接调用，
+     * Spring 的事务代理在自调用时根本不生效；而且自动结案必须「失败只记日志、不把已判分的
+     * 任务写成失败」，用 {@link TransactionTemplate} 能把「登记错题 + 置已完成」收在一个
+     * 事务里，异常由调用点就地捕获。</p>
+     *
+     * <p>可选项：bean 缺失（精简测试上下文）时自动结案降级为不开事务执行 —— 宁可少一层
+     * 事务，也不能因为缺 bean 让判分链路起不来。</p>
+     */
+    @Autowired(required = false)
+    private TransactionTemplate transactionTemplate;
 
     /**
      * 外来卷入库时的来源类型：与「手动录入 / 老师上传」区分，便于题库里筛出来单独复核
@@ -764,9 +779,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             EduMarkingTask latest = taskMapper.selectByTaskId(taskId);
             changeStage(taskId, EduMarkingTask.STATUS_DONE, "已完成",
                     latest == null ? null : latest.getMarkingTaskTotal(), graded, null, true);
-            // 错题登记已收敛到老师点「完成」时（按最终分 + 学生 + 试卷归因），
-            // 判分阶段不再登记，避免同一题被「判分」与「完成」登记两次而虚增错误次数。
+            // 错题登记默认收敛到老师点「完成」时（按最终分 + 学生 + 试卷归因），
+            // 判分阶段不登记，避免同一题被「判分」与「完成」登记两次而虚增错误次数。
+            // 打开「判分完成即自动结案」后，等同于后台替老师点了这一下：
+            // 仍走同一套收口，只是没有用户上下文，故跳过归属校验。
             log.info("[EduAi] 阅卷任务完成: taskId={}, 已判分={}", taskId, graded);
+            autoFinishIfEnabled(taskId);
         } catch (BusinessException be) {
             if (isInterruptedByShutdown(be)) {
                 keepResumable(taskId, be);
@@ -794,6 +812,40 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             changeStage(taskId, EduMarkingTask.STATUS_FAILED, "失败", null, null,
                     t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage(), true);
             log.warn("[EduAi] 阅卷任务失败(未捕获): taskId={}, msg={}", taskId, t.toString());
+        }
+    }
+
+    /**
+     * 「判分完成即自动结案」：按开关替老师执行一次完成动作。
+     *
+     * <p>为什么要单独一个方法而不是直接调 {@link #finishMarking(String)}：
+     * 后台判分线程没有登录用户上下文，公开入口的 {@code EduUserContext.checkWritable}
+     * 会直接拒绝（「无权操作该数据」），自动结案必须走跳过归属校验的内部口径。</p>
+     *
+     * <p>失败语义：只记日志，<b>不改变</b>已判分状态，也不把任务写成失败。
+     * 自动结案是判分之后的附加动作，未识别学生一类的问题应当由老师进详情页补学号后
+     * 手动点「完成」，而不是把一次成功的判分结果整个作废。</p>
+     *
+     * @param taskId 任务业务标识
+     */
+    private void autoFinishIfEnabled(String taskId) {
+        if (markingSettingService == null || !markingSettingService.autoFinish()) {
+            return;
+        }
+        try {
+            if (transactionTemplate != null) {
+                // 登记错题 + 置「已完成」放同一事务：中途失败整体回滚，
+                // 不会留下「错题登记了但任务没置完成」的半截状态。
+                transactionTemplate.execute(status -> {
+                    doFinishMarking(taskId, null, true);
+                    return null;
+                });
+            } else {
+                doFinishMarking(taskId, null, true);
+            }
+        } catch (Exception e) {
+            log.warn("[EduAi] 自动结案失败，任务保持「已判分」待人工完成: taskId={}, msg={}",
+                    taskId, e.getMessage());
         }
     }
 
@@ -3299,7 +3351,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public MarkingFinishResultVO finishMarking(String taskId) {
-        return finishMarking(taskId, null);
+        return doFinishMarking(taskId, null, false);
     }
 
     @Override
@@ -3311,11 +3363,31 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return 返回值
     */
     public MarkingFinishResultVO finishMarking(String taskId, List<Long> excludeQuestionIds) {
+        return doFinishMarking(taskId, excludeQuestionIds, false);
+    }
+
+    /**
+     * 「完成阅卷」的内部实现：登记错题 + 置「已完成」。
+     *
+     * <p>为什么要把归属校验做成开关：公开入口（{@code finishMarking}）必须校验
+     * 「只有本人或管理员能改」，但后台判分线程没有登录用户上下文，
+     * 它的自动结案（{@link #autoFinishIfEnabled}）走同一套登记逻辑时必须跳过这一步 ——
+     * 否则会以「无权操作该数据」失败，判分明明成功却结不了案。</p>
+     *
+     * @param taskId             任务业务标识
+     * @param excludeQuestionIds 本次不登记为错题的题目（老师手动剔除），可空
+     * @param skipOwnershipCheck true 表示调用方已确认身份（后台自动结案），跳过归属校验
+     * @return 完成结果
+     */
+    private MarkingFinishResultVO doFinishMarking(String taskId, List<Long> excludeQuestionIds,
+                                                  boolean skipOwnershipCheck) {
         EduMarkingTask task = taskMapper.selectByTaskId(taskId);
         if (task == null) {
             throw new BusinessException("任务不存在");
         }
-        EduUserContext.checkWritable(task.getOwnerUserId());
+        if (!skipOwnershipCheck) {
+            EduUserContext.checkWritable(task.getOwnerUserId());
+        }
         EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
                 ? findSheet(taskId)
                 : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());
@@ -3603,7 +3675,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param studentId 学生标识，可为 null
      * @return 空、或等于占位 {@code anonymous} 时返回 true
      */
-    private static boolean isUnidentifiedStudent(String studentId) {
+    static boolean isUnidentifiedStudent(String studentId) {
         return StringUtils.isBlank(studentId) || ANONYMOUS_STUDENT.equalsIgnoreCase(studentId.trim());
     }
 

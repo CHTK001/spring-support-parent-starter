@@ -37,6 +37,7 @@ import java.util.Map;
  * {@link SysAiRolePromptResolver}。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Slf4j
 @Tag(name = "AI 设置 - 提示词形态与角色分形态提示词")

@@ -197,6 +197,21 @@ public class WorldSimController {
         worldSimService.removeNpc(id);
     }
 
+    /** 让 AI 按世界现状自己造角色（body: count / hint） */
+    @PostMapping("/worlds/{id}/npcs/ai-create")
+    public List<Map<String, Object>> createNpcsByAi(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> b = body == null ? Map.of() : body;
+        Object rawCount = b.get("count");
+        Integer count;
+        try {
+            count = rawCount == null ? null : (int) Math.round(Double.parseDouble(String.valueOf(rawCount)));
+        } catch (NumberFormatException e) {
+            count = null;
+        }
+        Object hint = b.get("hint");
+        return worldSimService.createNpcsByAi(id, count, hint == null ? null : String.valueOf(hint));
+    }
+
     /* ---------------- 关系 ---------------- */
 
     /**

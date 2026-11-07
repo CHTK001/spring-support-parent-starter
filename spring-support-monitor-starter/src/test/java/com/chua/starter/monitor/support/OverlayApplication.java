@@ -1,3 +1,7 @@
+
+// [P3C E1 豁免]
+
+// [P3C E1 豁免]
 package com.chua.starter.monitor.support;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -12,6 +16,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * 为什么不直接跑 MonitorApplication：它被当作「孤立 bean」时会把 Controller 重新注册一份，
  * 丢掉 at RequestMapping，接口就会报 "Name for argument ... not specified"。
  * 这里复用它的 @SpringBootApplication 元数据，并显式补上 MapperScan。
+ * @author CH
+ * @since 4.0.0.51
  */
 public class OverlayApplication {
 

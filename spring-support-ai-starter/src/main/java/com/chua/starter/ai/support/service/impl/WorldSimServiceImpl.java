@@ -12,10 +12,15 @@ import com.chua.starter.ai.support.entity.SysAiWorldMessage;
 import com.chua.starter.ai.support.entity.SysAiWorldNpc;
 import com.chua.starter.ai.support.entity.SysAiWorldRelationship;
 import com.chua.starter.ai.support.entity.SysAiWorldScene;
+import com.chua.starter.ai.support.generate.GenerateClientResolver;
+import com.chua.starter.ai.support.generate.GenerateConfigSupport;
+import com.chua.starter.ai.support.generate.GenerateMediaStore;
 import com.chua.starter.ai.support.generate.GenerateService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
 import com.chua.starter.ai.support.mapper.SysAiWorldActMapper;
 import com.chua.starter.ai.support.mapper.SysAiWorldEventMapper;
@@ -32,6 +37,7 @@ import com.chua.starter.ai.support.service.act.ActScript;
 import com.chua.starter.ai.support.service.act.StoryStoreService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.text.json.Json;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -40,9 +46,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 模拟（世界沙盒）服务实现。
@@ -54,6 +63,7 @@ import java.util.Map;
  * @author CH
  * @since 4.0.0.42
  */
+@Slf4j
 @Service
 public class WorldSimServiceImpl implements WorldSimService {
 
@@ -62,6 +72,20 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     /** 世界列表缓存名 */
     private static final String LIST_CACHE = "aiWorldList";
+
+    /** 造角色的系统提示词：只吐 JSON，字段固定，便于服务端落库 */
+    private static final String NPC_WRITER_SYSTEM = String.join("\n",
+            "你是一位角色设计师，为模拟世界起草新角色。",
+            "只输出一个 JSON 对象，结构如下：",
+            "{\"characters\":[{\"name\":\"名字\",\"persona\":\"身份与性格（60~120 字）\","
+                    + "\"gender\":\"男/女\",\"profession\":\"职业\",\"scene\":\"所属场景名\",\"seed\":1}],"
+                    + "\"relations\":[{\"from\":1,\"to\":2,\"affinity\":45,\"tag\":\"旧识\",\"memo\":\"关系由来\"}]}",
+            "要求：",
+            "1. characters 的个数与用户要求一致，seed 从 1 递增；",
+            "2. scene 必须是给出的场景名之一；",
+            "3. relations 只写新角色之间、或新角色与现有角色（seed 用负数，如 -1 表示现有第 1 个）的关系；",
+            "4. affinity 取 -100~100；",
+            "5. 不要输出 JSON 以外的任何内容。");
 
     private final SysAiWorldMapper worldMapper;
     private final SysAiWorldSceneMapper sceneMapper;
@@ -94,6 +118,15 @@ public class WorldSimServiceImpl implements WorldSimService {
     /** 媒体生成服务（文生图 / 文生视频） */
     private final GenerateService generateService;
 
+    /** 生成实现解析器：按媒体类型挑模型、读尺寸声明 */
+    private final GenerateClientResolver generateClientResolver;
+
+    /** 生成结果落盘存储：图生视频要把已生成的场景图读回字节 */
+    private final GenerateMediaStore generateMediaStore;
+
+    /** 模型行查询：设置里没点名模型时，按「有对应 SPI 实现」挑一个可用模型 */
+    private final SysAiProviderModelMapper providerModelMapper;
+
     /** 全局设置读取器（sim 分组） */
     private final GlobalSettingReader globalSettingReader;
 
@@ -119,6 +152,9 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @param storyStore           剧本落盘服务
      * @param aiChatFacadeService  AI 对话门面（编剧 / 表演）
      * @param generateService      媒体生成服务（文生图 / 文生视频）
+     * @param generateClientResolver 生成实现解析器
+     * @param generateMediaStore   生成结果落盘存储
+     * @param providerModelMapper  生成模型行查询
      * @param globalSettingReader  全局设置读取器
      * @param effectiveChatModelResolver  生效对话模型解析器
      */
@@ -134,6 +170,9 @@ public class WorldSimServiceImpl implements WorldSimService {
                                StoryStoreService storyStore,
                                AiChatFacadeService aiChatFacadeService,
                                GenerateService generateService,
+                               GenerateClientResolver generateClientResolver,
+                               GenerateMediaStore generateMediaStore,
+                               SysAiProviderModelMapper providerModelMapper,
                                GlobalSettingReader globalSettingReader,
                                EffectiveChatModelResolver effectiveChatModelResolver) {
         this.worldMapper = worldMapper;
@@ -148,6 +187,9 @@ public class WorldSimServiceImpl implements WorldSimService {
         this.storyStore = storyStore;
         this.aiChatFacadeService = aiChatFacadeService;
         this.generateService = generateService;
+        this.generateClientResolver = generateClientResolver;
+        this.generateMediaStore = generateMediaStore;
+        this.providerModelMapper = providerModelMapper;
         this.globalSettingReader = globalSettingReader;
         this.effectiveChatModelResolver = effectiveChatModelResolver;
     }
@@ -182,7 +224,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     @Override
     public Map<String, Object> worldView(Long worldId) {
         String userId = AiUserContext.requireUserId();
-        SysAiWorld world = requireOwned(worldId);
+        SysAiWorld world = requireVisible(worldId);
         Cache cache = cache();
         String key = worldId + ":" + userId;
         Map<String, Object> cached = cache.get(key, Map.class);
@@ -287,7 +329,7 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public List<SysAiWorldScene> listScenes(Long worldId) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         return sceneMapper.selectList(
                 new LambdaQueryWrapper<SysAiWorldScene>()
                         .eq(SysAiWorldScene::getWorldId, worldId)
@@ -359,7 +401,7 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public List<Map<String, Object>> listNpcs(Long worldId) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         List<SysAiWorldNpc> npcs = npcMapper.selectList(
                 new LambdaQueryWrapper<SysAiWorldNpc>()
                         .eq(SysAiWorldNpc::getWorldId, worldId)
@@ -495,8 +537,245 @@ public class WorldSimServiceImpl implements WorldSimService {
     /* ---------------- 关系 ---------------- */
 
     @Override
+    @Transactional
+    public List<Map<String, Object>> createNpcsByAi(Long worldId, Integer count, String hint) {
+        SysAiWorld world = requireOwned(worldId);
+        int n = count == null ? 2 : Math.max(1, Math.min(3, count));
+        String userId = AiUserContext.requireUserId();
+        List<SysAiWorldScene> scenes = sceneMapper.selectList(
+                new LambdaQueryWrapper<SysAiWorldScene>()
+                        .eq(SysAiWorldScene::getWorldId, worldId)
+                        .orderByAsc(SysAiWorldScene::getSort)
+                        .orderByAsc(SysAiWorldScene::getId));
+        if (scenes.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "世界还没有场景，先给世界摆一个舞台");
+        }
+        List<SysAiWorldNpc> existing = npcMapper.selectList(
+                new LambdaQueryWrapper<SysAiWorldNpc>()
+                        .eq(SysAiWorldNpc::getWorldId, worldId)
+                        .orderByAsc(SysAiWorldNpc::getSort));
+
+        AiChatRequest request = new AiChatRequest();
+        request.setModel(scriptModel());
+        request.setSystemPrompt(NPC_WRITER_SYSTEM);
+        request.setPrompt(composeNpcPrompt(world, scenes, existing, n, hint));
+        request.setTemperature(0.95);
+        request.setMaxTokens(2000);
+        request.setUseSkill(false);
+        AiChatResult result = aiChatFacadeService.callForResult(request);
+        if (!result.success()) {
+            throw new ApiException(ApiErrorCode.AI_ERROR, "AI 造角色失败：" + result.errorMessage());
+        }
+        List<Map<String, Object>> drafted = parseNpcDrafts(result.text(), n);
+        if (drafted.isEmpty()) {
+            throw new ApiException(ApiErrorCode.AI_ERROR, "AI 没有返回可用的角色");
+        }
+
+        int sort = existing.size();
+        List<Map<String, Object>> created = new ArrayList<>();
+        Map<Long, Long> npcBySeed = new LinkedHashMap<>();
+        // 现有角色也登记进去：AI 写关系时可以用负数 seed 指向它们
+        int seedIdx = 0;
+        for (SysAiWorldNpc npc : existing) {
+            seedIdx++;
+            npcBySeed.put((long) -seedIdx, npc.getId());
+        }
+        for (Map<String, Object> d : drafted) {
+            String name = str(d.get("name"), "无名氏");
+            String persona = str(d.get("persona"), "");
+            SysAiRole role = new SysAiRole();
+            role.setUserId(userId);
+            role.setName(name);
+            role.setCode("ws-" + worldId + "-" + System.currentTimeMillis() + "-" + sort);
+            role.setDescription(persona.length() > 120 ? persona.substring(0, 120) : persona);
+            role.setSystemPrompt(persona);
+            role.setTemperature(0.8);
+            role.setStatus(1);
+            role.setDeleted(0);
+            role.setSort(sort);
+            role.setCreateName(AiUserContext.currentUsername());
+            role.setCreateTime(LocalDateTime.now());
+            role.setUpdateTime(LocalDateTime.now());
+            roleMapper.insert(role);
+
+            SysAiWorldNpc npc = new SysAiWorldNpc();
+            npc.setWorldId(worldId);
+            npc.setRoleId(role.getId());
+            npc.setSceneId(resolveSceneId(scenes, d.get("scene")));
+            npc.setPersona(persona);
+            npc.setGender(str(d.get("gender"), null));
+            npc.setProfession(str(d.get("profession"), null));
+            npc.setAgeEnabled(Boolean.FALSE);
+            npc.setStatus("alive");
+            npc.setIsActive(Boolean.TRUE);
+            npc.setSort(sort++);
+            npc.setUserId(userId);
+            npc.setCreateTime(LocalDateTime.now());
+            npc.setUpdateTime(LocalDateTime.now());
+            npcMapper.insert(npc);
+
+            Object seed = d.get("seed");
+            if (seed != null) {
+                npcBySeed.put(parseLong(seed), npc.getId());
+            }
+            created.add(npcRow(npc));
+        }
+
+        // 关系：AI 写的 from/to 用临时序号，落库时换成真实 NPC ID；找不到就静默丢弃
+        Object rawRels = drafted.isEmpty() ? null : drafted.get(0).get("relations");
+        if (rawRels instanceof List<?> rl) {
+            for (Object o : rl) {
+                if (!(o instanceof Map<?, ?> rm)) {
+                    continue;
+                }
+                Long from = npcBySeed.get(parseLong(rm.get("from")));
+                Long to = npcBySeed.get(parseLong(rm.get("to")));
+                if (from == null || to == null || from.equals(to)) {
+                    continue;
+                }
+                SysAiWorldRelationship rel = new SysAiWorldRelationship();
+                rel.setWorldId(worldId);
+                rel.setFromNpcId(from);
+                rel.setToNpcId(to);
+                rel.setAffinity(clampAffinity(rm.get("affinity")));
+                rel.setRelationTag(str(rm.get("tag"), null));
+                rel.setMemo(str(rm.get("memo"), null));
+                rel.setUserId(userId);
+                rel.setCreateTime(LocalDateTime.now());
+                rel.setUpdateTime(LocalDateTime.now());
+                relationshipMapper.insert(rel);
+            }
+        }
+
+        evictWorld(worldId);
+        return created;
+    }
+
+    /**
+     * 造角色的提示词：世界现状 + 已有角色 + 场景，作为 AI 起草的依据。
+     *
+     * @param world    世界行
+     * @param scenes   场景列表
+     * @param existing 已有 NPC
+     * @param count    要造几个
+     * @param hint     观众给的倾向
+     * @return 提示词
+     */
+    private String composeNpcPrompt(SysAiWorld world, List<SysAiWorldScene> scenes,
+                                    List<SysAiWorldNpc> existing, int count, String hint) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("世界名：").append(world.getName());
+        if (world.getEra() != null && !world.getEra().isBlank()) {
+            sb.append("（时代：").append(world.getEra()).append("）");
+        }
+        if (world.getDescription() != null && !world.getDescription().isBlank()) {
+            sb.append("\n世界背景：").append(world.getDescription());
+        }
+        sb.append("\n\n【现有角色】");
+        if (existing.isEmpty()) {
+            sb.append("（暂无）");
+        }
+        int idx = 0;
+        for (SysAiWorldNpc npc : existing) {
+            idx++;
+            sb.append("\n- seed=").append(-idx).append(" ").append(npcDisplayName(npc));
+            if (npc.getPersona() != null && !npc.getPersona().isBlank()) {
+                sb.append("：").append(npc.getPersona());
+            }
+        }
+        sb.append("\n\n【场景】");
+        for (SysAiWorldScene s : scenes) {
+            sb.append("\n- ").append(s.getName());
+        }
+        sb.append("\n\n【要求】");
+        sb.append("\n请新造 ").append(count).append(" 个角色，编号 1~").append(count);
+        sb.append("。人设要具体（身份、性格、与现有角色的利害关系），不要套话。");
+        if (hint != null && !hint.isBlank()) {
+            sb.append("\n观众的倾向：").append(hint.trim());
+        }
+        sb.append("\n只输出 JSON，不要解释。");
+        return sb.toString();
+    }
+
+    /**
+     * 解析 AI 返回的角色草稿。
+     *
+     * <p>期望结构：<code>{"characters":[{name, persona, gender, profession, scene, seed}],
+     * "relations":[{from, to, affinity, tag, memo}]}</code>；解析不出数组时抛 AI_ERROR。</p>
+     *
+     * @param text  AI 文本
+     * @param count 期望个数
+     * @return 草稿列表（第一条额外带 relations）
+     */
+    private List<Map<String, Object>> parseNpcDrafts(String text, int count) {
+        String trimmed = text == null ? "" : text.trim();
+        int start = trimmed.indexOf('{');
+        int end = trimmed.lastIndexOf('}');
+        if (start < 0 || end <= start) {
+            throw new ApiException(ApiErrorCode.AI_ERROR, "AI 没有按要求返回 JSON");
+        }
+        Map<String, Object> json;
+        try {
+            json = Json.fromJson(trimmed.substring(start, end + 1), Map.class);
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.AI_ERROR, "角色 JSON 解析失败：" + e.getMessage());
+        }
+        Object raw = json.get("characters");
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                if (o instanceof Map<?, ?> m) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> item = (Map<String, Object>) m;
+                    if (str(item.get("name"), null) != null && out.size() < count) {
+                        out.add(item);
+                    }
+                }
+            }
+        }
+        if (!out.isEmpty() && json.get("relations") != null) {
+            out.get(0).put("relations", json.get("relations"));
+        }
+        return out;
+    }
+
+    /** 场景名或序号 → 场景 ID；对不上时落到第一个场景，保证新角色至少有个位置 */
+    private static Long resolveSceneId(List<SysAiWorldScene> scenes, Object ref) {
+        String key = str(ref, null);
+        if (key != null) {
+            for (SysAiWorldScene s : scenes) {
+                if (key.equals(s.getName())) {
+                    return s.getId();
+                }
+            }
+            try {
+                int idx = Integer.parseInt(key.trim());
+                if (idx >= 1 && idx <= scenes.size()) {
+                    return scenes.get(idx - 1).getId();
+                }
+            } catch (NumberFormatException ignore) {
+                // 不是序号，按名字没对上，落到默认场景
+            }
+        }
+        return scenes.get(0).getId();
+    }
+
+    /** 好感度钳制到 [-100,100]，非法值按 0 */
+    private static int clampAffinity(Object v) {
+        int n = 0;
+        if (v != null) {
+            try {
+                n = (int) Math.round(Double.parseDouble(String.valueOf(v)));
+            } catch (NumberFormatException e) {
+                n = 0;
+            }
+        }
+        return Math.max(-100, Math.min(100, n));
+    }
+
+    @Override
     public List<Map<String, Object>> listRelationships(Long worldId) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         List<SysAiWorldRelationship> rows = relationshipMapper.selectList(
                 new LambdaQueryWrapper<SysAiWorldRelationship>()
                         .eq(SysAiWorldRelationship::getWorldId, worldId)
@@ -579,7 +858,7 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public List<SysAiWorldEvent> listEvents(Long worldId, Long sceneId, Integer limit) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         LambdaQueryWrapper<SysAiWorldEvent> w = new LambdaQueryWrapper<SysAiWorldEvent>()
                 .eq(SysAiWorldEvent::getWorldId, worldId)
                 .orderByDesc(SysAiWorldEvent::getId);
@@ -613,7 +892,7 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public List<SysAiWorldMessage> listMessages(Long worldId, Long sceneId) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         return messageMapper.selectList(
                 new LambdaQueryWrapper<SysAiWorldMessage>()
                         .eq(SysAiWorldMessage::getWorldId, worldId)
@@ -660,6 +939,25 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
         if (!AiUserContext.requireUserId().equals(w.getUserId())) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "不可操作他人的世界");
+        }
+        return w;
+    }
+
+    /**
+     * require Visible：只读写路径用。主人可见自己的世界；他人世界只要已经开演（status=1）
+     * 也可旁观，但只能看不能改（写路径仍走 {@link #requireOwned}）。
+     *
+     * @param id 世界ID
+     * @return 世界行
+     */
+    private SysAiWorld requireVisible(Long id) {
+        SysAiWorld w = worldMapper.selectById(id);
+        if (w == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "世界不存在");
+        }
+        String userId = AiUserContext.requireUserId();
+        if (!userId.equals(w.getUserId()) && !Integer.valueOf(1).equals(w.getStatus())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "这个世界还没开演，不能旁观");
         }
         return w;
     }
@@ -856,6 +1154,10 @@ public class WorldSimServiceImpl implements WorldSimService {
     private static final String MEDIA_VIDEO_TYPE = "video";
     /** 默认生成图片尺寸 */
     private static final String MEDIA_SIZE = "1024x1024";
+    /** 默认视频尺寸（模型没声明尺寸时用它：竖屏短剧，舞台上占满一栏） */
+    private static final String MEDIA_VIDEO_SIZE = "720x1280";
+    /** 单个分镜视频时长（秒）：太长上游慢且贵，短片连播更像一幕戏 */
+    private static final int VIDEO_DURATION = 5;
     /** 单笔生成数量 */
     private static final int MEDIA_COUNT = 1;
     /** 素材状态：未开始（剧本中还没有任务号） */
@@ -864,6 +1166,16 @@ public class WorldSimServiceImpl implements WorldSimService {
     private static final String MEDIA_NO_PROMPT = "NO_PROMPT";
     /** 素材状态：成功（已生成） */
     private static final String MEDIA_OK = "OK";
+    /** 单轮推进最多提交几个素材任务（防止一轮打爆上游） */
+    private static final int MAX_ASSETS_PER_TICK = 8;
+    /** 素材任务超过这个时长仍无终态就判死放行（毫秒） */
+    private static final long STALE_TASK_MS = 120_000L;
+    /** 剧本里记录「本幕失败的媒体类型」的键（跨请求持久化） */
+    private static final String FAILED_TYPES_KEY = "failedMediaTypes";
+    /** 节点种类：过场 */
+    private static final String MEDIA_TRANSITION_TYPE = "transition";
+    /** 节点种类：道具 */
+    private static final String MEDIA_PROP_TYPE = "prop";
 
     /* ========================================================================
      * 查询
@@ -871,7 +1183,7 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public List<Map<String, Object>> listActs(Long worldId) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         List<SysAiWorldAct> acts = actMapper.selectList(
                 new LambdaQueryWrapper<SysAiWorldAct>()
                         .eq(SysAiWorldAct::getWorldId, worldId)
@@ -917,7 +1229,7 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public Map<String, Object> actDetail(Long worldId, Integer actNo) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         SysAiWorldAct act = actMapper.selectOne(
                 new LambdaQueryWrapper<SysAiWorldAct>()
                         .eq(SysAiWorldAct::getWorldId, worldId)
@@ -1002,6 +1314,10 @@ public class WorldSimServiceImpl implements WorldSimService {
                 actMapper.updateById(act);
                 out.put("act", actRow(act));
                 out.put("playedScenes", act.getProgress());
+                // 这一幕演完即接下一幕：AI 自己把故事往下续，观众不用点任何东西。
+                // 这里只开一个空的下一幕并回传整行，具体书写/演出由前端连续推进，
+                // 避免在同一事务里递归 advanceAct 造成状态机重入。
+                out.put("nextAct", actRow(createAct(worldId)));
             }
             default ->
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "幕次阶段为：" + act.getStage() + "，无法推进");
@@ -1078,7 +1394,7 @@ public class WorldSimServiceImpl implements WorldSimService {
      */
     @Override
     public List<Map<String, Object>> listStories(Long worldId, Integer actNo) {
-        requireOwned(worldId);
+        requireVisible(worldId);
         String userId = AiUserContext.requireUserId();
         List<Integer> nos = actNo != null
                 ? List.of(actNo)
@@ -1131,7 +1447,11 @@ public class WorldSimServiceImpl implements WorldSimService {
                 m.put("sceneId", sid);
                 m.put("name", str(s.get(ActScript.SCENE_NAME), "场景"));
                 m.put("stageName", sceneNameById(sceneNames, sid));
+                m.put("desc", str(s.get(ActScript.SCENE_DESC), ""));
                 m.put("playText", str(s.get(ActScript.SCENE_PLAY), ""));
+                // 台词是演出正文里最重要的一层：没有它前端只能显示旁白，
+                // 观众看不到「谁说了什么」，整幕看起来像一段没有对白的流水账。
+                m.put("lines", sceneLines(s.get(ActScript.SCENE_LINES)));
                 m.put("mediaImage", s.get(ActScript.SCENE_MEDIA_IMAGE));
                 m.put("mediaVideo", s.get(ActScript.SCENE_MEDIA_VIDEO));
                 scenes.add(m);
@@ -1142,8 +1462,38 @@ public class WorldSimServiceImpl implements WorldSimService {
         return out;
     }
 
-    /** 场景 ID（可能是 Integer/Long/String 的 JSON 值）→ 场景名，找不到返回 null */
-    private static String sceneNameById(Map<Long, String> names, Object rawId) {
+    /**
+     * 把剧本里的台词数组整理成演出可用的结构。
+     *
+     * <p>编剧有时把台词写成纯字符串，有时写成 {@code {speaker, text}}。演出正文要逐句排版，
+     * 两种都要接住：字符串按旁白处理，说话人为空。</p>
+     *
+     * @param raw 台词原值
+     * @return 台词列表（说话人 + 文本），永不为 null
+     */
+    private static List<Map<String, Object>> sceneLines(Object raw) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        if (!(raw instanceof List<?> list)) return out;
+        for (Object o : list) {
+            if (o == null) continue;
+            Map<String, Object> line = new LinkedHashMap<>();
+            if (o instanceof Map<?, ?> m) {
+                Object speaker = m.get("speaker");
+                if (speaker == null) speaker = m.get("role");
+                Object text = m.get("text");
+                if (text == null) text = m.get("content");
+                line.put("speaker", speaker == null ? "" : String.valueOf(speaker));
+                line.put("text", text == null ? "" : String.valueOf(text));
+            } else {
+                line.put("speaker", "");
+                line.put("text", String.valueOf(o));
+            }
+            out.add(line);
+        }
+        return out;
+    }
+
+    /** 场景 ID（可能是 Integer/Long/String 的 JSON 值）→ 场景名，找不到返回 null */    private static String sceneNameById(Map<Long, String> names, Object rawId) {
         if (rawId == null) {
             return null;
         }
@@ -1316,32 +1666,89 @@ public class WorldSimServiceImpl implements WorldSimService {
         Map<String, Object> json = Json.fromJson(script, Map.class);
         List<Material> materials = mediaItems(json);
 
+        // 本幕已经失败过的媒体类型（图/视频）。环境没有该能力时不要让同类素材反复建任务空转，
+        // 记在剧本里而不是只记在内存里——否则每轮请求都是一次新的方法调用，记忆全丢。
+        Set<String> failedTypes = new HashSet<>();
+        Object ft = json.get(FAILED_TYPES_KEY);
+        if (ft instanceof List<?> ftList) {
+            for (Object o : ftList) {
+                if (o != null) failedTypes.add(String.valueOf(o));
+            }
+        }
+
         // 第一阶段：查封已有任务的 RETURN 状态（成功/失败/悬而未决）
         for (Material mat : materials) {
             String taskId = mat.taskId();
             if (taskId == null || taskId.isBlank()) continue;
             SysAiGenerateTask task = generateService.query(taskId);
-            if (task == null) continue;
+            if (task == null) {
+                // 任务记录已不存在（历史数据被清理 / 库里从未写入）：
+                // 留着 taskId 会让下面的循环永远判「生成中」，整幕永远卡在素材阶段。
+                // 这里直接判死，交给下面的失败分支放行。
+                mat.head().put("status", "FAILED");
+                continue;
+            }
             mat.head().put("taskId", task.getTaskId());
-            mat.head().put("status", task.getStatus());
+            String st = task.getStatus();
+            if (st == null || st.isBlank()) {
+                // 状态缺失当作生成中，别把未知状态当成终态放行
+                st = "RUNNING";
+            }
+            if (!"SUCCESS".equals(st) && isStaleTask(task)) {
+                // 排队/生成中超过阈值仍无终态：判死放行，避免整幕被一个卡住的任务无限期拖住
+                st = "FAILED";
+            }
+            if ("FAILED".equals(st) || "CANCELED".equals(st)) {
+                // 失败要当场放行：留到下一轮会让整幕多空转一次
+                mat.head().remove("taskId");
+                failedTypes.add(String.valueOf(mat.head().get("type")));
+                st = MEDIA_NO_PROMPT;
+            }
+            mat.head().put("status", st);
             if ("SUCCESS".equals(task.getStatus())) {
                 List<String> urls = GenerateService.mediaUrls(task);
                 mat.head().put("url", urls == null || urls.isEmpty() ? null : urls.get(0));
+                // 成功必须落成 OK：素材就绪判断、图生视频取首帧、前端放映都只认 OK。
+                // 此前这里只写了 task 的 SUCCESS 字样，OK 从头到尾没人写过，
+                // 结果素材永远停在非终态、图生视频永远拿不到参考图、舞台永远退回文字演出。
+                mat.head().put("status", MEDIA_OK);
             }
+            mat.persist();
         }
 
         boolean inProgress = false;
         Material target = null;
+        // 关了视频出片的部署：视频通道整体放行，只出场景图。
+        // 不这么做的话，每一个场景都会先建一次注定被拦掉的视频任务，素材阶段白白空转一圈。
+        boolean videoEnabled = videoMediaEnabled();
+        // 按已有的失败记录收敛一遍：失败类型直接放行，不再为它建任务
+        for (Material mat : materials) {
+            Map<String, Object> head = mat.head();
+            String st = String.valueOf(head.get("status"));
+            if (failedTypes.contains(String.valueOf(head.get("type")))) {
+                head.remove("taskId");
+                head.put("status", MEDIA_NO_PROMPT);
+            } else if (!videoEnabled && mat.video()) {
+                head.remove("taskId");
+                head.put("status", MEDIA_NO_PROMPT);
+            }
+        }
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
             if (MEDIA_OK.equals(head.get("status"))) continue;
             String taskId = mat.taskId();
             if (taskId != null) {
                 // 有任务号：由上方的 query 回填，status 为终态则一定会被标记为 OK
-                if (!"FAILED".equals(head.get("status")) && !"CANCELED".equals(head.get("status"))) {
-                    // 状态 PENDING/RUNNING：任务还在生成中，按约束一次只允许一个任务
-                    inProgress = true;
+                String st = String.valueOf(head.get("status"));
+                if ("FAILED".equals(st) || "CANCELED".equals(st)) {
+                    // 出图失败不能让整幕永远卡在素材阶段：记一笔失败并当作「无素材」放行。
+                    // 必须把 taskId 一并清掉，否则下一轮又落回任务分支，永远等不到终态。
+                    head.remove("taskId");
+                    head.put("status", MEDIA_NO_PROMPT);
+                    continue;
                 }
+                // 状态 PENDING/RUNNING：任务还在生成中，按约束一次只允许一个任务
+                inProgress = true;
                 continue;
             }
             // 没有任务号：是否有素材需求
@@ -1366,32 +1773,150 @@ public class WorldSimServiceImpl implements WorldSimService {
         // 注意：NO_PROMPT 的素材头此前只在内存里改了 status，没有写回剧本，
         // 前端因此拿不到素材状态（素材区一片空白）。这里先落盘再返回。
         if (target == null) {
-            if (inProgress) return out;
+            if (inProgress) {
+                for (Material m : materials) m.persist();
+                persistFailedTypes(json, failedTypes);
+                storyStore.writeAct(worldId, actNo, Json.toJson(json));
+                return out;
+            }
             for (Material m : materials) m.persist();
+            persistFailedTypes(json, failedTypes);
             storyStore.writeAct(worldId, actNo, Json.toJson(json));
             return null;
         }
         if (inProgress) {
             // 有任务还在生成中，不能叠新的，由服务端生命周期调遣
+            for (Material m : materials) m.persist();
+            persistFailedTypes(json, failedTypes);
+            storyStore.writeAct(worldId, actNo, Json.toJson(json));
             return out;
         }
 
-        // 第一个未跑的素材，造了它
-        Material mat = target;
-        SysAiGenerateTask task = createAssetTask(
-                String.valueOf(mat.head().get("prompt")), String.valueOf(mat.head().get("type")));
-        mat.head().put("taskId", task.getTaskId());
-        mat.head().put("status", task.getStatus());
-        if ("SUCCESS".equals(task.getStatus())) {
-            List<String> urls = GenerateService.mediaUrls(task);
-            mat.head().put("url", urls == null || urls.isEmpty() ? null : urls.get(0));
+        int created = 0;
+        String lastError = null;
+        while (target != null && created < MAX_ASSETS_PER_TICK) {
+            if (failedTypes.contains(String.valueOf(target.head().get("type")))) {
+                target.head().remove("taskId");
+                target.head().put("status", MEDIA_NO_PROMPT);
+                target = nextTarget(materials);
+                continue;
+            }
+            Material mat = target;
+            SysAiGenerateTask task;
+            try {
+                task = createAssetTask(mat);
+            } catch (Exception e) {
+                // 没有出图/出视频能力时不能让整幕停摆：该素材按「无素材」放行，演出照常进行
+                mat.head().put("status", MEDIA_NO_PROMPT);
+                mat.head().remove("taskId");
+                failedTypes.add(String.valueOf(mat.head().get("type")));
+                lastError = e.getMessage() == null ? "媒体服务不可用" : e.getMessage();
+                target = nextTarget(materials);
+                continue;
+            }
+            created++;
+            mat.head().put("taskId", task.getTaskId());
+            String st = task.getStatus() == null || task.getStatus().isBlank() ? "RUNNING" : task.getStatus();
+            // 本地同步任务常常「受理即失败」（例如环境没有该类型的生成能力）：
+            // 建完立刻回查一次，失败就当场放行，别让整幕按轮次空转。
+            if ("RUNNING".equals(st) || "PENDING".equals(st)) {
+                SysAiGenerateTask now = null;
+                try {
+                    now = generateService.query(task.getTaskId());
+                } catch (Exception ignore) {
+                    // 回查失败按仍在跑处理
+                }
+                String nowSt = now == null ? null : now.getStatus();
+                if (nowSt != null && !nowSt.isBlank()) {
+                    st = nowSt;
+                }
+                if ("FAILED".equals(st) || "CANCELED".equals(st)) {
+                    failedTypes.add(String.valueOf(mat.head().get("type")));
+                }
+            }
+            mat.head().put("status", st);
+            if ("SUCCESS".equals(st)) {
+                List<String> urls = GenerateService.mediaUrls(task);
+                mat.head().put("url", urls == null || urls.isEmpty() ? null : urls.get(0));
+                mat.head().put("status", MEDIA_OK);
+            } else if ("FAILED".equals(st) || "CANCELED".equals(st)) {
+                // 同步失败（例如模型不支持该类型）：同样放行，别把整幕卡死
+                mat.head().put("status", MEDIA_NO_PROMPT);
+                mat.head().remove("taskId");
+            } else {
+                // 真在跑：按约束一次只允许一个生成中任务，交回给下一轮轮询。
+                // 这里不能把类型记进失败集合：本地同步任务建出来就是 PENDING/RUNNING，
+                // 大多会在下一轮变成 SUCCESS。此前一建任务就记账，等于「凡是建了任务的类型
+                // 都判死」——场景图与视频永远生不出来，舞台只能退回文字演出。
+                // 真正的失败由上面 FAILED/CANCELED 分支与 catch 分支记账。
+                inProgress = true;
+            }
+            target = inProgress ? null : nextTarget(materials);
         }
-        // 把媒体头写回剧本节点并落盘
         for (Material m : materials) m.persist();
+        persistFailedTypes(json, failedTypes);
         storyStore.writeAct(worldId, actNo, Json.toJson(json));
-        out.put("taskId", task.getTaskId());
-        out.put("inProgress", true);
+        // 循环可能把 target 耗成 null（失败类型全部放行 / 本轮额度用尽）：
+        // 此时素材阶段其实已经结束，必须返回 null 让状态机进入演出，
+        // 否则会一直返回一个「无事可做」的进度对象，整幕永远停在 props_ok。
+        if (target == null && !inProgress) {
+            return null;
+        }
+        if (lastError != null) {
+            out.put("assetError", lastError);
+        }
+        out.put("created", created);
+        out.put("inProgress", inProgress);
         return out;
+    }
+
+    /**
+     * 把「本幕失败的媒体类型」写回剧本节点。
+     *
+     * <p>剧本文件是唯一跨请求存活的载体：只记在内存 Set 里，下一轮推进又会当它没失败过，
+     * 于是同一类型的素材被反复提交、反复失败，整幕永远停在素材阶段。</p>
+     *
+     * @param json        剧本 JSON
+     * @param failedTypes 失败类型集合
+     */
+    private static void persistFailedTypes(Map<String, Object> json, Set<String> failedTypes) {
+        if (failedTypes == null || failedTypes.isEmpty()) {
+            json.remove(FAILED_TYPES_KEY);
+            return;
+        }
+        json.put(FAILED_TYPES_KEY, new ArrayList<>(failedTypes));
+    }
+
+    /**
+     * 任务是否已经僵死：非终态且发起时间超过阈值。
+     *
+     * <p>本地环境常常没有出图/出视频能力，受理后的任务会一直停在 PENDING/RUNNING，
+     * 没有线程回写终态。这类任务若一直占着「生成中」，整幕就再也演不下去。</p>
+     *
+     * @param task 任务行
+     * @return true 表示应当判死
+     */
+    private static boolean isStaleTask(SysAiGenerateTask task) {
+        if (task == null) return true;
+        Long createdAt = task.getCreatedAt();
+        if (createdAt == null || createdAt <= 0) return false;
+        return System.currentTimeMillis() - createdAt > STALE_TASK_MS;
+    }
+
+    /** 在素材序列里找下一个「还没建任务、有提示词」的目标；无提示词的直接标成放行 */
+    private Material nextTarget(List<Material> materials) {
+        for (Material mat : materials) {
+            Map<String, Object> head = mat.head();
+            String st = String.valueOf(head.get("status"));
+            if (MEDIA_OK.equals(st) || MEDIA_NO_PROMPT.equals(st)) continue;
+            if (mat.taskId() != null) continue;
+            if (String.valueOf(head.get("prompt")).isBlank()) {
+                head.put("status", MEDIA_NO_PROMPT);
+                continue;
+            }
+            return mat;
+        }
+        return null;
     }
 
     /** 媒体序列 / 它落盘的剧本节点。 */
@@ -1436,23 +1961,258 @@ public class WorldSimServiceImpl implements WorldSimService {
                     head.put("field", mk);
                 }
                 Object pn = node.get(nameField);
-                head.put("prompt", String.valueOf(pn));
-                head.put("type", mk.equals(ActScript.MEDIA_IMAGE_KEY) ? MEDIA_IMAGE_TYPE : MEDIA_VIDEO_TYPE);
-                items.add(new Material(node, mk, head));
+                // String.valueOf(null) 会得到字面量 "null"，会被误当成有效提示词去建任务。
+                head.put("prompt", pn == null ? "" : String.valueOf(pn));
+                String type = mk.equals(ActScript.MEDIA_IMAGE_KEY) ? MEDIA_IMAGE_TYPE : MEDIA_VIDEO_TYPE;
+                head.put("type", type);
+                // 节点种类（scene/transition/prop）与媒体种类（image/video）分开记：
+                // 提示词的写法按节点种类补，任务类型按媒体种类分，混用一个键会互相覆盖。
+                head.put("nodeType", role);
+                items.add(new Material(node, mk, nameField, head));
             }
         }
     }
 
-    /** 生成（图/视频）媒体任务。 */
-    private SysAiGenerateTask createAssetTask(String prompt, String type) {
-        String model = scriptModel();
-        if (model == null || model.isBlank()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "请配置编剧模型（sim.script_model 或生效对话模型）");
+    /**
+     * 这一个素材的提示词是否值得去生成。
+     *
+     * <p>场景 desc 是「这一场发生了什么」的完整语句，本体就是画面描述，可以直接交给生成模型；
+     * 道具只有名字（如「旧书」），单喂一个词生成出来的东西往往和剧情无关——
+     * 给它补一句画面语，让模型知道是在什么戏里出现的。</p>
+     *
+     * @param mat 素材
+     * @return 可以直接提交的提示词；不值得生成时为 null
+     */
+    private static String mediaPrompt(Material mat) {
+        Object pn = mat.node().get(mat.promptField());
+        if (pn == null) {
+            return null;
         }
+        String text = String.valueOf(pn).trim();
+        if (text.isEmpty() || "null".equals(text)) {
+            return null;
+        }
+        if (mat.video()) {
+            // 视频要比静态图多交代「怎么动」：不说清楚时长内几乎没有可看的变化
+            if (MEDIA_TRANSITION_TYPE.equals(String.valueOf(mat.head().get("nodeType")))) {
+                return text + "。镜头平稳推进，光线与氛围自然流动。";
+            }
+            return text + "。电影感运镜，人物有细微动作与表情变化，画面连续，不要字幕。";
+        }
+        if (MEDIA_PROP_TYPE.equals(String.valueOf(mat.head().get("nodeType")))) {
+            return "道具特写：" + text + "，置于场景中，光线自然。";
+        }
+        return text;
+    }
+
+    /**
+     * 舞台是否出视频。
+     *
+     * @return true 表示素材阶段要为场景出视频；设置里选 image 时为 false
+     */
+    private boolean videoMediaEnabled() {
+        String mode = globalSettingReader.getStr("sim", "media_mode");
+        return mode == null || mode.isBlank() || "video".equalsIgnoreCase(mode.trim());
+    }
+
+    /**
+     * 生成（图 / 视频）媒体任务。
+     *
+     * <p>图与视频走的是两套模型：编剧模型只会「写字」，拿它去建视频任务上游必然
+     * 报「模型不支持」，本地又没有真实出图 / 出视频能力，于是素材阶段永远只能降级成纯文字。
+     * 因此这里按媒体类型各取各的模型（{@code sim.image_model} / {@code sim.video_model}），
+     * 留空时才退回生成侧该类型的默认模型。</p>
+     *
+     * <p>视频优先走<b>图生视频</b>：同一节点的场景图已经生成好，就以它为参考图，
+     * 让画面与舞台上的布景、人物一致；没有可用的图（未开图生成 / 图生成失败）时退回文生视频。</p>
+     *
+     * @param mat 待生成的素材
+     * @return 已提交的生成任务
+     */
+    private SysAiGenerateTask createAssetTask(Material mat) {
+        String type = String.valueOf(mat.head().get("type"));
+        String rawPrompt = String.valueOf(mat.head().get("prompt"));
+        boolean video = MEDIA_VIDEO_TYPE.equals(type);
+
+        // 画面提示词按节点种类补全（场景直接用 desc，道具补成特写，视频补上运镜与动作）
+        String prompt = mediaPrompt(mat);
+        if (prompt == null) {
+            prompt = rawPrompt;
+        }
+
+        StringBuilder model = new StringBuilder(video ? mediaModel(MEDIA_VIDEO_TYPE) : mediaModel(MEDIA_IMAGE_TYPE));
+        if (model.toString().isBlank()) {
+            // 设置里没配：退回生成侧对同类型已经可用（有 SPI 实现）的模型
+            String found = defaultGenerateModel(type);
+            model.setLength(0);
+            model.append(found == null ? "" : found);
+        }
+        if (model.toString().isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, video
+                    ? "请配置视频生成模型（sim.video_model 或任一视频模型）"
+                    : "请配置图片生成模型（sim.image_model 或任一图片模型）");
+        }
+
+        byte[] reference = null;
+        if (video) {
+            reference = referenceImageOf(mat);
+        }
+
         GenerateService.Request request = new GenerateService.Request(
-                type, model, prompt, null, MEDIA_SIZE, MEDIA_COUNT, null, null, null, null, null, null,
+                type, model.toString(), prompt, null,
+                video ? videoSize(model.toString()) : MEDIA_SIZE,
+                MEDIA_COUNT,
+                video ? VIDEO_DURATION : null,
+                null, null, null, null,
+                reference == null ? null : Base64.getEncoder().encodeToString(reference),
                 AiUserContext.requireUserId());
-        return generateService.create(request);
+        try {
+            return generateService.create(request);
+        } catch (IllegalStateException e) {
+            // 图生视频被渠道拒绝（参考图只收公网地址、存储不可用，或该模型不支持参考图）：
+            // 观众等的是这一幕的画面，而不是一条「不支持」的错误。退回文生视频重试一次，
+            // 并把原因记在素材头上，前端能看到「这一条是退回来的」。
+            if (reference == null) {
+                throw e;
+            }
+            String reason = e.getMessage() == null ? "图生视频不可用" : e.getMessage();
+            log.info("[WorldSim] 图生视频不可用，退回文生视频 type={} reason={}", type, reason);
+            mat.head().put("videoMode", "text2video");
+            mat.head().put("videoFallbackReason", reason);
+            GenerateService.Request fallback = new GenerateService.Request(
+                    type, model.toString(), prompt, null, videoSize(model.toString()), MEDIA_COUNT,
+                    VIDEO_DURATION, null, null, null, null, null, AiUserContext.requireUserId());
+            return generateService.create(fallback);
+        }
+    }
+
+    /**
+     * 取图生视频的参考图（字节）。
+     *
+     * <p>场景图由生成侧落地：可能是外链，也可能是落盘的 base64 / data URI。
+     * 两种都要能读成字节；本机读不到（外链无网、文件已清理）就返回 null，退回文生视频。</p>
+     *
+     * @param mat 视频素材
+     * @return 参考图字节，取不到为 null
+     */
+    private byte[] referenceImageOf(Material mat) {
+        String url = mat.referenceImageUrl();
+        if (url == null) {
+            return null;
+        }
+        mat.head().put("videoMode", "image2video");
+        mat.head().put("referenceImage", url.length() > 200 ? url.substring(0, 200) + '…' : url);
+        byte[] bytes = loadImageBytes(url);
+        if (bytes == null) {
+            mat.head().put("videoMode", "text2video");
+            mat.head().put("videoFallbackReason", "场景图读不到（外链不可达或文件已清理）");
+        }
+        return bytes;
+    }
+
+    /**
+     * 把生成结果地址读成字节。
+     *
+     * @param url data URI / base64 / http(s) 地址
+     * @return 图片字节，读不到为 null
+     */
+    private byte[] loadImageBytes(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            if (url.startsWith("data:")) {
+                int comma = url.indexOf(',');
+                return comma < 0 ? null : Base64.getDecoder().decode(url.substring(comma + 1));
+            }
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                java.net.URI uri = java.net.URI.create(url);
+                try (java.io.InputStream in = uri.toURL().openStream()) {
+                    return in.readAllBytes();
+                }
+            }
+            // 落盘结果给的是 media:xxx 句柄，交生成侧的存储按同口径读回字节
+            if (GenerateMediaStore.isHandle(url)) {
+                GenerateMediaStore.Stored stored = generateMediaStore.load(url);
+                if (stored != null && stored.bytes() != null && stored.bytes().length > 0) {
+                    return stored.bytes();
+                }
+            }
+            String bare = url.trim();
+            if (bare.length() > 64 && bare.matches("[A-Za-z0-9+/=\\s]+")) {
+                // 裸 base64（无前缀）：生成侧部分实现直接把字节编码成字符串落库
+                return Base64.getDecoder().decode(bare.replaceAll("\\s", ""));
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("[WorldSim] 读取场景图失败 url={}: {}", url, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 素材模型的设置值。
+     *
+     * @param type image / video
+     * @return 设置里配置的模型名；未配置为空串
+     */
+    private String mediaModel(String type) {
+        String key = MEDIA_VIDEO_TYPE.equals(type) ? "video_model" : "image_model";
+        String model = globalSettingReader.getStr("sim", key);
+        return model == null ? "" : model.trim();
+    }
+
+    /**
+     * 同类型可用的默认生成模型。
+     *
+     * <p>只挑「该供应商确实有对应 SPI 实现」的模型：否则建了任务也只是再去失败一次，
+     * 还会被记进失败类型，连别的可用模型都轮不上。</p>
+     *
+     * @param type image / video
+     * @return 模型名；找不到为 null
+     */
+    private String defaultGenerateModel(String type) {
+        boolean video = MEDIA_VIDEO_TYPE.equals(type);
+        try {
+            var rows = providerModelMapper.selectList(
+                    new LambdaQueryWrapper<SysAiProviderModel>()
+                            .eq(SysAiProviderModel::getEnabled, true));            for (SysAiProviderModel row : rows) {
+                if (row.getModel() == null || row.getModel().isBlank()) {
+                    continue;
+                }
+                var resolved = video
+                        ? generateClientResolver.resolveVideo(row.getModel())
+                        : generateClientResolver.resolveImage(row.getModel());
+                if (resolved.ok()) {
+                    return row.getModel();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[WorldSim] 查找默认生成模型失败 type={}: {}", type, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 视频分辨率：按模型的尺寸声明取第一条（竖屏短剧就是 9:16），未声明时用默认横屏。
+     *
+     * @param model 视频模型名
+     * @return WxH
+     */
+    private String videoSize(String model) {
+        try {
+            var resolved = generateClientResolver.resolveVideo(model);
+            if (resolved != null && resolved.modelCfg() != null) {
+                var view = GenerateConfigSupport.read(resolved.modelCfg(), MEDIA_VIDEO_TYPE);
+                if (view.sizes() != null && !view.sizes().isEmpty()
+                        && view.sizes().get(0) != null && !view.sizes().get(0).isBlank()) {
+                    return view.sizes().get(0);
+                }
+            }
+        } catch (Exception ignore) {
+            // 读不到尺寸声明就用默认值
+        }
+        return MEDIA_VIDEO_SIZE;
     }
 
     /** 剧本资产完成度 */
@@ -1719,11 +2479,15 @@ public class WorldSimServiceImpl implements WorldSimService {
 
         private final String field;
 
+        /** 该节点取提示词用的字段名（场景 desc / 过场 text / 道具 name） */
+        private final String promptField;
+
         private final Map<String, Object> head;
 
-        private Material(Map<String, Object> node, String field, Map<String, Object> head) {
+        private Material(Map<String, Object> node, String field, String promptField, Map<String, Object> head) {
             this.node = node;
             this.field = field;
+            this.promptField = promptField;
             this.head = head;
         }
 
@@ -1737,9 +2501,47 @@ public class WorldSimServiceImpl implements WorldSimService {
             return (String) head.get("taskId");
         }
 
+        /** 所属节点（场景 / 过场 / 道具） */
+        public Map<String, Object> node() {
+            return node;
+        }
+
+        /** 是否视频通道 */
+        public boolean video() {
+            return ActScript.MEDIA_VIDEO_KEY.equals(field);
+        }
+
+        /** 取提示词用的字段名（场景 desc / 过场 text / 道具 name） */
+        public String promptField() {
+            return promptField;
+        }
+
+        /**
+         * 同一节点下已生成好的画面地址（图生视频的参考图来源）。
+         *
+         * <p>素材顺序是先图后视频：视频任务轮到建的时候，场景图通常已经 OK，
+         * 把它当首帧喂给视频模型，画面才和这一幕的布景、人物对得上，
+         * 而不是另外凭空生成一段与舞台无关的视频。</p>
+         *
+         * @return 画面地址；没有就直接返回 null，调用方退回文生视频
+         */
+        public String referenceImageUrl() {
+            Object img = node.get(ActScript.MEDIA_IMAGE_KEY);
+            if (!(img instanceof Map<?, ?> m)) {
+                return null;
+            }
+            if (!MEDIA_OK.equals(String.valueOf(m.get("status")))) {
+                return null;
+            }
+            Object url = m.get("url");
+            return url == null || String.valueOf(url).isBlank() ? null : String.valueOf(url);
+        }
+
         /** 把自身写回剧本节点 */
         public void persist() {
-            if (!node.containsKey(field)) {
+            // 注意：剧本里 mediaImage/mediaVideo 的初值常常是显式的 null（AI 编剧按约定这么写），
+            // 只判断 containsKey 会让媒体头永远写不回去，素材阶段每轮都被重置成 NOT_STARTED。
+            if (!node.containsKey(field) || node.get(field) == null || node.get(field) == head) {
                 node.put(field, head);
             }
         }

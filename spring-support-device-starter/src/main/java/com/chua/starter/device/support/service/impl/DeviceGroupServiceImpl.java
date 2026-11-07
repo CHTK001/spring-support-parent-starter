@@ -13,6 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 设备分组服务实现。
+ *
+ * <p>分组树按 parentId 递归装配；分组与设备关联的增删在事务内维护，
+ * 保证分组删除时关联记录一并清理。</p>
+ *
+ * @author CH
+ * @since 4.0.0.51
+ */
 @Service
 @RequiredArgsConstructor
 public class DeviceGroupServiceImpl implements DeviceGroupService {

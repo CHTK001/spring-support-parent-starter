@@ -23,6 +23,7 @@ import java.util.Map;
  * <p>建群者即群主；群成员是拉进来的 AI 角色；按当前登录用户隔离。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @RestController
 @RequestMapping("/v2/tavern")

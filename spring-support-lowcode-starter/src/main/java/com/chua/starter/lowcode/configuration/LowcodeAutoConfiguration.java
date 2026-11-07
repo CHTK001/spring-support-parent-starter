@@ -1,10 +1,16 @@
 package com.chua.starter.lowcode.configuration;
 
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.lowcode.properties.LowcodeProperties;
+import com.chua.starter.lowcode.support.LowcodeMetaObjectHandler;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
@@ -44,4 +50,20 @@ public class LowcodeAutoConfiguration {
      * 低代码模块的 Mapper 包，消费方自行扫描时使用。
      */
     public static final String MAPPER_PACKAGE = "com.chua.starter.lowcode.mapper";
+
+    /**
+     * 审计字段自动填充。
+     *
+     * <p>必须在自动配置里用 {@code @Bean} 声明：{@code @ConditionalOnMissingBean} 只有在这里
+     * 才能看到消费方已注册的同类型 bean 并正确让位；挂在 {@code @Component} 上时判定发生在
+     * 组件扫描期，实测会导致本 bean 完全不注册，审计列全部为 NULL。</p>
+     *
+     * @param authServiceProvider 当前登录用户来源，可为空
+     * @return 审计字段处理器
+     */
+    @Bean
+    @ConditionalOnMissingBean(MetaObjectHandler.class)
+    public MetaObjectHandler lowcodeMetaObjectHandler(ObjectProvider<AuthService> authServiceProvider) {
+        return new LowcodeMetaObjectHandler(authServiceProvider);
+    }
 }

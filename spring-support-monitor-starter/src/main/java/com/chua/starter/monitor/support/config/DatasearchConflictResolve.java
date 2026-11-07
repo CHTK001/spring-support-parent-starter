@@ -1,10 +1,16 @@
 package com.chua.starter.monitor.support.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.core.Ordered;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 数据搜索接口的控制器冲突消歧。
@@ -26,7 +32,7 @@ import org.springframework.core.Ordered;
  * <p>
  * 本处理器在注册中心层面移走两个历史控制器的 BeanDefinition，
  * 让 datasearch 的新接口独享对应路径； {@code ServiceConfiguration} /
- * {@code SystemAutoConfiguration} 中的其余 Bean（ {@code /v2/user}、 {@code /v2/captcha}、
+ * {@code SystemAutoConfiguration} 中的其余 Bean（ {@code /v2/user}、{@code /v2/captcha}、
  * {@code /manage/*} 等）不受影响。
  * <p>
  * 注意只作用于「同时装入两个模块」的宿主；当宿主的 classpath 中只有历史控制器时，
@@ -34,6 +40,7 @@ import org.springframework.core.Ordered;
  *
  * @author CH
  * @since 4.0.0.51
+ * @version 4.0.0.51
  * @see com.chua.starter.oauth.client.support.web.WebRequest#isPass()
  * @see com.chua.starter.oauth.client.support.filter.AuthFilter
  */
@@ -55,17 +62,62 @@ public class DatasearchConflictResolve
      */
     private static final int ORDER = Ordered.HIGHEST_PRECEDENCE;
 
+    /**
+     * 已见过的「Bean 名 → 类名」，用于发现依赖闭包里同名不同类的控制器。
+     */
+    private final Map<String, String> seenClasses = new ConcurrentHashMap<>();
+
+    /**
+     * 日志
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(DatasearchConflictResolve.class);
+
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)
             throws BeansException {
         remove(registry, SYS_HOLIDAY_CONTROLLER);
         remove(registry, SYS_IP_CONTROLLER);
+        detectDuplicateNames(registry);
     }
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
             throws BeansException {
         // 不需要后处理
+    }
+
+    /**
+     * 扫描注册中心里「同名不同类」的 Bean，只记 WARN。
+     * <p>
+     * 不做任何移除：组件扫描阶段同名类会直接抛
+     * {@code ConflictingBeanDefinitionException}，此时注册中心里已经只剩后注册的那一份，
+     * 在这里再动 Bean 只会把本该生效的控制器删掉。此处仅用于把冲突留痕，
+     * 真正的消歧由 {@code spring.main.allow-bean-definition-overriding=true} 完成。
+     * </p>
+     *
+     * @param registry 注册中心
+     */
+    private void detectDuplicateNames(BeanDefinitionRegistry registry) {
+        for (String name : registry.getBeanDefinitionNames()) {
+            String className = className(registry.getBeanDefinition(name));
+            if (className == null) {
+                continue;
+            }
+            String previous = seenClasses.putIfAbsent(name, className);
+            if (previous != null && !previous.equals(className)) {
+                LOG.warn("[datasearch] 同名 Bean 冲突: name={}, 保留={}, 忽略={}", name, className, previous);
+            }
+        }
+    }
+
+    /**
+     * 取 BeanDefinition 的类名。
+     *
+     * @param definition BeanDefinition
+     * @return 类名；注解定义以外返回 空
+     */
+    private String className(BeanDefinition definition) {
+        return definition.getBeanClassName();
     }
 
     /**

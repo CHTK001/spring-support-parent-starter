@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
  * 模拟-场景对话消息 Mapper
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface SysAiWorldMessageMapper extends BaseMapper<SysAiWorldMessage> {

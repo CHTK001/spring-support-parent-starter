@@ -224,7 +224,8 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
                            * @param annotationType.getName( 注解类型.getname(
                            * @return illegal状态异常的结果
                            */
-                        throw new IllegalStateException("When using @" + annotationType.getName() + " to inject interface proxy, it is not supported on static methods: " + method);
+                        throw new IllegalStateException("When using @" + annotationType.getName() + " to inject interface proxy, it is not su" +
+                            "pported on static methods: " + method);
                     }
                     if (method.getParameterTypes().length != 1) {
                           /**
@@ -232,7 +233,8 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
                            * @param annotationType.getName( 注解类型.getname(
                            * @return illegal状态异常的结果
                            */
-                        throw new IllegalStateException("When using @" + annotationType.getName() + " to inject interface proxy, the method must have only one parameter: " + method);
+                        throw new IllegalStateException("When using @" + annotationType.getName() + " to inject interface proxy, the method m" +
+                            "ust have only one parameter: " + method);
                     }
                     PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, beanClass);
                     elements.add(new AnnotatedMethodElement(method, pd, attributes));

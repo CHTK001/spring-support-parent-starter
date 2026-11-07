@@ -1,0 +1,15 @@
+# 账号管理应用（账号资产 + 模板管理 + 消息模板）
+#
+# 作为独立应用运行时，账号侧不提供登录/鉴权服务，关闭前端鉴权拦截；
+# 作为应用嵌入宿主（monitor / system）时，宿主的 app.yaml 会覆盖本文件。
+app:
+  title: 账号管理
+  openAuth: false
+
+routeConfig:
+  homePath: /account-assets
+
+# 模板接口挂在 /api/template；账号接口是 /api/accounts（缺省 baseUrl 即可命中）。
+httpConfig:
+  moduleBaseUrl:
+    template: /api/template

@@ -84,6 +84,28 @@ public interface LowPageService extends IService<LowFormPage> {
     boolean rollbackToVersion(Integer versionId);
 
     /**
+     * 启用/停用页面。
+     *
+     * <p>停用后运行期接口不再返回该页面的 Schema，但已发布的版本快照保留，
+     * 重新启用即可恢复对外服务。</p>
+     *
+     * @param pageId 页面ID
+     * @param status 0:停用, 1:启用
+     * @return 是否成功
+     */
+    boolean changeStatus(Integer pageId, Integer status);
+
+    /**
+     * 撤销发布：发布状态回到未发布，运行期接口立即取不到 Schema。
+     *
+     * <p>版本历史与快照不删除，重新发布会在历史版本号基础上继续递增。</p>
+     *
+     * @param pageId 页面ID
+     * @return 是否成功
+     */
+    boolean unpublish(Integer pageId);
+
+    /**
      * 页面的版本列表。
      *
      * @param pageId 页面ID

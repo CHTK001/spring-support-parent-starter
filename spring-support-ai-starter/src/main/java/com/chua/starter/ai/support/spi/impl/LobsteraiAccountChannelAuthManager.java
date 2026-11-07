@@ -5,7 +5,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.common.support.text.json.Json;
 
 import java.nio.charset.StandardCharsets;

@@ -106,6 +106,11 @@ public class SyncServerInstance {
       */
     private boolean listenersAttached = false;
 
+    /**
+     * 服务发现注册器：非空时服务端启动后自动注册、停止前注销。
+     */
+    private com.chua.common.support.network.sync.SyncServerRegistrar discoveryRegistrar;
+
       /**
        * 创建 同步服务端instance 实例
        * @param instanceConfig instance配置
@@ -115,6 +120,30 @@ public class SyncServerInstance {
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {
         this.instanceConfig = SyncProperties.ServerInstance.copyOf(instanceConfig);
         this.syncProperties = SyncProperties.copyOf(syncProperties);
+    }
+
+    /**
+     * 接入服务发现：服务端启动后按配置注册自己，停止时注销。
+     *
+     * <p>服务名优先取实例自己的 name（多实例场景各注册各的），没配才用 server.service-name。
+     * 两者都为空表示不注册。</p>
+     *
+     * @param discovery      服务发现实例，可为 null
+     * @param syncProperties 同步属性
+     */
+    public void setDiscovery(com.chua.common.support.network.discovery.ServiceDiscovery discovery,
+                             SyncProperties syncProperties) {
+        if (discovery == null || syncProperties == null) {
+            return;
+        }
+        SyncProperties.ServerConfig serverConfig = syncProperties.getServer();
+        String serviceName = serverConfig.getServiceName();
+        if (serviceName == null || serviceName.isBlank()) {
+            serviceName = instanceConfig.getName();
+        }
+        String scatterId = serverConfig.getScatterId();
+        this.discoveryRegistrar =
+                com.chua.common.support.network.sync.SyncServerRegistrar.of(discovery, serviceName, scatterId);
     }
 
       /**
@@ -172,7 +201,8 @@ public class SyncServerInstance {
         if (topic == null || topic.isBlank() || handler == null) {
             return;
         }
-        List<com.chua.common.support.network.sync.SyncMessageHandler> handlers = handlerMap.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>());
+        List<com.chua.common.support.network.sync.SyncMessageHandler> handlers = handlerMap.computeIfAbsent(topic,
+            k -> new CopyOnWriteArrayList<>());
         if (handlers.stream().noneMatch(h -> h == handler)) {
             handlers.add(handler);
         }
@@ -264,7 +294,13 @@ public class SyncServerInstance {
 
         com.chua.common.support.spi.ServiceProvider<SyncServer> provider =
                 com.chua.common.support.spi.ServiceProvider.of(SyncServer.class);
-        return provider.getNewExtension(protocol, setting);
+        SyncServer server = provider.getNewExtension(protocol, setting);
+        // 注册器必须在 start() 之前挂上，否则本次启动不会注册
+        if (server instanceof com.chua.common.support.network.server.AbstractServer abstractServer
+                && discoveryRegistrar != null) {
+            abstractServer.setDiscoveryRegistrar(discoveryRegistrar);
+        }
+        return server;
     }
 
       /**

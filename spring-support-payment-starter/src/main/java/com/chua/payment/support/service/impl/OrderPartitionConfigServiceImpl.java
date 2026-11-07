@@ -493,8 +493,10 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
        */
     private static Map<String, OrderPartitionConfig> createDefaults() {
         Map<String, OrderPartitionConfig> result = new LinkedHashMap<>();
-        result.put("ORDER", buildDefault("ORDER", "pay_order", "pay_order_part", "payment.order.partition.create", "payment.order.partition.migrate"));
-        result.put("TRANSACTION", buildDefault("TRANSACTION", "pay_transaction_record", "pay_transaction_record_part", "payment.transaction.partition.create", "payment.transaction.partition.migrate"));
+        result.put("ORDER", buildDefault("ORDER", "pay_order", "pay_order_part", "payment.order.partition.create",
+            "payment.order.partition.migrate"));
+        result.put("TRANSACTION", buildDefault("TRANSACTION", "pay_transaction_record", "pay_transaction_record_part",
+            "payment.transaction.partition.create", "payment.transaction.partition.migrate"));
         return result;
     }
 

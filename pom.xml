@@ -138,14 +138,14 @@
         <module>spring-support-eduai-starter</module>
         <!-- 设备管理模块（海康/大华等平台接入） -->
         <module>spring-support-device-starter</module>
-        <!-- 模板库管理模块（hiprint 模板设计与打印机配置） -->
-        <module>spring-support-template-starter</module>
+        <!-- 模板管理已并入账号管理模块（spring-support-account-starter），不再单独成模块 -->
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datasource-hub-starter</module>
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
-        <module>spring-support-cdp-starter</module>          <!-- CDP 调试模块：Chrome DevTools Protocol 代用/Debug 控制台 -->
+        <!-- CDP 调试模块已并入 spring-support-monitor-starter 的 tshark 域
+             （com.chua.starter.monitor.support.tshark.cdp），模块目录与父 POM 条目同时移除 -->
 
         <!-- 渠道管理模块（已下线，功能由 spring-support-account-starter 承接）：
              spring-support-channel-starter 目录已删除，父 POM 中保留的 active 条目
@@ -764,12 +764,7 @@
                 <artifactId>spring-support-message-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <!-- 统一模板库：hiprint 绘制模板 + 消息模板 + 组卷模板 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-template-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+            <!-- 统一模板库已并入账号管理模块（spring-support-account-starter） -->
             
             <dependency>
                 <groupId>com.chua</groupId>

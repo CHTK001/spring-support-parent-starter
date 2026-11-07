@@ -67,14 +67,17 @@ public class RoomState {
         this.epoch = epoch;
     }
 
+    /** bumpEpoch 方法 */
     public void bumpEpoch() {
         this.epoch++;
     }
 
+    /** getOffererSlotId 方法 */
     public String getOffererSlotId() {
         return offererSlotId;
     }
 
+    /** setOffererSlotId 方法 */
     public void setOffererSlotId(String offererSlotId) {
         this.offererSlotId = offererSlotId;
     }
@@ -83,26 +86,32 @@ public class RoomState {
         return slots;
     }
 
+    /** getRoomId 方法 */
     public String getRoomId() {
         return roomId;
     }
 
+    /** setRoomId 方法 */
     public void setRoomId(String roomId) {
         this.roomId = roomId;
     }
 
+    /** getCreatedAt 方法 */
     public long getCreatedAt() {
         return createdAt;
     }
 
+    /** setCreatedAt 方法 */
     public void setCreatedAt(long createdAt) {
         this.createdAt = createdAt;
     }
 
+    /** getLastActiveAt 方法 */
     public long getLastActiveAt() {
         return lastActiveAt;
     }
 
+    /** setLastActiveAt 方法 */
     public void setLastActiveAt(long lastActiveAt) {
         this.lastActiveAt = lastActiveAt;
     }

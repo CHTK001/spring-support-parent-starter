@@ -507,12 +507,16 @@ public class ServerFilterFactory {
     private Object newInstance(Class<?> clazz, ServerSetting setting) throws Exception {
    // 先试无参构造、再试 (ServerSetting) 构造的优先级探测，ReflectUtils 无法表达该语义
         try {
-            return clazz.getDeclaredConstructor().newInstance(); // [P3C 1.10 豁免] 无参构造缺省需回落 (ServerSetting) 构造，ReflectUtils.instantiate 静默返回 null 无法区分缺省与失败
+            // [P3C 1.10 豁免] 无参构造缺省需回落 (ServerSetting) 构造，
+            // ReflectUtils.instantiate 静默返回 null 无法区分缺省与失败
+            return clazz.getDeclaredConstructor().newInstance();
         } catch (NoSuchMethodException ignored) {
               // 尝试 (服务端setting) 构造
         }
         try {
-            return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting); // [P3C 1.10 豁免] 需按接口类型精确匹配构造器并在缺省时抛出明确异常，ReflectUtils 按实参类型推断不可靠
+            // [P3C 1.10 豁免] 需按接口类型精确匹配构造器并在缺省时抛出明确异常，
+            // ReflectUtils 按实参类型推断不可靠
+            return clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException(clazz.getName() + " 缺少无参或 (ServerSetting) 构造器");
         }

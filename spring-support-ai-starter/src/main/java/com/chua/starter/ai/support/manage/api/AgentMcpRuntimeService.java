@@ -31,6 +31,7 @@ import java.util.Map;
  * 关闭底层 stdio 进程 / HTTP 连接，避免资源泄漏。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Service
 @RequiredArgsConstructor

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
  * 所以这一份测试同时是两侧口径的唯一真源校验。</p>
  *
  * @author chua
+ * @since 4.0.0.51
  */
 class CollectSqlKindTest {
 

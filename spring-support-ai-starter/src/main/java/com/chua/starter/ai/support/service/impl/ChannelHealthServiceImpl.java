@@ -16,7 +16,7 @@ import com.chua.starter.ai.support.manage.store.ChannelHealth;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.service.ChannelHealthService;
-import com.chua.starter.ai.support.spi.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -829,6 +829,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
 
     // ==================== 探针执行 ====================
 
+    /** send 方法 */
     private ClientResponse send(String url, String header, String proxy, int timeoutSec) throws Exception {
         try {
             HttpClientBuilder builder = HttpClientFactory.of(url);
@@ -984,6 +985,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         return h;
     }
 
+    /** saveHealth 方法 */
     private void saveHealth(ChannelHealth h) {
         if (channelHealthMapper.selectCount(
                 new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getId, h.getId())) == 0) {

@@ -17,6 +17,7 @@ import lombok.EqualsAndHashCode;
  * 本表让「某生某题识别成什么」可直接查、可统计、可回溯。</p>
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

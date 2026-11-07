@@ -644,6 +644,33 @@ public class ReleaseController {
         return releaseService.gitPullAndDeploy(id);
     }
 
+    /**
+     * 查看项目 Git 仓库（已拉取的本地工作区）。
+     *
+     * @param id 项目标识
+     * @return 仓库概览：分支 / 提交 / 改动 / 分支列表
+     */
+    @Operation(summary = "查看项目 Git 仓库（分支/提交/工作区改动）")
+    @GetMapping("/project/{id}/git/repository")
+    public ReturnResult<java.util.Map<String, Object>> gitRepository(@PathVariable Long id) {
+        return releaseService.gitRepository(id);
+    }
+
+    /**
+     * 拉取项目 Git 仓库（只同步本地工作区，不构建、不发布）。
+     *
+     * @param id     项目标识
+     * @param branch 目标分支（可空：用项目配置的分支）
+     * @return 拉取结果
+     */
+    @Operation(summary = "拉取项目 Git 仓库（仅同步，不发布）")
+    @PostMapping("/project/{id}/git/pull")
+    public ReturnResult<java.util.Map<String, Object>> gitPull(
+            @PathVariable Long id,
+            @RequestParam(required = false) String branch) {
+        return releaseService.gitPull(id, branch);
+    }
+
     // ==================== 发布管理增强 ====================
 
     /**

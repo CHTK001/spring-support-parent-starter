@@ -283,6 +283,26 @@ public class GenerateClientResolver {
     }
 
     /**
+     * 已启用的模型行（按主键顺序）。
+     *
+     * <p>业务侧在「没有在设置里点名模型」时需要自己挑一个能用的：
+     * 逐个解析会把没有 SPI 实现的供应商也试一遍，故由这里统一给出候选集。</p>
+     *
+     * @return 已启用的模型行；查询异常时返回空列表
+     */
+    public List<SysAiProviderModel> listEnabledModels() {
+        try {
+            List<SysAiProviderModel> rows = providerModelMapper.selectList(
+                    new LambdaQueryWrapper<SysAiProviderModel>()
+                            .eq(SysAiProviderModel::getEnabled, true));
+            return rows == null ? List.of() : rows;
+        } catch (Exception e) {
+            log.warn("[Generate] 查询已启用模型失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
      * 按模型名查已启用的模型行。
      *
      * @param model 模型名

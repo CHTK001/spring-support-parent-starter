@@ -323,6 +323,7 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
         }
     }
 
+    /** describeSqlError 方法 */
     private static String describeSqlError(String raw) {
         if (raw == null) {
             return "未提供原因";

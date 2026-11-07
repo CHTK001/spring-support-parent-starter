@@ -12,7 +12,7 @@ import java.io.Serializable;
  * 渠道健康探针记录。
  *
  * <p>对标 Sub2API Channel Monitor：以「提供者 + 连接」为粒度，对每个渠道发轻量探针
- * （OAuth 渠道由 {@link com.chua.starter.ai.support.spi.AccountChannelAuthManager} 探活，
+ * （OAuth 渠道由 {@link com.chua.starter.common.support.channel.AccountChannelAuthManager} 探活，
  * API Key 渠道走 HTTP GET），回写状态机给路由与安全层消费：</p>
  * <ul>
  *   <li>{@code UNKNOWN} — 从未探测或首次探测前</li>

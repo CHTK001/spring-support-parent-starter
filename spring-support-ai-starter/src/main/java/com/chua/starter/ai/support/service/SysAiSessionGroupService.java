@@ -8,6 +8,7 @@ import java.util.List;
  * 会话分组 Service
  *
  * @author CH
+ * @since 4.0.0.51
  */
 public interface SysAiSessionGroupService {
 

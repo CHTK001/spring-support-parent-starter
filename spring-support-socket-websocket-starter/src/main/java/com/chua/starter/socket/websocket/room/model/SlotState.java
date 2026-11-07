@@ -56,62 +56,77 @@ public class SlotState {
         return slotId;
     }
 
+    /** setSlotId 方法 */
     public void setSlotId(String slotId) {
         this.slotId = slotId;
     }
 
+    /** getPeerSessionId 方法 */
     public String getPeerSessionId() {
         return peerSessionId;
     }
 
+    /** setPeerSessionId 方法 */
     public void setPeerSessionId(String peerSessionId) {
         this.peerSessionId = peerSessionId;
     }
 
+    /** getTokenHash 方法 */
     public String getTokenHash() {
         return tokenHash;
     }
 
+    /** setTokenHash 方法 */
     public void setTokenHash(String tokenHash) {
         this.tokenHash = tokenHash;
     }
 
+    /** getConnectionId 方法 */
     public String getConnectionId() {
         return connectionId;
     }
 
+    /** setConnectionId 方法 */
     public void setConnectionId(String connectionId) {
         this.connectionId = connectionId;
     }
 
+    /** getDisconnectedAt 方法 */
     public long getDisconnectedAt() {
         return disconnectedAt;
     }
 
+    /** setDisconnectedAt 方法 */
     public void setDisconnectedAt(long disconnectedAt) {
         this.disconnectedAt = disconnectedAt;
     }
 
+    /** getLeaseExpiresAt 方法 */
     public Long getLeaseExpiresAt() {
         return leaseExpiresAt;
     }
 
+    /** setLeaseExpiresAt 方法 */
     public void setLeaseExpiresAt(Long leaseExpiresAt) {
         this.leaseExpiresAt = leaseExpiresAt;
     }
 
+    /** getLastSeenAt 方法 */
     public Long getLastSeenAt() {
         return lastSeenAt;
     }
 
+    /** setLastSeenAt 方法 */
     public void setLastSeenAt(Long lastSeenAt) {
         this.lastSeenAt = lastSeenAt;
     }
 
+    /** getConnectedAt 方法 */
     public Long getConnectedAt() {
         return connectedAt;
     }
 
+    /** setConnectedAt 方法 */
     public void setConnectedAt(Long connectedAt) {
         this.connectedAt = connectedAt;
     }

@@ -56,13 +56,39 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
                              Environment environment,
                              List<com.chua.starter.sync.support.spi.SyncClientInfoCustomizer> infoCustomizers,
                              List<com.chua.starter.sync.support.spi.SyncClientCustomizer> customizers) {
+        this(syncProperties, environment, infoCustomizers, customizers, null);
+    }
+
+    /**
+     * 创建 同步客户端包装器 实例，并接入服务发现。
+     *
+     * @param syncProperties 同步属性
+     * @param environment 环境
+     * @param infoCustomizers 信息customizers
+     * @param customizers customizers
+     * @param serviceDiscovery 服务发现实例，可为 null（只用显式地址）
+     */
+    public SyncClientWrapper(SyncProperties syncProperties,
+                             Environment environment,
+                             List<com.chua.starter.sync.support.spi.SyncClientInfoCustomizer> infoCustomizers,
+                             List<com.chua.starter.sync.support.spi.SyncClientCustomizer> customizers,
+                             com.chua.common.support.network.discovery.ServiceDiscovery serviceDiscovery) {
         this.syncProperties = syncProperties;
         this.environment = environment;
         try {
             String protocol = syncProperties.getClient().getProtocol();
             String serverAddress = syncProperties.getClient().getEffectiveServerAddress();
+            // 配置了 serviceDiscovery 且 discovery-name 非空时按发现结果寻址，否则沿用显式地址
+            com.chua.common.support.network.sync.SyncSetting syncSetting =
+                    new com.chua.common.support.network.sync.SyncSetting(serverAddress);
+            String discoveryName = syncProperties.getClient().getDiscoveryName();
+            if (serviceDiscovery != null && discoveryName != null && !discoveryName.isBlank()) {
+                syncSetting.setDiscovery(serviceDiscovery);
+                syncSetting.setServiceName(discoveryName);
+                syncSetting.setScatterId(syncProperties.getClient().getScatterId());
+            }
             this.delegate = ServiceProvider.of(com.chua.common.support.network.sync.SyncClient.class)
-                    .getNewExtension(protocol, serverAddress);
+                    .getNewExtension(protocol, syncSetting);
             if (this.delegate == null) {
                 /**
                  * IllegalArgumentException。
@@ -72,7 +98,8 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
                 throw new IllegalArgumentException("Unsupported sync client protocol: " + protocol);
             }
             if (this.delegate.getClientId() == null) {
-                this.delegate = new com.chua.common.support.network.sync.impl.WebSocketSyncClient("ws://" + serverAddress);
+                this.delegate = new com.chua.common.support.network.sync.impl.WebSocketSyncClient(
+                        java.util.UUID.randomUUID().toString(), syncSetting);
             }
             this.clientInfo = buildClientInfo();
             for (com.chua.starter.sync.support.spi.SyncClientInfoCustomizer customizer : infoCustomizers) {

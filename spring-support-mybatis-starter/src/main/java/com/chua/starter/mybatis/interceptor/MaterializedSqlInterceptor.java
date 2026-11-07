@@ -329,7 +329,8 @@ public class MaterializedSqlInterceptor implements Interceptor {
             return current;
         }
 
-        MaterializedRouteDefinition cached = refreshDefinitionCache.computeIfAbsent(mappedStatement.getId(), this::resolveRefreshDefinitionFromMapper);
+        MaterializedRouteDefinition cached = refreshDefinitionCache.computeIfAbsent(mappedStatement.getId(),
+            this::resolveRefreshDefinitionFromMapper);
         return cached == NONE ? null : cached;
     }
 

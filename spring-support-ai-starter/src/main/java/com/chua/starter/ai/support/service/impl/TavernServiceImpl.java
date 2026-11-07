@@ -29,6 +29,7 @@ import java.util.Map;
  * 酒馆服务实现。按当前登录用户隔离群/成员/消息。
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Service
 @RequiredArgsConstructor

@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
  * 项目管理 Mapper
  *
  * @author CH
+ * @since 4.0.0.51
  */
 @Mapper
 public interface MsServerProjectMapper extends BaseMapper<MsServerProject> {
