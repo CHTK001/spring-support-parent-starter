@@ -602,6 +602,13 @@
     <!-- 新增 / 编辑 Cookie -->
     <CookieDialog v-model="cookieFormVisible" :cookie="editingCookie" @saved="onCookieSaved" />
 
+    <!-- 收 / 发信箱：邮箱走 IMAP / SMTP，短信走 MessagePush -->
+    <MailboxDrawer
+      v-model="mailboxVisible"
+      :account="mailboxAccount"
+      :console-url="mailboxAccount ? accountConsoleUrl(mailboxAccount) : ''"
+    />
+
     <!-- 轮换后的一次性明文 -->
     <ReDialog v-model="secretVisible" title="新的 Secret" width="520px" append-to-body destroy-on-close>
       <div class="secret-box">
@@ -644,6 +651,7 @@ import type {
 import ReTag from '@repo/ui/re-tag';
 
 import AccountFormDialog from '../components/AccountFormDialog.vue';
+import MailboxDrawer from '../components/MailboxDrawer.vue';
 import MessageTemplateView from '../../template/views/MessageTemplateView.vue';
 import TemplateView from '../../template/views/TemplateView.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
@@ -749,6 +757,10 @@ const editingCookie = ref<SysAccountCookie | null>(null);
 const secretVisible = ref(false);
 const secretValue = ref('');
 const secretName = ref('');
+
+/** 收 / 发信箱抽屉（邮箱 IMAP、短信 MessagePush） */
+const mailboxVisible = ref(false);
+const mailboxAccount = ref<SysAccount | null>(null);
 
 /** 是否为账号类分段 */
 const isAccountSegment = computed(
@@ -1638,16 +1650,6 @@ function verifyTone(status?: AccountVerifyStatus): 'ok' | 'bad' | 'idle' {
   if (status === 'VALID') return 'ok';
   if (status === 'INVALID') return 'bad';
   return 'idle';
-}
-
-/**
- * 账号的控制台地址。
- *
- * @param row 账号
- * @returns 地址；解析不出返回空串
- */
-function consoleUrlOf(row: SysAccount): string {
-  return accountConsoleUrl(row);
 }
 
 /**
