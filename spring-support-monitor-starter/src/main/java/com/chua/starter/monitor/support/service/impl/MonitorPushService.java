@@ -298,7 +298,27 @@ public class MonitorPushService {
      */
     public void pushHostMetrics(Long hostId, String hostName, Number cpu, Number mem, Number disk,
                                 Number diskRead, Number diskWrite, String software) {
-        Map<String, Object> payload = new LinkedHashMap<>(10);
+        pushHostMetrics(hostId, hostName, cpu, mem, disk, diskRead, diskWrite, null, null, software);
+    }
+
+    /**
+     * 广播主机实时指标（含磁盘 IO、网络收发与软件，前端 订阅("监控", "host-metrics") 接收）
+     *
+     * @param hostId    主机 标识
+     * @param hostName  主机名
+     * @param cpu       CPU 使用率 %
+     * @param mem       内存使用率 %
+     * @param disk      磁盘使用率 %
+     * @param diskRead  磁盘读取速率 KB/s，可为空
+     * @param diskWrite 磁盘写入速率 KB/s，可为空
+     * @param netRx     网络接收速率 KB/s，可为空
+     * @param netTx     网络发送速率 KB/s，可为空
+     * @param software  软件实例 JSON，可为空
+     */
+    public void pushHostMetrics(Long hostId, String hostName, Number cpu, Number mem, Number disk,
+                                Number diskRead, Number diskWrite, Number netRx, Number netTx,
+                                String software) {
+        Map<String, Object> payload = new LinkedHashMap<>(12);
         payload.put("hostId", hostId);
         payload.put("hostName", hostName == null ? "" : hostName);
         payload.put("cpu", cpu == null ? 0 : cpu);
@@ -306,6 +326,8 @@ public class MonitorPushService {
         payload.put("disk", disk == null ? 0 : disk);
         payload.put("diskRead", diskRead == null ? 0 : diskRead);
         payload.put("diskWrite", diskWrite == null ? 0 : diskWrite);
+        payload.put("netRx", netRx == null ? 0 : netRx);
+        payload.put("netTx", netTx == null ? 0 : netTx);
         if (software != null && !software.isBlank()) {
             payload.put("software", software);
         }

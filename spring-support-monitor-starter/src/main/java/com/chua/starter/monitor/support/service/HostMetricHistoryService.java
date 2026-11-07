@@ -36,8 +36,31 @@ public interface HostMetricHistoryService {
      * @param diskReadKbs  磁盘读取速率 KB/s，可为空
      * @param diskWriteKbs 磁盘写入速率 KB/s，可为空
      */
+    default void record(Long hostId, Double cpuUsage, Double memUsage, Double diskUsage,
+                        Double diskReadKbs, Double diskWriteKbs) {
+        record(hostId, cpuUsage, memUsage, diskUsage, diskReadKbs, diskWriteKbs, null, null);
+    }
+
+    /**
+     * 写入一次主机指标历史（含磁盘 IO 与网络收发，三率可部分为空，全空则不写）。
+     *
+     * <p>网络收发两列是 4.0.0.54 新增：实体与历史表都加了
+     * {@code ms_server_host_net_rx_kbs} / {@code ms_server_host_net_tx_kbs} 与
+     * {@code net_rx_kbs} / {@code net_tx_kbs}。旧库没有这两列时写侧会整条失败，
+     * 因此实现里对这两列做了容错（见 {@code HostMetricHistoryServiceImpl#record}）。</p>
+     *
+     * @param hostId       主机台账标识
+     * @param cpuUsage     CPU 使用率，可为空
+     * @param memUsage     内存使用率，可为空
+     * @param diskUsage    磁盘使用率，可为空
+     * @param diskReadKbs  磁盘读取速率 KB/s，可为空
+     * @param diskWriteKbs 磁盘写入速率 KB/s，可为空
+     * @param netRxKbs     网络接收速率 KB/s，可为空
+     * @param netTxKbs     网络发送速率 KB/s，可为空
+     */
     void record(Long hostId, Double cpuUsage, Double memUsage, Double diskUsage,
-                Double diskReadKbs, Double diskWriteKbs);
+                Double diskReadKbs, Double diskWriteKbs,
+                Double netRxKbs, Double netTxKbs);
 
     /**
      * 查询主机近 N 小时的指标历史，升序。
@@ -49,7 +72,8 @@ public interface HostMetricHistoryService {
      *
      * @param hostId 主机台账标识
      * @param hours  回溯小时数，取值范围 {@code 1..168}（即最多 7 天）
-     * @return 每行 {@code [时间戳ms, cpu, mem, disk, diskReadKbs, diskWriteKbs]}，缺失值为 null
+     * @return 每行 {@code [时间戳ms, cpu, mem, disk, diskReadKbs, diskWriteKbs, netRxKbs, netTxKbs]}，
+     *         缺失值为 null；网络两列在老库（未执行 4.0.0.54 迁移）下恒为 null
      * @throws IllegalArgumentException hours 超出 {@code 1..168} 范围
      */
     List<List<Object>> list(Long hostId, int hours);

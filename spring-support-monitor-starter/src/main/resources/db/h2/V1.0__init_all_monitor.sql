@@ -499,6 +499,8 @@ CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
     `ms_host_metric_history_disk_usage`         DOUBLE   DEFAULT NULL COMMENT '磁盘使用率(0-100)',
     `ms_host_metric_history_disk_read_kbs`      DOUBLE   DEFAULT NULL COMMENT '磁盘读(KB/s)',
     `ms_host_metric_history_disk_write_kbs`     DOUBLE   DEFAULT NULL COMMENT '磁盘写(KB/s)',
+`ms_host_metric_history_net_rx_kbs`         DOUBLE   DEFAULT NULL COMMENT '网络接收(KB/s)',
+`ms_host_metric_history_net_tx_kbs`         DOUBLE   DEFAULT NULL COMMENT '网络发送(KB/s)',
     `ms_host_metric_history_collect_time`       DATETIME NOT NULL COMMENT '采集时刻',
     PRIMARY KEY (`id`),
     KEY `idx_ms_host_metric_history_monitor_time` (`ms_host_metric_history_monitor_id`, `ms_host_metric_history_collect_time`)
