@@ -147,9 +147,12 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, resolved.getMsg());
             return;
         }
-        int port = host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
-                ? host.getServerHostRemotePort()
-                : (host.getServerHostPort() == null ? ServerConstants.DEFAULT_SSH_PORT : host.getServerHostPort());
+        // SSH 端口就是台账里的主机端口（serverHostPort，缺省 22）。
+        // 不能用 remotePort：那是远控协议（VNC 5900 / RDP 3389）的端口，
+        // 一台机器同时开着 VNC 与 sshd 时会把 SSH 连到 VNC 上去。
+        int port = host.getServerHostPort() != null && host.getServerHostPort() > 0
+                ? host.getServerHostPort()
+                : ServerConstants.DEFAULT_SSH_PORT;
 
         SshClients.Handle handle;
         try {
@@ -482,9 +485,12 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, resolved.getMsg());
             return null;
         }
-        int port = host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
-                ? host.getServerHostRemotePort()
-                : (host.getServerHostPort() == null ? ServerConstants.DEFAULT_SSH_PORT : host.getServerHostPort());
+        // SSH 端口就是台账里的主机端口（serverHostPort，缺省 22）。
+        // 不能用 remotePort：那是远控协议（VNC 5900 / RDP 3389）的端口，
+        // 一台机器同时开着 VNC 与 sshd 时会把 SSH 连到 VNC 上去。
+        int port = host.getServerHostPort() != null && host.getServerHostPort() > 0
+                ? host.getServerHostPort()
+                : ServerConstants.DEFAULT_SSH_PORT;
 
         SshClients.Handle handle;
         try {

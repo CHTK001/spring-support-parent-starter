@@ -221,11 +221,9 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler implements Su
         MsServerHost connectHost = hostResult.getData();
         boolean isLocal = connectHost.getServerHostCollectMode() != null
                 && "LOCAL".equalsIgnoreCase(connectHost.getServerHostCollectMode().trim());
-        // 本机远控仅支持 VNC（本机对自身 SSH/RDP 无意义）
-        if (isLocal && protocolType != ProtocolType.VNC) {
-            reject(wsSession, "本机远控仅支持 VNC 协议");
-            return;
-        }
+        // 这里不再按「本机」拦协议：SSH 能力只看台账 serverHostSshEnabled，
+        // SSH 走的是 SshDirect 直连通道，经 guacd 过来的只剩 RDP / VNC。
+        // 本机（采集方式 LOCAL）自己也可能开着 sshd / RDP，一刀切拒绝只会把用户挡在门外。
         // 本机地址去回环：远程 guacd 收到 127.0.0.1 会回连 guacd 自身，强制物理网卡 IP
         String connectAddress = isLocal
                 ? NetUtils.getPreferredLocalIp() : connectHost.getServerHostAddress();
