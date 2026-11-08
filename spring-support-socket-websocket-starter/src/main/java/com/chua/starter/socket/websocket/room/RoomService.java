@@ -111,7 +111,7 @@ public class RoomService {
      */
     public RoomMessage onHello(String roomId, String slotId, String peerSessionId, String resumeToken, Long epoch, String connectionId) {
         // 房间台账（不存在新建）
-        boolean fresh = rooms.containsKey(roomId);
+        boolean existing = rooms.containsKey(roomId);
         RoomState room = Optional.ofNullable(rooms.get(roomId)).orElseGet(() -> {
             RoomState state = new RoomState(roomId);
             rooms.put(roomId, state);
@@ -125,7 +125,10 @@ public class RoomService {
         ResumeToken token = (resumeToken == null || resumeToken.isEmpty()) ? null : resumeTokens.get(resumeToken);
         if (token != null && token.getEpoch().equals(room.getEpoch())) {
             SlotState alive = room.findSlot(token.getSlotId()).orElse(null);
-            if (alive != null && alive.isActive()) {
+            // 续接的语义：端点上一轮连接已断（isDisconnected），但只要租约未过期，
+            // 就应允许原 slotId 重新挂到新的连接上；这里不能用 isActive() 判断，
+            // 因为正常掉线正是 inactive 状态，否则续接永远走不到。
+            if (alive != null && !alive.isLeaseExpired(System.currentTimeMillis())) {
                 log.info("[Room] 续接连接: roomId={}, slotId={}, connectionId={}", roomId, slotId, connectionId);
                 resumeConnection(room, token, alive, connectionId);
                 return buildWelcome(room, alive.getSlotId(), true, resumeToken);
@@ -133,7 +136,7 @@ public class RoomService {
         }
 
         // 加入房间（新接入 / 续练不通过）
-        joinRoom(room, slotId, peerSessionId, connectionId, fresh);
+        joinRoom(room, slotId, peerSessionId, connectionId, existing);
         String resumedToken = emitResumeToken(room, slotId);
         return buildWelcome(room, slotId, false, resumedToken);
     }
@@ -310,7 +313,7 @@ public class RoomService {
     /**
      * 加入房间（新接入 / 续练不通过）
      */
-    private void joinRoom(RoomState room, String slotId, String peerSessionId, String connectionId, boolean fresh) {
+    private void joinRoom(RoomState room, String slotId, String peerSessionId, String connectionId, boolean existing) {
         SlotState slot = new SlotState(slotId);
         slot.setPeerSessionId(peerSessionId);
         slot.setConnectionId(connectionId);
@@ -322,8 +325,12 @@ public class RoomService {
             room.setOffererSlotId(slotId);
         }
         // 房间已有对端时（第二人加入）→ 新增对局，代数递增
-        if (!fresh && !room.hasActiveSlot()) {
+        // 注意：只有「房间早先存在且当前无活跃端点」（上一局已散）才升代数；
+        // 全新房间保持 epoch=1，否则首进就拿不到 epoch=1，客户端代数校准会错位。
+        // 上一局的端点记录必须清掉，否则 slots 会一直堆到上限，新一局永远「房间已满」。
+        if (existing && !room.hasActiveSlot()) {
             room.bumpEpoch();
+            room.resetSlots();
         }
 
         boolean ok = room.addSlot(slot);
@@ -407,7 +414,7 @@ public class RoomService {
         slot.setLeaseExpiresAt(System.currentTimeMillis() + properties.getTimeouts().getLeaseExpiresMs());
         slot.setLastSeenAt(System.currentTimeMillis());
         room.setLastActiveAt(System.currentTimeMillis());
-        peers.replace(connectionId, new PeerSession(room, slot));
+        peers.put(connectionId, new PeerSession(room, slot));
     }
 
     /** leavePeer 方法 */

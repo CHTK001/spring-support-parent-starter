@@ -76,15 +76,85 @@ class MagpieChannelCreditProviderTest {
     }
 
     @Test
-    @DisplayName("余额窗口用 limit - amount 反推剩余，并标记超额")
+    @DisplayName("余额窗口用 limit - used 反推剩余，并标记超额")
     void exhaustedWindowIsFlagged() {
         List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
-                windowWithAmount("5h", 20, 20, "requests"))));
+                windowWithUsed("5h", 20, 20, "requests"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
         assertEquals(0L, result.get("remain"));
         assertEquals(Boolean.TRUE, result.get("exceeded"));
+    }
+
+    @Test
+    @DisplayName("magpie 的 used 字段能反推剩余（线上卡实测：used=0 / limit=100）")
+    void usedFieldIsUnderstood() {
+        List<Map<String, Object>> quotas = List.of(quota("workbuddy-ai", "WorkBuddy AI", "subscription", null,
+                List.of(windowWithUsed("Credits", 0, 100, "credits"))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        assertEquals(100L, result.get("remain"));
+        assertEquals(100L, result.get("total"));
+        assertEquals("credits", result.get("unit"));
+    }
+
+    @Test
+    @DisplayName("早期版本的 amount 字段仍然兼容")
+    void legacyAmountFieldStillWorks() {
+        List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
+                windowWithAmount("5h", 4, 10, "requests"))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        assertEquals(6L, result.get("remain"));
+        assertEquals(10L, result.get("total"));
+    }
+
+    @Test
+    @DisplayName("「Total」汇总行不计入合计，避免余额翻倍（100 + 90 + 190 → 190）")
+    void totalWindowIsNotSummed() {
+        List<Map<String, Object>> quotas = List.of(quota("workbuddy-ai", "WorkBuddy AI", "subscription", null,
+                List.of(
+                        windowWithUsed("Credits", 0, 100, "credits"),
+                        windowWithUsed("Extra credits", 0, 90, "credits"),
+                        windowWithUsed("Total credits", 0, 190, "credits"))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        assertEquals(190L, result.get("remain"));
+        assertEquals(190L, result.get("total"));
+        // 三行都保留在明细里，只是汇总行不参与求和
+        assertEquals(3, packages(result).size());
+    }
+
+    @Test
+    @DisplayName("名字不是合计、只是数值碰巧等于其余之和时，按原样相加")
+    void ambiguousWindowsAreSummedAsIs() {
+        List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
+                windowWithUsed("a", 0, 10, "requests"),
+                windowWithUsed("b", 0, 10, "requests"),
+                windowWithUsed("c", 0, 20, "requests"))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        // 「10 + 10 + 20」是合法的三个分桶；没有合计语义的行名就不归并
+        assertEquals(40L, result.get("total"));
+    }
+
+    @Test
+    @DisplayName("名字像合计但数值对不上时，不当作汇总行")
+    void totalLabelWithMismatchedNumbersIsKept() {
+        List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
+                windowWithUsed("Credits", 0, 100, "requests"),
+                windowWithUsed("Extra credits", 0, 90, "requests"),
+                windowWithUsed("Total credits", 0, 250, "requests"))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        // 250 ≠ 100 + 90，说明它不是这两行的合计（可能是另一个真正的桶）
+        assertEquals(440L, result.get("total"));
     }
 
     @Test
@@ -154,6 +224,15 @@ class MagpieChannelCreditProviderTest {
         if (limit != null) {
             window.put("limit", limit);
         }
+        window.put("unit", unit);
+        return window;
+    }
+
+    private static Map<String, Object> windowWithUsed(String name, int used, int limit, String unit) {
+        Map<String, Object> window = new LinkedHashMap<>();
+        window.put("name", name);
+        window.put("used", used);
+        window.put("limit", limit);
         window.put("unit", unit);
         return window;
     }

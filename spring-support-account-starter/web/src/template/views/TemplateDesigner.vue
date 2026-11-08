@@ -251,6 +251,7 @@ import { hiprint, defaultElementTypeProvider } from 'vue-plugin-hiprint'
 import 'vue-plugin-hiprint/dist/print-lock.css'
 
 import { templateApi } from '../api/templateApi'
+import { errorText } from '../../shared/errorText'
 import type { TemplateDesignerPayload } from '../types/template'
 import type { Theme } from '../themes/themes'
 import { THEMES, applyTheme } from '../themes/themes'
@@ -452,7 +453,7 @@ onMounted(async () => {
     // 拖拽模式才初始化 hiprint 画布（Vue 沙盒模式完全用不到 hiprint，不初始化）
     if (mode.value === 'drag') await createDesign(rawContent || '')
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
     router.replace('/template')
   }
 })
@@ -534,7 +535,7 @@ async function createDesign(template: string): Promise<void> {
       historyRedo.value = true
     },
     onUpdateError: (e: any) => {
-      ElMessage.error('模板更新失败：' + String(e))
+      ElMessage.error('模板更新失败：' + errorText(e))
     }
   })
 
@@ -607,7 +608,7 @@ async function onSave(): Promise<void> {
     ElMessage.success('保存成功')
     emit('saved')
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     saving.value = false
   }
@@ -638,7 +639,7 @@ async function onPrint(): Promise<void> {
         frame.contentWindow.print()
         ElMessage.success('已发送打印任务')
       } catch (err) {
-        ElMessage.error(String(err))
+        ElMessage.error(errorText(err))
       } finally {
         printing.value = false
       }
@@ -669,7 +670,7 @@ async function onPrintWith(tpl: any, name: string): Promise<void> {
       ElMessage.info(`已发送到「${name}」`)
     })
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     printing.value = false
   }
@@ -699,7 +700,7 @@ async function onThemeChange(id: string): Promise<void> {
     await rebuildDesign(themed)
     ElMessage.success(`主题「${t.name}」已应用（已写进设计描述）`)
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   }
 }
 

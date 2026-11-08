@@ -87,6 +87,7 @@ import ReDrawer from '@repo/ui/re-drawer'
 import RePrinter from '../components/RePrinter.vue'
 
 import { templateApi } from '../api/templateApi'
+import { errorText } from '../../shared/errorText'
 import type { TemplateDesignerPayload } from '../types/template'
 
 const props = defineProps<{
@@ -170,7 +171,7 @@ function onPrintWith(tpl: any, name: string): void {
       }
     )
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     saving.value = false
   }
@@ -218,7 +219,7 @@ function renderPrintPages(content: string): void {
     }
   } catch (err) {
     tpl.value = null
-    ElMessage.error(`预览渲染：${String(err)}`)
+    ElMessage.error(`预览渲染：${errorText(err)}`)
   }
 }
 
@@ -237,7 +238,7 @@ onMounted(async () => {
     // 只读画出第三方的打页面
     renderPrintPages(payload.content)
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
     void router.replace('/template')
   } finally {
     loading.value = false

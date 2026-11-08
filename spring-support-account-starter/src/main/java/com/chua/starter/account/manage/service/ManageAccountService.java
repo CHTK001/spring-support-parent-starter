@@ -1,5 +1,6 @@
 package com.chua.starter.account.manage.service;
 
+import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.store.SysAccount;
 
 import java.util.List;
@@ -84,6 +85,34 @@ public interface ManageAccountService {
      * @return {@code {valid, status, message}}
      */
     Map<String, Object> verify(String accountId);
+
+    /**
+     * 批量更新账号状态（启用 / 停用）。
+     *
+     * <p>逐条校验归属与存在性：能改的照改，越权或已删除的记入失败明细，
+     * 不因一条失败把整批回滚。</p>
+     *
+     * @param accountIds 账号标识清单
+     * @param status     目标状态：1 启用 / 0 停用
+     * @return 批量结果
+     */
+    AccountBatchResult batchStatus(List<String> accountIds, int status);
+
+    /**
+     * 批量校验账号凭据。
+     *
+     * @param accountIds 账号标识清单
+     * @return 批量结果
+     */
+    AccountBatchResult batchVerify(List<String> accountIds);
+
+    /**
+     * 批量逻辑删除账号。
+     *
+     * @param accountIds 账号标识清单
+     * @return 批量结果
+     */
+    AccountBatchResult batchDelete(List<String> accountIds);
 
     /**
      * 解密账号凭据，供必选依赖模块内部调用。

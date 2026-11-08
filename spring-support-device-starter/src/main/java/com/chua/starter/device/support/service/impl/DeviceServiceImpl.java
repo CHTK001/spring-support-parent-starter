@@ -40,6 +40,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DeviceServiceImpl implements DeviceService {
 
+    /** 导出上限：一次导出最多行数，避免误导出整库 */
+    private static final int EXPORT_LIMIT = 20000;
+
     /**
      * 设备信息 映射器
      */
@@ -250,9 +253,34 @@ public class DeviceServiceImpl implements DeviceService {
     public PageResult<DeviceInfo> pageDevices(DevicePageQuery query) {
         DevicePageQuery q = query == null ? new DevicePageQuery() : query.normalize();
         Page<DeviceInfo> page = new Page<>(q.getPageNo(), q.getPageSize());
+        deviceInfoMapper.selectPage(page, buildFilter(q));
+        return PageResult.copy(page);
+    }
+
+    @Override
+    public List<DeviceInfo> listDevices(DevicePageQuery query) {
+        DevicePageQuery q = query == null ? new DevicePageQuery() : query.normalize();
+        LambdaQueryWrapper<DeviceInfo> wrapper = buildFilter(q);
+        // 导出上限，避免误点「全部」把整库拉进内存
+        wrapper.last("LIMIT " + EXPORT_LIMIT);
+        return deviceInfoMapper.selectList(wrapper);
+    }
+
+    /**
+     * 由分页条件构造查询条件（分页与导出共用，保证「所见即所得」）
+     *
+     * @param q 已规范化的查询条件
+     * @return 查询条件
+     */
+    private LambdaQueryWrapper<DeviceInfo> buildFilter(DevicePageQuery q) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(q.getOrgId())) {
+        if (q.getOrgIds() != null && !q.getOrgIds().isEmpty()) {
+            wrapper.in(DeviceInfo::getDeviceInfoOrgId, q.getOrgIds());
+        } else if (StringUtils.hasText(q.getOrgId())) {
             wrapper.eq(DeviceInfo::getDeviceInfoOrgId, q.getOrgId());
+        }
+        if (q.getIds() != null && !q.getIds().isEmpty()) {
+            wrapper.in(DeviceInfo::getDeviceInfoId, q.getIds());
         }
         if (StringUtils.hasText(q.getVendor())) {
             wrapper.eq(DeviceInfo::getDeviceInfoVendor, q.getVendor());
@@ -281,7 +309,18 @@ public class DeviceServiceImpl implements DeviceService {
                     .or().like(DeviceInfo::getDeviceInfoCode, kw));
         }
         // 分组筛选：一台设备可属于多个分组，这里用关联表 EXISTS 过滤
-        if (StringUtils.hasText(q.getGroupId())) {
+        if (q.getGroupIds() != null && !q.getGroupIds().isEmpty()) {
+            StringBuilder placeholders = new StringBuilder();
+            for (int i = 0; i < q.getGroupIds().size(); i++) {
+                if (i > 0) {
+                    placeholders.append(',');
+                }
+                placeholders.append('{').append(i).append('}');
+            }
+            wrapper.apply("EXISTS (SELECT 1 FROM device_group_device gd "
+                    + "WHERE gd.device_id = device_info.device_info_id AND gd.group_id IN ("
+                    + placeholders + "))", q.getGroupIds().toArray());
+        } else if (StringUtils.hasText(q.getGroupId())) {
             wrapper.apply("EXISTS (SELECT 1 FROM device_group_device gd "
                     + "WHERE gd.device_id = device_info.device_info_id AND gd.group_id = {0})", q.getGroupId());
         } else if (Boolean.TRUE.equals(q.getUngrouped())) {
@@ -295,8 +334,7 @@ public class DeviceServiceImpl implements DeviceService {
             default -> DeviceInfo::getDeviceInfoUpdatedAt;
         };
         wrapper.orderBy(true, "asc".equalsIgnoreCase(q.getSortOrder()), sort);
-        deviceInfoMapper.selectPage(page, wrapper);
-        return PageResult.copy(page);
+        return wrapper;
     }
 
     @Override

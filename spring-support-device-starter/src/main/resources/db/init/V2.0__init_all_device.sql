@@ -191,6 +191,9 @@ CREATE TABLE IF NOT EXISTS device_provider_credential (
     device_credential_remark VARCHAR(255) COMMENT '备注',
     device_credential_created_at DATETIME COMMENT '创建时间',
     device_credential_updated_at DATETIME COMMENT '更新时间',
+    -- 健康留痕：单条「测试连接」与顶部「全部检测」都会写这两列
+    device_credential_last_test_at DATETIME COMMENT '最近一次连通性探测时间',
+    device_credential_last_test_ok TINYINT COMMENT '最近一次连通性探测结果：0 失败、1 成功、NULL 未检测',
     -- 原 V1.1__add_cloud_yao_fields.sql 的云曜字段，已折进建表
     device_credential_product_code VARCHAR(64) COMMENT '云曜产品编码 ProductCode（云曜平台必填）',
     device_credential_project_id VARCHAR(64) COMMENT '云曜项目 ID ProjectID（云曜平台必填）',
@@ -739,3 +742,27 @@ SET @sql_cred_org_sync_interval := IF(@has_cred_org_sync_interval > 0, 'SELECT 1
 PREPARE stmt_cred_org_sync_interval FROM @sql_cred_org_sync_interval;
 EXECUTE stmt_cred_org_sync_interval;
 DEALLOCATE PREPARE stmt_cred_org_sync_interval;
+
+-- ---------------------------------------------------------------------
+-- 凭据健康留痕两列（单条测试 / 全部检测写入，凭据表健康列读取）
+-- 老库升级：表已存在但缺列时按需补齐，重复执行安全
+-- ---------------------------------------------------------------------
+SET @has_cred_last_test_at := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_last_test_at'
+);
+SET @sql_cred_last_test_at := IF(@has_cred_last_test_at > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_last_test_at DATETIME COMMENT ''最近一次连通性探测时间'' AFTER device_credential_updated_at');
+PREPARE stmt_cred_last_test_at FROM @sql_cred_last_test_at;
+EXECUTE stmt_cred_last_test_at;
+DEALLOCATE PREPARE stmt_cred_last_test_at;
+
+SET @has_cred_last_test_ok := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_last_test_ok'
+);
+SET @sql_cred_last_test_ok := IF(@has_cred_last_test_ok > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_last_test_ok TINYINT COMMENT ''最近一次连通性探测结果：0 失败、1 成功、NULL 未检测'' AFTER device_credential_last_test_at');
+PREPARE stmt_cred_last_test_ok FROM @sql_cred_last_test_ok;
+EXECUTE stmt_cred_last_test_ok;
+DEALLOCATE PREPARE stmt_cred_last_test_ok;

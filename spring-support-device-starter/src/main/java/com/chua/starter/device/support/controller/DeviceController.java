@@ -159,16 +159,19 @@ public class DeviceController {
     }
 
     /**
-     * 导出设备列表为 Excel
+     * 导出设备台账为 Excel。
      *
-     * @param orgId 组织 标识，可选
+     * <p>筛选条件与 {@code /page} 完全一致（关键字、厂商、分类、在线状态、组织/分组/设备集合），
+     * 保证导出内容与列表「所见即所得」。{@code orgIds} / {@code groupIds} / {@code ids}
+     * 用于把左树选中的组织（含子孙）、分组（含子分组）、单台设备带过来。</p>
+     *
+     * @param query    筛选条件
      * @param response HTTP 响应
      * @throws Exception 导出异常
-     * @param false false
      */
     @GetMapping("/export")
-    public void exportDevices(@RequestParam(required = false) String orgId, HttpServletResponse response) throws Exception {
-        List<DeviceInfo> devices = deviceService.listDevices(orgId);
+    public void exportDevices(DevicePageQuery query, HttpServletResponse response) throws Exception {
+        List<DeviceInfo> devices = deviceService.listDevices(query);
         ExcelExportUtil.exportDevices(response, devices);
     }
 

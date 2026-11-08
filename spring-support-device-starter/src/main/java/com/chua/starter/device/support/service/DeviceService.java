@@ -106,6 +106,17 @@ public interface DeviceService {
                                        String keyword, String category, Boolean online);
 
     /**
+     * 按筛选条件取设备列表（导出使用，不分页）。
+     *
+     * <p>与 {@link #pageDevices(DevicePageQuery)} 共用同一套筛选条件，
+     * 保证导出结果与列表「所见即所得」。</p>
+     *
+     * @param query 筛选条件
+     * @return 设备列表（最多 {@code 20000} 行）
+     */
+    List<DeviceInfo> listDevices(DevicePageQuery query);
+
+    /**
      * 按大类查询设备列表
      *
      * @param category 大类，例如 摄像头、accesscontrol

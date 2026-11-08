@@ -56,6 +56,7 @@ import ReIcon from '@repo/ui/re-icon'
 import type { ReTableColumn, ReTableLoadParams, RePageResult } from '@repo/ui/re-table'
 
 import { templateApi } from '../api/templateApi'
+import { errorText } from '../../shared/errorText'
 import { actionLabel, tplActionLabels } from '../utils/i18n'
 
 const tableRef = ref<InstanceType<typeof ReTable> | null>(null)
@@ -97,7 +98,7 @@ async function loadLogs({ page, pageSize, params }: ReTableLoadParams): Promise<
     })
     return { total: Number(res?.total ?? 0), records: (res?.records ?? []) as unknown as Record<string, unknown>[] }
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
     return { total: 0, records: [] }
   }
 }

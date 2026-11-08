@@ -164,6 +164,17 @@ public class RoomState {
     }
 
     /**
+     * 清空上一局的端点记录（新一局开始时调用）。
+     *
+     * <p>端点断开后 slot 仍留在 {@code slots} 里（续接要用），但房间开新一局时
+     * 必须清掉，否则 {@code slots} 会一直累积到 {@link #MAX_PEERS}，新端点永远加不进来。</p>
+     */
+    public synchronized void resetSlots() {
+        slots.clear();
+        offererSlotId = null;
+    }
+
+    /**
      * 按 ID 查找端点
      */
     public Optional<SlotState> findSlot(String slotId) {

@@ -135,42 +135,92 @@ public class RoomMessage {
         return payload;
     }
 
+    /**
+     * 获取当前端点的 SlotID。
+     *
+     * @return slot id
+     */
     public String getSlotId() {
         return slotId;
     }
 
+    /**
+     * 获取来源端点的 SlotID（发起方）。
+     *
+     * @return from slot id
+     */
     public String getFromSlotId() {
         return fromSlotId;
     }
 
+    /**
+     * 获取对等端点的 SessionID。
+     *
+     * @return peer session id
+     */
     public String getPeerSessionId() {
         return peerSessionId;
     }
 
+    /**
+     * 获取当前对端的 SlotID（对端）。
+     *
+     * @return peer id
+     */
     public String getPeerId() {
         return peerId;
     }
 
+    /**
+     * 获取发起端点的 SlotID。
+     *
+     * @return offerer slot id
+     */
     public String getOffererSlotId() {
         return offererSlotId;
     }
 
+    /**
+     * 获取房间投入的端点总数。
+     *
+     * @return peer count
+     */
     public Integer getPeerCount() {
         return peerCount;
     }
 
+    /**
+     * 获取是否已经恢复（续接旧连接）。
+     *
+     * @return resumed
+     */
     public Boolean getResumed() {
         return resumed;
     }
 
+    /**
+     * 获取是否正在重新加入。
+     *
+     * @return initiator
+     */
     public Boolean getInitiator() {
         return initiator;
     }
 
+    /**
+     * 获取当前房间代数。
+     *
+     * @return epoch
+     */
     public Long getEpoch() {
         return epoch;
     }
 
+    /**
+     * 获取恢复令牌（后续续连 / 重连用）。
+     *
+     * @return resume token
+     */
     public String getResumeToken() {
         return resumeToken;
     }

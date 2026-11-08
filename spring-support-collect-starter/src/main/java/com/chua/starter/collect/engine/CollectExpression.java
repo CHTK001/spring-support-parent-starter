@@ -503,6 +503,9 @@ public final class CollectExpression {
         /**
          * 读取字符串字面量。
          *
+         * <p>只把 {@code \\n \\t \\r \\0} 与引号本身的转义翻成字符，其余 {@code \\x}
+         * 原样保留反斜杠——正则 {@code '\\w'}、{@code '\\s'}、{@code '\\.'} 依赖它。</p>
+         *
          * @param quote 引号
          * @return 字符串内容
          */
@@ -523,8 +526,16 @@ public final class CollectExpression {
                         case 't':
                             builder.append('\t');
                             break;
+                        case 'r':
+                            builder.append('\r');
+                            break;
+                        case '0':
+                            builder.append('\0');
+                            break;
+                        // 未识别的转义原样保留反斜杠：正则里的 \\w / \\s / \\d / \\. 必须进到
+                        // Pattern.compile 才有效，历史上把它们吃成 w/s/d 导致「正则对但永远不命中」。
                         default:
-                            builder.append(escaped);
+                            builder.append('\\').append(escaped);
                             break;
                     }
                     continue;

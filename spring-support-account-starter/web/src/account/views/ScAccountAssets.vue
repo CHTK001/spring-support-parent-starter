@@ -147,11 +147,11 @@
           <ReTableColumn label="操作" width="140" fixed="right" align="right">
             <template #default="{ row }">
               <span class="ops" @click.stop>
-                <ReButton v-if="row.kind === 'EMAIL' || row.kind === 'SMS'" link @click.stop="openConsole(row)">
+                <ReButton v-if="row.kind === 'EMAIL' || row.kind === 'SMS'" text @click.stop="openConsole(row)">
                   {{ row.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
                 </ReButton>
-                <ReButton v-else link @click.stop="openDetail(row)">详情</ReButton>
-                <ReButton link type="primary" @click.stop="openEdit(row)">编辑</ReButton>
+                <ReButton v-else text @click.stop="openDetail(row)">详情</ReButton>
+                <ReButton text type="primary" @click.stop="openEdit(row)">编辑</ReButton>
               </span>
             </template>
           </ReTableColumn>
@@ -217,8 +217,8 @@
           <ReTableColumn label="操作" width="120" fixed="right" align="right">
             <template #default="{ row }">
               <span class="ops" @click.stop>
-                <ReButton link @click.stop="rotateKey(row)">轮换</ReButton>
-                <ReButton link type="primary" @click.stop="openEditKey(row)">编辑</ReButton>
+                <ReButton text @click.stop="rotateKey(row)">轮换</ReButton>
+                <ReButton text type="primary" @click.stop="openEditKey(row)">编辑</ReButton>
               </span>
             </template>
           </ReTableColumn>
@@ -285,7 +285,7 @@
           <ReTableColumn label="操作" width="100" fixed="right" align="right">
             <template #default="{ row }">
               <span class="ops" @click.stop>
-                <ReButton link type="primary" @click.stop="openEditCookie(row)">编辑</ReButton>
+                <ReButton text type="primary" @click.stop="openEditCookie(row)">编辑</ReButton>
               </span>
             </template>
           </ReTableColumn>

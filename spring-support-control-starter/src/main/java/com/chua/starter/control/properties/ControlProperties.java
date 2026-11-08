@@ -18,6 +18,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   <li>{@code control.webrtc.height} — 采集最大高度（默认 720）</li>
  * </ul>
  *
+ * <p>{@code host} / {@code port} 同时是 REST（{@code /control/**}）与 WebSocket
+ * （{@code /webrtc}）的对外地址来源。</p>
+ *
  * @author CH
  * @since 4.0.0.51
  */

@@ -1,6 +1,8 @@
 package com.chua.starter.account.manage.controller;
 
 import com.chua.starter.account.common.ApiResult;
+import com.chua.starter.account.manage.model.AccountBatchRequest;
+import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
@@ -133,5 +135,43 @@ public class AccountController {
     @PostMapping("/{accountId}/verify")
     public ApiResult<Map<String, Object>> verify(@PathVariable("accountId") String accountId) {
         return ApiResult.ok(accountService.verify(accountId));
+    }
+
+    /**
+     * 批量启用 / 停用账号。
+     *
+     * @param status  目标状态（1 启用 / 0 停用）
+     * @param request 账号标识清单
+     * @return 批量结果（成功 / 失败逐条计数）
+     */
+    @PostMapping("/batch/status")
+    public ApiResult<AccountBatchResult> batchStatus(
+            @RequestParam("status") int status,
+            @RequestBody AccountBatchRequest request) {
+        return ApiResult.ok(accountService.batchStatus(request == null ? null : request.accountIds(), status));
+    }
+
+    /**
+     * 批量校验账号凭据（账号健康巡检）。
+     *
+     * @param request 账号标识清单
+     * @return 批量结果
+     */
+    @PostMapping("/batch/verify")
+    public ApiResult<AccountBatchResult> batchVerify(@RequestBody AccountBatchRequest request) {
+        return ApiResult.ok(accountService.batchVerify(request == null ? null : request.accountIds()));
+    }
+
+    /**
+     * 批量删除账号（逻辑删除）。
+     *
+     * <p>用 POST 而不是带请求体的 DELETE：后者在部分网关与客户端上会被丢掉请求体。</p>
+     *
+     * @param request 账号标识清单
+     * @return 批量结果
+     */
+    @PostMapping("/batch/delete")
+    public ApiResult<AccountBatchResult> batchDelete(@RequestBody AccountBatchRequest request) {
+        return ApiResult.ok(accountService.batchDelete(request == null ? null : request.accountIds()));
     }
 }

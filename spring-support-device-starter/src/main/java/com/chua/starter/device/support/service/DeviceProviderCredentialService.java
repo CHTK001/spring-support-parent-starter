@@ -85,6 +85,15 @@ public interface DeviceProviderCredentialService {
     DeviceProviderCredential resolveById(String id);
 
     /**
+     * 记录一次连通性探测结果（健康留痕）
+     * <p>只更新探测时间与结果两列，不触碰 AK/SK、名称等业务字段。</p>
+     *
+     * @param id 凭据 ID
+     * @param ok 本次探测是否成功
+     */
+    void recordTestResult(String id, boolean ok);
+
+    /**
      * 各厂商的离线检测阈值（秒），取自默认套；无默认套则回退代码内置值
      *
      * @return 厂商标识 -> 阈值（秒）
