@@ -39,6 +39,21 @@ public final class ServerConstants {
     public static final String WEBSOCKET_RDP_DIRECT_PATH = "/ws/ms/server/terminal/rdp";
 
     /**
+     * RDP 直连桌面网页路径（生成式：canvas 帧 + 键鼠输入）
+     */
+    public static final String PAGE_RDP_DIRECT = "/ms/server/remote/rdp-direct.html";
+
+    /**
+     * 串口 console 网页路径（生成式：xterm + 二进制收发）
+     */
+    public static final String PAGE_SERIAL_DIRECT = "/ms/server/remote/serial-direct.html";
+
+    /**
+     * Telnet console 网页路径（生成式：xterm + 原始 TCP 收发）
+     */
+    public static final String PAGE_TELNET_DIRECT = "/ms/server/remote/telnet-direct.html";
+
+    /**
      * 接口根路径
     */
     public static final String API_PREFIX = "/ms/server";
@@ -52,6 +67,11 @@ public final class ServerConstants {
      * 默认 VNC 端口
     */
     public static final int DEFAULT_VNC_PORT = 5900;
+
+    /**
+     * 默认 RDP 端口
+    */
+    public static final int DEFAULT_RDP_PORT = 3389;
 
     /**
      * 会话状态：打开

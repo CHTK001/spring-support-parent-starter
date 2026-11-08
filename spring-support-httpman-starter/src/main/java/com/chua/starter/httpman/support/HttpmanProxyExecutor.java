@@ -2,11 +2,11 @@ package com.chua.starter.httpman.support;
 
 import com.chua.starter.httpman.config.HttpmanProperties;
 import com.chua.starter.httpman.model.vo.HttpmanResponse;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.ReactorResourceFactory;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -18,6 +18,7 @@ import reactor.netty.transport.ProxyProvider;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,10 +48,7 @@ public class HttpmanProxyExecutor {
     private static final Logger log = LoggerFactory.getLogger(HttpmanProxyExecutor.class);
 
     /** 脱敏的敏感头（运行记录里不存真实凭据） */
-    private static final Set<String> SENSITIVE_HEADERS = Set.of("authorization", "cookie", "x-oauth-token");
-
-    /** 脱敏敏感头名（与 behind 一致） */
-    static final Set<String> SENSITIVE_KEYS = Set.of("authorization", "cookie", "x-oauth-token");
+    public static final Set<String> SENSITIVE_KEYS = Set.of("authorization", "cookie", "x-oauth-token");
 
     /** 版本号和配置 */
     private final HttpmanProperties properties;
@@ -71,13 +69,11 @@ public class HttpmanProxyExecutor {
     /** 构建 WebClient。连接池由独立建立的 {@link ReactorResourceFactory} 管理 */
     private WebClient buildWebClient() {
         ReactorResourceFactory resourceFactory = new ReactorResourceFactory();
-        resourceFactory.setConnectionProviderSupplier(() -> ConnectionProvider.create(
-                "httpman",
-                cp -> cp
-                        .maxConnections(512)
-                        .pendingAcquireTimeout(Duration.ofSeconds(30))
-                        .maxLifeTime(Duration.ofSeconds(600))
-                        .idleResourceTimeout(Duration.ofSeconds(60))));
+        resourceFactory.setConnectionProviderSupplier(() -> ConnectionProvider.builder("httpman")
+                .maxConnections(512)
+                .pendingAcquireTimeout(Duration.ofSeconds(30))
+                .maxLifeTime(Duration.ofSeconds(600))
+                .build());
         resourceFactory.afterPropertiesSet();
 
         ReactorClientHttpConnector connector = new ReactorClientHttpConnector(
@@ -115,11 +111,19 @@ public class HttpmanProxyExecutor {
         if (proxy == null || proxy.isBlank()) {
             return httpClient.noProxy();
         }
+        int port;
+        String host;
+        try {
+            host = new URI(proxy).getHost();
+            port = new URI(proxy).getPort();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("代理地址格式错误: " + proxy, e);
+        }
         return httpClient.proxy(typeSpec -> typeSpec
                 .type(ProxyProvider.Proxy.HTTP)
-                .host(new URI(proxy).getHost())
-                .port(new URI(proxy).getPort())
-                .nonProxyHosts(properties.getProxyBypass()));
+                .host(host)
+                .port(port)
+                .nonProxyHosts(String.join(",", properties.getProxyBypass())));
     }
 
     /**
@@ -135,24 +139,25 @@ public class HttpmanProxyExecutor {
      */
     public Mono<HttpmanResponse> execute(String method, String url, Map<String, String> headers,
                                           Map<String, List<String>> params, String body, String bodyType) {
-        long start = System.currentTimeMillis();
         try {
             HttpMethod httpMethod = HttpMethod.valueOf(method);
             // 查询参数通过 URI 的 scheme/host/path 组合注入（params 可能悬挂 uri）
             URI uri = buildUri(url, params);
             return webClient.method(httpMethod)
                     .uri(uri)
-                    .headers(httpHeaders -> headers.forEach(httpHeaders::add))
+                    .headers(httpHeaders -> {
+                        headers.forEach(httpHeaders::add);
+                        applyContentType(httpHeaders, bodyType);
+                    })
                     .bodyValue(body)
-                    .contentType(httpHeaders -> applyContentType(httpHeaders, bodyType))
                     .retrieve()
                     .toEntity(byte[].class)
-                    .map(responseEntity -> toResponse(method, url, responseEntity, start))
+                    .map(responseEntity -> toResponse(method, url, responseEntity))
                     .timeout(Duration.ofSeconds(properties.getReadTimeout().toSeconds()))
-                    .onErrorResume(e -> Mono.just(HttpmanResponse.error(method, url, System.currentTimeMillis() - start, e)));
+                    .onErrorResume(e -> Mono.just(HttpmanResponse.error(method, url, System.currentTimeMillis(), e)));
         } catch (Throwable e) {
             log.error("HttpmanProxyExecutor execute failed: {}", e.getMessage());
-            return Mono.just(HttpmanResponse.error(method, url, System.currentTimeMillis() - start, e));
+            return Mono.just(HttpmanResponse.error(method, url, System.currentTimeMillis(), e));
         }
     }
 
@@ -176,41 +181,34 @@ public class HttpmanProxyExecutor {
             }
         }
         return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(),
-                uri.getPath(), sb.length() > 0 ? sb.toString() : null);
+                uri.getPath(), sb.length() > 0 ? sb.toString() : null, null);
     }
 
     /**
-     * ContentType
+     * ContentType 写入
      */
     private void applyContentType(HttpHeaders httpHeaders, String bodyType) {
-        if (bodyType == null || bodyType.trim().isEmpty() || "none".equalsIgnoreCase(bodyType.trim())) {
+        if (bodyType == null || bodyType.trim().isEmpty()) {
             return;
         }
-        String type;
-        switch (bodyType.trim().toLowerCase()) {
-            case "json":
-                type = HttpHeaderValues.APPLICATION_JSON.toString();
-                break;
-            case "form-data":
-                type = HttpHeaderValues.APPLICATION_FORM_URLENCODED.toString();
-                break;
-            case "x-www-form-urlencoded":
-                type = HttpHeaderValues.APPLICATION_FORM_URLENCODED.toString();
-                break;
-            case "text":
-                type = HttpHeaderValues.TEXT_PLAIN.toString();
-                break;
-            default:
-                type = bodyType.trim();
-                break;
+        String type = bodyType.trim().toLowerCase();
+        if ("text".equals(type)) {
+            httpHeaders.setContentType(MediaType.TEXT_PLAIN);
+        } else if ("json".equals(type)) {
+            httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        } else if ("form-data".equals(type)) {
+            httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+        } else if ("x-www-form-urlencoded".equals(type)) {
+            httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        } else if ("binary".equals(type)) {
+            httpHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         }
-        httpHeaders.setContentType(type);
     }
 
     /**
      * 从 {@link org.springframework.http.client.ClientHttpResponse} 回写执行结果
      */
-    private HttpmanResponse toResponse(String method, String url, org.springframework.http.ResponseEntity<byte[]> responseEntity, long start) {
+    private HttpmanResponse toResponse(String method, String url, org.springframework.http.ResponseEntity<byte[]> responseEntity) {
         HttpmanResponse response = new HttpmanResponse();
         response.setStatus(responseEntity.getStatusCode().value());
         response.setHeaders(responseEntity.getHeaders().toSingleValueMap());
@@ -218,7 +216,6 @@ public class HttpmanProxyExecutor {
                 ? ""
                 : new String(responseEntity.getBody(), StandardCharsets.UTF_8)));
         response.setBodyLength(responseEntity.getBody() == null ? 0 : responseEntity.getBody().length);
-        response.setCostMs(System.currentTimeMillis() - start);
         return response;
     }
 
@@ -232,7 +229,7 @@ public class HttpmanProxyExecutor {
         Map<String, String> mask = new HashMap<>();
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             String key = entry.getKey();
-            if (key == null || !SENSITIVE_HEADERS.contains(key.toLowerCase())) {
+            if (key == null || !SENSITIVE_KEYS.contains(key.toLowerCase())) {
                 mask.put(key, entry.getValue());
                 continue;
             }

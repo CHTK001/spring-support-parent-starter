@@ -139,6 +139,13 @@
             <version>5.19.1</version>
         </dependency>
 
+        <!-- RDP 直连桌面：FreeRDP 3.x C 扩展（JNA 桥接，随平台抽取 .so/.dll/.dylib） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-native-rdp</artifactId>
+            <version>4.0.0.43</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
