@@ -26,6 +26,13 @@ spring:
         - logic-table: orders
           sharding-column: id
 
+  # 数据表结构（DB_SCRIPT 由 DataSourceScriptConfiguration 管理，本地 H2 联调
+  # 时手动注入建表，类似生产 init 脚本）
+  sql:
+    init:
+      mode: always
+      schema-locations:
+        - classpath:db/init/V2.0__init_all_server.sql
 # 数据权限（@DataScope）启用：字段列名使用框架默认值（sys_dept_id / create_by）；
 # oauth-client：本地联调模式（无远程 OAuth 服务时 ThreadLocal 注入 admin 上下文）；
 # whitelist 放行测试端点；block-address 指向永不匹配路径以关闭 AuthFilter 的 token 认证

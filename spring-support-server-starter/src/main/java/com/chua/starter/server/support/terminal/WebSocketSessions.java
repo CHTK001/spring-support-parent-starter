@@ -27,6 +27,15 @@ public final class WebSocketSessions {
     }
 
     /**
+     * 生成一次分离的随机唯一标识（仅生成，不做持久化）
+     *
+     * @return UUID 字符串
+     */
+    public static String uuid() {
+        return java.util.UUID.randomUUID().toString();
+    }
+
+    /**
      * 解析握手 URL 的查询参数
      *
      * @param session WebSocket 会话

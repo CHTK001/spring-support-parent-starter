@@ -111,7 +111,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     /**
      * 平台自研直连通道覆盖的协议：SSH 为 MINA SSHD PTY 桥接，VNC 为 RFB 帧桥接
     */
-    private static final Set<String> DIRECT_PROTOCOLS = Set.of("SSH", "VNC");
+    /**
+     * 平台自研直连通道覆盖的协议：SSH（MINA SSHD PTY 桥接）、VNC（RFB 帧桥接）
+     * 与 SERIAL（jSerialComm 原样收发）；TELNET 由原始 TCP 桥接，也在 DIRECT_PROTOCOLS 中
+     */
+    private static final Set<String> DIRECT_PROTOCOLS = Set.of("SSH", "VNC", "SERIAL", "TELNET");
 
     /**
      * JSON 序列化器
@@ -1770,6 +1774,10 @@ public class ServerHostServiceImpl implements ServerHostService {
             return "远控通道只能是 GUACD/DIRECT/NONE，当前值: " + mode;
         }
         String protocol = effectiveRemoteProtocol(host);
+        // Serializable 只能经平台直连通道承载；SERIAL 设备挂在平台宿主机上，不走 guacd
+        if ("SERIAL".equals(protocol) && !"DIRECT".equals(mode)) {
+            return "SERIAL 必须经平台直连通道承载，远控通道不能设为 " + mode;
+        }
         if ("RDP".equals(protocol) && !"GUACD".equals(mode)) {
             return "RDP 必须经 guacd 中转通道，远控通道不能设为 " + mode;
         }
@@ -1902,7 +1910,7 @@ public class ServerHostServiceImpl implements ServerHostService {
      * 生效远控协议：显式配置优先，留空按系统类型推断（与前端推断口径一致）
      *
      * @param host 主机
-     * @return SSH/RDP/VNC
+     * @return SSH/RDP/VNC/TELNET/SERIAL
      */
     private String effectiveRemoteProtocol(MsServerHost host) {
         String protocol = upper(host.getServerHostRemoteProtocol());

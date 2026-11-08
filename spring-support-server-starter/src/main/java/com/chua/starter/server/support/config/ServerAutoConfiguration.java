@@ -1,6 +1,7 @@
 package com.chua.starter.server.support.config;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.server.support.config.SerialProperties;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * 开启事务管理。周期任务由 {@code ServerTaskScheduler} 基于
  * common-starter 哈希时间轮统一调度（在离线检测/定时采集/计划任务/会话清理）。
  * webSocket 端点由 {@link TerminalWebSocketConfig} 单独注册；
+ * 串口参数由 {@link SerialProperties} 集中注入；
  * 凭据加解密器与会话注册表以 @组件 形式随包扫描装配。
  * </p>
  *
@@ -25,7 +27,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.server.support")
 @MapperScan(basePackages = "com.chua.starter.server.support.mapper")
-@EnableConfigurationProperties(ServerProperties.class)
+@EnableConfigurationProperties({ServerProperties.class, SerialProperties.class})
 @EnableTransactionManagement
 @EnableScheduling
 public class ServerAutoConfiguration {

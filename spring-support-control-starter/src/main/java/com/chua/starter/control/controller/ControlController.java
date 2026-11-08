@@ -31,12 +31,12 @@ import java.util.Map;
  * <p>为前端（{@code @pages/control}）提供设备/会话管理与桌面源查询能力。
  * 真正的媒体流与键鼠控制走 WebSocket 信令 + DataChannel，本接口只做辅助管理：</p>
  * <ul>
- *   <li>{@code GET  /control/sessions} — 活跃会话列表</li>
- *   <li>{@code POST /control/session/create} — 创建会话</li>
- *   <li>{@code DELETE /control/session/destroy/{sessionId}} — 销毁会话</li>
- *   <li>{@code GET  /control/screens} — 桌面采集源列表</li>
- *   <li>{@code GET  /control/config} — 信令地址与配置</li>
- *   <li>{@code POST /control/event/send} — 控制事件 REST 兜底通道</li>
+ *   <li>{@code GET  /control/api/sessions} — 活跃会话列表</li>
+ *   <li>{@code POST /control/api/session/create} — 创建会话</li>
+ *   <li>{@code DELETE /control/api/session/destroy/{sessionId}} — 销毁会话</li>
+ *   <li>{@code GET  /control/api/screens} — 桌面采集源列表</li>
+ *   <li>{@code GET  /control/api/config} — 信令地址与配置</li>
+ *   <li>{@code POST /control/api/event/send} — 控制事件 REST 兜底通道</li>
  * </ul>
  *
  * @author CH
@@ -44,7 +44,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/control")
+@RequestMapping("/control/api")
 @RequiredArgsConstructor
 public class ControlController {
 
