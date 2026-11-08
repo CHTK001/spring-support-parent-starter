@@ -337,8 +337,11 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
             } catch (Exception e) {
                 if (!closed) {
                     failure = e;
+                    log.info("[telnet] TCP 异常 sessionId={} 原因={}", wsSession.getId(), WebSocketSessions.describeCause(e));
+                } else {
+                    // 通道已由 WS 侧收口时 socket 读阻塞被唤醒，属正常收尾，不打异常栈
+                    log.info("[telnet] TCP 收尾 sessionId={} 通道已关闭 message={}", wsSession.getId(), e.getMessage());
                 }
-                log.info("[telnet] TCP 异常 sessionId={} 原因={}", wsSession.getId(), WebSocketSessions.describeCause(failure));
             } finally {
                 if (!closed) {
                     closeQuietly(finalReason(failure));

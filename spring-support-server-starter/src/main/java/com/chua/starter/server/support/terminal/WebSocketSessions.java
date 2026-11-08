@@ -126,6 +126,9 @@ public final class WebSocketSessions {
      * @return 最内层原因文本
      */
     public static String describeCause(Throwable error) {
+        if (error == null) {
+            return "未知原因";
+        }
         Throwable root = error;
         while (root.getCause() != null && root.getCause() != root) {
             root = root.getCause();
