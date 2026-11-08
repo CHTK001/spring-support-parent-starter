@@ -48,6 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1176,10 +1177,27 @@ public class WorldSimServiceImpl implements WorldSimService {
     private static final String MEDIA_OK = "OK";
     /** 单轮推进最多提交几个素材任务（防止一轮打爆上游） */
     private static final int MAX_ASSETS_PER_TICK = 8;
-    /** 素材任务超过这个时长仍无终态就判死放行（毫秒） */
-    private static final long STALE_TASK_MS = 120_000L;
+    /**
+     * 素材任务超过这个时长仍无终态就判死放行（毫秒）。
+     *
+     * <p>必须覆盖真实出图 / 出视频的耗时：真实模型单张出图 70–90 秒，
+     * 加上排队与上游转存，一个任务跑到 3–5 分钟很常见。阈值定 120 秒时，
+     * 还在正常生成的任务会被误判成僵死 → 该类型记进 failedMediaTypes →
+     * 同一幕剩下的场景全部不再出图，舞台就变成「有的场景有图、有的没图」。</p>
+     *
+     * <p>取 10 分钟：足够覆盖正常出片，又能让真正卡死的任务最终被放行，
+     * 不至于把整幕永久挂在素材阶段。</p>
+     */
+    private static final long STALE_TASK_MS = 600_000L;
     /** 剧本里记录「本幕失败的媒体类型」的键（跨请求持久化） */
     private static final String FAILED_TYPES_KEY = "failedMediaTypes";
+    /**
+     * 按幕的推进互斥锁（键 {@code worldId#actNo}）。
+     *
+     * <p>素材阶段是「读剧本 → 改 → 写剧本」的复合操作，没有事务也没有文件锁；
+     * 并发推进会让后写的旧快照覆盖掉新状态，导致同一幕里图片状态参差。</p>
+     */
+    private static final ConcurrentHashMap<String, Object> ACT_LOCKS = new ConcurrentHashMap<>();
     /** 节点种类：过场 */
     private static final String MEDIA_TRANSITION_TYPE = "transition";
     /** 节点种类：道具 */
@@ -1261,7 +1279,37 @@ public class WorldSimServiceImpl implements WorldSimService {
 
     @Override
     public Map<String, Object> advanceAct(Long worldId, Integer actNo) {
-        requireOwned(worldId);
+        // 同一幕的推进必须串行：素材阶段是「读剧本 → 改素材头 → 写剧本」的非原子过程，
+        // 前端定时推进与用户手动点「继续」很容易叠在一起。并发时后写的一方会用旧快照
+        // 覆盖先写的（taskId/status 被抹回 NOT_STARTED），结果是整幕带着
+        // 「有的场景有图、有的还在生成」的参差进入表演——正是要杜绝的混合。
+        synchronized (advanceLock(worldId, actNo)) {
+            requireOwned(worldId);
+            return advanceActLocked(worldId, actNo);
+        }
+    }
+
+    /**
+     * 按幕取一把进程内互斥锁。
+     *
+     * <p>键用 worldId + actNo，不同幕互不阻塞；锁对象常驻，避免每次 new 出来互不相干。</p>
+     *
+     * @param worldId 世界
+     * @param actNo   幕次
+     * @return 该幕的锁对象
+     */
+    private Object advanceLock(Long worldId, Integer actNo) {
+        return ACT_LOCKS.computeIfAbsent(worldId + "#" + actNo, k -> new Object());
+    }
+
+    /**
+     * 推进一幕的实际逻辑（由 {@link #advanceAct} 持锁调用）。
+     *
+     * @param worldId 世界
+     * @param actNo   幕次
+     * @return 结果
+     */
+    private Map<String, Object> advanceActLocked(Long worldId, Integer actNo) {
         SysAiWorldAct act = actMapper.selectOne(
                 new LambdaQueryWrapper<SysAiWorldAct>()
                         .eq(SysAiWorldAct::getWorldId, worldId)
@@ -1299,6 +1347,7 @@ public class WorldSimServiceImpl implements WorldSimService {
                 Map<String, Object> progress = needMedia
                         ? tryAdvanceAsset(worldId, actNo, script, act)
                         : null;
+                log.info("[WorldSim] 素材结果 world={} act={} progressNull={}", worldId, actNo, progress == null);
                 if (progress == null) {
                     // 素材已全部就位（全部 OK / NO_PROMPT）：直接进入出演阶段
                     act.setStage(ACT_STATUS_PLAYING);
@@ -1618,7 +1667,9 @@ public class WorldSimServiceImpl implements WorldSimService {
 
         sb.append("\n\n【约束】");
         sb.append("\n1. 剧情必须使用以上角色，不可凭空增加新角色。");
-        sb.append("\n2. 每个场景的 desc（画面描述）要足够具体（色调/光影/人物动作）。");
+        sb.append("\n2. 每个场景的 desc（画面描述）必填且要足够具体（色调/光影/人物动作/环境）。")
+          .append("不能留空、不能只写「（无）」「（此处省略）」之类的占位——")
+          .append("舞台形态为图片/视频时每个场景都要据此出图，缺一个就会整幕缺图。");
         sb.append("\n3. 每 2~3 个场景之间要有一个过场（transitions）。");
         sb.append("\n4. 道具要有描述和关联的位置。");
         sb.append("\n5. 台词要符合角色人设与当前关系。");
@@ -1736,6 +1787,8 @@ public class WorldSimServiceImpl implements WorldSimService {
                 // 失败要当场放行：留到下一轮会让整幕多空转一次
                 mat.head().remove("taskId");
                 failedTypes.add(String.valueOf(mat.head().get("type")));
+                // failed 标记用于整幕一致性收口：该出却没出的素材会让整幕退回纯文字
+                mat.head().put("failed", Boolean.TRUE);
                 st = MEDIA_NO_PROMPT;
             }
             mat.head().put("status", st);
@@ -1762,20 +1815,37 @@ public class WorldSimServiceImpl implements WorldSimService {
         // 只想看文字演出的用户会白白等上几分钟、还会照常产生费用。
         boolean videoEnabled = videoMediaEnabled();
         boolean imageEnabled = imageMediaEnabled();
-        // 按已有的失败记录收敛一遍：失败类型直接放行，不再为它建任务
+        // 按已有的失败记录收敛一遍
+        int modeOffCount = 0;
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
-            String st = String.valueOf(head.get("status"));
-            boolean typeOff = failedTypes.contains(String.valueOf(head.get("type")))
-                    || (!imageEnabled && !mat.video())
-                    || (!videoEnabled && mat.video());
-            if (typeOff) {
+            // 形态关闭导致的不出图不算「失败」：整幕本来就不要这类素材
+            if (!enabledForMode(mat)) {
                 head.remove("taskId");
+                head.remove("url");
+                head.remove("raw");
                 head.put("status", MEDIA_NO_PROMPT);
+                head.remove("failed");
+                // 必须立刻写回节点：不落盘的话下一轮 collect 会把它当 NOT_STARTED 重建，
+                // 于是「关掉的视频通道」又活过来去建任务、再失败、再进 failedTypes，
+                // 最后把整幕的图片一致性一起带崩。
+                mat.persist();
+                modeOffCount++;
+                continue;
+            }
+            // 该类型本幕已经确认出不了（上游报错 / 没有能力）：
+            // 已经在跑的任务不能在这里抹掉——抹掉只是让它的图白生成，
+            // 它自己会在下面的任务循环里落成 FAILED 并被记 failed。
+            // 这里只做一件事：不再为同一类型新建任务，避免空转刷错误。
+            if (failedTypes.contains(String.valueOf(head.get("type"))) && mat.taskId() == null) {
+                head.put("status", MEDIA_NO_PROMPT);
+                // 该出却没出（上游失败）：打标记，整幕要做一致性收口
+                head.put("failed", Boolean.TRUE);
             }
         }
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
+            if (!enabledForMode(mat)) continue;
             if (MEDIA_OK.equals(head.get("status"))) continue;
             String taskId = mat.taskId();
             if (taskId != null) {
@@ -1786,6 +1856,7 @@ public class WorldSimServiceImpl implements WorldSimService {
                     // 必须把 taskId 一并清掉，否则下一轮又落回任务分支，永远等不到终态。
                     head.remove("taskId");
                     head.put("status", MEDIA_NO_PROMPT);
+                    head.put("failed", Boolean.TRUE);
                     continue;
                 }
                 // 状态 PENDING/RUNNING：任务还在生成中，按约束一次只允许一个任务
@@ -1794,6 +1865,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             }
             // 没有任务号：是否有素材需求
             if (String.valueOf(head.get("prompt")).isBlank()) {
+                // 这个节点本来就没有画面描述（如无名道具）：不是失败，只是不需要图
                 head.put("status", MEDIA_NO_PROMPT);
                 continue;
             }
@@ -1803,6 +1875,8 @@ public class WorldSimServiceImpl implements WorldSimService {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("total", materials.size());
+        log.info("[WorldSim] 素材扫描 world={} act={} imageEnabled={} videoEnabled={} materials={} modeOff={} failedTypes={}",
+                worldId, actNo, imageEnabled, videoEnabled, materials.size(), modeOffCount, failedTypes);
         int done = 0;
         for (Material mat : materials) {
             if (MEDIA_OK.equals(mat.head().get("status"))) done++;
@@ -1813,20 +1887,45 @@ public class WorldSimServiceImpl implements WorldSimService {
         // 全部落在 OK / NO_PROMPT 上：进入下一阶段（表演）
         // 注意：NO_PROMPT 的素材头此前只在内存里改了 status，没有写回剧本，
         // 前端因此拿不到素材状态（素材区一片空白）。这里先落盘再返回。
-        if (target == null) {
-            if (inProgress) {
+        // 只要还有任务在生成中，本幕就没收敛：这一刻放行，观众会先看到「几场有图」，
+        // 等后台补完才算齐，中间那段就是混合态。所以 inProgress 时不进收口分支。
+        if (target == null && !inProgress) {
+            StringBuilder dbg = new StringBuilder();
+            for (Material m : materials) {
+                Map<String, Object> h = m.head();
+                dbg.append(h.get("role")).append('/').append(h.get("type")).append('=')
+                   .append(h.get("status"))
+                   .append(h.get("taskId") == null ? "" : "/T")
+                   .append(Boolean.TRUE.equals(h.get("failed")) ? "/F" : "")
+                   .append(h.get("url") == null ? "" : "/U")
+                   .append(' ');
+            }
+            log.info("[WorldSim] 素材收口 world={} act={} failedTypes={} nodes={}", worldId, actNo, failedTypes, dbg);
+            // 整幕一致性收口：一场戏要么全有图、要么全没有，不做半张半张的混合。
+            // 只要有一个带提示词的素材真的出图失败（上游报错 / 额度用尽），
+            // 整幕统一退回纯文字演出，不留「前两场有图、后面没有」的参差。
+            if (MEDIA_OK.equals(enforceActMediaConsistency(materials))) {
                 for (Material m : materials) m.persist();
                 persistFailedTypes(json, failedTypes);
                 storyStore.writeAct(worldId, actNo, Json.toJson(json));
-                return out;
+                return null;
             }
-            for (Material m : materials) m.persist();
+            for (Material m : materials) {
+                // 统一退回文字：已出好的图也不用，避免同一幕里图片状态自相矛盾
+                m.head().remove("url");
+                m.head().remove("raw");
+                m.head().remove("taskId");
+                m.head().put("status", MEDIA_NO_PROMPT);
+                m.persist();
+            }
             persistFailedTypes(json, failedTypes);
             storyStore.writeAct(worldId, actNo, Json.toJson(json));
             return null;
         }
-        if (inProgress) {
-            // 有任务还在生成中，不能叠新的，由服务端生命周期调遣
+        if (inProgress || target == null) {
+            // 还有任务在生成中（或还有素材没轮到）：本幕没收敛，先只回进度、不放行。
+            // 素材阶段每轮只提交一个任务，MAX_ASSETS_PER_TICK 只在这一轮内生效，
+            // 所以 target != null 时同样要返回进度让调用方发起下一轮。
             for (Material m : materials) m.persist();
             persistFailedTypes(json, failedTypes);
             storyStore.writeAct(worldId, actNo, Json.toJson(json));
@@ -1839,6 +1938,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             if (failedTypes.contains(String.valueOf(target.head().get("type")))) {
                 target.head().remove("taskId");
                 target.head().put("status", MEDIA_NO_PROMPT);
+                target.head().put("failed", Boolean.TRUE);
                 target = nextTarget(materials);
                 continue;
             }
@@ -1847,8 +1947,11 @@ public class WorldSimServiceImpl implements WorldSimService {
             try {
                 task = createAssetTask(mat);
             } catch (Exception e) {
-                // 没有出图/出视频能力时不能让整幕停摆：该素材按「无素材」放行，演出照常进行
+                // 没有出图/出视频能力时不能让整幕停摆：该素材按「无素材」放行，演出照常进行。
+                // 打 failed 标记是给整幕一致性收口用的：能力缺失时整幕统一退回纯文字，
+                // 不要出现「前一场有图、后一场没有」。
                 mat.head().put("status", MEDIA_NO_PROMPT);
+                mat.head().put("failed", Boolean.TRUE);
                 mat.head().remove("taskId");
                 failedTypes.add(String.valueOf(mat.head().get("type")));
                 lastError = e.getMessage() == null ? "媒体服务不可用" : e.getMessage();
@@ -1872,7 +1975,14 @@ public class WorldSimServiceImpl implements WorldSimService {
                     st = nowSt;
                 }
                 if ("FAILED".equals(st) || "CANCELED".equals(st)) {
+                    // 受理即失败：必须同时清掉 taskId 并落成「该出没出」，
+                    // 否则下一轮还是「有任务号 → 判定生成中」，整幕永远等一个已经死掉的任务，
+                    // 而状态又停在 PENDING，最终以半收敛的混合形态被放行。
+                    mat.head().remove("taskId");
+                    mat.head().put("status", MEDIA_NO_PROMPT);
+                    mat.head().put("failed", Boolean.TRUE);
                     failedTypes.add(String.valueOf(mat.head().get("type")));
+                    continue;
                 }
             }
             mat.head().put("status", st);
@@ -1883,8 +1993,10 @@ public class WorldSimServiceImpl implements WorldSimService {
                 mat.head().put("url", raw == null ? null : playableUrl(task, raw));
                 mat.head().put("status", MEDIA_OK);
             } else if ("FAILED".equals(st) || "CANCELED".equals(st)) {
-                // 同步失败（例如模型不支持该类型）：同样放行，别把整幕卡死
+                // 同步失败（例如模型不支持该类型）：同样放行，别把整幕卡死。
+                // 打 failed 标记，让整幕一致性收口统一退回纯文字，不留半张图
                 mat.head().put("status", MEDIA_NO_PROMPT);
+                mat.head().put("failed", Boolean.TRUE);
                 mat.head().remove("taskId");
             } else {
                 // 真在跑：按约束一次只允许一个生成中任务，交回给下一轮轮询。
@@ -1899,18 +2011,35 @@ public class WorldSimServiceImpl implements WorldSimService {
         for (Material m : materials) m.persist();
         persistFailedTypes(json, failedTypes);
         storyStore.writeAct(worldId, actNo, Json.toJson(json));
-        // 循环可能把 target 耗成 null（失败类型全部放行 / 本轮额度用尽）：
-        // 此时素材阶段其实已经结束，必须返回 null 让状态机进入演出，
-        // 否则会一直返回一个「无事可做」的进度对象，整幕永远停在 props_ok。
-        if (target == null && !inProgress) {
+        // 形态关闭（text）时本轮不该跑素材循环；真正「全部收敛」的判定只放在上面
+        // 唯一的收口处（target == null && !inProgress）。
+        //
+        // 这里曾经有一句 `if (target == null && !inProgress) return null;` 的捷径，
+        // 它绕过了整幕一致性收口：只要循环里把目标耗光（失败类型全部放行），
+        // 就直接以 null 放行进表演，于是「有些场景有图、有些还在生成」的混合态
+        // 就这么漏到舞台上。收敛只能有一个出口。
+        if (inProgress || target != null) {
+            // 还在跑 / 还有没轮到的素材：回进度，让它下一轮再来
+            if (lastError != null) {
+                out.put("assetError", lastError);
+            }
+            out.put("created", created);
+            out.put("inProgress", inProgress);
+            return out;
+        }
+        // 循环把目标全部耗光且没有在跑的任务：和第一段收敛走同一套收口判定
+        if (MEDIA_OK.equals(enforceActMediaConsistency(materials))) {
             return null;
         }
-        if (lastError != null) {
-            out.put("assetError", lastError);
+        for (Material m : materials) {
+            m.head().remove("url");
+            m.head().remove("raw");
+            m.head().remove("taskId");
+            m.head().put("status", MEDIA_NO_PROMPT);
         }
-        out.put("created", created);
-        out.put("inProgress", inProgress);
-        return out;
+        for (Material m : materials) m.persist();
+        storyStore.writeAct(worldId, actNo, Json.toJson(json));
+        return null;
     }
 
     /**
@@ -1931,6 +2060,19 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     /**
+     * 这个素材通道在当前形态下是否启用。
+     *
+     * <p>三形态互斥：图片形态只有图片通道有效，视频形态两者都要（图生视频要有首帧），
+     * 文本形态两个都关。判断统一收在这里，避免各处重复写形态判断而漏掉一处。</p>
+     *
+     * @param mat 素材
+     * @return true 表示本幕要为它出素材
+     */
+    private boolean enabledForMode(Material mat) {
+        return mat.video() ? videoMediaEnabled() : imageMediaEnabled();
+    }
+
+    /**
      * 任务是否已经僵死：非终态且发起时间超过阈值。
      *
      * <p>本地环境常常没有出图/出视频能力，受理后的任务会一直停在 PENDING/RUNNING，
@@ -1944,6 +2086,57 @@ public class WorldSimServiceImpl implements WorldSimService {
         Long createdAt = task.getCreatedAt();
         if (createdAt == null || createdAt <= 0) return false;
         return System.currentTimeMillis() - createdAt > STALE_TASK_MS;
+    }
+
+    /**
+     * 整幕素材一致性收口：一场戏要么全有图，要么全没有。
+     *
+     * <p>舞台形态是<b>整幕</b>的选择，不是逐节点的。真实环境里会出现两种参差：</p>
+     * <ul>
+     *   <li>某类素材真的失败（上游报错 / 额度用尽 / 没有该能力），
+     *       于是前几场有图、后面几场没图；</li>
+     *   <li>部分节点本来就没有画面描述（例如没有名字的道具），
+     *       被判成 NO_PROMPT 而跳过。</li>
+     * </ul>
+     *
+     * <p>前者会让观众看到「一会儿有图一会儿没图」，比整幕统一不出图更像是坏了。
+     * 后者是节点本来就不该配图，不算破坏一致性。</p>
+     *
+     * <p>判定办法：只要有素材 <b>建过任务却最终没拿到图</b>（{@code failed} 标记），
+     * 就认为本幕不满足一致性，由调用方整幕退回纯文字。</p>
+     *
+     * <p><b>只看当前形态启用的通道</b>：图片形态下视频通道是关掉的，
+     * 它上面的历史 {@code failed}（比如当初试过图生视频被拒）与本幕要不要出图无关。
+     * 把它算进来会把一整幕本来完全正常的图片全部作废，回归成纯文字。</p>
+     *
+     * @param materials 本幕全部素材
+     * @return 一致返回 {@link #MEDIA_OK}；出现缺失返回 {@code null}
+     */
+    private String enforceActMediaConsistency(List<Material> materials) {
+        for (Material mat : materials) {
+            if (!enabledForMode(mat)) {
+                continue;
+            }
+            Map<String, Object> head = mat.head();
+            String st = String.valueOf(head.get("status"));
+            if (MEDIA_OK.equals(st) || MEDIA_NO_PROMPT.equals(st)) {
+                continue;
+            }
+            // 还有悬而未决的素材（正常流程走不到这里）
+            return null;
+        }
+        for (Material mat : materials) {
+            if (!enabledForMode(mat)) {
+                continue;
+            }
+            Map<String, Object> head = mat.head();
+            if (MEDIA_NO_PROMPT.equals(head.get("status"))
+                    && Boolean.TRUE.equals(head.get("failed"))) {
+                // 该出却没出：整幕不能半张半张
+                return null;
+            }
+        }
+        return MEDIA_OK;
     }
 
     /** 在素材序列里找下一个「还没建任务、有提示词」的目标；无提示词的直接标成放行 */
@@ -2005,7 +2198,20 @@ public class WorldSimServiceImpl implements WorldSimService {
                 }
                 Object pn = node.get(nameField);
                 // String.valueOf(null) 会得到字面量 "null"，会被误当成有效提示词去建任务。
-                head.put("prompt", pn == null ? "" : String.valueOf(pn));
+                String prompt = pn == null ? "" : String.valueOf(pn).trim();
+                if ((prompt.isEmpty() || "null".equals(prompt)) && !MEDIA_PROP_TYPE.equals(role)) {
+                    // 剧本节点缺画面描述（场景 desc 为空 / 过场没写 text）：
+                    // 这里就把兜底提示词算出来写进素材头。
+                    // 不能留到 createAssetTask 再补——nextTarget 用 head.prompt 判「有没有需求」，
+                    // 为空就直接判 NO_PROMPT 跳过，兜底永远轮不到，
+                    // 于是同一幕里有的场景有图、有的没图，正是要杜绝的混合。
+                    // 道具不套兜底：道具名本身就是要生成的画面主体，mediaPrompt 会补成「道具特写」。
+                    String fallback = fallbackPrompt(node);
+                    if (fallback != null) {
+                        prompt = fallback;
+                    }
+                }
+                head.put("prompt", prompt);
                 String type = mk.equals(ActScript.MEDIA_IMAGE_KEY) ? MEDIA_IMAGE_TYPE : MEDIA_VIDEO_TYPE;
                 head.put("type", type);
                 // 节点种类（scene/transition/prop）与媒体种类（image/video）分开记：
@@ -2028,12 +2234,18 @@ public class WorldSimServiceImpl implements WorldSimService {
      */
     private static String mediaPrompt(Material mat) {
         Object pn = mat.node().get(mat.promptField());
-        if (pn == null) {
-            return null;
+        String text = pn == null ? "" : String.valueOf(pn).trim();
+        if ("null".equals(text)) {
+            text = "";
         }
-        String text = String.valueOf(pn).trim();
-        if (text.isEmpty() || "null".equals(text)) {
-            return null;
+        if (text.isEmpty()) {
+            // 场景 desc / 过场 text 缺了：collect 已经把兜底提示词算进素材头，
+            // 这里直接用它，保证「每个场景都能出图」这个口径不被缺字段破坏。
+            Object headPrompt = mat.head().get("prompt");
+            text = headPrompt == null ? "" : String.valueOf(headPrompt).trim();
+            if (text.isEmpty() || "null".equals(text)) {
+                return null;
+            }
         }
         if (mat.video()) {
             // 视频要比静态图多交代「怎么动」：不说清楚时长内几乎没有可看的变化
@@ -2046,6 +2258,38 @@ public class WorldSimServiceImpl implements WorldSimService {
             return "道具特写：" + text + "，置于场景中，光线自然。";
         }
         return text;
+    }
+
+    /**
+     * 剧本节点缺画面描述时的兜底提示词。
+     *
+     * <p>用场景名与第一句台词拼一句可用的画面语，保证这一幕的每个场景都能出图，
+     * 不至于因为编剧漏写 desc 就变成「几场有图几场没图」。</p>
+     *
+     * @param node 剧本节点
+     * @return 兜底提示词；连场景名都没有时返回 null
+     */
+    private static String fallbackPrompt(Map<String, Object> node) {
+        Object nameObj = node.get(ActScript.SCENE_NAME);
+        String name = nameObj == null ? "" : String.valueOf(nameObj).trim();
+        if (name.isEmpty() || "null".equals(name)) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(name);
+        Object lines = node.get(ActScript.SCENE_LINES);
+        if (lines instanceof List<?> lineList && !lineList.isEmpty()) {
+            Object first = lineList.get(0);
+            String speech = "";
+            if (first instanceof Map<?, ?> lineMap) {
+                Object t = lineMap.get("text");
+                if (t == null) t = lineMap.get("content");
+                speech = t == null ? "" : String.valueOf(t).trim();
+            }
+            if (!speech.isEmpty() && !"null".equals(speech)) {
+                sb.append("：").append(speech.length() > 40 ? speech.substring(0, 40) : speech);
+            }
+        }
+        return sb.append("。电影感画面，光线与氛围自然，人物神态清晰。").toString();
     }
 
     /**
@@ -2253,8 +2497,15 @@ public class WorldSimServiceImpl implements WorldSimService {
         try {
             var rows = providerModelMapper.selectList(
                     new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getEnabled, true));            for (SysAiProviderModel row : rows) {
+                            .eq(SysAiProviderModel::getEnabled, true));
+            for (SysAiProviderModel row : rows) {
                 if (row.getModel() == null || row.getModel().isBlank()) {
+                    continue;
+                }
+                // 能力位里声明的是何种任务：出图模型绝不能拿去建视频任务。
+                // 只靠 resolveVideo「供应商支持视频」会把图片模型也选中，
+                // 建出来必然被上游拒（本机实测 agnes-image-2.1-flash 反复提交失败）。
+                if (!declaresTask(row.getCapabilities(), type)) {
                     continue;
                 }
                 var resolved = video
@@ -2268,6 +2519,25 @@ public class WorldSimServiceImpl implements WorldSimService {
             log.warn("[WorldSim] 查找默认生成模型失败 type={}: {}", type, e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * 模型行声明的能力里是否包含指定任务类型。
+     *
+     * <p>能力位是 JSON 数组（如 {@code [{"task":"image_generation"}]}）。
+     * 没写能力位的模型一律不认——宁可让上层报「请配置模型」，
+     * 也不要拿一个不确定的模型去跑，跑出来的失败还会污染整幕的素材一致性。</p>
+     *
+     * @param capabilities 能力位 JSON
+     * @param type         image / video
+     * @return true 表示该模型能承担这类任务
+     */
+    private static boolean declaresTask(String capabilities, String type) {
+        if (capabilities == null || capabilities.isBlank()) {
+            return false;
+        }
+        String want = MEDIA_VIDEO_TYPE.equals(type) ? "video_generation" : "image_generation";
+        return capabilities.contains("\"" + want + "\"");
     }
 
     /**

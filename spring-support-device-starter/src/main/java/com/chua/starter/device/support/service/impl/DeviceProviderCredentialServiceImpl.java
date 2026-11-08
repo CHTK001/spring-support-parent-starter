@@ -249,8 +249,19 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
     }
 
     @Override
-    public Map<String, Integer> vendorThresholds() {
-        Map<String, Integer> thresholds = new LinkedHashMap<>(FALLBACK_THRESHOLDS);
+    public void recordTestResult(String id, boolean ok) {
+        if (!StringUtils.hasText(id)) {
+            return;
+        }
+        DeviceProviderCredential update = new DeviceProviderCredential();
+        update.setDeviceCredentialId(id);
+        update.setDeviceCredentialLastTestAt(LocalDateTime.now());
+        update.setDeviceCredentialLastTestOk(ok);
+        credentialMapper.updateById(update);
+    }
+
+    @Override
+    public Map<String, Integer> vendorThresholds() {        Map<String, Integer> thresholds = new LinkedHashMap<>(FALLBACK_THRESHOLDS);
         for (DeviceProviderCredential c : list(null)) {
             Integer threshold = c.getDeviceCredentialOfflineThreshold();
             if (threshold == null || threshold <= 0) {

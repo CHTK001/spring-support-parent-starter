@@ -18,6 +18,7 @@ import {
   type MessageTemplate,
   type MessageTemplateRenderResult,
 } from '../api/messageTemplateApi'
+import { errorText as errorMessage } from '../../shared/errorText'
 
 type Kind = 'SMS' | 'EMAIL'
 
@@ -71,7 +72,7 @@ async function loadTemplates() {
       draft.value = emptyDraft(kind.value)
     }
   } catch (e) {
-    errorText.value = e instanceof Error ? e.message : String(e)
+    errorText.value = errorMessage(e)
   } finally {
     loading.value = false
   }

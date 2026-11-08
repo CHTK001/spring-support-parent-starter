@@ -20,7 +20,7 @@
           <ReIcon name="Warning" :size="14" />
           <span>{{ overview.message }}</span>
           <a v-if="consoleUrl" class="mb-console" :href="consoleUrl" target="_blank" rel="noopener noreferrer">
-            网页版邮箱
+            {{ consoleLabel }}
           </a>
           <button type="button" class="mb-retry" @click="reload">重试</button>
         </div>
@@ -72,6 +72,7 @@
               </div>
 
               <ReTable
+                v-if="!inboxUnavailable"
                 :data="messages"
                 :loading="loadingMessages"
                 row-key="id"
@@ -106,6 +107,11 @@
                   </template>
                 </ReTableColumn>
               </ReTable>
+
+              <div v-else class="mb-state mb-state--block">
+                <ReIcon name="Message" :size="18" />
+                <span>{{ isEmail ? '这个账号还没有可用的收件文件夹' : '短信账号没有收件箱，可直接写信发送' }}</span>
+              </div>
 
               <div class="mb-more">
                 <ReButton v-if="hasMore" plain :loading="loadingMessages" @click="loadMore">加载更多</ReButton>
@@ -311,9 +317,23 @@ const drawerTitle = computed(() => {
 });
 
 /** 当前文件夹展示名 */
-const activeFolderName = computed(
-  () => folders.value.find(folder => folder.key === activeFolder.value)?.name || '收件箱',
-);
+const activeFolderName = computed(() => {
+  const found = folders.value.find(folder => folder.key === activeFolder.value)?.name;
+  if (found) return found;
+  return isEmail.value ? '收件箱' : '短消息';
+});
+
+/**
+ * 是否没有可读的收件文件夹。
+ *
+ * <p>邮箱没配 IMAP、短信部署没注册收信实现时，后端概览会回 {@code supported=false} 且
+ * {@code folders} 为空。此时不该再渲染一张空表格（用户会以为「真的没信」），
+ * 而应直说这个账号没有收件箱；发信能力是独立的，写信入口照旧可用。</p>
+ */
+const inboxUnavailable = computed(() => !activeFolder.value);
+
+/** 兜底链接文案：邮箱叫网页版邮箱，短信是服务商控制台 */
+const consoleLabel = computed(() => (isEmail.value ? '网页版邮箱' : '服务商控制台'));
 
 /**
  * HTML 邮件的沙箱文档。
@@ -618,6 +638,18 @@ function pad(value: number): string {
 
 .spin {
   animation: mb-spin 1s linear infinite;
+}
+
+.mb-state--block {
+  flex: 1;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+  border: 1px dashed var(--border-subtle, #ebeef5);
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-tertiary, #909399);
+  font-size: 13px;
 }
 
 @keyframes mb-spin {

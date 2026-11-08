@@ -285,6 +285,45 @@ public final class CollectFunctions {
     }
 
     /**
+     * 集合大小，与 {@link #size(Object)} 同义。
+     *
+     * <p>历史上表达式里集合只能用 {@code size(x)}，而 {@code count(x)} 会报「不支持的函数」，
+     * 用户按直觉写 {@code ${count(rows)}} 时无从判断是语法问题还是数据问题，本别名统一两者。</p>
+     *
+     * @param value 集合、数组、映射或标量
+     * @return 元素个数，空返回 0
+     */
+    public static int count(Object value) {
+        return size(value);
+    }
+
+    /**
+     * 条件取值：条件为真返回 {@code whenTrue}，否则返回 {@code whenFalse}。
+     *
+     * <p>配合 {@code ?:} 使用，便于在单个参数里做兜底而不必写嵌套三元。</p>
+     *
+     * @param condition 条件，按 {@link CollectExpression#truthy(Object)} 判定
+     * @param whenTrue  条件为真时的结果
+     * @param whenFalse 条件为假时的结果
+     * @return 命中的分支结果
+     */
+    public static Object ifThenElse(Object condition, Object whenTrue, Object whenFalse) {
+        return CollectExpression.truthy(condition) ? whenTrue : whenFalse;
+    }
+
+    /**
+     * 条件取文本：任一分支为 null 时返回空串。
+     *
+     * @param condition 条件
+     * @param whenTrue  条件为真时的文本
+     * @param whenFalse 条件为假时的文本
+     * @return 命中的分支文本
+     */
+    public static String ifThenElseText(Object condition, Object whenTrue, Object whenFalse) {
+        return stringify(ifThenElse(condition, whenTrue, whenFalse));
+    }
+
+    /**
      * 取集合元素，越界返回 null。
      *
      * @param value 集合或数组

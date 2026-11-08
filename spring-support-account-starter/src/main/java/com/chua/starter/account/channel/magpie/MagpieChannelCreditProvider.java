@@ -146,7 +146,13 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             long quotaExpires = epochOf(quota.get("until"));
             expiresAt = earliest(expiresAt, quotaExpires);
 
-            for (Map<String, Object> window : mapList(quota.get("windows"))) {
+            // 先量一遍各窗口的总量，识别「汇总行」：magpie 的 workbuddy 卡同时给出
+            // 「Credits 100 / Extra credits 90 / Total credits 190」，把三行都累加会把
+            // 可用额度报成 380（实际 190）。判定见 aggregateWindowIndex。
+            List<Map<String, Object>> windows = mapList(quota.get("windows"));
+            int aggregateIndex = aggregateWindowIndex(windows);
+            for (int windowIndex = 0; windowIndex < windows.size(); windowIndex++) {
+                Map<String, Object> window = windows.get(windowIndex);
                 if (Boolean.TRUE.equals(window.get("unlimited"))) {
                     continue;
                 }
@@ -156,7 +162,9 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
                     windowLimit = parseAmount(window.get("total"));
                 }
                 if (windowRemain == null && windowLimit != null && windowLimit > 0) {
-                    Long used = parseAmount(window.get("amount"));
+                    // 上游字段叫 used（见 magpie /api/usage/quotas 的 windows[]），
+                    // 早期版本还发过 amount，两个都认，否则剩余永远是「未知」。
+                    Long used = firstAmount(window.get("used"), window.get("amount"));
                     windowRemain = used == null ? null : Math.max(windowLimit - used, 0L);
                 }
                 String windowName = stringOf(window.get("name"));
@@ -178,7 +186,9 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
                 if (windowLimit != null && windowLimit > 0) {
                     row.put("size", windowLimit);
                 }
-                accumulate(sums, unit, windowRemain, windowLimit);
+                if (windowIndex != aggregateIndex) {
+                    accumulate(sums, unit, windowRemain, windowLimit);
+                }
                 String display = stringOf(window.get("display"));
                 if (!MagpieSupport.isBlank(display)) {
                     row.put("display", display);
@@ -250,6 +260,90 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
     }
 
     // ── 私有辅助 ──
+
+    /**
+     * 找出「汇总行」：名字表示合计、且总量正好等于同一张卡里其余窗口之和的那一行。
+     *
+     * <p>magpie 会把合计再列一遍（{@code Credits 100 + Extra credits 90 + Total credits 190}），
+     * 全部相加会把可用额度报成两倍。只在<b>数值上严格成立</b>时才归并，且必须满足：</p>
+     * <ul>
+     *   <li>行名是「合计」语义（{@code Total credits} / 总计 / 汇总 …）——只看数值的话，
+     *       「10 + 10 + 20」这种合法分桶会被误判成汇总；</li>
+     *   <li>至少三行有正的总量（两行时 1+1=2 也可能成立，容易误判）；</li>
+     *   <li>所有有量的行单位一致（不同单位相加本来就无意义）；</li>
+     *   <li>满足条件的行<b>只有一行</b>，两行都满足视为有歧义，不归并。</li>
+     * </ul>
+     *
+     * <p>被判定为汇总的行仍会出现在 {@code packages} 里（保留上游 display），只是不计入顶部合计。</p>
+     *
+     * @param windows 同一张配额卡的窗口列表
+     * @return 汇总行的下标；没有或不唯一返回 {@code -1}
+     */
+    private static int aggregateWindowIndex(List<Map<String, Object>> windows) {
+        if (windows.size() < 3) {
+            return -1;
+        }
+        List<Long> limits = new ArrayList<>(windows.size());
+        String limitUnit = null;
+        boolean unitConflict = false;
+        long sum = 0L;
+        int positive = 0;
+        for (Map<String, Object> window : windows) {
+            if (Boolean.TRUE.equals(window.get("unlimited"))) {
+                limits.add(null);
+                continue;
+            }
+            Long limit = parseAmount(window.get("limit"));
+            if (limit == null) {
+                limit = parseAmount(window.get("total"));
+            }
+            if (limit == null || limit <= 0) {
+                limits.add(null);
+                continue;
+            }
+            limits.add(limit);
+            positive++;
+            sum += limit;
+            String unit = stringOf(window.get("unit"));
+            if (!MagpieSupport.isBlank(unit)) {
+                if (limitUnit == null) {
+                    limitUnit = unit;
+                } else if (!limitUnit.equalsIgnoreCase(unit)) {
+                    unitConflict = true;
+                }
+            }
+        }
+        if (positive < 3 || unitConflict) {
+            return -1;
+        }
+        int found = -1;
+        for (int index = 0; index < limits.size(); index++) {
+            Long limit = limits.get(index);
+            if (limit == null || limit * 2 != sum || !isTotalLabel(stringOf(windows.get(index).get("name")))) {
+                continue;
+            }
+            if (found >= 0) {
+                return -1;
+            }
+            found = index;
+        }
+        return found;
+    }
+
+    /**
+     * 行名是否为「合计」语义。
+     *
+     * @param name 窗口名
+     * @return 表示合计返回 true
+     */
+    private static boolean isTotalLabel(String name) {
+        if (MagpieSupport.isBlank(name)) {
+            return false;
+        }
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("total") || name.contains("合计")
+                || name.contains("总计") || name.contains("汇总");
+    }
 
     /**
      * 按单位累加余额与总量。

@@ -493,6 +493,7 @@ import type { ReTabsContextItem, ReTabsItem } from '@repo/ui/re-tabs'
 import type { ReTableColumn, ReTableLoadParams, RePageResult } from '@repo/ui/re-table'
 
 import { templateApi } from '../api/templateApi'
+import { errorText, isCancelled } from '../../shared/errorText'
 import type {
   ProviderInfo,
   ProviderSyncResult,
@@ -561,7 +562,7 @@ async function loadProviders(): Promise<void> {
     const list = await templateApi.providerList()
     providers.value = Array.isArray(list) ? list : []
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     loadingProviders.value = false
   }
@@ -606,7 +607,7 @@ async function syncProvider(item: ProviderInfo | undefined): Promise<void> {
     )
     tableRefs[`${item.id}:templates`]?.reload?.()
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     syncingProvider.value = ''
   }
@@ -704,7 +705,7 @@ async function onProviderFormConfirm(): Promise<void> {
     }
     providerFormVisible.value = false
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     providerSaving.value = false
   }
@@ -724,7 +725,7 @@ async function removeProvider(item: ProviderInfo): Promise<void> {
     if (!tabs.value.some(t => t.name === activeTab.value)) activeTab.value = tabs.value[0]?.name ?? ''
     await loadProviders()
   } catch (err) {
-    if (String(err) !== 'Error: cancel') ElMessage.error(String(err))
+    if (!isCancelled(err)) ElMessage.error(errorText(err))
   }
 }
 
@@ -902,7 +903,7 @@ async function loadProviderTemplates(providerId: string, params: ReTableLoadPara
       records: (res?.records ?? []) as unknown as Record<string, unknown>[]
     }
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
     return { total: 0, records: [] }
   }
 }
@@ -975,7 +976,7 @@ async function onFormConfirm(): Promise<void> {
     if (form.value.providerId) tableRefs[`${form.value.providerId}:templates`]?.reload?.()
     await loadProviders()
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     saving.value = false
   }
@@ -991,7 +992,7 @@ async function removeTemplate(row: Record<string, any>): Promise<void> {
     if (providerId) tableRefs[`${providerId}:templates`]?.reload?.()
     await loadProviders()
   } catch (err) {
-    if (String(err) !== 'Error: cancel') ElMessage.error(String(err))
+    if (!isCancelled(err)) ElMessage.error(errorText(err))
   }
 }
 
@@ -1132,7 +1133,7 @@ async function onPrintConfirm(): Promise<void> {
     printDialogVisible.value = false
     ElMessage.success(`已发送到「${printParams.printer}」`)
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     printing.value = false
   }

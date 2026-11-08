@@ -64,6 +64,16 @@ public class MailboxService {
     private static final int DEFAULT_SMTP_SSL_PORT = 465;
 
     /**
+     * 端口取值下界（不含，即最小合法端口）
+     */
+    private static final int PORT_MIN = 1;
+
+    /**
+     * 端口取值上界（含）
+     */
+    private static final int PORT_MAX = 65535;
+
+    /**
      * 统一账号服务
      */
     private final ManageAccountService accountService;
@@ -492,7 +502,7 @@ public class MailboxService {
         if (value != null) {
             try {
                 int port = Integer.parseInt(String.valueOf(value).trim());
-                if (port > 0 && port <= 65535) {
+                if (port >= PORT_MIN && port <= PORT_MAX) {
                     return port;
                 }
             } catch (NumberFormatException ignored) {

@@ -19,10 +19,13 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
-        <!-- WebRTC 远控（Java 服务端 + 浏览器客户端信令） -->
+        <!-- WebRTC 远控（Java 服务端 + 浏览器客户端信令）。
+             optional：是独立分发的原生能力包，本机仓库未必有；声明为 optional 后
+             不参与下游的传递依赖，缺包时本模块仍能编译，信令运行期按需装配。 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-webrtc-starter</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Spring Boot Web（REST 会话 / 屏幕管理接口） -->

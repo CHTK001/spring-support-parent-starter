@@ -33,7 +33,7 @@ import java.util.Map;
  * @since 4.0.0.53
  */
 @ApiReturnFormatIgnore
-@RestController
+@RestController("accountMailboxController")
 @RequestMapping("/api/accounts/{accountId}/mailbox")
 @RequiredArgsConstructor
 public class MailboxController {

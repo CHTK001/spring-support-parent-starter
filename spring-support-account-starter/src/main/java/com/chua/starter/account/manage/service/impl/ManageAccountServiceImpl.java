@@ -8,6 +8,8 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.manage.mapper.ManageAccountMapper;
+import com.chua.starter.account.manage.model.AccountBatchFailure;
+import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.security.AccountSecretCodec;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.store.AccountKind;
@@ -19,10 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * 统一账号服务实现。
@@ -227,6 +233,51 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> verify(String accountId) {
+        return doVerify(accountId);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AccountBatchResult batchStatus(List<String> accountIds, int status) {
+        int target = status == 0 ? 0 : 1;
+        return runBatch(accountIds, accountId -> {
+            SysAccount existing = requireAccount(accountId);
+            assertWritable(existing);
+            existing.setStatus(target);
+            existing.setUpdatedAt(System.currentTimeMillis());
+            accountMapper.updateById(existing);
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AccountBatchResult batchVerify(List<String> accountIds) {
+        return runBatch(accountIds, this::doVerify);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AccountBatchResult batchDelete(List<String> accountIds) {
+        return runBatch(accountIds, accountId -> {
+            SysAccount existing = requireAccount(accountId);
+            assertWritable(existing);
+            accountMapper.deleteById(accountId);
+        });
+    }
+
+    /**
+     * 校验账号并把结果落库（批量校验也走这里，避免逐条起事务代理）。
+     *
+     * @param accountId 账号标识
+     * @return {@code {valid, status, message}}
+     */
+    private Map<String, Object> doVerify(String accountId) {
         SysAccount account = requireAccount(accountId);
         assertWritable(account);
         Map<String, Object> detail = null;
@@ -264,6 +315,54 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         payload.put("status", status);
         payload.put("message", message);
         return payload;
+    }
+
+    /**
+     * 逐条执行批量动作，单条失败只记明细、不回滚其它条目。
+     *
+     * @param accountIds 账号标识清单
+     * @param action     单条动作
+     * @return 批量结果
+     */
+    private AccountBatchResult runBatch(List<String> accountIds, Consumer<String> action) {
+        List<String> ids = normalizeIds(accountIds);
+        List<AccountBatchFailure> failures = new ArrayList<>();
+        int succeeded = 0;
+        for (String accountId : ids) {
+            try {
+                action.accept(accountId);
+                succeeded++;
+            } catch (ApiException e) {
+                failures.add(new AccountBatchFailure(accountId, e.getErrorCode().getCode(), e.getMessage()));
+            } catch (Exception e) {
+                log.warn("[account] 批量操作单条失败: id={}, msg={}", accountId, e.getMessage());
+                failures.add(new AccountBatchFailure(accountId, ApiErrorCode.INTERNAL_ERROR.getCode(),
+                        e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            }
+        }
+        log.info("[account] 批量操作完成: total={}, succeeded={}, failed={}",
+                ids.size(), succeeded, failures.size());
+        return new AccountBatchResult(ids.size(), succeeded, failures.size(), failures);
+    }
+
+    /**
+     * 去空白、去重、去空值。
+     *
+     * @param accountIds 原始清单
+     * @return 规范化后的清单
+     */
+    private List<String> normalizeIds(List<String> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return List.of();
+        }
+        Set<String> unique = new LinkedHashSet<>();
+        for (String accountId : accountIds) {
+            String value = trimToNull(accountId);
+            if (value != null) {
+                unique.add(value);
+            }
+        }
+        return new ArrayList<>(unique);
     }
 
     /**

@@ -69,6 +69,7 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { messageTemplateApi, type MessageTemplate } from '../api/messageTemplateApi'
+import { errorText as errorMessage } from '../../shared/errorText'
 
 /** 模板种类 */
 type TemplateKind = 'SMS' | 'EMAIL'
@@ -238,7 +239,7 @@ async function reload(): Promise<void> {
     templates.value = Array.isArray(res) ? res : []
   } catch (e) {
     templates.value = []
-    loadError.value = e instanceof Error ? e.message : String(e)
+    loadError.value = errorMessage(e)
   } finally {
     loading.value = false
   }

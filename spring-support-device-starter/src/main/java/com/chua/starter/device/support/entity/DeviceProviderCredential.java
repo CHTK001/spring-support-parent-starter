@@ -128,6 +128,18 @@ public class DeviceProviderCredential {
     @TableField("device_credential_org_sync_interval")
     private Integer deviceCredentialOrgSyncInterval;
 
+    /**
+     * 最近一次连通性探测时间（单条「测试连接」或顶部「全部检测」写入）
+     */
+    @TableField("device_credential_last_test_at")
+    private LocalDateTime deviceCredentialLastTestAt;
+
+    /**
+     * 最近一次连通性探测结果：true 成功、false 失败、null 未检测
+     */
+    @TableField("device_credential_last_test_ok")
+    private Boolean deviceCredentialLastTestOk;
+
     /** 创建 时间 */
     @TableField("device_credential_created_at")
     private LocalDateTime deviceCredentialCreatedAt;

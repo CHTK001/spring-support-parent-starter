@@ -119,6 +119,12 @@ public class FileStorageEmbeddedFilter extends OncePerRequestFilter {
 
         ServletServerRequest serverRequest =
                 new ServletServerRequest(request, decode(resolved), request.getQueryString());
+          // 挂载前缀（contextPath + pathPrefix，如 /fs）：预览壳要把根路径
+          // 资源引用改写成同源路径，否则 /ot/{token} 与 /assets/* 会绕过文件存储过滤器
+        String mountPrefix = (context == null ? "" : context) + pathPrefix;
+        if (!mountPrefix.isEmpty()) {
+            serverRequest.setAttribute(FileStorageServerFilter.ATTR_MOUNT_PREFIX, mountPrefix);
+        }
         ServletServerResponse serverResponse = new ServletServerResponse(response);
         try {
             headChain.doFilter(serverRequest, serverResponse);

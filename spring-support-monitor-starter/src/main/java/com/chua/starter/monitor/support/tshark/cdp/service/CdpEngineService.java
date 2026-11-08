@@ -95,6 +95,9 @@ public class CdpEngineService {
             "Page.navigateFrameCompleted",
             "Page.navigateRequested",
             "Page.screenshot",
+            "Tracing.dataCollected",
+            "Tracing.tracingComplete",
+            "Tracing.bufferUsage",
             "Target.targetCreated",
             "Target.targetDestroyed",
             "Target.targetCrashed",
@@ -131,7 +134,10 @@ public class CdpEngineService {
             "Page.loadEventFired",
             "Page.navigateFrameCompleted",
             "Page.navigateRequested",
-            "Page.screenshot"
+            "Page.screenshot",
+            "Tracing.dataCollected",
+            "Tracing.tracingComplete",
+            "Tracing.bufferUsage"
     );
 
     /**

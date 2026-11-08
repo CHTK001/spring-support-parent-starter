@@ -299,6 +299,9 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         message.setId(entity.getId());
         message.setDialogId(entity.getSysAiSessionId());
         message.setRole(entity.getRole());
+        // 父子关系从这里原样读回：落库时 addMessage 已经写了 parent_id，
+        // 原先读出口漏这一行，导致按 parentId 配对的使用方拿不到归属。
+        message.setParentId(entity.getParentId());
         message.setContent(entity.getContent());
         message.setModelName(entity.getModelName());
         message.setPromptTokens(entity.getPromptTokens());

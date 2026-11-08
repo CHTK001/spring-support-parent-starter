@@ -176,6 +176,7 @@ import type { ReTableColumn, ReTableLoadParams, RePageResult } from '@repo/ui/re
 import type { PrinterConfig } from '../types/template'
 import { templateApi } from '../api/templateApi'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { errorText, isCancelled } from '../../shared/errorText'
 
 // --------------------------- 主上的 (& 由调用的脚决定页面样式) ---------------------------
 const props = defineProps<{
@@ -232,7 +233,7 @@ async function loadPrinters({ page: p, pageSize: ps }: ReTableLoadParams): Promi
     const data = list.slice(start, start + ps)
     return { total, data: data as unknown as Record<string, unknown>[] }
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
     return { total: 0, data: [] }
   } finally {
     loading.value = false
@@ -257,7 +258,7 @@ async function onDiscover(): Promise<void> {
     await loadPrinters({ page: page.value, pageSize: pageSize.value, params: {} })
     tableRef.value?.reload()
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   }
 }
 
@@ -284,7 +285,7 @@ async function onSetDefault(name: string): Promise<void> {
     tableRef.value?.reload()
     ElMessage.success(`「${name}」已设为默认打印机`)
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     saving.value = false
   }
@@ -300,7 +301,7 @@ async function onRemove(name: string): Promise<void> {
     tableRef.value?.reload()
     ElMessage.success('删除成功')
   } catch (err) {
-    if (String(err) !== 'Error: cancel') ElMessage.error(String(err))
+    if (!isCancelled(err)) ElMessage.error(errorText(err))
   } finally {
     saving.value = false
   }
@@ -351,7 +352,7 @@ async function onFormConfirm(): Promise<void> {
     formVisible.value = false
     await loadPrinters({ page: page.value, pageSize: pageSize.value, params: {} })
   } catch (err) {
-    ElMessage.error(String(err))
+    ElMessage.error(errorText(err))
   } finally {
     saving.value = false
   }
@@ -374,7 +375,7 @@ async function onPrint(): Promise<void> {
         ElMessage.info(`已发送到 ${name}（第三方的打印）`)
       })
     } catch (err) {
-      ElMessage.error(String(err))
+      ElMessage.error(errorText(err))
     } finally {
       saving.value = false
     }

@@ -89,6 +89,21 @@ public class EmailInboxProvider implements AccountInboxProvider {
     private static final int PREVIEW_LENGTH = 160;
 
     /**
+     * 默认取信条数
+     */
+    private static final int DEFAULT_LIMIT = 20;
+
+    /**
+     * 端口取值下界（不含，即最小合法端口）
+     */
+    private static final int PORT_MIN = 1;
+
+    /**
+     * 端口取值上界（含）
+     */
+    private static final int PORT_MAX = 65535;
+
+    /**
      * HTML 标签
      */
     private static final Pattern TAG = Pattern.compile("<[^>]+>");
@@ -347,6 +362,21 @@ public class EmailInboxProvider implements AccountInboxProvider {
      * @throws MessagingException 连接失败
      */
     private Store open(SysAccount account, String secret) throws MessagingException {
+        return openStore(account, secret);
+    }
+
+    /**
+     * 建立 IMAP / IMAPS 连接。
+     *
+     * <p>收信与「账号凭据校验」共用同一套主机 / 端口 / 加密推导，
+     * 避免两处口径漂移（校验通过但打不开收件箱，或反之）。</p>
+     *
+     * @param account 账号
+     * @param secret  明文凭据
+     * @return 已连接的 Store（调用方负责关闭）
+     * @throws MessagingException 连接失败
+     */
+    static Store openStore(SysAccount account, String secret) throws MessagingException {
         String host = imapHost(account);
         boolean ssl = ssl(account);
         String protocol = ssl ? "imaps" : "imap";
@@ -545,7 +575,7 @@ public class EmailInboxProvider implements AccountInboxProvider {
      */
     private int clampLimit(Integer limit) {
         if (limit == null || limit < 1) {
-            return 20;
+            return DEFAULT_LIMIT;
         }
         return Math.min(limit, MAX_LIMIT);
     }
@@ -556,7 +586,13 @@ public class EmailInboxProvider implements AccountInboxProvider {
      * @param account 账号
      * @return 主机；无法解析返回 {@code null}
      */
-    private String imapHost(SysAccount account) {
+    /**
+     * IMAP 主机（包内共享：收信与凭据校验同一口径）。
+     *
+     * @param account 账号
+     * @return 主机；无法解析返回 {@code null}
+     */
+    static String imapHost(SysAccount account) {
         String explicit = configString(account, "imapHost");
         if (explicit != null) {
             return explicit;
@@ -579,12 +615,18 @@ public class EmailInboxProvider implements AccountInboxProvider {
      * @param account 账号
      * @return 端口
      */
-    private int imapPort(SysAccount account) {
+    /**
+     * IMAP 端口（包内共享）。
+     *
+     * @param account 账号
+     * @return 端口
+     */
+    static int imapPort(SysAccount account) {
         Object explicit = account.getConfig() == null ? null : account.getConfig().get("imapPort");
         if (explicit != null) {
             try {
                 int port = Integer.parseInt(String.valueOf(explicit).trim());
-                if (port > 0 && port <= 65535) {
+                if (port >= PORT_MIN && port <= PORT_MAX) {
                     return port;
                 }
             } catch (NumberFormatException ignored) {
@@ -600,7 +642,13 @@ public class EmailInboxProvider implements AccountInboxProvider {
      * @param account 账号
      * @return SSL 返回 {@code true}（未配置时默认 true）
      */
-    private boolean ssl(SysAccount account) {
+    /**
+     * 是否使用 SSL（包内共享）。
+     *
+     * @param account 账号
+     * @return SSL 返回 {@code true}（未配置时默认 true）
+     */
+    static boolean ssl(SysAccount account) {
         Object ssl = account.getConfig() == null ? null : account.getConfig().get("ssl");
         return ssl == null || Boolean.parseBoolean(String.valueOf(ssl));
     }
@@ -612,7 +660,14 @@ public class EmailInboxProvider implements AccountInboxProvider {
      * @param key     配置键
      * @return 非空字符串；不存在返回 {@code null}
      */
-    private String configString(SysAccount account, String key) {
+    /**
+     * 读取配置字符串（包内共享）。
+     *
+     * @param account 账号
+     * @param key     配置键
+     * @return 非空字符串；不存在返回 {@code null}
+     */
+    static String configString(SysAccount account, String key) {
         Object value = account.getConfig() == null ? null : account.getConfig().get(key);
         return value == null ? null : StringUtils.trimToNull(String.valueOf(value));
     }

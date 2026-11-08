@@ -3,6 +3,7 @@ package com.chua.starter.account.spi;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.generation.Model3DGenerationResult;
+import com.chua.common.support.ai.generation.Model3DGenerator;
 import com.chua.common.support.spi.ServiceProvider;
 
 import java.util.List;
@@ -119,7 +120,10 @@ public interface Model3DChannelProvider extends ChannelProvider {
                 client.model(model.trim());
             }
             int timeout = timeoutSeconds <= 0 ? DEFAULT_TIMEOUT_SECONDS : timeoutSeconds;
-            return client.generate3D(prompt, refImageUrl, format, timeout);
+            if (client instanceof Model3DGenerator generator) {
+                return generator.generate3D(prompt, refImageUrl, format, timeout);
+            }
+            throw new IllegalStateException("ChatClient 扩展 " + extension() + " 未实现 Model3DGenerator，无法生成 3D 模型");
         } finally {
             closeQuietly(client);
         }

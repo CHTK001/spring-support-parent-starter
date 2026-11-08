@@ -3,6 +3,8 @@ package com.chua.starter.device.support.model;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 设备分页查询条件
  *
@@ -24,6 +26,11 @@ public class DevicePageQuery {
     /** 组织 ID */
     private String orgId;
 
+    /**
+     * 组织 ID 集合（左树选中组织时连同子孙组织一起导出，优先于 {@link #orgId}）。
+     */
+    private List<String> orgIds;
+
     /** 厂商 */
     private String vendor;
 
@@ -41,6 +48,16 @@ public class DevicePageQuery {
 
     /** 所属分组 ID */
     private String groupId;
+
+    /**
+     * 分组 ID 集合（左树选中分组时连同子分组一起导出，优先于 {@link #groupId}）。
+     */
+    private List<String> groupIds;
+
+    /**
+     * 设备 ID 集合（左树定位到单台设备时只导出该设备）。
+     */
+    private List<String> ids;
 
     /** 仅看未分组设备（groupId 为空时生效） */
     private Boolean ungrouped;

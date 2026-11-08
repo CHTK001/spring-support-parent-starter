@@ -243,6 +243,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private static final long PREVIEW_TOKEN_TTL_MILLIS = 5 * 60 * 1000L;
 
       /**
+       * 请求属性：文件存储的挂载前缀（内嵌形态由 {@code FileStorageEmbeddedFilter} 写入，
+       * 如 {@code /fs}；独立形态不写，视为根路径）。
+       *
+       * <p>用于把预览壳里的根路径引用（组件资源、字节直链）还原成与壳同源的地址，
+       * 否则 {@code /ot/{token}} 会绕过文件存储过滤器落到应用鉴权上。</p>
+       */
+    public static final String ATTR_MOUNT_PREFIX = "file-storage.mount-prefix";
+
+      /**
        * 一次性访问链接：令牌 → 条目（阅后即焚）
        */
     private final ConcurrentHashMap<String, OneTimeEntry> oneTimeMap = new ConcurrentHashMap<>();
@@ -4202,7 +4211,7 @@ var search=document.getElementById('search');
                 }
                 CompletionStage<Void> entryShell = servePreviewShell(
                         buildShellBytesUrl(rawChannel, bucket, key, innerPath, request),
-                        entryName, entryBytes.length, innerPath, bucket, key, response);
+                        entryName, entryBytes.length, innerPath, bucket, key, request, response);
                 if (entryShell != null) {
                     return entryShell;
                 }
@@ -4255,7 +4264,7 @@ var search=document.getElementById('search');
             if (forceServer || !mediaInline) {
                 CompletionStage<Void> shellStage = servePreviewShell(
                         buildShellBytesUrl(rawChannel, bucket, key, null, request),
-                        fileName, data.length, null, bucket, key, response);
+                        fileName, data.length, null, bucket, key, request, response);
                 if (shellStage != null) {
                     return shellStage;
                 }
@@ -4374,23 +4383,38 @@ var search=document.getElementById('search');
        * @param innerPath 压缩包内条目路径（无则 null）
        * @param bucket    存储桶名（专用面板经票据取数用）
        * @param key       对象键（同上；三方 URL 预览场景为文件名，票据不可用时入口自行降级）
+       * @param request   当前请求（取挂载前缀；独立形态取不到时为空串）
        * @param response  响应
        * @return 已提交响应返回阶段；壳缺失返回 {@code null}（调用方落回旧兜底）
        */
     private CompletionStage<Void> servePreviewShell(String bytesUrl, String fileName, long size,
                                                     String innerPath, String bucket, String key,
-                                                    ServerResponse response) {
+                                                    ServerRequest request, ServerResponse response) {
         String shell = readPreviewShell();
         if (shell == null) {
             return null;
         }
+          // 内嵌形态（默认 /fs）下壳与它引用的资源都必须带挂载前缀：
+          // 浏览器在 http://host:8082/fs/ot/{token} 上解析根路径 "/assets/x.js"
+          // 会落到应用自身的静态资源（开发态由 Vite 接管 → 404），而 "/ot/{inner}"
+          // 根本不进文件存储过滤器 → 401/403。独立形态前缀为空，保持原样。
+        String prefix = mountPrefixOf(request);
+        if (!prefix.isEmpty()) {
+            bytesUrl = prefix + bytesUrl;
+            shell = applyMountPrefix(shell, prefix);
+        }
+          // assetBase：file-viewer 运行期按需 chunk / worker / wasm 的同源前缀。
+          // 内嵌形态必须是带挂载前缀的 "/fs/"，否则运行期会 import("/assets/x.js")
+          // 绕过文件存储过滤器（开发态还被 Vite 接管）→ 404、渲染器整体崩掉。
+        String assetBase = prefix.isEmpty() ? "/" : prefix + "/";
         String boot = "<script>window.__FILE_PREVIEW_BOOT__={"
                   + "bytesUrl:" + jsonString(bytesUrl) + ","
                   + "fileName:" + jsonString(fileName) + ","
                   + "size:" + size + ","
                   + "inner:" + jsonString(innerPath == null ? "" : innerPath) + ","
                   + "bucket:" + jsonString(bucket == null ? "" : bucket) + ","
-                  + "key:" + jsonString(key == null ? "" : key)
+                  + "key:" + jsonString(key == null ? "" : key) + ","
+                  + "assetBase:" + jsonString(assetBase)
                   + "};</script>";
         String html = injectBootScript(shell, boot);
         response.setStatus(200)
@@ -4546,6 +4570,52 @@ var search=document.getElementById('search');
             }
         }
         return boot + shell;
+    }
+
+      /**
+       * 取出文件存储的挂载前缀（内嵌形态，如 {@code /fs}）。
+       *
+       * @param request 当前请求
+       * @return 规范化前缀；独立形态 / 未设置返回空串（表示根路径）
+       */
+    private static String mountPrefixOf(ServerRequest request) {
+        Object value = request == null ? null : request.getAttribute(ATTR_MOUNT_PREFIX);
+        if (value == null) {
+            return "";
+        }
+        String prefix = String.valueOf(value).trim();
+        if (prefix.isEmpty() || "/".equals(prefix)) {
+            return "";
+        }
+        while (prefix.endsWith("/")) {
+            prefix = prefix.substring(0, prefix.length() - 1);
+        }
+        if (prefix.isEmpty()) {
+            return "";
+        }
+        return prefix.startsWith("/") ? prefix : "/" + prefix;
+    }
+
+      /**
+       * 给预览壳的根路径资源引用补上挂载前缀。
+       *
+       * <p>壳由前端以 {@code base="/"} 构建，资源引用形如 {@code src="/assets/x.js"}、
+       * {@code href="/assets/x.css"}、CSS 里的 {@code url(/assets/x.woff2)}。内嵌形态下
+       * 这些绝对路径不会经过文件存储过滤器（只有 {@code /fs/**} 会），开发态还会被
+       * Vite 自己接管而 404，因此按挂载前缀改写。</p>
+       *
+       * @param html   壳 HTML
+       * @param prefix 挂载前缀（非空）
+       * @return 改写后的 HTML
+       */
+    private static String applyMountPrefix(String html, String prefix) {
+        if (html == null || html.isEmpty() || prefix == null || prefix.isEmpty()) {
+            return html;
+        }
+        return html.replace("=\"/assets/", "=\"" + prefix + "/assets/")
+                .replace("='/assets/", "='" + prefix + "/assets/")
+                .replace("(/assets/", "(" + prefix + "/assets/")
+                .replace("url(/assets/", "url(" + prefix + "/assets/");
     }
 
       /**

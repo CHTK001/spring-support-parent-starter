@@ -574,7 +574,10 @@ public class AiSessionController {
             }
         }
         
+        // 同一毫秒落库的 user/assistant 仅按 createTime 排序结果不确定，会导致下面的
+        // 倒序输出里 assistant 跑到所属 user 前面；id 单调递增，作为稳定兜底排序
         wrapper.orderByDesc(SysAiMessage::getCreateTime);
+        wrapper.orderByDesc(SysAiMessage::getId);
         if (limit != null && !turnWindowApplied) {
             wrapper.last("LIMIT " + limit);
         }
@@ -614,8 +617,19 @@ public class AiSessionController {
             if ("user".equals(msg.getRole())) {
                 lastUserMessageId = String.valueOf(msg.getId());
                 lastUserMessageTime = msg.getCreateTime();
-            } else if ("assistant".equals(msg.getRole()) && lastUserMessageId != null) {
-                item.put("parentId", lastUserMessageId);
+            } else if ("assistant".equals(msg.getRole())
+                    && (msg.getParentId() != null || lastUserMessageId != null)) {
+                /*
+                 * 优先用落库的 parent_id：插入顺序与创建时间一旦不等（同一毫秒落库、
+                 * 按 createTime 排序结果不确定、或 LIMIT / beforeMessageId 截窗把所属
+                 * 提问切掉），下面按「上一条 user」推断就会把回复挂到错误的轮次，
+                 * 甚至整条挂不上，前端按 parentId 分组时该回复直接消失。
+                 * 推断只作为老数据（parent_id 为空）的兜底。
+                 */
+                Long storedParentId = msg.getParentId();
+                String parentIdValue = storedParentId != null
+                        ? String.valueOf(storedParentId) : lastUserMessageId;
+                item.put("parentId", parentIdValue);
                   // 计算耗时（毫秒）
                 if (lastUserMessageTime != null) {
                     long durationMs = java.time.Duration.between(lastUserMessageTime, msg.getCreateTime()).toMillis();

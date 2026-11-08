@@ -256,10 +256,11 @@ public class OAuthServerFilter implements ServerFilter {
           // 链接管理（GET /ot 列举、DELETE /ot/{token} 吊销）既不是签发也不是消费：
           // 列举会返回文件名与对象键，吊销是写操作。缺了这条，任何未认证方
           // GET /ot 就能枚举全部分享链接（文件名/桶/剩余时间），DELETE 还能把别人的链接关掉。
-          // 只有在配置了私有桶（即本文件服务器需要鉴权）时才要求令牌，保持纯公共桶部署可用。
+          // 与桶是否私有无关：哪怕部署里没有任何私有桶，链接清单本身也是管理数据，
+          // 一律要求令牌。真正需要匿名可达的只有「消费」GET /ot/{token}（令牌即凭证）。
         boolean linkAdmin = bucket == null && isOneTimeLinkAdmin(request);
-        boolean needsAuth = bucket != null && isPrivate(bucket);
-        if (!needsAuth && !(linkAdmin && !privateBuckets.isEmpty())) {
+        boolean needsAuth = linkAdmin || (bucket != null && isPrivate(bucket));
+        if (!needsAuth) {
             chain.doFilter(request, response);
             return;
         }
