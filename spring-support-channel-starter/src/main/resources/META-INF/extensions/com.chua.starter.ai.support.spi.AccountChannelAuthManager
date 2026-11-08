@@ -1,0 +1,14 @@
+com.chua.starter.ai.support.spi.impl.ClineAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.QoderAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.QoderCnAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.TraeAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.GeminiAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.MinimaxAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.ZcodeAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.RaccoonAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.LoomyAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.LobsteraiAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.OpencodeAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.WorkBuddyAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.KiloAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.EacAccountChannelAuthManager
