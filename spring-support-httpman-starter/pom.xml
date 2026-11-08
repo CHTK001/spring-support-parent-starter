@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.51</version>
+    </parent>
+
+    <artifactId>spring-support-httpman-starter</artifactId>
+    <name>Spring Support HttpMan Starter</name>
+    <description>
+        接口调试控制台（HttpMan）能力：类似 Postman 的请求集合、请求与历史记录管理，
+        以及从后端代理发起 HTTP 请求的能力（/ms/httpman/** REST）。
+    </description>
+
+    <dependencies>
+        <!-- 公共能力：ReturnResult / Json / 通用工具 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 动画配置（HttpmanProperties） + 元注解 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 统一 REST 入口 /ms/httpman** 与 HTTP 代理执行（WebClient） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- HTTP 代理执行支持（响应式 WebClient） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 数据库：Mapper / Entity / 建表脚本（db/init） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <!-- 缓存（历史记录可选存 Redis；无 Redis 时降级为本地缓存） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cache-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Swagger API 注解 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- SLF4J -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>25</source>
+                    <target>25</target>
+                    <fork>false</fork>
+                    <release/>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

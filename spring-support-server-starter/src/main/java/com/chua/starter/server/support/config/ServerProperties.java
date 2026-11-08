@@ -44,6 +44,36 @@ public class ServerProperties {
     private int execConcurrency = 16;
 
     /**
+     * Telnet console 直连配置
+     * <p>
+     * 该通道不经 guacd，由后端直接以原始 TCP 连到目标主机的 23 端口（可配置覆盖），
+     * 浏览器侧获得的是一个无壳的 Telnet 会话代理。
+     * </p>
+     * @author CH
+     * @since 4.0.0.46
+     */
+    private Telnet telnet = new Telnet();
+
+    /**
+     * Telnet 直连配置
+     * @author CH
+     * @since 4.0.0.46
+     */
+    @Data
+    public static class Telnet {
+
+        /**
+         * Telnet 默认端口
+         */
+        private int port = 23;
+
+        /**
+         * TCP 连接超时（毫秒）
+         */
+        private int timeout = 10_000;
+    }
+
+    /**
      * guacd 连接配置
      * @author CH
      * @since 4.0.0

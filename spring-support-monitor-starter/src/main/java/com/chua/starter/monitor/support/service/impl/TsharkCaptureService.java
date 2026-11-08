@@ -2,14 +2,17 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.network.support.tshark.PacketParserService;
 import com.chua.network.support.tshark.PacketRecord;
 import com.chua.starter.datasource.support.DataSourceContextSupport;
+import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
+import com.chua.starter.monitor.support.mapper.MsMonitorAlarmEventMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
 import com.chua.starter.monitor.support.model.PacketRestoreFrame;
@@ -18,10 +21,13 @@ import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.model.TsharkTcpStreamVO;
+import com.chua.starter.monitor.support.tshark.TsharkDisplayFilter;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
 import com.chua.starter.monitor.support.tshark.TsharkSqliteSourceRegistry;
 import com.chua.starter.monitor.support.config.TsharkInstallProperties;
+import com.chua.starter.monitor.support.config.TsharkRetentionProperties;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +42,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
+import java.math.BigDecimal;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -53,6 +60,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -167,6 +175,7 @@ public class TsharkCaptureService {
     private final Map<Long, Process> running = new ConcurrentHashMap<>(); // running
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
     private final MsTsharkPacketMapper packetMapper; // 数据包映射器
+    private final MsMonitorAlarmEventMapper alarmEventMapper; // 告警事件映射器
     private final TsharkSqliteSourceRegistry sqliteRegistry;
     /**
      * 实时推送服务（Socket 未启用时静默跳过）
@@ -182,20 +191,29 @@ public class TsharkCaptureService {
      */
     private final ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider;
 
+    /**
+     * 搜包数据保留与清理策略配置。
+     */
+    private final TsharkRetentionProperties retentionProperties;
+
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
                                 MsTsharkPacketMapper packetMapper,
                                 MonitorPushService pushService,
                                 ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider,
                                 TsharkRuntime tsharkRuntime,
                                 TsharkSqliteSourceRegistry sqliteRegistry,
-                                TsharkInstallProperties installProperties) {
+                                TsharkInstallProperties installProperties,
+                                MsMonitorAlarmEventMapper alarmEventMapper,
+                                TsharkRetentionProperties retentionProperties) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
+        this.alarmEventMapper = alarmEventMapper;
         this.pushService = pushService;
         this.streamRegistryProvider = streamRegistryProvider;
         this.tsharkRuntime = tsharkRuntime;
         this.sqliteRegistry = sqliteRegistry;
         this.installProperties = installProperties;
+        this.retentionProperties = retentionProperties;
     }
 
     /**
@@ -684,6 +702,108 @@ public class TsharkCaptureService {
     }
 
     /**
+     * 多网卡同时抓包：每张网卡一个会话、一个 tshark 进程，统一入会话列表。
+     *
+     * <p>失败隔离：任意一张网卡起不来，只清自己的会话，别的会话正常跑；返回里
+     * 全是成功启用的会话，错误信息只在日志里。</p>
+     *
+     * @param name 名称
+     * @param ifaces 网卡列表（单网卡时也经过这里生成）
+     * @param filter 过滤器
+     * @param filterType 过滤语法：auto / bpf / display
+     * @param count 数量
+     * @param timeout 超时
+     * @return 启用的会语列表
+     */
+    public ReturnResult<List<MsTsharkSession>> startCapture(String name, List<String> ifaces,
+                                                            String filter, String filterType,
+                                                            Integer count, Integer timeout) {
+        if (ifaces == null || ifaces.isEmpty()) {
+            return ReturnResult.error("请指定至少一张网卡");
+        }
+        List<MsTsharkSession> created = new ArrayList<>();
+        for (String iface : ifaces) {
+            Long sessionId = null;
+            Process proc = null;
+            try {
+                Files.createDirectories(Paths.get(CAPTURE_DIR));
+                String fileName = UUID.randomUUID().toString().replace("-", "") + ".pcap";
+                Path filePath = Paths.get(CAPTURE_DIR, fileName);
+                List<String> cmd = new ArrayList<>();
+                cmd.add(bin());
+                cmd.add("-i");
+                cmd.add(iface);
+                if (filter != null && !filter.isBlank()) {
+                    String bpf = filter.trim();
+                    if (useDisplayFilter(filter, filterType)) {
+                        bpf = displayToBpf(filter.trim());
+                        if (bpf == null) {
+                            return ReturnResult.error("实时抓包只支持捕获过滤（BPF）。显示过滤「" + filter
+                                    + "」无法自动转换，请改用 tcp port 80、host 10.0.0.1 这类写法。");
+                        }
+                    }
+                    cmd.add("-f");
+                    cmd.add(bpf);
+                }
+                if (count != null && count > 0) {
+                    cmd.add("-c");
+                    cmd.add(String.valueOf(count));
+                }
+                if (timeout != null && timeout > 0) {
+                    cmd.add("-a");
+                    cmd.add("duration:" + timeout);
+                }
+                cmd.add("-w");
+                cmd.add(filePath.toString());
+                ProcessBuilder pb = new ProcessBuilder(cmd);
+                pb.redirectErrorStream(true);
+                pb.redirectOutput(new File(filePath + ".log"));
+                proc = pb.start();
+                // 启动健康检查：tshark 对过滤器/网卡的抱怨发生在启动后的几百毫秒内
+                if (proc.waitFor(600L, TimeUnit.MILLISECONDS) && proc.exitValue() != 0) {
+                    String detail = startupFailure(filePath, filter, proc.exitValue());
+                    Files.deleteIfExists(filePath);
+                    Files.deleteIfExists(Paths.get(filePath + ".log"));
+                    throw new IllegalStateException("抓包启动失败: " + detail);
+                }
+                String sessionName = name == null || name.isBlank() ? iface + " 抓包" : name + " (" + iface + ")";
+                MsTsharkSession session = new MsTsharkSession();
+                session.setSessionName(sessionName);
+                session.setCaptureInterface(iface);
+                session.setCaptureFilter(filter);
+                session.setSource(SOURCE_LIVE);
+                session.setCaptureStatus(1);
+                session.setPacketCount(0);
+                session.setFilePath(filePath.toString());
+                session.setCaptureDuration(timeout);
+                session.setStartTime(LocalDateTime.now());
+                this.sessionMapper.insert(session);
+                sessionId = session.getId();
+                this.running.put(sessionId, proc);
+                this.pushService.pushTsharkSession(session, session.getId());
+                // 过程引用必须在 lambda 劫前本地化：proc 被重新赋值后就不再是 effectively final，
+                // 不能进 lambda（可以把它传给同一个 instance）— 直接旁路一份 use
+                Process runProc = proc;
+                CompletableFuture.runAsync(() -> this.asyncFinalize(session.getId(), runProc, filePath));
+                created.add(session);
+            } catch (Exception e) {
+                log.warn("多网卡抓包单网卡拉起失败 iface={} reason={}", iface, e.getMessage());
+                // 失败隔离：清自己的会话和文件
+                try {
+                    if (proc != null) {
+                        proc.destroy();
+                    }
+                    if (sessionId != null) {
+                        this.deleteSession(sessionId);
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        return ReturnResult.ok(created);
+    }
+
+    /**
      * 启动capture。
      * @param name 名称
      * @param iface iface
@@ -693,81 +813,12 @@ public class TsharkCaptureService {
      * @param timeout 超时
      * @return 启动capture的结果
      */
-    public ReturnResult<MsTsharkSession> startCapture(String name, String iface, String filter,
+    public ReturnResult<List<MsTsharkSession>> startCapture(String name, String iface, String filter,
                                                       String filterType, Integer count, Integer timeout) {
-        try {
-            if (iface == null || iface.isBlank()) {
-                return ReturnResult.error("请指定网卡");
-            }
-            Files.createDirectories(Paths.get(CAPTURE_DIR));
-            String fileName = UUID.randomUUID().toString().replace("-", "") + ".pcap";
-            Path filePath = Paths.get(CAPTURE_DIR, fileName);
-            List<String> cmd = new ArrayList<>();
-            cmd.add(bin());
-            cmd.add("-i");
-            cmd.add(iface);
-            if (filter != null && !filter.isBlank()) {
-                // BPF（-f）与显示过滤（-Y）不是同一套语法；而且 tshark 在「抓包 + -w」
-                // 模式下明确不支持 -Y（会直接退出：Display filters aren't supported when
-                // capturing and saving the captured packets）。所以实时抓包只能走捕获过滤：
-                // 用户写 http 这类显示过滤时，先翻译成等价的 BPF，翻不了就明确拒绝，
-                // 绝不带着一条注定失败的 -Y 去建会话。
-                String bpf = filter.trim();
-                if (useDisplayFilter(filter, filterType)) {
-                    bpf = displayToBpf(filter.trim());
-                    if (bpf == null) {
-                        return ReturnResult.error("实时抓包只支持捕获过滤（BPF）。显示过滤「" + filter
-                                + "」无法自动转换，请改用 tcp port 80、host 10.0.0.1 这类写法。");
-                    }
-                }
-                cmd.add("-f");
-                cmd.add(bpf);
-            }
-            if (count != null && count > 0) {
-                cmd.add("-c");
-                cmd.add(String.valueOf(count));
-            }
-            if (timeout != null && timeout > 0) {
-                cmd.add("-a");
-                cmd.add("duration:" + timeout);
-            }
-            cmd.add("-w");
-            cmd.add(filePath.toString());
-            ProcessBuilder pb = new ProcessBuilder(cmd);
-            pb.redirectErrorStream(true);
-            pb.redirectOutput(new File(filePath + ".log"));
-            Process proc = pb.start();
-            // tshark 对过滤器/网卡的抱怨发生在启动后的几百毫秒内。这里等一小会儿：
-            // 非 0 退出直接回错误并清掉临时文件，不再落一条「刚建就停」的会话。
-            // 退出码 0 是 -c 1 这类迅速抓完的正常情况，继续走建会话 + 收尾解析。
-            if (proc.waitFor(600L, TimeUnit.MILLISECONDS) && proc.exitValue() != 0) {
-                String detail = startupFailure(filePath, filter, proc.exitValue());
-                Files.deleteIfExists(filePath);
-                Files.deleteIfExists(Paths.get(filePath + ".log"));
-                return ReturnResult.error("抓包启动失败: " + detail);
-            }
-            MsTsharkSession session = new MsTsharkSession();
-            session.setSessionName(name == null || name.isBlank() ? iface + " 抓包" : name);
-            session.setCaptureInterface(iface);
-            session.setCaptureFilter(filter);
-            // 来源显式落库，不靠 DDL 默认值：MyBatis-Plus 的字段策略一旦被改成
-            // 插入 NULL，默认值就失效，届时「抓包分析」页按 source=live 过滤会看不到自己的会话
-            session.setSource(SOURCE_LIVE);
-            session.setCaptureStatus(1);
-            session.setPacketCount(0);
-            session.setFilePath(filePath.toString());
-            session.setCaptureDuration(timeout);
-            session.setStartTime(LocalDateTime.now());
-            this.sessionMapper.insert(session);
-            this.running.put(session.getId(), proc);
-            this.pushService.pushTsharkSession(session, session.getId());
-            // 自调用不会走 Spring 代理，@Async 在这里不生效，必须显式切线程（见 asyncFinalize 的注释）
-            CompletableFuture.runAsync(() -> this.asyncFinalize(session.getId(), proc, filePath));
-            return ReturnResult.ok(session);
-        } catch (Exception e) {
-            log.error("start capture failed", e);
-            return ReturnResult.error("启动抓包失败: " + execHint(e));
+        if (iface == null || iface.isBlank()) {
+            return ReturnResult.error("请指定网卡");
         }
+        return startCapture(name, List.of(iface), filter, filterType, count, timeout);
     }
 
     /**
@@ -1119,6 +1170,79 @@ public class TsharkCaptureService {
         }
         this.pushService.pushTsharkSession(session, sessionId);
         return ReturnResult.success();
+    }
+
+    /**
+     * 暂停抓包会话的实时推送。
+     *
+     * <p><b>语义</b>：挂起推给前端的实时流（socket.io 广播与 SSE 同时掐断），
+     * 抓包进程、pcap 写入与增量解析入库一律不受影响 —— 这样「暂停-恢复」是无损的，
+     * 恢复后从断点继续推，不用重算也不用重抓。</p>
+     *
+     * <p>只允许正在运行的 live 会话；已停止或异常会话直接返回失败，
+     * 避免对停掉的会话做无意义操作。</p>
+     *
+     * @param sessionId 抓包会话 id
+     * @return 执行结果
+     */
+    public ReturnResult<Void> pauseSession(Long sessionId) {
+        Process proc = this.running.get(sessionId);
+        TsharkPacketStreamRegistry registry = streamRegistry();
+        if (proc == null) {
+            return ReturnResult.error("本机未存活抓包会话: " + sessionId);
+        }
+        if (registry != null) {
+            registry.pause(sessionId);
+            registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_SESSION,
+                    Map.of("sessionId", sessionId, "phase", "paused"));
+        }
+        sessionStatus(sessionId, 3, null);
+        return ReturnResult.success();
+    }
+
+    /**
+     * 恢复抓包会话的实时推送。
+     *
+     * @param sessionId 抓包会话 id
+     * @return 执行结果
+     */
+    public ReturnResult<Void> resumeSession(Long sessionId) {
+        Process proc = this.running.get(sessionId);
+        TsharkPacketStreamRegistry registry = streamRegistry();
+        if (proc == null) {
+            return ReturnResult.error("本机未存活抓包会话: " + sessionId);
+        }
+        if (registry != null) {
+            registry.resume(sessionId);
+            registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_SESSION,
+                    Map.of("sessionId", sessionId, "phase", "resumed"));
+        }
+        sessionStatus(sessionId, 1, null);
+        return ReturnResult.success();
+    }
+
+    /**
+     * 更新会话状态（暂停/恢复/停止时调用）。
+     *
+     * @param sessionId 会话 id
+     * @param status    目标状态；1 运行 | 3 已暂停 | 0 停止
+     * @param endTime   结束时间；无则置空
+     */
+    private void sessionStatus(Long sessionId, int status, LocalDateTime endTime) {
+        try {
+            MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+            if (session == null) {
+                return;
+            }
+            session.setCaptureStatus(status);
+            if (endTime != null) {
+                session.setEndTime(endTime);
+            }
+            this.sessionMapper.updateById(session);
+            this.pushService.pushTsharkSession(session, sessionId);
+        } catch (Exception e) {
+            log.debug("update session status failed session={} reason={}", sessionId, e.getMessage());
+        }
     }
 
     /**
@@ -1953,14 +2077,18 @@ public class TsharkCaptureService {
                 return Boolean.TRUE;
             });
             if (push) {
-                // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
-                this.pushService.pushTsharkPacket(packet, sessionId);
-                // SSE 推送：按会话分组，只推给正在看这个会话的连接。
-                // 载荷走精简字段（rawData 是整块 tshark JSON，逐包推会把带宽吃光），
-                // 完整原始数据仍走详情接口按需取。
                 TsharkPacketStreamRegistry registry = streamRegistry();
-                if (registry != null) {
+                // 暂停中：抓包进程与入库照常，但不再把新包推给前端
+                // （socket.io 广播与 SSE 同时掐断，恢复后从断点继续，不丢包）
+                if (registry == null || !registry.isPaused(sessionId)) {
+                    // 实时推送：每包广播（数据 id = 会话 id，前端按当前会话过滤）
+                    this.pushService.pushTsharkPacket(packet, sessionId);
+                    // SSE 推送：按会话分组，只推给正在看这个会话的连接。
+                    // 载荷走精简字段（rawData 是整块 tshark JSON，逐包推会把带宽吃光），
+                    // 完整原始数据仍走详情接口按需取。
                     registry.broadcast(sessionId, TsharkPacketStreamRegistry.EVENT_PACKET, toStreamPayload(packet));
+                } else {
+                    log.debug("[tshark] 抓包暂停中，跳过新包推送 sessionId={} frame={}", sessionId, packet.getFrameNo());
                 }
             }
             return true;
@@ -2058,21 +2186,32 @@ public class TsharkCaptureService {
 
     /**
      * page数据包。
+     *
      * @param sessionId 会话标识
      * @param page page
      * @param size 大小
-     * @param keyword 关键字（可空）。在协议 / 源目的 IP / 源目的端口 / 摘要里做模糊匹配。
-     *                端口是整型列，无法直接 like，只能先按文本匹配其余列，
-     *                再对「端口字符串」单独补一次 eq —— 纯数字关键字才当端口用。
+     * @param keyword 关键字（可空），在协议/IP/源目IP/端口/摘要里做模糊匹配
      * @param startTime 开始时间（可空），格式：yyyy-MM-dd HH:mm:ss
      * @param endTime 结束时间（可空），格式：yyyy-MM-dd HH:mm:ss
+     * @param displayFilter 显示过滤（可空），词法语义高于关键字：报文页/统计/会话流/诊断
+     *                      必须用同一套 SQL，不能让过滤条改了但统计还是全量
      * @return page数据包的结果
      */
-    public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size, String keyword, String startTime, String endTime) {
+    public ReturnResult<IPage<MsTsharkPacket>> pagePackets(Long sessionId, int page, int size, String keyword, String startTime, String endTime, String displayFilter) {
         String kw = keyword == null ? "" : keyword.trim();
+        String df = displayFilter == null ? "" : displayFilter.trim();
         LambdaQueryWrapper<MsTsharkPacket> w =
                 new LambdaQueryWrapper<MsTsharkPacket>().eq(sessionId != null, MsTsharkPacket::getSessionId, sessionId);
-        if (!kw.isEmpty()) {
+        // 显示过滤走 parameterized SQL（端口/协议/来源都精确匹配），关键字留给
+        // 旧调用方做全文模糊搜索，优先权低于显示过滤
+        if (!df.isEmpty()) {
+            TsharkDisplayFilter.SqlFilter sf = TsharkDisplayFilter.parse(df);
+            if (sf.isEmpty()) {
+                log.info("[tshark] 显示过滤未解析出条件 sessionId={} filter={}", sessionId, df);
+            } else {
+                w.apply(sf.sql(), sf.args().toArray());
+            }
+        } else if (!kw.isEmpty()) {
             w.and(q -> q.like(MsTsharkPacket::getProtocol, kw)
                     .or().like(MsTsharkPacket::getSourceIp, kw)
                     .or().like(MsTsharkPacket::getDestIp, kw)
@@ -2162,13 +2301,20 @@ public class TsharkCaptureService {
 
     /**
      * 协议stats。
+     *
      * @param sessionId 会话标识
+     * @param displayFilter 显示过滤（可空），报文分页用了同一套词法，统计不能独善其身
      * @return 协议stats的结果
      */
-    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(Long sessionId) {
-        // SQL 层聚合，不再全量加载报文到内存
-        List<Map<String, Object>> rows = this.withPacketDb(sessionId,
-                () -> this.packetMapper.selectProtocolStatsBySessionId(sessionId));
+    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(Long sessionId, String displayFilter) {
+        QueryWrapper<MsTsharkPacket> q = new QueryWrapper<>();
+        q.select("COALESCE(ms_tshark_packet_protocol, 'OTHER') AS protocol, "
+                + "COUNT(*) AS count, COALESCE(SUM(ms_tshark_packet_length), 0) AS bytes");
+        q.eq("ms_tshark_packet_session_id", sessionId);
+        appendFilterSql(q, displayFilter);
+        q.groupBy("COALESCE(ms_tshark_packet_protocol, 'OTHER')");
+        q.orderByDesc("count");
+        List<Map<String, Object>> rows = this.withPacketDb(sessionId, () -> this.packetMapper.selectMaps(q));
         List<TsharkProtocolStatVO> result = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             String proto = row.get("protocol") == null ? "OTHER" : String.valueOf(row.get("protocol"));
@@ -2181,14 +2327,24 @@ public class TsharkCaptureService {
 
     /**
      * top流。
+     *
      * @param sessionId 会话标识
      * @param limit 限制
+     * @param displayFilter 显示过滤（可空）
      * @return top流的结果
      */
-    public ReturnResult<List<TsharkFlowVO>> topFlows(Long sessionId, int limit) {
-        // SQL 层聚合，不再全量加载报文到内存；SQL 已带 LIMIT 20
-        List<Map<String, Object>> rows = this.withPacketDb(sessionId,
-                () -> this.packetMapper.selectTopFlowsBySessionId(sessionId));
+    public ReturnResult<List<TsharkFlowVO>> topFlows(Long sessionId, int limit, String displayFilter) {
+        QueryWrapper<MsTsharkPacket> q = new QueryWrapper<>();
+        q.select("(COALESCE(ms_tshark_packet_source_ip, '') || ':' || COALESCE(ms_tshark_packet_source_port, '')) AS flow, "
+                + "COUNT(*) AS count, COALESCE(SUM(ms_tshark_packet_length), 0) AS bytes, "
+                + "ms_tshark_packet_source_ip AS sourceIp, ms_tshark_packet_source_port AS sourcePort, "
+                + "ms_tshark_packet_dest_ip AS destIp, ms_tshark_packet_dest_port AS destPort");
+        q.eq("ms_tshark_packet_session_id", sessionId);
+        appendFilterSql(q, displayFilter);
+        q.groupBy("ms_tshark_packet_source_ip", "ms_tshark_packet_source_port",
+                "ms_tshark_packet_dest_ip", "ms_tshark_packet_dest_port");
+        q.orderByDesc("count").last("LIMIT " + Math.min(Math.max(0, limit), 100));
+        List<Map<String, Object>> rows = this.withPacketDb(sessionId, () -> this.packetMapper.selectMaps(q));
         List<TsharkFlowVO> result = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             String flow = row.get("flow") == null ? "" : String.valueOf(row.get("flow"));
@@ -2208,25 +2364,43 @@ public class TsharkCaptureService {
      *
      * @param sessionId     会话标识
      * @param bucketSeconds 桶大小（秒），默认 10
+     * @param displayFilter 显示过滤（可空）
      * @return 时间轴数据列表，格式：[{"t": "2026-10-19 10:00:00", "packets": 123, "bytes": 45678}, ...]
      */
-    public List<Map<String, Object>> timeline(Long sessionId, Integer bucketSeconds) {
+    public List<Map<String, Object>> timeline(Long sessionId, Integer bucketSeconds, String displayFilter) {
         int bucket = bucketSeconds == null || bucketSeconds <= 0 ? 10 : bucketSeconds;
-        return this.withPacketDb(sessionId, () -> this.packetMapper.selectTimelineBySessionId(sessionId, bucket));
+        QueryWrapper<MsTsharkPacket> q = new QueryWrapper<>();
+        q.select("datetime(" + bucketSql(bucket) + ", 'unixepoch') AS t, "
+                + "COUNT(*) AS packets, COALESCE(SUM(ms_tshark_packet_length), 0) AS bytes");
+        q.eq("ms_tshark_packet_session_id", sessionId);
+        appendFilterSql(q, displayFilter);
+        q.groupBy(bucketSql(bucket));
+        q.orderByAsc("t");
+        return this.withPacketDb(sessionId, () -> this.packetMapper.selectMaps(q));
     }
 
     /**
      * 会话常见异常诊断。
      *
-     * <p>聚合口径见 {@link MsTsharkPacketMapper#selectAnomalyCountsBySessionId}；
-     * 计数为 0 的项不返回，前端「很干净」的判据是有没有行，而不是行的计数。</p>
-     *
      * @param sessionId 会话标识
+     * @param displayFilter 显示过滤（可空），与报文分页同一套词法
      * @return 异常诊断列表；每项含 key/label/severity/count/filter
      */
-    public ReturnResult<List<TsharkAnomalyVO>> anomalies(Long sessionId) {
-        Map<String, Object> row = this.withPacketDb(sessionId,
-                () -> this.packetMapper.selectAnomalyCountsBySessionId(sessionId));
+    public ReturnResult<List<TsharkAnomalyVO>> anomalies(Long sessionId, String displayFilter) {
+        QueryWrapper<MsTsharkPacket> q = new QueryWrapper<>();
+        q.select("SUM(CASE WHEN ms_tshark_packet_info LIKE '%[RST%' THEN 1 ELSE 0 END) AS reset, "
+                + "SUM(CASE WHEN ms_tshark_packet_protocol LIKE 'ICMP%' AND ms_tshark_packet_info LIKE '%unreachable%' THEN 1 ELSE 0 END) AS unreachable, "
+                + "SUM(CASE WHEN ms_tshark_packet_info LIKE '%[TCP Retransmission]%' THEN 1 ELSE 0 END) AS retransmission, "
+                + "SUM(CASE WHEN ms_tshark_packet_info LIKE '%[TCP Out-Of-Order]%' OR ms_tshark_packet_info LIKE '%[TCP Out-of-Order]%' THEN 1 ELSE 0 END) AS outOfOrder, "
+                + "SUM(CASE WHEN ms_tshark_packet_info LIKE '%[TCP ZeroWindow]%' THEN 1 ELSE 0 END) AS zeroWindow, "
+                + "SUM(CASE WHEN ms_tshark_packet_protocol LIKE 'DNS%' AND (ms_tshark_packet_info LIKE '%No such name%' OR ms_tshark_packet_info LIKE '%NXDOMAIN%' OR ms_tshark_packet_info LIKE '%Non-Existent%') THEN 1 ELSE 0 END) AS dnsFail, "
+                + "SUM(CASE WHEN ms_tshark_packet_info LIKE 'HTTP/1.1 4%' OR ms_tshark_packet_info LIKE 'HTTP/1.0 4%' OR ms_tshark_packet_info LIKE 'HTTP/2 4%' THEN 1 ELSE 0 END) AS http4xx, "
+                + "SUM(CASE WHEN ms_tshark_packet_info LIKE 'HTTP/1.1 5%' OR ms_tshark_packet_info LIKE 'HTTP/1.0 5%' OR ms_tshark_packet_info LIKE 'HTTP/2 5%' THEN 1 ELSE 0 END) AS http5xx, "
+                + "SUM(CASE WHEN ms_tshark_packet_protocol LIKE 'TLS%' AND ms_tshark_packet_info LIKE '%Alert%' THEN 1 ELSE 0 END) AS tlsAlert");
+        q.eq("ms_tshark_packet_session_id", sessionId);
+        appendFilterSql(q, displayFilter);
+        List<Map<String, Object>> rows = this.withPacketDb(sessionId, () -> this.packetMapper.selectMaps(q));
+        Map<String, Object> row = rows.isEmpty() ? null : rows.get(0);
         List<TsharkAnomalyVO> result = new ArrayList<>(9);
         if (row != null) {
             addAnomaly(result, row, "reset", "连接重置 (RST)", "danger",
@@ -2248,6 +2422,9 @@ public class TsharkCaptureService {
             addAnomaly(result, row, "tlsAlert", "TLS 告警", "info",
                     "tls.record.content_type == 21");
         }
+        // 异常（danger / warning 级别）同时转入告警中心，告警中心两天内常查，
+        // 这样「抓包分析」里的失效率一眼可见，不需要再切页面看。
+        emitTsharkAlarms(result, sessionId);
         return ReturnResult.ok(result);
     }
 
@@ -2258,6 +2435,297 @@ public class TsharkCaptureService {
         if (count > 0) {
             out.add(new TsharkAnomalyVO(key, label, severity, count, filter));
         }
+    }
+
+    /**
+     * 把严重级别的抓包异常转入告警中心。
+     *
+     * <p>「抓包分析」页上的异常行只在页面可见，分析完关掉就没了。但告警中心是常驻页面，
+     * 把 high/medium 以上级别转到 {@code MsMonitorAlarmEvent} 里，运维从告警中心就能
+     * 直接看到本会话的失效率、丢包/重传指标，并可以在同一页里长按处理。</p>
+     *
+     * <p>只推 danger / warning：info 级别的报文（HTTP 4xx、TLS Alert）不代表故障，
+     * 只记录在异常里即可。每个异常一次事件，行为与告警引擎一致：落事件、推实时通道，
+     * 失败只记日志，不中断分析结果返回。</p>
+     *
+     * @param result  异常行
+     * @param sessionId 会话标识
+     */
+    private void emitTsharkAlarms(List<TsharkAnomalyVO> result, Long sessionId) {
+        if (result == null || result.isEmpty()) {
+            return;
+        }
+        for (TsharkAnomalyVO a : result) {
+            if (!"danger".equals(a.severity()) && !"warning".equals(a.severity())) {
+                continue;
+            }
+            try {
+                String level = "danger".equals(a.severity()) ? "P1" : "P2";
+                BigDecimal value = BigDecimal.valueOf(a.count());
+                BigDecimal threshold = BigDecimal.ONE;
+                MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+                String monitorName = session == null ? "tshark(" + sessionId + ")" : session.getSessionName();
+                var event = new MsMonitorAlarmEvent();
+                event.setMsMonitorAlarmEventMonitorId(sessionId);
+                event.setMsMonitorAlarmEventMonitorName(monitorName);
+                event.setMsMonitorAlarmEventRuleId(0L);
+                event.setMsMonitorAlarmEventMetricName("tshark." + a.key());
+                event.setMsMonitorAlarmEventAlarmValue(value);
+                event.setMsMonitorAlarmEventThreshold(threshold);
+                event.setMsMonitorAlarmEventLevel(level);
+                event.setMsMonitorAlarmEventStatus("NEW");
+                event.setMsMonitorAlarmEventTriggerTime(LocalDateTime.now());
+                var snapshot = new LinkedHashMap<String, Object>();
+                snapshot.put("sessionName", monitorName);
+                snapshot.put("anomaly", a.key());
+                snapshot.put("label", a.label());
+                snapshot.put("session_id", String.valueOf(sessionId));
+                event.setMsMonitorAlarmEventRuleSnapshot(new ObjectMapper().writeValueAsString(snapshot));
+                this.alarmEventMapper.insert(event);
+                try {
+                    this.pushService.pushAlarm(MonitorPushService.buildAlarmPayload(
+                            event.getMsMonitorAlarmEventMonitorId(),
+                            event.getMsMonitorAlarmEventMonitorName(),
+                            event.getMsMonitorAlarmEventMetricName(),
+                            value.doubleValue(),
+                            threshold.doubleValue(),
+                            level,
+                            event.getMsMonitorAlarmEventStatus()));
+                } catch (Exception e) {
+                    log.debug("[tshark] 告警推送跳过 session={} reason={}", sessionId, e.getMessage());
+                }
+                log.info("[tshark] 异常转告警 session={} anomaly={} count={} level={}",
+                        sessionId, a.key(), a.count(), level);
+            } catch (Exception e) {
+                log.warn("[tshark] 异常转告警失败 session={} anomaly={} reason={}",
+                        sessionId, a.key(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Follow TCP Stream：从指定报文所在连接中找出全部 5 元组报文，按时间排序后合并成
+     * 双向载荷帧，把 hex 与文字载荷都还给前端。
+     *
+     * <p>一次「流」不只看单包：连接由 5 元组唯一确定，报文可能跨帧、乱序进来，
+     * 所以先按 5 元组取本会话里方向相反、端口互补的全部报文，再按 frame.time
+     * 排序；从同一端连续发出的报文段合并成一条载荷帧，标注 Source（发起方）/
+     * Receive（对端），空的 control 帧（ACK/RST/PSH-only）不占载荷位。</p>
+     *
+     * <p>实现注意：字段还原靠在 {@code ms_tshark_packet_restored} 上（tshark 按协议
+     * 解析出的文字载荷），hex 载荷从 {@code rawData} 里取 frame.data 即可。
+     * 分页取走 100 条以内，超出截断到 {@code totalSteps / truncated}。</p>
+     *
+     * @param sessionId 会话标识
+     * @param packetId  会话中的任一条 TCP 报文
+     * @return 还原后的双向流
+     */
+    public ReturnResult<TsharkTcpStreamVO> followTcpStream(Long sessionId, Long packetId) {
+        MsTsharkPacket p = this.packetMapper.selectById(packetId);
+        if (p == null || !Objects.equals(p.getSessionId(), sessionId)) {
+            return ReturnResult.error("报文不在本会话中");
+        }
+        if (!p.getProtocol().equals("TCP")) {
+            return ReturnResult.error("只支持 TCP 报文的 Follow TCP Stream");
+        }
+        try {
+            // 1. 连接由 5 元组确定：两向报文都要取（（src,dst）或（dst,src））。
+            String srcIp = p.getSourceIp() == null ? "" : p.getSourceIp();
+            int srcPort = p.getSourcePort() == null ? 0 : p.getSourcePort();
+            String dstIp = p.getDestIp() == null ? "" : p.getDestIp();
+            int dstPort = p.getDestPort() == null ? 0 : p.getDestPort();
+            if (srcIp.isBlank() || dstIp.isBlank() || srcPort == 0 || dstPort == 0) {
+                return ReturnResult.error("得不到该报文的 5 元组（源/目的 IP 或端口缺失），无法拼流");
+            }
+            String where = "((ms_tshark_packet_source_ip = ? AND ms_tshark_packet_source_port = ?"
+                    + " AND ms_tshark_packet_dest_ip = ? AND ms_tshark_packet_dest_port = ?)"
+                    + " OR (ms_tshark_packet_source_ip = ? AND ms_tshark_packet_source_port = ?"
+                    + " AND ms_tshark_packet_dest_ip = ? AND ms_tshark_packet_dest_port = ?))";
+            List<MsTsharkPacket> flows = new ArrayList<>();
+            withPacketDb(sessionId, () -> {
+                QueryWrapper<MsTsharkPacket> q = new QueryWrapper<>();
+                q.eq("ms_tshark_packet_session_id", sessionId)
+                        .eq("ms_tshark_packet_protocol", "TCP");
+                q.apply(where, srcIp, srcPort, dstIp, dstPort,
+                        dstIp, dstPort, srcIp, srcPort);
+                q.orderByAsc("ms_tshark_packet_time", "ms_tshark_packet_frame_no");
+                flows.addAll(this.packetMapper.selectList(q));
+                return null;
+            });
+            if (flows.isEmpty()) {
+                return ReturnResult.ok(TcpStreamEmpty());
+            }
+            // 2. 拆成双向合并：从 src 发出的算 Source 方向，从 dst 发回的算 Receive 方向。
+            TsharkTcpStreamVO stream = new TsharkTcpStreamVO();
+            stream.setSessionId(sessionId);
+            stream.setProtocol("TCP");
+            stream.setSrc(srcIp);
+            stream.setSrcPort(srcPort);
+            stream.setDst(dstIp);
+            stream.setDstPort(dstPort);
+            stream.setSourceSide(true); // 发起方在 Source 列
+            LocalDateTime base = null;
+            for (MsTsharkPacket f : flows) {
+                if (base == null) {
+                    base = f.getPacketTime();
+                }
+                TsharkTcpStreamVO.TcpStreamFrame pf = new TsharkTcpStreamVO.TcpStreamFrame();
+                pf.setFrameNo(f.getFrameNo());
+                // tshark 的时间格式与实体落库一致，这里只取前缀秒级
+                pf.setTime(f.getPacketTime() == null ? "" : f.getPacketTime().toString());
+                double sec = 0;
+                if (base != null && f.getPacketTime() != null) {
+                    sec = Math.max(0D, java.time.Duration.between(base, f.getPacketTime()).getSeconds());
+                }
+                pf.setOffset(sec);
+                String text = f.getRestoredText() == null ? "" : f.getRestoredText().trim();
+                // hex 载荷从原始 JSON 的 frame.data 取（restoredText 是协议层文字，不是 hex）
+                String hex = f.getRawData() == null ? "" : hexOf(f.getRawData());
+                // 载荷非空且是数据帧才往帧里写：ACK/RST/ARF 等控制帧只留帧号标记
+                pf.setText(text.isEmpty() ? null : text);
+                pf.setPayload(hex.isEmpty() ? null : hex);
+                boolean source = Objects.equals(f.getSourceIp(), srcIp)
+                        && Objects.equals(f.getSourcePort(), srcPort);
+                stream.setSourceSide(source);
+                stream.getFrames().add(pf);
+            }
+            // 3. 同方向合并：把连续同向帧拼接（前端按帧号分段取）
+            return ReturnResult.ok(stream);
+        } catch (Exception e) {
+            log.error("follow tcp stream failed, session={} packet={}", sessionId, packetId, e);
+            return ReturnResult.error("Follow TCP Stream 失败: " + execHint(e));
+        }
+    }
+
+    /**
+     * 从 tshark 原始 JSON 里取 frame.data 的 hex。
+     *
+     * @param rawData 单包完整 JSON
+     * @return hex 载荷（无数据帧返回 null）
+     */
+    private static String hexOf(String rawData) {
+        if (rawData == null || rawData.isBlank()) {
+            return null;
+        }
+        try {
+            ObjectMapper om = new ObjectMapper();
+            JsonParser jp = om.getFactory().createParser(rawData);
+            StringBuilder buf = new StringBuilder();
+            while (jp.nextToken() != null) {
+                JsonToken t = jp.currentToken();
+                if (t == JsonToken.FIELD_NAME && "data".equals(jp.getCurrentName())) {
+                    jp.nextToken();
+                    if (jp.currentToken() == JsonToken.VALUE_STRING) {
+                        String hex = jp.getValueAsString();
+                        if (hex != null && !hex.isBlank()) {
+                            buf.append(hex);
+                            // 十六进制可以在 frame.data 下一层再出现，取全部拼接
+                        }
+                        break;
+                    }
+                    continue;
+                }
+            }
+            jp.close();
+            return buf.length() > 0 ? buf.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 没有抓到任何冗余流时的空结果。
+     * @return 空流
+     */
+    private static TsharkTcpStreamVO TcpStreamEmpty() {
+        TsharkTcpStreamVO stream = new TsharkTcpStreamVO();
+        stream.setSessionId(null);
+        return stream;
+    }
+
+    /**
+     * 按会话过滤后的 pcap 导出：把 tshark 的显示过滤再执行一次，输出成新的 pcap 下载。
+     *
+     * <p>幂等但不用轮询：tshark 一次 -r -w 就能把过滤后的包重新打包（文件本体已连着扔进
+     * 会话目录，不需要读 MySQL），返回文件资源让前端以下载文件的形式<wbr/>拿回去。</p>
+     *
+     * @param sessionId     会话标识
+     * @param displayFilter 显示过滤表达式，空串/空则导出整份 pcap
+     * @return 包含导出地址的下载资源
+     */
+    public ReturnResult<FileSystemResource> exportPcap(Long sessionId, String displayFilter) {
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        if (session == null || session.getFilePath() == null || session.getFilePath().isBlank()) {
+            return ReturnResult.error("会话不存在或 pcap 文件未落盘");
+        }
+        Path src = Paths.get(session.getFilePath());
+        if (!Files.exists(src)) {
+            return ReturnResult.error("pcap 文件不存在: " + src);
+        }
+        try {
+            Path outPath = Paths.get(CAPTURE_DIR, UUID.randomUUID().toString().replace("-", "") + ".pcap");
+            boolean filtered = displayFilter != null && !displayFilter.isBlank();
+            if (!filtered) {
+                Files.copy(src, outPath);
+            } else {
+                // 回放过滤：tshark -r <file> -w <out> -Y <filter> 是标准做法，
+                // 显示过滤在回放时合法（不是抓包写盘禁令的 -Y）。
+                List<String> cmd = new ArrayList<>(List.of(bin(), "-r", src.toString(),
+                        "-w", outPath.toString(), "-Y", displayFilter));
+                ProcessBuilder pb = new ProcessBuilder(cmd);
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                // 超时：大文件回放几十字节可能几 KB，1 分钟足够；等长于进程本身
+                boolean ok = p.waitFor(90L, TimeUnit.SECONDS);
+                if (!ok) {
+                    p.destroyForcibly();
+                    Files.deleteIfExists(outPath);
+                    return ReturnResult.error("导出超时，请缩短过滤时间范围后再试");
+                }
+                if (p.exitValue() != 0) {
+                    Files.deleteIfExists(outPath);
+                    return ReturnResult.error("过滤导出失败，可能是显示过滤语法不合法");
+                }
+            }
+            if (!Files.exists(outPath) || Files.size(outPath) == 0L) {
+                return ReturnResult.error("导出文件为空（可能没有匹配的报文）");
+            }
+            FileSystemResource resource = new FileSystemResource(outPath.toFile());
+            return ReturnResult.ok(resource);
+        } catch (Exception e) {
+            log.error("export pcap failed, session={}", sessionId, e);
+            return ReturnResult.error("导出 pcap 失败: " + execHint(e));
+        }
+    }
+
+    /**
+     * 把显示过滤解析出的 SQL 拼到 MyBatis-Plus 查询条件上。
+     *
+     * @param q 查询条件
+     * @param displayFilter 显示过滤表达式；空串时直接 pass
+     * @return 解析出的 SQL 条件（空串 = 不用拼）
+     */
+    private static String appendFilterSql(QueryWrapper<?> q, String displayFilter) {
+        if (displayFilter == null || displayFilter.isBlank()) {
+            return "";
+        }
+        TsharkDisplayFilter.SqlFilter sf;
+        try {
+            sf = TsharkDisplayFilter.parse(displayFilter);
+        } catch (IllegalArgumentException e) {
+            log.info("[tshark] 显示过滤解析失败 reason={}", e.getMessage());
+            return "";
+        }
+        if (sf.isEmpty()) {
+            return "";
+        }
+        q.apply(sf.sql(), sf.args().toArray());
+        return sf.sql();
+    }
+
+    /** 秒级时间桶的 SQL 片段（`strftime('%s', 时间) / 桶 * 桶`） */
+    private static String bucketSql(int bucket) {
+        return "strftime('%s', ms_tshark_packet_time) / " + bucket + " * " + bucket;
     }
 
     /**
@@ -2302,4 +2770,74 @@ public class TsharkCaptureService {
         }
         this.sessionMapper.deleteById(sessionId);
         return ReturnResult.success();
-    }}
+    }
+
+    /**
+     * 按保留策略清理过期的抓包会话。
+     *
+     * <p>清理两把尺子，任一条满足就清：超过 {@code plugin.monitor.tshark.retention.days}
+     * 天的会话，或者会话目录累计超过 {@code plugin.monitor.tshark.retention.sizeMb} MB 当
+     * 天的全部会话。每次只导出一页（100 条），避免一次扫描把 MySQL 打满。</p>
+     *
+     * @return 清理的会话条数
+     */
+    public int cleanupRetention() {
+        if (this.retentionProperties == null || !this.retentionProperties.isEnabled()) {
+            return 0;
+        }
+        int deleted = 0;
+        try {
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(this.retentionProperties.getDays());
+            LambdaQueryWrapper<MsTsharkSession> w = new LambdaQueryWrapper<>();
+            w.le(MsTsharkSession::getStartTime, cutoff);
+            List<MsTsharkSession> expired = this.sessionMapper.selectList(w.last("LIMIT 100"));
+            boolean spaceFull = false;
+            long usedBytes = 0L;
+            try {
+                usedBytes = dirSize(Paths.get(CAPTURE_DIR));
+                spaceFull = usedBytes > (long) this.retentionProperties.getSizeMb() * 1024L * 1024L;
+            } catch (Exception ignore) {
+                // 目录未建或读不到大小不影响按天清理
+            }
+            if (spaceFull) {
+                log.warn("[tshark] 抓包目录已满 {}MB（上限 {}MB），触发保留清理",
+                        usedBytes / 1024L / 1024L, this.retentionProperties.getSizeMb());
+            }
+            for (MsTsharkSession s : expired) {
+                if (s.getSource() == null || !SOURCE_LIVE.equals(s.getSource().trim())) {
+                    continue;
+                }
+                try {
+                    deleteSession(s.getId());
+                    deleted++;
+                } catch (Exception e) {
+                    log.warn("[tshark] 保留清理失败 session={} reason={}", s.getId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[tshark] 保留清理异常", e);
+        }
+        return deleted;
+    }
+
+    /**
+     * 目录总大小（按目录逐个累加文件）。
+     * @param dir 目录
+     * @return 总字节数
+     */
+    private static long dirSize(Path dir) throws IOException {
+        if (!Files.exists(dir)) {
+            return 0L;
+        }
+        return Files.walk(dir)
+                .filter(Files::isRegularFile)
+                .mapToLong(p -> {
+                    try {
+                        return Files.size(p);
+                    } catch (IOException e) {
+                        return 0L;
+                    }
+                })
+                .sum();
+    }
+}

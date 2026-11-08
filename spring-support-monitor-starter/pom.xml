@@ -62,11 +62,26 @@
             <artifactId>spring-support-docker-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- WebRTC 远程控制（/control REST + /webrtc 信令 + 桌面采集/键鼠注入），
+             前端 pages/control 的唯一后端；control.webrtc.enabled=false 可关闭。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-control-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket，
              经 AutoConfiguration.imports 自动装配 com.chua.starter.cdp.config.CdpAutoConfiguration） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-cdp-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 接口调试控制台（HttpMan）：类 Postman 的请求集合/请求/历史管理，
+             以及从后端代理发起 HTTP 请求的能力（/ms/httpman/**），
+             经 AutoConfiguration.imports 自动装配 com.chua.starter.httpman.config.HttpmanAutoConfiguration -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-httpman-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->

@@ -362,10 +362,10 @@ public class MsServerHost extends SysBase {
     private Integer serverHostRemoteEnabled; // 服务端主机远程启用
 
     /**
-     * 远控协议（主机级，为空时按操作系统类型推断）
+     * 远控协议：SSH/RDP/VNC/TELNET（空则按系统类型推断）
      */
     @TableField("ms_server_host_remote_protocol")
-    @Schema(description = "远控协议: SSH/RDP/VNC(空则按系统类型推断)", example = "SSH")
+    @Schema(description = "远控协议: SSH/RDP/VNC/TELNET(空则按系统类型推断)", example = "SSH")
     private String serverHostRemoteProtocol; // 服务端主机远程protocol
 
     /**

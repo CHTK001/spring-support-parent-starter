@@ -2,6 +2,7 @@ package com.chua.starter.control.configuration;
 
 import com.chua.common.support.network.ProtocolType;
 import com.chua.common.support.network.server.ServerSetting;
+import com.chua.starter.control.controller.ControlController;
 import com.chua.starter.control.properties.ControlProperties;
 import com.chua.webrtc.server.WebRtcServer;
 import com.chua.webrtc.spi.media.ScreenCaptureService;
@@ -44,6 +45,12 @@ public class ControlAutoConfiguration {
     @Bean(destroyMethod = "stop")
     @ConditionalOnMissingBean(WebRtcServer.class)
     public WebRtcServer webRtcServer(ControlProperties properties) {
+        System.out.println("### DIAG: headless=" + java.awt.GraphicsEnvironment.isHeadless()
+                + " klass=" + java.awt.GraphicsEnvironment.class.getClassLoader()
+                + " loc=" + java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getClass().getName()
+                + " cp=" + System.getProperty("java.awt.headless", "unset")
+                + " sun=" + System.getProperty("sun.awt.headless", "unset")
+                + " robotOk?=" + isRobotOk());
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(properties.getHost());
         setting.setPort(properties.getPort());
@@ -57,5 +64,35 @@ public class ControlAutoConfiguration {
                     displayHost, properties.getPort(), WebRtcServer.SIGNALING_PATH);
         }
         return server;
+    }
+
+    /**
+     * 诊断用：尝试创建一个 Robot
+     *
+     * @return 是否可用
+     */
+    private static boolean isRobotOk() {
+        try {
+            new java.awt.Robot();
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * 注册远程控制器。
+     *
+     * <p>实现中有些应用（例如独立运行的 {@code ControlMain}）的组件扫描范围只覆盖自己的包，
+     * 不会自动扫描 {@code com.chua.starter.control.controller}，
+     * 所以这里显式把 {@link ControlController} 注册为 Bean。</p>
+     *
+     * @param webRtcServer WebRTC 服务器
+     * @param properties   远控制器配置
+     * @return 控制 REST 接口
+     */
+    @Bean
+    public ControlController controlController(WebRtcServer webRtcServer, ControlProperties properties) {
+        return new ControlController(webRtcServer, properties);
     }
 }

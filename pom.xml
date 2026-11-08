@@ -146,6 +146,7 @@
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
         <module>spring-support-cdp-starter</module>          <!-- CDP 调试模块：Chrome DevTools Protocol 代用/Debug 控制台 -->
+        <module>spring-support-httpman-starter</module>      <!-- 接口调试控制台（HttpMan）：类 Postman 的请求/集合/历史管理 + 代理执行 -->
         <module>spring-support-control-starter</module>          <!-- WebRTC 远程控制：信令/桌面采集/键鼠注入 -->
 
         <!-- 渠道管理模块（账号类渠道鉴权 / 渠道健康探针 / 渠道定时任务）：

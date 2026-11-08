@@ -24,6 +24,21 @@ public final class ServerConstants {
     public static final String WEBSOCKET_VNC_DIRECT_PATH = "/ws/ms/server/terminal/vnc";
 
     /**
+     * SSH 串口 console 直连 webSocket 端点路径（不经 guacd）
+     */
+    public static final String WEBSOCKET_SERIAL_DIRECT_PATH = "/ws/ms/server/terminal/serial";
+
+    /**
+     * Telnet console 直连 webSocket 端点路径（不经 guacd）
+     */
+    public static final String WEBSOCKET_TELNET_DIRECT_PATH = "/ws/ms/server/terminal/telnet";
+
+    /**
+     * RDP 直连桌面 webSocket 端点路径（不经 guacd，FreeRDP 透过 JNA 驱动 C 扩展）
+     */
+    public static final String WEBSOCKET_RDP_DIRECT_PATH = "/ws/ms/server/terminal/rdp";
+
+    /**
      * 接口根路径
     */
     public static final String API_PREFIX = "/ms/server";

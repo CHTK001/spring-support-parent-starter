@@ -7,8 +7,10 @@ import com.chua.starter.server.support.entity.MsTerminalSession;
 import com.chua.starter.server.support.entity.MsTerminalSnippet;
 import com.chua.starter.server.support.mapper.MsTerminalBookmarkMapper;
 import com.chua.starter.server.support.mapper.MsTerminalSnippetMapper;
+import com.chua.starter.server.support.model.vo.SerialCommDeviceVO;
 import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.TerminalSessionService;
+import com.chua.starter.server.support.terminal.SerialCommListingService;
 import com.chua.starter.server.support.spi.TerminalSessionChannelRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,9 +40,14 @@ import java.util.List;
 public class TerminalController {
 
     /**
-     * 会话审计服务
-    */
+     * 终端与会话审计服务
+     */
     private final TerminalSessionService terminalSessionService;
+
+    /**
+     * 串口设备列表服务
+     */
+    private final SerialCommListingService serialCommListingService;
 
     /**
      * 远控会话通道注册中心（guacd 中转 + 各直连通道）
@@ -66,6 +73,17 @@ public class TerminalController {
     @GetMapping("/online")
     public ReturnResult<List<TerminalOnlineVO>> online() {
         return ReturnResult.list(sessionChannels.online());
+    }
+
+    /**
+     * 本机可用串口设备列表
+     *
+     * @return 设备视图列表
+     */
+    @Operation(summary = "串口设备列表")
+    @GetMapping("/serial/devices")
+    public ReturnResult<List<SerialCommDeviceVO>> serialDevices() {
+        return ReturnResult.list(serialCommListingService.listDevices());
     }
 
     /**
