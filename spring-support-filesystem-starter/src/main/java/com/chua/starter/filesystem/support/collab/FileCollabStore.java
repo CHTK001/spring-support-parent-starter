@@ -59,6 +59,33 @@ public class FileCollabStore {
     private static final int MAX_HISTORY = 50;
 
     /**
+     * 显式创建的协同目录（空目录也必须能存在）。
+     *
+     * <p>协同目录此前是「从文档 path 聚合出来的虚拟层级」：没有文档的目录
+     * 根本不存在，于是「新建目录」无处可落。这里把目录本身也当成一等公民
+     * 存下来，列表接口把它与文档路径聚合出的目录合并。</p>
+     */
+    private final java.util.Set<String> dirs = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * 已归档文档：id → 归档时间戳。
+     *
+     * <p>归档是「从常规列表里收起，但仍保留内容与权限」的中间态：与删除不同，
+     * 归档文档在「归档」视图里能一键取消归档；与回收桶也不同，它不参与
+     * 「彻底删除」。这三态用旁挂 Map 记录而不是给 {@link FileCollab} 加字段，
+     * 是为了让历史落盘文件（没有这些字段）照样能读进来。</p>
+     */
+    private final Map<String, Long> archived = new ConcurrentHashMap<>();
+
+    /**
+     * 回收桶：id → 移入回收桶时间戳。
+     *
+     * <p>{@code DELETE /{id}} 默认只移入回收桶（可恢复），只有显式
+     * {@code permanent=true} 才真删。这样「误删」不再是不可逆操作。</p>
+     */
+    private final Map<String, Long> trashed = new ConcurrentHashMap<>();
+
+    /**
      * 自增操作序号（变更广播用）
      */
     private final AtomicLong seq = new AtomicLong();
@@ -296,6 +323,10 @@ public class FileCollabStore {
         String kw = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase();
         List<FileCollab> result = new ArrayList<>();
         for (FileCollab c : collabs.values()) {
+            // 归档 / 回收桶里的文档不属于常规列表：它们各自有独立视图
+            if (archived.containsKey(c.id()) || trashed.containsKey(c.id())) {
+                continue;
+            }
             if (!canWrite(c, userId)) {
                 continue;
             }
@@ -312,6 +343,244 @@ public class FileCollabStore {
         }
         result.sort(Comparator.comparingLong(FileCollab::updatedAt).reversed());
         return Collections.unmodifiableList(result);
+    }
+
+    /* ==================== 目录 / 归档 / 回收桶 ==================== */
+
+    /**
+     * 显式创建目录（空目录也保留）。
+     *
+     * <p>目录此前是从文档 {@code path} 聚合出来的虚拟层级，没有文档就没有目录，
+     * 用户「新建目录」后空目录立刻消失。这里把目录本身登记下来，并把所有
+     * 父级路径一并登记，左侧树才能显示完整的层级。</p>
+     *
+     * @param path 目录路径（"a/b/c"；空/空串不创建）
+     * @return 是否新增（已存在返回 false）
+     */
+    public boolean createDir(String path) {
+        String dir = normalizePath(path);
+        if (dir.isEmpty()) {
+            return false;
+        }
+        boolean added = false;
+        String cur = "";
+        for (String seg : dir.split("/")) {
+            if (seg.isEmpty()) {
+                continue;
+            }
+            cur = cur.isEmpty() ? seg : cur + "/" + seg;
+            if (dirs.add(cur)) {
+                added = true;
+            }
+        }
+        if (added) {
+            markDirty();
+            publish(new CollabChange(dir, 0, System.currentTimeMillis(), "dir"));
+        }
+        return added;
+    }
+
+    /**
+     * 列出全部显式目录（含父级，升序）。
+     *
+     * @return 目录路径列表
+     */
+    public List<String> listDirs() {
+        List<String> result = new ArrayList<>(dirs);
+        result.sort(String::compareTo);
+        return result;
+    }
+
+    /**
+     * 删除目录（仅空目录可删）。
+     *
+     * <p>盘上有内容却把目录删掉，文档就会变成「没有父目录的孤儿」，
+     * 左侧树里突然冒出一层不存在的路径。所以这里只允许删除既没有文档、
+     * 也没有子目录的目录。</p>
+     *
+     * @param path 目录路径
+     * @return true = 已删除；目录不存在或非空返回 false
+     */
+    public boolean deleteDir(String path) {
+        String dir = normalizePath(path);
+        if (dir.isEmpty() || !dirs.contains(dir)) {
+            return false;
+        }
+        String prefix = dir + "/";
+        for (FileCollab c : collabs.values()) {
+            String p = c.path() == null ? "" : c.path();
+            if (p.equals(dir) || p.startsWith(prefix)) {
+                return false;
+            }
+        }
+        for (String d : dirs) {
+            if (d.startsWith(prefix)) {
+                return false;
+            }
+        }
+        dirs.remove(dir);
+        markDirty();
+        publish(new CollabChange(dir, 0, System.currentTimeMillis(), "dir"));
+        return true;
+    }
+
+    /**
+     * 归档文档（从常规列表收起，内容与权限保留）。
+     *
+     * @param id 协同文档号
+     * @return true = 已归档；文档不存在或状态未变返回 false
+     */
+    public boolean archive(String id) {
+        if (id == null || !collabs.containsKey(id) || archived.containsKey(id)) {
+            return false;
+        }
+        // 回收桶里的文档不能直接归档：先恢复再归档，避免状态互相打架
+        if (trashed.containsKey(id)) {
+            return false;
+        }
+        archived.put(id, System.currentTimeMillis());
+        markDirty();
+        publish(new CollabChange(id, collabs.get(id).version(), System.currentTimeMillis(), "archive"));
+        return true;
+    }
+
+    /**
+     * 取消归档（回到常规列表）。
+     *
+     * @param id 协同文档号
+     * @return true = 已取消归档
+     */
+    public boolean unarchive(String id) {
+        if (id == null || archived.remove(id) == null) {
+            return false;
+        }
+        markDirty();
+        publish(new CollabChange(id, collabs.containsKey(id) ? collabs.get(id).version() : 0,
+                System.currentTimeMillis(), "unarchive"));
+        return true;
+    }
+
+    /**
+     * 移入回收桶（软删除，可恢复）。
+     *
+     * @param id 协同文档号
+     * @return true = 已移入回收桶
+     */
+    public boolean trash(String id) {
+        if (id == null || !collabs.containsKey(id) || trashed.containsKey(id)) {
+            return false;
+        }
+        archived.remove(id);
+        trashed.put(id, System.currentTimeMillis());
+        markDirty();
+        publish(new CollabChange(id, collabs.get(id).version(), System.currentTimeMillis(), "trash"));
+        return true;
+    }
+
+    /**
+     * 从回收桶恢复（回到常规列表）。
+     *
+     * @param id 协同文档号
+     * @return true = 已恢复
+     */
+    public boolean restore(String id) {
+        if (id == null || trashed.remove(id) == null) {
+            return false;
+        }
+        markDirty();
+        publish(new CollabChange(id, collabs.containsKey(id) ? collabs.get(id).version() : 0,
+                System.currentTimeMillis(), "restore"));
+        return true;
+    }
+
+    /**
+     * 彻底删除（不可恢复，清掉内容、历史与三态标记）。
+     *
+     * @param id 协同文档号
+     * @return true = 确实删掉了一份文档
+     */
+    public boolean purge(String id) {
+        boolean removed = collabs.remove(id) != null;
+        history.remove(id);
+        archived.remove(id);
+        trashed.remove(id);
+        if (removed) {
+            markDirty();
+            publish(new CollabChange(id, -1, System.currentTimeMillis(), "delete"));
+        }
+        return removed;
+    }
+
+    /**
+     * 列出归档文档（新→旧）。
+     *
+     * @param userId  当前用户标识
+     * @param keyword 关键字过滤（null/空 = 不过滤）
+     * @return 已归档文档
+     */
+    public List<FileCollab> listArchived(String userId, String keyword) {
+        return listByState(archived, userId, keyword);
+    }
+
+    /**
+     * 列出回收桶文档（新→旧）。
+     *
+     * @param userId  当前用户标识
+     * @param keyword 关键字过滤（null/空 = 不过滤）
+     * @return 回收桶文档
+     */
+    public List<FileCollab> listTrashed(String userId, String keyword) {
+        return listByState(trashed, userId, keyword);
+    }
+
+    /**
+     * 某个状态（归档 / 回收桶）下的文档聚合。
+     *
+     * @param state   状态表（id → 时间戳）
+     * @param userId  当前用户标识
+     * @param keyword 关键字过滤
+     * @return 文档列表
+     */
+    private List<FileCollab> listByState(Map<String, Long> state, String userId, String keyword) {
+        String kw = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase();
+        List<FileCollab> result = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : state.entrySet()) {
+            FileCollab c = collabs.get(entry.getKey());
+            if (c == null || !canWrite(c, userId)) {
+                continue;
+            }
+            if (kw != null) {
+                String full = (c.path() == null || c.path().isEmpty() ? "" : c.path() + "/") + c.fileName();
+                if (!full.toLowerCase().contains(kw)) {
+                    continue;
+                }
+            }
+            result.add(c);
+        }
+        // 「最近操作」在前：归档看归档时间，回收桶看删除时间
+        result.sort(Comparator.comparingLong(
+                (FileCollab c) -> state.getOrDefault(c.id(), 0L)).reversed());
+        return Collections.unmodifiableList(result);
+    }
+
+    /**
+     * 某文档的归档时间戳。
+     *
+     * @param id 协同文档号
+     * @return 归档时间；未归档返回 0
+     */
+    public long archivedAt(String id) {
+        return archived.getOrDefault(id, 0L);
+    }
+
+    /**
+     * 某文档的删除（回收桶）时间戳。
+     *
+     * @param id 协同文档号
+     * @return 删除时间；不在回收桶返回 0
+     */
+    public long trashedAt(String id) {
+        return trashed.getOrDefault(id, 0L);
     }
 
     /**
@@ -502,19 +771,16 @@ public class FileCollabStore {
     }
 
     /**
-     * 删除协同文档。
+     * 删除协同文档（<b>彻底删除</b>，不可恢复）。
+     *
+     * <p>对外接口 {@code DELETE /{id}} 默认走 {@link #trash(String)}（移入回收桶），
+     * 只有显式 {@code permanent=true} 才落到这里。</p>
      *
      * @param id 协同文档号
      * @return 删除前是否存在
      */
     public boolean delete(String id) {
-        boolean removed = collabs.remove(id) != null;
-        history.remove(id);
-        if (removed) {
-            markDirty();
-            publish(new CollabChange(id, -1, System.currentTimeMillis(), "delete"));
-        }
-        return removed;
+        return purge(id);
     }
 
     /**
@@ -552,15 +818,59 @@ public class FileCollabStore {
     }
 
     /**
+     * 导出显式目录（落盘用）。
+     *
+     * @return 目录路径列表
+     */
+    public List<String> exportDirs() {
+        return new ArrayList<>(dirs);
+    }
+
+    /**
+     * 导出归档标记（落盘用）。
+     *
+     * @return id → 归档时间戳
+     */
+    public Map<String, Long> exportArchived() {
+        return new java.util.LinkedHashMap<>(archived);
+    }
+
+    /**
+     * 导出回收桶标记（落盘用）。
+     *
+     * @return id → 删除时间戳
+     */
+    public Map<String, Long> exportTrashed() {
+        return new java.util.LinkedHashMap<>(trashed);
+    }
+
+    /**
      * 用落盘内容整体替换当前状态（启动装载用）。
      *
      * <p>只应在启动阶段调用：它会清空现有内存态。装载完成后<b>不会</b>标脏
      * ——刚读进来的内容和磁盘一致，不需要再写回去。</p>
      *
-     * @param collabs 文档列表（null 视为空）
-     * @param history 历史快照（null 视为空）
+     * @param collabs  文档列表（null 视为空）
+     * @param history  历史快照（null 视为空）
      */
     public void replaceAll(List<FileCollab> collabs, Map<String, List<SnapshotEntry>> history) {
+        replaceAll(collabs, history, null, null, null);
+    }
+
+    /**
+     * 用落盘内容整体替换当前状态（含目录 / 归档 / 回收桶）。
+     *
+     * <p>只应在启动阶段调用：它会清空现有内存态。装载完成后<b>不会</b>标脏
+     * ——刚读进来的内容和磁盘一致，不需要再写回去。</p>
+     *
+     * @param collabs  文档列表（null 视为空）
+     * @param history  历史快照（null 视为空）
+     * @param dirs     显式目录（null 视为空）
+     * @param archived 归档标记（null 视为空）
+     * @param trashed  回收桶标记（null 视为空）
+     */
+    public void replaceAll(List<FileCollab> collabs, Map<String, List<SnapshotEntry>> history,
+                           List<String> dirs, Map<String, Long> archived, Map<String, Long> trashed) {
         Map<String, FileCollab> nextCollabs = new ConcurrentHashMap<>();
         if (collabs != null) {
             for (FileCollab c : collabs) {
@@ -577,6 +887,32 @@ public class FileCollabStore {
                 if (id != null && entries != null && !entries.isEmpty()) {
                     // 装载进来的列表也要是并发安全容器：读侧可能在请求线程上遍历它
                     this.history.put(id, new CopyOnWriteArrayList<>(entries));
+                }
+            });
+        }
+        // 三张旁挂状态表只装载「还存在的文档」，避免历史文件里的脏 id 长期占位
+        this.dirs.clear();
+        if (dirs != null) {
+            for (String d : dirs) {
+                String normalized = normalizePath(d);
+                if (!normalized.isEmpty()) {
+                    this.dirs.add(normalized);
+                }
+            }
+        }
+        this.archived.clear();
+        if (archived != null) {
+            archived.forEach((id, at) -> {
+                if (id != null && this.collabs.containsKey(id)) {
+                    this.archived.put(id, at == null ? 0L : at);
+                }
+            });
+        }
+        this.trashed.clear();
+        if (trashed != null) {
+            trashed.forEach((id, at) -> {
+                if (id != null && this.collabs.containsKey(id)) {
+                    this.trashed.put(id, at == null ? 0L : at);
                 }
             });
         }

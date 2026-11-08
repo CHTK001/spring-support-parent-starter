@@ -110,11 +110,21 @@ public class RoomService {
      * @return 下传到连接舱的信封（welcome / error）
      */
     public RoomMessage onHello(String roomId, String slotId, String peerSessionId, String resumeToken, Long epoch, String connectionId) {
+        // 新建房间：客户端只发 hello 不带房间号，房间号由服务端分配并通过 welcome 回执。
+        // 这里必须先补号：ConcurrentHashMap 不接受 null key，缺号时 containsKey(null) 会直接抛 NPE。
+        if (roomId == null || roomId.isBlank()) {
+            roomId = generateId("room-");
+        }
+        // 端点号同理：没有就由服务端分配，后面的 slots / 续接令牌都以它为主键
+        if (slotId == null || slotId.isBlank()) {
+            slotId = generateId("slot-");
+        }
         // 房间台账（不存在新建）
-        boolean existing = rooms.containsKey(roomId);
-        RoomState room = Optional.ofNullable(rooms.get(roomId)).orElseGet(() -> {
-            RoomState state = new RoomState(roomId);
-            rooms.put(roomId, state);
+        final String rid = roomId;
+        boolean existing = rooms.containsKey(rid);
+        RoomState room = Optional.ofNullable(rooms.get(rid)).orElseGet(() -> {
+            RoomState state = new RoomState(rid);
+            rooms.put(rid, state);
             return state;
         });
         room.setLastActiveAt(System.currentTimeMillis());
@@ -150,12 +160,18 @@ public class RoomService {
      * @return 是否转发给对端
      */
     public boolean onSignal(String roomId, String connectionId, RoomSignal signal) {
-        SlotState slot = findSlotByConnection(connectionId);
-        if (slot == null) {
+        PeerSession session = peers.get(connectionId);
+        if (session == null || session.slot() == null) {
             return false;
         }
-        RoomState room = Optional.ofNullable(rooms.get(roomId)).orElse(null);
+        SlotState slot = session.slot();
+        // 房间以连接所属会话为准：浏览器端的 signal 只带 payload，不带 roomId；
+        // 早先按 roomId 查台账会拿到 null key，ConcurrentHashMap 直接抛 NPE，聊天/画布全部发不出去。
+        RoomState room = session.room() != null ? session.room() : rooms.get(roomId);
         if (room == null) {
+            return false;
+        }
+        if (roomId != null && !roomId.isBlank() && !roomId.equals(room.getRoomId())) {
             return false;
         }
         String peerId = room.getOtherSlotId(slot.getSlotId());
@@ -488,13 +504,14 @@ public class RoomService {
         return raw;
     }
 
-    /** findSlotByConnection 方法 */
-    private SlotState findSlotByConnection(String connectionId) {
-        PeerSession peer = peers.get(connectionId);
-        if (peer == null || peer.slot() == null) {
-            return null;
-        }
-        return peer.slot();
+    /**
+     * 生成短标识（房间号 / 端点号）。
+     *
+     * @param prefix 前缀
+     * @return 前缀 + 无连字符 UUID 前 12 位
+     */
+    private static String generateId(String prefix) {
+        return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
     private Optional<PeerSession> findPeer(RoomState room, String slotId) {

@@ -55,6 +55,19 @@ public class MailboxOverview implements Serializable {
     private String provider;
 
     /**
+     * 是否支持修改已读标记。
+     *
+     * <p>只读来源（临时邮箱、接码平台）没有回写能力，界面据此禁用按钮，
+     * 而不是等用户点了才报「不支持」。</p>
+     */
+    private Boolean modifiable;
+
+    /**
+     * 是否支持删除邮件
+     */
+    private Boolean deletable;
+
+    /**
      * 不可用原因（可用时为空）
      */
     private String message;

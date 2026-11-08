@@ -469,6 +469,16 @@ public class CollectJdbcSupport {
     }
 
     /**
+     * 值是否为空：null 或空串（不 trim，纯空白视为有值，避免误判用户有意写入的空行）。
+     *
+     * @param value 待判断值
+     * @return 空返回 true
+     */
+    private boolean isBlankValue(Object value) {
+        return value == null || (value instanceof CharSequence && ((CharSequence) value).length() == 0);
+    }
+
+    /**
      * 按业务键写入的共用骨架：批量事务内逐行「定位 → 更新或跳过 → 插入」。
      *
      * <p>骨架只此一份：{@link #updateByKey} 与 {@link #insertIfAbsent} 的差别
@@ -515,24 +525,22 @@ public class CollectJdbcSupport {
                     predicates.add(quoted(connection, key) + " = ?");
                 }
                 String where = String.join(" AND ", predicates);
-                StringBuilder sets = new StringBuilder();
-                for (String column : columns) {
-                    if (sets.length() > 0) {
-                        sets.append(", ");
-                    }
-                    sets.append(quoted(connection, column)).append(" = ?");
-                }
+                String updateSqlBase = "UPDATE " + name + " SET ";
+                String updateSqlTail = " WHERE " + where;
                 String selectSql = "SELECT 1 FROM " + name + " WHERE " + where;
                 String insertSql = "INSERT INTO " + name + " ("
                         + String.join(", ", quotedAll(connection, columns)) + ") VALUES ("
                         + String.join(", ", columns.stream().map(column -> "?").toList()) + ")";
-                String updateSql = "UPDATE " + name + " SET " + sets + " WHERE " + where;
+                // 跳过模式每次执行的都是同一句 UPDATE；覆盖模式要按行「只补空」，
+                // SET 子句随每行的非空列变化，所以按行现拼 SQL（列名走白名单，值仍全部预编译绑定）
+                String updateSqlFull = updateSqlBase
+                        + String.join(", ", columns.stream().map(column -> quoted(connection, column) + " = ?").toList())
+                        + updateSqlTail;
                 int updated = 0;
                 int skipped = 0;
                 int inserted = 0;
                 try (PreparedStatement select = connection.prepareStatement(selectSql);
-                     PreparedStatement insert = connection.prepareStatement(insertSql);
-                     PreparedStatement update = connection.prepareStatement(updateSql)) {
+                     PreparedStatement insert = connection.prepareStatement(insertSql)) {
                     for (Map<String, Object> row : rows) {
                         for (int index = 0; index < keys.size(); index++) {
                             Object keyValue = row.get(keys.get(index));
@@ -552,14 +560,34 @@ public class CollectJdbcSupport {
                                 skipped++;
                                 continue;
                             }
-                            int index = 1;
+                            // 合并更新只补空：新值为 null / 空串时这一列不进 SET 子句，
+                            // 否则整行覆盖会把别的来源已补齐的译文/赏析/标签清空（实测风险）。
+                            // 空值与键列必须一起排除：键列只出现在 WHERE，不能进 SET。
+                            List<String> sets = new ArrayList<>(columns.size());
                             for (String column : columns) {
-                                update.setObject(index++, value(row.get(column)));
+                                if (keys.contains(column) || isBlankValue(row.get(column))) {
+                                    continue;
+                                }
+                                sets.add(column);
                             }
-                            for (String key : keys) {
-                                update.setObject(index++, value(row.get(key)));
+                            if (sets.isEmpty()) {
+                                // 这一行没有任何能补的列，等于跳过
+                                skipped++;
+                                continue;
                             }
-                            update.executeUpdate();
+                            String updateSql = updateSqlBase
+                                    + String.join(", ", sets.stream().map(column -> quoted(connection, column) + " = ?").toList())
+                                    + updateSqlTail;
+                            try (PreparedStatement update = connection.prepareStatement(updateSql)) {
+                                int index = 1;
+                                for (String column : sets) {
+                                    update.setObject(index++, value(row.get(column)));
+                                }
+                                for (String key : keys) {
+                                    update.setObject(index++, value(row.get(key)));
+                                }
+                                update.executeUpdate();
+                            }
                             updated++;
                         } else {
                             for (int index = 0; index < columns.size(); index++) {

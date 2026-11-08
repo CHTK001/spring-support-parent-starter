@@ -75,12 +75,41 @@
       <button type="button" @click="loadAll">重试</button>
     </div>
 
+    <!-- 批量操作条：勾选后才出现，不占常态版面 -->
+    <div v-if="isAccountSegment && selectedAccountIds.length" class="batch-bar">
+      <span class="batch-count">已选 <b>{{ selectedAccountIds.length }}</b> 项</span>
+      <span class="batch-actions">
+        <ReButton show-text size="small" icon="CircleCheck" :loading="batchBusy" @click="batchVerify">
+          批量校验
+        </ReButton>
+        <ReButton show-text size="small" icon="SwitchButton" :loading="batchBusy" @click="batchSetStatus(1)">
+          批量启用
+        </ReButton>
+        <ReButton show-text size="small" icon="TurnOff" :loading="batchBusy" @click="batchSetStatus(0)">
+          批量停用
+        </ReButton>
+        <ReButton
+          show-text
+          size="small"
+          icon="Delete"
+          type="danger"
+          plain
+          :loading="batchBusy"
+          @click="batchRemove"
+        >
+          批量删除
+        </ReButton>
+        <button type="button" class="batch-clear" @click="clearAccountSelection">取消选择</button>
+      </span>
+    </div>
+
     <div class="wb">
       <!-- ==================== 台账区 ==================== -->
       <section class="table-panel">
         <!-- 账号（ALL / API_KEY / EMAIL / SMS） -->
         <ReTable
           v-if="isAccountSegment"
+          ref="accountTableRef"
           :data="accountTableRows"
           :loading="loading"
           row-key="accountId"
@@ -89,10 +118,15 @@
           class="account-table"
           empty-text="暂无账号，点右上「新增账号」创建"
           :settings="{ highlightCurrentRow: true }"
-          :config="{ pagination: { enable: false }, toolbar: { enable: false } }"
+          :config="{
+            pagination: { enable: false },
+            toolbar: { enable: false },
+            selection: { enable: true },
+          }"
           :context-menu="accountMenu"
           @row-click="onAccountRowClick"
           @cell-click="onCellClick"
+          @selection-change="onAccountSelectionChange"
           @context-menu-select="onAccountMenuSelect"
         >
           <ReTableColumn label="账号" min-width="200">
@@ -359,6 +393,9 @@
               校验
             </ReButton>
             <ReButton show-text icon="EditPen" size="small" @click="openEdit(activeAccount)">编辑</ReButton>
+            <ReButton show-text icon="CopyDocument" size="small" @click="duplicateAccount(activeAccount)">
+              复制
+            </ReButton>
             <ReButton
               v-if="hasMailbox(activeAccount)"
               show-text
@@ -594,7 +631,7 @@
     </ReDialog>
 
     <!-- 新增 / 编辑账号 -->
-    <AccountFormDialog v-model="formVisible" :account="editing" @saved="onSaved" />
+    <AccountFormDialog v-model="formVisible" :account="editing" :draft="draft" @saved="onSaved" />
 
     <!-- 新增 / 编辑 AppKey -->
     <AppKeyDialog v-model="keyFormVisible" :app-key="editingKey" @saved="onKeySaved" />
@@ -657,6 +694,9 @@ import TemplateView from '../../template/views/TemplateView.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
 import CookieDialog from './components/CookieDialog.vue';
 import {
+  batchDeleteAccounts,
+  batchUpdateAccountStatus,
+  batchVerifyAccounts,
   deleteAccount,
   deleteAccountAppKey,
   deleteAccountCookie,
@@ -668,6 +708,7 @@ import {
   updateAccountAppKey,
   updateAccountCookie,
   verifyAccount,
+  type AccountBatchResult,
   type AccountKind,
   type AccountVerifyStatus,
   type SysAccount,
@@ -742,11 +783,20 @@ const selectedCookieId = ref('');
 /** 正在校验的账号 */
 const verifyingId = ref<string | null>(null);
 
+/** 账号表格勾选的账号标识 */
+const selectedAccountIds = ref<string[]>([]);
+/** 批量操作进行中 */
+const batchBusy = ref(false);
+/** 账号表格实例（用于清空勾选） */
+const accountTableRef = ref<{ clearAllSelection?: () => void } | null>(null);
+
 /** 详情弹窗 */
 const showDetail = ref(false);
 /** 账号新增 / 编辑 */
 const formVisible = ref(false);
 const editing = ref<SysAccount | null>(null);
+/** 复制来源（新增时预填，不进入编辑态） */
+const draft = ref<SysAccount | null>(null);
 /** AppKey 新增 / 编辑 */
 const keyFormVisible = ref(false);
 const editingKey = ref<SysAccountAppKey | null>(null);
@@ -1029,6 +1079,8 @@ async function loadAll(): Promise<void> {
     cookieError.value = 'Cookie 加载失败：' + errText(cookies.reason);
   }
   loading.value = false;
+  // 数据整体替换后旧勾选已经没有对应行，继续保留只会让「已选 N 项」与实际不符
+  clearAccountSelection();
   syncSelection();
 }
 
@@ -1069,6 +1121,7 @@ function syncSelection(): void {
 function setSegment(value: Segment): void {
   segment.value = value;
   statusFilter.value = 'all';
+  clearAccountSelection();
   syncSelection();
 }
 
@@ -1128,6 +1181,128 @@ function onCellClick(payload: ReTableCellClickPayload): void {
   openDetail(payload.row as unknown as SysAccount);
 }
 
+// ==================== 批量操作 ====================
+
+/**
+ * 账号表格勾选变化。
+ *
+ * @param rows 当前勾选行
+ */
+function onAccountSelectionChange(rows: Record<string, unknown>[]): void {
+  selectedAccountIds.value = rows.map(row => String(row.accountId ?? '')).filter(Boolean);
+}
+
+/** 清空勾选（数据刷新 / 切分段后必须清，避免把已消失的 id 提交上去） */
+function clearAccountSelection(): void {
+  selectedAccountIds.value = [];
+  accountTableRef.value?.clearAllSelection?.();
+}
+
+/**
+ * 批量结果提示。
+ *
+ * <p>部分成功必须如实说明：后端逐条执行、失败不回滚，只报「成功」会让用户
+ * 以为全部生效。失败明细只在确有失败时展开，避免正常路径刷屏。</p>
+ *
+ * @param action 动作名（如「批量校验」）
+ * @param result 批量结果
+ * @returns 是否全部成功
+ */
+function reportBatch(action: string, result: AccountBatchResult): boolean {
+  const succeeded = result?.succeeded ?? 0;
+  const failed = result?.failed ?? 0;
+  if (failed === 0) {
+    message.success(`${action}完成：${succeeded} 项`);
+    return true;
+  }
+  const detail = (result?.failures || [])
+    .slice(0, 3)
+    .map(item => `${shortId(item.accountId)}：${item.message}`)
+    .join('；');
+  const more = (result?.failures?.length || 0) > 3 ? ` 等 ${result.failures.length} 项` : '';
+  if (succeeded === 0) {
+    message.error(`${action}全部失败：${detail}${more}`);
+  } else {
+    message.warning(`${action}部分成功：成功 ${succeeded} 项，失败 ${failed} 项（${detail}${more}）`);
+  }
+  return false;
+}
+
+/**
+ * 账号短标识（失败明细里用，避免一屏全是 UUID）。
+ *
+ * @param accountId 账号标识
+ * @returns 前 8 位
+ */
+function shortId(accountId: string): string {
+  return accountId ? accountId.slice(0, 8) : '未知账号';
+}
+
+/**
+ * 批量校验勾选账号。
+ */
+async function batchVerify(): Promise<void> {
+  const ids = selectedAccountIds.value;
+  if (!ids.length || batchBusy.value) return;
+  batchBusy.value = true;
+  try {
+    const result = await batchVerifyAccounts(ids);
+    reportBatch('批量校验', result);
+    clearAccountSelection();
+    await loadAll();
+  } catch (e: any) {
+    message.error(e?.message || '批量校验失败');
+  } finally {
+    batchBusy.value = false;
+  }
+}
+
+/**
+ * 批量启用 / 停用勾选账号。
+ *
+ * @param status 目标状态（1 启用 / 0 停用）
+ */
+async function batchSetStatus(status: number): Promise<void> {
+  const ids = selectedAccountIds.value;
+  if (!ids.length || batchBusy.value) return;
+  batchBusy.value = true;
+  try {
+    const result = await batchUpdateAccountStatus(ids, status);
+    reportBatch(status === 1 ? '批量启用' : '批量停用', result);
+    clearAccountSelection();
+    await loadAll();
+  } catch (e: any) {
+    message.error(e?.message || '批量更新状态失败');
+  } finally {
+    batchBusy.value = false;
+  }
+}
+
+/**
+ * 批量删除勾选账号（逻辑删除）。
+ */
+async function batchRemove(): Promise<void> {
+  const ids = selectedAccountIds.value;
+  if (!ids.length || batchBusy.value) return;
+  const confirmed = await confirmThen(
+    message.confirm,
+    `确认删除勾选的 ${ids.length} 个账号？引用它们的设备 / 模板会失去凭据来源。`,
+    '批量删除账号',
+  );
+  if (!confirmed) return;
+  batchBusy.value = true;
+  try {
+    const result = await batchDeleteAccounts(ids);
+    reportBatch('批量删除', result);
+    clearAccountSelection();
+    await loadAll();
+  } catch (e: any) {
+    message.error(e?.message || '批量删除失败');
+  } finally {
+    batchBusy.value = false;
+  }
+}
+
 // ==================== 账号操作 ====================
 
 /** 打开新增账号 */
@@ -1143,6 +1318,7 @@ function openCreate(): void {
     return;
   }
   editing.value = null;
+  draft.value = null;
   formVisible.value = true;
 }
 
@@ -1150,6 +1326,22 @@ function openCreate(): void {
 function openEdit(row: SysAccount | null): void {
   if (!row) return;
   editing.value = row;
+  draft.value = null;
+  formVisible.value = true;
+}
+
+/**
+ * 复制为新账号。
+ *
+ * <p>把原账号作为预填草稿交给新增弹窗：不进入编辑态、不带凭据、不继承默认标记。
+ * 「照着同一个服务商再建一个邮箱」是高频操作，逐字段重填成本高且容易填错。</p>
+ *
+ * @param row 源账号
+ */
+function duplicateAccount(row: SysAccount | null): void {
+  if (!row) return;
+  editing.value = null;
+  draft.value = row;
   formVisible.value = true;
 }
 
@@ -1189,7 +1381,8 @@ function accountMenu(ctx: ReTableContextMenuContext): ReTableContextMenuItem[] {
     });
   }
   items.push(
-    { key: 'copy-code', label: '复制账号编码', icon: CopyDocument, divided: true },
+    { key: 'duplicate', label: '复制为新账号', icon: CopyDocument, divided: true },
+    { key: 'copy-code', label: '复制账号编码', icon: CopyDocument },
     {
       key: 'default',
       label: row.defaultAccount ? '已是同种类默认' : '设为同种类默认',
@@ -1221,6 +1414,9 @@ function onAccountMenuSelect(item: ReTableContextMenuItem, ctx: ReTableContextMe
       break;
     case 'copy-code':
       void copyCode(row);
+      break;
+    case 'duplicate':
+      duplicateAccount(row);
       break;
     case 'default':
       void setDefault(row);
@@ -1980,6 +2176,44 @@ onMounted(loadAll);
   font: inherit;
   font-size: 11.5px;
   cursor: pointer;
+}
+
+/* ---------- 批量操作条 ---------- */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 12px;
+  border: 1px solid var(--brand-100, #ece9ff);
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: none;
+}
+.batch-count b {
+  color: var(--brand-600, #5a4bd9);
+  font-variant-numeric: tabular-nums;
+}
+.batch-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.batch-clear {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.batch-clear:hover {
+  color: var(--text-primary);
 }
 
 /* ---------- 工作台 ---------- */

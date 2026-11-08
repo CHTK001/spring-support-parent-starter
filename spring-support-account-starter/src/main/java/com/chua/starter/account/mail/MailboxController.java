@@ -24,6 +24,8 @@ import java.util.Map;
  *   <li>{@code GET /api/accounts/{accountId}/mailbox}：能否收 / 发信与可用文件夹；</li>
  *   <li>{@code GET /api/accounts/{accountId}/mailbox/messages}：某个文件夹的信件列表（不含正文）；</li>
  *   <li>{@code GET /api/accounts/{accountId}/mailbox/messages/{messageId}}：单封详情（含正文）；</li>
+ *   <li>{@code POST /api/accounts/{accountId}/mailbox/messages/{messageId}/seen}：标记已读 / 未读；</li>
+ *   <li>{@code POST /api/accounts/{accountId}/mailbox/messages/{messageId}/delete}：删除单封；</li>
  *   <li>{@code POST /api/accounts/{accountId}/mailbox/send}：发信（邮件 / 短信统一入口）。</li>
  * </ul>
  *
@@ -98,6 +100,42 @@ public class MailboxController {
             @PathVariable("messageId") String messageId,
             @RequestParam(value = "folder", required = false) String folder) {
         return ApiResult.ok(mailboxService.message(accountId, folder, messageId));
+    }
+
+    /**
+     * 设置已读 / 未读标记。
+     *
+     * @param accountId 账号标识
+     * @param messageId 消息标识
+     * @param folder    服务端文件夹名（默认收件箱）
+     * @param seen      {@code true} 标记为已读（默认）
+     * @return 是否写入成功
+     */
+    @PostMapping("/messages/{messageId}/seen")
+    public ApiResult<Boolean> markSeen(
+            @PathVariable("accountId") String accountId,
+            @PathVariable("messageId") String messageId,
+            @RequestParam(value = "folder", required = false) String folder,
+            @RequestParam(value = "seen", required = false, defaultValue = "true") Boolean seen) {
+        return ApiResult.ok(mailboxService.markSeen(accountId, folder, messageId, Boolean.TRUE.equals(seen)));
+    }
+
+    /**
+     * 删除单封邮件。
+     *
+     * <p>用 POST 而不是 DELETE：消息标识可能含特殊字符，且部分网关会丢掉 DELETE 的查询参数。</p>
+     *
+     * @param accountId 账号标识
+     * @param messageId 消息标识
+     * @param folder    服务端文件夹名（默认收件箱）
+     * @return 是否删除成功
+     */
+    @PostMapping("/messages/{messageId}/delete")
+    public ApiResult<Boolean> delete(
+            @PathVariable("accountId") String accountId,
+            @PathVariable("messageId") String messageId,
+            @RequestParam(value = "folder", required = false) String folder) {
+        return ApiResult.ok(mailboxService.delete(accountId, folder, messageId));
     }
 
     /**

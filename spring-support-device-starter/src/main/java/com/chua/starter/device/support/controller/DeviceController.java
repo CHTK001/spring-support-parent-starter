@@ -176,6 +176,23 @@ public class DeviceController {
     }
 
     /**
+     * 导出设备台账为 Excel（POST 版）。
+     *
+     * <p>条件里含组织/分组/设备 ID 集合时用 POST，避免 GET 查询串过长；
+     * 筛选语义与 {@link #exportDevices(DevicePageQuery, HttpServletResponse)} 完全一致。</p>
+     *
+     * @param query    筛选条件
+     * @param response HTTP 响应
+     * @throws Exception 导出异常
+     */
+    @PostMapping("/export")
+    public void exportDevicesPost(@RequestBody(required = false) DevicePageQuery query,
+                                  HttpServletResponse response) throws Exception {
+        List<DeviceInfo> devices = deviceService.listDevices(query);
+        ExcelExportUtil.exportDevices(response, devices);
+    }
+
+    /**
      * 获取所有厂商的离线检测阈值配置
      *
      * @return 厂商标识 -> 阈值（秒）

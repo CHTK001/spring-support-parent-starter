@@ -20,6 +20,17 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+        <!--
+            租户库连接口：租户模块（tenant-starter）只定义 TenantDatasourceLookup 这个窄接口，
+            由本模块的 DatasourceTenantLookupAdapter 在装了台账的应用里补上实现。
+            optional=true：本模块单独使用时不强制引入 tenant-starter；
+            依赖方向仍是「hub → tenant 的契约」，不会让 tenant-starter 反过来依赖整个数据源中心。
+        -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-api-support-common-tenant-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
