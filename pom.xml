@@ -144,6 +144,7 @@
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
+        <module>spring-support-control-starter</module>          <!-- WebRTC 远程控制：信令/桌面采集/键鼠注入 -->
         <!-- CDP 调试模块已并入 spring-support-monitor-starter 的 tshark 域
              （com.chua.starter.monitor.support.tshark.cdp），模块目录与父 POM 条目同时移除 -->
 
@@ -944,6 +945,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-network-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <!-- WebRTC 远程控制：Java 服务端（webrtc-java）+ 浏览器客户端信令 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-webrtc-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
             <!-- Jackson模块版本管理 -->
