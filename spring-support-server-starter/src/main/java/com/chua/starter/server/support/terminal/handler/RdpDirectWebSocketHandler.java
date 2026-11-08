@@ -9,10 +9,11 @@ import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.TerminalSessionService;
 import com.chua.starter.server.support.terminal.WebSocketSessions;
 import com.chua.nativerdp.support.RdpjBridge;
-import com.sun.jna.LongByReference;
+import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.Memory;
-import com.sun.jna.NativeSize;
 import com.sun.jna.Pointer;
+
+import com.chua.common.support.lang.code.ReturnResult;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
+import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -205,7 +207,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int keysym = readInt(payload, "keysym", 0);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down ? 1 : 0);
+                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 键盘事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -297,8 +299,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                     bridge.buffer = new Memory(size);
                     bridge.bufferLen = size;
                 }
-                LongByReference outLen = new LongByReference(0);
-                int written = rdpj.rdpj_frame(handle, bridge.buffer, new NativeSize(size), outLen);
+                IntByReference outLen = new IntByReference(0);
+                int written = rdpj.rdpj_frame(handle, bridge.buffer, size, outLen);
                 if (written > 0) {
                     byte[] frame = new byte[written];
                     bridge.buffer.read(0, frame, 0, written);
