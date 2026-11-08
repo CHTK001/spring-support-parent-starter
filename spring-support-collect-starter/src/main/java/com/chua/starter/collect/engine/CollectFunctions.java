@@ -573,6 +573,53 @@ public final class CollectFunctions {
     }
 
     /**
+     * 取块正文：保留段落与 {@code <br>} 的换行边界，去掉块内标题与「收起 / 展开阅读全文」。
+     *
+     * <p>用于详情页「译文 / 注释 / 赏析」这类需要分段入库的正文。
+     * 与 {@link #text(Object)} 的区别是不能被当成一行文本 —— {@code text} 会把
+     * 段落边界折成空格。</p>
+     *
+     * @param host 文档、元素、响应映射或文本
+     * @return 多行正文，取不到返回空串
+     */
+    public static String blockText(Object host) {
+        return CollectDom.blockText(host);
+    }
+
+    /**
+     * 取块内的分节正文：从「译文及注释」这类块里取出其中一节。
+     *
+     * <p>站点把多种内容放在同一个块里，用 {@code 译文 / 注释 / 赏析} 这类小标题分界，
+     * 一个字段只能取其中一段。标题支持 {@code <p><strong>} 包裹、裸 {@code <strong>/<b>}
+     * 与带编号（{@code 其一译文}、{@code 译文二}）三种写法，同义标题
+     * （{@code 注解}、{@code 释文}、{@code 评析}）归一到规范节名；同一节出现多次时按顺序换行拼接。
+     * 块里没有分节标记时返回 {@code null}，调用方可用
+     * {@link #sectionTextOrBlock(Object, String)} 回落到整块正文。</p>
+     *
+     * @param host    文档、元素、响应映射或文本
+     * @param heading 目标节标题，如 {@code 译文}、{@code 注释}
+     * @return 该节正文；无分节标记返回 null，有标记但缺该节返回空串
+     */
+    public static String sectionText(Object host, String heading) {
+        return CollectDom.sectionText(host, heading);
+    }
+
+    /**
+     * 取块内的分节正文，块里没有分节标记时回落到整块正文。
+     *
+     * <p>与 {@code defaultIfEmpty(sectionText(块, '译文'), blockText(块))} 的差别：只有
+     * **没有分节标记**时才回落。块里明明有「注释」却没有「译文」时返回空串，
+     * 不会把注释当成译文写进库。</p>
+     *
+     * @param host    文档、元素、响应映射或文本
+     * @param heading 目标节标题，如 {@code 译文}
+     * @return 该节正文；无分节标记时返回整块正文；缺目标节返回空串
+     */
+    public static String sectionTextOrBlock(Object host, String heading) {
+        return CollectDom.sectionTextOrBlock(host, heading);
+    }
+
+    /**
      * 取首个元素的属性。
      *
      * @param host 宿主

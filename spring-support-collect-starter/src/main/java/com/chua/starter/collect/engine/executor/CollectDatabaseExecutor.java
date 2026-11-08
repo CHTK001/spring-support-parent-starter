@@ -107,6 +107,15 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
     public static final String MODE_PK = "pk";
 
     /**
+     * 补空更新：命中原键的行只补库里为空的列，库里已有值的列一律不动。
+     *
+     * <p>与 {@link #MODE_UPDATE} 的差别只在「命中的行怎么更新」：合并更新看新值，
+     * 补空更新还要看库里原值。详情页回填这类「只为把缺失补齐」的流程必须用它，
+     * 否则站点给的另一个版本会覆盖掉别处已经采到、可能更完整的值。</p>
+     */
+    public static final String MODE_FILL = "fill";
+
+    /**
      * 批次失败策略参数名。
      */
     public static final String ON_BATCH_ERROR = "onBatchError";
@@ -145,6 +154,11 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
      * 本次按主键新增行数的暂存变量名，仅供摘要使用。
      */
     private static final String VAR_INSERTED = "_inserted";
+
+    /**
+     * 本次补空更新行数的暂存变量名，仅供摘要使用。
+     */
+    private static final String VAR_FILLED = "_filled";
 
     /**
      * 本次因命中业务键而整行跳过的行数暂存变量名，仅供摘要使用。
@@ -198,10 +212,12 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
                         "追加：不判断，直接插入；"
                                 + "跳过：按下面的主键列命中已有行就整行跳过（已有数据不动）；"
                                 + "覆盖：按下面的主键列命中已有行就更新、未命中就新增；"
+                                + "补空：按下面的主键列命中已有行时，只补库里为空的那几列，"
+                                + "库里已有值的列一律不动（适合只为补齐缺失字段的回填流程）；"
                                 + "按主键更新：同「覆盖」，但主键取目标表的真实主键，不用手填；"
                                 + "全覆盖：先 TRUNCATE 清空目标表再全量写入（自增列复位）。"
                                 + "来源集合解析不出任何行时直接报错并保留原表，不会把表清空",
-                        MODE_APPEND, MODE_SKIP, MODE_UPDATE, MODE_PK, MODE_REPLACE),
+                        MODE_APPEND, MODE_SKIP, MODE_UPDATE, MODE_FILL, MODE_PK, MODE_REPLACE),
                 CollectShapeMetas.mapping(COLUMN + ":目标列", "字段映射", TABLE,
                         "左列选目标表字段，右列填来源字段名或 ${} 表达式；行内键可直接当变量名引用"),
                 keyParam,
@@ -263,6 +279,11 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
                     updated += result.updated();
                     inserted += result.inserted();
                     written += result.total();
+                } else if (MODE_FILL.equals(mode)) {
+                    var result = jdbc.fillBlankByKey(datasource, table, keys, slice);
+                    updated += result.updated();
+                    inserted += result.inserted();
+                    written += result.total();
                 } else if (MODE_SKIP.equals(mode)) {
                     var result = jdbc.insertIfAbsent(datasource, table, keys, slice);
                     skipped += result.skipped();
@@ -293,6 +314,10 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
             variables.put(VAR_UPDATED, updated);
             variables.put(VAR_INSERTED, inserted);
         }
+        if (MODE_FILL.equals(mode)) {
+            variables.put(VAR_FILLED, updated);
+            variables.put(VAR_INSERTED, inserted);
+        }
         if (MODE_SKIP.equals(mode)) {
             variables.put(VAR_SKIPPED, skipped);
             variables.put(VAR_INSERTED, inserted);
@@ -303,9 +328,13 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
     public String summary(CollectNode node, Map<String, Object> variables) {
         String result;
         Object skipped = variables.get(VAR_SKIPPED);
+        Object filled = variables.get(VAR_FILLED);
         Object updated = variables.get(VAR_UPDATED);
         if (skipped != null) {
             result = "跳过已存在 " + skipped + " 行、新增 " + variables.get(VAR_INSERTED) + " 行";
+        } else if (filled != null) {
+            result = "补空更新 " + filled + " 行（库里已有值的列未动）、新增 "
+                    + variables.get(VAR_INSERTED) + " 行";
         } else if (updated != null) {
             result = "按主键更新 " + updated + " 行、新增 " + variables.get(VAR_INSERTED) + " 行";
         } else {
@@ -362,10 +391,10 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
      * @throws IllegalStateException 未声明键，或键列不在字段映射的目标列里
      */
     private List<String> updateKeys(CollectNode node, List<CollectParamDTO> columns, String mode) {
-        if (!MODE_UPDATE.equals(mode) && !MODE_SKIP.equals(mode)) {
+        if (!MODE_UPDATE.equals(mode) && !MODE_SKIP.equals(mode) && !MODE_FILL.equals(mode)) {
             return List.of();
         }
-        String label = MODE_SKIP.equals(mode) ? "skip" : "update";
+        String label = MODE_SKIP.equals(mode) ? "skip" : (MODE_FILL.equals(mode) ? "fill" : "update");
         List<String> targets = new ArrayList<>(columns.size());
         for (CollectParamDTO column : columns) {
             targets.add(column.name().trim());

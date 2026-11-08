@@ -212,22 +212,89 @@ public class MonitorFileStorageGatewayConfig {
     }
 
     /**
+     * 协同文档定时落盘（重启不丢文档）。
+     *
+     * <p>与 {@code FileSystemAutoConfiguration#fileCollabPersistence} 同一实现，
+     * 只是补注册在这里：monitor 排除了整条自动配置链，若只补 {@code fileCollabStore}
+     * 而漏掉落盘器，存储器就退化成纯内存态——重启后 {@code /v2/file/collab/list}
+     * 返回空数组，协同文档与快照全部丢失（真机实测）。</p>
+     *
+     * <p>路径口径与上游一致：{@code plugin.filesystem.collab.persist-path}
+     * （默认 {@code data/file-collab/collab-store.json}，相对进程工作目录），
+     * 间隔 {@code plugin.filesystem.collab.persist-seconds}（默认 30s），
+     * 开关 {@code plugin.filesystem.collab.persist-enable}（默认 true）。</p>
+     *
+     * @param fileCollabStore 协同文档存储器
+     * @param properties      文件存储配置
+     * @return 定时落盘器（已启动）
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public com.chua.starter.filesystem.support.collab.FileCollabPersistence fileCollabPersistence(
+            com.chua.starter.filesystem.support.collab.FileCollabStore fileCollabStore,
+            FileStorageProperties properties) {
+        FileStorageProperties.CollabPersistConfig cfg = properties.getCollab() == null
+                ? new FileStorageProperties.CollabPersistConfig() : properties.getCollab();
+        String configured = cfg.getPersistPath();
+        java.nio.file.Path file = configured == null || configured.isBlank()
+                ? java.nio.file.Paths.get("data", "file-collab", "collab-store.json")
+                : java.nio.file.Paths.get(configured);
+        com.chua.starter.filesystem.support.collab.FileCollabPersistence persistence =
+                new com.chua.starter.filesystem.support.collab.FileCollabPersistence(
+                        fileCollabStore, file, cfg.getPersistSeconds(), cfg.isPersistEnable());
+        persistence.start();
+        return persistence;
+    }
+
+    /**
+     * 实时协同 hub（操作定序 + 日志 + presence）。
+     *
+     * <p>与落盘器同理：漏注册会让控制器回退到
+     * {@code new FileCollabHub(null, false, true)}（内存态、不落盘、空闲即卸载），
+     * 后端一重启房间日志与快照全清，重连客户端无法续接。</p>
+     *
+     * <p>目录 {@code plugin.filesystem.collab.hub-path}（默认
+     * {@code data/file-collab/hub}，相对进程工作目录）。</p>
+     *
+     * @param properties 文件存储配置
+     * @return hub
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public com.chua.starter.filesystem.support.collab.FileCollabHub fileCollabHub(
+            FileStorageProperties properties) {
+        FileStorageProperties.CollabPersistConfig cfg = properties.getCollab() == null
+                ? new FileStorageProperties.CollabPersistConfig() : properties.getCollab();
+        String configured = cfg.getHubPath();
+        java.nio.file.Path dir = configured == null || configured.isBlank()
+                ? java.nio.file.Paths.get("data", "file-collab", "hub")
+                : java.nio.file.Paths.get(configured);
+        return new com.chua.starter.filesystem.support.collab.FileCollabHub(dir);
+    }
+
+    /**
      * 协同文档控制器（{@code /v2/file/collab}）。
      *
      * <p>与 {@link UploadTaskController} 同理：{@code FileSystemAutoConfiguration}
      * 整链被排除后，协同接口一并消失。本配置单独补回——它依赖本配置已装配的
-     * {@code fileCollabStore} 与 {@code uploadTaskManager}（时间轮驱动 SSE 心跳）。</p>
+     * {@code fileCollabStore}、{@code uploadTaskManager}（时间轮驱动 SSE 心跳）
+     * 与 {@code fileCollabHub}（实时操作定序与落盘）。</p>
+     *
+     * <p>必须用三参构造：两参构造内部会新建一个不落盘的临时 hub，
+     * 后端重启即失去全部房间日志，双端重连拿不到续接数据。</p>
      *
      * @param fileCollabStore   协同文档存储器
      * @param uploadTaskManager 上传任务管理器（时间轮，SSE 心跳复用）
+     * @param fileCollabHub     实时协同 hub
      * @return 协同文档控制器
      */
     @Bean
     @ConditionalOnMissingBean
     public FileCollabController fileCollabController(
             com.chua.starter.filesystem.support.collab.FileCollabStore fileCollabStore,
-            UploadTaskManager uploadTaskManager) {
-        return new FileCollabController(fileCollabStore, uploadTaskManager);
+            UploadTaskManager uploadTaskManager,
+            com.chua.starter.filesystem.support.collab.FileCollabHub fileCollabHub) {
+        return new FileCollabController(fileCollabStore, uploadTaskManager, fileCollabHub);
     }
 
     /**

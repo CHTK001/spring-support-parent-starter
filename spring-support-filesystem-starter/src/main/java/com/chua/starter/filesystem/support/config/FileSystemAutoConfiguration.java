@@ -218,18 +218,44 @@ public class FileSystemAutoConfiguration {
     }
 
       /**
+       * 实时协同 hub（操作定序 + 日志 + presence）。
+       *
+       * <p>与 {@link #fileCollabStore()} 的分工：store 管「文档快照」（用户看到的
+       * 文件内容与版本号），hub 管「操作日志」（实时编辑的顺序与续接）。
+       * 两者通过 {@code seq} 对齐：客户端保存文档时把当时的 {@code session.rev}
+       * 一起报给 store，store 再让 hub 登记「内容已到 seq」。</p>
+       *
+       * @param properties 文件存储配置
+       * @return hub
+       */
+      @Bean
+      @ConditionalOnMissingBean
+      public com.chua.starter.filesystem.support.collab.FileCollabHub fileCollabHub(
+              FileStorageProperties properties) {
+          FileStorageProperties.CollabPersistConfig cfg = properties.getCollab() == null
+                  ? new FileStorageProperties.CollabPersistConfig() : properties.getCollab();
+          String configured = cfg.getHubPath();
+          java.nio.file.Path dir = configured == null || configured.isBlank()
+                  ? java.nio.file.Paths.get("data", "file-collab", "hub")
+                  : java.nio.file.Paths.get(configured);
+          return new com.chua.starter.filesystem.support.collab.FileCollabHub(dir);
+      }
+
+      /**
        * 协同文档控制器（{@code /v2/file/collab}）。
        *
        * @param fileCollabStore   协同文档存储器
        * @param uploadTaskManager 上传任务管理器（时间轮，SSE 心跳复用）
+       * @param fileCollabHub     实时协同 hub
        * @return 协同文档控制器
        */
     @Bean
     @ConditionalOnMissingBean
     public FileCollabController fileCollabController(
             com.chua.starter.filesystem.support.collab.FileCollabStore fileCollabStore,
-            UploadTaskManager uploadTaskManager) {
-        return new FileCollabController(fileCollabStore, uploadTaskManager);
+            UploadTaskManager uploadTaskManager,
+            com.chua.starter.filesystem.support.collab.FileCollabHub fileCollabHub) {
+        return new FileCollabController(fileCollabStore, uploadTaskManager, fileCollabHub);
     }
 
       /**
