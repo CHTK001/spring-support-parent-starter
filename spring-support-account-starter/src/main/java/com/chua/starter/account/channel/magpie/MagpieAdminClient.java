@@ -192,7 +192,9 @@ public final class MagpieAdminClient {
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("state", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH)));
         if (market) {
-            out.put("market", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH + "/market")));
+            // 市场要现场拉 npm 索引，国内网络实测 30s+，用默认 60s 容易踩线。
+            out.put("market", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH + "/market",
+                    ChannelHttp.LONG_TIMEOUT)));
         }
         return out;
     }
@@ -208,7 +210,10 @@ public final class MagpieAdminClient {
     public static Map<String, Object> pluginAction(Map<String, Object> credentials, String op,
                                                    Map<String, Object> body) {
         String payload = body == null || body.isEmpty() ? "{}" : Json.toJson(body);
-        return parseObject(adminPost(credentials, MagpieSupport.PLUGIN_ACTION_PATH + op, payload));
+        // 安装/升级会现场拉 bun 与 npm 包，实测可达数分钟：不能用默认 60s 掐断，
+        // 否则前端报失败、magpie 侧其实还在装，用户重复点会堆任务。
+        return parseObject(adminPost(credentials, MagpieSupport.PLUGIN_ACTION_PATH + op, payload,
+                ChannelHttp.LONG_TIMEOUT));
     }
 
     /**
@@ -407,8 +412,22 @@ public final class MagpieAdminClient {
      * @return 响应体
      */
     private static String adminGet(Map<String, Object> credentials, String path) {
+        return adminGet(credentials, path, ChannelHttp.DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * 管理面 GET（可指定超时）。
+     *
+     * @param credentials 连接凭据
+     * @param path        以 {@code /api/} 开头的路径
+     * @param timeout     单次请求超时
+     * @return 响应体
+     */
+    private static String adminGet(Map<String, Object> credentials, String path,
+                                   java.time.Duration timeout) {
         String pageUrl = MagpieSupport.pageUrl(credentials);
-        return callAdmin(() -> ChannelHttp.getJson(pageUrl + path, adminHeaders(credentials)));
+        return callAdmin(credentials,
+                () -> ChannelHttp.getJson(pageUrl + path, adminHeaders(credentials), timeout));
     }
 
     /**
@@ -420,32 +439,92 @@ public final class MagpieAdminClient {
      * @return 响应体
      */
     private static String adminPost(Map<String, Object> credentials, String path, String payload) {
+        return adminPost(credentials, path, payload, ChannelHttp.DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * 管理面 POST（可指定超时）。
+     *
+     * @param credentials 连接凭据
+     * @param path        以 {@code /api/} 开头的路径
+     * @param payload     JSON 请求体
+     * @param timeout     单次请求超时
+     * @return 响应体
+     */
+    private static String adminPost(Map<String, Object> credentials, String path, String payload,
+                                    java.time.Duration timeout) {
         String pageUrl = MagpieSupport.pageUrl(credentials);
-        return callAdmin(() -> ChannelHttp.postJson(pageUrl + path, payload, adminHeaders(credentials)));
+        return callAdmin(credentials,
+                () -> ChannelHttp.postJson(pageUrl + path, payload, adminHeaders(credentials), timeout));
+    }
+
+    /**
+     * 统一包装管理面调用：401/403 先丢掉缓存 Cookie 重握手再打一次，仍失败才报错。
+     *
+     * <p>为什么必须重试：管理面 Cookie 是按「页面地址 + 页面 Key」缓存的，TTL 30 分钟。
+     * magpie 重启或换了页面 Key 之后，缓存里的 Cookie 会一直 401，而 TTL 没到就不会重握手
+     * —— 用户会连续半小时看到「页面 Key 被拒」，只能重启我们的服务才能恢复。
+     * 一次重握手是幂等的，代价只有一次 {@code GET /?k=}。</p>
+     *
+     * @param credentials 连接凭据（用于按 key 清缓存）
+     * @param call        实际调用（每次都会重新构造请求头，重试才会拿到新 Cookie）
+     * @return 响应体
+     */
+    private static String callAdmin(Map<String, Object> credentials,
+                                    java.util.function.Supplier<String> call) {
+        try {
+            return call.get();
+        } catch (ChannelException e) {
+            if (!isUnauthorized(e)) {
+                throw translateAdminError(e);
+            }
+            forgetCookie(credentials);
+            try {
+                return call.get();
+            } catch (ChannelException retry) {
+                throw translateAdminError(retry);
+            }
+        }
+    }
+
+    /**
+     * 判断是否为「管理面不认这张 Cookie」。
+     *
+     * @param e 异常
+     * @return true 表示 401 / 403
+     */
+    private static boolean isUnauthorized(ChannelException e) {
+        int status = e.getHttpStatus();
+        return status == 401 || status == 403;
+    }
+
+    /**
+     * 丢掉某连接的 Cookie 缓存（下一次调管理面会重新握手）。
+     *
+     * @param credentials 连接凭据
+     */
+    private static void forgetCookie(Map<String, Object> credentials) {
+        SESSIONS.remove(MagpieSupport.pageUrl(credentials) + "|" + MagpieSupport.pageKey(credentials));
     }
 
     /**
      * 统一包装管理面调用的错误：401/403 换成「页面 Key 被拒」的可操作提示，
      * 连接失败补上「桌面版默认不开页面端口」的说明。
      *
-     * @param call 实际调用
-     * @return 响应体
+     * @param e 上游异常
+     * @return 转换后的异常（调用方直接 throw）
      */
-    private static String callAdmin(java.util.function.Supplier<String> call) {
-        try {
-            return call.get();
-        } catch (ChannelException e) {
-            String message = e.getMessage() == null ? "" : e.getMessage();
-            if (message.contains("-> 401") || message.contains("-> 403")) {
-                throw new ChannelException(ChannelException.CODE_UPSTREAM_ERROR,
-                        MagpieSupport.PAGE_KEY_INVALID_HINT + "（" + ChannelHttp.truncate(message) + "）", e);
-            }
-            if (message.contains("HTTP 请求失败")) {
-                throw new ChannelException(ChannelException.CODE_UPSTREAM_ERROR,
-                        MagpieSupport.PAGE_DISABLED_HINT + "（" + ChannelHttp.truncate(message) + "）", e);
-            }
-            throw e;
+    private static ChannelException translateAdminError(ChannelException e) {
+        String message = e.getMessage() == null ? "" : e.getMessage();
+        if (message.contains("-> 401") || message.contains("-> 403")) {
+            return new ChannelException(ChannelException.CODE_UPSTREAM_ERROR,
+                    MagpieSupport.PAGE_KEY_INVALID_HINT + "（" + ChannelHttp.truncate(message) + "）", e);
         }
+        if (message.contains("HTTP 请求失败")) {
+            return new ChannelException(ChannelException.CODE_UPSTREAM_ERROR,
+                    MagpieSupport.PAGE_DISABLED_HINT + "（" + ChannelHttp.truncate(message) + "）", e);
+        }
+        return e;
     }
 
     /**
