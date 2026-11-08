@@ -828,6 +828,29 @@ public class ApmQueryService {
     }
 
     /**
+     * 反射读取 TraceHandler$Span 的 OTel 字段（方法不存在则回退到默认值）。
+     *
+     * <p>原因：utils-support-runtime-apm 4.0.0.50 的 {@code TraceHandler$Span} 未暴露
+     * {@code getKind()}/{@code getAttributes()}/{@code getResource()}，
+     * 需向上兼容到提供这些方法的下个版本，避免编译/运行时强依赖。</p>
+     *
+     * @param span   方法级 Agent Span
+     * @param method OTel 字段方法名
+     * @param fallback 无此方法时的默认值
+     * @return 反射到的字段值或默认值
+     */
+    private static Object spanField(com.chua.runtime.apm.handler.TraceHandler.Span span, String method, Object fallback) {
+        if (span == null) {
+            return fallback;
+        }
+        try {
+            return span.getClass().getMethod(method).invoke(span);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    /**
      * 统一 Span 视图 — 优先取 Agent {@code TraceHandler} 的方法级 Span；
      * 当 Agent 未产生任何方法级 Span（例如纯 Spring Boot 应用未接入字节码方法采集）时，
      * 回落到**真实传输记录**派生，字段全部取自真实请求，不做任何填充或模拟。
@@ -861,10 +884,10 @@ public class ApmQueryService {
                             + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
                     v.put("displayName", (span.getClassName() == null ? "" : span.getClassName())
                             + "." + (span.getMethodName() == null ? "" : span.getMethodName()));
-                    // 标准 OTel 字段：平台无关的 SpanKind + 语义属性集合
-                    v.put("kind", span.getKind() == null ? "INTERNAL" : span.getKind().name());
-                    v.put("attributes", span.getAttributes() == null ? new LinkedHashMap<String, String>() : span.getAttributes());
-                    v.put("resource", span.getResource() == null ? new LinkedHashMap<String, String>() : span.getResource());
+                    // 标准 OTel 字段：平台无关的 SpanKind + 语义属性集合（反射回退）
+                    v.put("kind", String.valueOf(spanField(span, "getKind", "INTERNAL")));
+                    v.put("attributes", spanField(span, "getAttributes", new LinkedHashMap<String, String>()));
+                    v.put("resource", spanField(span, "getResource", new LinkedHashMap<String, String>()));
                     views.add(v);
                 }
             } catch (Exception e) {

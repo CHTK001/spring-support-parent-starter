@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.support.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
@@ -9,13 +8,16 @@ import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.model.TsharkTcpStreamVO;
 import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
 import com.chua.starter.monitor.support.tshark.TsharkInstallStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
 import com.chua.starter.monitor.support.tshark.TsharkRuntimeStatus;
+import com.chua.starter.monitor.support.config.TsharkRetentionProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -37,71 +39,74 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 网络抓包接口
+ * ç½‘ç»œæŠ“åŒ…æŽ¥å£
  *
  * @author CH
  * @since 4.0.0
  */
-@Tag(name = "网络抓包", description = "网卡抓包会话/数据包/统计")
+@Tag(name = "ç½‘ç»œæŠ“åŒ…", description = "ç½‘å¡æŠ“åŒ…ä¼šè¯/æ•°æ®åŒ…/ç»Ÿè®¡")
 @RestController
 @RequestMapping("/ms/monitor/tshark")
 public class TsharkCaptureController {
 
-    private final TsharkCaptureService tsharkCaptureService; // tshark抓包服务
+    private final TsharkCaptureService tsharkCaptureService; // tsharkæŠ“åŒ…æœåŠ¡
 
-    private final TsharkRuntime tsharkRuntime; // tshark 运行时检测与自动补齐
+    private final TsharkRuntime tsharkRuntime; // tshark è¿è¡Œæ—¶æ£€æµ‹ä¸Žè‡ªåŠ¨è¡¥é½
 
-    private final TsharkInstallStreamRegistry installStreamRegistry; // 安装进度推送
+    private final TsharkInstallStreamRegistry installStreamRegistry; // å®‰è£…è¿›åº¦æŽ¨é€
+    private final TsharkRetentionProperties retentionProperties; // å°ç¹ç­ç¥
+
+
 
     /**
-     * 构造器，注入 tshark 抓包服务
+     * æž„é€ å™¨ï¼Œæ³¨å…¥ tshark æŠ“åŒ…æœåŠ¡
      *
-     * @param tsharkCaptureService  tshark 抓包服务
-     * @param tsharkRuntime         tshark 运行时
-     * @param installStreamRegistry 安装进度推送注册表
+     * @param tsharkCaptureService  tshark æŠ“åŒ…æœåŠ¡
+     * @param tsharkRuntime         tshark è¿è¡Œæ—¶
+     * @param installStreamRegistry å®‰è£…è¿›åº¦æŽ¨é€æ³¨å†Œè¡¨
      */
     public TsharkCaptureController(TsharkCaptureService tsharkCaptureService,
                                    TsharkRuntime tsharkRuntime,
-                                   TsharkInstallStreamRegistry installStreamRegistry) {
+                                    TsharkInstallStreamRegistry installStreamRegistry, TsharkRetentionProperties retentionProperties) {
         this.tsharkCaptureService = tsharkCaptureService;
         this.tsharkRuntime = tsharkRuntime;
         this.installStreamRegistry = installStreamRegistry;
-    }
+           this.retentionProperties = retentionProperties;
 
     /**
-     * 检查 tshark 可用性
+     * æ£€æŸ¥ tshark å¯ç”¨æ€§
      *
-     * @return tshark 是否可用
+     * @return tshark æ˜¯å¦å¯ç”¨
      */
-    @Operation(summary = "检查 tshark 可用性")
+    @Operation(summary = "æ£€æŸ¥ tshark å¯ç”¨æ€§")
     @GetMapping("/check")
     public ReturnResult<Boolean> check() {
         return this.tsharkCaptureService.checkTshark();
     }
 
     /**
-     * tshark 运行时状态。
+     * tshark è¿è¡Œæ—¶çŠ¶æ€ã€‚
      *
-     * <p>比 {@code /check} 多带「安装到哪一步 / 能不能实时抓包 / 为什么不可用」，
-     * 页面据此决定是显示进度、提示装驱动，还是直接放行。</p>
+     * <p>æ¯” {@code /check} å¤šå¸¦ã€Œå®‰è£…åˆ°å“ªä¸€æ­¥ / èƒ½ä¸èƒ½å®žæ—¶æŠ“åŒ… / ä¸ºä»€ä¹ˆä¸å¯ç”¨ã€ï¼Œ
+     * é¡µé¢æ®æ­¤å†³å®šæ˜¯æ˜¾ç¤ºè¿›åº¦ã€æç¤ºè£…é©±åŠ¨ï¼Œè¿˜æ˜¯ç›´æŽ¥æ”¾è¡Œã€‚</p>
      *
-     * @return 状态快照
+     * @return çŠ¶æ€å¿«ç…§
      */
-    @Operation(summary = "tshark 运行时状态")
+    @Operation(summary = "tshark è¿è¡Œæ—¶çŠ¶æ€")
     @GetMapping("/status")
     public ReturnResult<TsharkRuntimeStatus> status() {
         return ReturnResult.ok(this.tsharkRuntime.status());
     }
 
     /**
-     * 触发一次异步补齐（下载 / 解压 / 自检）。
+     * è§¦å‘ä¸€æ¬¡å¼‚æ­¥è¡¥é½ï¼ˆä¸‹è½½ / è§£åŽ‹ / è‡ªæ£€ï¼‰ã€‚
      *
-     * <p>幂等：正在安装时直接返回当前状态，不会重复下载。页面上的「重试」也走这个接口，
-     * 失败后不需要重启服务。</p>
+     * <p>å¹‚ç­‰ï¼šæ­£åœ¨å®‰è£…æ—¶ç›´æŽ¥è¿”å›žå½“å‰çŠ¶æ€ï¼Œä¸ä¼šé‡å¤ä¸‹è½½ã€‚é¡µé¢ä¸Šçš„ã€Œé‡è¯•ã€ä¹Ÿèµ°è¿™ä¸ªæŽ¥å£ï¼Œ
+     * å¤±è´¥åŽä¸éœ€è¦é‡å¯æœåŠ¡ã€‚</p>
      *
-     * @return 触发后的状态快照
+     * @return è§¦å‘åŽçš„çŠ¶æ€å¿«ç…§
      */
-    @Operation(summary = "安装 / 重试补齐 tshark")
+    @Operation(summary = "å®‰è£… / é‡è¯•è¡¥é½ tshark")
     @PostMapping("/install")
     public ReturnResult<TsharkRuntimeStatus> install() {
         this.tsharkRuntime.ensureAsync();
@@ -109,14 +114,14 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 安装进度推送（SSE）。
+     * å®‰è£…è¿›åº¦æŽ¨é€ï¼ˆSSEï¼‰ã€‚
      *
-     * <p>事件名 {@code progress}，载荷就是 {@link TsharkRuntimeStatus}；连上先回一帧当前状态，
-     * 因此中途打开页面也能看到真实进度而不是从 0 开始。</p>
+     * <p>äº‹ä»¶å {@code progress}ï¼Œè½½è·å°±æ˜¯ {@link TsharkRuntimeStatus}ï¼›è¿žä¸Šå…ˆå›žä¸€å¸§å½“å‰çŠ¶æ€ï¼Œ
+     * å› æ­¤ä¸­é€”æ‰“å¼€é¡µé¢ä¹Ÿèƒ½çœ‹åˆ°çœŸå®žè¿›åº¦è€Œä¸æ˜¯ä»Ž 0 å¼€å§‹ã€‚</p>
      *
-     * @return SSE 连接
+     * @return SSE è¿žæŽ¥
      */
-    @Operation(summary = "tshark 安装进度")
+    @Operation(summary = "tshark å®‰è£…è¿›åº¦")
     @GetMapping("/install/stream")
     public ResponseEntity<SseEmitter> installStream() {
         SseEmitter emitter = this.installStreamRegistry.subscribe(this.tsharkRuntime.status());
@@ -124,79 +129,90 @@ public class TsharkCaptureController {
     }
 
     /**
-     * tshark 全局事件流（运行时状态 + 会话变化）。
+     * åˆ—å‡ºå¯ç”¨ç½‘å¡
      *
-     * <p>一条连接同时承载两类事件，页面因此不需要轮询 {@code /status}，也不需要
-     * 定时重拉会话列表：</p>
-     * <ul>
-     *   <li>{@code ready} / {@code progress}：载荷是 {@link TsharkRuntimeStatus}，
-     *       建连即回一帧当前状态；</li>
-     *   <li>{@code session}：某个会话被新建 / 停止 / 解析完成 / 删除时推送会话实体。</li>
-     * </ul>
+     * <p>å¸¦å‹å¥½åä¸Žæœ¬æœº IPv4ï¼Œå¹¶æŠŠæ‰¿è½½é»˜è®¤å‡ºå£çš„é‚£å¼ æŽ’åœ¨æœ€å‰ â€”â€” Windows ä¸Š tshark åªç»™
+     * {@code \Device\NPF_{GUID}}ï¼Œä¸åŠ å·¥çš„è¯é¡µé¢ä¸Šæ˜¯ä¸€ä¸²è¯»ä¸æ‡‚çš„ GUIDã€‚</p>
      *
-     * @return SSE 连接
+     * @return ç½‘å¡åˆ—è¡¨ï¼ˆè®¾å¤‡å + å‹å¥½å + IPv4 + æ˜¯å¦æœ¬æœºå‡ºå£ï¼‰
      */
-    @Operation(summary = "tshark 全局事件流")
-    @GetMapping("/stream")
-    public ResponseEntity<SseEmitter> globalStream() {
-        SseEmitter emitter = this.installStreamRegistry.subscribe(this.tsharkRuntime.status());
-        return ResponseEntity.ok().contentType(MediaType.TEXT_EVENT_STREAM).body(emitter);
-    }
-
-    /**
-     * 列出可用网卡
-     *
-     * <p>带友好名与本机 IPv4，并把承载默认出口的那张排在最前 —— Windows 上 tshark 只给
-     * {@code \Device\NPF_{GUID}}，不加工的话页面上是一串读不懂的 GUID。</p>
-     *
-     * @return 网卡列表（设备名 + 友好名 + IPv4 + 是否本机出口）
-     */
-    @Operation(summary = "列出可用网卡")
+    @Operation(summary = "åˆ—å‡ºå¯ç”¨ç½‘å¡")
     @GetMapping("/interfaces")
     public ReturnResult<List<TsharkInterfaceVO>> interfaces() {
         return this.tsharkCaptureService.listInterfaces();
     }
 
     /**
-     * 启动抓包会话
+     * å¯åŠ¨æŠ“åŒ…ä¼šè¯
      *
-     * @param body 抓包请求（name/captureInterface/captureFilter/filterType/count/timeout）
-     * @return 新建的抓包会话
+     * @param body æŠ“åŒ…è¯·æ±‚ï¼ˆname/captureInterface/captureFilter/filterType/count/timeoutï¼‰
+     * @return æ–°å»ºçš„æŠ“åŒ…ä¼šè¯
      */
-    @Operation(summary = "启动抓包会话")
+    @Operation(summary = "å¯åŠ¨æŠ“åŒ…ä¼šè¯")
     @PostMapping("/capture")
-    public ReturnResult<MsTsharkSession> start(@RequestBody TsharkCaptureStartDTO body) {
+    public ReturnResult<List<MsTsharkSession>> start(@RequestBody TsharkCaptureStartDTO body) {
+        if (body.interfaces() != null && !body.interfaces().isEmpty()) {
+            return this.tsharkCaptureService.startCapture(body.name(), body.interfaces(),
+                    body.captureFilter(), body.filterType(), body.count(), body.timeout());
+        }
         return this.tsharkCaptureService.startCapture(body.name(), body.captureInterface(),
                 body.captureFilter(), body.filterType(), body.count(), body.timeout());
     }
 
     /**
-     * 停止抓包会话
+     * åœæ­¢æŠ“åŒ…ä¼šè¯
      *
-     * @param id 会话 ID
-     * @return 操作结果
+     * @param id ä¼šè¯ ID
+     * @return æ“ä½œç»“æžœ
      */
-    @Operation(summary = "停止抓包会话")
+    @Operation(summary = "åœæ­¢æŠ“åŒ…ä¼šè¯")
     @PostMapping("/capture/{id}/stop")
     public ReturnResult<Void> stop(@PathVariable Long id) {
         return this.tsharkCaptureService.stopCapture(id);
     }
 
     /**
-     * 导入 pcap 文件（PCAP 分析）
+     * æš‚åœæŠ“åŒ…ä¼šè¯çš„å®žæ—¶æŽ¨é€
      *
-     * <p>上传的 pcap 落到抓包目录、以 {@code source=import} 建一条会话，随后在后台用
-     * {@code tshark -r} 整份解析入库。解析出的报文因此复用同一套接口（分页 / 详情 /
-     * 协议分布 / Top 流），原始文件用 {@link #pcap(Long)} 下回去。</p>
+     * <p>åªæŒ‚èµ·æŽ¨ç»™å‰ç«¯çš„å®žæ—¶æµï¼ˆsocket.io å¹¿æ’­ä¸Ž SSE åŒæ—¶æŽæ–­ï¼‰ï¼›æŠ“åŒ…è¿›ç¨‹ã€pcap å†™å…¥ä¸Ž
+     * å¢žé‡è§£æžå…¥åº“ä¸å—å½±å“ï¼Œæ¢å¤åŽä»Žæ–­ç‚¹ç»§ç»­æŽ¨ï¼Œä¸ä¸¢åŒ…ã€‚</p>
      *
-     * <p>返回时解析通常还没结束（会话状态 1 = 解析中），包数在后台累加并通过会话推送
-     * 抵达前端，页面据此显示进度。</p>
-     *
-     * @param file pcap 文件（multipart 字段名 {@code file}）
-     * @param name 会话名（可空，默认取上传的原始文件名）
-     * @return 新建的会话
+     * @param id ä¼šè¯ ID
+     * @return æ“ä½œç»“æžœ
      */
-    @Operation(summary = "导入 pcap 文件")
+    @Operation(summary = "æš‚åœæŠ“åŒ…ä¼šè¯")
+    @PostMapping("/capture/{id}/pause")
+    public ReturnResult<Void> pause(@PathVariable Long id) {
+        return this.tsharkCaptureService.pauseSession(id);
+    }
+
+    /**
+     * æ¢å¤æŠ“åŒ…ä¼šè¯çš„å®žæ—¶æŽ¨é€
+     *
+     * @param id ä¼šè¯ ID
+     * @return æ“ä½œç»“æžœ
+     */
+    @Operation(summary = "æ¢å¤æŠ“åŒ…ä¼šè¯")
+    @PostMapping("/capture/{id}/resume")
+    public ReturnResult<Void> resume(@PathVariable Long id) {
+        return this.tsharkCaptureService.resumeSession(id);
+    }
+
+    /**
+     * å¯¼å…¥ pcap æ–‡ä»¶ï¼ˆPCAP åˆ†æžï¼‰
+     *
+     * <p>ä¸Šä¼ çš„ pcap è½åˆ°æŠ“åŒ…ç›®å½•ã€ä»¥ {@code source=import} å»ºä¸€æ¡ä¼šè¯ï¼ŒéšåŽåœ¨åŽå°ç”¨
+     * {@code tshark -r} æ•´ä»½è§£æžå…¥åº“ã€‚è§£æžå‡ºçš„æŠ¥æ–‡å› æ­¤å¤ç”¨åŒä¸€å¥—æŽ¥å£ï¼ˆåˆ†é¡µ / è¯¦æƒ… /
+     * åè®®åˆ†å¸ƒ / Top æµï¼‰ï¼ŒåŽŸå§‹æ–‡ä»¶ç”¨ {@link #pcap(Long)} ä¸‹å›žåŽ»ã€‚</p>
+     *
+     * <p>è¿”å›žæ—¶è§£æžé€šå¸¸è¿˜æ²¡ç»“æŸï¼ˆä¼šè¯çŠ¶æ€ 1 = è§£æžä¸­ï¼‰ï¼ŒåŒ…æ•°åœ¨åŽå°ç´¯åŠ å¹¶é€šè¿‡ä¼šè¯æŽ¨é€
+     * æŠµè¾¾å‰ç«¯ï¼Œé¡µé¢æ®æ­¤æ˜¾ç¤ºè¿›åº¦ã€‚</p>
+     *
+     * @param file pcap æ–‡ä»¶ï¼ˆmultipart å­—æ®µå {@code file}ï¼‰
+     * @param name ä¼šè¯åï¼ˆå¯ç©ºï¼Œé»˜è®¤å–ä¸Šä¼ çš„åŽŸå§‹æ–‡ä»¶åï¼‰
+     * @return æ–°å»ºçš„ä¼šè¯
+     */
+    @Operation(summary = "å¯¼å…¥ pcap æ–‡ä»¶")
     @PostMapping("/pcap/import")
     public ReturnResult<MsTsharkSession> importPcap(@RequestParam("file") MultipartFile file,
                                                     @RequestParam(required = false) String name) {
@@ -204,26 +220,26 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 删除抓包会话（含数据包）
+     * åˆ é™¤æŠ“åŒ…ä¼šè¯ï¼ˆå«æ•°æ®åŒ…ï¼‰
      *
-     * @param id 会话 ID
-     * @return 操作结果
+     * @param id ä¼šè¯ ID
+     * @return æ“ä½œç»“æžœ
      */
-    @Operation(summary = "删除抓包会话(含数据包)")
+    @Operation(summary = "åˆ é™¤æŠ“åŒ…ä¼šè¯(å«æ•°æ®åŒ…)")
     @DeleteMapping("/sessions/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
         return this.tsharkCaptureService.deleteSession(id);
     }
 
     /**
-     * 抓包会话分页列表
+     * æŠ“åŒ…ä¼šè¯åˆ†é¡µåˆ—è¡¨
      *
-     * @param page 页码
-     * @param size 每页大小
-     * @param source 来源过滤（live 实时抓包 / import 导入 pcap，可空表示不过滤）
-     * @return 分页结果
+     * @param page é¡µç 
+     * @param size æ¯é¡µå¤§å°
+     * @param source æ¥æºè¿‡æ»¤ï¼ˆlive å®žæ—¶æŠ“åŒ… / import å¯¼å…¥ pcapï¼Œå¯ç©ºè¡¨ç¤ºä¸è¿‡æ»¤ï¼‰
+     * @return åˆ†é¡µç»“æžœ
      */
-    @Operation(summary = "抓包会话分页列表")
+    @Operation(summary = "æŠ“åŒ…ä¼šè¯åˆ†é¡µåˆ—è¡¨")
     @GetMapping("/sessions")
     public ReturnResult<IPage<MsTsharkSession>> sessions(@RequestParam(defaultValue = "1") int page,
                                                           @RequestParam(defaultValue = "10") int size,
@@ -232,39 +248,40 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 数据包分页列表
+     * æ•°æ®åŒ…åˆ†é¡µåˆ—è¡¨
      *
-     * @param id 会话 ID
-     * @param page 页码
-     * @param size 每页大小
-     * @param keyword 关键字（可空），在协议/IP/端口/摘要里模糊匹配
-     * @return 分页结果
+     * @param id ä¼šè¯ ID
+     * @param page é¡µç 
+     * @param size æ¯é¡µå¤§å°
+     * @param keyword å…³é”®å­—ï¼ˆå¯ç©ºï¼‰ï¼Œåœ¨åè®®/IP/ç«¯å£/æ‘˜è¦é‡Œæ¨¡ç³ŠåŒ¹é…
+     * @return åˆ†é¡µç»“æžœ
      */
-    @Operation(summary = "数据包分页列表")
+    @Operation(summary = "æ•°æ®åŒ…åˆ†é¡µåˆ—è¡¨")
     @GetMapping("/sessions/{id}/packets")
     public ReturnResult<IPage<MsTsharkPacket>> packets(@PathVariable Long id,
                                                         @RequestParam(defaultValue = "1") int page,
                                                         @RequestParam(defaultValue = "20") int size,
                                                         @RequestParam(required = false) String keyword,
                                                         @RequestParam(required = false) String startTime,
-                                                        @RequestParam(required = false) String endTime) {
-        return this.tsharkCaptureService.pagePackets(id, page, size, keyword, startTime, endTime);
+                                                        @RequestParam(required = false) String endTime,
+                                                        @RequestParam(required = false) String displayFilter) {
+        return this.tsharkCaptureService.pagePackets(id, page, size, keyword, startTime, endTime, displayFilter);
     }
 
     /**
-     * 还原某个包所属 TCP 流的握手 / 关闭生命周期
+     * è¿˜åŽŸæŸä¸ªåŒ…æ‰€å±ž TCP æµçš„æ¡æ‰‹ / å…³é—­ç”Ÿå‘½å‘¨æœŸ
      *
-     * <p>抓包页在包上右键 → 「查看生命周期」就调这里，返回该包的整条流按时序排好的
-     * 报文序列与握手判定（三次 / 四次 / 未完成），前端据此画时序图。</p>
+     * <p>æŠ“åŒ…é¡µåœ¨åŒ…ä¸Šå³é”® â†’ ã€ŒæŸ¥çœ‹ç”Ÿå‘½å‘¨æœŸã€å°±è°ƒè¿™é‡Œï¼Œè¿”å›žè¯¥åŒ…çš„æ•´æ¡æµæŒ‰æ—¶åºæŽ’å¥½çš„
+     * æŠ¥æ–‡åºåˆ—ä¸Žæ¡æ‰‹åˆ¤å®šï¼ˆä¸‰æ¬¡ / å››æ¬¡ / æœªå®Œæˆï¼‰ï¼Œå‰ç«¯æ®æ­¤ç”»æ—¶åºå›¾ã€‚</p>
      *
-     * <p>HTTP / TLS / SSH 等跑在 TCP 上的协议同样支持：数据帧的协议与握手帧的协议
-     * 不同，匹配只按四元组，不按协议列过滤。</p>
+     * <p>HTTP / TLS / SSH ç­‰è·‘åœ¨ TCP ä¸Šçš„åè®®åŒæ ·æ”¯æŒï¼šæ•°æ®å¸§çš„åè®®ä¸Žæ¡æ‰‹å¸§çš„åè®®
+     * ä¸åŒï¼ŒåŒ¹é…åªæŒ‰å››å…ƒç»„ï¼Œä¸æŒ‰åè®®åˆ—è¿‡æ»¤ã€‚</p>
      *
-     * @param sessionId 会话 ID
-     * @param packetId 数据包 ID
-     * @return 生命周期；包不存在或协议不跑在 TCP 上时 404
+     * @param sessionId ä¼šè¯ ID
+     * @param packetId æ•°æ®åŒ… ID
+     * @return ç”Ÿå‘½å‘¨æœŸï¼›åŒ…ä¸å­˜åœ¨æˆ–åè®®ä¸è·‘åœ¨ TCP ä¸Šæ—¶ 404
      */
-    @Operation(summary = "查看 TCP 握手生命周期")
+    @Operation(summary = "æŸ¥çœ‹ TCP æ¡æ‰‹ç”Ÿå‘½å‘¨æœŸ")
     @GetMapping("/sessions/{sessionId}/packets/{packetId}/handshake")
     public ResponseEntity<TsharkHandshakeVO> handshake(@PathVariable Long sessionId,
                                                        @PathVariable Long packetId) {
@@ -273,19 +290,19 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 订阅数据包的实时推送（SSE）
+     * è®¢é˜…æ•°æ®åŒ…çš„å®žæ—¶æŽ¨é€ï¼ˆSSEï¼‰
      *
-     * <p>建连即回 {@code ready}，之后：每入库一个包推一个 {@code packet}，
-     * pcap 解析收尾推一个 {@code session}（前端据此重拉协议分布与 Top 流）。
-     * 另有 20s 一次的注释帧保活，前端不会把它当事件。</p>
+     * <p>å»ºè¿žå³å›ž {@code ready}ï¼Œä¹‹åŽï¼šæ¯å…¥åº“ä¸€ä¸ªåŒ…æŽ¨ä¸€ä¸ª {@code packet}ï¼Œ
+     * pcap è§£æžæ”¶å°¾æŽ¨ä¸€ä¸ª {@code session}ï¼ˆå‰ç«¯æ®æ­¤é‡æ‹‰åè®®åˆ†å¸ƒä¸Ž Top æµï¼‰ã€‚
+     * å¦æœ‰ 20s ä¸€æ¬¡çš„æ³¨é‡Šå¸§ä¿æ´»ï¼Œå‰ç«¯ä¸ä¼šæŠŠå®ƒå½“äº‹ä»¶ã€‚</p>
      *
-     * <p><strong>首屏历史不在这里给</strong>：SSE 只做增量，历史走
-     * {@code /sessions/{id}/packets}。否则建连那一刻就要推上百个包。</p>
+     * <p><strong>é¦–å±åŽ†å²ä¸åœ¨è¿™é‡Œç»™</strong>ï¼šSSE åªåšå¢žé‡ï¼ŒåŽ†å²èµ°
+     * {@code /sessions/{id}/packets}ã€‚å¦åˆ™å»ºè¿žé‚£ä¸€åˆ»å°±è¦æŽ¨ä¸Šç™¾ä¸ªåŒ…ã€‚</p>
      *
-     * @param id 会话 ID
-     * @return SSE 连接；会话不存在时 404
+     * @param id ä¼šè¯ ID
+     * @return SSE è¿žæŽ¥ï¼›ä¼šè¯ä¸å­˜åœ¨æ—¶ 404
      */
-    @Operation(summary = "数据包实时推送（SSE）", description = "按抓包会话分组推送，逐包增量")
+    @Operation(summary = "æ•°æ®åŒ…å®žæ—¶æŽ¨é€ï¼ˆSSEï¼‰", description = "æŒ‰æŠ“åŒ…ä¼šè¯åˆ†ç»„æŽ¨é€ï¼Œé€åŒ…å¢žé‡")
     @GetMapping("/sessions/{id}/packets/stream")
     public ResponseEntity<SseEmitter> packetStream(@PathVariable Long id) {
         if (this.tsharkCaptureService.getSession(id) == null) {
@@ -295,15 +312,15 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 下载会话的原始 pcap 文件
+     * ä¸‹è½½ä¼šè¯çš„åŽŸå§‹ pcap æ–‡ä»¶
      *
-     * <p>页面上的协议摘要只是 tshark 解析后的结果，要做更深的分析（重组、专家信息、
-     * 自定义过滤）得把原始 pcap 拿去 Wireshark 打开，所以提供原件下载。</p>
+     * <p>é¡µé¢ä¸Šçš„åè®®æ‘˜è¦åªæ˜¯ tshark è§£æžåŽçš„ç»“æžœï¼Œè¦åšæ›´æ·±çš„åˆ†æžï¼ˆé‡ç»„ã€ä¸“å®¶ä¿¡æ¯ã€
+     * è‡ªå®šä¹‰è¿‡æ»¤ï¼‰å¾—æŠŠåŽŸå§‹ pcap æ‹¿åŽ» Wireshark æ‰“å¼€ï¼Œæ‰€ä»¥æä¾›åŽŸä»¶ä¸‹è½½ã€‚</p>
      *
-     * @param id 会话 ID
-     * @return pcap 文件流；会话不存在或文件已清理时返回 404
+     * @param id ä¼šè¯ ID
+     * @return pcap æ–‡ä»¶æµï¼›ä¼šè¯ä¸å­˜åœ¨æˆ–æ–‡ä»¶å·²æ¸…ç†æ—¶è¿”å›ž 404
      */
-    @Operation(summary = "下载原始 pcap")
+    @Operation(summary = "ä¸‹è½½åŽŸå§‹ pcap")
     @GetMapping("/sessions/{id}/pcap")
     public ResponseEntity<Resource> pcap(@PathVariable Long id) {
         Resource resource = this.tsharkCaptureService.pcapResource(id);
@@ -312,7 +329,7 @@ public class TsharkCaptureController {
         }
         String name = this.tsharkCaptureService.pcapFileName(id);
         return ResponseEntity.ok()
-                // 文件名含中文，ASCII 段兜底一个 pcap.pcap，避免老客户端拿到乱码名
+                // æ–‡ä»¶åå«ä¸­æ–‡ï¼ŒASCII æ®µå…œåº•ä¸€ä¸ª pcap.pcapï¼Œé¿å…è€å®¢æˆ·ç«¯æ‹¿åˆ°ä¹±ç å
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"capture.pcap\"; filename*=UTF-8''" + URLEncoder.encode(name, StandardCharsets.UTF_8))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -320,13 +337,53 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 数据包详情
+     * æŒ‰æ˜¾ç¤ºè¿‡æ»¤å¯¼å‡º pcap å­é›†
      *
-     * @param sessionId 会话 ID
-     * @param id 数据包 ID
-     * @return 数据包详情
+     * <p>è°ƒç”¨æ–¹è¡¥ä¸Šæ˜¾ç¤ºè¿‡æ»¤åŽï¼ŒæœåŠ¡ç«¯ç”¨ tshark åšä¸€æ¬¡å›žæ”¾è¿‡æ»¤ï¼ˆ-r åŽŸç‰ˆ + -w è¿‡æ»¤åŽ pcapï¼‰ï¼Œ
+     * ç›´æŽ¥è¿”å›žæ–‡ä»¶ï¼Œå‰ç«¯ä»¥ä¸‹è½½æ–‡ä»¶çš„å½¢å¼æ‹¿å›žåŽ»ã€‚</p>
+     *
+     * @param id ä¼šè¯ ID
+     * @param displayFilter æ˜¾ç¤ºè¿‡æ»¤ï¼Œç©ºä¸²åˆ™å¯¼å‡ºå®Œæ•´ pcap
+     * @return å¯¼å‡ºåŽçš„èµ„æº
      */
-    @Operation(summary = "数据包详情")
+    @Operation(summary = "æŒ‰è¿‡æ»¤å™¨å¯¼å‡º pcap")
+    @GetMapping("/sessions/{id}/packets/export")
+    public ResponseEntity<Resource> exportPcap(@PathVariable Long id,
+                                                @RequestParam(required = false) String displayFilter) {
+        ReturnResult<FileSystemResource> r = this.tsharkCaptureService.exportPcap(id, displayFilter);
+        if (r == null || !r.isOk()) {
+            return ResponseEntity.badRequest().build();
+        }
+        FileSystemResource res = r.getData();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"export.pcap\"; filename*=UTF-8''export.pcap")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(res);
+    }
+
+    /**
+     * Follow TCP Streamï¼šæŒ‰æŠ¥æ–‡æ‰€åœ¨è¿žæŽ¥è¿˜åŽŸåŒå‘è½½è·å¸§
+     *
+     * @param sessionId ä¼šè¯ ID
+     * @param packetId  æ•°æ®åŒ… ID
+     * @return åŒå‘é‡æž„æµ
+     */
+    @Operation(summary = "Follow TCP Stream")
+    @GetMapping("/sessions/{sessionId}/packets/{packetId}/stream")
+    public ReturnResult<TsharkTcpStreamVO> stream(@PathVariable Long sessionId,
+                                                   @PathVariable Long packetId) {
+        return this.tsharkCaptureService.followTcpStream(sessionId, packetId);
+    }
+
+    /**
+     * æ•°æ®åŒ…è¯¦æƒ…
+     *
+     * @param sessionId ä¼šè¯ ID
+     * @param id æ•°æ®åŒ… ID
+     * @return æ•°æ®åŒ…è¯¦æƒ…
+     */
+    @Operation(summary = "æ•°æ®åŒ…è¯¦æƒ…")
     @GetMapping("/sessions/{sessionId}/packets/{id}")
     public ReturnResult<MsTsharkPacket> packet(@PathVariable Long sessionId,
                                                @PathVariable Long id) {
@@ -334,77 +391,63 @@ public class TsharkCaptureController {
     }
 
     /**
-     * 报文所属的 HTTP 事务（请求头 / 请求体 / 响应头 / 响应体）。
+     * åè®®åˆ†å¸ƒç»Ÿè®¡
      *
-     * <p>一帧只有一个方向，详情抽屉靠这个接口把同一条 TCP 流上的请求与响应配成一对，
-     * 四段数据才能同时展示。</p>
-     *
-     * @param sessionId 会话 ID
-     * @param id        数据包 ID
-     * @return request / response 两帧（缺席的一侧为 null）
+     * @param id ä¼šè¯ ID
+     * @param displayFilter æ˜¾ç¤ºè¿‡æ»¤ï¼ˆå¯ç©ºï¼‰ï¼ŒæŠ¥æ–‡é¡µ / ç»Ÿè®¡ / ä¼šè¯æµ / è¯Šæ–­åŒä¸€å¥—è¯æ³•
      */
-    @Operation(summary = "报文所属 HTTP 事务")
-    @GetMapping("/sessions/{sessionId}/packets/{id}/http-transaction")
-    public ReturnResult<Map<String, Object>> httpTransaction(@PathVariable Long sessionId,
-                                                             @PathVariable Long id) {
-        return this.tsharkCaptureService.httpTransaction(sessionId, id);
-    }
-
-    /**
-     * 协议分布统计
-     *
-     * @param id 会话 ID
-     * @return 协议分布列表
-     */
-    @Operation(summary = "协议分布统计")
+    @Operation(summary = "åè®®åˆ†å¸ƒç»Ÿè®¡")
     @GetMapping("/sessions/{id}/stats/protocol")
-    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(@PathVariable Long id) {
-        return this.tsharkCaptureService.protocolStats(id);
+    public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(@PathVariable Long id, @RequestParam(required = false) String displayFilter) {
+        return this.tsharkCaptureService.protocolStats(id, displayFilter);
     }
 
     /**
-     * 会话 Top 流统计
+     * ä¼šè¯ Top æµç»Ÿè®¡
      *
-     * @param id 会话 ID
-     * @param limit 返回条数
-     * @return Top 流列表
+     * @param displayFilter æ˜¾ç¤ºè¿‡æ»¤ï¼ˆå¯ç©ºï¼‰
+     * @param limit è¿”å›žæ¡æ•°
+     * @return Top æµåˆ—è¡¨
      */
-    @Operation(summary = "会话 Top 流统计")
+    @Operation(summary = "ä¼šè¯ Top æµç»Ÿè®¡")
     @GetMapping("/sessions/{id}/stats/top")
-    public ReturnResult<List<TsharkFlowVO>> topFlows(@PathVariable Long id,
-                                                     @RequestParam(defaultValue = "10") int limit) {
-        return this.tsharkCaptureService.topFlows(id, limit);
+    public ReturnResult<List<TsharkFlowVO>> topFlows(@PathVariable Long id, @RequestParam(defaultValue = "10") int limit, @RequestParam(required = false) String displayFilter) {
+        return this.tsharkCaptureService.topFlows(id, limit, displayFilter);
     }
 
     /**
-     * 时间轴统计：按时间桶聚合报文的数量与总字节数。
+     * æ—¶é—´è½´ç»Ÿè®¡ï¼šæŒ‰æ—¶é—´æ¡¶èšåˆæŠ¥æ–‡çš„æ•°é‡ä¸Žæ€»å­—èŠ‚æ•°ã€‚
      *
-     * <p>用于前端绘制「报文量随时间变化」的折线图。</p>
+     * <p>ç”¨äºŽå‰ç«¯ç»˜åˆ¶ã€ŒæŠ¥æ–‡é‡éšæ—¶é—´å˜åŒ–ã€çš„æŠ˜çº¿å›¾ã€‚</p>
      *
-     * @param id            会话 ID
-     * @param bucketSeconds 桶大小（秒），默认 10
-     * @return 时间轴数据，格式：[{"t": "2026-10-19 10:00:00", "packets": 123, "bytes": 45678}, ...]
+     * @param id            ä¼šè¯ ID
+     * @param bucketSeconds æ¡¶å¤§å°ï¼ˆç§’ï¼‰ï¼Œé»˜è®¤ 10
+     * @param displayFilter æ˜¾ç¤ºè¿‡æ»¤ï¼ˆå¯ç©ºï¼‰
      */
-    @Operation(summary = "时间轴统计")
+    @Operation(summary = "æ—¶é—´è½´ç»Ÿè®¡")
     @GetMapping("/sessions/{id}/stats/timeline")
-    public ReturnResult<List<Map<String, Object>>> timeline(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "10") Integer bucketSeconds) {
-        return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds));
+    public ReturnResult<List<Map<String, Object>>> timeline(@PathVariable Long id, @RequestParam(defaultValue = "10") Integer bucketSeconds, @RequestParam(required = false) String displayFilter) {
+        return ReturnResult.success(this.tsharkCaptureService.timeline(id, bucketSeconds, displayFilter));
     }
 
     /**
-     * 异常诊断：连接重置 / ICMP 不可达 / 重传 / 乱序 / 零窗口 / DNS 失败 /
-     * HTTP 4xx/5xx / TLS 告警等常见问题的命中计数。
+     * å¼‚å¸¸è¯Šæ–­ï¼šè¿žæŽ¥é‡ç½® / ICMP ä¸å¯è¾¾ / é‡ä¼  / ä¹±åº / é›¶çª—å£ / DNS å¤±è´¥ /
+     * HTTP 4xx/5xx / TLS å‘Šè­¦ç­‰å¸¸è§é—®é¢˜çš„å‘½ä¸­è®¡æ•°ã€‚
      *
-     * <p>每项带一条可回填显示过滤条的等价表达式；计数为 0 的项不返回。</p>
+     * <p>æ¯é¡¹å¸¦ä¸€æ¡å¯å›žå¡«æ˜¾ç¤ºè¿‡æ»¤æ¡çš„ç­‰ä»·è¡¨è¾¾å¼ï¼›è®¡æ•°ä¸º 0 çš„é¡¹ä¸è¿”å›žã€‚</p>
      *
-     * @param id 会话 ID
-     * @return 异常诊断列表
+     * @param id ä¼šè¯ ID
+     * @param displayFilter æ˜¾ç¤ºè¿‡æ»¤ï¼ˆå¯ç©ºï¼‰
      */
-    @Operation(summary = "异常诊断")
-    @GetMapping("/sessions/{id}/stats/anomalies")
-    public ReturnResult<List<TsharkAnomalyVO>> anomalies(@PathVariable Long id) {
-        return this.tsharkCaptureService.anomalies(id);
+    @Operation(summary = "å¼‚å¸¸è¯Šæ–­")
+    /**
+     * ç«‹å³æ¸…ç†è¿‡æœŸå’Œè¶…ç©ºé—´çš„æŠ“åŒ…æ•°æ®ï¼ˆä¸ŽåŽå°æ¸…ç†ä»»åŠ¡ä¸€è‡´ï¼Œæ‰‹åŠ¨è§¦å‘ï¼‰ã€‚
+     *
+     * @return åˆ é™¤çš„ä¼šè¯æ•°
+     */
+    @Operation(summary = "ç«‹å³æ¸…ç†è¿‡æœŸæŠ“åŒ…æ•°æ®")
+    @GetMapping("/retention/cleanup")
+    public ReturnResult<Integer> cleanupRetention() {
+        return ReturnResult.success(this.tsharkCaptureService.cleanupRetention());
     }
 }
