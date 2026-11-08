@@ -54,15 +54,6 @@ public class TsharkPacketStreamRegistry {
     private static final long STREAM_TIMEOUT_MS = 0L;
 
     /**
-     * 会话级暂停标记：{@code true} 表示该会话的实时推送已挂起。
-     *
-     * <p>暂停时抓包进程与 PCAP 更新不受影响：包还在写进文件，下游的
-     * 增量解析与入库照样跑，只有推到前端的 SSE 帧被掐断。恢复后从断点继续推送，
-     * 不会丢包，也不存在「暂停期间数据比上班前还长」的断崖。</p>
-     */
-    private final Map<Long, Boolean> paused = new ConcurrentHashMap<>();
-
-    /**
      * 订阅者：抓包会话 id → 该会话的连接集合。
      *
      * <p>用 {@link CopyOnWriteArraySet}：广播是高频读，增删只在建连 / 断开时发生，
@@ -196,39 +187,6 @@ public class TsharkPacketStreamRegistry {
             }
         }
         log.info("[tshark] 会话删除，已关闭 {} 条 SSE 订阅 sessionId={}", set.size(), sessionId);
-    }
-
-    /**
-     * 暂停某会话的实时推送。
-     *
-     * <p>只挂起推给前端的 SSE 帧：抓包进程照跑、文件照样写、增量解析照进库，
-     * 恢复后从断点继续推，不会丢包。</p>
-     *
-     * @param sessionId 抓包会话 id
-     */
-    public void pause(Long sessionId) {
-        paused.put(sessionId, true);
-        log.info("[tshark] 抓包暂停 sessionId={}", sessionId);
-    }
-
-    /**
-     * 恢复某会话的实时推送。
-     *
-     * @param sessionId 抓包会话 id
-     */
-    public void resume(Long sessionId) {
-        paused.remove(sessionId);
-        log.info("[tshark] 抓包恢复 sessionId={}", sessionId);
-    }
-
-    /**
-     * 某会话当前是否暂停。
-     *
-     * @param sessionId 抓包会话 id
-     * @return 暂停则返回 true
-     */
-    public boolean isPaused(Long sessionId) {
-        return Boolean.TRUE.equals(paused.get(sessionId));
     }
 
     /**

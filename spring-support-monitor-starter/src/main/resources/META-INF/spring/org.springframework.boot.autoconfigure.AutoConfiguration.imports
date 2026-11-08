@@ -1,1 +1,2 @@
 com.chua.starter.monitor.support.config.MonitorAutoConfiguration
+com.chua.starter.monitor.support.config.ControlRestConfiguration
