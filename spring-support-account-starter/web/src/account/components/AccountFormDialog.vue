@@ -178,6 +178,13 @@ const props = defineProps<{
   modelValue: boolean;
   /** 正在编辑的账号；null 表示新增 */
   account?: SysAccount | null;
+  /**
+   * 复制来源：新增时用它预填表单。
+   *
+   * <p>与 {@code account} 的区别是「不进入编辑态」——保存走新增，
+   * 因此凭据不会被带过去（读接口本来也拿不到明文），编码自动加后缀避免撞唯一键。</p>
+   */
+  draft?: SysAccount | null;
 }>();
 
 const emit = defineEmits<{
@@ -325,22 +332,23 @@ function readString(config: Record<string, unknown> | null | undefined, key: str
   return value == null ? '' : String(value);
 }
 
-/** 用账号数据回填表单（新增时重置为空表单） */
+/** 用账号数据回填表单（新增时重置为空表单；有复制来源时按来源预填） */
 function fillForm(): void {
-  const account = props.account;
+  const source = props.account ?? props.draft ?? null;
   Object.assign(form, emptyForm());
-  if (!account) {
+  if (!source) {
     return;
   }
-  const config = account.config || {};
-  form.name = account.name || '';
-  form.code = account.code || '';
-  form.kind = account.kind || 'API_KEY';
-  form.vendor = account.vendor || '';
-  form.username = account.username || '';
-  form.endpoint = account.endpoint || '';
-  form.enabled = account.status !== 0;
-  form.defaultAccount = Boolean(account.defaultAccount);
+  const config = source.config || {};
+  form.name = props.account ? source.name || '' : copyName(source.name || source.code || '');
+  form.code = props.account ? source.code || '' : copyCode(source.code || '');
+  form.kind = source.kind || 'API_KEY';
+  form.vendor = source.vendor || '';
+  form.username = source.username || '';
+  form.endpoint = source.endpoint || '';
+  form.enabled = source.status !== 0;
+  // 复制出来的是新账号，默认标记必须显式再设，否则会顶掉原账号的默认位
+  form.defaultAccount = props.account ? Boolean(source.defaultAccount) : false;
   form.secret = '';
   form.from = readString(config, 'from');
   form.region = readString(config, 'region');
@@ -350,6 +358,26 @@ function fillForm(): void {
   const port = Number(config.port);
   form.port = Number.isFinite(port) && port > 0 ? port : 465;
   form.ssl = config.ssl == null ? true : Boolean(config.ssl);
+}
+
+/**
+ * 复制来源的账号编码加后缀，避免撞唯一键。
+ *
+ * @param code 原编码
+ * @returns 新编码（原编码为空时留空让用户填）
+ */
+function copyCode(code: string): string {
+  return code ? `${code}-copy` : '';
+}
+
+/**
+ * 复制来源的账号名称加后缀。
+ *
+ * @param name 原名称
+ * @returns 新名称
+ */
+function copyName(name: string): string {
+  return name ? `${name}（副本）` : '';
 }
 
 /** 切换种类：把不适用的专属字段清掉，避免串到另一种账号上 */
@@ -373,7 +401,8 @@ function onKindChange(): void {
  */
 function buildPayload(): SysAccount {
   const account = props.account;
-  const config: Record<string, unknown> = { ...(account?.config || {}) };
+  const source = account ?? props.draft ?? null;
+  const config: Record<string, unknown> = { ...(source?.config || {}) };
   const setOrDelete = (key: string, value: unknown) => {
     if (value === '' || value === undefined || value === null) {
       delete config[key];
@@ -435,7 +464,7 @@ async function submit(): Promise<void> {
 }
 
 watch(
-  () => [props.modelValue, props.account] as const,
+  () => [props.modelValue, props.account, props.draft] as const,
   ([open]) => {
     if (open) {
       fillForm();

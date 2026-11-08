@@ -129,6 +129,28 @@
                 <span class="mb-title ellipsis" :title="activeMessage?.subject">
                   {{ activeMessage?.subject || '（无主题）' }}
                 </span>
+                <template v-if="activeMessage">
+                  <ReButton
+                    v-if="overview?.modifiable"
+                    show-text
+                    :icon="activeMessage.unread ? 'Message' : 'View'"
+                    :loading="markingBusy"
+                    @click="toggleSeen"
+                  >
+                    {{ activeMessage.unread ? '标为已读' : '标为未读' }}
+                  </ReButton>
+                  <ReButton
+                    v-if="overview?.deletable"
+                    show-text
+                    icon="Delete"
+                    type="danger"
+                    plain
+                    :loading="deletingMessage"
+                    @click="removeMessage"
+                  >
+                    删除
+                  </ReButton>
+                </template>
                 <ReButton v-if="overview?.sendable" show-text icon="EditPen" @click="startCompose">
                   写信
                 </ReButton>
@@ -242,15 +264,18 @@ import ReTable from '@repo/ui/re-table';
 import ReTag from '@repo/ui/re-tag';
 
 import {
+  deleteMailboxMessage,
   getMailboxMessage,
   getMailboxOverview,
   listMailboxMessages,
+  markMailboxMessageSeen,
   sendMailboxMessage,
   type MailboxFolder,
   type MailboxMessage,
   type MailboxOverview,
 } from '../api/mailbox';
 import type { SysAccount } from '../api/account';
+import { confirmThen } from '../../shared/confirmThen';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -296,6 +321,10 @@ const activeMessage = ref<MailboxMessage | null>(null);
 const loadingMessage = ref(false);
 /** 发送中 */
 const sending = ref(false);
+/** 标记已读 / 未读进行中 */
+const markingBusy = ref(false);
+/** 删除进行中 */
+const deletingMessage = ref(false);
 
 /** 写信表单 */
 const form = reactive({
@@ -484,6 +513,10 @@ async function openMessage(row: Record<string, unknown>): Promise<void> {
   try {
     const detail = await getMailboxMessage(props.account.accountId, id, activeFolder.value);
     activeMessage.value = detail;
+    // 打开即视为已读（与主流邮件客户端一致）；只读来源静默失败，不影响阅读
+    if (detail?.unread && overview.value?.modifiable) {
+      void autoMarkRead(detail);
+    }
   } catch (e: any) {
     message.error(e?.message || '读取邮件失败');
   } finally {
@@ -496,6 +529,112 @@ function backToList(): void {
   mode.value = 'list';
   activeMessage.value = null;
   resetForm();
+}
+
+/**
+ * 打开邮件后自动标记已读（失败静默，不打扰阅读）。
+ *
+ * @param detail 已加载的邮件详情
+ */
+async function autoMarkRead(detail: MailboxMessage): Promise<void> {
+  const account = props.account;
+  if (!account?.accountId) return;
+  try {
+    await markMailboxMessageSeen(account.accountId, detail.id, activeFolder.value, true);
+    applySeen(true);
+  } catch {
+    // 只读收信来源无法回写标记，保持未读即可
+  }
+}
+
+/**
+ * 切换已读 / 未读标记。
+ *
+ * <p>先按目标状态本地更新再刷新文件夹计数：IMAP 往返可能几百毫秒，
+ * 期间按钮必须有反馈；失败时回滚并给出原因（只读来源会明确报「不支持」）。</p>
+ */
+async function toggleSeen(): Promise<void> {
+  const account = props.account;
+  const current = activeMessage.value;
+  if (!account?.accountId || !current || markingBusy.value) return;
+  const target = !current.unread;
+  markingBusy.value = true;
+  try {
+    await markMailboxMessageSeen(account.accountId, current.id, activeFolder.value, target);
+    applySeen(target);
+    message.success(target ? '已标为已读' : '已标为未读');
+    void refreshFolderCounters();
+  } catch (e: any) {
+    message.error(e?.message || '修改已读状态失败');
+  } finally {
+    markingBusy.value = false;
+  }
+}
+
+/**
+ * 删除当前邮件（二次确认）。
+ *
+ * <p>删除是远端不可逆操作，必须确认；成功后回列表并重算文件夹计数，
+ * 否则左侧「未读」会停在旧值。</p>
+ */
+async function removeMessage(): Promise<void> {
+  const account = props.account;
+  const current = activeMessage.value;
+  if (!account?.accountId || !current || deletingMessage.value) return;
+  const confirmed = await confirmThen(
+    message.confirm,
+    `确认删除「${current.subject || '（无主题）'}」？删除后无法从本界面恢复。`,
+    '删除邮件',
+  );
+  if (!confirmed) return;
+  deletingMessage.value = true;
+  try {
+    await deleteMailboxMessage(account.accountId, current.id, activeFolder.value);
+    message.success('邮件已删除');
+    mode.value = 'list';
+    activeMessage.value = null;
+    await reloadMessages();
+    void refreshFolderCounters();
+  } catch (e: any) {
+    message.error(e?.message || '删除邮件失败');
+  } finally {
+    deletingMessage.value = false;
+  }
+}
+
+/**
+ * 本地同步已读状态：详情 + 列表行 + 文件夹未读计数。
+ *
+ * @param seen 是否已读
+ */
+function applySeen(seen: boolean): void {
+  const current = activeMessage.value;
+  if (current) {
+    current.unread = !seen;
+    const hit = messages.value.find(item => item.id === current.id);
+    if (hit) hit.unread = !seen;
+  }
+  const folder = folders.value.find(item => item.key === activeFolder.value);
+  if (folder && typeof folder.unread === 'number') {
+    const next = folder.unread + (seen ? -1 : 1);
+    folder.unread = Math.max(0, next);
+  }
+}
+
+/**
+ * 只刷新文件夹计数（不重载当前列表，避免打断阅读位置）。
+ */
+async function refreshFolderCounters(): Promise<void> {
+  const account = props.account;
+  if (!account?.accountId) return;
+  try {
+    const data = await getMailboxOverview(account.accountId);
+    if (data?.folders) {
+      folders.value = data.folders;
+    }
+  } catch {
+    // 计数刷新失败不影响已完成的标记 / 删除
+  }
 }
 
 /** 进入写信（预填收件人） */

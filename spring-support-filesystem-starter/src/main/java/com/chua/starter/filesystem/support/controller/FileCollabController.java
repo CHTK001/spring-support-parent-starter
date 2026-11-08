@@ -272,16 +272,23 @@ public class FileCollabController {
     }
 
     /**
-     * 删除协同文档（仅创建者可删）。
+     * 删除协同文档。
      *
-     * @param id     协同文档号
-     * @param userId 操作者用户标识
-     * @return 删除结果
+     * <p><b>默认是软删除</b>：文档移入回收桶，可在「回收桶」视图里恢复。
+     * 只有显式传 {@code permanent=true}（回收桶里的「彻底删除」）才真正清掉内容和历史。
+     * 这是为了把「误删」从不可逆操作降级成可恢复操作。</p>
+     *
+     * @param id        协同文档号
+     * @param userId    操作者用户标识
+     * @param permanent 是否彻底删除（默认 false = 移入回收桶）
+     * @return 是否生效
      */
-    @Operation(summary = "删除协同文档")
+    @Operation(summary = "删除协同文档（默认移入回收桶）")
     @DeleteMapping("/{id}")
     public ReturnResult<Boolean> delete(@PathVariable("id") String id,
-                                        @RequestParam(value = "userId", required = false, defaultValue = "") String userId) {
+                                        @RequestParam(value = "userId", required = false, defaultValue = "") String userId,
+                                        @RequestParam(value = "permanent", required = false, defaultValue = "false")
+                                        boolean permanent) {
         FileCollabStore.FileCollab exist = collabStore.get(id);
         if (exist == null) {
             return ReturnResult.ok(false);
@@ -289,7 +296,150 @@ public class FileCollabController {
         if (!FileCollabStore.isOwner(exist, userId)) {
             return ReturnResult.illegal("只有创建者可以删除该协同文档");
         }
-        return ReturnResult.ok(collabStore.delete(id));
+        return ReturnResult.ok(permanent ? collabStore.purge(id) : collabStore.trash(id));
+    }
+
+    /**
+     * 归档协同文档（从常规列表收起，内容与权限保留）。
+     *
+     * @param id     协同文档号
+     * @param userId 操作者用户标识
+     * @return true = 已归档
+     */
+    @Operation(summary = "归档协同文档")
+    @PostMapping("/{id}/archive")
+    public ReturnResult<Boolean> archive(@PathVariable("id") String id,
+                                         @RequestParam(value = "userId", required = false, defaultValue = "") String userId) {
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        if (!FileCollabStore.canWrite(exist, userId)) {
+            return ReturnResult.illegal("没有该协同文档的编辑权限，请联系创建者授权");
+        }
+        return ReturnResult.ok(collabStore.archive(id));
+    }
+
+    /**
+     * 取消归档（回到常规列表）。
+     *
+     * @param id     协同文档号
+     * @param userId 操作者用户标识
+     * @return true = 已取消归档
+     */
+    @Operation(summary = "取消归档")
+    @PostMapping("/{id}/unarchive")
+    public ReturnResult<Boolean> unarchive(@PathVariable("id") String id,
+                                           @RequestParam(value = "userId", required = false, defaultValue = "") String userId) {
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        if (!FileCollabStore.canWrite(exist, userId)) {
+            return ReturnResult.illegal("没有该协同文档的编辑权限，请联系创建者授权");
+        }
+        return ReturnResult.ok(collabStore.unarchive(id));
+    }
+
+    /**
+     * 从回收桶恢复。
+     *
+     * @param id     协同文档号
+     * @param userId 操作者用户标识
+     * @return true = 已恢复
+     */
+    @Operation(summary = "从回收桶恢复")
+    @PostMapping("/{id}/restore")
+    public ReturnResult<Boolean> restore(@PathVariable("id") String id,
+                                         @RequestParam(value = "userId", required = false, defaultValue = "") String userId) {
+        FileCollabStore.FileCollab exist = collabStore.get(id);
+        if (exist == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        if (!FileCollabStore.isOwner(exist, userId)) {
+            return ReturnResult.illegal("只有创建者可以恢复该协同文档");
+        }
+        return ReturnResult.ok(collabStore.restore(id));
+    }
+
+    /**
+     * 归档视图列表。
+     *
+     * @param userId  当前用户标识
+     * @param keyword 关键字过滤（空 = 不过滤）
+     * @return 已归档文档
+     */
+    @Operation(summary = "列出已归档协同文档")
+    @GetMapping("/archived")
+    public ReturnResult<List<Map<String, Object>>> listArchived(
+            @RequestParam(value = "userId", required = false, defaultValue = "anonymous") String userId,
+            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword) {
+        String uid = userId == null || userId.isBlank() ? "anonymous" : userId;
+        return ReturnResult.ok(collabStore.listArchived(uid, keyword)
+                .stream().map(c -> toSummaryMap(c, uid)).toList());
+    }
+
+    /**
+     * 回收桶视图列表。
+     *
+     * @param userId  当前用户标识
+     * @param keyword 关键字过滤（空 = 不过滤）
+     * @return 回收桶文档
+     */
+    @Operation(summary = "列出回收桶协同文档")
+    @GetMapping("/trash")
+    public ReturnResult<List<Map<String, Object>>> listTrashed(
+            @RequestParam(value = "userId", required = false, defaultValue = "anonymous") String userId,
+            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword) {
+        String uid = userId == null || userId.isBlank() ? "anonymous" : userId;
+        return ReturnResult.ok(collabStore.listTrashed(uid, keyword)
+                .stream().map(c -> toSummaryMap(c, uid)).toList());
+    }
+
+    /**
+     * 显式创建的目录列表（空目录也返回）。
+     *
+     * @return 目录路径列表（升序）
+     */
+    @Operation(summary = "列出协同目录")
+    @GetMapping("/dirs")
+    public ReturnResult<List<String>> listDirs() {
+        return ReturnResult.ok(collabStore.listDirs());
+    }
+
+    /**
+     * 新建协同目录。
+     *
+     * @param path 目录路径（如 {@code 项目A/台账}；空/根不可创建）
+     * @return true = 新增成功（已存在返回 false）
+     */
+    @Operation(summary = "新建协同目录")
+    @PostMapping("/dirs")
+    public ReturnResult<Boolean> createDir(
+            @RequestParam(value = "path", required = false, defaultValue = "") String path) {
+        if (path == null || path.isBlank()) {
+            return ReturnResult.illegal("目录名不能为空");
+        }
+        return ReturnResult.ok(collabStore.createDir(path));
+    }
+
+    /**
+     * 删除协同目录（仅空目录可删）。
+     *
+     * @param path 目录路径
+     * @return true = 已删除；非空目录返回错误提示
+     */
+    @Operation(summary = "删除协同目录")
+    @DeleteMapping("/dirs")
+    public ReturnResult<Boolean> deleteDir(
+            @RequestParam(value = "path", required = false, defaultValue = "") String path) {
+        if (path == null || path.isBlank()) {
+            return ReturnResult.illegal("目录名不能为空");
+        }
+        if (!collabStore.deleteDir(path)) {
+            return ReturnResult.illegal("目录不存在或不是空目录，无法删除");
+        }
+        return ReturnResult.ok(true);
     }
 
     /**
@@ -560,7 +710,7 @@ public class FileCollabController {
      * @param userId 当前用户标识（用于计算权限位；null/空 = 匿名）
      * @return Map 快照
      */
-    private static Map<String, Object> toMap(FileCollabStore.FileCollab collab, String userId) {
+    private Map<String, Object> toMap(FileCollabStore.FileCollab collab, String userId) {
         Map<String, Object> m = toSummaryMap(collab, userId);
         m.put("snapshot", collab.snapshot() == null ? "" : collab.snapshot());
         return m;
@@ -582,7 +732,7 @@ public class FileCollabController {
      * @param userId 当前用户标识（用于计算权限位；null/空 = 匿名）
      * @return Map 摘要（含 size，不含 snapshot）
      */
-    private static Map<String, Object> toSummaryMap(FileCollabStore.FileCollab collab, String userId) {
+    private Map<String, Object> toSummaryMap(FileCollabStore.FileCollab collab, String userId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", collab.id());
         m.put("bucket", collab.bucket());
@@ -600,6 +750,9 @@ public class FileCollabController {
         m.put("size", bytesOf(collab.snapshot()));
         m.put("canWrite", FileCollabStore.canWrite(collab, userId));
         m.put("isOwner", FileCollabStore.isOwner(collab, userId));
+        // 归档 / 回收桶时间戳：常规列表里恒为 0；前端视图据此显示「归档于 / 删除于」
+        m.put("archivedAt", collabStore.archivedAt(collab.id()));
+        m.put("deletedAt", collabStore.trashedAt(collab.id()));
         return m;
     }
 }

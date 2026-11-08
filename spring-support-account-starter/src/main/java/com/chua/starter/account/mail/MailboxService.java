@@ -97,6 +97,8 @@ public class MailboxService {
         view.setProvider(provider == null ? null : provider.provider());
         view.setSupported(provider != null);
         view.setSendable(isSendable(account));
+        view.setModifiable(provider != null && provider.supportsMarkSeen());
+        view.setDeletable(provider != null && provider.supportsDelete());
         if (provider == null) {
             view.setMessage(unavailableReason(account));
             return view;
@@ -148,6 +150,48 @@ public class MailboxService {
             throw e;
         } catch (Exception e) {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "读取邮件失败：" + rootMessage(e), e);
+        }
+    }
+
+    /**
+     * 设置已读 / 未读。
+     *
+     * @param accountId 账号标识
+     * @param folder    服务端文件夹名
+     * @param messageId 消息标识
+     * @param seen      {@code true} 标记为已读
+     * @return 是否写入成功
+     */
+    public boolean markSeen(String accountId, String folder, String messageId, boolean seen) {
+        SysAccount account = requireInboxAccount(accountId);
+        AccountInboxProvider provider = requireProvider(account);
+        try {
+            return provider.markSeen(
+                    account, accountService.resolveSecret(accountId), folder, messageId, seen);
+        } catch (UnsupportedOperationException e) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, e.getMessage());
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "设置已读标记失败：" + rootMessage(e), e);
+        }
+    }
+
+    /**
+     * 删除单封邮件。
+     *
+     * @param accountId 账号标识
+     * @param folder    服务端文件夹名
+     * @param messageId 消息标识
+     * @return 是否删除成功
+     */
+    public boolean delete(String accountId, String folder, String messageId) {
+        SysAccount account = requireInboxAccount(accountId);
+        AccountInboxProvider provider = requireProvider(account);
+        try {
+            return provider.delete(account, accountService.resolveSecret(accountId), folder, messageId);
+        } catch (UnsupportedOperationException e) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, e.getMessage());
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "删除邮件失败：" + rootMessage(e), e);
         }
     }
 

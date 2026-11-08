@@ -799,6 +799,15 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <!-- 租户模块（/v2/tenant/**）：数据源中心需要在装上台账的应用里实现租户侧的
+                 TenantDatasourceLookup 窄接口（租户库改为引用台账里的实例）。
+                 同样由 spring-support-api-starter 构建产出，故在引入方模块里声明为 optional。 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-api-support-common-tenant-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
             <dependency>
                 <groupId>com.chua</groupId>

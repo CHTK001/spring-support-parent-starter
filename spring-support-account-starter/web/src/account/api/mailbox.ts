@@ -72,6 +72,10 @@ export interface MailboxOverview {
   supported?: boolean;
   /** 是否具备发信能力 */
   sendable?: boolean;
+  /** 是否支持修改已读标记（只读来源为 false） */
+  modifiable?: boolean;
+  /** 是否支持删除邮件（只读来源为 false） */
+  deletable?: boolean;
   /** 收信实现标识，如 email-imap */
   provider?: string;
   /** 不可用原因 */
@@ -150,3 +154,21 @@ export const sendMailboxMessage = (accountId: string, payload: MailboxSendReques
     .post(`${B}/${accountId}/mailbox/send`)
     .data(payload as unknown as Record<string, unknown>)
     .then(r => unwrap<MailboxSendResult>(r));
+
+/**
+ * 设置已读 / 未读标记。
+ *
+ * <p>只读来源（临时邮箱等）后端会抛「不支持」的错误，界面据此提示，不要静默当成成功。</p>
+ */
+export const markMailboxMessageSeen = (accountId: string, messageId: string, folder?: string, seen = true) =>
+  http()
+    .post(`${B}/${accountId}/mailbox/messages/${encodeURIComponent(messageId)}/seen`)
+    .query({ folder, seen })
+    .then(r => unwrap<boolean>(r));
+
+/** 删除单封邮件（后端打 DELETED 标记并 expunge） */
+export const deleteMailboxMessage = (accountId: string, messageId: string, folder?: string) =>
+  http()
+    .post(`${B}/${accountId}/mailbox/messages/${encodeURIComponent(messageId)}/delete`)
+    .query({ folder })
+    .then(r => unwrap<boolean>(r));

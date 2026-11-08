@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import { createVite } from '../../../vue-support-parent-starter/turbo/vite/createVite.ts';
 
 /**

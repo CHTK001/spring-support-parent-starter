@@ -1229,6 +1229,44 @@ public class WorldSimServiceImpl implements WorldSimService {
         return result;
     }
 
+    /**
+     * 取「下一幕」：已有空的待演幕就复用它，没有才新建。
+     *
+     * <p>每演完一幕都无条件 {@code createAct} 会让幕次成倍膨胀、堆满同名的空幕——
+     * 本机实测演 4 幕就冒出 4 个空「未命名幕次」。而观众真正要的是「往下演」，
+     * 那一个空幕就是它。复用它既不再膨胀，也让「演完接下一幕」始终只多一幕。</p>
+     *
+     * @param worldId 世界 id
+     * @return 下一幕的行（新建的或复用的空幕）
+     */
+    private SysAiWorldAct ensureNextAct(Long worldId) {
+        SysAiWorldAct latest = actMapper.selectOne(
+                new LambdaQueryWrapper<SysAiWorldAct>()
+                        .eq(SysAiWorldAct::getWorldId, worldId)
+                        .orderByDesc(SysAiWorldAct::getActNo)
+                        .last("limit 1"));
+        if (latest != null && isBlankAct(latest)) {
+            return latest;
+        }
+        return createAct(worldId);
+    }
+
+    /**
+     * 这一幕是不是一个「还没写过任何东西」的空幕。
+     *
+     * <p>判据是阶段仍停在 writing 且进度为 0。剧本文件在 {@code createAct} 里只落了一个
+     * {@code {"actNo":N}} 的空壳，不能拿「文件存在」当有内容。</p>
+     *
+     * @param act 幕次行
+     * @return true 表示可以直接拿来写下一幕
+     */
+    private static boolean isBlankAct(SysAiWorldAct act) {
+        if (!ACT_STATUS_WRITING.equals(act.getStage())) {
+            return false;
+        }
+        return act.getProgress() == null || act.getProgress() == 0;
+    }
+
     @Override
     public SysAiWorldAct createAct(Long worldId) {
         requireOwned(worldId);
@@ -1362,26 +1400,43 @@ public class WorldSimServiceImpl implements WorldSimService {
                 }
             }
             case ACT_STATUS_PLAYING -> {
-                // ── 表演：逐场景生成叙述（一镜到底），完成后标记可重播
+                // ── 表演：一次只演一场 ──
+                // 早先整幕一次演完（每场一次模型调用）才落稿，观众对着「正在演…」干等
+                // 几十秒，正文一个字都看不到。现在每推进一次只演下一场，演完立刻把剧本
+                // 与用户侧演出稿各落一次盘，前端下一次推进前就能把已演的场次放上舞台。
                 String script = storyStore.readAct(worldId, actNo);
                 if (script == null || script.isBlank()) {
                     throw new ApiException(ApiErrorCode.INVALID_PARAM, "没有剧本可表演");
                 }
-                String played = playAct(worldId, actNo, script, act);
-                storyStore.writeAct(worldId, actNo, played);
-                String userId = AiUserContext.requireUserId();
-                storyStore.writeStory(worldId, userId, actNo, playStory(worldId, actNo, played));
-                act.setStage(ACT_STATUS_REPLAY);
-                act.setStatus(ACT_STATUS_REPLAY);
-                act.setProgress(scenesDone(played));
+                Map<String, Object> json = Json.fromJson(script, Map.class);
+                List<Map<String, Object>> scenes = sceneList(json.get(ActScript.SCENES));
+                if (scenes.isEmpty()) {
+                    throw new ApiException(ApiErrorCode.INVALID_PARAM, "没有可表演的场景");
+                }
+                int total = scenes.size();
+                int idx = nextUnplayedScene(scenes);
+                if (idx >= 0) {
+                    playScene(worldId, scenes.get(idx), idx + 1);
+                    json.put(ActScript.ACT_STATUS, ACT_STATUS_PLAYING);
+                    script = Json.toJson(json);
+                    storyStore.writeAct(worldId, actNo, script);
+                    // 一场一落稿：舞台上的正文随场次增长，不必等整幕结束
+                    storyStore.writeStory(worldId, AiUserContext.requireUserId(), actNo,
+                            playStory(worldId, actNo, script));
+                }
+                int done = scenesDone(script);
+                act.setProgress(done);
+                if (done >= total) {
+                    // 全部场次演完：标记可重播，并开一个空的下一幕交给前端接着推
+                    act.setStage(ACT_STATUS_REPLAY);
+                    act.setStatus(ACT_STATUS_REPLAY);
+                    out.put("nextAct", actRow(ensureNextAct(worldId)));
+                }
                 act.setUpdateTime(LocalDateTime.now());
                 actMapper.updateById(act);
                 out.put("act", actRow(act));
-                out.put("playedScenes", act.getProgress());
-                // 这一幕演完即接下一幕：AI 自己把故事往下续，观众不用点任何东西。
-                // 这里只开一个空的下一幕并回传整行，具体书写/演出由前端连续推进，
-                // 避免在同一事务里递归 advanceAct 造成状态机重入。
-                out.put("nextAct", actRow(createAct(worldId)));
+                out.put("playedScenes", done);
+                out.put("totalScenes", total);
             }
             default ->
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "幕次阶段为：" + act.getStage() + "，无法推进");
@@ -1399,27 +1454,40 @@ public class WorldSimServiceImpl implements WorldSimService {
         if (act == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "幕次不存在");
         }
-        if (!ACT_STATUS_REPLAY.equals(act.getStage()) && !ACT_STATUS_FINISHED.equals(act.getStage())) {
+        // 只看阶段，不看状态：回退期间 stage=playing 而 status 仍留着 replay，
+        // 早先按 status 判可重播，同一次重播里第二次点就会被拒——「重播」变成一次性按钮。
+        // 还要接住旧数据：早期版本的重播把 stage 置成 playing 却没留下任何待演内容，
+        // 这种幕点「演出」会重跑一遍生成（多花一次图），点「重播」才是它真正需要的。
+        if (!ACT_STATUS_REPLAY.equals(act.getStage())
+                && !ACT_STATUS_FINISHED.equals(act.getStage())
+                && !isBlankAct(act)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "已演过或已播的幕次才能重播");
         }
         String script = storyStore.readAct(worldId, actNo);
         if (script == null || script.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "没有剧本可重播");
         }
-        // 表演阶段回滚到 playing，所见过的素材保留
-        Map<String, Object> json = Json.fromJson(script, Map.class);
-        json.put("status", ACT_STATUS_PLAYING);
-        storyStore.writeAct(worldId, actNo, Json.toJson(json));
-        // 用户侧故事片段回滚（已看过的不算，只删该幕）
-        storyStore.deleteStory(worldId, AiUserContext.requireUserId(), actNo);
-        act.setStage(ACT_STATUS_PLAYING);
+        // 重播的有无演出稿，看的是用户侧故事片段——舞台放的正是它。
+        // 没有它，按下「重播」舞台上还是空白，不如直说原因。
+        String story = storyStore.readStory(worldId, AiUserContext.requireUserId(), actNo);
+        if (story == null || story.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "这一幕还没演过，先点「演出」");
+        }
+        // 重播就是「从头再放一遍」，不改任何演出数据：
+        // 既不能删用户侧故事片段（那正是舞台要重放的稿子，删了重播只剩空白），
+        // 也不能把舞台形态回退成 playing（那样素材任务会从头再跑一轮，
+        // 观众点十次重播就烧十次图）。这里只把阶段摆到可重播的位置。
+        act.setStage(ACT_STATUS_REPLAY);
         act.setStatus(ACT_STATUS_REPLAY);
-        act.setProgress(0);
         act.setUpdateTime(LocalDateTime.now());
         actMapper.updateById(act);
+        evictActCaches(worldId);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("act", actRow(act));
         out.put("restart", true);
+        // 重播之后 AI 自己往下接：开一个空的下一幕，观众不用再回头找按钮。
+        // 只开空幕、不预写剧本——重播本身不该悄悄烧掉一整幕的模型与出图额度。
+        out.put("nextAct", actRow(ensureNextAct(worldId)));
         return out;
     }
 
@@ -1816,7 +1884,6 @@ public class WorldSimServiceImpl implements WorldSimService {
         boolean videoEnabled = videoMediaEnabled();
         boolean imageEnabled = imageMediaEnabled();
         // 按已有的失败记录收敛一遍
-        int modeOffCount = 0;
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
             // 形态关闭导致的不出图不算「失败」：整幕本来就不要这类素材
@@ -1830,7 +1897,6 @@ public class WorldSimServiceImpl implements WorldSimService {
                 // 于是「关掉的视频通道」又活过来去建任务、再失败、再进 failedTypes，
                 // 最后把整幕的图片一致性一起带崩。
                 mat.persist();
-                modeOffCount++;
                 continue;
             }
             // 该类型本幕已经确认出不了（上游报错 / 没有能力）：
@@ -1875,8 +1941,6 @@ public class WorldSimServiceImpl implements WorldSimService {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("total", materials.size());
-        log.info("[WorldSim] 素材扫描 world={} act={} imageEnabled={} videoEnabled={} materials={} modeOff={} failedTypes={}",
-                worldId, actNo, imageEnabled, videoEnabled, materials.size(), modeOffCount, failedTypes);
         int done = 0;
         for (Material mat : materials) {
             if (MEDIA_OK.equals(mat.head().get("status"))) done++;
@@ -1890,37 +1954,9 @@ public class WorldSimServiceImpl implements WorldSimService {
         // 只要还有任务在生成中，本幕就没收敛：这一刻放行，观众会先看到「几场有图」，
         // 等后台补完才算齐，中间那段就是混合态。所以 inProgress 时不进收口分支。
         if (target == null && !inProgress) {
-            StringBuilder dbg = new StringBuilder();
-            for (Material m : materials) {
-                Map<String, Object> h = m.head();
-                dbg.append(h.get("role")).append('/').append(h.get("type")).append('=')
-                   .append(h.get("status"))
-                   .append(h.get("taskId") == null ? "" : "/T")
-                   .append(Boolean.TRUE.equals(h.get("failed")) ? "/F" : "")
-                   .append(h.get("url") == null ? "" : "/U")
-                   .append(' ');
-            }
-            log.info("[WorldSim] 素材收口 world={} act={} failedTypes={} nodes={}", worldId, actNo, failedTypes, dbg);
             // 整幕一致性收口：一场戏要么全有图、要么全没有，不做半张半张的混合。
-            // 只要有一个带提示词的素材真的出图失败（上游报错 / 额度用尽），
-            // 整幕统一退回纯文字演出，不留「前两场有图、后面没有」的参差。
-            if (MEDIA_OK.equals(enforceActMediaConsistency(materials))) {
-                for (Material m : materials) m.persist();
-                persistFailedTypes(json, failedTypes);
-                storyStore.writeAct(worldId, actNo, Json.toJson(json));
-                return null;
-            }
-            for (Material m : materials) {
-                // 统一退回文字：已出好的图也不用，避免同一幕里图片状态自相矛盾
-                m.head().remove("url");
-                m.head().remove("raw");
-                m.head().remove("taskId");
-                m.head().put("status", MEDIA_NO_PROMPT);
-                m.persist();
-            }
-            persistFailedTypes(json, failedTypes);
-            storyStore.writeAct(worldId, actNo, Json.toJson(json));
-            return null;
+            // 与提交循环之后的收口是同一段逻辑。
+            return closeActIfConverged(worldId, actNo, materials, json, failedTypes);
         }
         if (inProgress || target == null) {
             // 还有任务在生成中（或还有素材没轮到）：本幕没收敛，先只回进度、不放行。
@@ -2027,10 +2063,55 @@ public class WorldSimServiceImpl implements WorldSimService {
             out.put("inProgress", inProgress);
             return out;
         }
-        // 循环把目标全部耗光且没有在跑的任务：和第一段收敛走同一套收口判定
+        // 循环把目标全部耗光且没有在跑的任务：和第一段收敛走同一套收口判定。
+        return closeActIfConverged(worldId, actNo, materials, json, failedTypes);
+    }
+
+    /**
+     * 整幕素材收口（唯一出口）。
+     *
+     * <p>素材阶段有两条路会走到「没有待办、也没有在跑的任务」：首轮判定就是收敛的，
+     * 和提交循环把目标全部耗光之后。两条路必须做同一件事——按一致性判定要么放行演出，
+     * 要么整幕统一退回纯文字。分成两处写就出过事：循环那条路曾经直接返回，绕过判定。</p>
+     *
+     * @param worldId     世界 id
+     * @param actNo       幕号
+     * @param materials   本幕全部素材
+     * @param json        剧本 JSON
+     * @param failedTypes 本幕失败类型
+     * @return 收敛时返回 null（调用方进入演出），否则返回给调用方的进度的空壳
+     */
+    private Map<String, Object> closeActIfConverged(Long worldId, Integer actNo, List<Material> materials,
+                                     Map<String, Object> json, Set<String> failedTypes) {
         if (MEDIA_OK.equals(enforceActMediaConsistency(materials))) {
+            // 收敛后的分布：场景要么全 OK、要么全无需求。留一条日志，
+            // 混合问题一旦回潮，能直接从这一行看出当时各通道的真实状态。
+            int ok = 0;
+            int none = 0;
+            for (Material m : materials) {
+                if (!enabledForMode(m)) continue;
+                if (MEDIA_OK.equals(m.head().get("status"))) ok++;
+                else none++;
+            }
+            log.info("[WorldSim] 素材收敛 world={} act={} mode={} 有素材={} 无需求={} failedTypes={}",
+                    worldId, actNo, mediaMode(), ok, none, failedTypes);
+            for (Material m : materials) m.persist();
+            persistFailedTypes(json, failedTypes);
+            storyStore.writeAct(worldId, actNo, Json.toJson(json));
             return null;
         }
+        // 有素材该出却没出：整幕统一退回纯文字，已出好的图也不用，
+        // 免得同一幕里图片状态自相矛盾（舞台上最刺眼的就是「有几场有图」）。
+        StringBuilder why = new StringBuilder();
+        for (Material m : materials) {
+            if (!enabledForMode(m)) continue;
+            Map<String, Object> h = m.head();
+            if (MEDIA_NO_PROMPT.equals(h.get("status")) && Boolean.TRUE.equals(h.get("failed"))) {
+                why.append(h.get("role")).append(' ');
+            }
+        }
+        log.warn("[WorldSim] 素材退化 world={} act={} mode={} 该出没出={} failedTypes={}",
+                worldId, actNo, mediaMode(), why.toString().trim(), failedTypes);
         for (Material m : materials) {
             m.head().remove("url");
             m.head().remove("raw");
@@ -2038,6 +2119,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             m.head().put("status", MEDIA_NO_PROMPT);
         }
         for (Material m : materials) m.persist();
+        persistFailedTypes(json, failedTypes);
         storyStore.writeAct(worldId, actNo, Json.toJson(json));
         return null;
     }
@@ -2060,32 +2142,66 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     /**
+     * 这个素材通道在「图片形态」下是否要出图。
+     *
+     * <p>图片形态只给<b>场景</b>出图。用户看到的舞台是「每一场一张定场画面」，
+     * 过场与道具在演出里不出现，也就没有画面位置放它们的图。</p>
+     *
+     * <p>更重要的是一致性：整幕的图要么全有、要么全没有。若把过场和道具也算进来，
+     * 一次十来个素材里只要有一张失败，整幕的好图就全被作废——
+     * 本机实测 8 个图片任务里恰好坏在道具上，整幕退成了纯文字。
+     * 收窄到场景后，判定范围就是观众真正会看到的那几张。</p>
+     *
+     * @param mat 素材
+     * @return true 表示图片形态下要给它出图
+     */
+    private static boolean imageWanted(Material mat) {
+        return !mat.video() && !MEDIA_PROP_TYPE.equals(String.valueOf(mat.head().get("nodeType")))
+                && !MEDIA_TRANSITION_TYPE.equals(String.valueOf(mat.head().get("nodeType")));
+    }
+
+    /**
      * 这个素材通道在当前形态下是否启用。
      *
-     * <p>三形态互斥：图片形态只有图片通道有效，视频形态两者都要（图生视频要有首帧），
+     * <p>三形态互斥：图片形态只有场景图；视频形态两者都要（图生视频要有首帧）；
      * 文本形态两个都关。判断统一收在这里，避免各处重复写形态判断而漏掉一处。</p>
      *
      * @param mat 素材
      * @return true 表示本幕要为它出素材
      */
     private boolean enabledForMode(Material mat) {
-        return mat.video() ? videoMediaEnabled() : imageMediaEnabled();
+        if (mat.video()) {
+            return videoMediaEnabled();
+        }
+        return imageMediaEnabled() && imageWanted(mat);
     }
 
     /**
-     * 任务是否已经僵死：非终态且发起时间超过阈值。
+     * 任务是否已经僵死：非终态、并且长时间没有任何进展。
      *
      * <p>本地环境常常没有出图/出视频能力，受理后的任务会一直停在 PENDING/RUNNING，
      * 没有线程回写终态。这类任务若一直占着「生成中」，整幕就再也演不下去。</p>
+     *
+     * <p>判死要看<b>最后一次推进的时间</b>，不能只看发起时间：真实出图本机实测 53–120 秒，
+     * 排队靠后的任务发起后就一直等，按发起时间判死会在它还没轮到就被判失败。
+     * 同时只能用服务端时钟（{@code currentTimeMillis}），任务行的时间来自另一台机器的库，
+     * 两套钟差几秒就能把刚建好的任务误判成僵死——本机实测两个任务 SUCCESS 写库同一毫秒，
+     * 就是被这条误判打断的。</p>
      *
      * @param task 任务行
      * @return true 表示应当判死
      */
     private static boolean isStaleTask(SysAiGenerateTask task) {
         if (task == null) return true;
-        Long createdAt = task.getCreatedAt();
-        if (createdAt == null || createdAt <= 0) return false;
-        return System.currentTimeMillis() - createdAt > STALE_TASK_MS;
+        long now = System.currentTimeMillis();
+        Long updatedAt = task.getUpdatedAt();
+        if (updatedAt == null || updatedAt <= 0) {
+            updatedAt = task.getCreatedAt();
+        }
+        if (updatedAt == null || updatedAt <= 0) return false;
+        long idle = now - updatedAt;
+        // 数据库与进程存在钟差时 idle 可能为负（任务比现在还「新」），那是活跃而不是僵死
+        return idle > STALE_TASK_MS;
     }
 
     /**
@@ -2592,7 +2708,9 @@ public class WorldSimServiceImpl implements WorldSimService {
      * ====================================================================== */
 
     /**
-     * 逐场景表演叙述（一镜到底），每场景一次对话调用
+     * 整幕表演（保留给一次性演完全部的场景）。
+     *
+     * <p>演出已改成分场增量，正常路径不再走这里，留作整幕重演的兜底实现。</p>
      */
     private String playAct(Long worldId, Integer actNo, String script, SysAiWorldAct act) {
         Map<String, Object> json = Json.fromJson(script, Map.class);
@@ -2600,35 +2718,63 @@ public class WorldSimServiceImpl implements WorldSimService {
         if (scenes.isEmpty()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "没有可表演的场景");
         }
-        SysAiWorld world = worldMapper.selectById(worldId);
         int order = 0;
         for (Map<String, Object> scene : scenes) {
-            order++;
-            String name = str(scene.get(ActScript.SCENE_NAME), "场景");
-            String cast = npcsLabel(worldId, scene.get(ActScript.SCENE_NPCS));
-            // 演出正文里记下演员名：舞台需要标「这一幕有谁」，剧本原件里只有 npc id
-            scene.put(ActScript.SCENE_CAST, cast);
-            String prompt =
-                "你是一位电影/话剧导演。请根据以下剧本场景生成一段不超过 300 字的表演叙述（对话 + 动作 + 神态），"
-                + "风格：古典历史剧；不要输出任何 JSON 与 HTML，只输出纯文本。"
-                + "\n\n【场景】" + name
-                + "\n【世界】" + (world == null ? "世界" : world.getName() + (world.getEra() == null ? "" : "（" + world.getEra() + "）"))
-                + "\n【画面描述】" + str(scene.get(ActScript.SCENE_DESC), "")
-                + "\n【演员与关系】" + cast;
-            AiChatRequest request = new AiChatRequest();
-            request.setModel(scriptModel());
-            request.setPrompt(prompt);
-            request.setUseSkill(false);
-            request.setTemperature(0.8);
-            request.setMaxTokens(2000);
-            AiChatResult result = aiChatFacadeService.callForResult(request);
-            if (result.success() && result.text() != null && !result.text().isBlank()) {
-                // 落「序 · 标题」再进正文：前端把首行当分场标题，正文不再重复标题
-                scene.put(ActScript.SCENE_PLAY, seqLabel(order) + " " + name + "\n" + result.text().trim());
-            }
+            playScene(worldId, scene, ++order);
         }
         json.put(ActScript.ACT_STATUS, ACT_STATUS_PLAYING);
         return Json.toJson(json);
+    }
+
+    /**
+     * 下一场还没演的场次下标（剧本里 playText 为空的第一个场景）。
+     *
+     * @param scenes 场景列表
+     * @return 下标；全部演完返回 -1
+     */
+    private static int nextUnplayedScene(List<Map<String, Object>> scenes) {
+        for (int i = 0; i < scenes.size(); i++) {
+            if (str(scenes.get(i).get(ActScript.SCENE_PLAY), null) == null) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 演一场：给这个场景生成一段表演叙述，写进场景节点的 playText（就地修改）。
+     *
+     * @param worldId 世界
+     * @param scene   场景节点（剧本 JSON 树里的活动对象）
+     * @param order   第几场（从 1 起，用于序号小标题）
+     */
+    private void playScene(Long worldId, Map<String, Object> scene, int order) {
+        String name = str(scene.get(ActScript.SCENE_NAME), "场景");
+        String cast = npcsLabel(worldId, scene.get(ActScript.SCENE_NPCS));
+        // 演出正文里记下演员名：舞台需要标「这一幕有谁」，剧本原件里只有 npc id
+        scene.put(ActScript.SCENE_CAST, cast);
+        SysAiWorld world = worldMapper.selectById(worldId);
+        String prompt =
+            "你是一位电影/话剧导演。请根据以下剧本场景生成一段不超过 300 字的表演叙述（对话 + 动作 + 神态），"
+            + "风格：古典历史剧；不要输出任何 JSON 与 HTML，只输出纯文本。"
+            + "\n\n【场景】" + name
+            + "\n【世界】" + (world == null ? "世界" : world.getName() + (world.getEra() == null ? "" : "（" + world.getEra() + "）"))
+            + "\n【画面描述】" + str(scene.get(ActScript.SCENE_DESC), "")
+            + "\n【演员与关系】" + cast;
+        AiChatRequest request = new AiChatRequest();
+        request.setModel(scriptModel());
+        request.setPrompt(prompt);
+        request.setUseSkill(false);
+        request.setTemperature(0.8);
+        request.setMaxTokens(2000);
+        AiChatResult result = aiChatFacadeService.callForResult(request);
+        if (result == null || !result.success() || result.text() == null || result.text().isBlank()) {
+            // 不能静默留在 playing：前端会一直推进，观众等到的只有空白舞台。
+            String reason = str(result.errorMessage(), "模型未返回内容");
+            throw new ApiException(ApiErrorCode.AI_ERROR, "第 " + order + " 场演出失败：" + reason);
+        }
+        // 落「序 · 标题」再进正文：前端把首行当分场标题，正文不再重复标题
+        scene.put(ActScript.SCENE_PLAY, seqLabel(order) + " " + name + "\n" + result.text().trim());
     }
 
     /** 把表演后的剧本转成用户侧的故事片段 */

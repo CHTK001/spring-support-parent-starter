@@ -268,6 +268,88 @@ public class EmailInboxProvider implements AccountInboxProvider {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean supportsMarkSeen() {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean supportsDelete() {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean markSeen(SysAccount account, String secret, String folder, String messageId, boolean seen)
+            throws Exception {
+        String folderName = StringUtils.isBlank(folder) ? INBOX : folder.trim();
+        String id = StringUtils.trimToNull(messageId);
+        if (id == null) {
+            return false;
+        }
+        Store store = open(account, secret);
+        Folder current = null;
+        try {
+            current = store.getFolder(folderName);
+            if (current == null || !current.exists()) {
+                return false;
+            }
+            // 改标记必须读写模式：READ_ONLY 下 setFlag 会被服务端拒绝
+            current.open(Folder.READ_WRITE);
+            Message msg = findMessage(current, id);
+            if (msg == null) {
+                return false;
+            }
+            msg.setFlag(Flags.Flag.SEEN, seen);
+            return true;
+        } finally {
+            // 标记靠 IMAP STORE 即时生效，这里不需要 expunge（避免误删别的 DELETED 邮件）
+            close(current);
+            close(store);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean delete(SysAccount account, String secret, String folder, String messageId) throws Exception {
+        String folderName = StringUtils.isBlank(folder) ? INBOX : folder.trim();
+        String id = StringUtils.trimToNull(messageId);
+        if (id == null) {
+            return false;
+        }
+        Store store = open(account, secret);
+        Folder current = null;
+        boolean deleted = false;
+        try {
+            current = store.getFolder(folderName);
+            if (current == null || !current.exists()) {
+                return false;
+            }
+            current.open(Folder.READ_WRITE);
+            Message msg = findMessage(current, id);
+            if (msg == null) {
+                return false;
+            }
+            msg.setFlag(Flags.Flag.DELETED, true);
+            deleted = true;
+        } finally {
+            // 只有真的打了删除标记才 expunge；中途失败保持原样，避免误删相邻邮件
+            closeExpunge(current, deleted);
+            close(store);
+        }
+        return deleted;
+    }
+
+    /**
      * 按消息标识取邮件：UID 优先，其次按序号回退。
      *
      * @param folder    已打开的文件夹
@@ -683,6 +765,23 @@ public class EmailInboxProvider implements AccountInboxProvider {
         }
         try {
             folder.close(false);
+        } catch (MessagingException ignored) {
+            // 关闭失败不影响结果
+        }
+    }
+
+    /**
+     * 关闭文件夹，按需提交删除标记（忽略异常）。
+     *
+     * @param folder  文件夹
+     * @param expunge {@code true} 时提交删除（真正从服务端移除）
+     */
+    private void closeExpunge(Folder folder, boolean expunge) {
+        if (folder == null || !folder.isOpen()) {
+            return;
+        }
+        try {
+            folder.close(expunge);
         } catch (MessagingException ignored) {
             // 关闭失败不影响结果
         }

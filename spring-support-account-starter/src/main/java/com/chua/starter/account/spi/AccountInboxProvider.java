@@ -81,4 +81,57 @@ public interface AccountInboxProvider {
      * @throws Exception 连接或协议异常
      */
     MailboxMessage message(SysAccount account, String secret, String folder, String messageId) throws Exception;
+
+    /**
+     * 该实现能否回写已读标记。
+     *
+     * @return 支持返回 {@code true}（默认不支持）
+     */
+    default boolean supportsMarkSeen() {
+        return false;
+    }
+
+    /**
+     * 该实现能否删除邮件。
+     *
+     * @return 支持返回 {@code true}（默认不支持）
+     */
+    default boolean supportsDelete() {
+        return false;
+    }
+
+    /**
+     * 设置已读 / 未读标记。
+     *
+     * <p>默认实现直接抛 {@link UnsupportedOperationException}：只读来源（临时邮箱、
+     * 接码平台）无法回写标记，界面据此禁用按钮，而不是假装成功。</p>
+     *
+     * @param account   账号
+     * @param secret    明文凭据
+     * @param folder    服务端文件夹名
+     * @param messageId 消息标识
+     * @param seen      {@code true} 标记为已读
+     * @return 是否真正写入
+     * @throws Exception 连接或协议异常
+     */
+    default boolean markSeen(SysAccount account, String secret, String folder, String messageId, boolean seen)
+            throws Exception {
+        throw new UnsupportedOperationException("该收信来源不支持修改已读标记");
+    }
+
+    /**
+     * 删除单封邮件（移入已删除 / 打删除标记）。
+     *
+     * <p>默认实现直接抛 {@link UnsupportedOperationException}：只读来源无法删除。</p>
+     *
+     * @param account   账号
+     * @param secret    明文凭据
+     * @param folder    服务端文件夹名
+     * @param messageId 消息标识
+     * @return 是否真正删除
+     * @throws Exception 连接或协议异常
+     */
+    default boolean delete(SysAccount account, String secret, String folder, String messageId) throws Exception {
+        throw new UnsupportedOperationException("该收信来源不支持删除邮件");
+    }
 }

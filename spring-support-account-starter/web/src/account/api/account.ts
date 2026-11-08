@@ -137,6 +137,61 @@ export const deleteAccount = (accountId: string) =>
 export const verifyAccount = (accountId: string) =>
   http().post(`${B}/${accountId}/verify`).then(r => unwrap<AccountVerifyResult>(r));
 
+/* ==================== 批量操作 ==================== */
+
+/** 批量操作中的单条失败 */
+export interface AccountBatchFailure {
+  /** 账号标识 */
+  accountId: string;
+  /** 失败码（FORBIDDEN / NOT_FOUND / INTERNAL_ERROR…） */
+  code: string;
+  /** 失败原因 */
+  message: string;
+}
+
+/**
+ * 批量操作结果。
+ *
+ * <p>后端逐条执行、单条失败不回滚其它条目，因此调用方必须同时看
+ * {@code succeeded} 与 {@code failed}：全部成功才是「全部成功」。</p>
+ */
+export interface AccountBatchResult {
+  /** 请求条数（去重后） */
+  total: number;
+  /** 成功条数 */
+  succeeded: number;
+  /** 失败条数 */
+  failed: number;
+  /** 失败明细 */
+  failures: AccountBatchFailure[];
+}
+
+/** 批量启用 / 停用（{@code status} 1 启用 / 0 停用） */
+export const batchUpdateAccountStatus = (accountIds: string[], status: number) =>
+  http()
+    .post(`${B}/batch/status`)
+    .query({ status })
+    .data(body({ accountIds }))
+    .then(r => unwrap<AccountBatchResult>(r));
+
+/** 批量校验凭据（账号健康巡检，逐条写入校验状态） */
+export const batchVerifyAccounts = (accountIds: string[]) =>
+  http()
+    .post(`${B}/batch/verify`)
+    .data(body({ accountIds }))
+    .then(r => unwrap<AccountBatchResult>(r));
+
+/**
+ * 批量删除（逻辑删除）。
+ *
+ * <p>用 POST 而不是带请求体的 DELETE：部分网关与客户端会丢掉 DELETE 的请求体。</p>
+ */
+export const batchDeleteAccounts = (accountIds: string[]) =>
+  http()
+    .post(`${B}/batch/delete`)
+    .data(body({ accountIds }))
+    .then(r => unwrap<AccountBatchResult>(r));
+
 /* ==================== 外部访问密钥（AppKey） ==================== */
 
 /**

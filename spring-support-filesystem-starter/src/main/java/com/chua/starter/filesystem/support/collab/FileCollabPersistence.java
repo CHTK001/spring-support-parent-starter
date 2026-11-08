@@ -171,9 +171,12 @@ public class FileCollabPersistence {
                 return;
             }
             StoreFile data = mapper.readValue(json, StoreFile.class);
-            store.replaceAll(data.collabs(), data.history());
-            log.info("[FileCollab] 已从磁盘装载协同文档 {} 份（历史 {} 份文档）: {}",
-                    store.size(), data.history() == null ? 0 : data.history().size(), file);
+            store.replaceAll(data.collabs(), data.history(), data.dirs(), data.archived(), data.trashed());
+            log.info("[FileCollab] 已从磁盘装载协同文档 {} 份（历史 {} 份文档，目录 {} 个，归档 {}，回收桶 {}）: {}",
+                    store.size(), data.history() == null ? 0 : data.history().size(),
+                    data.dirs() == null ? 0 : data.dirs().size(),
+                    data.archived() == null ? 0 : data.archived().size(),
+                    data.trashed() == null ? 0 : data.trashed().size(), file);
         } catch (Exception e) {
             archiveBrokenFile();
             log.error("[FileCollab] 落盘文件解析失败，已按空库启动（原文件改名留档）: {} ({})",
@@ -221,7 +224,8 @@ public class FileCollabPersistence {
                 Files.createDirectories(parent);
             }
             StoreFile data = new StoreFile(FORMAT_VERSION, System.currentTimeMillis(),
-                    store.exportCollabs(), store.exportHistory());
+                    store.exportCollabs(), store.exportHistory(),
+                    store.exportDirs(), store.exportArchived(), store.exportTrashed());
             // 快照里可能有几千行 JSON：先落临时文件，避免读到写了一半的内容
             tmp = file.resolveSibling(file.getFileName() + ".tmp");
             Files.writeString(tmp, mapper.writeValueAsString(data), StandardCharsets.UTF_8);
@@ -266,13 +270,22 @@ public class FileCollabPersistence {
     /**
      * 落盘文件结构。
      *
-     * @param format  格式版本
-     * @param savedAt 落盘时间戳
-     * @param collabs 全部协同文档
-     * @param history 全部历史快照（id → 条目）
+     * <p>{@code dirs} / {@code archived} / {@code trashed} 是后加的字段：
+     * 老版本文件里没有它们，Jackson 取到 null，装载侧按空处理，因此不需要迁移步骤。</p>
+     *
+     * @param format   格式版本
+     * @param savedAt  落盘时间戳
+     * @param collabs  全部协同文档
+     * @param history  全部历史快照（id → 条目）
+     * @param dirs     显式目录
+     * @param archived 归档标记（id → 归档时间戳）
+     * @param trashed  回收桶标记（id → 删除时间戳）
      */
     public record StoreFile(int format, long savedAt,
                             List<FileCollabStore.FileCollab> collabs,
-                            Map<String, List<FileCollabStore.SnapshotEntry>> history) {
+                            Map<String, List<FileCollabStore.SnapshotEntry>> history,
+                            List<String> dirs,
+                            Map<String, Long> archived,
+                            Map<String, Long> trashed) {
     }
 }
