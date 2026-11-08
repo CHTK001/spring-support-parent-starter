@@ -2532,12 +2532,22 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @param type         image / video
      * @return true 表示该模型能承担这类任务
      */
-    private static boolean declaresTask(String capabilities, String type) {
-        if (capabilities == null || capabilities.isBlank()) {
+    private static boolean declaresTask(Object capabilities, String type) {
+        if (capabilities == null) {
             return false;
         }
         String want = MEDIA_VIDEO_TYPE.equals(type) ? "video_generation" : "image_generation";
-        return capabilities.contains("\"" + want + "\"");
+        if (capabilities instanceof List<?> caps) {
+            for (Object cap : caps) {
+                if (cap instanceof Map<?, ?> m && want.equals(String.valueOf(m.get("task")))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // 兼容以 JSON 字符串存能力位的旧行
+        String text = String.valueOf(capabilities);
+        return !text.isBlank() && text.contains("\"" + want + "\"");
     }
 
     /**
