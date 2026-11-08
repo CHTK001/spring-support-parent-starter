@@ -71,6 +71,13 @@
             <artifactId>spring-support-docker-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- WebRTC 远程控制（/control REST + /webrtc 信令 + 桌面采集/键鼠注入），
+             前端 pages/control 的唯一后端；control.webrtc.enabled=false 可关闭。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-control-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket）。
              原 spring-support-cdp-starter 已并入本模块的 tshark 域（com.chua.starter.monitor.support.tshark.cdp），
              由 MonitorAutoConfiguration 的组件扫描装配；这里只补它用到的 WebSocket 运行库 -->
