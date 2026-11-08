@@ -2,6 +2,7 @@ package com.chua.starter.filesystem.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.logger.ModuleLog;
+import com.chua.starter.filesystem.support.collab.FileCollabHub;
 import com.chua.starter.filesystem.support.collab.FileCollabStore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 协同文档接口（{@code /v2/file/collab}）。
@@ -56,6 +58,25 @@ public class FileCollabController {
     private final com.chua.starter.filesystem.support.task.UploadTaskManager uploadTaskManager;
 
     /**
+     * 实时协同 hub（操作定序 + 日志 + presence）
+     */
+    private final FileCollabHub collabHub;
+
+    /**
+     * 已建立的 hub 下行流：{@code <docId>\u0000<clientId>} → 连接
+     *
+     * <p>为什么一个编辑器要占两路请求（GET 收 / POST 发）：浏览器原生
+     * {@code EventSource} 不能带自定义鉴权头，而 downlink 必须长连；所以下行用
+     * {@code fetch} 读 SSE，上行用普通 POST，两条请求靠 {@code clientId} 关联。</p>
+     */
+    private final Map<String, HubStream> hubStreams = new ConcurrentHashMap<>();
+
+    /**
+     * hub 心跳间隔（秒）
+     */
+    private static final int HUB_PING_INTERVAL_SECONDS = 25;
+
+    /**
      * 心跳间隔（秒）
      */
     private static final int PING_INTERVAL_SECONDS = 30;
@@ -73,8 +94,22 @@ public class FileCollabController {
      */
     public FileCollabController(FileCollabStore collabStore,
                                 com.chua.starter.filesystem.support.task.UploadTaskManager uploadTaskManager) {
+        this(collabStore, uploadTaskManager, new FileCollabHub(null, false, true));
+    }
+
+    /**
+     * 创建控制器（带 hub）。
+     *
+     * @param collabStore       协同文档存储器
+     * @param uploadTaskManager 上传任务管理器（时间轮，供 SSE 心跳复用）
+     * @param collabHub         实时协同 hub
+     */
+    public FileCollabController(FileCollabStore collabStore,
+                                com.chua.starter.filesystem.support.task.UploadTaskManager uploadTaskManager,
+                                FileCollabHub collabHub) {
         this.collabStore = collabStore;
         this.uploadTaskManager = uploadTaskManager;
+        this.collabHub = collabHub;
     }
 
     /**
@@ -199,6 +234,8 @@ public class FileCollabController {
      * @param id               协同文档号
      * @param userId           当前用户标识（写权限校验）
      * @param expectedVersion  期望的当前版本
+     * @param hubSeq           保存内容对应的协同序列号（>0 时同时登记 hub 快照）
+     * @param hubCtx           快照点的上下文批次（JSON 数组，可为空）
      * @param request          HTTP 请求（读原始 body 为快照 JSON）
      * @return 更新后的文档；版本冲突返回错误提示
      */
@@ -208,6 +245,8 @@ public class FileCollabController {
             @PathVariable("id") String id,
             @RequestParam(value = "userId", required = false, defaultValue = "") String userId,
             @RequestParam(value = "expectedVersion", required = false, defaultValue = "0") long expectedVersion,
+            @RequestParam(value = "hubSeq", required = false, defaultValue = "0") long hubSeq,
+            @RequestParam(value = "hubCtx", required = false, defaultValue = "") String hubCtx,
             jakarta.servlet.http.HttpServletRequest request) {
         FileCollabStore.FileCollab exist = collabStore.get(id);
         if (exist == null) {
@@ -231,6 +270,11 @@ public class FileCollabController {
             }
             // 冲突也算一次保存尝试（仅 MODULE_LOG 记录，不再写入文件操作日志）
             return ReturnResult.error("版本冲突：本地快照已过期，请刷新后重试（当前版本 " + current.version() + "）");
+        }
+        // 内容已写进文档文件：同时告诉 hub「文档内容前进了到 hubSeq」，
+        // 新加入的客户端才会以它作为 base，而不是从 0 重放整条历史。
+        if (hubSeq > 0) {
+            collabHub.registerSnapshot(id, hubSeq, collabHub.parseContext(hubCtx));
         }
         return ReturnResult.ok(toSummaryMap(updated, userId));
     }
@@ -296,7 +340,12 @@ public class FileCollabController {
         if (!FileCollabStore.isOwner(exist, userId)) {
             return ReturnResult.illegal("只有创建者可以删除该协同文档");
         }
-        return ReturnResult.ok(permanent ? collabStore.purge(id) : collabStore.trash(id));
+        if (permanent) {
+            // 彻底删除：协同房间与日志一并清掉，避免房间文件成为孤儿
+            collabHub.reset(id);
+            return ReturnResult.ok(collabStore.purge(id));
+        }
+        return ReturnResult.ok(collabStore.trash(id));
     }
 
     /**
@@ -590,6 +639,313 @@ public class FileCollabController {
             padding = 1;
         }
         return Math.max(0L, (long) body.length() * 3L / 4L - padding);
+    }
+
+    /**
+     * 实时协同下行流（SSE）：接收 hub 定序后的 {@code welcome / batch / presence / join / leave}
+     * 以及本连接专属的 {@code error}。
+     *
+     * <p>为什么下行不用 WebSocket：本服务守住「8082 单端口单实例」，SSE 是一条普通
+     * HTTP 长连接，网关 / 反向代理 / 鉴权过滤器都不需要额外开洞；上行用独立 POST，
+     * 两条请求通过 {@code clientId} 关联。协议内容仍然是 office-engine 原生的
+     * {@code HubMsg}，没有自造格式。</p>
+     *
+     * @param id       协同文档号
+     * @param clientId 前端生成的连接标识（同一编辑器实例内稳定）
+     * @return SSE 流
+     */
+    @Operation(summary = "实时协同下行流（SSE）")
+    @GetMapping(value = "/{id}/hub", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter hubEvents(
+            @PathVariable("id") String id,
+            @RequestParam(value = "clientId") String clientId) {
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter =
+                new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(0L);
+        FileCollabStore.FileCollab collab = collabStore.get(id);
+        HubStream stream = new HubStream(emitter);
+        if (collab == null) {
+            stream.sendError("协同文档不存在");
+            emitter.complete();
+            return emitter;
+        }
+        String key = hubKey(id, clientId);
+        // 同一 clientId 重连：旧连接（如果有）先摘掉，避免房间里的幽灵站点
+        HubStream previous = hubStreams.put(key, stream);
+        if (previous != null) {
+            previous.close();
+        }
+        // 先提交响应头：客户端 fetch 解析到响应后才发 hello，握手不能等
+        stream.sendEvent("open", "{}");
+        com.chua.common.support.task.timer.TimerTask pingHandle =
+                uploadTaskManager.heartbeat(ignored -> stream.sendEvent("ping", "ok"),
+                        HUB_PING_INTERVAL_SECONDS);
+        Runnable cleanup = () -> {
+            try {
+                uploadTaskManager.cancelHeartbeat(pingHandle);
+            } catch (Exception ignored) {
+                // 取消句柄失败可忽略
+            }
+            hubStreams.remove(key, stream);
+            stream.close();
+        };
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(t -> cleanup.run());
+        return emitter;
+    }
+
+    /**
+     * 实时协同上行：客户端消息（{@code hello / ops / presence}）。
+     *
+     * <p><b>写权限在这里兜底。</b>前端只读用户虽然挂载了协同层（为了看到在线
+     * 光标），但服务端不接受它提交的操作：直接回 {@code error}，不写日志、不广播。
+     * 只靠前端 {@code editable:false} 是拦不住手工构造的请求的。</p>
+     *
+     * @param id       协同文档号
+     * @param clientId 编辑器实例标识
+     * @param userId   当前用户标识（写权限校验）
+     * @param body     ClientMsg JSON
+     * @return 受理结果
+     */
+    @Operation(summary = "实时协同上行（ClientMsg）")
+    @PostMapping("/{id}/hub")
+    public ReturnResult<Map<String, Object>> hubReceive(
+            @PathVariable("id") String id,
+            @RequestParam(value = "clientId") String clientId,
+            @RequestParam(value = "userId", required = false, defaultValue = "") String userId,
+            @RequestBody(required = false) com.fasterxml.jackson.databind.JsonNode body) {
+        FileCollabStore.FileCollab collab = collabStore.get(id);
+        if (collab == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        // 直接接收 JSON 树：客户端发的是 application/json 对象，
+        // 若声明成 String，Spring 的消息转换器会因为「对象转字符串」而 500。
+        com.fasterxml.jackson.databind.JsonNode msg = body;
+        if (msg == null || msg.isNull() || !msg.isObject()) {
+            return ReturnResult.illegal("消息体不是合法 JSON");
+        }
+        HubStream stream = hubStreams.get(hubKey(id, clientId));
+        if (stream == null) {
+            return ReturnResult.illegal("hub 下行流未建立，请刷新后重试");
+        }
+        String type = msg.path("t").asText("");
+        if ("ops".equals(type) && !FileCollabStore.canWrite(collab, userId)) {
+            stream.sendError("没有该协同文档的编辑权限，操作已被拒绝");
+            Map<String, Object> rejected = new LinkedHashMap<>();
+            rejected.put("accepted", false);
+            return ReturnResult.ok(rejected);
+        }
+        if ("hello".equals(type)) {
+            // 重连：替换旧的 hub 连接（旧连接的 leave 会先广播，站点号由 hub 复用）
+            stream.replaceConnection(collabHub.connect(id, stream::sendMessage));
+        }
+        FileCollabHub.HubConnection connection = stream.connection();
+        if (connection == null) {
+            stream.sendError("尚未完成协同握手");
+            return ReturnResult.illegal("尚未完成协同握手");
+        }
+        connection.receive(msg);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("accepted", true);
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 房间状态：新客户端用 {@code snapshotSeq} 作为 {@code base}。
+     *
+     * @param id 协同文档号
+     * @return {@code {seq, snapshotSeq, start, logSize, peers, version}}
+     */
+    @Operation(summary = "实时协同房间状态")
+    @GetMapping("/{id}/hub/state")
+    public ReturnResult<Map<String, Object>> hubState(@PathVariable("id") String id) {
+        FileCollabStore.FileCollab collab = collabStore.get(id);
+        if (collab == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        Map<String, Object> state = collabHub.state(id);
+        state.put("version", collab.version());
+        return ReturnResult.ok(state);
+    }
+
+    /**
+     * 连接存活探针：判断某个 {@code clientId} 的下行流是否还挂在**当前进程**上。
+     *
+     * <p><b>为什么需要它。</b>后端重启后，浏览器这一侧的 SSE socket 可能被反向代理
+     * 一直挂着不关闭：客户端收不到 {@code close}，页面还显示「协同在线」，但上行
+     * POST 已经打到新进程而新进程没有这条流。前端每 5s 探一次，拿到 {@code false}
+     * 就立刻重建下行流，不用等用户先敲键盘、也不用等 ping 超时。</p>
+     *
+     * @param id       协同文档号
+     * @param clientId 连接标识
+     * @return {@code {alive}}
+     */
+    @Operation(summary = "实时协同连接存活探针")
+    @GetMapping("/{id}/hub/alive")
+    public ReturnResult<Map<String, Object>> hubAlive(
+            @PathVariable("id") String id,
+            @RequestParam(value = "clientId") String clientId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("alive", hubStreams.containsKey(hubKey(id, clientId)));
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 单独登记快照（保存链路已经带上 {@code hubSeq}，这里是补登记入口）。
+     *
+     * @param id   协同文档号
+     * @param body {@code {seq, ctx}}
+     * @return 登记结果
+     */
+    @Operation(summary = "登记实时协同快照")
+    @PostMapping("/{id}/hub/snapshot")
+    public ReturnResult<Map<String, Object>> hubSnapshot(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) com.fasterxml.jackson.databind.JsonNode body) {
+        FileCollabStore.FileCollab collab = collabStore.get(id);
+        if (collab == null) {
+            return ReturnResult.illegal("协同文档不存在");
+        }
+        com.fasterxml.jackson.databind.JsonNode msg = body;
+        if (msg == null || msg.isNull() || !msg.isObject()) {
+            return ReturnResult.illegal("消息体不是合法 JSON");
+        }
+        long seq = msg.path("seq").asLong(0L);
+        com.fasterxml.jackson.databind.JsonNode ctxNode = msg.get("ctx");
+        boolean accepted = collabHub.registerSnapshot(id, seq,
+                collabHub.parseContext(ctxNode == null ? null : ctxNode.toString()));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("accepted", accepted);
+        result.put("snapshotSeq", collabHub.state(id).get("snapshotSeq"));
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 协同下行流 key。
+     *
+     * @param id       文档号
+     * @param clientId 连接标识
+     * @return key
+     */
+    private static String hubKey(String id, String clientId) {
+        return id + '\u0000' + (clientId == null ? "" : clientId);
+    }
+
+    /**
+     * 单条 hub 下行流：包一层 SseEmitter，保证并发写不会交错。
+     */
+    private final class HubStream {
+
+        /**
+         * SSE 发射器
+         */
+        private final org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter;
+
+        /**
+         * 当前 hub 连接（未握手为 null）
+         */
+        private volatile FileCollabHub.HubConnection connection;
+
+        /**
+         * 写锁
+         */
+        private final Object sendLock = new Object();
+
+        /**
+         * 构造。
+         *
+         * @param emitter SSE 发射器
+         */
+        HubStream(org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter) {
+            this.emitter = emitter;
+        }
+
+        /**
+         * 当前连接。
+         *
+         * @return 连接；未握手为 null
+         */
+        FileCollabHub.HubConnection connection() {
+            return connection;
+        }
+
+        /**
+         * 替换连接（重连时旧连接先关）。
+         *
+         * @param next 新连接
+         */
+        void replaceConnection(FileCollabHub.HubConnection next) {
+            FileCollabHub.HubConnection previous = this.connection;
+            this.connection = next;
+            if (previous != null && previous != next) {
+                try {
+                    previous.close();
+                } catch (Exception ignored) {
+                    // 旧连接已断时关闭失败可忽略
+                }
+            }
+        }
+
+        /**
+         * 发送 hub 消息（{@code HubMsg} 原样 JSON）。
+         *
+         * @param msg 消息对象
+         */
+        void sendMessage(Object msg) {
+            sendEvent("msg", collabHub.toJson(msg));
+        }
+
+        /**
+         * 发送错误消息（只给本连接）。
+         *
+         * @param message 文案
+         */
+        void sendError(String message) {
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("t", "error");
+            msg.put("message", message);
+            sendMessage(msg);
+        }
+
+        /**
+         * 发送命名事件。
+         *
+         * @param name 事件名
+         * @param data 数据
+         */
+        void sendEvent(String name, String data) {
+            synchronized (sendLock) {
+                try {
+                    // 显式声明 text/plain：否则 String 会交给 JSON 转换器，
+                    // 输出成 data:"{...}"（整段被引号包住），前端 JSON.parse 得到字符串而不是对象。
+                    emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                            .name(name).data(data, org.springframework.http.MediaType.TEXT_PLAIN));
+                } catch (Exception e) {
+                    // 连接已断：关闭连接让房间里及时发 leave
+                    close();
+                    try {
+                        emitter.complete();
+                    } catch (Exception ignored) {
+                        // 已完成
+                    }
+                }
+            }
+        }
+
+        /**
+         * 关闭连接（幂等）。
+         */
+        void close() {
+            FileCollabHub.HubConnection current = connection;
+            connection = null;
+            if (current != null) {
+                try {
+                    current.close();
+                } catch (Exception ignored) {
+                    // 关闭失败可忽略
+                }
+            }
+        }
     }
 
     /**

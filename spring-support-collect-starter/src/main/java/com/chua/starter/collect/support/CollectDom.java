@@ -4,6 +4,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.helper.W3CDom;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import javax.xml.xpath.XPathConstants;
@@ -15,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -35,6 +38,56 @@ public final class CollectDom {
      * 响应映射里的 HTML 键。
      */
     private static final String HTML_KEY = "html";
+
+    /**
+     * 块文本里需要保留边界的块级标签。
+     *
+     * <p>这些标签的前后边界折成一个空格 —— 与库内历史数据的口径一致：段落之间用空格连接，
+     * 只有 {@code <br>} 才断行。行内标签（{@code strong}、{@code a}、{@code span}）
+     * 与相邻文本直接相连，避免把一句话拆开。</p>
+     */
+    private static final Set<String> BLOCK_TAGS = Set.of(
+            "p", "div", "section", "article", "li", "tr", "blockquote", "pre",
+            "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "table");
+
+    /**
+     * 分节标题词：块内用它把「译文 / 注释 / 赏析」切成多段。
+     *
+     * <p>只放规范化之后的标题：站点上的同义写法由 {@link #HEAD_ALIASES} 收口，
+     * 带编号的写法（{@code 其一译文}、{@code 译文二}）由 {@link #matchHead(String)} 去掉编号后比对。</p>
+     */
+    private static final Set<String> SECTION_HEADS = Set.of(
+            "译文", "注释", "赏析", "创作背景", "文言知识");
+
+    /**
+     * 分节标题同义写法到规范标题的映射。
+     *
+     * <p>古文岛同一节在不同页面上的标题并不统一：注释节会写成「注解」「释文」甚至错字「注人」，
+     * 译文节会写成「翻译」，赏析节会写成「评析 / 简析 / 鉴赏 / 解读」。
+     * 归一到同一节之后，{@code sectionText(块, '注释')} 才取得到这些页面的注释。</p>
+     */
+    private static final Map<String, String> HEAD_ALIASES = Map.ofEntries(
+            Map.entry("注解", "注释"),
+            Map.entry("释文", "注释"),
+            Map.entry("注人", "注释"),
+            Map.entry("译注", "注释"),
+            Map.entry("翻译", "译文"),
+            Map.entry("译的", "译文"),
+            Map.entry("评析", "赏析"),
+            Map.entry("简析", "赏析"),
+            Map.entry("鉴赏", "赏析"),
+            Map.entry("解读", "赏析"));
+
+    /**
+     * 标题开头的编号：{@code 其一译文}、{@code 第一译文}、{@code 二译文}。
+     */
+    private static final Pattern HEAD_NUMBER_PREFIX = Pattern.compile("^(?:其|第)?[一二三四五六七八九十百0-9]+");
+
+    /**
+     * 标题结尾的编号：{@code 译文二}、{@code 译文（1）}。
+     */
+    private static final Pattern HEAD_NUMBER_SUFFIX =
+            Pattern.compile("[（(]?[一二三四五六七八九十百0-9]+[）)]?$");
 
     /**
      * 工具类禁止实例化。
@@ -471,6 +524,354 @@ public final class CollectDom {
     }
 
     /**
+     * 块正文：把「标题 + 正文」结构的 HTML 块转成多行文本。
+     *
+     * <p>与 {@link #text(Object)} 的差别在换行：{@code text} 按 HTML 显式语义把空白折叠成空格，
+     * {@code <br>} 处也不留边界；这里把 {@code <br>} 保留成 {@code \n}，块级标签的边界折成空格
+     * （与库内历史数据的口径一致），并去掉块内的标题（{@code h1}~{@code h6}）与
+     * 「展开阅读全文 / 收起」这类脚本锚点，得到可以直接入库的正文。
+     * 段首缩进（U+3000）保留，行首行尾的 ASCII 空白清掉。</p>
+     *
+     * @param item 宿主，元素、元素集合或 HTML 文本
+     * @return 多行正文，取不到返回空串
+     */
+    public static String blockText(Object item) {
+        Element root = unwrapBlock(element(item));
+        if (root == null) {
+            return "";
+        }
+        Element copy = prepareBlock(root);
+        StringBuilder builder = new StringBuilder();
+        appendBlockText(copy, builder);
+        return stripLeadingHead(normalizeBlockText(builder.toString()));
+    }
+
+    /**
+     * 丢掉重解析带进来的缩进空白节点。
+     *
+     * <p>{@code outerHtml()} 是美化输出，标签之间有换行缩进；把它重新解析成文档后，
+     * 这些缩进会变成含换行的纯空白文本节点。留着它们会把原本同一行的内容拆成多行，
+     * 让「元素直传」与「HTML 字符串」两条路径得到不同正文。判据是「纯空白且含换行」，
+     * 站点正文里的真实空格不含换行，不会被误删。</p>
+     *
+     * @param root 块根
+     */
+    private static void dropPrettyText(Element root) {
+        for (Node child : new ArrayList<>(root.childNodes())) {
+            if (child instanceof TextNode textNode) {
+                String raw = textNode.getWholeText();
+                if (raw.isBlank() && (raw.indexOf('\n') >= 0 || raw.indexOf('\r') >= 0)) {
+                    textNode.remove();
+                }
+                continue;
+            }
+            if (child instanceof Element element) {
+                dropPrettyText(element);
+            }
+        }
+    }
+
+    /**
+     * 解析块宿主后剥掉 {@code html/body} 包装。
+     *
+     * <p>抽取节点用 {@code attribute=outer} 取出的是整段块 HTML，{@link #element(Object)}
+     * 会把它解析成一整篇文档；分节要靠块的直接子元素，所以这里必须先落到真正的块元素上，
+     * 否则 {@code html} 元素会被当成分节的直接子元素、永远找不到 {@code <p>} 分界。</p>
+     *
+     * @param root 解析出的元素
+     * @return 真正的块元素
+     */
+    private static Element unwrapBlock(Element root) {
+        Element current = root;
+        if (current instanceof Document document) {
+            current = document.body();
+        }
+        while (current != null && isWrapper(current)) {
+            Elements children = current.children();
+            if (children.size() != 1) {
+                break;
+            }
+            Element only = children.first();
+            // 只有「容器本身没有正文」时才继续往下剥：正文块的直接子元素是分节段落，
+            // 再剥一层就会把分节边界剥掉。
+            if (hasOwnText(current) || !isContainer(only)) {
+                break;
+            }
+            current = only;
+        }
+        return current;
+    }
+
+    /**
+     * 是否是可以安全剥掉的包装层：{@code body} 或自身没有正文的容器。
+     *
+     * @param element 元素
+     * @return 是包装层返回 true
+     */
+    private static boolean isWrapper(Element element) {
+        return "body".equals(element.tagName()) || (!hasOwnText(element) && isContainer(element));
+    }
+
+    /**
+     * 元素自身是否带非空白直接文本。
+     *
+     * @param element 元素
+     * @return 有直接文本返回 true
+     */
+    private static boolean hasOwnText(Element element) {
+        for (Node child : element.childNodes()) {
+            if (child instanceof TextNode textNode && !textNode.getWholeText().isBlank()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 是否是块容器标签。
+     *
+     * @param element 元素
+     * @return 块容器返回 true
+     */
+    private static boolean isContainer(Element element) {
+        String tag = element.tagName();
+        return "div".equals(tag) || "section".equals(tag) || "article".equals(tag);
+    }
+
+    /**
+     * 去掉正文开头单独一行的分节标题（如「译文」）。
+     *
+     * @param text 归一化后的正文
+     * @return 去掉首行标题的正文
+     */
+    private static String stripLeadingHead(String text) {
+        if (text.isEmpty()) {
+            return text;
+        }
+        int end = text.indexOf('\n');
+        String first = end < 0 ? text : text.substring(0, end);
+        if (matchHead(first) == null) {
+            return text;
+        }
+        return end < 0 ? "" : text.substring(end + 1);
+    }
+
+    /**
+     * 分节正文：从「标题 + 正文」块里取「译文 / 注释 / 赏析」中的一段。
+     *
+     * <p>站点把译文与注释放在同一个块里，用 {@code <p><strong>译文</strong><br>} 与
+     * {@code <p><strong>注释</strong><br>} 分界；这一节要把它们拆成两个字段。
+     * 标题有三种写法都要认：{@code <p><strong>} 包裹、裸 {@code <strong>/<b>}、
+     * 以及带编号的 {@code 其一译文 / 译文二}。</p>
+     *
+     * <p>同一节出现多次时（如「送应氏二首」的 {@code 其一译文} 与 {@code 其二译文}）
+     * 按出现顺序用换行拼接，避免只取到第一首。</p>
+     *
+     * <p>返回值有三种情形：块里没有任何分节标记时返回 {@code null}（整块只有一种内容）；
+     * 有标记但缺目标节时返回空串；命中目标节时返回该节正文。</p>
+     *
+     * @param item    宿主，元素、元素集合或 HTML 文本
+     * @param heading 目标节标题，如 {@code 译文}、{@code 注释}
+     * @return 该节正文，无分节标记返回 null
+     */
+    public static String sectionText(Object item, String heading) {
+        Element root = unwrapBlock(element(item));
+        String target = matchHead(heading);
+        if (root == null || target == null) {
+            return null;
+        }
+        Element copy = prepareBlock(root);
+        List<String> heads = new ArrayList<>();
+        List<StringBuilder> bodies = new ArrayList<>();
+        for (Node child : copy.childNodes()) {
+            String head = child instanceof Element element ? sectionHead(element) : null;
+            if (head != null) {
+                heads.add(head);
+                bodies.add(new StringBuilder());
+                appendBlockText(withoutHead((Element) child, head), bodies.get(bodies.size() - 1));
+                continue;
+            }
+            // 首个分节标题之前的内容不属于任何一节（通常是块标题与「朗读」锚点）
+            if (!bodies.isEmpty()) {
+                appendBlockText(child, bodies.get(bodies.size() - 1));
+            }
+        }
+        if (heads.isEmpty()) {
+            return null;
+        }
+        List<String> parts = new ArrayList<>();
+        for (int i = 0; i < heads.size(); i++) {
+            if (!target.equals(heads.get(i))) {
+                continue;
+            }
+            String text = normalizeBlockText(bodies.get(i).toString());
+            if (!text.isEmpty()) {
+                parts.add(text);
+            }
+        }
+        return String.join("\n", parts);
+    }
+
+    /**
+     * 分节正文，块里没有分节标记时回落到整块正文。
+     *
+     * <p>与 {@code defaultIfEmpty(sectionText(item, heading), blockText(item))} 的差别只在
+     * 「有分节标记但缺目标节」这一种：那时 {@code sectionText} 是空串、{@code defaultIfEmpty}
+     * 会回落到整块正文，于是「只有注释」的页面会把注释写进译文列；这里只在**没有分节标记**时
+     * 回落，缺目标节仍返回空串。</p>
+     *
+     * @param item    宿主，元素、元素集合或 HTML 文本
+     * @param heading 目标节标题
+     * @return 该节正文；无分节标记时返回整块正文；缺目标节返回空串
+     */
+    public static String sectionTextOrBlock(Object item, String heading) {
+        String section = sectionText(item, heading);
+        return section == null ? blockText(item) : section;
+    }
+
+    /**
+     * 复制块并去掉块内标题与「收起 / 展开阅读全文」锚点。
+     *
+     * @param root 块根
+     * @return 可继续遍历的副本
+     */
+    private static Element prepareBlock(Element root) {
+        Element copy = root.clone();
+        // outerHtml 默认带缩进换行，重解析后会在块与行内标签之间留下纯空白文本节点。
+        // 这些节点会把「同一行」拆成多行，必须按「含换行的纯空白」这个特征清掉：
+        // 站点正文里的真实空格不含换行，不会被误删。
+        dropPrettyText(copy);
+        for (Element heading : new ArrayList<>(copy.select("h1,h2,h3,h4,h5,h6"))) {
+            heading.remove();
+        }
+        for (Element anchor : new ArrayList<>(copy.select("a[href]"))) {
+            String href = anchor.attr("href").trim();
+            String label = anchor.text().trim();
+            if (href.startsWith("javascript:") && (label.isEmpty()
+                    || "收起".equals(label) || "展开阅读全文".equals(label))) {
+                anchor.remove();
+            }
+        }
+        return copy;
+    }
+
+    /**
+     * 判定元素是否以分节标题开头，是则返回规范标题。
+     *
+     * <p>三种写法都要认：完整版是 {@code <p><strong>译文<br></strong>……}，
+     * 截断版是 {@code <p>译文<br>……}（只有纯文本），
+     * 裸标题版是 {@code <strong>译文</strong><br>……}（{@code strong} 是块的直接子元素）；
+     * 三种都可能带编号，如 {@code 其一译文}。</p>
+     *
+     * @param element 块内直接子元素
+     * @return 命中的分节标题，未命中返回 null
+     */
+    private static String sectionHead(Element element) {
+        String tag = element.tagName();
+        if ("strong".equals(tag) || "b".equals(tag)) {
+            return matchHead(element.text());
+        }
+        if (!"p".equals(tag) && !"div".equals(tag)) {
+            return null;
+        }
+        Element first = element.children().first();
+        if (first != null && ("strong".equals(first.tagName()) || "b".equals(first.tagName()))) {
+            String head = matchHead(first.text());
+            if (head != null) {
+                return head;
+            }
+        }
+        for (Node child : element.childNodes()) {
+            if (child instanceof TextNode textNode) {
+                String raw = textNode.getWholeText();
+                if (raw.isBlank()) {
+                    continue;
+                }
+                return matchHead(raw);
+            }
+            if (!"br".equals(child.nodeName())) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 去掉元素开头的分节标题，保留标题后面的正文。
+     *
+     * @param element 带标题的元素
+     * @param head    已识别的标题
+     * @return 去掉标题后的副本
+     */
+    private static Element withoutHead(Element element, String head) {
+        Element copy = element.clone();
+        Element first = copy.children().first();
+        if (first != null && ("strong".equals(first.tagName()) || "b".equals(first.tagName()))
+                && head.equals(matchHead(first.text()))) {
+            first.remove();
+            if (!copy.childNodes().isEmpty() && "br".equals(copy.childNodes().get(0).nodeName())) {
+                copy.childNodes().get(0).remove();
+            }
+            return copy;
+        }
+        for (Node child : new ArrayList<>(copy.childNodes())) {
+            if (child instanceof TextNode textNode) {
+                String raw = textNode.getWholeText();
+                textNode.text(raw.replaceFirst("^[\\s\\u3000\\u00a0]*" + Pattern.quote(head), ""));
+                break;
+            }
+        }
+        return copy;
+    }
+
+    /**
+     * 标题规范化：去空白、去编号后与分节标题词比对。
+     *
+     * <p>先按原样查同义词表（{@code 注解 → 注释}、{@code 评析 → 赏析}），
+     * 再查规范词表；都不中就剥掉首/尾编号（{@code 其一译文}、{@code 译文二}）重新比对。
+     * {@code 译文及注释} 这类复合标题剥不出规范词，按普通正文处理，不会被误当成分节标题。</p>
+     *
+     * @param text 原文
+     * @return 规范标题，未命中返回 null
+     */
+    private static String matchHead(String text) {
+        if (text == null) {
+            return null;
+        }
+        String compacted = text.replaceAll("[\\s\\u3000\\u00a0：:]+", "");
+        if (compacted.isEmpty()) {
+            return null;
+        }
+        String head = canonicalHead(compacted);
+        if (head != null) {
+            return head;
+        }
+        String bare = HEAD_NUMBER_PREFIX.matcher(compacted).replaceFirst("");
+        head = canonicalHead(bare);
+        if (head != null) {
+            return head;
+        }
+        return canonicalHead(HEAD_NUMBER_SUFFIX.matcher(compacted).replaceFirst(""));
+    }
+
+    /**
+     * 同义词与规范词比对。
+     *
+     * @param word 已去空白的标题词
+     * @return 规范标题，未命中返回 null
+     */
+    private static String canonicalHead(String word) {
+        if (word == null || word.isEmpty()) {
+            return null;
+        }
+        String alias = HEAD_ALIASES.get(word);
+        if (alias != null) {
+            return alias;
+        }
+        return SECTION_HEADS.contains(word) ? word : null;
+    }
+
+    /**
      * 响应映射里的 HTML 文本，非 HTML 宿主退化为字符串化。
      *
      * @param item 宿主
@@ -485,6 +886,72 @@ public final class CollectDom {
             return html == null ? CollectJson.toJson(item) : String.valueOf(html);
         }
         return String.valueOf(item);
+    }
+
+    /**
+     * 递归拼接块文本，{@code <br>} 的边界写成换行，块级标签的边界写成空格。
+     *
+     * @param node    当前节点
+     * @param builder 结果缓冲
+     */
+    private static void appendBlockText(Node node, StringBuilder builder) {
+        if (node instanceof TextNode textNode) {
+            builder.append(textNode.getWholeText());
+            return;
+        }
+        for (Node child : node.childNodes()) {
+            if (child instanceof TextNode textNode) {
+                builder.append(textNode.getWholeText());
+                continue;
+            }
+            if (!(child instanceof Element element)) {
+                continue;
+            }
+            String tag = element.tagName();
+            if ("br".equals(tag)) {
+                builder.append('\n');
+                continue;
+            }
+            if ("script".equals(tag) || "style".equals(tag)) {
+                continue;
+            }
+            boolean block = BLOCK_TAGS.contains(tag);
+            if (block) {
+                builder.append(' ');
+            }
+            appendBlockText(element, builder);
+            if (block) {
+                builder.append(' ');
+            }
+        }
+    }
+
+    /**
+     * 归一化块文本：统一换行符、把 ASCII 空格压成单空格、去掉行首行尾空白与空行。
+     *
+     * <p>{@code U+3000} 段首缩进必须留下 —— 站点用它表示段落缩进，
+     * 库内历史数据也是这个口径，不能被当成空白清掉。</p>
+     *
+     * @param raw 原始文本
+     * @return 归一化文本
+     */
+    private static String normalizeBlockText(String raw) {
+        String text = raw.replace("\r\n", "\n").replace('\r', '\n').replace('\u00a0', ' ')
+                // 块级边界折出来的空格紧挨段首缩进时要丢掉，否则会变成「： 　　我平素」
+                // 这种半角空格 + 全角缩进混排，与站点原文的「：　　我平素」不一致。
+                .replaceAll("[ \\t]+", " ").replace(" \u3000", "\u3000");
+        StringBuilder builder = new StringBuilder(text.length());
+        for (String line : text.split("\n", -1)) {
+            String trimmed = line.replaceAll("^[ \\t]+", "").replaceAll("[ \\t]+$", "");
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append(trimmed);
+        }
+        return builder.toString();
     }
 
     /**

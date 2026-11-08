@@ -445,7 +445,32 @@ public class CollectJdbcSupport {
      */
     public UpsertResult updateByKey(String reference, String table, List<String> keys,
                                     List<Map<String, Object>> rows) {
-        KeyWriteResult result = writeByKey(reference, table, keys, rows, false);
+        KeyWriteResult result = writeByKey(reference, table, keys, rows, false, false);
+        return new UpsertResult(result.updated(), result.inserted());
+    }
+
+    /**
+     * 按业务键「补空式」写入：命中已有行时，只更新库里当前为空的列。
+     *
+     * <p>与 {@link #updateByKey} 的区别只在命中分支的判断依据：合并更新只看
+     * 「新值空不空」，库里已有的值照样会被新值改写；补空更新要连同「库里原值」
+     * 一起看，只有「库中为空 且 新值非空」的列才进 SET 子句。这正是
+     * 2026-11-09 实测事故的修法：payload 里带回了整行（含其它来源已补好的注释），
+     * 合并更新按新值非空把历史注释放上去覆盖成了短版本。</p>
+     *
+     * <p>未命中的行仍然整行插入，行为与合并更新一致；差量字段由来源值决定，
+     * 不会替库里「本来就没有」的行补默认值。</p>
+     *
+     * @param reference 数据源引用
+     * @param table     目标表
+     * @param keys      业务键列，必须都出现在待写入行的键里
+     * @param rows      待写入行
+     * @return 更新与新增的行数
+     * @throws IllegalStateException 执行失败，事务已回滚
+     */
+    public UpsertResult fillBlankByKey(String reference, String table, List<String> keys,
+                                       List<Map<String, Object>> rows) {
+        KeyWriteResult result = writeByKey(reference, table, keys, rows, false, true);
         return new UpsertResult(result.updated(), result.inserted());
     }
 
@@ -464,7 +489,7 @@ public class CollectJdbcSupport {
      */
     public SkipResult insertIfAbsent(String reference, String table, List<String> keys,
                                      List<Map<String, Object>> rows) {
-        KeyWriteResult result = writeByKey(reference, table, keys, rows, true);
+        KeyWriteResult result = writeByKey(reference, table, keys, rows, true, false);
         return new SkipResult(result.skipped(), result.inserted());
     }
 
@@ -486,9 +511,11 @@ public class CollectJdbcSupport {
      * 以后改标识符白名单 / 参数绑定这类安全相关的代码必然漏改一边。</p>
      *
      * @param skipExisting true 表示命中即跳过（不更新）；false 表示命中即更新
+     * @param fillBlank    true 表示命中行只补库里为空的列；false 表示按新值覆盖
      */
     private KeyWriteResult writeByKey(String reference, String table, List<String> keys,
-                                      List<Map<String, Object>> rows, boolean skipExisting) {
+                                      List<Map<String, Object>> rows, boolean skipExisting,
+                                      boolean fillBlank) {
         if (rows == null || rows.isEmpty()) {
             return new KeyWriteResult(0, 0, 0);
         }
@@ -527,7 +554,18 @@ public class CollectJdbcSupport {
                 String where = String.join(" AND ", predicates);
                 String updateSqlBase = "UPDATE " + name + " SET ";
                 String updateSqlTail = " WHERE " + where;
-                String selectSql = "SELECT 1 FROM " + name + " WHERE " + where;
+                // 补空模式必须读回库里当前值才能判断"这一列要不要补"，
+                // 其它模式只探测行在不在，省一次全列读取
+                List<String> writable = new ArrayList<>(columns.size());
+                for (String column : columns) {
+                    if (!keys.contains(column)) {
+                        writable.add(column);
+                    }
+                }
+                String selectSql = fillBlank
+                        ? "SELECT " + String.join(", ", quotedAll(connection, writable))
+                        + " FROM " + name + " WHERE " + where
+                        : "SELECT 1 FROM " + name + " WHERE " + where;
                 String insertSql = "INSERT INTO " + name + " ("
                         + String.join(", ", quotedAll(connection, columns)) + ") VALUES ("
                         + String.join(", ", columns.stream().map(column -> "?").toList()) + ")";
@@ -551,8 +589,16 @@ public class CollectJdbcSupport {
                             select.setObject(index + 1, value(keyValue));
                         }
                         boolean exists;
+                        Map<String, Object> existing = null;
                         try (ResultSet rs = select.executeQuery()) {
                             exists = rs.next();
+                            if (exists && fillBlank) {
+                                // 补空模式：把库里这一行当前值读回来，用于逐列判断
+                                existing = new LinkedHashMap<>(writable.size());
+                                for (int index = 0; index < writable.size(); index++) {
+                                    existing.put(writable.get(index), rs.getObject(index + 1));
+                                }
+                            }
                         }
                         if (exists) {
                             if (skipExisting) {
@@ -563,9 +609,15 @@ public class CollectJdbcSupport {
                             // 合并更新只补空：新值为 null / 空串时这一列不进 SET 子句，
                             // 否则整行覆盖会把别的来源已补齐的译文/赏析/标签清空（实测风险）。
                             // 空值与键列必须一起排除：键列只出现在 WHERE，不能进 SET。
+                            // 补空模式再加一条：库里这一列已经有值就绝不动它 ——
+                            // 只看新值会把「历史非空、站点给了另一个版本」当成可覆盖
+                            // （2026-11-09 实测：poem_id 1089 的 76 字注释被 60 字版本覆盖）。
                             List<String> sets = new ArrayList<>(columns.size());
                             for (String column : columns) {
                                 if (keys.contains(column) || isBlankValue(row.get(column))) {
+                                    continue;
+                                }
+                                if (fillBlank && !isBlankValue(existing.get(column))) {
                                     continue;
                                 }
                                 sets.add(column);

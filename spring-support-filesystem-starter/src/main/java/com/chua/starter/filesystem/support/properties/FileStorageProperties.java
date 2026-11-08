@@ -136,6 +136,15 @@ public class FileStorageProperties {
          * 与「最多丢半分钟改动」之间的折中。</p>
          */
         private long persistSeconds = 30;
+
+        /**
+         * 实时协同 hub 的日志目录（默认 {@code data/file-collab/hub}，相对进程工作目录）
+         *
+         * <p>hub 保存的是「快照 + 操作日志」，与文档快照本身分开存：前者约束实时
+         * 编辑的顺序与续接，后者是用户看到的文件内容。目录为空串表示纯内存
+         * （重启即丢日志，只适合本地调试）。</p>
+         */
+        private String hubPath;
     }
 
     // ==================== 功能开关 ====================
