@@ -505,6 +505,10 @@ public class ApiSkillController {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入技能失败: " + e.getMessage());
         }
 
+        if (!importedNames.isEmpty()) {
+            // 扫描缓存里没有新导入的技能：失效后 /installed 才能立刻看到
+            chatSkillSupport.invalidate();
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.getFirst());
         result.put("skill_names", importedNames);
@@ -723,6 +727,10 @@ public class ApiSkillController {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入技能失败: " + e.getMessage());
         }
 
+        if (!importedNames.isEmpty()) {
+            // 扫描缓存里没有新导入的技能：失效后 /installed 才能立刻看到
+            chatSkillSupport.invalidate();
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.getFirst());
         result.put("skill_names", importedNames);
@@ -763,6 +771,8 @@ public class ApiSkillController {
                 throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除技能失败: " + e.getMessage());
             }
         }
+        // 扫描结果有 30s 缓存：删除后必须失效，否则 /installed 仍会回显已删技能
+        chatSkillSupport.invalidate();
         return ApiResult.ok();
     }
 
@@ -2118,6 +2128,10 @@ public class ApiSkillController {
      */
     private ApiResult<Map<String, Object>> installResult(
             String skillName, List<String> installed, List<Map<String, String>> errors) {
+        if (!installed.isEmpty()) {
+            // 市场安装/专家包安装都走这里：同样要让 30s 扫描缓存失效
+            chatSkillSupport.invalidate();
+        }
         Map<String, Object> pkg = new LinkedHashMap<>();
         pkg.put("name", skillName != null ? skillName : "unknown");
         pkg.put("description", installed.isEmpty() ? "" : "从市场安装的技能包");
@@ -2216,6 +2230,9 @@ public class ApiSkillController {
             }
         }
 
+        if (!installed.isEmpty()) {
+            chatSkillSupport.invalidate();
+        }
         Map<String, Object> pkg = new LinkedHashMap<>();
         pkg.put("name", author);
         pkg.put("description", author + " 专家包（已安装 " + installed.size() + " 个技能）");
