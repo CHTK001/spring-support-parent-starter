@@ -255,11 +255,10 @@ public class HttpmanServiceImpl implements HttpmanService {
     private Map<String, Object> createHistoryRecord(MsHttpmanRequest request, HttpmanResponse response,
                                                     String url, String body, Map<String, Object> result) {
         // 脱敏后的请求头 JSON
-        String historyRequestHeaders = JSON.writeValueAsString(
-                resolveSensitiveList(request.getRequestHeaders(), properties.isSensitiveHeaderMask()));
+        String historyRequestHeaders = writJson(resolveSensitiveList(request.getRequestHeaders(), properties.isSensitiveHeaderMask()));
 
-        String historyResponseHeaders = JSON.writeValueAsString(
-                resolveSensitiveList(response.getHeaders(), properties.isSensitiveHeaderMask()));
+        // 脱敏后的响应头 JSON
+        String historyResponseHeaders = writJson(resolveSensitiveList(response.getHeaders(), properties.isSensitiveHeaderMask()));
 
         MsHttpmanHistory history = new MsHttpmanHistory();
         history.setHistoryRequestId(request.getRequestId());
@@ -363,6 +362,11 @@ public class HttpmanServiceImpl implements HttpmanService {
     }
 
     @Override
+    public MsHttpmanVariable getVariable(String id) {
+        return variableMapper.selectById(id);
+    }
+
+    @Override
     public void deleteVariable(String id) {
         variableMapper.deleteById(id);
     }
@@ -448,6 +452,15 @@ public class HttpmanServiceImpl implements HttpmanService {
         }
     }
 
+    /** JSON 序列化（受检异常包装为运行时异常） */
+    private String writJson(Object obj) {
+        try {
+            return JSON.writeValueAsString(obj);
+        } catch (Exception e) {
+            throw new RuntimeException("JSON 序列化失败: " + obj, e);
+        }
+    }
+
     private Map<String, String> resolveHeaderMap(String json, Map<String, String> variables) {
         List<Map<String, String>> list = parseHeaderList(json);
         Map<String, String> map = new HashMap<>();
@@ -472,15 +485,33 @@ public class HttpmanServiceImpl implements HttpmanService {
         if (!mask) {
             return list;
         }
-        return list.stream().map(m -> {
-            String name = m.get("name");
-            if (name == null || !HttpmanProxyExecutor.SENSITIVE_KEYS.contains(name.toLowerCase())) {
-                return m;
-            }
-            Map<String, String> copy = new HashMap<>(m);
-            copy.put("value", "******");
-            return copy;
-        }).collect(Collectors.toList());
+        return list.stream().map(this::maskSensitive).collect(Collectors.toList());
+    }
+
+    /** Map<String,String> => 脱敏后保存为 JSON 数组列表 */
+    private List<Map<String, String>> resolveSensitiveList(Map<String, String> map, boolean mask) {
+        List<Map<String, String>> list = new ArrayList<>();
+        if (map == null || map.isEmpty()) {
+            return list;
+        }
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            Map<String, String> item = new HashMap<>();
+            item.put("name", entry.getKey());
+            item.put("value", entry.getValue());
+            list.add(mask ? maskSensitive(item) : item);
+        }
+        return list;
+    }
+
+    /** 单一节点脱敏 */
+    private Map<String, String> maskSensitive(Map<String, String> m) {
+        String name = m.get("name");
+        if (name == null || !HttpmanProxyExecutor.SENSITIVE_KEYS.contains(name.toLowerCase())) {
+            return m;
+        }
+        Map<String, String> copy = new HashMap<>(m);
+        copy.put("value", "******");
+        return copy;
     }
 
     private Map<String, Object> historyToMap(MsHttpmanHistory history) {

@@ -10,6 +10,10 @@ package com.chua.starter.server.support.enums;
  *   <li>平台直连通道：SERIAL 串口终端 + TELNET console 终端 —— 均由平台自研
  *       直连处理器（Serial / Telnet）原样桥接收发流，无需 guacd 中转；MANAGEMENT（命令执行）/
  *       SFTP（文件管理）不走远控通道，不在本枚举里占位。</li>
+ *   <li>RDP 桌面直连通道（FreeRDP）：经 {@code /ws/ms/server/terminal/rdp} 自研 WebSocket，
+ *       由 <b>FreeRDP 3.x C 扩展</b>（RDP 客户端）在主机侧接出桌面，按帧向浏览器推送
+ *       BGRA 像素、接收键鼠事件——不依赖任何资产管理平台外的中间层（使用 guacd 的
+ *       RDP 走低轨，不含平台直连能力）。</li>
  * </ul>
  *
  * @author CH
@@ -29,11 +33,21 @@ public enum ProtocolType {
 
     /**
      * 远程桌面
+     * <p>
+     * 与平台直连的 RDP（FreeRDP）是两回事：本平台直连 RDP 通过
+     * {@link com.chua.starter.server.support.terminal.handler.RdpDirectWebSocketHandler}
+     * 提供，不进 guacd。
+     * </p>
     */
     RDP,
 
     /**
      * VNC 桌面
+     * <p>
+     * 与平台直连的 VNC（noVNC-socketify）也是两回事：本平台直连 VNC 通过
+     * {@link com.chua.starter.server.support.terminal.handler.VncWebsockifyWebSocketHandler}
+     * 提供。
+     * </p>
     */
     VNC,
 
@@ -49,8 +63,8 @@ public enum ProtocolType {
     /**
      * Telnet console 终端（platform direct）
      * <p>
-     * 不经 guacd，由 {@link com.chua.starter.server.support.terminal.telnet.TelnetWebSocketHandler}
-     * 原样桥接：浏览器收发的字节流原样进出目标主机的 Telnet 服务（TCP 默认 23）。
+     * 不经 guacd，直接走 {@link com.chua.starter.server.support.terminal.telnet.TelnetWebSocketHandler}
+     * 桥接：浏览器收发的字节流原样进出目标主机的 Telnet 服务（TCP 默认 23）。
      * </p>
     */
     TELNET;
@@ -79,5 +93,32 @@ public enum ProtocolType {
      */
     public boolean isPlatformDirectProtocol() {
         return this == SERIAL || this == TELNET;
+    }
+
+    /**
+     * 判断协议是否由平台直连的字符终端（console）通道承载
+     * <p>
+     * 仅 SERIAL / TELNET 属于"字符终端直连"：浏览器端对(bytes/JSON)终端，
+     * 由平台自研处理器 XML 原样桥接收发流。SSH 也显示为终端但由
+     * guacd 中转（或 ssh-direct 通道），不在本口径里。
+     * </p>
+     *
+     * @return 是否控制台直连
+     */
+    public boolean isConsoleProtocol() {
+        return this == SERIAL || this == TELNET;
+    }
+
+    /**
+     * 判断协议是否由平台直连的桌面通道承载
+     * <p>
+     * 即 RDP / VNC 的平台自研直连通道（freeRDP 直连桌面 / noVNC 直连 websockify），
+     * guacd 中转的 RDP/VNC 不在本口径里。
+     * </p>
+     *
+     * @return 是否桌面直连
+     */
+    public boolean isDirectDesktopProtocol() {
+        return this == RDP || this == VNC;
     }
 }

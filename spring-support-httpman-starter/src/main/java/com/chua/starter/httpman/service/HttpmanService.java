@@ -157,6 +157,14 @@ public interface HttpmanService {
     MsHttpmanVariable updateVariable(MsHttpmanVariable variable);
 
     /**
+     * 获取变量详情
+     *
+     * @param id 变量标识
+     * @return 变量实体
+     */
+    MsHttpmanVariable getVariable(String id);
+
+    /**
      * 删除变量
      *
      * @param id 变量标识
