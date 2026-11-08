@@ -63,6 +63,14 @@ final class FakeMagpieServer implements AutoCloseable {
     private volatile boolean adminQuotas;
 
     /**
+     * 当前下发的 Cookie 值。
+     *
+     * <p>正常等于 {@link #PAGE_KEY}；{@link #rotateCookie()} 之后换成新值，
+     * 模拟「magpie 重启/轮换后，旧 Cookie 立即失效而页面 Key 不变」。</p>
+     */
+    private volatile String issuedCookie = PAGE_KEY;
+
+    /**
      * 启动假服务。
      *
      * @throws IOException 端口绑定失败
@@ -133,6 +141,16 @@ final class FakeMagpieServer implements AutoCloseable {
      */
     void withAdminQuotas() {
         adminQuotas = true;
+    }
+
+    /**
+     * 让已下发的 Cookie 全部失效（页面 Key 不变）。
+     *
+     * <p>对应「magpie 重启或轮换 Cookie」：握手仍能用同一个 {@code ?k=} 换到新 Cookie，
+     * 但客户端手里的旧 Cookie 会开始 401。</p>
+     */
+    void rotateCookie() {
+        issuedCookie = PAGE_KEY + "-rotated";
     }
 
     /**
@@ -281,7 +299,7 @@ final class FakeMagpieServer implements AutoCloseable {
             respond(exchange, 401, "{\"error\":\"bad page key\"}");
             return;
         }
-        exchange.getResponseHeaders().add("Set-Cookie", cookieName() + "=" + PAGE_KEY + "; Path=/; HttpOnly");
+        exchange.getResponseHeaders().add("Set-Cookie", cookieName() + "=" + issuedCookie + "; Path=/; HttpOnly");
         exchange.sendResponseHeaders(303, -1);
         exchange.close();
     }
@@ -294,7 +312,7 @@ final class FakeMagpieServer implements AutoCloseable {
      */
     private boolean authorized(HttpExchange exchange) {
         String cookie = exchange.getRequestHeaders().getFirst("Cookie");
-        return cookie != null && cookie.contains(cookieName() + "=" + PAGE_KEY);
+        return cookie != null && cookie.contains(cookieName() + "=" + issuedCookie);
     }
 
     /**

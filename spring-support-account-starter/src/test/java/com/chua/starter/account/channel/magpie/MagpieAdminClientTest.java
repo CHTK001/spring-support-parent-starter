@@ -89,6 +89,32 @@ class MagpieAdminClientTest {
     }
 
     @Test
+    @DisplayName("Cookie 被上游作废（magpie 重启/轮换）时自动重握手，不必等 30 分钟缓存过期")
+    void staleCookieIsRekeyedOnce() {
+        Map<String, Object> credentials = credentials(FakeMagpieServer.PAGE_KEY);
+        assertEquals(1, MagpieAdminClient.providers(credentials).size());
+        int handshakes = server.hits("/");
+
+        server.rotateCookie();
+
+        List<Map<String, Object>> rows = MagpieAdminClient.providers(credentials);
+        assertEquals(1, rows.size(), "重握手后应拿到数据，而不是把 401 抛给用户");
+        assertEquals(handshakes + 1, server.hits("/"), "只重握手一次");
+        // 首次成功 1 次 + 失效那次 401 + 重试成功 1 次
+        assertEquals(3, server.hits("/api/providers"));
+    }
+
+    @Test
+    @DisplayName("页面 Key 本身不对时不无限重试：握手两次就报错")
+    void wrongKeyDoesNotRetryForever() {
+        Map<String, Object> credentials = credentials("wrong-key-000000");
+        ChannelException error = assertThrows(ChannelException.class,
+                () -> MagpieAdminClient.providers(credentials));
+        assertTrue(error.getMessage().contains("页面 Key 被拒"));
+        assertEquals(2, server.hits("/"), "首次握手 + 一次重试，不再继续打上游");
+    }
+
+    @Test
     @DisplayName("save 原样透传 provider 字段与 new/from 标记")
     void savePostsProviderBody() {
         Map<String, Object> provider = new LinkedHashMap<>();

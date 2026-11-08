@@ -61,6 +61,15 @@ public final class ChannelHttp {
     /** 登录轮询单次请求超时（秒）；轮询间隔短，超时也应短。 */
     public static final Duration POLL_TIMEOUT = Duration.ofSeconds(30);
 
+    /**
+     * 长任务超时（分钟）。
+     *
+     * <p>给「一次调用会拉起外部进程并下载依赖」的上游用：magpie 的插件安装
+     * （{@code POST /api/plugins/add}）首次要拉 bun 与 npm 包，实测可能几分钟；
+     * 按默认 60 秒掐断会让前端报失败、而后台上游其实还在装。</p>
+     */
+    public static final Duration LONG_TIMEOUT = Duration.ofMinutes(5);
+
     /** HTTP 429 Too Many Requests。 */
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
@@ -91,9 +100,22 @@ public final class ChannelHttp {
      * @return 响应体；HTTP 非 2xx 时抛 {@link ChannelHttpException}
      */
     public static String postJson(String url, String body, Map<String, String> headers) {
+        return postJson(url, body, headers, DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * 执行一次 POST JSON 请求，可指定超时。
+     *
+     * @param url 目标地址
+     * @param body 请求体 JSON（可为 null，表示无 body）
+     * @param headers 附加请求头（可为 null）
+     * @param timeout 单次请求超时
+     * @return 响应体；HTTP 非 2xx 时抛 {@link ChannelHttpException}
+     */
+    public static String postJson(String url, String body, Map<String, String> headers, Duration timeout) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .timeout(DEFAULT_TIMEOUT)
+                .timeout(timeout == null ? DEFAULT_TIMEOUT : timeout)
                 .POST(body == null
                         ? HttpRequest.BodyPublishers.noBody()
                         : HttpRequest.BodyPublishers.ofString(body));
@@ -109,9 +131,21 @@ public final class ChannelHttp {
      * @return 响应体；HTTP 非 2xx 时抛 {@link ChannelHttpException}
      */
     public static String getJson(String url, Map<String, String> headers) {
+        return getJson(url, headers, DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * 执行一次 GET 请求，可指定超时。
+     *
+     * @param url 目标地址
+     * @param headers 附加请求头（可为 null）
+     * @param timeout 单次请求超时
+     * @return 响应体；HTTP 非 2xx 时抛 {@link ChannelHttpException}
+     */
+    public static String getJson(String url, Map<String, String> headers, Duration timeout) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .timeout(DEFAULT_TIMEOUT)
+                .timeout(timeout == null ? DEFAULT_TIMEOUT : timeout)
                 .GET();
         applyHeaders(builder, headers);
         return execute(builder.build(), "GET " + url);
