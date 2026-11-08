@@ -44,6 +44,8 @@ public class ControlAutoConfiguration {
     @Bean(destroyMethod = "stop")
     @ConditionalOnMissingBean(WebRtcServer.class)
     public WebRtcServer webRtcServer(ControlProperties properties) {
+        System.out.println("### DIAG: headless=" + java.awt.GraphicsEnvironment.isHeadless()
+                + " robotOk?=" + isRobotOk());
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(properties.getHost());
         setting.setPort(properties.getPort());
@@ -57,5 +59,19 @@ public class ControlAutoConfiguration {
                     displayHost, properties.getPort(), WebRtcServer.SIGNALING_PATH);
         }
         return server;
+    }
+
+    /**
+     * 诊断用：尝试创建一个 Robot
+     *
+     * @return 是否可用
+     */
+    private static boolean isRobotOk() {
+        try {
+            new java.awt.Robot();
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 }
