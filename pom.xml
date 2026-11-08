@@ -146,6 +146,7 @@
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
         <module>spring-support-cdp-starter</module>          <!-- CDP 调试模块：Chrome DevTools Protocol 代用/Debug 控制台 -->
+        <module>spring-support-control-starter</module>          <!-- WebRTC 远程控制：信令/桌面采集/键鼠注入 -->
 
         <!-- 渠道管理模块（账号类渠道鉴权 / 渠道健康探针 / 渠道定时任务）：
              必须排在 ai-starter 之前——ai-starter 单向依赖本模块，reactor 才能按此顺序构建 -->
@@ -926,6 +927,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-network-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <!-- WebRTC 远程控制：Java 服务端（webrtc-java）+ 浏览器客户端信令 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-webrtc-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
             <!-- Jackson模块版本管理 -->
