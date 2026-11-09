@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>守住古文岛详情页的四种分节写法：{@code <p><strong>译文</strong>} 标准型、
  * 裸 {@code <strong>译文</strong>}、带编号的 {@code 其一译文 / 译文二}、
- * 以及同义标题（注解 / 释文 / 评析）。</p>
+ * 以及同义标题（注解 / 部释 / 评析，另有「释文」实为译文）。</p>
  *
  * <p>重点是两处曾经出过脏数据的边界：</p>
  * <ol>
@@ -38,10 +38,30 @@ class CollectDomSectionTest {
     }
 
     @Test
-    @DisplayName("同义标题：注解 / 释文 归一到注释")
+    @DisplayName("同义标题：注解 归一到注释")
     void aliasSections() {
         String html = "<div class=\"contyishang\"><p><strong>译文</strong><br />甲</p>"
                 + "<p><strong>注解</strong><br />丙</p></div>";
+
+        assertEquals("甲", CollectDom.sectionText(html, "译文"));
+        assertEquals("丙", CollectDom.sectionText(html, "注释"));
+    }
+
+    @Test
+    @DisplayName("释文是白话译文，不是注释")
+    void shiwenIsTranslation() {
+        String html = "<div class=\"contyishang\"><p>释文<br />甲</p>"
+                + "<p>注释<br />丙</p></div>";
+
+        assertEquals("甲", CollectDom.sectionText(html, "译文"));
+        assertEquals("丙", CollectDom.sectionText(html, "注释"));
+    }
+
+    @Test
+    @DisplayName("错字「部释」归一到注释")
+    void bushiIsNotes() {
+        String html = "<div class=\"contyishang\"><p>译文<br />甲</p>"
+                + "<p>部释<br />丙</p></div>";
 
         assertEquals("甲", CollectDom.sectionText(html, "译文"));
         assertEquals("丙", CollectDom.sectionText(html, "注释"));

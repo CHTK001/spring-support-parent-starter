@@ -62,15 +62,19 @@ public final class CollectDom {
     /**
      * 分节标题同义写法到规范标题的映射。
      *
-     * <p>古文岛同一节在不同页面上的标题并不统一：注释节会写成「注解」「释文」甚至错字「注人」，
-     * 译文节会写成「翻译」，赏析节会写成「评析 / 简析 / 鉴赏 / 解读」。
+     * <p>古文岛同一节在不同页面上的标题并不统一：注释节会写成「注解」甚至错字「注人」「部释」，
+     * 译文节会写成「释文」「翻译」，赏析节会写成「评析 / 简析 / 鉴赏 / 解读」。
      * 归一到同一节之后，{@code sectionText(块, '注释')} 才取得到这些页面的注释。</p>
+     *
+     * <p>「释文」在古籍整理里通常指白话译文（如《再上湘江》页「释文」下是整首白话），
+     * 归到译文节；它下面的「注释」才是注释。</p>
      */
     private static final Map<String, String> HEAD_ALIASES = Map.ofEntries(
             Map.entry("注解", "注释"),
-            Map.entry("释文", "注释"),
+            Map.entry("部释", "注释"),
             Map.entry("注人", "注释"),
             Map.entry("译注", "注释"),
+            Map.entry("释文", "译文"),
             Map.entry("翻译", "译文"),
             Map.entry("译的", "译文"),
             Map.entry("评析", "赏析"),
@@ -817,11 +821,40 @@ public final class CollectDom {
         for (Node child : new ArrayList<>(copy.childNodes())) {
             if (child instanceof TextNode textNode) {
                 String raw = textNode.getWholeText();
-                textNode.text(raw.replaceFirst("^[\\s\\u3000\\u00a0]*" + Pattern.quote(head), ""));
+                int strip = headPrefixLength(raw, head);
+                if (strip > 0) {
+                    textNode.text(raw.substring(strip).replaceFirst("^[\\s\\u3000\\u00a0：:]+", ""));
+                }
                 break;
             }
         }
         return copy;
+    }
+
+    /**
+     * 纯文本标题在正文里的结束位置。
+     *
+     * <p>标题可能是同义写法（{@code 释文}）或带编号的写法（{@code 其一译文}），
+     * 所以不能拿规范标题做字面替换；这里从最长前缀往下试，第一个能被
+     * {@link #matchHead(String)} 认成同一节的长度就是标题长度。</p>
+     *
+     * @param raw  文本节点的原文
+     * @param head 规范标题
+     * @return 标题结束下标（不含前导空白），未命中返回 -1
+     */
+    private static int headPrefixLength(String raw, String head) {
+        int start = 0;
+        while (start < raw.length() && (Character.isWhitespace(raw.charAt(start))
+                || raw.charAt(start) == '\u3000' || raw.charAt(start) == '\u00a0')) {
+            start++;
+        }
+        int limit = Math.min(raw.length(), start + 16);
+        for (int end = limit; end > start; end--) {
+            if (head.equals(matchHead(raw.substring(start, end)))) {
+                return end;
+            }
+        }
+        return -1;
     }
 
     /**
