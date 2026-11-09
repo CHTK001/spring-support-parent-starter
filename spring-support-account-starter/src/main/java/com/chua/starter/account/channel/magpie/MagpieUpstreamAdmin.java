@@ -1,9 +1,11 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.account.channel.magpie;
 
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.common.support.channel.ChannelException;
 import com.chua.starter.common.support.channel.ChannelUpstreamAdmin;
+import com.chua.starter.common.support.channel.ChannelUpstreamCodec;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,14 +45,39 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
             "off", "options", "prefer", "registry", "mirror", "check");
 
     /**
-     * 请求体里由消费方消费、不属于 provider 字段的控制键。
+     * 线上形态适配（SPI）。
+     *
+     * <p>列表脱敏、列表派生物清理、{@code balanceToken}/{@code models} 归一这些
+     * magpie 私有协议知识都在 {@link MagpieProviderCodec} 里，本类只按渠道别名取用。</p>
      */
-    private static final Set<String> CONTROL_KEYS = Set.of("connectionId", "label", "provider",
-            "isNew", "new", "from");
+    private volatile ChannelUpstreamCodec codec;
 
     @Override
     public String channel() {
         return MagpieSupport.CHANNEL;
+    }
+
+    /**
+     * 取本渠道的 provider 形态适配实现。
+     *
+     * @return 适配实现
+     */
+    private ChannelUpstreamCodec codec() {
+        ChannelUpstreamCodec local = codec;
+        if (local == null) {
+            synchronized (this) {
+                local = codec;
+                if (local == null) {
+                    local = ServiceProvider.of(ChannelUpstreamCodec.class).getExtension(channel());
+                    if (local == null) {
+                        throw new ChannelException(ChannelException.CODE_NOT_IMPLEMENTED,
+                                "渠道 " + channel() + " 缺少 ChannelUpstreamCodec 实现");
+                    }
+                    codec = local;
+                }
+            }
+        }
+        return local;
     }
 
     /**
@@ -96,8 +123,9 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     public Map<String, Object> list(Map<String, Object> credentials) {
         List<Map<String, Object>> providers = MagpieAdminClient.providers(credentials);
         List<Map<String, Object>> safe = new ArrayList<>(providers.size());
+        ChannelUpstreamCodec codec = codec();
         for (Map<String, Object> provider : providers) {
-            safe.add(sanitizeProvider(provider));
+            safe.add(codec.desensitize(provider));
         }
         Map<String, Object> out = new LinkedHashMap<>(2);
         out.put("providers", safe);
@@ -114,7 +142,7 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     @Override
     public Map<String, Object> save(Map<String, Object> credentials, Map<String, Object> payload) {
         Map<String, Object> body = payload == null ? new LinkedHashMap<>() : payload;
-        Map<String, Object> provider = providerPayload(body);
+        Map<String, Object> provider = codec().toUpstreamInput(body);
         if (Boolean.TRUE.equals(body.get("isNew")) || Boolean.TRUE.equals(body.get("new"))) {
             provider.put("new", true);
         }
@@ -151,7 +179,7 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
                     "不支持的 magpie provider 动作: " + action + "（仅 detect / models / test）");
         }
         Map<String, Object> body = payload == null ? new LinkedHashMap<>() : payload;
-        Map<String, Object> result = MagpieAdminClient.action(credentials, normalized, providerPayload(body));
+        Map<String, Object> result = MagpieAdminClient.action(credentials, normalized, codec().toUpstreamInput(body));
         if ("models".equals(normalized)) {
             result.put("modelIds", MagpieAdminClient.modelIds(result));
         }
@@ -377,90 +405,6 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
                 target.put(key, source.get(key));
             }
         }
-    }
-
-    /**
-     * 从请求体里取出 provider 字段（剔除控制字段）。
-     *
-     * @param body 请求体
-     * @return provider 字段副本
-     */
-    private static Map<String, Object> providerPayload(Map<String, Object> body) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        Object nested = body.get("provider");
-        if (nested instanceof Map<?, ?> map) {
-            map.forEach((k, v) -> {
-                if (k != null) {
-                    payload.put(String.valueOf(k), v);
-                }
-            });
-        } else {
-            payload.putAll(body);
-        }
-        CONTROL_KEYS.forEach(payload::remove);
-        return payload;
-    }
-
-    /**
-     * 上游 provider 脱敏：API key 只留末四位，并标记是否已配置。
-     *
-     * <p>magpie 的 {@code providerJSON} 不下发 {@code key}，凭据体现为 {@code keyList}
-     * （每个 key 一行）。因此「有没有凭据」主要看 {@code keyList} 长度；同时把
-     * key 行里可能出现的明文 key / secret 一律剥掉。</p>
-     *
-     * @param provider 上游原始字段
-     * @return 脱敏后的副本
-     */
-    private static Map<String, Object> sanitizeProvider(Map<String, Object> provider) {
-        Map<String, Object> safe = new LinkedHashMap<>(provider);
-        Object key = provider.get("key");
-        boolean hasInlineKey = key instanceof String text && !text.isBlank();
-        if (hasInlineKey) {
-            safe.put("key", MagpieSupport.maskKey(String.valueOf(key)));
-        } else {
-            safe.put("key", "");
-        }
-        Object keyList = provider.get("keyList");
-        int keyCount = keyList instanceof List<?> list ? list.size() : 0;
-        if (keyList instanceof List<?> list) {
-            safe.put("keyList", sanitizeKeyRows(list));
-        }
-        safe.put("keyCount", keyCount);
-        safe.put("hasKey", hasInlineKey || keyCount > 0);
-        // 私有凭据永远不回传（magpie 自身也不会下发，双保险）
-        safe.remove("secretAccessKey");
-        safe.remove("accessKeyID");
-        return safe;
-    }
-
-    /**
-     * 脱敏 {@code keyList} 的每一行：只保留展示字段，去掉可能的明文。
-     *
-     * @param rows magpie 的 key 行
-     * @return 脱敏后的行
-     */
-    private static List<Map<String, Object>> sanitizeKeyRows(List<?> rows) {
-        List<Map<String, Object>> safe = new ArrayList<>(rows.size());
-        for (Object item : rows) {
-            if (!(item instanceof Map<?, ?> map)) {
-                continue;
-            }
-            Map<String, Object> row = new LinkedHashMap<>(map.size());
-            map.forEach((k, v) -> {
-                if (k == null) {
-                    return;
-                }
-                String name = String.valueOf(k);
-                if ("key".equalsIgnoreCase(name) || "secret".equalsIgnoreCase(name)
-                        || "token".equalsIgnoreCase(name) || "apiKey".equalsIgnoreCase(name)) {
-                    row.put(name, MagpieSupport.maskKey(v == null ? null : String.valueOf(v)));
-                } else if (!"rest".equalsIgnoreCase(name)) {
-                    row.put(name, v);
-                }
-            });
-            safe.add(row);
-        }
-        return safe;
     }
 
     /**
