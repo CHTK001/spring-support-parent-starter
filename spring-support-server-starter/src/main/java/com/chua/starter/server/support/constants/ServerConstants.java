@@ -29,6 +29,11 @@ public final class ServerConstants {
     public static final String WEBSOCKET_TELNET_DIRECT_PATH = "/ws/ms/server/terminal/telnet";
 
     /**
+     * 串口 console 直连 webSocket 端点路径（不经 guacd）
+     */
+    public static final String WEBSOCKET_SERIAL_DIRECT_PATH = "/ws/ms/server/terminal/serial";
+
+    /**
      * RDP 直连桌面 webSocket 端点路径（不经 guacd，走 rdpj 原生桥）
      */
     public static final String WEBSOCKET_RDP_DIRECT_PATH = "/ws/ms/server/terminal/rdp";

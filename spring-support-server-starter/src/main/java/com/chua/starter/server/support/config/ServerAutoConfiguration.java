@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.server.support")
 @MapperScan(basePackages = "com.chua.starter.server.support.mapper")
-@EnableConfigurationProperties(ServerProperties.class)
+@EnableConfigurationProperties({ServerProperties.class, SerialProperties.class})
 @EnableTransactionManagement
 @EnableScheduling
 public class ServerAutoConfiguration {
