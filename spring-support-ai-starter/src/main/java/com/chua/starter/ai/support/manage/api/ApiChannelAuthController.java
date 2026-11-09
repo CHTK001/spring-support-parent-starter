@@ -767,7 +767,10 @@ public class ApiChannelAuthController {
 
     /** 凭据敏感键（checkin 结果回传前端前剔除，防 token 泄露到页面）。 */
     private static final java.util.Set<String> SENSITIVE_CREDENTIAL_KEYS = java.util.Set.of(
-            "access_token", "refresh_token", "client_secret", "api_key", "uuid", "first_keyfrom");
+            "access_token", "refresh_token", "client_secret", "api_key", "uuid", "first_keyfrom",
+            // Magpie 的页面 Key / 网关 Key 是管理面凭据，签到结果里会整份带回来；
+            // 页面只需要 checkin_message，没有理由让密钥出现在浏览器里。
+            "page_key", "gateway_key");
 
     /**
      * 单渠道、单账号的积分 / 余额查询（只读，不触发签到）。
