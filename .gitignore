@@ -211,3 +211,11 @@ site-builder/
 pmt_proxy/
 node_modules/.tmp/
 
+# --- generated / non-source (untracked) ---
+spring-support-filesystem-starter/src/main/resources/static/assets/
+spring-support-filesystem-starter/src/main/resources/static/wasm/
+spring-support-filesystem-starter/src/main/resources/static/vendor/
+spring-support-filesystem-starter/src/main/resources/static/preview-vendor/
+spring-support-hotsport-starter/src/main/resources/static/
+backups/
+*.map
