@@ -133,7 +133,8 @@ public class SerialWebSocketHandler extends AbstractWebSocketHandler {
         SerialPort port;
         try {
             port = connectionFactory.openDevice(device);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // jSerialComm 原生库缺失时为 UnsatisfiedLinkError（Error，非 Exception），必须一并兜住
             String cause = WebSocketSessions.describeCause(e);
             log.warn("[serial] 串口连接失败 hostId={} device={}: {}", hostId, device, cause, e);
             reject(wsSession, "串口连接失败 " + device + " - " + cause);

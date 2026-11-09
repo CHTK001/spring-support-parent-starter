@@ -3072,10 +3072,20 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (!changed) {
             try (GitClient client = buildGitClient(project, workspace).build()) {
                 String branch = isBlank(project.getGitBranch()) ? null : project.getGitBranch().trim();
-                // fetch + 比对交给 git-starter 的 remote()：本模块不再直接碰 jgit 的 refs
-                com.chua.git.support.model.FetchResult fetched = client.remote().fetch(branch);
-                commit = fetched.remoteCommit();
-                changed = fetched.updated();
+                // fetch + 比对直接用 jgit（git-starter 当前发布版尚无 remote()/head() 门面）
+                var repository = client.getRepository();
+                var fetch = client.getGit().fetch().setRemote("origin");
+                if (!isBlank(branch)) {
+                    fetch.setRefSpecs(new org.eclipse.jgit.transport.RefSpec(
+                            "+refs/heads/" + branch + ":refs/remotes/origin/" + branch));
+                }
+                fetch.call();
+                var remoteId = repository.resolve("refs/remotes/origin/" + (isBlank(branch) ? "HEAD" : branch));
+                String remoteCommit = remoteId == null ? null : remoteId.getName();
+                var localId = repository.resolve("HEAD");
+                String localCommit = localId == null ? null : localId.getName();
+                commit = remoteCommit;
+                changed = remoteCommit != null && !remoteCommit.equals(localCommit);
             } catch (Exception e) {
                 log.warn("[Git轮询] 项目 {} 检查更新失败: {}", id, e.getMessage());
                 return ReturnResult.error("Git 轮询失败: " + e.getMessage());
@@ -3158,14 +3168,31 @@ public class ReleaseServiceImpl implements ReleaseService {
         out.put("cloned", true);
         try (GitClient client = buildGitClient(project, workspace).build()) {
             client.open();
-            // HEAD / 分支 / 落后判断都走 SDK，本模块不直接碰 jgit 的 ObjectId 与 refs
-            var head = client.head();
-            String branch = head.branch();
+            // HEAD / 分支 / 落后判断（git-starter 当前发布版尚无 head()，直接用 jgit）
+            var repository = client.getRepository();
+            String branch = repository.getBranch();
+            var headObject = repository.resolve("HEAD");
+            String headCommit = headObject == null ? null : headObject.getName();
+            String shortCommit = headCommit == null ? null : headCommit.substring(0, Math.min(8, headCommit.length()));
+            var remoteHead = repository.resolve("refs/remotes/origin/" + branch);
+            String remoteCommit = remoteHead == null ? null : remoteHead.getName();
+            int behind = 0;
+            if (remoteHead != null && headObject != null && !remoteHead.equals(headObject)) {
+                try (var walk = new org.eclipse.jgit.revwalk.RevWalk(repository)) {
+                    walk.markStart(walk.parseCommit(remoteHead));
+                    walk.markUninteresting(walk.parseCommit(headObject));
+                    for (var ignored : walk) {
+                        behind++;
+                    }
+                } catch (Exception ignore) {
+                    behind = 0;
+                }
+            }
             out.put("branch", branch);
-            out.put("commit", head.commit());
-            out.put("shortCommit", head.shortCommit());
-            out.put("remoteCommit", head.remoteCommit());
-            out.put("behind", head.behind());
+            out.put("commit", headCommit);
+            out.put("shortCommit", shortCommit);
+            out.put("remoteCommit", remoteCommit);
+            out.put("behind", behind);
 
             // 分支：本地在前，远程去重（同一个分支名只保留一条，标 remote=true）
             // jgit 的 getAllBranches 会把 refs/heads/main 与 refs/remotes/origin/main 都列出来，

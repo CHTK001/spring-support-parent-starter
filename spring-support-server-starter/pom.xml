@@ -133,6 +133,20 @@
             <version>${jna.version}</version>
         </dependency>
 
+        <!-- RDP 原生桥（FreeRDP 3.x + JNA，跨平台 .so/.dll/.dylib 随 classpath 分发） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-native-rdp</artifactId>
+            <version>4.0.0.43</version>
+        </dependency>
+
+        <!-- 串口直连：jSerialComm 2.11.0（内含各平台原生库，运行时按 os/arch 抽取） -->
+        <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

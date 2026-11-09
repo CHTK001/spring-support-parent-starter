@@ -107,6 +107,15 @@ public final class WebSocketSessions {
     }
 
     /**
+     * 生成通道会话唯一标识
+     *
+     * @return UUID 字符串
+     */
+    public static String uuid() {
+        return java.util.UUID.randomUUID().toString();
+    }
+
+    /**
      * 还原异常链最内层的可读原因
      * <p>
      * 底层库的包装层常只带「连接失败: 地址」这类无信息量文案，真实故障（认证被拒、

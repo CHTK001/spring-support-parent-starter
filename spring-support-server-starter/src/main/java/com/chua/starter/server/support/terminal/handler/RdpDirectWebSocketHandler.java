@@ -129,6 +129,17 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         String user = WebSocketSessions.firstNonBlank(operator, resolved.getData().username());
 
         Pointer handle;
+        if (!RdpjBridge.isLoaded()) {
+            // 尝试加载一次，失败则把根因回给浏览器，避免抛 NPE 这类无诊断价值的错误
+            RdpjBridge.load();
+        }
+        if (!RdpjBridge.isLoaded()) {
+            Throwable cause = RdpjBridge.loadError();
+            String detail = cause == null ? "原生库缺失" : WebSocketSessions.describeCause(cause);
+            log.warn("[terminal-rdp] RDP 原生库未加载 hostId={} {}", hostId, detail);
+            reject(wsSession, "RDP 原生库未加载 - " + detail);
+            return;
+        }
         try {
             handle = RdpjBridge.instance().rdpj_create();
         } catch (Throwable e) {
@@ -204,7 +215,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int button = readInt(payload, "button", 1);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_mouse(bridge.handle, x, y, button, down ? 1 : 0);
+                int rc = rdpj.rdpj_mouse(bridge.handle, x, y, button, down);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 鼠标事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -215,7 +226,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int keysym = readInt(payload, "keysym", 0);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down ? 1 : 0);
+                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 键盘事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -303,13 +314,17 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         try {
+            boolean seenConnected = false;
             while (bridge.running) {
-                int state = rdpj.rdpj_state(handle);
-                if (state < 0 || state == 2) {
+                String status = rdpj.rdpj_status(handle);
+                if ("connected".equals(status)) {
+                    seenConnected = true;
+                } else if ("error".equals(status) || (seenConnected && "disconnected".equals(status))) {
                     // 连接失败/被远端断开时，浏览器一直等首帧会永远停在加载层，
-                    // 这里把原生层的错误原因明确回推一次。
-                    String reason = rdpj.rdpj_last_error(handle);
-                    sendErrorToBrowser(bridge, reason == null || reason.isEmpty() ? "RDP 连接已中断" : reason);
+                    // 这里把原生层的错误码明确回推一次。
+                    int errno = rdpj.rdpj_errno(handle);
+                    String reason = errno == 0 ? "RDP 连接已中断" : ("RDP 连接已中断（错误码 " + errno + "）");
+                    sendErrorToBrowser(bridge, reason);
                     return;
                 }
                 Pointer lastFrame = rdpj.rdpj_last_frame(handle);
