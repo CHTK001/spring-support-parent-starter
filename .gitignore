@@ -180,6 +180,8 @@ build-out.txt
 build-out2.txt
 build-out*.txt
 spring-support-ai-starter/data/generate-media/
+# eduai 运行期上传的答题卡图片（运行时数据，非源码）
+spring-support-eduai-starter/data/
 
 # 本轮新增：本地构建日志与一次性运维脚本不入库
 build-p*.txt
