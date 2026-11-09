@@ -3282,9 +3282,9 @@ public class ReleaseServiceImpl implements ReleaseService {
             try (GitClient client = buildGitClient(project, workspace).build()) {
                 client.open();
                 String target = isBlank(branch)
-                        ? (isBlank(project.getGitBranch()) ? client.head().branch() : project.getGitBranch().trim())
+                        ? (isBlank(project.getGitBranch()) ? client.getRepository().getBranch() : project.getGitBranch().trim())
                         : branch.trim();
-                String current = client.head().branch();
+                String current = client.getRepository().getBranch();
                 if (!target.equals(current)) {
                     client.branch().checkout(target);
                 }
@@ -3293,7 +3293,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                     return ReturnResult.error("工作区有未提交的改动，已停止拉取；请先在主机上处理或丢弃这些改动");
                 }
                 out.put("branch", target);
-                out.put("commit", client.head().commit());
+                var commitObject = client.getRepository().resolve("HEAD");
+                out.put("commit", commitObject == null ? null : commitObject.getName());
                 if (clone) {
                     // 刚克隆完，本地就是远端最新：再 pull 一次只会白跑一趟 fetch
                     out.put("updated", true);
