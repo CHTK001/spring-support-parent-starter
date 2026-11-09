@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsTerminalSession;
 import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
@@ -58,8 +59,8 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
     /** 处理为 TCP IO 字节的块 */
     private static final int BUFFER_SIZE = 8192;
 
-    /** 远端 socket 读的超时秒 */
-    private static final int SOCKET_TIMEOUT_SEC = 120;
+    /** 建连超时兜底（毫秒，配置缺失时使用） */
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 8000;
 
     private final ServerHostService serverHostService;
     private final ServerProperties serverProperties;
@@ -78,6 +79,7 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession wsSession) throws Exception {
         wsSession.setTextMessageSizeLimit(MAX_TEXT_BUFFER);
+        // [P3C A20 豁免]
         wsSession.setBinaryMessageSizeLimit(8 * 1024 * 1024);
 
         Map<String, String> params = WebSocketSessions.parseQuery(wsSession);
@@ -102,7 +104,10 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
                 ? requestedPort
                 : (host.getServerHostRemotePort() != null && host.getServerHostRemotePort() > 0
                         ? host.getServerHostRemotePort()
-                        : (telnet != null && telnet.getPort() > 0 ? telnet.getPort() : 23));
+                        : (telnet != null && telnet.getPort() > 0
+                                ? telnet.getPort()
+                                : ServerConstants.DEFAULT_TELNET_PORT));
+        int connectTimeout = telnet != null && telnet.getTimeout() > 0 ? telnet.getTimeout() : DEFAULT_CONNECT_TIMEOUT_MS;
         String hostAddress = host.getServerHostAddress();
         if (hostAddress == null || hostAddress.isBlank()) {
             reject(wsSession, "主机未配置地址");
@@ -112,8 +117,9 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
         Socket socket = null;
         try {
             socket = new Socket();
-            socket.setSoTimeout(SOCKET_TIMEOUT_SEC * 1000);
-            socket.connect(new InetSocketAddress(hostAddress, configuredPort), telnet.getTimeout());
+            // 不设 SO_TIMEOUT：交互式终端可能长时间没有输出，读超时会把空闲会话误杀；
+            // 收口统一由 WS 关闭、强制关闭与空闲扫描触发（关闭套接字会唤醒阻塞中的读）。
+            socket.connect(new InetSocketAddress(hostAddress, configuredPort), connectTimeout);
             log.info("[telnet] TCP 连接建立 sessionId={} hostId={} {}:{} real={}:{} sessionOpen={}"
                     , wsSession.getId(), hostId, hostAddress, configuredPort,
                     socket.getLocalSocketAddress(), socket.isConnected());
@@ -146,11 +152,10 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
     protected void handleBinaryMessage(WebSocketSession wsSession, BinaryMessage message) {
         Bridge bridge = bridges.get(wsSession.getId());
         if (bridge == null) {
-            log.info("[telnet] 未找到桥接体 session={} payloadLen={}", wsSession.getId(), message.getPayloadLength());
+            log.debug("[telnet] 未找到桥接体 session={} payloadLen={}", wsSession.getId(), message.getPayloadLength());
             return;
         }
-        log.info("[telnet] 收到帧 session={} len={} payload={}", wsSession.getId(), message.getPayloadLength(),
-                message.getPayloadLength());
+        log.debug("[telnet] 收到帧 session={} len={}", wsSession.getId(), message.getPayloadLength());
         bridge.toTelnet(message.getPayload());
     }
 
@@ -167,7 +172,6 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         byte[] bytes = message.getPayload().toString().getBytes(StandardCharsets.UTF_8);
-        log.info("[telnet] 收到文本 session={} len={}", wsSession.getId(), bytes.length);
         bridge.toTelnet(ByteBuffer.wrap(bytes));
     }
 
@@ -201,17 +205,9 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
         } catch (IOException e) {
             log.warn("[telnet] 发送拒绝信息失败 sessionId={}", wsSession.getId(), e);
         }
-        List<Bridge> removed = new ArrayList<>(bridges.values());
-        removed.removeIf(b -> !b.wsSession.getId().equals(wsSession.getId()));
-        bridges.values().removeAll(removed);
-        removed.forEach(b -> b.closeQuietly(reason));
-    }
-
-    private static void closeQuietly(Socket socket) {
-        try {
-            socket.close();
-        } catch (IOException e) {
-            log.debug("[telnet] 关闭套接字失败: {}", e.getMessage());
+        Bridge bridge = bridges.get(wsSession.getId());
+        if (bridge != null) {
+            bridge.closeQuietly(reason);
         }
     }
 
@@ -277,6 +273,8 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
         private final Socket socket;
         private volatile boolean closed = false;
         private volatile Thread pump;
+        /** 本连接的 Telnet 协商状态机（跨数据块保持） */
+        private final TelnetNegotiation negotiation = new TelnetNegotiation();
         private LocalDateTime lastActiveTime = LocalDateTime.now();
         private Long recordId;
 
@@ -313,7 +311,8 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
          * 启动 TCP→WS 泵
          */
         private void start() {
-            pump = new Thread(this::pumpTcp, "telnet-" + address);
+        // [P3C C1 豁免]
+        pump = new Thread(this::pumpTcp, "telnet-" + address);
             pump.setDaemon(true);
             pump.start();
             log.info("[telnet] 泵启动 sessionId={} thread={}", wsSession.getId(), pump.getName());
@@ -328,12 +327,22 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
             try (InputStream input = socket.getInputStream()) {
                 int read;
                 while (!closed && (read = input.read(buffer)) > 0) {
-                    byte[] copy = java.util.Arrays.copyOf(buffer, read);
-                    log.info("[telnet] TCP 收到 {} 字节 sessionId={} sessionOpen={} bytes={}",
-                            read, wsSession.getId(), wsSession.isOpen(), bytesToHex(copy));
-                    sendToBrowser(copy);
+                    byte[] raw = java.util.Arrays.copyOf(buffer, read);
+                    // 先剥掉 IAC 协商命令，只把可显示数据推给浏览器；
+                    // 对端的选项请求按「一律拒绝」回写，否则 xterm 会把 0xFF 序列画成乱码
+                    byte[] visible = negotiation.filterServerData(raw);
+                    byte[] replies = negotiation.drainReplies();
+                    if (replies.length > 0) {
+                        socket.getOutputStream().write(replies);
+                        socket.getOutputStream().flush();
+                    }
+                    if (visible.length > 0) {
+                        log.debug("[telnet] TCP 收到 {} 字节 sessionId={} 显示 {} 字节",
+                                read, wsSession.getId(), visible.length);
+                        sendToBrowser(visible);
+                    }
                 }
-                log.info("[telnet] TCP 读结束 sessionId={} closed={} read={}", wsSession.getId(), closed, -1);
+                log.info("[telnet] TCP 读结束 sessionId={} closed={}", wsSession.getId(), closed);
             } catch (Exception e) {
                 if (!closed) {
                     failure = e;
@@ -356,18 +365,17 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
          */
         private void sendToBrowser(byte[] bytes) {
             if (closed || !wsSession.isOpen()) {
-                log.info("[telnet] 回推失败 closed={} isOpen={} sessionId={}", closed, wsSession.isOpen(), wsSession.getId());
+                log.debug("[telnet] 回推失败 closed={} isOpen={} sessionId={}", closed, wsSession.isOpen(), wsSession.getId());
                 return;
             }
             touch();
             try {
                 synchronized (wsSession) {
                     wsSession.sendMessage(new BinaryMessage(bytes));
-                    log.info("[telnet] 回推 {} 字节至 WS sessionId={} bytes={}",
-                            bytes.length, wsSession.getId(), bytesToHex(bytes));
                 }
+                log.debug("[telnet] 回推 {} 字节至 WS sessionId={}", bytes.length, wsSession.getId());
             } catch (IOException | IllegalStateException e) {
-                log.info("[telnet] 远端输出回推失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
+                log.debug("[telnet] 远端输出回推失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
             }
         }
 
@@ -378,18 +386,21 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
          */
         private void toTelnet(ByteBuffer payload) {
             if (closed) {
-                log.info("[telnet] toTelnet 通道已关闭 sessionId={}", wsSession.getId());
+                log.debug("[telnet] toTelnet 通道已关闭 sessionId={}", wsSession.getId());
                 return;
             }
             try {
                 byte[] bytes = new byte[payload.remaining()];
                 payload.get(bytes);
-                if (bytes.length > 0) {
-                    socket.getOutputStream().write(bytes);
-                    log.info("[telnet] 发送 {} 字节至远端 {} session={} state={} timeout={}",
-                            bytes.length, address, wsSession.getId(),
-                            socket.isConnected(), socket.getSoTimeout());
+                if (bytes.length == 0) {
+                    return;
                 }
+                // 回车统一成 NVT 的 CR LF，并把数据里的 0xFF 转义，避免被对端当成命令起始
+                byte[] wire = TelnetNegotiation.escapeClientData(TelnetNegotiation.normalizeNewline(bytes));
+                socket.getOutputStream().write(wire);
+                socket.getOutputStream().flush();
+                touch();
+                log.debug("[telnet] 发送 {} 字节至远端 {} session={}", wire.length, address, wsSession.getId());
             } catch (IOException e) {
                 closeQuietly("Telnet 发送失败: " + WebSocketSessions.describeCause(e));
             }
@@ -407,10 +418,18 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
             closed = true;
             bridges.remove(wsSession.getId());
             log.info("[telnet] 桥接关闭 sessionId={} {} reason={}", wsSession.getId(), address, reason);
+            if (recordId != null) {
+                terminalSessionService.closeRecord(recordId, reason);
+            }
             try {
                 socket.close();
             } catch (IOException e) {
                 log.debug("[telnet] 关闭远端连接失败 {}: {}", address, e.getMessage());
+            }
+            try {
+                wsSession.close(CloseStatus.NORMAL);
+            } catch (IOException e) {
+                log.debug("[telnet] 关闭 WS 失败 sessionId={}", wsSession.getId());
             }
         }
 
@@ -422,16 +441,5 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
                     ? "远端 TCP 读结束"
                     : "TCP 读取异常: " + WebSocketSessions.describeCause(failure);
         }
-    }
-
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
-            if (sb.length() > 60) {
-                return sb.substring(0, 60) + "...";
-            }
-        }
-        return sb.toString();
     }
 }

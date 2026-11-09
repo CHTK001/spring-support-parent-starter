@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
  * </p>
  * <p>
  * 帧约定：二进制帧 = 帧头 32 字节（uint32_x8: width, height, stride, bpp, x, y, cx, cy）
- * + BGRA 像素（bpp 字节/像素、每行 stride 字节；自底向上扫描线，canvas 绘制时翻转）；
+ * + RGBA 像素（4 字节/像素、每行 stride 字节，自上而下扫描线，可直接喂 canvas ImageData）；
  * 文本帧 = JSON 控制指令（{"type":"mouse","x":..,"y":..,"button":..,"down":..} 等）。
  * </p>
  * 端点：{@code /ws/ms/server/terminal/rdp?hostId=&identityId=&width=&height=&user=}
@@ -141,6 +141,13 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, "RDP 连接创建失败（RDP 实例未创建）");
             return;
         }
+        // 把浏览器申请的分辨率写进 FreeRDP 设置：必须在 rdpj_connect 之前，
+        // 否则原生层用 1024×768 的兜底尺寸建连，画面会被拉伸。
+        try {
+            RdpjBridge.instance().rdpj_resize(handle, width, height);
+        } catch (Throwable e) {
+            log.debug("[terminal-rdp] 设置请求分辨率失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
+        }
 
         RdpBridge bridge = new RdpBridge(handle, wsSession, hostId, width, height, user);
         MsTerminalSession record = terminalSessionService.openRecord(
@@ -154,6 +161,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                     wsSession.getId(), hostId, host.getServerHostAddress(), port);
             // 连接手柄后启动帧泵（关闭通道），ramp 另一个线程外感受
             bridge.running = true;
+            // [P3C C1 豁免]
             new Thread(() -> pumpFrames(bridge), "rdp-pump-" + wsSession.getId()).start();
         } catch (Throwable e) {
             bridges.remove(wsSession.getId());
@@ -196,7 +204,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int button = readInt(payload, "button", 1);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_mouse(bridge.handle, x, y, button, down);
+                int rc = rdpj.rdpj_mouse(bridge.handle, x, y, button, down ? 1 : 0);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 鼠标事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -207,12 +215,24 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int keysym = readInt(payload, "keysym", 0);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down);
+                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down ? 1 : 0);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 键盘事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
             } catch (Throwable e) {
                 log.warn("[terminal-rdp] 键盘事件推送失败 sessionId={} {}", wsSession.getId(), e.getMessage());
+            }
+        } else if (payload.contains("\"wheel\"")) {
+            int x = readInt(payload, "x", 0);
+            int y = readInt(payload, "y", 0);
+            int delta = readInt(payload, "delta", 0);
+            try {
+                int rc = rdpj.rdpj_wheel(bridge.handle, x, y, delta);
+                if (rc != 0) {
+                    log.warn("[terminal-rdp] 滚轮事件推送失败 sessionId={} {}", wsSession.getId(), rc);
+                }
+            } catch (Throwable e) {
+                log.warn("[terminal-rdp] 滚轮事件推送失败 sessionId={} {}", wsSession.getId(), e.getMessage());
             }
         } else if (payload.contains("\"resize\"")) {
             int nextWidth = readInt(payload, "width", bridge.width);
@@ -284,6 +304,14 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         }
         try {
             while (bridge.running) {
+                int state = rdpj.rdpj_state(handle);
+                if (state < 0 || state == 2) {
+                    // 连接失败/被远端断开时，浏览器一直等首帧会永远停在加载层，
+                    // 这里把原生层的错误原因明确回推一次。
+                    String reason = rdpj.rdpj_last_error(handle);
+                    sendErrorToBrowser(bridge, reason == null || reason.isEmpty() ? "RDP 连接已中断" : reason);
+                    return;
+                }
                 Pointer lastFrame = rdpj.rdpj_last_frame(handle);
                 if (lastFrame == null || lastFrame.equals(Pointer.NULL)) {
                     Thread.sleep(FRAME_INTERVAL_MS);
@@ -333,6 +361,26 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             }
         } catch (IOException | IllegalStateException e) {
             log.debug("[terminal-rdp] 帧输出失败 sessionId={}: {}", bridge.wsSession.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 向浏览器推送错误文本帧（前端按字符串帧显示错误层）
+     *
+     * @param bridge 桥接上下文
+     * @param reason 错误原因
+     */
+    private void sendErrorToBrowser(RdpBridge bridge, String reason) {
+        if (bridge == null || bridge.closed || !bridge.wsSession.isOpen()) {
+            return;
+        }
+        try {
+            synchronized (bridge.wsSession) {
+                bridge.wsSession.sendMessage(new TextMessage("{\"c\":\"error\",\"msg\":\""
+                        + WebSocketSessions.escapeJson(reason) + "\"}"));
+            }
+        } catch (IOException | IllegalStateException e) {
+            log.debug("[terminal-rdp] 错误帧输出失败 sessionId={}: {}", bridge.wsSession.getId(), e.getMessage());
         }
     }
 
@@ -412,6 +460,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             }
         }
         try {
+            // [P3C A20 豁免]
             Thread.sleep(200);  // 让泵线程自行静默收口
         } catch (InterruptedException ignored) {
         }
@@ -474,6 +523,9 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             start++;
         }
         int end = start;
+        if (end < json.length() && json.charAt(end) == '-') {
+            end++;
+        }
         while (end < json.length() && Character.isDigit(json.charAt(end))) {
             end++;
         }

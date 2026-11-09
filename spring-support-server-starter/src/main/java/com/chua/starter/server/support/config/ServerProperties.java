@@ -44,6 +44,34 @@ public class ServerProperties {
     private int execConcurrency = 16;
 
     /**
+     * Telnet 直连配置
+     * <p>
+     * Telnet 是「目标机自己开着的 23 端口」，平台只做 WS → TCP 透传，
+     * 因此这里只留两个参数：没配端口时用哪个默认值、连不上时等多久。
+     * </p>
+     */
+    private Telnet telnet = new Telnet();
+
+    /**
+     * Telnet 直连参数
+     * @author CH
+     * @since 4.0.0.51
+     */
+    @Data
+    public static class Telnet {
+
+        /**
+         * 默认 Telnet 端口（主机台账没配远控端口时使用）
+         */
+        private int port = 23;
+
+        /**
+         * 建连超时（毫秒）
+         */
+        private int timeout = 8000;
+    }
+
+    /**
      * guacd 连接配置
      * @author CH
      * @since 4.0.0
