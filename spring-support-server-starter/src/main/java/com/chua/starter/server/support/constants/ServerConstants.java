@@ -24,6 +24,26 @@ public final class ServerConstants {
     public static final String WEBSOCKET_VNC_DIRECT_PATH = "/ws/ms/server/terminal/vnc";
 
     /**
+     * Telnet 直连字符终端 webSocket 端点路径（不经 guacd）
+     */
+    public static final String WEBSOCKET_TELNET_DIRECT_PATH = "/ws/ms/server/terminal/telnet";
+
+    /**
+     * RDP 直连桌面 webSocket 端点路径（不经 guacd，走 rdpj 原生桥）
+     */
+    public static final String WEBSOCKET_RDP_DIRECT_PATH = "/ws/ms/server/terminal/rdp";
+
+    /**
+     * 默认 Telnet 端口
+     */
+    public static final int DEFAULT_TELNET_PORT = 23;
+
+    /**
+     * 默认 RDP 端口
+     */
+    public static final int DEFAULT_RDP_PORT = 3389;
+
+    /**
      * 接口根路径
     */
     public static final String API_PREFIX = "/ms/server";

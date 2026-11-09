@@ -60,9 +60,9 @@ public class HostArchiveServiceImpl implements HostArchiveService {
     private static final String DEFAULT_COLLECT_MODE = "SCHEDULED";
 
     /**
-     * 默认远控模式
+     * 默认远控模式（各协议均有平台自研直连客户端）
      */
-    private static final String DEFAULT_REMOTE_MODE = "GUACD";
+    private static final String DEFAULT_REMOTE_MODE = "DIRECT";
 
     /**
      * 默认认证类型

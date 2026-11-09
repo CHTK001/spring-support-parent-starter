@@ -101,9 +101,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     private static final int DEFAULT_SSH_PORT = 22;
 
       /**
-       * 默认远控模式（经 guacd 中继，与历史行为一致）
+       * 默认远控模式：各协议都有平台自研直连客户端，缺省走 DIRECT；
+       * 存量台账已保存的通道值不动，只有空值才补默认
       */
-    private static final String DEFAULT_REMOTE_MODE = "GUACD";
+    private static final String DEFAULT_REMOTE_MODE = "DIRECT";
 
       /**
        * 远控通道取值：GUACD 中转 / DIRECT 平台原生客户端直连 / NONE 不经平台通道
@@ -111,9 +112,10 @@ public class ServerHostServiceImpl implements ServerHostService {
     private static final Set<String> REMOTE_MODES = Set.of("GUACD", "DIRECT", "NONE");
 
       /**
-       * 平台自研直连通道覆盖的协议：SSH 为 MINA SSHD PTY 桥接，VNC 为 RFB 帧桥接
+       * 平台自研直连通道覆盖的协议：SSH（MINA SSHD PTY）、TELNET（WS↔TCP 透传）、
+       * VNC（RFB 帧桥接）、RDP（FreeRDP 原生桥 rdpj.dll）
       */
-    private static final Set<String> DIRECT_PROTOCOLS = Set.of("SSH", "VNC");
+    private static final Set<String> DIRECT_PROTOCOLS = Set.of("SSH", "TELNET", "VNC", "RDP");
 
       /**
        * JSON 序列化器
@@ -1719,9 +1721,9 @@ public class ServerHostServiceImpl implements ServerHostService {
       /**
        * 校验远控通道与协议的搭配
        * <p>
-       * RDP 只能由 guacd 中转渲染，平台没有原生 RDP 客户端；DIRECT 是平台自研通道，
-       * 覆盖 SSH（MINA SSHD PTY 桥接）与 VNC（RFB 帧桥接）；NONE 表示不经平台通道
-       * （SSH 用平台终端、VNC 用本机客户端）。
+       * RDP 也由平台自研原生桥（FreeRDP + rdpj.dll）直连；DIRECT 覆盖 SSH（MINA SSHD PTY）、
+       * Telnet（WS↔TCP 透传）、VNC（RFB 帧桥接）与 RDP；GUACD 保留为可选中转，不再强制。
+       * NONE 表示不经平台通道（SSH 用平台终端、VNC 用本机客户端）。
        * </p>
        * <p>
        * VNC 直连只实现 RFB 标准认证（None/VNC 口令），macOS 远程管理的 ARD、TLS、AES 等
@@ -1740,9 +1742,6 @@ public class ServerHostServiceImpl implements ServerHostService {
             return "远控通道只能是 GUACD/DIRECT/NONE，当前值: " + mode;
         }
         String protocol = effectiveRemoteProtocol(host);
-        if ("RDP".equals(protocol) && !"GUACD".equals(mode)) {
-            return "RDP 必须经 guacd 中转通道，远控通道不能设为 " + mode;
-        }
         if ("DIRECT".equals(mode) && !DIRECT_PROTOCOLS.contains(protocol)) {
             return protocol + " 不支持平台直连通道，请改为 guacd 中转或无需通道";
         }

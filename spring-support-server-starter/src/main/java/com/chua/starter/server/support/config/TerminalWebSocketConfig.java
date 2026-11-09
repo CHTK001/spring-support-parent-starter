@@ -1,9 +1,11 @@
 package com.chua.starter.server.support.config;
 
 import com.chua.starter.server.support.constants.ServerConstants;
+import com.chua.starter.server.support.terminal.handler.RdpDirectWebSocketHandler;
 import com.chua.starter.server.support.terminal.handler.TerminalWebSocketHandler;
 import com.chua.starter.server.support.terminal.handler.SshDirectWebSocketHandler;
 import com.chua.starter.server.support.terminal.handler.VncWebsockifyWebSocketHandler;
+import com.chua.starter.server.support.terminal.telnet.TelnetWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -18,7 +20,10 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * {@link ServerConstants#WEBSOCKET_SSH_DIRECT_PATH}（不经 guacd）；
  * VNC 直连桥 {@link VncWebsockifyWebSocketHandler} 注册到
  * {@link ServerConstants#WEBSOCKET_VNC_DIRECT_PATH}（websockify 透明字节转发，
- * 浏览器侧 noVNC 讲 RFB）。
+ * 浏览器侧 noVNC 讲 RFB）；Telnet 直连桥
+ * {@link TelnetWebSocketHandler} 注册到
+ * {@link ServerConstants#WEBSOCKET_TELNET_DIRECT_PATH}（WS 二进制帧 ↔ 目标机 23 端口的
+ * TCP 字节流，IAC 协商由桥接体内处理，浏览器侧只看到可显示文本）。
  * </p>
  *
  * @author CH
@@ -44,18 +49,34 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
     private final VncWebsockifyWebSocketHandler vncWebsockifyWebSocketHandler;
 
     /**
+     * Telnet 直连处理器
+     */
+    private final TelnetWebSocketHandler telnetDirectWebSocketHandler;
+
+    /**
+     * RDP 直连处理器
+     */
+    private final RdpDirectWebSocketHandler rdpDirectWebSocketHandler;
+
+    /**
      * 构造并注入各处理器
      *
      * @param terminalWebSocketHandler       guacd 桥接处理器
      * @param sshDirectWebSocketHandler      SSH 直连处理器
      * @param vncWebsockifyWebSocketHandler  VNC websockify 桥接处理器
+     * @param telnetDirectWebSocketHandler   Telnet 直连处理器
+     * @param rdpDirectWebSocketHandler      RDP 直连处理器
      */
     public TerminalWebSocketConfig(TerminalWebSocketHandler terminalWebSocketHandler,
                                    SshDirectWebSocketHandler sshDirectWebSocketHandler,
-                                   VncWebsockifyWebSocketHandler vncWebsockifyWebSocketHandler) {
+                                   VncWebsockifyWebSocketHandler vncWebsockifyWebSocketHandler,
+                                   TelnetWebSocketHandler telnetDirectWebSocketHandler,
+                                   RdpDirectWebSocketHandler rdpDirectWebSocketHandler) {
         this.terminalWebSocketHandler = terminalWebSocketHandler;
         this.sshDirectWebSocketHandler = sshDirectWebSocketHandler;
         this.vncWebsockifyWebSocketHandler = vncWebsockifyWebSocketHandler;
+        this.telnetDirectWebSocketHandler = telnetDirectWebSocketHandler;
+        this.rdpDirectWebSocketHandler = rdpDirectWebSocketHandler;
     }
 
     /**
@@ -70,6 +91,10 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(sshDirectWebSocketHandler, ServerConstants.WEBSOCKET_SSH_DIRECT_PATH)
                 .setAllowedOriginPatterns("*");
         registry.addHandler(vncWebsockifyWebSocketHandler, ServerConstants.WEBSOCKET_VNC_DIRECT_PATH)
+                .setAllowedOriginPatterns("*");
+        registry.addHandler(telnetDirectWebSocketHandler, ServerConstants.WEBSOCKET_TELNET_DIRECT_PATH)
+                .setAllowedOriginPatterns("*");
+        registry.addHandler(rdpDirectWebSocketHandler, ServerConstants.WEBSOCKET_RDP_DIRECT_PATH)
                 .setAllowedOriginPatterns("*");
     }
 }
