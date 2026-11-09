@@ -95,6 +95,7 @@ public class CdpEngineService {
             "Page.navigateFrameCompleted",
             "Page.navigateRequested",
             "Page.screenshot",
+            "Page.screencastFrame",
             "Tracing.dataCollected",
             "Tracing.tracingComplete",
             "Tracing.bufferUsage",
@@ -135,6 +136,7 @@ public class CdpEngineService {
             "Page.navigateFrameCompleted",
             "Page.navigateRequested",
             "Page.screenshot",
+            "Page.screencastFrame",
             "Tracing.dataCollected",
             "Tracing.tracingComplete",
             "Tracing.bufferUsage"
