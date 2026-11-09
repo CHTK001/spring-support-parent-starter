@@ -200,6 +200,8 @@ final class FakeMagpieServer implements AutoCloseable {
             case "/api/provider/delete" -> respond(exchange, 200, "{\"providers\":[]}");
             case "/api/provider/models" -> respond(exchange, 200,
                     "{\"count\":2,\"dropped\":0,\"provider\":{\"models\":[{\"id\":\"alpha\"},{\"id\":\"beta\"}]}}");
+            case "/api/provider/test" -> respond(exchange, 200, "{\"ok\":true}");
+            case "/api/provider/detect" -> respond(exchange, 200, "{\"ok\":true,\"providers\":[]}");
             case "/api/usage/workbuddy-checkin" -> respond(exchange, 200,
                     "[{\"account\":\"a1\",\"message\":\"signed\"}]");
             case "/api/usage/plugin-checkin" -> respond(exchange, 200,

@@ -1,7 +1,9 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.account.channel.magpie;
 
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.channel.ChannelException;
+import com.chua.starter.common.support.channel.ChannelUpstreamCodec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -123,6 +125,53 @@ class MagpieUpstreamAdminTest {
         assertEquals(1, server.hits("/api/plugins/add"));
         assertTrue(server.lastBody().contains("opencode-workbuddy-auth"));
         assertFalse(server.lastBody().contains("connectionId"), "控制字段不应透传给 magpie");
+    }
+
+    @Test
+    @DisplayName("provider 形态适配按渠道走 SPI 注册")
+    void providerCodecIsDiscoverable() {
+        ChannelUpstreamCodec codec = ServiceProvider.of(ChannelUpstreamCodec.class).getExtension("magpie");
+        assertNotNull(codec);
+        assertTrue(codec.supports("magpie"));
+        assertFalse(codec.supports("codex"));
+    }
+
+    @Test
+    @DisplayName("provider 动作清掉列表派生物：balanceToken 转字符串、脱敏 key 置空")
+    void actionNormalizesProviderPayload() {
+        Map<String, Object> balanceToken = new LinkedHashMap<>();
+        balanceToken.put("takes", Boolean.FALSE);
+        balanceToken.put("set", Boolean.FALSE);
+        Map<String, Object> provider = new LinkedHashMap<>();
+        provider.put("id", "workbuddy");
+        provider.put("balanceToken", balanceToken);
+        provider.put("key", "****abcd");
+        provider.put("keyList", List.of(Map.of("id", "k1", "key", "sk-secret")));
+        provider.put("models", List.of(Map.of("id", "glm-5", "name", "GLM-5"), "plain-model"));
+        provider.put("account", Map.of("user", "a1"));
+        provider.put("agents", List.of());
+        provider.put("move", Map.of("state", "plugin"));
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("provider", provider);
+        payload.put("connectionId", "c1");
+
+        Map<String, Object> result = admin.action(credentials(), "test", payload);
+
+        assertNotNull(result);
+        assertEquals(1, server.hits("/api/provider/test"));
+        String body = server.lastBody();
+        // {takes,set} 是列表的「能否取余额」说明对象，落成空串才不会让 Go 解码失败
+        assertTrue(body.contains("\"balanceToken\":\"\""), body);
+        assertFalse(body.contains("\"keyList\""), body);
+        assertFalse(body.contains("sk-secret"), body);
+        assertFalse(body.contains("\"move\""), body);
+        assertFalse(body.contains("\"account\""), body);
+        assertFalse(body.contains("\"agents\""), body);
+        assertFalse(body.contains("connectionId"), body);
+        // 列表里的 ****abcd 是脱敏值，回传会让动作拿假 key 去测试
+        assertTrue(body.contains("\"key\":\"\""), body);
+        // 列表下发的是对象数组，动作输入只收模型 id 字符串
+        assertTrue(body.contains("\"models\":[\"glm-5\",\"plain-model\"]"), body);
     }
 
     @Test
