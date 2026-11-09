@@ -34,9 +34,21 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     public static final String FIELD_AGENT_IMPL = "agent_impl";
 
     /**
-     * Agent 引擎默认实现
+     * opencode 自动下载并启动开关字段标识
      */
-    public static final String DEFAULT_AGENT_IMPL = "agentscope";
+    public static final String FIELD_OPENCODE_AUTO_INSTALL = "opencode_auto_install";
+
+    /**
+     * Agent 引擎默认实现（本机 opencode 常驻服务；不可用时自动降级 agentscope）
+     */
+    public static final String DEFAULT_AGENT_IMPL = "opencode-server";
+
+    /**
+     * Agent 引擎字段描述（注册默认值与启动期默认值迁移共用同一份文案）
+     */
+    public static final String DEFAULT_AGENT_IMPL_DESCRIPTION =
+            "Agent 引擎实现（默认 opencode-server；opencode 不可用时自动降级 agentscope；"
+                    + "旧值 opencode 自动映射为 opencode-server）";
 
     /**
      * 分组显示名称
@@ -129,7 +141,10 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                         "是否允许普通账号调用工具（关闭时普通账号的 agent 不启用任何工具；管理员不受影响）",
                         22, true),
                 new SettingItem(FIELD_AGENT_IMPL, DEFAULT_AGENT_IMPL, "STRING",
-                        "Agent 引擎实现（agentscope / opencode-server；旧值 opencode 自动映射为 opencode-server）", 23, true)
+                        DEFAULT_AGENT_IMPL_DESCRIPTION, 23, true),
+                new SettingItem(FIELD_OPENCODE_AUTO_INSTALL, "true", "BOOLEAN",
+                        "opencode 不可用时是否自动下载并启动本机 opencode serve（关闭后仅探测已安装文件，"
+                                + "缺失即降级 agentscope）", 32, true)
         );
     }
 }

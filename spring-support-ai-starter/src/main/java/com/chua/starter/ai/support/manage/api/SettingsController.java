@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.ai.support.util.PrivateAddressGuard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.deeplearning.support.agent.opencode.OpencodeServerProcess;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingDefinitions;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
@@ -124,6 +125,11 @@ public class SettingsController {
      * 事件发布器：用户覆盖写完后触发热更新（与全局写入同口径）
      */
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * Agent 引擎工厂：runtime 状态块里的「实际生效 / 降级 / opencode 可用性」从这里取
+     */
+    private final AgentProviderFactory agentProviderFactory;
     /**
      * 获取指定分组对本人生效的设置
      *
@@ -509,18 +515,43 @@ public class SettingsController {
             }
         }
         result.put("__meta", origins);
-        // runtime 分组额外回带「界面选择」与「实际生效运行时」：被收敛的兼容引擎自本版本起
-        // 是全功能平替，实例化时复用完整工具链运行时，管理端与验收需要能直接看到这层映射，
-        // 而不是只凭界面文案。与 __meta 一样用双下划线前缀，不混进 field->value。
+        // runtime 分组额外回带「界面选择 / 目标运行时 / 实际生效运行时 / 降级信息」：opencode
+        // 引擎依赖本机常驻服务，不可用时会自动降级 agentscope，管理端必须能直接看到这层
+        // 映射与降级原因，而不是只凭界面文案。与 __meta 一样用双下划线前缀，不混进 field->value。
         if (RuntimeGlobalSettingProvider.GROUP.equals(group)) {
-            Object selectedRaw = result.get(RuntimeGlobalSettingProvider.FIELD_AGENT_IMPL);
-            String selected = selectedRaw == null ? null : String.valueOf(selectedRaw);
-            Map<String, Object> runtime = new LinkedHashMap<>(2);
-            runtime.put("selected", selected);
-            runtime.put("effective", AgentProviderFactory.effectiveRuntime(selected));
-            result.put("__runtime", runtime);
+            result.put("__runtime", runtimeStatus());
         }
         return result;
+    }
+
+    /**
+     * 组装 runtime 组的运行时状态块。
+     *
+     * @return selected / requested / effective / degraded / fallback / reason / preparing / opencode
+     */
+    private Map<String, Object> runtimeStatus() {
+        AgentProviderFactory.RuntimeResolution resolution = agentProviderFactory.resolution();
+        Map<String, Object> runtime = new LinkedHashMap<>(8);
+        runtime.put("selected", resolution.selected());
+        runtime.put("requested", resolution.requested());
+        runtime.put("effective", resolution.effective());
+        runtime.put("degraded", resolution.degraded());
+        runtime.put("fallback", resolution.fallback());
+        runtime.put("reason", resolution.reason());
+        runtime.put("preparing", resolution.preparing());
+        runtime.put("autoInstall", agentProviderFactory.autoInstallEnabled());
+        OpencodeServerProcess.Availability availability = resolution.opencode();
+        if (availability != null) {
+            Map<String, Object> opencode = new LinkedHashMap<>(6);
+            opencode.put("installed", availability.installed());
+            opencode.put("binary", availability.binary());
+            opencode.put("serverReady", availability.serverReady());
+            opencode.put("preparing", availability.preparing());
+            opencode.put("degraded", availability.degraded());
+            opencode.put("reason", availability.reason());
+            runtime.put("opencode", opencode);
+        }
+        return runtime;
     }
 
     /**
