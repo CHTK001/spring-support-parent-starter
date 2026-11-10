@@ -663,6 +663,49 @@ public class ApiChannelAuthController {
     }
 
     /**
+     * 取承载「渠道模型配置」的 provider 行主键。
+     *
+     * <p>AI 账号渠道沿用 {@code channel()} 的大写形式（见
+     * {@link #requireChannelProvider(String)}）；免登录对话 / 文生图渠道不在
+     * {@code AccountChannelAuthManager} 注册表里，但它们同样需要在页面里逐项
+     * 配置模型启用状态，因此仍用「渠道标识大写」作为 providerId 并惰性建行。
+     * 两者都落在 {@code sys_ai_provider_model}，读写只有一份实现。</p>
+     *
+     * @param channel 渠道标识
+     * @return providerId（必然存在对应的 provider 行）
+     */
+    @Transactional
+    private String ensureChannelProviderId(String channel) {
+        AccountChannelAuthManager impl = resolveManager(managers(), channel);
+        if (impl != null) {
+            return requireChannelProvider(channel).getProviderId();
+        }
+        if (channel == null || channel.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "渠道标识不能为空");
+        }
+        String providerId = channel.toUpperCase(java.util.Locale.ROOT);
+        SysAiProvider existing = providerMapper.selectById(providerId);
+        if (existing != null) {
+            return providerId;
+        }
+        long now = System.currentTimeMillis();
+        SysAiProvider p = new SysAiProvider();
+        p.setProviderId(providerId);
+        p.setPlatform(providerId);
+        p.setName(channel);
+        // 内置模型渠道没有上游地址：base_url 落空占位，模型清单由客户端提供
+        p.setBaseUrl("");
+        p.setAuthScheme(OAUTH_SCHEME);
+        p.setEnabled(true);
+        p.setSortOrder(providerMapper.selectCount(null).intValue());
+        p.setCreatedAt(now);
+        p.setUpdatedAt(now);
+        providerMapper.insert(p);
+        log.info("[ChannelAuth] 惰性物化内置模型渠道 provider 行: {}", providerId);
+        return providerId;
+    }
+
+    /**
      * 发起渠道账号绑定。
      *
      * <p>调用 SPI {@link AccountChannelAuthManager#startLogin()}，
@@ -1159,8 +1202,22 @@ public class ApiChannelAuthController {
         String connectionId = body == null ? null : asString(body.get("connectionId"));
         SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
         if (conn == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND,
-                    "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+            if (label != null || connectionId != null) {
+                // 明确点名的账号不存在：这是真的找不到，保留 404 语义。
+                throw new ApiException(ApiErrorCode.NOT_FOUND,
+                        "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+            }
+            // 网关里没有该渠道上游、本地也没绑过账号。原来这里抛 404，页面只能显示
+            // 「未找到渠道账号: qoder-cn / null」——null 是拼接出来的空 label，用户
+            // 看不出该做什么。改为一次正常返回，并把下一步写成可操作的说明。
+            Map<String, Object> credit = new LinkedHashMap<>(2);
+            credit.put("error", "网关与本地都没有「" + channel + "」的账号："
+                    + "请先在「Magpie 统一网关」里添加该上游，或在渠道页绑定账号");
+            out.put("ok", false);
+            out.put("channel", channel);
+            out.put("label", channel);
+            out.put("credit", credit);
+            return ApiResult.ok(out);
         }
         ChannelCreditProvider provider = creditProviderOf(channel);
         if (provider == null) {
@@ -1398,7 +1455,9 @@ public class ApiChannelAuthController {
      *
      * <p>去重语义：按 ({@code providerId}, {@code model}) 唯一键判断——
      * 已存在的行保留用户改过的 enabled / alias / contextWindow，只补 null 字段；
-     * 不存在的行直接插入（enabled 默认 true）。</p>
+     * 不存在的行直接插入，<b>默认不启用</b>。拉取只负责把上游模型目录同步进来，
+     * 启用哪些由用户在页面上勾选——以前插入即 enabled=true，等于一次拉取就把
+     * 几十个模型全部打开，用户还得逐个关掉。</p>
      *
      * @param channel 渠道标识
      * @param body 请求体：{ connectionId（优先）或 label（兜底，为空取主账号） }
@@ -1478,7 +1537,8 @@ public class ApiChannelAuthController {
                 m.setProviderId(provider.getProviderId());
                 m.setModel(modelName);
                 m.setAlias(modelAlias);
-                m.setEnabled(Boolean.TRUE);
+                // 新拉到的模型默认不启用：拉取是「同步目录」，不是「全部上线」
+                m.setEnabled(Boolean.FALSE);
                 m.setContextWindow(contextWindow);
                 if (!metrics.isEmpty()) {
                     m.setMetrics(metrics);
@@ -1576,11 +1636,52 @@ public class ApiChannelAuthController {
     }
 
     /**
+     * 读取渠道的模型配置（启用状态 / 别名 / 上下文窗口 / 价格指标）。
+     *
+     * <p>AI 账号渠道的配置随 {@code /api/channels} 摘要一并返回；免登录对话 /
+     * 文生图渠道的模型清单来自客户端内置表，摘要里没有数据库的启用状态，
+     * 渠道页用本端点取回用户保存过的配置再合并。缺省的模型不会出现在这里，
+     * 前端按「未启用」处理。</p>
+     *
+     * @param channel 渠道标识
+     * @return { ok, channel, models: [{ model, enabled, alias, contextWindow, free?, priceInput?, ... }] }
+     */
+    @GetMapping("/{channel}/models/config")
+    public ApiResult<Map<String, Object>> channelModelConfig(@PathVariable("channel") String channel) {
+        String providerId = ensureChannelProviderId(channel);
+        List<SysAiProviderModel> rows = modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId));
+        List<Map<String, Object>> items = new ArrayList<>(rows == null ? 0 : rows.size());
+        if (rows != null) {
+            for (SysAiProviderModel row : rows) {
+                Map<String, Object> item = new LinkedHashMap<>(8);
+                item.put("model", row.getModel());
+                item.put("enabled", Boolean.TRUE.equals(row.getEnabled()));
+                item.put("alias", row.getAlias());
+                item.put("contextWindow", row.getContextWindow());
+                putModelMetrics(item, row.getMetrics());
+                items.add(item);
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("models", items);
+        return ApiResult.ok(out);
+    }
+
+    /**
      * 批量启用 / 停用渠道下的模型（渠道页「保存」按钮）。
      *
      * <p>渠道页先在前端勾选，点保存才落库；这里按目标状态分两组各发一条
      * {@code UPDATE ... WHERE model IN (...)}，所以 82 个模型的改动也只产生
      * 两条 SQL、一次 HTTP，而不是前端串行发 82 个 PUT。</p>
+     *
+     * <p>免登录对话 / 文生图渠道的模型是客户端内置的，不能从上游拉取，
+     * 但启用状态同样要能保存：它们没有 {@code AccountChannelAuthManager}，
+     * 这里按「渠道标识大写」惰性物化 provider 行来承载模型配置
+     * （见 {@link #ensureChannelProviderId(String)}）。</p>
      *
      * @param channel 渠道标识
      * @param body    {@code { items: [{ model, enabled }] }}
@@ -1592,8 +1693,7 @@ public class ApiChannelAuthController {
             @PathVariable("channel") String channel,
             @RequestBody(required = false) Map<String, Object> body) {
         ownerId();
-        AccountChannelAuthManager impl = requireManager(channel);
-        String providerId = providerIdOf(impl);
+        String providerId = ensureChannelProviderId(channel);
         List<String> enable = new ArrayList<>();
         List<String> disable = new ArrayList<>();
         Object raw = body == null ? null : body.get("items");
@@ -1630,11 +1730,68 @@ public class ApiChannelAuthController {
                     .set(SysAiProviderModel::getEnabled, false)
                     .set(SysAiProviderModel::getUpdatedAt, now));
         }
+        // 内置模型渠道（免登录对话 / 文生图）从未「拉取」过，sys_ai_provider_model
+        // 里可能一条行都没有，UPDATE 命中 0 行；保存后刷新又会回到默认值。
+        // 因此对没有管理器的渠道补建缺失的模型行，用户第一次保存即生效并有记录。
+        if (resolveManager(managers(), channel) == null) {
+            updated += insertMissingModelRows(providerId, enable, disable, now);
+        }
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("ok", true);
-        out.put("channel", impl.channel());
+        out.put("channel", channel);
         out.put("updated", updated);
         return ApiResult.ok(out);
+    }
+
+    /**
+     * 为内置模型渠道补建缺失的模型行。
+     *
+     * <p>{@link #setModelsEnabled} 主体用两条批量 UPDATE 落库，依赖行已存在；
+     * 免登录对话 / 文生图渠道的模型清单由客户端内置，从未走过 {@code import-models}，
+     * 表里没有任何行，第一次保存就会「成功但没生效」。这里按目标状态补建。</p>
+     *
+     * @param providerId 渠道对应的 providerId
+     * @param enable     目标为启用的模型名
+     * @param disable    目标为停用的模型名
+     * @param now        统一时间戳
+     * @return 新建行数
+     */
+    private int insertMissingModelRows(String providerId, List<String> enable,
+                                       List<String> disable, long now) {
+        List<String> all = new ArrayList<>(enable.size() + disable.size());
+        all.addAll(enable);
+        all.addAll(disable);
+        if (all.isEmpty()) {
+            return 0;
+        }
+        Set<String> existing = new HashSet<>();
+        List<SysAiProviderModel> rows = modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId)
+                        .in(SysAiProviderModel::getModel, all));
+        if (rows != null) {
+            for (SysAiProviderModel row : rows) {
+                existing.add(row.getModel());
+            }
+        }
+        int sort = modelMapper.selectCount(new LambdaQueryWrapper<SysAiProviderModel>()
+                .eq(SysAiProviderModel::getProviderId, providerId)).intValue();
+        int created = 0;
+        for (String model : all) {
+            if (existing.contains(model)) {
+                continue;
+            }
+            SysAiProviderModel m = new SysAiProviderModel();
+            m.setProviderId(providerId);
+            m.setModel(model);
+            m.setEnabled(enable.contains(model));
+            m.setSortOrder(++sort);
+            m.setCreatedAt(now);
+            m.setUpdatedAt(now);
+            modelMapper.insert(m);
+            created++;
+        }
+        return created;
     }
 
     /**
