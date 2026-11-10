@@ -130,7 +130,10 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                         "压缩前是否把首次压缩结果作为基线融合进后续摘要（避免关键信息在多次压缩中丢失）", 30, true),
                 new SettingItem("protocol_server_enabled", "false", "BOOLEAN", "是否启用聚合协议服务（独立端口，提供 OpenAI/Claude/Gemini 三协议端点）", 18),
                 new SettingItem("protocol_server_port", "8090", "NUMBER", "聚合协议服务端口（OpenAI/Claude/Gemini 三协议统一入口）", 19),
-                new SettingItem("protocol_server_host", "0.0.0.0", "STRING", "聚合协议服务绑定地址", 20),
+                // 2026-11-10：原 protocol_server_host 删除 —— 全仓无任何消费方（协议服务只读
+                // enabled/port，见 AiGlobalSettingServiceImpl 的字段映射），留在界面上就是假配置。
+                // 另：group=protocol-server 的同名三字段（enabled/port/host）也是无人读取的重复组，
+                // 已整组删除（ProtocolServerGlobalSettingProvider），真实配置只此一处。
                 new SettingItem("extra_headers", "", "JSON", "自定义请求头（JSON 格式，如 {\\\"X-Custom\\\": \\\"value\\\"}）", 21),
                 // ==================== Agent 工具权限 ====================
                 // 管理员专属：普通账号不得看到、不得修改。默认 false 表示普通账号的 agent 不启用任何工具。

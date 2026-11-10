@@ -139,7 +139,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "热更新过滤器参数", description = "不重启服务器、不重建实例，直接对第 index 个过滤器调用 updateConfig")
-    @SysLog(name = "热更新过滤器参数", content = "节点 #{#arg0} 过滤器 #{#arg1} 参数=#{#arg2}")
+    @SysLog(name = "热更新过滤器参数", content = "节点 #{#arg0} 过滤器 #{#arg1} 参数=#{#arg2.toString()}")
     @PostMapping("/{id}/filters/{index}/params")
     public ReturnResult<ServerNodeView> hotUpdateFilterParams(@PathVariable Long id,
                                                               @PathVariable Integer index,

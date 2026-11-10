@@ -39,6 +39,7 @@ import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.spi.SystemServiceProvider;
 import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
+import com.chua.starter.server.support.util.DockerProjectSettings;
 import com.chua.starter.server.support.util.HostPlatforms;
 import com.chua.starter.server.support.util.ProjectScripts;
 import lombok.RequiredArgsConstructor;
@@ -162,6 +163,22 @@ public class ReleaseServiceImpl implements ReleaseService {
        * 项目级健康检测配置的键前缀（后接项目ID），不改表结构
        */
     private static final String CFG_HEALTH_CHECK_PREFIX = "release.health.check.";
+
+      /**
+       * 健康检测命令里状态码标记：响应体之后单独输出，便于同时取到 body
+       */
+    private static final String HC_CODE_MARK = "__HC_CODE__";
+
+      /**
+       * Windows 健康检测命令里响应体的行前缀
+       */
+    private static final String HC_BODY_PREFIX = "BODY=";
+
+      /**
+       * 响应体参与判断的最大长度：只需要看 readinessState，超出部分没有意义
+       */
+    private static final int HC_BODY_MAX = 2000;
+
 
       /**
        * Actuator 定时采集默认间隔（秒）
@@ -2467,6 +2484,12 @@ public class ReleaseServiceImpl implements ReleaseService {
                 project.getMainEntry(), project.getProjectPath(), project.getLogPath(), project.getProjectName()));
         project.setStatusScript(ProjectScripts.apply(project.getStatusScript(),
                 project.getMainEntry(), project.getProjectPath(), project.getLogPath(), project.getProjectName()));
+        // Docker 项目的容器名 / 镜像 / 端口 / 环境变量来自 appConfig，只在执行期展开：
+        // 保存时不展开，改了 Docker 配置后无需重新生成脚本即可生效。
+        project.setStartScript(DockerProjectSettings.expand(project.getStartScript(), project));
+        project.setStopScript(DockerProjectSettings.expand(project.getStopScript(), project));
+        project.setRestartScript(DockerProjectSettings.expand(project.getRestartScript(), project));
+        project.setStatusScript(DockerProjectSettings.expand(project.getStatusScript(), project));
     }
 
       /**
@@ -3278,29 +3301,31 @@ public class ReleaseServiceImpl implements ReleaseService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("url", savedHealthUrl(id));
         out.put("defaultUrl", defaultHealthUrl(prepared.getData().project));
+        out.put("warmupCheck", savedWarmupCheck(id));
         return ReturnResult.ok(out);
     }
 
     /**
-     * 保存项目的健康检测地址。
+     * 保存项目的健康检测地址与预热期判定开关。
      *
-     * @param id  项目标识
-     * @param url 检测地址（http/https）
+     * @param id          项目标识
+     * @param url         检测地址（http/https）；为空时保留原地址
+     * @param warmupCheck 是否在启动预热期也按严格规则判定；为空时保留原值
      * @return 操作结果
      */
     @Override
-    public ReturnResult<Void> saveProjectHealthCheck(Long id, String url) {
+    public ReturnResult<Void> saveProjectHealthCheck(Long id, String url, Boolean warmupCheck) {
         if (id == null) {
             return ReturnResult.error("项目ID不能为空");
         }
         if (projectMapper.selectById(id) == null) {
             return ReturnResult.error("项目不存在: " + id);
         }
-        String target = url == null ? "" : url.trim();
-        if (!isBlank(target) && !isSafeHealthUrl(target)) {
+        String target = url == null ? null : url.trim();
+        if (target != null && !isBlank(target) && !isSafeHealthUrl(target)) {
             return ReturnResult.error("检测地址必须是 http:// 或 https:// 开头的 URL，且不能包含引号、空格或 shell 特殊字符");
         }
-        return persistHealthUrl(id, target);
+        return persistHealthUrl(id, target, warmupCheck);
     }
 
     /**
@@ -3345,10 +3370,19 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         String output = result.getData().get(0).getMsExecLogOutput();
         int code = parseHealthCode(output, ctx.windows);
+        String body = parseHealthBody(output, ctx.windows);
+        boolean warmup = isWarmupState(code, body);
+        // 预热期开关关闭时：readiness 未就绪的 503 只表示服务刚启动，不判失败
+        boolean passWarmup = warmup && !savedWarmupCheck(id);
         out.put("statusCode", code);
-        out.put("ok", code == 200);
+        out.put("warmup", warmup);
+        out.put("ok", code == 200 || passWarmup);
         if (code == 200) {
             out.put("message", "HTTP 200，健康检测通过");
+        } else if (passWarmup) {
+            out.put("message", "HTTP 503，启动预热中（readiness 未就绪）；预热期健康检测已关闭，不判失败");
+        } else if (warmup) {
+            out.put("message", "HTTP 503，启动预热中（readiness 未就绪）；预热期健康检测开启，按未就绪处理");
         } else if (code > 0) {
             out.put("message", "HTTP " + code + "，仅 200 视为健康");
         } else {
@@ -3370,6 +3404,40 @@ public class ReleaseServiceImpl implements ReleaseService {
             return value == null ? "" : String.valueOf(value).trim();
         }
         return "";
+    }
+
+    /**
+     * 读取「启动预热期是否也做健康检测」开关。
+     *
+     * @param projectId 项目标识
+     * @return true=预热期也按严格规则判定（默认）；false=预热期不判失败
+     */
+    private boolean savedWarmupCheck(Long projectId) {
+        Object saved = readCfg(CFG_HEALTH_CHECK_PREFIX + projectId, null);
+        if (saved instanceof Map<?, ?> map) {
+            Object value = map.get("warmupCheck");
+            return value == null || Boolean.parseBoolean(String.valueOf(value));
+        }
+        return true;
+    }
+
+    /**
+     * 判断一次检测结果是否处于「启动预热期」。
+     *
+     * <p>Spring Boot 的 readiness 未就绪时，actuator/health 会返回 503 且
+     * readinessState=OUT_OF_SERVICE。此时服务其实已经能接请求（登录、页面都正常），
+     * 只是还在做启动收尾，不应等同故障。</p>
+     *
+     * @param code 状态码
+     * @param body 响应体（可能被截断）
+     * @return 是否预热期
+     */
+    private boolean isWarmupState(int code, String body) {
+        if (code != 503 || body == null || body.isEmpty()) {
+            return false;
+        }
+        String text = body.toUpperCase();
+        return text.contains("READINESSSTATE") && text.contains("OUT_OF_SERVICE");
     }
 
     /**
@@ -3405,17 +3473,37 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     /**
-     * 写入健康检测地址（存在则更新）。
+     * 写入健康检测配置（存在则合并更新）。
      *
-     * @param projectId 项目标识
-     * @param url       地址
+     * <p>地址与预热期开关共用同一条配置，写入时按字段合并，
+     * 避免「保存地址」把开关覆盖回默认值、或反之。</p>
+     *
+     * @param projectId   项目标识
+     * @param url         地址；为 null 表示不改
+     * @param warmupCheck 预热期开关；为 null 表示不改
      * @return 操作结果
      */
-    private ReturnResult<Void> persistHealthUrl(Long projectId, String url) {
+    private ReturnResult<Void> persistHealthUrl(Long projectId, String url, Boolean warmupCheck) {
         String key = CFG_HEALTH_CHECK_PREFIX + projectId;
+        Map<String, Object> data = new LinkedHashMap<>();
+        Object saved = readCfg(key, null);
+        if (saved instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    data.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+            }
+        }
+        if (url != null) {
+            data.put("url", url);
+        }
+        if (warmupCheck != null) {
+            data.put("warmupCheck", warmupCheck);
+        }
+        data.putIfAbsent("warmupCheck", true);
         String value;
         try {
-            value = JSON.writeValueAsString(Map.of("url", url));
+            value = JSON.writeValueAsString(data);
         } catch (Exception e) {
             return ReturnResult.error("配置序列化失败");
         }
@@ -3425,7 +3513,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             MsServerConfig cfg = new MsServerConfig();
             cfg.setConfigKey(key);
             cfg.setConfigValue(value);
-            cfg.setConfigDesc("项目 " + projectId + " 健康检测地址");
+            cfg.setConfigDesc("项目 " + projectId + " 健康检测配置");
             serverConfigMapper.insert(cfg);
         } else {
             exists.setConfigValue(value);
@@ -3435,17 +3523,20 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     /**
-     * POSIX 健康检测命令：只输出状态码。
+     * POSIX 健康检测命令：输出响应体，末行用标记带出状态码。
+     *
+     * <p>需要 body 判断 readiness 是否未就绪；tail -c 只保留末尾，
+     * 既能拿到标记，又不会被超大响应淹没。</p>
      *
      * @param url 检测地址
      * @return curl 命令
      */
     private String posixHealthCommand(String url) {
-        return "curl -s -m 10 -o /dev/null -w '%{http_code}' '" + url + "'";
+        return "curl -s -m 10 -w '\n" + HC_CODE_MARK + "%{http_code}' '" + url + "' | tail -c 4096";
     }
 
     /**
-     * Windows 健康检测命令：只输出状态码，异常时回落响应里的状态码或 0。
+     * Windows 健康检测命令：输出状态码与响应体，异常时回落响应里的状态码与 body。
      *
      * @param url 检测地址
      * @return PowerShell 命令
@@ -3453,21 +3544,38 @@ public class ReleaseServiceImpl implements ReleaseService {
     private String windowsHealthCommand(String url) {
         return "$ProgressPreference='SilentlyContinue'\n"
                 + "$ErrorActionPreference='SilentlyContinue'\n"
-                + "function __code($u){ try { return [int](Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $u).StatusCode } "
-                + "catch { if ($_.Exception.Response -ne $null) { return [int]$_.Exception.Response.StatusCode } return 0 } }\n"
-                + "Write-Output ('CODE=' + (__code '" + url + "'))\n";
+                + "function __probe($u){ try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $u; "
+                + "return @{ code=[int]$r.StatusCode; body=[string]$r.Content } } "
+                + "catch { $resp=$_.Exception.Response; if ($resp -ne $null) { $c=[int]$resp.StatusCode; $b=''; "
+                + "try { $sr=New-Object System.IO.StreamReader($resp.GetResponseStream()); $b=$sr.ReadToEnd(); $sr.Close() } "
+                + "catch { try { $b=[string]$resp.Content.ReadAsStringAsync().Result } catch { } }; "
+                + "return @{ code=$c; body=$b } } return @{ code=0; body='' } } }\n"
+                + "$p=__probe '" + url + "'\n"
+                + "$b=[string]$p.body\n"
+                + "if ($b.Length -gt " + HC_BODY_MAX + ") { $b=$b.Substring(0," + HC_BODY_MAX + ") }\n"
+                + "$b=$b.Replace([char]13,' ').Replace([char]10,' ')\n"
+                + "Write-Output ('" + HC_BODY_PREFIX + "' + $b)\n"
+                + "Write-Output ('" + HC_CODE_MARK + "' + $p.code)\n";
     }
 
     /**
      * 从检测命令输出里取 HTTP 状态码。
      *
      * @param output  命令输出
-     * @param windows 是否 Windows 主机（CODE= 前缀）
+     * @param windows 是否 Windows 主机（BODY= / CODE= 行）
      * @return 状态码；无法解析时为 0
      */
     private int parseHealthCode(String output, boolean windows) {
         String text = output == null ? "" : output.replace("\r", "").trim();
-        if (windows) {
+        int mark = text.lastIndexOf(HC_CODE_MARK);
+        if (mark >= 0) {
+            text = text.substring(mark + HC_CODE_MARK.length()).trim();
+            int end = 0;
+            while (end < text.length() && Character.isDigit(text.charAt(end))) {
+                end++;
+            }
+            text = text.substring(0, end);
+        } else if (windows) {
             for (String line : text.split("\n")) {
                 if (line.startsWith("CODE=")) {
                     text = line.substring(5).trim();
@@ -3480,6 +3588,27 @@ public class ReleaseServiceImpl implements ReleaseService {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    /**
+     * 从检测命令输出里取响应体（只用于识别 readiness 状态，可能被截断）。
+     *
+     * @param output  命令输出
+     * @param windows 是否 Windows 主机
+     * @return 响应体；取不到时为空串
+     */
+    private String parseHealthBody(String output, boolean windows) {
+        String text = output == null ? "" : output.replace("\r", "");
+        if (windows) {
+            for (String line : text.split("\n")) {
+                if (line.startsWith(HC_BODY_PREFIX)) {
+                    return line.substring(HC_BODY_PREFIX.length()).trim();
+                }
+            }
+            return "";
+        }
+        int mark = text.lastIndexOf(HC_CODE_MARK);
+        return mark >= 0 ? text.substring(0, mark).trim() : "";
     }
 
     @Override

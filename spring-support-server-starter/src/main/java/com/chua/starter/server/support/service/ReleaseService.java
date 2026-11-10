@@ -177,13 +177,14 @@ public interface ReleaseService {
     ReturnResult<Map<String, Object>> getProjectHealthCheck(Long id);
 
     /**
-     * 保存项目的健康检测地址。
+     * 保存项目的健康检测地址与预热期判定开关。
      *
-     * @param id  项目ID
-     * @param url 检测地址（http/https）
+     * @param id          项目ID
+     * @param url         检测地址（http/https）；为空时保留原地址
+     * @param warmupCheck 启动预热期是否也按严格规则判定；为空时保留原值
      * @return 操作结果
      */
-    ReturnResult<Void> saveProjectHealthCheck(Long id, String url);
+    ReturnResult<Void> saveProjectHealthCheck(Long id, String url, Boolean warmupCheck);
 
     /**
      * 执行一次健康检测（仅在目标主机上取 HTTP 状态码，200 为通过）。

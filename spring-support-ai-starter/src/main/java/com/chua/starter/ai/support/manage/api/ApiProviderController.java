@@ -886,7 +886,7 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                entity.getProxy(), tryFix, entity.getExtra()));
+                entity.getProxy(), tryFix, entity.getExtra(), entity.getProviderId()));
     }
 
     /**
@@ -919,7 +919,7 @@ public class ApiProviderController {
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                entity.getProxy(), tryFix, entity.getExtra());
+                entity.getProxy(), tryFix, entity.getExtra(), entity.getProviderId());
         Object rawModels = upstream.get("models");
         List<Map<String, Object>> upstreamModels = rawModels instanceof List<?> list ? (List<Map<String, Object>>) list
                 : new ArrayList<>(0);
@@ -1419,7 +1419,7 @@ public class ApiProviderController {
             SysAiProvider entity = requireProvider(providerId);
             Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                     entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
-                    entity.getProxy(), false, entity.getExtra());
+                    entity.getProxy(), false, entity.getExtra(), entity.getProviderId());
 
             // 转换格式：data.models[].name → data.items[].modelName
             @SuppressWarnings("unchecked")
@@ -1482,7 +1482,7 @@ public class ApiProviderController {
         Map<String, Object> bodyExtra = body.get("extra") instanceof Map
                 ? (Map<String, Object>) body.get("extra") : null;
         return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials,
-                UpstreamAuth.ofBody(body), proxy, false, bodyExtra));
+                UpstreamAuth.ofBody(body), proxy, false, bodyExtra, null));
     }
 
     /**
@@ -3437,7 +3437,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
                                                         UpstreamAuth auth, String proxy, boolean tryFix,
-                                                        Map<String, Object> extra) {
+                                                        Map<String, Object> extra, String providerId) {
         // 平台标识统一小写后再判断协议族（前端可能传大写形式）
         String platformLower = platform == null ? "" : platform.toLowerCase();
         // 本地推理（ONNX）没有远端模型目录可拉，改为分发给本地模型门面（ModelRegistry），
@@ -3447,11 +3447,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (platformLower.contains("onnx")) {
             return fetchLocalModelsFromFacade();
         }
-        // 免费渠道是纯路由聚合：模型清单 = extra.routes 的路由键（不含 default），
-        // **绝不真实请求占位 baseUrl 的 /models**（free.nomifun.com 直连必失败）。
-        // 未配置路由表时返回空清单 + 提示，不报错。
+        // 免费渠道是纯路由聚合：模型清单 = 运行时同一份合并路由表（静态 extra.routes +
+        // 动态渠道管理里的 OAuth 渠道模型 + Magpie 网关），**绝不真实请求占位 baseUrl 的 /models**。
+        // 之前只读 extra.routes，导致「渠道管理里明明有模型，FreeChannel 拉取却看不到」。
         if (ProviderRouteTargets.isFreeChannel(platform)) {
-            return fetchFreeChannelRoutes(extra);
+            return fetchFreeChannelRoutes(providerId, extra);
         }
         // 基础地址缺失直接判参数错误
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -3506,8 +3506,20 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param extra 供应商扩展配置（{@code extra.routes}）
      * @return { models: [...], hint?: 字符串 }；形态与其它供应商拉取一致
      */
-    private Map<String, Object> fetchFreeChannelRoutes(Map<String, Object> extra) {
+    private Map<String, Object> fetchFreeChannelRoutes(String providerId, Map<String, Object> extra) {
         Map<String, RouteTarget> routes = ProviderRouteTargets.fromExtra(extra);
+        // 与运行时同源：FreeChannelChatClient 用的就是 ModelClientResolver#mergedRoutes
+        // （静态 extra.routes + 从渠道管理动态收集的 OAuth 渠道路由 + Magpie）。
+        // 拉取列表若只读 extra.routes，就会出现「渠道管理里 82 个模型、这里只看到 2 个」。
+        if (providerId != null && !providerId.isBlank()) {
+            try {
+                SysAiProvider channelProvider = requireProvider(providerId);
+                routes = modelClientResolver.mergedRoutes(
+                        channelProvider, com.chua.starter.ai.support.chat.ModelClientResolver.ownerScopeOf(channelProvider));
+            } catch (Exception e) {
+                log.debug("[Provider] 合并渠道路由失败，退回 extra.routes: {}", e.getMessage());
+            }
+        }
         List<Map<String, Object>> models = new ArrayList<>(8);
         if (routes != null) {
             for (Map.Entry<String, RouteTarget> entry : routes.entrySet()) {
@@ -3847,6 +3859,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param metrics 标准指标
      */
     private void applyUpstreamMetrics(Map<String, Object> row, Map<String, Object> metrics) {
+        // 免费渠道 / 路由聚合行的「模型」是路由键，没有上游指标；调用方会传 null，
+        // 这里直接跳过，否则 NPE 会把整个 remote_models 打成 500（实测）。
+        if (metrics == null || metrics.isEmpty()) {
+            return;
+        }
         putIfPresent(row, "context_window", metrics.get("context_window_tokens"));
         putIfPresent(row, "max_tokens", metrics.get("max_output_tokens"));
         putIfPresent(row, "family", metrics.get("model_family"));

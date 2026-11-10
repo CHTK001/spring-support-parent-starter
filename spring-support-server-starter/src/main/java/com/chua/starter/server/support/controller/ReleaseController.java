@@ -375,17 +375,19 @@ public class ReleaseController {
     }
 
     /**
-     * 保存项目健康检测地址。
+     * 保存项目健康检测地址与预热期判定开关。
      *
-     * @param id  项目标识
-     * @param url 检测地址
+     * @param id          项目标识
+     * @param url         检测地址（为空时保留原地址）
+     * @param warmupCheck 启动预热期是否也按严格规则判定（为空时保留原值）
      * @return 操作结果
      */
     @Operation(summary = "保存项目健康检测地址")
     @PostMapping("/project/{id}/health")
     public ReturnResult<Void> saveProjectHealthCheck(@PathVariable Long id,
-                                                     @RequestParam(required = false) String url) {
-        return releaseService.saveProjectHealthCheck(id, url);
+                                                     @RequestParam(required = false) String url,
+                                                     @RequestParam(required = false) Boolean warmupCheck) {
+        return releaseService.saveProjectHealthCheck(id, url, warmupCheck);
     }
 
     /**

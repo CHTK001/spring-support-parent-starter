@@ -652,7 +652,11 @@ public class ModelClientResolver {
                 LambdaQueryWrapper<SysAiProviderConnection> wrapper =
                         new LambdaQueryWrapper<SysAiProviderConnection>()
                                 .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
-                if ("_free".equals(ownerScope) || "_sys".equals(ownerScope)) {
+                if ("_free".equals(ownerScope)) {
+                    // 免费渠道是**共享池**：渠道本身是通用资源，不按绑定者隔离 ——
+                    // 谁绑的账号都汇进同一条路由，所有人共用（用户口径：「整个渠道都是通用的」）。
+                    // 之前这里限 user_id IS NULL，导致 admin 绑的 opencode 82 个模型进不了免费池。
+                } else if ("_sys".equals(ownerScope)) {
                     wrapper.isNull(SysAiProviderConnection::getUserId);
                 } else {
                     boolean admin = AiUserContext.isAdmin();
@@ -734,9 +738,22 @@ public class ModelClientResolver {
         if (platform == null || platform.isBlank()) {
             return null;
         }
+        // 渠道供应商的 platform 在库里可能是大写（实测 OPENCODE / CLINE / GEMINI），
+        // 而 SPI 注册名是小写（@Spi("opencode")）。大小写不匹配会让整条渠道被跳过，
+        // 表现为「渠道页有模型、免费池里一个都没有」，所以两种写法都试。
+        String trimmed = platform.trim();
+        try {
+            AccountChannelAuthManager hit = ServiceProvider.of(AccountChannelAuthManager.class)
+                    .getExtension(trimmed);
+            if (hit != null) {
+                return hit;
+            }
+        } catch (Exception ignored) {
+            // 继续尝试小写
+        }
         try {
             return ServiceProvider.of(AccountChannelAuthManager.class)
-                    .getExtension(platform.trim());
+                    .getExtension(trimmed.toLowerCase(java.util.Locale.ROOT));
         } catch (Exception e) {
             log.debug("[ModelClientResolver] 未找到 SPI: {}", platform);
             return null;

@@ -40,7 +40,8 @@ public class MagpieProviderCodec implements ChannelUpstreamCodec {
      * 列表接口即时算出来的展示字段，写回没有意义。
      */
     private static final Set<String> DERIVED_KEYS = Set.of("keyList", "keyCount", "hasKey",
-            "move", "account", "agents", "fetched", "error", "sponsored", "spent", "balance");
+            "move", "account", "agents", "fetched", "error", "sponsored", "spent", "balance",
+            "iconDataUrl");
 
     /**
      * 凭据行里永远不该回传的键。

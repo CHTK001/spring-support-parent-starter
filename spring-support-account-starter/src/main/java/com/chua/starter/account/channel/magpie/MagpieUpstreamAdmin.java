@@ -137,11 +137,35 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
         List<Map<String, Object>> safe = new ArrayList<>(providers.size());
         ChannelUpstreamCodec codec = codec();
         for (Map<String, Object> provider : providers) {
-            safe.add(codec.desensitize(provider));
+            Map<String, Object> row = codec.desensitize(provider);
+            attachIcon(credentials, row);
+            safe.add(row);
         }
         Map<String, Object> out = new LinkedHashMap<>(2);
         out.put("providers", safe);
         return out;
+    }
+
+    /**
+     * 给一行 provider 附上品牌图标的 data URL（{@code iconDataUrl}）。
+     *
+     * <p>图标只挂在 magpie 管理面且需要页面 Cookie，浏览器取不到；由后端取一次、
+     * 转 data URL 随列表下发，前端才能把这些渠道显示成真实软件图标而不是首字母。
+     * 取不到（{@code generic} 没有实体文件、管理面不可达）就不放这个字段，
+     * 前端自然回落到文字徽标。</p>
+     *
+     * @param credentials 网关连接凭据
+     * @param row         已脱敏的 provider 行
+     */
+    private static void attachIcon(Map<String, Object> credentials, Map<String, Object> row) {
+        Object icon = row.get("icon");
+        if (!(icon instanceof String name) || name.isBlank()) {
+            return;
+        }
+        String dataUrl = MagpieAdminClient.iconDataUrl(credentials, name);
+        if (dataUrl != null && !dataUrl.isBlank()) {
+            row.put("iconDataUrl", dataUrl);
+        }
     }
 
     /**

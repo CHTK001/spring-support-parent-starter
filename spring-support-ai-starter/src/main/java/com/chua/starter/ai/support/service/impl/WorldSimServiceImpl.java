@@ -1148,7 +1148,8 @@ public class WorldSimServiceImpl implements WorldSimService {
         "你必须且只能输出严格合法的 JSON（不要输出 Markdown、不要输出代码块、不要输出额外文字）。"
         + "输出字段固定为：actNo（幕次编号，从 1 开始）、title（幕标题）、description（剧本概述）"
         + "、worldTime（世界时间标签）、weather（天气）、scenes（场景列表）和 transitions（过场列表）"
-        + "与 props（道具列表）。每个场景含 sceneId/name/desc/npcs/lines/playText/mediaImage/mediaVideo；"
+        + "与 props（道具列表）。每个场景含 sceneId/name/desc/npcs/lines/mediaImage/mediaVideo；"
+        + "不要输出 playText（演出正文由演出阶段逐场生成）；"
         + "mediaImage/mediaVideo 结构为 {taskId, url}（初始均为 null）。不要输出其他字段。";
 
     /** 媒体生成类型：图 */
@@ -1765,6 +1766,9 @@ public class WorldSimServiceImpl implements WorldSimService {
         // 清理 Markdown 代码块遮蔽（```json ... ```）
         if (trimmed.startsWith("```")) {
             String body = trimmed.substring(3);
+            // 模型常写成 ```json / ```JSON / ``` javascript：去掉语言标记再解析，
+            // 否则首字符是 "json" 这类裸 token，JSON 解析必失败（已实测）。
+            body = body.replaceFirst("^[A-Za-z][A-Za-z0-9_-]*\\s*", "");
             int end = body.indexOf("```");
             if (end > 0) {
                 body = body.substring(0, end);
@@ -1773,7 +1777,19 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
         try {
             Object parsed = Json.fromJson(trimmed, Map.class);
-            if (parsed instanceof Map) {
+            if (parsed instanceof Map<?, ?> map) {
+                // 演出阶段靠「场景有没有 playText」判断这一场演没演（见 scenesDone）。
+                // 部分模型会照着提示词把 playText 直接写进剧本，结果整幕一写完就被
+                // 判定为全部演完：既不逐场演出，也不落用户侧故事文件。编剧只负责写
+                // 剧本，playText 必须由 playScene 逐场生成，所以这里一律剥掉。
+                Object scenes = map.get(ActScript.SCENES);
+                if (scenes instanceof List<?> sceneList) {
+                    for (Object item : sceneList) {
+                        if (item instanceof Map<?, ?> scene) {
+                            scene.remove(ActScript.SCENE_PLAY);
+                        }
+                    }
+                }
                 return Json.toJson(parsed);
             }
             return trimmed;
