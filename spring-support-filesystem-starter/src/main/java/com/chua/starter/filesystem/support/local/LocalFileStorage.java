@@ -20,6 +20,7 @@ import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.common.support.storage.setting.BucketSetting;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -187,24 +188,7 @@ public class LocalFileStorage extends AbstractFileStorage {
      * @return 返回值
     */
     public GetObjectResult getObject(String key) {
-        Path target = resolveSafely(key);
-        if (target == null || !Files.exists(target)) {
-            return GetObjectResult.builder()
-                    .resultCode(ObjectResult.ResultCode.FAILURE)
-                    .message("对象不存在: " + key)
-                    .build();
-        }
-        try {
-            return GetObjectResult.builder()
-                    .resultCode(ObjectResult.ResultCode.SUCCESS)
-                    .inputStream(Files.newInputStream(target))
-                    .build();
-        } catch (IOException e) {
-            return GetObjectResult.builder()
-                    .resultCode(ObjectResult.ResultCode.FAILURE)
-                    .message("读取失败: " + e.getMessage())
-                    .build();
-        }
+        return openObject(key, resolveSafely(key), 0L, -1L);
     }
 
     @Override
@@ -214,7 +198,110 @@ public class LocalFileStorage extends AbstractFileStorage {
      * @return 返回值
     */
     public GetObjectResult getObject(GetObjectRequest request) {
-        return getObject(request.getKey());
+        String key = request.getKey();
+        return openObject(key, resolveSafely(key), Math.max(0L, request.getOffset()), request.getLength());
+    }
+
+    /**
+     * 打开对象并按偏移/长度裁剪输入流。
+     *
+     * <p>必须回填 {@link Metadata}（尤其是 {@code size} 与 {@code lastModified}）：
+     * 文件服务过滤器的 HTTP Range 快速通道靠 {@code size} 生成
+     * {@code Content-Range} / 判断 416，{@code lastModified} 用于
+     * {@code Last-Modified} 与 {@code If-Range} 校验。此前的实现只给输入流、
+     * 不给元数据，导致快速通道在 {@code totalSize<=0} 处直接放弃，Range 全部
+     * 落回整读链路（越界不返回 416、If-Range 失效、206 缺 ETag）。</p>
+     *
+     * @param key    对象键
+     * @param target 解析后的绝对路径（越界为 null）
+     * @param offset 起始偏移，≤0 表示从头
+     * @param length 读取长度，&lt;0 表示读到末尾
+     * @return 获取结果
+     */
+    private GetObjectResult openObject(String key, Path target, long offset, long length) {
+        if (target == null || !Files.exists(target)) {
+            return GetObjectResult.builder()
+                    .resultCode(ObjectResult.ResultCode.FAILURE)
+                    .message("对象不存在: " + key)
+                    .build();
+        }
+        try {
+            BasicFileAttributes attrs = Files.readAttributes(target, BasicFileAttributes.class);
+            if (attrs.isDirectory()) {
+                return GetObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.FAILURE)
+                        .message("对象是目录: " + key)
+                        .build();
+            }
+            long size = attrs.size();
+            if (offset >= size) {
+                  // 越界：过滤器据此回 416，而不是凭空给一个 0 字节的 206
+                return GetObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.FAILURE)
+                        .message("偏移超出文件长度: " + offset + " >= " + size)
+                        .build();
+            }
+            InputStream inputStream;
+            try {
+                inputStream = applyRange(Files.newInputStream(target), offset, length);
+            } catch (IOException e) {
+                return GetObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.FAILURE)
+                        .message("读取失败: " + e.getMessage())
+                        .build();
+            }
+            String name = target.getFileName() == null ? fileNameOf(key) : target.getFileName().toString();
+            String suffix = name.contains(".") ? name.substring(name.lastIndexOf('.') + 1) : "";
+            return GetObjectResult.builder()
+                    .resultCode(ObjectResult.ResultCode.SUCCESS)
+                    .inputStream(inputStream)
+                    .metadata(Metadata.builder()
+                            .name(name)
+                            .path(parentOf(key))
+                            .size(size)
+                            .suffix(suffix)
+                            .directory(false)
+                            .lastModified(attrs.lastModifiedTime().toInstant().toEpochMilli())
+                            .build())
+                    .build();
+        } catch (IOException e) {
+            return GetObjectResult.builder()
+                    .resultCode(ObjectResult.ResultCode.FAILURE)
+                    .message("读取失败: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    /**
+     * 本地文件系统原生支持按偏移/长度读取（{@link #applyRange} 走 skip + 长度上限，
+     * 本地文件 skip 等价于 lseek，不需要白读前缀）。
+     *
+     * @return 恒为 true
+     */
+    @Override
+    public boolean supportsRange() {
+        return true;
+    }
+
+    /**
+     * 取对象键的末段文件名。
+     *
+     * @param key 对象键
+     * @return 文件名
+     */
+    private String fileNameOf(String key) {
+        return key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+    }
+
+    /**
+     * 取对象键的父目录部分。
+     *
+     * @param key 对象键
+     * @return 父目录（根下对象返回空串）
+     */
+    private String parentOf(String key) {
+        int index = key.lastIndexOf('/');
+        return index < 0 ? "" : key.substring(0, index);
     }
 
     @Override

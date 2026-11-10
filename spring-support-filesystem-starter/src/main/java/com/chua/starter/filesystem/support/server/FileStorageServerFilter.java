@@ -4042,7 +4042,8 @@ var search=document.getElementById('search');
           // 入口壳注入给前端的字节直链就是这种短时效令牌，直连对象 URL 不放行 raw，
           // 避免「预览临时下载链路」变成任何人可用的常驻字节通道。
         boolean tokenConsumed = request.getPath() != null && request.getPath().startsWith("/ot/");
-        return serveObjectContent(request, response, data, key, bucket, tokenConsumed ? "token" : null);
+        return serveObjectContent(request, response, data, key, bucket, tokenConsumed ? "token" : null,
+                result.getMetadata());
     }
 
       /**
@@ -4071,7 +4072,7 @@ var search=document.getElementById('search');
        * @return 异步阶段
        */
     private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data,
-                                                     String key, String bucket, String rawChannel) {
+                                                     String key, String bucket, String rawChannel, Metadata metadata) {
           // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
           // 参数支持标志式写法（?preview 等价 ?preview=true）
         boolean wantPreview = boolParam(request, "preview");
@@ -4290,18 +4291,36 @@ var search=document.getElementById('search');
               // 兜底，保证不白屏、缩略图/媒体标签不坏
         }
 
-   // 范围 分段下载
+   // 范围 分段下载（整读链路的兜底分支）
+        // 只有存储拿不到真实长度（元数据缺失）时才会走到这里——元数据齐全的对象
+        // 已在上方的快速通道按区间定位读取。语义仍必须与 206/416/If-Range 一致。
         String range = request.getHeader("Range");
         if (setting.isOpenRange() && range != null && range.startsWith("bytes=")) {
-            long[] offsets = parseRange(range, data.length);
-            if (offsets != null) {
+              // If-Range 校验失败 = 客户端缓存已过期，必须回整份 200，不能给 206
+            String ifRange = request.getHeader("If-Range");
+            boolean rangeUsable = ifRange == null || ifRangeMatches(ifRange, metadata);
+            if (rangeUsable) {
+                long[] offsets = parseRange(range, data.length);
+                if (offsets == null) {
+                      // 越界：416 而不是静默返回整份内容
+                    response.setStatus(416)
+                            .setHeader("Content-Range", "bytes */" + data.length)
+                            .setHeader("Accept-Ranges", "bytes")
+                            .setContentType(resolveContentType(fileName))
+                            .setBody(new byte[0])
+                            .end();
+                    return CompletableFuture.completedFuture(null);
+                }
                 byte[] slice = Arrays.copyOfRange(data, (int) offsets[0], (int) offsets[1]);
                 response.setStatus(206)
                         .setHeader("Content-Range", "bytes " + offsets[0] + "-" + (offsets[1] - 1) + "/" + data.length)
                         .setHeader("Accept-Ranges", "bytes")
+                        .setHeader("Content-Length", String.valueOf(slice.length))
+                        .setHeader("X-FileStorage-Preview", "range")
                         .setContentType(resolveContentType(fileName))
-                        .setBody(slice)
-                        .end();
+                        .setBody(slice);
+                applyValidators(response, metadata, data.length);
+                response.setBody(slice).end();
                 return CompletableFuture.completedFuture(null);
             }
         }
@@ -4314,10 +4333,42 @@ var search=document.getElementById('search');
         }
         response.setStatus(200)
                 .setHeader("Accept-Ranges", setting.isOpenRange() ? "bytes" : "none")
-                .setContentType(inlineType)
-                .setBody(data)
-                .end();
+                .setHeader("Content-Length", String.valueOf(data.length))
+                .setContentType(inlineType);
+        applyValidators(response, metadata, data.length);
+        response.setBody(data).end();
         return CompletableFuture.completedFuture(null);
+    }
+
+      /**
+       * 写入内容协商用的校验头（{@code ETag} / {@code Last-Modified}）。
+       *
+       * <p>{@code ETag} 优先取存储元数据；元数据缺失（三方 URL 预览等）时用
+       * 「长度 + 修改时间」构造弱校验值，<b>不能</b>省略——浏览器缓存与
+       * {@code If-Range} 重发:hover/拖动进度条都依赖它，缺失会让每次请求都退化成
+       * 全量重传。</p>
+       *
+       * @param response  响应
+       * @param metadata  对象元数据，可为 null
+       * @param bodyLength 实际响应体长度
+       */
+    private void applyValidators(ServerResponse response, Metadata metadata, long bodyLength) {
+        if (metadata == null) {
+            response.setHeader("ETag", "\"" + Long.toHexString(bodyLength) + "-" + Long.toHexString(bodyLength) + "\"");
+            return;
+        }
+        String etag = metadata.getEtag();
+        long lastModified = metadata.getLastModified();
+        if (etag != null && !etag.isBlank()) {
+            response.setHeader("ETag", etag);
+        } else {
+            response.setHeader("ETag", "\"" + Long.toHexString(bodyLength)
+                    + "-" + Long.toHexString(Math.max(0L, lastModified)) + "\"");
+        }
+        if (lastModified > 0L) {
+            response.setHeader("Last-Modified", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
+                    .format(java.time.Instant.ofEpochMilli(lastModified).atZone(java.time.ZoneOffset.UTC)));
+        }
     }
 
       /* ==================== Range 分段：快速通道（不整读对象） ==================== */
@@ -5366,7 +5417,7 @@ var search=document.getElementById('search');
         applyWatermarkHeader(response);
           // 三方 URL 预览会话内允许 raw=true：入口壳签发的字节直链按当前会话
           // 原样重放（服务端重新拉取远端），与令牌消费同权，仍受 openPreview 约束。
-        return serveObjectContent(request, response, data, fileName, bucket, "third");
+        return serveObjectContent(request, response, data, fileName, bucket, "third", null);
     }
 
       /**
