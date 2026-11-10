@@ -318,6 +318,92 @@ public class ReleaseController {
     }
 
     /**
+     * 在目标主机上检索项目日志（后端检索）。
+     *
+     * @param id        项目标识
+     * @param keyword   关键字（字面匹配，非正则）
+     * @param maxLines  最多返回命中行数，缺省 500
+     * @param matchCase 是否区分大小写，缺省不区分
+     * @return 命中行 + 主机侧耗时
+     */
+    @Operation(summary = "检索项目日志（后端检索）")
+    @GetMapping("/project/{id}/log/search")
+    public ReturnResult<com.chua.starter.server.support.model.vo.ProjectLogSearchVO> searchProjectLog(
+            @PathVariable Long id,
+            @RequestParam String keyword,
+            @RequestParam(required = false) Integer maxLines,
+            @RequestParam(required = false) Boolean matchCase) {
+        return releaseService.searchProjectLog(id, keyword, maxLines, matchCase);
+    }
+
+    /**
+     * 读取项目「日志读取行数」配置。
+     *
+     * @param id 项目标识
+     * @return 生效行数
+     */
+    @Operation(summary = "读取日志读取行数")
+    @GetMapping("/project/{id}/log/lines")
+    public ReturnResult<Integer> getLogLines(@PathVariable Long id) {
+        return releaseService.getLogLines(id);
+    }
+
+    /**
+     * 保存项目「日志读取行数」配置。
+     *
+     * @param id    项目标识
+     * @param lines 行数
+     * @return 操作结果
+     */
+    @Operation(summary = "保存日志读取行数")
+    @PostMapping("/project/{id}/log/lines")
+    public ReturnResult<Void> updateLogLines(@PathVariable Long id,
+                                             @RequestParam Integer lines) {
+        return releaseService.updateLogLines(id, lines);
+    }
+
+    /**
+     * 读取项目健康检测配置。
+     *
+     * @param id 项目标识
+     * @return 已保存地址与建议地址
+     */
+    @Operation(summary = "读取项目健康检测配置")
+    @GetMapping("/project/{id}/health")
+    public ReturnResult<java.util.Map<String, Object>> getProjectHealthCheck(@PathVariable Long id) {
+        return releaseService.getProjectHealthCheck(id);
+    }
+
+    /**
+     * 保存项目健康检测地址。
+     *
+     * @param id  项目标识
+     * @param url 检测地址
+     * @return 操作结果
+     */
+    @Operation(summary = "保存项目健康检测地址")
+    @PostMapping("/project/{id}/health")
+    public ReturnResult<Void> saveProjectHealthCheck(@PathVariable Long id,
+                                                     @RequestParam(required = false) String url) {
+        return releaseService.saveProjectHealthCheck(id, url);
+    }
+
+    /**
+     * 执行项目健康检测（仅 HTTP 200 判定通过）。
+     *
+     * @param id  项目标识
+     * @param url 本次检测地址（可空，空则用已保存配置）
+     * @return ok / statusCode / elapsedMs / checkedAt / message
+     */
+    @Operation(summary = "执行项目健康检测")
+    @PostMapping("/project/{id}/health/check")
+    public ReturnResult<java.util.Map<String, Object>> checkProjectHealth(
+            @PathVariable Long id,
+            @RequestParam(required = false) String url) {
+        return releaseService.checkProjectHealth(id, url);
+    }
+
+    /**
      * 开启项目实时日志。
      *
      * @param id       项目标识

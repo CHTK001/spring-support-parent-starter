@@ -125,6 +125,14 @@ public final class MagpieSupport {
     static final String PLUGIN_SIGNIN_PATH = "/api/plugin-signin";
 
     /**
+     * 管理面插件登录的一问（{@code POST /api/plugin-signin/prompt}）。
+     *
+     * <p>插件登录前可能先要一个输入（手机号 / 验证码 / 选项），这一问由插件
+     * 自己定义；问完才允许发起 {@link #PLUGIN_SIGNIN_PATH}。</p>
+     */
+    static final String PLUGIN_SIGNIN_PROMPT_PATH = "/api/plugin-signin/prompt";
+
+    /**
      * 管理面内置 provider 登录（{@code POST /api/signin}）。
      */
     static final String SIGNIN_PATH = "/api/signin";

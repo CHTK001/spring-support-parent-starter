@@ -152,6 +152,49 @@ public interface ReleaseService {
     ReturnResult<Void> stopProjectLog(String sessionId);
 
     /**
+     * 读取项目的「日志读取行数」配置。
+     *
+     * @param id 项目ID
+     * @return 生效行数（未配置时 100）
+     */
+    ReturnResult<Integer> getLogLines(Long id);
+
+    /**
+     * 保存项目的「日志读取行数」配置。
+     *
+     * @param id    项目ID
+     * @param lines 行数（10 ~ 5000，越界按边界收口）
+     * @return 操作结果
+     */
+    ReturnResult<Void> updateLogLines(Long id, Integer lines);
+
+    /**
+     * 读取项目的健康检测配置。
+     *
+     * @param id 项目ID
+     * @return url=已保存的检测地址；defaultUrl=按端口推导的建议地址
+     */
+    ReturnResult<Map<String, Object>> getProjectHealthCheck(Long id);
+
+    /**
+     * 保存项目的健康检测地址。
+     *
+     * @param id  项目ID
+     * @param url 检测地址（http/https）
+     * @return 操作结果
+     */
+    ReturnResult<Void> saveProjectHealthCheck(Long id, String url);
+
+    /**
+     * 执行一次健康检测（仅在目标主机上取 HTTP 状态码，200 为通过）。
+     *
+     * @param id  项目ID
+     * @param url 本次检测地址；为空时用已保存的配置
+     * @return ok / statusCode / elapsedMs / checkedAt / message
+     */
+    ReturnResult<Map<String, Object>> checkProjectHealth(Long id, String url);
+
+    /**
      * 搜索软件包
      *
      * @param hostId 主机ID

@@ -705,7 +705,7 @@ public class ProjectTaskService {
                 if (!rr.isOk() || rr.getData() == null) {
                     throw new IllegalStateException(rr.getMsg() == null ? "凭据解析失败" : rr.getMsg());
                 }
-                String command = buildTailCommand(host.getServerHostOsType(), logPath);
+                String command = buildTailCommand(host.getServerHostOsType(), logPath, lines);
                 if ("LOCAL".equalsIgnoreCase(host.getServerHostCollectMode())) {
                     // 本机主机不经 SSH：直接在进程内跟随日志文件（与执行通道同一口径）
                     streamHandle = followLocalLog(command,
@@ -805,12 +805,15 @@ public class ProjectTaskService {
 
     /**
      * 构造实时日志命令
-     * @param logPath 字符串
-     * @param osType 字符串
-     * @return 返回值
-    */
-    private String buildTailCommand(String osType, String logPath) {
+     *
+     * @param osType  目标操作系统
+     * @param logPath 日志路径
+     * @param lines   连接时先回放的历史行数
+     * @return shell / PowerShell 命令
+     */
+    private String buildTailCommand(String osType, String logPath, int lines) {
         String path = logPath == null ? "" : logPath.trim();
+        int tail = lines <= 0 ? TAIL_LINES : Math.min(lines, 5000);
         if ("WINDOWS".equalsIgnoreCase(osType)) {
             // 纯 PowerShell 脚本；WinRM/SSH follow 内部统一包 EncodedCommand。
             // 日志文件可能尚未生成，先确保存在，否则 Get-Content -Wait 直接报错退出；
@@ -827,13 +830,13 @@ public class ProjectTaskService {
                     + "if ($f) { $target = $f.FullName } else { $target = Join-Path '" + path + "' 'app.log' } } "
                     + "else { $target = '" + path + "' }\n"
                     + "if (-not (Test-Path $target)) { New-Item -ItemType File -Path $target -Force | Out-Null }\n"
-                    + "Get-Content -Path $target -Tail " + TAIL_LINES + " -Wait";
+                    + "Get-Content -Path $target -Tail " + tail + " -Wait";
         }
         return "p='" + path.replace("'", "'\\''") + "'; if [ -d \"$p\" ]; then "
                 + "f=$(ls -tp \"$p\"/* 2>/dev/null | grep -v '/$' | head -n 1); "
                 + "[ -z \"$f\" ] && f=\"$p/app.log\"; else f=\"$p\"; fi; "
                 + "mkdir -p \"$(dirname \"$f\")\" 2>/dev/null; "
-                + "tail -n " + TAIL_LINES + " -F \"$f\"";
+                + "tail -n " + tail + " -F \"$f\"";
     }
 
     // ==================== 断点续传 ====================

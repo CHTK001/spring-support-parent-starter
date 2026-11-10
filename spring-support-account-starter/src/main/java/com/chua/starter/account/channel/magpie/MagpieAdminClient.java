@@ -229,6 +229,22 @@ public final class MagpieAdminClient {
     }
 
     /**
+     * 插件登录前的一问（{@code POST /api/plugin-signin/prompt}）。
+     *
+     * <p>不带 {@code key}/{@code value} 时取第一问；带上一问的答案时由插件校验
+     * 并返回下一问，直到 {@code prompt} 为空才发起登录。</p>
+     *
+     * @param credentials 连接凭据
+     * @param body        {@code {provider, method, inputs, key?, value?}}
+     * @return {@code {prompt, inputs}} 或 {@code {error, inputs}}
+     */
+    public static Map<String, Object> pluginSigninPrompt(Map<String, Object> credentials,
+                                                         Map<String, Object> body) {
+        String payload = body == null || body.isEmpty() ? "{}" : Json.toJson(body);
+        return parseObject(adminPost(credentials, MagpieSupport.PLUGIN_SIGNIN_PROMPT_PATH, payload));
+    }
+
+    /**
      * 发起内置 provider 登录（{@code POST /api/signin}）。
      *
      * @param credentials 连接凭据
