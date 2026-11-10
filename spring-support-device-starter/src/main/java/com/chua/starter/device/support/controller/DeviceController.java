@@ -78,6 +78,21 @@ public class DeviceController {
     }
 
     /**
+     * 启用 / 停用设备
+     *
+     * <p>只改设备状态：停用后后台所有定时采集（在线探测 / 事件轮询 / 门禁抽取）跳过该设备，
+     * 已建立的会话立即注销；地址、凭据、组织、资产等原有配置不受影响。</p>
+     *
+     * @param id     设备 标识
+     * @param status 目标状态：{@code normal} 启用 / {@code disabled} 停用
+     * @return 变更后的设备信息
+     */
+    @PutMapping("/{id}/status")
+    public DeviceInfo toggleStatus(@PathVariable String id, @RequestParam String status) {
+        return deviceService.toggleStatus(id, status);
+    }
+
+    /**
      * 获取设备详情
      *
      * @param id 设备 标识

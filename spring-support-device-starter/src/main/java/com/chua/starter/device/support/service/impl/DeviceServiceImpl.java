@@ -1,8 +1,9 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.starter.device.support.callback.DeviceLifecycleEvent;
+import com.chua.starter.device.support.callback.DeviceLifecyclePublisher;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
@@ -12,6 +13,7 @@ import com.chua.starter.device.support.model.DevicePageQuery;
 import com.chua.starter.device.support.model.DeviceSaveRequest;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.support.util.DeviceStatusUtil;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
@@ -68,6 +70,11 @@ public class DeviceServiceImpl implements DeviceService {
      */
     private final com.chua.starter.device.support.service.DeviceProviderCredentialService credentialService;
 
+    /**
+     * 生命周期回调发布器：成功/失败都通知全部 Spring Bean 回调实现
+     */
+    private final DeviceLifecyclePublisher lifecyclePublisher;
+
     @Override
     /**
      * 添加Device
@@ -75,42 +82,60 @@ public class DeviceServiceImpl implements DeviceService {
      * @return 返回值
     */
     public DeviceInfo addDevice(DeviceConnectInfo info) {
-        // 平台接入只传提供商凭据 ID，AK/SK 在服务端补齐，前端不再散落密钥
-        DeviceConnectInfo connectInfo = enrichWithCredential(info);
-        DeviceProvider provider = providers.stream()
-                .filter(p -> p.support(connectInfo))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("不支持的设备厂商"));
+        String vendor = info == null ? null : info.vendor();
+        // 提前生成 ID：添加失败时也能把同一个 ID 交给下游，便于对账与回滚
+        String deviceId = UUID.randomUUID().toString();
+        try {
+            // 平台接入只传提供商凭据 ID，AK/SK 在服务端补齐，前端不再散落密钥
+            DeviceConnectInfo connectInfo = enrichWithCredential(info);
+            DeviceProvider provider = providers.stream()
+                    .filter(p -> p.support(connectInfo))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("不支持的设备厂商"));
 
-        DeviceSession session = provider.connect(connectInfo);
+            DeviceSession session = provider.connect(connectInfo);
 
-        Map<String, Object> extra = connectInfo.extra() == null ? Map.of() : connectInfo.extra();
-        LocalDateTime now = LocalDateTime.now();
-        DeviceInfo device = new DeviceInfo();
-        device.setDeviceInfoId(UUID.randomUUID().toString());
-        device.setDeviceInfoName(firstNonBlank(str(extra.get("deviceInfoName")),
-                connectInfo.deviceSerial(), connectInfo.ip()));
-        device.setDeviceInfoVendor(connectInfo.vendor());
-        device.setDeviceInfoCategory(str(extra.get("deviceInfoCategory")));
-        device.setDeviceInfoSubCategory(str(extra.get("deviceInfoSubCategory")));
-        device.setDeviceInfoIp(connectInfo.ip());
-        device.setDeviceInfoPort(connectInfo.port());
-        device.setDeviceInfoUsername(connectInfo.username());
-        device.setDeviceInfoPassword(connectInfo.password());
-        device.setDeviceInfoSerial(firstNonBlank(connectInfo.deviceSerial(), str(extra.get("deviceInfoSerial"))));
-        device.setDeviceInfoLatitude(decimal(extra.get("deviceInfoLatitude")));
-        device.setDeviceInfoLongitude(decimal(extra.get("deviceInfoLongitude")));
-        device.setDeviceInfoAddress(str(extra.get("deviceInfoAddress")));
-        device.setDeviceInfoChannelCount(0);
-        device.setDeviceInfoOnline(Boolean.TRUE);
-        device.setDeviceInfoCreatedAt(now);
-        device.setDeviceInfoUpdatedAt(now);
-        deviceInfoMapper.insert(device);
+            Map<String, Object> extra = connectInfo.extra() == null ? Map.of() : connectInfo.extra();
+            LocalDateTime now = LocalDateTime.now();
+            DeviceInfo device = new DeviceInfo();
+            device.setDeviceInfoId(deviceId);
+            device.setDeviceInfoName(firstNonBlank(str(extra.get("deviceInfoName")),
+                    connectInfo.deviceSerial(), connectInfo.ip()));
+            device.setDeviceInfoVendor(connectInfo.vendor());
+            device.setDeviceInfoCategory(str(extra.get("deviceInfoCategory")));
+            device.setDeviceInfoSubCategory(str(extra.get("deviceInfoSubCategory")));
+            device.setDeviceInfoIp(connectInfo.ip());
+            device.setDeviceInfoPort(connectInfo.port());
+            device.setDeviceInfoUsername(connectInfo.username());
+            device.setDeviceInfoPassword(connectInfo.password());
+            device.setDeviceInfoSerial(firstNonBlank(connectInfo.deviceSerial(), str(extra.get("deviceInfoSerial"))));
+            device.setDeviceInfoLatitude(decimal(extra.get("deviceInfoLatitude")));
+            device.setDeviceInfoLongitude(decimal(extra.get("deviceInfoLongitude")));
+            device.setDeviceInfoAddress(str(extra.get("deviceInfoAddress")));
+            device.setDeviceInfoChannelCount(0);
+            device.setDeviceInfoOnline(Boolean.TRUE);
+            device.setDeviceInfoCreatedAt(now);
+            device.setDeviceInfoUpdatedAt(now);
+            deviceInfoMapper.insert(device);
 
-        sessionManager.register(device.getDeviceInfoId(), session);
-        log.info("设备添加成功: vendor={}, ip={}, name={}",
-                connectInfo.vendor(), connectInfo.ip(), device.getDeviceInfoName());
-        return device;
+            sessionManager.register(device.getDeviceInfoId(), session);
+            log.info("设备添加成功: vendor={}, ip={}, name={}",
+                    connectInfo.vendor(), connectInfo.ip(), device.getDeviceInfoName());
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("deviceId", deviceId);
+            payload.put("name", device.getDeviceInfoName());
+            payload.put("ip", device.getDeviceInfoIp());
+            payload.put("serial", device.getDeviceInfoSerial());
+            // 成功通知：下游可在此时把设备/人脸下发到其它服务器
+            lifecyclePublisher.publish(DeviceLifecycleEvent.success(
+                    DeviceLifecycleEvent.TYPE_DEVICE_CREATED, deviceId, connectInfo.vendor(), payload));
+            return device;
+        } catch (RuntimeException ex) {
+            // 失败也通知：下游据此回滚自己已经完成的动作；本地入库不因回调失败而回滚
+            lifecyclePublisher.publish(DeviceLifecycleEvent.failed(
+                    DeviceLifecycleEvent.TYPE_DEVICE_CREATED, deviceId, vendor, ex.getMessage()));
+            throw ex;
+        }
     }
 
     @Override
@@ -191,6 +216,11 @@ public class DeviceServiceImpl implements DeviceService {
     public void updateDevice(String id, DeviceInfo info) {
         info.setDeviceInfoId(id);
         deviceInfoMapper.updateById(info);
+        if (DeviceStatusUtil.collectionStopped(info.getDeviceInfoStatus())) {
+            // 编辑弹窗里把状态改成停用/报废，同样要立刻断开，不能等下一轮巡检
+            sessionManager.unregister(id);
+            log.info("设备状态改为停用/报废，已注销会话: id={}, status={}", id, info.getDeviceInfoStatus());
+        }
     }
 
     @Override
@@ -201,16 +231,31 @@ public class DeviceServiceImpl implements DeviceService {
      * @return 返回值
     */
     public void updateDevice(String id, DeviceSaveRequest request) {
-        DeviceInfo existing = deviceInfoMapper.selectById(id);
-        if (existing == null) {
-            throw new RuntimeException("设备不存在: " + id);
+        try {
+            DeviceInfo existing = deviceInfoMapper.selectById(id);
+            if (existing == null) {
+                throw new RuntimeException("设备不存在: " + id);
+            }
+            applySaveRequest(existing, request);
+            if (StringUtils.hasText(request.getDeviceInfoPassword())
+                    && !request.getDeviceInfoPassword().contains("*")) {
+                existing.setDeviceInfoPassword(request.getDeviceInfoPassword());
+            }
+            deviceInfoMapper.updateById(existing);
+            if (DeviceStatusUtil.collectionStopped(existing.getDeviceInfoStatus())) {
+                // 状态改成停用/报废后立刻断开，后台定时任务随后也会跳过这台设备
+                sessionManager.unregister(id);
+            }
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("deviceId", id);
+            payload.put("name", existing.getDeviceInfoName());
+            lifecyclePublisher.publish(DeviceLifecycleEvent.success(
+                    DeviceLifecycleEvent.TYPE_DEVICE_UPDATED, id, existing.getDeviceInfoVendor(), payload));
+        } catch (RuntimeException ex) {
+            lifecyclePublisher.publish(DeviceLifecycleEvent.failed(
+                    DeviceLifecycleEvent.TYPE_DEVICE_UPDATED, id, null, ex.getMessage()));
+            throw ex;
         }
-        applySaveRequest(existing, request);
-        if (StringUtils.hasText(request.getDeviceInfoPassword())
-                && !request.getDeviceInfoPassword().contains("*")) {
-            existing.setDeviceInfoPassword(request.getDeviceInfoPassword());
-        }
-        deviceInfoMapper.updateById(existing);
     }
 
     @Override
@@ -220,8 +265,20 @@ public class DeviceServiceImpl implements DeviceService {
      * @return 返回值
     */
     public void deleteDevice(String id) {
-        deviceInfoMapper.deleteById(id);
-        sessionManager.unregister(id);
+        try {
+            DeviceInfo existing = deviceInfoMapper.selectById(id);
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("deviceId", id);
+            deviceInfoMapper.deleteById(id);
+            sessionManager.unregister(id);
+            lifecyclePublisher.publish(DeviceLifecycleEvent.success(
+                    DeviceLifecycleEvent.TYPE_DEVICE_DELETED, id,
+                    existing == null ? null : existing.getDeviceInfoVendor(), payload));
+        } catch (RuntimeException ex) {
+            lifecyclePublisher.publish(DeviceLifecycleEvent.failed(
+                    DeviceLifecycleEvent.TYPE_DEVICE_DELETED, id, null, ex.getMessage()));
+            throw ex;
+        }
     }
 
     @Override
@@ -253,26 +310,26 @@ public class DeviceServiceImpl implements DeviceService {
     public PageResult<DeviceInfo> pageDevices(DevicePageQuery query) {
         DevicePageQuery q = query == null ? new DevicePageQuery() : query.normalize();
         Page<DeviceInfo> page = new Page<>(q.getPageNo(), q.getPageSize());
-        deviceInfoMapper.selectPage(page, buildFilter(q));
+        deviceInfoMapper.selectPage(page, buildFilter(q, null));
         return PageResult.copy(page);
     }
 
     @Override
     public List<DeviceInfo> listDevices(DevicePageQuery query) {
         DevicePageQuery q = query == null ? new DevicePageQuery() : query.normalize();
-        LambdaQueryWrapper<DeviceInfo> wrapper = buildFilter(q);
         // 导出上限，避免误点「全部」把整库拉进内存
-        wrapper.last("LIMIT " + EXPORT_LIMIT);
+        LambdaQueryWrapper<DeviceInfo> wrapper = buildFilter(q, "LIMIT " + EXPORT_LIMIT);
         return deviceInfoMapper.selectList(wrapper);
     }
 
     /**
      * 由分页条件构造查询条件（分页与导出共用，保证「所见即所得」）
      *
-     * @param q 已规范化的查询条件
+     * @param q    已规范化的查询条件
+     * @param tail 追加在 ORDER BY 之后的 SQL（导出时传 LIMIT），无则传 null
      * @return 查询条件
      */
-    private LambdaQueryWrapper<DeviceInfo> buildFilter(DevicePageQuery q) {
+    private LambdaQueryWrapper<DeviceInfo> buildFilter(DevicePageQuery q, String tail) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         if (q.getOrgIds() != null && !q.getOrgIds().isEmpty()) {
             wrapper.in(DeviceInfo::getDeviceInfoOrgId, q.getOrgIds());
@@ -327,13 +384,18 @@ public class DeviceServiceImpl implements DeviceService {
             wrapper.apply("NOT EXISTS (SELECT 1 FROM device_group_device gd "
                     + "WHERE gd.device_id = device_info.device_info_id)");
         }
-        SFunction<DeviceInfo, ?> sort = switch (q.getSortBy() == null ? "" : q.getSortBy()) {
-            case "name" -> DeviceInfo::getDeviceInfoName;
-            case "createdAt" -> DeviceInfo::getDeviceInfoCreatedAt;
-            case "lastOnlineAt" -> DeviceInfo::getDeviceInfoLastOnlineAt;
-            default -> DeviceInfo::getDeviceInfoUpdatedAt;
+        // 排序：停用 / 报废的设备固定排到最后，再按用户选择的字段排序。
+        // 这两类设备不再参与后台采集，排在末尾可以避免它们夹在正常设备之间干扰巡检。
+        String sortColumn = switch (q.getSortBy() == null ? "" : q.getSortBy()) {
+            case "name" -> "device_info_name";
+            case "createdAt" -> "device_info_created_at";
+            case "lastOnlineAt" -> "device_info_last_online_at";
+            default -> "device_info_updated_at";
         };
-        wrapper.orderBy(true, "asc".equalsIgnoreCase(q.getSortOrder()), sort);
+        String direction = "asc".equalsIgnoreCase(q.getSortOrder()) ? "ASC" : "DESC";
+        // 列名来自上面的固定 switch、方向只有 ASC/DESC，可以安全拼接
+        wrapper.last("ORDER BY CASE WHEN device_info_status IN ('disabled', 'scrapped') THEN 1 ELSE 0 END ASC, "
+                + sortColumn + " " + direction + (tail == null ? "" : " " + tail));
         return wrapper;
     }
 
@@ -495,6 +557,54 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     /**
+     * 启用 / 停用设备：只改状态字段，其它配置原样保留
+     * @param id 设备 标识
+     * @param status 目标状态（normal / disabled）
+     * @return 变更后的设备信息
+    */
+    public DeviceInfo toggleStatus(String id, String status) {
+        if (!StringUtils.hasText(status) || !DeviceStatusUtil.valid(status)) {
+            throw new IllegalArgumentException("设备状态不合法: " + status);
+        }
+        DeviceInfo existing = deviceInfoMapper.selectById(id);
+        if (existing == null) {
+            throw new RuntimeException("设备不存在: " + id);
+        }
+        // 只更新状态与更新时间，地址 / 凭据 / 组织 / 资产等配置一律不动
+        LocalDateTime now = LocalDateTime.now();
+        DeviceInfo update = new DeviceInfo();
+        update.setDeviceInfoId(id);
+        update.setDeviceInfoStatus(status);
+        update.setDeviceInfoUpdatedAt(now);
+        boolean stopped = DeviceStatusUtil.collectionStopped(status);
+        if (stopped) {
+            // 停用后不再巡检，在线标志停在最后一次心跳值会误导界面，这里一并归零
+            update.setDeviceInfoOnline(Boolean.FALSE);
+        }
+        deviceInfoMapper.updateById(update);
+        if (stopped) {
+            // 立刻注销会话：不等下一轮巡检，之后也不会被自动重连回来
+            sessionManager.unregister(id);
+            log.info("设备已停用，会话已注销，后台定时采集跳过: id={}", id);
+        } else {
+            // 启用后交给在线检测按凭据恢复连接，避免这里同步建连阻塞接口
+            log.info("设备已启用，等待在线检测恢复会话: id={}", id);
+        }
+        existing.setDeviceInfoStatus(status);
+        existing.setDeviceInfoUpdatedAt(now);
+        if (stopped) {
+            existing.setDeviceInfoOnline(Boolean.FALSE);
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("deviceId", id);
+        payload.put("status", status);
+        lifecyclePublisher.publish(DeviceLifecycleEvent.success(
+                DeviceLifecycleEvent.TYPE_DEVICE_UPDATED, id, existing.getDeviceInfoVendor(), payload));
+        return existing;
+    }
+
+    @Override
+    /**
      * Reconnect
      * @param id 字符串
      * @return 返回值
@@ -508,6 +618,9 @@ public class DeviceServiceImpl implements DeviceService {
              * @return runtime异常的结果
              */
             throw new RuntimeException("设备不存在: " + id);
+        }
+        if (DeviceStatusUtil.collectionStopped(device.getDeviceInfoStatus())) {
+            throw new RuntimeException("设备已停用，请先启用后再连接: " + id);
         }
         // 关闭旧会话
         sessionManager.unregister(id);
@@ -563,6 +676,10 @@ public class DeviceServiceImpl implements DeviceService {
              * @return runtime异常的结果
              */
             throw new RuntimeException("设备不存在: " + id);
+        }
+        if (DeviceStatusUtil.collectionStopped(device.getDeviceInfoStatus())) {
+            // 停用设备不参与任何探测：状态刷新直接拒绝，避免又把连接建回来
+            throw new RuntimeException("设备已停用，请先启用后再刷新状态: " + id);
         }
         DeviceSession session = sessionManager.getSession(id);
         boolean online = session != null && session.isOnline() && session.testConnection();

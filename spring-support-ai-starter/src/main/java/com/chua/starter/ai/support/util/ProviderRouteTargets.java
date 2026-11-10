@@ -40,6 +40,28 @@ public final class ProviderRouteTargets {
     public static final String FREE_CHANNEL_ALIAS = "free";
 
     /**
+     * 路由组供应商的平台标识。
+     *
+     * <p>路由组不是真实上游：它的「模型」来自已添加的模型库，会话选中其中任一模型时
+     * 由 {@code RouterGroupChatClient} 按容器策略（智能 / 按顺序 / 用完再换 …）选出
+     * 真实成员并转发。因此路由组本身不建普通 ChatClient，也没有上游地址与凭证。</p>
+     */
+    public static final String ROUTER_GROUP_PLATFORM = "router-group";
+
+    /**
+     * 是否为路由组平台
+     *
+     * @param platform 供应商平台标识
+     * @return 路由组返回 {@code true}
+     */
+    public static boolean isRouterGroup(String platform) {
+        if (platform == null) {
+            return false;
+        }
+        return ROUTER_GROUP_PLATFORM.equalsIgnoreCase(platform.trim());
+    }
+
+    /**
      * extra 中的路由表键名
      */
     private static final String ROUTES_KEY = "routes";

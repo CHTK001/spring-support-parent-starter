@@ -115,8 +115,25 @@ public interface ReleaseService {
 
     /**
      * 获取项目日志（一次性 tail，用于打开时的初始内容）
+     *
+     * <p>读取行数取项目「系统配置 → 日志读取行数」，未配置时为默认 100 行。</p>
      */
     ReturnResult<String> getProjectLog(Long id);
+
+    /**
+     * 在目标主机上检索项目日志（后端检索）。
+     *
+     * <p>关键字按字面匹配，只回传命中行；检索耗时随日志体积增长，
+     * 结果里带 {@code elapsedMs} 供前端提示预计时间。</p>
+     *
+     * @param id        项目ID
+     * @param keyword   关键字（字面匹配，非正则）
+     * @param maxLines  最多返回的命中行数，为空时用默认上限
+     * @param matchCase 是否区分大小写
+     * @return 检索结果（命中行 + 耗时 + 是否截断）
+     */
+    ReturnResult<com.chua.starter.server.support.model.vo.ProjectLogSearchVO> searchProjectLog(
+            Long id, String keyword, Integer maxLines, Boolean matchCase);
 
     /**
      * 开启实时日志（返回 sessionId，日志行经发布管理全局 SSE 推送）
@@ -239,6 +256,18 @@ public interface ReleaseService {
     ReturnResult<List<Map<String, Object>>> batchUpgrade(List<Long> projectIds, Map<String, Object> config);
 
     /**
+     * 集群批量回滚：按同一份配置依次回滚多个项目（每个项目独立异步任务）。
+     *
+     * <p>未指定 {@code backupName} 时各项目恢复自己的最新备份；指定后所有项目都按该名字定位备份，
+     * 找不到备份的项目单独失败，不影响其它项目。</p>
+     *
+     * @param projectIds 项目ID列表
+     * @param backupName 备份标识，为空恢复各项目最新备份
+     * @return 每个项目的触发结果（taskId / 失败原因）
+     */
+    ReturnResult<List<Map<String, Object>>> batchRollback(List<Long> projectIds, String backupName);
+
+    /**
      * 按给定升级配置执行升级（备份 / 投放包 / 解压 / 回滚 / 重启，按开关组合）（异步，返回 taskId）
      *
      * @param id     项目ID
@@ -302,6 +331,33 @@ public interface ReleaseService {
      * @return swagger/actuator 探测结果
      */
     ReturnResult<Map<String, Object>> probeProjectEndpoints(Long id);
+
+    /**
+     * 读取项目的 Actuator 定时采集配置。
+     *
+     * <p>配置只是「开关 + 间隔」，真正的采集由全局时间轮统一调度，
+     * 所有项目共用一个调度线程与一条发布管理 SSE 长连接。</p>
+     *
+     * @param id 项目ID
+     * @return enabled / intervalSeconds
+     */
+    ReturnResult<Map<String, Object>> getActuatorMonitor(Long id);
+
+    /**
+     * 保存项目的 Actuator 定时采集配置。
+     *
+     * @param id     项目ID
+     * @param config enabled / intervalSeconds
+     * @return 保存结果
+     */
+    ReturnResult<Void> saveActuatorMonitor(Long id, Map<String, Object> config);
+
+    /**
+     * 列出所有已开启 Actuator 定时采集的项目配置（全局时间轮读取）。
+     *
+     * @return 每项含 projectId / intervalSeconds
+     */
+    List<Map<String, Object>> listActuatorMonitors();
 
     /**
      * Git 定时轮询：fetch 后比较本地 HEAD 与远端分支，有更新才触发一次发布。

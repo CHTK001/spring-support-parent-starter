@@ -62,8 +62,10 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         int updated = 0;
         int skipped = 0;
         try {
-            session = provider.connect(job.connectInfo());
-            for (VendorDevice remote : provider.fetchDevices(session)) {
+            // 优先走统一 SDK 门面（官方 SDK / 官方 OpenAPI 由实现类决定）；
+            // 门面未覆盖的平台回落到原有会话实现。
+            List<VendorDevice> remoteDevices = fetchDevicesBySdk(provider, job);
+            for (VendorDevice remote : remoteDevices) {
                 try {
                     if (upsertByCredential(provider, remote, credentialId, job.credential())) {
                         created++;
@@ -88,10 +90,11 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     @Override
     /**
-     * 按凭据同步组织树（与 syncDevicesByCredential 平齐的维度） <p>厂商侧组织以 {@code vendor + 厂商 side 组织标识} 为在键幂等入库（与 设备列表的 {@code vendor + 序列号} 同口径），父节点依据 {@code desc()} 再挂接。
-     * @param credentialId 字符串
-     * @return 返回值
-    */
+     * 按凭据同步组织树。
+     *
+     * @param credentialId 凭据 ID
+     * @return created / updated / skipped
+     */
     public Map<String, Integer> syncOrganizationsByCredential(String credentialId) {
         CredentialJob job = resolveCredential(credentialId);
         if (job == null) {
@@ -179,6 +182,29 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
     }
 
     /**
+     * 拉设备目录：优先统一 SDK 门面，未覆盖平台回落原会话实现。
+     *
+     * @param provider 厂商 Provider
+     * @param job      凭据任务
+     * @return 设备条目
+     */
+    private List<VendorDevice> fetchDevicesBySdk(DeviceProvider provider, CredentialJob job) {
+        com.chua.starter.device.provider.sdk.DevicePlatformSdk sdk =
+                com.chua.starter.device.provider.sdk.DevicePlatformSdks.of(job.connectInfo());
+        if (sdk != null) {
+            log.info("[Device][Sync] 走统一 SDK 门面: platform={}, officialSdk={}",
+                    sdk.platform(), sdk.officialSdk());
+            return sdk.listDevices();
+        }
+        DeviceSession session = provider.connect(job.connectInfo());
+        try {
+            return provider.fetchDevices(session);
+        } finally {
+            session.close();
+        }
+    }
+
+    /**
      * 按凭据 ID 解析：缺失 / 停用的凭据返回 {@code null}
      *
      * @param credentialId 凭据 ID
@@ -197,9 +223,6 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     /**
      * 凭据 → 建立云平台会话所用的连接信息
-     *
-     * <p>appKey / appSecret / platformType 直取凭据本身；baseUrl 覆盖到 extra 里，
-     * 产品/项目等厂商侧隔离字段同样打入 extra，避免会话重建时遗漏参数。</p>
      *
      * @param credential 凭据
      * @return 连接信息（authType 为平台侧）

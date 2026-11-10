@@ -167,7 +167,7 @@ public class TsharkCaptureController {
     @PostMapping("/capture")
     public ReturnResult<MsTsharkSession> start(@RequestBody TsharkCaptureStartDTO body) {
         return this.tsharkCaptureService.startCapture(body.name(), body.captureInterface(),
-                body.captureFilter(), body.filterType(), body.count(), body.timeout());
+                body.captureFilter(), body.filterType(), body.count(), body.timeout(), body.maxSizeMb());
     }
 
     /**
@@ -213,6 +213,20 @@ public class TsharkCaptureController {
     @DeleteMapping("/sessions/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
         return this.tsharkCaptureService.deleteSession(id);
+    }
+
+    /**
+     * 立即执行一次保留清理（过期天数 / 目录空间）。
+     *
+     * <p>与 {@code TsharkRetentionCleanupScheduler} 同一份策略、同一套删除口径，
+     * 页面上的「一键清理」调这里，删了多少条会话直接返回。</p>
+     *
+     * @return 实际删除的会话数
+     */
+    @Operation(summary = "立即清理过期抓包数据")
+    @GetMapping("/sessions/retention/cleanup")
+    public ReturnResult<Integer> cleanupRetention() {
+        return ReturnResult.success(this.tsharkCaptureService.cleanupRetention());
     }
 
     /**

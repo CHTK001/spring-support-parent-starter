@@ -19,6 +19,7 @@ import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.metadata.Metadata;
 import com.chua.common.support.storage.request.ExistObjectRequest;
+import com.chua.common.support.storage.request.GetObjectRequest;
 import com.chua.common.support.storage.request.ListObjectRequest;
 import com.chua.common.support.storage.request.PutObjectRequest;
 import com.chua.common.support.storage.result.DeleteObjectResult;
@@ -4001,6 +4002,22 @@ var search=document.getElementById('search');
             return writeObjectConfig(bucket, key, result, response);
         }
 
+        // Range 快速通道：在把整份对象读进内存之前只读取请求区间。
+        // 浏览器 <video>/<audio>/<embed> 拖动进度条时发 Range；此前 Range 判定排在
+        // raw / clientRenderer 分支之后，令牌字节直链（/ot/{token}?raw=true）永远
+        // 到不了，等于「视频不能拖、大 PDF 不能跳页」，而且每次都要 readAllBytes。
+        // 这里对支持偏移的存储（本地文件系统）直接定位读取；不支持的后端仍可
+        // 走本通道（过滤器内 skip），语义一致，只是多读前缀。
+        if (!directoryIntent && setting.isOpenRange() && canServeRange(request)) {
+            String rangeHeader = request.getHeader("Range");
+            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+                CompletionStage<Void> rangeStage = serveRange(storage, request, response, key, rangeHeader, result);
+                if (rangeStage != null) {
+                    return rangeStage;
+                }
+            }
+        }
+
         byte[] data;
         try (InputStream in = result.getInputStream()) {
             data = in.readAllBytes();
@@ -4301,6 +4318,276 @@ var search=document.getElementById('search');
                 .setBody(data)
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+      /* ==================== Range 分段：快速通道（不整读对象） ==================== */
+
+      /**
+       * 判断该请求是否允许走 Range 快速通道。
+       *
+       * <p>访问门禁必须与 {@link #serveObjectContent} 完全一致：预览/下载都关闭、
+       * 或显式请求被开关拒绝时一律不走快速通道，避免用 {@code Range} 头绕开权限。
+       * 另外，带服务端转换/图片处理/压缩包下钻等副作用的请求也不走——它们的
+       * 响应体不是对象原始字节，按区间切会给出错误内容。</p>
+       *
+       * @param request 请求
+       * @return true 表示可以按 Range 只读目标区间
+       */
+    private boolean canServeRange(ServerRequest request) {
+        boolean wantPreview = boolParam(request, "preview");
+        boolean wantDownload = boolParam(request, "download");
+        if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
+            return false;
+        }
+        if (wantPreview && !setting.isOpenPreview()) {
+            return false;
+        }
+        if (wantDownload && !setting.isOpenDownload()) {
+            return false;
+        }
+        if (boolParam(request, "raw") && !isOneTimeTokenChannel(request)) {
+            return false;
+        }
+          // 这些参数会改变响应体（转换成 PDF/docx/xlsx、压缩包条目、CAD 图形、文件级配置），
+          // 它们必须走完整链路，区间切片对它们没有意义
+        if (boolParam(request, "config")
+                || stringParam(request, "format", "pdf") || stringParam(request, "format", "docx")
+                || stringParam(request, "format", "xlsx") || stringParam(request, "format", "archive")
+                || stringParam(request, "format", "cad")) {
+            return false;
+        }
+        if (request.getParams().get("inner") != null) {
+            return false;
+        }
+          // 图片处理参数（size/crop/rotate/watermark…）同样会改写字节
+        FileOperationSetting ops = parseFileOps(request);
+        return ops == null || !ops.hasOperation();
+    }
+
+      /**
+       * 请求是否经由短时效预览令牌（{@code /ot/{token}}）发起。
+       *
+       * @param request 请求
+       * @return true 表示为令牌会话
+       */
+    private boolean isOneTimeTokenChannel(ServerRequest request) {
+        String path = request.getPath();
+        return path != null && path.startsWith("/ot/");
+    }
+
+      /**
+       * 解析 Range 响应的下载语义（与 {@link #serveObjectContent} 的判定顺序一致）。
+       *
+       * @param request    请求
+       * @param wantRaw    是否 raw 直吐
+       * @param wantPreview 是否显式预览
+       * @param wantDownload 是否显式下载
+       * @return true=附件下载，false=内联
+       */
+    private boolean resolveRangeDownload(boolean wantRaw, boolean wantPreview, boolean wantDownload) {
+        if (wantPreview || wantRaw) {
+            return false;
+        }
+        if (wantDownload) {
+            return true;
+        }
+        return !setting.isOpenPreview();
+    }
+
+      /**
+       * 只读取对象的目标区间并返回 206；无法安全处理时返回 {@code null} 让调用方回落。
+       *
+       * <p>总长度取自存储元数据（{@link Metadata#getSize()}）。大小未知（0）时
+       * 无法生成 {@code Content-Range}，直接回落整读链路（那里有真实长度）。</p>
+       *
+       * @param storage   存储实例
+       * @param request   请求
+       * @param response  响应
+       * @param key       对象 键
+       * @param rangeHeader Range 头
+       * @param probe     已经打开的对象（本方法负责关闭其输入流）
+       * @return 异步阶段；返回 null 表示未处理
+       */
+    private CompletionStage<Void> serveRange(FileStorage storage, ServerRequest request, ServerResponse response,
+                                             String key, String rangeHeader, GetObjectResult probe) {
+        long totalSize = probe.getMetadata() == null ? 0L : probe.getMetadata().getSize();
+        if (totalSize <= 0L) {
+              // 大小未知：保留已打开对象，交回整读链路，避免白白关闭后 500
+            return null;
+        }
+        long[] offsets = parseRange(rangeHeader, totalSize);
+        if (offsets == null) {
+            closeQuietly(probe.getInputStream());
+            response.setStatus(416)
+                    .setHeader("Content-Range", "bytes */" + totalSize)
+                    .setHeader("Accept-Ranges", "bytes")
+                    .setContentType(resolveContentType(fileNameOf(key)))
+                    .setBody(new byte[0])
+                    .end();
+            return CompletableFuture.completedFuture(null);
+        }
+        long start = offsets[0];
+        long length = offsets[1] - offsets[0];
+        String fileName = fileNameOf(key);
+        boolean wantPreview = boolParam(request, "preview");
+        boolean wantDownload = boolParam(request, "download");
+        boolean wantRaw = boolParam(request, "raw") && isOneTimeTokenChannel(request);
+        boolean download = resolveRangeDownload(wantRaw, wantPreview, wantDownload);
+
+          // If-Range：校验失败表示客户端缓存的对象已变，必须回整份 200，不能给 206
+        String ifRange = request.getHeader("If-Range");
+        if (ifRange != null && !ifRangeMatches(ifRange, probe.getMetadata())) {
+            closeQuietly(probe.getInputStream());
+            return null;
+        }
+
+        byte[] slice;
+        try {
+            if (storage.supportsRange()) {
+                  // 原生偏移读取：关掉探测流后按 offset/length 重新打开，只读区间
+                closeQuietly(probe.getInputStream());
+                GetObjectResult ranged = storage.getObject(GetObjectRequest.builder()
+                        .fileName(fileName)
+                        .filePath(parentOf(key))
+                        .offset(start)
+                        .length(length)
+                        .build());
+                if (ranged.getResultCode() != ObjectResult.ResultCode.SUCCESS || ranged.getInputStream() == null) {
+                    log.error("[FileStorage] Range 读取失败: {} [{}-{}] - {}",
+                            key, start, offsets[1] - 1, ranged.getMessage());
+                    return error(response, 500, "Read Range Failed");
+                }
+                try (InputStream in = ranged.getInputStream()) {
+                    slice = readAtMost(in, length);
+                }
+            } else {
+                  // 不支持偏移的存储：复用已打开流，过滤器内跳过前缀（语义一致，代价是多读前缀）
+                try (InputStream in = probe.getInputStream()) {
+                    skipFully(in, start);
+                    slice = readAtMost(in, length);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[FileStorage] Range 读取异常: {} [{}-{}] - {}", key, start, offsets[1] - 1, e.getMessage(), e);
+            return error(response, 500, "Read Range Failed");
+        }
+
+        String etag = probe.getMetadata().getEtag();
+        long lastModified = probe.getMetadata().getLastModified();
+        response.setStatus(206)
+                .setHeader("Content-Range", "bytes " + start + "-" + (start + slice.length - 1) + "/" + totalSize)
+                .setHeader("Accept-Ranges", "bytes")
+                .setHeader("Content-Length", String.valueOf(slice.length))
+                .setHeader("X-FileStorage-Preview", wantRaw ? "raw" : "range")
+                .setHeader("Content-Disposition", buildDisposition(download, fileName))
+                .setContentType(resolveContentType(fileName));
+        if (etag != null && !etag.isBlank()) {
+            response.setHeader("ETag", etag);
+        } else {
+            response.setHeader("ETag", "\"" + Long.toHexString(totalSize) + "-" + Long.toHexString(lastModified) + "\"");
+        }
+        if (lastModified > 0L) {
+            response.setHeader("Last-Modified", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
+                    .format(java.time.Instant.ofEpochMilli(lastModified).atZone(java.time.ZoneOffset.UTC)));
+        }
+        response.setBody(slice).end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+      /**
+       * 校验 {@code If-Range}：ETag 原样比较，日期按 {@code Last-Modified} 比较。
+       *
+       * @param ifRange  If-Range 头
+       * @param metadata 对象元数据
+       * @return true 表示可以继续按 Range 返回
+       */
+    private boolean ifRangeMatches(String ifRange, Metadata metadata) {
+        String value = ifRange.trim();
+        if (metadata == null) {
+            return false;
+        }
+        if (value.startsWith("\"") || value.startsWith("W/")) {
+            String etag = metadata.getEtag();
+            return etag != null && etag.equals(value);
+        }
+        try {
+            long expected = java.time.ZonedDateTime.parse(value,
+                    java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli();
+              // HTTP 日期精度到秒：允许 1 秒内的误差
+            return Math.abs(expected - metadata.getLastModified()) < 1000L;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+      /**
+       * 从流中读取至多 {@code limit} 字节（不足即文件结束）。
+       *
+       * @param in    输入流
+       * @param limit 上限
+       * @return 实际读到的字节
+       * @throws IOException 读取失败
+       */
+    private byte[] readAtMost(InputStream in, long limit) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream((int) Math.min(Math.max(limit, 0L), 1L << 20));
+        byte[] buffer = new byte[8192];
+        long remaining = limit;
+        while (remaining > 0L) {
+            int read = in.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+            if (read < 0) {
+                break;
+            }
+            out.write(buffer, 0, read);
+            remaining -= read;
+        }
+        return out.toByteArray();
+    }
+
+      /**
+       * 跳过指定字节数（{@link InputStream#skip(long)} 可能提前返回）。
+       *
+       * @param in    输入流
+       * @param count 要跳过的字节数
+       * @throws IOException 跳过失败
+       */
+    private void skipFully(InputStream in, long count) throws IOException {
+        long remaining = count;
+        while (remaining > 0L) {
+            long skipped = in.skip(remaining);
+            if (skipped <= 0L) {
+                if (in.read() < 0) {
+                    return;
+                }
+                skipped = 1L;
+            }
+            remaining -= skipped;
+        }
+    }
+
+      /**
+       * 取对象键的末段文件名。
+       *
+       * @param key 对象键
+       * @return 文件名
+       */
+    private String fileNameOf(String key) {
+        return key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+    }
+
+      /**
+       * 安静关闭输入流（日志级别而不是抛错）。
+       *
+       * @param in 输入流，可为 null
+       */
+    private void closeQuietly(InputStream in) {
+        if (in == null) {
+            return;
+        }
+        try {
+            in.close();
+        } catch (IOException e) {
+            log.debug("[FileStorage] 关闭输入流失败: {}", e.getMessage());
+        }
     }
 
       /* ==================== 统一预览入口壳（前端 file-viewer 接管） ==================== */
@@ -6454,7 +6741,7 @@ var search=document.getElementById('search');
        * @param totalSize 数据总长度
        * @return [start, 结束] 区间（结束 为排他上界），格式非法返回 空
        */
-    private long[] parseRange(String range, int totalSize) {
+    private long[] parseRange(String range, long totalSize) {
         try {
             String spec = range.substring("bytes=".length());
             String[] parts = spec.split("-", 2);

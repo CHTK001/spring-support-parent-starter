@@ -94,6 +94,8 @@ export interface MailboxQuery {
   offset?: number;
   /** 只看未读 */
   unreadOnly?: boolean;
+  /** 未读优先：首屏把未读按时间倒序排在前面（仅 offset=0 生效） */
+  preferUnread?: boolean;
   /** 主题 / 发件人模糊词 */
   keyword?: string;
 }
@@ -137,6 +139,7 @@ export const listMailboxMessages = (accountId: string, query?: MailboxQuery) =>
       limit: query?.limit,
       offset: query?.offset,
       unreadOnly: query?.unreadOnly,
+      preferUnread: query?.preferUnread,
       keyword: query?.keyword,
     })
     .then(r => unwrap<MailboxMessage[]>(r));

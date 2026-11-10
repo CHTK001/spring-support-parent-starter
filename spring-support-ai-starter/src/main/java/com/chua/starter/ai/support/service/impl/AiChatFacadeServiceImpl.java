@@ -16,7 +16,6 @@ import com.chua.common.support.ai.chat.ChatToolCallData;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
-import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
@@ -1006,6 +1005,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                 .eq(SysAiProviderModel::getEnabled, true)
                                 .last("LIMIT 1"));
                 if (candidates.isEmpty()) {
+                    // 路由组没有自己的模型行（成员全在模型库里），按 providerId 精确命中即返回；
+                    // 否则会掉进下面的「按模型名反查」，反查不到任何行 → 会话报找不到模型。
+                    SysAiProvider grouped = sysAiProviderMapper.selectById(providerIdHint);
+                    if (grouped != null && Boolean.TRUE.equals(grouped.getEnabled())
+                            && ProviderRouteTargets.isRouterGroup(grouped.getPlatform())) {
+                        log.info("[AiChat] 路由 model={} -> 路由组供应商={}({})",
+                                model, grouped.getProviderId(), grouped.getPlatform());
+                        return grouped;
+                    }
                     log.warn("[AiChat] 供应商 {} 下未找到启用的模型 {}，回退按模型名反查", providerIdHint, model);
                 }
             } else {
@@ -1050,115 +1058,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      */
     private ChatClient buildProviderChatClient(SysAiProvider provider, String model) {
         try {
-            List<String> keys = collectAllApiKeys(provider);
-            Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
-            Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
-                    provider, ModelClientResolver.ownerScopeOf(provider));
-            if (keys.isEmpty()) {
- // 无任何可用密钥：保留原行为（appKey 为 空），由下游/兜底处理
-                ChatClientSetting setting = buildSetting(provider, null, extraHeaders, channelRoutes);
-                ChatClient raw = ChatClient.create(setting);
-                return raw == null ? null : raw.model(model);
-            }
-            if (keys.size() == 1) {
-                ChatClientSetting setting = buildSetting(provider, keys.getFirst(), extraHeaders, channelRoutes);
-                ChatClient raw = ChatClient.create(setting);
-                if (raw == null) {
-                    return null;
-                }
-                return raw.model(model);
-            }
-        // 多 appKey：逐密钥构建客户端，按 提供者 负载均衡算法聚合（默认 failover = 首个 Key 优先）
-        String strategy = resolveLoadStrategy(provider);
-        log.info("[AiChat] 构建多 AppKey 聚合客户端: provider={} model={} keys={} strategy={}",
-                provider.getProviderId(), model, keys.size(), strategy);
-        // 创建聚合客户端，先设置策略
-        AggregateChatClientSetting agg = new AggregateChatClientSetting();
-        agg.setStrategy(strategy);
-        AggregateChatClient aggregateClient = new AggregateChatClient(agg);
-        // 逐个创建底层客户端，设置 stream(true)
-        for (int i = 0; i < keys.size(); i++) {
-            String key = keys.get(i);
-            ChatClientSetting setting = buildSetting(provider, key, extraHeaders, channelRoutes);
-            ChatClient raw = ChatClient.create(setting);
-            if (raw != null) {
-                raw = raw.model(model);
-                raw = raw.stream(true); // 启用流式
-                aggregateClient.addClient("client-" + i, provider.getPlatform(), 1, raw);
-            }
-        }
-        return aggregateClient.model(model);
+            // 统一入口：路由组、单 Key、多 Key 全部交给 ModelClientResolver。
+            // Key 的轮换、失败与冷却都在 MultiKeyChatClient 内部处理，
+            // 这里不再自己收集 Key、也不再自己组 AggregateChatClient。
+            return modelClientResolver.resolve(provider.getProviderId() + ":" + model);
         } catch (Exception e) {
             log.warn("[AiChat] 构建 DB ChatClient 失败 provider={} model={}: {}",
                     provider.getProviderId(), model, e.getMessage());
             return null;
         }
-    }
-
-    /**
-     * 解析 提供者 的多 Key 负载均衡算法。
-     *
-     * <p>读 {@code extra.load_strategy}，缺省或非法时回退 {@code failover}（按序取第一个可用 key）。
-     * 可选值：{@code failover} / {@code round_robin} / {@code weighted} / {@code latency} / {@code cost} / {@code hybrid}。</p>
-     * @param provider 提供者
-     * @return resolve加载strategy的结果
-     */
-    private String resolveLoadStrategy(SysAiProvider provider) {
-        String s = null;
-        try {
-            Map<String, Object> extra = provider.getExtra();
-            if (extra != null && extra.get("load_strategy") != null) {
-                s = String.valueOf(extra.get("load_strategy")).trim().toLowerCase();
-            }
-        } catch (Exception e) {
-            log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
-        }
-        if (s == null || s.isEmpty()) {
-            return "failover";
-        }
-        // 归一化别名：roundrobin → round_robin
-        if (s.equals("roundrobin") || s.equals("round-robin")) {
-            return "round_robin";
-        }
-        return s;
-    }
-
-    /**
-     * 收集 提供者 全部可用 appKey（去重、保序）：
-     * 提供者 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
-     *
-     * @param provider DB 提供者
-     * @return 全部可用密钥列表（可能为空）
-     */
-    private List<String> collectAllApiKeys(SysAiProvider provider) {
-        LinkedHashSet<String> keys = new LinkedHashSet<>();
-        for (String k : extractApiKeys(provider.getCredentials())) {
-            keys.add(k);
-        }
-        List<SysAiProviderConnection> connections;
-        try {
-            connections = sysAiProviderConnectionMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProviderConnection>()
-                            .eq(SysAiProviderConnection::getProviderId, provider.getProviderId()));
-        } catch (Exception e) {
-            log.debug("[AiChat] 查询 provider connections 失败: {}", e.getMessage());
-            connections = new ArrayList<>(4); // 连接数量不可预估
-        }
-        for (SysAiProviderConnection conn : connections) {
-            for (String k : extractApiKeys(conn.getCredentials())) {
-                keys.add(k);
-            }
-        }
-        return new ArrayList<>(keys);
-    }
-
-    /**
-     * 从凭证中提取全部 API Key（形态兼容见 {@link ProviderCredentials}）。
-     * @param credentials 凭证
-     * @return extractapiKey的结果
-     */
-    private static List<String> extractApiKeys(Map<String, Object> credentials) {
-        return ProviderCredentials.apiKeys(credentials);
     }
 
     /**
@@ -1842,58 +1750,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             dbClientCache.put(cacheKey, new CachedDbClient(built, now));
         }
         return built;
-    }
-
-    /**
-     * 从 提供者 extra 中提取 {@code custom_headers}。
-     * @param extra extra
-     * @return extractextra头部的结果
-     */
-    @SuppressWarnings("unchecked")
-    private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
-        if (extra == null) {
-            return null;
-        }
-        Object headers = extra.get("custom_headers");
-        if (headers instanceof Map<?, ?> map) {
-            Map<String, String> result = new HashMap<>(8); // 自定义头部数量不可预估
-            map.forEach((k, v) -> {
-                if (k != null && v != null) {
-                    result.put(k.toString(), v.toString());
-                }
-            });
-            return result.isEmpty() ? null : result;
-        }
-        return null;
-    }
-
-    /**
-     * 组装 提供者 的对话客户端配置，含认证方案。
-     *
-     * <p>{@code auth_scheme} 决定是否发送认证头，{@code extra.auth_header} /
-     * {@code extra.auth_prefix} 决定头名与前缀。例如 Dots Studio 只认
-     * {@code api-key: <key>}，若仍发标准的 {@code Authorization: Bearer} 会被 401。</p>
-     *
-     * @param provider     DB 提供者
-     * @param apiKey       API Key，可为 null
-     * @param extraHeaders 自定义请求头
-     * @return 客户端配置
-     */
-    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
-                                                   Map<String, String> extraHeaders,
-                                                   Map<String, RouteTarget> channelRoutes) {
-        Map<String, Object> extra = provider.getExtra();
-        return ChatClientSetting.builder()
-                .provider(provider.getPlatform())
-                .appKey(apiKey)
-                .baseUrl(provider.getBaseUrl())
-                .extraHeaders(extraHeaders)
-                .authScheme(provider.getAuthScheme())
-                .authHeader(extraString(extra, "auth_header"))
-                .authPrefix(extraString(extra, "auth_prefix"))
-                .proxy(provider.getProxy())
-                .routes(channelRoutes != null ? channelRoutes : ProviderRouteTargets.fromExtra(extra))
-                .build();
     }
 
     /**

@@ -191,6 +191,26 @@ public interface ProjectPlatformProvider {
     String tailLog(String logPath, int lines);
 
     /**
+     * 生成「按关键字检索日志」的命令。
+     *
+     * <p>检索在目标主机上执行，平台只回传命中行：日志文件可能几十上百 MB，
+     * 整段拉回平台再过滤既慢又占内存。实现需保证：</p>
+     * <ul>
+     *   <li>日志路径被配成目录时，检索目录内最新的文件；</li>
+     *   <li>只做字面匹配（不按正则解析用户输入），关键字里的元字符按原文处理；</li>
+     *   <li>命中行带行号，便于和文件对照；</li>
+     *   <li>超出上限时截断，不返回整份文件。</li>
+     * </ul>
+     *
+     * @param logPath   日志文件路径（或日志目录）
+     * @param keyword   关键字（字面匹配）
+     * @param maxLines  最多返回的命中行数
+     * @param matchCase 是否区分大小写
+     * @return 检索命令
+     */
+    String searchLog(String logPath, String keyword, int maxLines, boolean matchCase);
+
+    /**
      * 生成「确保目录存在」命令（已存在时视为成功）。
      *
      * <p>典型场景：首次发布时日志目录尚不存在，而启动脚本把标准输出重定向到

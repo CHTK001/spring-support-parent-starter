@@ -17,6 +17,8 @@
         <guacamole.version>1.6.0</guacamole.version>
         <!-- RDP 直连原生桥的 JNA 绑定版本，与本地仓库已缓存版本一致 -->
         <jna.version>5.14.0</jna.version>
+        <!-- 串口终端依赖 -->
+        <jserialcomm.version>2.11.0</jserialcomm.version>
     </properties>
 
     <dependencies>
@@ -36,6 +38,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+        <!-- 串口终端：SerialWebSocketHandler 等直接使用 SerialPort，缺依赖整模块编译不过 -->
+        <dependency>
+            <groupId>com.fazecast</groupId>
+            <artifactId>jSerialComm</artifactId>
+            <version>${jserialcomm.version}</version>
         </dependency>
 
         <!-- 数据访问 -->

@@ -238,14 +238,27 @@ public class PosixHostOperations extends HostOperations {
         return HostActionVO.ok("已释放 pid " + pid + " 的 fd " + fd + " 所占空间" + detail(result));
     }
 
-    /* ---------- 系统配置（/proc/sys） ---------- */
+    /* ---------- 系统配置（/proc/sys 与 limits.d） ---------- */
 
+    /**
+     * 读取本平台全部系统配置项。
+     *
+     * <p>一次命令拿全量：每个键先打印 {@code key=}，再读对应文件，值里的换行按空格合并。
+     * 读不到（文件不存在 / 内核未编入）的键直接跳过，不编造默认值。</p>
+     *
+     * <p>用户限制（ulimit）不属于 /proc/sys：这里读执行通道当前会话的 soft/hard 值，
+     * 并单独标注「新会话生效」——修改写 limits.d，不会改变已经运行的进程。</p>
+     */
     @Override
     public List<SystemConfigItemVO> systemConfigs() {
         StringBuilder cmd = new StringBuilder();
         for (SysctlSpec spec : SYSCTL_SPECS) {
             cmd.append("printf '").append(spec.key()).append("='; cat /proc/sys/")
-                    .append(spec.key().replace('.', '/')).append(" 2>/dev/null; printf '\\n'; ");
+                    .append(spec.key().replace('.', '/')).append(" 2>/dev/null | tr '\\n' ' '; printf '\\n'; ");
+        }
+        for (LimitSpec spec : LIMIT_SPECS) {
+            cmd.append("printf '").append(spec.key()).append("='; sh -c '").append(spec.ulimitFlag())
+                    .append("' 2>/dev/null; printf '\\n'; ");
         }
         String out = output(cmd.toString());
         java.util.Map<String, String> values = new java.util.HashMap<>();
@@ -264,36 +277,65 @@ public class PosixHostOperations extends HostOperations {
             items.add(new SystemConfigItemVO(
                     spec.key(),
                     spec.label(),
-                    value,
+                    value.trim(),
                     spec.unit(),
                     spec.scope(),
                     "sysctl " + spec.key() + "（/proc/sys/" + spec.key().replace('.', '/') + "）",
                     true,
                     true,
                     spec.confirm(),
-                    spec.tip()));
+                    spec.tip(),
+                    spec.group(),
+                    spec.type(),
+                    spec.options()));
+        }
+        for (LimitSpec spec : LIMIT_SPECS) {
+            String value = values.get(spec.key());
+            if (value == null || value.isBlank() || "unlimited".equalsIgnoreCase(value.trim())) {
+                value = value == null || value.isBlank() ? null : "unlimited";
+            }
+            items.add(new SystemConfigItemVO(
+                    spec.key(),
+                    spec.label(),
+                    value == null ? "" : value.trim(),
+                    spec.unit(),
+                    spec.scope(),
+                    "ulimit " + spec.ulimitFlag() + "（/etc/security/limits.d/99-ms-monitor.conf）",
+                    true,
+                    false,
+                    false,
+                    spec.tip(),
+                    "用户限制（ulimit）",
+                    "text",
+                    ""));
         }
         return items;
     }
 
     @Override
     public HostActionVO applySystemConfig(String key, String value) {
-        SysctlSpec spec = sysctlSpec(key);
+        String k = key == null ? "" : key.trim();
+        String v = value == null ? "" : value.trim();
+        LimitSpec limit = limitSpec(k);
+        if (limit != null) {
+            return applyLimit(limit, v);
+        }
+        SysctlSpec spec = sysctlSpec(k);
         if (spec == null) {
             return HostActionVO.fail("不支持的系统配置项: " + key);
         }
-        String v = value == null ? "" : value.trim();
-        if (!v.matches("^-?\\d{1,12}$")) {
-            return HostActionVO.fail("配置值必须是整数: " + v);
+        String invalid = validate(spec, v);
+        if (invalid != null) {
+            return HostActionVO.fail(invalid);
         }
-        ShellSupport.ProbeResult result = run("sysctl -w " + spec.key() + "=" + v);
+        ShellSupport.ProbeResult result = run("sysctl -w " + spec.key() + "=" + shQuote(v));
         if (result.failed()) {
             return HostActionVO.fail("写入 " + spec.key() + " 失败" + detail(result));
         }
         // 持久化：sysctl -w 只改运行时，重启后丢失
         String file = "/etc/sysctl.d/99-ms-monitor.conf";
         String persist = "mkdir -p /etc/sysctl.d && { grep -v '^" + spec.key().replace(".", "\\.")
-                + "[ =]' " + file + " 2>/dev/null; echo '" + spec.key() + "=" + v + "'; } "
+                + "[ =]' " + file + " 2>/dev/null; echo " + shQuote(spec.key() + "=" + v) + "; } "
                 + "> /tmp/ms-sysctl.conf && mv /tmp/ms-sysctl.conf " + file;
         ShellSupport.ProbeResult persisted = run(persist);
         String suffix = persisted.failed() ? "（本次已生效，但写入 " + file + " 失败，重启后会回退）" : "";
@@ -303,6 +345,69 @@ public class PosixHostOperations extends HostOperations {
                     + (got == null ? "空" : got.trim()) + "）" + detail(result));
         }
         return HostActionVO.ok(spec.key() + " 已改为 " + v + suffix);
+    }
+
+    /**
+     * 写入 limits.d 并回读确认。
+     *
+     * <p>只对之后的新登录 / 新会话生效：ulimit 是进程级属性，已运行进程的限制不会被改写。</p>
+     *
+     * @param spec  用户限制定义
+     * @param value 新值（整数或 unlimited）
+     * @return 动作结果
+     */
+    private HostActionVO applyLimit(LimitSpec spec, String value) {
+        String v = value;
+        if (!"unlimited".equalsIgnoreCase(v) && !v.matches("^\\d{1,12}$")) {
+            return HostActionVO.fail(spec.label() + " 必须是整数或 unlimited: " + v);
+        }
+        String file = "/etc/security/limits.d/99-ms-monitor.conf";
+        String line = "* " + spec.limitType() + " " + spec.limitItem() + " " + v;
+        String script = "mkdir -p /etc/security/limits.d && { grep -v '^\\*[[:space:]]\\+"
+                + spec.limitType() + "[[:space:]]\\+" + spec.limitItem() + "[[:space:]]' " + file
+                + " 2>/dev/null; echo " + shQuote(line) + "; } > /tmp/ms-limits.conf && mv /tmp/ms-limits.conf "
+                + file + " && grep -c " + shQuote(line) + " " + file;
+        ShellSupport.ProbeResult result = run(script);
+        if (result.failed()) {
+            return HostActionVO.fail("写入 " + file + " 失败" + detail(result));
+        }
+        String got = output("sh -c '" + spec.ulimitFlag() + "' 2>/dev/null");
+        boolean currentMatches = got != null && v.equalsIgnoreCase(got.trim());
+        return HostActionVO.ok(spec.label() + " 已写入 " + file + "，新登录会话生效"
+                + (currentMatches ? "（当前会话恰好一致）" : "（当前会话仍为 "
+                + (got == null ? "未知" : got.trim()) + "）"));
+    }
+
+    /**
+     * 校验配置值是否满足该项的类型 / 范围约束。
+     *
+     * @param spec  配置定义
+     * @param value 待写入值
+     * @return 不合法时的原因，合法返回 null
+     */
+    private static String validate(SysctlSpec spec, String value) {
+        String v = value == null ? "" : value.trim();
+        String type = spec.type();
+        if ("int".equals(type)) {
+            if (!v.matches("^-?\\d{1,12}$")) {
+                return spec.label() + " 必须是整数: " + v;
+            }
+            return null;
+        }
+        if ("range".equals(type)) {
+            return v.matches("^\\d{1,6}\\s+\\d{1,6}$") ? null
+                    : spec.label() + " 必须是「起始 结束」两个整数: " + v;
+        }
+        if ("quad".equals(type)) {
+            return v.matches("^\\d{1,10}(\\s+\\d{1,10}){3}$") ? null
+                    : spec.label() + " 必须是四个整数: " + v;
+        }
+        if ("bool".equals(type) || "enum".equals(type)) {
+            return spec.options().contains(v + "=") || spec.options().endsWith("=" + v) ? null
+                    : spec.label() + " 取值必须是 " + spec.options() + ": " + v;
+        }
+        return v.matches("^[0-9A-Za-z_.:\\- ]{1,128}$") ? null
+                : spec.label() + " 含非法字符（只允许字母、数字、点、下划线、冒号、短横线与空格）";
     }
 
     /**
@@ -317,6 +422,25 @@ public class PosixHostOperations extends HostOperations {
         }
         String k = key.trim();
         for (SysctlSpec spec : SYSCTL_SPECS) {
+            if (spec.key().equals(k)) {
+                return spec;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 按 key 找用户限制定义。
+     *
+     * @param key 配置键
+     * @return 定义，未收录返回 null
+     */
+    private static LimitSpec limitSpec(String key) {
+        if (key == null) {
+            return null;
+        }
+        String k = key.trim();
+        for (LimitSpec spec : LIMIT_SPECS) {
             if (spec.key().equals(k)) {
                 return spec;
             }
@@ -543,25 +667,227 @@ public class PosixHostOperations extends HostOperations {
      * @param confirm 修改前是否需要二次确认
      * @param tip     操作提示
      */
-    private record SysctlSpec(String key, String label, String unit, String scope, boolean confirm, String tip) {
+    private record SysctlSpec(String key, String label, String unit, String scope, boolean confirm,
+                              String tip, String group, String type, String options) {
+    }
+
+    /**
+     * 用户限制（ulimit / limits.d）定义。
+     *
+     * @param key       配置键
+     * @param label     展示名
+     * @param unit      单位
+     * @param scope     作用域
+     * @param tip       操作提示
+     * @param limitType soft / hard
+     * @param limitItem nofile / nproc
+     * @param ulimitFlag 读取当前会话的 ulimit 参数
+     */
+    private record LimitSpec(String key, String label, String unit, String scope, String tip,
+                             String limitType, String limitItem, String ulimitFlag) {
     }
 
     /**
      * 系统配置白名单：只收录真实存在、可写、且改动风险可控的项。
+     *
+     * <p>分组覆盖句柄 / 进程 / 网络 / 内存 / 共享内存 / 安全 / 诊断七类，
+     * 常见项之外也收录 kptr_restrict、perf_event_paranoid 这类不常改但排障常用的项。</p>
      */
     private static final List<SysctlSpec> SYSCTL_SPECS = List.of(
             new SysctlSpec("fs.file-max", "全局文件句柄上限", "个", "内核", true,
                     "系统级最大打开文件数。改大立即生效；过小会让新进程拿不到句柄。"
-                            + "回退：改回原值，或编辑 /etc/sysctl.d/99-ms-monitor.conf 删除对应行。"),
+                            + "回退：改回原值，或编辑 /etc/sysctl.d/99-ms-monitor.conf 删除对应行。",
+                    "文件与句柄", "int", ""),
+            new SysctlSpec("fs.nr_open", "单进程文件句柄上限", "个", "内核", true,
+                    "单进程可分配的文件描述符上限，必须不小于 limits.conf 里的 nofile 硬限制。",
+                    "文件与句柄", "int", ""),
             new SysctlSpec("fs.inotify.max_user_watches", "inotify 监视上限", "个", "内核", false,
-                    "单个用户可注册的文件监视数。前端构建 / 日志采集报 ENOSPC 时调大，立即生效。"),
+                    "单个用户可注册的文件监视数。前端构建 / 日志采集报 ENOSPC 时调大，立即生效。",
+                    "文件与句柄", "int", ""),
+            new SysctlSpec("fs.inotify.max_user_instances", "inotify 实例上限", "个", "内核", false,
+                    "单个用户可创建的 inotify 实例数，文件监听类服务过多时调大。",
+                    "文件与句柄", "int", ""),
+            new SysctlSpec("fs.inotify.max_queued_events", "inotify 队列长度", "个", "内核", false,
+                    "事件队列长度，瞬时大量文件变更时过小会丢事件。",
+                    "文件与句柄", "int", ""),
+            new SysctlSpec("fs.aio-max-nr", "异步 IO 请求上限", "个", "内核", false,
+                    "全系统 AIO 事件数上限，数据库类服务报 EAGAIN 时调大。",
+                    "文件与句柄", "int", ""),
+            new SysctlSpec("fs.pipe-max-size", "管道最大容量", "字节", "内核", false,
+                    "单个管道的最大缓冲字节数，日志管道瓶颈时可调大。",
+                    "文件与句柄", "int", ""),
             new SysctlSpec("kernel.pid_max", "进程号上限", "个", "内核", true,
-                    "系统可分配的最大 PID。调小不会回收已存在的进程，重启后才完全生效。"),
+                    "系统可分配的最大 PID。调小不会回收已存在的进程，重启后才完全生效。",
+                    "进程与调度", "int", ""),
+            new SysctlSpec("kernel.threads-max", "线程总数上限", "个", "内核", true,
+                    "全系统可创建的内核线程数上限，改小可能让新线程创建失败。",
+                    "进程与调度", "int", ""),
+            new SysctlSpec("kernel.sched_autogroup_enabled", "自动分组调度", "开关", "内核", false,
+                    "桌面交互场景下按会话分组调度；服务器压测时可关闭以降低调度切换。",
+                    "进程与调度", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("kernel.numa_balancing", "NUMA 自动均衡", "开关", "内核", false,
+                    "自动把任务迁移到本地内存节点；NUMA 机器上数据库类负载常关闭。",
+                    "进程与调度", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("kernel.watchdog_thresh", "软锁检测阈值", "秒", "内核", false,
+                    "软锁 / 硬锁检测的时间阈值，排障时调大可减少误报。",
+                    "进程与调度", "int", ""),
+            new SysctlSpec("kernel.hung_task_timeout_secs", "任务挂起告警阈值", "秒", "内核", false,
+                    "任务 D 状态超过该秒数会打印告警；0 表示关闭该告警。",
+                    "进程与调度", "int", ""),
             new SysctlSpec("net.core.somaxconn", "监听队列上限", "个", "内核", false,
-                    "已完成握手的连接排队上限。高并发服务调大可减少连接被丢弃。"),
+                    "已完成握手的连接排队上限。高并发服务调大可减少连接被丢弃。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.core.netdev_max_backlog", "网卡收包队列", "个", "内核", false,
+                    "网卡中断到协议栈之间的 backlog，高pps 场景丢包时调大。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.core.rmem_max", "接收缓冲上限", "字节", "内核", false,
+                    "单 socket 接收缓冲最大值；高带宽长肥管道场景调大。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.core.wmem_max", "发送缓冲上限", "字节", "内核", false,
+                    "单 socket 发送缓冲最大值；大数据量传输场景调大。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.core.optmem_max", "附加缓冲上限", "字节", "内核", false,
+                    "每个 socket 的附加缓冲上限，影响 cmsg / 控制消息。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_max_syn_backlog", "SYN 队列上限", "个", "内核", false,
+                    "未完成三次握手的半连接队列上限，抗 SYN Flood 与高并发建连时调大。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_fin_timeout", "FIN_WAIT2 超时", "秒", "内核", false,
+                    "主动关闭方等待对端 FIN 的时长，短连接多时调小可加速端口回收。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_tw_reuse", "TIME_WAIT 复用", "开关", "内核", false,
+                    "允许复用 TIME_WAIT 状态的连接发起新连接，短连接场景常用。",
+                    "网络与端口", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("net.ipv4.ip_local_port_range", "临时端口范围", "起始 结束", "内核", false,
+                    "本机主动连接可用的端口区间，形如「32768 60999」；扩大可提高并发出站能力。",
+                    "网络与端口", "range", ""),
+            new SysctlSpec("net.ipv4.tcp_keepalive_time", "保活起始时间", "秒", "内核", false,
+                    "连接空闲多久后开始发保活探测，默认 7200；长连接场景常调小。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_keepalive_intvl", "保活探测间隔", "秒", "内核", false,
+                    "两次保活探测之间的间隔。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_keepalive_probes", "保活探测次数", "次", "内核", false,
+                    "连续探测失败多少次后判定连接断开。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_syncookies", "SYN Cookie", "开关", "内核", false,
+                    "半连接队列溢出时启用 SYN Cookie 防御 SYN Flood。",
+                    "网络与端口", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("net.ipv4.ip_forward", "IP 转发", "开关", "内核", true,
+                    "开启后本机可作为路由器 / 网关转发流量；普通服务器应保持关闭。",
+                    "网络与端口", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("net.ipv4.conf.all.rp_filter", "反向路径校验", "级别", "内核", false,
+                    "0 关闭 / 1 严格 / 2 宽松；多网卡与负载均衡场景常需要宽松或关闭。",
+                    "网络与端口", "enum", "0=关闭;1=严格;2=宽松"),
+            new SysctlSpec("net.ipv4.tcp_slow_start_after_idle", "空闲后慢启动", "开关", "内核", false,
+                    "空闲连接恢复后是否重新慢启动；长连接高吞吐场景常关闭。",
+                    "网络与端口", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("net.ipv4.tcp_mtu_probing", "MTU 探测", "级别", "内核", false,
+                    "0 关闭 / 1 检测到黑洞时开启 / 2 始终开启，解决 PMTU 黑洞导致的卡死。",
+                    "网络与端口", "enum", "0=关闭;1=黑洞时开启;2=始终开启"),
+            new SysctlSpec("net.ipv6.conf.all.disable_ipv6", "禁用 IPv6", "开关", "内核", false,
+                    "1 表示全系统禁用 IPv6；关闭后需确认业务没有依赖 IPv6 监听。",
+                    "网络与端口", "enum", "0=启用;1=禁用"),
             new SysctlSpec("vm.swappiness", "交换倾向", "0-100", "内核", false,
-                    "内核把匿名页换出到 swap 的倾向：0 更倾向保留内存，100 更积极换出。"));
+                    "内核把匿名页换出到 swap 的倾向：0 更倾向保留内存，100 更积极换出。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.overcommit_memory", "内存超额分配策略", "模式", "内核", true,
+                    "0 启发式 / 1 总是允许 / 2 严格限制；Redis 等常设置为 1。",
+                    "内存与交换", "enum", "0=启发式;1=总是允许;2=严格限制"),
+            new SysctlSpec("vm.overcommit_ratio", "超额分配比例", "百分比", "内核", false,
+                    "overcommit_memory=2 时，允许分配的内存比例。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.max_map_count", "内存映射区上限", "个", "内核", false,
+                    "单进程 mmap 区域数上限；Elasticsearch 等常要求调大到 262144。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.dirty_ratio", "脏页回写阈值", "百分比", "内核", false,
+                    "脏页占总内存比例达到该值时，进程写操作被阻塞等待回写。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.dirty_background_ratio", "后台回写阈值", "百分比", "内核", false,
+                    "脏页达到该比例后后台开始回写，通常小于 dirty_ratio。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.min_free_kbytes", "保留空闲内存", "KB", "内核", false,
+                    "为内核保留的最小空闲内存，过小会触发直接回收导致卡顿。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.vfs_cache_pressure", "VFS 缓存回收倾向", "百分比", "内核", false,
+                    "越高越积极回收 inode / dentry 缓存，100 为均衡值。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.panic_on_oom", "OOM 时 panic", "开关", "内核", true,
+                    "1 表示内存耗尽时直接 panic 而不是杀进程；生产环境默认为 0。",
+                    "内存与交换", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("kernel.shmmax", "共享内存段上限", "字节", "内核", false,
+                    "单个 System V 共享内存段的最大字节数，数据库部署常要求大于物理内存一半。",
+                    "IPC 与共享内存", "int", ""),
+            new SysctlSpec("kernel.shmall", "共享内存总页数", "页", "内核", false,
+                    "全系统可分配的共享内存页总数。",
+                    "IPC 与共享内存", "int", ""),
+            new SysctlSpec("kernel.shmmni", "共享内存段数量", "个", "内核", false,
+                    "系统级共享内存段数量上限。",
+                    "IPC 与共享内存", "int", ""),
+            new SysctlSpec("kernel.sem", "信号量参数", "四个整数", "内核", false,
+                    "形如「250 32000 32 128」：每信号量集上限 / 系统总信号量 / 每次操作数 / 信号量集数。",
+                    "IPC 与共享内存", "quad", ""),
+            new SysctlSpec("kernel.msgmax", "单条消息上限", "字节", "内核", false,
+                    "System V 消息队列单条消息的最大字节数。",
+                    "IPC 与共享内存", "int", ""),
+            new SysctlSpec("kernel.msgmnb", "消息队列容量", "字节", "内核", false,
+                    "单个消息队列的默认最大字节数。",
+                    "IPC 与共享内存", "int", ""),
+            new SysctlSpec("kernel.msgmni", "消息队列数量", "个", "内核", false,
+                    "系统级消息队列数量上限。",
+                    "IPC 与共享内存", "int", ""),
+            new SysctlSpec("kernel.kptr_restrict", "内核指针隐藏", "级别", "内核", false,
+                    "0 不隐藏 / 1 非特权用户隐藏 / 2 全部隐藏；排障时可能需要降到 0。",
+                    "安全与权限", "enum", "0=不隐藏;1=非特权隐藏;2=全部隐藏"),
+            new SysctlSpec("kernel.dmesg_restrict", "dmesg 访问限制", "开关", "内核", false,
+                    "1 表示仅特权用户可读内核环形缓冲区。",
+                    "安全与权限", "enum", "0=允许;1=仅特权"),
+            new SysctlSpec("kernel.perf_event_paranoid", "perf 权限级别", "级别", "内核", false,
+                    "控制非特权用户使用 perf 的权限，排障时需要放宽。",
+                    "安全与权限", "enum", "-1=全部允许;0=限制原始跟踪;1=仅内核追踪;2=更严格;3=禁止"),
+            new SysctlSpec("kernel.randomize_va_space", "地址空间随机化", "级别", "内核", true,
+                    "0 关闭 / 1 部分 / 2 完全；关闭会显著降低安全性，仅用于复现崩溃。",
+                    "安全与权限", "enum", "0=关闭;1=部分;2=完全"),
+            new SysctlSpec("kernel.yama.ptrace_scope", "ptrace 限制", "级别", "内核", false,
+                    "控制进程能否 ptrace 非子进程，排障 / 调试时按需放宽。",
+                    "安全与权限", "enum", "0=不限制;1=仅子进程;2=仅管理员;3=禁止"),
+            new SysctlSpec("kernel.unprivileged_bpf_disabled", "非特权 BPF", "开关", "内核", false,
+                    "1 表示禁止非特权用户加载 eBPF 程序，采集类工具可能受影响。",
+                    "安全与权限", "enum", "0=允许;1=禁止"),
+            new SysctlSpec("net.core.bpf_jit_enable", "BPF JIT", "开关", "内核", false,
+                    "开启后 eBPF 程序编译为本地指令，采集开销更低。",
+                    "安全与权限", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("kernel.sysrq", "SysRq 功能位", "位掩码", "内核", true,
+                    "控制哪些 SysRq 组合键可用；排障常设为 1，服务器安全加固时常设为 0。",
+                    "崩溃与诊断", "int", ""),
+            new SysctlSpec("kernel.panic", "panic 后重启等待", "秒", "内核", false,
+                    "内核 panic 后等待多少秒自动重启，0 表示不自动重启。",
+                    "崩溃与诊断", "int", ""),
+            new SysctlSpec("kernel.panic_on_oops", "Oops 时 panic", "开关", "内核", true,
+                    "1 表示发生 Oops 时直接 panic，便于 kdump 抓取现场，但会中断服务。",
+                    "崩溃与诊断", "enum", "0=关闭;1=开启"),
+            new SysctlSpec("kernel.core_uses_pid", "core 文件名带 PID", "开关", "内核", false,
+                    "生成的 core 文件名是否追加进程号，避免并发崩溃互相覆盖。",
+                    "崩溃与诊断", "enum", "0=关闭;1=开启")
+    );
 
+    /**
+     * 用户限制白名单：写入 limits.d，只对之后的新登录 / 新会话生效。
+     */
+    private static final List<LimitSpec> LIMIT_SPECS = List.of(
+            new LimitSpec("limits.nofile.soft", "打开文件数（软限制）", "个", "用户会话",
+                    "soft 限制是进程实际可用值；改大后需重新登录。已有进程不会变化。",
+                    "soft", "nofile", "ulimit -Sn"),
+            new LimitSpec("limits.nofile.hard", "打开文件数（硬限制）", "个", "用户会话",
+                    "hard 限制是 soft 的上限；普通用户只能降低、不能提高。",
+                    "hard", "nofile", "ulimit -Hn"),
+            new LimitSpec("limits.nproc.soft", "进程数（软限制）", "个", "用户会话",
+                    "单用户可创建进程 / 线程的软限制；容器与构建机常需要调大。",
+                    "soft", "nproc", "ulimit -Su"),
+            new LimitSpec("limits.nproc.hard", "进程数（硬限制）", "个", "用户会话",
+                    "单用户可创建进程 / 线程的硬限制。",
+                    "hard", "nproc", "ulimit -Hu")
+    );
 
     @Override
     public List<DiskPartitionRowVO> diskPartitions() {

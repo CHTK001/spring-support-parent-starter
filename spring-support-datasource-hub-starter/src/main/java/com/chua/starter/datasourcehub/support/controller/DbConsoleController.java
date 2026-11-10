@@ -12,6 +12,7 @@ import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.datasourcehub.support.dbconsole.DbAiStatusVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnDef;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnVO;
+import com.chua.starter.datasourcehub.support.dbconsole.DbCopyTaskRegistry;
 import com.chua.starter.datasourcehub.support.dbconsole.DbDialectSupport;
 import com.chua.starter.datasourcehub.support.dbconsole.DbErDiagram;
 import com.chua.starter.datasourcehub.support.dbconsole.DbFilter;
@@ -41,6 +42,8 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbSchemaSnapshotVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSnapshotDetailVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbSchemaRollbackResultVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbTableSpec;
+import com.chua.starter.datasourcehub.support.dbconsole.DbTableCopyRequest;
+import com.chua.starter.datasourcehub.support.dbconsole.DbTableCopyService;
 import com.chua.starter.datasourcehub.support.service.DbSchemaSnapshotService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.datasourcehub.support.config.DatasourceHubProperties;
@@ -141,6 +144,16 @@ public class DbConsoleController {
      * 表结构版本控制（DDL 快照 + 回滚）。
      */
     private final DbSchemaSnapshotService schemaSnapshotService;
+
+    /**
+     * 跨库复制表执行体（读 DDL + 流式搬数据）。
+     */
+    private final DbTableCopyService dbTableCopyService;
+
+    /**
+     * 复制任务注册表：全局 SSE 进度流与取消入口。
+     */
+    private final DbCopyTaskRegistry dbCopyTaskRegistry;
 
     /**
      * 取事务注册表。
@@ -4040,5 +4053,68 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             }
         });
 
+    }
+
+    // ==================== 跨库复制表 ====================
+
+    /**
+     * 提交一次跨库复制表任务。
+     *
+     * <p>只做校验与建任务，立刻返回 {@code taskId}；执行与进度走
+     * {@code copy/stream} 那条全局 SSE。请求体见 {@link DbTableCopyRequest}。</p>
+     *
+     * @param request 源/目标 + 是否复制数据 + 是否覆盖同名表
+     * @return 任务 id
+     */
+    @Operation(summary = "复制表：提交后台任务")
+    @SysLog(name = "复制表")
+    @PostMapping("table/copy")
+    public ReturnResult<Map<String, Object>> copyTable(@RequestBody DbTableCopyRequest request) {
+        return callDb("复制表", () -> Map.of("taskId", dbTableCopyService.start(request)));
+    }
+
+    /**
+     * 复制任务的全局进度流。
+     *
+     * <p>全局一条：事件按 {@code taskId} 分发，前端按需过滤。不走
+     * {@code StreamingResponseBody} 是因为这条连接需要长期存活并支持心跳，
+     * 注册表里用 {@code SseEmitter.data(byte[])} 手写帧（本项目该 Spring 版本下
+     * 传对象会被静默丢弃，详见 {@link DbCopyTaskRegistry} 类注释）。</p>
+     *
+     * @return SSE 流
+     */
+    @Operation(summary = "复制表：任务进度流（全局 SSE）")
+    @GetMapping(value = "copy/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter copyStream() {
+        return dbCopyTaskRegistry.subscribe();
+    }
+
+    /**
+     * 请求取消某个复制任务。
+     *
+     * <p>只置标志位，复制循环在批次边界停下：已经开始执行的数据库语句强行打断
+     * 会把连接留在未知状态。</p>
+     *
+     * @param taskId 任务 id
+     * @return 是否已受理
+     */
+    @Operation(summary = "复制表：取消任务")
+    @PostMapping("copy/{taskId}/cancel")
+    public ReturnResult<Map<String, Object>> cancelCopy(@PathVariable String taskId) {
+        if (!dbCopyTaskRegistry.cancel(taskId)) {
+            return ReturnResult.error("任务不存在或已结束: " + taskId);
+        }
+        return ReturnResult.ok(Map.of("taskId", taskId, "cancelled", true));
+    }
+
+    /**
+     * 当前保留的复制任务快照（诊断/刷新后补齐状态用）。
+     *
+     * @return 任务快照列表
+     */
+    @Operation(summary = "复制表：任务列表")
+    @GetMapping("copy/tasks")
+    public ReturnResult<List<Map<String, Object>>> copyTasks() {
+        return ReturnResult.ok(dbCopyTaskRegistry.snapshots());
     }
 }

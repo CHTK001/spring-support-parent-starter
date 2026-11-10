@@ -91,7 +91,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected volatile Instant tokenExpiry = Instant.EPOCH;
 
     /**
-     * 平台 baseurl
+     * 平台 base URL。只有综合安防与 ICC 私有化部署允许使用凭据覆盖值；公有云网关固定。
      */
     protected final String baseUrl;
 
@@ -114,7 +114,10 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected AbstractOpenApiSession(DeviceConnectInfo info, String baseUrl) {
         this.info = info;
         Object extra = info.extra() == null ? null : info.extra().get("baseUrl");
-        this.baseUrl = extra instanceof String s ? s : baseUrl;
+        String platformType = info.platformType();
+        boolean privateDeployment = "secure-platform".equalsIgnoreCase(platformType)
+                || "dahua-icc".equalsIgnoreCase(platformType);
+        this.baseUrl = privateDeployment && extra instanceof String s && !s.isBlank() ? s : baseUrl;
     }
 
     /**
@@ -189,8 +192,16 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
                 }
                 response = builder.get();
             } else {
-                Map<String, Object> body = params == null ? Collections.emptyMap() : params;
-                response = builder.body(body).post();
+                // 不能把 Map 直接交给 HttpClientBuilder.body(Object)：它只做 toString()，
+                // 发出去是 {accessKey=..., secretKey=...} 这种非 JSON 文本，平台直接回「JSON格式错误」。
+                // 这里显式序列化成 JSON 字符串（与 .json() 的 Content-Type 一致）。
+                String jsonBody;
+                try {
+                    jsonBody = MAPPER.writeValueAsString(params == null ? Collections.emptyMap() : params);
+                } catch (Exception ex) {
+                    throw new IllegalStateException("OpenAPI 请求体序列化失败: " + method + " " + path, ex);
+                }
+                response = builder.body(jsonBody).post();
             }
             String respBody = response.getBodyString();
             if (debug) {

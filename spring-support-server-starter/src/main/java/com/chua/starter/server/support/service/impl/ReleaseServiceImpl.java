@@ -154,6 +154,26 @@ public class ReleaseServiceImpl implements ReleaseService {
     private static final String CFG_PROJECT_PREFIX = "upgrade.project.";
 
       /**
+       * 项目级 Actuator 定时采集配置的键前缀（后接项目ID），不改表结构
+       */
+    private static final String CFG_ACTUATOR_MONITOR_PREFIX = "release.actuator.monitor.";
+
+      /**
+       * Actuator 定时采集默认间隔（秒）
+       */
+    private static final int ACTUATOR_MONITOR_DEFAULT_SECONDS = 30;
+
+      /**
+       * Actuator 定时采集最小间隔（秒）：再短会持续占住目标主机的命令通道
+       */
+    private static final int ACTUATOR_MONITOR_MIN_SECONDS = 5;
+
+      /**
+       * Actuator 定时采集最大间隔（秒）
+       */
+    private static final int ACTUATOR_MONITOR_MAX_SECONDS = 3600;
+
+      /**
        * 操作上下文：项目 + 目标主机
        */
     private static class OperationContext {
@@ -839,6 +859,27 @@ public class ReleaseServiceImpl implements ReleaseService {
 
       // ==================== 日志 ====================
 
+    /** 「日志读取行数」配置键前缀（项目级） */
+    private static final String CFG_LOG_LINES_PREFIX = "release.log.lines.";
+
+    /** 日志读取行数默认值 */
+    private static final int LOG_LINES_DEFAULT = 100;
+
+    /** 日志读取行数下限 */
+    private static final int LOG_LINES_MIN = 10;
+
+    /** 日志读取行数上限 */
+    private static final int LOG_LINES_MAX = 5000;
+
+    /** 后端检索命中行上限默认值 */
+    private static final int LOG_SEARCH_MAX_DEFAULT = 500;
+
+    /** 后端检索命中行硬上限：再多前端也放不下，且回传体积不可控 */
+    private static final int LOG_SEARCH_MAX_LIMIT = 5000;
+
+    /** 后端检索超时（秒）：大文件 grep 比普通命令慢，但不能无限等 */
+    private static final int LOG_SEARCH_TIMEOUT_SECONDS = 120;
+
     @Override
     public ReturnResult<String> getProjectLog(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
@@ -851,7 +892,8 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
           // 按操作系统生成读取命令（由平台 SPI 提供：POSIX tail / Windows Get-Content -Tail）
         String logPath = project.getLogPath();
-        String command = projectPlatformRouter.resolveOrPosix(prepared.getData().osType).tailLog(logPath, 100);
+        String command = projectPlatformRouter.resolveOrPosix(prepared.getData().osType)
+                .tailLog(logPath, resolveLogLines(id));
         ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
                 execService.runCommand(Collections.singletonList(prepared.getData().hostId), command, 30, null);
 
@@ -859,6 +901,124 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.ok(result.getData().get(0).getMsExecLogOutput());
         }
         return ReturnResult.ok("暂无日志内容");
+    }
+
+    @Override
+    public ReturnResult<com.chua.starter.server.support.model.vo.ProjectLogSearchVO> searchProjectLog(
+            Long id, String keyword, Integer maxLines, Boolean matchCase) {
+        if (isBlank(keyword)) {
+            return ReturnResult.error("检索关键字不能为空");
+        }
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        MsServerProject project = ctx.project;
+        if (isBlank(project.getLogPath())) {
+            return ReturnResult.error("日志路径未配置");
+        }
+        int limit = maxLines == null || maxLines <= 0
+                ? LOG_SEARCH_MAX_DEFAULT
+                : Math.min(LOG_SEARCH_MAX_LIMIT, maxLines);
+        boolean caseSensitive = matchCase != null && matchCase;
+        String command = projectPlatformRouter.resolveOrPosix(ctx.osType)
+                .searchLog(project.getLogPath(), keyword, limit, caseSensitive);
+        long begin = System.currentTimeMillis();
+        ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
+                execService.runCommand(Collections.singletonList(ctx.hostId), command,
+                        LOG_SEARCH_TIMEOUT_SECONDS, null);
+        long elapsed = System.currentTimeMillis() - begin;
+        if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
+            return ReturnResult.error("日志检索失败: " + (result.getMsg() == null ? "无返回" : result.getMsg()));
+        }
+        String output = result.getData().get(0).getMsExecLogOutput();
+        List<String> lines = new ArrayList<>();
+        if (output != null) {
+            for (String raw : output.split("\n")) {
+                String line = raw.endsWith("\r") ? raw.substring(0, raw.length() - 1) : raw;
+                if (!line.isEmpty()) {
+                    lines.add(line);
+                }
+            }
+        }
+        boolean noHit = lines.size() == 1 && lines.get(0).startsWith("未检索到匹配内容");
+        if (noHit) {
+            lines.clear();
+        }
+        boolean truncated = lines.size() >= limit;
+        return ReturnResult.ok(new com.chua.starter.server.support.model.vo.ProjectLogSearchVO(
+                keyword, project.getLogPath(), lines, lines.size(), truncated, elapsed, null));
+    }
+
+    /**
+     * 读取项目的「日志读取行数」；未配置或非法时回退默认 100 行。
+     *
+     * @param projectId 项目ID
+     * @return 行数（夹在 10 ~ 5000）
+     */
+    private int resolveLogLines(Long projectId) {
+        Object saved = readCfg(CFG_LOG_LINES_PREFIX + projectId, null);
+        int lines = LOG_LINES_DEFAULT;
+        if (saved instanceof Map) {
+            Object raw = ((Map<?, ?>) saved).get("lines");
+            if (raw != null) {
+                try {
+                    lines = Integer.parseInt(String.valueOf(raw).trim());
+                } catch (NumberFormatException e) {
+                    lines = LOG_LINES_DEFAULT;
+                }
+            }
+        } else if (saved != null) {
+            try {
+                lines = Integer.parseInt(String.valueOf(saved).trim());
+            } catch (NumberFormatException e) {
+                lines = LOG_LINES_DEFAULT;
+            }
+        }
+        return Math.max(LOG_LINES_MIN, Math.min(LOG_LINES_MAX, lines));
+    }
+
+    /**
+     * 保存项目的「日志读取行数」（写后回读口径与采集配置一致）。
+     *
+     * @param projectId 项目ID
+     * @param lines     行数
+     * @return 操作结果
+     */
+    private ReturnResult<Void> saveLogLines(Long projectId, int lines) {
+        int clamped = Math.max(LOG_LINES_MIN, Math.min(LOG_LINES_MAX, lines));
+        String key = CFG_LOG_LINES_PREFIX + projectId;
+        String value;
+        try {
+            value = JSON.writeValueAsString(Map.of("lines", clamped));
+        } catch (Exception e) {
+            return ReturnResult.error("配置序列化失败");
+        }
+        MsServerConfig exists = serverConfigMapper.selectOne(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
+        if (exists == null) {
+            MsServerConfig cfg = new MsServerConfig();
+            cfg.setConfigKey(key);
+            cfg.setConfigValue(value);
+            cfg.setConfigDesc("项目 " + projectId + " 日志读取行数");
+            serverConfigMapper.insert(cfg);
+        } else {
+            exists.setConfigValue(value);
+            serverConfigMapper.updateById(exists);
+        }
+        return ReturnResult.success();
+    }
+
+    public ReturnResult<Integer> getLogLines(Long id) {
+        return ReturnResult.ok(resolveLogLines(id));
+    }
+
+    public ReturnResult<Void> updateLogLines(Long id, Integer lines) {
+        if (lines == null) {
+            return ReturnResult.error("行数不能为空");
+        }
+        return saveLogLines(id, lines);
     }
 
     @Override
@@ -1382,6 +1542,31 @@ public class ReleaseServiceImpl implements ReleaseService {
                         : new java.util.LinkedHashMap<>(config);
                   // 批量升级只对一个项目下发一次：清掉可能残留的包路径判断，交给调用方显式传入
                 ReturnResult<String> r = runUpgrade(projectId, cfg);
+                row.put("ok", r.isOk());
+                row.put("taskId", r.isOk() ? r.getData() : null);
+                if (!r.isOk()) {
+                    row.put("message", r.getMsg());
+                }
+            } catch (Exception e) {
+                row.put("ok", false);
+                row.put("message", e.getMessage());
+            }
+            results.add(row);
+        }
+        return ReturnResult.ok(results);
+    }
+
+    @Override
+    public ReturnResult<List<Map<String, Object>>> batchRollback(List<Long> projectIds, String backupName) {
+        if (projectIds == null || projectIds.isEmpty()) {
+            return ReturnResult.error("请选择要回滚的项目");
+        }
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Long projectId : projectIds) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("projectId", projectId);
+            try {
+                ReturnResult<String> r = rollbackProject(projectId, backupName);
                 row.put("ok", r.isOk());
                 row.put("taskId", r.isOk() ? r.getData() : null);
                 if (!r.isOk()) {
@@ -3000,15 +3185,14 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("message", "项目未配置 server.port，无法探测 Swagger/Actuator");
             return ReturnResult.ok(out);
         }
-        if (ctx.windows) {
-            out.put("message", "Windows 主机暂不支持自动探测");
-            return ReturnResult.ok(out);
-        }
         String base = "http://127.0.0.1:" + port;
-        String command = "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/v3/api-docs; echo; "
-                  + "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/swagger-ui/index.html; echo; "
-                  + "curl -s -m 4 " + base + "/actuator/health; echo; "
-                  + "curl -s -m 4 " + base + "/actuator/metrics; echo";
+        /*
+         * 探测命令必须跑在「目标主机」上，所以不能在后端直接开 URL 连接：
+         * 项目跑在远端主机（如 192.168.50.101），后端所在机器访问 127.0.0.1 只会打到后端自己。
+         * POSIX 用 curl，Windows 用 Invoke-WebRequest，两者都把结果压成单行 KEY=值，
+         * 响应体先 base64 再输出，避免 JSON 里的换行把行号切乱。
+         */
+        String command = ctx.windows ? windowsProbeCommand(base) : posixProbeCommand(base);
         ReturnResult<List<MsExecLog>> result = execService.runCommand(
                 Collections.singletonList(ctx.hostId), command, 30, null);
         if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
@@ -3016,11 +3200,29 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.ok(out);
         }
         String output = result.getData().get(0).getMsExecLogOutput();
-        String[] lines = (output == null ? "" : output).replace("\r", "").split("\n", -1);
-        String docsCode = lines.length > 0 ? lines[0].trim() : "";
-        String uiCode = lines.length > 1 ? lines[1].trim() : "";
-        String healthJson = lines.length > 2 ? lines[2].trim() : "";
-        String metricsJson = lines.length > 3 ? lines[3].trim() : "";
+        String docsCode;
+        String uiCode;
+        String healthJson;
+        String metricsJson;
+        if (ctx.windows) {
+            Map<String, String> kv = new LinkedHashMap<>();
+            for (String line : (output == null ? "" : output).replace("\r", "").split("\n")) {
+                int idx = line.indexOf('=');
+                if (idx > 0) {
+                    kv.put(line.substring(0, idx).trim(), line.substring(idx + 1).trim());
+                }
+            }
+            docsCode = kv.getOrDefault("DOCS", "");
+            uiCode = kv.getOrDefault("UI", "");
+            healthJson = decodeBase64(kv.get("HEALTH"));
+            metricsJson = decodeBase64(kv.get("METRICS"));
+        } else {
+            String[] lines = (output == null ? "" : output).replace("\r", "").split("\n", -1);
+            docsCode = lines.length > 0 ? lines[0].trim() : "";
+            uiCode = lines.length > 1 ? lines[1].trim() : "";
+            healthJson = lines.length > 2 ? lines[2].trim() : "";
+            metricsJson = lines.length > 3 ? lines[3].trim() : "";
+        }
         boolean swagger = "200".equals(docsCode) || "200".equals(uiCode);
         boolean actuator = healthJson.startsWith("{") || metricsJson.startsWith("{");
         out.put("swagger", swagger);
@@ -3046,13 +3248,187 @@ public class ReleaseServiceImpl implements ReleaseService {
                 Object names = metrics.get("names");
                 if (names instanceof List<?> list) {
                     out.put("metricCount", list.size());
-                    out.put("metrics", list.size() > 8 ? list.subList(0, 8) : list);
+                    // 摘要给底部指标条悬停展示用：多留一些，前端再按长度截断
+                    out.put("metrics", list.size() > 40 ? list.subList(0, 40) : list);
                 }
             } catch (Exception ignored) {
                   // 指标摘要只是增强信息，解析失败不影响按钮可用性
             }
         }
         return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> getActuatorMonitor(Long id) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("enabled", false);
+        out.put("intervalSeconds", ACTUATOR_MONITOR_DEFAULT_SECONDS);
+        Object saved = readCfg(CFG_ACTUATOR_MONITOR_PREFIX + id, null);
+        if (saved instanceof Map<?, ?> map) {
+            out.put("enabled", Boolean.parseBoolean(String.valueOf(map.get("enabled"))));
+            out.put("intervalSeconds", normalizeActuatorInterval(map.get("intervalSeconds")));
+        }
+        return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Void> saveActuatorMonitor(Long id, Map<String, Object> config) {
+        if (id == null) {
+            return ReturnResult.error("项目ID不能为空");
+        }
+        if (projectMapper.selectById(id) == null) {
+            return ReturnResult.error("项目不存在: " + id);
+        }
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("enabled", config != null
+                && Boolean.parseBoolean(String.valueOf(config.get("enabled"))));
+        value.put("intervalSeconds", normalizeActuatorInterval(
+                config == null ? null : config.get("intervalSeconds")));
+        String json;
+        try {
+            json = JSON.writeValueAsString(value);
+        } catch (Exception e) {
+            return ReturnResult.error("配置序列化失败");
+        }
+        String key = CFG_ACTUATOR_MONITOR_PREFIX + id;
+        MsServerConfig exists = serverConfigMapper.selectOne(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
+        if (exists == null) {
+            MsServerConfig cfg = new MsServerConfig();
+            cfg.setConfigKey(key);
+            cfg.setConfigValue(json);
+            cfg.setConfigDesc("项目 " + id + " Actuator 定时采集配置");
+            serverConfigMapper.insert(cfg);
+        } else {
+            exists.setConfigValue(json);
+            serverConfigMapper.updateById(exists);
+        }
+        return ReturnResult.success();
+    }
+
+    @Override
+    public List<Map<String, Object>> listActuatorMonitors() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        List<MsServerConfig> rows = serverConfigMapper.selectList(
+                new LambdaQueryWrapper<MsServerConfig>()
+                        .likeRight(MsServerConfig::getConfigKey, CFG_ACTUATOR_MONITOR_PREFIX));
+        for (MsServerConfig row : rows) {
+            Long projectId = parseMonitorProjectId(row.getConfigKey());
+            if (projectId == null || isBlank(row.getConfigValue())) {
+                continue;
+            }
+            Object parsed;
+            try {
+                parsed = JSON.readValue(row.getConfigValue(), Object.class);
+            } catch (Exception e) {
+                continue;
+            }
+            if (!(parsed instanceof Map<?, ?> map)
+                    || !Boolean.parseBoolean(String.valueOf(map.get("enabled")))) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("projectId", projectId);
+            item.put("intervalSeconds", normalizeActuatorInterval(map.get("intervalSeconds")));
+            out.add(item);
+        }
+        return out;
+    }
+
+    /**
+     * 归一化 Actuator 采集间隔：非法值回落默认，并夹在允许区间内。
+     *
+     * @param raw 原始间隔（可能为 null / 字符串 / 数字）
+     * @return 归一化后的秒数
+     */
+    private int normalizeActuatorInterval(Object raw) {
+        int seconds = ACTUATOR_MONITOR_DEFAULT_SECONDS;
+        if (raw != null) {
+            try {
+                seconds = Integer.parseInt(String.valueOf(raw).trim());
+            } catch (NumberFormatException ignored) {
+                seconds = ACTUATOR_MONITOR_DEFAULT_SECONDS;
+            }
+        }
+        return Math.max(ACTUATOR_MONITOR_MIN_SECONDS, Math.min(ACTUATOR_MONITOR_MAX_SECONDS, seconds));
+    }
+
+    /**
+     * 从配置键解析项目ID。
+     *
+     * @param key 配置键（release.actuator.monitor.{projectId}）
+     * @return 项目ID；无法解析时返回 null
+     */
+    private Long parseMonitorProjectId(String key) {
+        if (key == null || !key.startsWith(CFG_ACTUATOR_MONITOR_PREFIX)) {
+            return null;
+        }
+        try {
+            return Long.valueOf(key.substring(CFG_ACTUATOR_MONITOR_PREFIX.length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * POSIX 端点探测命令：4 行输出，依次是 api-docs / swagger-ui 的状态码和 health / metrics 的 JSON。
+     *
+     * @param base 目标主机上的服务根地址（如 http://127.0.0.1:8080）
+     * @return shell 命令
+     */
+    private String posixProbeCommand(String base) {
+        return "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/v3/api-docs; echo; "
+                + "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/swagger-ui/index.html; echo; "
+                + "curl -s -m 4 " + base + "/actuator/health; echo; "
+                + "curl -s -m 4 " + base + "/actuator/metrics; echo";
+    }
+
+    /**
+     * Windows 端点探测命令（PowerShell / Invoke-WebRequest）。
+     *
+     * <p>目标主机是 Windows 时没有 curl（旧版系统自带的是 curl 别名，参数也不同），
+     * 统一走 PowerShell：状态码单行输出，响应体 base64 后单行输出 —— JSON 自带换行，
+     * 直接打印会把「第 n 行」的解析打乱。</p>
+     *
+     * @param base 目标主机上的服务根地址
+     * @return PowerShell 命令
+     */
+    private String windowsProbeCommand(String base) {
+        String docs = base + "/v3/api-docs";
+        String ui = base + "/swagger-ui/index.html";
+        String health = base + "/actuator/health";
+        String metrics = base + "/actuator/metrics";
+        return "$ProgressPreference='SilentlyContinue'\n"
+                + "$ErrorActionPreference='SilentlyContinue'\n"
+                + "function __code($u){ try { return [int](Invoke-WebRequest -UseBasicParsing -TimeoutSec 4 -Uri $u).StatusCode } "
+                + "catch { if ($_.Exception.Response -ne $null) { return [int]$_.Exception.Response.StatusCode } return 0 } }\n"
+                + "function __body($u){ try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 4 -Uri $u; $c=$r.Content; "
+                + "if ($c -is [byte[]]) { $c=[Text.Encoding]::UTF8.GetString($c) }; "
+                + "return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$c)) } "
+                + "catch { $m=$null; if ($_.ErrorDetails) { $m=$_.ErrorDetails.Message }; "
+                + "if (-not $m -and $_.Exception.Response -ne $null) { try { $s=$_.Exception.Response.GetResponseStream(); $rd=New-Object IO.StreamReader($s); $m=$rd.ReadToEnd() } catch { } }; "
+                + "if ($m) { return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$m)) }; return '' } }\n"
+                + "Write-Output ('DOCS=' + (__code '" + docs + "'))\n"
+                + "Write-Output ('UI=' + (__code '" + ui + "'))\n"
+                + "Write-Output ('HEALTH=' + (__body '" + health + "'))\n"
+                + "Write-Output ('METRICS=' + (__body '" + metrics + "'))\n";
+    }
+
+    /**
+     * 解码 Windows 探测输出里的 base64 响应体。
+     *
+     * @param raw base64 文本
+     * @return 原文；空值或解码失败返回空串（按「端点不可用」处理）
+     */
+    private String decodeBase64(String raw) {
+        if (isBlank(raw)) {
+            return "";
+        }
+        try {
+            return new String(java.util.Base64.getMimeDecoder().decode(raw), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     @Override

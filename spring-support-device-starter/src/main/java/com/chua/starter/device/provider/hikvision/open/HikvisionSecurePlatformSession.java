@@ -2,25 +2,20 @@
 package com.chua.starter.device.provider.hikvision.open;
 
 import com.chua.starter.device.provider.platform.AbstractOpenApiSession;
+import com.chua.starter.device.provider.sdk.PlatformApiResult;
+import com.chua.starter.device.provider.sdk.hikvision.HikvisionArtemisApis;
+import com.chua.starter.device.provider.sdk.hikvision.HikvisionArtemisSdk;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Instant;
-import java.util.Base64;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 海康安防平台（isecure Center / 综合安防管理平台）打开api 会话
- * <p>对接海康综合安防平台 OpenAPI（artemis 协议），基于 common-starter HttpClient，全平台可用。</p>
- *
- * <h3>接入说明</h3>
- * <ul>
- *   <li>endpoint、AppKey/AppSecret、签名算法需按安防平台官方 OpenAPI 文档配置</li>
- *   <li>常见签名：x-ca-key + x-ca-signature-headers + HMAC-SHA256（artemis 网关）</li>
- * </ul>
+ * 海康综合安防平台（iSecure Center / Artemis）会话。
+ * <p>业务请求委托给官方 Artemis SDK，由每次请求独立的 {@code Request} 携带 host/key/secret，
+ * 避免 Artemis 静态配置在多凭据并发时相互覆盖。私有化部署可由凭据提供 baseUrl。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -36,17 +31,20 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     /**
      * 视频取流接口
      */
-    private static final String PATH_VIDEO_STREAM = "/api/video/v1/cameras/previewURLs";
+    private static final String PATH_VIDEO_STREAM = "/artemis/api/video/v2/cameras/previewURLs";
 
     /**
      * 云台控制接口
      */
-    private static final String PATH_PTZ_CONTROL = "/api/video/v1/ptz/channels/controllable";
+    private static final String PATH_PTZ_CONTROL = "/artemis/api/video/v1/ptz/controlling";
 
     /**
      * 门禁控制接口
      */
-    private static final String PATH_DOOR_CONTROL = "/api/access/v1/door/control";
+    private static final String PATH_DOOR_CONTROL = "/artemis/api/access/v1/door/control";
+
+    /** 官方 Artemis SDK 适配器，负责线程安全签名与请求执行。 */
+    private final HikvisionArtemisSdk delegate;
 
     /**
      * 创建 hikvisionsecureplatform会话 实例
@@ -54,75 +52,27 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
      */
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
- // 安防平台通常无独立登录，app键/appsecret 通过签名头传递
-        this.accessToken = "artemis:" + info.appKey();
-        this.tokenExpiry = Instant.MAX;
-    }
-
-    /**
-     * Artemis 网关签名：x-ca-签名 = 基础64(HMAC-SHA256(appsecret, 字符串转为标志))
-     * @param method 方法
-     * @param path 路径
-     * @param headers 头部
-     * @return Artemis标志的结果
-     */
-    private String artemisSign(String method, String path, Map<String, String> headers) {
-        String stringToSign = method + "\n"
-                + headers.getOrDefault("x-ca-key", "") + "\n"
-                + path + "\n"
-                + headers.getOrDefault("x-ca-timestamp", "") + "\n"
-                + headers.getOrDefault("x-ca-nonce", "");
-        try {
-            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
-            mac.init(new javax.crypto.spec.SecretKeySpec(utf8(info.appSecret()), "HmacSHA256"));
-            byte[] digest = mac.doFinal(utf8(stringToSign));
-            return Base64.getEncoder().encodeToString(digest);
-        } catch (Exception e) {
-            throw new IllegalStateException("artemis 签名失败", e);
-        }
+        this.delegate = new HikvisionArtemisSdk(info);
     }
 
     @Override
-    /**
-     * 执行请求
-     * @param Map<String 参数
-     * @param method 字符串
-     * @param params 参数
-     * @param path 字符串
-     * @return 返回值
-    */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        String nonce = java.util.UUID.randomUUID().toString();
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("x-ca-key", info.appKey());
-        headers.put("x-ca-timestamp", timestamp);
-        headers.put("x-ca-nonce", nonce);
+        String code = HikvisionArtemisApis.all().stream()
+                .filter(spec -> spec.path().equals(path))
+                .map(com.chua.starter.device.provider.sdk.PlatformApiSpec::code)
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedOperationException("Artemis 接口未登记: " + path));
+        PlatformApiResult result = delegate.invoke(code, params);
+        if (result == null || !result.ok()) {
+            throw new IllegalStateException("Artemis 调用失败: "
+                    + (result == null ? "无调用结果" : result.message()));
+        }
+        return MAPPER.valueToTree(result.data());
+    }
 
-        String query = "";
-        if (params != null && !params.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            params.forEach((k, v) -> {
-                if (v != null) {
-                    if (sb.length() > 0) {
-                        sb.append("&");
-                    }
-                    sb.append(java.net.URLEncoder.encode(k, java.nio.charset.StandardCharsets.UTF_8));
-                    sb.append("=");
-                    sb.append(java.net.URLEncoder.encode(String.valueOf(v), java.nio.charset.StandardCharsets.UTF_8));
-                }
-            });
-            query = sb.toString();
-        }
-        String fullPath = query.isEmpty() ? path : path + "?" + query;
-        headers.put("x-ca-signature-headers", "x-ca-key,x-ca-timestamp,x-ca-nonce");
-        String sig = artemisSign(method, fullPath, headers);
-        headers.put("x-ca-signature", sig);
-        if (debugEnabled()) {
-            log.info("[OpenAPI-DEBUG] 海康安防 artemis 签名: path={}, sig={}",
-                    fullPath, sig.length() > 12 ? sig.substring(0, 12) + "..." : sig);
-        }
-        return execute(method, fullPath, params, headers);
+    @Override
+    public boolean testConnection() {
+        return delegate.testConnection();
     }
 
     /**
@@ -164,7 +114,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         params.put("beginTime", range.start().toString());
         params.put("endTime", range.end().toString());
         params.put("protocol", "hls");
-        JsonNode data = assertOk(post("/api/video/v1/cameras/playbackURLs", params));
+        JsonNode data = assertOk(post("/artemis/api/video/v2/cameras/playbackURLs", params));
         return data.path("url").asText(data.path("hls").asText(""));
     }
 

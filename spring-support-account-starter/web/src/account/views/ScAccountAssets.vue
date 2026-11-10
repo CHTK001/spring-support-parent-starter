@@ -19,56 +19,6 @@
     </div>
 
     <template v-if="view === 'accounts'">
-    <!-- KPI 带：数字既是概览也是筛选项，点一下就把列表收窄到那一类 -->
-    <div class="kpi-band">
-      <button
-        v-for="cell in kpiCells"
-        :key="cell.key"
-        type="button"
-        class="kpi"
-        :class="{ 'is-on': cell.on }"
-        :title="cell.hint"
-        @click="cell.run()"
-      >
-        <b :class="cell.tone">{{ cell.value }}</b>
-        <span>{{ cell.label }}</span>
-      </button>
-    </div>
-
-    <!-- 分段页签 + 工具行 -->
-    <div class="bar">
-      <div class="seg" role="tablist" aria-label="账号种类">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          type="button"
-          role="tab"
-          class="seg-item"
-          :class="{ 'is-on': segment === tab.value }"
-          :aria-selected="segment === tab.value"
-          @click="setSegment(tab.value)"
-        >
-          {{ tab.label }}
-          <b>{{ tab.count }}</b>
-        </button>
-      </div>
-
-      <label class="search">
-        <ReIcon class="search-icon" name="Search" :size="13" />
-        <input v-model="keyword" :placeholder="searchPlaceholder" />
-      </label>
-
-      <button v-if="statusFilter !== 'all'" type="button" class="chip-clear" @click="statusFilter = 'all'">
-        清除状态筛选
-      </button>
-
-      <span class="bar-count">{{ tableCount }} 项</span>
-
-      <span class="bar-actions">
-        <ReButton show-text icon="RefreshLeft" plain :loading="loading" @click="loadAll">刷新</ReButton>
-        <ReButton show-text icon="Plus" type="primary" @click="openCreate">{{ createLabel }}</ReButton>
-      </span>
-    </div>
 
     <div v-if="loadError" class="alert">
       <span>账号列表加载失败：{{ loadError }}</span>
@@ -103,336 +53,287 @@
       </span>
     </div>
 
-    <div class="wb">
-      <!-- ==================== 台账区 ==================== -->
-      <section class="table-panel">
-        <!-- 账号（ALL / API_KEY / EMAIL / SMS） -->
-        <ReTable
-          v-if="isAccountSegment"
-          ref="accountTableRef"
-          :data="accountTableRows"
-          :loading="loading"
-          row-key="accountId"
-          border
-          stripe
-          class="account-table"
-          empty-text="暂无账号，点右上「新增账号」创建"
-          :settings="{ highlightCurrentRow: true }"
-          :config="{
-            pagination: { enable: false },
-            toolbar: { enable: false },
-            selection: { enable: true },
-          }"
-          :context-menu="accountMenu"
-          @row-click="onAccountRowClick"
-          @cell-click="onCellClick"
-          @selection-change="onAccountSelectionChange"
-          @context-menu-select="onAccountMenuSelect"
-        >
-          <ReTableColumn label="账号" min-width="200">
-            <template #default="{ row }">
-              <div class="name-cell">
-                <i class="cred-bar" :class="row.hasSecret ? 'is-ok' : 'is-warn'"></i>
-                <div class="name-text">
-                  <div class="name-line">
-                    <span class="name" :title="row.name">{{ row.name || '未命名' }}</span>
-                    <ReTag v-if="row.defaultAccount" type="warning" size="small" effect="plain">默认</ReTag>
-                  </div>
-                  <div class="code mono">{{ row.code || '—' }}</div>
-                </div>
-              </div>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="种类" width="100">
-            <template #default="{ row }">
-              <ReTag :type="kindTagType(row.kind)" effect="plain">{{ kindLabel(row.kind) }}</ReTag>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="登录名 / 地址" min-width="168">
-            <template #default="{ row }">
-              <div v-if="row.username" class="mono ellipsis" :title="row.username">{{ row.username }}</div>
-              <div v-if="row.endpoint" class="mono dim ellipsis" :title="endpointText(row)">
-                {{ endpointText(row) }}
-              </div>
-              <span v-if="!row.username && !row.endpoint" class="dim">—</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="凭据" width="86" align="center">
-            <template #default="{ row }">
-              <ReTag :type="row.hasSecret ? 'success' : 'warning'" effect="plain">
-                {{ row.hasSecret ? '已配置' : '待配置' }}
-              </ReTag>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="校验" width="96" align="center">
-            <template #default="{ row }">
-              <el-tooltip :content="row.verifyMessage || '尚未校验'" placement="top" :show-after="200">
-                <ReTag :type="verifyTagType(row.verifyStatus)" effect="plain">
-                  {{ verifyLabel(row.verifyStatus) }}
-                </ReTag>
-              </el-tooltip>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="更新" width="100">
-            <template #default="{ row }">
-              <span class="dim time-text">{{ formatShort(row.updatedAt || row.createdAt) }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="操作" width="140" fixed="right" align="right">
-            <template #default="{ row }">
-              <span class="ops" @click.stop>
-                <ReButton v-if="row.kind === 'EMAIL' || row.kind === 'SMS'" text @click.stop="openConsole(row)">
-                  {{ row.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
-                </ReButton>
-                <ReButton v-else text @click.stop="openDetail(row)">详情</ReButton>
-                <ReButton text type="primary" @click.stop="openEdit(row)">编辑</ReButton>
+    <div class="ws" :style="{ '--idx-width': railWidth + 'px' }">
+      <!-- ==================== 左侧：分组索引 ==================== -->
+      <aside class="idx" aria-label="资产索引">
+        <div class="idx-tools">
+          <label class="search">
+            <ReIcon class="search-icon" name="Search" :size="13" />
+            <input v-model="keyword" :placeholder="searchPlaceholder" />
+          </label>
+          <button type="button" class="icon-btn" title="刷新" aria-label="刷新" @click="loadAll">
+            <ReIcon name="RefreshLeft" :size="14" />
+          </button>
+        </div>
+
+        <!-- 行内统计：数字即筛选入口，压缩成一条不抢版面 -->
+        <div class="stat-row">
+          <button
+            v-for="cell in kpiCells"
+            :key="cell.key"
+            type="button"
+            class="stat"
+            :class="{ 'is-on': cell.on }"
+            :title="cell.hint"
+            @click="cell.run()"
+          >
+            <b :class="cell.tone">{{ cell.value }}</b>
+            <span>{{ cell.label }}</span>
+          </button>
+        </div>
+
+        <div v-if="statusFilter !== 'all'" class="idx-filter">
+          仅看「{{ statusFilterLabel }}」
+          <button type="button" @click="statusFilter = 'all'">清除</button>
+        </div>
+
+        <div v-if="segmentError" class="idx-error">{{ segmentError }}</div>
+
+        <div class="idx-scroll">
+          <section v-for="group in indexGroups" :key="group.key" class="idx-group">
+            <header class="idx-group-head">
+              <ReIcon :name="group.icon" :size="12" />
+              <span>{{ group.label }}</span>
+              <b>{{ group.rows.length }}</b>
+            </header>
+            <button
+              v-for="row in group.rows"
+              :key="row.id"
+              type="button"
+              class="idx-row"
+              :class="{ 'is-on': row.selected, 'is-off': row.status === 0, 'is-checked': row.checked }"
+              :title="row.name"
+              @click="selectIndexRow(group, row, $event)"
+              @dblclick="openIndexRow(group, row)"
+              @contextmenu.prevent="openIndexMenu($event, group, row)"
+            >
+              <i class="dot" :class="'is-' + row.tone"></i>
+              <span class="idx-main">
+                <span class="idx-name">{{ row.name }}</span>
+                <span class="idx-sub">{{ row.sub }}</span>
               </span>
-            </template>
-          </ReTableColumn>
-        </ReTable>
-
-        <!-- AppKey -->
-        <ReTable
-          v-else-if="segment === 'APPKEY'"
-          :data="appKeyTableRows"
-          :loading="loading"
-          row-key="appKeyId"
-          border
-          stripe
-          class="account-table"
-          empty-text="暂无访问密钥，点右上「新增 AppKey」创建"
-          :settings="{ highlightCurrentRow: true }"
-          :config="{ pagination: { enable: false }, toolbar: { enable: false } }"
-          :context-menu="appKeyMenu"
-          @row-click="onAppKeyRowClick"
-          @cell-click="onCellClick"
-          @context-menu-select="onAppKeyMenuSelect"
-        >
-          <ReTableColumn label="名称" min-width="180">
-            <template #default="{ row }">
-              <div class="name-cell">
-                <i class="cred-bar" :class="row.status === 0 ? 'is-off' : 'is-ok'"></i>
-                <div class="name-text">
-                  <div class="name-line">
-                    <span class="name" :title="row.name">{{ row.name || '未命名' }}</span>
-                  </div>
-                  <div class="code mono">{{ row.remark || '—' }}</div>
-                </div>
-              </div>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="AppKey" min-width="170">
-            <template #default="{ row }">
-              <span class="mono ellipsis" :title="row.appKey">{{ row.appKey || '—' }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="归属" width="120">
-            <template #default="{ row }">
-              <span class="dim ellipsis">{{ row.owner ? '仅本人' : '部署级共享' }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="状态" width="86" align="center">
-            <template #default="{ row }">
-              <ReTag :type="row.status === 0 ? 'info' : 'success'" effect="plain">
-                {{ row.status === 0 ? '停用' : '启用' }}
-              </ReTag>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="过期" width="110">
-            <template #default="{ row }">
-              <span class="dim" :class="{ 'is-expired': expired(row.expireAt) }">{{ expireText(row.expireAt) }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="最近使用" width="110">
-            <template #default="{ row }">
-              <span class="dim time-text">{{ formatShort(row.lastUsedAt) }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="操作" width="120" fixed="right" align="right">
-            <template #default="{ row }">
-              <span class="ops" @click.stop>
-                <ReButton text @click.stop="rotateKey(row)">轮换</ReButton>
-                <ReButton text type="primary" @click.stop="openEditKey(row)">编辑</ReButton>
+              <span class="idx-meta">
+                <span v-if="row.tag" class="idx-tag" :class="'is-' + row.tagTone">{{ row.tag }}</span>
+                <span class="idx-time">{{ row.meta }}</span>
               </span>
-            </template>
-          </ReTableColumn>
-        </ReTable>
+              <i v-if="row.checked" class="idx-check"><ReIcon name="Select" :size="12" /></i>
+            </button>
+            <p v-if="!group.rows.length" class="idx-empty">暂无{{ group.label }}，点下方新建</p>
+          </section>
+        </div>
 
-        <!-- Cookie -->
-        <ReTable
-          v-else
-          :data="cookieTableRows"
-          :loading="loading"
-          row-key="cookieId"
-          border
-          stripe
-          class="account-table"
-          empty-text="暂无 Cookie，点右上「新增 Cookie」创建"
-          :settings="{ highlightCurrentRow: true }"
-          :config="{ pagination: { enable: false }, toolbar: { enable: false } }"
-          :context-menu="cookieMenu"
-          @row-click="onCookieRowClick"
-          @cell-click="onCellClick"
-          @context-menu-select="onCookieMenuSelect"
-        >
-          <ReTableColumn label="名称" min-width="180">
-            <template #default="{ row }">
-              <div class="name-cell">
-                <i class="cred-bar" :class="row.status === 0 ? 'is-off' : row.hasValue ? 'is-ok' : 'is-warn'"></i>
-                <div class="name-text">
-                  <div class="name-line">
-                    <span class="name" :title="row.name">{{ row.name || '未命名' }}</span>
-                  </div>
-                  <div class="code mono">{{ row.remark || '—' }}</div>
-                </div>
-              </div>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="域名" min-width="170">
-            <template #default="{ row }">
-              <div class="mono ellipsis" :title="row.domain">{{ row.domain || '—' }}</div>
-              <div class="dim mono">{{ row.path || '/' }}</div>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="来源" width="110">
-            <template #default="{ row }">
-              <span class="dim">{{ row.source || '—' }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="归属" width="110">
-            <template #default="{ row }">
-              <span class="dim">{{ row.owner ? '仅本人' : '部署级共享' }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="内容" width="86" align="center">
-            <template #default="{ row }">
-              <ReTag :type="row.hasValue ? 'success' : 'warning'" effect="plain">
-                {{ row.hasValue ? '已配置' : '待配置' }}
-              </ReTag>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="过期" width="110">
-            <template #default="{ row }">
-              <span class="dim" :class="{ 'is-expired': expired(row.expireAt) }">{{ expireText(row.expireAt) }}</span>
-            </template>
-          </ReTableColumn>
-          <ReTableColumn label="操作" width="100" fixed="right" align="right">
-            <template #default="{ row }">
-              <span class="ops" @click.stop>
-                <ReButton text type="primary" @click.stop="openEditCookie(row)">编辑</ReButton>
-              </span>
-            </template>
-          </ReTableColumn>
-        </ReTable>
+        <div class="idx-foot">
+          <span>{{ tableCount }} 项</span>
+          <ReButton show-text size="small" icon="Plus" type="primary" @click="openCreate">{{ createLabel }}</ReButton>
+        </div>
+      </aside>
 
-        <div v-if="segmentError" class="seg-error">{{ segmentError }}</div>
-      </section>
+      <!-- 分栏手柄：拖拽改索引宽度，双击复位，偏好存本地 -->
+      <ReRailSplit
+        v-model:width="railWidth"
+        class="ws-split"
+        storage-key="account.rail.width.v1"
+        :default-width="304"
+        label="拖拽调整资产索引宽度"
+      />
 
-      <!-- ==================== 检查器 ==================== -->
-      <aside class="inspector">
-        <!-- 账号 -->
+      <!-- ==================== 右侧：详情工作区 ==================== -->
+      <section class="main" aria-label="资产详情">
+        <!-- ---------- 账号 ---------- -->
         <template v-if="isAccountSegment && activeAccount">
-          <header class="ins-head">
-            <span class="ins-mark" :class="'is-' + kindClass(activeAccount.kind)">
-              <ReIcon :name="kindIcon(activeAccount.kind)" :size="15" />
+          <header class="main-head">
+            <span class="main-mark" :class="'is-' + kindClass(activeAccount.kind)">
+              <ReIcon :name="kindIcon(activeAccount.kind)" :size="16" />
             </span>
-            <div class="ins-title">
+            <div class="main-title">
               <b :title="activeAccount.name">{{ activeAccount.name || '未命名账号' }}</b>
-              <span>{{ kindLabel(activeAccount.kind) }} · {{ activeAccount.code || '—' }}</span>
+              <span>
+                {{ kindLabel(activeAccount.kind) }} · {{ activeAccount.code || '—' }} ·
+                {{ activeAccount.owner ? `仅本人（${activeAccount.owner}）` : '部署级共享' }}
+              </span>
             </div>
+            <ReTag v-if="activeAccount.defaultAccount" type="warning" effect="plain" size="small">默认</ReTag>
             <ReTag :type="activeAccount.status === 0 ? 'info' : 'success'" effect="plain" size="small">
               {{ activeAccount.status === 0 ? '停用' : '启用' }}
             </ReTag>
           </header>
 
-          <div class="ins-flags">
-            <span class="flag" :class="activeAccount.hasSecret ? 'is-ok' : 'is-warn'">
-              {{ activeAccount.hasSecret ? '凭据已配置' : '凭据待补' }}
-            </span>
-            <span class="flag" :class="'is-' + verifyTone(activeAccount.verifyStatus)">
-              校验{{ verifyLabel(activeAccount.verifyStatus) }}
-            </span>
-            <span v-if="activeAccount.defaultAccount" class="flag is-brand">同种类默认</span>
+          <nav class="main-tabs" role="tablist" aria-label="账号信息">
+            <button
+              v-for="tab in accountTabs"
+              :key="tab.value"
+              type="button"
+              role="tab"
+              class="main-tab"
+              :class="{ 'is-on': mainTab === tab.value }"
+              :aria-selected="mainTab === tab.value"
+              @click="mainTab = tab.value"
+            >
+              {{ tab.label }}
+              <b v-if="tab.value === 'mailbox' && unreadOf(activeAccount.accountId)" class="main-tab-badge">
+                {{ unreadOf(activeAccount.accountId) }}
+              </b>
+            </button>
+          </nav>
+
+          <div class="main-body">
+            <!-- 概览 -->
+            <div v-if="mainTab === 'overview'" class="pane">
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">登录名 / 地址</span>
+                  <span class="v mono">{{ activeAccount.username || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">服务地址</span>
+                  <span class="v mono">{{ endpointText(activeAccount) || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">厂商</span>
+                  <span class="v">{{ activeAccount.vendor || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">关联渠道</span>
+                  <span class="v">{{ activeAccount.channelKey || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">归属</span>
+                  <span class="v">{{ activeAccount.owner ? `仅本人（${activeAccount.owner}）` : '部署级共享' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">同种类默认</span>
+                  <span class="v">{{ activeAccount.defaultAccount ? '是' : '否' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">创建时间</span>
+                  <span class="v">{{ formatTime(activeAccount.createdAt) }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">更新时间</span>
+                  <span class="v">{{ formatTime(activeAccount.updatedAt) }}</span>
+                </div>
+              </div>
+              <div v-if="activeAccount.verifyMessage" class="note" :class="'is-' + verifyTone(activeAccount.verifyStatus)">
+                <ReIcon name="InfoFilled" :size="13" />
+                <span>{{ activeAccount.verifyMessage }}</span>
+              </div>
+            </div>
+
+            <!-- 凭据 -->
+            <div v-else-if="mainTab === 'credential'" class="pane">
+              <div class="cred-card" :class="activeAccount.hasSecret ? 'is-ok' : 'is-warn'">
+                <ReIcon :name="activeAccount.hasSecret ? 'CircleCheckFilled' : 'WarningFilled'" :size="16" />
+                <div>
+                  <b>{{ activeAccount.hasSecret ? '凭据已配置' : '凭据尚未配置' }}</b>
+                  <span>敏感值只进不出：读取接口只返回「是否已配置」，编辑时留空表示不修改。</span>
+                </div>
+              </div>
+              <h4 class="pane-title">类型专属配置</h4>
+              <div v-if="configRows.length" class="facts">
+                <div v-for="item in configRows" :key="item.key" class="fact">
+                  <span class="k">{{ item.label }}</span>
+                  <span class="v">{{ item.value }}</span>
+                </div>
+              </div>
+              <ReEmpty v-else :image-size="48" description="暂无类型专属配置" />
+            </div>
+
+            <!-- 校验记录 -->
+            <div v-else-if="mainTab === 'verify'" class="pane">
+              <div class="verify-hero" :class="'is-' + verifyTone(activeAccount.verifyStatus)">
+                <ReIcon :name="activeAccount.verifyStatus === 'VALID' ? 'CircleCheckFilled' : 'WarningFilled'" :size="18" />
+                <div>
+                  <b>校验{{ verifyLabel(activeAccount.verifyStatus) }}</b>
+                  <span>{{ activeAccount.verifyAt ? `最近一次：${formatTime(activeAccount.verifyAt)}` : '尚未执行过校验' }}</span>
+                </div>
+              </div>
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">校验状态</span>
+                  <span class="v">
+                    <ReTag :type="verifyTagType(activeAccount.verifyStatus)" effect="plain">
+                      {{ verifyLabel(activeAccount.verifyStatus) }}
+                    </ReTag>
+                  </span>
+                </div>
+                <div class="fact">
+                  <span class="k">最近校验</span>
+                  <span class="v">{{ formatTime(activeAccount.verifyAt) }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">校验说明</span>
+                  <span class="v">{{ activeAccount.verifyMessage || '—' }}</span>
+                </div>
+              </div>
+              <p class="pane-tip">校验会真实发起一次握手：API 密钥校验凭据是否存在，邮箱走 IMAP 登录，短信走模板可用性检查。</p>
+            </div>
+
+            <!-- 收信箱 -->
+            <div v-else class="pane">
+              <div class="mail-hero">
+                <span class="main-mark" :class="'is-' + kindClass(activeAccount.kind)">
+                  <ReIcon :name="kindIcon(activeAccount.kind)" :size="16" />
+                </span>
+                <div class="mail-copy">
+                  <b>{{ activeAccount.kind === 'EMAIL' ? '收 / 发信箱' : '短信收 / 发信箱' }}</b>
+                  <span>
+                    {{ activeAccount.kind === 'EMAIL'
+                      ? '收信走 IMAP，发信走 SMTP，全部在应用内抽屉完成，不跳外部门户；打开即拉最新邮件，未读排在前面。'
+                      : '发信走 MessagePush；未安装短信收信能力时抽屉会给出降级提示。' }}
+                  </span>
+                </div>
+                <ReButton type="primary" icon="Message" show-text @click="openConsole(activeAccount)">
+                  {{ activeAccount.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
+                </ReButton>
+              </div>
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">登录名</span>
+                  <span class="v mono">{{ activeAccount.username || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">服务地址</span>
+                  <span class="v mono">{{ endpointText(activeAccount) || '—' }}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <dl class="ins-list">
-            <div>
-              <dt>登录名</dt>
-              <dd class="mono">{{ activeAccount.username || '—' }}</dd>
-            </div>
-            <div>
-              <dt>服务地址</dt>
-              <dd class="mono">{{ endpointText(activeAccount) || '—' }}</dd>
-            </div>
-            <div>
-              <dt>厂商</dt>
-              <dd>{{ activeAccount.vendor || '—' }}</dd>
-            </div>
-            <div>
-              <dt>关联渠道</dt>
-              <dd>{{ activeAccount.channelKey || '—' }}</dd>
-            </div>
-            <div>
-              <dt>归属</dt>
-              <dd>{{ activeAccount.owner ? `仅本人（${activeAccount.owner}）` : '部署级共享' }}</dd>
-            </div>
-          </dl>
-
-          <div v-if="activeAccount.verifyMessage" class="ins-note" :class="'is-' + verifyTone(activeAccount.verifyStatus)">
-            {{ activeAccount.verifyMessage }}
-          </div>
-
-          <div class="ins-actions">
+          <footer class="main-foot">
             <ReButton
               show-text
               icon="CircleCheck"
-              size="small"
               :loading="verifyingId === activeAccount.accountId"
               @click="onVerify(activeAccount)"
             >
-              校验
+              校验凭据
             </ReButton>
-            <ReButton show-text icon="EditPen" size="small" @click="openEdit(activeAccount)">编辑</ReButton>
-            <ReButton show-text icon="CopyDocument" size="small" @click="duplicateAccount(activeAccount)">
-              复制
-            </ReButton>
+            <ReButton show-text icon="EditPen" @click="openEdit(activeAccount)">编辑</ReButton>
+            <ReButton show-text icon="CopyDocument" @click="duplicateAccount(activeAccount)">复制为新账号</ReButton>
             <ReButton
               v-if="hasMailbox(activeAccount)"
               show-text
               :icon="activeAccount.kind === 'EMAIL' ? 'Message' : 'ChatDotRound'"
-              size="small"
               @click="openConsole(activeAccount)"
             >
               {{ activeAccount.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
             </ReButton>
-            <ReButton
-              show-text
-              icon="Star"
-              size="small"
-              :disabled="Boolean(activeAccount.defaultAccount)"
-              @click="setDefault(activeAccount)"
-            >
+            <span class="foot-gap"></span>
+            <ReButton show-text icon="Star" :disabled="Boolean(activeAccount.defaultAccount)" @click="setDefault(activeAccount)">
               设为默认
             </ReButton>
-            <ReButton show-text icon="SwitchButton" size="small" @click="toggleStatus(activeAccount)">
+            <ReButton show-text icon="SwitchButton" @click="toggleStatus(activeAccount)">
               {{ activeAccount.status === 0 ? '启用' : '停用' }}
             </ReButton>
-            <ReButton show-text icon="Delete" size="small" type="danger" plain @click="remove(activeAccount)">删除</ReButton>
-          </div>
-
-          <div class="ins-meta">
-            <span>创建 {{ formatTime(activeAccount.createdAt) }}</span>
-            <span>更新 {{ formatTime(activeAccount.updatedAt) }}</span>
-          </div>
+            <ReButton show-text icon="Delete" type="danger" plain @click="remove(activeAccount)">删除</ReButton>
+          </footer>
         </template>
 
-        <!-- AppKey -->
+        <!-- ---------- AppKey ---------- -->
         <template v-else-if="segment === 'APPKEY' && activeAppKey">
-          <header class="ins-head">
-            <span class="ins-mark is-key">
-              <ReIcon name="Key" :size="15" />
-            </span>
-            <div class="ins-title">
+          <header class="main-head">
+            <span class="main-mark is-key"><ReIcon name="Key" :size="16" /></span>
+            <div class="main-title">
               <b :title="activeAppKey.name">{{ activeAppKey.name || '未命名密钥' }}</b>
               <span>访问密钥 · {{ activeAppKey.owner ? '仅本人' : '部署级共享' }}</span>
             </div>
@@ -441,118 +342,221 @@
             </ReTag>
           </header>
 
-          <div class="ins-flags">
-            <span class="flag is-brand">Secret 只进不出</span>
-            <span class="flag" :class="expired(activeAppKey.expireAt) ? 'is-warn' : 'is-ok'">
-              {{ expireText(activeAppKey.expireAt) }}
-            </span>
+          <nav class="main-tabs" role="tablist" aria-label="访问密钥信息">
+            <button
+              v-for="tab in keyTabs"
+              :key="tab.value"
+              type="button"
+              role="tab"
+              class="main-tab"
+              :class="{ 'is-on': mainTab === tab.value }"
+              :aria-selected="mainTab === tab.value"
+              @click="mainTab = tab.value"
+            >
+              {{ tab.label }}
+            </button>
+          </nav>
+
+          <div class="main-body">
+            <div v-if="mainTab === 'overview'" class="pane">
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">AppKey</span>
+                  <span class="v mono">{{ activeAppKey.appKey || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">状态</span>
+                  <span class="v">{{ activeAppKey.status === 0 ? '停用' : '启用' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">归属</span>
+                  <span class="v">{{ activeAppKey.owner ? `仅本人（${activeAppKey.owner}）` : '部署级共享' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">创建时间</span>
+                  <span class="v">{{ formatTime(activeAppKey.createdAt) }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">更新时间</span>
+                  <span class="v">{{ formatTime(activeAppKey.updatedAt) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-else-if="mainTab === 'secret'" class="pane">
+              <div class="cred-card is-ok">
+                <ReIcon name="Lock" :size="16" />
+                <div>
+                  <b>Secret 只进不出</b>
+                  <span>Secret 明文只在创建或轮换后弹一次，之后任何读取接口都不会再返回。</span>
+                </div>
+              </div>
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">AppKey</span>
+                  <span class="v mono">{{ activeAppKey.appKey || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">IP 白名单</span>
+                  <span class="v mono">{{ activeAppKey.ipWhitelist || '不限制' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">备注</span>
+                  <span class="v">{{ activeAppKey.remark || '—' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="pane">
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">最近使用</span>
+                  <span class="v">{{ formatTime(activeAppKey.lastUsedAt) }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">过期</span>
+                  <span class="v" :class="{ 'is-bad': expired(activeAppKey.expireAt) }">
+                    {{ expireText(activeAppKey.expireAt) }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <dl class="ins-list">
-            <div>
-              <dt>AppKey</dt>
-              <dd class="mono">{{ activeAppKey.appKey || '—' }}</dd>
-            </div>
-            <div>
-              <dt>最近使用</dt>
-              <dd>{{ formatShort(activeAppKey.lastUsedAt) }}</dd>
-            </div>
-            <div>
-              <dt>IP 白名单</dt>
-              <dd class="mono">{{ activeAppKey.ipWhitelist || '不限制' }}</dd>
-            </div>
-            <div>
-              <dt>备注</dt>
-              <dd>{{ activeAppKey.remark || '—' }}</dd>
-            </div>
-          </dl>
-
-          <div class="ins-actions">
-            <ReButton show-text icon="CopyDocument" size="small" @click="copyKey(activeAppKey)">复制 AppKey</ReButton>
-            <ReButton show-text icon="Refresh" size="small" @click="rotateKey(activeAppKey)">轮换 Secret</ReButton>
-            <ReButton show-text icon="EditPen" size="small" @click="openEditKey(activeAppKey)">编辑</ReButton>
-            <ReButton show-text icon="SwitchButton" size="small" @click="toggleKeyStatus(activeAppKey)">
+          <footer class="main-foot">
+            <ReButton show-text icon="CopyDocument" @click="copyKey(activeAppKey)">复制 AppKey</ReButton>
+            <ReButton show-text icon="Refresh" @click="rotateKey(activeAppKey)">轮换 Secret</ReButton>
+            <ReButton show-text icon="EditPen" @click="openEditKey(activeAppKey)">编辑</ReButton>
+            <span class="foot-gap"></span>
+            <ReButton show-text icon="SwitchButton" @click="toggleKeyStatus(activeAppKey)">
               {{ activeAppKey.status === 0 ? '启用' : '停用' }}
             </ReButton>
-            <ReButton show-text icon="Delete" size="small" type="danger" plain @click="removeKey(activeAppKey)">
-              删除
-            </ReButton>
-          </div>
-
-          <div class="ins-meta">
-            <span>创建 {{ formatTime(activeAppKey.createdAt) }}</span>
-            <span>更新 {{ formatTime(activeAppKey.updatedAt) }}</span>
-          </div>
+            <ReButton show-text icon="Delete" type="danger" plain @click="removeKey(activeAppKey)">删除</ReButton>
+          </footer>
         </template>
 
-        <!-- Cookie -->
+        <!-- ---------- Cookie ---------- -->
         <template v-else-if="segment === 'COOKIE' && activeCookie">
-          <header class="ins-head">
-            <span class="ins-mark is-cookie">
-              <ReIcon name="Postcard" :size="15" />
-            </span>
-            <div class="ins-title">
+          <header class="main-head">
+            <span class="main-mark is-cookie"><ReIcon name="Postcard" :size="16" /></span>
+            <div class="main-title">
               <b :title="activeCookie.name">{{ activeCookie.name || '未命名 Cookie' }}</b>
-              <span>{{ activeCookie.domain || '—' }}{{ activeCookie.path || '/' }}</span>
+              <span>Cookie · {{ activeCookie.domain || '—' }}{{ activeCookie.path || '/' }}</span>
             </div>
             <ReTag :type="activeCookie.status === 0 ? 'info' : 'success'" effect="plain" size="small">
               {{ activeCookie.status === 0 ? '停用' : '启用' }}
             </ReTag>
           </header>
 
-          <div class="ins-flags">
-            <span class="flag" :class="activeCookie.hasValue ? 'is-ok' : 'is-warn'">
-              {{ activeCookie.hasValue ? '内容已配置' : '内容待配置' }}
-            </span>
-            <span class="flag" :class="expired(activeCookie.expireAt) ? 'is-warn' : 'is-ok'">
-              {{ expireText(activeCookie.expireAt) }}
-            </span>
+          <nav class="main-tabs" role="tablist" aria-label="Cookie 信息">
+            <button
+              v-for="tab in cookieTabs"
+              :key="tab.value"
+              type="button"
+              role="tab"
+              class="main-tab"
+              :class="{ 'is-on': mainTab === tab.value }"
+              :aria-selected="mainTab === tab.value"
+              @click="mainTab = tab.value"
+            >
+              {{ tab.label }}
+            </button>
+          </nav>
+
+          <div class="main-body">
+            <div v-if="mainTab === 'overview'" class="pane">
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">域名</span>
+                  <span class="v mono">{{ activeCookie.domain || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">路径</span>
+                  <span class="v mono">{{ activeCookie.path || '/' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">来源</span>
+                  <span class="v">{{ activeCookie.source || '—' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">归属</span>
+                  <span class="v">{{ activeCookie.owner ? `仅本人（${activeCookie.owner}）` : '部署级共享' }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">创建时间</span>
+                  <span class="v">{{ formatTime(activeCookie.createdAt) }}</span>
+                </div>
+                <div class="fact">
+                  <span class="k">更新时间</span>
+                  <span class="v">{{ formatTime(activeCookie.updatedAt) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-else-if="mainTab === 'content'" class="pane">
+              <div class="cred-card" :class="activeCookie.hasValue ? 'is-ok' : 'is-warn'">
+                <ReIcon :name="activeCookie.hasValue ? 'CircleCheckFilled' : 'WarningFilled'" :size="16" />
+                <div>
+                  <b>{{ activeCookie.hasValue ? 'Cookie 内容已配置' : 'Cookie 内容尚未配置' }}</b>
+                  <span>内容只进不出：读取接口只返回「是否已配置」，编辑时留空表示不修改。</span>
+                </div>
+              </div>
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">备注</span>
+                  <span class="v">{{ activeCookie.remark || '—' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="pane">
+              <div class="facts">
+                <div class="fact">
+                  <span class="k">过期</span>
+                  <span class="v" :class="{ 'is-bad': expired(activeCookie.expireAt) }">
+                    {{ expireText(activeCookie.expireAt) }}
+                  </span>
+                </div>
+                <div class="fact">
+                  <span class="k">状态</span>
+                  <span class="v">{{ activeCookie.status === 0 ? '停用' : '启用' }}</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <dl class="ins-list">
-            <div>
-              <dt>域名</dt>
-              <dd class="mono">{{ activeCookie.domain || '—' }}</dd>
-            </div>
-            <div>
-              <dt>路径</dt>
-              <dd class="mono">{{ activeCookie.path || '/' }}</dd>
-            </div>
-            <div>
-              <dt>来源</dt>
-              <dd>{{ activeCookie.source || '—' }}</dd>
-            </div>
-            <div>
-              <dt>归属</dt>
-              <dd>{{ activeCookie.owner ? `仅本人（${activeCookie.owner}）` : '部署级共享' }}</dd>
-            </div>
-            <div>
-              <dt>备注</dt>
-              <dd>{{ activeCookie.remark || '—' }}</dd>
-            </div>
-          </dl>
-
-          <div class="ins-actions">
-            <ReButton show-text icon="EditPen" size="small" @click="openEditCookie(activeCookie)">编辑</ReButton>
-            <ReButton show-text icon="SwitchButton" size="small" @click="toggleCookieStatus(activeCookie)">
+          <footer class="main-foot">
+            <ReButton show-text icon="EditPen" @click="openEditCookie(activeCookie)">编辑 Cookie</ReButton>
+            <span class="foot-gap"></span>
+            <ReButton show-text icon="SwitchButton" @click="toggleCookieStatus(activeCookie)">
               {{ activeCookie.status === 0 ? '启用' : '停用' }}
             </ReButton>
-            <ReButton show-text icon="Delete" size="small" type="danger" plain @click="removeCookie(activeCookie)">
-              删除
-            </ReButton>
-          </div>
-
-          <div class="ins-meta">
-            <span>创建 {{ formatTime(activeCookie.createdAt) }}</span>
-            <span>更新 {{ formatTime(activeCookie.updatedAt) }}</span>
-          </div>
+            <ReButton show-text icon="Delete" type="danger" plain @click="removeCookie(activeCookie)">删除</ReButton>
+          </footer>
         </template>
 
-        <div v-else class="ins-blank">
-          <ReEmpty :image-size="56" :description="inspectorHint" />
-          <p>单击一行查看详情，双击打开完整详情弹窗，右键有完整操作。</p>
+        <div v-else class="main-blank">
+          <ReEmpty :image-size="64" :description="blankHint" />
+          <p>单击左侧一条资产查看详情，双击打开完整编辑，右键有完整操作。</p>
         </div>
-      </aside>
+      </section>
+
+      <!-- 右键菜单（索引行与表格共用一套动作） -->
+      <div v-if="ctxMenu" class="ctx-layer" @click="ctxMenu = null" @contextmenu.prevent="ctxMenu = null">
+        <ul class="ctx-menu" :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }" @click.stop>
+          <li
+            v-for="item in ctxMenu.items"
+            :key="item.key"
+            class="ctx-item"
+            :class="{ 'is-divided': item.divided, 'is-disabled': item.disabled }"
+            @click="runCtx(item)"
+          >
+            <ReIcon v-if="item.icon" :name="ctxIcon(item.icon)" :size="13" />
+            <span>{{ item.label }}</span>
+          </li>
+        </ul>
+      </div>
+
     </div>
     </template>
 
@@ -644,6 +648,7 @@
       v-model="mailboxVisible"
       :account="mailboxAccount"
       :console-url="mailboxAccount ? accountConsoleUrl(mailboxAccount) : ''"
+      @unread="onMailboxUnread"
     />
 
     <!-- 轮换后的一次性明文 -->
@@ -661,7 +666,7 @@
 </template>
 
 <script setup lang="ts" name="ScAccountAssets">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import {
   ChatDotRound,
   CircleCheck,
@@ -672,20 +677,14 @@ import {
   Refresh,
   Star,
   SwitchButton,
-  View,
 } from '@element-plus/icons-vue';
 import { message } from '@repo/core';
 import ReButton from '@repo/ui/re-button';
 import ReDialog from '@repo/ui/re-dialog';
 import ReEmpty from '@repo/ui/re-empty';
 import ReIcon from '@repo/ui/re-icon';
-import ReTable from '@repo/ui/re-table';
-import type {
-  ReTableCellClickPayload,
-  ReTableContextMenuContext,
-  ReTableContextMenuItem,
-} from '@repo/ui/re-table';
 import ReTag from '@repo/ui/re-tag';
+import ReRailSplit, { readRailWidth } from '@repo/ui/re-rail-split';
 
 import AccountFormDialog from '../components/AccountFormDialog.vue';
 import MailboxDrawer from '../components/MailboxDrawer.vue';
@@ -772,6 +771,10 @@ const cookieError = ref('');
 const segment = ref<Segment>('ALL');
 /** 搜索词 */
 const keyword = ref('');
+
+/* ---------- 左侧索引宽度（可拖拽，偏好存本地） ---------- */
+const RAIL_WIDTH_KEY = 'account.rail.width.v1';
+const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 304));
 /** 账号状态筛选 */
 const statusFilter = ref<StatusFilter>('all');
 
@@ -787,8 +790,6 @@ const verifyingId = ref<string | null>(null);
 const selectedAccountIds = ref<string[]>([]);
 /** 批量操作进行中 */
 const batchBusy = ref(false);
-/** 账号表格实例（用于清空勾选） */
-const accountTableRef = ref<{ clearAllSelection?: () => void } | null>(null);
 
 /** 详情弹窗 */
 const showDetail = ref(false);
@@ -811,6 +812,20 @@ const secretName = ref('');
 /** 收 / 发信箱抽屉（邮箱 IMAP、短信 MessagePush） */
 const mailboxVisible = ref(false);
 const mailboxAccount = ref<SysAccount | null>(null);
+/** 账号 → 收件箱未读数（抽屉打开后回填，用于页签角标；不预拉免得多开 IMAP 会话） */
+const unreadByAccount = reactive<Record<string, number>>({});
+
+/** 取某账号的未读数 */
+function unreadOf(accountId?: string): number {
+  return accountId ? unreadByAccount[accountId] || 0 : 0;
+}
+
+/** 抽屉回报的未读数 */
+function onMailboxUnread(value: number): void {
+  const id = mailboxAccount.value?.accountId;
+  if (!id) return;
+  unreadByAccount[id] = value || 0;
+}
 
 /** 是否为账号类分段 */
 const isAccountSegment = computed(
@@ -831,8 +846,8 @@ const searchPlaceholder = computed(() => {
   return '搜索名称 / 编码 / 登录名 / 地址';
 });
 
-/** 检查器空态提示 */
-const inspectorHint = computed(() => {
+/** 详情区空态提示 */
+const blankHint = computed(() => {
   if (segment.value === 'APPKEY') return '选择一条访问密钥查看详情';
   if (segment.value === 'COOKIE') return '选择一条 Cookie 查看详情';
   return '选择一条账号查看详情';
@@ -856,15 +871,16 @@ const channelCount = computed(
   () => new Set(accountList.value.map(row => row.channelKey).filter(Boolean)).size,
 );
 
-/** 分段页签（数量恒显示，避免点选后消失） */
-const tabs = computed<Array<{ value: Segment; label: string; count: number }>>(() => [
-  { value: 'ALL', label: '全部', count: accountList.value.length },
-  { value: 'API_KEY', label: '密钥', count: accountList.value.filter(row => row.kind === 'API_KEY').length },
-  { value: 'EMAIL', label: '邮箱', count: accountList.value.filter(row => row.kind === 'EMAIL').length },
-  { value: 'SMS', label: '短信', count: accountList.value.filter(row => row.kind === 'SMS').length },
-  { value: 'APPKEY', label: 'AppKey', count: appKeyList.value.length },
-  { value: 'COOKIE', label: 'Cookie', count: cookieList.value.length },
-]);
+/** 状态筛选文案 */
+const statusFilterLabel = computed(() => {
+  const map: Record<StatusFilter, string> = {
+    all: '全部',
+    on: '启用中',
+    pending: '凭据待补',
+    invalid: '校验失败',
+  };
+  return map[statusFilter.value];
+});
 
 /** KPI 单元格 */
 const kpiCells = computed<
@@ -973,23 +989,140 @@ const filteredCookies = computed(() => {
   );
 });
 
-/** ReTable 需要对象数组 */
-const accountTableRows = computed<Array<Record<string, unknown>>>(
-  () => filteredAccounts.value as unknown as Array<Record<string, unknown>>,
-);
-const appKeyTableRows = computed<Array<Record<string, unknown>>>(
-  () => filteredAppKeys.value as unknown as Array<Record<string, unknown>>,
-);
-const cookieTableRows = computed<Array<Record<string, unknown>>>(
-  () => filteredCookies.value as unknown as Array<Record<string, unknown>>,
-);
-
-/** 当前表格行数 */
-const tableCount = computed(() => {
-  if (segment.value === 'APPKEY') return filteredAppKeys.value.length;
-  if (segment.value === 'COOKIE') return filteredCookies.value.length;
-  return filteredAccounts.value.length;
+/**
+ * 索引里的账号结果。
+ *
+ * <p>和右侧详情不同：索引永远列全部分组，不受当前 {@code segment} 影响，
+ * 否则点中一条密钥后左侧就只剩密钥组，切换别的分组还得回顶栏。</p>
+ */
+const indexAccounts = computed(() => {
+  const text = keyword.value.trim().toLowerCase();
+  return accountList.value.filter(row => {
+    if (statusFilter.value === 'on' && row.status === 0) return false;
+    if (statusFilter.value === 'pending' && row.hasSecret) return false;
+    if (statusFilter.value === 'invalid' && row.verifyStatus !== 'INVALID') return false;
+    if (!text) return true;
+    return `${row.name || ''} ${row.code || ''} ${row.username || ''} ${row.endpoint || ''}`
+      .toLowerCase()
+      .includes(text);
+  });
 });
+
+/** 索引分组行 */
+interface IndexRow {
+  /** 行标识 */
+  id: string;
+  /** 主标题 */
+  name: string;
+  /** 副标题 */
+  sub: string;
+  /** 右侧时间 */
+  meta: string;
+  /** 右侧状态标签 */
+  tag: string;
+  /** 标签语义 */
+  tagTone: 'ok' | 'warn' | 'bad' | 'idle';
+  /** 左侧圆点语义 */
+  tone: 'ok' | 'warn' | 'bad' | 'idle';
+  /** 启停状态（0 停用；无启停概念时为 undefined） */
+  status?: number;
+  /** 是否选中 */
+  selected: boolean;
+  /** 是否加入批量选择 */
+  checked: boolean;
+}
+
+/** 索引分组 */
+interface IndexGroup {
+  /** 分组标识，同时是分段值 */
+  key: Segment;
+  /** 分组标题 */
+  label: string;
+  /** 分组图标 */
+  icon: string;
+  /** 分组行 */
+  rows: IndexRow[];
+}
+
+/**
+ * 账号行的圆点语义。
+ *
+ * <p>停用优先于校验状态：一条已停用的账号即便校验有效，也不该显示成绿的。</p>
+ */
+function accountTone(row: SysAccount): 'ok' | 'warn' | 'bad' | 'idle' {
+  if (row.status === 0) return 'idle';
+  if (!row.hasSecret) return 'warn';
+  return verifyTone(row.verifyStatus);
+}
+
+/** 左侧分组索引 */
+const indexGroups = computed<IndexGroup[]>(() => {
+  const groups: IndexGroup[] = [];
+  const kinds: Array<{ kind: AccountKind; label: string; icon: string }> = [
+    { kind: 'API_KEY', label: 'API 密钥', icon: 'Key' },
+    { kind: 'EMAIL', label: '邮箱账号', icon: 'Message' },
+    { kind: 'SMS', label: '短信账号', icon: 'ChatDotRound' },
+  ];
+
+  for (const def of kinds) {
+    const rows = indexAccounts.value
+      .filter(row => row.kind === def.kind)
+      .map<IndexRow>(row => ({
+        id: row.accountId,
+        name: row.name || row.code || '未命名账号',
+        sub: `${row.vendor || kindLabel(row.kind)}${row.username ? ` · ${row.username}` : ''}`,
+        meta: formatShort(row.updatedAt),
+        tag: row.status === 0 ? '停用' : verifyLabel(row.verifyStatus),
+        tagTone: row.status === 0 ? 'idle' : row.hasSecret ? verifyTone(row.verifyStatus) : 'warn',
+        tone: accountTone(row),
+        status: row.status,
+        selected: selectedAccountId.value === row.accountId,
+        checked: selectedAccountIds.value.includes(row.accountId),
+      }));
+    groups.push({ key: def.kind, label: def.label, icon: def.icon, rows });
+  }
+
+  if (statusFilter.value === 'all') {
+    groups.push({
+      key: 'APPKEY',
+      label: 'AppKey',
+      icon: 'Key',
+      rows: filteredAppKeys.value.map<IndexRow>(row => ({
+        id: row.appKeyId,
+        name: row.name || row.appKey || '未命名密钥',
+        sub: row.appKey || '—',
+        meta: formatShort(row.lastUsedAt),
+        tag: row.status === 0 ? '停用' : expired(row.expireAt) ? '过期' : '启用',
+        tagTone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
+        tone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
+        status: row.status,
+        selected: selectedAppKeyId.value === row.appKeyId,
+        checked: false,
+      })),
+    });
+    groups.push({
+      key: 'COOKIE',
+      label: 'Cookie',
+      icon: 'Postcard',
+      rows: filteredCookies.value.map<IndexRow>(row => ({
+        id: row.cookieId,
+        name: row.name || row.domain || '未命名 Cookie',
+        sub: `${row.domain || '—'}${row.path || '/'}`,
+        meta: formatShort(row.updatedAt),
+        tag: row.status === 0 ? '停用' : expired(row.expireAt) ? '过期' : '启用',
+        tagTone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
+        tone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
+        status: row.status,
+        selected: selectedCookieId.value === row.cookieId,
+        checked: false,
+      })),
+    });
+  }
+  return groups;
+});
+
+/** 索引里的总行数 */
+const tableCount = computed(() => indexGroups.value.reduce((sum, group) => sum + group.rows.length, 0));
 
 /** 选中账号 */
 const activeAccount = computed(
@@ -1138,64 +1271,206 @@ function toggleStatusFilter(value: StatusFilter): void {
 
 watch([segment, keyword, statusFilter], syncSelection);
 
+// 换了资产就回到概览：留在「收信箱」去看一条密钥会得到奇怪的空面板
+watch([selectedAccountId, selectedAppKeyId, selectedCookieId], () => {
+  mainTab.value = 'overview';
+});
+
 // ==================== 行选中 ====================
 
+/** 详情页签取值：账号 / AppKey / Cookie 三套页签共用一个游标 */
+type TabValue =
+  | 'overview'
+  | 'credential'
+  | 'verify'
+  | 'mailbox'
+  | 'secret'
+  | 'usage'
+  | 'content'
+  | 'expire';
+
+/** 当前账号页签 */
+const mainTab = ref<TabValue>('overview');
+
+/** 账号页签项 */
+const accountTabs: Array<{ value: TabValue; label: string }> = [
+  { value: 'overview', label: '概览' },
+  { value: 'credential', label: '凭据' },
+  { value: 'verify', label: '校验记录' },
+  { value: 'mailbox', label: '收信箱' },
+];
+
+/** AppKey 页签项 */
+const keyTabs: Array<{ value: TabValue; label: string }> = [
+  { value: 'overview', label: '概览' },
+  { value: 'secret', label: 'Secret' },
+  { value: 'usage', label: '使用与期限' },
+];
+
+/** Cookie 页签项 */
+const cookieTabs: Array<{ value: TabValue; label: string }> = [
+  { value: 'overview', label: '概览' },
+  { value: 'content', label: '内容' },
+  { value: 'expire', label: '期限' },
+];
+
+/** 右键菜单状态 */
+const ctxMenu = ref<{
+  /** 横坐标 */
+  x: number;
+  /** 纵坐标 */
+  y: number;
+  /** 分组 */
+  group: IndexGroup;
+  /** 行 */
+  row: IndexRow;
+  /** 菜单项 */
+  items: Array<{ key: string; label: string; icon?: string; divided?: boolean; disabled?: boolean }>;
+} | null>(null);
+
 /**
- * 账号行单击。
+ * 选中索引行。
  *
- * @param row 行数据
+ * <p>单击只切换右侧详情，不改左侧分组结构：点一条 AppKey 不会让账号分组消失。
+ * 按住 Ctrl / ⌘ 单击账号行则把它加入批量选择，用于批量校验 / 启停 / 删除。</p>
+ *
+ * @param group 分组
+ * @param row 行
+ * @param event 鼠标事件
  */
-function onAccountRowClick(row: Record<string, unknown>): void {
-  selectedAccountId.value = String(row.accountId ?? '');
+function selectIndexRow(group: IndexGroup, row: IndexRow, event?: MouseEvent): void {
+  segment.value = group.key;
+  if (group.key === 'APPKEY') {
+    selectedAppKeyId.value = row.id;
+  } else if (group.key === 'COOKIE') {
+    selectedCookieId.value = row.id;
+  } else {
+    selectedAccountId.value = row.id;
+    if (event?.ctrlKey || event?.metaKey || event?.shiftKey) {
+      const ids = selectedAccountIds.value;
+      selectedAccountIds.value = ids.includes(row.id) ? ids.filter(id => id !== row.id) : [...ids, row.id];
+    }
+  }
+  mainTab.value = 'overview';
 }
 
 /**
- * AppKey 行单击。
+ * 双击索引行：直接进完整编辑。
  *
- * @param row 行数据
+ * @param group 分组
+ * @param row 行
  */
-function onAppKeyRowClick(row: Record<string, unknown>): void {
-  selectedAppKeyId.value = String(row.appKeyId ?? '');
-}
-
-/**
- * Cookie 行单击。
- *
- * @param row 行数据
- */
-function onCookieRowClick(row: Record<string, unknown>): void {
-  selectedCookieId.value = String(row.cookieId ?? '');
-}
-
-/** 双击（第二次 click 的 detail=2）打开账号详情 */
-function onCellClick(payload: ReTableCellClickPayload): void {
-  if (payload.event?.detail !== 2) return;
-  if (segment.value === 'APPKEY') {
-    openEditKey(payload.row as unknown as SysAccountAppKey);
+function openIndexRow(group: IndexGroup, row: IndexRow): void {
+  if (group.key === 'APPKEY') {
+    openEditKey(appKeyList.value.find(item => item.appKeyId === row.id) ?? null);
     return;
   }
-  if (segment.value === 'COOKIE') {
-    openEditCookie(payload.row as unknown as SysAccountCookie);
+  if (group.key === 'COOKIE') {
+    openEditCookie(cookieList.value.find(item => item.cookieId === row.id) ?? null);
     return;
   }
-  openDetail(payload.row as unknown as SysAccount);
+  openEdit(accountList.value.find(item => item.accountId === row.id) ?? null);
+}
+
+/**
+ * 打开索引行右键菜单。
+ *
+ * @param event 鼠标事件
+ * @param group 分组
+ * @param row 行
+ */
+function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): void {
+  selectIndexRow(group, row);
+  const items = group.key === 'APPKEY'
+    ? [
+        { key: 'copy-key', label: '复制 AppKey', icon: 'CopyDocument' },
+        { key: 'rotate-key', label: '轮换 Secret', icon: 'Refresh', divided: true },
+        { key: 'edit', label: '编辑密钥', icon: 'EditPen' },
+        { key: 'status', label: row.status === 0 ? '启用密钥' : '停用密钥', icon: 'SwitchButton' },
+        { key: 'delete', label: '删除密钥', icon: 'Delete', divided: true },
+      ]
+    : group.key === 'COOKIE'
+      ? [
+          { key: 'edit', label: '编辑 Cookie', icon: 'EditPen' },
+          { key: 'status', label: row.status === 0 ? '启用 Cookie' : '停用 Cookie', icon: 'SwitchButton', divided: true },
+          { key: 'delete', label: '删除 Cookie', icon: 'Delete' },
+        ]
+      : [
+          { key: 'detail', label: '账号详情', icon: 'View' },
+          { key: 'edit', label: '编辑账号', icon: 'EditPen' },
+          { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
+          ...(group.key === 'EMAIL' || group.key === 'SMS'
+            ? [{ key: 'open-console', label: group.key === 'EMAIL' ? '打开邮箱' : '打开短信', icon: 'Message', divided: true }]
+            : []),
+          { key: 'duplicate', label: '复制为新账号', icon: 'CopyDocument', divided: true },
+          { key: 'copy-code', label: '复制账号编码', icon: 'CopyDocument' },
+          {
+            key: 'default',
+            label: '设为同种类默认',
+            icon: 'Star',
+          },
+          { key: 'status', label: row.status === 0 ? '启用账号' : '停用账号', icon: 'SwitchButton' },
+          { key: 'delete', label: '删除账号', icon: 'Delete', divided: true },
+        ];
+  ctxMenu.value = { x: event.clientX, y: event.clientY, group, row, items };
+}
+
+/**
+ * 右键菜单图标名。
+ *
+ * @param name 图标名
+ * @returns 同名图标
+ */
+function ctxIcon(name: string): string {
+  return name;
+}
+
+/**
+ * 执行右键菜单项。
+ *
+ * @param item 菜单项
+ */
+function runCtx(item: { key: string; disabled?: boolean }): void {
+  const menu = ctxMenu.value;
+  ctxMenu.value = null;
+  if (!menu || item.disabled) return;
+  const { group, row } = menu;
+  if (group.key === 'APPKEY') {
+    const target = appKeyList.value.find(entry => entry.appKeyId === row.id);
+    if (!target) return;
+    if (item.key === 'copy-key') void copyKey(target);
+    else if (item.key === 'rotate-key') void rotateKey(target);
+    else if (item.key === 'edit') openEditKey(target);
+    else if (item.key === 'status') void toggleKeyStatus(target);
+    else if (item.key === 'delete') void removeKey(target);
+    return;
+  }
+  if (group.key === 'COOKIE') {
+    const target = cookieList.value.find(entry => entry.cookieId === row.id);
+    if (!target) return;
+    if (item.key === 'edit') openEditCookie(target);
+    else if (item.key === 'status') void toggleCookieStatus(target);
+    else if (item.key === 'delete') void removeCookie(target);
+    return;
+  }
+  const target = accountList.value.find(entry => entry.accountId === row.id);
+  if (!target) return;
+  if (item.key === 'detail') openDetail(target);
+  else if (item.key === 'edit') openEdit(target);
+  else if (item.key === 'verify') void onVerify(target);
+  else if (item.key === 'open-console') openConsole(target);
+  else if (item.key === 'copy-code') void copyCode(target);
+  else if (item.key === 'duplicate') duplicateAccount(target);
+  else if (item.key === 'default') void setDefault(target);
+  else if (item.key === 'status') void toggleStatus(target);
+  else if (item.key === 'delete') void remove(target);
 }
 
 // ==================== 批量操作 ====================
 
-/**
- * 账号表格勾选变化。
- *
- * @param rows 当前勾选行
- */
-function onAccountSelectionChange(rows: Record<string, unknown>[]): void {
-  selectedAccountIds.value = rows.map(row => String(row.accountId ?? '')).filter(Boolean);
-}
-
 /** 清空勾选（数据刷新 / 切分段后必须清，避免把已消失的 id 提交上去） */
 function clearAccountSelection(): void {
   selectedAccountIds.value = [];
-  accountTableRef.value?.clearAllSelection?.();
 }
 
 /**
@@ -1356,78 +1631,6 @@ function openDetail(row: SysAccount | null): void {
 function onSaved(saved: SysAccount): void {
   if (saved?.accountId) selectedAccountId.value = saved.accountId;
   void loadAll();
-}
-
-/**
- * 账号行右键菜单。
- *
- * @param ctx 右键上下文
- * @returns 菜单项
- */
-function accountMenu(ctx: ReTableContextMenuContext): ReTableContextMenuItem[] {
-  const row = ctx.row as unknown as SysAccount;
-  const items: ReTableContextMenuItem[] = [
-    { key: 'detail', label: '账号详情', icon: View },
-    { key: 'edit', label: '编辑账号', icon: EditPen },
-    { key: 'verify', label: '校验凭据', icon: CircleCheck },
-  ];
-  if (row.kind === 'EMAIL' || row.kind === 'SMS') {
-    items.push({
-      key: 'open-console',
-      label: row.kind === 'EMAIL' ? '打开邮箱' : '打开短信',
-      icon: row.kind === 'EMAIL' ? Message : ChatDotRound,
-      divided: true,
-      disabled: !hasMailbox(row),
-    });
-  }
-  items.push(
-    { key: 'duplicate', label: '复制为新账号', icon: CopyDocument, divided: true },
-    { key: 'copy-code', label: '复制账号编码', icon: CopyDocument },
-    {
-      key: 'default',
-      label: row.defaultAccount ? '已是同种类默认' : '设为同种类默认',
-      icon: Star,
-      disabled: Boolean(row.defaultAccount),
-    },
-    { key: 'status', label: row.status === 0 ? '启用账号' : '停用账号', icon: SwitchButton },
-    { key: 'delete', label: '删除账号', icon: Delete, divided: true },
-  );
-  return items;
-}
-
-/** 账号右键选中 */
-function onAccountMenuSelect(item: ReTableContextMenuItem, ctx: ReTableContextMenuContext): void {
-  const row = ctx.row as unknown as SysAccount;
-  selectedAccountId.value = row.accountId;
-  switch (item.key) {
-    case 'detail':
-      openDetail(row);
-      break;
-    case 'edit':
-      openEdit(row);
-      break;
-    case 'verify':
-      void onVerify(row);
-      break;
-    case 'open-console':
-      openConsole(row);
-      break;
-    case 'copy-code':
-      void copyCode(row);
-      break;
-    case 'duplicate':
-      duplicateAccount(row);
-      break;
-    case 'default':
-      void setDefault(row);
-      break;
-    case 'status':
-      void toggleStatus(row);
-      break;
-    case 'delete':
-      void remove(row);
-      break;
-  }
 }
 
 /**
@@ -1633,41 +1836,6 @@ async function removeKey(row: SysAccountAppKey): Promise<void> {
   }
 }
 
-/** AppKey 行右键菜单 */
-function appKeyMenu(ctx: ReTableContextMenuContext): ReTableContextMenuItem[] {
-  const row = ctx.row as unknown as SysAccountAppKey;
-  return [
-    { key: 'copy', label: '复制 AppKey', icon: CopyDocument },
-    { key: 'rotate', label: '轮换 Secret', icon: Refresh, divided: true },
-    { key: 'edit', label: '编辑密钥', icon: EditPen },
-    { key: 'status', label: row.status === 0 ? '启用密钥' : '停用密钥', icon: SwitchButton },
-    { key: 'delete', label: '删除密钥', icon: Delete, divided: true },
-  ];
-}
-
-/** AppKey 右键选中 */
-function onAppKeyMenuSelect(item: ReTableContextMenuItem, ctx: ReTableContextMenuContext): void {
-  const row = ctx.row as unknown as SysAccountAppKey;
-  selectedAppKeyId.value = row.appKeyId;
-  switch (item.key) {
-    case 'copy':
-      void copyKey(row);
-      break;
-    case 'rotate':
-      void rotateKey(row);
-      break;
-    case 'edit':
-      openEditKey(row);
-      break;
-    case 'status':
-      void toggleKeyStatus(row);
-      break;
-    case 'delete':
-      void removeKey(row);
-      break;
-  }
-}
-
 // ==================== Cookie 操作 ====================
 
 /** 打开 Cookie 编辑 */
@@ -1729,33 +1897,6 @@ async function removeCookie(row: SysAccountCookie): Promise<void> {
   }
 }
 
-/** Cookie 行右键菜单 */
-function cookieMenu(ctx: ReTableContextMenuContext): ReTableContextMenuItem[] {
-  const row = ctx.row as unknown as SysAccountCookie;
-  return [
-    { key: 'edit', label: '编辑 Cookie', icon: EditPen },
-    { key: 'status', label: row.status === 0 ? '启用 Cookie' : '停用 Cookie', icon: SwitchButton, divided: true },
-    { key: 'delete', label: '删除 Cookie', icon: Delete },
-  ];
-}
-
-/** Cookie 右键选中 */
-function onCookieMenuSelect(item: ReTableContextMenuItem, ctx: ReTableContextMenuContext): void {
-  const row = ctx.row as unknown as SysAccountCookie;
-  selectedCookieId.value = row.cookieId;
-  switch (item.key) {
-    case 'edit':
-      openEditCookie(row);
-      break;
-    case 'status':
-      void toggleCookieStatus(row);
-      break;
-    case 'delete':
-      void removeCookie(row);
-      break;
-  }
-}
-
 // ==================== 一次性明文 ====================
 
 /** 复制轮换后的 Secret */
@@ -1775,19 +1916,6 @@ async function copySecret(): Promise<void> {
  */
 function kindLabel(kind?: AccountKind): string {
   return ({ API_KEY: 'API 密钥', EMAIL: '邮箱账号', SMS: '短信账号' } as Record<string, string>)[kind || ''] || '未知';
-}
-
-/**
- * 账号种类标签色。
- *
- * @param kind 种类
- * @returns ReTag type
- */
-function kindTagType(kind?: AccountKind): 'warning' | 'primary' | 'success' | 'info' {
-  if (kind === 'API_KEY') return 'warning';
-  if (kind === 'EMAIL') return 'primary';
-  if (kind === 'SMS') return 'success';
-  return 'info';
 }
 
 /**
@@ -1966,8 +2094,8 @@ onMounted(loadAll);
   color: var(--text-primary);
 }
 .views-item.is-on {
-  background: var(--brand-50);
-  color: var(--brand-600, #5a4bd9);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
   font-weight: 600;
 }
 
@@ -1984,118 +2112,668 @@ onMounted(loadAll);
   min-height: 0;
 }
 
-/* ---------- KPI 带 ---------- */
-.kpi-band {
+/* ---------- 工作台：左索引 + 右详情 ---------- */
+.ws {
+  flex: 1;
+  min-height: 0;
   display: flex;
+  /* 间距交给分栏手柄本身，避免 gap + 手柄叠出一段空档 */
+  gap: 0;
+  align-items: stretch;
+}
+
+/* ---------- 左侧分组索引 ---------- */
+.idx {
+  /* 宽度由分栏手柄写入 --idx-width（可拖拽，存本地偏好） */
+  width: var(--idx-width, 304px);
+  flex: none;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-container);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+}
+.idx-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 8px;
   flex: none;
 }
-.kpi {
+.idx-tools .search {
   flex: 1;
   min-width: 0;
+}
+.icon-btn {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-container);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+.icon-btn:hover {
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary-light-5);
+}
+
+/* 行内统计：数字即筛选入口，压缩成两行，不抢索引版面 */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 10px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--border-subtle);
+  flex: none;
+}
+.stat {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 9px 14px;
+  align-items: flex-start;
+  gap: 0;
+  padding: 5px 8px;
   border: 0;
-  border-right: 1px solid var(--border-subtle);
-  background: none;
+  background: var(--bg-container);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.16s var(--ease-out);
+  transition: background 0.15s var(--ease-out);
 }
-.kpi:last-child {
-  border-right: 0;
-}
-.kpi:hover {
+.stat:hover {
   background: var(--bg-fill);
 }
-.kpi.is-on {
-  background: var(--brand-50);
-  box-shadow: inset 0 -2px 0 var(--brand-500);
+.stat.is-on {
+  background: var(--el-color-primary-light-9);
 }
-.kpi b {
-  font-size: 20px;
+.stat b {
+  font-size: 15px;
   font-weight: 650;
-  line-height: 1.15;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
 }
-.kpi b.is-ok {
+.stat b.is-ok {
   color: var(--status-success);
 }
-.kpi b.is-warn {
+.stat b.is-warn {
   color: var(--status-warning);
 }
-.kpi b.is-bad {
+.stat b.is-bad {
   color: var(--status-error);
 }
-.kpi span {
-  font-size: 11px;
+.stat span {
+  font-size: 10.5px;
   color: var(--text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ---------- 分段 + 工具行 ---------- */
-.bar {
+.idx-filter {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  margin: 0 10px 8px;
+  padding: 5px 9px;
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--radius-sm);
+  background: var(--el-color-primary-light-9);
+  font-size: 11px;
+  color: var(--el-color-primary-dark-2);
   flex: none;
 }
-.seg {
-  display: inline-flex;
+.idx-filter button {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.idx-error {
+  margin: 0 10px 8px;
+  padding: 6px 9px;
+  border: 1px dashed var(--sev-p0-border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--sev-p0-text);
+  flex: none;
+}
+
+.idx-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px 6px;
+}
+.idx-group + .idx-group {
+  margin-top: 4px;
+}
+.idx-group-head {
+  display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  gap: 6px;
+  padding: 6px 6px 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
   background: var(--bg-container);
 }
-.seg-item {
-  display: inline-flex;
+.idx-group-head b {
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bg-fill);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.idx-row {
+  position: relative;
+  width: 100%;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  border: 0;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+.idx-row:hover {
+  background: var(--bg-fill);
+}
+.idx-row.is-on {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-7);
+}
+.idx-row.is-off .idx-name {
+  color: var(--text-tertiary);
+}
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-quaternary, var(--border-default));
+}
+.dot.is-ok {
+  background: var(--status-success);
+}
+.dot.is-warn {
+  background: var(--status-warning);
+}
+.dot.is-bad {
+  background: var(--status-error);
+}
+.idx-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.idx-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.idx-sub {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.idx-meta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.idx-tag {
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 16px;
+  background: var(--bg-fill);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.idx-tag.is-ok {
+  background: var(--sev-p3-bg);
+  color: var(--sev-p3-text);
+}
+.idx-tag.is-warn {
+  background: var(--sev-p2-bg);
+  color: var(--sev-p2-text);
+}
+.idx-tag.is-bad {
+  background: var(--sev-p0-bg);
+  color: var(--sev-p0-text);
+}
+.idx-time {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.idx-check {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--el-color-primary);
+}
+.idx-empty {
+  margin: 0;
+  padding: 4px 8px 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.idx-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-container);
+}
+.idx-foot > span {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.idx-foot > :last-child {
+  margin-left: auto;
+}
+
+/* ---------- 右侧详情工作区 ---------- */
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.main-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 10px;
+  min-width: 0;
+}
+.main-mark {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.main-mark.is-key {
+  background: #f0a020;
+}
+.main-mark.is-mail {
+  background: #5b8def;
+}
+.main-mark.is-sms {
+  background: #2fbf71;
+}
+.main-mark.is-cookie {
+  background: #8b5cf6;
+}
+.main-title {
+  flex: 1;
+  min-width: 0;
+}
+.main-title b {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.main-title span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.main-tabs {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.main-tab {
+  position: relative;
+  padding: 7px 10px 8px;
+  border: 0;
   background: none;
   font: inherit;
   font-size: 12px;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.16s var(--ease-out), color 0.16s var(--ease-out);
+  transition: color 0.15s var(--ease-out);
 }
-.seg-item b {
-  padding: 0 4px;
-  border-radius: 4px;
-  background: var(--bg-fill);
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.seg-item:hover {
-  background: var(--bg-fill);
+.main-tab:hover {
   color: var(--text-primary);
 }
-.seg-item.is-on {
-  background: var(--brand-50);
-  color: var(--brand-600, #5a4bd9);
+.main-tab.is-on {
+  color: var(--el-color-primary);
   font-weight: 600;
 }
-.seg-item.is-on b {
+.main-tab-badge {
+  display: inline-block;
+  min-width: 15px;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--status-error, #f56c6c);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+  vertical-align: 1px;
+}
+.main-tab.is-on::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--el-color-primary);
+}
+
+.main-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pane-title {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+.pane-tip {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 2px 18px;
+}
+.fact {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+.fact .k {
+  flex: 0 0 84px;
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+.fact .v {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+.fact .v.is-bad {
+  color: var(--status-error);
+}
+
+.cred-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-fill);
+  color: var(--text-secondary);
+}
+.cred-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cred-card b {
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+.cred-card span {
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.cred-card.is-ok {
+  border-color: var(--sev-p3-border);
+  background: var(--sev-p3-bg);
+  color: var(--sev-p3-text);
+}
+.cred-card.is-ok b {
+  color: var(--sev-p3-text);
+}
+.cred-card.is-warn {
+  border-color: var(--sev-p2-border);
+  background: var(--sev-p2-bg);
+  color: var(--sev-p2-text);
+}
+.cred-card.is-warn b {
+  color: var(--sev-p2-text);
+}
+
+.verify-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-fill);
+}
+.verify-hero div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.verify-hero b {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.verify-hero span {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+.verify-hero.is-ok {
+  border-color: var(--sev-p3-border);
+  background: var(--sev-p3-bg);
+}
+.verify-hero.is-bad {
+  border-color: var(--sev-p0-border);
+  background: var(--sev-p0-bg);
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-fill);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.note.is-bad {
+  border-color: var(--sev-p0-border);
+  background: var(--sev-p0-bg);
+  color: var(--sev-p0-text);
+}
+.note.is-ok {
+  border-color: var(--sev-p3-border);
+  background: var(--sev-p3-bg);
+  color: var(--sev-p3-text);
+}
+
+.mail-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-fill);
+}
+.mail-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mail-copy b {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.mail-copy span {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
+.main-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-subtle);
   background: var(--bg-container);
-  color: var(--brand-500, #6d5dfc);
+}
+.foot-gap {
+  flex: 1;
+}
+.main-blank {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 24px;
+  text-align: center;
+}
+.main-blank p {
+  margin: 0;
+  max-width: 280px;
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 右键菜单 ---------- */
+.ctx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+}
+.ctx-menu {
+  position: fixed;
+  min-width: 172px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg-elevated, var(--bg-container));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.ctx-item:hover {
+  background: var(--bg-fill);
+}
+.ctx-item.is-divided {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+.ctx-item.is-disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
 }
 
 .search {
@@ -2131,29 +2809,7 @@ onMounted(loadAll);
   flex: none;
   color: var(--text-tertiary);
 }
-.chip-clear {
-  padding: 4px 10px;
-  border: 1px solid var(--sev-p2-border);
-  border-radius: 999px;
-  background: var(--sev-p2-bg);
-  font: inherit;
-  font-size: 11.5px;
-  color: var(--sev-p2-text);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.bar-count {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-.bar-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-
+/* ---------- 加载失败提示 ---------- */
 .alert {
   display: flex;
   align-items: center;
@@ -2178,22 +2834,22 @@ onMounted(loadAll);
   cursor: pointer;
 }
 
-/* ---------- 批量操作条 ---------- */
+/* ---------- 批量操作条（Ctrl/⌘ 单击索引行进入多选） ---------- */
 .batch-bar {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   padding: 6px 12px;
-  border: 1px solid var(--brand-100, #ece9ff);
+  border: 1px solid var(--el-color-primary-light-7);
   border-radius: var(--radius-md);
-  background: var(--brand-50);
+  background: var(--el-color-primary-light-9);
   font-size: 12px;
   color: var(--text-secondary);
   flex: none;
 }
 .batch-count b {
-  color: var(--brand-600, #5a4bd9);
+  color: var(--el-color-primary-dark-2);
   font-variant-numeric: tabular-nums;
 }
 .batch-actions {
@@ -2216,298 +2872,10 @@ onMounted(loadAll);
   color: var(--text-primary);
 }
 
-/* ---------- 工作台 ---------- */
-.wb {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  gap: 12px;
-  align-items: stretch;
-}
-.table-panel {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.seg-error {
-  padding: 8px 10px;
-  border: 1px dashed var(--sev-p0-border);
-  border-radius: var(--radius-md);
-  color: var(--sev-p0-text);
-  font-size: 11.5px;
-  flex: none;
-}
-
-/* ---------- 表格 ---------- */
-.account-table {
-  --el-table-border-color: var(--border-subtle);
-}
-.account-table :deep(.el-table__header th) {
-  background: var(--bg-elevated);
-  color: var(--text-tertiary);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-}
-.account-table :deep(.el-table__cell) {
-  padding: 6px 0;
-}
-
-/* 行首凭据健康色条：绿=已配置，琥珀=缺凭据，灰=停用 */
-.name-cell {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-}
-.cred-bar {
-  flex: none;
-  width: 3px;
-  height: 24px;
-  border-radius: 2px;
-  background: var(--status-success);
-}
-.cred-bar.is-warn {
-  background: var(--status-warning);
-}
-.cred-bar.is-ok {
-  background: var(--status-success);
-}
-.cred-bar.is-off {
-  background: var(--border-default);
-}
-.name-text {
-  min-width: 0;
-}
-.name-line {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.code {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ---------- 等宽文本（地址、编码、AppKey） ---------- */
 .mono {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
-  font-size: 11px;
-}
-.ellipsis {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dim {
-  color: var(--text-tertiary);
-}
-.dim.is-expired {
-  color: var(--status-error);
-}
-.time-text {
-  font-size: 11px;
-  white-space: nowrap;
-}
-.ops {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ---------- 检查器 ---------- */
-.inspector {
-  flex: none;
-  width: 304px;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 13px 14px 15px;
-  background: var(--bg-container);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-.ins-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-}
-.ins-mark {
-  flex: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-}
-.ins-mark.is-key {
-  background: #f0a020;
-}
-.ins-mark.is-mail {
-  background: #5b8def;
-}
-.ins-mark.is-sms {
-  background: #2fbf71;
-}
-.ins-mark.is-cookie {
-  background: #8b5cf6;
-}
-.ins-title {
-  flex: 1;
-  min-width: 0;
-}
-.ins-title b {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 650;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ins-title span {
-  display: block;
-  font-size: 11px;
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ins-flags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.flag {
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--border-default);
-  font-size: 10.5px;
-  color: var(--text-tertiary);
-  background: var(--bg-fill);
-}
-.flag.is-ok {
-  border-color: var(--sev-p3-border);
-  background: var(--sev-p3-bg);
-  color: var(--sev-p3-text);
-}
-.flag.is-warn {
-  border-color: var(--sev-p2-border);
-  background: var(--sev-p2-bg);
-  color: var(--sev-p2-text);
-}
-.flag.is-bad {
-  border-color: var(--sev-p0-border);
-  background: var(--sev-p0-bg);
-  color: var(--sev-p0-text);
-}
-.flag.is-brand {
-  border-color: var(--brand-100, #ece9ff);
-  background: var(--brand-50);
-  color: var(--brand-600, #5a4bd9);
-}
-
-.ins-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0;
-  padding: 4px 0;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.ins-list > div {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 4px 0;
-  min-width: 0;
-}
-.ins-list dt {
-  flex: 0 0 62px;
-  font-size: 11px;
-  color: var(--text-tertiary);
-}
-.ins-list dd {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-primary);
-  word-break: break-all;
-}
-
-.ins-note {
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-fill);
   font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-.ins-note.is-bad {
-  border-color: var(--sev-p0-border);
-  background: var(--sev-p0-bg);
-  color: var(--sev-p0-text);
-}
-.ins-note.is-ok {
-  border-color: var(--sev-p3-border);
-  background: var(--sev-p3-bg);
-  color: var(--sev-p3-text);
-}
-
-.ins-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.ins-meta {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 10.5px;
-  color: var(--text-tertiary);
-}
-
-.ins-blank {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  text-align: center;
-}
-.ins-blank p {
-  margin: 0;
-  max-width: 210px;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--text-tertiary);
 }
 
 /* ---------- 一次性明文 ---------- */
@@ -2589,32 +2957,28 @@ onMounted(loadAll);
   gap: 4px 16px;
 }
 
-/* ---------- 窄屏 ---------- */
-@media (max-width: 1100px) {
-  .inspector {
-    width: 268px;
-  }
-}
-@media (max-width: 900px) {
-  .wb {
+/* ---------- 索引行高度吃满、窄屏降为上下结构 ---------- */
+@media (max-width: 940px) {
+  .ws {
     flex-direction: column;
   }
-  .inspector {
+  .idx {
     width: auto;
     max-height: 340px;
   }
-  .kpi-band {
-    flex-wrap: wrap;
-  }
-  .kpi {
-    flex: 1 1 30%;
-    border-bottom: 1px solid var(--border-subtle);
+  /* 上下堆叠时没有左右分栏，手柄一并收起 */
+  .ws-split {
+    display: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kpi,
-  .seg-item {
+  .views-item,
+  .stat,
+  .idx-row,
+  .main-tab,
+  .icon-btn,
+  .ctx-item {
     transition: none;
   }
 }

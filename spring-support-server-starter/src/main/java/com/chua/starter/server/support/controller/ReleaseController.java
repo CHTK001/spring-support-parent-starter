@@ -587,6 +587,22 @@ public class ReleaseController {
     }
 
     /**
+     * 集群批量回滚：按同一份配置依次回滚多个项目。
+     *
+     * @param body 请求体，含 projectIds 与可选的 backup
+     * @return 每个项目的触发结果
+     */
+    @Operation(summary = "集群批量回滚（多项目一次下发，异步）")
+    @PostMapping("/project/batch-rollback")
+    public ReturnResult<java.util.List<java.util.Map<String, Object>>> batchRollback(
+            @RequestBody java.util.Map<String, Object> body) {
+        java.util.List<Long> ids = toLongList(body == null ? null : body.get("projectIds"));
+        Object raw = body == null ? null : body.get("backup");
+        String backup = raw == null ? null : String.valueOf(raw).trim();
+        return releaseService.batchRollback(ids, backup == null || backup.isEmpty() ? null : backup);
+    }
+
+    /**
      * 按配置执行升级。
      *
      * @param id 项目标识
@@ -725,6 +741,32 @@ public class ReleaseController {
     @GetMapping("/project/{id}/endpoints")
     public ReturnResult<java.util.Map<String, Object>> probeProjectEndpoints(@PathVariable Long id) {
         return releaseService.probeProjectEndpoints(id);
+    }
+
+    /**
+     * 读取项目的 Actuator 定时采集配置（全局时间轮采集，经发布管理 SSE 推送）。
+     *
+     * @param id 项目标识
+     * @return enabled / intervalSeconds
+     */
+    @Operation(summary = "读取 Actuator 定时采集配置")
+    @GetMapping("/project/{id}/endpoints/monitor")
+    public ReturnResult<java.util.Map<String, Object>> getActuatorMonitor(@PathVariable Long id) {
+        return releaseService.getActuatorMonitor(id);
+    }
+
+    /**
+     * 保存项目的 Actuator 定时采集配置（可关闭）。
+     *
+     * @param id     项目标识
+     * @param config enabled / intervalSeconds
+     * @return 保存结果
+     */
+    @Operation(summary = "保存 Actuator 定时采集配置")
+    @PutMapping("/project/{id}/endpoints/monitor")
+    public ReturnResult<Void> saveActuatorMonitor(@PathVariable Long id,
+                                                  @RequestBody java.util.Map<String, Object> config) {
+        return releaseService.saveActuatorMonitor(id, config);
     }
 
     /**

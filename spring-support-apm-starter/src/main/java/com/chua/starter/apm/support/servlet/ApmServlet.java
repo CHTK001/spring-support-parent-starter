@@ -9,6 +9,9 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -74,12 +77,23 @@ public class ApmServlet extends HttpServlet {
      */
     private void handle(String method, HttpServletRequest request, HttpServletResponse response)
             throws IOException {
+        // 把当前请求绑进 RequestContextHolder：本 Servlet 不经过 DispatcherServlet，
+        // 默认没有请求上下文，而 APM 操作日志要在这里取「操作人 / 客户端 IP」。
+        // 与 RequestContextFilter 的做法一致，并在 finally 里还原，不影响外层过滤器。
+        RequestAttributes previous = RequestContextHolder.getRequestAttributes();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request), true);
         ApmResult result;
         try {
             result = dispatcher.dispatch(new ApmRequest(method, path(request), params(request)));
         } catch (Exception e) {
             log.debug("[APM] 处理请求失败: {}", e.getMessage());
             result = ApmResult.fail("APM 请求处理失败: " + e.getMessage());
+        } finally {
+            if (previous == null) {
+                RequestContextHolder.resetRequestAttributes();
+            } else {
+                RequestContextHolder.setRequestAttributes(previous, true);
+            }
         }
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(JSON_CONTENT_TYPE);

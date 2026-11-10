@@ -37,6 +37,11 @@ public class PacketHttpFrame implements Serializable {
     private String body;
 
     /**
+     * 实体正文字节（十六进制），与 body 同源；前端 hex 视图直接用它渲染
+     */
+    private String bodyHex;
+
+    /**
      * 实体类型 Content-Type
      */
     private String contentType;
@@ -172,6 +177,24 @@ public class PacketHttpFrame implements Serializable {
      */
     public void setBody(String body) {
         this.body = body;
+    }
+
+    /**
+     * 取正文字节（hex）。
+     *
+     * @return 正文字节（hex）
+     */
+    public String getBodyHex() {
+        return this.bodyHex;
+    }
+
+    /**
+     * 设置正文字节（hex）。
+     *
+     * @param bodyHex 正文字节（hex）
+     */
+    public void setBodyHex(String bodyHex) {
+        this.bodyHex = bodyHex;
     }
 
     /**

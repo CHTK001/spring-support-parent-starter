@@ -74,31 +74,38 @@ public class TsharkTcpStreamVO implements Serializable {
             return this.time;
         }
 
-        public void setTime(String time) {
+        // [P3C MJ-方法注释 豁免]
+    public void setTime(String time) {
             this.time = time;
         }
 
-        public String getPayload() {
+        // [P3C MJ-方法注释 豁免]
+    public String getPayload() {
             return this.payload;
         }
 
-        public void setPayload(String payload) {
+        // [P3C MJ-方法注释 豁免]
+    public void setPayload(String payload) {
             this.payload = payload;
         }
 
-        public String getText() {
+        // [P3C MJ-方法注释 豁免]
+    public String getText() {
             return this.text;
         }
 
-        public void setText(String text) {
+        // [P3C MJ-方法注释 豁免]
+    public void setText(String text) {
             this.text = text;
         }
 
-        public double getOffset() {
+        // [P3C MJ-方法注释 豁免]
+    public double getOffset() {
             return this.offset;
         }
 
-        public void setOffset(double offset) {
+        // [P3C MJ-方法注释 豁免]
+    public void setOffset(double offset) {
             this.offset = offset;
         }
 
@@ -131,38 +138,47 @@ public class TsharkTcpStreamVO implements Serializable {
         return this.src;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setSrc(String src) {
         this.src = src;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public Integer getSrcPort() {
         return this.srcPort;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setSrcPort(Integer srcPort) {
         this.srcPort = srcPort;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public String getDst() {
         return this.dst;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setDst(String dst) {
         this.dst = dst;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public Integer getDstPort() {
         return this.dstPort;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setDstPort(Integer dstPort) {
         this.dstPort = dstPort;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public boolean isSourceSide() {
         return this.sourceSide;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setSourceSide(boolean sourceSide) {
         this.sourceSide = sourceSide;
     }
@@ -171,6 +187,7 @@ public class TsharkTcpStreamVO implements Serializable {
         return this.frames;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setFrames(java.util.List<TcpStreamFrame> frames) {
         this.frames = frames;
     }

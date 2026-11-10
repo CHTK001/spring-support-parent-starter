@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
@@ -76,6 +77,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "创建服务器节点", description = "enabled=1 时创建后立即拉起；代理类型需 config.backendHost/backendPort")
+    @SysLog(name = "创建服务器节点")
     @PostMapping
     public ReturnResult<ServerNodeView> create(@RequestBody ServerNodeRequest request) {
         return serverManageService.create(request);
@@ -89,6 +91,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "更新服务器节点", description = "全量替换；运行中的节点先停止，enabled=1 时按新配置重新拉起")
+    @SysLog(name = "更新服务器节点")
     @PutMapping("/{id}")
     public ReturnResult<ServerNodeView> update(@PathVariable Long id, @RequestBody ServerNodeRequest request) {
         return serverManageService.update(id, request);
@@ -103,6 +106,7 @@ public class ServerManageController {
      */
     @Operation(summary = "热更新服务器节点",
             description = "监听参数未变则仅重建过滤器链(不重启)；监听参数变更则按新配置重启；未运行则仅保存定义")
+    @SysLog(name = "热更新服务器节点")
     @PostMapping("/{id}/hot-update")
     public ReturnResult<ServerHotUpdateResult> hotUpdate(@PathVariable Long id,
                                                          @RequestBody ServerNodeRequest request) {
@@ -118,6 +122,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "热切换过滤器启用状态", description = "不重启服务器，直接启用/停用托管链路上的第 index 个过滤器")
+    @SysLog(name = "热切换过滤器启用状态", content = "节点 #{#arg0} 过滤器 #{#arg1} 启用=#{#arg2}")
     @PostMapping("/{id}/filters/{index}/toggle")
     public ReturnResult<ServerNodeView> hotToggleFilter(@PathVariable Long id,
                                                         @PathVariable Integer index,
@@ -134,6 +139,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "热更新过滤器参数", description = "不重启服务器、不重建实例，直接对第 index 个过滤器调用 updateConfig")
+    @SysLog(name = "热更新过滤器参数", content = "节点 #{#arg0} 过滤器 #{#arg1} 参数=#{#arg2}")
     @PostMapping("/{id}/filters/{index}/params")
     public ReturnResult<ServerNodeView> hotUpdateFilterParams(@PathVariable Long id,
                                                               @PathVariable Integer index,
@@ -148,6 +154,7 @@ public class ServerManageController {
      * @return 空数据
      */
     @Operation(summary = "删除服务器节点", description = "先停止运行实例再删除定义")
+    @SysLog(name = "删除服务器节点")
     @DeleteMapping("/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
         return serverManageService.delete(id);
@@ -160,6 +167,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "启动服务器节点")
+    @SysLog(name = "启动服务器节点")
     @PostMapping("/{id}/start")
     public ReturnResult<ServerNodeView> start(@PathVariable Long id) {
         return serverManageService.start(id);
@@ -172,6 +180,7 @@ public class ServerManageController {
      * @return 节点视图
      */
     @Operation(summary = "停止服务器节点", description = "仅停止运行实例，定义保留")
+    @SysLog(name = "停止服务器节点")
     @PostMapping("/{id}/stop")
     public ReturnResult<ServerNodeView> stop(@PathVariable Long id) {
         return serverManageService.stop(id);

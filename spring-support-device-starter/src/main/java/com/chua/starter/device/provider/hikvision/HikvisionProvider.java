@@ -4,7 +4,9 @@ package com.chua.starter.device.provider.hikvision;
 import com.chua.starter.device.provider.hikvision.open.HikvisionCloudEyeSession;
 import com.chua.starter.device.provider.hikvision.open.HikvisionCloudYaoSession;
 import com.chua.starter.device.provider.hikvision.open.HikvisionSecurePlatformSession;
+import com.chua.starter.device.provider.hikvision.open.EzvizSession;
 import com.chua.starter.device.provider.hikvision.sdk.HikvisionRealSession;
+import com.chua.starter.device.provider.sdk.DeviceCapabilityMatrix;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.AuthTypeDescriptor;
@@ -78,6 +80,16 @@ public class HikvisionProvider implements DeviceProvider {
     private static final String PLATFORM_SECURE = "secure-platform";
 
     /**
+     * 萤石云（EZVIZ 开放平台）
+     */
+    private static final String PLATFORM_EZVIZ = "ezviz";
+
+    /**
+     * ISUP / EHome 设备主动注册协议
+     */
+    private static final String PLATFORM_ISUP = "isup";
+
+    /**
      * 是否允许回退到模拟会话（默认 false：严格真实对接）
      */
     private final boolean fallbackMock;
@@ -149,8 +161,12 @@ public class HikvisionProvider implements DeviceProvider {
                      */
                     return new HikvisionSecurePlatformSession(info);
                 }
+                if (PLATFORM_EZVIZ.equalsIgnoreCase(platform)) {
+                    // 萤石走独立会话：form 表单提交 + /api/lapp/ 路径
+                    return new EzvizSession(info);
+                }
                 throw new IllegalArgumentException("海康平台类型不支持: " + platform
-                        + "（期望 cloud-yao / cloud-eye / secure-platform）");
+                        + "（期望 cloud-yao / cloud-eye / secure-platform / ezviz）");
             } catch (Exception e) {
                 if (fallbackMock) {
                     log.warn("海康平台连接失败，回退模拟会话: {}", e.getMessage());
@@ -233,6 +249,29 @@ public class HikvisionProvider implements DeviceProvider {
         return fetchDevices();
     }
 
+    /**
+     * 按凭据直接走统一 SDK 门面拉设备目录（不经会话）。
+     *
+     * <p>同步服务优先走这里：官方 SDK / OpenAPI 的细节都在门面实现里，
+     * 不再依赖具体 Session 类型判断。</p>
+     *
+     * @param info 连接信息（含 AK/SK、产品/项目）
+     * @return 设备条目；平台未覆盖或失败时为空
+     */
+    public List<VendorDevice> fetchDevicesBySdk(com.chua.starter.device.spi.model.DeviceConnectInfo info) {
+        com.chua.starter.device.provider.sdk.DevicePlatformSdk sdk =
+                com.chua.starter.device.provider.sdk.DevicePlatformSdks.of(info);
+        if (sdk == null) {
+            return List.of();
+        }
+        try {
+            return sdk.listDevices();
+        } catch (Exception e) {
+            log.warn("海康 {} 设备目录拉取失败: {}", sdk.platform(), e.getMessage());
+            return List.of();
+        }
+    }
+
     @Override
     /**
      * 按凭据建连后的会话语境拉取组织树（cloud-yao OpenAPI：厂商侧组织列表）
@@ -266,7 +305,72 @@ public class HikvisionProvider implements DeviceProvider {
                 return List.of();
             }
         }
+        if (session instanceof EzvizSession ezviz) {
+            try {
+                return ezviz.fetchCompanyMembers(1, 200);
+            } catch (Exception e) {
+                log.warn("萤石 企业人员拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
         return List.of();
+    }
+
+    @Override
+    public String upsertPerson(DevicePerson person) {
+        throw new IllegalStateException("按凭据写人员请使用 upsertPerson(DeviceConnectInfo, DevicePerson)");
+    }
+
+    /**
+     * 按凭据在厂商侧新增或更新人员。
+     *
+     * <p>萤石是当前唯一支持人员写入的海康子平台：{@code externalId} 为空走
+     * {@code /api/v3/device/company/member/add}，非空走 {@code .../update}。</p>
+     *
+     * @param info   连接信息（平台须为 ezviz，含 appKey/appSecret）
+     * @param person 人员条目
+     * @return 厂商侧人员标识；不支持或失败为 null
+     */
+    public String upsertPerson(DeviceConnectInfo info, DevicePerson person) {
+        if (info == null || !PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+            return null;
+        }
+        EzvizSession ezviz = new EzvizSession(info);
+        if (person == null) {
+            throw new IllegalArgumentException("人员不能为空");
+        }
+        // 萤石更新要用主键 empId（不是业务号 empNo），业务侧无法自造，故本入口只做新增
+        return ezviz.addCompanyMember(person);
+    }
+
+    /**
+     * 按凭据在厂商侧删除人员（萤石）。
+     *
+     * @param info     连接信息（平台须为 ezviz）
+     * @param personId 厂商侧人员编号
+     * @return 是否删除成功
+     */
+    public boolean removePerson(DeviceConnectInfo info, String personId) {
+        if (info == null || !PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        return new EzvizSession(info).deleteCompanyMember(personId);
+    }
+
+    /**
+     * 按凭据远程开门（萤石智能锁）。
+     *
+     * <p>萤石远程开锁以门锁设备序列号为目标，走 {@code /api/lapp/building/device/smartlock/unlock}。</p>
+     *
+     * @param info       连接信息（平台须为 ezviz）
+     * @param doorSerial 门锁设备序列号
+     * @return 是否开门成功
+     */
+    public boolean remoteUnlock(DeviceConnectInfo info, String doorSerial) {
+        if (info == null || !PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        return new EzvizSession(info).unlockSmartLock(doorSerial);
     }
 
     @Override
@@ -306,16 +410,41 @@ public class HikvisionProvider implements DeviceProvider {
                         new AuthTypeDescriptor("SDK", "SDK 直连", "局域网直连设备，需要厂商 SDK 运行库")),
                 List.of(
                         new PlatformDescriptor(PLATFORM_CLOUD_YAO, "海康云耀",
-                                "https://open.hikyun.com", cloudYaoFields),
+                                "https://open.hikyun.com", cloudYaoFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_CLOUD_YAO)),
                         new PlatformDescriptor(PLATFORM_CLOUD_EYE, "海康云眸",
-                                "https://api.hik-cloud-eye.com", platformFields),
+                                "https://api2.hik-cloud.com", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_CLOUD_EYE)),
                         new PlatformDescriptor(PLATFORM_SECURE, "海康综合安防平台",
-                                "https://artemis.hikvision.com", platformFields)),
-                Set.of(DeviceCapability.DEVICE, DeviceCapability.MEDIA, DeviceCapability.PTZ,
-                        DeviceCapability.EVENT, DeviceCapability.ACCESS, DeviceCapability.CHANNEL,
-                        DeviceCapability.ORG),
+                                "https://artemis.hikvision.com", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_SECURE)),
+                        new PlatformDescriptor(PLATFORM_EZVIZ, "萤石云（EZVIZ）",
+                                "https://open.ys7.com", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_EZVIZ)),
+                        new PlatformDescriptor(PLATFORM_ISUP, "ISUP / EHome（设备主动注册）",
+                                "", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_ISUP))),
+                // 厂商级能力位取各平台的并集，仅用于「厂商是否能接入」这类粗粒度判断；
+                // 功能入口的显隐必须按平台级 capabilities，不能依赖这里
+                unionCapabilities(PLATFORM_CLOUD_YAO, PLATFORM_CLOUD_EYE, PLATFORM_SECURE,
+                        PLATFORM_EZVIZ, PLATFORM_ISUP),
                 60,
                 null,
-                "支持云耀、云眸、综合安防平台与 SDK 直连；组织同步与设备目录同步待各平台 API 接入后开放。");
+                "支持云耀、云眸、综合安防平台与 SDK 直连；各平台支持的能力以平台级能力矩阵为准，"
+                        + "不支持的平台在前端直接隐藏对应功能入口。");
+    }
+
+    /**
+     * 取厂商下若干平台能力位的并集。
+     *
+     * @param platforms 平台编码
+     * @return 能力位并集
+     */
+    private static Set<DeviceCapability> unionCapabilities(String... platforms) {
+        Set<DeviceCapability> result = java.util.EnumSet.noneOf(DeviceCapability.class);
+        for (String platform : platforms) {
+            result.addAll(DeviceCapabilityMatrix.capabilitiesOf(VENDOR, platform));
+        }
+        return result;
     }
 }

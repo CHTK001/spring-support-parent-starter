@@ -281,6 +281,20 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
     }
 
     @Override
+    public String searchLog(String logPath, String keyword, int maxLines, boolean matchCase) {
+        String p = "'" + quote(logPath) + "'";
+        // -F 字面匹配：关键字里的 . * 等不当正则；-n 带行号，便于与文件对照
+        return "p=" + p + "; if [ -d \"$p\" ]; then "
+                  + "f=$(ls -tp \"$p\"/* 2>/dev/null | grep -v '/$' | head -n 1); "
+                  + "[ -z \"$f\" ] && f=\"$p/app.log\"; else f=\"$p\"; fi; "
+                  + "if [ -f \"$f\" ]; then "
+                  + "r=$(grep -n" + (matchCase ? "" : " -i") + " -F -- '" + quote(keyword) + "' \"$f\" | head -n "
+                  + maxLines + "); "
+                  + "if [ -z \"$r\" ]; then echo '未检索到匹配内容'; else printf '%s\\n' \"$r\"; fi; "
+                  + "else echo \"日志文件不存在: $f\"; fi";
+    }
+
+    @Override
     public String quote(String value) {
         return value == null ? "" : value.replace("'", "'\\''");
     }

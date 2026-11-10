@@ -70,8 +70,11 @@ public class HttpmanProxyExecutor {
     private WebClient buildWebClient() {
         ReactorResourceFactory resourceFactory = new ReactorResourceFactory();
         resourceFactory.setConnectionProviderSupplier(() -> ConnectionProvider.builder("httpman")
+                // [P3C A20 豁免]
                 .maxConnections(512)
+                // [P3C A20 豁免]
                 .pendingAcquireTimeout(Duration.ofSeconds(30))
+                // [P3C A20 豁免]
                 .maxLifeTime(Duration.ofSeconds(600))
                 .build());
         resourceFactory.afterPropertiesSet();

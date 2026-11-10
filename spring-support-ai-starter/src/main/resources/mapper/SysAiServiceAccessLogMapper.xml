@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper">
+
+    <!--
+        入站流量按 AppKey 聚合：路由可视化页左侧「入站」节点用它回答
+        「这一小时是谁在打网关、打了多少次、用了多少 token」。
+        单条 SQL 完成 GROUP BY，避免把明细全量装进 JVM。
+    -->
+    <select id="selectAppKeyTraffic" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$AppKeyTrafficRow">
+        SELECT
+            app_key AS appKey,
+            COUNT(*) AS calls,
+            COALESCE(SUM(CASE WHEN status &gt;= 200 AND status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
+            COALESCE(SUM(total_tokens), 0) AS tokens,
+            COALESCE(AVG(latency_ms), 0) AS avgLatencyMs,
+            MAX(create_time) AS lastAt
+        FROM sys_ai_service_access_log
+        WHERE create_time &gt;= #{since}
+          AND app_key IS NOT NULL
+          AND app_key &lt;&gt; ''
+        GROUP BY app_key
+        ORDER BY calls DESC
+        LIMIT #{limit}
+    </select>
+
+    <!--
+        入站流量总计：网关节点上的「本窗口请求数 / 成功率 / 平均耗时」。
+    -->
+    <select id="selectTrafficTotal" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$TrafficTotalRow">
+        SELECT
+            COUNT(*) AS calls,
+            COALESCE(SUM(CASE WHEN status &gt;= 200 AND status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
+            COALESCE(SUM(total_tokens), 0) AS tokens,
+            COALESCE(AVG(latency_ms), 0) AS avgLatencyMs,
+            MAX(create_time) AS lastAt
+        FROM sys_ai_service_access_log
+        WHERE create_time &gt;= #{since}
+    </select>
+
+</mapper>

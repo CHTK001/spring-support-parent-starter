@@ -77,6 +77,36 @@ public interface DeviceSession {
     }
 
     /**
+     * 开启直播（实时预览）会话。
+     *
+     * <p>默认实现回落到「取播放地址」：云平台按 URL 播放，不需要显式开播/停播，
+     * 因此生成一个只带 URL 的句柄即可；SDK 直连会话应覆盖本方法返回真实预览句柄，
+     * 并覆盖 {@link #stopLive(String)} 释放厂商侧资源。</p>
+     *
+     * @param channel    通道
+     * @param protocol   协议
+     * @param streamType 码流：main 主码流 / sub 子码流
+     * @return 直播句柄
+     */
+    default LiveHandle startLive(int channel, String protocol, String streamType) {
+        String url = getLiveUrl(channel, protocol, streamType);
+        String streamId = getDeviceId() + ":live:" + channel + ":" + streamType;
+        return new LiveHandle(streamId, url, protocol, streamType, null);
+    }
+
+    /**
+     * 停止直播（实时预览）会话。
+     *
+     * <p>默认空实现：按 URL 播放的云平台无需释放资源；SDK 直连必须覆盖以停止预览、
+     * 释放句柄，否则厂商侧会话会一直占用。</p>
+     *
+     * @param streamId 开启直播时返回的会话标识
+     */
+    default void stopLive(String streamId) {
+        // 默认无资源可释放，由 SDK 会话覆盖
+    }
+
+    /**
      * 获取录像回放 URL（HLS）
      *
      * @return 回放 URL，平台不支持时返回 空
@@ -129,6 +159,40 @@ public interface DeviceSession {
      * @return 列表presets的结果
      */
     List<PresetInfo> listPresets();
+
+    /**
+     * 列出该设备下的通道。
+     *
+     * <p>默认抛 {@link UnsupportedOperationException}：没有通道能力的平台必须显式失败，
+     * 不能返回空列表让业务侧误以为「设备没有通道」。前端据能力矩阵隐藏入口，
+     * 不应调用到这里。</p>
+     *
+     * @return 通道列表
+     */
+    default List<DeviceChannel> listChannels() {
+        throw new UnsupportedOperationException("该平台不支持通道列表");
+    }
+
+    /**
+     * 抓图：返回一张 JPEG 字节流。
+     *
+     * <p>没有抓图能力的平台默认抛异常，避免返回空流被误当成成功。</p>
+     *
+     * @param channel 通道
+     * @return JPEG 图片字节流
+     */
+    default InputStream capture(int channel) {
+        throw new UnsupportedOperationException("该平台不支持抓图");
+    }
+
+    /**
+     * 列出该设备下的门点位。
+     *
+     * @return 门列表
+     */
+    default List<DeviceDoorInfo> listDoors() {
+        throw new UnsupportedOperationException("该平台不支持门列表");
+    }
 
     /**
      * 远程开门

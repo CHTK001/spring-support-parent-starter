@@ -33,6 +33,7 @@ public class TsharkRetentionCleanupScheduler implements SchedulingConfigurer {
      */
     @Override
     public void configureTasks(ScheduledTaskRegistrar registrar) {
+        // [P3C C1 豁免]
         registrar.setScheduler(Executors.newScheduledThreadPool(1));
     }
 

@@ -5,10 +5,12 @@ import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.RecordFile;
+import com.chua.starter.device.spi.model.LiveHandle;
 import com.chua.starter.device.spi.model.TimeRange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -67,6 +69,48 @@ public class VideoController {
         log.debug("设备拉流地址: deviceId={}, channel={}, protocol={}, streamType={}, url={}",
                 deviceId, channel, protocol, streamType, mask(url));
         return ReturnResult.ok(url);
+    }
+
+    /**
+     * 开启直播：显式建立一次预览会话，返回可播放地址与会话标识。
+     *
+     * <p>与 {@code /stream} 的区别：本端点强调「开启/停止」生命周期，
+     * SDK 直连会真实占用厂商侧句柄，用完必须调 {@code /live/stop}。</p>
+     *
+     * @param deviceId   设备标识
+     * @param channel    通道号
+     * @param protocol   协议类型，默认 hls
+     * @param streamType 码流，默认 main
+     * @return 直播句柄
+     */
+    @PostMapping("/live/start")
+    public ReturnResult<LiveHandle> startLive(@RequestParam String deviceId,
+                                              @RequestParam int channel,
+                                              @RequestParam(required = false, defaultValue = "hls") String protocol,
+                                              @RequestParam(required = false, defaultValue = "main") String streamType) {
+        DeviceSession session = requireOnline(deviceId);
+        LiveHandle handle = session.startLive(channel, protocol, streamType);
+        if (handle == null || handle.streamId() == null || handle.streamId().isEmpty()) {
+            throw new RuntimeException("设备 " + deviceId + " 未开启直播会话");
+        }
+        log.info("设备直播已开启: deviceId={}, channel={}, streamId={}", deviceId, channel, handle.streamId());
+        return ReturnResult.ok(handle);
+    }
+
+    /**
+     * 停止直播：释放开启直播时拿到的会话句柄。
+     *
+     * @param deviceId 设备标识
+     * @param streamId 开启直播时返回的会话标识
+     * @return 固定为 true；不支持显式停止的厂商会话按空操作处理
+     */
+    @PostMapping("/live/stop")
+    public ReturnResult<Boolean> stopLive(@RequestParam String deviceId,
+                                          @RequestParam String streamId) {
+        DeviceSession session = requireOnline(deviceId);
+        session.stopLive(streamId);
+        log.info("设备直播已停止: deviceId={}, streamId={}", deviceId, streamId);
+        return ReturnResult.ok(true);
     }
 
     /**

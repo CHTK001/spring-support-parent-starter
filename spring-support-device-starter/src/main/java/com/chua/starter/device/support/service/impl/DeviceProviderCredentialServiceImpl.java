@@ -33,7 +33,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
             "hikvision", 60,
             "dahua", 60,
             "ezviz", 120,
-            "isup", 90
+            "isup", 90,
+            "uniview", 90,
+            "standard", 90
     );
 
     /** 未显式配置时的阈值 */

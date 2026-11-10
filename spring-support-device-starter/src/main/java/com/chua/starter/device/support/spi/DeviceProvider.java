@@ -150,4 +150,62 @@ public interface DeviceProvider {
     default boolean removeRemote(String externalId) {
         return false;
     }
+
+    /**
+     * 在厂商侧新增或修改组织节点（可选实现）。
+     *
+     * <p>与 {@link #fetchOrganizations()} 方向相反。{@code node.externalId()}
+     * 为空表示新增，非空表示更新同名节点。</p>
+     *
+     * @param node 组织节点；externalId 为空表示新增
+     * @return 厂商侧的组织标识；{@code null} 表示不支持或失败
+     */
+    default String upsertOrganization(OrganizationNode node) {
+        return null;
+    }
+
+    /**
+     * 在厂商侧删除组织节点（可选实现）。
+     *
+     * @param externalId 厂商侧组织标识
+     * @return 是否删除成功
+     */
+    default boolean removeOrganization(String externalId) {
+        return false;
+    }
+
+    /**
+     * 在厂商侧新增或修改人员（可选实现）。
+     *
+     * <p>{@code person.externalId()} 为空表示新增，非空表示更新。</p>
+     *
+     * @param person 人员条目
+     * @return 厂商侧人员标识；{@code null} 表示不支持或失败
+     */
+    default String upsertPerson(DevicePerson person) {
+        return null;
+    }
+
+    /**
+     * 在厂商侧删除人员（可选实现）。
+     *
+     * @param personId 厂商侧人员标识
+     * @return 是否删除成功
+     */
+    default boolean removePerson(String personId) {
+        return false;
+    }
+
+    /**
+     * 远程开门（可选实现）。
+     *
+     * <p>与 {@link DeviceSession#remoteUnlock(int)} 的区别：本方法按平台凭证直接开门，
+     * 不需要先建立设备会话，适合云端门禁（萤石门锁、云睿门禁）。</p>
+     *
+     * @param doorSerial 平台侧门/门锁序列号
+     * @return 是否开门成功
+     */
+    default boolean remoteUnlock(String doorSerial) {
+        return false;
+    }
 }

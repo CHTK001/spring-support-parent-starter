@@ -1,6 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.mybatis.logger;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.SysLog;
@@ -102,7 +103,7 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         }
 
         String content = sysLog.content();
-        sysLoggerInfo.setLogStatus(null == throwable ? 1 : 0);
+        sysLoggerInfo.setLogStatus(resolveLogStatus(proceed, throwable));
         sysLoggerInfo.setLogMapping(getRequestUrl());
         sysLoggerInfo.setLogCode(java.util.UUID.randomUUID().toString());
         sysLoggerInfo.setLogContent(getContent(content, invocation, proceed));
@@ -114,5 +115,29 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
          * @param sysLoggerInfo sys日志记录器信息
          */
         publishEvent(sysLoggerInfo);
+    }
+
+    /**
+     * 判定一次操作为成功还是失败。
+     *
+     * <p>只按「是否抛异常」判定会把业务失败记成成功：monitor 的
+     * {@code ServerManageService} 全部在 controller 内部 catch 后返回
+     * {@link ReturnResult#error(String)}，异常没有穿出方法边界，切面拿到的
+     * {@code throwable} 恒为 null。因此返回值是 {@link ReturnResult} 时，
+     * 以 {@link ReturnResult#isOk()}（{@code 00000} / {@code 200} 视为成功）为准；
+     * 其它返回类型仍沿用异常判定。</p>
+     *
+     * @param proceed   方法返回值
+     * @param throwable 方法抛出的异常，为空表示没有异常
+     * @return 1 表示成功；0 表示失败
+     */
+    private int resolveLogStatus(Object proceed, Throwable throwable) {
+        if (null != throwable) {
+            return 0;
+        }
+        if (proceed instanceof ReturnResult<?> result) {
+            return result.isOk() ? 1 : 0;
+        }
+        return 1;
     }
 }

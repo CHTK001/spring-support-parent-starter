@@ -222,6 +222,7 @@ public class HttpmanServiceImpl implements HttpmanService {
         HttpmanResponse response;
         try {
             response = executor.execute(request.getRequestMethod(), url, headers, params, body,
+                    // [P3C A20 豁免]
                     request.getRequestBodyType()).block(Duration.ofSeconds(properties.getReadTimeout().toSeconds() + 15));
         } catch (Exception e) {
             log.error("Httpman execute failed: {}", e.getMessage());
@@ -274,12 +275,14 @@ public class HttpmanServiceImpl implements HttpmanService {
         history.setHistoryResponseHeaders(historyResponseHeaders);
         history.setHistoryResponseBody(response.getBody());
         history.setHistoryError(response.getError());
+        // [P3C A20 豁免]
         history.setHistoryAlert(response.getStatus() >= 400 || response.getCostMs() > 60000);
         historyMapper.insert(history);
         result.put("historyId", history.getHistoryId());
         return result;
     }
 
+    // [P3C MJ-方法注释 豁免]
     private void deleteRequestRecords(List<MsHttpmanRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return;

@@ -26,13 +26,18 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -98,6 +103,8 @@ public class ProjectTaskService {
      */
     private static final int DEFAULT_STEP_TIMEOUT_SECONDS = 600;
 
+    /** 本机（LOCAL）单步执行超时（秒）：本机不走网络，给足启动/备份时间 */
+    private static final int LOCAL_STEP_TIMEOUT_SECONDS = 600;
     /**
      * 启动脚本成功时打印的运行 PID 行
      */
@@ -363,8 +370,13 @@ public class ProjectTaskService {
                 throw new IllegalStateException(rr.getMsg() == null ? "凭据解析失败" : rr.getMsg());
             }
             boolean windows = WindowsSshShell.isWindows(host);
-            // 非 Windows 复用 SSH 连接缓存；Windows 每步经 OpenSSH 独立执行（内部自清理连接）
-            if (!windows) {
+            // 本机（collect_mode=LOCAL）主机不经 SSH：跑在平台所在机器，直接本地执行。
+            // 否则 start/stop/restart/backup/rollback 会经 OpenSSH 回环连本机（192.168.50.101），
+            // 实测长脚本写远端 temp 时连接被拒（远程计算机拒绝网络连接），全部操作失败。
+            boolean localHost = "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode());
+            // 非 Windows 复用 SSH 连接缓存；Windows 每步经 OpenSSH 独立执行（内部自清理连接）。
+            // 本机主机不占 SSH，无需连接缓存。
+            if (!windows && !localHost) {
                 handle = connectionManager.borrow(host, rr.getData());
             }
 
@@ -420,6 +432,10 @@ public class ProjectTaskService {
                         stderr = e.getMessage() == null ? e.toString() : e.getMessage();
                         stepLineHandler.accept("SDK 调用失败: " + stderr);
                     }
+                } else if (localHost) {
+                    LocalExecResult r = execLocalStep(step.command(), stepLineHandler);
+                    exitCode = r.exitCode;
+                    stderr = r.stderr;
                 } else if (windows) {
                     WindowsSshShell.Result r = windowsSshShell.execLines(host, rr.getData(), step.command(),
                             DEFAULT_STEP_TIMEOUT_SECONDS, stepLineHandler);
@@ -536,6 +552,108 @@ public class ProjectTaskService {
         }
     }
 
+    // ==================== 本机执行 ====================
+
+    /** 本机一步执行的结果（只需要退出码与合并输出） */
+    private static final class LocalExecResult {
+        private final int exitCode;
+        private final String stderr;
+
+        private LocalExecResult(int exitCode, String stderr) {
+            this.exitCode = exitCode;
+            this.stderr = stderr;
+        }
+    }
+
+    /**
+     * 本机（collect_mode=LOCAL）主机执行一步脚本。
+     *
+     * <p>本机主机跑在平台所在机器上，不能再经 OpenSSH 回环：实测长脚本分块写远端
+     * temp 时连接被拒，启动/重启/备份/回滚全部失败。这里直接在进程内起 PowerShell，
+     * 与 {@code ExecServiceImpl} 的 LOCAL 通道保持同一套处理：EncodedCommand 下发、
+     * UTF-8 输出、关闭进度流、Get-Content 默认 UTF8。</p>
+     *
+     * @param psCommand   PowerShell 脚本
+     * @param lineHandler 逐行回调（实时进任务日志）
+     * @return 退出码与合并输出
+     */
+    private LocalExecResult execLocalStep(String psCommand,
+                                          java.util.function.Consumer<String> lineHandler) {
+        String script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+                + "$ProgressPreference='SilentlyContinue';"
+                + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
+                + psCommand;
+        String encoded = Base64.getEncoder()
+                .encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
+        StringBuilder merged = new StringBuilder();
+        try {
+            ProcessBuilder builder = new ProcessBuilder("powershell.exe", "-NoProfile",
+                    "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded);
+            builder.redirectErrorStream(true);
+            Process process = builder.start();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (lineHandler != null) {
+                        lineHandler.accept(line);
+                    }
+                    merged.append(line).append('\n');
+                }
+            }
+            if (!process.waitFor(LOCAL_STEP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                return new LocalExecResult(1, "本机命令执行超时: " + LOCAL_STEP_TIMEOUT_SECONDS + "s");
+            }
+            return new LocalExecResult(process.exitValue(), merged.toString().trim());
+        } catch (Exception e) {
+            return new LocalExecResult(1, e.getMessage() == null ? e.toString() : e.getMessage());
+        }
+    }
+
+    /**
+     * 本机日志跟随：在进程内启动 PowerShell {@code Get-Content -Wait}，逐行回调。
+     *
+     * <p>本机主机不能再经 SSH 跟随：实测回环连接被拒，只收到 STARTED 收不到任何行。</p>
+     *
+     * @param psCommand 跟随命令（buildTailCommand 生成）
+     * @param onLine    每行回调
+     * @return 关闭句柄：关闭即终止进程
+     */
+    private AutoCloseable followLocalLog(String psCommand, java.util.function.Consumer<String> onLine) {
+        String script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+                + "$ProgressPreference='SilentlyContinue';"
+                + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
+                + psCommand;
+        String encoded = Base64.getEncoder()
+                .encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
+        Process process;
+        try {
+            process = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive",
+                    "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded)
+                    .redirectErrorStream(true)
+                    .start();
+        } catch (Exception e) {
+            throw new IllegalStateException("本机日志跟随启动失败: " + e.getMessage(), e);
+        }
+        Thread worker = new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (onLine != null) {
+                        onLine.accept(line);
+                    }
+                }
+            } catch (Exception ignore) {
+                // 跟随结束（进程被关闭）属正常
+            }
+        }, "local-log-follow");
+        worker.setDaemon(true);
+        worker.start();
+        return process::destroyForcibly;
+    }
+
     // ==================== 实时日志 ====================
 
     /**
@@ -560,6 +678,20 @@ public class ProjectTaskService {
      * @return sessionId
      */
     public String startLogTail(Long hostId, Long projectId, String logPath, String clientId) {
+        return startLogTail(hostId, projectId, logPath, clientId, TAIL_LINES);
+    }
+
+    /**
+     * 开启实时日志跟随（异步建立连接），并指定先回放的历史行数。
+     *
+     * @param hostId    主机标识
+     * @param projectId 项目标识
+     * @param logPath   日志文件路径
+     * @param clientId  发布管理 SSE 客户端标识；为空时回退到 Socket 推送
+     * @param lines     连接时先读取的历史行数（来自「日志读取行数」配置）
+     * @return sessionId
+     */
+    public String startLogTail(Long hostId, Long projectId, String logPath, String clientId, int lines) {
         String sessionId = "log-" + projectId + "-" + System.currentTimeMillis() + "-" + seq.incrementAndGet();
         taskPool.execute(() -> {
             SshClients.Handle sshHandle = null;
@@ -574,7 +706,11 @@ public class ProjectTaskService {
                     throw new IllegalStateException(rr.getMsg() == null ? "凭据解析失败" : rr.getMsg());
                 }
                 String command = buildTailCommand(host.getServerHostOsType(), logPath);
-                if (WindowsSshShell.isWindows(host)) {
+                if ("LOCAL".equalsIgnoreCase(host.getServerHostCollectMode())) {
+                    // 本机主机不经 SSH：直接在进程内跟随日志文件（与执行通道同一口径）
+                    streamHandle = followLocalLog(command,
+                            line -> pushLogLine(sessionId, projectId, clientId, line));
+                } else if (WindowsSshShell.isWindows(host)) {
                     // Windows 经 OpenSSH 持续跟随（Get-Content -Wait），follow 内部包 EncodedCommand
                     streamHandle = windowsSshShell.follow(host, rr.getData(), command,
                             line -> pushLogLine(sessionId, projectId, clientId, line));
@@ -676,10 +812,16 @@ public class ProjectTaskService {
     private String buildTailCommand(String osType, String logPath) {
         String path = logPath == null ? "" : logPath.trim();
         if ("WINDOWS".equalsIgnoreCase(osType)) {
-            // 纯 PowerShell 脚本；WinRM follow 内部统一包 EncodedCommand。
+            // 纯 PowerShell 脚本；WinRM/SSH follow 内部统一包 EncodedCommand。
             // 日志文件可能尚未生成，先确保存在，否则 Get-Content -Wait 直接报错退出；
             // 日志路径被配成目录时，跟随目录里最新的文件。
-            return "if (Test-Path '" + path + "' -PathType Container) { "
+            // 编码必须显式固定：Windows PowerShell 5.1 默认按 ANSI(GBK) 读文件、
+            // 也按 ANSI 写 stdout，而读取端按 UTF-8 解码 —— 不固定就整段中文乱码。
+            return "$ProgressPreference='SilentlyContinue';"
+                    + "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+                    + "$OutputEncoding=[Text.Encoding]::UTF8;"
+                    + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';\n"
+                    + "if (Test-Path '" + path + "' -PathType Container) { "
                     + "$f = Get-ChildItem -Path '" + path + "' -File "
                     + "| Sort-Object LastWriteTime -Descending | Select-Object -First 1; "
                     + "if ($f) { $target = $f.FullName } else { $target = Join-Path '" + path + "' 'app.log' } } "

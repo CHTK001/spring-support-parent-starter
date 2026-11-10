@@ -112,12 +112,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
         MsServerHost host = hostResult.getData();
-        // 本机不支持 RDP 远控，仅 VNC 直连
-        if (host.getServerHostCollectMode() != null
-                && "LOCAL".equalsIgnoreCase(host.getServerHostCollectMode().trim())) {
-            reject(wsSession, "本机不支持 RDP 远控，请使用 VNC");
-            return;
-        }
+        // 与 SSH 直连同口径：不做「本机不支持 RDP」的一刀切，
+        // 本机开了 RDP 服务（127.0.0.1 / 本机网卡）同样应能直连；能否连上交给真实握手结果说话。
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId, PROTOCOL);
         if (!resolved.isOk()) {
             reject(wsSession, resolved.getMsg());
@@ -249,6 +245,16 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                 }
             } catch (Throwable e) {
                 log.warn("[terminal-rdp] 尺寸调整失败 sessionId={} {}", wsSession.getId(), e.getMessage());
+            }
+        } else if (payload.contains("\"ping\"")) {
+            /* 应用层心跳：原样回包序号，浏览器据此算链路往返延迟（指标卡「延迟」） */
+            int t = readInt(payload, "t", 0);
+            try {
+                synchronized (wsSession) {
+                    wsSession.sendMessage(new TextMessage("{\"c\":\"pong\",\"t\":" + t + "}"));
+                }
+            } catch (IOException | IllegalStateException e) {
+                log.debug("[terminal-rdp] 心跳回包失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
             }
         }
     }

@@ -350,6 +350,65 @@ public class ExecServiceImpl implements ExecService {
     }
 
     /**
+     * 本机执行的进程构造：Windows 下按命令语法选择 shell。
+     *
+     * <p>项目脚本、端点探测、日志读取用的都是 PowerShell，而 {@code cmd.exe /c}
+     * 解释不了 {@code $var}、{@code function}、{@code Get-Content} 这类语法，
+     * 表现是「命令看起来执行了，但输出为空 / 退出码非 0」，端点探测于是把
+     * 全部端点判成不可用。</p>
+     *
+     * <p>PowerShell 脚本改走 {@code -EncodedCommand}：脚本先转 UTF-16LE 再 Base64，
+     * 避免命令行里的引号、换行、中文被 shell 二次解释；脚本开头把
+     * {@code [Console]::OutputEncoding} 固定成 UTF-8，否则中文输出按 GBK 落盘，
+     * 而读取端按 UTF-8 解码，日志就成了乱码。</p>
+     *
+     * @param command 待执行的命令
+     * @return 已配置好的进程构造器
+     */
+    private ProcessBuilder localProcessBuilder(String command) {
+        boolean windows = System.getProperty("os.name", "")
+                .toLowerCase(java.util.Locale.ROOT).contains("win");
+        if (!windows) {
+            return new ProcessBuilder("/bin/sh", "-c", command);
+        }
+        if (!looksLikePowerShell(command)) {
+            return new ProcessBuilder("cmd.exe", "/c", command);
+        }
+        String script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+                + "$ProgressPreference='SilentlyContinue';"
+                + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
+                + command;
+        String encoded = java.util.Base64.getEncoder()
+                .encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        return new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive",
+                "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded);
+    }
+
+    /**
+     * 判断一段命令是不是 PowerShell 语法（本机 Windows 执行时用来选 shell）。
+     *
+     * @param command 待执行命令
+     * @return true 表示按 PowerShell 执行
+     */
+    private boolean looksLikePowerShell(String command) {
+        if (command == null || command.isBlank()) {
+            return false;
+        }
+        String text = command.toLowerCase(java.util.Locale.ROOT);
+        return text.contains("$")
+                || text.contains("get-")
+                || text.contains("set-")
+                || text.contains("write-output")
+                || text.contains("write-host")
+                || text.contains("invoke-")
+                || text.contains("test-path")
+                || text.contains("new-item")
+                || text.contains("remove-item")
+                || text.contains("start-process")
+                || text.contains("function ");
+    }
+
+    /**
      * 单主机执行：命令走 SSH 执行，文件走 SFTP 上传
      *
      * @param host           主机
@@ -374,10 +433,7 @@ public class ExecServiceImpl implements ExecService {
         // 免去回环密钥/口令依赖（未配 authorized_keys 也能用）
         if ("LOCAL".equalsIgnoreCase(host.getServerHostCollectMode()) && localFile == null) {
             try {
-                boolean windows = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win");
-                ProcessBuilder builder = windows
-                        ? new ProcessBuilder("cmd.exe", "/c", commandOrPath)
-                        : new ProcessBuilder("/bin/sh", "-c", commandOrPath);
+                ProcessBuilder builder = localProcessBuilder(commandOrPath);
                 builder.redirectErrorStream(true);
                 Process process = builder.start();
                 String output = new String(process.getInputStream().readAllBytes(),

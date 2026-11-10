@@ -64,6 +64,7 @@ public class MailboxController {
      * @param limit     取多少封（默认 20）
      * @param offset    跳过多少封
      * @param unreadOnly 只看未读
+     * @param preferUnread 未读优先（首屏把未读排在前面）
      * @param keyword   主题 / 发件人模糊词
      * @return 消息列表（不含正文，只带摘要）
      */
@@ -74,6 +75,7 @@ public class MailboxController {
             @RequestParam(value = "limit", required = false) Integer limit,
             @RequestParam(value = "offset", required = false) Integer offset,
             @RequestParam(value = "unreadOnly", required = false) Boolean unreadOnly,
+            @RequestParam(value = "preferUnread", required = false) Boolean preferUnread,
             @RequestParam(value = "keyword", required = false) String keyword) {
         MailboxQuery query = new MailboxQuery();
         if (folder != null) {
@@ -82,6 +84,7 @@ public class MailboxController {
         query.setLimit(limit);
         query.setOffset(offset);
         query.setUnreadOnly(unreadOnly);
+        query.setPreferUnread(preferUnread);
         query.setKeyword(keyword);
         return ApiResult.ok(mailboxService.messages(accountId, query));
     }
