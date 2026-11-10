@@ -43,11 +43,6 @@ import java.util.stream.Collectors;
        */
     private final EduKnowledgeFileMapper knowledgeFileMapper;
 
-    /**
-     * 附件条目 Mapper
-     */
-    private final EduKnowledgeFileMapper knowledgeFileMapper;
-
     @Override
       /**
        * 列表树
