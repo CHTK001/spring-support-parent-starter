@@ -786,16 +786,17 @@ public class ApiChannelAuthController {
     public ApiResult<Map<String, Object>> checkinChannel(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body) {
+        // 网关优先：渠道归 magpie 承载时，以网关里的凭据为准，本地旧连接不参与。
+        // 只看本地会被过期连接挡住（典型症状是「凭据缺少 access_token」）。
+        ApiResult<Map<String, Object>> hosted = gatewayCheckin(channel);
+        if (hosted != null) {
+            return hosted;
+        }
         AccountChannelAuthManager impl = requireManager(channel);
         String label = body == null ? null : asString(body.get("label"));
         String connectionId = body == null ? null : asString(body.get("connectionId"));
         SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
         if (conn == null) {
-            // 凭据在网关里（用户直接在 magpie 里登了账号）：借网关连接只签这一家。
-            ApiResult<Map<String, Object>> hosted = gatewayCheckin(channel);
-            if (hosted != null) {
-                return hosted;
-            }
             throw new ApiException(ApiErrorCode.NOT_FOUND,
                     "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
         }
@@ -844,9 +845,9 @@ public class ApiChannelAuthController {
     /**
      * 网关托管渠道的签到 / 额度领取。
      *
-     * <p>商家账号在网关里，本地没有连接：借网关连接调
+     * <p>商家账号在网关里，本地连接不参与（网关优先）。借网关连接调
      * {@link AccountChannelAuthManager#checkinFor(String, Map)}，只签这一家上游，
-     * 不把网关里其它渠道一起签掉。结果不写回任何连接——本地根本没有这条记录。</p>
+     * 不把网关里其它渠道一起签掉。结果不写回任何本地连接。</p>
      *
      * @param channel 业务渠道标识
      * @return 有网关且能签到时的结果；否则 {@code null}（调用方按「未找到账号」处理）
@@ -924,16 +925,16 @@ public class ApiChannelAuthController {
             @PathVariable("channel") String channel,
             @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> out = new LinkedHashMap<>(6);
+        // 网关优先：渠道归 magpie 承载时以网关凭据为准，本地旧连接不参与。
+        // 否则过期连接会把请求挡回原生实现（例如直连 minimax 余额接口 404）。
+        ApiResult<Map<String, Object>> hosted = gatewayCredit(channel, out);
+        if (hosted != null) {
+            return hosted;
+        }
         String label = body == null ? null : asString(body.get("label"));
         String connectionId = body == null ? null : asString(body.get("connectionId"));
         SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
         if (conn == null) {
-            // 本地没有连接：凭据可能在网关里（用户直接在 magpie 里登了账号）。
-            // 这时借网关连接去问管理面，按 provider 过滤出这一家的额度。
-            ApiResult<Map<String, Object>> hosted = gatewayCredit(channel, out);
-            if (hosted != null) {
-                return hosted;
-            }
             throw new ApiException(ApiErrorCode.NOT_FOUND,
                     "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
         }
@@ -955,7 +956,8 @@ public class ApiChannelAuthController {
     /**
      * 网关托管渠道的积分读数。
      *
-     * <p>只在本地没有该渠道连接时调用：网关连接凭据 → 网关的积分实现 →
+     * <p><b>网关优先</b>：只要网关里已经有这个渠道的上游就以网关为准，本地旧连接
+     * 不参与（数据仍保留）。网关连接凭据 → 网关的积分实现 →
      * {@link ChannelCreditProvider#creditFor(String, Map)} 按上游过滤。</p>
      *
      * @param channel 业务渠道标识
