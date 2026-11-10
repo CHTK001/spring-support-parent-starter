@@ -77,6 +77,22 @@ public interface ChannelCreditProvider {
     }
 
     /**
+     * 按业务渠道 + 账号查询积分 / 余额（网关托管的多账号渠道用）。
+     *
+     * <p>网关里同一家上游可能登录了多个账号，账号行各自要显示自己的额度；
+     * 不指定账号时是这一家上游的合计。默认忽略 {@code account}，等价于
+     * {@link #creditFor(String, Map)}。</p>
+     *
+     * @param vendor      业务渠道标识（决定取哪一家上游的额度）
+     * @param account     上游账号（可为空；空表示该上游合计）
+     * @param credentials 网关连接凭据
+     * @return 积分快照（字段见类注释）
+     */
+    default Map<String, Object> creditFor(String vendor, String account, Map<String, Object> credentials) {
+        return creditFor(vendor, credentials);
+    }
+
+    /**
      * 该渠道的积分单位（供前端渲染，如「积分」「Token」「USD」）。
      *
      * @return 单位名

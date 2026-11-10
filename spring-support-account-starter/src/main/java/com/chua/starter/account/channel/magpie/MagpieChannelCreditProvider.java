@@ -77,6 +77,17 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     @Override
     public Map<String, Object> creditFor(String vendor, Map<String, Object> credentials) {
+        return creditFor(vendor, null, credentials);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>{@code account} 非空时只保留该账号的额度卡（网关上同一家上游可能登了多个
+     * 账号，账号卡各自显示自己的余额）；为空时是这一家上游的合计。</p>
+     */
+    @Override
+    public Map<String, Object> creditFor(String vendor, String account, Map<String, Object> credentials) {
         Map<String, Object> result = new LinkedHashMap<>(10);
         String baseUrl = MagpieSupport.baseUrl(credentials);
         String gatewayKey = MagpieSupport.gatewayKey(credentials);
@@ -88,7 +99,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             try {
                 List<Map<String, Object>> adminQuotas = MagpieAdminClient.adminQuotas(credentials, null, null);
                 if (!adminQuotas.isEmpty()) {
-                    return snapshotOf(scoped(adminQuotas, vendor), vendor);
+                    return snapshotOf(scoped(adminQuotas, vendor, account), vendor, account);
                 }
             } catch (Exception ignored) {
                 // 页面 Key 失效 / 管理面没开：继续走数据面
@@ -102,20 +113,22 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             result.put("error", "读取 Magpie 配额失败: " + ChannelHttp.truncate(e.getMessage()));
             return result;
         }
-        return snapshotOf(scoped(quotas, vendor), vendor);
+        return snapshotOf(scoped(quotas, vendor, account), vendor, account);
     }
 
     /**
-     * 按业务渠道过滤额度卡：只留 {@code provider} 命中该渠道候选 id 的行。
+     * 按业务渠道 + 账号过滤额度卡：只留 {@code provider} 命中该渠道候选 id 的行，
+     * 指定账号时再按 {@code user} 收窄。
      *
      * <p>候选 id 来自 {@link MagpieSupport#providerIdsOf(String)}，与前端左栏同一份对照表；
      * {@code vendor} 为空时原样返回（网关渠道自己的读数要的是全量）。</p>
      *
      * @param quotas 网关返回的额度卡
      * @param vendor 业务渠道标识
+     * @param account 上游账号（可空）
      * @return 过滤后的额度卡
      */
-    private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor) {
+    private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor, String account) {
         if (MagpieSupport.isBlank(vendor) || quotas == null || quotas.isEmpty()) {
             return quotas;
         }
@@ -126,12 +139,23 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             if (provider == null) {
                 continue;
             }
+            boolean providerHit = false;
             for (String id : wanted) {
                 if (id.equalsIgnoreCase(provider)) {
-                    hit.add(quota);
+                    providerHit = true;
                     break;
                 }
             }
+            if (!providerHit) {
+                continue;
+            }
+            if (!MagpieSupport.isBlank(account)) {
+                String user = stringOf(quota.get("user"));
+                if (user == null || !account.equalsIgnoreCase(user)) {
+                    continue;
+                }
+            }
+            hit.add(quota);
         }
         return hit;
     }
@@ -144,12 +168,14 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      *
      * @param quotas 过滤后的额度卡
      * @param vendor 业务渠道标识（空表示全量）
+     * @param account 上游账号（空表示不按账号收窄）
      * @return 积分快照
      */
-    private static Map<String, Object> snapshotOf(List<Map<String, Object>> quotas, String vendor) {
+    private static Map<String, Object> snapshotOf(List<Map<String, Object>> quotas, String vendor, String account) {
         if (!MagpieSupport.isBlank(vendor) && (quotas == null || quotas.isEmpty())) {
             Map<String, Object> result = new LinkedHashMap<>(4);
-            result.put("error", "网关里没有「" + vendor + "」的额度卡（确认该上游已登录，或到网关里补上余额读取）");
+            String scope = MagpieSupport.isBlank(account) ? vendor : vendor + " / " + account;
+            result.put("error", "网关里没有「" + scope + "」的额度卡（确认该上游已登录，或到网关里补上余额读取）");
             return result;
         }
         return snapshot(quotas);
