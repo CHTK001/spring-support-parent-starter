@@ -75,7 +75,8 @@ public class PaperGlobalSettingProvider implements GlobalSettingProvider {
                 // 结构化大模型只认模型管理的模型：不再提供 llm_provider（私自配供应商），
                 // 供应商由所选模型自动推导（见 PaperClientManager.resolveLlmClient）。
                 new GlobalSettingProvider.SettingItem("llm_model", "", "STRING", "结构化大模型（模型管理选择，留空用默认模型）", 8),
-                new GlobalSettingProvider.SettingItem("llm_prompt", "", "STRING", "结构化提示词（留空用内置默认）", 9),
+                // 2026-11-10：原 llm_prompt（结构化提示词）删除 —— 全仓无消费方读取，
+                // 试卷结构化实际用的是内置提示词。
                 // 行为开关
                 new GlobalSettingProvider.SettingItem("max_pages", "20", "NUMBER", "单任务最大处理页数", 10),
                 new GlobalSettingProvider.SettingItem("merge_answer", "true", "BOOLEAN", "是否合并题干与作答区域（false 仅文字块）", 11),

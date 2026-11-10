@@ -540,23 +540,27 @@ public record DeviceCapabilityMatrix(
     /**
      * 大华乐橙能力矩阵。
      *
-     * <p>乐橙确有门禁接口（{@code /openapi/openDoor}、{@code /openapi/accessRecordList}），
-     * 但 {@code DahuaLeChangeSession} 未重写 {@code remoteUnlock}，故 ACCESS 标 TODO。</p>
+     * <p>口径（2026-11-10 按官方文档实现后回写）：实时预览走 bindDeviceLive+getLiveStreamInfo，
+     * 回放走 createDeviceRecordHls，通道走 device.detail.list(v2)，抓图走 setDeviceSnap，
+     * 事件走 device.message.list(v2)，门禁走 openDoorRemote/getOpenDoorRecord/getDoorKeys，
+     * 录像走 queryLocalRecords —— 均已在 {@code DahuaLeChangeSession} 真实实现。
+     * 乐橙无预置位接口（只有 controlMovePTZ / controlLocationPTZ）、无组织与人员模型；
+     * 设备由序列号绑定，开放平台无删除接口（unBindDevice 是解绑自己的设备）。</p>
      *
      * @return 能力矩阵
      */
     static DeviceCapabilityMatrix dahuaLeChange() {
         return builder("dahua.lechange", "大华乐橙")
                 .yes(DeviceCapability.DEVICE, 8)
-                .unverified(DeviceCapability.MEDIA, 1, "getLiveUrl 已实现，未验证")
-                .unverified(DeviceCapability.RECORD, 4, "getPlaybackUrl 已实现，未验证")
-                .unverified(DeviceCapability.PTZ, 2, "ptzControl 已实现，未验证")
-                .todo(DeviceCapability.CHANNEL, 4, "会话层无通道列表方法")
-                .todo(DeviceCapability.ACCESS, 2, "远程开门与开门记录待实现（接口已存在）")
-                .todo(DeviceCapability.ACCESS_WRITE, 1, "远程开门接口待实现")
-                .todo(DeviceCapability.CAPTURE, 1, "抓图接口待实现")
-                .todo(DeviceCapability.EVENT, 2, "告警消息接口待实现")
-                .no(DeviceCapability.DEVICE_WRITE, "乐橙设备通过序列号绑定，开放平台无删除接口")
+                .unverified(DeviceCapability.MEDIA, 1, "getLiveUrl（bindDeviceLive+getLiveStreamInfo）已实现，真机当前离线未验证")
+                .unverified(DeviceCapability.RECORD, 4, "getPlaybackUrl（createDeviceRecordHls，不支持跨天）与 queryRecords（queryLocalRecords）已实现，未验证")
+                .unverified(DeviceCapability.PTZ, 2, "ptzControl（controlMovePTZ 八向/变倍/停止）与 locationPtz（controlLocationPTZ）已实现，未验证")
+                .unverified(DeviceCapability.CHANNEL, 4, "listChannels（v2 device.detail.list）已实现，未验证")
+                .unverified(DeviceCapability.ACCESS, 2, "queryAccessRecords（getOpenDoorRecord）与 listDoors 已实现，无门锁真机未验证")
+                .unverified(DeviceCapability.ACCESS_WRITE, 1, "remoteUnlock（openDoorRemote）已实现，无门锁真机未验证")
+                .unverified(DeviceCapability.CAPTURE, 1, "capture（setDeviceSnap+下载 url）已实现，未验证")
+                .unverified(DeviceCapability.EVENT, 2, "pollEvents（v2 device.message.list，设备本地时间）已实现，未验证")
+                .no(DeviceCapability.DEVICE_WRITE, "乐橙设备通过序列号绑定，开放平台无设备删除接口")
                 .no(DeviceCapability.ORG, "乐橙面向消费级，无组织模型")
                 .no(DeviceCapability.ORG_WRITE, "乐橙面向消费级，无组织模型")
                 .no(DeviceCapability.PERSON, "乐橙面向消费级，无人员模型")

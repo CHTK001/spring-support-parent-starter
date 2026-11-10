@@ -183,28 +183,44 @@ public class AiReidServiceImpl implements AiReidService {
         int created = 0;
         int faceHits = 0;
         int reidHits = 0;
+        int invalidFaces = 0;
         List<String> trackIds = new ArrayList<>();
         List<FaceBox> faces = new ArrayList<>();
         for (FaceReidPipeline.FaceObservation observation : result.observations()) {
-            if (observation.matched()) {
-                matched++;
-            } else {
-                created++;
-            }
             String trackId = observation.trackId();
-            // 分流：置信度 ≥ face_threshold 走人脸识别，否则走重识别。
-            // 两条路的**检测框是同一批**（一次低阈值检测），只是后续处理不同。
+            // 三档分流（判据是检测置信度/质量，不是 1:N 相似度）：
+            //   ≥ face_threshold                → 人脸识别（1:N 认人）
+            //   ≥ reid_threshold 且 < face_threshold → 重识别（跨帧轨迹）
+            //   < reid_threshold                → 不合规：明确提示，不落库、不计轨迹
             float confidence = observation.box().confidence();
-            boolean clearFace = confidence >= clientManager.faceThreshold();
+            String decision;
+            String reason = null;
+            if (confidence >= clientManager.faceThreshold()) {
+                decision = MatchType.FACE.name();
+            } else if (confidence >= clientManager.reidThreshold()) {
+                decision = MatchType.REID.name();
+            } else {
+                decision = "INVALID";
+                reason = "图片不合规：人脸质量低于重识别阈值";
+            }
+            boolean invalidFace = "INVALID".equals(decision);
             // 叠框需要每张脸的框与归属轨迹，逐条带出（前端据此在图上画框并标注轨迹）
             faces.add(new FaceBox(
                     observation.box().x(), observation.box().y(),
                     observation.box().width(), observation.box().height(),
                     trackId, observation.score(), observation.matched(),
-                    confidence,
-                    clearFace ? MatchType.FACE.name() : MatchType.REID.name(),
-                    null));
-            if (clearFace) {
+                    confidence, decision, null, reason));
+            if (invalidFace) {
+                // 不合规不是「结果行」：不落库、不计入轨迹，也不参与命中/新建统计
+                invalidFaces++;
+                continue;
+            }
+            if (observation.matched()) {
+                matched++;
+            } else {
+                created++;
+            }
+            if (MatchType.FACE.name().equals(decision)) {
                 faceHits++;
             } else {
                 reidHits++;
@@ -219,11 +235,12 @@ public class AiReidServiceImpl implements AiReidService {
             persistObservation(account, resolvedGroup, trackId, resolvedCamera, resolvedSource,
                     imageData, observation, lat, lng);
         }
-        log.info("[Reid] 账号 '{}' 分组 '{}' 摄像头 '{}' 观测到 {} 张脸（命中 {} / 新建 {}；清晰走识别 {} / 模糊走重识别 {}）",
+        log.info("[Reid] 账号 '{}' 分组 '{}' 摄像头 '{}' 观测到 {} 张脸（命中 {} / 新建 {}；清晰走识别 {} / 模糊走重识别 {} / 不合规 {}）",
                 account, resolvedGroup, resolvedCamera, result.observations().size(),
-                matched, created, faceHits, reidHits);
+                matched, created, faceHits, reidHits, invalidFaces);
         return new ObserveResult(resolvedCamera, resolvedSource,
-                result.observations().size(), trackIds, matched, created, faceHits, reidHits, faces);
+                result.observations().size(), trackIds, matched, created, faceHits, reidHits,
+                invalidFaces, faces);
     }
 
     /**
@@ -385,6 +402,28 @@ public class AiReidServiceImpl implements AiReidService {
         return true;
     }
 
+    /**
+     * 逐脸检索结果适配。
+     *
+     * <p>本实现仍以「整图」为单位检索（{@link #search}）：人脸命中直接返回、
+     * 未命中再走 ReID 轨迹。接口新增的 {@link #searchFaces} 要求逐脸分组，
+     * 这里把整图结果包成「一张脸一组」，分流结论按命中里的 matchType 判定，
+     * 保证接口契约可用且不会把 FACE / REID 混为一谈。
+     * 多脸拆框是后续三档分流改造的一部分（FaceReidPipeline 逐脸输出后替换本适配）。</p>
+     *
+     * @param groups    分组名列表
+     * @param imageData 图片字节
+     * @param topK      每张脸返回条数
+     * @return 逐脸结果（当前为单组）
+     */
+    @Override
+    public List<FaceSearchResult> searchFaces(List<String> groups, byte[] imageData, int topK) {
+        List<ReidHit> hits = search(groups, imageData, topK);
+        boolean faceHit = hits.stream().anyMatch(hit -> "FACE".equals(hit.matchType()));
+        return List.of(new FaceSearchResult(0, null, 1.0f,
+                faceHit ? MatchType.FACE.name() : MatchType.REID.name(), null, hits));
+    }
+
     @Override
     public List<ReidHit> search(List<String> groups, byte[] imageData, int topK) {
         String account = AiUserContext.requireUserId();
@@ -399,7 +438,11 @@ public class AiReidServiceImpl implements AiReidService {
             throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置人脸组的检测模型与特征模型");
         }
         int limit = topK <= 0 ? settingReader.getInt(GROUP, "top_k", DEFAULT_TOP_K) : topK;
-        double threshold = settingReader.getDouble(GROUP, "match_threshold", 0.5d);
+        // 重识别 1:N 检索用自己的阈值（reid_match_threshold），留空回落到人脸检索阈值
+        double threshold = settingReader.getDouble(GROUP, "reid_match_threshold", -1d);
+        if (threshold < 0) {
+            threshold = settingReader.getDouble(GROUP, "match_threshold", 0.5d);
+        }
 
         List<ReidHit> hits = new ArrayList<>();
 

@@ -101,21 +101,30 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("deepfake_enabled", "false", "BOOLEAN", "是否启用换脸检测", 28),
                 new SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 20),
                 // ---- 人脸重识别（face-reid 管线）专属参数 ----
-                // 由 FaceReidPipeline 消费（同一次低阈值检测，按 face_threshold 分流
-                // 到人脸识别或跨帧轨迹），参数全部落在 face 分组，不再新建 reid 分组。
+                // 由 FaceReidPipeline 消费（同一次低阈值检测，按两条业务阈值三档分流
+                // 到人脸识别 / 重识别 / 不合规），参数全部落在 face 分组，
+                // 在系统设置里以独立的「重识别配置」面板呈现，不新建 reid 配置分组。
                 new SettingItem("face_threshold", "0.5", "NUMBER",
-                        "人脸/重识别分流阈值：检测置信度不低于此值走人脸识别，低于此值走重识别", 32),
-                new SettingItem("reid_detector_threshold", "0.3", "NUMBER",
-                        "重识别低阈值检测置信度（尽量多检出模糊/远处人脸；只影响重识别观测，不改动人脸识别的高标准检测）", 33),
+                        "人脸阈值：检测置信度不低于此值走人脸识别管线（1:N 认人）", 32),
+                new SettingItem("reid_threshold", "0.3", "NUMBER",
+                        "ReID 阈值：置信度低于人脸阈值但达到此值走重识别管线；低于此值判为「图片不合规」。必须 ≤ 人脸阈值", 33),
+                new SettingItem("reid_detector_threshold", "0.2", "NUMBER",
+                        "重识别检测下限（必须 ≤ ReID 阈值：低于此值的框不会被检出，也就无法进入分流）", 34),
+                new SettingItem("reid_feature_model", "", "STRING",
+                        "ReID 特征模型（留空则复用「人脸特征模型」；两套特征分别写入两条特征值库）", 35),
+                new SettingItem("reid_feature_dimension", "", "NUMBER",
+                        "ReID 特征向量维度（留空则复用人脸特征维度；ReID 模型输出维度不同时必须填，否则向量库写入会错位）", 42),
+                new SettingItem("reid_match_threshold", "0.5", "NUMBER",
+                        "重识别 1:N 特征检索相似度阈值（与人脸 1:N 的 match_threshold 分开）", 36),
                 new SettingItem("track_threshold", "0.5", "NUMBER",
-                        "同人判定阈值（余弦相似度，越高越严格，ArcFace 通常要求相邻观测的相似度足够高）", 34),
+                        "同人判定阈值（余弦相似度，越高越严格，ArcFace 通常要求相邻观测的相似度足够高）", 37),
                 new SettingItem("track_gap_seconds", "30", "NUMBER",
-                        "跨帧归并时间窗（秒）；超过此时长不再并入同一轨迹", 35),
+                        "跨帧归并时间窗（秒）；超过此时长不再并入同一轨迹", 38),
                 new SettingItem("track_max_tracks", "10000", "NUMBER",
-                        "轨迹容量上限（超出淘汰最久未出现的轨迹）", 36),
+                        "轨迹容量上限（超出淘汰最久未出现的轨迹）", 39),
                 new SettingItem("track_ttl_seconds", "0", "NUMBER",
-                        "轨迹保留时长（秒）；0 表示永久保留", 37),
-                new SettingItem("default_camera_id", "", "STRING", "默认摄像头标识（未指定时使用）", 38)
+                        "轨迹保留时长（秒）；0 表示永久保留", 40),
+                new SettingItem("default_camera_id", "", "STRING", "默认摄像头标识（未指定时使用）", 41)
         );
     }
 }

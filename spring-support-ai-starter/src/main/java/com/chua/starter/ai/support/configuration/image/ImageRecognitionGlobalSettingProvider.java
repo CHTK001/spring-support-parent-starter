@@ -63,8 +63,8 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
                 new GlobalSettingProvider.SettingItem("detect_threshold", "0.5", "NUMBER", "目标检测置信度阈值（0~1）", 4),
                 new GlobalSettingProvider.SettingItem("segment_model", "", "STRING", "图像分割模型（留空关闭）", 5),
                 new GlobalSettingProvider.SettingItem("captioning_model", "", "STRING", "图像描述模型（留空关闭）", 6),
-                new GlobalSettingProvider.SettingItem("depth_enabled", "false", "BOOLEAN", "是否启用深度估计", 7),
-                new GlobalSettingProvider.SettingItem("pedestrian_enabled", "false", "BOOLEAN", "是否启用行人与异常检测", 8),
+                // 2026-11-10：原 depth_enabled / pedestrian_enabled 删除 ——
+                // 深度估计与行人检测两个开关全仓无消费方读取，勾了不生效。
                 new GlobalSettingProvider.SettingItem("quality_enabled", "false", "BOOLEAN", "是否启用图像质量评估", 9),
                 new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "图像超分模型（留空关闭）", 10),
                 new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 11),

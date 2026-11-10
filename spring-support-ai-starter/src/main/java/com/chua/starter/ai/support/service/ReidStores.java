@@ -444,7 +444,11 @@ public class ReidStores {
         }
         VectorCompareAlgorithm algorithm = resolveAlgorithm(
                 settingReader.getStr(GROUP, "vector_algorithm"));
-        int dimension = settingReader.getInt(GROUP, "feature_dimension", DEFAULT_DIMENSION);
+        int dimension = settingReader.getInt(GROUP, "reid_feature_dimension", 0);
+        if (dimension <= 0) {
+            // 留空 = 与 ReID 特征共用人脸特征维度（两套特征走同一维度的常见情形）
+            dimension = settingReader.getInt(GROUP, "feature_dimension", DEFAULT_DIMENSION);
+        }
         Map<String, Object> config = new LinkedHashMap<>(2);
         // jvector **不会自动创建缺失的父目录**：父目录不存在时写入静默失败，
         // 表现为「入库成功但重启即丢」。所以必须先建目录。

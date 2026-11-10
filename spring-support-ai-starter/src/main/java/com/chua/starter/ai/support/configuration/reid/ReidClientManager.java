@@ -54,13 +54,21 @@ public class ReidClientManager {
 
     /**
      * 默认检测置信度阈值（低阈值，尽量多检出模糊/远处人脸）。
+     *
+     * <p>必须低于 ReID 阈值，否则「不合规」这一档永远不可达：检测阶段就把
+     * 低于本值的框过滤掉了，分流看不到它们。</p>
      */
-    private static final float DEFAULT_DETECTOR_THRESHOLD = 0.3f;
+    private static final float DEFAULT_DETECTOR_THRESHOLD = 0.2f;
 
     /**
      * 默认人脸识别分流阈值：检测置信度 >= 此值走人脸识别，否则走重识别。
      */
     private static final float DEFAULT_FACE_THRESHOLD = 0.5f;
+
+    /**
+     * 默认 ReID 阈值：低于人脸阈值但达到此值走重识别；低于此值判为不合规。
+     */
+    private static final float DEFAULT_REID_THRESHOLD = 0.35f;
 
     /**
      * 默认归并时间窗（秒）。
@@ -280,9 +288,13 @@ public class ReidClientManager {
             log.info("[Reid] 人脸检测模型未配置，重识别能力未启用");
             return;
         }
-        // 特征模型就是 face 分组的 feature_model（不再额外留空重试）：两者用同一批模型，
-        // 用户只需配一次；都为空本方法不会走到—— face 检测没配则直接在上文返回了。
-        String featureModel = settingReader.getStr(GROUP, "feature_model");
+        // 特征模型：优先取重识别专用模型（face.reid_feature_model），留空回落到人脸特征模型。
+        // 两套特征写不同的特征值：人脸特征用于 1:N 认人，ReID 特征用于跨帧轨迹归并。
+        String featureModel = settingReader.getStr(GROUP, "reid_feature_model");
+        boolean reidOwnModel = StringUtils.isNotBlank(featureModel);
+        if (!reidOwnModel) {
+            featureModel = settingReader.getStr(GROUP, "feature_model");
+        }
         if (StringUtils.isBlank(featureModel)) {
             log.info("[Reid] 人脸特征模型未配置，重识别能力未启用");
             return;
@@ -302,9 +314,10 @@ public class ReidClientManager {
         // 业务侧会用各自账号的轨迹管理器另建管线。
         this.track = newTrack();
         this.pipeline = new FaceReidPipeline(this.lowThresholdDetector, extractor, this.track);
-        log.info("[Reid] 重识别实例就绪: 特征模型={}, 阈值={}, 归并窗口={}s, 容量={}, 低阈值检测={},"
+        log.info("[Reid] 重识别实例就绪: 特征模型={}({}), 阈值={}, 归并窗口={}s, 容量={}, 低阈值检测={},"
                         + " 识别分流={}",
-                featureModel, readThreshold(),
+                featureModel, reidOwnModel ? "ReID 专用" : "复用人脸特征模型",
+                readThreshold(),
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS),
                 settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS),
                 readLowDetectorThreshold(), faceThreshold());
@@ -377,6 +390,20 @@ public class ReidClientManager {
     private float readThreshold() {
         BigDecimal value = settingReader.getDecimalOrNull(GROUP, "track_threshold");
         return value == null ? DEFAULT_THRESHOLD : value.floatValue();
+    }
+
+    /**
+     * ReID 阈值：三档分流的第二档。
+     *
+     * <p>与 {@link #faceThreshold()} 配合使用：检测置信度 ≥ 人脸阈值走人脸识别；
+     * 介于 ReID 阈值与人脸阈值之间走重识别；低于 ReID 阈值判「图片不合规」，
+     * 明确提示而不落库。取值 {@code face.reid_threshold}，默认 0.3。</p>
+     *
+     * @return ReID 阈值
+     */
+    public float reidThreshold() {
+        BigDecimal value = settingReader.getDecimalOrNull(GROUP, "reid_threshold");
+        return value == null ? DEFAULT_REID_THRESHOLD : value.floatValue();
     }
 
     /**

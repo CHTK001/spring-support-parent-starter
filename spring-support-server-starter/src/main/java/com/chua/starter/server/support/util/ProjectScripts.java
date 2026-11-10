@@ -31,6 +31,28 @@ public final class ProjectScripts {
     public static final String PH_PATH = "__PATH__";
       /** 应用名占位符 */
     public static final String PH_APPNAME = "__APPNAME__";
+      /** Docker：Dockerfile 路径占位符 */
+    public static final String PH_DK_DOCKERFILE = "__DK_DOCKERFILE__";
+      /** Docker：构建上下文占位符 */
+    public static final String PH_DK_CONTEXT = "__DK_CONTEXT__";
+      /** Docker：镜像名占位符 */
+    public static final String PH_DK_IMAGE = "__DK_IMAGE__";
+      /** Docker：容器名占位符 */
+    public static final String PH_DK_CTR = "__DK_CTR__";
+      /** Docker：端口映射占位符（展开为 {@code -p a:b}） */
+    public static final String PH_DK_PORTS = "__DK_PORTS__";
+      /** Docker：环境变量占位符（展开为 {@code -e K=V}） */
+    public static final String PH_DK_ENV = "__DK_ENV__";
+      /** Docker：数据卷占位符（展开为 {@code -v host:ctr}） */
+    public static final String PH_DK_VOLUMES = "__DK_VOLUMES__";
+      /** Docker：网络占位符（展开为 {@code --network x}） */
+    public static final String PH_DK_NETWORK = "__DK_NETWORK__";
+      /** Docker：重启策略占位符 */
+    public static final String PH_DK_RESTART = "__DK_RESTART__";
+      /** Docker：构建参数占位符（展开为 {@code --build-arg K=V}） */
+    public static final String PH_DK_BUILDARGS = "__DK_BUILDARGS__";
+      /** Docker：覆盖容器启动命令占位符 */
+    public static final String PH_DK_CMD = "__DK_CMD__";
       /** 默认日志文件名（日志地址被填成目录时补用） */
     private static final String DEFAULT_LOG_NAME = "app.log";
 
@@ -715,6 +737,93 @@ public final class ProjectScripts {
        */
     public static Scripts windowsGeneric(String mainEntry) {
         return new Scripts(".\\start.ps1", ".\\stop.ps1", ".\\restart.ps1", WIN_STATUS);
+    }
+
+      /**
+       * Linux Docker：构建镜像 → 重建容器 → 回写容器 PID。
+       *
+       * <p>发布语义按 Dockerfile 组织：项目地址就是构建上下文，升级包（tar/zip）
+       * 解压后即新的源码与 Dockerfile；启动时先 {@code docker build}，
+       * 构建成功后才 {@code docker rm -f} 旧容器并 {@code docker run}，
+       * 构建失败不会打断正在运行的旧容器。</p>
+       *
+       * <p>容器 PID 由 {@code docker inspect .State.Pid} 取得（宿主命名空间内的 PID），
+       * 写入 {@code app.pid} 后，停止/状态/升级链路与其它类型保持同一套判定，
+       * 不需要为 Docker 单独开一条状态通道。</p>
+       *
+       * @param mainEntry 主入口名称（Docker 不使用，容器名来自配置）
+       * @return 四段脚本
+       */
+    public static Scripts linuxDocker(String mainEntry) {
+        String start = "cd '" + PH_PATH + "' 2>/dev/null || { echo '项目地址不存在: " + PH_PATH + "' >&2; exit 1; }\n"
+                + "docker build " + PH_DK_BUILDARGS + " -t " + PH_DK_IMAGE + " -f " + PH_DK_DOCKERFILE + " "
+                + PH_DK_CONTEXT + " || { echo 'docker build 失败' >&2; exit 1; }\n"
+                + "docker rm -f " + PH_DK_CTR + " >/dev/null 2>&1 || true\n"
+                + "docker run -d --name " + PH_DK_CTR + " --restart " + PH_DK_RESTART + " "
+                + PH_DK_PORTS + " " + PH_DK_ENV + " " + PH_DK_VOLUMES + " " + PH_DK_NETWORK + " "
+                + PH_DK_IMAGE + " " + PH_DK_CMD + "\n"
+                + "if [ $? -ne 0 ]; then echo 'docker run 失败' >&2; exit 1; fi\n"
+                + "__pid=$(docker inspect -f '{{.State.Pid}}' " + PH_DK_CTR + " 2>/dev/null)\n"
+                + "if [ -z \"$__pid\" ] || [ \"$__pid\" = \"0\" ]; then\n"
+                + "  echo '启动校验失败: 容器未运行' >&2\n"
+                + "  docker logs --tail 20 " + PH_DK_CTR + " >&2 2>/dev/null\n"
+                + "  exit 1\n"
+                + "fi\n"
+                + "echo \"$__pid\" > app.pid\n"
+                + "echo \"running pid=$__pid\"";
+        String stop = "docker stop " + PH_DK_CTR + " >/dev/null 2>&1 || true\n"
+                + "docker rm -f " + PH_DK_CTR + " >/dev/null 2>&1 || true\n"
+                + "rm -f app.pid\n"
+                + "echo stopped";
+        String status = "if [ \"$(docker inspect -f '{{.State.Running}}' " + PH_DK_CTR + " 2>/dev/null)\" = \"true\" ]; then\n"
+                + "  echo running\n"
+                + "else\n"
+                + "  echo stopped\n"
+                + "fi";
+        return new Scripts(start, stop, stop + "\n" + start, status);
+    }
+
+      /**
+       * Windows Docker：与 Linux 同一条链路，命令改写成 PowerShell 形态。
+       *
+       * @param mainEntry 主入口名称（Docker 不使用）
+       * @return 四段脚本
+       */
+    public static Scripts windowsDocker(String mainEntry) {
+        String start = "$ErrorActionPreference = 'Continue'\n"
+                + "Set-Location '" + PH_PATH + "'\n"
+                + "docker build " + PH_DK_BUILDARGS + " -t " + PH_DK_IMAGE + " -f " + PH_DK_DOCKERFILE + " "
+                + PH_DK_CONTEXT + "\n"
+                + "if ($LASTEXITCODE -ne 0) { throw 'docker build 失败' }\n"
+                + "docker rm -f " + PH_DK_CTR + " 2>$null | Out-Null\n"
+                + "docker run -d --name " + PH_DK_CTR + " --restart " + PH_DK_RESTART + " "
+                + PH_DK_PORTS + " " + PH_DK_ENV + " " + PH_DK_VOLUMES + " " + PH_DK_NETWORK + " "
+                + PH_DK_IMAGE + " " + PH_DK_CMD + "\n"
+                + "if ($LASTEXITCODE -ne 0) { throw 'docker run 失败' }\n"
+                + "$procId = (docker inspect -f '{{.State.Pid}}' " + PH_DK_CTR + ").Trim()\n"
+                + "if (-not $procId -or $procId -eq '0') { throw '启动校验失败: 容器未运行' }\n"
+                + "Set-Content -Path 'app.pid' -Value $procId -NoNewline\n"
+                + "Write-Output \"running pid=$procId\"";
+          // 停止/状态是「尽力而为」的探测：目标主机没装 docker、容器不存在都属于正常分支。
+          // 两条约束必须同时满足，否则状态接口会拿到一堆 CLIXML 错误块、甚至被判成 running：
+          //   1. 静默错误记录（否则命令不存在的错误记录会盖住正常输出）；
+          //   2. 把 docker 调用包在 try/catch 里（命令不存在在 PowerShell 里是终止性错误，
+          //      直接写在 if 条件里会中断整段脚本，连 stopped 都不输出）。
+        String quiet = "$ErrorActionPreference = 'SilentlyContinue'\n";
+        String stop = quiet
+                + "try { docker stop " + PH_DK_CTR + " 2>$null | Out-Null } catch { }\n"
+                + "try { docker rm -f " + PH_DK_CTR + " 2>$null | Out-Null } catch { }\n"
+                + "Remove-Item 'app.pid' -Force -ErrorAction SilentlyContinue\n"
+                + "Write-Output 'stopped'";
+        String status = quiet
+                + "$__running = $null\n"
+                + "try { $__running = docker inspect -f '{{.State.Running}}' " + PH_DK_CTR + " 2>$null } catch { $__running = $null }\n"
+                + "if ($__running -eq 'true') {\n"
+                + "  Write-Output 'running'\n"
+                + "} else {\n"
+                + "  Write-Output 'stopped'\n"
+                + "}";
+        return new Scripts(start, stop, stop + "\n" + start, status);
     }
 
       /**

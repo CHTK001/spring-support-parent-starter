@@ -1,8 +1,8 @@
 <template>
   <div class="account-assets">
-    <!-- 主分类导轨：账号资产 / 模板管理 / 消息模板。
-         原先是页面顶部的一条横向页签，点击会把整页（含左侧索引）换掉；
-         现在收进最左侧导轨，点击只换右侧工作区，索引与导轨位置不动。 -->
+    <!-- 主分类：账号资产 / 模板管理 / 消息模板。
+         早先是左侧一小格胶囊，右边留一大片空底色；现在整条吃满宽度，
+         点击只替换下方 .stage 里的内容，分类条本身不动。 -->
     <nav class="nav" aria-label="账号管理分类">
       <button
         v-for="item in views"
@@ -299,33 +299,69 @@
             </div>
           </div>
 
+          <!-- 底部操作：纯图标 + 悬浮提示，不占横向版面（文字只在 tooltip 里出现） -->
           <footer class="main-foot">
             <ReButton
-              show-text
+              text
+              :show-text="false"
               icon="CircleCheck"
+              :icon-size="28"
+              tip="校验凭据"
               :loading="verifyingId === activeAccount.accountId"
               @click="onVerify(activeAccount)"
-            >
-              校验凭据
-            </ReButton>
-            <ReButton show-text icon="EditPen" @click="openEdit(activeAccount)">编辑</ReButton>
-            <ReButton show-text icon="CopyDocument" @click="duplicateAccount(activeAccount)">复制为新账号</ReButton>
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="EditPen"
+              :icon-size="28"
+              tip="编辑"
+              @click="openEdit(activeAccount)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="CopyDocument"
+              :icon-size="28"
+              tip="复制为新账号"
+              @click="duplicateAccount(activeAccount)"
+            />
             <ReButton
               v-if="hasMailbox(activeAccount)"
-              show-text
+              text
+              :show-text="false"
               :icon="activeAccount.kind === 'EMAIL' ? 'Message' : 'ChatDotRound'"
+              :icon-size="28"
+              :tip="activeAccount.kind === 'EMAIL' ? '打开邮箱' : '打开短信'"
               @click="openConsole(activeAccount)"
-            >
-              {{ activeAccount.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
-            </ReButton>
+            />
             <span class="foot-gap"></span>
-            <ReButton show-text icon="Star" :disabled="Boolean(activeAccount.defaultAccount)" @click="setDefault(activeAccount)">
-              设为默认
-            </ReButton>
-            <ReButton show-text icon="SwitchButton" @click="toggleStatus(activeAccount)">
-              {{ activeAccount.status === 0 ? '启用' : '停用' }}
-            </ReButton>
-            <ReButton show-text icon="Delete" type="danger" plain @click="remove(activeAccount)">删除</ReButton>
+            <ReButton
+              text
+              :show-text="false"
+              icon="Star"
+              :icon-size="28"
+              tip="设为默认"
+              :disabled="Boolean(activeAccount.defaultAccount)"
+              @click="setDefault(activeAccount)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              :icon="activeAccount.status === 0 ? 'SwitchButton' : 'TurnOff'"
+              :icon-size="28"
+              :tip="activeAccount.status === 0 ? '启用' : '停用'"
+              @click="toggleStatus(activeAccount)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="Delete"
+              :icon-size="28"
+              type="danger"
+              tip="删除"
+              @click="remove(activeAccount)"
+            />
           </footer>
         </template>
 
@@ -526,12 +562,32 @@
           </div>
 
           <footer class="main-foot">
-            <ReButton show-text icon="EditPen" @click="openEditCookie(activeCookie)">编辑 Cookie</ReButton>
+            <ReButton
+              text
+              :show-text="false"
+              icon="EditPen"
+              :icon-size="28"
+              tip="编辑 Cookie"
+              @click="openEditCookie(activeCookie)"
+            />
             <span class="foot-gap"></span>
-            <ReButton show-text icon="SwitchButton" @click="toggleCookieStatus(activeCookie)">
-              {{ activeCookie.status === 0 ? '启用' : '停用' }}
-            </ReButton>
-            <ReButton show-text icon="Delete" type="danger" plain @click="removeCookie(activeCookie)">删除</ReButton>
+            <ReButton
+              text
+              :show-text="false"
+              :icon="activeCookie.status === 0 ? 'SwitchButton' : 'TurnOff'"
+              :icon-size="28"
+              :tip="activeCookie.status === 0 ? '启用' : '停用'"
+              @click="toggleCookieStatus(activeCookie)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="Delete"
+              :icon-size="28"
+              type="danger"
+              tip="删除"
+              @click="removeCookie(activeCookie)"
+            />
           </footer>
         </template>
 
@@ -558,7 +614,6 @@
       </div>
 
     </div>
-    </template>
 
     <!-- 模板管理：模板库 / 设计器 / 预览 / 打印机 / 调用日志，原「模板管理」模块整块并入 -->
     <div v-else-if="view === 'templates'" class="embed-pane">
@@ -568,6 +623,7 @@
     <!-- 消息模板：模板渲染与推送前预览 -->
     <div v-else class="embed-pane">
       <MessageTemplateView />
+    </div>
     </div>
 
     <!-- 账号详情 -->
@@ -2062,23 +2118,29 @@ onMounted(loadAll);
   gap: 10px;
 }
 
-/* ---------- 页面视图切换（账号资产 / 模板管理 / 消息模板） ---------- */
-.views {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  align-self: flex-start;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-container);
+/* ---------- 分类条：账号资产 / 模板管理 / 消息模板 ----------
+   桌面宽度吃满整行，各分项等分，不再缩成左侧一小格、右侧留一片底色；
+   点击只替换 .stage 里的内容。 */
+.nav {
   flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
-.views-item {
-  display: inline-flex;
+.nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
@@ -2089,14 +2151,24 @@ onMounted(loadAll);
   white-space: nowrap;
   transition: background 0.16s var(--ease-out), color 0.16s var(--ease-out);
 }
-.views-item:hover {
+.nav-item:hover {
   background: var(--bg-fill);
   color: var(--text-primary);
 }
-.views-item.is-on {
+.nav-item.is-on {
   background: var(--el-color-primary-light-9);
   color: var(--el-color-primary);
   font-weight: 600;
+}
+
+/* ---------- 内容舞台：分类切换只换这里 ---------- */
+.stage {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ---------- 内嵌子视图（模板管理 / 消息模板） ---------- */
@@ -2973,7 +3045,7 @@ onMounted(loadAll);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .views-item,
+  .nav-item,
   .stat,
   .idx-row,
   .main-tab,
