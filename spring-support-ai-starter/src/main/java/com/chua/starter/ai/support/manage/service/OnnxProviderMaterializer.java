@@ -390,7 +390,7 @@ public class OnnxProviderMaterializer {
                 hit.setCapabilities(capabilities);
                 hit.setDescription(description);
                 hit.setUpdatedAt(now);
-                providerModelMapper.updateById(hit);
+                providerModelMapper.updateByKey(hit);
             } else {
                 SysAiProviderModel row = new SysAiProviderModel();
                 row.setProviderId(ONNX_PROVIDER_ID);

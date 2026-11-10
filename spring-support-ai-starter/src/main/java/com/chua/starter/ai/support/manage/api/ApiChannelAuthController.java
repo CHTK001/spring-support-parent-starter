@@ -1577,7 +1577,9 @@ public class ApiChannelAuthController {
                 }
                 if (changed) {
                     existing.setUpdatedAt(now);
-                    modelMapper.updateById(existing);
+                    // 用 (provider_id, model) 双条件更新：单列 @TableId 的 updateById
+                    // 会命中其他供应商的同名模型（大小写不敏感还会撞主键）
+                    modelMapper.updateByKey(existing);
                     updated++;
                 }
             }
@@ -1626,7 +1628,9 @@ public class ApiChannelAuthController {
         }
         m.setEnabled(enabled);
         m.setUpdatedAt(System.currentTimeMillis());
-        modelMapper.updateById(m);
+        // 同模型名可能存在于多个供应商（列排序规则大小写不敏感），
+        // updateById 只带 model 会波及别人的行，这里按真实主键更新
+        modelMapper.updateByKey(m);
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("ok", true);
         out.put("channel", impl.channel());

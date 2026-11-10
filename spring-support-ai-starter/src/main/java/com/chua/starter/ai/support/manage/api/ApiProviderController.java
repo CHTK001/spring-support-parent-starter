@@ -533,7 +533,7 @@ public class ApiProviderController {
                     for (Map<String, Object> cap : caps) {
                         cap.put("protocol", protocol);
                     }
-                    modelMapper.updateById(pm);
+                    modelMapper.updateByKey(pm);
                 }
             }
         }
@@ -1529,7 +1529,7 @@ public class ApiProviderController {
             metrics.put("latency_ms", latency);
             model.setMetrics(metrics);
             model.setUpdatedAt(System.currentTimeMillis());
-            modelMapper.updateById(model);
+            modelMapper.updateByKey(model);
         }
         Map<String, Object> out = new LinkedHashMap<>(5);
         out.put("provider_id", providerId);
