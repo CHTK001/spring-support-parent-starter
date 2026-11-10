@@ -9,10 +9,13 @@ import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Magpie 网关的 HTTP 客户端：数据面读数 + 管理面 provider / 签到。
@@ -64,6 +67,40 @@ public final class MagpieAdminClient {
      * 页面 Cookie 缓存：{@code 页面地址|页面 Key → Cookie}。
      */
     private static final Map<String, Session> SESSIONS = new ConcurrentHashMap<>();
+
+    /**
+     * 品牌图标缓存：{@code 页面地址|图标名 → data URL}，取不到时存空串。
+     *
+     * <p>图标是静态资源，但 magpie 换了图标 / 重启后地址会变，故跟着 Cookie 一起
+     * 半小时重取；空串同样缓存，避免每次刷新都为同一个 404 再打两次请求。</p>
+     */
+    private static final Map<String, String> ICON_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 图标缓存有效期（毫秒）：与页面 Cookie 同步，30 分钟。
+     */
+    private static final long ICON_TTL_MILLIS = SESSION_TTL_MILLIS;
+
+    /**
+     * 图标缓存条目的写入时间：{@code 页面地址|图标名 → 时间戳}。
+     */
+    private static final Map<String, Long> ICON_CACHE_AT = new ConcurrentHashMap<>();
+
+    /**
+     * 用户上传图标的字段前缀（magpie 约定 {@code file:<文件名>}）。
+     */
+    private static final String ICON_FILE_PREFIX = "file:";
+
+    /**
+     * 内置图标名：只允许字母数字开头，避免 {@code ../} 之类的路径穿越。
+     */
+    private static final Pattern ICON_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,80}");
+
+    /**
+     * 上传图标的文件名：必须带图片后缀，同样禁止路径分隔符。
+     */
+    private static final Pattern ICON_FILE =
+            Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,80}\\.(?:svg|png|ico|webp|jpg|jpeg)");
 
     /**
      * 工具类，禁止实例化。
@@ -384,6 +421,157 @@ public final class MagpieAdminClient {
         return ids;
     }
 
+    // ==================== 品牌图标 ====================
+
+    /**
+     * 上游 provider 的品牌图标（内联 data URL）。
+     *
+     * <p><b>为什么由后端转成 data URL</b>：magpie 的图标只挂在管理面（{@code /icons/*}
+     * 与 {@code /api/icons/*}），要靠它的页面 Cookie 才能取；浏览器里的 {@code <img>}
+     * 既带不上我们自己的 Bearer，也拿不到 magpie 的 HttpOnly Cookie。后端取一次、
+     * 转成 data URL 随 provider 列表下发，前端直接 {@code <img :src>} 即可，
+     * 既不用额外的鉴权旁路，也不用为每个图标再发一轮请求。</p>
+     *
+     * <p>图标只是装饰：取不到（{@code generic} 这类没有实体文件、管理面不可达、
+     * 页面 Key 失效）一律返回 {@code null} 由前端回落首字徽标，绝不因此让
+     * provider 列表失败。</p>
+     *
+     * @param credentials 连接凭据
+     * @param icon        provider 的 {@code icon} 字段（内置名或 {@code file:xxx.svg}）
+     * @return 形如 {@code data:image/svg+xml;base64,...} 的 data URL；取不到返回 null
+     */
+    public static String iconDataUrl(Map<String, Object> credentials, String icon) {
+        if (icon == null || icon.isBlank()) {
+            return null;
+        }
+        String name = icon.trim();
+        String cacheKey = MagpieSupport.pageUrl(credentials) + "|" + name;
+        String cached = ICON_CACHE.get(cacheKey);
+        Long cachedAt = ICON_CACHE_AT.get(cacheKey);
+        long now = System.currentTimeMillis();
+        if (cached != null && cachedAt != null && now - cachedAt < ICON_TTL_MILLIS) {
+            return cached.isEmpty() ? null : cached;
+        }
+        String dataUrl;
+        try {
+            dataUrl = loadIcon(credentials, name);
+        } catch (RuntimeException e) {
+            // 图标失败不拖累列表：缓存空值，避免每次刷新都重试同一个 404。
+            dataUrl = null;
+        }
+        ICON_CACHE.put(cacheKey, dataUrl == null ? "" : dataUrl);
+        ICON_CACHE_AT.put(cacheKey, now);
+        return dataUrl;
+    }
+
+    /**
+     * 按 magpie 的图标命名规则取图标并转 data URL。
+     *
+     * <p>两种形态（对照 magpie 页面 app.js 的 {@code icon()}）：</p>
+     * <ul>
+     *   <li>{@code file:<文件名>}：用户上传的图标，走 {@code /api/icons/<文件名>}；</li>
+     *   <li>内置名（{@code openrouter} / {@code siliconcloud-color} …）：走
+     *       {@code /icons/<名>.svg}，少数是 png，故 svg 取不到再试 png。</li>
+     * </ul>
+     *
+     * @param credentials 连接凭据
+     * @param icon        provider 的 {@code icon} 字段
+     * @return data URL；命名不合法或文件不存在时返回 null
+     */
+    private static String loadIcon(Map<String, Object> credentials, String icon) {
+        if (icon.startsWith(ICON_FILE_PREFIX)) {
+            String file = icon.substring(ICON_FILE_PREFIX.length());
+            if (!ICON_FILE.matcher(file).matches()) {
+                return null;
+            }
+            return toDataUrl(fetchIcon(credentials, "/api/icons/" + file), file);
+        }
+        if (!ICON_NAME.matcher(icon).matches()) {
+            return null;
+        }
+        String lower = icon.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".svg") || lower.endsWith(".png") || lower.endsWith(".ico")
+                || lower.endsWith(".webp") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return toDataUrl(fetchIcon(credentials, "/icons/" + icon), icon);
+        }
+        byte[] svg = fetchIconQuietly(credentials, "/icons/" + icon + ".svg");
+        if (svg != null) {
+            return toDataUrl(svg, ".svg");
+        }
+        byte[] png = fetchIconQuietly(credentials, "/icons/" + icon + ".png");
+        return png == null ? null : toDataUrl(png, ".png");
+    }
+
+    /**
+     * 取一个图标文件，失败返回 null（用于 svg/png 二选一的探测）。
+     *
+     * @param credentials 连接凭据
+     * @param path        管理面路径
+     * @return 字节；不存在时返回 null
+     */
+    private static byte[] fetchIconQuietly(Map<String, Object> credentials, String path) {
+        try {
+            return fetchIcon(credentials, path);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 取一个图标文件的原始字节。
+     *
+     * <p>注意这里<b>不能</b>走 {@link ChannelHttp#getJson}：图片按 UTF-8 解码成字符串
+     * 会把非法字节换成替换字符，再编码回去图片就坏了。</p>
+     *
+     * @param credentials 连接凭据
+     * @param path        管理面路径
+     * @return 图标字节
+     */
+    private static byte[] fetchIcon(Map<String, Object> credentials, String path) {
+        String pageUrl = MagpieSupport.pageUrl(credentials);
+        return callAdmin(credentials,
+                () -> ChannelHttp.getBytes(pageUrl + path, adminHeaders(credentials),
+                        ChannelHttp.DEFAULT_TIMEOUT));
+    }
+
+    /**
+     * 把图标字节转成 data URL。
+     *
+     * @param data 图标字节
+     * @param hint 用于判断 MIME 的文件名 / 后缀
+     * @return data URL；字节为空时返回 null
+     */
+    private static String toDataUrl(byte[] data, String hint) {
+        if (data == null || data.length == 0) {
+            return null;
+        }
+        return "data:" + iconMime(hint) + ";base64,"
+                + Base64.getEncoder().encodeToString(data);
+    }
+
+    /**
+     * 由文件名 / 后缀推断图标 MIME。
+     *
+     * @param hint 文件名或后缀
+     * @return MIME；未知时按 png 处理
+     */
+    private static String iconMime(String hint) {
+        String lower = hint == null ? "" : hint.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".svg")) {
+            return "image/svg+xml";
+        }
+        if (lower.endsWith(".ico")) {
+            return "image/x-icon";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        return "image/png";
+    }
+
     // ==================== 数据面 ====================
 
     /**
@@ -484,10 +672,11 @@ public final class MagpieAdminClient {
      *
      * @param credentials 连接凭据（用于按 key 清缓存）
      * @param call        实际调用（每次都会重新构造请求头，重试才会拿到新 Cookie）
-     * @return 响应体
+     * @param <T>         响应类型（文本 JSON 或图标字节）
+     * @return 响应
      */
-    private static String callAdmin(Map<String, Object> credentials,
-                                    java.util.function.Supplier<String> call) {
+    private static <T> T callAdmin(Map<String, Object> credentials,
+                                   java.util.function.Supplier<T> call) {
         try {
             return call.get();
         } catch (ChannelException e) {

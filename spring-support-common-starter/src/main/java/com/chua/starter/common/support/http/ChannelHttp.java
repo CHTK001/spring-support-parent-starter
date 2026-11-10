@@ -152,6 +152,27 @@ public final class ChannelHttp {
     }
 
     /**
+     * 执行一次 GET 请求并返回二进制响应体（图片 / 字体这类非文本资源）。
+     *
+     * <p>与 {@link #getJson(String, Map, Duration)} 的差异只在解码方式：
+     * 图片若按 UTF-8 解成字符串再回写，字节会被替换字符破坏，图片直接打不开。
+     * 失败语义与文本接口一致：非 2xx 抛 {@link ChannelHttpException}。</p>
+     *
+     * @param url 目标地址
+     * @param headers 附加请求头（可为 null）
+     * @param timeout 单次请求超时
+     * @return 原始字节；HTTP 非 2xx 时抛 {@link ChannelHttpException}
+     */
+    public static byte[] getBytes(String url, Map<String, String> headers, Duration timeout) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(timeout == null ? DEFAULT_TIMEOUT : timeout)
+                .GET();
+        applyHeaders(builder, headers);
+        return executeBytes(builder.build(), "GET " + url);
+    }
+
+    /**
      * 执行一次 GET 请求并原样返回响应（不跟随重定向、非 2xx 不抛异常）。
      *
      * <p>供「用页面 Key 换 Cookie」这类需要读 {@code Set-Cookie} 的握手使用；
@@ -303,6 +324,31 @@ public final class ChannelHttp {
             throw new ChannelHttpException(CODE_UPSTREAM_ERROR, response.statusCode(),
                     "渠道上游返回非 2xx: " + label + " -> " + response.statusCode()
                             + " " + truncate(response.body()), null);
+        }
+        return response.body();
+    }
+
+    /**
+     * 发送请求并把二进制响应规整成「2xx 返回字节、其余抛异常」。
+     *
+     * @param request 已构造好的请求
+     * @param label 日志/异常信息里的请求标识，形如 {@code GET https://...}
+     * @return 2xx 的响应字节
+     */
+    private static byte[] executeBytes(HttpRequest request, String label) {
+        HttpResponse<byte[]> response;
+        try {
+            response = CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        } catch (java.io.IOException e) {
+            throw new ChannelHttpException(CODE_UPSTREAM_ERROR, 0,
+                    "渠道 HTTP 请求失败: " + label + " (" + e.getMessage() + ")", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ChannelHttpException(CODE_INTERNAL_ERROR, 0, "渠道 HTTP 请求被中断: " + label, e);
+        }
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new ChannelHttpException(CODE_UPSTREAM_ERROR, response.statusCode(),
+                    "渠道上游返回非 2xx: " + label + " -> " + response.statusCode(), null);
         }
         return response.body();
     }
