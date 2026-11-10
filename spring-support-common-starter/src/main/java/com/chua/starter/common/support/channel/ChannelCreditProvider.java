@@ -63,6 +63,20 @@ public interface ChannelCreditProvider {
     Map<String, Object> credit(Map<String, Object> credentials);
 
     /**
+     * 按业务渠道查询积分 / 余额（网关托管渠道用）。
+     *
+     * <p>网关把多家上游聚在一个连接里，凭据是<b>网关的</b>；要回答「Qoder 还剩多少」
+     * 就必须按上游过滤。默认实现忽略 {@code vendor}，等价于 {@link #credit(Map)}。</p>
+     *
+     * @param vendor      业务渠道标识（决定取哪一家上游的额度）
+     * @param credentials 网关连接凭据
+     * @return 积分快照（字段见类注释）
+     */
+    default Map<String, Object> creditFor(String vendor, Map<String, Object> credentials) {
+        return credit(credentials);
+    }
+
+    /**
      * 该渠道的积分单位（供前端渲染，如「积分」「Token」「USD」）。
      *
      * @return 单位名

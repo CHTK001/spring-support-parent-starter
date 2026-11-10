@@ -103,6 +103,18 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     /**
      * {@inheritDoc}
      *
+     * <p>magpie 的 provider id 与我们的渠道 id 并不总是同名（trae → {@code trae-cn}、
+     * minimax → {@code minimax-code}、gemini → {@code google}）。映射放在
+     * {@link MagpieSupport#providerIdsOf(String)}，与前端左栏使用同一份对照表。</p>
+     */
+    @Override
+    public List<String> providerIdsOf(String channel) {
+        return MagpieSupport.providerIdsOf(channel);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * <p>只做地址归一化，不探活。</p>
      */
     @Override

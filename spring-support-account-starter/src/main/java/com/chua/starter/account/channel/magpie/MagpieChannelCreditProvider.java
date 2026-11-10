@@ -65,6 +65,18 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     @Override
     public Map<String, Object> credit(Map<String, Object> credentials) {
+        return creditFor(null, credentials);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>{@code vendor} 非空时只保留该业务渠道自己的上游额度卡：网关托管渠道的页面在
+     * 「Qoder」那一行只能显示 Qoder 的额度，把网关里所有上游加起来会把数字报大，
+     * 也会让用户以为一个账号有这么多额度。</p>
+     */
+    @Override
+    public Map<String, Object> creditFor(String vendor, Map<String, Object> credentials) {
         Map<String, Object> result = new LinkedHashMap<>(10);
         String baseUrl = MagpieSupport.baseUrl(credentials);
         String gatewayKey = MagpieSupport.gatewayKey(credentials);
@@ -76,7 +88,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             try {
                 List<Map<String, Object>> adminQuotas = MagpieAdminClient.adminQuotas(credentials, null, null);
                 if (!adminQuotas.isEmpty()) {
-                    return snapshot(adminQuotas);
+                    return snapshotOf(scoped(adminQuotas, vendor), vendor);
                 }
             } catch (Exception ignored) {
                 // 页面 Key 失效 / 管理面没开：继续走数据面
@@ -88,6 +100,56 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             quotas = MagpieAdminClient.quotas(baseUrl, gatewayKey);
         } catch (Exception e) {
             result.put("error", "读取 Magpie 配额失败: " + ChannelHttp.truncate(e.getMessage()));
+            return result;
+        }
+        return snapshotOf(scoped(quotas, vendor), vendor);
+    }
+
+    /**
+     * 按业务渠道过滤额度卡：只留 {@code provider} 命中该渠道候选 id 的行。
+     *
+     * <p>候选 id 来自 {@link MagpieSupport#providerIdsOf(String)}，与前端左栏同一份对照表；
+     * {@code vendor} 为空时原样返回（网关渠道自己的读数要的是全量）。</p>
+     *
+     * @param quotas 网关返回的额度卡
+     * @param vendor 业务渠道标识
+     * @return 过滤后的额度卡
+     */
+    private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor) {
+        if (MagpieSupport.isBlank(vendor) || quotas == null || quotas.isEmpty()) {
+            return quotas;
+        }
+        List<String> wanted = MagpieSupport.providerIdsOf(vendor);
+        List<Map<String, Object>> hit = new ArrayList<>(quotas.size());
+        for (Map<String, Object> quota : quotas) {
+            String provider = stringOf(quota.get("provider"));
+            if (provider == null) {
+                continue;
+            }
+            for (String id : wanted) {
+                if (id.equalsIgnoreCase(provider)) {
+                    hit.add(quota);
+                    break;
+                }
+            }
+        }
+        return hit;
+    }
+
+    /**
+     * 过滤后的快照：命中为空时给出「该上游没有额度卡」的明确原因。
+     *
+     * <p>直接复用 {@link #snapshot(List)} 会报「Magpie 未返回配额卡」，读起来像网关整体故障；
+     * 但这里只是这一家上游没配余额读取。</p>
+     *
+     * @param quotas 过滤后的额度卡
+     * @param vendor 业务渠道标识（空表示全量）
+     * @return 积分快照
+     */
+    private static Map<String, Object> snapshotOf(List<Map<String, Object>> quotas, String vendor) {
+        if (!MagpieSupport.isBlank(vendor) && (quotas == null || quotas.isEmpty())) {
+            Map<String, Object> result = new LinkedHashMap<>(4);
+            result.put("error", "网关里没有「" + vendor + "」的额度卡（确认该上游已登录，或到网关里补上余额读取）");
             return result;
         }
         return snapshot(quotas);

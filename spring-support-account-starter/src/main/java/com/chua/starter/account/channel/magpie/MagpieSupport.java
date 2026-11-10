@@ -7,6 +7,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -177,6 +178,47 @@ public final class MagpieSupport {
      * 管理面内置的签到的上游（magpie 的固定端点，不是通用任务接口）。
      */
     static final List<String> CHECKIN_VENDORS = List.of("workbuddy", "trae", "minimax", "qoder");
+
+    /**
+     * 业务渠道 → magpie provider id 候选（按优先级）。
+     *
+     * <p>与前端 {@code magpieOwnership.ts} 的 {@code MAGPIE_OWNED_VENDORS} 同源同序：
+     * 前端用它定位左栏与「上游」页签，后端用它判断某渠道是否由网关承载、以及该按哪个
+     * provider 过滤额度 / 签到。两张表只允许有一份口径，改这里就要改那里。</p>
+     */
+    static final Map<String, List<String>> VENDOR_PROVIDERS = Map.ofEntries(
+            // 可移交插件的 vendor：插件接管后 provider id 可能带 -ai 后缀
+            Map.entry("workbuddy", List.of("workbuddy-ai", "workbuddy")),
+            Map.entry("zcode", List.of("zcode")),
+            Map.entry("qoder", List.of("qoder")),
+            Map.entry("qoder-cn", List.of("qoder-cn")),
+            Map.entry("trae", List.of("trae-cn", "trae-global")),
+            Map.entry("minimax", List.of("minimax-code", "minimax-code-global")),
+            Map.entry("loomy", List.of("loomy", "hub-loomy")),
+            Map.entry("lobsterai", List.of("hub-lobsterai")),
+            Map.entry("raccoon", List.of("raccoon")),
+            // 走 magpie 预设的渠道：不接管登录，只接管上游地址 / key / 模型目录
+            Map.entry("opencode", List.of("opencode-zen", "opencode-go", "opencode-zen-free")),
+            Map.entry("kilo", List.of("kilo")),
+            Map.entry("cline", List.of("cline", "clinepass")),
+            Map.entry("gemini", List.of("google", "google-vertex")));
+
+    /**
+     * 某业务渠道在 magpie 里对应的 provider id 候选。
+     *
+     * <p>不在对照表里的渠道按同名处理（如 {@code opencode-go} 这类本身就是 provider id 的）。</p>
+     *
+     * @param channel 业务渠道标识
+     * @return provider id 候选；入参为空返回空列表
+     */
+    static List<String> providerIdsOf(String channel) {
+        if (isBlank(channel)) {
+            return List.of();
+        }
+        String key = channel.trim().toLowerCase(Locale.ROOT);
+        List<String> known = VENDOR_PROVIDERS.get(key);
+        return known == null ? List.of(key) : known;
+    }
 
     /**
      * 需要从用户粘贴地址上剥掉的尾巴（按长度从长到短匹配）。

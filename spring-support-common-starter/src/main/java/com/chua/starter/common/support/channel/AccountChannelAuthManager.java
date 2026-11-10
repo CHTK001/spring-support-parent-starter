@@ -163,6 +163,22 @@ public interface AccountChannelAuthManager {
     }
 
     /**
+     * 只对某一家上游签到 / 领取额度（网关托管渠道用）。
+     *
+     * <p>默认忽略 {@code vendor}，等价于 {@link #checkin(Map)}。网关型渠道<b>必须</b>
+     * 覆盖：否则在 Qoder 那一行点一次签到，会把网关里的 WorkBuddy / Trae / MiniMax
+     * 一起签掉——用户点的是 Qoder，副作用却落在别的渠道上。</p>
+     *
+     * @param vendor      业务渠道标识
+     * @param credentials 网关连接凭据
+     * @return 更新后的凭据 Map（并入签到结果）
+     * @throws Exception 签到失败
+     */
+    default Map<String, Object> checkinFor(String vendor, Map<String, Object> credentials) throws Exception {
+        return checkin(credentials);
+    }
+
+    /**
      * 是否支持每日签到（自动签到任务据此跳过 no-op 渠道）。
      *
      * @return true 表示支持
