@@ -12,7 +12,7 @@ import java.util.Optional;
  * 限流器配置的数据库持久化仓库。
  * <p>
  * 负责将限流器配置（名称、QPS、预热时间、超时时间、启用状态）读写到
- * concurrent_rate_limiter 表，供 {@link com.chua.springboot.support.endpoint.ConcurrentEndpoint}
+ * concurrent_rate_limiter 表，供 {@link com.chua.starter.datasource.endpoint.ConcurrentEndpoint}
  * 端点通过 actuator API 进行增删查改。
  * </p>
  *
