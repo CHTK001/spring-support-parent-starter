@@ -1,0 +1,1 @@
+import{t as e}from"./ReSwitch-s0zyQLHZ.js";var t={install(t){t.component(`ReSwitch`,e)}},n=e;export{t as n,n as t};

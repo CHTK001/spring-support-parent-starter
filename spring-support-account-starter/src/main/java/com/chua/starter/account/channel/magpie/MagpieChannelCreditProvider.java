@@ -6,9 +6,12 @@ import com.chua.starter.common.support.channel.ChannelCreditProvider;
 import com.chua.starter.common.support.http.ChannelHttp;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Magpie 网关的配额 / 余额读数实现。
@@ -48,6 +51,25 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     private static final String UNIT_CURRENCY = "currency";
 
+    /**
+     * 单位：Token。
+     */
+    private static final String UNIT_TOKEN = "token";
+
+    /**
+     * magpie 用 ISO 币种代码表示货币窗口（{@code usd} / {@code cny}）。
+     *
+     * <p>这些必须归到 {@link #UNIT_CURRENCY} 统一处理，否则「美元余额」会被当成
+     * 一个独立单位，顶部既不能和别的货币相加，也不能标成货币。</p>
+     */
+    private static final Set<String> CURRENCY_UNITS = Set.of(
+            "usd", "eur", "cny", "rmb", "jpy", "gbp", "hkd", "sgd");
+
+    /**
+     * 分桶键分隔符：{@code unit|currency}，没有币种时只有 {@code unit}。
+     */
+    private static final String BUCKET_SEPARATOR = "|";
+
     @Override
     public String channel() {
         return MagpieSupport.CHANNEL;
@@ -65,6 +87,29 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     @Override
     public Map<String, Object> credit(Map<String, Object> credentials) {
+        return creditFor(null, credentials);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>{@code vendor} 非空时只保留该业务渠道自己的上游额度卡：网关托管渠道的页面在
+     * 「Qoder」那一行只能显示 Qoder 的额度，把网关里所有上游加起来会把数字报大，
+     * 也会让用户以为一个账号有这么多额度。</p>
+     */
+    @Override
+    public Map<String, Object> creditFor(String vendor, Map<String, Object> credentials) {
+        return creditFor(vendor, null, credentials);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>{@code account} 非空时只保留该账号的额度卡（网关上同一家上游可能登了多个
+     * 账号，账号卡各自显示自己的余额）；为空时是这一家上游的合计。</p>
+     */
+    @Override
+    public Map<String, Object> creditFor(String vendor, String account, Map<String, Object> credentials) {
         Map<String, Object> result = new LinkedHashMap<>(10);
         String baseUrl = MagpieSupport.baseUrl(credentials);
         String gatewayKey = MagpieSupport.gatewayKey(credentials);
@@ -76,7 +121,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             try {
                 List<Map<String, Object>> adminQuotas = MagpieAdminClient.adminQuotas(credentials, null, null);
                 if (!adminQuotas.isEmpty()) {
-                    return snapshot(adminQuotas);
+                    return snapshotOf(scoped(adminQuotas, vendor, account), vendor, account);
                 }
             } catch (Exception ignored) {
                 // 页面 Key 失效 / 管理面没开：继续走数据面
@@ -88,6 +133,71 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             quotas = MagpieAdminClient.quotas(baseUrl, gatewayKey);
         } catch (Exception e) {
             result.put("error", "读取 Magpie 配额失败: " + ChannelHttp.truncate(e.getMessage()));
+            return result;
+        }
+        return snapshotOf(scoped(quotas, vendor, account), vendor, account);
+    }
+
+    /**
+     * 按业务渠道 + 账号过滤额度卡：只留 {@code provider} 命中该渠道候选 id 的行，
+     * 指定账号时再按 {@code user} 收窄。
+     *
+     * <p>候选 id 来自 {@link MagpieSupport#providerIdsOf(String)}，与前端左栏同一份对照表；
+     * {@code vendor} 为空时原样返回（网关渠道自己的读数要的是全量）。</p>
+     *
+     * @param quotas 网关返回的额度卡
+     * @param vendor 业务渠道标识
+     * @param account 上游账号（可空）
+     * @return 过滤后的额度卡
+     */
+    private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor, String account) {
+        if (MagpieSupport.isBlank(vendor) || quotas == null || quotas.isEmpty()) {
+            return quotas;
+        }
+        List<String> wanted = MagpieSupport.providerIdsOf(vendor);
+        List<Map<String, Object>> hit = new ArrayList<>(quotas.size());
+        for (Map<String, Object> quota : quotas) {
+            String provider = stringOf(quota.get("provider"));
+            if (provider == null) {
+                continue;
+            }
+            boolean providerHit = false;
+            for (String id : wanted) {
+                if (id.equalsIgnoreCase(provider)) {
+                    providerHit = true;
+                    break;
+                }
+            }
+            if (!providerHit) {
+                continue;
+            }
+            if (!MagpieSupport.isBlank(account)) {
+                String user = stringOf(quota.get("user"));
+                if (user == null || !account.equalsIgnoreCase(user)) {
+                    continue;
+                }
+            }
+            hit.add(quota);
+        }
+        return hit;
+    }
+
+    /**
+     * 过滤后的快照：命中为空时给出「该上游没有额度卡」的明确原因。
+     *
+     * <p>直接复用 {@link #snapshot(List)} 会报「Magpie 未返回配额卡」，读起来像网关整体故障；
+     * 但这里只是这一家上游没配余额读取。</p>
+     *
+     * @param quotas 过滤后的额度卡
+     * @param vendor 业务渠道标识（空表示全量）
+     * @param account 上游账号（空表示不按账号收窄）
+     * @return 积分快照
+     */
+    private static Map<String, Object> snapshotOf(List<Map<String, Object>> quotas, String vendor, String account) {
+        if (!MagpieSupport.isBlank(vendor) && (quotas == null || quotas.isEmpty())) {
+            Map<String, Object> result = new LinkedHashMap<>(4);
+            String scope = MagpieSupport.isBlank(account) ? vendor : vendor + " / " + account;
+            result.put("error", "网关里没有「" + scope + "」的额度卡（确认该上游已登录，或到网关里补上余额读取）");
             return result;
         }
         return snapshot(quotas);
@@ -111,8 +221,9 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
         List<Map<String, Object>> packages = new ArrayList<>(quotas.size() * 2);
         List<String> errors = new ArrayList<>(2);
         // 不同上游的额度单位互不相通（Codex 是「请求数窗口」、Claude 是 token、
-        // 充值卡是货币），把它们加成一个数会给出错误的余额。这里按单位分桶求和，
-        // 顶部只报「主单位」的合计，其余单位在 packages 里各带自己的 unit / display。
+        // 充值卡是货币），把它们加成一个数会给出错误的余额。这里按「单位 + 币种」
+        // 分桶求和，每个桶都通过 {@code units} 交给前端分别展示；缺单位的窗口只
+        // 进明细，不进任何桶。
         Map<String, long[]> sums = new LinkedHashMap<>(4);
         boolean anyWindowExhausted = false;
         long expiresAt = 0L;
@@ -134,7 +245,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             Long quotaBalance = parseAmount(stringOf(quota.get("balance")));
             String balanceUnit = "balance".equalsIgnoreCase(kind) ? UNIT_CURRENCY : UNIT_CREDIT;
             if (quotaBalance != null) {
-                accumulate(sums, balanceUnit, quotaBalance, null);
+                accumulate(sums, balanceUnit, null, quotaBalance, null);
                 Map<String, Object> row = new LinkedHashMap<>(5);
                 row.put("name", title);
                 row.put("remain", quotaBalance);
@@ -146,37 +257,41 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             long quotaExpires = epochOf(quota.get("until"));
             expiresAt = earliest(expiresAt, quotaExpires);
 
-            // 先量一遍各窗口的总量，识别「汇总行」：magpie 的 workbuddy 卡同时给出
-            // 「Credits 100 / Extra credits 90 / Total credits 190」，把三行都累加会把
-            // 可用额度报成 380（实际 190）。判定见 aggregateWindowIndex。
+            // 先识别「汇总行」：magpie 的 workbuddy 卡同时给出
+            // 「Credits 500 / Extra credits 3936 / Total credits 4436」，把三行都累加
+            // 会把可用额度报成两倍（实际 4436）。判定见 aggregateWindowIndexes。
             List<Map<String, Object>> windows = mapList(quota.get("windows"));
-            int aggregateIndex = aggregateWindowIndex(windows);
+            Set<Integer> aggregateIndexes = aggregateWindowIndexes(windows);
             for (int windowIndex = 0; windowIndex < windows.size(); windowIndex++) {
                 Map<String, Object> window = windows.get(windowIndex);
                 if (Boolean.TRUE.equals(window.get("unlimited"))) {
                     continue;
                 }
-                Long windowRemain = firstAmount(window.get("balance"), window.get("remaining"));
-                Long windowLimit = parseAmount(window.get("limit"));
-                if (windowLimit == null) {
-                    windowLimit = parseAmount(window.get("total"));
-                }
-                if (windowRemain == null && windowLimit != null && windowLimit > 0) {
-                    // 上游字段叫 used（见 magpie /api/usage/quotas 的 windows[]），
-                    // 早期版本还发过 amount，两个都认，否则剩余永远是「未知」。
-                    Long used = firstAmount(window.get("used"), window.get("amount"));
-                    windowRemain = used == null ? null : Math.max(windowLimit - used, 0L);
+                Long windowLimit = firstAmount(window.get("limit"), window.get("total"));
+                // magpie 的窗口字段：amount 是「剩余量」，used 是「剩余百分比」
+                // （实测 48.333333 对应 145/300，100 对应 500/500）。早期把 used 当成
+                // 已用量去减总量，结果 Qoder 报 252/300、WorkBuddy 报 8604/8872。
+                Long windowRemain = firstAmount(
+                        window.get("balance"), window.get("remaining"), window.get("amount"));
+                if (windowRemain == null) {
+                    windowRemain = percentRemain(windowLimit, window.get("used"));
                 }
                 String windowName = stringOf(window.get("name"));
-                Map<String, Object> row = new LinkedHashMap<>(6);
+                Map<String, Object> row = new LinkedHashMap<>(7);
                 row.put("name", MagpieSupport.isBlank(windowName)
                         ? title : title + " · " + windowName);
                 row.put("kind", kind);
-                String unit = stringOf(window.get("unit"));
-                if (MagpieSupport.isBlank(unit)) {
-                    unit = UNIT_CREDIT;
+                String rawUnit = stringOf(window.get("unit"));
+                String windowUnit = canonicalUnit(rawUnit);
+                String windowCurrency = currencyOfUnit(rawUnit);
+                // 没给单位的窗口（magpie 的 token 估算窗）只展示明细，不进合计：
+                // 猜成 credit 会把 200M token 加到积分上，顶部数字直接失真。
+                if (windowUnit != null) {
+                    row.put("unit", windowUnit);
                 }
-                row.put("unit", unit);
+                if (windowCurrency != null) {
+                    row.put("currency", windowCurrency);
+                }
                 if (windowRemain != null) {
                     row.put("remain", windowRemain);
                     if (windowRemain <= 0) {
@@ -186,8 +301,8 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
                 if (windowLimit != null && windowLimit > 0) {
                     row.put("size", windowLimit);
                 }
-                if (windowIndex != aggregateIndex) {
-                    accumulate(sums, unit, windowRemain, windowLimit);
+                if (windowUnit != null && !aggregateIndexes.contains(windowIndex)) {
+                    accumulate(sums, windowUnit, windowCurrency, windowRemain, windowLimit);
                 }
                 String display = stringOf(window.get("display"));
                 if (!MagpieSupport.isBlank(display)) {
@@ -204,7 +319,9 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             }
         }
 
+        List<Map<String, Object>> units = new ArrayList<>(sums.size());
         String headlineUnit = null;
+        String headlineCurrency = null;
         long remainSum = 0L;
         long totalSum = 0L;
         boolean hasRemain = false;
@@ -214,9 +331,27 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             long[] sum = entry.getValue();
             boolean unitRemain = sum[2] > 0;
             boolean unitTotal = sum[3] > 0;
-            if (headlineUnit == null && (unitRemain || unitTotal)) {
-                // 首个出现数值的单位作为顶部口径（余额卡通常排在最前）
-                headlineUnit = entry.getKey();
+            if (!unitRemain && !unitTotal) {
+                continue;
+            }
+            String[] unitAndCurrency = splitBucketKey(entry.getKey());
+            Map<String, Object> row = new LinkedHashMap<>(4);
+            row.put("unit", unitAndCurrency[0]);
+            if (unitAndCurrency[1] != null) {
+                row.put("currency", unitAndCurrency[1]);
+            }
+            if (unitRemain) {
+                row.put("remain", sum[0]);
+            }
+            if (unitTotal) {
+                row.put("total", sum[1]);
+            }
+            units.add(row);
+            if (headlineUnit == null) {
+                // 首个出现数值的单位作为卡片口径（余额卡通常排在最前）；
+                // 顶部条会按 {@code units} 把每种单位各显示一条。
+                headlineUnit = unitAndCurrency[0];
+                headlineCurrency = unitAndCurrency[1];
                 remainSum = sum[0];
                 totalSum = sum[1];
                 hasRemain = unitRemain;
@@ -237,6 +372,12 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             result.put("total", totalSum);
         }
         result.put("unit", headlineUnit == null ? UNIT_CREDIT : headlineUnit);
+        if (headlineCurrency != null) {
+            result.put("currency", headlineCurrency);
+        }
+        if (!units.isEmpty()) {
+            result.put("units", units);
+        }
         result.put("exceeded", hasRemain && !anyPositive && anyWindowExhausted);
         result.put("updatedAt", System.currentTimeMillis());
         if (plan != null) {
@@ -248,11 +389,6 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
         if (!packages.isEmpty()) {
             result.put("packages", packages);
         }
-        if (sums.size() > 1) {
-            errors.add("上游额度单位不一致（" + String.join(" / ", sums.keySet())
-                    + "），顶部数值仅统计 " + (headlineUnit == null ? UNIT_CREDIT : headlineUnit)
-                    + "；各卡片保留自己的单位与原始 display");
-        }
         if (!errors.isEmpty()) {
             result.put("warning", String.join("; ", errors));
         }
@@ -262,72 +398,172 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
     // ── 私有辅助 ──
 
     /**
-     * 找出「汇总行」：名字表示合计、且总量正好等于同一张卡里其余窗口之和的那一行。
+     * 找出「汇总行」：名字表示合计、且总量正好等于<b>同一单位</b>下其余窗口之和的那一行。
      *
-     * <p>magpie 会把合计再列一遍（{@code Credits 100 + Extra credits 90 + Total credits 190}），
-     * 全部相加会把可用额度报成两倍。只在<b>数值上严格成立</b>时才归并，且必须满足：</p>
+     * <p>magpie 会把合计再列一遍（{@code Credits 500 + Extra credits 3936 + Total credits 4436}），
+     * 全部相加会把可用额度报成两倍。只在数值上严格成立时才归并，且必须满足：</p>
      * <ul>
      *   <li>行名是「合计」语义（{@code Total credits} / 总计 / 汇总 …）——只看数值的话，
      *       「10 + 10 + 20」这种合法分桶会被误判成汇总；</li>
-     *   <li>至少三行有正的总量（两行时 1+1=2 也可能成立，容易误判）；</li>
-     *   <li>所有有量的行单位一致（不同单位相加本来就无意义）；</li>
-     *   <li>满足条件的行<b>只有一行</b>，两行都满足视为有歧义，不归并。</li>
+     *   <li>同一单位下至少三行有正的总量（两行时 1+1=2 也可能成立，容易误判）；</li>
+     *   <li>按单位分别判定：同一张卡里的 token 估算窗不会破坏 credits 的合计；</li>
+     *   <li>同一单位里满足条件的行<b>只有一行</b>，两行都满足视为有歧义，不归并。</li>
      * </ul>
      *
-     * <p>被判定为汇总的行仍会出现在 {@code packages} 里（保留上游 display），只是不计入顶部合计。</p>
+     * <p>被判定为汇总的行仍会出现在 {@code packages} 里（保留上游 display），只是不计入合计。</p>
      *
      * @param windows 同一张配额卡的窗口列表
-     * @return 汇总行的下标；没有或不唯一返回 {@code -1}
+     * @return 汇总行的下标集合；没有返回空集合
      */
-    private static int aggregateWindowIndex(List<Map<String, Object>> windows) {
-        if (windows.size() < 3) {
-            return -1;
-        }
-        List<Long> limits = new ArrayList<>(windows.size());
-        String limitUnit = null;
-        boolean unitConflict = false;
-        long sum = 0L;
-        int positive = 0;
+    private static Set<Integer> aggregateWindowIndexes(List<Map<String, Object>> windows) {
+        Map<String, Long> unitSums = new LinkedHashMap<>(4);
+        Map<String, Integer> unitCounts = new LinkedHashMap<>(4);
+        List<String> units = new ArrayList<>(windows.size());
         for (Map<String, Object> window : windows) {
-            if (Boolean.TRUE.equals(window.get("unlimited"))) {
-                limits.add(null);
+            String unit = canonicalUnit(stringOf(window.get("unit")));
+            units.add(unit);
+            if (unit == null || Boolean.TRUE.equals(window.get("unlimited"))) {
                 continue;
             }
-            Long limit = parseAmount(window.get("limit"));
-            if (limit == null) {
-                limit = parseAmount(window.get("total"));
-            }
+            Long limit = firstAmount(window.get("limit"), window.get("total"));
             if (limit == null || limit <= 0) {
-                limits.add(null);
                 continue;
             }
-            limits.add(limit);
-            positive++;
-            sum += limit;
-            String unit = stringOf(window.get("unit"));
-            if (!MagpieSupport.isBlank(unit)) {
-                if (limitUnit == null) {
-                    limitUnit = unit;
-                } else if (!limitUnit.equalsIgnoreCase(unit)) {
-                    unitConflict = true;
-                }
-            }
+            unitSums.merge(unit, limit, Long::sum);
+            unitCounts.merge(unit, 1, Integer::sum);
         }
-        if (positive < 3 || unitConflict) {
-            return -1;
-        }
-        int found = -1;
-        for (int index = 0; index < limits.size(); index++) {
-            Long limit = limits.get(index);
-            if (limit == null || limit * 2 != sum || !isTotalLabel(stringOf(windows.get(index).get("name")))) {
+        Map<String, Integer> foundAt = new LinkedHashMap<>(4);
+        Set<String> ambiguous = new HashSet<>(2);
+        for (int index = 0; index < windows.size(); index++) {
+            String unit = units.get(index);
+            if (unit == null || ambiguous.contains(unit)) {
                 continue;
             }
-            if (found >= 0) {
-                return -1;
+            Integer count = unitCounts.get(unit);
+            Long unitSum = unitSums.get(unit);
+            Long limit = firstAmount(windows.get(index).get("limit"), windows.get(index).get("total"));
+            if (count == null || count < 3 || unitSum == null || limit == null) {
+                continue;
             }
-            found = index;
+            if (limit * 2 != unitSum || !isTotalLabel(stringOf(windows.get(index).get("name")))) {
+                continue;
+            }
+            if (foundAt.containsKey(unit)) {
+                foundAt.remove(unit);
+                ambiguous.add(unit);
+            } else {
+                foundAt.put(unit, index);
+            }
         }
-        return found;
+        return new HashSet<>(foundAt.values());
+    }
+
+    /**
+     * 单位归一：magpie 同一量纲会写成 {@code credit} / {@code credits}，
+     * 货币会写成 {@code usd} / {@code cny}，必须各自并成一个桶，
+     * 否则顶部会同时出现「积分」和「credits」两条。
+     *
+     * @param unit 上游单位
+     * @return 归一后的单位；没有单位返回 {@code null}
+     */
+    private static String canonicalUnit(String unit) {
+        if (MagpieSupport.isBlank(unit)) {
+            return null;
+        }
+        String text = unit.trim().toLowerCase(Locale.ROOT);
+        if ("credit".equals(text) || "credits".equals(text) || "积分".equals(text)) {
+            return UNIT_CREDIT;
+        }
+        if ("token".equals(text) || "tokens".equals(text)) {
+            return UNIT_TOKEN;
+        }
+        if (CURRENCY_UNITS.contains(text)) {
+            return UNIT_CURRENCY;
+        }
+        return text;
+    }
+
+    /**
+     * 货币单位对应的币种代码（{@code USD} / {@code CNY} …）。
+     *
+     * @param unit 上游单位
+     * @return 币种；非货币单位返回 {@code null}
+     */
+    private static String currencyOfUnit(String unit) {
+        if (MagpieSupport.isBlank(unit)) {
+            return null;
+        }
+        String text = unit.trim().toLowerCase(Locale.ROOT);
+        return CURRENCY_UNITS.contains(text) ? text.toUpperCase(Locale.ROOT) : null;
+    }
+
+    /**
+     * 用「剩余百分比」兜底算剩余量。
+     *
+     * <p>magpie 窗口的 {@code used} 是剩余百分比（实测 {@code 48.333333} 表示
+     * 145/300，{@code 100} 表示 500/500），只在没有 {@code amount} 时使用；
+     * 取值不在 0~100 说明不是百分比，宁可报「未知」也不猜。</p>
+     *
+     * @param limit 窗口总量
+     * @param used  上游的剩余百分比
+     * @return 剩余量；无法判断返回 {@code null}
+     */
+    private static Long percentRemain(Long limit, Object used) {
+        if (limit == null || limit <= 0) {
+            return null;
+        }
+        Double percent = asDecimal(used);
+        if (percent == null || percent < 0 || percent > 100) {
+            return null;
+        }
+        return Math.round(limit * percent / 100D);
+    }
+
+    /**
+     * 转成小数。
+     *
+     * @param value 原始值（数字 / 数字字符串，可带 %）
+     * @return 小数；不可解析返回 {@code null}
+     */
+    private static Double asDecimal(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (!(value instanceof String text) || text.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(text.trim().replace("%", ""));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * 分桶键：{@code unit} 或 {@code unit|currency}。
+     *
+     * <p>货币必须按币种分桶，USD 与 CNY 是不同的量，不能相加。</p>
+     *
+     * @param unit     归一后的单位
+     * @param currency 币种（可空）
+     * @return 分桶键
+     */
+    private static String bucketKey(String unit, String currency) {
+        return currency == null ? unit : unit + BUCKET_SEPARATOR + currency;
+    }
+
+    /**
+     * 拆分分桶键。
+     *
+     * @param key 分桶键
+     * @return {@code [unit, currency]}，没有币种时第二项为 {@code null}
+     */
+    private static String[] splitBucketKey(String key) {
+        int at = key.indexOf(BUCKET_SEPARATOR);
+        if (at < 0) {
+            return new String[]{key, null};
+        }
+        return new String[]{key.substring(0, at), key.substring(at + 1)};
     }
 
     /**
@@ -346,18 +582,24 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
     }
 
     /**
-     * 按单位累加余额与总量。
+     * 按「单位 + 币种」累加余额与总量。
      *
      * <p>桶结构 {@code [remain, total, remainCount, totalCount]}：
      * 计数用来区分「字段缺失」与「值为 0」，避免把未提供当成 0 汇总。</p>
      *
-     * @param sums   分单位累加器
-     * @param unit   单位
-     * @param remain 剩余（可空）
-     * @param total  总量（可空）
+     * @param sums     分桶累加器
+     * @param unit     归一后的单位
+     * @param currency 币种（非货币单位可空）
+     * @param remain   剩余（可空）
+     * @param total    总量（可空）
      */
-    private static void accumulate(Map<String, long[]> sums, String unit, Long remain, Long total) {
-        long[] sum = sums.computeIfAbsent(unit, key -> new long[4]);
+    private static void accumulate(Map<String, long[]> sums, String unit, String currency,
+                                   Long remain, Long total) {
+        if (remain == null && (total == null || total <= 0)) {
+            // 什么都没有的窗口不建桶：否则会凭空多出一个「credit」单位
+            return;
+        }
+        long[] sum = sums.computeIfAbsent(bucketKey(unit, currency), key -> new long[4]);
         if (remain != null) {
             sum[0] += remain;
             sum[2] += 1;

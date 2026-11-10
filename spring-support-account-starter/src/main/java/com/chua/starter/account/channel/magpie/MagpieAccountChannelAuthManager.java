@@ -225,6 +225,35 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
      */
     @Override
     public Map<String, Object> checkin(Map<String, Object> credentials) {
+        return checkinFor(null, credentials);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>只签 {@code vendor} 指定的那一家：网关托管渠道（Qoder / Trae / WorkBuddy …）
+     * 在页面上各占一行，用户在 Qoder 点签到，不该把其它几家一起签掉。
+     * {@code vendor} 为空时保持旧行为（签全部内置签到上游）。</p>
+     *
+     * @param vendor      业务渠道标识（可空）
+     * @param credentials 网关凭据
+     * @return 更新后的凭据
+     */
+    @Override
+    public Map<String, Object> checkinFor(String vendor, Map<String, Object> credentials) {
+        List<String> targets;
+        if (MagpieSupport.isBlank(vendor)) {
+            targets = MagpieSupport.CHECKIN_VENDORS;
+        } else {
+            String wanted = vendor.trim().toLowerCase(java.util.Locale.ROOT);
+            targets = MagpieSupport.CHECKIN_VENDORS.stream()
+                    .filter(v -> v.equals(wanted))
+                    .toList();
+            if (targets.isEmpty()) {
+                throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                        "Magpie 不支持「" + vendor + "」的签到（仅 workbuddy / trae / minimax / qoder）");
+            }
+        }
         Map<String, Object> updated = credentials == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(credentials);
         List<String> messages = new ArrayList<>(4);
@@ -232,28 +261,30 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
         int pressed = 0;
         int failed = 0;
         String lastError = null;
-        for (String vendor : MagpieSupport.CHECKIN_VENDORS) {
+        for (String target : targets) {
             try {
-                boolean viaPlugin = Boolean.TRUE.equals(pluginProviders.get(vendor));
+                boolean viaPlugin = Boolean.TRUE.equals(pluginProviders.get(target));
                 List<Map<String, Object>> rows = viaPlugin
-                        ? MagpieAdminClient.pluginCheckin(credentials, vendor)
-                        : MagpieAdminClient.checkin(credentials, vendor);
+                        ? MagpieAdminClient.pluginCheckin(credentials, target)
+                        : MagpieAdminClient.checkin(credentials, target);
                 int accounts = rows.size();
                 if (accounts > 0) {
                     pressed++;
-                    messages.add(vendor + (viaPlugin ? "（插件）" : "") + " 处理 " + accounts + " 个账号");
+                    messages.add(target + (viaPlugin ? "（插件）" : "") + " 处理 " + accounts + " 个账号");
                 }
             } catch (ChannelException e) {
                 failed++;
                 lastError = e.getMessage();
             }
         }
-        if (pressed == 0 && failed == MagpieSupport.CHECKIN_VENDORS.size()) {
+        if (pressed == 0 && failed == targets.size()) {
             throw new ChannelException(ChannelException.CODE_UPSTREAM_ERROR,
                     "Magpie 签到失败：" + ChannelHttp.truncate(lastError));
         }
         if (pressed == 0) {
-            messages.add("网关里没有支持签到的上游账号");
+            messages.add(MagpieSupport.isBlank(vendor)
+                    ? "网关里没有支持签到的上游账号"
+                    : "网关里没有「" + vendor + "」的签到账号");
         }
         // 只落摘要：上游返回的原始行可能带账号明细，没必要（也不应该）塞进连接凭据。
         updated.put("checkin_message", String.join("；", messages));

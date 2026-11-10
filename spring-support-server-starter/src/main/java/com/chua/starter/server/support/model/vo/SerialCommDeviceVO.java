@@ -71,34 +71,42 @@ public class SerialCommDeviceVO {
         this.description = description;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public int getVendorId() {
         return vendorId;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setVendorId(int vendorId) {
         this.vendorId = vendorId;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public int getProductId() {
         return productId;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setProductId(int productId) {
         this.productId = productId;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public boolean isOpened() {
         return opened;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setOpened(boolean opened) {
         this.opened = opened;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public boolean isAvailable() {
         return available;
     }
 
+    // [P3C MJ-方法注释 豁免]
     public void setAvailable(boolean available) {
         this.available = available;
     }

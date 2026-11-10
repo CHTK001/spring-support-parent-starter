@@ -2,9 +2,12 @@ package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.support.entity.DeviceAccessRecord;
+import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.mapper.DeviceAccessRecordMapper;
+import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.service.DeviceAccessRecordService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.support.util.DeviceStatusUtil;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.AccessRecord;
 import com.chua.starter.device.spi.model.TimeRange;
@@ -15,6 +18,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 门禁出入记录服务实现。
@@ -45,6 +50,11 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
      */
     private final DeviceSessionManager sessionManager;
 
+    /**
+     * 设备信息 映射器（判断会话对应设备是否已停用/报废）
+     */
+    private final DeviceInfoMapper deviceInfoMapper;
+
     @Override
     public int extractRecent(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null || !end.isAfter(start)) {
@@ -52,6 +62,11 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
         }
         int saved = 0;
         List<String> deviceIds = new ArrayList<>(sessionManager.getAllSessions().keySet());
+        // 停用 / 报废设备退出采集：先把它们从候选里剔除，避免占用每轮抽取名额
+        Set<String> stopped = stoppedDeviceIds(deviceIds);
+        if (!stopped.isEmpty()) {
+            deviceIds.removeAll(stopped);
+        }
         int window = Math.min(deviceIds.size(), MAX_EXTRACT_PER_CYCLE);
         for (int i = 0; i < window; i++) {
             String deviceId = deviceIds.get(i);
@@ -80,6 +95,22 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
         }
         log.info("[Device][Access] 门禁记录抽取完成: 窗口 {} 台设备, 落库 {} 条", window, saved);
         return saved;
+    }
+
+    /**
+     * 从设备台账里挑出已停用 / 报废的设备 ID
+     *
+     * @param deviceIds 会话里存在的设备 ID
+     * @return 需要跳过采集的设备 ID 集合（无则空集）
+     */
+    private Set<String> stoppedDeviceIds(List<String> deviceIds) {
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            return Set.of();
+        }
+        return deviceInfoMapper.selectBatchIds(deviceIds).stream()
+                .filter(device -> DeviceStatusUtil.collectionStopped(device.getDeviceInfoStatus()))
+                .map(DeviceInfo::getDeviceInfoId)
+                .collect(Collectors.toSet());
     }
 
     @Override

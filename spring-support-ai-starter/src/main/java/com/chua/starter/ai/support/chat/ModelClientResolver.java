@@ -3,10 +3,14 @@ package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
-import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
-import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
+import com.chua.common.support.ai.chat.aggregate.MultiKeyChatClient;
+import com.chua.common.support.ai.chat.aggregate.RouterGroupChatClient;
+import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.task.cooldown.Backoff;
+import com.chua.common.support.task.cooldown.CooldownPolicies;
+import com.chua.common.support.task.cooldown.CooldownPolicy;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -101,6 +105,42 @@ public class ModelClientResolver {
     private final MagpieRouteSource magpieRouteSource;
 
     /**
+     * 路由组业务（成员表读写与配置解析）
+     */
+    private final RouterGroupService routerGroupService;
+
+    /**
+     * 路由组配置或成员变化后，让该组的客户端缓存立即失效。
+     *
+     * @param groupId 路由组供应商 ID
+     */
+    public void invalidateRouterGroup(String groupId) {
+        if (groupId == null) {
+            return;
+        }
+        // 缓存键形如 scope::providerId::model：组 ID 在中间，
+        // 不能按 "::groupId::" 前后都带冒号匹配（那样会把结尾的 model 段漏掉）。
+        String marker = "::" + groupId + "::";
+        int removed = 0;
+        for (String key : cache.keySet()) {
+            if (key.startsWith(marker) || key.contains(marker)) {
+                cache.remove(key);
+                removed++;
+            }
+        }
+        log.info("[ModelClientResolver] 路由组缓存已失效 provider={} 清理={}", groupId, removed);
+    }
+
+    /**
+     * 让某个路由组缓存立即失效（配置 / 成员 / 顺序变化后调用）。
+     *
+     * @param providerId 路由组供应商 ID
+     */
+    public void invalidateProvider(String providerId) {
+        invalidateRouterGroup(providerId);
+    }
+
+    /**
      * 按（可能带 providerId 前缀的）模型名解析可用对话客户端。
      *
      * @param qualifiedModel 模型名，可为 {@code <providerId>:<model>} 或裸模型名
@@ -111,6 +151,8 @@ public class ModelClientResolver {
         if (parsed == null) {
             return null;
         }
+        // 同名模型的跨供应商自动切换已移除：外层聚合与路由组策略会互相覆盖，
+        // 且没有 per-key 冷却；需要自动切换时请建一个路由组供应商。
         SysAiProvider provider = resolveProvider(parsed);
         if (provider == null) {
             log.debug("[ModelClientResolver] 未找到启用的供应商: {}", qualifiedModel);
@@ -219,47 +261,211 @@ public class ModelClientResolver {
      * @return 已绑定模型的客户端；无可用密钥或构建失败返回 {@code null}
      */
     private ChatClient build(SysAiProvider provider, String model, String ownerScope) {
+        // 路由组供应商：模型来自模型库，选中成员 = 交给路由组容器按策略选真实上游
+        if (ProviderRouteTargets.isRouterGroup(provider.getPlatform())) {
+            return buildRouterGroup(provider, ownerScope);
+        }
         try {
-            List<String> keys = collectAllKeys(provider, ownerScope);
-            Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
-            // 免费渠道：收集动态渠道路由（多账号 429 failover）
-            Map<String, RouteTarget> channelRoutes = ProviderRouteTargets.isFreeChannel(provider.getPlatform())
-                    ? mergedRoutes(provider, ownerScope)
-                    : null;
-            if (keys.isEmpty()) {
-                if (!ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
-                    log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
-                    return null;
-                }
-                // 免费渠道允许无 key：部分上游免鉴权，缺失时由客户端按路由决定是否发送认证头
-                keys = new ArrayList<>();
-                keys.add(null);
-            }
-            // UI 上的「自动限流」开关：关闭时固定用第一个 Key，不组聚合、不横向切换账号
-            boolean autoSwitch = !"false".equalsIgnoreCase(
-                    extraString(provider.getExtra(), "auto_switch_on_rate_limit"));
-            if (keys.size() == 1 || !autoSwitch) {
-                ChatClient raw = ChatClient.create(buildSetting(provider, keys.getFirst(), extraHeaders, channelRoutes));
-                return raw == null ? null : raw.model(model);
-            }
-            // 多 Key：按 UI 上的 Key 策略（failover / round_robin）组聚合，429 限流自动切下一个
-            String strategy = extraString(provider.getExtra(), "load_strategy");
-            AggregateChatClientSetting aggSetting = new AggregateChatClientSetting();
-            aggSetting.setStrategy(StringUtils.isNotBlank(strategy) ? strategy : "failover");
-            aggSetting.setAutoSwitchOnRateLimit(true);
-            aggSetting.setAutoSwitchOnQuotaExhausted(true);
-            AggregateChatClient aggregate = new AggregateChatClient(aggSetting);
-            for (int i = 0; i < keys.size(); i++) {
-                ChatClient raw = ChatClient.create(buildSetting(provider, keys.get(i), extraHeaders, channelRoutes));
-                if (raw != null) {
-                    aggregate.addClient("client-" + i, provider.getPlatform(), 1, raw.model(model));
-                }
-            }
-            return aggregate.model(model);
+            return buildKeyed(provider, model, ownerScope);
         } catch (Exception e) {
             log.warn("[ModelClientResolver] 构建客户端失败 provider={} model={}: {}",
                     provider.getProviderId(), model, e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 按 Key 构建客户端：单 Key 与多 Key 走同一条路。
+     *
+     * <p>只有一个 Key 时也包一层 {@link MultiKeyChatClient}：Key 的失败/成功必须
+     * 记进 {@link com.chua.common.support.ai.chat.aggregate.ClientCooldownRegistry}，
+     * 否则同一个 Key 会被路由组反复选中、被上层当成健康账号。多 Key 的轮换、
+     * 冷却与「自动切换」开关同样由它内部处理，这里不再另建一套聚合。</p>
+     *
+     * @param provider   供应商
+     * @param model      裸模型名
+     * @param ownerScope 归属作用域
+     * @return 客户端；没有任何可用 Key 时返回 {@code null}
+     */
+    private ChatClient buildKeyed(SysAiProvider provider, String model, String ownerScope) {
+        registerCooldownPolicy(provider);
+        Map<String, ChatClient> keyed = keyedClients(provider, model, ownerScope);
+        if (keyed.isEmpty()) {
+            return null;
+        }
+        return MultiKeyChatClient.multiKey(provider.getProviderId(), model,
+                MultiKeyChatClient.Strategy.of(extraString(provider.getExtra(), "load_strategy")),
+                !"false".equalsIgnoreCase(extraString(provider.getExtra(), "auto_switch_on_rate_limit")),
+                keyed);
+    }
+
+    /**
+     * 按「Key → 已绑定模型的客户端」收集单个供应商下的客户端。
+     *
+     * <p>多 Key 的轮换、冷却、开关全部交给 {@link MultiKeyChatClient} 在内部维护，
+     * 这里只负责把「哪些 Key、每个 Key 用哪个地址」翻译成客户端。</p>
+     *
+     * @param provider   供应商
+     * @param model      裸模型名
+     * @param ownerScope 归属作用域
+     * @return Key（可空，代表免鉴权）→ 客户端；无可用 Key 时为空表
+     */
+    private Map<String, ChatClient> keyedClients(SysAiProvider provider, String model, String ownerScope) {
+        List<String> keys = collectAllKeys(provider, ownerScope);
+        Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+        Map<String, RouteTarget> channelRoutes = ProviderRouteTargets.isFreeChannel(provider.getPlatform())
+                ? mergedRoutes(provider, ownerScope)
+                : null;
+        if (keys.isEmpty()) {
+            if (!ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
+                log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
+                return Map.of();
+            }
+            // 免费渠道允许无 key：部分上游免鉴权，缺失时由客户端按路由决定是否发送认证头
+            keys = new ArrayList<>();
+            keys.add(null);
+        }
+        Map<String, ChatClient> result = new LinkedHashMap<>();
+        for (String key : keys) {
+            ChatClient raw = ChatClient.create(buildSetting(provider, key, extraHeaders, channelRoutes));
+            if (raw != null) {
+                result.put(key == null ? "" : key, raw.model(model));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 构造路由组供应商的客户端：成员 = 该路由组配置里引用的模型库行。
+     *
+     * <p>配置（策略 / 被限流 / 延迟 / 全忙 / 上下文 / 每个成员的 effort 与顺序）全部由
+     * {@link RouterGroupChatClient} 自己解析与执行，这里只做两件事：</p>
+     * <ol>
+     *   <li>把「成员模型 → 真实供应商客户端」的构造方式交给它（{@link #buildKeyed}）；</li>
+     *   <li>把模型行上的价格 / 上下文 / 智能 / 延迟回填给它，供「智能 / 最便宜 / 速度」策略打分。</li>
+     * </ol>
+     *
+     * @param provider   路由组供应商
+     * @param ownerScope 归属作用域
+     * @return 路由组客户端；没有任何可用成员时返回 {@code null}
+     */
+    private ChatClient buildRouterGroup(SysAiProvider provider, String ownerScope) {
+        try {
+            RouterGroupSetting setting = routerGroupService.readSetting(provider);
+            if (setting.getMembers().isEmpty()) {
+                log.debug("[ModelClientResolver] 路由组无成员模型: {}", provider.getProviderId());
+                return null;
+            }
+            RouterGroupChatClient group = RouterGroupChatClient.create(provider.getProviderId(), setting,
+                    member -> buildRouterGroupMember(member));
+            for (RouterGroupSetting.Member member : setting.getMembers()) {
+                SysAiProviderModel row = providerModelMapper.selectOne(
+                        Wrappers.<SysAiProviderModel>lambdaQuery()
+                                .eq(SysAiProviderModel::getProviderId, member.providerId())
+                                .eq(SysAiProviderModel::getModel, member.model()));
+                if (row == null) {
+                    continue;
+                }
+                group.describeMember(member.label(),
+                        row.getContextWindow() == null ? 0 : row.getContextWindow(),
+                        priceInputOf(row), intelligenceOf(row), ttftOf(row));
+            }
+            log.info("[ModelClientResolver] 路由组就绪 provider={} 名称={} 策略={} 成员={}",
+                    provider.getProviderId(), provider.getName(), setting.getStrategy(),
+                    setting.getMembers().stream().map(RouterGroupSetting.Member::label).toList());
+            return group;
+        } catch (Exception e) {
+            log.warn("[ModelClientResolver] 构建路由组失败 provider={}: {}",
+                    provider.getProviderId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 构造单个路由组成员的客户端（成员是普通供应商下的一行模型）。
+     *
+     * @param member 成员
+     * @return 客户端；成员供应商不可用或模型已删除时返回 {@code null}
+     */
+    private ChatClient buildRouterGroupMember(RouterGroupSetting.Member member) {
+        SysAiProvider memberProvider = providerMapper.selectById(member.providerId());
+        if (memberProvider == null || !Boolean.TRUE.equals(memberProvider.getEnabled())) {
+            log.warn("[ModelClientResolver] 路由组成员供应商不可用: {}", member.label());
+            return null;
+        }
+        if (ProviderRouteTargets.isRouterGroup(memberProvider.getPlatform())) {
+            // 路由组嵌套路由组会让策略互相覆盖，直接拒绝
+            log.warn("[ModelClientResolver] 路由组不能引用另一个路由组: {}", member.label());
+            return null;
+        }
+        // 成员内部同样按 Key 统一封装：单 Key 也记冷却，多 Key 在成员内部轮换
+        return buildKeyed(memberProvider, member.model(), ownerScopeOf(memberProvider));
+    }
+
+    /**
+     * 读取模型行的每百万输入 token 价格（没有价格时按 0 处理，即视为免费或未知）。
+     *
+     * @param row 模型行
+     * @return 价格
+     */
+    private static double priceInputOf(SysAiProviderModel row) {
+        Object price = metricValue(row, "price_input_per_musd");
+        return price == null ? 0D : parseDouble(price);
+    }
+
+    /**
+     * 读取模型行的智能分。
+     *
+     * @param row 模型行
+     * @return 智能分；未知为 0
+     */
+    private static double intelligenceOf(SysAiProviderModel row) {
+        Object value = metricValue(row, "intelligence");
+        return value == null ? 0D : parseDouble(value);
+    }
+
+    /**
+     * 读取模型行的实测首字延迟（毫秒）。
+     *
+     * @param row 模型行
+     * @return 首字延迟；未知为 0
+     */
+    private static long ttftOf(SysAiProviderModel row) {
+        Object value = metricValue(row, "ttft_ms");
+        if (value == null) {
+            value = metricValue(row, "latency_ms");
+        }
+        return value == null ? 0L : (long) parseDouble(value);
+    }
+
+    /**
+     * 从模型行 metrics 里取值。
+     *
+     * @param row 模型行
+     * @param key 指标键
+     * @return 值；缺失返回 null
+     */
+    private static Object metricValue(SysAiProviderModel row, String key) {
+        if (row == null || row.getMetrics() == null) {
+            return null;
+        }
+        return row.getMetrics().get(key);
+    }
+
+    /**
+     * 宽松解析数字（兼容字符串形式的数字）。
+     *
+     * @param value 原始值
+     * @return 数值；无法解析返回 0
+     */
+    private static double parseDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return Double.parseDouble(value.toString().trim());
+        } catch (Exception e) {
+            return 0D;
         }
     }
 
@@ -293,6 +499,49 @@ public class ModelClientResolver {
                 .routes(channelRoutes != null ? channelRoutes
                         : ProviderRouteTargets.fromExtra(provider.getExtra()))
                 .build();
+    }
+
+    /**
+     * 把渠道上配置的限流冷却时长挂到冷却引擎。
+     *
+     * <p>每个渠道一套恢复节奏：被 429 / 额度耗尽的账号先排除
+     * {@code rate_limit_base_ms}，同账号连续失败按 2 的幂次翻倍，
+     * 封顶 {@code rate_limit_max_ms}；一次成功立即恢复参与轮换。
+     * 两项都不配（或配成 0）时撤销该渠道的策略，回落到全局默认 60s / 10m。</p>
+     *
+     * <p>同时注册 platform 与 providerId 两个前缀：单供应商聚合用 platform 拼冷却键，
+     * 路由组成员用 providerId 拼冷却键，取最长匹配，两者都能命中。</p>
+     *
+     * @param provider 供应商
+     */
+    private void registerCooldownPolicy(SysAiProvider provider) {
+        long base = extraLong(provider.getExtra(), "rate_limit_base_ms");
+        long max = extraLong(provider.getExtra(), "rate_limit_max_ms");
+        String backoffName = extraString(provider.getExtra(), "rate_limit_backoff");
+        Backoff backoff = StringUtils.isBlank(backoffName) ? null : Backoff.of(backoffName);
+        CooldownPolicy policy = new CooldownPolicy(base, max, backoff);
+        CooldownPolicies.register(provider.getPlatform() + "|", policy);
+        CooldownPolicies.register(provider.getProviderId() + "|", policy);
+    }
+
+    /**
+     * 读取 extra 中的长整数值。
+     *
+     * @param extra 扩展配置
+     * @param key   键名
+     * @return 数值；缺失或非数字返回 0
+     */
+    private static long extraLong(Map<String, Object> extra, String key) {
+        String value = extraString(extra, key);
+        if (StringUtils.isBlank(value)) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("[ModelClientResolver] 渠道配置 {} 不是合法数字: {}", key, value);
+            return 0L;
+        }
     }
 
     /**

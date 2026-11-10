@@ -328,13 +328,36 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
     }
 
     @Override
+    public String searchLog(String logPath, String keyword, int maxLines, boolean matchCase) {
+        String path = logPath == null ? "" : logPath;
+        String kw = keyword == null ? "" : keyword;
+        // 只做字面匹配：用户输入的 . * $ 等按原文处理，不当正则
+        return "$ProgressPreference='SilentlyContinue';"
+                  + "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+                  + "$OutputEncoding=[Text.Encoding]::UTF8;"
+                  + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
+                  + "$p='" + quote(path) + "'; "
+                  + "if (Test-Path $p -PathType Container) { "
+                  + "$f = Get-ChildItem -Path $p -File | Sort-Object LastWriteTime -Descending "
+                  + "| Select-Object -First 1; if (-not $f) { Write-Output '日志目录为空: '; return } "
+                  + "$file = $f.FullName } elseif (Test-Path $p) { $file = $p } "
+                  + "else { Write-Output '日志文件不存在: '; return }; "
+                  + "$kw='" + quote(kw) + "'; "
+                  + "$hits = @(Select-String -Path $file -Pattern ([regex]::Escape($kw)) -Encoding UTF8 "
+                  + (matchCase ? "-CaseSensitive " : "")
+                  + "| Select-Object -First " + maxLines + "); "
+                  + "if ($hits.Count -eq 0) { Write-Output '未检索到匹配内容' } else { "
+                  + "foreach ($h in $hits) { Write-Output ($h.LineNumber.ToString() + ':' + $h.Line) } }";
+    }
+
+    @Override
     public String quote(String value) {
         return value == null ? "" : value.replace("'", "''");
     }
 
-      /**
-       * 取路径最后一段（投放时主入口为空则用包名）。
-       *
+    /**
+     * 取路径最后一段（投放时主入口为空则用包名）。
+     *
        * @param path 路径
        * @return 文件名
        */

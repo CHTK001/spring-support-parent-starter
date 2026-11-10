@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/ReThree-Cig0eyBK.js","assets/runtime-core.esm-bundler-Cy8JpWZa.js","assets/three.core-CiyW0PHg.js","assets/three.module-CovqgHMF.js","assets/rolldown-runtime-C0FnF6B9.js"])))=>i.map(i=>d[i]);
+import{ud as e}from"./file-viewer-3d-DR-r5IH4.js";import{t}from"./theme-Ca5dezGz.js";var n=t(`ReThree`,{default:()=>e(()=>import(`./ReThree-Cig0eyBK.js`),__vite__mapDeps([0,1,2,3,4]))}),r=n.component;export{r as component,r as default,n as install};

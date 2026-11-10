@@ -1,3 +1,4 @@
+// [P3C C1 豁免] C1: 内部创建单线程调度线程池与 Thread，见第 128-133 行。
 package com.chua.starter.filesystem.support.collab;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -86,6 +87,11 @@ public class FileCollabHub {
      * 落盘格式版本
      */
     private static final int FORMAT_VERSION = 1;
+
+    /**
+     * SHA-256 文件名前缀长度（十六进制，32 位）
+     */
+    private static final int SHA256_PREFIX = 32;
 
     /**
      * 房间表：id → 房间（只有连接进来才装载）
@@ -287,16 +293,24 @@ public class FileCollabHub {
      * @param id 房间号
      */
     public void reset(String id) {
+        // 先摘掉排队中的合并写盘，否则卸载后的房间会被一次迟到的 flush 重新写回磁盘
+        java.util.concurrent.ScheduledFuture<?> pending = pendingFlush.remove(id);
+        if (pending != null) {
+            pending.cancel(false);
+        }
         Room room = rooms.remove(id);
         if (room != null) {
             synchronized (room.lock) {
+                room.deleted = true;
                 for (Peer peer : room.peers.values()) {
                     peer.send().accept(error("Room was reset"));
                 }
                 room.peers.clear();
             }
-            deleteRoomFile(id);
         }
+        // 房间已空闲卸载时 rooms 里没有它，但磁盘文件还在：只有无条件删文件，
+        // 彻底删除的文档才不会在 hub 目录留下永远清不掉的孤儿房间。
+        deleteRoomFile(id);
     }
 
     /**
@@ -705,6 +719,11 @@ public class FileCollabHub {
         private boolean dirty;
 
         /**
+         * 是否已被强制忘记（reset）；置位后迟到的合并写盘不得再把文件写回来
+         */
+        private boolean deleted;
+
+        /**
          * 构造。
          *
          * @param id 房间号
@@ -916,6 +935,10 @@ public class FileCollabHub {
         }
         RoomFile data;
         synchronized (room.lock) {
+            if (room.deleted) {
+                // 房间已被 reset：即使队列里还有一次迟到的合并写盘，也不能把文件写回来
+                return;
+            }
             if (!force && !room.dirty) {
                 return;
             }
@@ -1037,7 +1060,7 @@ public class FileCollabHub {
         if (!persistEnabled) {
             return null;
         }
-        return dir.resolve(sha256(id).substring(0, 32) + ".json");
+        return dir.resolve(sha256(id).substring(0, SHA256_PREFIX) + ".json");
     }
 
     /**

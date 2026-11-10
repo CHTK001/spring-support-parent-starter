@@ -1,0 +1,1 @@
+import{a as e,i as t,r as n}from"./file-viewer-data-DdiJmB-M.js";export{n as dataRenderer,n as default,t as dataRendererDefinition,e as renderFileViewerData};

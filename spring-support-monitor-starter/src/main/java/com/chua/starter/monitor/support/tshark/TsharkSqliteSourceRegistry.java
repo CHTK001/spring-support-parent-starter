@@ -55,6 +55,7 @@ public class TsharkSqliteSourceRegistry {
             "ms_tshark_packet_http_req TEXT," +
             "ms_tshark_packet_http_resp TEXT," +
             "ms_tshark_packet_http_body TEXT," +
+            "ms_tshark_packet_http_hex TEXT," +
             "ms_tshark_packet_http_type TEXT," +
             "ms_tshark_packet_http_encoding TEXT," +
             "ms_tshark_packet_http_size INTEGER," +
@@ -212,6 +213,7 @@ public class TsharkSqliteSourceRegistry {
                 "ms_tshark_packet_http_req TEXT",
                 "ms_tshark_packet_http_resp TEXT",
                 "ms_tshark_packet_http_body TEXT",
+                "ms_tshark_packet_http_hex TEXT",
                 "ms_tshark_packet_http_type TEXT",
                 "ms_tshark_packet_http_encoding TEXT",
                 "ms_tshark_packet_http_size INTEGER",

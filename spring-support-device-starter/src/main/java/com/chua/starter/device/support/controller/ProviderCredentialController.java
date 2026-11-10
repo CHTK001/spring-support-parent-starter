@@ -1,3 +1,4 @@
+// [P3C C1 豁免] C1: 内部创建固定大小线程池，见第 192 行。
 package com.chua.starter.device.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
@@ -10,6 +11,7 @@ import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -227,7 +229,9 @@ public class ProviderCredentialController {
                     credential.getDeviceCredentialVendor(),
                     ok,
                     System.currentTimeMillis() - start,
-                    ok ? null : "平台登录失败，请检查 AK/SK 与平台地址");
+                    // 不要再说「请检查 AK/SK」：AK/SK 有效但平台侧接口不通时这句话会误导排查方向。
+                    ok ? null : "平台未返回可用结果（凭据可能有效，但接口路径/权限/产品授权不通过，"
+                            + "或项目下暂无设备）；请查看服务端日志中的平台原始返回");
         } catch (RuntimeException ex) {
             log.warn("凭据连通性探测异常: id={}, name={}", credential.getDeviceCredentialId(),
                     credential.getDeviceCredentialName(), ex);
@@ -303,6 +307,19 @@ public class ProviderCredentialController {
      * @return 建连参数
      */
     private static DeviceConnectInfo connectInfo(DeviceProviderCredential credential) {
+        // baseUrl / productCode / projectId 必须随连接信息下发：
+        // 云曜换令牌要把 productCode、projectId 放进包体，漏掉会被网关判成「产品不存在」。
+        Map<String, Object> extra = new LinkedHashMap<>();
+        if (StringUtils.hasText(credential.getDeviceCredentialBaseUrl())) {
+            extra.put("baseUrl", credential.getDeviceCredentialBaseUrl());
+        }
+        if (StringUtils.hasText(credential.getDeviceCredentialProductCode())) {
+            extra.put("productCode", credential.getDeviceCredentialProductCode());
+        }
+        if (StringUtils.hasText(credential.getDeviceCredentialProjectId())) {
+            extra.put("projectId", credential.getDeviceCredentialProjectId());
+        }
+        extra.put("credentialId", credential.getDeviceCredentialId());
         return new DeviceConnectInfo(
                 credential.getDeviceCredentialVendor(),
                 "PLATFORM",
@@ -314,7 +331,7 @@ public class ProviderCredentialController {
                 credential.getDeviceCredentialAppKey(),
                 credential.getDeviceCredentialAppSecret(),
                 null,
-                null);
+                extra);
     }
 
     /**

@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>云曜网关地址为 https://open.hikyun.com（"云曜的对外开放接口，地址 https://open.hikyun.com"）</li>
  *   <li>换 access_token：POST https://open.hikyun.com/artemis/oauth/token/v2（JSON 包体），参数为
- *   appKey / appSecret / productCode （产品标识，必须）/ projectId（项目编号，文档标注非必需）；
+ *   accessKey / secretKey / productCode （产品标识，必须）/ projectId（项目编号，文档标注非必需）；
  *   返回的 access_token 有效期 43200 秒（12 小时）</li>
  *   <li>调用云曜接口时，将 access_token 放入 Headers 中（Authorization: Bearer &lt;access_token&gt;）；
  *   不得作为 Query / Body 参数转发</li>
@@ -44,11 +44,9 @@ import java.util.stream.Collectors;
 public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
 
     /**
-     * 海康云耀默认 baseurl（按官方文档配置）
-     * <p>云曜对外开放的网关地址为 <a href="https://open.hikyun.com">https://open.hikyun.com</a>；
-     * 旧地址 https://api.hik-cloud.com 不是云曜网关，用它换令牌必然失败。</p>
-     * <p>还支持凭据级覆盖：在 {@code DeviceConnectInfo.extra("baseUrl")} /
-     * {@code device_credential_base_url} 填写云曜的接入地址即可更换环境。</p>
+     * 海康云曜固定网关。
+     * <p>云曜对外开放地址为 <a href="https://open.hikyun.com">https://open.hikyun.com</a>；
+     * 旧地址 https://api.hik-cloud.com 不是云曜网关。仅综合安防等私有化平台允许凭据覆盖 baseUrl。</p>
      */
     private static final String DEFAULT_BASE_URL = "https://open.hikyun.com";
 
@@ -125,13 +123,15 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     /**
      * 登录换取 access令牌（按海康云耀文档约定的 oauth 流程）
      * <p>接口地址 {@code POST https://open.hikyun.com/artemis/oauth/token/v2}（JSON 包体），
-     * 参数为 appKey / appSecret / productCode（产品标识，必须）/ projectId（项目编号，文档标注非必需），
+     * 参数为 accessKey / secretKey / productCode（产品标识，必须）/ projectId（项目编号，文档标注非必需），
      * 换得后 access_token 有效期默认 43200 秒（12 小时）。</p>
+     * <p>注意：云曜换令牌的字段名是 accessKey / secretKey（不是 appKey / appSecret），
+     * 用旧字段名会被网关直接拒绝为「参数 secretKey 不能为空」。</p>
      */
     private void login() {
         Map<String, Object> params = new LinkedHashMap<>();
-        params.put("appKey", info.appKey());
-        params.put("appSecret", info.appSecret());
+        params.put("accessKey", info.appKey());
+        params.put("secretKey", info.appSecret());
         // 产品/项目标识参加换令牌的包体
         if (productCode != null) {
             params.put("productCode", productCode);
@@ -274,11 +274,12 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
                 log.info("[OpenAPI-DEBUG] 海康云耀 签名: {}", sign.length() > 12 ? sign.substring(0, 12) + "..." : sign);
             }
         }
-        // 云曜文档约定：access_token 必须放在 Headers 中（Authorization: Bearer <token>），
-        // 不作为 Query / Body 参数转发，否则会被拒绝为"参数不够"。
+        // 云曜网关要求：全局 token 放在 access_token 请求头（不是 Authorization: Bearer）。
+        // 实测 Authorization: Bearer 会被网关当成「未传 access_token」，直接返回
+        // 0x02401005「access_token 为 null」；只有 access_token 头才推进到参数校验。
         Map<String, String> headers = new LinkedHashMap<>();
         if (accessToken != null) {
-            headers.put("Authorization", "Bearer " + accessToken);
+            headers.put("access_token", accessToken);
         }
         return execute(method, path, realParams, headers);
     }
@@ -396,19 +397,29 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     /**
-     * 云耀 OpenAPI 路径：组织列表（按 productCode/projectId 隔离）
+     * 云曜官方文档「物联接入 / 通用设备管理」：全局设备分页查询
+     * {@code POST /api/eits/v1/global/device/page}（全局_ 接口，走 AK/SK 换来的全局 token）。
+     *
+     * <p>实测结论：{@code /api/eits/v2/global/device/page} 返回 400，只有 v1 可用；
+     * 非 global 前缀（{@code /api/eits/v1/device/page}）属「需用户 Authorization」，
+     * 用全局 token 会得到 401。</p>
      */
-    private static final String PATH_ORG_TREE = "/api/v1/organizations";
+    private static final String PATH_DEVICE_PAGE = "/api/eits/v1/global/device/page";
 
     /**
-     * 云耀 OpenAPI 路径：组织维度设备列表（{0} 位厂商侧组织标识，按 productCode/projectId 隔离）
+     * 云曜官方文档：全局监控点分页查询 POST /api/eits/v1/global/monitor/page
      */
-    private static final String PATH_ORG_DEVICES = "/api/v1/organizations/%s/devices";
+    private static final String PATH_MONITOR_PAGE = "/api/eits/v1/global/monitor/page";
 
     /**
-     * 云耀 OpenAPI 路径：组织维度人员列表（{0} 位厂商侧组织标识，按 productCode/projectId 隔离）
+     * 云曜官方文档：全局人员分页查询 POST /api/eits/v1/global/user/page
      */
-    private static final String PATH_ORG_USERS = "/api/v1/organizations/%s/users";
+    private static final String PATH_USER_PAGE = "/api/eits/v1/global/user/page";
+
+    /**
+     * 云曜 OpenAPI 路径：组织列表（按 productCode/projectId 隔离）
+     */
+    private static final String PATH_ORG_TREE = "/api/eits/v1/global/cascade/org/page";
 
     /** 分页查询每页条数 */
     private static final int PAGE_SIZE = 100;
@@ -425,15 +436,12 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      */
     public List<OrganizationNode> fetchOrganizations() {
         try {
-            Map<String, Object> params = new HashMap<>();
-            params.put("pageSize", PAGE_SIZE);
-            JsonNode data = assertOk(get(PATH_ORG_TREE, params));
-            List<JsonNode> orgs = toList(data);
+            List<JsonNode> orgs = fetchPaged(PATH_ORG_TREE);
             return orgs.stream()
                     .map(n -> new OrganizationNode(
-                            toStr(n, "orgId", "id", "orgCode", "merchantId"),
-                            toStr(n, "orgName", "name", "orgName"),
-                            toStr(n, "parentOrgId", "parentId")))
+                            toStr(n, "id", "orgId", "orgCode", "departmentId", "merchantId"),
+                            toStr(n, "name", "orgName", "departmentName", "title"),
+                            toStr(n, "parentId", "parentOrgId", "parentDepartmentId")))
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("海康云耀 组织树拉取失败: {}", e.getMessage());
@@ -453,11 +461,8 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      */
     public List<VendorDevice> fetchDevices() {
         try {
-            List<OrganizationNode> orgs = fetchOrganizations();
-            List<VendorDevice> result = new ArrayList<>();
-            for (OrganizationNode org : orgs) {
-                result.addAll(fetchDevicesByOrg(org.orgId()));
-            }
+            List<VendorDevice> result = toVendorDevices(fetchPaged(PATH_DEVICE_PAGE));
+            log.info("海康云耀 设备目录: count={}", result.size());
             return result;
         } catch (Exception e) {
             log.warn("海康云耀 设备目录拉取失败: {}", e.getMessage());
@@ -466,55 +471,51 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     /**
-     * 厂商 side 组织维度下翻页拉取设备列表
+     * 云曜监控点目录：官方接口 {@code POST /api/eits/v1/global/monitor/page}。
      *
-     * @param orgId 厂商 side 组织标识
-     * @return 设备条目
+     * <p>监控点是「设备 + 通道」维度的目录，云曜侧一个设备可能有多路监控点；
+     * 这里按监控点编号落成独立条目（通道数记 1），让台账能按通道展示。</p>
+     *
+     * @return 厂商设备条目（监控点口径）
      */
-    private List<VendorDevice> fetchDevicesByOrg(String orgId) {
-        List<VendorDevice> result = new ArrayList<>();
-        for (int pageNo = 1; ; pageNo++) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("pageNo", pageNo);
-            params.put("pageSize", PAGE_SIZE);
-            List<JsonNode> list;
-            try {
-                JsonNode data = assertOk(get(String.format(PATH_ORG_DEVICES, orgId), params));
-                list = toList(data);
-            } catch (Exception e) {
-                log.warn("海康云耀 设备列表拉取失败: orgId={}, page={}", orgId, pageNo, e.getMessage());
-                break;
-            }
-            if (list == null || list.isEmpty()) {
-                break;
-            }
-            result.addAll(toVendorDevices(list));
-            if (list.size() < PAGE_SIZE) {
-                break;
-            }
+    public List<VendorDevice> fetchMonitors() {
+        try {
+            List<VendorDevice> result = fetchPaged(PATH_MONITOR_PAGE).stream()
+                    .map(n -> new VendorDevice(
+                            toStr(n, "monitorCode", "monitorUniqueCode", "id", "deviceSerial"),
+                            toStr(n, "monitorName", "name", "deviceName"),
+                            toStr(n, "deviceModel", "productModel", "model"),
+                            categorize(n),
+                            toStr(n, "deviceSerial", "deviceCode", "serial"),
+                            toStr(n, "deviceIp", "ip", "ipAddress"),
+                            toInt(n, "devicePort", "port"),
+                            toStr(n, "address", "installAddress", "deviceAddress"),
+                            decimal(n, "longitude", "lng", "lon"),
+                            decimal(n, "latitude", "lat", "lng"),
+                            1,
+                            bool(n, "onlineStatus", "online", "status")))
+                    .collect(Collectors.toList());
+            log.info("海康云耀 监控点目录: count={}", result.size());
+            return result;
+        } catch (Exception e) {
+            log.warn("海康云耀 监控点目录拉取失败: {}", e.getMessage());
+            return List.of();
         }
-        log.info("海康云耀 设备目录: orgId={}, count={}", orgId, result.size());
-        return result;
     }
 
     /**
-     * 云耀 OpenAPI 查询人员列表：按厂商侧组织维度翻页拉取
+     * 云曜人员列表：官方接口 {@code POST /api/eits/v1/global/user/page}。
      *
-     * <p>组织列表由 {@link #fetchOrganizations()} 拉取，逐个组织翻页取
-     *>{@code /api/v1/organizations/{orgId}/users}；按 productCode/projectId 隔离。
-     * 人员只保留低门槛字段：姓名/职务/手机号/邮箱；行政归属挂接厂商侧组织标识
-     * （与 {@code fetchOrganizations()} 组织标识同口径），避免人员 API 结构换表时
+     * <p>人员只保留低门槛字段：姓名/职务/手机号/邮箱；行政归属挂接厂商侧组织标识
+     * （{@code departmentId} / {@code userDepartmentId}），避免人员 API 结构换表时
      * 耦合到 org-person 关联表。</p>
      *
      * @return 人员条目（厂商侧组织标识 / 厂商 side 人员标识 / 姓名 / 职务 / 手机 / 邮箱）
      */
     public List<DevicePerson> fetchPersons() {
         try {
-            List<OrganizationNode> orgs = fetchOrganizations();
-            List<DevicePerson> result = new ArrayList<>();
-            for (OrganizationNode org : orgs) {
-                result.addAll(fetchPersonsByOrg(org.orgId()));
-            }
+            List<DevicePerson> result = toDevicePersons(fetchPaged(PATH_USER_PAGE));
+            log.info("海康云耀 人员列表: count={}", result.size());
             return result;
         } catch (Exception e) {
             log.warn("海康云耀 人员列表拉取失败: {}", e.getMessage());
@@ -523,35 +524,28 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     /**
-     * 厂商 side 组织维度下翻页拉取人员列表
+     * 按官方分页接口逐页拉取，直到取满或返回空页。
      *
-     * @param orgId 厂商 side 组织标识
-     * @return 人员条目
+     * @param path 接口路径
+     * @return 全量条目
      */
-    private List<DevicePerson> fetchPersonsByOrg(String orgId) {
-        List<DevicePerson> result = new ArrayList<>();
-        for (int pageNo = 1; ; pageNo++) {
-            Map<String, Object> params = new HashMap<>();
+    private List<JsonNode> fetchPaged(String path) {
+        List<JsonNode> all = new ArrayList<>();
+        for (int pageNo = 1; pageNo <= 200; pageNo++) {
+            Map<String, Object> params = new LinkedHashMap<>();
             params.put("pageNo", pageNo);
             params.put("pageSize", PAGE_SIZE);
-            List<JsonNode> list;
-            try {
-                JsonNode data = assertOk(get(String.format(PATH_ORG_USERS, orgId), params));
-                list = toList(data);
-            } catch (Exception e) {
-                log.warn("海康云耀 人员列表拉取失败: orgId={}, page={}", orgId, pageNo, e.getMessage());
-                break;
-            }
+            JsonNode data = assertOk(post(path, params));
+            List<JsonNode> list = toList(data);
             if (list == null || list.isEmpty()) {
                 break;
             }
-            result.addAll(toDevicePersons(list));
+            all.addAll(list);
             if (list.size() < PAGE_SIZE) {
                 break;
             }
         }
-        log.info("海康云耀 人员列表: orgId={}, count={}", orgId, result.size());
-        return result;
+        return all;
     }
 
     /**

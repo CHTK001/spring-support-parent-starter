@@ -96,6 +96,18 @@ public final class WebSocketSessions {
     }
 
     /**
+     * 生成直连会话标识
+     * <p>
+     * 串口等通道没有协议侧自带的会话号，用 UUID 作为桥接体与审计记录的关联键。
+     * </p>
+     *
+     * @return 32 位无连字符的 UUID 文本
+     */
+    public static String uuid() {
+        return java.util.UUID.randomUUID().toString().replace("-", "");
+    }
+
+    /**
      * 提取浏览器来源 IP
      *
      * @param session WebSocket 会话
@@ -104,15 +116,6 @@ public final class WebSocketSessions {
     public static String clientIp(WebSocketSession session) {
         var remoteAddress = session.getRemoteAddress();
         return remoteAddress == null ? "unknown" : remoteAddress.getAddress().getHostAddress();
-    }
-
-    /**
-     * 生成通道会话唯一标识
-     *
-     * @return UUID 字符串
-     */
-    public static String uuid() {
-        return java.util.UUID.randomUUID().toString();
     }
 
     /**

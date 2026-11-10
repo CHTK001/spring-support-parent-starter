@@ -110,6 +110,21 @@ public class MsTsharkPacket extends SysBase {
     @Schema(description = "HTTP 正文")
     private String httpBody; // HTTP 正文
 
+    /**
+     * HTTP 正文字节（十六进制），与 {@link #httpBody} 是同一份数据的两种视图。
+     *
+     * <p>正文入库时先解码成文本（{@code httpBody}），文本视图对二进制正文只能给
+     * 「HEX 前缀 + 前 1KB」，前端拿不到原始字节，hex 视图就无从谈起。这里把
+     * 「产生这段文本的字节」按十六进制另存一份：hex 视图直接按字节渲染，
+     * 与文本 / JSON 视图严格同源（都是 {@code Content-Encoding} 解压后的实体）。</p>
+     *
+     * <p>只在解析期写入，上限见 {@code TsharkCaptureService#HTTP_BODY_HEX_KEEP_BYTES}；
+     * 老会话没有这一列时为 null，前端退回按文本重新编码。</p>
+     */
+    @TableField("ms_tshark_packet_http_hex")
+    @Schema(description = "HTTP 正文字节(hex)")
+    private String httpBodyHex; // HTTP 正文字节
+
     /** HTTP 实体类型，如 text/html / application/json */
     @TableField("ms_tshark_packet_http_type")
     @Schema(description = "HTTP 内容类型")

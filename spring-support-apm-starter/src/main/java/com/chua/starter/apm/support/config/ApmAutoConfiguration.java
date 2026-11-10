@@ -6,9 +6,11 @@ import com.chua.starter.apm.support.properties.ApmProperties;
 import com.chua.starter.apm.support.server.ApmStandaloneServer;
 import com.chua.starter.apm.support.servlet.ApmServlet;
 import com.chua.starter.apm.support.web.ApmDispatcher;
+import com.chua.starter.apm.support.web.ApmOperLogSink;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -79,13 +81,21 @@ public class ApmAutoConfiguration {
      * @param registry      注册表
      * @param properties    配置
      * @param runtimeConfig 设置入口
+     * @param operLogSinks  写操作留痕落点（可选，宿主提供时装配）
      * @return 路由器
      */
     @Bean
     @ConditionalOnMissingBean
     public ApmDispatcher apmDispatcher(ApmRegistry registry, ApmProperties properties,
-                                       ApmRuntimeConfig runtimeConfig) {
-        return new ApmDispatcher(registry, properties, runtimeConfig);
+                                       ApmRuntimeConfig runtimeConfig,
+                                       ObjectProvider<ApmOperLogSink> operLogSinks) {
+        ApmDispatcher dispatcher = new ApmDispatcher(registry, properties, runtimeConfig);
+        ApmOperLogSink sink = operLogSinks.getIfAvailable();
+        if (sink != null) {
+            dispatcher.setOperLogSink(sink);
+            log.info("[APM] 已装配写操作留痕: {}", sink.getClass().getSimpleName());
+        }
+        return dispatcher;
     }
 
     /**

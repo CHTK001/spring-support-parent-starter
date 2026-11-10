@@ -164,6 +164,19 @@ public interface DeviceService {
     void updateOfflineThreshold(String id, int threshold);
 
     /**
+     * 启用 / 停用设备。
+     *
+     * <p>只改 {@code device_info_status} 一个字段，设备地址、凭据、组织、资产等
+     * 原有配置一律不动；停用时立刻注销已建立的会话，之后所有后台定时采集
+     * （在线探测 / 事件轮询 / 门禁抽取）都会跳过这台设备。</p>
+     *
+     * @param id     设备 标识
+     * @param status 目标状态，目前接受 {@code normal} 与 {@code disabled}
+     * @return 变更后的设备信息
+     */
+    DeviceInfo toggleStatus(String id, String status);
+
+    /**
      * 重新连接设备：关闭旧会话、按现有连接信息创建新会话并注册。
      *
      * @param id 设备 标识

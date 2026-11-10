@@ -1,0 +1,1 @@
+import{t as e}from"./koi-ranking-ClF6s-Ps.js";export{e as default};

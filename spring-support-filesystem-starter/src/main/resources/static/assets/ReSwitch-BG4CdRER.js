@@ -1,0 +1,1 @@
+import{n as e,t}from"./ReSwitch-hX1gvnjl.js";export{t as default,e as install};

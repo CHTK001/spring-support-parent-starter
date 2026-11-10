@@ -21,6 +21,7 @@ import com.chua.starter.monitor.support.server.model.ServerNodeView;
 import com.chua.starter.monitor.support.server.model.ServerPluginParamVO;
 import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
 import com.chua.starter.monitor.support.service.ServerManageService;
+import com.chua.starter.monitor.support.service.ServerOperLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,10 @@ public class ServerManageServiceImpl implements ServerManageService {
      * JSON
     */
     private final ObjectMapper objectMapper;
+    /**
+     * 节点操作日志
+     */
+    private final ServerOperLogService serverOperLogService;
 
     @Override
     public ReturnResult<List<ServerNodeView>> list() {
@@ -188,6 +193,7 @@ public class ServerManageServiceImpl implements ServerManageService {
             }
             nodeRegistry.remove(id);
             nodeMapper.deleteById(id);
+            serverOperLogService.purge(id);
             log.info("[ServerManage] 节点已删除: {} [{}]", node.getName(), node.getProtocol());
             return ReturnResult.success();
         } catch (Exception e) {

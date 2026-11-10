@@ -149,6 +149,16 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.manage.service.OnnxExternalDirectoryService onnxExternalDirectoryService;
 
     /**
+     * 路由组业务：成员表（来自已添加的模型库）读写、顺序调整、成员删除级联
+     */
+    private final com.chua.starter.ai.support.chat.RouterGroupService routerGroupService;
+
+    /**
+     * 模型 → 客户端解析器（路由组配置变更后让缓存立即失效）
+     */
+    private final com.chua.starter.ai.support.chat.ModelClientResolver modelClientResolver;
+
+    /**
      * ONNX 供应商标识：与其余提供商一样是 {@code sys_ai_provider} 表里的真实一行，
      * 由 {@link com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer} 物化维护。
      */
@@ -284,6 +294,19 @@ public class ApiProviderController {
     private static final long METRICS_INDEX_TTL_MILLIS = 30_000;
 
     /**
+     * 价格指标键（每百万 token 美元 + 单任务成本）。
+     *
+     * <p>上游 {@code /models} 的 pricing 由
+     * {@code HttpChatClientIndicator#parseModelMetrics} 归一成这些键；
+     * 采集时同时写指标库与模型行 metrics，模型卡片才会显示价格与「免费」。</p>
+     */
+    private static final String[] PRICE_METRIC_KEYS = {
+            "price_input_per_musd", "price_output_per_musd",
+            "price_cache_hit_per_musd", "price_cache_write_per_musd",
+            "cost_per_task",
+    };
+
+    /**
      * 需要合并进模型行 指标 的快照指标键。
      */
     private static final String[] METRIC_KEYS = {
@@ -379,7 +402,14 @@ public class ApiProviderController {
                             .eq(SysAiProviderConnection::getProviderId, p.getProviderId());
             applyConnectionOwnerFilter(connectionWrapper);
             List<SysAiProviderConnection> connections = connectionMapper.selectList(connectionWrapper);
-            items.add(toProviderResponse(p, models, connections));
+            Map<String, Object> item = toProviderResponse(p, models, connections);
+            if (routerGroupService.isRouterGroup(p)) {
+                // 路由组没有自己的模型行：成员全在模型库里。但会话的模型面板读的就是
+                // /api/providers 里每行的 models，这里补一条虚拟模型，让「选中这个组」
+                // 在会话里可选；它解析到的客户端是 RouterGroupChatClient（按组内策略选成员）。
+                item.put("models", List.of(routerGroupVirtualModel(p)));
+            }
+            items.add(item);
         }
 
         // 注入已注册的智能体模型作为虚拟提供者
@@ -434,8 +464,12 @@ public class ApiProviderController {
         }
         String platform = requireStr(body, "platform");
         String name = requireStr(body, "name");
-        // ONNX 为内置单行，不允许再新增一条同平台的供应商；其余供应商按「平台+名称」判重
-        requireNotDuplicateProvider(platform, name, null);
+        // 路由组供应商：模型来自「已添加的模型库」，没有上游地址可填，
+        // 因此不校验同平台重名（同一平台可以建多个不同策略的路由组）。
+        if (!ProviderRouteTargets.isRouterGroup(platform)) {
+            // ONNX 为内置单行，不允许再新增一条同平台的供应商；其余供应商按「平台+名称」判重
+            requireNotDuplicateProvider(platform, name, null);
+        }
         long now = System.currentTimeMillis();
 
         // 创建提供者实体
@@ -443,8 +477,18 @@ public class ApiProviderController {
         entity.setProviderId(providerId);
         entity.setPlatform(platform);
         entity.setName(name);
-        entity.setBaseUrl(requireStr(body, "base_url"));
-        entity.setAuthScheme(requireStr(body, "auth_scheme"));
+        // 路由组没有真实上游：地址与鉴权方式留空占位，不做必填校验
+        // （成员各自带着自己的地址与凭证，由 ModelClientResolver 按成员构造）。
+        if (ProviderRouteTargets.isRouterGroup(platform)) {
+            // 库列 NOT NULL：空串占位（不做「必填」校验，也不校验地址格式）
+            String routerBaseUrl = str(body, "base_url");
+            entity.setBaseUrl(routerBaseUrl == null ? "" : routerBaseUrl);
+            entity.setAuthScheme(str(body, "auth_scheme") != null && !str(body, "auth_scheme").isBlank()
+                ? str(body, "auth_scheme") : "none");
+        } else {
+            entity.setBaseUrl(requireStr(body, "base_url"));
+            entity.setAuthScheme(requireStr(body, "auth_scheme"));
+        }
         entity.setCredentials(uncheckedCast(body.get("credentials")));
         entity.setEnabled(bool(body, "enabled", true));
         entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
@@ -533,7 +577,7 @@ public class ApiProviderController {
                     for (Map<String, Object> cap : caps) {
                         cap.put("protocol", protocol);
                     }
-                    modelMapper.updateById(pm);
+                    modelMapper.updateByKey(pm);
                 }
             }
         }
@@ -862,7 +906,7 @@ public class ApiProviderController {
      * 计数见响应里的 {@code enriched}。</p>
      *
      * @param providerId 提供者 标识
-     * @param body       可选 { 尝试_fix }（404 时补全 /v1 重试，与单次拉取同语义）
+     * @param body       可选 { try_fix, models }（try_fix: 404 时补全 /v1 重试；models: 只录入勾选的模型名，空 = 全部）
      * @return { total, imported, skipped, enriched, models }
      */
     @SuppressWarnings("unchecked")
@@ -879,6 +923,25 @@ public class ApiProviderController {
         Object rawModels = upstream.get("models");
         List<Map<String, Object>> upstreamModels = rawModels instanceof List<?> list ? (List<Map<String, Object>>) list
                 : new ArrayList<>(0);
+        // 只录入用户勾选的模型：body.models 为空表示「全部录入」（保持原语义）。
+        // 放在落库前过滤，仍复用同一套元数据回填 / 去重逻辑。
+        if (body != null && body.get("models") instanceof List<?> only) {
+            Set<String> wanted = new HashSet<>(16);
+            for (Object item : only) {
+                if (item != null) {
+                    wanted.add(String.valueOf(item));
+                }
+            }
+            if (!wanted.isEmpty()) {
+                List<Map<String, Object>> filtered = new ArrayList<>(wanted.size());
+                for (Map<String, Object> m : upstreamModels) {
+                    if (wanted.contains(batchModelName(m))) {
+                        filtered.add(m);
+                    }
+                }
+                upstreamModels = filtered;
+            }
+        }
 
         // 已存在的模型名一次取齐：既是幂等判据，也省掉每条一次 select；
         // 顺带算出最大排序号，新模型排在既有行之后
@@ -976,6 +1039,15 @@ public class ApiProviderController {
                 : new LinkedHashMap<>(row.getMetrics());
         sysAiModelMetricsService.enrichRowFromMetrics(row, current, metrics,
                 "upstream:/models", provider.getBaseUrl(), now);
+        // 上游 /models 自带 pricing 时也要落到行 metrics：模型卡片的「价格 / 免费」
+        // 读的是行 metrics，只写指标库的话卡片上仍然看不到价格。
+        // 只补行里还没有的价，已有价格（官方指标同步写入的）优先。
+        for (String priceKey : PRICE_METRIC_KEYS) {
+            Object price = metrics.get(priceKey);
+            if (price != null && current.get(priceKey) == null) {
+                current.put(priceKey, price);
+            }
+        }
         Map<String, Object> afterMetrics = new LinkedHashMap<>(current);
         afterMetrics.remove("metrics_captured_at");
         // 采集时间每次都会变，不参与「是否有变化」判断，否则每次点击都全表写
@@ -1357,6 +1429,9 @@ public class ApiProviderController {
                 for (Map<String, Object> m : models) {
                     Map<String, Object> item = new LinkedHashMap<>(m);
                     item.put("modelName", m.get("name") != null ? m.get("name") : m.get("id"));
+                    // 价格 / 能力已随 metrics 解析出来：这里补挂到行顶层，
+                    // 让「从提供商获取」列表能直接标注价格与「免费」，不必再钻 metrics
+                    applyUpstreamMetrics(item, uncheckedCast(m.get("metrics")));
                     items.add(item);
                 }
             }
@@ -1364,8 +1439,20 @@ public class ApiProviderController {
             return ApiResult.ok(upstreamResult);
         } catch (ApiException e) {
             // 上游供应商的 Key/网络错误属于业务错误：以 200 + 错误信封返回，
-            // 避免被前端误判为「本应用会话过期」而强制登出
-            return ApiResult.error(e.getErrorCode().getCode(), e.getMessage());
+            // 避免被前端误判为「本应用会话过期」而强制登出。
+            ApiErrorCode code = e.getErrorCode();
+            // 认证/限流是用户可操作、需要明确告知的业务状态，保留错误信封；
+            // 「连不上 / 地址没配 / 超时」这类拿不到目录的情况按用户要求直接回空列表，
+            // 不再把 null 或网络异常堆到界面上。
+            if (code == ApiErrorCode.UNAUTHORIZED || code == ApiErrorCode.FORBIDDEN
+                    || code == ApiErrorCode.RATE_LIMITED) {
+                return ApiResult.error(code.getCode(), e.getMessage());
+            }
+            Map<String, Object> empty = new LinkedHashMap<>(4);
+            empty.put("models", new ArrayList<>());
+            empty.put("items", new ArrayList<>());
+            empty.put("hint", "未能从供应商获取模型列表，请检查 API 地址与网络连接");
+            return ApiResult.ok(empty);
         }
     }
 
@@ -1529,7 +1616,7 @@ public class ApiProviderController {
             metrics.put("latency_ms", latency);
             model.setMetrics(metrics);
             model.setUpdatedAt(System.currentTimeMillis());
-            modelMapper.updateById(model);
+            modelMapper.updateByKey(model);
         }
         Map<String, Object> out = new LinkedHashMap<>(5);
         out.put("provider_id", providerId);
@@ -1558,21 +1645,25 @@ public class ApiProviderController {
             }
             Map<String, Object> fakeCreds = new LinkedHashMap<>(2);
             fakeCreds.put("api_key", apiKey);
-            List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey,
-                    (platform != null && platform.toLowerCase().contains("gemini")), proxy, auth);
+            // 协议判定必须与 fetchModelsFromUpstream 完全一致：平台为 google 时走
+            // ?key= 查询参数，此前只认 "gemini"，导致 Google 的有效 Key 被按
+            // Authorization: Bearer 发出去，上游回 401，界面误报「API Key 无效」。
+            String platformLower = platform == null ? "" : platform.toLowerCase();
+            boolean googleProtocol = platformLower.contains("gemini") || platformLower.contains("google");
+            List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy, auth);
             r.put("latency_ms", System.currentTimeMillis() - latencyStart);
-            // 只有「真的解析出模型条目」才算 Key 有效。
-            // 上游返回 200 但 body 不是模型列表（网关错误页 / 200 包着的 error JSON /
-            // 反代登录页 HTML）时 parse 会得到空列表，若按 models != null 判成功，
-            // 任意 Key 都能「测通」—— 必须连空列表一起判失败。
-            if (models == null || models.isEmpty()) {
+            if (models == null) {
+                // 404 / 网络失败：只说明「读不到模型列表」，不能断言 Key 无效
                 r.put("ok", false);
-                r.put("error", models == null
-                        ? "无法从上游拉取模型（401/404/网络），key 可能无效"
-                        : "上游模型列表为空，无法确认 key 有效");
+                r.put("error", "无法从上游读取模型列表（地址或网络异常），未能校验 Key");
             } else {
+                // 200 即使返回空列表也说明鉴权已通过，Key 有效；
+                // 原实现把空列表判失败，导致有效 Key 被误报。
                 r.put("ok", true);
                 r.put("model_count", models.size());
+                if (models.isEmpty()) {
+                    r.put("message", "Key 校验通过，但上游未返回模型列表");
+                }
             }
         } catch (Exception e) {
             r.put("latency_ms", System.currentTimeMillis() - latencyStart);
@@ -1905,8 +1996,38 @@ public class ApiProviderController {
         if (deleted == 0) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + model);
         }
+        pruneRouterGroupMembers(providerId, model);
         refreshOnnxDevice(provider);
         return ApiResult.ok();
+    }
+
+    /**
+     * 模型行删除后，把它从所有路由组成员表里摘掉。
+     *
+     * <p>路由组的成员就是模型库里的行；成员行被删后如果仍留在组里，那个成员会在
+     * 每次路由时尝试构造客户端并失败。这里在同一个事务里一并清理，让「删模型」与
+     * 「清成员」同进同退。</p>
+     *
+     * @param providerId 被删模型所属供应商
+     * @param model      被删模型
+     */
+    private void pruneRouterGroupMembers(String providerId, String model) {
+        try {
+            List<SysAiProvider> all = providerMapper.selectList(new LambdaQueryWrapper<SysAiProvider>()
+                    .eq(SysAiProvider::getPlatform, ProviderRouteTargets.ROUTER_GROUP_PLATFORM));
+            for (com.chua.starter.ai.support.chat.RouterGroupService.PrunedGroup pruned
+                    : routerGroupService.pruneMemberDeletions(all, providerId, model)) {
+                SysAiProvider update = new SysAiProvider();
+                update.setProviderId(pruned.providerId());
+                update.setExtra(pruned.extra());
+                update.setUpdatedAt(System.currentTimeMillis());
+                // updateById 才会带上 JacksonTypeHandler（见 saveRouterGroup 的说明）
+                providerMapper.updateById(update);
+                modelClientResolver.invalidateRouterGroup(pruned.providerId());
+            }
+        } catch (Exception e) {
+            log.warn("清理路由组成员失败 {}:{}: {}", providerId, model, e.getMessage());
+        }
     }
 
     /**
@@ -1966,12 +2087,279 @@ public class ApiProviderController {
                 refreshOnnxDevice(provider);
                 lastProviderId = providerId;
             }
+            if (removed > 0) {
+                pruneRouterGroupMembers(providerId, pair[1]);
+            }
         }
 
         Map<String, Object> result = new HashMap<>(2);
         result.put("success", true);
         result.put("deletedCount", deleted);
         return ApiResult.ok(result);
+    }
+
+    // ==================== 路由组 ====================
+
+    /**
+     * 路由组成员候选：已加入模型库的模型（供组页面搜索添加）。
+     *
+     * @param keyword 模型名关键字
+     * @return 候选列表
+     */
+    @GetMapping("/router-groups/candidates")
+    public ApiResult<List<Map<String, Object>>> listRouterGroupCandidates(
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        List<Map<String, Object>> items = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (SysAiProviderModel row : routerGroupService.searchMemberCandidates(keyword)) {
+            SysAiProvider owner = providerMapper.selectById(row.getProviderId());
+            if (owner == null || ProviderRouteTargets.isRouterGroup(owner.getPlatform())) {
+                continue;
+            }
+            String key = row.getProviderId() + ":" + row.getModel();
+            if (!seen.add(key)) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("provider_id", row.getProviderId());
+            item.put("provider_name", owner.getName());
+            item.put("platform", owner.getPlatform());
+            item.put("model", row.getModel());
+            item.put("alias", row.getAlias());
+            item.put("enabled", row.getEnabled());
+            item.put("context_window", row.getContextWindow());
+            item.put("effort", routerGroupService.readEffort(row));
+            items.add(item);
+        }
+        return ApiResult.ok(items);
+    }
+
+    /**
+     * 读取路由组实时决策快照（供管理页的实时连线视图使用）。
+     *
+     * <p>只读内存快照：进程重启后为空，视图显示「等待请求」即可。不落库、不改配置。</p>
+     *
+     * @param providerId 路由组供应商 ID
+     * @return 最近决策（最新在前）
+     */
+    @GetMapping("/providers/{provider_id}/router-group/live")
+    public ApiResult<Map<String, Object>> getRouterGroupLive(@PathVariable("provider_id") String providerId) {
+        SysAiProvider provider = requireProvider(providerId);
+        if (!routerGroupService.isRouterGroup(provider)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
+        }
+        List<Map<String, Object>> items = new ArrayList<>(8);
+        for (com.chua.common.support.ai.chat.aggregate.RouterGroupActivity.Decision d
+                : com.chua.common.support.ai.chat.aggregate.RouterGroupActivity.recent(providerId)) {
+            Map<String, Object> item = new LinkedHashMap<>(8);
+            item.put("member_label", d.memberLabel());
+            item.put("member_model", d.memberModel());
+            item.put("at", d.at());
+            item.put("success", d.success());
+            item.put("cost_ms", d.costMs());
+            items.add(item);
+        }
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("decisions", items);
+        result.put("server_time", System.currentTimeMillis());
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 读取路由组配置（成员顺序 / 策略 / 每模型 effort）。
+     *
+     * @param providerId 路由组供应商 ID
+     * @return 配置
+     */
+    @GetMapping("/providers/{provider_id}/router-group")
+    public ApiResult<Map<String, Object>> getRouterGroup(@PathVariable("provider_id") String providerId) {
+        SysAiProvider provider = requireProvider(providerId);
+        if (!routerGroupService.isRouterGroup(provider)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
+        }
+        com.chua.common.support.ai.chat.aggregate.RouterGroupSetting setting =
+                routerGroupService.readSetting(provider);
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("setting", routerGroupService.toResponse(setting));
+        result.put("members", routerGroupService.describeMembers(setting));
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 保存路由组配置：成员（新增 / 移除 / 顺序）、策略与每模型 effort。
+     *
+     * <p>成员一律来自「已添加的模型库」：{@code members} 里出现的每一行都必须能在
+     * {@code sys_ai_provider_model} 里查到，否则整批拒绝 —— 避免配置上引用一个不存在的模型，
+     * 直到真正调用时才失败。写入后让该路由组的客户端缓存立即失效。</p>
+     *
+     * @param providerId 路由组供应商 ID
+     * @param body       配置（members / strategy / on_rate_limit / on_slow / on_busy / on_context …）
+     * @return 保存后的配置
+     */
+    @Permission("admin")
+    @PutMapping("/providers/{provider_id}/router-group")
+    @Transactional
+    public ApiResult<Map<String, Object>> saveRouterGroup(@PathVariable("provider_id") String providerId,
+                                                          @RequestBody Map<String, Object> body) {
+        SysAiProvider provider = requireProvider(providerId);
+        if (!routerGroupService.isRouterGroup(provider)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
+        }
+        List<com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member> members =
+                parseRouterGroupMembers(providerId, body);
+        com.chua.common.support.ai.chat.aggregate.RouterGroupSetting setting =
+                routerGroupService.applyRequest(provider, body, members);
+        SysAiProvider update = new SysAiProvider();
+        update.setProviderId(providerId);
+        update.setExtra(routerGroupService.writeSetting(provider, setting));
+        update.setUpdatedAt(System.currentTimeMillis());
+        // 必须用 updateById：LambdaUpdateWrapper.set(...) 不会带上实体的 TypeHandler，
+        // MyBatis-Plus 会退化成默认的 Java 序列化写 BLOB 字节，MySQL 直接报
+        // 「Incorrect string value '\xAC\xED\x00\x05sr...'」。
+        providerMapper.updateById(update);
+        modelClientResolver.invalidateRouterGroup(providerId);
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("setting", routerGroupService.toResponse(setting));
+        result.put("members", routerGroupService.describeMembers(setting));
+        log.info("保存路由组配置 provider={} 成员={} 策略={}", providerId,
+                members.size(), setting.getStrategy());
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 调整路由组成员顺序（前端拖拽后调用）。
+     *
+     * @param providerId 路由组供应商 ID
+     * @param body       含 {@code labels} 数组（{@code providerId:model}，新顺序）
+     * @return 保存后的配置
+     */
+    @Permission("admin")
+    @PutMapping("/providers/{provider_id}/router-group/order")
+    @Transactional
+    public ApiResult<Map<String, Object>> reorderRouterGroup(@PathVariable("provider_id") String providerId,
+                                                             @RequestBody Map<String, Object> body) {
+        SysAiProvider provider = requireProvider(providerId);
+        if (!routerGroupService.isRouterGroup(provider)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
+        }
+        @SuppressWarnings("unchecked")
+        List<String> labels = body == null ? null : (List<String>) body.get("labels");
+        if (labels == null || labels.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "labels 不能为空");
+        }
+        com.chua.common.support.ai.chat.aggregate.RouterGroupSetting setting =
+                routerGroupService.readSetting(provider);
+        Map<String, com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member> byLabel =
+                new LinkedHashMap<>();
+        for (com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member m : setting.getMembers()) {
+            byLabel.put(m.label(), m);
+        }
+        List<com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member> ordered = new ArrayList<>();
+        for (String label : labels) {
+            com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member m = byLabel.remove(label);
+            if (m != null) {
+                ordered.add(m);
+            }
+        }
+        // 未出现在新顺序里的成员按原相对顺序补齐，不允许因排序丢成员
+        ordered.addAll(byLabel.values());
+        setting.setMembers(ordered);
+        SysAiProvider update = new SysAiProvider();
+        update.setProviderId(providerId);
+        update.setExtra(routerGroupService.writeSetting(provider, setting));
+        update.setUpdatedAt(System.currentTimeMillis());
+        // updateById 才会带上 JacksonTypeHandler（见 saveRouterGroup 的说明）
+        providerMapper.updateById(update);
+        modelClientResolver.invalidateRouterGroup(providerId);
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("setting", routerGroupService.toResponse(setting));
+        result.put("members", routerGroupService.describeMembers(setting));
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 解析请求体里的成员数组，逐个校验「确实已加入模型库」。
+     *
+     * @param groupId 路由组 ID（用于拒绝自引用）
+     * @param body    请求体
+     * @return 成员列表（保持请求顺序）
+     */
+    private List<com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member> parseRouterGroupMembers(
+            String groupId, Map<String, Object> body) {
+        Object raw = body == null ? null : body.get("members");
+        List<com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member> members = new ArrayList<>();
+        if (!(raw instanceof List<?> list)) {
+            return members;
+        }
+        Set<String> seen = new HashSet<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> m)) {
+                continue;
+            }
+            String memberProviderId = m.get("provider_id") == null ? null : m.get("provider_id").toString().trim();
+            String model = m.get("model") == null ? null : m.get("model").toString().trim();
+            if (memberProviderId == null || memberProviderId.isEmpty() || model == null || model.isEmpty()) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "成员必须同时给出 provider_id 与 model");
+            }
+            if (groupId.equals(memberProviderId)) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "路由组不能把自己加入成员: " + model);
+            }
+            SysAiProvider owner = providerMapper.selectById(memberProviderId);
+            if (owner == null || ProviderRouteTargets.isRouterGroup(owner.getPlatform())) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                        "成员必须是已添加的模型: " + memberProviderId + ":" + model);
+            }
+            if (!routerGroupService.memberExists(memberProviderId, model)) {
+                throw new ApiException(ApiErrorCode.NOT_FOUND,
+                        "成员模型不在模型库中或已停用: " + memberProviderId + ":" + model);
+            }
+            String label = memberProviderId + ":" + model;
+            if (!seen.add(label)) {
+                continue;
+            }
+            String effort = m.get("effort") == null ? null : m.get("effort").toString().trim();
+            int weight = parseRouterWeight(m.get("weight"));
+            Boolean free = m.get("free") == null ? null : Boolean.valueOf(m.get("free").toString());
+            Long expireAt = parseRouterLong(m.get("expire_at"));
+            members.add(new com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member(
+                    memberProviderId, model, true, weight,
+                    effort == null || effort.isEmpty() ? null : effort, free, expireAt));
+        }
+        return members;
+    }
+
+    /**
+     * 解析成员权重，非法值回落到 1。
+     *
+     * @param value 原始值
+     * @return 权重（至少 1）
+     */
+    private int parseRouterWeight(Object value) {
+        if (value == null) {
+            return 1;
+        }
+        try {
+            return Math.max(1, Integer.parseInt(value.toString().trim()));
+        } catch (NumberFormatException e) {
+            return 1;
+        }
+    }
+
+    /**
+     * 解析可空长整数，非法值按无值处理。
+     *
+     * @param value 原始值
+     * @return 长整数或 null
+     */
+    private Long parseRouterLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.toString().trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     // ==================== 模型 协议 ====================
@@ -1989,6 +2377,36 @@ public class ApiProviderController {
                                                          @RequestParam String task,
                                                          @RequestParam(required = false) String base_url) {
         return ApiResult.ok(buildManifest(preset, task, base_url));
+    }
+
+    /**
+     * 路由组在「供应商 → 模型」视图里对外暴露的唯一虚拟模型。
+     *
+     * <p>路由组没有自己的 {@code sys_ai_provider_model} 行（成员是模型库里已有的行），
+     * 但会话的模型面板只认 {@code provider.models}，因此这里合成一条模型项，
+     * 让「选中这个路由组」在会话里可选。它不落库，也不出现在模型管理页的模型列表里。</p>
+     *
+     * @param provider 路由组供应商
+     * @return 虚拟模型项
+     */
+    private Map<String, Object> routerGroupVirtualModel(SysAiProvider provider) {
+        String providerId = provider.getProviderId();
+        String modelName = provider.getName() == null || provider.getName().isBlank()
+                ? providerId : provider.getName();
+        Map<String, Object> model = new LinkedHashMap<>(16);
+        model.put("provider_id", providerId);
+        model.put("model", modelName);
+        model.put("id", providerId + ":" + modelName);
+        model.put("modelType", "text");
+        model.put("enabled", Boolean.TRUE.equals(provider.getEnabled()));
+        model.put("sort_order", 0);
+        model.put("alias", modelName);
+        model.put("router_group", true);
+        Map<String, Object> capability = new LinkedHashMap<>(4);
+        capability.put("task", "chat");
+        capability.put("traits", List.of("input:text", "output:text"));
+        model.put("capabilities", List.of(capability));
+        return model;
     }
 
     /**
@@ -3220,6 +3638,16 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol,
                                                            String proxy, UpstreamAuth auth) {
+        // 地址为空时必须在拼 URL 之前拦住：原实现的 baseUrl.endsWith(...) 会直接 NPE，
+        // 异常 message 为 null，最终在界面上显示成「无法连接供应商模型接口: null」。
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
+        }
+        baseUrl = baseUrl.trim();
+        // 凭证里的 Key 可能带首尾空白（复制粘贴 / 多行输入），先归一化再发请求
+        if (apiKey != null) {
+            apiKey = apiKey.trim();
+        }
         // 拼接模型列表地址，兼容接口使用标准路径，生成式接口附带密钥参数
         StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
         if (googleProtocol && apiKey != null && !apiKey.isBlank()) {
@@ -3266,8 +3694,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         } catch (java.net.http.HttpTimeoutException e) {
             throw new ApiException(ApiErrorCode.TIMEOUT, "供应商模型接口请求超时");
         } catch (Exception e) {
-            // 网络层异常统一按网关错误处理
-            throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法连接供应商模型接口: " + e.getMessage());
+            // 网络层异常统一按网关错误处理。
+            // e.getMessage() 可能为 null（如 NPE），不能拼进字符串，否则界面出现
+            // 「无法连接供应商模型接口: null」这种无信息量的报错。
+            String reason = e.getMessage();
+            throw new ApiException(ApiErrorCode.BAD_GATEWAY,
+                    "无法连接供应商模型接口" + (reason == null || reason.isBlank() ? "（网络异常）" : ": " + reason));
         }
     }
 
@@ -3285,8 +3717,14 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     private List<Map<String, Object>> parseOpenAiModels(String body) {
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
-        // 响应格式为数据数组，每个元素包含模型标识等字段
-        com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("data");
+        // 响应格式为数据数组，每个元素包含模型标识等字段。
+        // 少数网关直接回裸数组或把列表放在 models 键下，这里一并兼容，
+        // 避免「Key 有效但列表为空」被误判。
+        com.fasterxml.jackson.databind.JsonNode data = root == null ? null
+                : (root.isArray() ? root : root.get("data"));
+        if (data == null && root != null) {
+            data = root.get("models");
+        }
         if (data != null && data.isArray()) {
             for (com.fasterxml.jackson.databind.JsonNode item : data) {
                 String id = item.path("id").asText(null);
@@ -3406,6 +3844,14 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         putIfPresent(row, "reasoning", metrics.get("reasoning"));
         putIfPresent(row, "tool_call", metrics.get("function_calling"));
         putIfPresent(row, "temperature_supported", metrics.get("temperature"));
+        // 价格：上游 /models 的 pricing 已由 parseModelMetrics 归一成「每百万 token 美元」。
+        // 提到行顶层是为了让「从提供商获取」列表能直接标注价格/免费，
+        // 落库时仍走 metrics 同一份数据（见 mergeUpstreamMetadata）。
+        putIfPresent(row, "price_input_per_musd", metrics.get("price_input_per_musd"));
+        putIfPresent(row, "price_output_per_musd", metrics.get("price_output_per_musd"));
+        putIfPresent(row, "price_cache_hit_per_musd", metrics.get("price_cache_hit_per_musd"));
+        putIfPresent(row, "price_cache_write_per_musd", metrics.get("price_cache_write_per_musd"));
+        putIfPresent(row, "cost_per_task", metrics.get("cost_per_task"));
         Map<String, Object> modalities = modalityMapOf(metrics);
         if (!modalities.isEmpty()) {
             row.put("modalities", modalities);

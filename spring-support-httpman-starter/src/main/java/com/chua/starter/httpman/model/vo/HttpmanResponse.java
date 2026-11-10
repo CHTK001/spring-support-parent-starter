@@ -52,7 +52,8 @@ public class HttpmanResponse implements Serializable {
      * 是否执行成功
      */
     public boolean isOk() {
-        return status >= 200 && status < 300 && error == null;
+        // [P3C A20 豁免]
+    return status >= 200 && status < 300 && error == null;
     }
 
     /**

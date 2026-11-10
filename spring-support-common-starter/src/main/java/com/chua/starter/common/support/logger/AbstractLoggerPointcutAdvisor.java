@@ -261,6 +261,9 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
         Object[] arguments = invocation.getArguments();
         for (int i = 0; i < arguments.length; i++) {
             evaluationContext.setVariable("$arg" + i, arguments[i]);
+            // 别名：模板里写 #{#arg0} 比 #{#$arg0} 更易读，且不依赖 SpEL
+            // 是否把 '$' 当合法标识符起始字符（旧写法 $arg0 保留，行为不变）。
+            evaluationContext.setVariable("arg" + i, arguments[i]);
         }
         evaluationContext.setVariable("$method", method);
         evaluationContext.setVariable("$result", proceed);

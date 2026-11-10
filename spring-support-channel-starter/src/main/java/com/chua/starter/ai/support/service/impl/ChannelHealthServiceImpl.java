@@ -687,6 +687,15 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
 
     // ==================== 探针执行 ====================
 
+    /**
+     * 向目标地址发起 HTTP GET 探针。
+     *
+     * @param url 探针地址
+     * @param header 认证头（无认证时传 null）
+     * @param proxy 代理地址（无代理时传 null）
+     * @param timeoutSec 连接/读取超时秒数
+     * @return 响应体
+     */
     private ClientResponse send(String url, String header, String proxy, int timeoutSec) throws Exception {
         try {
             HttpClientBuilder builder = HttpClientFactory.of(url);
@@ -842,6 +851,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         return h;
     }
 
+    /**
+     * 保存健康记录行（已存在则更新，不存在则新增）。
+     *
+     * @param h 健康记录行
+     */
     private void saveHealth(ChannelHealth h) {
         if (channelHealthMapper.selectCount(
                 new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getId, h.getId())) == 0) {

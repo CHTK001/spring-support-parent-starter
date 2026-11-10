@@ -1,0 +1,1 @@
+import{a as e,c as t,i as n,l as r,o as i,r as a,s as o}from"./file-viewer-word-BLs52_aF.js";export{a as applyDocxExternalLinkPolicy,n as applyDocxPageBackgroundImage,e as createDocxOptions,r as default,i as isMissingDocxHeaderFooterRootError,o as renderDocxWithHeaderFooterFallback,t as resolveDocxPageBackgroundImage};

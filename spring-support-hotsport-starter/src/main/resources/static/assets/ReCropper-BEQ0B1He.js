@@ -1,0 +1,1 @@
+import{t as e}from"./ReCropper-CnuSB8nu.js";var t={install(t){t.component(`ReCropper`,e)}},n=e;export{n as default,t as install};

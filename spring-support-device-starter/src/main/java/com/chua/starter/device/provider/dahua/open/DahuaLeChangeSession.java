@@ -2,15 +2,15 @@
 package com.chua.starter.device.provider.dahua.open;
 
 import com.chua.starter.device.provider.platform.AbstractOpenApiSession;
+import com.chua.starter.device.provider.sdk.PlatformApiResult;
+import com.chua.starter.device.provider.sdk.dahua.LeChangeApis;
+import com.chua.starter.device.provider.sdk.dahua.LeChangeSdk;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.security.MessageDigest;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * 大华乐橙（IMOU / lecheng）开放平台 打开api 会话
@@ -18,7 +18,8 @@ import java.util.TreeMap;
  *
  * <h3>接入说明</h3>
  * <ul>
- *   <li>endpoint、AppKey/AppSecret、签名算法需按乐橙开放平台 OpenAPI 文档配置</li>
+ *   <li>调用复用 {@link LeChangeSdk}：统一网关、官方三层 JSON 请求壳与签名均由 SDK 负责</li>
+ *   <li>DeviceSession 适配只映射官方接口目录；缺少请求/响应字段文档的操作明确抛出异常</li>
  * </ul>
  *
  * @since 4.0.0.42
@@ -30,22 +31,32 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     /**
      * 乐橙开放平台默认 baseurl（按官方文档配置）
      */
-    private static final String DEFAULT_BASE_URL = "https://openapi.lechange.com/openapi";
-
-    /**
-     * 获取 access令牌 接口
-     */
-    private static final String PATH_TOKEN = "/accessToken";
+    private static final String DEFAULT_BASE_URL = "https://openapi.lechange.cn/openapi";
 
     /**
      * 实时预览 URL 接口
      */
-    private static final String PATH_LIVE_URL = "/live";
+    private static final String PATH_LIVE_URL = "/liveList";
+
+    /**
+     * 回放 URL 接口
+     */
+    private static final String PATH_PLAYBACK_URL = "/playbackByDevice";
 
     /**
      * 云台控制接口
      */
-    private static final String PATH_PTZ_CONTROL = "/ptz";
+    private static final String PATH_PTZ_CONTROL = "/controlMovePTZ";
+
+    private static final String PATH_CHANNELS = "/listDeviceChannelByPage";
+    private static final String PATH_CAPTURE = "/setDeviceSnap";
+    private static final String PATH_ALARM_LIST = "/alarmMessageList";
+    private static final String PATH_ACCESS_RECORDS = "/accessRecordList";
+    private static final String PATH_OPEN_DOOR = "/openDoor";
+    private static final String PATH_LOCAL_RECORDS = "/queryLocalRecords";
+
+    /** 官方协议实现复用 SPI SDK，确保统一信封与签名规则。 */
+    private final LeChangeSdk delegate;
 
     /**
      * 创建 dahuale改变会话 实例
@@ -58,85 +69,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
          * @param DEFAULT_BASE_URL 默认baseurl
          */
         super(info, DEFAULT_BASE_URL);
-        /**
-         * login。
-         */
-        login();
-    }
-
-    /**
-     * 乐橙签名：MD5(appsecret + 系统 + 参数 + 时间 + nonce)。
-     * @param params 参数
-     * @param system 系统
-     * @param time 时间
-     * @param nonce nonce
-     * @return 标志的结果
-     */
-    private String sign(Map<String, Object> params, String system, String time, String nonce) {
-        TreeMap<String, Object> sorted = new TreeMap<>(params);
-        StringBuilder paramStr = new StringBuilder();
-        sorted.forEach((k, v) -> {
-            if (v != null) {
-                paramStr.append(k).append(v);
-            }
-        });
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            String src = info.appSecret() + system + paramStr + time + nonce;
-            byte[] digest = md.digest(utf8(src));
-            StringBuilder sb = new StringBuilder(digest.length * 2);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            /**
-             * illegal状态异常。
-             * @param "乐橙签名失败" "乐橙签名失败"
-             * @param e e
-             * @return illegal状态异常的结果
-             */
-            throw new IllegalStateException("乐橙签名失败", e);
-        }
-    }
-
-    /**
-     * Login
-    */
-    private void login() {
-        try {
-            Map<String, Object> params = new LinkedHashMap<>();
-            params.put("appKey", info.appKey());
-            params.put("appSecret", info.appSecret());
-            params.put("system", "openAPI");
-            JsonNode resp = execute("POST", PATH_TOKEN, params, null);
-            JsonNode data = assertOk(resp);
-            JsonNode result = data.path("result");
-            String token = result.path("accessToken").asText(null);
-            long expires = result.path("expiresIn").asLong(7200L);
-            if (token == null || token.isEmpty()) {
-                /**
-                 * illegal状态异常。
-                 * @param 为空" 为空"
-                 * @return illegal状态异常的结果
-                 */
-                throw new IllegalStateException("乐橙 accessToken 为空");
-            }
-            /**
-             * 缓存令牌。
-             * @param token 令牌
-             * @param expires expires
-             */
-            cacheToken(token, expires);
-            log.info("乐橙登录成功: deviceSerial={}", info.deviceSerial());
-        } catch (Exception e) {
-            /**
-             * illegal状态异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal状态异常的结果
-             */
-            throw new IllegalStateException("乐橙登录失败: " + e.getMessage(), e);
-        }
+        this.delegate = new LeChangeSdk(info);
     }
 
     @Override
@@ -149,31 +82,26 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
      * @return 返回值
     */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
-        if (!tokenValid() && !PATH_TOKEN.equals(path)) {
-            /**
-             * login。
-             */
-            login();
+        String code = LeChangeApis.all().stream()
+                .filter(spec -> ("/openapi" + path).equals(spec.path()))
+                .map(com.chua.starter.device.provider.sdk.PlatformApiSpec::code)
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedOperationException("乐橙接口未登记: " + path));
+        PlatformApiResult result = delegate.invoke(code, params);
+        if (result == null || !result.ok()) {
+            throw new IllegalStateException("乐橙调用失败: "
+                    + (result == null ? "无调用结果" : result.message()));
         }
-        String time = String.valueOf(System.currentTimeMillis() / 1000);
-        String nonce = java.util.UUID.randomUUID().toString().replace("-", "");
-        Map<String, Object> realParams = new LinkedHashMap<>();
-        if (params != null) {
-            realParams.putAll(params);
+        try {
+            return MAPPER.readTree(result.raw() == null ? "{}" : result.raw());
+        } catch (Exception ex) {
+            throw new IllegalStateException("乐橙响应解析失败: " + code, ex);
         }
-        if (accessToken != null && !PATH_TOKEN.equals(path)) {
-            realParams.put("token", accessToken);
-        }
-        Map<String, Object> signParams = new LinkedHashMap<>(realParams);
-        signParams.put("time", time);
-        signParams.put("nonce", nonce);
-        String sig = sign(signParams, "openAPI", time, nonce);
-        signParams.put("sign", sig);
-        if (debugEnabled()) {
-            log.info("[OpenAPI-DEBUG] 乐橙 签名: time={}, nonce={}, sign={}",
-                    time, nonce, sig.length() > 12 ? sig.substring(0, 12) + "..." : sig);
-        }
-        return execute(method, path, realParams, null);
+    }
+
+    @Override
+    public boolean testConnection() {
+        return delegate.testConnection();
     }
 
     /**
@@ -218,9 +146,52 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         params.put("beginTime", range.start().toString());
         params.put("endTime", range.end().toString());
         params.put("streamId", 0);
-        JsonNode data = assertOk(post("/playback", params));
+        JsonNode data = assertOk(post(PATH_PLAYBACK_URL, params));
         JsonNode result = data.path("result");
         return result.path("url").asText(result.path("hls").asText(""));
+    }
+
+    @Override
+    public java.util.List<com.chua.starter.device.spi.model.DeviceChannel> listChannels() {
+        throw undocumented(PATH_CHANNELS, "分页请求字段以及通道响应字段/结构");
+    }
+
+    @Override
+    public java.io.InputStream capture(int channel) {
+        throw undocumented(PATH_CAPTURE, "设备/通道请求字段以及抓图响应字段（图片字节或图片地址）");
+    }
+
+    @Override
+    public java.util.List<com.chua.starter.device.spi.model.DeviceEvent> pollEvents(
+            com.chua.starter.device.spi.model.TimeRange range) {
+        throw undocumented(PATH_ALARM_LIST, "设备、时间范围、分页请求字段以及告警响应字段/结构");
+    }
+
+    @Override
+    public java.util.List<com.chua.starter.device.spi.model.AccessRecord> queryAccessRecords(
+            com.chua.starter.device.spi.model.TimeRange range) {
+        throw undocumented(PATH_ACCESS_RECORDS, "设备、时间范围、分页请求字段以及通行记录响应字段/结构");
+    }
+
+    @Override
+    public void remoteUnlock(int doorId) {
+        throw undocumented(PATH_OPEN_DOOR, "设备/门标识请求字段、开门动作请求字段以及成功响应字段");
+    }
+
+    @Override
+    public java.util.List<com.chua.starter.device.spi.model.RecordFile> queryRecords(
+            int channel, com.chua.starter.device.spi.model.TimeRange range) {
+        throw undocumented(PATH_LOCAL_RECORDS, "设备/通道、时间范围、分页请求字段以及录像记录响应字段/结构");
+    }
+
+    /**
+     * API 目录仅确认接口方法名和路径；缺少对应请求/响应字段文档时不猜测调用协议。
+     * @param path 官方目录路径
+     * @param missing 缺少的官方字段说明
+     * @return 显式未支持异常
+     */
+    private UnsupportedOperationException undocumented(String path, String missing) {
+        return new UnsupportedOperationException("乐橙接口 /openapi" + path + " 字段文档不完整：" + missing);
     }
 
     @Override

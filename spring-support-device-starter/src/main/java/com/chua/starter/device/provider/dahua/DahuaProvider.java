@@ -4,6 +4,7 @@ package com.chua.starter.device.provider.dahua;
 import com.chua.starter.device.provider.dahua.open.DahuaCloudSession;
 import com.chua.starter.device.provider.dahua.open.DahuaLeChangeSession;
 import com.chua.starter.device.provider.dahua.sdk.DahuaRealSession;
+import com.chua.starter.device.provider.sdk.DeviceCapabilityMatrix;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.AuthTypeDescriptor;
@@ -66,6 +67,11 @@ public class DahuaProvider implements DeviceProvider {
      * 大华乐橙
      */
     private static final String PLATFORM_LECHANGE = "lechange";
+
+    /**
+     * 大华 ICC / DSS 私有化平台
+     */
+    private static final String PLATFORM_ICC = "dahua-icc";
 
     /**
      * 是否允许回退到模拟会话（默认 false：严格真实对接）
@@ -226,13 +232,33 @@ public class DahuaProvider implements DeviceProvider {
                         new AuthTypeDescriptor("SDK", "SDK 直连", "局域网直连设备，需要厂商 SDK 运行库")),
                 List.of(
                         new PlatformDescriptor(PLATFORM_DAHUA_CLOUD, "大华云睿",
-                                "https://api.dahua-cloud.com", platformFields),
+                                "https://open.cloud-dahua.com", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_DAHUA_CLOUD)),
                         new PlatformDescriptor(PLATFORM_LECHANGE, "大华乐橙",
-                                "https://openapi.lechange.com/openapi", platformFields)),
-                Set.of(DeviceCapability.MEDIA, DeviceCapability.PTZ,
-                        DeviceCapability.EVENT, DeviceCapability.ACCESS, DeviceCapability.CHANNEL),
+                                "https://openapi.lechange.cn", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_LECHANGE)),
+                        new PlatformDescriptor(PLATFORM_ICC, "大华 ICC / DSS（私有化）",
+                                "", platformFields,
+                                DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_ICC))),
+                // 厂商级能力位取各平台并集；功能显隐必须按平台级 capabilities
+                unionCapabilities(PLATFORM_DAHUA_CLOUD, PLATFORM_LECHANGE, PLATFORM_ICC),
                 60,
                 null,
-                "支持云睿、乐橙与 SDK 直连；组织同步与设备目录同步待各平台 API 接入后开放。");
+                "支持云睿、乐橙与 SDK 直连；各平台支持的能力以平台级能力矩阵为准，"
+                        + "不支持的平台在前端直接隐藏对应功能入口。");
+    }
+
+    /**
+     * 取厂商下若干平台能力位的并集。
+     *
+     * @param platforms 平台编码
+     * @return 能力位并集
+     */
+    private static java.util.Set<DeviceCapability> unionCapabilities(String... platforms) {
+        java.util.Set<DeviceCapability> result = java.util.EnumSet.noneOf(DeviceCapability.class);
+        for (String platform : platforms) {
+            result.addAll(DeviceCapabilityMatrix.capabilitiesOf(VENDOR, platform));
+        }
+        return result;
     }
 }

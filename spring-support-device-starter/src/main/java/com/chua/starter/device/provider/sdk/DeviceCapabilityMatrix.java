@@ -1,0 +1,678 @@
+package com.chua.starter.device.provider.sdk;
+
+import com.chua.starter.device.spi.model.DeviceCapability;
+
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 平台能力矩阵：一个平台官方支持哪些能力位、每块能力对应多少接口。
+ *
+ * <p>这是「100% 覆盖」的判定依据。覆盖率不是「方法都返回了值」，而是
+ * 「能力矩阵里标记为 {@link Support#YES} 的格子，都有真实实现且真实跑通」。</p>
+ *
+ * <h3>标注口径（严格执行）</h3>
+ * <ul>
+ *   <li>{@link Support#YES}：平台 {@code DeviceSession} 里确有实现，且已用真实凭据跑通。</li>
+ *   <li>{@link Support#IMPLEMENTED_UNVERIFIED}：确有实现，但尚无环境验证。</li>
+ *   <li>{@link Support#TODO}：平台官方有这部分接口，但本模块 {@code DeviceSession} 尚未实现。
+ *       只「接口目录里有路径」不算实现。</li>
+ *   <li>{@link Support#NO}：平台客观上不具备该能力。</li>
+ * </ul>
+ *
+ * <p>只有 {@code YES} 与 {@code IMPLEMENTED_UNVERIFIED} 会派生成平台级能力位，
+ * 前端据此显示功能入口；{@code TODO} 与 {@code NO} 一律隐藏并给出原因。</p>
+ *
+ * @param platform 平台标识，例如 hikvision.cloud-yao
+ * @param title 平台展示名
+ * @param cells 能力位到支持度的映射
+ * @since 4.0.0.51
+ * @author CH
+ */
+public record DeviceCapabilityMatrix(
+        String platform,
+        String title,
+        Map<DeviceCapability, Cell> cells
+) {
+
+    /**
+     * 支持度。
+     */
+    public enum Support {
+
+        /**
+         * 平台官方支持且本模块已实现并验证
+         */
+        YES("支持"),
+
+        /**
+         * 平台官方支持，本模块已实现但尚无环境验证
+         */
+        IMPLEMENTED_UNVERIFIED("已实现未验证"),
+
+        /**
+         * 平台官方支持，本模块尚未实现
+         */
+        TODO("待实现"),
+
+        /**
+         * 平台客观上不具备该能力
+         */
+        NO("不支持");
+
+        /**
+         * 展示名称
+         */
+        private final String description;
+
+        /**
+         * Support
+         *
+         * @param description 展示名称
+         */
+        Support(String description) {
+            this.description = description;
+        }
+
+        /**
+         * 获取展示名称
+         *
+         * @return 展示名称
+         */
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    /**
+     * 一个能力格子。
+     *
+     * @param support 支持度
+     * @param apiCount 该能力对应的官方接口数量（0 表示不适用）
+     * @param note 说明：不支持的写原因，待实现的写依据
+     */
+    public record Cell(Support support, int apiCount, String note) {
+
+        /**
+         * 构造：不支持的格子。
+         *
+         * @param note 原因
+         * @return 格子
+         */
+        public static Cell no(String note) {
+            return new Cell(Support.NO, 0, note);
+        }
+
+        /**
+         * 构造：支持的格子。
+         *
+         * @param apiCount 接口数
+         * @return 格子
+         */
+        public static Cell yes(int apiCount) {
+            return new Cell(Support.YES, apiCount, "");
+        }
+
+        /**
+         * 构造：已实现未验证的格子。
+         *
+         * @param apiCount 接口数
+         * @param note 说明
+         * @return 格子
+         */
+        public static Cell unverified(int apiCount, String note) {
+            return new Cell(Support.IMPLEMENTED_UNVERIFIED, apiCount, note);
+        }
+    }
+
+    /**
+     * 规范构造器：对能力位映射做只读拷贝。
+     *
+     * @param cells 能力位映射
+     */
+    public DeviceCapabilityMatrix {
+        if (cells == null || cells.isEmpty()) {
+            cells = Collections.emptyMap();
+        } else {
+            EnumMap<DeviceCapability, Cell> copy = new EnumMap<>(DeviceCapability.class);
+            copy.putAll(cells);
+            cells = Collections.unmodifiableMap(copy);
+        }
+    }
+
+    /**
+     * 该平台是否支持某能力。
+     *
+     * @param capability 能力位
+     * @return 支持（YES 或 IMPLEMENTED_UNVERIFIED）返回 true；NO 与 TODO 返回 false
+     */
+    public boolean supports(DeviceCapability capability) {
+        Cell cell = cells.get(capability);
+        return cell != null
+                && (cell.support() == Support.YES || cell.support() == Support.IMPLEMENTED_UNVERIFIED);
+    }
+
+    /**
+     * 取某能力的格子，缺失时按「未声明」处理。
+     *
+     * @param capability 能力位
+     * @return 格子
+     */
+    public Cell cell(DeviceCapability capability) {
+        return cells.getOrDefault(capability, new Cell(Support.NO, 0, "未在能力矩阵中声明"));
+    }
+
+    /**
+     * 统计该能力矩阵的覆盖率：已实现（YES + IMPLEMENTED_UNVERIFIED）占「官方支持」的比例。
+     *
+     * @return 覆盖率，0.0 ~ 1.0
+     */
+    public double coverage() {
+        int supported = 0;
+        int implemented = 0;
+        for (Cell cell : cells.values()) {
+            if (cell.support() == Support.NO) {
+                continue;
+            }
+            supported++;
+            if (cell.support() == Support.YES || cell.support() == Support.IMPLEMENTED_UNVERIFIED) {
+                implemented++;
+            }
+        }
+        return supported == 0 ? 0.0 : (double) implemented / supported;
+    }
+
+    /**
+     * 构造器。
+     *
+     * @param platform 平台标识
+     * @param title 平台展示名
+     * @return 构造器
+     */
+    public static Builder builder(String platform, String title) {
+        return new Builder(platform, title);
+    }
+
+    /**
+     * 取指定厂商下某平台支持的能力位集合。
+     *
+     * <p>平台标识在能力矩阵中统一采用 {@code vendor.platform} 形式，本方法负责拼接并转发到
+     * {@link Registry#capabilitiesOf(String)}，供各厂商描述符派生平台级能力位使用。</p>
+     *
+     * @param vendor   厂商标识，例如 hikvision
+     * @param platform 平台编码，例如 ezviz
+     * @return 能力位集合；未登记时返回空集
+     */
+    public static Set<DeviceCapability> capabilitiesOf(String vendor, String platform) {
+        return Registry.capabilitiesOf(vendor + "." + platform);
+    }
+
+    /**
+     * 能力矩阵构造器。
+     */
+    public static final class Builder {
+
+        private final String platform;
+
+        private final String title;
+
+        private final Map<DeviceCapability, Cell> cells = new LinkedHashMap<>();
+
+        private Builder(String platform, String title) {
+            this.platform = platform;
+            this.title = title;
+        }
+
+        /**
+         * 标记支持。
+         *
+         * @param capability 能力位
+         * @param apiCount 接口数
+         * @return 构造器
+         */
+        public Builder yes(DeviceCapability capability, int apiCount) {
+            cells.put(capability, Cell.yes(apiCount));
+            return this;
+        }
+
+        /**
+         * 标记已实现未验证。
+         *
+         * @param capability 能力位
+         * @param apiCount 接口数
+         * @param note 说明
+         * @return 构造器
+         */
+        public Builder unverified(DeviceCapability capability, int apiCount, String note) {
+            cells.put(capability, Cell.unverified(apiCount, note));
+            return this;
+        }
+
+        /**
+         * 标记平台不支持。
+         *
+         * @param capability 能力位
+         * @param reason 原因
+         * @return 构造器
+         */
+        public Builder no(DeviceCapability capability, String reason) {
+            cells.put(capability, Cell.no(reason));
+            return this;
+        }
+
+        /**
+         * 标记待实现。
+         *
+         * @param capability 能力位
+         * @param apiCount 官方接口数
+         * @param note 依据
+         * @return 构造器
+         */
+        public Builder todo(DeviceCapability capability, int apiCount, String note) {
+            cells.put(capability, new Cell(Support.TODO, apiCount, note));
+            return this;
+        }
+
+        /**
+         * 构造。
+         *
+         * @return 能力矩阵
+         */
+        public DeviceCapabilityMatrix build() {
+            return new DeviceCapabilityMatrix(platform, title, cells);
+        }
+    }
+
+    /**
+     * 能力矩阵注册表：所有平台的能力矩阵集中登记，供覆盖率统计与业务侧前置校验使用。
+     *
+     * @since 4.0.0.51
+     */
+    public static final class Registry {
+
+        private static final Map<String, DeviceCapabilityMatrix> MATRICES = new LinkedHashMap<>();
+
+        static {
+            register(hikvisionCloudYao());
+            register(hikvisionCloudEye());
+            register(hikvisionSecurePlatform());
+            register(hikvisionEzviz());
+            register(hikvisionIsup());
+            register(dahuaCloud());
+            register(dahuaLeChange());
+            register(dahuaIcc());
+            register(uniview());
+            register(gb28181());
+            register(onvif());
+        }
+
+        private Registry() {
+        }
+
+        /**
+         * 登记一个平台的能力矩阵。
+         *
+         * @param matrix 能力矩阵
+         */
+        public static void register(DeviceCapabilityMatrix matrix) {
+            MATRICES.put(matrix.platform(), matrix);
+        }
+
+        /**
+         * 取平台能力矩阵。
+         *
+         * @param platform 平台标识
+         * @return 能力矩阵，未登记返回 null
+         */
+        public static DeviceCapabilityMatrix get(String platform) {
+            return MATRICES.get(platform);
+        }
+
+        /**
+         * 全部已登记的能力矩阵。
+         *
+         * @return 只读视图
+         */
+        public static Map<String, DeviceCapabilityMatrix> all() {
+            return Collections.unmodifiableMap(MATRICES);
+        }
+
+        /**
+         * 取该平台支持的能力位集合（仅 {@link Support#YES} 与 {@link Support#IMPLEMENTED_UNVERIFIED}）。
+         *
+         * <p>供 {@code PlatformDescriptor} 派生能力位使用：能力矩阵是唯一事实源，
+         * 描述符不再手写能力位，避免两处声明不一致。</p>
+         *
+         * @param platform 平台标识，例如 hikvision.ezviz
+         * @return 能力位集合；平台未登记时返回空集
+         */
+        public static Set<DeviceCapability> capabilitiesOf(String platform) {
+            DeviceCapabilityMatrix matrix = MATRICES.get(platform);
+            if (matrix == null) {
+                return Set.of();
+            }
+            Set<DeviceCapability> result = EnumSet.noneOf(DeviceCapability.class);
+            for (Map.Entry<DeviceCapability, Cell> entry : matrix.cells().entrySet()) {
+                Support support = entry.getValue().support();
+                if (support == Support.YES || support == Support.IMPLEMENTED_UNVERIFIED) {
+                    result.add(entry.getKey());
+                }
+            }
+            return Collections.unmodifiableSet(result);
+        }
+    }
+
+    /**
+     * 海康云曜能力矩阵。
+     *
+     * <p>会话实现现状：{@code HikvisionCloudYaoSession} 实现了
+     * {@code getLiveUrl / getPlaybackUrl / ptzControl / remoteUnlock} 四个方法，
+     * 因此只有 MEDIA / RECORD / PTZ / ACCESS 标为已实现；
+     * 抓图、事件、组织虽有官方接口（9 / 3 / 4 条），会话层未实现，标 TODO。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix hikvisionCloudYao() {
+        return builder("hikvision.cloud-yao", "海康云曜")
+                .yes(DeviceCapability.DEVICE, 102)
+                .unverified(DeviceCapability.MEDIA, 74, "getLiveUrl 已实现，账号下无设备未验证")
+                .unverified(DeviceCapability.RECORD, 7, "getPlaybackUrl 已实现，无设备未验证")
+                .unverified(DeviceCapability.PTZ, 13, "ptzControl 已实现，无设备未验证")
+                .unverified(DeviceCapability.ACCESS, 5, "remoteUnlock 已实现，无门禁设备未验证")
+                .todo(DeviceCapability.CHANNEL, 20, "会话层无通道列表方法")
+                .todo(DeviceCapability.CAPTURE, 9, "抓图接口待实现")
+                .todo(DeviceCapability.EVENT, 3, "事件订阅接口待实现")
+                .todo(DeviceCapability.ORG, 4, "组织同步接口待实现")
+                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改接口待实现")
+                .todo(DeviceCapability.DEVICE_WRITE, 4, "设备增删改接口待实现")
+                .todo(DeviceCapability.PERSON, 3, "人员接口待实现")
+                .todo(DeviceCapability.PERSON_WRITE, 3, "人员增删改接口待实现")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改接口待实现")
+                .no(DeviceCapability.PARKING, "云曜开放平台未提供停车场业务接口")
+                .build();
+    }
+
+    /**
+     * 海康云眸能力矩阵。
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix hikvisionCloudEye() {
+        return builder("hikvision.cloud-eye", "海康云眸")
+                .yes(DeviceCapability.DEVICE, 7)
+                .unverified(DeviceCapability.MEDIA, 5, "getLiveUrl 已实现，账号下无设备未验证")
+                .unverified(DeviceCapability.RECORD, 2, "getPlaybackUrl 已实现，无设备未验证")
+                .unverified(DeviceCapability.PTZ, 2, "ptzControl 已实现，无设备未验证")
+                .unverified(DeviceCapability.ACCESS, 3, "remoteUnlock 已实现，无门禁设备未验证")
+                .todo(DeviceCapability.CHANNEL, 4, "会话层无通道列表方法")
+                .todo(DeviceCapability.CAPTURE, 1, "抓图接口待实现")
+                .todo(DeviceCapability.EVENT, 1, "事件接口待实现")
+                .todo(DeviceCapability.PERSON, 2, "人员接口待实现")
+                .todo(DeviceCapability.PERSON_WRITE, 2, "人员增删改接口待实现")
+                .no(DeviceCapability.DEVICE_WRITE, "云眸设备由设备侧注册，不支持平台侧增删")
+                .no(DeviceCapability.ORG, "云眸开放平台无组织架构接口")
+                .no(DeviceCapability.ORG_WRITE, "云眸开放平台不提供组织增删改")
+                .no(DeviceCapability.ACCESS_WRITE, "云眸开放平台不提供门禁增删改")
+                .no(DeviceCapability.PARKING, "云眸开放平台无停车场业务")
+                .build();
+    }
+
+    /**
+     * 海康综合安防管理平台（私有化部署）能力矩阵。
+     *
+     * <p>门禁接口真实存在：{@code /artemis/api/access/v1/door/control}、
+     * {@code /artemis/api/access/v1/accessRecords}、{@code /artemis/api/resource/v1/door/search}。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix hikvisionSecurePlatform() {
+        return builder("hikvision.secure-platform", "海康综合安防")
+                .yes(DeviceCapability.DEVICE, 6)
+                .unverified(DeviceCapability.MEDIA, 1, "getLiveUrl 已实现，缺网关地址未验证")
+                .unverified(DeviceCapability.RECORD, 5, "getPlaybackUrl 已实现，缺网关地址未验证")
+                .unverified(DeviceCapability.PTZ, 4, "ptzControl 已实现，缺网关地址未验证")
+                .unverified(DeviceCapability.ACCESS, 4, "remoteUnlock 已实现，缺网关地址未验证")
+                .todo(DeviceCapability.CHANNEL, 5, "会话层无通道列表方法")
+                .todo(DeviceCapability.ORG, 4, "组织同步接口待实现")
+                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改接口待实现")
+                .todo(DeviceCapability.DEVICE_WRITE, 3, "设备增删改接口待实现")
+                .todo(DeviceCapability.PERSON, 4, "人员接口待实现")
+                .todo(DeviceCapability.PERSON_WRITE, 3, "人员增删改接口待实现")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改接口待实现")
+                .todo(DeviceCapability.CAPTURE, 2, "抓图接口待实现")
+                .todo(DeviceCapability.EVENT, 2, "事件接口待实现")
+                .no(DeviceCapability.PARKING, "综合安防停车场为独立子系统，不在本接入范围")
+                .build();
+    }
+
+    /**
+     * 萤石云能力矩阵。
+     *
+     * <p><b>2026-11-10 实测更新（真机 BF1505592 + 真实凭据）</b>：
+     * {@code EzvizSession} 已建，直播/回放/抓图的方法实现完成并调用到真实接口，
+     * 但因该设备当前离线，平台返回 {@code 20007 The device is offline}，
+     * 故这三项按口径标 {@code IMPLEMENTED_UNVERIFIED}；通道列表、人员增删改、
+     * 告警查询、开门记录均已真跑通。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix hikvisionEzviz() {
+        return builder("hikvision.ezviz", "萤石云")
+                .yes(DeviceCapability.DEVICE, 287)
+                .yes(DeviceCapability.CHANNEL, 20)
+                .yes(DeviceCapability.PERSON, 17)
+                .yes(DeviceCapability.PERSON_WRITE, 8)
+                .yes(DeviceCapability.EVENT, 17)
+                .yes(DeviceCapability.ACCESS, 33)
+                .unverified(DeviceCapability.MEDIA, 14,
+                        "已实现 /api/lapp/v2/live/address/get；真机离线返回 20007，待设备上线复验")
+                .unverified(DeviceCapability.RECORD, 10,
+                        "已实现回放取址与录像检索；真机离线返回 20007，待设备上线复验")
+                .unverified(DeviceCapability.CAPTURE, 4,
+                        "已实现 /api/lapp/device/capture 并下载图片；真机离线待复验")
+                .unverified(DeviceCapability.PTZ, 13,
+                        "已实现 ptz start/stop 与预置位增删调用；真机离线待复验")
+                .unverified(DeviceCapability.ACCESS_WRITE, 6,
+                        "已实现智能锁开锁 /api/lapp/building/device/smartlock/unlock；账号下无锁可验")
+                .todo(DeviceCapability.DEVICE_WRITE, 4, "萤石设备增删改接口待接入")
+                .no(DeviceCapability.ORG, "萤石开放平台无组织架构接口（392 条中组织相关为 0）")
+                .no(DeviceCapability.ORG_WRITE, "萤石开放平台无组织架构接口")
+                .no(DeviceCapability.PARKING, "萤石无停车场业务")
+                .build();
+    }
+
+    /**
+     * 海康 ISUP 能力矩阵（协议网关转发模式）。
+     *
+     * <p>只有平台 SDK（{@code HikvisionIsupSdk}），无 DeviceSession，业务能力一律 TODO。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix hikvisionIsup() {
+        return builder("hikvision.isup", "海康 ISUP")
+                .yes(DeviceCapability.DEVICE, 6)
+                .todo(DeviceCapability.MEDIA, 5, "ISUP 转发网关待接入：实时预览")
+                .todo(DeviceCapability.RECORD, 2, "ISUP 转发网关待接入：录像检索")
+                .todo(DeviceCapability.PTZ, 2, "ISUP 转发网关待接入：云台")
+                .todo(DeviceCapability.CHANNEL, 2, "ISUP 转发网关待接入：通道列表")
+                .no(DeviceCapability.DEVICE_WRITE, "ISUP 设备由设备主动注册上线，平台侧不能新增或删除")
+                .no(DeviceCapability.ORG, "ISUP 是设备接入协议，无组织模型")
+                .no(DeviceCapability.ORG_WRITE, "ISUP 是设备接入协议，无组织模型")
+                .no(DeviceCapability.PERSON, "ISUP 是设备接入协议，无人员模型")
+                .no(DeviceCapability.PERSON_WRITE, "ISUP 是设备接入协议，无人员模型")
+                .no(DeviceCapability.ACCESS, "ISUP 协议本身不含门禁业务，门禁走设备 SDK")
+                .no(DeviceCapability.ACCESS_WRITE, "ISUP 协议本身不含门禁业务，门禁走设备 SDK")
+                .no(DeviceCapability.CAPTURE, "ISUP 无抓图信令，抓图走设备 SDK")
+                .no(DeviceCapability.EVENT, "ISUP 事件由设备主动上报，不走平台查询")
+                .no(DeviceCapability.PARKING, "ISUP 无停车场业务")
+                .build();
+    }
+
+    /**
+     * 大华云睿能力矩阵。
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix dahuaCloud() {
+        return builder("dahua.dahua-cloud", "大华云睿")
+                .yes(DeviceCapability.DEVICE, 11)
+                .unverified(DeviceCapability.MEDIA, 1, "getLiveUrl 已实现，账号下无设备未验证")
+                .unverified(DeviceCapability.RECORD, 4, "getPlaybackUrl 已实现，无设备未验证")
+                .unverified(DeviceCapability.PTZ, 4, "ptzControl 已实现，无设备未验证")
+                .unverified(DeviceCapability.ACCESS, 4, "remoteUnlock 已实现，无门禁设备未验证")
+                .todo(DeviceCapability.CHANNEL, 6, "会话层无通道列表方法")
+                .todo(DeviceCapability.CAPTURE, 2, "抓图接口待实现")
+                .todo(DeviceCapability.EVENT, 10, "事件/消息接口待实现")
+                .todo(DeviceCapability.DEVICE_WRITE, 4, "设备增删改接口待实现")
+                .todo(DeviceCapability.ORG, 4, "组织接口待实现")
+                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改接口待实现")
+                .todo(DeviceCapability.PERSON, 4, "人员接口待实现")
+                .todo(DeviceCapability.PERSON_WRITE, 4, "人员增删改接口待实现")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改接口待实现")
+                .no(DeviceCapability.PARKING, "云睿开放平台无停车场业务")
+                .build();
+    }
+
+    /**
+     * 大华乐橙能力矩阵。
+     *
+     * <p>乐橙确有门禁接口（{@code /openapi/openDoor}、{@code /openapi/accessRecordList}），
+     * 但 {@code DahuaLeChangeSession} 未重写 {@code remoteUnlock}，故 ACCESS 标 TODO。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix dahuaLeChange() {
+        return builder("dahua.lechange", "大华乐橙")
+                .yes(DeviceCapability.DEVICE, 8)
+                .unverified(DeviceCapability.MEDIA, 1, "getLiveUrl 已实现，未验证")
+                .unverified(DeviceCapability.RECORD, 4, "getPlaybackUrl 已实现，未验证")
+                .unverified(DeviceCapability.PTZ, 2, "ptzControl 已实现，未验证")
+                .todo(DeviceCapability.CHANNEL, 4, "会话层无通道列表方法")
+                .todo(DeviceCapability.ACCESS, 2, "远程开门与开门记录待实现（接口已存在）")
+                .todo(DeviceCapability.ACCESS_WRITE, 1, "远程开门接口待实现")
+                .todo(DeviceCapability.CAPTURE, 1, "抓图接口待实现")
+                .todo(DeviceCapability.EVENT, 2, "告警消息接口待实现")
+                .no(DeviceCapability.DEVICE_WRITE, "乐橙设备通过序列号绑定，开放平台无删除接口")
+                .no(DeviceCapability.ORG, "乐橙面向消费级，无组织模型")
+                .no(DeviceCapability.ORG_WRITE, "乐橙面向消费级，无组织模型")
+                .no(DeviceCapability.PERSON, "乐橙面向消费级，无人员模型")
+                .no(DeviceCapability.PERSON_WRITE, "乐橙面向消费级，无人员模型")
+                .no(DeviceCapability.PARKING, "乐橙无停车场业务")
+                .build();
+    }
+
+    /**
+     * 大华 ICC / DSS 私有化平台能力矩阵。
+     *
+     * <p>只有平台 SDK（{@code DahuaIccSdk}），无 DeviceSession，业务能力一律 TODO。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix dahuaIcc() {
+        return builder("dahua.dahua-icc", "大华 ICC")
+                .yes(DeviceCapability.DEVICE, 4)
+                .todo(DeviceCapability.MEDIA, 5, "ICC 会话待建：直播")
+                .todo(DeviceCapability.RECORD, 4, "ICC 会话待建：录像")
+                .todo(DeviceCapability.PTZ, 3, "ICC 会话待建：云台")
+                .todo(DeviceCapability.CHANNEL, 4, "ICC 会话待建：通道")
+                .todo(DeviceCapability.EVENT, 1, "ICC 事件待实现")
+                .todo(DeviceCapability.ACCESS, 2, "ICC 门禁待实现")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "ICC 门禁增删改待实现")
+                .todo(DeviceCapability.DEVICE_WRITE, 3, "ICC 设备增删改待实现")
+                .todo(DeviceCapability.ORG, 1, "ICC 组织待实现")
+                .todo(DeviceCapability.ORG_WRITE, 3, "ICC 组织增删改待实现")
+                .todo(DeviceCapability.PERSON, 1, "ICC 人员待实现")
+                .todo(DeviceCapability.PERSON_WRITE, 3, "ICC 人员增删改待实现")
+                .todo(DeviceCapability.CAPTURE, 2, "ICC 抓图待实现")
+                .no(DeviceCapability.PARKING, "ICC 停车场为独立子系统，不在本接入范围")
+                .build();
+    }
+
+    /**
+     * 宇视能力矩阵。
+     *
+     * <p>只有平台 SDK（{@code UniviewSdk}），接口路径尚未用官方文档核实，
+     * 无 DeviceSession，业务能力一律 TODO。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix uniview() {
+        return builder("uniview.uniview", "宇视")
+                .todo(DeviceCapability.DEVICE, 4, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.CHANNEL, 4, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.MEDIA, 5, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.RECORD, 4, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.PTZ, 3, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.DEVICE_WRITE, 3, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.ORG, 1, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.ORG_WRITE, 3, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.PERSON, 3, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.PERSON_WRITE, 3, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.ACCESS, 4, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.EVENT, 2, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.CAPTURE, 2, "接口路径未经官方文档核实")
+                .todo(DeviceCapability.PARKING, 3, "接口路径未经官方文档核实")
+                .build();
+    }
+
+    /**
+     * GB28181 能力矩阵（国标协议）。
+     *
+     * <p>只有平台 SDK（{@code Gb28181Sdk}），无 DeviceSession，业务能力一律 TODO。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix gb28181() {
+        return builder("standard.gb28181", "GB28181")
+                .yes(DeviceCapability.DEVICE, 7)
+                .todo(DeviceCapability.MEDIA, 9, "国标会话待建：取流（依赖 SIP 服务端）")
+                .todo(DeviceCapability.RECORD, 2, "国标会话待建：录像检索")
+                .todo(DeviceCapability.PTZ, 2, "国标会话待建：云台")
+                .todo(DeviceCapability.CHANNEL, 2, "国标会话待建：通道")
+                .no(DeviceCapability.DEVICE_WRITE, "国标设备由下级平台主动注册，上级不能新增或删除设备")
+                .no(DeviceCapability.ORG, "国标协议的定义范围是设备接入与视频传输，不含组织架构")
+                .no(DeviceCapability.ORG_WRITE, "国标协议不含组织架构")
+                .no(DeviceCapability.PERSON, "国标协议不含人员模型")
+                .no(DeviceCapability.PERSON_WRITE, "国标协议不含人员模型")
+                .no(DeviceCapability.ACCESS, "国标协议不含门禁业务")
+                .no(DeviceCapability.ACCESS_WRITE, "国标协议不含门禁业务")
+                .no(DeviceCapability.CAPTURE, "国标无抓图信令")
+                .no(DeviceCapability.EVENT, "国标事件为主动上报（订阅通知），不走平台查询")
+                .no(DeviceCapability.PARKING, "国标协议不含停车场业务")
+                .build();
+    }
+
+    /**
+     * ONVIF 能力矩阵（国际标准协议）。
+     *
+     * <p>{@code OnvifSession} 已建（媒体/云台/抓图/通道），按 ONVIF 2.0 规范实现并
+     * 按服务分别寻址；<b>本机无 ONVIF 设备可达，未经真实设备联调</b>，
+     * 故标 {@code IMPLEMENTED_UNVERIFIED}。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix onvif() {
+        return builder("standard.onvif", "ONVIF")
+                .unverified(DeviceCapability.DEVICE, 2, "已实现 GetDeviceInformation / GetCapabilities，待真机联调")
+                .unverified(DeviceCapability.MEDIA, 3, "已实现 GetStreamUri（Profile S），待真机联调")
+                .unverified(DeviceCapability.PTZ, 2, "已实现 ContinuousMove / Stop / 预置位，待真机联调")
+                .unverified(DeviceCapability.CHANNEL, 2, "已实现 GetProfiles 枚举通道，待真机联调")
+                .unverified(DeviceCapability.CAPTURE, 1, "已实现 GetSnapshotUri + 下载，待真机联调")
+                .no(DeviceCapability.RECORD, "ONVIF 的回放依赖设备 Profile G，国内主流设备普遍未实现")
+                .no(DeviceCapability.DEVICE_WRITE, "ONVIF 是设备发现与控制协议，不提供设备增删改")
+                .no(DeviceCapability.ORG, "ONVIF 不含组织架构模型")
+                .no(DeviceCapability.ORG_WRITE, "ONVIF 不含组织架构模型")
+                .no(DeviceCapability.PERSON, "ONVIF 不含人员模型")
+                .no(DeviceCapability.PERSON_WRITE, "ONVIF 不含人员模型")
+                .no(DeviceCapability.ACCESS, "ONVIF Access Control 服务国内设备几乎不支持")
+                .no(DeviceCapability.ACCESS_WRITE, "ONVIF Access Control 服务国内设备几乎不支持")
+                .no(DeviceCapability.EVENT, "ONVIF 事件为 PullPoint 订阅，不走平台查询")
+                .no(DeviceCapability.PARKING, "ONVIF 不含停车场业务")
+                .build();
+    }
+}

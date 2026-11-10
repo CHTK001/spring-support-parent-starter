@@ -58,6 +58,11 @@ public class ServerTaskScheduler {
     private static final int HOST_SCAN_INTERVAL_SECONDS = 5;
 
     /**
+     * Actuator 定时采集扫描粒度（秒）：各项目按自身开关/间隔决定是否采集
+     */
+    private static final int ACTUATOR_SCAN_INTERVAL_SECONDS = 5;
+
+    /**
      * 采集扫描粒度（秒）：采集间隔可小至 {@code MIN_INTERVAL=5s}，若与在离线检测共用 5s 扫描，
      * 因扫描相位与采集完成相位错开，配置 5s/10s 会被量化成约 10s/15s。采集单独用 1s 细粒度扫描，
      * 把触发延迟压到 ≤1s（5s 配置实际约 5-6s，10s 配置约 10-11s；剩余约 0.5-1s 为采集本身耗时）。
@@ -87,6 +92,14 @@ public class ServerTaskScheduler {
     /**
      * 时间轮实例
     */
+    /**
+     * Actuator 定时采集调度器（项目级开关，全局时间轮统一驱动）
+     */
+    private final ActuatorMonitorScheduler actuatorMonitorScheduler;
+
+    /**
+     * 时间轮实例
+     */
     private Timer timer;
 
     /**
@@ -115,6 +128,11 @@ public class ServerTaskScheduler {
     private volatile TimerTask delayTask;
 
     /**
+     * Actuator 定时采集任务
+     */
+    private volatile TimerTask actuatorMonitorTask;
+
+    /**
      * 启动：初始化时间轮并注册全部周期任务
      */
     @PostConstruct
@@ -132,6 +150,7 @@ public class ServerTaskScheduler {
          * reschedule延迟。
          */
         rescheduleDelay();
+        rescheduleActuatorMonitor();
         rescheduleSession();
         rescheduleConnection();
         log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/延迟检测/会话清理/连接健康检查(计划任务由 exec-cron 逐任务 CronTrigger 调度)");
@@ -174,6 +193,7 @@ public class ServerTaskScheduler {
         /**
          * rescheduleconnection。
          */
+        rescheduleActuatorMonitor();
         rescheduleConnection();
         log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.keys());
     }
@@ -215,6 +235,15 @@ public class ServerTaskScheduler {
         cancelTask(delayTask);
         delayTask = timer.scheduleAtFixedRate(onlineScheduler::delayTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 重排 Actuator 定时采集：全局时间轮固定扫描，各项目按自身开关/间隔决定是否采集
+     */
+    private void rescheduleActuatorMonitor() {
+        cancelTask(actuatorMonitorTask);
+        actuatorMonitorTask = timer.scheduleAtFixedRate(actuatorMonitorScheduler::tick,
+                ACTUATOR_SCAN_INTERVAL_SECONDS, ACTUATOR_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**

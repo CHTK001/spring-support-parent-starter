@@ -1,0 +1,1 @@
+import{t as e}from"./koi-global-edit-D7tE0TVH.js";export{e as default};

@@ -1,0 +1,1 @@
+import{t as e}from"./koi-housing-BP7jh6pS.js";export{e as default};

@@ -74,6 +74,11 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     private static final int MAX_VERIFY_MESSAGE_LENGTH = 500;
 
     /**
+     * 账号编码列宽（{@code sys_account_code varchar(128)}）
+     */
+    private static final int MAX_CODE_LENGTH = 128;
+
+    /**
      * 账号映射器
      */
     private final ManageAccountMapper accountMapper;
@@ -222,6 +227,7 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     public boolean delete(String accountId) {
         SysAccount existing = requireAccount(accountId);
         assertWritable(existing);
+        releaseCode(existing);
         int rows = accountMapper.deleteById(accountId);
         log.info("[account] 删除账号: id={}, rows={}", accountId, rows);
         return rows > 0;
@@ -267,6 +273,7 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         return runBatch(accountIds, accountId -> {
             SysAccount existing = requireAccount(accountId);
             assertWritable(existing);
+            releaseCode(existing);
             accountMapper.deleteById(accountId);
         });
     }
@@ -459,6 +466,28 @@ public class ManageAccountServiceImpl implements ManageAccountService {
             wrapper.eq(SysAccount::getOwner, account.getOwner());
         }
         accountMapper.update(null, wrapper);
+    }
+
+    /**
+     * 删除前释放账号编码占用。
+     *
+     * <p>{@code sys_account_code} 建的是<b>物理唯一索引</b>，而删除是逻辑删除：
+     * 行还在，编码就还被占着。若直接重发同一编码，{@code existsCode} 查不到
+     * （{@code @TableLogic} 自动过滤已删行），插入时却撞唯一索引，最终 500。
+     * 因此删除时先把编码改写为带墓碑后缀的历史值，把编码让出来。</p>
+     *
+     * @param account 待删除账号
+     */
+    private void releaseCode(SysAccount account) {
+        String suffix = "#del#" + account.getAccountId();
+        String code = StringUtils.isBlank(account.getCode()) ? "" : account.getCode();
+        int keep = Math.max(0, MAX_CODE_LENGTH - suffix.length());
+        String tombstone = (code.length() > keep ? code.substring(0, keep) : code) + suffix;
+        SysAccount patch = new SysAccount();
+        patch.setAccountId(account.getAccountId());
+        patch.setCode(tombstone);
+        patch.setUpdatedAt(System.currentTimeMillis());
+        accountMapper.updateById(patch);
     }
 
     /**

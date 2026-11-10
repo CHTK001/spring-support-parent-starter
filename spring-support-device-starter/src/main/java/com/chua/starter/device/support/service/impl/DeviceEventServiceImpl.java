@@ -7,6 +7,7 @@ import com.chua.starter.device.support.mapper.DeviceEventRecordMapper;
 import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.support.util.DeviceStatusUtil;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceEvent;
 import com.chua.starter.device.spi.model.EventType;
@@ -93,7 +94,14 @@ public class DeviceEventServiceImpl implements DeviceEventService {
      * <p>手工全量入口；定时驱动已改为按凭据的 {@link #pollDevicesByCredential(String)}。</p>
      */
     public void pollAllDevices() {
-        sessionManager.getAllSessions().forEach((deviceId, session) -> pollSession(deviceId, session));
+        sessionManager.getAllSessions().forEach((deviceId, session) -> {
+            DeviceInfo device = deviceService.getDevice(deviceId);
+            // 停用 / 报废设备即便会话还没回收，也不参与事件轮询
+            if (device != null && DeviceStatusUtil.collectionStopped(device.getDeviceInfoStatus())) {
+                return;
+            }
+            pollSession(deviceId, session);
+        });
     }
 
     @Override
@@ -104,6 +112,10 @@ public class DeviceEventServiceImpl implements DeviceEventService {
      */
     public void pollDevicesByCredential(String credentialId) {
         for (DeviceInfo device : deviceService.listByCredentialId(credentialId)) {
+            // 停用 / 报废设备不参与后台采集：即使会话还在，也不拉事件
+            if (DeviceStatusUtil.collectionStopped(device.getDeviceInfoStatus())) {
+                continue;
+            }
             DeviceSession session = sessionManager.getSession(device.getDeviceInfoId());
             if (session == null) {
                 continue;

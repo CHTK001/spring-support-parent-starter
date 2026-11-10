@@ -2,8 +2,12 @@ package com.chua.starter.device.support.configuration;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.device.provider.sdk.DevicePlatformSdkProvider;
+import com.chua.starter.device.provider.sdk.DevicePlatformSdks;
 import com.chua.starter.device.spi.DeviceProvider;
+import com.chua.starter.device.support.security.DeviceWebhookDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -31,6 +35,7 @@ import java.util.List;
         "com.chua.starter.device.support.util",
         "com.chua.starter.device.support.security",
         "com.chua.starter.device.support.realtime",
+        "com.chua.starter.device.support.callback",
         "com.chua.starter.device.provider"
 })
 @MapperScan("com.chua.starter.device.support.mapper")
@@ -44,15 +49,38 @@ import java.util.List;
 public class DeviceAutoConfiguration {
 
     /**
-     * 注入所有设备 提供者 Bean（@组件 自动注册）。
+     * 注入所有设备 提供者 Bean（@组件 自动注册），并登记到 common-starter 的
+     * {@link ServiceProvider} SPI 注册表，供其它模块按 vendor 取用。
      *
      * @param providers Spring 容器中所有 device提供者 实现
      * @return Provider 列表
      */
     @Bean
     public List<DeviceProvider> deviceProviders(List<DeviceProvider> providers) {
-        providers.forEach(p -> log.info("[Device] 注册 Provider: vendor={}", p.getVendor()));
+        ServiceProvider<DeviceProvider> spi = ServiceProvider.of(DeviceProvider.class);
+        providers.forEach(p -> {
+            spi.register(p.getVendor(), p);
+            log.info("[Device] 注册 Provider: vendor={}（已登记到 ServiceProvider SPI）", p.getVendor());
+        });
         return providers;
+    }
+
+    /**
+     * 登记外部模块提供的平台 SDK 扩展（SPI）。
+     *
+     * <p>平台 SDK 门面走 common-starter 的 {@link ServiceProvider} 扩展点：
+     * 外部模块只要提供一个 {@link DevicePlatformSdkProvider} Bean（即一个
+     * 「厂商 + 平台」实现），本方法会自动把它登记到平台 SDK 工厂，
+     * 业务侧与控制器无需任何改动即可调用新平台的全部接口。</p>
+     *
+     * @param sdkProviders Spring 容器中的平台 SDK 扩展
+     * @return 平台 SDK 扩展列表
+     */
+    @Bean
+    public List<DevicePlatformSdkProvider> devicePlatformSdkProviders(
+            List<DevicePlatformSdkProvider> sdkProviders) {
+        sdkProviders.forEach(DevicePlatformSdks::register);
+        return sdkProviders;
     }
 
     /**
@@ -83,7 +111,10 @@ public class DeviceAutoConfiguration {
         return registry -> {
             registry.registerEndpoint("设备", "设备管理", "/api/device/**", "设备增删改查、离线阈值、Excel 导出");
             registry.registerEndpoint("设备", "通道管理", "/api/device/channel/**", "通道的增删改查、启用/禁用");
-            registry.registerEndpoint("设备", "视频", "/api/device/video/**", "视频预览、回放");
+            registry.registerEndpoint("设备", "视频", "/api/device/video/**", "视频预览、回放、直播开启/停止");
+            registry.registerEndpoint("设备", "生命周期回调", "/api/device/callbacks/**", "回调实现列表与事件手工重放");
+            registry.registerEndpoint("设备", "webhook 入站", DeviceWebhookDefaults.WEBHOOK_PREFIX + "/**",
+                    "门禁记录/告警事件推送入库（appKey 鉴权，设备模块默认白名单）");
             registry.registerEndpoint("设备", "云台", "/api/device/ptz/**", "云台控制、预置位");
             registry.registerEndpoint("设备", "门禁", "/api/device/access/**", "远程开门、刷卡记录");
             registry.registerEndpoint("设备", "门禁记录", "/api/device/access-records/**", "门禁记录抽取落库与查询");

@@ -35,6 +35,7 @@ public class DeviceGroupController {
      * tree
      * @return 返回值
     */
+    @GetMapping("/tree")
     public List<DeviceGroupTreeNode> tree() {
         return groupService.tree();
     }
@@ -45,6 +46,7 @@ public class DeviceGroupController {
      * @param req 参数
      * @return 返回值
     */
+    @PostMapping
     public void create(@RequestBody DeviceGroupRequest req) {
         groupService.create(req);
     }
@@ -56,6 +58,7 @@ public class DeviceGroupController {
      * @param req 参数
      * @return 返回值
     */
+    @PutMapping("/{groupId}")
     public void update(@PathVariable String groupId, @RequestBody DeviceGroupRequest req) {
         groupService.update(groupId, req);
     }
@@ -66,6 +69,7 @@ public class DeviceGroupController {
      * @param groupId 字符串
      * @return 返回值
     */
+    @DeleteMapping("/{groupId}")
     public void delete(@PathVariable String groupId) {
         groupService.delete(groupId);
     }
@@ -76,6 +80,7 @@ public class DeviceGroupController {
      * @param groupId 字符串
      * @return 返回值
     */
+    @GetMapping("/{groupId}/devices")
     public List<DeviceInfo> groupDevices(@PathVariable String groupId) {
         List<String> ids = groupService.groupDeviceIds(groupId);
         if (ids.isEmpty()) {
@@ -94,6 +99,7 @@ public class DeviceGroupController {
      * @param groupId 字符串
      * @return 返回值
     */
+    @PutMapping("/{groupId}/devices")
     public void assignDevices(@PathVariable String groupId, @RequestBody List<String> deviceIds) {
         groupService.assignDevices(groupId, deviceIds);
     }
@@ -104,6 +110,7 @@ public class DeviceGroupController {
      * @param deviceId 字符串
      * @return 返回值
     */
+    @GetMapping("/device/{deviceId}/groups")
     public List<String> deviceGroups(@PathVariable String deviceId) {
         return groupService.deviceGroupIds(deviceId);
     }
@@ -115,6 +122,7 @@ public class DeviceGroupController {
      * @param groupIds 参数
      * @return 返回值
     */
+    @PutMapping("/device/{deviceId}/groups")
     public void assignDeviceGroups(@PathVariable String deviceId, @RequestBody List<String> groupIds) {
         groupService.assignDeviceGroups(deviceId, groupIds);
     }
@@ -124,6 +132,7 @@ public class DeviceGroupController {
      * assignments
      * @return 返回值
     */
+    @GetMapping("/assignments")
     public List<DeviceGroupDevice> assignments() {
         return groupService.assignments();
     }

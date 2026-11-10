@@ -1,0 +1,1 @@
+@keyframes re-badge-breath{0%{box-shadow:0 0 0 0 var(--re-badge-breath-color,var(--el-color-danger));opacity:.9}70%{opacity:.4;box-shadow:0 0 0 8px #0000}to{opacity:.9;box-shadow:0 0 #0000}}.re-badge--breath.el-badge__dot{animation:1.8s ease-out infinite re-badge-breath}

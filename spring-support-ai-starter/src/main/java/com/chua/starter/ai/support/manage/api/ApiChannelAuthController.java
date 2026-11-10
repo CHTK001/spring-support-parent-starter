@@ -18,6 +18,7 @@ import com.chua.starter.common.support.channel.ChannelCreditProvider;
 import com.chua.starter.common.support.channel.ChannelException;
 import com.chua.starter.common.support.channel.ChannelTaskProvider;
 import com.chua.starter.common.support.channel.ChannelUpstreamAdmin;
+import com.chua.starter.common.support.channel.ChannelUpstreamProvider;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.text.json.Json;
@@ -39,9 +40,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -133,6 +138,89 @@ public class ApiChannelAuthController {
      * 网关上游管理实现（按 {@code @Spi} 别名为 key，懒加载）
      */
     private volatile Map<String, ChannelUpstreamAdmin> upstreamAdmins;
+
+    /**
+     * 网关内部的上游 provider 适配实现（按 {@code @Spi} 别名为 key，懒加载）。
+     *
+     * <p>渠道级 SPI 只回答「这个网关怎么连」，provider 级差异（模型字段、账号标识）
+     * 由 {@link ChannelUpstreamProvider} 处理；取不到实现时按上游字段已是标准形态处理。</p>
+     */
+    private volatile Map<String, ChannelUpstreamProvider> upstreamProviders;
+
+    /**
+     * 网关托管索引缓存：网关连接 → 它当前的上游 provider id 集合。
+     *
+     * <p><b>为什么要缓存</b>：积分 / 签到 / 渠道摘要都要回答「这个渠道是不是由网关承载」，
+     * 每次回答都得读一遍网关管理面。30 秒内的重复提问直接复用，避免渠道页刷新时
+     * 把管理面打满；上游增删改后用 {@link #GATEWAY_INDEX_TTL_MS} 内自然过期收敛。</p>
+     */
+    private final Map<String, GatewayIndex> gatewayIndexes = new ConcurrentHashMap<>();
+
+    /**
+     * 网关托管索引的有效期（毫秒）。
+     */
+    private static final long GATEWAY_INDEX_TTL_MS = 30_000L;
+
+    /**
+     * 网关上游索引快照。
+     */
+    private static final class GatewayIndex {
+
+        /**
+         * 采集时刻（毫秒）。
+         */
+        private final long at;
+
+        /**
+         * 上游 provider id（小写，便于大小写不敏感比较）。
+         */
+        private final Set<String> providerIds;
+
+        /**
+         * 构造快照。
+         *
+         * @param at          采集时刻
+         * @param providerIds provider id 集合
+         */
+        private GatewayIndex(long at, Set<String> providerIds) {
+            this.at = at;
+            this.providerIds = providerIds;
+        }
+    }
+
+    /**
+     * 网关托管结果：某业务渠道实际由哪个网关的哪个上游承载。
+     */
+    private static final class GatewayOwner {
+
+        /**
+         * 网关的上游管理实现。
+         */
+        private final ChannelUpstreamAdmin admin;
+
+        /**
+         * 网关连接凭据（积分 / 签到都用它）。
+         */
+        private final Map<String, Object> credentials;
+
+        /**
+         * 命中的上游 provider id。
+         */
+        private final String providerId;
+
+        /**
+         * 构造结果。
+         *
+         * @param admin       上游管理实现
+         * @param credentials 网关连接凭据
+         * @param providerId  命中的 provider id
+         */
+        private GatewayOwner(ChannelUpstreamAdmin admin, Map<String, Object> credentials, String providerId) {
+            this.admin = admin;
+            this.credentials = credentials;
+            this.providerId = providerId;
+        }
+    }
 
     /**
      * SSE 登录流的执行器（守护线程，按需创建，空闲回收）。
@@ -288,16 +376,230 @@ public class ApiChannelAuthController {
                 models == null ? 0 : models.size());
         if (models != null) {
             for (SysAiProviderModel m : models) {
-                Map<String, Object> mm = new LinkedHashMap<>(4);
+                Map<String, Object> mm = new LinkedHashMap<>(8);
                 mm.put("model", m.getModel());
                 mm.put("enabled", Boolean.TRUE.equals(m.getEnabled()));
                 mm.put("alias", m.getAlias());
                 mm.put("contextWindow", m.getContextWindow());
+                putModelMetrics(mm, m.getMetrics());
                 modelItems.add(mm);
             }
         }
         summary.put("models", modelItems);
         return summary;
+    }
+
+    /**
+     * 网关托管时，从网关上游 provider 行里取该渠道的模型清单。
+     *
+     * <p>网关里的 provider 行自带 {@code models}（网关侧维护的模型目录），
+     * 它比「再调一次上游 /v1/models」更贴近用户在网关里配的那份；
+     * 字段差异交给 {@link ChannelUpstreamProvider} 归一，控制器只拿标准键。</p>
+     *
+     * @param owner 网关承载结果
+     * @return 模型清单（{@code id/name} + 可选 {@code contextWindow/free/priceInput/priceOutput/rate}）
+     */
+    private List<Map<String, Object>> gatewayModels(GatewayOwner owner) {
+        if (owner == null) {
+            return new ArrayList<>(0);
+        }
+        Map<String, Object> listed;
+        try {
+            listed = owner.admin.list(owner.credentials);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "读取网关模型失败: " + e.getMessage(), e);
+        }
+        Object rawProviders = listed == null ? null : listed.get("providers");
+        if (!(rawProviders instanceof List<?> providers)) {
+            return new ArrayList<>(0);
+        }
+        Map<String, Object> provider = null;
+        for (Object item : providers) {
+            if (!(item instanceof Map<?, ?> map) || map.get("id") == null) {
+                continue;
+            }
+            if (!owner.providerId.equalsIgnoreCase(String.valueOf(map.get("id")))) {
+                continue;
+            }
+            provider = new LinkedHashMap<>(map.size());
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null) {
+                    provider.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+            }
+            break;
+        }
+        Object rawModels = provider == null ? null : provider.get("models");
+        if (!(rawModels instanceof List<?> models)) {
+            return new ArrayList<>(0);
+        }
+        ChannelUpstreamProvider adapter = upstreamProviderOf(owner.admin.channel(), owner.providerId);
+        List<Map<String, Object>> out = new ArrayList<>(models.size());
+        for (Object item : models) {
+            Map<String, Object> source = new LinkedHashMap<>(6);
+            String id;
+            String name;
+            if (item instanceof Map<?, ?> map) {
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (entry.getKey() != null) {
+                        source.put(String.valueOf(entry.getKey()), entry.getValue());
+                    }
+                }
+                id = asString(source.get("id"));
+                name = asString(source.get("name"));
+            } else if (item != null && !String.valueOf(item).isBlank()) {
+                id = String.valueOf(item).trim();
+                name = id;
+                source.put("id", id);
+            } else {
+                continue;
+            }
+            if (id == null || id.isBlank()) {
+                id = name;
+            }
+            if (id == null || id.isBlank()) {
+                continue;
+            }
+            Map<String, Object> row = new LinkedHashMap<>(8);
+            row.put("id", id);
+            row.put("name", name == null || name.isBlank() ? id : name);
+            // 适配实现只补确实读到的键（价格 / 免费 / 倍率 / 上下文），缺值不补。
+            if (adapter != null) {
+                row.putAll(adapter.modelMeta(source));
+            }
+            out.add(row);
+        }
+        return out;
+    }
+
+    /**
+     * 把上游模型元数据翻译成 {@code sys_ai_provider_model.metrics} 的键。
+     *
+     * <p>metrics 的键沿用指标库口径（{@code price_input_per_musd} 等），
+     * 这样渠道页与模型管理页读的是同一份数据；上游没给的项不写键。</p>
+     *
+     * @param meta 上游模型元数据（{@code priceInput/priceOutput/rate/free}）
+     * @return metrics JSON（可为空 Map）
+     */
+    private static Map<String, Object> modelMetrics(Map<String, Object> meta) {
+        Map<String, Object> metrics = new LinkedHashMap<>(6);
+        if (meta == null || meta.isEmpty()) {
+            return metrics;
+        }
+        Double priceInput = metricDouble(meta, "priceInput", "price_input_per_musd");
+        Double priceOutput = metricDouble(meta, "priceOutput", "price_output_per_musd");
+        if (priceInput != null) {
+            metrics.put("price_input_per_musd", priceInput);
+        }
+        if (priceOutput != null) {
+            metrics.put("price_output_per_musd", priceOutput);
+        }
+        Double rate = metricDouble(meta, "rate", "ratio", "multiplier");
+        if (rate != null) {
+            metrics.put("rate", rate);
+        }
+        Object free = meta.get("free");
+        if (free instanceof Boolean value) {
+            metrics.put("free", value);
+        } else if (priceInput != null && priceOutput != null
+                && priceInput == 0D && priceOutput == 0D) {
+            metrics.put("free", Boolean.TRUE);
+        }
+        return metrics;
+    }
+
+    /**
+     * 把模型行 metrics 里的价格 / 免费 / 倍率带进渠道摘要。
+     *
+     * <p>渠道页的模型胶囊此前只拿到 {@code model/enabled/alias/contextWindow}，
+     * 所以前端写的 {@code m.free} / {@code m.rate} 永远是 undefined。数据本来就在
+     * {@code sys_ai_provider_model.metrics}（模型管理页已在用），这里只做透出。</p>
+     *
+     * <p>缺值不补：metrics 里没有价格就不放价格键，避免「未知」被显示成 0 或「免费」。</p>
+     *
+     * @param target  渠道摘要里的模型 Map
+     * @param metrics 模型行的 metrics JSON（可空）
+     */
+    private static void putModelMetrics(Map<String, Object> target, Map<String, Object> metrics) {
+        if (metrics == null || metrics.isEmpty()) {
+            return;
+        }
+        Double priceInput = metricDouble(metrics, "price_input_per_musd", "priceInput");
+        Double priceOutput = metricDouble(metrics, "price_output_per_musd", "priceOutput");
+        Boolean free = metricBoolean(metrics, "free", "is_free", "isFree");
+        if (free == null && priceInput != null && priceOutput != null
+                && priceInput == 0D && priceOutput == 0D) {
+            free = Boolean.TRUE;
+        }
+        if (free != null) {
+            target.put("free", free);
+        }
+        if (priceInput != null) {
+            target.put("priceInput", priceInput);
+        }
+        if (priceOutput != null) {
+            target.put("priceOutput", priceOutput);
+        }
+        Double rate = metricDouble(metrics, "rate", "ratio", "multiplier");
+        if (rate != null) {
+            target.put("rate", rate);
+        }
+    }
+
+    /**
+     * 从 metrics 中取第一个可解析的数值。
+     *
+     * @param metrics 指标 Map
+     * @param keys    候选键
+     * @return 数值；没有或不可解析返回 {@code null}
+     */
+    private static Double metricDouble(Map<String, Object> metrics, String... keys) {
+        for (String key : keys) {
+            Object value = metrics.get(key);
+            if (value instanceof Number number) {
+                return number.doubleValue();
+            }
+            if (value instanceof String text && !text.isBlank()) {
+                try {
+                    return Double.parseDouble(text.trim().replace(",", ""));
+                } catch (NumberFormatException ignored) {
+                    // 换下一个候选键
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从 metrics 中取第一个可判断的布尔值。
+     *
+     * @param metrics 指标 Map
+     * @param keys    候选键
+     * @return 布尔值；没有或无法判断返回 {@code null}
+     */
+    private static Boolean metricBoolean(Map<String, Object> metrics, String... keys) {
+        for (String key : keys) {
+            Object value = metrics.get(key);
+            if (value instanceof Boolean bool) {
+                return bool;
+            }
+            if (value instanceof Number number) {
+                return number.intValue() != 0;
+            }
+            if (value instanceof String text) {
+                String trimmed = text.trim();
+                if ("true".equalsIgnoreCase(trimmed) || "1".equals(trimmed)) {
+                    return Boolean.TRUE;
+                }
+                if ("false".equalsIgnoreCase(trimmed) || "0".equals(trimmed)) {
+                    return Boolean.FALSE;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -358,6 +660,49 @@ public class ApiChannelAuthController {
         providerMapper.insert(p);
         log.info("[ChannelAuth] 惰性物化渠道 provider 行: {}", providerId);
         return p;
+    }
+
+    /**
+     * 取承载「渠道模型配置」的 provider 行主键。
+     *
+     * <p>AI 账号渠道沿用 {@code channel()} 的大写形式（见
+     * {@link #requireChannelProvider(String)}）；免登录对话 / 文生图渠道不在
+     * {@code AccountChannelAuthManager} 注册表里，但它们同样需要在页面里逐项
+     * 配置模型启用状态，因此仍用「渠道标识大写」作为 providerId 并惰性建行。
+     * 两者都落在 {@code sys_ai_provider_model}，读写只有一份实现。</p>
+     *
+     * @param channel 渠道标识
+     * @return providerId（必然存在对应的 provider 行）
+     */
+    @Transactional
+    private String ensureChannelProviderId(String channel) {
+        AccountChannelAuthManager impl = resolveManager(managers(), channel);
+        if (impl != null) {
+            return requireChannelProvider(channel).getProviderId();
+        }
+        if (channel == null || channel.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "渠道标识不能为空");
+        }
+        String providerId = channel.toUpperCase(java.util.Locale.ROOT);
+        SysAiProvider existing = providerMapper.selectById(providerId);
+        if (existing != null) {
+            return providerId;
+        }
+        long now = System.currentTimeMillis();
+        SysAiProvider p = new SysAiProvider();
+        p.setProviderId(providerId);
+        p.setPlatform(providerId);
+        p.setName(channel);
+        // 内置模型渠道没有上游地址：base_url 落空占位，模型清单由客户端提供
+        p.setBaseUrl("");
+        p.setAuthScheme(OAUTH_SCHEME);
+        p.setEnabled(true);
+        p.setSortOrder(providerMapper.selectCount(null).intValue());
+        p.setCreatedAt(now);
+        p.setUpdatedAt(now);
+        providerMapper.insert(p);
+        log.info("[ChannelAuth] 惰性物化内置模型渠道 provider 行: {}", providerId);
+        return providerId;
     }
 
     /**
@@ -707,19 +1052,25 @@ public class ApiChannelAuthController {
     public ApiResult<Map<String, Object>> checkinChannel(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body) {
-        AccountChannelAuthManager impl = requireManager(channel);
-        if (!impl.supportsCheckin()) {
-            Map<String, Object> out = new LinkedHashMap<>(2);
-            out.put("ok", false);
-            out.put("message", "渠道不支持签到: " + channel);
-            return ApiResult.ok(out);
+        // 网关优先：渠道归 magpie 承载时，以网关里的凭据为准，本地旧连接不参与。
+        // 只看本地会被过期连接挡住（典型症状是「凭据缺少 access_token」）。
+        ApiResult<Map<String, Object>> hosted = gatewayCheckin(channel);
+        if (hosted != null) {
+            return hosted;
         }
+        AccountChannelAuthManager impl = requireManager(channel);
         String label = body == null ? null : asString(body.get("label"));
         String connectionId = body == null ? null : asString(body.get("connectionId"));
         SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
         if (conn == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND,
                     "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+        }
+        if (!impl.supportsCheckin()) {
+            Map<String, Object> out = new LinkedHashMap<>(2);
+            out.put("ok", false);
+            out.put("message", "渠道不支持签到: " + channel);
+            return ApiResult.ok(out);
         }
         Map<String, Object> current = conn.getCredentials() == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
@@ -753,6 +1104,59 @@ public class ApiChannelAuthController {
         // ⚠️ 脱敏：checkin 结果可能是完整凭据 Map（如 balance 并入），
         // 直接回传会把 access_token/refresh_token 暴露给前端。
         // 只保留签到/余额类展示键，丢弃所有凭据敏感键。
+        out.put("result", checkinResult(afterCheckin));
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 网关托管渠道的签到 / 额度领取。
+     *
+     * <p>商家账号在网关里，本地连接不参与（网关优先）。借网关连接调
+     * {@link AccountChannelAuthManager#checkinFor(String, Map)}，只签这一家上游，
+     * 不把网关里其它渠道一起签掉。结果不写回任何本地连接。</p>
+     *
+     * @param channel 业务渠道标识
+     * @return 有网关且能签到时的结果；否则 {@code null}（调用方按「未找到账号」处理）
+     */
+    private ApiResult<Map<String, Object>> gatewayCheckin(String channel) {
+        GatewayOwner owner = gatewayOwnerOf(channel);
+        if (owner == null) {
+            return null;
+        }
+        AccountChannelAuthManager gatewayManager = resolveManager(managers(), owner.admin.channel());
+        if (gatewayManager == null || !gatewayManager.supportsCheckin()) {
+            return null;
+        }
+        Map<String, Object> after;
+        try {
+            after = gatewayManager.checkinFor(channel, owner.credentials);
+        } catch (ApiException e) {
+            throw e;
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        } catch (Exception e) {
+            log.warn("[ChannelAuth] 网关签到异常 channel={} gateway={} cause={}",
+                    channel, owner.admin.channel(), e.getMessage());
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                    "渠道 checkin 失败: " + e.getMessage(), e);
+        }
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("label", owner.providerId);
+        out.put("managedBy", owner.admin.channel());
+        out.put("managedProvider", owner.providerId);
+        out.put("result", checkinResult(after));
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 剔除签到结果里的凭据敏感键。
+     *
+     * @param afterCheckin 实现返回的凭据 Map
+     * @return 可回传前端的展示键
+     */
+    private static Map<String, Object> checkinResult(Map<String, Object> afterCheckin) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (afterCheckin != null) {
             for (Map.Entry<String, Object> e : afterCheckin.entrySet()) {
@@ -761,8 +1165,7 @@ public class ApiChannelAuthController {
                 }
             }
         }
-        out.put("result", result);
-        return ApiResult.ok(out);
+        return result;
     }
 
     /** 凭据敏感键（checkin 结果回传前端前剔除，防 token 泄露到页面）。 */
@@ -780,33 +1183,89 @@ public class ApiChannelAuthController {
      *
      * @param channel 渠道标识
      * @param body    请求体：{ connectionId（优先）或 label（兜底，为空取主账号） }
-     * @return { ok, channel, label, credit: {remain,total,unit,plan,packages,error} }
+     * @return { ok, channel, label, credit: {remain,total,unit,plan,packages,error},
+     *         managedBy?, managedProvider? }——后两项表示读数来自网关托管
      */
     @PostMapping("/{channel}/credit")
     public ApiResult<Map<String, Object>> creditChannel(
             @PathVariable("channel") String channel,
             @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> out = new LinkedHashMap<>(6);
+        // 网关优先：渠道归 magpie 承载时以网关凭据为准，本地旧连接不参与。
+        // 否则过期连接会把请求挡回原生实现（例如直连 minimax 余额接口 404）。
+        String account = body == null ? null : asString(body.get("account"));
+        ApiResult<Map<String, Object>> hosted = gatewayCredit(channel, out, account);
+        if (hosted != null) {
+            return hosted;
+        }
+        String label = body == null ? null : asString(body.get("label"));
+        String connectionId = body == null ? null : asString(body.get("connectionId"));
+        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
+        if (conn == null) {
+            if (label != null || connectionId != null) {
+                // 明确点名的账号不存在：这是真的找不到，保留 404 语义。
+                throw new ApiException(ApiErrorCode.NOT_FOUND,
+                        "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
+            }
+            // 网关里没有该渠道上游、本地也没绑过账号。原来这里抛 404，页面只能显示
+            // 「未找到渠道账号: qoder-cn / null」——null 是拼接出来的空 label，用户
+            // 看不出该做什么。改为一次正常返回，并把下一步写成可操作的说明。
+            Map<String, Object> credit = new LinkedHashMap<>(2);
+            credit.put("error", "网关与本地都没有「" + channel + "」的账号："
+                    + "请先在「Magpie 统一网关」里添加该上游，或在渠道页绑定账号");
+            out.put("ok", false);
+            out.put("channel", channel);
+            out.put("label", channel);
+            out.put("credit", credit);
+            return ApiResult.ok(out);
+        }
         ChannelCreditProvider provider = creditProviderOf(channel);
-        Map<String, Object> out = new LinkedHashMap<>(5);
         if (provider == null) {
             out.put("ok", false);
             out.put("channel", channel);
             out.put("message", "渠道不支持积分查询: " + channel);
             return ApiResult.ok(out);
         }
-        String label = body == null ? null : asString(body.get("label"));
-        String connectionId = body == null ? null : asString(body.get("connectionId"));
-        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
-        if (conn == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND,
-                    "未找到渠道账号: " + channel + " / " + (label == null ? connectionId : label));
-        }
-        Map<String, Object> credentials = conn.getCredentials() == null
-                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
-        Map<String, Object> credit = provider.credit(credentials);
+        Map<String, Object> credit = provider.credit(credentialsOf(conn));
         out.put("ok", credit.get("error") == null);
         out.put("channel", channel);
         out.put("label", conn.getLabel());
+        out.put("credit", credit);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 网关托管渠道的积分读数。
+     *
+     * <p><b>网关优先</b>：只要网关里已经有这个渠道的上游就以网关为准，本地旧连接
+     * 不参与（数据仍保留）。网关连接凭据 → 网关的积分实现 →
+     * {@link ChannelCreditProvider#creditFor(String, String, Map)} 按上游 + 账号过滤。</p>
+     *
+     * <p>同一上游在网关里可能登录多个账号，{@code account} 用来取某一个账号的额度卡；
+     * 为空时是这一家上游的合计。账号名来自网关额度卡（{@code provider} + {@code user}），
+     * 不是本地连接的 label。</p>
+     *
+     * @param channel 业务渠道标识
+     * @param out     复用的输出 Map
+     * @param account 上游账号（可空；空表示该上游合计）
+     * @return 有网关且能读数时返回结果；否则 {@code null}（由调用方按「未找到账号」处理）
+     */
+    private ApiResult<Map<String, Object>> gatewayCredit(String channel, Map<String, Object> out, String account) {
+        GatewayOwner owner = gatewayOwnerOf(channel);
+        if (owner == null) {
+            return null;
+        }
+        ChannelCreditProvider provider = creditProviderOf(owner.admin.channel());
+        if (provider == null) {
+            return null;
+        }
+        Map<String, Object> credit = provider.creditFor(channel, account, owner.credentials);
+        out.put("ok", credit.get("error") == null);
+        out.put("channel", channel);
+        // label 给前端当卡片标题：本地没有连接记录，只能用网关里的上游名 / 账号。
+        out.put("label", account == null || account.isBlank() ? owner.providerId : account);
+        out.put("managedBy", owner.admin.channel());
+        out.put("managedProvider", owner.providerId);
         out.put("credit", credit);
         return ApiResult.ok(out);
     }
@@ -934,9 +1393,21 @@ public class ApiChannelAuthController {
     public ApiResult<Map<String, Object>> listModelsChannel(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body) {
-        AccountChannelAuthManager impl = requireManager(channel);
         String label = body == null ? null : asString(body.get("label"));
         String connectionId = body == null ? null : asString(body.get("connectionId"));
+        // 网关优先：账号在网关里时模型清单也以网关为准（本地没有连接，走原生实现会报「未绑定账号」）。
+        GatewayOwner owner = gatewayOwnerOf(channel);
+        if (owner != null) {
+            List<Map<String, Object>> hostedModels = gatewayModels(owner);
+            Map<String, Object> out = new LinkedHashMap<>(5);
+            out.put("ok", true);
+            out.put("channel", channel);
+            out.put("label", label == null || label.isBlank() ? owner.providerId : label);
+            out.put("hosted", true);
+            out.put("models", hostedModels);
+            return ApiResult.ok(out);
+        }
+        AccountChannelAuthManager impl = requireManager(channel);
         SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
         // ⚠️ 找不到账号时必须报 NOT_FOUND，不能拿空凭据继续往下走：
         // 否则上游按「无 token」返回空列表，接口回 ok=true + models=[]，
@@ -944,7 +1415,7 @@ public class ApiChannelAuthController {
         // 而真实原因是账号不存在（未绑定 / label 传错）。
         if (conn == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND,
-                    "未找到渠道账号，请先绑定: " + channel + " / " + (label == null ? connectionId : label));
+                    "「" + impl.displayName() + "」还没有绑定账号，请先在「账号」里完成绑定，再来拉取模型");
         }
         Map<String, Object> credentials = conn.getCredentials() == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
@@ -984,7 +1455,9 @@ public class ApiChannelAuthController {
      *
      * <p>去重语义：按 ({@code providerId}, {@code model}) 唯一键判断——
      * 已存在的行保留用户改过的 enabled / alias / contextWindow，只补 null 字段；
-     * 不存在的行直接插入（enabled 默认 true）。</p>
+     * 不存在的行直接插入，<b>默认不启用</b>。拉取只负责把上游模型目录同步进来，
+     * 启用哪些由用户在页面上勾选——以前插入即 enabled=true，等于一次拉取就把
+     * 几十个模型全部打开，用户还得逐个关掉。</p>
      *
      * @param channel 渠道标识
      * @param body 请求体：{ connectionId（优先）或 label（兜底，为空取主账号） }
@@ -995,30 +1468,39 @@ public class ApiChannelAuthController {
     public ApiResult<Map<String, Object>> importModelsChannel(
             @PathVariable("channel") String channel,
             @RequestBody Map<String, Object> body) {
-        AccountChannelAuthManager impl = requireManager(channel);
         SysAiProvider provider = requireChannelProvider(channel);
         String label = body == null ? null : asString(body.get("label"));
         String connectionId = body == null ? null : asString(body.get("connectionId"));
-        SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
-        // 同 list-models：账号不存在直接报错，避免把「没绑定」当成「0 个模型」落库成功。
-        if (conn == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND,
-                    "未找到渠道账号，请先绑定: " + channel + " / " + (label == null ? connectionId : label));
-        }
-        Map<String, Object> credentials = conn.getCredentials() == null
-                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+        // 网关优先：账号在网关里时，模型目录也从网关的上游 provider 取，
+        // 本地没有连接不代表「没绑定账号」。
+        GatewayOwner owner = gatewayOwnerOf(channel);
+        ChannelUpstreamProvider adapter = null;
         List<Map<String, Object>> rawModels;
-        try {
-            rawModels = impl.listModels(credentials);
-        } catch (ApiException e) {
-            throw e;
-        } catch (ChannelException e) {
-            throw channelFailure(e);
-        } catch (Exception e) {
-            log.warn("[ChannelAuth] import-models 上游异常 channel={} label={} cause={}",
-                    channel, conn.getLabel(), e.getMessage());
-            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
-                    "渠道 import-models 失败: " + e.getMessage(), e);
+        if (owner != null) {
+            adapter = upstreamProviderOf(owner.admin.channel(), owner.providerId);
+            rawModels = gatewayModels(owner);
+        } else {
+            AccountChannelAuthManager impl = requireManager(channel);
+            SysAiProviderConnection conn = findTargetConnection(channel, label, connectionId);
+            // 同 list-models：账号不存在直接报错，避免把「没绑定」当成「0 个模型」落库成功。
+            if (conn == null) {
+                throw new ApiException(ApiErrorCode.NOT_FOUND,
+                        "「" + impl.displayName() + "」还没有绑定账号，请先在「账号」里完成绑定，再来拉取模型");
+            }
+            Map<String, Object> credentials = conn.getCredentials() == null
+                    ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
+            try {
+                rawModels = impl.listModels(credentials);
+            } catch (ApiException e) {
+                throw e;
+            } catch (ChannelException e) {
+                throw channelFailure(e);
+            } catch (Exception e) {
+                log.warn("[ChannelAuth] import-models 上游异常 channel={} label={} cause={}",
+                        channel, conn.getLabel(), e.getMessage());
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                        "渠道 import-models 失败: " + e.getMessage(), e);
+            }
         }
         if (rawModels == null) {
             rawModels = new ArrayList<>(0);
@@ -1036,11 +1518,16 @@ public class ApiChannelAuthController {
             }
             String modelName = modelId;
             String modelAlias = asString(raw.get("name"));
+            // provider 级适配：不同上游的模型字段形态不一，统一成标准键；
+            // 没有专门实现时按上游字段已标准处理（空 Map）。
+            Map<String, Object> meta = adapter == null
+                    ? new LinkedHashMap<>() : adapter.modelMeta(raw);
             Integer contextWindow = null;
-            Object cw = raw.get("contextWindow");
+            Object cw = meta.get("contextWindow") != null ? meta.get("contextWindow") : raw.get("contextWindow");
             if (cw instanceof Number n) {
                 contextWindow = n.intValue();
             }
+            Map<String, Object> metrics = modelMetrics(meta);
             SysAiProviderModel existing = modelMapper.selectOne(
                     new LambdaQueryWrapper<SysAiProviderModel>()
                             .eq(SysAiProviderModel::getProviderId, provider.getProviderId())
@@ -1050,8 +1537,12 @@ public class ApiChannelAuthController {
                 m.setProviderId(provider.getProviderId());
                 m.setModel(modelName);
                 m.setAlias(modelAlias);
-                m.setEnabled(Boolean.TRUE);
+                // 新拉到的模型默认不启用：拉取是「同步目录」，不是「全部上线」
+                m.setEnabled(Boolean.FALSE);
                 m.setContextWindow(contextWindow);
+                if (!metrics.isEmpty()) {
+                    m.setMetrics(metrics);
+                }
                 m.setSortOrder(created + updated + 1);
                 m.setCreatedAt(now);
                 m.setUpdatedAt(now);
@@ -1068,9 +1559,27 @@ public class ApiChannelAuthController {
                     existing.setAlias(modelAlias);
                     changed = true;
                 }
+                if (!metrics.isEmpty()) {
+                    // 只补缺：用户改过的价格 / 倍率不能被重新拉取覆盖。
+                    Map<String, Object> current = existing.getMetrics() == null
+                            ? new LinkedHashMap<>() : new LinkedHashMap<>(existing.getMetrics());
+                    boolean filled = false;
+                    for (Map.Entry<String, Object> entry : metrics.entrySet()) {
+                        if (current.get(entry.getKey()) == null) {
+                            current.put(entry.getKey(), entry.getValue());
+                            filled = true;
+                        }
+                    }
+                    if (filled) {
+                        existing.setMetrics(current);
+                        changed = true;
+                    }
+                }
                 if (changed) {
                     existing.setUpdatedAt(now);
-                    modelMapper.updateById(existing);
+                    // 用 (provider_id, model) 双条件更新：单列 @TableId 的 updateById
+                    // 会命中其他供应商的同名模型（大小写不敏感还会撞主键）
+                    modelMapper.updateByKey(existing);
                     updated++;
                 }
             }
@@ -1119,13 +1628,174 @@ public class ApiChannelAuthController {
         }
         m.setEnabled(enabled);
         m.setUpdatedAt(System.currentTimeMillis());
-        modelMapper.updateById(m);
+        // 同模型名可能存在于多个供应商（列排序规则大小写不敏感），
+        // updateById 只带 model 会波及别人的行，这里按真实主键更新
+        modelMapper.updateByKey(m);
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("ok", true);
         out.put("channel", impl.channel());
         out.put("model", model);
         out.put("enabled", enabled);
         return ApiResult.ok(out);
+    }
+
+    /**
+     * 读取渠道的模型配置（启用状态 / 别名 / 上下文窗口 / 价格指标）。
+     *
+     * <p>AI 账号渠道的配置随 {@code /api/channels} 摘要一并返回；免登录对话 /
+     * 文生图渠道的模型清单来自客户端内置表，摘要里没有数据库的启用状态，
+     * 渠道页用本端点取回用户保存过的配置再合并。缺省的模型不会出现在这里，
+     * 前端按「未启用」处理。</p>
+     *
+     * @param channel 渠道标识
+     * @return { ok, channel, models: [{ model, enabled, alias, contextWindow, free?, priceInput?, ... }] }
+     */
+    @GetMapping("/{channel}/models/config")
+    public ApiResult<Map<String, Object>> channelModelConfig(@PathVariable("channel") String channel) {
+        String providerId = ensureChannelProviderId(channel);
+        List<SysAiProviderModel> rows = modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId));
+        List<Map<String, Object>> items = new ArrayList<>(rows == null ? 0 : rows.size());
+        if (rows != null) {
+            for (SysAiProviderModel row : rows) {
+                Map<String, Object> item = new LinkedHashMap<>(8);
+                item.put("model", row.getModel());
+                item.put("enabled", Boolean.TRUE.equals(row.getEnabled()));
+                item.put("alias", row.getAlias());
+                item.put("contextWindow", row.getContextWindow());
+                putModelMetrics(item, row.getMetrics());
+                items.add(item);
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("models", items);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 批量启用 / 停用渠道下的模型（渠道页「保存」按钮）。
+     *
+     * <p>渠道页先在前端勾选，点保存才落库；这里按目标状态分两组各发一条
+     * {@code UPDATE ... WHERE model IN (...)}，所以 82 个模型的改动也只产生
+     * 两条 SQL、一次 HTTP，而不是前端串行发 82 个 PUT。</p>
+     *
+     * <p>免登录对话 / 文生图渠道的模型是客户端内置的，不能从上游拉取，
+     * 但启用状态同样要能保存：它们没有 {@code AccountChannelAuthManager}，
+     * 这里按「渠道标识大写」惰性物化 provider 行来承载模型配置
+     * （见 {@link #ensureChannelProviderId(String)}）。</p>
+     *
+     * @param channel 渠道标识
+     * @param body    {@code { items: [{ model, enabled }] }}
+     * @return { ok, channel, updated }
+     */
+    @PutMapping("/{channel}/models/enabled")
+    @Transactional
+    public ApiResult<Map<String, Object>> setModelsEnabled(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        ownerId();
+        String providerId = ensureChannelProviderId(channel);
+        List<String> enable = new ArrayList<>();
+        List<String> disable = new ArrayList<>();
+        Object raw = body == null ? null : body.get("items");
+        if (raw instanceof List<?> items) {
+            for (Object item : items) {
+                if (!(item instanceof Map<?, ?> row)) {
+                    continue;
+                }
+                Object model = row.get("model");
+                if (model == null || String.valueOf(model).isBlank()) {
+                    continue;
+                }
+                String name = String.valueOf(model);
+                if (Boolean.TRUE.equals(row.get("enabled"))) {
+                    enable.add(name);
+                } else {
+                    disable.add(name);
+                }
+            }
+        }
+        long now = System.currentTimeMillis();
+        int updated = 0;
+        if (!enable.isEmpty()) {
+            updated += modelMapper.update(null, new LambdaUpdateWrapper<SysAiProviderModel>()
+                    .eq(SysAiProviderModel::getProviderId, providerId)
+                    .in(SysAiProviderModel::getModel, enable)
+                    .set(SysAiProviderModel::getEnabled, true)
+                    .set(SysAiProviderModel::getUpdatedAt, now));
+        }
+        if (!disable.isEmpty()) {
+            updated += modelMapper.update(null, new LambdaUpdateWrapper<SysAiProviderModel>()
+                    .eq(SysAiProviderModel::getProviderId, providerId)
+                    .in(SysAiProviderModel::getModel, disable)
+                    .set(SysAiProviderModel::getEnabled, false)
+                    .set(SysAiProviderModel::getUpdatedAt, now));
+        }
+        // 内置模型渠道（免登录对话 / 文生图）从未「拉取」过，sys_ai_provider_model
+        // 里可能一条行都没有，UPDATE 命中 0 行；保存后刷新又会回到默认值。
+        // 因此对没有管理器的渠道补建缺失的模型行，用户第一次保存即生效并有记录。
+        if (resolveManager(managers(), channel) == null) {
+            updated += insertMissingModelRows(providerId, enable, disable, now);
+        }
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("ok", true);
+        out.put("channel", channel);
+        out.put("updated", updated);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 为内置模型渠道补建缺失的模型行。
+     *
+     * <p>{@link #setModelsEnabled} 主体用两条批量 UPDATE 落库，依赖行已存在；
+     * 免登录对话 / 文生图渠道的模型清单由客户端内置，从未走过 {@code import-models}，
+     * 表里没有任何行，第一次保存就会「成功但没生效」。这里按目标状态补建。</p>
+     *
+     * @param providerId 渠道对应的 providerId
+     * @param enable     目标为启用的模型名
+     * @param disable    目标为停用的模型名
+     * @param now        统一时间戳
+     * @return 新建行数
+     */
+    private int insertMissingModelRows(String providerId, List<String> enable,
+                                       List<String> disable, long now) {
+        List<String> all = new ArrayList<>(enable.size() + disable.size());
+        all.addAll(enable);
+        all.addAll(disable);
+        if (all.isEmpty()) {
+            return 0;
+        }
+        Set<String> existing = new HashSet<>();
+        List<SysAiProviderModel> rows = modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, providerId)
+                        .in(SysAiProviderModel::getModel, all));
+        if (rows != null) {
+            for (SysAiProviderModel row : rows) {
+                existing.add(row.getModel());
+            }
+        }
+        int sort = modelMapper.selectCount(new LambdaQueryWrapper<SysAiProviderModel>()
+                .eq(SysAiProviderModel::getProviderId, providerId)).intValue();
+        int created = 0;
+        for (String model : all) {
+            if (existing.contains(model)) {
+                continue;
+            }
+            SysAiProviderModel m = new SysAiProviderModel();
+            m.setProviderId(providerId);
+            m.setModel(model);
+            m.setEnabled(enable.contains(model));
+            m.setSortOrder(++sort);
+            m.setCreatedAt(now);
+            m.setUpdatedAt(now);
+            modelMapper.insert(m);
+            created++;
+        }
+        return created;
     }
 
     /**
@@ -1565,6 +2235,50 @@ public class ApiChannelAuthController {
     }
 
     /**
+     * 懒加载网关内部的上游 provider 适配实现映射（幂等）。
+     *
+     * @return alias → 实现
+     */
+    private Map<String, ChannelUpstreamProvider> upstreamProviders() {
+        Map<String, ChannelUpstreamProvider> local = upstreamProviders;
+        if (local == null) {
+            synchronized (this) {
+                local = upstreamProviders;
+                if (local == null) {
+                    local = ServiceProvider.of(ChannelUpstreamProvider.class).list();
+                    upstreamProviders = local;
+                }
+            }
+        }
+        return local;
+    }
+
+    /**
+     * 取网关内部某个上游的适配实现。
+     *
+     * <p>同一网关允许多个实现按 provider id 分工；没有专门实现时返回 {@code null}，
+     * 调用方按标准字段处理。这里只做两层：渠道 → provider，不再往下套。</p>
+     *
+     * @param channel    网关渠道标识
+     * @param providerId 上游 provider id（可空）
+     * @return 适配实现；无则 {@code null}
+     */
+    private ChannelUpstreamProvider upstreamProviderOf(String channel, String providerId) {
+        if (channel == null) {
+            return null;
+        }
+        for (ChannelUpstreamProvider impl : upstreamProviders().values()) {
+            if (impl == null || impl.channel() == null || !impl.channel().equalsIgnoreCase(channel)) {
+                continue;
+            }
+            if (impl.supports(providerId)) {
+                return impl;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 按渠道标识取网关上游管理实现，未注册抛 501。
      *
      * <p>同一实现会以「{@code @Spi} 别名」和「类简名」登记两次，故按
@@ -1595,6 +2309,92 @@ public class ApiChannelAuthController {
             }
         }
         return null;
+    }
+
+    /**
+     * 判断某业务渠道是否由某个网关承载（网关里已有它的上游）。
+     *
+     * <p>只在「本地没有该渠道连接」时才需要：有连接说明用户在我们这边绑过账号，
+     * 凭据就在本地，按原生实现走即可。凭据在网关里时，积分 / 签到必须借用网关
+     * 连接去问管理面。</p>
+     *
+     * @param channel 业务渠道标识
+     * @return 承载它的网关与上游；没有返回 {@code null}
+     */
+    private GatewayOwner gatewayOwnerOf(String channel) {
+        if (channel == null || channel.isBlank()) {
+            return null;
+        }
+        for (ChannelUpstreamAdmin admin : upstreamAdmins().values()) {
+            if (admin == null || admin.supports(channel)) {
+                continue;
+            }
+            List<String> wanted = admin.providerIdsOf(channel);
+            if (wanted == null || wanted.isEmpty()) {
+                continue;
+            }
+            SysAiProviderConnection conn = findTargetConnection(admin.channel(), null, null);
+            if (conn == null) {
+                continue;
+            }
+            Set<String> ids = gatewayProviderIds(admin, conn);
+            if (ids.isEmpty()) {
+                continue;
+            }
+            for (String id : wanted) {
+                if (id != null && ids.contains(id.toLowerCase(Locale.ROOT))) {
+                    return new GatewayOwner(admin, credentialsOf(conn), id);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 读取（并缓存）某条网关连接的上游 provider id 集合。
+     *
+     * <p>读取失败一律当空集合：网关管理面没开 / 页面 Key 失效时，渠道页应继续可用，
+     * 只是「由网关托管」的判定不成立，不能把整页拖垮。</p>
+     *
+     * @param admin 上游管理实现
+     * @param conn  网关连接
+     * @return 小写 provider id 集合
+     */
+    private Set<String> gatewayProviderIds(ChannelUpstreamAdmin admin, SysAiProviderConnection conn) {
+        String key = admin.channel() + "@" + conn.getConnectionId() + "@" + conn.getUpdatedAt();
+        long now = System.currentTimeMillis();
+        GatewayIndex cached = gatewayIndexes.get(key);
+        if (cached != null && now - cached.at < GATEWAY_INDEX_TTL_MS) {
+            return cached.providerIds;
+        }
+        Set<String> ids = new HashSet<>();
+        try {
+            Map<String, Object> listed = admin.list(credentialsOf(conn));
+            Object raw = listed == null ? null : listed.get("providers");
+            if (raw instanceof List<?> list) {
+                for (Object item : list) {
+                    if (item instanceof Map<?, ?> map && map.get("id") != null) {
+                        ids.add(String.valueOf(map.get("id")).toLowerCase(Locale.ROOT));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[ChannelAuth] 读取网关上游失败 gateway={} cause={}",
+                    admin.channel(), e.getMessage());
+        }
+        gatewayIndexes.put(key, new GatewayIndex(now, ids));
+        return ids;
+    }
+
+    /**
+     * 取连接凭据的可变副本。
+     *
+     * @param conn 连接
+     * @return 凭据副本（原凭据为空时返回空 Map）
+     */
+    private static Map<String, Object> credentialsOf(SysAiProviderConnection conn) {
+        return conn.getCredentials() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(conn.getCredentials());
     }
 
     /**

@@ -36,6 +36,14 @@ public class MailboxQuery implements Serializable {
     private Boolean unreadOnly = Boolean.FALSE;
 
     /**
+     * 未读优先：先把未读邮件按时间倒序排在前面，不足一页再用最新的已读邮件补足。
+     *
+     * <p>只在首屏（{@code offset == 0}）生效：翻页时顺序必须稳定，否则
+     * 「加载更多」会因为前面插入未读而重复或漏信。</p>
+     */
+    private Boolean preferUnread = Boolean.FALSE;
+
+    /**
      * 主题 / 发件人模糊词
      */
     private String keyword;

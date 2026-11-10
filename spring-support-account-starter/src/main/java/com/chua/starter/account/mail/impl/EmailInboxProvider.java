@@ -19,10 +19,13 @@ import jakarta.mail.Session;
 import jakarta.mail.Store;
 import jakarta.mail.UIDFolder;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.search.FlagTerm;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -206,6 +209,8 @@ public class EmailInboxProvider implements AccountInboxProvider {
         int limit = clampLimit(effective.getLimit());
         int offset = effective.getOffset() == null ? 0 : Math.max(0, effective.getOffset());
         String keyword = StringUtils.trimToNull(effective.getKeyword());
+        boolean unreadOnly = Boolean.TRUE.equals(effective.getUnreadOnly());
+        boolean preferUnread = Boolean.TRUE.equals(effective.getPreferUnread());
 
         Store store = open(account, secret);
         Folder folder = null;
@@ -215,20 +220,18 @@ public class EmailInboxProvider implements AccountInboxProvider {
                 throw new MessagingException("邮箱文件夹不存在: " + folderName);
             }
             folder.open(Folder.READ_ONLY);
-            int total = folder.getMessageCount();
-            int end = total - offset;
-            if (end < 1) {
-                return List.of();
+            // 未读优先只在首屏启用：翻页必须保持稳定顺序，否则「加载更多」会重复或漏信
+            List<Message> picked;
+            if (unreadOnly) {
+                picked = unreadPage(folder, offset, limit);
+            } else if (preferUnread && offset == 0) {
+                picked = unreadFirstPage(folder, limit);
+            } else {
+                picked = latestPage(folder, offset, limit);
             }
-            int start = Math.max(1, end - limit + 1);
-            Message[] messages = folder.getMessages(start, end);
-            List<MailboxMessage> result = new ArrayList<>();
-            boolean unreadOnly = Boolean.TRUE.equals(effective.getUnreadOnly());
-            for (int i = messages.length - 1; i >= 0; i--) {
-                MailboxMessage view = toView(messages[i], folder, false);
-                if (unreadOnly && !Boolean.TRUE.equals(view.getUnread())) {
-                    continue;
-                }
+            List<MailboxMessage> result = new ArrayList<>(picked.size());
+            for (Message message : picked) {
+                MailboxMessage view = toView(message, folder, false);
                 if (keyword != null && !matches(view, keyword)) {
                     continue;
                 }
@@ -239,6 +242,127 @@ public class EmailInboxProvider implements AccountInboxProvider {
             close(folder);
             close(store);
         }
+    }
+
+    /**
+     * 取最新一页（按邮件序号倒序，最新在前）。
+     *
+     * @param folder 已打开的文件夹
+     * @param offset 跳过多少封
+     * @param limit  取多少封
+     * @return 邮件（最新在前）
+     * @throws MessagingException 协议异常
+     */
+    private List<Message> latestPage(Folder folder, int offset, int limit) throws MessagingException {
+        int total = folder.getMessageCount();
+        int end = total - offset;
+        if (end < 1) {
+            return List.of();
+        }
+        int start = Math.max(1, end - limit + 1);
+        return descending(Arrays.asList(folder.getMessages(start, end)));
+    }
+
+    /**
+     * 未读分页：只返回未读邮件，按序号倒序。
+     *
+     * <p>用服务端 {@code SEARCH UNSEEN} 而不是「先取一页再过滤」，后者会让
+     * 收件箱里未读很多但位置靠前时，第二页出现重复或漏信。</p>
+     *
+     * @param folder 已打开的文件夹
+     * @param offset 跳过多少封未读
+     * @param limit  取多少封
+     * @return 未读邮件（最新在前）
+     */
+    private List<Message> unreadPage(Folder folder, int offset, int limit) {
+        List<Message> unseen = descending(unseen(folder));
+        if (offset >= unseen.size()) {
+            return List.of();
+        }
+        return unseen.subList(offset, Math.min(unseen.size(), offset + limit));
+    }
+
+    /**
+     * 未读优先首屏：未读在前按时间倒序，不足一页用最新已读补足。
+     *
+     * <p>这就是「进入收信箱即优先收信」：打开抽屉先看到新的通知，
+     * 而不是被一堆已读订阅邮件顶到下面。</p>
+     *
+     * @param folder 已打开的文件夹
+     * @param limit  取多少封
+     * @return 邮件（未读在前）
+     */
+    private List<Message> unreadFirstPage(Folder folder, int limit) {
+        List<Message> picked = new ArrayList<>(limit);
+        Set<Integer> taken = new HashSet<>();
+        for (Message message : descending(unseen(folder))) {
+            if (picked.size() >= limit) {
+                return picked;
+            }
+            picked.add(message);
+            taken.add(numberOf(message));
+        }
+        try {
+            for (Message message : latestPage(folder, 0, limit)) {
+                if (picked.size() >= limit) {
+                    break;
+                }
+                if (taken.add(numberOf(message))) {
+                    picked.add(message);
+                }
+            }
+        } catch (MessagingException e) {
+            // 补足已读失败不影响已取到的未读列表
+            return picked;
+        }
+        return picked;
+    }
+
+    /**
+     * 未读邮件集合（服务端 SEARCH UNSEEN，不支持搜索时回退逐个读标记）。
+     *
+     * @param folder 已打开的文件夹
+     * @return 未读邮件
+     */
+    private List<Message> unseen(Folder folder) {
+        try {
+            Message[] found = folder.search(new FlagTerm(new Flags(Flags.Flag.SEEN), false));
+            return Arrays.asList(found);
+        } catch (MessagingException | RuntimeException e) {
+            List<Message> fallback = new ArrayList<>();
+            try {
+                for (Message message : folder.getMessages()) {
+                    if (!message.isSet(Flags.Flag.SEEN)) {
+                        fallback.add(message);
+                    }
+                }
+            } catch (MessagingException ignored) {
+                return List.of();
+            }
+            return fallback;
+        }
+    }
+
+    /**
+     * 按邮件序号倒序（最新在前）。
+     *
+     * @param messages 邮件
+     * @return 倒序列表
+     */
+    private List<Message> descending(List<Message> messages) {
+        List<Message> list = new ArrayList<>(messages);
+        list.sort((left, right) -> numberOf(right) - numberOf(left));
+        return list;
+    }
+
+    /**
+     * 邮件序号（读取失败按 0 处理，仅用于排序与去重）。
+     *
+     * @param message 邮件
+     * @return 序号
+     */
+    private int numberOf(Message message) {
+        return message.getMessageNumber();
     }
 
     /**

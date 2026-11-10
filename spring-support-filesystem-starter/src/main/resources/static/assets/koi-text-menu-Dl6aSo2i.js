@@ -1,0 +1,1 @@
+import{t as e}from"./koi-text-menu-DZBCozGi.js";export{e as default};

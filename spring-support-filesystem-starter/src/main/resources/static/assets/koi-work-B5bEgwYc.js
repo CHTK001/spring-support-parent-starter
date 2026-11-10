@@ -1,0 +1,1 @@
+import{t as e}from"./koi-work-Djg-UjhB.js";export{e as default};

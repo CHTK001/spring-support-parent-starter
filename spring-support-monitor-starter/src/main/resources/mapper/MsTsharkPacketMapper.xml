@@ -87,6 +87,11 @@
             WHEN #{f.frameNo} THEN COALESCE(#{f.body,jdbcType=VARCHAR}, ms_tshark_packet_http_body)
         </foreach>
         END,
+        ms_tshark_packet_http_hex = CASE ms_tshark_packet_frame_no
+        <foreach item="f" collection="frames" separator=" ">
+            WHEN #{f.frameNo} THEN COALESCE(#{f.bodyHex,jdbcType=VARCHAR}, ms_tshark_packet_http_hex)
+        </foreach>
+        END,
         ms_tshark_packet_http_type = CASE ms_tshark_packet_frame_no
         <foreach item="f" collection="frames" separator=" ">
             WHEN #{f.frameNo} THEN COALESCE(#{f.contentType,jdbcType=VARCHAR}, ms_tshark_packet_http_type)

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- favicon 由 koi 主题 setDocumentFavicon() 在路由进入时按 app.yaml loginConfig.logoUrl 动态设置（@repo/assets 打包资源），不再使用 public 静态副本 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APM 热点观测台</title>
+    <script type="module" crossorigin src="/assets/index-DhEr9jPB.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-Dd_uD5pT.js">
+    <link rel="modulepreload" crossorigin href="/assets/lib-antv-DPUBrK1v.js">
+    <link rel="modulepreload" crossorigin href="/assets/lib-element-plus-B7sGliKg.js">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-Czpn1I53.js">
+    <link rel="modulepreload" crossorigin href="/assets/src-DTAxcRNX.js">
+    <link rel="modulepreload" crossorigin href="/assets/axios-DP6pFVS6.js">
+    <link rel="modulepreload" crossorigin href="/assets/src-Cj9tqzct.js">
+    <link rel="modulepreload" crossorigin href="/assets/vue-router-CuOmW2D3.js">
+    <link rel="modulepreload" crossorigin href="/assets/src-DbHQ5afl.js">
+    <link rel="modulepreload" crossorigin href="/assets/pinia-J9As8i_z.js">
+    <link rel="modulepreload" crossorigin href="/assets/src-DM8L0x7T.js">
+    <link rel="modulepreload" crossorigin href="/assets/auth-26vzwcsn.js">
+    <link rel="modulepreload" crossorigin href="/assets/fingerprint-3ebLgb6U.js">
+    <link rel="modulepreload" crossorigin href="/assets/lib-vue-DCDWKPDn.js">
+    <link rel="modulepreload" crossorigin href="/assets/src-Csfb9KJW.js">
+    <link rel="modulepreload" crossorigin href="/assets/assets-icons-C5smTyx9.js">
+    <link rel="modulepreload" crossorigin href="/assets/src-92vgkZrr.js">
+    <link rel="modulepreload" crossorigin href="/assets/config-CVxHdIdF.js">
+    <link rel="modulepreload" crossorigin href="/assets/apmApi-UWiISx_b.js">
+    <link rel="modulepreload" crossorigin href="/assets/apmStore-DdV5k32J.js">
+    <link rel="modulepreload" crossorigin href="/assets/_plugin-vue_export-helper-BDNMzG2s.js">
+    <link rel="modulepreload" crossorigin href="/assets/realtimeService-C8pP05lT.js">
+    <link rel="stylesheet" crossorigin href="/assets/lib-element-plus-BC-lr_97.css">
+    <link rel="stylesheet" crossorigin href="/assets/src-1oWo33m3.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-C0XYl48g.css">
+  </head>
+  <body>
+    <!-- 全屏加载动画：防止白屏，应用挂载完成后由 createApp 调用 window.hideAppLoader() 隐藏 -->
+    <script src="/loader-config.js"></script>
+    <script src="/loader.js"></script>
+    <div id="app"></div>
+    <!-- rAF 兜底：原生 rAF 优先（可见页与刷新同步、体验不变）；页面隐藏 / 后台标签
+         原生 rAF 不触发时，由 setTimeout 16ms 兜底，保证后台标签也能实时渲染与推送 -->
+    <script>
+      (function () {
+        var nRaf = window.requestAnimationFrame
+          ? window.requestAnimationFrame.bind(window)
+          : null;
+        var nCancel = window.cancelAnimationFrame
+          ? window.cancelAnimationFrame.bind(window)
+          : null;
+        window.requestAnimationFrame = function (cb) {
+          var fired = false;
+          var nativeId = null;
+          var timer = setTimeout(function () {
+            if (fired) return;
+            fired = true;
+            cb(performance.now());
+          }, 16);
+          if (nRaf) {
+            nativeId = nRaf(function () {
+              if (fired) return;
+              fired = true;
+              clearTimeout(timer);
+              cb(performance.now());
+            });
+          }
+          return { timer: timer, nativeId: nativeId };
+        };
+        window.cancelAnimationFrame = function (handle) {
+          if (!handle) return;
+          clearTimeout(handle.timer);
+          if (nCancel && handle.nativeId != null) nCancel(handle.nativeId);
+        };
+      })();
+    </script>
+  </body>
+</html>

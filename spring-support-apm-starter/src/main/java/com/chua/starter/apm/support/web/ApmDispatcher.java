@@ -99,6 +99,10 @@ public class ApmDispatcher {
     private final ApmRegistry registry;
     private final ApmProperties properties;
     private final ApmRuntimeConfig runtimeConfig;
+    /**
+     * 写操作留痕的落点。未装配时为空：APM 模块可以脱离监控模块独立使用。
+     */
+    private volatile ApmOperLogSink operLogSink;
 
     /**
      * 构造路由器（自带设置存储：供独立模式等不经过 Spring 的场景使用）
@@ -125,6 +129,19 @@ public class ApmDispatcher {
     }
 
     /**
+     * 装配写操作留痕的落点（可选）。
+     * <p>
+     * 用 setter 而不是构造参数：APM 模块可以独立于监控模块使用（独立模式、单测），
+     * 没有日志实现时必须照常工作；Spring 装配时由自动配置把宿主的 bean 塞进来。
+     * </p>
+     *
+     * @param operLogSink 落点，null 表示不记录
+     */
+    public void setOperLogSink(ApmOperLogSink operLogSink) {
+        this.operLogSink = operLogSink;
+    }
+
+    /**
      * 分发请求
      *
      * @param request 请求
@@ -145,14 +162,18 @@ public class ApmDispatcher {
             if ("GET".equals(method)) {
                 return ApmResult.ok(runtimeConfig.view());
             }
+            long startNs = System.nanoTime();
+            ApmResult result;
             try {
-                return ApmResult.ok(runtimeConfig.update(request.params()));
+                result = ApmResult.ok(runtimeConfig.update(request.params()));
             } catch (IllegalArgumentException e) {
-                return ApmResult.fail(e.getMessage());
+                result = ApmResult.fail(e.getMessage());
             } catch (Exception e) {
                 log.warn("[APM] 保存设置失败: {}", e.getMessage());
-                return ApmResult.fail("保存 APM 设置失败: " + e.getMessage());
+                result = ApmResult.fail("保存 APM 设置失败: " + e.getMessage());
             }
+            recordOperLog(request, result, (System.nanoTime() - startNs) / 1_000_000L);
+            return result;
         }
         if ("/capabilities".equals(path)) {
             ApmProviderHolder holder = requireEngine();
@@ -625,6 +646,28 @@ public class ApmDispatcher {
             return Long.parseLong(value);
         } catch (NumberFormatException e) {
             return defaultValue;
+        }
+    }
+
+    /**
+     * 写操作留痕。
+     * <p>
+     * 记不下来不能影响写操作本身：实现方抛出的任何异常都在这里吞掉并降级成一行日志。
+     * </p>
+     *
+     * @param request 请求
+     * @param result  结果
+     * @param costMs  耗时（毫秒）
+     */
+    private void recordOperLog(ApmRequest request, ApmResult result, long costMs) {
+        ApmOperLogSink sink = this.operLogSink;
+        if (sink == null) {
+            return;
+        }
+        try {
+            sink.record(request, result, costMs);
+        } catch (Exception e) {
+            log.warn("[APM] 操作日志记录失败: {}", e.getMessage());
         }
     }
 }

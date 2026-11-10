@@ -67,6 +67,25 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- OAuth 客户端注解（@TokenForIgnore）：设备模块自己声明免登录态的 webhook 入站端点，
+             不写宿主 yaml 白名单。optional=true：未引入 oauth-client 的宿主不会被强加依赖，
+             注解在运行时不存在时静默失效，不影响模块编译与启动 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 海康综合安防平台官方 SDK：artemis 网关签名（x-ca-*）由 SDK 内部完成。
+             官方只在 Maven Central 发布了这一个安防类 SDK；云曜/云眸/大华/乐橙均无官方 Java SDK，
+             由 provider.sdk 包内的统一门面按官方 OpenAPI 实现 -->
+        <dependency>
+            <groupId>com.hikvision.ga</groupId>
+            <artifactId>artemis-http-client</artifactId>
+            <version>1.1.3</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

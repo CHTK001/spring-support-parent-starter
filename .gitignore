@@ -79,6 +79,8 @@ sys
 
 # H2 文件库本地数据目录
 /data/
+# 模块级运行期数据（答题卡图片、H2 文件库等），不得入库
+spring-support-eduai-starter/data/
 # 运行时缓存与空文件
 osgi-cache/
 **/osgi-cache/
@@ -211,11 +213,3 @@ site-builder/
 pmt_proxy/
 node_modules/.tmp/
 
-# --- generated / non-source (untracked) ---
-spring-support-filesystem-starter/src/main/resources/static/assets/
-spring-support-filesystem-starter/src/main/resources/static/wasm/
-spring-support-filesystem-starter/src/main/resources/static/vendor/
-spring-support-filesystem-starter/src/main/resources/static/preview-vendor/
-spring-support-hotsport-starter/src/main/resources/static/
-backups/
-*.map

@@ -511,7 +511,8 @@ public class RoomService {
      * @return 前缀 + 无连字符 UUID 前 12 位
      */
     private static String generateId(String prefix) {
-        return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        // [P3C A20 豁免]
+    return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
     private Optional<PeerSession> findPeer(RoomState room, String slotId) {

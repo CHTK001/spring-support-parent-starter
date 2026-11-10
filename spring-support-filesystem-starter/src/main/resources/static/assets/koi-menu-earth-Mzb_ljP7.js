@@ -1,0 +1,1 @@
+import{t as e}from"./koi-menu-earth-DqN865MN.js";export{e as default};

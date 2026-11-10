@@ -52,6 +52,11 @@ public class ReleaseSseHub {
     public static final String EVENT_OP_LOG = "op-log";
 
     /**
+     * Actuator 定时采集事件名：全局时间轮采集完成后广播，页面据此刷新底部指标条
+     */
+    public static final String EVENT_PROJECT_ENDPOINTS = "project-endpoints";
+
+    /**
      * SSE 连接超时（0 表示不超时）
      */
     private static final long SSE_TIMEOUT_MS = 0L;

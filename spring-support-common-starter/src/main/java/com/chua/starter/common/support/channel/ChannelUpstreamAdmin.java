@@ -1,6 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.common.support.channel;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,6 +40,23 @@ public interface ChannelUpstreamAdmin {
      */
     default boolean supports(String channel) {
         return channel != null && channel().equalsIgnoreCase(channel);
+    }
+
+    /**
+     * 某个业务渠道在本网关里对应的上游 provider id（按优先级排列）。
+     *
+     * <p>网关的 provider 命名不一定与我们的渠道 id 相同：magpie 里 Trae 是
+     * {@code trae-cn} / {@code trae-global}、MiniMax 是 {@code minimax-code}、
+     * Gemini 是 {@code google}。这层映射属于网关自己的知识，消费方（AI 模块）
+     * 不应该去猜后缀，也不该维护第二份对照表。</p>
+     *
+     * <p>默认按同名匹配：provider id 与渠道 id 一致的网关无需覆盖。</p>
+     *
+     * @param channel 业务渠道标识
+     * @return provider id 候选；不管理该渠道时返回空列表
+     */
+    default List<String> providerIdsOf(String channel) {
+        return channel == null || channel.isBlank() ? List.of() : List.of(channel);
     }
 
     /**

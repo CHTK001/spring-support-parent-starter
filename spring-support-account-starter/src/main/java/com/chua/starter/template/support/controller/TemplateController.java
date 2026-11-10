@@ -35,7 +35,7 @@ import java.util.Map;
  * @since 4.0.0.52
  * @author CH
  */
-@RestController
+@RestController("accountTemplateController")
 @RequestMapping("/api/template")
 @RequiredArgsConstructor
 public class TemplateController {

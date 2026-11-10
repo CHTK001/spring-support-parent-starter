@@ -263,6 +263,12 @@ class WorkBuddyAccountChannelAuthManagerTest {
         }
     }
 
+    /**
+     * 读取 HTTP 交互器的请求体全部内容。
+     *
+     * @param ex HTTP 交互器
+     * @return 请求体文本（无请求体时返回空串）
+     */
     private static String readAll(HttpExchange ex) throws IOException {
         return new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
     }}

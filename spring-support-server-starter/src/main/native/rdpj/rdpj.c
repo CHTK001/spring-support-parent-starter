@@ -381,6 +381,11 @@ static int rdpj_apply_settings(RdpjHandle* h) {
     freerdp_settings_set_bool(s, FreeRDP_NetworkAutoDetect, TRUE);
     freerdp_settings_set_bool(s, FreeRDP_SupportDisplayControl, FALSE);
     freerdp_settings_set_bool(s, FreeRDP_IgnoreCertificate, TRUE);
+    /* 老版本 Windows Server（如 2012 R2）的 RDP 自签证书多为 SHA1/1024 位，
+     * FreeRDP 默认安全等级 112BIT(2) 会在 TLS 握手阶段直接拒绝（表现为
+     * "connection failed at TLS connect"）。证书已由 IgnoreCertificate 忽略，
+     * 这里把 OpenSSL 安全等级降到 0，允许完成握手。 */
+    freerdp_settings_set_uint32(s, FreeRDP_TlsSecLevel, FREERDP_TLS_SECLEVEL_0);
     freerdp_settings_set_bool(s, FreeRDP_AutoReconnectionEnabled, FALSE);
     /* 键盘布局：中文区域走 0x804，其余按美式 0x409 */
     if (h->locale[0] != '\0' && _strnicmp(h->locale, "zh", 2) == 0) {

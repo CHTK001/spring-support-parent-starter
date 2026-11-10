@@ -24,6 +24,7 @@ import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
 import com.chua.starter.monitor.support.tshark.TsharkSqliteSourceRegistry;
 import com.chua.starter.monitor.support.config.TsharkInstallProperties;
+import com.chua.starter.monitor.support.config.TsharkRetentionProperties;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -217,6 +218,7 @@ public class TsharkCaptureService {
             "ms_tshark_packet_source_port", "ms_tshark_packet_dest_port",
             "ms_tshark_packet_protocol", "ms_tshark_packet_info", "ms_tshark_packet_tcp_stream",
             "ms_tshark_packet_http_req", "ms_tshark_packet_http_resp", "ms_tshark_packet_http_body",
+            "ms_tshark_packet_http_hex",
             "ms_tshark_packet_http_type", "ms_tshark_packet_http_encoding", "ms_tshark_packet_http_size",
             "ms_tshark_packet_http_method", "ms_tshark_packet_http_uri", "ms_tshark_packet_http_status",
             "ms_tshark_packet_restored");
@@ -275,13 +277,22 @@ public class TsharkCaptureService {
        */
     private final ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider;
 
+      /**
+       * 抓包数据保留策略（过期天数 / 目录空间上限 / 是否启用）。
+       *
+       * <p>过期清理与空间清理是两条独立规则，任一条满足就删；页面上的
+       * 「一键清理」与定时任务走同一份策略，避免两处口径不一致。</p>
+       */
+    private final TsharkRetentionProperties retentionProperties;
+
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
                                 MsTsharkPacketMapper packetMapper,
                                 MonitorPushService pushService,
                                 ObjectProvider<TsharkPacketStreamRegistry> streamRegistryProvider,
                                 TsharkRuntime tsharkRuntime,
                                 TsharkSqliteSourceRegistry sqliteRegistry,
-                                TsharkInstallProperties installProperties) {
+                                TsharkInstallProperties installProperties,
+                                TsharkRetentionProperties retentionProperties) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
         this.pushService = pushService;
@@ -289,6 +300,7 @@ public class TsharkCaptureService {
         this.tsharkRuntime = tsharkRuntime;
         this.sqliteRegistry = sqliteRegistry;
         this.installProperties = installProperties;
+        this.retentionProperties = retentionProperties;
     }
 
       /**
@@ -748,10 +760,12 @@ public class TsharkCaptureService {
        * @param filterType 过滤语法：auto / bpf / display
        * @param count 数量
        * @param timeout 超时
+       * @param maxSizeMb 会话文件大小上限（MB），为空或非正数表示不限
        * @return 启动capture的结果
        */
     public ReturnResult<MsTsharkSession> startCapture(String name, String iface, String filter,
-                                                      String filterType, Integer count, Integer timeout) {
+                                                      String filterType, Integer count, Integer timeout,
+                                                      Integer maxSizeMb) {
         try {
             if (iface == null || iface.isBlank()) {
                 return ReturnResult.error("请指定网卡");
@@ -789,9 +803,18 @@ public class TsharkCaptureService {
                 cmd.add("-c");
                 cmd.add(String.valueOf(count));
             }
+            // tshark 只允许一个 -a，多个停止条件必须用逗号拼在同一条里；
+            // filesize 的单位是 KB，前端填的是 MB。
+            List<String> autostop = new ArrayList<>();
             if (timeout != null && timeout > 0) {
+                autostop.add("duration:" + timeout);
+            }
+            if (maxSizeMb != null && maxSizeMb > 0) {
+                autostop.add("filesize:" + ((long) maxSizeMb * 1024L));
+            }
+            if (!autostop.isEmpty()) {
                 cmd.add("-a");
-                cmd.add("duration:" + timeout);
+                cmd.add(String.join(",", autostop));
             }
             cmd.add("-w");
             cmd.add(filePath.toString());
@@ -1531,8 +1554,9 @@ public class TsharkCaptureService {
                 return value;
             });
             String head = normalizeHttpRestoredHead(message.head());
-            String bodyText = decodeHttpBody(message.body(), message.contentType(), message.encoding(),
+            DecodedHttpBody decodedBody = decodeHttpBody(message.body(), message.contentType(), message.encoding(),
                     message.truncated());
+            String bodyText = decodedBody == null ? null : decodedBody.text();
             if (message.request()) {
                 frame.setRequestHead(head);
             } else {
@@ -1541,6 +1565,9 @@ public class TsharkCaptureService {
             fillHttpStartLine(frame, message.request(), head);
             if (bodyText != null) {
                 frame.setBody(bodyText);
+            }
+            if (decodedBody != null) {
+                frame.setBodyHex(decodedBody.hex());
             }
             if (message.contentType() != null && !message.contentType().isBlank()) {
                 frame.setContentType(message.contentType().trim());
@@ -2424,7 +2451,9 @@ public class TsharkCaptureService {
                 packet.setHttpContentType(blankToNull(cols[21]));
                 packet.setHttpContentEncoding(blankToNull(cols[22]));
                 packet.setHttpContentLength(parseIntOrNull(cols[23]));
-                packet.setHttpBody(decodeHttpBody(cols[24], cols[21], cols[22]));
+                DecodedHttpBody decoded = decodeHttpBody(cols[24], cols[21], cols[22]);
+                packet.setHttpBody(decoded == null ? null : decoded.text());
+                packet.setHttpBodyHex(decoded == null ? null : decoded.hex());
             }
               // 详情面板的补充字段：传输层（流号 / 序列号 / 标志位）、网络层跳数、
               // HTTP 起始行、TLS 域名、DNS 查询名。缺失的列留 null，前端按行隐藏。
@@ -2601,6 +2630,30 @@ public class TsharkCaptureService {
     private static final int HTTP_BODY_TEXT_LIMIT = 16000;
       /** 原始字节解码前最多取的字节数（256KB）：只影响展示，真实长度另存 */
     private static final int HTTP_BODY_BYTES_LIMIT = 256 * 1024;
+      /**
+       * 入库的「正文字节 hex」最多保留的字节数（32KB → 64K 个十六进制字符）。
+       *
+       * <p>文本视图上限 16K 字符，hex 视图给到 32K 字节足够看清编码 / 结构；
+       * 再往上加只会把每个报文行撑大，而 hex 视图本身也渲染不了那么多。</p>
+       */
+    private static final int HTTP_BODY_HEX_KEEP_BYTES = 32 * 1024;
+
+      /** 十六进制字符表：toHex 走查表，避免 32KB 正文做几万次 String.format */
+    private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
+
+      /**
+       * 正文解码结果：同一份字节的两种视图。
+       *
+       * <p>文本/JSON 与 HEX 必须是同源字节 —— 前端拿 {@code text} 做文本与 JSON 美化，
+       * 拿 {@code hex} 做十六进制视图，两边的行数 / 字节数才对得上。</p>
+       *
+       * @param text      可展示正文（二进制时为 {@code HEX } 前缀的预览）
+       * @param hex       同一份字节的十六进制串；空正文为 null
+       * @param binary    是否被判为二进制（文本视图不适合直接展示）
+       * @param truncated 字节或字符是否已被截断
+       */
+    private record DecodedHttpBody(String text, String hex, boolean binary, boolean truncated) {
+    }
 
       /**
        * 把 {@code http.file_data} 的十六进制还原成可读正文。
@@ -2614,7 +2667,7 @@ public class TsharkCaptureService {
        * @param encoding    头里的 Content-Encoding（gzip / deflate / br）
        * @return 可展示正文；没有返回 null
        */
-    private static String decodeHttpBody(String hex, String contentType, String encoding) {
+    private static DecodedHttpBody decodeHttpBody(String hex, String contentType, String encoding) {
         String h = hex == null ? "" : hex.trim();
         if (h.isEmpty()) {
             return null;
@@ -2639,7 +2692,7 @@ public class TsharkCaptureService {
        * @param truncated   实体是否已被上游截断
        * @return 可展示正文；没有返回 null
        */
-    private static String decodeHttpBody(byte[] raw, String contentType, String encoding, boolean truncated) {
+    private static DecodedHttpBody decodeHttpBody(byte[] raw, String contentType, String encoding, boolean truncated) {
         if (raw == null || raw.length == 0) {
             return null;
         }
@@ -2658,14 +2711,17 @@ public class TsharkCaptureService {
         }
         String text = new String(bytes, charsetOf(contentType));
         if (isProbablyBinary(text)) {
-            return "HEX " + toHex(bytes, 1024) + (truncated ? " …" : "");
+            return new DecodedHttpBody("HEX " + toHex(bytes, 1024) + (truncated ? " …" : ""),
+                    toHex(bytes, HTTP_BODY_HEX_KEEP_BYTES), true, truncated || bytes.length > 1024);
         }
         text = text.replace("\u0000", "");
         if (text.length() > HTTP_BODY_TEXT_LIMIT) {
             text = text.substring(0, HTTP_BODY_TEXT_LIMIT);
             truncated = true;
         }
-        return truncated ? text + "\n…（正文已截断）" : text;
+        return new DecodedHttpBody(truncated ? text + "\n…（正文已截断）" : text,
+                toHex(bytes, HTTP_BODY_HEX_KEEP_BYTES), false,
+                truncated || bytes.length > HTTP_BODY_HEX_KEEP_BYTES);
     }
 
       /**
@@ -2766,15 +2822,19 @@ public class TsharkCaptureService {
       /**
        * 字节转十六进制预览。
        *
+       * <p>逐个 {@code String.format("%02x")} 在 32KB 正文上是几十万次格式化调用，
+       * 抓包高峰期会明显拖慢解析线程；这里改用查表，结果完全一致。</p>
+       *
        * @param bytes 原始字节
        * @param limit 最多取多少字节
        * @return 连续十六进制串
        */
     private static String toHex(byte[] bytes, int limit) {
-        StringBuilder sb = new StringBuilder();
         int n = Math.min(bytes.length, limit);
+        StringBuilder sb = new StringBuilder(n * 2);
         for (int i = 0; i < n; i++) {
-            sb.append(String.format("%02x", bytes[i]));
+            int v = bytes[i] & 0xFF;
+            sb.append(HEX_CHARS[v >>> 4]).append(HEX_CHARS[v & 0x0F]);
         }
         return sb.toString();
     }
@@ -3105,6 +3165,7 @@ public class TsharkCaptureService {
         m.put("httpRequestHead", packet.getHttpRequestHead());
         m.put("httpResponseHead", packet.getHttpResponseHead());
         m.put("httpBody", packet.getHttpBody());
+        m.put("httpBodyHex", packet.getHttpBodyHex());
         m.put("httpContentType", packet.getHttpContentType());
         m.put("httpContentEncoding", packet.getHttpContentEncoding());
         m.put("httpContentLength", packet.getHttpContentLength());
@@ -3261,6 +3322,129 @@ public class TsharkCaptureService {
     }
 
       /**
+       * 按保留策略清理抓包数据（过期天数 / 目录空间）。
+       *
+       * <p>两条规则各成一条独立判据，任一满足即删：</p>
+       * <ol>
+       *   <li><b>过期</b>：会话创建时间早于 {@code days} 天；{@code days <= 0} 时关闭该规则。</li>
+       *   <li><b>目录超量</b>：{@code TSHARK_CAPTURE_DIR} 总占用超过 {@code sizeMb}，
+       *       从最老的会话开始删，直到回落到上限以内；{@code sizeMb <= 0} 时关闭该规则。</li>
+       * </ol>
+       *
+       * <p>删的是整条会话：会话记录 + 报文 SQLite + 原始 pcap + 抓包日志，
+       * 复用 {@link #deleteSession(Long)} 的口径，不另写一套清理逻辑。正在抓包 /
+       * 正在解析的会话一律跳过，交给用户先停止，避免把还在写的文件删掉。</p>
+       *
+       * <p>{@code enabled=false} 时只统计不删，返回 0。</p>
+       *
+       * @return 实际删除的会话数
+       */
+    public int cleanupRetention() {
+        TsharkRetentionProperties policy = this.retentionProperties;
+        if (policy == null || !policy.isEnabled()) {
+            return 0;
+        }
+        List<MsTsharkSession> sessions = this.sessionMapper.selectList(
+                new LambdaQueryWrapper<MsTsharkSession>()
+                        .orderByAsc(MsTsharkSession::getCreateTime)
+                        .orderByAsc(MsTsharkSession::getId));
+        if (sessions == null || sessions.isEmpty()) {
+            return 0;
+        }
+        int deleted = 0;
+        Set<Long> removed = new LinkedHashSet<>();
+        // 规则一：过期
+        if (policy.getDays() > 0) {
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(policy.getDays());
+            for (MsTsharkSession session : sessions) {
+                if (session == null || session.getId() == null || isCapturing(session)) {
+                    continue;
+                }
+                LocalDateTime created = session.getCreateTime();
+                if (created != null && created.isBefore(cutoff)) {
+                    if (removeSessionQuietly(session.getId())) {
+                        deleted++;
+                        removed.add(session.getId());
+                    }
+                }
+            }
+        }
+        // 规则二：目录空间
+        long limitBytes = (long) policy.getSizeMb() * 1024L * 1024L;
+        if (limitBytes > 0) {
+            long used = captureDirBytes();
+            for (MsTsharkSession session : sessions) {
+                if (used <= limitBytes) {
+                    break;
+                }
+                if (session == null || session.getId() == null
+                        || isCapturing(session) || removed.contains(session.getId())) {
+                    continue;
+                }
+                if (removeSessionQuietly(session.getId())) {
+                    deleted++;
+                    removed.add(session.getId());
+                    used = captureDirBytes();
+                }
+            }
+        }
+        if (deleted > 0) {
+            log.info("[tshark] 保留清理删除 {} 条会话（天数={} 空间上限={}MB）",
+                    deleted, policy.getDays(), policy.getSizeMb());
+        }
+        return deleted;
+    }
+
+      /**
+       * 会话是否仍在抓包 / 解析中（状态 1）。
+       *
+       * @param session 会话
+       * @return 是则跳过清理
+       */
+    private static boolean isCapturing(MsTsharkSession session) {
+        return Integer.valueOf(1).equals(session.getCaptureStatus());
+    }
+
+      /**
+       * 删除单条会话，失败只记日志不中断整轮清理。
+       *
+       * @param sessionId 会话标识
+       * @return 是否删除成功
+       */
+    private boolean removeSessionQuietly(Long sessionId) {
+        try {
+            ReturnResult<Void> result = deleteSession(sessionId);
+            return result != null && result.isOk();
+        } catch (Exception e) {
+            log.warn("[tshark] 保留清理删除会话失败 sessionId={} reason={}", sessionId, e.getMessage());
+            return false;
+        }
+    }
+
+      /**
+       * 抓包目录当前占用字节数（递归统计，目录不存在按 0）。
+       *
+       * @return 字节数
+       */
+    private static long captureDirBytes() {
+        Path dir = Paths.get(CAPTURE_DIR);
+        if (!Files.isDirectory(dir)) {
+            return 0L;
+        }
+        try (java.util.stream.Stream<Path> stream = Files.walk(dir)) {
+            return stream.filter(Files::isRegularFile).mapToLong(path -> {
+                try {
+                    return Files.size(path);
+                } catch (Exception e) {
+                    return 0L;
+                }
+            }).sum();
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+      /**
        * 删除会话。
        * @param sessionId 会话标识
        * @return 删除会话的结果
@@ -3294,6 +3478,12 @@ public class TsharkCaptureService {
           // 报文不再在 MySQL 里，整套迁移到会话自己的 SQLite 文件：关池拿路径后随文件一起删
         Path dbPath = this.sqliteRegistry.close(sessionId);
         MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+          // 跨重启的旧会话没有进过本进程的连接池，close() 取不到路径；
+          // 报文库与 pcap 同目录同名，按 pcap 路径反推，否则 .db 永远删不掉，
+          // 保留清理的空间规则会一直判定「超量」，把新会话也一起删了。
+        if (dbPath == null && session != null && session.getFilePath() != null) {
+            dbPath = TsharkSqliteSourceRegistry.dbPathForPcap(Paths.get(session.getFilePath()));
+        }
         if (session != null && session.getFilePath() != null) {
             try {
                 Path pcap = Paths.get(session.getFilePath());

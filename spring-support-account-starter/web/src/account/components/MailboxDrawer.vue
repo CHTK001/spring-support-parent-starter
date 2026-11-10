@@ -22,7 +22,7 @@
           <a v-if="consoleUrl" class="mb-console" :href="consoleUrl" target="_blank" rel="noopener noreferrer">
             {{ consoleLabel }}
           </a>
-          <button type="button" class="mb-retry" @click="reload">重试</button>
+          <button type="button" class="mb-retry" @click="reload()">重试</button>
         </div>
 
         <div class="mb-body">
@@ -47,7 +47,7 @@
             </div>
 
             <div class="mb-folder-foot">
-              <ReButton show-text icon="Refresh" size="small" plain :loading="loadingMessages" @click="reload">
+              <ReButton show-text icon="Refresh" size="small" plain :loading="loadingMessages" @click="reload()">
                 刷新
               </ReButton>
             </div>
@@ -62,9 +62,23 @@
                   {{ activeFolderName }}
                   <em v-if="keyword" class="mb-keyword">“{{ keyword }}”</em>
                 </span>
+                <button
+                  v-if="!inboxUnavailable"
+                  type="button"
+                  class="mb-unread"
+                  :class="{ 'is-on': onlyUnread }"
+                  :aria-pressed="onlyUnread"
+                  :title="onlyUnread ? '显示全部邮件' : '只看未读邮件'"
+                  @click="toggleOnlyUnread"
+                >
+                  <ReIcon name="Message" :size="12" />
+                  <span>只看未读</span>
+                  <b v-if="folderUnread">{{ folderUnread }}</b>
+                </button>
+                <em v-if="unreadFirstActive" class="mb-order">未读优先</em>
                 <label class="mb-search">
                   <ReIcon name="Search" :size="13" />
-                  <input v-model="keyword" placeholder="搜索主题 / 发件人" @keyup.enter="reloadMessages" />
+                  <input v-model="keyword" placeholder="搜索主题 / 发件人" @keyup.enter="reloadMessages()" />
                 </label>
                 <ReButton v-if="overview?.sendable" show-text icon="EditPen" type="primary" @click="startCompose">
                   写信
@@ -254,8 +268,12 @@
  *
  * <p>三种模式共用右侧主区：列表（分页取信）→ 详情（HTML 放沙箱 iframe）→ 写信。
  * 抽屉宽度 980，左栏只放文件夹，主区留给内容，移动端窄屏时自动收窄。</p>
+ *
+ * <p><b>进入即优先收信</b>：打开抽屉立刻连 IMAP 取最新一页，并请求 {@code preferUnread}，
+ * 未读邮件排在前面（服务端 {@code SEARCH UNSEEN}）；工具栏还提供「只看未读」。
+ * 抽屉重新可见时静默刷新一次，不做定时轮询，避免 IMAP 会话被反复开关。</p>
  */
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { message } from '@repo/core';
 import ReButton from '@repo/ui/re-button';
 import ReDrawer from '@repo/ui/re-drawer';
@@ -286,6 +304,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
+  /** 收件箱未读数变化（外层用在索引行 / 页签角标上） */
+  (e: 'unread', value: number): void;
 }>();
 
 /** 抽屉显隐双向绑定 */
@@ -325,6 +345,10 @@ const sending = ref(false);
 const markingBusy = ref(false);
 /** 删除进行中 */
 const deletingMessage = ref(false);
+/** 只看未读（工具栏开关；进入时若收件箱有未读则默认打开） */
+const onlyUnread = ref(false);
+/** 首屏是否已按「未读优先」加载过（翻页与刷新都不再重排） */
+const preferUnread = ref(true);
 
 /** 写信表单 */
 const form = reactive({
@@ -361,6 +385,19 @@ const activeFolderName = computed(() => {
  */
 const inboxUnavailable = computed(() => !activeFolder.value);
 
+/** 当前文件夹的未读数（收件箱角色优先，回退到第一个文件夹） */
+const folderUnread = computed(() => {
+  const inbox = folders.value.find(folder => folder.role === 'INBOX')
+    ?? folders.value.find(folder => folder.key === activeFolder.value);
+  return Number(inbox?.unread ?? 0) || 0;
+});
+
+/** 进入后是否真的按「未读优先」排了序（用于工具栏提示） */
+const unreadFirstActive = computed(() => preferUnread.value && !onlyUnread.value && folderUnread.value > 0);
+
+/** 未读数上报外层（索引行 / 页签角标） */
+watch(folderUnread, value => emit('unread', value), { immediate: true });
+
 /** 兜底链接文案：邮箱叫网页版邮箱，短信是服务商控制台 */
 const consoleLabel = computed(() => (isEmail.value ? '网页版邮箱' : '服务商控制台'));
 
@@ -379,7 +416,7 @@ const htmlDocument = computed(() => {
     '<style>html,body{margin:0;padding:0;background:#fff;color:#1f2329;',
     "font:14px/1.7 -apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}",
     'body{padding:16px 20px;word-break:break-word;}img{max-width:100%;height:auto;}',
-    'table{max-width:100%;border-collapse:collapse;}a{color:#5a4bd9;}</style>',
+    'table{max-width:100%;border-collapse:collapse;}a{color:#1877ff;}</style>',
     '</head><body>',
     body,
     '</body></html>',
@@ -395,30 +432,72 @@ watch(
     messages.value = [];
     activeMessage.value = null;
     keyword.value = '';
+    // 每次进入都从「全量 + 未读优先」开始，避免上次的筛选把新邮件藏起来
+    onlyUnread.value = false;
+    preferUnread.value = true;
     resetForm();
     void reload();
   },
 );
 
 /**
+ * 抽屉重新可见时静默刷新一次。
+ *
+ * <p>不做定时轮询：IMAP 每次都要建连 / 登录，轮询会拖慢服务端并让连接被限流。
+ * 用户切回浏览器标签时补一次最新即可。</p>
+ */
+function onVisibilityChange(): void {
+  if (document.visibilityState === 'visible' && props.modelValue) {
+    void refreshQuiet();
+  }
+}
+
+onMounted(() => document.addEventListener('visibilitychange', onVisibilityChange));
+onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisibilityChange));
+
+/**
+ * 静默刷新：不显示加载态、不弹错误提示，避免打断正在阅读的用户。
+ */
+async function refreshQuiet(): Promise<void> {
+  if (mode.value !== 'list') {
+    void refreshFolderCounters();
+    return;
+  }
+  await loadOverview(true);
+  await reloadMessages(true);
+}
+
+/**
+ * 切换「只看未读」。
+ */
+function toggleOnlyUnread(): void {
+  onlyUnread.value = !onlyUnread.value;
+  mode.value = 'list';
+  activeMessage.value = null;
+  void reloadMessages();
+}
+
+/**
  * 重新加载概览与当前文件夹。
  */
-async function reload(): Promise<void> {
-  await loadOverview();
-  await reloadMessages();
+async function reload(quiet = false): Promise<void> {
+  await loadOverview(quiet);
+  await reloadMessages(quiet);
 }
 
 /**
  * 加载概览并确定默认文件夹。
+ *
+ * @param quiet 静默刷新（不显示加载态、不弹错误）
  */
-async function loadOverview(): Promise<void> {
+async function loadOverview(quiet = false): Promise<void> {
   const account = props.account;
   if (!account?.accountId) {
     overview.value = null;
     folders.value = [];
     return;
   }
-  loadingOverview.value = true;
+  if (!quiet) loadingOverview.value = true;
   try {
     const data = await getMailboxOverview(account.accountId);
     overview.value = data;
@@ -428,44 +507,54 @@ async function loadOverview(): Promise<void> {
       activeFolder.value = inbox?.key || folders.value[0]?.key || '';
     }
   } catch (e: any) {
+    if (quiet) return;
     overview.value = null;
     folders.value = [];
     message.error(e?.message || '收信箱连接失败');
   } finally {
-    loadingOverview.value = false;
+    if (!quiet) loadingOverview.value = false;
   }
 }
 
 /**
  * 重新从第一页取信。
+ *
+ * @param quiet 静默刷新（不显示加载态、不弹错误）
  */
-async function reloadMessages(): Promise<void> {
+async function reloadMessages(quiet = false): Promise<void> {
   if (!props.account?.accountId || !activeFolder.value) {
     messages.value = [];
     hasMore.value = false;
     return;
   }
-  loadingMessages.value = true;
+  if (!quiet) loadingMessages.value = true;
   try {
     const rows = await listMailboxMessages(props.account.accountId, {
       folder: activeFolder.value,
       limit: PAGE_SIZE,
       offset: 0,
+      unreadOnly: onlyUnread.value || undefined,
+      // 首屏未读优先：服务端 SEARCH UNSEEN 把未读排到前面，已读补足一页
+      preferUnread: !onlyUnread.value && preferUnread.value ? true : undefined,
       keyword: keyword.value.trim() || undefined,
     });
     messages.value = rows ?? [];
     hasMore.value = messages.value.length >= PAGE_SIZE;
   } catch (e: any) {
+    if (quiet) return;
     messages.value = [];
     hasMore.value = false;
     message.error(e?.message || '收取邮件失败');
   } finally {
-    loadingMessages.value = false;
+    if (!quiet) loadingMessages.value = false;
   }
 }
 
 /**
  * 加载更早的信（追加到列表末尾）。
+ *
+ * <p>翻页不再请求「未读优先」：首屏已经重排过，再重排会让 offset 错位，
+ * 出现同一封邮件重复出现或整段被跳过。</p>
  */
 async function loadMore(): Promise<void> {
   if (!props.account?.accountId || loadingMessages.value) return;
@@ -475,6 +564,7 @@ async function loadMore(): Promise<void> {
       folder: activeFolder.value,
       limit: PAGE_SIZE,
       offset: messages.value.length,
+      unreadOnly: onlyUnread.value || undefined,
       keyword: keyword.value.trim() || undefined,
     });
     const next = rows ?? [];
@@ -814,13 +904,13 @@ function pad(value: number): string {
   margin-left: auto;
   border: 0;
   background: transparent;
-  color: var(--brand-600, #5a4bd9);
+  color: var(--el-color-primary, #1877ff);
   cursor: pointer;
 }
 
 .mb-console {
   margin-left: auto;
-  color: var(--brand-600, #5a4bd9);
+  color: var(--el-color-primary, #1877ff);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -864,8 +954,8 @@ function pad(value: number): string {
 }
 
 .mb-folder.is-on {
-  background: var(--brand-50, #efedff);
-  color: var(--brand-600, #5a4bd9);
+  background: var(--el-color-primary-light-9, #eef5ff);
+  color: var(--el-color-primary, #1877ff);
   font-weight: 600;
 }
 
@@ -935,6 +1025,54 @@ function pad(value: number): string {
   font-weight: 400;
 }
 
+.mb-order {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: var(--el-color-primary-light-9, #eef5ff);
+  color: var(--el-color-primary, #1877ff);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 16px;
+}
+
+.mb-unread {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--border-default, #dcdfe6);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mb-unread:hover {
+  border-color: var(--el-color-primary-light-5, #8bb8ff);
+  color: var(--el-color-primary, #1877ff);
+}
+
+.mb-unread.is-on {
+  border-color: var(--el-color-primary, #1877ff);
+  background: var(--el-color-primary-light-9, #eef5ff);
+  color: var(--el-color-primary, #1877ff);
+}
+
+.mb-unread b {
+  min-width: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--status-error, #f56c6c);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+}
+
 .mb-search {
   display: flex;
   align-items: center;
@@ -996,7 +1134,7 @@ function pad(value: number): string {
 }
 
 .mb-from.is-unread .mb-dot {
-  background: var(--brand-500, #6d5ce7);
+  background: var(--el-color-primary, #1877ff);
 }
 
 .mb-subject {
@@ -1137,7 +1275,7 @@ function pad(value: number): string {
 
 .mb-input:focus,
 .mb-textarea:focus {
-  border-color: var(--brand-500, #6d5ce7);
+  border-color: var(--el-color-primary, #1877ff);
 }
 
 .mb-textarea {

@@ -1,0 +1,1 @@
+import{n as e,t}from"./ReAvatar3D-r9AvOKRh.js";export{t as default,e as install};

@@ -39,13 +39,13 @@ class MagpieChannelCreditProviderTest {
     }
 
     @Test
-    @DisplayName("不同单位分别累加：顶部只报主单位，明细保留各自 display")
+    @DisplayName("不同单位分别累加：顶部按 units 分条，明细保留各自 display")
     void differentUnitsAreNotSummedTogether() {
         List<Map<String, Object>> quotas = new ArrayList<>();
         quotas.add(quota("codex", "codex", "subscription", null, List.of(
                 window("5h", null, 12, 20, "requests"))));
         quotas.add(quota("claude", "claude", "subscription", null, List.of(
-                window("weekly", "1.2k / 3k", null, null, "token"))));
+                window("weekly", "1.2k / 3k", null, 3000, "token"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
@@ -56,8 +56,48 @@ class MagpieChannelCreditProviderTest {
         // 1.2k / 3k 不能解析成数值，原样保留在 display 里
         assertEquals("1.2k / 3k", packages(result).get(1).get("display"));
         assertNull(packages(result).get(1).get("remain"));
-        String warning = String.valueOf(result.get("warning"));
-        assertTrue(warning.contains("单位不一致"), warning);
+        // 两种单位各一条，前端按单位分条展示，不再报「单位不一致」
+        assertEquals(2, units(result).size());
+        assertEquals("requests", units(result).get(0).get("unit"));
+        assertEquals("token", units(result).get(1).get("unit"));
+        assertNull(result.get("warning"));
+    }
+
+    @Test
+    @DisplayName("没有单位的窗口只进明细，不进合计")
+    void windowWithoutUnitStaysOutOfTotals() {
+        List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
+                window("5h", null, 7, 10, "requests"),
+                window("estimate", null, 200_000_000, 200_000_000, null))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        assertEquals(7L, result.get("remain"));
+        assertEquals(10L, result.get("total"));
+        assertEquals(2, packages(result).size());
+        assertEquals(1, units(result).size());
+        assertNull(packages(result).get(1).get("unit"));
+    }
+
+    @Test
+    @DisplayName("currency 与 credit 归一到同一单位，货币按币种分桶")
+    void currencyAndCurrencyCodeAreBucketed() {
+        List<Map<String, Object>> quotas = new ArrayList<>();
+        quotas.add(quota("openrouter", "openrouter", "balance", "10", List.of()));
+        quotas.add(quota("deepseek", "deepseek", "subscription", null, List.of(
+                window("wallet", null, 5, 20, "usd"))));
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
+
+        // 余额卡没有币种（bucket 键只有 currency），美元窗口带 USD，两者不能相加
+        assertEquals(2, units(result).size());
+        assertEquals("currency", units(result).get(0).get("unit"));
+        assertNull(units(result).get(0).get("currency"));
+        assertEquals(10L, units(result).get(0).get("remain"));
+        assertEquals("USD", units(result).get(1).get("currency"));
+        assertEquals(5L, units(result).get(1).get("remain"));
+        // 卡片口径取第一条
+        assertEquals(10L, result.get("remain"));
     }
 
     @Test
@@ -76,10 +116,10 @@ class MagpieChannelCreditProviderTest {
     }
 
     @Test
-    @DisplayName("余额窗口用 limit - used 反推剩余，并标记超额")
+    @DisplayName("used 是剩余百分比，为 0 时判超额")
     void exhaustedWindowIsFlagged() {
         List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
-                windowWithUsed("5h", 20, 20, "requests"))));
+                windowWithUsed("5h", 0, 20, "requests"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
@@ -88,43 +128,78 @@ class MagpieChannelCreditProviderTest {
     }
 
     @Test
-    @DisplayName("magpie 的 used 字段能反推剩余（线上卡实测：used=0 / limit=100）")
-    void usedFieldIsUnderstood() {
-        List<Map<String, Object>> quotas = List.of(quota("workbuddy-ai", "WorkBuddy AI", "subscription", null,
-                List.of(windowWithUsed("Credits", 0, 100, "credits"))));
+    @DisplayName("magpie 的 used 是剩余百分比（线上实测：Qoder 48.3333 → 145/300）")
+    void usedFieldIsRemainingPercent() {
+        List<Map<String, Object>> quotas = List.of(quota("qoder", "Qoder", "subscription", null,
+                List.of(windowWithUsed("Credits", 48, 300, "credits"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
-        assertEquals(100L, result.get("remain"));
-        assertEquals(100L, result.get("total"));
-        assertEquals("credits", result.get("unit"));
+        assertEquals(144L, result.get("remain"));
+        assertEquals(300L, result.get("total"));
+        // credits 归一到 credit
+        assertEquals("credit", result.get("unit"));
     }
 
     @Test
-    @DisplayName("早期版本的 amount 字段仍然兼容")
+    @DisplayName("amount 是剩余量，优先于 used 百分比（Qoder 实测 145/300）")
+    void amountWinsOverUsedPercent() {
+        Map<String, Object> window = new LinkedHashMap<>();
+        window.put("name", "Credits");
+        window.put("used", 48.333333);
+        window.put("amount", 145);
+        window.put("limit", 300);
+        window.put("unit", "credits");
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(
+                List.of(quota("qoder", "Qoder", "subscription", null, List.of(window))));
+
+        assertEquals(145L, result.get("remain"));
+        assertEquals(300L, result.get("total"));
+    }
+
+    @Test
+    @DisplayName("剩余量优先取 balance / remaining，再退回 amount")
+    void remainFieldPrecedence() {
+        Map<String, Object> window = new LinkedHashMap<>();
+        window.put("name", "Credits");
+        window.put("balance", 9);
+        window.put("remaining", 8);
+        window.put("amount", 7);
+        window.put("limit", 10);
+        window.put("unit", "credits");
+
+        Map<String, Object> result = MagpieChannelCreditProvider.snapshot(
+                List.of(quota("codex", "codex", "subscription", null, List.of(window))));
+
+        assertEquals(9L, result.get("remain"));
+    }
+
+    @Test
+    @DisplayName("早期版本的 amount 字段按剩余量理解")
     void legacyAmountFieldStillWorks() {
         List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
                 windowWithAmount("5h", 4, 10, "requests"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
-        assertEquals(6L, result.get("remain"));
+        assertEquals(4L, result.get("remain"));
         assertEquals(10L, result.get("total"));
     }
 
     @Test
-    @DisplayName("「Total」汇总行不计入合计，避免余额翻倍（100 + 90 + 190 → 190）")
+    @DisplayName("「Total」汇总行不计入合计，避免余额翻倍（500 + 3936 + 4436 → 4436）")
     void totalWindowIsNotSummed() {
         List<Map<String, Object>> quotas = List.of(quota("workbuddy-ai", "WorkBuddy AI", "subscription", null,
                 List.of(
-                        windowWithUsed("Credits", 0, 100, "credits"),
-                        windowWithUsed("Extra credits", 0, 90, "credits"),
-                        windowWithUsed("Total credits", 0, 190, "credits"))));
+                        windowWithUsed("Credits", 100, 500, "credits"),
+                        windowWithUsed("Extra credits", 100, 3936, "credits"),
+                        windowWithUsed("Total credits", 100, 4436, "credits"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
-        assertEquals(190L, result.get("remain"));
-        assertEquals(190L, result.get("total"));
+        assertEquals(4436L, result.get("remain"));
+        assertEquals(4436L, result.get("total"));
         // 三行都保留在明细里，只是汇总行不参与求和
         assertEquals(3, packages(result).size());
     }
@@ -133,14 +208,15 @@ class MagpieChannelCreditProviderTest {
     @DisplayName("名字不是合计、只是数值碰巧等于其余之和时，按原样相加")
     void ambiguousWindowsAreSummedAsIs() {
         List<Map<String, Object>> quotas = List.of(quota("codex", "codex", "subscription", null, List.of(
-                windowWithUsed("a", 0, 10, "requests"),
-                windowWithUsed("b", 0, 10, "requests"),
-                windowWithUsed("c", 0, 20, "requests"))));
+                window("a", null, 10, 10, "requests"),
+                window("b", null, 10, 10, "requests"),
+                window("c", null, 20, 20, "requests"))));
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
         // 「10 + 10 + 20」是合法的三个分桶；没有合计语义的行名就不归并
         assertEquals(40L, result.get("total"));
+        assertEquals(40L, result.get("remain"));
     }
 
     @Test
@@ -249,5 +325,11 @@ class MagpieChannelCreditProviderTest {
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> packages(Map<String, Object> result) {
         return (List<Map<String, Object>>) result.get("packages");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> units(Map<String, Object> result) {
+        List<Map<String, Object>> units = (List<Map<String, Object>>) result.get("units");
+        return units == null ? List.of() : units;
     }
 }
