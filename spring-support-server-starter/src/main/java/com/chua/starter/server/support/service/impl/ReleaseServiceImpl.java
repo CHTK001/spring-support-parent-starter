@@ -159,6 +159,11 @@ public class ReleaseServiceImpl implements ReleaseService {
     private static final String CFG_ACTUATOR_MONITOR_PREFIX = "release.actuator.monitor.";
 
       /**
+       * 项目级健康检测配置的键前缀（后接项目ID），不改表结构
+       */
+    private static final String CFG_HEALTH_CHECK_PREFIX = "release.health.check.";
+
+      /**
        * Actuator 定时采集默认间隔（秒）
        */
     private static final int ACTUATOR_MONITOR_DEFAULT_SECONDS = 30;
@@ -1032,7 +1037,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return ReturnResult.error("日志路径未配置");
         }
         String sessionId = projectTaskService.startLogTail(prepared.getData().hostId,
-                project.getId(), project.getLogPath(), clientId);
+                project.getId(), project.getLogPath(), clientId, resolveLogLines(id));
         return ReturnResult.ok(sessionId);
     }
 
@@ -3256,6 +3261,225 @@ public class ReleaseServiceImpl implements ReleaseService {
             }
         }
         return ReturnResult.ok(out);
+    }
+
+    /**
+     * 读取项目的健康检测配置。
+     *
+     * @param id 项目标识
+     * @return url=已保存的检测地址；defaultUrl=按项目端口推导的建议地址
+     */
+    @Override
+    public ReturnResult<Map<String, Object>> getProjectHealthCheck(Long id) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("url", savedHealthUrl(id));
+        out.put("defaultUrl", defaultHealthUrl(prepared.getData().project));
+        return ReturnResult.ok(out);
+    }
+
+    /**
+     * 保存项目的健康检测地址。
+     *
+     * @param id  项目标识
+     * @param url 检测地址（http/https）
+     * @return 操作结果
+     */
+    @Override
+    public ReturnResult<Void> saveProjectHealthCheck(Long id, String url) {
+        if (id == null) {
+            return ReturnResult.error("项目ID不能为空");
+        }
+        if (projectMapper.selectById(id) == null) {
+            return ReturnResult.error("项目不存在: " + id);
+        }
+        String target = url == null ? "" : url.trim();
+        if (!isBlank(target) && !isSafeHealthUrl(target)) {
+            return ReturnResult.error("检测地址必须是 http:// 或 https:// 开头的 URL，且不能包含引号、空格或 shell 特殊字符");
+        }
+        return persistHealthUrl(id, target);
+    }
+
+    /**
+     * 执行一次健康检测：在项目所在主机上发 HTTP 请求，仅以状态码 200 判定通过。
+     *
+     * <p>和端点探测同样的理由，请求必须跑在目标主机上 —— 项目可能只监听远端主机的
+     * 127.0.0.1，后端直接连接会打到后端自己。</p>
+     *
+     * <p>只检测、不落库：临时试一个地址不应覆盖已保存的配置，落库走「保存地址」。</p>
+     *
+     * @param id  项目标识
+     * @param url 本次使用的检测地址；为空时用已保存的配置
+     * @return ok / statusCode / elapsedMs / checkedAt / message
+     */
+    @Override
+    public ReturnResult<Map<String, Object>> checkProjectHealth(Long id, String url) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        String target = isBlank(url) ? savedHealthUrl(id) : url.trim();
+        if (isBlank(target)) {
+            return ReturnResult.error("请先配置健康检测地址");
+        }
+        if (!isSafeHealthUrl(target)) {
+            return ReturnResult.error("检测地址必须是 http:// 或 https:// 开头的 URL，且不能包含引号、空格或 shell 特殊字符");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("url", target);
+        out.put("ok", false);
+        out.put("statusCode", 0);
+        out.put("checkedAt", LocalDateTime.now().toString());
+        String command = ctx.windows ? windowsHealthCommand(target) : posixHealthCommand(target);
+        long start = System.currentTimeMillis();
+        ReturnResult<List<MsExecLog>> result = execService.runCommand(
+                Collections.singletonList(ctx.hostId), command, 20, null);
+        out.put("elapsedMs", System.currentTimeMillis() - start);
+        if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
+            out.put("message", "健康检测执行失败: " + result.getMsg());
+            return ReturnResult.ok(out);
+        }
+        String output = result.getData().get(0).getMsExecLogOutput();
+        int code = parseHealthCode(output, ctx.windows);
+        out.put("statusCode", code);
+        out.put("ok", code == 200);
+        if (code == 200) {
+            out.put("message", "HTTP 200，健康检测通过");
+        } else if (code > 0) {
+            out.put("message", "HTTP " + code + "，仅 200 视为健康");
+        } else {
+            out.put("message", "未取到 HTTP 状态码：目标不可达、超时或地址有误");
+        }
+        return ReturnResult.ok(out);
+    }
+
+    /**
+     * 读取已保存的健康检测地址。
+     *
+     * @param projectId 项目标识
+     * @return 地址；未配置时为空串
+     */
+    private String savedHealthUrl(Long projectId) {
+        Object saved = readCfg(CFG_HEALTH_CHECK_PREFIX + projectId, null);
+        if (saved instanceof Map<?, ?> map) {
+            Object value = map.get("url");
+            return value == null ? "" : String.valueOf(value).trim();
+        }
+        return "";
+    }
+
+    /**
+     * 按项目端口推导一个建议的检测地址（未配置时给前端预填）。
+     *
+     * @param project 项目
+     * @return http://127.0.0.1:端口/actuator/health；无端口时为空串
+     */
+    private String defaultHealthUrl(MsServerProject project) {
+        int port = resolveHealthPort(project);
+        return port <= 0 ? "" : "http://127.0.0.1:" + port + "/actuator/health";
+    }
+
+    /**
+     * 校验检测地址：必须是 http(s)，且不含会被 shell 解释的字符。
+     *
+     * @param url 地址
+     * @return 是否可用
+     */
+    private boolean isSafeHealthUrl(String url) {
+        String value = url == null ? "" : url.trim();
+        if (!(value.startsWith("http://") || value.startsWith("https://")) || value.length() > 2048) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == '\'' || c == '"' || c == '`' || c == '$' || c == '|' || c == ';'
+                    || c == '<' || c == '>' || c == '\\' || Character.isWhitespace(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 写入健康检测地址（存在则更新）。
+     *
+     * @param projectId 项目标识
+     * @param url       地址
+     * @return 操作结果
+     */
+    private ReturnResult<Void> persistHealthUrl(Long projectId, String url) {
+        String key = CFG_HEALTH_CHECK_PREFIX + projectId;
+        String value;
+        try {
+            value = JSON.writeValueAsString(Map.of("url", url));
+        } catch (Exception e) {
+            return ReturnResult.error("配置序列化失败");
+        }
+        MsServerConfig exists = serverConfigMapper.selectOne(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
+        if (exists == null) {
+            MsServerConfig cfg = new MsServerConfig();
+            cfg.setConfigKey(key);
+            cfg.setConfigValue(value);
+            cfg.setConfigDesc("项目 " + projectId + " 健康检测地址");
+            serverConfigMapper.insert(cfg);
+        } else {
+            exists.setConfigValue(value);
+            serverConfigMapper.updateById(exists);
+        }
+        return ReturnResult.success();
+    }
+
+    /**
+     * POSIX 健康检测命令：只输出状态码。
+     *
+     * @param url 检测地址
+     * @return curl 命令
+     */
+    private String posixHealthCommand(String url) {
+        return "curl -s -m 10 -o /dev/null -w '%{http_code}' '" + url + "'";
+    }
+
+    /**
+     * Windows 健康检测命令：只输出状态码，异常时回落响应里的状态码或 0。
+     *
+     * @param url 检测地址
+     * @return PowerShell 命令
+     */
+    private String windowsHealthCommand(String url) {
+        return "$ProgressPreference='SilentlyContinue'\n"
+                + "$ErrorActionPreference='SilentlyContinue'\n"
+                + "function __code($u){ try { return [int](Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $u).StatusCode } "
+                + "catch { if ($_.Exception.Response -ne $null) { return [int]$_.Exception.Response.StatusCode } return 0 } }\n"
+                + "Write-Output ('CODE=' + (__code '" + url + "'))\n";
+    }
+
+    /**
+     * 从检测命令输出里取 HTTP 状态码。
+     *
+     * @param output  命令输出
+     * @param windows 是否 Windows 主机（CODE= 前缀）
+     * @return 状态码；无法解析时为 0
+     */
+    private int parseHealthCode(String output, boolean windows) {
+        String text = output == null ? "" : output.replace("\r", "").trim();
+        if (windows) {
+            for (String line : text.split("\n")) {
+                if (line.startsWith("CODE=")) {
+                    text = line.substring(5).trim();
+                    break;
+                }
+            }
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     @Override

@@ -275,6 +275,26 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     }
 
     /**
+     * 插件登录前的一问：把页面给的答案交给网关，由插件校验并决定下一问。
+     *
+     * @param credentials 网关连接凭据
+     * @param payload     {@code {provider, method, inputs, key?, value?}}
+     * @return {@code {prompt, inputs}} 或 {@code {error, inputs}}
+     */
+    @Override
+    public Map<String, Object> signinPrompt(Map<String, Object> credentials,
+                                            Map<String, Object> payload) {
+        Map<String, Object> body = payload == null ? new LinkedHashMap<>() : new LinkedHashMap<>(payload);
+        body.remove("connectionId");
+        body.remove("label");
+        if (body.get("provider") == null) {
+            throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                    "缺少要登录的 provider");
+        }
+        return MagpieAdminClient.pluginSigninPrompt(credentials, body);
+    }
+
+    /**
      * 查询登录会话（内置与插件共用一个轮询端点）。
      *
      * @param credentials 网关连接凭据

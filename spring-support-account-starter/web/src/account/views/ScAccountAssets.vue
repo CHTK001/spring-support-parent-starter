@@ -1,32 +1,32 @@
 <template>
   <div class="account-assets">
-    <!-- 视图切换：账号资产是本页主体；模板管理与消息模板是账号管理下的子功能，
-         不再单独占侧边栏菜单，也不单独成应用。 -->
-    <div class="views" role="tablist" aria-label="账号管理视图">
+    <!-- 主分类导轨：账号资产 / 模板管理 / 消息模板。
+         原先是页面顶部的一条横向页签，点击会把整页（含左侧索引）换掉；
+         现在收进最左侧导轨，点击只换右侧工作区，索引与导轨位置不动。 -->
+    <nav class="nav" aria-label="账号管理分类">
       <button
         v-for="item in views"
         :key="item.value"
         type="button"
-        role="tab"
-        class="views-item"
+        class="nav-item"
         :class="{ 'is-on': view === item.value }"
-        :aria-selected="view === item.value"
+        :aria-current="view === item.value ? 'page' : undefined"
+        :title="item.label"
         @click="view = item.value"
       >
-        <ReIcon :name="item.icon" :size="14" />
+        <ReIcon :name="item.icon" :size="16" />
         <span>{{ item.label }}</span>
       </button>
-    </div>
+    </nav>
 
-    <template v-if="view === 'accounts'">
-
-    <div v-if="loadError" class="alert">
+    <div class="stage">
+    <div v-if="view === 'accounts' && loadError" class="alert">
       <span>账号列表加载失败：{{ loadError }}</span>
       <button type="button" @click="loadAll">重试</button>
     </div>
 
     <!-- 批量操作条：勾选后才出现，不占常态版面 -->
-    <div v-if="isAccountSegment && selectedAccountIds.length" class="batch-bar">
+    <div v-if="view === 'accounts' && isAccountSegment && selectedAccountIds.length" class="batch-bar">
       <span class="batch-count">已选 <b>{{ selectedAccountIds.length }}</b> 项</span>
       <span class="batch-actions">
         <ReButton show-text size="small" icon="CircleCheck" :loading="batchBusy" @click="batchVerify">
@@ -53,7 +53,7 @@
       </span>
     </div>
 
-    <div class="ws" :style="{ '--idx-width': railWidth + 'px' }">
+    <div v-if="view === 'accounts'" class="ws" :style="{ '--idx-width': railWidth + 'px' }">
       <!-- ==================== 左侧：分组索引 ==================== -->
       <aside class="idx" aria-label="资产索引">
         <div class="idx-tools">

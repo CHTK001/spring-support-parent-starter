@@ -234,10 +234,10 @@ public class LeChangeSdk extends AbstractPlatformSdk {
             if (!METHOD_TOKEN.equals(method)) {
                 body.putIfAbsent("token", token());
             }
-            JsonNode root = call(method, body);
-            JsonNode data = root == null ? null : root.get("data");
+            JsonNode data = call(method, body);
             Object normalized = data == null || data.isNull() ? null : MAPPER.convertValue(data, Object.class);
-            return PlatformApiResult.ok(code, normalized, root == null ? null : root.toString(),
+            return PlatformApiResult.ok(code, normalized,
+                    data == null || data.isNull() ? "{}" : data.toString(),
                     System.currentTimeMillis() - start);
         } catch (Exception ex) {
             return PlatformApiResult.fail(code, ex.getMessage(), null, System.currentTimeMillis() - start);
@@ -288,7 +288,69 @@ public class LeChangeSdk extends AbstractPlatformSdk {
      * @return data 节点
      */
     private JsonNode call(String method, Map<String, Object> params) {
-        JsonNode root = callEnvelope(method, params);
+        return unwrap(callEnvelope(method, params));
+    }
+
+    /**
+     * 调 v2 接口（官方文档：{@code POST /openapi/v2/{点号方法}}），返回 {@code result.data}。
+     *
+     * @param method 点号方法名，如 {@code device.detail.list}
+     * @param params 业务参数
+     * @return data 节点
+     */
+    private JsonNode callV2(String method, Map<String, Object> params) {
+        return unwrap(callEnvelopeV2(method, params));
+    }
+
+    /**
+     * 调 v1 接口并取 {@code result.data}。
+     *
+     * <p>官方部分接口（如 {@code openDoorRemote}）明确「无 data 数据返回」，
+     * 此时返回空对象而不是 null，调用方无需判空；失败靠 {@code code != "0"} 抛出。</p>
+     *
+     * @param method 方法名，如 {@code setDeviceSnap}
+     * @param params 业务参数（token 自动补齐）
+     * @return data 节点，无 data 时为空对象
+     */
+    public JsonNode callData(String method, Map<String, Object> params) {
+        JsonNode data = call(method, withToken(params));
+        return data == null || data.isNull() ? MAPPER.createObjectNode() : data;
+    }
+
+    /**
+     * 调 v2 接口并取 {@code result.data}，无 data 时返回空对象。
+     *
+     * @param method 点号方法名
+     * @param params 业务参数（token 自动补齐）
+     * @return data 节点
+     */
+    public JsonNode callDataV2(String method, Map<String, Object> params) {
+        JsonNode data = callV2(method, withToken(params));
+        return data == null || data.isNull() ? MAPPER.createObjectNode() : data;
+    }
+
+    /**
+     * 补齐管理员 accessToken（调用方已显式传 token 时不覆盖）。
+     *
+     * @param params 业务参数
+     * @return 带 token 的参数副本
+     */
+    private Map<String, Object> withToken(Map<String, Object> params) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (params != null) {
+            body.putAll(params);
+        }
+        body.putIfAbsent("token", token());
+        return body;
+    }
+
+    /**
+     * 拆乐橙响应信封：{@code {result:{code,msg,data}}}。
+     *
+     * @param root 响应根节点
+     * @return data 节点（可能为 null）
+     */
+    private JsonNode unwrap(JsonNode root) {
         JsonNode result = root == null ? null : root.get("result");
         String code = result == null ? null : str(result, "code");
         if (code != null && !"0".equals(code)) {
@@ -304,6 +366,17 @@ public class LeChangeSdk extends AbstractPlatformSdk {
     }
 
     /**
+     * 调 v2 接口并返回完整响应根节点。
+     *
+     * @param method 点号方法名
+     * @param params 业务参数
+     * @return 响应根节点
+     */
+    private JsonNode callEnvelopeV2(String method, Map<String, Object> params) {
+        return callEnvelopeAt(baseUrl() + "/openapi/v2/" + method, method, params);
+    }
+
+    /**
      * 调乐橙 OpenAPI 并返回完整响应根节点（含 result 信封）。
      *
      * @param method 方法名
@@ -311,10 +384,22 @@ public class LeChangeSdk extends AbstractPlatformSdk {
      * @return 响应根节点
      */
     private JsonNode callEnvelope(String method, Map<String, Object> params) {
+        return callEnvelopeAt(baseUrl() + "/openapi/" + method, method, params);
+    }
+
+    /**
+     * 按完整 URL 发起乐橙 OpenAPI 调用。
+     *
+     * @param url    完整地址
+     * @param method 方法名（仅用于错误信息）
+     * @param params 业务参数
+     * @return 响应根节点
+     */
+    private JsonNode callEnvelopeAt(String url, String method, Map<String, Object> params) {
         try {
             String json = MAPPER.writeValueAsString(envelope(params));
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl() + "/openapi/" + method))
+                    .uri(URI.create(url))
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))

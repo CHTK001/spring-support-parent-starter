@@ -2586,6 +2586,15 @@ public class ApiProviderController {
                     .findFirst()
                     .orElse(null));
         }
+        // 图片输入输出细化（张数 / 参考图）：与 generate 同款——原样回传 capabilities[].image，
+        // 缺省不返回该键，前端编辑弹窗按 null / false 兜底
+        if (caps.stream().anyMatch(c -> c.get("image") != null)) {
+            map.put("image", caps.stream()
+                    .map(c -> c.get("image"))
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(null));
+        }
         // 模型指标优先使用自身配置，再从缓存快照补充价格、延迟、智能和速度数据
         Map<String, Object> metrics = model.getMetrics() != null
                 ? new LinkedHashMap<>(model.getMetrics())
@@ -2721,6 +2730,11 @@ public class ApiProviderController {
         // 供模型管理弹框回显与编辑；未配置时前端回退到默认集合
         if (cap.get("thinking_efforts") != null) {
             map.put("thinking_efforts", cap.get("thinking_efforts"));
+        }
+        // 图片输入输出细化（张数 / 参考图）：与 generate 同理，显式透传，
+        // 供模型弹框回显与编辑；未配置时缺省不返回该键
+        if (cap.get("image") != null) {
+            map.put("image", cap.get("image"));
         }
         if (cap.get("base_url_override") != null) {
             map.put("base_url_override", cap.get("base_url_override"));

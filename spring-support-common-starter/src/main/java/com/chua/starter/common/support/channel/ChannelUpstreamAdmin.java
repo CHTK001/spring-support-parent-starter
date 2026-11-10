@@ -190,6 +190,24 @@ public interface ChannelUpstreamAdmin {
     }
 
     /**
+     * 登录前的一问（插件 provider 的 {@code plugin-signin/prompt}）。
+     *
+     * <p>有的插件登录不是一次调用就能开始：loomy 先要 11 位手机号，其余插件
+     * 可能要验证码或选项。调用方按返回的 {@code prompt} 逐题收集答案，把累计
+     * {@code inputs} 传回本方法，直到没有下一问再调 {@link #startSignin}。</p>
+     *
+     * @param credentials 网关连接凭据
+     * @param payload     {@code {provider, method, inputs, key?, value?}}
+     * @return {@code {prompt, inputs}} 或 {@code {error, inputs}}；不支持的渠道抛异常
+     * @throws ChannelException 不支持 / 网关调用失败
+     */
+    default Map<String, Object> signinPrompt(Map<String, Object> credentials,
+                                             Map<String, Object> payload) {
+        throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "该渠道不支持上游登录");
+    }
+
+    /**
      * 查询登录会话状态。
      *
      * @param credentials 网关连接凭据

@@ -3082,6 +3082,30 @@ public class ApiChannelAuthController {
     }
 
     /**
+     * 插件登录前的一问：逐题收集答案，问题问完再发起登录。
+     *
+     * @param channel 渠道标识
+     * @param body    { connectionId?, label?, provider, method?, inputs?, key?, value? }
+     * @return { ok, channel, result: { prompt?, inputs?, error? } }
+     */
+    @PostMapping("/{channel}/signin/prompt")
+    public ApiResult<Map<String, Object>> upstreamSigninPrompt(
+            @PathVariable("channel") String channel,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> safeBody = body == null ? new LinkedHashMap<>() : body;
+        ChannelUpstreamAdmin admin = requireUpstreamAdmin(channel);
+        Map<String, Object> credentials = requireUpstreamCredentials(admin,
+                asString(safeBody.get("connectionId")), asString(safeBody.get("label")));
+        Map<String, Object> result;
+        try {
+            result = admin.signinPrompt(credentials, safeBody);
+        } catch (ChannelException e) {
+            throw channelFailure(e);
+        }
+        return upstreamResult(admin.channel(), result);
+    }
+
+    /**
      * 查询登录会话状态（内置与插件共用一个轮询端点）。
      *
      * @param channel      渠道标识
