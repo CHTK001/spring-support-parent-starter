@@ -32,6 +32,19 @@ export default createVite({
     port: 19093,
     strictPort: false,
     proxy: {
+      /**
+       * 认证与系统设置前缀。
+       *
+       * <p>本应用沿用框架登录页（滑块 + 表单），前端固定打 {@code /v2/user/login}、
+       * {@code /v2/user/me}、{@code /v2/setting/default}。被测后端就是 monitor 8082
+       * （同一进程提供账号/模板接口），因此这些前缀必须一起转发，否则登录请求落到
+       * vite 自己的 HTML 上，表现为「一直停在登录页」。</p>
+       */
+      '/v2': {
+        target: accountApiTarget,
+        changeOrigin: true,
+        configure: stripOrigin,
+      },
       '/api/accounts': {
         target: accountApiTarget,
         changeOrigin: true,

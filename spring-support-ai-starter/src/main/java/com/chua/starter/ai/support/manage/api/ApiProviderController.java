@@ -3522,10 +3522,32 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         }
         List<Map<String, Object>> models = new ArrayList<>(8);
         if (routes != null) {
+            // 渠道前缀键（平台名，如 OPENCODE / KILO）也是路由键，但它只是「该渠道任意模型」
+            // 的前缀兜底，不是可选模型；混在模型列表里会让人以为有个叫 OPENCODE 的模型。
+            java.util.Set<String> channelPlatformKeys = new java.util.HashSet<>();
+            try {
+                for (SysAiProvider p : providerMapper.selectList(
+                        new LambdaQueryWrapper<SysAiProvider>().eq(SysAiProvider::getAuthScheme, "oauth"))) {
+                    if (p.getPlatform() != null && !p.getPlatform().isBlank()) {
+                        channelPlatformKeys.add(p.getPlatform().trim().toLowerCase(java.util.Locale.ROOT));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[Provider] 读取渠道平台键失败（不影响模型列表）: {}", e.getMessage());
+            }
+            // 静态 extra.routes 里显式写下的键一律保留：它们可能正好与渠道平台同名
+            // （例如 kilo 渠道 + extra.routes 里的 kilo 路由），那是管理员明确要暴露的入口。
+            // 注意必须按**原样大小写**判断：平台键是 KILO，静态键是 kilo，两者不同名。
+            Map<String, RouteTarget> staticRoutes = ProviderRouteTargets.fromExtra(extra);
             for (Map.Entry<String, RouteTarget> entry : routes.entrySet()) {
                 String key = entry.getKey();
                 // default 是兜底路由，不作为可选模型暴露
                 if ("default".equalsIgnoreCase(key)) {
+                    continue;
+                }
+                // 渠道前缀键同样跳过，但静态路由显式声明的不动（见 staticRoutes 注释）
+                String lowerKey = key.trim().toLowerCase(java.util.Locale.ROOT);
+                if (channelPlatformKeys.contains(lowerKey) && (staticRoutes == null || !staticRoutes.containsKey(key))) {
                     continue;
                 }
                 RouteTarget target = entry.getValue();
