@@ -283,7 +283,10 @@ public class DbCopyTaskRegistry {
             }
             for (Step step : task.steps) {
                 if ("RUNNING".equals(step.status)) {
-                    step.status = "SUCCESS".equals(status) ? "SUCCESS" : "CANCELLED";
+                    // 失败时把「正在跑的那一步」记成 FAILED：记成 CANCELLED 会让弹窗
+                    // 显示「创建目标表 已取消」，看上去像用户主动取消，和失败文案自相矛盾
+                    step.status = "SUCCESS".equals(status) ? "SUCCESS"
+                            : ("FAILED".equals(status) ? "FAILED" : "CANCELLED");
                 }
             }
             task.currentDescription = message;
