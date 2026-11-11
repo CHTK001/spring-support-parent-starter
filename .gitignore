@@ -240,5 +240,6 @@ pmt_proxy/
 /spring-support-ai-starter/data/
 # 文件系统模块的一次性验收脚本
 /spring-support-filesystem-starter/run-accept*.bat
+/spring-support-filesystem-starter/run-fs-accept.bat
 node_modules/.tmp/
 
