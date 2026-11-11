@@ -72,6 +72,19 @@ public interface ServerHostService {
     ReturnResult<Void> updateStatus(Long id, boolean enabled);
 
     /**
+     * 校验主机当前是否允许发起远控
+     *
+     * <p>「禁用主机」是平台侧的停用开关：禁用后不再采集、不再做在线检测，
+     * 也就不应再放行远程终端（SSH / VNC / RDP / Telnet / guacd）。
+     * 「停用远控入口」（{@code serverHostRemoteEnabled=0}）同样在这里拦住。
+     * 两者都只是开关，不会改动主机本身的连接配置，重新启用即恢复。</p>
+     *
+     * @param hostId 主机 标识
+     * @return 允许时返回成功；否则 message 说明被拦原因
+     */
+    ReturnResult<Void> checkRemoteAccess(Long hostId);
+
+    /**
      * 连通性测试：按已绑定身份尝试 SSH 登录并回显内核信息
      *
      * @param id 主键

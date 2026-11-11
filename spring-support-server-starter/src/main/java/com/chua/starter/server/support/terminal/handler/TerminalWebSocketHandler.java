@@ -173,6 +173,12 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler implements Su
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
+        // 远控闸门：主机被禁用、或远控入口已停用时，任何远程终端都不再放行
+        ReturnResult<Void> access = serverHostService.checkRemoteAccess(hostId);
+        if (!access.isOk()) {
+            reject(wsSession, access.getMsg());
+            return;
+        }
         ProtocolType protocolType;
         try {
             protocolType = ProtocolType.valueOf(protocolName.toUpperCase());

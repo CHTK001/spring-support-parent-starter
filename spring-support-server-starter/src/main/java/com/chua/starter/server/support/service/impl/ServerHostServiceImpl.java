@@ -509,6 +509,24 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     @Override
+    public ReturnResult<Void> checkRemoteAccess(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("缺少主机标识");
+        }
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        if (host.getServerHostStatus() == null || host.getServerHostStatus() != STATUS_ENABLED) {
+            return ReturnResult.error("主机「" + host.getServerHostName() + "」已禁用，启用后才能发起远控");
+        }
+        if (host.getServerHostRemoteEnabled() != null && host.getServerHostRemoteEnabled() != 1) {
+            return ReturnResult.error("主机「" + host.getServerHostName() + "」的远控入口已停用");
+        }
+        return ReturnResult.success();
+    }
+
+    @Override
     public ReturnResult<String> testConnect(Long id) {
         MsServerHost host = hostMapper.selectById(id);
         if (host == null) {

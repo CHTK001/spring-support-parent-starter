@@ -103,6 +103,12 @@ public class VncWebsockifyWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
+        // 远控闸门：主机被禁用、或远控入口已停用时，任何远程终端都不再放行
+        ReturnResult<Void> access = serverHostService.checkRemoteAccess(hostId);
+        if (!access.isOk()) {
+            reject(wsSession, access.getMsg());
+            return;
+        }
         Long identityId = WebSocketSessions.parseLong(params.get("identityId"));
         String operator = params.get("user");
         // 显式目标端口：允许前端按当前协议（VNC）指定，覆盖台账 remotePort。

@@ -101,6 +101,12 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
+        // 远控闸门：主机被禁用、或远控入口已停用时，任何远程终端都不再放行
+        ReturnResult<Void> access = serverHostService.checkRemoteAccess(hostId);
+        if (!access.isOk()) {
+            reject(wsSession, access.getMsg());
+            return;
+        }
         Long identityId = WebSocketSessions.parseLong(params.get("identityId"));
         int width = WebSocketSessions.parsePositiveInt(params.get("width"), DEFAULT_WIDTH);
         int height = WebSocketSessions.parsePositiveInt(params.get("height"), DEFAULT_HEIGHT);
