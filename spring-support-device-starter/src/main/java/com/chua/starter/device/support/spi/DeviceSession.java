@@ -280,4 +280,17 @@ public interface DeviceSession {
     default List<VehiclePassRecord> queryVehiclePasses(TimeRange range) {
         throw new UnsupportedOperationException("该平台不支持过车记录");
     }
+
+    /**
+     * 从指定游标后查询过车记录（支持游标的平台可避免重复翻页）。
+     *
+     * <p>默认实现忽略游标，直接走 {@link #queryVehiclePasses(TimeRange)}。</p>
+     *
+     * @param range   时间段
+     * @param afterId 平台侧起始消息 ID（不含）
+     * @return 过车记录
+     */
+    default List<VehiclePassRecord> queryVehiclePasses(TimeRange range, long afterId) {
+        return queryVehiclePasses(range);
+    }
 }

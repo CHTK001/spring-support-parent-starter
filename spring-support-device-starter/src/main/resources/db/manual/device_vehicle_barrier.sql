@@ -52,3 +52,10 @@ CREATE TABLE IF NOT EXISTS `device_vehicle_pass` (
   KEY `idx_pass_gate_time` (`device_vehicle_pass_gate_id`, `device_vehicle_pass_time`),
   KEY `idx_pass_plate_time` (`device_vehicle_pass_plate_no`, `device_vehicle_pass_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='车辆过车记录';
+
+CREATE TABLE IF NOT EXISTS `device_vehicle_pass_cursor` (
+  `device_vehicle_pass_cursor_device_id` varchar(64) NOT NULL COMMENT '设备标识',
+  `device_vehicle_pass_cursor_last_msg_id` bigint NOT NULL DEFAULT '0' COMMENT '最后处理的平台消息 ID',
+  `device_vehicle_pass_cursor_updated_at` datetime DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`device_vehicle_pass_cursor_device_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='过车拉取游标';

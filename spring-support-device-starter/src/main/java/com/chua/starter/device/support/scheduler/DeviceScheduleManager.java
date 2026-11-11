@@ -14,6 +14,7 @@ import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceStatusService;
 import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.support.service.DeviceTaskStateService;
+import com.chua.starter.device.support.service.DeviceVehiclePassCursorService;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
@@ -98,6 +99,11 @@ public class DeviceScheduleManager {
      * 过车记录服务
      */
     private final DeviceVehiclePassService vehiclePassService;
+
+    /**
+     * 过车拉取游标服务
+     */
+    private final DeviceVehiclePassCursorService vehiclePassCursorService;
     private final DeviceProviderCredentialService credentialService;
     /** 厂商 SPI：凭据能不能开某项能力，以厂商描述符的能力位为准 */
     private final List<DeviceProvider> deviceProviders;
@@ -430,7 +436,9 @@ public class DeviceScheduleManager {
     private void extractVehiclePasses(TimeRange range) {
         for (DeviceSession session : sessionManager.getAllSessions().values()) {
             try {
-                vehiclePassService.pull(session, range);
+                long cursor = vehiclePassCursorService.getLastMsgId(session.getDeviceId());
+                var result = vehiclePassService.pull(session, range, cursor);
+                vehiclePassCursorService.saveLastMsgId(session.getDeviceId(), result.cursor());
             } catch (UnsupportedOperationException ex) {
                 log.debug("平台不支持过车记录: {}", session.getDeviceId());
             } catch (Exception ex) {

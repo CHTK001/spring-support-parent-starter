@@ -5,6 +5,7 @@ import com.chua.starter.device.support.entity.DeviceBarrierGate;
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
 import com.chua.starter.device.support.service.DeviceBarrierGateService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.support.service.DeviceVehiclePassCursorService;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.TimeRange;
@@ -44,6 +45,11 @@ public class BarrierGateController {
      * 过车记录服务
      */
     private final DeviceVehiclePassService passService;
+
+    /**
+     * 过车拉取游标服务
+     */
+    private final DeviceVehiclePassCursorService passCursorService;
 
     /**
      * 会话管理器
@@ -144,7 +150,21 @@ public class BarrierGateController {
         if (session == null) {
             throw new IllegalStateException("设备未建立会话: " + deviceId);
         }
-        return ReturnResult.ok(passService.pull(session, new TimeRange(start, end)));
+        return ReturnResult.ok(pullWithCursor(session, new TimeRange(start, end)));
+    }
+
+    /**
+     * 从已保存的游标后拉取，并回写游标。
+     *
+     * @param session 设备会话
+     * @param range   时间段
+     * @return 新增条数
+     */
+    private int pullWithCursor(DeviceSession session, TimeRange range) {
+        long cursor = passCursorService.getLastMsgId(session.getDeviceId());
+        var result = passService.pull(session, range, cursor);
+        passCursorService.saveLastMsgId(session.getDeviceId(), result.cursor());
+        return result.created();
     }
 
     /**

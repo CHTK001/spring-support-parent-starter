@@ -185,10 +185,15 @@ public class EzvizSession extends AbstractOpenApiSession {
 
     @Override
     public List<VehiclePassRecord> queryVehiclePasses(TimeRange range) {
+        return queryVehiclePasses(range, 0L);
+    }
+
+    @Override
+    public List<VehiclePassRecord> queryVehiclePasses(TimeRange range, long afterId) {
         requireRange(range);
         String serial = requireSerial();
         List<VehiclePassRecord> result = new ArrayList<>();
-        long cursor = 0L;
+        long cursor = Math.max(afterId, 0L);
         for (int page = 0; page < MAX_PASS_PAGES; page++) {
             Map<String, Object> params = new LinkedHashMap<>();
             params.put("id", cursor);
@@ -210,8 +215,7 @@ public class EzvizSession extends AbstractOpenApiSession {
                 }
                 String plate = node.path("plateNumber").asText("");
                 java.time.LocalDateTime time = parsePassTime(node.path("msgTime").asText(""));
-                if (plate.isBlank() || time == null
-                        || time.isBefore(range.start()) || time.isAfter(range.end())) {
+                if (plate.isBlank()) {
                     continue;
                 }
                 result.add(new VehiclePassRecord(String.valueOf(msgId), serial, plate,

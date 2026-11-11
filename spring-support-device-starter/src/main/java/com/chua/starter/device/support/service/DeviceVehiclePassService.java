@@ -1,6 +1,7 @@
 package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
+import com.chua.starter.device.support.model.VehiclePassPullResult;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.TimeRange;
 import com.chua.starter.mybatis.entity.PageResult;
@@ -57,5 +58,17 @@ public interface DeviceVehiclePassService {
      * @param range   时间段
      * @return 新增条数
      */
-    int pull(DeviceSession session, TimeRange range);
+    default int pull(DeviceSession session, TimeRange range) {
+        return pull(session, range, 0L).created();
+    }
+
+    /**
+     * 从指定游标后拉取过车记录并落库。
+     *
+     * @param session 设备会话
+     * @param range   时间段（仅用于入库过滤）
+     * @param afterId 平台侧起始消息 ID（不含）
+     * @return 新增条数与拉取后的游标
+     */
+    VehiclePassPullResult pull(DeviceSession session, TimeRange range, long afterId);
 }

@@ -6,6 +6,7 @@ import com.chua.starter.device.support.entity.DeviceBarrierGate;
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
 import com.chua.starter.device.support.mapper.DeviceBarrierGateMapper;
 import com.chua.starter.device.support.mapper.DeviceVehiclePassMapper;
+import com.chua.starter.device.support.model.VehiclePassPullResult;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.TimeRange;
@@ -71,13 +72,19 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
     }
 
     @Override
-    public int pull(DeviceSession session, TimeRange range) {
+    public VehiclePassPullResult pull(DeviceSession session, TimeRange range, long afterId) {
         if (session == null) {
             throw new IllegalArgumentException("设备会话不能为空");
         }
-        List<VehiclePassRecord> records = session.queryVehiclePasses(range);
+        long cursor = Math.max(afterId, 0L);
+        List<VehiclePassRecord> records = session.queryVehiclePasses(range, cursor);
         int created = 0;
         for (VehiclePassRecord record : records) {
+            cursor = Math.max(cursor, passIdOf(record));
+            if (record.time() != null
+                    && (record.time().isBefore(range.start()) || record.time().isAfter(range.end()))) {
+                continue;
+            }
             LambdaQueryWrapper<DeviceVehiclePass> exists = new LambdaQueryWrapper<>();
             exists.eq(DeviceVehiclePass::getDeviceVehiclePassGateId, record.gateId())
                     .eq(DeviceVehiclePass::getDeviceVehiclePassPlateNo, record.plateNo());
@@ -100,9 +107,26 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
             record(entity);
             created++;
         }
-        log.info("拉取过车记录: session={}, received={}, created={}", session.getDeviceId(),
-                records.size(), created);
-        return created;
+        log.info("拉取过车记录: session={}, after={}, received={}, created={}, cursor={}", session.getDeviceId(),
+                afterId, records.size(), created, cursor);
+        return new VehiclePassPullResult(created, cursor);
+    }
+
+    /**
+     * 读取记录中的数值型游标；无法解析时返回 0。
+     *
+     * @param record 过车记录
+     * @return 数值游标
+     */
+    private static long passIdOf(VehiclePassRecord record) {
+        if (record.passId() == null || record.passId().isBlank()) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(record.passId().trim());
+        } catch (NumberFormatException ex) {
+            return 0L;
+        }
     }
 
     /**
