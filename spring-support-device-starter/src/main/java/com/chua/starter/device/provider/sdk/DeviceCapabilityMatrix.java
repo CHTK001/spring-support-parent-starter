@@ -652,7 +652,7 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.MEDIA, 5, "live/video/device/url/get 已接入，缺真机验证")
                 .unverified(DeviceCapability.RECORD, 4, "device/record/time/query 已接入；官方无回放地址接口")
                 .unverified(DeviceCapability.PTZ, 3, "device/ptz/start|stop 与 preset add/list/goto/delete 已接入")
-                .todo(DeviceCapability.DEVICE_WRITE, 3, "device/add|delete|name/update 路径已核实，会话未实现写操作")
+                .unverified(DeviceCapability.DEVICE_WRITE, 3, "device/add|delete|name/update 已接入；add 仅提交序列号+名称，待真机校准")
                 .no(DeviceCapability.ORG, "官方 openapi 目录无组织接口")
                 .no(DeviceCapability.ORG_WRITE, "官方 openapi 目录无组织接口")
                 .no(DeviceCapability.PERSON, "官方 openapi 目录无人员接口")

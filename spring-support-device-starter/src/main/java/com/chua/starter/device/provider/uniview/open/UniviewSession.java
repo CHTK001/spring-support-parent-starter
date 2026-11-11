@@ -52,6 +52,15 @@ public class UniviewSession extends AbstractOpenApiSession {
     /** 设备详情 */
     private static final String PATH_DEVICE_GET = "/openapi/device/get";
 
+    /** 设备新增 */
+    private static final String PATH_DEVICE_ADD = "/openapi/device/add";
+
+    /** 设备删除 */
+    private static final String PATH_DEVICE_DELETE = "/openapi/device/delete";
+
+    /** 设备改名 */
+    private static final String PATH_DEVICE_RENAME = "/openapi/device/name/update";
+
     /** 摄像头列表 */
     private static final String PATH_CHANNEL_LIST = "/openapi/device/channel/list";
 
@@ -196,6 +205,46 @@ public class UniviewSession extends AbstractOpenApiSession {
             log.warn("宇视连接测试失败: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 添加设备。
+     *
+     * <p>字段取官方 device/add 路径的最小集（deviceSerial + name），
+     * 尚未真机校准；平台要求更多字段时以返回码为准。</p>
+     *
+     * @param deviceSerial 设备序列号
+     * @param name         设备名称
+     */
+    public void addDevice(String deviceSerial, String name) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("deviceSerial", deviceSerial);
+        body.put("name", name);
+        ok(post(PATH_DEVICE_ADD, body));
+    }
+
+    /**
+     * 删除设备。
+     *
+     * @param deviceSerial 设备序列号
+     */
+    public void deleteDevice(String deviceSerial) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("deviceSerial", deviceSerial);
+        ok(post(PATH_DEVICE_DELETE, body));
+    }
+
+    /**
+     * 修改设备名称。
+     *
+     * @param deviceSerial 设备序列号
+     * @param name         新名称
+     */
+    public void renameDevice(String deviceSerial, String name) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("deviceSerial", deviceSerial);
+        body.put("name", name);
+        ok(post(PATH_DEVICE_RENAME, body));
     }
 
     @Override
