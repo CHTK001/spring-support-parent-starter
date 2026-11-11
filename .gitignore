@@ -233,5 +233,12 @@ pmt_proxy/
 /tsc-check.ps1
 /verify-all.sh
 /DATASOURCE-DIALECT-TYPES-ACCEPTANCE.md
+# monitor agent 包为请求时现打，仓库里这两份是历史残留
+/spring-support-monitor-starter/monitor-agent.tar.gz
+/spring-support-monitor-starter/src/main/resources/static/monitor-agent.tar.gz
+# 角色头像等 AI 运行期数据（ai.character.avatar-dir 默认 ./data/avatars/characters）
+/spring-support-ai-starter/data/
+# 文件系统模块的一次性验收脚本
+/spring-support-filesystem-starter/run-accept*.bat
 node_modules/.tmp/
 
