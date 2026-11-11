@@ -629,9 +629,11 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.ACCESS_WRITE, 1, "access.door.open 已接入；门禁点增删改目录未登记")
                 .todo(DeviceCapability.DEVICE_WRITE, 3, "ICC 设备增删改待实现")
                 .unverified(DeviceCapability.ORG, 1, "org.list 已接入，无 ICC 环境未验证")
-                .todo(DeviceCapability.ORG_WRITE, 3, "ICC 组织增删改待实现")
+                .unverified(DeviceCapability.ORG_WRITE, 3,
+                        "department/add|update|delete + generate-id 已接入，无 ICC 环境未验证")
                 .unverified(DeviceCapability.PERSON, 1, "person.list 已接入，无 ICC 环境未验证")
-                .todo(DeviceCapability.PERSON_WRITE, 3, "ICC 人员增删改待实现")
+                .unverified(DeviceCapability.PERSON_WRITE, 4,
+                        "person/subsystem/add|update 与 person/delete 已接入，证件字段必填，无 ICC 环境未验证")
                 .unverified(DeviceCapability.CAPTURE, 2, "video.capture 已接入，无 ICC 环境未验证")
                 .no(DeviceCapability.PARKING, "ICC 停车场为独立子系统，不在本接入范围")
                 .build();

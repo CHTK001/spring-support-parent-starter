@@ -2,6 +2,7 @@
 package com.chua.starter.device.provider.dahua;
 
 import com.chua.starter.device.provider.dahua.open.DahuaCloudSession;
+import com.chua.starter.device.provider.dahua.open.DahuaIccSession;
 import com.chua.starter.device.provider.dahua.open.DahuaLeChangeSession;
 import com.chua.starter.device.provider.dahua.sdk.DahuaRealSession;
 import com.chua.starter.device.provider.sdk.DeviceCapabilityMatrix;
@@ -11,6 +12,7 @@ import com.chua.starter.device.spi.model.AuthTypeDescriptor;
 import com.chua.starter.device.spi.model.CredentialField;
 import com.chua.starter.device.spi.model.DeviceCapability;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.spi.model.DevicePerson;
 import com.chua.starter.device.spi.model.DeviceVendorDescriptor;
 import com.chua.starter.device.spi.model.OrganizationNode;
 import com.chua.starter.device.spi.model.PlatformDescriptor;
@@ -200,6 +202,70 @@ public class DahuaProvider implements DeviceProvider {
     public List<OrganizationNode> fetchOrganizations() {
  // 云睿组织管理接口在 43 条基础通用套件之外，官方字段需控制台登录（OPF600001），未取证。
         return List.of();
+    }
+
+    @Override
+    public String upsertOrganization(OrganizationNode node) {
+        throw new IllegalStateException("按凭据写组织请使用 upsertOrganization(DeviceConnectInfo, OrganizationNode)");
+    }
+
+    /**
+     * 按 ICC 凭据写组织。
+     *
+     * @param info 连接信息
+     * @param node 组织节点
+     * @return ICC 部门 ID
+     */
+    public String upsertOrganization(DeviceConnectInfo info, OrganizationNode node) {
+        return new DahuaIccSession(info).upsertOrganization(node);
+    }
+
+    @Override
+    public boolean removeOrganization(String externalId) {
+        throw new IllegalStateException("按凭据删除组织请使用 removeOrganization(DeviceConnectInfo, String)");
+    }
+
+    /**
+     * 按 ICC 凭据删除组织。
+     *
+     * @param info       连接信息
+     * @param externalId 部门 ID
+     * @return 是否删除成功
+     */
+    public boolean removeOrganization(DeviceConnectInfo info, String externalId) {
+        return new DahuaIccSession(info).removeOrganization(externalId);
+    }
+
+    @Override
+    public String upsertPerson(DevicePerson person) {
+        throw new IllegalStateException("按凭据写人员请使用 upsertPerson(DeviceConnectInfo, DevicePerson)");
+    }
+
+    /**
+     * 按 ICC 凭据写人员。
+     *
+     * @param info   连接信息
+     * @param person 人员（需带 paperType/paperNumber）
+     * @return ICC 人员 ID
+     */
+    public String upsertPerson(DeviceConnectInfo info, DevicePerson person) {
+        return new DahuaIccSession(info).upsertPerson(person);
+    }
+
+    @Override
+    public boolean removePerson(String personId) {
+        throw new IllegalStateException("按凭据删除人员请使用 removePerson(DeviceConnectInfo, String)");
+    }
+
+    /**
+     * 按 ICC 凭据删除人员。
+     *
+     * @param info     连接信息
+     * @param personId 人员 ID
+     * @return 是否删除成功
+     */
+    public boolean removePerson(DeviceConnectInfo info, String personId) {
+        return new DahuaIccSession(info).removePerson(personId);
     }
 
     /**

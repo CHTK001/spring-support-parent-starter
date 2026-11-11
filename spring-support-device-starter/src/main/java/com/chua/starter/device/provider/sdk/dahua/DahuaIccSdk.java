@@ -196,7 +196,7 @@ public class DahuaIccSdk extends AbstractPlatformSdk {
             if (needToken) {
                 login();
             }
-            JsonNode root = send(base + path, params == null ? new LinkedHashMap<>() : params, needToken);
+            JsonNode root = send(base + path, spec.method(), params == null ? new LinkedHashMap<>() : params, needToken);
             JsonNode data = root == null ? null : root.get("data");
             Object normalized = data == null || data.isNull() ? null : MAPPER.convertValue(data, Object.class);
             return PlatformApiResult.ok(code, normalized, root == null ? null : root.toString(),
@@ -215,16 +215,38 @@ public class DahuaIccSdk extends AbstractPlatformSdk {
      * @return 响应根节点
      */
     private JsonNode send(String url, Map<String, Object> body, boolean needToken) {
+        return send(url, "POST", body, needToken);
+    }
+
+    /**
+     * 按指定 HTTP 方法发送请求。
+     *
+     * @param url       完整地址
+     * @param method    HTTP 方法
+     * @param body      请求体
+     * @param needToken 是否需要 Authorization
+     * @return 响应根节点
+     */
+    private JsonNode send(String url, String method, Map<String, Object> body, boolean needToken) {
         try {
             String json = MAPPER.writeValueAsString(body);
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json; charset=utf-8")
-                    .header("Accept-Language", "zh-CN")
-                    .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                    .header("Accept-Language", "zh-CN");
             if (needToken && accessToken != null) {
                 builder.header("Authorization", "Bearer " + accessToken);
+            }
+            String verb = method == null ? "POST" : method.toUpperCase(java.util.Locale.ROOT);
+            switch (verb) {
+                case "GET" -> builder.GET();
+                case "DELETE" -> builder.method("DELETE",
+                        HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                case "PUT" -> builder.PUT(
+                        HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+                default -> builder.POST(
+                        HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
             }
             HttpResponse<String> response = CLIENT.send(builder.build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));

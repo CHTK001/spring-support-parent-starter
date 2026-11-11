@@ -29,6 +29,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +54,11 @@ public class DahuaIccSession extends AbstractOpenApiSession {
      * ICC 必须由凭据提供 baseUrl，缺省为空串（由 {@link DeviceConnectInfo#extra()} 覆盖）。
      */
     private static final String DEFAULT_BASE_URL = "";
+
+    /**
+     * ICC 第三方子系统编码（官方参数默认值）。
+     */
+    private static final String SERVICE = "evo-thirdParty";
 
     /**
      * 抓图下载客户端（图片地址通常是平台签名 URL，不再附带鉴权头）。
@@ -323,6 +329,172 @@ public class DahuaIccSession extends AbstractOpenApiSession {
                     node.path("email").asText(null)));
         }
         return result;
+    }
+
+    /**
+     * 新增或更新 ICC 部门。
+     *
+     * <p>官方接口：新增 {@code POST /evo-apigw/evo-brm/1.0.0/department/add}，
+     * 更新 {@code PUT /department/update}，删除 {@code DELETE /department/delete}。
+     * {@code externalId} 为空时先调 {@code department/generate-id} 申请全局 ID。</p>
+     *
+     * @param node 组织节点
+     * @return ICC 部门 ID
+     */
+    public String upsertOrganization(OrganizationNode node) {
+        if (node == null || node.orgName() == null || node.orgName().isBlank()) {
+            throw new IllegalArgumentException("ICC 部门名称不能为空");
+        }
+        boolean create = node.orgId() == null || node.orgId().isBlank();
+        long id = create ? nextId("org.generateId") : parseId(node.orgId(), "部门 ID");
+        long parentId = parseId(node.parentId(), 1L);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("id", id);
+        body.put("parentId", parentId);
+        body.put("name", node.orgName());
+        body.put("service", SERVICE);
+        invoke(create ? "org.add" : "org.update", body);
+        log.info("[DahuaIcc] 部门写入: id={}, parentId={}, name={}, create={}",
+                id, parentId, node.orgName(), create);
+        return String.valueOf(id);
+    }
+
+    /**
+     * 删除 ICC 部门。
+     *
+     * @param externalId 部门 ID
+     * @return 是否删除成功
+     */
+    public boolean removeOrganization(String externalId) {
+        long id = parseId(externalId, "部门 ID");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("id", id);
+        body.put("service", SERVICE);
+        invoke("org.delete", body);
+        log.info("[DahuaIcc] 部门删除: id={}", id);
+        return true;
+    }
+
+    /**
+     * 新增或更新 ICC 人员。
+     *
+     * <p>官方新增接口要求 {@code paperType}/{@code paperNumber}/{@code departmentId}，
+     * 调用方必须提供证件类型与证件号，否则明确报错，不生成占位证件。</p>
+     *
+     * @param person 人员
+     * @return ICC 人员 ID
+     */
+    public String upsertPerson(DevicePerson person) {
+        if (person == null || person.name() == null || person.name().isBlank()) {
+            throw new IllegalArgumentException("ICC 人员姓名不能为空");
+        }
+        if (person.paperType() == null || person.paperNumber() == null
+                || person.paperNumber().isBlank()) {
+            throw new IllegalArgumentException("ICC 人员写入需要证件类型 paperType 与证件号 paperNumber");
+        }
+        boolean create = person.externalId() == null || person.externalId().isBlank();
+        long id = create ? nextId("person.generateId") : parseId(person.externalId(), "人员 ID");
+        long departmentId = parseId(person.orgId(), 1L);
+        String code = create ? personCode(person.externalId(), id) : person.externalId();
+        if (code.length() > 30) {
+            code = code.substring(0, 30);
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("service", SERVICE);
+        body.put("id", id);
+        body.put("name", person.name());
+        body.put("code", code);
+        body.put("paperType", person.paperType());
+        body.put("paperNumber", person.paperNumber());
+        body.put("departmentId", departmentId);
+        if (person.phone() != null && !person.phone().isBlank()) {
+            body.put("phone", person.phone());
+        }
+        if (person.email() != null && !person.email().isBlank()) {
+            body.put("email", person.email());
+        }
+        invoke(create ? "person.add" : "person.update", body);
+        log.info("[DahuaIcc] 人员写入: id={}, departmentId={}, name={}, create={}",
+                id, departmentId, person.name(), create);
+        return String.valueOf(id);
+    }
+
+    /**
+     * 删除 ICC 人员。
+     *
+     * @param personId 人员 ID
+     * @return 是否删除成功
+     */
+    public boolean removePerson(String personId) {
+        long id = parseId(personId, "人员 ID");
+        invoke("person.delete", Map.of("ids", List.of(id)));
+        log.info("[DahuaIcc] 人员删除: id={}", id);
+        return true;
+    }
+
+    /**
+     * 申请 ICC 全局数值 ID。
+     *
+     * @param code 接口编码
+     * @return 数值 ID
+     */
+    private long nextId(String code) {
+        JsonNode data = invoke(code, Map.of());
+        JsonNode idNode = data == null ? null : data.get("id");
+        if (idNode == null || idNode.isNull()) {
+            throw new IllegalStateException("ICC " + code + " 未返回 id");
+        }
+        return idNode.asLong();
+    }
+
+    /**
+     * 解析数值 ID，空值回落到默认值。
+     *
+     * @param text         文本
+     * @param defaultValue 默认值
+     * @return 数值 ID
+     */
+    private static long parseId(String text, long defaultValue) {
+        if (text == null || text.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(text.trim());
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("ICC ID 必须为数字: " + text);
+        }
+    }
+
+    /**
+     * 解析必填数值 ID。
+     *
+     * @param text 文本
+     * @param name 字段名
+     * @return 数值 ID
+     */
+    private static long parseId(String text, String name) {
+        if (text == null || text.isBlank()) {
+            throw new IllegalArgumentException("ICC " + name + " 不能为空");
+        }
+        try {
+            return Long.parseLong(text.trim());
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("ICC " + name + " 必须为数字: " + text);
+        }
+    }
+
+    /**
+     * 生成人员编码：只允许数字/字母，长度 1-30。
+     *
+     * @param externalId 外部 ID
+     * @param id         人员 ID
+     * @return 人员编码
+     */
+    private static String personCode(String externalId, long id) {
+        if (externalId != null && externalId.matches("[A-Za-z0-9]{1,30}")) {
+            return externalId;
+        }
+        return "P" + id;
     }
 
     /**

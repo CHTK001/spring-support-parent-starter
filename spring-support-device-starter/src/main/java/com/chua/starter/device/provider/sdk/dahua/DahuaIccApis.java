@@ -41,6 +41,14 @@ public final class DahuaIccApis {
 
             // ---------- 组织 ----------
             PlatformApiSpec.global("org.list", "组织列表", "POST", P + "/membership/api/org/list", "v1", "org"),
+            PlatformApiSpec.global("org.generateId", "部门全局 ID 生成", "GET",
+                    "/evo-apigw/evo-brm/1.0.0/department/generate-id", "1.0.0", "org"),
+            PlatformApiSpec.global("org.add", "部门新增", "POST",
+                    "/evo-apigw/evo-brm/1.0.0/department/add", "1.0.0", "org"),
+            PlatformApiSpec.global("org.update", "部门更新", "PUT",
+                    "/evo-apigw/evo-brm/1.0.0/department/update", "1.0.0", "org"),
+            PlatformApiSpec.global("org.delete", "部门删除", "DELETE",
+                    "/evo-apigw/evo-brm/1.0.0/department/delete", "1.0.0", "org"),
 
             // ---------- 视频 ----------
             PlatformApiSpec.global("video.live", "实时预览地址", "POST", P + "/video/api/live", "v1", "video"),
@@ -53,6 +61,14 @@ public final class DahuaIccApis {
             PlatformApiSpec.global("access.record", "门禁记录", "POST", P + "/access/api/record", "v1", "access"),
             PlatformApiSpec.global("access.door.open", "远程开门", "POST", P + "/access/api/door/open", "v1", "access"),
             PlatformApiSpec.global("person.list", "人员列表", "POST", P + "/person/api/list", "v1", "person"),
+            PlatformApiSpec.global("person.generateId", "人员全局 ID 生成", "GET",
+                    "/evo-apigw/evo-brm/1.0.0/person/generate-id", "1.0.0", "person"),
+            PlatformApiSpec.global("person.add", "人员新增", "POST",
+                    "/evo-apigw/evo-brm/1.2.0/person/subsystem/add", "1.2.0", "person"),
+            PlatformApiSpec.global("person.update", "人员更新", "PUT",
+                    "/evo-apigw/evo-brm/1.2.0/person/subsystem/update", "1.2.0", "person"),
+            PlatformApiSpec.global("person.delete", "人员删除", "POST",
+                    "/evo-apigw/evo-brm/1.0.0/person/delete", "1.0.0", "person"),
 
             // ---------- 告警 ----------
             PlatformApiSpec.global("alarm.list", "告警列表", "POST", P + "/alarm/api/list", "v1", "alarm")
