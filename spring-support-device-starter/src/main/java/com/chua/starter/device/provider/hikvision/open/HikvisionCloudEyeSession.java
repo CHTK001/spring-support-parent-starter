@@ -241,6 +241,12 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
      */
     private static final String PATH_PERSON_DELETE = "/api/v1/open/basic/persons/delete";
 
+    /** 人员人脸更新（官方 basic/faces/update） */
+    private static final String PATH_FACE_UPDATE = "/api/v1/open/basic/faces/update";
+
+    /** 人员人脸删除（官方 basic/faces/delete） */
+    private static final String PATH_FACE_DELETE = "/api/v1/open/basic/faces/delete";
+
     /**
      * 人员列表（GET，pageNo/pageSize）。
      */
@@ -1318,7 +1324,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     }
 
     /**
-     * 删除人员（官方 {@code persons/delete}，query {@code employeeNo}）。
+     * 人员删除（官方 {@code persons/delete}，query {@code employeeNo}）。
      *
      * @param employeeNo 人员编号
      * @return 是否成功
@@ -1326,6 +1332,32 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     public boolean removePerson(String employeeNo) {
         postQuery(PATH_PERSON_DELETE, "employeeNo", requireEmployeeNo(employeeNo));
         return true;
+    }
+
+    /**
+     * 录入/更新人脸（官方 {@code basic/faces/update}）。
+     *
+     * @param employeeNo      人员编号
+     * @param faceImageBase64 人脸图片 base64（不含 data:image 前缀）
+     */
+    public void updateFace(String employeeNo, String faceImageBase64) {
+        if (faceImageBase64 == null || faceImageBase64.isBlank()) {
+            throw new IllegalArgumentException("人脸图片 faceImageBase64 不能为空");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("employeeNo", requireEmployeeNo(employeeNo));
+        body.put("faceImageBase64", faceImageBase64);
+        body.put("verifyImage", true);
+        postJson(PATH_FACE_UPDATE, body);
+    }
+
+    /**
+     * 删除人脸（官方 {@code basic/faces/delete}，query {@code employeeNo}）。
+     *
+     * @param employeeNo 人员编号
+     */
+    public void deleteFace(String employeeNo) {
+        postQuery(PATH_FACE_DELETE, "employeeNo", requireEmployeeNo(employeeNo));
     }
 
     /**

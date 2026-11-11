@@ -1,8 +1,11 @@
 package com.chua.starter.device.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.device.provider.hikvision.open.HikvisionCloudEyeSession;
 import com.chua.starter.device.support.entity.DevicePerson;
+import com.chua.starter.device.support.model.FaceImageRequest;
 import com.chua.starter.device.support.service.DevicePersonService;
+import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +35,11 @@ public class PersonController {
      * 人员服务
      */
     private final DevicePersonService personService;
+
+    /**
+     * 设备会话管理器（人脸操作取云眸会话令牌）
+     */
+    private final DeviceSessionManager sessionManager;
 
     /**
      * 新增人员。
@@ -108,5 +116,63 @@ public class PersonController {
                                                 @RequestParam(required = false) String vendor,
                                                 @RequestParam(required = false) String keyword) {
         return personService.pagePersons(page, size, vendor, keyword);
+    }
+
+    /**
+     * 录入/更新人员人脸（云眸官方 {@code basic/faces/update}）。
+     *
+     * @param id      人员主键
+     * @param request 人脸图片
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/face")
+    public ReturnResult<Void> updateFace(@PathVariable String id, @RequestBody FaceImageRequest request) {
+        if (request == null || request.imageBase64() == null || request.imageBase64().isBlank()) {
+            throw new IllegalArgumentException("人脸图片 imageBase64 不能为空");
+        }
+        DevicePerson person = requirePerson(id);
+        cloudEye().updateFace(person.getDevicePersonExternalId(), request.imageBase64());
+        return ReturnResult.ok();
+    }
+
+    /**
+     * 删除人员人脸（云眸官方 {@code basic/faces/delete}）。
+     *
+     * @param id 人员主键
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}/face")
+    public ReturnResult<Void> deleteFace(@PathVariable String id) {
+        DevicePerson person = requirePerson(id);
+        cloudEye().deleteFace(person.getDevicePersonExternalId());
+        return ReturnResult.ok();
+    }
+
+    /**
+     * 读取人员，不存在时直接报错。
+     *
+     * @param id 主键
+     * @return 人员
+     */
+    private DevicePerson requirePerson(String id) {
+        DevicePerson person = personService.getPerson(id);
+        if (person == null) {
+            throw new IllegalArgumentException("人员不存在: " + id);
+        }
+        return person;
+    }
+
+    /**
+     * 取当前在线的云眸会话；人脸接口只在该平台实现。
+     *
+     * @return 云眸会话
+     */
+    private HikvisionCloudEyeSession cloudEye() {
+        return sessionManager.getAllSessions().values().stream()
+                .filter(HikvisionCloudEyeSession.class::isInstance)
+                .map(HikvisionCloudEyeSession.class::cast)
+                .findFirst()
+                .orElseThrow(() -> new UnsupportedOperationException(
+                        "云眸无在线会话，无法操作人脸（人脸接口为云眸专属）"));
     }
 }

@@ -437,7 +437,7 @@ public record DeviceCapabilityMatrix(
                         "fetchPersons 走历史接口 getPersons 分页、fetchPerson 走 basic/persons/get，无账号数据未验证")
                 .unverified(DeviceCapability.PERSON_WRITE, 5,
                         "addPerson/updatePerson/removePerson 走官方 persons/create|update|delete，"
-                                + "人脸 faces/update|delete 路径已入目录，无账号数据未验证")
+                                + "人脸 updateFace/deleteFace 走官方 faces/update|delete，无账号数据未验证")
                 .unverified(DeviceCapability.DEVICE_WRITE, 3,
                         "addDevice/renameDevice/removeDevice 走官方 basic/devices/create|update|delete，"
                                 + "注册要 groupNo + validateCode，无设备未验证")
