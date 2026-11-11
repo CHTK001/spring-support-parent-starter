@@ -94,12 +94,19 @@ public class SocketUser implements Serializable {
     }
 
     /**
-     * 设置额外属性
+     * 设置额外属性。
+     *
+     * <p>{@link ConcurrentHashMap} 不允许 null 值；登录令牌里的 roles/permissions
+     * 等字段允许为空（例如普通用户没有显式权限列表），这里必须忽略空值，否则
+     * 握手鉴权会在组装用户信息时抛 NPE，导致合法令牌也被拒绝。</p>
      *
      * @param key   属性键
-     * @param value 属性值
+     * @param value 属性值；为 null 时忽略
      */
     public void setExtra(String key, Object value) {
+        if (key == null || value == null) {
+            return;
+        }
         extras.put(key, value);
     }
 

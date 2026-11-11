@@ -567,7 +567,9 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 data.setAuthToken(user);
                 return AuthorizationResult.SUCCESSFUL_AUTHORIZATION;
             } catch (Exception e) {
-                log.warn("[SocketIO] 握手鉴权异常: {}", e.getMessage());
+                // 保留堆栈：鉴权失败时仅打印 message 会丢掉 NPE/类型转换等根因，
+                // 线上只能看到 "null"，无法定位是令牌解析还是用户组装阶段失败。
+                log.warn("[SocketIO] 握手鉴权异常: address={}", data.getAddress(), e);
                 return AuthorizationResult.FAILED_AUTHORIZATION;
             }
         });

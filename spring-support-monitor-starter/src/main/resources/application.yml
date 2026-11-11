@@ -215,6 +215,9 @@ plugin:
     enable: true
     protocol: socketio
     host: 0.0.0.0
+    # 握手鉴权：与系统模块保持一致，未携带有效 x-oauth-token/Bearer/token
+    # 的连接一律拒绝，避免实时通道成为匿名入口。
+    auth-factory: com.chua.starter.system.support.socket.TokenSocketAuthFactory
     room:
       - client-id: default
         context-path: /socket.io
