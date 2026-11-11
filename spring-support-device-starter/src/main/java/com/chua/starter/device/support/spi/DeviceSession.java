@@ -219,4 +219,65 @@ public interface DeviceSession {
      * @return poll事件的结果
      */
     List<DeviceEvent> pollEvents(TimeRange range);
+
+    /**
+     * 车辆档案列表。
+     *
+     * <p>默认抛 {@link UnsupportedOperationException}：没有车辆能力的平台必须显式失败，
+     * 不返回空列表让业务侧误以为「没有车辆」。</p>
+     *
+     * @return 车辆列表
+     */
+    default List<VehicleInfo> listVehicles() {
+        throw new UnsupportedOperationException("该平台不支持车辆档案");
+    }
+
+    /**
+     * 新增或修改车辆档案。
+     *
+     * @param vehicle 车辆
+     * @param exists  平台侧是否已存在
+     * @return 厂商侧车辆标识
+     */
+    default String upsertVehicle(VehicleInfo vehicle, boolean exists) {
+        throw new UnsupportedOperationException("该平台不支持车辆写入");
+    }
+
+    /**
+     * 删除车辆档案。
+     *
+     * @param vehicleId 车辆标识
+     */
+    default void deleteVehicle(String vehicleId) {
+        throw new UnsupportedOperationException("该平台不支持车辆删除");
+    }
+
+    /**
+     * 车闸（道闸）点位列表。
+     *
+     * @return 车闸列表
+     */
+    default List<BarrierGateInfo> listBarriers() {
+        throw new UnsupportedOperationException("该平台不支持车闸列表");
+    }
+
+    /**
+     * 开闸。
+     *
+     * @param gateId    车闸标识
+     * @param direction 方向：in / out
+     */
+    default void openBarrier(String gateId, String direction) {
+        throw new UnsupportedOperationException("该平台不支持开闸");
+    }
+
+    /**
+     * 查询过车记录。
+     *
+     * @param range 时间段
+     * @return 过车记录
+     */
+    default List<VehiclePassRecord> queryVehiclePasses(TimeRange range) {
+        throw new UnsupportedOperationException("该平台不支持过车记录");
+    }
 }
