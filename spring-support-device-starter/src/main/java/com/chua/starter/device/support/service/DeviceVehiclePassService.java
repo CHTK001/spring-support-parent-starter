@@ -31,7 +31,7 @@ public interface DeviceVehiclePassService {
      * @param end       结束时间，可选
      * @return 过车记录
      */
-    List<DeviceVehiclePass> listPasses(String gateId, String direction,
+    List<DeviceVehiclePass> listPasses(String deviceId, String gateId, String direction,
                                        LocalDateTime start, LocalDateTime end);
 
     /**
@@ -45,6 +45,6 @@ public interface DeviceVehiclePassService {
      * @param end       结束时间，可选
      * @return 分页结果
      */
-    PageResult<DeviceVehiclePass> pagePasses(int page, int size, String gateId, String direction,
+    PageResult<DeviceVehiclePass> pagePasses(int page, int size, String deviceId, String gateId, String direction,
                                              LocalDateTime start, LocalDateTime end);
 }

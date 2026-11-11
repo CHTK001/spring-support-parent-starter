@@ -141,11 +141,12 @@ public class BarrierGateController {
      */
     @GetMapping("/pass/list")
     public ReturnResult<List<DeviceVehiclePass>> listPasses(
+            @RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String gateId,
             @RequestParam(required = false) String direction,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return ReturnResult.ok(passService.listPasses(gateId, direction, start, end));
+        return ReturnResult.ok(passService.listPasses(deviceId, gateId, direction, start, end));
     }
 
     /**
@@ -163,10 +164,11 @@ public class BarrierGateController {
     public PageResult<DeviceVehiclePass> pagePasses(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String gateId,
             @RequestParam(required = false) String direction,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return passService.pagePasses(page, size, gateId, direction, start, end);
+        return passService.pagePasses(page, size, deviceId, gateId, direction, start, end);
     }
 }

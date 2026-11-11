@@ -2,7 +2,9 @@ package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.starter.device.support.entity.DeviceBarrierGate;
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
+import com.chua.starter.device.support.mapper.DeviceBarrierGateMapper;
 import com.chua.starter.device.support.mapper.DeviceVehiclePassMapper;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
 import com.chua.starter.mybatis.entity.PageResult;
@@ -29,6 +31,11 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
      */
     private final DeviceVehiclePassMapper passMapper;
 
+    /**
+     * 车闸映射器（按设备过滤过车记录时用来取车闸 ID）
+     */
+    private final DeviceBarrierGateMapper gateMapper;
+
     @Override
     public DeviceVehiclePass record(DeviceVehiclePass pass) {
         if (pass == null) {
@@ -47,17 +54,17 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
     }
 
     @Override
-    public List<DeviceVehiclePass> listPasses(String gateId, String direction,
+    public List<DeviceVehiclePass> listPasses(String deviceId, String gateId, String direction,
                                               LocalDateTime start, LocalDateTime end) {
-        return passMapper.selectList(buildQuery(gateId, direction, start, end));
+        return passMapper.selectList(buildQuery(deviceId, gateId, direction, start, end));
     }
 
     @Override
-    public PageResult<DeviceVehiclePass> pagePasses(int page, int size, String gateId, String direction,
+    public PageResult<DeviceVehiclePass> pagePasses(int page, int size, String deviceId, String gateId, String direction,
                                                     LocalDateTime start, LocalDateTime end) {
         Page<DeviceVehiclePass> query = new Page<>(Math.max(page, 1), Math.max(size, 1));
         return PageResult.copy(passMapper.selectPage(query,
-                buildQuery(gateId, direction, start, end)));
+                buildQuery(deviceId, gateId, direction, start, end)));
     }
 
     /**
@@ -69,9 +76,21 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
      * @param end       结束时间
      * @return 查询条件
      */
-    private LambdaQueryWrapper<DeviceVehiclePass> buildQuery(String gateId, String direction,
+    private LambdaQueryWrapper<DeviceVehiclePass> buildQuery(String deviceId, String gateId, String direction,
                                                             LocalDateTime start, LocalDateTime end) {
         LambdaQueryWrapper<DeviceVehiclePass> wrapper = new LambdaQueryWrapper<>();
+        if (deviceId != null && !deviceId.isBlank()) {
+            List<DeviceBarrierGate> gates = gateMapper.selectList(new LambdaQueryWrapper<DeviceBarrierGate>()
+                    .eq(DeviceBarrierGate::getDeviceBarrierGateDeviceId, deviceId));
+            List<String> gateIds = gates.stream()
+                    .map(DeviceBarrierGate::getDeviceBarrierGateId)
+                    .toList();
+            if (gateIds.isEmpty()) {
+                wrapper.eq(DeviceVehiclePass::getDeviceVehiclePassGateId, "__none__");
+            } else {
+                wrapper.in(DeviceVehiclePass::getDeviceVehiclePassGateId, gateIds);
+            }
+        }
         if (gateId != null && !gateId.isBlank()) {
             wrapper.eq(DeviceVehiclePass::getDeviceVehiclePassGateId, gateId);
         }
