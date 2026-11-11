@@ -1,1 +1,0 @@
-import{t as e}from"./koi-folder-favorite-zOV_Q7zq.js";export{e as default};

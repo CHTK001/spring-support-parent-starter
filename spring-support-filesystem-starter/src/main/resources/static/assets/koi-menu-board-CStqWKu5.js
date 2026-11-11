@@ -1,1 +1,0 @@
-import{t as e}from"./koi-menu-board-j5B0F1SD.js";export{e as default};

@@ -1,1 +1,0 @@
-import{t as e}from"./koi-menu-sun-DEALNKyQ.js";export{e as default};

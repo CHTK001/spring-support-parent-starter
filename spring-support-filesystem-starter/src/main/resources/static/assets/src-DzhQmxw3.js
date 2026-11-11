@@ -1,1 +1,0 @@
-import"./src-CDBpMMZR.js";import{J as e,K as t}from"./src-yqiBXSkK.js";import"./indexeddb-BWaLKDXO.js";import"./auth-D1U4LZ7r.js";import"./framework-Dg_pOi0n.js";export{t as browserLocalStorage,e as createStorage};

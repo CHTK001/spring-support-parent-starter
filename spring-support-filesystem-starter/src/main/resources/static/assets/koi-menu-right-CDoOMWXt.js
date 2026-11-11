@@ -1,1 +1,0 @@
-import{t as e}from"./koi-menu-right-5XuLOSos.js";export{e as default};

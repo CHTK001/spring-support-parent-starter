@@ -1,1 +1,0 @@
-import{n as e,t}from"./ReTrend-DuZ7uJ9F.js";export{t as default,e as install};

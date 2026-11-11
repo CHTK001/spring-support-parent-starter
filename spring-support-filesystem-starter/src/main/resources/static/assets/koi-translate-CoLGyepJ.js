@@ -1,1 +1,0 @@
-import{t as e}from"./koi-translate-D5t6DgmK.js";export{e as default};

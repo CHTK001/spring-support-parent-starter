@@ -1,1 +1,0 @@
-import{t as e}from"./koi-text-left-menu-c0tkULMJ.js";export{e as default};

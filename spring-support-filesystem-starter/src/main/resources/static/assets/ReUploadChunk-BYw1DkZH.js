@@ -1,1 +1,0 @@
-import{t as e}from"./ReUploadChunk-BPBk4c6a.js";var t={install(t){t.component(`ReUploadChunk`,e)}},n=e;export{n as default,t as install};
