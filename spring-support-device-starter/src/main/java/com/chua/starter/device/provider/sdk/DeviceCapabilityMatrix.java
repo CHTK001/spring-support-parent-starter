@@ -471,7 +471,9 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.DEVICE_WRITE, 3, "device.add|update|delete 已接入，缺网关地址未验证")
                 .unverified(DeviceCapability.PERSON, 4, "fetchPersons 走官方 resource/v2/person/personList，缺网关地址未验证")
                 .unverified(DeviceCapability.PERSON_WRITE, 3, "person.add|update|delete 已接入，缺网关地址未验证")
-                .todo(DeviceCapability.ACCESS_WRITE, 3, "接口目录未登记门禁点增删改路径，需补官方文档后再实现")
+                .no(DeviceCapability.ACCESS_WRITE,
+                        "综合安防公开 Artemis 目录只有门禁点查询/控制/状态/记录，没有门禁点增删改或权限下发字段文档；"
+                                + "需平台厂商提供门禁权限下发专属接口文档后才能接入")
                 .unverified(DeviceCapability.CAPTURE, 2, "capture 走官方 video/v1/cameras/images 并二次下载，缺网关地址未验证")
                 .unverified(DeviceCapability.EVENT, 2, "pollEvents 走官方 eventService/v1/eventRecords/page，缺网关地址未验证")
                 .no(DeviceCapability.PARKING, "综合安防停车场为独立子系统，不在本接入范围")
@@ -545,14 +547,13 @@ public record DeviceCapabilityMatrix(
     }
 
     /**
-     * 大华云睿能力矩阵（2026-11-11 按真实探活结论回写）。
+     * 大华云睿能力矩阵（2026-11-11 官方文档取证后回写）。
      *
      * <p>平台实际是「大华云开发者平台 IoT 开放平台」（open.cloud-dahua.com），
      * 43 条基础通用套件接口已逐条真实调用验证：42 条存在，
-     * {@code getDeviceChannelInfo} 不存在（BIZ120）。
-     * 视频监控、云存储、云联、门禁子系统的接口不在该套件内，官方文档详情
-     * 返回 {@code OPF600001 鉴权失败}（需控制台登录态），请求字段无法取证，
-     * 因此这几类能力只能保持 TODO，会话层显式抛 {@link UnsupportedOperationException}。</p>
+     * {@code getDeviceChannelInfo} 不存在（BIZ120）。视频监控、云存储、门禁、
+     * 组织、用户套件的字段已从官方文档中心取证，会话层按官方路径实现；
+     * 因无设备/凭据做真机调用，统一标 {@code IMPLEMENTED_UNVERIFIED}。</p>
      *
      * @return 能力矩阵
      */
@@ -562,18 +563,30 @@ public record DeviceCapabilityMatrix(
                         "getDeviceList/deviceOnline/listDeviceDetailsByIds 已真实调用（200/PRM0132），账号下 0 台设备，字段解析未验证")
                 .unverified(DeviceCapability.CHANNEL, 4,
                         "官方无 getDeviceChannelInfo（BIZ120），listChannels 改走 listDeviceDetailsByIds，通道字段未拿到真机样例")
-                .todo(DeviceCapability.MEDIA, 5, "视频监控套件不在 43 条基础通用套件内，文档字段需控制台登录（OPF600001）")
-                .todo(DeviceCapability.RECORD, 4, "云存储/录像套件不在 43 条基础通用套件内，字段未取证")
-                .todo(DeviceCapability.PTZ, 4, "云台控制属视频监控套件，路径与字段均未取证")
-                .todo(DeviceCapability.CAPTURE, 2, "抓图属视频监控套件，路径与字段均未取证")
-                .todo(DeviceCapability.EVENT, 10, "消息订阅接口已验证存在，但事件报文结构无官方字段文档，未实现解析")
-                .todo(DeviceCapability.DEVICE_WRITE, 4, "addDevice/modifyDeviceName 字段未取证（空包体仅回 PRM001）；deleteDevice 入参 deviceId 已确认")
-                .todo(DeviceCapability.ORG, 4, "组织管理套件不在 43 条基础通用套件内，字段未取证")
-                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改字段未取证")
-                .todo(DeviceCapability.PERSON, 4, "人员档案套件不在 43 条基础通用套件内，字段未取证")
-                .todo(DeviceCapability.PERSON_WRITE, 4, "人员增删改字段未取证")
-                .todo(DeviceCapability.ACCESS, 4, "门禁子系统字段未取证")
-                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改字段未取证")
+                .unverified(DeviceCapability.MEDIA, 4,
+                        "createDeviceHlsLive/delDeviceHlsLive/createDeviceFlvLive/createDeviceStreamUrl 已按官方文档实现，无设备未验证")
+                .unverified(DeviceCapability.RECORD, 2,
+                        "queryLocalRecords 分页检索 + createDeviceRecordHls 回放已实现（不支持跨天），无设备未验证")
+                .unverified(DeviceCapability.PTZ, 5,
+                        "controlMovePTZ 与 configPreset/turnPreset/queryPreset/deletePreset 已实现，无设备未验证")
+                .unverified(DeviceCapability.CAPTURE, 1,
+                        "setDeviceSnapEnhanced 取 URL 后二次下载已实现（官方限制 3 秒一次），无设备未验证")
+                .unverified(DeviceCapability.EVENT, 1,
+                        "getMessage 分页拉取已实现（官方仅保留 7 天），事件类型映射未做真机验证")
+                .unverified(DeviceCapability.DEVICE_WRITE, 4,
+                        "api-biz/device/addDevice|updateDeviceName + api-iot/device/deleteDevice|verifyDevCode 已实现，无设备未验证")
+                .unverified(DeviceCapability.ORG, 3,
+                        "org/getTree|getRootInfo|getOrgInfo 已实现；templateId 取当前用户 orgPriGroupList 或 extra.orgTemplateId")
+                .unverified(DeviceCapability.ORG_WRITE, 3,
+                        "org/addOrg|updateOrg|delByOrgId 已实现；新增需 parentId 与 orgType（可继承父节点或 extra 指定）")
+                .unverified(DeviceCapability.PERSON, 1,
+                        "api-biz/user/page 分页已实现，无账号数据未验证")
+                .unverified(DeviceCapability.PERSON_WRITE, 3,
+                        "user/addUserWithPwd|update|batchDelete 已实现；新增密码取 extra.defaultPersonPassword")
+                .unverified(DeviceCapability.ACCESS, 4,
+                        "门禁设备即门点；getDoorOpenRecord/openDoorRemote/setOpenDoorStatus/getPlanListByDeviceId 已实现，无门禁设备未验证")
+                .unverified(DeviceCapability.ACCESS_WRITE, 5,
+                        "平台无门点 CRUD；addPlan/updatePlan/removePlan/dispatchPlans/setUserPlans 已实现，无门禁设备未验证")
                 .no(DeviceCapability.PARKING, "云睿开放平台无停车场业务")
                 .build();
     }
@@ -646,8 +659,8 @@ public record DeviceCapabilityMatrix(
     /**
      * 宇视能力矩阵。
      *
-     * <p>只有平台 SDK（{@code UniviewSdk}），接口路径尚未用官方文档核实，
-     * 无 DeviceSession，业务能力一律 TODO。</p>
+     * <p>接口路径已按官方文档接入 {@code UniviewSession}；
+     * 官方 openapi 目录无组织、人员、门禁、停车场接口，对应能力位标 {@code NO}。</p>
      *
      * @return 能力矩阵
      */

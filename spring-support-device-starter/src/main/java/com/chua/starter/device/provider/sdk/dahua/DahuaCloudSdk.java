@@ -211,7 +211,7 @@ public class DahuaCloudSdk extends AbstractPlatformSdk {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("pageNum", 1);
         body.put("pageSize", 100);
-        JsonNode root = biz(PATH_DEVICE_LIST, body);
+        JsonNode root = biz("POST", PATH_DEVICE_LIST, body);
         JsonNode data = root == null ? null : root.get("data");
         List<JsonNode> nodes = new ArrayList<>();
         // 官方返回 data.pageData[].deviceList[]，兼容 data.deviceList / data.list
@@ -261,7 +261,7 @@ public class DahuaCloudSdk extends AbstractPlatformSdk {
             Map<String, Object> body = params == null ? new LinkedHashMap<>() : params;
             JsonNode root = "auth.token".equals(code)
                     ? tokenRoot(body)
-                    : biz(path, body);
+                    : biz(spec.method(), path, body);
             JsonNode data = root == null ? null : root.get("data");
             Object normalized = data == null || data.isNull() ? null : MAPPER.convertValue(data, Object.class);
             return PlatformApiResult.ok(code, normalized, root == null ? null : root.toString(),
@@ -289,17 +289,76 @@ public class DahuaCloudSdk extends AbstractPlatformSdk {
     /**
      * 业务请求：自动带 AppAccessToken 与业务签名。
      *
-     * @param path 接口路径
-     * @param body 请求体
+     * @param method HTTP 方法
+     * @param path   接口路径
+     * @param body   请求体 / GET 查询参数
      * @return 响应根节点
      */
-    private JsonNode biz(String path, Map<String, Object> body) {
+    private JsonNode biz(String method, String path, Map<String, Object> body) {
         login();
         String ts = String.valueOf(System.currentTimeMillis());
         String nonce = UUID.randomUUID().toString().replace("-", "");
         String signature = sign(info.appKey() + appToken + ts + nonce);
-        return send(path, body == null ? "{}" : writeJson(body),
-                baseHeaders(ts, nonce, signature, true));
+        Map<String, String> headers = baseHeaders(ts, nonce, signature, true);
+        if ("GET".equalsIgnoreCase(method)) {
+            return sendGet(path, body, headers);
+        }
+        return send(path, body == null ? "{}" : writeJson(body), headers);
+    }
+
+    /**
+     * 发一次 GET，查询参数按官方文档平铺。
+     *
+     * @param path    接口路径
+     * @param params  查询参数
+     * @param headers 请求头
+     * @return 响应根节点
+     */
+    private JsonNode sendGet(String path, Map<String, Object> params, Map<String, String> headers) {
+        StringBuilder url = new StringBuilder(baseUrl()).append(path);
+        if (params != null && !params.isEmpty()) {
+            char sep = '?';
+            for (Map.Entry<String, Object> entry : params.entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null) {
+                    continue;
+                }
+                url.append(sep).append(entry.getKey()).append('=')
+                        .append(java.net.URLEncoder.encode(String.valueOf(entry.getValue()),
+                                StandardCharsets.UTF_8));
+                sep = '&';
+            }
+        }
+        try {
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(url.toString()))
+                    .timeout(Duration.ofSeconds(30))
+                    .GET();
+            headers.forEach(builder::header);
+            HttpResponse<String> response = CLIENT.send(builder.build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            String content = response.body();
+            JsonNode root = parse(content);
+            if (response.statusCode() >= 400) {
+                throw new IllegalStateException("大华云 HTTP " + response.statusCode() + ": "
+                        + (content == null ? "" : content.substring(0, Math.min(200, content.length()))));
+            }
+            if (root == null) {
+                throw new IllegalStateException("大华云响应非 JSON: HTTP " + response.statusCode()
+                        + " " + (content == null ? "" : content.substring(0, Math.min(200, content.length()))));
+            }
+            String code = str(root, "code");
+            JsonNode successNode = root.get("success");
+            boolean success = successNode == null || successNode.isNull() || successNode.asBoolean();
+            if (!success || (code != null && !"200".equals(code) && !"0".equals(code))) {
+                throw new IllegalStateException("大华云返回失败: code=" + code
+                        + ", msg=" + str(root, "msg", "message", "errMsg"));
+            }
+            return root;
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException("大华云调用失败: " + path + " -> " + ex.getMessage(), ex);
+        }
     }
 
     /**

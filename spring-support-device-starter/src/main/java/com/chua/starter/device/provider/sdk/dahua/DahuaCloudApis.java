@@ -24,8 +24,8 @@ import java.util.List;
  *
  * <p>响应统一信封 {@code {code:"200", success:true, data, msg}}。</p>
  *
- * <p>路径来自官方「大华云开放平台 IoT 基础通用套件」43 个接口；凭据可用
- * {@code extra("apiPath.&lt;code&gt;")} 覆盖。</p>
+ * <p>路径来自大华云开放平台官方文档中心：基础通用套件、视频监控、云存储、门禁、
+ * 组织、用户、设备与消息套件。凭据可用 {@code extra("apiPath.&lt;code&gt;")} 覆盖。</p>
  *
  * @since 4.0.0.51
  * @author CH
@@ -70,10 +70,94 @@ public final class DahuaCloudApis {
                     IOT + "/checkDeviceBindInfo", "V1", "device"),
             PlatformApiSpec.global("device.category", "查询设备品类", "POST",
                     IOT + "/getCategory", "V1", "device"),
-            PlatformApiSpec.global("device.rename", "修改设备/通道名称", "POST",
+            PlatformApiSpec.global("device.rename.iot", "修改设备/通道名称（IoT 套件）", "POST",
                     IOT + "/modifyDeviceName", "V1", "device"),
             PlatformApiSpec.global("device.password", "修改设备密码", "POST",
                     IOT + "/modifyDevCode", "V1", "device"),
+            PlatformApiSpec.global("device.rename", "修改设备或通道名称", "POST",
+                    "/open-api/api-biz/device/updateDeviceName", "V1", "device"),
+            PlatformApiSpec.global("device.org", "批量修改设备所属组织", "POST",
+                    "/open-api/api-biz/device/updateDeviceOrg", "V1", "device"),
+            PlatformApiSpec.global("device.biz.add", "添加设备（业务侧）", "POST",
+                    "/open-api/api-biz/device/addDevice", "V1", "device"),
+
+            // ---------- 视频监控 ----------
+            PlatformApiSpec.global("media.hls", "创建设备 HLS 直播", "POST",
+                    IOT + "/createDeviceHlsLive", "V1", "media"),
+            PlatformApiSpec.global("media.hls.delete", "删除设备 HLS 直播", "POST",
+                    IOT + "/delDeviceHlsLive", "V1", "media"),
+            PlatformApiSpec.global("media.flv", "创建设备 FLV 直播", "POST",
+                    IOT + "/createDeviceFlvLive", "V1", "media"),
+            PlatformApiSpec.global("media.flv.delete", "删除设备 FLV 直播", "POST",
+                    IOT + "/delDeviceFlvLive", "V1", "media"),
+            PlatformApiSpec.global("media.stream", "创建设备私有拉流地址", "POST",
+                    IOT + "/createDeviceStreamUrl", "V1", "media"),
+            PlatformApiSpec.global("record.local", "设备录像查询", "POST",
+                    IOT + "/queryLocalRecords", "V1", "record"),
+            PlatformApiSpec.global("record.hls", "录像片段转 HLS 回放", "POST",
+                    IOT + "/createDeviceRecordHls", "V1", "record"),
+            PlatformApiSpec.global("capture.snap", "设备抓图", "POST",
+                    IOT + "/setDeviceSnapEnhanced", "V1", "media"),
+            PlatformApiSpec.global("ptz.move", "云台移动控制", "POST",
+                    AIOT + "/controlMovePTZ", "V1", "ptz"),
+            PlatformApiSpec.global("ptz.preset.set", "设置预置点", "POST",
+                    AIOT + "/configPreset", "V1", "ptz"),
+            PlatformApiSpec.global("ptz.preset.turn", "转到预置点", "POST",
+                    AIOT + "/turnPreset", "V1", "ptz"),
+            PlatformApiSpec.global("ptz.preset.query", "查询预置点", "POST",
+                    AIOT + "/queryPreset", "V1", "ptz"),
+            PlatformApiSpec.global("ptz.preset.delete", "删除预置点", "POST",
+                    AIOT + "/deletePreset", "V1", "ptz"),
+
+            // ---------- 门禁 ----------
+            PlatformApiSpec.global("access.record", "查询开门记录", "GET",
+                    IOT + "/accessControl/getDoorOpenRecord", "V1", "access"),
+            PlatformApiSpec.global("access.open", "远程开门 V2", "POST",
+                    IOT + "/v2/device/accessControl/openDoorRemote", "V1", "access"),
+            PlatformApiSpec.global("access.status", "设置开门状态", "POST",
+                    IOT + "/accessControl/setOpenDoorStatus", "V1", "access"),
+            PlatformApiSpec.global("access.plan.list", "查询设备开门计划", "GET",
+                    IOT + "/accessControl/getPlanListByDeviceId", "V1", "access"),
+            PlatformApiSpec.global("access.plan.add", "新增普通开门计划", "POST",
+                    IOT + "/accessControl/addPlan", "V1", "access"),
+            PlatformApiSpec.global("access.plan.update", "修改普通开门计划", "POST",
+                    IOT + "/accessControl/updatePlan", "V1", "access"),
+            PlatformApiSpec.global("access.plan.delete", "删除普通开门计划", "POST",
+                    IOT + "/accessControl/removePlan", "V1", "access"),
+            PlatformApiSpec.global("access.plan.dispatch", "下发普通开门计划", "POST",
+                    IOT + "/accessControl/dispatchPlans", "V1", "access"),
+            PlatformApiSpec.global("access.userPlans", "人员关联开门计划", "POST",
+                    IOT + "/accessControl/setUserPlans", "V1", "access"),
+            PlatformApiSpec.global("access.user.page", "分页查询门禁人员", "GET",
+                    IOT + "/accessControl/getUserInfoPage", "V1", "access"),
+
+            // ---------- 组织 / 用户 ----------
+            PlatformApiSpec.global("org.tree", "查询组织树", "GET",
+                    "/open-api/api-biz/org/getTree", "V1", "org"),
+            PlatformApiSpec.global("org.root", "查询根节点", "GET",
+                    "/open-api/api-biz/org/getRootInfo", "V1", "org"),
+            PlatformApiSpec.global("org.info", "查询组织基础信息", "GET",
+                    "/open-api/api-biz/org/getOrgInfo", "V1", "org"),
+            PlatformApiSpec.global("org.add", "新增组织节点", "POST",
+                    "/open-api/api-biz/org/addOrg", "V1", "org"),
+            PlatformApiSpec.global("org.update", "更新组织节点", "POST",
+                    "/open-api/api-biz/org/updateOrg", "V1", "org"),
+            PlatformApiSpec.global("org.delete", "删除组织节点", "POST",
+                    "/open-api/api-biz/org/delByOrgId", "V1", "org"),
+            PlatformApiSpec.global("user.current", "获取当前登录用户信息", "GET",
+                    "/open-api/api-biz/user/getUserInfo", "V1", "user"),
+            PlatformApiSpec.global("user.page", "分页查询用户列表", "POST",
+                    "/open-api/api-biz/user/page", "V1", "user"),
+            PlatformApiSpec.global("user.add", "添加用户", "POST",
+                    "/open-api/api-biz/user/addUserWithPwd", "V1", "user"),
+            PlatformApiSpec.global("user.update", "更新用户信息", "POST",
+                    "/open-api/api-biz/user/update", "V1", "user"),
+            PlatformApiSpec.global("user.delete", "批量删除用户", "POST",
+                    "/open-api/api-biz/user/batchDelete", "V1", "user"),
+
+            // ---------- 消息 ----------
+            PlatformApiSpec.global("msg.pull", "分页查询消息", "GET",
+                    MSG + "/getMessage", "V1", "message"),
 
             // ---------- 国标 GB28181 ----------
             PlatformApiSpec.global("gb.sip", "获取国标设备注册信息", "POST",

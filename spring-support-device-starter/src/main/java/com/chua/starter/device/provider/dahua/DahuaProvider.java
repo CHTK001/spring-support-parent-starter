@@ -200,7 +200,41 @@ public class DahuaProvider implements DeviceProvider {
 
     @Override
     public List<OrganizationNode> fetchOrganizations() {
- // 云睿组织管理接口在 43 条基础通用套件之外，官方字段需控制台登录（OPF600001），未取证。
+ // 云睿组织接口需要 templateId，必须按凭据建连后从当前用户或 extra 取，见 fetchOrganizations(DeviceSession)。
+        return List.of();
+    }
+
+    /**
+     * 按凭据建连后的会话语境拉取组织树。
+     *
+     * @param session 会话
+     * @return 组织节点
+     */
+    @Override
+    public List<OrganizationNode> fetchOrganizations(DeviceSession session) {
+        if (session instanceof DahuaCloudSession cloud) {
+            return cloud.fetchOrganizations();
+        }
+        if (session instanceof DahuaIccSession icc) {
+            return icc.fetchOrganizations();
+        }
+        return fetchOrganizations();
+    }
+
+    /**
+     * 按凭据建连后的会话语境拉取人员。
+     *
+     * @param session 会话
+     * @return 人员
+     */
+    @Override
+    public List<DevicePerson> fetchPersons(DeviceSession session) {
+        if (session instanceof DahuaCloudSession cloud) {
+            return cloud.fetchPersons();
+        }
+        if (session instanceof DahuaIccSession icc) {
+            return icc.fetchPersons();
+        }
         return List.of();
     }
 
@@ -210,13 +244,19 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     /**
-     * 按 ICC 凭据写组织。
+     * 按凭据写组织：云睿走组织套件，ICC 走 ICC 部门接口，乐橙无组织模型。
      *
      * @param info 连接信息
      * @param node 组织节点
-     * @return ICC 部门 ID
+     * @return 厂商侧组织 ID
      */
     public String upsertOrganization(DeviceConnectInfo info, OrganizationNode node) {
+        if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            return new DahuaCloudSession(info).upsertOrganization(node);
+        }
+        if (PLATFORM_LECHANGE.equalsIgnoreCase(info.platformType())) {
+            throw new UnsupportedOperationException("大华乐橙面向消费级，无组织模型");
+        }
         return new DahuaIccSession(info).upsertOrganization(node);
     }
 
@@ -226,13 +266,19 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     /**
-     * 按 ICC 凭据删除组织。
+     * 按凭据删除组织：云睿走组织套件，ICC 走 ICC 部门接口。
      *
      * @param info       连接信息
-     * @param externalId 部门 ID
+     * @param externalId 组织 ID
      * @return 是否删除成功
      */
     public boolean removeOrganization(DeviceConnectInfo info, String externalId) {
+        if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            return new DahuaCloudSession(info).removeOrganization(externalId);
+        }
+        if (PLATFORM_LECHANGE.equalsIgnoreCase(info.platformType())) {
+            throw new UnsupportedOperationException("大华乐橙面向消费级，无组织模型");
+        }
         return new DahuaIccSession(info).removeOrganization(externalId);
     }
 
@@ -242,13 +288,19 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     /**
-     * 按 ICC 凭据写人员。
+     * 按凭据写人员：云睿走平台用户套件，ICC 走 ICC 人员接口。
      *
      * @param info   连接信息
-     * @param person 人员（需带 paperType/paperNumber）
-     * @return ICC 人员 ID
+     * @param person 人员
+     * @return 厂商侧人员 ID
      */
     public String upsertPerson(DeviceConnectInfo info, DevicePerson person) {
+        if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            return new DahuaCloudSession(info).upsertPerson(person);
+        }
+        if (PLATFORM_LECHANGE.equalsIgnoreCase(info.platformType())) {
+            throw new UnsupportedOperationException("大华乐橙面向消费级，无人员模型");
+        }
         return new DahuaIccSession(info).upsertPerson(person);
     }
 
@@ -258,14 +310,80 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     /**
-     * 按 ICC 凭据删除人员。
+     * 按凭据删除人员。
      *
      * @param info     连接信息
      * @param personId 人员 ID
      * @return 是否删除成功
      */
     public boolean removePerson(DeviceConnectInfo info, String personId) {
+        if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            return new DahuaCloudSession(info).removePerson(personId);
+        }
+        if (PLATFORM_LECHANGE.equalsIgnoreCase(info.platformType())) {
+            throw new UnsupportedOperationException("大华乐橙面向消费级，无人员模型");
+        }
         return new DahuaIccSession(info).removePerson(personId);
+    }
+
+    /**
+     * 按凭据写回云睿设备（新增/改名）。
+     *
+     * @param info   连接信息
+     * @param device 设备
+     * @param exists 平台侧是否已存在
+     * @return 是否成功
+     */
+    public boolean upsertRemote(DeviceConnectInfo info, VendorDevice device, boolean exists) {
+        if (!PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        DahuaCloudSession cloud = new DahuaCloudSession(info);
+        String externalId = device.externalId() == null || device.externalId().isBlank()
+                ? device.serial() : device.externalId();
+        if (externalId == null || externalId.isBlank()) {
+            throw new IllegalArgumentException("大华云设备写入需要设备序列号");
+        }
+        if (exists) {
+            cloud.renameDevice(externalId, null, device.name());
+            return true;
+        }
+        String devCode = extraText(info, "devCode");
+        if (devCode == null) {
+            devCode = extraText(info, "devicePassword");
+        }
+        if (devCode == null) {
+            throw new IllegalStateException("大华云新增设备需要设备密码：请在凭据额外参数配置 devCode");
+        }
+        cloud.addDevice(externalId, device.name(), devCode, null);
+        return true;
+    }
+
+    /**
+     * 按凭据删除云睿设备。
+     *
+     * @param info       连接信息
+     * @param externalId 设备序列号
+     * @return 是否成功
+     */
+    public boolean removeRemote(DeviceConnectInfo info, String externalId) {
+        if (!PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        new DahuaCloudSession(info).removeDevice(externalId);
+        return true;
+    }
+
+    /**
+     * 取凭据扩展字段文本。
+     *
+     * @param info 连接信息
+     * @param key  键
+     * @return 文本，缺失返回 null
+     */
+    private static String extraText(DeviceConnectInfo info, String key) {
+        Object value = info.extra() == null ? null : info.extra().get(key);
+        return value == null ? null : String.valueOf(value).trim();
     }
 
     /**
