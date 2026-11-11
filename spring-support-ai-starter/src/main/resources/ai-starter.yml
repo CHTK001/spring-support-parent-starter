@@ -184,6 +184,9 @@ plugin:
         # 验收扫描专用实例，避免与并发的验收进程争抢 15689
         - http://localhost:15700
         - http://127.0.0.1:15700
+        # 世界沙盒人眼级验收：vite 起在 19095（15689/15700 被并发验收占用）
+        - http://localhost:19095
+        - http://127.0.0.1:19095
     decode:
       # 开发/验收用 AES 密钥（与前端 app.yaml httpConfig.requestCodec.key 一致，
       # 后端对 key 做 SHA-256 → 32 字节 AES-256 密钥，IV 取前 16 字节）

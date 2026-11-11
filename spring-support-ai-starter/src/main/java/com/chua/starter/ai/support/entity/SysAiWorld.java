@@ -40,6 +40,14 @@ public class SysAiWorld {
     @TableField("weather")
     private String weather;
 
+    /** 导演模型：世界的剧本导演用哪个模型写剧本（可空，沿用全局默认） */
+    @TableField("director_model")
+    private String directorModel;
+
+    /** 世界的演员/角色配置（JSON 数组，例：["诸葛亮","曹操"]），可空 */
+    @TableField("actor_roles")
+    private String actorRoles;
+
     /** 世界当前时间标签（推进时更新） */
     @TableField("time_label")
     private String timeLabel;

@@ -52,14 +52,14 @@ public class HikvisionCloudEyeSdk extends AbstractPlatformSdk {
     /** 换 token */
     private static final String PATH_TOKEN = "/oauth/token";
 
-    /** 设备列表（官方：GET /api/v1/open/basic/devices/list） */
+    /** 设备列表（官方：GET /api/v1/open/basic/devices/list，groupNo 必填） */
     private static final String PATH_DEVICE_LIST = "/api/v1/open/basic/devices/list";
 
-    /** 分组/区域列表 */
-    private static final String PATH_GROUP_LIST = "/api/v1/open/basic/groups/list";
+    /** 分组/区域列表（官方：GET /api/v1/open/basic/groups/actions/listAll） */
+    private static final String PATH_GROUP_LIST = "/api/v1/open/basic/groups/actions/listAll";
 
-    /** 监控点列表 */
-    private static final String PATH_CAMERA_LIST = "/api/v1/open/basic/cameras/list";
+    /** 通道列表（官方：GET /api/v1/open/basic/channels/list，deviceSerial 必填） */
+    private static final String PATH_CHANNEL_LIST = "/api/v1/open/basic/channels/list";
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
@@ -148,20 +148,26 @@ public class HikvisionCloudEyeSdk extends AbstractPlatformSdk {
     @Override
     public List<VendorDevice> listDevices() {
         List<VendorDevice> result = new ArrayList<>();
-        for (JsonNode node : page(PATH_DEVICE_LIST)) {
-            result.add(new VendorDevice(
-                    str(node, "deviceSerial", "deviceId", "id", "serial"),
-                    str(node, "deviceName", "name"),
-                    str(node, "deviceModel", "model"),
-                    "camera",
-                    str(node, "deviceSerial", "serial"),
-                    str(node, "deviceIp", "ip"),
-                    integer(node, "devicePort", "port"),
-                    str(node, "deviceAddress", "address"),
-                    decimal(node, "latitude", "lat"),
-                    decimal(node, "longitude", "lng"),
-                    integer(node, "channelNum", "channelCount"),
-                    bool(node, "onlineStatus", "online", "deviceStatus")));
+        for (String groupNo : groupNumbers()) {
+            for (JsonNode node : page(PATH_DEVICE_LIST, Map.of("groupNo", groupNo))) {
+                String serial = str(node, "deviceSerial");
+                if (serial == null) {
+                    continue;
+                }
+                result.add(new VendorDevice(
+                        str(node, "deviceId", "deviceSerial"),
+                        str(node, "deviceName"),
+                        str(node, "deviceModel"),
+                        "camera",
+                        serial,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "1".equals(str(node, "deviceStatus"))));
+            }
         }
         return result;
     }
@@ -169,20 +175,47 @@ public class HikvisionCloudEyeSdk extends AbstractPlatformSdk {
     @Override
     public List<VendorDevice> listMonitors() {
         List<VendorDevice> result = new ArrayList<>();
-        for (JsonNode node : page(PATH_CAMERA_LIST)) {
-            result.add(new VendorDevice(
-                    str(node, "cameraId", "cameraIndexCode", "id"),
-                    str(node, "cameraName", "name"),
-                    str(node, "cameraModel", "model"),
-                    "camera",
-                    str(node, "deviceSerial", "serial"),
-                    str(node, "deviceIp", "ip"),
-                    integer(node, "devicePort", "port"),
-                    str(node, "address", "deviceAddress"),
-                    decimal(node, "latitude", "lat"),
-                    decimal(node, "longitude", "lng"),
-                    1,
-                    bool(node, "onlineStatus", "online", "status")));
+        for (VendorDevice device : listDevices()) {
+            String serial = device.serial();
+            if (serial == null) {
+                continue;
+            }
+            for (JsonNode node : page(PATH_CHANNEL_LIST, Map.of("deviceSerial", serial))) {
+                String channelId = str(node, "channelId");
+                if (channelId == null) {
+                    continue;
+                }
+                String channelStatus = str(node, "channelStatus");
+                result.add(new VendorDevice(
+                        channelId,
+                        str(node, "channelName"),
+                        str(node, "childDeviceModel"),
+                        "camera",
+                        str(node, "ipcSerial", "deviceSerial"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        1,
+                        "1".equals(channelStatus)));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 全部组编号（官方 {@code groups/actions/listAll}；设备列表接口要求 {@code groupNo} 必填）。
+     *
+     * @return 组编号
+     */
+    private List<String> groupNumbers() {
+        List<String> result = new ArrayList<>();
+        for (JsonNode node : toList(dataOf(sendGet(PATH_GROUP_LIST, Map.of())))) {
+            String groupNo = str(node, "groupNo");
+            if (groupNo != null) {
+                result.add(groupNo);
+            }
         }
         return result;
     }
@@ -219,17 +252,17 @@ public class HikvisionCloudEyeSdk extends AbstractPlatformSdk {
      * 分页拉取全部条目（云眸是 GET + query）。
      *
      * @param path 接口路径
+     * @param base 固定查询参数（如 {@code groupNo} / {@code deviceSerial}）
      * @return 全量条目
      */
-    private List<JsonNode> page(String path) {
+    private List<JsonNode> page(String path, Map<String, Object> base) {
         List<JsonNode> all = new ArrayList<>();
         for (int pageNo = 1; pageNo <= 200; pageNo++) {
-            Map<String, Object> query = new LinkedHashMap<>();
+            Map<String, Object> query = new LinkedHashMap<>(base);
             query.put("pageNo", pageNo);
             query.put("pageSize", 100);
             JsonNode root = sendGet(path, query);
-            JsonNode data = root == null ? null : root.get("data");
-            List<JsonNode> list = toList(data);
+            List<JsonNode> list = toList(dataOf(root));
             if (list.isEmpty()) {
                 break;
             }
@@ -239,6 +272,16 @@ public class HikvisionCloudEyeSdk extends AbstractPlatformSdk {
             }
         }
         return all;
+    }
+
+    /**
+     * 取响应 {@code data} 节点（云眸统一信封 {@code {code,message,data}}）。
+     *
+     * @param root 响应根节点
+     * @return data 节点，缺失返回 null
+     */
+    private static JsonNode dataOf(JsonNode root) {
+        return root == null ? null : root.get("data");
     }
 
     /**

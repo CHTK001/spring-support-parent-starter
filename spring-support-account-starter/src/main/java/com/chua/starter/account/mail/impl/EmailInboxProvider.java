@@ -791,12 +791,6 @@ public class EmailInboxProvider implements AccountInboxProvider {
     }
 
     /**
-     * IMAP 主机。
-     *
-     * @param account 账号
-     * @return 主机；无法解析返回 {@code null}
-     */
-    /**
      * IMAP 主机（包内共享：收信与凭据校验同一口径）。
      *
      * @param account 账号
@@ -816,17 +810,16 @@ public class EmailInboxProvider implements AccountInboxProvider {
                 || host.startsWith("mail.")) {
             return "imap." + host.substring(host.indexOf('.') + 1);
         }
-        return host.contains(".") ? "imap." + host : null;
+        // IP / localhost / 单段主机名：不能再拼 imap. 前缀（会变成 imap.127.0.0.1 这类必然失败的名字），
+        // 直接按原样使用——内网邮件服务器与本地测试都走这条路径。
+        if (host.matches("\\d{1,3}(\\.\\d{1,3}){3}") || host.equals("localhost") || !host.contains(".")) {
+            return host;
+        }
+        return "imap." + host;
     }
 
     /**
-     * IMAP 端口。
-     *
-     * @param account 账号
-     * @return 端口
-     */
-    /**
-     * IMAP 端口（包内共享）。
+     * IMAP 端口（包内共享：收信与凭据校验同一口径）。
      *
      * @param account 账号
      * @return 端口

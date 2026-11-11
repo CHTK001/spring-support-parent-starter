@@ -81,7 +81,8 @@ public class ClineChannelCreditProvider implements ChannelCreditProvider {
             result.put("updatedAt", System.currentTimeMillis());
             return result;
         } catch (Exception e) {
-            result.put("error", "余额查询失败: " + ChannelHttp.truncate(e.getMessage()));
+            // 同上：上游报错原文（URL / HTML）不进界面
+            result.put("error", "余额查询失败，请稍后重试");
             return result;
         }
     }

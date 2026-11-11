@@ -30,8 +30,8 @@ public interface WorldSimService {
     /** 世界详情视图（世界配置 + 场景 + NPC + 关系网 + 最近事件），带缓存 */
     Map<String, Object> worldView(Long worldId);
 
-    /** 创建世界 */
-    SysAiWorld createWorld(String name, String description, String era);
+    /** 创建世界（导演模型/演员可空） */
+    SysAiWorld createWorld(String name, String description, String era, String directorModel, String actorRoles);
 
     /** 更新世界配置（名称/世界观/时代/天气/状态） */
     SysAiWorld updateWorld(Long id, Map<String, Object> body);

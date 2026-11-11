@@ -183,6 +183,7 @@ public class ReleaseController {
      * @param envVars     环境变量 JSON
      * @param jvmArgs     JVM 参数 JSON
      * @param cmdArgs     命令参数 JSON
+     * @param jdkHome     JDK 安装路径（可为空）
      * @return 四段脚本
      */
     @Operation(summary = "生成内置脚本（启动/停止/重启/状态，与执行期一致）")
@@ -196,9 +197,10 @@ public class ReleaseController {
             @RequestParam(required = false) String appName,
             @RequestParam(required = false) String envVars,
             @RequestParam(required = false) String jvmArgs,
-            @RequestParam(required = false) String cmdArgs) {
+            @RequestParam(required = false) String cmdArgs,
+            @RequestParam(required = false) String jdkHome) {
         return releaseService.generateScripts(hostId, projectType, mainEntry, projectPath,
-                logPath, appName, envVars, jvmArgs, cmdArgs);
+                logPath, appName, envVars, jvmArgs, cmdArgs, jdkHome);
     }
 
     /**
@@ -703,25 +705,6 @@ public class ReleaseController {
             @PathVariable Long id,
             @RequestBody(required = false) java.util.Map<String, Object> config) {
         return releaseService.runUpgrade(id, config);
-    }
-
-    /**
-     * 上传安装包并执行拖拽升级。
-     *
-     * @param id          项目标识
-     * @param file        安装包文件
-     * @param deployType  部署类型覆盖（main / lib / both，空则用项目默认）
-     * @param autoRestart 是否重启，空则用配置默认
-     * @return 异步任务标识
-     */
-    @Operation(summary = "拖拽升级：上传安装包并按项目默认配置升级（异步，返回taskId）")
-    @PostMapping("/project/{id}/upload")
-    public ReturnResult<String> uploadAndUpgrade(
-            @PathVariable Long id,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @RequestParam(required = false) String deployType,
-            @RequestParam(required = false) Boolean autoRestart) {
-        return releaseService.uploadAndUpgrade(id, file, deployType, autoRestart);
     }
 
     /**

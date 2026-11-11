@@ -9,7 +9,7 @@ import java.util.List;
  *
  * <p>把 {@code ReleaseServiceImpl}、{@code ProjectScripts} 里所有与项目类型相关的分支
  * 收拢到本扩展点：四段内置脚本、升级包投放位置、是否需要主入口、是否 JVM 进程、
- * 是否有常驻进程、是否支持依赖包升级、包来源（上传 / Git 构建）、
+ * 是否有常驻进程、是否支持依赖包升级、包来源（主机文件 / Git 构建）、
  * 以及挂载系统服务时的前台常驻命令。</p>
  *
  * <p>新增项目类型只需实现本接口、标注 {@code @Spi} 并登记到
@@ -28,9 +28,9 @@ import java.util.List;
 public interface ProjectTypeProvider {
 
     /**
-     * 包来源：上传安装包（拖拽 / 手动选择）
+     * 包来源：主机上的产物文件（默认）
      */
-    String SOURCE_UPLOAD = "upload";
+    String SOURCE_HOST = "host";
 
     /**
      * 包来源：从 Git 仓库拉取源码并构建
@@ -145,10 +145,10 @@ public interface ProjectTypeProvider {
     /**
      * 包来源。
      *
-     * @return {@link #SOURCE_UPLOAD} 或 {@link #SOURCE_GIT}
+     * @return {@link #SOURCE_HOST} 或 {@link #SOURCE_GIT}
      */
     default String sourceKind() {
-        return SOURCE_UPLOAD;
+        return SOURCE_HOST;
     }
 
     /**

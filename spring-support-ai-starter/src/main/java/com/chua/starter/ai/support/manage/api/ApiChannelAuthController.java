@@ -328,7 +328,12 @@ public class ApiChannelAuthController {
         // 能力标签：前端据此在渠道卡片右侧显示「积分 / 任务」入口。
         // 用独立 SPI 探测而不是问 AccountChannelAuthManager：签到与「看余额 / 做任务」
         // 是三件事，很多渠道只有其一（Cline 只有余额、Raccoon 只有自动发放）。
-        summary.put("supportsCredit", creditProviderOf(channel) != null);
+        // 网关承载的渠道本地通常没有自己的积分实现，但 /credit 是网关优先的
+        // （见 gatewayCredit）：只看本地实现会把 Loomy 这类纯托管渠道的积分区
+        // 整块藏掉，查到的余额永远显示不出来。判据与 gatewayCredit 保持同一套。
+        GatewayOwner gateway = gatewayOwnerOf(channel);
+        summary.put("supportsCredit", creditProviderOf(channel) != null
+                || (gateway != null && creditProviderOf(gateway.admin.channel()) != null));
         summary.put("supportsTask", taskProviderOf(channel) != null);
         summary.put("providerId", provider == null ? null : provider.getProviderId());
         summary.put("enabled", provider == null ? false : Boolean.TRUE.equals(provider.getEnabled()));
@@ -1194,7 +1199,8 @@ public class ApiChannelAuthController {
         // 网关优先：渠道归 magpie 承载时以网关凭据为准，本地旧连接不参与。
         // 否则过期连接会把请求挡回原生实现（例如直连 minimax 余额接口 404）。
         String account = body == null ? null : asString(body.get("account"));
-        ApiResult<Map<String, Object>> hosted = gatewayCredit(channel, out, account);
+        String providerScope = body == null ? null : asString(body.get("provider"));
+        ApiResult<Map<String, Object>> hosted = gatewayCredit(channel, out, providerScope, account);
         if (hosted != null) {
             return hosted;
         }
@@ -1211,8 +1217,7 @@ public class ApiChannelAuthController {
             // 「未找到渠道账号: qoder-cn / null」——null 是拼接出来的空 label，用户
             // 看不出该做什么。改为一次正常返回，并把下一步写成可操作的说明。
             Map<String, Object> credit = new LinkedHashMap<>(2);
-            credit.put("error", "网关与本地都没有「" + channel + "」的账号："
-                    + "请先在「Magpie 统一网关」里添加该上游，或在渠道页绑定账号");
+            credit.put("error", "「" + channel + "」还没有账号：请先添加账号，或绑定登录态账号");
             out.put("ok", false);
             out.put("channel", channel);
             out.put("label", channel);
@@ -1247,19 +1252,21 @@ public class ApiChannelAuthController {
      *
      * @param channel 业务渠道标识
      * @param out     复用的输出 Map
+     * @param provider 网关上游 id（可空；空表示该渠道全部上游）
      * @param account 上游账号（可空；空表示该上游合计）
      * @return 有网关且能读数时返回结果；否则 {@code null}（由调用方按「未找到账号」处理）
      */
-    private ApiResult<Map<String, Object>> gatewayCredit(String channel, Map<String, Object> out, String account) {
+    private ApiResult<Map<String, Object>> gatewayCredit(String channel, Map<String, Object> out,
+                                                         String provider, String account) {
         GatewayOwner owner = gatewayOwnerOf(channel);
         if (owner == null) {
             return null;
         }
-        ChannelCreditProvider provider = creditProviderOf(owner.admin.channel());
-        if (provider == null) {
+        ChannelCreditProvider creditProvider = creditProviderOf(owner.admin.channel());
+        if (creditProvider == null) {
             return null;
         }
-        Map<String, Object> credit = provider.creditFor(channel, account, owner.credentials);
+        Map<String, Object> credit = creditProvider.creditFor(channel, provider, account, owner.credentials);
         out.put("ok", credit.get("error") == null);
         out.put("channel", channel);
         // label 给前端当卡片标题：本地没有连接记录，只能用网关里的上游名 / 账号。

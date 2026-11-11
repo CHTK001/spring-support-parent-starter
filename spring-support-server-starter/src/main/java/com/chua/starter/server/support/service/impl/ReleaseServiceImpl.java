@@ -112,7 +112,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        */
     private static final Pattern SERVER_PORT_PROP = Pattern.compile("server\\.port\\s*=\\s*(\\d{1,5})");
       /**
-       * SFTP 服务（拖拽升级上传安装包，Linux）
+       * SFTP 服务（Git 构建产物上传等，Linux）
        */
     private final SftpService sftpService;
       /**
@@ -537,10 +537,10 @@ public class ReleaseServiceImpl implements ReleaseService {
         exists.setGitSkipTests(project.getGitSkipTests() == null ? exists.getGitSkipTests() : project.getGitSkipTests());
         exists.setMavenHome(project.getMavenHome() == null ? exists.getMavenHome() : project.getMavenHome());
         exists.setMavenVersion(project.getMavenVersion() == null ? exists.getMavenVersion() : project.getMavenVersion());
+        exists.setJdkHome(project.getJdkHome() == null ? exists.getJdkHome() : project.getJdkHome());
         exists.setUploadExtract(project.getUploadExtract() == null ? exists.getUploadExtract() : project.getUploadExtract());
         exists.setUploadTargetDir(project.getUploadTargetDir() == null ? exists.getUploadTargetDir() : project.getUploadTargetDir());
         exists.setDeployType(project.getDeployType() == null ? exists.getDeployType() : project.getDeployType());
-        exists.setUploadAutoUpgrade(project.getUploadAutoUpgrade() == null ? exists.getUploadAutoUpgrade() : project.getUploadAutoUpgrade());
         exists.setGitPollEnabled(project.getGitPollEnabled() == null ? exists.getGitPollEnabled() : project.getGitPollEnabled());
         exists.setGitPollCron(project.getGitPollCron() == null ? exists.getGitPollCron() : project.getGitPollCron());
           // 定时发布：开关或时间变化时重置状态；只接受未来时间，避免登记一个永远不会触发的 cron
@@ -581,7 +581,7 @@ public class ReleaseServiceImpl implements ReleaseService {
     @Override
     public ReturnResult<Map<String, String>> generateScripts(Long hostId, String projectType, String mainEntry,
             String projectPath, String logPath, String appName,
-            String envVars, String jvmArgs, String cmdArgs) {
+            String envVars, String jvmArgs, String cmdArgs, String jdkHome) {
         MsServerHost host = hostId == null ? null : hostMapper.selectById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
@@ -600,6 +600,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         stub.setEnvVars(envVars);
         stub.setJvmArgs(jvmArgs);
         stub.setCmdArgs(cmdArgs);
+        stub.setJdkHome(jdkHome);
         ProjectPlatformProvider pf = projectPlatformRouter.resolveOrPosix(osType);
         String start = materializeVars(def.start(), stub, pf);
         String restart = materializeVars(def.restart(), stub, pf);
@@ -1678,13 +1679,13 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @param ctx             操作上下文
        * @param project         项目
        * @param type            项目类型实现
-       * @param packagePath     安装包路径；为空表示只重启不投放
+       * @param packagePath     产物路径；为空表示只重启不投放
        * @param autoBackup      是否自动备份
        * @param autoExtract     是否自动解压
        * @param autoRestart     是否自动重启
        * @param autoRollback    是否健康检查失败自动回滚
-       * @param uploadExtract   上传包是否解压
-       * @param uploadTargetDir 上传投放目录
+       * @param uploadExtract   产物是否解压
+       * @param uploadTargetDir 产物投放目录
        * @param deployType      部署类型
        */
     private void appendDeploySteps(List<ProjectStep> steps, ProjectPlatformProvider pf, OperationContext ctx,
@@ -1972,64 +1973,6 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     @SuppressWarnings("unchecked")
-    public ReturnResult<String> uploadAndUpgrade(Long id, MultipartFile file,
-                                                 String deployTypeOverride, Boolean autoRestartOverride) {
-        ReturnResult<OperationContext> prepared = prepare(id);
-        if (!prepared.isOk()) {
-            return ReturnResult.error(prepared.getMsg());
-        }
-        OperationContext ctx = prepared.getData();
-        MsServerProject project = ctx.project;
-        if (isBlank(project.getProjectPath())) {
-            return ReturnResult.error("项目地址未配置，无法上传升级");
-        }
-        if (file == null || file.isEmpty()) {
-            return ReturnResult.error("上传文件不能为空");
-        }
-        String uploadDir = project.getProjectPath() + "/uploads";
-        ReturnResult<Void> mk = sftpService.mkdir(ctx.hostId, null, uploadDir);
-        if (!mk.isOk()) {
-            return ReturnResult.error("创建上传目录失败: " + mk.getMsg());
-        }
-        ReturnResult<String> up = sftpService.upload(ctx.hostId, null, uploadDir, file);
-        if (!up.isOk()) {
-            return ReturnResult.error(up.getMsg());
-        }
-        String remotePackage = up.getData();
-          // 上传配置：默认只上传不升级；仅当项目显式开启「上传后自动升级」时才走投放/重启。
-          // 显式指定 deployType 的调用（如「更新依赖包」只投 lib）本身就是一次升级动作，不受该开关限制。
-        boolean autoUpgrade = Boolean.TRUE.equals(project.getUploadAutoUpgrade()) || !isBlank(deployTypeOverride);
-        if (!autoUpgrade) {
-            log.info("[发布] 项目 {} 未开启上传后自动升级，安装包已上传至 {}", project.getId(), remotePackage);
-            return ReturnResult.ok("upload-only:" + remotePackage);
-        }
-        Object global = readCfg(CFG_GLOBAL_KEY, defaultGlobalConfig());
-        Map<String, Object> cfg = global instanceof Map
-                ? new java.util.LinkedHashMap<>((Map<String, Object>) global)
-                : defaultGlobalConfig();
-        cfg.put("packagePath", remotePackage);
-          // 注入项目自身的上传配置，覆盖全局默认
-        if (project.getUploadExtract() != null) {
-            cfg.put("uploadExtract", project.getUploadExtract());
-        }
-        if (!isBlank(project.getUploadTargetDir())) {
-            cfg.put("uploadTargetDir", project.getUploadTargetDir());
-        }
-        if (!isBlank(project.getDeployType())) {
-            cfg.put("deployType", project.getDeployType());
-        }
-          // 拖拽上传的调用方可以显式覆盖部署类型（典型：分离式项目「更新依赖包」只投 lib）
-        if (!isBlank(deployTypeOverride)) {
-            cfg.put("deployType", deployTypeOverride.trim().toLowerCase());
-        }
-        if (autoRestartOverride != null) {
-            cfg.put("autoRestart", autoRestartOverride);
-        }
-        return runUpgrade(id, cfg);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
       /**
        * git Pull And Deploy
        * @param id 长整数
@@ -2046,14 +1989,14 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
       /**
-       * 拉取源码 → Maven 构建 → 上传产物，返回目标主机上的安装包绝对路径。
+       * 拉取源码 → Maven 构建 → 上传构建产物，返回目标主机上的构建产物绝对路径。
        *
        * <p>只负责「把包做出来」，不碰投放与重启：备份、投放、健康检查仍走
        * {@link #runUpgrade(Long, Map)} 的统一编排，避免 Git 发布维护第二套发布流程。
        * 管理端无需预装 Maven，缺失时自动下载。</p>
        *
        * @param ctx 操作上下文
-       * @return 目标主机上的安装包路径
+       * @return 目标主机上的构建产物路径
        */
     private ReturnResult<String> prepareGitPackage(OperationContext ctx) {
         MsServerProject project = ctx.project;
@@ -2133,8 +2076,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
 
           // 5. 确保 Maven 可用（自动检测 / 自动下载）
+        String mavenHome;
         try {
-            ensureMavenAvailable(project);
+            mavenHome = ensureMavenAvailable(project);
         } catch (Exception e) {
             log.error("[Git发布] Maven 准备失败", e);
             return ReturnResult.error("Maven 准备失败: " + e.getMessage());
@@ -2154,6 +2098,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                     .projectPath(pomPath.toString())
                     .goal(goals)
                     .skipTests(skipTests)
+                    .mavenHome(mavenHome)
+                    .javaHome(project.getJdkHome())
                     .execute();
         } catch (Exception e) {
             log.error("[Git发布] Maven 构建异常", e);
@@ -2330,14 +2276,13 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @param project 项目（含 Maven 配置）
        * @throws Exception 下载或解压失败
        */
-    private void ensureMavenAvailable(MsServerProject project) throws Exception {
+    private String ensureMavenAvailable(MsServerProject project) throws Exception {
           // 1. 项目配置的 mavenHome
         if (!isBlank(project.getMavenHome())) {
             File mh = new File(project.getMavenHome().trim());
             if (mh.exists() && new File(mh, "bin").exists()) {
-                System.setProperty("maven.home", mh.getAbsolutePath());
                 log.info("[Git发布] 使用项目配置的 Maven: {}", mh.getAbsolutePath());
-                return;
+                return mh.getAbsolutePath();
             }
             log.warn("[Git发布] 项目配置的 Maven 路径无效: {}，尝试自动检测/下载", project.getMavenHome());
         }
@@ -2345,7 +2290,7 @@ public class ReleaseServiceImpl implements ReleaseService {
           // 2. 已设置的系统属性
         String sysHome = System.getProperty("maven.home");
         if (!isBlank(sysHome) && new File(sysHome).exists()) {
-            return;
+            return sysHome;
         }
 
           // 3. 环境变量 MAVEN_HOME / M2_HOME
@@ -2354,8 +2299,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             envHome = System.getenv("M2_HOME");
         }
         if (!isBlank(envHome) && new File(envHome).exists()) {
-            System.setProperty("maven.home", envHome);
-            return;
+            return envHome;
         }
 
           // 4. PATH 中查找 mvn
@@ -2365,15 +2309,14 @@ public class ReleaseServiceImpl implements ReleaseService {
                 if (new File(dir, "mvn.cmd").exists() || new File(dir, "mvn").exists()) {
                     File mavenDir = new File(dir).getParentFile();
                     if (mavenDir != null && new File(mavenDir, "lib").exists()) {
-                        System.setProperty("maven.home", mavenDir.getAbsolutePath());
-                        return;
+                        return mavenDir.getAbsolutePath();
                     }
                 }
             }
         }
 
           // 5. 自动下载
-        downloadMaven(project);
+        return downloadMaven(project);
     }
 
       /**
@@ -2382,7 +2325,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @param project 项目（含 Maven 版本配置）
        * @throws Exception 下载或解压失败
        */
-    private void downloadMaven(MsServerProject project) throws Exception {
+    private String downloadMaven(MsServerProject project) throws Exception {
         String version = isBlank(project.getMavenVersion())
                 ? "3.9.9" : project.getMavenVersion().trim();
         String artifactName = "apache-maven-" + version;
@@ -2406,9 +2349,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                     log.warn("[Git发布] 设置 mvn 脚本可执行权限失败: {}", mvnScript, e);
                 }
             }
-            System.setProperty("maven.home", mavenHome.toString());
             log.info("[Git发布] 复用已下载的 Maven: {}", mavenHome);
-            return;
+            return mavenHome.toString();
         }
 
         Files.createDirectories(mavenRoot);
@@ -2465,6 +2407,7 @@ public class ReleaseServiceImpl implements ReleaseService {
 
         System.setProperty("maven.home", mavenHome.toString());
         log.info("[Git发布] Maven 自动下载完成: {}", mavenHome);
+        return mavenHome.toString();
     }
 
       // ==================== 辅助 ====================
@@ -2618,7 +2561,9 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         out = out.replace("__JVMARGS__", pf.jvmArgsLiteral(jvms))
                 .replace("__ARGS__", pf.appArgsLiteral(args));
-        return out;
+        // 项目级 JDK：把裸 java 换成该 JDK 的可执行文件（含平台的引号与路径规则）。
+        // 放在占位符展开之后，历史脚本同样生效，无需重新生成。
+        return pf.applyJava(out, project.getJdkHome());
     }
 
       /**

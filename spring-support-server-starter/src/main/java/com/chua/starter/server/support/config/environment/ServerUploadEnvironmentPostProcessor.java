@@ -11,11 +11,10 @@ import java.util.Map;
 /**
  * 上传限制环境后处理器
  *
- * <p>发布管理模块（{@code /ms/server/sftp/**} 上传、{@code /ms/server/release/project/{id}/upload}
- * 拖拽升级）需要传递发布包，发布包普遍是上百 MB 的 jar。若沿用 Spring Boot 默认的
- * {@code spring.servlet.multipart.max-file-size=1MB}，任何超过 1MB 的安装包都会被
- * {@code MaxUploadSizeExceededException} 拒绝，表现为 HTTP 413 / {@code F0413S0001 文件超过大小限制}，
- * 而该报错文案完全无法提示真实原因。</p>
+ * <p>发布管理模块（{@code /ms/server/sftp/**} 主机文件上传）需要传递大文件。若沿用
+ * Spring Boot 默认的 {@code spring.servlet.multipart.max-file-size=1MB}，任何超过
+ * 1MB 的文件都会被 {@code MaxUploadSizeExceededException} 拒绝，表现为 HTTP 413 /
+ * {@code F0413S0001 文件超过大小限制}，而该报错文案完全无法提示真实原因。</p>
  *
  * <p>同时 Tomcat 侧 {@code max-swallow-size}（默认 2MB）会在请求被拒后强行截断连接，
  * 导致大文件上传即便放开 multipart 限制也会中途断开，因此需要一并放开。</p>

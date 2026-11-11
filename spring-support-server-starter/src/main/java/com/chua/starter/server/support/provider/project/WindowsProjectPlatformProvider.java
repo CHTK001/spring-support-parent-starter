@@ -180,6 +180,64 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
         return "$JvmArgs";
     }
 
+    /**
+     * 让启动脚本里的裸 {@code java} 用上项目指定的 JDK。
+     *
+     * <p>Windows 侧要点：</p>
+     * <ul>
+     *   <li>Win32_Process.Create 起的进程继承的是 WMI 服务自己的环境，脚本里
+     *       {@code $env:JAVA_HOME}/{@code $env:PATH} 传不到子进程，所以必须在被创建的
+     *       cmd 命令行里就地 {@code set}，应用与它拉起的子工具才拿得到；</li>
+     *   <li>用 PATH 前置而不是把 exe 换成绝对路径：路径含空格时 {@code cmd /c} 的引号规则
+     *       （首尾引号被成对剥离）会把参数拆坏，而 {@code set "PATH=C:\Program Files\...;%PATH%"}
+     *       里的引号只包住赋值，命令名仍是 {@code java}；</li>
+     *   <li>两个调用点都改写：模板生成的 {@code start "" /b "java"}，以及前端 PS 模板里的
+     *       {@code $inner = 'java '}；两者都只在未改写时命中，重复调用不会二次加前缀。</li>
+     * </ul>
+     *
+     * @param script  启动/重启脚本
+     * @param jdkHome JDK 安装路径
+     * @return 改写后的脚本
+     */
+    @Override
+    public String applyJava(String script, String jdkHome) {
+        String exe = javaExecutable(jdkHome);
+        if (script == null || script.isEmpty() || exe.isEmpty()) {
+            return script;
+        }
+        String home = exe.toLowerCase().endsWith("\\bin\\java.exe")
+                ? exe.substring(0, exe.length() - "\\bin\\java.exe".length())
+                : exe.replaceFirst("[\\\\/]java\\.exe$", "");
+        String bin = home + "\\bin";
+        String cmdPrefix = "set \"JAVA_HOME=" + home + "\" && set \"PATH=" + bin + ";%PATH%\" && ";
+        String psPrefix = cmdPrefix.replace("'", "''");
+        return script
+                .replace("$inner = 'java '", "$inner = '" + psPrefix + "java '")
+                .replace("start \"\" /b \"java\"", cmdPrefix + "start \"\" /b \"java\"");
+    }
+
+    /**
+     * Windows 可执行文件路径：补齐 {@code \bin\java.exe}，统一反斜杠。
+     *
+     * @param jdkHome JDK 安装路径（根目录 / bin 目录 / java.exe 本身均可）
+     * @return 可执行文件路径；入参为空返回空串
+     */
+    @Override
+    public String javaExecutable(String jdkHome) {
+        if (jdkHome == null || jdkHome.isBlank()) {
+            return "";
+        }
+        String home = jdkHome.trim().replaceAll("[/\\\\]+$", "").replace('/', '\\');
+        String lower = home.toLowerCase();
+        if (lower.endsWith("\\java.exe")) {
+            return home;
+        }
+        if (lower.endsWith("\\bin")) {
+            return home + "\\java.exe";
+        }
+        return home + "\\bin\\java.exe";
+    }
+
     @Override
     public String appArgsLiteral(List<String> cmdArgs) {
         return "$AppArgs";

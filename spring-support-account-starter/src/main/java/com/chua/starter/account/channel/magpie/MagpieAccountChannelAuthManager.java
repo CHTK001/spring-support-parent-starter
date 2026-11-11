@@ -5,6 +5,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.common.support.channel.ChannelException;
+import com.chua.starter.common.support.channel.MagpieSupport;
 import com.chua.starter.common.support.http.ChannelHttp;
 
 import java.util.ArrayList;

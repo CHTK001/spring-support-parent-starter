@@ -11,7 +11,10 @@ import com.chua.starter.device.support.mapper.DeviceAccessRecordMapper;
 import com.chua.starter.device.support.mapper.DeviceAlarmMapper;
 import com.chua.starter.device.support.mapper.DeviceWebhookAppKeyMapper;
 import com.chua.starter.device.support.mapper.DeviceWebhookReceiptMapper;
+import com.chua.starter.device.support.entity.DeviceVehiclePass;
+import com.chua.starter.device.support.mapper.DeviceVehiclePassMapper;
 import com.chua.starter.device.support.model.AccessRecordPush;
+import com.chua.starter.device.support.model.VehiclePassPush;
 import com.chua.starter.device.support.model.AlarmPush;
 import com.chua.starter.device.support.model.AppKeyCreateRequest;
 import com.chua.starter.device.support.model.AppKeyView;
@@ -55,8 +58,10 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     private static final String TOPIC_ACCESS = "access";
     /** 告警主题 */
     private static final String TOPIC_ALARM = "alarm";
+    /** 过车主题 */
+    private static final String TOPIC_VEHICLE = "vehicle";
     /** 默认授权主题 */
-    private static final String DEFAULT_SCOPES = "access,alarm";
+    private static final String DEFAULT_SCOPES = "access,alarm,vehicle";
     /** 时间戳防重放窗口（秒） */
     private static final long REPLAY_WINDOW_SECONDS = 300L;
     /** 常用时间格式 */
@@ -70,6 +75,8 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     private final DeviceAccessRecordMapper accessRecordMapper;
     /** 告警映射器 */
     private final DeviceAlarmMapper alarmMapper;
+    /** 过车记录映射器 */
+    private final DeviceVehiclePassMapper vehiclePassMapper;
     /** 生命周期回调发布器 */
     private final DeviceLifecyclePublisher lifecyclePublisher;
 
@@ -246,10 +253,43 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
         return result;
     }
 
+    @Override
+    public WebhookPushResult ingestVehiclePasses(String source, String rawBody, List<VehiclePassPush> items) {
+        WebhookPushResult result = newResult(TOPIC_VEHICLE, items);
+        for (int i = 0; i < items.size(); i++) {
+            VehiclePassPush item = items.get(i);
+            try {
+                if (item == null || !StringUtils.hasText(item.getPlateNo())) {
+                    result.getErrors().add("第 " + (i + 1) + " 条缺少 plateNo");
+                    continue;
+                }
+                String externalId = externalId(source, TOPIC_VEHICLE, rawBody, i, item.getExternalId());
+                if (receiptExists(source, externalId, TOPIC_VEHICLE)) {
+                    result.setSkipped(result.getSkipped() + 1);
+                    continue;
+                }
+                DeviceVehiclePass entity = new DeviceVehiclePass();
+                entity.setDeviceVehiclePassGateId(item.getGateId());
+                entity.setDeviceVehiclePassPlateNo(item.getPlateNo());
+                entity.setDeviceVehiclePassDirection(item.getDirection());
+                entity.setDeviceVehiclePassTime(parseTime(item.getPassTime()));
+                entity.setDeviceVehiclePassPhotoUrl(item.getPhotoUrl());
+                entity.setDeviceVehiclePassVehicleType(item.getVehicleType());
+                entity.setDeviceVehiclePassCreatedAt(LocalDateTime.now());
+                vehiclePassMapper.insert(entity);
+                saveReceipt(source, externalId, TOPIC_VEHICLE);
+                result.setCreated(result.getCreated() + 1);
+            } catch (Exception ex) {
+                result.getErrors().add("第 " + (i + 1) + " 条: " + ex.getMessage());
+            }
+        }
+        log.info("[Device][Webhook] 过车推送入库: source={}, received={}, created={}, skipped={}",
+                source, result.getReceived(), result.getCreated(), result.getSkipped());
+        return result;
+    }
+
     /**
      * 初始化结果对象。
-     *
-     * @param topic 主题
      * @param items 条目
      * @return 结果
      */

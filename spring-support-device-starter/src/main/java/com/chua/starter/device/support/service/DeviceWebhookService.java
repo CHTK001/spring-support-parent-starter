@@ -6,6 +6,7 @@ import com.chua.starter.device.support.model.AlarmPush;
 import com.chua.starter.device.support.model.AppKeyCreateRequest;
 import com.chua.starter.device.support.model.AppKeyView;
 import com.chua.starter.device.support.model.WebhookPushResult;
+import com.chua.starter.device.support.model.VehiclePassPush;
 
 import java.util.List;
 
@@ -83,4 +84,14 @@ public interface DeviceWebhookService {
      * @return 入库结果
      */
     WebhookPushResult ingestAlarms(String source, String rawBody, List<AlarmPush> items);
+
+    /**
+     * 过车记录推送入库（幂等）。
+     *
+     * @param source  来源（appKey 名称）
+     * @param rawBody 原始包体，用于生成缺省幂等键
+     * @param items   推送条目
+     * @return 入库结果
+     */
+    WebhookPushResult ingestVehiclePasses(String source, String rawBody, List<VehiclePassPush> items);
 }

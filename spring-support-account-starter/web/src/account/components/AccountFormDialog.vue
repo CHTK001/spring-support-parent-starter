@@ -70,7 +70,7 @@
       <el-row :gutter="16">
         <template v-if="form.kind === 'EMAIL'">
           <el-col :span="8">
-            <el-form-item label="端口">
+            <el-form-item label="发信端口">
               <el-input-number v-model="form.port" :min="1" :max="65535" controls-position="right" class="w-full" />
             </el-form-item>
           </el-col>
@@ -83,6 +83,27 @@
             <el-form-item label="默认发件人">
               <el-input v-model="form.from" placeholder="noreply@example.com" maxlength="255" />
             </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="收信主机">
+              <el-input v-model="form.imapHost" placeholder="如 imap.qq.com" maxlength="255" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="收信端口">
+              <el-input-number
+                v-model="form.imapPort"
+                :min="1"
+                :max="65535"
+                controls-position="right"
+                class="w-full"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <div class="field-hint hint-block">
+              收信（IMAP）与发信（SMTP）不同主机时才需填；留空按服务地址推导，端口留空按 SSL 开 993、关 143。
+            </div>
           </el-col>
         </template>
         <template v-else-if="form.kind === 'SMS'">
@@ -256,6 +277,8 @@ interface AccountForm {
   from: string;
   port: number | undefined;
   ssl: boolean;
+  imapHost: string;
+  imapPort: number | undefined;
   region: string;
   signName: string;
   templateCode: string;
@@ -277,6 +300,8 @@ function emptyForm(): AccountForm {
     from: '',
     port: 465,
     ssl: true,
+    imapHost: '',
+    imapPort: undefined,
     region: '',
     signName: '',
     templateCode: '',
@@ -358,6 +383,9 @@ function fillForm(): void {
   const port = Number(config.port);
   form.port = Number.isFinite(port) && port > 0 ? port : 465;
   form.ssl = config.ssl == null ? true : Boolean(config.ssl);
+  form.imapHost = readString(config, 'imapHost');
+  const imapPort = Number(config.imapPort);
+  form.imapPort = Number.isFinite(imapPort) && imapPort > 0 ? imapPort : undefined;
 }
 
 /**
@@ -414,8 +442,21 @@ function buildPayload(): SysAccount {
   setOrDelete('port', form.kind === 'EMAIL' ? form.port : undefined);
   if (form.kind === 'EMAIL') {
     config.ssl = form.ssl;
+    const imapHost = form.imapHost.trim();
+    if (imapHost) {
+      config.imapHost = imapHost;
+    } else {
+      delete config.imapHost;
+    }
+    if (form.imapPort) {
+      config.imapPort = form.imapPort;
+    } else {
+      delete config.imapPort;
+    }
   } else {
     delete config.ssl;
+    delete config.imapHost;
+    delete config.imapPort;
   }
   setOrDelete('region', form.kind === 'API_KEY' ? form.region.trim() : '');
   setOrDelete('signName', form.kind === 'SMS' ? form.signName.trim() : '');
@@ -492,6 +533,9 @@ watch(
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-tertiary);
+}
+.hint-block {
+  margin: -4px 0 10px 8px;
 }
 .owner-hint {
   font-size: 12px;

@@ -9,11 +9,11 @@ package com.chua.starter.server.support.spi;
  * @param projectPath     项目地址（绝对路径）
  * @param mainEntry       主入口名称（jar / 可执行文件 / 启动脚本）
  * @param libDir          依赖库目录（相对项目地址，仅分离式使用；为空表示 lib）
- * @param packagePath     安装包在目标主机上的绝对路径
- * @param archive         安装包是否为压缩包（按扩展名判定）
+ * @param packagePath     产物在目标主机上的绝对路径
+ * @param archive         产物是否为压缩包（按扩展名判定）
  * @param autoExtract     升级配置：压缩包是否自动解压
- * @param uploadExtract   项目配置：上传时是否解压（模型类型使用）
- * @param uploadTargetDir 项目配置：上传目标目录（相对项目地址，模型类型使用）
+ * @param uploadExtract   项目配置：投放时是否解压（模型类型使用）
+ * @param uploadTargetDir 项目配置：产物投放目录（相对项目地址，模型类型使用）
  * @param deployType      部署类型（main / lib / both，分离式使用）
  * @author CH
  * @since 4.0.0.42
@@ -60,7 +60,7 @@ public record ProjectPlacementContext(
     }
 
     /**
-     * 安装包文件名（去掉目录部分）。
+     * 产物文件名（去掉目录部分）。
      *
      * @return 文件名；包路径为空时返回空串
      */

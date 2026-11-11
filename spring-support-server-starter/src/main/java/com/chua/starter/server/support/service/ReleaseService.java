@@ -67,11 +67,12 @@ public interface ReleaseService {
      * @param envVars     环境变量 JSON（可为空）
      * @param jvmArgs     JVM 参数 JSON（可为空）
      * @param cmdArgs     命令参数 JSON（可为空）
+     * @param jdkHome     JDK 安装路径（可为空，空则用 PATH 上的 java）
      * @return startScript/stopScript/restartScript/statusScript 四段脚本
      */
     ReturnResult<Map<String, String>> generateScripts(Long hostId, String projectType, String mainEntry,
             String projectPath, String logPath, String appName,
-            String envVars, String jvmArgs, String cmdArgs);
+            String envVars, String jvmArgs, String cmdArgs, String jdkHome);
 
     /**
      * 删除项目
@@ -318,19 +319,6 @@ public interface ReleaseService {
      * @param config 升级配置
      */
     ReturnResult<String> runUpgrade(Long id, Map<String, Object> config);
-
-    /**
-     * 拖拽升级：上传安装包到目标主机 uploads 目录，按全局升级配置执行升级（异步，返回 taskId）
-     *
-     * @param id         项目ID
-     * @param file       安装包（jar / tar.gz / zip）
-     * @param deployType 部署类型覆盖（main / lib / both，空则用项目默认）
-     * @param autoRestart 是否重启，null 用配置默认
-     * @return 异步任务标识（taskId）
-     */
-    ReturnResult<String> uploadAndUpgrade(Long id,
-                                          org.springframework.web.multipart.MultipartFile file,
-                                          String deployType, Boolean autoRestart);
 
     /**
      * Git 自动发布：从项目配置的 Git 仓库拉取代码 → Maven 构建 → SFTP 上传产物 → 升级重启。

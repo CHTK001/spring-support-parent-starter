@@ -93,6 +93,25 @@ public interface ChannelCreditProvider {
     }
 
     /**
+     * 按业务渠道 + 网关上游 + 账号查询积分 / 余额。
+     *
+     * <p>一个业务渠道在网关里可能挂了多个上游实例（如 Trae 的国内 / 国际两份）。
+     * 账号行是按上游展开的，若只传 {@code vendor}，两行会各自拿到<b>整家渠道的合计</b>，
+     * 页面看起来一样、顶部汇总还会翻倍。默认实现忽略 {@code provider}，等价于
+     * {@link #creditFor(String, String, Map)}，网关实现按上游 id 收窄。</p>
+     *
+     * @param vendor      业务渠道标识
+     * @param provider    网关上游 id（可为空；空表示该渠道全部上游）
+     * @param account     上游账号（可为空；空表示该上游合计）
+     * @param credentials 网关连接凭据
+     * @return 积分快照（字段见类注释）
+     */
+    default Map<String, Object> creditFor(String vendor, String provider, String account,
+                                          Map<String, Object> credentials) {
+        return creditFor(vendor, account, credentials);
+    }
+
+    /**
      * 该渠道的积分单位（供前端渲染，如「积分」「Token」「USD」）。
      *
      * @return 单位名

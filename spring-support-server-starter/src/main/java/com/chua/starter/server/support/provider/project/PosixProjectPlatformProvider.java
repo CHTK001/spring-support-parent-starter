@@ -120,6 +120,54 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
         return quotedArgs(jvmArgs);
     }
 
+    /**
+     * 把启动脚本里的裸 java 换成项目指定 JDK 的可执行文件。
+     *
+     * <p>POSIX 侧要点：{@code JAVA_HOME='...' nohup '<jdk>/bin/java' ...} 这种前置赋值
+     * 会随 nohup 传给被启动的进程，应用与它拉起的子工具都能读到；
+     * 路径统一走本实现的单引号转义规则，避免目录含空格时被拆成多个参数。</p>
+     *
+     * <p>替换的是完整调用点 {@code nohup java }：历史脚本与模板生成的新脚本都命中，
+     * 且替换后不会二次改写。</p>
+     *
+     * @param script  启动/重启脚本
+     * @param jdkHome JDK 安装路径
+     * @return 改写后的脚本
+     */
+    @Override
+    public String applyJava(String script, String jdkHome) {
+        String exe = javaExecutable(jdkHome);
+        if (script == null || script.isEmpty() || exe.isEmpty()) {
+            return script;
+        }
+        String home = exe.endsWith("/bin/java")
+                ? exe.substring(0, exe.length() - "/bin/java".length())
+                : exe.replaceFirst("/java$", "");
+        String prefix = "JAVA_HOME='" + quote(home) + "' nohup '" + quote(exe) + "' ";
+        return script.replace("nohup java ", prefix);
+    }
+
+    /**
+     * POSIX 可执行文件路径：补齐 {@code /bin/java}。
+     *
+     * @param jdkHome JDK 安装路径（根目录 / bin 目录 / java 可执行文件均可）
+     * @return 可执行文件路径；入参为空返回空串
+     */
+    @Override
+    public String javaExecutable(String jdkHome) {
+        if (jdkHome == null || jdkHome.isBlank()) {
+            return "";
+        }
+        String home = jdkHome.trim().replaceAll("[/\\\\]+$", "");
+        if (home.endsWith("/java")) {
+            return home;
+        }
+        if (home.endsWith("/bin")) {
+            return home + "/java";
+        }
+        return home + "/bin/java";
+    }
+
     @Override
     public String appArgsLiteral(List<String> cmdArgs) {
         return quotedArgs(cmdArgs);

@@ -77,7 +77,8 @@ public class MinimaxChannelCreditProvider implements ChannelCreditProvider {
             result.put("updatedAt", System.currentTimeMillis());
             return result;
         } catch (Exception e) {
-            result.put("error", "余额查询失败: " + ChannelHttp.truncate(e.getMessage()));
+            // 上游报错里常带 URL / HTML 片段（404 页面），不往界面透；细节留给上游日志
+            result.put("error", "余额查询失败，请稍后重试");
             return result;
         }
     }

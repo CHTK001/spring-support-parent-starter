@@ -3462,7 +3462,7 @@ public class TsharkCaptureService {
                 total += fileBytes(Paths.get(db + "-wal"));
                 total += fileBytes(Paths.get(db + "-shm"));
             } catch (Exception ignored) {
-                  // 路径异常按 0 计：统计失败不该阻断清理
+                // 路径异常按 0 计：统计失败不该阻断清理
             }
         }
         return total;

@@ -3,7 +3,7 @@ package com.chua.starter.account.channel.magpie;
 
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.common.support.channel.ChannelCreditProvider;
-import com.chua.starter.common.support.http.ChannelHttp;
+import com.chua.starter.common.support.channel.MagpieSupport;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -99,7 +99,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     @Override
     public Map<String, Object> creditFor(String vendor, Map<String, Object> credentials) {
-        return creditFor(vendor, null, credentials);
+        return creditFor(vendor, null, null, credentials);
     }
 
     /**
@@ -110,6 +110,18 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     @Override
     public Map<String, Object> creditFor(String vendor, String account, Map<String, Object> credentials) {
+        return creditFor(vendor, null, account, credentials);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>{@code provider} 非空时再按上游实例收窄：一个业务渠道在网关里可能挂了多个
+     * 上游（Trae 国内 / 国际），账号行是按上游展开的，不收窄会让两行都显示整家合计。</p>
+     */
+    @Override
+    public Map<String, Object> creditFor(String vendor, String provider, String account,
+                                         Map<String, Object> credentials) {
         Map<String, Object> result = new LinkedHashMap<>(10);
         String baseUrl = MagpieSupport.baseUrl(credentials);
         String gatewayKey = MagpieSupport.gatewayKey(credentials);
@@ -121,7 +133,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             try {
                 List<Map<String, Object>> adminQuotas = MagpieAdminClient.adminQuotas(credentials, null, null);
                 if (!adminQuotas.isEmpty()) {
-                    return snapshotOf(scoped(adminQuotas, vendor, account), vendor, account);
+                    return snapshotOf(scoped(adminQuotas, vendor, provider, account), vendor, account);
                 }
             } catch (Exception ignored) {
                 // 页面 Key 失效 / 管理面没开：继续走数据面
@@ -132,10 +144,10 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
         try {
             quotas = MagpieAdminClient.quotas(baseUrl, gatewayKey);
         } catch (Exception e) {
-            result.put("error", "读取 Magpie 配额失败: " + ChannelHttp.truncate(e.getMessage()));
+            result.put("error", "余额查询失败，请稍后重试");
             return result;
         }
-        return snapshotOf(scoped(quotas, vendor, account), vendor, account);
+        return snapshotOf(scoped(quotas, vendor, provider, account), vendor, account);
     }
 
     /**
@@ -150,26 +162,35 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      * @param account 上游账号（可空）
      * @return 过滤后的额度卡
      */
-    private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor, String account) {
+    private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor,
+                                                   String provider, String account) {
         if (MagpieSupport.isBlank(vendor) || quotas == null || quotas.isEmpty()) {
             return quotas;
         }
         List<String> wanted = MagpieSupport.providerIdsOf(vendor);
         List<Map<String, Object>> hit = new ArrayList<>(quotas.size());
         for (Map<String, Object> quota : quotas) {
-            String provider = stringOf(quota.get("provider"));
-            if (provider == null) {
+            String quotaProvider = stringOf(quota.get("provider"));
+            if (quotaProvider == null) {
                 continue;
             }
-            boolean providerHit = false;
-            for (String id : wanted) {
-                if (id.equalsIgnoreCase(provider)) {
-                    providerHit = true;
-                    break;
+            if (!MagpieSupport.isBlank(provider)) {
+                // 账号行按上游展开：只留这一个上游实例的卡，否则两行都显示整家合计。
+                // provider 必须是本渠道的候选之一，避免拿别的渠道 id 越界读数。
+                if (!provider.equalsIgnoreCase(quotaProvider) || !containsIgnoreCase(wanted, provider)) {
+                    continue;
                 }
-            }
-            if (!providerHit) {
-                continue;
+            } else {
+                boolean providerHit = false;
+                for (String id : wanted) {
+                    if (id.equalsIgnoreCase(quotaProvider)) {
+                        providerHit = true;
+                        break;
+                    }
+                }
+                if (!providerHit) {
+                    continue;
+                }
             }
             if (!MagpieSupport.isBlank(account)) {
                 String user = stringOf(quota.get("user"));
@@ -197,7 +218,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
         if (!MagpieSupport.isBlank(vendor) && (quotas == null || quotas.isEmpty())) {
             Map<String, Object> result = new LinkedHashMap<>(4);
             String scope = MagpieSupport.isBlank(account) ? vendor : vendor + " / " + account;
-            result.put("error", "网关里没有「" + scope + "」的额度卡（确认该上游已登录，或到网关里补上余额读取）");
+            result.put("error", "「" + scope + "」暂时读不到余额，请稍后重试");
             return result;
         }
         return snapshot(quotas);
@@ -214,12 +235,15 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
     static Map<String, Object> snapshot(List<Map<String, Object>> quotas) {
         Map<String, Object> result = new LinkedHashMap<>(10);
         if (quotas == null || quotas.isEmpty()) {
-            result.put("error", "Magpie 未返回配额卡（确认网关已启动，且 provider 配置了余额或额度读取）");
+            result.put("error", "暂时读不到余额，请稍后重试");
             return result;
         }
 
         List<Map<String, Object>> packages = new ArrayList<>(quotas.size() * 2);
         List<String> errors = new ArrayList<>(2);
+        // 上游只给文案（"0 credits left" / "$0.0064" / "92 魔粒"）而没有数值时，
+        // 用这句原文当卡片主读数，比「额度未知」有用得多。
+        String headlineText = null;
         // 不同上游的额度单位互不相通（Codex 是「请求数窗口」、Claude 是 token、
         // 充值卡是货币），把它们加成一个数会给出错误的余额。这里按「单位 + 币种」
         // 分桶求和，每个桶都通过 {@code units} 交给前端分别展示；缺单位的窗口只
@@ -239,12 +263,15 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             }
             String quotaError = stringOf(quota.get("error"));
             if (!MagpieSupport.isBlank(quotaError)) {
-                errors.add(title + ": " + quotaError);
+                // 上游给的是插件 / 进程级原文（退出码、URL、HTML 片段），不往界面透；
+                // 卡片上只说「这一家读不到」，细节由上游日志承担。
+                errors.add(title);
             }
 
-            Long quotaBalance = parseAmount(stringOf(quota.get("balance")));
-            String balanceUnit = "balance".equalsIgnoreCase(kind) ? UNIT_CURRENCY : UNIT_CREDIT;
+            String rawBalance = stringOf(quota.get("balance"));
+            Long quotaBalance = isPlainAmount(rawBalance) ? parseAmount(rawBalance) : null;
             if (quotaBalance != null) {
+                String balanceUnit = "balance".equalsIgnoreCase(kind) ? UNIT_CURRENCY : UNIT_CREDIT;
                 accumulate(sums, balanceUnit, null, quotaBalance, null);
                 Map<String, Object> row = new LinkedHashMap<>(5);
                 row.put("name", title);
@@ -252,6 +279,24 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
                 row.put("unit", balanceUnit);
                 row.put("kind", kind);
                 packages.add(row);
+            } else if (!MagpieSupport.isBlank(rawBalance)) {
+                // 余额是厂商文案（带币种符号 / 单位词 / 小数），保留原文展示；
+                // 早先按整数解析会把 $0.0064 抹成 0，余额直接变「用光」。
+                Map<String, Object> row = new LinkedHashMap<>(5);
+                row.put("name", title);
+                row.put("display", rawBalance);
+                String balanceCurrency = currencyOfSymbol(rawBalance);
+                if (balanceCurrency != null) {
+                    row.put("unit", UNIT_CURRENCY);
+                    row.put("currency", balanceCurrency);
+                } else if ("balance".equalsIgnoreCase(kind)) {
+                    row.put("unit", UNIT_CURRENCY);
+                }
+                row.put("kind", kind);
+                packages.add(row);
+                if (headlineText == null) {
+                    headlineText = rawBalance;
+                }
             }
 
             long quotaExpires = epochOf(quota.get("until"));
@@ -307,6 +352,10 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
                 String display = stringOf(window.get("display"));
                 if (!MagpieSupport.isBlank(display)) {
                     row.put("display", display);
+                    if (windowRemain == null && headlineText == null) {
+                        // 只有文案没有数值（"0 credits left" 等）：拿它当主读数
+                        headlineText = display;
+                    }
                 }
                 long resetsAt = epochOf(window.get("resetsAt"));
                 if (resetsAt > 0) {
@@ -361,9 +410,12 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
         }
 
         if (!hasRemain && packages.isEmpty()) {
-            result.put("error", "Magpie 配额卡里没有可读的余额字段"
-                    + (errors.isEmpty() ? "" : "（" + String.join("; ", errors) + "）"));
+            result.put("error", "暂时读不到余额，请稍后重试");
             return result;
+        }
+        if (!hasRemain && headlineText != null) {
+            // 数值读不出来但有原文：主读数直接显示上游文案（"0 credits left"）
+            result.put("text", headlineText);
         }
         if (hasRemain) {
             result.put("remain", remainSum);
@@ -390,7 +442,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             result.put("packages", packages);
         }
         if (!errors.isEmpty()) {
-            result.put("warning", String.join("; ", errors));
+            result.put("warning", "「" + String.join("」「", errors) + "」余额读取失败");
         }
         return result;
     }
@@ -456,6 +508,22 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             }
         }
         return new HashSet<>(foundAt.values());
+    }
+
+    /**
+     * 列表里是否存在该值（忽略大小写）。
+     *
+     * @param values 候选值
+     * @param target 目标值
+     * @return 命中返回 true
+     */
+    private static boolean containsIgnoreCase(List<String> values, String target) {
+        for (String value : values) {
+            if (value != null && value.equalsIgnoreCase(target)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -619,7 +687,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      */
     private static String displayName(String provider, String name) {
         if (MagpieSupport.isBlank(provider)) {
-            return MagpieSupport.isBlank(name) ? "Magpie 账号" : name;
+            return MagpieSupport.isBlank(name) ? "账号" : name;
         }
         if (MagpieSupport.isBlank(name) || name.equalsIgnoreCase(provider)) {
             return provider;
@@ -641,6 +709,48 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
             }
         }
         return null;
+    }
+
+    /**
+     * 是否「纯整数金额」。
+     *
+     * <p>卡片级 {@code balance} 常是厂商文案（{@code "$0.0064"}、{@code "92 魔粒"}、
+     * {@code "4.77 credits (long-term 4.77)"}）。这些按整数解析会把余额抹成 0，
+     * 让人以为额度用光；只有纯整数才走数值通道，其余保留原文展示。</p>
+     *
+     * @param value 原始值
+     * @return 纯整数 / 数字类型返回 true
+     */
+    private static boolean isPlainAmount(Object value) {
+        if (value instanceof Number) {
+            return true;
+        }
+        if (!(value instanceof String text) || text.isBlank()) {
+            return false;
+        }
+        return text.trim().replace(",", "").matches("[-+]?\\d+");
+    }
+
+    /**
+     * 从文案里认币种符号（{@code $} / {@code ¥} / {@code €} / {@code £}）。
+     *
+     * @param text 余额原文
+     * @return ISO 币种；不是货币文案返回 {@code null}
+     */
+    private static String currencyOfSymbol(String text) {
+        if (MagpieSupport.isBlank(text)) {
+            return null;
+        }
+        if (text.indexOf('$') >= 0) {
+            return "USD";
+        }
+        if (text.indexOf('¥') >= 0 || text.indexOf('￥') >= 0) {
+            return "CNY";
+        }
+        if (text.indexOf('€') >= 0) {
+            return "EUR";
+        }
+        return text.indexOf('£') >= 0 ? "GBP" : null;
     }
 
     /**

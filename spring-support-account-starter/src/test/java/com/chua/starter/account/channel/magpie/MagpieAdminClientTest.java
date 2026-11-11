@@ -2,6 +2,7 @@
 package com.chua.starter.account.channel.magpie;
 
 import com.chua.starter.common.support.channel.ChannelException;
+import com.chua.starter.common.support.channel.MagpieSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

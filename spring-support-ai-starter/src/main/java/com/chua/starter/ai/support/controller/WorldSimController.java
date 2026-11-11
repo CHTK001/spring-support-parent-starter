@@ -72,7 +72,9 @@ public class WorldSimController {
         return worldSimService.createWorld(
                 body == null ? null : body.get("name"),
                 body == null ? null : body.get("description"),
-                body == null ? null : body.get("era"));
+                body == null ? null : body.get("era"),
+                body == null ? null : body.get("director_model"),
+                body == null ? null : body.get("actor_roles"));
     }
 
     /** 更新世界配置 */

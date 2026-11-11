@@ -196,13 +196,20 @@ public class MsServerProject {
     private String mavenVersion;
 
     /**
-     * 上传时是否自动解压（默认 true；jar 不解压，zip/tar.gz 解压）
-     * <p>模型项目上传模型文件到目录时设为 false，保留原文件结构</p>
+     * JDK 安装路径（可选，留空则用 PATH 上的 java）
+     * <p>同一台主机多套 JDK 并存时，按项目指定启动与构建所用的 java；
+     * 构建期会同时作为 JAVA_HOME 传给 Maven。</p>
+     */
+    private String jdkHome;
+
+    /**
+     * 投放时是否自动解压（默认 true；jar 不解压，zip/tar.gz 解压）
+     * <p>模型项目把模型文件投放到目录时设为 false，保留原文件结构</p>
      */
     private Boolean uploadExtract;
 
     /**
-     * 上传目标目录（相对项目地址，如 models/onnx）
+     * 产物投放目录（相对项目地址，如 models/onnx）
      * <p>模型项目必填；jar 类项目留空则投放到主入口文件名</p>
      */
     private String uploadTargetDir;
@@ -212,11 +219,6 @@ public class MsServerProject {
      * <p>仅 projectType=separated 时使用，控制升级时投放哪些文件</p>
      */
     private String deployType;
-
-    /**
-     * 上传完成后是否自动升级（默认 false：只上传到 uploads 目录，不执行投放/重启）
-     */
-    private Boolean uploadAutoUpgrade;
 
     /**
      * 是否启用定时发布（一次性）

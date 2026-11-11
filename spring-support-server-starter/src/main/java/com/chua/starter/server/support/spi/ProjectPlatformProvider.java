@@ -94,6 +94,44 @@ public interface ProjectPlatformProvider {
     String varsBlock(List<String> envNames, List<String> envValues, List<String> jvmArgs, List<String> cmdArgs);
 
     /**
+     * 按项目配置的 JDK 安装路径改写脚本里的 java 调用点。
+     *
+     * <p>同一台主机多套 JDK 并存时，启动脚本里的 {@code java} 由项目自己决定用哪一套：
+     * 平台实现负责把「裸 java」替换成该平台的绝对路径（含引号与路径分隔符规则），
+     * 调用方不得自行拼接命令。未配置 JDK 路径时原样返回，保持历史行为。</p>
+     *
+     * <p>同时兼容历史脚本：模板早先写的是裸 {@code java}，这里按调用点改写，
+     * 老项目不必重新生成脚本。</p>
+     *
+     * @param script  启动/重启脚本
+     * @param jdkHome JDK 安装路径；空或非法时原样返回
+     * @return 改写后的脚本
+     */
+    default String applyJava(String script, String jdkHome) {
+        return script;
+    }
+
+    /**
+     * 把 JDK 安装路径规范化为「可执行文件」路径（不负责引号与转义）。
+     *
+     * <p>允许用户填 JDK 根目录、{@code bin} 目录或直接指向 java 可执行文件；
+     * 各平台实现补齐自己的分隔符与可执行名。默认实现按 Unix 规则处理。</p>
+     *
+     * @param jdkHome JDK 安装路径
+     * @return 可执行文件路径；入参为空返回空串
+     */
+    default String javaExecutable(String jdkHome) {
+        if (jdkHome == null || jdkHome.isBlank()) {
+            return "";
+        }
+        String home = jdkHome.trim().replaceAll("[/\\\\]+$", "");
+        if (home.endsWith("/bin") || home.endsWith("\\bin")) {
+            return home + "/java";
+        }
+        return home + "/bin/java";
+    }
+
+    /**
      * JVM 参数占位符的展开字面量。
      *
      * @param jvmArgs JVM 参数

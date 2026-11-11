@@ -3517,7 +3517,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 routes = modelClientResolver.mergedRoutes(
                         channelProvider, com.chua.starter.ai.support.chat.ModelClientResolver.ownerScopeOf(channelProvider));
             } catch (Exception e) {
-                log.debug("[Provider] 合并渠道路由失败，退回 extra.routes: {}", e.getMessage());
+                // 必须 WARN：退回 extra.routes 只会给出静态那几条路由（实测 2 条），
+                // 用户在界面上看到的就是「渠道里明明有 80+ 个模型，这里只拉到 2 个」。
+                // 之前打 DEBUG，日志被 INFO 级别吞掉，排查时只能看到结果不对劲，
+                // 看不到「合并路由失败」这个真正原因。
+                log.warn("[Provider] 合并渠道路由失败，已退回 extra.routes（模型清单会明显变少）: {}",
+                        e.toString());
             }
         }
         List<Map<String, Object>> models = new ArrayList<>(8);

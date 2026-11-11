@@ -2,6 +2,7 @@
 package com.chua.starter.account.channel.magpie;
 
 import com.chua.starter.common.support.channel.ChannelException;
+import com.chua.starter.common.support.channel.MagpieSupport;
 import com.chua.starter.common.support.http.ChannelHttp;
 import com.chua.starter.common.support.text.json.Json;
 

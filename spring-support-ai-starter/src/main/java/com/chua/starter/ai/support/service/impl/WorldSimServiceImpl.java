@@ -245,7 +245,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     @Override
-    public SysAiWorld createWorld(String name, String description, String era) {
+    public SysAiWorld createWorld(String name, String description, String era, String directorModel, String actorRoles) {
         if (name == null || name.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "世界名称不能为空");
         }
@@ -255,6 +255,8 @@ public class WorldSimServiceImpl implements WorldSimService {
         w.setDescription(description == null || description.isBlank() ? null : description.trim());
         w.setEra(era == null || era.isBlank() ? "现代" : era.trim());
         w.setWeather("晴");
+        w.setDirectorModel(directorModel);
+        w.setActorRoles(actorRoles);
         w.setTimeLabel("第 1 天 上午");
         w.setTickCount(0);
         w.setStatus(1);
@@ -291,6 +293,14 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
         if (body.get("weather") != null) {
             w.setWeather(String.valueOf(body.get("weather")).trim());
+        }
+        if (body.containsKey("director_model")) {
+            Object v = body.get("director_model");
+            w.setDirectorModel(v == null || "null".equals(String.valueOf(v)) ? null : String.valueOf(v));
+        }
+        if (body.containsKey("actor_roles")) {
+            Object v = body.get("actor_roles");
+            w.setActorRoles(v == null || "null".equals(String.valueOf(v)) ? null : String.valueOf(v));
         }
         if (body.containsKey("timeLabel")) {
             w.setTimeLabel(String.valueOf(body.get("timeLabel")));
@@ -977,6 +987,8 @@ public class WorldSimServiceImpl implements WorldSimService {
         row.put("description", w.getDescription());
         row.put("era", w.getEra());
         row.put("weather", w.getWeather());
+        row.put("directorModel", w.getDirectorModel());
+        row.put("actorRoles", w.getActorRoles());
         row.put("timeLabel", w.getTimeLabel());
         row.put("tickCount", w.getTickCount());
         row.put("status", w.getStatus());

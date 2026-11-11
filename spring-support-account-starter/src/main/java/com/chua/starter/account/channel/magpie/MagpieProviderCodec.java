@@ -3,6 +3,7 @@ package com.chua.starter.account.channel.magpie;
 
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.common.support.channel.ChannelUpstreamCodec;
+import com.chua.starter.common.support.channel.MagpieSupport;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

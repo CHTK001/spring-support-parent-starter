@@ -1,5 +1,5 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
-package com.chua.starter.account.channel.magpie;
+package com.chua.starter.common.support.channel;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -49,6 +49,10 @@ import java.util.Map;
  * （{@code http://127.0.0.1:3430/?k=xxx}）直接粘进「网关地址」：这里会拆出页面 Key，
  * 并把数据面还原成同主机的 {@link #GATEWAY_PORT}。</p>
  *
+ * <p><b>存放位置</b>：本类放在 common，因为 magpie 的地址归一化需被账号模块（渠道鉴权 /
+ * 额度 / 上游管理）与 AI 模块（用量解析、路由）共同使用；两种依赖关系通过 {@code common}
+ * 共享，任何一方都不直接依赖另一方。</p>
+ *
  * @since 4.0.0.53
  * @author CH
  */
@@ -92,37 +96,37 @@ public final class MagpieSupport {
     /**
      * 数据面基址后缀。
      */
-    static final String V1 = "/v1";
+    public static final String V1 = "/v1";
 
     /**
      * 管理面 provider 列表。
      */
-    static final String PROVIDERS_PATH = "/api/providers";
+    public static final String PROVIDERS_PATH = "/api/providers";
 
     /**
      * 管理面 provider 动作（save / delete / detect / models / test）。
      */
-    static final String PROVIDER_ACTION_PATH = "/api/provider/";
+    public static final String PROVIDER_ACTION_PATH = "/api/provider/";
 
     /**
      * 管理面用量 / 签到前缀（{@code /api/usage/workbuddy-checkin} 等）。
      */
-    static final String USAGE_PATH = "/api/usage/";
+    public static final String USAGE_PATH = "/api/usage/";
 
     /**
      * 管理面插件清单 / 插件市场。
      */
-    static final String PLUGINS_PATH = "/api/plugins";
+    public static final String PLUGINS_PATH = "/api/plugins";
 
     /**
      * 管理面插件动作前缀（{@code /api/plugins/add} 等）。
      */
-    static final String PLUGIN_ACTION_PATH = "/api/plugins/";
+    public static final String PLUGIN_ACTION_PATH = "/api/plugins/";
 
     /**
      * 管理面插件登录（{@code POST /api/plugin-signin}）。
      */
-    static final String PLUGIN_SIGNIN_PATH = "/api/plugin-signin";
+    public static final String PLUGIN_SIGNIN_PATH = "/api/plugin-signin";
 
     /**
      * 管理面插件登录的一问（{@code POST /api/plugin-signin/prompt}）。
@@ -130,62 +134,62 @@ public final class MagpieSupport {
      * <p>插件登录前可能先要一个输入（手机号 / 验证码 / 选项），这一问由插件
      * 自己定义；问完才允许发起 {@link #PLUGIN_SIGNIN_PATH}。</p>
      */
-    static final String PLUGIN_SIGNIN_PROMPT_PATH = "/api/plugin-signin/prompt";
+    public static final String PLUGIN_SIGNIN_PROMPT_PATH = "/api/plugin-signin/prompt";
 
     /**
      * 管理面内置 provider 登录（{@code POST /api/signin}）。
      */
-    static final String SIGNIN_PATH = "/api/signin";
+    public static final String SIGNIN_PATH = "/api/signin";
 
     /**
      * 管理面登录会话（{@code GET /api/signin/{id}}，插件登录共用）。
      */
-    static final String SIGNIN_PATH_PREFIX = "/api/signin/";
+    public static final String SIGNIN_PATH_PREFIX = "/api/signin/";
 
     /**
      * 管理面额度卡（{@code GET /api/usage/quotas}，含签到状态与插件账号）。
      */
-    static final String ADMIN_QUOTAS_PATH = "/api/usage/quotas";
+    public static final String ADMIN_QUOTAS_PATH = "/api/usage/quotas";
 
     /**
      * 管理面插件签到（{@code POST /api/usage/plugin-checkin}，逐 provider）。
      */
-    static final String PLUGIN_CHECKIN_PATH = "/api/usage/plugin-checkin";
+    public static final String PLUGIN_CHECKIN_PATH = "/api/usage/plugin-checkin";
 
     /**
      * 读配额端点（{@code /v1/magpie/quotas}）。
      */
-    static final String QUOTAS_PATH = "/v1/magpie/quotas";
+    public static final String QUOTAS_PATH = "/v1/magpie/quotas";
 
     /**
      * 数据面模型清单端点。
      */
-    static final String MODELS_PATH = "/v1/models";
+    public static final String MODELS_PATH = "/v1/models";
 
     /**
-     * 管理面不可用时的统一提示：桌面版默认不开放页面端口。
+     * 管理面不可用时统一提示：桌面版默认不开放页面端口。
      */
-    static final String PAGE_DISABLED_HINT = "Magpie 管理面不可达：桌面版默认不把页面暴露成 HTTP 接口。"
+    public static final String PAGE_DISABLED_HINT = "Magpie 管理面不可达：桌面版默认不把页面暴露成 HTTP 接口。"
             + "请打开 magpie「设置 › 网络与共享 › 浏览器访问」，或用 magpie web / magpie serve --web 启动"
             + "（默认 127.0.0.1:3430），然后在绑定信息里填写页面 Key。";
 
     /**
      * 页面 Key 缺失时的统一提示。
      */
-    static final String PAGE_KEY_MISSING_HINT = "Magpie 管理面需要页面 Key："
+    public static final String PAGE_KEY_MISSING_HINT = "Magpie 管理面需要页面 Key："
             + "把 magpie 启动时打印的链接（http://127.0.0.1:3430/?k=…）整条粘进「网关地址」，"
             + "或在「页面 Key」里填写其中的 k 值。";
 
     /**
      * 页面 Key 被拒时的统一提示。
      */
-    static final String PAGE_KEY_INVALID_HINT = "Magpie 页面 Key 被拒（401/403）："
+    public static final String PAGE_KEY_INVALID_HINT = "Magpie 页面 Key 被拒（401/403）："
             + "magpie 每次启动都会换新 key（除非设置了 MAGPIE_WEB_KEY），请重新复制启动链接里的 k=…";
 
     /**
      * 管理面内置的签到的上游（magpie 的固定端点，不是通用任务接口）。
      */
-    static final List<String> CHECKIN_VENDORS = List.of("workbuddy", "trae", "minimax", "qoder");
+    public static final List<String> CHECKIN_VENDORS = List.of("workbuddy", "trae", "minimax", "qoder");
 
     /**
      * 业务渠道 → magpie provider id 候选（按优先级）。
@@ -194,7 +198,7 @@ public final class MagpieSupport {
      * 前端用它定位左栏与「上游」页签，后端用它判断某渠道是否由网关承载、以及该按哪个
      * provider 过滤额度 / 签到。两张表只允许有一份口径，改这里就要改那里。</p>
      */
-    static final Map<String, List<String>> VENDOR_PROVIDERS = Map.ofEntries(
+    public static final Map<String, List<String>> VENDOR_PROVIDERS = Map.ofEntries(
             // 可移交插件的 vendor：插件接管后 provider id 可能带 -ai 后缀
             Map.entry("workbuddy", List.of("workbuddy-ai", "workbuddy")),
             Map.entry("zcode", List.of("zcode")),
@@ -219,7 +223,7 @@ public final class MagpieSupport {
      * @param channel 业务渠道标识
      * @return provider id 候选；入参为空返回空列表
      */
-    static List<String> providerIdsOf(String channel) {
+    public static List<String> providerIdsOf(String channel) {
         if (isBlank(channel)) {
             return List.of();
         }
@@ -317,7 +321,7 @@ public final class MagpieSupport {
     }
 
     /**
-     * 数据面地址归一化：去空白、剥 {@code /v1} 等数据面尾巴、去尾部斜杠。
+     * 数据面地址归一化：去空白、剥 {@code /v1} 等数据面尾巴、去尾部每秒。
      *
      * @param raw 原始地址
      * @return 根地址；空白时返回 {@link #DEFAULT_BASE_URL}
@@ -480,13 +484,13 @@ public final class MagpieSupport {
     }
 
     /**
-     * 读取首个非空字符串字段。
+     * 从凭据里取首个非空字符串字段，供跨模块凭据解析使用。
      *
      * @param source 源 Map
      * @param keys   候选键
      * @return 值；全空返回 {@code null}
      */
-    static String readString(Map<String, Object> source, String... keys) {
+    public static String readString(Map<String, Object> source, String... keys) {
         if (source == null) {
             return null;
         }
@@ -508,7 +512,7 @@ public final class MagpieSupport {
      * @param value 字符串
      * @return 空或 null 返回 {@code true}
      */
-    static boolean isBlank(String value) {
+    public static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 

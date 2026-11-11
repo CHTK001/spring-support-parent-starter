@@ -74,8 +74,6 @@ public final class DahuaCloudApis {
                     IOT + "/modifyDeviceName", "V1", "device"),
             PlatformApiSpec.global("device.password", "修改设备密码", "POST",
                     IOT + "/modifyDevCode", "V1", "device"),
-            PlatformApiSpec.global("device.channels", "获取设备通道信息", "POST",
-                    IOT + "/getDeviceChannelInfo", "V1", "device"),
 
             // ---------- 国标 GB28181 ----------
             PlatformApiSpec.global("gb.sip", "获取国标设备注册信息", "POST",
