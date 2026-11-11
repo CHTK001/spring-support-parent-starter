@@ -78,6 +78,24 @@ public class ReidStores {
     private static final String LEAF = "reid";
 
     /**
+     * **人脸特征**索引文件名（与 ReID 特征分属两个索引）。
+     *
+     * <p>两套特征来自不同模型，维度可能不同，放在同一索引里会直接写不进去；
+     * 分开之后换 ReID 模型不会影响人脸识别那条链路。</p>
+     */
+    private static final String FACE_INDEX_NAME = "reid-face-index";
+
+    /**
+     * **人脸特征**快照文件名。
+     */
+    private static final String FACE_SNAPSHOT_NAME = "face-index.json";
+
+    /**
+     * **人脸特征**索引所在的子目录名。
+     */
+    private static final String FACE_LEAF = "reid-face";
+
+    /**
      * 底库根目录的系统属性名（缺省为进程工作目录）
      */
     private static final String BASE_DIR_PROPERTY = "reid.store.dir";
@@ -117,6 +135,11 @@ public class ReidStores {
     private final Map<String, AccountReid> accounts = new ConcurrentHashMap<>();
 
     /**
+     * 账号 -> 该账号的**人脸特征**向量库（与重识别向量库分开，各自一套索引与快照）。
+     */
+    private final Map<String, AccountReid> faceAccounts = new ConcurrentHashMap<>();
+
+    /**
      * 全局设置读取器
      */
     private final GlobalSettingReader settingReader;
@@ -139,7 +162,17 @@ public class ReidStores {
      */
     @PreDestroy
     public void shutdown() {
-        for (Map.Entry<String, AccountReid> e : accounts.entrySet()) {
+        shutdownAll(accounts);
+        shutdownAll(faceAccounts);
+    }
+
+    /**
+     * 关闭某一套账号向量库（先补落盘再关）。
+     *
+     * @param stores 账号向量库映射
+     */
+    private void shutdownAll(Map<String, AccountReid> stores) {
+        for (Map.Entry<String, AccountReid> e : stores.entrySet()) {
             try {
                 // 先补一次落盘再关：攒在内存里的待落盘观测不能随进程一起消失
                 e.getValue().flush();
@@ -149,7 +182,7 @@ public class ReidStores {
             try {
                 e.getValue().close();
             } catch (Exception ex) {
-                log.debug("[Reid] 关闭账号 '{}' 重识别向量库失败: {}", e.getKey(), ex.getMessage());
+                log.debug("[Reid] 关闭账号 '{}' 向量库失败: {}", e.getKey(), ex.getMessage());
             }
         }
     }
@@ -171,6 +204,77 @@ public class ReidStores {
     }
 
     /**
+     * 当前账号的**人脸特征**向量存储（与重识别向量存储分开）。
+     *
+     * <p>理由同 {@link #currentVectorStorage}：写入必须与 DB 行原子完成，
+     * 因此这里同样只暴露存储，由 {@link ReidLibraryLinkService#insertDual} 负责两套一起写、
+     * 任一失败双回滚。</p>
+     *
+     * @param group 分组名（空值按默认组）
+     * @return 向量存储；未就绪时返回 {@code null}
+     */
+    public VectorStorage currentFaceVectorStorage(String group) {
+        return faceSt(group).storage();
+    }
+
+    /**
+     * 以**人脸特征**在多个分组里检索底库（供人脸识别 1:N 用）。
+     *
+     * @param groups  分组名列表（空/未指定 = 只查默认组）
+     * @param feature 人脸特征
+     * @param topK    返回条数
+     * @return 命中列表（按相似度降序，已跨组归并）；未就绪时返回空列表
+     */
+    public List<Vector> searchFace(List<String> groups, float[] feature, int topK) {
+        return searchIn(faceAccounts, groups, feature, topK);
+    }
+
+    /**
+     * 记下一条已写入**人脸特征**向量库的条目（供重启后重建索引）。
+     *
+     * @param group   分组名（空值按默认组）
+     * @param id      向量标识
+     * @param feature 人脸特征
+     */
+    public void rememberFace(String group, String id, float[] feature) {
+        if (id == null || feature == null || feature.length == 0) {
+            return;
+        }
+        faceSt(group).remember(id, feature);
+    }
+
+    /**
+     * 删除一条**人脸特征**向量（同时清掉快照里的条目）。
+     *
+     * @param group 分组名（空值按默认组）
+     * @param id    向量标识
+     * @return 是否成功
+     */
+    public boolean removeFace(String group, String id) {
+        return removeIn(faceAccounts, group, id);
+    }
+
+    /**
+     * 清空指定分组的**人脸特征**向量库（与快照）。
+     *
+     * @param group 分组名（空值按默认组）
+     */
+    public void clearFace(String group) {
+        clearIn(faceAccounts, group);
+    }
+
+    /**
+     * 指定分组已入库的**人脸特征**向量数量。
+     *
+     * @param group 分组名（空值按默认组）
+     * @return 数量
+     */
+    public int faceSize(String group) {
+        VectorStorage storage = faceSt(group).storage();
+        return storage == null ? 0 : storage.size();
+    }
+
+    /**
      * 以特征在**多个分组**里检索最相似的观测。
      *
      * <p><b>分组是隔离手段，但检索常要跨组</b>（「在员工库和访客库里一起找」）。
@@ -183,12 +287,26 @@ public class ReidStores {
      * @return 命中列表（按相似度降序，已跨组归并）；向量库未就绪时返回空列表
      */
     public List<Vector> search(List<String> groups, float[] feature, int topK) {
+        return searchIn(accounts, groups, feature, topK);
+    }
+
+    /**
+     * 在某一套账号向量库里跨组检索。
+     *
+     * @param stores  账号向量库映射（ReID 那套或人脸特征那套）
+     * @param groups  分组名列表
+     * @param feature 查询特征
+     * @param topK    返回条数
+     * @return 命中列表（按相似度降序）
+     */
+    private List<Vector> searchIn(Map<String, AccountReid> stores, List<String> groups,
+                                  float[] feature, int topK) {
         if (feature == null || feature.length == 0 || topK <= 0) {
             return List.of();
         }
         List<Vector> merged = new ArrayList<>();
         for (String group : normalizeGroups(groups)) {
-            VectorStorage storage = st(group).storage();
+            VectorStorage storage = st(stores, group).storage();
             if (storage == null) {
                 continue;
             }
@@ -225,15 +343,30 @@ public class ReidStores {
     /**
      * 删除一条向量（同时清掉快照里的条目）。
      *
+     * <p>只删 ReID 特征那一份；人脸特征那份走 {@link #removeFace}。
+     * 业务侧删除底库行时两套都要删（见 {@code AiReidServiceImpl#clear} 与底库删除路径）。</p>
+     *
      * @param group 分组名（空值按默认组）
      * @param id    向量标识
      * @return 是否成功
      */
     public boolean remove(String group, String id) {
+        return removeIn(accounts, group, id);
+    }
+
+    /**
+     * 在某套账号向量库里删除一条向量。
+     *
+     * @param stores 账号向量库映射
+     * @param group  分组名
+     * @param id     向量标识
+     * @return 是否成功
+     */
+    private boolean removeIn(Map<String, AccountReid> stores, String group, String id) {
         if (id == null) {
             return false;
         }
-        AccountReid account = st(group);
+        AccountReid account = st(stores, group);
         VectorStorage storage = account.storage();
         try {
             if (storage != null) {
@@ -244,18 +377,31 @@ public class ReidStores {
             }
             return true;
         } catch (Exception ex) {
-            log.warn("[Reid] 删除重识别向量失败: group={}, id={} -> {}", group, id, ex.getMessage());
+            log.warn("[Reid] 删除向量失败: group={}, id={} -> {}", group, id, ex.getMessage());
             return false;
         }
     }
 
     /**
-     * 清空指定分组的全部向量（与快照）。
+     * 清空指定分组的**两套**向量（ReID 特征 + 人脸特征）与快照。
+     *
+     * <p>两套是同一批底库记录的两个特征值，只清一套会留下「认得出、搜不到」的一半数据。</p>
      *
      * @param group 分组名（空值按默认组）
      */
     public void clear(String group) {
-        AccountReid account = st(group);
+        clearIn(accounts, group);
+        clearIn(faceAccounts, group);
+    }
+
+    /**
+     * 在某套账号向量库里清空一个分组。
+     *
+     * @param stores 账号向量库映射
+     * @param group  分组名
+     */
+    private void clearIn(Map<String, AccountReid> stores, String group) {
+        AccountReid account = st(stores, group);
         try {
             VectorStorage storage = account.storage();
             if (storage != null) {
@@ -264,7 +410,7 @@ public class ReidStores {
             account.snapshot.clear();
             account.persistNow();
         } catch (Exception ex) {
-            log.warn("[Reid] 清空重识别向量库失败: group={} -> {}", group, ex.getMessage());
+            log.warn("[Reid] 清空向量库失败: group={} -> {}", group, ex.getMessage());
         }
     }
 
@@ -314,6 +460,19 @@ public class ReidStores {
         st(group).flush();
     }
 
+    /**
+     * 把当前账号指定分组的**人脸特征**快照强制落盘。
+     *
+     * <p>人脸登记是用户手动触发的低频操作，登记成功就该立刻在磁盘上可见；
+     * 若沿用观测那条 5 秒节流窗口，「入库成功」与 {@code face-index.json} 里
+     * 出现这条之间会有一段对不上，重启窗口内还会凭空丢一条登记。</p>
+     *
+     * @param group 分组名（空值按默认组）
+     */
+    public void flushFace(String group) {
+        faceSt(group).flush();
+    }
+
     // ==================== 内部：账号解析 ====================
 
     /**
@@ -332,9 +491,32 @@ public class ReidStores {
      * @return 账号 + 分组的向量库
      */
     private AccountReid st(String group) {
+        return st(accounts, group);
+    }
+
+    /**
+     * 当前账号指定分组的**人脸特征**向量库（不存在则懒建）。
+     *
+     * @param group 分组名（空值按默认组）
+     * @return 账号 + 分组的向量库
+     */
+    private AccountReid faceSt(String group) {
+        return st(faceAccounts, group);
+    }
+
+    /**
+     * 取某一套账号向量库里某分组的库（不存在则懒建）。
+     *
+     * @param stores 账号向量库映射（ReID 那套或人脸特征那套）
+     * @param group  分组名（空值按默认组）
+     * @return 账号 + 分组的向量库
+     */
+    private AccountReid st(Map<String, AccountReid> stores, String group) {
         String account = AiUserContext.requireUserId();
         String normalized = AiLibraryGroups.normalize(group);
-        return accounts.computeIfAbsent(key(account, normalized), k -> create(account, normalized));
+        boolean face = stores == faceAccounts;
+        return stores.computeIfAbsent(key(account, normalized),
+                k -> create(account, normalized, face));
     }
 
     /**
@@ -353,14 +535,19 @@ public class ReidStores {
     }
 
     /**
-     * 创建一个账号 + 分组的重识别向量库并加载快照。
+     * 创建一个账号 + 分组的向量库并加载快照。
      *
      * @param account 账号标识
      * @param group   已归一化的分组名
+     * @param face    {@code true} 建人脸特征那套（子目录 / 索引 / 快照名都不同）
      * @return 账号向量库
      */
-    private AccountReid create(String account, String group) {
-        AccountReid created = new AccountReid(account, group, accountDir(account, group));
+    private AccountReid create(String account, String group, boolean face) {
+        AccountReid created = new AccountReid(account, group,
+                accountDir(account, group, face ? FACE_LEAF : LEAF),
+                face ? FACE_INDEX_NAME : INDEX_NAME,
+                face ? FACE_SNAPSHOT_NAME : SNAPSHOT_NAME,
+                face);
         created.reload();
         return created;
     }
@@ -375,7 +562,7 @@ public class ReidStores {
     }
 
     /**
-     * 某账号某分组的向量库目录（{@code <根>/<账号>/<分组>/reid}）。
+     * 某账号某分组的向量库目录（{@code <根>/<账号>/<分组>/<leaf>}）。
      *
      * <p>分组进目录而不是进元数据过滤：topK 语义才精确
      * （过滤方案下「取前 K 再筛掉别的组」会返回不足 K 条），
@@ -383,13 +570,14 @@ public class ReidStores {
      *
      * @param account 账号标识
      * @param group   分组名
+     * @param leaf    子目录名（{@code reid} 或 {@code reid-face}）
      * @return 目录
      */
-    private Path accountDir(String account, String group) {
+    private Path accountDir(String account, String group, String leaf) {
         return baseDir()
                 .resolve(sanitize(account))
                 .resolve(AiLibraryGroups.sanitize(group))
-                .resolve(LEAF);
+                .resolve(leaf);
     }
 
     /**
@@ -434,20 +622,31 @@ public class ReidStores {
     /**
      * 构建向量存储（按当前配置）。
      *
+     * <p><b>两套特征的维度来源不同</b>：ReID 索引用 {@code reid_feature_dimension}
+     * （留空回落 {@code feature_dimension}）；人脸索引用 {@code feature_dimension}
+     * （它由人脸特征模型决定，与 ReID 模型无关）。维度传错时 jvector 会拒绝写入，
+     * 表现为「登记成功但检索不到」。</p>
+     *
      * @param indexPath 索引路径（不含扩展名）
+     * @param face      {@code true} 构建人脸特征索引
      * @return 向量存储；构建失败返回 {@code null}
      */
-    private VectorStorage buildStorage(Path indexPath) {
+    private VectorStorage buildStorage(Path indexPath, boolean face) {
         String name = settingReader.getStr(GROUP, "vector_storage");
         if (name == null || name.isBlank()) {
             name = "jvector";
         }
         VectorCompareAlgorithm algorithm = resolveAlgorithm(
                 settingReader.getStr(GROUP, "vector_algorithm"));
-        int dimension = settingReader.getInt(GROUP, "reid_feature_dimension", 0);
-        if (dimension <= 0) {
-            // 留空 = 与 ReID 特征共用人脸特征维度（两套特征走同一维度的常见情形）
+        int dimension;
+        if (face) {
             dimension = settingReader.getInt(GROUP, "feature_dimension", DEFAULT_DIMENSION);
+        } else {
+            dimension = settingReader.getInt(GROUP, "reid_feature_dimension", 0);
+            if (dimension <= 0) {
+                // 留空 = 与 ReID 特征共用人脸特征维度（两套特征走同一维度的常见情形）
+                dimension = settingReader.getInt(GROUP, "feature_dimension", DEFAULT_DIMENSION);
+            }
         }
         Map<String, Object> config = new LinkedHashMap<>(2);
         // jvector **不会自动创建缺失的父目录**：父目录不存在时写入静默失败，
@@ -455,14 +654,14 @@ public class ReidStores {
         try {
             Files.createDirectories(indexPath.toAbsolutePath().getParent());
         } catch (Exception ex) {
-            log.warn("[Reid] 重识别向量索引目录创建失败，索引可能无法落盘: {} -> {}",
+            log.warn("[Reid] 向量索引目录创建失败，索引可能无法落盘: {} -> {}",
                     indexPath.getParent(), ex.getMessage());
         }
         config.put("indexPath", indexPath.toAbsolutePath().toString());
         try {
             return VectorStorageProvider.createDynamic(name, dimension, algorithm, config);
         } catch (Exception ex) {
-            log.warn("[Reid] 构建重识别向量库失败: name={} -> {}", name, ex.getMessage());
+            log.warn("[Reid] 构建向量库失败: name={} -> {}", name, ex.getMessage());
             return null;
         }
     }
@@ -508,6 +707,21 @@ public class ReidStores {
         private final Path dir;
 
         /**
+         * 索引文件名（不含扩展名）
+         */
+        private final String indexName;
+
+        /**
+         * 快照文件名
+         */
+        private final String snapshotName;
+
+        /**
+         * 是否为**人脸特征**那套库（决定维度来源与日志措辞）
+         */
+        private final boolean face;
+
+        /**
          * 快照：id -> 特征向量。向量重建的来源
          */
         private final Map<String, float[]> snapshot = new LinkedHashMap<>();
@@ -528,16 +742,23 @@ public class ReidStores {
         private volatile VectorStorage storage;
 
         /**
-         * Account Reid
-         * @param account 字符串
-         * @param dir 路径
-         * @param group 字符串
-         * @return 返回值
-        */
-        AccountReid(String account, String group, Path dir) {
+         * 构造一套账号+分组的向量库。
+         *
+         * @param account      账号标识
+         * @param group        分组名
+         * @param dir          本套库的目录
+         * @param indexName    索引文件名（不含扩展名）
+         * @param snapshotName 快照文件名
+         * @param face         {@code true} = 人脸特征那套
+         */
+        AccountReid(String account, String group, Path dir,
+                    String indexName, String snapshotName, boolean face) {
             this.account = account;
             this.group = group;
             this.dir = dir;
+            this.indexName = indexName;
+            this.snapshotName = snapshotName;
+            this.face = face;
         }
 
         VectorStorage storage() {
@@ -558,9 +779,9 @@ public class ReidStores {
                 log.warn("[Reid] 账号 '{}' 目录创建失败: {} -> {}", account, dir, ex.getMessage());
             }
             loadSnapshot();
-            storage = buildStorage(dir.resolve(INDEX_NAME));
+            storage = buildStorage(dir.resolve(indexName), face);
             if (storage == null) {
-                log.warn("[Reid] 账号 '{}' 重识别向量库构建失败，重识别检索不可用", account);
+                log.warn("[Reid] 账号 '{}' {}向量库构建失败，检索不可用", account, typeName());
                 return;
             }
             try {
@@ -581,8 +802,8 @@ public class ReidStores {
                             account, e.getKey(), ex.getMessage());
                 }
             }
-            log.info("[Reid] 账号 '{}' 重识别向量库就绪: {}/{} 条（{}）",
-                    account, restored, snapshot.size(), dir.resolve(SNAPSHOT_NAME));
+            log.info("[Reid] 账号 '{}' {}向量库就绪: {}/{} 条（{}）",
+                    account, typeName(), restored, snapshot.size(), dir.resolve(snapshotName));
         }
 
         /**
@@ -635,7 +856,7 @@ public class ReidStores {
          * @throws IllegalStateException 写盘失败
          */
         synchronized void persist() {
-            Path file = dir.resolve(SNAPSHOT_NAME);
+            Path file = dir.resolve(snapshotName);
             try {
                 Files.createDirectories(dir);
                 List<Map<String, Object>> rows = new ArrayList<>(snapshot.size());
@@ -646,12 +867,13 @@ public class ReidStores {
                     rows.add(row);
                 }
                 byte[] raw = objectMapper.writeValueAsBytes(rows);
-                Path tmp = file.resolveSibling(SNAPSHOT_NAME + ".tmp");
+                Path tmp = file.resolveSibling(snapshotName + ".tmp");
                 Files.write(tmp, raw);
                 Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception ex) {
-                log.error("[Reid] 账号 '{}' 重识别快照写入失败: {} -> {}", account, file, ex.getMessage(), ex);
-                throw new IllegalStateException("重识别快照写入失败: " + file, ex);
+                log.error("[Reid] 账号 '{}' {}快照写入失败: {} -> {}",
+                        account, typeName(), file, ex.getMessage(), ex);
+                throw new IllegalStateException(typeName() + "快照写入失败: " + file, ex);
             }
         }
 
@@ -660,7 +882,7 @@ public class ReidStores {
          */
         private void loadSnapshot() {
             snapshot.clear();
-            Path file = dir.resolve(SNAPSHOT_NAME);
+            Path file = dir.resolve(snapshotName);
             if (!Files.isRegularFile(file)) {
                 return;
             }
@@ -677,9 +899,18 @@ public class ReidStores {
                     snapshot.put(id, feature);
                 }
             } catch (Exception ex) {
-                log.warn("[Reid] 账号 '{}' 重识别快照读取失败（按空库继续）: {} -> {}",
-                        account, file, ex.getMessage());
+                log.warn("[Reid] 账号 '{}' {}快照读取失败（按空库继续）: {} -> {}",
+                        account, typeName(), file, ex.getMessage());
             }
+        }
+
+        /**
+         * 日志用的人类可读名称。
+         *
+         * @return 名称
+         */
+        private String typeName() {
+            return face ? "人脸特征" : "重识别";
         }
 
         /**

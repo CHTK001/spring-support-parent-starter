@@ -286,18 +286,45 @@ public class FileSystemAutoConfiguration {
     static class EmbeddedServerConfiguration {
 
           /**
+           * 远程预览票据解析器的 bean 名（可选）。
+           *
+           * <p>持有 SSH 凭据的宿主侧（server-starter 的 SFTP 服务）注册这个 bean，
+           * 把「主机 + 路径」签成短时票据；文件存储这里只按名字取，不反向依赖宿主模块。
+           * 缺失时 {@code {path-prefix}/rt/**} 返回 403，其余路径行为不变。</p>
+           */
+        static final String REMOTE_PREVIEW_RESOLVER_BEAN = "fileStorageRemotePreviewResolver";
+
+          /**
            * 注册内置文件服务器过滤器：{@code {path-prefix}/*}。
            *
-           * @param properties 文件服务器配置
-           * @param template   文件存储模板
+           * @param properties         文件服务器配置
+           * @param template           文件存储模板
+           * @param applicationContext 应用上下文（按名取远程预览票据解析器）
            * @return 过滤器注册
            */
         @Bean
         @ConditionalOnProperty(prefix = FileStorageServerProperties.PRE, name = "mode",
                 havingValue = "embedded", matchIfMissing = true)
         public FilterRegistrationBean<FileStorageEmbeddedFilter> fileStorageEmbeddedFilter(
-                FileStorageServerProperties properties, FileStorageTemplate template) {
+                FileStorageServerProperties properties, FileStorageTemplate template,
+                ApplicationContext applicationContext) {
             FileStorageEmbeddedFilter filter = new FileStorageEmbeddedFilter(properties, template);
+            filter.setRemotePreviewResolver(token -> {
+                Object bean;
+                try {
+                    bean = applicationContext.getBean(REMOTE_PREVIEW_RESOLVER_BEAN);
+                } catch (org.springframework.beans.BeansException e) {
+                      // 宿主没装 SFTP 预览：功能关闭，不是错误
+                    return null;
+                }
+                if (!(bean instanceof java.util.function.Function<?, ?> function)) {
+                    return null;
+                }
+                @SuppressWarnings("unchecked")
+                java.util.function.Function<String, java.util.Map<String, Object>> resolver =
+                        (java.util.function.Function<String, java.util.Map<String, Object>>) function;
+                return resolver.apply(token);
+            });
             String prefix = properties.normalizedPathPrefix();
             FilterRegistrationBean<FileStorageEmbeddedFilter> registration =
                     new FilterRegistrationBean<>(filter);

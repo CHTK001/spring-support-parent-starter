@@ -192,6 +192,9 @@ public class MessageTemplateService {
     /**
      * 删除模板。
      *
+     * <p>若删掉的是该种类的默认模板，删除后按排序号把同种类下一条启用模板
+     * 顶为新默认，避免收信渲染因为「没有默认模板」而静默退回原文。</p>
+     *
      * @param templateId 模板标识
      * @return 是否删除成功
      */
@@ -200,9 +203,35 @@ public class MessageTemplateService {
         if (templateId == null || templateId.isBlank()) {
             return false;
         }
+        SysAiChannelMessageTemplate target = mapper.selectById(templateId);
         int removed = mapper.deleteById(templateId);
+        if (removed > 0 && target != null && Boolean.TRUE.equals(target.getTemplateDefault())) {
+            promoteNextDefault(target.getTemplateKind());
+        }
         invalidateCache();
         return removed > 0;
+    }
+
+    /**
+     * 默认模板被删除后补位：取同种类下排序最靠前的启用模板设为默认。
+     *
+     * @param kind 种类
+     */
+    private void promoteNextDefault(String kind) {
+        List<SysAiChannelMessageTemplate> candidates = mapper.selectList(
+                Wrappers.<SysAiChannelMessageTemplate>lambdaQuery()
+                        .eq(SysAiChannelMessageTemplate::getTemplateKind, kind)
+                        .eq(SysAiChannelMessageTemplate::getTemplateEnabled, true)
+                        .orderByAsc(SysAiChannelMessageTemplate::getTemplateSortOrder)
+                        .orderByDesc(SysAiChannelMessageTemplate::getTemplateUpdatedAt));
+        if (candidates == null || candidates.isEmpty()) {
+            return;
+        }
+        SysAiChannelMessageTemplate promoted = candidates.get(0);
+        promoted.setTemplateDefault(true);
+        promoted.setTemplateUpdatedAt(System.currentTimeMillis());
+        mapper.updateById(promoted);
+        log.info("[channel-template] 默认模板已删除, 自动补位 kind={} templateCode={}", kind, promoted.getTemplateCode());
     }
 
     /**

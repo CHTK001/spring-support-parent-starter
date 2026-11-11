@@ -154,7 +154,11 @@ public class DbTableCopyService {
             // ---- 2. 检查并创建目标表 ----
             checkCancelled(taskId);
             taskRegistry.startStep(taskId, STEP_CREATE, "检查目标表是否同名");
-            boolean exists = DbImporter.tableExists(target, targetTable);
+            // 目标表重名判定必须锁在目标库内：{@code DbImporter.tableExists} 的
+            // 兜底 scope 是 (null, null)，MySQL 驱动在 catalog 为空时会把**所有库**的
+            // 同名表都算进来 —— 跨库复制（目标表名与源表同名，正好是最常见的用法）
+            // 会被误判成「目标已存在」而直接失败。
+            boolean exists = tableExistsInDatabase(target, targetDatabase, targetTable);
             if (exists && !request.overwriteOrDefault()) {
                 throw new IllegalStateException("目标表 " + targetLabel + " 已存在；如需覆盖请重新勾选「覆盖同名表」");
             }
@@ -511,6 +515,38 @@ public class DbTableCopyService {
     private static void execute(Connection conn, String sql) throws SQLException {
         try (Statement st = conn.createStatement()) {
             st.execute(sql);
+        }
+    }
+
+    /**
+     * 目标库内是否已有同名表。
+     *
+     * <p>只查 {@code information_schema} 且库名精确限定，不用 JDBC 元数据的多级兜底
+     * —— 那条兜底在 catalog 为空时会跨库命中同名表，把「源库有这张表」误当成
+     * 「目标库已有目标表」。</p>
+     *
+     * <p>MySQL 的小写表名策略取决于 {@code lower_case_table_names}：Windows 上服务端
+     * 存的就是小写，Linux 上大小写敏感。用 {@code LOWER()} 比较，两边都能命中同名的表。</p>
+     *
+     * @param conn     目标连接
+     * @param database 目标库，可为空（回落到连接当前库）
+     * @param table    目标表名
+     * @return true=目标库内已有同名表
+     * @throws SQLException 查询失败
+     */
+    private static boolean tableExistsInDatabase(Connection conn, String database, String table) throws SQLException {
+        String schema = (database == null || database.isBlank()) ? conn.getCatalog() : database;
+        if (schema == null || schema.isBlank()) {
+            return DbImporter.tableExists(conn, table);
+        }
+        String sql = "SELECT 1 FROM information_schema.tables"
+                + " WHERE table_schema = ? AND LOWER(table_name) = LOWER(?) LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, schema);
+            ps.setString(2, table);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 

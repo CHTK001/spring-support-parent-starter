@@ -369,29 +369,39 @@ public record DeviceCapabilityMatrix(
     /**
      * 海康云曜能力矩阵。
      *
-     * <p>会话实现现状：{@code HikvisionCloudYaoSession} 实现了
-     * {@code getLiveUrl / getPlaybackUrl / ptzControl / remoteUnlock} 四个方法，
-     * 因此只有 MEDIA / RECORD / PTZ / ACCESS 标为已实现；
-     * 抓图、事件、组织虽有官方接口（9 / 3 / 4 条），会话层未实现，标 TODO。</p>
+     * <p>会话实现现状（{@code HikvisionCloudYaoSession}，全部按 help.hikyun.com 官方字段落地）：</p>
+     * <ul>
+     *   <li>DEVICE：{@code v2/global/device/page}（条件数组包体）</li>
+     *   <li>CHANNEL：{@code v1/global/v1/device/camera/list}</li>
+     *   <li>CAPTURE：{@code v1/global/monitor/capture}（data 是图片 URL，二次下载）</li>
+     *   <li>MEDIA / RECORD：{@code v1/global/live/address/get/by/deviceSerial}（type 1/2）</li>
+     *   <li>PTZ / 预置位：{@code v1/global/device/ptz}、{@code preset/add|move|clear}
+     *       （无预置位查询接口，{@code listPresets} 显式抛异常）</li>
+     *   <li>ORG / ORG_WRITE：{@code fdcs/v1/personOrg/page|add|update|batchDelete}</li>
+     *   <li>PERSON / PERSON_WRITE：{@code fdcs/v1/person/page|add|update|delete}</li>
+     *   <li>ACCESS_WRITE / ACCESS：云曜无远程开门接口，门禁点只有路径没有字段文档 → 不支持</li>
+     *   <li>EVENT：无事件拉取接口（平台侧推送）→ 不支持</li>
+     *   <li>DEVICE_WRITE：{@code v2/global/device/ezviz/save|update|delete}</li>
+     * </ul>
      *
      * @return 能力矩阵
      */
     static DeviceCapabilityMatrix hikvisionCloudYao() {
         return builder("hikvision.cloud-yao", "海康云曜")
                 .yes(DeviceCapability.DEVICE, 102)
-                .unverified(DeviceCapability.MEDIA, 74, "getLiveUrl 已实现，账号下无设备未验证")
-                .unverified(DeviceCapability.RECORD, 7, "getPlaybackUrl 已实现，无设备未验证")
-                .unverified(DeviceCapability.PTZ, 13, "ptzControl 已实现，无设备未验证")
-                .unverified(DeviceCapability.ACCESS, 5, "remoteUnlock 已实现，无门禁设备未验证")
-                .todo(DeviceCapability.CHANNEL, 20, "会话层无通道列表方法")
-                .todo(DeviceCapability.CAPTURE, 9, "抓图接口待实现")
-                .todo(DeviceCapability.EVENT, 3, "事件订阅接口待实现")
-                .todo(DeviceCapability.ORG, 4, "组织同步接口待实现")
-                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改接口待实现")
-                .todo(DeviceCapability.DEVICE_WRITE, 4, "设备增删改接口待实现")
-                .todo(DeviceCapability.PERSON, 3, "人员接口待实现")
-                .todo(DeviceCapability.PERSON_WRITE, 3, "人员增删改接口待实现")
-                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改接口待实现")
+                .unverified(DeviceCapability.MEDIA, 74, "getLiveUrl(type=1) 已按官方 live/address 实现，账号下无设备未验证")
+                .unverified(DeviceCapability.RECORD, 7, "getPlaybackUrl(type=2, rtmp/ezopen/flv) 已实现，无设备未验证")
+                .unverified(DeviceCapability.PTZ, 13, "ptzControl(direction/speed/type) 与 preset/add|move|clear 已实现，无设备未验证")
+                .no(DeviceCapability.ACCESS, "云曜 artemis 无远程开门接口；门禁点 acspoint/search 只有路径缺字段文档")
+                .unverified(DeviceCapability.CHANNEL, 20, "listChannels 走官方 v1/global/v1/device/camera/list，无设备未验证")
+                .unverified(DeviceCapability.CAPTURE, 9, "capture 走官方 monitor/capture 取 URL 后二次下载，无设备未验证")
+                .no(DeviceCapability.EVENT, "云曜无事件拉取接口，事件由平台侧推送")
+                .unverified(DeviceCapability.ORG, 4, "fetchOrganizations 走官方 fdcs/v1/personOrg/page，无账号数据未验证")
+                .unverified(DeviceCapability.ORG_WRITE, 3, "personOrg/add|update|batchDelete 已实现，无账号数据未验证")
+                .unverified(DeviceCapability.DEVICE_WRITE, 4, "addDevice/updateDevice/removeDevice 走官方 v2/global/device/ezviz/save|update|delete，无设备未验证")
+                .unverified(DeviceCapability.PERSON, 3, "fetchPersons 走官方 fdcs/v1/person/page，无账号数据未验证")
+                .unverified(DeviceCapability.PERSON_WRITE, 3, "person/add|update|delete 已实现，无账号数据未验证")
+                .no(DeviceCapability.ACCESS_WRITE, "云曜无门禁点/开门写接口")
                 .no(DeviceCapability.PARKING, "云曜开放平台未提供停车场业务接口")
                 .build();
     }
@@ -478,7 +488,8 @@ public record DeviceCapabilityMatrix(
                         "已实现 ptz start/stop 与预置位增删调用；真机离线待复验")
                 .unverified(DeviceCapability.ACCESS_WRITE, 6,
                         "已实现智能锁开锁 /api/lapp/building/device/smartlock/unlock；账号下无锁可验")
-                .todo(DeviceCapability.DEVICE_WRITE, 4, "萤石设备增删改接口待接入")
+                .unverified(DeviceCapability.DEVICE_WRITE, 4,
+                        "addDevice/deleteDevice/renameDevice 走官方 /api/lapp/device/add|delete|name/update；真机离线未验证")
                 .no(DeviceCapability.ORG, "萤石开放平台无组织架构接口（392 条中组织相关为 0）")
                 .no(DeviceCapability.ORG_WRITE, "萤石开放平台无组织架构接口")
                 .no(DeviceCapability.PARKING, "萤石无停车场业务")

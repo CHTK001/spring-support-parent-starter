@@ -6,6 +6,7 @@ import com.chua.starter.server.support.model.vo.SftpContentVO;
 import com.chua.starter.server.support.model.vo.SftpEntryVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -61,6 +62,21 @@ public interface SftpService {
      * @return 结果（含远端完整路径）
      */
     ReturnResult<String> upload(Long hostId, Long identityId, String directory, MultipartFile file);
+
+    /**
+     * 上传平台本地文件到指定目录。
+     *
+     * <p>与 {@link #upload(Long, Long, String, MultipartFile)} 的区别是不经过 HTTP multipart，
+     * 供「平台自己下载/选取 Agent 构件后投放」这类服务端到服务端的搬运使用。</p>
+     *
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
+     * @param directory  目标目录（不存在时自动递归创建）
+     * @param localFile  平台本地文件
+     * @param fileName   远端文件名（空时取本地文件名）
+     * @return 结果（含远端完整路径）
+     */
+    ReturnResult<String> uploadLocal(Long hostId, Long identityId, String directory, Path localFile, String fileName);
 
     /**
      * 下载远端文件到本地临时文件

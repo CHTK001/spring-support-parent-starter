@@ -100,6 +100,7 @@ public class ArthasServiceImpl implements ArthasService {
         status.put("javaProject", isJavaProject(project.getProjectType()));
         status.put("arthasInjected", isArthasInJvmArgs(project.getJvmArgs()));
         status.put("jvmArgs", project.getJvmArgs());
+        status.put("arthasJarPath", defaultArthasJarPath(project));
 
           // 查询运行时 Arthas 状态（通过 SSH 检查 telnet 端口是否监听）
         try {
@@ -156,9 +157,7 @@ public class ArthasServiceImpl implements ArthasService {
           // arthas jar 路径优先级：请求参数 > 项目路径推导 > 默认值
         String jarPath = arthasJarPath != null && !arthasJarPath.trim().isEmpty()
                 ? arthasJarPath
-                : (project.getProjectPath() != null && !project.getProjectPath().isEmpty()
-                    ? project.getProjectPath() + "/lib/arthas/arthas-boot.jar"
-                    : "/opt/arthas/arthas-boot.jar");
+                : defaultArthasJarPath(project);
 
           // 先查 PID
         String pidCmd = buildPidQueryCommand(ctx);
@@ -181,7 +180,8 @@ public class ArthasServiceImpl implements ArthasService {
         if (jarLogs.isOk() && jarLogs.getData() != null && !jarLogs.getData().isEmpty()) {
             String output = jarLogs.getData().get(0).getMsExecLogOutput();
             if (output != null && output.contains("MISSING")) {
-                return ReturnResult.error("arthas-boot.jar 不存在: " + jarPath + "，请先在目标主机上传 Arthas 安装包");
+                return ReturnResult.error("arthas-boot.jar 不存在: " + jarPath
+                        + "，可点「获取 arthas 构件」由平台下载/选取后自动投放，或手动上传");
             }
         }
 
@@ -306,6 +306,19 @@ public class ArthasServiceImpl implements ArthasService {
         ctx.osType = HostPlatforms.normalize(host.getServerHostOsType());
         ctx.windows = HostPlatforms.WINDOWS.equals(ctx.osType);
         return ctx;
+    }
+
+      /**
+       * 默认 arthas-boot.jar 路径：优先项目目录，其次 /opt/arthas。
+       *
+       * @param project 项目
+       * @return 目标主机上的绝对路径
+       */
+    private String defaultArthasJarPath(MsServerProject project) {
+        String projectPath = project.getProjectPath();
+        return projectPath != null && !projectPath.isEmpty()
+                ? projectPath + "/lib/arthas/arthas-boot.jar"
+                : "/opt/arthas/arthas-boot.jar";
     }
 
       /**

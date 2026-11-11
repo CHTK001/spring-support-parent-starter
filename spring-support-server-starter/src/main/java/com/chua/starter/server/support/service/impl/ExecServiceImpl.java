@@ -405,8 +405,23 @@ public class ExecServiceImpl implements ExecService {
                 || text.contains("new-item")
                 || text.contains("remove-item")
                 || text.contains("start-process")
-                || text.contains("function ");
+                || text.contains("function ")
+                  // 「动词-名词」是 PowerShell 专有写法（cmd 的内建命令用 /开关，不存在 Verb-Noun）。
+                  // 少了这条判定，只含 cmdlet、不含 $ / Get- 的命令（实测 Copy-Item 投放升级包）
+                  // 会被交给 cmd.exe 执行，报「'Copy-Item' 不是内部或外部命令」且退出码非 0，
+                  // 表现成「投放失败但看不出原因」，整批升级于是全军覆没。
+                || PS_CMDLET.matcher(text).find();
     }
+
+    /**
+     * PowerShell「动词-名词」cmdlet 识别：只认 PowerShell 常见动词，避免把
+     * {@code git-flow}、{@code docker-compose} 这类带连字符的普通命令误判成脚本。
+     */
+    private static final java.util.regex.Pattern PS_CMDLET = java.util.regex.Pattern.compile(
+            "\\b(get|set|new|add|remove|clear|copy|move|rename|test|write|read|out|select|where"
+                      + "|foreach|invoke|start|stop|restart|measure|sort|group|join|split|convert|export"
+                      + "|import|enable|disable|register|unregister|update|install|uninstall|save"
+                      + "|compare|resolve|wait|watch|show|hide|expand|compress|backup|restore|reset)-[a-z][a-z0-9]*\\b");
 
     /**
      * 单主机执行：命令走 SSH 执行，文件走 SFTP 上传

@@ -1179,6 +1179,11 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
                     entity.getSource(),
                     entity.getLogo()));
         }
+        // 兜底：ref 指着的行已经不在了（历史脏数据），装配结果为空就按空图返回，
+        // 否则 placeholder=false + 0 节点会让前端落进「当前范围没有关系」，与真实的空图矛盾
+        if (nodes.isEmpty() && edges.isEmpty()) {
+            return KnowledgeGraphViewVO.empty();
+        }
         return new KnowledgeGraphViewVO(nodes, edges, nodes.size(), edges.size(), false);
     }
 
@@ -1393,10 +1398,30 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         // 2) 删以它们为端点的关系：手工删了「关羽」，指向关羽的边必须一起走，
         //    否则会留下指向不存在节点的悬空边（pruneOrphans 只回收没被任何 ref 引用的关系，
         //    而这些边自己可能还挂在别的知识点上）
+        List<SysAiKnowledgeGraphRelation> cascadedRelations = graphRelationMapper.selectList(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
+                        .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId)
+                        .select(SysAiKnowledgeGraphRelation::getUid)
+                        .and(w -> w.in(SysAiKnowledgeGraphRelation::getSourceEntityUid, targets)
+                                .or().in(SysAiKnowledgeGraphRelation::getTargetEntityUid, targets)));
         graphRelationMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
                 .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId)
                 .and(w -> w.in(SysAiKnowledgeGraphRelation::getSourceEntityUid, targets)
                         .or().in(SysAiKnowledgeGraphRelation::getTargetEntityUid, targets)));
+        // 2b) 级联删掉的边，它们自己的 ref 必须同步清掉：ref 还在时 referencedUids(relation)
+        //     仍把不存在的边算作「存活」，buildView 于是返回 placeholder=false + 0 节点，
+        //     页面就落进「当前范围没有关系」而不是真正的空图（且 UI 已无行可删）
+        List<String> cascadedRelationUids = cascadedRelations.stream()
+                .map(SysAiKnowledgeGraphRelation::getUid)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+        if (!cascadedRelationUids.isEmpty()) {
+            graphRefMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
+                    .eq(SysAiKnowledgeGraphRef::getLibraryId, libraryId)
+                    .eq(SysAiKnowledgeGraphRef::getTargetType, TARGET_RELATION)
+                    .in(SysAiKnowledgeGraphRef::getTargetUid, cascadedRelationUids));
+        }
         // 3) 最后删实体本身
         int removed = graphEntityMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
                 .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)

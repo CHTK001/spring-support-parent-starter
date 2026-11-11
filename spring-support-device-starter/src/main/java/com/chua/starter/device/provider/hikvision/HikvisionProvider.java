@@ -324,15 +324,30 @@ public class HikvisionProvider implements DeviceProvider {
     /**
      * 按凭据在厂商侧新增或更新人员。
      *
-     * <p>萤石是当前唯一支持人员写入的海康子平台：{@code externalId} 为空走
-     * {@code /api/v3/device/company/member/add}，非空走 {@code .../update}。</p>
+     * <p>萤石：{@code externalId} 为空走
+     * {@code /api/v3/device/company/member/add}，非空走 {@code .../update}（本入口只做新增）。</p>
+     * <p>云曜：{@code externalId} 为空走官方 {@code fdcs/v1/person/add}，
+     * 非空走 {@code fdcs/v1/person/update}（{@code isFullyUpdate=0} 增量更新）。</p>
      *
-     * @param info   连接信息（平台须为 ezviz，含 appKey/appSecret）
+     * @param info   连接信息（平台为 ezviz 或 cloud-yao，含 appKey/appSecret）
      * @param person 人员条目
      * @return 厂商侧人员标识；不支持或失败为 null
      */
     public String upsertPerson(DeviceConnectInfo info, DevicePerson person) {
-        if (info == null || !PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+        if (info == null) {
+            return null;
+        }
+        if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+            HikvisionCloudYaoSession yao = new HikvisionCloudYaoSession(info);
+            if (person == null) {
+                throw new IllegalArgumentException("人员不能为空");
+            }
+            if (person.externalId() == null || person.externalId().isBlank()) {
+                return yao.addPerson(person);
+            }
+            return yao.updatePerson(person) ? person.externalId() : null;
+        }
+        if (!PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
             return null;
         }
         EzvizSession ezviz = new EzvizSession(info);
@@ -344,17 +359,141 @@ public class HikvisionProvider implements DeviceProvider {
     }
 
     /**
-     * 按凭据在厂商侧删除人员（萤石）。
+     * 按凭据在厂商侧删除人员（萤石、云曜）。
      *
-     * @param info     连接信息（平台须为 ezviz）
+     * @param info     连接信息（平台为 ezviz 或 cloud-yao）
      * @param personId 厂商侧人员编号
      * @return 是否删除成功
      */
     public boolean removePerson(DeviceConnectInfo info, String personId) {
-        if (info == null || !PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+        if (info == null) {
+            return false;
+        }
+        if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionCloudYaoSession(info).removePerson(personId);
+        }
+        if (!PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
             return false;
         }
         return new EzvizSession(info).deleteCompanyMember(personId);
+    }
+
+    /**
+     * 按凭据在厂商侧新增或更新设备（云曜 / 萤石）。
+     *
+     * <ul>
+     *   <li><b>云曜</b>：{@code externalId} 与 {@code serial} 都为空时无法定位设备；
+     *       平台侧不存在该序列号时走 {@code v2/global/device/ezviz/save}（添加后由平台自动激活），
+     *       已存在时走 {@code v2/global/device/update}。</li>
+     *   <li><b>萤石</b>：新增走 {@code /api/lapp/device/add}（序列号 + 机身验证码，
+     *       验证码从连接信息 {@code extra["validateCode"]} 取），已存在时走
+     *       {@code /api/lapp/device/name/update} 改名。</li>
+     * </ul>
+     *
+     * @param info   连接信息（平台为 cloud-yao / ezviz）
+     * @param device 设备条目
+     * @param exists 平台侧是否已存在（由调用方按同步上下文判定）
+     * @return 是否成功
+     */
+    public boolean upsertRemote(DeviceConnectInfo info, VendorDevice device, boolean exists) {
+        if (info == null) {
+            return false;
+        }
+        if (PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+            EzvizSession ezviz = new EzvizSession(info);
+            String serial = device.serial() != null && !device.serial().isBlank()
+                    ? device.serial() : device.externalId();
+            if (serial == null || serial.isBlank()) {
+                throw new IllegalArgumentException("萤石设备写入需要设备序列号");
+            }
+            if (exists) {
+                return ezviz.renameDevice(serial, device.name());
+            }
+            return ezviz.addDevice(serial, validateCodeOf(info)) != null;
+        }
+        if (!PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        HikvisionCloudYaoSession yao = new HikvisionCloudYaoSession(info);
+        if (device == null) {
+            throw new IllegalArgumentException("设备不能为空");
+        }
+        if (exists) {
+            return yao.updateDevice(device, null);
+        }
+        return yao.addDevice(device, null, null, null, null) != null;
+    }
+
+    /**
+     * 从凭据扩展参数里取设备验证码。
+     *
+     * <p>萤石添加设备必须带机身上的六位大写验证码，平台侧没有从序列号反查验证码的接口，
+     * 因此只能由台账侧提供。</p>
+     *
+     * @param info 连接信息
+     * @return 验证码；缺失返回 {@code null}
+     */
+    private static String validateCodeOf(DeviceConnectInfo info) {
+        Object code = info.extra() == null ? null : info.extra().get("validateCode");
+        return code instanceof String s ? s : null;
+    }
+
+    /**
+     * 按凭据在厂商侧删除设备（云曜 {@code v2/global/device/delete} / 萤石 {@code /api/lapp/device/delete}）。
+     *
+     * @param info      连接信息（平台为 cloud-yao / ezviz）
+     * @param externalId 厂商侧设备序列号
+     * @return 是否删除成功
+     */
+    public boolean removeRemote(DeviceConnectInfo info, String externalId) {
+        if (info == null) {
+            return false;
+        }
+        if (PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
+            return new EzvizSession(info).deleteDevice(externalId);
+        }
+        if (!PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        return new HikvisionCloudYaoSession(info).removeDevice(externalId);
+    }
+
+    /**
+     * 按凭据在厂商侧新增或更新组织（当前仅云曜）。
+     *
+     * <p>云曜官方 {@code personOrg/add} 要求 {@code parentOrgId} 必填，根节点由平台自动生成；
+     * {@code orgId} 非空时走 {@code personOrg/update}。</p>
+     *
+     * @param info 连接信息（平台为 cloud-yao）
+     * @param node 组织节点
+     * @return 厂商侧组织标识；不支持或失败为 null
+     */
+    public String upsertOrganization(DeviceConnectInfo info, OrganizationNode node) {
+        if (info == null || !PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+            return null;
+        }
+        HikvisionCloudYaoSession yao = new HikvisionCloudYaoSession(info);
+        if (node == null) {
+            throw new IllegalArgumentException("组织节点不能为空");
+        }
+        if (node.orgId() == null || node.orgId().isBlank()) {
+            return yao.addOrganization(node);
+        }
+        return yao.updateOrganization(node) ? node.orgId() : null;
+    }
+
+    /**
+     * 按凭据在厂商侧删除组织（当前仅云曜 {@code personOrg/batchDelete}）。
+     *
+     * @param info  连接信息（平台为 cloud-yao）
+     * @param orgId 厂商侧组织标识
+     * @return 是否删除成功
+     */
+    public boolean removeOrganization(DeviceConnectInfo info, String orgId) {
+        if (info == null || !PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+            return false;
+        }
+        return new HikvisionCloudYaoSession(info).removeOrganization(orgId);
     }
 
     /**

@@ -193,23 +193,25 @@ public class AiReidServiceImpl implements AiReidService {
             //   ≥ reid_threshold 且 < face_threshold → 重识别（跨帧轨迹）
             //   < reid_threshold                → 不合规：明确提示，不落库、不计轨迹
             float confidence = observation.box().confidence();
-            String decision;
-            String reason = null;
-            if (confidence >= clientManager.faceThreshold()) {
-                decision = MatchType.FACE.name();
-            } else if (confidence >= clientManager.reidThreshold()) {
-                decision = MatchType.REID.name();
-            } else {
-                decision = "INVALID";
-                reason = "图片不合规：人脸质量低于重识别阈值";
+            String decision = decide(confidence);
+            boolean invalidFace = MatchType.INVALID.name().equals(decision);
+            String reason = invalidFace ? REASON_INVALID : null;
+            // FACE 档要回答「这是谁」：把这张脸送一次 1:N，命中的姓名一并带出。
+            // REID 档只回答「去过哪」，不查人脸库；INVALID 档连结果行都不产生。
+            String faceName = null;
+            if (MatchType.FACE.name().equals(decision)) {
+                FaceIdentity identity = identifyFace(account, List.of(resolvedGroup),
+                        imageData, observation.box());
+                if (identity != null && identity.hit()) {
+                    faceName = identity.name();
+                }
             }
-            boolean invalidFace = "INVALID".equals(decision);
             // 叠框需要每张脸的框与归属轨迹，逐条带出（前端据此在图上画框并标注轨迹）
             faces.add(new FaceBox(
                     observation.box().x(), observation.box().y(),
                     observation.box().width(), observation.box().height(),
                     trackId, observation.score(), observation.matched(),
-                    confidence, decision, null, reason));
+                    confidence, decision, faceName, reason));
             if (invalidFace) {
                 // 不合规不是「结果行」：不落库、不计入轨迹，也不参与命中/新建统计
                 invalidFaces++;
@@ -233,7 +235,7 @@ public class AiReidServiceImpl implements AiReidService {
             }
             // 每次观测都落库：底库是轨迹的唯一来源，漏写就等于轨迹少一段
             persistObservation(account, resolvedGroup, trackId, resolvedCamera, resolvedSource,
-                    imageData, observation, lat, lng);
+                    imageData, observation, decision, lat, lng);
         }
         log.info("[Reid] 账号 '{}' 分组 '{}' 摄像头 '{}' 观测到 {} 张脸（命中 {} / 新建 {}；清晰走识别 {} / 模糊走重识别 {} / 不合规 {}）",
                 account, resolvedGroup, resolvedCamera, result.observations().size(),
@@ -249,10 +251,10 @@ public class AiReidServiceImpl implements AiReidService {
      * <p>失败只记 WARN 不抛：观测本身已经成功（归并结果已返回给调用方），
      * 落库失败不应让用户看到"观测失败"——但必须留日志，否则轨迹缺段无从排查。</p>
      *
-     * <p><b>向量必须落库。</b>此前这里传的是 {@code null, null}，
-     * 于是 {@link ReidLibraryLinkService#insert} 直接跳过向量写入 ——
-     * 重识别的向量库永远是空的，「以图搜人」只能搜内存里的实时归并，
-     * 进程一重启历史观测就再也搜不到了。</p>
+     * <p><b>一条记录两个特征值。</b>观测和登记入库是同一个底库：同一次观测同时写入
+     * 人脸特征（{@code reid-face} 索引，回答「这是谁」）与 ReID 特征
+     * （{@code reid} 索引，回答「去过哪」），两套共用同一向量标识。
+     * 只写 ReID 特征时 FACE 档 1:N 永远查不到这条观测。</p>
      *
      * @param account     账号
      * @param group       分组名（已归一化）
@@ -261,12 +263,13 @@ public class AiReidServiceImpl implements AiReidService {
      * @param sourceId    来源帧
      * @param imageData   原始图片字节
      * @param observation 观测
+     * @param matchType   本次分流结论（{@code FACE} / {@code REID}）
      * @param lat         纬度
      * @param lng         经度
      */
     private void persistObservation(String account, String group, String trackId, String cameraId,
                                     String sourceId, byte[] imageData,
-                                    FaceReidPipeline.FaceObservation observation,
+                                    FaceReidPipeline.FaceObservation observation, String matchType,
                                     BigDecimal lat, BigDecimal lng) {
         try {
             String vectorId = "reid-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
@@ -284,50 +287,31 @@ public class AiReidServiceImpl implements AiReidService {
                     "y", observation.box().y(),
                     "width", observation.box().width(),
                     "height", observation.box().height()));
-            // 提取特征供向量库写入：DB 先行、向量其次（与 FaceLibraryLinkService 同口径）
-            float[] feature = extractFeature(imageData, observation);
-            boolean ok = library.insert(account, vectorId, trackId, cameraId,
-                    cameraId + "@" + sourceId, meta, null, lat, lng,
-                    reidStores.currentVectorStorage(group), feature);
+            // 分流结论随行持久化：底库一行两个特征，检索时据此决定主用哪个
+            meta.put("matchType", matchType);
+            // 一条记录**两个特征值**（人脸特征 + ReID 特征），与登记入库同口径。
+            // 只写 ReID 特征会让这条观测在 reid-face 索引里缺席 ——
+            // FACE 档 1:N（reidStores.searchFace）永远查不到它，表现为 hits=0。
+            byte[] face = ImageCropUtils.crop(imageData, observation.box());
+            float[] reidFeature = extractWith(clientManager.currentFeatureExtractor(), face);
+            float[] faceFeature = extractWith(clientManager.currentFaceFeatureExtractor(), face);
+            boolean ok = library.insertDual(account, vectorId, vectorId, trackId, cameraId,
+                    cameraId + "@" + sourceId, meta, base64Of(face), lat, lng,
+                    reidStores.currentVectorStorage(group), reidFeature,
+                    reidStores.currentFaceVectorStorage(group), faceFeature, matchType);
             if (!ok) {
                 log.warn("[Reid] 观测落库失败（观测结果仍有效）: user={}, group={}, track={}",
                         account, group, trackId);
                 return;
             }
-            // 向量已进库 → 记进本分组快照，供进程重启后重建索引。
-            // 不在这里重复写向量库：写入与「失败则回滚 DB 行」的原子性由上面的 insert 保证，
+            // 向量已进库 → 两套快照都记上，供进程重启后重建索引。
+            // 不在这里重复写向量库：写入与「失败则回滚 DB 行」的原子性由上面的 insertDual 保证，
             // 这里只补快照这一半（否则重启后快照为空，reload 会把向量索引清空 —— 历史观测全搜不到）。
-            reidStores.remember(group, vectorId, feature);
+            reidStores.remember(group, vectorId, reidFeature);
+            reidStores.rememberFace(group, vectorId, faceFeature);
         } catch (Exception ex) {
             log.warn("[Reid] 观测落库异常（观测结果仍有效）: user={}, track={} -> {}",
                     account, trackId, ex.getMessage());
-        }
-    }
-
-    /**
-     * 取观测对应的特征向量。
-     *
-     * @param imageData   原始图片字节
-     * @param observation 观测
-     * @return 特征向量；提取失败返回 {@code null}
-     */
-    private float[] extractFeature(byte[] imageData, FaceReidPipeline.FaceObservation observation) {
-        if (imageData == null || imageData.length == 0) {
-            return null;
-        }
-        FeatureExtractor extractor = clientManager.currentFeatureExtractor();
-        if (extractor == null) {
-            return null;
-        }
-        try {
-            byte[] face = ImageCropUtils.crop(imageData, observation.box());
-            if (face == null || face.length == 0) {
-                return null;
-            }
-            return extractor.extract(face);
-        } catch (Exception ex) {
-            log.debug("[Reid] 提取观测特征失败: {}", ex.getMessage());
-            return null;
         }
     }
 
@@ -353,6 +337,32 @@ public class AiReidServiceImpl implements AiReidService {
      */
     @Override
     public boolean enroll(String group, String id, byte[] imageData, Map<String, Object> metadata) {
+        return enrollDetailed(group, id, imageData, metadata).success();
+    }
+
+    /**
+     * 登记（底库入库），返回三档分流结论。
+     *
+     * <p><b>只接受单人图。</b>多脸直接抛 {@link MultiFaceEnrollException}，
+     * 由调用方提示「请裁剪后重试」—— 底库一行对应一个人，
+     * 悄悄挑一张脸入库会让用户以为登记的是另一个人。</p>
+     *
+     * <p><b>不合规不入库。</b>唯一那张脸的检测置信度低于 ReID 阈值时，
+     * 这条图片不足以支撑任何检索，回 {@link AiReidService#REASON_INVALID} 且不落行。</p>
+     *
+     * <p><b>两个特征一次算完、一次写入。</b>达标后同时取人脸特征（{@code feature_model}）
+     * 与 ReID 特征（{@code reid_feature_model}），分别写进两个索引；
+     * 任一失败即整条回滚，不留「认得出、搜不到」的半拉数据。</p>
+     *
+     * @param group     分组名（空值按默认组 {@code default}）
+     * @param id        人员标识（底库行的向量标识，两套特征共用同一标识）
+     * @param imageData 图片字节
+     * @param metadata  元数据（可含 `name` 展示名 / `cameraId` 摄像头 / `lat` `lng` 经纬度）
+     * @return 登记结果
+     */
+    @Override
+    public EnrollResult enrollDetailed(String group, String id, byte[] imageData,
+                                       Map<String, Object> metadata) {
         String account = AiUserContext.requireUserId();
         String resolvedGroup = AiLibraryGroups.normalize(group);
 
@@ -360,21 +370,49 @@ public class AiReidServiceImpl implements AiReidService {
         if (detector == null) {
             throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置人脸组的检测模型与特征模型");
         }
-        // 先取特征再写底库：只有先取出特征，才能写底库行与向量（与 FaceStores.enrollFromImage 同路径）
+        // 低阈值检测：只有先看到框，才能区分「不合规」与「多脸」两种情况
         FaceFeaturePipelineResult result = detector.extractFeatureWithMeta(imageData);
-        if (result == null || result.feature() == null || result.feature().length == 0) {
-            log.warn("[Reid] 登记失败：未提取到人脸特征: id={}", id);
-            return false;
+        if (result == null || result.box() == null) {
+            log.warn("[Reid] 登记失败：未检测到人脸: id={}", id);
+            return new EnrollResult(false, null, "未检测到人脸", 0, id, false);
         }
         if (result.faceCount() > 1) {
             throw new MultiFaceEnrollException(result.faceCount());
         }
-        float[] feature = result.feature();
+        float confidence = result.box().confidence();
+        String decision = decide(confidence);
+        if (MatchType.INVALID.name().equals(decision)) {
+            log.info("[Reid] 登记被拒（图片不合规）: id={} confidence={}", id, confidence);
+            return new EnrollResult(false, decision, REASON_INVALID, result.faceCount(), id, false);
+        }
+
+        // 一次裁图、两套模型各算一遍：人脸特征回答「这是谁」，ReID 特征回答「去过哪」
+        byte[] face = result.faceImage();
+        if (face == null || face.length == 0) {
+            byte[] cropped = ImageCropUtils.crop(imageData, result.box());
+            face = cropped;
+        }
+        if (face == null || face.length == 0) {
+            log.warn("[Reid] 登记失败：人脸裁剪为空: id={}", id);
+            return new EnrollResult(false, decision, "人脸裁剪失败", result.faceCount(), id, false);
+        }
+        float[] faceFeature = extractWith(clientManager.currentFaceFeatureExtractor(), face);
+        float[] reidFeature = extractWith(clientManager.currentFeatureExtractor(), face);
+        if (faceFeature == null || faceFeature.length == 0
+                || reidFeature == null || reidFeature.length == 0) {
+            log.warn("[Reid] 登记失败：特征提取为空: id={} face={} reid={}", id,
+                    faceFeature == null ? 0 : faceFeature.length,
+                    reidFeature == null ? 0 : reidFeature.length);
+            return new EnrollResult(false, decision, "特征提取失败", result.faceCount(), id, false);
+        }
 
         // 元数据归一化（以已解析的分组为准）与展示字段
         Map<String, Object> meta = metadata == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(metadata);
         meta.put("group", resolvedGroup);
+        // 分流结论随行持久化：检索时据此决定这行主用哪个特征
+        meta.put("matchType", decision);
+        meta.put("faceVectorId", id);
         // 没传展示名就用标识符兜底，否则列表里没有名
         String name = strOf(meta, "name");
         if (name == null) {
@@ -388,103 +426,229 @@ public class AiReidServiceImpl implements AiReidService {
         BigDecimal lat = numberOf(meta.get("lat"));
         BigDecimal lng = numberOf(meta.get("lng"));
 
-        // 先写 DB 行与向量（向量失败则回滚 DB 行，不留下半拉数据）
-        boolean ok = library.insert(account, id, null, cameraId, name, meta,
+        // 先写 DB 行，再写两套向量（任一失败则删行并回滚另一套）
+        boolean ok = library.insertDual(account, id, id, null, cameraId, name, meta,
                 base64Of(result.faceImage()), lat, lng,
-                reidStores.currentVectorStorage(resolvedGroup), feature);
+                reidStores.currentVectorStorage(resolvedGroup), reidFeature,
+                reidStores.currentFaceVectorStorage(resolvedGroup), faceFeature, decision);
         if (!ok) {
             log.warn("[Reid] 登记落库失败: id={}", id);
-            return false;
+            return new EnrollResult(false, decision, "底库写入失败", result.faceCount(), id, false);
         }
-        // 向量已入库 → 记进本分组快照，供进程启动后重建 jvector 索引
-        reidStores.remember(resolvedGroup, id, feature);
-        log.info("[Reid] 登记成功: id={} group={} cameraId={}", id, resolvedGroup, cameraId);
-        return true;
+        // 向量已入库 → 两套快照都记上，供进程启动后重建 jvector 索引
+        reidStores.remember(resolvedGroup, id, reidFeature);
+        reidStores.rememberFace(resolvedGroup, id, faceFeature);
+        // 登记是用户手动触发的一次性操作：立刻落盘，别让它落在 5 秒节流窗口里
+        // （否则「入库成功」之后 index.json 还是旧的，进程重启就丢这一条向量）
+        try {
+            reidStores.flush(resolvedGroup);
+            reidStores.flushFace(resolvedGroup);
+        } catch (Exception ex) {
+            log.warn("[Reid] 登记后快照落盘失败（内存中仍可检索）: id={} -> {}", id, ex.getMessage());
+        }
+        log.info("[Reid] 登记成功: id={} group={} cameraId={} decision={} confidence={}",
+                id, resolvedGroup, cameraId, decision, confidence);
+        return new EnrollResult(true, decision, null, result.faceCount(), id, true);
     }
 
     /**
-     * 逐脸检索结果适配。
+     * 用指定提取器取特征（失败只记日志、返回 {@code null}）。
      *
-     * <p>本实现仍以「整图」为单位检索（{@link #search}）：人脸命中直接返回、
-     * 未命中再走 ReID 轨迹。接口新增的 {@link #searchFaces} 要求逐脸分组，
-     * 这里把整图结果包成「一张脸一组」，分流结论按命中里的 matchType 判定，
-     * 保证接口契约可用且不会把 FACE / REID 混为一谈。
-     * 多脸拆框是后续三档分流改造的一部分（FaceReidPipeline 逐脸输出后替换本适配）。</p>
+     * @param extractor 特征提取器（可空）
+     * @param face      单脸图片
+     * @return 特征；提取失败返回 {@code null}
+     */
+    private static float[] extractWith(FeatureExtractor extractor, byte[] face) {
+        if (extractor == null || face == null || face.length == 0) {
+            return null;
+        }
+        try {
+            return extractor.extract(face);
+        } catch (Exception ex) {
+            log.warn("[Reid] 特征提取失败: {}", ex.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 逐脸检索：一张脸一行结果，多脸就是多行，不合并。
+     *
+     * <p><b>为什么逐脸。</b>一张合影里的脸清晰度可能天差地别：一张够清晰可以认人，
+     * 另一张糊到不合规。按整图检索只能给出一个答案，用户没法知道
+     * 「这条结果对应图里哪张脸」「为什么那张脸没有结果」。逐脸之后，
+     * 每张脸按自己的检测置信度走三档，结论互不干扰。</p>
+     *
+     * <p><b>不降级。</b>FACE 档在人脸库里没认出人，仍是 FACE 档的结果（命中为空），
+     * 不会退回去用 ReID 凑一个答案 —— 两条管线回答的是不同问题，
+     * 「库里没这个人」与「这个人去过哪」不能互相冒充。</p>
      *
      * @param groups    分组名列表
      * @param imageData 图片字节
      * @param topK      每张脸返回条数
-     * @return 逐脸结果（当前为单组）
+     * @return 逐脸结果（按检测框在图中出现顺序，从 1 开始编号）
      */
     @Override
     public List<FaceSearchResult> searchFaces(List<String> groups, byte[] imageData, int topK) {
-        List<ReidHit> hits = search(groups, imageData, topK);
-        boolean faceHit = hits.stream().anyMatch(hit -> "FACE".equals(hit.matchType()));
-        return List.of(new FaceSearchResult(0, null, 1.0f,
-                faceHit ? MatchType.FACE.name() : MatchType.REID.name(), null, hits));
-    }
-
-    @Override
-    public List<ReidHit> search(List<String> groups, byte[] imageData, int topK) {
+        if (imageData == null || imageData.length == 0) {
+            return List.of();
+        }
         String account = AiUserContext.requireUserId();
         List<String> wanted = AiLibraryGroups.parse(
                 groups == null || groups.isEmpty() ? null : String.join(",", groups));
-        // 内存实时归并只在**第一个分组**上跑：轨迹管理器是按 (账号,分组) 隔离的，
-        // 多分组检索的语义是「在库里一起找」，实时的那点当次观测对跨组查询没有额外价值，
-        // 而逐个分组都跑一遍归并会把延迟乘以组数。
         String primary = wanted.getFirst();
         FaceReidPipeline pipeline = pipelineFor(account, primary);
-        if (pipeline == null) {
+        FacePipeline detector = clientManager.currentLowThresholdDetector();
+        if (pipeline == null || detector == null) {
             throw new IllegalStateException("人脸重识别能力未启用：请在设置中心配置人脸组的检测模型与特征模型");
         }
-        int limit = topK <= 0 ? settingReader.getInt(GROUP, "top_k", DEFAULT_TOP_K) : topK;
-        // 重识别 1:N 检索用自己的阈值（reid_match_threshold），留空回落到人脸检索阈值
-        double threshold = settingReader.getDouble(GROUP, "reid_match_threshold", -1d);
-        if (threshold < 0) {
-            threshold = settingReader.getDouble(GROUP, "match_threshold", 0.5d);
+        // 检测一律走低阈值管线：太早丢框就判不出「不合规」这一档，也看不见模糊人脸
+        List<PredictRectangle> boxes = detector.detectBoxes(imageData);
+        if (boxes == null || boxes.isEmpty()) {
+            return List.of();
         }
+        int limit = topK <= 0 ? settingReader.getInt(GROUP, "top_k", DEFAULT_TOP_K) : topK;
+        double faceMatchThreshold = settingReader.getDouble(GROUP, "match_threshold", 0.5d);
+        // 重识别 1:N 检索用自己的阈值（reid_match_threshold），留空回落到人脸检索阈值
+        double reidMatchThreshold = clientManager.reidMatchThreshold();
 
+        List<FaceSearchResult> out = new ArrayList<>();
+        int index = 0;
+        for (PredictRectangle box : boxes) {
+            index++;
+            float confidence = box.confidence();
+            String decision = decide(confidence);
+            String reason = MatchType.INVALID.name().equals(decision) ? REASON_INVALID : null;
+            List<ReidHit> hits = List.of();
+            if (reason == null) {
+                byte[] face = ImageCropUtils.crop(imageData, box);
+                if (face != null && face.length > 0) {
+                    hits = MatchType.FACE.name().equals(decision)
+                            ? faceIdentityHits(account, wanted, primary, face, faceMatchThreshold, limit)
+                            : reidIdentityHits(account, wanted, primary, pipeline, face,
+                                    reidMatchThreshold, limit);
+                }
+            }
+            FaceBox faceBox = new FaceBox(box.x(), box.y(), box.width(), box.height(),
+                    null, 0d, false, confidence, decision, null, reason);
+            out.add(new FaceSearchResult(index, faceBox, confidence, decision, reason, hits));
+        }
+        return out;
+    }
+
+    /**
+     * 按检测置信度落档：这是三档分流唯一的判据。
+     *
+     * <p>用「门槛」而不是「两条都跑完再合并」：同一张脸只由达标的那条管线回答，
+     * 否则同一个人的识别结果与轨迹命中会重复出现两份。</p>
+     *
+     * @param confidence 检测置信度
+     * @return 分流类型名（{@code FACE} / {@code REID} / {@code INVALID}）
+     */
+    private String decide(float confidence) {
+        if (confidence >= clientManager.faceThreshold()) {
+            return MatchType.FACE.name();
+        }
+        if (confidence >= clientManager.reidThreshold()) {
+            return MatchType.REID.name();
+        }
+        return MatchType.INVALID.name();
+    }
+
+    /**
+     * FACE 档单脸检索：人脸特征 1:N 定库，回答「这是谁」。
+     *
+     * <p>用<b>人脸特征提取器</b>（{@code feature_model}），不是 ReID 提取器 ——
+     * 底库的人脸特征列由前者产出，混用会让「只换了 ReID 模型」变成整库认不出人。</p>
+     *
+     * @param account   账号
+     * @param groups    人脸库分组列表
+     * @param primary   主分组（轨迹详情按它取）
+     * @param faceImage 裁剪后的单脸图
+     * @param threshold 人脸 1:N 检索阈值
+     * @param limit     返回条数
+     * @return 命中列表；未命中返回空列表（仍属 FACE 档结果）
+     */
+    private List<ReidHit> faceIdentityHits(String account, List<String> groups, String primary,
+                                           byte[] faceImage, double threshold, int limit) {
+        FeatureExtractor extractor = clientManager.currentFaceFeatureExtractor();
+        if (extractor == null) {
+            return List.of();
+        }
+        float[] feature;
+        try {
+            feature = extractor.extract(faceImage);
+        } catch (Exception ex) {
+            log.warn("[Reid] 人脸识别提特征失败: {}", ex.getMessage());
+            return List.of();
+        }
+        if (feature == null || feature.length == 0) {
+            return List.of();
+        }
+        // 查**重识别底库的人脸特征索引**（reid-face），不是独立的人脸库：
+        // 登记时两个特征是一起写的，认人这一半必须落在同一条底库记录上。
+        List<Vector> faceHits = reidStores.searchFace(groups, feature, limit);
+        if (faceHits == null || faceHits.isEmpty()) {
+            return List.of();
+        }
         List<ReidHit> hits = new ArrayList<>();
-
-        // ① 先做人脸识别：拿到「这个人是谁」。
-        //
-        // <p><b>为什么先做。</b>人脸识别用的是 face 分组自己的高标准检测阈值，
-        // 命中就说明这张脸够清晰 —— 那它<b>本来就应该走识别这条路</b>，
-        // 而不该被当成「模糊脸」丢给重识别。反过来，重识别那条路用的是低阈值，
-        // 会把清晰的脸也检出来，两条路的框是重叠的。</p>
-        //
-        // <p>因此这里的分界不是「谁先跑」，而是<b>按清晰度决定谁负责回答</b>：
-        // 清晰 → 人脸识别给名字；模糊 → 重识别给轨迹。两条路都跑，
-        // 但用检测置信度分派，避免同一个人被两个答案重复回答。</p>
-        FaceIdentity identity = identifyFace(account, wanted, imageData);
-        boolean faceUsable = identity != null && identity.hit();
-
-        if (faceUsable) {
-            // 清晰人脸：人脸识别负责回答「这是谁」
-            Track detail = identity.trackId() == null ? null : track(primary, identity.trackId());
+        for (Vector hit : faceHits) {
+            double similarity = vectorScore(hit);
+            if (similarity < threshold) {
+                continue;
+            }
+            String name = library.nameOf(account, hit.id());
+            String trackId = library.trackIdOf(account, hit.id());
+            Track detail = trackId == null ? null : track(primary, trackId);
             Track enriched = detail != null
                     ? new Track(detail.trackId(), detail.cameraIds(), detail.firstSeen(),
                             detail.lastSeen(), detail.observations(), detail.crossCamera(),
-                            detail.lat(), detail.lng(), identity.name(), detail.thumbnail())
-                    : new Track(identity.faceId(), List.of(), 0L, 0L, 0, false,
-                            null, null, identity.name(), null);
-            hits.add(new ReidHit(identity.faceId(), identity.score(), enriched,
-                    MatchType.FACE.name(), identity.name()));
-            return hits;
+                            detail.lat(), detail.lng(), name, detail.thumbnail())
+                    : new Track(trackId == null ? hit.id() : trackId, List.of(), 0L, 0L, 0, false,
+                            null, null, name, null);
+            hits.add(new ReidHit(hit.id(), similarity, enriched, MatchType.FACE.name(), name));
         }
+        return hits;
+    }
 
-        // ② 模糊人脸：重识别负责回答「这个人去过哪」。
-        //
-        // <p>先查<b>持久向量库</b>（跨重启可搜，且按分组隔离/跨组归并），
-        // 再查<b>内存实时归并</b>（当次会话内最准）。两者互补：
-        // 前者覆盖历史观测，后者覆盖刚发生还没落库的观测。</p>
-        for (Vector vector : reidStores.search(wanted, queryFeature(imageData), limit)) {
+    /**
+     * REID 档单脸检索：重识别特征查轨迹，回答「这个人去过哪」。
+     *
+     * <p>先查<b>持久向量库</b>（跨重启可搜、按分组隔离），再查<b>内存实时归并</b>
+     * （当次会话内最准）。两者互补：前者覆盖历史观测，后者覆盖刚发生还没落库的观测。</p>
+     *
+     * @param account   账号
+     * @param groups    分组名列表（向量库检索范围）
+     * @param primary   主分组（轨迹详情按它取）
+     * @param pipeline  该账号该分组的实时管线
+     * @param faceImage 裁剪后的单脸图
+     * @param threshold 重识别 1:N 检索阈值
+     * @param limit     返回条数
+     * @return 命中列表
+     */
+    private List<ReidHit> reidIdentityHits(String account, List<String> groups, String primary,
+                                           FaceReidPipeline pipeline, byte[] faceImage,
+                                           double threshold, int limit) {
+        FeatureExtractor extractor = clientManager.currentFeatureExtractor();
+        if (extractor == null) {
+            return List.of();
+        }
+        float[] feature;
+        try {
+            feature = extractor.extract(faceImage);
+        } catch (Exception ex) {
+            log.warn("[Reid] 重识别提特征失败: {}", ex.getMessage());
+            return List.of();
+        }
+        if (feature == null || feature.length == 0) {
+            return List.of();
+        }
+        List<ReidHit> hits = new ArrayList<>();
+        for (Vector vector : reidStores.search(groups, feature, limit)) {
             double similarity = vectorScore(vector);
             if (similarity < threshold) {
                 continue;
             }
-            String vectorId = vector.id();
-            String trackId = library.trackIdOf(account, vectorId);
+            String trackId = library.trackIdOf(account, vector.id());
             if (trackId == null) {
                 continue;
             }
@@ -496,8 +660,7 @@ public class AiReidServiceImpl implements AiReidService {
                     : new Track(trackId, List.of(), 0L, 0L, 0, false, null, null, null, null);
             hits.add(new ReidHit(trackId, similarity, enriched, MatchType.REID.name(), null));
         }
-
-        for (PersonTrack.TrackMatch match : pipeline.search(imageData, limit)) {
+        for (PersonTrack.TrackMatch match : pipeline.search(feature, limit)) {
             if (match.similarity() < threshold) {
                 continue;
             }
@@ -519,39 +682,29 @@ public class AiReidServiceImpl implements AiReidService {
     }
 
     /**
-     * 人脸识别：1:N 定库检索，回答「这个人是谁」。
+     * 人脸识别：对指定的单个检测框做 1:N 定库检索，回答「这个人是谁」。
+     *
+     * <p><b>逐脸调用。</b>框由检测阶段传进来，不在这里重新检一遍 ——
+     * 重检会用另一个阈值选出另一张脸，导致叠框与识别结果对不上。
+     * 用<b>人脸特征提取器</b>（{@code feature_model}），不是 ReID 提取器。</p>
      *
      * @param account   账号
      * @param groups    人脸库分组列表
-     * @param imageData 图片字节
+     * @param imageData 原图
+     * @param box       该脸的检测框
      * @return 识别结果；未命中或不可用返回 {@code null}
      */
-    private FaceIdentity identifyFace(String account, List<String> groups, byte[] imageData) {
+    private FaceIdentity identifyFace(String account, List<String> groups,
+                                      byte[] imageData, PredictRectangle box) {
         try {
-            FacePipeline pipeline = clientManager.currentLowThresholdDetector();
-            if (pipeline == null) {
+            if (box == null) {
                 return null;
             }
-            // 先用低阈值检测出所有脸，取置信度最高的那张（最清晰的那张）
-            List<PredictRectangle> boxes = pipeline.detectBoxes(imageData);
-            if (boxes == null || boxes.isEmpty()) {
-                return null;
-            }
-            PredictRectangle best = null;
-            for (PredictRectangle box : boxes) {
-                if (best == null || box.confidence() > best.confidence()) {
-                    best = box;
-                }
-            }
-            if (best == null || best.confidence() < clientManager.faceThreshold()) {
-                // 最清晰的那张都不过分流线 → 整张图走重识别
-                return null;
-            }
-            byte[] face = ImageCropUtils.crop(imageData, best);
+            byte[] face = ImageCropUtils.crop(imageData, box);
             if (face == null || face.length == 0) {
                 return null;
             }
-            FeatureExtractor extractor = clientManager.currentFeatureExtractor();
+            FeatureExtractor extractor = clientManager.currentFaceFeatureExtractor();
             if (extractor == null) {
                 return null;
             }
@@ -560,17 +713,18 @@ public class AiReidServiceImpl implements AiReidService {
                 return null;
             }
             // 1:N 定库检索：命中即「这是谁」。按请求的分组走，不越组去认人。
-            List<FaceSearchHit> faceHits = faceStores.searchHits(groups, feature, 1);
+            // 查重识别底库的人脸特征索引 —— 与登记写入的是同一套，换 ReID 模型不影响认人。
+            List<Vector> faceHits = reidStores.searchFace(groups, feature, 1);
             if (faceHits == null || faceHits.isEmpty()) {
                 return null;
             }
-            FaceSearchHit hit = faceHits.getFirst();
-            double score = hit.score();
+            Vector hit = faceHits.getFirst();
+            double score = vectorScore(hit);
             double matchThreshold = settingReader.getDouble("face", "match_threshold", 0.5d);
             if (score < matchThreshold) {
                 return null;
             }
-            String name = resolveFaceName(account, hit);
+            String name = library.nameOf(account, hit.id());
             return new FaceIdentity(name == null ? hit.id() : name, hit.id(), score, null);
         } catch (Exception ex) {
             log.warn("[Reid] 人脸识别异常: {}", ex.getMessage());
@@ -603,43 +757,6 @@ public class AiReidServiceImpl implements AiReidService {
             log.debug("[Reid] 回查人脸库档案失败: id={} -> {}", hit.id(), ex.getMessage());
         }
         return null;
-    }
-
-    /**
-     * 取查询图的特征向量（供向量库检索）。
-     *
-     * @param imageData 图片字节
-     * @return 特征向量；取不到返回 {@code null}
-     */
-    private float[] queryFeature(byte[] imageData) {
-        if (imageData == null || imageData.length == 0) {
-            return null;
-        }
-        try {
-            FacePipeline pipeline = clientManager.currentLowThresholdDetector();
-            FeatureExtractor extractor = clientManager.currentFeatureExtractor();
-            if (pipeline == null || extractor == null) {
-                return null;
-            }
-            List<PredictRectangle> boxes = pipeline.detectBoxes(imageData);
-            if (boxes == null || boxes.isEmpty()) {
-                return null;
-            }
-            PredictRectangle best = null;
-            for (PredictRectangle box : boxes) {
-                if (best == null || box.confidence() > best.confidence()) {
-                    best = box;
-                }
-            }
-            byte[] face = best == null ? null : ImageCropUtils.crop(imageData, best);
-            if (face == null || face.length == 0) {
-                return null;
-            }
-            return extractor.extract(face);
-        } catch (Exception ex) {
-            log.debug("[Reid] 提取查询特征失败: {}", ex.getMessage());
-            return null;
-        }
     }
 
     /**
@@ -750,6 +867,22 @@ public class AiReidServiceImpl implements AiReidService {
         }
         log.info("[Reid] 账号 '{}' 分组 '{}' 清空重识别底库：{} 条轨迹", account, resolvedGroup, count);
         return count;
+    }
+
+    @Override
+    public boolean delete(String group, String id) {
+        if (id == null || id.isBlank()) {
+            return false;
+        }
+        String account = AiUserContext.requireUserId();
+        String resolvedGroup = AiLibraryGroups.normalize(group);
+        boolean removed = library.deleteMeta(account, id);
+        // 元数据与两套向量一起删：任何一边残留都会让列表与检索对不上
+        reidStores.remove(resolvedGroup, id);
+        reidStores.removeFace(resolvedGroup, id);
+        log.info("[Reid] 删除底库记录: user={} group={} id={} removed={}",
+                account, resolvedGroup, id, removed);
+        return removed;
     }
 
     @Override

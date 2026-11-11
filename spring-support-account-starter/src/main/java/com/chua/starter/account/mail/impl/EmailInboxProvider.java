@@ -599,6 +599,10 @@ public class EmailInboxProvider implements AccountInboxProvider {
             props.setProperty(prefix + "ssl.enable", "true");
         }
         props.setProperty("mail.imap.partialfetch", "false");
+        // 列信 / 看详情都要读正文，默认的 BODY[] 会让服务端把邮件标成 \Seen：
+        // 一次「打开收信箱」就会把整页未读清零，未读角标、未读优先、未读过滤全部失真。
+        // BODY.PEEK 只取内容不改标记，改标记统一由 markSeen 显式执行。
+        props.setProperty(prefix + "peek", "true");
 
         Session session = Session.getInstance(props);
         Store store = session.getStore(protocol);

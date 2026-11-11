@@ -228,6 +228,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private volatile java.util.function.Consumer<FileStorageSetting> configListener;
 
       /**
+       * 远程预览票据解析器（契约见 {@link #setRemotePreviewResolver}）。
+       *
+       * <p>由宿主侧注入：host 侧持有 SSH 凭据，把主机与路径签成短时票据；
+       * 本过滤器按票据换字节后走与本地对象相同的预览分发。未注入时 {@code /rt/**} 拒绝。</p>
+       */
+    private volatile java.util.function.Function<String, Map<String, Object>> remotePreviewResolver;
+
+      /**
        * 统一预览入口壳缓存（classpath static/preview/index.html，懒加载）。
        *
        * <p>预览 HTML 不再由后端拼装：所有原本输出服务端预览页（Markdown / SPI /
@@ -421,6 +429,25 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
       /**
+       * 注册「远程预览票据」解析器。
+       *
+       * <p>远程内容（SSH 主机上的文件）不在本存储里，凭据也不该出现在浏览器地址栏，
+       * 因此由持有凭据的宿主侧（如 server-starter 的 SFTP 服务）把
+       * 「主机 + 路径」签成短时票据，这里只按票据换到字节：</p>
+       * <pre>{@code GET {prefix}/rt/{token}?preview=true}</pre>
+       *
+       * <p>解析器返回 {@code null} 表示票据不存在/已过期，过滤器按 404 处理。
+       * 返回的 Map 约定两个键：{@code data}（{@code byte[]} 原始字节）与
+       * {@code fileName}（{@code String}，决定按哪个后缀分发到 274 格式的预览管线）。
+       * 未注册解析器时 {@code /rt/**} 一律 403，与「远程文件透传」未开启同义。</p>
+       *
+       * @param resolver 票据解析器
+       */
+    public void setRemotePreviewResolver(java.util.function.Function<String, Map<String, Object>> resolver) {
+        this.remotePreviewResolver = resolver;
+    }
+
+      /**
        * 获取系统配置访问令牌。
        *
        * @return 令牌
@@ -560,6 +587,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
           // 一次性访问链接：GET /ot/{token}（消费）/ POST /ot?bucket=&key=（创建）
         if ("ot".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             return handleOneTime(request, response, segments);
+        }
+          // 远程预览票据：GET /rt/{token}?preview=true
+          // 内容在别处（SSH 主机 / 远程服务），凭据不该进浏览器地址栏：
+          // 宿主侧把「主机 + 路径」签成短时票据，这里按票据换字节后走和本地对象
+          // 完全相同的预览分发。放在存储桶判定之前——远程文件不属于任何桶。
+        if ("rt".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
+            if (request.getMethod() != HttpMethod.GET) {
+                return error(response, 405, "Method Not Allowed");
+            }
+            return handleRemoteTicket(request, response, segments);
         }
           // 系统配置端点：GET /config?token=xxx（未注册存储名时才接管）
         if ("config".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
@@ -4068,7 +4105,9 @@ var search=document.getElementById('search');
        * @param bucket     存储桶名（入口壳签发预览令牌用）
        * @param rawChannel raw 字节直吐的放行来源：null=不允许；
        *                   "token"=经 {@code /ot/{token}} 消费；
-       *                   "third"=三方 URL 预览会话
+       *                   "third"=三方 URL 预览会话；
+       *                   "remote" / "ssh"=远程（http(s) / SSH）文件会话（内容不在本存储，
+       *                   无法令牌化，字节直链按当前请求重放）
        * @return 异步阶段
        */
     private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data,
@@ -4080,7 +4119,8 @@ var search=document.getElementById('search');
           // raw=true：预览域的原始字节直吐（inline）。入口壳内嵌态经短时效令牌
           // 拉字节渲染用；不属于附件下载语义，因此不要求 openDownload 开启。
           // rawChannel：null=不允许 raw；"token"=经 /ot/{token} 消费；
-          // "third"=三方 URL 预览会话（内容不在本存储，字节直链按会话重放）。
+          // "third"=三方 URL 预览会话（内容不在本存储，字节直链按会话重放）；
+          // "remote"/"ssh"=远程文件会话，同上按当前请求重放。
         boolean wantRaw = boolParam(request, "raw") && rawChannel != null;
         boolean download;
         if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
@@ -4317,8 +4357,7 @@ var search=document.getElementById('search');
                         .setHeader("Accept-Ranges", "bytes")
                         .setHeader("Content-Length", String.valueOf(slice.length))
                         .setHeader("X-FileStorage-Preview", "range")
-                        .setContentType(resolveContentType(fileName))
-                        .setBody(slice);
+                        .setContentType(resolveContentType(fileName));
                 applyValidators(response, metadata, data.length);
                 response.setBody(slice).end();
                 return CompletableFuture.completedFuture(null);
@@ -4353,22 +4392,37 @@ var search=document.getElementById('search');
        * @param bodyLength 实际响应体长度
        */
     private void applyValidators(ServerResponse response, Metadata metadata, long bodyLength) {
+        String etag;
+        long lastModified = 0L;
         if (metadata == null) {
-            response.setHeader("ETag", "\"" + Long.toHexString(bodyLength) + "-" + Long.toHexString(bodyLength) + "\"");
-            return;
-        }
-        String etag = metadata.getEtag();
-        long lastModified = metadata.getLastModified();
-        if (etag != null && !etag.isBlank()) {
-            response.setHeader("ETag", etag);
+            etag = "\"" + Long.toHexString(bodyLength) + "-0\"";
         } else {
-            response.setHeader("ETag", "\"" + Long.toHexString(bodyLength)
-                    + "-" + Long.toHexString(Math.max(0L, lastModified)) + "\"");
+            lastModified = metadata.getLastModified();
+            etag = resolveEtag(metadata);
         }
+        response.setHeader("ETag", etag);
         if (lastModified > 0L) {
             response.setHeader("Last-Modified", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
                     .format(java.time.Instant.ofEpochMilli(lastModified).atZone(java.time.ZoneOffset.UTC)));
         }
+    }
+
+      /**
+       * 计算对象校验值：元数据自带 ETag 时原样使用，否则用「完整长度 + 修改时间」合成。
+       *
+       * <p>合成值必须基于<b>完整长度</b>而非本次响应体长度——206 只返回区间，
+       * 若按区间长度合成，同一对象在 200 与 206 上的 ETag 会不一致，
+       * {@code If-Range} 立即失效。</p>
+       *
+       * @param metadata 对象元数据
+       * @return 带引号的 ETag
+       */
+    private String resolveEtag(Metadata metadata) {
+        if (metadata.getEtag() != null && !metadata.getEtag().isBlank()) {
+            return metadata.getEtag();
+        }
+        return "\"" + Long.toHexString(metadata.getSize())
+                + "-" + Long.toHexString(Math.max(0L, metadata.getLastModified())) + "\"";
     }
 
       /* ==================== Range 分段：快速通道（不整读对象） ==================== */
@@ -4485,11 +4539,27 @@ var search=document.getElementById('search');
         boolean wantRaw = boolParam(request, "raw") && isOneTimeTokenChannel(request);
         boolean download = resolveRangeDownload(wantRaw, wantPreview, wantDownload);
 
-          // If-Range：校验失败表示客户端缓存的对象已变，必须回整份 200，不能给 206
+          // If-Range：校验失败表示客户端缓存的对象已变，必须回整份 200，不能给 206。
+        // 这里不能 return null 让整读链路接手——那条链路还会按 Range 再切一次，
+        // 等于把已失效的 Range 又用上了。
         String ifRange = request.getHeader("If-Range");
         if (ifRange != null && !ifRangeMatches(ifRange, probe.getMetadata())) {
-            closeQuietly(probe.getInputStream());
-            return null;
+            byte[] whole;
+            try (InputStream in = probe.getInputStream()) {
+                whole = in.readAllBytes();
+            } catch (Exception e) {
+                log.error("[FileStorage] If-Range 回退整读失败: {} - {}", key, e.getMessage(), e);
+                return error(response, 500, "Read Object Failed");
+            }
+            response.setStatus(200)
+                    .setHeader("Accept-Ranges", "bytes")
+                    .setHeader("Content-Length", String.valueOf(whole.length))
+                    .setHeader("X-FileStorage-Preview", wantRaw ? "raw" : "range-fallback")
+                    .setHeader("Content-Disposition", buildDisposition(download, fileName))
+                    .setContentType(resolveContentType(fileName));
+            applyValidators(response, probe.getMetadata(), whole.length);
+            response.setBody(whole).end();
+            return CompletableFuture.completedFuture(null);
         }
 
         byte[] slice;
@@ -4523,8 +4593,6 @@ var search=document.getElementById('search');
             return error(response, 500, "Read Range Failed");
         }
 
-        String etag = probe.getMetadata().getEtag();
-        long lastModified = probe.getMetadata().getLastModified();
         response.setStatus(206)
                 .setHeader("Content-Range", "bytes " + start + "-" + (start + slice.length - 1) + "/" + totalSize)
                 .setHeader("Accept-Ranges", "bytes")
@@ -4532,15 +4600,7 @@ var search=document.getElementById('search');
                 .setHeader("X-FileStorage-Preview", wantRaw ? "raw" : "range")
                 .setHeader("Content-Disposition", buildDisposition(download, fileName))
                 .setContentType(resolveContentType(fileName));
-        if (etag != null && !etag.isBlank()) {
-            response.setHeader("ETag", etag);
-        } else {
-            response.setHeader("ETag", "\"" + Long.toHexString(totalSize) + "-" + Long.toHexString(lastModified) + "\"");
-        }
-        if (lastModified > 0L) {
-            response.setHeader("Last-Modified", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
-                    .format(java.time.Instant.ofEpochMilli(lastModified).atZone(java.time.ZoneOffset.UTC)));
-        }
+        applyValidators(response, probe.getMetadata(), slice.length);
         response.setBody(slice).end();
         return CompletableFuture.completedFuture(null);
     }
@@ -4558,8 +4618,9 @@ var search=document.getElementById('search');
             return false;
         }
         if (value.startsWith("\"") || value.startsWith("W/")) {
-            String etag = metadata.getEtag();
-            return etag != null && etag.equals(value);
+              // 与 200 / 206 实际下发的 ETag 同源比较（元数据无 ETag 时是合成值）
+            String etag = resolveEtag(metadata);
+            return etag.equals(value) || etag.equals(value.replaceFirst("^W/", ""));
         }
         try {
             long expected = java.time.ZonedDateTime.parse(value,
@@ -4646,7 +4707,7 @@ var search=document.getElementById('search');
       /**
        * 组装入口壳引导参数里的字节直链（{@code bytesUrl}）。
        *
-       * <p>两条来源：</p>
+       * <p>三条来源：</p>
        * <ul>
        *   <li>{@code rawChannel="token"} —— 现场签发一枚<b>短时效预览令牌</b>
        *       （expiry 模式可多次读，TTL 取一次性链接配置与 5 分钟的较小值），
@@ -4654,10 +4715,15 @@ var search=document.getElementById('search');
        *       {@code openDownload} 关闭，预览也能拿到原始字节，且令牌过期后
        *       直链即失效，不会留下常驻下载通道；</li>
        *   <li>{@code rawChannel="third"} —— 三方 URL 预览会话：内容不在本存储，
-       *       无法令牌化，直链按当前会话原样重放（服务端重新拉取远端）。</li>
+       *       无法令牌化，直链按当前会话原样重放（服务端重新拉取远端）；</li>
+       *   <li>{@code rawChannel="remote" / "ssh"} —— 远程文件会话：同样无法令牌化，
+       *       按当前请求重放；SSH 还需把 {@code user}/{@code password}/{@code key}
+       *       一并带回，凭据在 query 里而不在路径里。</li>
+       *   <li>{@code rawChannel="rt"} —— 远程预览票据会话（{@code /rt/{token}}）：
+       *       主题是凭据不出服务端，token 本身就在路径里，按当前路径重放即可。</li>
        * </ul>
        *
-       * @param rawChannel raw 放行来源（null / "token" / "third"）
+       * @param rawChannel raw 放行来源（null / "token" / "third" / "rt" / "remote" / "ssh"）
        * @param bucket     存储桶名
        * @param key        对象键
        * @param innerPath  压缩包内条目路径（无则 null）
@@ -4667,10 +4733,29 @@ var search=document.getElementById('search');
     private String buildShellBytesUrl(String rawChannel, String bucket, String key,
                                       String innerPath, ServerRequest request) {
         String suffix = innerPath == null ? "" : "&inner=" + urlEncodeUtf8(innerPath);
-        if ("third".equals(rawChannel)) {
-              // 三方会话重放：当前路径 + 预览/raw 参数（去掉本次请求里的 render 等，
-              // 只保留预览语义，保证拿到的是字节而非壳）
+        if ("third".equals(rawChannel) || "rt".equals(rawChannel)) {
+              // 三方 / 票据会话重放：当前路径 + 预览/raw 参数（去掉本次请求里的 render 等，
+              // 只保留预览语义，保证拿到的是字节而非壳）。远程票据的 token 本来就在
+              // 路径里，不像 ssh 那样还要把凭据从 query 再带一遍。
             return request.getPath() + "?preview=true&raw=true" + suffix;
+        }
+        if ("remote".equals(rawChannel) || "ssh".equals(rawChannel)) {
+              // 远程 / SSH 会话重放：内容不在本存储，无法令牌化，只能按当前请求重放。
+              // SSH 的凭据在 query 里而非路径里，必须原样带回，否则入口壳里的字节直链
+              // 会被判成「Missing 'user' parameter」，壳拿不到字节就只剩空白。
+            StringBuilder replay = new StringBuilder(request.getPath()).append("?preview=true&raw=true");
+            if ("ssh".equals(rawChannel)) {
+                Map<String, String> params = request.getParams();
+                if (params != null) {
+                    for (String name : new String[]{"user", "password", "key"}) {
+                        String value = params.get(name);
+                        if (value != null && !value.isEmpty()) {
+                            replay.append('&').append(name).append('=').append(urlEncodeUtf8(value));
+                        }
+                    }
+                }
+            }
+            return replay.append(suffix).toString();
         }
         return "/ot/" + mintPreviewToken(bucket, key) + "?preview=true&raw=true" + suffix;
     }
@@ -5209,13 +5294,53 @@ var search=document.getElementById('search');
     }
 
       /**
-       * 处理远程文件拉取。
+       * 远程预览票据：{@code GET /rt/{token}?preview=true}。
+       *
+       * <p>内容不在本存储里（SSH 主机上的文件 / 别的远程服务），凭据也不该出现在
+       * 浏览器地址栏，所以由持有凭据的宿主侧把「哪台主机上的哪个路径」签成短时票据，
+       * 过滤器只按票据换字节，然后走 {@link #serveObjectContent}——格式转换、
+       * 客户端直渲染、入口壳、Range、内联兜底与本地对象逐条一致。</p>
+       *
+       * <p>票据一般是可多次读的（入口壳先取壳、再取 bytesUrl；图片/视频还要 Range），
+       * 有效窗口与是否一次性由宿主侧的票据存储决定，这里不做二次限制。</p>
        *
        * @param request  请求
        * @param response 响应
-       * @param remoteUrl 远程地址
+       * @param segments 路径段（{@code [rt, token, ...]}）
        * @return 异步阶段
        */
+    private CompletionStage<Void> handleRemoteTicket(ServerRequest request, ServerResponse response, List<String> segments) {
+        java.util.function.Function<String, Map<String, Object>> resolver = this.remotePreviewResolver;
+        if (resolver == null) {
+            return error(response, 403, "Remote preview ticket disabled");
+        }
+        if (segments.size() < 2 || segments.get(1).isBlank()) {
+            return error(response, 400, "Missing preview token");
+        }
+        Map<String, Object> payload;
+        try {
+            payload = resolver.apply(segments.get(1));
+        } catch (Exception e) {
+            log.warn("远程预览票据解析失败: {}", e.getMessage());
+            return error(response, 502, "Remote Preview Failed: " + e.getMessage());
+        }
+        if (payload == null) {
+            return error(response, 404, "Preview Ticket Not Found or Expired");
+        }
+        if (!(payload.get("data") instanceof byte[] data)) {
+            return error(response, 502, "Remote Preview Failed: empty payload");
+        }
+        Object name = payload.get("fileName");
+        String fileName = name == null ? "" : name.toString();
+        if (fileName.isEmpty()) {
+            fileName = "remote";
+        }
+          // rawChannel="rt"：入口壳里的字节直链按当前路径重放（token 本来就在路径里，
+          // 不需要像 ssh 那样把凭据再带一遍）；bucket 传空串的理由同远程分支——
+          // 传真实桶名会让壳把该桶里的同名对象误认成这个远程文件。
+        return serveObjectContent(request, response, data, fileName, "", "rt", null);
+    }
+
       /**
        * 处理远程文件拉取。
        *
@@ -5237,10 +5362,15 @@ var search=document.getElementById('search');
                 data = in.readAllBytes();
             }
             String fileName = remoteUrl.substring(remoteUrl.lastIndexOf('/') + 1);
-            response.setStatus(200)
-                    .setContentType(resolveContentType(fileName))
-                    .setBody(data)
-                    .end();
+            if (fileName.isEmpty()) {
+                fileName = "remote";
+            }
+              // 与本地对象走同一条预览分发（格式转换 / 客户端渲染 / 入口壳 / Range / 内联兜底）。
+              // 此前直接 setBody 原始字节，等于把「远程文件」降级成裸下载：页面里那套
+              // 274 格式的 file-viewer 一个都用不上，?preview=true 也只拿到字节流。
+              // bucket 传空串：远程内容不在本存储里，壳拿不到可用的 bucket/key 票据，
+              // 传真实桶名会让该桶里同名对象被「特殊渲染器」当成这个远程文件去读。
+            return serveObjectContent(request, response, data, fileName, "", "remote", null);
         } catch (Exception e) {
             log.warn("远程文件拉取失败: {} - {}", remoteUrl, e.getMessage());
             response.sendError(502, "Remote Fetch Failed: " + e.getMessage());
@@ -5293,34 +5423,26 @@ var search=document.getElementById('search');
             }
 
               // 私钥认证优先于密码认证（主机管理实体存储的是 agent key 私钥）
-            if (privateKey != null && !privateKey.isBlank()) {
-                RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username, null, privateKey, path, null);
-                RemoteFileResult result = reader.readRemote(rfRequest);
-                return writeRemoteResult(response, result);
-            }
-
-            RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username, password, null, path, null);
+            boolean useKey = privateKey != null && !privateKey.isBlank();
+            RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username,
+                    useKey ? null : password, useKey ? privateKey : null, path, null);
             RemoteFileResult result = reader.readRemote(rfRequest);
-            return writeRemoteResult(response, result);
+              // 与本地对象走同一条预览分发：格式转换 / 客户端渲染 / 入口壳 / Range /
+              // 内联兜底全部复用。此前直接回吐原始字节，等于把「远程文件」降级成裸下载，
+              // 部署了 274 格式的 file-viewer 却一个都用不上。
+              // bucket 传空串的理由同 {@link #handleRemoteFile}：避免壳把真实桶里的同名对象
+              // 误认成这个远程文件。
+            String fileName = result.fileName() != null && !result.fileName().isEmpty()
+                    ? result.fileName()
+                    : path.substring(path.lastIndexOf('/') + 1);
+            if (fileName.isEmpty()) {
+                fileName = "remote";
+            }
+            return serveObjectContent(request, response, result.data(), fileName, "", "ssh", null);
         } catch (Exception e) {
             log.warn("SSH 远程文件读取失败: {} - {}", sshUrl, e.getMessage());
             response.sendError(502, "SSH Remote Read Failed: " + e.getMessage());
         }
-        return CompletableFuture.completedFuture(null);
-    }
-
-      /**
-       * 将远程文件读取结果写入 HTTP 响应。
-       * @param response HTTP 响应
-       * @param result 远程文件读取结果
-       * @return 返回值
-      */
-    private CompletionStage<Void> writeRemoteResult(ServerResponse response, RemoteFileResult result) {
-        String fileName = result.fileName() != null ? result.fileName() : "remote";
-        response.setStatus(200)
-                .setContentType(resolveContentType(fileName))
-                .setBody(result.data())
-                .end();
         return CompletableFuture.completedFuture(null);
     }
 

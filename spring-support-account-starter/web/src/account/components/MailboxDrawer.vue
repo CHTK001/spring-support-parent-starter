@@ -647,7 +647,9 @@ async function toggleSeen(): Promise<void> {
   const account = props.account;
   const current = activeMessage.value;
   if (!account?.accountId || !current || markingBusy.value) return;
-  const target = !current.unread;
+  // 当前未读 → 按钮是「标为已读」（seen=true）；当前已读 → 按钮是「标为未读」（seen=false）。
+  // 这里算的是「目标 seen」，因此正好等于当前的 unread，不能取反。
+  const target = Boolean(current.unread);
   markingBusy.value = true;
   try {
     await markMailboxMessageSeen(account.accountId, current.id, activeFolder.value, target);

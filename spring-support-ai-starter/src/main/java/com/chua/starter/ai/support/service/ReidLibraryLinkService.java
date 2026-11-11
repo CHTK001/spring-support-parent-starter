@@ -114,9 +114,49 @@ public class ReidLibraryLinkService {
                           String name, Map<String, Object> metadata, String thumbnail,
                           BigDecimal lat, BigDecimal lng,
                           VectorStorage storage, float[] feature) {
+        return insertDual(userId, vectorId, null, trackId, cameraId, name, metadata, thumbnail,
+                lat, lng, storage, feature, null, null, null);
+    }
+
+    /**
+     * 新增/更新一条底库记录，并<b>同时写两套特征</b>（人脸特征 + ReID 特征）。
+     *
+     * <p><b>为什么一条记录两个向量。</b>人脸重识别 = 人脸识别管线 + ReID 管线，
+     * 同一张脸要能被两条链路各自检索到：{@code vectorId} 指 ReID 特征
+     * （「去过哪」），{@code faceVectorId} 指人脸特征（「这是谁」）。
+     * 两个索引分开（{@code reid} / {@code reid-face}），换掉其中一个模型不会毁掉另一个。</p>
+     *
+     * <p><b>原子性。</b>DB 行先行，两套向量随后；<b>任一向量失败都删掉 DB 行并把另一套向量也删掉</b>。
+     * 否则会出现「一行只有一个人脸向量」，之后按 ReID 搜不到、列表里又看得见，
+     * 是最难解释的半拉数据。</p>
+     *
+     * @param userId       归属账号
+     * @param vectorId     ReID 特征向量标识（可空 = 无人脸重识别特征）
+     * @param faceVectorId 人脸特征向量标识（可空 = 无人脸特征）
+     * @param trackId      所属跨帧轨迹 ID；为空表示新建一条轨迹
+     * @param cameraId     摄像头标识
+     * @param name         展示名
+     * @param metadata     其余档案（落 meta 列）
+     * @param thumbnail    缩略图 base64（可空）
+     * @param lat          纬度（可空）
+     * @param lng          经度（可空）
+     * @param storage      ReID 向量存储；{@code null} 表示向量能力未就绪
+     * @param feature      ReID 特征；{@code null} 表示未提取到
+     * @param faceStorage  人脸向量存储；{@code null} 表示未就绪
+     * @param faceFeature  人脸特征；{@code null} 表示未提取到
+     * @param matchType    入库时的分流结论（{@code FACE} / {@code REID}）
+     * @return 是否成功
+     */
+    public boolean insertDual(String userId, String vectorId, String faceVectorId, String trackId,
+                              String cameraId, String name, Map<String, Object> metadata,
+                              String thumbnail, BigDecimal lat, BigDecimal lng,
+                              VectorStorage storage, float[] feature,
+                              VectorStorage faceStorage, float[] faceFeature, String matchType) {
         SysAiReidLibrary row = new SysAiReidLibrary();
         row.setUserId(userId);
         row.setVectorId(vectorId);
+        row.setFaceVectorId(faceVectorId);
+        row.setMatchType(matchType);
         row.setTrackId(trackId);
         row.setCameraId(cameraId);
         row.setName(name);
@@ -139,12 +179,20 @@ public class ReidLibraryLinkService {
         Integer faceId = intOf(metadata, "faceId");
         row.setFaceId(faceId);
         row.setFaceName(strOf(metadata, "faceName"));
+        String existingVectorId = vectorId;
         try {
             SysAiReidLibrary exist = find(userId, vectorId);
             if (exist == null) {
                 mapper.insert(row);
             } else {
                 row.setId(exist.getId());
+                // 保留原有的另一个向量标识：本次没给就不该把它覆盖成 NULL
+                if (row.getFaceVectorId() == null) {
+                    row.setFaceVectorId(exist.getFaceVectorId());
+                }
+                if (row.getMatchType() == null) {
+                    row.setMatchType(exist.getMatchType());
+                }
                 mapper.updateById(row);
             }
         } catch (Exception ex) {
@@ -153,22 +201,60 @@ public class ReidLibraryLinkService {
             return false;
         }
 
-        if (storage == null || feature == null || feature.length == 0) {
+        boolean hasReid = storage != null && feature != null && feature.length > 0;
+        boolean hasFace = faceStorage != null && faceFeature != null && faceFeature.length > 0;
+        if (!hasReid && !hasFace) {
             // 向量能力未就绪：只落元数据，不算失败
             return true;
         }
         try {
-            storage.remove(vectorId);
-            if (!storage.add(vectorId, feature)) {
-                throw new IllegalStateException("向量库拒绝写入");
+            if (hasReid) {
+                writeVector(storage, existingVectorId, feature);
+            }
+            if (hasFace) {
+                writeVector(faceStorage, faceVectorId, faceFeature);
             }
         } catch (Exception ex) {
             log.error("[Reid] 向量写入失败，回滚底库元数据: user={}, id={} -> {}",
-                    userId, vectorId, ex.getMessage(), ex);
+                    userId, vectorId, ex.getMessage());
+            // 两套一起回滚：留下任何一套都是「认得出、搜不到」的半拉数据
+            rollbackVector(storage, existingVectorId);
+            rollbackVector(faceStorage, faceVectorId);
             deleteRow(userId, vectorId);
             return false;
         }
         return true;
+    }
+
+    /**
+     * 写一条向量（先删后加，避免同 id 重复写被向量库拒绝）。
+     *
+     * @param storage 向量存储
+     * @param id      向量标识
+     * @param feature 特征
+     */
+    private static void writeVector(VectorStorage storage, String id, float[] feature) {
+        storage.remove(id);
+        if (!storage.add(id, feature)) {
+            throw new IllegalStateException("向量库拒绝写入: " + id);
+        }
+    }
+
+    /**
+     * 回滚一条已写入的向量（尽力而为，失败只记日志）。
+     *
+     * @param storage 向量存储
+     * @param id      向量标识
+     */
+    private void rollbackVector(VectorStorage storage, String id) {
+        if (storage == null || id == null) {
+            return;
+        }
+        try {
+            storage.remove(id);
+        } catch (Exception ex) {
+            log.warn("[Reid] 回滚向量失败: id={} -> {}", id, ex.getMessage());
+        }
     }
 
     /**
@@ -200,6 +286,14 @@ public class ReidLibraryLinkService {
         String faceName = strOf(metadata, "faceName");
         if (faceName != null) {
             exist.setFaceName(faceName);
+        }
+        String matchType = strOf(metadata, "matchType");
+        if (matchType != null) {
+            exist.setMatchType(matchType);
+        }
+        String faceVectorId = strOf(metadata, "faceVectorId");
+        if (faceVectorId != null) {
+            exist.setFaceVectorId(faceVectorId);
         }
         // 更新时间显式写（理由同 insert：无填充器时 NULL 会覆盖列默认值）
         exist.setUpdateTime(java.time.LocalDateTime.now());
@@ -257,6 +351,10 @@ public class ReidLibraryLinkService {
         for (SysAiReidLibrary row : rows) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", row.getVectorId());
+            // 两个特征标识都透出：前端/排障要能分辨这行「认不认得出人」（人脸特征）
+            // 与「搜不搜得到轨迹」（ReID 特征）
+            item.put("faceVectorId", row.getFaceVectorId());
+            item.put("matchType", row.getMatchType());
             item.put("trackId", row.getTrackId());
             item.put("cameraId", row.getCameraId());
             item.put("name", row.getName());
@@ -440,6 +538,39 @@ public class ReidLibraryLinkService {
             return row == null ? null : row.getTrackId();
         } catch (Exception ex) {
             log.warn("[Reid] 反查观测所属轨迹失败: user={}, id={} -> {}", userId, vectorId, ex.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 按向量标识反查展示名。
+     *
+     * <p>人脸识别命中后要把「命中了哪条底库记录」翻译成「这是谁」。
+     * 名字取底库行的 {@code name}，取不到再回落 {@code faceName} ——
+     * 两者语义不同：{@code name} 是这条底库记录的展示名（登记时写入），
+     * {@code faceName} 是人脸库联动带过来的姓名。</p>
+     *
+     * @param userId   归属账号
+     * @param vectorId 向量标识
+     * @return 展示名；不存在返回 {@code null}
+     */
+    public String nameOf(String userId, String vectorId) {
+        if (userId == null || userId.isBlank() || vectorId == null || vectorId.isBlank()) {
+            return null;
+        }
+        try {
+            SysAiReidLibrary row = find(userId, vectorId);
+            if (row == null) {
+                return null;
+            }
+            String name = row.getName();
+            if (name != null && !name.isBlank()) {
+                return name;
+            }
+            String faceName = row.getFaceName();
+            return faceName == null || faceName.isBlank() ? null : faceName;
+        } catch (Exception ex) {
+            log.warn("[Reid] 反查底库展示名失败: user={}, id={} -> {}", userId, vectorId, ex.getMessage());
             return null;
         }
     }

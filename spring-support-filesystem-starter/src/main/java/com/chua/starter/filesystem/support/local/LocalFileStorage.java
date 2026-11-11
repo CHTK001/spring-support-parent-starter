@@ -234,7 +234,7 @@ public class LocalFileStorage extends AbstractFileStorage {
                         .build();
             }
             long size = attrs.size();
-            if (offset >= size) {
+            if (offset > 0L && offset >= size) {
                   // 越界：过滤器据此回 416，而不是凭空给一个 0 字节的 206
                 return GetObjectResult.builder()
                         .resultCode(ObjectResult.ResultCode.FAILURE)

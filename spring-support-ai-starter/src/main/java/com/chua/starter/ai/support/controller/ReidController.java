@@ -143,8 +143,18 @@ public class ReidController {
         }
         try {
             Map<String, Object> meta = parseMetadata(metadata);
-            boolean success = reidService.enroll(group, id, file.getBytes(), meta);
-            return success ? ReturnResult.ok("已登记") : ReturnResult.error("登记失败");
+            AiReidService.EnrollResult result = reidService.enrollDetailed(group, id, file.getBytes(), meta);
+            if (!result.success()) {
+                // 不合规 / 特征失败都带回具体原因，而不是笼统的「登记失败」
+                return ReturnResult.error(result.reason() == null ? "登记失败" : result.reason());
+            }
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("message", "已登记");
+            body.put("id", result.id());
+            body.put("decision", result.decision());
+            body.put("faceCount", result.faceCount());
+            body.put("extracted", result.extracted());
+            return ReturnResult.ok(body);
         } catch (MultiFaceEnrollException e) {
             // 可预期的业务分支：多脸照片。不打 ERROR 全栈（不是故障），只回明确原因
             log.info("[Reid] 拒绝多脸登记: id={} -> {}", id, e.getMessage());
@@ -172,9 +182,21 @@ public class ReidController {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
-            List<AiReidService.ReidHit> hits = reidService.search(
+            // 逐脸结果：一张脸一行，多脸就是多行（不合并、不取最大脸）
+            List<AiReidService.FaceSearchResult> faces = reidService.searchFaces(
                     AiLibraryGroups.parse(group), file.getBytes(), topK == null ? 0 : topK);
-            return ReturnResult.ok(Map.of("count", hits.size(), "hits", hits));
+            // 旧的 hits 视图由逐脸结果铺平而来，不重复跑一遍检测/提取
+            List<AiReidService.ReidHit> hits = new ArrayList<>();
+            for (AiReidService.FaceSearchResult face : faces) {
+                hits.addAll(face.hits());
+            }
+            hits.sort((a, b) -> Double.compare(b.similarity(), a.similarity()));
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("count", hits.size());
+            body.put("hits", hits);
+            body.put("faces", faces);
+            body.put("faceCount", faces.size());
+            return ReturnResult.ok(body);
         } catch (IOException e) {
             log.warn("[Reid] 读取上传文件失败: {}", e.getMessage());
             return ReturnResult.error("读取上传文件失败");
@@ -245,7 +267,7 @@ public class ReidController {
     public ReturnResult<?> deleteLibraryItem(@PathVariable("id") String id,
                                              @RequestParam(value = "group", required = false) String group) {
         String account = AiUserContext.requireUserId();
-        boolean removed = reidLibrary.deleteMeta(account, id);
+        boolean removed = reidService.delete(group, id);
         return removed ? ReturnResult.ok("已删除") : ReturnResult.error("删除失败或记录不存在");
     }
 
@@ -350,6 +372,12 @@ public class ReidController {
         if (!(raw instanceof Map<?, ?> fields) || fields.isEmpty()) {
             return ReturnResult.error("没有可更新的配置项");
         }
+        // 三档分流靠两个阈值分界，阈值关系写反会让中间那一档永远不可达
+        // （reid > face 时「介于两者之间」是空集），必须在写库前挡住。
+        String violation = validateThresholds(fields);
+        if (violation != null) {
+            return ReturnResult.error(violation);
+        }
         int updated = 0;
         for (Map.Entry<?, ?> entry : fields.entrySet()) {
             String field = String.valueOf(entry.getKey());
@@ -362,6 +390,90 @@ public class ReidController {
         }
         log.info("[ReidConfig] face 分组已更新 {} 项配置，热重建生效", updated);
         return ReturnResult.ok("人脸重识别配置已更新（" + updated + " 项）");
+    }
+
+    /**
+     * 校验三档分流的阈值关系（以「本次提交值优先、其余取当前值」的合并结果判定）。
+     *
+     * <p>两条约束：</p>
+     * <ul>
+     *   <li>{@code reid_threshold ≤ face_threshold}：否则「低于人脸阈值但高于 ReID 阈值」
+     *       这一档是空集，ReID 永远不会被选中；</li>
+     *   <li>{@code reid_detector_threshold ≤ reid_threshold}：否则低于 ReID 阈值的人脸
+     *       在检测阶段就被过滤掉，「不合规」这一档永远不可达。</li>
+     * </ul>
+     *
+     * @param submitted 本次提交的字段（值可能是字符串）
+     * @return 违规说明；合法返回 {@code null}
+     */
+    private String validateThresholds(Map<?, ?> submitted) {
+        Double face = effectiveNumber(submitted, "face_threshold");
+        Double reid = effectiveNumber(submitted, "reid_threshold");
+        Double detector = effectiveNumber(submitted, "reid_detector_threshold");
+        if (face != null && reid != null && reid > face) {
+            return "ReID 阈值不能高于人脸识别阈值：" + reidThresholdHint(reid)
+                    + " > face_threshold(" + face + ")，请满足 reid_threshold ≤ face_threshold";
+        }
+        if (reid != null && detector != null && detector > reid) {
+            return "ReID 检测阈值不能高于 ReID 阈值：reid_detector_threshold(" + detector
+                    + ") > reid_threshold(" + reid + ")，否则「不合规」这一档不可达";
+        }
+        return null;
+    }
+
+    /**
+     * 取合并后的阈值：提交值优先，否则取库里当前值。
+     *
+     * @param submitted 提交字段
+     * @param field     字段名
+     * @return 数值；两边都没有返回 {@code null}
+     */
+    private Double effectiveNumber(Map<?, ?> submitted, String field) {
+        Object submittedValue = submitted.get(field);
+        Double parsed = toDouble(submittedValue);
+        if (parsed != null) {
+            return parsed;
+        }
+        try {
+            return toDouble(settingService.getValue(GROUP, field).orElse(null));
+        } catch (Exception ex) {
+            log.debug("[ReidConfig] 读取阈值 {} 失败: {}", field, ex.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 阈值提示文案（附带名字，避免只看到一个裸数字）。
+     *
+     * @param value 数值
+     * @return 提示片段
+     */
+    private static String reidThresholdHint(double value) {
+        return "reid_threshold(" + value + ")";
+    }
+
+    /**
+     * 安全转 double。
+     *
+     * @param value 原始值
+     * @return 数值；无法解析返回 {@code null}
+     */
+    private static Double toDouble(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number n) {
+            return n.doubleValue();
+        }
+        String s = String.valueOf(value).trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     /**

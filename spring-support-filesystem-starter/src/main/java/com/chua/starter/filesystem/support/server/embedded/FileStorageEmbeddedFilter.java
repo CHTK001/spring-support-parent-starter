@@ -182,6 +182,18 @@ public class FileStorageEmbeddedFilter extends OncePerRequestFilter {
     }
 
     /**
+     * 注入远程预览票据解析器（{@code GET {pathPrefix}/rt/{token}}）。
+     *
+     * <p>远程文件（SSH 主机上的文件）的凭据由持有方保管，浏览器只拿票据；
+     * 宿主没有提供解析器时 {@code /rt/**} 一律 403，其余路径行为不变。</p>
+     *
+     * @param resolver 票据解析器（token → {data, fileName}）
+     */
+    public void setRemotePreviewResolver(java.util.function.Function<String, java.util.Map<String, Object>> resolver) {
+        storageFilter.setRemotePreviewResolver(resolver);
+    }
+
+    /**
      * 取出规范化后的路径前缀。
      *
      * @return 前缀（空串表示根路径）

@@ -29,6 +29,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.StringJoiner;
 
@@ -103,6 +104,15 @@ public class EzvizSession extends AbstractOpenApiSession {
 
     /** 设备在线状态 */
     private static final String P_DEVICE_INFO = "/api/lapp/device/info";
+
+    /** 添加设备到账号下（官方要求 deviceSerial + validateCode 均必填） */
+    private static final String P_DEVICE_ADD = "/api/lapp/device/add";
+
+    /** 从账号下删除设备 */
+    private static final String P_DEVICE_DELETE = "/api/lapp/device/delete";
+
+    /** 修改云端设备名称 */
+    private static final String P_DEVICE_NAME_UPDATE = "/api/lapp/device/name/update";
 
     /** 成功码 */
     private static final String OK = "200";
@@ -623,6 +633,81 @@ public class EzvizSession extends AbstractOpenApiSession {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("empId", empId);
         doRequest("DELETE", P_MEMBER_DELETE, params);
+        return true;
+    }
+
+    /**
+     * 添加设备到当前账号（{@code POST /api/lapp/device/add}）。
+     *
+     * <p>官方字段：{@code deviceSerial}（必填，含字母的序列号须大写）、
+     * {@code validateCode}（必填，设备机身六位大写验证码）。添加成功后
+     * 响应只回 {@code {code,msg}}，不返回序列号，故直接返回入参序列号。</p>
+     *
+     * <p>官方错误码里值得注意的几条：{@code 20013} 已被别人添加、{@code 20017}
+     * 已被自己添加、{@code 20010} 验证码错误、{@code 60066} 不能使用出厂默认验证码、
+     * {@code 60058}/{@code 60085} 需先确权。</p>
+     *
+     * @param serial       设备序列号
+     * @param validateCode 设备验证码（机身上六位大写字母）
+     * @return 已添加的设备序列号
+     */
+    public String addDevice(String serial, String validateCode) {
+        if (serial == null || serial.isBlank()) {
+            throw new IllegalArgumentException("萤石添加设备需要设备序列号");
+        }
+        if (validateCode == null || validateCode.isBlank()) {
+            throw new IllegalArgumentException("萤石添加设备需要设备验证码（机身上六位大写字母）");
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceSerial", serial.trim().toUpperCase(Locale.ROOT));
+        params.put("validateCode", validateCode.trim().toUpperCase(Locale.ROOT));
+        assertOk(doRequest("POST", P_DEVICE_ADD, params));
+        return params.get("deviceSerial").toString();
+    }
+
+    /**
+     * 修改云端设备名称（{@code POST /api/lapp/device/name/update}）。
+     *
+     * <p>官方约束：{@code deviceName} 长度不大于 50 字节，不能包含特殊字符。
+     * 网关下子设备须用长序列号调用（形如 {@code C87654321-C12345678}）。</p>
+     *
+     * @param serial     设备序列号
+     * @param deviceName 新名称
+     * @return 是否修改成功
+     */
+    public boolean renameDevice(String serial, String deviceName) {
+        if (serial == null || serial.isBlank()) {
+            throw new IllegalArgumentException("萤石修改设备名称需要设备序列号");
+        }
+        if (deviceName == null || deviceName.isBlank()) {
+            throw new IllegalArgumentException("萤石修改设备名称需要设备名称");
+        }
+        if (deviceName.getBytes(StandardCharsets.UTF_8).length > 50) {
+            throw new IllegalArgumentException("萤石设备名称不得超过 50 字节（官方约束）");
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceSerial", serial);
+        params.put("deviceName", deviceName);
+        assertOk(doRequest("POST", P_DEVICE_NAME_UPDATE, params));
+        return true;
+    }
+
+    /**
+     * 从当前账号删除设备（{@code POST /api/lapp/device/delete}）。
+     *
+     * <p>官方提示：为保证正常返回，请勿在萤石云 App 开启终端绑定，
+     * 否则会报 {@code 20031}。</p>
+     *
+     * @param serial 设备序列号
+     * @return 是否删除成功
+     */
+    public boolean deleteDevice(String serial) {
+        if (serial == null || serial.isBlank()) {
+            throw new IllegalArgumentException("萤石删除设备需要设备序列号");
+        }
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceSerial", serial);
+        assertOk(doRequest("POST", P_DEVICE_DELETE, params));
         return true;
     }
 
