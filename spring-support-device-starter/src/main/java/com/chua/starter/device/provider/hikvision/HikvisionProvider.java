@@ -287,6 +287,22 @@ public class HikvisionProvider implements DeviceProvider {
                 return List.of();
             }
         }
+        if (session instanceof HikvisionCloudEyeSession eye) {
+            try {
+                return eye.fetchOrganizations();
+            } catch (Exception e) {
+                log.warn("海康云眸 组织树拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        if (session instanceof HikvisionSecurePlatformSession secure) {
+            try {
+                return secure.fetchOrganizations();
+            } catch (Exception e) {
+                log.warn("海康综合安防 组织树拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
         return fetchOrganizations();
     }
 
@@ -310,6 +326,22 @@ public class HikvisionProvider implements DeviceProvider {
                 return ezviz.fetchCompanyMembers(1, 200);
             } catch (Exception e) {
                 log.warn("萤石 企业人员拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        if (session instanceof HikvisionCloudEyeSession eye) {
+            try {
+                return eye.fetchPersons();
+            } catch (Exception e) {
+                log.warn("海康云眸 人员列表拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        if (session instanceof HikvisionSecurePlatformSession secure) {
+            try {
+                return secure.fetchPersons();
+            } catch (Exception e) {
+                log.warn("海康综合安防 人员列表拉取失败: {}", e.getMessage());
                 return List.of();
             }
         }
@@ -337,6 +369,9 @@ public class HikvisionProvider implements DeviceProvider {
         if (info == null) {
             return null;
         }
+        if (PLATFORM_SECURE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionSecurePlatformSession(info).upsertPerson(person);
+        }
         if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
             HikvisionCloudYaoSession yao = new HikvisionCloudYaoSession(info);
             if (person == null) {
@@ -346,6 +381,16 @@ public class HikvisionProvider implements DeviceProvider {
                 return yao.addPerson(person);
             }
             return yao.updatePerson(person) ? person.externalId() : null;
+        }
+        if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(info.platformType())) {
+            HikvisionCloudEyeSession eye = new HikvisionCloudEyeSession(info);
+            if (person == null) {
+                throw new IllegalArgumentException("人员不能为空");
+            }
+            if (person.externalId() == null || person.externalId().isBlank()) {
+                return eye.addPerson(person);
+            }
+            return eye.updatePerson(person) ? person.externalId() : null;
         }
         if (!PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
             return null;
@@ -369,8 +414,14 @@ public class HikvisionProvider implements DeviceProvider {
         if (info == null) {
             return false;
         }
+        if (PLATFORM_SECURE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionSecurePlatformSession(info).removePerson(personId);
+        }
         if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
             return new HikvisionCloudYaoSession(info).removePerson(personId);
+        }
+        if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionCloudEyeSession(info).removePerson(personId);
         }
         if (!PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
             return false;
@@ -399,6 +450,9 @@ public class HikvisionProvider implements DeviceProvider {
         if (info == null) {
             return false;
         }
+        if (PLATFORM_SECURE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionSecurePlatformSession(info).upsertDevice(device, exists);
+        }
         if (PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
             EzvizSession ezviz = new EzvizSession(info);
             String serial = device.serial() != null && !device.serial().isBlank()
@@ -410,6 +464,18 @@ public class HikvisionProvider implements DeviceProvider {
                 return ezviz.renameDevice(serial, device.name());
             }
             return ezviz.addDevice(serial, validateCodeOf(info)) != null;
+        }
+        if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(info.platformType())) {
+            HikvisionCloudEyeSession eye = new HikvisionCloudEyeSession(info);
+            String serial = device.serial() != null && !device.serial().isBlank()
+                    ? device.serial() : device.externalId();
+            if (serial == null || serial.isBlank()) {
+                throw new IllegalArgumentException("云眸设备写入需要设备序列号");
+            }
+            if (exists) {
+                return eye.renameDevice(serial, device.name());
+            }
+            return eye.addDevice(device, groupNoOf(info), validateCodeOf(info)) != null;
         }
         if (!PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
             return false;
@@ -439,6 +505,20 @@ public class HikvisionProvider implements DeviceProvider {
     }
 
     /**
+     * 从凭据扩展参数里取云眸组编号。
+     *
+     * <p>云眸注册设备要求 {@code groupNo}（组编号，不是组 ID），平台没有「按序列号反查组编号」的接口，
+     * 只能由台账侧提供。</p>
+     *
+     * @param info 连接信息
+     * @return 组编号；缺失返回 {@code null}
+     */
+    private static String groupNoOf(DeviceConnectInfo info) {
+        Object groupNo = info.extra() == null ? null : info.extra().get("groupNo");
+        return groupNo instanceof String s ? s : null;
+    }
+
+    /**
      * 按凭据在厂商侧删除设备（云曜 {@code v2/global/device/delete} / 萤石 {@code /api/lapp/device/delete}）。
      *
      * @param info      连接信息（平台为 cloud-yao / ezviz）
@@ -449,8 +529,14 @@ public class HikvisionProvider implements DeviceProvider {
         if (info == null) {
             return false;
         }
+        if (PLATFORM_SECURE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionSecurePlatformSession(info).removeDevice(externalId);
+        }
         if (PLATFORM_EZVIZ.equalsIgnoreCase(info.platformType())) {
             return new EzvizSession(info).deleteDevice(externalId);
+        }
+        if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionCloudEyeSession(info).removeDevice(externalId);
         }
         if (!PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
             return false;
@@ -469,7 +555,23 @@ public class HikvisionProvider implements DeviceProvider {
      * @return 厂商侧组织标识；不支持或失败为 null
      */
     public String upsertOrganization(DeviceConnectInfo info, OrganizationNode node) {
-        if (info == null || !PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+        if (info == null) {
+            return null;
+        }
+        if (PLATFORM_SECURE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionSecurePlatformSession(info).upsertOrganization(node);
+        }
+        if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(info.platformType())) {
+            HikvisionCloudEyeSession eye = new HikvisionCloudEyeSession(info);
+            if (node == null) {
+                throw new IllegalArgumentException("组织节点不能为空");
+            }
+            if (node.orgId() == null || node.orgId().isBlank()) {
+                return eye.addOrganization(node);
+            }
+            return eye.updateOrganization(node) ? node.orgId() : null;
+        }
+        if (!PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
             return null;
         }
         HikvisionCloudYaoSession yao = new HikvisionCloudYaoSession(info);
@@ -490,7 +592,16 @@ public class HikvisionProvider implements DeviceProvider {
      * @return 是否删除成功
      */
     public boolean removeOrganization(DeviceConnectInfo info, String orgId) {
-        if (info == null || !PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
+        if (info == null) {
+            return false;
+        }
+        if (PLATFORM_SECURE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionSecurePlatformSession(info).removeOrganization(orgId);
+        }
+        if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(info.platformType())) {
+            return new HikvisionCloudEyeSession(info).removeOrganization(orgId);
+        }
+        if (!PLATFORM_CLOUD_YAO.equalsIgnoreCase(info.platformType())) {
             return false;
         }
         return new HikvisionCloudYaoSession(info).removeOrganization(orgId);

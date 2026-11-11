@@ -413,21 +413,40 @@ public record DeviceCapabilityMatrix(
      */
     static DeviceCapabilityMatrix hikvisionCloudEye() {
         return builder("hikvision.cloud-eye", "海康云眸")
-                .yes(DeviceCapability.DEVICE, 7)
-                .unverified(DeviceCapability.MEDIA, 5, "getLiveUrl 已实现，账号下无设备未验证")
-                .unverified(DeviceCapability.RECORD, 2, "getPlaybackUrl 已实现，无设备未验证")
-                .unverified(DeviceCapability.PTZ, 2, "ptzControl 已实现，无设备未验证")
-                .unverified(DeviceCapability.ACCESS, 3, "remoteUnlock 已实现，无门禁设备未验证")
-                .todo(DeviceCapability.CHANNEL, 4, "会话层无通道列表方法")
-                .todo(DeviceCapability.CAPTURE, 1, "抓图接口待实现")
-                .todo(DeviceCapability.EVENT, 1, "事件接口待实现")
-                .todo(DeviceCapability.PERSON, 2, "人员接口待实现")
-                .todo(DeviceCapability.PERSON_WRITE, 2, "人员增删改接口待实现")
-                .no(DeviceCapability.DEVICE_WRITE, "云眸设备由设备侧注册，不支持平台侧增删")
-                .no(DeviceCapability.ORG, "云眸开放平台无组织架构接口")
-                .no(DeviceCapability.ORG_WRITE, "云眸开放平台不提供组织增删改")
-                .no(DeviceCapability.ACCESS_WRITE, "云眸开放平台不提供门禁增删改")
-                .no(DeviceCapability.PARKING, "云眸开放平台无停车场业务")
+                .yes(DeviceCapability.DEVICE, 4)
+                .unverified(DeviceCapability.MEDIA, 2,
+                        "getLiveUrl/getPlaybackUrl 走官方 v1/carrier/wing/endpoint/video/getVideoUrl，"
+                                + "stopLiveUrl 走 siot/.../disableLiveAddress，账号下无设备未验证")
+                .unverified(DeviceCapability.RECORD, 2,
+                        "queryRecords 走官方 v1/carrier/communicate/record/daily（跨度≤1 天），"
+                                + "回放地址由 getVideoUrl type=2 提供，无设备未验证")
+                .unverified(DeviceCapability.PTZ, 9,
+                        "ptzControl/stopPtz 走官方 ptz/start|stop（direction 0~11），"
+                                + "预设位 create/update/delete/actions/move|list 按 index 字段，无设备未验证")
+                .unverified(DeviceCapability.ACCESS, 2,
+                        "queryAccessRecords 走官方 accessEvents/actions/list（major=5，minor 单值分次查询），"
+                                + "remoteUnlock/controlDoor 走 remoteControl/actions/open，无门禁设备未验证")
+                .unverified(DeviceCapability.CHANNEL, 4,
+                        "listChannels 走官方 basic/channels/list，另实现 syncChannels/renameChannel，无设备未验证")
+                .unverified(DeviceCapability.CAPTURE, 1,
+                        "capture 走官方 basic/channels/actions/capture 取 data.picUrl 后二次下载，无设备未验证")
+                .unverified(DeviceCapability.EVENT, 5,
+                        "pollEvents 走官方消息通道 mq/consumer/group1|messages|offsets，"
+                                + "ISAPI 订阅路径已入接口目录，无设备未验证")
+                .unverified(DeviceCapability.PERSON, 2,
+                        "fetchPersons 走历史接口 getPersons 分页、fetchPerson 走 basic/persons/get，无账号数据未验证")
+                .unverified(DeviceCapability.PERSON_WRITE, 5,
+                        "addPerson/updatePerson/removePerson 走官方 persons/create|update|delete，"
+                                + "人脸 faces/update|delete 路径已入目录，无账号数据未验证")
+                .unverified(DeviceCapability.DEVICE_WRITE, 3,
+                        "addDevice/renameDevice/removeDevice 走官方 basic/devices/create|update|delete，"
+                                + "注册要 groupNo + validateCode，无设备未验证")
+                .unverified(DeviceCapability.ORG, 3,
+                        "fetchOrganizations 走官方 basic/groups/actions/listAll（另 get/childrenList 在目录），无账号数据未验证")
+                .unverified(DeviceCapability.ORG_WRITE, 3,
+                        "addOrganization/updateOrganization/removeOrganization 走官方 groups/create|update|delete，无账号数据未验证")
+                .no(DeviceCapability.ACCESS_WRITE, "云眸开放平台只提供控门与事件查询，没有门禁设备/门点增删改接口")
+                .no(DeviceCapability.PARKING, "云眸开放平台无停车场业务接口")
                 .build();
     }
 
@@ -446,15 +465,15 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.RECORD, 5, "getPlaybackUrl 已实现，缺网关地址未验证")
                 .unverified(DeviceCapability.PTZ, 4, "ptzControl 已实现，缺网关地址未验证")
                 .unverified(DeviceCapability.ACCESS, 4, "remoteUnlock 已实现，缺网关地址未验证")
-                .todo(DeviceCapability.CHANNEL, 5, "会话层无通道列表方法")
-                .todo(DeviceCapability.ORG, 4, "组织同步接口待实现")
-                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改接口待实现")
-                .todo(DeviceCapability.DEVICE_WRITE, 3, "设备增删改接口待实现")
-                .todo(DeviceCapability.PERSON, 4, "人员接口待实现")
-                .todo(DeviceCapability.PERSON_WRITE, 3, "人员增删改接口待实现")
-                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改接口待实现")
-                .todo(DeviceCapability.CAPTURE, 2, "抓图接口待实现")
-                .todo(DeviceCapability.EVENT, 2, "事件接口待实现")
+                .unverified(DeviceCapability.CHANNEL, 5, "listChannels 走官方 resource/v2/camera/search，按 cameraIndexCode 过滤，缺网关地址未验证")
+                .unverified(DeviceCapability.ORG, 4, "fetchOrganizations 走官方 resource/v1/org/orgList，缺网关地址未验证")
+                .unverified(DeviceCapability.ORG_WRITE, 3, "org.add|update|delete 已接入，缺网关地址未验证")
+                .unverified(DeviceCapability.DEVICE_WRITE, 3, "device.add|update|delete 已接入，缺网关地址未验证")
+                .unverified(DeviceCapability.PERSON, 4, "fetchPersons 走官方 resource/v2/person/personList，缺网关地址未验证")
+                .unverified(DeviceCapability.PERSON_WRITE, 3, "person.add|update|delete 已接入，缺网关地址未验证")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "接口目录未登记门禁点增删改路径，需补官方文档后再实现")
+                .unverified(DeviceCapability.CAPTURE, 2, "capture 走官方 video/v1/cameras/images 并二次下载，缺网关地址未验证")
+                .unverified(DeviceCapability.EVENT, 2, "pollEvents 走官方 eventService/v1/eventRecords/page，缺网关地址未验证")
                 .no(DeviceCapability.PARKING, "综合安防停车场为独立子系统，不在本接入范围")
                 .build();
     }
@@ -524,26 +543,35 @@ public record DeviceCapabilityMatrix(
     }
 
     /**
-     * 大华云睿能力矩阵。
+     * 大华云睿能力矩阵（2026-11-11 按真实探活结论回写）。
+     *
+     * <p>平台实际是「大华云开发者平台 IoT 开放平台」（open.cloud-dahua.com），
+     * 43 条基础通用套件接口已逐条真实调用验证：42 条存在，
+     * {@code getDeviceChannelInfo} 不存在（BIZ120）。
+     * 视频监控、云存储、云联、门禁子系统的接口不在该套件内，官方文档详情
+     * 返回 {@code OPF600001 鉴权失败}（需控制台登录态），请求字段无法取证，
+     * 因此这几类能力只能保持 TODO，会话层显式抛 {@link UnsupportedOperationException}。</p>
      *
      * @return 能力矩阵
      */
     static DeviceCapabilityMatrix dahuaCloud() {
         return builder("dahua.dahua-cloud", "大华云睿")
-                .yes(DeviceCapability.DEVICE, 11)
-                .unverified(DeviceCapability.MEDIA, 1, "getLiveUrl 已实现，账号下无设备未验证")
-                .unverified(DeviceCapability.RECORD, 4, "getPlaybackUrl 已实现，无设备未验证")
-                .unverified(DeviceCapability.PTZ, 4, "ptzControl 已实现，无设备未验证")
-                .unverified(DeviceCapability.ACCESS, 4, "remoteUnlock 已实现，无门禁设备未验证")
-                .todo(DeviceCapability.CHANNEL, 6, "会话层无通道列表方法")
-                .todo(DeviceCapability.CAPTURE, 2, "抓图接口待实现")
-                .todo(DeviceCapability.EVENT, 10, "事件/消息接口待实现")
-                .todo(DeviceCapability.DEVICE_WRITE, 4, "设备增删改接口待实现")
-                .todo(DeviceCapability.ORG, 4, "组织接口待实现")
-                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改接口待实现")
-                .todo(DeviceCapability.PERSON, 4, "人员接口待实现")
-                .todo(DeviceCapability.PERSON_WRITE, 4, "人员增删改接口待实现")
-                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改接口待实现")
+                .unverified(DeviceCapability.DEVICE, 11,
+                        "getDeviceList/deviceOnline/listDeviceDetailsByIds 已真实调用（200/PRM0132），账号下 0 台设备，字段解析未验证")
+                .unverified(DeviceCapability.CHANNEL, 4,
+                        "官方无 getDeviceChannelInfo（BIZ120），listChannels 改走 listDeviceDetailsByIds，通道字段未拿到真机样例")
+                .todo(DeviceCapability.MEDIA, 5, "视频监控套件不在 43 条基础通用套件内，文档字段需控制台登录（OPF600001）")
+                .todo(DeviceCapability.RECORD, 4, "云存储/录像套件不在 43 条基础通用套件内，字段未取证")
+                .todo(DeviceCapability.PTZ, 4, "云台控制属视频监控套件，路径与字段均未取证")
+                .todo(DeviceCapability.CAPTURE, 2, "抓图属视频监控套件，路径与字段均未取证")
+                .todo(DeviceCapability.EVENT, 10, "消息订阅接口已验证存在，但事件报文结构无官方字段文档，未实现解析")
+                .todo(DeviceCapability.DEVICE_WRITE, 4, "addDevice/modifyDeviceName 字段未取证（空包体仅回 PRM001）；deleteDevice 入参 deviceId 已确认")
+                .todo(DeviceCapability.ORG, 4, "组织管理套件不在 43 条基础通用套件内，字段未取证")
+                .todo(DeviceCapability.ORG_WRITE, 3, "组织增删改字段未取证")
+                .todo(DeviceCapability.PERSON, 4, "人员档案套件不在 43 条基础通用套件内，字段未取证")
+                .todo(DeviceCapability.PERSON_WRITE, 4, "人员增删改字段未取证")
+                .todo(DeviceCapability.ACCESS, 4, "门禁子系统字段未取证")
+                .todo(DeviceCapability.ACCESS_WRITE, 3, "门禁增删改字段未取证")
                 .no(DeviceCapability.PARKING, "云睿开放平台无停车场业务")
                 .build();
     }
