@@ -246,27 +246,41 @@ public final class ProjectScripts {
        * Windows 停止脚本的孤儿兜底：{@code app.pid} 陈旧或丢失时按命令行回收本项目残留进程。
        *
        * <p>与 Linux 同理，只按 {@code app.pid} 结束进程在 pid 陈旧时完全失效。
-       * Windows 上获取「某 pid 的工作目录」没有等价于 {@code /proc/<pid>/cwd} 的廉价手段，
-       * 因此按命令行匹配；为不误伤主入口同名的其它项目，模式仍走
-       * {@link #selfSafePattern(String)}（首字符字符类），并排除当前 PowerShell 自身。</p>
+       * 早先按「命令行含主入口名」匹配，结果同机两个同名主入口的项目互相误杀
+       * （实测批量升级：一个项目的停服步骤把另一个项目的进程杀掉，随后两者的 PID
+       * 解析都指向同一个进程）。因此归属判据改为<b>本项目专属路径</b>：命令行含本项目的
+       * 日志重定向目标或项目目录 —— 包装壳命令行里必然带 {@code > "日志文件"}，
+       * 计划任务回退路径的启动器路径也含项目目录。</p>
+       *
+       * <p>同时排除命令行含 {@code Get-CimInstance} 的进程：那正是本脚本自身（执行期整段
+       * 脚本以 {@code -Command} 内联传入，连同外层包装进程都可能命中路径字面量），
+       * 真实应用的包装壳不会包含这段文字。</p>
        *
        * <p>普通用户执行 {@code Get-CimInstance Win32_Process} 可能被拒（本项目既有约定），
        * 故整体 try/catch：CIM 不可用时静默跳过，不影响按 app.pid 停止这条主路径。</p>
        *
-       * @param mainEntry 主入口名
+       * @param mainEntry 主入口名（保留用于兼容与日志，归属判定不再依赖它）
        * @return 兜底片段；无法生成模式时返回空串
        */
     private static String winOrphanReaper(String mainEntry) {
-        String pat = selfSafePattern(mainEntry);
-        if (pat == null) {
+        if (selfSafePattern(mainEntry) == null) {
             return "";
         }
+        String logPs = PH_LOG.replace("'", "''");
+        String pathPs = PH_PATH.replace("'", "''");
         return "\n# 兜底：app.pid 陈旧/丢失时按命令行回收本项目残留进程（CIM 不可用时静默跳过）\n"
+                  + "# 归属判据=命令行含本项目的日志重定向目标或项目目录，避免误杀主入口同名的其它项目\n"
                   + "try {\n"
-                  + "  $re = '" + pat.replace("'", "''") + "'\n"
+                  + "  $own = @('" + logPs + "', '" + pathPs + "') | Where-Object { $_ }\n"
+                  // 按路径边界比对，不能只做子串包含：C:\ms-acc\acc-sb 是 C:\ms-acc\acc-sb2 的前缀，
+                  // 用 Contains 会让「停 38」把 53 的进程一起杀掉（同机目录名前缀重叠的常见情形）。
+                  + "  $ownRx = @($own | ForEach-Object { [regex]::Escape($_) + '([\\\\/\\s\\x22]|$)' })\n"
                   + "  foreach ($op in (Get-CimInstance Win32_Process -ErrorAction Stop |\n"
-                  + "      Where-Object { $_.CommandLine -and $_.ProcessId -ne $PID -and $_.CommandLine -match $re })) {\n"
-                  + "    & taskkill.exe /PID $op.ProcessId /T /F | Out-Null\n"
+                  + "      Where-Object { $_.CommandLine -and $_.ProcessId -ne $PID })) {\n"
+                  + "    if ($op.CommandLine.Contains('Get-CimInstance')) { continue }\n"
+                  + "    $mine = $false\n"
+                  + "    foreach ($rx in $ownRx) { if ($op.CommandLine -match $rx) { $mine = $true; break } }\n"
+                  + "    if ($mine) { & taskkill.exe /PID $op.ProcessId /T /F | Out-Null }\n"
                   + "  }\n"
                   + "} catch { }";
     }
@@ -525,6 +539,9 @@ public final class ProjectScripts {
           // 但启动器仍返回 0，最终「报成功而进程不存在」。启动前先按日志路径补齐父目录；
           // 相对路径按项目目录解析（计划任务的工作目录是 System32，不能用当前目录）。
         String logPathPs = PH_LOG.replace("'", "''");
+          // 项目目录也作为「归属判据」写进脚本：启动后的进程解析只认本项目的候选，
+          // 同机不同项目共用同一个主入口名时不会串号。
+        String pathPs = PH_PATH.replace("'", "''");
         String logDirSetup = "$__logTarget = '" + logPathPs + "'\n"
                   + "if (-not [IO.Path]::IsPathRooted($__logTarget)) {\n"
                   + "  $__logTarget = Join-Path '" + PH_PATH.replace("'", "''") + "' $__logTarget\n"
@@ -572,7 +589,34 @@ public final class ProjectScripts {
                   + "  $byId = @{}\n"
                   + "  foreach ($p in $all) { $byId[[int]$p.ProcessId] = $p }\n"
                   + "  $hit = @($all | Where-Object {\n"
-                  + "    $_.CommandLine -and $_.ProcessId -ne $PID -and $_.CommandLine -like ('*' + $want + '*') })\n"
+                  // 排除本脚本自身：执行期整段脚本以 -Command 内联传入，命令行里就带着主入口名，
+                  // 连外层包装进程都可能命中，不排除就会把「自己」选成目标进程。
+                  + "    $_.CommandLine -and $_.ProcessId -ne $PID -and $_.CommandLine -like ('*' + $want + '*') -and -not $_.CommandLine.Contains('Get-CimInstance') })\n"
+                  // 归属过滤：只保留「自身或祖先命令行含本项目日志路径/项目目录」的候选。
+                  // 同机不同项目可以共用同一个主入口名（实测两个 smoke.jar），
+                  // 只按主入口名解析会把别的项目的进程认成自己的（导致 app.pid 串号）。
+                  + "  $ownKeys = @('" + logPathPs + "', '" + pathPs + "') | Where-Object { $_ }\n"
+                  // 必须按路径边界比对：只做子串包含时 C:\ms-acc\acc-sb 会命中 C:\ms-acc\acc-sb2，
+                  // 两个项目互相认领对方的进程 —— 实测批量升级并发启动时两个 app.pid 都写成同一个 PID。
+                  + "  $ownRx = @($ownKeys | ForEach-Object { [regex]::Escape($_) + '([\\\\/\\s\\x22]|$)' })\n"
+                  + "  $ownIds = @{}\n"
+                  + "  foreach ($o in $all) {\n"
+                  + "    if (-not $o.CommandLine) { continue }\n"
+                  + "    foreach ($rx in $ownRx) { if ($o.CommandLine -match $rx) { $ownIds[[int]$o.ProcessId] = $true; break } }\n"
+                  + "  }\n"
+                  + "  $scoped = @()\n"
+                  + "  foreach ($h in $hit) {\n"
+                  + "    if ($ownIds.ContainsKey([int]$h.ProcessId)) { $scoped += $h; continue }\n"
+                  + "    $hp = [int]$h.ParentProcessId\n"
+                  + "    $hg = 0\n"
+                  + "    while ($hp -and $hg -lt 32) {\n"
+                  + "      if ($ownIds.ContainsKey($hp)) { $scoped += $h; break }\n"
+                  + "      if (-not $byId.ContainsKey($hp)) { break }\n"
+                  + "      $hp = [int]$byId[$hp].ParentProcessId\n"
+                  + "      $hg++\n"
+                  + "    }\n"
+                  + "  }\n"
+                  + "  if ($scoped.Count -gt 0) { $hit = $scoped }\n"
                   + "  $target = @()\n"
                   + "  foreach ($h in $hit) {\n"
                   + "    $isWrap = $false\n"

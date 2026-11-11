@@ -19,8 +19,12 @@ import java.util.List;
  * （{@link PlatformApiSpec.Auth#GLOBAL}）；其余需要平台用户登录 token
  * （{@link PlatformApiSpec.Auth#USER}），只有 AK/SK 时会返回 401。</p>
  *
- * <p>版本：云曜按 {@code /v1} {@code /v2} {@code /v3} 分版本且并不通用
- * （实测 {@code v2/global/device/page} 返回 400，v1 可用），故逐条记录版本。</p>
+ * <p>版本：云曜按 {@code /v1} {@code /v2} {@code /v3} 分版本且并不通用，
+ * 故逐条记录版本。设备/监控点分页的官方文档口径是 v2。</p>
+ *
+ * <p><b>手工补充</b>：人员组织域（{@code /api/eits/fdcs/v1/person/*}、
+ * {@code personOrg/*}）与 {@code v2/global/monitor/page} 不在文档树 API 的导出范围内，
+ * 由官方文档页快照补入，标为 {@code fdcs-v1} / {@code v2}。</p>
  *
  * @since 4.0.0.51
  * @author CH
@@ -340,7 +344,9 @@ public final class HikvisionCloudYaoApis {
             PlatformApiSpec.global("post.v2.global.monitor.update", "更新监控点状态V2", "POST",
                     "/artemis/api/eits/v2/global/monitor/update", "v2", "monitor"),
             PlatformApiSpec.global("post.v2.global.monitor.updatename", "更新监控点V2", "POST",
-                    "/artemis/api/eits/v2/global/monitor/updateName", "v2", "monitor")
+                    "/artemis/api/eits/v2/global/monitor/updateName", "v2", "monitor"),
+            PlatformApiSpec.global("post.v2.global.monitor.page", "分页查询监控点V2", "POST",
+                    "/artemis/api/eits/v2/global/monitor/page", "v2", "monitor")
     );
 
     /** msg 域（2 条） */
@@ -363,6 +369,28 @@ public final class HikvisionCloudYaoApis {
                     "/artemis/api/eits/v1/global/cascade/sub/page", "v1", "org"),
             PlatformApiSpec.user("post.v1.queue.statistics.query.organization.list", "获取组织列表", "POST",
                     "/artemis/api/eits/v1/queue/statistics/query/organization/list", "v1", "org")
+    );
+
+    /** 人员组织域（9 条，fdcs；官方文档页快照补入） */
+    private static final List<PlatformApiSpec> DOMAIN_PERSON = List.of(
+            PlatformApiSpec.user("post.fdcs.v1.person.page", "分页查询人员", "POST",
+                    "/artemis/api/eits/fdcs/v1/person/page", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.person.add", "添加人员", "POST",
+                    "/artemis/api/eits/fdcs/v1/person/add", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.person.update", "修改人员", "POST",
+                    "/artemis/api/eits/fdcs/v1/person/update", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.person.delete", "删除人员", "POST",
+                    "/artemis/api/eits/fdcs/v1/person/delete", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.personorg.page", "分页查询组织", "POST",
+                    "/artemis/api/eits/fdcs/v1/personOrg/page", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.personorg.add", "添加组织", "POST",
+                    "/artemis/api/eits/fdcs/v1/personOrg/add", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.personorg.update", "修改组织", "POST",
+                    "/artemis/api/eits/fdcs/v1/personOrg/update", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.personorg.batchdelete", "批量删除组织", "POST",
+                    "/artemis/api/eits/fdcs/v1/personOrg/batchDelete", "fdcs-v1", "person"),
+            PlatformApiSpec.user("post.fdcs.v1.message.page", "分页查询人员组织变更消息", "POST",
+                    "/artemis/api/eits/fdcs/v1/message/page", "fdcs-v1", "person")
     );
 
     /** other 域（61 条） */
@@ -681,6 +709,7 @@ public final class HikvisionCloudYaoApis {
         all.addAll(DOMAIN_MONITOR);
         all.addAll(DOMAIN_MSG);
         all.addAll(DOMAIN_ORG);
+            all.addAll(DOMAIN_PERSON);
         all.addAll(DOMAIN_OTHER);
         all.addAll(DOMAIN_VIDEO);
         ALL = List.copyOf(all);

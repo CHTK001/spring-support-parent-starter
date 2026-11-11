@@ -71,6 +71,11 @@ public class ReidClientManager {
     private static final float DEFAULT_REID_THRESHOLD = 0.35f;
 
     /**
+     * 默认 1:N 相似度阈值（人脸识别与 ReID 检索共用兜底）。
+     */
+    private static final double DEFAULT_MATCH_THRESHOLD = 0.5d;
+
+    /**
      * 默认归并时间窗（秒）。
      */
     private static final int DEFAULT_GAP_SECONDS = 30;
@@ -106,9 +111,18 @@ public class ReidClientManager {
     private volatile PersonTrack track;
 
     /**
-     * 当前生效的特征提取器。
+     * 当前生效的**重识别**特征提取器（{@code reid_feature_model}，留空回落人脸特征模型）。
      */
     private volatile FeatureExtractor featureExtractor;
+
+    /**
+     * 当前生效的**人脸识别**特征提取器（{@code feature_model}）。
+     *
+     * <p>与 {@link #featureExtractor} 是两套特征：人脸特征用于 1:N 认人，
+     * 重识别特征用于跨帧轨迹归并。两者可以相同（只配了一个特征模型时），
+     * 但取值来源必须分开 —— 否则「换掉 ReID 模型」会把认人也一起换掉。</p>
+     */
+    private volatile FeatureExtractor faceFeatureExtractor;
 
     /**
      * 当前生效的检测管线。
@@ -215,13 +229,31 @@ public class ReidClientManager {
     }
 
     /**
-     * 当前生效的特征提取器。
+     * 当前生效的**重识别**特征提取器。
+     *
+     * <p>用于跨帧轨迹归并与 ReID 1:N 检索，取 {@code reid_feature_model}，
+     * 留空回落 {@code feature_model}。要「认人」请用 {@link #currentFaceFeatureExtractor()}。</p>
      *
      * @return 特征提取器；未就绪时返回 {@code null}
      */
     public FeatureExtractor currentFeatureExtractor() {
         currentPipeline();
         return featureExtractor;
+    }
+
+    /**
+     * 当前生效的**人脸识别**特征提取器（{@code feature_model}）。
+     *
+     * <p><b>为什么要与人脸重识别分开。</b>重识别底库要存两个特征值：
+     * 人脸特征用于「这是谁」（1:N 定库），ReID 特征用于「这个人去过哪」（轨迹归并）。
+     * 两者必须是同一个模型产出的向量才能各自比对；混用一个提取器会让
+     * 「只换了 ReID 模型」变成「把人脸识别也换成了别的模型」。</p>
+     *
+     * @return 人脸识别特征提取器；未就绪时返回 {@code null}
+     */
+    public FeatureExtractor currentFaceFeatureExtractor() {
+        currentPipeline();
+        return faceFeatureExtractor;
     }
 
     /**
@@ -263,6 +295,7 @@ public class ReidClientManager {
         this.pipeline = null;
         this.track = null;
         this.featureExtractor = null;
+        this.faceFeatureExtractor = null;
         this.detector = null;
         this.lowThresholdDetector = null;
         build();
@@ -288,39 +321,58 @@ public class ReidClientManager {
             log.info("[Reid] 人脸检测模型未配置，重识别能力未启用");
             return;
         }
-        // 特征模型：优先取重识别专用模型（face.reid_feature_model），留空回落到人脸特征模型。
-        // 两套特征写不同的特征值：人脸特征用于 1:N 认人，ReID 特征用于跨帧轨迹归并。
-        String featureModel = settingReader.getStr(GROUP, "reid_feature_model");
-        boolean reidOwnModel = StringUtils.isNotBlank(featureModel);
-        if (!reidOwnModel) {
-            featureModel = settingReader.getStr(GROUP, "feature_model");
+        // 特征模型分两套：
+        //   人脸识别：feature_model      → 1:N 认人
+        //   重识别  ：reid_feature_model → 跨帧轨迹归并（留空回落人脸特征模型）
+        // 两套特征在入库时各算一次、各写一个向量库，检索时各用各的。
+        String faceModel = settingReader.getStr(GROUP, "feature_model");
+        String reidModel = settingReader.getStr(GROUP, "reid_feature_model");
+        boolean reidOwnModel = StringUtils.isNotBlank(reidModel);
+        if (!reidOwnModel || StringUtils.isBlank(faceModel)) {
+            reidModel = faceModel;
         }
-        if (StringUtils.isBlank(featureModel)) {
+        if (StringUtils.isBlank(faceModel)) {
             log.info("[Reid] 人脸特征模型未配置，重识别能力未启用");
             return;
         }
         String device = settingReader.getStr(GROUP, "device");
-        FeatureExtractor extractor = FeatureExtractor.create(featureModel);
-        if (StringUtils.isNotBlank(device)) {
-            extractor = extractor.device(device);
-        }
+        FeatureExtractor faceExtractor = createExtractor(faceModel, device);
+        FeatureExtractor reidExtractor = reidOwnModel && !reidModel.equals(faceModel)
+                ? createExtractor(reidModel, device)
+                : faceExtractor;
 
         this.detector = sharedDetector;
-        this.featureExtractor = extractor;
+        this.faceFeatureExtractor = faceExtractor;
+        this.featureExtractor = reidExtractor;
         // 低阈值检测管线：重识别专用，尽量多检出模糊/远处人脸。
         // 构建失败时退回共享管线（阈值高一点而已，不影响功能，只是少检出一些）。
         this.lowThresholdDetector = buildLowThresholdDetector(sharedDetector);
         // 管线里的轨迹用一份临时实例：共享实例本身不承载任何账号的轨迹，
         // 业务侧会用各自账号的轨迹管理器另建管线。
         this.track = newTrack();
-        this.pipeline = new FaceReidPipeline(this.lowThresholdDetector, extractor, this.track);
-        log.info("[Reid] 重识别实例就绪: 特征模型={}({}), 阈值={}, 归并窗口={}s, 容量={}, 低阈值检测={},"
-                        + " 识别分流={}",
-                featureModel, reidOwnModel ? "ReID 专用" : "复用人脸特征模型",
+        this.pipeline = new FaceReidPipeline(this.lowThresholdDetector, reidExtractor, this.track);
+        log.info("[Reid] 重识别实例就绪: 人脸特征模型={}, 重识别特征模型={}({}), 阈值={}, 归并窗口={}s, 容量={}, 低阈值检测={},"
+                        + " 识别分流={}, ReID 分流={}",
+                faceModel, reidModel, reidOwnModel ? "ReID 专用" : "复用人脸特征模型",
                 readThreshold(),
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS),
                 settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS),
-                readLowDetectorThreshold(), faceThreshold());
+                readLowDetectorThreshold(), faceThreshold(), reidThreshold());
+    }
+
+    /**
+     * 按模型标识创建特征提取器（可带设备）。
+     *
+     * @param modelId 模型标识
+     * @param device  设备（可空）
+     * @return 特征提取器
+     */
+    private static FeatureExtractor createExtractor(String modelId, String device) {
+        FeatureExtractor extractor = FeatureExtractor.create(modelId);
+        if (StringUtils.isNotBlank(device)) {
+            extractor = extractor.device(device);
+        }
+        return extractor;
     }
 
     /**
@@ -407,6 +459,25 @@ public class ReidClientManager {
     }
 
     /**
+     * ReID 1:N 检索阈值（{@code reid_match_threshold}）。
+     *
+     * <p>与 {@link #reidThreshold()} 不是同一个东西：后者是<b>分流</b>门槛
+     * （这张脸的检测质量够不够进 ReID），本值是<b>相似度</b>门槛
+     * （ReID 特征命中底库所需的最低相似度）。留空回落到人脸 1:N 的
+     * {@code match_threshold}。</p>
+     *
+     * @return 相似度阈值
+     */
+    public double reidMatchThreshold() {
+        BigDecimal value = settingReader.getDecimalOrNull(GROUP, "reid_match_threshold");
+        if (value != null) {
+            return value.doubleValue();
+        }
+        BigDecimal fallback = settingReader.getDecimalOrNull(GROUP, "match_threshold");
+        return fallback == null ? DEFAULT_MATCH_THRESHOLD : fallback.doubleValue();
+    }
+
+    /**
      * 读取默认摄像头标识。
      *
      * @return 摄像头标识；未配置返回 {@code null}
@@ -427,12 +498,15 @@ public class ReidClientManager {
     public String configSummary() {
         return "face-reid{detector=" + settingReader.getStr(GROUP, "detector_model")
                 + ", feature=" + settingReader.getStr(GROUP, "feature_model")
+                + ", reidFeature=" + settingReader.getStr(GROUP, "reid_feature_model")
                 + ", threshold=" + readThreshold()
                 + ", gap=" + settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS) + "s"
                 + ", maxTracks=" + settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS)
                 + ", device=" + settingReader.getStr(GROUP, "device")
                 + ", detectThreshold=" + readLowDetectorThreshold()
                 + ", faceThreshold=" + faceThreshold()
+                + ", reidThreshold=" + reidThreshold()
+                + ", reidMatchThreshold=" + reidMatchThreshold()
                 + ", available=" + available() + "}";
     }
 }

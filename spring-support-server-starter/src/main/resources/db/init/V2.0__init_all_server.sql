@@ -343,6 +343,7 @@ CREATE TABLE IF NOT EXISTS ms_server_project (
     git_skip_tests TINYINT      NULL DEFAULT 1          COMMENT '是否跳过测试',
     maven_home     VARCHAR(512) NULL                    COMMENT 'Maven安装路径(留空则自动检测/下载)',
     maven_version  VARCHAR(32)  NULL DEFAULT '3.9.9'    COMMENT 'Maven版本(自动下载时使用)',
+    jdk_home       VARCHAR(512) NULL                    COMMENT 'JDK安装路径(留空则用PATH上的java)',
     upload_extract TINYINT      NULL DEFAULT 1          COMMENT '上传时是否自动解压(jar不解压;zip/tar解压;模型上传设0保留原文件)',
     upload_target_dir VARCHAR(255) NULL                 COMMENT '上传目标目录(相对项目地址,如models/onnx;jar类留空则投放到主入口)',
     deploy_type    VARCHAR(16)  NULL DEFAULT 'main'     COMMENT '分离式部署类型: main=仅主包; lib=仅依赖; both=全部',

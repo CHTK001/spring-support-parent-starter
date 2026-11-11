@@ -3327,9 +3327,16 @@ public class TsharkCaptureService {
        * <p>两条规则各成一条独立判据，任一满足即删：</p>
        * <ol>
        *   <li><b>过期</b>：会话创建时间早于 {@code days} 天；{@code days <= 0} 时关闭该规则。</li>
-       *   <li><b>目录超量</b>：{@code TSHARK_CAPTURE_DIR} 总占用超过 {@code sizeMb}，
+       *   <li><b>会话超量</b>：在册且可删的会话（pcap + 日志 + 报文库）合计超过 {@code sizeMb}，
        *       从最老的会话开始删，直到回落到上限以内；{@code sizeMb <= 0} 时关闭该规则。</li>
        * </ol>
+       *
+       * <p><b>为什么统计「在册会话」而不是整个目录</b>：原实现统计 {@code TSHARK_CAPTURE_DIR}
+       * 的全部文件，但目录里还留着一堆早已没有会话行的孤儿 pcap / .db（删会话时数据库被别的
+       * 实例抹掉、文件没跟着删，或迁移前的历史残留）。这些孤儿删会话并不能让统计值减少分毫，
+       * 于是每轮清理都判定「超量」，一路从最老的删到最新 —— 刚导入的会话几分钟内就被清掉，
+       * 页面列表里「导入了又消失」。按在册会话合计，判据才和「删了能腾出多少」一致；孤儿
+       * 只记一条日志，交给运维手工清理，免得误删别的实例还在写入的文件。</p>
        *
        * <p>删的是整条会话：会话记录 + 报文 SQLite + 原始 pcap + 抓包日志，
        * 复用 {@link #deleteSession(Long)} 的口径，不另写一套清理逻辑。正在抓包 /
@@ -3369,10 +3376,10 @@ public class TsharkCaptureService {
                 }
             }
         }
-        // 规则二：目录空间
+        // 规则二：会话占用（只看在册会话的文件，目录里的孤儿不计入，见方法注释）
         long limitBytes = (long) policy.getSizeMb() * 1024L * 1024L;
         if (limitBytes > 0) {
-            long used = captureDirBytes();
+            long used = sessionScopeBytes(sessions, removed);
             for (MsTsharkSession session : sessions) {
                 if (used <= limitBytes) {
                     break;
@@ -3384,8 +3391,13 @@ public class TsharkCaptureService {
                 if (removeSessionQuietly(session.getId())) {
                     deleted++;
                     removed.add(session.getId());
-                    used = captureDirBytes();
+                    used = sessionScopeBytes(sessions, removed);
                 }
+            }
+            long orphan = captureDirBytes() - used;
+            if (orphan > limitBytes / 10) {
+                log.info("[tshark] 抓包目录里有 {}MB 无主残留（pcap/.db 已无对应会话行），"
+                        + "不计入保留上限，需运维手工清理", orphan / 1024L / 1024L);
             }
         }
         if (deleted > 0) {
@@ -3418,6 +3430,55 @@ public class TsharkCaptureService {
         } catch (Exception e) {
             log.warn("[tshark] 保留清理删除会话失败 sessionId={} reason={}", sessionId, e.getMessage());
             return false;
+        }
+    }
+
+      /**
+       * 在册会话当前占用的字节数（pcap + 抓包日志 + 报文 SQLite）。
+       *
+       * <p>只算数据库里还有会话行的文件，已删除会话的孤儿文件不计入 —— 空间规则的杠杆是
+       * 「删会话」，统计口径必须与「删了能腾出多少」一致，否则孤儿会把每轮清理都判成超量。</p>
+       *
+       * @param sessions 全部会话（按创建时间升序）
+       * @param removed  本轮已删除的会话
+       * @return 字节数
+       */
+    private static long sessionScopeBytes(List<MsTsharkSession> sessions, Set<Long> removed) {
+        long total = 0L;
+        if (sessions == null) {
+            return 0L;
+        }
+        for (MsTsharkSession session : sessions) {
+            if (session == null || session.getId() == null || removed.contains(session.getId())
+                    || session.getFilePath() == null) {
+                continue;
+            }
+            try {
+                Path pcap = Paths.get(session.getFilePath());
+                total += fileBytes(pcap);
+                total += fileBytes(Paths.get(pcap + ".log"));
+                Path db = TsharkSqliteSourceRegistry.dbPathForPcap(pcap);
+                total += fileBytes(db);
+                total += fileBytes(Paths.get(db + "-wal"));
+                total += fileBytes(Paths.get(db + "-shm"));
+            } catch (Exception ignored) {
+                  // 路径异常按 0 计：统计失败不该阻断清理
+            }
+        }
+        return total;
+    }
+
+      /**
+       * 单个文件字节数（不存在或不可读按 0）。
+       *
+       * @param path 文件路径
+       * @return 字节数
+       */
+    private static long fileBytes(Path path) {
+        try {
+            return Files.isRegularFile(path) ? Files.size(path) : 0L;
+        } catch (Exception e) {
+            return 0L;
         }
     }
 

@@ -161,6 +161,21 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      */
     protected JsonNode execute(String method, String path, Map<String, Object> params,
                                Map<String, String> headers) {
+        return executeJson(method, path, params, headers);
+    }
+
+    /**
+     * 用任意可序列化包体发起请求：云曜等平台的接口包体口径不一致，
+     * 有的要对象、有的要条件数组（{@code [{key,option,value}]}），因此不能只收 {@link Map}。
+     *
+     * @param method  HTTP 方法
+     * @param path    接口路径
+     * @param body    业务包体（Map / List / 字符串均可，null 视为空对象）
+     * @param headers 自定义请求头（如签名头）
+     * @return 响应 JSON
+     */
+    protected JsonNode executeJson(String method, String path, Object body,
+                                   Map<String, String> headers) {
         boolean debug = debugEnabled();
         if (debug) {
             /**
@@ -170,7 +185,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
              * @param headers 头部
              * @param params 参数
              */
-            logRequest(method, path, headers, params);
+            logRequest(method, path, headers, body);
         }
         try {
             HttpClientBuilder builder = HttpClientFactory.of(baseUrl)
@@ -183,10 +198,10 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
             }
             ClientResponse response;
             if ("GET".equalsIgnoreCase(method)) {
-                if (params != null) {
+                if (body instanceof Map<?, ?> params) {
                     params.forEach((k, v) -> {
-                        if (v != null) {
-                            builder.query(k, String.valueOf(v));
+                        if (k != null && v != null) {
+                            builder.query(String.valueOf(k), String.valueOf(v));
                         }
                     });
                 }
@@ -197,7 +212,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
                 // 这里显式序列化成 JSON 字符串（与 .json() 的 Content-Type 一致）。
                 String jsonBody;
                 try {
-                    jsonBody = MAPPER.writeValueAsString(params == null ? Collections.emptyMap() : params);
+                    jsonBody = MAPPER.writeValueAsString(body == null ? Collections.emptyMap() : body);
                 } catch (Exception ex) {
                     throw new IllegalStateException("OpenAPI 请求体序列化失败: " + method + " " + path, ex);
                 }
@@ -236,13 +251,15 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      * @param headers 头部
      * @param params 参数
      */
-    private void logRequest(String method, String path, Map<String, String> headers, Map<String, Object> params) {
+    private void logRequest(String method, String path, Map<String, String> headers, Object params) {
         log.info("[OpenAPI-DEBUG] -> {} {}{}", method, baseUrl, path);
         if (headers != null && !headers.isEmpty()) {
             log.info("[OpenAPI-DEBUG] -> headers: {}", maskHeaders(headers));
         }
-        if (params != null && !params.isEmpty()) {
-            log.info("[OpenAPI-DEBUG] -> body: {}", maskParams(params));
+        if (params instanceof Map<?, ?> map && !map.isEmpty()) {
+            log.info("[OpenAPI-DEBUG] -> body: {}", maskParams(map));
+        } else if (params != null) {
+            log.info("[OpenAPI-DEBUG] -> body: {}", params);
         }
     }
 
@@ -286,14 +303,17 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      * @param params 参数
      * @return mask参数的结果
      */
-    private static Map<String, Object> maskParams(Map<String, Object> params) {
+    private static Map<String, Object> maskParams(Map<?, ?> params) {
         java.util.LinkedHashMap<String, Object> masked = new java.util.LinkedHashMap<>();
         params.forEach((k, v) -> {
-            String lk = k == null ? "" : k.toLowerCase();
+            if (!(k instanceof String key)) {
+                return;
+            }
+            String lk = key.toLowerCase();
             if (lk.contains("secret")) {
-                masked.put(k, v == null ? "null" : maskTail(String.valueOf(v)));
+                masked.put(key, v == null ? "null" : maskTail(String.valueOf(v)));
             } else {
-                masked.put(k, v);
+                masked.put(key, v);
             }
         });
         return masked;

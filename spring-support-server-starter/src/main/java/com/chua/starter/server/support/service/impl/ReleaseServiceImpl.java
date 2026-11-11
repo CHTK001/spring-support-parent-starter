@@ -902,6 +902,12 @@ public class ReleaseServiceImpl implements ReleaseService {
     /** 后端检索超时（秒）：大文件 grep 比普通命令慢，但不能无限等 */
     private static final int LOG_SEARCH_TIMEOUT_SECONDS = 120;
 
+    /** 投放复制失败后的重试次数：目标文件被上一个进程短暂占用时，等一会就能复制成功 */
+    private static final int PLACE_COPY_RETRY = 3;
+
+    /** 投放复制重试间隔（毫秒）：Windows 上 taskkill 后句柄释放通常 1~2 秒内完成 */
+    private static final long PLACE_COPY_RETRY_INTERVAL_MS = 2000L;
+
     @Override
     public ReturnResult<String> getProjectLog(Long id) {
         ReturnResult<OperationContext> prepared = prepare(id);
@@ -1834,13 +1840,38 @@ public class ReleaseServiceImpl implements ReleaseService {
                   // 给第二个项目或二次升级就会报文件不存在（实测升级后上传目录里的包已消失），
                   // 而且 SDK 路径移动、命令回退路径复制，两条路径的副作用还不一致。
                   // 因此先走平台命令复制（cp -f / Copy-Item），源包始终保留。
+                String placeCmd = placeCommand(pf, dir, pc.packagePath(), placement.fileName());
                 ReturnResult<java.util.List<MsExecLog>> copied =
                         execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
-                                placeCommand(pf, dir, pc.packagePath(), placement.fileName()), 60, null);
+                                placeCmd, 60, null);
                 if (copied.isOk() && !anyExecFailed(copied.getData())) {
                     return java.util.List.of("已复制到 " + dst + "（保留源包）");
                 }
-                String cmdWhy = copied.isOk() ? "退出码非 0" : copied.getMsg();
+                String cmdWhy = copied.isOk() ? execFailureDetail(copied.getData()) : copied.getMsg();
+                  // 命令通道可用、只是复制失败（最典型：目标 jar 仍被上一个进程占用，写入被拒）时，
+                  // 绝不能退化成「重命名源包」：批量升级让多个项目共用同一个源包，源包一旦被移动，
+                  // 后续项目就只剩「文件不存在」，整批升级必然失败（实测 38 在批量升级里因此失败）。
+                  // 这里改为短暂等待后重试复制，源包始终保留。
+                if (copied.isOk()) {
+                    for (int retry = 1; retry <= PLACE_COPY_RETRY; retry++) {
+                        sleepQuietly(PLACE_COPY_RETRY_INTERVAL_MS);
+                        ReturnResult<java.util.List<MsExecLog>> again =
+                                execService.runCommand(java.util.Collections.singletonList(ctx.hostId),
+                                        placeCmd, 60, null);
+                        if (again.isOk() && !anyExecFailed(again.getData())) {
+                            return java.util.List.of("已复制到 " + dst + "（第 " + retry
+                                      + " 次重试成功，保留源包；首次失败: " + cmdWhy + "）");
+                        }
+                        cmdWhy = again.isOk() ? execFailureDetail(again.getData()) + "（第 " + retry + " 次重试）"
+                                : again.getMsg();
+                    }
+                    if (placement.restoreOnFailure()) {
+                        String restoreNote = restoreAndRestart(pf, ctx, pc.projectPath(), ctx.project);
+                        throw new IllegalStateException(placement.title() + "失败；" + restoreNote
+                                  + "复制重试 " + PLACE_COPY_RETRY + " 次后仍失败=" + cmdWhy);
+                    }
+                    throw new IllegalStateException(placement.title() + "失败: " + cmdWhy);
+                }
                   // 命令通道不可用（如仅开 SFTP 的主机）才退回重命名：这条路径必然移动源包，
                   // 属于次优但唯一可行的手段，会在步骤日志里写明。
                 ReturnResult<Void> mv = sftpService.rename(ctx.hostId, null, src, dst);
@@ -1865,6 +1896,43 @@ public class ReleaseServiceImpl implements ReleaseService {
             }));
         }
         return steps;
+    }
+
+      /**
+       * 静默等待：投放复制失败后释放被占用的目标文件需要时间。
+       *
+       * @param millis 等待毫秒
+       */
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+      /**
+       * 提炼命令失败原因：执行失败的真实报错只在日志的 error/output 里，
+       * 只报「退出码非 0」会让运维完全看不出原因
+       * （实测投放失败被这个空泛信息挡了两轮才定位到 shell 选错）。
+       *
+       * @param logs 执行日志
+       * @return 带退出码与首行错误信息的简述
+       */
+    private static String execFailureDetail(java.util.List<MsExecLog> logs) {
+        if (logs == null || logs.isEmpty()) {
+            return "退出码非 0（无执行日志）";
+        }
+        MsExecLog first = logs.get(0);
+        String why = first.getMsExecLogError();
+        if (why == null || why.isBlank()) {
+            why = first.getMsExecLogOutput();
+        }
+        String line = why == null ? "" : why.replace("\r", "").split("\n", 2)[0].trim();
+        if (line.length() > 200) {
+            line = line.substring(0, 200);
+        }
+        return "退出码 " + first.getMsExecLogExitCode() + (line.isEmpty() ? "" : "：" + line);
     }
 
       /**

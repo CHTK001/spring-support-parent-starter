@@ -226,6 +226,34 @@ public class SftpServiceImpl implements SftpService {
     }
 
     @Override
+    public ReturnResult<String> uploadLocal(Long hostId, Long identityId, String directory,
+                                           Path localFile, String fileName) {
+        if (localFile == null || !Files.isRegularFile(localFile)) {
+            return ReturnResult.error("本地文件不存在: " + localFile);
+        }
+        String dir = normalizeDir(directory);
+        String name = sanitizeFileName(notBlank(fileName) ? fileName : localFile.getFileName().toString());
+        ReturnResult<SshCredential> resolved = resolve(hostId, identityId);
+        if (!resolved.isOk()) {
+            return ReturnResult.error(resolved.getMsg());
+        }
+        var host = requireHost(hostId);
+        String remotePath = dir.endsWith("/") ? dir + name : dir + "/" + name;
+        /**
+         * 尝试。
+         * @param openSftpClient(host.getServerHostAddress( 打开sftpclient(主机.获取服务端主机地址(
+         */
+        try (var sftp = openSftpClient(host, resolved.getData())) {
+            sftp.client().mkdir().path(dir).recursive(true).exec();
+            sftp.client().upload().local(localFile.toString()).remote(remotePath).exec();
+            return ReturnResult.ok(remotePath, "上传成功");
+        } catch (Exception e) {
+            log.warn("[sftp] 本地上传失败 hostId={} dir={} file={}: {}", hostId, directory, localFile, e.getMessage());
+            return ReturnResult.error("上传失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public ReturnResult<TempFile> download(Long hostId, Long identityId, String path) {
         if (path == null || path.isBlank()) {
             return ReturnResult.error("文件路径不能为空");

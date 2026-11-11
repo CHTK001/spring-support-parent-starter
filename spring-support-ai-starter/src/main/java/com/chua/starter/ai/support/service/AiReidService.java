@@ -183,6 +183,17 @@ public interface AiReidService {
     int clear(String group);
 
     /**
+     * 删除一条底库记录（元数据 + 两套特征向量）。
+     *
+     * <p>两套一起删：只删一套会留下「认得出但搜不到」或「搜得到但列表里没有」的幽灵数据。</p>
+     *
+     * @param group 分组名（空值按默认组）
+     * @param id    底库行的向量标识
+     * @return 是否删除成功（记录不存在也返回 true，便于幂等）
+     */
+    boolean delete(String group, String id);
+
+    /**
      * 当前账号已有数据的分组名列表（供前端分组选择器）。
      *
      * <p>总是包含 {@link AiLibraryGroups#DEFAULT}：即使某账号还没有任何数据，

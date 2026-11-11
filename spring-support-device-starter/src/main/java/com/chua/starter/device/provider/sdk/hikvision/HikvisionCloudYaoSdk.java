@@ -22,18 +22,20 @@ import java.util.Map;
 /**
  * 海康云曜 SDK 实现（官方未提供 Java SDK，按官方 OpenAPI 实现）。
  *
- * <p><b>官方文档核对结果</b>（open.hikyun.com 文档树 API 取得）：</p>
+ * <p><b>官方文档核对结果</b>（help.hikyun.com 文档快照）：</p>
  * <ul>
  *   <li>换 token：{@code POST /artemis/oauth/token/v2}，字段 accessKey / secretKey / productCode / projectId</li>
  *   <li>令牌请求头：{@code access_token: <token>}（<b>不是</b> Authorization: Bearer）</li>
- *   <li>设备分页：{@code POST /api/eits/v1/global/device/page}（全局_ 接口，走 AK/SK 全局 token）</li>
- *   <li>监控点分页：{@code POST /api/eits/v1/global/monitor/page}</li>
- *   <li>组织分页：{@code POST /api/eits/v1/global/cascade/org/page}</li>
- *   <li>人员分页：{@code POST /api/eits/v1/global/user/page}</li>
+ *   <li>设备分页：{@code POST /artemis/api/eits/v2/global/device/page}，
+ *       包体是<b>条件数组</b> {@code [{key,option:"eq",value}]}（pageNo / pageSize / projectId）</li>
+ *   <li>监控点分页：{@code POST /artemis/api/eits/v2/global/monitor/page}，
+ *       包体 {@code {projectId,pageNo,pageSize}}；该接口的官方入参写的是
+ *       {@code Authorization} 用户凭证，AK/SK 的 access_token 不满足，未配 userToken 时会被网关拒绝</li>
+ *   <li>组织分页：{@code POST /artemis/api/eits/fdcs/v1/personOrg/page}</li>
+ *   <li>人员分页：{@code POST /artemis/api/eits/fdcs/v1/person/page}</li>
  * </ul>
  *
- * <p>实测注意：{@code /api/eits/v2/global/device/page} 返回 400，只有 v1 可用；
- * 非 global 前缀属「需用户 Authorization」，用全局 token 会得到 401。</p>
+ * <p>文档里的「请求路径」均不含 {@code /artemis} 前缀，真实调用必须补上。</p>
  *
  * @since 4.0.0.51
  * @author CH
@@ -50,20 +52,23 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
     /** 换 token */
     private static final String PATH_TOKEN = "/artemis/oauth/token/v2";
 
-    /** 设备分页 */
-    private static final String PATH_DEVICE_PAGE = "/artemis/api/eits/v1/global/device/page";
+    /** 设备分页（官方 v2 全局接口，条件数组包体） */
+    private static final String PATH_DEVICE_PAGE = "/artemis/api/eits/v2/global/device/page";
 
-    /** 监控点分页 */
-    private static final String PATH_MONITOR_PAGE = "/artemis/api/eits/v1/global/monitor/page";
+    /** 监控点分页（官方 v2 全局接口，对象包体） */
+    private static final String PATH_MONITOR_PAGE = "/artemis/api/eits/v2/global/monitor/page";
 
-    /** 组织分页 */
-    private static final String PATH_ORG_PAGE = "/artemis/api/eits/v1/global/cascade/org/page";
+    /** 组织分页（官方人员组织域接口） */
+    private static final String PATH_ORG_PAGE = "/artemis/api/eits/fdcs/v1/personOrg/page";
 
-    /** 人员分页 */
-    private static final String PATH_USER_PAGE = "/artemis/api/eits/v1/global/user/page";
+    /** 人员分页（官方人员组织域接口） */
+    private static final String PATH_USER_PAGE = "/artemis/api/eits/fdcs/v1/person/page";
 
     /** 分页大小 */
     private static final int PAGE_SIZE = 100;
+
+    /** 分页翻页上限，防御平台不返回 total 时死循环 */
+    private static final int MAX_PAGES = 200;
 
     /** HTTP 客户端（复用连接） */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
@@ -100,9 +105,9 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
 
     @Override
     public com.chua.starter.device.provider.sdk.PlatformApiVersion apiVersion() {
-        // 实测：v1 的 global 分页接口可用；v2 的 device/page 返回 400，故锁定 v1
+        // 官方文档口径：设备/监控点分页在 v2，人员组织域在 fdcs/v1
         return com.chua.starter.device.provider.sdk.PlatformApiVersion.verified(
-                "eits-v1", "https://open.hikyun.com/");
+                "eits-v2", "https://open.hikyun.com/artemis/");
     }
 
     @Override
@@ -202,20 +207,20 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
     @Override
     public List<VendorDevice> listDevices() {
         List<VendorDevice> result = new ArrayList<>();
-        for (JsonNode node : page(PATH_DEVICE_PAGE)) {
+        for (JsonNode node : devicePage()) {
             result.add(new VendorDevice(
-                    str(node, "deviceSerial", "deviceId", "id", "serial"),
-                    str(node, "deviceName", "name"),
-                    str(node, "deviceModel", "productModel", "model"),
-                    "camera",
-                    str(node, "deviceSerial", "serial"),
-                    str(node, "deviceIp", "ip"),
-                    integer(node, "devicePort", "port"),
-                    str(node, "address", "deviceAddress"),
-                    decimal(node, "latitude", "lat"),
-                    decimal(node, "longitude", "lng"),
-                    integer(node, "channelNum", "channelCount"),
-                    bool(node, "onlineStatus", "online", "status")));
+                    str(node, "deviceSerial", "id"),
+                    str(node, "deviceName"),
+                    str(node, "model"),
+                    categoryOf(str(node, "modelType", "modelTypeStr")),
+                    str(node, "deviceSerial"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    integer(node, "channumCount", "channelNum"),
+                    bool(node, "onlineStatus")));
         }
         return result;
     }
@@ -223,20 +228,20 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
     @Override
     public List<VendorDevice> listMonitors() {
         List<VendorDevice> result = new ArrayList<>();
-        for (JsonNode node : page(PATH_MONITOR_PAGE)) {
+        for (JsonNode node : monitorPage()) {
             result.add(new VendorDevice(
-                    str(node, "monitorCode", "monitorUniqueCode", "id"),
-                    str(node, "monitorName", "name", "deviceName"),
-                    str(node, "deviceModel", "model"),
-                    "camera",
-                    str(node, "deviceSerial", "deviceCode", "serial"),
-                    str(node, "deviceIp", "ip"),
-                    integer(node, "devicePort", "port"),
-                    str(node, "address", "installAddress"),
-                    decimal(node, "latitude", "lat"),
-                    decimal(node, "longitude", "lng"),
+                    str(node, "monitorCode", "monitorSerial", "id"),
+                    str(node, "monitorName", "deviceName"),
+                    str(node, "model"),
+                    categoryOf(str(node, "modelType", "moduleType")),
+                    str(node, "monitorSerial"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                     1,
-                    bool(node, "onlineStatus", "online", "status")));
+                    bool(node, "onlineStatus")));
         }
         return result;
     }
@@ -244,11 +249,11 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
     @Override
     public List<OrganizationNode> listOrganizations() {
         List<OrganizationNode> result = new ArrayList<>();
-        for (JsonNode node : page(PATH_ORG_PAGE)) {
+        for (JsonNode node : fdcsPage(PATH_ORG_PAGE)) {
             result.add(new OrganizationNode(
-                    str(node, "id", "orgId", "orgCode", "departmentId"),
-                    str(node, "name", "orgName", "departmentName", "title"),
-                    str(node, "parentId", "parentOrgId", "parentDepartmentId")));
+                    str(node, "orgId", "orgCode"),
+                    str(node, "orgName"),
+                    str(node, "parentOrgId")));
         }
         return result;
     }
@@ -256,48 +261,170 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
     @Override
     public List<DevicePerson> listPersons() {
         List<DevicePerson> result = new ArrayList<>();
-        for (JsonNode node : page(PATH_USER_PAGE)) {
+        for (JsonNode node : fdcsPage(PATH_USER_PAGE)) {
             result.add(new DevicePerson(
-                    str(node, "userDepartmentId", "departmentId", "orgId"),
-                    str(node, "id", "userId", "userName"),
-                    str(node, "nickName", "userName", "name"),
-                    str(node, "departmentName", "title"),
-                    str(node, "phoneNo", "phone", "mobile"),
-                    str(node, "email", "mail")));
+                    str(node, "orgId"),
+                    str(node, "personId"),
+                    str(node, "personName"),
+                    str(node, "jobPost", "personNum"),
+                    str(node, "phone", "phoneNo"),
+                    str(node, "email")));
         }
         return result;
     }
 
     /**
-     * 分页拉取全部条目。
+     * 设备分页逐页拉取（官方 v2 全局接口，包体是条件数组）。
      *
-     * @param path 接口路径
-     * @return 全量条目
+     * @return 全量设备条目
      */
-    private List<JsonNode> page(String path) {
+    private List<JsonNode> devicePage() {
         List<JsonNode> all = new ArrayList<>();
-        for (int pageNo = 1; pageNo <= 200; pageNo++) {
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("pageNo", pageNo);
-            body.put("pageSize", PAGE_SIZE);
-            if (productCode != null) {
-                body.put("productCode", productCode);
-            }
+        for (int pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+            List<Map<String, Object>> conditions = new ArrayList<>();
+            conditions.add(condition("pageNo", pageNo));
+            conditions.add(condition("pageSize", PAGE_SIZE));
             if (projectId != null) {
-                body.put("projectId", projectId);
+                conditions.add(condition("projectId", projectId));
             }
-            JsonNode root = send(path, body, token());
-            JsonNode data = root == null ? null : root.get("data");
-            List<JsonNode> list = toList(data);
+            JsonNode root = send(PATH_DEVICE_PAGE, conditions, token());
+            List<JsonNode> list = toList(root == null ? null : root.get("data"));
             if (list.isEmpty()) {
                 break;
             }
             all.addAll(list);
-            if (list.size() < PAGE_SIZE) {
+            if (list.size() < PAGE_SIZE || lastPage(root == null ? null : root.get("data"), pageNo)) {
                 break;
             }
         }
         return all;
+    }
+
+    /**
+     * 监控点分页逐页拉取（官方 v2 全局接口，包体是对象）。
+     *
+     * @return 全量监控点条目
+     */
+    private List<JsonNode> monitorPage() {
+        if (projectId == null) {
+            log.info("[HikvisionCloudYao] 未配置 projectId，监控点分页不可用（官方 projectId 必填）");
+            return List.of();
+        }
+        List<JsonNode> all = new ArrayList<>();
+        for (int pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("projectId", projectIdNumber());
+            body.put("pageNo", pageNo);
+            body.put("pageSize", PAGE_SIZE);
+            JsonNode root = send(PATH_MONITOR_PAGE, body, token());
+            List<JsonNode> list = toList(root == null ? null : root.get("data"));
+            if (list.isEmpty()) {
+                break;
+            }
+            all.addAll(list);
+            if (list.size() < PAGE_SIZE || lastPage(root == null ? null : root.get("data"), pageNo)) {
+                break;
+            }
+        }
+        return all;
+    }
+
+    /**
+     * 人员/组织分页逐页拉取（官方 fdcs 接口，projectId + productCode 必填）。
+     *
+     * @param path 接口路径
+     * @return 全量条目
+     */
+    private List<JsonNode> fdcsPage(String path) {
+        List<JsonNode> all = new ArrayList<>();
+        for (int pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+            Map<String, Object> body = new LinkedHashMap<>();
+            if (projectId != null) {
+                body.put("projectId", projectIdNumber());
+            }
+            if (productCode != null) {
+                body.put("productCode", productCode);
+            }
+            body.put("pageNo", pageNo);
+            body.put("pageSize", PAGE_SIZE);
+            JsonNode root = send(path, body, token());
+            List<JsonNode> list = toList(root == null ? null : root.get("data"));
+            if (list.isEmpty()) {
+                break;
+            }
+            all.addAll(list);
+            if (list.size() < PAGE_SIZE || lastPage(root == null ? null : root.get("data"), pageNo)) {
+                break;
+            }
+        }
+        return all;
+    }
+
+    /**
+     * 构造设备分页条件项 {@code {key,option:"eq",value}}。
+     *
+     * @param key   字段
+     * @param value 值
+     * @return 条件项
+     */
+    private static Map<String, Object> condition(String key, Object value) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("key", key);
+        item.put("option", "eq");
+        item.put("value", value);
+        return item;
+    }
+
+    /**
+     * 项目 ID 的包体取值：官方示例是数字，非数字时原样下发。
+     *
+     * @return projectId 或 {@code null}
+     */
+    private Object projectIdNumber() {
+        if (projectId == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(projectId);
+        } catch (NumberFormatException ex) {
+            return projectId;
+        }
+    }
+
+    /**
+     * 分页是否已到末页（响应带 totalPage / total 时据此提前结束）。
+     *
+     * @param data   响应 data 节点
+     * @param pageNo 当前页
+     * @return true 已到末页
+     */
+    private static boolean lastPage(JsonNode data, int pageNo) {
+        if (data == null || !data.isObject()) {
+            return false;
+        }
+        int totalPage = data.path("totalPage").asInt(0);
+        if (totalPage > 0) {
+            return pageNo >= totalPage;
+        }
+        long total = data.path("total").asLong(0L);
+        return total > 0 && (long) pageNo * PAGE_SIZE >= total;
+    }
+
+    /**
+     * 设备类型映射：CAMERA 视频 / ALARM 报警 / ACCESS 门禁。
+     *
+     * @param code 平台类型码
+     * @return 设备分类
+     */
+    private static String categoryOf(String code) {
+        String value = code == null ? "" : code.trim().toUpperCase(java.util.Locale.ROOT);
+        if (value.contains("ACCESS") || value.contains("门禁")) {
+            return "accessControl";
+        }
+        if (value.contains("ALARM") || value.contains("报警")) {
+            return "alarm";
+        }
+        return "camera";
     }
 
     /**
@@ -318,7 +445,7 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
      * @param token access_token，null 表示换 token 请求
      * @return 解析后的 JSON 根节点
      */
-    private JsonNode send(String path, Map<String, Object> body, String token) {
+    private JsonNode send(String path, Object body, String token) {
         try {
             String json = MAPPER.writeValueAsString(body);
             HttpRequest.Builder builder = HttpRequest.newBuilder()

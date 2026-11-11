@@ -62,9 +62,35 @@ public class SysAiReidLibrary {
 
     /**
      * 向量库中的条目标识，与 jvector 里的 key 同名 —— 两者的关联键。
+     *
+     * <p>本列指向<b>ReID 特征</b>（{@code reid_feature_model} 产出），
+     * 用于「这个人去过哪」的轨迹检索。</p>
      */
     @TableField("sys_ai_reid_library_vector_id")
     private String vectorId;
+
+    /**
+     * 人脸特征向量标识（{@code feature_model} 产出）。
+     *
+     * <p><b>为什么一条记录两个向量。</b>人脸重识别 = 人脸识别管线 + ReID 管线，
+     * 两条管线用各自的模型解释同一张脸：人脸特征用于 1:N「这是谁」，
+     * ReID 特征用于跨帧/跨镜「去过哪」。两个向量分属两个索引
+     * （{@code reid} 与 {@code reid-face}），换掉其中一个模型不会毁掉另一个。</p>
+     *
+     * <p>为 {@code null} 表示这条记录只有 ReID 特征（历史行或入库时人脸特征提取失败），
+     * 此时它不参与人脸识别 1:N 检索。</p>
+     */
+    @TableField("sys_ai_reid_library_face_vector_id")
+    private String faceVectorId;
+
+    /**
+     * 入库时的分流结论：{@code FACE}（置信度 ≥ 人脸阈值）或 {@code REID}（只到 ReID 阈值）。
+     *
+     * <p>同一张脸只由达标的那条管线回答，这一列是那个结论的持久形态：
+     * 检索时据此决定这行主用哪个特征。历史行为 {@code null}。</p>
+     */
+    @TableField("sys_ai_reid_library_match_type")
+    private String matchType;
 
     /**
      * 缩略图（base64）。
