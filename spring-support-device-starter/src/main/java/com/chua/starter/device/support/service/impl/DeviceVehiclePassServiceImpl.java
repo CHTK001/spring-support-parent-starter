@@ -98,6 +98,7 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
                 continue;
             }
             DeviceVehiclePass entity = new DeviceVehiclePass();
+            entity.setDeviceVehiclePassDeviceId(session.getDeviceId());
             entity.setDeviceVehiclePassGateId(record.gateId());
             entity.setDeviceVehiclePassPlateNo(record.plateNo());
             entity.setDeviceVehiclePassDirection(record.direction());

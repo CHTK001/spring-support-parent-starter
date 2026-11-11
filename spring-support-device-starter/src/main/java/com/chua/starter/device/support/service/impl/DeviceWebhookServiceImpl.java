@@ -5,15 +5,18 @@ import com.chua.starter.device.support.callback.DeviceLifecycleEvent;
 import com.chua.starter.device.support.callback.DeviceLifecyclePublisher;
 import com.chua.starter.device.support.entity.DeviceAccessRecord;
 import com.chua.starter.device.support.entity.DeviceAlarm;
+import com.chua.starter.device.support.entity.DeviceAttendanceRecord;
 import com.chua.starter.device.support.entity.DeviceWebhookAppKey;
 import com.chua.starter.device.support.entity.DeviceWebhookReceipt;
 import com.chua.starter.device.support.mapper.DeviceAccessRecordMapper;
 import com.chua.starter.device.support.mapper.DeviceAlarmMapper;
+import com.chua.starter.device.support.mapper.DeviceAttendanceRecordMapper;
 import com.chua.starter.device.support.mapper.DeviceWebhookAppKeyMapper;
 import com.chua.starter.device.support.mapper.DeviceWebhookReceiptMapper;
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
 import com.chua.starter.device.support.mapper.DeviceVehiclePassMapper;
 import com.chua.starter.device.support.model.AccessRecordPush;
+import com.chua.starter.device.support.model.AttendancePush;
 import com.chua.starter.device.support.model.VehiclePassPush;
 import com.chua.starter.device.support.model.AlarmPush;
 import com.chua.starter.device.support.model.AppKeyCreateRequest;
@@ -60,8 +63,10 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     private static final String TOPIC_ALARM = "alarm";
     /** 过车主题 */
     private static final String TOPIC_VEHICLE = "vehicle";
+    /** 考勤主题 */
+    private static final String TOPIC_ATTENDANCE = "attendance";
     /** 默认授权主题 */
-    private static final String DEFAULT_SCOPES = "access,alarm,vehicle";
+    private static final String DEFAULT_SCOPES = "access,alarm,vehicle,attendance";
     /** 时间戳防重放窗口（秒） */
     private static final long REPLAY_WINDOW_SECONDS = 300L;
     /** 常用时间格式 */
@@ -77,6 +82,8 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     private final DeviceAlarmMapper alarmMapper;
     /** 过车记录映射器 */
     private final DeviceVehiclePassMapper vehiclePassMapper;
+    /** 考勤记录映射器 */
+    private final DeviceAttendanceRecordMapper attendanceMapper;
     /** 生命周期回调发布器 */
     private final DeviceLifecyclePublisher lifecyclePublisher;
 
@@ -269,6 +276,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                     continue;
                 }
                 DeviceVehiclePass entity = new DeviceVehiclePass();
+                entity.setDeviceVehiclePassDeviceId(item.getDeviceId());
                 entity.setDeviceVehiclePassGateId(item.getGateId());
                 entity.setDeviceVehiclePassPlateNo(item.getPlateNo());
                 entity.setDeviceVehiclePassDirection(item.getDirection());
@@ -284,6 +292,44 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
             }
         }
         log.info("[Device][Webhook] 过车推送入库: source={}, received={}, created={}, skipped={}",
+                source, result.getReceived(), result.getCreated(), result.getSkipped());
+        return result;
+    }
+
+    @Override
+    public WebhookPushResult ingestAttendance(String source, String rawBody, List<AttendancePush> items) {
+        WebhookPushResult result = newResult(TOPIC_ATTENDANCE, items);
+        for (int i = 0; i < items.size(); i++) {
+            AttendancePush item = items.get(i);
+            try {
+                if (item == null || (!StringUtils.hasText(item.getPersonName())
+                        && !StringUtils.hasText(item.getCardNo()))) {
+                    result.getErrors().add("第 " + (i + 1) + " 条缺少人员姓名或卡号");
+                    continue;
+                }
+                String externalId = externalId(source, TOPIC_ATTENDANCE, rawBody, i, item.getExternalId());
+                if (receiptExists(source, externalId, TOPIC_ATTENDANCE)) {
+                    result.setSkipped(result.getSkipped() + 1);
+                    continue;
+                }
+                DeviceAttendanceRecord entity = new DeviceAttendanceRecord();
+                entity.setDeviceAttendanceRecordDeviceId(item.getDeviceId());
+                entity.setDeviceAttendanceRecordPersonName(item.getPersonName());
+                entity.setDeviceAttendanceRecordPersonNo(item.getPersonNo());
+                entity.setDeviceAttendanceRecordCardNo(item.getCardNo());
+                entity.setDeviceAttendanceRecordDirection(item.getDirection());
+                entity.setDeviceAttendanceRecordOccurredAt(parseTime(item.getOccurredAt()));
+                entity.setDeviceAttendanceRecordSource("webhook");
+                entity.setDeviceAttendanceRecordSourceId(externalId);
+                entity.setDeviceAttendanceRecordCreatedAt(LocalDateTime.now());
+                attendanceMapper.insert(entity);
+                saveReceipt(source, externalId, TOPIC_ATTENDANCE);
+                result.setCreated(result.getCreated() + 1);
+            } catch (Exception ex) {
+                result.getErrors().add("第 " + (i + 1) + " 条: " + ex.getMessage());
+            }
+        }
+        log.info("[Device][Webhook] 考勤推送入库: source={}, received={}, created={}, skipped={}",
                 source, result.getReceived(), result.getCreated(), result.getSkipped());
         return result;
     }

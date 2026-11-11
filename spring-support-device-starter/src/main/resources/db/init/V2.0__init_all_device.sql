@@ -831,6 +831,8 @@ CREATE TABLE IF NOT EXISTS device_vehicle (
     device_vehicle_valid_to     DATETIME DEFAULT NULL COMMENT '有效期止',
     device_vehicle_vendor       VARCHAR(32) DEFAULT NULL COMMENT '厂商标识',
     device_vehicle_external_id  VARCHAR(128) DEFAULT NULL COMMENT '厂商侧车辆标识',
+    device_vehicle_device_id    VARCHAR(64) DEFAULT NULL COMMENT '绑定设备 ID（车闸所在设备）',
+    device_vehicle_belonging    VARCHAR(128) DEFAULT NULL COMMENT '车牌所属（单位/车场）',
     device_vehicle_remark       VARCHAR(512) DEFAULT NULL COMMENT '备注',
     device_vehicle_deleted      TINYINT(1) DEFAULT '0' COMMENT '删除标记',
     device_vehicle_created_at   DATETIME DEFAULT NULL COMMENT '创建时间',
@@ -859,6 +861,7 @@ CREATE TABLE IF NOT EXISTS device_barrier_gate (
 
 CREATE TABLE IF NOT EXISTS device_vehicle_pass (
     device_vehicle_pass_id           VARCHAR(64) NOT NULL COMMENT '主键',
+    device_vehicle_pass_device_id    VARCHAR(64) DEFAULT NULL COMMENT '所属设备 ID',
     device_vehicle_pass_gate_id      VARCHAR(64) DEFAULT NULL COMMENT '车闸标识',
     device_vehicle_pass_plate_no     VARCHAR(32) DEFAULT NULL COMMENT '车牌号',
     device_vehicle_pass_direction    VARCHAR(16) DEFAULT NULL COMMENT '方向：in/out',
@@ -868,8 +871,26 @@ CREATE TABLE IF NOT EXISTS device_vehicle_pass (
     device_vehicle_pass_created_at   DATETIME DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (device_vehicle_pass_id),
     KEY idx_pass_gate_time (device_vehicle_pass_gate_id, device_vehicle_pass_time),
+    KEY idx_pass_device_time (device_vehicle_pass_device_id, device_vehicle_pass_time),
     KEY idx_pass_plate_time (device_vehicle_pass_plate_no, device_vehicle_pass_time)
 ) COMMENT '车辆过车记录';
+
+CREATE TABLE IF NOT EXISTS device_attendance_record (
+    device_attendance_record_id           VARCHAR(64) NOT NULL COMMENT '主键',
+    device_attendance_record_device_id    VARCHAR(64) DEFAULT NULL COMMENT '设备 ID',
+    device_attendance_record_person_name  VARCHAR(64) DEFAULT NULL COMMENT '人员姓名',
+    device_attendance_record_person_no    VARCHAR(64) DEFAULT NULL COMMENT '人员编号（工号）',
+    device_attendance_record_card_no      VARCHAR(64) DEFAULT NULL COMMENT '卡号',
+    device_attendance_record_direction    VARCHAR(16) DEFAULT NULL COMMENT '方向：in/out',
+    device_attendance_record_occurred_at  DATETIME DEFAULT NULL COMMENT '考勤时间',
+    device_attendance_record_source       VARCHAR(32) DEFAULT NULL COMMENT '来源：webhook/access-sync',
+    device_attendance_record_source_id    VARCHAR(128) DEFAULT NULL COMMENT '来源侧幂等键',
+    device_attendance_record_created_at   DATETIME DEFAULT NULL COMMENT '创建时间',
+    PRIMARY KEY (device_attendance_record_id),
+    KEY idx_attendance_time (device_attendance_record_occurred_at),
+    KEY idx_attendance_device_time (device_attendance_record_device_id, device_attendance_record_occurred_at),
+    KEY idx_attendance_source (device_attendance_record_source_id)
+) COMMENT '考勤记录';
 
 CREATE TABLE IF NOT EXISTS device_vehicle_pass_cursor (
     device_vehicle_pass_cursor_device_id   VARCHAR(64) NOT NULL COMMENT '设备标识',

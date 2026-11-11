@@ -19,6 +19,7 @@ VALUES
     (REPLACE(UUID(), '-', ''), 'deviceEventPoll', 0, 30, '设备事件轮询任务'),
     (REPLACE(UUID(), '-', ''), 'deviceSync', 0, 600, '厂商设备目录同步任务'),
     (REPLACE(UUID(), '-', ''), 'deviceAccessExtract', 0, 60, '门禁出入记录抽取任务'),
-    (REPLACE(UUID(), '-', ''), 'deviceVehiclePassExtract', 0, 60, '车闸过车记录抽取任务')
+    (REPLACE(UUID(), '-', ''), 'deviceVehiclePassExtract', 0, 60, '车闸过车记录抽取任务'),
+    (REPLACE(UUID(), '-', ''), 'deviceAttendanceSync', 0, 300, '考勤记录归集任务')
 ON DUPLICATE KEY UPDATE
     device_task_state_description = VALUES(device_task_state_description);

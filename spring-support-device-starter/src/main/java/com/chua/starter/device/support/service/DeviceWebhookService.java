@@ -3,6 +3,7 @@ package com.chua.starter.device.support.service;
 import com.chua.starter.device.support.entity.DeviceWebhookAppKey;
 import com.chua.starter.device.support.model.AccessRecordPush;
 import com.chua.starter.device.support.model.AlarmPush;
+import com.chua.starter.device.support.model.AttendancePush;
 import com.chua.starter.device.support.model.AppKeyCreateRequest;
 import com.chua.starter.device.support.model.AppKeyView;
 import com.chua.starter.device.support.model.WebhookPushResult;
@@ -59,7 +60,7 @@ public interface DeviceWebhookService {
      * @param nonce     X-Nonce，可空
      * @param signature X-Signature（HMAC-SHA256 十六进制），可空
      * @param rawBody   原始包体，签名模式下参与计算
-     * @param topic     主题：access / alarm
+     * @param topic     主题：access / alarm / vehicle / attendance
      * @return 校验通过的凭据
      */
     DeviceWebhookAppKey verify(String appKey, String secret, String timestamp, String nonce,
@@ -94,4 +95,14 @@ public interface DeviceWebhookService {
      * @return 入库结果
      */
     WebhookPushResult ingestVehiclePasses(String source, String rawBody, List<VehiclePassPush> items);
+
+    /**
+     * 考勤记录推送入库（幂等）。
+     *
+     * @param source  来源（appKey 名称）
+     * @param rawBody 原始包体，用于生成缺省幂等键
+     * @param items   推送条目
+     * @return 入库结果
+     */
+    WebhookPushResult ingestAttendance(String source, String rawBody, List<AttendancePush> items);
 }

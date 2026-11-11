@@ -17,6 +17,11 @@ public class VehiclePassPush {
     private String externalId;
 
     /**
+     * 设备 ID
+     */
+    private String deviceId;
+
+    /**
      * 车闸标识
      */
     private String gateId;

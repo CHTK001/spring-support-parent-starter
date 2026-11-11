@@ -2,6 +2,7 @@ package com.chua.starter.device.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceVehicle;
+import com.chua.starter.device.support.model.VehicleRenewRequest;
 import com.chua.starter.device.support.service.DeviceVehicleService;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * 车辆档案控制器。
@@ -115,5 +118,37 @@ public class VehicleController {
                                                   @RequestParam(defaultValue = "20") int size,
                                                   @RequestParam(required = false) String keyword) {
         return vehicleService.pageVehicles(page, size, keyword);
+    }
+
+    /**
+     * 车辆续期：按月顺延或指定新的有效期止。
+     *
+     * @param id      主键
+     * @param request 续期参数；为空默认顺延 12 个月
+     * @return 续期后的车辆
+     */
+    @PostMapping("/{id}/renew")
+    public ReturnResult<DeviceVehicle> renewVehicle(@PathVariable String id,
+                                                    @RequestBody(required = false) VehicleRenewRequest request) {
+        Integer months = request == null ? null : request.getMonths();
+        LocalDateTime validTo = parseTime(request == null ? null : request.getValidTo());
+        return ReturnResult.ok(vehicleService.renewVehicle(id, months, validTo));
+    }
+
+    /**
+     * 解析可选时间。
+     *
+     * @param text 时间文本
+     * @return 时间，空或非法返回 null
+     */
+    private static LocalDateTime parseTime(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(text.trim().replace('T', ' '), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("有效期格式应为 yyyy-MM-dd HH:mm:ss");
+        }
     }
 }

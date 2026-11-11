@@ -27,6 +27,12 @@ public class DeviceVehiclePass {
     private String deviceVehiclePassId;
 
     /**
+     * 所属设备 ID
+     */
+    @TableField("device_vehicle_pass_device_id")
+    private String deviceVehiclePassDeviceId;
+
+    /**
      * 车闸标识
      */
     @TableField("device_vehicle_pass_gate_id")

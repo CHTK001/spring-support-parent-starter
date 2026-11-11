@@ -7,6 +7,7 @@ import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.entity.DeviceTaskState;
 import com.chua.starter.device.support.service.DeviceAccessRecordService;
+import com.chua.starter.device.support.service.DeviceAttendanceService;
 import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
 import com.chua.starter.device.support.service.DeviceService;
@@ -67,6 +68,9 @@ public class DeviceScheduleManager {
      */
     private static final String TASK_VEHICLE_PASS_EXTRACT = "deviceVehiclePassExtract";
 
+    /** 考勤归集任务名 */
+    private static final String TASK_ATTENDANCE_SYNC = "deviceAttendanceSync";
+
     /**
      * 凭据级任务前缀（任务名 = 前缀 + '_' + 凭据 ID）
      */
@@ -104,6 +108,9 @@ public class DeviceScheduleManager {
      * 过车拉取游标服务
      */
     private final DeviceVehiclePassCursorService vehiclePassCursorService;
+
+    /** 考勤服务 */
+    private final DeviceAttendanceService attendanceService;
     private final DeviceProviderCredentialService credentialService;
     /** 厂商 SPI：凭据能不能开某项能力，以厂商描述符的能力位为准 */
     private final List<DeviceProvider> deviceProviders;
@@ -121,6 +128,7 @@ public class DeviceScheduleManager {
             // 仅保留仍属于平台级的 tick（门禁记录抽取）；其余能力全部下沉到凭据级
             tick(TASK_ACCESS_EXTRACT, this::executeAccessExtract);
             tick(TASK_VEHICLE_PASS_EXTRACT, this::executeVehiclePassExtract);
+            tick(TASK_ATTENDANCE_SYNC, this::executeAttendanceSync);
             // 全部凭据的 Tick（从 `device_provider_credential` 的能力配置取开关与间隔）
             refresh();
             log.info("设备定时调度器已启动，tick 间隔 {} 秒（{}）；凭据级任务按实例独立注册",
@@ -295,6 +303,10 @@ public class DeviceScheduleManager {
                 LocalDateTime end = LocalDateTime.now();
                 extractVehiclePasses(new TimeRange(end.minusMinutes(10), end));
             });
+            case TASK_ATTENDANCE_SYNC -> runTracked(taskName, () -> {
+                LocalDateTime end = LocalDateTime.now();
+                attendanceService.syncFromAccess(end.minusHours(24), end);
+            });
             default -> {
                 log.warn("未实现的任务名: {}", taskName);
                 yield false;
@@ -460,6 +472,22 @@ public class DeviceScheduleManager {
             accessRecordService.extractRecent(end.minusMinutes(10), end);
         } finally {
             taskStateService.markFinished(TASK_ACCESS_EXTRACT);
+        }
+    }
+
+    /** 考勤归集：把最近 24 小时门禁记录转成考勤记录，幂等键为门禁记录主键 */
+    private void executeAttendanceSync() {
+        if (!taskStateService.shouldRun(TASK_ATTENDANCE_SYNC)) {
+            return;
+        }
+        if (!taskStateService.markRunning(TASK_ATTENDANCE_SYNC)) {
+            return;
+        }
+        try {
+            LocalDateTime end = LocalDateTime.now();
+            attendanceService.syncFromAccess(end.minusHours(24), end);
+        } finally {
+            taskStateService.markFinished(TASK_ATTENDANCE_SYNC);
         }
     }
 

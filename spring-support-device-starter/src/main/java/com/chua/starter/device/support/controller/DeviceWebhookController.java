@@ -5,6 +5,7 @@ import com.chua.starter.device.support.entity.DeviceWebhookAppKey;
 import com.chua.starter.device.support.security.DeviceWebhookDefaults;
 import com.chua.starter.device.support.model.AccessRecordPush;
 import com.chua.starter.device.support.model.AlarmPush;
+import com.chua.starter.device.support.model.AttendancePush;
 import com.chua.starter.device.support.model.AppKeyCreateRequest;
 import com.chua.starter.device.support.model.AppKeyView;
 import com.chua.starter.device.support.model.WebhookPushResult;
@@ -50,6 +51,8 @@ public class DeviceWebhookController {
     private static final String TOPIC_ALARM = "alarm";
     /** 过车主题 */
     private static final String TOPIC_VEHICLE = "vehicle";
+    /** 考勤主题 */
+    private static final String TOPIC_ATTENDANCE = "attendance";
 
     /** webhook 服务 */
     private final DeviceWebhookService webhookService;
@@ -183,6 +186,34 @@ public class DeviceWebhookController {
                 signature, rawBody, TOPIC_VEHICLE);
         List<VehiclePassPush> items = parseList(rawBody, VehiclePassPush.class);
         return ReturnResult.ok(webhookService.ingestVehiclePasses(
+                key.getDeviceWebhookAppkeyName(), rawBody, items));
+    }
+
+    /**
+     * 考勤记录推送入库（考勤 webhook）。
+     *
+     * @param appKey    X-App-Key
+     * @param secret    X-App-Secret（简化模式）
+     * @param timestamp X-Timestamp（签名模式）
+     * @param nonce     X-Nonce（签名模式）
+     * @param signature X-Signature（签名模式）
+     * @param request   HTTP 请求
+     * @return 入库结果
+     */
+    @TokenForIgnore
+    @PostMapping(DeviceWebhookDefaults.PATH_ATTENDANCE)
+    public ReturnResult<WebhookPushResult> pushAttendance(
+            @RequestHeader(value = "X-App-Key", required = false) String appKey,
+            @RequestHeader(value = "X-App-Secret", required = false) String secret,
+            @RequestHeader(value = "X-Timestamp", required = false) String timestamp,
+            @RequestHeader(value = "X-Nonce", required = false) String nonce,
+            @RequestHeader(value = "X-Signature", required = false) String signature,
+            HttpServletRequest request) {
+        String rawBody = readRawBody(request);
+        DeviceWebhookAppKey key = webhookService.verify(appKey, secret, timestamp, nonce,
+                signature, rawBody, TOPIC_ATTENDANCE);
+        List<AttendancePush> items = parseList(rawBody, AttendancePush.class);
+        return ReturnResult.ok(webhookService.ingestAttendance(
                 key.getDeviceWebhookAppkeyName(), rawBody, items));
     }
 

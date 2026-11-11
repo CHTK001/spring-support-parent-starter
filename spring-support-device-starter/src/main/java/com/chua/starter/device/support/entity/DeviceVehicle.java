@@ -88,6 +88,18 @@ public class DeviceVehicle {
     private String deviceVehicleExternalId;
 
     /**
+     * 绑定设备 ID（车闸所在设备）
+     */
+    @TableField("device_vehicle_device_id")
+    private String deviceVehicleDeviceId;
+
+    /**
+     * 车牌所属（单位/车场，自由文本）
+     */
+    @TableField("device_vehicle_belonging")
+    private String deviceVehicleBelonging;
+
+    /**
      * 备注
      */
     @TableField("device_vehicle_remark")

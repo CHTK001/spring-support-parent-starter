@@ -120,4 +120,38 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
         wrapper.orderByDesc(DeviceVehicle::getDeviceVehicleUpdatedAt);
         return wrapper;
     }
+
+    @Override
+    public DeviceVehicle renewVehicle(String id, Integer months, LocalDateTime validTo) {
+        DeviceVehicle existing = vehicleMapper.selectById(id);
+        if (existing == null) {
+            throw new IllegalArgumentException("车辆不存在: " + id);
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime base = existing.getDeviceVehicleValidTo() != null
+                && existing.getDeviceVehicleValidTo().isAfter(now)
+                ? existing.getDeviceVehicleValidTo() : now;
+        LocalDateTime newValidTo;
+        if (validTo != null) {
+            newValidTo = validTo;
+        } else {
+            int step = months == null ? 12 : months;
+            if (step < 1 || step > 120) {
+                throw new IllegalArgumentException("续期月数必须在 1-120 之间");
+            }
+            newValidTo = base.plusMonths(step);
+        }
+        if (!newValidTo.isAfter(base)) {
+            throw new IllegalArgumentException("新的有效期必须晚于当前有效期");
+        }
+        DeviceVehicle update = new DeviceVehicle();
+        update.setDeviceVehicleId(id);
+        update.setDeviceVehicleValidFrom(existing.getDeviceVehicleValidFrom() == null
+                ? now : existing.getDeviceVehicleValidFrom());
+        update.setDeviceVehicleValidTo(newValidTo);
+        update.setDeviceVehicleUpdatedAt(now);
+        vehicleMapper.updateById(update);
+        log.info("车辆续期: id={}, validTo={}", id, newValidTo);
+        return vehicleMapper.selectById(id);
+    }
 }

@@ -69,4 +69,14 @@ public interface DeviceVehicleService {
      * @return 分页结果
      */
     PageResult<DeviceVehicle> pageVehicles(int page, int size, String keyword);
+
+    /**
+     * 车辆续期。
+     *
+     * @param id      主键
+     * @param months  续期月数（validTo 为空时生效，1-120）
+     * @param validTo 指定新的有效期止，为空则按 months 顺延
+     * @return 续期后的车辆
+     */
+    DeviceVehicle renewVehicle(String id, Integer months, java.time.LocalDateTime validTo);
 }
