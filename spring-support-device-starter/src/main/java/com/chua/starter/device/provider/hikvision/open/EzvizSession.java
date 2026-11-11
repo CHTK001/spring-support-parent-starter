@@ -12,6 +12,7 @@ import com.chua.starter.device.spi.model.PresetInfo;
 import com.chua.starter.device.spi.model.PtzCommand;
 import com.chua.starter.device.spi.model.RecordFile;
 import com.chua.starter.device.spi.model.TimeRange;
+import com.chua.starter.device.spi.model.VehiclePassRecord;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
@@ -114,6 +115,9 @@ public class EzvizSession extends AbstractOpenApiSession {
     /** 修改云端设备名称 */
     private static final String P_DEVICE_NAME_UPDATE = "/api/lapp/device/name/update";
 
+    /** 停车/过车记录（萤石设备套件） */
+    private static final String P_PARKING_RECORD = "/api/service/devicekit/parking/parkingRecord";
+
     /** 成功码 */
     private static final String OK = "200";
 
@@ -171,6 +175,102 @@ public class EzvizSession extends AbstractOpenApiSession {
     @Override
     public void close() {
         online = false;
+    }
+
+    @Override
+    public List<VehiclePassRecord> queryVehiclePasses(TimeRange range) {
+        requireRange(range);
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceSerial", requireSerial());
+        params.put("beginTime", toEzvizTime(range.start()));
+        params.put("endTime", toEzvizTime(range.end()));
+        params.put("pageStart", 0);
+        params.put("pageSize", 100);
+        JsonNode data = assertOk(doRequest("GET", P_PARKING_RECORD, params));
+        JsonNode list = data.path("list");
+        if (!list.isArray()) {
+            list = data.path("records");
+        }
+        if (!list.isArray()) {
+            list = data;
+        }
+        List<VehiclePassRecord> result = new ArrayList<>();
+        for (JsonNode node : list) {
+            String plate = text(node, "carNo", "plateNo", "plateNumber", "vehicleNo");
+            if (plate.isBlank()) {
+                continue;
+            }
+            String gate = text(node, "gateId", "roadGateId", "deviceSerial");
+            String direction = mapPassDirection(text(node, "direction", "inOut", "passType"));
+            String photo = text(node, "picUrl", "imageUrl", "photoUrl", "captureUrl");
+            String passId = text(node, "id", "recordId", "passId");
+            if (passId.isBlank()) {
+                passId = gate + "_" + plate + "_" + text(node, "passTime", "occurTime", "time");
+            }
+            result.add(new VehiclePassRecord(passId, gate, plate, direction,
+                    parsePassTime(text(node, "passTime", "occurTime", "time", "captureTime")),
+                    photo, text(node, "vehicleType", "carType")));
+        }
+        return result;
+    }
+
+    /**
+     * 多个候选键中取第一个非空值。
+     *
+     * @param node 节点
+     * @param keys 候选键
+     * @return 文本
+     */
+    private static String text(JsonNode node, String... keys) {
+        for (String key : keys) {
+            String value = node.path(key).asText("");
+            if (!value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 过车方向归一。
+     *
+     * @param raw 原始值
+     * @return in / out / 原值
+     */
+    private static String mapPassDirection(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if ("in".equalsIgnoreCase(value) || "0".equals(value) || value.contains("入")) {
+            return "in";
+        }
+        if ("out".equalsIgnoreCase(value) || "1".equals(value) || value.contains("出")) {
+            return "out";
+        }
+        return value;
+    }
+
+    /**
+     * 解析过车时间：支持 epoch 秒/毫秒与常见日期字符串。
+     *
+     * @param raw 原始值
+     * @return 时间；无法解析时返回 null
+     */
+    private static java.time.LocalDateTime parsePassTime(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            long value = Long.parseLong(raw.trim());
+            long epochMillis = value > 10_000_000_000L ? value : value * 1000L;
+            return java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(epochMillis),
+                    java.time.ZoneId.systemDefault());
+        } catch (NumberFormatException ignore) {
+            try {
+                return java.time.LocalDateTime.parse(raw.trim().replace(' ', 'T'));
+            } catch (Exception ex) {
+                log.warn("[EzvizSession] 过车时间解析失败: {}", raw);
+                return null;
+            }
+        }
     }
 
     @Override
