@@ -14,9 +14,11 @@ import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceStatusService;
 import com.chua.starter.device.support.service.DeviceSyncService;
 import com.chua.starter.device.support.service.DeviceTaskStateService;
+import com.chua.starter.device.support.service.DeviceVehiclePassService;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceCapability;
+import com.chua.starter.device.spi.model.TimeRange;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,11 @@ public class DeviceScheduleManager {
     private static final String TASK_ACCESS_EXTRACT = "deviceAccessExtract";
 
     /**
+     * 车闸过车记录抽取任务名
+     */
+    private static final String TASK_VEHICLE_PASS_EXTRACT = "deviceVehiclePassExtract";
+
+    /**
      * 凭据级任务前缀（任务名 = 前缀 + '_' + 凭据 ID）
      */
     private static final String PREFIX_OFFLINE_DETECT = "offlineDetect";
@@ -86,6 +93,11 @@ public class DeviceScheduleManager {
     private final DeviceEventService eventService;
     private final DeviceSyncService syncService;
     private final DeviceAccessRecordService accessRecordService;
+
+    /**
+     * 过车记录服务
+     */
+    private final DeviceVehiclePassService vehiclePassService;
     private final DeviceProviderCredentialService credentialService;
     /** 厂商 SPI：凭据能不能开某项能力，以厂商描述符的能力位为准 */
     private final List<DeviceProvider> deviceProviders;
@@ -102,6 +114,7 @@ public class DeviceScheduleManager {
             timeScheduler = TimeScheduler.of();
             // 仅保留仍属于平台级的 tick（门禁记录抽取）；其余能力全部下沉到凭据级
             tick(TASK_ACCESS_EXTRACT, this::executeAccessExtract);
+            tick(TASK_VEHICLE_PASS_EXTRACT, this::executeVehiclePassExtract);
             // 全部凭据的 Tick（从 `device_provider_credential` 的能力配置取开关与间隔）
             refresh();
             log.info("设备定时调度器已启动，tick 间隔 {} 秒（{}）；凭据级任务按实例独立注册",
@@ -272,6 +285,10 @@ public class DeviceScheduleManager {
                 LocalDateTime end = LocalDateTime.now();
                 accessRecordService.extractRecent(end.minusMinutes(10), end);
             });
+            case TASK_VEHICLE_PASS_EXTRACT -> runTracked(taskName, () -> {
+                LocalDateTime end = LocalDateTime.now();
+                extractVehiclePasses(new TimeRange(end.minusMinutes(10), end));
+            });
             default -> {
                 log.warn("未实现的任务名: {}", taskName);
                 yield false;
@@ -383,6 +400,41 @@ public class DeviceScheduleManager {
             if (!online) {
                 sessionManager.unregister(device.getDeviceInfoId());
                 log.warn("设备离线: id={}, ip={}", device.getDeviceInfoId(), device.getDeviceInfoIp());
+            }
+        }
+    }
+
+    /**
+     * 车闸过车记录抽取。
+     */
+    private void executeVehiclePassExtract() {
+        if (!taskStateService.shouldRun(TASK_VEHICLE_PASS_EXTRACT)) {
+            return;
+        }
+        if (!taskStateService.markRunning(TASK_VEHICLE_PASS_EXTRACT)) {
+            return;
+        }
+        try {
+            LocalDateTime end = LocalDateTime.now();
+            extractVehiclePasses(new TimeRange(end.minusMinutes(10), end));
+        } finally {
+            taskStateService.markFinished(TASK_VEHICLE_PASS_EXTRACT);
+        }
+    }
+
+    /**
+     * 从全部活动会话拉取过车记录；不支持该能力的平台直接跳过。
+     *
+     * @param range 时间段
+     */
+    private void extractVehiclePasses(TimeRange range) {
+        for (DeviceSession session : sessionManager.getAllSessions().values()) {
+            try {
+                vehiclePassService.pull(session, range);
+            } catch (UnsupportedOperationException ex) {
+                log.debug("平台不支持过车记录: {}", session.getDeviceId());
+            } catch (Exception ex) {
+                log.warn("拉取过车记录失败: device={}, message={}", session.getDeviceId(), ex.getMessage());
             }
         }
     }
