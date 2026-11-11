@@ -766,3 +766,114 @@ SET @sql_cred_last_test_ok := IF(@has_cred_last_test_ok > 0, 'SELECT 1',
 PREPARE stmt_cred_last_test_ok FROM @sql_cred_last_test_ok;
 EXECUTE stmt_cred_last_test_ok;
 DEALLOCATE PREPARE stmt_cred_last_test_ok;
+
+-- ---------------------------------------------------------------------
+-- webhook 入站凭据 / 幂等回执 / 告警
+-- 原先分散在 db/manual/device_webhook_alarm.sql，现并入唯一 DDL 入口。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_webhook_appkey (
+    device_webhook_appkey_id          VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_webhook_appkey_key         VARCHAR(64) NOT NULL COMMENT '公开标识 appKey',
+    device_webhook_appkey_secret      VARCHAR(128) NOT NULL COMMENT '签名密钥 secret',
+    device_webhook_appkey_name        VARCHAR(100) NOT NULL COMMENT '凭据名称，同时作为入站 source',
+    device_webhook_appkey_scopes      VARCHAR(200) DEFAULT 'access,alarm' COMMENT '允许主题：access,alarm,vehicle',
+    device_webhook_appkey_expires_at  DATETIME NULL COMMENT '过期时间；NULL 表示永久有效',
+    device_webhook_appkey_enabled     TINYINT DEFAULT 1 COMMENT '1 启用、0 停用',
+    device_webhook_appkey_last_used_at DATETIME NULL COMMENT '最近一次成功调用时间',
+    device_webhook_appkey_created_at  DATETIME NULL COMMENT '创建时间',
+    UNIQUE KEY uk_webhook_appkey_key (device_webhook_appkey_key)
+) COMMENT '设备 webhook 入站应用凭据';
+
+CREATE TABLE IF NOT EXISTS device_webhook_receipt (
+    device_webhook_receipt_id          VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_webhook_receipt_source      VARCHAR(100) NOT NULL COMMENT '来源（appKey 名称）',
+    device_webhook_receipt_external_id VARCHAR(128) NOT NULL COMMENT '外部事件 ID 或包体摘要',
+    device_webhook_receipt_topic       VARCHAR(32) NOT NULL COMMENT '主题：access / alarm / vehicle',
+    device_webhook_receipt_created_at  DATETIME NULL COMMENT '入库时间',
+    UNIQUE KEY uk_webhook_receipt (device_webhook_receipt_source, device_webhook_receipt_external_id, device_webhook_receipt_topic),
+    KEY idx_webhook_receipt_time (device_webhook_receipt_created_at)
+) COMMENT 'webhook 入站幂等回执';
+
+CREATE TABLE IF NOT EXISTS device_alarm (
+    device_alarm_id            VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_alarm_source        VARCHAR(100) COMMENT '来源（appKey 名称 / 厂商标识）',
+    device_alarm_external_id   VARCHAR(128) COMMENT '外部事件 ID / 包体摘要',
+    device_alarm_device_id     VARCHAR(32) COMMENT '所属设备 ID',
+    device_alarm_channel_no    INT COMMENT '通道号',
+    device_alarm_type          VARCHAR(40) COMMENT 'MOTION / IO_ALARM / OFFLINE / ACCESS / OTHER',
+    device_alarm_level         VARCHAR(16) COMMENT 'critical / major / minor / info',
+    device_alarm_title         VARCHAR(200) COMMENT '告警标题',
+    device_alarm_detail        TEXT COMMENT '告警详情',
+    device_alarm_status        VARCHAR(16) DEFAULT 'unhandled' COMMENT 'unhandled / handling / resolved / ignored',
+    device_alarm_handler       VARCHAR(64) COMMENT '处理人',
+    device_alarm_handled_at    DATETIME NULL COMMENT '处理时间',
+    device_alarm_occurred_at   DATETIME NULL COMMENT '发生时间',
+    device_alarm_created_at    DATETIME NULL COMMENT '入库时间',
+    KEY idx_alarm_time (device_alarm_occurred_at),
+    KEY idx_alarm_status (device_alarm_status),
+    KEY idx_alarm_level (device_alarm_level),
+    KEY idx_alarm_device (device_alarm_device_id)
+) COMMENT '设备告警（webhook 入站落库）';
+
+-- ---------------------------------------------------------------------
+-- 车辆档案 / 车闸点位 / 过车记录 / 过车拉取游标
+-- 原先分散在 db/manual/device_vehicle_barrier.sql，现并入唯一 DDL 入口。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_vehicle (
+    device_vehicle_id           VARCHAR(64) NOT NULL COMMENT '主键',
+    device_vehicle_plate_no     VARCHAR(32) NOT NULL COMMENT '车牌号',
+    device_vehicle_plate_color  VARCHAR(16) DEFAULT NULL COMMENT '车牌颜色',
+    device_vehicle_type         VARCHAR(32) DEFAULT NULL COMMENT '车辆类型',
+    device_vehicle_owner_name   VARCHAR(64) DEFAULT NULL COMMENT '车主姓名',
+    device_vehicle_owner_phone  VARCHAR(32) DEFAULT NULL COMMENT '车主电话',
+    device_vehicle_list_type    VARCHAR(16) DEFAULT 'normal' COMMENT '名单类型：white/black/normal',
+    device_vehicle_valid_from   DATETIME DEFAULT NULL COMMENT '有效期起',
+    device_vehicle_valid_to     DATETIME DEFAULT NULL COMMENT '有效期止',
+    device_vehicle_vendor       VARCHAR(32) DEFAULT NULL COMMENT '厂商标识',
+    device_vehicle_external_id  VARCHAR(128) DEFAULT NULL COMMENT '厂商侧车辆标识',
+    device_vehicle_remark       VARCHAR(512) DEFAULT NULL COMMENT '备注',
+    device_vehicle_deleted      TINYINT(1) DEFAULT '0' COMMENT '删除标记',
+    device_vehicle_created_at   DATETIME DEFAULT NULL COMMENT '创建时间',
+    device_vehicle_updated_at   DATETIME DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (device_vehicle_id),
+    KEY idx_vehicle_plate (device_vehicle_plate_no),
+    KEY idx_vehicle_vendor_ext (device_vehicle_vendor, device_vehicle_external_id)
+) COMMENT '车辆档案';
+
+CREATE TABLE IF NOT EXISTS device_barrier_gate (
+    device_barrier_gate_id          VARCHAR(64) NOT NULL COMMENT '主键',
+    device_barrier_gate_name        VARCHAR(128) DEFAULT NULL COMMENT '车闸名称',
+    device_barrier_gate_device_id   VARCHAR(64) DEFAULT NULL COMMENT '所属设备',
+    device_barrier_gate_channel_no  INT DEFAULT NULL COMMENT '通道号',
+    device_barrier_gate_direction   VARCHAR(16) DEFAULT 'both' COMMENT '方向：in/out/both',
+    device_barrier_gate_status      VARCHAR(16) DEFAULT 'unknown' COMMENT '状态',
+    device_barrier_gate_vendor      VARCHAR(32) DEFAULT NULL COMMENT '厂商标识',
+    device_barrier_gate_external_id VARCHAR(128) DEFAULT NULL COMMENT '厂商侧车闸标识',
+    device_barrier_gate_deleted     TINYINT(1) DEFAULT '0' COMMENT '删除标记',
+    device_barrier_gate_created_at  DATETIME DEFAULT NULL COMMENT '创建时间',
+    device_barrier_gate_updated_at  DATETIME DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (device_barrier_gate_id),
+    KEY idx_barrier_device (device_barrier_gate_device_id),
+    KEY idx_barrier_direction (device_barrier_gate_direction)
+) COMMENT '车闸点位';
+
+CREATE TABLE IF NOT EXISTS device_vehicle_pass (
+    device_vehicle_pass_id           VARCHAR(64) NOT NULL COMMENT '主键',
+    device_vehicle_pass_gate_id      VARCHAR(64) DEFAULT NULL COMMENT '车闸标识',
+    device_vehicle_pass_plate_no     VARCHAR(32) DEFAULT NULL COMMENT '车牌号',
+    device_vehicle_pass_direction    VARCHAR(16) DEFAULT NULL COMMENT '方向：in/out',
+    device_vehicle_pass_time         DATETIME DEFAULT NULL COMMENT '过车时间',
+    device_vehicle_pass_photo_url    VARCHAR(1024) DEFAULT NULL COMMENT '抓拍图片地址',
+    device_vehicle_pass_vehicle_type VARCHAR(32) DEFAULT NULL COMMENT '车辆类型',
+    device_vehicle_pass_created_at   DATETIME DEFAULT NULL COMMENT '创建时间',
+    PRIMARY KEY (device_vehicle_pass_id),
+    KEY idx_pass_gate_time (device_vehicle_pass_gate_id, device_vehicle_pass_time),
+    KEY idx_pass_plate_time (device_vehicle_pass_plate_no, device_vehicle_pass_time)
+) COMMENT '车辆过车记录';
+
+CREATE TABLE IF NOT EXISTS device_vehicle_pass_cursor (
+    device_vehicle_pass_cursor_device_id   VARCHAR(64) NOT NULL COMMENT '设备标识',
+    device_vehicle_pass_cursor_last_msg_id BIGINT NOT NULL DEFAULT '0' COMMENT '最后处理的平台消息 ID',
+    device_vehicle_pass_cursor_updated_at  DATETIME DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (device_vehicle_pass_cursor_device_id)
+) COMMENT '过车拉取游标';
