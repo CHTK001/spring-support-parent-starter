@@ -454,7 +454,8 @@ public record DeviceCapabilityMatrix(
      * 海康综合安防管理平台（私有化部署）能力矩阵。
      *
      * <p>门禁接口真实存在：{@code /artemis/api/access/v1/door/control}、
-     * {@code /artemis/api/access/v1/accessRecords}、{@code /artemis/api/resource/v1/door/search}。</p>
+     * {@code /artemis/api/access/v1/accessRecords}、{@code /artemis/api/resource/v1/door/search}；
+     * 门禁权限同步下发按 iSC ACPS 的 {@code /api/acps/v1/authDownload/task/simpleDownload} 接入。</p>
      *
      * @return 能力矩阵
      */
@@ -471,9 +472,9 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.DEVICE_WRITE, 3, "device.add|update|delete 已接入，缺网关地址未验证")
                 .unverified(DeviceCapability.PERSON, 4, "fetchPersons 走官方 resource/v2/person/personList，缺网关地址未验证")
                 .unverified(DeviceCapability.PERSON_WRITE, 3, "person.add|update|delete 已接入，缺网关地址未验证")
-                .no(DeviceCapability.ACCESS_WRITE,
-                        "综合安防公开 Artemis 目录只有门禁点查询/控制/状态/记录，没有门禁点增删改或权限下发字段文档；"
-                                + "需平台厂商提供门禁权限下发专属接口文档后才能接入")
+                .unverified(DeviceCapability.ACCESS_WRITE, 1,
+                        "单人员单门权限同步下发已按 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload` 接入；"
+                                + "门禁点增删改与批量下载任务无公开字段文档，未实现")
                 .unverified(DeviceCapability.CAPTURE, 2, "capture 走官方 video/v1/cameras/images 并二次下载，缺网关地址未验证")
                 .unverified(DeviceCapability.EVENT, 2, "pollEvents 走官方 eventService/v1/eventRecords/page，缺网关地址未验证")
                 .no(DeviceCapability.PARKING, "综合安防停车场为独立子系统，不在本接入范围")

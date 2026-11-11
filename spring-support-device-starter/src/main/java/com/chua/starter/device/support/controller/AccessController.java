@@ -56,6 +56,26 @@ public class AccessController {
     }
 
     /**
+     * 给人员下发单个门点权限（同步）。
+     *
+     * @param deviceId 设备标识
+     * @param personId 厂商侧人员标识
+     * @param doorId   厂商侧门点标识
+     * @return 操作结果
+     */
+    @PostMapping("/grant")
+    public ReturnResult<Void> grant(@RequestParam String deviceId,
+                                    @RequestParam String personId,
+                                    @RequestParam String doorId) {
+        DeviceSession session = sessionManager.getSession(deviceId);
+        if (session == null || !session.isOnline()) {
+            throw new RuntimeException("设备不在线: " + deviceId);
+        }
+        session.grantDoorAccess(personId, doorId);
+        return ReturnResult.ok();
+    }
+
+    /**
      * 查询门禁出入记录
      *
      * @param deviceId 设备 标识

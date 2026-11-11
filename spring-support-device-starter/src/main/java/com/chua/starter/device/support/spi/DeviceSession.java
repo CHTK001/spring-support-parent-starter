@@ -201,6 +201,18 @@ public interface DeviceSession {
     void remoteUnlock(int doorId);
 
     /**
+     * 给单个人员下发单个门点权限（同步）。
+     *
+     * <p>默认不支持；平台实现需按自身接口将人员与门点绑定。</p>
+     *
+     * @param personId 厂商侧人员标识
+     * @param doorId   厂商侧门点标识
+     */
+    default void grantDoorAccess(String personId, String doorId) {
+        throw new UnsupportedOperationException("该平台不支持门禁权限下发");
+    }
+
+    /**
      * 订阅事件
      * @param type 类型
      * @param listener 监听器

@@ -62,7 +62,7 @@
 |---|---|---:|---:|---:|---:|
 | 海康云曜 | `cloud-yao` | 1 | 10 | 0 | 4 |
 | 海康云眸 | `cloud-eye` | 1 | 12 | 0 | 2 |
-| 海康综合安防 | `secure-platform` | 1 | 12 | 0 | 2 |
+| 海康综合安防 | `secure-platform` | 1 | 13 | 0 | 1 |
 | 海康萤石 | `ezviz` | 6 | 7 | 0 | 2 |
 | 海康 ISUP | `isup` | 1 | 4 | 0 | 10 |
 | 大华云平台 | `dahua-cloud` | 0 | 14 | 0 | 1 |
@@ -71,7 +71,7 @@
 | 宇视云开放平台 | `uniview` | 0 | 8 | 0 | 7 |
 | GB28181 | `gb28181` | 1 | 4 | 0 | 10 |
 | ONVIF | `onvif` | 0 | 5 | 0 | 10 |
-| **合计** | | **13** | **96** | **0** | **56** |
+| **合计** | | **13** | **97** | **0** | **55** |
 
 已标 `yes` 的能力位：
 
@@ -142,7 +142,7 @@ try {
 | 萤石 | 停车记录仅有查询接口（parking/msgRecord、parking/parkingRecord），无车场、车道与开闸接口 |
 | 大华云平台 | 14 项 `unverified`：视频/录像/云台/抓图/事件/设备写/组织/人员/门禁均按官方文档实现，缺设备与凭据真机验证。组织写需 `templateId`（当前用户或 `extra.orgTemplateId`）、新增用户需 `extra.defaultPersonPassword`、新增设备需 `extra.devCode` |
 | 大华 ICC | 设备公开目录只有详情/分页/树/通道分页，无增删改；组织/人员写已接入，缺环境验证 |
-| 海康综合安防 | `ACCESS_WRITE` 标 `no`：公开 Artemis 目录只有门禁点查询/控制/状态/记录，没有门禁点增删改或权限下发字段文档，不虚构路径 |
+| 海康综合安防 | `ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
 | 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调 |
 | ONVIF | 5 项 `unverified`、10 项 `no`：标准本身无对应服务 |
 

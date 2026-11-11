@@ -85,6 +85,11 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     private static final String PATH_DOOR_LIST = "/artemis/api/resource/v1/door/search";
 
     /**
+     * 门禁权限同步下发（iSC ACPS）
+     */
+    private static final String PATH_ACCESS_DOWNLOAD = "/api/acps/v1/authDownload/task/simpleDownload";
+
+    /**
      * 门禁出入记录接口
      */
     private static final String PATH_ACCESS_RECORD = "/artemis/api/access/v1/accessRecords";
@@ -356,11 +361,49 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
             result.add(new DeviceDoorInfo(
                     node.path("doorIndexCode").asText(),
                     node.path("doorName").asText(""),
-                    info.deviceSerial(),
+                    node.path("acsDevIndexCode").asText(info.deviceSerial()),
                     node.path("status").asText(null),
                     node.hasNonNull("channelNo") ? node.get("channelNo").asInt() : null));
         }
         return result;
+    }
+
+    /**
+     * 单人员单门权限同步下发。
+     *
+     * <p>按 iSC ACPS 的 {@code simpleDownload} 接口资料实现：
+     * 先按 {@code doorId} 查门点，取所属门禁设备 {@code acsDevIndexCode}
+     * 与门点通道号，再提交人员与资源对象。该接口一次只处理一个人员到一个门点，
+     * 大批量场景应使用下载任务接口（未接入）。</p>
+     *
+     * @param personId 厂商侧人员标识
+     * @param doorId   厂商侧门点标识
+     */
+    @Override
+    public void grantDoorAccess(String personId, String doorId) {
+        if (personId == null || personId.isBlank()) {
+            throw new IllegalArgumentException("人员标识不能为空");
+        }
+        if (doorId == null || doorId.isBlank()) {
+            throw new IllegalArgumentException("门点标识不能为空");
+        }
+        DeviceDoorInfo door = listDoors().stream()
+                .filter(item -> doorId.equals(item.doorId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("门点不存在: " + doorId));
+        if (door.channelNo() == null) {
+            throw new IllegalStateException("门点缺少通道号，无法下发权限: " + doorId);
+        }
+        Map<String, Object> resourceInfo = new HashMap<>();
+        resourceInfo.put("resourceIndexCode", door.deviceId());
+        resourceInfo.put("resourceType", "acsDevice");
+        resourceInfo.put("channelNos", List.of(door.channelNo()));
+        Map<String, Object> personInfo = new HashMap<>();
+        personInfo.put("personId", personId);
+        Map<String, Object> params = new HashMap<>();
+        params.put("resourceInfo", resourceInfo);
+        params.put("personInfo", personInfo);
+        assertOk(post(PATH_ACCESS_DOWNLOAD, params));
     }
 
     /**

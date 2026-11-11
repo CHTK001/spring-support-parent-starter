@@ -7,8 +7,9 @@ import java.util.List;
 /**
  * 海康综合安防平台（iSecure Center / artemis 网关）官方接口目录。
  *
- * <p>路径按官方 OpenAPI 文档的 {@code /artemis/api/...} 形态登记；签名由
- * {@code artemis-http-client} SDK 完成，所以全部标 {@link PlatformApiSpec.Auth#GLOBAL}。</p>
+ * <p>路径按官方 OpenAPI 文档的 {@code /artemis/api/...} 形态登记；
+ * 门禁权限下发走 iSC ACPS 的 {@code /api/acps/...} 服务路径，单独按资料登记。
+ * 签名由 {@code artemis-http-client} SDK 完成，所以全部标 {@link PlatformApiSpec.Auth#GLOBAL}。</p>
  *
  * <p>版本：综合安防的版本体现在路径里（{@code resource/v1}、{@code video/v2}、
  * {@code resource/v2}），同一平台不同资源版本不同，故逐条写清。</p>
@@ -50,6 +51,8 @@ public final class HikvisionArtemisApis {
             PlatformApiSpec.global("door.list", "门禁点列表", "POST", "/artemis/api/resource/v1/door/search", "v1", "access"),
             PlatformApiSpec.global("door.control", "门禁远程控制", "POST", "/artemis/api/access/v1/door/control", "v1", "access"),
             PlatformApiSpec.global("door.status", "门禁点状态", "POST", "/artemis/api/access/v1/door/status", "v1", "access"),
+            PlatformApiSpec.global("access.download", "门禁权限同步下发", "POST",
+                    "/api/acps/v1/authDownload/task/simpleDownload", "v1", "access"),
             PlatformApiSpec.global("access.record", "门禁出入记录", "POST", "/artemis/api/access/v1/accessRecords", "v1", "access"),
             PlatformApiSpec.global("person.list", "人员列表", "POST", "/artemis/api/resource/v2/person/personList", "v2", "person"),
             PlatformApiSpec.global("person.add", "添加人员", "POST", "/artemis/api/resource/v1/person/single/add", "v1", "person"),
