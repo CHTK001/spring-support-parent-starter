@@ -1,6 +1,8 @@
 package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
+import com.chua.starter.device.spi.DeviceSession;
+import com.chua.starter.device.spi.model.TimeRange;
 import com.chua.starter.mybatis.entity.PageResult;
 
 import java.time.LocalDateTime;
@@ -47,4 +49,13 @@ public interface DeviceVehiclePassService {
      */
     PageResult<DeviceVehiclePass> pagePasses(int page, int size, String deviceId, String gateId, String direction,
                                              LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 从平台会话拉取过车记录并落库（按 车闸+车牌+时间 去重）。
+     *
+     * @param session 设备会话
+     * @param range   时间段
+     * @return 新增条数
+     */
+    int pull(DeviceSession session, TimeRange range);
 }

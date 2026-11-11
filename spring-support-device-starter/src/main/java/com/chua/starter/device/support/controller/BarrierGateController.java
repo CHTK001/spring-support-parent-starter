@@ -4,7 +4,10 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceBarrierGate;
 import com.chua.starter.device.support.entity.DeviceVehiclePass;
 import com.chua.starter.device.support.service.DeviceBarrierGateService;
+import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
+import com.chua.starter.device.spi.DeviceSession;
+import com.chua.starter.device.spi.model.TimeRange;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -41,6 +44,11 @@ public class BarrierGateController {
      * 过车记录服务
      */
     private final DeviceVehiclePassService passService;
+
+    /**
+     * 会话管理器
+     */
+    private final DeviceSessionManager sessionManager;
 
     /**
      * 新增车闸。
@@ -117,6 +125,26 @@ public class BarrierGateController {
                                                    @RequestParam(required = false) String deviceId,
                                                    @RequestParam(required = false) String direction) {
         return gateService.pageGates(page, size, deviceId, direction);
+    }
+
+    /**
+     * 从平台拉取过车记录并落库。
+     *
+     * @param deviceId 设备标识（需已建立会话）
+     * @param start    起始时间
+     * @param end      结束时间
+     * @return 新增条数
+     */
+    @PostMapping("/pass/pull")
+    public ReturnResult<Integer> pullPasses(
+            @RequestParam String deviceId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        DeviceSession session = sessionManager.getSession(deviceId);
+        if (session == null) {
+            throw new IllegalStateException("设备未建立会话: " + deviceId);
+        }
+        return ReturnResult.ok(passService.pull(session, new TimeRange(start, end)));
     }
 
     /**

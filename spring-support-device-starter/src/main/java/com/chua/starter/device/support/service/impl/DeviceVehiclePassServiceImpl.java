@@ -7,6 +7,9 @@ import com.chua.starter.device.support.entity.DeviceVehiclePass;
 import com.chua.starter.device.support.mapper.DeviceBarrierGateMapper;
 import com.chua.starter.device.support.mapper.DeviceVehiclePassMapper;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
+import com.chua.starter.device.spi.DeviceSession;
+import com.chua.starter.device.spi.model.TimeRange;
+import com.chua.starter.device.spi.model.VehiclePassRecord;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +68,41 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
         Page<DeviceVehiclePass> query = new Page<>(Math.max(page, 1), Math.max(size, 1));
         return PageResult.copy(passMapper.selectPage(query,
                 buildQuery(deviceId, gateId, direction, start, end)));
+    }
+
+    @Override
+    public int pull(DeviceSession session, TimeRange range) {
+        if (session == null) {
+            throw new IllegalArgumentException("设备会话不能为空");
+        }
+        List<VehiclePassRecord> records = session.queryVehiclePasses(range);
+        int created = 0;
+        for (VehiclePassRecord record : records) {
+            LambdaQueryWrapper<DeviceVehiclePass> exists = new LambdaQueryWrapper<>();
+            exists.eq(DeviceVehiclePass::getDeviceVehiclePassGateId, record.gateId())
+                    .eq(DeviceVehiclePass::getDeviceVehiclePassPlateNo, record.plateNo());
+            if (record.time() == null) {
+                exists.isNull(DeviceVehiclePass::getDeviceVehiclePassTime);
+            } else {
+                exists.eq(DeviceVehiclePass::getDeviceVehiclePassTime, record.time());
+            }
+            Long count = passMapper.selectCount(exists);
+            if (count != null && count > 0) {
+                continue;
+            }
+            DeviceVehiclePass entity = new DeviceVehiclePass();
+            entity.setDeviceVehiclePassGateId(record.gateId());
+            entity.setDeviceVehiclePassPlateNo(record.plateNo());
+            entity.setDeviceVehiclePassDirection(record.direction());
+            entity.setDeviceVehiclePassTime(record.time());
+            entity.setDeviceVehiclePassPhotoUrl(record.photoUrl());
+            entity.setDeviceVehiclePassVehicleType(record.vehicleType());
+            record(entity);
+            created++;
+        }
+        log.info("拉取过车记录: session={}, received={}, created={}", session.getDeviceId(),
+                records.size(), created);
+        return created;
     }
 
     /**
