@@ -613,7 +613,8 @@ public record DeviceCapabilityMatrix(
      *
      * <p>平台 SDK（{@code DahuaIccSdk}）之外已于 2026-11-11 补齐 {@code DahuaIccSession}：
      * 通道/取流/回放/录像/抓图/云台/门禁/事件/组织/人员按 15 条目录接通；
-     * 设备与组织/人员的写接口（device/org/person 增删改）目录未登记，仍为 TODO。</p>
+     * 设备写接口在公开设备管理目录中只有详情/分页/树/通道分页，没有增删改；
+     * 组织/人员写接口已按官网登记并接入。</p>
      *
      * @return 能力矩阵
      */
@@ -627,7 +628,8 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.EVENT, 1, "alarm.list 已接入，无 ICC 环境未验证")
                 .unverified(DeviceCapability.ACCESS, 2, "access.record 已接入，无 ICC 环境未验证")
                 .unverified(DeviceCapability.ACCESS_WRITE, 1, "access.door.open 已接入；门禁点增删改目录未登记")
-                .todo(DeviceCapability.DEVICE_WRITE, 3, "ICC 设备增删改待实现")
+                .no(DeviceCapability.DEVICE_WRITE,
+                        "公开设备管理接口只有详情/分页/树/通道分页，无增删改路径")
                 .unverified(DeviceCapability.ORG, 1, "org.list 已接入，无 ICC 环境未验证")
                 .unverified(DeviceCapability.ORG_WRITE, 3,
                         "department/add|update|delete + generate-id 已接入，无 ICC 环境未验证")
