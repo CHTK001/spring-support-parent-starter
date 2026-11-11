@@ -9,6 +9,7 @@ import com.chua.starter.device.support.entity.DeviceTaskState;
 import com.chua.starter.device.support.service.DeviceAccessRecordService;
 import com.chua.starter.device.support.service.DeviceAttendanceService;
 import com.chua.starter.device.support.service.DeviceEventService;
+import com.chua.starter.device.support.service.DeviceMetricService;
 import com.chua.starter.device.support.service.DeviceProviderCredentialService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
@@ -43,9 +44,10 @@ import java.util.concurrent.TimeUnit;
  * <h3>任务分类</h3>
  * <ul>
  *   <li>仍由时间轮统一调度的任务：<code>deviceAccessExtract</code>（门禁记录抽取）；</li>
- *   <li>凭据级任务：每套提供商凭据独立拥有 4 个任务，名称为
+ *   <li>凭据级任务：每套提供商凭据独立拥有 5 个任务，名称为
  *   <code>offlineDetect_{credId}</code>/<code>eventPoll_{credId}</code>/
- *   <code>deviceSync_{credId}</code>/<code>orgSync_{credId}</code>，
+ *   <code>deviceSync_{credId}</code>/<code>orgSync_{credId}</code>/
+ *   <code>metricCollect_{credId}</code>，
  *   行为由 {@link DeviceProviderCredential} 的能力配置驱动（开关 + 间隔秒），默认为关闭；
  *   在离线检测/事件轮询/设备同步/组织同步都不再有全局入口，哪套凭据开启就只跑哪套。</li>
  * </ul>
@@ -78,6 +80,9 @@ public class DeviceScheduleManager {
     private static final String PREFIX_EVENT_POLL = "eventPoll";
     private static final String PREFIX_DEVICE_SYNC = "deviceSync";
     private static final String PREFIX_ORG_SYNC = "orgSync";
+
+    /** 环境指标采集任务前缀 */
+    private static final String PREFIX_METRIC_COLLECT = "metricCollect";
 
     /**
      * 调度 tick 间隔（秒）。任务是否到期由 {@code device_task_state.interval} 控制，
@@ -112,6 +117,8 @@ public class DeviceScheduleManager {
     /** 考勤服务 */
     private final DeviceAttendanceService attendanceService;
     private final DeviceProviderCredentialService credentialService;
+    /** 环境指标采集 */
+    private final DeviceMetricService metricService;
     /** 厂商 SPI：凭据能不能开某项能力，以厂商描述符的能力位为准 */
     private final List<DeviceProvider> deviceProviders;
 
@@ -223,7 +230,7 @@ public class DeviceScheduleManager {
     }
 
     /**
-     * 按凭据重注册 4 个 Tick。
+     * 按凭据重注册 5 个 Tick。
      * <p>先撤掉该凭据名下的旧 Tick，再按最新配置判定：凭据停用、开关关闭、
      * 间隔为空或非正数时不注册任务。</p>
      *
@@ -547,7 +554,10 @@ public class DeviceScheduleManager {
                 DeviceProviderCredential::getDeviceCredentialDeviceSyncInterval),
         ORG_SYNC(PREFIX_ORG_SYNC, "组织自动同步", DeviceCapability.ORG,
                 DeviceProviderCredential::getDeviceCredentialOrgSyncEnabled,
-                DeviceProviderCredential::getDeviceCredentialOrgSyncInterval);
+                DeviceProviderCredential::getDeviceCredentialOrgSyncInterval),
+        METRIC_COLLECT(PREFIX_METRIC_COLLECT, "环境指标采集", DeviceCapability.METRIC,
+                DeviceProviderCredential::getDeviceCredentialMetricCollectEnabled,
+                DeviceProviderCredential::getDeviceCredentialMetricCollectInterval);
 
         private final String prefix;
         private final String description;
@@ -626,6 +636,7 @@ public class DeviceScheduleManager {
             case EVENT_POLL -> () -> eventService.pollDevicesByCredential(credId);
             case DEVICE_SYNC -> () -> syncService.syncDevicesByCredential(credId);
             case ORG_SYNC -> () -> syncService.syncOrganizationsByCredential(credId);
+            case METRIC_COLLECT -> () -> metricService.collectByCredential(credId);
         };
     }
 }

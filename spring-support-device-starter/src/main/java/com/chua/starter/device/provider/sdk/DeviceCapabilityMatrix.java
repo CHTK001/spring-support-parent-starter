@@ -404,6 +404,7 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.PERSON_WRITE, 3, "person/add|update|delete 已实现，无账号数据未验证")
                 .no(DeviceCapability.ACCESS_WRITE, "云曜无门禁点/开门写接口")
                 .no(DeviceCapability.PARKING, "云曜开放平台未提供停车场业务接口")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -448,6 +449,7 @@ public record DeviceCapabilityMatrix(
                         "addOrganization/updateOrganization/removeOrganization 走官方 groups/create|update|delete，无账号数据未验证")
                 .no(DeviceCapability.ACCESS_WRITE, "云眸开放平台只提供控门与事件查询，没有门禁设备/门点增删改接口")
                 .no(DeviceCapability.PARKING, "云眸开放平台无停车场业务接口")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -479,6 +481,7 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.CAPTURE, 2, "capture 走官方 video/v1/cameras/images 并二次下载，缺网关地址未验证")
                 .unverified(DeviceCapability.EVENT, 2, "pollEvents 走官方 eventService/v1/eventRecords/page，缺网关地址未验证")
                 .no(DeviceCapability.PARKING, "综合安防停车场为独立子系统，不在本接入范围")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -516,6 +519,7 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.ORG, "萤石开放平台无组织架构接口（392 条中组织相关为 0）")
                 .no(DeviceCapability.ORG_WRITE, "萤石开放平台无组织架构接口")
                 .unverified(DeviceCapability.PARKING, 2, "过车取 parking/msgRecord（msgType 1 入/3 出）；停车单取 parkingRecord（需 spaceId）；无车场/车道/开闸接口")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -545,6 +549,7 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.CAPTURE, "ISUP 无抓图信令，抓图走设备 SDK")
                 .no(DeviceCapability.EVENT, "ISUP 事件由设备主动上报，不走平台查询")
                 .no(DeviceCapability.PARKING, "ISUP 无停车场业务")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -590,6 +595,7 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.ACCESS_WRITE, 5,
                         "平台无门点 CRUD；addPlan/updatePlan/removePlan/dispatchPlans/setUserPlans 已实现，无门禁设备未验证")
                 .no(DeviceCapability.PARKING, "云睿开放平台无停车场业务")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -622,6 +628,7 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.PERSON, "乐橙面向消费级，无人员模型")
                 .no(DeviceCapability.PERSON_WRITE, "乐橙面向消费级，无人员模型")
                 .no(DeviceCapability.PARKING, "乐橙无停车场业务")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -655,6 +662,7 @@ public record DeviceCapabilityMatrix(
                         "person/subsystem/add|update 与 person/delete 已接入，证件字段必填，无 ICC 环境未验证")
                 .unverified(DeviceCapability.CAPTURE, 2, "video.capture 已接入，无 ICC 环境未验证")
                 .no(DeviceCapability.PARKING, "ICC 停车场为独立子系统，不在本接入范围")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -683,6 +691,7 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.EVENT, 2, "event/alarm/query 已接入，缺真机验证")
                 .unverified(DeviceCapability.CAPTURE, 2, "device/capture/get + 二次下载已接入，缺真机验证")
                 .no(DeviceCapability.PARKING, "官方 openapi 目录无停车场接口")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -712,6 +721,7 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.CAPTURE, "国标无抓图信令")
                 .no(DeviceCapability.EVENT, "国标事件为主动上报（订阅通知），不走平台查询")
                 .no(DeviceCapability.PARKING, "国标协议不含停车场业务")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 
@@ -729,6 +739,8 @@ public record DeviceCapabilityMatrix(
         return builder("sennor.sennor-cloud", "精讯云")
                 .unverified(DeviceCapability.DEVICE, 2,
                         "设备列表/设备详情路径已按官方文档登记；控制台账号可登录，名下 0 台设备，字段映射未验证")
+                .unverified(DeviceCapability.METRIC, 1,
+                        "环境指标走 /device/selSensorData（secretKey）或控制台 /deviceManage/getSensorList；演示设备已返回温湿度读数，真实设备未验证")
                 .no(DeviceCapability.DEVICE_WRITE,
                         "官方只提供设备改名（/device/upDeviceInfo、/relay/updateDeviceName），没有新增/删除设备接口")
                 .no(DeviceCapability.CHANNEL, "精讯云是传感器/继电器设备平台，没有视频通道")
@@ -773,6 +785,7 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.ACCESS_WRITE, "ONVIF Access Control 服务国内设备几乎不支持")
                 .no(DeviceCapability.EVENT, "ONVIF 事件为 PullPoint 订阅，不走平台查询")
                 .no(DeviceCapability.PARKING, "ONVIF 不含停车场业务")
+                .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
     }
 }

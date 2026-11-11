@@ -28,7 +28,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
      * 凭据级任务名前缀，与 {@code DeviceScheduleManager.CredentialTask} 保持一致
      */
     private static final List<String> CREDENTIAL_TASK_PREFIXES = List.of(
-            "offlineDetect", "eventPoll", "deviceSync", "orgSync");
+            "offlineDetect", "eventPoll", "deviceSync", "orgSync", "metricCollect");
 
     /**
      * 任务状态 映射器

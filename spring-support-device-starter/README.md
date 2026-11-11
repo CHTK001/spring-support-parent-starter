@@ -37,6 +37,7 @@
 | 抓图 | `capture(channel)` |
 | 事件 | `subscribeEvent`、`unsubscribeEvent`、`pollEvents(range)` |
 | 门禁 | `listDoors()`、`remoteUnlock(doorId)`、`queryAccessRecords(range)` |
+| 环境指标 | `readMetrics()`（气象站/温湿度等节点实时值；不支持时抛异常） |
 
 约定：
 
@@ -56,23 +57,23 @@
 | `todo` | 官方接口已核实，代码未实现 |
 | `no` | 官方开放接口目录无此能力 |
 
-当前统计（12 个平台 × 15 个能力位 = 180）：
+当前统计（12 个平台 × 16 个能力位 = 192）：
 
 | 平台 | platformType | yes | unverified | todo | no |
 |---|---|---:|---:|---:|---:|
-| 海康云曜 | `cloud-yao` | 1 | 10 | 0 | 4 |
-| 海康云眸 | `cloud-eye` | 1 | 12 | 0 | 2 |
-| 海康综合安防 | `secure-platform` | 1 | 13 | 0 | 1 |
-| 海康萤石 | `ezviz` | 6 | 7 | 0 | 2 |
-| 海康 ISUP | `isup` | 1 | 4 | 0 | 10 |
-| 大华云平台 | `dahua-cloud` | 0 | 14 | 0 | 1 |
-| 大华乐橙 | `lechange` | 1 | 8 | 0 | 6 |
-| 大华 ICC | `dahua-icc` | 1 | 12 | 0 | 2 |
-| 宇视云开放平台 | `uniview` | 0 | 8 | 0 | 7 |
-| GB28181 | `gb28181` | 1 | 4 | 0 | 10 |
-| ONVIF | `onvif` | 0 | 5 | 0 | 10 |
-| 精讯云 | `sennor-cloud` | 0 | 1 | 0 | 14 |
-| **合计** | | **13** | **98** | **0** | **69** |
+| 海康云曜 | `cloud-yao` | 1 | 10 | 0 | 5 |
+| 海康云眸 | `cloud-eye` | 1 | 12 | 0 | 3 |
+| 海康综合安防 | `secure-platform` | 1 | 13 | 0 | 2 |
+| 海康萤石 | `ezviz` | 6 | 7 | 0 | 3 |
+| 海康 ISUP | `isup` | 1 | 4 | 0 | 11 |
+| 大华云平台 | `dahua-cloud` | 0 | 14 | 0 | 2 |
+| 大华乐橙 | `lechange` | 1 | 8 | 0 | 7 |
+| 大华 ICC | `dahua-icc` | 1 | 12 | 0 | 3 |
+| 宇视云开放平台 | `uniview` | 0 | 8 | 0 | 8 |
+| GB28181 | `gb28181` | 1 | 4 | 0 | 11 |
+| ONVIF | `onvif` | 0 | 5 | 0 | 11 |
+| 精讯云 | `sennor-cloud` | 0 | 2 | 0 | 14 |
+| **合计** | | **13** | **99** | **0** | **80** |
 
 已标 `yes` 的能力位：
 
@@ -144,8 +145,19 @@ try {
 - HTTP 取数模式：`appKey` 填 16 位 `secretKey`，`appSecret` 留空，调用
   `/device/*`、`/relay/*` 官方接口。`secretKey` 需联系厂商获取，本仓库不带任何凭据。
 
-平台地址默认 `http://www.sennor.net`，可由 `extra.baseUrl` 覆盖。精讯云只声明
-`DEVICE` 能力，设备统一映射为 `category=other`，不提供视频、门禁、组织、人员能力。
+平台地址默认 `http://www.sennor.net`，可由 `extra.baseUrl` 覆盖。精讯云声明
+`DEVICE` 与 `METRIC` 能力，设备统一映射为 `category=other`；不提供视频、门禁、组织、人员能力。
+
+环境指标（气象站 / 温湿度传感器）：
+
+- 账号模式读取 `GET /deviceManage/getSensorList?deviceNumber=<设备编号>`，
+  对应控制台设备详情页的节点实时值。
+- HTTP 取数模式读取 `GET /device/selSensorData`，响应字段与官方 `/device/*` 一致。
+- 节点按 `sensorId` / `templateId` 作为稳定标识；名称为温度、湿度、风速、雨量等，
+  值保留字符串以兼容风向、天气现象。
+- 凭据高级配置可开启「环境指标采集」，时间轮任务为 `metricCollect_<credentialId>`，
+  默认 60 秒；设备详情页「指标」页每 10 秒读取最新快照，也可手动触发采集。
+- 快照表 `device_metric_latest` 按设备 + 节点覆盖更新，不保留历史趋势。
 
 ## 5. 已知缺口
 
@@ -157,8 +169,8 @@ try {
 | 大华 ICC | 设备公开目录只有详情/分页/树/通道分页，无增删改；组织/人员写已接入，缺环境验证 |
 | 海康综合安防 | `ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
 | 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调 |
-| ONVIF | 5 项 `unverified`、10 项 `no`：标准本身无对应服务 |
-| 精讯云 | `DEVICE` 已实现设备目录与在线状态；账号名下 0 台设备，字段映射未验证。官方只有设备改名，没有新增/删除；传感器/继电器数据接口已登记但本模块暂无对应能力位与页面 |
+| ONVIF | 5 项 `unverified`、11 项 `no`：标准本身无对应服务 |
+| 精讯云 | `DEVICE` 已实现设备目录与在线状态，`METRIC` 已实现节点实时值读取与定时采集；账号名下 0 台设备，设备目录字段映射未用真实气象设备验证。官方只有设备改名，没有新增/删除；视频、门禁、组织、人员能力不支持 |
 
 真机验证缺口：综合安防无网关、ICC 无环境、宇视无 appId/secretKey、大华云无设备与凭据、精讯云账号下无设备。
 

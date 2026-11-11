@@ -129,6 +129,18 @@ public class DeviceProviderCredential {
     private Integer deviceCredentialOrgSyncInterval;
 
     /**
+     * 环境指标采集开关：该凭据维度的气象/传感器设备是否由时间轮自动拉取（能力位 METRIC）
+     */
+    @TableField("device_credential_metric_collect_enabled")
+    private Boolean deviceCredentialMetricCollectEnabled;
+
+    /**
+     * 环境指标采集间隔（秒）
+     */
+    @TableField("device_credential_metric_collect_interval")
+    private Integer deviceCredentialMetricCollectInterval;
+
+    /**
      * 最近一次连通性探测时间（单条「测试连接」或顶部「全部检测」写入）
      */
     @TableField("device_credential_last_test_at")

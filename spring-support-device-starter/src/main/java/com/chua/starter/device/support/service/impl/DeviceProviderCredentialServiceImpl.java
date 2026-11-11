@@ -173,6 +173,12 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         update.setDeviceCredentialOrgSyncInterval(credential.getDeviceCredentialOrgSyncInterval() != null
                 ? credential.getDeviceCredentialOrgSyncInterval()
                 : existing.getDeviceCredentialOrgSyncInterval());
+        update.setDeviceCredentialMetricCollectEnabled(credential.getDeviceCredentialMetricCollectEnabled() != null
+                ? credential.getDeviceCredentialMetricCollectEnabled()
+                : existing.getDeviceCredentialMetricCollectEnabled());
+        update.setDeviceCredentialMetricCollectInterval(credential.getDeviceCredentialMetricCollectInterval() != null
+                ? credential.getDeviceCredentialMetricCollectInterval()
+                : existing.getDeviceCredentialMetricCollectInterval());
 
         normalize(update);
         assertNameFree(update, id);
@@ -222,7 +228,7 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
             return;
         }
         credentialMapper.deleteById(id);
-        // 凭据名下 4 个凭据级任务（offlineDetect_/eventPoll_/deviceSync_/orgSync_）的状态行一并清掉，
+        // 凭据名下 5 个凭据级任务（offlineDetect_/eventPoll_/deviceSync_/orgSync_/metricCollect_）的状态行一并清掉，
         // 否则任务列表会留一排永远不跑的空行
         taskStateService.deleteByCredentialId(id);
         // 删掉的若正是默认套，把该厂商剩余启用套里最早的一套提为默认
@@ -331,6 +337,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
         if (c.getDeviceCredentialOrgSyncEnabled() == null) {
             c.setDeviceCredentialOrgSyncEnabled(false);
+        }
+        if (c.getDeviceCredentialMetricCollectEnabled() == null) {
+            c.setDeviceCredentialMetricCollectEnabled(false);
         }
     }
 

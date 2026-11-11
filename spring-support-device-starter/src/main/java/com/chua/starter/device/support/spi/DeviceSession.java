@@ -26,6 +26,18 @@ public interface DeviceSession {
     boolean isOnline();
 
     /**
+     * 读取设备当前环境指标快照。
+     *
+     * <p>气象站、温湿度传感器等设备可能一次返回多个节点。平台没有环境指标时
+     * 默认抛 {@link UnsupportedOperationException}，不返回空列表冒充成功。</p>
+     *
+     * @return 指标快照；平台支持但当前无数据时返回空列表
+     */
+    default List<DeviceMetric> readMetrics() {
+        throw new UnsupportedOperationException("该平台不支持环境指标");
+    }
+
+    /**
      * 关闭会话
      */
     void close();

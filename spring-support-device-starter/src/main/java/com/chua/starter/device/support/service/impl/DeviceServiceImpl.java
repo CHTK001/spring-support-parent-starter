@@ -635,7 +635,7 @@ public class DeviceServiceImpl implements DeviceService {
                 null,
                 null,
                 null,
-                null,
+                device.getDeviceInfoSerial(),
                 null
         );
         final DeviceConnectInfo connectInfo = enrichWithCredential(info);

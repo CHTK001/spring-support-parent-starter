@@ -84,6 +84,11 @@ public enum DeviceCapability {
     CAPTURE("抓图"),
 
     /**
+     * 环境指标：传感器 / 气象设备的温湿度、风速、雨量等实时读数
+     */
+    METRIC("环境指标"),
+
+    /**
      * 停车场：车场、车道、过车记录
      */
     PARKING("停车场");

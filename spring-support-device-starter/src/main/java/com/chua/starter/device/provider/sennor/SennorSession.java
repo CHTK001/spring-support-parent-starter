@@ -6,6 +6,7 @@ import com.chua.starter.device.spi.EventListener;
 import com.chua.starter.device.spi.model.AccessRecord;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.chua.starter.device.spi.model.DeviceEvent;
+import com.chua.starter.device.spi.model.DeviceMetric;
 import com.chua.starter.device.spi.model.EventType;
 import com.chua.starter.device.spi.model.PresetInfo;
 import com.chua.starter.device.spi.model.PtzCommand;
@@ -27,11 +28,16 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 精讯畅通（Sennor）精讯云设备会话。
@@ -49,7 +55,7 @@ import java.util.Objects;
  *
  * <p>精讯云是传感器/继电器设备平台，没有视频通道、录像、云台、门禁和停车场业务；
  * 这些 SPI 方法一律显式抛出 {@link UnsupportedOperationException}，不返回空数据
- * 冒充成功。能力矩阵只声明 {@code DEVICE}。</p>
+ * 冒充成功。能力矩阵声明 {@code DEVICE} 与 {@code METRIC}（节点实时值）。</p>
  *
  * <p><b>验证状态</b>：控制台账号已实测登录成功并返回空设备列表（账号名下 0 台设备）；
  * 因为没有真实设备，字段映射与在线状态仍标 {@code IMPLEMENTED_UNVERIFIED}。</p>
@@ -68,6 +74,13 @@ public class SennorSession implements DeviceSession {
 
     /** 控制台设备列表路径 */
     private static final String PLATFORM_DEVICE_LIST = "/deviceManage/getDeviceList";
+
+    /** 控制台设备节点实时数据路径（传感器列表页使用） */
+    private static final String PLATFORM_SENSOR_LIST = "/deviceManage/getSensorList";
+
+    /** 厂商数据时间格式 */
+    private static final DateTimeFormatter DATA_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** 分页大小 */
     private static final int PAGE_SIZE = 100;
@@ -182,6 +195,71 @@ public class SennorSession implements DeviceSession {
      */
     public List<VendorDevice> fetchDevices() {
         return secretKey != null ? fetchPublicDevices() : fetchPlatformDevices();
+    }
+
+    /**
+     * 读取当前设备的节点实时数据。
+     *
+     * <p>secretKey 模式走官方 {@code /device/selSensorData}；控制台账号模式走控制台
+     * 设备详情页使用的 {@code /deviceManage/getSensorList}。两种响应都按节点名称、
+     * 单位与厂商节点标识映射为统一指标。</p>
+     *
+     * @return 指标快照；设备无节点时返回空列表
+     */
+    @Override
+    public List<DeviceMetric> readMetrics() {
+        String deviceNumber = trimToNull(info.deviceSerial());
+        if (deviceNumber == null) {
+            throw new IllegalStateException("精讯云设备缺少设备编号，无法读取环境指标");
+        }
+        JsonNode root = secretKey != null
+                ? requestJson("GET", SennorApis.P_DEVICE_SENSOR_DATA,
+                        Map.of("deviceNumber", deviceNumber))
+                : requestJson("GET", PLATFORM_SENSOR_LIST,
+                        Map.of("deviceNumber", deviceNumber));
+        JsonNode rows = firstArray(root, "data", "datas");
+        List<DeviceMetric> metrics = new ArrayList<>(rows.size());
+        Set<String> usedKeys = new HashSet<>();
+        for (JsonNode row : rows) {
+            String name = text(row, "name", "sensorName");
+            String value = text(row, "value", "sensorData", "data");
+            if (name == null && value == null) {
+                continue;
+            }
+            String unit = text(row, "unit");
+            String key = text(row, "templateId", "sensorId", "id");
+            if (key == null || "0".equals(key)) {
+                key = (name == null ? "metric" : name) + (unit == null ? "" : "|" + unit);
+            }
+            String uniqueKey = key;
+            int suffix = 2;
+            while (!usedKeys.add(uniqueKey)) {
+                uniqueKey = key + "#" + suffix++;
+            }
+            metrics.add(new DeviceMetric(uniqueKey,
+                    name == null ? uniqueKey : name,
+                    value == null ? "" : value,
+                    unit,
+                    parseDataTime(text(row, "dataTime", "time", "drecordTime"))));
+        }
+        return metrics;
+    }
+
+    /**
+     * 解析厂商数据时间，格式不符时返回空。
+     *
+     * @param value 原始时间
+     * @return 解析结果或 null
+     */
+    private static LocalDateTime parseDataTime(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value, DATA_TIME_FORMAT);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
     }
 
     /**

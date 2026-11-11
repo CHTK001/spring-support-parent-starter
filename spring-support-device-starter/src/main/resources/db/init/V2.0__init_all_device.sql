@@ -204,6 +204,8 @@ CREATE TABLE IF NOT EXISTS device_provider_credential (
     device_credential_device_sync_interval INT COMMENT '该凭据维度的设备自动同步间隔（秒）',
     device_credential_org_sync_enabled TINYINT DEFAULT 0 COMMENT '该凭据维度的组织自动同步开关',
     device_credential_org_sync_interval INT COMMENT '该凭据维度的组织自动同步间隔（秒）',
+    device_credential_metric_collect_enabled TINYINT DEFAULT 0 COMMENT '该凭据维度的环境指标采集开关',
+    device_credential_metric_collect_interval INT COMMENT '该凭据维度的环境指标采集间隔（秒）',
     KEY `idx_dpc_vendor_platform` (`device_credential_vendor`, `device_credential_platform_type`)
 ) COMMENT '提供商接入凭据（AK/SK 等）';
 
@@ -742,6 +744,42 @@ SET @sql_cred_org_sync_interval := IF(@has_cred_org_sync_interval > 0, 'SELECT 1
 PREPARE stmt_cred_org_sync_interval FROM @sql_cred_org_sync_interval;
 EXECUTE stmt_cred_org_sync_interval;
 DEALLOCATE PREPARE stmt_cred_org_sync_interval;
+
+SET @has_cred_metric_collect_enabled := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_metric_collect_enabled'
+);
+SET @sql_cred_metric_collect_enabled := IF(@has_cred_metric_collect_enabled > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_metric_collect_enabled TINYINT DEFAULT 0 COMMENT ''该凭据维度的环境指标采集开关'' AFTER device_credential_org_sync_interval');
+PREPARE stmt_cred_metric_collect_enabled FROM @sql_cred_metric_collect_enabled;
+EXECUTE stmt_cred_metric_collect_enabled;
+DEALLOCATE PREPARE stmt_cred_metric_collect_enabled;
+
+SET @has_cred_metric_collect_interval := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_metric_collect_interval'
+);
+SET @sql_cred_metric_collect_interval := IF(@has_cred_metric_collect_interval > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_metric_collect_interval INT COMMENT ''该凭据维度的环境指标采集间隔（秒）'' AFTER device_credential_metric_collect_enabled');
+PREPARE stmt_cred_metric_collect_interval FROM @sql_cred_metric_collect_interval;
+EXECUTE stmt_cred_metric_collect_interval;
+DEALLOCATE PREPARE stmt_cred_metric_collect_interval;
+
+-- ------------------------------------------------------------
+-- 环境指标最新快照（气象站/温湿度传感器）
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_metric_latest (
+    device_metric_id VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_info_id VARCHAR(32) NOT NULL COMMENT '设备 ID',
+    device_metric_key VARCHAR(128) NOT NULL COMMENT '节点稳定标识（厂商节点 ID 或名称+单位）',
+    device_metric_name VARCHAR(64) COMMENT '节点名称',
+    device_metric_value VARCHAR(128) COMMENT '读数（字符串兼容风向/天气现象）',
+    device_metric_unit VARCHAR(32) COMMENT '单位',
+    device_metric_data_time DATETIME COMMENT '厂商侧数据时间',
+    device_metric_collected_at DATETIME COMMENT '本地采集时间',
+    UNIQUE KEY uk_device_metric (device_info_id, device_metric_key),
+    KEY idx_device_metric_device (device_info_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备环境指标最新快照';
 
 -- ---------------------------------------------------------------------
 -- 凭据健康留痕两列（单条测试 / 全部检测写入，凭据表健康列读取）
