@@ -76,9 +76,12 @@ public class StandardProtocolProvider implements DeviceProvider {
             // ONVIF 直连设备，有完整会话实现（媒体/云台/抓图）
             return new OnvifSession(info);
         }
-        // GB28181 依赖 SIP 服务端转发，暂不提供独立 Session
-        throw new IllegalStateException("GB28181 请通过平台 SDK 门面调用："
-                + "platformType=" + info.platformType());
+        if (PLATFORM_GB.equalsIgnoreCase(info.platformType())) {
+            // 国标走 WVP/ZLMediaKit REST 网关，SIP 信令由服务端处理
+            return new Gb28181Session(info);
+        }
+        // 其他标准协议类型明确失败，不伪造会话
+        throw new IllegalStateException("标准协议类型不支持: " + info.platformType());
     }
 
     @Override

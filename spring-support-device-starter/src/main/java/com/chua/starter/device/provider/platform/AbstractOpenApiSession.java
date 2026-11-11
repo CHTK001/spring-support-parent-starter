@@ -116,7 +116,9 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
         Object extra = info.extra() == null ? null : info.extra().get("baseUrl");
         String platformType = info.platformType();
         boolean privateDeployment = "secure-platform".equalsIgnoreCase(platformType)
-                || "dahua-icc".equalsIgnoreCase(platformType);
+                || "dahua-icc".equalsIgnoreCase(platformType)
+                || "isup".equalsIgnoreCase(platformType)
+                || "gb28181".equalsIgnoreCase(platformType);
         this.baseUrl = privateDeployment && extra instanceof String s && !s.isBlank() ? s : baseUrl;
     }
 

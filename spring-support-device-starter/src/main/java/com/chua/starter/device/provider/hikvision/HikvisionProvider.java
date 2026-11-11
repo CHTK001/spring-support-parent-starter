@@ -3,6 +3,7 @@ package com.chua.starter.device.provider.hikvision;
 
 import com.chua.starter.device.provider.hikvision.open.HikvisionCloudEyeSession;
 import com.chua.starter.device.provider.hikvision.open.HikvisionCloudYaoSession;
+import com.chua.starter.device.provider.hikvision.open.HikvisionIsupSession;
 import com.chua.starter.device.provider.hikvision.open.HikvisionSecurePlatformSession;
 import com.chua.starter.device.provider.hikvision.open.EzvizSession;
 import com.chua.starter.device.provider.hikvision.sdk.HikvisionRealSession;
@@ -165,8 +166,11 @@ public class HikvisionProvider implements DeviceProvider {
                     // 萤石走独立会话：form 表单提交 + /api/lapp/ 路径
                     return new EzvizSession(info);
                 }
+                if (PLATFORM_ISUP.equalsIgnoreCase(platform)) {
+                    return new HikvisionIsupSession(info);
+                }
                 throw new IllegalArgumentException("海康平台类型不支持: " + platform
-                        + "（期望 cloud-yao / cloud-eye / secure-platform / ezviz）");
+                        + "（期望 cloud-yao / cloud-eye / secure-platform / ezviz / isup）");
             } catch (Exception e) {
                 if (fallbackMock) {
                     log.warn("海康平台连接失败，回退模拟会话: {}", e.getMessage());

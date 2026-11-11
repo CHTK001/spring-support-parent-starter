@@ -52,7 +52,7 @@
 | 状态 | 含义 |
 |---|---|
 | `yes` | 已接通并有真实调用验证 |
-| `unverified` | 已按官方文档实现，缺环境/凭据，未做真机验证 |
+| `unverified` | 已按官方文档或既有网关契约实现，缺环境/凭据，未做真机验证 |
 | `todo` | 官方接口已核实，代码未实现 |
 | `no` | 官方开放接口目录无此能力 |
 
@@ -64,14 +64,14 @@
 | 海康云眸 | `cloud-eye` | 1 | 12 | 0 | 2 |
 | 海康综合安防 | `secure-platform` | 1 | 12 | 1 | 1 |
 | 海康萤石 | `ezviz` | 6 | 7 | 0 | 2 |
-| 海康 ISUP | `isup` | 1 | 0 | 4 | 10 |
+| 海康 ISUP | `isup` | 1 | 4 | 0 | 10 |
 | 大华云平台 | `dahua-cloud` | 0 | 2 | 12 | 1 |
 | 大华乐橙 | `lechange` | 1 | 8 | 0 | 6 |
 | 大华 ICC | `dahua-icc` | 1 | 12 | 0 | 2 |
 | 宇视云开放平台 | `uniview` | 0 | 8 | 0 | 7 |
-| GB28181 | `gb28181` | 1 | 0 | 4 | 10 |
+| GB28181 | `gb28181` | 1 | 4 | 0 | 10 |
 | ONVIF | `onvif` | 0 | 5 | 0 | 10 |
-| **合计** | | **13** | **76** | **21** | **55** |
+| **合计** | | **13** | **84** | **13** | **55** |
 
 已标 `yes` 的能力位：
 
@@ -96,7 +96,7 @@
 | 大华（云平台/乐橙/ICC） | `provider/dahua/DahuaProvider` | `provider/dahua/open/*Session` |
 | 宇视 | `provider/uniview/UniviewProvider` | `provider/uniview/open/UniviewSession` |
 | ONVIF | `provider/standard/StandardProtocolProvider` | `provider/standard/*Session` |
-| GB28181 | 仅 `provider/sdk/protocol/Gb28181Sdk` 门面，未返回 Session | — |
+| GB28181 | `provider/sdk/protocol/Gb28181Sdk` 门面 + `provider/standard/Gb28181Session`（WVP REST 网关） |
 
 接口目录：
 
@@ -142,7 +142,7 @@ try {
 | 大华云平台 | 12 项 `todo`：缺云平台套件文档 |
 | 大华 ICC | 设备公开目录只有详情/分页/树/通道分页，无增删改；组织/人员写已接入，缺环境验证 |
 | 海康综合安防 | 1 项 `todo`：官方目录无门禁写接口 |
-| 海康 ISUP / GB28181 | 各 4 项 `todo`：缺网关/SIP 环境 |
+| 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调 |
 | ONVIF | 5 项 `unverified`、10 项 `no`：标准本身无对应服务 |
 
 真机验证缺口：综合安防无网关、ICC 无环境、宇视无 appId/secretKey。

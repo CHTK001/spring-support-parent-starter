@@ -518,17 +518,19 @@ public record DeviceCapabilityMatrix(
     /**
      * 海康 ISUP 能力矩阵（协议网关转发模式）。
      *
-     * <p>只有平台 SDK（{@code HikvisionIsupSdk}），无 DeviceSession，业务能力一律 TODO。</p>
+     * <p>会话 {@code HikvisionIsupSession} 按企业自建 ISUP 网关的 {@code /isup/...}
+     * REST 契约实现通道、取流、录像、云台与预置位；网关不是海康官方 HTTP 服务，
+     * 本机无 ISUP 服务端，故全部标 {@code IMPLEMENTED_UNVERIFIED}。</p>
      *
      * @return 能力矩阵
      */
     static DeviceCapabilityMatrix hikvisionIsup() {
         return builder("hikvision.isup", "海康 ISUP")
                 .yes(DeviceCapability.DEVICE, 6)
-                .todo(DeviceCapability.MEDIA, 5, "ISUP 转发网关待接入：实时预览")
-                .todo(DeviceCapability.RECORD, 2, "ISUP 转发网关待接入：录像检索")
-                .todo(DeviceCapability.PTZ, 2, "ISUP 转发网关待接入：云台")
-                .todo(DeviceCapability.CHANNEL, 2, "ISUP 转发网关待接入：通道列表")
+                .unverified(DeviceCapability.MEDIA, 5, "HikvisionIsupSession 已接 /isup/live、/isup/live/stop，待 ISUP 服务端联调")
+                .unverified(DeviceCapability.RECORD, 2, "HikvisionIsupSession 已接 /isup/record/query、/isup/playback，待联调")
+                .unverified(DeviceCapability.PTZ, 2, "HikvisionIsupSession 已接 /isup/ptz 与预置位接口，待联调")
+                .unverified(DeviceCapability.CHANNEL, 2, "HikvisionIsupSession 已接 /isup/device/channels，待联调")
                 .no(DeviceCapability.DEVICE_WRITE, "ISUP 设备由设备主动注册上线，平台侧不能新增或删除")
                 .no(DeviceCapability.ORG, "ISUP 是设备接入协议，无组织模型")
                 .no(DeviceCapability.ORG_WRITE, "ISUP 是设备接入协议，无组织模型")
@@ -672,17 +674,19 @@ public record DeviceCapabilityMatrix(
     /**
      * GB28181 能力矩阵（国标协议）。
      *
-     * <p>只有平台 SDK（{@code Gb28181Sdk}），无 DeviceSession，业务能力一律 TODO。</p>
+     * <p>会话 {@code Gb28181Session} 按 WVP 的 {@code /api/v1/...} REST 约定实现
+     * 通道、取流、录像、云台与预置位，SIP 信令由 WVP/ZLMediaKit 处理。
+     * 本机没有国标服务端，故全部标 {@code IMPLEMENTED_UNVERIFIED}。</p>
      *
      * @return 能力矩阵
      */
     static DeviceCapabilityMatrix gb28181() {
         return builder("standard.gb28181", "GB28181")
                 .yes(DeviceCapability.DEVICE, 7)
-                .todo(DeviceCapability.MEDIA, 9, "国标会话待建：取流（依赖 SIP 服务端）")
-                .todo(DeviceCapability.RECORD, 2, "国标会话待建：录像检索")
-                .todo(DeviceCapability.PTZ, 2, "国标会话待建：云台")
-                .todo(DeviceCapability.CHANNEL, 2, "国标会话待建：通道")
+                .unverified(DeviceCapability.MEDIA, 9, "Gb28181Session 已接 WVP /api/v1/play/start|stop，待 WVP+ZLM 联调")
+                .unverified(DeviceCapability.RECORD, 2, "Gb28181Session 已接 WVP /api/v1/record/query|play，待联调")
+                .unverified(DeviceCapability.PTZ, 2, "Gb28181Session 已接 WVP /api/v1/ptz/control 与预置位接口，待联调")
+                .unverified(DeviceCapability.CHANNEL, 2, "Gb28181Session 已接 WVP /api/v1/device/channel/list，待联调")
                 .no(DeviceCapability.DEVICE_WRITE, "国标设备由下级平台主动注册，上级不能新增或删除设备")
                 .no(DeviceCapability.ORG, "国标协议的定义范围是设备接入与视频传输，不含组织架构")
                 .no(DeviceCapability.ORG_WRITE, "国标协议不含组织架构")
