@@ -213,5 +213,25 @@ deploy/
 **/_sweep.marker
 site-builder/
 pmt_proxy/
+
+# ===== 本地验收/临时脚本与产物（2026-11-11 从仓库移除，仅在本地保留）=====
+/spring-support-test-app/
+/backups/
+/tools/job-acceptance/
+/config/oauth.whitelist
+/.github/workflows/collect-gate.yml
+/.github/workflows/monitor-gate.yml
+/cp*.txt
+/run.txt
+/jarpath.txt
+/start-pid.txt
+/tshark-sources.txt
+/app9.stdout
+/start.bat
+/run_build.cmd
+/compile-check.ps1
+/tsc-check.ps1
+/verify-all.sh
+/DATASOURCE-DIALECT-TYPES-ACCEPTANCE.md
 node_modules/.tmp/
 
