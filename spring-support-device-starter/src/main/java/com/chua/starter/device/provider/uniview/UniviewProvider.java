@@ -1,6 +1,7 @@
 package com.chua.starter.device.provider.uniview;
 
 import com.chua.starter.device.provider.sdk.DeviceCapabilityMatrix;
+import com.chua.starter.device.provider.uniview.open.UniviewSession;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.AuthTypeDescriptor;
@@ -61,7 +62,7 @@ public class UniviewProvider implements DeviceProvider {
     @Override
     public DeviceSession connect(DeviceConnectInfo info) {
         log.info("宇视设备连接: platformType={}", info.platformType());
-        throw new IllegalStateException("宇视平台请通过平台 SDK 门面调用：platformType=" + info.platformType());
+        return new UniviewSession(info);
     }
 
     @Override
