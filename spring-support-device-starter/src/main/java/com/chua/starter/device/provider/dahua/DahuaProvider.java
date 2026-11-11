@@ -137,8 +137,11 @@ public class DahuaProvider implements DeviceProvider {
                      */
                     return new DahuaLeChangeSession(info);
                 }
+                if (PLATFORM_ICC.equalsIgnoreCase(platform)) {
+                    return new com.chua.starter.device.provider.dahua.open.DahuaIccSession(info);
+                }
                 throw new IllegalArgumentException("大华平台类型不支持: " + platform
-                        + "（期望 dahua-cloud / lechange）");
+                        + "（期望 dahua-cloud / lechange / dahua-icc）");
             } catch (Exception e) {
                 if (fallbackMock) {
                     log.warn("大华平台连接失败，回退模拟会话: {}", e.getMessage());
@@ -194,13 +197,32 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     @Override
-    /**
-     * 获取组织
-     * @return 返回值
-    */
     public List<OrganizationNode> fetchOrganizations() {
- // 组织同步需在已连接的 打开api 会话上下文中执行，由业务层处理。
+ // 云睿组织管理接口在 43 条基础通用套件之外，官方字段需控制台登录（OPF600001），未取证。
         return List.of();
+    }
+
+    /**
+     * 按凭据建连后的会话语境拉取设备目录。
+     *
+     * <p>云睿：走已验证的 {@code /open-api/api-iot/device/getDeviceList}
+     * （入 {@code pageNum/pageSize}，出 {@code data.pageData[].deviceList[]}）。
+     * 乐橙：走乐橙 v2 设备列表。</p>
+     *
+     * @param session 按凭据建连后的会话
+     * @return 厂商设备条目
+     */
+    @Override
+    public List<VendorDevice> fetchDevices(DeviceSession session) {
+        if (session instanceof DahuaCloudSession cloud) {
+            try {
+                return cloud.fetchDevices();
+            } catch (Exception e) {
+                log.warn("大华云睿 设备目录拉取失败: {}", e.getMessage());
+                return List.of();
+            }
+        }
+        return fetchDevices();
     }
 
     @Override

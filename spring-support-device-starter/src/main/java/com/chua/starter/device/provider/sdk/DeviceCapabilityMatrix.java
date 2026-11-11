@@ -611,26 +611,28 @@ public record DeviceCapabilityMatrix(
     /**
      * 大华 ICC / DSS 私有化平台能力矩阵。
      *
-     * <p>只有平台 SDK（{@code DahuaIccSdk}），无 DeviceSession，业务能力一律 TODO。</p>
+     * <p>平台 SDK（{@code DahuaIccSdk}）之外已于 2026-11-11 补齐 {@code DahuaIccSession}：
+     * 通道/取流/回放/录像/抓图/云台/门禁/事件/组织/人员按 15 条目录接通；
+     * 设备与组织/人员的写接口（device/org/person 增删改）目录未登记，仍为 TODO。</p>
      *
      * @return 能力矩阵
      */
     static DeviceCapabilityMatrix dahuaIcc() {
         return builder("dahua.dahua-icc", "大华 ICC")
                 .yes(DeviceCapability.DEVICE, 4)
-                .todo(DeviceCapability.MEDIA, 5, "ICC 会话待建：直播")
-                .todo(DeviceCapability.RECORD, 4, "ICC 会话待建：录像")
-                .todo(DeviceCapability.PTZ, 3, "ICC 会话待建：云台")
-                .todo(DeviceCapability.CHANNEL, 4, "ICC 会话待建：通道")
-                .todo(DeviceCapability.EVENT, 1, "ICC 事件待实现")
-                .todo(DeviceCapability.ACCESS, 2, "ICC 门禁待实现")
-                .todo(DeviceCapability.ACCESS_WRITE, 3, "ICC 门禁增删改待实现")
+                .unverified(DeviceCapability.MEDIA, 5, "video.live 已接入 ICC 会话，无 ICC 环境未验证")
+                .unverified(DeviceCapability.RECORD, 4, "video.records/playback 已接入，无 ICC 环境未验证")
+                .unverified(DeviceCapability.PTZ, 3, "video.ptz 已接入，无 ICC 环境未验证")
+                .unverified(DeviceCapability.CHANNEL, 4, "device.channels 已接入，无 ICC 环境未验证")
+                .unverified(DeviceCapability.EVENT, 1, "alarm.list 已接入，无 ICC 环境未验证")
+                .unverified(DeviceCapability.ACCESS, 2, "access.record 已接入，无 ICC 环境未验证")
+                .unverified(DeviceCapability.ACCESS_WRITE, 1, "access.door.open 已接入；门禁点增删改目录未登记")
                 .todo(DeviceCapability.DEVICE_WRITE, 3, "ICC 设备增删改待实现")
-                .todo(DeviceCapability.ORG, 1, "ICC 组织待实现")
+                .unverified(DeviceCapability.ORG, 1, "org.list 已接入，无 ICC 环境未验证")
                 .todo(DeviceCapability.ORG_WRITE, 3, "ICC 组织增删改待实现")
-                .todo(DeviceCapability.PERSON, 1, "ICC 人员待实现")
+                .unverified(DeviceCapability.PERSON, 1, "person.list 已接入，无 ICC 环境未验证")
                 .todo(DeviceCapability.PERSON_WRITE, 3, "ICC 人员增删改待实现")
-                .todo(DeviceCapability.CAPTURE, 2, "ICC 抓图待实现")
+                .unverified(DeviceCapability.CAPTURE, 2, "video.capture 已接入，无 ICC 环境未验证")
                 .no(DeviceCapability.PARKING, "ICC 停车场为独立子系统，不在本接入范围")
                 .build();
     }
