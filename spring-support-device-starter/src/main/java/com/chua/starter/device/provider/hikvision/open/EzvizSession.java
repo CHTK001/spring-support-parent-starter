@@ -115,8 +115,14 @@ public class EzvizSession extends AbstractOpenApiSession {
     /** 修改云端设备名称 */
     private static final String P_DEVICE_NAME_UPDATE = "/api/lapp/device/name/update";
 
-    /** 停车/过车记录（萤石设备套件） */
-    private static final String P_PARKING_RECORD = "/api/service/devicekit/parking/parkingRecord";
+    /** 停车消息记录（官方 devicekit parking/msgRecord，msgType=1 入车、3 出车、2 定时抓拍） */
+    private static final String P_PARKING_MSG_RECORD = "/api/service/devicekit/parking/msgRecord";
+
+    /** 过车记录单页大小（官方限制小于 50） */
+    private static final int PASS_PAGE_SIZE = 50;
+
+    /** 过车记录单次最多翻页数 */
+    private static final int MAX_PASS_PAGES = 20;
 
     /** 成功码 */
     private static final String OK = "200";
@@ -180,36 +186,40 @@ public class EzvizSession extends AbstractOpenApiSession {
     @Override
     public List<VehiclePassRecord> queryVehiclePasses(TimeRange range) {
         requireRange(range);
-        Map<String, Object> params = new LinkedHashMap<>();
-        params.put("deviceSerial", requireSerial());
-        params.put("beginTime", toEzvizTime(range.start()));
-        params.put("endTime", toEzvizTime(range.end()));
-        params.put("pageStart", 0);
-        params.put("pageSize", 100);
-        JsonNode data = assertOk(doRequest("GET", P_PARKING_RECORD, params));
-        JsonNode list = data.path("list");
-        if (!list.isArray()) {
-            list = data.path("records");
-        }
-        if (!list.isArray()) {
-            list = data;
-        }
+        String serial = requireSerial();
         List<VehiclePassRecord> result = new ArrayList<>();
-        for (JsonNode node : list) {
-            String plate = text(node, "carNo", "plateNo", "plateNumber", "vehicleNo");
-            if (plate.isBlank()) {
-                continue;
+        long cursor = 0L;
+        for (int page = 0; page < MAX_PASS_PAGES; page++) {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("id", cursor);
+            params.put("pageSize", PASS_PAGE_SIZE);
+            JsonNode data = assertOk(doRequest("GET", P_PARKING_MSG_RECORD, params,
+                    Map.of("deviceSerial", serial)));
+            JsonNode list = data.isArray() ? data : data.path("data");
+            if (!list.isArray() || list.isEmpty()) {
+                break;
             }
-            String gate = text(node, "gateId", "roadGateId", "deviceSerial");
-            String direction = mapPassDirection(text(node, "direction", "inOut", "passType"));
-            String photo = text(node, "picUrl", "imageUrl", "photoUrl", "captureUrl");
-            String passId = text(node, "id", "recordId", "passId");
-            if (passId.isBlank()) {
-                passId = gate + "_" + plate + "_" + text(node, "passTime", "occurTime", "time");
+            for (JsonNode node : list) {
+                long msgId = node.path("msgId").asLong(0L);
+                if (msgId > cursor) {
+                    cursor = msgId;
+                }
+                int msgType = node.path("msgType").asInt(0);
+                if (msgType != 1 && msgType != 3) {
+                    continue;
+                }
+                String plate = node.path("plateNumber").asText("");
+                java.time.LocalDateTime time = parsePassTime(node.path("msgTime").asText(""));
+                if (plate.isBlank() || time == null
+                        || time.isBefore(range.start()) || time.isAfter(range.end())) {
+                    continue;
+                }
+                result.add(new VehiclePassRecord(String.valueOf(msgId), serial, plate,
+                        msgType == 1 ? "in" : "out", time, node.path("picUrl").asText(""), ""));
             }
-            result.add(new VehiclePassRecord(passId, gate, plate, direction,
-                    parsePassTime(text(node, "passTime", "occurTime", "time", "captureTime")),
-                    photo, text(node, "vehicleType", "carType")));
+            if (list.size() < PASS_PAGE_SIZE) {
+                break;
+            }
         }
         return result;
     }
@@ -229,23 +239,6 @@ public class EzvizSession extends AbstractOpenApiSession {
             }
         }
         return "";
-    }
-
-    /**
-     * 过车方向归一。
-     *
-     * @param raw 原始值
-     * @return in / out / 原值
-     */
-    private static String mapPassDirection(String raw) {
-        String value = raw == null ? "" : raw.trim();
-        if ("in".equalsIgnoreCase(value) || "0".equals(value) || value.contains("入")) {
-            return "in";
-        }
-        if ("out".equalsIgnoreCase(value) || "1".equals(value) || value.contains("出")) {
-            return "out";
-        }
-        return value;
     }
 
     /**
@@ -554,6 +547,20 @@ public class EzvizSession extends AbstractOpenApiSession {
      */
     @Override
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
+        return doRequest(method, path, params, Map.of());
+    }
+
+    /**
+     * 发送请求并附加自定义请求头（如 deviceSerial）。
+     *
+     * @param method  HTTP 方法
+     * @param path    路径
+     * @param params  参数（拼到 query 或表单）
+     * @param headers 自定义请求头
+     * @return 响应 JSON
+     */
+    protected JsonNode doRequest(String method, String path, Map<String, Object> params,
+                                 Map<String, String> headers) {
         ensureToken(path);
         Map<String, Object> form = new LinkedHashMap<>();
         if (params != null) {
@@ -565,6 +572,9 @@ public class EzvizSession extends AbstractOpenApiSession {
         String query = encode(form);
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder().timeout(Duration.ofSeconds(30));
+            if (headers != null) {
+                headers.forEach(builder::header);
+            }
             HttpRequest request;
             String uri = baseUrl + path + (query.isEmpty() ? "" : "?" + query);
             if ("GET".equalsIgnoreCase(method)) {

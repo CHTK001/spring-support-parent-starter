@@ -39,6 +39,9 @@ public final class EzvizApis {
             PlatformApiSpec.global("devicekit.elevator.sos.info.detail", "获取电梯sos事件", "GET", "/api/devicekit/elevator/sos/info/detail", "devicekit", "alarm"),
             PlatformApiSpec.global("devicekit.elevator.sos.list", "分页查询电梯sos事件列表", "GET", "/api/devicekit/elevator/sos/list", "devicekit", "alarm"),
             PlatformApiSpec.global("devicekit.elevator.sos.rescuetime.update", "手动订正救援开始时间结束时间", "POST", "/api/devicekit/elevator/sos/rescuetime/update", "devicekit", "alarm"),
+            // ---------- 设备套件：停车/过车 ----------
+            PlatformApiSpec.global("service.devicekit.parking.msgrecord", "查询停车消息记录（过车）", "GET", "/api/service/devicekit/parking/msgRecord", "service", "vehicle"),
+            PlatformApiSpec.global("service.devicekit.parking.parkingrecord", "查询停车记录", "GET", "/api/service/devicekit/parking/parkingRecord", "service", "vehicle"),
             PlatformApiSpec.global("lapp.alarm.device.list", "按照设备获取告警消息列表", "POST", "/api/lapp/alarm/device/list", "lapp", "alarm"),
             PlatformApiSpec.global("lapp.alarm.list", "获取所有告警信息列表", "POST", "/api/lapp/alarm/list", "lapp", "alarm"),
             PlatformApiSpec.global("lapp.detector.cancelalarm", "一键消警", "POST", "/api/lapp/detector/cancelAlarm", "lapp", "alarm"),

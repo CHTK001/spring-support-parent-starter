@@ -511,7 +511,7 @@ public record DeviceCapabilityMatrix(
                         "addDevice/deleteDevice/renameDevice 走官方 /api/lapp/device/add|delete|name/update；真机离线未验证")
                 .no(DeviceCapability.ORG, "萤石开放平台无组织架构接口（392 条中组织相关为 0）")
                 .no(DeviceCapability.ORG_WRITE, "萤石开放平台无组织架构接口")
-                .unverified(DeviceCapability.PARKING, 2, "仅停车/过车记录（parking/parkingRecord）已接入；无车场/车道/开闸接口")
+                .unverified(DeviceCapability.PARKING, 2, "过车取 parking/msgRecord（msgType 1 入/3 出）；停车单取 parkingRecord（需 spaceId）；无车场/车道/开闸接口")
                 .build();
     }
 
