@@ -43,6 +43,12 @@
             <artifactId>utils-support-filestorage-starter</artifactId>
             <version>4.0.0.50</version>
         </dependency>
+        <!-- 文件预览前端资源（file-viewer）由纯资源制品提供，starter 不再内置 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-resource-filestorage</artifactId>
+            <version>4.0.0.43</version>
+        </dependency>
         <!-- CAD 图纸预览：DXF 真渲染 + DWG 头信息（?format=cad 端点使用） -->
         <dependency>
             <groupId>com.chua</groupId>
