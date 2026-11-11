@@ -1197,15 +1197,19 @@ public class DataSourceScriptConfiguration {
 
             String errorMsg = String.format("脚本 %s (版本: %s) 的校验和不匹配。期望值: %s, 实际值: %s",
                     fileName, version, storedChecksum, currentChecksum);
-            log.error(errorMsg);
-            if (!dataSourceScriptProperties.isContinueOnError()) {
-                  /**
-                   * SQL异常。
-                   * @param errorMsg 错误信息
-                   * @return sql异常的结果
-                   */
-                throw new SQLException(errorMsg);
+            if (dataSourceScriptProperties.isContinueOnError()) {
+                // 已显式容忍校验和漂移时，这不是启动失败，不应污染 ERROR 日志；
+                // 仍保留 WARN 便于发现基线脚本被改动。未容忍时下面按原逻辑抛错。
+                log.warn(errorMsg);
+                return;
             }
+            log.error(errorMsg);
+            /**
+             * SQL异常。
+             * @param errorMsg 错误信息
+             * @return sql异常的结果
+             */
+            throw new SQLException(errorMsg);
         }
 
           /**
