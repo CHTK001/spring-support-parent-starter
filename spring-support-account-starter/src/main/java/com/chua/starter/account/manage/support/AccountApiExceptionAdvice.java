@@ -19,12 +19,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * 避免被框架通用兜底统一打成 500「系统繁忙」。优先级高于通用兜底，
  * 且只处理本模块自己的异常类型，不影响 AI 模块的同名体系。</p>
  *
+ * <p>同时用 {@code basePackages} 把处理器限定在账号模块：此前通用
+ * {@code Exception} 兜底是全局的，会抢在 AI 模块的 {@code AiApiExceptionAdvice}
+ * 前面，把 AI 的 {@code ApiException}（例如「尚未绑定 magpie 网关」）当成未预期
+ * 异常打成 500 并输出整段 ERROR 堆栈。</p>
+ *
  * @author CH
  * @since 4.0.0.52
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.chua.starter.account")
 public class AccountApiExceptionAdvice {
 
     /**

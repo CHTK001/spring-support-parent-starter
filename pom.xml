@@ -1314,6 +1314,19 @@
     </dependencyManagement>
     <!-- 构建配置 -->
     <build>
+        <!--
+          统一启用 os-maven-plugin：ngrok-java-native 等依赖用 ${os.detected.classifier}
+          选择本机原生包。只在 ngrok starter 自己的 build 里声明时，消费方（如 monitor）
+          解析传递依赖拿不到该属性，会把字面量 ${os.detected.classifier} 当 classifier，
+          导致 package 阶段依赖解析失败。放在根 POM 让所有子模块都能解析。
+        -->
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${os-maven-plugin.version}</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
