@@ -3129,7 +3129,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
        * <p>按 {@link FileStorageSetting#getLayoutType()} 分流：</p>
        * <ul>
        *   <li>SYSTEM — 返回 Vue 独立构建壳页面（classpath {@code static/index.html}），
-       *       交互由前端通过 REST API 完成（{@code ?format=json} / {@code ?config}）</li>
+       *       前后端分离部署后包内不再带壳，此时告警并回落 SIMPLE</li>
        *   <li>SIMPLE — 服务端渲染的简单文件列表树</li>
        * </ul>
        *
@@ -3142,14 +3142,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private CompletionStage<Void> renderLayoutPage(String bucket, String dir, List<Metadata> items, ServerResponse response) {
         if (resolveLayoutType() == FileStorageSetting.LayoutType.SYSTEM) {
             String html = readVueShell();
-            if (html == null) {
-                return error(response, 500, "Vue 前端资源缺失（static/index.html）");
+            if (html != null) {
+                response.setStatus(200)
+                        .setContentType("text/html;charset=UTF-8")
+                        .setBody(html.getBytes(StandardCharsets.UTF_8))
+                        .end();
+                return CompletableFuture.completedFuture(null);
             }
-            response.setStatus(200)
-                    .setContentType("text/html;charset=UTF-8")
-                    .setBody(html.getBytes(StandardCharsets.UTF_8))
-                    .end();
-            return CompletableFuture.completedFuture(null);
+            // 前后端分离后脚手架不再随包：壳缺失时回落 SIMPLE，不再 500
+            log.warn("[FileStorage] layoutType=SYSTEM 但包内无 Vue 壳（前后端分离部署），已回落 SIMPLE");
         }
    // 简单：服务端渲染简单列表
         String html = buildSimpleLayoutHtml(bucket, dir, items);
@@ -4783,7 +4784,8 @@ var search=document.getElementById('search');
        * 输出统一预览入口壳（前端 file-viewer 接管全部预览渲染）。
        *
        * <p>壳为 classpath {@code static/preview/index.html}（pages/filesystem
-       * 前端独立入口 preview.html 的构建产物）。响应时在 {@code </head>} 前注入
+       * 前端独立入口 preview.html 的构建产物）。前后端分离部署后包内不再带壳，
+       * 读取返回 {@code null}，调用方落回旧的兜底渲染。响应时在 {@code </head>} 前注入
        * 引导脚本：</p>
        * <pre>{@code
        * window.__FILE_PREVIEW_BOOT__ = {

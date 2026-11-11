@@ -1,1 +1,0 @@
-import{J as e,On as t,g as n}from"./runtime-core.esm-bundler-K64zC-lh.js";import{R as r}from"./install-BresTzAU.js";var i=[``,`default`,`small`,`large`],a=r({type:String,values:i,required:!1}),o=Symbol(`size`),s=()=>{let r=e(o,{});return n(()=>t(r.size)||``)};export{i,s as n,a as r,o as t};

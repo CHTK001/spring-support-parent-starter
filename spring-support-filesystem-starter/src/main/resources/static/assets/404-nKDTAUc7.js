@@ -1,1 +1,0 @@
-var e=`/assets/404-CwMLa_Zl.png`;export{e as t};

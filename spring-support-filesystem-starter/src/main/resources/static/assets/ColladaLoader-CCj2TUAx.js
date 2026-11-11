@@ -1,1 +1,0 @@
-import{t as e}from"./ColladaLoader-Bvp3Nmte.js";export{e as ColladaLoader};

@@ -1,1 +1,0 @@
-import{w as e}from"./_baseGet-DSZshHnQ.js";var t=function(){return e.Date.now()};export{t};

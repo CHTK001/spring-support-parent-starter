@@ -1,1 +1,0 @@
-function e(e){var t=e==null?0:e.length;return t?e[t-1]:void 0}export{e as t};
