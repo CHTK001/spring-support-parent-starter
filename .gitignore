@@ -81,6 +81,8 @@ sys
 /data/
 # 模块级运行期数据（答题卡图片、H2 文件库等），不得入库
 spring-support-eduai-starter/data/
+# 运行时补丁 jar（构建产物，不入库）
+patch-runtime/
 # 运行时缓存与空文件
 osgi-cache/
 **/osgi-cache/
