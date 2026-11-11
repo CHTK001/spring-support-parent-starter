@@ -1,6 +1,7 @@
 package com.chua.socketio.support.session;
 
 import com.chua.socket.support.SocketListener;
+import com.chua.socket.support.auth.SocketAuthFactory;
 import com.chua.socket.support.handler.EventListenerProcessor;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSession;
@@ -15,11 +16,13 @@ import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -66,6 +69,36 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         this.properties = properties;
         this.listeners = listeners;
         this.eventListenerProcessor = new EventListenerProcessor(listeners);
+    }
+
+    /**
+     * 当前模板实际使用的协议名。
+     *
+     * @return socketio
+     */
+    @Override
+    public String protocol() {
+        return "socketio";
+    }
+
+    /**
+     * 是否已真正监听端口。
+     *
+     * @return 至少一个服务端实例启动成功返回 true
+     */
+    @Override
+    public boolean isReady() {
+        return !servers.isEmpty();
+    }
+
+    /**
+     * 配置了握手鉴权工厂才具备可信用户身份，才允许定向发送。
+     *
+     * @return 支持定向发送返回 true
+     */
+    @Override
+    public boolean supportsUserTargeting() {
+        return properties.getAuthFactory() != null && !properties.getAuthFactory().isBlank();
     }
 
     @Override
@@ -324,13 +357,22 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
                 SocketIOSession session = new SocketIOSession(client, properties);
                 session.setAttribute("clientId", clientId);
                 session.setAttribute("contextPath", contextPath);
+                // 鉴权通过时 AuthorizationListener 已把用户写入握手数据；
+                // 没有用户说明未启用鉴权，保持旧行为（user 为空）。
+                Object authUser = client.getHandshakeData() == null
+                        ? null : client.getHandshakeData().getAuthToken();
+                if (authUser instanceof SocketUser socketUser) {
+                    session.setUser(socketUser);
+                }
                 /**
                  * 保存。
                  * @param clientId 客户端标识
                  * @param session 会话
                  */
                 save(clientId, session);
-                log.debug("[SocketIO] 客户端连接: clientId={}, sessionId={}", clientId, client.getSessionId());
+                log.debug("[SocketIO] 客户端连接: clientId={}, sessionId={}, userId={}",
+                        clientId, client.getSessionId(), session.getUser() == null
+                                ? null : session.getUser().getUserId());
             });
 
             // 断开连接事件
@@ -490,7 +532,90 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         configuration.setJsonSupport(new JacksonJsonSupport());
         configuration.setAddVersionHeader(true);
         configuration.setUseLinuxNativeEpoll(properties.isUseLinuxNativeEpoll());
+        configureAuthorization(configuration);
 
         return configuration;
+    }
+
+    /**
+     * 配置握手鉴权。
+     *
+     * <p>未配置 {@code plugin.socket.auth-factory} 时保持原有放行行为；一旦配置，
+     * 工厂无法加载或令牌无效都按失败关闭处理，不能因为配置写错就把实时通道变成匿名入口。</p>
+     *
+     * @param configuration Socket.IO 配置
+     */
+    private void configureAuthorization(Configuration configuration) {
+        String factoryName = properties.getAuthFactory();
+        if (factoryName == null || factoryName.isBlank()) {
+            return;
+        }
+        SocketAuthFactory factory = resolveAuthFactory(factoryName);
+        if (factory == null) {
+            log.error("[SocketIO] 鉴权工厂加载失败，拒绝所有连接: {}", factoryName);
+            configuration.setAuthorizationListener(data -> AuthorizationResult.FAILED_AUTHORIZATION);
+            return;
+        }
+        configuration.setAuthorizationListener(data -> {
+            try {
+                SocketUser user = factory.getUser(toHandshakeData(data));
+                if (user == null || user.getUserId() == null || user.getUserId().isBlank()) {
+                    log.warn("[SocketIO] 握手鉴权拒绝: address={}", data.getAddress());
+                    return AuthorizationResult.FAILED_AUTHORIZATION;
+                }
+                // 同一份用户对象交给 connect 回调，避免二次解析/二次远程校验
+                data.setAuthToken(user);
+                return AuthorizationResult.SUCCESSFUL_AUTHORIZATION;
+            } catch (Exception e) {
+                log.warn("[SocketIO] 握手鉴权异常: {}", e.getMessage());
+                return AuthorizationResult.FAILED_AUTHORIZATION;
+            }
+        });
+    }
+
+    /**
+     * 按类名创建鉴权工厂。
+     *
+     * <p>用反射而不是 Spring 注入：Socket.IO 模板由 SPI 手工创建，不在 Spring 容器里；
+     * {@code authFactory} 的既有语义就是“工厂类名”。</p>
+     *
+     * @param className 工厂全限定类名
+     * @return 工厂实例，创建失败返回 null
+     */
+    private SocketAuthFactory resolveAuthFactory(String className) {
+        try {
+            Class<?> type = Class.forName(className);
+            Object instance = type.getDeclaredConstructor().newInstance();
+            if (instance instanceof SocketAuthFactory factory) {
+                return factory;
+            }
+            log.error("[SocketIO] 鉴权工厂未实现 SocketAuthFactory: {}", className);
+        } catch (Exception e) {
+            log.error("[SocketIO] 鉴权工厂实例化失败: {}, {}", className, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 把 netty 握手数据转成与协议无关的 Map，供 {@link SocketAuthFactory} 使用。
+     *
+     * @param data 握手数据
+     * @return 请求头、查询参数与来源地址
+     */
+    private Map<String, Object> toHandshakeData(HandshakeData data) {
+        Map<String, Object> result = new HashMap<>(4);
+        Map<String, String> headers = new HashMap<>(16);
+        if (data.getHttpHeaders() != null) {
+            for (Map.Entry<String, String> entry : data.getHttpHeaders()) {
+                if (entry.getKey() != null) {
+                    headers.put(entry.getKey().toLowerCase(Locale.ROOT), entry.getValue());
+                }
+            }
+        }
+        result.put(SocketSessionTemplate.HANDSHAKE_HEADERS, headers);
+        result.put(SocketSessionTemplate.HANDSHAKE_QUERY,
+                data.getUrlParams() == null ? Collections.emptyMap() : data.getUrlParams());
+        result.put("address", data.getAddress() == null ? null : data.getAddress().toString());
+        return result;
     }
 }

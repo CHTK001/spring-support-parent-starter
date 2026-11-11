@@ -19,6 +19,16 @@ import java.util.Map;
 public interface SocketSessionTemplate {
 
     /**
+     * 握手数据中的请求头映射键（值类型为 {@code Map<String, String>}）
+     */
+    String HANDSHAKE_HEADERS = "headers";
+
+    /**
+     * 握手数据中的查询参数映射键（值类型为 {@code Map<String, List<String>>}）
+     */
+    String HANDSHAKE_QUERY = "query";
+
+    /**
      * 保存或更新一个客户端的会话
      *
      * @param clientId 客户端唯一标识符
@@ -291,6 +301,39 @@ public interface SocketSessionTemplate {
                 }
             }
         }
+    }
+
+    /**
+     * 服务是否已经真正监听端口。
+     *
+     * <p>模板 Bean 存在不等于端口绑定成功：端口被占用、配置缺失时模板仍会创建。
+     * 能力接口必须据此判断，避免给前端一个永远收不到帧的“可用”套接字。</p>
+     *
+     * @return 已就绪返回 true
+     */
+    default boolean isReady() {
+        return true;
+    }
+
+    /**
+     * 当前模板实际使用的协议名。
+     *
+     * @return 协议名
+     */
+    default String protocol() {
+        return "unknown";
+    }
+
+    /**
+     * 是否支持按用户定向发送。
+     *
+     * <p>只有握手阶段能建立可信用户身份时才返回 true；否则调用方应继续广播，
+     * 不能假设 {@code sendToUser} 一定能送达。</p>
+     *
+     * @return 支持定向发送返回 true
+     */
+    default boolean supportsUserTargeting() {
+        return false;
     }
 
     /**
