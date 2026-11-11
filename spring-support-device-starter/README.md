@@ -1,6 +1,6 @@
 # spring-support-device-starter
 
-设备接入 Starter：把海康、大华、宇视、GB28181、ONVIF 等厂商/协议收敛成一套
+设备接入 Starter：把海康、大华、宇视、精讯畅通、GB28181、ONVIF 等厂商/协议收敛成一套
 `DeviceProvider` + `DeviceSession` SPI，业务侧只依赖 SPI，不直接碰各家的鉴权与报文差异。
 
 - 包名：`com.chua.starter.device`
@@ -56,7 +56,7 @@
 | `todo` | 官方接口已核实，代码未实现 |
 | `no` | 官方开放接口目录无此能力 |
 
-当前统计（11 个平台 × 15 个能力位 = 165）：
+当前统计（12 个平台 × 15 个能力位 = 180）：
 
 | 平台 | platformType | yes | unverified | todo | no |
 |---|---|---:|---:|---:|---:|
@@ -71,7 +71,8 @@
 | 宇视云开放平台 | `uniview` | 0 | 8 | 0 | 7 |
 | GB28181 | `gb28181` | 1 | 4 | 0 | 10 |
 | ONVIF | `onvif` | 0 | 5 | 0 | 10 |
-| **合计** | | **13** | **97** | **0** | **55** |
+| 精讯云 | `sennor-cloud` | 0 | 1 | 0 | 14 |
+| **合计** | | **13** | **98** | **0** | **69** |
 
 已标 `yes` 的能力位：
 
@@ -96,6 +97,7 @@
 | 海康（云曜/云眸/综合安防/萤石/ISUP） | `provider/hikvision/HikvisionProvider` | `provider/hikvision/open/*Session`、`provider/hikvision/sdk/*` |
 | 大华（云平台/乐橙/ICC） | `provider/dahua/DahuaProvider` | `provider/dahua/open/*Session` |
 | 宇视 | `provider/uniview/UniviewProvider` | `provider/uniview/open/UniviewSession` |
+| 精讯畅通（Sennor） | `provider/sennor/SennorProvider` | `provider/sennor/SennorSession` |
 | ONVIF | `provider/standard/StandardProtocolProvider` | `provider/standard/*Session` |
 | GB28181 | `provider/sdk/protocol/Gb28181Sdk` 门面 + `provider/standard/Gb28181Session`（WVP REST 网关） |
 
@@ -103,6 +105,7 @@
 
 - `provider/sdk/hikvision/HikvisionArtemisApis.java`（综合安防 Artemis 网关）
 - `provider/sdk/uniview/UniviewApis.java`（宇视云开放平台）
+- `provider/sdk/sennor/SennorApis.java`（精讯云 HTTP 取数接口）
 - 其余厂商接口常量随各自 Session/Provider 维护
 
 ## 4. 接入示例
@@ -134,6 +137,16 @@ try {
 （`appId` + `secretKey` → `accessToken` + `expireTime`），后续请求头
 `Authorization: <accessToken>`；token 在会话内按 `expireTime` 缓存。
 
+精讯云鉴权有两种模式，复用凭据的 `appKey` / `appSecret` 两列：
+
+- 账号模式：`appKey` 填控制台账号，`appSecret` 填密码，走 `POST /index/login`
+  建立 `JSESSIONID` 会话，再用 `/deviceManage/getDeviceList` 取设备。
+- HTTP 取数模式：`appKey` 填 16 位 `secretKey`，`appSecret` 留空，调用
+  `/device/*`、`/relay/*` 官方接口。`secretKey` 需联系厂商获取，本仓库不带任何凭据。
+
+平台地址默认 `http://www.sennor.net`，可由 `extra.baseUrl` 覆盖。精讯云只声明
+`DEVICE` 能力，设备统一映射为 `category=other`，不提供视频、门禁、组织、人员能力。
+
 ## 5. 已知缺口
 
 | 平台 | 缺口 |
@@ -145,8 +158,9 @@ try {
 | 海康综合安防 | `ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
 | 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调 |
 | ONVIF | 5 项 `unverified`、10 项 `no`：标准本身无对应服务 |
+| 精讯云 | `DEVICE` 已实现设备目录与在线状态；账号名下 0 台设备，字段映射未验证。官方只有设备改名，没有新增/删除；传感器/继电器数据接口已登记但本模块暂无对应能力位与页面 |
 
-真机验证缺口：综合安防无网关、ICC 无环境、宇视无 appId/secretKey、大华云无设备与凭据。
+真机验证缺口：综合安防无网关、ICC 无环境、宇视无 appId/secretKey、大华云无设备与凭据、精讯云账号下无设备。
 
 ## 6. 验证
 

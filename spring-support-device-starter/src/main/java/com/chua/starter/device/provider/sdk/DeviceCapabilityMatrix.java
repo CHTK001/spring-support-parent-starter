@@ -308,6 +308,7 @@ public record DeviceCapabilityMatrix(
             register(uniview());
             register(gb28181());
             register(onvif());
+            register(sennor());
         }
 
         private Registry() {
@@ -711,6 +712,38 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.CAPTURE, "国标无抓图信令")
                 .no(DeviceCapability.EVENT, "国标事件为主动上报（订阅通知），不走平台查询")
                 .no(DeviceCapability.PARKING, "国标协议不含停车场业务")
+                .build();
+    }
+
+    /**
+     * 精讯畅通（Sennor）精讯云能力矩阵。
+     *
+     * <p>精讯云是传感器/继电器设备平台，官方 HTTP 取数文档只覆盖设备目录、
+     * 节点实时数据、历史数据和继电器控制；没有视频、门禁、组织、人员与停车场业务。
+     * 2026-11-11 已用控制台账号实测登录成功，账号名下 0 台设备，故 {@code DEVICE}
+     * 标 {@code IMPLEMENTED_UNVERIFIED}。</p>
+     *
+     * @return 能力矩阵
+     */
+    static DeviceCapabilityMatrix sennor() {
+        return builder("sennor.sennor-cloud", "精讯云")
+                .unverified(DeviceCapability.DEVICE, 2,
+                        "设备列表/设备详情路径已按官方文档登记；控制台账号可登录，名下 0 台设备，字段映射未验证")
+                .no(DeviceCapability.DEVICE_WRITE,
+                        "官方只提供设备改名（/device/upDeviceInfo、/relay/updateDeviceName），没有新增/删除设备接口")
+                .no(DeviceCapability.CHANNEL, "精讯云是传感器/继电器设备平台，没有视频通道")
+                .no(DeviceCapability.MEDIA, "精讯云不提供视频取流")
+                .no(DeviceCapability.RECORD, "精讯云没有录像文件与回放业务")
+                .no(DeviceCapability.PTZ, "精讯云设备没有云台")
+                .no(DeviceCapability.EVENT, "官方文档没有事件订阅/告警查询接口；历史数据按设备节点查询")
+                .no(DeviceCapability.ACCESS, "精讯云没有门禁门点与出入记录")
+                .no(DeviceCapability.ACCESS_WRITE, "精讯云没有门禁权限下发")
+                .no(DeviceCapability.ORG, "精讯云没有组织架构接口")
+                .no(DeviceCapability.ORG_WRITE, "精讯云没有组织架构接口")
+                .no(DeviceCapability.PERSON, "精讯云没有人员模型")
+                .no(DeviceCapability.PERSON_WRITE, "精讯云没有人员模型")
+                .no(DeviceCapability.CAPTURE, "精讯云没有视频抓图")
+                .no(DeviceCapability.PARKING, "精讯云没有停车场业务")
                 .build();
     }
 
