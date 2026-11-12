@@ -47,7 +47,7 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
 
     @Override
     public DeviceTopologyResult topology() {
-        List<DeviceInfo> devices = deviceService.listDevices(null);
+        List<DeviceInfo> devices = deviceService.listDevices((String) null);
         List<DeviceTopologyNode> nodes = new ArrayList<>();
         List<DeviceTopologyEdge> edges = new ArrayList<>();
         // 通道一次取回，按设备分组后在内存里取（避免每台设备查一次造成 N+1）
