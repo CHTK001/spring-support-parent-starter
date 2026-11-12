@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,14 +125,73 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-     * Redis 快照 Key
+     * Redis 快照 Key 的应用名（缺省取 spring.application.name）
      */
-    static final String REDIS_KEY = "nomifun:model-metrics:latest";
+    @org.springframework.beans.factory.annotation.Value("${spring.application.name:ai-starter}")
+    private String appName;
+
+    /**
+     * Redis 快照 Key 的数据源指纹来源
+     */
+    @org.springframework.beans.factory.annotation.Value("${spring.datasource.url:}")
+    private String datasourceUrl;
+
+    /**
+     * 本应用的快照 Key（延迟计算并缓存）
+     */
+    private volatile String redisKey;
 
     /**
      * Redis 快照 TTL（12 小时，防止冗余堆积）
      */
     private static final long REDIS_TTL_SECONDS = 12L * 60 * 60;
+
+    /**
+     * 快照 Key 前缀
+     */
+    private static final String REDIS_KEY_PREFIX = "nomifun:model-metrics:";
+
+    /**
+     * 快照 Key 后缀
+     */
+    private static final String REDIS_KEY_SUFFIX = ":latest";
+
+    /**
+     * 缺省应用名（未配置 spring.application.name 时使用）
+     */
+    private static final String DEFAULT_APP_NAME = "ai-starter";
+
+    /**
+     * 组装本应用的快照 Key。
+     *
+     * <p>原来所有内嵌本模块的应用共用一个 {@code nomifun:model-metrics:latest}：
+     * 只挡得住「空快照」，挡不住「非空但属于别的应用」—— 同一台机器上另一个内嵌应用
+     * （自带库、供应商表里是另一批模型）会把它的快照写进来，本应用读到就整段指标错位。
+     * 这里把应用名与数据源指纹拼进 Key，各应用各读各的。</p>
+     *
+     * @param appName       应用名，空则用 {@link #DEFAULT_APP_NAME}
+     * @param datasourceUrl 数据源地址，用于区分同名的多套部署
+     * @return 带应用指纹的 Redis Key
+     */
+    static String snapshotKey(String appName, String datasourceUrl) {
+        String app = appName == null || appName.isBlank() ? DEFAULT_APP_NAME : appName.trim();
+        String ds = datasourceUrl == null ? "" : datasourceUrl.trim();
+        return REDIS_KEY_PREFIX + app + "-" + Integer.toHexString(ds.hashCode()) + REDIS_KEY_SUFFIX;
+    }
+
+    /**
+     * 取本应用的快照 Key（首次调用时计算）。
+     *
+     * @return Redis Key
+     */
+    private String redisKey() {
+        String key = redisKey;
+        if (key == null) {
+            key = snapshotKey(appName, datasourceUrl);
+            redisKey = key;
+        }
+        return key;
+    }
 
     /**
      * 手动锁定字段在模型 metrics JSON 中的键（值为被锁定字段名数组）
@@ -255,7 +315,7 @@ public class ModelMetricsSnapshotService {
      */
     public void updateProbeLatency(String providerId, String model, long latencyMs) {
         try {
-            String cached = stringRedisTemplate.opsForValue().get(REDIS_KEY);
+            String cached = stringRedisTemplate.opsForValue().get(redisKey());
             if (cached == null || cached.isBlank()) {
                 return;
             }
@@ -301,13 +361,13 @@ public class ModelMetricsSnapshotService {
      */
     public Map<String, Object> latestSnapshot() {
         try {
-            String cached = stringRedisTemplate.opsForValue().get(REDIS_KEY);
+            String cached = stringRedisTemplate.opsForValue().get(redisKey());
             if (cached != null && !cached.isBlank()) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> parsed = objectMapper.readValue(cached, Map.class);
-                // 空快照视为不可用：Redis 上的 Key 是按应用共享的，别的内嵌本模块的应用
-                // （供应商表为空）会把自己的空快照写进来。若直接采信，本应用的模型指标索引
-                // 会整段为空 —— 卡片上的官方估价/速度/智能全部消失。此时改为现场构建。
+                // 空快照仍视为不可用：Key 已按应用名 + 数据源指纹隔离，这里保留这层校验作为
+                // 兜底（历史遗留的同名 Key、迁移期残留）。若直接采信，模型指标索引会整段为空 ——
+                // 卡片上的官方估价/速度/智能全部消失。此时改为现场构建。
                 if (isUsableSnapshot(parsed)) {
                     return parsed;
                 }
@@ -327,11 +387,18 @@ public class ModelMetricsSnapshotService {
     private Map<String, Object> buildSnapshotInternal() {
         List<Map<String, Object>> models = new ArrayList<>();
         List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
+        // 一次取全部模型行再按供应商分组。原来逐供应商查询是 N+1 次往返，
+        // 数据库跨网络（远端隧道）时每次往返秒级，一次列表请求就被拖到分钟级。
+        Map<String, List<SysAiProviderModel>> rowsByProvider = new HashMap<>(16);
+        for (SysAiProviderModel row : modelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
+                .orderByAsc(SysAiProviderModel::getSortOrder))) {
+            rowsByProvider.computeIfAbsent(row.getProviderId(), k -> new ArrayList<>()).add(row);
+        }
         for (SysAiProvider provider : providers) {
-            List<SysAiProviderModel> rows = modelMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getProviderId, provider.getProviderId())
-                            .orderByAsc(SysAiProviderModel::getSortOrder));
+            List<SysAiProviderModel> rows = rowsByProvider.get(provider.getProviderId());
+            if (rows == null) {
+                continue;
+            }
             for (SysAiProviderModel row : rows) {
                 models.add(toRow(provider, row));
             }
@@ -503,7 +570,7 @@ public class ModelMetricsSnapshotService {
     private void persistToRedis(Map<String, Object> snapshot) {
         try {
             String json = objectMapper.writeValueAsString(snapshot);
-            stringRedisTemplate.opsForValue().set(REDIS_KEY, json, REDIS_TTL_SECONDS, TimeUnit.SECONDS);
+            stringRedisTemplate.opsForValue().set(redisKey(), json, REDIS_TTL_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("[ModelMetrics] Redis 快照写入失败: {}", e.getMessage());
         }

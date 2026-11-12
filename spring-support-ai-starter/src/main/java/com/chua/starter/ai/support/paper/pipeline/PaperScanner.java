@@ -65,7 +65,7 @@ public class EduPaperScanner {
     /**
      * 教育 AI 配置（读取识别策略 key）
      */
-    private final com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties eduAiProperties;
+    private final com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties eduAiProperties;
 
     /**
      * 阅卷运行时设置（识别策略 / 匹配模式）。

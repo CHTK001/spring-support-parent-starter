@@ -459,7 +459,7 @@ import java.util.Map;
         /**
          * Codec类型
         */
-        private String codecType = "sm2";
+        private String codecType = "aes";
 
         /**
          * 白名单（不需要加密的接口路径）
@@ -593,7 +593,7 @@ import java.util.Map;
         /**
          * Codec类型
         */
-        private String codecType = "sm4";
+        private String codecType = "aes";
 
         /**
          * 获取codec类型

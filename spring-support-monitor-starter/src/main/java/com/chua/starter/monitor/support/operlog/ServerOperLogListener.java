@@ -83,7 +83,18 @@ public class ServerOperLogListener {
             if (nodeId == null) {
                 return;
             }
-            operLogService.record(toRow(info, nodeId));
+            // 每次事件都取走快照（即便本次不是删除），避免残留跨请求认领
+            ServerOperLogNodeSnapshot snapshot = ServerOperLogNodeSnapshot.take(nodeId);
+            MsServerNode node = findNode(nodeId);
+            if (isUntraceable(info, node, snapshot)) {
+                // 失败 + 主表已查不到 + 没有删除快照：说明这次操作根本没落到任何节点上
+                // （典型是删除/启停一个不存在的 id）。这种请求没有「该节点的操作历史」可言，
+                // 落库只会得到一条 nodeName / target 全空、任何节点面板都查不到的孤儿行。
+                log.debug("[server-oper-log] 跳过无主操作 nodeId={} action={} path={}",
+                        nodeId, actionOf(info.getMethodName()), pathOf(info.getLogMapping()));
+                return;
+            }
+            operLogService.record(toRow(info, nodeId, node, snapshot));
         } catch (RuntimeException e) {
             // 监听器抛异常会冒泡回切面、进而让业务请求报错，
             // 所以这里必须自己吞掉：留痕失败不影响用户操作。
@@ -111,21 +122,44 @@ public class ServerOperLogListener {
     }
 
     /**
+     * 判断这次操作是否「没有可留痕的主体」。
+     *
+     * <p>成功但查不到节点（删除刚走完）由快照兜住，不属于这一类；
+     * 只有失败、且节点在库里根本不存在、也没有删除快照时才成立。</p>
+     *
+     * @param info     事件
+     * @param node     当前查到的节点，可能为 null
+     * @param snapshot 删除前快照，可能为 null
+     * @return true 表示不落库
+     */
+    private boolean isUntraceable(SysLoggerInfo info, MsServerNode node, ServerOperLogNodeSnapshot snapshot) {
+        if (node != null || snapshot != null) {
+            return false;
+        }
+        Integer status = info == null ? null : info.getLogStatus();
+        // status 为空按成功处理：宁可留一条空主语的行，也不要吞掉一次真实操作
+        return status != null && status == 0;
+    }
+
+    /**
      * 事件转日志行。
      *
-     * @param info   事件
-     * @param nodeId 节点 id
+     * @param info     事件
+     * @param nodeId   节点 id
+     * @param node     当前节点；删除后为 null
+     * @param snapshot 删除前快照；非删除操作为 null
      * @return 日志行
      */
-    private MsServerOperLog toRow(SysLoggerInfo info, Long nodeId) {
+    private MsServerOperLog toRow(SysLoggerInfo info, Long nodeId,
+                                  MsServerNode node, ServerOperLogNodeSnapshot snapshot) {
         String path = pathOf(info.getLogMapping());
         MsServerOperLog row = new MsServerOperLog();
         row.setNodeId(nodeId);
-        row.setNodeName(resolveNodeName(nodeId));
+        row.setNodeName(nameOf(node, snapshot));
         row.setAction(actionOf(info.getMethodName()));
         row.setActionName(info.getLogName() == null || info.getLogName().isBlank()
                 ? info.getLogModule() : info.getLogName());
-        row.setTarget(resolveNodeTarget(nodeId));
+        row.setTarget(targetOf(node, snapshot));
         row.setDetail(buildDetail(info));
         row.setSuccess(info.getLogStatus());
         row.setCostMs(info.getLogCost());
@@ -219,33 +253,39 @@ public class ServerOperLogListener {
     /**
      * 冗余一份节点名称。
      *
-     * <p>删除操作触发时节点已经没了，这里查不到就留空 —— 历史日志里
-     * 「已删除」和「当时叫什么」只能保其一，取「当时还在、能查到」的那一侧。</p>
+     * <p>删除操作触发时主表里已经没有这行了，此时用删除前快照顶上；
+     * 两边都拿不到才留空串（{@code node_name} 是非空列）。</p>
      *
-     * @param nodeId 节点 id
-     * @return 节点名称，查不到返回空串
+     * @param node     当前节点，可能为 null
+     * @param snapshot 删除前快照，可能为 null
+     * @return 节点名称
      */
-    private String resolveNodeName(Long nodeId) {
-        MsServerNode node = findNode(nodeId);
-        return node == null || node.getName() == null ? "" : node.getName();
+    private String nameOf(MsServerNode node, ServerOperLogNodeSnapshot snapshot) {
+        if (node != null) {
+            return node.getName() == null ? "" : node.getName();
+        }
+        if (snapshot != null && snapshot.getNodeName() != null) {
+            return snapshot.getNodeName();
+        }
+        return "";
     }
 
     /**
      * 冗余一份节点访问摘要（协议 + 监听地址）。
      *
-     * @param nodeId 节点 id
-     * @return 摘要；查不到返回 null
+     * @param node     当前节点，可能为 null
+     * @param snapshot 删除前快照，可能为 null
+     * @return 摘要；两边都拿不到返回 null
      */
-    private String resolveNodeTarget(Long nodeId) {
-        MsServerNode node = findNode(nodeId);
-        if (node == null) {
-            return null;
+    private String targetOf(MsServerNode node, ServerOperLogNodeSnapshot snapshot) {
+        if (node != null) {
+            String protocol = node.getProtocol() == null ? "" : node.getProtocol();
+            String host = node.getHost() == null ? "" : node.getHost();
+            String port = node.getPort() == null ? "" : String.valueOf(node.getPort());
+            String target = (protocol + " " + host + ":" + port).trim();
+            return target.isBlank() ? null : target;
         }
-        String protocol = node.getProtocol() == null ? "" : node.getProtocol();
-        String host = node.getHost() == null ? "" : node.getHost();
-        String port = node.getPort() == null ? "" : String.valueOf(node.getPort());
-        String target = (protocol + " " + host + ":" + port).trim();
-        return target.isBlank() ? null : target;
+        return snapshot == null ? null : snapshot.getTarget();
     }
 
     /**

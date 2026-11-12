@@ -2,6 +2,7 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.starter.ai.support.model.KnowledgeGraphExtractionDTO;
+import com.chua.starter.ai.support.model.KnowledgeGraphExtractionOutcome;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.rag.RagClient;
 import com.chua.common.support.ai.rag.RagClientSetting;
@@ -163,8 +164,25 @@ public class KnowledgeGraphExtractionService {
      */
     public KnowledgeGraphExtractionDTO extractAndStore(String knowledgeBaseId, String knowledgeBaseName,
                                                        String docPath, String text) {
+        return extractAndStoreOutcome(knowledgeBaseId, knowledgeBaseName, docPath, text).extraction();
+    }
+
+    /**
+     * 同步抽取并落库，返回带状态的结果。
+     *
+     * <p>与 {@link #extractAndStore} 的区别只在返回值：这里把「没配模型 / 调用异常 / 真没抽到」
+     * 区分开，供调用方在界面上如实报错，而不是一律显示「0 实体 0 关系」。</p>
+     *
+     * @param knowledgeBaseId   知识库ID
+     * @param knowledgeBaseName 知识库名称
+     * @param docPath           知识点相对路径
+     * @param text              知识点正文
+     * @return 抽取状态与结果，永不为 null
+     */
+    public KnowledgeGraphExtractionOutcome extractAndStoreOutcome(String knowledgeBaseId, String knowledgeBaseName,
+                                                                  String docPath, String text) {
         if (!StringUtils.hasText(knowledgeBaseId) || !StringUtils.hasText(text)) {
-            return null;
+            return KnowledgeGraphExtractionOutcome.failed("知识点正文为空，未执行关系抽取");
         }
         return runExtraction(knowledgeBaseId, knowledgeBaseName, docPath, text);
     }
@@ -173,13 +191,30 @@ public class KnowledgeGraphExtractionService {
      * 仅执行抽取（不落库），用于排障时观察大模型输出。
      *
      * @param text 待抽取文本
-     * @return 抽取结果
+     * @return 抽取结果；链路失败时为空结果（失败原因见日志与 {@link #extractOnlyOutcome}）
      */
     public KnowledgeGraphExtractionDTO extractOnly(String text) {
+        return extractOnlyOutcome(text).extraction();
+    }
+
+    /**
+     * 仅执行抽取并返回状态，用于区分「模型没抽到」与「根本没跑成」。
+     *
+     * <p>排障接口与「生成图谱」都靠它给出可行动的原因：没有可用模型时提示去配置，
+     * 调用异常时带出异常摘要，而不是静默返回空结果让页面显示「生成成功 0 实体」。</p>
+     *
+     * @param text 待抽取文本
+     * @return 抽取状态与结果，永不为 null
+     */
+    public KnowledgeGraphExtractionOutcome extractOnlyOutcome(String text) {
+        if (!StringUtils.hasText(text)) {
+            return KnowledgeGraphExtractionOutcome.failed("待抽取文本为空");
+        }
         ChatClient client = resolveClient();
         if (client == null) {
             log.warn("[KnowledgeGraph] 没有可用的对话客户端，跳过关系抽取");
-            return KnowledgeGraphExtractionDTO.empty();
+            return KnowledgeGraphExtractionOutcome.failed(
+                    "没有可用的对话模型，请先在「设置 → 模型」配置默认对话模型后重试");
         }
         String input = text.length() > MAX_INPUT_CHARS ? text.substring(0, MAX_INPUT_CHARS) : text;
         String prompt = String.format(PROMPT_TEMPLATE, input);
@@ -191,8 +226,17 @@ public class KnowledgeGraphExtractionService {
         // 工具调用）一起永久钉成贪心解码，是跨模块的严重回归。
         // 代价是抽取结果不可复现（每次措辞略有差异），因此并集语义下重复抽取会让图谱缓慢膨胀。
         // 想要干净重抽请走 graph/generate?reset=true（先清空该知识点关联再抽），不要指望调温度。
-        String reply = client.chatSync(prompt);
-        return parse(reply);
+        String reply;
+        try {
+            reply = client.chatSync(prompt);
+        } catch (Exception e) {
+            log.warn("[KnowledgeGraph] 调用大模型抽取失败: {}", e.getMessage());
+            return KnowledgeGraphExtractionOutcome.failed("调用对话模型失败：" + e.getMessage());
+        }
+        KnowledgeGraphExtractionDTO extraction = parse(reply);
+        return extraction.isEmpty()
+                ? KnowledgeGraphExtractionOutcome.empty(extraction)
+                : KnowledgeGraphExtractionOutcome.ok(extraction);
     }
 
     /**
@@ -202,20 +246,26 @@ public class KnowledgeGraphExtractionService {
      * @param knowledgeBaseName 知识库名称
      * @param docPath 知识点相对路径
      * @param text 知识点正文
-     * @return 抽取结果；异常时返回 null
+     * @return 抽取状态与结果；异常时状态为 failed 并带原因，不返回 null
      */
-    private KnowledgeGraphExtractionDTO runExtraction(String knowledgeBaseId, String knowledgeBaseName,
-                                                      String docPath, String text) {
+    private KnowledgeGraphExtractionOutcome runExtraction(String knowledgeBaseId, String knowledgeBaseName,
+                                                          String docPath, String text) {
         long start = System.currentTimeMillis();
         try {
-            KnowledgeGraphExtractionDTO extraction = extractOnly(text);
-            if (extraction == null || extraction.isEmpty()) {
+            KnowledgeGraphExtractionOutcome outcome = extractOnlyOutcome(text);
+            if (outcome.isFailed()) {
+                log.warn("[KnowledgeGraph] 关系抽取未完成 kb={} path={} 原因={}",
+                        knowledgeBaseId, docPath, outcome.errorMessage());
+                return outcome;
+            }
+            KnowledgeGraphExtractionDTO extraction = outcome.extraction();
+            if (extraction.isEmpty()) {
                 log.info("[KnowledgeGraph] 未抽取到实体关系 kb={} path={} 耗时={}ms",
                         knowledgeBaseId, docPath, System.currentTimeMillis() - start);
                 // 抽空时什么都不做：合并语义下若在这里清关联，LLM 一次空返回（超时/截断/格式错）
                 // 就会抹掉该知识点已有的全部关系。宁可留着可能过期的关联，也不能因为一次抖动丢数据；
                 // 真要清理走删除知识点（deleteByKnowledgePoint）。
-                return extraction;
+                return outcome;
             }
             knowledgeGraphService.mergeKnowledgePointGraph(
                     knowledgeBaseId, knowledgeBaseName, docPath, extraction);
@@ -224,12 +274,12 @@ public class KnowledgeGraphExtractionService {
                     extraction.entities() == null ? 0 : extraction.entities().size(),
                     extraction.relations() == null ? 0 : extraction.relations().size(),
                     System.currentTimeMillis() - start);
-            return extraction;
+            return outcome;
         } catch (Exception e) {
-            // 抽取失败不影响知识入库，只记录
+            // 抽取失败不影响知识入库，只记录并如实上报
             log.warn("[KnowledgeGraph] 关系抽取失败 kb={} path={}: {}",
                     knowledgeBaseId, docPath, e.getMessage());
-            return null;
+            return KnowledgeGraphExtractionOutcome.failed("关系抽取异常：" + e.getMessage());
         }
     }
 

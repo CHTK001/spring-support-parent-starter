@@ -88,11 +88,13 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
         return List.of(
                 new SettingItem("enabled", "true", "BOOLEAN", "是否启用全局对话路由（false 时 ChatClient 禁用）", 1),
                 new SettingItem("provider", "", "STRING", "LLM 供应商（openai / zhipu / deepseek / qwen 等）", 2),
-                new SettingItem("factory", "default", "STRING", "LLM 工厂实现（default 使用供应商默认实现）", 3),
                 new SettingItem("provider_base_url", "", "STRING", "LLM 供应商接口地址（如 https://api.openai.com/v1）", 4),
                 new SettingItem("provider_api_key", "", "STRING", "LLM API Key", 5),
-                new SettingItem("provider_app_key", "", "STRING", "LLM App Key（部分供应商使用）", 6),
-                new SettingItem("provider_app_secret", "", "STRING", "LLM App Secret（部分供应商使用）", 7),
+                // factory / provider_app_key / provider_app_secret 三项已删除：
+                // 它们只被 ChatClientSettingsResolver 读进 ChatClientSetting，而该对象唯一的
+                // 出口 createSetting(boolean) 全仓零调用 —— 供应商凭据的真实来源是
+                // sys_ai_manufacturer / sys_ai_model_key 表（见 AiModelServiceImpl:234）。
+                // 留在设置页等于让管理员填一份没人读的凭据，删掉比“显示成功”更诚实。
                 new SettingItem("default_model", "", "STRING", "默认对话模型（留空=自动使用模型管理中第一个启用的模型）", 8),
             new SettingItem("default_image_feature_model", "", "STRING", "默认图像特征模型（ONNX 模型标识；以图搜图未单独配置时兜底）", 30),
             new SettingItem("default_face_model", "", "STRING", "默认人脸模型（ONNX 模型标识；人脸检测/特征未单独配置时兜底）", 31),
@@ -106,7 +108,9 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 // 截断是静默的，日志里只看到输出=4096。16384 给足单文件代码的余量。
                 new SettingItem("max_tokens", "16384", "NUMBER", "默认最大输出 tokens（agent 写大文件需要足够余量，过小会截断工具参数）", 12),
                 new SettingItem("timeout_millis", "30000", "NUMBER", "请求超时时间（毫秒）", 13),
-                new SettingItem("input_optimization_enabled", "false", "BOOLEAN", "是否启用对话输入自动优化", 14),
+                // input_optimization_enabled 已删除：输入优化的唯一开关是 input.optimizer_enabled
+                // （AiInputOptimizeServiceImpl:147 真实读取）。本组这个同名旧键零读取，
+                // 两个开关并存在界面上只会让人关错一个还以为生效了。
                 // ==================== 压缩开关 ====================
                 new SettingItem("auto", "true", "BOOLEAN",
                         "是否启用自动上下文压缩（每次对话回复后，达到触发条件时自动压缩历史）", 24, true),
@@ -128,8 +132,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 // ==================== 压缩验证 ====================
                 new SettingItem("validate", "true", "BOOLEAN",
                         "压缩前是否把首次压缩结果作为基线融合进后续摘要（避免关键信息在多次压缩中丢失）", 30, true),
-                new SettingItem("protocol_server_enabled", "false", "BOOLEAN", "是否启用聚合协议服务（独立端口，提供 OpenAI/Claude/Gemini 三协议端点）", 18),
-                new SettingItem("protocol_server_port", "8090", "NUMBER", "聚合协议服务端口（OpenAI/Claude/Gemini 三协议统一入口）", 19),
+                new SettingItem("protocol_server_enabled", "true", "BOOLEAN", "是否启用聚合协议服务（提供 OpenAI/Claude/Gemini 三协议入口，挂在应用主端口上）；缺省启用，关闭后外部客户端会收到「服务未启用」", 18),
                 // 2026-11-10：原 protocol_server_host 删除 —— 全仓无任何消费方（协议服务只读
                 // enabled/port，见 AiGlobalSettingServiceImpl 的字段映射），留在界面上就是假配置。
                 // 另：group=protocol-server 的同名三字段（enabled/port/host）也是无人读取的重复组，

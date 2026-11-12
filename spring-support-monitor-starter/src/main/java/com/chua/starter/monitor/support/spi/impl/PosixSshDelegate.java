@@ -10,6 +10,7 @@ import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
+import com.chua.starter.monitor.support.spi.SectionUnavailableException;
 import com.chua.starter.monitor.support.spi.SshConnectionCache;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.support.ShellSupport;
@@ -29,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,6 +72,13 @@ public class PosixSshDelegate implements SystemInfoProvider {
      * {@code ss} 输出里的进程段：{@code users:(("java",pid=1234,fd=80))}，捕获进程名与 PID
      */
     private static final Pattern SS_USERS = Pattern.compile("\\(\"([^\"]+)\",.*?pid=(\\d+)");
+
+    /**
+     * {@code ss} 的状态列取值（用于识别「没有 Netid 列」的老格式输出）
+     */
+    private static final Set<String> SS_STATES = Set.of(
+            "LISTEN", "LISTENING", "UNCONN", "ESTAB", "ESTABLISHED", "SYN-SENT", "SYN-RECV",
+            "TIME-WAIT", "CLOSE-WAIT", "FIN-WAIT-1", "FIN-WAIT-2", "LAST-ACK", "CLOSING", "CLOSED");
 
     /**
      * macOS {@code ifconfig} 块里的 MTU
@@ -394,7 +403,14 @@ public class PosixSshDelegate implements SystemInfoProvider {
      */
     private List<NetworkInterfaceRowVO> linuxNetworkInterfaces(MsServerHost host) {
         Map<String, NetworkInterfaceRowVO> byName = new LinkedHashMap<>();
-        for (JsonNode node : readJsonArray(sshCache().exec(host, "ip -j addr", 15000))) {
+        String addrJson = sshCache().exec(host, "ip -j addr", 15000);
+        if (addrJson == null || addrJson.isBlank()) {
+            // 与端口分区同理：`ip -j` 是老 iproute2 没有的参数，缺失时 stdout 为空，
+            // 以前直接返回空列表，页面显示「0 张网卡」像是真的没有网卡。
+            throw new SectionUnavailableException(
+                    "缺少命令 ip 或版本过旧（不支持 ip -j），无法读取网卡列表；升级 iproute2 后重试");
+        }
+        for (JsonNode node : readJsonArray(addrJson)) {
             String name = node.path("ifname").asText("");
             if (name.isEmpty()) {
                 continue;
@@ -547,7 +563,12 @@ public class PosixSshDelegate implements SystemInfoProvider {
         String out = sshCache().exec(host, cmd, 15000);
         List<NetProcessRowVO> list = new ArrayList<>();
         if (out == null || out.isBlank()) {
-            return list;
+            // 空输出不能当成「没有监听端口」：多半是目标机没装 ss（exit 127，报错在
+            // stderr）。以前这里直接返回空列表，页面显示「0 行」，看起来像采集成功，
+            // 实际是命令根本不存在。宁可显式报错，也不给一个假的空结果。
+            throw new SectionUnavailableException(mac
+                    ? "缺少命令 lsof，无法列出网络连接；安装 lsof 后重试"
+                    : "缺少命令 ss（iproute2 未安装），无法列出监听端口；安装 iproute2 后重试");
         }
         for (String line : out.split("\\r?\\n")) {
             if (line.isBlank()) {
@@ -557,6 +578,46 @@ public class PosixSshDelegate implements SystemInfoProvider {
             if (row != null) {
                 list.add(row);
             }
+        }
+        // 老 iproute2 / busybox 的 ss 不打印 Netid 列（首列直接是状态），严格解析会把这些
+        // 行全部丢掉，端口分区就变成「0 行且无报错」。只有严格解析一无所获时才走这条兜底，
+        // 现代格式的机器行为完全不变。
+        if (list.isEmpty() && !mac) {
+            list = parseSsWithoutNetid(out);
+        }
+        return list;
+    }
+
+    /**
+     * 解析没有 Netid 列的 {@code ss} 输出。
+     *
+     * <p>这类输出形如 {@code LISTEN 0 128 0.0.0.0:22 0.0.0.0:*}：第 0 列是状态而不是
+     * 协议。协议列缺失时按 ss 自己的惯例反推 —— udp 套接字显示 UNCONN，tcp 监听显示
+     * LISTEN，据此标注协议，好过整段丢弃。</p>
+     *
+     * @param out 命令输出
+     * @return 结构化行；无法识别时返回空列表
+     */
+    private static List<NetProcessRowVO> parseSsWithoutNetid(String out) {
+        List<NetProcessRowVO> list = new ArrayList<>();
+        for (String line : out.split("\\r?\\n")) {
+            String[] p = line.trim().split("\\s+");
+            if (p.length < 5 || !SS_STATES.contains(p[0].toUpperCase(Locale.ROOT))) {
+                continue;
+            }
+            String[] local = splitAddrPort(p[3]);
+            String[] peer = splitAddrPort(p[4]);
+            String state = "LISTENING".equalsIgnoreCase(p[0]) ? "LISTEN" : p[0].toUpperCase(Locale.ROOT);
+            String protocol = "UNCONN".equals(state) ? "udp" : "tcp";
+            String process = "";
+            int pid = 0;
+            Matcher m = SS_USERS.matcher(line);
+            if (m.find()) {
+                process = m.group(1);
+                pid = toInt(m.group(2));
+            }
+            list.add(NetProcessRowVO.of(protocol, local[0], toInt(local[1]), peer[0], toInt(peer[1]),
+                    state, pid, process));
         }
         return list;
     }

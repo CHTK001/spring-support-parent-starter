@@ -46,6 +46,11 @@ public class AiWorkspaceFileController {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
+     * 会话执行目录解析器：会话绑定了项目目录时，工具 CWD 在 {@code <项目>/<会话id>}
+     */
+    private final com.chua.starter.ai.support.workspace.SessionWorkspaceResolver sessionWorkspaceResolver;
+
+    /**
      * 在会话工作区内解析路径。
      *
      * <p><b>为什么要试两层</b>：agent 报出来的相对路径，是相对**它自己的工作目录**
@@ -88,7 +93,7 @@ public class AiWorkspaceFileController {
     @GetMapping("/{id}/workspace/file")
     public ReturnResult<Map<String, Object>> workspaceFile(@PathVariable("id") String id,
                                                           @RequestParam("path") String path) {
-        Path root = resolveAgentWorkspace();
+        Path root = resolveWorkspaceRoot(id);
         if (root == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "工作目录未配置");
         }
@@ -129,7 +134,7 @@ public class AiWorkspaceFileController {
     @GetMapping("/{id}/workspace/raw-file")
     public ResponseEntity<byte[]> workspaceRawFile(@PathVariable("id") String id,
                                                    @RequestParam("path") String path) {
-        Path root = resolveAgentWorkspace();
+        Path root = resolveWorkspaceRoot(id);
         if (root == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
@@ -183,5 +188,16 @@ public class AiWorkspaceFileController {
             log.warn("[WsFile] 解析工作目录失败 base={}: {}", base, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 解析会话的工作区根：绑定了项目目录就用项目，否则回退账号工作目录。
+     *
+     * @param sessionId 会话标识（数字主键字符串）
+     * @return 工作区根；基路径未配置时返回 null
+     */
+    private Path resolveWorkspaceRoot(String sessionId) {
+        Path project = sessionWorkspaceResolver.projectRoot(sessionId);
+        return project != null ? project : resolveAgentWorkspace();
     }
 }

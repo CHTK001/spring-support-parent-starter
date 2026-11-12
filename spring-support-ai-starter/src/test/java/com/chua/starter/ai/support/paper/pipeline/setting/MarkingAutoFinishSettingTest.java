@@ -1,9 +1,8 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
-package com.chua.starter.eduai.service.impl;
+package com.chua.starter.ai.support.paper.pipeline.setting;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
-import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService;
+import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +52,7 @@ class MarkingAutoFinishSettingTest {
     @Test
     @DisplayName("自动结案：未配置时默认关闭")
     void autoFinish_defaultOff() {
-        MarkingSettingService service = new MarkingSettingService(new EduAiProperties());
+        MarkingSettingService service = new MarkingSettingService(new PaperPipelineProperties());
         assertFalse(service.autoFinish(), "未配置 auto_finish 时必须保持原行为（停在已判分）");
     }
 
@@ -126,7 +125,7 @@ class MarkingAutoFinishSettingTest {
      * @throws Exception 反射写入失败
      */
     private static MarkingSettingService serviceWith(Map<String, String> values) throws Exception {
-        MarkingSettingService service = new MarkingSettingService(new EduAiProperties());
+        MarkingSettingService service = new MarkingSettingService(new PaperPipelineProperties());
         Field field = MarkingSettingService.class.getDeclaredField("globalSettingReader");
         field.setAccessible(true);
         field.set(service, new MapGlobalSettingReader(values));

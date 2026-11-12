@@ -47,8 +47,11 @@ public class GatewayRateLimitFilter extends AbstractGatewaySecurityFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         try {
-            // 总开关关闭 / 路径未命中 → 放行
-            if (!enabled() || !matches(request)) {
+            // 总开关关闭 / 本开关关闭 / 路径未命中 → 放行。
+            // security_rate_limit_enabled 曾经只在设置页登记、无人读取：把它关掉后三个维度
+            // 仍然生效，管理员以为「关了限流」其实没关。这里才是它唯一的生效点。
+            if (!enabled() || !matches(request)
+                    || !globalSettingReader().getBool("security", "security_rate_limit_enabled", true)) {
                 safePass(request, response, chain);
                 return;
             }

@@ -236,6 +236,100 @@ public class RagClientManager implements RagClientProvider {
     }
 
     /**
+     * 采集当前账号生效的 RAG 关键配置（不含任何密钥），供失败诊断使用。
+     *
+     * <p>为什么需要它：问答失败时用户只看到「Embedding 调用未成功，请检查设置」，
+     * 但设置页里模型、地址、向量库散在多个分栏，用户要逐个试才知道错在哪。
+     * 这里按<b>当前账号的生效值</b>（含用户覆盖）取一份快照随错误体下发，
+     * 前端折叠展示「实际用的是哪个模型 / 打的哪个地址 / 失败在哪个节点」。</p>
+     *
+     * <p>地址一律脱敏到「协议 + 主机 + 端口」，路径与查询串不落前端：
+     * 部分供应商把密钥放在 URL 路径里，原样展示会泄露凭据。</p>
+     *
+     * @return 只读配置快照（键值均为展示用，缺配置时值为空串）
+     */
+    public Map<String, Object> diagnostics() {
+        Map<String, Object> info = new LinkedHashMap<>(12);
+        String account = AiUserContext.currentUserId();
+        info.put("account", StringUtils.defaultString(account, SYSTEM_ACCOUNT));
+
+        String embeddingModel = settingReader.getStr(GROUP, "rag_embedding_model_name");
+        info.put("embedding_model", StringUtils.defaultString(embeddingModel, ""));
+        String engine = resolveEmbeddingEngineByModel(embeddingModel);
+        info.put("embedding_engine", StringUtils.defaultString(engine, ""));
+        String embeddingBase = settingReader.getStr(GROUP, "rag_embedding_base_url");
+        if (!StringUtils.hasText(embeddingBase)) {
+            embeddingBase = settingReader.getStr("runtime", "provider_base_url");
+        }
+        info.put("embedding_base_url", maskUrl(embeddingBase));
+        String embeddingKey = settingReader.getStr(GROUP, "rag_embedding_api_key");
+        if (!StringUtils.hasText(embeddingKey)) {
+            embeddingKey = settingReader.getStr("runtime", "provider_api_key");
+        }
+        info.put("embedding_key_configured", StringUtils.hasText(embeddingKey));
+        info.put("embedding_dimensions",
+                settingReader.getInt(GROUP, "rag_embedding_dimensions", DEFAULT_EMBEDDING_DIMENSIONS));
+
+        String llmModel = settingReader.getStr(GROUP, "rag_llm_model");
+        if (!StringUtils.hasText(llmModel)) {
+            llmModel = resolveDefaultModelQuietly();
+        }
+        info.put("llm_model", StringUtils.defaultString(llmModel, ""));
+
+        String storage = settingReader.getStr(GROUP, "rag_vector_storage");
+        info.put("vector_storage", StringUtils.defaultString(storage, properties.getVectorStorage()));
+        String baseUpload = settingReader.getStr(GROUP, "rag_upload_dir");
+        if (!StringUtils.hasText(baseUpload)) {
+            baseUpload = properties.getUploadDir();
+        }
+        try {
+            info.put("upload_dir", accountUploadDir(baseUpload, account));
+        } catch (RuntimeException e) {
+            info.put("upload_dir", StringUtils.defaultString(baseUpload, ""));
+        }
+        return info;
+    }
+
+    /**
+     * 解析「当前账号的默认对话模型」，失败时静默返回空串。
+     *
+     * <p>诊断代码不能因为「默认模型没配」再抛一次异常，把真正的失败原因盖掉。</p>
+     *
+     * @return 默认模型引用；解析失败返回空串
+     */
+    private String resolveDefaultModelQuietly() {
+        try {
+            return effectiveChatModelResolver.resolve(null);
+        } catch (RuntimeException e) {
+            log.debug("[RagClientManager] 诊断读取默认模型失败: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 把 baseUrl 脱敏成「协议 + 主机 + 端口」。
+     *
+     * @param url 原始地址，允许为空
+     * @return 脱敏地址；解析失败返回 {@code ***}
+     */
+    private static String maskUrl(String url) {
+        if (!StringUtils.hasText(url)) {
+            return "";
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(url.trim());
+            String host = uri.getHost();
+            if (host == null) {
+                return "***";
+            }
+            String scheme = uri.getScheme() == null ? "http" : uri.getScheme();
+            return scheme + "://" + host + (uri.getPort() > 0 ? ":" + uri.getPort() : "") + "/***";
+        } catch (RuntimeException e) {
+            return "***";
+        }
+    }
+
+    /**
      * 全局设置读取工具
      */
     private final GlobalSettingReader settingReader;

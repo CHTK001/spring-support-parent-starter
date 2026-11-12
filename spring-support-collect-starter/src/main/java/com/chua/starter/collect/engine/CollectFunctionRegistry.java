@@ -3,11 +3,11 @@ package com.chua.starter.collect.engine;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.collect.engine.spi.CollectFunctionDef;
 import com.chua.starter.collect.engine.spi.CollectFunctionProvider;
+import com.chua.starter.collect.properties.CollectProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -30,7 +30,6 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "plugin.collect.function", name = "enable", havingValue = "true", matchIfMissing = true)
 public class CollectFunctionRegistry implements CollectBuiltinInvoker.UserHook {
 
     /**
@@ -47,6 +46,11 @@ public class CollectFunctionRegistry implements CollectBuiltinInvoker.UserHook {
      * 函数来源，Spring Bean 与 @Spi 都收。
      */
     private final ObjectProvider<CollectFunctionProvider> providers;
+
+    /**
+     * 运行期配置，用于判断自定义函数库开关。
+     */
+    private final CollectProperties properties;
 
     /**
      * 当前线程的函数嵌套层数。
@@ -66,17 +70,24 @@ public class CollectFunctionRegistry implements CollectBuiltinInvoker.UserHook {
     /**
      * 构造注册表。
      *
-     * @param provider Spring 容器内的函数来源
+     * @param provider   Spring 容器内的函数来源
+     * @param properties 运行期配置
      */
-    public CollectFunctionRegistry(ObjectProvider<CollectFunctionProvider> provider) {
+    public CollectFunctionRegistry(ObjectProvider<CollectFunctionProvider> provider,
+                                   CollectProperties properties) {
         this.providers = provider;
+        this.properties = properties;
     }
 
     /**
-     * 挂到表达式求值的函数解析链上。
+     * 挂到表达式求值的函数解析链上；开关关闭时不挂，重启后按新值决定。
      */
     @PostConstruct
     public void bind() {
+        if (!properties.getFunction().isEnable()) {
+            log.info("[collect] 自定义函数库已在运行参数中关闭，不挂载函数解析链");
+            return;
+        }
         CollectBuiltinInvoker.registerUserHook(this);
         log.info("[collect] 自定义函数注册表就绪 refreshMs={} maxDepth={}", REFRESH_MS, MAX_DEPTH);
     }
@@ -91,6 +102,9 @@ public class CollectFunctionRegistry implements CollectBuiltinInvoker.UserHook {
 
     @Override
     public CollectBuiltinInvoker.Outcome call(String name, List<Object> arguments) {
+        if (!properties.getFunction().isEnable()) {
+            return CollectBuiltinInvoker.Outcome.MISS;
+        }
         CollectFunctionDef def = snapshot().get(name);
         if (def == null) {
             return CollectBuiltinInvoker.Outcome.MISS;
@@ -137,6 +151,9 @@ public class CollectFunctionRegistry implements CollectBuiltinInvoker.UserHook {
      * @return 函数名到定义
      */
     private synchronized Map<String, CollectFunctionDef> snapshot() {
+        if (!properties.getFunction().isEnable()) {
+            return Map.of();
+        }
         long now = System.currentTimeMillis();
         if (now - loadedAt < REFRESH_MS) {
             return cached;

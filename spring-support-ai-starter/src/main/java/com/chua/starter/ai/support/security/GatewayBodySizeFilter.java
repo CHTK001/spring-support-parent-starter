@@ -39,8 +39,10 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         try {
-            // 总开关关闭 / 路径未命中 → 放行
-            if (!enabled() || !matches(request)) {
+            // 总开关关闭 / 本开关关闭 / 路径未命中 → 放行。
+            // security_body_limit_enabled 原先零读取：关掉它 8MB 上限照样生效。
+            if (!enabled() || !matches(request)
+                    || !globalSettingReader().getBool("security", "security_body_limit_enabled", true)) {
                 safePass(request, response, chain);
                 return;
             }
@@ -67,6 +69,10 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
                 return;
             }
             chain.doFilter(new ReplayingRequestWrapper(request, body), response);
+            // 回放已经执行过下游：必须结束。
+            // 原实现会继续落到末尾的 safePass，分块请求的过滤器链于是跑两遍
+            // （第二遍拿的是已被读空的原始请求），与并发预算过滤器是同一个缺陷。
+            return;
         } catch (Exception e) {
             log.warn("[GatewayBodySizeFilter] 拦截异常，放行: {}", e.getMessage());
         }

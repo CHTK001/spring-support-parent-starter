@@ -15,6 +15,7 @@ import com.chua.starter.monitor.support.model.NetworkConfigVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
 import com.chua.starter.monitor.support.model.SystemConfigItemVO;
 import com.chua.starter.monitor.support.spi.HostOperations;
+import com.chua.starter.monitor.support.spi.SectionUnavailableException;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -119,7 +120,21 @@ public class PosixHostOperations extends HostOperations {
 
     @Override
     public List<FirewallRuleRowVO> firewallRules() {
-        return parseIptables(output("iptables -L -n --line-numbers"));
+        // iptables 读规则要 root。目标机不给权限时命令退出码非 0，上层会把它报成
+        // 「通道不可达」——那句话会让人去查 SSH/网络，而真正缺的是权限。
+        try {
+            return parseIptables(output("iptables -L -n --line-numbers"));
+        } catch (RuntimeException denied) {
+            try {
+                // 免密 sudo 是 Linux 上最常见的授权方式；-n 不弹密码，失败就失败
+                return parseIptables(output("sudo -n iptables -L -n --line-numbers 2>/dev/null"));
+            } catch (RuntimeException ignored) {
+                throw new SectionUnavailableException(
+                        "没有权限读取防火墙规则：目标机当前账号不是 root，且没有免密 sudo。"
+                                + "给该账号配置 NOPASSWD 的 iptables，或改用 root 账号接入。"
+                                + "原始原因: " + denied.getMessage());
+            }
+        }
     }
 
     @Override

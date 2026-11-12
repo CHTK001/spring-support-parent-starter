@@ -44,7 +44,7 @@ public class SysAiWorld {
     @TableField("director_model")
     private String directorModel;
 
-    /** 世界的演员/角色配置（JSON 数组，例：["诸葛亮","曹操"]），可空 */
+    /** 世界的演员/角色配置：每行一个角色名（纯文本，例：「诸葛亮\\n曹操」），可空 */
     @TableField("actor_roles")
     private String actorRoles;
 

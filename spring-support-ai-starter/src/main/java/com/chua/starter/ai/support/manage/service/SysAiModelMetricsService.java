@@ -19,6 +19,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService.MetricsRecord;
+import com.chua.starter.ai.support.util.ModelMetricKeyMatcher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -147,6 +148,20 @@ public class SysAiModelMetricsService {
     }
 
     /**
+     * 全表读取（供调用方在内存里建 模型键 → 指标行 的索引）。
+     *
+     * <p>列表接口按模型逐个 {@link #getByKey(String)} 查询时，在跨网络访问数据库
+     * 的环境下会把一次请求放大成上百次往返（实测远端 185 个模型耗时数分钟）。
+     * 本方法一次取全表（千行级别），由调用方自行建索引并按需缓存。</p>
+     *
+     * @return 全部指标行，按 id 升序
+     */
+    public List<SysAiModelMetrics> listAll() {
+        return metricsMapper.selectList(new LambdaQueryWrapper<SysAiModelMetrics>()
+                .orderByAsc(SysAiModelMetrics::getId));
+    }
+
+    /**
      * 用量回填：按 服务商+模型 对全部本地用量的 token 输出速度取平均，写入
      * {@code sys_ai_model_metrics.avg_output_speed_tps}（归一化键关联：
      * {@code provider/model} → normalizeKey）。
@@ -194,7 +209,13 @@ public class SysAiModelMetricsService {
     }
 
     /**
-     * 计费取价回退：按模型名精确匹配，未命中做包含关系模糊匹配。
+     * 计费取价回退：按模型名精确匹配，未命中时匹配同模型变体。
+     *
+     * <p>兜底匹配只接受「头尾多出版本/日期/别名后缀」的候选（见
+     * {@link ModelMetricKeyMatcher}）：原实现用双向 {@code contains}，
+     * 会把 {@code glm-5-3-flash-free} 的取价算到 {@code glm-5-3} 上、
+     * 或把 {@code gemini-3-5-flash-lite} 的价格当成 {@code gemini-3-5-flash}，
+     * 计费估算直接算错。</p>
      *
      * @param modelId 模型标识
      * @return 指标记录，未找到返回 空
@@ -213,13 +234,7 @@ public class SysAiModelMetricsService {
             return exact;
         }
         List<SysAiModelMetrics> all = metricsMapper.selectList(null);
-        for (SysAiModelMetrics m : all) {
-            String k = m.getModelKey();
-            if (k.length() >= 6 && (k.contains(key) || key.contains(k))) {
-                return m;
-            }
-        }
-        return null;
+        return ModelMetricKeyMatcher.selectNearest(key, all, SysAiModelMetrics::getModelKey);
     }
 
     /**

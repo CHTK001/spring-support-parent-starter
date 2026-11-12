@@ -296,6 +296,73 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
+     * 把某知识点（或目录子树）的图谱关联迁到新路径。
+     *
+     * <p>移动/改名会改变 docId 与相对路径，而 ref 表以 doc_path 记录来源；不迁移的话，
+     * 图谱仍指向已经不存在的旧路径，按知识点查图查不到，删新路径也不会清掉旧关联。
+     * 这里原地改 ref 的 doc_path，保留已抽取的实体与关系（不销毁重抽）。</p>
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param oldDocPath      旧相对路径；目录以它作为子树前缀
+     * @param newDocPath      新相对路径
+     * @return 迁移的 ref 行数
+     */
+    public int renameDocPath(String knowledgeBaseId, String oldDocPath, String newDocPath) {
+        if (!StringUtils.hasText(knowledgeBaseId) || !StringUtils.hasText(oldDocPath)) {
+            return 0;
+        }
+        String oldPath = normalizeDocPath(oldDocPath);
+        String newPath = normalizeDocPath(newDocPath);
+        if (!StringUtils.hasText(oldPath) || !StringUtils.hasText(newPath) || oldPath.equals(newPath)) {
+            return 0;
+        }
+        // likeRight 里的 % / _ 会被当通配符，因此取回后用 startsWith 在内存里再收紧一次，
+        // 避免把「a_b/x.md」这类同前缀的兄弟路径一起迁走。
+        List<SysAiKnowledgeGraphRef> rows = graphRefMapper.selectList(
+                new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
+                        .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId)
+                        .and(w -> w.eq(SysAiKnowledgeGraphRef::getDocPath, oldPath)
+                                .or().likeRight(SysAiKnowledgeGraphRef::getDocPath, oldPath + "/")));
+        if (rows == null || rows.isEmpty()) {
+            return 0;
+        }
+        String prefix = oldPath + "/";
+        int changed = 0;
+        for (SysAiKnowledgeGraphRef row : rows) {
+            String current = row.getDocPath() == null ? "" : row.getDocPath();
+            if (!current.equals(oldPath) && !current.startsWith(prefix)) {
+                continue;
+            }
+            String suffix = current.length() > oldPath.length() ? current.substring(oldPath.length()) : "";
+            String target = normalizeDocPath(newPath + suffix);
+            if (target.equals(current)) {
+                continue;
+            }
+            // 同一 (target_type, target_uid, kb_id, doc_path) 已有行时，唯一键会挡住 update：
+            // 直接删掉旧行即可，目标行本就等价（同一实体/关系同一来源）。
+            SysAiKnowledgeGraphRef duplicate = graphRefMapper.selectOne(
+                    new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
+                            .eq(SysAiKnowledgeGraphRef::getTargetType, row.getTargetType())
+                            .eq(SysAiKnowledgeGraphRef::getTargetUid, row.getTargetUid())
+                            .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId)
+                            .eq(SysAiKnowledgeGraphRef::getDocPath, target)
+                            .last("limit 1"));
+            if (duplicate != null) {
+                graphRefMapper.delete(new LambdaQueryWrapper<SysAiKnowledgeGraphRef>()
+                        .eq(SysAiKnowledgeGraphRef::getUid, row.getUid()));
+                continue;
+            }
+            row.setDocPath(target);
+            graphRefMapper.updateById(row);
+            changed++;
+        }
+        log.info("[KnowledgeGraph] 知识点路径迁移 {} -> {}，迁移 ref {} 行", oldPath, newPath, changed);
+        return changed;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    /**
      * delete By Knowledge Base
      * @param knowledgeBaseId 字符串
      * @return 返回值

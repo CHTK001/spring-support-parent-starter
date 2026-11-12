@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.workspace.terminal;
 
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.chua.starter.ai.support.workspace.WorkspacePathResolver;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -176,6 +177,11 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
     private final WorkspacePathResolver pathResolver;
 
     /**
+     * 会话执行目录解析器：会话绑定了项目目录时，终端 cwd 落在项目里
+     */
+    private final SessionWorkspaceResolver sessionWorkspaceResolver;
+
+    /**
      * JSON 工具
      */
     private final ObjectMapper objectMapper;
@@ -249,7 +255,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
         AiUserContext.runWith(resume, () -> {
             try {
                 directories[0] = pathResolver.agentWorkspace();
-                directories[1] = pathResolver.sessionWorkspace(sessionId);
+                directories[1] = sessionWorkspaceResolver.sessionRoot(sessionId);
             } catch (Exception e) {
                 error[0] = messageOf(e);
             }

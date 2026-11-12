@@ -57,9 +57,12 @@ public class GatewayIpFilter extends AbstractGatewaySecurityFilter {
                     return;
                 }
             }
-            // 2、黑名单
+            // 2、黑名单：受 security_ip_enabled 控制。
+            // 该开关原先零读取，声明是「关闭时只放行全局白名单（若未配则全部放行）」——
+            // 也就是说它管的是黑名单这一半，白名单始终生效。这里按声明实现。
+            boolean blacklistOn = globalSettingReader().getBool("security", "security_ip_enabled", true);
             String blacklist = globalSettingReader().getStr("security", "security_ip_global_blacklist");
-            if (StringUtils.hasText(blacklist)) {
+            if (blacklistOn && StringUtils.hasText(blacklist)) {
                 if (matchesIp(clientIp, blacklist)) {
                     rejectIp(request, response, "客户端 IP " + clientIp + " 在黑名单中");
                     return;

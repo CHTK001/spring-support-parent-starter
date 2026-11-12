@@ -45,8 +45,10 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         try {
-            // 总开关关闭 / 路径未命中 → 放行
-            if (!enabled() || !matches(request)) {
+            // 总开关关闭 / 本开关关闭 / 路径未命中 → 放行。
+            // security_connection_budget_enabled 原先零读取：关掉它并发预算照样拦人。
+            if (!enabled() || !matches(request)
+                    || !globalSettingReader().getBool("security", "security_connection_budget_enabled", true)) {
                 safePass(request, response, chain);
                 return;
             }
@@ -72,6 +74,10 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
                     inFlight.remove(key);
                 }
             }
+            // 下游已经跑过：必须在这里结束。
+            // 原实现在这段之后还会再走一次 safePass —— 预算够用时过滤器链被调两次，
+            // 下游 handler 会执行两遍（重复计费、重复写库），属于必须修掉的真缺陷。
+            return;
         } catch (Exception e) {
             log.warn("[GatewayConnectionBudgetFilter] 拦截异常，放行: {}", e.getMessage());
         }

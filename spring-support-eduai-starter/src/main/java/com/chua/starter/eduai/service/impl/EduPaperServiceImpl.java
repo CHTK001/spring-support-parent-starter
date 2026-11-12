@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.ai.support.paper.pipeline.EduAiService;
-import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.mapper.EduPaperHistoryMapper;
 import com.chua.starter.eduai.mapper.EduPaperMapper;

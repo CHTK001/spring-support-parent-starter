@@ -20,6 +20,8 @@ import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.ai.support.configuration.rag.RagProperties;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.model.WebPageContent;
+import com.chua.starter.ai.support.model.KnowledgeGraphExtractionDTO;
+import com.chua.starter.ai.support.model.KnowledgeGraphExtractionOutcome;
 import com.chua.starter.ai.support.service.KnowledgeBaseStore;
 import com.chua.starter.ai.support.service.KnowledgeGraphService;
 import com.chua.starter.ai.support.service.impl.KnowledgeGraphExtractionService;
@@ -65,6 +67,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -96,6 +100,15 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 @Slf4j
 public class ApiKnowledgeController {
+
+    /**
+     * 从上游错误报文里识别 HTTP 状态码。
+     *
+     * <p>只认「status / code / http」后紧跟的三位状态码：直接搜三位数字会把
+     * 分片号（「第 429 号」）和向量维度（「dimension 1536」）误当状态码。</p>
+     */
+    private static final Pattern HTTP_STATUS_PATTERN =
+            Pattern.compile("(?:status|code|http)[^0-9]{0,10}([45]\\d{2})");
 
     /**
      * 会话存储（复用其 新标识 生成 UUID 主键）
@@ -202,17 +215,18 @@ public class ApiKnowledgeController {
     private final Map<String, Object> retrievalConfig = defaultRetrievalConfig();
 
     /**
-     * 一次「列目录」请求内缓存的「相对路径 → 处理状态」映射。
+     * 一次「列目录」请求内缓存的「相对路径 → {@link RagDocument}」映射。
      *
      * <p>{@code treeEntry} 会被每个文件调用一次，而状态要问向量库；
      * 不缓存的话 30 个文件就是 30 次 {@code listDocuments}。请求结束后由
      * {@code listTree} 清空，所以不会跨请求读到过期数据。</p>
      *
-     * <p>值是前端分栏用的状态串：{@code completed} / {@code failed} / {@code uploaded}。
-     * 早先只存「已索引路径集合」，无法表达失败态，导致「失败」分栏恒为 0、
-     * 抽取失败的文件还被算进「已索引」。</p>
+     * <p>缓存整个文档对象而不是只缓存状态串：失败原因
+     * （{@link RagDocument#errorMessage()}）必须和状态一起下发给前端，
+     * 否则左栏「待处理失败」只能写「原因未返回」。早先只存「已索引路径集合」，
+     * 连失败态都表达不了，导致「失败」分栏恒为 0。</p>
      */
-    private Map<String, String> relPathStatusCache;
+    private Map<String, RagDocument> relPathDocCache;
 
     /**
      * 启动时把持久化的知识库元数据载入内存缓存。
@@ -747,9 +761,16 @@ public class ApiKnowledgeController {
             }
             done.add(singleGraphGenerate(base, rel, text, reset));
         }
+        List<Map<String, Object>> failedFiles = new ArrayList<>();
         for (Map<String, Object> item : done) {
             entities += toIntSafe(item.get("entity_count"), 0);
             relations += toIntSafe(item.get("relation_count"), 0);
+            if (KnowledgeGraphExtractionOutcome.STATUS_FAILED.equals(String.valueOf(item.get("status")))) {
+                Map<String, Object> failed = new LinkedHashMap<>(2);
+                failed.put("doc_path", item.get("doc_path"));
+                failed.put("error_message", item.get("error_message"));
+                failedFiles.add(failed);
+            }
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("knowledge_base_id", knowledge_base_id);
@@ -757,6 +778,12 @@ public class ApiKnowledgeController {
         result.put("entity_count", entities);
         result.put("relation_count", relations);
         result.put("reset", reset);
+        // 整体状态必须如实：此前无论抽取链路是否可用都返回 200 + 计数，
+        // 模型没配时前端弹「已生成 0 个实体」，是标准的假成功。
+        result.put("status", graphGenerateStatus(done.size(), failedFiles.size()));
+        if (!failedFiles.isEmpty()) {
+            result.put("failed_files", failedFiles);
+        }
         // reset 是「收口」语义，顺手把历史遗留的同名节点与重复边合并掉，
         // 让图谱回到只反映当前文本的干净状态（不传 reset 的增量补充不做全库扫描）
         if (reset) {
@@ -776,7 +803,7 @@ public class ApiKnowledgeController {
      * @param rel   知识点相对路径
      * @param text  知识点正文
      * @param reset 是否先清空该知识点的已有关联
-     * @return 该知识点的抽取结果摘要
+     * @return 该知识点的抽取结果摘要（含 status 与 error_message）
      */
     private Map<String, Object> singleGraphGenerate(Map<String, Object> base, String rel, String text,
                                                     boolean reset) {
@@ -786,17 +813,41 @@ public class ApiKnowledgeController {
         if (reset) {
             knowledgeGraphService.deleteByKnowledgePoint(kbId, rel);
         }
-        var extraction = knowledgeGraphExtractionService.extractAndStore(
+        // 取带状态的结果：此前 extractAndStore 失败也返回 null，这里记 0 实体 0 关系，
+        // 接口响应里没有任何失败信号，前端只能弹出「已生成 0 个实体」的假成功。
+        KnowledgeGraphExtractionOutcome outcome = knowledgeGraphExtractionService.extractAndStoreOutcome(
                 kbId,
                 base.get("name") == null ? null : String.valueOf(base.get("name")),
                 rel, text);
-        int entityCount = extraction == null || extraction.entities() == null
+        KnowledgeGraphExtractionDTO extraction = outcome.extraction();
+        int entityCount = extraction.entities() == null
                 ? 0 : (int) extraction.entities().stream().filter(Objects::nonNull).count();
-        int relationCount = extraction == null || extraction.relations() == null
+        int relationCount = extraction.relations() == null
                 ? 0 : (int) extraction.relations().stream().filter(Objects::nonNull).count();
+        item.put("status", outcome.status());
         item.put("entity_count", entityCount);
         item.put("relation_count", relationCount);
+        if (outcome.errorMessage() != null) {
+            item.put("error_message", outcome.errorMessage());
+        }
         return item;
+    }
+
+    /**
+     * 计算「生成图谱」的整体状态。
+     *
+     * @param files       参与抽取的知识点数量
+     * @param failedFiles 其中链路失败的数量
+     * @return empty（没有可抽取的知识点）/ failed（全部失败）/ partial（部分失败）/ ok
+     */
+    private static String graphGenerateStatus(int files, int failedFiles) {
+        if (files == 0) {
+            return "empty";
+        }
+        if (failedFiles == 0) {
+            return "ok";
+        }
+        return failedFiles >= files ? "failed" : "partial";
     }
 
     @PutMapping("/bases/{knowledge_base_id}/source")
@@ -884,8 +935,11 @@ public class ApiKnowledgeController {
              */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "目录不存在: " + path);
         }
-        List<Map<String, Object>> tree = buildTree(root, dir, 4);
-        relPathStatusCache = null;
+        // 先清缓存再建树：缓存是「本次列目录」用的快照，放在 buildTree 之后清会让
+        // 本次请求读到上一次的旧状态（期间刚重建过索引也仍显示旧的）。异常路径也不会漏清。
+        relPathDocCache = null;
+        List<Map<String, Object>> tree = buildTree(knowledge_base_id, root, dir, 4);
+        relPathDocCache = null;
         tree.sort(Comparator.<Map<String, Object>, Boolean>comparing(m -> Boolean.TRUE.equals(m.get("is_dir")))
                 .thenComparing(m -> String.valueOf(m.get("name"))));
         return ApiResult.ok(tree);
@@ -916,7 +970,7 @@ public class ApiKnowledgeController {
          */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
-        return ApiResult.ok(treeEntry(root, folder));
+        return ApiResult.ok(treeEntry(knowledge_base_id, root, folder));
     }
 
     @DeleteMapping("/bases/{knowledge_base_id}/folder")
@@ -1047,13 +1101,16 @@ public class ApiKnowledgeController {
         int lastSlash = rel.lastIndexOf('/');
         String newRel = lastSlash >= 0 ? rel.substring(0, lastSlash + 1) + newName : newName;
         reindexVectorsAfterRename(knowledge_base_id, rel, newRel);
+        // 改名改变了文档 ID（<知识库ID>/<相对路径>），索引状态缓存必须失效，
+        // 否则返回给前端的还是改名前的索引状态
+        relPathDocCache = null;
         /**
          * refreshstats。
          * @param base 基础
          */
         refreshStats(base);
         pushService.push("knowledge.base-updated", toBaseResponse(base));
-        return ApiResult.ok(treeEntry(root, renamed));
+        return ApiResult.ok(treeEntry(knowledge_base_id, root, renamed));
     }
 
     @GetMapping("/bases/{knowledge_base_id}/file")
@@ -1066,6 +1123,12 @@ public class ApiKnowledgeController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + path);
         }
         Path file = safeResolve(root, path);
+        // 目录不能当文件读：此前这里直接落到存储 SPI，目录取流失败被解释成 404「文件不存在」，
+        // 而前端恰好把「点开目录条目」这一场景也走到这里，用户看到的是
+        // 「文件不存在」而不是「这是目录，不能预览」。
+        if (Files.isDirectory(file)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 指向目录，不能作为文件读取: " + path);
+        }
         // 存在性与字节读取都走文件存储 SPI；越界校验仍由 safeResolve 给 400 业务提示
         GetObjectResult got = knowledgeFileStorage.get(root.toString(), path);
         if (got == null || ObjectResult.ResultCode.FAILURE == got.getResultCode()
@@ -1122,6 +1185,13 @@ public class ApiKnowledgeController {
         Map<String, Object> base = requireBase(knowledge_base_id);
         Path root = resolveRoot(base);
         Path file = safeResolve(root, rel);
+        // 空文件没有可索引的内容：新上传的空文件直接挡在落盘前，否则会入库并显示
+        // 「失败 · 提取文本为空」，用户会去查 embedding / 解析器，实际只是空文件。
+        // 已有文件被清空仍允许覆盖（那是用户主动清空），索引侧如实记失败。
+        if (content.isEmpty() && !knowledgeFileStorage.exists(root.toString(), rel)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "文件为空（0 字节）：没有可索引的内容，请写入正文后再上传");
+        }
         // 落盘改走 spring-support-filesystem-starter 的 FileStorage SPI（对象键 = 相对根目录的路径），
         // 不再直接 Files.createDirectories + Files.writeString
         PutObjectResult put = knowledgeFileStorage.writeText(root.toString(), rel, content);
@@ -1273,6 +1343,76 @@ public class ApiKnowledgeController {
         return ApiResult.ok();
     }
 
+    /**
+     * 移动文件或目录到另一个目录（同库内）。
+     *
+     * <p>移动会改变 docId（{@code <kbId>/<relPath>}）与相对路径，所以不能只做一次
+     * {@code Files.move}：旧路径的向量会留在库里指向不存在的文件、新路径没有向量、
+     * 图谱 ref 仍挂在旧 doc_path 上。这里三步一起做：① 按旧路径前缀回收向量
+     * ② 按新路径重建索引（{@link #reindexVectorsAfterRename}）③ 迁移图谱 ref 的 doc_path。</p>
+     *
+     * @param knowledge_base_id 知识库ID
+     * @param body              {path: 源相对路径, target_dir: 目标目录相对路径；空串=根目录}
+     * @return 移动后的条目（与 /tree 单项同构）
+     */
+    @PostMapping("/bases/{knowledge_base_id}/move")
+    public ApiResult<Map<String, Object>> moveTreeEntry(@PathVariable String knowledge_base_id,
+                                                        @RequestBody Map<String, Object> body) {
+        String rel = body.get("path") == null ? null : String.valueOf(body.get("path")).trim();
+        String targetDir = body.get("target_dir") == null ? "" : String.valueOf(body.get("target_dir")).trim();
+        if (StringUtils.isBlank(rel)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 不能为空");
+        }
+        Map<String, Object> base = requireBase(knowledge_base_id);
+        Path root = resolveRoot(base);
+        Path source = safeResolve(root, rel);
+        if (source.equals(root.normalize())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "不能移动根目录");
+        }
+        if (!Files.exists(source)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "要移动的条目不存在: " + rel);
+        }
+        Path destDir = safeResolve(root, targetDir);
+        if (!Files.isDirectory(destDir)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "目标目录不存在: " + targetDir);
+        }
+        // 目录不能移进自己或自己的子树（Files.move 会留一个空壳目录、内部文件全部丢失）
+        if (Files.isDirectory(source) && destDir.startsWith(source.normalize())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "不能把目录移动到它自己或它的子目录下");
+        }
+        Path dest = destDir.resolve(source.getFileName());
+        if (dest.equals(source.normalize())) {
+            // 原地移动是空操作，直接回当前条目，避免前端误报「移动成功」却没变
+            return ApiResult.ok(treeEntry(knowledge_base_id, root, source));
+        }
+        if (Files.exists(dest)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "目标目录下已存在同名条目: " + root.relativize(dest).toString().replace('\\', '/'));
+        }
+        String oldRel = root.relativize(source).toString().replace('\\', '/');
+        String newRel = root.relativize(dest).toString().replace('\\', '/');
+        try {
+            // 先做同库原子改名（同一文件系统内 rename）；跨目录也是同根，不会触发跨盘复制
+            Files.move(source, dest);
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "移动失败: " + e.getMessage());
+        }
+        // ①② 旧路径向量按前缀回收，新路径逐文件重建
+        reindexVectorsAfterRename(knowledge_base_id, oldRel, newRel);
+        // ③ 图谱 ref 的 doc_path 原地迁移，保留已抽取的实体与关系
+        try {
+            knowledgeGraphService.renameDocPath(knowledge_base_id, oldRel, newRel);
+        } catch (Exception e) {
+            // 图谱迁移失败不回滚文件移动：文件已经在正确位置，图谱最多是旧关联需要重抽，
+            // 如实记日志并继续（与删除/重建索引的容错口径一致）
+            log.warn("[ApiKnowledgeController] 移动后图谱路径迁移失败(忽略): {}", e.getMessage());
+        }
+        relPathDocCache = null;
+        refreshStats(base);
+        pushService.push("knowledge.base-updated", toBaseResponse(base));
+        return ApiResult.ok(treeEntry(knowledge_base_id, root, dest));
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 库内问答（RAG 检索 + 大模型作答 + 引用溯源）
     // ─────────────────────────────────────────────────────────────────────────
@@ -1320,7 +1460,8 @@ public class ApiKnowledgeController {
         RagClient client = ragClientManager.current();
         if (client == null) {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR,
-                    "RAG 不可用：请先在「设置中心 → 模型设置 → RAG」配置 RAG LLM 模型");
+                    "RAG 不可用：请先在「设置中心 → 模型设置 → RAG」配置 RAG LLM 模型",
+                    ragUnavailableDetail());
         }
         RagResponse response;
         try {
@@ -1328,7 +1469,7 @@ public class ApiKnowledgeController {
         } catch (RuntimeException e) {
             // 失败注入映射：外部 embedding SDK 的异常经 RagPipeline 包装后只剩
             // 「Node execution failed: embedQuery」，前端无法分辨余额不足/密钥无效/限流/维度不符。
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, friendlyRagError(e));
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, friendlyRagError(e), ragErrorDetail(e));
         }
 
         String prefix = knowledge_base_id + "/";
@@ -2013,6 +2154,85 @@ public class ApiKnowledgeController {
     }
 
     /**
+     * 组装「RAG 客户端不可用」的结构化排查信息。
+     *
+     * <p>客户端构建不出来时几乎总是 embedding / 向量库配置问题，
+     * {@link RagClientManager#embeddingIssue()} 已能给出逐层判定结论（未配模型 /
+     * 引擎未注册 / 缺凭证），直接带上能省掉用户反复试配置。</p>
+     *
+     * @return 排查明细
+     */
+    private Map<String, Object> ragUnavailableDetail() {
+        Map<String, Object> detail = new LinkedHashMap<>(12);
+        detail.put("stage", "client");
+        detail.put("stage_label", "RAG 客户端构建");
+        detail.put("config_path", "/setting/default-models");
+        try {
+            detail.putAll(ragClientManager.diagnostics());
+        } catch (RuntimeException e) {
+            log.debug("[Knowledge] 采集 RAG 诊断快照失败: {}", e.getMessage());
+        }
+        try {
+            detail.put("embedding_issue", StringUtils.defaultString(ragClientManager.embeddingIssue(), ""));
+        } catch (RuntimeException e) {
+            detail.put("embedding_issue", "");
+        }
+        return detail;
+    }
+
+    /**
+     * 组装问答失败的结构化排查信息。
+     *
+     * <p>一句中文装不下「哪个模型、打的哪个地址、卡在哪个节点、上游回了什么状态」，
+     * 硬塞会变成读不下去的长句，用户到设置页仍要逐个试。这里按机器可读的键值
+     * 下发一份快照（地址脱敏、不含密钥），前端折叠展示，用户能直接照着改。</p>
+     *
+     * @param error 原始异常（可为 null）
+     * @return 排查明细；采集配置快照失败时仍返回节点与原因
+     */
+    private Map<String, Object> ragErrorDetail(Throwable error) {
+        Map<String, Object> detail = new LinkedHashMap<>(16);
+        String raw = error == null || error.getMessage() == null ? "" : error.getMessage();
+        String deepest = "";
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            if (StringUtils.hasText(t.getMessage())) {
+                deepest = t.getMessage();
+            }
+        }
+        String all = (raw + " " + deepest).toLowerCase();
+        boolean generateNode = all.contains("node=generate") || all.contains("generate [pipeline");
+        detail.put("stage", generateNode ? "generate" : "embedQuery");
+        detail.put("stage_label", generateNode ? "对话模型（LLM）生成" : "Embedding 向量化/检索");
+        detail.put("cause", snippet(deepest, 300));
+        String httpStatus = firstHttpStatus(all);
+        if (StringUtils.hasText(httpStatus)) {
+            detail.put("http_status", httpStatus);
+        }
+        detail.put("config_path", "/setting/default-models");
+        try {
+            // 生效配置快照：模型 / 引擎 / 脱敏地址 / 向量库 / 上传目录（当前账号口径）
+            detail.putAll(ragClientManager.diagnostics());
+        } catch (RuntimeException e) {
+            log.debug("[Knowledge] 采集 RAG 诊断快照失败: {}", e.getMessage());
+        }
+        return detail;
+    }
+
+    /**
+     * 从错误报文里提取上游 HTTP 状态码（4xx/5xx）。
+     *
+     * <p>只认「status / code / http」后紧跟的三位状态码，避免把分片号（如「第 429 号」）
+     * 或向量维度数字误当成状态码。</p>
+     *
+     * @param text 已小写的错误报文
+     * @return 状态码字符串；未命中返回空串
+     */
+    private static String firstHttpStatus(String text) {
+        Matcher matcher = HTTP_STATUS_PATTERN.matcher(text);
+        return matcher.find() ? matcher.group(1) : "";
+    }
+
+    /**
      * 解析知识库根目录（目录缺失抛 NOT_FOUND）。
      * @param base 基础
      * @return resolve根的结果
@@ -2384,11 +2604,12 @@ public class ApiKnowledgeController {
 
     /**
      * 构造目录树条目（含子目录递归）。
+     * @param knowledgeBaseId 知识库ID（用于拼出 {@code <知识库ID>/<相对路径>} 形式的文档 ID）
      * @param root 根
      * @param entry entry
      * @return 树entry的结果
      */
-    private Map<String, Object> treeEntry(Path root, Path entry) {
+    private Map<String, Object> treeEntry(String knowledgeBaseId, Path root, Path entry) {
         boolean isDir = Files.isDirectory(entry);
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("name", entry.getFileName() == null ? "" : entry.getFileName().toString());
@@ -2404,62 +2625,75 @@ public class ApiKnowledgeController {
         // 又只在 completed||failed 时才 emit('view')——两处硬编码撞在一起，
         // 导致文件预览永远打不开。
         if (!isDir) {
-            m.put("processing_status", relPathStatuses().getOrDefault(relPath, "uploaded"));
+            RagDocument doc = relPathDocs().get(knowledgeBaseId + "/" + relPath);
+            m.put("processing_status", doc == null ? "uploaded" : toDisplayStatus(doc.status()));
+            // 失败原因随状态一起下发。此前只给状态不给原因，前端映射层又没有这个字段，
+            // 左栏「待处理失败」只能退化成写死文案「解析失败，原因未返回」——
+            // 用户看到失败却拿不到任何可行动的信息（是 embedding 没配、还是文件超限）。
+            if (doc != null && doc.errorMessage() != null && !doc.errorMessage().isBlank()) {
+                m.put("error_message", doc.errorMessage());
+            }
         }
         return m;
     }
 
     /**
-     * 列出「相对路径 → 处理状态」的映射，状态串与前端分栏一致。
+     * 列出「文档 ID → 索引文档状态」的映射。
      *
      * <p>没有专门的索引状态表，判断依据只能是向量库：{@link RagClient#listDocuments}
-     * 能列出已入库文档，而 docId 固定为 {@code <知识库ID>/<相对路径>}（见 {@link #indexKnowledgeFile}），
-     * 剥掉第一段前缀即得相对路径。</p>
+     * 能列出已入库文档，而 docId 固定为 {@code <知识库ID>/<相对路径>}（见 {@link #indexKnowledgeFile}）。
+     * 这里<b>保留完整 docId 作为 key</b>：早先剥掉第一段只留相对路径，而
+     * {@code RagClient#listDocuments} 是进程级全局表，两个知识库存在同名文件时
+     * 后写入的那条会覆盖先写入的，导致 A 库的文件显示 B 库的索引状态与失败原因。</p>
      *
-     * <p>必须带上文档自身的 {@code status}：{@link RagDocument} 的取值是
-     * {@code READY / PROCESSING / FAILED}，只有 READY 才算「已索引」，FAILED 要落到
-     * 「失败」分栏。早先只按「路径是否出现在文档表里」判断，等于把抽取失败的文件
-     * 也算成已索引，于是「失败」分栏永远是 0。</p>
+     * <p>必须保留文档自身的 {@code status} 与 {@code errorMessage}：{@link RagDocument} 的
+     * 状态取值是 {@code READY / PROCESSING / FAILED}，只有 READY 才算「已索引」，FAILED 要落到
+     * 「失败」分栏并把原因带给前端。早先只按「路径是否出现在文档表里」判断，等于把抽取失败的
+     * 文件也算成已索引，于是「失败」分栏永远是 0；只回状态不回原因时，界面又只能写
+     * 「原因未返回」。</p>
      *
      * <p>同一路径可能有多条记录（重复入库）：{@code listDocuments} 按创建时间倒序，
      * 因此用 {@code putIfAbsent} 保留最新的那条。</p>
      *
-     * <p><b>已知局限</b>：{@code listDocuments} 读的是进程内存里的文档登记表，
-     * 进程重启后为空，而向量是持久化的。此时本方法会返回空映射（全部显示为「已上传」），
-     * 属于<b>展示层的保守降级</b>——不会谎称已索引，但也不会谎称未索引失败。</p>
+     * <p><b>已知局限</b>：{@code listDocuments} 读的是进程内存里的文档登记表。
+     * RagPipeline 已把登记表持久化到 {@code uploadDir/documents.json} 并在启动时恢复，
+     * 但若登记表与分块缓存同时丢失，仍会退化成空映射（全部显示为「已上传」），
+     * 属于<b>展示层的保守降级</b>——不会谎称已索引，也不会误报成功。</p>
      *
      * <p>失败一律降级为空映射（当作全未索引），不抛异常——索引状态只用于展示，
      * 不该让「列目录」这个基础操作整体失败。结果缓存到本次「列目录」请求内，
      * 避免每个文件都去问一次向量库。</p>
      *
-     * @return 相对路径到状态串（completed / failed / uploaded）的映射
+     * @return 文档 ID 到索引文档（含状态与失败原因）的映射
      */
-    private Map<String, String> relPathStatuses() {
-        if (relPathStatusCache != null) {
-            return relPathStatusCache;
+    private Map<String, RagDocument> relPathDocs() {
+        if (relPathDocCache != null) {
+            return relPathDocCache;
         }
         try {
             RagClient client = ragClientManager.current();
             // 页码从 1 开始（RagClient#listDocuments 契约）；传 0 会让 (page-1)*pageSize 变负，
             // subList 抛 IndexOutOfBoundsException，被下方 catch 吞掉后全部文件都显示未索引。
             List<RagDocument> docs = client.listDocuments(1, 10000);
-            Map<String, String> out = new HashMap<>();
+            Map<String, RagDocument> out = new HashMap<>();
             for (RagDocument doc : docs == null ? List.<RagDocument>of() : docs) {
                 String id = doc == null ? null : doc.id();
                 if (id == null || !id.contains("/")) {
                     continue;
                 }
-                out.putIfAbsent(id.substring(id.indexOf('/') + 1), toDisplayStatus(doc.status()));
+                // key 必须是完整 docId（<知识库ID>/<相对路径>），不能只留相对路径：
+                // listDocuments 是全局表，跨库同名文件会互相覆盖状态与失败原因
+                out.putIfAbsent(id, doc);
             }
-            relPathStatusCache = out;
+            relPathDocCache = out;
         } catch (Exception e) {
             // 用 warn 而不是 debug：这里一旦降级成空映射，页面上所有文件都会显示「已上传」，
             // 现象与真正的「未索引」完全相同。此前传入非法页码导致 subList 抛异常被静默吞掉，
             // 排查时只能看到状态不对、看不到任何日志。
             log.warn("[Knowledge] 读取索引文档列表失败，按全未索引处理: {}", e.getMessage(), e);
-            relPathStatusCache = Map.of();
+            relPathDocCache = Map.of();
         }
-        return relPathStatusCache;
+        return relPathDocCache;
     }
 
     /**
@@ -2485,7 +2719,15 @@ public class ApiKnowledgeController {
      * @param depth 深度
      * @return 构建树的结果
      */
-    private List<Map<String, Object>> buildTree(Path root, Path dir, int depth) {
+    /**
+     * 递归构建目录树（限制深度）。目录条目携带 children。
+     * @param knowledgeBaseId 知识库ID
+     * @param root 根
+     * @param dir dir
+     * @param depth 深度
+     * @return 构建树的结果
+     */
+    private List<Map<String, Object>> buildTree(String knowledgeBaseId, Path root, Path dir, int depth) {
         List<Map<String, Object>> entries = new ArrayList<>();
         /**
          * 尝试。
@@ -2493,9 +2735,9 @@ public class ApiKnowledgeController {
          */
         try (Stream<Path> list = Files.list(dir)) {
             for (Path p : (Iterable<Path>) list.sorted()::iterator) {
-                Map<String, Object> e = treeEntry(root, p);
+                Map<String, Object> e = treeEntry(knowledgeBaseId, root, p);
                 if (Files.isDirectory(p) && depth > 0) {
-                    e.put("children", buildTree(root, p, depth - 1));
+                    e.put("children", buildTree(knowledgeBaseId, root, p, depth - 1));
                 }
                 entries.add(e);
             }

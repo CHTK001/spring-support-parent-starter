@@ -20,6 +20,7 @@ import com.chua.starter.server.support.mapper.MsServerConfigMapper;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.mapper.MsServerProjectMapper;
 import com.chua.starter.server.support.mapper.MsServerReleaseMapper;
+import com.chua.starter.server.support.model.ApmGlobalConfig;
 import com.chua.starter.server.support.model.vo.ProjectBackupVO;
 import com.chua.starter.server.support.model.vo.SoftwareUpgradeVO;
 import com.chua.starter.server.support.push.ProjectTaskService;
@@ -108,6 +109,11 @@ public class ReleaseServiceImpl implements ReleaseService {
     private static final Pattern SERVER_PORT_ARG = Pattern.compile("--server\\.port=(\\d{1,5})");
 
       /**
+       * JVM 参数里的业务端口：{@code -Dserver.port=8112}
+       */
+    private static final Pattern SERVER_PORT_JVM = Pattern.compile("-Dserver\\.port=(\\d{1,5})");
+
+      /**
        * 外部配置里的业务端口：{@code server.port=8112}
        */
     private static final Pattern SERVER_PORT_PROP = Pattern.compile("server\\.port\\s*=\\s*(\\d{1,5})");
@@ -151,6 +157,19 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     private static final String CFG_GLOBAL_KEY = "upgrade.global";
     private static final String CFG_LAST_KEY = "upgrade.last";
+
+    /** 全局 APM 兜底配置（JSON） */
+    private static final String CFG_APM_GLOBAL_KEY = "release.apm.global";
+
+    /**
+     * 发布注入标记。
+     *
+     * <p>注入参数落库后无法仅凭参数值区分「发布注入」与「项目自己填写」；
+     * 尤其是项目自己写的 OAP 恰好与发布配置相同时，旧版按值匹配会把项目配置误判为
+     * 发布配置并覆盖。这里给发布注入的参数加一个显式标记，后续同步/关闭只处理带标记
+     * 的参数，项目自己声明的 APM 永远不动。</p>
+     */
+    private static final String APM_MANAGED_PREFIX = "-Dskywalking.scnet.release_owner=";
       /** 项目级默认升级配置的键前缀（后接项目ID），不改表结构 */
     private static final String CFG_PROJECT_PREFIX = "upgrade.project.";
 
@@ -207,6 +226,17 @@ public class ReleaseServiceImpl implements ReleaseService {
         private String osType;
           /** 目标主机是否为 Windows（决定命令按 PowerShell 还是 bash 构造） */
         private boolean windows;
+    }
+
+      /**
+       * 发布级 APM 的生效配置（发布字段优先，全局兜底）。
+       */
+    private static class EffectiveApm {
+        private Long releaseId;
+        private boolean ready;
+        private String jarPath;
+        private String backendService;
+        private String serviceNamePrefix;
     }
 
       // ==================== 发布 CRUD ====================
@@ -295,6 +325,19 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @param release 发布
        */
     private void syncReleaseApm(MsServerRelease release) {
+        syncReleaseApm(release, loadGlobalApmConfig());
+    }
+
+    /**
+     * 发布级 SkyWalking 配置变更后，同步到该发布下的全部项目。
+     *
+     * <p>同步只碰带有本发布标记的参数；项目自己声明的 APM（自研 agent、自有 OAP 地址）
+     * 一律不动。没有标记的历史参数按项目自有处理，宁可保留也不误删。</p>
+     *
+     * @param release 发布
+     * @param global  全局兜底配置
+     */
+    private void syncReleaseApm(MsServerRelease release, ApmGlobalConfig global) {
         if (release == null) {
             return;
         }
@@ -303,19 +346,20 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (projects.isEmpty()) {
             return;
         }
-        boolean enabled = Boolean.TRUE.equals(release.getSwEnabled());
-        boolean ready = !isBlank(release.getSwJarPath()) && !isBlank(release.getSwBackendService());
-        boolean inject = enabled && ready;
+        EffectiveApm effective = resolveEffectiveApm(release, global);
+        boolean inject = effective.ready;
         for (MsServerProject project : projects) {
             List<String> args = readStringList(project.getJvmArgs());
             boolean declared = args.stream().anyMatch(this::isApmArg);
-            if (declared && !injectedByRelease(release, project, args)) {
-                  // 项目自己声明的 APM：发布级永远不覆盖、也不清理
+            boolean managed = injectedByRelease(effective, args);
+            if (declared && !managed) {
+                  // 项目自己声明的 APM：发布级/全局兜底永远不覆盖、也不清理
                 continue;
             }
-            List<String> out = new ArrayList<>(inject
-                    ? apmArgs(release, project)
-                    : Collections.<String>emptyList());
+            List<String> out = new ArrayList<>();
+            if (inject) {
+                out.addAll(apmArgs(effective, project));
+            }
             for (String arg : args) {
                 if (!isApmArg(arg)) {
                     out.add(arg);
@@ -331,41 +375,70 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
     }
 
-      /**
-       * 判断项目里的 APM 参数是否由本发布注入（用于「同步/清理」的范围界定）。
-       *
-       * @param release 发布
-       * @param project 项目
-       * @param args    项目当前参数
-       * @return 属于本发布注入时为 {@code true}
-       */
-    private boolean injectedByRelease(MsServerRelease release, MsServerProject project, List<String> args) {
-        String jar = release.getSwJarPath();
-        if (!isBlank(jar) && args.contains("-javaagent:" + jar)) {
-            return true;
-        }
-          // jar 路径被改空时退化为「service_name 与 OAP 地址同时命中」：
-          // 前缀为空时 service_name 就是项目名，与项目自研配置无法区分，故此种情况不做归属判定
-          // （宁可留着让用户手动清理，也不误删项目自研 agent）。
-        String prefix = release.getSwServiceNamePrefix();
-        String backend = release.getSwBackendService();
-        return !isBlank(prefix) && !isBlank(backend)
-                && args.contains("-Dskywalking.agent.service_name=" + serviceNameOf(release, project))
-                && args.contains("-Dskywalking.collector.backend_service=" + backend);
+    /**
+     * 判断项目里的 APM 参数是否由当前发布注入。
+     *
+     * <p>只看显式标记：旧版本注入的参数没有标记，按项目自有处理。这样项目自己写的
+     * agent/OAP 即使与发布配置完全相同，也不会被发布同步误覆盖。</p>
+     *
+     * @param effective 生效的发布 APM 配置
+     * @param args      项目当前参数
+     * @return 属于当前发布注入时为 {@code true}
+     */
+    private boolean injectedByRelease(EffectiveApm effective, List<String> args) {
+        return effective.releaseId != null
+                && args.contains(APM_MANAGED_PREFIX + effective.releaseId);
     }
 
-      /**
-       * 发布级 APM 注入的三条参数（顺序固定：agent → service_name → backend）。
-       *
-       * @param release 发布
-       * @param project 项目
-       * @return 参数列表
-       */
-    private List<String> apmArgs(MsServerRelease release, MsServerProject project) {
+    /**
+     * 发布级 APM 注入参数（顺序固定：agent → service_name → backend → 归属标记）。
+     *
+     * @param effective 生效配置
+     * @param project   项目
+     * @return 参数列表
+     */
+    private List<String> apmArgs(EffectiveApm effective, MsServerProject project) {
         return Arrays.asList(
-                "-javaagent:" + release.getSwJarPath(),
-                "-Dskywalking.agent.service_name=" + serviceNameOf(release, project),
-                "-Dskywalking.collector.backend_service=" + release.getSwBackendService());
+                "-javaagent:" + effective.jarPath,
+                "-Dskywalking.agent.service_name=" + serviceNameOf(effective, project),
+                "-Dskywalking.collector.backend_service=" + effective.backendService,
+                APM_MANAGED_PREFIX + effective.releaseId);
+    }
+
+    /**
+     * 解析发布的生效 APM 配置：发布字段优先，留空时取全局兜底。
+     *
+     * @param release 发布
+     * @return 生效配置
+     */
+    private EffectiveApm resolveEffectiveApm(MsServerRelease release) {
+        return resolveEffectiveApm(release, loadGlobalApmConfig());
+    }
+
+    /**
+     * 解析发布的生效 APM 配置：发布字段优先，留空时取全局兜底。
+     *
+     * @param release 发布
+     * @param global  全局配置
+     * @return 生效配置
+     */
+    private EffectiveApm resolveEffectiveApm(MsServerRelease release, ApmGlobalConfig global) {
+        EffectiveApm effective = new EffectiveApm();
+        if (release == null) {
+            return effective;
+        }
+        effective.releaseId = release.getId();
+        boolean globalEnabled = global != null && Boolean.TRUE.equals(global.getEnabled());
+        effective.jarPath = firstNonBlank(release.getSwJarPath(),
+                globalEnabled ? global.getJarPath() : null);
+        effective.backendService = firstNonBlank(release.getSwBackendService(),
+                globalEnabled ? global.getBackendService() : null);
+        effective.serviceNamePrefix = firstNonBlank(release.getSwServiceNamePrefix(),
+                globalEnabled ? global.getServiceNamePrefix() : null);
+        effective.ready = Boolean.TRUE.equals(release.getSwEnabled())
+                && !isBlank(effective.jarPath)
+                && !isBlank(effective.backendService);
+        return effective;
     }
 
     @Override
@@ -381,6 +454,84 @@ public class ReleaseServiceImpl implements ReleaseService {
                 .eq(MsServerProject::getReleaseId, id));
         releaseMapper.deleteById(id);
         return ReturnResult.success();
+    }
+
+    // ==================== 全局 APM 兜底 ====================
+
+    @Override
+    public ReturnResult<ApmGlobalConfig> getGlobalApmConfig() {
+        return ReturnResult.ok(loadGlobalApmConfig());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<ApmGlobalConfig> saveGlobalApmConfig(ApmGlobalConfig config) {
+        if (config == null) {
+            return ReturnResult.error("全局 APM 配置不能为空");
+        }
+        ApmGlobalConfig normalized = new ApmGlobalConfig();
+        normalized.setEnabled(Boolean.TRUE.equals(config.getEnabled()));
+        normalized.setJarPath(trimToNull(config.getJarPath()));
+        normalized.setBackendService(trimToNull(config.getBackendService()));
+        normalized.setServiceNamePrefix(trimToNull(config.getServiceNamePrefix()));
+        String value;
+        try {
+            value = JSON.writeValueAsString(normalized);
+        } catch (Exception e) {
+            return ReturnResult.error("全局 APM 配置序列化失败");
+        }
+        MsServerConfig exists = serverConfigMapper.selectOne(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, CFG_APM_GLOBAL_KEY));
+        if (exists == null) {
+            MsServerConfig cfg = new MsServerConfig();
+            cfg.setConfigKey(CFG_APM_GLOBAL_KEY);
+            cfg.setConfigValue(value);
+            cfg.setConfigDesc("全局 APM 兜底配置（OAP 上报地址 / agent / 服务名前缀）");
+            serverConfigMapper.insert(cfg);
+        } else {
+            exists.setConfigValue(value);
+            serverConfigMapper.updateById(exists);
+        }
+        // 全局值变化会影响所有发布下的项目，保存后立即重算；项目自身 APM 由标记保护。
+        syncAllApm(normalized);
+        return ReturnResult.ok(normalized);
+    }
+
+    /**
+     * 读取全局 APM 配置；未配置时返回 enabled=false 的空配置。
+     *
+     * @return 全局配置
+     */
+    private ApmGlobalConfig loadGlobalApmConfig() {
+        ApmGlobalConfig out = new ApmGlobalConfig();
+        MsServerConfig cfg = serverConfigMapper.selectOne(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, CFG_APM_GLOBAL_KEY));
+        if (cfg != null && !isBlank(cfg.getConfigValue())) {
+            try {
+                ApmGlobalConfig parsed = JSON.readValue(cfg.getConfigValue(), ApmGlobalConfig.class);
+                if (parsed != null) {
+                    out = parsed;
+                }
+            } catch (Exception e) {
+                log.warn("[release] 全局 APM 配置解析失败，按未配置处理: {}", e.getMessage());
+            }
+        }
+        if (out.getEnabled() == null) {
+            out.setEnabled(false);
+        }
+        return out;
+    }
+
+    /**
+     * 全局配置变化后重算所有发布下的项目。
+     *
+     * @param global 全局配置
+     */
+    private void syncAllApm(ApmGlobalConfig global) {
+        List<MsServerRelease> releases = releaseMapper.selectList(null);
+        for (MsServerRelease release : releases) {
+            syncReleaseApm(release, global);
+        }
     }
 
       // ==================== 项目 CRUD ====================
@@ -441,16 +592,16 @@ public class ReleaseServiceImpl implements ReleaseService {
             return;
         }
         MsServerRelease release = releaseMapper.selectById(project.getReleaseId());
-          // 未开启 / 缺少 jar 路径 / 缺少 OAP 地址时不注入
-        if (release == null || !Boolean.TRUE.equals(release.getSwEnabled())
-                || isBlank(release.getSwJarPath()) || isBlank(release.getSwBackendService())) {
+        EffectiveApm effective = resolveEffectiveApm(release);
+          // 未开启 / 发布与全局都缺少 jar 或 OAP 地址时不注入
+        if (!effective.ready) {
             return;
         }
         List<String> args = readStringList(project.getJvmArgs());
         if (args.stream().anyMatch(this::isApmArg)) {
             return;
         }
-        List<String> out = new ArrayList<>(apmArgs(release, project));
+        List<String> out = new ArrayList<>(apmArgs(effective, project));
         out.addAll(args);
         project.setJvmArgs(writeArgs(out));
     }
@@ -484,11 +635,15 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @param project 项目
        * @return 服务名
        */
-    private String serviceNameOf(MsServerRelease release, MsServerProject project) {
-        String prefix = release.getSwServiceNamePrefix();
+    private String serviceNameOf(EffectiveApm effective, MsServerProject project) {
+        String prefix = effective.serviceNamePrefix;
         String name = project.getProjectName();
-        if (isBlank(prefix)) return name;
-        if (isBlank(name)) return prefix;
+        if (isBlank(prefix)) {
+            return name;
+        }
+        if (isBlank(name)) {
+            return prefix;
+        }
         return prefix + "-" + name;
     }
 
@@ -2791,6 +2946,33 @@ public class ReleaseServiceImpl implements ReleaseService {
         return value == null || value.isBlank();
     }
 
+    /**
+     * 取第一个非空白字符串（保留原值，用于发布字段优先、全局兜底）。
+     *
+     * @param first  首选值
+     * @param second 兜底值
+     * @return 首个非空白值；都为空时返回 {@code null}
+     */
+    private String firstNonBlank(String first, String second) {
+        if (!isBlank(first)) {
+            return first;
+        }
+        return isBlank(second) ? null : second;
+    }
+
+    /**
+     * 去首尾空白，空串归一为 {@code null}。
+     *
+     * @param value 原值
+     * @return 归一后的值
+     */
+    private String trimToNull(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
       // ---------- 升级配置辅助 ----------
 
       /**
@@ -3024,9 +3206,41 @@ public class ReleaseServiceImpl implements ReleaseService {
             port = firstPort(SERVER_PORT_ARG, project.getJvmArgs());
         }
         if (port <= 0) {
-            port = firstPort(SERVER_PORT_PROP, project.getAppConfig());
+            port = firstPort(SERVER_PORT_JVM, project.getJvmArgs());
+        }
+        if (port <= 0) {
+            port = appConfigPort(project.getAppConfig());
         }
         return port;
+    }
+
+      /**
+       * 从 Spring Boot 外部配置中解析 {@code server.port}。
+       *
+       * <p>前端保存的是 JSON 数组（形如
+       * {@code [{"key":"server.port","value":"18090"}]}），直接用
+       * {@code server.port=} 正则匹配不到 JSON 的键值分隔符，导致项目明明配置了
+       * 端口，概览仍提示「未配置 server.port」。这里先按结构化配置读取，
+       * 再兼容历史/手工写入的 {@code server.port=18090} 裸串。</p>
+       *
+       * @param appConfig 项目外部配置 JSON 或裸串
+       * @return 端口号；无法解析时为 0
+       */
+    private int appConfigPort(String appConfig) {
+        for (EnvVar item : readEnvList(appConfig)) {
+            if (!"server.port".equals(item.key) || isBlank(item.value)) {
+                continue;
+            }
+            try {
+                int value = Integer.parseInt(item.value.trim());
+                if (value > 0 && value <= 65535) {
+                    return value;
+                }
+            } catch (NumberFormatException ignored) {
+                  // 非数字配置继续走裸串兜底，交给 firstPort 统一校验范围
+            }
+        }
+        return firstPort(SERVER_PORT_PROP, appConfig);
     }
 
       /**

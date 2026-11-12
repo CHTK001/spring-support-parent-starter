@@ -46,26 +46,6 @@ public class GuacdConnectionFactory {
     private static final int DEFAULT_VNC_PORT = 5900;
 
     /**
-     * RDP 默认分辨率宽
-    */
-    private static final int RDP_WIDTH = 1280;
-
-    /**
-     * RDP 默认分辨率高
-    */
-    private static final int RDP_HEIGHT = 768;
-
-    /**
-     * RDP 默认 DPI
-    */
-    private static final int RDP_DPI = 96;
-
-    /**
-     * RDP 默认色深
-    */
-    private static final int RDP_COLOR_DEPTH = 24;
-
-    /**
      * 服务属性（guacd 地址）
     */
     private final ServerProperties properties;
@@ -74,6 +54,16 @@ public class GuacdConnectionFactory {
      * 系统配置服务（guacd 地址动态化——配置表优先）
     */
     private final ServerConfigService configService;
+
+    /**
+     * RDP 显示参数（分辨率/色深/画质，系统配置可改，带范围校验与回落）
+     */
+    private final RdpDisplaySettings rdpDisplay;
+
+    /**
+     * guacd 三条链路的可调开关（体验/设备/VNC/SSH 外观），全部带校验与回落
+     */
+    private final GuacdTunables tunables;
 
     /**
      * 创建与 guacd 完成握手的隧道
@@ -137,12 +127,12 @@ public class GuacdConnectionFactory {
         } else if (notBlank(credential.password())) {
             tunnel.setParameter(GuacdConst.PASSWORD, credential.password());
         }
-        // 终端外观
+        // 终端外观：终端类型/字体/字号/退格都可在系统配置里改（带合法性校验与回落）
         tunnel.setParameter(GuacdConst.COLOR_SCHEME, "gray-black");
-        tunnel.setParameter(GuacdConst.FONT_NAME, "monospace");
-        tunnel.setParameter(GuacdConst.FONT_SIZE, 12);
-        tunnel.setParameter(GuacdConst.TERMINAL_TYPE, "xterm-256color");
-        tunnel.setParameter(GuacdConst.BACKSPACE, 127);
+        tunnel.setParameter(GuacdConst.FONT_NAME, tunables.sshFontName());
+        tunnel.setParameter(GuacdConst.FONT_SIZE, tunables.sshFontSize());
+        tunnel.setParameter(GuacdConst.TERMINAL_TYPE, tunables.sshTerminalType());
+        tunnel.setParameter(GuacdConst.BACKSPACE, tunables.sshBackspace());
     }
 
     /**
@@ -157,15 +147,15 @@ public class GuacdConnectionFactory {
         if (notBlank(credential.password())) {
             tunnel.setParameter(GuacdConst.PASSWORD, credential.password());
         }
-        // 图形参数
-        tunnel.setParameter(GuacdConst.COLOR_DEPTH, RDP_COLOR_DEPTH);
-        tunnel.setParameter(GuacdConst.COMPRESS_LEVEL, 7);
-        tunnel.setParameter(GuacdConst.QUALITY_LEVEL, 6);
-        tunnel.setParameter(GuacdConst.SWAP_RED_BLUE, false);
-        tunnel.setParameter(GuacdConst.CURSOR, GuacdConst.CURSOR_LOCAL);
-        tunnel.setParameter(GuacdConst.ENCODINGS, "ZRLE,Hextile,Tight");
+        // 图形参数：色深/压缩/画质/编码/光标都可调（vnc.* 键，带白名单校验与回落）
+        tunnel.setParameter(GuacdConst.COLOR_DEPTH, tunables.vncColorDepth());
+        tunnel.setParameter(GuacdConst.COMPRESS_LEVEL, tunables.vncCompressLevel());
+        tunnel.setParameter(GuacdConst.QUALITY_LEVEL, tunables.vncQualityLevel());
+        tunnel.setParameter(GuacdConst.SWAP_RED_BLUE, tunables.vncSwapRedBlue());
+        tunnel.setParameter(GuacdConst.CURSOR, tunables.vncCursor());
+        tunnel.setParameter(GuacdConst.ENCODINGS, tunables.vncEncodings());
         tunnel.setParameter(GuacdConst.CLIPBOARD_ENCODING, GuacdConst.CLIPBOARD_ENCODING);
-        tunnel.setParameter(GuacdConst.AUTO_RETRY, 0);
+        tunnel.setParameter(GuacdConst.AUTO_RETRY, tunables.vncAutoRetry());
     }
 
     /**
@@ -185,41 +175,41 @@ public class GuacdConnectionFactory {
         }
         // 显式空域名，防止 guacd 自动用 Windows 机器名作为域前缀（如 SAGE4\administrator）
         tunnel.setParameter("domain", "");
-        // 分辨率
-        tunnel.size(RDP_WIDTH, RDP_HEIGHT);
-        tunnel.dpi(RDP_DPI);
+        // 分辨率：系统配置 rdp.width / rdp.height（越界回落默认，见 RdpDisplaySettings）
+        tunnel.size(rdpDisplay.width(), rdpDisplay.height());
+        tunnel.dpi(tunables.rdpDpi());
         // 安全与认证：默认强制 NLA（Windows 默认要求），可用系统配置 guacd.rdp.security 覆盖
         // （取值 any/rdp/tls/nla/nla-ext/vmconnect，部分 RDP 服务/网关需非 NLA 模式）
         String rdpSecurity = configService.getString("guacd.rdp.security", "nla");
         tunnel.setParameter(GuacdConst.SECURITY, rdpSecurity);
-        tunnel.setParameter(GuacdConst.IGNORE_CERT, true);
+        tunnel.setParameter(GuacdConst.IGNORE_CERT, tunables.rdpIgnoreCert());
         tunnel.setParameter(GuacdConst.DISABLE_AUTH, false);
         // 剪贴板/时区/布局
         tunnel.setParameter(GuacdConst.NORMALIZE_CLIPBOARD, "preserve");
-        tunnel.setParameter(GuacdConst.TIMEZONE, "Asia/Shanghai");
-        tunnel.setParameter(GuacdConst.SERVER_LAYOUT, "en-us-qwerty");
+        tunnel.setParameter(GuacdConst.TIMEZONE, tunables.rdpTimezone());
+        tunnel.setParameter(GuacdConst.SERVER_LAYOUT, tunables.rdpKeyboardLayout());
         // 自适应窗口
         tunnel.setParameter(GuacdConst.RESIZE_METHOD, GuacdConst.RESIZE_METHOD_DISPLAY_UPDATE);
         // 图形优化
-        tunnel.setParameter(GuacdConst.COLOR_DEPTH, RDP_COLOR_DEPTH);
-        tunnel.setParameter(GuacdConst.FORCE_LOSSLESS, false);
-        tunnel.setParameter(GuacdConst.ENABLE_WALLPAPER, false);
-        tunnel.setParameter(GuacdConst.ENABLE_THEMING, false);
-        tunnel.setParameter(GuacdConst.ENABLE_FONT_SMOOTHING, true);
-        tunnel.setParameter(GuacdConst.ENABLE_FULL_WINDOW_DRAG, true);
-        tunnel.setParameter(GuacdConst.ENABLE_DESKTOP_COMPOSITION, true);
-        tunnel.setParameter(GuacdConst.ENABLE_MENU_ANIMATIONS, false);
+        tunnel.setParameter(GuacdConst.COLOR_DEPTH, rdpDisplay.colorDepth());
+        tunnel.setParameter(GuacdConst.FORCE_LOSSLESS, rdpDisplay.forceLossless());
+        tunnel.setParameter(GuacdConst.ENABLE_WALLPAPER, tunables.rdpWallpaper());
+        tunnel.setParameter(GuacdConst.ENABLE_THEMING, tunables.rdpTheming());
+        tunnel.setParameter(GuacdConst.ENABLE_FONT_SMOOTHING, tunables.rdpFontSmoothing());
+        tunnel.setParameter(GuacdConst.ENABLE_FULL_WINDOW_DRAG, tunables.rdpFullWindowDrag());
+        tunnel.setParameter(GuacdConst.ENABLE_DESKTOP_COMPOSITION, tunables.rdpDesktopComposition());
+        tunnel.setParameter(GuacdConst.ENABLE_MENU_ANIMATIONS, tunables.rdpMenuAnimations());
         tunnel.setParameter(GuacdConst.DISABLE_BITMAP_CACHING, false);
         tunnel.setParameter(GuacdConst.DISABLE_OFFSCREEN_CACHING, false);
         tunnel.setParameter(GuacdConst.DISABLE_GLYPH_CACHING, false);
         tunnel.setParameter(GuacdConst.DISABLE_GFX, false);
-        // 音频
+        // 音频：输出默认开、输入（麦克风）默认关；DISABLE_AUDIO_OUTPUT 是反向参数
         tunnel.setAudioMimeTypes(GuacdConst.AUDIO_MIMETYPES);
-        tunnel.setParameter(GuacdConst.ENABLE_AUDIO_INPUT, false);
-        tunnel.setParameter(GuacdConst.DISABLE_AUDIO_OUTPUT, false);
+        tunnel.setParameter(GuacdConst.ENABLE_AUDIO_INPUT, tunables.rdpAudioInput());
+        tunnel.setParameter(GuacdConst.DISABLE_AUDIO_OUTPUT, !tunables.rdpAudioOutput());
         // 客户端标识 + RDP 磁盘映射（文件传输驱动）
         tunnel.setParameter(GuacdConst.CLIENT_NAME, "spring-support");
-        tunnel.setParameter(GuacdConst.ENABLE_DRIVE, false);
+        tunnel.setParameter(GuacdConst.ENABLE_DRIVE, tunables.rdpDrive());
         tunnel.setParameter(GuacdConst.CREATE_DRIVE_PATH, false);
         tunnel.setParameter(GuacdConst.DRIVE_NAME, GuacdConst.DRIVE_DRIVE_NAME);
         String drivePath = properties.getGuacd().getDrivePath();
@@ -228,7 +218,7 @@ public class GuacdConnectionFactory {
         }
         // 触控/控制台
         tunnel.setParameter(GuacdConst.ENABLE_TOUCH, false);
-        tunnel.setParameter(GuacdConst.CONSOLE, false);
+        tunnel.setParameter(GuacdConst.CONSOLE, tunables.rdpConsole());
     }
 
     /**

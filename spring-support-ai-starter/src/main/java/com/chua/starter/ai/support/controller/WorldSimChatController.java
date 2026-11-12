@@ -297,7 +297,7 @@ public class WorldSimChatController {
         List<Map<String, Object>> history = buildHistory(world.getId(), scene == null ? null : scene.getId());
         SysAiRole role = roleMapper.selectById(member.getRoleId());
         String displayName = displayName(member, role);
-        String[] resolved = resolveModelQualified(member, role);
+        String[] resolved = resolveModelQualified(world, member, role);
         String model = resolved[0];
         String providerId = resolved[1];
         if (model == null || model.isBlank()) {
@@ -1151,18 +1151,26 @@ public class WorldSimChatController {
     }
 
     /**
-     * resolve Model Qualified
-     * @param member 参数
-     * @param role 参数
-     * @return 返回值
-    */
-    private String[] resolveModelQualified(SysAiWorldNpc member, SysAiRole role) {
+     * 解析某位 NPC 开口用哪个模型。
+     *
+     * <p>优先级：NPC 自己的 model_override → 角色库里的 role.model → 世界配置的导演模型 → 全局默认。
+     * 把世界导演模型放在角色之后、全局之前，是为了让「世界设置 → 导演模型」在
+     * 世界内所有没单独指定模型的角色身上也生效（弹框文案承诺的正是这个语义）。</p>
+     *
+     * @param world 世界（可空）
+     * @param member 世界 NPC
+     * @param role   角色库角色（可空）
+     * @return [模型, providerId]
+     */
+    private String[] resolveModelQualified(SysAiWorld world, SysAiWorldNpc member, SysAiRole role) {
         String providerId = null;
         String raw = null;
         if (member.getModelOverride() != null && !member.getModelOverride().isBlank()) {
             raw = member.getModelOverride();
         } else if (role != null && role.getModel() != null && !role.getModel().isBlank()) {
             raw = role.getModel();
+        } else if (world != null && world.getDirectorModel() != null && !world.getDirectorModel().isBlank()) {
+            raw = world.getDirectorModel();
         }
         if (raw != null) {
             providerId = extractProviderId(raw);

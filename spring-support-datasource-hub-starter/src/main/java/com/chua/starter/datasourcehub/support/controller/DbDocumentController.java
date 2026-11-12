@@ -200,7 +200,7 @@ public class DbDocumentController {
      * <p><b>支持预览的格式</b>：</p>
      * <ul>
      *   <li>markdown → 转 HTML（marked 库）；</li>
-     *   <li>html → 直接包裹进 HTML 壳；</li>
+     *   <li>html → 直接返回模板渲染出的完整 HTML（模板自带 head/style/script，不再二次包裹）；</li>
      *   <li>word / pdf → 这两种是二进制格式，浏览器无法直接渲染，返回 501 提示下载。</li>
      * </ul>
      *
@@ -273,15 +273,15 @@ public class DbDocumentController {
         byte[] raw = Files.readAllBytes(tmp.toPath());
         Files.deleteIfExists(tmp.toPath());
 
-        String htmlBody;
         if ("html".equalsIgnoreCase(targetFormat)) {
-            // html 渲染器直接出 HTML 内容，无需再转
-            htmlBody = new String(raw, StandardCharsets.UTF_8);
-        } else {
-            // markdown → HTML（内联 marked 风格，不依赖外部 CDN）
-            String markdown = new String(raw, StandardCharsets.UTF_8);
-            htmlBody = markdownToHtml(markdown);
+            // html 模板本身就是完整文档（自带 <head>/<style>/<script>），
+            // 再套一层 HTML_WRAPPER 会得到嵌套 html/head，样式和脚本都会打架。
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                    .body(raw);
         }
+        // markdown → HTML（内联 marked 风格，不依赖外部 CDN）
+        String htmlBody = markdownToHtml(new String(raw, StandardCharsets.UTF_8));
 
         String html = HTML_WRAPPER.formatted(data.getTitle() != null ? data.getTitle() : "数据库设计文档", htmlBody);
         return ResponseEntity.ok()

@@ -279,7 +279,7 @@ public class ApiModelMetricsController {
      * @return 返回值
     */
     private static ApiResult<Map<String, Object>> manualError(String code, String msg) {
-        return new ApiResult<>(false, null, code, msg, null);
+        return new ApiResult<>(false, null, code, msg, null, null);
     }
 
     /**

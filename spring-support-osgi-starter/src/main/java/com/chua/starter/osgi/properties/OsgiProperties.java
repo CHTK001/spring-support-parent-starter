@@ -142,6 +142,14 @@ public class OsgiProperties {
          * 需由使用方显式开启并纳入既有的接口鉴权体系。</p>
          */
         private boolean enabled = false;
+
+        /**
+         * 是否允许变更类操作（上传安装、升级、启动、停止、卸载）。
+         *
+         * <p>默认开启，但只有在 {@link #enabled}=true 时端点才存在。
+         * 关闭后仍可在界面上查看 bundle 清单，但不能改；适用于只读观测场景。</p>
+         */
+        private boolean manageEnabled = true;
     }
 
     /**

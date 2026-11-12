@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.paper.pipeline.setting;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +59,7 @@ public class MarkingSettingService {
      */
     public static final String MATCH_MODE_LOOSE = "loose";
 
-    private final EduAiProperties properties;
+    private final PaperPipelineProperties properties;
 
     /**
      * 全局设置读取器（ai-starter 装配；缺失时全部回落到 YAML 默认值）
@@ -129,7 +129,7 @@ public class MarkingSettingService {
      * @return 设置
      */
     private MarkingSettingVO load() {
-        EduAiProperties.Retry defaults = retryDefaults();
+        PaperPipelineProperties.Retry defaults = retryDefaults();
         MarkingSettingVO setting = new MarkingSettingVO();
 
         setting.setRetryTimes(readInt("retry_times", defaults.getTimes()));
@@ -251,13 +251,13 @@ public class MarkingSettingService {
     }
 
     /**
-     * 取 YAML 侧的重试默认值；缺失时回退 {@link EduAiProperties.Retry} 的字段默认
+     * 取 YAML 侧的重试默认值；缺失时回退 {@link PaperPipelineProperties.Retry} 的字段默认
      *
      * @return 重试默认配置
      */
-    private EduAiProperties.Retry retryDefaults() {
+    private PaperPipelineProperties.Retry retryDefaults() {
         if (properties.getAi() == null || properties.getAi().getRetry() == null) {
-            return new EduAiProperties.Retry();
+            return new PaperPipelineProperties.Retry();
         }
         return properties.getAi().getRetry();
     }

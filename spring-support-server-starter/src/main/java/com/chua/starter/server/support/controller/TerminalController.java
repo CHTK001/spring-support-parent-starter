@@ -9,6 +9,7 @@ import com.chua.starter.server.support.mapper.MsTerminalBookmarkMapper;
 import com.chua.starter.server.support.mapper.MsTerminalSnippetMapper;
 import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.TerminalSessionService;
+import com.chua.starter.server.support.terminal.RdpDisplaySettings;
 import com.chua.starter.server.support.spi.TerminalSessionChannelRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,6 +49,11 @@ public class TerminalController {
     private final TerminalSessionChannelRegistry sessionChannels;
 
     /**
+     * RDP 显示参数（与 guacd 链路共用同一套取值与回落规则）
+     */
+    private final RdpDisplaySettings rdpDisplay;
+
+    /**
      * 命令片段 映射器（简单 CRUD 直连）
     */
     private final MsTerminalSnippetMapper snippetMapper;
@@ -56,6 +62,21 @@ public class TerminalController {
      * 路径书签 映射器（简单 CRUD 直连）
     */
     private final MsTerminalBookmarkMapper bookmarkMapper;
+
+    /**
+     * RDP 显示参数（分辨率 / 色深 / 画质取向）。
+     *
+     * <p>自研直连 RDP 的前端（{@code ScRdpDirectViewer}）用它决定初始画布尺寸：
+     * 这里返回的是**校验后**的生效值，与 guacd 链路读的是同一套配置，
+     * 前端不需要重复实现范围判断。</p>
+     *
+     * @return 生效值
+     */
+    @Operation(summary = "RDP 显示参数")
+    @GetMapping("/display/rdp")
+    public ReturnResult<RdpDisplaySettings.View> rdpDisplay() {
+        return ReturnResult.ok(rdpDisplay.view());
+    }
 
     /**
      * 在线会话概览

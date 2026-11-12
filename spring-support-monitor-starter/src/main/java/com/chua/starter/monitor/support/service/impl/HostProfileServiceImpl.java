@@ -23,6 +23,7 @@ import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.model.SystemConfigItemVO;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.HostProfileService;
+import com.chua.starter.monitor.support.spi.SectionUnavailableException;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.monitor.support.spi.impl.AgentProvider;
@@ -407,6 +408,12 @@ public class HostProfileServiceImpl implements HostProfileService {
             R rows = reader.apply(providerRouter.route(host), host);
             clearError(hostId);
             return ReturnResult.ok(rows);
+        } catch (SectionUnavailableException e) {
+            // 通道是通的，只是这个分区读不到（例如 iptables 要 root）。
+            // 消息本身已经是动作建议，再套「通道不可达」会把排查带到网络上去。
+            String reason = cut(e.getMessage());
+            markError(hostId, reason);
+            return ReturnResult.error(reason);
         } catch (Exception e) {
             String reason = cut(e.getMessage());
             markError(hostId, reason);

@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.workspace.git;
 
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.chua.starter.ai.support.workspace.WorkspacePathResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -120,6 +121,11 @@ public class AiGitService {
      * 工作目录解析器
      */
     private final WorkspacePathResolver pathResolver;
+
+    /**
+     * 会话执行目录解析器：会话绑定了项目目录时，Git 仓库根从项目里找
+     */
+    private final SessionWorkspaceResolver sessionWorkspaceResolver;
 
     /**
      * 查询仓库状态。
@@ -757,7 +763,8 @@ public class AiGitService {
      */
     private WorkspacePaths workspacePaths(String sessionId) {
         Path workspaceRoot = pathResolver.agentWorkspace();
-        Path sessionRoot = pathResolver.sessionWorkspace(sessionId);
+        // 仓库根查找边界仍是账号工作目录；起点换成会话执行目录（会话绑了项目就在项目里）
+        Path sessionRoot = sessionWorkspaceResolver.sessionRoot(sessionId);
         return new WorkspacePaths(workspaceRoot, sessionRoot);
     }
 

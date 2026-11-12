@@ -84,6 +84,21 @@ public interface KnowledgeGraphService {
     void deleteByKnowledgeBase(String knowledgeBaseId);
 
     /**
+     * 把某知识点（或目录子树）的图谱关联迁到新路径。
+     *
+     * <p>移动/改名会改变 docId 与相对路径，而 ref 表以 {@code doc_path} 记录来源；
+     * 不迁移的话，图谱仍指向已经不存在的旧路径，按知识点查图会查不到，
+     * 删除新路径也不会连带清掉旧关联。这里原地改 ref 的 doc_path，保留已抽取的
+     * 实体与关系（不销毁重抽）。</p>
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param oldDocPath      旧相对路径；目录以它作为子树前缀
+     * @param newDocPath      新相对路径
+     * @return 迁移的 ref 行数
+     */
+    int renameDocPath(String knowledgeBaseId, String oldDocPath, String newDocPath);
+
+    /**
      * 查询整个知识库的关系图谱。
      *
      * @param knowledgeBaseId 知识库ID

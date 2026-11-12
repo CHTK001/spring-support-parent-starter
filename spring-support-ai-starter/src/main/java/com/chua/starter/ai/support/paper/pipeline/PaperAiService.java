@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.AiChatGateway;
-import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService;
 import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingVO;
 import com.chua.starter.ai.support.paper.pipeline.util.AnswerSimilarity;
@@ -57,13 +57,13 @@ public class EduAiService {
     /**
      * 属性
      */
-    private final EduAiProperties properties;
+    private final PaperPipelineProperties properties;
 
     /**
      * 阅卷运行时设置（重试次数 / 退避曲线）。
      *
      * <p>可选项：读到系统配置弹窗保存的运行时覆盖值；bean 缺失（如精简上下文）时
-     * 完全退回 {@link EduAiProperties} 的 YAML 默认值，不影响原行为。</p>
+     * 完全退回 {@link PaperPipelineProperties} 的 YAML 默认值，不影响原行为。</p>
      */
     @Autowired(required = false)
     private MarkingSettingService markingSettingService;
@@ -86,7 +86,7 @@ public class EduAiService {
      * @param properties 属性，不允许为 null
      */
     @Autowired
-    public EduAiService(EduAiProperties properties) {
+    public EduAiService(PaperPipelineProperties properties) {
         this.properties = properties;
     }
 
@@ -498,7 +498,7 @@ public class EduAiService {
      * @param systemHint  系统提示词摘要（可为 null）
      */
     private void fireAlertOnRetryExhausted(Exception e, int attempts, String systemHint) {
-        EduAiProperties.Alert alert = properties.getAlert();
+        PaperPipelineProperties.Alert alert = properties.getAlert();
         if (!alert.isEnabled() || StringUtils.isBlank(alert.getWebhookUrl())) {
             return;
         }
@@ -543,7 +543,7 @@ public class EduAiService {
      * @return 模型响应
      */
     private String callWithRateLimitRetry(String systemPrompt, String userPrompt) {
-        EduAiProperties.Retry retry = properties.getAi().getRetry();
+        PaperPipelineProperties.Retry retry = properties.getAi().getRetry();
         int maxRetry = Math.max(0, retry.getTimes());
         double multiplier = retry.getBackoffMultiplier() > 1 ? retry.getBackoffMultiplier() : 2.0D;
         long cap = retry.getMaxBackoffMillis() > 0 ? retry.getMaxBackoffMillis() : 15000L;

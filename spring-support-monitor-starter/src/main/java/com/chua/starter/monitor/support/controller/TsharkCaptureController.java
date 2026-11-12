@@ -9,7 +9,7 @@ import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
-import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
+import com.chua.starter.monitor.support.model.TsharkRestoreCapabilityVO;import com.chua.starter.monitor.support.model.dto.TsharkCaptureStartDTO;
 import com.chua.starter.monitor.support.service.impl.TsharkCaptureService;
 import com.chua.starter.monitor.support.tshark.TsharkInstallStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
@@ -374,6 +374,34 @@ public class TsharkCaptureController {
     @GetMapping("/sessions/{id}/stats/protocol")
     public ReturnResult<List<TsharkProtocolStatVO>> protocolStats(@PathVariable Long id) {
         return this.tsharkCaptureService.protocolStats(id);
+    }
+
+    /**
+     * 可还原协议清单（能力矩阵）。
+     *
+     * <p>页面用它告诉用户「这个工作台能还原什么、还原到哪一层」，数据来自 SPI
+     * 注册的还原器，而不是前端写死的表——新增还原器会自动出现。</p>
+     *
+     * @return 协议名 + 优先级 + 还原深度
+     */
+    @Operation(summary = "可还原协议清单")
+    @GetMapping("/restore/capabilities")
+    public ReturnResult<List<TsharkRestoreCapabilityVO>> restoreCapabilities() {
+        return this.tsharkCaptureService.restoreCapabilities();
+    }
+
+    /**
+     * TLS keylog 状态。
+     *
+     * <p>配了 keylog 才能把 TLS 里的 HTTP/2、MSRP、SMPP 等解出来；这个接口让页面
+     * 明确显示「已启用 / 未配置」，避免用户以为「抓到了却没内容」是解析坏了。</p>
+     *
+     * @return configured / enabled / path
+     */
+    @Operation(summary = "TLS keylog 状态")
+    @GetMapping("/tls/keylog")
+    public ReturnResult<Map<String, Object>> tlsKeylog() {
+        return this.tsharkCaptureService.tlsKeylogState();
     }
 
     /**

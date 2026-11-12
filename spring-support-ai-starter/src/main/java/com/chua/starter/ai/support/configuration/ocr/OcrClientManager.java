@@ -372,8 +372,35 @@ public class OcrClientManager {
      */
     private OcrPipeline build() {
         // 设置页模型选择器存「onnx:裸名」，注册表只认裸名——统一归一后再下传
-        String detector = ModelIds.bare(settingReader.getStr(GROUP, "detector_model"));
-        String recognizer = ModelIds.bare(settingReader.getStr(GROUP, "recognizer_model"));
+        return build(ModelIds.bare(settingReader.getStr(GROUP, "detector_model")),
+                ModelIds.bare(settingReader.getStr(GROUP, "recognizer_model")));
+    }
+
+    /**
+     * 用指定模型另建一条 OCR 管线（不影响 {@link #current()} 的共享实例）。
+     *
+     * <p>试卷分组需要「自己的 OCR 模型，留空复用 ocr 分组」。这里只替换模型标识，
+     * 阈值 / 方向 / 增强 / 矫正 / 设备仍取 {@code ocr} 分组：这些是模型级参数
+     * （见 {@code ModelParamBridge}），对同名模型是进程级共享的，
+     * 按调用方各配一份只会互相覆盖，所以 paper 分组不再重复声明它们。</p>
+     *
+     * @param detectorModel   检测模型引用，可为空（沿用 ocr 分组）
+     * @param recognizerModel 识别模型引用，可为空（沿用 ocr 分组）
+     * @return OCR 管线
+     * @throws IllegalStateException 两个模型都未配置时
+     */
+    public OcrPipeline buildWithModels(String detectorModel, String recognizerModel) {
+        return build(ModelIds.bare(detectorModel), ModelIds.bare(recognizerModel));
+    }
+
+    /**
+     * 按模型标识装配管线。
+     *
+     * @param detector   检测模型裸名
+     * @param recognizer 识别模型裸名
+     * @return OCR 管线
+     */
+    private OcrPipeline build(String detector, String recognizer) {
         if (StringUtils.isBlank(detector) && StringUtils.isBlank(recognizer)) {
             /**
              * illegal状态异常。

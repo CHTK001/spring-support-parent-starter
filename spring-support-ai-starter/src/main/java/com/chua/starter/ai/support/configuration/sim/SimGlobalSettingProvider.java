@@ -66,7 +66,8 @@ public class SimGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("story_mkdir", "true", "BOOLEAN",
                         "世界数据目录不存在时自动创建（true 时自动建目录；false 时写文件失败）", 2),
                 new SettingItem("story_max_acts", "64", "NUMBER",
-                        "单世界最大幕次（超过时禁止执笔新幕，只重播）", 3),
+                        "单世界最大幕次：到达上限后拒绝执笔新幕（创建报参数错误），"
+                                + "自动补幕则停在最后一幕继续重播，避免剧本无限增长", 3),
                 // ==================== 舞台出片 ====================
                 // 一幕的「画面」怎么来：video = 让 AI 按分镜出视频（图生视频优先，失败退回文生视频），
                 // 舞台连播；image = 只出场景图，舞台用图文演出。关掉视频等于把每一幕省成一两张图。

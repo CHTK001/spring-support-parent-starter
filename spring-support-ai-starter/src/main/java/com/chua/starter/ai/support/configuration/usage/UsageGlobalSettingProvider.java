@@ -69,6 +69,9 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("usage_report_interval", "3600", "NUMBER", "定时聚合时间（秒），最小 60 秒，未配置默认 3600（1小时）", 4),
                 new SettingItem("usage_timewheel_enabled", "false", "BOOLEAN", "后台时间轮：开启后用量同步改用时间轮调度", 5),
                 new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 6),
+                // 下面 5 项是**前端消费**配置：后端不读，由用量看板直接调设置接口取值
+                // （UsageConfigSettings.vue / useUsageBoard.ts / usage/format.ts）。
+                // 它们是真实生效的，只是生效点在浏览器侧，后端 grep 不到读取点。
                 new SettingItem("usage_currency", "CNY", "STRING", "货币单位：CNY（人民币 ¥）/ USD（美元 $）/ EUR（欧元 €）", 7),
                 new SettingItem("usage_token_scale", "auto", "STRING", "Token 显示量级：auto（自动 K/M/B 缩写）/ raw（完整数值）", 8),
                 new SettingItem("usage_currency_auto_convert", "true", "BOOLEAN", "货币自动换算：开启后切换货币按下方汇率换算金额，关闭则仅切换符号", 9),

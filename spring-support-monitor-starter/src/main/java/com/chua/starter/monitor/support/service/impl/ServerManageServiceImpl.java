@@ -11,6 +11,7 @@ import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
+import com.chua.starter.monitor.support.operlog.ServerOperLogNodeSnapshot;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry.RuntimeServer;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
@@ -191,6 +192,9 @@ public class ServerManageServiceImpl implements ServerManageService {
             if (node == null) {
                 return ReturnResult.error("节点不存在: " + id);
             }
+            // 先登记快照再删行：@SysLog 事件在方法返回后才发出，那时主表已查不到这个节点，
+            // 没有快照的话 DELETE 那条日志的 nodeName / target 只能留空
+            ServerOperLogNodeSnapshot.capture(node);
             nodeRegistry.remove(id);
             nodeMapper.deleteById(id);
             serverOperLogService.purge(id);

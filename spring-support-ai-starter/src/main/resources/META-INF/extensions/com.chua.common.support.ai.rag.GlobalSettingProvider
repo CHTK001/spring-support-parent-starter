@@ -20,3 +20,4 @@ com.chua.starter.ai.support.configuration.reid.ReidGlobalSettingProvider
 com.chua.starter.ai.support.configuration.marking.MarkingGlobalSettingProvider
 com.chua.starter.ai.support.configuration.compose.PaperComposeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.health.ChannelProbeGlobalSettingProvider
+com.chua.starter.ai.support.configuration.input.InputSuggestGlobalSettingProvider

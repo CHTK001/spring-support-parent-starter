@@ -60,6 +60,22 @@ public interface ChannelUpstreamAdmin {
     }
 
     /**
+     * 本网关承载的全部业务渠道，以及各自对应的上游 provider id 候选。
+     *
+     * <p>这是左栏「网关」分组的唯一真值：前端据此判断某个渠道是否由网关接管、
+     * 角标该印几接入。<b>不要</b>让前端再维护一份对照表——网关改一次 provider 命名，
+     * 页面就会静默滑回「待接入」，而且没有任何报错。</p>
+     *
+     * <p>默认空表（网关不主动声明任何渠道归属，行为与只有 {@link #providerIdsOf(String)}
+     * 时一致）。网关型渠道实现按自己的对照表覆盖。</p>
+     *
+     * @return 业务渠道 id → provider id 候选（按优先级）；无声明时为空表
+     */
+    default Map<String, List<String>> ownedChannels() {
+        return Map.of();
+    }
+
+    /**
      * 是否支持插件管理（{@link #plugins} / {@link #pluginAction}）。
      *
      * <p>插件是网关自己的扩展机制，不是每个网关型渠道都有。默认 false，

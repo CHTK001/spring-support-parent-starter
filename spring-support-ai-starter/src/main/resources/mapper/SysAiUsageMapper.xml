@@ -235,7 +235,12 @@
                 早期只落了汇总计量的调用没有这两个字段，混进均值会把延迟拉低。
             -->
             AVG(sys_ai_usage_first_token_latency) AS avgFirstTokenLatency,
-            AVG(sys_ai_usage_total_latency) AS avgTotalLatency
+            AVG(sys_ai_usage_total_latency) AS avgTotalLatency,
+            <!--
+                平均输出速度：响应表中实际记录的 tokens_per_second（输出 Token / 解码窗口）
+                的均值。不调用端点的端到端口，只体现实时解码表现；无实测样本时 AVG 返回 null。
+            -->
+            AVG(sys_ai_usage_tokens_per_second) AS avgTokensPerSecond
         FROM sys_ai_usage
         <where>
             <if test="startTime != null">

@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.time.LocalDateTime;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
@@ -25,6 +26,7 @@ import com.chua.starter.ai.support.service.SessionNextTaskService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 /**
@@ -65,12 +67,22 @@ public class AiSessionController {
     private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService;
 
       /**
+       * 会话自定义工作目录（项目目录）解析器：校验范围、读会话绑定、算终端/Git 的执行目录
+       */
+    private final SessionWorkspaceResolver sessionWorkspaceResolver;
+
+      /**
        * 会话「AI 联想下一个任务」服务
        *
        * <p>开关值钉在会话自身的 {@code settings.aiNextTask}（会话保留原始信息），
        * 联想走 {@code EffectiveChatModelResolver} 解析出的模型，不在此处写死模型名。</p>
        */
     private final SessionNextTaskService sessionNextTaskService;
+
+      /**
+       * 会话输入框预测服务（按 Tab 填入的「下一条消息」建议，不自动发送）
+       */
+    private final com.chua.starter.ai.support.service.SessionInputSuggestService sessionInputSuggestService;
 
       /**
        * 工作目录文件变化事件流（工作区侧栏实时刷新用）
@@ -117,6 +129,64 @@ public class AiSessionController {
             log.warn("[Session] 解析 settings 失败: {}", e.getMessage());
             return new HashMap<>();
         }
+    }
+
+      /**
+       * 合并会话 settings，并统一托管控件「会话工作目录」。
+       *
+       * <p>工作目录虽是客户端提交的，但只有落在 {@code <基路径>/<账号>/agent} 或
+       * {@code <基路径>/public} 下、且真实存在的目录才会被接受（校验在
+       * {@link SessionWorkspaceResolver#normalize(String)}）。因此先把客户端塞进 settings 的
+       * 同名键剔掉，再按入参校验后写回，避免绕过范围校验。</p>
+       *
+       * @param previousJson 库里已有的 settings JSON（新建会话传 null）
+       * @param incomingSettings 本次提交的 settings；null 表示保持原值
+       * @param touchWorkspace 本次是否修改工作目录
+       * @param rawWorkspacePath 本次提交的工作目录；空值表示清空
+       * @return 合并后的 JSON；内容为空时返回 null
+       */
+    private String mergeSettings(String previousJson, Object incomingSettings,
+                                 boolean touchWorkspace, Object rawWorkspacePath) {
+        Map<String, Object> settings = new LinkedHashMap<>(readSettings(previousJson));
+        Map<String, Object> incoming = asSettingsMap(incomingSettings);
+        if (incoming != null) {
+            settings = new LinkedHashMap<>(incoming);
+              // 工作目录是服务端托管键：客户端不能借 settings 绕过下面的范围校验
+            settings.remove(SessionWorkspaceResolver.WORKSPACE_PATH_KEY);
+        }
+        String current = Objects.toString(settings.get(SessionWorkspaceResolver.WORKSPACE_PATH_KEY), null);
+        if (touchWorkspace) {
+            current = Objects.toString(rawWorkspacePath, null);
+        }
+        String normalized = sessionWorkspaceResolver.normalize(current);
+        if (normalized == null) {
+            settings.remove(SessionWorkspaceResolver.WORKSPACE_PATH_KEY);
+        } else {
+            settings.put(SessionWorkspaceResolver.WORKSPACE_PATH_KEY, normalized);
+        }
+        return settings.isEmpty() ? null : writeSettings(settings);
+    }
+
+      /**
+       * 把前端提交的 settings 统一成键值对。
+       *
+       * @param rawSettings 前端提交的 settings
+       * @return 键值对；null 表示本次没有提交 settings
+       */
+    private Map<String, Object> asSettingsMap(Object rawSettings) {
+        if (rawSettings == null) {
+            return null;
+        }
+        if (rawSettings instanceof Map<?, ?> map) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            map.forEach((key, value) -> result.put(String.valueOf(key), value));
+            return result;
+        }
+        if (rawSettings instanceof CharSequence text) {
+              // 双重编码的 settings：直接按 JSON 文本解析，避免被当成字符串丢掉
+            return readSettings(text.toString());
+        }
+        return readSettings(writeSettings(rawSettings));
     }
 
       /**
@@ -854,7 +924,10 @@ public class AiSessionController {
             result.put("updatedAt", System.currentTimeMillis());
         }
         
-        result.put("settings", readSettings(session == null ? null : session.getSettings()));
+        Map<String, Object> detailSettings = readSettings(session == null ? null : session.getSettings());
+        result.put("settings", detailSettings);
+          // 会话绑定的项目目录：前端据此回显工作目录，未设置时为 null
+        result.put("workspacePath", detailSettings.get(SessionWorkspaceResolver.WORKSPACE_PATH_KEY));
         return ReturnResult.ok(result);
     }
 
@@ -920,14 +993,17 @@ public class AiSessionController {
             session.setMcpServerIds(mcpCsvOnUpdate);
         }
 
-          // 更新会话级设置（runMode、温度、topP、知识库引用等），整体 JSON 持久化
-        if (body.containsKey("settings")) {
-            session.setSettings(writeSettings(body.get("settings")));
+          // 更新会话级设置（runMode、温度、topP、知识库引用等）与会话工作目录。
+          // 两者落在同一份 settings JSON：工作目录由 mergeSettings 统一做范围校验。
+        if (body.containsKey("settings") || body.containsKey("workspacePath")) {
+            session.setSettings(mergeSettings(session.getSettings(), body.get("settings"),
+                    body.containsKey("workspacePath"), body.get("workspacePath")));
         }
 
         session.setUpdateTime(LocalDateTime.now());
         sessionMapper.updateById(session);
 
+        Map<String, Object> updatedSettings = readSettings(session.getSettings());
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         result.put("id", String.valueOf(session.getId()));
@@ -936,7 +1012,8 @@ public class AiSessionController {
         result.put("modelId", session.getModelId());
         result.put("characterId", session.getCharacterId());
         result.put("mcpServerIds", parseIdList(session.getMcpServerIds()));
-        result.put("settings", readSettings(session.getSettings()));
+        result.put("settings", updatedSettings);
+        result.put("workspacePath", updatedSettings.get(SessionWorkspaceResolver.WORKSPACE_PATH_KEY));
         return ReturnResult.ok(result);
     }
 
@@ -966,14 +1043,19 @@ public class AiSessionController {
             mcpCsvOnCreate = null;
         }
         session.setMcpServerIds(mcpCsvOnCreate);
-        session.setSettings(writeSettings(body.get("settings")));
+          // 先确认身份再碰文件系统：normalize 会按当前账号解析工作区根，
+          // 未登录时不该有机会落到公共目录
         session.setSysUserId(AiUserContext.requireUserId());
+        String createdSettings = mergeSettings(null, body.get("settings"),
+                body.containsKey("workspacePath"), body.get("workspacePath"));
+        session.setSettings(createdSettings);
         session.setCreateTime(LocalDateTime.now());
         session.setUpdateTime(LocalDateTime.now());
         session.setStatus(1);
         session.setIsArchived(false);
         sessionMapper.insert(session);
 
+        Map<String, Object> createdSettingsView = readSettings(createdSettings);
         Map<String, Object> result = new HashMap<>();
         result.put("id", String.valueOf(session.getId()));
         result.put("title", session.getTitle());
@@ -981,7 +1063,8 @@ public class AiSessionController {
         result.put("modelId", session.getModelId());
         result.put("characterId", session.getCharacterId());
         result.put("mcpServerIds", parseIdList(session.getMcpServerIds()));
-        result.put("settings", readSettings(session.getSettings()));
+        result.put("settings", createdSettingsView);
+        result.put("workspacePath", createdSettingsView.get(SessionWorkspaceResolver.WORKSPACE_PATH_KEY));
         result.put("createdAt", session.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
         result.put("updatedAt", session.getUpdateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
 
@@ -1487,6 +1570,33 @@ public class AiSessionController {
     }
 
       /**
+       * 预测该会话输入框里「用户下一条最可能发送的消息」。
+       *
+       * <p><b>这条建议绝不会被自动发送</b>：前端只把它当灰字提示，用户按 Tab 才填入输入框，
+       * 填入后仍是可编辑草稿，发不发由用户决定。</p>
+       *
+       * <p>模型口径：配置 {@code input_suggest.suggest_model} 优先，否则用请求体带来的
+       * 当前会话模型，再兜底生效对话模型链。会话没有消息、模型不可用或调用失败时
+       * 返回空建议 + 原因文案（HTTP 仍是 200），预测失败不该打断用户输入。</p>
+       *
+       * @param id   会话标识
+       * @param body 含 model（当前会话模型，可空）的请求体，可为空
+       * @return 预测文本、实际模型、耗时与不可用原因
+       */
+    @PostMapping("/{id}/suggest-input")
+    public ReturnResult<com.chua.starter.ai.support.model.InputSuggestResponse> suggestInput(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) com.chua.starter.ai.support.model.InputSuggestRequest body) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        String requestedModel = body == null ? null : body.model();
+        return ReturnResult.ok(sessionInputSuggestService.suggest(sessionId, requestedModel));
+    }
+
+      /**
        * 取会话工作目录的文件树。
        *
        * <p>目录口径与对话写入侧一致：{@code <system.workspaceBaseDir>/<当前账号>/agent}
@@ -1502,7 +1612,7 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
         requireReadableSession(sessionId);
-        java.nio.file.Path root = resolveAgentWorkspace();
+        java.nio.file.Path root = resolveSessionRoot(String.valueOf(sessionId));
         Map<String, Object> result = new HashMap<>();
         result.put("tree", root == null ? new ArrayList<>() : listWorkspace(root, 0));
         return ReturnResult.ok(result);
@@ -1525,7 +1635,7 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
         requireReadableSession(sessionId);
-        java.nio.file.Path root = resolveAgentWorkspace();
+        java.nio.file.Path root = resolveSessionRoot(String.valueOf(sessionId));
         String path = root == null ? "" : root.toString();
         Map<String, Object> result = new HashMap<>();
         result.put("path", path);
@@ -1538,7 +1648,7 @@ public class AiSessionController {
        *
        * <p>前端打开工作区侧栏时按会话连上来，智能体往工作目录写文件时就地推送，
        * 文件树与预览自动刷新，不用手动刷新。归属与目录口径都复用上面两个出口：
-       * 目录按账号隔离（{@link #resolveAgentWorkspace}），会话归属走
+       * 目录按「会话绑定的项目目录 / 账号工作目录」解析（{@link #resolveSessionRoot}），会话归属走
        * {@link #requireReadableSession}。</p>
        *
        * <p>基路径未配置时回 404 空响应：前端把 404/405/410 当作「接口不存在」永久停止
@@ -1555,7 +1665,7 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
         requireReadableSession(sessionId);
-        java.nio.file.Path root = resolveAgentWorkspace();
+        java.nio.file.Path root = resolveSessionRoot(String.valueOf(sessionId));
         if (root == null) {
             return org.springframework.http.ResponseEntity.notFound().build();
         }
@@ -1596,6 +1706,20 @@ public class AiSessionController {
             log.warn("[Session] 解析工作目录失败 base={}: {}", base, e.getMessage());
             return null;
         }
+    }
+
+      /**
+       * 解析会话的工作区根：会话绑定了项目目录就用项目，否则回退账号工作目录。
+       *
+       * <p>侧栏文件树、{@code workspace-path}、SSE 监视都以这个根为准，口径与智能体的执行目录一致
+       * （见 {@link SessionWorkspaceResolver#projectRoot(String)}）。</p>
+       *
+       * @param sessionId 会话标识（数字主键字符串）
+       * @return 工作区根；基路径未配置时返回 {@code null}
+       */
+    private java.nio.file.Path resolveSessionRoot(String sessionId) {
+        java.nio.file.Path project = sessionWorkspaceResolver.projectRoot(sessionId);
+        return project != null ? project : resolveAgentWorkspace();
     }
 
       /**

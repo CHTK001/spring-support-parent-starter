@@ -116,6 +116,18 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     /**
      * {@inheritDoc}
      *
+     * <p>整份对照表直接来自 {@link MagpieSupport#VENDOR_PROVIDERS}：它就是后端
+     * 判断「渠道是否由网关承载」与「按哪个 provider 取额度」用的那一份，
+     * 前端拿到的是同一份，不再各自维护。</p>
+     */
+    @Override
+    public Map<String, List<String>> ownedChannels() {
+        return MagpieSupport.VENDOR_PROVIDERS;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * <p>只做地址归一化，不探活。</p>
      */
     @Override

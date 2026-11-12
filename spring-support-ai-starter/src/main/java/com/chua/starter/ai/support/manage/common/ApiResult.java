@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.manage.common;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * 前端统一响应信封。
@@ -21,6 +22,7 @@ import java.io.Serializable;
  * @param code    机器可读错误码（如 CONVERSATION_ARCHIVED / FORBIDDEN）
  * @param error   人类可读错误信息
  * @param msg     附加提示信息
+ * @param detail  结构化排查信息（失败时可选：生效配置、失败节点、脱敏地址等）
  * @param <T>     业务数据类型
  * @since 4.0.0.42
  * @author CH
@@ -30,7 +32,8 @@ public record ApiResult<T>(
         @JsonInclude(JsonInclude.Include.ALWAYS) T data,
         @JsonInclude(JsonInclude.Include.NON_NULL) String code,
         @JsonInclude(JsonInclude.Include.NON_NULL) String error,
-        @JsonInclude(JsonInclude.Include.NON_NULL) String msg) implements Serializable {
+        @JsonInclude(JsonInclude.Include.NON_NULL) String msg,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> detail) implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -42,7 +45,7 @@ public record ApiResult<T>(
      * @return 响应信封
      */
     public static <T> ApiResult<T> ok(T data) {
-        return new ApiResult<>(true, data, null, null, null);
+        return new ApiResult<>(true, data, null, null, null, null);
     }
 
     /**
@@ -62,7 +65,7 @@ public record ApiResult<T>(
      * @return 响应信封
      */
     public static ApiResult<Void> error(String code, String error) {
-        return new ApiResult<>(false, null, code, error, null);
+        return new ApiResult<>(false, null, code, error, null, null);
     }
 
     /**
@@ -74,6 +77,22 @@ public record ApiResult<T>(
      * @return 响应信封
      */
     public static ApiResult<Void> error(String code, String error, String msg) {
-        return new ApiResult<>(false, null, code, error, msg);
+        return new ApiResult<>(false, null, code, error, msg, null);
+    }
+
+    /**
+     * 构造失败响应（含结构化排查信息）。
+     *
+     * <p>给「用户必须自己定位配置问题」的失败路径用：一句中文塞不下「哪个模型、
+     * 打的是哪个地址、卡在哪个节点」，硬塞会变成无法阅读的长句。这里把它拆成
+     * 机器可读的明细，前端折叠展示，用户能直接照着改配置。</p>
+     *
+     * @param code   机器可读错误码
+     * @param error  人类可读错误信息
+     * @param detail 结构化排查信息（如生效模型、脱敏地址、失败节点）
+     * @return 响应信封
+     */
+    public static ApiResult<Void> errorDetail(String code, String error, Map<String, Object> detail) {
+        return new ApiResult<>(false, null, code, error, null, detail);
     }
 }

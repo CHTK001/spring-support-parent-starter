@@ -6,6 +6,7 @@ import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.datasearch.pricing.spi.AbstractModelMetricsProvider;
 import com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.util.ModelMetricKeyMatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -120,6 +121,58 @@ public class AiModelMetricsEnrichmentService {
      * 上次加载时间戳
      */
     private final AtomicLong lastLoadAt = new AtomicLong(0);
+
+    /**
+     * 是否已有线程在加载指标源（单飞标记）。
+     */
+    private final java.util.concurrent.atomic.AtomicBoolean loading =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * 本轮加载的起始时间（毫秒）：给 loading 标记做看门狗，防止一次永久阻塞把
+     * 「再也不会加载」变成永久状态。
+     */
+    private final AtomicLong loadStartedAt = new AtomicLong(0);
+
+    /**
+     * 加载失败后的冷却截止时间戳（毫秒）：失败后这段时间内不再触发加载，
+     * 避免每个请求都去打一次不可达的外网。用 AtomicLong 而不是 volatile：
+     * 读-判断-写三步要原子，否则并发请求会同时穿过冷却窗口。
+     */
+    private final AtomicLong nextLoadAttemptAt = new AtomicLong(0);
+
+    /**
+     * 加载失败重试冷却（毫秒）
+     */
+    private static final long LOAD_RETRY_COOLDOWN_MILLIS = 60_000L;
+
+    /**
+     * loading 标记的最长存活时间（毫秒）：超过视为线程卡死，强制放开重试。
+     *
+     * <p>底层 HTTP 客户端默认 30 秒连接/读取超时，两次抓取最多约 60 秒；给到 5 分钟是
+     * 留足余量。真卡死时宁可多一轮重复加载，也不能让指标永久停在空索引。</p>
+     */
+    private static final long LOAD_STUCK_MILLIS = 5L * 60 * 1000;
+
+    /**
+     * 显式同步入口等待加载完成的上限（毫秒）
+     */
+    private static final long LOAD_WAIT_MILLIS = 20_000L;
+
+    /**
+     * 启动后在后台线程预热指标源。
+     *
+     * <p>加载要访问外网（Artificial Analysis），网络不可达时可能挂几分钟。这里只负责
+     * 触发，加载始终在 daemon 线程里跑，请求线程永不等待网络 I/O。</p>
+     */
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void warmUpOnStartup() {
+        try {
+            ensureLoaded();
+        } catch (Throwable t) {
+            log.debug("[AiModelMetrics] 启动预热失败: {}", t.getMessage());
+        }
+    }
 
     /**
      * 为单个模型追加指标扩展字段。
@@ -308,10 +361,15 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 返回指标源中的全部模型指标记录（全量，与本地是否配置该模型无关）。
      *
+     * <p>本方法给「显式同步」这类管理动作使用：触发加载后最多等
+     * {@link #LOAD_WAIT_MILLIS}，拿到当前索引就返回；等不到也不抛错，
+     * 由调用方按「暂无数据」处理（{@code syncAll} 已有空列表保护）。</p>
+     *
      * @return 指标记录列表
      */
     public List<MetricsRecord> all() {
         ensureLoaded();
+        awaitLoaded(LOAD_WAIT_MILLIS);
         return new ArrayList<>(index.values());
     }
 
@@ -346,18 +404,19 @@ public class AiModelMetricsEnrichmentService {
         if (exact != null) {
             return exact;
         }
-        // 次优：包含关系（AA 的 slug 通常更长，如 deepseek-v4-flash-vision-exp）
-        for (MetricsRecord rec : index.values()) {
-            String nk = rec.normalizedKey;
-            if (nk.length() >= 6 && (nk.contains(key) || key.contains(nk))) {
-                return rec;
-            }
-        }
-        return null;
+        // 次优：同模型变体（指标源 slug 多带版本/日期/别名后缀，或本地名多带版本后缀）。
+        // 只接受「头尾多出可解释后缀」的候选，且长度差最小者胜 —— 见 ModelMetricKeyMatcher：
+        // 原实现用双向 contains 取遍历到的第一个，既会串到 -mini/-lite/-free 这类别的模型，
+        // 又会因 ConcurrentHashMap 桶序在索引扩容后换人，同一模型两次同步拿到不同数字。
+        return ModelMetricKeyMatcher.selectNearest(key, index.values(), MetricsRecord::normalizedKey);
     }
 
     /**
-     * 惰性加载并按 TTL 刷新指标索引。
+     * 惰性触发加载并按 TTL 刷新指标索引。
+     *
+     * <p><b>请求线程永不等待外网</b>：这里只负责把加载交给后台 daemon 线程，
+     * 调用方立刻拿到「当前索引」（可能为空）。原实现即使改成了单飞，抢到加载权的那条
+     * 请求仍要等网络返回；指标源不可达时一次列表请求就要挂到分钟级。</p>
      */
     private void ensureLoaded() {
         long now = System.currentTimeMillis();
@@ -365,12 +424,35 @@ public class AiModelMetricsEnrichmentService {
         if (now - last < CACHE_TTL_MILLIS && !index.isEmpty()) {
             return;
         }
-        synchronized (this) {
-            now = System.currentTimeMillis();
-            last = lastLoadAt.get();
-            if (now - last < CACHE_TTL_MILLIS && !index.isEmpty()) {
+        if (now < nextLoadAttemptAt.get()) {
+            // 上一次加载刚失败过：冷却期内不再打外网
             return;
         }
+        if (loading.get() && now - loadStartedAt.get() > LOAD_STUCK_MILLIS) {
+            // 看门狗：加载线程卡死超过上限就放开标记，宁可多一轮重复加载，
+            // 也不能让指标永久停在空索引。
+            log.warn("[AiModelMetrics] 上次加载已超过 {}ms 未结束，强制放开重试", LOAD_STUCK_MILLIS);
+            loading.set(false);
+        }
+        if (!loading.compareAndSet(false, true)) {
+            // 已有线程在加载：本次直接用当前索引返回
+            return;
+        }
+        loadStartedAt.set(now);
+        Thread thread = new Thread(this::loadAndSwap, "ai-metrics-load");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    /**
+     * 后台加载主体：在线成功换索引并写盘，失败回退磁盘快照并进入冷却。
+     */
+    private void loadAndSwap() {
+        try {
+            long now = System.currentTimeMillis();
+            if (now - lastLoadAt.get() < CACHE_TTL_MILLIS && !index.isEmpty()) {
+                return;
+            }
 
             List<MetricsRecord> fresh = null;
             try {
@@ -386,10 +468,6 @@ public class AiModelMetricsEnrichmentService {
                 index.clear();
                 index.putAll(indexOf(fresh));
                 lastLoadAt.set(now);
-                /**
-                 * 保存转为disk。
-                 * @param fresh fresh
-                 */
                 saveToDisk(fresh);
                 log.info("[AiModelMetrics] 在线指标已加载并持久化，共 {} 条", fresh.size());
                 return;
@@ -401,6 +479,32 @@ public class AiModelMetricsEnrichmentService {
                 index.clear();
                 index.putAll(indexOf(stale));
                 log.warn("[AiModelMetrics] 使用磁盘持久化快照（陈旧数据），共 {} 条", stale.size());
+            }
+            // 本轮没拿到在线数据：进入冷却，避免下一个请求立刻再打一次外网
+            nextLoadAttemptAt.set(now + LOAD_RETRY_COOLDOWN_MILLIS);
+        } catch (Throwable t) {
+            // 兜底：任何未预期异常都不能让 loading 永久为 true
+            log.warn("[AiModelMetrics] 指标加载异常: {}", t.getMessage());
+            nextLoadAttemptAt.set(System.currentTimeMillis() + LOAD_RETRY_COOLDOWN_MILLIS);
+        } finally {
+            loadStartedAt.set(0);
+            loading.set(false);
+        }
+    }
+
+    /**
+     * 等待后台加载结束（仅供显式同步入口使用，有硬上限）。
+     *
+     * @param millis 最长等待毫秒
+     */
+    private void awaitLoaded(long millis) {
+        long deadline = System.currentTimeMillis() + millis;
+        while (loading.get() && System.currentTimeMillis() < deadline) {
+            try {
+                Thread.sleep(50L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
             }
         }
     }
@@ -541,6 +645,9 @@ public class AiModelMetricsEnrichmentService {
             java.nio.file.Path dir = java.nio.file.Path.of(CACHE_DIR);
             java.nio.file.Files.createDirectories(dir);
             StringBuilder sb = new StringBuilder(512); // 快照 JSON 长度不可预估
+            // 开头的 '[' 不能漏：原实现只补了结尾的 ']'，写出的文件不是合法 JSON，
+            // loadFromDisk 解析必然抛异常又被 debug 日志吞掉，于是「离线兜底」这条分支一直是死的。
+            sb.append('[');
             for (int i = 0; i < records.size(); i++) {
                 MetricsRecord r = records.get(i);
                 if (i > 0) { sb.append(','); }

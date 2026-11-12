@@ -78,6 +78,17 @@ public class TsharkInstallProperties {
     private int timeoutSeconds = 600;
 
     /**
+     * TLS 会话密钥日志文件（NSS key log 格式，如 {@code D:\keys\sslkeys.log}）。
+     *
+     * <p>配置后 tshark 会带 {@code -o tls.keylog_file:<path>}，把 TLS 里的 HTTP/2、
+     * MSRP、SMPP 等明文解出来继续走协议还原。不配置则不传该参数，抓包行为与以前一致。</p>
+     *
+     * <p><b>安全提醒</b>：keylog 文件本身就是解密钥匙，只能用于自有环境的排障，
+     * 不要在生产机器上长期开启，也不要跟抓包文件放在一起。</p>
+     */
+    private String tlsKeylogFile = "";
+
+    /**
      * 是否在解析 pcap 时，额外启用 tshark json 通道回填 {@code rawData}（完整协议层 JSON）
      * 与 {@code restoredText}（协议还原出的明文）。
      *

@@ -105,6 +105,18 @@ public class ProjectTaskService {
 
     /** 本机（LOCAL）单步执行超时（秒）：本机不走网络，给足启动/备份时间 */
     private static final int LOCAL_STEP_TIMEOUT_SECONDS = 600;
+
+      /**
+       * SSH 流式命令的最大尝试次数。
+       *
+       * <p>连接池里的长连接会被网络设备静默回收，首次失败通常发生在通道层，
+       * 重建连接即可恢复；只重试一次时，第二次仍可能踩在刚重建的连接上。
+       * 限制为 3 次并留出短暂退避，既不无限重试，也给新连接稳定时间。</p>
+       */
+    private static final int SSH_STEP_MAX_ATTEMPTS = 3;
+
+      /** SSH 重试退避基数（毫秒），第 N 次重试等待 N 倍。 */
+    private static final long SSH_STEP_RETRY_BACKOFF_MS = 250L;
     /**
      * 启动脚本成功时打印的运行 PID 行
      */
@@ -443,7 +455,7 @@ public class ProjectTaskService {
                     stderr = r.stderr();
                 } else {
                     SshClient.ExecResult result;
-                    boolean retried = false;
+                    int sshAttempt = 1;
                     while (true) {
                         try {
                             result = handle.client().exec().command(step.command())
@@ -451,17 +463,22 @@ public class ProjectTaskService {
                             break;
                         } catch (SshClient.SshClientException ce) {
                             // 复用连接在通道层立即失败（常见于长连接半死 / 会话状态异常，logs 为空）：
-                            // 失效旧连接、重建后重试一次；重试仍失败则正常报错
-                            if (retried) {
+                            // 失效旧连接、重建后重试；最多 3 次，仍失败则正常报错。
+                            if (sshAttempt >= SSH_STEP_MAX_ATTEMPTS) {
                                 throw ce;
                             }
-                            retried = true;
-                            String notice = "连接通道异常，正在重建连接并重试…";
+                            sshAttempt++;
+                            String notice = "连接通道异常，正在重建连接并重试（"
+                                    + sshAttempt + "/" + SSH_STEP_MAX_ATTEMPTS + "）…";
                             appendLog(state, notice);
                             emit(state, PHASE_LOG, null, notice, null, null);
-                            log.warn("[task] {} 步骤「{}」SSH 通道层失败，重建连接重试: {}",
-                                    state.taskId, step.name(), ce.getMessage());
+                            log.warn("[task] {} 步骤「{}」SSH 通道层失败，第 {} 次重试: {}",
+                                    state.taskId, step.name(), sshAttempt - 1, ce.getMessage());
                             connectionManager.invalidate(hostId);
+                              // 新连接建立后不要立刻压命令，给通道/认证状态一点稳定时间
+                            java.util.concurrent.locks.LockSupport.parkNanos(
+                                    java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(
+                                            SSH_STEP_RETRY_BACKOFF_MS * (sshAttempt - 1)));
                             handle = connectionManager.borrow(host, rr.getData());
                         }
                     }

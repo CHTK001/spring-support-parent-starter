@@ -242,8 +242,9 @@ public class WebSearchService {
                         DEFAULT_GUBO_ENDPOINT, query, count);
                 case "tinyfish" -> standardWebSearch(providerKey("tinyfish"), "tinyfish_endpoint",
                         DEFAULT_TINYFISH_ENDPOINT, query, count);
-                // metaso（秘塔）搜索 API 暂未接入，返回空以便竞速快速落到 360
-                case "metaso" -> List.of();
+                // metaso（秘塔）Open API：POST /api/v1/search，Bearer mk-xxx，
+                // 响应 {"webpages":[{title,link,snippet}]}（见 WebSearchService#metaso）
+                case "metaso" -> metaso(query, count);
                 default -> List.of();
             };
         } catch (Exception e) {
@@ -269,6 +270,8 @@ public class WebSearchService {
     private static final String DEFAULT_GUBO_ENDPOINT = "https://api.gubosearch.com/v1/web-search";
 
     private static final String DEFAULT_TINYFISH_ENDPOINT = "https://api.tinyfish.ai/v1/web-search";
+
+    private static final String DEFAULT_METASO_ENDPOINT = "https://metaso.cn/api/v1/search";
 
     /**
      * 取某个付费源的 API Key（未配置返回 {@code null}）。
@@ -325,6 +328,52 @@ public class WebSearchService {
                     snippet = v.path("summary").asText("");
                 }
                 out.add(new WebResult(v.path("name").asText(""), v.path("url").asText(""), snippet));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 秘塔（Metaso）搜索。
+     *
+     * <p>官方 Open API 契约：{@code POST https://metaso.cn/api/v1/search}，
+     * 头 {@code Authorization: Bearer mk-xxx}，体
+     * {@code {"q":..,"scope":"webpage","size":N,"includeSummary":true}}；
+     * 响应 {@code {"webpages":[{"title","link","snippet"}]}}。
+     * 接口地址可用 {@code search.metaso_endpoint} 覆盖（与 langsearch / gubo 一致）。</p>
+     *
+     * @param query 检索词
+     * @param count 期望条数
+     * @return 结果列表；未配置 Key 时为空列表
+     * @throws Exception 请求或解析失败
+     */
+    private List<WebResult> metaso(String query, int count) throws Exception {
+        String key = providerKey("metaso");
+        if (key == null || key.isBlank()) {
+            return List.of();
+        }
+        String endpoint = sysAiGlobalSettingService.getValue("search", "metaso_endpoint")
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .orElse(DEFAULT_METASO_ENDPOINT);
+        Map<String, Object> body = Map.of(
+                "q", query, "scope", "webpage", "size", count, "includeSummary", true);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .header("Authorization", "Bearer " + key)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body), StandardCharsets.UTF_8))
+                .timeout(Duration.ofSeconds(15))
+                .build();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("metaso http " + response.statusCode() + " @" + endpoint);
+        }
+        JsonNode pages = objectMapper.readTree(response.body()).path("webpages");
+        List<WebResult> out = new ArrayList<>();
+        if (pages.isArray()) {
+            for (JsonNode v : pages) {
+                out.add(new WebResult(v.path("title").asText(""), v.path("link").asText(""),
+                        v.path("snippet").asText("")));
             }
         }
         return out;

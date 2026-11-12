@@ -49,7 +49,8 @@ public class ExternalModelSupport {
             // 图片识别
             Map.entry("image.classify_model", "mobilenetv4-classification"),
             Map.entry("image.detect_model", "yolo26n"),
-            Map.entry("image.segment_model", "efficientsam"),
+            // 2026-11-12：image.segment_model 删除 —— 图片识别分组没有分割能力，
+            // 该字段已从 ImageRecognitionGlobalSettingProvider 移除，模板表同步。
             Map.entry("image.captioning_model", "vit-gpt2-captioning"),
             Map.entry("image.super_resolution_model", "real-esrgan")
     );

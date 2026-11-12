@@ -569,7 +569,7 @@ public class WorldSimServiceImpl implements WorldSimService {
                         .orderByAsc(SysAiWorldNpc::getSort));
 
         AiChatRequest request = new AiChatRequest();
-        request.setModel(scriptModel());
+        request.setModel(scriptModel(world));
         request.setSystemPrompt(NPC_WRITER_SYSTEM);
         request.setPrompt(composeNpcPrompt(world, scenes, existing, n, hint));
         request.setTemperature(0.95);
@@ -1155,6 +1155,9 @@ public class WorldSimServiceImpl implements WorldSimService {
     /** 幕次状态：已废弃 */
     private static final String ACT_STATUS_ABORTED = "aborted";
 
+    /** 单个世界允许的最大幕数缺省值（设置中心 sim.story_max_acts 未配置时使用） */
+    private static final int DEFAULT_STORY_MAX_ACTS = 64;
+
     /** 系统提示词（AI 编剧必须输出严格 JSON 剧本） */
     private static final String SCRIPT_PROMPT_SYSTEM_SANGO =
         "你必须且只能输出严格合法的 JSON（不要输出 Markdown、不要输出代码块、不要输出额外文字）。"
@@ -1261,7 +1264,27 @@ public class WorldSimServiceImpl implements WorldSimService {
         if (latest != null && isBlankAct(latest)) {
             return latest;
         }
+        // 幕次上限（sim.story_max_acts）：到顶后不再新建。这里不能抛异常 ——
+        // 调用方是「演完一幕顺带给出下一幕」，抛错会把已经成功的播放结果一起打掉；
+        // 也不能返回 null —— actRow(null) 会 NPE。回退成最新的那一幕，
+        // 前端看到的是「没有下一幕」，与 limit 到的语义一致。
+        if (latest != null && latest.getActNo() != null && latest.getActNo() + 1 > storyMaxActs()) {
+            log.info("[WorldSim] 世界 {} 已达幕次上限 {}，不再新建下一幕", worldId, storyMaxActs());
+            return latest;
+        }
         return createAct(worldId);
+    }
+
+    /**
+     * 一个世界允许的最大幕数（设置中心 {@code sim.story_max_acts}，默认 64）。
+     *
+     * <p>这项此前只声明、全仓零读取：幕次可以无限新增，剧本目录与库表跟着无限膨胀。</p>
+     *
+     * @return 上限；配置非法（非正数）时回落 64
+     */
+    public int storyMaxActs() {
+        int configured = globalSettingReader.getInt("sim", "story_max_acts", DEFAULT_STORY_MAX_ACTS);
+        return configured > 0 ? configured : DEFAULT_STORY_MAX_ACTS;
     }
 
     /**
@@ -1283,9 +1306,15 @@ public class WorldSimServiceImpl implements WorldSimService {
     @Override
     public SysAiWorldAct createAct(Long worldId) {
         requireOwned(worldId);
+        int nextNo = actNextNo(worldId);
+        int maxActs = storyMaxActs();
+        if (nextNo > maxActs) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "该世界已达到幕次上限 " + maxActs + "（可在设置中心 sim.story_max_acts 调整）");
+        }
         SysAiWorldAct act = new SysAiWorldAct();
         act.setWorldId(worldId);
-        act.setActNo(actNextNo(worldId));
+        act.setActNo(nextNo);
         act.setTitle("未命名幕次");
         act.setDescription("");
         act.setStatus(ACT_STATUS_WRITING);
@@ -1663,7 +1692,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     private String writeScript(Long worldId, SysAiWorldAct act) {
         String prompt = composeScriptPrompt(worldId);
         AiChatRequest request = new AiChatRequest();
-        request.setModel(scriptModel());
+        request.setModel(scriptModel(worldId));
         request.setPrompt(prompt);
         request.setSystemPrompt(SCRIPT_PROMPT_SYSTEM_SANGO);
         request.setTemperature(0.85);
@@ -1723,6 +1752,13 @@ public class WorldSimServiceImpl implements WorldSimService {
             sb.append("；状态：").append(n.getStatus() == null ? "alive" : n.getStatus());
         }
 
+        // 世界级「演员」配置：导演指定的可用角色，编剧应优先在这些角色里排戏
+        String actorRoles = w.getActorRoles();
+        if (actorRoles != null && !actorRoles.isBlank()) {
+            sb.append("\n\n【导演指定演员】（优先在这些角色里安排戏份）");
+            sb.append("\n").append(actorRoles.trim());
+        }
+
         sb.append("\n\n【场景列表】（可在场景间自由连通）");
         List<SysAiWorldScene> scenes = sceneMapper.selectList(
                 new LambdaQueryWrapper<SysAiWorldScene>()
@@ -1758,13 +1794,29 @@ public class WorldSimServiceImpl implements WorldSimService {
         return sb.toString();
     }
 
-    /** 编剧单元模型（读设置 sim.script_model，留空则用生效对话模型） */
+    /** 编剧单元模型：世界级「导演模型」优先，其次设置 sim.script_model，最后用生效对话模型 */
     private String scriptModel() {
         String model = globalSettingReader.getStr("sim", "script_model");
         if (model == null || model.isBlank()) {
             return effectiveChatModelResolver.resolve(null);
         }
         return model;
+    }
+
+    /** 按世界取编剧模型：世界配置了导演模型就用它，否则回落全局 */
+    private String scriptModel(SysAiWorld world) {
+        if (world != null) {
+            String director = world.getDirectorModel();
+            if (director != null && !director.isBlank()) {
+                return director.trim();
+            }
+        }
+        return scriptModel();
+    }
+
+    /** 按世界 ID 取编剧模型（内部会加载世界；世界不存在时回落全局） */
+    private String scriptModel(Long worldId) {
+        return scriptModel(worldId == null ? null : worldMapper.selectById(worldId));
     }
 
     /**
@@ -2790,7 +2842,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             + "\n【画面描述】" + str(scene.get(ActScript.SCENE_DESC), "")
             + "\n【演员与关系】" + cast;
         AiChatRequest request = new AiChatRequest();
-        request.setModel(scriptModel());
+        request.setModel(scriptModel(world));
         request.setPrompt(prompt);
         request.setUseSkill(false);
         request.setTemperature(0.8);

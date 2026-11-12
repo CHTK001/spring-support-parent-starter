@@ -66,7 +66,9 @@ public class SysAccountCookieServiceImpl implements SysAccountCookieService {
      */
     @Override
     public SysAccountCookie get(String cookieId) {
-        return mask(requireCookie(cookieId));
+        SysAccountCookie cookie = requireCookie(cookieId);
+        assertVisible(cookie);
+        return mask(cookie);
     }
 
     /**
@@ -167,6 +169,24 @@ public class SysAccountCookieServiceImpl implements SysAccountCookieService {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Cookie 不存在: " + cookieId);
         }
         return cookie;
+    }
+
+    /**
+     * 归属可见性：个人 Cookie 只对本人可见，部署级 Cookie 所有人可见。
+     *
+     * <p>列表已经按归属过滤，详情接口必须做同一条断言，否则知道
+     * {@code cookieId} 的他人仍可读到 Cookie 元数据。</p>
+     *
+     * @param cookie Cookie
+     */
+    private void assertVisible(SysAccountCookie cookie) {
+        String owner = cookie.getOwner();
+        if (StringUtils.isBlank(owner)) {
+            return;
+        }
+        if (!owner.equals(AccountUserContext.currentUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权查看该 Cookie");
+        }
     }
 
     /**

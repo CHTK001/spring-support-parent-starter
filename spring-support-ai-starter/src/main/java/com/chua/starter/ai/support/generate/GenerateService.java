@@ -94,6 +94,16 @@ public class GenerateService {
     private static final String FIELD_TASK_TIMEOUT_MINUTES = "task_timeout_minutes";
 
       /**
+       * 默认文生图模型字段名（请求未指定模型时兜底）
+       */
+    private static final String FIELD_IMAGE_MODEL = "image_model";
+
+      /**
+       * 默认文生视频模型字段名（请求未指定模型时兜底）
+       */
+    private static final String FIELD_VIDEO_MODEL = "video_model";
+
+      /**
        * 任务超时时间可配置区间的上限（分钟）
        */
     private static final int MAX_TASK_TIMEOUT_MINUTES = 120;
@@ -306,14 +316,21 @@ public class GenerateService {
        * @throws IllegalArgumentException 参数非法或未配置可用的生成实现
        */
     public SysAiGenerateTask create(Request request) {
-        if (request == null || request.model() == null || request.model().isBlank()) {
+        if (request == null) {
+            throw new IllegalArgumentException("请选择生成模型");
+        }
+        String type = request.type() == null || request.type().isBlank()
+                ? GenerateConfigSupport.TYPE_IMAGE : request.type();
+          // 模型来源：请求显式指定 > 设置中心 generate.image_model / video_model。
+          // 这两项此前只落库、全仓零读取：设置页填了「默认文生图模型」，请求不带模型时
+          // 依然直接报「请选择生成模型」。现在按类型取各自默认值。
+        String model = resolveGenerateModel(request.model(), request.userId(), type);
+        if (model == null) {
             throw new IllegalArgumentException("请选择生成模型");
         }
         if (request.prompt() == null || request.prompt().isBlank()) {
             throw new IllegalArgumentException("请输入提示词");
         }
-        String type = request.type() == null || request.type().isBlank()
-                ? GenerateConfigSupport.TYPE_IMAGE : request.type();
 
           // 先把僵死任务收敛掉，再查「有没有在跑」：否则一条卡住的任务会永远占着名额，
           // 让用户既等不到结果也发不出新任务。
@@ -324,6 +341,8 @@ public class GenerateService {
         requireNoRunningTask(request.userId());
 
         SysAiGenerateTask task = buildTask(request, type);
+        // 请求没带模型时用设置中心的默认值落库（buildTask 里取的是请求原值）
+        task.setModel(model);
           // 视频原先是「先提交上游、成功后才 insert」，主键由上游任务号回填；
           // 改为先落库后主键必须在 insert 之前就有，否则 sysAiGenerateTaskId 为空。
           // 这里先给一个本地占位号。注意它此后**不再被上游任务号覆盖**：
@@ -464,6 +483,31 @@ public class GenerateService {
         } catch (Exception e) {
             log.warn("[Generate] 提交前收敛超时任务失败: {}", e.getMessage());
         }
+    }
+
+      /**
+       * 解析本次生成使用的模型名。
+       *
+       * <p>请求显式指定优先；未指定时按任务类型取设置中心的默认值
+       * （{@code generate.image_model} / {@code generate.video_model}）。</p>
+       *
+       * @param requested 请求里的模型名
+       * @param userId    任务归属账号（支持用户级覆盖）
+       * @param type      任务类型（image / video）
+       * @return 模型名；都未配置时返回 {@code null}
+       */
+    private String resolveGenerateModel(String requested, String userId, String type) {
+        if (requested != null && !requested.isBlank()) {
+            return requested.trim();
+        }
+        String field = GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(type)
+                ? FIELD_VIDEO_MODEL : FIELD_IMAGE_MODEL;
+        String configured = globalSettingReader.getStrAs(userId, GROUP_GENERATE, field);
+        if (configured == null || configured.isBlank()) {
+            return null;
+        }
+        log.info("[Generate] 请求未指定模型，使用设置中心 {} 默认值: {}", field, configured.trim());
+        return configured.trim();
     }
 
       /**

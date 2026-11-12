@@ -2,6 +2,8 @@ package com.chua.starter.ai.support.manage.common;
 
 import lombok.Getter;
 
+import java.util.Map;
+
 /**
  * 前端契约业务异常。
  *
@@ -20,6 +22,14 @@ public class ApiException extends RuntimeException {
     private final ApiErrorCode errorCode;
 
     /**
+     * 结构化排查信息（可选）
+     *
+     * <p>用于「用户必须自己定位配置问题」的失败：把生效模型、脱敏地址、失败节点
+     * 这类明细随错误体一起下发，前端折叠展示，而不是把它们塞进一句中文。</p>
+     */
+    private final Map<String, Object> detail;
+
+    /**
      * 构造业务异常。
      *
      * @param errorCode 错误码
@@ -32,6 +42,7 @@ public class ApiException extends RuntimeException {
          */
         super(message);
         this.errorCode = errorCode;
+        this.detail = null;
     }
 
     /**
@@ -49,5 +60,19 @@ public class ApiException extends RuntimeException {
          */
         super(message, cause);
         this.errorCode = errorCode;
+        this.detail = null;
+    }
+
+    /**
+     * 构造业务异常（带结构化排查信息）。
+     *
+     * @param errorCode 错误码
+     * @param message   人类可读信息
+     * @param detail    结构化排查信息（生效模型 / 脱敏地址 / 失败节点等）
+     */
+    public ApiException(ApiErrorCode errorCode, String message, Map<String, Object> detail) {
+        super(message);
+        this.errorCode = errorCode;
+        this.detail = detail;
     }
 }

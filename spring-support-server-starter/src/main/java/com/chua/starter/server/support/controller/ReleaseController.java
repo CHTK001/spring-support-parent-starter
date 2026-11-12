@@ -6,6 +6,7 @@ import com.chua.starter.server.support.entity.MsServerRelease;
 import com.chua.starter.server.support.entity.SoftwarePackage;
 import com.chua.starter.server.support.model.vo.ProjectTaskSnapshotVO;
 import com.chua.starter.server.support.model.vo.ProjectBackupVO;
+import com.chua.starter.server.support.model.ApmGlobalConfig;
 import com.chua.starter.server.support.push.ProjectTaskService;
 import com.chua.starter.server.support.schedule.ReleaseScheduleService;
 import com.chua.starter.server.support.service.ProjectOpLogService;
@@ -85,6 +86,29 @@ public class ReleaseController {
     @GetMapping("/list")
     public ReturnResult<List<MsServerRelease>> listReleases() {
         return releaseService.listReleases();
+    }
+
+    /**
+     * 读取全局 APM 兜底配置。
+     *
+     * @return 全局配置
+     */
+    @Operation(summary = "读取全局 APM 兜底配置")
+    @GetMapping("/apm/global")
+    public ReturnResult<ApmGlobalConfig> getGlobalApmConfig() {
+        return releaseService.getGlobalApmConfig();
+    }
+
+    /**
+     * 保存全局 APM 兜底配置，并同步到所有发布下的项目。
+     *
+     * @param config 全局配置
+     * @return 保存后的配置
+     */
+    @Operation(summary = "保存全局 APM 兜底配置")
+    @PutMapping("/apm/global")
+    public ReturnResult<ApmGlobalConfig> saveGlobalApmConfig(@RequestBody ApmGlobalConfig config) {
+        return releaseService.saveGlobalApmConfig(config);
     }
 
     /**

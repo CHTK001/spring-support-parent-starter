@@ -91,7 +91,7 @@ public class SecurityGlobalSettingProvider implements GlobalSettingProvider {
                         "逐请求超时开关：关闭时不做超时控制", 14),
                 new SettingItem("security_request_timeout_millis",
                         "60000", "NUMBER",
-                        "逐请求最大处理时间（毫秒）", 15),
+                        "下游开始响应前的最大等待（毫秒，首字节超时）：流式响应在首字节发出后不再受此限制", 15),
                 new SettingItem("security_health_paths",
                         "/healthz /ping /readyz", "STRING",
                         "健康检查路径（空格分隔）：零开销直回 200，不进入任何拦截器", 16)

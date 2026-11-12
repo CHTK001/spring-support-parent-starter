@@ -239,6 +239,43 @@ class AccountServiceUnitTest {
     }
 
     @Test
+    @DisplayName("查询账号详情：他人个人账号抛 403")
+    void getForeignPersonalAccountForbidden() {
+        loginAs(CURRENT_USER);
+        SysAccount existing = new SysAccount();
+        existing.setAccountId("acc-2");
+        existing.setCode("dev-key-2");
+        existing.setName("他人密钥");
+        existing.setKind(AccountKind.API_KEY);
+        existing.setOwner(OTHER_USER);
+        when(accountMapper.selectById("acc-2")).thenReturn(existing);
+
+        ApiException error = assertThrows(ApiException.class, () -> accountService.get("acc-2"));
+
+        assertEquals(ApiErrorCode.FORBIDDEN, error.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("查询账号详情：本人账号可读，凭据只标已配置")
+    void getOwnPersonalAccountMasked() {
+        loginAs(CURRENT_USER);
+        SysAccount existing = new SysAccount();
+        existing.setAccountId("acc-3");
+        existing.setCode("dev-key-3");
+        existing.setName("我的密钥");
+        existing.setKind(AccountKind.API_KEY);
+        existing.setOwner(CURRENT_USER);
+        existing.setSecret(secretCodec.encrypt("mine"));
+        when(accountMapper.selectById("acc-3")).thenReturn(existing);
+
+        SysAccount result = accountService.get("acc-3");
+
+        assertEquals("acc-3", result.getAccountId());
+        assertNull(result.getSecret());
+        assertTrue(result.getHasSecret());
+    }
+
+    @Test
     @DisplayName("查询账号：列表不回显密文，只标记已配置")
     void listHidesSecret() {
         SysAccount row = new SysAccount();
@@ -369,6 +406,22 @@ class AccountServiceUnitTest {
 
         assertEquals(secretCodec.encrypt("session=abc"), storedValue[0]);
         assertEquals("站点 Cookie-改名", storedName[0]);
+    }
+
+    @Test
+    @DisplayName("查询 Cookie 详情：他人个人 Cookie 抛 403")
+    void cookieGetForeignPersonalForbidden() {
+        loginAs(CURRENT_USER);
+        SysAccountCookie existing = new SysAccountCookie();
+        existing.setCookieId("cookie-3");
+        existing.setName("他人 Cookie");
+        existing.setOwner(OTHER_USER);
+        existing.setCookieValue(secretCodec.encrypt("session=xyz"));
+        when(cookieMapper.selectById("cookie-3")).thenReturn(existing);
+
+        ApiException error = assertThrows(ApiException.class, () -> cookieService.get("cookie-3"));
+
+        assertEquals(ApiErrorCode.FORBIDDEN, error.getErrorCode());
     }
 
     @Test

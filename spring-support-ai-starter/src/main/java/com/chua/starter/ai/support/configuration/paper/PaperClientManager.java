@@ -158,9 +158,9 @@ public class PaperClientManager implements PaperClient {
     /**
      * 试卷识别管线（utils-xx 能力门面，懒装配 + 配置变更重建）。
      *
-     * <p>从 {@code paper} 分组配置装配部件：OCR 用 {@link OcrClientManager#current()}
-     * （复用 ocr 分组的共享 OcrPipeline）、版面用 {@link LayoutClientManager#current()}
-     * （复用 layout 分组的共享 LayoutDetector）、LLM 用 {@link #resolveLlmClient()}
+     * <p>从 {@code paper} 分组配置装配部件：OCR 用 {@link #resolveOcrPipeline()}、
+     * 版面用 {@link #resolveLayoutDetector()}（两者都遵循「paper 分组模型优先，
+     * 留空复用 ocr / layout 分组的共享实例」）、LLM 用 {@link #resolveLlmClient()}
      * （paper 分组 model，回落到默认对话模型）。配置指纹变化时重建。</p>
      *
      * @return 试卷识别管线；OCR 部件缺失时返回 null（识别走 {@code available()} 判不可用）
@@ -207,14 +207,14 @@ public class PaperClientManager implements PaperClient {
     private PaperPipeline buildPipeline() {
         OcrPipeline ocr = null;
         try {
-            ocr = ocrClientManager.current();
+            ocr = resolveOcrPipeline();
         } catch (Exception e) {
             log.warn("[PaperClientManager] OCR 部件不可用，试卷识别不可用: {}", e.getMessage());
             return null;
         }
         LayoutDetector layout = null;
         try {
-            layout = layoutClientManager.current();
+            layout = resolveLayoutDetector();
         } catch (Exception e) {
             // 版面为可选项：缺失时 PaperPipeline 退化为整图 OCR
             log.debug("[PaperClientManager] 版面部件不可用，试卷管线按整图 OCR 装配: {}", e.getMessage());
@@ -231,6 +231,47 @@ public class PaperClientManager implements PaperClient {
                 built.engine(), layout != null ? "on" : "off",
                 ocr != null ? "on" : "off", llm != null ? "on" : "off");
         return built;
+    }
+
+    /**
+     * 试卷管线使用的 OCR 部件。
+     *
+     * <p>{@code paper.ocr_detector_model} / {@code paper.ocr_recognizer_model} 都留空时
+     * 复用 {@code ocr} 分组的共享管线；任一非空则按 paper 的模型另建一条
+     * （另一个留空的字段回落 ocr 分组）。这项此前只进指纹串、从不参与装配 ——
+     * 用户在试卷设置里换了 OCR 模型，实际仍在用 ocr 分组的模型。</p>
+     *
+     * @return OCR 管线
+     */
+    private OcrPipeline resolveOcrPipeline() {
+        String detector = settingReader.getStr(GROUP, "ocr_detector_model");
+        String recognizer = settingReader.getStr(GROUP, "ocr_recognizer_model");
+        if (StringUtils.isBlank(detector) && StringUtils.isBlank(recognizer)) {
+            return ocrClientManager.current();
+        }
+        log.info("[PaperClientManager] 使用 paper 分组指定的 OCR 模型: detector={}, recognizer={}",
+                StringUtils.defaultString(detector, "(ocr 分组)"),
+                StringUtils.defaultString(recognizer, "(ocr 分组)"));
+        return ocrClientManager.buildWithModels(detector, recognizer);
+    }
+
+    /**
+     * 试卷管线使用的版面检测器。
+     *
+     * <p>{@code paper.layout_model} 留空时复用 {@code layout} 分组的共享检测器；
+     * 非空则按该模型另建。阈值与设备仍由 {@code layout} 分组决定
+     * （模型级参数进程内共享，paper 分组不再重复声明）。</p>
+     *
+     * @return 版面检测器
+     */
+    private LayoutDetector resolveLayoutDetector() {
+        String model = settingReader.getStr(GROUP, "layout_model");
+        if (StringUtils.isBlank(model)) {
+            return layoutClientManager.current();
+        }
+        String bare = ModelIds.bare(model);
+        log.info("[PaperClientManager] 使用 paper 分组指定的版面模型: {}", bare);
+        return LayoutDetector.create(bare);
     }
 
     /**
@@ -574,7 +615,7 @@ public class PaperClientManager implements PaperClient {
     }
 
     /**
-     * 配置指纹（engine + 各模型 + 阈值），用于轻量判断是否需要重建。
+     * 配置指纹（engine + 各模型 + 答案合并开关），用于轻量判断是否需要重建。
      *
      * <p><b>必须与实际装配取值一致</b>：管线装配 OCR 部件时用的是
      * {@link #ocrDetectorModel()} / {@link #ocrRecognizerModel()}，语义是
@@ -582,6 +623,9 @@ public class PaperClientManager implements PaperClient {
      * {@code paper.ocr_*}，用户只改了 {@code ocr.detector_model} 时指纹不变，
      * 管线就不会重建 —— 表现为「配置改了、status 仍显示旧值且无任何日志」。
      * 版面模型同理（{@code paper.layout_model} 为空时回退 {@code layout.layout_model}）。</p>
+     *
+     * <p>阈值与设备不在指纹里：paper 分组已不再声明它们，装配时直接沿用
+     * {@code ocr} / {@code layout} 分组（模型级参数进程内共享，重复声明只会互相覆盖）。</p>
      *
      * @return 指纹字符串
      */
@@ -591,9 +635,8 @@ public class PaperClientManager implements PaperClient {
                 layoutModel(),
                 ocrDetectorModel(),
                 ocrRecognizerModel(),
-                String.valueOf(settingReader.getDecimalOrNull(GROUP, "ocr_threshold")),
-                StringUtils.defaultString(settingReader.getStr(GROUP, "llm_model"), ""),
-                StringUtils.defaultString(settingReader.getStr(GROUP, "device"), ""));
+                String.valueOf(settingReader.getBool(GROUP, "merge_answer", true)),
+                StringUtils.defaultString(settingReader.getStr(GROUP, "llm_model"), ""));
     }
 
     /**

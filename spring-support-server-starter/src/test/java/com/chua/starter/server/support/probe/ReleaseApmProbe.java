@@ -618,6 +618,52 @@ public final class ReleaseApmProbe {
                 String.valueOf(args));
     }
 
+    // ==================== G. 业务端口解析 ====================
+
+    /**
+     * G 段：概览探测与健康检查使用的端口必须能读懂项目 appConfig 的 JSON 形态。
+     */
+    @Test
+    void gResolveHealthPort() {
+        Harness h = harness();
+        MsServerProject project = project(41L, 1L, "port-demo", null);
+
+        project.setAppConfig("[{\"key\":\"server.port\",\"value\":\"18090\"}]");
+        check("G1 appConfig JSON 中的 server.port 可被解析", portOf(h.impl, project) == 18090,
+                "port=" + portOf(h.impl, project));
+
+        project.setCmdArgs(json("--server.port=18091"));
+        check("G2 显式命令参数优先于 appConfig", portOf(h.impl, project) == 18091,
+                "port=" + portOf(h.impl, project));
+
+        project.setCmdArgs("[]");
+        project.setJvmArgs(json("-Dserver.port=18092"));
+        check("G3 JVM 参数优先于 appConfig", portOf(h.impl, project) == 18092,
+                "port=" + portOf(h.impl, project));
+
+        project.setJvmArgs("[]");
+        project.setAppConfig("server.port=18093");
+        check("G4 历史裸串 server.port= 仍兼容", portOf(h.impl, project) == 18093,
+                "port=" + portOf(h.impl, project));
+
+        project.setAppConfig("[{\"key\":\"server.port\",\"value\":\"99999\"}]");
+        check("G5 非法端口不参与探测", portOf(h.impl, project) == 0,
+                "port=" + portOf(h.impl, project));
+
+        assertSectionDone("G");
+    }
+
+    /**
+     * 反射解析项目端口。
+     *
+     * @param impl    服务实例
+     * @param project 项目
+     * @return 端口；无法解析为 0
+     */
+    private static int portOf(ReleaseServiceImpl impl, MsServerProject project) {
+        return (Integer) invoke(impl, "resolveHealthPort", new Class<?>[] {MsServerProject.class}, project);
+    }
+
     // ==================== 桩与断言基础设施 ====================
 
     /**
@@ -925,6 +971,7 @@ public final class ReleaseApmProbe {
                     proxy(MsServerReleaseMapper.class, releases),
                     proxy(MsServerProjectMapper.class, projects),
                     proxy(MsServerHostMapper.class, hosts),
+                    null,
                     null,
                     null,
                     null,

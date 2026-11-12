@@ -9,6 +9,7 @@ import com.chua.webrtc.model.DefaultControlEventFactory;
 import com.chua.webrtc.model.WebRtcSession;
 import com.chua.webrtc.server.WebRtcServer;
 import com.chua.webrtc.spi.media.ScreenCaptureService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -123,15 +124,23 @@ public class ControlController {
     /**
      * 获取信令服务配置。
      *
+     * <p>wsUrl 的 host 取当前请求的 Host（不能用监听地址 0.0.0.0），端口取信令端口；
+     * token 只通过这个已鉴权接口下发，页面连接时再拼到 ws 地址上。</p>
+     *
+     * @param request 当前请求
      * @return 配置信息
      */
     @GetMapping("/config")
-    public ReturnResult<Map<String, Object>> config() {
+    public ReturnResult<Map<String, Object>> config(HttpServletRequest request) {
+        String scheme = request.isSecure() ? "wss" : "ws";
+        String wsUrl = scheme + "://" + request.getServerName() + ":" + properties.getPort()
+                + WebRtcServer.SIGNALING_PATH;
         return ReturnResult.ok(Map.of(
                 "host", properties.getHost(),
                 "port", properties.getPort(),
                 "path", WebRtcServer.SIGNALING_PATH,
-                "wsUrl", "ws://" + properties.getHost() + ":" + properties.getPort() + WebRtcServer.SIGNALING_PATH,
+                "wsUrl", wsUrl,
+                "token", properties.getToken(),
                 "frameRate", properties.getFrameRate(),
                 "width", properties.getWidth(),
                 "height", properties.getHeight()

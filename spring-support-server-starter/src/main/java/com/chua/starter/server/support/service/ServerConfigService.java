@@ -61,4 +61,15 @@ public interface ServerConfigService {
      * @return 整数值
      */
     int getInt(String key, int defValue);
+
+    /**
+     * 删除单个配置（键不存在时视为成功，幂等）。
+     *
+     * <p>只删一行、不广播配置变更事件：调用方删的是「终端配色预设」这类
+     * 与定时任务/连接参数无关的键，没有监听器需要据此重排。</p>
+     *
+     * @param key 配置键
+     * @return 结果
+     */
+    ReturnResult<Void> deleteConfig(String key);
 }

@@ -39,6 +39,11 @@ public class ControlProperties {
     private boolean enabled = true;
 
     /**
+     * 信令访问令牌；为空时启动自动生成，随 /control/config 下发给已登录页面。
+     */
+    private String token = "";
+
+    /**
      * 信令监听地址
      */
     private String host = "0.0.0.0";

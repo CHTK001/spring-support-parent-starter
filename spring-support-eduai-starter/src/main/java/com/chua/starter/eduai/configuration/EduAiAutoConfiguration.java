@@ -1,12 +1,15 @@
 package com.chua.starter.eduai.configuration;
 
+import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 
 /**
  * 教育AI模块自动配置
@@ -36,6 +39,7 @@ import org.springframework.context.annotation.Import;
         // 同步至统一模板库（paper → template_info）
         "com.chua.starter.eduai.template"
 })
+@EnableConfigurationProperties(EduAiProperties.class)
 /**
  * eduaiauto配置类。
  *
@@ -44,6 +48,49 @@ import org.springframework.context.annotation.Import;
  */
 @Import(EduAiCachePrimaryConfiguration.class)
 public class EduAiAutoConfiguration {
+
+    /**
+     * 把教育业务配置里的「试卷管线」参数映射给 ai-starter。
+     *
+     * <p>{@code plugin.eduai.*} 属于业务前缀，不能出现在 ai-starter 里；
+     * 管线包只认自己的 {@link PaperPipelineProperties}。加 {@code @Primary}：
+     * ai-starter 自带一份默认 Bean，宿主引入 eduai 时以这里的映射为准。</p>
+     *
+     * @param source 教育 AI 配置
+     * @return 管线参数
+     */
+    @Bean
+    @Primary
+    public PaperPipelineProperties paperPipelineProperties(EduAiProperties source) {
+        PaperPipelineProperties target = new PaperPipelineProperties();
+        EduAiProperties.Marking marking = source.getMarking();
+        if (marking != null) {
+            target.getMarking().setCallTimeout(marking.getCallTimeout());
+            target.getMarking().setPreprocess(marking.isPreprocess());
+            target.getMarking().setLayoutCorrection(marking.isLayoutCorrection());
+            target.getMarking().setExtractStrategy(marking.getExtractStrategy());
+        }
+        EduAiProperties.Ai ai = source.getAi();
+        if (ai != null) {
+            target.getAi().setEnabled(ai.isEnabled());
+            EduAiProperties.Retry retry = ai.getRetry();
+            if (retry != null) {
+                PaperPipelineProperties.Retry copy = target.getAi().getRetry();
+                copy.setTimes(retry.getTimes());
+                copy.setBackoffMillis(retry.getBackoffMillis());
+                copy.setBackoffMultiplier(retry.getBackoffMultiplier());
+                copy.setMaxBackoffMillis(retry.getMaxBackoffMillis());
+                copy.setRetryOnTransient(retry.isRetryOnTransient());
+            }
+        }
+        EduAiProperties.Alert alert = source.getAlert();
+        if (alert != null) {
+            target.getAlert().setEnabled(alert.isEnabled());
+            target.getAlert().setWebhookUrl(alert.getWebhookUrl());
+            target.getAlert().setTimeoutMillis(alert.getTimeoutMillis());
+        }
+        return target;
+    }
 
     /**
      * 注册教育AI模块的服务信息贡献者。

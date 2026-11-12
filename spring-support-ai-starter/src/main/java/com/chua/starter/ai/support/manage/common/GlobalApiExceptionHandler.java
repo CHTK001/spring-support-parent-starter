@@ -44,7 +44,7 @@ public class GlobalApiExceptionHandler {
         ApiErrorCode code = ex.getErrorCode();
         log.warn("[api-ex] 业务异常: code={}, message={}", code.getCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.valueOf(code.getHttpStatus()))
-                .body(ApiResult.error(code.getCode(), ex.getMessage()));
+                .body(ApiResult.errorDetail(code.getCode(), ex.getMessage(), ex.getDetail()));
     }
 
     /**

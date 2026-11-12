@@ -54,6 +54,39 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         DEFAULTS.put("ssh.connect.timeout", "15");
         DEFAULTS.put("ssh.session.timeout", "30");
         DEFAULTS.put("ssh.read.timeout", "60");
+        // RDP 显示参数（越界/非法回落默认，见 RdpDisplaySettings）
+        DEFAULTS.put("rdp.width", "1280");
+        DEFAULTS.put("rdp.height", "768");
+        DEFAULTS.put("rdp.color-depth", "24");
+        DEFAULTS.put("rdp.force-lossless", "false");
+        // RDP 体验/设备（见 GuacdTunables，全部带校验与回落）
+        DEFAULTS.put("rdp.dpi", "96");
+        DEFAULTS.put("rdp.wallpaper", "false");
+        DEFAULTS.put("rdp.theming", "false");
+        DEFAULTS.put("rdp.font-smoothing", "true");
+        DEFAULTS.put("rdp.full-window-drag", "true");
+        DEFAULTS.put("rdp.desktop-composition", "true");
+        DEFAULTS.put("rdp.menu-animations", "false");
+        DEFAULTS.put("rdp.audio-input", "false");
+        DEFAULTS.put("rdp.audio-output", "true");
+        DEFAULTS.put("rdp.drive", "false");
+        DEFAULTS.put("rdp.console", "false");
+        DEFAULTS.put("rdp.ignore-cert", "true");
+        DEFAULTS.put("rdp.timezone", "Asia/Shanghai");
+        DEFAULTS.put("rdp.keyboard-layout", "en-us-qwerty");
+        // VNC 画面
+        DEFAULTS.put("vnc.color-depth", "24");
+        DEFAULTS.put("vnc.compress-level", "7");
+        DEFAULTS.put("vnc.quality-level", "6");
+        DEFAULTS.put("vnc.swap-red-blue", "false");
+        DEFAULTS.put("vnc.cursor", "local");
+        DEFAULTS.put("vnc.encodings", "ZRLE,Hextile,Tight");
+        DEFAULTS.put("vnc.auto-retry", "0");
+        // SSH 终端外观（guacd 链路；直连终端用 xterm 侧设置）
+        DEFAULTS.put("ssh.terminal-type", "xterm-256color");
+        DEFAULTS.put("ssh.font-name", "monospace");
+        DEFAULTS.put("ssh.font-size", "12");
+        DEFAULTS.put("ssh.backspace", "127");
     }
 
     /**
@@ -117,13 +150,37 @@ public class ServerConfigServiceImpl implements ServerConfigService {
             changedKeys.add(key);
         }
         // 配置变更后发布事件，时间轮调度器据此动态重排周期任务
-        if (!changedKeys.isEmpty()) {
-            try {
-                eventPublisher.publishEvent(new ServerConfigChangedEvent(changedKeys));
-            } catch (Exception e) {
-                log.warn("[config] 发布配置变更事件失败: {}", e.getMessage());
-            }
+        publishChanged(changedKeys);
+        return ReturnResult.success();
+    }
+
+    /**
+     * 发布配置变更事件。
+     *
+     * <p>保存与删除都走这里：只让保存发、删除不发，会让「配置变了」的监听器
+     * 在删除场景漏掉（例如将来按配置失效缓存），语义不一致比少发一次更难查。</p>
+     *
+     * @param keys 变更的配置键
+     */
+    private void publishChanged(Set<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return;
         }
+        try {
+            eventPublisher.publishEvent(new ServerConfigChangedEvent(keys));
+        } catch (Exception e) {
+            log.warn("[config] 发布配置变更事件失败: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<Void> deleteConfig(String key) {
+        if (key == null || key.isBlank()) {
+            return ReturnResult.error("配置键不能为空");
+        }
+        configMapper.delete(new LambdaQueryWrapper<MsServerConfig>()
+                .eq(MsServerConfig::getConfigKey, key));
+        publishChanged(Set.of(key));
         return ReturnResult.success();
     }
 
@@ -226,6 +283,35 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         desc.put("ssh.connect.timeout", "SSH 连接/握手超时(秒)");
         desc.put("ssh.session.timeout", "SSH 认证/会话建立超时(秒)");
         desc.put("ssh.read.timeout", "SSH 命令执行/输出读取超时(秒)");
+        desc.put("rdp.width", "RDP 分辨率宽（640-3840，越界回落 1280）");
+        desc.put("rdp.height", "RDP 分辨率高（480-2160，越界回落 768）");
+        desc.put("rdp.color-depth", "RDP 色深（8/16/24/32，其它回落 24）");
+        desc.put("rdp.force-lossless", "RDP 画质优先（true=关闭有损压缩，更清晰但更占带宽）");
+        desc.put("rdp.dpi", "RDP DPI（60-480，越界回落 96）");
+        desc.put("rdp.wallpaper", "RDP 显示远端壁纸（关掉省带宽）");
+        desc.put("rdp.theming", "RDP 显示远端主题（关掉省带宽）");
+        desc.put("rdp.font-smoothing", "RDP 字体平滑（更清晰，略占带宽）");
+        desc.put("rdp.full-window-drag", "RDP 整窗拖拽（关掉只显示轮廓，弱网更流畅）");
+        desc.put("rdp.desktop-composition", "RDP 桌面合成（Aero 效果）");
+        desc.put("rdp.menu-animations", "RDP 菜单动画");
+        desc.put("rdp.audio-input", "RDP 音频输入（麦克风）");
+        desc.put("rdp.audio-output", "RDP 音频输出");
+        desc.put("rdp.drive", "RDP 驱动器映射（远程桌面文件传输通道）");
+        desc.put("rdp.console", "RDP 以控制台会话接入（不踢掉已登录用户）");
+        desc.put("rdp.ignore-cert", "RDP 忽略服务端证书错误（自签证书场景）");
+        desc.put("rdp.timezone", "RDP 会话时区，如 Asia/Shanghai");
+        desc.put("rdp.keyboard-layout", "RDP 键盘布局，如 en-us-qwerty");
+        desc.put("vnc.color-depth", "VNC 色深（8/16/24/32）");
+        desc.put("vnc.compress-level", "VNC 压缩级别（0-9，越大越省带宽越耗 CPU）");
+        desc.put("vnc.quality-level", "VNC 画质级别（0-9，越大越清晰越占带宽）");
+        desc.put("vnc.swap-red-blue", "VNC 交换红蓝通道（颜色反转时开）");
+        desc.put("vnc.cursor", "VNC 光标渲染：local 本地跟手 / remote 远端形状准确");
+        desc.put("vnc.encodings", "VNC 编码优先级（逗号分隔，未知编码整份回落默认）");
+        desc.put("vnc.auto-retry", "VNC 断线自动重连次数（0-10）");
+        desc.put("ssh.terminal-type", "SSH 终端类型 TERM（xterm-256color / xterm / screen-256color…）");
+        desc.put("ssh.font-name", "SSH 终端字体名（guacd 链路）");
+        desc.put("ssh.font-size", "SSH 终端字号（8-40，guacd 链路）");
+        desc.put("ssh.backspace", "SSH 退格键字符：127(DEL) 或 8(BS)");
         return desc.getOrDefault(key, "系统配置");
     }
 }

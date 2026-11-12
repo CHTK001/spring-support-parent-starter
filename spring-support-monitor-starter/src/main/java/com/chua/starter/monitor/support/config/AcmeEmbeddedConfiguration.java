@@ -8,10 +8,12 @@ import com.chua.starter.monitor.service.impl.AcmeCertificateServiceImpl;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
 
 /**
  * 把 ACME 证书模块并入主后端进程。
@@ -73,5 +75,30 @@ public class AcmeEmbeddedConfiguration {
     @Bean
     public MonitorAcmeOrderMapper monitorAcmeOrderMapper(SqlSessionTemplate sqlSessionTemplate) {
         return sqlSessionTemplate.getMapper(MonitorAcmeOrderMapper.class);
+    }
+
+    /**
+     * 证书页路径别名：{@code /monitor/api/**} 剥前缀后交给主后端真实的 {@code /**}。
+     *
+     * <p>前端证书页用的仍是独立 ACME 应用那套地址（前缀来自它的
+     * {@code server.servlet.context-path=/monitor/api}）；ACME 并入主后端后
+     * context-path 为空，控制器实际在 {@code /v1/cert/**}，不剥前缀就会落到
+     * 静态资源兜底并返回 {@code No static resource monitor/api/v1/cert/page}。</p>
+     *
+     * <p>只对 {@code /monitor/api/*} 生效，其它路径不经过本过滤器。</p>
+     *
+     * @return 过滤器注册
+     */
+    @Bean
+    public FilterRegistrationBean<AcmePathAliasFilter> acmePathAliasFilterRegistration() {
+        FilterRegistrationBean<AcmePathAliasFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new AcmePathAliasFilter());
+        registration.setName("acmePathAliasFilter");
+        registration.addUrlPatterns(AcmePathAliasFilter.ALIAS_PREFIX + "/*");
+        // 排在 CORS（HIGHEST_PRECEDENCE + 10）之后、鉴权与 MVC 之前：
+        // 后续过滤器与处理器看到的都是剥掉前缀的真实路径 /v1/cert/**，
+        // 与用户直接访问 /v1/cert/** 时的行为完全一致
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 20);
+        return registration;
     }
 }

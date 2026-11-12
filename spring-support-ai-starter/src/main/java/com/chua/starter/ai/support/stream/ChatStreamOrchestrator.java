@@ -399,6 +399,9 @@ public class ChatStreamOrchestrator {
         if (boundRole != null && boundRole.getTemperature() != null) {
             request.setTemperature(boundRole.getTemperature());
         }
+        // 生成参数最后兜底：模型登记 > 角色配置 > 设置中心（runtime.temperature / max_tokens）。
+        // 前两者都没给值时，才用设置中心的全局默认；这也解释了为什么它必须放在角色覆盖之后。
+        applyGlobalGenerationDefaults(request);
         final Map<?, ?> roleCapabilities = asMap(roleSettings.get("capabilities"));
         Object thinkObj = body.get("think");
         if (thinkObj != null) {
@@ -1538,6 +1541,73 @@ public class ChatStreamOrchestrator {
     }
 
     /**
+     * 用设置中心的全局默认值补齐「温度」与「最大输出 tokens」。
+     *
+     * <p><b>为什么需要补。</b>这两项被 {@code ChatClientSettingsResolver} 读进
+     * {@code ChatClientSettings} 后就没了下文（{@code getTemperature()} /
+     * {@code getMaxTokens()} 全仓零调用）：设置页能改、能存，对话链路上从不读取。
+     * 现在按 {@code 模型登记 > 角色配置 > 设置中心} 的回退链落到真实请求上 ——
+     * 只有前两级都没给值时才用全局默认，避免覆盖用户为单个模型/角色调过的参数。</p>
+     *
+     * @param request 待填充的对话请求
+     */
+    private void applyGlobalGenerationDefaults(AiChatRequest request) {
+        try {
+            if (request.getTemperature() == null) {
+                Double temperature = parseDouble(sysAiGlobalSettingService
+                        .getValue(SETTINGS_GROUP_RUNTIME, GLOBAL_FIELD_TEMPERATURE).orElse(null));
+                if (temperature != null) {
+                    request.setTemperature(temperature);
+                }
+            }
+            if (request.getMaxTokens() == null) {
+                Integer maxTokens = parseInteger(sysAiGlobalSettingService
+                        .getValue(SETTINGS_GROUP_RUNTIME, GLOBAL_FIELD_MAX_TOKENS).orElse(null));
+                // <=0 视为未配置：0 会让部分供应商直接拒请求
+                if (maxTokens != null && maxTokens > 0) {
+                    request.setMaxTokens(maxTokens);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ChatStream] 应用全局生成参数失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 解析小数为空安全值。
+     *
+     * @param raw 原始字符串
+     * @return 解析结果；空/非法返回 null
+     */
+    private static Double parseDouble(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.valueOf(raw.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 解析整数为空安全值。
+     *
+     * @param raw 原始字符串
+     * @return 解析结果；空/非法返回 null
+     */
+    private static Integer parseInteger(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(raw.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
      * 全局设置分组（与 ChatClientSettingsResolver.GROUP 保持一致）。
      */
     private static final String SETTINGS_GROUP_RUNTIME = "runtime";
@@ -1561,6 +1631,16 @@ public class ChatStreamOrchestrator {
      * 全局默认系统提示词字段名（与 ChatClientSettingsResolver 读取的键一致）。
      */
     private static final String GLOBAL_FIELD_SYSTEM_PROMPT = "system_prompt";
+
+    /**
+     * 全局默认生成温度字段名
+     */
+    private static final String GLOBAL_FIELD_TEMPERATURE = "temperature";
+
+    /**
+     * 全局默认最大输出 tokens 字段名
+     */
+    private static final String GLOBAL_FIELD_MAX_TOKENS = "max_tokens";
 
     /**
      * load Role

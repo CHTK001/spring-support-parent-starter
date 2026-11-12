@@ -301,9 +301,10 @@ public class OsgiAutoConfiguration {
     @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
     @ConditionalOnProperty(prefix = "plugin.osgi.endpoint", name = "enabled", havingValue = "true")
     public OsgiMonitorController osgiMonitorController(FelixOsgiLauncher osgiLauncher,
-                                                       ObjectProvider<OsgiBeanDefinitionRegister> registerProvider) {
+                                                       ObjectProvider<OsgiBeanDefinitionRegister> registerProvider,
+                                                       OsgiProperties properties) {
         log.info("[OSGi] 运行时观测端点已启用: /osgi/stats, /osgi/bundles, /osgi/services, /osgi/snapshot");
-        return new OsgiMonitorController(osgiLauncher, registerProvider.getIfAvailable());
+        return new OsgiMonitorController(osgiLauncher, registerProvider.getIfAvailable(), properties);
     }
 
     /**

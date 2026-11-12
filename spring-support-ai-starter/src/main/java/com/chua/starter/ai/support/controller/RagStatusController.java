@@ -83,10 +83,12 @@ public class RagStatusController {
         // 提示信息
         if (!ragAvailable) {
             status.put("message", "RAG 服务未初始化，请先配置对话模型");
-            status.put("configPath", "/settings/default-models");
+            // 路由是 /setting/:tab?（见 pages/ai/src/main.js），tab 名见 SystemSettings.vue 的 tabs：
+            // 此前写成 /settings/default-models 与 /settings/rag，点了会落到不存在的前端路由。
+            status.put("configPath", "/setting/default-models");
         } else if (needEmbeddingConfig) {
             status.put("message", embeddingIssue);
-            status.put("configPath", "/settings/rag");
+            status.put("configPath", "/setting/rag-config");
         } else {
             status.put("message", "RAG 服务正常");
             status.put("configPath", null);

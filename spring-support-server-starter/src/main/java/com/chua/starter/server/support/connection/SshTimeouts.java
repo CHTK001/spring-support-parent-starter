@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 /**
  * SSH 超时配置（运行时可改）
  * <p>
@@ -108,11 +110,21 @@ public class SshTimeouts {
     /**
      * 系统配置变更后热刷新
      *
+     * <p>只认这三个键：{@code ServerConfigChangedEvent} 是「任意系统配置保存」都会发的
+     * 通用事件，之前这里无条件 {@link #refresh()}，结果保存终端配色这类与 SSH 无关的
+     * 配置也会重刷超时并打一行「[ssh] 超时生效」，日志里看着像 SSH 设置被改过。</p>
+     *
      * @param event 变更事件
      */
     @EventListener(ServerConfigChangedEvent.class)
     public void onConfigChanged(ServerConfigChangedEvent event) {
-        refresh();
+        Set<String> keys = event == null ? null : event.keys();
+        if (keys == null
+                || keys.contains(KEY_CONNECT)
+                || keys.contains(KEY_SESSION)
+                || keys.contains(KEY_READ)) {
+            refresh();
+        }
     }
 
     /**

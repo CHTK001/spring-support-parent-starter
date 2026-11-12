@@ -201,6 +201,11 @@ plugin:
     # 拆除鉴权过滤器里的令牌硬要求：无法完成鉴权的请求（无令牌 / 令牌失效）
     # 直接注入内置 admin 身份放行。本地开发与浏览器验收专用，严禁对外环境开启。
     local-admin-fallback: true
+    # 跨域来源白名单：/v2/user/login 这类 OAuth 端点带 Origin 时，若未命中此名单，
+    # 过滤器既不下发 CORS 头也不返回响应，浏览器登录会一直 pending（实测 12s 超时）。
+    # 因此本地开发/验收必须显式列出 vite 端口，且与上面 plugin.api.cors 保持一致。
+    file-storage:
+      cors-allowed-origins: http://localhost:15689,http://127.0.0.1:15689,http://localhost:15700,http://127.0.0.1:15700,http://localhost:19095,http://127.0.0.1:19095
     temp:
       # 格式 用户名:口令;用户名:口令；用户标识取用户名，跨登录稳定，数据按此归属
       #

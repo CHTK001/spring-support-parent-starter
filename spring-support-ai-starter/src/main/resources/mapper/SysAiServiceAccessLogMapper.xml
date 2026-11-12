@@ -3,39 +3,72 @@
 <mapper namespace="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper">
 
     <!--
+        入站流量口径（两个查询共用，必须共用）：
+
+        1) 必须限定 router_group。拓扑页可以切换路由组，不限组时左列永远不变，
+           连线就指向了不存在的因果（A 组的 Key 连到 B 组的成员）。
+
+        2) 必须 INNER JOIN AppKey 台账。一是把「空 AppKey / 已删除 Key / 别人家的 Key」
+           一次滤干净——访问日志的 app_key 只是请求带来的字符串，Key 一旦被删，
+           日志行仍是孤儿，只按字符串过滤就会把已撤销的凭据继续画在页面上；
+           二是归属过滤只能靠台账（日志的 user_id 是调用身份，网关机器流量为空）。
+           归属口径与 ApiChannelAuthController.applyOwnerFilter 一致：
+           有身份只看自己的 Key；无身份（后台线程/机器）只看无主 Key，绝不当成全见。
+
+        3) 平均耗时不做 COALESCE(...,0)：窗口内没有样本时必须返回 NULL，
+           由前端显示「—」；返回 0 会让「无数据」伪装成「0ms」。
+    -->
+    <sql id="trafficScope">
+        FROM sys_ai_service_access_log l
+        INNER JOIN sys_ai_app_key k
+                ON k.sys_ai_app_key_app_key = l.app_key
+               AND k.sys_ai_app_key_delete = 0
+        WHERE l.create_time &gt;= #{since}
+          AND l.router_group = #{routerGroup}
+        <if test="restrictOwner">
+            <choose>
+                <when test="ownerUserId != null">
+                    AND k.sys_ai_app_key_user_id = #{ownerUserId}
+                </when>
+                <otherwise>
+                    AND k.sys_ai_app_key_user_id IS NULL
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!--
         入站流量按 AppKey 聚合：路由可视化页左侧「入站」节点用它回答
-        「这一小时是谁在打网关、打了多少次、用了多少 token」。
-        单条 SQL 完成 GROUP BY，避免把明细全量装进 JVM。
+        「这一小时是谁在打【这个路由组】、打了多少次、用了多少 token」。
     -->
     <select id="selectAppKeyTraffic" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$AppKeyTrafficRow">
         SELECT
-            app_key AS appKey,
+            l.app_key AS appKey,
             COUNT(*) AS calls,
-            COALESCE(SUM(CASE WHEN status &gt;= 200 AND status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
-            COALESCE(SUM(total_tokens), 0) AS tokens,
-            COALESCE(AVG(latency_ms), 0) AS avgLatencyMs,
-            MAX(create_time) AS lastAt
-        FROM sys_ai_service_access_log
-        WHERE create_time &gt;= #{since}
-          AND app_key IS NOT NULL
-          AND app_key &lt;&gt; ''
-        GROUP BY app_key
+            COALESCE(SUM(CASE WHEN l.status &gt;= 200 AND l.status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
+            COALESCE(SUM(l.total_tokens), 0) AS tokens,
+            AVG(l.latency_ms) AS avgLatencyMs,
+            MAX(l.create_time) AS lastAt
+        <include refid="trafficScope"/>
+        GROUP BY l.app_key
         ORDER BY calls DESC
         LIMIT #{limit}
     </select>
 
     <!--
         入站流量总计：网关节点上的「本窗口请求数 / 成功率 / 平均耗时」。
+
+        WHERE 与上方逐条对齐（同一个 trafficScope），
+        这样「调用总数」等于各 Key 之和（未触及 key_limit 时），对账不会出差额。
     -->
     <select id="selectTrafficTotal" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$TrafficTotalRow">
         SELECT
             COUNT(*) AS calls,
-            COALESCE(SUM(CASE WHEN status &gt;= 200 AND status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
-            COALESCE(SUM(total_tokens), 0) AS tokens,
-            COALESCE(AVG(latency_ms), 0) AS avgLatencyMs,
-            MAX(create_time) AS lastAt
-        FROM sys_ai_service_access_log
-        WHERE create_time &gt;= #{since}
+            COALESCE(SUM(CASE WHEN l.status &gt;= 200 AND l.status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
+            COALESCE(SUM(l.total_tokens), 0) AS tokens,
+            AVG(l.latency_ms) AS avgLatencyMs,
+            MAX(l.create_time) AS lastAt
+        <include refid="trafficScope"/>
     </select>
 
 </mapper>

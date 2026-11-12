@@ -65,8 +65,10 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         m.put("temperature", new String[]{"runtime", "temperature"});
         m.put("maxTokens", new String[]{"runtime", "max_tokens"});
         m.put("timeout", new String[]{"runtime", "timeout_millis"});
-        m.put("enableCache", new String[]{"global", "enable_cache"});
-        m.put("stream", new String[]{"global", "stream"});
+        // enableCache（global.enable_cache）/ stream（global.stream）已移除：两者只在
+        // DTO 与 FIELD_MAP 之间往返，全仓没有任何业务读取点（对话缓存与流式的真实开关
+        // 是请求体的 stream 字段与各客户端自身实现）。保留它们等于让 PUT 成功、
+        // GET 回显、实际什么都不会发生。
         m.put("systemPrompt", new String[]{"runtime", "system_prompt"});
         // 遗留别名 ragEmbeddingModel 原本指向已废弃的引擎字段 rag_embedding_model。
         // 改指模型字段 rag_embedding_model_name：既符合「只选模型不选引擎」的契约，
@@ -81,12 +83,9 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         m.put("ragChunkSize", new String[]{"rag", "rag_chunk_size"});
         m.put("ragChunkOverlap", new String[]{"rag", "rag_chunk_overlap"});
         m.put("ragSplitter", new String[]{"rag", "rag_splitter"});
-        m.put("workshopStorageDir", new String[]{"workshop", "storage_dir"});
-        m.put("workshopMaxUploadSizeMb", new String[]{"workshop", "max_upload_size_mb"});
-        m.put("workshopAllowedExtensions", new String[]{"workshop", "allowed_extensions"});
-        m.put("protocolServerEnabled", new String[]{"runtime", "protocol_server_enabled"});
-        m.put("protocolServerPort", new String[]{"runtime", "protocol_server_port"});
-        return java.util.Map.copyOf(m);
+        // workshop 三项（storage_dir / max_upload_size_mb / allowed_extensions）已移除：
+        // 没有对应的 GlobalSettingProvider 分组，也没有任何业务读取点，只在 DTO 里往返。
+        m.put("protocolServerEnabled", new String[]{"runtime", "protocol_server_enabled"});        return java.util.Map.copyOf(m);
     }
 
     @Override
@@ -99,8 +98,6 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         dto.setTemperature(getDecimal("temperature", null));
         dto.setMaxTokens(getInt("maxTokens", null));
         dto.setTimeout(getInt("timeout", null));
-        dto.setEnableCache(getBool("enableCache", null));
-        dto.setStream(getBool("stream", null));
         dto.setSystemPrompt(getStr("systemPrompt"));
         dto.setRagEmbeddingModel(getStr("ragEmbeddingModel"));
         dto.setRagLlmModel(getStr("ragLlmModel"));
@@ -111,11 +108,7 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         dto.setRagChunkSize(getInt("ragChunkSize", null));
         dto.setRagChunkOverlap(getInt("ragChunkOverlap", null));
         dto.setRagSplitter(getStr("ragSplitter"));
-        dto.setWorkshopStorageDir(getStr("workshopStorageDir"));
-        dto.setWorkshopMaxUploadSizeMb(getInt("workshopMaxUploadSizeMb", null));
-        dto.setWorkshopAllowedExtensions(getStr("workshopAllowedExtensions"));
         dto.setProtocolServerEnabled(getBool("protocolServerEnabled", null));
-        dto.setProtocolServerPort(getInt("protocolServerPort", null));
         return dto;
     }
 
@@ -166,18 +159,6 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
          * @param setting.getTimeout( setting.获取超时(
          */
         put("timeout", setting.getTimeout());
-        /**
-         * 放入。
-         * @param "enableCache" "enable缓存"
-         * @param setting.getEnableCache( setting.获取enable缓存(
-         */
-        put("enableCache", setting.getEnableCache());
-        /**
-         * 放入。
-         * @param "stream" "流"
-         * @param setting.getStream( setting.获取流(
-         */
-        put("stream", setting.getStream());
         /**
          * 放入。
          * @param "systemPrompt" "系统提示符"
@@ -235,34 +216,10 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         put("ragSplitter", setting.getRagSplitter());
         /**
          * 放入。
-         * @param "workshopStorageDir" "workshopstoragedir"
-         * @param setting.getWorkshopStorageDir( setting.获取workshopstoragedir(
-         */
-        put("workshopStorageDir", setting.getWorkshopStorageDir());
-        /**
-         * 放入。
-         * @param "workshopMaxUploadSizeMb" "workshop最大upload大小mb"
-         * @param setting.getWorkshopMaxUploadSizeMb( setting.getworkshop最大upload大小mb(
-         */
-        put("workshopMaxUploadSizeMb", setting.getWorkshopMaxUploadSizeMb());
-        /**
-         * 放入。
-         * @param "workshopAllowedExtensions" "workshopallowed延伸"
-         * @param setting.getWorkshopAllowedExtensions( setting.获取workshopallowed延伸(
-         */
-        put("workshopAllowedExtensions", setting.getWorkshopAllowedExtensions());
-        /**
-         * 放入。
          * @param "protocolServerEnabled" "协议服务端已启用"
          * @param setting.getProtocolServerEnabled( setting.获取协议服务端已启用(
          */
         put("protocolServerEnabled", setting.getProtocolServerEnabled());
-        /**
-         * 放入。
-         * @param "protocolServerPort" "协议服务端端口"
-         * @param setting.getProtocolServerPort( setting.获取协议服务端端口(
-         */
-        put("protocolServerPort", setting.getProtocolServerPort());
         return get();
     }
 

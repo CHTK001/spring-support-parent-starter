@@ -41,9 +41,14 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
         var file = "backup_" + System.currentTimeMillis() + ".tar.gz";
           // 排除 backups 自身（避免把正在写入的备份打包进去），并排除运行时 pid 文件：
           // 回滚会把备份里的 pid 还原成「指向备份时刻旧进程」的陈旧 pid，导致停止脚本判定已停止而不真正停止。
-        return prefix(projectPath) + "mkdir -p backups && tar -czf backups/" + file
-                  + " --exclude='./backups' --exclude='./app.pid' --exclude='./logs/nginx.pid' . ; "
-                  + "ls -1dt backups/backup_* 2>/dev/null | tail -n +" + (keep + 1) + " | xargs -r rm -rf";
+          // 失败必须让整条命令以非 0 退出：旧写法用 `;` 接保留策略，tar/cd 失败后
+          // 末尾的 ls 仍返回 0，页面会把「没有生成任何备份」显示成「备份成功」。
+          // 因此 tar 失败先删掉半成品并 exit 1；保留策略自身失败不影响本次备份结果。
+        return prefix(projectPath) + "mkdir -p backups && { tar -czf backups/" + file
+                  + " --exclude='./backups' --exclude='./app.pid' --exclude='./logs/nginx.pid' ."
+                  + " || { rm -f backups/" + file + "; exit 1; }; } && { "
+                  + "ls -1dt backups/backup_* 2>/dev/null | tail -n +" + (keep + 1)
+                  + " | xargs -r rm -rf || true; echo 'backup created: backups/" + file + "'; }";
     }
 
     @Override
@@ -81,7 +86,9 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
         if (projectPath == null || projectPath.isBlank()) {
             return script;
         }
-        return "mkdir -p '" + quote(projectPath) + "' && cd '" + quote(projectPath) + "' && " + script;
+          // 目录准备失败必须直接终止整段脚本。旧写法只在首行用 && 串联，多行脚本（如停止脚本）
+          // 后续的 if / true 会覆盖退出码，实测 /opt/app 无写权限时仍显示「步骤完成 exit 0」。
+        return "mkdir -p '" + quote(projectPath) + "' && cd '" + quote(projectPath) + "' || exit 1;\n" + script;
     }
 
     @Override

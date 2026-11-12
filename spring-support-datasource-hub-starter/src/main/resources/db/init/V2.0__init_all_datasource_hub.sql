@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS `ms_datasource`
       --   补列可能没执行 —— 列没建成要等到运行期 SELECT 才暴露成 Unknown column。
     `datasource_control_mode` VARCHAR(16) NULL DEFAULT '' COMMENT '进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测',
     `datasource_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测',
+    `datasource_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(ms_jdbc_driver_jar.id)，空=用内置驱动',
+    `datasource_top_flag` INT NULL DEFAULT 0 COMMENT '置顶标记 - 1:置顶, 0:普通',
     `datasource_driver_class_name` VARCHAR(255) NULL DEFAULT '' COMMENT 'JDBC 驱动类名，jdbc 类型非 MySQL 时可显式指定',
     `datasource_create_time` DATETIME     NULL COMMENT '创建时间',
     `datasource_update_time` DATETIME     NULL COMMENT '更新时间',

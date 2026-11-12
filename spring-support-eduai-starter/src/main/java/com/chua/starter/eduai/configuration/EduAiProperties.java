@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.paper.pipeline.config;
+package com.chua.starter.eduai.configuration;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

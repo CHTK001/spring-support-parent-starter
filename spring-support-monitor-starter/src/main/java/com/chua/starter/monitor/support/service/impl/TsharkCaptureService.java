@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.protocol.ProtocolRestorer;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.network.support.tshark.PacketParserService;
 import com.chua.network.support.tshark.PacketRecord;
 import com.chua.starter.datasource.support.DataSourceContextSupport;
@@ -19,6 +21,7 @@ import com.chua.starter.monitor.support.model.TsharkFlowVO;
 import com.chua.starter.monitor.support.model.TsharkHandshakeVO;
 import com.chua.starter.monitor.support.model.TsharkInterfaceVO;
 import com.chua.starter.monitor.support.model.TsharkProtocolStatVO;
+import com.chua.starter.monitor.support.model.TsharkRestoreCapabilityVO;
 import com.chua.starter.monitor.support.tshark.TsharkHttpStreamRestorer;
 import com.chua.starter.monitor.support.tshark.TsharkPacketStreamRegistry;
 import com.chua.starter.monitor.support.tshark.TsharkRuntime;
@@ -51,6 +54,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -228,6 +232,16 @@ public class TsharkCaptureService {
        * 按帧号对回 SQLite 行做一次 {@code CASE WHEN frame_no = ? THEN ?} 批量更新。
        */
     private static final int RESTORE_BATCH = 250;
+
+      /**
+       * 只能还原到「结构」的协议：协议头/命令/记录可读，载荷本身是密文。
+       *
+       * <p>这是给页面看的展示口径，不参与调度。HTTPS 是 TLS 记录、SSH 是握手与
+       * 加密通道、FTP/Telnet 是命令流、微信/QQ/钉钉是自研加密协议——它们的正文都
+       * 拿不到，标成「正文可读」会误导排障的人。新增结构级还原器时在这里补一行。</p>
+       */
+    private static final Set<String> STRUCTURE_LEVEL_PROTOCOLS = Set.of(
+            "https", "tls", "ssh", "ftp", "telnet", "wechat", "qq", "im");
 
       /**
        * tshark 解析时额外开启 json 通道的开关。
@@ -1168,6 +1182,7 @@ public class TsharkCaptureService {
         this.sqliteRegistry.ensure(sessionId, filePath);
         List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                 "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=a"));
+        applyTlsKeylog(cmd);
         for (String field : TSHARK_FIELDS) {
             cmd.add("-e");
             cmd.add(field);
@@ -1305,6 +1320,7 @@ public class TsharkCaptureService {
             this.sqliteRegistry.ensure(sessionId, filePath);
             List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                     "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=a"));
+            applyTlsKeylog(cmd);
               // 字段顺序即输出列顺序，逐列含义见 TSHARK_FIELDS 的注释
             for (String field : TSHARK_FIELDS) {
                 cmd.add("-e");
@@ -1424,6 +1440,7 @@ public class TsharkCaptureService {
             Path stderr = Files.createTempFile("tshark-restore", ".log");
             List<String> restoreCmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                     "-T", "json", "-x"));
+            applyTlsKeylog(restoreCmd);
             // 启用显示过滤时 pcap 里还躺着未命中的帧（捕获阶段不下 -f，全量抓）。
             // 这一遍只用于回填已入库报文，同样只读命中的帧，避免白解析几十万条。
             String display = this.displayFilters.get(sessionId);
@@ -3237,6 +3254,111 @@ public class TsharkCaptureService {
             result.add(new TsharkProtocolStatVO(proto, count, bytes));
         }
         return ReturnResult.ok(result);
+    }
+
+      /**
+       * 给 tshark 命令补上 TLS keylog 参数。
+       *
+       * <p>tshark 的写法是 {@code -o tls.keylog_file:<路径>}，解析 pcap 与还原两遍都要带，
+       * 否则「骨架有、正文没有」：第一遍只出协议列，第二遍才把 TLS 里的明文解出来。</p>
+       *
+       * <p>路径不可读时直接跳过并记一条 warn —— 抓包不能因为一个调试用文件缺失就整体失败。</p>
+       *
+       * @param cmd tshark 命令
+       */
+    private void applyTlsKeylog(List<String> cmd) {
+        Path keylog = tlsKeylogPath();
+        if (keylog == null) {
+            return;
+        }
+        cmd.add("-o");
+        cmd.add("tls.keylog_file:" + keylog);
+    }
+
+      /**
+       * 取可读的 TLS keylog 路径。
+       *
+       * @return 绝对路径；未配置或不可读返回 null
+       */
+    private Path tlsKeylogPath() {
+        if (this.installProperties == null) {
+            return null;
+        }
+        String configured = this.installProperties.getTlsKeylogFile();
+        if (configured == null || configured.isBlank()) {
+            return null;
+        }
+        try {
+            Path path = Paths.get(configured.trim()).toAbsolutePath().normalize();
+            if (!Files.isReadable(path)) {
+                log.warn("[tshark] TLS keylog 不可读，已跳过：{}", path);
+                return null;
+            }
+            return path;
+        } catch (RuntimeException e) {
+            log.warn("[tshark] TLS keylog 路径非法：{}", configured);
+            return null;
+        }
+    }
+
+      /**
+       * TLS keylog 是否生效（给页面与排障接口用）。
+       *
+       * @return configured / enabled / path 三项
+       */
+    public ReturnResult<Map<String, Object>> tlsKeylogState() {
+        String configured = this.installProperties == null ? "" : this.installProperties.getTlsKeylogFile();
+        Path path = tlsKeylogPath();
+        Map<String, Object> state = new LinkedHashMap<>(4);
+        state.put("configured", configured != null && !configured.isBlank());
+        state.put("enabled", path != null);
+        state.put("path", path == null ? "" : path.toString());
+        return ReturnResult.ok(state);
+    }
+
+       /**
+        * 可还原协议清单：把 SPI 注册的还原器列出来，并标出还原深度。
+        *
+        * <p><b>为什么由后端给</b>：协议名来自 {@code ProtocolRestorer} 的 SPI 注册，
+        * 写死在前端迟早会和代码不一致（新增一个还原器却没人记得改页脚）。这里按
+        * 优先级升序返回，页面只负责分组展示。</p>
+        *
+        * <p><b>深度口径</b>：{@code FULL} 正文可读（HTTP / 邮件 / 数据库…）；
+        * {@code STRUCTURE} 只能读到协议头、命令或记录结构，载荷本身是密文
+        * （HTTPS / SSH / 微信 / QQ / 钉钉类）；两者都不命中就只能是连接级识别。</p>
+        *
+        * @return 能力清单
+        */
+    public ReturnResult<List<TsharkRestoreCapabilityVO>> restoreCapabilities() {
+        List<ProtocolRestorer> restorers = new ArrayList<>(
+                ServiceProvider.of(ProtocolRestorer.class).collect());
+        restorers.sort(Comparator.comparingInt(ProtocolRestorer::getPriority));
+        List<TsharkRestoreCapabilityVO> result = new ArrayList<>(restorers.size());
+        for (ProtocolRestorer restorer : restorers) {
+            String protocol = restorer.getProtocolName();
+            result.add(new TsharkRestoreCapabilityVO(protocol, restorer.getPriority(), restoreLevel(protocol)));
+        }
+        return ReturnResult.ok(result);
+    }
+
+       /**
+        * 还原深度：正文可读 / 结构可读 / 仅连接。
+        *
+        * <p>这是展示口径，不参与调度。新增还原器时如果要标成结构级，把它加进
+        * {@link #STRUCTURE_LEVEL_PROTOCOLS} 即可；默认按正文可读处理。</p>
+        *
+        * @param protocol 协议名
+        * @return FULL / STRUCTURE / CONNECTION
+        */
+    private static String restoreLevel(String protocol) {
+        if (protocol == null || protocol.isBlank()) {
+            return "CONNECTION";
+        }
+        String name = protocol.trim().toLowerCase(Locale.ROOT);
+        if (STRUCTURE_LEVEL_PROTOCOLS.contains(name)) {
+            return "STRUCTURE";
+        }
+        return "FULL";
     }
 
       /**

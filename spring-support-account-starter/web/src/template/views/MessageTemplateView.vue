@@ -13,6 +13,7 @@
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import ReIcon from '@repo/ui/re-icon'
 import {
   messageTemplateApi,
   type MessageTemplate,
@@ -248,26 +249,23 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
 
 <template>
   <div class="msg-tpl" data-page="message-template">
-    <!-- 页头 -->
-    <header class="msg-tpl__head">
-      <div>
-        <h3>消息模板</h3>
-        <span>短信 / 邮件模板的自定义与选择 · 收信时套用默认模板渲染（部署级共享）</span>
-      </div>
-      <span class="msg-tpl__default">当前默认：{{ defaultName }}</span>
-    </header>
-
     <div class="mtp">
+      <!-- 左：种类切换 + 模板索引 -->
       <aside class="mtp__aside">
-        <div class="mtp__tabs">
-          <button type="button" :class="{ 'is-active': kind === 'SMS' }" @click="switchKind('SMS')">
-            短信
-          </button>
-          <button type="button" :class="{ 'is-active': kind === 'EMAIL' }" @click="switchKind('EMAIL')">
-            邮件
+        <div class="mtp__aside-head">
+          <div class="mtp__tabs">
+            <button type="button" :class="{ 'is-active': kind === 'SMS' }" @click="switchKind('SMS')">
+              短信
+            </button>
+            <button type="button" :class="{ 'is-active': kind === 'EMAIL' }" @click="switchKind('EMAIL')">
+              邮件
+            </button>
+          </div>
+          <button type="button" class="mtp__new" @click="createNew">
+            <ReIcon name="Plus" :size="12" />
+            <span>新建</span>
           </button>
         </div>
-        <button type="button" class="mtp__new" @click="createNew">＋ 新建模板</button>
 
         <div v-if="loading" class="mtp__empty">加载中…</div>
         <div v-else-if="!templates.length" class="mtp__empty">该种类暂无模板</div>
@@ -288,77 +286,91 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
           </button>
         </div>
         <p v-if="errorText" class="mtp__error">{{ errorText }}</p>
+        <p class="mtp__aside-tip">收信时套用该种类的默认模板渲染，部署级共享。</p>
       </aside>
 
+      <!-- 右：编辑器 + 实时预览 -->
       <section class="mtp__editor">
-        <div class="mtp__row">
-          <label class="mtp__field">
-            <span>模板名称</span>
-            <input v-model="draft.templateName" type="text" placeholder="如：验证码优先" />
-          </label>
-          <label class="mtp__field">
-            <span>模板编码</span>
-            <input v-model="draft.templateCode" type="text" placeholder="同种类内唯一" />
-          </label>
-          <label class="mtp__field mtp__field--sm">
-            <span>排序</span>
-            <input v-model.number="draft.templateSortOrder" type="number" min="0" />
-          </label>
-        </div>
-
-        <label v-if="kind === 'EMAIL'" class="mtp__field">
-          <span>邮件主题</span>
-          <input v-model="draft.templateSubject" type="text" placeholder="支持 {{变量}}" />
-        </label>
-
-        <div class="mtp__field">
-          <span>模板正文（{{ kind === 'SMS' ? '短信' : '邮件' }}，支持 &#123;&#123;变量&#125;&#125; 占位）</span>
-          <textarea
-            ref="contentRef"
-            v-model="draft.templateContent"
-            class="mtp__content"
-            rows="7"
-            spellcheck="false"
-          />
-        </div>
-
-        <div class="mtp__vars">
-          <span class="mtp__vars-label">插入变量</span>
-          <button
-            v-for="name in variables"
-            :key="name"
-            type="button"
-            class="mtp__var"
-            @click="insertVariable(name)"
-          >{{ name }}</button>
-        </div>
-
-        <div class="mtp__toggle">
-          <label>
-            <input v-model="draft.templateEnabled" type="checkbox" />
-            启用
-          </label>
-          <label>
-            <input v-model="draft.templateDefault" type="checkbox" />
-            设为默认
-          </label>
-        </div>
-
-        <div class="mtp__preview">
-          <div class="mtp__preview-head">
-            <b>预览</b>
-            <span>{{ previewing ? '渲染中…' : '示例变量' }}</span>
+        <header class="mtp__editor-head">
+          <div class="mtp__editor-title">
+            <b>{{ draft.templateName || '新模板' }}</b>
+            <i>{{ kind === 'SMS' ? '短信' : '邮件' }}模板 · {{ draft.templateCode || '未设编码' }}</i>
           </div>
-          <div class="mtp__preview-body">
-            <div v-if="preview?.subject" class="mtp__preview-subject">{{ preview.subject }}</div>
-            <pre class="mtp__preview-content">{{ preview?.content || '输入正文后自动预览' }}</pre>
-            <div v-if="preview?.missing?.length" class="mtp__missing">
-              未取值变量：{{ preview.missing.join('、') }}
+          <span class="msg-tpl__default">当前默认：{{ defaultName }}</span>
+        </header>
+
+        <div class="mtp__split">
+          <div class="mtp__form">
+            <div class="mtp__row">
+              <label class="mtp__field">
+                <span>模板名称</span>
+                <input v-model="draft.templateName" type="text" placeholder="如：验证码优先" />
+              </label>
+              <label class="mtp__field">
+                <span>模板编码</span>
+                <input v-model="draft.templateCode" type="text" placeholder="同种类内唯一" />
+              </label>
+              <label class="mtp__field mtp__field--sm">
+                <span>排序</span>
+                <input v-model.number="draft.templateSortOrder" type="number" min="0" />
+              </label>
+            </div>
+
+            <label v-if="kind === 'EMAIL'" class="mtp__field">
+              <span>邮件主题</span>
+              <input v-model="draft.templateSubject" type="text" placeholder="支持 {{变量}}" />
+            </label>
+
+            <div class="mtp__field">
+              <span>模板正文（{{ kind === 'SMS' ? '短信' : '邮件' }}，支持 &#123;&#123;变量&#125;&#125; 占位）</span>
+              <textarea
+                ref="contentRef"
+                v-model="draft.templateContent"
+                class="mtp__content"
+                rows="10"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="mtp__vars">
+              <span class="mtp__vars-label">插入变量</span>
+              <button
+                v-for="name in variables"
+                :key="name"
+                type="button"
+                class="mtp__var"
+                @click="insertVariable(name)"
+              >{{ name }}</button>
+            </div>
+
+            <div class="mtp__toggle">
+              <label>
+                <input v-model="draft.templateEnabled" type="checkbox" />
+                启用
+              </label>
+              <label>
+                <input v-model="draft.templateDefault" type="checkbox" />
+                设为默认
+              </label>
             </div>
           </div>
+
+          <aside class="mtp__preview">
+            <div class="mtp__preview-head">
+              <b>预览</b>
+              <span>{{ previewing ? '渲染中…' : '示例变量' }}</span>
+            </div>
+            <div class="mtp__preview-body">
+              <div v-if="preview?.subject" class="mtp__preview-subject">{{ preview.subject }}</div>
+              <pre class="mtp__preview-content">{{ preview?.content || '输入正文后自动预览' }}</pre>
+              <div v-if="preview?.missing?.length" class="mtp__missing">
+                未取值变量：{{ preview.missing.join('、') }}
+              </div>
+            </div>
+          </aside>
         </div>
 
-        <div class="mtp__footer">
+        <footer class="mtp__footer">
           <button
             v-if="draft.templateId"
             type="button"
@@ -374,7 +386,7 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
           <button type="button" class="mtp__btn is-primary" :disabled="saving" @click="save">
             {{ saving ? '保存中…' : '保存模板' }}
           </button>
-        </div>
+        </footer>
       </section>
     </div>
   </div>
@@ -387,63 +399,59 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
-  gap: 14px;
-  padding: 4px 0 8px;
-}
-.msg-tpl__head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  flex: none;
-}
-.msg-tpl__head h3 {
-  margin: 0 0 2px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary, #0f172a);
-}
-.msg-tpl__head span {
-  font-size: 12px;
-  color: var(--text-secondary, #475569);
+  padding: 2px 0 6px;
 }
 .msg-tpl__default {
   flex: none;
-  font-size: 12px;
-  padding: 3px 10px;
+  font-size: 11px;
+  padding: 3px 9px;
   border-radius: 999px;
-  background: var(--el-fill-color-light, #f1f5f9);
+  border: 1px solid var(--border-default, #e2e9f3);
+  background: var(--bg-fill, #f1f5f9);
   color: var(--text-secondary, #475569);
+  white-space: nowrap;
 }
 .mtp {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   flex: 1;
   min-height: 0;
 }
+
+/* ---------- 左索引卡 ---------- */
 .mtp__aside {
   flex: none;
-  width: 216px;
+  width: 238px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-right: 12px;
-  border-right: 1px solid var(--border-default, #e2e9f3);
+  padding: 10px;
   min-height: 0;
+  background: var(--bg-container, #fff);
+  border: 1px solid var(--border-default, #e2e9f3);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(15 23 42 / 4%));
+}
+.mtp__aside-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
 }
 .mtp__tabs {
+  flex: 1;
   display: flex;
   gap: 2px;
   padding: 3px;
   border-radius: 8px;
-  background: var(--el-fill-color-light, #f1f5f9);
+  background: var(--bg-fill, #f1f5f9);
 }
 .mtp__tabs button {
   flex: 1;
   border: 0;
   background: transparent;
   border-radius: 6px;
-  padding: 4px 0;
+  padding: 5px 0;
   font-size: 12px;
   color: var(--text-secondary, #475569);
   cursor: pointer;
@@ -451,22 +459,35 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
 }
 .mtp__tabs button.is-active {
   background: var(--bg-container, #fff);
-  color: var(--el-color-primary, #409eff);
+  color: var(--el-color-primary, #1877ff);
   font-weight: 600;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(15 23 42 / 6%));
 }
 .mtp__new {
-  border: 1px dashed var(--border-default, #e2e9f3);
-  background: transparent;
-  border-radius: 8px;
-  padding: 6px 10px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border-default, #e2e9f3);
+  background: var(--bg-container, #fff);
+  border-radius: 7px;
+  padding: 5px 7px;
   font-size: 12px;
   color: var(--text-secondary, #475569);
   cursor: pointer;
+  white-space: nowrap;
   transition: border-color .15s ease, color .15s ease;
 }
 .mtp__new:hover {
-  border-color: var(--el-color-primary, #409eff);
-  color: var(--el-color-primary, #409eff);
+  border-color: var(--el-color-primary, #1877ff);
+  color: var(--el-color-primary, #1877ff);
+}
+.mtp__aside-tip {
+  margin: 0;
+  flex: none;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-tertiary, #94a3b8);
 }
 .mtp__empty {
   padding: 18px 8px;
@@ -541,10 +562,61 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
   flex: 1;
   min-width: 0;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-container, #fff);
+  border: 1px solid var(--border-default, #e2e9f3);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(15 23 42 / 4%));
+}
+.mtp__editor-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border-default, #e2e9f3);
+}
+.mtp__editor-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.mtp__editor-title b {
+  font-size: 13px;
+  color: var(--text-primary, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mtp__editor-title i {
+  font-style: normal;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-tertiary, #94a3b8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mtp__split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+}
+.mtp__form {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-right: 4px;
 }
 .mtp__row {
   display: flex;
@@ -621,12 +693,18 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
   gap: 5px;
 }
 .mtp__preview {
+  flex: none;
+  width: 300px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border-default, #e2e9f3);
   border-radius: 10px;
   overflow: hidden;
   background: var(--bg-elevated, #f8fafc);
 }
 .mtp__preview-head {
+  flex: none;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -642,6 +720,9 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
   color: var(--text-tertiary, #94a3b8);
 }
 .mtp__preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 9px 10px;
 }
 .mtp__preview-subject {
@@ -697,5 +778,14 @@ const defaultName = computed(() => templates.value.find((t) => t.templateDefault
 .mtp__btn.is-primary:disabled {
   opacity: .55;
   cursor: not-allowed;
+}
+@media (max-width: 1180px) {
+  .mtp__preview { width: 240px; }
+}
+@media (max-width: 980px) {
+  .mtp__aside { width: 200px; }
+  .mtp__split { flex-direction: column; overflow-y: auto; }
+  .mtp__preview { width: auto; max-height: 260px; }
+  .mtp__form { overflow: visible; }
 }
 </style>

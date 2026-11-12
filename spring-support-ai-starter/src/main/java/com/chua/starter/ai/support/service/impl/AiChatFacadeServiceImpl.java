@@ -20,6 +20,7 @@ import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
+import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -29,6 +30,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
+import com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
@@ -41,6 +43,7 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.starter.ai.support.chat.ModelClientResolver;
@@ -105,10 +108,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ChatSkillSupport chatSkillSupport; // 已安装技能注入
     private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
     private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
+    private final SessionWorkspaceResolver sessionWorkspaceResolver; // 会话绑定的项目目录（settings.workspacePath）
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentProviderFactory agentProviderFactory;
     private final ChatStreamRegistry chatStreamRegistry; // 活跃流注册表：停止会话时中断在执行的那一轮
     private final SysAiAppKeyService sysAiAppKeyService; // appKey 台账：Token 总量配额的唯一累计写入口
+    private final SysAiServiceAccessLogMapper accessLogMapper; // 访问日志：路由拓扑页「入站流量」的唯一写入口
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -154,12 +159,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     public AiChatResult callForResult(AiChatRequest request) {
         ChatClient client = resolveChatClient(request);
         if (client == null) {
+            recordAccessLog(request, appKeyOf(request), AiUserContext.currentUserId(), 400, null, 0L);
             return AiChatResult.failed(request.getModel(),
                     "No available ChatClient for model: " + request.getModel());
         }
         ChatClient configured = maybeWrapAgent(configureClient(client, request), request);
+        long start = System.currentTimeMillis();
         try {
-            long start = System.currentTimeMillis();
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
             long end = System.currentTimeMillis();
             /**
@@ -175,10 +181,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
              * @param response 响应
              */
             recordUsage(configured, callTypeOf(request), response, AiUserContext.currentUserId(), appKeyOf(request));
+            // 入站流量口径：这一笔已经出结果，按真实耗时/用量写访问日志（失败也写，见下方 catch）
+            recordAccessLog(request, appKeyOf(request), AiUserContext.currentUserId(), 200, usage, end - start);
             String text = response != null && response.getText() != null ? response.getText() : "";
             return AiChatResult.ok(text, resolveUsedModel(configured, request, usage), usage);
         } catch (Exception e) {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
+            recordAccessLog(request, appKeyOf(request), AiUserContext.currentUserId(), 502, null,
+                    System.currentTimeMillis() - start);
             return AiChatResult.failed(request.getModel(), e.getMessage());
         } finally {
             // 释放 Agent 运行时私有的 MCP 连接；直连客户端不在此关闭（可能为缓存共享实例）
@@ -459,6 +469,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                             request.getModel(), usageUserId, e);
                                 }
                             }
+                            // 入站流量：流结束才拿到真实用量，日志按终态写一行
+                            recordAccessLog(request, usageAppKey, usageUserId, 200, lastUsage[0],
+                                    System.currentTimeMillis() - start);
                             if (onCompleteWithUsage != null) {
                                 try {
                                     onCompleteWithUsage.accept(reply, lastUsage[0]);
@@ -475,6 +488,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         },
                         error -> {
                             log.error("[AiChat] stream error: model={}", request.getModel(), error);
+                            recordAccessLog(request, usageAppKey, usageUserId, 502, lastUsage[0],
+                                    System.currentTimeMillis() - start);
                             if (onError != null) {
                                 try {
                                     onError.accept(error);
@@ -617,6 +632,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                     log.error("[AiChat] resume计量落库失败: model={}", request.getModel(), e);
                                 }
                             }
+                            recordAccessLog(request, usageAppKey, usageUserId, 200, lastUsage[0],
+                                    System.currentTimeMillis() - start);
                             wrapper.close();
                             emitter.complete();
                         },
@@ -1333,6 +1350,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @return 工作目录基路径绝对路径；未配置或创建失败时返回 null（回退底层默认目录）
      */
     private String resolveSessionWorkspace(String sessionId) {
+        // 会话绑定了项目目录时，工作间以项目为根：harness 的 WorkspaceManager 会在其下再拼 <sessionId>，
+        // 因此这里只给到项目目录，不能再补会话段（否则会出现 <项目>/<会话>/<会话>）。
+        java.nio.file.Path project = sessionWorkspaceResolver.projectRoot(sessionId);
+        if (project != null) {
+            return project.toString();
+        }
         String base;
         try {
             base = globalSettingService.getValue("system", "workspaceBaseDir").orElse(null);
@@ -1688,6 +1711,75 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             log.warn("[AppKey] Token 配额累计失败 appKey={} tokens={}: {}",
                     appKey, usage.getTotalTokens(), e.getMessage());
         }
+    }
+
+    /**
+     * 写一行入站访问日志（路由拓扑页「入站流量」的唯一写入口）。
+     *
+     * <p>为什么放在门面而不是控制器：网关 {@code /v2/v1/chat/completions}、控制台会话、
+     * 服务实例三条链路最终都收敛到 {@link #callForResult} 与 {@link #streamWithUsage}，
+     * 在这里写才不会出现「网关请求在拓扑页上看不见」。此前只有服务实例的裸
+     * HttpExchange 在写这张表，路由页左列显示的是别人的流量。</p>
+     *
+     * <p>{@code router_group} 取模型复合标识 {@code 供应商ID:模型名} 的前缀：
+     * 路由组对外就是这个名字，前缀即组。非路由组的直连调用前缀只是普通供应商 ID，
+     * 拓扑页按组过滤时自然不会被算进任何一个组。</p>
+     *
+     * <p>失败只记日志：拓扑是观测视图，不能因为写日志失败把已经生成的回复丢掉。</p>
+     *
+     * @param request  对话请求
+     * @param appKey   本次调用所属 AppKey，可为空（控制台直连）
+     * @param userId   归属用户标识，可为空
+     * @param status   终态状态码（成功 200 / 上游失败 502 / 无可用客户端 400）
+     * @param usage    用量，可为空（失败时通常没有用量）
+     * @param latencyMs 处理耗时（毫秒）
+     */
+    private void recordAccessLog(AiChatRequest request, String appKey, String userId, int status,
+                                 com.chua.common.support.ai.AiUsage usage, long latencyMs) {
+        if (appKey == null || appKey.isBlank()) {
+            // 无 AppKey 的调用（控制台直连 / 本地信任模式）进不了拓扑页的入站列：
+            // 聚合口径 INNER JOIN AppKey 台账，写进来也只是给日志表添噪声与写压力
+            return;
+        }
+        try {
+            SysAiServiceAccessLog row = new SysAiServiceAccessLog();
+            String model = request == null ? null : request.getModel();
+            row.setModel(model);
+            row.setEndpoint("/v2/v1/chat/completions");
+            row.setMethod("POST");
+            row.setProtocol("openai");
+            row.setRouterGroup(routerGroupOf(model));
+            row.setStatus(status);
+            int p = usage != null && usage.getInputTokens() != null ? usage.getInputTokens() : 0;
+            int c = usage != null && usage.getOutputTokens() != null ? usage.getOutputTokens() : 0;
+            row.setPromptTokens(p);
+            row.setCompletionTokens(c);
+            row.setTotalTokens(usage != null && usage.getTotalTokens() != null ? usage.getTotalTokens() : p + c);
+            row.setLatencyMs(Math.max(latencyMs, 0L));
+            row.setAppKey(appKey);
+            row.setUserId(userId);
+            accessLogMapper.insert(row);
+        } catch (Exception e) {
+            log.warn("[AccessLog] 入站流量记录失败 model={} appKey={}: {}",
+                    request == null ? null : request.getModel(), appKey, e.getMessage());
+        }
+    }
+
+    /**
+     * 从复合模型标识里取路由组前缀。
+     *
+     * @param model 模型标识（{@code 供应商ID:模型名}），可为空
+     * @return 前缀；没有复合结构时返回 {@code null}
+     */
+    private static String routerGroupOf(String model) {
+        if (model == null || model.isBlank()) {
+            return null;
+        }
+        int idx = model.indexOf(':');
+        if (idx <= 0 || idx == model.length() - 1) {
+            return null;
+        }
+        return model.substring(0, idx).trim();
     }
 
     /**

@@ -4,6 +4,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.entity.MsServerRelease;
 import com.chua.starter.server.support.entity.MsServerProject;
 import com.chua.starter.server.support.entity.SoftwarePackage;
+import com.chua.starter.server.support.model.ApmGlobalConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,21 @@ public interface ReleaseService {
      * 更新发布
      */
     ReturnResult<MsServerRelease> updateRelease(Long id, MsServerRelease release);
+
+    /**
+     * 读取全局 APM 兜底配置。
+     *
+     * @return 全局配置（未配置时返回默认空配置）
+     */
+    ReturnResult<ApmGlobalConfig> getGlobalApmConfig();
+
+    /**
+     * 保存全局 APM 兜底配置，并立即同步到所有发布下的项目。
+     *
+     * @param config 全局配置
+     * @return 保存后的配置
+     */
+    ReturnResult<ApmGlobalConfig> saveGlobalApmConfig(ApmGlobalConfig config);
 
     /**
      * 删除发布

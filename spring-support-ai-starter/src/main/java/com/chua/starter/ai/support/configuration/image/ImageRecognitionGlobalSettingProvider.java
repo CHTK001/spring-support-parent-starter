@@ -13,8 +13,8 @@ import java.util.List;
  * {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
  * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
  *
- * <p>图片识别管线：classify(图像分类) → detect(目标检测) → segment(图像分割) →
- * captioning(图像描述)；辅助能力：深度(深度估计) / pedestrian(行人) / quality(图像质量)。</p>
+ * <p>图片识别管线：classify(图像分类) → detect(目标检测) → captioning(图像描述)；
+ * 辅助能力：超分。分割与质量评估当前没有实现，故不在此声明。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -61,11 +61,13 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
                 new GlobalSettingProvider.SettingItem("classify_threshold", "0.5", "NUMBER", "图像分类置信度阈值（0~1）", 2),
                 new GlobalSettingProvider.SettingItem("detect_model", "", "STRING", "目标检测模型（留空关闭）", 3),
                 new GlobalSettingProvider.SettingItem("detect_threshold", "0.5", "NUMBER", "目标检测置信度阈值（0~1）", 4),
-                new GlobalSettingProvider.SettingItem("segment_model", "", "STRING", "图像分割模型（留空关闭）", 5),
+                // 2026-11-12：segment_model 与 quality_enabled 删除 ——
+                // ImageRecognitionClientManager 只装配 classify / detect / captioning / 超分，
+                // 既没有分割能力也没有质量评估实现（face 分组另有 quality_enabled，那里是真读的）。
+                // 声明保留只会让人勾了以为生效。
                 new GlobalSettingProvider.SettingItem("captioning_model", "", "STRING", "图像描述模型（留空关闭）", 6),
                 // 2026-11-10：原 depth_enabled / pedestrian_enabled 删除 ——
                 // 深度估计与行人检测两个开关全仓无消费方读取，勾了不生效。
-                new GlobalSettingProvider.SettingItem("quality_enabled", "false", "BOOLEAN", "是否启用图像质量评估", 9),
                 new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "图像超分模型（留空关闭）", 10),
                 new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 11),
                 new GlobalSettingProvider.SettingItem("colorize_model", "", "STRING", "图像上色模型（留空关闭）", 12),

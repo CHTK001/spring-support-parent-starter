@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.api.encode;
 import com.chua.common.support.lang.algorithm.cipher.Sm2Cipher;
 import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.starter.common.support.api.decode.ApiRequestDecodeSetting;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.starter.common.support.api.properties.ApiProperties;
@@ -101,7 +102,11 @@ import java.util.List;
             if ("sm2".equalsIgnoreCase(codecType)) {
                 return sm2Encode(data);
             }
-            String encryptedData = Codec.build("sm4", codecType).encodeHex(data);
+            String codecKey = resolveCodecKey();
+            // 有密钥时按配置类型走真实 AES（前端 encodeRequestBody 同一口径）；
+            // 没有密钥时保持旧的 hex 兼容路径，避免把明文误当密文。
+            String effectiveType = (codecKey == null || codecKey.isBlank()) ? "hex" : codecType;
+            String encryptedData = Codec.build(effectiveType, codecKey).encodeHex(data);
               /**
                * codec结果。
                * @param codecType codec类型
@@ -109,7 +114,7 @@ import java.util.List;
                * @param String.valueOf(codecType.length( 字符串.值的(codec类型.长度(
                * @return codec结果的结果
                */
-            return new CodecResult(codecType, encryptedData, String.valueOf(codecType.length()));
+            return new CodecResult(String.valueOf(effectiveType.length()), encryptedData, String.valueOf(effectiveType.length()));
         } catch (Exception e) {
             log.error("[CodecFactory] 数据加密失败", e);
               /**
@@ -121,6 +126,20 @@ import java.util.List;
                */
             return new CodecResult("", data, String.valueOf(0));
         }
+    }
+
+    /**
+     * 响应加密密钥。
+     *
+     * <p>系统配置只维护一份 {@code CodecRequestKey}，请求解密和响应加密共用它；
+     * 没有单独再暴露响应密钥，避免 UI 出现两个必须保持一致的密钥输入框。</p>
+     *
+     * @return 当前 codec 密钥，未配置时为 null
+     */
+    private String resolveCodecKey() {
+        ApiRequestDecodeSetting setting = GlobalSettingFactory.getInstance()
+                .get("config", ApiRequestDecodeSetting.class);
+        return setting == null ? null : setting.getCodecRequestKey();
     }
 
       /**

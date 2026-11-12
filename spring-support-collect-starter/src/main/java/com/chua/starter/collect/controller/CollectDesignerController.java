@@ -2,13 +2,16 @@ package com.chua.starter.collect.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.collect.dto.CollectDslDTO;
+import com.chua.starter.collect.engine.executor.CollectAgentCatalog;
 import com.chua.starter.collect.engine.spi.CollectShapeMeta;
 import com.chua.starter.collect.service.CollectDesignerService;
+import com.chua.starter.collect.vo.CollectOptionVO;
 import com.chua.starter.collect.vo.CollectPreviewVO;
 import com.chua.starter.collect.vo.CollectRuntimeVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -42,6 +45,11 @@ public class CollectDesignerController {
     private final CollectDesignerService designerService;
 
     /**
+     * Agent 目录；未集成 AI starter 时为空。
+     */
+    private final ObjectProvider<CollectAgentCatalog> agentCatalogProvider;
+
+    /**
      * 全部节点类型元数据。
      *
      * @return 节点元数据列表
@@ -50,6 +58,18 @@ public class CollectDesignerController {
     @GetMapping("/metas")
     public ReturnResult<List<CollectShapeMeta>> metas() {
         return ReturnResult.ok(designerService.metas());
+    }
+
+    /**
+     * 已注册 Agent 目录，供设计器刷新 Agent 节点下拉。
+     *
+     * @return Agent 选项；未集成 AI starter 时为空
+     */
+    @Operation(summary = "已注册 Agent 目录")
+    @GetMapping("/agents")
+    public ReturnResult<List<CollectOptionVO>> agents() {
+        CollectAgentCatalog catalog = agentCatalogProvider.getIfAvailable();
+        return ReturnResult.ok(catalog == null ? List.of() : catalog.options());
     }
 
     /**

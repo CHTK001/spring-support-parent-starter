@@ -13,7 +13,7 @@ import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.mapper.EduMarkingResultMapper;

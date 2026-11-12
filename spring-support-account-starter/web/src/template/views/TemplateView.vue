@@ -1236,10 +1236,10 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .tpl {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   height: 100%;
   min-height: 0;
-  color: var(--el-text-color-primary);
+  color: var(--text-primary, var(--el-text-color-primary));
 }
 
 /* ==================== 左栏提供商轨 ==================== */
@@ -1250,17 +1250,18 @@ onMounted(async () => {
   width: 286px;
   min-height: 0;
   overflow: hidden;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .rail__head {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 12px 9px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--border-subtle, var(--border-default));
 }
 
 .rail__title {
@@ -1270,9 +1271,10 @@ onMounted(async () => {
 
   h1 {
     margin: 0;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 650;
     letter-spacing: 0.01em;
+    color: var(--text-primary);
   }
 }
 
@@ -1353,11 +1355,11 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 3px 8px 3px 12px;
+  padding: 3px 8px 3px 10px;
   font-size: 11px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-fill-color-lighter, var(--el-fill-color-light));
-  border-top: 1px solid var(--el-border-color-lighter);
+  color: var(--text-tertiary);
+  background: var(--bg-container);
+  border-top: 1px solid var(--border-subtle, var(--border-default));
 }
 
 .rail__actions {
@@ -1372,29 +1374,19 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  padding: 9px 8px 9px 10px;
-  border-radius: 8px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   outline: none;
+  transition: background 0.15s var(--ease-out, ease), border-color 0.15s var(--ease-out, ease);
 
   & + & {
     margin-top: 1px;
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    bottom: 10px;
-    left: 0;
-    width: 2px;
-    background: transparent;
-    border-radius: 2px;
-    transition: background 0.15s ease;
-  }
-
   &:hover {
-    background: var(--el-fill-color-light);
+    background: var(--bg-fill);
   }
 
   &:focus-visible {
@@ -1403,10 +1395,7 @@ onMounted(async () => {
 
   &.is-active {
     background: var(--el-color-primary-light-9);
-
-    &::before {
-      background: var(--el-color-primary);
-    }
+    border-color: var(--el-color-primary-light-7);
 
     .entry__name {
       color: var(--el-color-primary);
@@ -1536,9 +1525,10 @@ onMounted(async () => {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .deck-empty {
@@ -1580,8 +1570,8 @@ onMounted(async () => {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  background: var(--el-bg-color-page);
-  padding: 18px 20px 24px;
+  background: var(--bg-fill, var(--el-bg-color-page));
+  padding: 16px 18px 22px;
 }
 
 /* 模板管理 / 设计器 / 预览：页签内容自己占满，不再加内边距 */

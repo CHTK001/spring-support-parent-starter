@@ -1,6 +1,7 @@
 package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduFunConfig;
 import com.chua.starter.eduai.service.IEduFunConfigService;
@@ -84,6 +85,7 @@ public class EduFunConfigController {
     }
 
     @Operation(summary = "更新模块启用状态")
+    @Permission("admin")
     @PutMapping("/toggle/{moduleCode}")
     public ReturnResult<Boolean> toggle(@PathVariable String moduleCode,
                                          @RequestParam Integer enabled) {
@@ -97,10 +99,15 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "保存趣味模块配置")
+    @Permission("admin")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduFunConfig config) {
         if (config.getConfigId() == null) {
-            config.setOwnerUserId(EduUserContext.requireUserId());
+            // 门户菜单是全局配置（学生端/教师端所有账号共用），新建行不绑定创建人。
+            // 绑定后 selectByLevel 的 owner 谓词会把它从学生/老师端过滤掉，
+            // 表现为「后台加了入口，门户里看不到」。这里仍要求已登录，只是不写 owner。
+            EduUserContext.requireUserId();
+            config.setOwnerUserId(null);
         } else {
             EduFunConfig exists = funConfigService.getById(config.getConfigId());
             if (exists == null) {
@@ -119,6 +126,7 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "删除趣味模块配置")
+    @Permission("admin")
     @DeleteMapping("/delete/{configId}")
     public ReturnResult<Boolean> delete(@PathVariable Long configId) {
         EduFunConfig exists = funConfigService.getById(configId);

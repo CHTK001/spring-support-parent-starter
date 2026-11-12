@@ -83,8 +83,8 @@ public class SearchGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("tavily", "", "STRING",
                         "Tavily API Key（格式 {\"apiKey\":\"tvly-xxx\"}；留空则该源不可用，不影响其他源）", 3),
                 new SettingItem("metaso", "", "STRING",
-                        "秘塔 API Key（格式 {\"apiKey\":\"xxx\"}；该源的搜索接口尚未接入，"
-                                + "填写后暂无效果，预留字段）", 4),
+                        "秘塔 API Key（mk- 开头，格式 {\"apiKey\":\"mk-xxx\"}；"
+                                + "按 metaso.cn/api/v1/search 官方契约调用）", 4),
                 new SettingItem("langsearch", "", "STRING",
                         "LangSearch API Key（格式 {\"apiKey\":\"sk-xxx\"}；"
                                 + "按 langsearch.com 官方 web-search 契约调用）", 5),
@@ -104,7 +104,9 @@ public class SearchGlobalSettingProvider implements GlobalSettingProvider {
                         "TinyFish 接口地址（留空用内置默认 https://api.tinyfish.ai/v1/web-search；"
                                 + "契约不同时在此覆盖）", 9),
                 new SettingItem("langsearch_endpoint", "", "STRING",
-                        "LangSearch 接口地址（留空用内置默认 https://api.langsearch.com/v1/web-search）", 10)
+                        "LangSearch 接口地址（留空用内置默认 https://api.langsearch.com/v1/web-search）", 10),
+                new SettingItem("metaso_endpoint", "", "STRING",
+                        "秘塔接口地址（留空用内置默认 https://metaso.cn/api/v1/search）", 11)
         );
     }
 }

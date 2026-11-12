@@ -118,7 +118,9 @@ public class ManageAccountServiceImpl implements ManageAccountService {
      */
     @Override
     public SysAccount get(String accountId) {
-        return mask(requireAccount(accountId));
+        SysAccount account = requireAccount(accountId);
+        assertVisible(account);
+        return mask(account);
     }
 
     /**
@@ -402,6 +404,25 @@ public class ManageAccountServiceImpl implements ManageAccountService {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "账号不存在: " + accountId);
         }
         return account;
+    }
+
+    /**
+     * 归属可见性：个人账号只对本人可见，部署级账号（{@code owner} 为空）所有人可见。
+     *
+     * <p>列表查询已经按归属过滤，详情接口必须做同一条断言：否则知道
+     * {@code accountId} 的他人仍可读到账号元数据；收信箱接口也走这里，
+     * 漏掉这条断言等于把他人信箱一起暴露。</p>
+     *
+     * @param account 账号
+     */
+    private void assertVisible(SysAccount account) {
+        String owner = account.getOwner();
+        if (StringUtils.isBlank(owner)) {
+            return;
+        }
+        if (!owner.equals(AccountUserContext.currentUserId())) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "无权查看该账号");
+        }
     }
 
     /**

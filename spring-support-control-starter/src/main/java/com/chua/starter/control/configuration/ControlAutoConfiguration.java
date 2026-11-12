@@ -12,6 +12,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.UUID;
+
 /**
  * WebRTC 远程控制自动配置。
  *
@@ -50,11 +52,29 @@ public class ControlAutoConfiguration {
         setting.setProtocol(ProtocolType.WS.name());
         WebRtcServer server = new WebRtcServer(setting);
         server.setAutoClose(true);
+        // 信令端口不经过 Spring 鉴权，启动时生成/下发一次性令牌；页面先走 /control/config 取令牌
+        String token = properties.getToken();
+        if (token == null || token.isBlank()) {
+            token = UUID.randomUUID().toString().replace("-", "");
+            properties.setToken(token);
+        }
+        server.setSignalingToken(token);
+        try {
+            server.extensions().screenCaptureService().setCaptureRate(properties.getFrameRate());
+        } catch (Exception e) {
+            log.warn("[webrtc] 设置采集帧率失败: {}", e.getMessage());
+        }
         if (properties.isAutoStart()) {
-            server.start();
-            String displayHost = "0.0.0.0".equals(properties.getHost()) ? "127.0.0.1" : properties.getHost();
-            log.info("[webrtc] 远程控制信令已启动: ws://{}:{}{}",
-                    displayHost, properties.getPort(), WebRtcServer.SIGNALING_PATH);
+            try {
+                server.start();
+                String displayHost = "0.0.0.0".equals(properties.getHost()) ? "127.0.0.1" : properties.getHost();
+                log.info("[webrtc] 远程控制信令已启动: ws://{}:{}{} (token 已启用)",
+                        displayHost, properties.getPort(), WebRtcServer.SIGNALING_PATH);
+            } catch (Exception e) {
+                // 端口被占用等情况下让宿主继续启动，远控降级为不可用，而不是整站起不来
+                log.error("[webrtc] 远程控制信令启动失败（端口 {} 可能被占用）：{}",
+                        properties.getPort(), e.getMessage());
+            }
         }
         return server;
     }

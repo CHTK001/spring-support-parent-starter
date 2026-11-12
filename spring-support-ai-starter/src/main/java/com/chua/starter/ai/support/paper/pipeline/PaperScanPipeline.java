@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.paper.pipeline;
 
 import com.chua.starter.ai.support.configuration.paper.PaperImageCorrector;
 import com.chua.starter.ai.support.configuration.paper.PaperImagePreprocessor;
-import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -39,7 +39,7 @@ public class PaperScanPipeline {
     /**
      * 教育 AI 配置
      */
-    private final EduAiProperties properties;
+    private final PaperPipelineProperties properties;
 
     /**
      * 管线执行结果。

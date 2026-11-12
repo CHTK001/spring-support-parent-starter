@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,6 +69,15 @@ public class ServerTaskScheduler {
      * 把触发延迟压到 ≤1s（5s 配置实际约 5-6s，10s 配置约 10-11s；剩余约 0.5-1s 为采集本身耗时）。
      */
     private static final int COLLECT_SCAN_INTERVAL_SECONDS = 1;
+
+    /**
+     * 真正会改变本调度器节奏的系统配置键。
+     *
+     * <p>只有连接健康检查的间隔/空闲超时来自系统配置；在离线检测、采集、延迟检测、
+     * Actuator 采集都是固定扫描粒度，是否执行由各主机自身字段决定，改系统配置不需要重排。</p>
+     */
+    private static final Set<String> CONNECTION_KEYS = Set.of(
+            "connection.sweep.interval", "connection.idle.timeout");
 
     /**
      * 系统配置服务
@@ -168,8 +178,13 @@ public class ServerTaskScheduler {
     }
 
     /**
-     * 主机级配置变更监听：重新注册周期任务
-     * <p>主机配置变更（新增/编辑/删除）或全局 connection 配置变更时触发。</p>
+     * 系统配置变更监听：只在连接相关配置变化时重排连接健康检查。
+     *
+     * <p>{@link ServerConfigChangedEvent} 是「任意系统配置保存」都会发的通用事件
+     * （保存终端配色、邮件、SIP 等等都算），这里以前无条件把 5 类周期任务全部
+     * cancel + 重新注册，等于把在离线探测/指标采集/连接扫描的倒计时一起清零：
+     * 保存一个配色就能让采集相位抖一下，日志还会打一行「配置变更已重排周期任务」。
+     * 现在按 key 过滤，只做真正相关的那一个。</p>
      *
      * @param event 配置变更事件
      */
@@ -178,24 +193,12 @@ public class ServerTaskScheduler {
         if (timer == null || !timer.isRunning()) {
             return;
         }
-        /**
-         * rescheduleonline。
-         */
-        rescheduleOnline();
-        /**
-         * reschedulecollect。
-         */
-        rescheduleCollect();
-        /**
-         * reschedule延迟。
-         */
-        rescheduleDelay();
-        /**
-         * rescheduleconnection。
-         */
-        rescheduleActuatorMonitor();
+        Set<String> keys = event == null ? null : event.keys();
+        if (keys != null && keys.stream().noneMatch(CONNECTION_KEYS::contains)) {
+            return;
+        }
         rescheduleConnection();
-        log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.keys());
+        log.info("[task-scheduler] connection 配置变更，连接健康检查已重排: {}", keys);
     }
 
     /**

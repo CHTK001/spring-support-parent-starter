@@ -394,8 +394,10 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                     r.totalTokens() == null ? 0L : r.totalTokens(),
                     r.totalCost() == null ? 0D : r.totalCost(),
                       // 延迟原样透传 null：0 会被前端画成「延迟极低」，而 null 能表达「当天没测到」
+                      // 速率同理：无实测样本时不填，前端只对有样本的模型画线。
                     r.avgFirstTokenLatency(),
-                    r.avgTotalLatency()
+                    r.avgTotalLatency(),
+                    r.avgTokensPerSecond()
             ));
         }
         return result;

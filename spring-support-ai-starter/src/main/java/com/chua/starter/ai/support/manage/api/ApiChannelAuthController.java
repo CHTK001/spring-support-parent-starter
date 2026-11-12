@@ -325,6 +325,12 @@ public class ApiChannelAuthController {
         // 插件与上游登录是网关各自的能力，不能按渠道名硬编码
         summary.put("supportsPlugins", upstream != null && upstream.supportsPlugins());
         summary.put("supportsSignin", upstream != null && upstream.supportsSignin());
+        // 网关自己声明「承载了哪些业务渠道、各对应哪些上游 provider id」。左栏角标与
+        // 「待接入」判定都读它：前端不再维护第二份对照表，网关改 provider 命名时也不会
+        // 静默错位（详见 ChannelUpstreamAdmin#ownedChannels）。
+        if (upstream != null) {
+            summary.put("ownedChannels", upstream.ownedChannels());
+        }
         // 能力标签：前端据此在渠道卡片右侧显示「积分 / 任务」入口。
         // 用独立 SPI 探测而不是问 AccountChannelAuthManager：签到与「看余额 / 做任务」
         // 是三件事，很多渠道只有其一（Cline 只有余额、Raccoon 只有自动发放）。

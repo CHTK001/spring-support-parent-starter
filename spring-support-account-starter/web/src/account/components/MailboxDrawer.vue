@@ -76,11 +76,22 @@
                   <b v-if="folderUnread">{{ folderUnread }}</b>
                 </button>
                 <em v-if="unreadFirstActive" class="mb-order">未读优先</em>
+                <ReButton
+                  v-if="!inboxUnavailable && folderUnread"
+                  show-text
+                  size="small"
+                  plain
+                  icon="CircleCheck"
+                  :loading="markingAll"
+                  @click="markAllRead"
+                >
+                  全部已读
+                </ReButton>
                 <label class="mb-search">
                   <ReIcon name="Search" :size="13" />
                   <input v-model="keyword" placeholder="搜索主题 / 发件人" @keyup.enter="reloadMessages()" />
                 </label>
-                <ReButton v-if="overview?.sendable" show-text icon="EditPen" type="primary" @click="startCompose">
+                <ReButton v-if="overview?.sendable" show-text icon="EditPen" type="primary" @click="startCompose()">
                   写信
                 </ReButton>
               </div>
@@ -144,6 +155,8 @@
                   {{ activeMessage?.subject || '（无主题）' }}
                 </span>
                 <template v-if="activeMessage">
+                  <ReButton v-if="isEmail" show-text icon="Message" @click="replyMessage">回复</ReButton>
+                  <ReButton v-if="isEmail" show-text icon="Share" @click="forwardMessage">转发</ReButton>
                   <ReButton
                     v-if="overview?.modifiable"
                     show-text
@@ -165,7 +178,7 @@
                     删除
                   </ReButton>
                 </template>
-                <ReButton v-if="overview?.sendable" show-text icon="EditPen" @click="startCompose">
+                <ReButton v-if="overview?.sendable" show-text icon="EditPen" @click="startCompose()">
                   写信
                 </ReButton>
               </div>
@@ -187,6 +200,7 @@
                       <ReTag v-for="name in activeMessage.attachments" :key="name" type="info" effect="plain">
                         {{ name }}
                       </ReTag>
+                      <span class="mb-attach-tip">仅回显文件名，暂不支持在应用内下载</span>
                     </dd>
                   </div>
                 </dl>
@@ -343,6 +357,8 @@ const loadingMessage = ref(false);
 const sending = ref(false);
 /** 标记已读 / 未读进行中 */
 const markingBusy = ref(false);
+/** 批量标记全部已读进行中 */
+const markingAll = ref(false);
 /** 删除进行中 */
 const deletingMessage = ref(false);
 /** 只看未读（工具栏开关；进入时若收件箱有未读则默认打开） */
@@ -729,9 +745,115 @@ async function refreshFolderCounters(): Promise<void> {
   }
 }
 
-/** 进入写信（预填收件人） */
-function startCompose(): void {
+/**
+ * 把当前文件夹里所有未读邮件标为已读。
+ *
+ * <p>后端只有单封的已读接口，这里先按 {@code unreadOnly} 拉一页未读（上限 200），
+ * 再逐封回写；每封完成都即时更新本地状态，中途失败也保留已完成的部分。</p>
+ */
+async function markAllRead(): Promise<void> {
+  const account = props.account;
+  if (!account?.accountId || !activeFolder.value || markingAll.value) return;
+  markingAll.value = true;
+  let done = 0;
+  try {
+    const rows = await listMailboxMessages(account.accountId, {
+      folder: activeFolder.value,
+      limit: 200,
+      offset: 0,
+      unreadOnly: true,
+    });
+    for (const row of rows ?? []) {
+      try {
+        await markMailboxMessageSeen(account.accountId, row.id, activeFolder.value, true);
+        row.unread = false;
+        const hit = messages.value.find(item => item.id === row.id);
+        if (hit) hit.unread = false;
+        done += 1;
+      } catch {
+        // 单封失败（如只读来源）继续处理下一封
+      }
+    }
+    if (done) {
+      message.success(`已把 ${done} 封邮件标为已读`);
+      await reloadMessages(true);
+    } else {
+      message.info('当前文件夹没有可标记的未读邮件');
+    }
+    void refreshFolderCounters();
+  } catch (e: any) {
+    message.error(e?.message || '批量标记已读失败');
+  } finally {
+    markingAll.value = false;
+  }
+}
+
+/**
+ * 从「姓名 <a@b.c>」里取出纯地址。
+ *
+ * @param raw 原始发件人
+ * @returns 纯地址（取不到时原样返回）
+ */
+function pickAddress(raw?: string): string {
+  const text = (raw || '').trim();
+  const matched = text.match(/<([^>]+)>/);
+  return (matched ? matched[1] : text).trim();
+}
+
+/** 生成引用正文：只保留文本，HTML 先剥标签 */
+function quoteBody(msg: MailboxMessage): string {
+  const raw = msg.content || msg.preview || '';
+  const text = msg.contentType === 'html'
+    ? raw.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')
+    : raw;
+  return [
+    '',
+    '',
+    '---------- 原始邮件 ----------',
+    `发件人：${msg.from || '—'}`,
+    `时间：${formatFullTime(msg.sentAt)}`,
+    `主题：${msg.subject || '（无主题）'}`,
+    '',
+    text.trim(),
+  ].join('\n');
+}
+
+/** 回复：填好收件人与引用正文，进入写信模式 */
+function replyMessage(): void {
+  const current = activeMessage.value;
+  if (!current) return;
+  startCompose({
+    to: pickAddress(current.from),
+    subject: /^re:/i.test(current.subject || '') ? (current.subject || '') : `Re: ${current.subject || ''}`,
+    content: quoteBody(current),
+  });
+  message.info('已填入原文，可直接编辑后发送');
+}
+
+/** 转发：清空收件人，主题加 Fwd:，正文带引用 */
+function forwardMessage(): void {
+  const current = activeMessage.value;
+  if (!current) return;
+  startCompose({
+    to: '',
+    subject: /^fwd:/i.test(current.subject || '') ? (current.subject || '') : `Fwd: ${current.subject || ''}`,
+    content: quoteBody(current),
+  });
+  message.info('请填写转发对象');
+}
+
+/**
+ * 进入写信。
+ *
+ * @param prefill 预填内容（回复 / 转发时带入）
+ */
+function startCompose(prefill?: { to?: string; subject?: string; content?: string }): void {
   resetForm();
+  if (prefill) {
+    form.to = prefill.to ?? '';
+    form.subject = prefill.subject ?? '';
+    form.content = prefill.content ?? '';
+  }
   mode.value = 'compose';
 }
 
@@ -1007,12 +1129,15 @@ function pad(value: number): string {
 .mb-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 10px;
   min-height: 30px;
 }
 
 .mb-title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   overflow: hidden;
@@ -1212,6 +1337,12 @@ function pad(value: number): string {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.mb-attach-tip {
+  flex: 1 0 100%;
+  font-size: 11px;
+  color: var(--text-tertiary, #94a3b8);
 }
 
 .mb-html {

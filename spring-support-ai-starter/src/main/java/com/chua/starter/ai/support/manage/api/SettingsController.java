@@ -84,7 +84,7 @@ public class SettingsController {
      */
     private static final Set<String> USER_MODEL_GROUPS = Set.of(
             "runtime", "rag", "generate", "ocr", "image_search", "face",
-            "image", "memory", "layout", "input", "bot", "asr", "tts");
+            "image", "memory", "layout", "input", "input_suggest", "bot", "asr", "tts");
 
     /**
      * 判断某分组是否按用户隔离写入（纯偏好组 ∪ 默认模型组）。

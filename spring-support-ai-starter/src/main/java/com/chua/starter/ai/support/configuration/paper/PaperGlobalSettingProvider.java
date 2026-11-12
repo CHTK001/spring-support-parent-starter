@@ -64,22 +64,23 @@ public class PaperGlobalSettingProvider implements GlobalSettingProvider {
                 // 引擎不再提供配置项：由 PaperClientManager.engine() 按模型配置推导
                 // （配了 llm_model → ocr+llm，否则 ocr）。移除后设置页
                 // 少一个「识别引擎」下拉，用户不用理解双管线细节。
-                // 版面模型：留空时回落到 layout 分组
-                new GlobalSettingProvider.SettingItem("layout_model", "", "STRING", "版面分析模型（留空复用 layout 分组）", 2),
-                new GlobalSettingProvider.SettingItem("layout_threshold", "0.5", "NUMBER", "版面置信度阈值（0~1）", 3),
-                // OCR 模型：留空时回落到 ocr 分组
-                new GlobalSettingProvider.SettingItem("ocr_detector_model", "", "STRING", "文字检测模型（留空复用 ocr 分组）", 4),
+                // 版面模型：留空时回落到 layout 分组（装配见 PaperClientManager#resolveLayoutDetector）
+                new GlobalSettingProvider.SettingItem("layout_model", "", "STRING", "版面分析模型（留空复用 layout 分组；阈值与设备请到「版面分析」分组设置）", 2),
+                // OCR 模型：留空时回落到 ocr 分组（装配见 PaperClientManager#resolveOcrPipeline）
+                new GlobalSettingProvider.SettingItem("ocr_detector_model", "", "STRING", "文字检测模型（留空复用 ocr 分组；置信度阈值与设备请到「OCR」分组设置）", 4),
                 new GlobalSettingProvider.SettingItem("ocr_recognizer_model", "", "STRING", "文字识别模型（留空复用 ocr 分组）", 5),
-                new GlobalSettingProvider.SettingItem("ocr_threshold", "0.5", "NUMBER", "OCR 检测置信度阈值（0~1）", 6),
                 // LLM 结构化（engine=ocr+llm 时生效）
                 // 结构化大模型只认模型管理的模型：不再提供 llm_provider（私自配供应商），
                 // 供应商由所选模型自动推导（见 PaperClientManager.resolveLlmClient）。
                 new GlobalSettingProvider.SettingItem("llm_model", "", "STRING", "结构化大模型（模型管理选择，留空用默认模型）", 8),
                 // 2026-11-10：原 llm_prompt（结构化提示词）删除 —— 全仓无消费方读取，
                 // 试卷结构化实际用的是内置提示词。
+                // 2026-11-12：layout_threshold / ocr_threshold / device / max_pages 删除。
+                // 前三项是模型级参数（ModelParamBridge 进程内按模型名共享），在 paper 组
+                // 再声明一份只会与 layout/ocr 分组互相覆盖，真源应留在各自分组；
+                // max_pages 则完全没有实现——PaperClient 的识别入口只接收单张图片字节，
+                // 全仓没有任何分页/多页循环，填多少都不会改变行为。
                 // 行为开关
-                new GlobalSettingProvider.SettingItem("max_pages", "20", "NUMBER", "单任务最大处理页数", 10),
-                new GlobalSettingProvider.SettingItem("merge_answer", "true", "BOOLEAN", "是否合并题干与作答区域（false 仅文字块）", 11),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 12)
+                new GlobalSettingProvider.SettingItem("merge_answer", "true", "BOOLEAN", "是否合并题干与作答区域（false 仅文字块）", 11)
         );
     }}

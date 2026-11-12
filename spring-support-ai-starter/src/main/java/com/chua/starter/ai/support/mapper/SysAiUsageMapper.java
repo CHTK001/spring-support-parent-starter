@@ -195,14 +195,15 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     /**
      * 「按天 × 按模型」聚合行，供用量管理的每日堆叠柱状图使用。
      *
-     * @param statDate  统计日期
-     * @param provider  服务商
-     * @param model     模型
-     * @param totalCalls 当日该模型调用次数
-     * @param totalTokens 当日该模型令牌合计
-     * @param totalCost 当日该模型费用
+     * @param statDate             统计日期
+     * @param provider             服务商
+     * @param model                模型
+     * @param totalCalls           当日该模型调用次数
+     * @param totalTokens          当日该模型令牌合计
+     * @param totalCost            当日该模型费用
      * @param avgFirstTokenLatency 当日该模型平均首字延迟（毫秒；无实测样本时为 null）
-     * @param avgTotalLatency 当日该模型平均总耗时（毫秒；无实测样本时为 null）
+     * @param avgTotalLatency      当日该模型平均总耗时（毫秒；无实测样本时为 null）
+     * @param avgTokensPerSecond   当日该模型平均输出速度（Token/秒；无实测样本时为 null）
      */
     record DailyModelRow(
             LocalDate statDate,
@@ -212,7 +213,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             Long totalTokens,
             Double totalCost,
             Double avgFirstTokenLatency,
-            Double avgTotalLatency
+            Double avgTotalLatency,
+            Double avgTokensPerSecond
     ) {}
 
     /**

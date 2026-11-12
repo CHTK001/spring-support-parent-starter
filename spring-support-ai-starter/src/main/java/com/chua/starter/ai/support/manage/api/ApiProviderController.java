@@ -44,6 +44,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -157,6 +159,16 @@ public class ApiProviderController {
      * 模型 → 客户端解析器（路由组配置变更后让缓存立即失效）
      */
     private final com.chua.starter.ai.support.chat.ModelClientResolver modelClientResolver;
+
+    /**
+     * 服务访问日志映射器：路由拓扑页的「入站流量」按 AppKey 聚合
+     */
+    private final com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper accessLogMapper;
+
+    /**
+     * AppKey 映射器：拓扑页入站节点回填名称 / 余额 / 配额（网关鉴权身份）
+     */
+    private final com.chua.starter.ai.support.mapper.SysAiAppKeyMapper appKeyMapper;
 
     /**
      * ONNX 供应商标识：与其余提供商一样是 {@code sys_ai_provider} 表里的真实一行，
@@ -289,9 +301,62 @@ public class ApiProviderController {
     private volatile Map<String, Map<String, Object>> metricsIndex = Map.of();
 
     /**
+     * 指标索引重建标记（单飞）：冷启动并发请求只放一个线程去建，其余直接用旧值返回。
+     */
+    private final java.util.concurrent.atomic.AtomicBoolean metricsIndexRefreshing =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * 指标索引构建失败后的退避截止时间（毫秒）。
+     *
+     * <p>失败时既不能把可用索引覆盖成空表，也不能让后续每个请求都重查一次快照
+     * （Redis 不可用时每次构建都要打两条全表 SQL，跨网络就是秒级）。</p>
+     */
+    private volatile long metricsIndexRetryAt = 0;
+
+    /**
      * 指标索引 TTL（毫秒）：30 秒
      */
     private static final long METRICS_INDEX_TTL_MILLIS = 30_000;
+
+    /**
+     * 指标索引构建失败后的退避时长（毫秒）：3 秒
+     */
+    private static final long METRICS_INDEX_RETRY_BACKOFF_MILLIS = 3_000;
+
+    /**
+     * 本地指标库索引构建时间戳（毫秒）
+     */
+    private volatile long metricsLibraryLoadedAt = 0;
+
+    /**
+     * 本地指标库索引（归一化模型键 → 指标行）。
+     *
+     * <p>一次全量查询替代「每个模型查一次」：跨网络/慢库环境下逐模型查询会把
+     * 一次列表请求放大成 N 次往返（实测远端 185 个模型耗时数分钟）。</p>
+     */
+    private volatile Map<String, SysAiModelMetrics> metricsLibraryIndex = Map.of();
+
+    /**
+     * 本地指标库索引重建标记（单飞）
+     */
+    private final java.util.concurrent.atomic.AtomicBoolean metricsLibraryRefreshing =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * 本地指标库索引构建失败后的退避截止时间（毫秒）
+     */
+    private volatile long metricsLibraryRetryAt = 0;
+
+    /**
+     * 本地指标库索引 TTL（毫秒）：60 秒
+     */
+    private static final long METRICS_LIBRARY_TTL_MILLIS = 60_000;
+
+    /**
+     * 本地指标库索引构建失败后的退避时长（毫秒）：5 秒
+     */
+    private static final long METRICS_LIBRARY_RETRY_BACKOFF_MILLIS = 5_000;
 
     /**
      * 价格指标键（每百万 token 美元 + 单任务成本）。
@@ -343,6 +408,17 @@ public class ApiProviderController {
             "openai_compatible",
             "intelligence_index_estimated"
     };
+
+    /**
+     * 免费通道模型名后缀（如 deepseek-v4.1-flash-free）：指标库里存的是去掉后缀的
+     * 上游模型名，精确键取不到时按此后缀回退一次。
+     */
+    private static final String FREE_MODEL_SUFFIX = "-free";
+
+    /**
+     * 首字延迟按秒采信的上限：指标库该列混有历史毫秒数据，超过该值一律丢弃。
+     */
+    private static final long TRUSTED_FIRST_TOKEN_MAX_SECONDS = 30L;
 
     // ==================== 提供者 ====================
 
@@ -2186,6 +2262,257 @@ public class ApiProviderController {
     }
 
     /**
+     * 路由拓扑快照：一次请求拿齐「入站 AppKey → 网关（路由组）→ 上游成员」三层，
+     * 供独立的路由页画连线与命中高亮。
+     *
+     * <p>为什么做聚合端点：拓扑页每 2 秒刷新一次，如果让前端分别打
+     * {@code router-group}、{@code router-group/live}、流量聚合三个接口，
+     * 三层数据来自不同时刻，连线会「对不上人」。这里在同一个请求里完成读取，
+     * 各层的时序一致。</p>
+     *
+     * <p>数据来源都是现成的：配置与成员来自 {@link RouterGroupService}，
+     * 实时命中来自内存 {@code RouterGroupActivity}（进程内最近 20 条），
+     * 入站流量来自 {@code sys_ai_service_access_log} 的按 AppKey 聚合。</p>
+     *
+     * @param providerId  路由组供应商 ID
+     * @param windowHours 入站流量回看窗口（小时，1~720，默认 1）
+     * @param keyLimit    入站 AppKey 最多返回条数（1~50，默认 8）
+     * @return 拓扑快照
+     */
+    @GetMapping("/providers/{provider_id}/router-group/topology")
+    public ApiResult<Map<String, Object>> getRouterGroupTopology(
+            @PathVariable("provider_id") String providerId,
+            @RequestParam(value = "window_hours", required = false, defaultValue = "1") int windowHours,
+            @RequestParam(value = "key_limit", required = false, defaultValue = "8") int keyLimit) {
+        SysAiProvider provider = requireProvider(providerId);
+        if (!routerGroupService.isRouterGroup(provider)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
+        }
+        int hours = Math.min(Math.max(windowHours, 1), 720);
+        int limit = Math.min(Math.max(keyLimit, 1), 50);
+        long nowMs = System.currentTimeMillis();
+
+        com.chua.common.support.ai.chat.aggregate.RouterGroupSetting setting =
+                routerGroupService.readSetting(provider);
+        List<Map<String, Object>> members = routerGroupService.describeMembers(setting);
+
+        // 内存决策：进程重启后为空，视图显示「等待请求」即可
+        List<com.chua.common.support.ai.chat.aggregate.RouterGroupActivity.Decision> decisions =
+                com.chua.common.support.ai.chat.aggregate.RouterGroupActivity.recent(providerId);
+        List<Map<String, Object>> decisionItems = new ArrayList<>(decisions.size());
+        Map<String, long[]> hitsByLabel = new HashMap<>(8);
+        for (com.chua.common.support.ai.chat.aggregate.RouterGroupActivity.Decision d : decisions) {
+            Map<String, Object> item = new LinkedHashMap<>(8);
+            item.put("member_label", d.memberLabel());
+            item.put("member_model", d.memberModel());
+            item.put("at", d.at());
+            item.put("success", d.success());
+            item.put("cost_ms", d.costMs());
+            decisionItems.add(item);
+            long[] stat = hitsByLabel.computeIfAbsent(d.memberLabel(), k -> new long[3]);
+            stat[0] = stat[0] + 1;
+            if (d.success()) {
+                stat[1] = stat[1] + 1;
+                // 平均耗时只统计成功样本：把超时/失败的长尾算进去，「这条通道 8s」实际是
+                // 「一半请求直接失败」，会误导排障时误判为上游慢
+                stat[2] = stat[2] + Math.max(d.costMs(), 0);
+            }
+        }
+
+        List<Map<String, Object>> upstreams = new ArrayList<>(members.size());
+        for (Map<String, Object> member : members) {
+            Map<String, Object> item = new LinkedHashMap<>(member);
+            String label = member.get("label") == null ? null : String.valueOf(member.get("label"));
+            long[] stat = label == null ? null : hitsByLabel.get(label);
+            long hits = stat == null ? 0 : stat[0];
+            long ok = stat == null ? 0 : stat[1];
+            long totalCost = stat == null ? 0 : stat[2];
+            item.put("hits", hits);
+            item.put("success_hits", ok);
+            item.put("avg_cost_ms", ok == 0 ? null : Math.round((double) totalCost / ok));
+            item.put("hit_rate", decisions.size() == 0 ? null
+                    : Math.round(hits * 1000.0 / decisions.size()) / 10.0);
+            upstreams.add(item);
+        }
+
+        Map<String, Object> group = new LinkedHashMap<>(8);
+        group.put("provider_id", provider.getProviderId());
+        group.put("name", provider.getName());
+        group.put("platform", provider.getPlatform());
+        group.put("member_count", members.size());
+        Map<String, Object> settingView = routerGroupService.toResponse(setting);
+        settingView.forEach(group::putIfAbsent);
+
+        Map<String, Object> gateway = new LinkedHashMap<>(8);
+        gateway.put("provider_id", provider.getProviderId());
+        gateway.put("name", provider.getName());
+        gateway.put("platform", provider.getPlatform());
+
+        Map<String, Object> inbound = buildInboundTraffic(nowMs, hours, limit, providerId);
+
+        Map<String, Object> result = new LinkedHashMap<>(8);
+        result.put("group", group);
+        result.put("gateway", gateway);
+        result.put("inbound", inbound);
+        result.put("upstreams", upstreams);
+        result.put("decisions", decisionItems);
+        result.put("window_hours", hours);
+        result.put("server_time", nowMs);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 入站流量：按 AppKey 聚合近 {@code hours} 小时的请求，并回填 AppKey 的身份与配额。
+     *
+     * <p>归属口径：只有管理员能看到全部 Key 的流量；普通用户与无身份的机器调用都按
+     * 「自己的 Key / 无主 Key」收敛（判定写在 mapper 的 {@code trafficScope} 里，
+     * 因为过滤依赖 AppKey 台账而不是日志的 {@code user_id}）。此前这里没有任何归属过滤，
+     * 任何登录用户都能从拓扑页看到别人 Key 的调用次数、token 与余额。</p>
+     *
+     * @param nowMs       当前时间（毫秒）
+     * @param hours       回看窗口（小时）
+     * @param limit       最多返回的 AppKey 数
+     * @param routerGroup 路由组供应商 ID（拓扑页当前选中的组）
+     * @return 入站节点数据
+     */
+    private Map<String, Object> buildInboundTraffic(long nowMs, int hours, int limit, String routerGroup) {
+        LocalDateTime since = LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(nowMs - hours * 3600_000L), ZoneId.systemDefault());
+        boolean restrictOwner = !com.chua.starter.ai.support.util.AiUserContext.isAdmin();
+        String ownerUserId = com.chua.starter.ai.support.util.AiUserContext.currentUserId();
+        Map<String, Object> inbound = new LinkedHashMap<>(8);
+        inbound.put("window_hours", hours);
+        List<Map<String, Object>> keys = new ArrayList<>(limit);
+        try {
+            List<com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper.AppKeyTrafficRow> rows =
+                    accessLogMapper.selectAppKeyTraffic(since, routerGroup, restrictOwner, ownerUserId, limit);
+            // 身份一次性批量取：8 个 Key = 8 条 selectByAppKey 会把这个 2 秒轮询的页面
+            // 变成 8 倍数据库压力，且各 Key 的身份来自不同时刻
+            Map<String, com.chua.starter.ai.support.entity.SysAiAppKey> identities = loadAppKeyIdentities(rows);
+            for (com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper.AppKeyTrafficRow row : rows) {
+                Map<String, Object> item = new LinkedHashMap<>(12);
+                item.put("app_key", maskAppKey(row.appKey()));
+                item.put("calls", row.calls() == null ? 0 : row.calls());
+                item.put("success_calls", row.successCalls() == null ? 0 : row.successCalls());
+                item.put("tokens", row.tokens() == null ? 0 : row.tokens());
+                item.put("avg_latency_ms", row.avgLatencyMs() == null ? null : Math.round(row.avgLatencyMs()));
+                item.put("last_at", toMillis(row.lastAt()));
+                applyAppKeyIdentity(item, identities.get(row.appKey()));
+                keys.add(item);
+            }
+            com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper.TrafficTotalRow total =
+                    accessLogMapper.selectTrafficTotal(since, routerGroup, restrictOwner, ownerUserId);
+            Map<String, Object> totalView = new LinkedHashMap<>(8);
+            totalView.put("calls", total == null || total.calls() == null ? 0 : total.calls());
+            totalView.put("success_calls", total == null || total.successCalls() == null ? 0 : total.successCalls());
+            totalView.put("tokens", total == null || total.tokens() == null ? 0 : total.tokens());
+            totalView.put("avg_latency_ms", total == null || total.avgLatencyMs() == null
+                    ? null : Math.round(total.avgLatencyMs()));
+            totalView.put("last_at", total == null ? null : toMillis(total.lastAt()));
+            inbound.put("total", totalView);
+        } catch (Exception e) {
+            // 拓扑页只是观测视图：日志表结构异常不能把整个页面打挂
+            log.warn("读取入站流量聚合失败: {}", e.getMessage());
+            Map<String, Object> totalView = new LinkedHashMap<>(4);
+            totalView.put("calls", 0);
+            totalView.put("success_calls", 0);
+            totalView.put("tokens", 0);
+            totalView.put("avg_latency_ms", null);
+            totalView.put("last_at", null);
+            inbound.put("total", totalView);
+        }
+        inbound.put("keys", keys);
+        return inbound;
+    }
+
+    /**
+     * 批量读取 AppKey 台账身份。
+     *
+     * @param rows 聚合行
+     * @return appKey 值 → 台账行；查不到的不在 Map 里
+     */
+    private Map<String, com.chua.starter.ai.support.entity.SysAiAppKey> loadAppKeyIdentities(
+            List<com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper.AppKeyTrafficRow> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        List<String> appKeys = new ArrayList<>(rows.size());
+        for (com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper.AppKeyTrafficRow row : rows) {
+            if (row.appKey() != null && !row.appKey().isBlank()) {
+                appKeys.add(row.appKey());
+            }
+        }
+        if (appKeys.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        List<com.chua.starter.ai.support.entity.SysAiAppKey> found = appKeyMapper.selectList(
+                new LambdaQueryWrapper<com.chua.starter.ai.support.entity.SysAiAppKey>()
+                        .in(com.chua.starter.ai.support.entity.SysAiAppKey::getAppKey, appKeys));
+        Map<String, com.chua.starter.ai.support.entity.SysAiAppKey> result =
+                new HashMap<>(Math.max(found.size(), 4));
+        for (com.chua.starter.ai.support.entity.SysAiAppKey key : found) {
+            result.put(key.getAppKey(), key);
+        }
+        return result;
+    }
+
+    /**
+     * AppKey 打码：只保留前 6 位与后 4 位。
+     *
+     * <p>拓扑页只需要「认得是哪把钥匙」，不需要完整凭据。此前把完整 app_key 塞进
+     * 响应体和 DOM 的 {@code title} 属性，任何能打开这个页面的账号都能顺手抄走凭据。</p>
+     *
+     * @param appKey 原始 AppKey，可为 null
+     * @return 打码后的展示串
+     */
+    private static String maskAppKey(String appKey) {
+        if (appKey == null || appKey.isBlank()) {
+            return appKey;
+        }
+        int len = appKey.length();
+        if (len <= 10) {
+            return appKey.substring(0, Math.min(3, len)) + "****";
+        }
+        return appKey.substring(0, 6) + "****" + appKey.substring(len - 4);
+    }
+
+    /**
+     * 把 AppKey 台账行的名称、余额、配额回填进入站节点。
+     *
+     * @param item 入站节点
+     * @param key  AppKey 台账行，可为 null（日志里的 Key 已被删除）
+     */
+    private void applyAppKeyIdentity(Map<String, Object> item,
+                                     com.chua.starter.ai.support.entity.SysAiAppKey key) {
+        if (key == null) {
+            item.put("name", null);
+            item.put("orphan", true);
+            return;
+        }
+        item.put("name", key.getName());
+        item.put("status", key.getStatus());
+        item.put("group_id", key.getGroupId());
+        item.put("balance", key.getBalance());
+        item.put("total_cost", key.getTotalCost());
+        item.put("total_tokens", key.getTotalTokens());
+        item.put("max_tokens", key.getMaxTokens());
+        item.put("use_count", key.getUseCount());
+        item.put("max_use", key.getMaxUse());
+        item.put("expire_datetime", key.getExpireDatetime() == null ? null : toMillis(key.getExpireDatetime()));
+        item.put("overdraft_enabled", key.getOverdraftEnabled());
+    }
+
+    /**
+     * 本地时间 → 毫秒时间戳（前端统一按毫秒比较新旧）。
+     *
+     * @param time 本地时间，可为 null
+     * @return 毫秒时间戳；{@code null} 原样返回
+     */
+    private static Long toMillis(LocalDateTime time) {
+        return time == null ? null : time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    /**
      * 保存路由组配置：成员（新增 / 移除 / 顺序）、策略与每模型 effort。
      *
      * <p>成员一律来自「已添加的模型库」：{@code members} 里出现的每一行都必须能在
@@ -2608,13 +2935,12 @@ public class ApiProviderController {
                 }
             }
         }
-        // 本地平均输出速度：用量聚合任务回填至 sys_ai_model_metrics（非指标快照、
-        // 不进 METRIC_KEYS：指标库中的 @code avg_output_speed_tps 才是本地均值），
-        // 模型卡片的速度列优先展示本地平均值。
+        // 本地指标库兜底：速度 / 首字 / 智能 / 全知 / 价格 / 上下文。快照没给值的键
+        // 从 sys_ai_model_metrics 补，已有的不动（模型自身配置和快照都优先）。
         try {
-            fillAvgOutputSpeed(provider, model, metrics);
+            fillFromMetricsLibrary(provider, model, metrics);
         } catch (Throwable e) {
-            log.warn("[ApiProvider] 读取本地平均输出速度失败: {}", e.getMessage());
+            log.warn("[ApiProvider] 读取本地指标库失败: {}", e.getMessage());
         }
         if (!metrics.isEmpty()) {
             map.put("metrics", metrics);
@@ -2624,17 +2950,6 @@ public class ApiProviderController {
         return map;
     }
 
-    /**
-     * 计算 provider/model 所在指标库行的本地平均输出速度，并入模型指标（空值不写）。
-     *
-     * <p><b>数据源</b>：sys_ai_model_metrics（由用量聚合任务按 provider+model 回填），
-     * 与指标快照无关（不是 METRIC_KEYS 成员、不进 Redis 快照）。前端「速度」列优先
-     * 取本地均值 {@code avg_output_speed_tps}，未回填时回退到 {@code output_speed_tps}。</p>
-     *
-     * @param provider  供应商行
-     * @param model     模型行
-     * @param metrics   待补充的指标映射（就地写入）
-     */
     /**
      * 将键截断为固定长度（可排序、可索引）
      *
@@ -2649,17 +2964,86 @@ public class ApiProviderController {
         return value.length() <= maxLen ? value : value.substring(0, maxLen);
     }
 
-    private void fillAvgOutputSpeed(SysAiProvider provider, SysAiProviderModel model, Map<String, Object> metrics) {
+    /**
+     * 用本地指标库（sys_ai_model_metrics）补齐模型指标里缺失的键。
+     *
+     * <p><b>为什么需要</b>：卡片的「速度 / 首字 / 智能 / 全知 / 价格 / 上下文」原本只靠
+     * 指标快照填充，而快照来自 Artificial Analysis 网页的 Next.js flight 数据。该页面
+     * 2026-11 起已抓不到 {@code medianOutputTokensPerSecond} /
+     * {@code medianTimeToFirstTokenSeconds} / {@code hle} 三个键（实测抓下来 893KB，
+     * 三个键出现 0 次），这批指标就恒为 —。本地指标库由同步任务写库，这些值是有数的
+     * （hle 305 条、首字 241 条、速度 159 条），按同一归一化模型名兜底补上。</p>
+     *
+     * <p><b>写入规则</b>：</p>
+     * <ul>
+     *   <li>只补缺：模型自身配置、快照已有的键一律不动，不覆盖可信数据；</li>
+     *   <li>速度优先本地均值 {@code avg_output_speed_tps}，其次官方中位
+     *       {@code output_speed_tps}（前端本来就按这个顺序取值）；</li>
+     *   <li>首字延迟列单位混杂（多数是秒，少量历史行是毫秒）：只在 (0, 30] 区间按秒
+     *       写入，超过 30 视作毫秒脏值丢弃 —— 宁可不显示，也不显示 94174ms；</li>
+     *   <li>免费通道的模型名带 {@code -free} 后缀（如 deepseek-v4.1-flash-free）：指标库里
+     *       这种后缀行多数是全空壳，真正有数的是去掉后缀的上游模型行，所以两行都读、
+     *       精确行优先，缺的键再由上游行补齐。</li>
+     * </ul>
+     *
+     * @param provider 供应商行
+     * @param model    模型行
+     * @param metrics  待补充的指标映射（就地写入）
+     */
+    private void fillFromMetricsLibrary(SysAiProvider provider, SysAiProviderModel model, Map<String, Object> metrics) {
         String key = truncate(
                 modelMetricsEnrichmentService.normalizeKey(provider.getProviderId() + "/" + model.getModel()), 160);
         if (key.isEmpty()) {
             return;
         }
-        SysAiModelMetrics row = sysAiModelMetricsService.getByKey(key);
-        if (row == null || row.getAvgOutputSpeedTps() == null) {
+        Map<String, SysAiModelMetrics> index = metricsLibraryIndex();
+        applyMetricsRow(metrics, index.get(key));
+        if (key.endsWith(FREE_MODEL_SUFFIX)) {
+            // 指标库里常常同时存在「-free 行」和「上游模型行」：前者多为全空壳，
+            // 后者才有速度/智能/HLE。两行都取，精确行优先，缺的键由上游行补。
+            String upstreamKey = key.substring(0, key.length() - FREE_MODEL_SUFFIX.length());
+            if (!upstreamKey.isEmpty()) {
+                applyMetricsRow(metrics, index.get(upstreamKey));
+            }
+        }
+    }
+
+    /**
+     * 把指标库里的一行并入模型指标（只补缺）。
+     *
+     * @param metrics 模型指标映射（就地写入）
+     * @param row     指标库行，可为空
+     */
+    private static void applyMetricsRow(Map<String, Object> metrics, SysAiModelMetrics row) {
+        if (row == null) {
             return;
         }
-        metrics.put("avg_output_speed_tps", row.getAvgOutputSpeedTps());
+        putIfAbsentMetric(metrics, "avg_output_speed_tps", row.getAvgOutputSpeedTps());
+        putIfAbsentMetric(metrics, "output_speed_tps", row.getOutputSpeedTps());
+        putIfAbsentMetric(metrics, "intelligence_index", row.getIntelligenceIndex());
+        putIfAbsentMetric(metrics, "hle_score", row.getHleScore());
+        putIfAbsentMetric(metrics, "omniscience_index", row.getOmniscienceIndex());
+        putIfAbsentMetric(metrics, "price_input_per_musd", row.getPriceInputPerMusd());
+        putIfAbsentMetric(metrics, "price_output_per_musd", row.getPriceOutputPerMusd());
+        putIfAbsentMetric(metrics, "context_window_tokens", row.getContextWindowTokens());
+        java.math.BigDecimal ttft = row.getLatencyFirstTokenSeconds();
+        if (ttft != null && ttft.signum() > 0
+                && ttft.compareTo(java.math.BigDecimal.valueOf(TRUSTED_FIRST_TOKEN_MAX_SECONDS)) <= 0) {
+            putIfAbsentMetric(metrics, "latency_first_token_seconds", ttft);
+        }
+    }
+
+    /**
+     * 指标缺失时才写入（已有值不动）。
+     *
+     * @param metrics 指标映射
+     * @param key     指标键
+     * @param value   指标值，空则跳过
+     */
+    private static void putIfAbsentMetric(Map<String, Object> metrics, String key, Object value) {
+        if (value != null) {
+            metrics.putIfAbsent(key, value);
+        }
     }
 
     /**
@@ -2672,38 +3056,89 @@ public class ApiProviderController {
      */
     private Map<String, Map<String, Object>> metricIndex() {
         long now = System.currentTimeMillis();
-        if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS && !metricsIndex.isEmpty()) {
-            return metricsIndex;
+        Map<String, Map<String, Object>> current = metricsIndex;
+        if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS) {
+            return current;
         }
-        synchronized (this) {
-            if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS && !metricsIndex.isEmpty()) {
-                return metricsIndex;
-            }
+        if (now < metricsIndexRetryAt) {
+            // 上一次构建刚失败：退避期内直接给旧索引，别让每个请求都去打一次快照
+            return current;
+        }
+        // 单飞：并发请求不排队也不重复重建，抢不到的那一个用旧索引立即返回。
+        // 不加实例锁（锁会把外部延迟放大成全局串行），也不放任重复构建（冷启动 30 个并发
+        // 就是 30 次全表查询，跨隧道等于 60 次往返）。
+        if (!metricsIndexRefreshing.compareAndSet(false, true)) {
+            return current;
+        }
+        try {
             Map<String, Map<String, Object>> index = new HashMap<>(64); // 提供者模型索引不可预估
-            try {
-                Map<String, Object> snapshot = metricsSnapshotService.latestSnapshot();
-                Object modelsObj = snapshot.get("models");
-                if (modelsObj instanceof List<?> list) {
-                    for (Object item : list) {
-                        if (!(item instanceof Map<?, ?> row)) {
-                            continue;
-                        }
-                        Object providerId = row.get("provider_id");
-                        Object modelName = row.get("model");
-                        if (providerId != null && modelName != null) {
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> rowMap = (Map<String, Object>) row;
-                            index.put(providerId + "::" + modelName, rowMap);
-                        }
+            Map<String, Object> snapshot = metricsSnapshotService.latestSnapshot();
+            Object modelsObj = snapshot.get("models");
+            if (modelsObj instanceof List<?> list) {
+                for (Object item : list) {
+                    if (!(item instanceof Map<?, ?> row)) {
+                        continue;
+                    }
+                    Object providerId = row.get("provider_id");
+                    Object modelName = row.get("model");
+                    if (providerId != null && modelName != null) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> rowMap = (Map<String, Object>) row;
+                        index.put(providerId + "::" + modelName, rowMap);
                     }
                 }
-            } catch (Exception e) {
-                log.warn("[ApiProvider] 缓存指标索引构建失败: {}", e.getMessage());
             }
             metricsIndex = index;
-            metricsIndexLoadedAt = now;
+            metricsIndexLoadedAt = System.currentTimeMillis();
+            return index;
+        } catch (Exception e) {
+            // 失败绝不能覆盖已有索引：原来这里无条件 metricsIndex = index，
+            // 一次抖动就把整页指标清空，且空表不进 TTL 缓存 → 后续每个请求都重查。
+            metricsIndexRetryAt = System.currentTimeMillis() + METRICS_INDEX_RETRY_BACKOFF_MILLIS;
+            log.warn("[ApiProvider] 缓存指标索引构建失败，继续使用旧索引: {}", e.getMessage());
+            return current;
+        } finally {
+            metricsIndexRefreshing.set(false);
         }
-        return metricsIndex;
+    }
+
+    /**
+     * 构建（带 TTL 缓存）本地指标库索引：归一化模型键 → 指标行。
+     *
+     * <p>一次 {@code selectList} 取全表（千行级别）在内存里建索引，替代原先
+     * 「每个模型 getByKey 一次」的做法。后者在跨网络访问数据库时会把一次列表
+     * 请求放大成上百次往返，把接口拖到分钟级；同时本方法不加锁，冷启动并发
+     * 最多重复构建一次，不会互相阻塞。</p>
+     *
+     * @return 模型键 → 指标行，读取失败时返回上一次的索引（可能为空）
+     */
+    private Map<String, SysAiModelMetrics> metricsLibraryIndex() {
+        long now = System.currentTimeMillis();
+        Map<String, SysAiModelMetrics> current = metricsLibraryIndex;
+        if (now - metricsLibraryLoadedAt <= METRICS_LIBRARY_TTL_MILLIS) {
+            return current;
+        }
+        if (now < metricsLibraryRetryAt) {
+            return current;
+        }
+        if (!metricsLibraryRefreshing.compareAndSet(false, true)) {
+            return current;
+        }
+        try {
+            Map<String, SysAiModelMetrics> index = new HashMap<>(1024);
+            for (SysAiModelMetrics row : sysAiModelMetricsService.listAll()) {
+                index.put(row.getModelKey(), row);
+            }
+            metricsLibraryIndex = index;
+            metricsLibraryLoadedAt = System.currentTimeMillis();
+            return index;
+        } catch (Exception e) {
+            metricsLibraryRetryAt = System.currentTimeMillis() + METRICS_LIBRARY_RETRY_BACKOFF_MILLIS;
+            log.warn("[ApiProvider] 本地指标库索引构建失败，继续使用旧索引: {}", e.getMessage());
+            return current;
+        } finally {
+            metricsLibraryRefreshing.set(false);
+        }
     }
 
     /**

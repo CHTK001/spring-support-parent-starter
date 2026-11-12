@@ -85,24 +85,6 @@ public class AiGlobalSettingDTO implements Serializable {
     private Integer timeout;
 
     /**
-     * 是否启用缓存
-     */
-    @Schema(description = "是否启用缓存")
-    /**
-     * Enable缓存
-    */
-    private Boolean enableCache;
-
-    /**
-     * 是否流式输出
-     */
-    @Schema(description = "是否流式输出")
-    /**
-     * 流
-    */
-    private Boolean stream;
-
-    /**
      * 全局 对话客户端 默认系统提示词
      */
     @Schema(description = "全局 ChatClient 默认系统提示词")
@@ -200,47 +182,13 @@ public class AiGlobalSettingDTO implements Serializable {
     private String ragSplitter;
 
     /**
-     * 问题库原始素材存储目录，对应映射到 workshop.storage_dir。
-     */
-    @Schema(description = "问题库原始素材存储目录")
-    /**
-     * 问题库素材存储目录。
-     */
-    private String workshopStorageDir;
-
-    /**
-     * 问题库素材上传大小限制，单位 MB，对应映射到 workshop.max_upload_size_mb。
-     */
-    @Schema(description = "问题库素材上传大小限制(MB)")
-    /**
-     * 素材上传大小限制，单位 MB。
-     */
-    private Integer workshopMaxUploadSizeMb;
-
-    /**
-     * 问题库素材上传文件扩展名白名单，默认支持 jpg、png、webp、mp4，对应映射到 workshop.allowed_extensions。
-     */
-    @Schema(description = "问题库素材上传文件扩展名白名单(扩展名，如 jpg,png,webp,mp4)")
-    /**
-     * 上传文件扩展名白名单。
-     */
-    private String workshopAllowedExtensions;
-
-    /**
      * 是否启用协议服务端，对应映射到 runtime.protocol_server_enabled。
+     * 关闭时 {@code AiProtocolController} 的三个对外协议入口统一回「服务未启用」，
+     * 且不再注册协议过滤器 Bean。
      */
     @Schema(description = "是否启用协议服务端")
     /**
      * 协议服务端是否启用。
      */
     private Boolean protocolServerEnabled;
-
-    /**
-     * 协议服务端监听端口，对应映射到 runtime.protocol_server_port。
-     */
-    @Schema(description = "协议服务端监听端口")
-    /**
-     * 协议服务端端口。
-     */
-    private Integer protocolServerPort;
 }

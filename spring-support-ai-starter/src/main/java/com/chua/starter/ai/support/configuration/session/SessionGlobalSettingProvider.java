@@ -79,7 +79,8 @@ public class SessionGlobalSettingProvider implements GlobalSettingProvider {
                  */
                 new SettingItem("initial_load_turns", "10", "NUMBER",
                         "初始化加载最新的记录数量（用户轮次，1-50，默认 10）：打开会话时只加载最近这么多轮问答"
-                                + "（含每轮对应的助手回复），更早的记录由向上翻页获取，避免一次性渲染整段历史把页面卡死", 3),
+                                + "（含每轮对应的助手回复），更早的记录由向上翻页获取，避免一次性渲染整段历史把页面卡死"
+                                + "（前端消费：message.api.ts 直接读该字段）", 3),
                 new SettingItem("stream_idle_timeout_minutes", "30", "NUMBER",
                         "会话超时时间（分钟）：一次聊天流连续这么久没有任何输出就判定为超时，"
                                 + "服务端结束该流并回一条超时提示，避免连接被一直挂住（1-180，0=不限制）", 4),
@@ -101,7 +102,8 @@ public class SessionGlobalSettingProvider implements GlobalSettingProvider {
                  */
                 new SettingItem("thinking_placeholder_phrases", "", "STRING",
                         "「AI 正在思考…」占位文案（一行一句，随机轮换且不会连着重复）："
-                                + "AI 答复的首字还没回来时，气泡里显示的就是这里的一句话；留空则使用内置的默认文案", 7)
+                                + "AI 答复的首字还没回来时，气泡里显示的就是这里的一句话；留空则使用内置的默认文案"
+                                + "（前端消费：ThinkingPlaceholder.vue 直接读该字段）", 7)
         );
     }
 }

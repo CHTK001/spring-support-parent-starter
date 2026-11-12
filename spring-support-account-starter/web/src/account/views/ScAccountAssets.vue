@@ -459,15 +459,50 @@
             </div>
           </div>
 
+          <!-- 与账号 / Cookie 一致：底部只留图标 + 悬浮提示，文字只在 tooltip 里出现 -->
           <footer class="main-foot">
-            <ReButton show-text icon="CopyDocument" @click="copyKey(activeAppKey)">复制 AppKey</ReButton>
-            <ReButton show-text icon="Refresh" @click="rotateKey(activeAppKey)">轮换 Secret</ReButton>
-            <ReButton show-text icon="EditPen" @click="openEditKey(activeAppKey)">编辑</ReButton>
+            <ReButton
+              text
+              :show-text="false"
+              icon="CopyDocument"
+              :icon-size="28"
+              tip="复制 AppKey"
+              @click="copyKey(activeAppKey)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="Refresh"
+              :icon-size="28"
+              tip="轮换 Secret（旧 Secret 立即失效）"
+              @click="rotateKey(activeAppKey)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="EditPen"
+              :icon-size="28"
+              tip="编辑"
+              @click="openEditKey(activeAppKey)"
+            />
             <span class="foot-gap"></span>
-            <ReButton show-text icon="SwitchButton" @click="toggleKeyStatus(activeAppKey)">
-              {{ activeAppKey.status === 0 ? '启用' : '停用' }}
-            </ReButton>
-            <ReButton show-text icon="Delete" type="danger" plain @click="removeKey(activeAppKey)">删除</ReButton>
+            <ReButton
+              text
+              :show-text="false"
+              :icon="activeAppKey.status === 0 ? 'SwitchButton' : 'TurnOff'"
+              :icon-size="28"
+              :tip="activeAppKey.status === 0 ? '启用' : '停用'"
+              @click="toggleKeyStatus(activeAppKey)"
+            />
+            <ReButton
+              text
+              :show-text="false"
+              icon="Delete"
+              :icon-size="28"
+              type="danger"
+              tip="删除"
+              @click="removeKey(activeAppKey)"
+            />
           </footer>
         </template>
 
@@ -626,70 +661,6 @@
     </div>
     </div>
 
-    <!-- 账号详情 -->
-    <ReDialog v-model="showDetail" :title="detailTitle" width="760" :height="620" destroy-on-close compact>
-      <div v-if="activeAccount" class="detail-body">
-        <section class="detail-section">
-          <h4 class="section-title">基础信息</h4>
-          <ReRow :gutter="16">
-            <ReCol :span="8"><div class="kv"><span class="k">名称</span><span class="v">{{ activeAccount.name || '—' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">编码</span><span class="v mono">{{ activeAccount.code || '—' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">种类</span><span class="v">{{ kindLabel(activeAccount.kind) }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">厂商 / 服务商</span><span class="v">{{ activeAccount.vendor || '—' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">登录名 / 地址</span><span class="v mono">{{ activeAccount.username || '—' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">服务地址</span><span class="v mono">{{ activeAccount.endpoint || '—' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">归属</span><span class="v">{{ activeAccount.owner ? `仅本人（${activeAccount.owner}）` : '部署级共享' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">状态</span><span class="v">{{ activeAccount.status === 0 ? '停用' : '启用' }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">同种类默认</span><span class="v">{{ activeAccount.defaultAccount ? '是' : '否' }}</span></div></ReCol>
-          </ReRow>
-        </section>
-
-        <section class="detail-section">
-          <h4 class="section-title">
-            凭据与校验
-            <span class="section-extra">
-              <ReTag :type="activeAccount.hasSecret ? 'success' : 'warning'" effect="plain" size="small">
-                {{ activeAccount.hasSecret ? '凭据已配置' : '凭据待配置' }}
-              </ReTag>
-            </span>
-          </h4>
-          <ReRow :gutter="16">
-            <ReCol :span="8"><div class="kv"><span class="k">校验状态</span><span class="v">{{ verifyLabel(activeAccount.verifyStatus) }}</span></div></ReCol>
-            <ReCol :span="8"><div class="kv"><span class="k">最近校验</span><span class="v">{{ formatTime(activeAccount.verifyAt) }}</span></div></ReCol>
-            <ReCol :span="24"><div class="kv wide"><span class="k">校验说明</span><span class="v">{{ activeAccount.verifyMessage || '—' }}</span></div></ReCol>
-          </ReRow>
-          <div class="detail-tip">凭据明文只进不出：读取接口只回传「是否已配置」，编辑时留空表示不修改。</div>
-        </section>
-
-        <section class="detail-section">
-          <h4 class="section-title">类型专属配置</h4>
-          <div v-if="configRows.length" class="config-grid">
-            <div v-for="item in configRows" :key="item.key" class="kv wide">
-              <span class="k">{{ item.label }}</span>
-              <span class="v">{{ item.value }}</span>
-            </div>
-          </div>
-          <ReEmpty v-else :image-size="56" description="暂无类型专属配置" />
-        </section>
-
-        <section class="detail-section">
-          <h4 class="section-title">时间</h4>
-          <ReRow :gutter="16">
-            <ReCol :span="12"><div class="kv"><span class="k">创建时间</span><span class="v">{{ formatTime(activeAccount.createdAt) }}</span></div></ReCol>
-            <ReCol :span="12"><div class="kv"><span class="k">更新时间</span><span class="v">{{ formatTime(activeAccount.updatedAt) }}</span></div></ReCol>
-          </ReRow>
-        </section>
-      </div>
-
-      <template #footer>
-        <ReButton v-if="activeAccount && hasMailbox(activeAccount)" @click="openConsole(activeAccount)">
-          {{ activeAccount?.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
-        </ReButton>
-        <ReButton :loading="verifyingId === activeAccount?.accountId" @click="onVerify(activeAccount)">校验凭据</ReButton>
-        <ReButton type="primary" @click="openEdit(activeAccount)">编辑</ReButton>
-      </template>
-    </ReDialog>
-
     <!-- 新增 / 编辑账号 -->
     <AccountFormDialog v-model="formVisible" :account="editing" :draft="draft" @saved="onSaved" />
 
@@ -847,8 +818,6 @@ const selectedAccountIds = ref<string[]>([]);
 /** 批量操作进行中 */
 const batchBusy = ref(false);
 
-/** 详情弹窗 */
-const showDetail = ref(false);
 /** 账号新增 / 编辑 */
 const formVisible = ref(false);
 const editing = ref<SysAccount | null>(null);
@@ -1193,12 +1162,6 @@ const activeCookie = computed(
   () => cookieList.value.find(row => row.cookieId === selectedCookieId.value) ?? null,
 );
 
-/** 详情标题 */
-const detailTitle = computed(() => {
-  if (!activeAccount.value) return '账号详情';
-  return `${kindLabel(activeAccount.value.kind)} · ${activeAccount.value.name || activeAccount.value.code || ''}`;
-});
-
 /**
  * 是否具备收发信箱（仅邮箱 / 短信账号）。
  *
@@ -1452,7 +1415,6 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
           { key: 'delete', label: '删除 Cookie', icon: 'Delete' },
         ]
       : [
-          { key: 'detail', label: '账号详情', icon: 'View' },
           { key: 'edit', label: '编辑账号', icon: 'EditPen' },
           { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
           ...(group.key === 'EMAIL' || group.key === 'SMS'
@@ -1511,8 +1473,7 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
   }
   const target = accountList.value.find(entry => entry.accountId === row.id);
   if (!target) return;
-  if (item.key === 'detail') openDetail(target);
-  else if (item.key === 'edit') openEdit(target);
+  if (item.key === 'edit') openEdit(target);
   else if (item.key === 'verify') void onVerify(target);
   else if (item.key === 'open-console') openConsole(target);
   else if (item.key === 'copy-code') void copyCode(target);
@@ -1674,13 +1635,6 @@ function duplicateAccount(row: SysAccount | null): void {
   editing.value = null;
   draft.value = row;
   formVisible.value = true;
-}
-
-/** 打开账号详情 */
-function openDetail(row: SysAccount | null): void {
-  if (!row) return;
-  selectedAccountId.value = row.accountId;
-  showDetail.value = true;
 }
 
 /** 账号保存后刷新并回指 */
@@ -2974,59 +2928,6 @@ onMounted(loadAll);
   color: var(--text-primary);
   word-break: break-all;
   user-select: all;
-}
-
-/* ---------- 详情 ---------- */
-.detail-body {
-  padding: 4px 4px 8px;
-}
-.detail-section {
-  margin-bottom: 20px;
-}
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-}
-.section-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border-subtle);
-}
-.section-extra {
-  font-weight: 400;
-  letter-spacing: 0;
-}
-.kv {
-  display: flex;
-  gap: 8px;
-  padding: 6px 0;
-  font-size: 13px;
-  min-width: 0;
-}
-.kv .k {
-  flex: 0 0 84px;
-  color: var(--text-tertiary);
-}
-.kv .v {
-  color: var(--text-primary);
-  word-break: break-all;
-}
-.detail-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-.config-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 4px 16px;
 }
 
 /* ---------- 索引行高度吃满、窄屏降为上下结构 ---------- */

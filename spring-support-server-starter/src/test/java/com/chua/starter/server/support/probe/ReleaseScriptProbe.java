@@ -401,6 +401,15 @@ public final class ReleaseScriptProbe {
         // 保留语义：保留最新 10 个 → 从第 11 个开始删（tail -n +11），断言要反映真实语义
         check("G1 备份命令含保留语义（保留 10 → tail -n +11）",
                 backup.contains("tail -n +11") && backup.contains("tar -czf"), backup);
+          // tar / cd 失败不能被末尾保留策略的 ls 掩盖：否则目标目录不存在时页面显示「备份成功」，
+          // 实际 backups/backup_*.tar.gz 一个都没有。
+        check("G1b 备份失败以非 0 退出并清理半成品",
+                backup.contains("|| { rm -f backups/") && backup.contains("exit 1; }; }")
+                        && backup.contains("echo 'backup created:"), backup);
+          // 多行脚本末尾常有 if / true，目录准备失败若只进首行 && 链会被后续命令重置为 exit 0。
+        String wrapped = posix.wrap(LINUX, "if [ -f app.pid ]; then true; fi\ntrue");
+        check("G1c 目录准备失败直接终止整段脚本",
+                wrapped.contains("|| exit 1;\n"), wrapped);
         String rb = posix.rollback(LINUX, null);
         check("G2 回滚命令可用最新备份（参数为空）",
                 rb.contains("ls -t backups/backup_*.tar.gz") && rb.contains("tar -xzf"), rb);

@@ -29,10 +29,29 @@ public class AiProtocolServerConfiguration {
     /**
      * 收集所有 AI 协议服务器过滤器。
      *
-     * @return 过滤器列表
+     * <p>两级开关都打开才注册：部署级 {@code plugin.protocol.enable}（YAML，重启生效）
+     * 与管理员级 {@code runtime.protocol_server_enabled}（设置表，热改后下次重启生效）。
+     * 后者此前只在设置页登记、后端从不读取 —— 关掉它，协议端点照样对外服务。</p>
+     *
+     * @param settingService 全局设置服务
+     * @return 过滤器列表；关闭时为空列表
      */
     @Bean("aiProtocolServerFilters")
-    public List<AiProtocolServerFilter> aiProtocolServerFilters() {
+    public List<AiProtocolServerFilter> aiProtocolServerFilters(
+            com.chua.starter.ai.support.service.SysAiGlobalSettingService settingService) {
+        boolean enabled;
+        try {
+            // 缺省启用：该开关此前未被读取，协议入口一直可用；默认关闭会让升级即停服
+            enabled = settingService.getBoolean("runtime", "protocol_server_enabled", true);
+        } catch (Exception e) {
+            // 设置表异常按关闭处理：对外协议入口不能因为读配置失败就默认放开
+            log.warn("[AiProtocolServer] 读取 protocol_server_enabled 失败，按关闭处理: {}", e.getMessage());
+            enabled = false;
+        }
+        if (!enabled) {
+            log.info("[AiProtocolServer] runtime.protocol_server_enabled=false，不注册协议服务器过滤器");
+            return List.of();
+        }
         List<AiProtocolServerFilter> filters = ServiceProvider.of(AiProtocolServerFilter.class).collect();
         log.info("[AiProtocolServer] 加载 {} 个 AI 协议服务器过滤器", filters.size());
         return filters;

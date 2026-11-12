@@ -73,6 +73,16 @@ public class AiProtocolController extends BaseAiController {
     private final EffectiveChatModelResolver effectiveChatModelResolver;
 
     /**
+     * 全局设置分组：运行时
+     */
+    private static final String GROUP_RUNTIME = "runtime";
+
+    /**
+     * 全局设置字段：聚合协议服务开关
+     */
+    private static final String FIELD_PROTOCOL_SERVER_ENABLED = "protocol_server_enabled";
+
+    /**
      * 协议适配器：描述一个协议族全部的形状（请求/响应/流式），支撑 {@link #route} 统一分发。
      *
      * <p>协议相关的不确定性（提示词提取、流式事件排列、响应体结构）各协议之间不可能通用，
@@ -164,6 +174,27 @@ public class AiProtocolController extends BaseAiController {
     }
 
     /**
+     * 聚合协议服务是否启用（全局设置 {@code runtime.protocol_server_enabled}）。
+     *
+     * <p><b>缺省为启用</b>：这个开关此前从未被读取，对外协议入口一直是可用的；
+     * 接线后若默认关闭，升级当天所有外部客户端都会收到「服务未启用」。
+     * 保持默认启用 = 行为不变，管理员显式关闭才停服。</p>
+     *
+     * <p>读取失败按「关闭」处理：对外协议入口宁可多一次明文不可用，也不能因为设置表异常
+     * 就默认对外开放。</p>
+     *
+     * @return 启用返回 true
+     */
+    private boolean protocolServerEnabled() {
+        try {
+            return sysAiGlobalSettingService.getBoolean(GROUP_RUNTIME, FIELD_PROTOCOL_SERVER_ENABLED, true);
+        } catch (Exception e) {
+            log.warn("[ai] 读取 protocol_server_enabled 失败，按关闭处理: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 统一分发入口：鉴权 → 提示词提取 → 对话执行 → 协议化表达，全部由 {@link ProtocolAdapter} 描述。
      *
      * @param servletRequest HTTP 请求
@@ -175,6 +206,14 @@ public class AiProtocolController extends BaseAiController {
         // 检查 REST 开关
         if (!restEnabled()) {
             log.info("[ai] {} 协议被 REST 开关禁用", adapter.family());
+            return ResponseEntity.ok(adapter.disabled());
+        }
+        // 聚合协议服务开关（runtime.protocol_server_enabled）：关闭时三个对外协议入口统一回
+        // 「服务未启用」。这个配置原先只在设置页登记、后端从不读取 —— 关掉它外部软件照样能用，
+        // 声明与行为相反。默认关闭（与设置项声明的默认值一致），要在网关外被第三方软件调用
+        // 必须由管理员显式打开。
+        if (!protocolServerEnabled()) {
+            log.info("[ai] {} 协议被 protocol_server_enabled 禁用", adapter.family());
             return ResponseEntity.ok(adapter.disabled());
         }
         // 鉴权校验
@@ -617,7 +656,7 @@ public class AiProtocolController extends BaseAiController {
     @Operation(summary = "Gemini Models", description = "获取支持的模型列表")
     @GetMapping("/v1beta/models")
     public ResponseEntity<Map<String, Object>> geminiModels(HttpServletRequest servletRequest) {
-        if (!restEnabled()) {
+        if (!restEnabled() || !protocolServerEnabled()) {
             return ResponseEntity.ok(Map.of("models", List.of()));
         }
         if (!authCheckReadOnly(servletRequest)) {
