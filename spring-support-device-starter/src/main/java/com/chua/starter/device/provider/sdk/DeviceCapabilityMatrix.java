@@ -19,9 +19,11 @@ import java.util.Set;
  * <ul>
  *   <li>{@link Support#YES}：平台 {@code DeviceSession} 里确有实现，且已用真实凭据跑通。</li>
  *   <li>{@link Support#IMPLEMENTED_UNVERIFIED}：确有实现，但尚无环境验证。</li>
- *   <li>{@link Support#TODO}：平台官方有这部分接口，但本模块 {@code DeviceSession} 尚未实现。
+ *   <li>{@link Support#TODO}：平台官方有可完成该能力的接口，但本模块 {@code DeviceSession} 尚未实现。
  *       只「接口目录里有路径」不算实现。</li>
- *   <li>{@link Support#NO}：平台客观上不具备该能力。</li>
+ *   <li>{@link Support#NO}：平台公开接口/协议不能完整支持该能力（无接口、仅推送、
+ *       仅相邻/部分接口，或业务模型不存在）。{@code NO} 不等于接口目录零路径；
+ *       仍有部分接口时用 {@link Cell#no(int, String)} 保留接口数。</li>
  * </ul>
  *
  * <p>只有 {@code YES} 与 {@code IMPLEMENTED_UNVERIFIED} 会派生成平台级能力位，
@@ -92,19 +94,30 @@ public record DeviceCapabilityMatrix(
      * 一个能力格子。
      *
      * @param support 支持度
-     * @param apiCount 该能力对应的官方接口数量（0 表示不适用）
+     * @param apiCount 该能力对应的官方接口数量（0 表示不适用；`no` 也可能有相邻/部分接口）
      * @param note 说明：不支持的写原因，待实现的写依据
      */
     public record Cell(Support support, int apiCount, String note) {
 
         /**
-         * 构造：不支持的格子。
+         * 构造：不支持的格子（接口目录中没有对应接口）。
          *
          * @param note 原因
          * @return 格子
          */
         public static Cell no(String note) {
             return new Cell(Support.NO, 0, note);
+        }
+
+        /**
+         * 构造：不支持的格子，但接口目录中仍有相邻/部分接口。
+         *
+         * @param apiCount 已登记但不能完成该能力的接口数量
+         * @param note     原因，必须写明“仅……”
+         * @return 格子
+         */
+        public static Cell no(int apiCount, String note) {
+            return new Cell(Support.NO, apiCount, note);
         }
 
         /**
@@ -265,6 +278,19 @@ public record DeviceCapabilityMatrix(
         }
 
         /**
+         * 标记平台不支持，但接口目录中仍有相邻/部分接口。
+         *
+         * @param capability 能力位
+         * @param apiCount 已登记但不能完成该能力的接口数量
+         * @param reason 原因，必须写明“仅……”
+         * @return 构造器
+         */
+        public Builder no(DeviceCapability capability, int apiCount, String reason) {
+            cells.put(capability, Cell.no(apiCount, reason));
+            return this;
+        }
+
+        /**
          * 标记待实现。
          *
          * @param capability 能力位
@@ -393,7 +419,8 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.MEDIA, 74, "getLiveUrl(type=1) 已按官方 live/address 实现，账号下无设备未验证")
                 .unverified(DeviceCapability.RECORD, 7, "getPlaybackUrl(type=2, rtmp/ezopen/flv) 已实现，无设备未验证")
                 .unverified(DeviceCapability.PTZ, 13, "ptzControl(direction/speed/type) 与 preset/add|move|clear 已实现，无设备未验证")
-                .no(DeviceCapability.ACCESS, "云曜 artemis 无远程开门接口；门禁点 acspoint/search 只有路径缺字段文档")
+                .no(DeviceCapability.ACCESS, 1,
+                        "仅门禁点查询路径 acspoint/search，缺字段文档；无出入记录/远程开门")
                 .unverified(DeviceCapability.CHANNEL, 20, "listChannels 走官方 v1/global/v1/device/camera/list，无设备未验证")
                 .unverified(DeviceCapability.CAPTURE, 9, "capture 走官方 monitor/capture 取 URL 后二次下载，无设备未验证")
                 .no(DeviceCapability.EVENT, "云曜无事件拉取接口，事件由平台侧推送")
@@ -547,7 +574,8 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.ACCESS, "ISUP 协议本身不含门禁业务，门禁走设备 SDK")
                 .no(DeviceCapability.ACCESS_WRITE, "ISUP 协议本身不含门禁业务，门禁走设备 SDK")
                 .no(DeviceCapability.CAPTURE, "ISUP 无抓图信令，抓图走设备 SDK")
-                .no(DeviceCapability.EVENT, "ISUP 事件由设备主动上报，不走平台查询")
+                .no(DeviceCapability.EVENT, 1,
+                        "仅 isup.alarm 设备上报，无事件订阅/轮询查询")
                 .no(DeviceCapability.PARKING, "ISUP 无停车场业务")
                 .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
@@ -607,7 +635,7 @@ public record DeviceCapabilityMatrix(
      * 事件走 device.message.list(v2)，门禁走 openDoorRemote/getOpenDoorRecord/getDoorKeys，
      * 录像走 queryLocalRecords —— 均已在 {@code DahuaLeChangeSession} 真实实现。
      * 乐橙无预置位接口（只有 controlMovePTZ / controlLocationPTZ）、无组织与人员模型；
-     * 设备由序列号绑定，开放平台无删除接口（unBindDevice 是解绑自己的设备）。</p>
+     * 设备写操作有 bindDevice / unBindDevice / modifyDeviceName，Provider 尚未实现。</p>
      *
      * @return 能力矩阵
      */
@@ -619,10 +647,12 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.PTZ, 2, "ptzControl（controlMovePTZ 八向/变倍/停止）与 locationPtz（controlLocationPTZ）已实现，未验证")
                 .unverified(DeviceCapability.CHANNEL, 4, "listChannels（v2 device.detail.list）已实现，未验证")
                 .unverified(DeviceCapability.ACCESS, 2, "queryAccessRecords（getOpenDoorRecord）与 listDoors 已实现，无门锁真机未验证")
-                .unverified(DeviceCapability.ACCESS_WRITE, 1, "remoteUnlock（openDoorRemote）已实现，无门锁真机未验证")
+                .no(DeviceCapability.ACCESS_WRITE, 1,
+                        "仅 remoteUnlock（openDoorRemote）远程开门，无门点增删改/授权下发；远程开门计入 ACCESS")
                 .unverified(DeviceCapability.CAPTURE, 1, "capture（setDeviceSnap+下载 url）已实现，未验证")
                 .unverified(DeviceCapability.EVENT, 2, "pollEvents（v2 device.message.list，设备本地时间）已实现，未验证")
-                .no(DeviceCapability.DEVICE_WRITE, "乐橙设备通过序列号绑定，开放平台无设备删除接口")
+                .todo(DeviceCapability.DEVICE_WRITE, 3,
+                        "官方 bindDevice / unBindDevice / modifyDeviceName 已登记，Provider 尚未实现乐橙写操作")
                 .no(DeviceCapability.ORG, "乐橙面向消费级，无组织模型")
                 .no(DeviceCapability.ORG_WRITE, "乐橙面向消费级，无组织模型")
                 .no(DeviceCapability.PERSON, "乐橙面向消费级，无人员模型")
@@ -687,7 +717,7 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.PERSON, "官方 openapi 目录无人员接口")
                 .no(DeviceCapability.PERSON_WRITE, "官方 openapi 目录无人员接口")
                 .no(DeviceCapability.ACCESS, "官方 openapi 目录无门禁记录接口")
-                .no(DeviceCapability.ACCESS_WRITE, "官方 openapi 目录无门禁接口，仅 device/api/invoke 透传")
+                .no(DeviceCapability.ACCESS_WRITE, "官方 openapi 目录无门禁接口")
                 .unverified(DeviceCapability.EVENT, 2, "event/alarm/query 已接入，缺真机验证")
                 .unverified(DeviceCapability.CAPTURE, 2, "device/capture/get + 二次下载已接入，缺真机验证")
                 .no(DeviceCapability.PARKING, "官方 openapi 目录无停车场接口")
@@ -719,7 +749,8 @@ public record DeviceCapabilityMatrix(
                 .no(DeviceCapability.ACCESS, "国标协议不含门禁业务")
                 .no(DeviceCapability.ACCESS_WRITE, "国标协议不含门禁业务")
                 .no(DeviceCapability.CAPTURE, "国标无抓图信令")
-                .no(DeviceCapability.EVENT, "国标事件为主动上报（订阅通知），不走平台查询")
+                .todo(DeviceCapability.EVENT, 2,
+                        "gb.alarm / gb.alarm.subscribe 已登记；Gb28181Session 尚未实现事件订阅/轮询")
                 .no(DeviceCapability.PARKING, "国标协议不含停车场业务")
                 .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
@@ -741,8 +772,8 @@ public record DeviceCapabilityMatrix(
                         "设备列表/设备详情路径已按官方文档登记；控制台账号可登录，名下 0 台设备，字段映射未验证")
                 .unverified(DeviceCapability.METRIC, 1,
                         "环境指标走 /device/selSensorData（secretKey）或控制台 /deviceManage/getSensorList；演示设备已返回温湿度读数，真实设备未验证")
-                .no(DeviceCapability.DEVICE_WRITE,
-                        "官方只提供设备改名（/device/upDeviceInfo、/relay/updateDeviceName），没有新增/删除设备接口")
+                .no(DeviceCapability.DEVICE_WRITE, 2,
+                        "仅改名（/device/upDeviceInfo、/relay/updateDeviceName），无新增/删除设备接口")
                 .no(DeviceCapability.CHANNEL, "精讯云是传感器/继电器设备平台，没有视频通道")
                 .no(DeviceCapability.MEDIA, "精讯云不提供视频取流")
                 .no(DeviceCapability.RECORD, "精讯云没有录像文件与回放业务")
@@ -763,8 +794,8 @@ public record DeviceCapabilityMatrix(
      * ONVIF 能力矩阵（国际标准协议）。
      *
      * <p>{@code OnvifSession} 已建（媒体/云台/抓图/通道），按 ONVIF 2.0 规范实现并
-     * 按服务分别寻址；<b>本机无 ONVIF 设备可达，未经真实设备联调</b>，
-     * 故标 {@code IMPLEMENTED_UNVERIFIED}。</p>
+     * 按服务分别寻址；门禁/事件/录像协议有 Profile/动作，但本会话未实现，
+     * 故标 {@code TODO}。<b>本机无 ONVIF 设备可达，未经真实设备联调</b>。</p>
      *
      * @return 能力矩阵
      */
@@ -775,15 +806,19 @@ public record DeviceCapabilityMatrix(
                 .unverified(DeviceCapability.PTZ, 2, "已实现 ContinuousMove / Stop / 预置位，待真机联调")
                 .unverified(DeviceCapability.CHANNEL, 2, "已实现 GetProfiles 枚举通道，待真机联调")
                 .unverified(DeviceCapability.CAPTURE, 1, "已实现 GetSnapshotUri + 下载，待真机联调")
-                .no(DeviceCapability.RECORD, "ONVIF 的回放依赖设备 Profile G，国内主流设备普遍未实现")
+                .todo(DeviceCapability.RECORD, 0,
+                        "ONVIF Profile G 提供录像检索/回放；本会话未实现，目标设备支持度待验证")
                 .no(DeviceCapability.DEVICE_WRITE, "ONVIF 是设备发现与控制协议，不提供设备增删改")
                 .no(DeviceCapability.ORG, "ONVIF 不含组织架构模型")
                 .no(DeviceCapability.ORG_WRITE, "ONVIF 不含组织架构模型")
                 .no(DeviceCapability.PERSON, "ONVIF 不含人员模型")
                 .no(DeviceCapability.PERSON_WRITE, "ONVIF 不含人员模型")
-                .no(DeviceCapability.ACCESS, "ONVIF Access Control 服务国内设备几乎不支持")
-                .no(DeviceCapability.ACCESS_WRITE, "ONVIF Access Control 服务国内设备几乎不支持")
-                .no(DeviceCapability.EVENT, "ONVIF 事件为 PullPoint 订阅，不走平台查询")
+                .todo(DeviceCapability.ACCESS, 0,
+                        "ONVIF Profile A/C/D/M 定义门禁控制；本会话未实现，接口动作未登记")
+                .todo(DeviceCapability.ACCESS_WRITE, 0,
+                        "ONVIF Profile A/C/D/M 定义门禁控制；本会话未实现，接口动作未登记")
+                .todo(DeviceCapability.EVENT, 2,
+                        "CreatePullPointSubscription / PullMessages 已登记；OnvifSession 尚未实现 pollEvents")
                 .no(DeviceCapability.PARKING, "ONVIF 不含停车场业务")
                 .no(DeviceCapability.METRIC, "平台官方接口目录无环境指标")
                 .build();
