@@ -1,8 +1,8 @@
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.paper.pipeline;
 
 import com.chua.starter.ai.support.configuration.paper.PaperImageCorrector;
-import com.chua.starter.eduai.ai.paper.PaperImagePreprocessor;
-import com.chua.starter.eduai.configuration.EduAiProperties;
+import com.chua.starter.ai.support.configuration.paper.PaperImagePreprocessor;
+import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

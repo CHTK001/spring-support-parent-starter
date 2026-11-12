@@ -66,7 +66,8 @@ import java.util.Map;
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.ai.support")
 @MapperScan("com.chua.starter.ai.support.mapper")
-@EnableConfigurationProperties(AiChatProperties.class)
+@EnableConfigurationProperties({AiChatProperties.class,
+        com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties.class})
 public class AiConfiguration {
 
     /**

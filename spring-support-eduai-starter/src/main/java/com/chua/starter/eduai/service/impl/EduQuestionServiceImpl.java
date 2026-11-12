@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
-import com.chua.starter.eduai.ai.EduAiService;
+import com.chua.starter.ai.support.paper.pipeline.EduAiService;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
@@ -637,8 +637,14 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         long total = baseMapper.selectCount(base);
         QueryWrapper<EduQuestion> pendingWrapper = base.clone().eq("question_audit_status", 0);
         long pending = baseMapper.selectCount(pendingWrapper);
-        QueryWrapper<EduQuestion> todayWrapper = base.clone().ge("create_time", LocalDate.now().atStartOfDay());
-        long today = baseMapper.selectCount(todayWrapper);
+        LocalDate today = LocalDate.now();
+        QueryWrapper<EduQuestion> todayWrapper = base.clone().ge("create_time", today.atStartOfDay());
+        long todayNew = baseMapper.selectCount(todayWrapper);
+        // 昨日新增：前端「较昨日 +N」必须来自真实区间，不能用今日数减常数凑
+        QueryWrapper<EduQuestion> yesterdayWrapper = base.clone()
+                .ge("create_time", today.minusDays(1).atStartOfDay())
+                .lt("create_time", today.atStartOfDay());
+        long yesterdayNew = baseMapper.selectCount(yesterdayWrapper);
         List<Object> subjects = baseMapper.selectObjs(base.clone()
                 .select("DISTINCT question_subject")
                 .isNotNull("question_subject")
@@ -646,7 +652,8 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("total", total);
         stats.put("pendingAudit", pending);
-        stats.put("todayNew", today);
+        stats.put("todayNew", todayNew);
+        stats.put("yesterdayNew", yesterdayNew);
         stats.put("subjectCount", subjects == null ? 0 : subjects.stream().filter(java.util.Objects::nonNull).count());
         return stats;
     }

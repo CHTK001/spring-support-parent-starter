@@ -1,4 +1,4 @@
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.paper.pipeline;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

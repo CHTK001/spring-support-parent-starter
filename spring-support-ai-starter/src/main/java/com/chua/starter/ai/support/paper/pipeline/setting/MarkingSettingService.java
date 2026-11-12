@@ -1,8 +1,7 @@
-package com.chua.starter.eduai.service;
+package com.chua.starter.ai.support.paper.pipeline.setting;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.eduai.configuration.EduAiProperties;
-import com.chua.starter.eduai.model.vo.MarkingSettingVO;
+import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

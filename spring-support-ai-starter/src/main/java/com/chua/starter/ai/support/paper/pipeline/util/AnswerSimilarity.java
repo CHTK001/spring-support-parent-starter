@@ -1,4 +1,4 @@
-package com.chua.starter.eduai.support.util;
+package com.chua.starter.ai.support.paper.pipeline.util;
 
 /**
  * 答案相似度工具。

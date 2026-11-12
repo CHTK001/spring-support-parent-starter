@@ -1,6 +1,6 @@
-package com.chua.starter.eduai.ai.strategy;
+package com.chua.starter.ai.support.paper.pipeline.strategy;
 
-import com.chua.starter.eduai.ai.EduPaperScanner;
+import com.chua.starter.ai.support.paper.pipeline.EduPaperScanner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

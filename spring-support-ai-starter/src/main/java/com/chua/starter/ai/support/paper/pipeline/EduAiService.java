@@ -1,14 +1,14 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.paper.pipeline;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.chat.AiChatGateway;
-import com.chua.starter.eduai.configuration.EduAiProperties;
-import com.chua.starter.eduai.model.vo.MarkingSettingVO;
-import com.chua.starter.eduai.service.MarkingSettingService;
-import com.chua.starter.eduai.support.util.AnswerSimilarity;
+import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService;
+import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingVO;
+import com.chua.starter.ai.support.paper.pipeline.util.AnswerSimilarity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

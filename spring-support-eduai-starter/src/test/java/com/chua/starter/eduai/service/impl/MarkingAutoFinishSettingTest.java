@@ -2,8 +2,8 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.eduai.configuration.EduAiProperties;
-import com.chua.starter.eduai.service.MarkingSettingService;
+import com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties;
+import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -4,7 +4,6 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -32,13 +31,11 @@ import org.springframework.context.annotation.Import;
         "com.chua.starter.eduai.dimension.controller",
         "com.chua.starter.eduai.service.impl",
         "com.chua.starter.eduai.dimension.service",
-        "com.chua.starter.eduai.ai",
         "com.chua.starter.eduai.collect",
         "com.chua.starter.eduai.queue",
         // 同步至统一模板库（paper → template_info）
         "com.chua.starter.eduai.template"
 })
-@EnableConfigurationProperties(EduAiProperties.class)
 /**
  * eduaiauto配置类。
  *

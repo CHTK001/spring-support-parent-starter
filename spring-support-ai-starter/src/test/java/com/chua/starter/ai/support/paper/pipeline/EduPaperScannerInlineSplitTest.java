@@ -1,5 +1,5 @@
 // [P3C A20 豁免] A20/A30/A31: 测试数据为真实卷面文本与版面坐标，属用例字面量，豁免。
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.paper.pipeline;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

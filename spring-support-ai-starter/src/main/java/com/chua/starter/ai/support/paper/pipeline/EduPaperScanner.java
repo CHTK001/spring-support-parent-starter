@@ -1,5 +1,5 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
-package com.chua.starter.eduai.ai;
+package com.chua.starter.ai.support.paper.pipeline;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.ocr.OcrResult;
@@ -60,12 +60,12 @@ public class EduPaperScanner {
      *
      * <p>识别逻辑不再写死在本类里，而是由策略实现；本类只负责提供文字块/版面/模型回调。</p>
      */
-    private final List<com.chua.starter.eduai.ai.strategy.AnyExtractStrategy> anyExtractStrategies;
+    private final List<com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy> anyExtractStrategies;
 
     /**
      * 教育 AI 配置（读取识别策略 key）
      */
-    private final com.chua.starter.eduai.configuration.EduAiProperties eduAiProperties;
+    private final com.chua.starter.ai.support.paper.pipeline.config.EduAiProperties eduAiProperties;
 
     /**
      * 阅卷运行时设置（识别策略 / 匹配模式）。
@@ -74,7 +74,7 @@ public class EduPaperScanner {
      * {@code plugin.eduai.marking.*} 的 YAML 默认值。</p>
      */
     @Autowired(required = false)
-    private com.chua.starter.eduai.service.MarkingSettingService markingSettingService;
+    private com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService markingSettingService;
 
     /**
      * JSON 解析器
@@ -982,7 +982,7 @@ public class EduPaperScanner {
      * 任意卷抽取（带版面区域，供 region 策略按区域分块识别）。
      *
      * <p>策略由系统配置 {@code plugin.eduai.marking.extract-strategy} 选择（默认 {@code whole}），
-     * 通过 {@link com.chua.starter.eduai.ai.strategy.AnyExtractStrategy} SPI 扩展；
+     * 通过 {@link com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy} SPI 扩展；
      * 配置值找不到对应实现时回落 {@code whole}，保证行为可预期。</p>
      *
      * <p>取值优先「系统配置弹窗」的运行时覆盖（{@code edu_app_config} 的
@@ -999,7 +999,7 @@ public class EduPaperScanner {
         if (markingSettingService != null) {
             key = markingSettingService.resolved().getExtractStrategy();
         }
-        com.chua.starter.eduai.ai.strategy.AnyExtractStrategy strategy = resolveStrategy(key);
+        com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy strategy = resolveStrategy(key);
         log.info("[EduScan] 任意卷识别策略: {}", strategy.key());
         return strategy.extract(new ExtractContext(blocks, layoutBoxes, text));
     }
@@ -1010,15 +1010,15 @@ public class EduPaperScanner {
      * @param key 配置的策略 key
      * @return 策略实现
      */
-    private com.chua.starter.eduai.ai.strategy.AnyExtractStrategy resolveStrategy(String key) {
+    private com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy resolveStrategy(String key) {
         String want = org.springframework.util.StringUtils.hasText(key) ? key.trim() : "whole";
         if (anyExtractStrategies != null) {
-            for (com.chua.starter.eduai.ai.strategy.AnyExtractStrategy s : anyExtractStrategies) {
+            for (com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy s : anyExtractStrategies) {
                 if (want.equalsIgnoreCase(s.key())) {
                     return s;
                 }
             }
-            for (com.chua.starter.eduai.ai.strategy.AnyExtractStrategy s : anyExtractStrategies) {
+            for (com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy s : anyExtractStrategies) {
                 if ("whole".equalsIgnoreCase(s.key())) {
                     log.warn("[EduScan] 未找到识别策略 '{}'，回落 whole", want);
                     return s;
@@ -1034,7 +1034,7 @@ public class EduPaperScanner {
     /**
      * 识别上下文实现：把本类已有的能力以回调形式交给策略，策略不依赖本类，避免循环依赖。
      */
-    private final class ExtractContext implements com.chua.starter.eduai.ai.strategy.AnyExtractStrategy.Context {
+    private final class ExtractContext implements com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy.Context {
 
         private final List<ScanBlock> blocks;
         private final List<LayoutBox> layoutBoxes;
@@ -2123,7 +2123,7 @@ public class EduPaperScanner {
     /**
      * 校验模型输出不是「失败提示串」。
      *
-     * <p>{@link com.chua.starter.eduai.ai.EduAiService#answerQuestion} 在模型不可用或调用失败时
+     * <p>{@link com.chua.starter.ai.support.paper.pipeline.EduAiService#answerQuestion} 在模型不可用或调用失败时
      * 返回 {@code "AI 模块未启用…"} / {@code "AI 响应失败: …"} 这类<b>字符串</b>而不是抛异常。
      * 调用方若直接拿去解析 JSON，只会得到「解析失败」，把真正原因（如 429 限流）埋掉 ——
      * 实测 ANY 抽取整卷失败，任务错误只写「未能从图片中解析出题目」，真因是限流。
