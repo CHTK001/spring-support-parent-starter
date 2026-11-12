@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.paper.pipeline.strategy;
 
-import com.chua.starter.ai.support.paper.pipeline.EduPaperScanner;
+import com.chua.starter.ai.support.paper.pipeline.PaperScanner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -30,22 +30,22 @@ public class WholeTextAnyExtractStrategy implements AnyExtractStrategy {
     }
 
     @Override
-    public EduPaperScanner.AnyScan extract(Context context) {
+    public PaperScanner.AnyScan extract(Context context) {
         if (!StringUtils.hasText(context.text())) {
-            return new EduPaperScanner.AnyScan(List.of(), null, null);
+            return new PaperScanner.AnyScan(List.of(), null, null);
         }
-        List<EduPaperScanner.ScanBlock> blocks = context.blocks();
+        List<PaperScanner.ScanBlock> blocks = context.blocks();
         if (blocks != null && !blocks.isEmpty()) {
-            List<EduPaperScanner.ScannedQuestion> byLayout = context.layoutQuestions();
+            List<PaperScanner.ScannedQuestion> byLayout = context.layoutQuestions();
             if (!byLayout.isEmpty()) {
-                List<EduPaperScanner.ScannedQuestion> withStem = context.fillStems(byLayout);
-                List<EduPaperScanner.ScannedQuestion> questions = !withStem.isEmpty() ? withStem : byLayout;
+                List<PaperScanner.ScannedQuestion> withStem = context.fillStems(byLayout);
+                List<PaperScanner.ScannedQuestion> questions = !withStem.isEmpty() ? withStem : byLayout;
                 String[] student = context.studentByLines();
-                return new EduPaperScanner.AnyScan(questions, student[0], student[1]);
+                return new PaperScanner.AnyScan(questions, student[0], student[1]);
             }
         }
         try {
-            EduPaperScanner.AnyScan byModel = context.modelExtract();
+            PaperScanner.AnyScan byModel = context.modelExtract();
             if (!byModel.questions().isEmpty()) {
                 return byModel;
             }
@@ -53,6 +53,6 @@ public class WholeTextAnyExtractStrategy implements AnyExtractStrategy {
             log.warn("[EduScan] 模型抽取失败，回退行规则（题干留空）: {}", e.getMessage());
         }
         String[] student = context.studentByLines();
-        return new EduPaperScanner.AnyScan(context.ruleQuestions(), student[0], student[1]);
+        return new PaperScanner.AnyScan(context.ruleQuestions(), student[0], student[1]);
     }
 }

@@ -1,13 +1,13 @@
 package com.chua.starter.ai.support.paper.pipeline.strategy;
 
-import com.chua.starter.ai.support.paper.pipeline.EduPaperScanner;
+import com.chua.starter.ai.support.paper.pipeline.PaperScanner;
 
 import java.util.List;
 
 /**
  * 任意卷识别策略（SPI）。
  *
- * <p>把「一份外来卷怎么被识别成题目列表」这件事从 {@link EduPaperScanner} 里抽成可插拔扩展点，
+ * <p>把「一份外来卷怎么被识别成题目列表」这件事从 {@link PaperScanner} 里抽成可插拔扩展点，
  * 由系统配置 {@code plugin.eduai.marking.extract-strategy} 选择实现（默认 {@code whole}）。</p>
  *
  * <p>内置实现：</p>
@@ -36,7 +36,7 @@ public interface AnyExtractStrategy {
      * @param context 识别上下文（文字块、全文、版面区域与回调能力）
      * @return 题目列表 + 卷面学生
      */
-    EduPaperScanner.AnyScan extract(Context context);
+    PaperScanner.AnyScan extract(Context context);
 
     /**
      * 识别上下文：把扫描器已有的能力以回调形式交给策略，策略不必依赖扫描器本身
@@ -49,7 +49,7 @@ public interface AnyExtractStrategy {
          *
          * @return 文字块
          */
-        List<EduPaperScanner.ScanBlock> blocks();
+        List<PaperScanner.ScanBlock> blocks();
 
         /**
          * 版面全文。
@@ -63,14 +63,14 @@ public interface AnyExtractStrategy {
          *
          * @return 版面区域
          */
-        List<EduPaperScanner.LayoutBox> layoutBoxes();
+        List<PaperScanner.LayoutBox> layoutBoxes();
 
         /**
          * 版面规则切题：按「题号块 → 后续块」切出题号与作答（不调模型）。
          *
          * @return 题目；切不出时为空
          */
-        List<EduPaperScanner.ScannedQuestion> layoutQuestions();
+        List<PaperScanner.ScannedQuestion> layoutQuestions();
 
         /**
          * 用模型给题目补题干（一次调用）。
@@ -78,21 +78,21 @@ public interface AnyExtractStrategy {
          * @param base 版面规则切出的题目
          * @return 补好题干的题目；失败或为空时返回空列表
          */
-        List<EduPaperScanner.ScannedQuestion> fillStems(List<EduPaperScanner.ScannedQuestion> base);
+        List<PaperScanner.ScannedQuestion> fillStems(List<PaperScanner.ScannedQuestion> base);
 
         /**
          * 整卷模型抽取（一次调用）：题号/题干/作答/分值 + 卷面学生。
          *
          * @return 抽取结果；失败时抛异常由策略决定是否降级
          */
-        EduPaperScanner.AnyScan modelExtract();
+        PaperScanner.AnyScan modelExtract();
 
         /**
          * 行规则切题兜底（不调模型）。
          *
          * @return 题目（题干留空）
          */
-        List<EduPaperScanner.ScannedQuestion> ruleQuestions();
+        List<PaperScanner.ScannedQuestion> ruleQuestions();
 
         /**
          * 从卷头行正则抽「姓名 / 学号」。
@@ -107,6 +107,6 @@ public interface AnyExtractStrategy {
          * @param regionText 该区域的文本
          * @return 抽取结果；失败时抛异常
          */
-        EduPaperScanner.AnyScan modelExtract(String regionText);
+        PaperScanner.AnyScan modelExtract(String regionText);
     }
 }

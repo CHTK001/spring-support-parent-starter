@@ -1,8 +1,9 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
-package com.chua.starter.ai.support.paper.pipeline.setting;
+package com.chua.starter.eduai.service.impl;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
+import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

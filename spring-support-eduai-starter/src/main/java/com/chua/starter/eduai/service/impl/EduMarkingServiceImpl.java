@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.ai.support.paper.pipeline.EduAiService;
-import com.chua.starter.ai.support.paper.pipeline.EduPaperScanner;
+import com.chua.starter.ai.support.paper.pipeline.PaperAiService;
+import com.chua.starter.ai.support.paper.pipeline.PaperScanner;
 import com.chua.starter.ai.support.paper.pipeline.MarkingBlankRule;
 import com.chua.starter.ai.support.paper.pipeline.PaperScanPipeline;
 import com.chua.starter.eduai.model.EduMarkingTask;
@@ -191,7 +191,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     /**
      * EDUAI服务
     */
-    private final EduAiService eduAiService;
+    private final PaperAiService eduAiService;
     /**
      * 属性
     */
@@ -207,7 +207,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     /**
      * 试卷扫描器（版面还原 + 文字提取 + 结构化，内部复用 ai-starter 全局 Bean）
      */
-    private final EduPaperScanner paperScanner;
+    private final PaperScanner paperScanner;
 
     /**
      * Paper 图片扫描管线（可选布局矫正 -> 原预处理 -> 扫描）
@@ -493,7 +493,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 continue;
             }
             int maxScore = fullScores.getOrDefault(item.questionId(), fallbackScore);
-            EduAiService.MarkingOutcome outcome = eduAiService.markQuestionWithAi(
+            PaperAiService.MarkingOutcome outcome = eduAiService.markQuestionWithAi(
                     question.getQuestionType(),
                     question.getQuestionStem(),
                     question.getQuestionAnswer(),
@@ -554,7 +554,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param question question
      * @param outcome outcome
      */
-    public void applyOutcome(String taskId, EduQuestion question, EduAiService.MarkingOutcome outcome) {
+    public void applyOutcome(String taskId, EduQuestion question, PaperAiService.MarkingOutcome outcome) {
         markingResultMapper.updateAiOutcome(taskId, question.getQuestionId(),
                 outcome.getScore(), outcome.getComment(), LocalDateTime.now());
     }
@@ -597,7 +597,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     public String scanAndMark(List<byte[]> images, String mode, Long paperId, String studentId,
                               Long examId, Integer maxScore) {
         // 入参快速校验（不落库）
-        boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(mode);
+        boolean anyMode = !PaperScanner.MODE_SELF.equalsIgnoreCase(mode);
         List<byte[]> validImages = images == null ? List.of()
                 : images.stream().filter(v -> v != null && v.length > 0).toList();
         if (validImages.isEmpty()) {
@@ -645,7 +645,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         task.setOwnerUserId(EduUserContext.requireUserId());
         task.setMarkingTaskTaskId(taskId);
         task.setMarkingTaskStatus(EduMarkingTask.STATUS_PENDING);
-        task.setMarkingTaskMode(anyMode ? EduPaperScanner.MODE_ANY : EduPaperScanner.MODE_SELF);
+        task.setMarkingTaskMode(anyMode ? PaperScanner.MODE_ANY : PaperScanner.MODE_SELF);
         task.setMarkingTaskPaperId(paperId);
         task.setMarkingTaskExamId(examId);
         task.setMarkingTaskStudentId(StringUtils.isBlank(studentId) ? "anonymous" : studentId);
@@ -770,7 +770,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         taskMapper.claimPending(taskId, LocalDateTime.now());
         changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "识别中", null, null, null, false);
         try {
-            boolean anyMode = !EduPaperScanner.MODE_SELF.equalsIgnoreCase(task.getMarkingTaskMode());
+            boolean anyMode = !PaperScanner.MODE_SELF.equalsIgnoreCase(task.getMarkingTaskMode());
             // 识别阶段：仅在尚未产出答题卡时执行（续跑时跳过，直接进判分）
             if (task.getMarkingTaskAnswerSheetId() == null) {
                 recognizeAndPrepare(task, anyMode);
@@ -1054,13 +1054,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param height 该页像素高
      * @return 归一化后的区域列表
      */
-    private static List<Map<String, Object>> normalizeLayout(List<EduPaperScanner.LayoutBox> boxes,
+    private static List<Map<String, Object>> normalizeLayout(List<PaperScanner.LayoutBox> boxes,
                                                              int width, int height) {
         var out = new ArrayList<Map<String, Object>>();
         if (boxes == null) {
             return out;
         }
-        for (EduPaperScanner.LayoutBox box : boxes) {
+        for (PaperScanner.LayoutBox box : boxes) {
             var node = new LinkedHashMap<String, Object>();
             node.put("label", box.label());
             node.put("x", ratio(box.x(), width));
@@ -1080,13 +1080,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param height 该页像素高
      * @return 归一化后的文字块列表
      */
-    private static List<Map<String, Object>> normalizeBlocks(List<EduPaperScanner.ScanBlock> blocks,
+    private static List<Map<String, Object>> normalizeBlocks(List<PaperScanner.ScanBlock> blocks,
                                                              int width, int height) {
         var out = new ArrayList<Map<String, Object>>();
         if (blocks == null) {
             return out;
         }
-        for (EduPaperScanner.ScanBlock block : blocks) {
+        for (PaperScanner.ScanBlock block : blocks) {
             var node = new LinkedHashMap<String, Object>();
             node.put("text", block.text());
             node.put("confidence", block.confidence());
@@ -1131,13 +1131,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         var mergedText = new StringBuilder();
         var mergedLayoutRegions = new HashMap<String, Integer>();
         var pages = new ArrayList<Map<String, Object>>();
-        var mergedBlocks = new ArrayList<EduPaperScanner.ScanBlock>();
+        var mergedBlocks = new ArrayList<PaperScanner.ScanBlock>();
         // 按页保留原始 blocks/text：SELF 按页抽取时页面间重新开始题号递进，
         // 避免「上一页末题号 + 下一页头题号不递进」导致整页文本被吞进上一题作答。
-        var pageBlocksList = new ArrayList<List<EduPaperScanner.ScanBlock>>();
+        var pageBlocksList = new ArrayList<List<PaperScanner.ScanBlock>>();
         var pageTextsList = new ArrayList<String>();
         // 版面区域同样跨页合并并加页偏移：region 策略要按区域归属文字块（坐标必须与 blocks 同空间）
-        var mergedLayoutBoxes = new ArrayList<EduPaperScanner.LayoutBox>();
+        var mergedLayoutBoxes = new ArrayList<PaperScanner.LayoutBox>();
         int blockCount = 0;
         int pageNo = 0;
         for (byte[] imageData : images) {
@@ -1145,7 +1145,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // 图片级扫描管线：可选 ONNX 布局矫正 -> 原预处理 -> 版面+OCR。
             // 矫正默认关闭；开启时未检出或失败也回退原图，不改变原有阅卷路径。
             PaperScanPipeline.ScanOutcome pageOutcome = paperScanPipeline.scan(imageData);
-            EduPaperScanner.ScanResult pageScan = pageOutcome.scan();
+            PaperScanner.ScanResult pageScan = pageOutcome.scan();
             if (pageScan == null) {
                 continue;
             }
@@ -1170,14 +1170,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // 多页 y 坐标会撞车，加页偏移区分（页高未知时用 100000 兜底，只保相对顺序）。
             int pageH = pageScan.pageHeight() > 0 ? pageScan.pageHeight() : 100000;
             if (pageScan.blocks() != null) {
-                for (EduPaperScanner.ScanBlock b : pageScan.blocks()) {
-                    mergedBlocks.add(new EduPaperScanner.ScanBlock(b.text(), b.confidence(),
+                for (PaperScanner.ScanBlock b : pageScan.blocks()) {
+                    mergedBlocks.add(new PaperScanner.ScanBlock(b.text(), b.confidence(),
                             b.x(), b.y() + (float) (pageNo - 1) * pageH, b.width(), b.height()));
                 }
             }
             if (pageScan.layoutBoxes() != null) {
-                for (EduPaperScanner.LayoutBox box : pageScan.layoutBoxes()) {
-                    mergedLayoutBoxes.add(new EduPaperScanner.LayoutBox(box.label(), box.x(),
+                for (PaperScanner.LayoutBox box : pageScan.layoutBoxes()) {
+                    mergedLayoutBoxes.add(new PaperScanner.LayoutBox(box.label(), box.x(),
                             box.y() + (float) (pageNo - 1) * pageH, box.width(), box.height()));
                 }
             }
@@ -1202,8 +1202,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
         changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "解析题目", null, null, null, false);
 
-        List<EduPaperScanner.ScannedQuestion> scanned;
-        EduPaperScanner.AnyScan anyScan = null;
+        List<PaperScanner.ScannedQuestion> scanned;
+        PaperScanner.AnyScan anyScan = null;
         if (anyMode) {
             anyScan = paperScanner.extractAnyScan(mergedBlocks, mergedLayoutBoxes, text);
             scanned = anyScan.questions();
@@ -1213,7 +1213,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // 改为每页独立 extractSelfQuestions 再拼接，页内仍走版面块归属→行规则→模型。
             scanned = new ArrayList<>();
             for (int pi = 0; pi < pageBlocksList.size(); pi++) {
-                List<EduPaperScanner.ScanBlock> pb = pageBlocksList.get(pi);
+                List<PaperScanner.ScanBlock> pb = pageBlocksList.get(pi);
                 String pt = pi < pageTextsList.size() ? pageTextsList.get(pi) : null;
                 scanned.addAll(paperScanner.extractSelfQuestions(pb, pt));
             }
@@ -1224,7 +1224,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (scanned.isEmpty()) {
             // any卷识别全失败时，用 OCR 文字块兜底（防止完全无法阅卷）
             if (anyScan != null && !text.isEmpty()) {
-                EduPaperScanner.ScannedQuestion fallback = new EduPaperScanner.ScannedQuestion(
+                PaperScanner.ScannedQuestion fallback = new PaperScanner.ScannedQuestion(
                         "未知题目",
                         null,
                         null,
@@ -1288,7 +1288,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         var questionAnchors = new ArrayList<Map<String, Object>>();
         // 与 scanned 同序的「卷面（N分）标注」提示：模型没给出 score 时的兜底分值来源
         var scanScoreHints = new ArrayList<Integer>();
-        for (EduPaperScanner.ScannedQuestion q : scanned) {
+        for (PaperScanner.ScannedQuestion q : scanned) {
             Map<String, Object> anchor = locateAnchor(q.no(), q.stem(), pages);
             if (anchor != null) {
                 scanScoreHints.add(parseQuestionScore(String.valueOf(anchor.remove("_blockText"))));
@@ -1335,7 +1335,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 会把另一处的作答再次配到第 1 题，导致同一题多行互相覆盖、总题数虚高（实测 13 题产出 15 行）。
         Set<Long> usedQuestionIds = new HashSet<>();
         for (int scannedIndex = 0; scannedIndex < scanned.size(); scannedIndex++) {
-            EduPaperScanner.ScannedQuestion item = scanned.get(scannedIndex);
+            PaperScanner.ScannedQuestion item = scanned.get(scannedIndex);
             Integer paperScoreHint = scannedIndex < scanScoreHints.size()
                     ? scanScoreHints.get(scannedIndex) : null;
             EduPaperQuestion relation = anyMode ? null : matchRelation(item.no(), byNo, byOrder);
@@ -1412,7 +1412,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                 done++;
                 continue;
             }
-            EduPaperScanner.ScannedQuestion item = parseScanDetail(row.getMarkingResultDetail());
+            PaperScanner.ScannedQuestion item = parseScanDetail(row.getMarkingResultDetail());
             int maxScore = parseDetailMaxScore(row.getMarkingResultDetail());
             try {
                 // SELF 卷：题库题干已确定，把行规则误收进作答的题干前缀剥掉
@@ -1425,7 +1425,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                         String cleanedAnswer;
                         String qType = String.valueOf(question.getQuestionType()).trim();
                         if ("FILL".equalsIgnoreCase(qType)) {
-                            cleanedAnswer = EduPaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
+                            cleanedAnswer = PaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
                         } else if ("JUDGE".equalsIgnoreCase(qType)) {
                             // 判断题：题目整段（含尾部页脚污染）一旦被规则切题收进作答，
                             // stripLeadingStem 的 startsWith 会因尾注不匹配而剥离失败，导致
@@ -1433,18 +1433,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                             // 对/错/√/× 符号：剥离题干后仍提取不到判定符号（题干尾段、页脚
                             // 或空），一律按未作答置空——不依赖题干互含判断（OCR 题干与题库
                             // 标点/空格常有差异，互含判断会漏）。
-                            cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
-                            if (EduAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null) {
+                            cleanedAnswer = PaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                            if (PaperAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null) {
                                 cleanedAnswer = "";
                             }
                         } else {
-                            cleanedAnswer = EduPaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                            cleanedAnswer = PaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
                         }
-                        item = new EduPaperScanner.ScannedQuestion(
+                        item = new PaperScanner.ScannedQuestion(
                                 item.no(), item.stem(), cleanedAnswer, item.score());
                     }
                 }
-                EduAiService.MarkingOutcome outcome;
+                PaperAiService.MarkingOutcome outcome;
                 if (anyMode) {
                     // 切分修复：版面把印刷尾段切进了作答（实测第 15 题题干「…它的面积是」、
                     // 作答「平方厘米。24」）。先把印刷片段回填到题干、原位补一个空位，
@@ -1455,7 +1455,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                             || !Objects.equals(repaired.answer(), item.answer())) {
                         log.info("[EduAi] 第 {} 题切分修复: 作答「{}」→「{}」，题干「{}」→「{}」",
                                 item.no(), item.answer(), repaired.answer(), item.stem(), repaired.stem());
-                        item = new EduPaperScanner.ScannedQuestion(
+                        item = new PaperScanner.ScannedQuestion(
                                 item.no(), repaired.stem(), repaired.answer(), item.score());
                     }
                     outcome = paperScanner.markAnyQuestion(item, maxScore);
@@ -1914,19 +1914,19 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param detail 详情 JSON
      * @return 题目（题号 / 题干 / 作答）
      */
-    private EduPaperScanner.ScannedQuestion parseScanDetail(String detail) {
+    private PaperScanner.ScannedQuestion parseScanDetail(String detail) {
         if (StringUtils.isBlank(detail)) {
-            return new EduPaperScanner.ScannedQuestion("", null, "");
+            return new PaperScanner.ScannedQuestion("", null, "");
         }
         try {
             var node = MAPPER.readTree(detail);
-            return new EduPaperScanner.ScannedQuestion(
+            return new PaperScanner.ScannedQuestion(
                     node.path("recognizedNo").asText(""),
                     node.hasNonNull("stem") ? node.path("stem").asText("") : null,
                     node.path("studentAnswer").asText(""));
         } catch (Exception e) {
             log.warn("[EduAi] 解析识别详情失败: {}", e.getMessage());
-            return new EduPaperScanner.ScannedQuestion("", null, "");
+            return new PaperScanner.ScannedQuestion("", null, "");
         }
     }
 
@@ -2183,7 +2183,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param maxScore 本题满分
      * @return 详情 JSON（尚无得分）
      */
-    private static String buildScanBaseDetail(EduPaperScanner.ScannedQuestion item, int maxScore) {
+    private static String buildScanBaseDetail(PaperScanner.ScannedQuestion item, int maxScore) {
         var detail = new java.util.LinkedHashMap<String, Object>();
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
@@ -2193,7 +2193,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 外来卷（题干也是抽出来的）还要剥掉混在作答里的题干片段。
         // 这既让前端展示不再把整段题干当作答，也让判分直接面对真实作答。
         // SELF 卷 item.stem() 为 null，normalizeAnyAnswer 退化为原「清洗+提取」行为。
-        detail.put("studentAnswer", EduPaperScanner.normalizeAnyAnswer(item.answer(), item.stem()));
+        detail.put("studentAnswer", PaperScanner.normalizeAnyAnswer(item.answer(), item.stem()));
         detail.put("maxScore", maxScore);
         return Json.toJson(detail);
     }
@@ -2206,14 +2206,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param maxScore 本题满分
      * @return 详情 JSON
      */
-    private static String buildScanFinalDetail(EduPaperScanner.ScannedQuestion item,
-                                               EduAiService.MarkingOutcome outcome,
+    private static String buildScanFinalDetail(PaperScanner.ScannedQuestion item,
+                                               PaperAiService.MarkingOutcome outcome,
                                                int maxScore) {
         var detail = new java.util.LinkedHashMap<String, Object>();
         detail.put("scan", true);
         detail.put("recognizedNo", item.no());
         detail.put("stem", item.stem());
-        detail.put("studentAnswer", EduPaperScanner.normalizeAnyAnswer(item.answer(), item.stem()));
+        detail.put("studentAnswer", PaperScanner.normalizeAnyAnswer(item.answer(), item.stem()));
         detail.put("maxScore", maxScore);
         detail.put("score", outcome == null ? 0 : outcome.getScore());
         detail.put("correct", outcome != null && maxScore > 0 && outcome.getScore() >= maxScore);
@@ -2236,7 +2236,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param maxScore      本题满分
      * @return 判分结果
      */
-    private EduAiService.MarkingOutcome tolerantObjectiveOutcome(EduQuestion question,
+    private PaperAiService.MarkingOutcome tolerantObjectiveOutcome(EduQuestion question,
                                                                  String studentAnswer,
                                                                  int maxScore) {
         // 严谨模式：填空题的作答必须落在题干空位内。传入的是剥离题干碎片后的作答，
@@ -2244,7 +2244,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 「宽松」模式不做这道门禁，仍按文本内容判分。
         if (markingSettingService != null && markingSettingService.strictMatch()
                 && MarkingBlankRule.outsideBlank(question.getQuestionStem(), studentAnswer)) {
-            var outside = new EduAiService.MarkingOutcome();
+            var outside = new PaperAiService.MarkingOutcome();
             outside.setSource("AI");
             outside.setScore(0);
             outside.setComment("未填写在题目空格内（严谨模式），本题不给分");
@@ -2254,30 +2254,30 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // 判断/选择先做符号与选项归一化（√→对、(C)→C）：学生作答里常混着题干
             // （OCR 把「（√）」连题干一起识别），LCS 对符号不敏感，直接比对会误判。
             String type = question.getQuestionType().trim().toUpperCase();
-            String extracted = EduAiService.extractObjectiveAnswer(type, studentAnswer);
+            String extracted = PaperAiService.extractObjectiveAnswer(type, studentAnswer);
             // 判断题作答为空（stripLeadingStem 剥离题干后学生没有写判定符号）→ 未作答
             // 判断作答提取不到判定符号（"·二次验收专用 1" 之类页脚残留）同样按未作答：判断题
             // 的实质作答只有 对/错/√/× 符号，OCR 残留的题干尾段/页脚不构成作答。
             if ("JUDGE".equals(type) && (StringUtils.isBlank(studentAnswer) || extracted == null)) {
-                var outcome = new EduAiService.MarkingOutcome();
+                var outcome = new PaperAiService.MarkingOutcome();
                 outcome.setSource("AI");
                 outcome.setScore(0);
                 outcome.setComment("未作答");
                 return outcome;
             }
             if ("JUDGE".equals(type) && extracted != null) {
-                boolean right = extracted.equals(EduAiService.normalizeJudgeAnswer(question.getQuestionAnswer()));
-                var outcome = new EduAiService.MarkingOutcome();
+                boolean right = extracted.equals(PaperAiService.normalizeJudgeAnswer(question.getQuestionAnswer()));
+                var outcome = new PaperAiService.MarkingOutcome();
                 outcome.setSource("AI");
                 outcome.setScore(right ? maxScore : 0);
                 outcome.setComment(right ? "判断正确" : String.format("判断错误，正确答案：%s",
-                        EduAiService.normalizeJudgeAnswer(question.getQuestionAnswer())));
+                        PaperAiService.normalizeJudgeAnswer(question.getQuestionAnswer())));
                 return outcome;
             }
             if ("SINGLE_CHOICE".equals(type) && extracted != null) {
                 boolean right = extracted.equalsIgnoreCase(question.getQuestionAnswer() == null
                         ? "" : question.getQuestionAnswer().trim());
-                var outcome = new EduAiService.MarkingOutcome();
+                var outcome = new PaperAiService.MarkingOutcome();
                 outcome.setSource("AI");
                 outcome.setScore(right ? maxScore : 0);
                 outcome.setComment(right ? "选择正确" : String.format("选择错误，正确答案：%s",
@@ -2286,7 +2286,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
             double sim = similarity(question.getQuestionAnswer(), studentAnswer);
             if (sim >= AnswerSimilarity.SIMILARITY_THRESHOLD) {
-                var outcome = new EduAiService.MarkingOutcome();
+                var outcome = new PaperAiService.MarkingOutcome();
                 outcome.setSource("AI");
                 outcome.setScore(maxScore);
                 outcome.setComment(sim >= 1d
@@ -2359,11 +2359,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     detail.get("studentAnswer") == null ? null : String.valueOf(detail.get("studentAnswer")));
             item.put("stem", repaired.stem());
             String rawAnswer = repaired.answer();
-            item.put("studentAnswer", EduPaperScanner.extractInlineMark(rawAnswer));
+            item.put("studentAnswer", PaperScanner.extractInlineMark(rawAnswer));
             if (detail.get("recognizedNo") != null) {
                 String no = normalizeNo(String.valueOf(detail.get("recognizedNo")));
-                String answerText = EduPaperScanner.extractInlineMark(
-                        EduPaperScanner.cleanScannedAnswer(rawAnswer));
+                String answerText = PaperScanner.extractInlineMark(
+                        PaperScanner.cleanScannedAnswer(rawAnswer));
                 if (StringUtils.isNotBlank(answerText)) {
                     anchorAnswers.put(no, answerText);
                 }
@@ -2495,14 +2495,14 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private List<Map<String, Object>> splitLegacyAggregated(Map<String, Object> original,
                                                              List<Map<String, Object>> pages) {
-        List<EduPaperScanner.ScanBlock> blocks = new ArrayList<>();
+        List<PaperScanner.ScanBlock> blocks = new ArrayList<>();
         for (Map<String, Object> page : pages) {
             for (Map<String, Object> item : toMapList(page.get("blocks"))) {
                 Object text = item.get("text");
                 if (text == null) {
                     continue;
                 }
-                blocks.add(new EduPaperScanner.ScanBlock(
+                blocks.add(new PaperScanner.ScanBlock(
                         String.valueOf(text),
                         item.get("confidence") == null ? 0f : Float.parseFloat(String.valueOf(item.get("confidence"))),
                         floatValue(item.get("x")),
@@ -2511,13 +2511,13 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                         floatValue(item.get("height"))));
             }
         }
-        List<EduPaperScanner.ScannedQuestion> split = paperScanner.extractByLayout(blocks);
+        List<PaperScanner.ScannedQuestion> split = paperScanner.extractByLayout(blocks);
         if (split.size() <= 1) {
             return List.of(original);
         }
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = 0; i < split.size(); i++) {
-            EduPaperScanner.ScannedQuestion q = split.get(i);
+            PaperScanner.ScannedQuestion q = split.get(i);
             Map<String, Object> row = new LinkedHashMap<>(original);
             row.put("resultId", -1000L - i);
             row.put("questionId", 0);

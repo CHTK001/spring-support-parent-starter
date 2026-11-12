@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
  *   <li>既有照度校正/尺度归一化预处理（可配置关闭）</li>
  *   <li>版面分析 + OCR + 结构化扫描</li>
  * </ol>
- * 未开启布局矫正时与旧实现完全一致，只执行原有预处理后送入 {@link EduPaperScanner}。</p>
+ * 未开启布局矫正时与旧实现完全一致，只执行原有预处理后送入 {@link PaperScanner}。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -34,7 +34,7 @@ public class PaperScanPipeline {
     /**
      * 版面 + OCR 扫描器
      */
-    private final EduPaperScanner paperScanner;
+    private final PaperScanner paperScanner;
 
     /**
      * 教育 AI 配置
@@ -47,7 +47,7 @@ public class PaperScanPipeline {
      * @param scan      既有扫描结果
      * @param corrected 本次是否应用了布局矫正
      */
-    public record ScanOutcome(EduPaperScanner.ScanResult scan, boolean corrected) {
+    public record ScanOutcome(PaperScanner.ScanResult scan, boolean corrected) {
     }
 
     /**

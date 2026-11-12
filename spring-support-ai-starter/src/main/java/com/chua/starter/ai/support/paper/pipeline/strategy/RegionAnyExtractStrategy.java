@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.paper.pipeline.strategy;
 
-import com.chua.starter.ai.support.paper.pipeline.EduPaperScanner;
+import com.chua.starter.ai.support.paper.pipeline.PaperScanner;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -32,27 +32,27 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
     }
 
     @Override
-    public EduPaperScanner.AnyScan extract(Context context) {
+    public PaperScanner.AnyScan extract(Context context) {
         if (!StringUtils.hasText(context.text())) {
-            return new EduPaperScanner.AnyScan(List.of(), null, null);
+            return new PaperScanner.AnyScan(List.of(), null, null);
         }
-        List<EduPaperScanner.LayoutBox> regions = context.layoutBoxes();
-        List<EduPaperScanner.ScanBlock> blocks = context.blocks();
+        List<PaperScanner.LayoutBox> regions = context.layoutBoxes();
+        List<PaperScanner.ScanBlock> blocks = context.blocks();
         if (regions == null || regions.isEmpty() || blocks == null || blocks.isEmpty()) {
             log.info("[EduScan] region 策略：无版面区域，回退整卷识别");
             return fallbackWhole(context);
         }
 
         // 区域按 (y, x) 排序：试卷阅读顺序，模型按顺序抽题时题号更不容易乱
-        List<EduPaperScanner.LayoutBox> ordered = new ArrayList<>(regions);
-        ordered.sort(Comparator.comparingDouble(EduPaperScanner.LayoutBox::y)
-                .thenComparingDouble(EduPaperScanner.LayoutBox::x));
+        List<PaperScanner.LayoutBox> ordered = new ArrayList<>(regions);
+        ordered.sort(Comparator.comparingDouble(PaperScanner.LayoutBox::y)
+                .thenComparingDouble(PaperScanner.LayoutBox::x));
 
-        List<EduPaperScanner.ScannedQuestion> merged = new ArrayList<>();
+        List<PaperScanner.ScannedQuestion> merged = new ArrayList<>();
         String studentName = null;
         String studentNo = null;
-        for (EduPaperScanner.LayoutBox region : ordered) {
-            List<EduPaperScanner.ScanBlock> inner = blocksInside(region, blocks);
+        for (PaperScanner.LayoutBox region : ordered) {
+            List<PaperScanner.ScanBlock> inner = blocksInside(region, blocks);
             if (inner.isEmpty()) {
                 continue;
             }
@@ -61,7 +61,7 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
                 continue;
             }
             try {
-                EduPaperScanner.AnyScan scanned = context.modelExtract(regionText);
+                PaperScanner.AnyScan scanned = context.modelExtract(regionText);
                 merged.addAll(scanned.questions());
                 if (studentName == null) {
                     studentName = scanned.studentName();
@@ -87,7 +87,7 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
         }
         log.info("[EduScan] region 策略：{}/{} 个区域并入 {} 道题",
                 ordered.size(), ordered.size(), merged.size());
-        return new EduPaperScanner.AnyScan(merged, studentName, studentNo);
+        return new PaperScanner.AnyScan(merged, studentName, studentNo);
     }
 
     /**
@@ -96,18 +96,18 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
      * @param context 识别上下文
      * @return 整卷识别结果
      */
-    private EduPaperScanner.AnyScan fallbackWhole(Context context) {
+    private PaperScanner.AnyScan fallbackWhole(Context context) {
         if (context.blocks() != null && !context.blocks().isEmpty()) {
-            List<EduPaperScanner.ScannedQuestion> byLayout = context.layoutQuestions();
+            List<PaperScanner.ScannedQuestion> byLayout = context.layoutQuestions();
             if (!byLayout.isEmpty()) {
-                List<EduPaperScanner.ScannedQuestion> withStem = context.fillStems(byLayout);
+                List<PaperScanner.ScannedQuestion> withStem = context.fillStems(byLayout);
                 String[] student = context.studentByLines();
-                return new EduPaperScanner.AnyScan(
+                return new PaperScanner.AnyScan(
                         !withStem.isEmpty() ? withStem : byLayout, student[0], student[1]);
             }
         }
         try {
-            EduPaperScanner.AnyScan byModel = context.modelExtract();
+            PaperScanner.AnyScan byModel = context.modelExtract();
             if (!byModel.questions().isEmpty()) {
                 return byModel;
             }
@@ -115,7 +115,7 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
             log.warn("[EduScan] region 回退整卷：模型抽取失败，回退行规则: {}", e.getMessage());
         }
         String[] student = context.studentByLines();
-        return new EduPaperScanner.AnyScan(context.ruleQuestions(), student[0], student[1]);
+        return new PaperScanner.AnyScan(context.ruleQuestions(), student[0], student[1]);
     }
 
     /**
@@ -125,10 +125,10 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
      * @param blocks 文字块
      * @return 该区域内的文字块（保持原有顺序）
      */
-    private static List<EduPaperScanner.ScanBlock> blocksInside(EduPaperScanner.LayoutBox region,
-                                                                List<EduPaperScanner.ScanBlock> blocks) {
-        List<EduPaperScanner.ScanBlock> out = new ArrayList<>();
-        for (EduPaperScanner.ScanBlock block : blocks) {
+    private static List<PaperScanner.ScanBlock> blocksInside(PaperScanner.LayoutBox region,
+                                                                List<PaperScanner.ScanBlock> blocks) {
+        List<PaperScanner.ScanBlock> out = new ArrayList<>();
+        for (PaperScanner.ScanBlock block : blocks) {
             float cx = block.x() + block.width() / 2f;
             float cy = block.y() + block.height() / 2f;
             if (cx >= region.x() && cx <= region.x() + region.width()
@@ -145,12 +145,12 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
      * @param blocks 文字块
      * @return 拼接文本
      */
-    private static String joinText(List<EduPaperScanner.ScanBlock> blocks) {
-        List<EduPaperScanner.ScanBlock> ordered = new ArrayList<>(blocks);
-        ordered.sort(Comparator.comparingDouble(EduPaperScanner.ScanBlock::y)
-                .thenComparingDouble(EduPaperScanner.ScanBlock::x));
+    private static String joinText(List<PaperScanner.ScanBlock> blocks) {
+        List<PaperScanner.ScanBlock> ordered = new ArrayList<>(blocks);
+        ordered.sort(Comparator.comparingDouble(PaperScanner.ScanBlock::y)
+                .thenComparingDouble(PaperScanner.ScanBlock::x));
         StringBuilder sb = new StringBuilder();
-        for (EduPaperScanner.ScanBlock block : ordered) {
+        for (PaperScanner.ScanBlock block : ordered) {
             if (StringUtils.hasText(block.text())) {
                 sb.append(block.text().trim()).append('\n');
             }

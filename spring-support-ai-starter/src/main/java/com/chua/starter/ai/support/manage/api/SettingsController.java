@@ -178,7 +178,7 @@ public class SettingsController {
         // 写到哪一层，按「分组的语义」而不是「是否用户隔离」判定：
         //   · 纯个人偏好组（appearance / browser / session）：与角色无关，永远写本人覆盖层；
         //   · 系统级分组（runtime / ocr / rag / paper …）：管理员写「全局默认层」。
-        //     运行时消费端（如 eduai 的 EduAiService、ChatClientSettingsResolver）读的是
+        //     运行时消费端（如 eduai 的 PaperAiService、ChatClientSettingsResolver）读的是
         //     GlobalSettingReader#getStrDirect —— 只读全局层、不读用户覆盖。若管理员保存
         //     runtime 的 provider/密钥时落到覆盖层，就会「界面保存成功、运行时却读不到」，
         //     这正是此前「配置中心显示未配置/改了不生效」的根因。

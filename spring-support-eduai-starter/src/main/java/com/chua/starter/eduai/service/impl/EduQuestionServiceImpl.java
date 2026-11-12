@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
-import com.chua.starter.ai.support.paper.pipeline.EduAiService;
+import com.chua.starter.ai.support.paper.pipeline.PaperAiService;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
@@ -68,7 +68,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
     /**
      * 属性
      */
-    private final EduAiService eduAiService;
+    private final PaperAiService eduAiService;
 
     /**
      * 应用配置：老师上传题目是否自动通过（V1.14 起）
@@ -588,7 +588,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         String gradeLevel = GradeLevels.normalize(dto.gradeLevel());
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
 
-        // 规则选题作为兜底：AI 不可用或解析失败时由 EduAiService 直接返回这份候选
+        // 规则选题作为兜底：AI 不可用或解析失败时由 PaperAiService 直接返回这份候选
         List<EduQuestion> candidates =
                 baseMapper.selectCandidates(dto.subject(), gradeLevel, scope, Math.max(count * 3, count));
         List<Long> fallbackIds = candidates.stream()

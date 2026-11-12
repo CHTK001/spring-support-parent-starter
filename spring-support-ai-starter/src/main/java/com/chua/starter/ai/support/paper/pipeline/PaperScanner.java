@@ -26,7 +26,7 @@ import java.util.Map;
  * <ul>
  * <li>{@link PaperClient} —— 试卷识别契约（utils-xx 接口，实现由 ai-starter 装配）：
  *     文字块识别、版面分组框、结构化结果</li>
- * <li>{@link EduAiService} —— 调用大模型把文本结构化（自有卷提题号、任意卷提题干与作答）</li>
+ * <li>{@link PaperAiService} —— 调用大模型把文本结构化（自有卷提题号、任意卷提题干与作答）</li>
  * </ul>
  *
  * <p>两类试卷的处理差异（对应需求 3.1 / 3.2）：</p>
@@ -42,7 +42,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class EduPaperScanner {
+public class PaperScanner {
 
     /**
      * 试卷识别客户端（utils-xx 接口）：实现类由 ai-starter 装配为 Bean，
@@ -53,7 +53,7 @@ public class EduPaperScanner {
     /**
      * AI 服务（用于文本结构化与判分）
      */
-    private final EduAiService eduAiService;
+    private final PaperAiService eduAiService;
 
     /**
      * 任意卷识别策略（SPI）：按 {@code plugin.eduai.marking.extract-strategy} 选择，默认 whole。
@@ -448,7 +448,7 @@ public class EduPaperScanner {
      * @param lastNum 上一题号数字
      * @return 是否应作为新题起点
      */
-    private static boolean isBareItemBlock(EduPaperScanner.ScanBlock block, int lastNum) {
+    private static boolean isBareItemBlock(PaperScanner.ScanBlock block, int lastNum) {
         if (block == null) {
             return false;
         }
@@ -536,7 +536,7 @@ public class EduPaperScanner {
         List<ScannedQuestion> list = parseQuestions(raw, false);
         // 兜底：模型偶尔会把「题号 + 作答」合并成一个 no（如 no="L.主次不分"、answer=""）。
         // 拆分是确定性工作，不该交给模型 —— 这里按「题号后紧跟内容」把 no 再拆一次。
-        return list.stream().map(EduPaperScanner::splitMergedNo).toList();
+        return list.stream().map(PaperScanner::splitMergedNo).toList();
     }
 
     /**
@@ -1539,8 +1539,8 @@ public class EduPaperScanner {
      * @param maxScore 满分
      * @return 判分结果；模型不可用或解析失败时回退为 0 分并说明原因
      */
-    public EduAiService.MarkingOutcome markAnyQuestion(ScannedQuestion question, int maxScore) {
-        var fallback = new EduAiService.MarkingOutcome();
+    public PaperAiService.MarkingOutcome markAnyQuestion(ScannedQuestion question, int maxScore) {
+        var fallback = new PaperAiService.MarkingOutcome();
         fallback.setSource("FALLBACK");
         if (StringUtils.isBlank(question.answer())) {
             fallback.setScore(0);
@@ -1553,7 +1553,7 @@ public class EduPaperScanner {
         // 「宽松」模式不设这道门禁，仍按文本内容判分。
         if (markingSettingService != null && markingSettingService.strictMatch()
                 && MarkingBlankRule.outsideBlank(question.stem(), mark)) {
-            var outside = new EduAiService.MarkingOutcome();
+            var outside = new PaperAiService.MarkingOutcome();
             outside.setSource("AI");
             outside.setScore(0);
             outside.setComment("未填写在题目空格内（严谨模式），本题不给分");
@@ -1622,7 +1622,7 @@ public class EduPaperScanner {
             }
             int score = node.path("score").asInt(0);
             score = Math.max(0, Math.min(score, maxScore));
-            var outcome = new EduAiService.MarkingOutcome();
+            var outcome = new PaperAiService.MarkingOutcome();
             outcome.setSource("AI");
             outcome.setScore(score);
             outcome.setComment(comment);
@@ -2123,7 +2123,7 @@ public class EduPaperScanner {
     /**
      * 校验模型输出不是「失败提示串」。
      *
-     * <p>{@link com.chua.starter.ai.support.paper.pipeline.EduAiService#answerQuestion} 在模型不可用或调用失败时
+     * <p>{@link com.chua.starter.ai.support.paper.pipeline.PaperAiService#answerQuestion} 在模型不可用或调用失败时
      * 返回 {@code "AI 模块未启用…"} / {@code "AI 响应失败: …"} 这类<b>字符串</b>而不是抛异常。
      * 调用方若直接拿去解析 JSON，只会得到「解析失败」，把真正原因（如 429 限流）埋掉 ——
      * 实测 ANY 抽取整卷失败，任务错误只写「未能从图片中解析出题目」，真因是限流。

@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
-import com.chua.starter.ai.support.paper.pipeline.EduAiService;
+import com.chua.starter.ai.support.paper.pipeline.PaperAiService;
 import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.mapper.EduPaperHistoryMapper;
@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
  * <p>AI 组卷流程：
  * <ol>
  *   <li>先按学科/学段/年级/题型从题库中筛出候选题目（兜底数据）</li>
- *   <li>调用 {@link EduAiService#generatePaperOutline} 让模型挑选合适的题目 ID</li>
+ *   <li>调用 {@link PaperAiService#generatePaperOutline} 让模型挑选合适的题目 ID</li>
  *   <li>AI 不可用/返回为空时回退到候选前 N 条</li>
  *   <li>写入 {@code edu_paper} 与 {@code edu_paper_question} 关联表</li>
  * </ol>
@@ -171,7 +171,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * EDUAI服务
     */
     private final com.chua.starter.eduai.dimension.mapper.EduTeacherMapper teacherMapper;
-    private final EduAiService eduAiService;
+    private final PaperAiService eduAiService;
     /**
      * 组卷设置（AI 配置中心「试卷配置 → AI 组卷」，未配置时回落 {@link EduAiProperties.Paper}）
      */

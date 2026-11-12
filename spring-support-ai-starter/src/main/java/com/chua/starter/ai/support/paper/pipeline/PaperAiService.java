@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class EduAiService {
+public class PaperAiService {
 
     /**
      * AI 对话网关（AI 模块提供的统一模型调用出口）。
@@ -86,7 +86,7 @@ public class EduAiService {
      * @param properties 属性，不允许为 null
      */
     @Autowired
-    public EduAiService(PaperPipelineProperties properties) {
+    public PaperAiService(PaperPipelineProperties properties) {
         this.properties = properties;
     }
 

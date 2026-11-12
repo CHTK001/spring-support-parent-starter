@@ -59,7 +59,7 @@ class AnyScanStemFallbackTest {
     @Test
     @DisplayName("分段切题：按题号把整卷切成每题一段，且大节标题不混入段落")
     void splitsSegmentsByQuestionNo() {
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(PAGE1);
+        var segments = PaperScanner.splitSegmentsByQuestionNo(PAGE1);
 
         assertEquals(3, segments.size(), "应切出 3 道题，实际题号: " + segments.keySet());
         assertTrue(segments.containsKey("1"));
@@ -85,7 +85,7 @@ class AnyScanStemFallbackTest {
                 80
                 平方厘米。
                 """;
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(text);
+        var segments = PaperScanner.splitSegmentsByQuestionNo(text);
 
         // 12 → 13 递进成立；15 前面是 13，不递进（跳过 14），按「续行」处理
         assertTrue(segments.containsKey("12"), "应切出第 12 题");
@@ -98,13 +98,13 @@ class AnyScanStemFallbackTest {
     @Test
     @DisplayName("原文兜底：模型被拦截时，选择题仍能从 OCR 原文拿到题干与全部选项")
     void stemsFromLayoutTextKeepOptions() {
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(PAGE1);
+        var segments = PaperScanner.splitSegmentsByQuestionNo(PAGE1);
         var questions = List.of(
-                new EduPaperScanner.ScannedQuestion("1.", null, "B", null),
-                new EduPaperScanner.ScannedQuestion("2.", null, "A", null),
-                new EduPaperScanner.ScannedQuestion("3.", null, "B", null));
+                new PaperScanner.ScannedQuestion("1.", null, "B", null),
+                new PaperScanner.ScannedQuestion("2.", null, "A", null),
+                new PaperScanner.ScannedQuestion("3.", null, "B", null));
 
-        var out = EduPaperScanner.fillStemsByLayoutText(questions, segments, null);
+        var out = PaperScanner.fillStemsByLayoutText(questions, segments, null);
 
         assertEquals(3, out.size());
         for (var q : out) {
@@ -126,10 +126,10 @@ class AnyScanStemFallbackTest {
                 5.光在真空中的传播速度约为（）
                 (B)
                 """;
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(text);
-        var questions = List.of(new EduPaperScanner.ScannedQuestion("5.", null, "B", null));
+        var segments = PaperScanner.splitSegmentsByQuestionNo(text);
+        var questions = List.of(new PaperScanner.ScannedQuestion("5.", null, "B", null));
 
-        var out = EduPaperScanner.fillStemsByLayoutText(questions, segments, null);
+        var out = PaperScanner.fillStemsByLayoutText(questions, segments, null);
 
         assertEquals(1, out.size());
         assertTrue(out.get(0).stem().contains("光在真空中的传播速度"),
@@ -140,12 +140,12 @@ class AnyScanStemFallbackTest {
     @Test
     @DisplayName("原文兜底：模型已给出的题干不被覆盖")
     void keepsModelStem() {
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(PAGE1);
+        var segments = PaperScanner.splitSegmentsByQuestionNo(PAGE1);
         var questions = List.of(
-                new EduPaperScanner.ScannedQuestion("1.", "模型给出的题干 A. B. C. D.", "B", null),
-                new EduPaperScanner.ScannedQuestion("2.", null, "A", null));
+                new PaperScanner.ScannedQuestion("1.", "模型给出的题干 A. B. C. D.", "B", null),
+                new PaperScanner.ScannedQuestion("2.", null, "A", null));
 
-        var out = EduPaperScanner.fillStemsByLayoutText(questions, segments, null);
+        var out = PaperScanner.fillStemsByLayoutText(questions, segments, null);
 
         assertEquals(2, out.size());
         assertEquals("模型给出的题干 A. B. C. D.", out.get(0).stem(), "模型题干优先，不得被兜底覆盖");
@@ -158,21 +158,21 @@ class AnyScanStemFallbackTest {
         // 实测第 12 题：模型把题号一起抄回，题干变成 "12.24的因数中，最大的一个是"，
         // 判分模型把 12.24 当成小数，理解错了题目含义。
         assertEquals("24的因数中，最大的一个是",
-                EduPaperScanner.stripStemNoPrefix("12.24的因数中，最大的一个是", "12."));
+                PaperScanner.stripStemNoPrefix("12.24的因数中，最大的一个是", "12."));
         // 第 10 题同样的题号回显
         assertEquals("长江是我国最长的河流。（）",
-                EduPaperScanner.stripStemNoPrefix("10.长江是我国最长的河流。（）", "10."));
+                PaperScanner.stripStemNoPrefix("10.长江是我国最长的河流。（）", "10."));
         // 行内标注 "[3] 题号 3." 也一并剥掉
         assertEquals("三角形的内角和是180度。（）",
-                EduPaperScanner.stripStemNoPrefix("[3] 题号 3.三角形的内角和是180度。（）", "3."));
+                PaperScanner.stripStemNoPrefix("[3] 题号 3.三角形的内角和是180度。（）", "3."));
         // 「第 N 题」写法
         assertEquals("光在真空中的传播速度约为（）",
-                EduPaperScanner.stripStemNoPrefix("第5题 光在真空中的传播速度约为（）", "5."));
+                PaperScanner.stripStemNoPrefix("第5题 光在真空中的传播速度约为（）", "5."));
         // 关键反例：题干本身以数字开头，但那个数字不是本题题号 → 必须原样保留
-        assertEquals("3.14是圆周率", EduPaperScanner.stripStemNoPrefix("3.14是圆周率", "7."));
+        assertEquals("3.14是圆周率", PaperScanner.stripStemNoPrefix("3.14是圆周率", "7."));
         // 题干本来就没有题号前缀 → 不动
         assertEquals("下列词语中，没有错别字的一项是（）",
-                EduPaperScanner.stripStemNoPrefix("下列词语中，没有错别字的一项是（）", "1."));
+                PaperScanner.stripStemNoPrefix("下列词语中，没有错别字的一项是（）", "1."));
     }
 
     @Test
@@ -181,7 +181,7 @@ class AnyScanStemFallbackTest {
         // 实测第 7 题：版面把整段题干都当成了作答
         String raw = "“画蛇添足\"这个成语比喻做了多余的事，反而不好。（） (对)";
         String stem = "“画蛇添足”这个成语比喻做了多余的事，反而不好。（）";
-        assertEquals("对", EduPaperScanner.normalizeAnyAnswer(raw, stem));
+        assertEquals("对", PaperScanner.normalizeAnyAnswer(raw, stem));
     }
 
     @Test
@@ -190,7 +190,7 @@ class AnyScanStemFallbackTest {
         // 实测第 11 题：作答带着整行题干，标准答案是「黄山」
         String raw = "五岳归来不看山， 归来不看岳。 黃山";
         String stem = "五岳归来不看山，______归来不看岳。";
-        String got = EduPaperScanner.normalizeAnyAnswer(raw, stem);
+        String got = PaperScanner.normalizeAnyAnswer(raw, stem);
         assertFalse(got.contains("五岳归来不看山"), "题干片段不得留在作答里: " + got);
         assertTrue(got.contains("黃山") || got.contains("黄山"), "学生填写内容必须保留: " + got);
     }
@@ -198,9 +198,9 @@ class AnyScanStemFallbackTest {
     @Test
     @DisplayName("作答归一化：选择题只留字母，题干为空时不做剥离")
     void normalizesChoiceAnswerWithoutStem() {
-        assertEquals("B", EduPaperScanner.normalizeAnyAnswer("(B)", null));
+        assertEquals("B", PaperScanner.normalizeAnyAnswer("(B)", null));
         // 题干为空时不剥任何内容（剥了可能误删学生真实作答）
-        assertEquals("学生写的完整答案", EduPaperScanner.normalizeAnyAnswer("学生写的完整答案", null));
+        assertEquals("学生写的完整答案", PaperScanner.normalizeAnyAnswer("学生写的完整答案", null));
     }
 
     @Test
@@ -208,7 +208,7 @@ class AnyScanStemFallbackTest {
     void stripsPaperFooter() {
         // 实测第 18 题：作答尾部带着页脚，模型因此判为作答不完整、扣 2 分
         String raw = "因为书读得多，知识就丰富，写文章的时候就能写得又快又好。 试卷结束";
-        String got = EduPaperScanner.normalizeAnyAnswer(raw, "为什么说“读书破万卷，下笔如有神”?请谈谈你的理解。");
+        String got = PaperScanner.normalizeAnyAnswer(raw, "为什么说“读书破万卷，下笔如有神”?请谈谈你的理解。");
         assertFalse(got.contains("试卷结束"), "页脚不得留在作答里: " + got);
         assertTrue(got.contains("知识就丰富"), "学生正文必须保留: " + got);
     }
@@ -217,7 +217,7 @@ class AnyScanStemFallbackTest {
     @DisplayName("作答归一化：题干 OCR 错字（器宫/器官）也能剥离干净")
     void stripsStemWithOcrTypo() {
         // 实测第 13 题：题干「人体最大的器官是」，作答 OCR 成「人体最大的器宫是 皮肤」
-        String got = EduPaperScanner.normalizeAnyAnswer(
+        String got = PaperScanner.normalizeAnyAnswer(
                 "人体最大的器宫是 皮肤", "人体最大的器官是");
         assertEquals("皮肤", got, "错一字也必须剥净题干，只留学生作答");
     }
@@ -228,7 +228,7 @@ class AnyScanStemFallbackTest {
         // 题干与作答无关（简答题），作答不应被剥掉
         String answer = "读书可以让人增长见识";
         String stem = "请谈谈你对读书的理解";
-        assertEquals(answer, EduPaperScanner.normalizeAnyAnswer(answer, stem));
+        assertEquals(answer, PaperScanner.normalizeAnyAnswer(answer, stem));
     }
 
     @Test
@@ -243,12 +243,12 @@ class AnyScanStemFallbackTest {
                 12.24的因数中，最大的一个是
                 24
                 """;
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(text);
+        var segments = PaperScanner.splitSegmentsByQuestionNo(text);
         assertTrue(segments.containsKey("11"), "应切出第 11 题，实际: " + segments.keySet());
         assertTrue(segments.containsKey("12"), "应切出第 12 题，实际: " + segments.keySet());
 
-        var questions = List.of(new EduPaperScanner.ScannedQuestion("11.", null, "归来不看岳。 黃山", null));
-        var out = EduPaperScanner.fillStemsByLayoutText(questions, segments, null);
+        var questions = List.of(new PaperScanner.ScannedQuestion("11.", null, "归来不看岳。 黃山", null));
+        var out = PaperScanner.fillStemsByLayoutText(questions, segments, null);
 
         String stem = out.get(0).stem();
         assertTrue(stem != null && !stem.isBlank(), "题干不得为空");
@@ -264,11 +264,11 @@ class AnyScanStemFallbackTest {
                 归来不看岳。
                 黃山
                 """;
-        var segments = EduPaperScanner.splitSegmentsByQuestionNo(text);
-        var questions = List.of(new EduPaperScanner.ScannedQuestion(
+        var segments = PaperScanner.splitSegmentsByQuestionNo(text);
+        var questions = List.of(new PaperScanner.ScannedQuestion(
                 "11.", "五岳归来不看山，______归来不看岳。", "黃山", null));
         // 全部题干已存在 → 没有需要兜底的题，按契约返回空列表，调用方保留原题
-        var out = EduPaperScanner.fillStemsByLayoutText(questions, segments, null);
+        var out = PaperScanner.fillStemsByLayoutText(questions, segments, null);
         assertTrue(out.isEmpty(), "已有题干时不应产出兜底结果，实际: " + out);
     }
 }

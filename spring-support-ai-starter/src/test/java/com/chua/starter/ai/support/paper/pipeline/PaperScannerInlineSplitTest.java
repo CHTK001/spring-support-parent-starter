@@ -25,15 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @author CH
  * @since 4.0.0.51
  */
-class EduPaperScannerInlineSplitTest {
+class PaperScannerInlineSplitTest {
 
     /**
      * 只测切题逻辑，构造依赖（识别客户端/AI 服务/策略）均不参与。
      *
      * @return 可直接调用版面切题的扫描器
      */
-    private static EduPaperScanner scanner() {
-        return new EduPaperScanner(null, null, List.of(), null);
+    private static PaperScanner scanner() {
+        return new PaperScanner(null, null, List.of(), null);
     }
 
     /**
@@ -43,8 +43,8 @@ class EduPaperScannerInlineSplitTest {
      * @param y    纵向位置
      * @return 文字块
      */
-    private static EduPaperScanner.ScanBlock block(String text, float y) {
-        return new EduPaperScanner.ScanBlock(text, 0.95f, 0.05f, y, 0.9f, 0.05f);
+    private static PaperScanner.ScanBlock block(String text, float y) {
+        return new PaperScanner.ScanBlock(text, 0.95f, 0.05f, y, 0.9f, 0.05f);
     }
 
     /**
@@ -55,10 +55,10 @@ class EduPaperScannerInlineSplitTest {
      * @throws Exception 反射失败
      */
     @SuppressWarnings("unchecked")
-    private static List<EduPaperScanner.ScannedQuestion> byLines(String text) throws Exception {
-        Method method = EduPaperScanner.class.getDeclaredMethod("parseSelfByLines", String.class);
+    private static List<PaperScanner.ScannedQuestion> byLines(String text) throws Exception {
+        Method method = PaperScanner.class.getDeclaredMethod("parseSelfByLines", String.class);
         method.setAccessible(true);
-        return (List<EduPaperScanner.ScannedQuestion>) method.invoke(null, text);
+        return (List<PaperScanner.ScannedQuestion>) method.invoke(null, text);
     }
 
     @Test
