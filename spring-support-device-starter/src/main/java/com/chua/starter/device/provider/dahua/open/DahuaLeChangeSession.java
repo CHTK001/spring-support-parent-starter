@@ -71,6 +71,15 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     /** 设备详情（含通道列表） */
     private static final String M_DEVICE_DETAIL = "device.detail.list";
 
+    /** 绑定设备 */
+    private static final String M_DEVICE_BIND = "bindDevice";
+
+    /** 解绑设备 */
+    private static final String M_DEVICE_UNBIND = "unBindDevice";
+
+    /** 修改设备名称 */
+    private static final String M_DEVICE_RENAME = "modifyDeviceName";
+
     /** 设备抓图 */
     private static final String M_CAPTURE = "setDeviceSnap";
 
@@ -369,6 +378,54 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
             }
         }
         return result;
+    }
+
+    // ------------------------------------------------------------------ 设备管理
+
+    /**
+     * 绑定设备到当前开发者账号。
+     *
+     * <p>官方 {@code bindDevice}：入 {@code deviceId}、{@code code}。{@code code} 为设备验证码
+     * 或设备密码；设备底部没有 8 位安全码时按官方要求传空串。token 由 SDK 自动补齐。</p>
+     *
+     * @param deviceId 设备序列号
+     * @param code     设备验证码或设备密码，可为空
+     */
+    public void bindDevice(String deviceId, String code) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceId", requireText(deviceId, "绑定设备需要设备序列号"));
+        params.put("code", code == null ? "" : code.trim());
+        delegate.callData(M_DEVICE_BIND, params);
+    }
+
+    /**
+     * 从当前开发者账号解绑设备。
+     *
+     * <p>官方 {@code unBindDevice}：入 {@code deviceId}。云录像、告警、云存储与物理链接
+     * 的删除策略使用官方默认值，不在此处隐式改变。</p>
+     *
+     * @param deviceId 设备序列号
+     */
+    public void unbindDevice(String deviceId) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceId", requireText(deviceId, "解绑设备需要设备序列号"));
+        delegate.callData(M_DEVICE_UNBIND, params);
+    }
+
+    /**
+     * 修改设备名称。
+     *
+     * <p>官方 {@code modifyDeviceName}：入 {@code deviceId}、{@code name}。不传
+     * {@code channelId} 表示修改设备本身的名称；通道改名走通道级调用，不在本方法范围内。</p>
+     *
+     * @param deviceId 设备序列号
+     * @param name     新名称，最大 64 字符
+     */
+    public void modifyDeviceName(String deviceId, String name) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("deviceId", requireText(deviceId, "修改设备名称需要设备序列号"));
+        params.put("name", requireText(name, "修改设备名称需要新名称"));
+        delegate.callData(M_DEVICE_RENAME, params);
     }
 
     /**
@@ -849,6 +906,20 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     // ------------------------------------------------------------------ 工具
+
+    /**
+     * 校验必填文本。
+     *
+     * @param value   文本
+     * @param message 缺失时的错误信息
+     * @return 去空白后的文本
+     */
+    private static String requireText(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
+    }
 
     /**
      * 在线状态映射：乐橙 {@code deviceStatus/channelStatus} 取

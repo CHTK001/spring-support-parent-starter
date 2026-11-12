@@ -635,7 +635,8 @@ public record DeviceCapabilityMatrix(
      * 事件走 device.message.list(v2)，门禁走 openDoorRemote/getOpenDoorRecord/getDoorKeys，
      * 录像走 queryLocalRecords —— 均已在 {@code DahuaLeChangeSession} 真实实现。
      * 乐橙无预置位接口（只有 controlMovePTZ / controlLocationPTZ）、无组织与人员模型；
-     * 设备写操作有 bindDevice / unBindDevice / modifyDeviceName，Provider 尚未实现。</p>
+     * 设备写操作已在 {@code DahuaLeChangeSession} 实现 bindDevice / unBindDevice /
+     * modifyDeviceName，并在 {@code DahuaProvider} 接入，缺设备与凭据真机验证。</p>
      *
      * @return 能力矩阵
      */
@@ -651,8 +652,8 @@ public record DeviceCapabilityMatrix(
                         "仅 remoteUnlock（openDoorRemote）远程开门，无门点增删改/授权下发；远程开门计入 ACCESS")
                 .unverified(DeviceCapability.CAPTURE, 1, "capture（setDeviceSnap+下载 url）已实现，未验证")
                 .unverified(DeviceCapability.EVENT, 2, "pollEvents（v2 device.message.list，设备本地时间）已实现，未验证")
-                .todo(DeviceCapability.DEVICE_WRITE, 3,
-                        "官方 bindDevice / unBindDevice / modifyDeviceName 已登记，Provider 尚未实现乐橙写操作")
+                .unverified(DeviceCapability.DEVICE_WRITE, 3,
+                        "bindDevice / unBindDevice / modifyDeviceName 已在 DahuaLeChangeSession 与 DahuaProvider 接入，缺乐橙设备与凭据未真机验证")
                 .no(DeviceCapability.ORG, "乐橙面向消费级，无组织模型")
                 .no(DeviceCapability.ORG_WRITE, "乐橙面向消费级，无组织模型")
                 .no(DeviceCapability.PERSON, "乐橙面向消费级，无人员模型")

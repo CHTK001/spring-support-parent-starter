@@ -67,13 +67,13 @@
 | 海康萤石 | `ezviz` | 6 | 7 | 0 | 3 |
 | 海康 ISUP | `isup` | 1 | 4 | 0 | 11 |
 | 大华云平台 | `dahua-cloud` | 0 | 14 | 0 | 2 |
-| 大华乐橙 | `lechange` | 1 | 7 | 1 | 7 |
+| 大华乐橙 | `lechange` | 1 | 8 | 0 | 7 |
 | 大华 ICC | `dahua-icc` | 1 | 12 | 0 | 3 |
 | 宇视云开放平台 | `uniview` | 0 | 8 | 0 | 8 |
 | GB28181 | `gb28181` | 1 | 4 | 1 | 10 |
 | ONVIF | `onvif` | 0 | 5 | 4 | 7 |
 | 精讯云 | `sennor-cloud` | 0 | 2 | 0 | 14 |
-| **合计** | | **13** | **98** | **6** | **75** |
+| **合计** | | **13** | **99** | **5** | **75** |
 
 已标 `yes` 的能力位：
 
@@ -89,7 +89,7 @@
 | GB28181 | DEVICE |
 
 > `yes` 只覆盖上表能力位，其余能力位按 `unverified` / `todo` / `no` 计，不能外推。
-> 当前 `todo` 为 6：乐橙 `DEVICE_WRITE`、GB28181 `EVENT`、ONVIF `ACCESS` / `ACCESS_WRITE` / `EVENT` / `RECORD`；均为官方接口/协议已核实、会话层未实现。ONVIF 门禁/录像目前只到 Profile 级，具体动作尚未登记。`no` 中仍可能保留 1~2 个仅部分/相邻接口，原因写在能力矩阵的 `note` 里。
+> 当前 `todo` 为 5：GB28181 `EVENT`、ONVIF `ACCESS` / `ACCESS_WRITE` / `EVENT` / `RECORD`；均为官方接口/协议已核实、会话层未实现。ONVIF 门禁/录像目前只到 Profile 级，具体动作尚未登记。`no` 中仍可能保留 1~2 个仅部分/相邻接口，原因写在能力矩阵的 `note` 里。
 
 ## 3. 各平台实现位置
 
@@ -166,7 +166,7 @@ try {
 | 宇视 | 设备写操作已接入但未真机校准；官方 openapi 目录无组织、人员、门禁、停车场接口；无回放地址接口（仅录像检索） |
 | 萤石 | 停车记录仅有查询接口（parking/msgRecord、parking/parkingRecord），无车场、车道与开闸接口 |
 | 大华云平台 | 14 项 `unverified`：视频/录像/云台/抓图/事件/设备写/组织/人员/门禁均按官方文档实现，缺设备与凭据真机验证。组织写需 `templateId`（当前用户或 `extra.orgTemplateId`）、新增用户需 `extra.defaultPersonPassword`、新增设备需 `extra.devCode` |
-| 大华乐橙 | `DEVICE_WRITE` 为 `todo`（`bindDevice` / `unBindDevice` / `modifyDeviceName` 已登记，Provider 未实现）；`ACCESS_WRITE` 仅远程开门，无门点增删改/授权下发；无组织、人员、停车场 |
+| 大华乐橙 | `DEVICE_WRITE` 为 `unverified`：`bindDevice` / `unBindDevice` / `modifyDeviceName` 已在 `DahuaLeChangeSession` 与 `DahuaProvider` 接入，缺设备与凭据真机验证；新增设备的验证码取 `extra.code`（兼容 `extra.devicePassword`，无安全码时按官方要求传空串）；`ACCESS_WRITE` 仅远程开门，无门点增删改/授权下发；无组织、人员、停车场 |
 | 大华 ICC | 设备公开目录只有详情/分页/树/通道分页，无增删改；组织/人员写已接入，缺环境验证 |
 | 海康综合安防 | `ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
 | 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调；GB28181 `EVENT` 另为 `todo`（`gb.alarm.subscribe` 已登记，会话未实现） |

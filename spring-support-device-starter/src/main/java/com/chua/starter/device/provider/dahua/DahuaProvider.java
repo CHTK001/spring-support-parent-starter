@@ -327,7 +327,11 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     /**
-     * 按凭据写回云睿设备（新增/改名）。
+     * 按凭据写回设备（新增/改名）：云睿走设备套件，乐橙走绑定/改名接口。
+     *
+     * <p>乐橙新增时 {@code extra.code}（兼容 {@code extra.devicePassword}）作为设备验证码；
+     * 设备底部无 8 位安全码时按官方要求传空串。绑定成功后按本地名称改名，改名失败不回滚绑定，
+     * 只记录告警，避免调用方重复绑定。</p>
      *
      * @param info   连接信息
      * @param device 设备
@@ -335,43 +339,68 @@ public class DahuaProvider implements DeviceProvider {
      * @return 是否成功
      */
     public boolean upsertRemote(DeviceConnectInfo info, VendorDevice device, boolean exists) {
-        if (!PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+        boolean cloud = PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType());
+        boolean lechange = PLATFORM_LECHANGE.equalsIgnoreCase(info.platformType());
+        if (!cloud && !lechange) {
             return false;
         }
-        DahuaCloudSession cloud = new DahuaCloudSession(info);
         String externalId = device.externalId() == null || device.externalId().isBlank()
                 ? device.serial() : device.externalId();
         if (externalId == null || externalId.isBlank()) {
-            throw new IllegalArgumentException("大华云设备写入需要设备序列号");
+            throw new IllegalArgumentException("大华设备写入需要设备序列号");
         }
         if (exists) {
-            cloud.renameDevice(externalId, null, device.name());
+            if (cloud) {
+                new DahuaCloudSession(info).renameDevice(externalId, null, device.name());
+            } else {
+                new DahuaLeChangeSession(info).modifyDeviceName(externalId, device.name());
+            }
             return true;
         }
-        String devCode = extraText(info, "devCode");
-        if (devCode == null) {
-            devCode = extraText(info, "devicePassword");
+        if (cloud) {
+            String devCode = extraText(info, "devCode");
+            if (devCode == null) {
+                devCode = extraText(info, "devicePassword");
+            }
+            if (devCode == null) {
+                throw new IllegalStateException("大华云新增设备需要设备密码：请在凭据额外参数配置 devCode");
+            }
+            new DahuaCloudSession(info).addDevice(externalId, device.name(), devCode, null);
+            return true;
         }
-        if (devCode == null) {
-            throw new IllegalStateException("大华云新增设备需要设备密码：请在凭据额外参数配置 devCode");
+        String code = extraText(info, "code");
+        if (code == null) {
+            code = extraText(info, "devicePassword");
         }
-        cloud.addDevice(externalId, device.name(), devCode, null);
+        DahuaLeChangeSession lechangeSession = new DahuaLeChangeSession(info);
+        lechangeSession.bindDevice(externalId, code);
+        if (device.name() != null && !device.name().isBlank()) {
+            try {
+                lechangeSession.modifyDeviceName(externalId, device.name());
+            } catch (RuntimeException e) {
+                log.warn("乐橙设备已绑定但改名失败: deviceId={}, message={}", externalId, e.getMessage());
+            }
+        }
         return true;
     }
 
     /**
-     * 按凭据删除云睿设备。
+     * 按凭据删除设备：云睿走删除接口，乐橙走解绑接口。
      *
      * @param info       连接信息
      * @param externalId 设备序列号
      * @return 是否成功
      */
     public boolean removeRemote(DeviceConnectInfo info, String externalId) {
-        if (!PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
-            return false;
+        if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(info.platformType())) {
+            new DahuaCloudSession(info).removeDevice(externalId);
+            return true;
         }
-        new DahuaCloudSession(info).removeDevice(externalId);
-        return true;
+        if (PLATFORM_LECHANGE.equalsIgnoreCase(info.platformType())) {
+            new DahuaLeChangeSession(info).unbindDevice(externalId);
+            return true;
+        }
+        return false;
     }
 
     /**
