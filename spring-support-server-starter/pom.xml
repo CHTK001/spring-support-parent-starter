@@ -138,13 +138,16 @@
         </dependency>
 
         <!-- RDP 直连原生桥：JNA 绑定 rdpj.dll（FreeRDP 3.x 静态链接的 C 扩展）。
-             原生库与桥接类由 utils-support-native-rdp 统一提供，本模块只消费，
-             不再自带 native/rdpj 资源与 com.chua.nativerdp.support.RdpjBridge 副本。
+             原生库与桥接类由 utils-support-native-rdp 统一提供，本模块只消费。
+             optional：属于可选部署件，不带它也能编译/启动，运行期由
+             RdpjNative.exists() 探测，缺失时直连直接提示“不支持”；
+             同时避免下游应用被这条 12.8MB 的原生库强制牵连。
              native 制品版本独立于 utils.version（native 父 POM 为 4.0.0.43）。 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-native-rdp</artifactId>
             <version>${native.rdp.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>net.java.dev.jna</groupId>

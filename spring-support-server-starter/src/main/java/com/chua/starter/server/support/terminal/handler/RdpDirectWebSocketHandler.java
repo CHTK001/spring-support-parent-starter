@@ -9,6 +9,7 @@ import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.TerminalSessionService;
 import com.chua.starter.server.support.terminal.WebSocketSessions;
 import com.chua.nativerdp.support.RdpjBridge;
+import com.chua.starter.server.support.terminal.util.RdpjNative;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -101,6 +102,12 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
+        // 原生桥是可选的部署件：没带 utils-support-native-rdp 时直接提示不支持，
+        // 不要等到握手阶段才暴露成「连接失败」；带了就完全走原来的直连逻辑。
+        if (!RdpjNative.exists()) {
+            reject(wsSession, RdpjNative.UNSUPPORTED_MESSAGE);
+            return;
+        }
         // 远控闸门：主机被禁用、或远控入口已停用时，任何远程终端都不再放行
         ReturnResult<Void> access = serverHostService.checkRemoteAccess(hostId);
         if (!access.isOk()) {
@@ -132,7 +139,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
 
         Pointer handle;
         try {
-            handle = RdpjBridge.instance().rdpj_create();
+            handle = Native.create();
         } catch (Throwable e) {
             String cause = WebSocketSessions.describeCause(e);
             log.warn("[terminal-rdp] RDP 连接创建失败 hostId={} {}", hostId, cause, e);
@@ -146,7 +153,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         // 把浏览器申请的分辨率写进 FreeRDP 设置：必须在 rdpj_connect 之前，
         // 否则原生层用 1024×768 的兜底尺寸建连，画面会被拉伸。
         try {
-            RdpjBridge.instance().rdpj_resize(handle, width, height);
+            Native.resize(handle, width, height);
         } catch (Throwable e) {
             log.debug("[terminal-rdp] 设置请求分辨率失败 sessionId={}: {}", wsSession.getId(), e.getMessage());
         }
@@ -157,7 +164,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         bridge.recordId = record == null ? null : record.getId();
         bridges.put(wsSession.getId(), bridge);
         try {
-            RdpjBridge.instance().rdpj_connect(handle, host.getServerHostAddress(), port,
+            Native.connect(handle, host.getServerHostAddress(), port,
                     resolved.getData().username(), resolved.getData().password(), "zh-CN");
             log.info("[terminal-rdp] 会话建立 sessionId={} hostId={} {}:{}",
                     wsSession.getId(), hostId, host.getServerHostAddress(), port);
@@ -168,7 +175,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         } catch (Throwable e) {
             bridges.remove(wsSession.getId());
             try {
-                RdpjBridge.instance().rdpj_destroy(handle);
+                Native.destroy(handle);
             } catch (Throwable ex) {
                 log.debug("[terminal-rdp] 销毁 RDP 句柄异常 sessionId={}: {}", wsSession.getId(), ex.getMessage());
             }
@@ -196,8 +203,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         if (payload == null || !payload.startsWith("{")) {
             return;
         }
-        RdpjBridge.Rdpj rdpj = RdpjBridge.instance();
-        if (rdpj == null) {
+        if (!RdpjNative.exists()) {
             return;
         }
         if (payload.contains("\"mouse\"")) {
@@ -206,7 +212,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int button = readInt(payload, "button", 1);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_mouse(bridge.handle, x, y, button, down ? 1 : 0);
+                int rc = Native.mouse(bridge.handle, x, y, button, down ? 1 : 0);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 鼠标事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -217,7 +223,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int keysym = readInt(payload, "keysym", 0);
             boolean down = readBoolean(payload, "down", false);
             try {
-                int rc = rdpj.rdpj_key(bridge.handle, (short) keysym, down ? 1 : 0);
+                int rc = Native.key(bridge.handle, (short) keysym, down ? 1 : 0);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 键盘事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -229,7 +235,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             int y = readInt(payload, "y", 0);
             int delta = readInt(payload, "delta", 0);
             try {
-                int rc = rdpj.rdpj_wheel(bridge.handle, x, y, delta);
+                int rc = Native.wheel(bridge.handle, x, y, delta);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 滚轮事件推送失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -245,7 +251,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             bridge.width = nextWidth;
             bridge.height = nextHeight;
             try {
-                int rc = rdpj.rdpj_resize(bridge.handle, nextWidth, nextHeight);
+                int rc = Native.resize(bridge.handle, nextWidth, nextHeight);
                 if (rc != 0) {
                     log.warn("[terminal-rdp] 尺寸调整失败 sessionId={} {}", wsSession.getId(), rc);
                 }
@@ -310,21 +316,20 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     private void pumpFrames(RdpBridge bridge) {
         Pointer handle = bridge.handle;
-        RdpjBridge.Rdpj rdpj = RdpjBridge.instance();
-        if (rdpj == null || handle == null) {
+        if (!RdpjNative.exists() || handle == null) {
             return;
         }
         try {
             while (bridge.running) {
-                int state = rdpj.rdpj_state(handle);
+                int state = Native.state(handle);
                 if (state < 0 || state == 2) {
                     // 连接失败/被远端断开时，浏览器一直等首帧会永远停在加载层，
                     // 这里把原生层的错误原因明确回推一次。
-                    String reason = rdpj.rdpj_last_error(handle);
+                    String reason = Native.lastError(handle);
                     sendErrorToBrowser(bridge, reason == null || reason.isEmpty() ? "RDP 连接已中断" : reason);
                     return;
                 }
-                Pointer lastFrame = rdpj.rdpj_last_frame(handle);
+                Pointer lastFrame = Native.lastFrame(handle);
                 if (lastFrame == null || lastFrame.equals(Pointer.NULL)) {
                     Thread.sleep(FRAME_INTERVAL_MS);
                     continue;
@@ -340,7 +345,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                     bridge.bufferLen = size;
                 }
                 IntByReference outLen = new IntByReference(0);
-                int written = rdpj.rdpj_frame(handle, bridge.buffer, size, outLen);
+                int written = Native.frame(handle, bridge.buffer, size, outLen);
                 if (written > 0) {
                     byte[] frame = new byte[written];
                     bridge.buffer.read(0, frame, 0, written);
@@ -461,11 +466,11 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         bridge.closed = true;
         bridges.remove(bridge.wsSession.getId());
         bridge.running = false;
-        RdpjBridge.Rdpj rdpj = RdpjBridge.instance();
         Pointer handle = bridge.handle;
-        if (handle != null && !handle.equals(Pointer.NULL) && rdpj != null) {
+        boolean nativeReady = RdpjNative.exists();
+        if (handle != null && !handle.equals(Pointer.NULL) && nativeReady) {
             try {
-                rdpj.rdpj_close(handle);
+                Native.close(handle);
             } catch (Throwable e) {
                 log.debug("[terminal-rdp] 关闭 RDP 连接异常 sessionId={}: {}",
                         bridge.wsSession.getId(), e.getMessage());
@@ -476,9 +481,9 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             Thread.sleep(200);  // 让泵线程自行静默收口
         } catch (InterruptedException ignored) {
         }
-        if (handle != null && !handle.equals(Pointer.NULL) && rdpj != null) {
+        if (handle != null && !handle.equals(Pointer.NULL) && nativeReady) {
             try {
-                rdpj.rdpj_destroy(handle);
+                Native.destroy(handle);
             } catch (Throwable e) {
                 log.debug("[terminal-rdp] 销毁 RDP 句柄异常 sessionId={}: {}",
                         bridge.wsSession.getId(), e.getMessage());
@@ -652,6 +657,161 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         @Override
         public String toString() {
             return "RdpBridge{hostId=" + hostId + ", now=" + LocalDateTime.now() + "}";
+        }
+    }
+
+    /**
+     * 原生桥调用收口。
+     * <p>
+     * 单独成类的原因：{@code RdpjBridge} 属于可选依赖，外层 handler 一旦直接引用它，
+     * 在没带 {@code utils-support-native-rdp} 的部署里类校验阶段就可能
+     * {@code NoClassDefFoundError}；把引用关进本嵌套类后，只有
+     * {@link RdpjNative#exists()} 为真时才会加载它，缺包时业务侧只提示“不支持”。
+     * </p>
+     * <p>
+     * 本类的方法签名只用 {@code int} / {@link Pointer} / {@link IntByReference} / {@code String}，
+     * 不向外暴露 {@code RdpjBridge} 的任何类型。
+     * </p>
+     */
+    private static final class Native {
+
+        private Native() {
+        }
+
+        /**
+         * 创建 RDP 实例
+         *
+         * @return 句柄
+         */
+        private static Pointer create() {
+            return RdpjBridge.instance().rdpj_create();
+        }
+
+        /**
+         * 请求桌面尺寸
+         *
+         * @param handle 句柄
+         * @param width  宽
+         * @param height 高
+         * @return 0
+         */
+        private static int resize(Pointer handle, int width, int height) {
+            return RdpjBridge.instance().rdpj_resize(handle, width, height);
+        }
+
+        /**
+         * 发起连接
+         *
+         * @param handle   句柄
+         * @param host     主机
+         * @param port     端口
+         * @param user     用户名
+         * @param password 口令
+         * @param locale   区域
+         * @return 0 表示已启动
+         */
+        private static int connect(Pointer handle, String host, int port, String user, String password, String locale) {
+            return RdpjBridge.instance().rdpj_connect(handle, host, port, user, password, locale);
+        }
+
+        /**
+         * 连接状态
+         *
+         * @param handle 句柄
+         * @return 0 连接中 1 已连接 2 已关闭 -1 失败
+         */
+        private static int state(Pointer handle) {
+            return RdpjBridge.instance().rdpj_state(handle);
+        }
+
+        /**
+         * 最近一次错误描述
+         *
+         * @param handle 句柄
+         * @return 错误文本
+         */
+        private static String lastError(Pointer handle) {
+            return RdpjBridge.instance().rdpj_last_error(handle);
+        }
+
+        /**
+         * 帧头指针
+         *
+         * @param handle 句柄
+         * @return 帧头指针
+         */
+        private static Pointer lastFrame(Pointer handle) {
+            return RdpjBridge.instance().rdpj_last_frame(handle);
+        }
+
+        /**
+         * 取增量帧
+         *
+         * @param handle 句柄
+         * @param buffer 输出缓冲
+         * @param size   缓冲长度
+         * @param outLen 实际写入长度
+         * @return 写入字节数
+         */
+        private static int frame(Pointer handle, Pointer buffer, int size, IntByReference outLen) {
+            return RdpjBridge.instance().rdpj_frame(handle, buffer, size, outLen);
+        }
+
+        /**
+         * 投递鼠标事件
+         *
+         * @param handle 句柄
+         * @param x      坐标 X
+         * @param y      坐标 Y
+         * @param button 按钮
+         * @param down   按下标志
+         * @return 0 表示已入队
+         */
+        private static int mouse(Pointer handle, int x, int y, int button, int down) {
+            return RdpjBridge.instance().rdpj_mouse(handle, x, y, button, down);
+        }
+
+        /**
+         * 投递键盘事件
+         *
+         * @param handle 句柄
+         * @param code   RDP scancode
+         * @param down   按下标志
+         * @return 0 表示已入队
+         */
+        private static int key(Pointer handle, short code, int down) {
+            return RdpjBridge.instance().rdpj_key(handle, code, down);
+        }
+
+        /**
+         * 投递滚轮事件
+         *
+         * @param handle 句柄
+         * @param x      坐标 X
+         * @param y      坐标 Y
+         * @param delta  滚动量
+         * @return 0 表示已入队
+         */
+        private static int wheel(Pointer handle, int x, int y, int delta) {
+            return RdpjBridge.instance().rdpj_wheel(handle, x, y, delta);
+        }
+
+        /**
+         * 关闭连接
+         *
+         * @param handle 句柄
+         */
+        private static void close(Pointer handle) {
+            RdpjBridge.instance().rdpj_close(handle);
+        }
+
+        /**
+         * 释放句柄
+         *
+         * @param handle 句柄
+         */
+        private static void destroy(Pointer handle) {
+            RdpjBridge.instance().rdpj_destroy(handle);
         }
     }
 }
