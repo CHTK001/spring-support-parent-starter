@@ -1,6 +1,7 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.device.provider.dahua.DahuaProvider;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
@@ -277,6 +278,10 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             existing.setDeviceInfoChannelCount(remote.channelCount());
             existing.setDeviceInfoOnline(Boolean.TRUE.equals(remote.online()));
             existing.setDeviceInfoLastOnlineAt(Boolean.TRUE.equals(remote.online()) ? LocalDateTime.now() : null);
+            if (StringUtils.hasText(remote.externalId())) {
+                // 远端幂等键回写台账，推送/解绑方向才能定位到同一台设备
+                existing.setDeviceInfoExternalId(remote.externalId());
+            }
             existing.setDeviceInfoUpdatedAt(LocalDateTime.now());
             // 回写：该台账行由哪套凭据维系
             existing.setDeviceInfoCredentialId(credentialId);
@@ -306,9 +311,17 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         // 同步只落台账，不在同步线程里建立厂商会话；在线状态由定时检测校准
         request.setConnect(false);
         DeviceInfo created = deviceService.addDevice(request);
+        boolean dirty = false;
+        if (StringUtils.hasText(remote.externalId())) {
+            created.setDeviceInfoExternalId(remote.externalId());
+            dirty = true;
+        }
         if (Boolean.TRUE.equals(remote.online())) {
             created.setDeviceInfoOnline(true);
             created.setDeviceInfoLastOnlineAt(LocalDateTime.now());
+            dirty = true;
+        }
+        if (dirty) {
             deviceInfoMapper.updateById(created);
         }
         return true;
@@ -486,6 +499,9 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             if (Boolean.TRUE.equals(remote.online())) {
                 existing.setDeviceInfoLastOnlineAt(LocalDateTime.now());
             }
+            if (StringUtils.hasText(remote.externalId())) {
+                existing.setDeviceInfoExternalId(remote.externalId());
+            }
             existing.setDeviceInfoUpdatedAt(LocalDateTime.now());
             deviceInfoMapper.updateById(existing);
             return false;
@@ -514,9 +530,17 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         // 同步只落台账，不在同步线程里建立厂商会话；在线状态由定时检测校准
         request.setConnect(false);
         DeviceInfo created = deviceService.addDevice(request);
+        boolean dirty = false;
+        if (StringUtils.hasText(remote.externalId())) {
+            created.setDeviceInfoExternalId(remote.externalId());
+            dirty = true;
+        }
         if (Boolean.TRUE.equals(remote.online())) {
             created.setDeviceInfoOnline(true);
             created.setDeviceInfoLastOnlineAt(LocalDateTime.now());
+            dirty = true;
+        }
+        if (dirty) {
             deviceInfoMapper.updateById(created);
         }
         return true;
@@ -535,7 +559,20 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         VendorDevice remote = toRemoteDevice(device);
         boolean ok;
         try {
-            ok = provider.upsertRemote(remote);
+            if (provider instanceof DahuaProvider dahuaProvider) {
+                DeviceProviderCredential credential = resolveDeviceCredential(device);
+                if (credential == null) {
+                    return false;
+                }
+                boolean exists = remoteExists(device);
+                ok = dahuaProvider.upsertRemote(deviceConnectInfo(device, credential), remote, exists);
+                if (ok && !exists) {
+                    // 绑定成功后补记远端标识，后续推送走改名、删除走解绑
+                    persistExternalId(device, remote.externalId());
+                }
+            } else {
+                ok = provider.upsertRemote(remote);
+            }
         } catch (Exception e) {
             log.warn("[Device][Push] 厂商 {} 写回设备失败: {}, message={}",
                     provider.getVendor(), device.getDeviceInfoId(), e.getMessage());
@@ -548,7 +585,14 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
 
     @Override
     public boolean removeRemote(DeviceInfo device) {
-        if (device == null || !StringUtils.hasText(device.getDeviceInfoExternalId())) {
+        if (device == null) {
+            return false;
+        }
+        // 与推送方向同口径：externalId 缺失时用序列号兜底
+        String externalId = StringUtils.hasText(device.getDeviceInfoExternalId())
+                ? device.getDeviceInfoExternalId()
+                : device.getDeviceInfoSerial();
+        if (!StringUtils.hasText(externalId)) {
             return false;
         }
         DeviceProvider provider = findProvider(device.getDeviceInfoVendor());
@@ -558,14 +602,22 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         }
         boolean ok;
         try {
-            ok = provider.removeRemote(device.getDeviceInfoExternalId());
+            if (provider instanceof DahuaProvider dahuaProvider) {
+                DeviceProviderCredential credential = resolveDeviceCredential(device);
+                if (credential == null) {
+                    return false;
+                }
+                ok = dahuaProvider.removeRemote(deviceConnectInfo(device, credential), externalId);
+            } else {
+                ok = provider.removeRemote(externalId);
+            }
         } catch (Exception e) {
             log.warn("[Device][Push] 厂商 {} 删除设备失败: id={}, message={}",
                     provider.getVendor(), device.getDeviceInfoId(), e.getMessage());
             return false;
         }
         log.info("[Device][Push] 厂商 {} 删除远端设备: id={}, externalId={}, result={}",
-                provider.getVendor(), device.getDeviceInfoId(), device.getDeviceInfoExternalId(), ok);
+                provider.getVendor(), device.getDeviceInfoId(), externalId, ok);
         return ok;
     }
 
@@ -583,6 +635,118 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                 .filter(p -> vendor.equalsIgnoreCase(p.getVendor()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 解析设备写回所用的凭据：优先显式绑定，其次厂商默认套。
+     *
+     * <p>凭据必须启用、厂商一致且配置了平台类型，否则云平台写接口无法建连。</p>
+     *
+     * @param device 本地设备
+     * @return 可用凭据；不可用时返回 {@code null}
+     */
+    private DeviceProviderCredential resolveDeviceCredential(DeviceInfo device) {
+        DeviceProviderCredential credential;
+        if (StringUtils.hasText(device.getDeviceInfoCredentialId())) {
+            credential = credentialService.resolveById(device.getDeviceInfoCredentialId());
+            if (credential == null) {
+                log.warn("[Device][Push] 设备绑定的凭据不存在: deviceId={}, credentialId={}",
+                        device.getDeviceInfoId(), device.getDeviceInfoCredentialId());
+                return null;
+            }
+        } else {
+            credential = credentialService.resolveFor(device.getDeviceInfoVendor(), null);
+            if (credential == null) {
+                log.warn("[Device][Push] 厂商无可用凭据: deviceId={}, vendor={}",
+                        device.getDeviceInfoId(), device.getDeviceInfoVendor());
+                return null;
+            }
+        }
+        if (Boolean.FALSE.equals(credential.getDeviceCredentialEnabled())) {
+            log.warn("[Device][Push] 设备绑定凭据已停用: deviceId={}, credentialId={}",
+                    device.getDeviceInfoId(), credential.getDeviceCredentialId());
+            return null;
+        }
+        if (!StringUtils.hasText(device.getDeviceInfoVendor())
+                || !device.getDeviceInfoVendor().equalsIgnoreCase(credential.getDeviceCredentialVendor())) {
+            log.warn("[Device][Push] 设备厂商与凭据厂商不一致: deviceId={}, vendor={}, credentialVendor={}",
+                    device.getDeviceInfoId(), device.getDeviceInfoVendor(),
+                    credential.getDeviceCredentialVendor());
+            return null;
+        }
+        if (!StringUtils.hasText(credential.getDeviceCredentialPlatformType())) {
+            log.warn("[Device][Push] 凭据未配置平台类型，无法写回: deviceId={}, credentialId={}",
+                    device.getDeviceInfoId(), credential.getDeviceCredentialId());
+            return null;
+        }
+        return credential;
+    }
+
+    /**
+     * 设备台账 + 凭据 → 写回用连接信息。
+     *
+     * <p>设备密码同时写入 {@code code}/{@code devCode}/{@code devicePassword}：乐橙绑定用
+     * {@code code}，云睿新增用 {@code devCode}，Provider 亦兼容 {@code devicePassword}。</p>
+     *
+     * @param device     本地设备
+     * @param credential 凭据
+     * @return 连接信息
+     */
+    private DeviceConnectInfo deviceConnectInfo(DeviceInfo device, DeviceProviderCredential credential) {
+        DeviceConnectInfo base = credentialConnectInfo(credential);
+        Map<String, Object> extra = new LinkedHashMap<>(
+                base.extra() == null ? Map.of() : base.extra());
+        String password = device.getDeviceInfoPassword();
+        if (StringUtils.hasText(password)) {
+            extra.put("code", password);
+            extra.put("devCode", password);
+            extra.put("devicePassword", password);
+        }
+        String serial = StringUtils.hasText(device.getDeviceInfoSerial())
+                ? device.getDeviceInfoSerial()
+                : device.getDeviceInfoExternalId();
+        return new DeviceConnectInfo(
+                base.vendor(), base.authType(), base.ip(), base.port(), base.username(), base.password(),
+                base.platformType(), base.appKey(), base.appSecret(), serial, extra);
+    }
+
+    /**
+     * 平台侧是否已存在该设备。
+     *
+     * <p>厂商同步来的台账标记为 {@code vendor}，无需 externalId 也可判定为已存在；
+     * 手工录入设备只有回写 externalId 后才视为已绑定。</p>
+     *
+     * @param device 本地设备
+     * @return true 表示已有远端设备
+     */
+    private boolean remoteExists(DeviceInfo device) {
+        return StringUtils.hasText(device.getDeviceInfoExternalId())
+                || "vendor".equalsIgnoreCase(device.getDeviceInfoSource());
+    }
+
+    /**
+     * 写回成功后持久化远端标识。
+     *
+     * <p>只更新 externalId 与更新时间，避免把内存中的密码等字段整行覆盖。</p>
+     *
+     * @param device     本地设备
+     * @param externalId 远端设备标识
+     */
+    private void persistExternalId(DeviceInfo device, String externalId) {
+        if (!StringUtils.hasText(externalId)) {
+            return;
+        }
+        try {
+            DeviceInfo patch = new DeviceInfo();
+            patch.setDeviceInfoId(device.getDeviceInfoId());
+            patch.setDeviceInfoExternalId(externalId);
+            patch.setDeviceInfoUpdatedAt(LocalDateTime.now());
+            deviceInfoMapper.updateById(patch);
+            device.setDeviceInfoExternalId(externalId);
+        } catch (RuntimeException e) {
+            log.warn("[Device][Push] 设备已写回但回写 externalId 失败: id={}, message={}",
+                    device.getDeviceInfoId(), e.getMessage());
+        }
     }
 
     /**

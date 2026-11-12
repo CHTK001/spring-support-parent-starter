@@ -20,7 +20,7 @@
 | `descriptor()` | 厂商描述（名称、网关、能力矩阵），默认由 `getVendor()` 推导 |
 | `fetchDevices()` / `fetchDevices(session)` | 设备同步（平台级） |
 | `fetchOrganizations()` / `fetchPersons(session)` | 组织、人员同步（平台有则实现） |
-| `upsertRemote` / `removeRemote` | 设备写操作（平台有则实现） |
+| `upsertRemote` / `removeRemote` | 设备写操作（平台有则实现；大华由 `DeviceSyncServiceImpl` 按设备凭据路由） |
 | `upsertOrganization` / `removeOrganization` | 组织写操作 |
 | `upsertPerson` / `removePerson` | 人员写操作 |
 | `remoteUnlock(doorSerial)` | 平台级远程开门 |
@@ -165,8 +165,8 @@ try {
 |---|---|
 | 宇视 | 设备写操作已接入但未真机校准；官方 openapi 目录无组织、人员、门禁、停车场接口；无回放地址接口（仅录像检索） |
 | 萤石 | 停车记录仅有查询接口（parking/msgRecord、parking/parkingRecord），无车场、车道与开闸接口 |
-| 大华云平台 | 14 项 `unverified`：视频/录像/云台/抓图/事件/设备写/组织/人员/门禁均按官方文档实现，缺设备与凭据真机验证。组织写需 `templateId`（当前用户或 `extra.orgTemplateId`）、新增用户需 `extra.defaultPersonPassword`、新增设备需 `extra.devCode` |
-| 大华乐橙 | `DEVICE_WRITE` 为 `unverified`：`bindDevice` / `unBindDevice` / `modifyDeviceName` 已在 `DahuaLeChangeSession` 与 `DahuaProvider` 接入，缺设备与凭据真机验证；新增设备的验证码取 `extra.code`（兼容 `extra.devicePassword`，无安全码时按官方要求传空串）；`ACCESS_WRITE` 仅远程开门，无门点增删改/授权下发；无组织、人员、停车场 |
+| 大华云平台 | 14 项 `unverified`：视频/录像/云台/抓图/事件/设备写/组织/人员/门禁均按官方文档实现，缺设备与凭据真机验证。组织写需 `templateId`（当前用户或 `extra.orgTemplateId`）、新增用户需 `extra.defaultPersonPassword`、新增设备需凭据 `extra.devCode` 或设备密码 |
+| 大华乐橙 | `DEVICE_WRITE` 为 `unverified`：`bindDevice` / `unBindDevice` / `modifyDeviceName` 已在 `DahuaLeChangeSession` 与 `DahuaProvider` 接入，并由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据构造 `DeviceConnectInfo` 调用（首次绑定成功回写 externalId），缺设备与凭据真机验证；新增设备的验证码取 `extra.code`（兼容 `extra.devicePassword`，无安全码时按官方要求传空串）；`ACCESS_WRITE` 仅远程开门，无门点增删改/授权下发；无组织、人员、停车场 |
 | 大华 ICC | 设备公开目录只有详情/分页/树/通道分页，无增删改；组织/人员写已接入，缺环境验证 |
 | 海康综合安防 | `ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
 | 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调；GB28181 `EVENT` 另为 `todo`（`gb.alarm.subscribe` 已登记，会话未实现） |
