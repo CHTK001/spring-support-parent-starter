@@ -163,13 +163,13 @@ try {
 
 | 平台 | 缺口 |
 |---|---|
-| 宇视 | 设备写操作已接入，并由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按凭据路由；未真机校准。官方 openapi 目录无组织、人员、门禁、停车场接口；无回放地址接口（仅录像检索） |
+| 宇视 | `DEVICE_WRITE` 为 `unverified`：`device/add`、`device/delete`、`device/name/update` 已接入，并由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据路由到 `UniviewProvider`；缺真机验证。官方 openapi 目录无组织、人员、门禁、停车场接口；无回放地址接口（仅录像检索） |
 | 萤石 | 停车记录仅有查询接口（parking/msgRecord、parking/parkingRecord），无车场、车道与开闸接口 |
-| 海康云曜 / 云眸 / 萤石 | 设备写已由 `DeviceSyncServiceImpl` 按设备凭据路由到 `HikvisionProvider`；萤石/云眸新增设备需验证码，当前将设备密码映射为 `extra.validateCode`，云眸另需 `groupNo`，凭据实体无该字段、未做透传；均缺真机验证 |
-| 大华云平台 | 14 项 `unverified`：视频/录像/云台/抓图/事件/设备写/组织/人员/门禁均按官方文档实现，缺设备与凭据真机验证。组织写需 `templateId`（当前用户或 `extra.orgTemplateId`）、新增用户需 `extra.defaultPersonPassword`、新增设备需凭据 `extra.devCode` 或设备密码 |
-| 大华乐橙 | `DEVICE_WRITE` 为 `unverified`：`bindDevice` / `unBindDevice` / `modifyDeviceName` 已在 `DahuaLeChangeSession` 与 `DahuaProvider` 接入，并由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据构造 `DeviceConnectInfo` 调用（首次绑定成功回写 externalId），缺设备与凭据真机验证；新增设备的验证码取 `extra.code`（兼容 `extra.devicePassword`，无安全码时按官方要求传空串）；`ACCESS_WRITE` 仅远程开门，无门点增删改/授权下发；无组织、人员、停车场 |
+| 海康云曜 / 云眸 / 萤石 | `DEVICE_WRITE` 均为 `unverified`：已由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据路由到 `HikvisionProvider`；萤石/云眸新增设备需验证码，当前将设备密码映射为 `extra.validateCode`，云眸另需 `groupNo`，凭据实体无该字段、未做透传；均缺真机验证 |
+| 大华云平台 | 14 项 `unverified`：视频/录像/云台/抓图/事件/组织/人员/门禁按官方文档实现；`DEVICE_WRITE` 已接入并由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据路由到 `DahuaProvider`（新增设备需凭据 `extra.devCode` 或设备密码）；均缺设备与凭据真机验证。组织写需 `templateId`（当前用户或 `extra.orgTemplateId`）、新增用户需 `extra.defaultPersonPassword` |
+| 大华乐橙 | `DEVICE_WRITE` 为 `unverified`：`bindDevice` / `unBindDevice` / `modifyDeviceName` 已在 `DahuaLeChangeSession` 实现，并由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据路由到 `DahuaProvider`（首次绑定成功回写 externalId）；缺设备与凭据真机验证。新增设备的验证码取 `extra.code`（兼容 `extra.devicePassword`，无安全码时按官方要求传空串）；`ACCESS_WRITE` 仅远程开门，无门点增删改/授权下发；无组织、人员、停车场 |
 | 大华 ICC | 设备公开目录只有详情/分页/树/通道分页，无增删改；组织/人员写已接入，缺环境验证 |
-| 海康综合安防 | `ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
+| 海康综合安防 | `DEVICE_WRITE` 为 `unverified`：`device.add`、`device.update`、`device.delete` 已由 `DeviceSyncServiceImpl.pushDevice/removeRemote` 按设备凭据路由到 `HikvisionProvider`，缺网关地址真机验证。`ACCESS_WRITE` 部分接入：单人员单门权限同步下发走 iSC ACPS `/api/acps/v1/authDownload/task/simpleDownload`；门禁点增删改与批量下载任务无公开字段文档，未实现 |
 | 海康 ISUP / GB28181 | 各 4 项 `unverified`：会话已实现（ISUP `/isup/*` 网关、国标 WVP `/api/v1/*`），缺服务端环境联调；GB28181 `EVENT` 另为 `todo`（`gb.alarm.subscribe` 已登记，会话未实现） |
 | ONVIF | 5 项 `unverified`、4 项 `todo`、7 项 `no`：门禁/事件/录像协议有 Profile/动作但会话未实现；其余为无组织/人员/停车场/环境指标或设备写模型 |
 | 精讯云 | `DEVICE` 已实现设备目录与在线状态，`METRIC` 已实现节点实时值读取与定时采集；账号名下 0 台设备，设备目录字段映射未用真实气象设备验证。官方只有设备改名，没有新增/删除；视频、门禁、组织、人员能力不支持 |
