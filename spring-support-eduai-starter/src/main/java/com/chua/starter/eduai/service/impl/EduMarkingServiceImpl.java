@@ -631,6 +631,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 试卷校验：自有卷必须存在、已发布、卷下有题；任意卷不校验
         if (!anyMode) {
             requirePublishedPaper(paperId, null);
+        } else if (!eduAiService.isAvailable()) {
+            // 外来卷没有题库标准答案，判分必须依赖模型。没有可用模型时提前拒绝：
+            // 否则整卷逐题回退 0 分并标「AI 判分暂不可用」，老师会把「无法判分」误读成「全错」。
+            throw new BusinessException("外来卷需要模型判分，当前没有可用模型，请先在 AI 配置中心配置模型后再提交");
         }
 
         String taskId = UUID.randomUUID().toString().replace("-", "");

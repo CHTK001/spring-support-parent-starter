@@ -2124,7 +2124,7 @@ public class PaperScanner {
      * 校验模型输出不是「失败提示串」。
      *
      * <p>{@link com.chua.starter.ai.support.paper.pipeline.PaperAiService#answerQuestion} 在模型不可用或调用失败时
-     * 返回 {@code "AI 模块未启用…"} / {@code "AI 响应失败: …"} 这类<b>字符串</b>而不是抛异常。
+     * 返回 {@code "AI 服务不可用…"} / {@code "AI 响应失败: …"} 这类<b>字符串</b>而不是抛异常。
      * 调用方若直接拿去解析 JSON，只会得到「解析失败」，把真正原因（如 429 限流）埋掉 ——
      * 实测 ANY 抽取整卷失败，任务错误只写「未能从图片中解析出题目」，真因是限流。
      * 这里显式识别并抛出，让错误信息直接可读。</p>
@@ -2137,7 +2137,7 @@ public class PaperScanner {
             throw new IllegalStateException("模型无输出");
         }
         String text = raw.trim();
-        if (text.startsWith("AI 响应失败") || text.startsWith("AI 模块未启用")) {
+        if (text.startsWith("AI 响应失败") || text.startsWith("AI 服务不可用")) {
             throw new IllegalStateException("模型调用失败：" + StringUtils.substring(text, 0, 120));
         }
     }

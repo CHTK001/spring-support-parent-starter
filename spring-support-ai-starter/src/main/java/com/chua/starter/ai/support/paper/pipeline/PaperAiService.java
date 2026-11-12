@@ -459,7 +459,7 @@ public class PaperAiService {
      */
     public String answerQuestion(String systemPrompt, String userPrompt) {
         if (!isAvailable()) {
-            return "AI 模块未启用，无法回答";
+            return "AI 服务不可用（未配置可用模型），无法回答";
         }
         try {
             String response = callWithRateLimitRetry(systemPrompt, userPrompt);
