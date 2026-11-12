@@ -2,6 +2,8 @@ package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.provider.dahua.DahuaProvider;
+import com.chua.starter.device.provider.hikvision.HikvisionProvider;
+import com.chua.starter.device.provider.uniview.UniviewProvider;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
@@ -559,15 +561,25 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         VendorDevice remote = toRemoteDevice(device);
         boolean ok;
         try {
-            if (provider instanceof DahuaProvider dahuaProvider) {
+            if (provider instanceof DahuaProvider || provider instanceof HikvisionProvider
+                    || provider instanceof UniviewProvider) {
                 DeviceProviderCredential credential = resolveDeviceCredential(device);
                 if (credential == null) {
                     return false;
                 }
+                DeviceConnectInfo connectInfo = deviceConnectInfo(device, credential);
                 boolean exists = remoteExists(device);
-                ok = dahuaProvider.upsertRemote(deviceConnectInfo(device, credential), remote, exists);
+                if (provider instanceof DahuaProvider dahuaProvider) {
+                    ok = dahuaProvider.upsertRemote(connectInfo, remote, exists);
+                } else if (provider instanceof HikvisionProvider hikvisionProvider) {
+                    ok = hikvisionProvider.upsertRemote(connectInfo, remote, exists);
+                } else if (provider instanceof UniviewProvider univiewProvider) {
+                    ok = univiewProvider.upsertRemote(connectInfo, remote, exists);
+                } else {
+                    return false;
+                }
                 if (ok && !exists) {
-                    // 绑定成功后补记远端标识，后续推送走改名、删除走解绑
+                    // 首次写入成功后补记远端标识，后续推送走改名、删除走删除接口
                     persistExternalId(device, remote.externalId());
                 }
             } else {
@@ -602,12 +614,22 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         }
         boolean ok;
         try {
-            if (provider instanceof DahuaProvider dahuaProvider) {
+            if (provider instanceof DahuaProvider || provider instanceof HikvisionProvider
+                    || provider instanceof UniviewProvider) {
                 DeviceProviderCredential credential = resolveDeviceCredential(device);
                 if (credential == null) {
                     return false;
                 }
-                ok = dahuaProvider.removeRemote(deviceConnectInfo(device, credential), externalId);
+                DeviceConnectInfo connectInfo = deviceConnectInfo(device, credential);
+                if (provider instanceof DahuaProvider dahuaProvider) {
+                    ok = dahuaProvider.removeRemote(connectInfo, externalId);
+                } else if (provider instanceof HikvisionProvider hikvisionProvider) {
+                    ok = hikvisionProvider.removeRemote(connectInfo, externalId);
+                } else if (provider instanceof UniviewProvider univiewProvider) {
+                    ok = univiewProvider.removeRemote(connectInfo, externalId);
+                } else {
+                    return false;
+                }
             } else {
                 ok = provider.removeRemote(externalId);
             }
@@ -685,8 +707,9 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
     /**
      * 设备台账 + 凭据 → 写回用连接信息。
      *
-     * <p>设备密码同时写入 {@code code}/{@code devCode}/{@code devicePassword}：乐橙绑定用
-     * {@code code}，云睿新增用 {@code devCode}，Provider 亦兼容 {@code devicePassword}。</p>
+     * <p>设备密码同时写入 {@code code}/{@code devCode}/{@code devicePassword}/{@code validateCode}：
+     * 乐橙绑定用 {@code code}，云睿新增用 {@code devCode}，海康萤石/云眸新增用
+     * {@code validateCode}，Provider 亦兼容 {@code devicePassword}。</p>
      *
      * @param device     本地设备
      * @param credential 凭据
@@ -701,6 +724,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             extra.put("code", password);
             extra.put("devCode", password);
             extra.put("devicePassword", password);
+            extra.put("validateCode", password);
         }
         String serial = StringUtils.hasText(device.getDeviceInfoSerial())
                 ? device.getDeviceInfoSerial()

@@ -64,9 +64,9 @@ public interface DeviceSyncService {
     /**
      * 把单台本地设备写回到厂商侧（推送方向）。
      *
-     * <p>大华按设备绑定的凭据（缺省回退厂商默认套）构造连接信息，再走厂商带凭据的
-     * 新增/改名接口；首次绑定成功会回写 {@code deviceInfoExternalId}。厂商不支持写回、
-     * 凭据缺失/停用或平台类型为空时返回 {@code false} 并保持本地不动。</p>
+     * <p>大华、海康、宇视按设备绑定的凭据（缺省回退厂商默认套）构造连接信息，再走
+     * 厂商带凭据的新增/改名接口；首次绑定成功会回写 {@code deviceInfoExternalId}。
+     * 厂商不支持写回、凭据缺失/停用或平台类型为空时返回 {@code false} 并保持本地不动。</p>
      *
      * @param device 本地台账设备
      * @return 是否写回成功；厂商不支持或凭据不可用时为 {@code false}
@@ -76,9 +76,9 @@ public interface DeviceSyncService {
     /**
      * 从厂商侧删除设备（推送方向）。
      *
-     * <p>按 {@code deviceInfoExternalId}（缺失时用序列号）调厂商删除接口；大华按设备
-     * 绑定凭据路由到云睿删除或乐橙解绑。厂商不支持时返回 {@code false}，由调用方决定
-     * 是否仍保留本地台账。</p>
+     * <p>按 {@code deviceInfoExternalId}（缺失时用序列号）调厂商删除接口；大华、海康、
+     * 宇视按设备绑定凭据路由到各自带凭据的删除接口。厂商不支持时返回 {@code false}，
+     * 由调用方决定是否仍保留本地台账。</p>
      *
      * @param device 本地台账设备
      * @return 是否删除成功；厂商不支持时为 {@code false}
