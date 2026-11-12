@@ -8,6 +8,7 @@ import com.chua.starter.tenant.server.support.TenantDatasourceLookup;
 import com.chua.starter.tenant.server.support.TenantDatasourceOption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.Locale;
  */
 @Slf4j
 @Component
+@ConditionalOnClass(name = "com.chua.starter.tenant.server.support.TenantDatasourceLookup")
 @RequiredArgsConstructor
 public class DatasourceTenantLookupAdapter implements TenantDatasourceLookup {
 
