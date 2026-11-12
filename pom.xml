@@ -173,6 +173,7 @@
     <properties>
         <!-- Java版本配置 - 使用Java 25 LTS版本 -->
         <java.version>25</java.version>
+        <jacoco.skip>true</jacoco.skip>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -1364,7 +1365,7 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.15</version>
                 <configuration>
-                    <skip>true</skip>
+                    <skip>${jacoco.skip}</skip>
                     <!-- 排除超大生成解析器类：JaCoCo 0.8.13 的 ASM 无法插桩 jsqlparser 的
                          CCJSqlParserTokenManager.jjMoveNfa_0（MethodTooLargeException），
                          该类由 osgi-starter 传递引入，加载时触发探针失败 -->
