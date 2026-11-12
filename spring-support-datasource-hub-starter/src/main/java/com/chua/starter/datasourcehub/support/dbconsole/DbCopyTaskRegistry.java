@@ -236,6 +236,14 @@ public class DbCopyTaskRegistry {
             task.percentage = Math.max(0, Math.min(100, percentage));
             if (description != null && !description.isBlank()) {
                 task.currentDescription = description;
+                // 步骤副标题同步跟到最新进度：数据段每 500 行推一次「已复制 N / M 行」，
+                // 这里不跟着写的话，任务被取消/失败收尾时步骤还挂着启动文案
+                // 「统计源表行数」，和顶层「已取消复制」自相矛盾
+                for (Step step : task.steps) {
+                    if ("RUNNING".equals(step.status)) {
+                        step.detail = description;
+                    }
+                }
             }
         }
         publish(taskId);

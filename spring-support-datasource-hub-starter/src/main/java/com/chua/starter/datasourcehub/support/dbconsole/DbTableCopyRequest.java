@@ -15,7 +15,7 @@ package com.chua.starter.datasourcehub.support.dbconsole;
  * @param targetDatabase     目标库名，可为空（沿用连接默认库）
  * @param targetTable        目标表名
  * @param copyData           是否连同数据一起复制，缺省 true
- * @param overwrite          目标同名表是否覆盖（先 DROP 再建），缺省 false
+ * @param overwrite          目标同名表是否覆盖（写临时表后原子换名），缺省 false
  * @author CH
  * @since 4.0.0.51
  */
@@ -42,7 +42,7 @@ public record DbTableCopyRequest(
     /**
      * 是否覆盖同名目标表（缺省 false）。
      *
-     * @return true=先删除同名表再建
+     * @return true=覆盖同名表
      */
     public boolean overwriteOrDefault() {
         return Boolean.TRUE.equals(overwrite);

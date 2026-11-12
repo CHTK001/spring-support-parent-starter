@@ -14,6 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,14 @@ import org.springframework.stereotype.Service;
  * <p><b>为什么数据区段放进一个事务</b>：表已经建好后中途失败/取消，半张表的数据
  * 比一张空表更难收拾。整段写入放在目标连接的一个事务里，失败统一回滚，
  * 用户看到的是「表建好了但没有数据」，语义干净。</p>
+ *
+ * <p><b>覆盖同名表为什么不用 DROP + CREATE</b>：那条路上建表或搬数据任何一步失败，
+ * 原表已经没了，数据不可恢复。这里改成「新数据先写进临时表 → 全部提交后一条
+ * {@code RENAME TABLE} 原子换名 → 删旧表备份」：换名之前原表一直是在线的，
+ * 失败/取消只丢掉临时表。</p>
+ *
+ * <p><b>为什么目标表要占位</b>：两个任务同时改同一张表会各自换名，谁也不知道最后
+ * 剩下的是哪份数据。提交任务时按「数据源+库+表」占位，重复提交直接拒绝。</p>
  *
  * <p>DDL 改写只做三件事：把表名换成目标名、剔除 {@code FOREIGN KEY} 约束
  * （跨库时被引用的表不一定存在）、去掉 {@code AUTO_INCREMENT=数字}
@@ -74,6 +84,18 @@ public class DbTableCopyService {
     /** DDL 里 {@code AUTO_INCREMENT=123} 这个表选项 */
     private static final String AUTO_INCREMENT_OPTION = "(?i)AUTO_INCREMENT\\s*=\\s*\\d+";
 
+    /** 临时表/旧表备份名里插入的标记：一眼能看出是复制留下的中间表 */
+    private static final String SCRATCH_MARK = "_dbmcp_";
+
+    /** 标识符长度上限（与 MySQL 的表名上限一致） */
+    private static final int MAX_IDENT_LENGTH = 64;
+
+    /** 取消轮询间隔：统计行数这类单条长语句靠它才停得下来 */
+    private static final long CANCEL_POLL_MS = 200L;
+
+    /** 正在改写的目标表：{@code 数据源id|库|小写表名}，任务结束（含失败/取消）释放 */
+    private final Set<String> activeTargets = ConcurrentHashMap.newKeySet();
+
     private final DatasourceService datasourceService;
 
     private final DbCopyTaskRegistry taskRegistry;
@@ -102,12 +124,21 @@ public class DbTableCopyService {
         if (targetDatabase != null) {
             ident(targetDatabase, "目标数据库名");
         }
-        // 同源同库同名 = 自己复制到自己：开了覆盖会把源表直接 DROP 掉，
-        // 必须在建任务之前拦下来，不能等后台线程执行到 DROP 才报错
+        // 同源同库同名 = 自己复制到自己：覆盖时临时表写完会换掉目标表，
+        // 而目标表就是源表 —— 换名之后源表只剩备份，语义上等于自毁，
+        // 必须在建任务之前拦下来
         if (java.util.Objects.equals(request.sourceDatasourceId(), request.targetDatasourceId())
                 && equalsName(sourceDatabase, targetDatabase)
                 && sourceTable.equalsIgnoreCase(targetTable)) {
             throw new IllegalArgumentException("目标表与源表相同，请换一个目标表名");
+        }
+        String subtitle = label(sourceDatabase, sourceTable) + " → " + label(targetDatabase, targetTable);
+        // 占位在提交之前完成：双击粘贴会在两个 HTTP 请求里各走一遍校验，
+        // 只有「先占位再建任务」才能把第二次请求挡下来
+        String lockKey = lockKey(request.targetDatasourceId(), targetDatabase, targetTable);
+        if (!activeTargets.add(lockKey)) {
+            throw new IllegalStateException("目标表 " + label(targetDatabase, targetTable)
+                    + " 已有复制任务在执行，等它结束或取消后再试");
         }
         Map<String, String> steps = new LinkedHashMap<>();
         steps.put(STEP_STRUCTURE, "读取源表结构");
@@ -115,10 +146,15 @@ public class DbTableCopyService {
         if (request.copyDataOrDefault()) {
             steps.put(STEP_DATA, "复制表数据");
         }
-        String subtitle = label(sourceDatabase, sourceTable) + " → " + label(targetDatabase, targetTable);
-        String taskId = taskRegistry.create("复制表", subtitle, steps);
-        taskRegistry.submit(() -> run(taskId, request, sourceDatabase, sourceTable, targetDatabase, targetTable));
-        return taskId;
+        try {
+            String taskId = taskRegistry.create("复制表", subtitle, steps);
+            taskRegistry.submit(() -> run(taskId, request, sourceDatabase, sourceTable,
+                    targetDatabase, targetTable, lockKey));
+            return taskId;
+        } catch (RuntimeException e) {
+            activeTargets.remove(lockKey);
+            throw e;
+        }
     }
 
     /**
@@ -130,9 +166,10 @@ public class DbTableCopyService {
      * @param sourceTable    源表
      * @param targetDatabase 目标库（已去空白）
      * @param targetTable    目标表
+     * @param lockKey        目标表占位键（任务结束时释放）
      */
     private void run(String taskId, DbTableCopyRequest request, String sourceDatabase, String sourceTable,
-                     String targetDatabase, String targetTable) {
+                     String targetDatabase, String targetTable, String lockKey) {
         String targetLabel = label(targetDatabase, targetTable);
         try (Connection source = datasourceService.newConnection(request.sourceDatasourceId());
              Connection target = datasourceService.newConnection(request.targetDatasourceId())) {
@@ -144,9 +181,8 @@ public class DbTableCopyService {
             // ---- 1. 读取源表结构 ----
             taskRegistry.startStep(taskId, STEP_STRUCTURE, "读取 " + sourceTable + " 的建表语句");
             DbTableSpec spec = DbTableSpec.showCreateTable(source, sourceDatabase, sourceTable);
-            String ddl = targetDdl(spec.ddl(), targetTable);
-            taskRegistry.finishStep(taskId, STEP_STRUCTURE, "SUCCESS",
-                    "建表语句 " + ddl.length() + " 字节");
+            int ddlBytes = spec.ddl() == null ? 0 : spec.ddl().length();
+            taskRegistry.finishStep(taskId, STEP_STRUCTURE, "SUCCESS", "建表语句 " + ddlBytes + " 字节");
             taskRegistry.progress(taskId, STRUCTURE_DONE, "源表结构已读取");
             taskRegistry.detail(taskId, "源表 " + sourceTable + " 共 "
                     + (spec.columns() == null ? 0 : spec.columns().size()) + " 列");
@@ -160,19 +196,35 @@ public class DbTableCopyService {
             // 会被误判成「目标已存在」而直接失败。
             boolean exists = tableExistsInDatabase(target, targetDatabase, targetTable);
             if (exists && !request.overwriteOrDefault()) {
-                throw new IllegalStateException("目标表 " + targetLabel + " 已存在；如需覆盖请重新勾选「覆盖同名表」");
+                throw new IllegalStateException("目标表 " + targetLabel
+                        + " 已存在，如需覆盖请确认后再提交");
             }
-            if (exists) {
-                execute(target, "DROP TABLE " + qualified(targetDatabase, targetTable));
-                taskRegistry.detail(taskId, "已删除同名目标表 " + targetTable);
-            }
+            // 覆盖时先写临时表，搬完再换名：原表在换名之前一直可用，失败也不会丢数据
+            String workingTable = exists
+                    ? scratchTableName(target, targetDatabase, targetTable, taskId, "t") : targetTable;
+            String ddl = targetDdl(spec.ddl(), workingTable);
             execute(target, ddl);
-            taskRegistry.finishStep(taskId, STEP_CREATE, "SUCCESS", exists ? "已重建目标表" : "已创建目标表");
-            taskRegistry.progress(taskId, CREATE_DONE, "目标表 " + targetLabel + " 已就绪");
+            if (exists) {
+                taskRegistry.detail(taskId, "已创建临时表 " + workingTable + "，复制完成后替换 " + targetTable);
+            }
+            taskRegistry.finishStep(taskId, STEP_CREATE, "SUCCESS",
+                    exists ? "已创建临时表 " + workingTable : "已创建目标表");
+            taskRegistry.progress(taskId, CREATE_DONE,
+                    exists ? "临时表已就绪，开始搬运数据" : "目标表 " + targetLabel + " 已就绪");
 
             // ---- 3. 复制数据 ----
-            if (request.copyDataOrDefault()) {
-                copyData(taskId, source, target, sourceDatabase, sourceTable, targetDatabase, targetTable);
+            try {
+                if (request.copyDataOrDefault()) {
+                    copyData(taskId, source, target, sourceDatabase, sourceTable, targetDatabase, workingTable);
+                }
+                if (exists) {
+                    swapTables(target, targetDatabase, workingTable, targetTable, taskId);
+                }
+            } catch (Exception e) {
+                // 这次复制建出来的表（覆盖时是临时表，新建时就是目标表）都由我们清掉：
+                // 数据已回滚，留着只会让用户在左栏看到一张空表，还以为是复制成功了一半
+                dropQuietly(target, targetDatabase, exists ? workingTable : targetTable, taskId);
+                throw e;
             }
             taskRegistry.finish(taskId, "SUCCESS", "已复制到 " + targetLabel);
         } catch (CopyCancelledException e) {
@@ -181,6 +233,8 @@ public class DbTableCopyService {
         } catch (Exception e) {
             log.warn("[db-copy] 任务 {} 失败: {}", taskId, e.getMessage(), e);
             taskRegistry.finish(taskId, "FAILED", describe(e));
+        } finally {
+            activeTargets.remove(lockKey);
         }
     }
 
@@ -193,14 +247,24 @@ public class DbTableCopyService {
      * @param sourceDatabase 源库
      * @param sourceTable    源表
      * @param targetDatabase 目标库
-     * @param targetTable    目标表
+     * @param targetTable    写入的表（覆盖同名表时是临时表，写完后才换名成目标表）
      * @throws Exception 读写失败或用户取消
      */
     private void copyData(String taskId, Connection source, Connection target,
                           String sourceDatabase, String sourceTable,
                           String targetDatabase, String targetTable) throws Exception {
         taskRegistry.startStep(taskId, STEP_DATA, "统计源表行数");
-        long total = countRows(source, sourceDatabase, sourceTable);
+        long total;
+        try {
+            total = countRows(taskId, source, sourceDatabase, sourceTable);
+        } catch (SQLException e) {
+            // 统计被 cancel 打断时驱动抛的是「查询被中断」，语义上就是用户取消
+            if (taskRegistry.cancelled(taskId)) {
+                throw new CopyCancelledException();
+            }
+            throw e;
+        }
+        checkCancelled(taskId);
         if (total <= 0) {
             taskRegistry.finishStep(taskId, STEP_DATA, "SKIPPED", "源表没有数据，只复制了结构");
             return;
@@ -245,6 +309,8 @@ public class DbTableCopyService {
                     write.executeBatch();
                     done += pending;
                 }
+                // 最后一批写完也要再看一次：否则在 99% 时点取消，任务仍然报「复制成功」
+                checkCancelled(taskId);
                 target.commit();
             }
         } catch (Exception e) {
@@ -401,16 +467,81 @@ public class DbTableCopyService {
     /**
      * 统计源表行数（进度分母）。
      *
+     * <p>单条 {@code COUNT(*)} 在大表上可能跑几十秒到几分钟，这段时间里用户的取消
+     * 必须生效：批次边界检查管不到这条语句，只能由旁路线程在命中取消标志时调用
+     * {@link Statement#cancel()} 把它打断。</p>
+     *
+     * @param taskId   任务 id
      * @param conn     源连接
      * @param database 源库
      * @param table    源表
      * @return 行数
      * @throws SQLException 查询失败
      */
-    private static long countRows(Connection conn, String database, String table) throws SQLException {
-        try (Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + qualified(database, table))) {
-            return rs.next() ? rs.getLong(1) : 0L;
+    private long countRows(String taskId, Connection conn, String database, String table) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM " + qualified(database, table);
+        try (Statement st = conn.createStatement()) {
+            CancelWatcher watcher = new CancelWatcher(taskId, st);
+            watcher.start();
+            try (ResultSet rs = st.executeQuery(sql)) {
+                return rs.next() ? rs.getLong(1) : 0L;
+            } finally {
+                watcher.stopWatching();
+            }
+        }
+    }
+
+    /**
+     * 取消旁路：轮询取消标志，命中时 {@code cancel} 掉正在执行的那条语句。
+     *
+     * <p>JDBC 没有「中断执行中的语句」的标准方式，{@link Statement#cancel()} 是唯一
+     * 能从另一个线程安全调用的入口；本线程只在轮询间隔里睡眠，命中或停止后即退出。</p>
+     */
+    private final class CancelWatcher extends Thread {
+
+        private final String taskId;
+
+        private final Statement statement;
+
+        private volatile boolean stopped;
+
+        /**
+         * 建一个取消旁路线程。
+         *
+         * @param taskId    任务 id
+         * @param statement 正在执行的长语句
+         */
+        private CancelWatcher(String taskId, Statement statement) {
+            super("db-copy-cancel-watch");
+            setDaemon(true);
+            this.taskId = taskId;
+            this.statement = statement;
+        }
+
+        @Override
+        public void run() {
+            while (!stopped) {
+                if (taskRegistry.cancelled(taskId)) {
+                    try {
+                        statement.cancel();
+                    } catch (SQLException e) {
+                        // 语句已经结束或连接已关：取消本来就无从下手，交给主线程收尾
+                        log.debug("[db-copy] 取消统计语句失败: {}", e.getMessage());
+                    }
+                    return;
+                }
+                try {
+                    Thread.sleep(CANCEL_POLL_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
+
+        /** 主线程侧结束轮询（语句已正常结束或已抛错）。 */
+        private void stopWatching() {
+            stopped = true;
         }
     }
 
@@ -548,6 +679,120 @@ public class DbTableCopyService {
                 return rs.next();
             }
         }
+    }
+
+    /**
+     * 生成临时表/旧表备份的表名。
+     *
+     * <p>名字要满足两件事：长度不超 64（MySQL 表名上限），且能被 {@code SqlName}
+     * 的标识符规则接受。表名本身超长时截断基名，后缀始终完整 —— 后缀里的任务序号
+     * 是唯一性来源，截掉它两个并发任务就会撞名。</p>
+     *
+     * @param table  目标表名
+     * @param taskId 任务 id
+     * @param kind   {@code t}=临时表，{@code b}=旧表备份
+     * @return 形如 {@code orders_dbmcp_t7}
+     */
+    static String scratchTableName(String table, String taskId, String kind) {
+        String token = taskId == null ? "0" : taskId.substring(taskId.lastIndexOf('-') + 1);
+        String suffix = SCRATCH_MARK + kind + token;
+        int maxBase = Math.max(1, MAX_IDENT_LENGTH - suffix.length());
+        String base = table.length() > maxBase ? table.substring(0, maxBase) : table;
+        return base + suffix;
+    }
+
+    /**
+     * 生成临时表名并避开目标库里已存在的同名表。
+     *
+     * <p>撞名只可能出现在「上一轮异常退出留下的中间表」这种场景，最多试 9 次；
+     * 仍然撞名时照原样返回，让建表语句自己报「表已存在」，不会误删别人的表。</p>
+     *
+     * @param conn     目标连接
+     * @param database 目标库
+     * @param table    目标表名
+     * @param taskId   任务 id
+     * @param kind     {@code t}=临时表，{@code b}=旧表备份
+     * @return 可用的中间表名
+     * @throws SQLException 查询表是否存在失败
+     */
+    private static String scratchTableName(Connection conn, String database, String table,
+                                           String taskId, String kind) throws SQLException {
+        String candidate = scratchTableName(table, taskId, kind);
+        for (int i = 1; i <= 9 && tableExistsInDatabase(conn, database, candidate); i++) {
+            String suffix = "_" + i;
+            String base = candidate.length() + suffix.length() > MAX_IDENT_LENGTH
+                    ? candidate.substring(0, MAX_IDENT_LENGTH - suffix.length()) : candidate;
+            candidate = base + suffix;
+        }
+        return candidate;
+    }
+
+    /**
+     * 用临时表原子替换目标表，再把旧表备份删掉。
+     *
+     * <p>{@code RENAME TABLE} 在一条语句里同时完成「旧表→备份」「临时表→目标表」，
+     * 中途不会出现目标表不存在的窗口：执行期间读这张表的会话要么看到旧表、
+     * 要么看到新表。</p>
+     *
+     * @param target        目标连接
+     * @param database      目标库
+     * @param workingTable  已写完数据的临时表
+     * @param targetTable   目标表
+     * @param taskId        任务 id
+     * @throws SQLException 换名失败（此时目标表未被替换）
+     */
+    private void swapTables(Connection target, String database, String workingTable,
+                            String targetTable, String taskId) throws SQLException {
+        String backup = scratchTableName(target, database, targetTable, taskId, "b");
+        execute(target, "RENAME TABLE " + qualified(database, targetTable) + " TO " + qualified(database, backup)
+                + ", " + qualified(database, workingTable) + " TO " + qualified(database, targetTable));
+        taskRegistry.detail(taskId, "已用新表替换 " + targetTable + "，旧表备份为 " + backup);
+        try {
+            execute(target, "DROP TABLE " + qualified(database, backup));
+        } catch (SQLException e) {
+            // 换名已经生效，删备份失败只影响磁盘占用；报成失败会让用户以为数据没换
+            log.warn("[db-copy] 任务 {} 删除旧表备份 {} 失败: {}", taskId, backup, e.getMessage());
+            taskRegistry.detail(taskId, "旧表备份 " + backup + " 删除失败，请手动清理");
+        }
+    }
+
+    /**
+     * 尽力删掉一张中间表（失败/取消时的清理）。
+     *
+     * @param conn     目标连接
+     * @param database 目标库
+     * @param table    要删的表
+     * @param taskId   任务 id
+     */
+    private void dropQuietly(Connection conn, String database, String table, String taskId) {
+        try {
+            execute(conn, "DROP TABLE IF EXISTS " + qualified(database, table));
+        } catch (SQLException e) {
+            // 连接已经坏了的时候清理也会失败；留一张中间表总比把失败原因盖掉好
+            log.warn("[db-copy] 任务 {} 清理临时表 {} 失败: {}", taskId, table, e.getMessage());
+        }
+    }
+
+    /**
+     * 拼「数据源|库|表」占位键，标识符按忽略大小写归一。
+     *
+     * @param datasourceId 目标数据源 id
+     * @param database     目标库，可为空
+     * @param table        目标表
+     * @return 占位键
+     */
+    static String lockKey(Long datasourceId, String database, String table) {
+        return datasourceId + "|" + lower(database) + "|" + lower(table);
+    }
+
+    /**
+     * 忽略大小写归一（MySQL 表名在 Windows 上大小写不敏感）。
+     *
+     * @param value 原值
+     * @return 小写值，null 视为空串
+     */
+    private static String lower(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
     /**
