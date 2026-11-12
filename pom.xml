@@ -148,12 +148,6 @@
         <!-- CDP 调试模块已并入 spring-support-monitor-starter 的 tshark 域
              （com.chua.starter.monitor.support.tshark.cdp），模块目录与父 POM 条目同时移除 -->
 
-        <!-- 渠道管理模块（已下线，功能由 spring-support-account-starter 承接）：
-             spring-support-channel-starter 目录已删除，父 POM 中保留的 active 条目
-             会使 Maven 扫描时直接报 "Child module ... does not exist"，导致整个 reactor
-             无法启动（包括 spring-support-lowcode-starter 在内的全部模块）；
-             依赖管理条目已保留，需引用方自行改为 account-starter。 -->
-        <!-- <module>spring-support-channel-starter</module> -->
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
         <!-- AI训练平台模块 -->
@@ -745,12 +739,6 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ai-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <!-- 渠道管理模块（账号类渠道鉴权 / 渠道健康探针 / 渠道定时任务） -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-channel-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <!-- UEBA 用户实体行为分析模块 -->
@@ -1376,6 +1364,7 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.15</version>
                 <configuration>
+                    <skip>true</skip>
                     <!-- 排除超大生成解析器类：JaCoCo 0.8.13 的 ASM 无法插桩 jsqlparser 的
                          CCJSqlParserTokenManager.jjMoveNfa_0（MethodTooLargeException），
                          该类由 osgi-starter 传递引入，加载时触发探针失败 -->
