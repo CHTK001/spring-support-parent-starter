@@ -42,6 +42,11 @@ public class TempMailClient {
     private static final String CONTENT_TYPE_JSON = "application/json";
 
     /**
+     * 限流重试次数（mail.tm 对建号 / 换 token 有速率限制）
+     */
+    private static final int RATE_LIMIT_RETRY = 3;
+
+    /**
      * JSON 编解码
      */
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -207,11 +212,23 @@ public class TempMailClient {
                 builder.method(method, HttpRequest.BodyPublishers.ofString(
                         objectMapper.writeValueAsString(body), StandardCharsets.UTF_8));
             }
-            HttpResponse<String> response = httpClient.send(
-                    builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpRequest request = builder.build();
+            HttpResponse<String> response = null;
+            for (int attempt = 1; attempt <= RATE_LIMIT_RETRY; attempt++) {
+                response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                if (response.statusCode() != 429 || attempt == RATE_LIMIT_RETRY) {
+                    break;
+                }
+                // mail.tm 对建号 / 换 token / 删号有速率限制，连续操作会 429；
+                // 短退避重试能救回「刚领取就销毁」这类连打场景。
+                Thread.sleep(1200L * attempt);
+            }
             int status = response.statusCode();
             if (status == 404) {
                 throw new ApiException(ApiErrorCode.NOT_FOUND, "mail.tm 资源不存在");
+            }
+            if (status == 429) {
+                throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "临时邮箱服务繁忙（mail.tm 限流），请稍后重试");
             }
             if (status >= 400) {
                 throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
