@@ -17,6 +17,8 @@
         <guacamole.version>1.6.0</guacamole.version>
         <!-- RDP 直连原生桥的 JNA 绑定版本，与本地仓库已缓存版本一致 -->
         <jna.version>5.14.0</jna.version>
+        <!-- native 制品版本独立于 utils.version，跟随 utils-support-native-parent 主线 -->
+        <native.rdp.version>4.0.0.43</native.rdp.version>
         <!-- 串口终端依赖 -->
         <jserialcomm.version>2.11.0</jserialcomm.version>
     </properties>
@@ -135,7 +137,15 @@
             <version>${guacamole.version}</version>
         </dependency>
 
-        <!-- RDP 直连原生桥：JNA 绑定 rdpj.dll（FreeRDP 3.x 静态链接的 C 扩展） -->
+        <!-- RDP 直连原生桥：JNA 绑定 rdpj.dll（FreeRDP 3.x 静态链接的 C 扩展）。
+             原生库与桥接类由 utils-support-native-rdp 统一提供，本模块只消费，
+             不再自带 native/rdpj 资源与 com.chua.nativerdp.support.RdpjBridge 副本。
+             native 制品版本独立于 utils.version（native 父 POM 为 4.0.0.43）。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-native-rdp</artifactId>
+            <version>${native.rdp.version}</version>
+        </dependency>
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
