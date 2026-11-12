@@ -41,9 +41,14 @@ import java.util.UUID;
 public class ServiceApiController {
 
     /**
-     * 端口卡统计窗口（小时）。与页面上的「近 24 小时」文案必须一致。
+     * 端口卡统计窗口（小时）。{@code listInstances} 的默认值，页面可覆盖。
      */
-    private static final int STATS_WINDOW_HOURS = 24;
+    private static final int DEFAULT_STATS_WINDOW_HOURS = 24;
+
+    /**
+     * 端口卡折线的桶数：窗口再长也画 24 个点。
+     */
+    private static final int SPARK_BUCKETS = 24;
 
     private final SysAiServiceInstanceMapper instanceMapper;
     private final SysAiServiceAccessLogMapper accessLogMapper;
@@ -70,7 +75,8 @@ public class ServiceApiController {
      * @return 服务实例列表响应
      */
     @GetMapping("/v2/service/instances")
-    public Map<String, Object> listInstances(@RequestParam(defaultValue = "24") int hours) {
+    public Map<String, Object> listInstances(
+            @RequestParam(defaultValue = "" + DEFAULT_STATS_WINDOW_HOURS) int hours) {
         int windowHours = Math.min(Math.max(hours, 1), 720);
         List<SysAiServiceInstance> list = instanceMapper.selectList(null);
         Map<String, SysAiServiceAccessLogMapper.InstanceStatRow> stats = loadInstanceStats(windowHours);
@@ -141,6 +147,58 @@ public class ServiceApiController {
             return map;
         } catch (Exception e) {
             log.warn("[ServiceApi] 读取实例统计失败，列表仅返回状态: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 读取实例请求量分桶序列（固定 {@link #SPARK_BUCKETS} 个桶）。
+     *
+     * @param windowHours 统计窗口（小时）
+     * @return instanceId → 长度固定的桶数组；没有样本的实例不在 Map 里
+     */
+    private Map<String, long[]> loadInstanceSeries(int windowHours) {
+        try {
+            int bucketMinutes = Math.max(1, (int) Math.round(windowHours * 60.0 / SPARK_BUCKETS));
+            List<SysAiServiceAccessLogMapper.InstanceSeriesRow> rows = accessLogMapper.selectInstanceSeries(
+                    LocalDateTime.now().minusHours(windowHours), bucketMinutes);
+            Map<String, long[]> map = new HashMap<>(Math.max(rows.size(), 4));
+            for (SysAiServiceAccessLogMapper.InstanceSeriesRow row : rows) {
+                if (row.instanceId() == null || row.bucket() == null) {
+                    continue;
+                }
+                long[] buckets = map.computeIfAbsent(row.instanceId(), k -> new long[SPARK_BUCKETS]);
+                int index = row.bucket();
+                if (index >= 0 && index < SPARK_BUCKETS) {
+                    buckets[index] += row.calls() == null ? 0L : row.calls();
+                }
+            }
+            return map;
+        } catch (Exception e) {
+            log.warn("[ServiceApi] 读取实例请求序列失败，折线退化为空: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 读取实例 P95 耗时。
+     *
+     * @param windowHours 统计窗口（小时）
+     * @return instanceId → P95 毫秒；没有可用样本的实例不在 Map 里
+     */
+    private Map<String, Long> loadInstanceP95(int windowHours) {
+        try {
+            List<SysAiServiceAccessLogMapper.InstanceP95Row> rows =
+                    accessLogMapper.selectInstanceP95(LocalDateTime.now().minusHours(windowHours));
+            Map<String, Long> map = new HashMap<>(Math.max(rows.size(), 4));
+            for (SysAiServiceAccessLogMapper.InstanceP95Row row : rows) {
+                if (row.instanceId() != null && row.p95Ms() != null) {
+                    map.put(row.instanceId(), row.p95Ms());
+                }
+            }
+            return map;
+        } catch (Exception e) {
+            log.warn("[ServiceApi] 读取实例 P95 失败，性能列显示为空: {}", e.getMessage());
             return Collections.emptyMap();
         }
     }
