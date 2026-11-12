@@ -71,4 +71,66 @@
         <include refid="trafficScope"/>
     </select>
 
+    <!--
+        实例统计：服务管理页端口卡上的「请求 / Token / 失败 / 均耗时」。
+
+        与入站流量不同，这里**不** JOIN AppKey 台账、也不按路由组过滤：
+        端口卡回答的是「这台实例收了多少请求」，服务实例的裸 HttpExchange
+        流量没有 AppKey 归属，按台账过滤会把它们全部丢掉。
+        只要求 instance_id 非空，网关直连（不属于任何实例）不参与。
+    -->
+    <select id="selectInstanceStats" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$InstanceStatRow">
+        SELECT
+            instance_id AS instanceId,
+            COUNT(*) AS calls,
+            COALESCE(SUM(CASE WHEN status &gt;= 200 AND status &lt; 400 THEN 1 ELSE 0 END), 0) AS successCalls,
+            COALESCE(SUM(total_tokens), 0) AS tokens,
+            AVG(latency_ms) AS avgLatencyMs,
+            MAX(create_time) AS lastAt
+        FROM sys_ai_service_access_log
+        WHERE create_time &gt;= #{since}
+          AND instance_id IS NOT NULL
+          AND instance_id &lt;&gt; ''
+        GROUP BY instance_id
+    </select>
+
+    <!--
+        端口卡的迷你折线：按「窗口 / 24」切成固定 24 个桶，前端按桶序号补齐 0。
+        固定桶数（而不是固定 1 小时）是为了让 24h / 7d / 30d 三个窗口
+        用同一套前端逻辑，也避免 30 天窗口画出 720 个点。
+    -->
+    <select id="selectInstanceSeries" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$InstanceSeriesRow">
+        SELECT
+            instance_id AS instanceId,
+            FLOOR(TIMESTAMPDIFF(MINUTE, #{since}, create_time) / #{bucketMinutes}) AS bucket,
+            COUNT(*) AS calls
+        FROM sys_ai_service_access_log
+        WHERE create_time &gt;= #{since}
+          AND instance_id IS NOT NULL
+          AND instance_id &lt;&gt; ''
+        GROUP BY instance_id, bucket
+        ORDER BY instance_id, bucket
+    </select>
+
+    <!--
+        P95：MySQL 8 窗口函数，取「按耗时排序后第 ceil(n*0.95) 条」。
+        用 rn = ceil(cnt*0.95) 而不是 rn &gt;= ...，避免同一实例返回多行。
+    -->
+    <select id="selectInstanceP95" resultType="com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper$InstanceP95Row">
+        SELECT t.instance_id AS instanceId, t.latency_ms AS p95Ms
+        FROM (
+            SELECT
+                instance_id,
+                latency_ms,
+                ROW_NUMBER() OVER (PARTITION BY instance_id ORDER BY latency_ms) AS rn,
+                COUNT(*) OVER (PARTITION BY instance_id) AS cnt
+            FROM sys_ai_service_access_log
+            WHERE create_time &gt;= #{since}
+              AND instance_id IS NOT NULL
+              AND instance_id &lt;&gt; ''
+              AND latency_ms IS NOT NULL
+        ) t
+        WHERE t.rn = CEIL(t.cnt * 0.95)
+    </select>
+
 </mapper>

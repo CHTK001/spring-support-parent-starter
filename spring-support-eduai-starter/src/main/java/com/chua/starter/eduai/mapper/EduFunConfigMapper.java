@@ -37,10 +37,12 @@ public interface EduFunConfigMapper extends BaseMapper<EduFunConfig> {
      * 按模块编码查询配置（XML 语句 selectByModuleCode，取第一条）。
      *
      * @param moduleCode 模块编码
+     * @param gradeLevel 学段；为空时不限（优先通用行）
      * @param scope      归属隔离参数
      * @return 配置，不存在时返回 {@code null}
      */
     EduFunConfig selectByModuleCode(@Param("moduleCode") String moduleCode,
+                                    @Param("gradeLevel") String gradeLevel,
                                     @Param("scope") EduUserContext.OwnerScope scope);
 
     /**

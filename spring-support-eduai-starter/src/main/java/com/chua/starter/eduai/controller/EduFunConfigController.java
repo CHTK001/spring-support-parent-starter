@@ -2,7 +2,6 @@ package com.chua.starter.eduai.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduFunConfig;
 import com.chua.starter.eduai.service.IEduFunConfigService;
 import com.chua.starter.eduai.support.util.EduUserContext;
@@ -52,9 +51,25 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "获取所有趣味模块（含禁用）")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @GetMapping("/list-all")
     public ReturnResult<List<EduFunConfig>> listAll() {
         return ReturnResult.ok(funConfigService.listAllScoped());
+    }
+
+    /**
+     * 门户菜单清单（学生端/教师端用）。
+     *
+     * <p>含停用项，只返回编码/名称/路径/学段/启停/排序，用来判断
+     * 「从没配过」与「全部停用」，并过滤「全部功能」里的停用入口。</p>
+     *
+     * @param level 学段：PRIMARY / JUNIOR / SENIOR / TEACHER
+     * @return 该学段的菜单清单
+     */
+    @Operation(summary = "门户菜单清单（含停用）")
+    @GetMapping("/portal-menu")
+    public ReturnResult<List<EduFunConfig>> portalMenu(@RequestParam String level) {
+        return ReturnResult.ok(funConfigService.listPortalMenu(level));
     }
 
     /**
@@ -76,20 +91,23 @@ public class EduFunConfigController {
      * detail。
      *
      * @param moduleCode module编码，不允许为 null
+     * @param gradeLevel 学段（可选）；同编码在多个学段各有一行时用它精确定位
      * @return Return结果 对象
      */
     @Operation(summary = "根据模块编码获取配置")
     @GetMapping("/detail/{moduleCode}")
-    public ReturnResult<EduFunConfig> detail(@PathVariable String moduleCode) {
-        return ReturnResult.ok(funConfigService.getByModuleCode(moduleCode));
+    public ReturnResult<EduFunConfig> detail(@PathVariable String moduleCode,
+                                             @RequestParam(required = false) String gradeLevel) {
+        return ReturnResult.ok(funConfigService.getByModuleCode(moduleCode, gradeLevel));
     }
 
     @Operation(summary = "更新模块启用状态")
-    @Permission("admin")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @PutMapping("/toggle/{moduleCode}")
     public ReturnResult<Boolean> toggle(@PathVariable String moduleCode,
+                                         @RequestParam(required = false) String gradeLevel,
                                          @RequestParam Integer enabled) {
-        return ReturnResult.ok(funConfigService.updateEnabled(moduleCode, enabled));
+        return ReturnResult.ok(funConfigService.updateEnabled(moduleCode, gradeLevel, enabled));
     }
 
     /**
@@ -99,24 +117,27 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "保存趣味模块配置")
-    @Permission("admin")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody EduFunConfig config) {
-        if (config.getConfigId() == null) {
-            // 门户菜单是全局配置（学生端/教师端所有账号共用），新建行不绑定创建人。
-            // 绑定后 selectByLevel 的 owner 谓词会把它从学生/老师端过滤掉，
-            // 表现为「后台加了入口，门户里看不到」。这里仍要求已登录，只是不写 owner。
-            EduUserContext.requireUserId();
-            config.setOwnerUserId(null);
-        } else {
-            EduFunConfig exists = funConfigService.getById(config.getConfigId());
-            if (exists == null) {
-                throw new BusinessException("趣味模块配置不存在");
-            }
-            EduUserContext.checkWritable(exists.getOwnerUserId());
-            config.setOwnerUserId(exists.getOwnerUserId());
-        }
-        return ReturnResult.ok(funConfigService.saveOrUpdate(config));
+        funConfigService.saveScoped(config);
+        return ReturnResult.ok(true);
+    }
+
+    /**
+     * 批量保存（同一事务）。
+     *
+     * <p>门户菜单一次保存会改多行；逐条提交中途失败会留下半保存状态，
+     * 这里整批成功或整批回滚，调用方失败后可以原样保留本地编辑重试。</p>
+     *
+     * @param configs 配置列表
+     * @return 保存后的配置（新建行带回 configId）
+     */
+    @Operation(summary = "批量保存趣味模块配置")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
+    @PostMapping("/batch-save")
+    public ReturnResult<List<EduFunConfig>> batchSave(@RequestBody List<EduFunConfig> configs) {
+        return ReturnResult.ok(funConfigService.saveBatchScoped(configs));
     }
 
     /**
@@ -126,7 +147,7 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "删除趣味模块配置")
-    @Permission("admin")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @DeleteMapping("/delete/{configId}")
     public ReturnResult<Boolean> delete(@PathVariable Long configId) {
         EduFunConfig exists = funConfigService.getById(configId);

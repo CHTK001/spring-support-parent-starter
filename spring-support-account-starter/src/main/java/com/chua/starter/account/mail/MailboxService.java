@@ -9,6 +9,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.email.support.EmailPush;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
+import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
@@ -210,6 +211,9 @@ public class MailboxService {
         if (StringUtils.isBlank(request.getTo())) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "收件人不能为空");
         }
+        if (TempMailService.isTempMail(account)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "临时邮箱是只读收信来源，不支持发信");
+        }
         if (KIND_EMAIL.equalsIgnoreCase(account.getKind())) {
             return sendMail(account, accountService.resolveSecret(accountId), request);
         }
@@ -343,6 +347,9 @@ public class MailboxService {
      * @return 可发信返回 {@code true}
      */
     private boolean isSendable(SysAccount account) {
+        if (TempMailService.isTempMail(account)) {
+            return false;
+        }
         if (KIND_EMAIL.equalsIgnoreCase(account.getKind())) {
             return StringUtils.isNotBlank(smtpHost(account)) && StringUtils.isNotBlank(account.getUsername());
         }

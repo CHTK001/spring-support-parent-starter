@@ -79,4 +79,66 @@ public interface SysAiServiceAccessLogMapper extends BaseMapper<SysAiServiceAcce
     record TrafficTotalRow(Long calls, Long successCalls, Long tokens,
                            Double avgLatencyMs, LocalDateTime lastAt) {
     }
+
+    /**
+     * 实例统计：服务管理页每张端口卡上的「请求 / Token / 失败 / 均耗时」。
+     *
+     * @param instanceId   服务实例 ID（访问日志里的 instance_id）
+     * @param calls        调用次数
+     * @param successCalls 成功次数（2xx/3xx）
+     * @param tokens       令牌合计
+     * @param avgLatencyMs 平均耗时（毫秒）；窗口内无样本为 null
+     * @param lastAt       窗口内最近一次请求时间；无样本为 null
+     */
+    record InstanceStatRow(String instanceId, Long calls, Long successCalls,
+                           Long tokens, Double avgLatencyMs, LocalDateTime lastAt) {
+    }
+
+    /**
+     * 按实例聚合最近窗口内的访问日志。
+     *
+     * <p>只统计带 {@code instance_id} 的行：网关直连（控制台 / 对外 API）不归属任何
+     * 服务实例，算进任何一张端口卡都会让「这个实例的请求数」虚高。</p>
+     *
+     * @param since 起始时间（含）
+     * @return 每个实例一行
+     */
+    List<InstanceStatRow> selectInstanceStats(@Param("since") LocalDateTime since);
+
+    /**
+     * 实例请求量分桶序列（端口卡的迷你折线）。
+     *
+     * @param since         起始时间（含）
+     * @param bucketMinutes 每个桶的分钟数（窗口/24，至少 1）
+     * @return 每个实例每个桶一行；没有请求的桶不返回，由调用方补 0
+     */
+    List<InstanceSeriesRow> selectInstanceSeries(@Param("since") LocalDateTime since,
+                                                 @Param("bucketMinutes") int bucketMinutes);
+
+    /**
+     * 实例 P95 耗时（成功率之外最常被问的一个数）。
+     *
+     * @param since 起始时间（含）
+     * @return 每个实例一行；没有样本的实例不返回
+     */
+    List<InstanceP95Row> selectInstanceP95(@Param("since") LocalDateTime since);
+
+    /**
+     * 实例分桶序列行。
+     *
+     * @param instanceId 服务实例 ID
+     * @param bucket     桶序号（0 起）
+     * @param calls      该桶调用次数
+     */
+    record InstanceSeriesRow(String instanceId, Integer bucket, Long calls) {
+    }
+
+    /**
+     * 实例 P95 行。
+     *
+     * @param instanceId 服务实例 ID
+     * @param p95Ms      P95 耗时（毫秒）
+     */
+    record InstanceP95Row(String instanceId, Long p95Ms) {
+    }
 }

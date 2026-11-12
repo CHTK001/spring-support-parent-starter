@@ -656,6 +656,11 @@ public class HikvisionProvider implements DeviceProvider {
         // 简化作用域：在默认字段基底上追加产品维字段，只给云耀
         List<CredentialField> cloudYaoFields = Stream.concat(platformFields.stream(), productFields.stream())
                 .collect(Collectors.toList());
+        // 云眸注册设备要组编号；组编号是账号内配置，不属于设备台账
+        List<CredentialField> cloudEyeFields = Stream.concat(platformFields.stream(), Stream.of(
+                        new CredentialField("groupNo", "组编号（groupNo）", false, false,
+                                "云眸组编号，注册设备时必填；留空时设备同步会扫描全部组")))
+                .collect(Collectors.toList());
         return new DeviceVendorDescriptor(
                 VENDOR,
                 "海康威视",
@@ -667,7 +672,7 @@ public class HikvisionProvider implements DeviceProvider {
                                 "https://open.hikyun.com", cloudYaoFields,
                                 DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_CLOUD_YAO)),
                         new PlatformDescriptor(PLATFORM_CLOUD_EYE, "海康云眸",
-                                "https://api2.hik-cloud.com", platformFields,
+                                "https://api2.hik-cloud.com", cloudEyeFields,
                                 DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_CLOUD_EYE)),
                         new PlatformDescriptor(PLATFORM_SECURE, "海康综合安防平台",
                                 "https://artemis.hikvision.com", platformFields,

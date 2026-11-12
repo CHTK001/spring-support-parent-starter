@@ -252,10 +252,18 @@ plugin:
       # 只补 tshark 本体；实时抓包仍需要抓包驱动（Windows: Npcap / Linux: libpcap），
       # 页面会如实提示「可解析但不可实时抓包」，不会静默安装内核驱动。
       auto-install: true
-      # 离线部署：把含 tshark 与依赖 DLL 的 zip 放到机器上，填绝对路径（优先于 package-url）
+      # 离线部署：把安装包放到机器上，填绝对路径（优先于 package-url）
+      # 支持 zip / tar.gz / tar.xz / deb；Linux 的 deb 会自动取出 data.tar.* 再解
       # package-path: /data/packages/tshark-win64.zip
-      # 内网镜像地址（zip）。两者都为空时只探测、不下载，状态会提示「缺少安装包」
+      # 按平台的包路径（优先于 package-path）：
+      # package-path-windows: /data/packages/tshark-win64.zip
+      # package-path-linux: /data/packages/tshark_4.4.1_amd64.deb
+      # 内网镜像地址。两者都为空时只探测、不下载，状态会提示「缺少安装包」
+      # 优先级：package-path(-平台) > classpath 内置包(utils-support-resource-tshark) > package-url(-平台)
       # package-url: http://10.0.0.5:8094/ms/tshark/package
+      # 按平台的下载地址（优先于 package-url）：
+      # package-url-windows: http://10.0.0.5:8094/ms/tshark/tshark-win64.zip
+      # package-url-linux: http://10.0.0.5:8094/ms/tshark/tshark_4.4.1_amd64.deb
       # 解压目录，留空用 ~/spring-support/tshark
       # install-dir: /data/app/tshark
       # 下载 + 解压 + 自检的总超时（秒）

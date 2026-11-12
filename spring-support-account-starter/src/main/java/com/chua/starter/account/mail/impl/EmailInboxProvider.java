@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.account.mail.MailboxFolder;
 import com.chua.starter.account.mail.MailboxMessage;
 import com.chua.starter.account.mail.MailboxQuery;
+import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.spi.AccountInboxProvider;
 import jakarta.mail.Address;
@@ -153,6 +154,7 @@ public class EmailInboxProvider implements AccountInboxProvider {
     @Override
     public boolean supports(SysAccount account) {
         return account != null
+                && !TempMailService.isTempMail(account)
                 && KIND_EMAIL.equalsIgnoreCase(account.getKind())
                 && StringUtils.isNotBlank(account.getUsername())
                 && StringUtils.isNotBlank(imapHost(account));

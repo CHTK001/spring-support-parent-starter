@@ -153,6 +153,7 @@
               </span>
             </div>
             <ReTag v-if="activeAccount.defaultAccount" type="warning" effect="plain" size="small">默认</ReTag>
+            <ReTag v-if="isTempMail(activeAccount)" type="warning" effect="plain" size="small">临时邮箱</ReTag>
             <ReTag :type="activeAccount.status === 0 ? 'info' : 'success'" effect="plain" size="small">
               {{ activeAccount.status === 0 ? '停用' : '启用' }}
             </ReTag>
@@ -211,6 +212,10 @@
                 <div class="fact">
                   <span class="k">更新时间</span>
                   <span class="v">{{ formatTime(activeAccount.updatedAt) }}</span>
+                </div>
+                <div v-if="isTempMail(activeAccount)" class="fact">
+                  <span class="k">临时邮箱租期</span>
+                  <span class="v">{{ tempRemainText(activeAccount) }}</span>
                 </div>
               </div>
               <div v-if="activeAccount.verifyMessage" class="note" :class="'is-' + verifyTone(activeAccount.verifyStatus)">
@@ -723,13 +728,17 @@ import {
   batchDeleteAccounts,
   batchUpdateAccountStatus,
   batchVerifyAccounts,
+  claimTempMailbox,
   deleteAccount,
   deleteAccountAppKey,
   deleteAccountCookie,
+  destroyTempMailbox,
+  isTempMail,
   listAccountAppKeys,
   listAccountCookies,
   listAccounts,
   rotateAccountAppKey,
+  tempMailExpireAt,
   updateAccount,
   updateAccountAppKey,
   updateAccountCookie,
@@ -761,7 +770,7 @@ import { copyText } from '../../shared/clipboard';
  */
 
 /** 当前分段：账号三种 + AppKey + Cookie */
-type Segment = 'ALL' | AccountKind | 'APPKEY' | 'COOKIE';
+type Segment = 'ALL' | AccountKind | 'APPKEY' | 'COOKIE' | 'TEMP_MAIL';
 
 /** 账号状态筛选 */
 type StatusFilter = 'all' | 'on' | 'pending' | 'invalid';
@@ -817,6 +826,8 @@ const verifyingId = ref<string | null>(null);
 const selectedAccountIds = ref<string[]>([]);
 /** 批量操作进行中 */
 const batchBusy = ref(false);
+/** 临时邮箱领取中 */
+const tempBusy = ref(false);
 
 /** 账号新增 / 编辑 */
 const formVisible = ref(false);
@@ -854,13 +865,19 @@ function onMailboxUnread(value: number): void {
 
 /** 是否为账号类分段 */
 const isAccountSegment = computed(
-  () => segment.value === 'ALL' || segment.value === 'API_KEY' || segment.value === 'EMAIL' || segment.value === 'SMS',
+  () =>
+    segment.value === 'ALL' ||
+    segment.value === 'API_KEY' ||
+    segment.value === 'EMAIL' ||
+    segment.value === 'SMS' ||
+    segment.value === 'TEMP_MAIL',
 );
 
 /** 新建按钮文案 */
 const createLabel = computed(() => {
   if (segment.value === 'APPKEY') return '新增 AppKey';
   if (segment.value === 'COOKIE') return '新增 Cookie';
+  if (segment.value === 'TEMP_MAIL') return '领取临时邮箱';
   return '新增账号';
 });
 
@@ -868,6 +885,7 @@ const createLabel = computed(() => {
 const searchPlaceholder = computed(() => {
   if (segment.value === 'APPKEY') return '搜索名称 / AppKey / 备注';
   if (segment.value === 'COOKIE') return '搜索名称 / 域名 / 来源';
+  if (segment.value === 'TEMP_MAIL') return '搜索地址 / 名称';
   return '搜索名称 / 编码 / 登录名 / 地址';
 });
 
@@ -875,6 +893,7 @@ const searchPlaceholder = computed(() => {
 const blankHint = computed(() => {
   if (segment.value === 'APPKEY') return '选择一条访问密钥查看详情';
   if (segment.value === 'COOKIE') return '选择一条 Cookie 查看详情';
+  if (segment.value === 'TEMP_MAIL') return '选择一条临时邮箱查看详情';
   return '选择一条账号查看详情';
 });
 
@@ -891,6 +910,8 @@ const enabledCount = computed(() => accountList.value.filter(row => row.status !
 const missingCount = computed(() => accountList.value.filter(row => !row.hasSecret).length);
 /** 校验失败账号数 */
 const invalidCount = computed(() => accountList.value.filter(row => row.verifyStatus === 'INVALID').length);
+/** 临时邮箱数 */
+const tempMailCount = computed(() => accountList.value.filter(row => isTempMail(row)).length);
 /** 关联渠道数（有 channelKey 的账号覆盖的渠道去重） */
 const channelCount = computed(
   () => new Set(accountList.value.map(row => row.channelKey).filter(Boolean)).size,
@@ -921,6 +942,15 @@ const kpiCells = computed<
       setSegment('ALL');
       statusFilter.value = 'all';
     },
+  },
+  {
+    key: 'tempmail',
+    value: tempMailCount.value,
+    label: '临时邮箱',
+    tone: tempMailCount.value > 0 ? 'is-ok' : '',
+    on: segment.value === 'TEMP_MAIL',
+    hint: 'mail.tm 临时收信地址，到期自动清理',
+    run: () => setSegment('TEMP_MAIL'),
   },
   {
     key: 'enabled',
@@ -985,7 +1015,13 @@ const kpiCells = computed<
 const filteredAccounts = computed(() => {
   const text = keyword.value.trim().toLowerCase();
   return accountList.value.filter(row => {
-    if (isAccountSegment.value && segment.value !== 'ALL' && row.kind !== segment.value) return false;
+    if (isAccountSegment.value && segment.value !== 'ALL') {
+      if (segment.value === 'TEMP_MAIL') {
+        if (!isTempMail(row)) return false;
+      } else if (row.kind !== segment.value) {
+        return false;
+      }
+    }
     if (statusFilter.value === 'on' && row.status === 0) return false;
     if (statusFilter.value === 'pending' && row.hasSecret) return false;
     if (statusFilter.value === 'invalid' && row.verifyStatus !== 'INVALID') return false;
@@ -1080,6 +1116,22 @@ function accountTone(row: SysAccount): 'ok' | 'warn' | 'bad' | 'idle' {
   return verifyTone(row.verifyStatus);
 }
 
+/**
+ * 临时邮箱剩余时间文案。
+ *
+ * @param account 账号
+ * @returns 如「剩 23h」「已过期」
+ */
+function tempRemainText(account: SysAccount): string {
+  const expireAt = tempMailExpireAt(account);
+  if (!expireAt) return '—';
+  const left = expireAt - Date.now();
+  if (left <= 0) return '已过期';
+  const hours = Math.floor(left / 3600000);
+  if (hours >= 1) return `剩 ${hours}h`;
+  return `剩 ${Math.max(1, Math.floor(left / 60000))}m`;
+}
+
 /** 左侧分组索引 */
 const indexGroups = computed<IndexGroup[]>(() => {
   const groups: IndexGroup[] = [];
@@ -1091,7 +1143,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
 
   for (const def of kinds) {
     const rows = indexAccounts.value
-      .filter(row => row.kind === def.kind)
+      .filter(row => row.kind === def.kind && !isTempMail(row))
       .map<IndexRow>(row => ({
         id: row.accountId,
         name: row.name || row.code || '未命名账号',
@@ -1106,6 +1158,29 @@ const indexGroups = computed<IndexGroup[]>(() => {
       }));
     groups.push({ key: def.kind, label: def.label, icon: def.icon, rows });
   }
+
+  groups.push({
+    key: 'TEMP_MAIL',
+    label: '临时邮箱',
+    icon: 'Promotion',
+    rows: indexAccounts.value
+      .filter(row => isTempMail(row))
+      .map<IndexRow>(row => {
+        const expiredMail = tempMailExpireAt(row) > 0 && tempMailExpireAt(row) < Date.now();
+        return {
+          id: row.accountId,
+          name: row.username || row.name || '临时邮箱',
+          sub: `${row.vendor || 'mail.tm'} · 临时收信`,
+          meta: tempRemainText(row),
+          tag: expiredMail ? '过期' : '临时',
+          tagTone: expiredMail ? 'bad' : 'ok',
+          tone: expiredMail ? 'bad' : 'ok',
+          status: row.status,
+          selected: selectedAccountId.value === row.accountId,
+          checked: selectedAccountIds.value.includes(row.accountId),
+        };
+      }),
+  });
 
   if (statusFilter.value === 'all') {
     groups.push({
@@ -1388,6 +1463,10 @@ function openIndexRow(group: IndexGroup, row: IndexRow): void {
     openEditCookie(cookieList.value.find(item => item.cookieId === row.id) ?? null);
     return;
   }
+  if (group.key === 'TEMP_MAIL') {
+    openConsole(accountList.value.find(item => item.accountId === row.id) ?? null);
+    return;
+  }
   openEdit(accountList.value.find(item => item.accountId === row.id) ?? null);
 }
 
@@ -1414,7 +1493,13 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
           { key: 'status', label: row.status === 0 ? '启用 Cookie' : '停用 Cookie', icon: 'SwitchButton', divided: true },
           { key: 'delete', label: '删除 Cookie', icon: 'Delete' },
         ]
-      : [
+      : group.key === 'TEMP_MAIL'
+        ? [
+            { key: 'open-console', label: '打开邮箱', icon: 'Message' },
+            { key: 'copy-address', label: '复制邮箱地址', icon: 'CopyDocument' },
+            { key: 'destroy-temp', label: '销毁临时邮箱', icon: 'Delete', divided: true },
+          ]
+        : [
           { key: 'edit', label: '编辑账号', icon: 'EditPen' },
           { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
           ...(group.key === 'EMAIL' || group.key === 'SMS'
@@ -1476,6 +1561,8 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
   if (item.key === 'edit') openEdit(target);
   else if (item.key === 'verify') void onVerify(target);
   else if (item.key === 'open-console') openConsole(target);
+  else if (item.key === 'copy-address') void copyAddress(target);
+  else if (item.key === 'destroy-temp') void destroyTemp(target);
   else if (item.key === 'copy-code') void copyCode(target);
   else if (item.key === 'duplicate') duplicateAccount(target);
   else if (item.key === 'default') void setDefault(target);
@@ -1609,9 +1696,64 @@ function openCreate(): void {
     cookieFormVisible.value = true;
     return;
   }
+  if (segment.value === 'TEMP_MAIL') {
+    void claimTemp();
+    return;
+  }
   editing.value = null;
   draft.value = null;
   formVisible.value = true;
+}
+
+/**
+ * 领取一个临时邮箱。
+ *
+ * <p>没有表单：地址、密码、租期都由服务端生成，用户只需要「拿到一个能用一次
+ * 的收信地址」。领取后自动选中新行并打开地址复制提示。</p>
+ */
+async function claimTemp(): Promise<void> {
+  if (tempBusy.value) return;
+  tempBusy.value = true;
+  try {
+    const saved = await claimTempMailbox();
+    await loadAll();
+    selectedAccountId.value = saved.accountId;
+    segment.value = 'TEMP_MAIL';
+    message.success(`已领取临时邮箱：${saved.username || ''}`);
+  } catch (e: any) {
+    message.error(e?.message || '领取临时邮箱失败');
+  } finally {
+    tempBusy.value = false;
+  }
+}
+
+/**
+ * 销毁临时邮箱（远端 + 本地）。
+ *
+ * @param row 临时邮箱账号
+ */
+async function destroyTemp(row: SysAccount): Promise<void> {
+  const confirmed = await confirmThen(
+    message.confirm,
+    `确认销毁临时邮箱「${row.username || row.name}」？该地址会立即失效，已收邮件一并丢弃。`,
+    '销毁临时邮箱',
+  );
+  if (!confirmed) return;
+  try {
+    await destroyTempMailbox(row.accountId);
+    message.success('临时邮箱已销毁');
+    if (selectedAccountId.value === row.accountId) selectedAccountId.value = '';
+    await loadAll();
+  } catch (e: any) {
+    message.error(e?.message || '销毁临时邮箱失败');
+  }
+}
+
+/** 复制临时邮箱地址 */
+async function copyAddress(row: SysAccount): Promise<void> {
+  const ok = await copyText(row.username || '');
+  if (ok) message.success('邮箱地址已复制');
+  else message.error('复制失败');
 }
 
 /** 打开账号编辑 */

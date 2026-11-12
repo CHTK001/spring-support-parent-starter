@@ -4,6 +4,8 @@ import com.chua.starter.account.template.MessageTemplateController;
 import com.chua.starter.account.template.MessageTemplateService;
 import com.chua.starter.account.mail.MailboxController;
 import com.chua.starter.account.mail.MailboxService;
+import com.chua.starter.account.mail.temp.TempMailController;
+import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.controller.AccountAppKeyController;
 import com.chua.starter.account.manage.controller.AccountController;
 import com.chua.starter.account.manage.controller.AccountCookieController;
@@ -71,7 +73,9 @@ import org.springframework.context.annotation.FilterType;
                         AccountSecretCodec.class,
                         AccountApiExceptionAdvice.class,
                         MailboxController.class,
-                        MailboxService.class
+                        MailboxService.class,
+                        TempMailController.class,
+                        TempMailService.class
                 })
 )
 @MapperScan({

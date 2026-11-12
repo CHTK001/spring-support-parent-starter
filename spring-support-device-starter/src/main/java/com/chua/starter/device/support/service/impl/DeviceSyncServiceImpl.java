@@ -241,6 +241,9 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         if (StringUtils.hasText(credential.getDeviceCredentialProjectId())) {
             extra.put("projectId", credential.getDeviceCredentialProjectId());
         }
+        if (StringUtils.hasText(credential.getDeviceCredentialGroupNo())) {
+            extra.put("groupNo", credential.getDeviceCredentialGroupNo());
+        }
         // 凭据 ID 打入 extra，会话持有者、设备回写、采集向下保持一致
         extra.put("credentialId", credential.getDeviceCredentialId());
         return new DeviceConnectInfo(

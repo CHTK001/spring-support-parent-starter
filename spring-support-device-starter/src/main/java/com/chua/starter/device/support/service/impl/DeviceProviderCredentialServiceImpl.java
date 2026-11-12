@@ -133,6 +133,9 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         update.setDeviceCredentialProjectId(credential.getDeviceCredentialProjectId() != null
                 ? credential.getDeviceCredentialProjectId()
                 : existing.getDeviceCredentialProjectId());
+        update.setDeviceCredentialGroupNo(credential.getDeviceCredentialGroupNo() != null
+                ? credential.getDeviceCredentialGroupNo()
+                : existing.getDeviceCredentialGroupNo());
         update.setDeviceCredentialBaseUrl(credential.getDeviceCredentialBaseUrl() != null
                 ? credential.getDeviceCredentialBaseUrl()
                 : existing.getDeviceCredentialBaseUrl());

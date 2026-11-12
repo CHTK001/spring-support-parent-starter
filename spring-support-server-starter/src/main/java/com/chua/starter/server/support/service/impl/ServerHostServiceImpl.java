@@ -5,12 +5,13 @@ package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.nativeapi.NativeServices;
+import com.chua.common.support.nativeapi.NmapSpi;
 import com.chua.common.support.network.net.NetUtils;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.nmap.support.NmapScanner;
 import com.chua.nmap.support.RustNmapScanner;
-import com.chua.nmap.support.bridge.RustNmapBridge;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WinrmShell;
 import com.chua.starter.server.support.connection.WindowsSshShell;
@@ -801,7 +802,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (isBlank(address)) {
             return ReturnResult.error("主机地址为空，无法扫描端口");
         }
-        if (!RustNmapBridge.isLoaded()) {
+        NmapSpi nmap = NativeServices.get(NmapSpi.class);
+        if (nmap == null || !nmap.isLoaded()) {
             return ReturnResult.error("Rust Nmap 原生库未加载，请检查 jar 内置 native 库是否随平台分发");
         }
           // 同一主机同时只允许一个扫描任务，重复点击直接拒绝

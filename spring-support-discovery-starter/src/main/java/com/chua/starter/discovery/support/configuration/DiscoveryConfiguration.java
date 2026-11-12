@@ -134,7 +134,6 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         discoveryOption.setPassword(discoveryProperties.getPassword());
         discoveryOption.setConnectionTimeoutMillis(discoveryProperties.getConnectionTimeoutMillis());
         discoveryOption.setSessionTimeoutMillis(discoveryProperties.getSessionTimeoutMillis());
-
         ServiceProvider<ServiceDiscovery> serviceProvider = ServiceProvider.of(ServiceDiscovery.class);
         ServiceDiscovery serviceDiscovery = serviceProvider.getNewExtension(discoveryProperties.getProtocol(), discoveryOption);
         String baseBeanName = "serviceDiscovery#" + discoveryProperties.getProtocol();
@@ -178,25 +177,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         Map<String, String> newMetaData = new LinkedHashMap<>(project.getProject());
         String serverIdValue = DigestUtils.md5(project.getApplicationHost() + project.getApplicationPort());
         newMetaData.put("serverId", serverIdValue);
-        Collection<DiscoveryEnvironment> beanList = SpringBeanUtils.getBeanList(DiscoveryEnvironment.class);
-        for (DiscoveryEnvironment discoveryEnvironment : beanList) {
-            String name = discoveryEnvironment.getName();
-            if(null == name) {
-                continue;
-            }
-
-            if(!name.equals(discoveryNodeProperties.getNamespace())) {
-                continue;
-            }
-
-            Properties properties = discoveryEnvironment.getProperties();
-            properties.forEach((key, value) -> {
-                if(null == value) {
-                    return;
-                }
-                newMetaData.put(key.toString(), value.toString());
-            });
-        }
+        // 环境元数据（DiscoveryEnvironment）不在这里合并：本方法运行在
+        // BeanDefinitionRegistryPostProcessor 阶段，getBeansOfType 会强制提前实例化业务 Bean，
+        // 依赖未就绪时会直接拖垮启动。改到 ServiceDiscovertyFactoryBean.start() 里合并。
 
         return Discovery.builder()
                 .id(serverId)
@@ -271,6 +254,38 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
 
         /**
+         * 合并匹配当前命名空间的 {@link DiscoveryEnvironment} 元数据。
+         *
+         * <p>必须在 {@code start()} 里做：此时普通 Bean 已实例化，不会在
+         * BeanDefinitionRegistryPostProcessor 阶段强制提前创建业务 Bean。</p>
+         *
+         * @param discovery 待注册实例
+         */
+        private void applyEnvironmentMetadata(Discovery discovery) {
+            try {
+                Collection<DiscoveryEnvironment> environments = SpringBeanUtils.getBeanList(DiscoveryEnvironment.class);
+                for (DiscoveryEnvironment environment : environments) {
+                    String name = environment.getName();
+                    if (null == name || !name.equals(discovery.getUriSpec())) {
+                        continue;
+                    }
+                    Map<String, String> metadata = new LinkedHashMap<>(discovery.getMetadata());
+                    Properties properties = environment.getProperties();
+                    for (String key : properties.stringPropertyNames()) {
+                        String value = properties.getProperty(key);
+                        if (null != value) {
+                            metadata.put(key, value);
+                        }
+                    }
+                    discovery.setMetadata(metadata);
+                }
+            } catch (Exception e) {
+                DiscoveryConfiguration.log.warn("[Discovery] 合并环境元数据失败: {} -> {}",
+                        discovery.getUriSpec(), e.getMessage());
+            }
+        }
+
+        /**
          * 开始
          * @return 返回值
          * @throws Exception 异常
@@ -278,6 +293,8 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         public void start() throws Exception {
             serviceDiscovery.start();
             for (Discovery discovery : discoveryList) {
+                // 环境元数据在这里合并：Bean 已就绪，不会像 BFPP 阶段那样被迫提前实例化
+                applyEnvironmentMetadata(discovery);
                 serviceDiscovery.registerService(discovery.getUriSpec(), discovery);
                 if(serviceDiscovery.isSupportSubscribe()) {
                     serviceDiscovery.subscribe(discovery.getUriSpec(), new ServiceDiscoveryListener() {
@@ -304,6 +321,16 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
          * @throws Exception 异常
         */
         public void close() throws Exception {
+            // 先反注册再断连：否则实例会在注册中心残留到 TTL/心跳剔除，
+            // 滚动重启期间上游仍会把流量打到已经停掉的进程。
+            for (Discovery discovery : discoveryList) {
+                try {
+                    serviceDiscovery.unregisterService(discovery.getUriSpec(), discovery);
+                } catch (Exception e) {
+                    DiscoveryConfiguration.log.warn("[Discovery] 反注册失败: {} -> {}",
+                            discovery.getUriSpec(), e.getMessage());
+                }
+            }
             serviceDiscovery.close();
         }
     }

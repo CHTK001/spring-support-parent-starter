@@ -288,3 +288,36 @@ export const updateAccountCookie = (cookieId: string, payload: SysAccountCookie)
 /** 删除 Cookie */
 export const deleteAccountCookie = (cookieId: string) =>
   http().delete(`${CK}/${cookieId}`).then(r => unwrap<boolean>(r));
+
+/* ==================== 临时邮箱（mail.tm） ==================== */
+
+/** 临时邮箱接口基址 */
+const TM = `${B}/temp-mail`;
+
+/**
+ * 账号是否为临时邮箱。
+ *
+ * <p>临时邮箱不新增账号种类，靠 {@code config.tempProvider} 标记；
+ * 判断函数只认这个标记，避免把普通 EMAIL 账号误当临时邮箱。</p>
+ */
+export const isTempMail = (account?: SysAccount | null): boolean =>
+  String((account?.config as Record<string, unknown> | null | undefined)?.tempProvider || '') !== '';
+
+/** 临时邮箱租期到期时间（毫秒，0 表示未知） */
+export const tempMailExpireAt = (account?: SysAccount | null): number => {
+  const raw = (account?.config as Record<string, unknown> | null | undefined)?.expireAt;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : 0;
+};
+
+/** 领取一个临时邮箱（{@code name} 可空） */
+export const claimTempMailbox = (name?: string) =>
+  http().post(TM).data(body({ name: name || '' })).then(r => unwrap<SysAccount>(r));
+
+/** 当前用户可见的临时邮箱 */
+export const listTempMailboxes = () =>
+  http().get(TM).then(r => unwrap<SysAccount[]>(r));
+
+/** 销毁临时邮箱（远端账号 + 本地账号） */
+export const destroyTempMailbox = (accountId: string) =>
+  http().delete(`${TM}/${accountId}`).then(r => unwrap<boolean>(r));

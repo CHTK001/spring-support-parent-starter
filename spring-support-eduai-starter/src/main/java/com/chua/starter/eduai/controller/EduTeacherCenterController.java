@@ -245,8 +245,9 @@ public class EduTeacherCenterController {
     public ReturnResult<PageResult<EduMarkingTask>> pageMarkingTasks(
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize,
-            @RequestParam(required = false) Integer teacherFinished) {
-        return ReturnResult.ok(teacherCenterService.pageMyMarkingTasks(pageNum, pageSize, teacherFinished));
+            @RequestParam(required = false) Integer teacherFinished,
+            @RequestParam(required = false) String keyword) {
+        return ReturnResult.ok(teacherCenterService.pageMyMarkingTasks(pageNum, pageSize, teacherFinished, keyword));
     }
 
     // ==================== 老师上传题目 ====================

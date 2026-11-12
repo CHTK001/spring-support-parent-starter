@@ -105,7 +105,13 @@ public class ConnectionManager {
         Entry entry = cache.get(host.getId());
         // 无缓存 / 凭据变化 / 已断开：重建
         if (entry == null || !fp.equals(entry.credentialFingerprint) || isClosed(entry)) {
-            entry = rebuild(host, credential, fp, now);
+            // 重建原因要写进日志：终端"很慢"时第一件事就是分清「在复用」还是「每次都在重新握手」
+            String reason = entry == null ? "无缓存"
+                    : (!fp.equals(entry.credentialFingerprint) ? "凭据变化" : "连接已断开");
+            entry = rebuild(host, credential, fp, now, reason);
+        }
+        else {
+            log.debug("[connection] 复用连接 hostId={} refs={}", host.getId(), entry.refCount.get());
         }
         entry.lastActiveNanos = now;
         entry.refCount.incrementAndGet();
@@ -191,10 +197,12 @@ public class ConnectionManager {
      * @param credential credential
      * @param fp fp
      * @param now now
+     * @param reason 重建原因（无缓存 / 凭据变化 / 连接已断开），会写进日志用于排查「终端很慢」
      * @return rebuild的结果
      */
-    private Entry rebuild(MsServerHost host, SshCredential credential, String fp, long now) throws IOException {
+    private Entry rebuild(MsServerHost host, SshCredential credential, String fp, long now, String reason) throws IOException {
         Long hostId = host.getId();
+        long startedAt = System.nanoTime();
         Entry old = cache.remove(hostId);
         if (old != null) {
             /**
@@ -206,7 +214,10 @@ public class ConnectionManager {
         }
         Exception failure;
         try {
-            return connect(host, credential, fp, now);
+            Entry created = connect(host, credential, fp, now);
+            log.info("[connection] 新建连接 hostId={} 耗时={}ms 原因={}",
+                    hostId, (System.nanoTime() - startedAt) / 1_000_000L, reason);
+            return created;
         } catch (IOException | RuntimeException e) {
             failure = e;
         }
@@ -218,7 +229,10 @@ public class ConnectionManager {
                 && isAuthFailure(failure)) {
             try {
                 log.info("[connection] 口令认证未通过，回退默认身份文件 hostId={} user={}", hostId, credential.username());
-                return connect(host, new SshCredential(credential.username(), null, null), fp, now);
+                Entry created = connect(host, new SshCredential(credential.username(), null, null), fp, now);
+                log.info("[connection] 新建连接（回退默认身份文件）hostId={} 总耗时={}ms",
+                        hostId, (System.nanoTime() - startedAt) / 1_000_000L);
+                return created;
             } catch (IOException | RuntimeException retry) {
                 failure = retry;
             }

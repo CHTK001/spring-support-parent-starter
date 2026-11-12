@@ -26,9 +26,12 @@ import java.util.Set;
 public class DiscoveryService {
 
     /**
-     * 默认负载均衡策略
+     * 默认负载均衡策略。
+     *
+     * <p>可用 {@code -Dchua.discovery.balance=xxx} 覆盖；仍以 "weight" 为默认，
+     * 保持既有行为不变。需要按调用区分策略时用 {@link #setDefaultBalance(String)}。</p>
      */
-    private static final String DEFAULT_BALANCE = "weight";
+    private String defaultBalance = System.getProperty("chua.discovery.balance", "weight");
 
     /**
      * 默认服务发现实现（primary）
@@ -83,6 +86,17 @@ public class DiscoveryService {
     }
 
     /**
+     * 覆盖默认负载均衡策略（默认 "weight"，也可用 -Dchua.discovery.balance 指定）。
+     *
+     * @param balance 策略名；为空则忽略
+     */
+    public void setDefaultBalance(String balance) {
+        if (StringUtils.isNotEmpty(balance)) {
+            this.defaultBalance = balance;
+        }
+    }
+
+    /**
      * 按指定协议获取单个服务。
      *
      * @param protocol 协议名称，对应配置中的 协议
@@ -91,7 +105,7 @@ public class DiscoveryService {
      */
     public Discovery getDiscovery(String protocol, String uriSpec) {
         ServiceDiscovery target = resolveServiceDiscovery(protocol);
-        return target.getService(uriSpec, DEFAULT_BALANCE, protocol);
+        return target.getService(uriSpec, defaultBalance, protocol);
     }
 
     /**
@@ -130,9 +144,15 @@ public class DiscoveryService {
             return target;
         }
 
+        // 同一协议配置多个实例时，registryBean 会拼成 serviceDiscovery#<protocol>#0/#1…，
+        // 这类名字并不以 "#<protocol>" 结尾，必须额外按前缀匹配，否则第二个实现永远选不到。
+        String dedupPrefix = beanName + "#";
         for (Map.Entry<String, ServiceDiscovery> entry : serviceDiscoveryMap.entrySet()) {
             String key = entry.getKey();
-            if (key != null && key.endsWith("#" + protocol)) {
+            if (key == null) {
+                continue;
+            }
+            if (key.endsWith("#" + protocol) || key.startsWith(dedupPrefix)) {
                 return entry.getValue();
             }
         }

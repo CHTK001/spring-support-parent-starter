@@ -8,11 +8,9 @@ import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.TerminalSessionService;
 import com.chua.starter.server.support.terminal.WebSocketSessions;
-import com.chua.nativerdp.support.RdpjBridge;
 import com.chua.starter.server.support.terminal.util.RdpjNative;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.Memory;
-import com.sun.jna.Pointer;
+import com.chua.common.support.nativeapi.NativeServices;
+import com.chua.common.support.nativeapi.RdpNativeSpi;
 
 import com.chua.common.support.lang.code.ReturnResult;
 
@@ -38,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
  * RDP 直连桌面 webSocket 处理器
  * <p>
  * 与 {@link SshDirectWebSocketHandler} / {@link com.chua.starter.server.support.terminal.telnet.TelnetWebSocketHandler}
- * 同构：不经过 guacd——由 {@link RdpjBridge}（FreeRDP 3.x C 扩展）在主机侧接出到目标
+ * 同构：不经过 guacd——由 {@link RdpNativeSpi}（FreeRDP 3.x C 扩展）在主机侧接出到目标
  * RDP 服务器的连接，远端桌面按 32 字节帧头 + BGRA 像素的帧定时推向浏览器，
  * 浏览器的键鼠事件回传为 JSON 文本帧，由 Pump 线程交给 FreeRDP。
  * </p>
@@ -137,7 +135,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                 : (host.getServerHostPort() == null ? ServerConstants.DEFAULT_RDP_PORT : host.getServerHostPort());
         String user = WebSocketSessions.firstNonBlank(operator, resolved.getData().username());
 
-        Pointer handle;
+        long handle;
         try {
             handle = Native.create();
         } catch (Throwable e) {
@@ -146,7 +144,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, "RDP 连接创建失败 - " + cause);
             return;
         }
-        if (handle == null || handle.equals(Pointer.NULL)) {
+        if (handle <= 0L) {
             reject(wsSession, "RDP 连接创建失败（RDP 实例未创建）");
             return;
         }
@@ -315,10 +313,11 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
      * @param bridge 桥接上下文
      */
     private void pumpFrames(RdpBridge bridge) {
-        Pointer handle = bridge.handle;
-        if (!RdpjNative.exists() || handle == null) {
+        long handle = bridge.handle;
+        if (!RdpjNative.exists() || handle <= 0L) {
             return;
         }
+        int[] header = new int[4];
         try {
             while (bridge.running) {
                 int state = Native.state(handle);
@@ -329,26 +328,22 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                     sendErrorToBrowser(bridge, reason == null || reason.isEmpty() ? "RDP 连接已中断" : reason);
                     return;
                 }
-                Pointer lastFrame = Native.lastFrame(handle);
-                if (lastFrame == null || lastFrame.equals(Pointer.NULL)) {
+                if (!Native.frameHeader(handle, header)) {
                     Thread.sleep(FRAME_INTERVAL_MS);
                     continue;
                 }
-                int width = lastFrame.getInt(0);
-                int height = lastFrame.getInt(4);
-                int stride = lastFrame.getInt(8);
-                int bpp = lastFrame.getInt(12);
+                int height = header[1];
+                int stride = header[2];
                 int payload = stride * height;
                 int size = 32 + payload;
                 if (bridge.bufferLen != size || bridge.buffer == null) {
-                    bridge.buffer = new Memory(size);
+                    bridge.buffer = new byte[size];
                     bridge.bufferLen = size;
                 }
-                IntByReference outLen = new IntByReference(0);
-                int written = Native.frame(handle, bridge.buffer, size, outLen);
+                int written = Native.frame(handle, bridge.buffer);
                 if (written > 0) {
                     byte[] frame = new byte[written];
-                    bridge.buffer.read(0, frame, 0, written);
+                    System.arraycopy(bridge.buffer, 0, frame, 0, written);
                     sendFrameToBrowser(bridge, frame);
                 } else {
                     Thread.sleep(FRAME_INTERVAL_MS);
@@ -466,9 +461,9 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         bridge.closed = true;
         bridges.remove(bridge.wsSession.getId());
         bridge.running = false;
-        Pointer handle = bridge.handle;
+        long handle = bridge.handle;
         boolean nativeReady = RdpjNative.exists();
-        if (handle != null && !handle.equals(Pointer.NULL) && nativeReady) {
+        if (handle > 0L && nativeReady) {
             try {
                 Native.close(handle);
             } catch (Throwable e) {
@@ -481,7 +476,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             Thread.sleep(200);  // 让泵线程自行静默收口
         } catch (InterruptedException ignored) {
         }
-        if (handle != null && !handle.equals(Pointer.NULL) && nativeReady) {
+        if (handle > 0L && nativeReady) {
             try {
                 Native.destroy(handle);
             } catch (Throwable e) {
@@ -592,7 +587,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
     private static final class RdpBridge {
 
         /** RDP 连接句柄 */
-        private final Pointer handle;
+        private final long handle;
 
         /** 主机 标识 */
         private final Long hostId;
@@ -622,13 +617,13 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         private volatile LocalDateTime lastActiveTime = LocalDateTime.now();
 
         /** 帧缓存（避免按 stride*height 重复分配） */
-        private volatile Memory buffer;
+        private volatile byte[] buffer;
 
         /** 帧缓存大小 */
         private volatile int bufferLen;
 
         /** 构造桥接上下文 */
-        private RdpBridge(Pointer handle, WebSocketSession wsSession, Long hostId, int width, int height, String userName) {
+        private RdpBridge(long handle, WebSocketSession wsSession, Long hostId, int width, int height, String userName) {
             this.handle = handle;
             this.wsSession = wsSession;
             this.hostId = hostId;
@@ -663,14 +658,13 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
     /**
      * 原生桥调用收口。
      * <p>
-     * 单独成类的原因：{@code RdpjBridge} 属于可选依赖，外层 handler 一旦直接引用它，
-     * 在没带 {@code utils-support-native-rdp} 的部署里类校验阶段就可能
-     * {@code NoClassDefFoundError}；把引用关进本嵌套类后，只有
-     * {@link RdpjNative#exists()} 为真时才会加载它，缺包时业务侧只提示“不支持”。
+     * 只依赖 utils 侧 {@link RdpNativeSpi} 契约；native 制品缺失时
+     * {@link NativeServices#get(Class)} 返回 {@code null}，业务侧只提示“不支持”，
+     * 不会在类校验阶段触发 {@code NoClassDefFoundError}。
      * </p>
      * <p>
-     * 本类的方法签名只用 {@code int} / {@link Pointer} / {@link IntByReference} / {@code String}，
-     * 不向外暴露 {@code RdpjBridge} 的任何类型。
+     * 本类的方法签名只用 {@code long} / {@code byte[]} / {@code String}，
+     * 不向外暴露 native 模块或 JNA 的任何类型。
      * </p>
      */
     private static final class Native {
@@ -679,12 +673,25 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         }
 
         /**
+         * 取可用的 RDP 原生实现
+         *
+         * @return 原生实现
+         */
+        private static RdpNativeSpi spi() {
+            RdpNativeSpi spi = NativeServices.get(RdpNativeSpi.class);
+            if (spi == null) {
+                throw new IllegalStateException(RdpjNative.UNSUPPORTED_MESSAGE);
+            }
+            return spi;
+        }
+
+        /**
          * 创建 RDP 实例
          *
          * @return 句柄
          */
-        private static Pointer create() {
-            return RdpjBridge.instance().rdpj_create();
+        private static long create() {
+            return spi().create();
         }
 
         /**
@@ -695,8 +702,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param height 高
          * @return 0
          */
-        private static int resize(Pointer handle, int width, int height) {
-            return RdpjBridge.instance().rdpj_resize(handle, width, height);
+        private static int resize(long handle, int width, int height) {
+            return spi().resize(handle, width, height);
         }
 
         /**
@@ -710,8 +717,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param locale   区域
          * @return 0 表示已启动
          */
-        private static int connect(Pointer handle, String host, int port, String user, String password, String locale) {
-            return RdpjBridge.instance().rdpj_connect(handle, host, port, user, password, locale);
+        private static int connect(long handle, String host, int port, String user, String password, String locale) {
+            return spi().connect(handle, host, port, user, password, locale);
         }
 
         /**
@@ -720,8 +727,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param handle 句柄
          * @return 0 连接中 1 已连接 2 已关闭 -1 失败
          */
-        private static int state(Pointer handle) {
-            return RdpjBridge.instance().rdpj_state(handle);
+        private static int state(long handle) {
+            return spi().state(handle);
         }
 
         /**
@@ -730,18 +737,19 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param handle 句柄
          * @return 错误文本
          */
-        private static String lastError(Pointer handle) {
-            return RdpjBridge.instance().rdpj_last_error(handle);
+        private static String lastError(long handle) {
+            return spi().lastError(handle);
         }
 
         /**
-         * 帧头指针
+         * 读取当前帧头
          *
          * @param handle 句柄
-         * @return 帧头指针
+         * @param header 输出数组
+         * @return 有新帧返回 true
          */
-        private static Pointer lastFrame(Pointer handle) {
-            return RdpjBridge.instance().rdpj_last_frame(handle);
+        private static boolean frameHeader(long handle, int[] header) {
+            return spi().frameHeader(handle, header);
         }
 
         /**
@@ -749,12 +757,10 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          *
          * @param handle 句柄
          * @param buffer 输出缓冲
-         * @param size   缓冲长度
-         * @param outLen 实际写入长度
          * @return 写入字节数
          */
-        private static int frame(Pointer handle, Pointer buffer, int size, IntByReference outLen) {
-            return RdpjBridge.instance().rdpj_frame(handle, buffer, size, outLen);
+        private static int frame(long handle, byte[] buffer) {
+            return spi().frame(handle, buffer);
         }
 
         /**
@@ -767,8 +773,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param down   按下标志
          * @return 0 表示已入队
          */
-        private static int mouse(Pointer handle, int x, int y, int button, int down) {
-            return RdpjBridge.instance().rdpj_mouse(handle, x, y, button, down);
+        private static int mouse(long handle, int x, int y, int button, int down) {
+            return spi().mouse(handle, x, y, button, down);
         }
 
         /**
@@ -779,8 +785,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param down   按下标志
          * @return 0 表示已入队
          */
-        private static int key(Pointer handle, short code, int down) {
-            return RdpjBridge.instance().rdpj_key(handle, code, down);
+        private static int key(long handle, short code, int down) {
+            return spi().key(handle, code, down);
         }
 
         /**
@@ -792,8 +798,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          * @param delta  滚动量
          * @return 0 表示已入队
          */
-        private static int wheel(Pointer handle, int x, int y, int delta) {
-            return RdpjBridge.instance().rdpj_wheel(handle, x, y, delta);
+        private static int wheel(long handle, int x, int y, int delta) {
+            return spi().wheel(handle, x, y, delta);
         }
 
         /**
@@ -801,8 +807,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          *
          * @param handle 句柄
          */
-        private static void close(Pointer handle) {
-            RdpjBridge.instance().rdpj_close(handle);
+        private static void close(long handle) {
+            spi().close(handle);
         }
 
         /**
@@ -810,8 +816,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
          *
          * @param handle 句柄
          */
-        private static void destroy(Pointer handle) {
-            RdpjBridge.instance().rdpj_destroy(handle);
+        private static void destroy(long handle) {
+            spi().destroy(handle);
         }
     }
 }

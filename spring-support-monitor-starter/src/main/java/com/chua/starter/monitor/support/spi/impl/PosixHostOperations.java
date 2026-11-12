@@ -883,7 +883,47 @@ public class PosixHostOperations extends HostOperations {
                     "崩溃与诊断", "enum", "0=关闭;1=开启"),
             new SysctlSpec("kernel.core_uses_pid", "core 文件名带 PID", "开关", "内核", false,
                     "生成的 core 文件名是否追加进程号，避免并发崩溃互相覆盖。",
-                    "崩溃与诊断", "enum", "0=关闭;1=开启")
+                    "崩溃与诊断", "enum", "0=关闭;1=开启"),
+            // ===== 追加：高频运维项（按 group 归入上面的分组） =====
+            new SysctlSpec("net.ipv4.tcp_congestion_control", "拥塞控制算法", "算法", "内核", false,
+                    "整机默认拥塞控制算法。BBR 需要内核 4.9+ 且 tcp_bbr 模块可用（modprobe tcp_bbr）；"
+                            + "内核不认识时会直接拒绝写入，报错原样回显。",
+                    "网络与端口", "enum", "cubic=cubic（默认）;bbr=BBR;reno=reno"),
+            new SysctlSpec("net.core.default_qdisc", "默认队列算法", "算法", "内核", false,
+                    "网卡默认排队规则，BBR 通常搭配 fq；改完对新连接生效。",
+                    "网络与端口", "enum", "fq_codel=fq_codel（默认）;fq=fq;cake=cake;pfifo_fast=pfifo_fast"),
+            new SysctlSpec("net.ipv4.tcp_max_tw_buckets", "TIME_WAIT 上限", "个", "内核", false,
+                    "同时存在的 TIME_WAIT 连接上限，超过会被直接销毁并打内核日志；短连接高并发时调大。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.tcp_fastopen", "TCP Fast Open", "位掩码", "内核", false,
+                    "0 关闭 / 1 客户端 / 2 服务端 / 3 双向；需要应用同时支持才真正生效。",
+                    "网络与端口", "enum", "0=关闭;1=客户端;2=服务端;3=双向"),
+            new SysctlSpec("net.ipv4.tcp_rmem", "TCP 接收缓冲（三值）", "最小 默认 最大", "内核", false,
+                    "形如「4096 87380 6291456」；长肥管道（高带宽高延迟）调大最大值可提升单连接吞吐。",
+                    "网络与端口", "quad", ""),
+            new SysctlSpec("net.ipv4.tcp_wmem", "TCP 发送缓冲（三值）", "最小 默认 最大", "内核", false,
+                    "形如「4096 16384 4194304」；大文件传输与高并发上行常常调大最大值。",
+                    "网络与端口", "quad", ""),
+            new SysctlSpec("net.ipv4.neigh.default.gc_thresh3", "ARP 表硬上限", "个", "内核", false,
+                    "邻居表最大条目数；容器 / 大二层网络出现「neighbour table overflow」时调大。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.netfilter.nf_conntrack_max", "连接跟踪上限", "个", "内核", false,
+                    "conntrack 表容量；网关 / NAT / 容器宿主机打满后新连接会被丢弃。"
+                            + "内核未加载 nf_conntrack 时本项不会出现。",
+                    "网络与端口", "int", ""),
+            new SysctlSpec("net.ipv4.ping_group_range", "允许 ping 的组范围", "起始 结束", "内核", false,
+                    "允许创建 ICMP socket 的组 ID 区间，形如「0 2147483647」表示所有组；容器里 ping 不通常调它。",
+                    "网络与端口", "range", ""),
+            new SysctlSpec("vm.nr_hugepages", "大页数量", "页", "内核", false,
+                    "预留的 2MB 大页数量；数据库 / DPDK 类应用按需预留，改大立即占用内存。",
+                    "内存与交换", "int", ""),
+            new SysctlSpec("vm.zone_reclaim_mode", "NUMA 回收模式", "级别", "内核", false,
+                    "0 关闭（默认）/ 1 优先本地回收 / 2 回收+回写 / 3 再叠加 swap；多数负载应保持 0。",
+                    "内存与交换", "enum", "0=关闭;1=优先本地回收;2=回收+回写;3=回收+回写+swap"),
+            new SysctlSpec("kernel.io_uring_disabled", "io_uring 开关", "级别", "内核", false,
+                    "0 允许 / 1 仅特权 / 2 禁止；安全加固常设 2，但会影响使用 io_uring 的服务。"
+                            + "老内核没有该项，此时它不会出现在列表里。",
+                    "安全与权限", "enum", "0=允许;1=仅特权;2=禁止")
     );
 
     /**
@@ -901,7 +941,13 @@ public class PosixHostOperations extends HostOperations {
                     "soft", "nproc", "ulimit -Su"),
             new LimitSpec("limits.nproc.hard", "进程数（硬限制）", "个", "用户会话",
                     "单用户可创建进程 / 线程的硬限制。",
-                    "hard", "nproc", "ulimit -Hu")
+                    "hard", "nproc", "ulimit -Hu"),
+            new LimitSpec("limits.memlock.soft", "锁定内存（软限制）", "KB", "用户会话",
+                    "允许 mlock 锁定的内存量；Elasticsearch / 大页 / 实时类服务常需要 unlimited。",
+                    "soft", "memlock", "ulimit -Sl"),
+            new LimitSpec("limits.memlock.hard", "锁定内存（硬限制）", "KB", "用户会话",
+                    "memlock 的硬上限；写入 limits.d 后对新登录会话生效。",
+                    "hard", "memlock", "ulimit -Hl")
     );
 
     @Override

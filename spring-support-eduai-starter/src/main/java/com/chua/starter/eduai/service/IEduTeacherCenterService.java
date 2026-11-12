@@ -142,9 +142,10 @@ public interface IEduTeacherCenterService {
      * @param pageNum         页码，从 1 开始；null 按第 1 页
      * @param pageSize        每页条数；null 按默认档
      * @param teacherFinished 完成状态筛选：1 只看已完成；0 只看未完成（含历史 NULL）；null 不筛选
+     * @param keyword         任务号 / 学号模糊匹配；空串不筛选
      * @return 阅卷任务分页结果
      */
-    PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize, Integer teacherFinished);
+    PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize, Integer teacherFinished, String keyword);
 
     /**
      * 成绩分布统计：某阅卷任务的分数段分布、平均分、最高/最低分。

@@ -308,7 +308,8 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
     }
 
     @Override
-    public PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize, Integer teacherFinished) {
+    public PageResult<EduMarkingTask> pageMyMarkingTasks(Integer pageNum, Integer pageSize, Integer teacherFinished,
+                                                          String keyword) {
         String me = EduUserContext.requireUserId();
         Page<EduMarkingTask> page = new Page<>(PageBounds.pageNum(pageNum), PageBounds.pageSize(pageSize));
         QueryWrapper<EduMarkingTask> query = new QueryWrapper<EduMarkingTask>()
@@ -320,6 +321,12 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
         } else if (Integer.valueOf(0).equals(teacherFinished)) {
             query.and(w -> w.eq("marking_task_teacher_finished", 0)
                     .or().isNull("marking_task_teacher_finished"));
+        }
+        // 关键词只匹配「任务号 / 学号」：这两个字段是老师手里真正能拿到、能粘贴的标识；
+        // 学生姓名来自维度表、试卷名不落任务表，放进来会变成跨表 like，代价大且易误伤。
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim();
+            query.and(w -> w.like("marking_task_task_id", kw).or().like("marking_task_student_id", kw));
         }
         query.orderByDesc("marking_task_id");
         IPage<EduMarkingTask> result = markingTaskMapper.selectPage(page, query);

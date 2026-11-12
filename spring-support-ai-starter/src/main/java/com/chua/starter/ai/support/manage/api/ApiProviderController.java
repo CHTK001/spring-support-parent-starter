@@ -633,7 +633,11 @@ public class ApiProviderController {
             entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
         }
         if (body.containsKey("proxy")) {
-            entity.setProxy(str(body, "proxy"));
+            // 表单把代理做成「直连 / 自定义」两态：选直连时前端会显式提交空串。
+            // str() 把空串归成 null，而 updateById 默认跳过 null 字段 —— 于是
+            // 「改回直连」永远清不掉旧代理。这里把空串落成 '' 才能真的写入。
+            String proxy = str(body, "proxy");
+            entity.setProxy(proxy == null ? "" : proxy);
         }
         if (body.containsKey("extra")) {
             entity.setExtra(uncheckedCast(body.get("extra")));
@@ -2177,7 +2181,12 @@ public class ApiProviderController {
     // ==================== 路由组 ====================
 
     /**
-     * 路由组成员候选：已加入模型库的模型（供组页面搜索添加）。
+     * 路由组成员候选：已加入模型库、且用户能在模型页看到的模型。
+     *
+     * <p>候选集必须与 {@link #listProviders()} 的可见口径一致，否则会出现
+     * 「模型页只有 3 个模型，挑选成员却冒出几十个」：渠道管理给每个 OAuth 渠道
+     * 镀的那行 provider 在模型页是隐藏的，但它下面的模型行仍然 enabled，
+     * 直接按 enabled 查就会把它们当候选。</p>
      *
      * @param keyword 模型名关键字
      * @return 候选列表
@@ -2185,11 +2194,23 @@ public class ApiProviderController {
     @GetMapping("/router-groups/candidates")
     public ApiResult<List<Map<String, Object>>> listRouterGroupCandidates(
             @RequestParam(value = "keyword", required = false) String keyword) {
+        boolean onnxVisible = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
         List<Map<String, Object>> items = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (SysAiProviderModel row : routerGroupService.searchMemberCandidates(keyword)) {
             SysAiProvider owner = providerMapper.selectById(row.getProviderId());
             if (owner == null || ProviderRouteTargets.isRouterGroup(owner.getPlatform())) {
+                continue;
+            }
+            // 供应商本身停用 → 它的模型在会话里也选不到，不能进候选
+            if (Boolean.FALSE.equals(owner.getEnabled())) {
+                continue;
+            }
+            // 与模型页同一口径：渠道 OAuth 行（非免费渠道）在模型页不展示
+            if (isOAuthChannelRow(owner) && !isFreeChannelRow(owner)) {
+                continue;
+            }
+            if (isOnnxRow(owner) && !onnxVisible) {
                 continue;
             }
             String key = row.getProviderId() + ":" + row.getModel();
@@ -2203,7 +2224,13 @@ public class ApiProviderController {
             item.put("model", row.getModel());
             item.put("alias", row.getAlias());
             item.put("enabled", row.getEnabled());
+            // 挑选成员时要能判断「这个模型能干什么、吃多少、多少钱」
+            item.put("description", row.getDescription());
+            item.put("family", row.getFamily());
             item.put("context_window", row.getContextWindow());
+            item.put("max_tokens", row.getMaxTokens());
+            item.put("metrics", row.getMetrics());
+            item.put("capabilities", row.getCapabilities());
             item.put("effort", routerGroupService.readEffort(row));
             items.add(item);
         }

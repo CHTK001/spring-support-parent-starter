@@ -16,12 +16,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
@@ -103,6 +106,33 @@ public class TsharkRuntime {
      * 解压后查找可执行文件的最大目录深度。
      */
     private static final int MAX_SCAN_DEPTH = 4;
+
+    /**
+     * 解包命令（tar/ar）的输出尾部保留行数：报错时给出最后几行，够定位即可
+     */
+    private static final int TOOL_TAIL_LINES = 20;
+
+    /**
+     * 解包命令超时（秒）：几十 MB 的 tar 在慢盘上也不会超过这个量级
+     */
+    private static final long TOOL_TIMEOUT_SECONDS = 180L;
+
+    /**
+     * Windows 内置包候选文件名
+     */
+    private static final List<String> BUNDLE_WINDOWS = List.of("tshark-package.zip");
+
+    /**
+     * Linux 内置包候选文件名：deb 优先，其次自打 tar
+     */
+    private static final List<String> BUNDLE_LINUX = List.of(
+            "tshark-package.deb", "tshark-package.tar.xz", "tshark-package.tar.gz");
+
+    /**
+     * macOS 内置包候选文件名
+     */
+    private static final List<String> BUNDLE_DARWIN = List.of(
+            "tshark-package.tar.gz", "tshark-package.tar.xz");
 
     /**
      * 系统常见安装路径（只做存在性判断，命中就不下载）。
@@ -256,24 +286,27 @@ public class TsharkRuntime {
                 }
                 publish(TsharkInstallState.MISSING, 0,
                         "未找到 tshark，也没有可用的安装包：请配置 plugin.monitor.tshark.package-url "
-                                + "或把便携包放到 plugin.monitor.tshark.package-path");
+                                + "（或按平台配置 package-url-windows / package-url-linux），"
+                                + "也可以把安装包放到 package-path");
                 return;
             }
             if (!pkg.equals(downloadTarget())) {
                 // 本地包：不占下载区间，直接进解压
                 publish(TsharkInstallState.EXTRACTING, DOWNLOAD_WEIGHT, "正在解压便携包");
             }
-            unzip(pkg, targetDir);
+            extract(pkg, targetDir);
             Path bin = findExecutable(targetDir);
             if (bin == null) {
                 publish(TsharkInstallState.FAILED, 0,
                         "便携包里没有找到 " + EXE_NAME + "，请确认压缩的是带依赖的整包");
                 return;
             }
+            ensureExecutable(bin);
             String version = probeVersion(bin);
             if (version.isBlank()) {
                 publish(TsharkInstallState.FAILED, 0,
-                        "解压后无法执行 " + bin + "（常见原因：缺少同目录下的依赖 DLL）");
+                        "解压后无法执行 " + bin + "（常见原因：缺少同目录下的依赖 DLL/so，"
+                                + "或 Linux 上没有可执行权限 / 缺少 libpcap）");
                 return;
             }
             resolvedBin = bin.toString();
@@ -424,7 +457,7 @@ public class TsharkRuntime {
      * @return zip 路径；没有可用的包返回 null（下载失败时已发布 FAILED）
      */
     private Path resolvePackage() {
-        String local = properties.getPackagePath();
+        String local = platformPackagePath();
         if (local != null && !local.isBlank()) {
             Path path = Paths.get(local);
             if (Files.isRegularFile(path)) {
@@ -432,7 +465,11 @@ public class TsharkRuntime {
             }
             log.warn("[tshark] package-path 不存在 path={}", local);
         }
-        String url = properties.getPackageUrl();
+        Path bundled = bundledPackage();
+        if (bundled != null) {
+            return bundled;
+        }
+        String url = platformPackageUrl();
         if (url == null || url.isBlank()) {
             return null;
         }
@@ -505,6 +542,344 @@ public class TsharkRuntime {
     private String progressText(long downloaded, long total) {
         String done = humanSize(downloaded);
         return total > 0 ? "正在下载安装包 " + done + " / " + humanSize(total) : "正在下载安装包 " + done;
+    }
+
+    /**
+     * 从 classpath 取内置便携包（`utils-support-resource-tshark`）。
+     *
+     * <p>资源目录 {@code tshark/<os>-<arch>/tshark-package.*}，与 vnc 资源模块同一口径；
+     * 目录为空时返回 null，继续走 package-url，不影响既有安装方式。</p>
+     *
+     * @return 已复制到安装目录的包路径；没有内置包返回 null
+     */
+    private Path bundledPackage() {
+        String platform = platformTag();
+        List<String> names = platform.startsWith("windows") ? BUNDLE_WINDOWS
+                : platform.startsWith("darwin") ? BUNDLE_DARWIN : BUNDLE_LINUX;
+        ClassLoader loader = TsharkRuntime.class.getClassLoader();
+        for (String name : names) {
+            String resource = "tshark/" + platform + "/" + name;
+            Path target = installDir().resolve(name);
+            try {
+                if (Files.isRegularFile(target) && Files.size(target) > 0L) {
+                    return target;
+                }
+                try (InputStream in = loader.getResourceAsStream(resource)) {
+                    if (in == null) {
+                        continue;
+                    }
+                    Files.createDirectories(target.getParent());
+                    Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+                }
+                log.info("[tshark] 使用内置便携包 {}", target);
+                return target;
+            } catch (IOException e) {
+                log.warn("[tshark] 释放内置便携包失败 resource={} reason={}", resource, e.getMessage());
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 当前平台标识（与资源目录命名一致）。
+     *
+     * @return 形如 windows-x86_64 / linux-x86_64 / darwin-aarch64
+     */
+    private static String platformTag() {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
+        String name;
+        if (os.contains("win")) {
+            name = "windows";
+        } else if (os.contains("mac")) {
+            name = "darwin";
+        } else {
+            name = "linux";
+        }
+        boolean arm = arch.contains("aarch64") || arch.contains("arm64");
+        return name + "-" + (arm ? "aarch64" : "x86_64");
+    }
+
+    /**
+     * 取当前平台的本地包路径：平台专用 &gt; 通用。
+     *
+     * @return 配置值，未配置返回空串
+     */
+    private String platformPackagePath() {
+        String platform = isWindows() ? properties.getPackagePathWindows() : properties.getPackagePathLinux();
+        return firstNonBlank(platform, properties.getPackagePath());
+    }
+
+    /**
+     * 取当前平台的下载地址：平台专用 &gt; 通用。
+     *
+     * @return 配置值，未配置返回空串
+     */
+    private String platformPackageUrl() {
+        String platform = isWindows() ? properties.getPackageUrlWindows() : properties.getPackageUrlLinux();
+        return firstNonBlank(platform, properties.getPackageUrl());
+    }
+
+    /**
+     * 取第一个非空白值。
+     *
+     * @param first    首选值
+     * @param fallback 兜底值
+     * @return 值，均为空返回空串
+     */
+    private static String firstNonBlank(String first, String fallback) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return fallback == null ? "" : fallback;
+    }
+
+    /**
+     * 按格式解包：zip / tar(.gz/.xz) / deb。
+     *
+     * <p>为什么不再只认 zip：Wireshark 官方没有 Linux 便携 zip，发行版产物是
+     * {@code .deb} 或 {@code .tar.xz}；运维自己打的内网包也多半是 tar。
+     * tar 与 deb 的解包交给系统 {@code tar}/{@code ar}，不在 Java 里重写一遍归档格式。</p>
+     *
+     * @param pkg 安装包
+     * @param dir 目标目录
+     * @throws IOException 解包失败
+     */
+    private void extract(Path pkg, Path dir) throws IOException {
+        PackageType type = detectType(pkg);
+        log.info("[tshark] 安装包 type={} file={}", type, pkg.getFileName());
+        switch (type) {
+            case ZIP -> unzip(pkg, dir);
+            case TAR -> runTool(List.of("tar", "-xf", pkg.toString(), "-C", dir.toString()), "解压安装包");
+            case DEB -> extractDeb(pkg, dir);
+            default -> throw new IOException("无法识别的安装包格式（支持 zip / tar.gz / tar.xz / deb）："
+                    + pkg.getFileName());
+        }
+    }
+
+    /**
+     * 安装包格式。
+     */
+    private enum PackageType {
+        /**
+         * zip
+         */
+        ZIP,
+        /**
+         * tar / tar.gz / tar.xz
+         */
+        TAR,
+        /**
+         * Debian 包
+         */
+        DEB,
+        /**
+         * 未知
+         */
+        UNKNOWN
+    }
+
+    /**
+     * 按魔数识别安装包格式（后缀只作兜底）。
+     *
+     * @param pkg 安装包
+     * @return 格式
+     * @throws IOException 读取失败
+     */
+    private static PackageType detectType(Path pkg) throws IOException {
+        byte[] head = new byte[8];
+        try (InputStream in = Files.newInputStream(pkg)) {
+            int read = in.read(head);
+            if (read >= 4 && head[0] == 'P' && head[1] == 'K') {
+                return PackageType.ZIP;
+            }
+            if (read >= 2 && (head[0] & 0xff) == 0x1f && (head[1] & 0xff) == 0x8b) {
+                return PackageType.TAR;
+            }
+            if (read >= 6 && (head[0] & 0xff) == 0xfd && head[1] == 0x37 && head[2] == 0x7a
+                    && head[3] == 0x58 && head[4] == 0x5a) {
+                return PackageType.TAR;
+            }
+            if (read >= 8 && head[0] == '!' && head[1] == '<' && head[2] == 'a' && head[3] == 'r'
+                    && head[4] == 'c' && head[5] == 'h') {
+                return PackageType.DEB;
+            }
+        }
+        String name = pkg.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".zip")) {
+            return PackageType.ZIP;
+        }
+        if (name.endsWith(".tar") || name.endsWith(".tar.gz") || name.endsWith(".tgz")
+                || name.endsWith(".tar.xz") || name.endsWith(".txz")) {
+            return PackageType.TAR;
+        }
+        if (name.endsWith(".deb")) {
+            return PackageType.DEB;
+        }
+        return PackageType.UNKNOWN;
+    }
+
+    /**
+     * 解 deb：取出 {@code data.tar.*} 再交给 tar。
+     *
+     * @param deb deb 包
+     * @param dir 目标目录
+     * @throws IOException 解包失败
+     */
+    private void extractDeb(Path deb, Path dir) throws IOException {
+        List<String> members = runToolForLines(List.of("ar", "t", deb.toString()), "列出 deb 内容");
+        String data = members.stream()
+                .filter(line -> line.trim().startsWith("data.tar"))
+                .map(String::trim)
+                .findFirst()
+                .orElseThrow(() -> new IOException("deb 里没有 data.tar* 成员（可能是控制包）"));
+        Path inner = Files.createTempFile("tshark-deb-", ".tar");
+        try {
+            runToolToFile(List.of("ar", "p", deb.toString(), data), inner, "取出 " + data);
+            runTool(List.of("tar", "-xf", inner.toString(), "-C", dir.toString()), "解压 " + data);
+        } finally {
+            Files.deleteIfExists(inner);
+        }
+    }
+
+    /**
+     * 执行外部命令，失败时带上输出尾部一并抛出。
+     *
+     * @param command 命令
+     * @param action  动作名（用于报错）
+     * @throws IOException 执行失败或超时
+     */
+    private void runTool(List<String> command, String action) throws IOException {
+        Process process = startTool(command);
+        List<String> tail = drain(process);
+        waitTool(process, action, tail);
+    }
+
+    /**
+     * 执行外部命令并收集输出行。
+     *
+     * @param command 命令
+     * @param action  动作名
+     * @return 输出行
+     * @throws IOException 执行失败
+     */
+    private List<String> runToolForLines(List<String> command, String action) throws IOException {
+        Process process = startTool(command);
+        List<String> lines = drain(process);
+        waitTool(process, action, lines);
+        return lines;
+    }
+
+    /**
+     * 执行外部命令并把标准输出写进文件。
+     *
+     * @param command 命令
+     * @param target  输出文件
+     * @param action  动作名
+     * @throws IOException 执行失败
+     */
+    private void runToolToFile(List<String> command, Path target, String action) throws IOException {
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.redirectErrorStream(true);
+        pb.redirectOutput(target.toFile());
+        Process process;
+        try {
+            process = pb.start();
+        } catch (IOException e) {
+            throw new IOException(action + " 启动失败：" + e.getMessage()
+                    + "（系统缺少命令 " + command.getFirst() + "）", e);
+        }
+        waitTool(process, action, List.of());
+    }
+
+    /**
+     * 启动外部命令。
+     *
+     * @param command 命令
+     * @return 进程
+     * @throws IOException 启动失败
+     */
+    private Process startTool(List<String> command) throws IOException {
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.redirectErrorStream(true);
+        try {
+            return pb.start();
+        } catch (IOException e) {
+            throw new IOException("启动失败：" + e.getMessage()
+                    + "（系统缺少命令 " + command.getFirst() + "）", e);
+        }
+    }
+
+    /**
+     * 收集进程输出（最多保留尾部若干行）。
+     *
+     * @param process 进程
+     * @return 输出行
+     */
+    private static List<String> drain(Process process) {
+        List<String> lines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (lines.size() >= TOOL_TAIL_LINES) {
+                    lines.remove(0);
+                }
+                lines.add(line);
+            }
+        } catch (IOException e) {
+            log.debug("[tshark] 读取命令输出失败: {}", e.getMessage());
+        }
+        return lines;
+    }
+
+    /**
+     * 等待进程结束并校验退出码。
+     *
+     * @param process 进程
+     * @param action  动作名
+     * @param tail    输出尾部
+     * @throws IOException 超时或非 0 退出
+     */
+    private static void waitTool(Process process, String action, List<String> tail) throws IOException {
+        try {
+            if (!process.waitFor(TOOL_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new IOException(action + "超时（" + TOOL_TIMEOUT_SECONDS + "s）");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(action + "被中断", e);
+        }
+        if (process.exitValue() != 0) {
+            throw new IOException(action + "失败（exit=" + process.exitValue() + "）："
+                    + String.join(" | ", tail));
+        }
+    }
+
+    /**
+     * 给解出来的 tshark 补可执行位。
+     *
+     * <p>zip 不携带 Unix 权限位，{@code Files.copy} 落盘默认 644，Linux 上直接执行会
+     * {@code Permission denied}。这里只补 x 位，不动其它权限；非 POSIX 平台跳过。</p>
+     *
+     * @param bin 可执行文件
+     */
+    private void ensureExecutable(Path bin) {
+        if (isWindows() || bin == null) {
+            return;
+        }
+        try {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(bin);
+            EnumSet<PosixFilePermission> next = EnumSet.copyOf(permissions);
+            next.add(PosixFilePermission.OWNER_EXECUTE);
+            next.add(PosixFilePermission.GROUP_EXECUTE);
+            next.add(PosixFilePermission.OTHERS_EXECUTE);
+            Files.setPosixFilePermissions(bin, next);
+        } catch (UnsupportedOperationException | IOException e) {
+            log.debug("[tshark] 补可执行位跳过 bin={} reason={}", bin, e.getMessage());
+        }
     }
 
     /**
@@ -592,12 +967,29 @@ public class TsharkRuntime {
      * @param message 文案
      */
     private void publishReady(String message) {
-        TsharkRuntimeStatus next = new TsharkRuntimeStatus(TsharkInstallState.READY, 100, message,
+        // 只装上了 tshark、没有抓包驱动/权限时，别让「已就绪」误导用户：
+        // 解析 pcap 能用，实时抓包不能用，这两件事必须在状态里说清楚。
+        String text = captureCapable ? message : message + "（实时抓包不可用：" + captureHint() + "）";
+        TsharkRuntimeStatus next = new TsharkRuntimeStatus(TsharkInstallState.READY, 100, text,
                 true, captureCapable, resolvedBin == null ? "" : resolvedBin,
                 resolvedVersion, resolvedSource, System.currentTimeMillis());
         status = next;
-        log.info("[tshark] {} bin={} captureReady={}", message, next.binPath(), next.captureReady());
+        log.info("[tshark] {} bin={} captureReady={}", text, next.binPath(), next.captureReady());
         streamRegistry.broadcast(next);
+    }
+
+    /**
+     * 实时抓包不可用时的原因提示。
+     *
+     * <p>Windows 缺 Npcap，Linux 缺 libpcap 或没有 CAP_NET_RAW/CAP_NET_ADMIN ——
+     * 后者在容器里尤其常见，提示要能直接指向处理办法。</p>
+     *
+     * @return 提示文案
+     */
+    private static String captureHint() {
+        return isWindows()
+                ? "未检测到 Npcap 抓包驱动，请安装 Npcap 后重试"
+                : "需要 libpcap，且进程要有 CAP_NET_RAW/CAP_NET_ADMIN 权限（或以 root 运行）";
     }
 
     /**

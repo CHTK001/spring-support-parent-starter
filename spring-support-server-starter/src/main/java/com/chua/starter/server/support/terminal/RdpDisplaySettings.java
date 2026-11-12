@@ -51,6 +51,26 @@ public class RdpDisplaySettings {
     public static final String KEY_FORCE_LOSSLESS = "rdp.force-lossless";
 
     /**
+     * 系统配置键：界面缩放 DPI
+     */
+    public static final String KEY_DPI = "rdp.dpi";
+
+    /**
+     * 默认 DPI（与 guacd 历史默认一致）
+     */
+    public static final int DEFAULT_DPI = 96;
+
+    /**
+     * DPI 下限
+     */
+    private static final int MIN_DPI = 60;
+
+    /**
+     * DPI 上限
+     */
+    private static final int MAX_DPI = 480;
+
+    /**
      * 默认宽（与 guacd 工厂历史的默认一致，改这里等于改出厂值）
      */
     public static final int DEFAULT_WIDTH = 1280;
@@ -126,6 +146,15 @@ public class RdpDisplaySettings {
             return DEFAULT_COLOR_DEPTH;
         }
         return raw;
+    }
+
+    /**
+     * 生效的 DPI。
+     *
+     * @return 60..480 之间的值，越界回落默认
+     */
+    public int rdpDpi() {
+        return intInRange(KEY_DPI, DEFAULT_DPI, MIN_DPI, MAX_DPI);
     }
 
     /**

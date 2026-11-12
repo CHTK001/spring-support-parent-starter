@@ -66,11 +66,38 @@ public class TsharkInstallProperties {
     private String packageUrl = "";
 
     /**
+     * Windows 专用便携包地址，优先于 {@link #packageUrl}。
+     *
+     * <p>同一个部署包里可能同时带 Windows 与 Linux 的产物，用平台专用配置就不必为
+     * 不同系统准备两份 application.yml。</p>
+     */
+    private String packageUrlWindows = "";
+
+    /**
+     * Linux 专用便携包地址，优先于 {@link #packageUrl}。
+     *
+     * <p>支持 {@code .tar.gz} / {@code .tar.xz} / {@code .deb}（deb 会取出其中的
+     * {@code data.tar.*} 再解）；Wireshark 官方没有 Linux 便携 zip，通常用发行版的
+     * deb 或自建 tar 包。</p>
+     */
+    private String packageUrlLinux = "";
+
+    /**
      * 本地便携包路径，优先于 {@link #packageUrl}。
      *
      * <p>内网离线部署时把 zip 放到机器上，填这里即可，服务端不再访问外网。</p>
      */
     private String packagePath = "";
+
+    /**
+     * Windows 专用本地包路径，优先于 {@link #packagePath}。
+     */
+    private String packagePathWindows = "";
+
+    /**
+     * Linux 专用本地包路径，优先于 {@link #packagePath}。
+     */
+    private String packagePathLinux = "";
 
     /**
      * 单次下载 + 解压 + 自检的总体超时（秒）。

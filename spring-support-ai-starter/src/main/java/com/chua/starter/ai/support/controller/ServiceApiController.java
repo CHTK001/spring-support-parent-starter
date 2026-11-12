@@ -15,7 +15,11 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +39,11 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 public class ServiceApiController {
+
+    /**
+     * 端口卡统计窗口（小时）。与页面上的「近 24 小时」文案必须一致。
+     */
+    private static final int STATS_WINDOW_HOURS = 24;
 
     private final SysAiServiceInstanceMapper instanceMapper;
     private final SysAiServiceAccessLogMapper accessLogMapper;
@@ -61,8 +70,12 @@ public class ServiceApiController {
      * @return 服务实例列表响应
      */
     @GetMapping("/v2/service/instances")
-    public Map<String, Object> listInstances() {
+    public Map<String, Object> listInstances(@RequestParam(defaultValue = "24") int hours) {
+        int windowHours = Math.min(Math.max(hours, 1), 720);
         List<SysAiServiceInstance> list = instanceMapper.selectList(null);
+        Map<String, SysAiServiceAccessLogMapper.InstanceStatRow> stats = loadInstanceStats(windowHours);
+        Map<String, long[]> series = loadInstanceSeries(windowHours);
+        Map<String, Long> p95 = loadInstanceP95(windowHours);
         List<Map<String, Object>> result = new ArrayList<>();
         for (SysAiServiceInstance i : list) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -75,9 +88,61 @@ public class ServiceApiController {
             m.put("ccEnabled", i.getCcEnabled());
             m.put("geminiEnabled", i.getGeminiEnabled());
             m.put("recordUsage", i.getRecordUsage());
+            // 端口卡上的四个读数：来自访问日志按 instance_id 的聚合，不做任何猜测
+            SysAiServiceAccessLogMapper.InstanceStatRow stat = stats.get(i.getInstanceId());
+            long calls = stat == null || stat.calls() == null ? 0L : stat.calls();
+            long ok = stat == null || stat.successCalls() == null ? 0L : stat.successCalls();
+            m.put("calls", calls);
+            m.put("successCalls", ok);
+            m.put("errors", Math.max(calls - ok, 0L));
+            m.put("tokens", stat == null || stat.tokens() == null ? 0L : stat.tokens());
+            m.put("avgLatencyMs", stat == null || stat.avgLatencyMs() == null
+                    ? null : Math.round(stat.avgLatencyMs()));
+            m.put("lastAt", stat == null ? null : toMillis(stat.lastAt()));
+            long[] spark = series.get(i.getInstanceId());
+            m.put("spark", spark == null ? new long[SPARK_BUCKETS] : spark);
+            m.put("p95Ms", p95.get(i.getInstanceId()));
             result.add(m);
         }
-        return Map.of("instances", result);
+        Map<String, Object> response = new LinkedHashMap<>(4);
+        response.put("instances", result);
+        response.put("statsWindowHours", windowHours);
+        return response;
+    }
+
+    /**
+     * 本地时间 → 毫秒时间戳（前端按毫秒比较新旧）。
+     *
+     * @param time 本地时间，可为 null
+     * @return 毫秒时间戳；{@code null} 原样返回
+     */
+    private static Long toMillis(LocalDateTime time) {
+        return time == null ? null : time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    /**
+     * 读取「近 {@link #STATS_WINDOW_HOURS} 小时」的实例聚合。
+     *
+     * <p>统计失败不能把实例列表打挂：日志表结构异常时返回空表，页面退化成
+     * 「只有端口和状态」而不是整块空白。</p>
+     *
+     * @return instanceId → 聚合行
+     */
+    private Map<String, SysAiServiceAccessLogMapper.InstanceStatRow> loadInstanceStats(int windowHours) {
+        try {
+            List<SysAiServiceAccessLogMapper.InstanceStatRow> rows =
+                    accessLogMapper.selectInstanceStats(LocalDateTime.now().minusHours(windowHours));
+            Map<String, SysAiServiceAccessLogMapper.InstanceStatRow> map = new HashMap<>(Math.max(rows.size(), 4));
+            for (SysAiServiceAccessLogMapper.InstanceStatRow row : rows) {
+                if (row.instanceId() != null && !row.instanceId().isBlank()) {
+                    map.put(row.instanceId(), row);
+                }
+            }
+            return map;
+        } catch (Exception e) {
+            log.warn("[ServiceApi] 读取实例统计失败，列表仅返回状态: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 
     /**
@@ -175,13 +240,26 @@ public class ServiceApiController {
      */
     @GetMapping("/v2/service/logs")
     public Map<String, Object> listLogs(@RequestParam(required = false) String instanceId,
-                                        @RequestParam(defaultValue = "20") int limit) {
+                                        @RequestParam(defaultValue = "20") int limit,
+                                        @RequestParam(defaultValue = "24") int hours,
+                                        @RequestParam(defaultValue = "false") boolean onlyFailed) {
         LambdaQueryWrapper<SysAiServiceAccessLog> wrapper = new LambdaQueryWrapper<>();
-        if (instanceId != null) {
+        // 空串等于「不限定实例」：前端下拉的「全部实例」value 是 ''，
+        // 若照旧 eq(instance_id, '') 会一条都查不到（历史缺陷）。
+        if (instanceId != null && !instanceId.isBlank()) {
             wrapper.eq(SysAiServiceAccessLog::getInstanceId, instanceId);
         }
-        wrapper.orderByDesc(SysAiServiceAccessLog::getCreateTime).last("LIMIT " + limit);
-        return Map.of("logs", accessLogMapper.selectList(wrapper));
+        int windowHours = Math.min(Math.max(hours, 1), 720);
+        wrapper.ge(SysAiServiceAccessLog::getCreateTime, LocalDateTime.now().minusHours(windowHours));
+        if (onlyFailed) {
+            wrapper.ge(SysAiServiceAccessLog::getStatus, 400);
+        }
+        int size = Math.min(Math.max(limit, 1), 500);
+        wrapper.orderByDesc(SysAiServiceAccessLog::getCreateTime).last("LIMIT " + size);
+        Map<String, Object> result = new LinkedHashMap<>(4);
+        result.put("logs", accessLogMapper.selectList(wrapper));
+        result.put("windowHours", windowHours);
+        return result;
     }
 
     // ==================== 运行日志 / 系统日志（admin） ====================

@@ -10,6 +10,7 @@ import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.model.vo.TerminalOnlineVO;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.TerminalSessionService;
+import com.chua.starter.server.support.terminal.GuacdTunables;
 import com.chua.starter.server.support.terminal.WebSocketSessions;
 import com.chua.starter.server.support.util.SshClients;
 import com.chua.ssh.support.client.SshClient;
@@ -79,6 +80,11 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      * SSH 连接缓存管理器（复用已建立连接，避免每次远控重复握手）
      */
     private final ConnectionManager connectionManager;
+
+    /**
+     * 终端可调参数（TERM 类型等；直连 PTY 也走同一套配置）
+     */
+    private final GuacdTunables tunables;
 
     /**
      * 会话审计服务
@@ -161,6 +167,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
                 : ServerConstants.DEFAULT_SSH_PORT;
 
         SshClients.Handle handle;
+        long borrowStart = System.nanoTime();
         try {
             handle = connectionManager.borrow(host, resolved.getData());
         } catch (Exception e) {
@@ -169,6 +176,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
             reject(wsSession, "SSH 连接失败 " + host.getServerHostAddress() + ":" + port + " - " + cause);
             return;
         }
+        long borrowMs = (System.nanoTime() - borrowStart) / 1_000_000L;
 
         Bridge bridge = new Bridge(handle, wsSession, hostId);
         String userName = WebSocketSessions.firstNonBlank(operator, resolved.getData().username());
@@ -177,16 +185,21 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         bridge.recordId = record == null ? null : record.getId();
         bridges.put(wsSession.getId(), bridge);
         try {
+            long ptyStart = System.nanoTime();
             SshClient.TerminalOperation operation = handle.client().terminal()
                     .pty(true)
+                    .ptyType(tunables.sshTerminalType())
                     .width(cols)
                     .height(rows)
                     .onOutput(bridge::writeToBrowser)
                     .onClose(() -> closeBridge(bridge, "远端会话结束"))
                     .connect();
             bridge.operation = operation;
-            log.info("[terminal-ssh] 会话建立 sessionId={} hostId={} {}:{} {}x{}",
-                    wsSession.getId(), hostId, host.getServerHostAddress(), port, cols, rows);
+            // 两段耗时分开打：borrow 大 = 在重新握手（看 ConnectionManager 的「新建连接」原因）；
+            // pty 大 = 通道/目标机，与连接池无关
+            log.info("[terminal-ssh] 会话建立 sessionId={} hostId={} {}:{} {}x{} borrow={}ms pty={}ms term={}",
+                    wsSession.getId(), hostId, host.getServerHostAddress(), port, cols, rows,
+                    borrowMs, (System.nanoTime() - ptyStart) / 1_000_000L, tunables.sshTerminalType());
         } catch (Exception e) {
             bridges.remove(wsSession.getId());
             closeHandle(handle, hostId);
@@ -518,6 +531,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
         try {
             SshClient.TerminalOperation operation = handle.client().terminal()
                     .pty(true)
+                    .ptyType(tunables.sshTerminalType())
                     .width(cols)
                     .height(rows)
                     .onOutput(room::broadcast)

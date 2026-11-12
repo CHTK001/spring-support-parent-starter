@@ -197,6 +197,7 @@ CREATE TABLE IF NOT EXISTS device_provider_credential (
     -- 原 V1.1__add_cloud_yao_fields.sql 的云曜字段，已折进建表
     device_credential_product_code VARCHAR(64) COMMENT '云曜产品编码 ProductCode（云曜平台必填）',
     device_credential_project_id VARCHAR(64) COMMENT '云曜项目 ID ProjectID（云曜平台必填）',
+    device_credential_group_no VARCHAR(64) COMMENT '云眸组编号 groupNo（云眸平台注册设备必填）',
     -- 凭据维度的自动检测/自动同步（高级配置，挂载到时间轮，默认全关）
     device_credential_offline_detect_enabled TINYINT DEFAULT 0 COMMENT '该凭据维度的在离线检测开关',
     device_credential_offline_detect_interval INT COMMENT '该凭据维度的在离线检测间隔（秒）',
@@ -585,7 +586,7 @@ EXECUTE stmt_asset_pwd;
 DEALLOCATE PREPARE stmt_asset_pwd;
 
 -- ---------------------------------------------------------------------
--- device_provider_credential：SK 加密后长度变长 + 云曜字段
+-- device_provider_credential：SK 加密后长度变长 + 云曜/云眸字段
 -- ---------------------------------------------------------------------
 SET @has_cred_secret := (
     SELECT COUNT(*) FROM information_schema.COLUMNS
@@ -618,6 +619,16 @@ SET @sql_cred_project_id := IF(@has_cred_project_id > 0, 'SELECT 1',
 PREPARE stmt_cred_project_id FROM @sql_cred_project_id;
 EXECUTE stmt_cred_project_id;
 DEALLOCATE PREPARE stmt_cred_project_id;
+
+SET @has_cred_group_no := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'device_provider_credential' AND COLUMN_NAME = 'device_credential_group_no'
+);
+SET @sql_cred_group_no := IF(@has_cred_group_no > 0, 'SELECT 1',
+    'ALTER TABLE device_provider_credential ADD COLUMN device_credential_group_no VARCHAR(64) COMMENT ''云眸组编号 groupNo（云眸平台注册设备必填）'' AFTER device_credential_project_id');
+PREPARE stmt_cred_group_no FROM @sql_cred_group_no;
+EXECUTE stmt_cred_group_no;
+DEALLOCATE PREPARE stmt_cred_group_no;
 
 -- ---------------------------------------------------------------------
 -- device_organization：外部 ID、排序、删除标记

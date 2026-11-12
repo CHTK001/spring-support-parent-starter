@@ -118,6 +118,15 @@ class DatasourceTenantLookupAdapterTest {
         assertEquals(3306, option.port());
     }
 
+    @Test
+    @DisplayName("按主键取名称：停用的行也要能显示名称，便于看清原配置指向哪条数据源")
+    void nameWorksEvenWhenRowDisabled() {
+        rows.add(row(8L, "旧生产库", "jdbc", 0, "10.0.0.20", 3306, "db", "u", "p"));
+
+        assertEquals("旧生产库", adapter.name(8L), "回显名称不受启用状态过滤");
+        assertNull(adapter.name(404L));
+    }
+
     /**
      * 构造一行台账。
      *

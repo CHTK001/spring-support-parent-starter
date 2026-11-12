@@ -30,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -129,6 +131,39 @@ public class ModelClientResolver {
             }
         }
         log.info("[ModelClientResolver] 路由组缓存已失效 provider={} 清理={}", groupId, removed);
+    }
+
+    /**
+     * 读取某个模型所属供应商的限流参数。
+     *
+     * <p>限流按供应商维度共享：同一供应商下的所有 Key 共用并发与每分钟配额。
+     * 模型解析不到供应商时返回 {@code null}（不限流）。</p>
+     *
+     * @param qualifiedModel 模型名，可为 {@code <providerId>:<model>} 或裸模型名
+     * @return 限流参数；无供应商时 {@code null}
+     */
+    public ThrottleSpec throttleOf(String qualifiedModel) {
+        ParsedModel parsed = parse(qualifiedModel);
+        if (parsed == null) {
+            return null;
+        }
+        SysAiProvider provider = resolveProvider(parsed);
+        if (provider == null) {
+            return null;
+        }
+        Map<String, Object> extra = provider.getExtra() == null ? Map.of() : provider.getExtra();
+        return new ThrottleSpec(provider.getProviderId(),
+                extraInt(extra, "max_concurrency"), extraInt(extra, "requests_per_minute"));
+    }
+
+    /**
+     * 供应商级限流参数。
+     *
+     * @param providerId  供应商 ID
+     * @param concurrency 并发上限（≤0 不限制）
+     * @param rpm         每分钟请求数（≤0 不限制）
+     */
+    public record ThrottleSpec(String providerId, int concurrency, int rpm) {
     }
 
     /**
@@ -311,8 +346,18 @@ public class ModelClientResolver {
      * @return Key（可空，代表免鉴权）→ 客户端；无可用 Key 时为空表
      */
     private Map<String, ChatClient> keyedClients(SysAiProvider provider, String model, String ownerScope) {
+        Map<String, Object> providerExtra = provider.getExtra() == null ? Map.of() : provider.getExtra();
         List<String> keys = collectAllKeys(provider, ownerScope);
-        Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+        // 同时使用的账号数：只用前 N 个 Key 轮换（0/缺失 = 全部启用）
+        int maxAccounts = extraInt(providerExtra, "max_accounts");
+        if (maxAccounts > 0 && keys.size() > maxAccounts) {
+            log.info("[ModelClientResolver] 供应商 {} 限制同时使用 Key：{} / {}",
+                    provider.getProviderId(), maxAccounts, keys.size());
+            keys = new ArrayList<>(keys.subList(0, maxAccounts));
+        }
+        Map<String, String> extraHeaders = extractExtraHeaders(providerExtra);
+        mergePassthroughRequestHeaders(providerExtra, extraHeaders);
+        Map<String, Object> extraBody = extraMap(providerExtra, "extra_body");
         Map<String, RouteTarget> channelRoutes = ProviderRouteTargets.isFreeChannel(provider.getPlatform())
                 ? mergedRoutes(provider, ownerScope)
                 : null;
@@ -327,10 +372,15 @@ public class ModelClientResolver {
         }
         Map<String, ChatClient> result = new LinkedHashMap<>();
         for (String key : keys) {
-            ChatClient raw = ChatClient.create(buildSetting(provider, key, extraHeaders, channelRoutes));
-            if (raw != null) {
-                result.put(key == null ? "" : key, raw.model(model));
+            ChatClient raw = ChatClient.create(buildSetting(provider, key, extraHeaders, channelRoutes, model));
+            if (raw == null) {
+                continue;
             }
+            if (!extraBody.isEmpty()) {
+                // 额外请求体：整段并入出站 JSON（prompt_cache_key、safety_settings 这类上游私有字段）
+                raw = raw.extraBody(extraBody);
+            }
+            result.put(key == null ? "" : key, raw.model(model));
         }
         return result;
     }
@@ -485,11 +535,11 @@ public class ModelClientResolver {
      */
     private ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
                                             Map<String, String> extraHeaders,
-                                            Map<String, RouteTarget> channelRoutes) {
+                                            Map<String, RouteTarget> channelRoutes, String model) {
         return ChatClientSetting.builder()
                 .provider(provider.getPlatform())
                 .appKey(apiKey)
-                .baseUrl(provider.getBaseUrl())
+                .baseUrl(resolveBaseUrl(provider, model))
                 .extraHeaders(extraHeaders)
                 .authScheme(provider.getAuthScheme())
                 .authHeader(extraString(provider.getExtra(), "auth_header"))
@@ -522,6 +572,170 @@ public class ModelClientResolver {
         CooldownPolicy policy = new CooldownPolicy(base, max, backoff);
         CooldownPolicies.register(provider.getPlatform() + "|", policy);
         CooldownPolicies.register(provider.getProviderId() + "|", policy);
+    }
+
+    /**
+     * 解析本次请求实际使用的上游地址。
+     *
+     * <p>供应商 {@code extra.endpoints} 可按协议单独覆盖地址（截图里的
+     * 「端点 OpenAI / Responses / Anthropic」三行）：键为协议名
+     * （openai / openai-response / gemini / anthropic），值为该协议的基础地址。
+     * 命中则用协议地址，未命中回落到供应商的 base_url。</p>
+     *
+     * @param provider 供应商
+     * @param model    裸模型名
+     * @return 实际基础地址
+     */
+    private String resolveBaseUrl(SysAiProvider provider, String model) {
+        Map<String, Object> extra = provider.getExtra();
+        Map<String, Object> endpoints = extraMap(extra, "endpoints");
+        if (endpoints.isEmpty()) {
+            return provider.getBaseUrl();
+        }
+        String protocol = protocolOf(provider.getProviderId(), model);
+        Object url = protocol == null ? null : endpoints.get(protocol);
+        if (url == null || String.valueOf(url).isBlank()) {
+            return provider.getBaseUrl();
+        }
+        log.debug("[ModelClientResolver] 端点覆盖 provider={} model={} protocol={} url={}",
+                provider.getProviderId(), model, protocol, url);
+        return String.valueOf(url).trim();
+    }
+
+    /**
+     * 读取模型行上的接入协议（能力表里的 {@code protocol}）。
+     *
+     * @param providerId 供应商 ID
+     * @param model      裸模型名
+     * @return 协议名；读不到返回 {@code null}
+     */
+    private String protocolOf(String providerId, String model) {
+        try {
+            SysAiProviderModel row = providerModelMapper.selectOne(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getProviderId, providerId)
+                            .eq(SysAiProviderModel::getModel, model));
+            if (row == null || row.getCapabilities() == null) {
+                return null;
+            }
+            for (Map<String, Object> cap : row.getCapabilities()) {
+                Object protocol = cap == null ? null : cap.get("protocol");
+                if (protocol != null && !String.valueOf(protocol).isBlank()) {
+                    return String.valueOf(protocol).trim();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[ModelClientResolver] 读取模型协议失败 {}:{} {}", providerId, model, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 把「透传请求头」名单里的入站头带到出站请求。
+     *
+     * <p>名单来自 {@code extra.passthrough_request_headers}（逗号分隔或数组）；
+     * 只在请求线程里可用，后台线程取不到就是没有，不报错。</p>
+     *
+     * @param extra   扩展配置
+     * @param headers 待补齐的出站头
+     */
+    private void mergePassthroughRequestHeaders(Map<String, Object> extra, Map<String, String> headers) {
+        List<String> names = extraStringList(extra, "passthrough_request_headers");
+        if (names.isEmpty()) {
+            return;
+        }
+        try {
+            if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs)) {
+                return;
+            }
+            for (String name : names) {
+                String value = attrs.getRequest().getHeader(name);
+                if (value != null && !value.isBlank()) {
+                    headers.putIfAbsent(name, value);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[ModelClientResolver] 透传请求头失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 读取 extra 中的整数字段。
+     *
+     * @param extra 扩展配置
+     * @param key   键名
+     * @return 数值；缺失或非法返回 0
+     */
+    private static int extraInt(Map<String, Object> extra, String key) {
+        return (int) extraLong(extra, key);
+    }
+
+    /**
+     * 读取 extra 中的对象字段。
+     *
+     * @param extra 扩展配置
+     * @param key   键名
+     * @return 对象内容；非对象返回空表
+     */
+    private static Map<String, Object> extraMap(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return Map.of();
+        }
+        Object value = extra.get(key);
+        if (!(value instanceof Map<?, ?> map) || map.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Object> out = new LinkedHashMap<>(map.size());
+        map.forEach((k, v) -> {
+            if (k != null && v != null) {
+                out.put(String.valueOf(k), v);
+            }
+        });
+        return out;
+    }
+
+    /**
+     * 读取 extra 中的字符串清单（数组或逗号/换行分隔）。
+     *
+     * @param extra 扩展配置
+     * @param key   键名
+     * @return 去空白后的清单
+     */
+    private static List<String> extraStringList(Map<String, Object> extra, String key) {
+        if (extra == null) {
+            return List.of();
+        }
+        Object value = extra.get(key);
+        if (value == null) {
+            return List.of();
+        }
+        List<String> out = new ArrayList<>(4);
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                addToken(out, item == null ? null : String.valueOf(item));
+            }
+            return out;
+        }
+        for (String token : String.valueOf(value).split("[,\\n]")) {
+            addToken(out, token);
+        }
+        return out;
+    }
+
+    /**
+     * 追加一个非空 token。
+     *
+     * @param target 目标清单
+     * @param token  原始 token
+     */
+    private static void addToken(List<String> target, String token) {
+        if (token == null) {
+            return;
+        }
+        String trimmed = token.trim();
+        if (!trimmed.isEmpty() && !target.contains(trimmed)) {
+            target.add(trimmed);
+        }
     }
 
     /**

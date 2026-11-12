@@ -187,6 +187,9 @@ plugin:
         # 世界沙盒人眼级验收：vite 起在 19095（15689/15700 被并发验收占用）
         - http://localhost:19095
         - http://127.0.0.1:19095
+        # 19095 常被并发会话抢占时，本机前端改用 19096
+        - http://localhost:19096
+        - http://127.0.0.1:19096
     decode:
       # 开发/验收用 AES 密钥（与前端 app.yaml httpConfig.requestCodec.key 一致，
       # 后端对 key 做 SHA-256 → 32 字节 AES-256 密钥，IV 取前 16 字节）
@@ -205,7 +208,7 @@ plugin:
     # 过滤器既不下发 CORS 头也不返回响应，浏览器登录会一直 pending（实测 12s 超时）。
     # 因此本地开发/验收必须显式列出 vite 端口，且与上面 plugin.api.cors 保持一致。
     file-storage:
-      cors-allowed-origins: http://localhost:15689,http://127.0.0.1:15689,http://localhost:15700,http://127.0.0.1:15700,http://localhost:19095,http://127.0.0.1:19095
+      cors-allowed-origins: http://localhost:15689,http://127.0.0.1:15689,http://localhost:15700,http://127.0.0.1:15700,http://localhost:19095,http://127.0.0.1:19095,http://localhost:19096,http://127.0.0.1:19096
     temp:
       # 格式 用户名:口令;用户名:口令；用户标识取用户名，跨登录稳定，数据按此归属
       #

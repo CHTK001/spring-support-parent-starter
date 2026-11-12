@@ -47,6 +47,7 @@ import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.starter.ai.support.chat.ModelClientResolver;
+import com.chua.starter.ai.support.chat.ProviderThrottle;
 import com.chua.starter.ai.support.stream.ChatStreamRegistry;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
@@ -326,15 +327,31 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                       Consumer<com.chua.common.support.ai.agent.ConfirmationRequest> onConfirmation) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
+        // 供应商级限流：并发上限与每分钟请求数在请求线程里取许可，流结束/出错时归还。
+        // 拿不到许可最多等 2s，仍拿不到就回「供应商繁忙」，不把请求无限挂住。
+        final ProviderThrottle.Lease lease = acquireThrottle(request);
+        if (lease == null) {
+            emitter.completeWithError(new IllegalStateException(
+                    "供应商繁忙：并发或每分钟请求数已达上限，请稍后重试"));
+            return emitter;
+        }
+        // 许可挂在 emitter 的三个终态上：正常完成 / 出错 / 超时都会归还，
+        // 不用在每个回调分支里各写一遍 release（漏一处就会永久占住并发名额）。
+        emitter.onCompletion(lease::release);
+        emitter.onError(error -> lease.release());
+        emitter.onTimeout(lease::release);
+
         ChatClient configured;
         try {
             ChatClient client = resolveChatClient(request);
             if (client == null) {
+                lease.release();
                 emitter.completeWithError(new IllegalStateException("No available ChatClient for model: " + request.getModel()));
                 return emitter;
             }
             configured = maybeWrapAgent(configureClient(client, request), request);
         } catch (Throwable e) {
+            lease.release();
             // 组装阶段（含 Agent 包装 / SPI 实例化）异常必须显式记录并经错误回调下发，
             // 否则外层 CompletableFuture 会静默吞掉，前端永远停在“工作中”
             log.error("[AiChat] 组装 Agent/客户端失败 model={}", request.getModel(), e);
@@ -522,6 +539,28 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }));
 
         return emitter;
+    }
+
+    /**
+     * 取一个供应商级限流许可（并发上限 + 每分钟请求数）。
+     *
+     * <p>两项都没配（或配成 0）时返回空许可，几乎零开销；配了才真的排队。
+     * 最多等 2 秒，等不到返回 {@code null}，由调用方回「供应商繁忙」。</p>
+     *
+     * @param request 对话请求
+     * @return 许可；超时返回 {@code null}
+     */
+    private ProviderThrottle.Lease acquireThrottle(AiChatRequest request) {
+        ModelClientResolver.ThrottleSpec spec = null;
+        try {
+            spec = modelClientResolver.throttleOf(request.getModel());
+        } catch (Exception e) {
+            log.debug("[AiChat] 读取供应商限流配置失败: {}", e.getMessage());
+        }
+        if (spec == null) {
+            return ProviderThrottle.acquire(null, 0, 0, 0L);
+        }
+        return ProviderThrottle.acquire(spec.providerId(), spec.concurrency(), spec.rpm(), 2000L);
     }
 
     @Override

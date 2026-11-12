@@ -120,4 +120,19 @@ public class DatasourceTenantLookupAdapter implements TenantDatasourceLookup {
         }
         return options;
     }
+
+    /**
+     * 按主键取台账名称（只读回显用）。
+     *
+     * <p>不复用 {@link #options()}：那里的过滤条件比「取一个名字」严格，
+     * 已停用或类型不符的实例仍要显示名称，用户才看得懂原配置指向哪条数据源。</p>
+     *
+     * @param datasourceId 台账主键
+     * @return 名称；不存在时返回 {@code null}
+     */
+    @Override
+    public String name(long datasourceId) {
+        MsDatasource row = datasourceMapper.selectById(datasourceId);
+        return row == null ? null : row.getDatasourceName();
+    }
 }

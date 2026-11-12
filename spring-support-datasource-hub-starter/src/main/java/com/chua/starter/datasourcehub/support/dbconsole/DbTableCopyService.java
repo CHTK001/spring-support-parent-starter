@@ -27,10 +27,16 @@ import org.springframework.stereotype.Service;
  * （索引、字符集、注释、生成列全在原文里），数据要按批流式搬，任何一步都不适合
  * 让浏览器参与。前端只负责发一个请求、看进度。</p>
  *
- * <p><b>为什么源和目标各持一条物理连接</b>：{@code DatasourceService.connection(id)}
- * 返回的是缓存共享的同一条物理连接，同一数据源跨库复制时源和目标会抢同一条连接，
+ * <p><b>为什么源和目标各持一条连接</b>：{@code DatasourceService.connection(id)}
+ * 返回的是缓存共享的同一条连接，同一数据源跨库复制时源和目标会抢同一条连接，
  * 一边流式读游标一边写目标必然互相打断。这里用 {@code newConnection(id)} 各开一条，
  * 归本方法所有、用完即关。</p>
+ *
+ * <p><b>用完为什么还要还原会话库</b>：台账数据源的 {@code newConnection} 是独立物理连接，
+ * 关掉就没了；但主数据源（{@code datasourceId=0}）的 {@code newConnection} 拿的是容器
+ * 连接池里的连接（{@code AppDatasourceConnector} 不愿意绕开池另开连接）。切库后不还原，
+ * 这条连接归还池里仍停在业务库上，之后走同一连接的业务 SQL 会报「表不存在」。
+ * 所以本类在切库前记下会话库，任务结束时（成功/失败/取消）一律还原。</p>
  *
  * <p><b>为什么只支持 MySQL/MariaDB 系</b>：{@link DbTableSpec#showCreateTable} 与
  * {@link DbImporter} 的 DDL 拼装都以反引号为准；跨到 PG/H2 会把反引号原样带过去。
@@ -173,60 +179,72 @@ public class DbTableCopyService {
         String targetLabel = label(targetDatabase, targetTable);
         try (Connection source = datasourceService.newConnection(request.sourceDatasourceId());
              Connection target = datasourceService.newConnection(request.targetDatasourceId())) {
-            requireMysqlFamily(source, "源数据源");
-            requireMysqlFamily(target, "目标数据源");
-            useDatabase(source, sourceDatabase);
-            useDatabase(target, targetDatabase);
-
-            // ---- 1. 读取源表结构 ----
-            taskRegistry.startStep(taskId, STEP_STRUCTURE, "读取 " + sourceTable + " 的建表语句");
-            DbTableSpec spec = DbTableSpec.showCreateTable(source, sourceDatabase, sourceTable);
-            int ddlBytes = spec.ddl() == null ? 0 : spec.ddl().length();
-            taskRegistry.finishStep(taskId, STEP_STRUCTURE, "SUCCESS", "建表语句 " + ddlBytes + " 字节");
-            taskRegistry.progress(taskId, STRUCTURE_DONE, "源表结构已读取");
-            taskRegistry.detail(taskId, "源表 " + sourceTable + " 共 "
-                    + (spec.columns() == null ? 0 : spec.columns().size()) + " 列");
-
-            // ---- 2. 检查并创建目标表 ----
-            checkCancelled(taskId);
-            taskRegistry.startStep(taskId, STEP_CREATE, "检查目标表是否同名");
-            // 目标表重名判定必须锁在目标库内：{@code DbImporter.tableExists} 的
-            // 兜底 scope 是 (null, null)，MySQL 驱动在 catalog 为空时会把**所有库**的
-            // 同名表都算进来 —— 跨库复制（目标表名与源表同名，正好是最常见的用法）
-            // 会被误判成「目标已存在」而直接失败。
-            boolean exists = tableExistsInDatabase(target, targetDatabase, targetTable);
-            if (exists && !request.overwriteOrDefault()) {
-                throw new IllegalStateException("目标表 " + targetLabel
-                        + " 已存在，如需覆盖请确认后再提交");
-            }
-            // 覆盖时先写临时表，搬完再换名：原表在换名之前一直可用，失败也不会丢数据
-            String workingTable = exists
-                    ? scratchTableName(target, targetDatabase, targetTable, taskId, "t") : targetTable;
-            String ddl = targetDdl(spec.ddl(), workingTable);
-            execute(target, ddl);
-            if (exists) {
-                taskRegistry.detail(taskId, "已创建临时表 " + workingTable + "，复制完成后替换 " + targetTable);
-            }
-            taskRegistry.finishStep(taskId, STEP_CREATE, "SUCCESS",
-                    exists ? "已创建临时表 " + workingTable : "已创建目标表");
-            taskRegistry.progress(taskId, CREATE_DONE,
-                    exists ? "临时表已就绪，开始搬运数据" : "目标表 " + targetLabel + " 已就绪");
-
-            // ---- 3. 复制数据 ----
+            // 切库前先记下进入时的会话库：主数据源（datasourceId=0）的 newConnection
+            // 拿的是容器连接池里的连接（见 AppDatasourceConnector），USE 过后不还原就把
+            // 池里的连接留在了业务库上 —— 之后的登录、用户查询都会跑到那个库里，报
+            // 「Table 'xxx.sys_user' doesn't exist」。台账数据源是独立物理连接，还原只是多发一次 USE。
+            String sourceOriginal = currentDatabase(source);
+            String targetOriginal = currentDatabase(target);
             try {
-                if (request.copyDataOrDefault()) {
-                    copyData(taskId, source, target, sourceDatabase, sourceTable, targetDatabase, workingTable);
+                requireMysqlFamily(source, "源数据源");
+                requireMysqlFamily(target, "目标数据源");
+                useDatabase(source, sourceDatabase);
+                useDatabase(target, targetDatabase);
+
+                // ---- 1. 读取源表结构 ----
+                taskRegistry.startStep(taskId, STEP_STRUCTURE, "读取 " + sourceTable + " 的建表语句");
+                DbTableSpec spec = DbTableSpec.showCreateTable(source, sourceDatabase, sourceTable);
+                int ddlBytes = spec.ddl() == null ? 0 : spec.ddl().length();
+                taskRegistry.finishStep(taskId, STEP_STRUCTURE, "SUCCESS", "建表语句 " + ddlBytes + " 字节");
+                taskRegistry.progress(taskId, STRUCTURE_DONE, "源表结构已读取");
+                taskRegistry.detail(taskId, "源表 " + sourceTable + " 共 "
+                        + (spec.columns() == null ? 0 : spec.columns().size()) + " 列");
+
+                // ---- 2. 检查并创建目标表 ----
+                checkCancelled(taskId);
+                taskRegistry.startStep(taskId, STEP_CREATE, "检查目标表是否同名");
+                // 目标表重名判定必须锁在目标库内：{@code DbImporter.tableExists} 的
+                // 兜底 scope 是 (null, null)，MySQL 驱动在 catalog 为空时会把**所有库**的
+                // 同名表都算进来 —— 跨库复制（目标表名与源表同名，正好是最常见的用法）
+                // 会被误判成「目标已存在」而直接失败。
+                boolean exists = tableExistsInDatabase(target, targetDatabase, targetTable);
+                if (exists && !request.overwriteOrDefault()) {
+                    throw new IllegalStateException("目标表 " + targetLabel
+                            + " 已存在，如需覆盖请确认后再提交");
                 }
+                // 覆盖时先写临时表，搬完再换名：原表在换名之前一直可用，失败也不会丢数据
+                String workingTable = exists
+                        ? scratchTableName(target, targetDatabase, targetTable, taskId, "t") : targetTable;
+                String ddl = targetDdl(spec.ddl(), workingTable);
+                execute(target, ddl);
                 if (exists) {
-                    swapTables(target, targetDatabase, workingTable, targetTable, taskId);
+                    taskRegistry.detail(taskId, "已创建临时表 " + workingTable + "，复制完成后替换 " + targetTable);
                 }
-            } catch (Exception e) {
-                // 这次复制建出来的表（覆盖时是临时表，新建时就是目标表）都由我们清掉：
-                // 数据已回滚，留着只会让用户在左栏看到一张空表，还以为是复制成功了一半
-                dropQuietly(target, targetDatabase, exists ? workingTable : targetTable, taskId);
-                throw e;
+                taskRegistry.finishStep(taskId, STEP_CREATE, "SUCCESS",
+                        exists ? "已创建临时表 " + workingTable : "已创建目标表");
+                taskRegistry.progress(taskId, CREATE_DONE,
+                        exists ? "临时表已就绪，开始搬运数据" : "目标表 " + targetLabel + " 已就绪");
+
+                // ---- 3. 复制数据 ----
+                try {
+                    if (request.copyDataOrDefault()) {
+                        copyData(taskId, source, target, sourceDatabase, sourceTable, targetDatabase, workingTable);
+                    }
+                    if (exists) {
+                        swapTables(target, targetDatabase, workingTable, targetTable, taskId);
+                    }
+                } catch (Exception e) {
+                    // 这次复制建出来的表（覆盖时是临时表，新建时就是目标表）都由我们清掉：
+                    // 数据已回滚，留着只会让用户在左栏看到一张空表，还以为是复制成功了一半
+                    dropQuietly(target, targetDatabase, exists ? workingTable : targetTable, taskId);
+                    throw e;
+                }
+                taskRegistry.finish(taskId, "SUCCESS", "已复制到 " + targetLabel);
+            } finally {
+                // 无论成功/失败/取消都把会话库还原，绝不把切过库的连接还回池里
+                restoreDatabase(source, sourceOriginal);
+                restoreDatabase(target, targetOriginal);
             }
-            taskRegistry.finish(taskId, "SUCCESS", "已复制到 " + targetLabel);
         } catch (CopyCancelledException e) {
             log.info("[db-copy] 任务 {} 已取消", taskId);
             taskRegistry.finish(taskId, "CANCELLED", "已取消复制");
@@ -617,6 +635,28 @@ public class DbTableCopyService {
         }
         try (Statement st = conn.createStatement()) {
             st.execute("USE " + SqlName.quoteMysql(database, "数据库名"));
+        }
+    }
+
+    /**
+     * 把连接还原到切库前的会话库。
+     *
+     * <p>主数据源（{@code datasourceId=0}）的连接来自容器连接池，{@code newConnection}
+     * 拿到的也是池里的连接。切库后不还原，这条连接归还池里仍停在业务库上，
+     * 之后任何走同一连接的业务 SQL（登录、用户查询）都会报「表不存在」。</p>
+     *
+     * @param conn     连接
+     * @param original 切库前的会话库；为空表示当时读不到，不做还原
+     */
+    private static void restoreDatabase(Connection conn, String original) {
+        if (original == null || original.isBlank()) {
+            return;
+        }
+        try {
+            useDatabase(conn, original);
+        } catch (SQLException e) {
+            // 还原失败只能随连接一起被池回收；这里不掩盖任务本身的结论
+            log.warn("[db-copy] 还原会话库 {} 失败: {}", original, e.getMessage());
         }
     }
 

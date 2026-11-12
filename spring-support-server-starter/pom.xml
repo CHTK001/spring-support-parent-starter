@@ -15,10 +15,6 @@
 
     <properties>
         <guacamole.version>1.6.0</guacamole.version>
-        <!-- RDP 直连原生桥的 JNA 绑定版本，与本地仓库已缓存版本一致 -->
-        <jna.version>5.14.0</jna.version>
-        <!-- native 制品版本独立于 utils.version，跟随 utils-support-native-parent 主线 -->
-        <native.rdp.version>4.0.0.43</native.rdp.version>
         <!-- 串口终端依赖 -->
         <jserialcomm.version>2.11.0</jserialcomm.version>
     </properties>
@@ -64,6 +60,21 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <!-- 文件存储：主机文件页直接复用 FileStorageTemplate（分片上传与进度 SSE 也在该模块） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-filesystem-starter</artifactId>
+        </dependency>
+        <!--
+          AI 能力：optional。发布模块只依赖 ReleaseAiCapability 这个门面，
+          宿主装了 ai-starter 才装配实现，没装时 AI 入口自动隐藏。
+          硬依赖会把 onnx / pty4j 等一整套拖进只用发布模块的应用。
+        -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-ai-starter</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- 文档 -->
         <dependency>
@@ -137,22 +148,14 @@
             <version>${guacamole.version}</version>
         </dependency>
 
-        <!-- RDP 直连原生桥：JNA 绑定 rdpj.dll（FreeRDP 3.x 静态链接的 C 扩展）。
-             原生库与桥接类由 utils-support-native-rdp 统一提供，本模块只消费。
-             optional：属于可选部署件，不带它也能编译/启动，运行期由
-             RdpjNative.exists() 探测，缺失时直连直接提示“不支持”；
-             同时避免下游应用被这条 12.8MB 的原生库强制牵连。
-             native 制品版本独立于 utils.version（native 父 POM 为 4.0.0.43）。 -->
+        <!-- RDP 直连原生桥：只依赖 utils 侧 SPI 契约（utils-support-native-spi），
+             具体实现（rdpj.dll + JNA）由部署时按需加入 utils-support-native-rdp。
+             这样没有 native 制品也能编译，运行期由 RdpjNative.exists() 探测，
+             缺失时直连直接提示“不支持”。 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-native-rdp</artifactId>
-            <version>${native.rdp.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>net.java.dev.jna</groupId>
-            <artifactId>jna</artifactId>
-            <version>${jna.version}</version>
+            <artifactId>utils-support-native-spi</artifactId>
+            <version>${utils.version}</version>
         </dependency>
 
         <!-- 日志 -->

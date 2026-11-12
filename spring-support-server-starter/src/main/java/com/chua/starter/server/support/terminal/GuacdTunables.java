@@ -11,12 +11,16 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * guacd 三条协议链路里「可以让人调」的开关。
+ * 终端可调参数：guacd 三条协议链路 + 自研 SSH 直连共用的开关。
  *
  * <p><b>为什么集中在一个类里</b>：{@code GuacdConnectionFactory} 里原本有三十多个写死的参数
  * （壁纸、主题、字体平滑、音频、驱动器、VNC 编码与压缩、SSH 终端类型……）。逐个改成
  * {@code configService.getXxx(...)} 会让工厂里散落一堆「读配置 + 兜底」，也无法统一
  * 校验与日志。这里按协议收口，工厂只负责"取生效值并下发"。</p>
+ *
+ * <p>直连 SSH（{@code SshDirectWebSocketHandler} → MINA PTY）也读这里的
+ * {@link #sshTerminalType()}：原来库内把 PTY 类型写死成 {@code vt100}，只有 8 色，
+ * 与页面里 256 色的 xterm 不匹配。</p>
  *
  * <p><b>校验策略</b>：这些值会原样进 guacd 的协议参数，写错不是「画质差一点」，
  * 而是<b>连不上</b>（例如色深 20、编码写个不存在的 ZZZ）。所以全部走

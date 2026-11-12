@@ -53,12 +53,15 @@
         ORDER BY f.sort_order ASC
     </select>
 
-    <!-- 按模块编码查询配置：优先取通用行（grade_level IS NULL），
-         再退回任意一行。这样管理端原有按 code 操作的接口保持不变 -->
+    <!-- 按模块编码查询配置：可指定学段（同编码在三个学段各有一行时避免取错），
+         不传则优先取通用行（grade_level IS NULL），再退回任意一行 -->
     <select id="selectByModuleCode" resultType="com.chua.starter.eduai.model.EduFunConfig">
         SELECT f.* FROM edu_fun_config f
         <where>
             f.module_code = #{moduleCode}
+            <if test="gradeLevel != null and gradeLevel != ''">
+                AND f.fun_config_grade_level = #{gradeLevel}
+            </if>
             <choose>
                 <when test="scope.ownerPredicate != null">
                     AND (f.fun_config_owner_user_id IS NULL OR f.fun_config_owner_user_id = #{scope.ownerPredicate})

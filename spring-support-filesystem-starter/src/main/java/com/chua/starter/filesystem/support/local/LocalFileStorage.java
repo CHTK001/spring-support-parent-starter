@@ -66,6 +66,18 @@ public class LocalFileStorage extends AbstractFileStorage {
     private final Path rootPath;
 
     /**
+     * 取本地存储根目录（对象 key 相对此目录）。
+     *
+     * <p>发布管理「从主机文件选升级包」需要把 key 还原成主机上的绝对路径，
+     * 再交给 SFTP 投放，因此必须暴露根目录，而不是让调用方猜 base-path 拼接规则。</p>
+     *
+     * @return 根目录绝对路径
+     */
+    public Path getRootPath() {
+        return rootPath;
+    }
+
+    /**
      * uploadid → 分片路径 映射
      */
     private final Map<String, Map<Integer, Path>> multipartMap = new ConcurrentHashMap<>();

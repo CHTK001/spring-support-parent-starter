@@ -405,6 +405,23 @@ public class TsharkCaptureController {
     }
 
     /**
+     * 上传某个会话的 TLS keylog，并立即重跑协议还原。
+     *
+     * <p>只影响这一个会话：同一个工作台里不同 pcap 可能来自不同环境，
+     * 密钥文件不能混用。</p>
+     *
+     * @param id   会话 id
+     * @param file keylog 文件（NSS 格式）
+     * @return 密钥条数 / 标签 / 重新还原的报文数
+     */
+    @Operation(summary = "上传 TLS keylog 并重新还原")
+    @PostMapping("/sessions/{id}/tls-keylog")
+    public ReturnResult<Map<String, Object>> uploadTlsKeylog(@PathVariable Long id,
+                                                             @RequestParam("file") MultipartFile file) {
+        return this.tsharkCaptureService.uploadTlsKeylog(id, file);
+    }
+
+    /**
      * 会话 Top 流统计
      *
      * @param id 会话 ID

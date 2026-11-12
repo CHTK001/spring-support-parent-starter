@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.network.protocol.ProtocolRestorer;
+import com.chua.common.support.network.ssl.TlsKeyLogDecoder;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.network.support.tshark.PacketParserService;
 import com.chua.network.support.tshark.PacketRecord;
@@ -273,6 +274,14 @@ public class TsharkCaptureService {
         * 下一批才有正文；每批新建一个还原器会把跨批消息截断。会话收尾后移除。</p>
         */
     private final Map<Long, TsharkHttpStreamRestorer> httpRestorers = new ConcurrentHashMap<>();
+
+      /**
+       * 会话级 TLS keylog：用户在页面上为某个会话上传的密钥文件。
+       *
+       * <p>优先于全局配置 {@code plugin.monitor.tshark.tls-keylog-file}：同一个工作台里
+       * 不同会话可能来自不同环境，没必要为了解一份 pcap 去重启服务改配置。</p>
+       */
+    private final Map<Long, Path> sessionKeylogs = new ConcurrentHashMap<>();
 
     private final MsTsharkSessionMapper sessionMapper; // 会话映射器
     private final MsTsharkPacketMapper packetMapper; // 数据包映射器
@@ -1182,7 +1191,7 @@ public class TsharkCaptureService {
         this.sqliteRegistry.ensure(sessionId, filePath);
         List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                 "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=a"));
-        applyTlsKeylog(cmd);
+        applyTlsKeylog(cmd, sessionId);
         for (String field : TSHARK_FIELDS) {
             cmd.add("-e");
             cmd.add(field);
@@ -1320,7 +1329,7 @@ public class TsharkCaptureService {
             this.sqliteRegistry.ensure(sessionId, filePath);
             List<String> cmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                     "-T", "fields", "-E", "separator=\t", "-E", "quote=n", "-E", "occurrence=a"));
-            applyTlsKeylog(cmd);
+            applyTlsKeylog(cmd, sessionId);
               // 字段顺序即输出列顺序，逐列含义见 TSHARK_FIELDS 的注释
             for (String field : TSHARK_FIELDS) {
                 cmd.add("-e");
@@ -1440,7 +1449,7 @@ public class TsharkCaptureService {
             Path stderr = Files.createTempFile("tshark-restore", ".log");
             List<String> restoreCmd = new ArrayList<>(List.of(bin(), "-r", filePath.toString(),
                     "-T", "json", "-x"));
-            applyTlsKeylog(restoreCmd);
+            applyTlsKeylog(restoreCmd, sessionId);
             // 启用显示过滤时 pcap 里还躺着未命中的帧（捕获阶段不下 -f，全量抓）。
             // 这一遍只用于回填已入库报文，同样只读命中的帧，避免白解析几十万条。
             String display = this.displayFilters.get(sessionId);
@@ -3266,8 +3275,11 @@ public class TsharkCaptureService {
        *
        * @param cmd tshark 命令
        */
-    private void applyTlsKeylog(List<String> cmd) {
-        Path keylog = tlsKeylogPath();
+    private void applyTlsKeylog(List<String> cmd, Long sessionId) {
+        Path keylog = sessionId == null ? null : this.sessionKeylogs.get(sessionId);
+        if (keylog == null || !Files.isReadable(keylog)) {
+            keylog = tlsKeylogPath();
+        }
         if (keylog == null) {
             return;
         }
@@ -3314,6 +3326,69 @@ public class TsharkCaptureService {
         state.put("enabled", path != null);
         state.put("path", path == null ? "" : path.toString());
         return ReturnResult.ok(state);
+    }
+
+      /**
+       * 给某个会话上传 TLS keylog，并立刻用它重跑一遍协议还原。
+       *
+       * <p><b>为什么按会话存</b>：同一个工作台里不同 pcap 可能来自不同环境，密钥文件
+       * 不能混用；放全局配置里就得重启服务，验收时没法一份一份试。</p>
+       *
+       * <p><b>为什么先解码再落盘</b>：{@link TlsKeyLogDecoder} 会剔掉注释、坏行与非法
+       * 十六进制；如果一行有效的都没有，直接报错比让 tshark 静默解不开更有用。</p>
+       *
+       * <p>落盘路径固定为 pcap 同目录的 {@code keylog-<sessionId>.log}：与抓包文件
+       * 同生命周期，会话被清理时一起删。</p>
+       *
+       * @param sessionId 会话 id
+       * @param file      keylog 文件（NSS 格式）
+       * @return 密钥条数 / 标签 / 重新还原的报文数 / 落盘路径
+       */
+    public ReturnResult<Map<String, Object>> uploadTlsKeylog(Long sessionId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ReturnResult.error("keylog 文件为空");
+        }
+        MsTsharkSession session = this.sessionMapper.selectById(sessionId);
+        if (session == null || session.getFilePath() == null || session.getFilePath().isBlank()) {
+            return ReturnResult.error("会话不存在或没有 pcap 文件");
+        }
+        List<TlsKeyLogDecoder.Entry> entries;
+        try {
+            entries = new TlsKeyLogDecoder().decode(
+                    new String(file.getBytes(), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            return ReturnResult.error("读取 keylog 失败: " + e.getMessage());
+        }
+        if (entries.isEmpty()) {
+            return ReturnResult.error("没有可用的密钥行（需要 CLIENT_RANDOM <random> <secret>）");
+        }
+        Path pcap = Paths.get(session.getFilePath());
+        Path target = pcap.getParent().resolve("keylog-" + sessionId + ".log");
+        try {
+            StringBuilder text = new StringBuilder(entries.size() * 180);
+            for (TlsKeyLogDecoder.Entry entry : entries) {
+                text.append(entry.label()).append(' ').append(entry.clientRandom())
+                        .append(' ').append(entry.secret()).append(System.lineSeparator());
+            }
+            Files.createDirectories(pcap.getParent());
+            Files.writeString(target, text.toString(), StandardCharsets.US_ASCII);
+        } catch (IOException e) {
+            return ReturnResult.error("保存 keylog 失败: " + e.getMessage());
+        }
+        this.sessionKeylogs.put(sessionId, target);
+        long restored = -1L;
+        try {
+            restored = this.restorePacketPayloads(sessionId, pcap);
+        } catch (IOException e) {
+            log.warn("[tshark] 用 keylog 重新还原失败 session={}: {}", sessionId, e.getMessage());
+        }
+        List<String> labels = entries.stream().map(TlsKeyLogDecoder.Entry::label).distinct().toList();
+        Map<String, Object> out = new LinkedHashMap<>(5);
+        out.put("entries", entries.size());
+        out.put("labels", labels);
+        out.put("restored", restored);
+        out.put("keylog", target.toString());
+        return ReturnResult.ok(out);
     }
 
        /**
