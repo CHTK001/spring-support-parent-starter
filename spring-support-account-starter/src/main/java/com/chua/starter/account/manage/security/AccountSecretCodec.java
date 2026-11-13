@@ -1,12 +1,10 @@
 package com.chua.starter.account.manage.security;
 
-import com.chua.starter.common.support.crypto.AesCodec;
+import com.chua.starter.common.support.algorithm.crypto.Codec;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * 账号模块敏感值编解码器。
@@ -32,7 +30,7 @@ public class AccountSecretCodec {
     /**
      * AES 编解码器；密钥未配置时为 {@code null}
      */
-    private final AesCodec codec;
+    private final Codec codec;
 
     /**
      * 创建编解码器。
@@ -45,7 +43,7 @@ public class AccountSecretCodec {
             log.warn("[account] 未配置 account.security.secret-key，账号 Secret / Cookie 将以明文存储；"
                     + "生产环境请务必配置");
         } else {
-            this.codec = new AesCodec(secretKey.getBytes(StandardCharsets.UTF_8));
+            this.codec = Codec.build("aes-gcm", secretKey);
         }
     }
 

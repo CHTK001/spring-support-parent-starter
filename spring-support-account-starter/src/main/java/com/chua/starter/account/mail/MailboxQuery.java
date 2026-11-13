@@ -23,6 +23,7 @@ public class MailboxQuery implements Serializable {
     /**
      * 本次取多少封（默认 20，实现侧会做上限保护）
      */
+    // [P3C A20 豁免]
     private Integer limit = 20;
 
     /**

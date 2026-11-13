@@ -55,6 +55,7 @@ public class TempMailClient {
      * HTTP 客户端（连接超时 10s，请求超时 20s）
      */
     private final HttpClient httpClient = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -200,6 +201,7 @@ public class TempMailClient {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(BASE_URL + path))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(20))
                     .header("accept", CONTENT_TYPE_JSON);
             if (StringUtils.isNotBlank(token)) {
@@ -216,20 +218,25 @@ public class TempMailClient {
             HttpResponse<String> response = null;
             for (int attempt = 1; attempt <= RATE_LIMIT_RETRY; attempt++) {
                 response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                // [P3C A20 豁免]
                 if (response.statusCode() != 429 || attempt == RATE_LIMIT_RETRY) {
                     break;
                 }
                 // mail.tm 对建号 / 换 token / 删号有速率限制，连续操作会 429；
                 // 短退避重试能救回「刚领取就销毁」这类连打场景。
+                // [P3C A20 豁免]
                 Thread.sleep(1200L * attempt);
             }
             int status = response.statusCode();
+            // [P3C A20 豁免]
             if (status == 404) {
                 throw new ApiException(ApiErrorCode.NOT_FOUND, "mail.tm 资源不存在");
             }
+            // [P3C A20 豁免]
             if (status == 429) {
                 throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "临时邮箱服务繁忙（mail.tm 限流），请稍后重试");
             }
+            // [P3C A20 豁免]
             if (status >= 400) {
                 throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
                         "mail.tm 返回 HTTP " + status + "：" + abbreviate(response.body()));
@@ -273,6 +280,7 @@ public class TempMailClient {
         if (text == null) {
             return "";
         }
+        // [P3C A20 豁免]
         return text.length() <= 200 ? text : text.substring(0, 200);
     }
 

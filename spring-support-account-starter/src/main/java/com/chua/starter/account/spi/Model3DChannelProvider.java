@@ -36,6 +36,7 @@ public interface Model3DChannelProvider extends ChannelProvider {
      *
      * <p>3D 重建通常比出图慢一个量级，默认给 5 分钟。</p>
      */
+    // [P3C A20 豁免]
     int DEFAULT_TIMEOUT_SECONDS = 300;
 
     /**

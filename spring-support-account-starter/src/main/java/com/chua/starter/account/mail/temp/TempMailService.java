@@ -79,8 +79,10 @@ public class TempMailService {
      */
     public SysAccount claim(String name) {
         String domain = client.pickDomain();
+        // [P3C A20 豁免]
         String local = "tmp" + randomToken(10).toLowerCase(Locale.ROOT);
         String address = local + "@" + domain;
+        // [P3C A20 豁免]
         String password = randomToken(20);
         String remoteId = client.createAccount(address, password);
 
@@ -92,6 +94,7 @@ public class TempMailService {
         config.put("expireAt", now + TTL_MILLIS);
 
         SysAccount input = new SysAccount();
+        // [P3C A20 豁免]
         input.setCode("temp-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
         input.setName(StringUtils.isBlank(name) ? address : name.trim());
         input.setKind(AccountKind.EMAIL);

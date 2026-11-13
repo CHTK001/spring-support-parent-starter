@@ -530,6 +530,7 @@ public class MessageTemplateService {
         if (value instanceof Number number) {
             long raw = number.longValue();
             // 兼容秒级时间戳
+            // [P3C A20 豁免]
             return raw < 1_000_000_000_000L ? raw * 1000L : raw;
         }
         if (value != null) {

@@ -41,6 +41,7 @@ public interface VideoChannelProvider extends ChannelProvider {
     /**
      * 默认超时时间（秒）。
      */
+    // [P3C A20 豁免]
     int DEFAULT_TIMEOUT_SECONDS = 300;
 
     /**

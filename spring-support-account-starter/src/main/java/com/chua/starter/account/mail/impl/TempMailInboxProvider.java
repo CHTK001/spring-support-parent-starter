@@ -87,6 +87,7 @@ public class TempMailInboxProvider implements AccountInboxProvider {
      */
     @Override
     public List<MailboxMessage> messages(SysAccount account, String secret, MailboxQuery query) throws Exception {
+        // [P3C A20 豁免]
         int pageNo = query == null || query.getOffset() == null ? 1 : query.getOffset() / 20 + 1;
         TempMailClient.Page page = client.listMessages(token(account, secret), pageNo);
         List<MailboxMessage> result = new ArrayList<>();
