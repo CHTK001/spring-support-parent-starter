@@ -2,7 +2,6 @@
 package com.chua.socket.support.properties;
 
 import com.chua.socket.support.SocketProtocol;
-import com.chua.socket.support.codec.SocketEncryptMode;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -128,21 +127,6 @@ public class SocketProperties {
      * 编解码器类型
      */
     private String codecType = "json";
-
-    /**
-     * 是否开启数据加密
-     */
-    private Boolean encryptEnabled;
-
-    /**
-     * 数据加密模式，默认自动协商且优先加密
-     */
-    private SocketEncryptMode encryptMode;
-
-    /**
-     * 加密密钥
-     */
-    private String encryptKey;
 
     /**
      * 最大帧大小（字节），默认1MB
@@ -272,68 +256,6 @@ public class SocketProperties {
      */
     public void setCodecType(String codecType) {
         this.codecType = codecType;
-    }
-
-    /**
-     * 获取是否开启数据加密
-     *
-     * @return 是否开启数据加密
-     */
-    public boolean isEncryptEnabled() {
-        return Boolean.TRUE.equals(encryptEnabled);
-    }
-
-    /**
-     * 获取原始加密开关配置
-     *
-     * @return 原始加密开关配置
-     */
-    public Boolean getEncryptEnabledValue() {
-        return encryptEnabled;
-    }
-
-    /**
-     * 设置是否开启数据加密
-     *
-     * @param encryptEnabled 是否开启数据加密
-     */
-    public void setEncryptEnabled(Boolean encryptEnabled) {
-        this.encryptEnabled = encryptEnabled;
-    }
-
-    /**
-     * 解析实际生效的加密模式
-     *
-     * @return 实际生效的加密模式
-     */
-    public SocketEncryptMode resolveEncryptMode() {
-        if (encryptMode != null) {
-            return encryptMode;
-        }
-        if (encryptEnabled != null) {
-            return Boolean.TRUE.equals(encryptEnabled)
-                    ? SocketEncryptMode.AUTO
-                    : SocketEncryptMode.PLAIN;
-        }
-        return SocketEncryptMode.AUTO;
-    }
-
-    /**
-     * 获取加密密钥
-     *
-     * @return 加密密钥
-     */
-    public String getEncryptKey() {
-        return encryptKey;
-    }
-
-    /**
-     * 设置加密密钥
-     *
-     * @param encryptKey 加密密钥
-     */
-    public void setEncryptKey(String encryptKey) {
-        this.encryptKey = encryptKey;
     }
 
     /**

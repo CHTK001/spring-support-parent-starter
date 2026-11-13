@@ -122,9 +122,6 @@ public class SocketConfiguration {
         props.setRoom(protocolConfig.getRoom());
         props.setHost(baseProperties.getHost());
         props.setCodecType(baseProperties.getCodecType());
-        props.setEncryptEnabled(baseProperties.getEncryptEnabledValue());
-        props.setEncryptMode(baseProperties.getEncryptMode());
-        props.setEncryptKey(baseProperties.getEncryptKey());
         props.setMaxFrameSize(baseProperties.getMaxFrameSize());
         props.setBossCount(baseProperties.getBossCount());
         props.setWorkCount(baseProperties.getWorkCount());
