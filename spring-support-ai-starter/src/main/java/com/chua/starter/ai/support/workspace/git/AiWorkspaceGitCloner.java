@@ -143,11 +143,15 @@ public class AiWorkspaceGitCloner {
         if (!ALLOWED_HOSTS.contains(host)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "目前只支持 github.com 上的仓库");
         }
-        String path = Objects.toString(uri.getPath(), "");
+        // URI.getPath() 始终带前导斜杠（https://github.com/owner/repo → /owner/repo），
+        // 而 REPOSITORY_PATH 只认 owner/repo 形态。必须先剥前导斜杠再做正则校验，
+        // 否则所有 GitHub 地址都会被误判为「应形如 https://github.com/owner/repo」
+        // 而 400（2026-11-13 实测：前端 GitHub 克隆入口全废）。
+        String path = Objects.toString(uri.getPath(), "").replaceAll("^/+", "");
         if (!REPOSITORY_PATH.matcher(path).matches()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "仓库地址应形如 https://github.com/owner/repo");
         }
-        String cleaned = path.replaceAll("^/+", "").replaceAll("/+$", "");
+        String cleaned = path.replaceAll("/+$", "");
         String normalized = GITHUB_PREFIX + cleaned;
         return normalized.endsWith(GIT_SUFFIX) ? normalized : normalized + GIT_SUFFIX;
     }
