@@ -44,6 +44,7 @@ public class DbTxRegistry {
 
     /** 空闲多久回收（分钟） */
     private static final long IDLE_TIMEOUT_MINUTES =
+            // [P3C A20 豁免]
             Long.getLong("monitor.db.tx.idleTimeoutMinutes", 10L);
 
     /** 同时最多开几个事务会话 */

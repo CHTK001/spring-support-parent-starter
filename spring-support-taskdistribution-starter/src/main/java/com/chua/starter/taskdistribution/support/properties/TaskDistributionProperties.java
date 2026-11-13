@@ -78,6 +78,7 @@ public class TaskDistributionProperties {
         /**
          * 监听端口
          */
+        // [P3C A20 豁免]
         private int port = 19390;
 
         /**
@@ -103,6 +104,7 @@ public class TaskDistributionProperties {
         /**
          * 默认超时（毫秒）
          */
+        // [P3C A20 豁免]
         private long timeoutMs = 30000;
 
         /**

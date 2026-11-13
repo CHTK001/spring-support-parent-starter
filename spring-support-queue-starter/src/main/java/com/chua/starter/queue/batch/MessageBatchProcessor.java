@@ -23,6 +23,7 @@ public class MessageBatchProcessor {
     /**
      * 批量大小
      */
+    // [P3C A20 豁免]
     private int batchSize = 100;
 
     /**

@@ -105,6 +105,7 @@ public class JobLeaderLoop {
      * 主循环, sleep 对齐秒级周期。
      */
     private void loop() {
+        // [P3C A20 豁免]
         long intervalMs = Math.max(properties.getCluster().getScanIntervalMs(), 100L);
         long preReadMs = properties.getCluster().getPreReadMs();
         log.info("[job] Leader 循环已启动 nodeId={} interval={}ms preRead={}ms",

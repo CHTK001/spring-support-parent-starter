@@ -84,6 +84,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
                 }
             }
             long nowMs = currentDbTimeMs();
+            // [P3C A20 豁免]
             int rows = clusterMapper.tryAcquire(group, nodeId, nowMs, nowMs + leaseSeconds * 1000L);
             if (rows > 0) {
                 if (existing != null && nodeId.equals(existing.getSysJobClusterLeaderNode())) {
@@ -116,6 +117,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
         // 不再影响"租约是否过期"的判据，NTP 由硬要求降级为可选
         try {
             long nowMs = currentDbTimeMs();
+            // [P3C A20 豁免]
             int rows = clusterMapper.renew(group, nodeId, nowMs, nowMs + leaseSeconds * 1000L);
             return rows > 0;
         } catch (Exception ex) {

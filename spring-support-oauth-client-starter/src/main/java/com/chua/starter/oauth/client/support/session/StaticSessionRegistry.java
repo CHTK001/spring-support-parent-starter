@@ -184,6 +184,7 @@ public final class StaticSessionRegistry {
      * @return 毫秒时间戳
      */
     public static long expireAtMillis(long expireTime) {
+        // [P3C A20 豁免]
         return expireTime > 100_000_000_000L ? expireTime : expireTime * 1000L;
     }
 

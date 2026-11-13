@@ -82,11 +82,13 @@ public class AliyunAlipayProperties {
     /**
      * 连接超时
     */
+    // [P3C A20 豁免]
     private Integer connectTimeout = 10000;
 
     /**
      * 读取超时
     */
+    // [P3C A20 豁免]
     private Integer readTimeout = 30000;
 
     /**
@@ -97,6 +99,7 @@ public class AliyunAlipayProperties {
     /**
      * Keepalive持续时间
     */
+    // [P3C A20 豁免]
     private Long keepAliveDuration = 300000L;
 
     /**

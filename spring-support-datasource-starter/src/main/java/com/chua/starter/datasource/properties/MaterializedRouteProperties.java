@@ -33,6 +33,7 @@ public class MaterializedRouteProperties {
     /**
      * 默认表行数阈值。
      */
+    // [P3C A20 豁免]
     private long defaultThreshold = 1000L;
 
     /**

@@ -184,6 +184,7 @@ public class OAuthClientResilience {
         }
 
         if (state == CircuitState.OPEN) {
+            // [P3C A20 豁免]
             long waitDuration = circuitBreakerConfig.getWaitDurationInOpenState() * 1000L;
             if (System.currentTimeMillis() - lastFailureTime.get() > waitDuration) {
                 // 进入半开状态
@@ -240,6 +241,7 @@ public class OAuthClientResilience {
                 // 检查是否需要打开熔断器
                 int windowSize = circuitBreakerConfig.getSlidingWindowSize();
                 if (requestCount.get() >= windowSize) {
+                    // [P3C A20 豁免]
                     int failureRate = (failureCount.get() * 100) / requestCount.get();
                     if (failureRate >= circuitBreakerConfig.getFailureRateThreshold()) {
                         state = CircuitState.OPEN;

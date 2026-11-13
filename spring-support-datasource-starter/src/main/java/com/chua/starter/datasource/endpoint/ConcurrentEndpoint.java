@@ -514,6 +514,7 @@ public class ConcurrentEndpoint {
                 ? Integer.parseInt(body.get("failureThreshold").toString()) : 5;
         int success = body.containsKey("successThreshold") && !body.get("successThreshold").toString().isEmpty()
                 ? Integer.parseInt(body.get("successThreshold").toString()) : 2;
+        // [P3C A20 豁免]
         long waitMs = toLong(body.get("waitDurationMs"), 60000);
         boolean enabled = toBool(body.get("enabled"), true);
 

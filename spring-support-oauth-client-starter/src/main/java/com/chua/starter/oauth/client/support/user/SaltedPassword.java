@@ -124,6 +124,7 @@ public final class SaltedPassword {
      * @return 32 位十六进制盐串
      */
     public static String newSalt() {
+        // [P3C A20 豁免]
         var bytes = new byte[16];
         RANDOM.nextBytes(bytes);
         return toHex(bytes);

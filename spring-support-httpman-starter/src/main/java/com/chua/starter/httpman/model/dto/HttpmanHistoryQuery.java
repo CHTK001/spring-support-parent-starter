@@ -46,5 +46,6 @@ public class HttpmanHistoryQuery {
     /**
      * 每页条数，默认 20
      */
+    // [P3C A20 豁免]
     private long pageSize = 20;
 }

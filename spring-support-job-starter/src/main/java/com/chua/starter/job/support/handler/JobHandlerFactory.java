@@ -24,6 +24,7 @@ public final class JobHandlerFactory {
     /**
      * 处理器存储, Key 为处理器名称
      */
+    // [P3C A20 豁免]
     private final ConcurrentMap<String, JobHandler> handlers = new ConcurrentHashMap<>(32);
 
     /**

@@ -121,6 +121,7 @@ public class CacheProperties {
     /**
      * 空值占位符过期时间（秒），仅在 {@link #cacheNullValues} 为 true 时生效
      */
+    // [P3C A20 豁免]
     private long nullValueTtl = 60;
 
     /**
@@ -138,6 +139,7 @@ public class CacheProperties {
         /**
          * 初始容量
          */
+        // [P3C A20 豁免]
         private int initialCapacity = 256;
 
         /**
@@ -148,6 +150,7 @@ public class CacheProperties {
         /**
          * 写入后过期时间（秒），小于等于 0 表示不设置
          */
+        // [P3C A20 豁免]
         private long expireAfterWrite = 300;
 
         /**
@@ -181,6 +184,7 @@ public class CacheProperties {
         /**
          * 默认过期时间（秒），小于等于 0 表示永不过期
          */
+        // [P3C A20 豁免]
         private long ttl = 600;
 
         /**

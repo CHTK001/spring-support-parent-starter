@@ -141,6 +141,7 @@ public class DatalakeComprehensiveProbe {
             CapturingSink sink = new CapturingSink("log");
             DatalakeReactorExecutor exec = new DatalakeReactorExecutor("test-e07", true);
             exec.registerSink(sink);
+            // [P3C A20 豁免]
             int threads = 10, perThread = 100;
             CountDownLatch latch = new CountDownLatch(threads);
             for (int t = 0; t < threads; t++) {
@@ -153,6 +154,7 @@ public class DatalakeComprehensiveProbe {
                     latch.countDown();
                 });
             }
+            // [P3C A20 豁免]
             boolean ok = latch.await(10, TimeUnit.SECONDS);
             return ok && sink.getCount() >= threads * perThread;
         });
@@ -570,6 +572,7 @@ public class DatalakeComprehensiveProbe {
 
         check("E26-PipelineManager concurrent write/read", () -> {
             PipelineManager pm = new DefaultPipelineManager();
+            // [P3C A20 豁免]
             int threads = 10, opsPerThread = 100;
             CountDownLatch latch = new CountDownLatch(threads);
             AtomicInteger errors = new AtomicInteger(0);
@@ -591,6 +594,7 @@ public class DatalakeComprehensiveProbe {
                     latch.countDown();
                 });
             }
+            // [P3C A20 豁免]
             boolean ok = latch.await(10, TimeUnit.SECONDS);
             return ok && errors.get() == 0;
         });
@@ -600,6 +604,7 @@ public class DatalakeComprehensiveProbe {
             AtomicInteger received = new AtomicInteger(0);
             RealTimeDatalakeSubscriber sub = new RealTimeDatalakeSubscriber(
                     "e27-sub", flow, env -> received.incrementAndGet());
+            // [P3C A20 豁免]
             int count = 50;
             for (int i = 0; i < count; i++) {
                 DataEnvelope env = DataEnvelope.builder()

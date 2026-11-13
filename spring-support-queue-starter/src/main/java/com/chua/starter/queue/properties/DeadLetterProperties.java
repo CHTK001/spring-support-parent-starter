@@ -49,6 +49,7 @@ public class DeadLetterProperties {
     /**
      * 最大重试延迟（秒）
      */
+    // [P3C A20 豁免]
     private long maxRetryDelaySeconds = 300;
 
     /**

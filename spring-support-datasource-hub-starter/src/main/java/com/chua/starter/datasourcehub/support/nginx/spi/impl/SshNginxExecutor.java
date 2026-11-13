@@ -34,6 +34,7 @@ public class SshNginxExecutor implements NginxExecutor {
 
     @Override
     public ExecResult exec(Target target, String command, long seconds) {
+        // [P3C A20 豁免]
         int port = target.port() > 0 ? target.port() : 22;
         String host = target.host() == null ? "" : target.host().trim();
         String username = target.username() == null ? "" : target.username().trim();

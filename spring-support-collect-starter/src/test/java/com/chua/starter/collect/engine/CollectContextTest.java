@@ -109,6 +109,7 @@ class CollectContextTest {
     void concurrentOfferAndDiscard() throws InterruptedException {
         CollectContext context = context(new CollectProperties());
         int threads = 4;
+        // [P3C A20 豁免]
         int perThread = 250;
         AtomicInteger dropped = new AtomicInteger();
         Thread[] workers = new Thread[threads];

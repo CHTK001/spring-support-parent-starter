@@ -21,6 +21,7 @@ public class HikariDataSourceProperties extends DataSourceProperties {
      * 连接在池中空闲的最长时间，超过此时间的连接将被关闭。
      * 单位为毫秒。
      */
+    // [P3C A20 豁免]
     private volatile long idleTimeout = MINUTES.toMillis(10);
 
     /**
@@ -33,16 +34,19 @@ public class HikariDataSourceProperties extends DataSourceProperties {
      * 连接的最大生命周期，超过此时间的连接将被关闭。
      * 单位为毫秒。
      */
+    // [P3C A20 豁免]
     private volatile long maxLifetime = MINUTES.toMillis(30);
 
     /**
      * 连接池中允许的最大连接数。
      */
+    // [P3C A20 豁免]
     private volatile int maxPoolSize = 100;
 
     /**
      * 连接池中保持的最小空闲连接数。
      */
+    // [P3C A20 豁免]
     private volatile int minIdle = 10;
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）

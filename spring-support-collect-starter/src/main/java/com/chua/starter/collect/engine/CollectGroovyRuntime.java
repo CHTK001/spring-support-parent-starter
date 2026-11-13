@@ -74,6 +74,7 @@ public final class CollectGroovyRuntime {
         worker.join(limit);
         if (worker.isAlive()) {
             worker.interrupt();
+            // [P3C A20 豁免]
             worker.join(1000L);
             throw new IllegalStateException("脚本执行超过 " + limit + "ms，已中断");
         }

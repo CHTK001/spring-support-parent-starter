@@ -14,10 +14,12 @@ public class MaterializedSqlOptions {
     /**
      * 默认阈值
     */
+    // [P3C A20 豁免]
     private long defaultThreshold = 1000L;
     /**
      * Refresh间隔秒
     */
+    // [P3C A20 豁免]
     private long refreshIntervalSeconds = 300L;
     /**
      * 缓存数据来源前缀

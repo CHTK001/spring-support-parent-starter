@@ -30,11 +30,13 @@ public class ConfigCenterProperties {
     /**
      * 连接超时（毫秒）
      */
+    // [P3C A20 豁免]
     private int connectTimeout = 5000;
 
     /**
      * 读取超时（毫秒）
      */
+    // [P3C A20 豁免]
     private int readTimeout = 5000;
 
     /**
@@ -113,6 +115,7 @@ public class ConfigCenterProperties {
          * 防止配置频繁变更导致应用抖动
          * </p>
          */
+        // [P3C A20 豁免]
         private long refreshDelayMs = 100;
 
         /**

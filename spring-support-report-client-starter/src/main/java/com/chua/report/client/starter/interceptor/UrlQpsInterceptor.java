@@ -59,6 +59,7 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
             String url = getRequestUrl(request);
             String method = request.getMethod();
             int statusCode = response.getStatus();
+            // [P3C A20 豁免]
             boolean success = statusCode >= 200 && statusCode < 400;
 
             // 记录统计

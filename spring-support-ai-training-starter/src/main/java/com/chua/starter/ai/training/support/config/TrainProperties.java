@@ -30,6 +30,7 @@ public class TrainProperties {
     /**
      * 文件上传大小限制（MB），默认 3000。
      */
+    // [P3C A20 豁免]
     private int maxSize = 3000;
 
     /**

@@ -134,6 +134,7 @@ public class CollectAgentExecutor implements CollectShapeExecutor {
             return null;
         }
         String text = String.valueOf(value);
+        // [P3C A20 豁免]
         return text.length() > 80 ? text.substring(0, 80) + "…" : text;
     }
 

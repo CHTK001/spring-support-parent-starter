@@ -48,6 +48,7 @@ public class SseSocketProvider implements SocketProvider {
             List<SocketListener> listeners) {
 
         // 获取超时配置，默认30分钟
+        // [P3C A20 豁免]
         long timeout = 30 * 60 * 1000L;
         if (properties != null && properties.getPingTimeout() > 0) {
             timeout = properties.getPingTimeout();

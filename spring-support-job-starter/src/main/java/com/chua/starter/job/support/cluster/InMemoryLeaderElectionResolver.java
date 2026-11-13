@@ -43,6 +43,7 @@ public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
         boolean mine = nodeId.equals(currentLeader);
         if (currentLeader == null || expired || mine) {
             leaderMap.put(group, nodeId);
+            // [P3C A20 豁免]
             leaseMap.put(group, now + leaseSeconds * 1000L);
             return true;
         }

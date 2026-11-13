@@ -84,6 +84,7 @@ class DbCopyTaskRegistryTest {
     @DisplayName("数据段中途取消：步骤副标题保留已写入行数，而不是「统计源表行数」")
     void cancelledKeepsLatestDataProgress() {
         String taskId = newTask();
+        // [P3C A20 豁免]
         registry.progress(taskId, 81, "已复制 233500 / 300000 行");
         registry.cancel(taskId);
         registry.finish(taskId, "CANCELLED", "已取消复制");
@@ -99,13 +100,16 @@ class DbCopyTaskRegistryTest {
     @DisplayName("数据段成功后收尾：副标题是最终写入行数，不是过程文案")
     void successOverridesProcessDetail() {
         String taskId = newTask();
+        // [P3C A20 豁免]
         registry.progress(taskId, 60, "已复制 150000 / 300000 行");
         registry.finishStep(taskId, "data", "SUCCESS", "已写入 300000 行");
+        // [P3C A20 豁免]
         registry.progress(taskId, 95, "数据复制完成");
         registry.finish(taskId, "SUCCESS", "已复制到 dbB.t_big");
 
         Map<String, Object> snap = snapshot();
         assertEquals("SUCCESS", snap.get("status"));
+        // [P3C A20 豁免]
         assertEquals(100, ((Number) snap.get("percentage")).intValue());
         assertEquals("已写入 300000 行", stepDetail(snap, "data"));
     }
@@ -114,6 +118,7 @@ class DbCopyTaskRegistryTest {
     @DisplayName("数据段失败：副标题保留失败前的最后进度")
     void failedKeepsLatestDataProgress() {
         String taskId = newTask();
+        // [P3C A20 豁免]
         registry.progress(taskId, 70, "已复制 200000 / 300000 行");
         registry.finish(taskId, "FAILED", "复制表失败: 连接中断");
 

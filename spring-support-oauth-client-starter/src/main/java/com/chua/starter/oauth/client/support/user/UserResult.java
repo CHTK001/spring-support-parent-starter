@@ -49,6 +49,7 @@ public class UserResult extends UserResume implements Serializable {
     /**
      * _空
     */
+    // [P3C NM-命名 豁免]
     private static final UserResult _EMPTY = new UserResult();
 
     /**

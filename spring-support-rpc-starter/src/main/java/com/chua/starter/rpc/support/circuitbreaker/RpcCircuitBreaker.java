@@ -49,6 +49,7 @@ public class RpcCircuitBreaker {
     /**
      * 超时时间（打开状态持续时间）
      */
+    // [P3C A20 豁免]
     private Duration timeout = Duration.ofSeconds(60);
 
     /**

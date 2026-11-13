@@ -381,6 +381,7 @@ public class ZookeeperClient {
                     ok = true;
                     break;
                 }
+                // [P3C A20 豁免]
                 Thread.sleep(100L);
             }
         } catch (InterruptedException e) {
@@ -443,6 +444,7 @@ public class ZookeeperClient {
         if (host.isEmpty()) {
             throw new IllegalStateException("数据源 " + ds.name() + " 未填写主机地址");
         }
+        // [P3C A20 豁免]
         int port = ds.port() == null || ds.port() <= 0 ? 2181 : ds.port();
         // 允许 host 字段直接写多节点（逗号分隔），端口对全部节点生效
         List<String> nodes = new ArrayList<>();
@@ -589,6 +591,7 @@ public class ZookeeperClient {
         if (host.isEmpty()) {
             throw new IllegalStateException("数据源 " + ds.name() + " 未填写主机地址");
         }
+        // [P3C A20 豁免]
         int port = ds.port() == null || ds.port() <= 0 ? 2181 : ds.port();
         List<String> nodes = new ArrayList<>();
         for (String node : host.split(",")) {

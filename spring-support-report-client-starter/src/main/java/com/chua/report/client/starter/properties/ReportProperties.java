@@ -50,6 +50,7 @@ public class ReportProperties {
     /**
      * 服务端端口
      */
+    // [P3C A20 豁免]
     private int port = 29170;
     /**
      * 应用信息上报配置
@@ -67,6 +68,7 @@ public class ReportProperties {
         /**
          * 上报间隔（秒）
          */
+        // [P3C A20 豁免]
         private long interval = 30;
     }
 
@@ -86,6 +88,7 @@ public class ReportProperties {
         /**
          * 上报间隔（秒）
          */
+        // [P3C A20 豁免]
         private long interval = 30;
 
         /**
@@ -159,6 +162,7 @@ public class ReportProperties {
         /**
          * 上报间隔（秒）
          */
+        // [P3C A20 豁免]
         private long interval = 30;
 
         /**

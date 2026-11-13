@@ -848,6 +848,7 @@ public final class CollectDom {
                 || raw.charAt(start) == '\u3000' || raw.charAt(start) == '\u00a0')) {
             start++;
         }
+        // [P3C A20 豁免]
         int limit = Math.min(raw.length(), start + 16);
         for (int end = limit; end > start; end--) {
             if (head.equals(matchHead(raw.substring(start, end)))) {

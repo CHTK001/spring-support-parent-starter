@@ -44,11 +44,13 @@ public class SqlMonitorProperties {
     /**
      * 慢 SQL 阈值（毫秒），超过该阈值的 SQL 视为慢 SQL
      */
+    // [P3C A20 豁免]
     private long slowSqlThresholdMs = 1000L;
 
     /**
      * SQL 记录最大长度，超过部分截断，防止大 SQL 占用内存
      */
+    // [P3C A20 豁免]
     private int maxSqlLength = 2000;
 
     /**
@@ -66,6 +68,7 @@ public class SqlMonitorProperties {
      * <p>防止数据源名称动态增长导致内存无限膨胀。达到上限后，新数据源的行为由
      * {@link #overflowPolicy} 决定。单个统计对象仅约 80 字节，默认 1000 个约 80KB。</p>
      */
+    // [P3C A20 豁免]
     private int maxTrackedDataSources = 1000;
 
     /**

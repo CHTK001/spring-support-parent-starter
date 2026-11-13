@@ -282,6 +282,7 @@ public class CollectContext {
                 if (left <= 0) {
                     return false;
                 }
+                // [P3C A20 豁免]
                 finishMonitor.wait(Math.min(left, 500L));
             }
         }

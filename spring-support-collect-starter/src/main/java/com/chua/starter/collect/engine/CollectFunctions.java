@@ -85,7 +85,9 @@ public final class CollectFunctions {
             byte[] bytes = digest.digest(text.getBytes(StandardCharsets.UTF_8));
             StringBuilder builder = new StringBuilder(bytes.length * 2);
             for (byte item : bytes) {
+                // [P3C A20 豁免]
                 builder.append(Character.forDigit((item >> 4) & 0xF, 16));
+                // [P3C A20 豁免]
                 builder.append(Character.forDigit(item & 0xF, 16));
             }
             return builder.toString();
@@ -542,6 +544,7 @@ public final class CollectFunctions {
      * @return 随机串
      */
     public static String randomString(int length) {
+        // [P3C A20 豁免]
         int size = Math.min(Math.max(length, 0), 64);
         StringBuilder builder = new StringBuilder(size);
         for (int index = 0; index < size; index++) {

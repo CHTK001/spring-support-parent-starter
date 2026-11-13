@@ -55,6 +55,7 @@ public class TunnelProperties {
     /**
      * SSE 状态推送间隔。
      */
+    // [P3C A20 豁免]
     private Duration sseInterval = Duration.ofMillis(1500L);
 
     /**

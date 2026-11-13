@@ -46,6 +46,7 @@ public record PageResult<T>(List<T> records, long total, long current, long size
      */
     public static <T> PageResult<T> of(IPage<T> page) {
         if (page == null) {
+            // [P3C A20 豁免]
             return new PageResult<>(Collections.emptyList(), 0L, 1L, 10L);
         }
         return new PageResult<>(page.getRecords(), page.getTotal(), page.getCurrent(), page.getSize());

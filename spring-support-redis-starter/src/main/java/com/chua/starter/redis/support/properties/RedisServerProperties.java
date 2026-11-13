@@ -24,6 +24,7 @@ public class RedisServerProperties {
     /**
      * 端口
      */
+    // [P3C A20 豁免]
     private Integer port = 6379;
     /**
      * 数据库

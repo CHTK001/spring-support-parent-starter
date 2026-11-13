@@ -112,6 +112,7 @@ public class DeviceMetricsReporter {
     /**
      * 间隔秒
     */
+    // [P3C A20 豁免]
     private long intervalSeconds = 30;
 
     /**

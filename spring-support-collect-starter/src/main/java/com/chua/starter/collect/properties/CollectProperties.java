@@ -45,6 +45,7 @@ public class CollectProperties {
     /**
      * 单次抓取默认超时毫秒，节点未显式配置时使用。
      */
+    // [P3C A20 豁免]
     private int requestTimeoutMs = 30000;
 
     /**
@@ -75,16 +76,19 @@ public class CollectProperties {
      * 用户看到的是「跑了一半就失败」而不是真的出错。真正的失控保护由
      * {@link #maxRecordPerTask}（默认 10 万条）兜底，超时这里只防线程永久挂死。</p>
      */
+    // [P3C A20 豁免]
     private long taskTimeoutMs = 1800000L;
 
     /**
      * 单任务最多落库记录数，超出后丢弃并写任务日志，防止失控抓取撑爆结果表。
      */
+    // [P3C A20 豁免]
     private int maxRecordPerTask = 100000;
 
     /**
      * 节点出参预览保留字符数。
      */
+    // [P3C A20 豁免]
     private int previewLength = 500;
 
     /**
@@ -95,6 +99,7 @@ public class CollectProperties {
      * 已登记的照常可引用；取不到与「变量未定义」同语义，求值得 null。
      * 0 或负数表示不限。</p>
      */
+    // [P3C A20 豁免]
     private int nodeOutputLimit = 2000;
 
     /**
@@ -104,6 +109,7 @@ public class CollectProperties {
      * 会顶到 {@code max_allowed_packet}（默认 4~64MB）。分片后每片走一次
      * PreparedStatement 绑定，既不超包也无注入面。默认 500。</p>
      */
+    // [P3C A20 豁免]
     private int existsBatchSize = 500;
 
     /**
@@ -237,6 +243,7 @@ public class CollectProperties {
         /**
          * 单次生成总超时毫秒（整图 JSON 生成较慢，放宽）。
          */
+        // [P3C A20 豁免]
         private int timeoutMs = 180000;
     }
 

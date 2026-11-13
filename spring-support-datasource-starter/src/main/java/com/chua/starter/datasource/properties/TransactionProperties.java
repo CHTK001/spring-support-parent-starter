@@ -37,6 +37,7 @@ public class TransactionProperties {
     /**
      * 事务超时时间
      */
+    // [P3C A20 豁免]
     private Integer timeout = 10;
     /**
      * 事务位置

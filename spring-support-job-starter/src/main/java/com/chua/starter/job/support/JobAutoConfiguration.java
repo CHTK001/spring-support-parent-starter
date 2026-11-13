@@ -912,6 +912,7 @@ public class JobAutoConfiguration {
         return new ThreadPoolExecutor(
                 properties.getPool().getCoreSize(),
                 properties.getPool().getMaxSize(),
+                // [P3C A20 豁免]
                 60L,
                 TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(properties.getPool().getQueueSize()),

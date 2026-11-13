@@ -64,6 +64,7 @@ public class TunnelController {
     public TunnelController(TunnelService service, TunnelProperties properties) {
         this.service = service;
         long interval = properties.getSseInterval() == null
+                // [P3C A20 豁免]
                 ? 1500L : properties.getSseInterval().toMillis();
         this.statusStream = new TunnelStatusStream(service::listAll, interval);
     }

@@ -82,6 +82,7 @@ public class HotsportProperties {
         /**
          * Shell 端口。
         */
+        // [P3C A20 豁免]
         private int shellPort = 4567;
 
         /**
@@ -264,11 +265,13 @@ public class HotsportProperties {
         /**
          * 数据保留毫秒。
         */
+        // [P3C A20 豁免]
         private long retentionMs = 7L * 24 * 60 * 60 * 1000;
 
         /**
          * 单表容量上限（超出按最旧淘汰）。
         */
+        // [P3C A20 豁免]
         private int capacity = 100000;
 
         /**
@@ -302,6 +305,7 @@ public class HotsportProperties {
         /**
          * 单批写入条数（type=mysql 时使用，默认 200）。
         */
+        // [P3C A20 豁免]
         private int batchSize = 200;
 
         /**

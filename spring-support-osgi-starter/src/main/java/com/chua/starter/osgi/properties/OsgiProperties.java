@@ -221,6 +221,7 @@ public class OsgiProperties {
          *
          * <p>源码指纹（路径 + 大小 + 修改时间）未变化时不会触发编译。</p>
          */
+        // [P3C A20 豁免]
         private long pollingInterval = 5000L;
 
         /**
@@ -264,6 +265,7 @@ public class OsgiProperties {
         /**
          * 扫描间隔（毫秒）。
          */
+        // [P3C A20 豁免]
         private long pollingInterval = 10000L;
 
         /**

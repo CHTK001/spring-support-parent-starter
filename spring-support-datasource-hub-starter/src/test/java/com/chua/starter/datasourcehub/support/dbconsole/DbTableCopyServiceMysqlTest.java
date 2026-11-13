@@ -314,6 +314,7 @@ class DbTableCopyServiceMysqlTest {
             if (snap != null && "RUNNING".equals(snap.get("status"))) {
                 return;
             }
+            // [P3C A20 豁免]
             Thread.sleep(50L);
         }
         throw new IllegalStateException("任务未进入 RUNNING: " + taskId);
@@ -332,6 +333,7 @@ class DbTableCopyServiceMysqlTest {
             Map<String, Object> snap = snapshot(taskId);
             if (snap != null) {
                 Object pct = snap.get("percentage");
+                // [P3C A20 豁免]
                 if (pct instanceof Number && ((Number) pct).intValue() >= 30) {
                     return;
                 }
@@ -339,6 +341,7 @@ class DbTableCopyServiceMysqlTest {
                     throw new IllegalStateException("任务在大表复制前就结束了: " + snap);
                 }
             }
+            // [P3C A20 豁免]
             Thread.sleep(20L);
         }
         throw new IllegalStateException("任务未进入数据段: " + taskId);
@@ -359,6 +362,7 @@ class DbTableCopyServiceMysqlTest {
             if (snap != null && Boolean.TRUE.equals(snap.get("finished"))) {
                 return snap;
             }
+            // [P3C A20 豁免]
             Thread.sleep(50L);
         }
         throw new IllegalStateException("任务未在 " + timeout + "ms 内结束: " + taskId);

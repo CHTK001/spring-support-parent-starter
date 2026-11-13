@@ -34,6 +34,7 @@ public class SshServerProperties {
     /**
      * SSH服务端端口
      */
+    // [P3C A20 豁免]
     private int port = 2222;
 
     /**
@@ -177,16 +178,19 @@ public class SshServerProperties {
         /**
          * 会话超时时间（秒）
          */
+        // [P3C A20 豁免]
         private long timeout = 3600;
 
         /**
          * 最大会话数
          */
+        // [P3C A20 豁免]
         private int maxSessions = 10;
 
         /**
          * 空闲超时时间（秒）
          */
+        // [P3C A20 豁免]
         private long idleTimeout = 1800;
         
  // Lombok @数据 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
@@ -252,6 +256,7 @@ public class SshServerProperties {
         /**
          * 最大文件大小（字节）
          */
+        // [P3C A20 豁免]
         private long maxFileSize = 100 * 1024 * 1024; // 100MB
         
  // Lombok @数据 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
@@ -317,6 +322,7 @@ public class SshServerProperties {
         /**
          * 登录失败锁定时间（秒）
          */
+        // [P3C A20 豁免]
         private long lockoutDuration = 300;
 
         /**

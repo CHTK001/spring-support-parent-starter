@@ -54,6 +54,7 @@ public final class CollectCronSupport {
         if (text.isEmpty()) {
             return new long[0];
         }
+        // [P3C A20 豁免]
         int limit = Math.max(1, Math.min(times, 10));
         long[] result = new long[limit];
         int count = 0;

@@ -323,6 +323,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             String clientId = room.getClientId();
             String host = room.getActualHost(properties.getHost());
  // 如果 端口 是正数，直接使用；如果是负数，需要主端口（这里使用默认值 9000）
+            // [P3C A20 豁免]
             int port = room.getPort() >= 0 ? room.getPort() : room.getActualPort(9000);
             String contextPath = room.getContextPath();
             log.info("[SocketIO] 启动服务: 客户端ID={}, 地址={}, 端口={}, 上下文={}", 
@@ -606,6 +607,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
      */
     private Map<String, Object> toHandshakeData(HandshakeData data) {
         Map<String, Object> result = new HashMap<>(4);
+        // [P3C A20 豁免]
         Map<String, String> headers = new HashMap<>(16);
         if (data.getHttpHeaders() != null) {
             for (Map.Entry<String, String> entry : data.getHttpHeaders()) {

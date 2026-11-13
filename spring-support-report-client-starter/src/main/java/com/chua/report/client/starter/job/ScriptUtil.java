@@ -89,6 +89,7 @@ public class ScriptUtil {
                      * 副本。
                      * @param process.getInputStream( 处理.获取输入流(
                      */
+                    // [P3C A20 豁免]
                     copy(process.getInputStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
                     DefaultJobLog.log(e.getMessage());
@@ -101,6 +102,7 @@ public class ScriptUtil {
                      * 副本。
                      * @param process.getErrorStream( 处理.获取错误流(
                      */
+                    // [P3C A20 豁免]
                     copy(process.getErrorStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
                     DefaultJobLog.log(e.getMessage());

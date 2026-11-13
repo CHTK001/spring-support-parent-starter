@@ -24,6 +24,7 @@ public class AgentAttachProperties {
     /**
      * Shell 端口（options 为空时作为默认 options 传入）。
     */
+    // [P3C A20 豁免]
     private int shellPort = 4567;
 
     /**

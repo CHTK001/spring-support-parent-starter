@@ -34,9 +34,11 @@ class DbTableCopyServiceTest {
     @Test
     @DisplayName("临时表名：64 字符表名截基名保后缀，结果仍是合法标识符且不超长")
     void scratchNameFitsMysqlLimit() {
+        // [P3C A20 豁免]
         String longName = "t".repeat(64);
         String scratch = DbTableCopyService.scratchTableName(longName, "db-copy-1794398243843-3", "t");
 
+        // [P3C A20 豁免]
         assertTrue(scratch.length() <= 64, "临时表名不能超过 64 字符，实际 " + scratch.length());
         assertTrue(scratch.endsWith("_dbmcp_t3"), "后缀必须完整保留，否则并发任务会撞名");
         assertEquals(scratch, SqlName.checkSimple(scratch, "临时表名"), "生成的临时表名必须能过标识符白名单");

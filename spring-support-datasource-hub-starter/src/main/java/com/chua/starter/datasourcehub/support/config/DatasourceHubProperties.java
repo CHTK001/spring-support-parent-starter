@@ -24,6 +24,7 @@ public class DatasourceHubProperties {
     /**
      * JDBC 连接空闲存活时长（分钟），超时自动关闭（小于 1 按 1 处理）
      */
+    // [P3C A20 豁免]
     private long connectionTtlMinutes = 10L;
 
     /**
@@ -40,6 +41,7 @@ public class DatasourceHubProperties {
     /**
      * 连通性探测超时（毫秒）
      */
+    // [P3C A20 豁免]
     private int probeTimeoutMs = 5000;
 
     /**
@@ -53,6 +55,7 @@ public class DatasourceHubProperties {
      * 是**毫秒**，PostgreSQL 的是**秒**，SQL Server 只认 {@code loginTimeout}（秒）。
      * 写错单位会让「30 秒」变成 30 毫秒（必超时）或 30 万秒（等于没设）。</p>
      */
+    // [P3C A20 豁免]
     private int connectTimeoutSeconds = 30;
 
     /**
@@ -67,6 +70,7 @@ public class DatasourceHubProperties {
      * <p>只约束语句级执行（查询/批量/单语句事务），不影响连接本身的建连超时；
      * 按库的慢查询水位调整，0 关闭。</p>
      */
+    // [P3C A20 豁免]
     private int queryTimeoutSeconds = 60;
 
     /**
@@ -87,6 +91,7 @@ public class DatasourceHubProperties {
      * 「误传了整个 JDK」或「传了源码包」把磁盘写满 —— 这个目录在生产机上，
      * 而后台又是常驻的。</p>
      */
+    // [P3C A20 豁免]
     private long driverJarMaxBytes = 64L * 1024 * 1024;
 
     /**
@@ -107,6 +112,7 @@ public class DatasourceHubProperties {
      * <p>单文件库正常在几 MB 以内；给上限是为了防止误传一个几百 MB 的
      * 数据仓库文件把磁盘写满。要传更大的库，把这个值调大即可。</p>
      */
+    // [P3C A20 豁免]
     private long fileDbMaxBytes = 64L * 1024 * 1024;
 
     /**

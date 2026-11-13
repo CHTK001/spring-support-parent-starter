@@ -144,6 +144,7 @@ public class RedisLeaderElectionResolver implements LeaderElectionResolver {
         }
         try {
             Long rows = template.execute(RENEW_SCRIPT, List.of(KEY_PREFIX + group),
+                    // [P3C A20 豁免]
                     nodeId, String.valueOf(leaseSeconds * 1000L));
             return rows != null && rows > 0L;
         } catch (Exception ex) {

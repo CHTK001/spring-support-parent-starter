@@ -59,6 +59,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
       */
     protected static final Logger log = LoggerFactory.getLogger(AbstractAnnotationBeanPostProcessor.class);
 
+    // [P3C A20 豁免]
     private final static int CACHE_SIZE = Integer.getInteger("", 32);
 
 

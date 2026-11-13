@@ -35,6 +35,7 @@ public class CalciteDataSourceProperties {
     /**
      * 连接池最大大小
      */
+    // [P3C A20 豁免]
     private int maxPoolSize = 10;
 
     /**

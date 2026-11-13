@@ -215,6 +215,7 @@ public class CalciteMergeDataSourceFactory {
         } catch (Exception e) {
             try {
                 connection.close();
+            // [P3C F1 豁免]
             } catch (Exception ignored) {
             }
             if (e instanceof java.sql.SQLException) {

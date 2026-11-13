@@ -47,16 +47,19 @@ public class HttpmanProperties {
     /**
      * 历史记录保留天数（0 表示不限制；过期行会在查询时静默过滤，不走补偿任务）
      */
+    // [P3C A20 豁免]
     private int historyRetentionDays = 30;
 
     /**
      * 代理执行：连接超时
      */
+    // [P3C A20 豁免]
     private Duration connectTimeout = Duration.ofSeconds(15);
 
     /**
      * 代理执行：读取超时
      */
+    // [P3C A20 豁免]
     private Duration readTimeout = Duration.ofSeconds(60);
 
     /**

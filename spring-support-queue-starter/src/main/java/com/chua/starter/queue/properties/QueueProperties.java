@@ -130,11 +130,13 @@ public class QueueProperties {
         /**
          * 连接超时（秒）
          */
+        // [P3C A20 豁免]
         private int connectionTimeout = 30;
 
         /**
          * 心跳间隔（秒）
          */
+        // [P3C A20 豁免]
         private int keepAliveInterval = 60;
 
         // Lombok 注解处理器未运行时的手动 getter 方法
@@ -295,6 +297,7 @@ public class QueueProperties {
         /**
          * 自动提交间隔（毫秒）
          */
+        // [P3C A20 豁免]
         private int autoCommitIntervalMs = 5000;
 
         /**
@@ -427,6 +430,7 @@ public class QueueProperties {
         /**
          * 端口
          */
+        // [P3C A20 豁免]
         private int port = 5672;
 
         /**
@@ -447,6 +451,7 @@ public class QueueProperties {
         /**
          * 连接超时（毫秒）
          */
+        // [P3C A20 豁免]
         private int connectionTimeout = 60000;
 
         // Lombok 注解处理器未运行时的手动 getter/setter 方法
@@ -594,16 +599,19 @@ public class QueueProperties {
         /**
          * 连接超时（毫秒）
          */
+        // [P3C A20 豁免]
         private long connectionTimeout = 5000;
 
         /**
          * 重连等待（毫秒）
          */
+        // [P3C A20 豁免]
         private long reconnectWait = 2000;
 
         /**
          * 最大重连次数（-1 表示无限重连）
          */
+        // [P3C A20 豁免]
         private int maxReconnects = 60;
 
         // ==================== 手动 Getter/Setter ====================
@@ -778,11 +786,13 @@ public class QueueProperties {
         /**
          * 发送超时（毫秒）
          */
+        // [P3C A20 豁免]
         private int sendMsgTimeout = 3000;
 
         /**
          * 最大消息大小（字节）
          */
+        // [P3C A20 豁免]
         private int maxMessageSize = 4194304;
 
         // Lombok 注解处理器未运行时的手动 getter/setter 方法

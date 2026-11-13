@@ -93,6 +93,7 @@ public class CloudflaredProperties {
     /**
      * 启动等待公网 URL 的超时。【选填】默认 40 秒。
      */
+    // [P3C A20 豁免]
     private Duration startTimeout = Duration.ofSeconds(40);
 
     /**

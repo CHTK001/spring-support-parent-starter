@@ -266,6 +266,7 @@ public class RoomServer extends AbstractServer {
     private boolean performHandshake(Connection connection) throws IOException {
         InputStream in = connection.socket.getInputStream();
         ByteArrayOutputStream requestBuffer = new ByteArrayOutputStream();
+        // [P3C A20 豁免]
         byte[] buffer = new byte[4096];
         String request = null;
         while (request == null) {

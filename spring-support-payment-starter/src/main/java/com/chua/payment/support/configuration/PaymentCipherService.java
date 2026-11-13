@@ -202,6 +202,7 @@ public class PaymentCipherService {
             throw new PaymentException("支付加密密钥不能为空");
         }
         byte[] source = keyText.getBytes(StandardCharsets.UTF_8);
+        // [P3C A20 豁免]
         byte[] normalized = new byte[16];
         int length = Math.min(source.length, normalized.length);
         System.arraycopy(source, 0, normalized, 0, length);

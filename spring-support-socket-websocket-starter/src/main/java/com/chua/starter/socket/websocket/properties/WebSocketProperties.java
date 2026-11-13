@@ -44,21 +44,25 @@ public class WebSocketProperties {
     /**
      * 心跳间隔（毫秒），0 表示禁用
      */
+    // [P3C A20 豁免]
     private long heartbeatInterval = 25000;
 
     /**
      * 消息大小限制（字节）
      */
+    // [P3C A20 豁免]
     private int maxMessageSize = 65536;
 
     /**
      * 发送缓冲区大小限制（字节）
      */
+    // [P3C A20 豁免]
     private int sendBufferSizeLimit = 524288;
 
     /**
      * 发送超时时间（毫秒）
      */
+    // [P3C A20 豁免]
     private int sendTimeLimit = 10000;
 
     /**

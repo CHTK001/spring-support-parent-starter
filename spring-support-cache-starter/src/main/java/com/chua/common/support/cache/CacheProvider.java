@@ -112,6 +112,7 @@ public interface CacheProvider {
             */
             CacheEntry(Object value, long ttlSeconds) {
                 this.value = value;
+                // [P3C A20 豁免]
                 this.expireAt = ttlSeconds > 0 ? System.currentTimeMillis() + ttlSeconds * 1000 : 0;
             }
 

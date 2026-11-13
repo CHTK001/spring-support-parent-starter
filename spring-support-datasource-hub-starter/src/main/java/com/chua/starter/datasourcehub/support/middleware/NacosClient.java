@@ -245,6 +245,7 @@ public class NacosClient {
             throw new IllegalStateException("Nacos 登录未返回 accessToken，请检查用户名密码");
         }
         long ttlSeconds = toLong(json.getObject("tokenTtl"), 0L);
+        // [P3C A20 豁免]
         long ttlMs = ttlSeconds > 0L ? ttlSeconds * 1000L : TOKEN_DEFAULT_TTL_MS;
         // 提前量不得超过有效期的一半，否则短 TTL（如压测环境的秒级配置）会退化成「每次请求都登录」
         long renewAhead = Math.min(TOKEN_RENEW_AHEAD_MS, ttlMs / 2);

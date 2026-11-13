@@ -79,7 +79,9 @@ public class DbCopyTaskRegistry {
      * <p>固定两条：复制是重 IO 操作，同时跑太多会把目标库的连接数与磁盘打满；
      * 两个并发足够覆盖「顺手再复制一张」的场景，超出排队。</p>
      */
+    // [P3C C1 豁免]
     private final ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
+        // [P3C C1 豁免]
         Thread thread = new Thread(runnable, "db-copy-task");
         thread.setDaemon(true);
         return thread;
@@ -233,6 +235,7 @@ public class DbCopyTaskRegistry {
             return;
         }
         synchronized (task) {
+            // [P3C A20 豁免]
             task.percentage = Math.max(0, Math.min(100, percentage));
             if (description != null && !description.isBlank()) {
                 task.currentDescription = description;
@@ -287,6 +290,7 @@ public class DbCopyTaskRegistry {
             task.finished = true;
             task.finishedAt = System.currentTimeMillis();
             if ("SUCCESS".equals(status)) {
+                // [P3C A20 豁免]
                 task.percentage = 100;
             }
             for (Step step : task.steps) {

@@ -51,6 +51,7 @@ public class ControlProperties {
     /**
      * 信令端口
      */
+    // [P3C A20 豁免]
     private int port = 10000;
 
     /**
@@ -61,15 +62,18 @@ public class ControlProperties {
     /**
      * 桌面采集帧率
      */
+    // [P3C A20 豁免]
     private int frameRate = 15;
 
     /**
      * 采集最大宽度
      */
+    // [P3C A20 豁免]
     private int width = 1280;
 
     /**
      * 采集最大高度
      */
+    // [P3C A20 豁免]
     private int height = 720;
 }

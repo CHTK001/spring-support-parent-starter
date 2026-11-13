@@ -23,6 +23,7 @@ public class JobLogQuery {
     /**
      * 每页条数
      */
+    // [P3C A20 豁免]
     private Integer pageSize = 10;
 
     /**

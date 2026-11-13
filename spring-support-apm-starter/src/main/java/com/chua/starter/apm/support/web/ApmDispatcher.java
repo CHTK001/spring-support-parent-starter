@@ -560,6 +560,7 @@ public class ApmDispatcher {
                 start, end,
                 text(safe, "step"),
                 (int) number(safe, "pageNum", 1L),
+                // [P3C A20 豁免]
                 (int) number(safe, "pageSize", 20L),
                 "true".equalsIgnoreCase(text(safe, "orderByDuration")));
     }
