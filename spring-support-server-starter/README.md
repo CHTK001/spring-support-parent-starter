@@ -57,10 +57,10 @@ Maven 坐标（版本随父工程 `4.0.0.51`）：
 | `org.apache.guacamole:guacamole-common:1.6.0` | 对接 guacd | `guacamole.version` |
 | `com.fazecast:jSerialComm:2.11.0` | 串口终端 | `jserialcomm.version`，缺失会导致整模块编译失败 |
 | `utils-support-ssh-starter`、`utils-support-winrm-starter` | SSH / WinRM 通道 | WinRM 与 SSH 按系统类型路由 |
-| `utils-support-nmap-starter` | 端口扫描 | `scanPorts` 依赖本机 nmap |
+| `utils-support-common-starter` + `utils-support-native-nmap` | 端口扫描 | `scanPorts` 走 `NmapScanner` SPI；原生库由 native-nmap 提供 |
 | `utils-support-email-starter` | 邮箱收发 | — |
 | `utils-support-git-starter`、`utils-support-maven-starter` | Git 发布与本地构建 | — |
-| `utils-support-native-spi` | RDP 直连原生桥契约 | 具体实现由 `utils-support-native-rdp` 部署时提供 |
+| `utils-support-common-starter` | RDP 直连原生桥契约 | 具体实现由 `utils-support-native-rdp` 部署时提供 |
 | `spring-support-ai-starter` | 发布模块 AI 门面 | `optional`，宿主不引入时 AI 入口隐藏 |
 | `spring-support-job-starter` | 定时发布 / Git 定时轮询 | `optional`，`ReleaseScheduleServiceImpl` 按 `@ConditionalOnBean(JobOperator.class)` 装配 |
 
@@ -267,7 +267,7 @@ com.example.server.OpenBsdHostDetectProvider
 - 基础：`spring-support-common-starter`、`spring-support-datasource-starter`、`spring-support-mybatis-starter`
 - 能力：`spring-support-filesystem-starter`、`spring-support-socket-sse-starter`、`spring-support-socket-starter`、`spring-support-swagger-starter`
 - 可选：`spring-support-ai-starter`（发布 AI 门面）、`spring-support-job-starter`（定时发布）
-- utils 侧：`utils-support-ssh-starter`、`utils-support-winrm-starter`、`utils-support-nmap-starter`、`utils-support-guacamole-starter`、`utils-support-email-starter`、`utils-support-datasearch-starter`、`utils-support-git-starter`、`utils-support-maven-starter`、`utils-support-native-spi`
+- utils 侧：`utils-support-ssh-starter`、`utils-support-winrm-starter`、`utils-support-common-starter`、`utils-support-guacamole-starter`、`utils-support-email-starter`、`utils-support-datasearch-starter`、`utils-support-git-starter`、`utils-support-maven-starter`
 
 反向依赖本模块的 starter（父工程内）：
 
@@ -278,7 +278,7 @@ com.example.server.OpenBsdHostDetectProvider
 
 ## 七、已知限制
 
-- **RDP 直连依赖可选原生库**：本模块只依赖 `utils-support-native-spi` 契约，实际实现由部署时加入的 `utils-support-native-rdp` 提供。未部署时 `RdpjNative.exists()` 返回 false，直连被拒绝，提示语为 `RdpjNative.UNSUPPORTED_MESSAGE`：「当前环境不支持 RDP 直连：未部署 RDP 原生库（utils-support-native-rdp）」。
+- **RDP 直连依赖可选原生库**：本模块只依赖 `utils-support-common-starter` 契约，实际实现由部署时加入的 `utils-support-native-rdp` 提供。未部署时 `RdpjNative.exists()` 返回 false，直连被拒绝，提示语为 `RdpjNative.UNSUPPORTED_MESSAGE`：「当前环境不支持 RDP 直连：未部署 RDP 原生库（utils-support-native-rdp）」。
 - **guacd 是外部进程**：`/ws/ms/server/terminal` 依赖可用的 guacd（默认 `127.0.0.1:4822`），`client-host` 需与浏览器实际回连地址一致，否则前端连不上隧道。
 - **RDP 磁盘映射与录屏需真实目录**：`guacd.drive-path`、`guacd.recording-path` 不会自动创建到目标主机上，挂载失败由 guacd 侧报错。
 - **定时发布是可选的**：`ReleaseScheduleServiceImpl` 标注 `@ConditionalOnBean(JobOperator.class)`，宿主未引入 `spring-support-job-starter`（无 `JobOperator` Bean）时该实现不装配，控制器通过 `ObjectProvider` 可选调用。

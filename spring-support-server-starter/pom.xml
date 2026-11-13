@@ -85,11 +85,6 @@
         <!-- 工具 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-nmap-starter</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
             <artifactId>utils-support-guacamole-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
@@ -148,13 +143,13 @@
             <version>${guacamole.version}</version>
         </dependency>
 
-        <!-- RDP 直连原生桥：只依赖 utils 侧 SPI 契约（utils-support-native-spi），
+        <!-- RDP 直连原生桥：只依赖 utils 侧 SPI 契约（utils-support-common-starter 的 nativeapi 包），
              具体实现（rdpj.dll + JNA）由部署时按需加入 utils-support-native-rdp。
              这样没有 native 制品也能编译，运行期由 RdpjNative.exists() 探测，
              缺失时直连直接提示“不支持”。 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-native-spi</artifactId>
+            <artifactId>utils-support-common-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
 
