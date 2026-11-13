@@ -1,48 +1,95 @@
-# spring-support-ngrok-starter
+# spring-support-tunnel-ngrok-starter
 
-Spring Boot 3 自动将本机服务通过 [ngrok](https://ngrok.com) 暴露到公网。基于官方 [ngrok-java](https://github.com/ngrok/ngrok-java) Agent SDK，零外部进程，开箱即用。
+Spring Boot 3 集成 ngrok：基于官方 `ngrok-java` Agent SDK（内嵌 Rust Agent），
+把本机服务暴露到公网，**不需要启动独立的 ngrok CLI**。
 
----
+## 一、模块能力
 
-## 特性
+| 能力域 | 关键类 | 入口 |
+|:-------|:-------|:-----|
+| 自动配置与开关 | `NgrokAutoConfiguration` | `plugin.ngrok.enable` |
+| 配置绑定 | `NgrokProperties` | `plugin.ngrok.*` |
+| 启动期默认隧道 | `NgrokAutoConfiguration#onApplicationReady` | `ApplicationReadyEvent` |
+| 统一入口提供方 | `NgrokTunnelProvider` | `/ms/tunnel`（由 tunnel-starter 装配） |
+| 能力探测 | `NgrokTunnelProvider#capabilities` | `GET /ms/tunnel/providers` |
+| 服务信息登记 | `ngrokServiceInfoContributor` | 控制台模块能力 |
 
-- ✅ **默认开启**：依赖引入即生效，只需配置 authtoken
-- ✅ **零外部进程**：内嵌 Rust Agent，无需启动独立 ngrok CLI
-- ✅ **自动获取 `server.port`**：处理 `server.port=0` 随机端口场景
-- ✅ **支持三种隧道**：`http` / `tcp` / `tls`
-- ✅ **支持两种模式**：`forward`（自动转发到本机 server.port）/ `listen`（仅暴露 URL）
-- ✅ **多端口同时暴露**：`extraLocalPorts` 同时转发多个端口
-- ✅ **HTTP 鉴权**：内置 BasicAuth 支持
-- ✅ **私有部署**：支持自建 ngrok 服务端 + CA 证书
-- ✅ **失败容错**：`failFast` 控制是否中断 Spring 启动
-- ✅ **跨平台**：Windows / macOS / Linux（x86_64、aarch64、armv7、i686）
+支持的模式与能力：
 
----
+- 隧道类型：`http` / `tcp` / `tls`（`TunnelProvider` 侧同一套模式）；
+- HTTP 转发：`forward`（转发到本机端口）/ `listen`（仅暴露 URL，启动期路径）；
+- HTTP BasicAuth、固定域名、私有部署（`server-addr` + CA 证书）、心跳参数；
+- 多端口同时暴露：`extra-local-ports`（仅启动期 http 类型生效）；
+- 失败容错：`fail-fast` 控制是否中断 Spring 启动。
 
-## 1. 引入依赖
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
-    <artifactId>spring-support-ngrok-starter</artifactId>
-    <version>4.0.0.42</version>
+    <artifactId>spring-support-tunnel-ngrok-starter</artifactId>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
----
+关键依赖：
 
-## 2. 最小启用（最常用）
+| 依赖 | 作用 |
+|:-----|:-----|
+| `spring-support-tunnel-starter` | `TunnelProvider` SPI 与统一入口 `/ms/tunnel` |
+| `utils-support-ngrok-starter` | 纯 Java 客户端 `NgrokClient`（链式 API） |
+| `com.ngrok:ngrok-java:1.1.1` | 官方 Agent SDK |
+| `com.ngrok:ngrok-java-native:1.1.1` | 平台 native，classifier 由 `os-maven-plugin` 生成 |
+| `spring-support-common-starter` | `TunnelRecord` 与服务信息登记 |
 
-只需配置 authtoken，**模块默认开启**：
+`ngrok-java-native` 按 `os.detected.classifier` 选择平台包，pom 已启用
+`kr.motd.maven:os-maven-plugin:1.7.1`，无需手工指定。
 
-```yaml
-# application.yml
-plugin:
-  ngrok:
-    authtoken: 2abc...xyz
-```
+## 三、配置项
 
-或者通过环境变量（推荐 — token 不入 git）：
+配置前缀：`plugin.ngrok`（`NgrokProperties`）。
+
+| key | 默认值 | 说明 |
+|:----|:-------|:-----|
+| `plugin.ngrok.enable` | `true` | 总开关，`false` 完全禁用 |
+| `plugin.ngrok.authtoken` | 无 | 为空时回退环境变量 / 系统属性 `NGROK_AUTHTOKEN`；仍为空则隧道建立失败并记错误 |
+| `plugin.ngrok.metadata` | 无 | 会话元数据，ngrok 控制台可见 |
+| `plugin.ngrok.server-addr` | 无 | 私有部署服务端地址，如 `tunnel.example.com:443` |
+| `plugin.ngrok.ca-cert` | 无 | 私有部署 CA，classpath 资源路径 |
+| `plugin.ngrok.heartbeat-interval` | ngrok 默认 | 心跳间隔 |
+| `plugin.ngrok.heartbeat-tolerance` | ngrok 默认 | 心跳容忍 |
+| `plugin.ngrok.type` | `http` | `http` / `tcp` / `tls` |
+| `plugin.ngrok.mode` | `forward` | `forward` 自动转发 / `listen` 仅暴露 URL |
+| `plugin.ngrok.domain` | 无 | 固定域名（需面板预留） |
+| `plugin.ngrok.subdomain` | 无 | 已下线能力，仅打印告警，不生效 |
+| `plugin.ngrok.remote-address` | 无 | tcp 模式必填，如 `1.tcp.ngrok.io:20000` |
+| `plugin.ngrok.scheme` | `HTTPS` | 启动期 http 模式协议方案 |
+| `plugin.ngrok.compression` | `false` | 启动期 http 响应压缩 |
+| `plugin.ngrok.basic-auth` | 无 | `user:password`，优先于用户名/密码两个字段 |
+| `plugin.ngrok.basic-auth-username` | 无 | BasicAuth 用户名 |
+| `plugin.ngrok.basic-auth-password` | 无 | BasicAuth 密码 |
+| `plugin.ngrok.fail-fast` | `false` | 启动期隧道失败是否中断应用 |
+| `plugin.ngrok.extra-local-ports` | 无 | 额外本地端口，逗号分隔，如 `8081,8082` |
+| `plugin.ngrok.auto-start` | `true` | 启动期是否用 `server.port` 自动建默认隧道 |
+| `plugin.ngrok.auto-start-stored` | `true` | 启动时是否恢复 `autoStart=true` 的持久化映射 |
+| `plugin.ngrok.store-dir` | `~/.chua/tunnel/ngrok` | 映射持久化目录（一条映射一个 JSON） |
+
+必填项速查：
+
+| 场景 | 必填 |
+|:-----|:-----|
+| HTTP 转发（默认） | `authtoken` |
+| HTTP 固定域名 | `authtoken` + `domain` |
+| HTTP BasicAuth | `authtoken` + `basic-auth`（或 username + password） |
+| TCP 隧道 | `authtoken` + `remote-address` |
+| TLS 隧道 | `authtoken` + `domain` |
+| 私有部署 | `authtoken` + `server-addr` + `ca-cert` |
+
+## 四、快速开始
+
+**第一步：引入依赖**（见上）。
+
+**第二步：配置 authtoken（推荐走环境变量）**
 
 ```bash
 # Linux / macOS
@@ -52,7 +99,13 @@ export NGROK_AUTHTOKEN=2abc...xyz
 $env:NGROK_AUTHTOKEN="2abc...xyz"
 ```
 
-启动 Spring Boot，控制台会输出：
+```yaml
+plugin:
+  ngrok:
+    authtoken: ${NGROK_AUTHTOKEN}
+```
+
+**第三步：启动并确认公网地址**
 
 ```
 =========================================================
@@ -62,333 +115,120 @@ $env:NGROK_AUTHTOKEN="2abc...xyz"
 =========================================================
 ```
 
-通过公网 URL 即可访问你本地的 Spring 服务。
+`auto-start: false` 时不建默认隧道，改由 `/ms/tunnel` 按需创建（适合管理台部署）。
 
----
+生产环境彻底禁用：`plugin.ngrok.enable=false`，或环境变量 `PLUGIN_NGROK_ENABLE=false`。
 
-## 3. 配置项详细说明
+## 五、运行示例
 
-所有配置项前缀为 `plugin.ngrok`。
+### 5.1 调用示例
 
-### 3.1 字段总表（必填 / 选填 / 默认）
+本模块**无链式 API**：对外能力是自动配置 + `TunnelProvider` 实现，调用方式是配置或 REST，不是链式 Builder。
 
-| 字段 | 必填 | 默认 | 说明 |
-|:-----|:----:|:----:|:-----|
-| `enable` | 否 | `true` | **总开关**。设为 `false` 完全禁用。模块默认开启 |
-| `authtoken` | **是** | 无 | ngrok authtoken。空时回退读取环境变量 `NGROK_AUTHTOKEN`；两者都为空则启动期**硬错误**中断 |
-| `metadata` | 否 | 无 | 会话元数据，ngrok 控制台可见 |
-| `serverAddr` | 否 | 无 | 私有部署 ngrok 服务端地址，例：`tunnel.example.com:443` |
-| `caCert` | 否 | 无 | 私有部署 CA 证书（classpath 资源路径），例：`classpath:ngrok-ca.crt` |
-| `heartbeatInterval` | 否 | 30s | 心跳间隔 |
-| `heartbeatTolerance` | 否 | 60s | 心跳容忍 |
-| `type` | 否 | `http` | 隧道类型：`http` / `tcp` / `tls` |
-| `mode` | 否 | `forward` | 转发模式：`forward` 自动转发 / `listen` 仅暴露 URL |
-| `domain` | 否 | 无 | 固定域名（http/tls），需 ngrok 面板预留 |
-| `subdomain` | 否 | 无 | 子域名（已部分下线，建议改用 `domain`） |
-| `remoteAddress` | **tcp 模式必填** | 无 | TCP 远程地址，例：`1.tcp.ngrok.io:20000` |
-| `scheme` | 否 | `HTTPS` | http 模式协议方案：`HTTP` / `HTTPS` |
-| `compression` | 否 | `false` | 启用 HTTP 响应压缩 |
-| `basicAuth` | 否 | 无 | BasicAuth，格式 `user:password` |
-| `basicAuthUsername` | 否 | 无 | BasicAuth 用户名（与 `basicAuthPassword` 配合） |
-| `basicAuthPassword` | 否 | 无 | BasicAuth 密码 |
-| `failFast` | 否 | `false` | ngrok 启动失败时是否中断 Spring 启动 |
-| `extraLocalPorts` | 否 | 无 | 额外本地端口（逗号分隔），例：`8081,8082` |
-
-### 3.2 必填项总结
-
-| 场景 | 必填项 |
-|:-----|:-------|
-| HTTP 转发（默认） | `authtoken` |
-| HTTP 固定域名 | `authtoken` + `domain` |
-| HTTP BasicAuth | `authtoken` + `basicAuth`（或 username + password） |
-| TCP 隧道 | `authtoken` + `remoteAddress` |
-| TLS 隧道 | `authtoken` + `domain` |
-| 私有部署 | `authtoken` + `serverAddr` + `caCert` |
-
----
-
-## 4. 典型场景示例
-
-### 4.1 HTTP 转发（默认）
+方式一：配置驱动（启动期一次性隧道）
 
 ```yaml
 plugin:
   ngrok:
     authtoken: ${NGROK_AUTHTOKEN}
-```
-
-效果：随机域名 + 自动转发到 `server.port`（默认 8080）。
-
-### 4.2 固定域名
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    domain: my-app.ngrok-free.app
-```
-
-前提：先在 <https://dashboard.ngrok.com/cloud-edge/domains> 预留该域名。
-
-### 4.3 HTTP BasicAuth 鉴权
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    domain: my-app.ngrok-free.app
-    basicAuth: admin:secret123
-```
-
-或者：
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    basicAuthUsername: admin
-    basicAuthPassword: secret123
-```
-
-### 4.4 同时暴露多个本地端口
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    extraLocalPorts: 8081,8082
-```
-
-效果：会同时为 8080（server.port）、8081、8082 建立 HTTP 转发隧道，公网 URL 会有 3 个。
-
-### 4.5 TCP 隧道
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    type: tcp
-    remoteAddress: 1.tcp.ngrok.io:20000
-```
-
-前提：先在 ngrok 面板 reserve 一个 TCP 地址。
-
-### 4.6 TLS 隧道
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    type: tls
-    domain: my-app.example.com
+    type: http
     mode: forward
+    domain: my-app.ngrok-free.app
+    basic-auth: admin:secret123
+    fail-fast: false
 ```
 
-### 4.7 私有部署
+方式二：统一入口按需创建（需要 `spring-support-tunnel-starter`）
 
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    serverAddr: tunnel.example.com:443
-    caCert: classpath:ngrok-ca.crt
+```java
+// TunnelService 来自 spring-support-tunnel-starter，NgrokTunnelProvider 已由
+// NgrokAutoConfiguration#ngrokTunnelProvider 注册为 Bean，无需手工 new。
+private final TunnelService tunnelService;
+
+public String expose() {
+    TunnelRecord input = new TunnelRecord();
+    input.setProvider("ngrok");
+    input.setName("调试");
+    input.setLocalPort(8080);
+    input.setMode("http");              // http / tcp / tls
+    input.setDomain("my-app.ngrok-free.app");
+    TunnelView created = tunnelService.create(input);   // 只保存，不启动
+    TunnelView running = tunnelService.start(created.getId());
+    return running.getPublicUrls().get(0);
+}
+
+// 走 REST 更常见：
+// POST /ms/tunnel {"provider":"ngrok","name":"调试","localPort":8080,"mode":"http"}
+// POST /ms/tunnel/{id}/start
 ```
 
-把 `ngrok-ca.crt` 放到 `src/main/resources/` 即可。
+方式三：底层客户端（属于 `utils-support-ngrok-starter`，这里是链式 API）
 
-### 4.8 listen 模式（仅暴露 URL，不自动转发）
-
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    mode: listen
+```java
+NgrokClient client = NgrokClient.create(authtoken)
+        .metadata("my-spring-service")
+        .heartbeatInterval(Duration.ofSeconds(30));
+client.connect();
+client.forwardHttp(client.http().domain("my-app.ngrok-free.app").builder(),
+        new URL("http://127.0.0.1:8080"));
+List<String> urls = client.getUrls();
+client.close();
 ```
 
-适用场景：需要手动 accept 连接、处理字节流时使用。
+### 5.2 SPI 扩展示例
 
-### 4.9 失败快速失败
+本模块**提供** `TunnelProvider` 实现，而不是定义扩展点；登记动作在自动配置里完成：
 
-```yaml
-plugin:
-  ngrok:
-    authtoken: ${NGROK_AUTHTOKEN}
-    failFast: true
+```java
+@Bean
+@ConditionalOnMissingBean
+public NgrokTunnelProvider ngrokTunnelProvider(ObjectProvider<ResourceLoader> resourceLoader) {
+    return new NgrokTunnelProvider(properties, resourceLoader.getIfAvailable());
+}
 ```
 
-默认 `failFast: false`，ngrok 启动失败时只打 ERROR 日志，Spring 继续启动；设为 `true` 则直接中断启动。
+生效链路：Bean 注册 → tunnel-starter 的 `TunnelProviderRegistry` 收集 → `plugin.tunnel.providers`
+白名单裁剪 → `/ms/tunnel/providers` 可见 → 创建映射时 `provider=ngrok` 可选中。
 
-> 注意：**authtoken 为空**导致的错误**不受** `failFast` 控制 — 必填项会直接中断启动。
+若要新增别的提供方，实现 `TunnelProvider` 并注册 Bean 即可（详见 tunnel-starter README）；
+名称必须唯一，`ngrok` 已被本模块占用。
 
----
+## 六、与其它 starter 的关系
 
-## 5. 关闭 / 禁用
+| 模块 | 层次 | 与本模块的关系 |
+|:-----|:-----|:---------------|
+| `utils-support-ngrok-starter` | 通用客户端层 | 本模块依赖它；纯 Java、零 Spring，可在非 Spring 环境单独使用 |
+| `spring-support-tunnel-ngrok-starter` | Spring 集成层 | 自动配置 + 启动期隧道 + `NgrokTunnelProvider` |
+| `spring-support-tunnel-starter` | 编排层 | 本模块依赖它；统一 REST、持久化、SSE、启动恢复都由它提供 |
 
-### 5.1 临时关闭（不改代码）
+与 cloudflared 的差异：
 
-```yaml
-plugin:
-  ngrok:
-    enable: false
-```
+| 维度 | ngrok | cloudflared |
+|:-----|:------|:------------|
+| 运行形态 | 进程内 SDK（native 库） | 外部 `cloudflared` 子进程 |
+| 是否要装二进制 | 否 | 是 |
+| 免账号可用 | 否，必须 authtoken | 是，Quick Tunnel 免账号 |
+| 支持模式 | `http` / `tcp` / `tls` | `quick` / `named` |
+| 固定域名 | `domain`（需面板预留） | `hostname`（需账户 + CNAME） |
 
-### 5.2 生产环境彻底禁用
+两者可同时引入，用 `plugin.tunnel.providers` 决定暴露哪个。
 
-通过环境变量：
+## 七、已知限制
 
-```bash
-PLUGIN_NGROK_ENABLE=false
-```
-
-或者用 Spring Profile：
-
-```yaml
-# application-prod.yml
-plugin:
-  ngrok:
-    enable: false
-```
-
----
-
-## 6. 故障排查
-
-### 6.1 `authtoken 未配置`
-
-```
-[Ngrok] authtoken 未配置：请设置 plugin.ngrok.authtoken 或环境变量 NGROK_AUTHTOKEN
-```
-
-**解决**：设置 `plugin.ngrok.authtoken` 或 `NGROK_AUTHTOKEN` 环境变量。
-
-### 6.2 `连接被拒绝` / `Connection refused`
-
-```
-io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: connect
-```
-
-**原因**：本机服务未启动，或 `server.port` 配置与实际不一致。
-
-**解决**：
-- 确认 Spring 服务已正常启动（看启动 banner）
-- 确认 `server.port` 与实际监听端口一致
-- 默认模块监听 `WebServerInitializedEvent`，能正确处理 `server.port=0` 随机端口
-
-### 6.3 `认证失败` / `authtoken 无效`
-
-```
-[Ngrok] Ngrok Session 连接失败: ...
-```
-
-**解决**：
-- 检查 authtoken 是否正确（不要有多余空格）
-- 重新到 <https://dashboard.ngrok.com/get-started/your-authtoken> 复制
-
-### 6.4 `unsatisfiedlinkerror`
-
-```
-java.lang.UnsatisfiedLinkError: no ngrok-java-native-linux-x86_64 in java.library.path
-```
-
-**原因**：`ngrok-java-native` 平台不匹配。
-
-**解决**：本模块已通过 `os-maven-plugin` 自动选择 native 分类器，确认父 pom 启用了 `kr.motd.maven:os-maven-plugin`。
-
-### 6.5 域名绑定失败
-
-```
-[Ngrok] ... domain not reserved
-```
-
-**原因**：自定义域名未在 ngrok 面板预留。
-
-**解决**：到 <https://dashboard.ngrok.com/cloud-edge/domains> 预留并配置 DNS CNAME。
-
----
-
-## 7. 与 utils-support-ngrok-starter 的关系
-
-- `utils-support-ngrok-starter` — **通用层**（纯 Java 链式客户端，零 Spring 依赖）
-- `spring-support-ngrok-starter` — **Spring Boot 集成层**（依赖前者，封装自动配置）
-
-如需在非 Spring 环境使用 NgrokClient，直接引入 utils-support-ngrok-starter 即可。
-
----
-
-## 8. 版本对应
-
-| ngrok-java | spring-support-ngrok-starter | utils-support-ngrok-starter |
-|:----------:|:---------------------------:|:--------------------------:|
-| 1.1.1      | 4.0.0.42                    | 4.0.0.42                   |
-
----
-
-## 10. 隧道管理工作台
-
-在监控管理应用（`vue-support-monitor-starter`）侧新增了 **内网穿透** 菜单（`pages/tunnel`）。配置不入库，而是以 `<store-dir>/<id>.json` 的形式持久化到本地目录，每个映射各占一个文件；页面通过 SSE 实时拿到隧道启动 / 停止 / 公网地址的变化。
-
-### 10.1 持久化存储
-
-| 配置项 | 说明 | 默认值 |
-|------|------|------|
-| `plugin.ngrok.store-dir` | ngrok 映射配置文件存放目录 | `~/.chua/tunnel/ngrok` |
-| `plugin.cloudflared.store-dir` | Cloudflare Tunnel 映射配置文件存放目录 | `~/.chua/tunnel/cloudflared` |
-
-例如：
-
-```yaml
-plugin:
-  ngrok:
-    store-dir: ~/.chua/tunnel/ngrok
-```
-
-在 `~/.chua/tunnel/ngrok` 下会生成：
-
-```
-~/.chua/tunnel/ngrok
-├── 1a2b3c4d-1234-5678-9abc-def012345678.json
-└── 2b3c4d5e-...json
-```
-
-每个文件包含该映射的完整台账信息（如 `id`、`name`、`localPort`、`mode`、`domain`、`provider`、`enabled`、`autoStart`、`remark`）。创建会新建文件，更新回写，删除删除文件。页面通过 SSE 实时接收后端广播的变化，看到的永远是磁盘上的实际状态。
-
-### 10.2 自动启动
-
-> 监控管理应用（`spring-support-monitor-starter`）集成两个模块，其 `application.yml` 内已把自动启动关掉：
-
-```yaml
-plugin:
-  ngrok:
-    auto-start: false
-```
-
-开启 `auto-start`（配合目录里已保存的映射）后，应用启动时 `autoStartStored` 会把存储的每个启用的映射拉起。页面「启动 / 停止」按钮与 SSE 推送联动，下一秒就能收到表现。
-
-### 10.3 实时状态（SSE）
-
-`/ms/tunnel/{ngrok|cloudflared}/stream` 是 `TunnelStatusStream` 产出的 SSE 端点：连接时即推送当前快照，后续按 **1.5 秒** 一次的固定频率广播最新的完整快照。页面的 `onMounted` 发起连接，断线自动重连（见页面 `connectSSE`）。
-
-```
-event: tunnels
-data: [{ "id": "...", "name": "测试映射", "localPort": 8080, "mode": "http",
-        "running": true, "publicUrls": ["https://abc.ngrok-free.app"], "error": "" }]
-```
-
-### 10.4 REST 接口
-
-```
-GET  /ms/tunnel/{ngrok|cloudflared}             隧道列表（台账 + 运行状态）
-GET  /ms/tunnel/{ngrok|cloudflared}/{id}        隧道详情
-POST /ms/tunnel/{ngrok|cloudflared}             创建隧道
-PUT  /ms/tunnel/{ngrok|cloudflared}/{id}        更新隧道
-DELETE /ms/tunnel/{ngrok|cloudflared}/{id}      删除隧道
-POST /ms/tunnel/{ngrok|cloudflared}/{id}/start  启动隧道
-POST /ms/tunnel/{ngrok|cloudflared}/{id}/stop   停止隧道
-GET  /ms/tunnel/{ngrok|cloudflared}/stream      SSE 实时推送
-```
-
-所有的 `POST`/`PUT` 请求体见 `pages/tunnel/src/api/types.ts`。
-
-## 9. 作者
-
-CH <ch@chua.com>
+- **`server.port=0` 不会自动探测实际端口**：`resolveLocalPort` 读到 `0` 时返回 -1，
+  只打印「无法解析本地 server.port，跳过隧道建立」。随机端口场景请显式配置端口或用 `/ms/tunnel` 指定 `localPort`。
+- **启动期路径与提供方路径能力不完全等价**：
+  - `scheme`、`compression`、`extra-local-ports`、`mode=listen` 只在启动期默认隧道生效；
+  - `NgrokTunnelProvider` 的 http 固定使用 HTTPS 并只做 forward，不读取上述字段；
+  - `subdomain` 在任何路径都只打印「已在新版套餐下线」告警，不设置到 SDK。
+- **authtoken 缺失不会无条件中断启动**：`startTunnels` 抛出的异常被 `handleStartupFailure` 捕获，
+  默认 `fail-fast: false` 只打 ERROR 日志（`[Ngrok] 隧道启动失败: ...authtoken 未配置...`）后继续启动；
+  要强制失败必须显式 `fail-fast: true`。
+- **`auto-start` 默认 true**：同时使用管理台时建议设为 `false`，否则启动期默认隧道与页面映射会各建一条。
+- **BasicAuth 明文**：`basic-auth` 会随映射写入 `<store-dir>/<id>.json`，注意目录权限。
+- `NgrokTunnelProvider#isAvailable()` 恒为 `true`（客户端是编译期依赖），不代表凭据已配置；
+  凭据状态看 `capabilities.authtokenConfigured`。
+- tcp 模式只接受已 reserve 的 `remote-address`；tls 模式必须有 `domain`。
+- 连接被拒绝时先确认本机服务已启动、`server.port` 与实际监听端口一致。
+- `UnsatisfiedLinkError: no ngrok-java-native-<os>` 说明 native 分类器不匹配，
+  确认父 pom 的 `os-maven-plugin` 生效，构建产物包含对应平台 jar。

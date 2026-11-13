@@ -1,48 +1,110 @@
-# spring-support-cloudflared-starter
+# spring-support-tunnel-cloudflared-starter
 
-Spring Boot 3 自动将本机服务通过 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) 暴露到公网。基于官方 `cloudflared` 守护进程，零账号门槛，开箱即用。
+Spring Boot 3 集成 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)：
+管理外部 `cloudflared` 进程，把本机服务暴露为公网 HTTPS 地址。免账号 Quick Tunnel 开箱可用。
 
----
+## 一、模块能力
 
-## 特性
+| 能力域 | 关键类 | 入口 |
+|:-------|:-------|:-----|
+| 自动配置与开关 | `CloudflaredAutoConfiguration` | `plugin.cloudflared.enable` |
+| 配置绑定 | `CloudflaredProperties` | `plugin.cloudflared.*` |
+| 启动期默认隧道 | `CloudflaredAutoConfiguration#onApplicationReady` | `ApplicationReadyEvent` |
+| 统一入口提供方 | `CloudflaredTunnelProvider` | `/ms/tunnel`（由 tunnel-starter 装配） |
+| 二进制定位 | `CloudflaredTool#locate` | `capabilities.binaryPath` |
+| 服务信息登记 | `cloudflaredServiceInfoContributor` | 控制台模块能力 |
 
-- ✅ **默认开启**：依赖引入即生效，无需配置任何 token（免账号 Quick Tunnel）
-- ✅ **免账号 Quick Tunnel**：一条命令把本机服务暴露为 `*.trycloudflare.com` 公网 HTTPS 地址
-- ✅ **自动获取 `server.port`**：处理 `server.port=0` 随机端口场景
-- ✅ **远程管理命名隧道**：支持 Zero Trust 面板 Token（`plugin.cloudflared.token`）
-- ✅ **固定自定义域名**：支持 `plugin.cloudflared.hostname`（需账户 + DNS CNAME）
-- ✅ **失败容错**：`failFast` 控制是否中断 Spring 启动
-- ✅ **跨平台**：Windows / macOS / Linux
-- ✅ **凭据保护**：日志自动脱敏 token
+能力说明：
 
----
+- **Quick Tunnel（默认，免账号）**：`cloudflared tunnel --url ...`，得到随机 `*.trycloudflare.com`；
+- **命名隧道（named）**：Zero Trust 面板生成 Token，由本模块以 `token` 参数启动；
+- 固定自定义域名：映射记录里的 `domain`（启动期配置为 `hostname`）；
+- 每个映射独占一个 `cloudflared` 子进程，停止/更新/删除时关闭；
+- 凭据不写日志，启动失败由 `fail-fast` 决定是否中断应用。
 
-## 1. 引入依赖
+## 二、依赖与引入
 
-先安装 [cloudflared](https://github.com/cloudflare/cloudflared/releases)（macOS：`brew install cloudflared`；Windows：`winget install Cloudflare.cloudflared`）：
+先安装 `cloudflared` 二进制（本模块不自带）：
+
+```bash
+# macOS
+brew install cloudflared
+# Windows
+winget install Cloudflare.cloudflared
+```
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
-    <artifactId>spring-support-cloudflared-starter</artifactId>
-    <version>4.0.0.42</version>
+    <artifactId>spring-support-tunnel-cloudflared-starter</artifactId>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
----
+关键依赖：
 
-## 2. 最小启用（最常用，免账号）
+| 依赖 | 作用 |
+|:-----|:-----|
+| `spring-support-tunnel-starter` | `TunnelProvider` SPI 与统一入口 `/ms/tunnel` |
+| `utils-support-cloudflared-starter` | `CloudflareTunnelClient` 子进程管理 |
+| `spring-support-common-starter` | `TunnelRecord` 与服务信息登记 |
+| `spring-boot-starter-web` | 统一入口 REST（optional，由 tunnel-starter 侧需要） |
 
-**不需要任何配置**，模块默认开启：
+二进制定位顺序：`CLOUDFLARED_BIN` 环境变量 → `PATH` → 常见安装目录；
+也可以用 `plugin.cloudflared.binary` 指定绝对路径。定位结果可在
+`GET /ms/tunnel/providers` 的 `capabilities.binaryPath` 查看。
+
+## 三、配置项
+
+配置前缀：`plugin.cloudflared`（`CloudflaredProperties`）。
+
+| key | 默认值 | 说明 |
+|:----|:-------|:-----|
+| `plugin.cloudflared.enable` | `true` | 总开关，`false` 完全禁用 |
+| `plugin.cloudflared.binary` | 自动定位 | `cloudflared` 可执行文件路径 |
+| `plugin.cloudflared.token` | 无 | 命名隧道 Token；为空时走免账号 Quick Tunnel |
+| `plugin.cloudflared.hostname` | 无 | 启动期固定域名（需账户 + DNS CNAME） |
+| `plugin.cloudflared.local-url` | `http://127.0.0.1:server.port` | 启动期本地待暴露地址 |
+| `plugin.cloudflared.no-auto-update` | `true` | 关闭 cloudflared 运行期自更新，避免隧道中断 |
+| `plugin.cloudflared.log-level` | `info` | `debug` / `info` / `warn` / `error` / `fatal` |
+| `plugin.cloudflared.start-timeout` | `40s` | 等待公网 URL 的超时 |
+| `plugin.cloudflared.fail-fast` | `false` | 启动失败是否中断应用 |
+| `plugin.cloudflared.auto-start` | `true` | 启动期是否用 `server.port` 自动建默认隧道 |
+| `plugin.cloudflared.auto-start-stored` | `true` | 启动时是否恢复 `autoStart=true` 的持久化映射 |
+| `plugin.cloudflared.store-dir` | `~/.chua/tunnel/cloudflared` | 映射持久化目录 |
+
+映射维度的字段（`TunnelRecord`）：
+
+| 字段 | 说明 |
+|:-----|:-----|
+| `localPort` | 本地端口，提供方固定转发到 `http://127.0.0.1:<localPort>` |
+| `mode` | `quick` / `named`，默认 `quick` |
+| `token` | named 模式必填；为空时回退 `plugin.cloudflared.token` |
+| `domain` | 固定域名，映射到 client 的 `hostname` |
+
+模式规则：
+
+- `quick`：不传 token，得到随机 `trycloudflare.com` 域名；
+- `named`：映射 token 或全局 token 至少有一个，否则创建时抛
+  `named 模式必须填写 Cloudflare 隧道 Token`。
+
+## 四、快速开始
+
+**第一步：安装 `cloudflared` 并确认可执行**
+
+```bash
+cloudflared --version
+```
+
+**第二步：确认模块开启（默认即开启）**
 
 ```yaml
-# application.yml
 plugin:
   cloudflared:
     enable: true
 ```
 
-启动 Spring Boot，控制台会输出：
+**第三步：启动应用，读取公网地址**
 
 ```
 =========================================================
@@ -52,197 +114,128 @@ plugin:
 =========================================================
 ```
 
-通过公网 URL 即可访问你本地的 Spring 服务。
+Quick Tunnel 的域名每次启动都会变化；需要稳定地址时使用固定域名或命名隧道。
 
----
+禁用：`plugin.cloudflared.enable=false`，或环境变量 `PLUGIN_CLOUDFLARED_ENABLE=false`。
 
-## 3. 配置项详细说明
+## 五、运行示例
 
-所有配置项前缀为 `plugin.cloudflared`。
+### 5.1 调用示例
 
-| 字段 | 必填 | 默认 | 说明 |
-|:-----|:----:|:----:|:-----|
-| `enable` | 否 | `true` | **总开关**。设为 `false` 完全禁用 |
-| `binary` | 否 | 自动定位 | cloudflared 可执行文件路径；自动定位顺序：`CLOUDFLARED_BIN` 环境变量 → PATH → 常见安装目录 |
-| `token` | 否 | 无 | Zero Trust 远程管理隧道 Token；为空时使用免账号 Quick Tunnel |
-| `hostname` | 否 | 无 | 固定自定义域名（需账户 + DNS CNAME 路由） |
-| `localUrl` | 否 | `http://127.0.0.1:server.port` | 本地待暴露的服务地址 |
-| `noAutoUpdate` | 否 | `true` | 禁用 cloudflared 运行期自动更新（避免隧道中断） |
-| `logLevel` | 否 | `info` | cloudflared 日志级别：`debug` / `info` / `warn` / `error` / `fatal` |
-| `startTimeout` | 否 | `40s` | 启动等待公网 URL 的超时 |
-| `failFast` | 否 | `false` | 启动失败时是否中断 Spring 启动 |
+本模块**无链式 API**：对外是自动配置 + `TunnelProvider` 实现，调用方式是配置或 REST。
 
----
-
-## 4. 典型场景示例
-
-### 4.1 Quick Tunnel（默认，免账号）
+启动期一次性隧道（配置驱动）：
 
 ```yaml
 plugin:
   cloudflared:
-    enable: true
+    hostname: tunnel.example.com   # 需先在 Cloudflare 配好 CNAME
+    no-auto-update: true
+    log-level: info
+    fail-fast: false
 ```
 
-效果：随机 `*.trycloudflare.com` 域名 + 自动转发到 `server.port`。
+统一入口按需创建（需要 `spring-support-tunnel-starter`）：
 
-### 4.2 固定自定义域名
+```java
+// CloudflaredTunnelProvider 已由 CloudflaredAutoConfiguration#cloudflaredTunnelProvider 注册
+private final TunnelService tunnelService;
 
-```yaml
-plugin:
-  cloudflared:
-    hostname: tunnel.example.com
+public String expose() {
+    TunnelRecord input = new TunnelRecord();
+    input.setProvider("cloudflared");
+    input.setName("演示");
+    input.setLocalPort(8080);
+    input.setMode("quick");          // quick / named
+    TunnelView created = tunnelService.create(input);
+    TunnelView running = tunnelService.start(created.getId());
+    return running.getPublicUrls().get(0);
+}
 ```
 
-前提：该域名已添加到 Cloudflare 账户并配置 CNAME 路由（指向 `<隧道>.cfargotunnel.com`）。
+命名隧道（REST 等价写法）：
 
-### 4.3 Zero Trust 远程管理隧道
-
-```yaml
-plugin:
-  cloudflared:
-    token: ${CLOUDFLARE_TUNNEL_TOKEN}
+```json
+POST /ms/tunnel
+{
+  "provider": "cloudflared",
+  "name": "命名隧道",
+  "localPort": 8080,
+  "mode": "named",
+  "token": "<CLOUDFLARE_TUNNEL_TOKEN>",
+  "domain": "tunnel.example.com"
+}
 ```
 
-Token 在 [Zero Trust 面板](https://one.dash.cloudflare.com) → Networks → Tunnels → Create tunnel 中生成。
+底层子进程客户端（属于 `utils-support-cloudflared-starter`，链式 API）：
 
-### 4.4 指定本地服务地址
-
-```yaml
-plugin:
-  cloudflared:
-    localUrl: http://127.0.0.1:9090
+```java
+CloudflareTunnelClient client = CloudflareTunnelClient.create()
+        .url("http://127.0.0.1:8080")
+        .token(token)
+        .hostname("tunnel.example.com")
+        .noAutoUpdate(true)
+        .logLevel("info")
+        .startTimeout(Duration.ofSeconds(40));
+client.start();
+List<String> urls = client.getUrls();
+client.close();
 ```
 
-### 4.5 失败快速失败
+### 5.2 SPI 扩展示例
 
-```yaml
-plugin:
-  cloudflared:
-    failFast: true
+本模块**提供** `TunnelProvider` 实现，登记在自动配置中：
+
+```java
+@Bean
+@ConditionalOnMissingBean
+public CloudflaredTunnelProvider cloudflaredTunnelProvider() {
+    return new CloudflaredTunnelProvider(properties);
+}
 ```
 
-默认 `failFast: false`，启动失败时只打 ERROR 日志、Spring 继续启动；设为 `true` 则直接中断启动。
+生效链路：Bean 注册 → `TunnelProviderRegistry` 收集 → `plugin.tunnel.providers` 白名单
+→ `GET /ms/tunnel/providers` 可见（含 `binaryAvailable`）→ 创建映射时 `provider=cloudflared`。
+若要新增其它提供方，请实现 `TunnelProvider` 并注册 Bean（见 tunnel-starter README）。
 
----
+## 六、与其它 starter 的关系
 
-## 5. 关闭 / 禁用
+| 模块 | 层次 | 与本模块的关系 |
+|:-----|:-----|:---------------|
+| `utils-support-cloudflared-starter` | 通用进程客户端层 | 本模块依赖它；纯 Java 管理 `cloudflared` 子进程，可脱离 Spring 使用 |
+| `spring-support-tunnel-cloudflared-starter` | Spring 集成层 | 自动配置 + 启动期隧道 + `CloudflaredTunnelProvider` |
+| `spring-support-tunnel-starter` | 编排层 | 本模块依赖它；统一 REST、持久化、SSE、启动恢复由它提供 |
 
-```yaml
-plugin:
-  cloudflared:
-    enable: false
-```
+与 ngrok 的差异：
 
-或通过环境变量：`PLUGIN_CLOUDFLARED_ENABLE=false`。
+| 维度 | cloudflared | ngrok |
+|:-----|:------------|:------|
+| 运行形态 | 外部二进制子进程，每映射一个进程 | 进程内 SDK（native 库） |
+| 免账号 | 是，Quick Tunnel | 否，必须 authtoken |
+| 安装要求 | 需安装 `cloudflared` | 无需额外安装 |
+| 模式 | `quick` / `named` | `http` / `tcp` / `tls` |
+| 固定域名 | `hostname` / 映射 `domain`（需 CNAME） | `domain`（需面板预留） |
+| 可用性判定 | `CloudflaredTool#isAvailable` 真实探测二进制 | 恒 true（编译期依赖） |
 
----
+两者可同时引入，用 `plugin.tunnel.providers` 裁剪；cloudflared 不可用时页面应禁用该提供方，
+而不是等用户点击后失败。
 
-## 6. 故障排查
+## 七、已知限制
 
-### 6.1 未找到 cloudflared
-
-```
-[Cloudflared] 隧道启动失败: 未找到 cloudflared 可执行文件...
-```
-
-**解决**：设置 `CLOUDFLARED_BIN` 环境变量指向可执行文件，或安装后重试。
-
-### 6.2 进程提前退出
-
-```
-cloudflared 进程提前退出，退出码=...
-```
-
-**原因**：token 无效、端口已被占用、本地服务未启动。
-
-### 6.3 启动超时
-
-```
-cloudflared 启动超时（40000ms），未输出公网地址
-```
-
-**原因**：网络无法访问 Cloudflare 边缘网络；固定域名场景需确认 DNS CNAME 已生效。
-
-### 6.4 隧道变 530
-
-通常为进程输出流被外部关闭导致——本模块持续消费输出直至进程退出，无此问题。
-
----
-
-## 7. 与 utils-support-cloudflared-starter 的关系
-
-- `utils-support-cloudflared-starter` — **通用层**（纯 Java 链式进程客户端，零 Spring 依赖）
-- `spring-support-cloudflared-starter` — **Spring Boot 集成层**（依赖前者，封装自动配置）
-
-如需在非 Spring 环境使用 CloudflareTunnelClient，直接引入 utils-support-cloudflared-starter 即可。
-
----
-
-## 9. 隧道管理工作台
-
-在监控管理应用（`vue-support-monitor-starter`）侧新增了 **内网穿透** 菜单（`pages/tunnel`）。配置不入库，而是以 `<store-dir>/<id>.json` 的形式持久化到本地目录，每个映射各占一个文件；页面通过 SSE 实时拿到隧道启动 / 停止 / 公网地址的变化。
-
-### 9.1 持久化存储
-
-| 配置项 | 说明 | 默认值 |
-|------|------|------|
-| `plugin.ngrok.store-dir` | ngrok 映射配置文件存放目录 | `~/.chua/tunnel/ngrok` |
-| `plugin.cloudflared.store-dir` | Cloudflare Tunnel 映射配置文件存放目录 | `~/.chua/tunnel/cloudflared` |
-
-例如：
-
-```yaml
-plugin:
-  cloudflared:
-    store-dir: ~/.chua/tunnel/cloudflared
-```
-
-在 `~/.chua/tunnel/cloudflared` 下会生成：
-
-```
-~/.chua/tunnel/cloudflared
-├── 1a2b3c4d-1234-5678-9abc-def012345678.json
-└── 2b3c4d5e-...json
-```
-
-每个文件包含该映射的完整台账信息（如 `id`、`name`、`localPort`、`mode`、`token`、`provider`、`enabled`、`autoStart`、`remark`）。创建会新建文件，更新回写，删除删除文件。页面通过 SSE 实时接收后端广播的变化，看到的永远是磁盘上的实际状态。
-
-### 9.2 自动启动
-
-> 监控管理应用（`spring-support-monitor-starter`）集成两个模块，其 `application.yml` 内已把自动启动关掉：
-
-```yaml
-plugin:
-  cloudflared:
-    auto-start: false
-```
-
-开启 `auto-start`（配合目录里已保存的映射与 `enabled` 标记）后，应用启动时 `autoStartStored` 会把存储的每个启用的映射拉起。页面「启动 / 停止」按钮与 SSE 推送联动，下一秒就能收到表现。
-
-### 9.3 实时状态（SSE）
-
-`/ms/tunnel/{ngrok|cloudflared}/stream` 是 `TunnelStatusStream` 产出的 SSE 端点：连接时即推送当前快照，后续按 **1.5 秒** 一次的固定频率广播最新的完整快照。页面的 `onMounted` 发起连接，断线自动重连（见页面 `connectSSE`）。
-
-```
-event: tunnels
-data: [{ "id": "...", "name": "测试映射", "localPort": 8080, "mode": "quick",
-        "running": true, "publicUrls": ["https://abc.trycloudflare.com"], "error": "" }]
-```
-
-### 9.4 REST 接口
-
-```
-GET  /ms/tunnel/{ngrok|cloudflared}             隧道列表（台账 + 运行状态）
-GET  /ms/tunnel/{ngrok|cloudflared}/{id}        隧道详情
-POST /ms/tunnel/{ngrok|cloudflared}             创建隧道
-PUT  /ms/tunnel/{ngrok|cloudflared}/{id}        更新隧道
-DELETE /ms/tunnel/{ngrok|cloudflared}/{id}      删除隧道
-POST /ms/tunnel/{ngrok|cloudflared}/{id}/start  启动隧道
-POST /ms/tunnel/{ngrok|cloudflared}/{id}/stop   停止隧道
-GET  /ms/tunnel/{ngrok|cloudflared}/stream      SSE 实时推送
-```
-
-## 8. 作者
-
-CH <ch@chua.com>
+- **必须先安装 `cloudflared`**：未找到时启动期日志为
+  `[Cloudflared] 隧道启动失败: ...`，`isAvailable()` 返回 `false`。
+- **`server.port=0` 不会自动探测实际端口**：`resolveLocalPort` 读到 `0` 返回 -1，
+  日志为「无法解析本地 server.port，跳过隧道建立」。
+- **启动期与提供方路径字段不完全等价**：
+  - `local-url` 只在启动期生效；`CloudflaredTunnelProvider` 固定使用 `http://127.0.0.1:<localPort>`；
+  - `hostname` 只在启动期生效，映射路径使用记录里的 `domain`；
+  - `token` 在 quick 模式下即使配置了也不会传给进程，`named` 才使用。
+- **Quick Tunnel 域名不固定**：重启即换域名，`auto-start: true` 会导致每次启动地址不同；
+  要稳定地址请用 `hostname` 或 `named`。
+- **`auto-start` 默认 true**：与管理台映射同时使用时建议设为 `false`，避免重复建隧道。
+- **启动超时默认 40s**：网络无法访问 Cloudflare 边缘时会失败；
+  固定域名场景还需确认 DNS CNAME 已生效（指向 `<隧道>.cfargotunnel.com`）。
+- **进程提前退出**通常意味着 token 无效、端口被占用或本地服务未启动；
+  失败原因会写入映射的 `error` 字段并出现在 SSE 快照里。
+- **Token 会写入映射 JSON**：`<store-dir>/cloudflared/<id>.json` 含 `token`，注意目录权限。
+- 本模块不提供 SPI 扩展点，只消费 tunnel-starter 的 `TunnelProvider` 契约。
