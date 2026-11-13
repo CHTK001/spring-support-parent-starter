@@ -289,6 +289,59 @@ export const updateAccountCookie = (cookieId: string, payload: SysAccountCookie)
 export const deleteAccountCookie = (cookieId: string) =>
   http().delete(`${CK}/${cookieId}`).then(r => unwrap<boolean>(r));
 
+/* ==================== 密钥库 ==================== */
+
+/**
+ * 账号密钥库里的厂商密钥。
+ *
+ * <p>账号只引用 {@code secretId}，换密钥时所有引用它的账号一起生效；
+ * {@code secret} 读接口不回显，只回 {@code hasSecret}。</p>
+ */
+export interface SysAccountSecret {
+  secretId: string;
+  name?: string;
+  /** 用途 / 厂商：aliyun / tencent / huawei / custom */
+  provider?: string | null;
+  /** AccessKeyId（可明文查询） */
+  accessKey?: string | null;
+  /** AccessKeySecret（落库密文，接口不回显） */
+  secret?: string | null;
+  region?: string | null;
+  endpoint?: string | null;
+  owner?: string | null;
+  status?: number;
+  remark?: string | null;
+  /** 是否已配置 Secret（读接口回显） */
+  hasSecret?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+const SK = `${B}/secrets`;
+
+/** 密钥列表 */
+export const listAccountSecrets = (query?: { provider?: string; keyword?: string }) =>
+  http()
+    .get(SK)
+    .query({ provider: query?.provider, keyword: query?.keyword })
+    .then(r => unwrap<SysAccountSecret[]>(r));
+
+/** 密钥详情（不含明文） */
+export const getAccountSecret = (secretId: string) =>
+  http().get(`${SK}/${secretId}`).then(r => unwrap<SysAccountSecret>(r));
+
+/** 新增密钥（{@code secret} 传明文） */
+export const createAccountSecret = (payload: SysAccountSecret) =>
+  http().post(SK).data(body(payload)).then(r => unwrap<SysAccountSecret>(r));
+
+/** 更新密钥（{@code secret} 留空或掩码表示不修改） */
+export const updateAccountSecret = (secretId: string, payload: SysAccountSecret) =>
+  http().put(`${SK}/${secretId}`).data(body(payload)).then(r => unwrap<SysAccountSecret>(r));
+
+/** 删除密钥 */
+export const deleteAccountSecret = (secretId: string) =>
+  http().delete(`${SK}/${secretId}`).then(r => unwrap<boolean>(r));
+
 /* ==================== 临时邮箱（mail.tm） ==================== */
 
 /** 临时邮箱接口基址 */

@@ -42,7 +42,7 @@
             <el-input v-model="form.vendor" :placeholder="VENDOR_PLACEHOLDERS[form.kind]" maxlength="64" />
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col v-if="!useKeyRef" :span="12">
           <el-form-item :label="USERNAME_LABELS[form.kind]">
             <el-input v-model="form.username" :placeholder="USERNAME_PLACEHOLDERS[form.kind]" maxlength="255" />
           </el-form-item>
@@ -52,7 +52,7 @@
             <el-input v-model="form.endpoint" :placeholder="ENDPOINT_PLACEHOLDERS[form.kind]" maxlength="512" />
           </el-form-item>
         </el-col>
-        <el-col :span="24">
+        <el-col v-if="!useKeyRef" :span="24">
           <el-form-item label="敏感凭据">
             <el-input
               v-model="form.secret"
@@ -107,6 +107,29 @@
           </el-col>
         </template>
         <template v-else-if="form.kind === 'SMS'">
+          <el-col :span="24">
+            <el-form-item label="密钥来源">
+              <el-radio-group v-model="form.keyMode">
+                <el-radio value="inline">直接填写</el-radio>
+                <el-radio value="ref">引用密钥库</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col v-if="useKeyRef" :span="24">
+            <el-form-item label="选择密钥">
+              <el-select v-model="form.secretId" filterable placeholder="从密钥库选择" class="w-full">
+                <el-option
+                  v-for="item in secretOptions"
+                  :key="item.secretId"
+                  :label="`${item.name || item.accessKey}（${item.provider || 'custom'}）`"
+                  :value="item.secretId"
+                />
+              </el-select>
+              <div class="field-hint">
+                发送短信时使用该密钥的 AccessKeyId / Secret；换密钥不必改账号。
+              </div>
+            </el-form-item>
+          </el-col>
           <el-col :span="12">
             <el-form-item label="短信签名">
               <el-input v-model="form.signName" placeholder="如 某某科技" maxlength="128" />
@@ -180,9 +203,11 @@ import ReDialog from '@repo/ui/re-dialog';
 import MessageTemplateSelect from '../../template/components/MessageTemplateSelect.vue';
 import {
   createAccount,
+  listAccountSecrets,
   updateAccount,
   type AccountKind,
   type SysAccount,
+  type SysAccountSecret,
 } from '../api/account';
 
 /**
@@ -283,6 +308,10 @@ interface AccountForm {
   signName: string;
   templateCode: string;
   webUrl: string;
+  /** 密钥来源：inline 直接填写 / ref 引用密钥库（仅短信） */
+  keyMode: 'inline' | 'ref';
+  /** 引用的密钥标识 */
+  secretId: string;
 }
 
 /** 空表单 */
@@ -306,6 +335,8 @@ function emptyForm(): AccountForm {
     signName: '',
     templateCode: '',
     webUrl: '',
+    keyMode: 'inline',
+    secretId: '',
   };
 }
 
@@ -337,6 +368,25 @@ const secretHint = computed(() =>
     ? '留空或含 **** 表示不修改；填写明文则覆盖原值。'
     : '明文只在保存时提交，读取接口永不回显。',
 );
+
+/** 是否引用密钥库（仅短信） */
+const useKeyRef = computed(() => form.kind === 'SMS' && form.keyMode === 'ref');
+
+/** 密钥库选项 */
+const secretOptions = ref<SysAccountSecret[]>([]);
+
+/**
+ * 加载密钥库选项。
+ *
+ * <p>失败时留空即可，不阻塞账号表单：没有密钥库的部署仍可手工填密钥。</p>
+ */
+async function loadSecretOptions(): Promise<void> {
+  try {
+    secretOptions.value = await listAccountSecrets();
+  } catch {
+    secretOptions.value = [];
+  }
+}
 
 /** 表单校验规则 */
 const rules: FormRules = {
@@ -380,6 +430,8 @@ function fillForm(): void {
   form.signName = readString(config, 'signName');
   form.templateCode = readString(config, 'templateCode');
   form.webUrl = readString(config, 'webUrl');
+  form.secretId = readString(config, 'secretId');
+  form.keyMode = form.secretId ? 'ref' : 'inline';
   const port = Number(config.port);
   form.port = Number.isFinite(port) && port > 0 ? port : 465;
   form.ssl = config.ssl == null ? true : Boolean(config.ssl);
@@ -416,6 +468,8 @@ function onKindChange(): void {
   if (form.kind !== 'SMS') {
     form.signName = '';
     form.templateCode = '';
+    form.keyMode = 'inline';
+    form.secretId = '';
   }
   if (form.kind !== 'API_KEY') {
     form.region = '';
@@ -461,6 +515,7 @@ function buildPayload(): SysAccount {
   setOrDelete('region', form.kind === 'API_KEY' ? form.region.trim() : '');
   setOrDelete('signName', form.kind === 'SMS' ? form.signName.trim() : '');
   setOrDelete('templateCode', form.kind === 'SMS' ? form.templateCode.trim() : '');
+  setOrDelete('secretId', form.kind === 'SMS' && form.keyMode === 'ref' ? form.secretId : '');
   setOrDelete('webUrl', form.webUrl.trim());
 
   const payload: SysAccount = {
@@ -476,7 +531,7 @@ function buildPayload(): SysAccount {
     defaultAccount: form.defaultAccount,
   };
   const secret = form.secret.trim();
-  if (secret) {
+  if (secret && !useKeyRef.value) {
     payload.secret = secret;
   }
   return payload;
@@ -509,6 +564,7 @@ watch(
   ([open]) => {
     if (open) {
       fillForm();
+      void loadSecretOptions();
       formRef.value?.clearValidate();
     }
   },

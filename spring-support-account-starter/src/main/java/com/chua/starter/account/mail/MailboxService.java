@@ -11,8 +11,10 @@ import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.service.ManageAccountService;
+import com.chua.starter.account.manage.service.SysAccountSecretService;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
+import com.chua.starter.account.manage.store.SysAccountSecret;
 import com.chua.starter.account.spi.AccountInboxProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +80,11 @@ public class MailboxService {
      * 统一账号服务
      */
     private final ManageAccountService accountService;
+
+    /**
+     * 账号密钥库（账号 config.secretId 引用时从这里取凭据）
+     */
+    private final SysAccountSecretService secretService;
 
     /**
      * 信箱概览：能否收信 / 发信、可用文件夹。
@@ -475,14 +482,26 @@ public class MailboxService {
         if (push == null) {
             return null;
         }
+        // 账号可以引用密钥库里的密钥（config.secretId）；没引用时沿用账号自带的
+        // username/config.accessKey + secret，保持旧数据可用。
+        String accessKey = StringUtils.defaultString(
+                StringUtils.defaultString(configString(account, "accessKey"), account.getUsername()), "");
+        String secretKey = secret == null ? "" : secret;
+        String region = StringUtils.defaultString(configString(account, "region"), "");
+        String secretId = configString(account, "secretId");
+        if (StringUtils.isNotBlank(secretId)) {
+            SysAccountSecret ref = secretService.requireVisible(secretId);
+            accessKey = StringUtils.defaultString(ref.getAccessKey(), accessKey);
+            secretKey = StringUtils.defaultString(secretService.resolveSecret(secretId), secretKey);
+            region = StringUtils.defaultString(ref.getRegion(), region);
+        }
         MessageEnvironment environment = new MessageEnvironment()
-                .set("sms.secretKey", secret == null ? "" : secret)
-                .set("sms.accessKey", StringUtils.defaultString(
-                        StringUtils.defaultString(configString(account, "accessKey"), account.getUsername()), ""))
+                .set("sms.secretKey", secretKey)
+                .set("sms.accessKey", accessKey)
                 .set("sms.signName", StringUtils.defaultString(configString(account, "signName"), ""))
                 .set("sms.templateCode", StringUtils.defaultString(configString(account, "templateCode"), ""))
                 .set("sms.appId", StringUtils.defaultString(configString(account, "appId"), ""))
-                .set("sms.regionId", StringUtils.defaultString(configString(account, "region"), ""));
+                .set("sms.regionId", region);
         try {
             Constructor<?> constructor = push.getClass().getConstructor(MessageEnvironment.class);
             return (MessagePush) constructor.newInstance(environment);

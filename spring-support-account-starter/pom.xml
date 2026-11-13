@@ -38,11 +38,6 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-    <!-- OAuth 客户端：AiUserContext 读取当前登录用户（AuthSessionUtils / UserResume） -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-oauth-client-starter</artifactId>
-    </dependency>
     <!-- MyBatis Plus：渠道健康记录与提供商账号连接持久化 -->
     <dependency>
       <groupId>com.baomidou</groupId>
