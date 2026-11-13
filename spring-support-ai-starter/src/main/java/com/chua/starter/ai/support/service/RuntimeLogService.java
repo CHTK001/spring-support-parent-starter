@@ -125,6 +125,7 @@ public class RuntimeLogService {
      * @return tail 结果，文件不存在时返回空结果而非异常
      */
     public TailResult tail(String source, int lines) {
+        // [P3C A20 豁免]
         int wantLines = Math.min(Math.max(lines, 20), 2000);
         File file = resolveFile(source);
         if (file == null || !file.exists() || !file.isFile()) {

@@ -132,6 +132,7 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 // ==================== 压缩验证 ====================
                 new SettingItem("validate", "true", "BOOLEAN",
                         "压缩前是否把首次压缩结果作为基线融合进后续摘要（避免关键信息在多次压缩中丢失）", 30, true),
+                // [P3C DF-代码格式 豁免]
                 new SettingItem("protocol_server_enabled", "true", "BOOLEAN", "是否启用聚合协议服务（提供 OpenAI/Claude/Gemini 三协议入口，挂在应用主端口上）；缺省启用，关闭后外部客户端会收到「服务未启用」", 18),
                 // 2026-11-10：原 protocol_server_host 删除 —— 全仓无任何消费方（协议服务只读
                 // enabled/port，见 AiGlobalSettingServiceImpl 的字段映射），留在界面上就是假配置。

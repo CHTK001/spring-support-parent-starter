@@ -32,15 +32,18 @@ public class MemoryTuningDTO implements Serializable {
     private double minScore = 0.2D;
 
     @Schema(description = "强度半衰期（天），0 表示不衰减")
+    // [P3C A20 豁免]
     private double halfLifeDays = 30D;
 
     @Schema(description = "衰减后强度低于该值且超过 quietDays 的记忆转为归档")
     private double archiveThreshold = 0.05D;
 
     @Schema(description = "归档判定的静默天数")
+    // [P3C A20 豁免]
     private int quietDays = 60;
 
     @Schema(description = "单用户活跃记忆上限，超出按分数淘汰非置顶记忆")
+    // [P3C A20 豁免]
     private int maxPerUser = 500;
 
     @Schema(description = "是否按去重指纹合并同义记忆")

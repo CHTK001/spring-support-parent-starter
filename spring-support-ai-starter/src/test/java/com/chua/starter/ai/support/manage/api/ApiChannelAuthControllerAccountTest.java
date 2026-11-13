@@ -63,6 +63,7 @@ class ApiChannelAuthControllerAccountTest {
     @Test
     @DisplayName("expiresAtOf：10 位秒级时间戳归一化成毫秒（否则前端算成 1970 年）")
     void expiresAtOfNormalizesSecondsToMillis() throws Exception {
+        // [P3C A20 豁免]
         long seconds = EXPECTED_MS / 1000L;
         assertEquals(EXPECTED_MS, expiresAtOf(connectionWith("expires_at", seconds)));
         // 字符串形态的秒级时间戳（JacksonTypeHandler 反序列化后可能是 String）

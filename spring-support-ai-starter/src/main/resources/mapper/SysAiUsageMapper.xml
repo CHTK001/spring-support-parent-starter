@@ -78,7 +78,14 @@
             COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost,
             COALESCE(SUM(sys_ai_usage_cached_tokens), 0) AS totalCachedTokens,
             COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency,
-            COALESCE(SUM(sys_ai_usage_first_token_latency), 0) AS totalFirstTokenLatency
+            COALESCE(SUM(sys_ai_usage_first_token_latency), 0) AS totalFirstTokenLatency,
+            <!--
+                输出速度：只累加有实测值的行（SUM 自动跳过 NULL），
+                COUNT 非空值给出样本数，读取侧用 合计/样本数 还原均值。
+                AVG 不能跨行相加，所以这里存的是可加的两个量。
+            -->
+            COALESCE(SUM(sys_ai_usage_tokens_per_second), 0) AS totalTokensPerSecond,
+            COUNT(sys_ai_usage_tokens_per_second) AS tpsSamples
         FROM sys_ai_usage
         <where>
             <if test="startTime != null">

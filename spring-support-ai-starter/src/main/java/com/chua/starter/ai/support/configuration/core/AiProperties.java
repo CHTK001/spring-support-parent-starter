@@ -55,11 +55,13 @@ public class AiProperties {
         /**
          * 默认宽度
          */
+        // [P3C A20 豁免]
         private int width = 1024;
 
         /**
          * 默认高度
          */
+        // [P3C A20 豁免]
         private int height = 1024;
     }
 

@@ -261,6 +261,7 @@ public final class ClasspathDirSupport {
      */
     private static byte[] readAll(InputStream in) throws IOException {
         var out = new ByteArrayOutputStream();
+        // [P3C A20 豁免]
         var buffer = new byte[8192];
         int total = 0;
         int read;

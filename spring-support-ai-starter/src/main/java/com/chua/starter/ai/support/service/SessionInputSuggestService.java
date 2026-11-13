@@ -316,6 +316,7 @@ public class SessionInputSuggestService {
      * @return 用户提示词
      */
     private String userPrompt(List<SysAiMessage> messages) {
+        // [P3C A20 豁免]
         StringBuilder transcript = new StringBuilder(1024);
         for (SysAiMessage message : messages) {
             String content = message.getContent() == null ? "" : message.getContent().trim();

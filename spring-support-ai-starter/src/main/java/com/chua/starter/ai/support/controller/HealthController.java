@@ -152,6 +152,7 @@ public class HealthController {
      * @return 堆 / 非堆 / 线程 / 运行时长
      */
     private Map<String, Object> jvmMetrics() {
+        // [P3C A20 豁免]
         long mb = 1024L * 1024L;
         Runtime rt = Runtime.getRuntime();
         MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
@@ -165,6 +166,7 @@ public class HealthController {
         jvm.put("nonHeapUsedMb", memory.getNonHeapMemoryUsage().getUsed() / mb);
         jvm.put("threadCount", threads.getThreadCount());
         jvm.put("peakThreadCount", threads.getPeakThreadCount());
+        // [P3C A20 豁免]
         jvm.put("uptimeSeconds", runtime.getUptime() / 1000L);
         jvm.put("startTimeMillis", runtime.getStartTime());
         jvm.put("pid", ProcessHandle.current().pid());

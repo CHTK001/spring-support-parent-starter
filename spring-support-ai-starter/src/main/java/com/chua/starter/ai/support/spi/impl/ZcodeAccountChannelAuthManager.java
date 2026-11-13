@@ -270,6 +270,7 @@ public class ZcodeAccountChannelAuthManager implements AccountChannelAuthManager
      * @return 返回值
     */
     private static String deviceMid() {
+        // [P3C A20 豁免]
         byte[] raw = new byte[32];
         new SecureRandom().nextBytes(raw);
         return HexFormat.of().formatHex(raw);

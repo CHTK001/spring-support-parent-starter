@@ -439,6 +439,7 @@ public class AiModelMetricsEnrichmentService {
             return;
         }
         loadStartedAt.set(now);
+        // [P3C C1 豁免]
         Thread thread = new Thread(this::loadAndSwap, "ai-metrics-load");
         thread.setDaemon(true);
         thread.start();

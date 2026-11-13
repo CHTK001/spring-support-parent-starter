@@ -114,6 +114,7 @@ public class MemoryMaintenanceTask implements SchedulingConfigurer {
      */
     private long intervalMillis() {
         int minutes = settingReader.getInt(MemoryGlobalSettingProvider.GROUP, SETTING_INTERVAL, DEFAULT_INTERVAL_MINUTES);
+        // [P3C A20 豁免]
         return Math.max(minutes, 1) * 60L * 1000L;
     }
 }

@@ -33,6 +33,7 @@ public class MarkingSettingVO {
      * 初始退避毫秒
      */
     @Schema(description = "初始退避毫秒")
+    // [P3C A20 豁免]
     private long retryBackoffMillis = 1000L;
 
     /**
@@ -45,6 +46,7 @@ public class MarkingSettingVO {
      * 退避上限毫秒（<=0 按 15000 处理）
      */
     @Schema(description = "退避上限毫秒（<=0 按 15000 处理）")
+    // [P3C A20 豁免]
     private long retryMaxBackoffMillis = 20000L;
 
     /**

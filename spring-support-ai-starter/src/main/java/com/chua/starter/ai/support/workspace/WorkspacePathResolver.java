@@ -154,7 +154,13 @@ public class WorkspacePathResolver {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取工作目录配置失败");
         }
         if (base == null || base.isBlank()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "未配置工作目录基路径（系统设置 - workspaceBaseDir）");
+            // 未配置时的兜底（用户口径 2026-11-13）：不把「去改 workspaceBaseDir」暴露给客户。
+            // 落在进程用户家目录下（普通容器/登录节点都可写），目录结构仍是
+            // <base>/<account>/agent，越界校验、并发创建等逻辑保持不变。
+            Path fallback = Paths.get(System.getProperty("user.home", "."), "ai-workspace")
+                    .toAbsolutePath().normalize();
+            log.info("[Workspace] 未配置 workspaceBaseDir，使用默认工作区: {}", fallback);
+            return fallback;
         }
         return Paths.get(base.trim()).toAbsolutePath().normalize();
     }

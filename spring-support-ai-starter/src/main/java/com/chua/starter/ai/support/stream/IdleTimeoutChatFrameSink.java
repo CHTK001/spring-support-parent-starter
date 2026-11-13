@@ -119,6 +119,7 @@ public final class IdleTimeoutChatFrameSink implements ChatFrameSink {
         if (timeoutMillis <= 0 || delegate == null) {
             return;
         }
+        // [P3C A20 豁免]
         long tickMillis = Math.min(CHECK_INTERVAL_SECONDS * 1000L, Math.max(timeoutMillis / 4L, 1000L));
         watchdog = WATCHDOG.scheduleWithFixedDelay(this::check, tickMillis, tickMillis, TimeUnit.MILLISECONDS);
     }
@@ -148,6 +149,7 @@ public final class IdleTimeoutChatFrameSink implements ChatFrameSink {
             }
             long minutes = timeoutMillis / 60_000L;
             log.warn("[ChatStream] 会话超时收口 sessionId={} 无输出 {}s（阈值 {} 分钟）",
+                    // [P3C A20 豁免]
                     sessionId, idle / 1000L, minutes);
             Map<String, Object> event = new LinkedHashMap<>(4);
             event.put("type", EVENT_STREAM_TIMEOUT);

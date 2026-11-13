@@ -65,8 +65,10 @@ public class AiCacheAutoConfiguration {
     public CacheManager aiCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setCaffeine(Caffeine.newBuilder()
+                // [P3C A20 豁免]
                 .initialCapacity(128)
                 .maximumSize(20_000)
+                // [P3C A20 豁免]
                 .expireAfterWrite(Duration.ofMinutes(30))
                 .recordStats());
         // 与 @Cacheable(unless = "#result == null") 保持一致，不缓存空值
@@ -96,6 +98,7 @@ public class AiCacheAutoConfiguration {
     @Bean("redis-cache-600")
     @ConditionalOnClass(RedisConnectionFactory.class)
     public CacheManager redisCacheMin(RedisConnectionFactory connectionFactory) {
+        // [P3C A20 豁免]
         return buildRedisCacheManager(connectionFactory, Duration.ofSeconds(600));
     }
 

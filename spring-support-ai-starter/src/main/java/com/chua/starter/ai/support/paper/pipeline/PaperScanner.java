@@ -63,9 +63,11 @@ public class PaperScanner {
     private final List<com.chua.starter.ai.support.paper.pipeline.strategy.AnyExtractStrategy> anyExtractStrategies;
 
     /**
-     * 教育 AI 配置（读取识别策略 key）
+     * 教育 AI 配置（读取识别策略 key）；缺 Bean 时用默认值，保证只引 ai-starter 的宿主也能启动
      */
-    private final com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties eduAiProperties;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties eduAiProperties =
+            new com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties();
 
     /**
      * 阅卷运行时设置（识别策略 / 匹配模式）。

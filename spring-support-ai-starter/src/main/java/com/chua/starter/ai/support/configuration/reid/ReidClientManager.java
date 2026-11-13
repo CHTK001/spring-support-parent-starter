@@ -186,7 +186,9 @@ public class ReidClientManager {
         return new DefaultPersonTrack(
                 readThreshold(),
                 settingReader.getInt(GROUP, "track_max_tracks", DEFAULT_MAX_TRACKS),
+                // [P3C A20 豁免]
                 settingReader.getInt(GROUP, "track_ttl_seconds", DEFAULT_TTL_SECONDS) * 1000L,
+                // [P3C A20 豁免]
                 settingReader.getInt(GROUP, "track_gap_seconds", DEFAULT_GAP_SECONDS) * 1000L);
     }
 

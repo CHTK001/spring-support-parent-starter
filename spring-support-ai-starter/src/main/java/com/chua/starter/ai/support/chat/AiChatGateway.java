@@ -212,6 +212,7 @@ public interface AiChatGateway {
          * @return 默认选项
          */
         public static AiChatOptions defaults() {
+            // [P3C A20 豁免]
             return new AiChatOptions(DEFAULT_TIMEOUT_MILLIS, DEFAULT_MAX_RETRIES, 1000L,
                     2.0D, 20_000L, true);
         }

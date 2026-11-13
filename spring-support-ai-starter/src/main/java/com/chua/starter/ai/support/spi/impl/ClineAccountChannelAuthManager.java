@@ -508,6 +508,7 @@ public class ClineAccountChannelAuthManager implements AccountChannelAuthManager
     private static Long toMillis(Object value) {
         if (value instanceof Number number && number.doubleValue() > 0) {
             double v = number.doubleValue();
+            // [P3C A20 豁免]
             return v < 1e12 ? Math.round(v * 1000d) : Math.round(v);
         }
         if (value instanceof String s && !s.isBlank()) {

@@ -197,6 +197,7 @@ public final class AppKeyQuotaGate {
         if (raw == null || raw <= 0) {
             return false;
         }
+        // [P3C A20 豁免]
         long deadline = raw > MILLIS_THRESHOLD ? raw : raw * 1000L;
         return nowMillis > deadline;
     }

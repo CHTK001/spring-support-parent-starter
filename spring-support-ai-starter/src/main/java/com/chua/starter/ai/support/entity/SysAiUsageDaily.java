@@ -114,4 +114,20 @@ public class SysAiUsageDaily extends SysBase {
      */
     @TableField("sys_ai_usage_daily_standard_cost")
     private Double standardCost; // 标准cost
+
+    /**
+     * 输出速度（Token/秒）合计。
+     *
+     * <p>单次调用的 {@code sys_ai_usage_tokens_per_second} 之和，只累加有实测值的行。
+     * 配合 {@link #tpsSamples} 还原均值：{@code 合计 / 样本数}。直接存日均值再平均
+     * 会让样本稀少的模型被放大，所以存的是可加的量。</p>
+     */
+    @TableField("sys_ai_usage_daily_total_tokens_per_second")
+    private Double totalTokensPerSecond;
+
+    /**
+     * 有实测输出速度的调用次数（速度样本数），作为速度均值的权重。
+     */
+    @TableField("sys_ai_usage_daily_tps_samples")
+    private Long tpsSamples;
 }

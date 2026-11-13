@@ -56,6 +56,7 @@ public class GatewayRateLimitFilter extends AbstractGatewaySecurityFilter {
                 return;
             }
             String appKey = resolveAppKey(request);
+            // [P3C A20 豁免]
             int qpm = globalSettingReader().getInt("security", "security_rate_limit_qpm", 60);
             if (qpm > 0 && StringUtils.hasText(appKey)) {
                 if (!rateLimiter.allow("key:" + appKey, qpm)) {
@@ -65,6 +66,7 @@ public class GatewayRateLimitFilter extends AbstractGatewaySecurityFilter {
                 }
             }
             // 2、IP 维度（所有未携带 APPKey 的控制台流量、入站流都受 IP 约束）
+            // [P3C A20 豁免]
             int perIpQpm = globalSettingReader().getInt("security", "security_rate_limit_per_ip_qpm", 200);
             String clientIp = StringUtils.trimToNull(IpUtils.getClientIp(request));
             if (perIpQpm > 0 && StringUtils.hasText(clientIp)) {
@@ -75,6 +77,7 @@ public class GatewayRateLimitFilter extends AbstractGatewaySecurityFilter {
                 }
             }
             // 3、Path 维度
+            // [P3C A20 豁免]
             int perPathQpm = globalSettingReader().getInt("security", "security_rate_limit_per_path_qpm", 600);
             if (perPathQpm > 0) {
                 if (!rateLimiter.allow("path:" + request.getRequestURI(), perPathQpm)) {

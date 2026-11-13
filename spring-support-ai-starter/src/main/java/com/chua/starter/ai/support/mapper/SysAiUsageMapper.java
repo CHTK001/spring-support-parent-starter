@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -82,6 +83,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param totalCachedTokens 缓存读取 令牌
      * @param totalLatency 总耗时（ms）
      * @param totalFirstTokenLatency 总首字延迟（ms）
+     * @param totalTokensPerSecond 输出速度（Token/秒）合计
+     * @param tpsSamples    有实测输出速度的调用数（速度均值权重）
      * @param userId    归属账号。<b>日汇总表必须带这一维度</b>：不分组的话不同账号的用量
      *                   会被合并成一行，日后任何按账号过滤的读取都会把别人的量算进来
      */
@@ -98,7 +101,9 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             Double totalCost,
             Long totalCachedTokens,
             Long totalLatency,
-            Long totalFirstTokenLatency
+            Long totalFirstTokenLatency,
+            Double totalTokensPerSecond,
+            Long tpsSamples
     ) {}
 
     /**
@@ -264,4 +269,16 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             @Param("provider") String provider,
             @Param("model") String model
     );
+
+    /**
+     * 明细表里实际出现过用量的日期（升序）。
+     *
+     * <p>只给「日汇总表自愈」用：拿它和 {@code sys_ai_usage_daily} 出现过的日期做差，
+     * 差集就是服务停摆/任务漏跑留下的空洞。结果集最多几百行，但需要扫一遍
+     * {@code sys_ai_usage_call_time} 索引，因此只在聚合任务的调度线程里每进程跑一次。</p>
+     *
+     * @return 有明细数据的日期列表，无数据时为空列表
+     */
+    @Select("SELECT DISTINCT DATE(sys_ai_usage_call_time) FROM sys_ai_usage")
+    List<LocalDate> selectDistinctUsageDays();
 }

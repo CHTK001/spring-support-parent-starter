@@ -98,6 +98,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final String LOG_LEVEL_WARN = "WARN";
 
     /**
+     * 日汇总表缺口天数超过该值时改走一次全量回填（逐天补太多次往返）。
+     */
+    private static final int DAILY_GAP_FULL_BACKFILL_DAYS = 30;
+
+    /**
      * 同步日志级别：错误
      */
     private static final String LOG_LEVEL_ERROR = "ERROR";
@@ -850,43 +855,66 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 一次性自愈：日汇总表缺历史数据时触发一次全量回填。
+     * 一次性自愈：日汇总表缺历史数据时补齐。
      *
-     * <p><b>为什么需要。</b>{@link #run()} 每次只聚合当前小时，历史区间从不回补。
-     * 日汇总表是<b>全量重建过</b>的（口径修正：原先按日期删、且实体缺 userId 字段，
-     * 导致存的是一份不分账号的全局汇总，与明细口径不一致，必须重建）。
-     * 若只靠人工点「全量同步」，任何忘了点的环境都会留下一张<b>只有当天数据</b>的表 ——
-     * 而这张表当前没有读取方，所以不会报错、不会告警，等哪天有人打开全局读取，
-     * 读到的就是一个静默残缺的历史。</p>
+     * <p><b>为什么需要。</b>{@link #run()} 每次只聚合<b>当前小时</b>，历史区间从不回补。
+     * 服务停过一天、或某天聚合任务没跑，那天在日汇总表里就是<b>整天空洞</b>；
+     * 而用量统计/分布/每日模型趋势现在都以日汇总为主源 —— 空洞会被读成「那天没有用量」，
+     * 比慢更糟（静默少算，页面上看不出异常）。</p>
      *
-     * <p><b>判据很轻</b>：只查「明细最早那天」在日汇总里有没有行，一条 count 而已；
-     * 有则直接返回，后续每个调度周期都只花这一次 count。
-     * 用「有没有最早那天」而不是「行数对不对」，是因为行数比对需要跑一遍全量
-     * GROUP BY 才知道，本身就比回填还贵。</p>
+     * <p><b>判据。</b>明细里有、日汇总里没有的日期视为缺口（今天除外：当天还没结束，
+     * 由小时聚合持续写入）。只查一次「明细出现过哪些日期 + 汇总出现过哪些日期」，
+     * 两者都是小结果集，比逐天 count 更省。</p>
      *
-     * <p><b>每进程只跑一次</b>（{@code dailyHistoryChecked} 置位）。回填本身是一次
-     * 全量 GROUP BY，百万级明细下要跑若干秒，放在调度线程里可接受（不在请求路径上），
-     * 但绝不该每个周期都跑。</p>
+     * <p><b>补法。</b>缺口少时逐天 {@link #aggregateRange}（每次只重算一天，压力可控）；
+     * 缺口超过 {@value #DAILY_GAP_FULL_BACKFILL_DAYS} 天时走一次 {@link #aggregateAll()}，
+     * 避免上百次往返。</p>
+     *
+     * <p><b>每进程只跑一次</b>（{@code dailyHistoryChecked} 置位）。回填是重活，
+     * 放在调度线程里可接受（不在请求路径上），但绝不该每个周期都跑。</p>
      */
     private void ensureDailyHistoryBackfilled() {
         if (!dailyHistoryChecked.compareAndSet(false, true)) {
             return;
         }
         try {
-            LocalDateTime earliest = findEarliestUsageTime();
-            if (earliest == null) {
+            List<LocalDate> rawDays = usageMapper.selectDistinctUsageDays();
+            if (rawDays == null || rawDays.isEmpty()) {
                 return;
             }
-            LocalDate earliestDay = earliest.toLocalDate();
-            Long covered = dailyMapper.selectCount(new LambdaQueryWrapper<SysAiUsageDaily>()
-                    .eq(SysAiUsageDaily::getStatDate, earliestDay));
-            if (covered != null && covered > 0) {
+            Set<LocalDate> dailyDays = new HashSet<>();
+            List<SysAiUsageDaily> dailyRows = dailyMapper.selectList(new LambdaQueryWrapper<SysAiUsageDaily>()
+                    .select(SysAiUsageDaily::getStatDate)
+                    .groupBy(SysAiUsageDaily::getStatDate));
+            for (SysAiUsageDaily row : dailyRows) {
+                if (row.getStatDate() != null) {
+                    dailyDays.add(row.getStatDate());
+                }
+            }
+            LocalDate today = LocalDate.now();
+            List<LocalDate> missing = new ArrayList<>();
+            for (LocalDate day : rawDays) {
+                // 今天还没结束，由小时聚合持续写入，不算缺口
+                if (day != null && !day.equals(today) && !dailyDays.contains(day)) {
+                    missing.add(day);
+                }
+            }
+            if (missing.isEmpty()) {
                 return;
             }
-            log.info("[UsageAggregation] 日汇总表缺少历史数据（最早 {} 无汇总行），触发一次全量回填",
-                    earliestDay);
-            recordLog(LOG_LEVEL_INFO, "日汇总表缺少历史数据，自动触发全量回填");
-            aggregateAll();
+            missing.sort(LocalDate::compareTo);
+            if (missing.size() > DAILY_GAP_FULL_BACKFILL_DAYS) {
+                log.info("[UsageAggregation] 日汇总表缺 {} 天（最早 {}），触发一次全量回填",
+                        missing.size(), missing.getFirst());
+                recordLog(LOG_LEVEL_INFO, String.format("日汇总表缺 %d 天，自动触发全量回填", missing.size()));
+                aggregateAll();
+                return;
+            }
+            log.info("[UsageAggregation] 日汇总表缺 {} 天，按天补齐: {}", missing.size(), missing);
+            recordLog(LOG_LEVEL_INFO, String.format("日汇总表缺 %d 天，按天补齐", missing.size()));
+            for (LocalDate day : missing) {
+                self.aggregateRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+            }
         } catch (Throwable e) {
             log.warn("[UsageAggregation] 日汇总表历史自愈检查失败（不影响本轮聚合）: {}", e.getMessage());
         }
@@ -1032,6 +1060,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             daily.setTotalCachedTokens(row.totalCachedTokens() != null ? row.totalCachedTokens() : 0L);
             daily.setTotalLatency(row.totalLatency() != null ? row.totalLatency() : 0L);
             daily.setTotalFirstTokenLatency(row.totalFirstTokenLatency() != null ? row.totalFirstTokenLatency() : 0L);
+            // 速度存「合计 + 样本数」，读取侧用 合计/样本数 还原均值（AVG 不可跨行相加）
+            daily.setTotalTokensPerSecond(row.totalTokensPerSecond() != null ? row.totalTokensPerSecond() : 0D);
+            daily.setTpsSamples(row.tpsSamples() != null ? row.tpsSamples() : 0L);
             // 实际费用缺失（未记录）时用标准价兜底，保证统计口径一致
             double actualCost = row.totalCost() != null ? row.totalCost() : 0.0;
             daily.setTotalCost(actualCost != 0 ? actualCost : standardCost.doubleValue());

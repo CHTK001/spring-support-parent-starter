@@ -350,6 +350,7 @@ public class AIChatController extends BaseAiController {
             // 估算当前历史令牌用量，结合余量百分比判断是否触发
             int historyTokens = historyTokens(history);
             // 预算：上下文占用超过 100-headroomPercent% 时触发
+            // [P3C A20 豁免]
             int budget = DEFAULT_MODEL_WINDOW * (100 - settings.headroomPercent()) / 100;
             if (historyTokens <= budget) {
                 log.debug("[AIChat] 会话 {} 上下文 {} tokens 未达触发阈值 {}，跳过压缩", dialogId, historyTokens, budget);

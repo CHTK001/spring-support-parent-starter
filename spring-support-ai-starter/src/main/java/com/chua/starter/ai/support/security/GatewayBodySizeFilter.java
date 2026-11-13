@@ -89,6 +89,7 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
     private static byte[] readBody(HttpServletRequest request, int limit) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ServletInputStream in = request.getInputStream();
+        // [P3C A20 豁免]
         byte[] buf = new byte[4096];
         int read = 0;
         int total = 0;

@@ -185,6 +185,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 入站流量口径：这一笔已经出结果，按真实耗时/用量写访问日志（失败也写，见下方 catch）
             recordAccessLog(request, appKeyOf(request), AiUserContext.currentUserId(), 200, usage, end - start);
             String text = response != null && response.getText() != null ? response.getText() : "";
+            // 透传响应头：客户端在同步调用里捕获，这里立刻取走并挂到请求参数上，
+            // 由控制器写回自己的 HTTP 响应（SSE 不支持，见 ResponseHeaderCapture 注释）
+            java.util.Map<String, String> responseHeaders =
+                    com.chua.common.support.ai.chat.ResponseHeaderCapture.drain();
+            if (!responseHeaders.isEmpty() && request.getParameters() != null) {
+                request.getParameters().put("_responseHeaders", responseHeaders);
+            }
             return AiChatResult.ok(text, resolveUsedModel(configured, request, usage), usage);
         } catch (Exception e) {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
@@ -331,8 +338,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 拿不到许可最多等 2s，仍拿不到就回「供应商繁忙」，不把请求无限挂住。
         final ProviderThrottle.Lease lease = acquireThrottle(request);
         if (lease == null) {
-            emitter.completeWithError(new IllegalStateException(
-                    "供应商繁忙：并发或每分钟请求数已达上限，请稍后重试"));
+            // 必须先走 onError：调用方（服务实例端口）只认回调，
+            // 只 completeWithError 会让它永远等不到终态，客户端表现为「无响应直到超时」。
+            IllegalStateException busy = new IllegalStateException(
+                    "供应商繁忙：并发或每分钟请求数已达上限，请稍后重试");
+            notifyError(onError, busy);
+            emitter.completeWithError(busy);
             return emitter;
         }
         // 许可挂在 emitter 的三个终态上：正常完成 / 出错 / 超时都会归还，
@@ -346,7 +357,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             ChatClient client = resolveChatClient(request);
             if (client == null) {
                 lease.release();
-                emitter.completeWithError(new IllegalStateException("No available ChatClient for model: " + request.getModel()));
+                String message = "No available ChatClient for model: " + request.getModel();
+                IllegalStateException missing = new IllegalStateException(message);
+                log.warn("[AiChat] 无可用的对话客户端 model={}", request.getModel());
+                notifyError(onError, missing);
+                emitter.completeWithError(missing);
                 return emitter;
             }
             configured = maybeWrapAgent(configureClient(client, request), request);
@@ -1749,6 +1764,23 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             log.warn("[AppKey] Token 配额累计失败 appKey={} tokens={}: {}",
                     appKey, usage.getTotalTokens(), e.getMessage());
+        }
+    }
+
+    /**
+     * 触发错误回调，回调自身异常不外抛。
+     *
+     * @param onError 错误回调，可为 null
+     * @param error   错误
+     */
+    private static void notifyError(Consumer<Throwable> onError, Throwable error) {
+        if (onError == null) {
+            return;
+        }
+        try {
+            onError.accept(error);
+        } catch (Exception e) {
+            log.debug("[ai] 错误回调执行失败，已忽略: {}", e.getMessage());
         }
     }
 

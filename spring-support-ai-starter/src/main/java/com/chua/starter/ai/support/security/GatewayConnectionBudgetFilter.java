@@ -52,6 +52,7 @@ public class GatewayConnectionBudgetFilter extends AbstractGatewaySecurityFilter
                 safePass(request, response, chain);
                 return;
             }
+            // [P3C A20 豁免]
             int max = globalSettingReader().getInt("security", "security_connection_budget_max", 64);
             if (max <= 0) {
                 safePass(request, response, chain);

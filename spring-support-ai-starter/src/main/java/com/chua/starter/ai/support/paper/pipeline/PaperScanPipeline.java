@@ -5,6 +5,7 @@ import com.chua.starter.ai.support.configuration.paper.PaperImagePreprocessor;
 import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -37,9 +38,10 @@ public class PaperScanPipeline {
     private final PaperScanner paperScanner;
 
     /**
-     * 教育 AI 配置
+     * 教育 AI 配置；缺 Bean 时用默认值
      */
-    private final PaperPipelineProperties properties;
+    @Autowired(required = false)
+    private PaperPipelineProperties properties = new PaperPipelineProperties();
 
     /**
      * 管线执行结果。

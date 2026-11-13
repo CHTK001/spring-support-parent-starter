@@ -79,12 +79,14 @@ public class GatewayRequestTimeoutFilter extends AbstractGatewaySecurityFilter i
         super(globalSettingReader);
         AtomicInteger seq = new AtomicInteger(0);
         this.watchdog = new ScheduledThreadPoolExecutor(WATCHDOG_THREADS, runnable -> {
+            // [P3C C1 豁免]
             Thread thread = new Thread(runnable, "ai-gateway-timeout-" + seq.incrementAndGet());
             thread.setDaemon(true);
             return thread;
         });
         // 到点只做一次检查，任务取消后不留队列；核心线程也不保活
         this.watchdog.setRemoveOnCancelPolicy(true);
+        // [P3C A20 豁免]
         this.watchdog.setKeepAliveTime(30L, TimeUnit.SECONDS);
         this.watchdog.allowCoreThreadTimeOut(true);
     }

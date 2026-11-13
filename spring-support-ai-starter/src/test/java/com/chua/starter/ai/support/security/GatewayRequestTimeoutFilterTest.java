@@ -78,6 +78,7 @@ class GatewayRequestTimeoutFilterTest {
         try {
             FakeResponse response = new FakeResponse();
             response.committed = true;
+            // [P3C A20 豁免]
             filter.doFilter(request(GATEWAY_PATH), response.proxy(), sleepChain(200L));
             assertEquals(SC_OK, response.status);
             assertTrue(response.body().isEmpty(), "已提交的响应不应被追加内容: " + response.body());
@@ -92,6 +93,7 @@ class GatewayRequestTimeoutFilterTest {
         GatewayRequestTimeoutFilter filter = new GatewayRequestTimeoutFilter(settings("20", "false"));
         try {
             FakeResponse response = new FakeResponse();
+            // [P3C A20 豁免]
             filter.doFilter(request(GATEWAY_PATH), response.proxy(), sleepChain(150L));
             assertEquals(SC_OK, response.status);
             assertTrue(response.body().isEmpty(), response.body());
@@ -106,6 +108,7 @@ class GatewayRequestTimeoutFilterTest {
         GatewayRequestTimeoutFilter filter = new GatewayRequestTimeoutFilter(settings("20", null));
         try {
             FakeResponse response = new FakeResponse();
+            // [P3C A20 豁免]
             filter.doFilter(request(OTHER_PATH), response.proxy(), sleepChain(150L));
             assertEquals(SC_OK, response.status);
             assertTrue(response.body().isEmpty(), response.body());
@@ -120,6 +123,7 @@ class GatewayRequestTimeoutFilterTest {
         GatewayRequestTimeoutFilter filter = new GatewayRequestTimeoutFilter(settings("0", null));
         try {
             FakeResponse response = new FakeResponse();
+            // [P3C A20 豁免]
             filter.doFilter(request(GATEWAY_PATH), response.proxy(), sleepChain(150L));
             assertEquals(SC_OK, response.status);
             assertFalse(response.committed, "不应写出任何响应");
@@ -252,6 +256,7 @@ class GatewayRequestTimeoutFilterTest {
             long deadline = System.currentTimeMillis() + 2_000L;
             while (response.status != SC_GATEWAY_TIMEOUT && System.currentTimeMillis() < deadline) {
                 try {
+                    // [P3C A20 豁免]
                     Thread.sleep(10L);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

@@ -158,7 +158,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,ai-config,ai-models,ai-beans,ai-cache
   endpoint:
     health:
       # 不对外暴露组件明细（DB / 磁盘等），避免信息泄露

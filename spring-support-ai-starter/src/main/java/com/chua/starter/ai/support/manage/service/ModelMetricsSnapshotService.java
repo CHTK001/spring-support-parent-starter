@@ -389,6 +389,7 @@ public class ModelMetricsSnapshotService {
         List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
         // 一次取全部模型行再按供应商分组。原来逐供应商查询是 N+1 次往返，
         // 数据库跨网络（远端隧道）时每次往返秒级，一次列表请求就被拖到分钟级。
+        // [P3C A20 豁免]
         Map<String, List<SysAiProviderModel>> rowsByProvider = new HashMap<>(16);
         for (SysAiProviderModel row : modelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
                 .orderByAsc(SysAiProviderModel::getSortOrder))) {

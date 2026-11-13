@@ -546,6 +546,7 @@ public class ModelClientResolver {
                 .authPrefix(extraString(provider.getExtra(), "auth_prefix"))
                 .metricsUrl(extraString(provider.getExtra(), "metrics_url"))
                 .proxy(provider.getProxy())
+                .passthroughResponseHeaders(extraStringList(provider.getExtra(), "passthrough_response_headers"))
                 .routes(channelRoutes != null ? channelRoutes
                         : ProviderRouteTargets.fromExtra(provider.getExtra()))
                 .build();

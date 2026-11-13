@@ -86,6 +86,7 @@ public final class ProviderThrottle {
             long now = System.currentTimeMillis();
             if (semaphore != null) {
                 try {
+                    // [P3C A20 豁免]
                     if (!semaphore.tryAcquire(200, TimeUnit.MILLISECONDS)) {
                         if (System.currentTimeMillis() >= deadline) {
                             return null;
@@ -108,6 +109,7 @@ public final class ProviderThrottle {
                             return null;
                         }
                         try {
+                            // [P3C A20 豁免]
                             Thread.sleep(100L);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();

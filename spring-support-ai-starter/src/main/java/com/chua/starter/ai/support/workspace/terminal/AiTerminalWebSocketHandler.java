@@ -787,6 +787,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
             Thread thread = readerThread;
             if (thread != null) {
                 try {
+                    // [P3C A20 豁免]
                     thread.join(READER_JOIN_SECONDS * 1000L);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

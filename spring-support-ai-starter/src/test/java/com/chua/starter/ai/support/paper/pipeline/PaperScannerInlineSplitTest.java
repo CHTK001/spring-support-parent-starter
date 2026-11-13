@@ -33,7 +33,7 @@ class PaperScannerInlineSplitTest {
      * @return 可直接调用版面切题的扫描器
      */
     private static PaperScanner scanner() {
-        return new PaperScanner(null, null, List.of(), null);
+        return new PaperScanner(null, null, List.of());
     }
 
     /**

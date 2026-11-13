@@ -270,6 +270,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `sys_ai_usage_daily_standard_cost` DOUBLE DEFAULT 0 COMMENT '标准费用(官方价格)',
     `sys_ai_usage_daily_total_first_token_latency` BIGINT DEFAULT 0 COMMENT '总首字延迟(ms)合计',
     `sys_ai_usage_daily_user_id`            VARCHAR(64)  NULL COMMENT '归属用户 ID（登录用户名，NULL 表示全局汇总）',
+    `sys_ai_usage_daily_total_tokens_per_second` DOUBLE DEFAULT 0 COMMENT '输出速度(Token/秒)合计，配合样本数还原均值',
+    `sys_ai_usage_daily_tps_samples`             BIGINT DEFAULT 0 COMMENT '有实测输出速度的调用数，作为均值权重',
     PRIMARY KEY (`sys_ai_usage_daily_id`),
     KEY `sys_ai_usage_daily_sys_ai_usage_daily_user` (`sys_ai_usage_daily_user_id`, `sys_ai_usage_daily_stat_date`)
 );

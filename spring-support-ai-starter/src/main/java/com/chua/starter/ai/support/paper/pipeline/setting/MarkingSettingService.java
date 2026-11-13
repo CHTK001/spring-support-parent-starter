@@ -2,7 +2,6 @@ package com.chua.starter.ai.support.paper.pipeline.setting;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,6 @@ import java.util.Locale;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MarkingSettingService {
 
     /**
@@ -59,7 +57,11 @@ public class MarkingSettingService {
      */
     public static final String MATCH_MODE_LOOSE = "loose";
 
-    private final PaperPipelineProperties properties;
+    /**
+     * 管线参数；缺 Bean 时用默认值（eduai 引入时才由映射 Bean 覆盖）
+     */
+    @Autowired(required = false)
+    private PaperPipelineProperties properties = new PaperPipelineProperties();
 
     /**
      * 全局设置读取器（ai-starter 装配；缺失时全部回落到 YAML 默认值）

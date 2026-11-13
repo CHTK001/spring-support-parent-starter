@@ -280,6 +280,7 @@ public class FaceClientManager {
         if (nmsTh != null) {
             d.nms(nmsTh.floatValue());
         }
+        // [P3C A20 豁免]
         int minSize = settingReader.getInt(GROUP, "min_face_size", 20);
         d.minFaceSize(minSize);
         // 桥接为模型级参数：使 device / 阈值在引擎侧生效（人脸链路原先只调用门面 setter，

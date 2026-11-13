@@ -11,7 +11,6 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.updater.ChatClientHotUpdater;
-import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
@@ -189,20 +188,6 @@ public class AiConfiguration {
          * @return AIdialog本地record服务的结果
          */
         return new AIDialogLocalRecordService();
-    }
-
-    /**
-     * 试卷管线的默认参数。
-     *
-     * <p>只引 ai-starter 的宿主也必须能启动，所以这里给一份默认值；
-     * 引入 eduai 时由 {@code EduAiAutoConfiguration} 提供 {@code @Primary} 的映射 Bean 覆盖。</p>
-     *
-     * @return 管线参数
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public PaperPipelineProperties paperPipelineProperties() {
-        return new PaperPipelineProperties();
     }
 
     /**

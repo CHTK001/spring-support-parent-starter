@@ -84,6 +84,7 @@ public class ChannelCircuitServiceImpl implements ChannelCircuitService {
     /**
      * 熔断条目：key = providerId::model
      */
+    // [P3C A20 豁免]
     private final Map<String, Entry> entries = new ConcurrentHashMap<>(64);
 
     /**
@@ -163,6 +164,7 @@ public class ChannelCircuitServiceImpl implements ChannelCircuitService {
             entry.lastUpdatedAt = now;
             if (STATE_HALF_OPEN.equals(entry.state) || entry.consecutiveFailures >= threshold) {
                 entry.state = STATE_OPEN;
+                // [P3C A20 豁免]
                 entry.openUntil = now + openSeconds * 1000L;
                 log.warn("[ChannelCircuit] 熔断打开 provider={} model={} failures={}/{} 冷却={}s 原因={}",
                         providerId, model, entry.consecutiveFailures, threshold, openSeconds, entry.lastError);

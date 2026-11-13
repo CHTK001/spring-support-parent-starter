@@ -39,16 +39,19 @@ public class RagProperties {
     /**
      * 向量维度（默认与 内存嵌入客户端 输出维度一致）
      */
+    // [P3C A20 豁免]
     private int embeddingDimensions = 1536;
 
     /**
      * 默认文本切片大小（字符）
      */
+    // [P3C A20 豁免]
     private int chunkSize = 1000;
 
     /**
      * 默认文本切片重叠（字符）
      */
+    // [P3C A20 豁免]
     private int chunkOverlap = 200;
 
     /**

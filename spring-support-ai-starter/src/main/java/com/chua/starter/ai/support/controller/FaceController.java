@@ -412,6 +412,7 @@ public class FaceController {
                                 @RequestParam(value = "sortOrder", required = false) String sortOrder) {
         try {
             boolean paged = page != null && page > 0 && size != null && size > 0;
+            // [P3C A20 豁免]
             int cap = size == null ? 0 : Math.min(size, 500);
             return ReturnResult.ok(faceService.listPage(group, keyword, status, sortField, sortOrder,
                     paged ? page : 0, paged ? cap : 0));

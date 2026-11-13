@@ -42,6 +42,7 @@ public class PaperPipelineProperties {
         /**
          * 单次模型调用超时（秒）
          */
+        // [P3C A20 豁免]
         private int callTimeout = 90;
 
         /**
@@ -91,6 +92,7 @@ public class PaperPipelineProperties {
         /**
          * 初始退避毫秒
          */
+        // [P3C A20 豁免]
         private long backoffMillis = 1000L;
 
         /**
@@ -101,6 +103,7 @@ public class PaperPipelineProperties {
         /**
          * 退避上限毫秒（&lt;=0 按 15000 处理）
          */
+        // [P3C A20 豁免]
         private long maxBackoffMillis = 20000L;
 
         /**
@@ -128,6 +131,7 @@ public class PaperPipelineProperties {
         /**
          * 告警请求超时（毫秒）
          */
+        // [P3C A20 豁免]
         private int timeoutMillis = 5000;
     }
 }

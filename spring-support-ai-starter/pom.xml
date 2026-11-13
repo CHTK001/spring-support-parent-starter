@@ -305,6 +305,15 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-websocket</artifactId>
     </dependency>
+    <!--
+      Actuator 只读端点（/actuator/ai-config、ai-models、ai-beans、ai-cache）。
+      optional：没有引入 actuator 的宿主不会被动带上它；引入后自动装配。
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- MCP（Model Context Protocol）Java SDK - 真实 MCP 服务器连接 / 工具列举 -->
     <dependency>
       <groupId>io.modelcontextprotocol.sdk</groupId>

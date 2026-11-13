@@ -57,7 +57,8 @@ public class PaperAiService {
     /**
      * 属性
      */
-    private final PaperPipelineProperties properties;
+    @Autowired(required = false)
+    private PaperPipelineProperties properties = new PaperPipelineProperties();
 
     /**
      * 阅卷运行时设置（重试次数 / 退避曲线）。
@@ -79,16 +80,6 @@ public class PaperAiService {
      * Objectmapper
     */
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    /**
-     * 构造方法，创建 EduAi服务 实例。
-     *
-     * @param properties 属性，不允许为 null
-     */
-    @Autowired
-    public PaperAiService(PaperPipelineProperties properties) {
-        this.properties = properties;
-    }
 
     /**
      * 是否启用 AI（总开关 + 对话客户端 是否可用）。

@@ -443,6 +443,7 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
      * @return 返回值
     */
     private static String codeVerifier() {
+        // [P3C A20 豁免]
         byte[] raw = new byte[48];
         new SecureRandom().nextBytes(raw);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
@@ -548,6 +549,7 @@ public class MinimaxAccountChannelAuthManager implements AccountChannelAuthManag
     private static Long toMillis(Object value) {
         if (value instanceof Number number && number.doubleValue() > 0) {
             double v = number.doubleValue();
+            // [P3C A20 豁免]
             return v < 1e12 ? Math.round(v * 1000d) : Math.round(v);
         }
         if (value instanceof String s && !s.isBlank()) {

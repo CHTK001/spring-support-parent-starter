@@ -131,7 +131,15 @@ public class FaceConfigController {
     @Operation(summary = "人脸模型清单", description = "枚举可用的人脸检测/特征/活体/超分等模型")
     @GetMapping("/models")
     public ReturnResult<Map<String, List<String>>> models() {
-        return ReturnResult.ok(faceService.listModels());
+        try {
+            return ReturnResult.ok(faceService.listModels());
+        } catch (Throwable e) {
+            // 未配置人脸 provider 时，底层可能抛 RuntimeException，也可能是
+            // NoClassDefFoundError / ExceptionInInitializerError 这类 Error（能力实现没装配）。
+            // 对调用方来说都等价于「没有可用模型」，返回空清单即可，不该把设置页带成 500。
+            log.warn("[FaceConfig] 人脸模型清单不可用（可能未配置 provider）：{}", e.toString());
+            return ReturnResult.ok(Map.of());
+        }
     }
 
     /**

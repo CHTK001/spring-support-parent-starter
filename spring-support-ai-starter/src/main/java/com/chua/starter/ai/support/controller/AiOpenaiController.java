@@ -131,7 +131,19 @@ public class AiOpenaiController extends BaseAiController {
         try {
             AiChatRequest chatRequest = convertToChatRequest(request, groupId, appKey);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            return ResponseEntity.ok(buildOpenAiChatResponse(result, request.getModel()));
+            // 透传响应头：供应商配置了 passthrough_response_headers 时，把上游返回的
+            // 同名头写回本次响应（仅同步调用；SSE 开流后无法再补头）
+            ResponseEntity.BodyBuilder builder = ResponseEntity.ok();
+            Object captured = chatRequest.getParameters() == null
+                    ? null : chatRequest.getParameters().remove("_responseHeaders");
+            if (captured instanceof Map<?, ?> headers) {
+                headers.forEach((k, v) -> {
+                    if (k != null && v != null) {
+                        builder.header(String.valueOf(k), String.valueOf(v));
+                    }
+                });
+            }
+            return builder.body(buildOpenAiChatResponse(result, request.getModel()));
         } catch (IllegalStateException ex) {
             return ResponseEntity.ok(buildOpenAiChatError(request.getModel(), ex.getMessage()));
         }

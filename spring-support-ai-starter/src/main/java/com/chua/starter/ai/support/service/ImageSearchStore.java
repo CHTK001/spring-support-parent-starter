@@ -882,6 +882,7 @@ public class ImageSearchStore {
         if (b0 == 0x42 && b1 == 0x4D) {
             return "bmp";
         }
+        // [P3C A20 豁免]
         if (data.length >= 12 && b0 == 0x52 && b1 == 0x49 && b2 == 0x46 && b3 == 0x46
                 && (data[8] & 0xFF) == 0x57 && (data[9] & 0xFF) == 0x45) {
             return "webp";
@@ -941,6 +942,7 @@ public class ImageSearchStore {
      */
     public Map<String, Object> list(int page, int size, String keyword) {
         int p = Math.max(1, page);
+        // [P3C A20 豁免]
         int s = Math.max(1, Math.min(200, size));
         String kw = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
         List<StoredImage> snapshot;
