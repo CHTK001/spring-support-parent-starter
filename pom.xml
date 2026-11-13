@@ -73,6 +73,8 @@
         <module>spring-support-datasource-starter</module>
         <!-- spring-support-test-app 已从仓库移除（本地保留目录，不参与构建） -->
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
+        <module>spring-support-account-starter</module>         <!-- 账号/模板管理（eduai 依赖） -->
+        <module>spring-support-collect-starter</module>         <!-- 采集平台 /v2/collect/**（eduai 依赖） -->
         <module>spring-support-cache-starter</module>           <!-- 缓存功能模块 -->
         <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
         <!-- 认证和安全模块 -->
