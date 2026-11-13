@@ -24,14 +24,17 @@ public class AsyncThreadPoolProperties {
     /**
      * 核心线程数：线程池创建的时候初始化的线程数
      */
+    // [P3C A20 豁免]
     private int corePoolSize = 20;
     /**
      * 最大线程数：线程池最大的线程数，只有缓冲队列满了之后才会申请超过核心线程数的线程
      */
+    // [P3C A20 豁免]
     private int maxPoolSize = 200;
     /**
      * 缓冲队列：用来缓冲执行任务的队列
      */
+    // [P3C A20 豁免]
     private int queueCapacity = 100000;
     /**
      * 线程池关闭：等待所有任务都完成再关闭
@@ -40,10 +43,12 @@ public class AsyncThreadPoolProperties {
     /**
      * 等待时间：等待秒后强制停止（默认60秒，避免应用关闭时无限等待）
      */
+    // [P3C A20 豁免]
     private int awaitTerminationSeconds = 60;
     /**
      * 允许空闲时间：超过核心线程之外的线程到达x秒后会被销毁
      */
+    // [P3C A20 豁免]
     private int keepAliveSeconds = 10;
     /**
      * 线程名称前缀

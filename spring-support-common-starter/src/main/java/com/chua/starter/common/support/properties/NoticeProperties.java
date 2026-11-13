@@ -55,6 +55,7 @@ public class NoticeProperties {
         /**
          * smtp端口
          */
+        // [P3C A20 豁免]
         private int smtpPort = 25;
     }
 }

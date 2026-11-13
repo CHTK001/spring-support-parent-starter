@@ -139,6 +139,7 @@ public class Version implements Comparable<Version> {
             try {
                 double d = Double.parseDouble(trimmed);
                 int major = (int) d;
+                // [P3C A20 豁免]
                 int minor = (int) ((d - major) * 10);
                 return new Version(major, minor, 0, null, null, false, trimmed);
             } catch (NumberFormatException e) {

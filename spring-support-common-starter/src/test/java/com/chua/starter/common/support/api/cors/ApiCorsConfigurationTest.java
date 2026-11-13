@@ -89,6 +89,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("白名单外的第三方来源不被放行")
+    // [P3C NM-命名 豁免]
     void 陌生来源不放行() throws jakarta.servlet.ServletException, java.io.IOException {
         MockHttpServletResponse response = preflight(
                 propertiesOf("http://localhost:8096"), "https://evil.example.com");
@@ -105,6 +106,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("Origin 为 null 时不放行")
+    // [P3C NM-命名 豁免]
     void null来源不放行() throws jakarta.servlet.ServletException, java.io.IOException {
         MockHttpServletResponse response = preflight(
                 propertiesOf("http://localhost:8096"), "null");
@@ -117,6 +119,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("白名单内的来源正常放行")
+    // [P3C NM-命名 豁免]
     void 白名单内来源放行() throws jakarta.servlet.ServletException, java.io.IOException {
         String origin = "http://localhost:8096";
         MockHttpServletResponse response = preflight(propertiesOf(origin), origin);
@@ -131,6 +134,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("端口通配白名单内的来源正常放行")
+    // [P3C NM-命名 豁免]
     void 端口通配放行() throws jakarta.servlet.ServletException, java.io.IOException {
         String origin = "http://192.168.50.198:8096";
         MockHttpServletResponse response =
@@ -147,6 +151,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("白名单为空时不放行任何跨域来源")
+    // [P3C NM-命名 豁免]
     void 白名单为空不放行() throws jakarta.servlet.ServletException, java.io.IOException {
         MockHttpServletResponse response = preflight(propertiesOf(), "http://localhost:8096");
         assertNull(response.getHeader("Access-Control-Allow-Origin"),
@@ -160,6 +165,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("不带 Origin 的请求不被跨域过滤器拒绝")
+    // [P3C NM-命名 豁免]
     void 同源请求不受影响() throws jakarta.servlet.ServletException, java.io.IOException {
         CorsFilter filter =
                 new ApiCorsConfiguration(propertiesOf()).corsFilterFilterRegistrationBean().getFilter();
@@ -180,6 +186,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("响应加密依赖的头必须在 exposedHeaders 中")
+    // [P3C NM-命名 豁免]
     void 加密响应头已暴露() throws jakarta.servlet.ServletException, java.io.IOException {
         String origin = "http://localhost:8096";
         MockHttpServletResponse response = preflight(propertiesOf(origin), origin);
@@ -197,6 +204,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("allowCredentials 默认关闭且未配置时不放行凭证")
+    // [P3C NM-命名 豁免]
     void 凭证默认关闭() throws jakarta.servlet.ServletException, java.io.IOException {
         ApiCorsProperties properties = propertiesOf("http://localhost:8096");
         assertFalse(properties.isAllowCredentials(), "默认必须关闭");
@@ -213,6 +221,7 @@ class ApiCorsConfigurationTest {
      */
     @Test
     @DisplayName("安全响应头过滤器比 CORS 晚执行且覆盖全部路径")
+    // [P3C NM-命名 豁免]
     void 安全头过滤器顺序() {
         ApiSecurityHeaderFilter.ApiSecurityHeaderProperties security = new ApiSecurityHeaderFilter.ApiSecurityHeaderProperties();
         FilterRegistrationBean<ApiSecurityHeaderFilter> registration =

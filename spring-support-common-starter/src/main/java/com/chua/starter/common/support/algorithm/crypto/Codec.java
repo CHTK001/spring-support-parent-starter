@@ -1,111 +1,70 @@
 package com.chua.starter.common.support.algorithm.crypto;
 
-import com.chua.common.support.lang.algorithm.crypto.Hex;
-import com.chua.starter.common.support.crypto.AesCodec;
+import com.chua.common.support.spi.ServiceProvider;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
- * 编解码器。
+ * 文本加解密 SPI。
+ *
+ * <p>所有算法实现都通过 {@code META-INF/extensions/} 注册，按类型名解析：
+ * {@code aes}、{@code sm4}、{@code des} 是真实加解密，{@code hex} 只是十六进制编码
+ * （仅用于未配置密钥的兼容路径）。<b>不认识的类型直接抛异常，不再静默退化成 hex</b>。</p>
+ *
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * Codec codec = Codec.build("sm4", "1234567890abcdef");
+ * String cipher = codec.encodeHex("明文");
+ * String plain = codec.decodeHex(cipher);
+ * }</pre>
  *
  * @author CH
  * @since 4.0.0
  */
-public class Codec {
+public interface Codec {
 
     /**
-     * 加密类型
-     */
-    private final String type;
-
-    /**
-     * 密钥
-     */
-    private final String key;
-
-    /**
-     * 构建编解码器。
+     * 绑定密钥，返回可用的编解码器。
      *
-     * @param type 加密类型，aes 表示 AES 加解密，其他为 Hex 编解码
-     * @param key  密钥
-     * @return 编解码器
+     * @param key 密钥原文（对称算法）或公钥十六进制（SM2 不走本接口）
+     * @return 绑定密钥后的编解码器
      */
-    public static Codec build(String type, String key) {
-        /**
-         * Codec。
-         * @param type 类型
-         * @param key Key
-         */
-        return new Codec(type, key);
-    }
-
-    /**
-     * 构造器。
-     *
-     * @param type 加密类型
-     * @param key  密钥
-     */
-    private Codec(String type, String key) {
-        this.type = type;
-        this.key = key;
-    }
+    Codec key(String key);
 
     /**
      * 编码为十六进制字符串。
      *
-     * @param data 原始数据
-     * @return 编码结果
+     * @param data 明文
+     * @return 十六进制密文
      */
-    public String encodeHex(String data) {
-        if (data == null) {
-            return null;
-        }
-        if (isAes()) {
-            /**
-             * aescodec。
-             * @param key.getBytes(StandardCharsets.UTF_8 键.获取bytes(标准字符集.UTF_8
-             * @return AesCodec的结果
-             */
-            return new AesCodec(key.getBytes(StandardCharsets.UTF_8)).encodeHex(data);
-        }
-        byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
-        return Hex.encodeHexString(bytes);
-    }
+    String encodeHex(String data);
 
     /**
      * 解码十六进制字符串。
      *
-     * @param hex 编码数据
-     * @return 解码结果
+     * @param hex 十六进制密文
+     * @return 明文
      */
-    public String decodeHex(String hex) {
-        if (hex == null) {
-            return null;
-        }
-        if (isAes()) {
-            /**
-             * aescodec。
-             * @param key.getBytes(StandardCharsets.UTF_8 键.获取bytes(标准字符集.UTF_8
-             * @return AesCodec的结果
-             */
-            return new AesCodec(key.getBytes(StandardCharsets.UTF_8)).decodeHex(hex);
-        }
-        byte[] bytes = Hex.decodeHex(hex);
-        /**
-         * 字符串。
-         * @param bytes bytes
-         * @param StandardCharsets.UTF_8 标准字符集.utf8
-         * @return 字符串的结果
-         */
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
+    String decodeHex(String hex);
 
     /**
-     * 是否为 AES 加解密。
+     * 按类型解析实现。
      *
-     * @return 是否使用 AES
+     * @param type 类型名，如 aes / sm4 / des / hex
+     * @param key  密钥
+     * @return 编解码器
+     * @throws IllegalArgumentException 类型不支持或密钥为空
      */
-    private boolean isAes() {
-        return type != null && type.toLowerCase().contains("aes");
+    static Codec build(String type, String key) {
+        String name = type == null || type.isBlank() ? "aes" : type.trim().toLowerCase(Locale.ROOT);
+        ServiceProvider<Codec> provider = ServiceProvider.of(Codec.class);
+        if (!provider.isSupport(name)) {
+            throw new IllegalArgumentException("不支持的加解密类型: " + type);
+        }
+        Codec codec = provider.getNewExtension(name);
+        if (codec == null) {
+            throw new IllegalArgumentException("加解密实现加载失败: " + type);
+        }
+        return codec.key(key);
     }
 }

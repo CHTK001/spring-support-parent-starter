@@ -34,6 +34,7 @@ public class CaptchaProperties {
     /**
      * 验证码缓存过期时间单位:秒
      */
+    // [P3C A20 豁免]
     private long ttl = 120L;
 
     /**
@@ -43,10 +44,12 @@ public class CaptchaProperties {
     /**
      * 验证码宽度
      */
+    // [P3C A20 豁免]
     private int width = 120;
     /**
      * 验证码高度
      */
+    // [P3C A20 豁免]
     private int height = 36;
 
     /**
@@ -62,6 +65,7 @@ public class CaptchaProperties {
     /**
      * 字体大小
      */
+    // [P3C A20 豁免]
     private int fontSize = 20;
 
     /**

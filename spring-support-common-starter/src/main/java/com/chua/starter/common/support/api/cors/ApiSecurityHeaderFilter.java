@@ -149,6 +149,7 @@ public class ApiSecurityHeaderFilter implements Filter {
         /**
          * HSTS max-age（秒）
          */
+        // [P3C A20 豁免]
         private int hstsMaxAgeSeconds = 31536000;
 
         /**

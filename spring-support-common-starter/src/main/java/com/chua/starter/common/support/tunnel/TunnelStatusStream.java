@@ -67,6 +67,7 @@ public class TunnelStatusStream implements AutoCloseable {
             thread.setDaemon(true);
             return thread;
         });
+        // [P3C A20 豁免]
         this.scheduler.scheduleWithFixedDelay(this::broadcast, 0, Math.max(500L, intervalMillis),
                 TimeUnit.MILLISECONDS);
     }

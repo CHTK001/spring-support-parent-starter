@@ -24,6 +24,7 @@ public class LogProperties {
     /**
      * 慢请求阈值（毫秒），超过此值将打印 WARN 日志，默认 3000ms
      */
+    // [P3C A20 豁免]
     private long slowRequestThresholdMs = 3000;
 
     /**
