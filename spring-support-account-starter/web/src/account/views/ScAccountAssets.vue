@@ -868,6 +868,23 @@ const segment = ref<Segment>('ALL');
 /** 搜索词 */
 const keyword = ref('');
 
+/**
+ * 外部深链分段：路由 props 直达某分段（如「密钥管理」菜单 → SECRET），
+ * 复用同一工作台页面而不另维护一套版式。只在 props 变化时应用，不影响页内手动切换。
+ */
+const props = defineProps<{ initialSegment?: string }>();
+
+/** 合法分段清单（运行时可校验，避免把任意字符串塞进 Segment） */
+const KNOWN_SEGMENTS: Segment[] = ['ALL', 'API_KEY', 'EMAIL', 'SMS', 'APPKEY', 'COOKIE', 'SECRET', 'TEMP_MAIL'];
+watch(
+  () => props.initialSegment,
+  (value) => {
+    const next = KNOWN_SEGMENTS.find((s) => s === value);
+    if (next) segment.value = next;
+  },
+  { immediate: true },
+);
+
 /* ---------- 左侧索引宽度（可拖拽，偏好存本地） ---------- */
 const RAIL_WIDTH_KEY = 'account.rail.width.v1';
 const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 304));
