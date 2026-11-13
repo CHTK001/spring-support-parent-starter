@@ -269,6 +269,14 @@
             <artifactId>utils-support-metrics-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
+        <!-- tshark 内置便携包（按平台资源）：Windows 包已内置 41MB；Linux/macOS 目录为空时
+             自动跳过。不需要时排除本依赖即可，monitor 会回落 package-url。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-resource-tshark</artifactId>
+            <version>4.0.0.43</version>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
