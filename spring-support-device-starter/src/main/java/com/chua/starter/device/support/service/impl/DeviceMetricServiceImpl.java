@@ -7,6 +7,7 @@ import com.chua.starter.device.support.mapper.DeviceMetricLatestMapper;
 import com.chua.starter.device.support.service.DeviceMetricService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.support.timeseries.DeviceSeriesRecorder;
 import com.chua.starter.device.support.util.DeviceStatusUtil;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceMetric;
@@ -46,6 +47,9 @@ public class DeviceMetricServiceImpl implements DeviceMetricService {
 
     /** 设备会话管理器 */
     private final DeviceSessionManager sessionManager;
+
+    /** 时序写入器：历史读数只进时序存储，不追加明细行 */
+    private final DeviceSeriesRecorder seriesRecorder;
 
     @Override
     public List<DeviceMetricLatest> listLatest(String deviceId) {
@@ -148,6 +152,9 @@ public class DeviceMetricServiceImpl implements DeviceMetricService {
                 fill(row, metric, now);
                 metricMapper.updateById(row);
             }
+            // 历史读数旁路写时序：最新快照仍只保留一行，趋势查询走时序引擎
+            seriesRecorder.recordMetric(deviceId, uniqueKey, row.getDeviceMetricName(),
+                    row.getDeviceMetricValue(), row.getDeviceMetricUnit(), row.getDeviceMetricDataTime());
             written++;
         }
         return written;

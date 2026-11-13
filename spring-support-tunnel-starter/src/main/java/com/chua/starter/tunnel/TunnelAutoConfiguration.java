@@ -26,8 +26,8 @@ import java.util.Locale;
  *
  * <p>组织方式对齐 {@code QueueAutoConfiguration} / {@code SocketAutoConfiguration}：
  * 本模块是「标准 starter」，只提供 SPI、编排服务与统一接口，<b>不含任何厂商客户端</b>。
- * 具体提供方由独立 starter 提供（{@code spring-support-ngrok-starter}、
- * {@code spring-support-cloudflared-starter}），引入哪个就有哪个，二者可同时存在。</p>
+ * 具体提供方由独立 starter 提供（{@code spring-support-tunnel-ngrok-starter}、
+ * {@code spring-support-tunnel-cloudflared-starter}），引入哪个就有哪个，二者可同时存在。</p>
  *
  * <p>开关：{@code plugin.tunnel.enable}（默认 true）。关闭后不注册接口与编排服务，
  * 各提供方 starter 自己的一次性隧道能力不受影响。</p>
@@ -79,12 +79,19 @@ public class TunnelAutoConfiguration {
      *
      * @param properties 统一配置
      * @param registry   提供方注册表
+     * @param environment Spring 环境（取 {@code server.port} 推导本实例控制地址）
      * @return 编排服务
      */
     @Bean
     @ConditionalOnMissingBean
-    public TunnelService tunnelService(TunnelProperties properties, TunnelProviderRegistry registry) {
-        return new TunnelService(properties, registry);
+    public TunnelService tunnelService(TunnelProperties properties, TunnelProviderRegistry registry,
+                                       org.springframework.core.env.Environment environment) {
+        String instanceUrl = properties.getInstanceUrl();
+        if (instanceUrl == null || instanceUrl.isBlank()) {
+            String port = environment.getProperty("server.port", "8080");
+            instanceUrl = "http://127.0.0.1:" + port;
+        }
+        return new TunnelService(properties, registry, instanceUrl);
     }
 
     /**

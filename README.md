@@ -81,9 +81,9 @@ REST 接口清单、表结构、验收记录不在这里，见各模块自己的
 | 平台与治理 | [`spring-support-swagger-starter`](spring-support-swagger-starter/README.md) | OpenAPI 文档与导出 | `SpringDocConfigProperties`、Knife4j 页面 |
 | 平台与治理 | [`spring-support-swagger2-starter`](spring-support-swagger2-starter/README.md) | Swagger 2.x 注解兼容 | 无独立 Bean，复用宿主 Swagger |
 | 隧道与云服务 | [`spring-support-tunnel-starter`](spring-support-tunnel-starter/README.md) | 内网穿透统一入口（ngrok/cloudflared/tailscale） | `TunnelProvider`、隧道管理 Service |
-| 隧道与云服务 | [`spring-support-ngrok-starter`](spring-support-ngrok-starter/README.md) | ngrok 隧道 Provider | `TunnelProvider`（ngrok） |
-| 隧道与云服务 | [`spring-support-cloudflared-starter`](spring-support-cloudflared-starter/README.md) | Cloudflare Tunnel Provider | `CloudflaredTunnelProvider` |
-| 隧道与云服务 | [`spring-support-tailscale-starter`](spring-support-tailscale-starter/README.md) | Tailscale Funnel Provider | `TunnelProvider`（tailscale） |
+| 隧道与云服务 | [`spring-support-tunnel-ngrok-starter`](spring-support-tunnel-ngrok-starter/README.md) | ngrok 隧道 Provider | `TunnelProvider`（ngrok） |
+| 隧道与云服务 | [`spring-support-tunnel-cloudflared-starter`](spring-support-tunnel-cloudflared-starter/README.md) | Cloudflare Tunnel Provider | `CloudflaredTunnelProvider` |
+| 隧道与云服务 | [`spring-support-tunnel-tailscale-starter`](spring-support-tunnel-tailscale-starter/README.md) | Tailscale Funnel Provider | `TunnelProvider`（tailscale） |
 | 隧道与云服务 | `spring-support-cdp-starter` | Chrome DevTools Protocol 调试代理 | CDP 服务（`spring.cdp.*`） |
 | 隧道与云服务 | [`spring-support-httpman-starter`](spring-support-httpman-starter/README.md) | 接口调试控制台后端 | 集合/请求/历史 Service |
 | 隧道与云服务 | [`spring-support-tencent-starter`](spring-support-tencent-starter/README.md) | 腾讯云/微信小程序/短信/存储 | `TencentWechatPayClientFactory` |
@@ -3459,7 +3459,7 @@ plugin:
 只需要一种隧道就直接引对应模块；多提供方切换用 tunnel 的门面与白名单。
 
 
-### spring-support-ngrok-starter
+### spring-support-tunnel-ngrok-starter
 
 **定位**：ngrok 隧道 Provider（官方 Java Agent SDK）。
 
@@ -3506,7 +3506,7 @@ plugin:
 本机演示最快；生产注意免费域名与连接数限制。
 
 
-### spring-support-cloudflared-starter
+### spring-support-tunnel-cloudflared-starter
 
 **定位**：Cloudflare Tunnel Provider（官方 cloudflared 进程）。
 
@@ -3543,7 +3543,7 @@ plugin:
 免账号 Quick Tunnel 最省事；固定域名走命名隧道 + Zero Trust。
 
 
-### spring-support-tailscale-starter
+### spring-support-tunnel-tailscale-starter
 
 **定位**：Tailscale Funnel Provider（tailscale CLI 子进程）。
 
@@ -3809,7 +3809,7 @@ plugin:
 | `plugin.bundle` | `BundleProperties` | [`spring-support-bundle-starter`](spring-support-bundle-starter/README.md) | 5 |
 | `plugin.cache` | `CacheProperties` | [`spring-support-cache-starter`](spring-support-cache-starter/README.md) | 29 |
 | `plugin.captcha` | `CaptchaProperties` | [`spring-support-common-starter`](spring-support-common-starter/README.md) | 9 |
-| `plugin.cloudflared` | `CloudflaredProperties` | [`spring-support-cloudflared-starter`](spring-support-cloudflared-starter/README.md) | 12 |
+| `plugin.cloudflared` | `CloudflaredProperties` | [`spring-support-tunnel-cloudflared-starter`](spring-support-tunnel-cloudflared-starter/README.md) | 12 |
 | `plugin.collect` | `CollectProperties` | [`spring-support-collect-starter`](spring-support-collect-starter/README.md) | 9 |
 | `plugin.config-center` | `ConfigCenterProperties` | [`spring-support-configcenter-starter`](spring-support-configcenter-starter/README.md) | 14 |
 | `plugin.console` | `ConsoleProperties` | [`spring-support-console-starter`](spring-support-console-starter/README.md) | 4 |
@@ -3848,7 +3848,7 @@ plugin:
 | `plugin.mybatis` | `MybatisPlusProperties` | [`spring-support-mybatis-starter`](spring-support-mybatis-starter/README.md) | 14 |
 | `plugin.mybatis.data.scope` | `MybatisPlusDataScopeProperties` | [`spring-support-mybatis-starter`](spring-support-mybatis-starter/README.md) | 5 |
 | `plugin.mybatis.slow-sql` | `MybatisSlowSqlProperties` | [`spring-support-mybatis-starter`](spring-support-mybatis-starter/README.md) | 6 |
-| `plugin.ngrok` | `NgrokProperties` | [`spring-support-ngrok-starter`](spring-support-ngrok-starter/README.md) | 22 |
+| `plugin.ngrok` | `NgrokProperties` | [`spring-support-tunnel-ngrok-starter`](spring-support-tunnel-ngrok-starter/README.md) | 22 |
 | `plugin.notice` | `NoticeProperties` | [`spring-support-common-starter`](spring-support-common-starter/README.md) | 7 |
 | `plugin.oauth` | `AuthClientProperties` | [`spring-support-oauth-client-starter`](spring-support-oauth-client-starter/README.md) | 77 |
 | `plugin.optional` | `OptionalProperties` | [`spring-support-common-starter`](spring-support-common-starter/README.md) | 1 |
@@ -3870,7 +3870,7 @@ plugin:
 | `plugin.swagger.export` | `SwaggerExportProperties` | [`spring-support-swagger-starter`](spring-support-swagger-starter/README.md) | 6 |
 | `plugin.sync` | `SyncProperties` | [`spring-support-sync-starter`](spring-support-sync-starter/README.md) | 49 |
 | `plugin.sync.datasync` | `SyncDatasyncProperties` | [`spring-support-sync-starter`](spring-support-sync-starter/README.md) | 1 |
-| `plugin.tailscale` | `TailscaleProperties` | [`spring-support-tailscale-starter`](spring-support-tailscale-starter/README.md) | 8 |
+| `plugin.tailscale` | `TailscaleProperties` | [`spring-support-tunnel-tailscale-starter`](spring-support-tunnel-tailscale-starter/README.md) | 8 |
 | `plugin.taskdistribution` | `TaskDistributionProperties` | [`spring-support-taskdistribution-starter`](spring-support-taskdistribution-starter/README.md) | 15 |
 | `plugin.tencent.mini-app` | `TencentMiniAppProperties` | [`spring-support-tencent-starter`](spring-support-tencent-starter/README.md) | 4 |
 | `plugin.tencent.open-platform` | `TencentWechatOpenPlatformProperties` | [`spring-support-tencent-starter`](spring-support-tencent-starter/README.md) | 5 |

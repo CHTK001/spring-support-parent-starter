@@ -10,7 +10,9 @@ import lombok.Data;
  * 这样两条持久化链路可以复用 {@link TunnelFileStore}，页面也只需要维护一套模型。</p>
  *
  * <p>记录本身不落数据库，按 {@code <storeDir>/<id>.json} 一文件一条保存，便于人工查看、
- * 备份与迁移。运行态（是否运行、公网地址、错误）不落盘，见 {@link TunnelView}。</p>
+ * 备份与迁移。运行态（是否运行、公网地址、错误）不落盘，见 {@link TunnelView}；
+ * 唯一例外是 {@code owner}——它是「当前由哪个实例运行」的所有权标记，
+ * 多实例共享同一存储目录时靠它避免互相抢同一域名。</p>
  *
  * @author CH
  * @since 4.0.0.52
@@ -86,6 +88,15 @@ public class TunnelRecord {
      * 是否启用。停用的映射不会随自动启动恢复。
      */
     private boolean enabled = true;
+
+    /**
+     * 当前运行该隧道的实例控制地址（如 {@code http://127.0.0.1:8083}）。
+     *
+     * <p>只由启动成功的实例写入、停止时清空，用户编辑时忽略。多实例共享同一
+     * 存储目录时，其他实例据此判断「这条隧道正被谁运行着」，避免两个实例
+     * 同时拉起同一条隧道（同一域名互抢导致 ERR_NGROK_334 之类冲突）。</p>
+     */
+    private String owner;
 
     /**
      * 备注。

@@ -84,6 +84,31 @@ public final class TunnelInputs {
     }
 
     /**
+     * 校验 Basic 认证格式（仅 HTTP 模式的可选字段）。
+     *
+     * <p>ngrok 服务端要求 Basic 认证的密码长度在 8 - 128 位之间
+     * （否则报 {@code ERR_NGROK_360}），这里在提交时就拦住，避免到 ngrok 才失败。
+     * 格式：{@code 用户名:密码}，密码可含冒号。</p>
+     *
+     * @param basicAuth 页面填写的 Basic 认证
+     * @throws IllegalArgumentException 格式不合法
+     */
+    public static void requireBasicAuth(String basicAuth) {
+        if (!StringUtils.hasText(basicAuth)) {
+            return;
+        }
+        String value = basicAuth.trim();
+        int sep = value.indexOf(':');
+        String password = sep > -1 ? value.substring(sep + 1) : "";
+        if (sep < 1 || password.isEmpty()) {
+            throw new IllegalArgumentException("Basic 认证格式应为 用户名:密码，如 ops:password123");
+        }
+        if (password.length() < 8 || password.length() > 128) {
+            throw new IllegalArgumentException("Basic 认证的密码长度必须是 8 - 128 位，当前 " + password.length() + " 位");
+        }
+    }
+
+    /**
      * 校验模式是否在允许集合内。
      *
      * @param mode     待校验模式（已小写）

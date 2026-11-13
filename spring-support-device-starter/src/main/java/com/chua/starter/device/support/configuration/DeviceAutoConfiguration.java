@@ -121,6 +121,8 @@ public class DeviceAutoConfiguration {
             registry.registerEndpoint("设备", "事件", "/api/device/event/**", "事件订阅与查询");
             registry.registerEndpoint("设备", "目录同步", "/api/device/sync/**", "厂商设备目录拉取与写回");
             registry.registerEndpoint("设备", "定时任务", "/api/device/tasks/**", "时间轮任务状态与间隔配置");
+            registry.registerEndpoint("设备", "时序存储", "/api/device/series/**",
+                    "传感器/门禁/车闸时序记录查询与保留期清理（bean/influxdb/redis 可切换）");
             registry.registerFlag("device", "设备", true, "设备管理模块（海康云耀/云眸/安防平台/大华云睿/乐橙/SDK 直连）");
         };
     }

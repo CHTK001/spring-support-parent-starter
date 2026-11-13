@@ -1653,8 +1653,9 @@ public class ApiProviderController {
      * 检测 API 地址实际支持什么协议。
      *
      * <p>用户只填一个 baseUrl 时不知道它是 OpenAI 兼容还是 Gemini / Anthropic 形态，
-     * 这里对 4 种协议各发一次只读探测（GET 模型列表），按状态码给出「可用 / 无模型 /
-     * Key 无效 / 端点不存在 / 不可达」的结果行，前端按行展示。</p>
+     * 这里对 4 种协议各发一次只读探测（GET 模型列表）。判定口径：只有 404 才算
+     * 「该地址不支持此协议形态」，其余状态（2xx/401/403/405/429/5xx）都视为端点存在、
+     * 协议形态被支持，按状态码给出「可用 / 端点不存在 / 不可达」的结果行，前端按行展示。</p>
      *
      * @param body 含 apiUrl / apiKey / proxy / auth_*（协议探测是只读的，不动库）
      * @return results 数组 + foot 汇总文案
@@ -1687,11 +1688,22 @@ public class ApiProviderController {
         boolean keyBlank = apiKey == null || apiKey.isBlank();
         String foot;
         if (!anyOk) {
-            foot = keyBlank
-                    ? "都没有响应，且还没有填写 API 密钥。请在「API 密钥」中粘贴密钥后再测试"
-                    : "四种协议都不可用：请检查 API 地址是否正确、密钥是否有效，或该服务商只支持其中某一种协议";
+            boolean all404 = true;
+            for (Map<String, Object> r : results) {
+                if (!String.valueOf(r.getOrDefault("message", "")).contains("404")) {
+                    all404 = false;
+                    break;
+                }
+            }
+            if (all404) {
+                foot = "四个协议都返回 404：该地址没有可用的模型列表端点，请检查 API 地址是否正确";
+            } else if (keyBlank) {
+                foot = "都没有响应，且还没有填写 API 密钥。请在「API 密钥」中粘贴密钥后再测试";
+            } else {
+                foot = "四个协议都未探测到模型列表端点（404 或无法连接）：请检查 API 地址是否正确，或该服务商只支持其中某一种协议";
+            }
         } else if (keyBlank) {
-            foot = "已有协议可连通，但未填 API 密钥，模型列表可能为空；粘贴密钥后再检测一次。";
+            foot = "已有协议响应，但未填 API 密钥，模型列表可能为空；粘贴密钥后再检测一次。";
         } else {
             foot = "已标「可用」的协议行即为该地址支持的协议。";
         }
@@ -1716,56 +1728,51 @@ public class ApiProviderController {
             results.add(r);
             return;
         }
+        // 同一份地址在不同服务商那儿版本前缀不一样（有的要 /v1，有的直接 /models），
+        // 所以每个协议都排一串候选路径：逐个试，只有 404 才换下一个。
+        List<String> candidates = modelListCandidates(protocol, baseUrl);
+        String lastUrl = candidates.isEmpty() ? baseUrl : candidates.get(0);
+        int lastStatus = -1;
         try {
-            HttpRequest.Builder b;
-            if ("anthropic".equals(protocol)) {
-                // Anthropic 形态：x-api-key 头 + /v1/models
-                String u = baseUrl.endsWith("/") ? baseUrl + "v1/models" : baseUrl + "/v1/models";
-                b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
-                if (apiKey != null && !apiKey.isBlank()) {
-                    b.header("x-api-key", apiKey);
-                }
-                b.header("anthropic-version", "2023-06-01");
-            } else if ("gemini".equals(protocol)) {
-                // Gemini 形态：?key= 查询参数 + /v1beta/models
-                String u = baseUrl.endsWith("/") ? baseUrl + "v1beta/models" : baseUrl + "/v1beta/models";
-                if (apiKey != null && !apiKey.isBlank()) {
+            for (String candidate : candidates) {
+                String u = candidate;
+                // 原生 Gemini 把 key 放查询参数；v1beta/openai 那层是 OpenAI 兼容，走请求头
+                boolean geminiQueryKey = "gemini".equals(protocol) && !candidate.contains("/openai/");
+                if (geminiQueryKey && apiKey != null && !apiKey.isBlank()) {
                     u += (u.indexOf("?") >= 0 ? "&" : "?") + "key=" + apiKey;
                 }
-                b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
-            } else {
-                // OpenAI 兼容形态：Authorization 头 + /models（openai-response 同一形态）
-                String u = baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models";
-                b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
-                Map.Entry<String, String> resolved = auth == null ? null
-                        : AuthHeaders.resolve(auth.scheme(), auth.header(), auth.prefix(), apiKey);
-                if (resolved != null) {
-                    b.header(resolved.getKey(), resolved.getValue());
+                lastUrl = u;
+                HttpRequest.Builder b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
+                if ("anthropic".equals(protocol)) {
+                    // Anthropic 形态：x-api-key 头 + anthropic-version
+                    if (apiKey != null && !apiKey.isBlank()) {
+                        b.header("x-api-key", apiKey);
+                    }
+                    b.header("anthropic-version", "2023-06-01");
+                } else if (!"gemini".equals(protocol) || !geminiQueryKey) {
+                    // OpenAI 兼容形态：Authorization 头（openai-response 与 v1beta/openai 同理）
+                    Map.Entry<String, String> resolved = auth == null ? null
+                            : AuthHeaders.resolve(auth.scheme(), auth.header(), auth.prefix(), apiKey);
+                    if (resolved != null) {
+                        b.header(resolved.getKey(), resolved.getValue());
+                    }
                 }
+                HttpResponse<String> resp = httpClient(proxy).send(b.build(), HttpResponse.BodyHandlers.ofString());
+                lastStatus = resp.statusCode();
+                if (lastStatus == 404) {
+                    // 这层路径没有该协议的模型列表端点，换下一个候选
+                    continue;
+                }
+                fillProbeResult(r, lastStatus, resp.body());
+                break;
             }
-            HttpResponse<String> resp = httpClient(proxy).send(b.build(), HttpResponse.BodyHandlers.ofString());
-            r.put("latency_ms", System.currentTimeMillis() - start);
-            int st = resp.statusCode();
-            if (st >= 200 && st < 300) {
-                int count = countModelIds(resp.body());
-                r.put("ok", true);
-                r.put("message", count > 0 ? "可用（" + count + " 个模型）" : "连接成功但没有可用试用的模型");
-            } else if (st == 401) {
-                r.put("ok", false);
-                r.put("message", "API Key 无效或已过期（401）");
-            } else if (st == 403) {
-                r.put("ok", false);
-                r.put("message", "无权限访问该协议端点（403）");
-            } else if (st == 404) {
+            if (lastStatus == 404) {
                 r.put("ok", false);
                 r.put("message", "该地址下没有此协议的模型列表端点（404）");
-            } else if (st == 429) {
-                r.put("ok", false);
-                r.put("message", "请求过于频繁（429）");
-            } else {
-                r.put("ok", false);
-                r.put("message", "供应商模型接口返回 " + st);
             }
+            // Gemini 的 key 只能放查询参数，展示时掩码，不把凭据打印到屏幕上
+            r.put("url", "gemini".equals(protocol) ? maskQueryKey(lastUrl) : lastUrl);
+            r.put("latency_ms", System.currentTimeMillis() - start);
         } catch (Exception e) {
             r.put("latency_ms", System.currentTimeMillis() - start);
             String reason = friendlyNetworkReason(e);
@@ -1773,6 +1780,95 @@ public class ApiProviderController {
             r.put("message", reason != null ? reason : "无法连接");
         }
         results.add(r);
+    }
+
+    /**
+     * 同一份地址在服务商那儿版本前缀不统一，这里给出该协议的候选模型列表路径。
+     *
+     * <p>典型例子：{@code https://api.mosi.cn} 的 OpenAI 兼容端点在
+     * {@code /v1/models}，若只试 {@code /models} 就会 404；而 Anthropic 探测恰好拼的是
+     * {@code /v1/models}，于是只显示「Claude 支持」，把 OpenAI 漏掉。所以两个前缀都要试。</p>
+     *
+     * @param protocol 协议名
+     * @param baseUrl  用户填的地址
+     * @return 依次尝试的完整地址
+     */
+    private static List<String> modelListCandidates(String protocol, String baseUrl) {
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        List<String> suffixes = new ArrayList<>(3);
+        if ("gemini".equals(protocol)) {
+            // 原生 Gemini 只有 v1beta 这条线；v1beta/openai 是 Google 官方的 OpenAI 兼容层
+            if (base.endsWith("/v1beta")) {
+                suffixes.add("/models");
+                suffixes.add("/openai/models");
+            } else {
+                suffixes.add("/v1beta/models");
+                suffixes.add("/v1beta/openai/models");
+            }
+        } else if ("anthropic".equals(protocol)) {
+            if (base.endsWith("/v1")) {
+                suffixes.add("/models");
+            } else {
+                suffixes.add("/v1/models");
+                suffixes.add("/models");
+            }
+        } else if (base.endsWith("/v1") || base.endsWith("/v2") || base.endsWith("/v3")) {
+            suffixes.add("/models");
+        } else {
+            suffixes.add("/v1/models");
+            suffixes.add("/models");
+        }
+        List<String> out = new ArrayList<>(suffixes.size());
+        for (String suffix : suffixes) {
+            out.add(base + suffix);
+        }
+        return out;
+    }
+
+    /**
+     * 按状态码判定探测结论：只有 404 算「没有这个端点」，其余状态都说明端点存在。
+     *
+     * @param r      结果行
+     * @param st     HTTP 状态码
+     * @param body   响应体
+     */
+    private static void fillProbeResult(Map<String, Object> r, int st, String body) {
+        if (st >= 200 && st < 300) {
+            int count = countModelIds(body);
+            r.put("ok", true);
+            r.put("message", count > 0 ? "可用（" + count + " 个模型）" : "连接成功但没有可用试用的模型");
+        } else if (st == 401) {
+            r.put("ok", true);
+            r.put("message", "端点存在，API Key 无效或已过期（401）");
+        } else if (st == 403) {
+            r.put("ok", true);
+            r.put("message", "端点存在，但无权限访问（403）");
+        } else if (st == 405) {
+            r.put("ok", true);
+            r.put("message", "端点存在，但不接受该探测方法（405）");
+        } else if (st == 429) {
+            r.put("ok", true);
+            r.put("message", "端点存在，但请求过于频繁（429）");
+        } else {
+            r.put("ok", true);
+            r.put("message", "端点存在，供应商接口返回 " + st);
+        }
+    }
+
+    /**
+     * 把地址里 {@code key=...} 这类凭据参数掩码掉，只留前 3 位。
+     *
+     * <p>检测结果会把整条探测地址渲染到界面上，Gemini 形态的 key 只能放在
+     * 查询参数里 —— 不掩码就等于把凭据打印在屏幕上。</p>
+     *
+     * @param url 原始探测地址
+     * @return 掩码后的地址
+     */
+    private static String maskQueryKey(String url) {
+        if (url == null) {
+            return null;
+        }
+        return url.replaceAll("([?&](?:key|api_key|apikey|token)=)([^&]{3})[^&]*", "$1$2***");
     }
 
     /** 粗略统计模型列表 JSON 里的条目数（探测语义，不做完整解析）。 */

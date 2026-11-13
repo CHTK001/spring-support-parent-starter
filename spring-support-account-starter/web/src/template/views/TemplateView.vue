@@ -441,19 +441,57 @@ function toMsgItems(list: MessageTemplate[]): TplItem[] {
   }))
 }
 
+/**
+ * 规范化文档模板记录：后端模板实体用 `templateInfo*` 前缀字段，前端领域模型用
+ * 短字段名（id/name/type…），这里两套都兼容。
+ *
+ * <p>模板接口默认落在本应用后端后，分页接口直接返回实体字段；不做这层映射，
+ * 列表会显示空名称、类型全部落到「其他」，编辑弹窗也回填不出值。</p>
+ */
+function normalizeDoc(record: Record<string, unknown>): TemplateInfo {
+  const pick = <T>(...keys: string[]): T | undefined => {
+    for (const key of keys) {
+      const value = record[key]
+      if (value !== undefined && value !== null && value !== '') return value as T
+    }
+    return undefined
+  }
+  return {
+    ...(record as unknown as TemplateInfo),
+    id: String(pick<string>('id', 'templateInfoId') ?? ''),
+    name: String(pick<string>('name', 'templateInfoName') ?? ''),
+    subtitle: String(pick<string>('subtitle', 'templateInfoSubtitle') ?? ''),
+    language: (pick<string>('language', 'templateInfoLanguage') ?? 'html') as TemplateInfo['language'],
+    type: (pick<string>('type', 'templateInfoType') ?? 'other') as TemplateInfo['type'],
+    status: (pick<string>('status', 'templateInfoStatus') ?? 'draft') as TemplateInfo['status'],
+    source: (pick<string>('source', 'templateInfoSource') ?? 'hiprint') as TemplateInfo['source'],
+    providerId: pick<string>('providerId', 'templateInfoProviderId'),
+    sourceId: pick<string>('sourceId', 'templateInfoSourceId'),
+    sourceCode: pick<string>('sourceCode', 'templateInfoSourceCode'),
+    creator: String(pick<string>('creator', 'templateInfoCreator') ?? ''),
+    modifier: pick<string>('modifier', 'templateInfoModifier'),
+    createdAt: pick<string>('createdAt', 'templateInfoCreatedAt'),
+    updatedAt: pick<string>('updatedAt', 'templateInfoUpdatedAt'),
+    remark: pick<string>('remark', 'templateInfoRemark')
+  }
+}
+
 /** 文档模板 -> 统一项 */
 function toDocItems(list: TemplateInfo[]): TplItem[] {
-  return list.map(t => ({
-    key: `d-${t.id}`,
-    id: String(t.id),
-    name: t.name,
-    code: t.sourceId ?? t.sourceCode ?? '',
-    type: (t.type ?? 'other') as TplType,
-    source: t.source ?? 'hiprint',
-    status: t.status,
-    updatedAt: t.updatedAt,
-    raw: t
-  }))
+  return list.map(raw => {
+    const t = normalizeDoc(raw as unknown as Record<string, unknown>)
+    return {
+      key: `d-${t.id}`,
+      id: String(t.id),
+      name: t.name,
+      code: t.sourceId ?? t.sourceCode ?? '',
+      type: (t.type ?? 'other') as TplType,
+      source: t.source ?? 'hiprint',
+      status: t.status,
+      updatedAt: t.updatedAt,
+      raw: t
+    }
+  })
 }
 
 // ==================== 列表数据 ====================

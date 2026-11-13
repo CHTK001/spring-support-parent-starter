@@ -20,8 +20,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>spring-support-tailscale-starter</artifactId>
-    <name>Spring Support Tailscale Starter</name>
+    <artifactId>spring-support-tunnel-tailscale-starter</artifactId>
+    <name>Spring Support Tunnel Tailscale Starter</name>
     <description>Spring Boot 集成 Tailscale：自动将本机 Spring 服务（server.port）通过 Tailscale Funnel 暴露为公网地址。</description>
 
     <dependencies>

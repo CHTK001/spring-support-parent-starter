@@ -2,11 +2,14 @@ package com.chua.starter.device.support.controller;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
+import com.chua.starter.device.support.model.DeviceImportResult;
 import com.chua.starter.device.support.model.DevicePageQuery;
 import com.chua.starter.device.support.model.DeviceStats;
+import com.chua.starter.device.support.service.DeviceImportService;
 import com.chua.starter.device.support.service.DeviceProviderConfigService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.support.util.DeviceExcelImportUtil;
 import com.chua.starter.device.support.util.ExcelExportUtil;
 import com.chua.starter.mybatis.entity.PageResult;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +48,11 @@ public class DeviceController {
      * 提供商配置服务
      */
     private final DeviceProviderConfigService providerConfigService;
+
+    /**
+     * 台账导入服务
+     */
+    private final DeviceImportService importService;
 
     /**
      * 添加设备
@@ -206,6 +215,35 @@ public class DeviceController {
                                   HttpServletResponse response) throws Exception {
         List<DeviceInfo> devices = deviceService.listDevices(query);
         ExcelExportUtil.exportDevices(response, devices);
+    }
+
+    /**
+     * 下载台账导入模板（Excel）。
+     *
+     * @param response HTTP 响应
+     * @throws Exception 写出失败
+     */
+    @GetMapping("/import/template")
+    public void importTemplate(HttpServletResponse response) throws Exception {
+        DeviceExcelImportUtil.writeTemplate(response);
+    }
+
+    /**
+     * 导入台账（multipart）。
+     *
+     * <p>前端先用 {@code dryRun=true} 看逐行预览，确认后按 {@code dryRun=false} 写库。</p>
+     *
+     * @param file   Excel 文件
+     * @param mode   create / update / upsert
+     * @param dryRun true 只校验不写库
+     * @return 逐行导入结果
+     * @throws Exception 读取文件失败
+     */
+    @PostMapping("/import")
+    public DeviceImportResult importDevices(@RequestParam("file") MultipartFile file,
+                                            @RequestParam(defaultValue = "create") String mode,
+                                            @RequestParam(defaultValue = "true") boolean dryRun) throws Exception {
+        return importService.importDevices(file, mode, dryRun);
     }
 
     /**

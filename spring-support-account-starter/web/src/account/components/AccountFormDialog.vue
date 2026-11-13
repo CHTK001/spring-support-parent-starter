@@ -52,6 +52,30 @@
             <el-input v-model="form.endpoint" :placeholder="ENDPOINT_PLACEHOLDERS[form.kind]" maxlength="512" />
           </el-form-item>
         </el-col>
+        <el-col v-if="form.kind !== 'EMAIL'" :span="24">
+          <el-form-item label="密钥来源">
+            <el-radio-group v-model="form.keyMode">
+              <el-radio value="inline">直接填写</el-radio>
+              <el-radio value="ref">引用密钥管理</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-col>
+        <el-col v-if="useKeyRef" :span="24">
+          <el-form-item label="选择密钥">
+            <el-select v-model="form.secretId" filterable placeholder="从密钥管理里选择" class="w-full">
+              <el-option
+                v-for="item in secretOptions"
+                :key="item.secretId"
+                :label="`${item.name || item.accessKey}（${typeLabel(item.secretType)} · ${item.provider || 'custom'}）`"
+                :value="item.secretId"
+              />
+            </el-select>
+            <div class="field-hint">
+              只列出「{{ typeLabel(SECRET_TYPE_BY_KIND[form.kind]) }}」类型的密钥；调用时使用该密钥的
+              AccessKeyId / Secret，换密钥不必改账号。可去「密钥管理」新建。
+            </div>
+          </el-form-item>
+        </el-col>
         <el-col v-if="!useKeyRef" :span="24">
           <el-form-item label="敏感凭据">
             <el-input
@@ -107,29 +131,6 @@
           </el-col>
         </template>
         <template v-else-if="form.kind === 'SMS'">
-          <el-col :span="24">
-            <el-form-item label="密钥来源">
-              <el-radio-group v-model="form.keyMode">
-                <el-radio value="inline">直接填写</el-radio>
-                <el-radio value="ref">引用密钥库</el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
-          <el-col v-if="useKeyRef" :span="24">
-            <el-form-item label="选择密钥">
-              <el-select v-model="form.secretId" filterable placeholder="从密钥库选择" class="w-full">
-                <el-option
-                  v-for="item in secretOptions"
-                  :key="item.secretId"
-                  :label="`${item.name || item.accessKey}（${item.provider || 'custom'}）`"
-                  :value="item.secretId"
-                />
-              </el-select>
-              <div class="field-hint">
-                发送短信时使用该密钥的 AccessKeyId / Secret；换密钥不必改账号。
-              </div>
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="短信签名">
               <el-input v-model="form.signName" placeholder="如 某某科技" maxlength="128" />
@@ -376,11 +377,40 @@ const secretHint = computed(() =>
     : '明文只在保存时提交，读取接口永不回显。',
 );
 
-/** 是否引用密钥库（仅短信） */
-const useKeyRef = computed(() => form.kind === 'SMS' && form.keyMode === 'ref');
+/** 是否引用密钥管理（短信 / API 密钥两类账号可引用） */
+const useKeyRef = computed(
+  () => (form.kind === 'SMS' || form.kind === 'API_KEY') && form.keyMode === 'ref',
+);
 
-/** 密钥库选项 */
-const secretOptions = ref<SysAccountSecret[]>([]);
+/** 密钥类型中文名（与密钥管理页保持一致） */
+function typeLabel(secretType?: string | null): string {
+  const map: Record<string, string> = {
+    sms: '短信',
+    mail: '邮件',
+    storage: '对象存储',
+    payment: '支付',
+    api: '通用 API',
+    other: '其他',
+  };
+  return map[String(secretType || '').toLowerCase()] ?? '其他';
+}
+
+/** 账号种类 → 可选的密钥类型 */
+const SECRET_TYPE_BY_KIND: Record<AccountKind, string> = {
+  SMS: 'sms',
+  EMAIL: 'mail',
+  API_KEY: 'api',
+};
+
+/** 密钥库全量（供 secretOptions 过滤） */
+const secretList = ref<SysAccountSecret[]>([]);
+
+/** 密钥库选项（按当前账号种类对应的密钥类型过滤） */
+const secretOptions = computed(() =>
+  secretList.value.filter((item) =>
+    !item.secretType || item.secretType === SECRET_TYPE_BY_KIND[form.kind],
+  ),
+);
 
 /**
  * 加载密钥库选项。
@@ -389,9 +419,9 @@ const secretOptions = ref<SysAccountSecret[]>([]);
  */
 async function loadSecretOptions(): Promise<void> {
   try {
-    secretOptions.value = await listAccountSecrets();
+    secretList.value = await listAccountSecrets();
   } catch {
-    secretOptions.value = [];
+    secretList.value = [];
   }
 }
 
@@ -473,7 +503,7 @@ function onKindChange(): void {
   if (form.kind !== 'EMAIL') {
     form.from = '';
   }
-  if (form.kind !== 'SMS') {
+  if (form.kind === 'EMAIL') {
     form.signName = '';
     form.templateCode = '';
     form.appId = '';
@@ -525,7 +555,7 @@ function buildPayload(): SysAccount {
   setOrDelete('signName', form.kind === 'SMS' ? form.signName.trim() : '');
   setOrDelete('templateCode', form.kind === 'SMS' ? form.templateCode.trim() : '');
   setOrDelete('appId', form.kind === 'SMS' ? form.appId.trim() : '');
-  setOrDelete('secretId', form.kind === 'SMS' && form.keyMode === 'ref' ? form.secretId : '');
+  setOrDelete('secretId', useKeyRef.value ? form.secretId : '');
   setOrDelete('webUrl', form.webUrl.trim());
 
   const payload: SysAccount = {

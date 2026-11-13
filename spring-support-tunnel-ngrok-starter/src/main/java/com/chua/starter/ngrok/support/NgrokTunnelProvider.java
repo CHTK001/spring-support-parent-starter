@@ -142,6 +142,10 @@ public class NgrokTunnelProvider implements TunnelProvider {
         if ("tcp".equals(mode) && !StringUtils.hasText(input.getRemoteAddress())) {
             throw new IllegalArgumentException("tcp 模式必须填写远程地址");
         }
+        if ("http".equals(mode)) {
+            // Basic 认证只在 HTTP 模式存在；ngrok 要求密码 8 - 128 位，提前拦住（ERR_NGROK_360）
+            TunnelInputs.requireBasicAuth(input.getBasicAuth());
+        }
         target.setMode(mode);
         target.setDomain(TunnelInputs.trimToNull(input.getDomain()));
         target.setRemoteAddress(TunnelInputs.trimToNull(input.getRemoteAddress()));

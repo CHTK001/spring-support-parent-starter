@@ -7,6 +7,7 @@ import com.chua.starter.device.support.mapper.DeviceAccessRecordMapper;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.service.DeviceAccessRecordService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.support.timeseries.DeviceSeriesRecorder;
 import com.chua.starter.device.support.util.DeviceStatusUtil;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.AccessRecord;
@@ -55,6 +56,11 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
      */
     private final DeviceInfoMapper deviceInfoMapper;
 
+    /**
+     * 时序写入器（门禁记录同时进时序存储，供趋势/跨后端查询）
+     */
+    private final DeviceSeriesRecorder seriesRecorder;
+
     @Override
     public int extractRecent(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null || !end.isAfter(start)) {
@@ -87,6 +93,8 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
                         continue;
                     }
                     accessRecordMapper.insert(toEntity(deviceId, record));
+                    seriesRecorder.recordAccess(deviceId, record.doorId(), record.cardNo(), record.userName(),
+                            record.eventType(), record.direction(), record.photoUrl(), record.time());
                     saved++;
                 }
             } catch (Exception e) {

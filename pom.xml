@@ -130,12 +130,14 @@
         <!-- 上报信息客户端模块 -->
         <module>spring-support-report-client-starter</module>
         <!-- 内网穿透标准 starter（SPI + 统一入口 /ms/tunnel），
-             下列 ngrok / cloudflared 模块均为其提供方实现 -->
+             下列 ngrok / cloudflared / tailscale 模块均为其提供方实现 -->
         <module>spring-support-tunnel-starter</module>
         <!-- 内网穿透模块（基于 ngrok-java） -->
-        <module>spring-support-ngrok-starter</module>
+        <module>spring-support-tunnel-ngrok-starter</module>
         <!-- 内网穿透模块（基于 cloudflared，Cloudflare Tunnel） -->
-        <module>spring-support-cloudflared-starter</module>
+        <module>spring-support-tunnel-cloudflared-starter</module>
+        <!-- 内网穿透模块（基于 Tailscale Funnel） -->
+        <module>spring-support-tunnel-tailscale-starter</module>
         <!-- 教育AI模块 -->
         <module>spring-support-eduai-starter</module>
         <!-- 设备管理模块（海康/大华等平台接入） -->

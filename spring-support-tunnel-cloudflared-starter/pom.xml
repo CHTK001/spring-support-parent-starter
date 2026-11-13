@@ -20,8 +20,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>spring-support-cloudflared-starter</artifactId>
-    <name>Spring Support Cloudflared Starter</name>
+    <artifactId>spring-support-tunnel-cloudflared-starter</artifactId>
+    <name>Spring Support Tunnel Cloudflared Starter</name>
     <description>Spring Boot 集成 cloudflared：自动将本机 Spring 服务（server.port）通过 Cloudflare Tunnel 暴露为公网 HTTPS 地址。</description>
 
     <dependencies>

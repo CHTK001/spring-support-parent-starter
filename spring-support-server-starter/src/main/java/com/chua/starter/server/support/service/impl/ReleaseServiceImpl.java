@@ -222,6 +222,26 @@ public class ReleaseServiceImpl implements ReleaseService {
        */
     private static final int ACTUATOR_MONITOR_MAX_SECONDS = 3600;
 
+    /**
+     * Actuator 读取命令里状态码的标记
+     */
+    private static final String ACT_CODE_MARK = "__ACT_CODE__";
+
+    /**
+     * Windows Actuator 命令里 base64 响应体的键名（行形如 {@code ACTBODY=<base64>}）
+     */
+    private static final String ACT_BODY_KEY = "ACTBODY";
+
+    /**
+     * Actuator 响应体最大字节数：loggers / threaddump 会到几百 KB，再大就不读了
+     */
+    private static final int ACT_BODY_MAX = 512000;
+
+    /**
+     * 允许热更新的日志级别（Actuator loggers 支持的集合）
+     */
+    private static final Set<String> LOG_LEVELS = Set.of("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "OFF");
+
       /**
        * 操作上下文：项目 + 目标主机
        */
@@ -4038,6 +4058,259 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     @Override
+    public ReturnResult<Map<String, Object>> actuatorFetch(Long id, String path) {
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        String endpoint = normalizeActuatorPath(path);
+        if (endpoint == null) {
+            return ReturnResult.error("不支持的 Actuator 端点: " + path);
+        }
+        int port = resolveHealthPort(ctx.project);
+        if (port <= 0) {
+            return ReturnResult.error("项目未配置 server.port，无法读取 Actuator");
+        }
+        String hostAddress = ctx.host == null || isBlank(ctx.host.getServerHostAddress())
+                ? "127.0.0.1" : ctx.host.getServerHostAddress();
+        String local = "http://127.0.0.1:" + port + "/actuator/" + endpoint;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("endpoint", endpoint);
+        out.put("url", "http://" + hostAddress + ":" + port + "/actuator/" + endpoint);
+        out.put("status", 0);
+        out.put("body", "");
+        long start = System.currentTimeMillis();
+        String command = ctx.windows ? windowsActuatorGetCommand(local) : posixActuatorGetCommand(local);
+        ReturnResult<List<MsExecLog>> result = execService.runCommand(
+                Collections.singletonList(ctx.hostId), command, 30, null);
+        out.put("elapsedMs", System.currentTimeMillis() - start);
+        if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
+            out.put("message", "Actuator 读取失败: " + result.getMsg());
+            return ReturnResult.ok(out);
+        }
+        String output = result.getData().get(0).getMsExecLogOutput();
+        int statusCode;
+        String body;
+        if (ctx.windows) {
+            // 状态码行是 `__ACT_CODE__204`，没有 `=`，不能走 KEY=VALUE 解析
+            statusCode = parseActuatorCode(output, true);
+            body = actuatorBody(output, true);
+        } else {
+            String text = output == null ? "" : output.replace("\r", "");
+            int firstBreak = text.indexOf('\n');
+            String first = firstBreak >= 0 ? text.substring(0, firstBreak) : text;
+            statusCode = first.startsWith(ACT_CODE_MARK)
+                    ? parseCode(first.substring(ACT_CODE_MARK.length())) : 0;
+            body = actuatorBody(output, false);
+        }
+        out.put("status", statusCode);
+        out.put("body", body);
+        if (statusCode == 0) {
+            out.put("message", "目标不可达或超时");
+        } else if (statusCode == 404) {
+            out.put("message", "端点未暴露：检查 management.endpoints.web.exposure.include");
+        } else if (statusCode >= 400) {
+            out.put("message", "Actuator 返回 HTTP " + statusCode);
+        }
+        return ReturnResult.ok(out);
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> actuatorSetLogLevel(Long id, String name, String level) {
+        String logger = name == null ? "" : name.trim();
+        if (!logger.matches("[A-Za-z0-9_.$-]{1,200}")) {
+            return ReturnResult.error("日志名称不合法: " + name);
+        }
+        String target = level == null ? "" : level.trim().toUpperCase(java.util.Locale.ROOT);
+        if (!target.isEmpty() && !LOG_LEVELS.contains(target)) {
+            return ReturnResult.error("不支持的日志级别: " + level);
+        }
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        int port = resolveHealthPort(ctx.project);
+        if (port <= 0) {
+            return ReturnResult.error("项目未配置 server.port，无法修改日志级别");
+        }
+        String local = "http://127.0.0.1:" + port + "/actuator/loggers/" + logger;
+        // 空级别表示清除项目级配置、继承上级：Actuator 用 configuredLevel=null 表达
+        String payload = target.isEmpty()
+                ? "{\"configuredLevel\":null}" : "{\"configuredLevel\":\"" + target + "\"}";
+        String command = ctx.windows
+                ? windowsActuatorPostCommand(local, payload) : posixActuatorPostCommand(local, payload);
+        long start = System.currentTimeMillis();
+        ReturnResult<List<MsExecLog>> result = execService.runCommand(
+                Collections.singletonList(ctx.hostId), command, 30, null);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("logger", logger);
+        out.put("level", target.isEmpty() ? "继承" : target);
+        out.put("status", 0);
+        out.put("ok", false);
+        out.put("elapsedMs", System.currentTimeMillis() - start);
+        if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
+            out.put("message", "修改日志级别失败: " + result.getMsg());
+            return ReturnResult.ok(out);
+        }
+        int code = parseActuatorCode(result.getData().get(0).getMsExecLogOutput(), ctx.windows);
+        out.put("status", code);
+        // Actuator 改级别成功返回 204，部分网关包一层会回 200
+        out.put("ok", code == 204 || code == 200);
+        if (!Boolean.TRUE.equals(out.get("ok"))) {
+            out.put("message", "目标未接受本次修改（HTTP " + code + "）");
+        }
+        return ReturnResult.ok(out);
+    }
+
+    /**
+     * 归一化 Actuator 端点路径：只放行只读白名单，防止把任意 URL 拼进远端命令。
+     *
+     * @param path 端点路径
+     * @return 归一后的路径；不在白名单内返回 {@code null}
+     */
+    private static String normalizeActuatorPath(String path) {
+        String value = path == null ? "" : path.trim();
+        if (value.isEmpty() || value.length() > 200 || value.contains("..")) {
+            return null;
+        }
+        if (!value.matches("(health|info|metrics|loggers|env|beans|mappings|threaddump"
+                + "|conditions|configprops|scheduledtasks|caches|startup)"
+                + "(/[A-Za-z0-9_.$-]+)?")) {
+            return null;
+        }
+        return value;
+    }
+
+    /**
+     * POSIX 读取 Actuator：先输出状态码行，再输出响应体。
+     *
+     * <p>状态码放第一行而不是 curl 的 {@code -w} 尾部：后面 {@code head -c} 会截断尾部，
+     * 但响应体必须从第一个字节起是完整 JSON（否则日志列表解析不了）。</p>
+     *
+     * @param url 目标主机内的地址
+     * @return shell 命令
+     */
+    private static String posixActuatorGetCommand(String url) {
+        return "curl -s -m 8 -o /dev/null -w '" + ACT_CODE_MARK + "%{http_code}\\n' '" + url + "'; "
+                + "curl -s -m 8 '" + url + "' | head -c " + ACT_BODY_MAX;
+    }
+
+    /**
+     * Windows 读取 Actuator：状态码一行 + base64 响应体一行。
+     *
+     * @param url 目标主机内的地址
+     * @return PowerShell 命令
+     */
+    private static String windowsActuatorGetCommand(String url) {
+        return "$ProgressPreference='SilentlyContinue'\n"
+                + "$ErrorActionPreference='SilentlyContinue'\n"
+                + "$code=0\n$b=''\n"
+                + "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 8 -Uri '" + url + "'; "
+                + "$code=[int]$r.StatusCode; $c=$r.Content; "
+                + "if ($c -is [byte[]]) { $c=[Text.Encoding]::UTF8.GetString($c) }; $b=[string]$c } "
+                + "catch { $resp=$_.Exception.Response; if ($resp -ne $null) { "
+                + "try { $code=[int]$resp.StatusCode } catch { }; "
+                + "try { $sr=New-Object IO.StreamReader($resp.GetResponseStream()); $b=$sr.ReadToEnd(); $sr.Close() } catch { } } }\n"
+                + "if ($b.Length -gt " + ACT_BODY_MAX + ") { $b=$b.Substring(0," + ACT_BODY_MAX + ") }\n"
+                + "Write-Output ('" + ACT_CODE_MARK + "' + $code)\n"
+                + "Write-Output ('" + ACT_BODY_KEY + "=' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($b)))\n";
+    }
+
+    /**
+     * POSIX 修改日志级别（Actuator POST）。
+     *
+     * @param url     目标地址
+     * @param payload JSON 体
+     * @return shell 命令
+     */
+    private static String posixActuatorPostCommand(String url, String payload) {
+        return "curl -s -m 8 -o /dev/null -w '" + ACT_CODE_MARK + "%{http_code}' "
+                + "-X POST -H 'Content-Type: application/json' --data-raw '" + payload + "' '" + url + "'";
+    }
+
+    /**
+     * Windows 修改日志级别（Actuator POST）。
+     *
+     * @param url     目标地址
+     * @param payload JSON 体
+     * @return PowerShell 命令
+     */
+    private static String windowsActuatorPostCommand(String url, String payload) {
+        return "$ProgressPreference='SilentlyContinue'\n"
+                + "$ErrorActionPreference='SilentlyContinue'\n"
+                + "$code=0\n"
+                + "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 8 -Method Post "
+                + "-ContentType 'application/json' -Body '" + payload + "' -Uri '" + url + "'; "
+                + "$code=[int]$r.StatusCode } "
+                + "catch { $resp=$_.Exception.Response; if ($resp -ne $null) { "
+                + "try { $code=[int]$resp.StatusCode } catch { } } }\n"
+                + "Write-Output ('" + ACT_CODE_MARK + "' + $code)\n";
+    }
+
+    /**
+     * 从 Actuator 读取命令输出里取响应体。
+     *
+     * <p>Windows 走 base64 单行（JSON 自带换行，直接打印会把行号切乱）；
+     * POSIX 的响应体就是状态码行之后的全部内容。两者分开取而不是共用一套
+     * KEY=VALUE 解析：状态码行没有 `=`，混在一起解析会把 body 丢成空串。</p>
+     *
+     * @param output  命令输出
+     * @param windows 是否 Windows
+     * @return 响应体；取不到时为空串
+     */
+    private static String actuatorBody(String output, boolean windows) {
+        String text = output == null ? "" : output.replace("\r", "");
+        if (windows) {
+            String prefix = ACT_BODY_KEY + "=";
+            for (String line : text.split("\n")) {
+                if (line.startsWith(prefix)) {
+                    return decodeBase64(line.substring(prefix.length()).trim());
+                }
+            }
+            return "";
+        }
+        int firstBreak = text.indexOf('\n');
+        return firstBreak >= 0 ? text.substring(firstBreak + 1) : "";
+    }
+
+    /**
+     * 从 Actuator 命令输出里取状态码。
+     *
+     * @param output  命令输出
+     * @param windows 是否 Windows（单独一行标记）
+     * @return 状态码；无法解析时为 0
+     */
+    private static int parseActuatorCode(String output, boolean windows) {
+        String text = output == null ? "" : output.replace("\r", "").trim();
+        int mark = text.indexOf(ACT_CODE_MARK);
+        if (mark < 0) {
+            return 0;
+        }
+        String digits = text.substring(mark + ACT_CODE_MARK.length()).trim();
+        int end = 0;
+        while (end < digits.length() && Character.isDigit(digits.charAt(end))) {
+            end++;
+        }
+        return parseCode(digits.substring(0, end));
+    }
+
+    /**
+     * 字符串转整数，失败回落 0。
+     *
+     * @param raw 原值
+     * @return 数字
+     */
+    private static int parseCode(String raw) {
+        try {
+            return Integer.parseInt(raw == null ? "" : raw.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    @Override
     public List<Map<String, Object>> listActuatorMonitors() {
         List<Map<String, Object>> out = new ArrayList<>();
         List<MsServerConfig> rows = serverConfigMapper.selectList(
@@ -4152,7 +4425,7 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @param raw base64 文本
      * @return 原文；空值或解码失败返回空串（按「端点不可用」处理）
      */
-    private String decodeBase64(String raw) {
+    private static String decodeBase64(String raw) {
         if (isBlank(raw)) {
             return "";
         }

@@ -47,6 +47,17 @@ public class SysAccountSecret implements Serializable {
     private String provider;
 
     /**
+     * 密钥类型（sms / storage / payment / mail / api / other）
+     *
+     * <p>与 {@link #provider} 是两个维度：{@code provider} 说「谁的密钥」
+     * （阿里云 / 腾讯云），{@code secretType} 说「拿来干什么」
+     * （短信 / 对象存储 / 支付 / 邮件 / 通用 API）。账号引用密钥时按类型挑选，
+     * 不同类型的密钥字段含义不同（短信看签名与模板，存储看 Bucket 与 Endpoint）。</p>
+     */
+    @TableField("sys_account_secret_type")
+    private String secretType;
+
+    /**
      * AccessKeyId / 账号标识（可明文查询）
      */
     @TableField("sys_account_secret_access_key")

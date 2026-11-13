@@ -35,9 +35,14 @@ import java.util.Set;
 public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
 
     /**
-     * 放行的只读动作：写操作必须走 {@link #save} / {@link #delete}。
+     * 放行的分项动作：{@code detect} / {@code models} / {@code test} 是只读探测，
+     * {@code on} / {@code off} 是 magpie 自己的启停端点（{@code POST /api/provider/{on|off}}，
+     * 请求体只有 {@code id}）。
+     *
+     * <p>启停为什么不走 {@link #save}：save 收的是整份 provider 视图，字段缺省时
+     * 由网关按预设补齐；停一条上游只想翻一个开关，走网关为它单开的端点最稳。</p>
      */
-    private static final Set<String> ACTIONS = Set.of("detect", "models", "test");
+    private static final Set<String> ACTIONS = Set.of("detect", "models", "test", "on", "off");
 
     /**
      * 放行的插件动作：与 magpie {@code POST /api/plugins/{op}} 的 switch 一致。
@@ -216,8 +221,8 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     /**
      * {@inheritDoc}
      *
-     * <p>只放行 {@code detect} / {@code models} / {@code test}；{@code models} 的响应
-     * 额外归一成 {@code modelIds}，前端不必再解一层对象。</p>
+     * <p>放行 {@code detect} / {@code models} / {@code test} / {@code on} / {@code off}；
+     * {@code models} 的响应额外归一成 {@code modelIds}，前端不必再解一层对象。</p>
      */
     @Override
     public Map<String, Object> action(Map<String, Object> credentials, String action,
@@ -225,7 +230,8 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
         String normalized = action == null ? "" : action.trim().toLowerCase(Locale.ROOT);
         if (!ACTIONS.contains(normalized)) {
             throw new ChannelException(ChannelException.CODE_INVALID_PARAM,
-                    "不支持的 magpie provider 动作: " + action + "（仅 detect / models / test）");
+                    "不支持的 magpie provider 动作: " + action
+                            + "（仅 detect / models / test / on / off）");
         }
         Map<String, Object> body = payload == null ? new LinkedHashMap<>() : payload;
         Map<String, Object> result = MagpieAdminClient.action(credentials, normalized, codec().toUpstreamInput(body));

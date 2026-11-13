@@ -51,6 +51,15 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Redis 时序引擎（plugin.device.timeseries.engine=redis）编译期类型。
+             optional=true：宿主持有 spring-data-redis 时才装配 Redis 引擎，
+             未引入时模块照常启动，只是该引擎不可用（页面会如实提示原因） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Swagger 注解（DeviceGroupController 文档注解） -->
         <dependency>
             <groupId>com.chua</groupId>

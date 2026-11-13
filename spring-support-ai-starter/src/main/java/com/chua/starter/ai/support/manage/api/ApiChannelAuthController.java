@@ -2916,7 +2916,8 @@ public class ApiChannelAuthController {
     }
 
     /**
-     * 网关上游 provider 的分项动作（如 {@code detect} / {@code models} / {@code test}）。
+     * 网关上游 provider 的分项动作（{@code detect} / {@code models} / {@code test}，
+     * 以及启停用的 {@code on} / {@code off}）。
      *
      * <p>前端用「拉模型」按钮一次性带出 provider 可用模型，避免用户手抄。
      * 动作白名单由渠道实现维护，免得路径段被拼成任意上游调用。</p>
@@ -2941,6 +2942,8 @@ public class ApiChannelAuthController {
         } catch (ChannelException e) {
             throw channelFailure(e);
         }
+        // 启停立刻改变可路由的模型集合，缓存不能等自然过期；其余动作清了也无害
+        refreshMagpieRoutes();
         return upstreamResult(admin.channel(), result);
     }
 

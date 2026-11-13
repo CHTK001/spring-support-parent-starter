@@ -1,1 +1,2 @@
 sse=com.chua.starter.sse.support.socket.SseSocketProvider
+sse-server=com.chua.starter.sse.support.server.SseStandaloneProvider

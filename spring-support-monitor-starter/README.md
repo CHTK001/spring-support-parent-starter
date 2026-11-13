@@ -92,7 +92,7 @@
 | `spring-support-swagger-starter` | OpenAPI 3 + knife4j |
 | `spring-support-ai-starter` | `ChatClient` / `AiChatFacadeService`（AI 诊断） |
 | `spring-support-job-starter` | 定时发布 / Git 轮询所需调度 |
-| `spring-support-tunnel-starter` + `spring-support-ngrok-starter` + `spring-support-cloudflared-starter` | 端口映射编排与两种 SPI 实现 |
+| `spring-support-tunnel-starter` + `spring-support-tunnel-ngrok-starter` + `spring-support-tunnel-cloudflared-starter` + `spring-support-tunnel-tailscale-starter` | 端口映射编排与三种 SPI 实现 |
 | `spring-support-docker-starter` | 容器 / 镜像 / 网络 / 卷 |
 | `spring-support-control-starter` + `utils-support-webrtc-starter` | WebRTC 远程控制（webrtc 原生包为 `optional`，宿主需显式声明） |
 | `spring-support-device-starter` | `/api/device/**` 的唯一实现方 |

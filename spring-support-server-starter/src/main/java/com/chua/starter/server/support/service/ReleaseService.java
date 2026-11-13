@@ -410,6 +410,28 @@ public interface ReleaseService {
     ReturnResult<Map<String, Object>> getActuatorMonitor(Long id);
 
     /**
+     * 读取项目的一个 Actuator 端点（在目标主机内发起请求）。
+     *
+     * <p>项目跑在目标主机上，后端不能直接连它的 127.0.0.1，所以命令必须在主机内执行。
+     * 只放行只读端点，见 {@code normalizeActuatorPath}。</p>
+     *
+     * @param id   项目ID
+     * @param path 端点路径，如 {@code metrics}、{@code metrics/jvm.memory.used}、{@code loggers}
+     * @return endpoint / url / status / body（原始文本）/ elapsedMs
+     */
+    ReturnResult<Map<String, Object>> actuatorFetch(Long id, String path);
+
+    /**
+     * 热更新日志级别（Actuator {@code POST /actuator/loggers/{name}}，不用重启）。
+     *
+     * @param id    项目ID
+     * @param name  日志名称，如 {@code com.chua.demo}；ROOT 用 {@code ROOT}
+     * @param level 目标级别；空串表示清除项目级配置、继承上级
+     * @return ok / status / logger / level
+     */
+    ReturnResult<Map<String, Object>> actuatorSetLogLevel(Long id, String name, String level);
+
+    /**
      * 保存项目的 Actuator 定时采集配置。
      *
      * @param id     项目ID

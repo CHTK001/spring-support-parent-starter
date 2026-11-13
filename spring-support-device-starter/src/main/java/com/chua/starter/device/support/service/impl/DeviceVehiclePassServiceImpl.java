@@ -8,6 +8,7 @@ import com.chua.starter.device.support.mapper.DeviceBarrierGateMapper;
 import com.chua.starter.device.support.mapper.DeviceVehiclePassMapper;
 import com.chua.starter.device.support.model.VehiclePassPullResult;
 import com.chua.starter.device.support.service.DeviceVehiclePassService;
+import com.chua.starter.device.support.timeseries.DeviceSeriesRecorder;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.TimeRange;
 import com.chua.starter.device.spi.model.VehiclePassRecord;
@@ -40,6 +41,11 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
      */
     private final DeviceBarrierGateMapper gateMapper;
 
+    /**
+     * 时序写入器（过车记录同时进时序存储）
+     */
+    private final DeviceSeriesRecorder seriesRecorder;
+
     @Override
     public DeviceVehiclePass record(DeviceVehiclePass pass) {
         if (pass == null) {
@@ -52,6 +58,10 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
             pass.setDeviceVehiclePassCreatedAt(LocalDateTime.now());
         }
         passMapper.insert(pass);
+        seriesRecorder.recordVehiclePass(pass.getDeviceVehiclePassDeviceId(), pass.getDeviceVehiclePassGateId(),
+                pass.getDeviceVehiclePassPlateNo(), pass.getDeviceVehiclePassDirection(),
+                pass.getDeviceVehiclePassVehicleType(), pass.getDeviceVehiclePassPhotoUrl(),
+                pass.getDeviceVehiclePassTime());
         log.info("过车记录: gate={}, plate={}, direction={}", pass.getDeviceVehiclePassGateId(),
                 pass.getDeviceVehiclePassPlateNo(), pass.getDeviceVehiclePassDirection());
         return pass;

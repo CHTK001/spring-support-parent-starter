@@ -1,7 +1,7 @@
 package com.chua.starter.filesystem.support.server.embedded;
 
 import com.chua.common.support.network.server.ServerSetting;
-import com.chua.common.support.network.server.filter.CorsFilter;
+import com.chua.common.support.network.server.filter.CorsServerFilter;
 import com.chua.common.support.network.server.filter.SecurityHeadersServerFilter;
 import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.network.server.filter.ServerFilterChain;
@@ -80,7 +80,7 @@ public class FileStorageEmbeddedFilter extends OncePerRequestFilter {
 
         List<ServerFilter> head = new ArrayList<>();
         head.add(init(new SecurityHeadersServerFilter(setting.getSecurityHeaders()), config));
-        head.add(init(new CorsFilter(), config));
+        head.add(init(new CorsServerFilter(), config));
         ServerFilter oauth = FileStorageServerAssembler.createOAuthFilter(properties, storageFilter.getSetting());
         if (oauth != null) {
             FileStorageServerAssembler.linkPrivateBucketSync(storageFilter, oauth);

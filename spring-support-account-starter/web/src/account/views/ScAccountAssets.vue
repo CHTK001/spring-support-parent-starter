@@ -612,97 +612,6 @@
           </footer>
         </template>
 
-        <template v-else-if="segment === 'SECRET' && activeSecret">
-          <header class="main-head">
-            <span class="main-mark is-cookie"><ReIcon name="Lock" :size="16" /></span>
-            <div class="main-title">
-              <b :title="activeSecret.name">{{ activeSecret.name || '未命名密钥' }}</b>
-              <span>
-                密钥 · {{ activeSecret.provider || 'custom' }}
-                {{ activeSecret.accessKey ? ` · ${activeSecret.accessKey}` : '' }}
-              </span>
-            </div>
-            <ReTag :type="activeSecret.status === 0 ? 'info' : 'success'" effect="plain" size="small">
-              {{ activeSecret.status === 0 ? '停用' : '启用' }}
-            </ReTag>
-          </header>
-
-          <div class="main-body">
-            <div class="pane">
-              <div class="cred-card" :class="activeSecret.hasSecret ? 'is-ok' : 'is-warn'">
-                <ReIcon :name="activeSecret.hasSecret ? 'CircleCheckFilled' : 'WarningFilled'" :size="16" />
-                <div>
-                  <b>{{ activeSecret.hasSecret ? 'AccessKeySecret 已配置' : 'AccessKeySecret 尚未配置' }}</b>
-                  <span>Secret 只进不出：读取接口只返回「是否已配置」，编辑时留空表示不修改。</span>
-                </div>
-              </div>
-              <div class="facts">
-                <div class="fact">
-                  <span class="k">用途 / 厂商</span>
-                  <span class="v">{{ activeSecret.provider || '—' }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">AccessKeyId</span>
-                  <span class="v mono">{{ activeSecret.accessKey || '—' }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">Region</span>
-                  <span class="v">{{ activeSecret.region || '—' }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">服务地址</span>
-                  <span class="v mono">{{ activeSecret.endpoint || '厂商默认' }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">归属</span>
-                  <span class="v">{{ activeSecret.owner ? `仅本人（${activeSecret.owner}）` : '部署级共享' }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">创建时间</span>
-                  <span class="v">{{ formatTime(activeSecret.createdAt) }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">更新时间</span>
-                  <span class="v">{{ formatTime(activeSecret.updatedAt) }}</span>
-                </div>
-                <div class="fact">
-                  <span class="k">备注</span>
-                  <span class="v">{{ activeSecret.remark || '—' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <footer class="main-foot">
-            <ReButton
-              text
-              :show-text="false"
-              icon="EditPen"
-              :icon-size="28"
-              tip="编辑密钥"
-              @click="openEditSecret(activeSecret)"
-            />
-            <span class="foot-gap"></span>
-            <ReButton
-              text
-              :show-text="false"
-              :icon="activeSecret.status === 0 ? 'SwitchButton' : 'TurnOff'"
-              :icon-size="28"
-              :tip="activeSecret.status === 0 ? '启用' : '停用'"
-              @click="toggleSecretStatus(activeSecret)"
-            />
-            <ReButton
-              text
-              :show-text="false"
-              icon="Delete"
-              :icon-size="28"
-              type="danger"
-              tip="删除"
-              @click="removeSecret(activeSecret)"
-            />
-          </footer>
-        </template>
-
         <div v-else class="main-blank">
           <ReEmpty :image-size="64" :description="blankHint" />
           <p>单击左侧一条资产查看详情，双击打开完整编辑，右键有完整操作。</p>
@@ -736,9 +645,6 @@
 
     <!-- 新增 / 编辑 Cookie -->
     <CookieDialog v-model="cookieFormVisible" :cookie="editingCookie" @saved="onCookieSaved" />
-
-    <!-- 新增 / 编辑密钥 -->
-    <SecretDialog v-model="secretFormVisible" :secret="editingSecret" @saved="onSecretSaved" />
 
     <!-- 收 / 发信箱：邮箱走 IMAP / SMTP，短信走 MessagePush -->
     <MailboxDrawer
@@ -787,7 +693,6 @@ import AccountFormDialog from '../components/AccountFormDialog.vue';
 import MailboxDrawer from '../components/MailboxDrawer.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
 import CookieDialog from './components/CookieDialog.vue';
-import SecretDialog from './components/SecretDialog.vue';
 import {
   batchDeleteAccounts,
   batchUpdateAccountStatus,
@@ -796,12 +701,10 @@ import {
   deleteAccount,
   deleteAccountAppKey,
   deleteAccountCookie,
-  deleteAccountSecret,
   destroyTempMailbox,
   isTempMail,
   listAccountAppKeys,
   listAccountCookies,
-  listAccountSecrets,
   listAccounts,
   rotateAccountAppKey,
   syncAccountSmsTemplates,
@@ -809,7 +712,6 @@ import {
   updateAccount,
   updateAccountAppKey,
   updateAccountCookie,
-  updateAccountSecret,
   verifyAccount,
   type AccountBatchResult,
   type AccountKind,
@@ -817,7 +719,6 @@ import {
   type SysAccount,
   type SysAccountAppKey,
   type SysAccountCookie,
-  type SysAccountSecret,
 } from '../api/account';
 import { accountConsoleUrl } from '../utils/accountLinks';
 import { confirmThen } from '../../shared/confirmThen';
@@ -830,16 +731,18 @@ import { copyText } from '../../shared/clipboard';
  * 归谁所有、能不能直接打开控制台」这些问题每次都要看。纯台账逼用户点开弹窗逐条确认；
  * 工作台把选中行的关键状态常驻在右侧检查器里，单击即看，双击才进完整详情。</p>
  *
- * <p><b>四种资产</b>：统一账号（设备密钥 / 邮箱 / 短信）、AppKey、Cookie 共用一套
+ * <p><b>三类资产</b>：统一账号（设备密钥 / 邮箱 / 短信）、AppKey、Cookie 共用一套
  * KPI 带 + 分段页签 + 检查器，因为它们回答的是同一类问题——「这个凭据还能不能用」。
- * 三张表各自保留自己的列，不做字段对齐，避免把不同语义的字段硬塞进同一列。</p>
+ * 三张表各自保留自己的列，不做字段对齐，避免把不同语义的字段硬塞进同一列。
+ * 厂商密钥（AccessKey / AccessKeySecret）不进本页，由独立的「密钥管理」页按类型维护，
+ * 账号表单引用时按类型选择。</p>
  *
  * <p><b>敏感值</b>：账号 secret / AppKey secret / Cookie 值都只进不出。列表与检查器
  * 只显示「是否已配置」，AppKey 的明文只在创建或轮换后弹一次。</p>
  */
 
-/** 当前分段：账号三种 + AppKey + Cookie */
-type Segment = 'ALL' | AccountKind | 'APPKEY' | 'COOKIE' | 'SECRET' | 'TEMP_MAIL';
+/** 当前分段：账号三种 + AppKey + Cookie（密钥由「密钥管理」独立页维护） */
+type Segment = 'ALL' | AccountKind | 'APPKEY' | 'COOKIE' | 'TEMP_MAIL';
 
 /** 账号状态筛选 */
 type StatusFilter = 'all' | 'on' | 'pending' | 'invalid';
@@ -851,39 +754,19 @@ const accountList = ref<SysAccount[]>([]);
 const appKeyList = ref<SysAccountAppKey[]>([]);
 /** Cookie */
 const cookieList = ref<SysAccountCookie[]>([]);
-/** 密钥库 */
-const secretList = ref<SysAccountSecret[]>([]);
 
 /** 加载中 */
 const loading = ref(false);
 /** 账号接口错误 */
 const loadError = ref('');
-/** AppKey / Cookie / 密钥接口错误（分段内联提示） */
+/** AppKey / Cookie 接口错误（分段内联提示） */
 const appKeyError = ref('');
 const cookieError = ref('');
-const secretError = ref('');
 
 /** 当前分段 */
 const segment = ref<Segment>('ALL');
 /** 搜索词 */
 const keyword = ref('');
-
-/**
- * 外部深链分段：路由 props 直达某分段（如「密钥管理」菜单 → SECRET），
- * 复用同一工作台页面而不另维护一套版式。只在 props 变化时应用，不影响页内手动切换。
- */
-const props = defineProps<{ initialSegment?: string }>();
-
-/** 合法分段清单（运行时可校验，避免把任意字符串塞进 Segment） */
-const KNOWN_SEGMENTS: Segment[] = ['ALL', 'API_KEY', 'EMAIL', 'SMS', 'APPKEY', 'COOKIE', 'SECRET', 'TEMP_MAIL'];
-watch(
-  () => props.initialSegment,
-  (value) => {
-    const next = KNOWN_SEGMENTS.find((s) => s === value);
-    if (next) segment.value = next;
-  },
-  { immediate: true },
-);
 
 /* ---------- 左侧索引宽度（可拖拽，偏好存本地） ---------- */
 const RAIL_WIDTH_KEY = 'account.rail.width.v1';
@@ -891,11 +774,10 @@ const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 304));
 /** 账号状态筛选 */
 const statusFilter = ref<StatusFilter>('all');
 
-/** 选中的账号 / AppKey / Cookie / 密钥 */
+/** 选中的账号 / AppKey / Cookie */
 const selectedAccountId = ref('');
 const selectedAppKeyId = ref('');
 const selectedCookieId = ref('');
-const selectedSecretId = ref('');
 
 /** 正在校验的账号 */
 const verifyingId = ref<string | null>(null);
@@ -918,9 +800,6 @@ const editingKey = ref<SysAccountAppKey | null>(null);
 /** Cookie 新增 / 编辑 */
 const cookieFormVisible = ref(false);
 const editingCookie = ref<SysAccountCookie | null>(null);
-/** 密钥库新增 / 编辑 */
-const secretFormVisible = ref(false);
-const editingSecret = ref<SysAccountSecret | null>(null);
 /** 一次性明文 */
 const secretVisible = ref(false);
 const secretValue = ref('');
@@ -958,7 +837,6 @@ const isAccountSegment = computed(
 const createLabel = computed(() => {
   if (segment.value === 'APPKEY') return '新增 AppKey';
   if (segment.value === 'COOKIE') return '新增 Cookie';
-  if (segment.value === 'SECRET') return '新增密钥';
   if (segment.value === 'TEMP_MAIL') return '领取临时邮箱';
   return '新增账号';
 });
@@ -967,7 +845,6 @@ const createLabel = computed(() => {
 const searchPlaceholder = computed(() => {
   if (segment.value === 'APPKEY') return '搜索名称 / AppKey / 备注';
   if (segment.value === 'COOKIE') return '搜索名称 / 域名 / 来源';
-  if (segment.value === 'SECRET') return '搜索名称 / AccessKey / 备注';
   if (segment.value === 'TEMP_MAIL') return '搜索地址 / 名称';
   return '搜索名称 / 编码 / 登录名 / 地址';
 });
@@ -976,7 +853,6 @@ const searchPlaceholder = computed(() => {
 const blankHint = computed(() => {
   if (segment.value === 'APPKEY') return '选择一条访问密钥查看详情';
   if (segment.value === 'COOKIE') return '选择一条 Cookie 查看详情';
-  if (segment.value === 'SECRET') return '选择一条密钥查看详情';
   if (segment.value === 'TEMP_MAIL') return '选择一条临时邮箱查看详情';
   return '选择一条账号查看详情';
 });
@@ -985,7 +861,6 @@ const blankHint = computed(() => {
 const segmentError = computed(() => {
   if (segment.value === 'APPKEY') return appKeyError.value;
   if (segment.value === 'COOKIE') return cookieError.value;
-  if (segment.value === 'SECRET') return secretError.value;
   return '';
 });
 
@@ -1094,14 +969,6 @@ const kpiCells = computed<
     hint: '免登录会话 Cookie',
     run: () => setSegment('COOKIE'),
   },
-  {
-    key: 'secrets',
-    value: secretList.value.length,
-    label: '密钥',
-    on: segment.value === 'SECRET',
-    hint: '厂商密钥库（账号 / server 共用）',
-    run: () => setSegment('SECRET'),
-  },
 ]);
 
 // ==================== 列表数据 ====================
@@ -1145,22 +1012,11 @@ const filteredCookies = computed(() => {
   );
 });
 
-/** 密钥筛选结果 */
-const filteredSecrets = computed(() => {
-  const text = keyword.value.trim().toLowerCase();
-  if (!text) return secretList.value;
-  return secretList.value.filter(row =>
-    `${row.name || ''} ${row.accessKey || ''} ${row.provider || ''} ${row.remark || ''}`
-      .toLowerCase()
-      .includes(text),
-  );
-});
-
 /**
  * 索引里的账号结果。
  *
  * <p>和右侧详情不同：索引永远列全部分组，不受当前 {@code segment} 影响，
- * 否则点中一条密钥后左侧就只剩密钥组，切换别的分组还得回顶栏。</p>
+ * 否则点中一条后左侧就只剩该组，切换别的分组还得回顶栏。</p>
  */
 const indexAccounts = computed(() => {
   const text = keyword.value.trim().toLowerCase();
@@ -1323,23 +1179,6 @@ const indexGroups = computed<IndexGroup[]>(() => {
         checked: false,
       })),
     });
-    groups.push({
-      key: 'SECRET',
-      label: '密钥',
-      icon: 'Lock',
-      rows: filteredSecrets.value.map<IndexRow>(row => ({
-        id: row.secretId,
-        name: row.name || row.accessKey || '未命名密钥',
-        sub: `${row.provider || 'custom'}${row.accessKey ? ` · ${row.accessKey}` : ''}`,
-        meta: formatShort(row.updatedAt),
-        tag: row.status === 0 ? '停用' : row.hasSecret ? '已配置' : '待补',
-        tagTone: row.status === 0 ? 'idle' : row.hasSecret ? 'ok' : 'warn',
-        tone: row.status === 0 ? 'idle' : row.hasSecret ? 'ok' : 'warn',
-        status: row.status,
-        selected: selectedSecretId.value === row.secretId,
-        checked: false,
-      })),
-    });
   }
   return groups;
 });
@@ -1358,10 +1197,6 @@ const activeAppKey = computed(
 /** 选中 Cookie */
 const activeCookie = computed(
   () => cookieList.value.find(row => row.cookieId === selectedCookieId.value) ?? null,
-);
-/** 选中密钥 */
-const activeSecret = computed(
-  () => secretList.value.find(row => row.secretId === selectedSecretId.value) ?? null,
 );
 
 /**
@@ -1409,11 +1244,10 @@ const configRows = computed(() => {
 async function loadAll(): Promise<void> {
   loading.value = true;
   loadError.value = '';
-  const [accounts, keys, cookies, secrets] = await Promise.allSettled([
+  const [accounts, keys, cookies] = await Promise.allSettled([
     listAccounts(),
     listAccountAppKeys(),
     listAccountCookies(),
-    listAccountSecrets(),
   ]);
   if (accounts.status === 'fulfilled') {
     accountList.value = accounts.value ?? [];
@@ -1432,12 +1266,6 @@ async function loadAll(): Promise<void> {
     cookieError.value = '';
   } else {
     cookieError.value = 'Cookie 加载失败：' + errText(cookies.reason);
-  }
-  if (secrets.status === 'fulfilled') {
-    secretList.value = secrets.value ?? [];
-    secretError.value = '';
-  } else {
-    secretError.value = '密钥加载失败：' + errText(secrets.reason);
   }
   loading.value = false;
   // 数据整体替换后旧勾选已经没有对应行，继续保留只会让「已选 N 项」与实际不符
@@ -1463,13 +1291,6 @@ function syncSelection(): void {
     const rows = filteredAppKeys.value;
     if (!rows.some(row => row.appKeyId === selectedAppKeyId.value)) {
       selectedAppKeyId.value = rows[0]?.appKeyId ?? '';
-    }
-    return;
-  }
-  if (segment.value === 'SECRET') {
-    const secrets = filteredSecrets.value;
-    if (!secrets.some(row => row.secretId === selectedSecretId.value)) {
-      selectedSecretId.value = secrets[0]?.secretId ?? '';
     }
     return;
   }
@@ -1579,8 +1400,6 @@ function selectIndexRow(group: IndexGroup, row: IndexRow, event?: MouseEvent): v
     selectedAppKeyId.value = row.id;
   } else if (group.key === 'COOKIE') {
     selectedCookieId.value = row.id;
-  } else if (group.key === 'SECRET') {
-    selectedSecretId.value = row.id;
   } else {
     selectedAccountId.value = row.id;
     if (event?.ctrlKey || event?.metaKey || event?.shiftKey) {
@@ -1604,10 +1423,6 @@ function openIndexRow(group: IndexGroup, row: IndexRow): void {
   }
   if (group.key === 'COOKIE') {
     openEditCookie(cookieList.value.find(item => item.cookieId === row.id) ?? null);
-    return;
-  }
-  if (group.key === 'SECRET') {
-    openEditSecret(secretList.value.find(item => item.secretId === row.id) ?? null);
     return;
   }
   if (group.key === 'TEMP_MAIL') {
@@ -1646,12 +1461,6 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
             { key: 'copy-address', label: '复制邮箱地址', icon: 'CopyDocument' },
             { key: 'destroy-temp', label: '销毁临时邮箱', icon: 'Delete', divided: true },
           ]
-        : group.key === 'SECRET'
-          ? [
-              { key: 'edit', label: '编辑密钥', icon: 'EditPen' },
-              { key: 'status', label: row.status === 0 ? '启用密钥' : '停用密钥', icon: 'SwitchButton', divided: true },
-              { key: 'delete', label: '删除密钥', icon: 'Delete' },
-            ]
           : [
           { key: 'edit', label: '编辑账号', icon: 'EditPen' },
           { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
@@ -1710,14 +1519,6 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
     if (item.key === 'edit') openEditCookie(target);
     else if (item.key === 'status') void toggleCookieStatus(target);
     else if (item.key === 'delete') void removeCookie(target);
-    return;
-  }
-  if (group.key === 'SECRET') {
-    const target = secretList.value.find(entry => entry.secretId === row.id);
-    if (!target) return;
-    if (item.key === 'edit') openEditSecret(target);
-    else if (item.key === 'status') void toggleSecretStatus(target);
-    else if (item.key === 'delete') void removeSecret(target);
     return;
   }
   const target = accountList.value.find(entry => entry.accountId === row.id);
@@ -1859,11 +1660,6 @@ function openCreate(): void {
   if (segment.value === 'COOKIE') {
     editingCookie.value = null;
     cookieFormVisible.value = true;
-    return;
-  }
-  if (segment.value === 'SECRET') {
-    editingSecret.value = null;
-    secretFormVisible.value = true;
     return;
   }
   if (segment.value === 'TEMP_MAIL') {
@@ -2233,67 +2029,6 @@ async function removeCookie(row: SysAccountCookie): Promise<void> {
     await deleteAccountCookie(row.cookieId);
     message.success('Cookie 已删除');
     if (selectedCookieId.value === row.cookieId) selectedCookieId.value = '';
-    await loadAll();
-  } catch (e: any) {
-    message.error(e?.message || '删除失败');
-  }
-}
-
-// ==================== 密钥库 ====================
-
-/** 打开密钥编辑 */
-function openEditSecret(row: SysAccountSecret | null): void {
-  editingSecret.value = row;
-  secretFormVisible.value = true;
-}
-
-/** 密钥保存后刷新 */
-function onSecretSaved(): void {
-  void loadAll();
-}
-
-/**
- * 启用 / 停用密钥。
- *
- * @param row 密钥
- */
-async function toggleSecretStatus(row: SysAccountSecret): Promise<void> {
-  const next = row.status === 0 ? 1 : 0;
-  try {
-    await updateAccountSecret(row.secretId, {
-      secretId: row.secretId,
-      name: row.name,
-      provider: row.provider ?? null,
-      accessKey: row.accessKey ?? null,
-      region: row.region ?? null,
-      endpoint: row.endpoint ?? null,
-      status: next,
-      remark: row.remark ?? null,
-      secret: null,
-    });
-    message.success(next === 1 ? '密钥已启用' : '密钥已停用');
-    await loadAll();
-  } catch (e: any) {
-    message.error(e?.message || '状态更新失败');
-  }
-}
-
-/**
- * 删除密钥。
- *
- * @param row 密钥
- */
-async function removeSecret(row: SysAccountSecret): Promise<void> {
-  const confirmed = await confirmThen(
-    message.confirm,
-    `确认删除密钥「${row.name || row.accessKey}」？引用它的账号 / 服务会失去凭据来源。`,
-    '删除密钥',
-  );
-  if (!confirmed) return;
-  try {
-    await deleteAccountSecret(row.secretId);
-    message.success('密钥已删除');
-    if (selectedSecretId.value === row.secretId) selectedSecretId.value = '';
     await loadAll();
   } catch (e: any) {
     message.error(e?.message || '删除失败');

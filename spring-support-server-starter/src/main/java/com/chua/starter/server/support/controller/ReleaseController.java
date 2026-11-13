@@ -897,6 +897,40 @@ public class ReleaseController {
     }
 
     /**
+     * 读取项目的一个 Actuator 端点（在目标主机内请求）。
+     *
+     * @param id   项目标识
+     * @param path 端点路径，如 metrics / metrics/jvm.memory.used / loggers
+     * @return endpoint / url / status / body / elapsedMs
+     */
+    @Operation(summary = "读取 Actuator 端点")
+    @GetMapping("/project/{id}/actuator")
+    public ReturnResult<java.util.Map<String, Object>> actuatorFetch(
+            @PathVariable Long id,
+            @RequestParam(name = "path", required = false) String path) {
+        return releaseService.actuatorFetch(id, path);
+    }
+
+    /**
+     * 热更新日志级别（Actuator loggers，不用重启）。
+     *
+     * @param id    项目标识
+     * @param body  name / level
+     * @return ok / status / logger / level
+     */
+    @Operation(summary = "热更新日志级别")
+    @PostMapping("/project/{id}/actuator/log-level")
+    public ReturnResult<java.util.Map<String, Object>> actuatorSetLogLevel(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> body) {
+        Object name = body == null ? null : body.get("name");
+        Object level = body == null ? null : body.get("level");
+        return releaseService.actuatorSetLogLevel(id,
+                name == null ? null : String.valueOf(name),
+                level == null ? null : String.valueOf(level));
+    }
+
+    /**
      * 手动触发一次 Git 轮询：有更新才发布。
      *
      * @param id 项目标识

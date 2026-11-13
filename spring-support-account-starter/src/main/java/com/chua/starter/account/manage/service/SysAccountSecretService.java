@@ -18,11 +18,19 @@ public interface SysAccountSecretService {
     /**
      * 当前用户可见的密钥列表。
      *
-     * @param provider 厂商 / 用途过滤（可空）
+     * @param provider 厂商过滤（可空）
      * @param keyword  名称 / AccessKey 模糊词（可空）
      * @return 密钥列表（不含明文 Secret）
      */
     List<SysAccountSecret> list(String provider, String keyword);
+
+    /**
+     * 按类型过滤的密钥列表（账号引用密钥时按类型挑选）。
+     *
+     * @param secretType 密钥类型（sms / storage / payment / mail / api / other，可空表示不限）
+     * @return 密钥列表（不含明文 Secret）
+     */
+    List<SysAccountSecret> listByType(String secretType);
 
     /**
      * 密钥详情。

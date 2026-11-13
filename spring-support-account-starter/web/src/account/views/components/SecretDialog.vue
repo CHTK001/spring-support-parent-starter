@@ -12,6 +12,19 @@
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="如 阿里云短信-生产" maxlength="128" />
         </el-form-item>
+        <el-form-item label="密钥类型" prop="secretType">
+          <el-select v-model="form.secretType" placeholder="选择密钥类型" class="w-full">
+            <el-option label="短信" value="sms" />
+            <el-option label="邮件" value="mail" />
+            <el-option label="对象存储" value="storage" />
+            <el-option label="支付" value="payment" />
+            <el-option label="通用 API" value="api" />
+            <el-option label="其他" value="other" />
+          </el-select>
+          <span class="form-hint">账号引用密钥时按类型挑选（如短信账号只挑短信密钥）。</span>
+        </el-form-item>
+      </div>
+      <div class="form-grid">
         <el-form-item label="用途 / 厂商">
           <el-select v-model="form.provider" placeholder="选择或输入" allow-create filterable clearable class="w-full">
             <el-option label="阿里云" value="aliyun" />
@@ -20,10 +33,10 @@
             <el-option label="自定义" value="custom" />
           </el-select>
         </el-form-item>
+        <el-form-item label="AccessKeyId">
+          <el-input v-model="form.accessKey" placeholder="如 LTAI5t..." maxlength="255" spellcheck="false" />
+        </el-form-item>
       </div>
-      <el-form-item label="AccessKeyId">
-        <el-input v-model="form.accessKey" placeholder="如 LTAI5t..." maxlength="255" spellcheck="false" />
-      </el-form-item>
       <el-form-item label="AccessKeySecret" prop="secret">
         <el-input
           v-model="form.secret"
@@ -49,7 +62,7 @@
         <el-input v-model="form.endpoint" placeholder="留空按厂商默认（如 dysmsapi.aliyuncs.com）" maxlength="255" />
       </el-form-item>
       <el-form-item label="归属">
-        <span class="form-static">{{ ownerText }}</span>
+        <span class="form-static">{{ isEdit ? ownerText : '仅本人（创建后按登录用户归属）' }}</span>
       </el-form-item>
       <el-form-item label="备注">
         <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="用途说明" maxlength="255" />
@@ -104,6 +117,7 @@ const isEdit = computed(() => Boolean(props.secret?.secretId));
 const form = ref<SysAccountSecret>({
   secretId: '',
   name: '',
+  secretType: 'sms',
   provider: 'aliyun',
   accessKey: '',
   secret: '',
@@ -135,6 +149,7 @@ const secretHint = computed(() =>
 /** 校验规则 */
 const rules = computed(() => ({
   name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
+  secretType: [{ required: true, message: '请选择密钥类型', trigger: 'change' }],
   secret: isEdit.value ? [] : [{ required: true, message: '请粘贴 AccessKeySecret', trigger: 'blur' }],
 }));
 
@@ -147,6 +162,7 @@ watch(
     form.value = {
       secretId: source?.secretId ?? '',
       name: source?.name ?? '',
+      secretType: source?.secretType ?? 'sms',
       provider: source?.provider ?? 'aliyun',
       accessKey: source?.accessKey ?? '',
       secret: '',
@@ -194,8 +210,7 @@ async function submit(): Promise<void> {
 <style scoped>
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 12px;
+  grid-template-columns: 1fr;
 }
 
 .form-hint {

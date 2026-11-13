@@ -39,12 +39,11 @@ export const accountRoutes: RouteConfigsTable[] = [
     },
   },
   {
-    // 密钥管理：复用账号资产工作台的「密钥库」分段，props 直达 SECRET 段。
-    // 厂商访问密钥（阿里云等账号的 AccessKey/AccessKeySecret）在此集中维护。
+    // 密钥管理：独立的密钥页（只管密钥本身），不是账号资产页的分段。
+    // 账号表单引用密钥时按类型从这里挑选。
     path: '/secret-assets',
     name: 'SecretAssets',
-    component: () => import('../account/views/ScAccountAssets.vue'),
-    props: { initialSegment: 'SECRET' },
+    component: () => import('../account/views/ScSecretAssets.vue'),
     meta: {
       title: '密钥管理',
       icon: 'Lock',

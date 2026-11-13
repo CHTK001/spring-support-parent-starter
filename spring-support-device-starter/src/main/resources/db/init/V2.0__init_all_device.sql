@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS device_info (
     device_info_version INT DEFAULT 0 COMMENT '乐观锁/增量序号',
     KEY `idx_device_info_org` (`device_info_org_id`),
     KEY `idx_device_info_location` (`device_info_latitude`, `device_info_longitude`)
-) COMMENT '设备基本信息';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT '设备基本信息';
 
 -- 同步幂等键：同一厂商同一外部设备只允许一行；手工录入 external_id 为 NULL 不受影响
 CREATE UNIQUE INDEX uk_device_vendor_external
@@ -791,6 +791,28 @@ CREATE TABLE IF NOT EXISTS device_metric_latest (
     UNIQUE KEY uk_device_metric (device_info_id, device_metric_key),
     KEY idx_device_metric_device (device_info_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备环境指标最新快照';
+
+-- ---------------------------------------------------------------------
+-- 设备时序点（plugin.device.timeseries.engine=bean 的明细表）
+-- 传感器历史与门禁/车闸时序记录统一落这一张表；
+-- 切到 influxdb / redis 时本表不再写入，结构保留以便随时切回。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS device_series_point (
+    device_series_point_id VARCHAR(32) PRIMARY KEY COMMENT '主键 ID',
+    device_series_category VARCHAR(32) NOT NULL COMMENT '分类：metric 传感器 / access 门禁 / vehicle 车闸',
+    device_series_device_id VARCHAR(64) NOT NULL COMMENT '设备 ID',
+    device_series_channel VARCHAR(64) DEFAULT NULL COMMENT '通道 / 门点 / 车闸标识',
+    device_series_key VARCHAR(128) NOT NULL COMMENT '序列键：节点标识 / 卡号或人员 / 车牌号',
+    device_series_name VARCHAR(100) DEFAULT NULL COMMENT '展示名',
+    device_series_value VARCHAR(256) DEFAULT NULL COMMENT '记录值：读数 / 事件类型 / 进出方向',
+    device_series_unit VARCHAR(32) DEFAULT NULL COMMENT '单位',
+    device_series_time DATETIME(3) NOT NULL COMMENT '发生时间（毫秒精度）',
+    device_series_extra TEXT COMMENT '附加字段 JSON（门点 / 抓拍 / 车型）',
+    device_series_created_at DATETIME DEFAULT NULL COMMENT '入库时间',
+    KEY idx_dsp_cat_dev_time (device_series_category, device_series_device_id, device_series_time),
+    KEY idx_dsp_cat_key_time (device_series_category, device_series_key, device_series_time),
+    KEY idx_dsp_time (device_series_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备时序点（bean 引擎明细）';
 
 -- ---------------------------------------------------------------------
 -- 凭据健康留痕两列（单条测试 / 全部检测写入，凭据表健康列读取）

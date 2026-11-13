@@ -776,28 +776,37 @@ public class FaceStores {
     public boolean remove(String group, String id) {
         AccountFace st = st(group);
         Entry prev = st.snapshot.remove(id);
-        if (prev == null) {
-            return false;
-        }
-        try {
-            st.persist();
-        } catch (RuntimeException ex) {
-            // 快照没删掉 = 这次删除等于没发生。图、向量、DB 行都还没动，内存态还原即可
-            restoreSnapshot(st, id, prev);
-            throw ex;
+        // 快照里没有这条，不等于「库里没有这个人」：
+        //   · 列表以 DB 为准（list() 读 sys_ai_face_library），快照可能没加载到这条
+        //     （恢复库、换节点、快照丢失、只写过 DB 的历史数据）；
+        //   · 向量删除本身是静默的，失败只影响检索，不影响档案。
+        // 所以这里不能提前 return false —— 那会让「列表里看得见、点删除却报未确认删除」。
+        if (prev != null) {
+            try {
+                st.persist();
+            } catch (RuntimeException ex) {
+                // 快照没删掉 = 这次删除等于没发生。图、向量、DB 行都还没动，内存态还原即可
+                restoreSnapshot(st, id, prev);
+                throw ex;
+            }
         }
         // DB 行：DB 化之前登记的存量人脸本来就没有 DB 行，那也算删除成功，
         // 只有 DB 真的出错才算失败 —— 此时必须把快照也还原，否则三处状态就此分叉：
         // 列表里已看不到这个人，但 DB 里那行还在，日后按 DB 统计又会把他算回来。
         if (!library.deleteMeta(st.account, id)) {
-            restoreSnapshot(st, id, prev);
-            try {
-                st.persist();
-            } catch (RuntimeException ex) {
-                log.error("[Face] 账号 '{}' 删除失败后回滚快照也失败，人脸可能已从列表消失: id={} -> {}",
-                        st.account, id, ex.getMessage());
+            if (prev != null) {
+                restoreSnapshot(st, id, prev);
+                try {
+                    st.persist();
+                } catch (RuntimeException ex) {
+                    log.error("[Face] 账号 '{}' 删除失败后回滚快照也失败，人脸可能已从列表消失: id={} -> {}",
+                            st.account, id, ex.getMessage());
+                }
             }
             return false;
+        }
+        if (prev == null) {
+            log.info("[Face] 账号 '{}' 删除的是仅存在于 DB 的记录（快照里没有）: id={}", st.account, id);
         }
         // 档案本体已删干净，图与向量才是「附属品」：删失败只影响可看性/检索，
         // 且向量残留会在下次重建索引时自动清掉，不阻断本次删除。

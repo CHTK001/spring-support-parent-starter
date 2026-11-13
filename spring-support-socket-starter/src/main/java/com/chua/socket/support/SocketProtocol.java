@@ -27,7 +27,14 @@ public enum SocketProtocol {
      * @param "sse" "sse"
      * @return SSE的结果
      */
-    SSE("sse");
+    SSE("sse"),
+
+    /**
+     * 独立端口 SSE：事件流由本进程单独监听（不占主应用 Tomcat）
+     * @param "sse-server" "sse-server"
+     * @return 独立 SSE 的结果
+     */
+    SSE_SERVER("sse-server");
 
     /**
      * 值

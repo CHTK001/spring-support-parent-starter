@@ -233,9 +233,9 @@ public class AiReidServiceImpl implements AiReidService {
             if (!trackIds.contains(trackId)) {
                 trackIds.add(trackId);
             }
-            // 每次观测都落库：底库是轨迹的唯一来源，漏写就等于轨迹少一段
-            persistObservation(account, resolvedGroup, trackId, resolvedCamera, resolvedSource,
-                    imageData, observation, decision, lat, lng);
+            // 观测**不落底库**：重识别库与人脸库同口径，只有「登记入库」才写行（两条向量）。
+            // 若这里也写，底库会混入大量一次性的画面观测，用户无法区分「我导入的人」
+            // 与「监控偶然拍到的人」。观测结果只回给本次请求（画面叠框 + 命中统计）。
         }
         log.info("[Reid] 账号 '{}' 分组 '{}' 摄像头 '{}' 观测到 {} 张脸（命中 {} / 新建 {}；清晰走识别 {} / 模糊走重识别 {} / 不合规 {}）",
                 account, resolvedGroup, resolvedCamera, result.observations().size(),

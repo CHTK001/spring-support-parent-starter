@@ -49,18 +49,23 @@
             <artifactId>spring-support-tunnel-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 端口映射的两种 SPI 实现：AutoConfiguration.imports 自动注册为 TunnelProvider，
+        <!-- 端口映射的三种 SPI 实现：AutoConfiguration.imports 自动注册为 TunnelProvider，
              由 tunnel-starter 统一装配，浏览器只认 /ms/tunnel 一套接口（provider 只是字段）。
              映射配置持久化到 ~/.chua/tunnel/<provider>/<id>.json，不依赖数据库；
              运行时默认 auto-start=false，由页面按需启停，避免监控进程启动即暴露公网端口。 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-ngrok-starter</artifactId>
+            <artifactId>spring-support-tunnel-ngrok-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-cloudflared-starter</artifactId>
+            <artifactId>spring-support-tunnel-cloudflared-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-tunnel-tailscale-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
 

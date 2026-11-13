@@ -1,696 +1,331 @@
-# Spring Support OAuth Client Starter
+# spring-support-oauth-client-starter
 
-## 📖 模块简介
+单点登录**客户端** Starter：把「令牌校验 / 白名单 / 权限判定 / 登录页 / 会话控制」下沉到框架层，
+业务代码只依赖 `OAuthPrincipal` 与 `@Permission`，不再自己解析 token、比对角色。
 
-Spring Support OAuth Client Starter 是一个功能强大的 OAuth 客户端模块，提供完整的 OAuth 认证集成方案。该模块不仅支持标准的 OAuth 认证流程，还实现了 Java EE/Jakarta EE 的安全 API 标准，包括`java.security.Principal`接口和`HttpServletRequest`的认证相关方法。
+- 包名：`com.chua.starter.oauth.client.support`
+- 版本：`4.0.0.51`
+- 定位：本模块是**消费方**，认证服务端由独立服务提供（通过 `address` + `protocol` 通信）；
+  没有服务端时只有 `dev` / `test` + `enable=false` 的降级过滤器可用。
 
-## ✨ 主要功能
+## 一、模块能力
 
-### 🔐 OAuth 认证
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| 自动装配 | `AuthClientConfiguration`（`plugin.oauth.enable`，默认 `matchIfMissing=true`） | `META-INF/spring/...AutoConfiguration.imports` |
+| 配置 | `AuthClientProperties`（前缀 `plugin.oauth`） | `@EnableConfigurationProperties` |
+| 认证过滤器 | `AuthFilter`（order `LOWEST_PRECEDENCE - 10`，`url-patterns = block-address`） | 所有被拦截的 HTTP 请求 |
+| 令牌校验 | `WebRequest#authentication`、`Protocol` | 5 种协议实现 |
+| 限流 | `RateLimitFilter`（`HIGHEST_PRECEDENCE`）+ `RateLimitService` | `plugin.oauth.rate-limit.*` |
+| 权限判定 | `PermissionInterceptor`、`@Permission` | 方法 / 类级注解 |
+| 当前用户 | `OAuthPrincipal`、`OauthAuthService`（`AuthService` 的 `@Primary` Bean） | 注入 `AuthService` |
+| 请求增强 | `OAuthHttpServletRequestWrapper` | `request.isUserInRole`、`request.getUserPrincipal` |
+| 参数注入 | `@UserValue`、`@TokenValue` + 两个 `HandlerMethodArgumentResolver` | Controller 方法参数 |
+| 认证执行 | `AuthClientExecute`（单例 `INSTANCE`） | 登录 / 登出 / 在线 / 踢人 / 升级 / 临时令牌 |
+| 协议扩展 | `Protocol`、`AbstractProtocol`、`TcpProtocol`、`HttpProtocol`、`Oauth2Protocol`、`RSocketProtocol`、`StaticProtocol` | `ServiceProvider.of(Protocol.class)` |
+| 白名单 | `AuthClientProperties#getEffectiveWhitelist`、`WhitelistFileWatcher`、`OAuthWhitelistController` | `plugin.oauth.whitelist` / `whitelist-file` / `/oauth/whitelist` |
+| 登录页 | `LocalLoginPageProvider`、`UserStatisticProvider` | 自渲染表单 `POST /login/form`、`POST /v1/users/login` |
+| 异常处理 | `OauthExceptionAdvice`、`OauthException` | 权限拦截器抛出的 401/403 |
+| 会话工具 | `AuthSessionUtils` | `getUsername()` / `getUserId()` / `getTenantId()` |
+| 凭据扩展 | `CredentialProvider`、`PasswordCredentialProvider`、`VerifiedCodeCredentialProvider` | 静态账号 / 验证码登录 |
+| AI AppKey | `AiAppKeySupport` | `plugin.oauth.ai-app-key.enabled=true` |
+| 指纹校验 | `@VerifyFingerprint`、`@FingerprintCheck`、`AuthClientProperties.Fingerprint` | 浏览器指纹 |
+| 降级过滤器 | `AuthFilterBypassConfiguration` | 仅 `dev` / `test` Profile 且 `enable=false` |
 
-- 多协议支持（HTTP、WebSocket、Static 等）
-- 自动令牌管理和刷新
-- 用户信息缓存
-- 会话管理
+### 1.1 认证流程（简版）
 
-### 👤 Principal 支持
+1. `RateLimitFilter` 先做限流（总开关 `rate-limit.enable`，默认 `false`）。
+2. `AuthFilter` 收请求：命中白名单直接放行；否则按 `protocol` 找 `Protocol` 实现做令牌校验。
+3. 校验成功后把用户信息写入请求，并包一层 `OAuthHttpServletRequestWrapper`。
+4. 控制器侧用 `@Permission` 触发 `PermissionInterceptor` 做角色 / 权限 / 只读判定。
+5. 失败抛 `OauthException`，由 `OauthExceptionAdvice` 转成对应状态码（不是 500）。
 
-- 完整实现`java.security.Principal`接口
-- 集成 OAuth 用户信息
-- 角色和权限管理
-- 用户详细信息访问
+### 1.2 权限注解（只有 `@Permission` 一个）
 
-### 🌐 HttpServletRequest 增强
+```java
+@Permission("user:create")                       // 权限位，命中任一即可
+@Permission(role = {"ADMIN", "OPS"})             // 角色，命中任一即可
+@Permission(value = "user:delete", role = "ADMIN") // 权限或角色，命中任一即可
+```
 
-- `isUserInRole()` - 角色检查
-- `getAuthType()` - 认证类型获取
-- `logout()` - 用户登出
-- `login()` - 用户登录（OAuth 流程）
-- `getUserPrincipal()` - 获取用户 Principal
+`value` 与 `permission` 互为别名（`@AliasFor`），二者不可同时使用。
+**本模块没有 `@RequiredRole` / `@RequiredPermission` / `@RequiredAnyRole`** —— 早期文档里的这三个注解
+不存在，用它们会直接编译失败。类与常量：`AuthConstant.SUPER_ADMIN` / `ADMIN` / `OPS` / `STUDENT` / `TEACHER`。
 
-### 🛡️ 权限控制
+只读账号：`PermissionInterceptor` 在**所有权限判定之前**检查「账号级 `readonly` 字段」或
+角色含 `READ_ONLY`（大小写不敏感）。命中后：`GET` / `HEAD` / `OPTIONS` 放行，其余方法一律 403；
+该判定**优先于超管**，即超管账号被标记只读时写操作同样被拒。
 
-- 基于注解的权限验证
-- 方法级别的访问控制
-- 角色和权限检查
-- 自定义权限拦截器
+### 1.3 注解清单
 
-## 🚀 快速开始
+| 注解 | 目标 | 作用 |
+|---|---|---|
+| `@Permission` | 类 / 方法 | 权限 / 角色判定（见上） |
+| `@TokenForIgnore` | 类 / 方法 | 免令牌校验（webhook 入站等） |
+| `@TokenForType` | 类 / 方法 | 限定适用的 `AuthType` 与分组 |
+| `@UserValue` | 参数 | 注入当前用户字段（`value`/`name`/`required`/`defaultValue`） |
+| `@TokenValue` | 参数 | 注入当前令牌（`value`/`defaultValue`） |
+| `@LoginType` | 类 | 标识登录方式（`value` + `AuthType group`） |
+| `@Extension` | 类 | 标识扩展点类型 |
+| `@VerifyFingerprint` | 类 / 方法 | 该接口需要浏览器指纹校验 |
+| `@FingerprintCheck` | 类 / 方法 | 指纹校验声明 |
 
-### Maven 依赖
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-oauth-client-starter</artifactId>
-    <version>4.0.0.42</version>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
-### 基础配置
+| 依赖 | 作用 | 说明 |
+|---|---|---|
+| `com.chua:spring-support-common-starter` | `AuthService`、`@Permission`、`ServiceInfoContributor` | 必需 |
+| `com.chua:spring-support-cache-starter` | `CacheProvider`，认证信息缓存 | 必需 |
+| `com.chua:spring-support-swagger-starter` | OpenAPI 注解 | 必需 |
+| `com.chua:spring-support-mybatis-starter` | 分页 / `PageResult` | 必需 |
+| `me.zhyd.oauth:JustAuth` | 第三方登录模型（`AuthUser`） | 必需，`UserInfoService` 扩展点用 |
+| `com.konghq:unirest-java` | `HttpProtocol` 的 HTTP 客户端 | 必需 |
+| `com.chua:utils-support-rsocket-starter` | `RSocketProtocol` | 必需 |
+| `com.chua:utils-support-httpclient-starter`、`utils-support-spring-starter` | HTTP / Spring 工具 | 必需 |
+| `com.chua:utils-support-datasource-starter` | `JdbcEngine`（AI AppKey 动态表查询） | `optional`，仅在启用 AI AppKey 时需要 |
+| `jakarta.servlet:jakarta.servlet-api` | Servlet API | `provided` |
+
+## 三、配置项
+
+前缀 `plugin.oauth`。核心项：
+
+| key | 默认值 | 说明 |
+|---|---|---|
+| `enable` | `true` | 自动装配总开关（`matchIfMissing=true`，不写也生效） |
+| `protocol` | `tcp` | 可选 `tcp` / `http` / `oauth2` / `rsocket` / `static`（**无 websocket**） |
+| `address` | 空 | 认证服务端地址 |
+| `login-address` | `${plugin.oauth.auth-address:}` | 登录端点地址 |
+| `oauth-url` | `/verify` | 令牌校验路径 |
+| `token-name` | `x-oauth-token` | 令牌请求头名 |
+| `cookie-name` | `x-oauth-cookie` | 令牌 Cookie 名 |
+| `alias` | `Boren-Token` | 令牌别名头 |
+| `cache-timeout` | `21600`（6 小时） | 客户端鉴权信息缓存秒数 |
+| `cache-hot-cold-backup` | `true` | 缓存冷热备份 |
+| `encryption` | `aes` | 传输加密算法 |
+| `enable-encryption` | `true` | 是否启用数据加密 |
+| `block-address` | `{/*}` | **拦截**地址集合，注册为过滤器的 `url-patterns` |
+| `whitelist` | `[]` | 白名单（Ant 风格），只能增加不能减少登录链路 |
+| `whitelist-file` | `config/oauth.whitelist` | 外部白名单文件，支持热更新与 `#` 注释 |
+| `use-default-whitelist` | `true` | 是否启用内置默认白名单（不影响登录链路必备项） |
+| `local-admin-fallback` | `false` | 取不到用户上下文时是否兜底为本地 admin（等价绕过鉴权，仅联调用） |
+| `static-token-expire-seconds` | `86400` | 静态账号令牌有效期，取值被夹到 `[60, 604800]` |
+| `login-page` | `/login` | 登录页 |
+| `login-form-action` | `/login/form` | 自渲染登录表单提交端点（表单编码 POST） |
+| `logout-page` | `/logout` | 登出页 |
+| `temporary-token-page` | `/temporary-token` | 临时令牌页 |
+| `upgrade-page` | `/upgrade` | 升级页 |
+| `no-permission-page` | `/oauth-page` | 无权限页 |
+| `balance` | `polling` | 多服务端时的均衡模式 |
+| `connect-timeout` / `read-timeout` / `request-timeout` | `5000` / `10000` / `15000` | 毫秒 |
+| `retry.enabled` / `max-attempts` / `delay` / `multiplier` / `max-delay` | `true` / `3` / `1000` / `1.5` / `5000` | 重试（指数退避） |
+| `circuit-breaker.enabled` / `failure-rate-threshold` / `wait-duration-in-open-state` | `true` / `50` / `30` | 熔断 |
+| `rate-limit.enable` | `false` | 限流总开关；`rate-limit.login.*` 与 `rate-limit.api.*` 只有它为 `true` 才生效 |
+| `rate-limit.api.qps` / `window-seconds` | `200` / `1` | 接口限流（默认 200 QPS） |
+| `rate-limit.login.ip-limit` / `ip-window-seconds` / `account-fail-limit` / `account-lock-minutes` | `30` / `60` / `5` / `5` | 登录防暴破 |
+| `temp.open` | 无默认 | 只有显式 `true` 才装配 `UserStatisticProvider`（临时账号 / 代入） |
+| `temp.user` | `""` | 静态账号 `用户名:口令;...`，默认**刻意留空**；支持加盐摘要 `用户名:盐$MD5(盐+口令)` |
+| `temp.menu-path` | 空 | 临时账号菜单文件 |
+| `key.enabled` / `access-key` / `secret-key` | `false` | AK/SK 二次加密 |
+| `ai-app-key.enabled` / `table-name` / `app-key-column` / `status-column` / `expire-time-column` | `false` / `sys_ai_app_key` / `sys_ai_app_key_app_key` / `sys_ai_app_key_status` / `sys_ai_app_key_expire_datetime` | AI AppKey 本地校验 |
+| `fingerprint.global-verification` / `enable-client-verification` / `config-cache-timeout` | `false` / `false` / `3600` | 指纹校验 |
+
+**没有 `exclude-address` 这个配置项**：排除靠 `whitelist`（yaml 清单 / 外部文件 / 动态接口）实现，
+`block-address` 只决定过滤器拦哪些 URL。
+
+### 3.1 白名单优先级
+
+`getEffectiveWhitelist()` 的拼接顺序（后者不能删除前者）：
+
+1. `ALWAYS_WHITELIST`（**不可关闭**）：`/login`、`/**/login`、`/**/login/**`、`/**/doLogin`、
+   `/**/captcha`、`/**/users/loginCode`。关掉会让登录接口 403 自锁 —— 拿 token 本身需要 token。
+2. `DEFAULT_WHITELIST`（`use-default-whitelist: false` 可关）：`/doc.html`、`/actuator/**`、
+   `/v3/api-docs/**`、`/webjars/**`、`/**/logout`、`/v1/sys/setting` 等。
+3. yaml `plugin.oauth.whitelist`。
+4. 动态白名单：`POST /oauth/whitelist?pattern=...`、`DELETE /oauth/whitelist?pattern=...`
+   （两个接口都要求 `@Permission("admin")`），`GET /oauth/whitelist` 查当前生效清单。
+
+外部文件 `whitelist-file` 由 `WhitelistFileWatcher` 监听，改动后自动重载。
+
+## 四、快速开始
+
+**第一步**：引入依赖（见第二节）。
+
+**第二步**：指向认证服务端：
 
 ```yaml
 plugin:
   oauth:
-    # OAuth服务器地址
-    address: "http://oauth-server:8080"
-    # 认证协议类型
-    protocol: "http"
-    # 拦截地址模式
-    block-address:
-      - "/*"
-    # 排除地址模式
-    exclude-address:
-      - "/login"
-      - "/public/*"
-      - "/actuator/**"
-    # 缓存配置
-    cache-timeout: 3600
-    cache-hot-cold-backup: true
-    # 加密配置
-    encryption: "SM4"
+    enable: true
+    protocol: http          # tcp 为默认；http 基于 Unirest，同步实现
+    address: http://127.0.0.1:9090
+    oauth-url: /verify
+    whitelist:
+      - /api/public/**
 ```
 
-## 📋 详细功能说明
-
-### 1. Principal 支持
-
-#### 获取用户 Principal
+**第三步**：在业务侧用注解与注入的 `AuthService`：
 
 ```java
 @RestController
+@RequestMapping("/api/user")
 public class UserController {
 
-    @GetMapping("/profile")
-    public ResponseEntity<?> getUserProfile(Principal principal) {
-        if (principal instanceof OAuthPrincipal oauthPrincipal) {
-            return ResponseEntity.ok(Map.of(
-                "username", oauthPrincipal.getName(),
-                "userId", oauthPrincipal.getUserId(),
-                "realName", oauthPrincipal.getRealName(),
-                "roles", oauthPrincipal.getRoles(),
-                "permissions", oauthPrincipal.getPermissions(),
-                "tenantId", oauthPrincipal.getTenantId(),
-                "deptId", oauthPrincipal.getDeptId(),
-                "isAdmin", oauthPrincipal.isAdmin()
-            ));
-        }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    private final AuthService authService;   // OauthAuthService，@Primary
+
+    public UserController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @Permission(role = "ADMIN")
+    @GetMapping("/me")
+    public CurrentUser me() {
+        return authService.getCurrentUser();
     }
 }
 ```
 
-#### 权限检查
+## 五、运行示例
+
+### 5.1 调用示例
+
+运行期 API 为**步骤式**：`AuthClientExecute` 是单例、方法即调用，所有参数按签名传入；
+**本模块无链式 API**（没有 builder / fluent 构造器）。
+
+**取当前用户 + 权限判定**：
 
 ```java
-@Service
-public class UserService {
+// 控制器里直接注入 OAuthPrincipal（AuthFilter 包装请求后可用）
+@GetMapping("/who")
+public Map<String, Object> who(OAuthPrincipal principal) {
+    return Map.of(
+            "userId", principal.getUserId(),
+            "tenantId", principal.getTenantId(),
+            "admin", principal.isAdmin(),
+            "roles", principal.getRoles());
+}
 
-    public void updateUser(User user, Principal principal) {
-        if (principal instanceof OAuthPrincipal oauthPrincipal) {
-            // 检查单个角色
-            if (!oauthPrincipal.hasRole("ADMIN")) {
-                throw new AccessDeniedException("需要管理员权限");
-            }
+// 非 Controller 场景：从会话工具取
+String username = AuthSessionUtils.getUsername();
+String tenantId = AuthSessionUtils.getTenantId();
+```
 
-            // 检查多个角色（任意一个）
-            if (!oauthPrincipal.hasAnyRole("ADMIN", "USER_MANAGER")) {
-                throw new AccessDeniedException("权限不足");
-            }
+`OAuthPrincipal` 方法：`getName` / `getUserId` / `getRealName` / `getTenantId` / `getDeptId` /
+`getRoles` / `getPermissions` / `hasRole` / `hasAnyRole` / `hasPermission` / `hasAnyPermission` /
+`isAdmin`。
 
-            // 检查权限
-            if (!oauthPrincipal.hasPermission("USER_UPDATE")) {
-                throw new AccessDeniedException("缺少用户更新权限");
-            }
-        }
+**在线统计 / 踢人 / 升级 / 临时令牌**（`AuthClientExecute.INSTANCE`）：
 
-        userRepository.save(user);
+```java
+AuthClientExecute exec = AuthClientExecute.getInstance();
+
+Protocol.OnlineStatus status = exec.getOnlineStatus(uid);                 // 单用户在线状态
+Protocol.OnlineUserResult page = exec.getOnlineUsers(null, null, 1, 20);  // 分页在线列表
+boolean canLogin = exec.canLogin(uid);                                    // 单端/多端登录限制
+
+exec.kickUserSessions(userId);            // 踢掉该用户全部会话
+exec.kickOtherSessions(currentToken);     // 保留当前令牌，踢掉其它设备
+exec.logoutByToken(token);                // 指定令牌登出
+
+LoginResult refreshed = exec.upgrade(refreshToken, UpgradeType.REFRESH);  // REFRESH 返回新令牌
+LoginAuthResult temp = exec.createTemporaryToken(600, List.of("/api/report/**"));
+```
+
+`UpgradeType`：`VERSION`（只升级账号信息）/ `TIMESTAMP`（升级并重置时长）/ `REFRESH`（换新令牌）。
+`LogoutType` 决定 `uid` 语义（`LOGOUT` = 令牌、`KICK` = 用户 id、`KICK_OTHERS` = 当前令牌、
+`DISABLE`/`ENABLE` = 用户 id），传错不会报错但会命中错误的会话范围。
+
+**登录**（`LoginAuthResult`）：`getAccessToken(username, password, AuthType.WEB, ext)`、
+`thirdPartyLogin(account, credential, authType, ext)`、`smsLogin`、`emailLogin`；
+三方登录的用户映射由 `UserInfoService` 的 `@Spi` 实现提供（见 5.2）。
+
+**Servlet 增强**：`AuthFilter` 把请求包成 `OAuthHttpServletRequestWrapper`，
+可用标准 API `request.getUserPrincipal()` / `request.isUserInRole("ADMIN")` / `request.isAuthenticated()`。
+注意 `request.login(...)` **恒抛** `ServletException("OAuth客户端不支持直接用户名密码登录，请使用OAuth认证流程")`。
+
+### 5.2 SPI 扩展示例
+
+**新增一种认证协议**（例如内部 RPC 通道），按「实现 → 登记 → 生效」三步：
+
+**① 实现**：继承 `AbstractProtocol`（复用令牌编解码、错误处理、均衡逻辑），只覆写通信部分：
+
+```java
+@Spi("acme")
+public class AcmeProtocol extends AbstractProtocol {
+
+    public AcmeProtocol(AuthClientProperties properties) {
+        super(properties);
     }
+
+    // 覆写 AbstractProtocol 定义的握手 / 校验 / 升级等抽象方法，
+    // 不需要的方法显式抛 UnsupportedOperationException，不返回空值冒充成功
 }
 ```
 
-### 2. HttpServletRequest 增强
-
-#### 使用标准 Java EE API
-
-```java
-@RestController
-public class AuthController {
-
-    @GetMapping("/login-info")
-    public ResponseEntity<?> getUserInfo(HttpServletRequest request) {
-        // 获取认证类型
-        String authType = request.getAuthType(); // 返回: OAUTH_HTTP, OAUTH_STATIC等
-
-        // 获取远程用户
-        String remoteUser = request.getRemoteUser();
-
-        // 获取用户Principal
-        Principal principal = request.getUserPrincipal();
-
-        // 角色检查
-        boolean isAdmin = request.isUserInRole("ADMIN");
-        boolean isUser = request.isUserInRole("USER");
-
-        return ResponseEntity.ok(Map.of(
-            "authType", authType,
-            "remoteUser", remoteUser,
-            "isAdmin", isAdmin,
-            "isUser", isUser
-        ));
-    }
-
-    @PostMapping("/admin-only")
-    public ResponseEntity<?> adminOnlyAction(HttpServletRequest request) {
-        if (!request.isUserInRole("ADMIN")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body("需要管理员权限");
-        }
-
-        // 执行管理员操作
-        return ResponseEntity.ok("操作成功");
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
-        try {
-            request.logout(); // 清除Session中的用户信息
-            return ResponseEntity.ok("登出成功");
-        } catch (ServletException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("登出失败: " + e.getMessage());
-        }
-    }
-}
-```
-
-#### 使用增强功能
-
-```java
-@RestController
-public class EnhancedController {
-
-    @GetMapping("/enhanced-info")
-    public ResponseEntity<?> getEnhancedInfo(HttpServletRequest request) {
-        if (request instanceof OAuthHttpServletRequestWrapper oauthRequest) {
-            // 多角色检查
-            boolean hasAnyRole = oauthRequest.isUserInAnyRole("ADMIN", "USER", "GUEST");
-
-            // 权限检查
-            boolean hasPermission = oauthRequest.hasPermission("USER_READ");
-            boolean hasAnyPermission = oauthRequest.hasAnyPermission("USER_READ", "USER_WRITE");
-
-            // 用户详细信息
-            String userId = oauthRequest.getUserId();
-            String tenantId = oauthRequest.getTenantId();
-            String deptId = oauthRequest.getDeptId();
-            boolean isAdmin = oauthRequest.isAdmin();
-            boolean isAuthenticated = oauthRequest.isAuthenticated();
-
-            // 获取OAuth Principal
-            OAuthPrincipal oauthPrincipal = oauthRequest.getOAuthPrincipal();
-
-            return ResponseEntity.ok(Map.of(
-                "hasAnyRole", hasAnyRole,
-                "hasPermission", hasPermission,
-                "hasAnyPermission", hasAnyPermission,
-                "userId", userId,
-                "tenantId", tenantId,
-                "deptId", deptId,
-                "isAdmin", isAdmin,
-                "isAuthenticated", isAuthenticated,
-                "principal", oauthPrincipal
-            ));
-        }
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-}
-```
-
-### 3. 权限注解
-
-```java
-@RestController
-public class SecureController {
-
-    @GetMapping("/admin/users")
-    @RequiredRole("ADMIN")  // 需要管理员角色
-    public List<User> getUsers() {
-        return userService.findAll();
-    }
-
-    @PostMapping("/users")
-    @RequiredPermission("USER_CREATE")  // 需要用户创建权限
-    public User createUser(@RequestBody CreateUserRequest request) {
-        return userService.create(request);
-    }
-
-    @DeleteMapping("/users/{id}")
-    @RequiredAnyRole({"ADMIN", "USER_MANAGER"})  // 需要任意一个角色
-    public void deleteUser(@PathVariable Long id) {
-        userService.delete(id);
-    }
-}
-```
-
-### 3.1 @Permission 注解（接口权限 / 按钮权限 / 只读角色）——推荐
-
-#### 🎯 场景与用途
-
-- **接口权限**：标注在 Controller/Service 方法或类上，要求用户持有指定权限码或角色才能访问（方法级、类级均可）。
-- **按钮权限**：按钮与接口共用同一套权限码——前端按权限码控制按钮显隐，后端在接口上用 `@Permission` 拦截兜底，防止绕过前端直接调用。
-- **只读角色**：账号授予 `READ_ONLY` 角色后，写操作（POST/PUT/DELETE/PATCH）一律拒绝，**优先于所有权限（含超级管理员）**。
-
-#### 📦 注解属性
-
-| 属性 | 类型 | 说明 | 示例 |
-|---|---|---|---|
-| `value` / `permission`（互为别名） | `String[]` | 权限标识列表，用户拥有**任一**即满足 | `@Permission("user:delete")` |
-| `role` | `String[]` | 角色标识列表，用户拥有**任一**即满足 | `@Permission(role = "ADMIN")` |
-
-匹配语义：权限码或角色**任一命中即放行**；两者都不满足则拒绝（抛 `OauthException`，由应用层 `OauthExceptionAdvice` 映射为 403）。
-
-#### 🧩 使用示例
-
-```java
-// 接口权限：需要 user:delete 权限码
-@PostMapping("/user/delete")
-@Permission("user:delete")
-public Result<Void> deleteUser(@RequestBody DeleteRequest request) {
-    return userService.delete(request);
-}
-
-// 按钮权限：按钮绑定同一权限码（前端控制显隐，后端拦截兜底）
-// 前端：hasPermission('user:add') 为 true 才渲染"新增用户"按钮
-@PostMapping("/user/add")
-@Permission("user:add")
-public Result<Void> addUser(@RequestBody User user) {
-    return userService.create(user);
-}
-
-// 角色权限：ADMIN 或 USER_MANAGER 任一角色放行
-@GetMapping("/user/export")
-@Permission(role = {"ADMIN", "USER_MANAGER"})
-public Result<Void> exportUsers() { ... }
-
-// 类级注解：整个 Controller 统一权限（@Target 支持 TYPE）
-@RestController
-@RequestMapping("/api/order")
-@Permission("order:manage")
-public class OrderController { ... }
-```
-
-#### 🔒 只读账号（readonly 字段 + READ_ONLY 角色）
-
-账号只读由两种来源任一触发（**均来自 OAuth 服务端数据库查询，非配置文件**）：
-
-| 来源 | 说明 |
-|---|---|
-| 账号级 `readonly` 字段（推荐） | OAuth 服务端用户表增加只读字段（如 `user_readonly`），认证/用户信息接口在 `UserResume` 返回 `readonly: true/false`；客户端经 `userInfo.isReadonly()` 判断 |
-| `READ_ONLY` 角色（兼容兜底） | 账号角色含 `READ_ONLY` 时同样生效（角色数据同样来自服务端数据库） |
-
-命中只读后：
-
-| 请求方法 | 行为 |
-|---|---|
-| GET / HEAD / OPTIONS | 正常放行（只读操作） |
-| POST / PUT / DELETE / PATCH | 一律拒绝（403），即使持有对应权限码甚至为超级管理员 |
-
-适用于：只读报表账号、审计账号、只读第三方对接账号等场景。校验发生在 `PermissionInterceptor` 权限判断**之前**，因此优先级最高；无 HTTP 请求上下文（非 Web 调用）时不阻断。
-
-> 🗄️ **服务端返回契约**：用户表需含只读字段（建议 `user_readonly` TINYINT/boolean），登录/用户信息接口在返回的 `UserResume` 中输出 `readonly`；`UserResume` 其余用户数据（角色、权限码、部门、数据权限等）同样全部来自服务端数据库查询，客户端不通过配置文件承载任何业务数据。
->
-> 🖥️ **前端同步契约**（`readonly` 字段前后端联调约定）：
-> - **字段**：`readonly`，`boolean`，`true`=只读账号；由用户信息接口从 `UserResume` 返回（JSON 示例：`"userInfo": { "userId": "...", "username": "...", "readonly": true }`）。
-> - **账号管理页**：创建/编辑账号表单增加"是否只读"开关（对应服务端 `user_readonly` 字段）；用户列表/详情展示只读状态标识。
-> - **操作按钮**：当前用户 `readonly=true` 时前端**同步禁用写操作按钮**（新增/编辑/删除/导入等），仅保留查询/导出——与后端 `PermissionInterceptor` 拦截一致（前端提示"只读账号不允许写操作"）。
-> - **登录态响应**：若应用自建用户信息接口（如 ai-starter 的 `UserAuthController` 手工组装 map），需在返回体中补 `readonly` 字段（取 `userResume.isReadonly()`）。
-
-#### 📖 怎么用（接入步骤）
-
-1. 引入 `spring-support-oauth-client-starter` + `spring-support-common-starter`；
-2. 用户信息（`UserResume`）经认证后存入 Session，其中 `permission` 为权限码集合、`roles` 为角色集合、`readonly` 为服务端返回的只读标记；
-3. 在方法/类上标注 `@Permission`（权限码或角色，任一命中放行）；
-4. 本地联调模式（无远程 OAuth 服务）下无用户上下文时自动注入本地 admin 放行；生产环境须接入真实 OAuth 认证。
-
-> ⚠️ **注意事项**：权限码/角色为"任一命中"（OR）语义；按钮权限码与接口权限码必须一致；`READ_ONLY` 为兼容兜底的角色名（`PermissionInterceptor.READ_ONLY_ROLE`），新接入建议使用账号级 `readonly` 字段。
-
-### 4. 过滤器和拦截器
-
-#### 自定义安全过滤器
-
-```java
-@Component
-public class CustomSecurityFilter implements Filter {
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response,
-                        FilterChain chain) throws IOException, ServletException {
-
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-
-        // 检查用户是否已认证
-        Principal principal = httpRequest.getUserPrincipal();
-        if (principal == null) {
-            ((HttpServletResponse) response).sendRedirect("/login");
-            return;
-        }
-
-        // 检查特定路径的权限
-        String requestURI = httpRequest.getRequestURI();
-        if (requestURI.startsWith("/admin/") && !httpRequest.isUserInRole("ADMIN")) {
-            ((HttpServletResponse) response).sendError(HttpStatus.FORBIDDEN.value());
-            return;
-        }
-
-        chain.doFilter(request, response);
-    }
-}
-```
-
-#### 权限拦截器
-
-```java
-@Component
-public class AuthInterceptor implements HandlerInterceptor {
-
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-                           Object handler) throws Exception {
-
-        Principal principal = request.getUserPrincipal();
-        if (principal instanceof OAuthPrincipal oauthPrincipal) {
-
-            // 管理员可以访问所有资源
-            if (oauthPrincipal.isAdmin()) {
-                return true;
-            }
-
-            // 检查特定权限
-            if (request.getRequestURI().startsWith("/api/users/") &&
-                !oauthPrincipal.hasPermission("USER_MANAGE")) {
-                response.sendError(HttpStatus.FORBIDDEN.value(), "权限不足");
-                return false;
-            }
-        }
-
-        return true;
-    }
-}
-```
-
-### 5. 登录单端/多端控制（在线数量限制）
-
-查询用户在线状态，判断当前为单端（SINGLE）还是多端（MULTIPLE）模式：
-
-```java
-AuthClientExecute client = AuthClientExecute.getInstance();
-
-// 获取指定用户在线状态（单端/多端、当前在线数、最大在线数）
-Protocol.OnlineStatus status = client.getOnlineStatus("userId");
-boolean multiple = status.isMultipleMode();   // 是否多端模式
-boolean canLogin = status.canLogin();         // 是否还可继续登录
-
-// 分页查询在线用户
-Protocol.OnlineUserResult onlineUsers = client.getOnlineUsers(null, null, 1, 100);
-```
-
-> **在线数量限制由认证服务器（sso）强制**：登录时校验 `maxOnlineCount`（默认 3），
-> 达到上限返回「已达到最大在线设备数量限制」；Http/Armeria 协议返回真实在线状态，
-> static/OAuth2 协议无状态部署时返回默认多端模式（不强制限制）。
-
-### 6. Refresh 多种升级模式
-
-`UpgradeType` 支持三种模式：
-
-```java
-AuthClientExecute client = AuthClientExecute.getInstance();
-
-// VERSION：升级账号信息（刷新用户信息）
-client.upgrade("access-token", UpgradeType.VERSION);
-
-// TIMESTAMP：升级账号信息并重置时长（续期）
-client.upgrade("access-token", UpgradeType.TIMESTAMP);
-
-// REFRESH：使用 refresh token 换发新 token
-client.upgrade("refresh-token", UpgradeType.REFRESH);
-```
-
-对应 HTTP 接口：`POST /v2/user/upgrade`（VERSION/TIMESTAMP，通过 `x-oauth-upgrade-type` 头指定）、
-`POST /v2/user/refresh-token`（REFRESH）。
-
-### 7. AppKey 认证模式
-
-基于 `appId` / `appSecret` 的客户端认证，无需用户密码：
-
-```java
-AppKeySecret appKeySecret = new AppKeySecret()
-        .setAppId("APP-1001")
-        .setAppSecret("secret")
-        .setUserCode("U-100");               // 缓存键优先使用 userCode
-// 可选自定义请求体（兼容服务端两种 body 形式）
-appKeySecret.setBody("{\"appKey\":\"xxx\",\"appSecret\":\"yyy\"}");
-
-AuthenticationInformation info = protocol.authentication(appKeySecret);
-```
-
-> Http/Armeria/RSocket 协议支持 AppKey 认证；static 协议不支持（降级返回 403）。
-
-### 8. 临时令牌（含 Refresh 换临时令牌）
-
-创建短期有效的临时令牌，可限定过期时间与允许访问的 URL：
-
-```java
-AuthClientExecute client = AuthClientExecute.getInstance();
-
-// 基于当前登录用户创建临时令牌（默认 10 秒过期）
-client.createTemporaryToken();
-
-// 基于任意有效源令牌创建
-client.createTemporaryTokenByToken("source-token", 60, List.of("/api/upload", "/api/download"));
-
-// 用 refresh token 换取临时令牌（access token 过期时的临时授权场景）
-client.createTemporaryTokenByRefreshToken("refresh-token", 60, List.of("/api/file/*"));
-```
-
-> 过期时间范围 1~3600 秒；Http/Armeria/RSocket 协议实现，OAuth2/static 协议返回 501。
-
-## ⚙️ 高级配置
-
-### 完整配置示例
-```yaml
-plugin:
-  oauth:
-    # OAuth服务器配置
-    address: "http://oauth-server:8080"
-    protocol: "http" # http, websocket, static
-
-    # 路径配置
-    block-address:
-      - "/*"
-    exclude-address:
-      - "/login"
-      - "/register"
-      - "/public/**"
-      - "/actuator/**"
-      - "/swagger-ui/**"
-      - "/v3/api-docs/**"
-
-    # 缓存配置
-    cache-timeout: 3600 # 缓存超时时间（秒）
-    cache-hot-cold-backup: true # 启用热冷备份
-
-    # 安全配置
-    encryption: "SM4" # 加密算法
-
-    # 临时提供者配置
-    temp:
-      open: true
-
-    # 会话配置
-    session:
-      timeout: 1800 # 会话超时时间（秒）
-
-    # 权限配置
-    permission:
-      enable: true
-      default-role: "USER"
-```
-
-### 多环境配置
-
-```yaml
-# 开发环境
-spring:
-  profiles:
-    active: dev
-
----
-spring:
-  profiles: dev
-plugin:
-  oauth:
-    address: "http://localhost:8080"
-    cache-timeout: 300
-
----
-spring:
-  profiles: prod
-plugin:
-  oauth:
-    address: "https://oauth.example.com"
-    cache-timeout: 3600
-    encryption: "AES"
-```
-
-## 🔧 自定义扩展
-
-### 自定义认证处理
-
-```java
-@Component
-public class CustomAuthService implements AuthService {
-
-    @Override
-    public String getCurrentUserId() {
-        // 自定义用户ID获取逻辑
-        return "custom-login-id";
-    }
-
-    @Override
-    public String getCurrentUsername() {
-        // 自定义用户名获取逻辑
-        return "custom-username";
-    }
-
-    // 实现其他方法...
-}
-```
-
-### 自定义权限验证
-
-```java
-@Component
-public class CustomPermissionEvaluator {
-
-    public boolean hasPermission(Principal principal, String permission) {
-        if (principal instanceof OAuthPrincipal oauthPrincipal) {
-            // 自定义权限验证逻辑
-            return customPermissionCheck(oauthPrincipal, permission);
-        }
-        return false;
-    }
-}
-```
-
-## 🔄 OAuth 认证流程图
-
-```mermaid
-sequenceDiagram
-    participant User as 用户/浏览器
-    participant Web as Web层<br/>(Controller/Filter)
-    participant Filter as AuthFilter<br/>(认证过滤器)
-    participant Cache as Cache<br/>(本地缓存)
-    participant Session as Session<br/>(会话存储)
-    participant Protocol as ProtocolExecutor<br/>(协议执行器)
-    participant Server as OAuth服务端
-    participant Principal as OAuthPrincipal<br/>(Principal对象)
-
-    User->>Web: 1. 发起HTTP请求
-    Web->>Filter: 2. 请求被AuthFilter拦截
-    
-    alt 请求在排除列表中
-        Filter->>Web: 直接放行
-        Web->>User: 返回响应
-    else 需要认证
-        Filter->>Session: 3. 检查Session中是否有Token
-        alt Session中有Token
-            Session-->>Filter: 返回Token和UserResume
-            Filter->>Cache: 4. 检查缓存中是否有用户信息
-            alt 缓存命中
-                Cache-->>Filter: 返回缓存的UserResume
-                Filter->>Principal: 5. 创建OAuthPrincipal
-                Principal-->>Filter: 返回Principal对象
-                Filter->>Web: 6. 设置Principal到Request
-                Web->>User: 7. 返回响应
-            else 缓存未命中
-                Filter->>Protocol: 8. 调用ProtocolExecutor验证Token
-                Protocol->>Server: 9. 发送认证请求<br/>(Header: x-oauth-type, x-oauth-token)
-                Server-->>Protocol: 10. 返回UserResume
-                Protocol-->>Filter: 返回用户信息
-                Filter->>Cache: 11. 缓存用户信息
-                Filter->>Session: 12. 更新Session
-                Filter->>Principal: 13. 创建OAuthPrincipal
-                Principal-->>Filter: 返回Principal对象
-                Filter->>Web: 14. 设置Principal到Request
-                Web->>User: 15. 返回响应
-            end
-        else Session中没有Token
-            Filter->>Protocol: 16. 检查请求头中的Token
-            alt 请求头中有Token
-                Protocol->>Server: 17. 发送认证请求验证Token
-                alt Token有效
-                    Server-->>Protocol: 返回UserResume
-                    Protocol-->>Filter: 返回用户信息
-                    Filter->>Session: 18. 保存Token和UserResume到Session
-                    Filter->>Cache: 19. 缓存用户信息
-                    Filter->>Principal: 20. 创建OAuthPrincipal
-                    Principal-->>Filter: 返回Principal对象
-                    Filter->>Web: 21. 设置Principal到Request
-                    Web->>User: 22. 返回响应
-                else Token无效
-                    Server-->>Protocol: 返回认证失败
-                    Protocol-->>Filter: 认证失败
-                    Filter->>Web: 23. 返回401未授权
-                    Web->>User: 返回401错误
-                end
-            else 请求头中没有Token
-                Filter->>Web: 24. 返回401未授权
-                Web->>User: 返回401错误
-            end
-        end
-    end
-
-    Note over User,Principal: 认证成功后，用户可以通过<br/>request.getUserPrincipal()<br/>获取OAuthPrincipal对象
-```
-
-## 📝 注意事项
-
-1. **登录方法限制**：OAuth 客户端不支持直接的用户名密码登录，`request.login()`方法会抛出`ServletException`
-2. **登出行为**：`request.logout()`方法会清除 Session 中的用户信息，但不会完全销毁 Session
-3. **线程安全**：Principal 和用户信息存储在 Session 中，在多线程环境下是安全的
-4. **性能考虑**：用户信息会缓存在 Session 中，避免频繁的远程调用
-5. **兼容性**：完全兼容 Java EE/Jakarta EE 的安全 API 标准
-
-## 🐛 故障排除
-
-### 常见问题
-
-1. **Principal 为 null**
-
-   - 检查用户是否已通过 OAuth 认证
-   - 确认请求路径不在排除列表中
-   - 验证 OAuth 服务器配置是否正确
-
-2. **isUserInRole 返回 false**
-
-   - 确认用户确实具有该角色
-   - 检查角色名称是否正确（区分大小写）
-   - 验证 OAuth 服务器返回的角色信息
-
-3. **logout 不生效**
-   - 检查 Session 是否存在
-   - 确认没有其他组件重新设置用户信息
-
-### 调试建议
-
-启用调试日志：
-
-```yaml
-logging:
-  level:
-    com.chua.starter.oauth.client: DEBUG
-```
-
-这将输出详细的认证和 Principal 创建过程日志。
+**② 登记**：`com.chua.common.support.spi` 有三个解析器，任选其一：
+
+- **同包扫描**（本模块自带协议就是这样发现的）：实现类与 `Protocol` 接口在
+  `...support.protocol` 包（或子包）内，`@Spi` 即完成登记，**不需要**任何文件。
+- **`META-INF/extensions/<接口全限定名>`**：写入实现类全名，一行一个
+  （`spring-support-aliyun-starter` / `-tencent-starter` 用这种方式登记 `UserInfoService`）。
+- **`META-INF/services/<接口全限定名>`**：标准 `ServiceLoader` 格式。
+
+**③ 生效**：`plugin.oauth.protocol=acme`，`AuthFilter` 通过
+`ServiceProvider.of(Protocol.class).getNewExtension(protocol, properties)` 取实例；
+扩展名匹配**不区分大小写**，可用 `ServiceProvider.of(Protocol.class).names()` 打印已注册协议。
+协议实例按「协议名 + 配置摘要」在进程内缓存（`WebRequest.getProtocolExtension`）。
+
+**新增一种第三方登录**：实现 `com.chua.starter.oauth.client.support.user.UserInfoService`
+（`checkLogin(principal, credential, address, ext)` / `upgrade(UserResult)`），
+用 `@Spi("<登录类型>")` 标注并登记到 `META-INF/extensions/...UserInfoService`；
+`thirdPartyLogin(..., AuthType, ext)` 会按登录类型找到它。
+
+## 六、与其它 starter 的关系
+
+- **`spring-support-common-starter`（必需）**：`AuthService` 接口、`@Permission` 注解、
+  `ServiceInfoContributor` 都在这里；本模块的 `OauthAuthService` 只是 `@Primary` 实现。
+- **`spring-support-cache-starter`（必需）**：认证信息缓存（`cache-timeout`、冷热备份）。
+- **`spring-support-swagger-starter` / `-mybatis-starter`（必需）**：接口文档与分页模型。
+- **`utils-support-common-starter`（间接必需）**：`@Spi` 与 `ServiceProvider` 注册表。
+- **被谁用**：`spring-support-aliyun-starter` / `-tencent-starter` 通过
+  `UserInfoService` + `META-INF/extensions` 把支付宝 / 微信小程序登录接进来；
+  `spring-support-device-starter` 只用 `@TokenForIgnore` 声明 webhook 免登录态；
+  `spring-support-message-starter` 用它做接口权限注解。
+- **服务端**：不在本仓库，`AuthClientConfiguration` 在检测到
+  `com.chua.starter.oauth.server.support.SsoServer` 时会**跳过**过滤器装配
+  （`@ConditionalOnMissingClass`），服务端自己处理鉴权。
+
+## 七、已知限制
+
+1. **只有 `@Permission` 一个权限注解**：`@RequiredRole` / `@RequiredPermission` / `@RequiredAnyRole`
+   从未存在，历史文档里的示例不可编译。
+2. **没有 `protocol: websocket`**：只有 `tcp` / `http` / `oauth2` / `rsocket` / `static`；
+   `static` 的实现类标注是 `@Spi("Static")`（匹配不区分大小写，但日志里显示为 `Static`）。
+3. **`local-admin-fallback` 等于关掉鉴权**：`true` 时取不到用户上下文按本地 admin 放行，
+   只应出现在没有认证服务端的本地联调；默认 `false`，取不到就拒绝。
+4. **`temp.user` 默认空**：不配置就没有可用的静态账号，登录会被明确拒绝；
+   早期版本内置的 `admin:admin@123!456` 已删除。`temp.open` 不显式为 `true` 时连
+   `UserStatisticProvider` 都不会装配。
+5. **`block-address` 与 `whitelist` 是两套东西**：前者是过滤器拦截范围（默认 `/*`），
+   后者是放行清单；写成 `exclude-address` 不生效，因为不存在该字段。
+6. **登录链路白名单不可关闭**：`ALWAYS_WHITELIST` 的 6 条规则无视任何配置，这是防自锁设计，
+   不是可选项。
+7. **`request.login()` 不可用**：恒抛 `ServletException`，用户名密码登录必须走
+   `AuthClientExecute#getAccessToken` 或 `/v1/users/login`。
+8. **`/v1/users/**` 与 `/login/form` 由本模块提供**：`UserStatisticProvider` 挂在
+   `/v1/users`（`POST /login`、`POST /grid`、`DELETE /logout`、`GET /menus/my/**`），
+   与宿主已有的同名控制器会冲突（`ConflictingBeanDefinitionException`），需自行改名或排除。
+9. **限流默认关闭**：`rate-limit.enable=false`，且 `login` / `api` 子开关默认 `true` ——
+   只打开总开关就会立刻生效（200 QPS + 登录 30 次/60 秒 + 失败 5 次锁 5 分钟）。
+10. **认证信息有缓存延迟**：`cache-timeout` 默认 6 小时，权限变更 / 踢人在缓存窗口内可能不立即生效。
+11. **`AuthSessionUtils` 依赖请求上下文**：非 Web 线程（异步任务、定时任务）取不到
+    `RequestContextHolder`，会返回空值而不是抛异常，调用方必须自己判空。
+12. **AI AppKey 需要数据源**：`ai-app-key.enabled=true` 且容器中有 `DataSource` 才装配
+    `AiAppKeySupport`，否则该开关静默无效。

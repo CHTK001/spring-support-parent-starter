@@ -54,8 +54,8 @@ public class TunnelProviderRegistry {
                     key, provider.getClass().getSimpleName(), provider.isAvailable());
         }
         if (providers.isEmpty()) {
-            log.warn("[Tunnel] 未发现任何 TunnelProvider 实现：请引入 spring-support-ngrok-starter "
-                    + "或 spring-support-cloudflared-starter");
+            log.warn("[Tunnel] 未发现任何 TunnelProvider 实现：请引入 spring-support-tunnel-ngrok-starter "
+                    + "或 spring-support-tunnel-cloudflared-starter");
         }
     }
 

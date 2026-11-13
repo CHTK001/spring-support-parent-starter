@@ -9,6 +9,7 @@ export * from './template';
 export { default as AccountMessageTemplateSelect } from './template/components/MessageTemplateSelect.vue';
 
 export { default as AccountAssetsPage } from './account/views/ScAccountAssets.vue';
+export { default as SecretAssetsPage } from './account/views/ScSecretAssets.vue';
 export { default as AccountFormDialog } from './account/components/AccountFormDialog.vue';
 export { default as AccountAppKeyDialog } from './account/views/components/AppKeyDialog.vue';
 export { default as AccountCookieDialog } from './account/views/components/CookieDialog.vue';

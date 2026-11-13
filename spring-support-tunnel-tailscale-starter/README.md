@@ -1,4 +1,4 @@
-# spring-support-tailscale-starter
+# spring-support-tunnel-tailscale-starter
 
 Spring Boot 集成 [Tailscale](https://tailscale.com) Funnel，把本机服务暴露到公网 Tailnet。Tailscale 不提供可内嵌的 Java SDK，本模块基于官方 `tailscale` 命令行客户端，通过 `funnel` 子进程建立隧道。
 
@@ -22,7 +22,7 @@ Spring Boot 集成 [Tailscale](https://tailscale.com) Funnel，把本机服务�
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
-    <artifactId>spring-support-tailscale-starter</artifactId>
+    <artifactId>spring-support-tunnel-tailscale-starter</artifactId>
     <version>4.0.0.51</version>
 </dependency>
 ```
@@ -207,7 +207,7 @@ plugin:
 ## 7. 与 utils-support-tailscale-starter 的关系
 
 - `utils-support-tailscale-starter` — **通用层**（`TailscaleTool` CLI 定位 + `TailscaleTunnelClient` 链式调启，零 Spring 依赖）
-- `spring-support-tailscale-starter` — **Spring Boot 集成层**（依赖前者，封装自动配置 + `TunnelProvider` 实现）
+- `spring-support-tunnel-tailscale-starter` — **Spring Boot 集成层**（依赖前者，封装自动配置 + `TunnelProvider` 实现）
 
 如需在非 Spring 环境直接调用 Tailscale CLI，直接引入 utils-support-tailscale-starter 即可。
 
@@ -215,7 +215,7 @@ plugin:
 
 ## 8. 版本对应
 
-| Tailscale CLI | spring-support-tailscale-starter | utils-support-tailscale-starter |
+| Tailscale CLI | spring-support-tunnel-tailscale-starter | utils-support-tailscale-starter |
 |:-------------:|:--------------------------------:|:------------------------------:|
 | 1.102.4       | 4.0.0.51                         | 4.0.0.50                       |
 

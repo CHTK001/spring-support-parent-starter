@@ -48,6 +48,14 @@ public class TunnelProperties {
     private List<String> providers = new ArrayList<>();
 
     /**
+     * 本实例的控制地址（{@code http://host:port}），用作隧道记录的所有权标记。
+     *
+     * <p>多实例共享同一映射目录时，启动/停止会依据该地址互相识别与接管；
+     * 缺省按 {@code http://127.0.0.1:{server.port}} 自动推导，一般无需配置。</p>
+     */
+    private String instanceUrl;
+
+    /**
      * 是否在应用启动时恢复 {@code autoStart=true} 的映射。
      */
     private boolean restoreOnStartup = true;

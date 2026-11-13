@@ -101,7 +101,7 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 plugin:
-  # 内网穿透：两种实现共用「一份配置文件一条映射」的本地持久化目录，不写数据库。
+  # 内网穿透：三种实现共用「一份配置文件一条映射」的本地持久化目录，不写数据库。
   # 启动方式有两种，互不冲突：
   #   1. properties 启动：auto-start=true 时应用就绪后自动拉起映射；
   #   2. 页面实时启停：监控页「内网穿透」发起 /ms/tunnel/** 调用（默认走这种）。
@@ -116,6 +116,12 @@ plugin:
     auto-start: false
     # 每条映射一个 JSON 文件；不配时默认 ~/.chua/tunnel/cloudflared
     # store-dir: ${user.home}/.chua/tunnel/cloudflared
+  tailscale:
+    enable: true
+    auto-start: false
+    # 设备需先加入 Tailnet（tailscale up 或 plugin.tailscale.auth-key）；auth-key 留空时用本机已登录状态。
+    # 每条映射一个 JSON 文件；不配时默认 ~/.chua/tunnel/tailscale
+    # store-dir: ${user.home}/.chua/tunnel/tailscale
   api:
     request-decode:
       enable: false

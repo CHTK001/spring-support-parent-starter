@@ -302,6 +302,8 @@ export interface SysAccountSecret {
   name?: string;
   /** 用途 / 厂商：aliyun / tencent / huawei / custom */
   provider?: string | null;
+  /** 密钥类型：sms / mail / storage / payment / api / other */
+  secretType?: string | null;
   /** AccessKeyId（可明文查询） */
   accessKey?: string | null;
   /** AccessKeySecret（落库密文，接口不回显） */
@@ -320,10 +322,10 @@ export interface SysAccountSecret {
 const SK = `${B}/secrets`;
 
 /** 密钥列表 */
-export const listAccountSecrets = (query?: { provider?: string; keyword?: string }) =>
+export const listAccountSecrets = (query?: { provider?: string; secretType?: string; keyword?: string }) =>
   http()
     .get(SK)
-    .query({ provider: query?.provider, keyword: query?.keyword })
+    .query({ provider: query?.provider, secretType: query?.secretType, keyword: query?.keyword })
     .then(r => unwrap<SysAccountSecret[]>(r));
 
 /** 密钥详情（不含明文） */

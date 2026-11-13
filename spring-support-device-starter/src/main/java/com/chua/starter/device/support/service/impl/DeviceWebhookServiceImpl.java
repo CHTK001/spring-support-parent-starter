@@ -23,6 +23,7 @@ import com.chua.starter.device.support.model.AppKeyCreateRequest;
 import com.chua.starter.device.support.model.AppKeyView;
 import com.chua.starter.device.support.model.WebhookPushResult;
 import com.chua.starter.device.support.service.DeviceWebhookService;
+import com.chua.starter.device.support.timeseries.DeviceSeriesRecorder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -86,6 +87,8 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     private final DeviceAttendanceRecordMapper attendanceMapper;
     /** 生命周期回调发布器 */
     private final DeviceLifecyclePublisher lifecyclePublisher;
+    /** 时序写入器（门禁/过车推送同时进时序存储） */
+    private final DeviceSeriesRecorder seriesRecorder;
 
     /** 安全随机数（生成 secret） */
     private final SecureRandom random = new SecureRandom();
@@ -206,6 +209,9 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 entity.setDeviceAccessRecordPhotoUrl(item.getPhotoUrl());
                 entity.setDeviceAccessRecordOccurredAt(parseTime(item.getOccurredAt()));
                 accessRecordMapper.insert(entity);
+                seriesRecorder.recordAccess(item.getDeviceId(), item.getDoorId(), item.getCardNo(),
+                        item.getUserName(), item.getEventType(), item.getDirection(), item.getPhotoUrl(),
+                        entity.getDeviceAccessRecordOccurredAt());
                 saveReceipt(source, externalId, TOPIC_ACCESS);
                 result.setCreated(result.getCreated() + 1);
             } catch (Exception ex) {
@@ -286,6 +292,9 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 entity.setDeviceVehiclePassVehicleType(item.getVehicleType());
                 entity.setDeviceVehiclePassCreatedAt(LocalDateTime.now());
                 vehiclePassMapper.insert(entity);
+                seriesRecorder.recordVehiclePass(item.getDeviceId(), item.getGateId(), item.getPlateNo(),
+                        item.getDirection(), item.getVehicleType(), item.getPhotoUrl(),
+                        entity.getDeviceVehiclePassTime());
                 saveReceipt(source, externalId, TOPIC_VEHICLE);
                 result.setCreated(result.getCreated() + 1);
             } catch (Exception ex) {

@@ -1,5 +1,6 @@
 package com.chua.starter.account.manage.controller;
 
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.account.common.ApiResult;
 import com.chua.starter.account.manage.service.SysAccountSecretService;
 import com.chua.starter.account.manage.store.SysAccountSecret;
@@ -47,14 +48,19 @@ public class AccountSecretController {
     /**
      * 密钥列表。
      *
-     * @param provider 厂商 / 用途过滤（可空）
-     * @param keyword  名称 / AccessKey 模糊词（可空）
+     * @param provider   厂商过滤（可空）
+     * @param secretType 密钥类型过滤（可空）
+     * @param keyword    名称 / AccessKey 模糊词（可空）
      * @return 密钥列表
      */
     @GetMapping
     public ApiResult<List<SysAccountSecret>> list(
             @RequestParam(value = "provider", required = false) String provider,
+            @RequestParam(value = "secretType", required = false) String secretType,
             @RequestParam(value = "keyword", required = false) String keyword) {
+        if (StringUtils.isNotBlank(secretType)) {
+            return ApiResult.ok(secretService.listByType(secretType));
+        }
         return ApiResult.ok(secretService.list(provider, keyword));
     }
 

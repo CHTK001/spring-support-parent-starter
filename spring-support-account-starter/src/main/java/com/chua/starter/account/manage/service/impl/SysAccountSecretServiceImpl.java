@@ -68,6 +68,22 @@ public class SysAccountSecretServiceImpl implements SysAccountSecretService {
      * {@inheritDoc}
      */
     @Override
+    public List<SysAccountSecret> listByType(String secretType) {
+        LambdaQueryWrapper<SysAccountSecret> wrapper = Wrappers.lambdaQuery();
+        if (StringUtils.isNotBlank(secretType)) {
+            wrapper.eq(SysAccountSecret::getSecretType, secretType.trim());
+        }
+        applyOwnership(wrapper);
+        wrapper.orderByDesc(SysAccountSecret::getUpdatedAt).orderByDesc(SysAccountSecret::getCreatedAt);
+        List<SysAccountSecret> secrets = secretMapper.selectList(wrapper);
+        secrets.forEach(this::mask);
+        return secrets;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public SysAccountSecret get(String secretId) {
         SysAccountSecret secret = requireSecret(secretId);
         assertVisible(secret);
@@ -88,6 +104,7 @@ public class SysAccountSecretServiceImpl implements SysAccountSecretService {
         secret.setSecretId(UUID.randomUUID().toString().replace("-", ""));
         secret.setName(requireText(input.getName(), "密钥名称"));
         secret.setProvider(trimToNull(input.getProvider()));
+        secret.setSecretType(trimToNull(input.getSecretType()));
         secret.setAccessKey(trimToNull(input.getAccessKey()));
         secret.setSecret(secretCodec.encrypt(trimToNull(input.getSecret())));
         secret.setRegion(trimToNull(input.getRegion()));
@@ -117,6 +134,7 @@ public class SysAccountSecretServiceImpl implements SysAccountSecretService {
         assertWritable(existing);
         existing.setName(requireText(input.getName(), "密钥名称"));
         existing.setProvider(trimToNull(input.getProvider()));
+        existing.setSecretType(trimToNull(input.getSecretType()));
         existing.setAccessKey(trimToNull(input.getAccessKey()));
         existing.setRegion(trimToNull(input.getRegion()));
         existing.setEndpoint(trimToNull(input.getEndpoint()));
