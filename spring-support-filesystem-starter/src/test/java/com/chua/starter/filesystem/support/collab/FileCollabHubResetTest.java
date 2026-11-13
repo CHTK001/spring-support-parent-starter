@@ -56,6 +56,7 @@ class FileCollabHubResetTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 未装载的房间也要删掉落盘文件(@TempDir Path dir) throws Exception {
         FileCollabHub writer = new FileCollabHub(dir);
         seedRoom(writer, "doc-not-loaded");
@@ -71,6 +72,7 @@ class FileCollabHubResetTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 已装载房间reset后文件消失且状态清零(@TempDir Path dir) throws Exception {
         FileCollabHub hub = new FileCollabHub(dir);
         seedRoom(hub, "doc-loaded");
@@ -88,6 +90,7 @@ class FileCollabHubResetTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void reset只影响目标房间(@TempDir Path dir) throws Exception {
         FileCollabHub hub = new FileCollabHub(dir);
         seedRoom(hub, "doc-keep");
@@ -102,6 +105,7 @@ class FileCollabHubResetTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 重复reset不抛错且保持文件缺失(@TempDir Path dir) throws Exception {
         FileCollabHub hub = new FileCollabHub(dir);
         seedRoom(hub, "doc-twice");

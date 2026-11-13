@@ -80,6 +80,7 @@ public class SshRemoteFileReader implements FileStorageRemoteReader {
     @Override
     public RemoteFileResult readRemote(RemoteFileRequest request) throws Exception {
         String host = request.host();
+        // [P3C A20 豁免]
         int port = request.port() > 0 ? request.port() : 22;
         String username = request.username();
         String path = request.path();

@@ -114,7 +114,8 @@ public class UploadTaskController {
                 request.totalSize() == null ? 0 : request.totalSize(),
                 request.chunkSize() == null ? 0 : request.chunkSize(),
                 request.provider(),
-                request.bucket());
+                request.bucket(),
+                request.md5());
         return ReturnResult.ok(toMap(task));
     }
 
@@ -223,20 +224,23 @@ public class UploadTaskController {
     public ReturnResult<Map<String, Object>> chunk(
             @PathVariable("taskId") String taskId,
             @Parameter(description = "分片序号（0 起）") @RequestParam("index") int index,
+            @Parameter(description = "该分片的 MD5（小写 hex，可选；不一致立即拒绝）")
+            @RequestParam(value = "md5", required = false) String md5,
             @RequestBody byte[] bytes
     ) {
         if (index < 0) {
             return ReturnResult.illegal("分片序号不合法");
         }
         try {
-            UploadTaskManager.UploadTask task = uploadTaskManager.putChunk(taskId, index, bytes);
+            UploadTaskManager.UploadTask task = uploadTaskManager.putChunk(taskId, index, bytes, md5);
             if (task == null) {
                 return ReturnResult.illegal("任务不存在或已不在接收分片");
             }
             return ReturnResult.ok(toMap(task));
         } catch (IOException e) {
-            MODULE_LOG.error("分片落盘失败: id={} index={}", taskId, index, e);
-            return ReturnResult.error("分片保存失败");
+            // MD5 不一致也走这里：把原因原样回给调用方，前端好提示重传这一片
+            MODULE_LOG.error("分片保存失败: id={} index={}", taskId, index, e);
+            return ReturnResult.error(e.getMessage() == null ? "分片保存失败" : e.getMessage());
         }
     }
 
@@ -345,6 +349,37 @@ public class UploadTaskController {
     }
 
     /**
+     * 分片详情：上传列表里展开某条任务时用。
+     *
+     * @param taskId 任务号
+     * @return 每片 {index, md5, received, size}
+     */
+    @Operation(summary = "分片详情")
+    @GetMapping("/task/{taskId}/chunks")
+    public ReturnResult<List<Map<String, Object>>> chunks(@PathVariable("taskId") String taskId) {
+        List<Map<String, Object>> details = uploadTaskManager.chunkDetails(taskId);
+        if (details == null) {
+            return ReturnResult.illegal("任务不存在");
+        }
+        return ReturnResult.ok(details);
+    }
+
+    /**
+     * 任务列表（可按条数限制，默认 20）。
+     *
+     * @param limit 条数
+     * @return 任务快照列表（含 md5）
+     */
+    @Operation(summary = "任务列表（带条数限制）")
+    @GetMapping("/task/list")
+    public ReturnResult<List<Map<String, Object>>> list(
+            @Parameter(description = "最多返回多少条（默认 20，上限 200）")
+            @RequestParam(value = "limit", required = false, defaultValue = "20") int limit) {
+        return ReturnResult.ok(uploadTaskManager.listTasks(limit).stream()
+                .map(UploadTaskController.this::toMap).toList());
+    }
+
+    /**
      * 取消任务（停止调度并清理分片）。
      *
      * @param taskId 任务号
@@ -400,6 +435,7 @@ public class UploadTaskController {
         map.put("mime", task.getMime() == null ? "" : task.getMime());
         map.put("width", task.getWidth() == null ? 0 : task.getWidth());
         map.put("height", task.getHeight() == null ? 0 : task.getHeight());
+        map.put("md5", task.getMd5() == null ? "" : task.getMd5());
         return map;
     }
 
@@ -417,6 +453,8 @@ public class UploadTaskController {
             Long totalSize,
             Long chunkSize,
             String provider,
-            String bucket) {
+            String bucket,
+            @io.swagger.v3.oas.annotations.media.Schema(description = "整文件 MD5（小写 hex，可选；合并后按它校验）")
+            String md5) {
     }
 }

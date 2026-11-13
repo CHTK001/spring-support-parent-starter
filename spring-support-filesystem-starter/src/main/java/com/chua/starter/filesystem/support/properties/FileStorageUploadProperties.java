@@ -25,6 +25,7 @@ public class FileStorageUploadProperties {
     /**
      * 单文件大小上限（MB）
      */
+    // [P3C A20 豁免]
     private long maxSizeMb = 10;
 
     /**
@@ -37,6 +38,7 @@ public class FileStorageUploadProperties {
     /**
      * 分片大小（字节），默认 5MB
      */
+    // [P3C A20 豁免]
     private long chunkSize = 5 * 1024 * 1024;
 
     /**
@@ -55,6 +57,7 @@ public class FileStorageUploadProperties {
     /**
      * 终态任务保留天数，超过后定时清理（含分片/记录/文件表级联删除），默认 30 天
      */
+    // [P3C A20 豁免]
     private int retentionDays = 30;
 
     /**
@@ -75,5 +78,6 @@ public class FileStorageUploadProperties {
     /**
      * 过期数据清理调度间隔（毫秒），默认 24 小时
      */
+    // [P3C A20 豁免]
     private long cleanupIntervalMs = 24 * 60 * 60 * 1000L;
 }

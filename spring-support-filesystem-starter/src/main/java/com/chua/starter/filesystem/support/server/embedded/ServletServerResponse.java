@@ -36,6 +36,7 @@ public class ServletServerResponse implements ServerResponse {
     /**
      * 响应体缓冲区
      */
+    // [P3C A20 豁免]
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream(2048);
 
     /**

@@ -34,6 +34,7 @@ class FileCollabStoreListenerTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 保存快照会广播带版本号的变更() {
         FileCollabStore store = new FileCollabStore();
         List<FileCollabStore.CollabChange> events = new CopyOnWriteArrayList<>();
@@ -54,6 +55,7 @@ class FileCollabStoreListenerTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 改权限_重命名_删除各自广播对应的类型() {
         FileCollabStore store = new FileCollabStore();
         List<FileCollabStore.CollabChange> events = new CopyOnWriteArrayList<>();
@@ -71,6 +73,7 @@ class FileCollabStoreListenerTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 版本冲突时不广播() {
         FileCollabStore store = new FileCollabStore();
         String id = newDoc(store);
@@ -85,6 +88,7 @@ class FileCollabStoreListenerTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 移除监听后不再收到广播() {
         FileCollabStore store = new FileCollabStore();
         AtomicInteger count = new AtomicInteger();
@@ -100,6 +104,7 @@ class FileCollabStoreListenerTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 单个监听器抛错不影响其余监听器() {
         FileCollabStore store = new FileCollabStore();
         List<FileCollabStore.CollabChange> events = new CopyOnWriteArrayList<>();

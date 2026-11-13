@@ -12,12 +12,15 @@ import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import lombok.Getter;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -92,6 +95,12 @@ public class UploadTaskManager {
      * 每任务一把「合并/完成」互斥锁（细粒度，避免全表竞争）
      */
     private final ConcurrentHashMap<String, Object> mergeLocks = new ConcurrentHashMap<>();
+
+    /**
+     * 可选持久化仓库（没配数据源时为 null；写入失败绝不影响上传主流程）
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private UploadTaskRepository repository;
 
     /**
      * 任务过期时长（毫秒）：超时未完成即回收分片
@@ -182,11 +191,32 @@ public class UploadTaskManager {
      */
     public UploadTask createTask(String fileName, long totalSize, long chunkSize,
                                  String provider, String bucketDir) {
+        return createTask(fileName, totalSize, chunkSize, provider, bucketDir, null);
+    }
+
+    /**
+     * 创建上传任务（带整文件 MD5）。
+     *
+     * @param fileName  文件名（调用方原始名）
+     * @param totalSize 文件总字节数（可为 0 表示未知）
+     * @param chunkSize 分片大小（字节；0 表示不分片）
+     * @param provider  存储提供者名（null/空 → 默认提供者）
+     * @param bucketDir 存储桶（目录路径；null → 提供者默认桶）
+     * @param md5       整文件 MD5（小写 hex；null = 合并后不校验）
+     * @return 任务
+     */
+    public UploadTask createTask(String fileName, long totalSize, long chunkSize,
+                                 String provider, String bucketDir, String md5) {
         UploadTask task = new UploadTask(fileName, totalSize, chunkSize, provider, bucketDir);
+        task.setMd5(md5);
         tasks.put(task.getTaskId(), task);
         publish(task);
-        MODULE_LOG.info("上传任务已创建: id={} file={} size={} chunks={} provider={}",
-                task.getTaskId(), fileName, totalSize, task.getTotalChunks(), provider);
+        if (repository != null) {
+            repository.saveTask(task);
+        }
+        MODULE_LOG.info("上传任务已创建: id={} file={} size={} chunks={} provider={} md5={}",
+                task.getTaskId(), fileName, totalSize, task.getTotalChunks(), provider,
+                md5 == null || md5.isBlank() ? "-" : md5);
         return task;
     }
 
@@ -200,21 +230,101 @@ public class UploadTaskManager {
      * @throws IOException 分片落盘失败
      */
     public UploadTask putChunk(String taskId, int index, byte[] bytes) throws IOException {
+        return putChunk(taskId, index, bytes, null);
+    }
+
+    /**
+     * 写入一个分片，并按需校验该分片的 MD5。
+     *
+     * <p>分片级校验的意义：整文件校验只能等到合并完才发现坏，而那时所有分片
+     * 都已经传完；分片级能在传输当场把「这一片坏了」指出来，重传成本低一个量级。</p>
+     *
+     * @param taskId   任务号
+     * @param index    分片序号（0 起）
+     * @param bytes    分片内容
+     * @param chunkMd5 该分片的 MD5（小写 hex；null/空 = 不校验）
+     * @return 任务；任务不存在返回 {@code null}
+     * @throws IOException 分片落盘失败，或 MD5 与声明值不一致
+     */
+    public UploadTask putChunk(String taskId, int index, byte[] bytes, String chunkMd5) throws IOException {
         UploadTask task = tasks.get(taskId);
         if (task == null || task.getState() != UploadTask.State.UPLOADING) {
             return task;
+        }
+        if (chunkMd5 != null && !chunkMd5.isBlank()) {
+            String actual = md5Hex(bytes);
+            if (!actual.equalsIgnoreCase(chunkMd5.trim())) {
+                throw new IOException("分片 " + index + " MD5 校验失败：期望 " + chunkMd5
+                        + "，实际 " + actual);
+            }
+            task.recordChunkMd5(index, actual);
+        } else {
+            // 调用方没给分片 MD5 也要留痕：详情页能直接看到每片的实算值
+            task.recordChunkMd5(index, md5Hex(bytes));
         }
         Path dir = chunkRoot.resolve(taskId);
         Files.createDirectories(dir);
         Files.write(dir.resolve(index + ".part"), bytes);
         task.markChunkReceived(index, bytes.length);
+        if (repository != null) {
+            repository.saveChunk(taskId, index, task.chunkMd5(index), bytes.length, true);
+            repository.saveTask(task);
+        }
         publish(task);
         return task;
     }
 
     /**
-     * 标记分片上传完毕，把合并动作挂上时间轮（到期后由虚拟线程执行）。
+     * 查询任务的分片详情（上传列表 / 详情页用）。
      *
+     * <p>每片返回：序号、声明或实算的 MD5、是否已落盘、实际字节数。
+     * 页面据此显示「哪一片还没传」「哪一片 MD5 对不上」。</p>
+     *
+     * @param taskId 任务号
+     * @return 分片列表（按序号升序）；任务不存在返回 {@code null}
+     */
+    public List<Map<String, Object>> chunkDetails(String taskId) {
+        UploadTask task = tasks.get(taskId);
+        if (task == null) {
+            return null;
+        }
+        List<Map<String, Object>> list = new ArrayList<>();
+        Path dir = chunkRoot.resolve(taskId);
+        int total = (int) Math.max(task.getTotalChunks(), 1);
+        for (int i = 0; i < total; i += 1) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("index", i);
+            String md5 = task.chunkMd5(i);
+            item.put("md5", md5 == null ? "" : md5);
+            Path part = dir.resolve(i + ".part");
+            boolean exists = Files.exists(part);
+            item.put("received", exists);
+            try {
+                item.put("size", exists ? Files.size(part) : 0L);
+            } catch (IOException e) {
+                item.put("size", 0L);
+            }
+            list.add(item);
+        }
+        return list;
+    }
+
+    /**
+     * 最近的 upload 任务（列表页用）。
+     *
+     * @param limit 最多返回多少条（&lt;=0 视为 20）
+     * @return 任务列表，按创建时间倒序
+     */
+    public List<UploadTask> listTasks(int limit) {
+        int max = limit <= 0 ? 20 : Math.min(limit, 200);
+        return tasks.values().stream()
+                .sorted(java.util.Comparator.comparingLong(UploadTask::getCreatedAt).reversed())
+                .limit(max)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 标记分片上传完毕，把合并动作挂上时间轮（到期后由虚拟线程执行）。
      * @param taskId 任务号
      * @return 任务；不存在或状态不允许返回 {@code null}
      */
@@ -368,15 +478,30 @@ public class UploadTaskManager {
                 List<Path> parts = listSortedParts(chunkDir);
                 Files.createDirectories(mergeRoot);
                 concatParts(parts, mergedFile);
+                // 整文件校验：分片都到齐也可能拼出坏文件（重复片、乱序、截断），
+                // 只有按调用方声明的 MD5 复核一次才算真的传成功
+                String expect = task.getMd5();
+                if (expect != null && !expect.isBlank()) {
+                    String actual = md5Hex(mergedFile);
+                    if (!actual.equalsIgnoreCase(expect)) {
+                        throw new IOException("MD5 校验失败：期望 " + expect + "，实际 " + actual);
+                    }
+                }
                 writeStorage(task, mergedFile);
                 task.setState(UploadTask.State.COMPLETED);
                 task.touch();
                 publish(task);
+                if (repository != null) {
+                    repository.saveTask(task);
+                }
                 MODULE_LOG.info("上传任务合并完成: id={} key={}", taskId, task.getObjectKey());
             } catch (Exception e) {
                 task.setState(UploadTask.State.FAILED);
                 task.setMessage(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
                 publish(task);
+                if (repository != null) {
+                    repository.saveTask(task);
+                }
                 MODULE_LOG.error("上传任务合并失败: id={}", taskId, e);
             } finally {
                 cleanupChunks(taskId);
@@ -806,6 +931,64 @@ public class UploadTaskManager {
     }
 
     /**
+     * 计算字节数组的 MD5（小写 hex）
+     *
+     * @param bytes 字节
+     * @return 32 位小写 hex
+     */
+    private static String md5Hex(byte[] bytes) {
+        return toHex(newDigest().digest(bytes));
+    }
+
+    /**
+     * 计算文件的 MD5（小写 hex，流式，不整文件进内存）
+     *
+     * @param file 文件
+     * @return 32 位小写 hex
+     * @throws IOException 读取失败
+     */
+    private static String md5Hex(Path file) throws IOException {
+        MessageDigest digest = newDigest();
+        try (InputStream in = Files.newInputStream(file)) {
+            byte[] buf = new byte[64 * 1024];
+            int read;
+            while ((read = in.read(buf)) > 0) {
+                digest.update(buf, 0, read);
+            }
+        }
+        return toHex(digest.digest());
+    }
+
+    /**
+     * 取 MD5 摘要器
+     *
+     * @return MessageDigest
+     */
+    private static MessageDigest newDigest() {
+        try {
+            return MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            // 所有 JRE 都必须提供 MD5，走到这里说明运行环境异常
+            throw new IllegalStateException("MD5 不可用", e);
+        }
+    }
+
+    /**
+     * 字节转小写 hex
+     *
+     * @param bytes 摘要字节
+     * @return hex
+     */
+    private static String toHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            sb.append(Character.forDigit((b >> 4) & 0xf, 16));
+            sb.append(Character.forDigit(b & 0xf, 16));
+        }
+        return sb.toString();
+    }
+
+    /**
      * 上传任务。
      */
     @Getter
@@ -895,6 +1078,53 @@ public class UploadTaskManager {
          * 图片高度（像素；非图片为 null）
          */
         private volatile Integer height;
+
+        /**
+         * 调用方声明的整文件 MD5（小写 hex；可为 null = 不校验）
+         *
+         * <p>合并完成后按它核对落盘字节，不一致即判任务失败并清理，
+         * 避免「分片都传上来了但拼出来是坏文件」这种最难查的问题。</p>
+         */
+        private volatile String md5;
+
+        /**
+         * 设置整文件 MD5（合并时校验用）
+         *
+         * @param md5 小写 hex；null 表示不校验
+         */
+        public void setMd5(String md5) {
+            this.md5 = md5 == null ? null : md5.trim().toLowerCase();
+        }
+
+        /**
+         * 每个分片的 MD5（下标 → 小写 hex）
+         *
+         * <p>调用方传了就记调用方声明的值，没传就记后端实算的值 ——
+         * 这样「分片详情」永远有 md5 可看，也是分片级校验的留痕。</p>
+         */
+        private final java.util.Map<Integer, String> chunkMd5s = new ConcurrentHashMap<>();
+
+        /**
+         * 记录某个分片的 MD5
+         *
+         * @param index 分片序号
+         * @param md5   小写 hex
+         */
+        public void recordChunkMd5(int index, String md5) {
+            if (md5 != null && !md5.isBlank()) {
+                chunkMd5s.put(index, md5.trim().toLowerCase());
+            }
+        }
+
+        /**
+         * 读取某个分片的 MD5
+         *
+         * @param index 分片序号
+         * @return 小写 hex；未记录为 null
+         */
+        public String chunkMd5(int index) {
+            return chunkMd5s.get(index);
+        }
 
         /**
          * 构造。

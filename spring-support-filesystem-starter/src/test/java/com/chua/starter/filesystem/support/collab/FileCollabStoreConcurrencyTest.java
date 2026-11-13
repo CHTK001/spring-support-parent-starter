@@ -72,7 +72,9 @@ class FileCollabStoreConcurrencyTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 同一版本的并发保存只能有一个成功() throws Exception {
+        // [P3C A20 豁免]
         int threads = 16;
         FileCollabStore store = new FileCollabStore();
         String id = newDoc(store);
@@ -107,7 +109,9 @@ class FileCollabStoreConcurrencyTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 并发保存不丢版本_每次成功都对应一个版本() throws Exception {
+        // [P3C A20 豁免]
         int threads = 12;
         FileCollabStore store = new FileCollabStore();
         String id = newDoc(store);
@@ -155,6 +159,7 @@ class FileCollabStoreConcurrencyTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 并发重命名不会把已保存的内容退回上一版() throws Exception {
         FileCollabStore store = new FileCollabStore();
         String id = newDoc(store);
@@ -199,6 +204,7 @@ class FileCollabStoreConcurrencyTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 并发改权限不会丢快照() throws Exception {
         FileCollabStore store = new FileCollabStore();
         String id = newDoc(store);

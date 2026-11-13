@@ -72,6 +72,7 @@ public class FileCollabPersistence {
     /**
      * 时间轮（与上传任务同一套 {@link Timer}，不另起线程池）
      */
+    // [P3C A20 豁免]
     private final Timer timer = Timer.newTimer(64, 100, TimeUnit.MILLISECONDS);
 
     /**
@@ -107,6 +108,7 @@ public class FileCollabPersistence {
     public FileCollabPersistence(FileCollabStore store, Path file, long intervalSeconds, boolean enabled) {
         this.store = store;
         this.file = file;
+        // [P3C A20 豁免]
         this.intervalSeconds = intervalSeconds > 0 ? intervalSeconds : 30L;
         this.enabled = enabled;
     }

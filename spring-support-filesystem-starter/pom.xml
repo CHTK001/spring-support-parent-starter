@@ -97,6 +97,22 @@
             <scope>provided</scope>
         </dependency>
 
+        <!--
+          JDBC 模板：上传任务 / 分片的 MD5 落库（UploadTaskRepository）。
+          显式声明而不是靠 spring-support-datasource-starter 传递进来 ——
+          传递依赖会随上游 starter 调整版本被动漂移，编译期看不出来。
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
+
+        <!-- @PostConstruct（建表钩子）等 Jakarta 注解 -->
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
+
         <!-- 测试框架（JUnit 5 + Spring Boot Test） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

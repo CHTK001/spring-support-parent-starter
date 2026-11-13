@@ -65,6 +65,7 @@ public class FileStorageServerProperties {
      * <p>前端 {@code pages/filesystem/src/api/filestorageApi.ts#DEFAULT_SERVER} 缺省
      * http://127.0.0.1:18082，后端 CORS 默认开启，二者同端口同源即可直连。</p>
      */
+    // [P3C A20 豁免]
     private int port = 18082;
 
     /**

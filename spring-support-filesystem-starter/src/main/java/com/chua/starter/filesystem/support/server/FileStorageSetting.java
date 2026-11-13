@@ -145,6 +145,7 @@ public class FileStorageSetting {
      * 只能在前端 9 档预设里挑。改为配置项后可由系统配置面板调整，改完立即生效。</p>
      */
     @Builder.Default
+    // [P3C A20 豁免]
     private long oneTimeTtlMs = 10 * 60 * 1000L;
 
     /**

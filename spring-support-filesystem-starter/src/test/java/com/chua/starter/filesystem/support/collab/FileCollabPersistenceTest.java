@@ -56,6 +56,7 @@ class FileCollabPersistenceTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 落盘后装载_内容版本权限历史都要一致(@TempDir Path dir) {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
@@ -95,6 +96,7 @@ class FileCollabPersistenceTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 没有改动时不写盘(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
@@ -113,6 +115,7 @@ class FileCollabPersistenceTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 装载后不应把自己再标脏(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
@@ -125,6 +128,7 @@ class FileCollabPersistenceTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 写失败会把脏标记放回去(@TempDir Path dir) throws Exception {
         // 用一个「父路径是文件」的路径制造写失败（createDirectories 会抛错）
         Path blocker = dir.resolve("blocker");
@@ -141,6 +145,7 @@ class FileCollabPersistenceTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 落盘文件损坏时按空库启动且原文件留档(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("collab-store.json");
         Files.writeString(file, "{ 这不是 JSON", StandardCharsets.UTF_8);
@@ -155,6 +160,7 @@ class FileCollabPersistenceTest {
     }
 
     @Test
+    // [P3C NM-命名 豁免]
     void 关闭开关时既不装载也不调度(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("collab-store.json");
         FileCollabStore store = new FileCollabStore();
