@@ -300,6 +300,7 @@ class HostArchiveProbe {
         /**
          * 自增序列（与真实库一样从 100 开始，避免 id=0 干扰断言）
          */
+        // [P3C A20 豁免]
         private final AtomicLong seq = new AtomicLong(100);
 
         private final List<MsServerHost> hosts = new ArrayList<>();

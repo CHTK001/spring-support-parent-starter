@@ -732,6 +732,38 @@ public class ReleaseController {
     }
 
     /**
+     * 用主机文件里的产物升级：文件在运行本服务的这台机器上，后端负责推到目标主机。
+     *
+     * @param id 项目标识
+     * @param body 主机文件 key 与升级配置
+     * @return 异步任务标识
+     */
+    @Operation(summary = "从主机文件选产物升级（异步，返回taskId）")
+    @PostMapping("/project/{id}/upgrade/from-host-file")
+    public ReturnResult<String> upgradeFromHostFile(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> body) {
+        Object key = body == null ? null : body.get("key");
+        java.util.Map<String, Object> config = body == null
+                ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(body);
+        config.remove("key");
+        return releaseService.upgradeFromHostFile(id, key == null ? null : String.valueOf(key), config);
+    }
+
+    /**
+     * SkyWalking OAP 可达性探测（右下角状态灯）。
+     *
+     * @param releaseId 发布标识
+     * @return enabled / reachable / url / elapsedMs
+     */
+    @Operation(summary = "SkyWalking OAP 可达性探测")
+    @GetMapping("/apm/skywalking/health")
+    public ReturnResult<java.util.Map<String, Object>> skywalkingHealth(
+            @RequestParam(name = "releaseId", required = false) Long releaseId) {
+        return releaseService.skywalkingHealth(releaseId);
+    }
+
+    /**
      * 统计分离式项目 lib 目录中的 jar 文件数量。
      *
      * @param id 项目标识

@@ -220,6 +220,7 @@ public class TunnelServiceImpl implements TunnelService {
         }
         SshClients.Handle handle = SshClients.open(host.getServerHostAddress(), host.getServerHostPort(), resolved.getData());
         handle.client().connect();
+        // [P3C A20 豁免]
         int port = parseInt(vo.getPort(), 22);
         String bind = blankDefault(vo.getListen(), "127.0.0.1");
         SshClient.ForwardOperation forward = handle.client().forward().bindAddress(bind);

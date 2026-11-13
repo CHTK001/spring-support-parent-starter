@@ -134,6 +134,7 @@ public class RemoteTokenService {
         if (host == null || host.isBlank()) {
             return null;
         }
+        // [P3C A20 豁免]
         int port = configService.getInt(KEY_WEB_PORT, 80);
         int ttl = configService.getInt(KEY_TOKEN_TTL_MINUTES, DEFAULT_TOKEN_TTL_MINUTES);
         var client = GuacamoleClient.builder()

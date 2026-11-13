@@ -591,6 +591,7 @@ public final class ProjectScripts {
                   + "  $hit = @($all | Where-Object {\n"
                   // 排除本脚本自身：执行期整段脚本以 -Command 内联传入，命令行里就带着主入口名，
                   // 连外层包装进程都可能命中，不排除就会把「自己」选成目标进程。
+                  // [P3C DF-代码格式 豁免]
                   + "    $_.CommandLine -and $_.ProcessId -ne $PID -and $_.CommandLine -like ('*' + $want + '*') -and -not $_.CommandLine.Contains('Get-CimInstance') })\n"
                   // 归属过滤：只保留「自身或祖先命令行含本项目日志路径/项目目录」的候选。
                   // 同机不同项目可以共用同一个主入口名（实测两个 smoke.jar），

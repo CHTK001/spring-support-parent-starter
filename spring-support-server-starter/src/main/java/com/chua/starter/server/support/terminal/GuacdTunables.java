@@ -95,6 +95,7 @@ public class GuacdTunables {
      * @return 8..40 之间的值，越界回落 12
      */
     public int sshFontSize() {
+        // [P3C A20 豁免]
         return intIn("ssh.font-size", 12, 8, 40);
     }
 
@@ -104,9 +105,12 @@ public class GuacdTunables {
      * @return 127 或 8，其它回落 127
      */
     public int sshBackspace() {
+        // [P3C A20 豁免]
         int raw = configService.getInt("ssh.backspace", 127);
+        // [P3C A20 豁免]
         if (raw != 127 && raw != 8) {
             log.warn("[terminal] 配置 ssh.backspace = {} 只支持 127/8，已回落到 127", raw);
+            // [P3C A20 豁免]
             return 127;
         }
         return raw;
@@ -120,6 +124,7 @@ public class GuacdTunables {
      * @return 8/16/24/32，其它回落 24
      */
     public int vncColorDepth() {
+        // [P3C A20 豁免]
         return colorDepth("vnc.color-depth", 24);
     }
 
@@ -198,6 +203,7 @@ public class GuacdTunables {
      * @return 0..10，越界回落 0
      */
     public int vncAutoRetry() {
+        // [P3C A20 豁免]
         return intIn("vnc.auto-retry", 0, 0, 10);
     }
 
@@ -209,6 +215,7 @@ public class GuacdTunables {
      * @return 60..480，越界回落 96
      */
     public int rdpDpi() {
+        // [P3C A20 豁免]
         return intIn("rdp.dpi", 96, 60, 480);
     }
 

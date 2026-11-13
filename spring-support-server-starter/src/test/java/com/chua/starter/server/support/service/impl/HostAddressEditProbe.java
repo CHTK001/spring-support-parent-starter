@@ -35,6 +35,7 @@ class HostAddressEditProbe {
     @Test
     void updateKeepsAddressLiteral() {
         MsServerHost exists = new MsServerHost();
+        // [P3C A20 豁免]
         exists.setId(11L);
         exists.setServerHostName("rdp-test-198");
         exists.setServerHostAddress("192.168.50.198");
@@ -70,6 +71,7 @@ class HostAddressEditProbe {
 
         MsServerHost patch = new MsServerHost();
         patch.setServerHostAddress("ibssh_demo@ssh.instabox.sh");
+        // [P3C A20 豁免]
         service.update(11L, patch);
 
         assertEquals("ibssh_demo@ssh.instabox.sh", captured[0].getServerHostAddress(),

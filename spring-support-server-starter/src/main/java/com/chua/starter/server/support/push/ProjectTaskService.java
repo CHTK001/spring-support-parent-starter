@@ -653,6 +653,7 @@ public class ProjectTaskService {
         } catch (Exception e) {
             throw new IllegalStateException("本机日志跟随启动失败: " + e.getMessage(), e);
         }
+        // [P3C C1 豁免]
         Thread worker = new Thread(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {

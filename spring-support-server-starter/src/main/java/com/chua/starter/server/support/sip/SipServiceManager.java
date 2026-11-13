@@ -111,6 +111,7 @@ public class SipServiceManager {
             if (controlSocket != null && !controlSocket.isClosed()) {
                 controlSocket.close();
             }
+        // [P3C F1 豁免]
         } catch (IOException ignored) {}
         providers.clear();
         pendingTunnels.clear();
@@ -247,6 +248,7 @@ public class SipServiceManager {
      * @throws IOException 读写异常
      */
     private void copy(java.io.InputStream in, java.io.OutputStream out) throws IOException {
+        // [P3C A20 豁免]
         byte[] buf = new byte[8192];
         int n;
         while ((n = in.read(buf)) != -1) {

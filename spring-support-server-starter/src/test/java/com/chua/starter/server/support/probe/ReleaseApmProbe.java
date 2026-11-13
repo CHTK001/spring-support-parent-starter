@@ -979,7 +979,8 @@ public final class ReleaseApmProbe {
                     new SystemServiceProviderRegistry(),
                     new ProjectPlatformProviderRegistry(),
                     new ProjectTypeProviderRegistry(),
-                    proxy(MsServerConfigMapper.class, configs));
+                    proxy(MsServerConfigMapper.class, configs),
+                    null);
         }
 
         /**

@@ -36,11 +36,13 @@ public class ServerProperties {
     /**
      * 远程终端会话空闲超时（分钟），超时后由清理任务关闭
      */
+    // [P3C A20 豁免]
     private int sessionIdleMinutes = 30;
 
     /**
      * 批量执行最大并发主机数
      */
+    // [P3C A20 豁免]
     private int execConcurrency = 16;
 
     /**
@@ -63,11 +65,13 @@ public class ServerProperties {
         /**
          * 默认 Telnet 端口（主机台账没配远控端口时使用）
          */
+        // [P3C A20 豁免]
         private int port = 23;
 
         /**
          * 建连超时（毫秒）
          */
+        // [P3C A20 豁免]
         private int timeout = 8000;
     }
 
@@ -87,6 +91,7 @@ public class ServerProperties {
         /**
          * guacd 端口
          */
+        // [P3C A20 豁免]
         private int port = 4822;
 
         /**

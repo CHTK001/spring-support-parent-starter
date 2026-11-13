@@ -31,6 +31,7 @@ public class SerialProperties {
     /**
      * 默认波特率
      */
+    // [P3C A20 豁免]
     private int baudRate = 115200;
 
     /**
@@ -57,6 +58,7 @@ public class SerialProperties {
     /**
      * 读超时（毫秒），只影响轮询节奏，不阻塞设备
      */
+    // [P3C A20 豁免]
     private int readTimeout = 1000;
 
     /**

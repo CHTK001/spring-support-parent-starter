@@ -337,6 +337,24 @@ public interface ReleaseService {
     ReturnResult<String> runUpgrade(Long id, Map<String, Object> config);
 
     /**
+     * 用主机文件里的产物升级（先把文件推到目标主机 uploads/，再走正常升级）。
+     *
+     * @param id     项目ID
+     * @param key    主机文件 key（相对文件存储根目录）
+     * @param config 升级配置
+     * @return 异步任务标识
+     */
+    ReturnResult<String> upgradeFromHostFile(Long id, String key, Map<String, Object> config);
+
+    /**
+     * SkyWalking OAP 可达性探测（发布页右下角状态灯）。
+     *
+     * @param releaseId 发布ID
+     * @return enabled / reachable / url / elapsedMs
+     */
+    ReturnResult<Map<String, Object>> skywalkingHealth(Long releaseId);
+
+    /**
      * Git 自动发布：从项目配置的 Git 仓库拉取代码 → Maven 构建 → SFTP 上传产物 → 升级重启。
      *
      * <p>流程：</p>

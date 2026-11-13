@@ -3,6 +3,9 @@ package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.storage.FileStorage;
+import com.chua.starter.filesystem.support.local.LocalFileStorage;
+import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import com.chua.common.support.lang.placeholder.MapMixSystemPlaceholderResolver;
 import com.chua.common.support.lang.placeholder.PlaceholderSupport;
 import com.chua.common.support.lang.placeholder.StringValuePropertyResolver;
@@ -148,6 +151,11 @@ public class ReleaseServiceImpl implements ReleaseService {
        * 系统配置 Mapper（读写升级全局/最近配置的原始 JSON）
        */
     private final MsServerConfigMapper serverConfigMapper;
+
+      /**
+       * 主机文件存储（从本机文件升级时用；宿主未装文件存储时为空）
+       */
+    private final org.springframework.beans.factory.ObjectProvider<FileStorageTemplate> fileStorageTemplate;
 
       /**
        * JSON 序列化（升级配置解析）
@@ -1822,6 +1830,149 @@ public class ReleaseServiceImpl implements ReleaseService {
         String taskId = projectTaskService.startTask(ctx.hostId, project.getId(),
                 "upgrade", steps, type.runtimeProcess() ? "running" : null);
         return task(taskId);
+    }
+
+    /**
+     * 用「主机文件」里的产物升级：先把文件推到目标主机的 uploads/，再走正常升级。
+     *
+     * <p>发布管理不再接收浏览器直传：包统一先落到运行本服务的这台机器的文件存储里，
+     * 这里只负责把选中的 key 还原成本机绝对路径、SFTP 投放、再复用 {@link #runUpgrade}。
+     * 目标机上的最终路径由 SFTP 返回，避免调用方猜目录规则。</p>
+     *
+     * @param id     项目标识
+     * @param key    主机文件 key（相对文件存储根目录）
+     * @param config 升级配置（与手动升级同一套字段）
+     * @return 异步任务标识
+     */
+    @Override
+    public ReturnResult<String> upgradeFromHostFile(Long id, String key, Map<String, Object> config) {
+        if (isBlank(key)) {
+            return ReturnResult.error("请先在主机文件里选择产物");
+        }
+        ReturnResult<OperationContext> prepared = prepare(id);
+        if (!prepared.isOk()) {
+            return ReturnResult.error(prepared.getMsg());
+        }
+        OperationContext ctx = prepared.getData();
+        if (isBlank(ctx.project.getProjectPath())) {
+            return ReturnResult.error("项目地址未配置，无法投放产物");
+        }
+        FileStorageTemplate template = fileStorageTemplate.getIfAvailable();
+        if (template == null) {
+            return ReturnResult.error("文件存储未启用，请开启 plugin.filesystem.enable");
+        }
+        FileStorage storage = template.getDefaultStorage();
+        if (!(storage instanceof LocalFileStorage local)) {
+            return ReturnResult.error("仅支持本地文件存储作为升级包来源");
+        }
+        Path root = local.getRootPath();
+        Path localFile = root.resolve(key).normalize();
+        // 目录穿越防护：key 来自前端，必须归一后仍在根目录内
+        if (!localFile.startsWith(root)) {
+            return ReturnResult.error("非法的文件路径: " + key);
+        }
+        if (!Files.isRegularFile(localFile)) {
+            return ReturnResult.error("主机文件不存在: " + key);
+        }
+        String uploadDir = ctx.project.getProjectPath() + "/uploads";
+        String remotePackage;
+        // 本机主机（collectMode=LOCAL）没有 SSH/SFTP 通道：直接在本地拷到 uploads/，
+        // 否则会去连本机 22 端口，Windows 本机根本没开 SSH，直接报「连接被拒绝」。
+        boolean localHost = ctx.host != null
+                && com.chua.starter.server.support.enums.HostCollectType.LOCAL
+                == com.chua.starter.server.support.enums.HostCollectType.of(ctx.host.getServerHostCollectMode());
+        if (localHost) {
+            Path targetDir = Paths.get(uploadDir);
+            Path target = targetDir.resolve(localFile.getFileName().toString());
+            try {
+                Files.createDirectories(targetDir);
+                Files.copy(localFile, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception e) {
+                log.error("[主机文件升级] 本机投放失败: {} -> {}", localFile, target, e);
+                return ReturnResult.error("投放到本机 uploads 失败: " + e.getMessage());
+            }
+            remotePackage = target.toAbsolutePath().toString();
+        } else {
+            ReturnResult<Void> mk = sftpService.mkdir(ctx.hostId, null, uploadDir);
+            if (!mk.isOk()) {
+                return ReturnResult.error("创建上传目录失败: " + mk.getMsg());
+            }
+            ReturnResult<String> up = sftpService.uploadLocal(ctx.hostId, null, uploadDir,
+                    localFile, localFile.getFileName().toString());
+            if (!up.isOk()) {
+                return ReturnResult.error("上传到目标主机失败: " + up.getMsg());
+            }
+            remotePackage = up.getData();
+        }
+        Map<String, Object> cfg = config == null
+                ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(config);
+        cfg.put("packagePath", remotePackage);
+        return runUpgrade(id, cfg);
+    }
+
+      /**
+       * SkyWalking OAP 可达性探测：给发布页右下角状态灯用。
+       *
+       * <p>只看「这个发布是否接了 SkyWalking」以及 OAP 的 HTTP 端能不能连通。
+       * agent 配的是 gRPC 端口（默认 11800），查询端是 HTTP（默认 12800），
+       * 因此从 {@code swBackendService} 推 HTTP 地址：已带 http(s) 前缀就原样用，
+       * 否则取主机名 + 12800。多后端只探第一个。</p>
+       *
+       * <p>超时 2.5s；连不上不算错误，返回 reachable=false，前端据此隐藏这盏灯。</p>
+       *
+       * @param releaseId 发布ID
+       * @return enabled / reachable / url / elapsedMs
+       */
+    @Override
+    public ReturnResult<Map<String, Object>> skywalkingHealth(Long releaseId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        MsServerRelease release = releaseId == null ? null : releaseMapper.selectById(releaseId);
+        String backend = release == null ? null : release.getSwBackendService();
+        if (release == null || !Boolean.TRUE.equals(release.getSwEnabled()) || isBlank(backend)) {
+            data.put("enabled", false);
+            return ReturnResult.ok(data);
+        }
+        String url = oapHttpUrl(backend);
+        data.put("enabled", true);
+        data.put("url", url);
+        long start = System.currentTimeMillis();
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofMillis(2000))
+                    .build();
+            HttpRequest request = HttpRequest.newBuilder(URI.create(url + "/"))
+                    .timeout(java.time.Duration.ofMillis(2500))
+                    .GET()
+                    .build();
+            HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+            data.put("reachable", true);
+            data.put("status", response.statusCode());
+        } catch (Exception e) {
+            data.put("reachable", false);
+            data.put("error", e.getClass().getSimpleName());
+        }
+        data.put("elapsedMs", System.currentTimeMillis() - start);
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 由 agent 的 gRPC 地址推 OAP 的 HTTP 地址。
+     *
+     * @param backend swBackendService，如 {@code oap:11800} 或 {@code http://oap:12800}
+     * @return OAP HTTP 基地址
+     */
+    private String oapHttpUrl(String backend) {
+        String value = backend.trim();
+        int comma = value.indexOf(',');
+        if (comma > 0) {
+            value = value.substring(0, comma).trim();
+        }
+        if (value.startsWith("http://") || value.startsWith("https://")) {
+            return value.replaceAll("/+$", "");
+        }
+        int colon = value.lastIndexOf(':');
+        String host = colon > 0 ? value.substring(0, colon) : value;
+        return "http://" + host + ":12800";
     }
 
       /**
@@ -3986,6 +4137,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 + "if ($c -is [byte[]]) { $c=[Text.Encoding]::UTF8.GetString($c) }; "
                 + "return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$c)) } "
                 + "catch { $m=$null; if ($_.ErrorDetails) { $m=$_.ErrorDetails.Message }; "
+                // [P3C DF-代码格式 豁免]
                 + "if (-not $m -and $_.Exception.Response -ne $null) { try { $s=$_.Exception.Response.GetResponseStream(); $rd=New-Object IO.StreamReader($s); $m=$rd.ReadToEnd() } catch { } }; "
                 + "if ($m) { return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$m)) }; return '' } }\n"
                 + "Write-Output ('DOCS=' + (__code '" + docs + "'))\n"

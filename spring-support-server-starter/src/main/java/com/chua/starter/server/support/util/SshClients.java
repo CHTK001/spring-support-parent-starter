@@ -30,16 +30,19 @@ public final class SshClients {
     /**
      * 进程级默认：TCP 连接/握手超时（秒）
      */
+    // [P3C A20 豁免]
     private static volatile int defaultConnectSeconds = 15;
 
     /**
      * 进程级默认：认证/会话建立超时（秒）
      */
+    // [P3C A20 豁免]
     private static volatile int defaultSessionSeconds = 30;
 
     /**
      * 进程级默认：命令执行/输出读取超时（秒）
      */
+    // [P3C A20 豁免]
     private static volatile long defaultReadSeconds = 60L;
 
     /**

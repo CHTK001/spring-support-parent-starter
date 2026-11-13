@@ -1,10 +1,8 @@
 package com.chua.starter.server.support.util;
 
-import com.chua.starter.common.support.crypto.AesCodec;
+import com.chua.starter.common.support.algorithm.crypto.Codec;
 import com.chua.starter.server.support.config.ServerProperties;
 import org.springframework.stereotype.Component;
-
-import java.nio.charset.StandardCharsets;
 
 /**
  * 凭据加解密器
@@ -22,7 +20,7 @@ public class CredentialCipher {
     /**
      * 编解码器
     */
-    private final AesCodec codec;
+    private final Codec codec;
 
     /**
      * 构造注入（密钥取自服务属性）
@@ -31,7 +29,7 @@ public class CredentialCipher {
      */
     public CredentialCipher(ServerProperties properties) {
         String key = properties == null ? null : properties.getCredentialKey();
-        this.codec = new AesCodec((key == null ? "" : key).getBytes(StandardCharsets.UTF_8));
+        this.codec = Codec.build("aes-gcm", key == null ? "" : key);
     }
 
     /**

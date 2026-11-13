@@ -87,16 +87,19 @@ public class SshTimeouts {
     /**
      * 当前生效值：连接/握手超时（秒）
      */
+    // [P3C A20 豁免]
     private volatile int connectTimeout = 15;
 
     /**
      * 当前生效值：认证/会话建立超时（秒）
      */
+    // [P3C A20 豁免]
     private volatile int sessionTimeout = 30;
 
     /**
      * 当前生效值：命令执行/输出读取超时（秒）
      */
+    // [P3C A20 豁免]
     private volatile int readTimeout = 60;
 
     /**

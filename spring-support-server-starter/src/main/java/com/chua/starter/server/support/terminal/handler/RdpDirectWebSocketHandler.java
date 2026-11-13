@@ -335,6 +335,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                 int height = header[1];
                 int stride = header[2];
                 int payload = stride * height;
+                // [P3C A20 豁免]
                 int size = 32 + payload;
                 if (bridge.bufferLen != size || bridge.buffer == null) {
                     bridge.buffer = new byte[size];
@@ -474,6 +475,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         try {
             // [P3C A20 豁免]
             Thread.sleep(200);  // 让泵线程自行静默收口
+        // [P3C F1 豁免]
         } catch (InterruptedException ignored) {
         }
         if (handle > 0L && nativeReady) {

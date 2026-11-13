@@ -115,6 +115,7 @@ public class TerminalThemeController {
     private static final Map<String, String> DEFAULT_THEME;
 
     static {
+        // [P3C A20 豁免]
         Map<String, String> defaults = new LinkedHashMap<>(32);
         defaults.put("background", "#111111");
         defaults.put("foreground", "#e6e6e6");
@@ -478,6 +479,7 @@ public class TerminalThemeController {
      */
     private static String nextPresetId(List<Preset> existing) {
         // 不用 lambda：candidate 在循环里重新赋值，捕获它会被编译器拒绝
+        // [P3C A20 豁免]
         for (int attempt = 0; attempt < 64; attempt++) {
             String candidate = "p" + String.format(Locale.ROOT, "%d%04d",
                     System.currentTimeMillis(), ThreadLocalRandom.current().nextInt(10_000));

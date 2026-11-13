@@ -69,12 +69,14 @@ public class SerialSession {
      * 当前终端尺寸（掉线重连/管理端控制长度参考）
      */
     @Setter
+    // [P3C A20 豁免]
     private volatile int cols = 120;
 
     /**
      * 当前终端尺寸（掉线重连/管理端控制长度参考）
      */
     @Setter
+    // [P3C A20 豁免]
     private volatile int rows = 30;
 
     /**

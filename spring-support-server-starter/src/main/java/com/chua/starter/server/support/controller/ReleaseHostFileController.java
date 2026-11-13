@@ -24,9 +24,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -197,6 +200,56 @@ public class ReleaseHostFileController {
                         "attachment; filename=\"file\"; filename*=UTF-8''" + encoded)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(new InputStreamResource(result.getInputStream()));
+    }
+
+    /**
+     * 计算文件 MD5（流式读取，不整包进内存）。
+     *
+     * <p>按需计算而不是列目录就全算：一次列 200 个 jar 会把磁盘打满，
+     * 用户真正要的通常只是「马上要投放的那个包」的指纹。</p>
+     *
+     * @param key    文件 key
+     * @param bucket 存储桶名，留空用默认桶
+     * @return md5 / size / elapsedMs
+     */
+    @Operation(summary = "计算主机文件 MD5")
+    @GetMapping("/md5")
+    public ReturnResult<Map<String, Object>> md5(@RequestParam(name = "key") String key,
+                                                 @RequestParam(name = "bucket", required = false) String bucket) {
+        FileStorage storage = resolve(bucket);
+        if (storage == null) {
+            return ReturnResult.error("文件存储未启用，请开启 plugin.filesystem.enable");
+        }
+        java.nio.file.Path root = rootPath(storage);
+        if (root == null) {
+            return ReturnResult.error("仅支持本地文件存储计算 MD5");
+        }
+        if (key == null || key.isBlank()) {
+            return ReturnResult.error("缺少文件 key");
+        }
+        java.nio.file.Path file = root.resolve(key).normalize();
+        // 目录穿越防护：key 来自前端，归一后必须仍在根目录内
+        if (!file.startsWith(root) || !java.nio.file.Files.isRegularFile(file)) {
+            return ReturnResult.error("文件不存在: " + key);
+        }
+        long start = System.currentTimeMillis();
+        try (InputStream in = java.nio.file.Files.newInputStream(file)) {
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            // [P3C A20 豁免]
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = in.read(buffer)) > 0) {
+                digest.update(buffer, 0, read);
+            }
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("md5", HexFormat.of().formatHex(digest.digest()));
+            data.put("size", java.nio.file.Files.size(file));
+            data.put("elapsedMs", System.currentTimeMillis() - start);
+            return ReturnResult.ok(data);
+        } catch (Exception e) {
+            log.error("[主机文件] 计算 MD5 失败: key={}", key, e);
+            return ReturnResult.error("计算 MD5 失败: " + e.getMessage());
+        }
     }
 
     /**
