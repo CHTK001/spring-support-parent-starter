@@ -229,6 +229,25 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- 短信厂商实现：MessagePush SPI 的 alibaba-sms / tencent-sms / baidu-sms。
+             账号模块只按 vendor 解析 SPI 别名，不直接依赖任何厂商 SDK；
+             宿主不引这些 starter 时，短信发送会明确报「未安装短信通道」。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-alibaba-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-hunyuan-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-baidu-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- 文档 -->
         <dependency>
             <groupId>com.chua</groupId>

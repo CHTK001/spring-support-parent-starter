@@ -332,6 +332,29 @@ public class MailboxService {
     }
 
     /**
+     * 解析账号对应的短信通道（按 vendor 查 MessagePush SPI，不绑定任何厂商）。
+     *
+     * @param accountId 账号标识
+     * @return 已注入该账号密钥 / 签名 / 模板码的通道
+     */
+    public MessagePush smsPush(String accountId) {
+        SysAccount account = requireAccount(accountId);
+        if (!KIND_SMS.equalsIgnoreCase(account.getKind())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号不是短信账号");
+        }
+        String alias = smsAlias(account.getVendor());
+        if (alias == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "短信账号未填写受支持的服务商（aliyun / tencent / baidu）");
+        }
+        MessagePush push = createSmsPush(alias, account, accountService.resolveSecret(accountId));
+        if (push == null) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "当前部署未安装短信通道：" + alias);
+        }
+        return push;
+    }
+
+    /**
      * 组装发送结果。
      *
      * @param provider 通道标识

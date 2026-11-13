@@ -835,6 +835,7 @@ import {
   listAccountSecrets,
   listAccounts,
   rotateAccountAppKey,
+  syncAccountSmsTemplates,
   tempMailExpireAt,
   updateAccount,
   updateAccountAppKey,
@@ -1682,6 +1683,9 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
           ...(group.key === 'EMAIL' || group.key === 'SMS'
             ? [{ key: 'open-console', label: group.key === 'EMAIL' ? '打开邮箱' : '打开短信', icon: 'Message', divided: true }]
             : []),
+          ...(group.key === 'SMS'
+            ? [{ key: 'sync-sms-templates', label: '同步短信模板', icon: 'Refresh' }]
+            : []),
           { key: 'duplicate', label: '复制为新账号', icon: 'CopyDocument', divided: true },
           { key: 'copy-code', label: '复制账号编码', icon: 'CopyDocument' },
           {
@@ -1746,6 +1750,7 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
   if (item.key === 'edit') openEdit(target);
   else if (item.key === 'verify') void onVerify(target);
   else if (item.key === 'open-console') openConsole(target);
+  else if (item.key === 'sync-sms-templates') void syncSmsTemplatesOf(target);
   else if (item.key === 'copy-address') void copyAddress(target);
   else if (item.key === 'destroy-temp') void destroyTemp(target);
   else if (item.key === 'copy-code') void copyCode(target);
@@ -2015,6 +2020,26 @@ async function onVerify(row: SysAccount | null): Promise<void> {
     message.error(e?.message || '校验失败');
   } finally {
     verifyingId.value = null;
+  }
+}
+
+/**
+ * 同步短信账号对应厂商的云端模板。
+ *
+ * <p>厂商由账号 vendor 决定，后端走 MessagePush SPI 的 listTemplates()，
+ * 前端不区分阿里 / 腾讯 / 百度。</p>
+ *
+ * @param row 短信账号
+ */
+async function syncSmsTemplatesOf(row: SysAccount | null): Promise<void> {
+  if (!row) return;
+  try {
+    const result = await syncAccountSmsTemplates(row.accountId);
+    message.success(
+      `模板同步完成：新增 ${result.created}，更新 ${result.updated}，跳过 ${result.skipped}（${result.provider}）`,
+    );
+  } catch (e: any) {
+    message.error(e?.message || '同步短信模板失败');
   }
 }
 

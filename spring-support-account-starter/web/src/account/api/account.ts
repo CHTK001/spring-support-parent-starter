@@ -342,6 +342,30 @@ export const updateAccountSecret = (secretId: string, payload: SysAccountSecret)
 export const deleteAccountSecret = (secretId: string) =>
   http().delete(`${SK}/${secretId}`).then(r => unwrap<boolean>(r));
 
+/* ==================== 短信模板同步 ==================== */
+
+/** 短信模板同步结果 */
+export interface SmsTemplateSyncResult {
+  /** 实际使用的短信通道（由账号 vendor 解析） */
+  provider: string;
+  /** 云端拉到的模板数 */
+  fetched: number;
+  /** 新增数 */
+  created: number;
+  /** 更新数 */
+  updated: number;
+  /** 跳过数（缺内容 / 保存失败） */
+  skipped: number;
+}
+
+/**
+ * 同步指定短信账号对应厂商的模板。
+ *
+ * <p>不绑定厂商：后端按账号 vendor 解析 MessagePush SPI 的 listTemplates()。</p>
+ */
+export const syncAccountSmsTemplates = (accountId: string) =>
+  http().post(`${B}/${accountId}/sms/templates/sync`).then(r => unwrap<SmsTemplateSyncResult>(r));
+
 /* ==================== 临时邮箱（mail.tm） ==================== */
 
 /** 临时邮箱接口基址 */
