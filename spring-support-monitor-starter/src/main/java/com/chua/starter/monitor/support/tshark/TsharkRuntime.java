@@ -545,12 +545,19 @@ public class TsharkRuntime {
     }
 
     /**
-     * 从 classpath 取内置便携包（`utils-support-resource-tshark`）。
+     * 取内置便携包：先看 classpath，再看应用目录下的 {@code tshark/<os>-<arch>/}。
      *
-     * <p>资源目录 {@code tshark/<os>-<arch>/tshark-package.*}，与 vnc 资源模块同一口径；
-     * 目录为空时返回 null，继续走 package-url，不影响既有安装方式。</p>
+     * <p>两种放法都支持：</p>
+     * <ol>
+     *   <li>把 resource jar 放进 classpath（引入依赖即可）；</li>
+     *   <li>不加依赖，直接把 jar 里的 {@code tshark/} 解到应用工作目录 —— 部署时
+     *       {@code unzip utils-support-resource-tshark-*.jar 'tshark/*' -d <app 目录>} 就行，
+     *       不必把 41MB 塞进依赖树。</li>
+     * </ol>
      *
-     * @return 已复制到安装目录的包路径；没有内置包返回 null
+     * <p>目录为空时返回 null，继续走 package-url。</p>
+     *
+     * @return 安装包路径；没有内置包返回 null
      */
     private Path bundledPackage() {
         String platform = platformTag();
@@ -576,6 +583,16 @@ public class TsharkRuntime {
             } catch (IOException e) {
                 log.warn("[tshark] 释放内置便携包失败 resource={} reason={}", resource, e.getMessage());
                 return null;
+            }
+        }
+        // 不加依赖的放法：把 jar 里的 tshark/ 解到应用工作目录，直接从磁盘取
+        Path local = Paths.get("tshark", platform);
+        for (String name : names) {
+            Path candidate = local.resolve(name);
+            if (Files.isRegularFile(candidate)) {
+                Path absolute = candidate.toAbsolutePath().normalize();
+                log.info("[tshark] 使用应用目录内的便携包 {}", absolute);
+                return absolute;
             }
         }
         return null;
