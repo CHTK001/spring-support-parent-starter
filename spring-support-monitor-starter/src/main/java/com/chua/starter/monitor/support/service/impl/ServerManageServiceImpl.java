@@ -563,6 +563,21 @@ public class ServerManageServiceImpl implements ServerManageService {
                 "classpath 需含 ServiceDiscovery SPI(内置 peerMesh); discoveryName 留空取 peerMesh",
                 groupOf(null, "service-discovery"), detailPageOf("service-discovery"),
                 detailKindOf("service-discovery"), detailLabelOf("service-discovery"), false));
+        // 2.5 安全类：IP 黑白名单 / 防火墙（IP + 限流）。
+        // 这两类在运行时能按别名实例化，但 SPI 定义枚举不到（下拉里看不到），所以与
+        // file-storage / service-discovery 一样按预设显式登记，保证 UI 可选。
+        result.add(new ServerFilterTypeMetaVO("ip",
+                "IP 黑白名单过滤器(IpServerFilter)：白名单只放行列表内 IP，黑名单拒绝列表内 IP",
+                List.of(new ServerPluginParamVO("mode", "blacklist", "blacklist=拒绝列表内 IP；whitelist=只允许列表内 IP", "string", null),
+                        new ServerPluginParamVO("ips", "", "逗号或空格分隔的 IP 列表，如 10.0.0.1,10.0.0.2", "string", null)),
+                null, "security", null, null, null, true));
+        result.add(new ServerFilterTypeMetaVO("firewall",
+                "防火墙(FirewallServerFilter)：IP 黑白名单 + 每 IP 限流，http 返回 403/429，tcp 与 proxy 直接断开",
+                List.of(new ServerPluginParamVO("mode", "blacklist", "blacklist=拒绝列表内 IP；whitelist=只允许列表内 IP", "string", null),
+                        new ServerPluginParamVO("ips", "", "逗号或空格分隔的 IP 列表", "string", null),
+                        new ServerPluginParamVO("qps", "0", "每 IP 每秒允许请求数，0 表示不限流", "number", null),
+                        new ServerPluginParamVO("burst", "0", "突发容量，0 表示与 qps 相同", "number", null)),
+                null, "security", null, null, null, true));
         // 3. SPI 动态发现的 ServerFilter(仅暴露带 @SpiDescribe 元数据的对外过滤器)
         ServiceProvider.of(ServerFilter.class).forDefinitionEach(definition -> {
             String describe = definition.getDescribe();

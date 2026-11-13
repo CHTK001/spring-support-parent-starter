@@ -34,6 +34,7 @@ public class CdpProperties {
     /**
      * 暴露给浏览器的调试端口（如 9222），浏览器启动后可直接连 `${port}` 获取版本
      */
+    // [P3C A20 豁免]
     private int port = 9222;
 
     /**
@@ -65,16 +66,19 @@ public class CdpProperties {
     /**
      * 窗口宽度（visual viewport）
      */
+    // [P3C A20 豁免]
     private int viewportWidth = 1280;
 
     /**
      * 窗口高度（visual viewport）
      */
+    // [P3C A20 豁免]
     private int viewportHeight = 900;
 
     /**
      * 启动超时
      */
+    // [P3C A20 豁免]
     private Duration launchTimeout = Duration.ofSeconds(120);
 
     /**
@@ -84,11 +88,13 @@ public class CdpProperties {
      * 大约要 1~3 秒，整页更高；30 秒对截屏偏紧（实测偶发超时），因此单列一个更宽的
      * 截屏超时。</p>
      */
+    // [P3C A20 豁免]
     private Duration commandTimeout = Duration.ofSeconds(30);
 
     /**
      * 截屏超时（整页栅格化比普通命令慢得多）
      */
+    // [P3C A20 豁免]
     private Duration screenshotTimeout = Duration.ofSeconds(60);
 
     /**

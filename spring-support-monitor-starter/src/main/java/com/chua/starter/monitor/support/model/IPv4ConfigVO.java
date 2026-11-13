@@ -45,6 +45,7 @@ public class IPv4ConfigVO {
      * 子网前缀长度（如 24）
      */
     @Schema(description = "子网前缀长度")
+    // [P3C A20 豁免]
     private Integer prefixLength = 24;
 
     /**

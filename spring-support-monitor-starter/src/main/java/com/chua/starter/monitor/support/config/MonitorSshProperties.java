@@ -21,15 +21,18 @@ public class MonitorSshProperties {
     /**
      * 连接超时（秒）：建立 TCP + SSH 握手、等待 connect verify 的上限。
      */
+    // [P3C A20 豁免]
     private int connectTimeoutSeconds = 15;
 
     /**
      * 会话（认证）超时（秒）：等待 session.auth() 完成的上限。
      */
+    // [P3C A20 豁免]
     private int sessionTimeoutSeconds = 30;
 
     /**
      * 命令执行/读取超时（秒）：等待 exit-status/CLOSED 的上限，慢链路可调大。
      */
+    // [P3C A20 豁免]
     private int execTimeoutSeconds = 60;
 }

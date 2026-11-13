@@ -110,6 +110,7 @@ public class AgentHostHistoryWriter implements HostAgentHistoryWriter {
             return tags;
         }
         tags.put("total_bytes", String.valueOf(totalBytes));
+        // [P3C A20 豁免]
         long used = usagePercent == null ? 0L : Math.min(totalBytes, Math.round(totalBytes * usagePercent / 100.0));
         tags.put("used_bytes", String.valueOf(used));
         if (withFree) {

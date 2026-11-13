@@ -34,6 +34,7 @@ public class ServerOperLogScheduler {
      * <p>不用 {@code @Value} 占位符注入，原因同调度注解：宿主早期创建链上
      * resolver 未就绪时，原样字符串转 int 会直接炸掉 bean 创建。</p>
      */
+    // [P3C A20 豁免]
     private int retentionDays = 90;
 
     private final ObjectProvider<ServerOperLogService> operLogServiceProvider;

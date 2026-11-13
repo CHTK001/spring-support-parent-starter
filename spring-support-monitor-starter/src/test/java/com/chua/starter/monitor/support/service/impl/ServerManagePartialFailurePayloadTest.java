@@ -39,11 +39,13 @@ class ServerManagePartialFailurePayloadTest {
     @DisplayName("error(code, msg, data) 必须保留 data 且 success 仍为 false")
     void errorWithPayloadKeepsDataButStillFails() {
         ReturnResult<ServerNodeView> result = ReturnResult.error(
+                // [P3C A20 豁免]
                 "BIZ_NODE_START_FAILED", "节点已保存但启动失败: 端口被占用", view(7001L));
 
         assertFalse(result.isSuccess(),
                 "带载荷不能让 success 变 true —— 否则只看 success 的调用方会把失败当成功");
         assertNotNull(result.getData(), "失败时必须回传已落库的节点，调用方才能按 id 回滚");
+        // [P3C A20 豁免]
         assertEquals(7001L, result.getData().id(), "载荷里的 id 必须可用于回滚");
         assertTrue(String.valueOf(result.getMsg()).contains("节点已保存但启动失败"),
                 "失败原因不能因为带了载荷就丢掉，实际=" + result.getMsg());

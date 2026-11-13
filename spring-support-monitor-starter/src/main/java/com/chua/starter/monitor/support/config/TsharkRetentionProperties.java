@@ -40,6 +40,7 @@ public class TsharkRetentionProperties {
     /**
      * 套餐目录保留的最大空间（MB）。超过时应清理。
      */
+    // [P3C A20 豁免]
     private int sizeMb = 512;
 
     /**

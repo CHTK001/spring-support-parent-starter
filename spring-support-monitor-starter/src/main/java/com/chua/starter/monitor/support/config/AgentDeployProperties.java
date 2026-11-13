@@ -64,6 +64,7 @@ public class AgentDeployProperties {
     /**
      * 启动后等待 /health 就绪的秒数
     */
+    // [P3C A20 豁免]
     private int healthWaitSeconds = 30;
 
     /**

@@ -168,6 +168,7 @@ public class MonitorScheduler {
      */
     @Scheduled(cron = "${monitor.cleanup.cron:0 0 * * * ?}")
     public void cleanupOldData() {
+        // [P3C A20 豁免]
         int retentionDays = configService.getInt("monitor.data.retention.days", 30);
         metricService.cleanupOldData(retentionDays);
     }

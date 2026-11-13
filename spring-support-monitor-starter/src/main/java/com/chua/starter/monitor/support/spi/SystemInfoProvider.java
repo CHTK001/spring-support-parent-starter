@@ -509,6 +509,28 @@ public interface SystemInfoProvider {
     }
 
     /**
+     * 进程的环境变量（进程属性「环境」页签）。
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @return 变量列表，永不为 null
+     */
+    default List<EnvVarVO> processEnv(MsServerHost host, int pid) {
+        return HostOperations.of(this, host).processEnv(pid);
+    }
+
+    /**
+     * 进程的工作目录（进程属性「环境」页签）。
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @return 绝对路径，取不到返回空串
+     */
+    default String processCwd(MsServerHost host, int pid) {
+        return HostOperations.of(this, host).processCwd(pid);
+    }
+
+    /**
      * 主机句柄数（Windows 系统句柄总数 / POSIX 打开文件描述符数）。
      *
      * <p>平台差异（PowerShell 汇总 vs {@code /proc} 计数）由 {@link HostOperations} 的平台子类给出，

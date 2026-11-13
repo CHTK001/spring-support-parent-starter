@@ -6,6 +6,7 @@ import com.chua.starter.monitor.support.enums.ShellDialect;
 import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
+import com.chua.starter.monitor.support.model.EnvVarVO;
 import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
@@ -84,6 +85,7 @@ public abstract class HostOperations {
             if (!processAlive(pid)) {
                 return HostActionVO.ok("进程 " + pid + suffix + " 已关闭" + detail(result));
             }
+            // [P3C A20 豁免]
             sleepQuietly(800L);
         }
         String detail = detail(result);
@@ -111,6 +113,7 @@ public abstract class HostOperations {
             if ("MISSING".equals(last) || "UNKNOWN".equals(last)) {
                 break;
             }
+            // [P3C A20 豁免]
             sleepQuietly(1000L);
         }
         return HostActionVO.fail("服务 " + name + " " + action.getDesc() + "未生效，当前状态 " + last + detail(result));
@@ -257,6 +260,33 @@ public abstract class HostOperations {
      * @return 线程列表
      */
     public abstract List<ProcessThreadRowVO> processThreads(int pid);
+
+    /**
+     * 进程的环境变量。
+     *
+     * <p>POSIX 读 {@code /proc/<pid>/environ}（同用户或 root 才有权限）；Windows 读取其他
+     * 进程的 PEV 需要调试权限，默认实现如实返回空表，由页面说明「该平台取不到」，
+     * 而不是伪造一份当前进程的变量糊弄过去。</p>
+     *
+     * @param pid 进程 ID
+     * @return 变量列表，永不为 null
+     */
+    public List<EnvVarVO> processEnv(int pid) {
+        return List.of();
+    }
+
+    /**
+     * 进程的工作目录。
+     *
+     * <p>POSIX 读 {@code /proc/<pid>/cwd}（macOS 退化为 {@code lsof -d cwd}）；
+     * 取不到时返回空串，不做「猜一个」的回退。</p>
+     *
+     * @param pid 进程 ID
+     * @return 绝对路径，取不到返回空串
+     */
+    public String processCwd(int pid) {
+        return "";
+    }
 
     /**
      * 主机句柄数：Windows 为系统句柄总数（各进程 HandleCount 汇总），

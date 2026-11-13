@@ -102,6 +102,7 @@ public class TsharkInstallProperties {
     /**
      * 单次下载 + 解压 + 自检的总体超时（秒）。
      */
+    // [P3C A20 豁免]
     private int timeoutSeconds = 600;
 
     /**

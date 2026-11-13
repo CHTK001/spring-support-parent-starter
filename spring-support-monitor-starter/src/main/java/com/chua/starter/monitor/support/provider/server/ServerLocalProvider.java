@@ -219,6 +219,7 @@ public class ServerLocalProvider implements MetricProvider {
         }
 
         long free = total > 0 ? total - used : 0L;
+        // [P3C A20 豁免]
         double usagePercent = total > 0 ? used * 100.0 / total : 0.0;
 
         Map<String, String> tags = new HashMap<>();
@@ -256,6 +257,7 @@ public class ServerLocalProvider implements MetricProvider {
             long total = disk.getTotal();
             long used = disk.getUsed();
             long free = total > 0 ? total - used : 0L;
+            // [P3C A20 豁免]
             double usagePercent = total > 0 ? used * 100.0 / total : 0.0;
 
             Map<String, String> tags = new HashMap<>();

@@ -155,6 +155,7 @@ public class HostFileController {
                 }
             }
             if (best != null && best.totalGb() > 0) {
+                // [P3C A20 豁免]
                 long gb = 1024L * 1024L * 1024L;
                 root.setTotalSpace((long) (best.totalGb() * gb));
                 root.setFreeSpace((long) (Math.max(0, best.availGb()) * gb));

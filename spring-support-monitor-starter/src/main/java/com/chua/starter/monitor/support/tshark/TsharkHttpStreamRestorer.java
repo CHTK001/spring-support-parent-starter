@@ -124,11 +124,13 @@ public final class TsharkHttpStreamRestorer {
     /**
      * 每个方向一个 HTTP 消息切分器。
      */
+    // [P3C A20 豁免]
     private final Map<Direction, HttpMessageParser> parsers = new LinkedHashMap<>(64, 0.75f, true);
 
     /**
      * 每条连接共享的上下文（响应要据此判断 HEAD 请求没有实体）。
      */
+    // [P3C A20 豁免]
     private final Map<TcpStreamKey, StreamContext> contexts = new LinkedHashMap<>(64, 0.75f, true);
 
     /**
@@ -402,6 +404,7 @@ public final class TsharkHttpStreamRestorer {
         /**
          * 缓冲字节。
          */
+        // [P3C A20 豁免]
         private byte[] data = new byte[4096];
 
         /**

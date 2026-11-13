@@ -368,6 +368,7 @@ public class CdpEngineService {
                 browserClient.markClosed();
                 try {
                     browserClient.close();
+                // [P3C F1 豁免]
                 } catch (Exception ignored) {
                 }
                 browserClient = null;
@@ -375,6 +376,7 @@ public class CdpEngineService {
             for (CdpWsClient client : new ArrayList<>(pageClients.values())) {
                 try {
                     client.close();
+                // [P3C F1 豁免]
                 } catch (Exception ignored) {
                 }
             }
@@ -637,11 +639,13 @@ public class CdpEngineService {
         }
         try {
             process.destroy();
+        // [P3C F1 豁免]
         } catch (Exception ignored) {
         }
         for (ProcessHandle child : descendants) {
             try {
                 child.destroyForcibly();
+            // [P3C F1 豁免]
             } catch (Exception ignored) {
             }
         }
@@ -653,6 +657,7 @@ public class CdpEngineService {
         }
         try {
             handle.destroyForcibly();
+        // [P3C F1 豁免]
         } catch (Exception ignored) {
         }
         // 兜底：Chromium 在 Windows 上可能已经脱离父子关系，按命令行匹配强杀
@@ -891,6 +896,7 @@ public class CdpEngineService {
         if (client != null) {
             try {
                 client.close();
+            // [P3C F1 豁免]
             } catch (Exception ignored) {
             }
         }

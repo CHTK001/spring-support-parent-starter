@@ -88,6 +88,7 @@ public class MonitorServiceImpl implements MonitorService {
      * @return 探针标识
      */
     private String generateAgentKey() {
+        // [P3C A20 豁免]
         byte[] bytes = new byte[16];
         SECURE_RANDOM.nextBytes(bytes);
         return java.util.HexFormat.of().formatHex(bytes);

@@ -263,6 +263,7 @@ public class SystemManageController {
             @RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
+            // [P3C A20 豁免]
             int want = pageSize != null && pageSize > 0 ? pageSize : Math.max(limit, 500);
             boolean filtered = keyword != null && !keyword.isBlank();
             List<ProcessRowVO> processes = new ArrayList<>(ch.provider().processes(ch.host(), 1, filtered ? KEYWORD_SCAN : want));
@@ -382,6 +383,43 @@ public class SystemManageController {
     }
 
     /**
+     * 获取进程的环境变量（进程属性「环境」页签）。
+     *
+     * @param pid    进程 ID
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @return 变量列表
+     */
+    @Operation(summary = "获取进程的环境变量", description = "POSIX 读 /proc/<pid>/environ；Windows 无调试权限时返回空表")
+    @GetMapping("/process/{pid}/env")
+    public Mono<ReturnResult<List<EnvVarVO>>> processEnv(@PathVariable int pid,
+                                                         @RequestParam(required = false) Long hostId) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            return ReturnResult.ok(ch.provider().processEnv(ch.host(), pid));
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<List<EnvVarVO>>error("获取进程环境变量失败: " + e.getMessage())));
+    }
+
+    /**
+     * 获取进程的工作目录（进程属性「环境」页签）。
+     *
+     * @param pid    进程 ID
+     * @param hostId 主机 ID，为空表示管控机本机
+     * @return 绝对路径；取不到返回空串
+     */
+    @Operation(summary = "获取进程的工作目录")
+    @GetMapping("/process/{pid}/cwd")
+    public Mono<ReturnResult<String>> processCwd(@PathVariable int pid,
+                                                 @RequestParam(required = false) Long hostId) {
+        return Mono.fromCallable(() -> {
+            HostChannel ch = channelOf(hostId);
+            String dir = ch.provider().processCwd(ch.host(), pid);
+            return ReturnResult.ok(dir == null ? "" : dir);
+        }).subscribeOn(Schedulers.boundedElastic())
+          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("获取进程工作目录失败: " + e.getMessage())));
+    }
+
+    /**
      * 重启进程：读取原命令行后杀掉，再以原命令、原工作目录拉起。
      *
      * @param hostId 主机 ID，为空表示管控机本机
@@ -419,6 +457,7 @@ public class SystemManageController {
             @RequestParam(required = false) Long hostId) {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
+            // [P3C A20 豁免]
             int want = pageSize != null && pageSize > 0 ? pageSize : 5000;
             boolean filtered = keyword != null && !keyword.isBlank();
             List<ServiceRowVO> services = new ArrayList<>(ch.provider().services(ch.host(), 1, filtered ? KEYWORD_SCAN : want));

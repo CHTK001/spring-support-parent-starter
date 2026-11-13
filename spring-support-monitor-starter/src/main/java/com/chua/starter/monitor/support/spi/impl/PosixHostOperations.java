@@ -6,6 +6,7 @@ import com.chua.starter.monitor.support.model.DeletedFileRowVO;
 import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.DiskPartitionRowVO;
 import com.chua.starter.monitor.support.model.DriverRowVO;
+import com.chua.starter.monitor.support.model.EnvVarVO;
 import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
@@ -145,6 +146,74 @@ public class PosixHostOperations extends HostOperations {
     @Override
     public List<ProcessThreadRowVO> processThreads(int pid) {
         return parseThreadRows(output("ps -L -p " + pid + " -o tid,pcpu,pmem,stat,comm,time"));
+    }
+
+    /**
+     * 进程环境变量：{@code /proc/<pid>/environ} 是 NUL 分隔的 {@code KEY=VALUE} 串。
+     *
+     * <p>先转成换行再逐行切：按 {@code =} 只切第一处，值里本来就允许出现等号
+     * （例如 {@code JAVA_OPTS=-Da=b}），用 split("=") 会把值截断。</p>
+     *
+     * <p>权限不足时 {@code /proc/<pid>/environ} 读到空串，这里返回空表而不是抛异常：
+     * 环境变量只是属性框的一个页签，读不到不该让整个弹框报错。</p>
+     */
+    @Override
+    public List<EnvVarVO> processEnv(int pid) {
+        if (pid <= 0) {
+            return List.of();
+        }
+        return parseEnviron(run("tr '\\0' '\\n' < /proc/" + pid + "/environ 2>/dev/null").output());
+    }
+
+    /**
+     * 解析 {@code /proc/<pid>/environ} 转成换行后的内容。
+     *
+     * <p>抽成静态方法是为了能在没有 Linux 主机的机器上单测：这条命令只在 POSIX
+     * 通道上跑得到，而解析规则（值里含等号、空行、CRLF）是纯文本处理。</p>
+     *
+     * @param out 以换行分隔的 {@code KEY=VALUE} 文本，可为 null
+     * @return 按变量名排序的列表，永不为 null
+     */
+    static List<EnvVarVO> parseEnviron(String out) {
+        if (out == null || out.isBlank()) {
+            return List.of();
+        }
+        List<EnvVarVO> rows = new ArrayList<>();
+        for (String line : out.split("\r?\n")) {
+            // 只切第一处等号：值里本来就允许出现等号（JAVA_OPTS=-Da=b）
+            int eq = line.indexOf('=');
+            if (eq <= 0) {
+                continue;
+            }
+            rows.add(EnvVarVO.of(line.substring(0, eq), line.substring(eq + 1)));
+        }
+        rows.sort((a, b) -> a.name().compareToIgnoreCase(b.name()));
+        return rows;
+    }
+
+    /**
+     * 进程工作目录：Linux 走 {@code /proc/<pid>/cwd}，macOS 没有 /proc 时退回
+     * {@code lsof -d cwd}（只取字段模式的第一行 {@code n<path>}）。
+     */
+    @Override
+    public String processCwd(int pid) {
+        if (pid <= 0) {
+            return "";
+        }
+        String out = run("readlink /proc/" + pid + "/cwd 2>/dev/null").output();
+        if (out != null && !out.isBlank()) {
+            return out.trim();
+        }
+        String lsof = run("lsof -a -p " + pid + " -d cwd -Fn 2>/dev/null").output();
+        if (lsof == null) {
+            return "";
+        }
+        for (String line : lsof.split("\r?\n")) {
+            if (line.startsWith("n") && line.length() > 1) {
+                return line.substring(1).trim();
+            }
+        }
+        return "";
     }
 
     /**

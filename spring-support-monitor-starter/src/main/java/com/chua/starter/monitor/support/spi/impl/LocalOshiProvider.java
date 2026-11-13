@@ -191,6 +191,7 @@ public class LocalOshiProvider implements SystemInfoProvider {
     @Override
     public boolean uploadFile(MsServerHost host, String remotePath, InputStream data, long size) {
         try (FileOutputStream fos = new FileOutputStream(remotePath)) {
+            // [P3C A20 豁免]
             byte[] buf = new byte[8192];
             int n;
             while ((n = data.read(buf)) > 0) {
