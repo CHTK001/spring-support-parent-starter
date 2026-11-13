@@ -1,5 +1,0 @@
-aes=com.chua.starter.common.support.algorithm.crypto.AesCbcCodec
-aes-gcm=com.chua.starter.common.support.crypto.AesCodec
-sm4=com.chua.starter.common.support.algorithm.crypto.Sm4Codec
-des=com.chua.starter.common.support.algorithm.crypto.DesCodec
-hex=com.chua.starter.common.support.algorithm.crypto.HexCodec

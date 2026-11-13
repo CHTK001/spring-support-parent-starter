@@ -12,7 +12,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;

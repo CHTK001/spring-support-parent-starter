@@ -555,7 +555,10 @@ public class ApiFsController {
             }
             Files.createDirectories(dir);
             Path target = dir.resolve(name);
-            file.transferTo(target.toFile());
+            // transferTo 对「相对路径」会按 servlet 的 multipart 临时目录解析（Tomcat work 目录），
+            // 于是落点变成 <work>/<fs-root>/... 而那个目录并不存在 → 上传必然 500。
+            // 这里显式转绝对路径，确保写到 fsRoot 实际指向的位置。
+            file.transferTo(target.toAbsolutePath().toFile());
             return ApiResult.ok(target.toAbsolutePath().toString());
         } catch (IOException e) {
             /**

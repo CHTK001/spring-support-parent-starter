@@ -6,12 +6,12 @@ package com.chua.starter.server.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.nativeapi.NativeServices;
+import com.chua.common.support.nativeapi.NmapScanner;
 import com.chua.common.support.nativeapi.NmapSpi;
 import com.chua.common.support.network.net.NetUtils;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.nmap.support.NmapScanner;
-import com.chua.nmap.support.RustNmapScanner;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WinrmShell;
 import com.chua.starter.server.support.connection.WindowsSshShell;
@@ -832,7 +832,11 @@ public class ServerHostServiceImpl implements ServerHostService {
         long start = System.currentTimeMillis();
         try {
               // 只扫常用端口：1~65535 全量扫描实测超过 240 秒不返回，且期间把同进程采集接口拖慢数倍
-            NmapScanner.ScanResult result = new RustNmapScanner().scanCommonPorts(addr);
+            NmapScanner scanner = ServiceProvider.of(NmapScanner.class).getExtension((String) null);
+            if (scanner == null) {
+                throw new IllegalStateException("NmapScanner 实现未加载，请检查 utils-support-native-nmap 是否在 classpath");
+            }
+            NmapScanner.ScanResult result = scanner.scanCommonPorts(addr);
             List<NmapScanner.PortInfo> openPorts = new ArrayList<>();
             if (result.getPorts() != null) {
                 for (NmapScanner.PortInfo p : result.getPorts()) {

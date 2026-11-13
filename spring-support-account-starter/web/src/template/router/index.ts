@@ -19,7 +19,7 @@ export const templateRoutes: RouteConfigsTable[] = [
     name: 'TemplateHome',
     component: () => import('../views/TemplateView.vue'),
     meta: {
-      title: '模板库',
+      title: '模板',
       icon: 'MagicStick',
       showLink: true,
       keepAlive: true,
@@ -57,13 +57,14 @@ export const templateRoutes: RouteConfigsTable[] = [
   {
     path: '/template/message',
     name: 'TemplateMessage',
-    component: () => import('../views/MessageTemplateView.vue'),
+    component: () => import('../views/TemplateView.vue'),
+    props: { type: 'message' },
     meta: {
       title: '消息模板',
       icon: 'ChatDotRound',
-      showLink: true,
+      showLink: false,
       keepAlive: false,
-      isVisible: '1',
+      isVisible: '0',
       rank: 24
     }
   },
@@ -121,11 +122,6 @@ export const templateMenus = [
         path: '/template/logs',
         name: 'TemplateLogs',
         meta: { title: '调用日志', icon: 'List', isVisible: '1', rank: 23 }
-      },
-      {
-        path: '/template/message',
-        name: 'TemplateMessage',
-        meta: { title: '消息模板', icon: 'ChatDotRound', isVisible: '1', rank: 24 }
       }
     ]
   }

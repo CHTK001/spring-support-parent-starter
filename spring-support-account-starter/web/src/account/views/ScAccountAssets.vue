@@ -1,32 +1,13 @@
 <template>
   <div class="account-assets">
-    <!-- 主分类：账号资产 / 模板管理 / 消息模板。
-         早先是左侧一小格胶囊，右边留一大片空底色；现在整条吃满宽度，
-         点击只替换下方 .stage 里的内容，分类条本身不动。 -->
-    <nav class="nav" aria-label="账号管理分类">
-      <button
-        v-for="item in views"
-        :key="item.value"
-        type="button"
-        class="nav-item"
-        :class="{ 'is-on': view === item.value }"
-        :aria-current="view === item.value ? 'page' : undefined"
-        :title="item.label"
-        @click="view = item.value"
-      >
-        <ReIcon :name="item.icon" :size="16" />
-        <span>{{ item.label }}</span>
-      </button>
-    </nav>
-
     <div class="stage">
-    <div v-if="view === 'accounts' && loadError" class="alert">
+    <div v-if="loadError" class="alert">
       <span>账号列表加载失败：{{ loadError }}</span>
       <button type="button" @click="loadAll">重试</button>
     </div>
 
     <!-- 批量操作条：勾选后才出现，不占常态版面 -->
-    <div v-if="view === 'accounts' && isAccountSegment && selectedAccountIds.length" class="batch-bar">
+    <div v-if="isAccountSegment && selectedAccountIds.length" class="batch-bar">
       <span class="batch-count">已选 <b>{{ selectedAccountIds.length }}</b> 项</span>
       <span class="batch-actions">
         <ReButton show-text size="small" icon="CircleCheck" :loading="batchBusy" @click="batchVerify">
@@ -53,7 +34,7 @@
       </span>
     </div>
 
-    <div v-if="view === 'accounts'" class="ws" :style="{ '--idx-width': railWidth + 'px' }">
+    <div class="ws" :style="{ '--idx-width': railWidth + 'px' }">
       <!-- ==================== 左侧：分组索引 ==================== -->
       <aside class="idx" aria-label="资产索引">
         <div class="idx-tools">
@@ -745,16 +726,6 @@
       </div>
 
     </div>
-
-    <!-- 模板管理：模板库 / 设计器 / 预览 / 打印机 / 调用日志，原「模板管理」模块整块并入 -->
-    <div v-else-if="view === 'templates'" class="embed-pane">
-      <TemplateView />
-    </div>
-
-    <!-- 消息模板：模板渲染与推送前预览 -->
-    <div v-else class="embed-pane">
-      <MessageTemplateView />
-    </div>
     </div>
 
     <!-- 新增 / 编辑账号 -->
@@ -814,8 +785,6 @@ import ReRailSplit, { readRailWidth } from '@repo/ui/re-rail-split';
 
 import AccountFormDialog from '../components/AccountFormDialog.vue';
 import MailboxDrawer from '../components/MailboxDrawer.vue';
-import MessageTemplateView from '../../template/views/MessageTemplateView.vue';
-import TemplateView from '../../template/views/TemplateView.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
 import CookieDialog from './components/CookieDialog.vue';
 import SecretDialog from './components/SecretDialog.vue';
@@ -840,6 +809,7 @@ import {
   updateAccount,
   updateAccountAppKey,
   updateAccountCookie,
+  updateAccountSecret,
   verifyAccount,
   type AccountBatchResult,
   type AccountKind,
@@ -875,18 +845,6 @@ type Segment = 'ALL' | AccountKind | 'APPKEY' | 'COOKIE' | 'SECRET' | 'TEMP_MAIL
 type StatusFilter = 'all' | 'on' | 'pending' | 'invalid';
 
 /** 页面视图：账号资产是本页主体，模板管理与消息模板是账号管理下的子功能 */
-type AccountView = 'accounts' | 'templates' | 'messages';
-
-/** 当前视图 */
-const view = ref<AccountView>('accounts');
-
-/** 视图切换项 */
-const views: Array<{ value: AccountView; label: string; icon: string }> = [
-  { value: 'accounts', label: '账号资产', icon: 'User' },
-  { value: 'templates', label: '模板管理', icon: 'MagicStick' },
-  { value: 'messages', label: '消息模板', icon: 'ChatDotRound' },
-];
-
 /** 统一账号 */
 const accountList = ref<SysAccount[]>([]);
 /** 访问密钥 */
@@ -2490,50 +2448,7 @@ onMounted(loadAll);
   gap: 10px;
 }
 
-/* ---------- 分类条：账号资产 / 模板管理 / 消息模板 ----------
-   桌面宽度吃满整行，各分项等分，不再缩成左侧一小格、右侧留一片底色；
-   点击只替换 .stage 里的内容。 */
-.nav {
-  flex: none;
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  padding: 3px;
-  background: var(--bg-container);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
-.nav-item {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  font: inherit;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.16s var(--ease-out), color 0.16s var(--ease-out);
-}
-.nav-item:hover {
-  background: var(--bg-fill);
-  color: var(--text-primary);
-}
-.nav-item.is-on {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
-  font-weight: 600;
-}
-
-/* ---------- 内容舞台：分类切换只换这里 ---------- */
+/* ---------- 内容舞台 ---------- */
 .stage {
   flex: 1 1 auto;
   min-width: 0;
@@ -2541,19 +2456,6 @@ onMounted(loadAll);
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-/* ---------- 内嵌子视图（模板管理 / 消息模板） ---------- */
-.embed-pane {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  overflow: hidden;
-}
-.embed-pane > * {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
 }
 
 /* ---------- 工作台：左索引 + 右详情 ---------- */
@@ -3364,7 +3266,6 @@ onMounted(loadAll);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav-item,
   .stat,
   .idx-row,
   .main-tab,

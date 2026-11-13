@@ -1650,6 +1650,147 @@ public class ApiProviderController {
     }
 
     /**
+     * 检测 API 地址实际支持什么协议。
+     *
+     * <p>用户只填一个 baseUrl 时不知道它是 OpenAI 兼容还是 Gemini / Anthropic 形态，
+     * 这里对 4 种协议各发一次只读探测（GET 模型列表），按状态码给出「可用 / 无模型 /
+     * Key 无效 / 端点不存在 / 不可达」的结果行，前端按行展示。</p>
+     *
+     * @param body 含 apiUrl / apiKey / proxy / auth_*（协议探测是只读的，不动库）
+     * @return results 数组 + foot 汇总文案
+     */
+    @Permission("admin")
+    @PostMapping("/providers/detect-protocol")
+    public ApiResult<Map<String, Object>> detectProtocol(@RequestBody Map<String, Object> body) {
+        String apiUrl = str(body, "apiUrl");
+        if (apiUrl != null) {
+            apiUrl = apiUrl.trim();
+        }
+        String apiKey = str(body, "apiKey");
+        if (apiKey != null) {
+            apiKey = apiKey.trim();
+        }
+        String proxy = str(body, "proxy");
+        UpstreamAuth auth = UpstreamAuth.ofBody(body);
+        List<Map<String, Object>> results = new ArrayList<>(4);
+        probeProtocol(results, "openai", "OpenAI", "openai", apiUrl, apiKey, auth, proxy);
+        probeProtocol(results, "openai-response", "OpenAI Response", "openai", apiUrl, apiKey, auth, proxy);
+        probeProtocol(results, "anthropic", "Anthropic Claude", "anthropic", apiUrl, apiKey, auth, proxy);
+        probeProtocol(results, "gemini", "Gemini", "gemini", apiUrl, apiKey, auth, proxy);
+        boolean anyOk = false;
+        for (Map<String, Object> r : results) {
+            if (Boolean.TRUE.equals(r.get("ok"))) {
+                anyOk = true;
+                break;
+            }
+        }
+        boolean keyBlank = apiKey == null || apiKey.isBlank();
+        String foot;
+        if (!anyOk) {
+            foot = keyBlank
+                    ? "都没有响应，且还没有填写 API 密钥。请在「API 密钥」中粘贴密钥后再测试"
+                    : "四种协议都不可用：请检查 API 地址是否正确、密钥是否有效，或该服务商只支持其中某一种协议";
+        } else if (keyBlank) {
+            foot = "已有协议可连通，但未填 API 密钥，模型列表可能为空；粘贴密钥后再检测一次。";
+        } else {
+            foot = "已标「可用」的协议行即为该地址支持的协议。";
+        }
+        Map<String, Object> out = new LinkedHashMap<>(2);
+        out.put("results", results);
+        out.put("foot", foot);
+        return ApiResult.ok(out);
+    }
+
+    /** 对单个协议发只读探测，结果写入 results。 */
+    private void probeProtocol(List<Map<String, Object>> results, String protocol, String label, String icon,
+                               String baseUrl, String apiKey, UpstreamAuth auth, String proxy) {
+        Map<String, Object> r = new LinkedHashMap<>(6);
+        r.put("protocol", protocol);
+        r.put("label", label);
+        r.put("icon", icon);
+        long start = System.currentTimeMillis();
+        if (baseUrl == null || baseUrl.isBlank()) {
+            r.put("ok", false);
+            r.put("message", "API 地址为空");
+            r.put("latency_ms", 0);
+            results.add(r);
+            return;
+        }
+        try {
+            HttpRequest.Builder b;
+            if ("anthropic".equals(protocol)) {
+                // Anthropic 形态：x-api-key 头 + /v1/models
+                String u = baseUrl.endsWith("/") ? baseUrl + "v1/models" : baseUrl + "/v1/models";
+                b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
+                if (apiKey != null && !apiKey.isBlank()) {
+                    b.header("x-api-key", apiKey);
+                }
+                b.header("anthropic-version", "2023-06-01");
+            } else if ("gemini".equals(protocol)) {
+                // Gemini 形态：?key= 查询参数 + /v1beta/models
+                String u = baseUrl.endsWith("/") ? baseUrl + "v1beta/models" : baseUrl + "/v1beta/models";
+                if (apiKey != null && !apiKey.isBlank()) {
+                    u += (u.indexOf("?") >= 0 ? "&" : "?") + "key=" + apiKey;
+                }
+                b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
+            } else {
+                // OpenAI 兼容形态：Authorization 头 + /models（openai-response 同一形态）
+                String u = baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models";
+                b = HttpRequest.newBuilder(java.net.URI.create(u)).GET().timeout(UPSTREAM_TIMEOUT);
+                Map.Entry<String, String> resolved = auth == null ? null
+                        : AuthHeaders.resolve(auth.scheme(), auth.header(), auth.prefix(), apiKey);
+                if (resolved != null) {
+                    b.header(resolved.getKey(), resolved.getValue());
+                }
+            }
+            HttpResponse<String> resp = httpClient(proxy).send(b.build(), HttpResponse.BodyHandlers.ofString());
+            r.put("latency_ms", System.currentTimeMillis() - start);
+            int st = resp.statusCode();
+            if (st >= 200 && st < 300) {
+                int count = countModelIds(resp.body());
+                r.put("ok", true);
+                r.put("message", count > 0 ? "可用（" + count + " 个模型）" : "连接成功但没有可用试用的模型");
+            } else if (st == 401) {
+                r.put("ok", false);
+                r.put("message", "API Key 无效或已过期（401）");
+            } else if (st == 403) {
+                r.put("ok", false);
+                r.put("message", "无权限访问该协议端点（403）");
+            } else if (st == 404) {
+                r.put("ok", false);
+                r.put("message", "该地址下没有此协议的模型列表端点（404）");
+            } else if (st == 429) {
+                r.put("ok", false);
+                r.put("message", "请求过于频繁（429）");
+            } else {
+                r.put("ok", false);
+                r.put("message", "供应商模型接口返回 " + st);
+            }
+        } catch (Exception e) {
+            r.put("latency_ms", System.currentTimeMillis() - start);
+            String reason = friendlyNetworkReason(e);
+            r.put("ok", false);
+            r.put("message", reason != null ? reason : "无法连接");
+        }
+        results.add(r);
+    }
+
+    /** 粗略统计模型列表 JSON 里的条目数（探测语义，不做完整解析）。 */
+    private static int countModelIds(String body) {
+        if (body == null || body.isBlank()) {
+            return 0;
+        }
+        int n = 0;
+        String key = "\"id\"";
+        int from = 0;
+        while ((from = body.indexOf(key, from)) >= 0) {
+            n++;
+            from += key.length();
+        }
+        return n;
+    }
+
+    /**
      * 测试指定提供者模型的连通性延迟。
      *
      * <p>模型管理卡片的模型来自 {@code /api/providers} 的
@@ -4209,13 +4350,43 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         } catch (java.net.http.HttpTimeoutException e) {
             throw new ApiException(ApiErrorCode.TIMEOUT, "供应商模型接口请求超时");
         } catch (Exception e) {
-            // 网络层异常统一按网关错误处理。
-            // e.getMessage() 可能为 null（如 NPE），不能拼进字符串，否则界面出现
-            // 「无法连接供应商模型接口: null」这种无信息量的报错。
-            String reason = e.getMessage();
+            // 网络层异常统一按网关错误处理。e.getMessage() 可能为 null（如 NPE），
+            // 不能拼进字符串，否则界面出现「无法连接供应商模型接口: null」这种无信息量的报错。
+            // 按异常类型给出可操作的文案，别再笼统显示「（网络异常）」。
+            String reason = friendlyNetworkReason(e);
             throw new ApiException(ApiErrorCode.BAD_GATEWAY,
-                    "无法连接供应商模型接口" + (reason == null || reason.isBlank() ? "（网络异常）" : ": " + reason));
+                    "无法连接供应商模型接口" + (reason == null ? "" : "：" + reason));
         }
+    }
+
+    /**
+     * 把上游请求的网络异常翻译成可操作的提示。
+     *
+     * <p>测试延迟报「（网络异常）」= 原始 message 为 null/空，对排查没有帮助。
+     * 这里按根因分类：DNS / 拒连 / TLS / 超时 / IO 中断，各自给一句话。</p>
+     */
+    private String friendlyNetworkReason(Exception e) {
+        Throwable root = e;
+        for (int i = 0; i < 8 && root.getCause() != null && root.getCause() != root; i++) {
+            root = root.getCause();
+        }
+        if (root instanceof java.net.UnknownHostException) {
+            return "域名解析失败（DNS），请检查 baseUrl 的域名";
+        }
+        if (root instanceof java.net.ConnectException) {
+            return "连接被拒绝（端口未开或地址错误）";
+        }
+        if (root instanceof javax.net.ssl.SSLException || root instanceof java.security.cert.CertificateException) {
+            return "TLS/SSL 握手失败，请确认地址是否应为 https";
+        }
+        if (root instanceof java.net.SocketTimeoutException || root instanceof java.net.http.HttpTimeoutException) {
+            return "请求超时，请检查网络或加大超时时间";
+        }
+        if (root instanceof java.io.IOException) {
+            return "网络不可达（连接或读取中断）";
+        }
+        String msg = e.getMessage();
+        return (msg == null || msg.isBlank()) ? null : msg;
     }
 
     /**

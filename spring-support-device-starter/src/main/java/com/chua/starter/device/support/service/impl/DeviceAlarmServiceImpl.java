@@ -113,7 +113,11 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
         if (end != null) {
             wrapper.le(DeviceAlarm::getDeviceAlarmOccurredAt, end);
         }
-        wrapper.orderByDesc(DeviceAlarm::getDeviceAlarmOccurredAt);
+        // 未处理 / 处理中置顶，其余按发生时间倒序。
+        // 告警表只有一张（device_alarm），「已解决」只是状态位的更新，
+        // 所以这里用状态表达式排序，不额外建「待处理」视图或第二张表。
+        wrapper.last("ORDER BY (device_alarm_status IN ('unhandled','handling')) DESC,"
+                + " device_alarm_occurred_at DESC");
         return wrapper;
     }
 

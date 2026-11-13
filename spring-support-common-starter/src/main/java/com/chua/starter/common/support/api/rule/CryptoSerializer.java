@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.api.rule;
 
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.annotations.Crypto;
 import com.chua.spring.support.configuration.SpringBeanUtils;

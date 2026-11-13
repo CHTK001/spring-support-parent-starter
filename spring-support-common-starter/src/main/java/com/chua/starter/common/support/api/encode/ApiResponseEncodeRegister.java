@@ -3,7 +3,7 @@ package com.chua.starter.common.support.api.encode;
 import com.chua.common.support.application.GlobalSettingFactory;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeSetting;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import org.springframework.context.ApplicationListener;

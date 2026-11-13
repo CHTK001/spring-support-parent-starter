@@ -57,6 +57,23 @@
         </div>
       </header>
 
+      <!-- 模板类型：消息模板与文档模板同属模板管理，消息模板按短信 / 邮件分种类 -->
+      <div class="rail__pinned">
+        <button
+          type="button"
+          class="entry entry--pinned"
+          :class="{ 'is-active': isMessageActive }"
+          @click="openMessageTemplates"
+        >
+          <span class="entry__mark is-message"><ReIcon name="ChatDotRound" :size="14" /></span>
+          <span class="entry__main">
+            <span class="entry__name-row"><span class="entry__name">消息模板</span></span>
+            <span class="entry__endpoint">短信 / 邮件正文与变量</span>
+          </span>
+          <span class="entry__side"><span class="entry__unit">类型</span></span>
+        </button>
+      </div>
+
       <div class="rail__list">
         <div v-if="loadingProviders && !providers.length" class="rail__state">加载中…</div>
         <div v-else-if="!shownProviders.length" class="rail__state">没有匹配的提供商</div>
@@ -361,6 +378,11 @@
           <div v-else-if="isPreviewTab(tab.name)" class="work work--fill work--plain">
             <TemplatePreviewView :template-id="tplIdOf(tab.name)" />
           </div>
+
+          <!-- 消息模板页签：与文档模板同属模板管理，右栏直接复用消息模板工作台 -->
+          <div v-else-if="isMessageTab(tab.name)" class="work work--fill work--plain">
+            <MessageTemplateView />
+          </div>
         </template>
 
         <template #empty>
@@ -504,6 +526,7 @@ import type {
 } from '../types/template'
 import TemplatePreviewView from '../views/TemplatePreviewView.vue'
 import TemplateDesigner from '../views/TemplateDesigner.vue'
+import MessageTemplateView from './MessageTemplateView.vue'
 import {
   tplLanguageLabels,
   tplTypeLabels,
@@ -515,6 +538,9 @@ import {
 } from '../utils/i18n'
 
 const router = useRouter()
+
+/** 宿主传入的初始类型：message 时直接打开消息模板 */
+const props = defineProps<{ type?: string }>()
 
 // ==================== 提供商列表 ====================
 /** 全部提供商 */
@@ -800,6 +826,10 @@ function isTemplatesTab(name: string): boolean { return name.endsWith(':template
 function isDesignTab(name: string): boolean { return name.endsWith(':design') }
 /** 页签名判断：`<templateId>:preview` */
 function isPreviewTab(name: string): boolean { return name.endsWith(':preview') }
+/** 页签名判断：消息模板工作台 */
+function isMessageTab(name: string): boolean { return name === 'message:templates' }
+/** 左栏高亮：消息模板 */
+const isMessageActive = computed(() => activeTab.value === 'message:templates')
 
 /** 页签名里的提供商 ID */
 function providerIdOf(name: string): string { return name.replace(/:provider$/, '').replace(/:templates$/, '') }
@@ -811,9 +841,20 @@ function isProviderActive(providerId: string): boolean {
   return activeTab.value === `${providerId}:provider` || activeTab.value === `${providerId}:templates`
 }
 
+/** 打开（或切换到）消息模板工作台（模板中心的一种类型） */
+function openMessageTemplates(): void {
+  const name = 'message:templates'
+  const existing = tabs.value.find(t => t.name === name)
+  if (existing) {
+    activeTab.value = name
+    return
+  }
+  tabs.value.push({ name, label: '消息模板', hint: '短信 / 邮件', icon: 'ChatDotRound', closable: true })
+  activeTab.value = name
+}
+
 /** 打开（或切换到）提供商详情页签 */
-function openProvider(item: ProviderInfo): void {
-  const name = `${item.id}:provider`
+function openProvider(item: ProviderInfo): void {  const name = `${item.id}:provider`
   const existing = tabs.value.find(t => t.name === name)
   if (existing) {
     existing.label = item.name
@@ -1230,6 +1271,9 @@ function formatTime(value?: string): string {
 // ==================== 初始化 ====================
 onMounted(async () => {
   await loadProviders()
+  if (props.type === 'message') {
+    openMessageTemplates()
+  }
 })
 </script>
 
@@ -1814,6 +1858,24 @@ onMounted(async () => {
 .mono {
   font-family: var(--el-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 12px;
+}
+
+/* 模板类型：消息模板是模板中心的一种，不占提供商列表 */
+.rail__pinned {
+  flex: 0 0 auto;
+  padding: 8px 10px 4px;
+}
+
+.entry--pinned {
+  width: 100%;
+}
+
+.entry__mark.is-message {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary, #1877ff);
+  background: color-mix(in srgb, var(--primary, #1877ff) 12%, transparent);
 }
 
 @media (max-width: 900px) {

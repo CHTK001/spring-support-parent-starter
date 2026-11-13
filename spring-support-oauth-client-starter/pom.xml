@@ -59,7 +59,7 @@
              也是 utils 父 pom 里 armeria 版本号（现 1.41.1，本地仓库无此版本）唯一被真正解析的地方。
              删掉它以后本模块不再需要 armeria，也不再传递 armeria + netty-all (~30MB)。
              注意：服务端 spring-api-support-oauth-starter 侧的 armeria 尚未处理，
-             那里走 utils-support-protocol-starter 的 SPI 名解析，与本模块无关。 -->
+             那里已不依赖 utils-support-protocol-starter（该模块已删除），与本模块无关。 -->
 
         <dependency>
             <groupId>com.chua</groupId>

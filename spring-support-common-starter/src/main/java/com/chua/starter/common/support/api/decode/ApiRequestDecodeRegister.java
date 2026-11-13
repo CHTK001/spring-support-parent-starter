@@ -1,5 +1,5 @@
 package com.chua.starter.common.support.api.decode;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;

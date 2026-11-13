@@ -1,6 +1,6 @@
 package com.chua.starter.server.support.util;
 
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.server.support.config.ServerProperties;
 import org.springframework.stereotype.Component;
 

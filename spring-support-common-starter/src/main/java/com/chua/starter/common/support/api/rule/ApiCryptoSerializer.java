@@ -5,7 +5,7 @@ import com.chua.common.support.lang.algorithm.cipher.Sm2Cipher;
 import com.chua.common.support.lang.algorithm.crypto.Hex;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.common.support.api.annotations.ApiFieldCrypto;
 import com.chua.starter.common.support.api.annotations.ApiFieldCryptoKey;
 import com.chua.spring.support.configuration.SpringBeanUtils;

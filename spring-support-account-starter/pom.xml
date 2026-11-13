@@ -89,16 +89,25 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-email-starter</artifactId>
     </dependency>
-    <!-- 单元测试：Spi 实现的报文/签名回归探针 -->
+    <!-- 单元测试：账号归属隔离 / 加密 / 掩码回归，走 H2 真库 + MyBatis-Plus 真实 Mapper。
+         刻意不用 spring-boot-starter-test：它会传递引入 mockito-core，
+         而 AGENTS.md §3 与 example-p3c-review 规约四十禁止 mockito / @MockBean / 打桩 Mapper。
+         这里只需要 JUnit 5、Spring 自带测试夹具（MockHttpServletRequest，非 mock 框架）与 H2。
+         spring-test / h2 / junit-jupiter 的版本均由 Spring Boot BOM 托管。 -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- 单元测试：账号服务的归属隔离 / 默认互斥 / 掩码保留用 Mockito 打桩 Mapper -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- 真实数据库链路：内存 H2（MySQL 兼容模式）回放账号三表 DDL，Mapper 全部真实落库 -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -6,7 +6,7 @@ import com.chua.common.support.lang.algorithm.cipher.AesCipher;
 import com.chua.common.support.lang.algorithm.crypto.Hex;
 import com.chua.common.support.utils.StringUtils;
 import com.google.common.base.Preconditions;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.Codec;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.CallableStatement;
