@@ -1,8 +1,7 @@
 package com.chua.starter.sse.support.socket;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,24 +22,38 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/sse")
-@ConditionalOnBean(SseSocketSessionTemplate.class)
 public class SseSocketController {
 
-    @Autowired
     /**
      * sseSocket会话模板
-    */
-    private SseSocketSessionTemplate sseSocketSessionTemplate;
+     */
+    private final SseSocketSessionTemplate sseSocketSessionTemplate;
 
     /**
-     * 建立 SSE 连接
+     * 构造器注入：必须和业务广播用的是同一个模板实例。
+     *
+     * @param sseSocketSessionTemplate SSE 会话模板
+     */
+    public SseSocketController(SseSocketSessionTemplate sseSocketSessionTemplate) {
+        this.sseSocketSessionTemplate = sseSocketSessionTemplate;
+    }
+
+    /**
+     * 建立 SSE 连接（POST）
+     *
+     * <p>用 POST 而不是 GET：token 可以放在 {@code x-oauth-token} / Authorization
+     * 请求头里，不会出现在 URL、浏览器历史和网关访问日志中。</p>
      *
      * @param clientId 客户端标识（可选）
+     * @param response HTTP 响应，用于关闭代理缓冲
      * @return SseEmitter
-     * @param false false
      */
-    @GetMapping(value = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter connect(@RequestParam(required = false) String clientId) {
+    @PostMapping(value = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter connect(@RequestParam(required = false) String clientId,
+                              HttpServletResponse response) {
+        // nginx 默认会缓冲 text/event-stream；不关掉会“攒一批才吐”，看起来像不推送。
+        response.setHeader("Cache-Control", "no-cache");
+        response.setHeader("X-Accel-Buffering", "no");
         log.info("[SSE] 连接请求: clientId={}", clientId);
         return sseSocketSessionTemplate.createConnection(clientId);
     }

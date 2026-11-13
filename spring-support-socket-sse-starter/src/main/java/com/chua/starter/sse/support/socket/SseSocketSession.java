@@ -188,6 +188,24 @@ public class SseSocketSession implements SocketSession {
         }
     }
 
+    /**
+     * 心跳：发一条 SSE 注释（comment），保持连接不被代理/网关按空闲关闭。
+     *
+     * @return 连接仍可用返回 true
+     */
+    public boolean ping() {
+        if (!connected) {
+            return false;
+        }
+        try {
+            emitter.send(SseEmitter.event().comment("ping"));
+            return true;
+        } catch (Exception e) {
+            connected = false;
+            return false;
+        }
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     /**

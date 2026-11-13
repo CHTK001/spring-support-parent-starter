@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +38,16 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
      * SSE 连接超时时间（毫秒），默认30分钟
      */
     private final long timeout;
+
+    /**
+     * 心跳间隔（秒）：发 SSE 注释，避免 nginx/网关按空闲关闭连接
+     */
+    private static final long HEARTBEAT_SECONDS = 15L;
+
+    /**
+     * 心跳执行器（start 时创建，stop 时关闭）
+     */
+    private ScheduledExecutorService heartbeatExecutor;
 
     /**
      * 客户端连接映射
@@ -283,7 +296,29 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
      * 开始
     */
     public void start() {
+        if (heartbeatExecutor == null || heartbeatExecutor.isShutdown()) {
+            // [P3C C1 豁免]
+            heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+                // [P3C C1 豁免]
+                Thread thread = new Thread(r, "sse-heartbeat");
+                thread.setDaemon(true);
+                return thread;
+            });
+            heartbeatExecutor.scheduleAtFixedRate(
+                    this::heartbeat, HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+        }
         log.info("[SSE] Socket 服务启动");
+    }
+
+    /**
+     * 心跳：给所有在线连接发一条 SSE 注释，顺手清理已断开的会话。
+     */
+    private void heartbeat() {
+        sessions.forEach((clientId, session) -> {
+            if (!session.ping()) {
+                sessions.remove(clientId, session);
+            }
+        });
     }
 
     @Override
@@ -292,6 +327,10 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
     */
     public void stop() {
         log.info("[SSE] Socket 服务停止");
+        if (heartbeatExecutor != null) {
+            heartbeatExecutor.shutdownNow();
+            heartbeatExecutor = null;
+        }
         sessions.values().forEach(SseSocketSession::disconnect);
         sessions.clear();
         userSessionMap.clear();
