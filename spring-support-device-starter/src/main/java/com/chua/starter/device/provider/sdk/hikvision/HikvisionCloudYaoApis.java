@@ -461,6 +461,7 @@ public final class HikvisionCloudYaoApis {
                     "/artemis/api/eits/v1/intelligent/fdlib/fdsetup/put", "v1", "other"),
             PlatformApiSpec.user("post.v1.intelligent.fdlib.manualmodeling.progressstate.taskid.identitykey.get", "获取建模进度状态", "POST",
                     "/artemis/api/eits/v1/Intelligent/FDLib/manualModeling/progressState/taskID/identityKey/get", "v1", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.user("post.v1.intelligent.fdlib.manualmodeling.security.iv.range.fdid.fdtype.identitykey.picturesavemode.get", "统一控制建模", "POST",
                     "/artemis/api/eits/v1/Intelligent/FDLib/manualModeling/security/iv/range/FDID/FDType/identityKey/pictureSaveMode/get", "v1", "other"),
             PlatformApiSpec.user("post.v1.intelligent.fdlib.modelingstatus.fdid.pid.security.iv.identitykey.fdtype.get", "查询单一建模状态", "POST",
@@ -469,6 +470,7 @@ public final class HikvisionCloudYaoApis {
                     "/artemis/api/eits/v1/Intelligent/FDLib/modelingStatus/status/security/iv/identityKey/FDType/terminalNo/post", "v1", "other"),
             PlatformApiSpec.user("post.v1.intelligent.fdlib.modelingstatusrange.security.iv.identitykey.post", "查询整体建模状态", "POST",
                     "/artemis/api/eits/v1/Intelligent/FDLib/modelingStatusRange/security/iv/identityKey/post", "v1", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.user("post.v1.intelligent.fdlib.pictureupload.security.iv.identitykey.type.datatype.picturesavemode.post", "导入图片到人脸库", "POST",
                     "/artemis/api/eits/v1/Intelligent/FDLib/pictureUpload/security/iv/identityKey/type/dataType/pictureSaveMode/post", "v1", "other"),
             PlatformApiSpec.user("post.v1.intelligent.fdlib.post", "创建人脸库信息", "POST",

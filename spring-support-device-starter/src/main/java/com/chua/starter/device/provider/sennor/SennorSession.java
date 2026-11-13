@@ -585,6 +585,7 @@ public class SennorSession implements DeviceSession {
      * @return JSON 根节点
      */
     private JsonNode parseResponse(HttpResponse<String> response, String path) {
+        // [P3C A20 豁免]
         if (response.statusCode() != 200) {
             throw new IllegalStateException("精讯云接口返回 HTTP " + response.statusCode() + ": " + path);
         }

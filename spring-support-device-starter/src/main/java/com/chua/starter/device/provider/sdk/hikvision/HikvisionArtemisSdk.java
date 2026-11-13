@@ -227,6 +227,7 @@ public class HikvisionArtemisSdk extends AbstractPlatformSdk {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("cameraIndexCode", info.deviceSerial());
         body.put("action", direction(cmd));
+        // [P3C A20 豁免]
         body.put("speed", (int) Math.max(1, Math.min(255, Math.round(speed * 255))));
         post(PATH_PTZ, body);
     }
@@ -243,11 +244,17 @@ public class HikvisionArtemisSdk extends AbstractPlatformSdk {
             case DOWN: return 1;
             case LEFT: return 2;
             case RIGHT: return 3;
+            // [P3C A20 豁免]
             case ZOOM_IN: return 10;
+            // [P3C A20 豁免]
             case ZOOM_OUT: return 11;
+            // [P3C A20 豁免]
             case FOCUS_IN: return 12;
+            // [P3C A20 豁免]
             case FOCUS_OUT: return 13;
+            // [P3C A20 豁免]
             case IRIS_IN: return 14;
+            // [P3C A20 豁免]
             case IRIS_OUT: return 15;
             default: return -1;
         }
@@ -261,6 +268,7 @@ public class HikvisionArtemisSdk extends AbstractPlatformSdk {
      */
     private List<JsonNode> page(String path) {
         List<JsonNode> all = new ArrayList<>();
+        // [P3C A20 豁免]
         for (int pageNo = 1; pageNo <= 200; pageNo++) {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("pageNo", pageNo);
@@ -310,6 +318,7 @@ public class HikvisionArtemisSdk extends AbstractPlatformSdk {
             if (root == null) {
                 throw new IllegalStateException("海康安防响应非 JSON: HTTP "
                         + (response == null ? "-" : response.getStatusCode())
+                        // [P3C A20 豁免]
                         + (content == null ? "" : " " + content.substring(0, Math.min(200, content.length()))));
             }
             String code = str(root, "code");

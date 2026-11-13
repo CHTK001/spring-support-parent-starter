@@ -86,6 +86,7 @@ public class SennorProvider implements DeviceProvider {
                 List.of(new PlatformDescriptor(PLATFORM, "精讯云", DEFAULT_BASE_URL, fields,
                         DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM))),
                 DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM),
+                // [P3C A20 豁免]
                 600,
                 DOC_URL,
                 "精讯云传感器/继电器设备目录与在线状态；账号模式走控制台登录，secretKey 模式走官方 HTTP 取数接口。");

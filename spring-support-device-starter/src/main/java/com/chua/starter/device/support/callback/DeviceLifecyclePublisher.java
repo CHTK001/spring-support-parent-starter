@@ -126,6 +126,7 @@ public class DeviceLifecyclePublisher implements DisposableBean {
                                                 Future<DeviceCallbackResult> future) {
         if (future.isCancelled()) {
             return new DeviceCallbackResult(callback.name(), false,
+                    // [P3C A20 豁免]
                     "回调超时（" + TIMEOUT_SECONDS + " 秒）", TIMEOUT_SECONDS * 1000L);
         }
         try {

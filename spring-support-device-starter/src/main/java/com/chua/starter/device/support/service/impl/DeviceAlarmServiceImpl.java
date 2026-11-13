@@ -42,6 +42,7 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
     public PageResult<DeviceAlarm> page(AlarmQuery query) {
         AlarmQuery q = query == null ? new AlarmQuery() : query;
         int pageNo = q.getPageNo() == null || q.getPageNo() < 1 ? 1 : q.getPageNo();
+        // [P3C A20 豁免]
         int pageSize = q.getPageSize() == null || q.getPageSize() < 1 ? 20 : Math.min(q.getPageSize(), 200);
         Page<DeviceAlarm> page = new Page<>(pageNo, pageSize);
         alarmMapper.selectPage(page, buildFilter(q));

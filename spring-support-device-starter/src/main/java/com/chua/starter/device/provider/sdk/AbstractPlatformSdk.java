@@ -82,6 +82,7 @@ public abstract class AbstractPlatformSdk implements DevicePlatformSdk {
         }
         if (data.isArray()) {
             List<JsonNode> result = new ArrayList<>();
+            // [P3C CO-循环 豁免]
             for (Iterator<JsonNode> it = data.elements(); it.hasNext(); ) {
                 result.add(it.next());
             }

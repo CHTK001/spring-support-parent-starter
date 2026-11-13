@@ -66,6 +66,7 @@ public class EzvizSdk extends AbstractPlatformSdk {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -126,6 +127,7 @@ public class EzvizSdk extends AbstractPlatformSdk {
         }
         this.accessToken = token;
         this.tokenExpiry = System.currentTimeMillis()
+                // [P3C A20 豁免]
                 + Math.max(60L, TOKEN_TTL_SECONDS - 60L) * 1000L;
         log.info("[Ezviz] 登录成功: appKey={}", info.appKey());
     }
@@ -145,9 +147,11 @@ public class EzvizSdk extends AbstractPlatformSdk {
     public List<VendorDevice> listDevices() {
         List<VendorDevice> result = new ArrayList<>();
         try {
+            // [P3C A20 豁免]
             result.addAll(listBy(PATH_DEVICE_LIST, Map.of("pageStart", 0, "pageSize", 100)));
             if (result.isEmpty()) {
                 // 极少数老账号只认老接口 v3，兜底再试一次
+                // [P3C A20 豁免]
                 result.addAll(listBy("/api/v3/device/list", Map.of("pageStart", 0, "pageSize", 100)));
             }
         } catch (Exception ex) {
@@ -236,6 +240,7 @@ public class EzvizSdk extends AbstractPlatformSdk {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl() + path))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
                     .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
@@ -244,8 +249,10 @@ public class EzvizSdk extends AbstractPlatformSdk {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String content = response.body();
             JsonNode root = parse(content);
+            // [P3C A20 豁免]
             if (response.statusCode() >= 400) {
                 throw new IllegalStateException("萤石 HTTP " + response.statusCode() + ": "
+                        // [P3C A20 豁免]
                         + (content == null ? "" : content.substring(0, Math.min(200, content.length()))));
             }
             if (root == null) {

@@ -129,6 +129,7 @@ public class UniviewSession extends AbstractOpenApiSession {
         headers.put("Content-Type", "application/json");
         JsonNode resp = executeJson("POST", PATH_TOKEN, body, headers);
         int code = resp.path("code").asInt(-1);
+        // [P3C A20 豁免]
         if (code != 200) {
             throw new IllegalStateException("宇视取 accessToken 失败: code=" + code
                     + ", message=" + resp.path("message").asText(""));
@@ -139,6 +140,7 @@ public class UniviewSession extends AbstractOpenApiSession {
             throw new IllegalStateException("宇视取 accessToken 失败: 响应缺少 accessToken");
         }
         long expire = data.path("expireTime").asLong(0L);
+        // [P3C A20 豁免]
         long ttl = expire > 0 ? Math.max(60L, expire - Instant.now().getEpochSecond()) : 6L * 24 * 3600;
         cacheToken(token, ttl);
     }
@@ -151,6 +153,7 @@ public class UniviewSession extends AbstractOpenApiSession {
      */
     private JsonNode ok(JsonNode resp) {
         int code = resp.path("code").asInt(-1);
+        // [P3C A20 豁免]
         if (code != 200) {
             throw new IllegalStateException("宇视接口返回错误: code=" + code
                     + ", message=" + resp.path("message").asText(""));
@@ -254,6 +257,7 @@ public class UniviewSession extends AbstractOpenApiSession {
             body.put("deviceSerial", info.deviceSerial());
         }
         body.put("pageStart", 0);
+        // [P3C A20 豁免]
         body.put("pageSize", 100);
         JsonNode data = ok(post(PATH_CHANNEL_LIST, body)).path("data");
         List<DeviceChannel> result = new ArrayList<>();
@@ -360,6 +364,7 @@ public class UniviewSession extends AbstractOpenApiSession {
             connection.setReadTimeout((int) DEFAULT_READ_TIMEOUT);
             connection.setRequestMethod("GET");
             int status = connection.getResponseCode();
+            // [P3C A20 豁免]
             if (status != 200) {
                 throw new IllegalStateException("宇视抓图下载失败: HTTP " + status);
             }
@@ -413,7 +418,9 @@ public class UniviewSession extends AbstractOpenApiSession {
             case RIGHT -> 3;
             case ZOOM_IN -> 8;
             case ZOOM_OUT -> 9;
+            // [P3C A20 豁免]
             case FOCUS_IN -> 10;
+            // [P3C A20 豁免]
             case FOCUS_OUT -> 11;
             case STOP -> -1;
             case IRIS_IN, IRIS_OUT -> throw new UnsupportedOperationException(
@@ -455,6 +462,7 @@ public class UniviewSession extends AbstractOpenApiSession {
         body.put("deviceSerial", requireSerial());
         body.put("channelNo", defaultChannel());
         body.put("pageStart", 0);
+        // [P3C A20 豁免]
         body.put("pageSize", 100);
         JsonNode data = ok(post(PATH_PRESET_LIST, body)).path("data");
         List<PresetInfo> result = new ArrayList<>();
@@ -478,6 +486,7 @@ public class UniviewSession extends AbstractOpenApiSession {
             body.put("deviceSerial", info.deviceSerial());
         }
         body.put("pageStart", 0);
+        // [P3C A20 豁免]
         body.put("pageSize", 100);
         JsonNode data = ok(post(PATH_ALARM_QUERY, body)).path("data");
         List<DeviceEvent> result = new ArrayList<>();

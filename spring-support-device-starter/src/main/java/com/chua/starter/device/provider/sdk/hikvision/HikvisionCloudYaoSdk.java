@@ -72,6 +72,7 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
 
     /** HTTP 客户端（复用连接） */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -189,6 +190,7 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
             expiresIn = expiresNode.asLong(43_200L);
         }
         this.accessToken = token;
+        // [P3C A20 豁免]
         this.tokenExpiry = System.currentTimeMillis() + Math.max(60L, expiresIn - 60L) * 1000L;
         log.info("[HikvisionCloudYao] 登录成功: productCode={}, projectId={}", productCode, projectId);
     }
@@ -450,6 +452,7 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
             String json = MAPPER.writeValueAsString(body);
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl() + path))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
@@ -462,6 +465,7 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
             JsonNode root = parse(response.body());
             if (root == null) {
                 throw new IllegalStateException("海康云曜响应非 JSON: HTTP " + response.statusCode()
+                        // [P3C A20 豁免]
                         + " " + response.body().substring(0, Math.min(200, response.body().length())));
             }
             String code = str(root, "code");

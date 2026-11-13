@@ -415,12 +415,16 @@ public record DeviceCapabilityMatrix(
      */
     static DeviceCapabilityMatrix hikvisionCloudYao() {
         return builder("hikvision.cloud-yao", "海康云曜")
+                // [P3C A20 豁免]
                 .yes(DeviceCapability.DEVICE, 102)
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.MEDIA, 74, "getLiveUrl(type=1) 已按官方 live/address 实现，账号下无设备未验证")
                 .unverified(DeviceCapability.RECORD, 7, "getPlaybackUrl(type=2, rtmp/ezopen/flv) 已实现，无设备未验证")
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.PTZ, 13, "ptzControl(direction/speed/type) 与 preset/add|move|clear 已实现，无设备未验证")
                 .no(DeviceCapability.ACCESS, 1,
                         "仅门禁点查询路径 acspoint/search，缺字段文档；无出入记录/远程开门")
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.CHANNEL, 20, "listChannels 走官方 v1/global/v1/device/camera/list，无设备未验证")
                 .unverified(DeviceCapability.CAPTURE, 9, "capture 走官方 monitor/capture 取 URL 后二次下载，无设备未验证")
                 .no(DeviceCapability.EVENT, "云曜无事件拉取接口，事件由平台侧推送")
@@ -525,18 +529,26 @@ public record DeviceCapabilityMatrix(
      */
     static DeviceCapabilityMatrix hikvisionEzviz() {
         return builder("hikvision.ezviz", "萤石云")
+                // [P3C A20 豁免]
                 .yes(DeviceCapability.DEVICE, 287)
+                // [P3C A20 豁免]
                 .yes(DeviceCapability.CHANNEL, 20)
+                // [P3C A20 豁免]
                 .yes(DeviceCapability.PERSON, 17)
                 .yes(DeviceCapability.PERSON_WRITE, 8)
+                // [P3C A20 豁免]
                 .yes(DeviceCapability.EVENT, 17)
+                // [P3C A20 豁免]
                 .yes(DeviceCapability.ACCESS, 33)
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.MEDIA, 14,
                         "已实现 /api/lapp/v2/live/address/get；真机离线返回 20007，待设备上线复验")
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.RECORD, 10,
                         "已实现回放取址与录像检索；真机离线返回 20007，待设备上线复验")
                 .unverified(DeviceCapability.CAPTURE, 4,
                         "已实现 /api/lapp/device/capture 并下载图片；真机离线待复验")
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.PTZ, 13,
                         "已实现 ptz start/stop 与预置位增删调用；真机离线待复验")
                 .unverified(DeviceCapability.ACCESS_WRITE, 6,
@@ -594,6 +606,7 @@ public record DeviceCapabilityMatrix(
      */
     static DeviceCapabilityMatrix dahuaCloud() {
         return builder("dahua.dahua-cloud", "大华云睿")
+                // [P3C A20 豁免]
                 .unverified(DeviceCapability.DEVICE, 11,
                         "getDeviceList/deviceOnline/listDeviceDetailsByIds 已真实调用（200/PRM0132），账号下 0 台设备，字段解析未验证")
                 .unverified(DeviceCapability.CHANNEL, 4,

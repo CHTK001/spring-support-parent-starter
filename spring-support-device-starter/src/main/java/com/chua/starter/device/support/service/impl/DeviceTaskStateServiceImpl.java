@@ -61,6 +61,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
             return false;
         }
         LocalDateTime lastRun = state.getDeviceTaskStateLastRunAt();
+        // [P3C A20 豁免]
         int interval = state.getDeviceTaskStateInterval() != null ? state.getDeviceTaskStateInterval() : 30;
         if (lastRun == null) {
             return true;

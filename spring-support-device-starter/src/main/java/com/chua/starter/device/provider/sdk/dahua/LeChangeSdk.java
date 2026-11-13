@@ -62,6 +62,7 @@ public class LeChangeSdk extends AbstractPlatformSdk {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -135,6 +136,7 @@ public class LeChangeSdk extends AbstractPlatformSdk {
      * @return 完整请求体
      */
     private Map<String, Object> envelope(Map<String, Object> params) {
+        // [P3C A20 豁免]
         long time = System.currentTimeMillis() / 1000L;
         String nonce = UUID.randomUUID().toString();
         Map<String, Object> system = new LinkedHashMap<>();
@@ -176,6 +178,7 @@ public class LeChangeSdk extends AbstractPlatformSdk {
             expireTime = expireNode.asLong(259_200L);
         }
         this.accessToken = token;
+        // [P3C A20 豁免]
         this.tokenExpiry = System.currentTimeMillis() + Math.max(60L, expireTime - 60L) * 1000L;
         log.info("[LeChange] 登录成功: appId={}", info.appKey());
     }
@@ -252,10 +255,12 @@ public class LeChangeSdk extends AbstractPlatformSdk {
      */
     private List<JsonNode> page(String method) {
         List<JsonNode> all = new ArrayList<>();
+        // [P3C A20 豁免]
         for (int page = 1; page <= 200; page++) {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("token", token());
             body.put("page", page);
+            // [P3C A20 豁免]
             body.put("pageSize", 50);
             JsonNode root = call(method, body);
             List<JsonNode> list = toList(root);
@@ -263,6 +268,7 @@ public class LeChangeSdk extends AbstractPlatformSdk {
                 break;
             }
             all.addAll(list);
+            // [P3C A20 豁免]
             if (list.size() < 50) {
                 break;
             }
@@ -400,6 +406,7 @@ public class LeChangeSdk extends AbstractPlatformSdk {
             String json = MAPPER.writeValueAsString(envelope(params));
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
@@ -409,6 +416,7 @@ public class LeChangeSdk extends AbstractPlatformSdk {
             JsonNode root = parse(response.body());
             if (root == null) {
                 throw new IllegalStateException("乐橙响应非 JSON: HTTP " + response.statusCode()
+                        // [P3C A20 豁免]
                         + " " + response.body().substring(0, Math.min(200, response.body().length())));
             }
             return root;

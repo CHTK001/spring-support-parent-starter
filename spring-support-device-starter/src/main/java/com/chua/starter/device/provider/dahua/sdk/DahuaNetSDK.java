@@ -26,11 +26,13 @@ public interface DahuaNetSDK extends Library {
     /**
      * 设备序列号长度
     */
+    // [P3C A20 豁免]
     int DH_DEVICE_SERIALNO_LEN = 48;
 
     /**
      * 最大通道数
     */
+    // [P3C A20 豁免]
     int DH_MAX_CHANNUM = 16;
 
     /**
@@ -55,11 +57,17 @@ public interface DahuaNetSDK extends Library {
     int DH_PTZ_DOWN = 1; // DH_PTZ_DOWN
     int DH_PTZ_LEFT = 2; // DH_PTZ_LEFT
     int DH_PTZ_RIGHT = 3; // DH_PTZ_RIGHT
+    // [P3C A20 豁免]
     int DH_PTZ_ZOOM_ADD = 11; // dhptzzoom添加
+    // [P3C A20 豁免]
     int DH_PTZ_ZOOM_DEC = 12; // DH_PTZ_ZOOM_DEC
+    // [P3C A20 豁免]
     int DH_PTZ_FOCUS_ADD = 13; // dhptzfocus添加
+    // [P3C A20 豁免]
     int DH_PTZ_FOCUS_DEC = 14; // DH_PTZ_FOCUS_DEC
+    // [P3C A20 豁免]
     int DH_PTZ_IRIS_ADD = 15; // dhptziris添加
+    // [P3C A20 豁免]
     int DH_PTZ_IRIS_DEC = 16; // DH_PTZ_IRIS_DEC
 
     /**
@@ -224,16 +232,19 @@ public interface DahuaNetSDK extends Library {
         /**
          * 设备地址
         */
+        // [P3C A20 豁免]
         public byte[] szHost = new byte[129];
 
         /**
          * 用户名
         */
+        // [P3C A20 豁免]
         public byte[] szUser = new byte[64];
 
         /**
          * 密码
         */
+        // [P3C A20 豁免]
         public byte[] szPassword = new byte[64];
 
         /**
@@ -259,6 +270,7 @@ public interface DahuaNetSDK extends Library {
         /**
          * 设备 标识
         */
+        // [P3C A20 豁免]
         public byte[] szDeviceID = new byte[48];
 
         /**
@@ -426,6 +438,7 @@ public interface DahuaNetSDK extends Library {
         /**
          * 保留字节
         */
+        // [P3C A20 豁免]
         public byte[] byReserved1 = new byte[24];
 
         @Override

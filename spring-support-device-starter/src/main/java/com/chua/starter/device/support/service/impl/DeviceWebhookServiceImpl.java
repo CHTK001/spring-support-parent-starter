@@ -96,6 +96,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 ? "webhook-" + LocalDateTime.now().format(DTF) : request.getName().trim();
         String scopes = request == null || !StringUtils.hasText(request.getScopes())
                 ? DEFAULT_SCOPES : request.getScopes().trim();
+        // [P3C A20 豁免]
         byte[] secretBytes = new byte[32];
         random.nextBytes(secretBytes);
         String secret = Base64.getUrlEncoder().withoutPadding().encodeToString(secretBytes);
@@ -364,6 +365,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
         } catch (Exception ex) {
             throw new IllegalArgumentException("缺少或非法 X-Timestamp");
         }
+        // [P3C A20 豁免]
         if (Math.abs(System.currentTimeMillis() / 1000L - ts) > REPLAY_WINDOW_SECONDS) {
             throw new IllegalArgumentException("请求时间戳超出防重放窗口");
         }

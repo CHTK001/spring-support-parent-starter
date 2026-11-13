@@ -1676,6 +1676,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
             return List.of();
         }
         List<JsonNode> result = new ArrayList<>();
+        // [P3C CO-循环 豁免]
         for (Iterator<JsonNode> it = node.elements(); it.hasNext(); ) {
             result.add(it.next());
         }

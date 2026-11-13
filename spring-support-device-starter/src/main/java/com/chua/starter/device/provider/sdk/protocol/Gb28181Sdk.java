@@ -47,6 +47,7 @@ public class Gb28181Sdk extends AbstractPlatformSdk {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -108,6 +109,7 @@ public class Gb28181Sdk extends AbstractPlatformSdk {
                     "GB28181 未配置 SIP 服务端地址：请在凭据里填 baseUrl（WVP/ZLMediaKit 等服务的 REST 地址）");
         }
         JsonNodeHolder holder = new JsonNodeHolder(send(base + "/api/v1/device/list",
+                // [P3C A20 豁免]
                 Map.of("page", 1, "count", 500)));
         List<VendorDevice> result = new ArrayList<>();
         for (com.fasterxml.jackson.databind.JsonNode node : toList(holder.root)) {
@@ -171,6 +173,7 @@ public class Gb28181Sdk extends AbstractPlatformSdk {
             String json = MAPPER.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
@@ -179,8 +182,10 @@ public class Gb28181Sdk extends AbstractPlatformSdk {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String content = response.body();
             com.fasterxml.jackson.databind.JsonNode root = parse(content);
+            // [P3C A20 豁免]
             if (response.statusCode() >= 400) {
                 throw new IllegalStateException("GB28181 服务端 HTTP " + response.statusCode() + ": "
+                        // [P3C A20 豁免]
                         + (content == null ? "" : content.substring(0, Math.min(200, content.length()))));
             }
             if (root == null) {

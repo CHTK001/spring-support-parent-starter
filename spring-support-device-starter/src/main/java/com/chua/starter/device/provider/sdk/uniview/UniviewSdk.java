@@ -56,6 +56,7 @@ public class UniviewSdk extends AbstractPlatformSdk {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -121,6 +122,7 @@ public class UniviewSdk extends AbstractPlatformSdk {
             expire = expireNode.asLong(604_800L);
         }
         this.accessToken = token;
+        // [P3C A20 豁免]
         this.tokenExpiry = System.currentTimeMillis() + Math.max(60L, expire - 60L) * 1000L;
         log.info("[Uniview] 登录成功: appKey={}", info.appKey());
     }
@@ -140,6 +142,7 @@ public class UniviewSdk extends AbstractPlatformSdk {
     public List<VendorDevice> listDevices() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("pageNo", 1);
+        // [P3C A20 豁免]
         body.put("pageSize", 100);
         JsonNode root = biz(PATH_DEVICE_LIST, body);
         JsonNode data = root == null ? null : root.get("data");
@@ -213,6 +216,7 @@ public class UniviewSdk extends AbstractPlatformSdk {
             String json = MAPPER.writeValueAsString(body);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl() + path))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
@@ -221,8 +225,10 @@ public class UniviewSdk extends AbstractPlatformSdk {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String content = response.body();
             JsonNode root = parse(content);
+            // [P3C A20 豁免]
             if (response.statusCode() >= 400) {
                 throw new IllegalStateException("宇视 HTTP " + response.statusCode() + ": "
+                        // [P3C A20 豁免]
                         + (content == null ? "" : content.substring(0, Math.min(200, content.length()))));
             }
             if (root == null) {

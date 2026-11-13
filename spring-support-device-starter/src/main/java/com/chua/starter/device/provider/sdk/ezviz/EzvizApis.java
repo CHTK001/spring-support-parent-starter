@@ -36,11 +36,15 @@ public final class EzvizApis {
     private static final List<PlatformApiSpec> ALL = List.of(
             // ---------- alarm（31） ----------
             PlatformApiSpec.global("devicekit.elevator.sos.close", "手动关闭指定sos事件", "GET", "/api/devicekit/elevator/sos/close", "devicekit", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("devicekit.elevator.sos.info.detail", "获取电梯sos事件", "GET", "/api/devicekit/elevator/sos/info/detail", "devicekit", "alarm"),
             PlatformApiSpec.global("devicekit.elevator.sos.list", "分页查询电梯sos事件列表", "GET", "/api/devicekit/elevator/sos/list", "devicekit", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("devicekit.elevator.sos.rescuetime.update", "手动订正救援开始时间结束时间", "POST", "/api/devicekit/elevator/sos/rescuetime/update", "devicekit", "alarm"),
             // ---------- 设备套件：停车/过车 ----------
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.parking.msgrecord", "查询停车消息记录（过车）", "GET", "/api/service/devicekit/parking/msgRecord", "service", "vehicle"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.parking.parkingrecord", "查询停车记录", "GET", "/api/service/devicekit/parking/parkingRecord", "service", "vehicle"),
             PlatformApiSpec.global("lapp.alarm.device.list", "按照设备获取告警消息列表", "POST", "/api/lapp/alarm/device/list", "lapp", "alarm"),
             PlatformApiSpec.global("lapp.alarm.list", "获取所有告警信息列表", "POST", "/api/lapp/alarm/list", "lapp", "alarm"),
@@ -52,13 +56,20 @@ public final class EzvizApis {
             PlatformApiSpec.global("lapp.detector.list", "获取探测器列表", "POST", "/api/lapp/detector/list", "lapp", "alarm"),
             PlatformApiSpec.global("lapp.detector.name.change", "修改探测器名称", "POST", "/api/lapp/detector/name/change", "lapp", "alarm"),
             PlatformApiSpec.global("lapp.detector.status.set", "设置探测器状态", "POST", "/api/lapp/detector/status/set", "lapp", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.device.intelligence.detection.switch.set", "设置智能检测开关状态", "POST", "/api/lapp/device/intelligence/detection/switch/set", "lapp", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.device.intelligence.detection.switch.status", "获取智能检测开关状态", "POST", "/api/lapp/device/intelligence/detection/switch/status", "lapp", "alarm"),
             PlatformApiSpec.global("lapp.mq.v2.consumer.messages", "消费者消费信息", "POST", "/api/lapp/mq/v2/consumer/messages", "lapp", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.statistics.alarm", "分页查询报警信息", "GET", "/api/service/devicekit/aicamera/statistics/alarm", "service", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.sleepdetector.v3.third.huayi.device.bound", "平台用户设备绑定", "GET", "/api/service/sleepDetector/v3/third/huayi/device/bound", "service", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.sleepdetector.v3.third.huayi.deviceid", "通过设备序列号获取deviceId", "GET", "/api/service/sleepDetector/v3/third/huayi/deviceId", "service", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.sleepdetector.v3.third.whst.sleepreport.list", "获取睡眠报告", "GET", "/api/service/sleepDetector/v3/third/whst/sleepReport/list", "service", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.sleepdetector.v3.third.whst.statistics.data.bodydetect", "获取设备在离床消息", "GET", "/api/service/sleepDetector/v3/third/whst/statistics/data/bodyDetect", "service", "alarm"),
             PlatformApiSpec.global("v3.das.device.detect.switch.get", "查询高级告警侦测类型", "GET", "/api/v3/das/device/detect/switch/get", "v3", "alarm"),
             PlatformApiSpec.global("v3.device.alarm.detect.switch.get", "查询人形/PIR检测状态", "GET", "/api/v3/device/alarm/detect/switch/get", "v3", "alarm"),
@@ -68,13 +79,18 @@ public final class EzvizApis {
             PlatformApiSpec.global("v3.device.detect.switch.set", "设置侦测开关", "POST", "/api/v3/device/detect/switch/set", "v3", "alarm"),
             PlatformApiSpec.global("v3.device.motion.detect.get", "查询人形检测区域", "GET", "/api/v3/device/motion/detect/get", "v3", "alarm"),
             PlatformApiSpec.global("v3.device.tamper.alarm.switch.set", "设置设备防拆告警开关", "POST", "/api/v3/device/tamper/alarm/switch/set", "v3", "alarm"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.tamper.alarm.switch.status", "查询设备防拆告警开关", "GET", "/api/v3/device/tamper/alarm/switch/status", "v3", "alarm"),
             // ---------- other（77） ----------
             PlatformApiSpec.global("hikvision.isapi.mobile.location", "获取设备定位参数", "GET", "/api/hikvision/ISAPI/Mobile/location", "hikvision", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.mobile.location.2", "配置设备定位参数", "PUT", "/api/hikvision/ISAPI/Mobile/location", "hikvision", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.system.localbuttonpermission", "配置设备本地按键权限", "PUT", "/api/hikvision/ISAPI/System/localButtonPermission", "hikvision", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.system.localbuttonpermission.2", "获取设备本地按键权限", "GET", "/api/hikvision/ISAPI/System/localButtonPermission", "hikvision", "other"),
             PlatformApiSpec.global("hikvision.isapi.system.reboot", "设备重启", "PUT", "/api/hikvision/ISAPI/System/reboot", "hikvision", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.system.workstatuscfg", "获取设备工作状态上报配置", "GET", "/api/hikvision/ISAPI/System/WorkStatusCfg", "hikvision", "other"),
             PlatformApiSpec.global("lapp.camera.list", "获取视频通道列表", "POST", "/api/lapp/camera/list", "lapp", "other"),
             PlatformApiSpec.global("lapp.camera.name.update", "修改云端通道名称", "POST", "/api/lapp/camera/name/update", "lapp", "other"),
@@ -119,44 +135,69 @@ public final class EzvizApis {
             PlatformApiSpec.global("service.device.add.tokenurls", "开发者授权列表查询", "GET", "/api/service/device/add/tokenUrls", "service", "other"),
             PlatformApiSpec.global("service.media.aac.transfer", "音频格式转码为AAC", "POST", "/api/service/media/aac/transfer", "service", "other"),
             PlatformApiSpec.global("service.media.aac.transfer.2", "查询是否将音频格式转码为AAC", "GET", "/api/service/media/aac/transfer", "service", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.thirdproto.dhreg.licenses.apply", "批量申请设备", "POST", "/api/service/thirdproto/dhreg/licenses/apply", "service", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.thirdproto.dhreg.licenses.edit", "设备名称和密码修改", "POST", "/api/service/thirdproto/dhreg/licenses/edit", "service", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.thirdproto.dhreg.licenses.task", "批量申请设备结果查询", "GET", "/api/service/thirdproto/dhreg/licenses/task", "service", "other"),
             PlatformApiSpec.global("service.thirdproto.dhreg.project", "服务开通", "POST", "/api/service/thirdproto/dhreg/project", "service", "other"),
             PlatformApiSpec.global("service.thirdproto.dhreg.project.2", "查询已开通服务", "GET", "/api/service/thirdproto/dhreg/project", "service", "other"),
             PlatformApiSpec.global("v3.device.authorize.add", "添加设备授权", "POST", "/api/v3/device/authorize/add", "v3", "other"),
             PlatformApiSpec.global("v3.device.authorize.list", "设备授权状态批量查询", "GET", "/api/v3/device/authorize/list", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.company.member.query.authority.records", "获取授权信息", "GET", "/api/v3/device/company/member/query/authority/records", "v3", "other"),
             PlatformApiSpec.global("v3.intelligent.model.app.load", "设备智能算法下发", "POST", "/api/v3/intelligent/model/app/load", "v3", "other"),
             PlatformApiSpec.global("v3.keyvalue.bg9859941.1.op", "查询暖光调节、亮灯时长（GET）", "GET", "/api/v3/keyValue/BG9859941/1/op", "v3", "other"),
             PlatformApiSpec.global("v3.keyvalue.bg9859941.1.op.2", "设置暖光调节、亮灯时长（PUT）", "PUT", "/api/v3/keyValue/BG9859941/1/op", "v3", "other"),
             PlatformApiSpec.global("v3.lapp.trust.sign.apply", "B账户托管申请生成授权码", "POST", "/api/v3/lapp/trust/sign/apply", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.lapp.trust.sign.resource.authorize", "B账户单设备托管授权", "POST", "/api/v3/lapp/trust/sign/resource/authorize", "v3", "other"),
             PlatformApiSpec.global("v3.lapp.trust.sign.resource.list", "B账户托管查询资源列表", "POST", "/api/v3/lapp/trust/sign/resource/list", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.lapp.trust.sign.resource.relieve", "B账户单设备托管解绑", "POST", "/api/v3/lapp/trust/sign/resource/relieve", "v3", "other"),
             PlatformApiSpec.global("v3.lapp.trust.sign.userauthorize", "B账户托管用户授权", "POST", "/api/v3/lapp/trust/sign/userAuthorize", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.action.l12345678.smokesensor.0.systemmaintenance.erasure", "消音/消警 （Erasure）", "PUT", "/api/v3/otap/action/L12345678/SmokeSensor/0/SystemMaintenance/Erasure", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.action.l12345678.smokesensor.0.systemmaintenance.selfcheck", "自检 （SelfCheck）", "PUT", "/api/v3/otap/action/L12345678/SmokeSensor/0/SystemMaintenance/SelfCheck", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.action.l12345678.smokesensor.0.systemmaintenance.systemcleanup", "系统一键清理 （SystemCleanup）", "PUT", "/api/v3/otap/action/L12345678/SmokeSensor/0/SystemMaintenance/SystemCleanup", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.gatewayremind.soundremindstatus", "查询网关声音提醒状态 （SoundRemindStatus）", "GET", "/api/v3/otap/prop/L12345678/SmokeSensor/0/GatewayRemind/SoundRemindStatus", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.gatewayremind.soundremindstatus.2", "设置网关声音提醒状态 （SoundRemindStatus）", "PUT", "/api/v3/otap/prop/L12345678/SmokeSensor/0/GatewayRemind/SoundRemindStatus", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.powermgr.countdowninfo", "查询倒计时信息 （GetPowerSwitchCountdown）", "GET", "/api/v3/otap/prop/L12345678/SmokeSensor/0/PowerMgr/CountdownInfo", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.powermgr.surpluspower", "设置剩余电量 （SurplusPower）", "PUT", "/api/v3/otap/prop/L12345678/SmokeSensor/0/PowerMgr/SurplusPower", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.powermgr.surpluspower.2", "查询剩余电量 （SurplusPower）", "GET", "/api/v3/otap/prop/L12345678/SmokeSensor/0/PowerMgr/SurplusPower", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.smokesense.remindswitch", "设置提醒开关 （RemindSwitch）", "PUT", "/api/v3/otap/prop/L12345678/SmokeSensor/0/SmokeSense/RemindSwitch", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.smokesense.remindswitch.2", "查询提醒开关 （RemindSwitch）", "GET", "/api/v3/otap/prop/L12345678/SmokeSensor/0/SmokeSense/RemindSwitch", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.smokesense.smokesensorstatus", "查询烟雾告警状态 （SmokeSensorStatus）", "GET", "/api/v3/otap/prop/L12345678/SmokeSensor/0/SmokeSense/SmokeSensorStatus", "v3", "other"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.otap.prop.l12345678.smokesensor.0.smokesense.smokesensorstatus.2", "设置烟雾告警状态 （SmokeSensorStatus）", "PUT", "/api/v3/otap/prop/L12345678/SmokeSensor/0/SmokeSense/SmokeSensorStatus", "v3", "other"),
             // ---------- video（66） ----------
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.streaming.channels", "获取指定通道编码参数", "GET", "/api/hikvision/ISAPI/Streaming/channels/", "hikvision", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.streaming.channels.2", "配置指定通道编码参数", "PUT", "/api/hikvision/ISAPI/Streaming/channels/", "hikvision", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.streaming.channels.101.1", "获取指定通道编码参数", "GET", "/api/hikvision/ISAPI/Streaming/channels/101（用于设置设备1通道主码流", "hikvision", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.streaming.channels.101.1.2", "配置指定通道编码参数", "PUT", "/api/hikvision/ISAPI/Streaming/channels/101（用于设置设备1通道主码流", "hikvision", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("hikvision.isapi.system.localbuttonrecord", "配置设备本地录像按键控制参数（远程开启/关闭本地录像）", "PUT", "/api/hikvision/ISAPI/System/localButtonRecord", "hikvision", "video"),
             PlatformApiSpec.global("lapp.camera.video.sound.set", "设置设备麦克风开关状态", "POST", "/api/lapp/camera/video/sound/set", "lapp", "video"),
             PlatformApiSpec.global("lapp.camera.video.sound.status", "获取设备麦克风开关状态", "POST", "/api/lapp/camera/video/sound/status", "lapp", "video"),
             PlatformApiSpec.global("lapp.device.capture", "设备抓拍图片", "POST", "/api/lapp/device/capture", "lapp", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.device.fullday.record.switch.set", "设置全天录像开关", "POST", "/api/lapp/device/fullday/record/switch/set", "lapp", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.device.fullday.record.switch.status", "获取全天录像开关状态", "POST", "/api/lapp/device/fullday/record/switch/status", "lapp", "video"),
             PlatformApiSpec.global("lapp.device.preset.add", "添加预置点", "POST", "/api/lapp/device/preset/add", "lapp", "video"),
             PlatformApiSpec.global("lapp.device.preset.clear", "清除预置点", "POST", "/api/lapp/device/preset/clear", "lapp", "video"),
@@ -169,25 +210,38 @@ public final class EzvizApis {
             PlatformApiSpec.global("lapp.v2.live.address.get", "视频直播与回放", "POST", "/api/lapp/v2/live/address/get", "lapp", "video"),
             PlatformApiSpec.global("lapp.video.by.time", "根据时间获取存储文件信息", "POST", "/api/lapp/video/by/time", "lapp", "video"),
             PlatformApiSpec.global("open.cloud.v1.rec.video.save", "录像任务创建", "POST", "/api/open/cloud/v1/rec/video/save", "open", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.cloudrecord.pic.panoramic.compose", "全景图片抓拍", "POST", "/api/service/cloudrecord/pic/panoramic/compose", "service", "video"),
             PlatformApiSpec.global("service.device.preset.list", "查询设备预置点列表", "GET", "/api/service/device/preset/list", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.statistics.facecapture", "分页查询人脸抓拍信息", "GET", "/api/service/devicekit/aicamera/statistics/faceCapture", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.parking.msgrecord", "查询停车消息记录（GET）", "GET", "/api/service/devicekit/parking/msgRecord", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.parking.parkingrecord", "查询停车记录（GET）", "GET", "/api/service/devicekit/parking/parkingRecord", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.media.streammanage.stream", "创建直播流（设备接入）", "POST", "/api/service/media/streammanage/stream", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.media.streammanage.stream.address", "获取播放地址（直播流管理）", "GET", "/api/service/media/streammanage/stream/address", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.media.streammanage.stream.file.info", "流管理：录制源文件查询", "POST", "/api/service/media/streammanage/stream/file/info", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.media.streammanage.stream.index.file", "直播流：云点播文件获取", "POST", "/api/service/media/streammanage/stream/index/file", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.media.streammanage.stream.list", "查询直播流列表", "GET", "/api/service/media/streammanage/stream/list", "service", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.open.capture.device.capture", "设备抓拍图片(自定义存储时长)", "POST", "/api/service/open/capture/device/capture", "service", "video"),
             PlatformApiSpec.global("v3.das.device.video.encode", "编码格式查询", "GET", "/api/v3/das/device/video/encode", "v3", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.acs.videointercom.callstatus", "获取通话状态", "POST", "/api/v3/device/acs/videoIntercom/callStatus", "v3", "video"),
             PlatformApiSpec.global("v3.device.ctrl.ptz.reset", "云台复位", "POST", "/api/v3/device/ctrl/ptz/reset", "v3", "video"),
             PlatformApiSpec.global("v3.device.display.mode.get", "查询图像风格", "GET", "/api/v3/device/display/mode/get", "v3", "video"),
             PlatformApiSpec.global("v3.device.display.mode.set", "设置设备图像风格", "POST", "/api/v3/device/display/mode/set", "v3", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.life.remind.clock.schedule.record", "闹铃提醒记录查询", "GET", "/api/v3/device/life/remind/clock/schedule/record", "v3", "video"),
             PlatformApiSpec.global("v3.device.local.video.unify.query", "查询设备本地录像", "GET", "/api/v3/device/local/video/unify/query", "v3", "video"),
             PlatformApiSpec.global("v3.device.ptz.cruise.auto.switch", "查询自动巡航开关（GET）", "GET", "/api/v3/device/ptz/cruise/auto/switch", "v3", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.ptz.cruise.auto.switch.2", "设置自动巡航开关（POST）", "POST", "/api/v3/device/ptz/cruise/auto/switch", "v3", "video"),
             PlatformApiSpec.global("v3.device.ptz.cruise.timeplan", "查询巡航计划（GET）", "GET", "/api/v3/device/ptz/cruise/timePlan", "v3", "video"),
             PlatformApiSpec.global("v3.device.ptz.cruise.timeplan.2", "设置巡航计划（POST）", "POST", "/api/v3/device/ptz/cruise/timePlan", "v3", "video"),
@@ -212,24 +266,35 @@ public final class EzvizApis {
             PlatformApiSpec.global("v3.mall.online.user.limit.live", "查询用户取流限制信息", "GET", "/api/v3/mall/online/user/limit/live", "v3", "video"),
             PlatformApiSpec.global("v3.mall.online.user.limit.live.2", "添加或者更新用户取流限制信息", "POST", "/api/v3/mall/online/user/limit/live", "v3", "video"),
             PlatformApiSpec.global("v3.mall.online.user.limit.live.3", "删除用户取流限制信息", "DELETE", "/api/v3/mall/online/user/limit/live", "v3", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.open.cloud.video.frame.interval.start", "抽帧任务创建", "POST", "/api/v3/open/cloud/video/frame/interval/start", "v3", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.open.cloud.video.frame.timing.start", "抽帧任务创建", "POST", "/api/v3/open/cloud/video/frame/timing/start", "v3", "video"),
             // ---------- device（212） ----------
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.audio.config", "配置麦克风扬声器参数", "POST", "/api/lapp/building/device/audio/config", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.audio.config.get", "获取麦克风扬声器参数", "POST", "/api/lapp/building/device/audio/config/get", "lapp", "device"),
             PlatformApiSpec.global("lapp.building.device.call", "通话操作", "POST", "/api/lapp/building/device/call", "lapp", "device"),
             PlatformApiSpec.global("lapp.building.device.call.status", "获取通话状态", "POST", "/api/lapp/building/device/call/status", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.defence.config", "配置移动侦测开关和灵敏度", "POST", "/api/lapp/building/device/defence/config", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.defence.config.get", "获取移动侦测开关状态和灵敏度", "POST", "/api/lapp/building/device/defence/config/get", "lapp", "device"),
             PlatformApiSpec.global("lapp.building.device.dialing.get", "获取主叫信息", "POST", "/api/lapp/building/device/dialing/get", "lapp", "device"),
             PlatformApiSpec.global("lapp.building.device.info.login", "APP登录设备处理", "POST", "/api/lapp/building/device/info/login", "lapp", "device"),
             PlatformApiSpec.global("lapp.building.device.list", "获取门口机列表", "POST", "/api/lapp/building/device/list", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.smartlock.list", "获取智能锁列表", "POST", "/api/lapp/building/device/smartlock/list", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.smartlock.unlock", "智能锁开锁", "POST", "/api/lapp/building/device/smartlock/unlock", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.storage.format", "TF卡格式化", "POST", "/api/lapp/building/device/storage/format", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.building.device.storage.status", "获取TF卡状态、总容量、剩余容量", "POST", "/api/lapp/building/device/storage/status", "lapp", "device"),
             PlatformApiSpec.global("lapp.building.device.unlock", "远程开锁", "POST", "/api/lapp/building/device/unlock", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.add", "添加设备", "POST", "/api/lapp/device/add", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.device.algorithm.config.get", "获取移动侦测灵敏度配置", "POST", "/api/lapp/device/algorithm/config/get", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.algorithm.config.set", "设置移动侦测灵敏度", "POST", "/api/lapp/device/algorithm/config/set", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.camera.list", "获取指定设备的通道列表", "POST", "/api/lapp/device/camera/list", "lapp", "device"),
@@ -252,6 +317,7 @@ public final class EzvizApis {
             PlatformApiSpec.global("lapp.device.scene.switch.set", "设置镜头遮蔽开关", "POST", "/api/lapp/device/scene/switch/set", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.scene.switch.status", "获取镜头遮蔽开关状态", "POST", "/api/lapp/device/scene/switch/status", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.sound.switch.set", "设置wifi配置提示音开关", "POST", "/api/lapp/device/sound/switch/set", "lapp", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("lapp.device.sound.switch.status", "获取wifi配置提示音开关状态", "POST", "/api/lapp/device/sound/switch/status", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.ssl.switch.set", "设置声源定位开关", "POST", "/api/lapp/device/ssl/switch/set", "lapp", "device"),
             PlatformApiSpec.global("lapp.device.ssl.switch.status", "获取声源定位开关状态", "POST", "/api/lapp/device/ssl/switch/status", "lapp", "device"),
@@ -268,125 +334,222 @@ public final class EzvizApis {
             PlatformApiSpec.global("lapp.traffic.device.detail", "查询指定设备在某一时间段消耗流量数据", "POST", "/api/lapp/traffic/device/detail", "lapp", "device"),
             PlatformApiSpec.global("lapp.trust.device.list", "获取设备托管列表", "POST", "/api/lapp/trust/device/list", "lapp", "device"),
             PlatformApiSpec.global("open.device.camera.limit", "NVR设备隐藏IPC", "POST", "/api/open/device/camera/limit", "open", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("route.userdevicetob.v3.devices.childdevice.link", "关联子设备", "POST", "/api/route/userdevicetob/v3/devices/childDevice/link", "route", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("route.userdevicetob.v3.devices.childdevice.list", "网关下子设备列表", "GET", "/api/route/userdevicetob/v3/devices/childDevice/list", "route", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("route.userdevicetob.v3.devices.childdevice.unlink", "删除子设备", "POST", "/api/route/userdevicetob/v3/devices/childDevice/unlink", "route", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("route.userdevicetob.v3.devices.resources", "资源列表", "GET", "/api/route/userdevicetob/v3/devices/resources", "route", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("route.userdevicetob.v3.devices.resources.rename", "资源名称修改", "POST", "/api/route/userdevicetob/v3/devices/resources/rename", "route", "device"),
             PlatformApiSpec.global("route.voice.v3.devices.voices", "获取设备语音列表接口", "GET", "/api/route/voice/v3/devices/voices", "route", "device"),
             PlatformApiSpec.global("route.voice.v3.devices.voices.2", "新增设备语音接口", "POST", "/api/route/voice/v3/devices/voices", "route", "device"),
             PlatformApiSpec.global("route.voice.v3.devices.voices.3", "修改设备语音名称接口", "PUT", "/api/route/voice/v3/devices/voices", "route", "device"),
             PlatformApiSpec.global("route.voice.v3.devices.voices.4", "删除设备语音接口", "DELETE", "/api/route/voice/v3/devices/voices", "route", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.device.metadata.infrared.brand", "根据设备类型查询红码支持的品牌列表", "GET", "/api/service/device/metadata/infrared/brand", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.device.metadata.infrared.remote", "根据设备类型和品牌查询红码", "GET", "/api/service/device/metadata/infrared/remote", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.device.metadata.infrared.type", "查询红码支持的设备类型列表", "GET", "/api/service/device/metadata/infrared/type", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.device.otap.prop.latest", "otap设备属性查询期望值与最新上报值", "GET", "/api/service/device/otap/prop/latest", "service", "device"),
             PlatformApiSpec.global("service.device.upgrade.modules", "获取设备模块升级信息", "GET", "/api/service/device/upgrade/modules", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.device.upgrade.modules.status", "获取设备模块升级状态", "GET", "/api/service/device/upgrade/modules/status", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.community.add", "新增小区信息", "POST", "/api/service/devicekit/aicamera/community/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.community.info", "查询小区信息", "GET", "/api/service/devicekit/aicamera/community/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.community.list", "分页查询小区信息", "GET", "/api/service/devicekit/aicamera/community/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.community.update", "修改小区信息", "PUT", "/api/service/devicekit/aicamera/community/update", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.device.add", "新增设备信息", "POST", "/api/service/devicekit/aicamera/device/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.device.delete", "删除设备信息", "DELETE", "/api/service/devicekit/aicamera/device/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.device.info", "查询设备信息", "GET", "/api/service/devicekit/aicamera/device/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.device.list", "分页查询设备信息", "GET", "/api/service/devicekit/aicamera/device/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.device.update", "修改设备信息", "PUT", "/api/service/devicekit/aicamera/device/update", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.mappeoplecategory.add", "新增人员和人员库绑定信息", "POST", "/api/service/devicekit/aicamera/mapPeopleCategory/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.mappeoplecategory.delete", "删除人员和人员库绑定信息", "DELETE", "/api/service/devicekit/aicamera/mapPeopleCategory/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.people.add", "新增人员信息", "POST", "/api/service/devicekit/aicamera/people/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.people.delete", "删除人员信息", "DELETE", "/api/service/devicekit/aicamera/people/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.people.info", "查询人员信息", "GET", "/api/service/devicekit/aicamera/people/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.people.list", "分页查询人员基本信息", "GET", "/api/service/devicekit/aicamera/people/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.people.update", "修改人员信息", "PUT", "/api/service/devicekit/aicamera/people/update", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peoplecategory.add", "新增人员库信息", "POST", "/api/service/devicekit/aicamera/peopleCategory/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peoplecategory.delete", "删除人员库信息", "DELETE", "/api/service/devicekit/aicamera/peopleCategory/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peoplecategory.info", "查询人员库信息", "GET", "/api/service/devicekit/aicamera/peopleCategory/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peoplecategory.list", "分页查询人员库信息", "GET", "/api/service/devicekit/aicamera/peopleCategory/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peoplecategory.update", "修改人员库信息", "PUT", "/api/service/devicekit/aicamera/peopleCategory/update", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peopleext.add", "新增人员额外信息", "POST", "/api/service/devicekit/aicamera/peopleExt/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.peopleext.update", "修改人员额外信息", "PUT", "/api/service/devicekit/aicamera/peopleExt/update", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.statistics.anpr", "分页查询车辆抓拍信息", "GET", "/api/service/devicekit/aicamera/statistics/anpr", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.vehicle.add", "新增车辆信息", "POST", "/api/service/devicekit/aicamera/vehicle/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.vehicle.delete", "删除车辆信息", "DELETE", "/api/service/devicekit/aicamera/vehicle/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.vehicle.info", "查询车辆信息", "GET", "/api/service/devicekit/aicamera/vehicle/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.vehicle.list", "分页查询车辆信息", "GET", "/api/service/devicekit/aicamera/vehicle/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.aicamera.vehicle.update", "修改车辆信息", "PUT", "/api/service/devicekit/aicamera/vehicle/update", "service", "device"),
             PlatformApiSpec.global("service.devicekit.bodycamera", "标注巡检设备", "POST", "/api/service/devicekit/bodycamera", "service", "device"),
             PlatformApiSpec.global("service.devicekit.bodycamera.2", "更新巡检设备", "PUT", "/api/service/devicekit/bodycamera", "service", "device"),
             PlatformApiSpec.global("service.devicekit.bodycamera.3", "巡检设备详情查询", "GET", "/api/service/devicekit/bodycamera", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.device.trace", "查询设备巡检轨迹", "GET", "/api/service/devicekit/bodycamera/device/trace", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.inspect", "巡检记录详情查询", "GET", "/api/service/devicekit/bodycamera/inspect", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.inspect.event", "更新巡检事件", "PUT", "/api/service/devicekit/bodycamera/inspect/event", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.inspect.event.2", "添加巡检事件", "POST", "/api/service/devicekit/bodycamera/inspect/event", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.inspect.list", "巡检记录列表查询", "GET", "/api/service/devicekit/bodycamera/inspect/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.inspect.point", "设置巡检点位", "POST", "/api/service/devicekit/bodycamera/inspect/point", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.inspect.point.2", "查询巡检点位", "GET", "/api/service/devicekit/bodycamera/inspect/point", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.stats.device", "巡检设备使用情况统计", "GET", "/api/service/devicekit/bodycamera/stats/device", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.stats.event", "事件统计查询", "GET", "/api/service/devicekit/bodycamera/stats/event", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.bodycamera.stats.inspect", "巡检统计查询", "GET", "/api/service/devicekit/bodycamera/stats/inspect", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.common.device.event", "查询超脑设备信息", "GET", "/api/service/devicekit/common/device/event", "service", "device"),
             PlatformApiSpec.global("service.devicekit.common.worksite", "添加工地", "POST", "/api/service/devicekit/common/worksite", "service", "device"),
             PlatformApiSpec.global("service.devicekit.common.worksite.2", "修改工地", "PUT", "/api/service/devicekit/common/worksite", "service", "device"),
             PlatformApiSpec.global("service.devicekit.common.worksite.3", "查询工地", "GET", "/api/service/devicekit/common/worksite", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.common.worksite.4", "删除工地", "DELETE", "/api/service/devicekit/common/worksite", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.deepinmind.device.algorithm", "查询超脑设备算法", "GET", "/api/service/devicekit/deepinmind/device/algorithm", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.deepinmind.device.channel.list", "查询超脑设备通道信息", "GET", "/api/service/devicekit/deepinmind/device/channel/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.deepinmind.device.info", "查询设备事件消息", "GET", "/api/service/devicekit/deepinmind/device/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.deepinmind.event.stats.by.device", "消息统计（按时间、区域、设备）", "POST", "/api/service/devicekit/deepinmind/event/stats/by/device", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.deepinmind.event.stats.by.type", "消息统计（按时间、区域、事件类型）", "POST", "/api/service/devicekit/deepinmind/event/stats/by/type", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.add", "添加电梯信息", "POST", "/api/service/devicekit/elevator/info/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.binding", "电梯设备关系绑定", "POST", "/api/service/devicekit/elevator/info/binding", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.delete", "电梯信息删除", "DELETE", "/api/service/devicekit/elevator/info/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.detail", "电梯详细信息查询", "GET", "/api/service/devicekit/elevator/info/detail", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.list", "查询电梯列表", "GET", "/api/service/devicekit/elevator/info/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.query.delete", "查询已删除的电梯列表", "GET", "/api/service/devicekit/elevator/info/query/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.unbinding", "电梯设备关系取消绑定", "POST", "/api/service/devicekit/elevator/info/unbinding", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.info.update", "更新电梯信息", "POST", "/api/service/devicekit/elevator/info/update", "service", "device"),
             PlatformApiSpec.global("service.devicekit.elevator.query", "获取单个设备信息", "GET", "/api/service/devicekit/elevator/query", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.statistic.event", "电梯异常事件统计", "GET", "/api/service/devicekit/elevator/statistic/event", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.statistic.running", "电梯消息记录查询", "GET", "/api/service/devicekit/elevator/statistic/running", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.status.get", "电梯实时状态信息查询", "GET", "/api/service/devicekit/elevator/status/get", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.worksite.add", "添加区域信息", "POST", "/api/service/devicekit/elevator/worksite/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.worksite.delete", "删除区域信息", "DELETE", "/api/service/devicekit/elevator/worksite/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.worksite.list", "分页查询区域信息", "GET", "/api/service/devicekit/elevator/worksite/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.worksite.query", "查询区域信息", "GET", "/api/service/devicekit/elevator/worksite/query", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.elevator.worksite.update", "更新区域信息", "PUT", "/api/service/devicekit/elevator/worksite/update", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.add", "标记多维客流设备", "POST", "/api/service/devicekit/peoplecounting/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.del", "多维客流设备删除", "DELETE", "/api/service/devicekit/peoplecounting/del", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.find", "多维客流设备查询", "GET", "/api/service/devicekit/peoplecounting/find", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.issue", "客流统计模板下发设备", "PUT", "/api/service/devicekit/peoplecounting/issue", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.list", "多维客流设备分页查询", "POST", "/api/service/devicekit/peoplecounting/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.statistic.ranking.passenger.flow", "指定日期的各区域客流排行", "POST", "/api/service/devicekit/peoplecounting/statistic/ranking/passenger/flow", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.statistic.region", "区域客流数据统计查询", "POST", "/api/service/devicekit/peoplecounting/statistic/region", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.statistic.region.device.status", "客流设备状态统计", "GET", "/api/service/devicekit/peoplecounting/statistic/region/device/status", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.template.add", "添加客流统计模板", "POST", "/api/service/devicekit/peoplecounting/template/add", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.template.del", "删除客流统计模板", "DELETE", "/api/service/devicekit/peoplecounting/template/del", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.template.find", "查询客流统计模板", "GET", "/api/service/devicekit/peoplecounting/template/find", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.template.list", "分页查询客流统计模板", "POST", "/api/service/devicekit/peoplecounting/template/list", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.peoplecounting.template.update", "更新客流统计模板", "POST", "/api/service/devicekit/peoplecounting/template/update", "service", "device"),
             PlatformApiSpec.global("service.devicekit.simcard.add", "物联网卡添加", "POST", "/api/service/devicekit/simcard/add", "service", "device"),
             PlatformApiSpec.global("service.devicekit.simcard.delete", "物联网卡删除", "POST", "/api/service/devicekit/simcard/delete", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.simcard.device.info", "查询4G设备信息", "GET", "/api/service/devicekit/simcard/device/info", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.simcard.device.nbcardid", "查询物联网卡卡号", "GET", "/api/service/devicekit/simcard/device/nbCardId", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.devicekit.simcard.statistic.traffictrend", "查询物联网卡流量趋势", "GET", "/api/service/devicekit/simcard/statistic/trafficTrend", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.thirdproto.dhreg.devicelicense.apply", "申请单个设备", "POST", "/api/service/thirdproto/dhreg/deviceLicense/apply", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("service.thirdproto.dhreg.devices.page", "分页查询设备信息", "GET", "/api/service/thirdproto/dhreg/devices/page", "service", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("userdevice.v3.devices.op.permission", "自动确权", "GET", "/api/userdevice/v3/devices/op/permission", "userdevice", "device"),
             PlatformApiSpec.global("userdevice.v3.devices.permission", "在线确权", "GET", "/api/userdevice/v3/devices/permission", "userdevice", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("userdevice.v3.devices.realtimestatus", "离线确认", "GET", "/api/userdevice/v3/devices/realtimestatus", "userdevice", "device"),
             PlatformApiSpec.global("v3.device.acs.remote.door", "门禁远程控制", "POST", "/api/v3/device/acs/remote/door", "v3", "device"),
             PlatformApiSpec.global("v3.device.audio.encodetype", "音频编码格式切换", "PUT", "/api/v3/device/audio/encodeType", "v3", "device"),
             PlatformApiSpec.global("v3.device.audition", "播放铃声", "POST", "/api/v3/device/audition", "v3", "device"),
             PlatformApiSpec.global("v3.device.company.member.add", "添加企业人员基础信息", "POST", "/api/v3/device/company/member/add", "v3", "device"),
             PlatformApiSpec.global("v3.device.company.member.delete", "删除人员信息", "DELETE", "/api/v3/device/company/member/delete", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.company.member.delete.permission", "删除设备权限", "DELETE", "/api/v3/device/company/member/delete/permission", "v3", "device"),
             PlatformApiSpec.global("v3.device.company.member.ext.add", "添加人员扩展信息", "POST", "/api/v3/device/company/member/ext/add", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.company.member.ext.update", "更新人员扩展信息", "POST", "/api/v3/device/company/member/ext/update", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.company.member.info.batch.send", "批量下发分组人员信息", "POST", "/api/v3/device/company/member/info/batch/send", "v3", "device"),
             PlatformApiSpec.global("v3.device.company.member.info.send", "人员信息下发设备", "POST", "/api/v3/device/company/member/info/send", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.company.member.query.device.delete.process", "获取设备删除状态", "GET", "/api/v3/device/company/member/query/device/delete/process", "v3", "device"),
             PlatformApiSpec.global("v3.device.company.member.querybyno", "查询单个人员详情", "GET", "/api/v3/device/company/member/queryByNo", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.company.member.querybypage", "批量查询人员详情", "GET", "/api/v3/device/company/member/queryByPage", "v3", "device"),
             PlatformApiSpec.global("v3.device.company.member.update", "更新企业人员基础信息", "POST", "/api/v3/device/company/member/update", "v3", "device"),
             PlatformApiSpec.global("v3.device.curtain.correct", "设置窗帘行程校准", "PUT", "/api/v3/device/curtain/correct", "v3", "device"),
@@ -397,6 +560,7 @@ public final class EzvizApis {
             PlatformApiSpec.global("v3.device.format.disk", "设备存储介质格式化", "PUT", "/api/v3/device/format/disk", "v3", "device"),
             PlatformApiSpec.global("v3.device.format.status", "设备存储介质状态查询", "GET", "/api/v3/device/format/status", "v3", "device"),
             PlatformApiSpec.global("v3.device.infrared.remote.bind", "绑定红码方案控制指定类型的电器", "POST", "/api/v3/device/infrared/remote/bind", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.infrared.remote.unbind", "解绑红码方案控制指定类型的电器", "POST", "/api/v3/device/infrared/remote/unbind", "v3", "device"),
             PlatformApiSpec.global("v3.device.life.remind.clock", "删除闹铃", "DELETE", "/api/v3/device/life/remind/clock", "v3", "device"),
             PlatformApiSpec.global("v3.device.life.remind.clock.2", "添加闹铃", "POST", "/api/v3/device/life/remind/clock", "v3", "device"),
@@ -411,6 +575,7 @@ public final class EzvizApis {
             PlatformApiSpec.global("v3.device.otap.prop.2", "otap设备属性查询接口", "GET", "/api/v3/device/otap/prop", "v3", "device"),
             PlatformApiSpec.global("v3.device.pir.set", "设置PIR检测区域", "POST", "/api/v3/device/pir/set", "v3", "device"),
             PlatformApiSpec.global("v3.device.power.status.get", "查询电池充电状态", "GET", "/api/v3/device/power/status/get", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.register.gb.license.list", "获取国标License列表", "GET", "/api/v3/device/register/gb/license/list", "v3", "device"),
             PlatformApiSpec.global("v3.device.searchdeviceinfo", "设备基础信息查询", "POST", "/api/v3/device/searchDeviceInfo", "v3", "device"),
             PlatformApiSpec.global("v3.device.sleep.delay", "设备延时休眠（POST）", "POST", "/api/v3/device/sleep/delay", "v3", "device"),
@@ -420,16 +585,21 @@ public final class EzvizApis {
             PlatformApiSpec.global("v3.device.talkspeakervolume", "配置音量", "POST", "/api/v3/device/talkSpeakerVolume", "v3", "device"),
             PlatformApiSpec.global("v3.device.talkspeakervolume.2", "查询音量", "GET", "/api/v3/device/talkSpeakerVolume", "v3", "device"),
             PlatformApiSpec.global("v3.device.timing.plan.get", "查询设备工作模式计划", "GET", "/api/v3/device/timing/plan/get", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.timing.plan.set.batch", "设置自动人脸解锁计划（POST）", "POST", "/api/v3/device/timing/plan/set/batch", "v3", "device"),
             PlatformApiSpec.global("v3.device.upgrade.modules", "触发设备模块升级", "POST", "/api/v3/device/upgrade/modules", "v3", "device"),
             PlatformApiSpec.global("v3.intelligent.model.device", "查询智能设备列表", "GET", "/api/v3/intelligent/model/device", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.intelligent.model.device.onoffline", "设备启用/停用智能算法", "PUT", "/api/v3/intelligent/model/device/onoffline", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.intelligent.model.device.support", "查询设备支持的智能算法列表", "GET", "/api/v3/intelligent/model/device/support", "v3", "device"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.open.device.metadata.channel.status", "获取NVR通道状态信息", "GET", "/api/v3/open/device/metadata/channel/status", "v3", "device"),
             PlatformApiSpec.global("v3.open.device.metadata.wakeup", "低功耗设备休眠状态设置", "PUT", "/api/v3/open/device/metadata/wakeup", "v3", "device"),
             // ---------- person（5） ----------
             PlatformApiSpec.global("lapp.keylock.user.delete.face", "删除用户人脸密码", "DELETE", "/api/lapp/keylock/user/delete/face", "lapp", "person"),
             PlatformApiSpec.global("v3.device.acs.person.qrcode.get", "获取访客二维码", "GET", "/api/v3/device/acs/person/qrcode/get", "v3", "person"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("v3.device.life.remind.face.recognize.list", "获取人脸成员列表", "GET", "/api/v3/device/life/remind/face/recognize/list", "v3", "person"),
             PlatformApiSpec.global("v3.device.switch.human.track", "获取人形追踪开关状态", "GET", "/api/v3/device/switch/human/track", "v3", "person"),
             PlatformApiSpec.global("v3.device.switch.human.track.2", "配置人形追踪开关状态", "PUT", "/api/v3/device/switch/human/track", "v3", "person"),

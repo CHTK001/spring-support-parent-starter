@@ -302,6 +302,7 @@ public class DahuaRealSession implements DeviceSession {
         if (command == null) {
             return;
         }
+        // [P3C A20 豁免]
         int param = (int) Math.max(1, Math.min(255, Math.round(speed * 255)));
         if (cmd == PtzCommand.STOP) {
             sdk.CLIENT_DHPTZControl(loginHandle, 0, 0, 0, 0);

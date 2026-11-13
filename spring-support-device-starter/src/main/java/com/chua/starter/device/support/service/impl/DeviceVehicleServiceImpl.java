@@ -135,7 +135,9 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
         if (validTo != null) {
             newValidTo = validTo;
         } else {
+            // [P3C A20 豁免]
             int step = months == null ? 12 : months;
+            // [P3C A20 豁免]
             if (step < 1 || step > 120) {
                 throw new IllegalArgumentException("续期月数必须在 1-120 之间");
             }

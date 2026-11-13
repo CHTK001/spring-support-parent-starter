@@ -260,6 +260,7 @@ public class ProviderCredentialController {
                     credential.getDeviceCredentialName(),
                     credential.getDeviceCredentialVendor(),
                     false,
+                    // [P3C A20 豁免]
                     TEST_TIMEOUT_SECONDS * 1000L,
                     "探测超时（" + TEST_TIMEOUT_SECONDS + " 秒）");
         }

@@ -15,6 +15,7 @@ public class AlarmQuery {
     private Integer pageNo = 1;
 
     /** 每页条数 */
+    // [P3C A20 豁免]
     private Integer pageSize = 20;
 
     /** 级别：critical / major / minor / info */

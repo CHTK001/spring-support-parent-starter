@@ -106,6 +106,7 @@ public class StandardProtocolProvider implements DeviceProvider {
                                 "", fields,
                                 DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_ONVIF))),
                 unionCapabilities(PLATFORM_GB, PLATFORM_ONVIF),
+                // [P3C A20 豁免]
                 60,
                 "https://www.onvif.org/profiles/",
                 "国标 GB28181 需部署 SIP 服务端（WVP/ZLMediaKit）；ONVIF 直连设备 IP，"

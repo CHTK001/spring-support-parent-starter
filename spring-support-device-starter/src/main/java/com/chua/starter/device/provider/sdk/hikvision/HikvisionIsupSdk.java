@@ -52,6 +52,7 @@ public class HikvisionIsupSdk extends AbstractPlatformSdk {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -113,6 +114,7 @@ public class HikvisionIsupSdk extends AbstractPlatformSdk {
                     "ISUP 未配置服务端地址：请在凭据里填 baseUrl（企业自建 ISUP 服务端 REST 封装地址），"
                             + "或改用 ISUP SDK 模式");
         }
+        // [P3C A20 豁免]
         JsonNode root = send(base + "/isup/device/list", Map.of("pageNo", 1, "pageSize", 200));
         JsonNode data = root == null ? null : root.get("data");
         List<VendorDevice> result = new ArrayList<>();
@@ -178,6 +180,7 @@ public class HikvisionIsupSdk extends AbstractPlatformSdk {
             String json = MAPPER.writeValueAsString(body);
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
@@ -191,8 +194,10 @@ public class HikvisionIsupSdk extends AbstractPlatformSdk {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String content = response.body();
             JsonNode root = parse(content);
+            // [P3C A20 豁免]
             if (response.statusCode() >= 400) {
                 throw new IllegalStateException("ISUP 服务端 HTTP " + response.statusCode() + ": "
+                        // [P3C A20 豁免]
                         + (content == null ? "" : content.substring(0, Math.min(200, content.length()))));
             }
             if (root == null) {

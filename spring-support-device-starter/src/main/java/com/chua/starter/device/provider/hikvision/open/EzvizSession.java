@@ -132,6 +132,7 @@ public class EzvizSession extends AbstractOpenApiSession {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -257,6 +258,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         }
         try {
             long value = Long.parseLong(raw.trim());
+            // [P3C A20 豁免]
             long epochMillis = value > 10_000_000_000L ? value : value * 1000L;
             return java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(epochMillis),
                     java.time.ZoneId.systemDefault());
@@ -357,6 +359,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         try {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    // [P3C A20 豁免]
                     .timeout(Duration.ofSeconds(20))
                     .GET()
                     .build();
@@ -379,6 +382,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         assertOk(doRequest("POST", P_PTZ_START, params));
         // 萤石要求显式 stop，否则云台会一直转
         try {
+            // [P3C A20 豁免]
             Thread.sleep(Math.max(120L, (long) (300L / Math.max(1.0, speed))));
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -426,6 +430,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("deviceSerial", requireSerial());
         params.put("pageStart", 0);
+        // [P3C A20 豁免]
         params.put("pageSize", 50);
         JsonNode data;
         try {
@@ -487,6 +492,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         params.put("startTime", toEzvizTime(range.start()));
         params.put("endTime", toEzvizTime(range.end()));
         params.put("pageStart", 0);
+        // [P3C A20 豁免]
         params.put("pageSize", 50);
         JsonNode data = assertOk(doRequest("POST", P_LOCK_OPEN_LIST, params));
         List<AccessRecord> result = new ArrayList<>();
@@ -513,6 +519,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         params.put("startTime", toEpochMillis(range.start()));
         params.put("endTime", toEpochMillis(range.end()));
         params.put("pageStart", 0);
+        // [P3C A20 豁免]
         params.put("pageSize", 50);
         JsonNode root = doRequest("POST", P_ALARM_LIST, params);
         assertOk(root);
@@ -575,6 +582,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         }
         String query = encode(form);
         try {
+            // [P3C A20 豁免]
             HttpRequest.Builder builder = HttpRequest.newBuilder().timeout(Duration.ofSeconds(30));
             if (headers != null) {
                 headers.forEach(builder::header);
@@ -594,8 +602,10 @@ public class EzvizSession extends AbstractOpenApiSession {
             HttpResponse<String> response = CLIENT.send(request,
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String body = response.body();
+            // [P3C A20 豁免]
             if (response.statusCode() >= 400) {
                 throw new IllegalStateException("萤石 HTTP " + response.statusCode() + ": "
+                        // [P3C A20 豁免]
                         + (body == null ? "" : body.substring(0, Math.min(200, body.length()))));
             }
             JsonNode root = MAPPER.readTree(body == null || body.isBlank() ? "{}" : body);
@@ -796,6 +806,7 @@ public class EzvizSession extends AbstractOpenApiSession {
         if (deviceName == null || deviceName.isBlank()) {
             throw new IllegalArgumentException("萤石修改设备名称需要设备名称");
         }
+        // [P3C A20 豁免]
         if (deviceName.getBytes(StandardCharsets.UTF_8).length > 50) {
             throw new IllegalArgumentException("萤石设备名称不得超过 50 字节（官方约束）");
         }

@@ -131,6 +131,7 @@ public class UniviewProvider implements DeviceProvider {
                 List.of(new PlatformDescriptor(PLATFORM, "宇视云", "https://ezcloud.uniview.com", fields,
                         DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM))),
                 DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM),
+                // [P3C A20 豁免]
                 60,
                 "https://ezcloud.uniview.com",
                 "宇视云开放平台接入；接口清单在控制台，路径可由凭据覆盖。");

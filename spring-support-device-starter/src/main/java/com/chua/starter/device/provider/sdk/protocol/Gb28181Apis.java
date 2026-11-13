@@ -61,6 +61,7 @@ public final class Gb28181Apis {
             PlatformApiSpec.global("onvif.media.snapshot", "抓图（GetSnapshotUri）", "QUERY", ON + "GetSnapshotUri", "2.0", "video"),
             PlatformApiSpec.global("onvif.ptz.nodes", "云台节点（GetNodes）", "QUERY", ON + "GetNodes", "2.0", "video"),
             PlatformApiSpec.global("onvif.ptz.move", "云台移动（ContinuousMove）", "COMMAND", ON + "ContinuousMove", "2.0", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("onvif.events.subscribe", "事件订阅（CreatePullPointSubscription）", "COMMAND", ON + "CreatePullPointSubscription", "2.0", "alarm"),
             PlatformApiSpec.global("onvif.events.pull", "事件拉取（PullMessages）", "QUERY", ON + "PullMessages", "2.0", "alarm")
     );

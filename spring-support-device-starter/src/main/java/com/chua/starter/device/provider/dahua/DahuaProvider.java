@@ -459,6 +459,15 @@ public class DahuaProvider implements DeviceProvider {
         List<CredentialField> platformFields = List.of(
                 new CredentialField("appKey", "AppKey（AK）", false, true, "平台应用的 AppKey"),
                 new CredentialField("appSecret", "AppSecret（SK）", true, true, "平台应用的 AppSecret"));
+        // 云睿走大华云开发者平台 IoT open-api：签名头与业务请求都要带 ProductId，
+        // 缺这一项连换 token 都过不了，所以必须由凭据字段显式提供。
+        List<CredentialField> cloudFields = List.of(
+                new CredentialField("appKey", "AppKey（AK）", false, true,
+                        "大华云开发者平台的 AccessKey"),
+                new CredentialField("appSecret", "AppSecret（SK）", true, true,
+                        "大华云开发者平台的 SecretKey，参与 HMAC-SHA512 签名"),
+                new CredentialField("productCode", "产品 ID（ProductId）", false, true,
+                        "IoT 开放平台的产品 ID（控制台产品详情可见），请求头与签名必带"));
         return new DeviceVendorDescriptor(
                 VENDOR,
                 "大华股份",
@@ -467,7 +476,7 @@ public class DahuaProvider implements DeviceProvider {
                         new AuthTypeDescriptor("SDK", "SDK 直连", "局域网直连设备，需要厂商 SDK 运行库")),
                 List.of(
                         new PlatformDescriptor(PLATFORM_DAHUA_CLOUD, "大华云睿",
-                                "https://open.cloud-dahua.com", platformFields,
+                                "https://open.cloud-dahua.com", cloudFields,
                                 DeviceCapabilityMatrix.capabilitiesOf(VENDOR, PLATFORM_DAHUA_CLOUD)),
                         new PlatformDescriptor(PLATFORM_LECHANGE, "大华乐橙",
                                 "https://openapi.lechange.cn", platformFields,

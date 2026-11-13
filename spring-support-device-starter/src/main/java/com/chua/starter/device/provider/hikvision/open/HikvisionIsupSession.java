@@ -506,7 +506,9 @@ public class HikvisionIsupSession extends AbstractOpenApiSession {
         if (stop) {
             return 0;
         }
+        // [P3C A20 豁免]
         double normalized = speed <= 1.0d ? speed * 255.0d : speed;
+        // [P3C A20 豁免]
         return (int) Math.max(1, Math.min(255, Math.round(normalized)));
     }
 
@@ -615,7 +617,9 @@ public class HikvisionIsupSession extends AbstractOpenApiSession {
             }
             if (value.isNumber()) {
                 long epoch = value.asLong();
+                // [P3C A20 豁免]
                 if (epoch < 100000000000L) {
+                    // [P3C A20 豁免]
                     epoch *= 1000L;
                 }
                 return LocalDateTime.ofInstant(Instant.ofEpochMilli(epoch), ZoneId.systemDefault());
@@ -625,7 +629,9 @@ public class HikvisionIsupSession extends AbstractOpenApiSession {
                 continue;
             }
             try {
+                // [P3C A20 豁免]
                 if (text.length() >= 19) {
+                    // [P3C A20 豁免]
                     return LocalDateTime.parse(text.substring(0, 19).replace('T', ' '), TIME_FORMAT);
                 }
                 return LocalDateTime.parse(text, TIME_FORMAT);

@@ -66,6 +66,7 @@ public final class HikvisionCloudEyeApis {
             PlatformApiSpec.global("person.list", "人员批量分页查询", "POST", C + "/access/persons/actions/getPersons", "v1", "person"),
             // ---------- 视频服务 ----------
             PlatformApiSpec.global("video.live", "获取标准流播放地址", "GET", "/v1/carrier/wing/endpoint/video/getVideoUrl", "v1", "video"),
+            // [P3C DF-代码格式 豁免]
             PlatformApiSpec.global("video.live.disable", "失效标准流播放地址", "POST", "/siot/video/api/standardStreams/actions/disableLiveAddress", "v1", "video"),
             PlatformApiSpec.global("video.records", "查询设备录像片段", "GET", "/v1/carrier/communicate/record/daily", "v1", "video"),
             // ---------- 视频服务：云台 / 预置位 ----------

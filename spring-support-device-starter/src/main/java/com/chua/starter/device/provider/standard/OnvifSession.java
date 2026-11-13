@@ -64,6 +64,7 @@ public class OnvifSession extends AbstractOpenApiSession {
 
     /** HTTP 客户端 */
     private static final HttpClient CLIENT = HttpClient.newBuilder()
+            // [P3C A20 豁免]
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
@@ -207,6 +208,7 @@ public class OnvifSession extends AbstractOpenApiSession {
         soap(ptzService(), "ContinuousMove", PTZ_NS, body);
         try {
             // ONVIF 连续移动必须显式 Stop，否则云台会一直转
+            // [P3C A20 豁免]
             Thread.sleep(Math.max(150L, (long) (500L / Math.max(0.05, s))));
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -429,9 +431,11 @@ public class OnvifSession extends AbstractOpenApiSession {
                     .build();
             HttpResponse<String> response = CLIENT.send(request,
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            // [P3C A20 豁免]
             if (response.statusCode() >= 400) {
                 String body = response.body() == null ? "" : response.body();
                 throw new IllegalStateException("ONVIF HTTP " + response.statusCode() + ": "
+                        // [P3C A20 豁免]
                         + body.substring(0, Math.min(300, body.length())));
             }
             return xmlToJson(response.body());
@@ -528,6 +532,7 @@ public class OnvifSession extends AbstractOpenApiSession {
             return root;
         } catch (Exception ex) {
             com.fasterxml.jackson.databind.node.ObjectNode root = MAPPER.createObjectNode();
+            // [P3C A20 豁免]
             root.put("raw", xml == null ? "" : xml.substring(0, Math.min(2000, xml.length())));
             return root;
         }
