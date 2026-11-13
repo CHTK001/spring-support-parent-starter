@@ -118,12 +118,20 @@ public class HostFileServiceImpl implements HostFileService {
     private final ObjectProvider<FileStorageTemplate> templateProvider;
 
     /**
+     * MD5 台账（列表直接回显指纹，不再每次进目录都重算）
+     */
+    private final HostFileDigestRepository digestRepository;
+
+    /**
      * 构造。
      *
      * @param templateProvider 存储模板提供者
+     * @param digestRepository MD5 台账
      */
-    public HostFileServiceImpl(ObjectProvider<FileStorageTemplate> templateProvider) {
+    public HostFileServiceImpl(ObjectProvider<FileStorageTemplate> templateProvider,
+                               HostFileDigestRepository digestRepository) {
         this.templateProvider = templateProvider;
+        this.digestRepository = digestRepository;
     }
 
     @Override
@@ -173,8 +181,10 @@ public class HostFileServiceImpl implements HostFileService {
             int to = Math.min(from + pageSize, matched.size());
             long rawTotal = result == null ? all.size() : Math.max(result.getTotal(), all.size());
             boolean truncated = rawTotal > all.size() || matched.size() > to;
+            List<HostFileEntryVO> page = matched.subList(from, to);
+            // 指纹一次性批量回填：列表要直接显示 MD5，逐条查库会把目录页变成 N 次往返
             return ReturnResult.ok(new HostFilePageVO(dir, keyword == null ? "" : keyword.trim(),
-                    matched.subList(from, to), matched.size(), all.size(), truncated));
+                    attachDigests(bucket, page), matched.size(), all.size(), truncated));
         } catch (RuntimeException e) {
             log.error("[主机文件] 列目录失败: path={}", dir, e);
             return ReturnResult.error("列目录失败: " + messageOf(e));
@@ -471,6 +481,46 @@ public class HostFileServiceImpl implements HostFileService {
         }
         storage.deleteObject(key);
         return ReturnResult.ok(entryOf(storage, targetKey, name, false, 0L, System.currentTimeMillis()));
+    }
+
+    /**
+     * 给目录页条目回填已登记的 MD5。
+     *
+     * @param bucket 存储提供者名
+     * @param page   当前页条目
+     * @return 回填后的条目（目录与无记录的文件 md5 为 null）
+     */
+    private List<HostFileEntryVO> attachDigests(String bucket, List<HostFileEntryVO> page) {
+        List<String> keys = new ArrayList<>();
+        for (HostFileEntryVO item : page) {
+            if (!item.directory()) {
+                keys.add(item.key());
+            }
+        }
+        if (keys.isEmpty()) {
+            return page;
+        }
+        Map<String, String> digests = digestRepository.find(resolveDigestBucket(bucket), keys);
+        if (digests.isEmpty()) {
+            return page;
+        }
+        List<HostFileEntryVO> rows = new ArrayList<>(page.size());
+        for (HostFileEntryVO item : page) {
+            String md5 = item.directory() ? null : digests.get(item.key());
+            rows.add(new HostFileEntryVO(item.name(), item.key(), item.parent(), item.size(), item.directory(),
+                    item.lastModified(), item.kind(), item.ext(), item.hostPath(), md5));
+        }
+        return rows;
+    }
+
+    /**
+     * 台账分区名：与 HostFileDigestServiceImpl 保持同一口径（空桶收敛到 {@code _default}）。
+     *
+     * @param bucket 请求里的提供者名
+     * @return 台账分区名
+     */
+    private String resolveDigestBucket(String bucket) {
+        return bucket == null || bucket.isBlank() ? "_default" : bucket.trim();
     }
 
     /**

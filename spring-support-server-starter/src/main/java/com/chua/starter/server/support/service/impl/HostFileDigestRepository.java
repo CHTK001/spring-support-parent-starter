@@ -144,4 +144,27 @@ public class HostFileDigestRepository {
             // 同上
         }
     }
+
+    /**
+     * 文件改名 / 移动后把指纹跟过去。
+     *
+     * <p>不跟的话，同一个字节流换了 key 就查不到指纹，列表里会凭空多出「未知」，
+     * 投放前对包又得重算一次。</p>
+     *
+     * @param bucket 存储提供者名
+     * @param from   原 key
+     * @param to     新 key
+     */
+    public void relocate(String bucket, String from, String to) {
+        if (jdbcTemplate == null) {
+            return;
+        }
+        try {
+            jdbcTemplate.update(
+                    "update ms_host_file_digest set file_key = ? where bucket = ? and file_key = ?",
+                    to, bucket, from);
+        } catch (Exception ignored) {
+            // 同上
+        }
+    }
 }
