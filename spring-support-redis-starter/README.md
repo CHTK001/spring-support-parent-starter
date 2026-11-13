@@ -1,566 +1,272 @@
-# Spring Support Redis Starter
+# spring-support-redis-starter
 
-## 📖 模块简介
+Redis 集成：Redisson 客户端、预置分档 `CacheManager`、分布式锁模板、发布订阅监听、KV 与计数服务。
 
-Spring Support Redis Starter 是一个功能完整的Redis集成模块，提供了企业级应用中Redis缓存、分布式锁、消息队列、会话管理等功能的完整解决方案。该模块支持多种Redis客户端，提供了丰富的Redis数据结构操作和高级功能。
+## 一、模块能力
 
-## ✨ 主要功能
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| Redisson 客户端 | `RedisConfiguration#redissonClient` | 自动装配，`@ConditionalOnMissingBean` |
+| Redis 操作模板 | `redisTemplate`（`RedisTemplate<String,Object>`）、`stringRedisTemplate` | 直接注入 |
+| 预置分档缓存 | `CacheConfiguration#createRedisCacheManager` | Bean 名 `redis-cache-10/30/60/600/3600/-1/86400` |
+| 分布式锁模板 | `LockTemplate`、`RedissonLockTemplate`、`NoopLockTemplate` | Bean 名 `customLockTemplate` |
+| 锁 SPI 实现 | `LockProvider`、`RedissonLockProvider`（`@Spi("redisson")`） | `ServiceProvider` |
+| 发布订阅 | `RedisMessageListenerContainer`、`RedisListener` | 声明 `RedisListener` Bean 自动注册 |
+| KV 引擎 | `KvEngine`、`RedisKvEngine` | 注入 `KvEngine` |
+| 指标计数 | `SimpleRedisService`、`SimpleRedisServiceImpl` | 注入后 `increment`/`decrement`/`qps` |
+| 时间序列 | `TimeSeriesService` | 占位接口，当前无方法 |
+| Redis 搜索 | `RedisSearchService` | 占位接口，当前无方法 |
+| 服务信息登记 | `ServiceInfoContributor`（`redis` 端点/标志） | 启动横幅 |
 
-### 🔄 缓存管理
-- 多级缓存管理器
-- 自定义缓存策略
-- 缓存注解支持
-- 缓存序列化配置
+自动配置类（`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`）：
+`RedisConfiguration`、`CacheConfiguration`、`LockTemplateConfiguration`。
 
-### 🔒 分布式锁
-- 基于Redisson的分布式锁
-- 防重复提交
-- 锁超时控制
-- 公平锁和非公平锁
-
-### 📨 消息队列
-- Redis发布订阅
-- 消息监听器
-- 异步消息处理
-- 消息序列化
-
-### 🕐 时间序列
-- Redis TimeSeries支持
-- 时间序列数据存储
-- 数据聚合和查询
-- 指标监控
-
-### 🔍 搜索功能
-- Redis Search集成
-- 全文搜索
-- 索引管理
-- 复杂查询
-
-### 🖥️ 嵌入式Redis
-- 测试环境支持
-- 内存Redis服务器
-- 自动启动和停止
-- 配置简化
-
-## 🚀 快速开始
-
-### Maven依赖
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-redis-starter</artifactId>
-    <version>4.0.0.32</version>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
-### 基础配置
+| 依赖 | 作用 | 说明 |
+|---|---|---|
+| `spring-support-cache-starter` | `CacheConstant` 常量与多级缓存 | 必需 |
+| `spring-support-common-starter` | `ModuleEnvironmentRegistration`、`ServiceInfoContributor` | 必需 |
+| `spring-boot-starter-data-redis` | `RedisTemplate`、监听容器 | 必需 |
+| `redisson` | 分布式锁与客户端 | 必需 |
+| `utils-support-redis-starter` | Redis 工具类与 SPI 基础设施 | 必需 |
+| `lock4j-redis-template-spring-boot-starter` | `@Lock4j` 注解能力 | 依赖带入，本模块不做额外配置 |
+| `utils-support-springboot-starter` | `LockTemplate` 相关扩展 | `provided` + `optional` |
+
+## 三、配置项
+
+| 前缀 | 配置类 | 关键项（默认值） |
+|---|---|---|
+| `spring.data.redis` | Spring Boot `DataRedisProperties` | `host`、`port`=`6379`、`password`、`database`=`0`、`username`、`url`、`timeout`、`connect-timeout`、`client-name`、`lettuce.pool.max-active/max-idle/min-idle/max-wait` |
+| `plugin.redis.server` | `RedisServerProperties` | `enable`=`false`（注解为 `matchIfMissing=true`，不配置即生效）；`open-embedded`=`false`；`port`=`6379`；`database`=`0`；`host`=`0.0.0.0`；`max-memory`=`128M`；`max-heap`=`100M` |
+
+注意：Spring Boot 4 的 Redis 连接配置前缀是 `spring.data.redis`，旧写法 `spring.redis.*` 不再生效。
+
+`plugin.redis.server.enable=false` 会关闭整个 `RedisConfiguration`（Redisson 客户端、两个模板、监听容器、计数/KV 服务全部不注册）。
+
+## 四、快速开始
+
+**第一步**：引入依赖并配置连接：
 
 ```yaml
-# Redis基础配置
 spring:
-  redis:
-    host: localhost       # Redis 主机地址
-    port: 6379            # Redis 端口
-    password:             # Redis 密码，没有可留空
-    database: 0           # 默认库编号
-    timeout: 10s          # 命令执行超时时间
-    connect-timeout: 10s  # 建连超时时间
-    client-name: spring-app # 客户端名称
-    
-    # 连接池配置
-    lettuce:
-      pool:
-        max-active: 20  # 最大连接数
-        max-idle: 10    # 最大空闲连接数
-        min-idle: 5     # 最小空闲连接数
-        max-wait: 2s    # 获取连接最大等待时间
-
-# 插件配置
-plugin:
-  redis:
-    server:
-      open-embedded: false  # 是否启用嵌入式Redis
-      port: 6379            # 嵌入式 Redis 监听端口
-      max-memory: 128mb     # 嵌入式 Redis 最大内存
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 10s
+      connect-timeout: 10s
+      client-name: spring-app
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 2s
 ```
 
-## 📋 详细功能说明
+**第二步**：按需使用预置 `CacheManager`（名称即 Bean 名，不是方法名）：
 
-### 1. 缓存管理
+| Bean 名 | TTL |
+|---|---|
+| `redis-cache-10` | 10 秒 |
+| `redis-cache-30` | 30 秒 |
+| `redis-cache-60` | 60 秒 |
+| `redis-cache-600` | 600 秒 |
+| `redis-cache-3600` | 3600 秒 |
+| `redis-cache-86400` | 86400 秒 |
+| `redis-cache--1` | 永不过期 |
 
-#### 使用预定义缓存管理器
+**第三步**：在 `@Cacheable` 上指定 `cacheManager`，或直接注入 `RedisTemplate` / `LockTemplate`。
+
+## 五、运行示例
+
+### 5.1 调用示例
+
+本模块无链式 API，以下为注入 + 步骤式用法。
+
+**分档缓存**：
 
 ```java
 @Service
 public class UserService {
-    
-    // 10分钟过期缓存
-    @Cacheable(cacheManager = "systemCacheManager600", cacheNames = "users", key = "#id")
-    public User findById(Long id) {
-        return userRepository.findById(id);
-    }
-    
-    // 1小时过期缓存
-    @Cacheable(cacheManager = "systemCacheManager", cacheNames = "users", key = "#username")
-    public User findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-    
-    // 永不过期缓存
-    @Cacheable(cacheManager = "systemCacheManagerAlways", cacheNames = "config", key = "#key")
-    public String getConfig(String key) {
-        return configRepository.getValue(key);
-    }
-    
-    // 一天过期缓存
-    @Cacheable(cacheManager = "redis86400CacheManager", cacheNames = "reports", key = "#date")
-    public Report getDailyReport(String date) {
-        return reportService.generateReport(date);
-    }
+
+    @Cacheable(cacheManager = "redis-cache-600", cacheNames = "users", key = "#id")
+    public User findById(Long id) { return userRepository.findById(id); }
+
+    @Cacheable(cacheManager = "redis-cache-3600", cacheNames = "users", key = "#username")
+    public User findByUsername(String username) { return userRepository.findByUsername(username); }
+
+    @Cacheable(cacheManager = "redis-cache--1", cacheNames = "config", key = "#key")
+    public String getConfig(String key) { return configRepository.getValue(key); }
 }
 ```
 
-#### 缓存操作
+**模板操作**：
 
 ```java
-@Service
-public class CacheService {
-    
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-    
-    public void setCache(String key, Object value, long timeout, TimeUnit unit) {
-        redisTemplate.opsForValue().set(key, value, timeout, unit);
-    }
-    
-    public Object getCache(String key) {
-        return redisTemplate.opsForValue().get(key);
-    }
-    
-    public void deleteCache(String key) {
-        redisTemplate.delete(key);
-    }
-    
-    public void deleteCachePattern(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (!keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
-    }
+@Autowired
+private RedisTemplate<String, Object> redisTemplate;
+
+redisTemplate.opsForValue().set(key, value, 600, TimeUnit.SECONDS);
+Object value = redisTemplate.opsForValue().get(key);
+redisTemplate.delete(key);
+
+Set<String> keys = redisTemplate.keys("user:*");
+if (keys != null && !keys.isEmpty()) {
+    redisTemplate.delete(keys);
 }
 ```
 
-### 2. 分布式锁
-
-#### 使用Redisson分布式锁
+**分布式锁（推荐用模板，自动释放）**：
 
 ```java
-@Service
-public class OrderService {
-    
-    @Autowired
-    private RedissonClient redissonClient;
-    
-    public void processOrder(String orderId) {
-        String lockKey = "order:lock:" + orderId;
-        RLock lock = redissonClient.getLock(lockKey);
-        
-        try {
-            // 尝试获取锁，最多等待10秒，锁定30秒后自动释放
-            if (lock.tryLock(10, 30, TimeUnit.SECONDS)) {
-                // 执行业务逻辑
-                doProcessOrder(orderId);
-            } else {
-                throw new RuntimeException("获取锁失败，订单正在处理中");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("获取锁被中断", e);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
-        }
-    }
-    
-    private void doProcessOrder(String orderId) {
-        // 具体的订单处理逻辑
-        log.info("处理订单: {}", orderId);
-    }
-}
+@Autowired
+private LockTemplate lockTemplate;   // Bean 名 customLockTemplate
+
+// 阻塞获取，租约默认 30 秒
+String result = lockTemplate.lock("order:create", () -> createOrder(req));
+
+// 最多等 5 秒，拿不到返回 null
+String tried = lockTemplate.tryLock("order:create", Duration.ofSeconds(5), () -> createOrder(req));
+
+// 拿不到锁走降级
+String fallback = lockTemplate.tryLock("order:create",
+        Duration.ofSeconds(5), () -> createOrder(req), () -> "busy");
 ```
 
-#### 防重复提交
+锁 key 会统一加 `lock:` 前缀（`RedissonLockTemplate#getLockKey`）。需要手工控制时用 `acquire(key, waitTime, leaseTime)` / `release(key)`，注意成对调用。
 
-```java
-@Component
-public class SubmitLockAspect {
-    
-    @Autowired
-    private RedissonClient redissonClient;
-    
-    @Around("@annotation(submitLock)")
-    public Object around(ProceedingJoinPoint joinPoint, SubmitLock submitLock) throws Throwable {
-        String key = generateKey(joinPoint, submitLock);
-        RLock lock = redissonClient.getLock(key);
-        
-        try {
-            if (lock.tryLock()) {
-                return joinPoint.proceed();
-            } else {
-                throw new RuntimeException("请勿重复提交");
-            }
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
-        }
-    }
-    
-    private String generateKey(ProceedingJoinPoint joinPoint, SubmitLock submitLock) {
-        // 生成锁的key
-        return "submit:lock:" + joinPoint.getSignature().toShortString();
-    }
-}
-```
-
-### 3. 消息发布订阅
-
-#### 消息发布
-
-```java
-@Service
-public class MessagePublisher {
-    
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-    
-    public void publishMessage(String channel, Object message) {
-        redisTemplate.convertAndSend(channel, message);
-    }
-    
-    public void publishUserEvent(String userId, String event) {
-        Map<String, Object> message = new HashMap<>();
-        message.put("userId", userId);
-        message.put("event", event);
-        message.put("timestamp", System.currentTimeMillis());
-        
-        redisTemplate.convertAndSend("login:events", message);
-    }
-}
-```
-
-#### 消息监听
+**发布订阅**：声明 `RedisListener` Bean 即被 `RedisMessageListenerContainer` 收集。
 
 ```java
 @Component
 public class UserEventListener implements RedisListener {
-    
+
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        String channel = new String(message.getChannel());
-        String body = new String(message.getBody());
-        
-        log.info("收到消息 - 频道: {}, 内容: {}", channel, body);
-        
-        // 处理用户事件
-        handleUserEvent(body);
+        String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
+        String body = new String(message.getBody(), StandardCharsets.UTF_8);
+        log.info("收到消息 channel={}, body={}", channel, body);
     }
-    
+
     @Override
     public Collection<Topic> getTopics() {
-        return List.of(new ChannelTopic("login:events"));
-    }
-    
-    private void handleUserEvent(String message) {
-        // 处理用户事件逻辑
-        try {
-            Map<String, Object> event = JsonUtils.parseMap(message);
-            String userId = (String) event.get("userId");
-            String eventType = (String) event.get("event");
-            
-            switch (eventType) {
-                case "login":
-                    handleUserLogin(userId);
-                    break;
-                case "logout":
-                    handleUserLogout(userId);
-                    break;
-                default:
-                    log.warn("未知事件类型: {}", eventType);
-            }
-        } catch (Exception e) {
-            log.error("处理用户事件失败: {}", message, e);
-        }
+        return List.of(new ChannelTopic("login:events"), new PatternTopic("system:*"));
     }
 }
 ```
 
-### 4. 时间序列数据
+发布端直接用模板：`redisTemplate.convertAndSend("login:events", payload)`。
 
-#### 时间序列服务
+**指标计数**：
 
 ```java
-@Service
-public class MetricsService {
-    
-    @Autowired
-    private TimeSeriesService timeSeriesService;
-    
-    public void recordMetric(String metricName, double value) {
-        long timestamp = System.currentTimeMillis();
-        LinkedHashMap<String, String> labels = new LinkedHashMap<>();
-        labels.put("app", "spring-app");
-        labels.put("env", "prod");
-        
-        // 保存时间序列数据，保留7天
-        timeSeriesService.save(metricName, timestamp, value, labels, 7 * 24 * 3600);
-    }
-    
-    public void recordApiMetrics(String apiPath, long responseTime) {
-        String metricName = "api:response_time:" + apiPath.replace("/", ":");
-        recordMetric(metricName, responseTime);
-    }
-    
-    public void recordUserActivity(String userId, String activity) {
-        String metricName = "login:activity:" + activity;
-        recordMetric(metricName, 1.0);
-    }
+@Autowired
+private SimpleRedisService simpleRedisService;
+
+simpleRedisService.increment("page:views", pageId, 24 * 3600); // 带过期
+simpleRedisService.incrementDay("login:actions", userId);      // 到当天 24 点过期
+simpleRedisService.decrement("product:stock", productId, 3600);
+ReturnResult<BigDecimal> qps = simpleRedisService.qps("api:/orders");
+```
+
+**KV 引擎**：
+
+```java
+@Autowired
+private KvEngine kvEngine;   // RedisKvEngine，基于 StringRedisTemplate
+
+kvEngine.put("user:1", "tom");
+kvEngine.put("user:2", "jerry", Duration.ofMinutes(10));
+String v = kvEngine.get("user:1");
+Map<String, String> all = kvEngine.findAllByPrefix("user:");
+```
+
+**自定义 TTL 的缓存管理器**（`createRedisCacheManager` 是 public static）：
+
+```java
+@Bean("redisCacheManager1800")
+public CacheManager redisCacheManager1800(RedisConnectionFactory factory) {
+    return CacheConfiguration.createRedisCacheManager(null, factory, 1800);
 }
 ```
 
-### 5. Redis搜索
+预置实现固定使用 `StringRedisSerializer` 作 key、`GenericJackson2JsonRedisSerializer` 作 value，前缀 `CACHE:` + 缓存名 + `:`，并 `disableCachingNullValues()`。
 
-#### 搜索服务
+### 5.2 SPI 扩展示例
 
-```java
-@Service
-public class SearchService {
-    
-    @Autowired
-    private RedisSearchService redisSearchService;
-    
-    public void indexDocument(String indexName, String docId, Map<String, Object> fields) {
-        // 创建或更新文档索引
-        redisSearchService.addDocument(indexName, docId, fields);
-    }
-    
-    public List<Map<String, Object>> search(String indexName, String query) {
-        // 执行搜索查询
-        return redisSearchService.search(indexName, query);
-    }
-    
-    public void createUserIndex() {
-        // 创建用户索引
-        Map<String, String> schema = new HashMap<>();
-        schema.put("username", "TEXT");
-        schema.put("email", "TEXT");
-        schema.put("age", "NUMERIC");
-        schema.put("status", "TAG");
-        
-        redisSearchService.createIndex("user_index", schema);
-    }
-}
-```
+模块自身没有 `META-INF/extensions` 登记表，但提供锁实现的 SPI 扩展点：`LockProvider`（`com.chua.starter.redis.support.task.lock`），内置实现 `RedissonLockProvider` 标注 `@Spi(value = "redisson", order = 100)`。
 
-### 6. 简单Redis操作
-
-#### 计数器服务
+三步新增一个自定义锁提供者：
 
 ```java
-@Service
-public class CounterService {
-    
-    @Autowired
-    private SimpleRedisService simpleRedisService;
-    
-    public void incrementPageView(String pageId) {
-        String indicator = "page:views";
-        simpleRedisService.increment(indicator, pageId, 24 * 3600); // 24小时过期
-    }
-    
-    public void incrementUserAction(String userId, String action) {
-        String indicator = "login:actions:" + action;
-        simpleRedisService.increment(indicator, userId);
-    }
-    
-    public void decrementStock(String productId) {
-        String indicator = "product:stock";
-        simpleRedisService.decrement(indicator, productId, 3600); // 1小时过期
-    }
-}
-```
+// 1. 实现接口 + @Spi 声明名称
+@Spi(value = "zk", order = 50)
+public class ZkLockProvider implements LockProvider {
 
-## ⚙️ 高级配置
+    private final String key;
+    private ZkLock lock;
 
-### 完整配置示例
+    public ZkLockProvider(String key) { this.key = key; }
 
-```yaml
-spring:
-  redis:
-    # 基础连接配置
-    host: localhost
-    port: 6379
-    password: your_password
-    database: 0
-    timeout: 10s
-    connect-timeout: 10s
-    client-name: spring-app
-    
-    # 集群配置
-    cluster:
-      nodes:
-        - 192.168.1.100:7000
-        - 192.168.1.100:7001
-        - 192.168.1.100:7002
-      max-redirects: 3
-    
-    # 哨兵配置
-    sentinel:
-      master: mymaster
-      nodes:
-        - 192.168.1.100:26379
-        - 192.168.1.101:26379
-        - 192.168.1.102:26379
-    
-    # Lettuce连接池配置
-    lettuce:
-      pool:
-        max-active: 20    # 最大连接数
-        max-idle: 10      # 最大空闲连接数
-        min-idle: 5       # 最小空闲连接数
-        max-wait: 2s      # 最大等待时间
-
-# 插件配置
-plugin:
-  redis:
-    server:
-      open-embedded: false    # 是否启用嵌入式Redis
-      port: 6379             # 嵌入式Redis端口
-      max-memory: 128mb      # 最大内存
-      config-file: redis.conf # 配置文件路径
-```
-
-### 自定义缓存管理器
-
-```java
-@Configuration
-public class CustomCacheConfig {
-    
-    @Bean("customCacheManager")
-    public CacheManager customCacheManager(RedisConnectionFactory factory) {
-        // 创建自定义过期时间的缓存管理器
-        return CacheConfiguration.createRedisCacheManager(null, factory, 1800); // 30分钟
-    }
-    
-    @Bean("shortTermCacheManager")
-    public CacheManager shortTermCacheManager(RedisConnectionFactory factory) {
-        // 短期缓存管理器
-        return CacheConfiguration.createRedisCacheManager(null, factory, 300); // 5分钟
-    }
-}
-```
-
-## 🔧 自定义扩展
-
-### 自定义Redis监听器
-
-```java
-@Component
-public class CustomRedisListener implements RedisListener {
-    
     @Override
-    public void onMessage(Message message, byte[] pattern) {
-        String channel = new String(message.getChannel());
-        String content = new String(message.getBody());
-        
-        // 自定义消息处理逻辑
-        processMessage(channel, content);
+    public boolean tryLock(int timeout, TimeUnit timeUnit) {
+        this.lock = zkClient.acquire(key);
+        return true;
     }
-    
+
     @Override
-    public Collection<Topic> getTopics() {
-        return Arrays.asList(
-            new ChannelTopic("custom:channel"),
-            new PatternTopic("system:*")
-        );
-    }
-    
-    private void processMessage(String channel, String content) {
-        log.info("处理消息 - 频道: {}, 内容: {}", channel, content);
-        // 实现具体的消息处理逻辑
-    }
+    public void unlock() { if (lock != null) { lock.release(); } }
+
+    @Override
+    public String getName() { return "zk"; }
+
+    @Override
+    public String getType() { return "zk"; }
 }
 ```
 
-### 自定义分布式锁
+```text
+# 2. 登记到 src/main/resources/META-INF/extensions/com.chua.starter.redis.support.task.lock.LockProvider
+com.example.ZkLockProvider
+```
 
 ```java
-@Component
-public class CustomLockService {
-    
-    @Autowired
-    private RedissonClient redissonClient;
-    
-    public <T> T executeWithLock(String lockKey, int waitTime, int leaseTime, 
-                                TimeUnit unit, Supplier<T> supplier) {
-        RLock lock = redissonClient.getLock(lockKey);
-        
-        try {
-            if (lock.tryLock(waitTime, leaseTime, unit)) {
-                return supplier.get();
-            } else {
-                throw new RuntimeException("获取锁失败: " + lockKey);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("获取锁被中断", e);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
-        }
-    }
-}
+// 3. 生效：按名称取用
+LockProvider provider = ServiceProvider.of(LockProvider.class).getExtension("zk");
+provider.tryLock(5, TimeUnit.SECONDS);
 ```
 
-## 📝 注意事项
+注意 `LockProvider` 实现需提供 `String key` 构造参数，SPI 框架按构造参数实例化。
 
-1. **连接池配置**：根据应用负载合理配置连接池参数
-2. **序列化选择**：选择合适的序列化方式，平衡性能和兼容性
-3. **缓存过期**：合理设置缓存过期时间，避免内存泄漏
-4. **分布式锁**：注意锁的超时时间设置，避免死锁
-5. **消息队列**：处理消息时要考虑幂等性和异常处理
-6. **嵌入式Redis**：仅用于测试环境，生产环境使用独立Redis服务
+## 六、与其它 starter 的关系
 
-## 🐛 故障排除
+- **`spring-support-cache-starter`**：本模块依赖它（拿 `CacheConstant` 与多级缓存）。它的 `CacheConfiguration` 会 `@AutoConfigureAfter` 本模块的 `CacheConfiguration`，因此 `redis-cache-*` 系列先于 `redisCacheManager` 就绪。两者可共存：`redis-cache-*` 是单一 Redis 分档缓存，`multiLevelCacheManager` 是 L1+L2 组合。
+- **`spring-support-common-starter`**：提供 `ModuleEnvironmentRegistration`（启动横幅按 `plugin.redis.server` 显示开启状态）与 `ServiceInfoContributor`。
+- **`spring-support-datasource-starter`**：无直接依赖，健康检查各自注册 `HealthIndicator`，在 `/actuator/health` 并列展示。
+- **`spring-support-oauth-client-starter`**：使用 `CacheProvider`（来自 cache-starter）做令牌撤销缓存，不依赖本模块。
+- **Lock4j**：`lock4j-redis-template-spring-boot-starter` 由本模块传递引入，其原生 `@Lock4j` 注解可直接使用；本模块的 `LockTemplate` 是独立封装，两者互不覆盖。
 
-### 常见问题
+## 七、已知限制
 
-1. **连接超时**
-   - 检查Redis服务器状态
-   - 验证网络连接
-   - 调整超时配置
-
-2. **序列化错误**
-   - 检查对象是否可序列化
-   - 验证序列化配置
-   - 确认类路径一致性
-
-3. **缓存不生效**
-   - 检查缓存管理器配置
-   - 验证缓存注解使用
-   - 确认方法是否被代理
-
-### 调试建议
-
-启用调试日志：
-
-```yaml
-logging:
-  level:
-    com.chua.starter.redis: DEBUG
-    org.springframework.data.redis: DEBUG
-    org.redisson: DEBUG
-```
+1. `TimeSeriesService`、`RedisSearchService` 是空接口（无任何方法），Bean 虽注册但无法调用；时间序列/搜索能力需自行实现或换模块。
+2. `plugin.redis.server` 下的 `open-embedded`、`max-memory`、`max-heap` 目前只有配置字段，没有代码消费——**嵌入式 Redis 未实现**，不要指望 `open-embedded=true` 能启动内存实例。
+3. Redisson 只按单机模式构建（`config.useSingleServer()`），`spring.data.redis.cluster` / `sentinel` 配置不会传给 Redisson；集群/哨兵需自行声明 `RedissonClient` Bean（`@ConditionalOnMissingBean` 会退让）。
+4. `LockTemplateConfiguration` 在缺少 `RedissonClient` 时回退 `NoopLockTemplate`：`tryLock` 恒成功且不真正加锁，只适合无 Redis 的本地/测试环境，生产需确认 Bean 类型。
+5. `RedisConfiguration` 整体受 `plugin.redis.server.enable` 控制，且 `matchIfMissing=true`；显式配置 `enable: false` 会连带关闭模板、监听容器与计数服务。
+6. 预置缓存 Bean 名是常量（`redis-cache-600` 等），与创建方法名（`systemCacheManager600`）不一致，`cacheManager` 属性必须写 Bean 名。
+7. 监听容器的 topic 序列化使用 `Jackson2JsonRedisSerializer` + `enableDefaultTyping`（已废弃 API），且序列化器必须在 `addMessageListener` 之后设置，改动顺序会收不到消息。
+8. 预置缓存一律 `disableCachingNullValues()`，无法缓存空值；需要防穿透须自定义 `CacheManager`。
+9. `SimpleRedisService#qps` 以「哈希汇总值 ÷ 86400」估算，不是滑动窗口 QPS，仅作粗略指标。
+10. 运行环境：Java 25、Spring Boot 4.1.x，Redis 配置前缀为 `spring.data.redis`。

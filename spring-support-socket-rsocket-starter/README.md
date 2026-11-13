@@ -1,358 +1,192 @@
-# Spring Support RSocket Starter
+# spring-support-socket-rsocket-starter
 
-## 模块简介
+`rsocket` 协议别名的实现模块：用 Spring WebSocket 文本通道承载 JSON 事件（`{event, data, timestamp}`），向 `spring-support-socket-starter` 提供 `SocketSessionTemplate`；**不是** RSocket 二进制协议与 Reactor 响应式栈。
 
-`spring-support-rsocket-starter` 是一个基于 RSocket 的 Spring Boot 集成模块，提供了响应式双向通信的完整支持。本模块依赖 `utils-support-rsocket-starter`（底层协议实现），并提供了 Spring Boot 风格的自动配置、注解支持和会话管理功能。
+## 一、模块能力
 
-## 架构设计
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| SPI 实现 | `RSocketProvider`（`@Spi("rsocket")`） | `SocketProvider` 扩展点 |
+| 会话模板 | `RSocketSessionTemplateImpl`（`TextWebSocketHandler` + `SocketSessionTemplate`） | 由 `SocketLifecycle` 调 `start()` |
+| 会话模型 | `RSocketSessionImpl`（包装 `WebSocketSession`） | `template.getSession(sessionId)` |
+| 入站事件分发 | `EventListenerProcessor` + `@OnEvent` | `SocketListener` Bean |
+| 客户端分组 | 从连接路径提取 `clientId`（`/ws/webrtc` → `webrtc`） | `afterConnectionEstablished` |
+| 文本发送 | `RSocketSessionImpl.send(event, data)`、`sendRaw(message)` | 会话方法 |
+| 同步协议适配 | `RsocketSyncServer`（继承 `AbstractSyncServer`） | 未标注组件注解，本模块不自动注册 |
 
-```
-spring-support-rsocket-starter（Spring Boot 集成层）
-    ↓ 依赖
-utils-support-rsocket-starter（底层协议实现）
-    ↓ 依赖
-RSocket Core + Reactor（RSocket核心库）
-```
+本模块**没有** Spring 自动配置类（`AutoConfiguration.imports` 仅一行说明注释），也没有 `@ConfigurationProperties`。
 
-## 主要特性
-
-### 1. Spring Boot 自动配置
-- ✅ 基于 `@ConfigurationProperties` 的配置管理
-- ✅ 条件化 Bean 注册（`@ConditionalOnProperty`）
-- ✅ 自动装配支持
-- ✅ 配置元数据生成
-
-### 2. 注解驱动开发
-- ✅ `@OnConnect` - 连接事件处理
-- ✅ `@OnDisconnect` - 断开连接事件处理
-- ✅ `@OnEvent` - 自定义事件处理
-
-### 3. 会话管理
-- ✅ RSocketSession - 会话抽象
-- ✅ RSocketUser - 用户信息管理
-- ✅ RSocketSessionResolver - 会话解析器
-- ✅ RSocketSessionTemplate - 操作模板
-
-### 4. 认证与授权
-- ✅ RSocketAuthFactory - 认证工厂接口
-- ✅ 可插拔认证机制
-
-### 5. 响应式特性
-- ✅ 基于 Project Reactor 的响应式编程
-- ✅ 背压（Backpressure）支持
-- ✅ 流式数据处理
-- ✅ 异步非阻塞
-
-## 快速开始
-
-### 1. 添加依赖
-
-在 `pom.xml` 中添加：
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
-    <artifactId>spring-support-rsocket-starter</artifactId>
-    <version>4.0.0.35</version>
+    <artifactId>spring-support-socket-rsocket-starter</artifactId>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
-### 2. 配置文件
+| 依赖 | 作用 | 是否可选 |
+|---|---|---|
+| `com.chua:spring-support-socket-starter` | 抽象层、SPI、`SocketProperties` | 否 |
+| `org.springframework.boot:spring-boot-starter-websocket` | `TextWebSocketHandler` / `WebSocketSession` | 否 |
+| `com.chua:spring-support-sync-starter` | `AbstractSyncServer` 基类 | 否 |
+| `com.chua:utils-support-common-starter` | 公共工具 | 否 |
 
-在 `application.yml` 中配置：
+**没有** `io.rsocket:rsocket-core`、**没有** `projectreactor`、**没有** `utils-support-rsocket-starter` 依赖；本模块不提供背压、四种交互模式（request-response / fire-and-forget / request-stream / channel）等 RSocket 语义。
+
+## 三、配置项
+
+本模块**无 `@ConfigurationProperties`**，接收抽象层传入的 `SocketProperties`（前缀 `plugin.socket`）。
+
+| key | 默认值 | 本模块是否读取 |
+|---|---|---|
+| `enable` | `false` | 是（抽象层据此决定是否创建模板） |
+| `auto-start` | `true` | 是（抽象层决定是否调 `start()`） |
+| `protocol` | `SSE` | 需设为 `rsocket` 才会选中本实现 |
+| `room` | `[]` | 否 |
+| `host` / `ping-interval` / `ping-timeout` | `0.0.0.0` / `25000` / `60000` | 否 |
+| `boss-count` / `work-count` / `max-frame-size` | `1` / `100` / `1048576` | 否 |
+| `auth-factory` | 空 | 否 |
+| `codec-type` / `encrypt-*` | `json` / 未设置 | 否 |
+
+`RSocketSessionTemplateImpl` 只保存 `SocketProperties` 引用，实现中未读取任何字段；改这些配置不会影响本实现的行为。
+
+示例（当前仅能表达"选择该实现"，端口与端点由宿主的 `WebSocketHandler` 注册决定）：
 
 ```yaml
 plugin:
-  rsocket:
-    enable: true                    # 启用RSocket
-    host: 0.0.0.0                  # 监听地址
-    port: 7000                      # 监听端口
-    boss-count: 1                   # Boss线程数
-    work-count: 100                 # Worker线程数
-    max-frame-payload-length: 1048576  # 最大帧长度
-    ping-timeout: 60000             # Ping超时时间（毫秒）
-    ping-interval: 25000            # Ping间隔（毫秒）
-    auth-factory: com.example.MyAuthFactory  # 认证工厂类
+  socket:
+    enable: true
+    protocol: rsocket
+    auto-start: true
 ```
 
-### 3. 使用注解处理事件
+## 四、快速开始
 
-```java
-package com.example.handler;
+**第一步：引入依赖。**
 
-import com.chua.starter.rsocket.support.annotations.*;
-import com.chua.starter.rsocket.support.session.RSocketSession;
-import org.springframework.stereotype.Component;
-
-/**
- * RSocket 事件处理器
- * 
- * @author CH
- * @version 4.0.0.34
- * @since 2024/10/24
- */
-@Component
-public class RSocketEventHandler {
-    
-    /**
-     * 客户端连接事件
-     */
-    @OnConnect
-    public void onConnect(RSocketSession session) {
-        System.out.println("客户端连接: " + session.getId());
-        // 可以在这里进行认证、初始化等操作
-    }
-    
-    /**
-     * 客户端断开连接事件
-     */
-    @OnDisconnect
-    public void onDisconnect(RSocketSession session) {
-        System.out.println("客户端断开: " + session.getId());
-        // 清理资源、记录日志等
-    }
-    
-    /**
-     * 处理自定义事件
-     */
-    @OnEvent("chat.message")
-    public String onChatMessage(RSocketSession session, String message) {
-        System.out.println("收到消息: " + message + " from " + session.getId());
-        return "Echo: " + message;
-    }
-    
-    /**
-     * 处理用户登录事件
-     */
-    @OnEvent("user.login")
-    public void onUserLogin(RSocketSession session, Map<String, Object> data) {
-        String username = (String) data.get("username");
-        session.setAttribute("username", username);
-        System.out.println("用户登录: " + username);
-    }
-}
+```xml
+<dependency>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-socket-rsocket-starter</artifactId>
+    <version>4.0.0.51</version>
+</dependency>
 ```
 
-### 4. 使用 RSocketSessionTemplate
+**第二步：配置协议。**
 
-```java
-package com.example.service;
-
-import com.chua.starter.rsocket.support.session.RSocketSessionTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-/**
- * RSocket 消息服务
- * 
- * @author CH
- * @version 4.0.0.34
- * @since 2024/10/24
- */
-@Service
-public class RSocketMessageService {
-    
-    @Autowired
-    private RSocketSessionTemplate rsocketSessionTemplate;
-    
-    /**
-     * 发送消息到指定会话
-     */
-    public void sendToSession(String sessionId, String event, Object data) {
-        rsocketSessionTemplate.send(sessionId, event, data);
-    }
-    
-    /**
-     * 广播消息到所有会话
-     */
-    public void broadcast(String event, Object data) {
-        rsocketSessionTemplate.broadcast(event, data);
-    }
-    
-    /**
-     * 发送消息到指定用户
-     */
-    public void sendToUser(String userId, String event, Object data) {
-        rsocketSessionTemplate.sendToUser(userId, event, data);
-    }
-}
+```yaml
+plugin:
+  socket:
+    enable: true
+    protocol: rsocket
 ```
 
-### 5. 自定义认证工厂
+**第三步：把模板注册为 WebSocket 端点（当前必须由宿主完成）。**
 
 ```java
-package com.example.auth;
+@Configuration
+@EnableWebSocket
+public class RsocketEndpointConfig implements WebSocketConfigurer {
 
-import com.chua.starter.rsocket.support.auth.RSocketAuthFactory;
-import com.chua.starter.rsocket.support.session.RSocketSession;
-import org.springframework.stereotype.Component;
+    private final SocketSessionTemplate template;
 
-/**
- * 自定义认证工厂
- * 
- * @author CH
- * @version 4.0.0.34
- * @since 2024/10/24
- */
-@Component
-public class MyAuthFactory implements RSocketAuthFactory {
-    
+    public RsocketEndpointConfig(SocketSessionTemplate template) {
+        this.template = template;
+    }
+
     @Override
-    public boolean authenticate(RSocketSession session, Map<String, Object> credentials) {
-        // 实现认证逻辑
-        String token = (String) credentials.get("token");
-        
-        if (validateToken(token)) {
-            // 认证成功，设置用户信息
-            session.setAttribute("userId", getUserIdFromToken(token));
-            session.setAttribute("username", getUsernameFromToken(token));
-            return true;
-        }
-        
-        return false;
-    }
-    
-    private boolean validateToken(String token) {
-        // 验证token逻辑
-        return token != null && !token.isEmpty();
-    }
-    
-    private String getUserIdFromToken(String token) {
-        // 从token中提取用户ID
-        return "user-123";
-    }
-    
-    private String getUsernameFromToken(String token) {
-        // 从token中提取用户名
-        return "admin";
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler((RSocketSessionTemplateImpl) template, "/ws/*")
+                .setAllowedOrigins("*");
     }
 }
 ```
 
-## 配置说明
+`start()` 只把内部 `running` 置为 `true` 并打日志，不会自行绑定端口或注册端点；不完成上面的注册，客户端无处可连。
 
-### 完整配置示例
+## 五、运行示例
 
-```yaml
-plugin:
-  rsocket:
-    # 基础配置
-    enable: true                      # 是否启用RSocket，默认false
-    host: 0.0.0.0                    # 监听地址，默认0.0.0.0
-    port: 7000                        # 监听端口，默认7000
-    
-    # 线程配置
-    boss-count: 1                     # Boss线程数，默认1
-    work-count: 100                   # Worker线程数，默认100
-    use-linux-native-epoll: false    # 是否使用Epoll（Linux），默认false
-    
-    # 帧配置
-    max-frame-size: 1048576            # 最大帧大小（字节），默认1MB（推荐使用）
-    max-frame-payload-length: 1048576  # 最大帧载荷长度（字节），默认1MB（向后兼容）
-    max-http-content-length: 1048576   # 最大HTTP内容长度（字节），默认1MB
-    
-    # 心跳配置
-    ping-timeout: 60000               # Ping超时时间（毫秒），默认60秒
-    ping-interval: 25000              # Ping间隔（毫秒），默认25秒
-    
-    # 认证配置
-    auth-factory: com.example.MyAuthFactory  # 认证工厂类全限定名
-    
-    # 其他配置
-    allow-custom-requests: true       # 是否允许自定义请求，默认true
-    codec-type: json                  # 编解码器类型，默认json
+### 5.1 调用示例
+
+**本模块无链式 API**，按调用步骤使用：
+
+1. 注入 `SocketSessionTemplate`（抽象层 `@Primary`）或强转为 `RSocketSessionTemplateImpl` 使用端点注册。
+2. 发送：`send(sessionId, event, msg)` 走会话 `send(event, data)`，序列化为 `{"event":...,"data":...,"timestamp":...}` 后作为文本帧写出。
+3. 广播：`broadcast(event, msg)` 遍历全部已登记会话逐个发送。
+4. 按用户：`sendToUser(userId, event, msg)` 遍历会话比较 `session.getUser().getUserId()`；本实现未在连接时建立用户身份，实际很难命中。
+5. 查询：`getOnlineSessions()`、`getOnlineCount()`、`getOnlineSession(type, roomId)`、`getOnlineUsers(type)`。
+6. 原始文本：强转 `RSocketSessionImpl` 后调 `sendRaw(message)`。
+
+```java
+@Service
+public class MessageService {
+
+    private final SocketSessionTemplate template;
+
+    public MessageService(SocketSessionTemplate template) {
+        this.template = template;
+    }
+
+    public void push(String text) {
+        template.broadcast("notice", text);
+    }
+}
 ```
 
-## 与 Socket.IO 功能对比
+事件监听（客户端发 `{"event":"chat.message","data":"hi"}` 时触发）：
 
-本模块实现了 `spring-support-socketio-starter` 的所有核心功能：
+```java
+@Component
+public class EventHandler implements SocketListener {
 
-| 功能 | Socket.IO | RSocket | 说明 |
-|------|-----------|---------|------|
-| 自动配置 | ✅ | ✅ | Spring Boot自动配置 |
-| 注解支持 | ✅ (@OnConnect, @OnDisconnect, @OnEvent) | ✅ (相同注解) | 一致的API |
-| 会话管理 | ✅ (SocketSession) | ✅ (RSocketSession) | 相同的抽象 |
-| 用户管理 | ✅ (SocketUser) | ✅ (RSocketUser) | 用户信息封装 |
-| 操作模板 | ✅ (SocketSessionTemplate) | ✅ (RSocketSessionTemplate) | 统一的操作接口 |
-| 认证工厂 | ✅ (SocketAuthFactory) | ✅ (RSocketAuthFactory) | 可插拔认证 |
-| 广播消息 | ✅ | ✅ | - |
-| 点对点消息 | ✅ | ✅ | - |
-| 房间管理 | ✅ | ❌ | RSocket使用路由替代 |
-| 背压支持 | ❌ | ✅ | **RSocket独有** |
-| 响应式流 | ❌ | ✅ | **RSocket独有** |
-| 四种交互模式 | ❌ | ✅ | **RSocket独有** |
+    @OnEvent("chat.message")
+    public void onChat(SocketSession session, Object data) {
+        log.info("session={}, data={}", session.getId(), data);
+    }
 
-## 使用场景
+    @OnEvent("user.login")
+    public void onLogin(SocketSession session, Map<String, Object> data) {
+        session.setAttribute("username", data.get("username"));
+    }
+}
+```
 
-### 适用场景
-- ✅ 微服务之间的高性能通信
-- ✅ 实时数据流传输
-- ✅ 需要背压控制的场景
-- ✅ 响应式系统架构
-- ✅ 高并发实时通信
+客户端分组由路径决定：连接 `/ws/webrtc` 时 `clientId` 为 `webrtc`，`/ws` 或 `/` 归为 `default`；`getOnlineSession(type, roomId)` 用 `type` 作为 `clientId` 取分组，`roomId` 非空时再按会话属性 `roomId` 过滤——而该属性从未被写入，所以传了 `roomId` 通常返回空列表。
 
-### 推荐使用
-- 当需要比 Socket.IO 更高性能时
-- 当需要背压机制时
-- 当需要流式数据处理时
-- 当使用响应式技术栈时
+### 5.2 SPI 扩展示例
 
-## 技术栈
+本模块不提供 SPI 扩展点：没有自己的 `META-INF/extensions` 目录，也不接受自定义别名。
 
-- Spring Boot 3.4.5
-- Utils Support RSocket Starter 4.0.0.31
-- RSocket Core 1.1.4
-- Project Reactor 3.6.2
-- Java 21
+它自身是抽象层 `SocketProvider` 的一个实现（`RSocketProvider` 标注 `@Spi("rsocket")`），但**未在 `META-INF/extensions/com.chua.socket.support.spi.SocketProvider` 中登记**，因此 `ServiceProvider` 的 `META-INF/extensions` 与同包扫描都发现不到它——详见第七节第 1 条。
 
-## 示例代码
+## 六、与其它 starter 的关系
 
-完整示例代码请参考：
-- [服务器端示例](examples/server)
-- [客户端示例](examples/client)
-- [集成测试](src/test/java)
+```
+spring-support-socket-rsocket-starter
+    ├── spring-support-socket-starter     （抽象层：SocketProvider / SocketSessionTemplate）
+    ├── spring-support-sync-starter       （同步协议基类）
+    └── spring-boot-starter-websocket     （文本通道，不引入 rsocket-core）
+```
 
-## 常见问题
+| 模块 | 与本模块的关系 |
+|---|---|
+| `spring-support-socket-starter` | 上游抽象层；`protocol=rsocket` 时按别名查找本模块的 `RSocketProvider` |
+| `spring-support-socket-io-starter` | 兄弟实现（`socketio`）；Socket.IO 有房间、鉴权、独立端口，本模块都没有，不要按 Socket.IO 的配置项来写 |
+| `spring-support-socket-sse-starter` | 兄弟实现（`sse`）；单向推送，本模块是双向文本通道 |
+| `spring-support-socket-websocket-starter` | 同用 Spring WebSocket，但配置前缀是 `plugin.websocket`、自带端点注册与 `WebSocketTemplate`，与本模块无装配关系 |
 
-### 1. 如何启用RSocket？
+能力边界：本模块只做「WebSocket 文本帧 + JSON 事件名分发」，不具备 RSocket 的二进制帧、背压、连接复用与响应式流。
 
-在配置文件中设置 `plugin.rsocket.enable=true`。
+## 七、已知限制
 
-### 2. 如何修改端口？
-
-在配置文件中设置 `plugin.rsocket.port=8000`。
-
-### 3. 如何实现自定义认证？
-
-实现 `RSocketAuthFactory` 接口并在配置中指定类名。
-
-### 4. 如何获取当前会话？
-
-在事件处理方法中注入 `RSocketSession` 参数。
-
-### 5. 如何发送消息？
-
-使用 `RSocketSessionTemplate` 的方法：
-- `send(sessionId, event, data)` - 发送到指定会话
-- `broadcast(event, data)` - 广播到所有会话
-- `sendToUser(userId, event, data)` - 发送到指定用户
-
-## 技术支持
-
-- **版本**: 4.0.0.34
-- **作者**: CH
-- **日期**: 2024/10/24
-
-## 更新日志
-
-### v4.0.0.34 (2024-10-24)
-- ✨ 初始版本发布
-- ✨ 实现完整的Spring Boot集成
-- ✨ 提供注解驱动的事件处理
-- ✨ 实现会话管理和操作模板
-- ✨ 支持自定义认证机制
-
-## 许可证
-
-本模块遵循项目主许可证。
-
+1. **SPI 未登记**：仓库内缺少 `spring-support-socket-rsocket-starter/src/main/resources/META-INF/extensions/com.chua.socket.support.spi.SocketProvider`。按 `protocol=rsocket` 启动时 `SocketConfiguration` 会抛 `IllegalStateException("未找到协议 [rsocket] 的 SPI 实现...")`；补齐一行 `rsocket=com.chua.rsocket.support.spi.RSocketProvider`（与 socket-io / sse 一致）后才会被发现。
+2. **不是真正的 RSocket**：实现基于 `TextWebSocketHandler`，`pom.xml` 中没有 `rsocket-core` / Reactor；`pom` 的 description 写的是「RSocket 响应式通信实现」，实际能力以本节为准。
+3. **`start()` 不监听端口**：只翻转 `running` 标记，端点需宿主用 `WebSocketHandlerRegistry` 注册；也不存在独立的 `host` / `port` 配置生效路径。
+4. **配置项全部不生效**：`SocketProperties` 仅被保存、未被读取，`room`、`max-frame-size`、`ping-*`、`auth-factory`、`encrypt-*` 对本实现无影响。
+5. **`protocol()` / `isReady()` / `supportsUserTargeting()` 用默认值**：分别返回 `unknown` / `true` / `false`，健康检查与定向发送能力判断都不可靠。
+6. **无鉴权**：没有握手校验逻辑，连接建立即登记会话。
+7. **不注册连接/断开回调**：`@OnConnect`、`@OnDisconnect` 注解不会被扫描；需要在 `afterConnectionEstablished` / `afterConnectionClosed` 之外自行扩展。
+8. **仅文本帧**：未处理二进制消息，`sendBinary` 走抽象层默认实现（Base64 转文本）。
+9. **会话仅存内存**：`sessionCache` 为本地 `ConcurrentHashMap`，多实例不共享，重启即失联。

@@ -1,98 +1,197 @@
-# Spring Support DataSearch Starter
+# spring-support-datasearch-starter
 
-数据检索服务化：把 `utils-support-datasearch-starter` 的数据源 SPI 归一成前端唯一契约，并以 `/v2/**` 暴露。
+把 `utils-support-datasearch-starter` 的数据源 SPI 归一成前端唯一契约，并以 `/v2/**` 暴露：天气 / 定位 / 台风 / 汇率 / 节假日 / IP 归属地。
 
-## 提供的接口
+## 一、模块能力
 
-| 接口 | 说明 | 前端消费方 |
-| --- | --- | --- |
-| `GET /v2/weather/overview` | 天气总览（实况 + 逐小时 + 逐日），参数 `latitude/longitude/city/days/hours` 全可选 | `@repo/core` `getWeatherOverview()` |
-| `GET /v2/location/resolve` | 按请求来源 IP 解析展示位置（内网退回服务器自身定位） | `@repo/core` `resolveGeoLocation()` |
-| `GET /v2/typhoon/active` | 当前活跃台风列表（无活跃台风返回空数组） | `@repo/core` `getActiveTyphoonList()` |
-| `GET /v2/typhoon/detail?id=` | 单个台风详情（历史路径 + 预报路径） | `@repo/core` `getTyphoonDetail()` |
-| `GET /v2/exchange-rate/overview` | 汇率概览（最新价 + 周期涨跌 + 周期极值），参数 `symbols`（逗号分隔，可选）、`period`（1m/3m/6m/12m，可选） | `@repo/core` `getExchangeRateOverview()` |
-| `GET /v2/holiday/get?year=` | 某年法定节假日与调休补班，按日期逐行；`year` 缺省当年 | `@repo/core` `fetchHolidays()` |
-| `GET /v2/ip/lookup?ip=` | IP 归属地（国家/省/市/运营商 + 经纬度/邮编/时区） | `@repo/ui` `ReIpText` |
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| 自动配置 | `DataSearchServiceConfiguration` | `META-INF/spring/...AutoConfiguration.imports` |
+| 天气总览 | `WeatherV2Controller` + `WeatherDataService` / `WeatherDataServiceImpl` | `GET /v2/weather/overview` |
+| 定位解析 | `LocationV2Controller`（复用 `WeatherDataService#resolveLocation`） | `GET /v2/location/resolve` |
+| 台风列表 / 详情 | `TyphoonV2Controller` + `TyphoonDataService` | `GET /v2/typhoon/active`、`GET /v2/typhoon/detail` |
+| 汇率概览 | `ExchangeRateV2Controller` + `ExchangeRateDataService` | `GET /v2/exchange-rate/overview` |
+| 节假日 | `HolidayV2Controller` + `HolidayDataService` | `GET /v2/holiday/get` |
+| IP 归属地 | `IpLookupV2Controller` + `IpLookupDataService` | `GET /v2/ip/lookup` |
+| SPI 装载 | `SpiProviders#list(Class)`（按实现类去重、保持注册顺序、失败返回空列表） | 各 `*DataServiceImpl` 内部调用 |
+| 响应包装 | `ReturnResult.ok/error`（HTTP 200 + 业务码） | 六个控制器 |
 
-七个接口均 `@TokenForIgnore`：**顶栏与日历在登录前就可能渲染**，必须匿名可访问。参数全部可选，
-启动期的 HEAD 探测不带查询串也要能命中映射（前端 `probeBackend` 用 HEAD 判定能力是否存在）。
+七个接口全部标注 `@TokenForIgnore`：**顶栏与日历在登录前就可能渲染**，必须匿名可访问。除台风详情的 `id` 外参数全部可选，启动期的 HEAD 探测不带查询串也要能命中映射（前端 `probeBackend` 用 HEAD 判定能力是否存在）。
 
-## 契约是硬约束
+## 二、依赖与引入
 
-前端对后台数据**原样透传、不做字段补齐**（`packages/core/src/api/weather.ts`、`typhoon.ts`），所以：
+```xml
+<dependency>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-datasearch-starter</artifactId>
+    <version>4.0.0.51</version>
+</dependency>
+```
+
+| 依赖 | 作用 | 说明 |
+|---|---|---|
+| `spring-boot-starter-web` | `@RestController` / `@GetMapping` / MVC 绑定 | 必需 |
+| `spring-boot-autoconfigure` | `@AutoConfiguration`、条件注解 | 必需 |
+| `utils-support-datasearch-starter` | `WeatherProvider` / `TyphoonProvider` / `LocationProvider` / `GeocodeProvider` / `HolidayProvider` / `ExchangeRateProvider` SPI 与模型 | 必需 |
+| `utils-support-common-starter` | `ReturnResult`、`ServiceProvider`、`IpPosition` | 必需 |
+| `spring-support-oauth-client-starter` | `@TokenForIgnore` | 必需（匿名放行） |
+| `io.swagger.core.v3:swagger-annotations` | `@Tag` / `@Operation` / `@Schema` | 仅文档用途 |
+| `jakarta.servlet-api` | `HttpServletRequest`（定位接口按来源 IP 解析） | `provided` |
+| `lombok` | 构造注入 / 日志 | `provided` |
+
+## 三、配置项
+
+模块内无 `@ConfigurationProperties` 类；唯一的配置项由 `@ConditionalOnProperty` 直接读取：
+
+| key | 默认值 | 说明 |
+|---|---|---|
+| `plugin.datasearch.enabled` | `true`（`matchIfMissing = true`） | 整体开关。`false` 时六个控制器与五个数据服务都不注册 |
+
+生效条件（三个同时满足）：Servlet Web 应用（`@ConditionalOnWebApplication(SERVLET)`）、开关不为 `false`、宿主未自建同名 Bean（逐个 `@ConditionalOnMissingBean`）。
+
+## 四、快速开始
+
+**第一步**：引入依赖。宿主需是 Servlet Web 应用，并已装配 `spring-support-oauth-client-starter` 的 `@TokenForIgnore` 支持（否则接口会被鉴权拦下）。
+
+**第二步**：确认开关（默认已开，可不写）：
+
+```yaml
+plugin:
+  datasearch:
+    enabled: true
+```
+
+**第三步**：直接访问任一接口验证，例如：
+
+```bash
+curl -s "http://localhost:8080/v2/weather/overview?city=杭州&days=3&hours=12"
+```
+
+**不需要** `@ComponentScan` 覆盖 `com.chua.starter.datasearch`——多数宿主只扫自己的子包，扫不到这里，所以本模块用自动配置注册 Bean。
+
+## 五、运行示例
+
+### 5.1 调用示例
+
+本模块无链式 API：对外是 HTTP 契约，对内是普通 Bean 方法（返回 VO / `List`），没有 Builder 或 `return this`。以下为步骤式用法。
+
+**HTTP 契约**：
+
+| 方法与路径 | 参数（全可选，除注明外） | 出参 |
+|---|---|---|
+| `GET /v2/weather/overview` | `latitude`、`longitude`、`city`、`days`（默认 7，上限 16）、`hours`（默认 24，上限 72） | `WeatherOverviewVO`（实况 + 逐小时 + 逐日） |
+| `GET /v2/location/resolve` | 无（取请求头 `X-Forwarded-For` / `X-Real-IP` / `Proxy-Client-IP` / `WL-Proxy-Client-IP`） | `LocationVO` |
+| `GET /v2/typhoon/active` | 无 | `List<TyphoonItemVO>`；无活跃台风时为空数组 |
+| `GET /v2/typhoon/detail` | `id`（**必填**，如 `202618`） | `TyphoonDetailVO`（历史路径 + 预报路径） |
+| `GET /v2/exchange-rate/overview` | `symbols`（逗号分隔或重复传参，如 `USD/EUR,USD/CNY`）、`period`（`1m`/`3m`/`6m`/`12m`，默认 `1m`） | `ExchangeRateOverviewVO`（最新价 + 周期涨跌 + 周期极值） |
+| `GET /v2/holiday/get` | `year`（缺省当年） | `List<HolidayVO>`，按日期逐行 |
+| `GET /v2/ip/lookup` | `ip`（支持 `1.2.3.4:8080`，端口忽略） | `IpLookupVO`（国家/省/市/运营商 + 经纬度/邮编/时区） |
+
+`symbols` 同时接受两种前端序列化方式：`symbols=USD/EUR,USD/CNY` 与 axios 默认的 `symbols[]=USD/EUR&symbols[]=USD/CNY`（`ExchangeRateV2Controller#flatten`）。
+
+**几个可直接粘贴的请求**：
+
+```bash
+# 台风：先取活跃列表，再按编号取详情
+curl -s "http://localhost:8080/v2/typhoon/active"
+curl -s "http://localhost:8080/v2/typhoon/detail?id=202618"
+
+# 汇率：默认周期 1m
+curl -s "http://localhost:8080/v2/exchange-rate/overview?symbols=USD/CNY,USD/EUR&period=3m"
+
+# 节假日 / IP 归属地
+curl -s "http://localhost:8080/v2/holiday/get?year=2026"
+curl -s "http://localhost:8080/v2/ip/lookup?ip=114.114.114.114"
+```
+
+**服务端直接调用**（跳过 HTTP，适合内部聚合）：
+
+```java
+@Service
+@RequiredArgsConstructor
+public class TopBarService {
+
+    private final WeatherDataService weatherDataService;
+    private final HolidayDataService holidayDataService;
+
+    public WeatherOverviewVO weather(String city) {
+        WeatherQuery query = new WeatherQuery();
+        query.setCity(city);
+        query.setDays(3);
+        query.setHours(12);
+        return weatherDataService.overview(query);   // 无可用数据源时返回 null
+    }
+
+    public List<HolidayVO> holidays(Integer year) {
+        return holidayDataService.list(year);        // 无数据源时返回 null
+    }
+}
+```
+
+**契约是硬约束**（前端对后台数据原样透传、不做字段补齐，见 `packages/core/src/api/weather.ts`、`typhoon.ts`）：
 
 - 数据源给出的字段必须**全部映射**到出参，缺一项 UI 对应位置就显示 `-`；
 - 天气现象一律用 WMO 4677 数字码，文案与图标由前端按码推导；
 - 时间统一 `yyyy-MM-ddTHH:mm`（与前端 `canonTime` 同口径，带偏移的报文折算到本地时区）；
 - 风圈报文 `"250|150|250|150"` 在此解析成四方位数组 `[东北, 东南, 西南, 西北]`（公里）；
 - 无可用数据源时返回 `ReturnResult.error(...)`（HTTP 200 + 失败码），前端据此回落三方，**不要**返回半截数据；
-- 唯一的例外是节假日：**「这一年没有放假数据」返回空数组**，空是权威结论，失败（数据源整体不可用）
-  才返回失败码 —— 前端把两者区分对待（空数组 → 不重复探测，失败 → 退回内置表）。
+- 唯一例外是节假日：**「这一年没有放假数据」返回空数组**，空是权威结论，失败（数据源整体不可用）才返回失败码——前端把两者区分对待（空数组 → 不重复探测，失败 → 退回内置表）。
 
 新增数据源字段时，务必同步前端契约（`@repo/core` 的 TS 接口）与本模块出参。
 
-## 数据源（SPI）
+### 5.2 SPI 扩展示例
 
-来自 `utils-support-datasearch-starter`，按 SPI 注册顺序取用，全部不可达时返回空交由前端降级：
+扩展点在 `utils-support-datasearch-starter`，本模块通过 `SpiProviders.list(...)` 消费。以新增天气源为例：
 
-- 天气：`OpenMeteoWeatherProvider`、`WttrInWeatherProvider`
-- 台风：`ZhejiangTyphoonProvider`（浙江省水利厅台风网）
-- 定位：`IpApiLocationProvider`
-- 反查地名：`BigDataCloudGeocodeProvider`
-- 节假日：`OnlineHolidayProvider`（holiday-cn 年度 JSON，内置 2026 官方安排兜底）
-- 汇率：`OpenExchangeRateProvider`（open.er-api.com，USD 基准全量表，6 小时内存缓存）
+**实现**（接口只有 `name()`、`getWeather(String city)`、`getWeather(Double latitude, Double longitude, Integer days)`；坐标重载有默认实现返回 `null`，不支持坐标时可只覆盖城市查询）：
 
-汇率与节假日另有两处**非 SPI 兜底**，目的是让「宿主没引 utils 数据检索模块」或「SPI 抓取失败」
-时顶栏不至于整块空白：
+```java
+@Spi("my-weather")
+public class MyWeatherProvider implements WeatherProvider {
 
-- 汇率最新价回落到 frankfurter `/latest`，周期序列走 frankfurter 日期区间接口（一次拿整段，
-  不逐日外呼），历史序列按「base + quotes + 天数」缓存 10 分钟；
-- 节假日的年份解析失败时返回空数组而非异常，日历仍有内置表可渲染。
+    @Override
+    public String name() { return "my-weather"; }
 
-IP 归属地不走 `IptablesService`，而是直接消费 `IpPosition` SPI（ip2region / geoip2 本地库）：
-`IptablesService` 在接口上钉了 `@Cacheable(cacheManager = "redis-cache-600")`，该管理器由
-redis + ai 侧的配置提供，没有它的宿主首次调用就会抛 `Cannot find cache named 'redis-cache-600'`。
-IP 归属地在本模块还需要「同一 IP 被页面上多处渲染」的去重，进程内缓存比走 Redis 更合适。
+    @Override
+    public WeatherInfo getWeather(String city) {
+        // 拉取并转成 WeatherInfo（天气现象填 WMO 4677 数字码）
+        return null;
+    }
 
-## 装配方式
-
-以**自动配置**注册（`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`），宿主引入依赖即生效：
-
-- 生效条件：Servlet Web 应用；`plugin.datasearch.enabled` 不为 `false`（默认开启）；
-- 宿主已自建同名 Bean 时逐个退让（`@ConditionalOnMissingBean`）；
-- **不要求** `@ComponentScan` 覆盖 `com.chua.starter.datasearch`（多数宿主只扫自己的子包，扫不到这里）。
-
-## 依赖方向
-
-放在 spring 层的原因：这套能力是"平台可选增强"，`ai` / `system` / `monitor` 等各类宿主都可能要，而 spring 层不得反向依赖 api 层。
-
-- 本模块是**唯一实现**：`spring-api-support-common-service-starter`（api 业务层）已移除原先的同名类，改为依赖本模块，避免两份代码分叉；
-- 其余 api 侧宿主（`-system` / `-oauth` / `-monitor` 等）经由 common-service-starter 传递获得同一份实现。
-
-## 前端配合
-
-前端用「业务能力开关」控制是否探测（`app.yaml` → `other.capabilities`）：
-
-```yaml
-other:
-  capabilities:
-    weather: true       # 天气总览
-    location: true      # 定位解析
-    typhoon: true       # 活跃台风
-    exchangeRate: true  # 汇率概览
-    holiday: true       # 节假日
-    ipLookup: true      # IP 归属地
+    @Override
+    public WeatherInfo getWeather(Double latitude, Double longitude, Integer days) {
+        // 支持坐标查询时覆盖此方法
+        return null;
+    }
+}
 ```
 
-- `false` = 后台不提供该能力：前端**不发探测请求**（避免每次启动的 404 噪音），对应入口一并隐藏；
-- 能力清单与探测路径见 `packages/core/src/api/capability.ts`，新增能力在此登记一条即可，探测、显隐、开关、app.yaml 自动全链路生效。
+**登记**：在自有 jar 下新建 `META-INF/extensions/com.chua.common.support.datasearch.weather.spi.WeatherProvider`，一行一条 `名称=实现类全限定名`：
 
-## 不含的能力
+```text
+my-weather=com.example.weather.MyWeatherProvider
+```
 
-- `/v2/holiday/sync`（从三方同步到本地库）：本模块**不读也不写** `sys_holiday` 表，没有可同步的
-  落地目标，同步仍由 system 模块的 `SysHolidayController` 负责，前端据其返回值提示「尚未实现」。
-- `/v2/ip/lookup` **已在本模块实现**（原 README 写「不在本模块」的原因见上：当时依赖的是带
-  `redis-cache-600` 的 `IptablesService`，现已改为直连 `IpPosition` SPI）。若宿主同时引入了
-  api 侧 `SysIpController`，两边路径相同 —— Spring MVC 会因模糊映射在启动时失败，
-  部署侧只需保留一处（本模块的 Bean 带 `@ConditionalOnMissingBean`，宿主自建 `IpLookupV2Controller`
-  时自动退让）。
+**生效**：把 jar 放进宿主 classpath 即可，无需改本模块。装配顺序即 SPI 注册顺序（`SpiProviders#list` 用 `LinkedHashMap` 去重保序），天气侧逐个尝试、**优先采用带 WMO 天气码的结果**，全部缺码时才退回首个结果。
+
+## 六、与其它 starter 的关系
+
+- **上游**：`utils-support-datasearch-starter`（全部数据源 SPI 与 `WeatherInfo` 等模型）、`utils-support-common-starter`（`ReturnResult`、`ServiceProvider`、`IpPosition`）、`spring-support-oauth-client-starter`（`@TokenForIgnore`）。
+- **本模块是唯一实现**：`spring-api-support-common-service-starter`（api 业务层）已移除原先的同名类，改为依赖本模块，避免两份代码分叉；其余 api 侧宿主（`-system` / `-oauth` / `-monitor` 等）经由 common-service-starter 传递获得同一份实现。
+- **`spring-support-ai-starter`**：依赖本模块以获取 utils 层的 `UsageParser`、`ModelMetricsProvider`、`UsagePricingReconciler` 契约（会同时带上本模块的 `/v2/**` 接口）。
+- **`spring-support-monitor-starter`**：`MonitorAutoConfiguration` 注册 `DatasearchConflictResolve`，把宿主里旧的 `/v2/holiday/get`、`/v2/ip/lookup` 控制器移走，避免与本模块同路径双映射导致 `Ambiguous handler methods mapped`。
+- **前端**：能力开关在 `app.yaml` → `other.capabilities`（`weather` / `location` / `typhoon` / `exchangeRate` / `holiday` / `ipLookup`）。`false` 表示后台不提供该能力：前端**不发探测请求**（避免每次启动的 404 噪音），对应入口一并隐藏；能力清单与探测路径见 `packages/core/src/api/capability.ts`，新增能力在此登记一条即可。
+
+放在 spring 层的原因：这套能力是「平台可选增强」，`ai` / `system` / `monitor` 等各类宿主都可能要，而 spring 层不得反向依赖 api 层。
+
+## 七、已知限制
+
+1. **契约不可协商**：出参字段、时间格式、WMO 天气码、风圈数组顺序都是前端硬依赖；改字段必须同步前端 `@repo/core`，否则 UI 直接缺项。
+2. **失败返回 200**：数据源不可用时是 `ReturnResult.error(...)`（HTTP 200 + 失败码），不是 5xx；调用方必须看业务码，不能只看 HTTP 状态。
+3. **空的语义分两种**：台风 `active` 与节假日「该年无数据」返回空集合（权威结论），数据源整体不可用才返回失败码；两者不可混用。
+4. **定位不猜 IP**：客户端来源 IP 无法确认（内网 / 回环）或查不到归属地时直接返回 `null`（控制器回失败码），**不会退回服务器自身定位**——把服务器地址当客户端地址会导致顶栏显示错城市。
+5. **IP 归属地不走 `IptablesService`**：直接消费 `IpPosition` SPI（ip2region / geoip2 本地库）。`IptablesService` 在接口上钉了 `@Cacheable(cacheManager = "redis-cache-600")`，该管理器由 redis + ai 侧配置提供，没有它的宿主首次调用会抛 `Cannot find cache named 'redis-cache-600'`；本模块还需要「同一 IP 被页面多处渲染」的去重，进程内缓存更合适。
+6. **对外部数据源有兜底但不是万能**：汇率最新价与历史序列会回落到 frankfurter（历史序列按「base + quotes + 天数」缓存 10 分钟），节假日年份解析失败返回空数组；天气/台风没有额外的三方兜底，SPI 全不可用即为空。
+7. **不含 `/v2/holiday/sync`**：本模块**不读也不写** `sys_holiday` 表，没有可同步的落地目标；同步仍由 system 模块的 `SysHolidayController` 负责，前端据其返回值提示「尚未实现」。
+8. **可能与 api 侧接口撞路径**：若宿主同时引入 api 侧 `SysIpController`（同样映射 `/v2/ip/lookup`），Spring MVC 会因模糊映射在启动时失败。部署侧只需保留一处；本模块的 Bean 带 `@ConditionalOnMissingBean`，宿主自建 `IpLookupV2Controller` 时自动退让。
+9. **仅 Servlet Web**：`@ConditionalOnWebApplication(type = SERVLET)`，WebFlux 宿主不装配任何控制器。

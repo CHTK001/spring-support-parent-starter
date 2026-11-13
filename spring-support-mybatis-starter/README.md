@@ -1,795 +1,278 @@
-# Spring Support MyBatis Starter
+# spring-support-mybatis-starter
 
-## 📖 模块简介
+MyBatis-Plus 增强装配：分页/乐观锁/逻辑删除、`@DataScope` 数据权限、只读模式、慢 SQL 事件、XML 热重载与自定义 SQL 注入。
 
-Spring Support MyBatis Starter 是一个基于MyBatis Plus的增强ORM模块，提供了企业级应用中数据库操作的完整解决方案。该模块集成了代码生成、分页插件、乐观锁、数据权限、多租户、SQL监控等功能，大大简化了数据库开发工作。
+## 一、模块能力
 
-## ✨ 主要功能
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| MyBatis-Plus 装配 | `MybatisPlusConfiguration`（`SqlSessionFactory`、`SqlSessionTemplate`、`GlobalConfig`） | 自动配置 |
+| 分页 | `PaginationInnerInterceptor` | 自动注册，`IPage` 返回 |
+| 乐观锁 | `OptimisticLockerInnerInterceptor` | `@Version` |
+| 逻辑删除 | `GlobalConfig`（固定 `sys_deleted` / `1` / `0`） | `@TableLogic` |
+| 自动填充 | 容器中的 `MetaObjectHandler` | `@TableField(fill = ...)` |
+| 数据权限 | `DataScope`、`MybatisPlusDataPermissionInterceptor`、`MybatisPlusDataPermissionHandler` | `plugin.mybatis.data.scope` |
+| 只读模式 | `ReadOnlyInterceptor`、`ReadOnlyException` | `plugin.mybatis.read-only` |
+| 删除保护 | `DeleteOnlySelfInterceptor`、`DeleteOnlySelfOnMapper` | 注解（当前不命中，见已知限制） |
+| 字段加解密 | `CryptoInterceptor`、`EncryptTypeHandler` | `mybatis-plus.encryptor.*` |
+| 慢 SQL 检测 | `SlowSqlDetectInterceptor`、`MybatisSlowSqlEvent` | `plugin.mybatis.slow-sql` |
+| 多数据源路由 | `MapperDataSourceInterceptor` | 与 `spring-support-datasource-starter` 协作 |
+| SQL 物理化 | `MaterializedSqlInterceptor` | `plugin.datasource.materialized.enabled` |
+| XML 热重载 | `Reload`、`MapperReload`、`MapperXmlEndpoint` | `plugin.mybatis.open-xml-reload` |
+| 自定义 SQL 注入 | `SupportInjector`、`SqlMethodProperties` | `plugin.mybatis.sql-method` |
+| 关联查询 | `BaseMapperX`、`MPJLambdaWrapperX`、`mybatis-plus-join` | 代码调用 |
+| 类型处理器 | `IntegerListTypeHandler`、`LongListTypeHandler`、`StringListTypeHandler`、`JsonLongSetTypeHandler` | 实体字段 `@TableField(typeHandler=...)` |
+| 分页结果转换 | `PageResult`、`PageResultUtils`、`ReturnPageResultUtils`、`MybatisPageUtils` | 代码调用 |
+| 操作日志切面 | `SysLoggerPointcutAdvisor` | `@SysLog` |
+| Actuator 端点 | `MybatisEndpoint`（`mybatis-extension`）；`MapperXmlEndpoint`（`mybatis-xml`，未在自动配置注册） | 需 Actuator + `mapper-reload` |
 
-### 🔧 MyBatis Plus增强
-- 基于MyBatis Plus的CRUD操作
-- 自动代码生成器
-- 条件构造器增强
-- 自定义SQL方法注入
-
-### 📄 分页和查询
-- 高性能分页插件
-- 多表关联查询支持
-- 动态条件查询
-- 复杂查询构建
-
-### 🔒 数据安全
-- 乐观锁并发控制
-- 数据权限控制（支持声明式注解，多种权限类型，多表关联场景）
-- 多租户数据隔离
-- 逻辑删除支持
-
-### 📊 监控和审计
-- SQL执行监控
-- 性能分析
-- 操作审计日志
-- Mapper XML热重载（支持文件监听自动重载）
-
-### 🏗️ 代码生成
-- 根据数据库表生成实体类
-- 自动生成Mapper接口
-- Service层代码生成
-- Controller层代码生成
-
-## 🚀 快速开始
-
-### Maven依赖
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-mybatis-starter</artifactId>
-    <version>4.0.0.32</version>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
-### 基础配置
+| 依赖 | 作用 | 说明 |
+|---|---|---|
+| `mybatis-plus-spring-boot4-starter` | MyBatis-Plus 核心 | Boot 4 专用坐标 |
+| `mybatis-plus-jsqlparser` | SQL 解析（分页、数据权限、物理化） | 必需 |
+| `mybatis-plus-join-boot-starter` | 多表关联查询 | 必需 |
+| `spring-support-common-starter` | `AuthService`、`DataFilterTypeEnum`、`SysLoggerInfo` | 必需 |
+| `p6spy` | SQL 打印 | 必需 |
+| `spring-support-datasource-starter` | `MultiDataSourceSettingProperties`、`MaterializedRouteProperties` | `optional` |
+| `mybatis-plus-generator` + `spring-boot-starter-freemarker` | 代码生成 | `provided` |
+| `spring-support-swagger-starter` | 文档注解 | `provided` |
 
-```yaml
-# MyBatis Plus配置
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true               # 下划线字段自动转驼峰
-    cache-enabled: false                             # 是否开启 MyBatis 二级缓存
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 控制台打印 SQL 日志
-  global-config:
-    db-config:
-      logic-delete-field: sys_deleted  # 逻辑删除字段
-      logic-delete-value: 1            # 删除值
-      logic-not-delete-value: 0        # 未删除值
-      id-type: auto                    # 主键策略
+## 三、配置项
 
-# 插件配置
-plugin:
-  mybatis-plus:
-    open-xml-reload: true              # 是否启用 Mapper XML 热重载
-    data-scope:
-      enable: true                     # 是否启用数据权限拦截
-      table-name: "sys_dept"           # 部门/组织表名
-      dept-id-column: "sys_dept_id"    # 部门主键字段
-      dept-tree-id-column: "sys_dept_tree_id"  # 部门树路径字段
-      current-user-id-column: "create_by"      # 当前用户字段
-```
+| 前缀 | 配置类 | 关键项（默认值） |
+|---|---|---|
+| `plugin.mybatis` | `MybatisPlusProperties` | `enable`=`true`（当前无消费方）；`open-xml-reload`=`true`（字段默认 true，但 Bean 条件 `matchIfMissing=false`，**不显式配置不生效**）；`read-only`=`false`；`reload-type`=`AUTO`（仅 `NONE`/`AUTO`）；`reload-time`=`3000`（毫秒）；`reload-directories[].path/pattern/watch-enabled`（`pattern` 默认 `**/*Mapper.xml`）；`sql-method[].type`（`FILE`/`MYSQL`）、`source`、`timeout`=`3000`、`watchdog` |
+| `plugin.mybatis.data.scope` | `MybatisPlusDataScopeProperties` | `enable`=`false`；`table-name`=`sys_dept`；`dept-id-column`=`sys_dept_id`；`dept-tree-id-column`=`sys_dept_tree_id`；`current-user-id-column`=`create_by` |
+| `plugin.mybatis.slow-sql` | `MybatisSlowSqlProperties` | `enabled`=`true`；`threshold-ms`=`500`；`print`=`true`；`include-sql`=`true`；`include-parameters`=`false`；`max-sql-length`=`2000` |
+| `mybatis-plus.*` | MyBatis-Plus 原生 | `configuration.*`、`global-config.db-config.*`、`mapper-locations`、`encryptor.password`、`encryptor.mode` |
+| `plugin.datasource.materialized` | `MaterializedRouteProperties`（datasource-starter） | `enabled`，启用后本模块注册 `MaterializedSqlInterceptor` |
 
-## 📋 详细功能说明
+注意数据权限前缀是 `plugin.mybatis.data.scope`（**不是** `plugin.mybatis-plus.data-scope`）。
 
-### 1. 基础CRUD操作
+## 四、快速开始
 
-#### 实体类定义
+**第一步**：引入依赖，保留宿主的 `spring.datasource` 与 `mybatis-plus.mapper-locations`。本模块自动提供 `SqlSessionFactory` / `SqlSessionTemplate`，无需手写配置类。
 
-```java
-@Data
-@TableName("sys_user")
-public class User {
-    
-    @TableId(type = IdType.AUTO)
-    private Long id;
-    
-    @TableField("username")
-    private String username;
-    
-    @TableField("email")
-    private String email;
-    
-    @TableField("phone")
-    private String phone;
-    
-    @TableField("status")
-    private Integer status;
-    
-    // 逻辑删除字段
-    @TableLogic
-    @TableField("sys_deleted")
-    private Integer deleted;
-    
-    // 乐观锁字段
-    @Version
-    @TableField("version")
-    private Integer version;
-    
-    // 自动填充字段
-    @TableField(value = "create_time", fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-    
-    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-    
-    @TableField(value = "create_by", fill = FieldFill.INSERT)
-    private String createBy;
-    
-    @TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
-    private String updateBy;
-}
-```
-
-#### Mapper接口
-
-```java
-@Mapper
-public interface UserMapper extends BaseMapper<User> {
-    
-    /**
-     * 自定义查询方法
-     */
-    @Select("SELECT * FROM sys_user WHERE status = #{status}")
-    List<User> findByStatus(@Param("status") Integer status);
-    
-    /**
-     * 复杂查询
-     */
-    IPage<User> selectUserPage(IPage<User> page, @Param("ew") Wrapper<User> wrapper);
-}
-```
-
-#### Service层
-
-```java
-@Service
-public class UserService extends ServiceImpl<UserMapper, User> {
-    
-    /**
-     * 分页查询用户
-     */
-    public IPage<User> getUserPage(int current, int size, String keyword) {
-        Page<User> page = new Page<>(current, size);
-        
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.isNotBlank(keyword)) {
-            wrapper.like(User::getUsername, keyword)
-                   .or()
-                   .like(User::getEmail, keyword);
-        }
-        wrapper.eq(User::getStatus, 1)
-               .orderByDesc(User::getCreateTime);
-        
-        return this.page(page, wrapper);
-    }
-    
-    /**
-     * 批量操作
-     */
-    @Transactional
-    public boolean batchUpdateStatus(List<Long> ids, Integer status) {
-        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.in(User::getId, ids)
-               .set(User::getStatus, status);
-        
-        return this.update(wrapper);
-    }
-}
-```
-
-### 2. 分页查询
-
-#### 基础分页
-
-```java
-@RestController
-@RequestMapping("/users")
-public class UserController {
-    
-    @Autowired
-    private UserService userService;
-    
-    @GetMapping("/page")
-    public IPage<User> getUserPage(
-            @RequestParam(defaultValue = "1") int current,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String keyword) {
-        
-        return userService.getUserPage(current, size, keyword);
-    }
-}
-```
-
-#### 自定义分页查询
-
-```java
-@Service
-public class UserService extends ServiceImpl<UserMapper, User> {
-    
-    public IPage<UserVO> getUserVOPage(int current, int size, UserQueryDTO query) {
-        Page<UserVO> page = new Page<>(current, size);
-        
-        // 使用自定义SQL进行分页查询
-        return baseMapper.selectUserVOPage(page, query);
-    }
-}
-```
-
-### 3. 数据权限控制
-
-数据权限功能提供了声明式的数据访问控制，支持基于部门、用户的数据过滤，确保用户只能访问其权限范围内的数据。
-
-#### 功能特性
-
-- **声明式控制**：通过 `@DataScope` 注解轻松控制数据权限
-- **多种权限类型**：支持全部可见、本人可见、部门可见、部门及子级可见、指定部门可见、自定义权限
-- **多表关联支持**：支持通过 `deptAlias` 和 `userAlias` 指定表别名，适用于复杂多表查询
-- **性能优化**：使用 LIKE 前缀查询替代 `find_in_set`，可以利用数据库索引提升性能
-- **灵活配置**：支持方法级别和类级别的注解，可灵活控制每个方法的数据权限
-
-#### 🎯 场景与用途
-
-数据权限解决"同表数据按人隔离"问题：**同一张业务表，不同用户看到不同数据行**。典型场景：
-
-- 经销商/代理商只能查看**本部门**的订单数据；
-- 销售只能查看**自己创建**（`create_by` = 当前用户）的客户数据；
-- 区域经理可查看**本部门及所有子部门**的数据（部门树）；
-- 管理员/超管查看全部数据（`ALL` 或 `enabled=false` 禁用）。
-
-声明式控制：Mapper 方法标注 `@DataScope` 后，MyBatis 插件在 SQL 执行前自动拼接数据权限条件，业务代码无侵入。
-
-#### 启用数据权限
+**第二步**：按需开启数据权限与慢 SQL：
 
 ```yaml
 plugin:
   mybatis:
+    read-only: false
+    open-xml-reload: true          # 必须显式写 true 才会注册 Reload
     data:
       scope:
-        enable: true                    # 是否启用数据权限
-        table-name: "sys_dept"          # 部门表名
-        dept-id-column: "sys_dept_id"   # 部门ID字段名
-        dept-tree-id-column: "sys_dept_tree_id"  # 部门树ID字段名（用于部门及子级查询）
-        current-user-id-column: "create_by"      # 当前用户ID字段名
+        enable: true
+        table-name: sys_dept
+        dept-id-column: sys_dept_id
+        dept-tree-id-column: sys_dept_tree_id
+        current-user-id-column: create_by
+    slow-sql:
+      enabled: true
+      threshold-ms: 500
 ```
 
-#### 数据权限类型
+**第三步**：实体继承 `SysBase` / `SysTenantBase`，Mapper 继承 `BaseMapperX<T>`，在需要过滤的方法上加 `@DataScope`。
 
-| 类型 | 枚举值 | 说明 | SQL示例 |
-|------|--------|------|---------|
-| 全部可见 | `ALL` | 不进行数据权限过滤 | 无限制条件 |
-| 本人可见 | `SELF` | 只能查看自己创建的数据 | `WHERE create_by = 'currentUserId'` |
-| 所在部门可见 | `DEPT` | 只能查看所在部门的数据 | `WHERE sys_dept_id = currentDeptId` |
-| 所在部门及子级可见 | `DEPT_AND_SUB` | 可查看所在部门及所有子部门的数据 | `WHERE sys_dept_id IN (SELECT sys_dept_id FROM sys_dept WHERE sys_dept_tree_id LIKE 'currentDeptTreeId%')` |
-| 选择的部门可见 | `DEPT_SETS` | 可查看指定部门列表的数据 | `WHERE sys_dept_id IN (deptId1, deptId2, ...)` |
-| 自定义 | `CUSTOM` | 本人数据 + 指定部门数据 | `WHERE (create_by = 'currentUserId' OR sys_dept_id IN (...))` |
+## 五、运行示例
 
-#### 使用数据权限注解
+### 5.1 调用示例
 
-**基础用法**
+本模块无链式 API，以下为注解 + 步骤式用法。
+
+**实体与 Mapper**：
 
 ```java
+@Data
+@TableName("sys_user")
+public class User extends SysBase {          // SysBase 已带 create_name/create_by/create_time/update_*
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    private String username;
+
+    @TableLogic
+    private Integer sysDeleted;              // 与 GlobalConfig 的 sys_deleted 对应
+
+    @Version
+    private Integer version;
+}
+
 @Mapper
-public interface UserMapper extends BaseMapper<User> {
-    
-    /**
-     * 使用用户当前的数据权限（默认）
-     * 会根据用户登录时的数据权限类型自动过滤
-     */
-    @DataScope
+public interface UserMapper extends BaseMapperX<User> {
+
+    @DataScope                                   // 按当前登录用户的数据权限过滤
     List<User> selectUserList();
-    
-    /**
-     * 强制使用指定的数据权限类型
-     */
+
     @DataScope(value = DataFilterTypeEnum.DEPT, useUserPermission = false)
     List<User> selectDeptUserList();
-    
-    /**
-     * 禁用数据权限（管理员查询所有数据）
-     */
-    @DataScope(enabled = false)
+
+    @DataScope(enabled = false)                  // 管理员旁路
     List<User> selectAllUserList();
 }
 ```
 
-**多表关联场景**
+**数据权限类型**（`com.chua.starter.common.support.constant.DataFilterTypeEnum`）：
 
-当查询涉及多表关联时，可以通过 `deptAlias` 和 `userAlias` 指定表别名：
+| 枚举 | 语义 | 生成条件 |
+|---|---|---|
+| `ALL` | 全部可见 | 不加条件 |
+| `SELF` | 本人可见 | `create_by = 当前用户` |
+| `DEPT` | 所在部门 | `sys_dept_id = 当前部门` |
+| `DEPT_AND_SUB` | 本部门及子级 | `sys_dept_tree_id LIKE '当前树ID%'`（可用索引） |
+| `DEPT_SETS` | 指定部门集合 | `sys_dept_id IN (...)` |
+| `CUSTOM` | 自定义 | 本人 + 指定部门（结合 `CurrentUser.dataPermissionRule`） |
+
+**多表别名**：
 
 ```java
-@Mapper
-public interface UserMapper extends BaseMapper<User> {
-    
-    /**
-     * 多表关联查询示例
-     * 假设查询语句为：
-     * SELECT u.*, d.dept_name 
-     * FROM sys_user u 
-     * LEFT JOIN sys_dept d ON u.sys_dept_id = d.sys_dept_id
-     * 
-     * 通过 deptAlias="d" 指定部门表别名，userAlias="u" 指定用户表别名
-     */
-    @DataScope(
-        value = DataFilterTypeEnum.DEPT_AND_SUB,
-        deptAlias = "d",  // 部门表别名
-        userAlias = "u"   // 用户表别名
-    )
-    @Select("SELECT u.*, d.dept_name FROM sys_user u " +
-            "LEFT JOIN sys_dept d ON u.sys_dept_id = d.sys_dept_id")
-    List<UserVO> selectUserWithDept();
-}
+@DataScope(value = DataFilterTypeEnum.DEPT_AND_SUB, deptAlias = "d", userAlias = "u")
+@Select("SELECT u.*, d.dept_name FROM sys_user u LEFT JOIN sys_dept d ON u.sys_dept_id = d.sys_dept_id")
+List<UserVO> selectUserWithDept();
 ```
 
-**类级别注解**
-
-可以在 Mapper 接口上使用 `@DataScope` 注解，作用于该接口的所有方法：
+**用户上下文**：数据权限依赖 `AuthService`，Bean 名为 `authService`（或 `defaultAuthService`）。
 
 ```java
-@DataScope(value = DataFilterTypeEnum.DEPT)
-@Mapper
-public interface UserMapper extends BaseMapper<User> {
-    // 该接口的所有方法默认使用部门权限
-    List<User> selectUserList();
-    
-    // 方法级别注解会覆盖类级别注解
-    @DataScope(value = DataFilterTypeEnum.SELF)
-    List<User> selectMyUserList();
-}
-```
-
-**Service 层使用**
-
-```java
-@Service
-public class UserService extends ServiceImpl<UserMapper, User> {
-    
-    /**
-     * Service 层方法会自动应用 Mapper 方法上的 @DataScope 注解
-     */
-    public List<User> getUsersByDataScope() {
-        // 会自动应用 UserMapper.selectUserList() 上的数据权限
-        return baseMapper.selectUserList();
+@Component("authService")
+public class OauthAuthService implements AuthService {
+    @Override
+    public CurrentUser getCurrentUser() {
+        // 从会话/令牌解析；CurrentUser 需带 userId、deptId、dataPermission(、roles)
+        return requestContext.getCurrentUser();
     }
 }
 ```
 
-#### 📦 @DataScope 注解属性
+`MybatisPlusDataPermissionHandler` 对 `SUPER_ADMIN` / `ADMIN` 角色直接旁路，不拼条件。
 
-| 属性 | 类型 | 默认值 | 说明 |
-|---|---|---|---|
-| `value` | `DataFilterTypeEnum` | `ALL` | 数据权限类型（见上方类型表）；`useUserPermission=true` 时忽略 |
-| `enabled` | `boolean` | `true` | 是否启用数据权限；`false` 时该方法不过滤（如管理员全量查询） |
-| `useUserPermission` | `boolean` | `true` | 使用用户登录时的数据权限类型；`false` 时强制使用 `value` 指定类型 |
-| `deptAlias` | `String` | `""` | 部门字段表别名（多表关联必须指定），默认用全局配置 |
-| `userAlias` | `String` | `""` | 用户字段表别名（多表关联必须指定），默认用全局配置 |
-
-#### 📖 怎么用（接入步骤）
-
-1. **配置启用**：`plugin.mybatis.data.scope.enable: true`（配置仅承载功能开关与表/列名**结构映射**，不承载业务数据）；
-2. **提供用户上下文**：实现 `AuthService` 接口（提供当前用户 `userId`、`deptId`、数据权限类型、`SUPER_ADMIN` 标识等）——**这些用户数据一律来自 OAuth 服务端数据库查询**（经认证会话 `UserResume`/用户信息接口返回），插件经其获取当前用户，不使用配置文件硬编码业务数据；
-3. **标注注解**：在 Mapper 方法（或接口类级）标注 `@DataScope`；超管角色自动旁路全量可见；
-4. **多表关联**：查询涉及多张表时通过 `deptAlias`/`userAlias` 指定别名，避免字段歧义；
-5. **字段约定**：表须含 `dept-id-column`（默认 `sys_dept_id`）与 `current-user-id-column`（默认 `create_by`），否则不应用过滤。
-
-#### 性能优化说明
-
-数据权限功能针对性能进行了优化：
-
-1. **LIKE 前缀查询**：`DEPT_AND_SUB` 类型使用 `LIKE 'treeId%'` 替代 `find_in_set`，可以利用索引
-2. **注解缓存**：`@DataScope` 注解信息会被缓存，避免重复解析
-3. **条件检查**：只有表包含部门ID字段时才应用数据权限，减少不必要的处理
-
-#### 配置属性说明（`plugin.mybatis.data.scope.*`）
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `enable` | boolean | `false` | 是否启用数据权限功能 |
-| `table-name` | String | `"sys_dept"` | 部门表名 |
-| `dept-id-column` | String | `"sys_dept_id"` | 部门ID字段名 |
-| `dept-tree-id-column` | String | `"sys_dept_tree_id"` | 部门树ID字段名，用于部门及子级查询 |
-| `current-user-id-column` | String | `"create_by"` | 当前用户ID字段名，用于本人可见权限 |
-
-#### 注意事项
-
-1. **表字段要求**：数据权限只对包含 `dept-id-column` 字段的表生效
-2. **用户上下文**：需要实现 `AuthService` 接口提供当前用户信息
-3. **权限数据**：用户对象需要包含 `dataPermission`、`deptId`、`userId` 等字段
-4. **多表查询**：多表关联时必须正确指定 `deptAlias` 和 `userAlias`，否则可能生成错误的SQL
-
-### 4. 多租户支持
-
-#### 租户配置
+**分页与结果转换**：
 
 ```java
-@Configuration
-public class TenantConfig {
-    
-    @Bean
-    public TenantLineInnerInterceptor tenantLineInnerInterceptor() {
-        return new TenantLineInnerInterceptor(new TenantLineHandler() {
-            @Override
-            public Expression getTenantId() {
-                // 从当前上下文获取租户ID
-                String tenantId = TenantContextHolder.getTenantId();
-                if (StringUtils.isNotBlank(tenantId)) {
-                    return new LongValue(tenantId);
-                }
-                return new NullValue();
-            }
-            
-            @Override
-            public boolean ignoreTable(String tableName) {
-                // 忽略系统表
-                return "sys_config".equals(tableName) || 
-                       "sys_dict".equals(tableName);
-            }
-        });
-    }
+public PageResult<User> page(Query<User> query) {
+    return userMapper.selectPage(query, Wrappers.<User>lambdaQuery().eq(User::getStatus, 1));
+}
+
+public PageResult<UserVO> joinPage(Query<User> query) {
+    return userMapper.selectJoinPage(query, UserVO.class,
+            new MPJLambdaWrapperX<User>().selectAll(User.class).selectAs(Dept::getDeptName, UserVO::getDeptName));
 }
 ```
 
-### 5. 自动填充
+**只读模式**（`plugin.mybatis.read-only=true`）：`ReadOnlyInterceptor` 拦截 `INSERT`/`UPDATE`/`DELETE` 并抛 `ReadOnlyException`，适合只读副本或演示环境。
 
-#### 自动填充处理器
+**删除保护**：`DeleteOnlySelfInterceptor` 的设计意图是给 `DELETE` 语句追加 `AND create_by = 当前用户`（列名与参数名可由 `DeleteOnlySelfOnMapper` 的 `createUserColumn` / `currentUserParam` 指定）。该注解声明为 `@Target(TYPE)`，而拦截器从 Mapper 方法上读取，当前版本实际不会命中，启用前请自行验证（见「已知限制」）。
+
+**慢 SQL 事件**：
 
 ```java
 @Component
-public class MyMetaObjectHandler implements MetaObjectHandler {
-    
-    @Override
-    public void insertFill(MetaObject metaObject) {
-        this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
-        this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-        
-        // 获取当前用户
-        String currentUser = getCurrentUser();
-        this.strictInsertFill(metaObject, "createBy", String.class, currentUser);
-        this.strictInsertFill(metaObject, "updateBy", String.class, currentUser);
-    }
-    
-    @Override
-    public void updateFill(MetaObject metaObject) {
-        this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-        
-        String currentUser = getCurrentUser();
-        this.strictUpdateFill(metaObject, "updateBy", String.class, currentUser);
-    }
-    
-    private String getCurrentUser() {
-        // 从安全上下文获取当前用户
-        return SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getName();
+public class SlowSqlAlert {
+    @EventListener
+    public void onSlow(MybatisSlowSqlEvent event) {
+        log.warn("慢 SQL {}ms, statement={}: {}", event.getElapsedMs(), event.getStatementId(), event.getSql());
     }
 }
 ```
 
-### 6. 代码生成器
-
-#### 代码生成配置
-
-```java
-@RestController
-@RequestMapping("/generator")
-public class CodeGeneratorController {
-    
-    @PostMapping("/generate")
-    public void generateCode(@RequestBody GeneratorConfig config) {
-        FastAutoGenerator.create(config.getUrl(), config.getUsername(), config.getPassword())
-                .globalConfig(builder -> {
-                    builder.author(config.getAuthor())
-                           .outputDir(config.getOutputDir())
-                           .commentDate("yyyy-MM-dd");
-                })
-                .packageConfig(builder -> {
-                    builder.parent(config.getPackageName())
-                           .entity("entity")
-                           .mapper("mapper")
-                           .service("service")
-                           .serviceImpl("service.impl")
-                           .controller("controller");
-                })
-                .strategyConfig(builder -> {
-                    builder.addInclude(config.getTableNames())
-                           .entityBuilder()
-                           .enableLombok()
-                           .enableTableFieldAnnotation()
-                           .logicDeleteColumnName("sys_deleted")
-                           .versionColumnName("version")
-                           .addTableFills(
-                               new Column("create_time", FieldFill.INSERT),
-                               new Column("update_time", FieldFill.INSERT_UPDATE)
-                           );
-                })
-                .templateEngine(new FreemarkerTemplateEngine())
-                .execute();
-    }
-}
-```
-
-### 7. Mapper XML热重载
-
-#### 功能说明
-
-Mapper XML热重载功能支持在开发环境中监听Mapper XML文件的变化，自动重新加载到MyBatis配置中，无需重启应用。
-
-#### 配置说明
+**XML 热重载**（开发环境）：
 
 ```yaml
 plugin:
-  mybatis-plus:
-    # 启用XML热重载
+  mybatis:
     open-xml-reload: true
-    # 重载类型：AUTO（自动监听）、MANUAL（手动触发）
-    reload-type: AUTO
-    # 监听轮询间隔（毫秒）
-    reload-time: 1000
-    # 配置监听目录
+    reload-type: AUTO          # 仅 NONE / AUTO
+    reload-time: 3000
     reload-directories:
-      - path: "classpath:mapper"           # classpath路径
-        pattern: "*.xml"                    # 文件匹配模式
-        watch-enabled: true                 # 是否启用监听
-      - path: "/path/to/mapper"             # 本地文件系统路径
-        pattern: "**/*Mapper.xml"           # glob模式
+      - path: "classpath:mapper"
+        pattern: "*.xml"
+        watch-enabled: true
+      - path: "D:/work/mapper"
+        pattern: "**/*Mapper.xml"
         watch-enabled: true
 ```
 
-#### 使用方式
+注册 Bean 名为 `mapper-reload` 的 `Reload` 后，`MybatisEndpoint`（`/actuator/mybatis-extension`）提供按文件名/方法名触发重载与信息查询；`MapperXmlEndpoint`（`mybatis-xml`）只有 `@WebEndpoint` 注解、未在自动配置中登记 Bean，需要时自行声明。
 
-**自动监听模式（AUTO）**：
-- 启动时自动扫描并加载所有Mapper XML文件
-- 自动监听文件系统中的XML文件变化
-- 文件修改后自动触发重载
-
-**手动触发模式（MANUAL）**：
-- 通过API接口手动触发重载
-- 支持按文件名或路径重载
-
-```java
-@RestController
-@RequestMapping("/mapper")
-public class MapperReloadController {
-    
-    @Autowired
-    private Reload mapperReload;
-    
-    /**
-     * 手动重载指定Mapper文件
-     */
-    @PostMapping("/reload")
-    public String reloadMapper(@RequestParam String mapperXml) {
-        return mapperReload.reload(mapperXml);
-    }
-    
-    /**
-     * 列出所有已加载的Mapper文件
-     */
-    @GetMapping("/list")
-    public List<FileInfo> listMappers() {
-        return mapperReload.listFiles();
-    }
-}
-```
-
-#### 注意事项
-
-1. **文件系统限制**：只能监听本地文件系统中的文件，jar包内的资源无法监听
-2. **开发环境使用**：建议仅在开发环境启用，生产环境应关闭
-3. **性能影响**：监听会占用一定系统资源，建议合理设置轮询间隔
-4. **文件路径**：支持classpath和本地文件系统路径，不支持jar包内路径
-
-### 8. SQL监控
-
-#### P6Spy配置
-
-```properties
-# spy.properties
-modulelist=com.p6spy.engine.spy.P6SpyFactory
-logMessageFormat=com.p6spy.engine.spy.appender.CustomLineFormat
-customLogMessageFormat=%(currentTime) | %(executionTime) ms | %(category) | %(sql)
-appender=com.p6spy.engine.spy.appender.Slf4JLogger
-logfile=spy.log
-append=true
-dateformat=yyyy-MM-dd HH:mm:ss
-filter=false
-exclude=
-excludecategories=info,debug,result,resultset
-```
-
-#### 性能监控
-
-```java
-@Component
-public class SqlPerformanceInterceptor implements Interceptor {
-    
-    @Override
-    public Object intercept(Invocation invocation) throws Throwable {
-        long startTime = System.currentTimeMillis();
-        
-        try {
-            return invocation.proceed();
-        } finally {
-            long endTime = System.currentTimeMillis();
-            long executionTime = endTime - startTime;
-            
-            if (executionTime > 1000) { // 慢查询阈值1秒
-                log.warn("慢查询检测: 执行时间 {} ms", executionTime);
-            }
-        }
-    }
-}
-```
-
-## ⚙️ 高级配置
-
-### 完整配置示例
+**自定义 SQL 方法注入**：
 
 ```yaml
-mybatis-plus:
-  # MyBatis配置
-  configuration:
-    map-underscore-to-camel-case: true
-    cache-enabled: false
-    call-setters-on-nulls: true
-    jdbc-type-for-null: 'null'
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  
-  # 全局配置
-  global-config:
-    banner: false
-    db-config:
-      id-type: auto
-      table-underline: true
-      logic-delete-field: sys_deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-      insert-strategy: not_null
-      update-strategy: not_null
-      select-strategy: not_empty
-  
-  # Mapper XML文件位置
-  mapper-locations: classpath*:mapper/**/*.xml
-  type-aliases-package: com.example.entity
-
-# 插件配置
 plugin:
-  mybatis-plus:
-    # XML热重载
-    open-xml-reload: true
-    
-    # 数据权限配置
-    data-scope:
-      enable: true
-      table-name: "sys_dept"
-      dept-id-column: "sys_dept_id"
-      dept-tree-id-column: "sys_dept_tree_id"
-      current-user-id-column: "create_by"
-      
-    # 代码生成配置
-    generator:
-      author: "开发者"
-      output-dir: "/tmp/generator"
-      package-name: "com.example"
+  mybatis:
+    sql-method:
+      - type: FILE
+        source: classpath:sql/find-all.sql
+        watchdog: false
+        timeout: 3000
 ```
 
-## 🔧 自定义扩展
+`SupportInjector` 会把配置的方法注入到每个 Mapper（`FindAllSqlMethod` / `DynamicSqlMethod`）。
 
-### 自定义SQL方法
+### 5.2 SPI 扩展示例
+
+本模块不提供 SPI 扩展点（`src/main/resources/META-INF` 下只有 `spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`，无 `extensions` / `services` 目录）。
+
+可扩展点是 Spring Bean 覆盖（均为 `@ConditionalOnMissingBean`）：
+
+| 扩展点 | 覆盖方式 |
+|---|---|
+| 数据权限处理器 | 声明 `MybatisPlusDataPermissionHandler` Bean 替换默认实现 |
+| 自动填充 | 声明 `MetaObjectHandler` Bean，装配进 `GlobalConfig` |
+| 内部拦截器 | 声明任意 `InnerInterceptor` Bean，会被收集进 `MybatisPlusInterceptor`（分页固定排最后） |
+| XML 重载 | 声明名为 `mapper-reload` 的 `Reload` Bean |
+| SQL 注入 | 声明 `supportInjector` / 自定义 `DefaultSqlInjector` |
+
+示例（自定义数据权限）：
 
 ```java
 @Component
-public class CustomSqlInjector extends DefaultSqlInjector {
-    
-    @Override
-    public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
-        List<AbstractMethod> methodList = super.getMethodList(mapperClass, tableInfo);
-        
-        // 添加自定义方法
-        methodList.add(new SelectByIdWithDeleted());
-        methodList.add(new BatchInsertOrUpdate());
-        
-        return methodList;
+public class TenantDataPermissionHandler extends MybatisPlusDataPermissionHandler {
+
+    public TenantDataPermissionHandler(MybatisPlusDataScopeProperties props,
+                                       Supplier<AuthService> authService) {
+        super(props, authService);
     }
-}
-```
 
-### 自定义数据权限处理
-
-如果需要自定义数据权限处理逻辑，可以实现 `MultiDataPermissionHandler` 接口：
-
-```java
-@Component
-public class CustomDataPermissionHandler implements MultiDataPermissionHandler {
-    
     @Override
     public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
-        // 根据当前用户权限生成SQL条件
-        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
-        CurrentUser currentUser = authService.getCurrentUser();
-        
-        if (currentUser == null || currentUser.isAdmin()) {
-            return null; // 管理员或未登录用户不限制
-        }
-        
-        // 自定义权限逻辑
-        DataFilterTypeEnum dataPermission = currentUser.getDataPermission();
-        if (dataPermission == DataFilterTypeEnum.SELF) {
-            EqualsTo userCondition = new EqualsTo();
-            userCondition.setLeftExpression(new Column(table, "create_by"));
-            userCondition.setRightExpression(new StringValue(currentUser.getUserId()));
-            return where == null ? userCondition : new AndExpression(where, userCondition);
-        }
-        
-        return null;
+        // 返回 null 表示该表不追加条件
+        return super.getSqlSegment(table, where, mappedStatementId);
     }
 }
 ```
 
-然后在配置类中注册自定义处理器：
+生效条件：Bean 在 `MybatisPlusConfiguration#dataPermissionInterceptor` 执行前注册，且 `plugin.mybatis.data.scope.enable=true`。
 
-```java
-@Configuration
-public class MybatisPlusConfiguration {
-    
-    @Bean
-    @ConditionalOnMissingBean
-    public DataPermissionInterceptor dataPermissionInterceptor(
-            @Autowired(required = false) MultiDataPermissionHandler dataPermissionHandler,
-            MybatisPlusDataScopeProperties dataScopeProperties) {
-        if (dataPermissionHandler == null) {
-            dataPermissionHandler = new MybatisPlusDataPermissionHandler(dataScopeProperties);
-        }
-        return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, dataScopeProperties);
-    }
-}
-```
+## 六、与其它 starter 的关系
 
-## 📝 注意事项
+- **`spring-support-common-starter`**：`AuthService` / `CurrentUser`（数据权限取当前用户）、`DataFilterTypeEnum`（权限枚举）、`SysLoggerInfo`（操作日志事件）。`CurrentUser` 的 `userId`、`deptId`、`dataPermission`、`roles` 为空时数据权限无法生效。
+- **`spring-support-datasource-starter`**：本模块 `optional` 依赖它。`MapperDataSourceInterceptor` 读取 `MultiDataSourceSettingProperties` 做数据源路由；`@MaterializedRoute` 的 SQL 物理化由 `MaterializedSqlInterceptor` 接入，需 `plugin.datasource.materialized.enabled=true`。
+- **`spring-support-swagger-starter`**：`provided`，仅用于 `AbstractSwagger*Controller` 的文档注解。
+- **`spring-support-lowcode-starter` / `spring-support-payment-starter`**：各自实现 `MetaObjectHandler`，可与本模块共存（容器内只取第一个 `MetaObjectHandler`）。
+- **`spring-support-datasource-starter` 的 `@DS`**：与本模块共存时，方法级 `@DS` 先切换数据源，再由 MyBatis 执行；两者都依赖 Spring AOP 代理。
 
-1. **分页性能**：大数据量分页时建议使用游标分页或限制最大页数
-2. **乐观锁**：使用乐观锁时需要在更新操作中包含version字段
-3. **逻辑删除**：逻辑删除的数据仍占用存储空间，需要定期清理
-4. **数据权限**：
-   - 数据权限只对包含部门ID字段的表生效
-   - 多表关联查询时必须正确指定 `deptAlias` 和 `userAlias`
-   - 确保用户对象包含完整的数据权限信息（`dataPermission`、`deptId`、`userId` 等）
-5. **SQL监控**：生产环境建议关闭详细SQL日志以提高性能
-6. **注解缓存**：`@DataScope` 注解信息会被缓存，修改注解后需要重启应用生效
+## 七、已知限制
 
-## 🐛 故障排除
-
-### 常见问题
-
-1. **分页不生效**
-   - 检查分页插件是否正确配置
-   - 确认使用的是IPage类型的返回值
-   - 验证SQL是否正确生成
-
-2. **自动填充不工作**
-   - 检查MetaObjectHandler是否注册为Bean
-   - 确认字段上的@TableField注解配置正确
-   - 验证fill属性设置
-
-3. **逻辑删除不生效**
-   - 检查全局配置中的逻辑删除字段设置
-   - 确认实体类字段上有@TableLogic注解
-   - 验证数据库字段类型匹配
-
-### 调试建议
-
-启用调试日志：
-
-```yaml
-logging:
-  level:
-    com.chua.starter.mybatis: DEBUG
-    com.baomidou.mybatisplus: DEBUG
-    org.apache.ibatis: DEBUG
-```
+1. `plugin.mybatis.enable` 字段存在但无消费方，写 `false` 不会关闭模块。
+2. `open-xml-reload` 的属性默认值是 `true`，但注册 `Reload` 的 `@ConditionalOnProperty(matchIfMissing = false)` 要求显式配置 `open-xml-reload: true`，否则热重载与 `mybatis-extension` 端点都不出现（该端点本身还要求类路径有 Actuator）。
+3. `reload-type` 只有 `NONE` / `AUTO` 两个值，没有 `MANUAL`；手动重载走 `MapperXmlEndpoint` 的写操作。
+4. 热重载只能监听本地文件系统，jar 包内 `classpath:` 资源无法监听；生产环境应关闭。
+5. 逻辑删除字段被硬编码为 `sys_deleted`（值 `1`/`0`），`GlobalConfig` 由本模块创建；实体若用其它字段名需自行覆盖 `GlobalConfig` Bean。
+6. 数据权限只对包含 `dept-id-column` 与 `current-user-id-column` 的表生效；无 `AuthService` Bean、`CurrentUser` 为空、或 `data.scope.enable=false` 时静默不加条件。
+7. 多表查询必须显式给 `deptAlias` / `userAlias`，否则可能生成歧义 SQL；子查询与 UNION 场景未做别名推断。
+8. `@DataScope` 解析结果按方法缓存，修改注解后需重启。
+9. `CryptoInterceptor` 依赖 `mybatis-plus.encryptor.password` / `.mode`，并在构造 `MybatisPlusConfiguration` 时同步到系统属性，密码变更需重启。
+10. `sqlSessionFactory` 由本模块 `@ConditionalOnMissingBean` 创建，若宿主自定义 `SqlSessionFactory`，本模块的全局配置、拦截器与 `SupportInjector` 都不会装配。
+11. 运行环境：Java 25、Spring Boot 4.1.x（`mybatis-plus-spring-boot4-starter`），MyBatis-Plus 3 的 Boot 3 坐标不在支持范围。
+12. `@DeleteOnlySelfOnMapper` 声明为 `@Target(TYPE)`，但 `DeleteOnlySelfInterceptor` 通过 `mapperMethod.getAnnotation(...)` 从方法上读取，实际永不命中；要启用该能力需把注解改成方法级或覆盖拦截器。

@@ -1,89 +1,106 @@
-# Spring Support Datasource Starter
+# spring-support-datasource-starter
 
-## 📖 模块简介
+多数据源路由与治理：`@DS` 注解切换、SpEL 动态路由、分组负载均衡、多数据源事务、ENC 配置加密、健康检查、SQL 监听与 Calcite 跨源查询。
 
-Spring Support Datasource Starter 是一个功能强大的数据源配置和管理模块，提供了企业级应用中数据源的配置、管理和监控功能。
+## 一、模块能力
 
-### ✨ 功能全景
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| `@DS` 数据源切换 | `DS`、`DynamicDataSourceAspect` | 类 / 方法 / Mapper 接口级注解 |
+| SpEL 动态路由 | `DynamicDataSourceAspect#resolveSpelExpression` | `@DS("#tenantId")`、`#header`、`#session` |
+| 跨源聚合 | `MultiDataSource`（Calcite 合并） | `@DS("master,slave")` |
+| 分组 + 负载均衡 | `DataSourceGroupRegistry`、`DataSourceGroup` | 数据源名 `组_序号` 自动归组 |
+| 多数据源事务 | `DSTransactional`、`DSTransactionalAspect`、`MultiDSTransactionContext` | `@DSTransactional` |
+| 声明式事务切入点 | `DataSourceTransactionConfiguration`、`MethodPointcutAdvisor` | `plugin.transaction` |
+| Seata 集成 | `SeataAutoConfiguration` | `@GlobalTransactional` |
+| ENC 配置加密 | `ENCEnvironmentPostProcessor`、`AesPasswordDecryptor` | `ENC(...)`、`plugin.datasource.enc` |
+| 健康检查 | `DataSourceHealthIndicator` | `/actuator/health` |
+| 优雅关闭 | `GracefulShutdownListener` | `plugin.datasource.graceful-shutdown` |
+| 脚本初始化 | `DataSourceScriptConfiguration`、`DataSourceScriptProperties` | `plugin.datasource.script` |
+| SQL 监听 | `DataSourceSqlMonitor`、`SqlMonitorEndpoint` | `plugin.datasource.monitor` |
+| SQL 物理化路由 | `MaterializedRoute`、`MaterializedRouteAdvisor` | `@MaterializedRoute` |
+| 多连接池适配 | `DataSourcePropertyProvider`（Hikari/Druid/DBCP2/Tomcat/C3P0） | `plugin.multi-datasource.hikari` |
+| H2 / SQLite 引擎 | `H2EngineAutoConfiguration`、`SqliteEngineAutoConfiguration` | `plugin.h2` / `plugin.sqlite` |
+| 分库分表 | `ShardingAutoConfiguration` | `plugin.datasource.sharding` |
+| 数据库文档 | `DataSourceDocumentController`、`DatabaseGraphService` | `plugin.datasource.document` |
 
-| 功能 | 状态 | 对标 baomidou |
-|------|:----:|:------------:|
-| `@DS` 注解 (类/方法级别) | ✅ | ✅ |
-| SpEL 表达式 (`#header`, `#session`, 方法参数) | ✅ | ✅ |
-| 数据源分组 + 轮询/随机负载均衡 | ✅ | ✅ |
-| 严格模式 (找不到数据源时抛异常) | ✅ | ✅ |
-| `@DSTransactional` 多数据源本地事务 | ✅ | ✅ |
-| Seata 分布式事务集成 | ✅ | ✅ |
-| ENC 配置加密 (AES/可扩展SPI) | ✅ | ✅ |
-| Actuator 健康检查 (`/actuator/health`) | ✅ | ✅ |
-| 优雅关闭 (ContextClosedEvent) | ✅ | ✅ |
-| Calcite 跨源 JOIN 查询 | ✅ | ❌ **独家** |
-| SQL 物理化路由 (@MaterializedRoute) | ✅ | ❌ **独家** |
-| 分区路由表 (PartitionRoutingTable) | ✅ | ❌ **独家** |
-
----
-
-## 🚀 快速开始
-
-### Maven依赖
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-datasource-starter</artifactId>
-    <version>4.0.0.41</version>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
-### 最简配置
+关键依赖：
+
+| 依赖 | 作用 | scope |
+|---|---|---|
+| `spring-support-common-starter` | 统一响应、`ModuleLog`、`ServiceInfoContributor` | 必需 |
+| `spring-boot-starter-jdbc` | `DataSourceProperties`、事务基础设施 | 必需 |
+| `aspectjweaver` | `@DS` / `@DSTransactional` 切面 | 必需 |
+| `calcite-core` | 跨源 SQL 解析与合并 | 必需 |
+| `p6spy` | 旧版 SQL 打印 | 必需 |
+| `sqlite-jdbc` | 默认内置库 | 必需 |
+| `utils-support-flyway-starter` | 脚本迁移 SPI 实现 | 必需 |
+| `HikariCP` / `druid-spring-boot-4-starter` / `commons-dbcp2` / `tomcat-jdbc` / `c3p0` | 连接池 | `provided`，按需引入 |
+| `spring-boot-starter-actuator` | 健康检查 | `provided` + `optional` |
+| `seata-all` | 分布式事务 | `provided` + `optional` |
+| `utils-support-calcite-starter` / `utils-support-shardingv5-starter` | 跨源 / 分片实现 | `optional` |
+| `utils-support-h2-starter` / `utils-support-sqlite-starter` | 嵌入式引擎 | `optional` |
+
+## 三、配置项
+
+| 前缀 | 配置类 | 关键项（默认值） |
+|---|---|---|
+| `plugin.multi-datasource` | `MultiDataSourceProperties` | `enable`=`false`；`data-source[]`（`name`/`url`/`username`/`password`/`driver-class-name`）；旧前缀 `spring.multi-datasource` 兼容 |
+| `plugin.multi-datasource` | `MultiDataSourceSettingProperties` | `force-annotation`=`true`；`strict`=`false`；`load-balance`=`round_robin`（`random`） |
+| `plugin.multi-datasource.hikari` | `MultiHikariDataSourceProperties` | `data-source[]` 以 `HikariDataSource` 构建，支持 `max-pool-size`、`minimum-idle`、`leak-detection-threshold` 等 |
+| `plugin.transaction` | `TransactionProperties` | `enable`=`false`；`timeout`=`10`（秒）；`tx-mapper`=`""`；`read-only`/`write-only`/`no-tx` 均为空串（不预设方法前缀） |
+| `plugin.datasource.enc` | `ENCEnvironmentPostProcessor` | `enabled`=`false`；`secret-key`=`""` |
+| `plugin.datasource.health` | — | `enabled`=`true`（`matchIfMissing=true`） |
+| `plugin.datasource.graceful-shutdown` | — | `enabled`=`true` |
+| `plugin.datasource.script` | `DataSourceScriptProperties` | `enable`=`true`；`scan-mode`=`ONCE`；`migration-scan-mode`=`ALWAYS`；`data-scan-mode`=`ONCE`；`script-path`=`classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql`；`continue-on-error`=`true`；`version-table`=`sys_database_version`；`baseline-version`=`1.0.0`；`release-type`=`STABLE`；`initdata-parallelism`=`0` |
+| `plugin.datasource.monitor` | `SqlMonitorProperties` | `enabled`=`null`（按 profile 自动：`dev`/`test`/`uat`/`local` 开启）；`slow-sql-threshold-ms`=`1000`；`max-sql-length`=`2000`；`max-tracked-data-sources`=`1000`；`overflow-policy`=`REJECT` |
+| `plugin.datasource.materialized` | `MaterializedRouteProperties` | `enabled`=`false`；`default-threshold`=`1000`；`refresh-interval-seconds`=`0`；`skip-query-in-transaction`=`true`；`cache-data-source-prefix`=`materialized#`；旧前缀 `spring.datasource.materialized` 兼容 |
+| `plugin.datasource.calcite` | `CalciteDataSourceProperties` | `enabled`，Calcite 合并数据源参数 |
+| `plugin.datasource.sharding` | `ShardingDataSourceProperties` | `enabled`，ShardingSphere 5.x 参数 |
+| `plugin.datasource.document` | `DocumentProperties` | 数据库文档导出配置 |
+| `plugin.h2` / `plugin.sqlite` | `H2DataSourceProperties` / `SqliteDataSourceProperties` | 内置库路径等 |
+
+## 四、快速开始
+
+**第一步**：引入依赖，并保留宿主的 `spring.datasource` 作为主库（默认数据源名 `master`）。
+
+**第二步**：声明多数据源。每个条目需要同时给出 `name` 与 `url`，否则跳过注册：
 
 ```yaml
 plugin:
   multi-datasource:
+    load-balance: round_robin
     data-source:
       - name: master
         url: jdbc:mysql://localhost:3306/master_db
         username: root
         password: password
         driver-class-name: com.mysql.cj.jdbc.Driver
-      - name: slave
+      - name: slave_1
         url: jdbc:mysql://localhost:3306/slave_db
         username: root
         password: password
-        driver-class-name: com.mysql.cj.jdbc.Driver
 ```
 
----
+**第三步**：在 Service / Mapper 上标注 `@DS`。不标注时走默认数据源 `master`。
 
-## 📚 核心功能详解
+## 五、运行示例
 
-### 1. `@DS` 注解 —— 数据源切换
+### 5.1 调用示例
 
-#### 🎯 场景与用途
+本模块无链式 API，以下均为注解 + 步骤式用法。
 
-多个数据源经 `MultiDataSource` **合并**为一个可路由数据源，`@DS` 在方法/类上声明式指定本次访问的目标数据源。典型场景：
-
-- **读写分离**：写操作 `@DS("master")`，读操作 `@DS("slave")`；
-- **多租户/分库**：按租户或业务域分库，`@DS("#tenantId")` 动态路由；
-- **跨库聚合**：`@DS("master,slave")` 逗号分隔跨数据源查询；
-- **报表/只读副本**：类级 `@DS("slave")` 整类走只读库。
-
-支持 方法级 / 类级（方法覆盖类级）/ Mapper 接口级 三种标注位置；无 `@DS` 时走**默认数据源**（`master`，即主数据源 = `spring.datasource`，符合 primary+@DS 标准模式）。
-
-#### 📦 注解属性
-
-| 属性 | 类型 | 说明 | 示例 |
-|---|---|---|---|
-| `value` | `String`（必填） | 目标数据源名称（`plugin.multi-datasource.data-source[].name` 之一）；逗号分隔表示跨数据源聚合；以 `#` 开头为 SpEL 动态路由 | `@DS("slave")` / `@DS("master,slave")` / `@DS("#header.xTenantId")` |
-
-#### 📖 怎么用（接入步骤）
-
-1. **配置数据源**：`plugin.multi-datasource.enable: true` + `data-source` 列表（`name`/`url`/`username`/`password`）；
-2. **标注 `@DS`**：在 Service 方法 / 类、Mapper 接口 / 方法上标注，值为数据源名称；
-3. **默认路由**：不标注即走主数据源（master）；需动态路由时用 SpEL（见下节）；
-4. **事务注意**：跨数据源写操作需 `@DSTransactional` 本地事务（见第 5 节）或 Seata 分布式事务（见第 6 节）。
-
-#### 方法级别
+**方法级与类级切换**：
 
 ```java
 @Service
@@ -95,352 +112,95 @@ public class UserService {
     @DS("slave")
     public List<User> findAll() { return userRepository.findAll(); }
 }
-```
 
-#### 类级别
-
-```java
 @Service
-@DS("slave")   // 整个类默认使用 slave
+@DS("slave")                    // 类级默认
 public class ReportService {
 
     public List<Report> generate() { return reportRepository.findAll(); }
 
-    @DS("master")  // 方法覆盖类级别
+    @DS("master")               // 方法级覆盖
     public void save(Report r) { reportRepository.save(r); }
 }
 ```
 
-#### Mapper 级别
+**SpEL 动态路由**（`#` 开头才解析，支持 `#参数名`、`#header`、`#session`、`#request`）：
 
 ```java
-@Mapper
-@DS("slave")
-public interface UserMapper {
+@GetMapping("/orders")
+@DS("#header.xTenantId")
+public List<Order> listOrders() { ... }
 
-    List<User> selectAll();
+@GetMapping("/users")
+@DS("#header['x-datasource'] ?: 'master'")
+public List<User> listUsers() { ... }
 
-    @DS("master")
-    int insert(User user);
-}
+@GetMapping("/tenant/{tenantId}/data")
+@DS("#tenantId")
+public List<Data> getTenantData(@PathVariable String tenantId) { ... }
 ```
 
-#### 逗号分隔聚合查询
+表达式解析失败时记 WARN 日志并回退 `master`。
 
-```java
-@DS("master,slave")  // 跨 master 和 slave 两个数据源查询
-public List<User> queryAll() { ... }
-```
+**分组负载均衡**：数据源名按 `组_序号` 自动归组，`@DS("slave")` 在 `slave_1`/`slave_2` 之间按 `round_robin` 或 `random` 选择。
 
----
-
-### 2. SpEL 表达式 —— 动态数据源路由
-
-`@DS` 支持以 `#` 开头的 SpEL 表达式，在运行时根据上下文动态决定数据源。
-
-#### 语法总览
-
-| 表达式 | 说明 | 示例 |
-|--------|------|------|
-| `#参数名` | 使用方法参数 | `@DS("#tenantId")` |
-| `#header.xxx` | 使用请求头 | `@DS("#header.xTenantId")` |
-| `#header['xxx']` | 请求头（下标语法） | `@DS("#header['xTenantId']")` |
-| `#session.xxx` | 使用 Session 属性 | `@DS("#session.userType")` |
-| `#request` | 直接使用 HttpServletRequest | 用于复杂自定义逻辑 |
-
-#### 用法示例
-
-```java
-@RestController
-public class OrderController {
-
-    // 从请求头动态获取租户ID，路由到对应数据源
-    @GetMapping("/orders")
-    @DS("#header.xTenantId")
-    public List<Order> listOrders() { ... }
-
-    // 从请求头获取数据源名称，带默认值
-    @GetMapping("/users")
-    @DS("#header['x-datasource'] ?: 'master'")
-    public List<User> listUsers() { ... }
-
-    // 使用方法参数
-    @GetMapping("/tenant/{tenantId}/data")
-    @DS("#tenantId")
-    public List<Data> getTenantData(@PathVariable String tenantId) { ... }
-
-    // 从 Session 获取用户类型
-    @GetMapping("/profile")
-    @DS("#session.userType == 'vip' ? 'master' : 'slave'")
-    public Profile getProfile() { ... }
-}
-```
-
----
-
-### 3. 数据源分组 + 负载均衡
-
-当多个数据源属于同一逻辑分组时（如 `slave_1`, `slave_2`），无需额外配置，系统自动将 `_数字` 后缀的数据源归入同一分组。
-
-#### 自动分组规则
-
-```
-slave_1, slave_2  →  自动归入 slave 组
-read_1, read_2    →  自动归入 read 组
-master            →  不包含 `_数字` 后缀，不属于任何分组
-```
-
-#### 配置示例
-
-```yaml
-plugin:
-  multi-datasource:
-    load-balance: round_robin    # 全局负载均衡策略：round_robin / random
-    data-source:
-      - name: master
-        url: jdbc:mysql://master:3306/db
-      - name: slave_1             # 自动归入 slave 组
-        url: jdbc:mysql://slave1:3306/db
-      - name: slave_2             # 自动归入 slave 组
-        url: jdbc:mysql://slave2:3306/db
-```
-
-#### 使用分组
-
-```java
-@DS("slave")   // 自动在 slave_1 和 slave_2 之间负载均衡
-public List<User> findAll() { ... }
-```
-
-#### 支持的负载均衡策略
-
-| 策略 | 配置值 | 说明 |
-|------|--------|------|
-| 轮询 | `round_robin` | 按顺序轮流分配（默认） |
-| 随机 | `random` | 随机选择，适合短连接场景 |
-
----
-
-### 4. 严格模式
-
-默认情况下，当 `@DS` 指定的数据源不存在时，回退到默认数据源（`master`）。开启严格模式后，直接抛出异常，避免误操作。
-
-#### 配置
-
-```yaml
-plugin:
-  multi-datasource:
-    strict: true   # 开启严格模式（默认 false）
-```
-
-#### 效果
-
-```java
-@DS("nonexistent_ds")   // 严格模式下抛出 IllegalStateException
-public void test() { ... }
-```
-
-#### 异常信息
-
-```
-[动态数据源] 严格模式：找不到数据源 [nonexistent_ds]，请检查 @DS 注解或配置
-```
-
----
-
-### 5. `@DSTransactional` —— 多数据源本地事务
-
-`@DSTransactional` 确保在动态多数据源场景下，数据源上下文在事务方法中正确切换和管理。
-
-> **设计说明**：`@DSTransactional` **不试图实现跨数据源 ACID**（跨库一致性请使用 Seata）。其核心作用是确保 `@DS` 切换在事务绑定 **之前** 完成，并通过栈式（Deque）上下文管理支持嵌套切换。
-
-#### 基本用法
-
-```java
-@Service
-public class UserService {
-
-    @DSTransactional
-    @DS("master")
-    public void saveUser(User user) {
-        userDao.insert(user);                         // 使用 master
-
-        UserLog log = logService.getLastLog(user.getId()); // 嵌套切换 slave
-
-        userDao.updateLog(user.getId(), log.getId());      // 恢复 master
-    }
-}
-```
-
-#### 嵌套传播
+**多数据源事务**：
 
 ```java
 @DSTransactional
+@DS("master")
 @Service
-public class OrderService {
+public class UserService {
 
-    public void createOrder(Order order) {
-        orderDao.insert(order);                  // 外层事务
-        paymentService.processPayment(order);    // 嵌套 @DSTransactional(propagate=true)
-    }
-}
-
-@DSTransactional(propagate = true)  // 继承外层上下文，不创建独立事务
-public class PaymentService {
-    public void processPayment(Order order) {
-        paymentDao.insert(order);   // 参与外层事务
+    public void saveUser(User user) {
+        userDao.insert(user);                              // master
+        UserLog log = logService.getLastLog(user.getId());  // 嵌套切 slave
+        userDao.updateLog(user.getId(), log.getId());       // 恢复 master
     }
 }
 ```
 
-#### 注解属性
+`@DSTransactional` 属性：`value`/`name`（互为别名）、`propagate`（默认 `true`）。它只保证 `@DS` 在事务绑定前完成切换并支持嵌套恢复，**不提供跨库 ACID**。
 
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `value` | String | `""` | 事务名称（日志/监控用） |
-| `name` | String | `""` | 事务名称（与 value 互为别名） |
-| `propagate` | boolean | `true` | 嵌套调用时是否传播外部数据源上下文 |
-
-#### 优先级说明
-
-- `@DSTransactional` 切面优先级为 `Ordered.LOWEST_PRECEDENCE - 10`
-- 在 Spring 的 `TransactionInterceptor`（默认 `LOWEST_PRECEDENCE`）**之前**执行
-- 确保数据源上下文在事务绑定前完成切换
-
----
-
-### 6. Seata 分布式事务
-
-用户需自行引入 `seata-spring-boot-starter`，然后使用 `@GlobalTransactional` 即可。
-
-#### Maven 依赖
-
-```xml
-<dependency>
-    <groupId>org.apache.seata</groupId>
-    <artifactId>seata-spring-boot-starter</artifactId>
-    <version>2.6.0</version>
-</dependency>
-```
-
-#### 配置
-
-```yaml
-seata:
-  enabled: true                       # 默认开启
-  application-id: my-app
-  tx-service-group: my_tx_group
-  enable-auto-data-source-proxy: false  # 我们自行代理，避免冲突
-  data-source-proxy-mode: AT            # AT / XA
-```
-
-#### 使用
+**严格模式**：`plugin.multi-datasource.strict=true` 时数据源不存在抛异常，否则回退 `master`。
 
 ```java
-@GlobalTransactional
-public void transfer() {
-    accountDao.debit();      // 数据源 A（自动被 Seata DataSourceProxy 包装）
-    accountDao.credit();     // 数据源 B（自动被 Seata DataSourceProxy 包装）
+@DS("nonexistent_ds")   // 严格模式：IllegalStateException
+public void test() { ... }
+```
+
+**编程式切换**：
+
+```java
+try {
+    DataSourceContextSupport.setDbType("source");
+    List<Data> data = dataRepository.findAll();
+    DataSourceContextSupport.setDbType("target");
+    dataRepository.saveAll(data);
+} finally {
+    DataSourceContextSupport.clearDbType();
 }
 ```
 
-> **自动配置说明**：当检测到类路径存在 `io.seata.core.context.RootContext` 时，自动为所有已注册的动态数据源包装 `DataSourceProxy`，无需手动配置。
-
----
-
-### 7. ENC 配置加密
-
-支持对配置项中的密码等敏感信息进行加密存储，运行时自动解密。
-
-> **默认关闭**，需显式配置 `plugin.datasource.enc.enabled=true` 启用。
-
-#### 配置
+**ENC 配置加密**（默认关闭）：
 
 ```yaml
 plugin:
   datasource:
     enc:
-      enabled: true                     # 启用 ENC 解密（必须显式设为 true）
-      secret-key: mySecretKey12345      # AES 加密密钥（推荐配置）
+      enabled: true
+      secret-key: mySecretKey12345
 
-# 使用加密密码
 spring:
   datasource:
     password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
-    url: ENC(jdbc:mysql://localhost:3306/db)
 ```
 
-#### 加密格式
+支持 `ENC(base64密文)` 与 `ENC(AES:base64密文)`；解密在 `EnvironmentPostProcessor` 阶段完成，失败默认保留原值。
 
-| 格式 | 说明 |
-|------|------|
-| `ENC(base64密文)` | 使用 AES 解密（默认算法） |
-| `ENC(AES:base64密文)` | 显式指定 AES 算法 |
+**SQL 监听**：`plugin.datasource.monitor.enabled` 不设时按 profile 自动判断；慢 SQL 阈值 `slow-sql-threshold-ms` 默认 1000ms，统计通过 `SqlMonitorEndpoint` 与 `SqlExecutionEvent` 暴露。该能力是纯 JDBC 包装（`MonitoringDataSource`），不依赖 P6Spy 或 Druid。
 
-#### 生成密文（Java 工具代码）
-
-```java
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.Base64;
-
-public class EncryptUtil {
-    public static String encrypt(String plainText, String secretKey) throws Exception {
-        byte[] key = secretKey.getBytes("UTF-8");
-        // 不足 32 字节时补齐
-        MessageDigest sha = MessageDigest.getInstance("SHA-256");
-        key = sha.digest(key);
-        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
-        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
-        return Base64.getEncoder().encodeToString(cipher.doFinal(plainText.getBytes("UTF-8")));
-    }
-}
-```
-
-#### 自定义解密器 SPI
-
-实现 `PasswordDecryptor` 接口，通过 SPI 注册：
-
-```java
-public class MyDecryptor implements PasswordDecryptor {
-    @Override
-    public boolean supports(String algorithm) {
-        return "SM4".equals(algorithm);
-    }
-    @Override
-    public String decrypt(String encryptedValue) {
-        // 国密 SM4 解密逻辑
-    }
-}
-```
-
----
-
-### 8. Actuator 健康检查
-
-集成 Spring Boot Actuator，自动检查所有已注册数据源的连接健康状态。
-
-#### 配置
-
-```yaml
-plugin:
-  datasource:
-    health:
-      enabled: true                     # 默认开启
-
-# Actuator 端点暴露
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: always
-```
-
-#### 响应示例
+**健康检查**（需 Actuator）：
 
 ```json
 {
@@ -448,281 +208,54 @@ management:
   "components": {
     "dataSource": {
       "status": "DEGRADED",
-      "details": {
-        "total": 3,
-        "up": 2,
-        "down": 1,
-        "dataSources": {
-          "master":  { "status": "UP",   "responseTime": 5  },
-          "slave_1": { "status": "UP",   "responseTime": 8  },
-          "slave_2": { "status": "DOWN", "error": "连接超时" }
-        }
-      }
+      "details": { "total": 3, "up": 2, "down": 1, "dataSources": { "master": { "status": "UP", "responseTime": 5 } } }
     }
   }
 }
 ```
 
-#### 健康状态规则
+状态规则：全部 UP → `UP`；部分异常 → `DEGRADED`；全部异常 → `DOWN`；无数据源 → `OUT_OF_SERVICE`。`CommunicationsException` / `SocketException` / `InterruptedException` 视为暂时性错误，仍记 `UP` 并附 `warning`。
 
-| 条件 | 状态 |
-|------|------|
-| 所有数据源正常 | `UP` |
-| 部分数据源异常 | `DEGRADED` |
-| 所有数据源异常 | `DOWN` |
-| 无已注册数据源 | `OUT_OF_SERVICE` |
-
-> 需引入 `spring-boot-starter-actuator` 依赖。
-
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-actuator</artifactId>
-</dependency>
-```
-
----
-
-### 9. 优雅关闭
-
-应用关闭时，自动遍历所有已注册数据源并释放连接池资源。
-
-#### 配置
-
-```yaml
-plugin:
-  datasource:
-    graceful-shutdown:
-      enabled: true                     # 默认开启
-```
-
-#### 关闭策略（按优先级）
-
-1. `DisposableBean.destroy()` —— HikariCP、Druid 等
-2. `AutoCloseable.close()` —— 通用
-3. `java.io.Closeable.close()` —— 通用
-4. 反射关闭 —— HikariCP、Druid、DBCP2、Tomcat JDBC
-
-#### 清理内容
-
-- 关闭所有连接池
-- 归还 Calcite 连接池 (MultiDataSource)
-- 清除数据源分组注册表
-- 输出关闭统计（耗时、成功数、失败数）
-
----
-
-## 📋 完整配置参考
-
-### 全局配置
-
-```yaml
-plugin:
-  # ========== 多数据源设置 ==========
-  multi-datasource:
-    force-annotation: true          # 是否强制使用注解上的数据源（默认 true）
-    strict: false                   # 严格模式：true=找不到抛异常，false=回退默认（默认 false）
-    load-balance: round_robin       # 负载均衡策略：round_robin / random（默认 round_robin）
-
-  # ========== 数据源脚本初始化 ==========
-  datasource:
-    script:
-      enable: true
-      script-path: classpath*:db/init/*.sql
-      scan-mode: ONCE
-      continue-on-error: true
-
-    # ========== ENC 密码加密（默认关闭） ==========
-    enc:
-      enabled: false                 # 需显式设为 true 才启用
-      secret-key: ""                 # AES 加密密钥（建议配置）
-
-    # ========== Actuator 健康检查 ==========
-    health:
-      enabled: true                  # 默认开启
-
-    # ========== 优雅关闭 ==========
-    graceful-shutdown:
-      enabled: true                  # 默认开启
-
-  # ========== 事务配置 ==========
-  transaction:
-    enable: true
-    timeout: 30                      # 事务超时时间（秒）
-    read-only: "get*,find*,list*,query*,select*"
-    write-only: "save*,insert*,update*,delete*,remove*"
-    no-tx: "count*,exists*"
-```
-
----
-
-## 🔧 自定义扩展
-
-### 自定义数据源路由
-
-```java
-@Component
-public class CustomRouter {
-    public String route(String operation, Object... params) {
-        if (operation.startsWith("read")) return "slave";
-        if (operation.startsWith("write")) return "master";
-        return "master";
-    }
-}
-```
-
-### 自定义密码解密器
-
-```java
-public class Sm4Decryptor implements PasswordDecryptor {
-    @Override
-    public boolean supports(String algorithm) {
-        return "SM4".equals(algorithm);
-    }
-    @Override
-    public String decrypt(String encryptedValue) {
-        // 国密 SM4 解密
-    }
-}
-```
-
----
-
-## 🐛 故障排除
-
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| `@DS` 切换不生效 | 方法未被 Spring AOP 代理 | 确保方法为 `public`，且通过注入的 Bean 调用（非 `this.xxx()`） |
-| SpEL 表达式报错 | 表达式语法错误或上下文变量不存在 | 检查日志中 `SpEL 表达式解析失败` 警告 |
-| 严格模式抛异常 | 指定的数据源不存在 | 检查配置中的数据源名称 |
-| ENC 解密失败 | 密钥不匹配或密文格式错误 | 确认 `secret-key` 与加密时一致，密文为 Base64 编码 |
-| 健康检查显示 DOWN | 数据源连接不可达 | 检查数据库服务状态和网络连通性 |
-| `@DSTransactional` 不生效 | 切面未加载 | 确认 aspectjweaver 在类路径上 |
-
----
-
-### 10. 跨数据源查询 (MultiDataSource + Calcite JOIN)
-
-支持通过逗号分割 `@DS` 跨多个数据源执行 JOIN 查询，底层基于 Apache Calcite。
-
-```java
-@DS("master,slave")
-public List<Map<String, Object>> crossQuery() {
-    String sql = """
-        SELECT u.name, o.total 
-        FROM master.users u 
-        JOIN slave.orders o ON u.id = o.user_id
-        WHERE o.status = 'COMPLETED'
-        """;
-    // ... 执行 SQL 查询，跨 master.users 和 slave.orders 两个库的关联查询
-}
-```
-
-也支持直接标在 Mapper 接口或方法上：
-
-```java
-@Mapper
-@DS("slave")  // 接口级别默认使用 slave
-public interface UserMapper {
-
-    List<User> selectAll();
-
-    @DS("master")  // 方法级别覆盖接口级别
-    int insert(User user);
-}
-```
-
----
-
-### 11. SQL 物理化路由 (@MaterializedRoute)
-
-用于给小表查询增加一层 Calcite 内存物理化副本。不改业务 SQL、不改 Mapper XML，通过注解启用。
-
-- 查询优先命中内存副本，失败自动回源库
-- `insert` 直接更新内存表
-- `update/delete` 重建受影响表
-
-#### 依赖
-
-```xml
-<dependency>
-    <groupId>com.chua</groupId>
-    <artifactId>spring-support-mybatis-starter</artifactId>
-</dependency>
-<dependency>
-    <groupId>com.chua</groupId>
-    <artifactId>utils-support-calcite-starter</artifactId>
-</dependency>
-```
-
-#### 配置
+**SQL 物理化路由**（需 `spring-support-mybatis-starter` + `utils-support-calcite-starter`）：
 
 ```yaml
 plugin:
   datasource:
     materialized:
-      enabled: true                     # 是否启用（默认 false）
-      default-threshold: 1000           # 阈值，只有小表查询才走内存副本
-      refresh-interval-seconds: 0       # 自动刷新窗口（0=关闭）
-      skip-query-in-transaction: true   # 事务中默认跳过物理化查询
-      cache-data-source-prefix: materialized#  # 动态数据源注册前缀
+      enabled: true
+      default-threshold: 1000
+      refresh-interval-seconds: 0
+      skip-query-in-transaction: true
 ```
 
-> 兼容性说明：旧前缀 `spring.datasource.materialized` 仍兼容。
+```java
+@MaterializedRoute(threshold = 500, dataSource = "master")
+public List<UserReportVO> querySmallTableReport() { ... }
 
-#### @MaterializedRoute 注解
+@MaterializedRefresh(dataSource = "master")
+public List<DictItem> reloadDict() { ... }
+```
 
-标在 Service 或 Mapper 方法上：
+**Seata 分布式事务**（需自行引入 `seata-spring-boot-starter`）：检测到 `io.seata.core.context.RootContext` 时，`SeataAutoConfiguration` 自动为已注册数据源包装 `DataSourceProxy`。
+
+```yaml
+seata:
+  enabled: true
+  application-id: my-app
+  tx-service-group: my_tx_group
+  enable-auto-data-source-proxy: false   # 本模块自行代理，避免双重包装
+  data-source-proxy-mode: AT             # AT / XA
+```
 
 ```java
-import com.chua.starter.datasource.annotation.MaterializedRoute;
-
-@Service
-public class UserReportService {
-
-    @MaterializedRoute(threshold = 500, dataSource = "master")
-    public List<UserReportVO> querySmallTableReport() {
-        return userReportMapper.querySmallTableReport();
-    }
+@GlobalTransactional
+public void transfer() {
+    accountDao.debit();   // 数据源 A
+    accountDao.credit();  // 数据源 B
 }
 ```
 
-#### @MaterializedRefresh 注解
-
-主动重建内存副本：
-
-```java
-import com.chua.starter.datasource.annotation.MaterializedRefresh;
-
-@Service
-public class DictRefreshService {
-
-    @MaterializedRefresh(dataSource = "master")
-    public List<DictItem> reloadDict() {
-        return dictMapper.selectAll();
-    }
-}
-```
-
-#### 运行行为
-
-1. MyBatis 拦截器解析原始 SQL，提取表名和参数
-2. 命中注解且涉及表均小于阈值时，在 Calcite 中构建内存副本
-3. 查询优先在内存副本执行，失败自动回退原始数据源
-4. `insert ... values ...` 直接追加到内存表
-5. `update/delete` 触发受影响表全量重建
-6. `@MaterializedRefresh` 方法执行成功后主动重建物理化副本
-
-#### 适用范围
-
-- 面向小表、码表、配置表、轻量维度表
-- 裸 `JdbcTemplate` 不会自动走物理化（当前接入点是 MyBatis）
-- 复杂 SQL 可能自动回源或退化为全量重建
-- 事务内强一致读建议保持 `skip-query-in-transaction: true`
-
----
-
-### 12. HikariCP 连接池详细配置
+**HikariCP 细粒度配置**（走 `plugin.multi-datasource.hikari`，旧前缀 `spring.multi-datasource.hikari` 兼容）：
 
 ```yaml
 plugin:
@@ -730,148 +263,90 @@ plugin:
     hikari:
       data-source:
         - name: master
-          jdbc-url: jdbc:mysql://localhost:3306/master_db  # Hikari 推荐使用 jdbc-url
+          jdbc-url: jdbc:mysql://localhost:3306/master_db
           username: root
           password: password
-          driver-class-name: com.mysql.cj.jdbc.Driver
-          max-pool-size: 20          # 最大连接数
-          minimum-idle: 5            # 最小空闲连接数
-          connection-timeout: 30000  # 获取连接超时(毫秒)
-          idle-timeout: 600000       # 空闲连接超时(毫秒)
-          max-lifetime: 1800000      # 连接最大生命周期(毫秒)
-          leak-detection-threshold: 60000  # 连接泄漏检测阈值(毫秒)
+          max-pool-size: 20
+          minimum-idle: 5
+          connection-timeout: 30000
+          idle-timeout: 600000
+          max-lifetime: 1800000
+          leak-detection-threshold: 60000
           connection-test-query: SELECT 1
-          validation-timeout: 5000
-          auto-commit: true
-          read-only: false
-          connection-init-sql: SET NAMES utf8mb4
 ```
 
-> 推荐前缀 `plugin.multi-datasource.hikari`，旧前缀 `spring.multi-datasource.hikari` 仍兼容。
+**ENC 密文生成**（密钥先经 SHA-256 归一为 32 字节，再 AES/ECB/PKCS5Padding + Base64）：
 
----
+```java
+public static String encrypt(String plainText, String secretKey) throws Exception {
+    byte[] key = MessageDigest.getInstance("SHA-256").digest(secretKey.getBytes(StandardCharsets.UTF_8));
+    Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+    cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"));
+    return Base64.getEncoder().encodeToString(cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8)));
+}
+```
 
-### 13. P6Spy SQL 监控配置
+**P6Spy**（模块保留 `p6spy` 依赖与 `spy/SimpleAppender`，新项目建议优先用上面的 `plugin.datasource.monitor`）：
 
 ```properties
-# spy.properties
 modulelist=com.p6spy.engine.spy.P6SpyFactory
 logMessageFormat=com.p6spy.engine.spy.appender.CustomLineFormat
 customLogMessageFormat=%(currentTime) | %(executionTime) ms | %(category) | %(sql)
 appender=com.p6spy.engine.spy.appender.Slf4JLogger
-logfile=spy.log
-append=true
-dateformat=yyyy-MM-dd HH:mm:ss
-filter=false
-exclude=
 excludecategories=info,debug,result,resultset
 ```
 
-### 14. 编程式数据源切换
+`@DSTransactional` 切面优先级为 `Ordered.LOWEST_PRECEDENCE - 10`，早于 Spring `TransactionInterceptor`（`LOWEST_PRECEDENCE`），从而保证数据源上下文先于事务绑定完成切换。
+
+### 5.2 SPI 扩展示例
+
+本模块不提供 SPI 扩展点（`src/main/resources/META-INF` 下只有 `spring.factories` 与 `AutoConfiguration.imports`，无 `extensions` 目录）。
+
+唯一可替换的扩展是密码解密器，走 Spring Bean 覆盖而非 SPI：
 
 ```java
-@Service
-public class DataMigrationService {
-
-    public void migrateData() {
-        try {
-            DataSourceContextSupport.setDbType("source");
-            List<Data> sourceData = dataRepository.findAll();
-
-            DataSourceContextSupport.setDbType("target");
-            dataRepository.saveAll(sourceData);
-
-        } finally {
-            DataSourceContextSupport.clearDbType();
-        }
+// 1. 实现接口
+public class Sm4PasswordDecryptor implements PasswordDecryptor {
+    @Override
+    public String decrypt(String encryptedValue) {
+        return Sm4Utils.decrypt(encryptedValue);   // 不含 ENC() 包裹
     }
-}
-```
-
-### 15. 自定义事务拦截器
-
-```java
-@Component
-public class CustomTransactionInterceptor implements MethodInterceptor {
 
     @Override
-    public Object invoke(MethodInvocation invocation) throws Throwable {
-        Method method = invocation.getMethod();
-        String methodName = method.getName();
-        if (methodName.startsWith("batch")) {
-            return executeInNewTransaction(invocation);
-        }
-        return invocation.proceed();
+    public boolean supports(String algorithm) {
+        return "SM4".equalsIgnoreCase(algorithm);
     }
+}
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    private Object executeInNewTransaction(MethodInvocation invocation) throws Throwable {
-        return invocation.proceed();
+// 2. 声明为 Bean（默认 AesPasswordDecryptor 带 @ConditionalOnMissingBean）
+@Configuration
+public class CryptoConfiguration {
+    @Bean
+    public PasswordDecryptor passwordDecryptor() {
+        return new Sm4PasswordDecryptor();
     }
 }
 ```
 
----
+3. 生效：`plugin.datasource.enc.enabled=true`，配置值写 `ENC(SM4:base64密文)`。注意 `ENCEnvironmentPostProcessor` 在环境准备阶段自行构建解密器，自定义 Bean 主要用于容器内注入场景，两处行为需分别验证。
 
-## 🐛 高级故障排除
+## 六、与其它 starter 的关系
 
-### 常见问题
+- **上游**：`spring-support-common-starter`（统一响应、`ServiceInfoContributor` 注册横幅）。
+- **MyBatis**：`spring-support-mybatis-starter` 提供 SQL 物理化拦截器，`@MaterializedRoute` 在 MyBatis 执行链上生效；裸 `JdbcTemplate` 不会自动走物理化。
+- **连接池**：Druid/Hikari/DBCP2/Tomcat/C3P0 全部 `provided`，由宿主选择；`DataSourcePropertyProvider` 按池类型映射配置项。
+- **缓存/Redis**：互不依赖；健康检查与 `spring-support-redis-starter` 的健康指示器并列出现在 `/actuator/health`。
+- **分库分表**：ShardingSphere 5.x 通过 `plugin.datasource.sharding` 与 `utils-support-shardingv5-starter` 接入，与本模块的 `@DS` 路由是两套独立机制，不建议同一方法上同时使用。
 
-| 问题 | 原因 | 解决 |
-|------|------|------|
-| `@DS` 切换不生效 | 方法未被 Spring AOP 代理 | 确保方法为 `public`，且通过注入的 Bean 调用（非 `this.xxx()`） |
-| 连接池耗尽 | 连接未正确关闭 | 调整连接池配置，启用泄漏检测 |
-| 事务不生效 | 方法非 public 或异常类型不匹配 | 确认 `@Transactional` 在 public 方法上，异常继承 RuntimeException |
-| SpEL 表达式报错 | 表达式语法错误或上下文变量不存在 | 检查日志中 `SpEL 表达式解析失败` 警告 |
-| 严格模式抛异常 | 指定的数据源不存在 | 检查配置中的数据源名称 |
-| ENC 解密失败 | 密钥不匹配或密文格式错误 | 确认 `secret-key` 与加密时一致，密文为 Base64 编码 |
-| 健康检查显示 DOWN | 数据源连接不可达 | 检查数据库服务状态和网络连通性 |
-| `@DSTransactional` 不生效 | 切面未加载 | 确认 aspectjweaver 在类路径上 |
-| 物理化查询未命中 | 缺少依赖或阈值超限 | 检查 `spring-support-mybatis-starter`、`utils-support-calcite-starter`、`enabled` 配置、`@MaterializedRoute` 注解 |
+## 七、已知限制
 
-### 调试建议
-
-```yaml
-logging:
-  level:
-    com.chua.starter.datasource: DEBUG
-    com.zaxxer.hikari: DEBUG
-    org.springframework.transaction: DEBUG
-```
-
----
-
-## 📌 注意事项
-
-1. **数据源切换**：使用 `@DS` 时，确保在事务边界内保持数据源一致性
-2. **SpEL 执行时机**：SpEL 在 `@DS` 解析阶段执行，早于方法参数验证
-3. **分组命名**：分组依赖 `_数字` 后缀，如 `slave_1`、`slave_2`
-4. **ENC 密钥安全**：自定义密钥不要硬编码在代码中，推荐通过环境变量注入
-5. **跨数据源事务**：`@DSTransactional` 不保证跨库 ACID，跨库一致性请使用 Seata
-6. **Actuator 依赖**：健康检查需要 `spring-boot-starter-actuator` 在类路径上
-7. **Seata 版本兼容**：建议 Seata Server 与 `seata-spring-boot-starter` 版本保持一致
-8. **物理化路由依赖**：需要显式引入 `spring-support-mybatis-starter` + `utils-support-calcite-starter`
-
----
-
-## 📊 版本兼容性
-
-| 项目 | 版本 |
-|------|------|
-| Java | 25+ |
-| Spring Boot | 3.5.x |
-| Seata (可选) | 2.6.x |
-| Lombok | 1.18.46+ |
-| Calcite | 1.37.0 |
-| P6Spy | 3.9.1 |
-| H2 (物理化副本) | 最新 |
-
----
-
-## 🔗 相关模块
-
-| 模块 | 说明 |
-|------|------|
-| `spring-support-mybatis-starter` | MyBatis 集成，物理化路由的拦截器所在 |
-| `utils-support-calcite-starter` | Calcite 物理化副本核心实现 |
-| `spring-support-common-starter` | 通用工具模块（Actuator 认证过滤器等） |
+1. `@DS` 依赖 Spring AOP 代理，`private`/`final` 方法、同类内部 `this.xxx()` 调用均不生效。
+2. 类级与方法级注解只支持 `TYPE`/`METHOD`，字段、构造参数上标注无效。
+3. SpEL 在 `@DS` 解析阶段执行，早于参数校验；无 `RequestContextHolder`（异步线程、定时任务）时 `#header`/`#session` 不可用，会回退 `master`。
+4. 分组依赖 `组_序号` 命名（如 `slave_1`），`master` 这类无下划线名称不归组；组内成员在启动注册时确定。
+5. `@DSTransactional` 不做跨库提交/回滚协调，跨库一致性必须使用 Seata `@GlobalTransactional`。
+6. ENC 功能默认关闭，需 `plugin.datasource.enc.enabled=true`；`secret-key` 变更后旧密文无法解密。
+7. 健康检查需 `spring-boot-starter-actuator` 在类路径，且 Boot 4 的 `org.springframework.boot.health.contributor.HealthIndicator` 存在，否则指示器不注册。
+8. SQL 物理化只面向小表/码表；复杂 SQL 会回源或退化为全量重建，事务内默认跳过（`skip-query-in-transaction=true`）。
+9. `plugin.transaction.enable` 默认 `false`，不开启时不注册声明式事务切入点，方法前缀类名规则（`read-only` 等）也不生效。
+10. 运行环境：Java 25、Spring Boot 4.1.x（pom 引入 `druid-spring-boot-4-starter`、`spring-boot-starter-jdbc`），Boot 3.x 不在支持范围。

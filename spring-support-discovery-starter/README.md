@@ -1,92 +1,84 @@
 # spring-support-discovery-starter
 
-## 📖 模块简介
+把 `ServiceDiscovery` SPI 的多协议实现装配成 Spring Bean：按配置自动创建发现客户端、注册本机服务节点、订阅变更，并对外暴露统一查询门面 `DiscoveryService`。
 
-**服务发现模块** - 提供服务注册与发现功能，支持多种服务发现协议，实现微服务架构中的服务治理。
+## 一、模块能力
 
-## ✨ 核心功能
+| 能力域 | 关键类 | 入口 |
+|---|---|---|
+| 配置绑定 | `DiscoveryListProperties` | `plugin.discovery` 前缀 |
+| 注册编排 | `DiscoveryConfiguration`（`BeanDefinitionRegistryPostProcessor`） | `META-INF/spring/...AutoConfiguration.imports` |
+| 客户端生命周期 | `DiscoveryConfiguration.ServiceDiscovertyFactoryBean`（`initMethod=start`、`destroyMethod=close`） | 由注册编排按协议创建 |
+| 统一查询门面 | `DiscoveryService`（Bean 名 `discoveryService#embedd`） | 注入即可用 |
+| 协议实现路由 | Bean 名 `serviceDiscovery#<protocol>`（重名追加 `#0`/`#1`） | `DiscoveryService#resolveServiceDiscovery` |
+| 环境元数据合并 | `DiscoveryEnvironment`（`getName()` 等于节点的 `namespace` 时合并 `getProperties()`） | 声明 Bean |
+| 负载均衡策略 | `defaultBalance`，默认 `weight`，可用 `-Dchua.discovery.balance` 覆盖 | `DiscoveryService#setDefaultBalance` |
+| 协议扩展点 | `com.chua.common.support.network.discovery.ServiceDiscovery`（SPI） | `META-INF/extensions/...ServiceDiscovery` |
+| 服务信息登记 | `ServiceInfoContributor`（标志 `discovery`） | 启动横幅 / `/actuator/info` |
+| 开关关闭时的降级 | `DefaultServiceDiscovery`（空实现） | `plugin.discovery.enable=false` |
 
-### 🔍 服务发现
+关键行为（源码事实）：
 
-- ✅ 服务自动注册
-- ✅ 服务健康检查
-- ✅ 服务实例管理
-- ✅ 服务负载均衡
+- `plugin.discovery.enable=false`（默认）时只注册一个空实现的 `ServiceDiscovery`，不连任何注册中心；
+- 开启后逐个处理 `properties` 列表，`enabled=true` 的条目才创建客户端；全部不可用时告警并回退默认实现；
+- 每个 `node` 生成一个 `Discovery`：`id=serverId`（未配置时用 `Project.calcApplicationUuid()`），`serverId=md5(host+port)`，`uriSpec=namespace`；
+- `start()` 依次 `serviceDiscovery.start()` → `registerService(namespace, discovery)` → 支持订阅时 `subscribe(...)`；
+- `close()` **先反注册再断连**，避免滚动重启期间实例残留到 TTL 剔除（见 `DiscoveryLifecycleTest`）。
 
-### 🌐 多协议支持
-
-- ✅ Consul
-- ✅ Eureka
-- ✅ Nacos
-- ✅ Zookeeper
-
-## 🚀 快速开始
-
-### 1. 添加依赖
+## 二、依赖与引入
 
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-discovery-starter</artifactId>
-    <version>4.0.0.32</version>
+    <version>4.0.0.51</version>
 </dependency>
 ```
 
-### 2. 配置开关
+| 依赖 | 作用 | 说明 |
+|---|---|---|
+| `spring-support-common-starter` | `Project`、`ServiceInfoContributor`、`SpringBeanUtils`、`ModuleLog` | 必需（pom 中唯一编译依赖） |
+| `org.junit.jupiter:junit-jupiter` | 注册/反注册、同协议多实例解析回归 | `test` 作用域 |
 
-**配置文件**：`application.yml`
+本模块 pom **不引入任何注册中心客户端**，协议能力由宿主 classpath 上的 utils 模块决定：
 
-```yaml
-plugin:
-  discovery:
-    # 是否启用服务发现
-    # 默认: false
-    enable: true
+| `protocol` 取值 | 实现类 | 需要引入 |
+|---|---|---|
+| `nacos` | `NacosServiceDiscovery` | `utils-support-nacos-starter` |
+| `zookeeper` | `ZookeeperServiceDiscovery` | `utils-support-zookeeper-starter` |
+| `redis` | `RedisServiceDiscovery` | `utils-support-redis-starter` |
+| `apollo` | `ApolloServiceDiscovery` | `utils-support-apollo-starter` |
+| `udp-broadcast` | `UdpBroadcastServiceDiscovery` | `utils-support-common-starter`（已在 classpath） |
 
-    # 多个发现中心配置列表
-    properties:
-      - protocol: nacos           # 必填: 协议, 对应 ServiceDiscovery SPI 实现名
-        address: http://localhost:8848
-        username: nacos
-        password: nacos
-        connection-timeout-millis: 10000
-        session-timeout-millis: 10000
+未引入对应实现时，`protocol` 会解析为 `null`，日志输出「未发现可用的服务实现」并注册 `DefaultServiceDiscovery`，启动不失败但注册/查询都是空操作。
 
-        # 要注册的服务节点列表
-        node:
-          - server-id: ${spring.application.name}   # 可选: 服务ID, 为空则自动生成
-            namespace: /demo-service               # 必填: 服务命名空间/业务标识
-            protocol: http                         # 可选: 服务协议, 默认 http
-```
+## 三、配置项
 
-### 3. 服务注册
+前缀 `plugin.discovery`，配置类 `DiscoveryListProperties`；列表元素为 `DiscoveryProperties`，其 `node` 列表元素为 `DiscoveryNodeProperties`。
 
-服务启动后会自动注册到服务发现中心，无需额外代码。
+| key | 默认值 | 说明 |
+|---|---|---|
+| `enable` | `false` | 总开关。`false` 时只注册空实现 `DefaultServiceDiscovery` |
+| `properties` | `[]` | 多发现中心配置列表 |
+| `properties[].enabled` | `true` | 单条配置是否启用 |
+| `properties[].protocol` | 无 | 协议名，对应 `ServiceDiscovery` SPI 名（`nacos` / `zookeeper` / `redis` / `apollo` / `udp-broadcast`） |
+| `properties[].address` | 无 | 注册中心地址 |
+| `properties[].username` | 无 | 账号，装入 `DiscoveryOption#setUser` |
+| `properties[].password` | 无 | 密码 |
+| `properties[].connection-timeout-millis` | `10000` | 连接超时（毫秒） |
+| `properties[].session-timeout-millis` | `10000` | 会话超时（毫秒） |
+| `properties[].node` | `[]` | 要注册的服务节点列表 |
+| `properties[].node[].server-id` | 无 | 实例 ID；为空时用 `Project.calcApplicationUuid()` |
+| `properties[].node[].namespace` | 无 | 服务命名空间，即注册/查询用的 `uriSpec`；也是匹配 `DiscoveryEnvironment#getName()` 的键 |
+| `properties[].node[].protocol` | `http` | 节点通信协议，写入 `Discovery#protocol` |
 
-### 4. 服务调用
+另有 JVM 参数 `-Dchua.discovery.balance=<strategy>` 设置默认负载均衡策略，可取值来自 `LoadBalance` SPI：`weight`（默认）、`random`、`round` / `polling`。
 
-```java
-@Service
-public class DemoService {
+## 四、快速开始
 
-    @Resource
-    private DiscoveryService discoveryService;
+**第一步**：引入本模块与所用注册中心的 utils 实现（例如 Nacos）。
 
-    public Discovery getOne(String namespace) {
-        // 使用默认协议查询
-        return discoveryService.getDiscovery(namespace);
-    }
-
-    public Set<Discovery> getAll(String namespace) {
-        // 使用默认协议查询所有实例
-        return discoveryService.getDiscoveryAll(namespace);
-    }
-}
-```
-
-## ⚙️ 配置说明
-
-### 多协议配置示例
+**第二步**：打开开关并声明发现中心与节点：
 
 ```yaml
 plugin:
@@ -97,376 +89,146 @@ plugin:
         address: http://localhost:8848
         username: nacos
         password: nacos
+        connection-timeout-millis: 10000
+        session-timeout-millis: 10000
         node:
-          - server-id: demo-nacos
-            namespace: /demo-service
-            protocol: http
-
-      - protocol: zookeeper
-        address: 127.0.0.1:2181
-        connection-timeout-millis: 5000
-        session-timeout-millis: 15000
-        node:
-          - server-id: demo-zk
+          - server-id: ${spring.application.name}
             namespace: /demo-service
             protocol: http
 ```
 
-## 💡 使用示例
+**第三步**：启动应用。注册在 Bean 初始化阶段完成，无需写任何注册代码；业务侧注入 `DiscoveryService` 查询即可。
 
-### 按协议查询服务
+## 五、运行示例
+
+### 5.1 调用示例
+
+本模块无链式 API：`DiscoveryService` 的四个方法都直接返回查询结果。以下为步骤式用法。
+
+**按默认协议查询**（默认协议 = `primary` 的那个 `ServiceDiscovery`，即配置列表里第一条成功创建的）：
 
 ```java
 @Service
-public class MultiProtocolService {
+@RequiredArgsConstructor
+public class DemoService {
 
-    @Resource
-    private DiscoveryService discoveryService;
+    private final DiscoveryService discoveryService;
 
-    public Discovery selectFromNacos(String namespace) {
-        return discoveryService.getDiscovery("nacos", namespace);
+    /** 单个实例：内部按默认负载均衡策略（weight）选一个 */
+    public Discovery getOne(String uriSpec) {
+        return discoveryService.getDiscovery(uriSpec);
     }
 
-    public Set<Discovery> selectAllFromZookeeper(String namespace) {
-        return discoveryService.getDiscoveryAll("zookeeper", namespace);
+    /** 全部实例 */
+    public Set<Discovery> getAll(String uriSpec) {
+        return discoveryService.getDiscoveryAll(uriSpec);
     }
 }
 ```
 
-## 🎯 设计原则
+**按指定协议查询**（多注册中心并存时）：
 
-### 1. 高可用
-
-- ✅ 服务健康检查
-- ✅ 故障自动剔除
-- ✅ 服务自动恢复
-
-### 2. 负载均衡
-
-- ✅ 轮询策略
-- ✅ 随机策略
-- ✅ 权重策略
-
-### 3. 易于集成
-
-- ✅ 自动配置
-- ✅ 最小化配置
-- ✅ 多协议支持
-
-## 🏗️ 系统架构流程图
-
-### 1. 整体系统架构
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff'}}}%%
-flowchart TB
-    subgraph Application["应用层 Application Layer"]
-        SpringApp["Spring Boot应用<br/>SpringBootApplication"]
-        UserCode["用户代码<br/>使用DiscoveryService"]
-        ServiceController["ServiceController<br/>服务管理接口"]
-    end
-    
-    subgraph Config["配置层 Configuration Layer"]
-        DiscoveryListProperties["DiscoveryListProperties<br/>配置属性读取<br/>application.yml"]
-        DiscoveryProperties["DiscoveryProperties<br/>单个发现配置<br/>protocol address等"]
-        DiscoveryNodeProperties["DiscoveryNodeProperties<br/>节点配置<br/>namespace serverId等"]
-    end
-    
-    subgraph PostProcessor["后置处理层 PostProcessor Layer"]
-        DiscoveryConfiguration["DiscoveryConfiguration<br/>Bean定义后置处理器<br/>BeanDefinitionRegistryPostProcessor"]
-        RegistryBean["注册Bean<br/>registryBean<br/>创建ServiceDiscovery Bean"]
-        CreateFactoryBean["创建FactoryBean<br/>ServiceDiscovertyFactoryBean<br/>管理ServiceDiscovery生命周期"]
-    end
-    
-    subgraph Service["服务层 Service Layer"]
-        DiscoveryService["DiscoveryService<br/>服务发现服务<br/>统一操作接口"]
-        ServiceDiscovery["ServiceDiscovery接口<br/>统一服务发现接口"]
-        DefaultServiceDiscovery["DefaultServiceDiscovery<br/>默认服务发现<br/>空实现"]
-    end
-    
-    subgraph Discovery["发现层 Discovery Layer"]
-        ConsulServiceDiscovery["ConsulServiceDiscovery<br/>Consul服务发现<br/>HashiCorp Consul"]
-        EurekaServiceDiscovery["EurekaServiceDiscovery<br/>Eureka服务发现<br/>Netflix Eureka"]
-        NacosServiceDiscovery["NacosServiceDiscovery<br/>Nacos服务发现<br/>阿里云Nacos"]
-        ZookeeperServiceDiscovery["ZookeeperServiceDiscovery<br/>Zookeeper服务发现<br/>Apache Zookeeper"]
-    end
-    
-    subgraph Registration["注册层 Registration Layer"]
-        RegisterService["注册服务<br/>registerService<br/>注册服务到发现中心"]
-        Discovery["Discovery对象<br/>服务信息<br/>id host port metadata等"]
-        ServiceDiscoveryListener["ServiceDiscoveryListener<br/>服务变更监听器<br/>监听服务变化"]
-        Subscribe["订阅服务变化<br/>subscribe<br/>监听服务注册/注销"]
-    end
-    
-    subgraph Query["查询层 Query Layer"]
-        GetService["获取服务<br/>getService<br/>获取单个服务实例"]
-        GetServiceAll["获取所有服务<br/>getServiceAll<br/>获取所有服务实例"]
-        ServiceInstance["ServiceInstance<br/>服务实例<br/>服务地址信息"]
-    end
-    
-    subgraph Metadata["元数据层 Metadata Layer"]
-        Project["Project<br/>项目信息<br/>应用名称 主机 端口等"]
-        DiscoveryEnvironment["DiscoveryEnvironment<br/>发现环境<br/>自定义元数据"]
-        Metadata["Metadata<br/>元数据<br/>服务标签和属性"]
-    end
-    
-    SpringApp --> DiscoveryConfiguration
-    DiscoveryConfiguration --> DiscoveryListProperties
-    DiscoveryListProperties --> DiscoveryProperties
-    DiscoveryProperties --> DiscoveryNodeProperties
-    
-    DiscoveryConfiguration --> RegistryBean
-    RegistryBean --> CreateFactoryBean
-    CreateFactoryBean --> ServiceDiscovery
-    
-    DiscoveryConfiguration --> DiscoveryService
-    DiscoveryService --> ServiceDiscovery
-    ServiceDiscovery --> DefaultServiceDiscovery
-    
-    ServiceDiscovery --> ConsulServiceDiscovery
-    ServiceDiscovery --> EurekaServiceDiscovery
-    ServiceDiscovery --> NacosServiceDiscovery
-    ServiceDiscovery --> ZookeeperServiceDiscovery
-    
-    CreateFactoryBean --> RegisterService
-    RegisterService --> Discovery
-    RegisterService --> ServiceDiscoveryListener
-    ServiceDiscoveryListener --> Subscribe
-    
-    DiscoveryService --> GetService
-    DiscoveryService --> GetServiceAll
-    GetService --> ServiceInstance
-    GetServiceAll --> ServiceInstance
-    
-    RegistryBean --> Project
-    RegistryBean --> DiscoveryEnvironment
-    Discovery --> Metadata
-    Project --> Metadata
-    DiscoveryEnvironment --> Metadata
-    
-    style Application fill:#e3f2fd
-    style Config fill:#fff3e0
-    style PostProcessor fill:#f3e5f5
-    style Service fill:#e8f5e9
-    style Discovery fill:#fce4ec
-    style Registration fill:#fff9c4
-    style Query fill:#e1f5fe
-    style Metadata fill:#f1f8e9
+```java
+Discovery fromNacos = discoveryService.getDiscovery("nacos", "/demo-service");
+Set<Discovery> allFromZk = discoveryService.getDiscoveryAll("zookeeper", "/demo-service");
 ```
 
-### 2. 服务注册流程架构
+协议解析顺序：Bean 名等于 `serviceDiscovery#<protocol>` → Bean 名以 `#<protocol>` 结尾 → 以 `serviceDiscovery#<protocol>#` 开头（同协议多实例的重名后缀）→ 全部未命中回退默认实现。
 
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff'}}}%%
-flowchart TD
-    Start([开始: Spring Boot应用启动]) --> PostProcessRegistry["DiscoveryConfiguration<br/>postProcessBeanDefinitionRegistry<br/>Bean定义后置处理"]
-    
-    PostProcessRegistry --> ReadProperties["读取DiscoveryListProperties<br/>从Environment读取配置<br/>Binder.get绑定属性"]
-    
-    ReadProperties --> CheckEnabled{"检查<br/>plugin.discovery.enable配置"}
-    
-    CheckEnabled -->|"未启用"| CreateDefaultService["创建默认服务<br/>DefaultServiceDiscovery<br/>空实现"]
-    
-    CheckEnabled -->|"已启用"| GetPropertiesList["获取配置列表<br/>properties.getProperties<br/>多个发现配置"]
-    
-    CreateDefaultService --> CreateEmbeddedService["创建嵌入式服务<br/>DiscoveryService<br/>使用默认实现"]
-    
-    CreateEmbeddedService --> EndInit([结束: 初始化完成])
-    
-    GetPropertiesList --> ProcessProperties["处理每个配置<br/>循环处理每个DiscoveryProperties"]
-    
-    ProcessProperties --> CheckPropertyEnabled{"配置是否启用<br/>discoveryProperties.isEnabled()"}
-    
-    CheckPropertyEnabled -->|"未启用"| MoreProperties{"是否还有更多<br/>配置需要处理"}
-    
-    CheckPropertyEnabled -->|"已启用"| CreateDiscoveryOption["创建DiscoveryOption<br/>address username password<br/>connectionTimeout sessionTimeout"]
-    
-    CreateDiscoveryOption --> GetServiceProvider["获取服务提供者<br/>ServiceProvider.of<br/>ServiceDiscovery.class"]
-    
-    GetServiceProvider --> CreateServiceDiscovery["创建ServiceDiscovery实例<br/>getNewExtension<br/>根据protocol创建对应实现"]
-    
-    CreateServiceDiscovery --> ServiceDiscoveryType{"服务发现类型判断<br/>根据protocol"]
-    
-    ServiceDiscoveryType -->|"consul"| CreateConsul["创建ConsulServiceDiscovery<br/>Consul客户端<br/>Consul SDK"]
-    ServiceDiscoveryType -->|"eureka"| CreateEureka["创建EurekaServiceDiscovery<br/>Eureka客户端<br/>Eureka SDK"]
-    ServiceDiscoveryType -->|"nacos"| CreateNacos["创建NacosServiceDiscovery<br/>Nacos客户端<br/>Nacos SDK"]
-    ServiceDiscoveryType -->|"zookeeper"| CreateZookeeper["创建ZookeeperServiceDiscovery<br/>Zookeeper客户端<br/>Zookeeper SDK"]
-    
-    CreateConsul --> ProcessNodes
-    CreateEureka --> ProcessNodes
-    CreateNacos --> ProcessNodes
-    CreateZookeeper --> ProcessNodes
-    
-    ProcessNodes["处理节点配置<br/>discoveryProperties.getNode<br/>获取节点列表"] --> ProcessNode["处理每个节点<br/>循环处理每个DiscoveryNodeProperties"]
-    
-    ProcessNode --> GetProject["获取项目信息<br/>Project.getInstance<br/>应用名称 主机 端口等"]
-    
-    GetProject --> BuildServerId["构建服务ID<br/>serverId或计算UUID<br/>DigestUtils.md5Hex"]
-    
-    BuildServerId --> BuildMetadata["构建元数据<br/>newMetaData<br/>包含项目信息和自定义元数据"]
-    
-    BuildMetadata --> GetDiscoveryEnvironment["获取发现环境<br/>SpringBeanUtils.getBeanList<br/>DiscoveryEnvironment Bean"]
-    
-    GetDiscoveryEnvironment --> MergeMetadata["合并元数据<br/>将DiscoveryEnvironment属性<br/>添加到元数据"]
-    
-    MergeMetadata --> CreateDiscovery["创建Discovery对象<br/>Discovery.builder<br/>id host port metadata等"]
-    
-    CreateDiscovery --> AddToDiscoveryList["添加到发现列表<br/>discoveryList.add<br/>保存Discovery对象"]
-    
-    AddToDiscoveryList --> MoreNodes{"是否还有更多<br/>节点需要处理"}
-    
-    MoreNodes -->|"是"| ProcessNode
-    MoreNodes -->|"否"| CreateFactoryBean["创建FactoryBean<br/>ServiceDiscovertyFactoryBean<br/>管理ServiceDiscovery生命周期"]
-    
-    CreateFactoryBean --> RegisterBean["注册Bean<br/>registry.registerBeanDefinition<br/>注册到Spring容器"]
-    
-    RegisterBean --> MoreProperties
-    
-    MoreProperties -->|"是"| ProcessProperties
-    MoreProperties -->|"否"| CreateEmbeddedService
-    
-    style Start fill:#e1f5ff
-    style EndInit fill:#c8e6c9
-    style CheckEnabled fill:#ffccbc
-    style CheckPropertyEnabled fill:#ffccbc
-    style ServiceDiscoveryType fill:#ffccbc
-    style MoreNodes fill:#ffccbc
-    style MoreProperties fill:#ffccbc
-    style CreateServiceDiscovery fill:#fff9c4
-    style ProcessNodes fill:#fff9c4
-    style CreateFactoryBean fill:#fff9c4
+**切换默认负载均衡策略**：
+
+```java
+discoveryService.setDefaultBalance("random");   // 可用值：weight / random / round(polling)
 ```
 
-### 3. 服务启动与注册流程架构
+**`Discovery` 主要字段**：
 
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff'}}}%%
-flowchart TD
-    Start([开始: FactoryBean初始化]) --> InitMethod["ServiceDiscovertyFactoryBean<br/>initMethod start<br/>初始化方法"]
-    
-    InitMethod --> StartServiceDiscovery["启动ServiceDiscovery<br/>serviceDiscovery.start<br/>连接服务发现中心"]
-    
-    StartServiceDiscovery --> GetDiscoveryList["获取发现列表<br/>discoveryList<br/>所有要注册的服务"]
-    
-    GetDiscoveryList --> ProcessDiscovery["处理每个Discovery<br/>循环处理每个服务"]
-    
-    ProcessDiscovery --> RegisterService["注册服务<br/>serviceDiscovery.registerService<br/>注册服务到发现中心"]
-    
-    RegisterService --> CheckSupportSubscribe{"是否支持订阅<br/>serviceDiscovery.isSupportSubscribe()"}
-    
-    CheckSupportSubscribe -->|"不支持"| MoreDiscoveries{"是否还有更多<br/>服务需要处理"}
-    
-    CheckSupportSubscribe -->|"支持"| CreateListener["创建监听器<br/>ServiceDiscoveryListener<br/>监听服务变化"]
-    
-    CreateListener --> SubscribeService["订阅服务变化<br/>serviceDiscovery.subscribe<br/>监听服务注册/注销"]
-    
-    SubscribeService --> MoreDiscoveries
-    
-    MoreDiscoveries -->|"是"| ProcessDiscovery
-    MoreDiscoveries -->|"否"| EndStart([结束: 服务启动完成])
-    
-    style Start fill:#e1f5ff
-    style EndStart fill:#c8e6c9
-    style CheckSupportSubscribe fill:#ffccbc
-    style MoreDiscoveries fill:#ffccbc
-    style StartServiceDiscovery fill:#fff9c4
-    style RegisterService fill:#fff9c4
-    style SubscribeService fill:#fff9c4
+```text
+id         实例唯一标识（配置的 serverId 或应用 UUID），反注册用它
+serverId   md5(host + port) 地址指纹，端口变化即变化，不要拿它当反注册键
+uriSpec    命名空间
+host/port  本机地址与端口
+protocol   节点协议，默认 http
+metadata   Project 元数据 + DiscoveryEnvironment 合并的属性
+weight     负载均衡权重
+timeout    请求超时（毫秒）
+scatterId  业务分组，仅同组节点参与同一负载均衡池
 ```
 
-### 4. 服务查询与发现流程架构
+**直接操作 SPI（可选）**：容器里的 `ServiceDiscovery` Bean 也可注入。`registerService` / `unregisterService` / `updateService` 返回 `this`，支持链式调用：
 
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff'}}}%%
-flowchart TD
-    Start([开始: 用户查询服务]) --> UserCall["用户代码调用<br/>DiscoveryService.getDiscovery<br/>或getDiscoveryAll"]
-    
-    UserCall --> QueryType{"查询类型判断<br/>getDiscovery或getDiscoveryAll"]
-    
-    QueryType -->|"单个服务"| GetService["获取单个服务<br/>serviceDiscovery.getService<br/>根据uriSpec获取服务"]
-    
-    QueryType -->|"所有服务"| GetServiceAll["获取所有服务<br/>serviceDiscovery.getServiceAll<br/>根据uriSpec获取所有服务实例"]
-    
-    GetService --> ServiceDiscoveryType{"服务发现类型判断<br/>根据实际实现"]
-    
-    GetServiceAll --> ServiceDiscoveryType
-    
-    ServiceDiscoveryType -->|"consul"| ConsulQuery["Consul查询<br/>ConsulServiceDiscovery.getService<br/>从Consul查询服务"]
-    ServiceDiscoveryType -->|"eureka"| EurekaQuery["Eureka查询<br/>EurekaServiceDiscovery.getService<br/>从Eureka查询服务"]
-    ServiceDiscoveryType -->|"nacos"| NacosQuery["Nacos查询<br/>NacosServiceDiscovery.getService<br/>从Nacos查询服务"]
-    ServiceDiscoveryType -->|"zookeeper"| ZookeeperQuery["Zookeeper查询<br/>ZookeeperServiceDiscovery.getService<br/>从Zookeeper查询服务"]
-    
-    ConsulQuery --> QueryService["查询服务<br/>调用服务发现中心API<br/>获取服务实例列表"]
-    EurekaQuery --> QueryService
-    NacosQuery --> QueryService
-    ZookeeperQuery --> QueryService
-    
-    QueryService --> FilterHealthy["过滤健康实例<br/>过滤掉不健康的实例<br/>只返回可用实例"]
-    
-    FilterHealthy --> BuildInstances["构建服务实例<br/>转换为Discovery对象<br/>包含host port metadata等"]
-    
-    BuildInstances --> ReturnResult["返回结果<br/>Discovery或Set<Discovery><br/>返回给用户"]
-    
-    ReturnResult --> EndQuery([结束: 查询完成])
-    
-    style Start fill:#e1f5ff
-    style EndQuery fill:#c8e6c9
-    style QueryType fill:#ffccbc
-    style ServiceDiscoveryType fill:#ffccbc
-    style QueryService fill:#fff9c4
-    style FilterHealthy fill:#fff9c4
-    style BuildInstances fill:#fff9c4
+```java
+@Autowired
+private ServiceDiscovery nacosServiceDiscovery;
+
+nacosServiceDiscovery
+        .registerService("/demo-service", discovery)
+        .updateService("/demo-service", discovery);
 ```
 
-### 5. 服务变更监听流程架构
+**手工构造实例**（`Discovery` 带 `@Builder`，配置驱动之外的补充注册场景）：
 
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff'}}}%%
-flowchart TD
-    Start([开始: 服务发现中心服务变更]) --> ServiceChanged["服务变更事件<br/>服务发现中心检测到变化<br/>触发监听器"]
-    
-    ServiceChanged --> ServiceDiscoveryListener["ServiceDiscoveryListener<br/>服务发现监听器<br/>listen方法"]
-    
-    ServiceDiscoveryListener --> EventType{"事件类型判断<br/>Event类型<br/>REGISTER/UNREGISTER/UPDATE"]
-    
-    EventType -->|"REGISTER"| ServiceRegistered["服务注册事件<br/>新服务注册<br/>记录日志"]
-    
-    EventType -->|"UNREGISTER"| ServiceUnregistered["服务注销事件<br/>服务注销<br/>记录日志"]
-    
-    EventType -->|"UPDATE"| ServiceUpdated["服务更新事件<br/>服务信息更新<br/>记录日志"]
-    
-    ServiceRegistered --> LogEvent["记录事件日志<br/>log.info<br/>记录服务变更信息<br/>uriSpec和Event类型"]
-    
-    ServiceUnregistered --> LogEvent
-    
-    ServiceUpdated --> LogEvent
-    
-    LogEvent --> UpdateCache["更新本地缓存<br/>更新服务实例缓存<br/>保持数据一致性"]
-    
-    UpdateCache --> NotifyListeners["通知其他监听器<br/>如果有其他监听器<br/>通知服务变化"]
-    
-    NotifyListeners --> EndListen([结束: 监听处理完成])
-    
-    style Start fill:#e1f5ff
-    style EndListen fill:#c8e6c9
-    style EventType fill:#ffccbc
-    style ServiceDiscoveryListener fill:#fff9c4
-    style UpdateCache fill:#fff9c4
+```java
+Discovery discovery = Discovery.builder()
+        .id("demo-node-1")              // 反注册键，实例生命周期内稳定
+        .uriSpec("/demo-service")       // 命名空间
+        .host("127.0.0.1")
+        .port(8080)
+        .protocol("http")
+        .weight(1.0d)
+        .build();
+
+serviceDiscovery.registerService(discovery.getUriSpec(), discovery);
 ```
 
-> 💡 **提示**: 架构图支持横向滚动查看，也可以点击图表在新窗口中打开查看大图。
+### 5.2 SPI 扩展示例
 
-## 🔗 相关模块
+扩展点：`com.chua.common.support.network.discovery.ServiceDiscovery`，实现被 `ServiceProvider#getNewExtension(protocol, DiscoveryOption)` 创建，因此**必须提供接收 `DiscoveryOption` 的构造方法**。
 
-- [spring-support-common-starter](../spring-support-common-starter) - 公共基础模块
-- [spring-support-rpc-starter](../spring-support-rpc-starter) - RPC 远程调用模块
+**实现**：
 
-## 📄 许可证
+```java
+@Spi("myproto")
+public class MyServiceDiscovery extends AbstractServiceDiscovery {
 
-本项目采用 Apache License 2.0 许可证。
+    public MyServiceDiscovery(DiscoveryOption option) {
+        super(option);
+    }
+
+    @Override
+    public void start() { /* 建连 */ }
+
+    @Override
+    public Set<Discovery> getServiceAll(String path) { /* 查询列表 */ }
+}
+```
+
+**登记**：在自己的 jar 下新建 `META-INF/extensions/com.chua.common.support.network.discovery.ServiceDiscovery`，内容为 `名称=实现类全限定名`（与 nacos 模块的登记文件同格式）：
+
+```text
+myproto=com.example.discovery.MyServiceDiscovery
+```
+
+**生效**：把该 jar 放进宿主 classpath，配置里写 `protocol: myproto` 即可；`DiscoveryConfiguration` 会在启动时按该协议创建 Bean，Bean 名为 `serviceDiscovery#myproto`。
+
+## 六、与其它 starter 的关系
+
+- **上游**：`spring-support-common-starter`（`Project`、`ServiceInfoContributor`、`ServiceInfoRegistry`、`SpringBeanUtils`）。
+- **协议实现**：`utils-support-nacos-starter` / `utils-support-zookeeper-starter` / `utils-support-redis-starter` / `utils-support-apollo-starter`，本模块只消费其 SPI 实现。
+- **被依赖**：`spring-support-monitor-starter`（`optional`，为「服务管理 → service-discovery 插件」提供 `/ms/monitor/discovery` 查询；缺失时该接口降级为「未启用发现服务」）、`spring-support-report-client-starter`。
+- **无反向依赖**：本模块不依赖 rpc / web / 缓存等上层 starter。
+
+## 七、已知限制
+
+1. **默认关闭**：`plugin.discovery.enable` 默认 `false`，不配置就等于没有服务发现，且只存在空实现 Bean。
+2. **协议不是内置的**：pom 只带 `spring-support-common-starter`，nacos/zookeeper/redis/apollo 需宿主自行引入对应的 utils starter；实现缺失时降级为空操作而非启动失败。
+3. **`serverId` 会随端口变化**：它是 `md5(host + port)`，改端口会留下孤儿注册；反注册请用 `id` 或传整个 `Discovery`。
+4. **同协议多实例只有一个可用**：重名时 Bean 名为 `serviceDiscovery#<protocol>#0`，`DiscoveryService` 按前缀匹配只返回**第一个**，其余实例只能通过按 Bean 名注入访问。
+5. **环境元数据合并时机**：`DiscoveryEnvironment` 的属性在 `ServiceDiscovertyFactoryBean#start()` 才合并（`BeanDefinitionRegistryPostProcessor` 阶段合并会强制提前实例化业务 Bean）。因此 `namespace` 必须与 `DiscoveryEnvironment#getName()` 完全相等才会合并。
+6. **订阅只打日志**：内置的 `ServiceDiscoveryListener` 仅记录「服务变更」，不维护本地实例缓存，也不通知业务方；需要变更驱动时请自行调用 `subscribe` 注册监听器。
+7. **无健康检查实现**：健康检查与故障剔除由具体 `ServiceDiscovery` 实现决定，本模块不提供统一的探活/剔除策略。
+8. **旧版本说法已作废**：本模块没有 Consul / Eureka 实现，也不内置「配置版本管理」「服务管理接口 `ServiceController`」等能力，相关描述已从本文移除。
 
 ---
 
-**作者**: CH  
-**版本**: 4.0.0.32  
-**更新时间**: 2024/12/11
+本项目采用 Apache License 2.0 许可证。
