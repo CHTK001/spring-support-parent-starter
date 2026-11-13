@@ -11,12 +11,11 @@
  *   templateRoutes.forEach(r => context.router.addRoute("layout", r));
  *
  * 提供的页面：
- *   - TemplateView：模板库（档案轨 + 多页签工作台）
+ *   - TemplateView：模板管理（模板资产版式：左列表 + 右预览 / 编辑；消息模板并入列表为普通类型）
  *   - TemplateDesigner：模板设计器（拖拽式设计 + 打印）
  *   - TemplatePreviewView：只读预览（单模板打印）
  *   - PrinterManage：打印机管理（接入第三方打印机 + 设置默认打印机）
  *   - LogManage：调用日志（预览 / 设计 / 打印，含参数/时间/IP）
- *   - MessageTemplateView：消息模板（短信 / 邮件收信渲染模板，归模板管理域）
  *
  * 共享组件：
  *   - MessageTemplateSelect：消息模板选择器（按类型 / 分组查询，可回传完整模板）
@@ -26,7 +25,6 @@ export { default as TemplateDesigner } from './views/TemplateDesigner.vue'
 export { default as TemplatePreviewView } from './views/TemplatePreviewView.vue'
 export { default as PrinterManage } from './views/PrinterManage.vue'
 export { default as LogManage } from './views/LogManage.vue'
-export { default as MessageTemplateView } from './views/MessageTemplateView.vue'
 export { default as MessageTemplateSelect } from './components/MessageTemplateSelect.vue'
 export { templateRoutes, templateMenus } from './router'
 export { templateApi } from './api/templateApi'

@@ -1,488 +1,372 @@
 <!--
-  模板中心 · 提供商轨（左） + 多页签工作台（右）
+  模板管理 · 模板资产（参考设备资产版式）
 
   布局：
-    - 左栏 286px 提供商轨：标题 + 数量、搜索、接入方筛选；
-      条目为细线/强调条样式，展示名称、endpoint、AK（脱敏）、支持模板类型、模板数；
-      整条右键：同步 / 模板管理 / 编辑配置 / 删除提供商；
-      左键单击在右侧打开该提供商的详情页签。
-    - 右栏 ReTabs 工作台：提供商详情、模板管理（ReTable）、模板设计器、模板预览四种页签，
-      页签右键关闭 / 关闭其他 / 关闭全部。
+    - 顶部操作条：标题 + 总数、搜索、类型筛选（全部 / 短信 / 邮件 / 文档 / 其他）、
+      刷新、新建模板（短信 / 邮件 / 文档）。
+    - 左栏 300px 模板列表：模板数据直接上轨，滚动分页；
+      条目展示名称、状态点 / 默认角标、编码、类型 chip；
+      消息模板（短信 / 邮件）是普通类型，不再单独占特殊入口。
+    - 右栏详情卡面：左键点击左侧模板 -> 预览；
+      右下角编辑图标 -> 当前页打开编辑（消息模板就地表单编辑，文档模板走弹窗）；
+      左下角删除图标 -> 删除。
+      页面级导航（打印机管理 / 调用日志）收在左栏底部图标里。
 
-  说明：本页没有整体顶栏，操作收在左栏头部、详情页签头部与模板管理工具栏；
-  页面级导航（打印机管理 / 调用日志）收在左栏底部的图标按钮里，均带悬浮提示。
+  数据源：
+    - 消息模板（短信 / 邮件）：/api/channels/templates（宿主后端进程，部署级共享）
+    - 文档模板（单据 / 标签 / 其他）：/api/template/page（模板后端，滚动分页）
 -->
 <template>
   <div class="tpl">
-    <!-- ==================== 左栏：提供商轨 ==================== -->
-    <aside class="rail">
-      <header class="rail__head">
-        <div class="rail__title">
-          <h1>模板中心</h1>
-          <span class="rail__count">{{ providers.length }}</span>
-        </div>
+    <!-- ==================== 顶部操作条 ==================== -->
+    <header class="tpl__bar">
+      <div class="bar__title">
+        <h1>模板管理</h1>
+        <span class="bar__count">{{ filteredItems.length }} / {{ allItems.length }}</span>
+      </div>
 
-        <div class="rail__tools">
-          <ReInput
-            v-model="keyword"
-            size="small"
-            clearable
-            prefix-icon="Search"
-            placeholder="搜索名称 / endpoint"
-          />
-          <ReButton
-            text
-            :show-text="false"
-            icon="Refresh"
-            tip="同步全部提供商模板"
-            :icon-size="28"
-            :loading="syncingAll"
-            :disabled="syncingAll"
-            @click="syncAll"
-          />
-        </div>
+      <div class="bar__search">
+        <ReInput
+          v-model="keyword"
+          size="small"
+          clearable
+          prefix-icon="Search"
+          placeholder="搜索名称 / 编码"
+        />
+      </div>
 
-        <div class="rail__filters">
-          <button
-            v-for="item in vendorFilters"
-            :key="item.key"
-            type="button"
-            class="filter"
-            :class="{ 'is-on': vendorFilter === item.key }"
-            @click="vendorFilter = item.key"
-          >
-            {{ item.label }}
-            <span class="filter__n">{{ item.count }}</span>
-          </button>
-        </div>
-      </header>
-
-      <!-- 模板类型：消息模板与文档模板同属模板管理，消息模板按短信 / 邮件分种类 -->
-      <div class="rail__pinned">
+      <div class="bar__filters">
         <button
+          v-for="f in typeFilters"
+          :key="f.key"
           type="button"
-          class="entry entry--pinned"
-          :class="{ 'is-active': isMessageActive }"
-          @click="openMessageTemplates"
+          class="filter"
+          :class="{ 'is-on': typeFilter === f.key }"
+          @click="typeFilter = f.key"
         >
-          <span class="entry__mark is-message"><ReIcon name="ChatDotRound" :size="14" /></span>
-          <span class="entry__main">
-            <span class="entry__name-row"><span class="entry__name">消息模板</span></span>
-            <span class="entry__endpoint">短信 / 邮件正文与变量</span>
-          </span>
-          <span class="entry__side"><span class="entry__unit">类型</span></span>
+          {{ f.label }}
+          <span class="filter__n">{{ f.n }}</span>
         </button>
       </div>
 
-      <div class="rail__list">
-        <div v-if="loadingProviders && !providers.length" class="rail__state">加载中…</div>
-        <div v-else-if="!shownProviders.length" class="rail__state">没有匹配的提供商</div>
-        <template v-else>
-          <div
-            v-for="item in shownProviders"
-            :key="item.id"
-            class="entry"
-            :class="{ 'is-active': isProviderActive(item.id) }"
-            role="button"
-            tabindex="0"
-            @click="openProvider(item)"
-            @keydown.enter="openProvider(item)"
-            @contextmenu.prevent="openProviderMenu($event, item)"
-          >
-            <span class="entry__mark" :style="{ '--tpl-tint': vendorTint(item.vendor) }">
-              {{ initials(item.name) }}
-            </span>
-            <span class="entry__main">
-              <span class="entry__name-row">
-                <span class="entry__name" :title="item.name">{{ item.name }}</span>
-                <span class="entry__dot" :class="`is-${item.status}`" :title="statusMeta(item.status).label" />
-              </span>
-              <span class="entry__endpoint mono" :title="item.endpoint">{{ item.endpoint }}</span>
-              <span class="entry__ak mono" :title="maskAk(item.ak ?? '')">AK {{ maskAk(item.ak ?? '') }}</span>
-              <span class="entry__chips">
-                <span v-for="t in item.templateTypes ?? []" :key="t" class="chip">{{ typeLabel(t) }}</span>
-                <span v-if="item.customDesign" class="chip is-custom" title="支持在模板中心自定义设计模板">自定义设计</span>
-              </span>
-            </span>
-            <span class="entry__side">
-              <span class="entry__num">{{ templateCountOf(item) }}</span>
-              <span class="entry__unit">模板</span>
-            </span>
-          </div>
-        </template>
+      <div class="bar__acts">
+        <ReButton
+          text
+          :show-text="false"
+          icon="Refresh"
+          tip="刷新模板列表"
+          :icon-size="26"
+          :loading="refreshing"
+          :disabled="refreshing"
+          @click="refreshAll"
+        />
+        <el-dropdown trigger="click" @command="onCreateCommand">
+          <ReButton type="primary" icon="Plus" :show-text="true" size="small">新建模板</ReButton>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="sms">短信模板</el-dropdown-item>
+              <el-dropdown-item command="email">邮件模板</el-dropdown-item>
+              <el-dropdown-item command="document" divided>文档模板</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
+    </header>
 
-      <footer class="rail__foot">
-        <span>右键提供商：同步 · 模板管理</span>
-        <span class="rail__actions">
-          <ReButton
-            text
-            :show-text="false"
-            icon="Printer"
-            tip="打印机管理"
-            :icon-size="26"
-            @click="openPrinterManage"
-          />
-          <ReButton
-            text
-            :show-text="false"
-            icon="Document"
-            tip="调用日志"
-            :icon-size="26"
-            @click="openLogs"
-          />
-        </span>
-      </footer>
-    </aside>
-
-    <!-- ==================== 右栏：多页签工作台 ==================== -->
-    <section class="deck">
-      <ReTabs
-        v-model="activeTab"
-        :tabs="tabs"
-        :context-menu="tabContextMenu"
-        :closable="true"
-        :show-close-all="true"
-        empty-text="从左侧选择提供商"
-        @close="closeTab"
-        @context-command="onTabCommand"
-        @close-all="closeAllTabs"
-      >
-        <template #default="{ tab }">
-          <!-- 提供商详情 -->
-          <div v-if="isProviderTab(tab.name)" class="work">
-            <article v-if="providerOf(tab.name)" class="work__sheet">
-              <header class="work__head">
-                <span class="work__mark" :style="{ '--tpl-tint': vendorTint(providerOf(tab.name)!.vendor) }">
-                  {{ initials(providerOf(tab.name)!.name) }}
-                </span>
-                <div class="work__title">
-                  <h2>{{ providerOf(tab.name)!.name }}</h2>
-                  <p class="mono">{{ providerOf(tab.name)!.endpoint }}</p>
-                </div>
-                <div class="work__acts">
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="Refresh"
-                    tip="同步该提供商的模板"
-                    :icon-size="30"
-                    :loading="syncingProvider === providerOf(tab.name)!.id"
-                    :disabled="syncingProvider === providerOf(tab.name)!.id"
-                    @click="syncProvider(providerOf(tab.name)!)"
-                  />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="EditPen"
-                    tip="编辑提供商配置"
-                    :icon-size="30"
-                    @click="openProviderEdit(providerOf(tab.name)!)"
-                  />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="Files"
-                    tip="模板管理"
-                    :icon-size="30"
-                    @click="openProviderTemplates(providerOf(tab.name)!)"
-                  />
-                </div>
-              </header>
-
-              <div class="work__chips">
-                <span class="chip">{{ vendorLabel(providerOf(tab.name)!.vendor) }}</span>
-                <el-tag :type="statusMeta(providerOf(tab.name)!.status).type" size="small" effect="plain" round>
-                  {{ statusMeta(providerOf(tab.name)!.status).label }}
-                </el-tag>
-                <el-tag
-                  :type="providerOf(tab.name)!.customDesign ? 'success' : 'info'"
-                  size="small"
-                  effect="plain"
-                  round
-                >
-                  {{ providerOf(tab.name)!.customDesign ? '支持自定义模板设计' : '不支持自定义模板设计' }}
-                </el-tag>
-              </div>
-
-              <dl class="work__meta">
-                <div>
-                  <dt>Access Key</dt>
-                  <dd class="mono">{{ maskAk(providerOf(tab.name)!.ak ?? '') }}</dd>
-                </div>
-                <div>
-                  <dt>Secret Key</dt>
-                  <dd class="mono">{{ maskSk(providerOf(tab.name)!.sk ?? '') }}</dd>
-                </div>
-                <div>
-                  <dt>Endpoint</dt>
-                  <dd class="mono">{{ providerOf(tab.name)!.endpoint }}</dd>
-                </div>
-                <div>
-                  <dt>支持模板类型</dt>
-                  <dd class="chips">
-                    <span v-for="t in providerOf(tab.name)!.templateTypes ?? []" :key="t" class="chip">
-                      {{ typeLabel(t) }}
-                    </span>
-                    <span v-if="!(providerOf(tab.name)!.templateTypes ?? []).length">—</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>模板数</dt>
-                  <dd>{{ templateCountOf(providerOf(tab.name)!) }} 个</dd>
-                </div>
-                <div>
-                  <dt>最近同步</dt>
-                  <dd>{{ formatTime(providerOf(tab.name)!.lastSyncAt) }}</dd>
-                </div>
-                <div>
-                  <dt>负责人</dt>
-                  <dd>{{ providerOf(tab.name)!.owner || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>更新时间</dt>
-                  <dd>{{ formatTime(providerOf(tab.name)!.updatedAt) }}</dd>
-                </div>
-              </dl>
-
-              <section v-if="providerOf(tab.name)!.remark" class="work__remark">
-                <h3>说明</h3>
-                <p>{{ providerOf(tab.name)!.remark }}</p>
-              </section>
-
-              <p class="work__note">
-                {{
-                  providerOf(tab.name)!.customDesign
-                    ? '该提供商支持自定义模板设计，模板可在设计器里拖拽或 Vue 沙盒编辑。'
-                    : '该提供商不支持自定义模板设计，模板由提供商侧维护，这里只读并可同步、预览与打印。'
-                }}
-              </p>
-            </article>
+    <!-- ==================== 主体：左列表 + 右详情 ==================== -->
+    <div class="tpl__body">
+      <!-- 左栏：模板列表（滚动分页） -->
+      <aside class="rail">
+        <div
+          ref="railListRef"
+          class="rail__list"
+          @scroll.passive="onRailScroll"
+        >
+          <div v-if="msgLoading && !msgItems.length" class="rail__state">加载中…</div>
+          <div v-else-if="!filteredItems.length" class="rail__state">
+            {{ keyword || typeFilter !== 'all' ? '没有匹配的模板' : '暂无模板，点右上角「新建模板」创建' }}
+            <span v-if="docError" class="rail__warn">文档模板服务暂不可用</span>
           </div>
-
-          <!-- 模板管理（ReTable） -->
-          <div v-else-if="isTemplatesTab(tab.name)" class="work work--fill">
-            <ReTable
-              :key="`tpl-table-${providerIdOf(tab.name)}`"
-              :ref="el => setTableRef(providerIdOf(tab.name), el)"
-              :table-id="`template-provider-${providerIdOf(tab.name)}`"
-              :toolbar="false"
-              :loader="params => loadProviderTemplates(providerIdOf(tab.name), params)"
-              :columns="templateColumns"
-              :params="{ providerId: providerIdOf(tab.name) }"
-              :pagination="true"
-              :layout-table="{ fill: true }"
-              row-key="id"
+          <template v-else>
+            <div
+              v-for="item in filteredItems"
+              :key="item.key"
+              class="entry"
+              :class="{
+                'is-active': selected?.key === item.key,
+                'is-off': item.source === 'message' && item.enabled === false
+              }"
+              role="button"
+              tabindex="0"
+              @click="selectItem(item)"
+              @keydown.enter="selectItem(item)"
             >
-              <template #toolbar>
-                <div class="tpl-bar">
-                  <span class="tpl-bar__title">
-                    {{ providerOf(tab.name)?.name ?? '模板管理' }}
-                    <span class="tpl-bar__hint">模板管理</span>
-                  </span>
-                  <span class="tpl-bar__spacer" />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="Refresh"
-                    tip="同步该提供商的模板"
-                    :icon-size="28"
-                    :loading="syncingProvider === providerIdOf(tab.name)"
-                    @click="syncProvider(providerOf(tab.name)!)"
+              <span class="entry__mark" :class="`is-${item.type}`">
+                <ReIcon :name="itemIcon(item)" :size="15" />
+              </span>
+              <span class="entry__main">
+                <span class="entry__name-row">
+                  <span class="entry__name" :title="item.name">{{ item.name }}</span>
+                  <span
+                    v-if="item.source === 'message'"
+                    class="entry__dot"
+                    :class="item.enabled === false ? 'is-off' : 'is-on'"
+                    :title="item.enabled === false ? '已停用' : '已启用'"
                   />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="Plus"
-                    tip="新建模板"
-                    :icon-size="28"
-                    @click="openCreate(providerOf(tab.name)!)"
+                  <span
+                    v-else-if="item.status"
+                    class="entry__dot"
+                    :class="`is-${item.status}`"
+                    :title="statusMeta(item.status).label"
                   />
-                </div>
-              </template>
-              <template #name="{ row }">
-                <span class="cell-name">
-                  <span class="cell-name__dot" :class="`is-${row.status}`" />
-                  <span>{{ row.name }}</span>
+                  <span v-if="item.isDefault" class="entry__badge">默认</span>
                 </span>
-              </template>
-              <template #source="{ row }">
-                <span class="chip">{{ sourceLabel(row.source) }}</span>
-              </template>
-              <template #type="{ row }">{{ typeLabel(row.type) }}</template>
-              <template #status="{ row }">
-                <el-tag :type="statusMeta(row.status).type" size="small" effect="plain" round>
-                  {{ statusMeta(row.status).label }}
-                </el-tag>
-              </template>
-              <template #updatedAt="{ row }">{{ formatTime(row.updatedAt) }}</template>
-              <template #actions="{ row }">
-                <span class="row-acts">
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="MagicStick"
-                    tip="进入设计器"
-                    :icon-size="24"
-                    :disabled="!canDesign(providerOf(tab.name), row)"
-                    @click="openDesigner(row)"
-                  />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="View"
-                    tip="预览"
-                    :icon-size="24"
-                    @click="openPreview(row)"
-                  />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="Printer"
-                    tip="打印"
-                    :icon-size="24"
-                    @click="openPrintDialog(row)"
-                  />
-                  <ReButton
-                    text
-                    :show-text="false"
-                    icon="Delete"
-                    tip="删除模板"
-                    :icon-size="24"
-                    @click="removeTemplate(row)"
-                  />
-                </span>
-              </template>
-              <template #empty>
-                <div class="page-empty">
-                  <span class="page-empty__icon"><ReIcon name="Files" :size="22" /></span>
-                  <b class="page-empty__title">该提供商下还没有模板</b>
-                  <span class="page-empty__desc">点击右上角「同步」从提供商拉取，或「新建模板」手工创建。</span>
-                </div>
-              </template>
-            </ReTable>
-          </div>
+                <span class="entry__code mono" :title="item.code">{{ item.code || '未编码' }}</span>
+              </span>
+              <span class="entry__side">
+                <span class="chip">{{ typeLabel(item.type) }}</span>
+              </span>
+            </div>
+          </template>
+          <div v-if="docLoading" class="rail__loading">加载更多…</div>
+          <div v-else-if="docEnd && docItems.length" class="rail__loading">已到底</div>
+        </div>
 
-          <!-- 设计器页签：整块工作区交给设计器（左栏切换拖拽 / Vue 沙盒） -->
-          <div v-else-if="isDesignTab(tab.name)" class="work work--fill work--plain">
-            <TemplateDesigner
-              :template-id="tplIdOf(tab.name)"
-              :custom-design="providerByTab(tab.name)?.customDesign !== false"
-              @back="switchToProvider"
-              @preview="openDesignPreview"
-              @saved="onDesignerSaved"
+        <footer class="rail__foot">
+          <span>滚动加载更多模板</span>
+          <span class="rail__actions">
+            <ReButton
+              text
+              :show-text="false"
+              icon="Printer"
+              tip="打印机管理"
+              :icon-size="24"
+              @click="openPrinterManage"
             />
+            <ReButton
+              text
+              :show-text="false"
+              icon="Document"
+              tip="调用日志"
+              :icon-size="24"
+              @click="openLogs"
+            />
+          </span>
+        </footer>
+      </aside>
+
+      <!-- 右栏：详情卡面（预览 / 编辑 / 设计） -->
+      <section class="detail">
+        <!-- 文档模板设计器（当前页切换） -->
+        <div v-if="viewMode === 'design' && selected" class="detail__fill">
+          <TemplateDesigner
+            :template-id="selected.id"
+            custom-design
+            @back="backFromDesign"
+            @preview="enterDocPreview"
+            @saved="onDesignerSaved"
+          />
+        </div>
+
+        <!-- 消息模板编辑（当前页打开编辑） -->
+        <div v-else-if="viewMode === 'edit' && editing" class="detail__edit">
+          <header class="detail__head">
+            <div class="detail__title">
+              <h2>{{ editing.templateName || '新模板' }}</h2>
+              <p>{{ editing.templateKind === 'EMAIL' ? '邮件' : '短信' }}模板 · {{ editing.templateCode || '未设编码' }}</p>
+            </div>
+          </header>
+
+          <div class="edit-form">
+            <div class="edit-form__row">
+              <label class="field">
+                <span>模板名称</span>
+                <input v-model="editing.templateName" type="text" placeholder="如：验证码优先" maxlength="64" />
+              </label>
+              <label class="field">
+                <span>模板编码</span>
+                <input v-model="editing.templateCode" type="text" placeholder="同种类内唯一" maxlength="64" />
+              </label>
+              <label class="field field--sm">
+                <span>排序</span>
+                <input v-model.number="editing.templateSortOrder" type="number" min="0" />
+              </label>
+            </div>
+
+            <label v-if="editing.templateKind === 'EMAIL'" class="field">
+              <span>邮件主题</span>
+              <input v-model="editing.templateSubject" type="text" placeholder="支持 {{变量}}" />
+            </label>
+
+            <div class="field">
+              <span>模板正文（{{ editing.templateKind === 'EMAIL' ? '邮件' : '短信' }}，支持 &#123;&#123;变量&#125;&#125; 占位）</span>
+              <textarea
+                ref="contentRef"
+                v-model="editing.templateContent"
+                class="edit-form__content"
+                rows="10"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="edit-form__vars">
+              <span class="edit-form__vars-label">插入变量</span>
+              <button
+                v-for="name in variables"
+                :key="name"
+                type="button"
+                class="var"
+                @click="insertVariable(name)"
+              >{{ name }}</button>
+            </div>
+
+            <div class="edit-form__toggle">
+              <label>
+                <input v-model="editing.templateEnabled" type="checkbox" />
+                启用
+              </label>
+              <label>
+                <input v-model="editing.templateDefault" type="checkbox" />
+                设为默认
+              </label>
+            </div>
           </div>
 
-          <!-- 预览页签 -->
-          <div v-else-if="isPreviewTab(tab.name)" class="work work--fill work--plain">
-            <TemplatePreviewView :template-id="tplIdOf(tab.name)" />
-          </div>
-
-          <!-- 消息模板页签：与文档模板同属模板管理，右栏直接复用消息模板工作台 -->
-          <div v-else-if="isMessageTab(tab.name)" class="work work--fill work--plain">
-            <MessageTemplateView />
-          </div>
-        </template>
-
-        <template #empty>
-          <div class="deck-empty">
-            <span class="deck-empty__mark">
-              <ReIcon name="Connection" :size="22" />
+          <footer class="detail__foot">
+            <ReButton
+              v-if="editing.templateId"
+              text
+              :show-text="false"
+              icon="Delete"
+              tip="删除模板"
+              :icon-size="28"
+              @click="removeSelected"
+            />
+            <span class="detail__foot-right">
+              <ReButton size="small" @click="cancelEdit">取消</ReButton>
+              <ReButton type="primary" size="small" :loading="saving" :disabled="saving" @click="saveMessage">
+                保存模板
+              </ReButton>
             </span>
-            <b>还没有选择提供商</b>
-            <span>从左栏选择提供商查看配置，或右键直接进入同步 / 模板管理</span>
+          </footer>
+        </div>
+
+        <!-- 预览 -->
+        <div v-else-if="selected && viewMode === 'preview'" class="detail__preview">
+          <header class="detail__head">
+            <div class="detail__title">
+              <h2>{{ selected.name }}</h2>
+              <p class="mono">{{ selected.code || '未编码' }}</p>
+            </div>
+            <div class="detail__tags">
+              <span class="chip">{{ typeLabel(selected.type) }}</span>
+              <span v-if="selected.isDefault" class="chip is-default">默认</span>
+              <span v-if="selected.source === 'message'" class="chip">
+                {{ selected.enabled === false ? '已停用' : '已启用' }}
+              </span>
+              <el-tag
+                v-else-if="selected.status"
+                :type="statusMeta(selected.status).type"
+                size="small"
+                effect="plain"
+                round
+              >
+                {{ statusMeta(selected.status).label }}
+              </el-tag>
+            </div>
+            <div v-if="selected.source === 'hiprint'" class="detail__head-acts">
+              <ReButton
+                text
+                :show-text="false"
+                icon="MagicStick"
+                tip="进入设计器"
+                :icon-size="26"
+                @click="enterDesign"
+              />
+            </div>
+          </header>
+
+          <div class="detail__body">
+            <!-- 消息模板预览：示例变量渲染 -->
+            <div v-if="selected.source === 'message'" class="msg-preview">
+              <div class="msg-preview__bar">
+                <b>预览</b>
+                <span>{{ previewing ? '渲染中…' : '示例变量' }}</span>
+              </div>
+              <div class="msg-preview__body">
+                <div v-if="msgPreview?.subject" class="msg-preview__subject">{{ msgPreview.subject }}</div>
+                <pre class="msg-preview__content">{{ msgPreview?.content || '输入正文后自动预览' }}</pre>
+                <div v-if="msgPreview?.missing?.length" class="msg-preview__missing">
+                  未取值变量：{{ msgPreview.missing.join('、') }}
+                </div>
+              </div>
+            </div>
+            <!-- 文档模板预览 -->
+            <div v-else class="detail__fill">
+              <TemplatePreviewView :template-id="selected.id" />
+            </div>
           </div>
-        </template>
-      </ReTabs>
-    </section>
 
-    <!-- 提供商右键菜单 -->
-    <ReContextMenu ref="ctxMenu" :items="ctxItems" @select="onCtxSelect" />
+          <footer class="detail__foot">
+            <ReButton
+              text
+              :show-text="false"
+              icon="Delete"
+              tip="删除模板"
+              :icon-size="28"
+              @click="removeSelected"
+            />
+            <span class="detail__foot-right">
+              <ReButton
+                text
+                :show-text="false"
+                icon="EditPen"
+                tip="编辑模板"
+                :icon-size="28"
+                @click="startEdit(selected)"
+              />
+            </span>
+          </footer>
+        </div>
 
-    <!-- 提供商配置弹窗（新增 / 编辑） -->
-    <ReDialog v-model="providerFormVisible" :title="providerFormTitle" width="560px" @confirm="onProviderFormConfirm">
-      <el-form ref="providerFormRef" :model="providerForm" label-width="112px">
-        <el-form-item label="提供商名称" required>
-          <el-input v-model="providerForm.name" placeholder="例如 阿里云短信" maxlength="64" />
-        </el-form-item>
-        <el-form-item label="接入方" required>
-          <ReSelect v-model="providerForm.vendor" :options="vendorOptions" placeholder="选择接入方" />
-        </el-form-item>
-        <el-form-item label="Access Key">
-          <el-input v-model="providerForm.ak" placeholder="AK" maxlength="128" />
-        </el-form-item>
-        <el-form-item label="Secret Key">
-          <el-input v-model="providerForm.sk" type="password" show-password placeholder="SK" maxlength="256" />
-        </el-form-item>
-        <el-form-item label="Endpoint" required>
-          <el-input v-model="providerForm.endpoint" placeholder="例如 dysmsapi.aliyuncs.com" maxlength="200" />
-        </el-form-item>
-        <el-form-item label="支持模板类型" required>
-          <ReSelect v-model="providerForm.templateTypes" multiple :options="typeOptions" placeholder="可多选" />
-        </el-form-item>
-        <el-form-item label="自定义模板设计">
-          <el-switch v-model="providerForm.customDesign" />
-          <span class="form-hint">开启后模板可进入设计器（拖拽 / Vue 沙盒）</span>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="providerForm.status">
-            <el-radio value="online">已启用</el-radio>
-            <el-radio value="offline">已停用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="说明">
-          <el-input v-model="providerForm.remark" type="textarea" :rows="2" maxlength="200" show-word-limit />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <ReButton @click="providerFormVisible = false">取消</ReButton>
-        <ReButton type="primary" :loading="providerSaving" @click="onProviderFormConfirm">确定</ReButton>
-      </template>
-    </ReDialog>
+        <!-- 空态 -->
+        <div v-else class="detail__empty">
+          <span class="detail__empty-mark"><ReIcon name="Files" :size="24" /></span>
+          <b>还没有选择模板</b>
+          <span>从左侧选择模板查看预览；点右上角「新建模板」创建</span>
+        </div>
+      </section>
+    </div>
 
-    <!-- 新建 / 编辑模板弹窗 -->
-    <ReDialog v-model="formVisible" :title="formTitle" width="520px" @confirm="onFormConfirm">
-      <el-form ref="formRef" :model="form" label-width="80px">
+    <!-- 文档模板新建 / 编辑弹窗 -->
+    <ReDialog v-model="docFormVisible" :title="docFormTitle" width="520px" @confirm="onDocFormConfirm">
+      <el-form :model="docForm" label-width="80px">
         <el-form-item label="模板名称" required>
-          <el-input v-model="form.name" placeholder="例如 出库单" maxlength="64" />
+          <el-input v-model="docForm.name" placeholder="例如 出库单" maxlength="64" />
         </el-form-item>
         <el-form-item label="模板副标题">
-          <el-input v-model="form.subtitle" placeholder="例如 仓库出库单据" maxlength="128" />
+          <el-input v-model="docForm.subtitle" placeholder="例如 仓库出库单据" maxlength="128" />
         </el-form-item>
         <el-form-item label="模板语言" required>
-          <el-select v-model="form.language" class="w-full">
+          <el-select v-model="docForm.language" class="w-full">
             <el-option v-for="item in languageOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="模板类型" required>
-          <el-select v-model="form.type" class="w-full">
+          <el-select v-model="docForm.type" class="w-full">
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
+        <el-form-item label="归属提供商">
+          <ReSelect v-model="docForm.providerId" :options="providerOptions" placeholder="选择提供商（文档模板归属）" />
+        </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="200" show-word-limit />
+          <el-input v-model="docForm.remark" type="textarea" :rows="2" maxlength="200" show-word-limit />
         </el-form-item>
       </el-form>
       <template #footer>
-        <ReButton @click="formVisible = false">取消</ReButton>
-        <ReButton type="primary" :loading="saving" @click="onFormConfirm">确定</ReButton>
-      </template>
-    </ReDialog>
-
-    <!-- 打印参数弹窗：选好打印机和份数后，只有「确定打印」才会发起 -->
-    <ReDialog v-model="printDialogVisible" title="打印" width="400px" @confirm="onPrintConfirm">
-      <el-form :model="printParams" label-width="80px">
-        <el-form-item label="打印机" required>
-          <ReSelect v-model="printParams.printer" :options="printerOptions" placeholder="选择打印机" />
-        </el-form-item>
-        <el-form-item label="份数">
-          <el-input-number v-model="printParams.copies" :min="1" :max="99" class="w-full" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <ReButton @click="printDialogVisible = false">取消</ReButton>
-        <ReButton type="primary" :loading="printing" @click="onPrintConfirm">确定打印</ReButton>
+        <ReButton @click="docFormVisible = false">取消</ReButton>
+        <ReButton type="primary" :loading="docSaving" @click="onDocFormConfirm">确定</ReButton>
       </template>
     </ReDialog>
   </div>
@@ -490,16 +374,16 @@
 
 <script setup lang="ts">
 /**
- * 模板中心页（提供商轨布局）。
+ * 模板管理 · 模板资产页（参考设备资产版式）。
  *
- * <p>左栏是提供商档案轨，右栏是 ReTabs 多页签工作台。页签分四类，靠页签名的后缀区分：
- * {@code <providerId>:provider} 提供商详情、{@code <providerId>:templates} 模板管理、
- * {@code <templateId>:design} 设计器、{@code <templateId>:preview} 预览。</p>
+ * <p>左栏直接渲染模板数据（消息模板 + 文档模板，滚动分页），消息模板只是
+ * 普通类型（短信 / 邮件），不再单独占特殊入口；右栏点击出预览，右下角编辑
+ * （消息模板当前页就地编辑，文档模板走弹窗 / 设计器），左下角删除。</p>
  *
- * <p>提供商与模板是两级数据：提供商带 AK / SK / endpoint / 支持的模板类型 / 是否支持自定义设计，
- * 模板归属于提供商并以 {@code providerId} 关联；「同步」「模板管理」都作用在提供商这一级。</p>
+ * <p>消息模板数据来自宿主后端 `/api/channels/templates`（部署级共享），
+ * 文档模板来自模板后端 `/api/template/page`（独立模板服务，远程承载）。</p>
  */
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ReButton from '@repo/ui/re-button'
@@ -507,515 +391,336 @@ import ReDialog from '@repo/ui/re-dialog'
 import ReIcon from '@repo/ui/re-icon'
 import ReInput from '@repo/ui/re-input'
 import ReSelect from '@repo/ui/re-select'
-import ReTable from '@repo/ui/re-table'
-import ReTabs from '@repo/ui/re-tabs'
-import ReContextMenu from '@repo/ui/re-context-menu'
-import type { ReContextMenuItem } from '@repo/ui/re-context-menu'
-import type { ReTabsContextItem, ReTabsItem } from '@repo/ui/re-tabs'
-import type { ReTableColumn, ReTableLoadParams, RePageResult } from '@repo/ui/re-table'
 
 import { templateApi } from '../api/templateApi'
-import { errorText, isCancelled } from '../../shared/errorText'
-import type {
-  ProviderInfo,
-  ProviderSyncResult,
-  TemplateInfo,
-  TemplateStatus,
-  LogRecord,
-  PrinterConfig
-} from '../types/template'
+import {
+  messageTemplateApi,
+  type MessageTemplate,
+  type MessageTemplateRenderResult
+} from '../api/messageTemplateApi'
+import { errorText } from '../../shared/errorText'
+import type { ProviderInfo, TemplateInfo } from '../types/template'
 import TemplatePreviewView from '../views/TemplatePreviewView.vue'
 import TemplateDesigner from '../views/TemplateDesigner.vue'
-import MessageTemplateView from './MessageTemplateView.vue'
-import {
-  tplLanguageLabels,
-  tplTypeLabels,
-  tplVendorLabels,
-  languageLabel,
-  sourceLabel,
-  statusMeta,
-  typeLabel
-} from '../utils/i18n'
+import { statusMeta, tplLanguageLabels, tplTypeLabels, typeLabel } from '../utils/i18n'
 
 const router = useRouter()
 
-/** 宿主传入的初始类型：message 时直接打开消息模板 */
+/** 宿主传入的初始类型：message 时自动选中第一条消息模板 */
 const props = defineProps<{ type?: string }>()
 
-// ==================== 提供商列表 ====================
-/** 全部提供商 */
-const providers = ref<ProviderInfo[]>([])
-/** 提供商加载中 */
-const loadingProviders = ref(false)
+// ==================== 统一模板项 ====================
+type TplType = 'sms' | 'email' | 'document' | 'label' | 'other'
+
+interface TplItem {
+  key: string
+  id: string
+  name: string
+  code: string
+  type: TplType
+  source: 'message' | 'hiprint' | 'paper'
+  isDefault?: boolean
+  enabled?: boolean
+  status?: string
+  updatedAt?: string
+  raw: MessageTemplate | TemplateInfo
+}
+
+/** 消息模板 -> 统一项 */
+function toMsgItems(list: MessageTemplate[]): TplItem[] {
+  return list.map(t => ({
+    key: `m-${t.templateId ?? t.templateCode}`,
+    id: String(t.templateId ?? ''),
+    name: t.templateName,
+    code: t.templateCode,
+    type: t.templateKind === 'EMAIL' ? 'email' : 'sms',
+    source: 'message',
+    isDefault: !!t.templateDefault,
+    enabled: !!t.templateEnabled,
+    raw: t
+  }))
+}
+
+/** 文档模板 -> 统一项 */
+function toDocItems(list: TemplateInfo[]): TplItem[] {
+  return list.map(t => ({
+    key: `d-${t.id}`,
+    id: String(t.id),
+    name: t.name,
+    code: t.sourceId ?? t.sourceCode ?? '',
+    type: (t.type ?? 'other') as TplType,
+    source: t.source ?? 'hiprint',
+    status: t.status,
+    updatedAt: t.updatedAt,
+    raw: t
+  }))
+}
+
+// ==================== 列表数据 ====================
+/** 消息模板（短信 + 邮件，一次拉全量） */
+const msgItems = ref<TplItem[]>([])
+const msgLoading = ref(false)
+const msgError = ref('')
+
+/** 文档模板（滚动分页） */
+const docItems = ref<TplItem[]>([])
+const docLoading = ref(false)
+const docEnd = ref(false)
+const docPage = ref(1)
+const docError = ref('')
+
 /** 搜索关键词 */
 const keyword = ref('')
-/** 接入方筛选 */
-const vendorFilter = ref('all')
+/** 类型筛选：all / sms / email / document / other */
+const typeFilter = ref<'all' | TplType>('all')
+/** 左栏滚动容器（滚到底部加载更多文档模板） */
+const railListRef = ref<HTMLElement | null>(null)
 
-/** 接入方选项 */
-const vendorOptions = computed(() =>
-  Object.entries(tplVendorLabels).map(([value, label]) => ({ label, value }))
-)
-
-/** 接入方筛选条（带数量） */
-const vendorFilters = computed(() => [
-  { key: 'all', label: '全部', count: providers.value.length },
-  ...vendorOptions.value.map(v => ({
-    key: v.value,
-    label: v.label,
-    count: providers.value.filter(p => p.vendor === v.value).length
-  }))
-])
-
-/** 过滤后的提供商：关键词匹配名称 / endpoint / AK */
-const shownProviders = computed(() => {
-  const k = keyword.value.trim().toLowerCase()
-  return providers.value.filter(p => {
-    if (vendorFilter.value !== 'all' && p.vendor !== vendorFilter.value) return false
-    if (!k) return true
-    return (
-      (p.name ?? '').toLowerCase().includes(k) ||
-      (p.endpoint ?? '').toLowerCase().includes(k) ||
-      (p.ak ?? '').toLowerCase().includes(k)
-    )
+/** 全部模板项：消息模板在前（短信 / 邮件按排序），文档模板按更新时间倒序在后 */
+const allItems = computed<TplItem[]>(() => {
+  const msg = [...msgItems.value].sort((a, b) => {
+    const am = a.raw as MessageTemplate
+    const bm = b.raw as MessageTemplate
+    if ((am.templateKind ?? '') !== (bm.templateKind ?? '')) return am.templateKind === 'SMS' ? -1 : 1
+    return (am.templateSortOrder ?? 0) - (bm.templateSortOrder ?? 0)
   })
+  const doc = [...docItems.value].sort((a, b) =>
+    String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? ''))
+  )
+  return [...msg, ...doc]
 })
 
-/** 加载提供商列表 */
-async function loadProviders(): Promise<void> {
-  loadingProviders.value = true
-  try {
-    const list = await templateApi.providerList()
-    providers.value = Array.isArray(list) ? list : []
-  } catch (err) {
-    ElMessage.error(errorText(err))
-  } finally {
-    loadingProviders.value = false
-  }
-}
-
-/** 按 ID 取提供商（tab.name 可能带 `:provider` / `:templates` 页签名后缀，先归一化） */
-function providerOf(id: string): ProviderInfo | undefined {
-  return providers.value.find(p => p.id === providerIdOf(id))
-}
-
-/** 提供商下的模板数（后端统计优先，否则按已同步计数） */
-function templateCountOf(item: ProviderInfo): number {
-  return Number(item.templateCount ?? 0)
-}
-
-// ==================== 提供商同步 ====================
-/** 全量同步中 */
-const syncingAll = ref(false)
-/** 正在同步的提供商 ID */
-const syncingProvider = ref('')
-
-/**
- * 同步单个提供商的模板。
- *
- * @param item 目标提供商
- */
-async function syncProvider(item: ProviderInfo | undefined): Promise<void> {
-  if (!item || syncingProvider.value) return
-  syncingProvider.value = item.id
-  try {
-    const result: ProviderSyncResult = await templateApi.syncProvider(item.id)
-    const added = Number(result?.added ?? 0)
-    const updated = Number(result?.updated ?? 0)
-    const failed = Number(result?.failed ?? 0)
-    ElMessage.success(`「${item.name}」同步完成：新增 ${added}，更新 ${updated}，失败 ${failed}`)
-    await loadProviders()
-    // 同步结果也进调用日志，便于回溯
-    recordLog(
-      { id: item.id, name: item.name, creator: item.owner } as TemplateInfo,
-      'sync',
-      { added, updated, failed, providerId: item.id, endpoint: item.endpoint }
-    )
-    tableRefs[`${item.id}:templates`]?.reload?.()
-  } catch (err) {
-    ElMessage.error(errorText(err))
-  } finally {
-    syncingProvider.value = ''
-  }
-}
-
-/** 同步全部提供商 */
-async function syncAll(): Promise<void> {
-  if (syncingAll.value || !providers.value.length) return
-  syncingAll.value = true
-  let added = 0
-  let updated = 0
-  let failed = 0
-  for (const item of providers.value) {
-    try {
-      const r = await templateApi.syncProvider(item.id)
-      added += Number(r?.added ?? 0)
-      updated += Number(r?.updated ?? 0)
-      failed += Number(r?.failed ?? 0)
-    } catch {
-      failed += 1
-    }
-  }
-  syncingAll.value = false
-  ElMessage.success(`同步完成：新增 ${added}，更新 ${updated}，失败 ${failed}`)
-  await loadProviders()
-  // 已打开的模板管理页签一起刷新
-  providers.value.forEach(item => tableRefs[`${item.id}:templates`]?.reload?.())
-}
-
-// ==================== 提供商新增 / 编辑 / 删除 ====================
-const providerFormVisible = ref(false)
-const providerFormTitle = ref('')
-const providerSaving = ref(false)
-const providerFormRef = ref<Record<string, any> | null>(null)
-/** 编辑中的提供商 ID（空=新增） */
-const editingProviderId = ref('')
-/** 提供商表单 */
-const providerForm = ref<Partial<ProviderInfo>>({})
-
-/** 新建提供商表单 */
-function openProviderCreate(): void {
-  providerFormTitle.value = '新增提供商'
-  editingProviderId.value = ''
-  providerForm.value = {
-    name: '',
-    vendor: 'aliyun',
-    ak: '',
-    sk: '',
-    endpoint: '',
-    templateTypes: [],
-    customDesign: false,
-    status: 'online',
-    remark: ''
-  }
-  providerFormVisible.value = true
-}
-
-/** 编辑提供商表单 */
-function openProviderEdit(item: ProviderInfo): void {
-  providerFormTitle.value = '编辑提供商配置'
-  editingProviderId.value = item.id
-  providerForm.value = { ...item, templateTypes: [...(item.templateTypes ?? [])] }
-  providerFormVisible.value = true
-}
-
-/** 提供商表单提交 */
-async function onProviderFormConfirm(): Promise<void> {
-  const form = providerForm.value
-  if (!form.name?.trim()) {
-    ElMessage.warning('请输入提供商名称')
-    return
-  }
-  if (!form.endpoint?.trim()) {
-    ElMessage.warning('请输入 endpoint')
-    return
-  }
-  if (!(form.templateTypes ?? []).length) {
-    ElMessage.warning('请至少选择一个支持的模板类型')
-    return
-  }
-  providerSaving.value = true
-  try {
-    if (editingProviderId.value) {
-      const updated = await templateApi.updateProvider(editingProviderId.value, form)
-      const index = providers.value.findIndex(p => p.id === editingProviderId.value)
-      if (index >= 0) providers.value[index] = { ...providers.value[index], ...(updated ?? form) }
-      // 详情页签标题跟随改名
-      const tab = tabs.value.find(t => t.name === `${editingProviderId.value}:provider`)
-      if (tab && form.name) tab.label = form.name
-      ElMessage.success('已保存提供商配置')
-    } else {
-      await templateApi.addProvider(form)
-      ElMessage.success('已新增提供商')
-      await loadProviders()
-    }
-    providerFormVisible.value = false
-  } catch (err) {
-    ElMessage.error(errorText(err))
-  } finally {
-    providerSaving.value = false
-  }
-}
-
-/** 删除提供商：连同该提供商下的页签一起关闭 */
-async function removeProvider(item: ProviderInfo): Promise<void> {
-  try {
-    await ElMessageBox.confirm(
-      `确定删除提供商「${item.name}」？其下的 ${templateCountOf(item)} 个模板将不再显示。`,
-      '删除提供商',
-      { type: 'warning' }
-    )
-    await templateApi.removeProvider(item.id)
-    ElMessage.success('已删除提供商')
-    tabs.value = tabs.value.filter(t => t.name !== `${item.id}:provider` && t.name !== `${item.id}:templates`)
-    if (!tabs.value.some(t => t.name === activeTab.value)) activeTab.value = tabs.value[0]?.name ?? ''
-    await loadProviders()
-  } catch (err) {
-    if (!isCancelled(err)) ElMessage.error(errorText(err))
-  }
-}
-
-// ==================== 右键菜单 ====================
-const ctxMenu = ref<InstanceType<typeof ReContextMenu> | null>(null)
-/** 当前右键的提供商 */
-const ctxProvider = ref<ProviderInfo | null>(null)
-
-/** 菜单项：同步 / 模板管理 / 编辑配置 / 删除 */
-const ctxItems = computed<ReContextMenuItem[]>(() => {
-  const p = ctxProvider.value
-  if (!p) return []
+/** 类型筛选条（带数量） */
+const typeFilters = computed<Array<{ key: 'all' | TplType; label: string; n: number }>>(() => {
+  const count = (t: TplType) => allItems.value.filter(i => i.type === t).length
+  const other = count('label') + count('other')
   return [
-    { label: '同步模板', command: 'sync', icon: 'Refresh', disabled: p.status !== 'online' },
-    { label: '模板管理', command: 'templates', icon: 'Files' },
-    { label: '编辑配置', command: 'config', icon: 'EditPen' },
-    { separator: true },
-    { label: '删除提供商', command: 'remove', icon: 'Delete', danger: true }
+    { key: 'all', label: '全部', n: allItems.value.length },
+    { key: 'sms', label: '短信', n: count('sms') },
+    { key: 'email', label: '邮件', n: count('email') },
+    { key: 'document', label: '文档', n: count('document') },
+    { key: 'other', label: '其他', n: other }
   ]
 })
 
-/** 在鼠标位置弹出提供商菜单 */
-function openProviderMenu(event: MouseEvent, item: ProviderInfo): void {
-  ctxProvider.value = item
-  ctxMenu.value?.open(event.clientX, event.clientY)
-}
-
-/** 菜单命令分发 */
-function onCtxSelect(command: string): void {
-  const item = ctxProvider.value
-  if (!item) return
-  switch (command) {
-    case 'sync':
-      void syncProvider(item)
-      break
-    case 'templates':
-      openProviderTemplates(item)
-      break
-    case 'config':
-      openProviderEdit(item)
-      break
-    case 'remove':
-      void removeProvider(item)
-      break
-  }
-}
-
-// ==================== 右侧工作台 ====================
-/** 当前激活的页签 name */
-const activeTab = ref('')
-/** 页签列表 */
-const tabs = ref<ReTabsItem[]>([])
-/** 页签右键菜单 */
-const tabContextMenu: ReTabsContextItem[] = [
-  { key: 'close', label: '关闭' },
-  { key: 'close-other', label: '关闭其他' },
-  { key: 'close-all', label: '关闭全部' }
-]
-/** 模板管理页签里的 ReTable 实例（按页签名索引，供同步后刷新） */
-const tableRefs = reactive<Record<string, { reload?: () => void } | null>>({})
-
-/** 登记模板表格实例 */
-function setTableRef(providerId: string, el: unknown): void {
-  tableRefs[`${providerId}:templates`] = (el ?? null) as { reload?: () => void } | null
-}
-
-/** 页签名判断：`<providerId>:provider` */
-function isProviderTab(name: string): boolean { return name.endsWith(':provider') }
-/** 页签名判断：`<providerId>:templates` */
-function isTemplatesTab(name: string): boolean { return name.endsWith(':templates') }
-/** 页签名判断：`<templateId>:design` */
-function isDesignTab(name: string): boolean { return name.endsWith(':design') }
-/** 页签名判断：`<templateId>:preview` */
-function isPreviewTab(name: string): boolean { return name.endsWith(':preview') }
-/** 页签名判断：消息模板工作台 */
-function isMessageTab(name: string): boolean { return name === 'message:templates' }
-/** 左栏高亮：消息模板 */
-const isMessageActive = computed(() => activeTab.value === 'message:templates')
-
-/** 页签名里的提供商 ID */
-function providerIdOf(name: string): string { return name.replace(/:provider$/, '').replace(/:templates$/, '') }
-/** 页签名里的模板 ID */
-function tplIdOf(name: string): string { return name.replace(/:design$/, '').replace(/:preview$/, '') }
-
-/** 左栏高亮：当前页签所属的提供商 */
-function isProviderActive(providerId: string): boolean {
-  return activeTab.value === `${providerId}:provider` || activeTab.value === `${providerId}:templates`
-}
-
-/** 打开（或切换到）消息模板工作台（模板中心的一种类型） */
-function openMessageTemplates(): void {
-  const name = 'message:templates'
-  const existing = tabs.value.find(t => t.name === name)
-  if (existing) {
-    activeTab.value = name
-    return
-  }
-  tabs.value.push({ name, label: '消息模板', hint: '短信 / 邮件', icon: 'ChatDotRound', closable: true })
-  activeTab.value = name
-}
-
-/** 打开（或切换到）提供商详情页签 */
-function openProvider(item: ProviderInfo): void {  const name = `${item.id}:provider`
-  const existing = tabs.value.find(t => t.name === name)
-  if (existing) {
-    existing.label = item.name
-    activeTab.value = name
-    return
-  }
-  tabs.value.push({ name, label: item.name, hint: '提供商', icon: 'Connection', status: item.status, closable: true })
-  activeTab.value = name
-}
-
-/** 打开（或切换到）模板管理页签 */
-function openProviderTemplates(item: ProviderInfo): void {
-  if (!item) return
-  const name = `${item.id}:templates`
-  const existing = tabs.value.find(t => t.name === name)
-  if (existing) {
-    existing.label = item.name
-    activeTab.value = name
-    return
-  }
-  tabs.value.push({ name, label: item.name, hint: '模板管理', icon: 'Files', status: item.status, closable: true })
-  activeTab.value = name
-}
-
-/** 关闭页签 */
-function closeTab(name: string): void {
-  tabs.value = tabs.value.filter(t => t.name !== name)
-  delete tableRefs[name]
-  if (activeTab.value === name) activeTab.value = tabs.value[tabs.value.length - 1]?.name ?? ''
-}
-
-/** 关闭全部页签 */
-function closeAllTabs(): void {
-  tabs.value = []
-  activeTab.value = ''
-  Object.keys(tableRefs).forEach(key => delete tableRefs[key])
-}
-
-/** 页签右键命令 */
-function onTabCommand(payload: { key: string; tab: ReTabsItem }): void {
-  const tab = payload.tab
-  if (!tab) return
-  switch (payload.key) {
-    case 'close':
-      closeTab(tab.name)
-      break
-    case 'close-other':
-      tabs.value = [tab]
-      activeTab.value = tab.name
-      Object.keys(tableRefs).forEach(key => {
-        if (key !== tab.name) delete tableRefs[key]
-      })
-      break
-    case 'close-all':
-      closeAllTabs()
-      break
-  }
-}
-
-// ==================== 模板管理数据 ====================
-/** 模板表格列 */
-const templateColumns: ReTableColumn[] = [
-  { prop: 'name', label: '模板名称', minWidth: 200, slot: 'name', showOverflowTooltip: true },
-  { prop: 'sourceId', label: '编码', width: 170, showOverflowTooltip: true },
-  { prop: 'source', label: '来源', width: 100, slot: 'source', align: 'center' },
-  { prop: 'type', label: '类型', width: 96, slot: 'type', align: 'center' },
-  { prop: 'status', label: '状态', width: 100, slot: 'status', align: 'center' },
-  { prop: 'updatedAt', label: '更新时间', width: 150, slot: 'updatedAt' },
-  { prop: 'actions', label: '操作', width: 156, slot: 'actions', align: 'center', fixed: 'right' }
-]
-
-/**
- * 模板管理表格数据源：按提供商分页取模板。
- *
- * @param providerId 提供商 ID
- * @param params ReTable 传入的分页与查询参数
- */
-async function loadProviderTemplates(providerId: string, params: ReTableLoadParams): Promise<RePageResult> {
-  try {
-    const res = await templateApi.page({
-      providerId,
-      page: params.page,
-      size: params.pageSize
-    })
-    return {
-      total: Number(res?.total ?? 0),
-      records: (res?.records ?? []) as unknown as Record<string, unknown>[]
+/** 过滤后的列表 */
+const filteredItems = computed(() => {
+  const k = keyword.value.trim().toLowerCase()
+  return allItems.value.filter(it => {
+    if (typeFilter.value === 'other') {
+      if (!['label', 'other'].includes(it.type)) return false
+    } else if (typeFilter.value !== 'all' && it.type !== typeFilter.value) {
+      return false
     }
+    if (!k) return true
+    return `${it.name} ${it.code}`.toLowerCase().includes(k)
+  })
+})
+
+/** 加载消息模板 */
+async function loadMessages(): Promise<void> {
+  msgLoading.value = true
+  try {
+    const list = await messageTemplateApi.list()
+    msgItems.value = toMsgItems(Array.isArray(list) ? list : [])
+    msgError.value = ''
   } catch (err) {
-    ElMessage.error(errorText(err))
-    return { total: 0, records: [] }
+    msgError.value = errorText(err)
+  } finally {
+    msgLoading.value = false
   }
 }
 
-/** 是否允许该模板进入设计器：模板来源为绘制，且提供商支持自定义设计 */
-function canDesign(provider: ProviderInfo | undefined, row: Record<string, any>): boolean {
-  return provider?.customDesign !== false && row?.source === 'hiprint'
+/** 加载文档模板（滚动分页；reset 时回到第一页） */
+async function loadDocs(reset = false): Promise<void> {
+  if (docLoading.value) return
+  if (reset) {
+    docPage.value = 1
+    docItems.value = []
+    docEnd.value = false
+    docError.value = ''
+  }
+  docLoading.value = true
+  try {
+    const res = await templateApi.page({ page: docPage.value, size: 30 })
+    const records = (res?.records ?? []) as TemplateInfo[]
+    docItems.value = [...docItems.value, ...toDocItems(records)]
+    docEnd.value = !records.length || docItems.value.length >= Number(res?.total ?? 0)
+    if (!docEnd.value) docPage.value += 1
+  } catch (err) {
+    if (reset) docError.value = errorText(err)
+    /* 滚动续载失败静默，顶部有刷新可重试 */
+  } finally {
+    docLoading.value = false
+  }
 }
 
-// ==================== 新建 / 编辑模板 ====================
-const formVisible = ref(false)
-const formTitle = ref('')
-const editingId = ref('')
-const formRef = ref<Record<string, any> | null>(null)
-const form = ref<Partial<TemplateInfo>>({})
+/** 左栏滚动到底部时加载更多文档模板 */
+function onRailScroll(e: Event): void {
+  const el = e.target as HTMLElement
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) {
+    if (typeFilter.value !== 'sms' && typeFilter.value !== 'email') void loadDocs()
+  }
+}
+
+/** 刷新全部 */
+const refreshing = ref(false)
+async function refreshAll(): Promise<void> {
+  refreshing.value = true
+  try {
+    await Promise.all([loadMessages(), loadDocs(true)])
+  } finally {
+    refreshing.value = false
+  }
+}
+
+// ==================== 选中 / 预览 ====================
+const selected = ref<TplItem | null>(null)
+const viewMode = ref<'preview' | 'edit' | 'design'>('preview')
+
+/** 预览用示例变量（与后端内置变量清单对齐） */
+const SAMPLE_VARIABLES: Record<string, string> = {
+  from: 'noreply@example.com',
+  code: '123456',
+  content: '您的验证码是 123456，5 分钟内有效。',
+  body: '您的验证码是 123456，5 分钟内有效。请勿泄露给他人。',
+  subject: '您的登录验证码',
+  phone: '13800000000',
+  email: 'demo@example.com'
+}
+
+/** 消息模板预览结果 */
+const msgPreview = ref<MessageTemplateRenderResult | null>(null)
+const previewing = ref(false)
+
+async function renderMessagePreview(mt: MessageTemplate): Promise<void> {
+  previewing.value = true
+  try {
+    msgPreview.value = await messageTemplateApi.render({
+      kind: mt.templateKind,
+      subject: mt.templateSubject ?? undefined,
+      content: mt.templateContent,
+      variables: SAMPLE_VARIABLES
+    })
+  } catch {
+    msgPreview.value = null
+  } finally {
+    previewing.value = false
+  }
+}
+
+/** 左键点击：出预览 */
+async function selectItem(item: TplItem): Promise<void> {
+  selected.value = item
+  viewMode.value = 'preview'
+  editing.value = null
+  msgPreview.value = null
+  if (item.source === 'message') await renderMessagePreview(item.raw as MessageTemplate)
+}
+
+// ==================== 编辑（消息模板当前页 / 文档模板弹窗） ====================
+const editing = ref<MessageTemplate | null>(null)
 const saving = ref(false)
-/** 新建模板归属的提供商 */
-const formProvider = ref<ProviderInfo | null>(null)
+const contentRef = ref<HTMLTextAreaElement | null>(null)
+const variables = ref<string[]>([])
 
-/** 新建模板（归属当前提供商） */
-function openCreate(provider: ProviderInfo | undefined): void {
-  if (!provider) return
-  formProvider.value = provider
-  formTitle.value = `新建模板 · ${provider.name}`
-  editingId.value = ''
-  form.value = {
-    language: 'html',
-    type: (provider.templateTypes?.[0] as TemplateInfo['type']) ?? 'document',
-    status: 'draft'
+/** 右下角编辑图标：当前页打开编辑 */
+function startEdit(item: TplItem): void {
+  if (item.source !== 'message') {
+    openDocEdit(item.raw as TemplateInfo)
+    return
   }
-  formVisible.value = true
+  editing.value = { ...(item.raw as MessageTemplate) }
+  viewMode.value = 'edit'
+  void loadVariables(editing.value.templateKind as 'SMS' | 'EMAIL')
 }
 
-/** 编辑模板信息 */
-function openEdit(row: TemplateInfo): void {
-  formTitle.value = '编辑模板'
-  editingId.value = row.id
-  form.value = { ...row }
-  formVisible.value = true
+/** 新建消息模板（短信 / 邮件），直接进入当前页编辑 */
+function createMessage(kind: 'SMS' | 'EMAIL'): void {
+  editing.value = {
+    templateKind: kind,
+    templateName: kind === 'SMS' ? '新短信模板' : '新邮件模板',
+    templateCode: kind === 'SMS' ? 'sms-custom' : 'email-custom',
+    templateSubject: kind === 'EMAIL' ? '{{subject}}' : null,
+    templateContent: kind === 'SMS' ? '{{content}}' : '{{body}}',
+    templateDefault: false,
+    templateEnabled: true,
+    templateSortOrder: 30
+  }
+  selected.value = null
+  msgPreview.value = null
+  viewMode.value = 'edit'
+  void loadVariables(kind)
 }
 
-/** 新建 / 编辑模板提交 */
-async function onFormConfirm(): Promise<void> {
-  if (!form.value.name) {
-    ElMessage.warning('请输入模板名称')
+/** 新建下拉命令 */
+function onCreateCommand(command: string): void {
+  if (command === 'sms') createMessage('SMS')
+  else if (command === 'email') createMessage('EMAIL')
+  else openDocCreate()
+}
+
+/** 在正文光标处插入 {{变量}} */
+async function insertVariable(name: string): Promise<void> {
+  const d = editing.value
+  if (!d) return
+  const token = `{{${name}}}`
+  const el = contentRef.value
+  if (!el) {
+    d.templateContent += token
+    return
+  }
+  const start = el.selectionStart ?? d.templateContent.length
+  const end = el.selectionEnd ?? start
+  d.templateContent = d.templateContent.slice(0, start) + token + d.templateContent.slice(end)
+  await nextTick()
+  el.focus()
+  const cursor = start + token.length
+  el.setSelectionRange(cursor, cursor)
+}
+
+/** 加载消息模板内置变量 */
+async function loadVariables(kind: 'SMS' | 'EMAIL'): Promise<void> {
+  try {
+    variables.value = await messageTemplateApi.variables(kind)
+  } catch {
+    variables.value = kind === 'EMAIL'
+      ? ['from', 'subject', 'body', 'code', 'email', 'time', 'date']
+      : ['from', 'content', 'code', 'phone', 'time', 'date']
+  }
+}
+
+/** 保存消息模板 */
+async function saveMessage(): Promise<void> {
+  const d = editing.value
+  if (!d) return
+  if (!d.templateName.trim() || !d.templateCode.trim()) {
+    ElMessage.warning('模板名称与编码不能为空')
+    return
+  }
+  if (!d.templateContent.trim()) {
+    ElMessage.warning('模板正文不能为空')
     return
   }
   saving.value = true
   try {
-    const payload = {
-      id: editingId.value,
-      name: form.value.name,
-      subtitle: form.value.subtitle,
-      language: form.value.language,
-      type: form.value.type,
-      status: (form.value.status as TemplateStatus) ?? 'draft',
-      remark: form.value.remark,
-      // 编辑时保留原来源；新建走「绘制」（hiprint），后端新增时也会兜底成 hiprint
-      source: form.value.source ?? 'hiprint',
-      providerId: form.value.providerId ?? formProvider.value?.id
-    }
-    if (editingId.value) {
-      await templateApi.update(editingId.value, payload)
-      ElMessage.success('更新成功')
+    const saved = await messageTemplateApi.save({
+      ...d,
+      templateKind: d.templateKind,
+      templateSubject: d.templateKind === 'EMAIL' ? d.templateSubject : null
+    })
+    ElMessage.success('模板已保存')
+    await loadMessages()
+    // 回预览：优先按保存返回的 templateId 定位列表项
+    const item = msgItems.value.find(i => i.id === String(saved.templateId ?? ''))
+    if (item) {
+      editing.value = null
+      viewMode.value = 'preview'
+      await selectItem(item)
     } else {
-      await templateApi.add(payload)
-      ElMessage.success('新增成功')
+      editing.value = { ...saved }
+      viewMode.value = 'edit'
     }
-    formVisible.value = false
-    if (form.value.providerId) tableRefs[`${form.value.providerId}:templates`]?.reload?.()
-    await loadProviders()
   } catch (err) {
     ElMessage.error(errorText(err))
   } finally {
@@ -1023,190 +728,118 @@ async function onFormConfirm(): Promise<void> {
   }
 }
 
-/** 删除模板 */
-async function removeTemplate(row: Record<string, any>): Promise<void> {
-  try {
-    await ElMessageBox.confirm(`确定删除模板「${row.name}」？`, '删除', { type: 'warning' })
-    await templateApi.remove(String(row.id))
-    ElMessage.success('删除成功')
-    const providerId = String(row.providerId ?? '')
-    if (providerId) tableRefs[`${providerId}:templates`]?.reload?.()
-    await loadProviders()
-  } catch (err) {
-    if (!isCancelled(err)) ElMessage.error(errorText(err))
-  }
+/** 取消编辑 */
+function cancelEdit(): void {
+  editing.value = null
+  viewMode.value = 'preview'
 }
 
-// ==================== 设计器 / 预览页签 ====================
-/** 该模板归属的提供商 ID（模板上带了就用，否则退回当前激活页签的提供商） */
-function providerIdForTemplate(row: TemplateInfo): string {
-  if (row.providerId) return String(row.providerId)
-  const name = activeTab.value
-  if (isTemplatesTab(name) || isProviderTab(name)) return providerIdOf(name)
-  return ''
-}
-
-/** 预览页签 */
-function addPreviewTab(row: TemplateInfo): void {
-  const id = String(row.id)
-  const name = `${id}:preview`
-  const providerId = providerIdForTemplate(row)
-  const existing = tabs.value.find(t => t.name === name)
-  if (existing) {
-    activeTab.value = name
+// ==================== 删除（左下角图标） ====================
+async function removeSelected(): Promise<void> {
+  const item = selected.value
+  if (!item) {
+    ElMessage.warning('未选择模板')
     return
   }
-  tabs.value.push({
-    name,
-    label: row.name,
-    hint: '预览',
-    icon: 'View',
-    closable: true,
-    // 记住归属提供商，设计器 / 预览面板据此反查 customDesign
-    badge: null
-  })
-  tabProviders[name] = providerId
-  activeTab.value = name
-}
-
-/** 设计器页签 */
-function addDesignTab(row: TemplateInfo): void {
-  const id = String(row.id)
-  const name = `${id}:design`
-  const providerId = providerIdForTemplate(row)
-  const existing = tabs.value.find(t => t.name === name)
-  if (existing) {
-    activeTab.value = name
-    return
-  }
-  tabs.value.push({ name, label: row.name, hint: '设计', icon: 'MagicStick', closable: true })
-  tabProviders[name] = providerId
-  activeTab.value = name
-}
-
-/** 设计器 / 预览页签 -> 提供商 ID（页签名里没有提供商，单独记一份） */
-const tabProviders = reactive<Record<string, string>>({})
-
-/**
- * 反查页签对应的提供商：设计 / 预览页签走 tabProviders，
- * 提供商 / 模板管理页签直接由页签名解析。
- */
-function providerByTab(tabName: string): ProviderInfo | undefined {
-  const pid = tabProviders[tabName] ?? providerIdOf(tabName)
-  return providers.value.find(p => p.id === pid)
-}
-
-/** 设计器「返回」：回到该模板所属提供商的模板管理页签 */
-function switchToProvider(): void {
-  const pid = tabProviders[activeTab.value] ?? ''
-  const item = providers.value.find(p => p.id === pid)
-  if (item) openProviderTemplates(item)
-}
-
-/** 从设计器页签打开预览页签 */
-function openDesignPreview(): void {
-  const tab = tabs.value.find(t => t.name === activeTab.value)
-  if (!tab || !isDesignTab(tab.name)) return
-  addPreviewTab({ id: tplIdOf(tab.name), name: tab.label ?? '', providerId: tabProviders[tab.name] } as TemplateInfo)
-}
-
-/** 设计器保存后刷新模板列表与提供商统计 */
-function onDesignerSaved(): void {
-  const pid = tabProviders[activeTab.value] ?? ''
-  if (pid) tableRefs[`${pid}:templates`]?.reload?.()
-  void loadProviders()
-}
-
-/** 预览模板 */
-function openPreview(row: TemplateInfo | Record<string, any>): void {
-  recordLog(row as TemplateInfo, 'preview', {})
-  addPreviewTab(row as TemplateInfo)
-}
-
-/** 进入设计器（仅绘制来源且提供商支持自定义设计） */
-function openDesigner(row: TemplateInfo | Record<string, any>): void {
-  recordLog(row as TemplateInfo, 'design', {})
-  addDesignTab(row as TemplateInfo)
-}
-
-// ==================== 打印 ====================
-/** 当前准备打印的模板 */
-const printRow = ref<TemplateInfo | null>(null)
-const printDialogVisible = ref(false)
-const printing = ref(false)
-const printers = ref<PrinterConfig[]>([])
-const printParams = reactive<Record<string, any>>({ printer: '', copies: 1 })
-const printerOptions = computed(() => printers.value.map(p => ({ label: p.name, value: p.name })))
-
-/** 加载打印机列表 */
-async function loadPrinters(): Promise<void> {
   try {
-    printers.value = await templateApi.printerList()
+    await ElMessageBox.confirm(`删除模板「${item.name}」？`, '删除模板', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
   } catch {
-    /* 没有打印机就手动选，不影响其他操作 */
-  }
-}
-
-/** 打开打印参数弹窗 */
-async function openPrintDialog(row: TemplateInfo | Record<string, any>): Promise<void> {
-  printRow.value = row as TemplateInfo
-  if (printers.value.length === 0) await loadPrinters()
-  printParams.printer = printers.value.find(p => p.isDefault)?.name ?? ''
-  printParams.copies = 1
-  printDialogVisible.value = true
-}
-
-/** 确认打印：用户点击确定后才请求 */
-async function onPrintConfirm(): Promise<void> {
-  const row = printRow.value
-  if (!row) {
-    ElMessage.warning('未指定模板')
     return
   }
-  if (!printParams.printer) {
-    ElMessage.warning('请选择打印机')
-    return
-  }
-  printing.value = true
   try {
-    await templateApi.print(String(row.id), { printer: printParams.printer, copies: printParams.copies })
-    recordLog(row, 'print', { printer: printParams.printer, copies: printParams.copies })
-    printDialogVisible.value = false
-    ElMessage.success(`已发送到「${printParams.printer}」`)
+    if (item.source === 'message') await messageTemplateApi.remove(item.id)
+    else await templateApi.remove(item.id)
+    ElMessage.success('模板已删除')
+    selected.value = null
+    editing.value = null
+    msgPreview.value = null
+    if (item.source === 'message') await loadMessages()
+    else await loadDocs(true)
+  } catch (err) {
+    ElMessage.error(errorText(err))
+  }
+}
+
+// ==================== 文档模板：弹窗新建 / 编辑 ====================
+const docFormVisible = ref(false)
+const docFormTitle = ref('')
+const docForm = ref<Partial<TemplateInfo>>({})
+const docSaving = ref(false)
+const providers = ref<ProviderInfo[]>([])
+const providerOptions = computed(() => providers.value.map(p => ({ label: p.name, value: p.id })))
+
+async function loadProviders(): Promise<void> {
+  try {
+    providers.value = await templateApi.providerList()
+  } catch {
+    providers.value = []
+  }
+}
+
+function openDocCreate(): void {
+  docFormTitle.value = '新建模板'
+  docForm.value = { language: 'html', type: 'document', status: 'draft', source: 'hiprint' }
+  docFormVisible.value = true
+}
+
+function openDocEdit(row: TemplateInfo): void {
+  docFormTitle.value = '编辑模板'
+  docForm.value = { ...row }
+  docFormVisible.value = true
+}
+
+async function onDocFormConfirm(): Promise<void> {
+  if (!docForm.value.name) {
+    ElMessage.warning('请输入模板名称')
+    return
+  }
+  docSaving.value = true
+  try {
+    const payload = {
+      ...docForm.value,
+      status: (docForm.value.status as TemplateInfo['status']) ?? 'draft',
+      source: docForm.value.source ?? 'hiprint'
+    }
+    if (docForm.value.id) {
+      await templateApi.update(String(docForm.value.id), payload)
+      ElMessage.success('更新成功')
+    } else {
+      await templateApi.add(payload)
+      ElMessage.success('新增成功')
+    }
+    docFormVisible.value = false
+    await loadDocs(true)
   } catch (err) {
     ElMessage.error(errorText(err))
   } finally {
-    printing.value = false
+    docSaving.value = false
   }
 }
 
-/**
- * 调用日志：预览 / 设计 / 打印 / 同步 归集到日志页。
- *
- * <p>同步是提供商级操作，没有模板可挂，这里借提供商自身作为 {@code templateId} / {@code templateName}，
- * 并在参数里带上 providerId 便于过滤。</p>
- */
-function recordLog(
-  row: TemplateInfo,
-  action: LogRecord['action'],
-  parameters: Record<string, any>
-): void {
-  const record: LogRecord = {
-    id: String(Date.now()),
-    templateId: String(row.id),
-    templateName: row.name,
-    action,
-    parameters,
-    time: new Date().toISOString(),
-    ip: '127.0.0.1',
-    operator: row.creator
-  }
-  templateApi.log(record).catch(() => {
-    /* 日志只负责记录，失败不影响主操作 */
-  })
+// ==================== 文档模板：设计器 ====================
+function enterDesign(): void {
+  if (!selected.value || selected.value.source !== 'hiprint') return
+  viewMode.value = 'design'
 }
 
-// ==================== 页面入口 ====================
+function backFromDesign(): void {
+  viewMode.value = 'preview'
+}
+
+function enterDocPreview(): void {
+  viewMode.value = 'preview'
+}
+
+function onDesignerSaved(): void {
+  void loadDocs(true)
+  viewMode.value = 'preview'
+}
+
+// ==================== 页面级导航 / 字典 ====================
 function openPrinterManage(): void {
   router.push({ name: 'TemplatePrinter' })
 }
@@ -1215,64 +848,32 @@ function openLogs(): void {
   router.push({ name: 'TemplateLogs' })
 }
 
-// ==================== 字典 / 展示 ====================
-/** 语言下拉选项 */
+/** 条目图标：短信 / 邮件 / 文档 */
+function itemIcon(item: TplItem): string {
+  if (item.type === 'sms') return 'ChatDotRound'
+  if (item.type === 'email') return 'Message'
+  if (item.type === 'label') return 'PriceTag'
+  return 'Document'
+}
+
 const languageOptions = computed(() =>
   Object.entries(tplLanguageLabels).map(([value, label]) => ({ label, value }))
 )
-/** 类型下拉选项 */
 const typeOptions = computed(() =>
   Object.entries(tplTypeLabels).map(([value, label]) => ({ label, value }))
 )
 
-/** 接入方显示文本 */
-function vendorLabel(vendor: string): string {
-  return tplVendorLabels[vendor] ?? vendor
-}
-
-/** 接入方强调色 */
-function vendorTint(vendor: string): string {
-  if (vendor === 'aliyun') return 'var(--el-color-warning)'
-  if (vendor === 'tencent') return 'var(--el-color-primary)'
-  return 'var(--el-color-success)'
-}
-
-/** AK 脱敏：保留前 6 位与后 4 位 */
-function maskAk(ak: string): string {
-  if (!ak) return '—'
-  if (ak.length <= 10) return ak
-  return `${ak.slice(0, 6)}••••${ak.slice(-4)}`
-}
-
-/** SK 脱敏：只露后 4 位 */
-function maskSk(sk: string): string {
-  if (!sk) return '—'
-  return `••••••••${sk.slice(-4)}`
-}
-
-/** 名称首字：作为提供商轨的色块标记 */
-function initials(name: string): string {
-  return (name || '?').trim().slice(0, 1)
-}
-
-/**
- * 时间格式化：2026-10-31 14:22。
- *
- * @param value 后端时间字段
- */
-function formatTime(value?: string): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
 // ==================== 初始化 ====================
 onMounted(async () => {
-  await loadProviders()
+  // 消息模板先行：深链 /template/message 只等消息模板就绪即选中，
+  // 不被文档模板后端（独立部署，可能较慢/不可达）拖住
+  const msgReady = loadMessages()
+  void Promise.all([msgReady, loadDocs(), loadProviders()])
   if (props.type === 'message') {
-    openMessageTemplates()
+    void msgReady.then(() => {
+      const first = filteredItems.value.find(i => i.source === 'message') ?? msgItems.value[0]
+      if (first) void selectItem(first)
+    })
   }
 })
 </script>
@@ -1280,49 +881,41 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .tpl {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   height: 100%;
   min-height: 0;
   color: var(--text-primary, var(--el-text-color-primary));
 }
 
-/* ==================== 左栏提供商轨 ==================== */
-.rail {
+/* ==================== 顶部操作条 ==================== */
+.tpl__bar {
   display: flex;
-  flex: 0 0 286px;
-  flex-direction: column;
-  width: 286px;
-  min-height: 0;
-  overflow: hidden;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
   background: var(--bg-container);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
 
-.rail__head {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 10px 8px;
-  border-bottom: 1px solid var(--border-subtle, var(--border-default));
-}
-
-.rail__title {
+.bar__title {
   display: flex;
   align-items: baseline;
   gap: 8px;
 
   h1 {
     margin: 0;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 650;
     letter-spacing: 0.01em;
     color: var(--text-primary);
   }
 }
 
-.rail__count {
+.bar__count {
   padding: 0 7px;
   font-size: 11px;
   font-weight: 600;
@@ -1332,19 +925,18 @@ onMounted(async () => {
   border-radius: 999px;
 }
 
-.rail__tools {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+.bar__search {
+  width: 220px;
+  flex: none;
 
   :deep(.el-input) {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
   }
 }
 
-.rail__filters {
+.bar__filters {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   gap: 4px;
 }
@@ -1353,9 +945,9 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 8px;
-  font-size: 11px;
-  line-height: 18px;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 20px;
   color: var(--el-text-color-regular);
   background: none;
   border: 1px solid var(--el-border-color-lighter);
@@ -1379,6 +971,35 @@ onMounted(async () => {
   opacity: 0.65;
 }
 
+.bar__acts {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==================== 主体 ==================== */
+.tpl__body {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* ==================== 左栏：模板列表 ==================== */
+.rail {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  width: 300px;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
 .rail__list {
   flex: 1;
   min-height: 0;
@@ -1388,10 +1009,24 @@ onMounted(async () => {
 }
 
 .rail__state {
-  padding: 26px 0;
+  padding: 28px 12px;
   font-size: 12px;
   text-align: center;
   color: var(--el-text-color-secondary);
+}
+
+.rail__warn {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--el-color-warning);
+}
+
+.rail__loading {
+  padding: 10px 0 12px;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-tertiary);
 }
 
 .rail__foot {
@@ -1412,11 +1047,11 @@ onMounted(async () => {
   gap: 0;
 }
 
-/* ---------- 提供商条目 ---------- */
+/* ---------- 模板条目 ---------- */
 .entry {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 9px;
   padding: 7px 8px;
   border: 1px solid transparent;
@@ -1445,6 +1080,10 @@ onMounted(async () => {
       color: var(--el-color-primary);
     }
   }
+
+  &.is-off {
+    opacity: 0.62;
+  }
 }
 
 .entry__mark {
@@ -1455,23 +1094,37 @@ onMounted(async () => {
   height: 30px;
   font-size: 13px;
   font-weight: 650;
-  color: var(--tpl-tint);
-  background: color-mix(in srgb, var(--tpl-tint) 10%, transparent);
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
   border-radius: 8px;
+
+  &.is-email {
+    color: var(--el-color-success);
+    background: var(--el-color-success-light-9);
+  }
+
+  &.is-sms {
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+  }
+
+  &.is-document {
+    color: var(--el-color-warning);
+    background: var(--el-color-warning-light-9);
+  }
 }
 
 .entry__main {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 1px;
   min-width: 0;
 }
 
 .entry__name-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -1479,321 +1132,32 @@ onMounted(async () => {
   overflow: hidden;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
+  line-height: 18px;
   text-overflow: ellipsis;
-  transition: color 0.15s ease;
-}
-
-.entry__endpoint,
-.entry__ak {
-  overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.entry__endpoint {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-}
-
-.entry__ak {
-  font-size: 10.5px;
-  color: var(--el-text-color-placeholder);
-}
-
-.entry__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 3px;
+  color: var(--text-primary);
 }
 
 .entry__dot {
-  flex: 0 0 auto;
+  flex: none;
   width: 6px;
   height: 6px;
   border-radius: 50%;
 
-  &.is-online {
+  &.is-on {
     background: var(--el-color-success);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 16%, transparent);
   }
 
-  &.is-offline {
-    background: var(--el-color-info);
+  &.is-off {
+    background: var(--el-color-danger);
   }
-}
-
-.entry__side {
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  padding-top: 2px;
-}
-
-.entry__num {
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.entry__unit {
-  font-size: 10px;
-  color: var(--el-text-color-secondary);
-}
-
-.chip {
-  padding: 0 6px;
-  font-size: 10.5px;
-  line-height: 17px;
-  color: var(--el-text-color-regular);
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.chip.is-custom {
-  color: var(--el-color-primary);
-  background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
-  border-color: color-mix(in srgb, var(--el-color-primary) 35%, transparent);
-  font-weight: 600;
-}
-
-/* ==================== 右栏工作台 ==================== */
-.deck {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  background: var(--bg-container);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.deck-empty {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 6px;
-  padding: 24px;
-
-  b {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--el-text-color-regular);
-  }
-
-  span {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.deck-empty__mark {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: 4px;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  border-radius: 12px;
-  opacity: 0.9;
-}
-
-.work {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  background: var(--bg-fill, var(--el-bg-color-page));
-  padding: 16px 18px 22px;
-}
-
-/* 模板管理 / 设计器 / 预览：页签内容自己占满，不再加内边距 */
-.work--fill {
-  padding: 0;
-  gap: 0;
-  overflow: hidden;
-}
-
-/* 设计器 / 预览：白底，与页面其余工作区区分 */
-.work--plain {
-  background: var(--el-bg-color);
-}
-
-.work__head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.work__mark {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--tpl-tint);
-  background: color-mix(in srgb, var(--tpl-tint) 12%, var(--el-bg-color));
-  border-radius: 11px;
-}
-
-.work__title {
-  flex: 1;
-  min-width: 0;
-
-  h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 650;
-    letter-spacing: 0.01em;
-  }
-
-  p {
-    margin: 3px 0 0;
-    overflow: hidden;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-}
-
-.work__acts {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 2px;
-}
-
-.work__chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.work__meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1px;
-  margin: 0;
-  overflow: hidden;
-  background: var(--el-border-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
-
-  > div {
-    padding: 10px 12px;
-    background: var(--el-bg-color);
-  }
-
-  dt {
-    font-size: 11px;
-    color: var(--el-text-color-secondary);
-  }
-
-  dd {
-    margin: 3px 0 0;
-    font-size: 13px;
-    font-weight: 550;
-    word-break: break-all;
-  }
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.work__remark {
-  padding: 12px 14px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
-
-  h3 {
-    margin: 0 0 6px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--el-text-color-secondary);
-  }
-
-  p {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--el-text-color-regular);
-    white-space: pre-wrap;
-  }
-}
-
-.work__note {
-  margin: auto 0 0;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
-/* ---------- 模板管理工具栏（ReTable 的 #toolbar 插槽） ---------- */
-.tpl-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.tpl-bar__title {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding-left: 4px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.tpl-bar__hint {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--el-text-color-secondary);
-}
-
-.tpl-bar__spacer {
-  flex: 1;
-}
-
-.cell-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.cell-name__dot {
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
 
   &.is-online {
     background: var(--el-color-success);
   }
 
   &.is-offline {
-    background: var(--el-color-info);
+    background: var(--el-color-danger);
   }
 
   &.is-draft {
@@ -1801,32 +1165,86 @@ onMounted(async () => {
   }
 }
 
-.row-acts {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+.entry__badge {
+  flex: none;
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 15px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 999px;
 }
 
-.page-empty {
+.entry__code {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-tertiary);
+}
+
+.entry__side {
   display: flex;
+  flex: none;
   align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--text-secondary);
+  background: var(--bg-fill);
+  border: 1px solid var(--border-subtle, var(--border-default));
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &.is-default {
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary-light-7);
+  }
+}
+
+/* ==================== 右栏：详情卡面 ==================== */
+.detail {
+  display: flex;
+  flex: 1;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.detail__empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 24px;
+  padding: 40px 20px;
+  color: var(--text-tertiary);
 
   b {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--el-text-color-regular);
+    font-size: 14px;
+    color: var(--text-secondary);
   }
 
   span {
     font-size: 12px;
-    color: var(--el-text-color-secondary);
   }
 }
 
-.page-empty__icon {
+.detail__empty-mark {
   display: grid;
   place-items: center;
   width: 44px;
@@ -1835,53 +1253,261 @@ onMounted(async () => {
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
   border-radius: 12px;
-  opacity: 0.9;
 }
 
-.page-empty__title {
+.detail__fill {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- 预览 ---------- */
+.detail__preview,
+.detail__edit {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.detail__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle, var(--border-default));
+}
+
+.detail__title {
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+  }
+
+  p {
+    margin: 2px 0 0;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-tertiary);
+  }
+}
+
+.detail__tags {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.detail__head-acts {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.detail__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+}
+
+.detail__foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 6px 8px;
+  border-top: 1px solid var(--border-subtle, var(--border-default));
+}
+
+.detail__foot-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- 消息模板预览 ---------- */
+.msg-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--bg-fill);
+  border: 1px solid var(--border-subtle, var(--border-default));
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+}
+
+.msg-preview__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-container);
+  border-bottom: 1px solid var(--border-subtle, var(--border-default));
+
+  span {
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+}
+
+.msg-preview__body {
+  flex: 1;
+  padding: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.msg-preview__subject {
+  margin-bottom: 10px;
+  padding: 8px 10px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--el-text-color-regular);
+  color: var(--text-primary);
+  background: var(--bg-container);
+  border-left: 3px solid var(--el-color-primary);
+  border-radius: 4px;
 }
 
-.page-empty__desc {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+.msg-preview__content {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+  background: var(--bg-container);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, var(--border-default));
 }
 
-.form-hint {
-  margin-left: 8px;
+.msg-preview__missing {
+  margin-top: 10px;
+  padding: 6px 10px;
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-9);
+  border-radius: 6px;
+}
+
+/* ---------- 消息模板编辑表单 ---------- */
+.edit-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px;
+}
+
+.edit-form__row {
+  display: flex;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+
+  &.field--sm {
+    flex: 0 0 96px;
+  }
+
+  input,
+  textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 6px 9px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-primary);
+    background: var(--bg-container);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s ease;
+
+    &:focus {
+      border-color: var(--el-color-primary);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.edit-form__content {
+  min-height: 160px;
+}
+
+.edit-form__vars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-form__vars-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.var {
+  padding: 1px 9px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--el-color-primary-light-8);
+  }
+}
+
+.edit-form__toggle {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
 }
 
 .mono {
-  font-family: var(--el-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 12px;
-}
-
-/* 模板类型：消息模板是模板中心的一种，不占提供商列表 */
-.rail__pinned {
-  flex: 0 0 auto;
-  padding: 8px 10px 4px;
-}
-
-.entry--pinned {
-  width: 100%;
-}
-
-.entry__mark.is-message {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary, #1877ff);
-  background: color-mix(in srgb, var(--primary, #1877ff) 12%, transparent);
-}
-
-@media (max-width: 900px) {
-  .rail {
-    flex-basis: 240px;
-    width: 240px;
-  }
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 }
 </style>
