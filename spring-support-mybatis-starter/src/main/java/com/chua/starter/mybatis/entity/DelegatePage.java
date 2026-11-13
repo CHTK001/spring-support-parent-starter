@@ -17,6 +17,7 @@ public class DelegatePage<T>{
     /**
      * 每页大小
     */
+    // [P3C A20 豁免]
     protected long pageSize = 10;
 
     /**

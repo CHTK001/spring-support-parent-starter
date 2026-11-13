@@ -146,7 +146,7 @@ public class CryptoInterceptor implements Interceptor {
                     continue;
                 }
 
-                AesCipher aesCipher = new AesCipher();
+                AesCipher aesCipher = AesCipher.create("jdk");
                 String processedValue;
                 if (encrypt) {
                     processedValue = java.util.Base64.getEncoder().encodeToString(

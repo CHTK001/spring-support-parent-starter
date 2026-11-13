@@ -166,7 +166,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         // 构建 AES
         password = System.getProperty(ENCRYPTOR_PROPERTY_NAME);
         Preconditions.checkArgument(!password.isEmpty(), "配置项(%s)不能为空", ENCRYPTOR_PROPERTY_NAME);
-        aesCodec = new AesCipher();
+        aesCodec = AesCipher.create("jdk");
         return aesCodec;
     }
 

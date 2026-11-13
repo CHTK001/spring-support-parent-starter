@@ -26,6 +26,7 @@ public class MybatisSlowSqlProperties {
     /**
      * 慢 SQL 阈值（毫秒）。默认 500ms。
      */
+    // [P3C A20 豁免]
     private long thresholdMs = 500;
 
     /**
@@ -46,6 +47,7 @@ public class MybatisSlowSqlProperties {
     /**
      * SQL 最大长度。超过后会截断，避免事件体过大。
      */
+    // [P3C A20 豁免]
     private int maxSqlLength = 2000;
 
     /**

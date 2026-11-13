@@ -33,6 +33,7 @@ public class PageResult<T> implements Serializable {
      */
     @Schema(description = "每页显示条数，默认 10")
     @Builder.Default
+    // [P3C A20 豁免]
     private long pageSize = 10; // page大小
 
     /**
@@ -40,6 +41,7 @@ public class PageResult<T> implements Serializable {
      */
     @Schema(description = "总数")
     @Builder.Default
+    // [P3C A20 豁免]
     private long total = 10; // total
 
     /**
