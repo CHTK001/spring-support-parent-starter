@@ -9,6 +9,7 @@ import com.chua.starter.server.support.model.vo.HostFileDeleteVO;
 import com.chua.starter.server.support.model.vo.HostFileDigestVO;
 import com.chua.starter.server.support.model.vo.HostFileEntryVO;
 import com.chua.starter.server.support.model.vo.HostFilePageVO;
+import com.chua.starter.server.support.service.HostFileDigestService;
 import com.chua.starter.server.support.service.HostFileService;
 import com.chua.starter.server.support.util.HostFilePaths;
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,12 +62,19 @@ public class ReleaseHostFileController {
     private final HostFileService hostFileService;
 
     /**
+     * MD5 指纹台账（上传完成后复核并入库）
+     */
+    private final HostFileDigestService digestService;
+
+    /**
      * 构造。
      *
      * @param hostFileService 主机文件服务
+     * @param digestService   MD5 指纹台账
      */
-    public ReleaseHostFileController(HostFileService hostFileService) {
+    public ReleaseHostFileController(HostFileService hostFileService, HostFileDigestService digestService) {
         this.hostFileService = hostFileService;
+        this.digestService = digestService;
     }
 
     /**
@@ -205,6 +213,24 @@ public class ReleaseHostFileController {
             @Parameter(description = "存储提供者名") @RequestParam(name = "bucket", required = false) String bucket,
             @Parameter(description = "文件 key") @RequestParam(name = "key") String key) {
         return hostFileService.md5(bucket, key);
+    }
+
+    /**
+     * 复核并登记 MD5：上传完成后由前端带声明的指纹调用，服务端按文件真实字节重算，
+     * 一致才写入台账；之后的列表直接显示台账值，不再重算。
+     *
+     * @param bucket 存储提供者名
+     * @param key    文件 key
+     * @param md5    前端声明的 MD5（小写 hex）
+     * @return 复核后的实际 MD5
+     */
+    @Operation(summary = "复核并登记主机文件 MD5（上传后用）")
+    @PostMapping("/md5/confirm")
+    public ReturnResult<String> confirmMd5(
+            @Parameter(description = "存储提供者名") @RequestParam(name = "bucket", required = false) String bucket,
+            @Parameter(description = "文件 key") @RequestParam(name = "key") String key,
+            @Parameter(description = "声明的 MD5（小写 hex）") @RequestParam(name = "md5") String md5) {
+        return digestService.confirm(bucket, key, md5);
     }
 
     /**

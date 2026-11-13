@@ -8,7 +8,7 @@ import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.server.filter.FilterChain;
-import com.chua.starter.filesystem.support.server.filter.LoggingFilter;
+import com.chua.starter.filesystem.support.server.filter.LoggingServerFilter;
 import com.chua.starter.filesystem.support.server.filter.ServerFilter;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import com.sun.net.httpserver.HttpExchange;
@@ -256,8 +256,8 @@ public class FileServerManager implements AutoCloseable {
                 filters.add(filter);
             }
         }
-        if (filters.stream().noneMatch(f -> f instanceof LoggingFilter)) {
-            filters.add(new LoggingFilter());
+        if (filters.stream().noneMatch(f -> f instanceof LoggingServerFilter)) {
+            filters.add(new LoggingServerFilter());
         }
         return filters;
     }

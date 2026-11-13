@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * 主机文件服务实现。
@@ -269,6 +270,7 @@ public class HostFileServiceImpl implements HostFileService {
                 return ReturnResult.error("文件不存在: " + normalized);
             }
             deleteLocal(target);
+            digestRepository.delete(resolveDigestBucket(bucket), normalized);
             return ReturnResult.ok(Boolean.TRUE);
         } catch (IOException e) {
             return ReturnResult.error("删除失败: " + messageOf(e));
@@ -408,9 +410,9 @@ public class HostFileServiceImpl implements HostFileService {
         try {
             Path root = localRoot(storage);
             if (root != null) {
-                return moveLocal(storage, root, key, targetKey);
+                return moveLocal(bucket, storage, root, key, targetKey);
             }
-            return moveObject(storage, key, targetKey);
+            return moveObject(bucket, storage, key, targetKey);
         } catch (IOException e) {
             return ReturnResult.error("移动失败: " + messageOf(e));
         } catch (RuntimeException e) {
@@ -421,6 +423,7 @@ public class HostFileServiceImpl implements HostFileService {
     /**
      * 本地存储上的移动：目录与文件都走 NIO，目录移动只改父目录项，不做递归拷贝。
      *
+     * @param bucket    存储提供者名（台账分区）
      * @param storage   存储
      * @param root      存储根
      * @param key       源 key
@@ -428,7 +431,7 @@ public class HostFileServiceImpl implements HostFileService {
      * @return 移动后的条目
      * @throws IOException 移动失败
      */
-    private ReturnResult<HostFileEntryVO> moveLocal(FileStorage storage, Path root, String key,
+    private ReturnResult<HostFileEntryVO> moveLocal(String bucket, FileStorage storage, Path root, String key,
                                                     String targetKey) throws IOException {
         Path source = resolveLocal(root, key);
         if (source == null || !Files.exists(source)) {
@@ -447,6 +450,7 @@ public class HostFileServiceImpl implements HostFileService {
             Files.createDirectories(parent);
         }
         Files.move(source, target);
+        digestRepository.relocate(resolveDigestBucket(bucket), key, targetKey);
         return ReturnResult.ok(entryOf(storage, targetKey, HostFilePaths.nameOf(targetKey), directory, 0L,
                 System.currentTimeMillis()));
     }
@@ -454,12 +458,14 @@ public class HostFileServiceImpl implements HostFileService {
     /**
      * 对象存储上的移动：只支持文件（流式复制后删除源），目录明确拒绝。
      *
+     * @param bucket    存储提供者名（台账分区）
      * @param storage   存储
      * @param key       源 key
      * @param targetKey 目标 key
      * @return 移动后的条目
      */
-    private ReturnResult<HostFileEntryVO> moveObject(FileStorage storage, String key, String targetKey) {
+    private ReturnResult<HostFileEntryVO> moveObject(String bucket, FileStorage storage, String key,
+                                                     String targetKey) {
         GetObjectResult source = storage.getObject(key);
         if (source == null || ObjectResult.ResultCode.FAILURE == source.getResultCode()
                 || source.getInputStream() == null) {
@@ -480,6 +486,7 @@ public class HostFileServiceImpl implements HostFileService {
             return ReturnResult.error("移动失败: " + messageOf(e));
         }
         storage.deleteObject(key);
+        digestRepository.relocate(resolveDigestBucket(bucket), key, targetKey);
         return ReturnResult.ok(entryOf(storage, targetKey, name, false, 0L, System.currentTimeMillis()));
     }
 
@@ -567,7 +574,8 @@ public class HostFileServiceImpl implements HostFileService {
             hostPath = file == null ? null : file.toString();
         }
         return new HostFileEntryVO(name, key, HostFilePaths.parentOf(key), directory ? 0L : size,
-                directory, lastModified, HostFilePaths.kindOf(name, directory), HostFilePaths.extOf(name), hostPath);
+                directory, lastModified, HostFilePaths.kindOf(name, directory), HostFilePaths.extOf(name), hostPath,
+                null);
     }
 
     /**

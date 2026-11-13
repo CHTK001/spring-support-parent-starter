@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
  * @since 4.0.0
  */
 @Slf4j
-public class LoggingFilter implements ServerFilter {
+public class LoggingServerFilter implements ServerFilter {
 
     /**
      * 执行过滤器逻辑：记录请求前后信息并继续链式处理。
