@@ -237,7 +237,6 @@ public final class ActuatorProbe {
         Assertions.assertEquals("", invoke("actuatorBody",
                 new Class<?>[]{String.class, boolean.class}, new Object[]{"__ACT_CODE__0", false}));
     }
-}
 
     /**
      * 找一个可用的 PowerShell 宿主。

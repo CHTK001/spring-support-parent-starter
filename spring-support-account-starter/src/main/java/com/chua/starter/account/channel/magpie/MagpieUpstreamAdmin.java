@@ -312,9 +312,36 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
         body.remove("label");
         Object plugin = body.remove("plugin");
         boolean viaPlugin = Boolean.TRUE.equals(plugin) || body.get("provider") != null;
-        return viaPlugin
-                ? MagpieAdminClient.startPluginSignin(credentials, body)
-                : MagpieAdminClient.startSignin(credentials, body);
+        try {
+            return viaPlugin
+                    ? MagpieAdminClient.startPluginSignin(credentials, body)
+                    : MagpieAdminClient.startSignin(credentials, body);
+        } catch (ChannelException failure) {
+            throw signinFailure(body, failure);
+        }
+    }
+
+    /**
+     * 把网关「没有登录方式」的回绝翻成人话。
+     *
+     * <p>纯 API Key 上游（自带 {@code chat} 基址 + {@code keyList}）在 magpie 里没有登录
+     * 实现，{@code POST /api/signin} 会回 400 {@code magpie can't sign in to <id> accounts}。
+     * 这类 4xx 是「这个请求本来就不成立」，不是网关坏了：原样透出会变成
+     * {@code 502 渠道上游返回非 2xx}，用户看不懂也不知道下一步做什么。</p>
+     *
+     * @param body    请求体（取 {@code provider} / {@code agent} 作为上游标识）
+     * @param failure 网关原始异常
+     * @return 面向用户的异常
+     */
+    private static ChannelException signinFailure(Map<String, Object> body, ChannelException failure) {
+        String message = failure.getMessage() == null ? "" : failure.getMessage();
+        if (!message.contains("can't sign in to")) {
+            return failure;
+        }
+        Object target = body.get("provider") != null ? body.get("provider") : body.get("agent");
+        String id = target == null ? "该上游" : "「" + target + "」";
+        return new ChannelException(ChannelException.CODE_INVALID_PARAM,
+                "上游" + id + "用 API Key 接入，网关里没有它的登录方式：换 Key 请直接编辑上游凭据，不需要登录");
     }
 
     /**

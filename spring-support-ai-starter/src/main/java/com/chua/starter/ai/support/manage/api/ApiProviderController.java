@@ -1652,10 +1652,11 @@ public class ApiProviderController {
     /**
      * 检测 API 地址实际支持什么协议。
      *
-     * <p>用户只填一个 baseUrl 时不知道它是 OpenAI 兼容还是 Gemini / Anthropic 形态，
-     * 这里对 4 种协议各发一次只读探测（GET 模型列表）。判定口径：只有 404 才算
-     * 「该地址不支持此协议形态」，其余状态（2xx/401/403/405/429/5xx）都视为端点存在、
-     * 协议形态被支持，按状态码给出「可用 / 端点不存在 / 不可达」的结果行，前端按行展示。</p>
+     * <p>用户只填一个 baseUrl 时不知道它支持 OpenAI 兼容、Gemini 还是 Claude(CC) 形态。
+     * 这里对 4 种协议各探测一次，每种协议都按「api 原生路径 + 该协议自己的前后缀路径」
+     * 排一串候选地址一起试（见 {@link #modelListCandidates}）。判定口径：只有 404 才算
+     * 「该地址不支持此协议形态」，其余状态（2xx/400/401/403/405/429/5xx）都视为端点存在、
+     * 协议形态被支持，按状态码给出「可用 / 不支持 / 连不上」的结果行，前端按行展示。</p>
      *
      * @param body 含 apiUrl / apiKey / proxy / auth_*（协议探测是只读的，不动库）
      * @return results 数组 + foot 汇总文案
@@ -1783,46 +1784,70 @@ public class ApiProviderController {
     }
 
     /**
-     * 同一份地址在服务商那儿版本前缀不统一，这里给出该协议的候选模型列表路径。
+     * 给出该协议的候选探测地址：api 原生路径 + 各协议后缀路径，逐个试。
      *
-     * <p>典型例子：{@code https://api.mosi.cn} 的 OpenAI 兼容端点在
-     * {@code /v1/models}，若只试 {@code /models} 就会 404；而 Anthropic 探测恰好拼的是
-     * {@code /v1/models}，于是只显示「Claude 支持」，把 OpenAI 漏掉。所以两个前缀都要试。</p>
+     * <p>同一个 api 地址在不同服务商那儿挂法不一样，只看一种拼法必然误判。
+     * 以 {@code https://api.mosi.cn} 为例：OpenAI 端点在 {@code /v1/chat/completions}
+     * 与 {@code /v1/models}（403 也算存在），Claude/CC 端点在 {@code /v1/messages}，
+     * 而 {@code /models}、{@code /v1beta/models}、{@code /cc/*}、{@code /gemini/*} 都是 404。
+     * 旧实现 OpenAI 只拼 {@code /models} → 404 → 界面上只剩「Claude 支持」。</p>
      *
-     * @param protocol 协议名
+     * <p>所以每个协议都排一整串候选（api 原生 /v1 路径 + 该协议自己的前缀路径），
+     * 探测循环里只有 404 才换下一个，其余状态都算端点存在。</p>
+     *
+     * @param protocol 协议名（openai / openai-response / anthropic / gemini）
      * @param baseUrl  用户填的地址
-     * @return 依次尝试的完整地址
+     * @return 依次尝试的完整地址（已去重保序）
      */
     private static List<String> modelListCandidates(String protocol, String baseUrl) {
         String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        List<String> suffixes = new ArrayList<>(3);
+        List<String> out = new ArrayList<>(8);
         if ("gemini".equals(protocol)) {
-            // 原生 Gemini 只有 v1beta 这条线；v1beta/openai 是 Google 官方的 OpenAI 兼容层
+            // 原生 Gemini 只有 v1beta 这条线；v1beta/openai 是 Google 官方 OpenAI 兼容层。
+            // 不能用 /v1/models 兜底：那是 OpenAI 端点，会把 Gemini 行误判成支持。
             if (base.endsWith("/v1beta")) {
-                suffixes.add("/models");
-                suffixes.add("/openai/models");
+                out.add(base + "/models");
+                out.add(base + "/openai/models");
             } else {
-                suffixes.add("/v1beta/models");
-                suffixes.add("/v1beta/openai/models");
+                out.add(base + "/v1beta/models");
+                out.add(base + "/v1beta/openai/models");
             }
+            out.add(base + "/gemini/v1beta/models");
+            out.add(base + "/gemini/models");
         } else if ("anthropic".equals(protocol)) {
+            // Claude / CC：原生 /v1/messages；模型列表在 /v1/models
             if (base.endsWith("/v1")) {
-                suffixes.add("/models");
+                out.add(base + "/messages");
+                out.add(base + "/models");
             } else {
-                suffixes.add("/v1/models");
-                suffixes.add("/models");
+                out.add(base + "/v1/models");
+                out.add(base + "/v1/messages");
+                out.add(base + "/models");
             }
-        } else if (base.endsWith("/v1") || base.endsWith("/v2") || base.endsWith("/v3")) {
-            suffixes.add("/models");
+            out.add(base + "/cc/v1/messages");
+            out.add(base + "/cc/models");
+            out.add(base + "/cc/v1/models");
         } else {
-            suffixes.add("/v1/models");
-            suffixes.add("/models");
+            // OpenAI / Responses：原生 /v1/models 与 /v1/chat/completions，再试 openai 前缀形态
+            if (base.endsWith("/v1") || base.endsWith("/v2") || base.endsWith("/v3")) {
+                out.add(base + "/models");
+                out.add(base + "/chat/completions");
+            } else {
+                out.add(base + "/v1/models");
+                out.add(base + "/models");
+                out.add(base + "/v1/chat/completions");
+            }
+            out.add(base + "/openai/v1/models");
+            out.add(base + "/openai/models");
+            out.add(base + "/openai/v1/chat/completions");
         }
-        List<String> out = new ArrayList<>(suffixes.size());
-        for (String suffix : suffixes) {
-            out.add(base + suffix);
+        List<String> unique = new ArrayList<>(out.size());
+        for (String u : out) {
+            if (!unique.contains(u)) {
+                unique.add(u);
+            }
         }
-        return out;
+        return unique;
     }
 
     /**
@@ -1840,6 +1865,10 @@ public class ApiProviderController {
         } else if (st == 401) {
             r.put("ok", true);
             r.put("message", "端点存在，API Key 无效或已过期（401）");
+        } else if (st == 400) {
+            // 探测用 GET 打对话/消息端点时，不少网关先回 400「参数不对」——端点本身是通的
+            r.put("ok", true);
+            r.put("message", "端点存在，探测请求缺少必要参数（400）");
         } else if (st == 403) {
             r.put("ok", true);
             r.put("message", "端点存在，但无权限访问（403）");

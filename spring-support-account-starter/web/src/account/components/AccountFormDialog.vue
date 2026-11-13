@@ -2,7 +2,7 @@
   <ReDialog
     v-model="visible"
     :title="isEdit ? '编辑账号' : '新增账号'"
-    width="720"
+    width="920"
     append-to-body
     destroy-on-close
   >
@@ -54,10 +54,7 @@
         </el-col>
         <el-col v-if="form.kind !== 'EMAIL'" :span="24">
           <el-form-item label="密钥来源">
-            <el-radio-group v-model="form.keyMode">
-              <el-radio value="inline">直接填写</el-radio>
-              <el-radio value="ref">引用密钥管理</el-radio>
-            </el-radio-group>
+            <el-segmented v-model="form.keyMode" :options="KEY_SOURCE_OPTIONS" size="small" />
           </el-form-item>
         </el-col>
         <el-col v-if="useKeyRef" :span="24">
@@ -92,66 +89,98 @@
 
       <div class="form-section">类型专属配置</div>
       <el-row :gutter="16">
-        <template v-if="form.kind === 'EMAIL'">
-          <el-col :span="8">
-            <el-form-item label="发信端口">
-              <el-input-number v-model="form.port" :min="1" :max="65535" controls-position="right" class="w-full" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="SSL / TLS">
-              <el-switch v-model="form.ssl" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="默认发件人">
-              <el-input v-model="form.from" placeholder="noreply@example.com" maxlength="255" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="收信主机">
-              <el-input v-model="form.imapHost" placeholder="如 imap.qq.com" maxlength="255" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="收信端口">
-              <el-input-number
-                v-model="form.imapPort"
-                :min="1"
-                :max="65535"
-                controls-position="right"
-                class="w-full"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="24">
-            <div class="field-hint hint-block">
-              收信（IMAP）与发信（SMTP）不同主机时才需填；留空按服务地址推导，端口留空按 SSL 开 993、关 143。
+        <el-col v-if="form.kind === 'EMAIL' || form.kind === 'SMS'" :span="24">
+          <el-form-item label="账号来源">
+            <el-segmented v-model="form.sourceMode" :options="SOURCE_OPTIONS" size="small" />
+            <div class="field-hint">
+              {{
+                form.sourceMode === 'temp'
+                  ? form.kind === 'EMAIL'
+                    ? '领取一个临时邮箱（mail.tm）：地址、密码与租期由服务端生成，可随时销毁。'
+                    : '临时短信接码服务尚未接入（后端无领取接口）；请先在「渠道管理」配置短信接码渠道，或选择「自定义」。'
+                  : '手动填写自己的邮箱 / 短信服务商账号。'
+              }}
             </div>
+          </el-form-item>
+        </el-col>
+        <template v-if="form.kind === 'EMAIL'">
+          <template v-if="form.sourceMode === 'custom'">
+            <el-col :span="8">
+              <el-form-item label="发信端口">
+                <el-input-number v-model="form.port" :min="1" :max="65535" controls-position="right" class="w-full" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="SSL / TLS">
+                <el-switch v-model="form.ssl" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="默认发件人">
+                <el-input v-model="form.from" placeholder="noreply@example.com" maxlength="255" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="收信主机">
+                <el-input v-model="form.imapHost" placeholder="如 imap.qq.com" maxlength="255" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="收信端口">
+                <el-input-number
+                  v-model="form.imapPort"
+                  :min="1"
+                  :max="65535"
+                  controls-position="right"
+                  class="w-full"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="24">
+              <div class="field-hint hint-block">
+                收信（IMAP）与发信（SMTP）不同主机时才需填；留空按服务地址推导，端口留空按 SSL 开 993、关 143。
+              </div>
+            </el-col>
+          </template>
+          <el-col v-else :span="24">
+            <el-form-item label="临时邮箱">
+              <ReButton v-if="!isEdit" type="primary" :loading="tempBusy" @click="claimTemp">
+                领取临时邮箱
+              </ReButton>
+              <span v-else class="field-hint">该账号是临时邮箱（mail.tm），地址不可修改；需要新地址请重新领取。</span>
+              <div class="field-hint">地址、密码与租期由服务端生成；领取后自动创建账号并关闭表单。</div>
+            </el-form-item>
           </el-col>
         </template>
         <template v-else-if="form.kind === 'SMS'">
-          <el-col :span="12">
-            <el-form-item label="短信签名">
-              <el-input v-model="form.signName" placeholder="如 某某科技" maxlength="128" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="应用 ID">
-              <el-input v-model="form.appId" placeholder="腾讯云 SmsSdkAppid（阿里/百度可留空）" maxlength="64" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="模板编码">
-              <MessageTemplateSelect
-                v-model="form.templateCode"
-                kind="SMS"
-                allow-create
-                placeholder="选择模板，或直接输入运营商模板码"
-              />
-              <div class="field-hint">
-                可从「模板管理 → 消息模板」选择；运营商下发的模板码（如 SMS_123456789）可直接输入。
-              </div>
+          <template v-if="form.sourceMode === 'custom'">
+            <el-col :span="12">
+              <el-form-item label="短信签名">
+                <el-input v-model="form.signName" placeholder="如 某某科技" maxlength="128" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="应用 ID">
+                <el-input v-model="form.appId" placeholder="腾讯云 SmsSdkAppid（阿里/百度可留空）" maxlength="64" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="模板编码">
+                <MessageTemplateSelect
+                  v-model="form.templateCode"
+                  kind="SMS"
+                  allow-create
+                  placeholder="选择模板，或直接输入运营商模板码"
+                />
+                <div class="field-hint">
+                  可从「模板管理 → 消息模板」选择；运营商下发的模板码（如 SMS_123456789）可直接输入。
+                </div>
+              </el-form-item>
+            </el-col>
+          </template>
+          <el-col v-else :span="24">
+            <el-form-item label="临时短信">
+              <span class="field-hint">临时短信接码服务尚未接入：请在「渠道管理」配置短信接码渠道后领取号码。</span>
             </el-form-item>
           </el-col>
         </template>
@@ -206,9 +235,12 @@ import { computed, reactive, ref, watch } from 'vue';
 import { message } from '@repo/core';
 import type { FormInstance, FormRules } from 'element-plus';
 import ReDialog from '@repo/ui/re-dialog';
+import ReButton from '@repo/ui/re-button';
 import MessageTemplateSelect from '../../template/components/MessageTemplateSelect.vue';
 import {
+  claimTempMailbox,
   createAccount,
+  isTempMail,
   listAccountSecrets,
   updateAccount,
   type AccountKind,
@@ -250,6 +282,18 @@ const KIND_OPTIONS: Array<{ value: AccountKind; label: string }> = [
   { value: 'API_KEY', label: 'API 密钥' },
   { value: 'EMAIL', label: '邮箱账号' },
   { value: 'SMS', label: '短信账号' },
+];
+
+/** 密钥来源分段：直接填写 / 引用密钥管理 */
+const KEY_SOURCE_OPTIONS = [
+  { label: '直接填写', value: 'inline' },
+  { label: '引用密钥管理', value: 'ref' },
+];
+
+/** 账号来源分段：临时（系统领取）/ 自定义（手动填写） */
+const SOURCE_OPTIONS = [
+  { label: '自定义', value: 'custom' },
+  { label: '临时', value: 'temp' },
 ];
 
 /** 厂商字段标签 */
@@ -319,6 +363,8 @@ interface AccountForm {
   keyMode: 'inline' | 'ref';
   /** 引用的密钥标识 */
   secretId: string;
+  /** 账号来源：custom 自定义（手动填写）/ temp 临时（系统领取） */
+  sourceMode: 'custom' | 'temp';
 }
 
 /** 空表单 */
@@ -345,6 +391,7 @@ function emptyForm(): AccountForm {
     webUrl: '',
     keyMode: 'inline',
     secretId: '',
+    sourceMode: 'custom',
   };
 }
 
@@ -470,6 +517,7 @@ function fillForm(): void {
   form.webUrl = readString(config, 'webUrl');
   form.secretId = readString(config, 'secretId');
   form.keyMode = form.secretId ? 'ref' : 'inline';
+  form.sourceMode = isTempMail(source) ? 'temp' : 'custom';
   const port = Number(config.port);
   form.port = Number.isFinite(port) && port > 0 ? port : 465;
   form.ssl = config.ssl == null ? true : Boolean(config.ssl);
@@ -500,6 +548,7 @@ function copyName(name: string): string {
 
 /** 切换种类：把不适用的专属字段清掉，避免串到另一种账号上 */
 function onKindChange(): void {
+  form.sourceMode = 'custom';
   if (form.kind !== 'EMAIL') {
     form.from = '';
   }
@@ -575,6 +624,30 @@ function buildPayload(): SysAccount {
     payload.secret = secret;
   }
   return payload;
+}
+
+/** 临时邮箱领取中 */
+const tempBusy = ref(false);
+
+/**
+ * 领取临时邮箱（真实接口）。
+ *
+ * <p>临时邮箱由服务端在 mail.tm 上创建（地址 / 密码 / 租期都由服务端生成），
+ * 领取即完成入库，因此不再走表单提交：拿到账号后直接通知宿主刷新并关闭弹窗。</p>
+ */
+async function claimTemp(): Promise<void> {
+  if (tempBusy.value) return;
+  tempBusy.value = true;
+  try {
+    const saved = await claimTempMailbox();
+    message.success(`已领取临时邮箱：${saved.username || ''}`);
+    emit('saved', saved);
+    visible.value = false;
+  } catch (e: any) {
+    message.error(e?.message || '领取临时邮箱失败');
+  } finally {
+    tempBusy.value = false;
+  }
 }
 
 /** 提交保存 */

@@ -4426,7 +4426,7 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @return 原文；空值或解码失败返回空串（按「端点不可用」处理）
      */
     private static String decodeBase64(String raw) {
-        if (isBlank(raw)) {
+        if (raw == null || raw.isBlank()) {
             return "";
         }
         try {
