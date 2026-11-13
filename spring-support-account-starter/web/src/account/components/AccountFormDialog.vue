@@ -136,6 +136,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="应用 ID">
+              <el-input v-model="form.appId" placeholder="腾讯云 SmsSdkAppid（阿里/百度可留空）" maxlength="64" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item label="模板编码">
               <MessageTemplateSelect
                 v-model="form.templateCode"
@@ -307,6 +312,7 @@ interface AccountForm {
   region: string;
   signName: string;
   templateCode: string;
+  appId: string;
   webUrl: string;
   /** 密钥来源：inline 直接填写 / ref 引用密钥库（仅短信） */
   keyMode: 'inline' | 'ref';
@@ -334,6 +340,7 @@ function emptyForm(): AccountForm {
     region: '',
     signName: '',
     templateCode: '',
+    appId: '',
     webUrl: '',
     keyMode: 'inline',
     secretId: '',
@@ -429,6 +436,7 @@ function fillForm(): void {
   form.region = readString(config, 'region');
   form.signName = readString(config, 'signName');
   form.templateCode = readString(config, 'templateCode');
+  form.appId = readString(config, 'appId');
   form.webUrl = readString(config, 'webUrl');
   form.secretId = readString(config, 'secretId');
   form.keyMode = form.secretId ? 'ref' : 'inline';
@@ -468,6 +476,7 @@ function onKindChange(): void {
   if (form.kind !== 'SMS') {
     form.signName = '';
     form.templateCode = '';
+    form.appId = '';
     form.keyMode = 'inline';
     form.secretId = '';
   }
@@ -515,6 +524,7 @@ function buildPayload(): SysAccount {
   setOrDelete('region', form.kind === 'API_KEY' ? form.region.trim() : '');
   setOrDelete('signName', form.kind === 'SMS' ? form.signName.trim() : '');
   setOrDelete('templateCode', form.kind === 'SMS' ? form.templateCode.trim() : '');
+  setOrDelete('appId', form.kind === 'SMS' ? form.appId.trim() : '');
   setOrDelete('secretId', form.kind === 'SMS' && form.keyMode === 'ref' ? form.secretId : '');
   setOrDelete('webUrl', form.webUrl.trim());
 

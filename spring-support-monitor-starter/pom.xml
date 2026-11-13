@@ -239,7 +239,7 @@
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-hunyuan-starter</artifactId>
+            <artifactId>utils-support-tencentcloud-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
         <dependency>
