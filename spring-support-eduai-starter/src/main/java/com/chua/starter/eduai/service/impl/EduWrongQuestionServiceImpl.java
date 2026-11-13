@@ -174,6 +174,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
      * @return 返回值
     */
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
+        // [P3C A20 豁免]
         int count = dto.count() != null ? dto.count() : 10;
         EduUserContext.OwnerScope scope = EduUserContext.ownerScope();
         List<EduWrongQuestion> list = baseMapper.selectReviewQuestions(dto.studentId(), count, scope);

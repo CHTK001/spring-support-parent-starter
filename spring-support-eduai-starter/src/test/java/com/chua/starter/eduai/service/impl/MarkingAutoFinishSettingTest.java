@@ -2,7 +2,6 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
-import com.chua.starter.ai.support.paper.pipeline.config.PaperPipelineProperties;
 import com.chua.starter.ai.support.paper.pipeline.setting.MarkingSettingService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +52,7 @@ class MarkingAutoFinishSettingTest {
     @Test
     @DisplayName("自动结案：未配置时默认关闭")
     void autoFinish_defaultOff() {
-        MarkingSettingService service = new MarkingSettingService(new PaperPipelineProperties());
+        MarkingSettingService service = new MarkingSettingService();
         assertFalse(service.autoFinish(), "未配置 auto_finish 时必须保持原行为（停在已判分）");
     }
 
@@ -126,7 +125,7 @@ class MarkingAutoFinishSettingTest {
      * @throws Exception 反射写入失败
      */
     private static MarkingSettingService serviceWith(Map<String, String> values) throws Exception {
-        MarkingSettingService service = new MarkingSettingService(new PaperPipelineProperties());
+        MarkingSettingService service = new MarkingSettingService();
         Field field = MarkingSettingService.class.getDeclaredField("globalSettingReader");
         field.setAccessible(true);
         field.set(service, new MapGlobalSettingReader(values));

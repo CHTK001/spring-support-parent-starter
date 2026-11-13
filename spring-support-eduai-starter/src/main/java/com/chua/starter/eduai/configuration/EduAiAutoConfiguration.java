@@ -9,7 +9,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 
 /**
  * 教育AI模块自动配置
@@ -60,7 +59,6 @@ public class EduAiAutoConfiguration {
      * @return 管线参数
      */
     @Bean
-    @Primary
     public PaperPipelineProperties paperPipelineProperties(EduAiProperties source) {
         PaperPipelineProperties target = new PaperPipelineProperties();
         EduAiProperties.Marking marking = source.getMarking();

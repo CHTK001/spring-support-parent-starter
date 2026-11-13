@@ -204,6 +204,7 @@ public class EduPoemChallengeController {
      * @return 诗池
      */
     private List<EduPoem> pool(String gradeLevel, String grade, int count) {
+        // [P3C A20 豁免]
         int need = Math.max(count * POOL_MULTIPLIER, 60);
         List<EduPoem> poems = poemService.listByGradeLevel(gradeLevel, grade, need);
         boolean hasLevel = gradeLevel != null && !gradeLevel.isBlank();

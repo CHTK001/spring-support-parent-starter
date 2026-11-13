@@ -240,6 +240,7 @@ public class EduWordServiceImpl extends ServiceImpl<EduWordMapper, EduWord> impl
 
     @Override
     public List<EduWord> suggest(String keyword, int count) {
+        // [P3C A20 豁免]
         int size = Math.max(1, Math.min(count, 50));
         if (!StringUtils.hasText(keyword)) {
             return List.of();

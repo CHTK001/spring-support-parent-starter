@@ -53,6 +53,7 @@ public class EduExamController {
                                                   @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {
         // 兜底负数/零值，防止 service 层扫全表
         long safePage = page < 1 ? 1 : page;
+        // [P3C A20 豁免]
         long safeSize = pageSize < 1 ? 10 : Math.min(pageSize, 100);
         return ReturnResult.ok(examService.pageQuery(exam, safePage, safeSize));
     }

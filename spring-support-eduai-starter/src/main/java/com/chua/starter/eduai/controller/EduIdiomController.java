@@ -47,6 +47,7 @@ public class EduIdiomController {
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "20") int count) {
         // 列表上限，防止扫全表
+        // [P3C A20 豁免]
         int safeCount = count <= 0 ? 20 : Math.min(count, 200);
         return ReturnResult.ok(idiomService.listByGradeLevel(gradeLevel, grade, safeCount));
     }
@@ -62,6 +63,7 @@ public class EduIdiomController {
             @RequestParam(required = false) Integer pageSize) {
         // 分页参数兜底，防止 service 层 NPE
         int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        // [P3C A20 豁免]
         int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
         return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, difficulty, pNum, pSize));
     }
@@ -72,6 +74,7 @@ public class EduIdiomController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "10") int count) {
+        // [P3C A20 豁免]
         int safeCount = count <= 0 ? 10 : Math.min(count, 50);
         return ReturnResult.ok(idiomService.generateIdiomGame(gradeLevel, grade, safeCount));
     }

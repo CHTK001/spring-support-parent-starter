@@ -40,6 +40,7 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "获取所有启用的趣味模块")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @GetMapping("/list")
     public ReturnResult<List<EduFunConfig>> listEnabled() {
         return ReturnResult.ok(funConfigService.listEnabled());
@@ -95,6 +96,7 @@ public class EduFunConfigController {
      * @return Return结果 对象
      */
     @Operation(summary = "根据模块编码获取配置")
+    @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @GetMapping("/detail/{moduleCode}")
     public ReturnResult<EduFunConfig> detail(@PathVariable String moduleCode,
                                              @RequestParam(required = false) String gradeLevel) {

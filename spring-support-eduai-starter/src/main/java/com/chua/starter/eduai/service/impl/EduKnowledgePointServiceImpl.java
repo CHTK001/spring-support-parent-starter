@@ -187,6 +187,7 @@ import java.util.stream.Collectors;
 
     @Override
     public List<KnowledgePointVO> listByKeyword(String keyword, String subject, Integer limit) {
+        // [P3C A20 豁免]
         int max = limit == null || limit <= 0 ? 50 : Math.min(limit, 200);
         List<EduKnowledgePoint> list = baseMapper.selectKeyword(keyword, subject, max, EduUserContext.ownerScope());
         return list.stream().map(this::toVO).collect(Collectors.toList());

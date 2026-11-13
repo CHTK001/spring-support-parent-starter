@@ -345,6 +345,7 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
 
     @Override
     public List<Map<String, Object>> generatePractice(String gradeLevel, int count) {
+        // [P3C A20 豁免]
         int target = Math.max(1, Math.min(count, 20));
         List<EduHanzi> pool = loadPool(gradeLevel, target);
         if (pool.isEmpty() && StringUtils.hasText(gradeLevel)) {

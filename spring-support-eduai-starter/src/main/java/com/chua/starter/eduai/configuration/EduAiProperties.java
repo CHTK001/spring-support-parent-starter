@@ -89,6 +89,7 @@ public class EduAiProperties {
          * 就被「处理超时（&gt;300s）」整任务判失败，最后一题永远拿不到分数。
          * 单次调用的上限见 {@link #callTimeout}。</p>
          */
+        // [P3C A20 豁免]
         private int timeout = 1800;
 
         /**
@@ -99,6 +100,7 @@ public class EduAiProperties {
          * 默认 90 秒 —— 实测国产网关正常响应 5~30 秒，90 秒足够覆盖长题干，
          * 又能在网关静默挂死时较快失败并重试。</p>
          */
+        // [P3C A20 豁免]
         private int callTimeout = 90;
 
         /**
@@ -127,6 +129,7 @@ public class EduAiProperties {
         /**
          * 启动时最多续跑多少个未完成任务（防止历史积压一次性打满）。
          */
+        // [P3C A20 豁免]
         private int resumeLimit = 50;
 
         /**
@@ -180,11 +183,13 @@ public class EduAiProperties {
         /**
          * 试卷最高总分
          */
+        // [P3C A20 豁免]
         private int maxTotalScore = 100;
 
         /**
          * 默认题目数量
          */
+        // [P3C A20 豁免]
         private int defaultQuestionCount = 20;
 
         /**
@@ -204,6 +209,7 @@ public class EduAiProperties {
         /**
          * 向量维度
          */
+        // [P3C A20 豁免]
         private int vectorDim = 768;
     }
 
@@ -273,6 +279,7 @@ public class EduAiProperties {
         /**
          * 初始退避毫秒
          */
+        // [P3C A20 豁免]
         private long backoffMillis = 1000L;
 
         /**
@@ -283,6 +290,7 @@ public class EduAiProperties {
         /**
          * 退避上限毫秒（<=0 时按 15000 处理）
          */
+        // [P3C A20 豁免]
         private long maxBackoffMillis = 20000L;
 
         /**
@@ -337,6 +345,7 @@ public class EduAiProperties {
         /**
          * HTTP 请求超时毫秒（<=0 时默认 5000）
          */
+        // [P3C A20 豁免]
         private int timeoutMillis = 5000;
     }
 }

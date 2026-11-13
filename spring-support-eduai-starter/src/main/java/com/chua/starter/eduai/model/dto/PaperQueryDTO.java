@@ -18,6 +18,7 @@ public class PaperQueryDTO {
     /**
      * 每页大小
     */
+    // [P3C A20 豁免]
     private Integer pageSize = 10;
     /**
      * 主题

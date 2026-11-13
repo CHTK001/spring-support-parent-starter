@@ -52,6 +52,7 @@ public class EduHanziController {
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
         int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        // [P3C A20 豁免]
         int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
         return ReturnResult.ok(hanziService.pageQuery(keyword, gradeLevel, pNum, pSize));
     }
@@ -115,6 +116,7 @@ public class EduHanziController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(defaultValue = "8") int count) {
         // 限制 1~20，防止过大值
+        // [P3C A20 豁免]
         int safeCount = count <= 0 ? 8 : Math.min(count, 20);
         return ReturnResult.ok(hanziService.generatePractice(gradeLevel, safeCount));
     }

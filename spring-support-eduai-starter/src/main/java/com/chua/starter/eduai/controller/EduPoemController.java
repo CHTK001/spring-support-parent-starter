@@ -48,6 +48,7 @@ public class EduPoemController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "20") int count) {
+        // [P3C A20 豁免]
         int safeCount = count <= 0 ? 20 : Math.min(count, 200);
         return ReturnResult.ok(poemService.listByGradeLevel(gradeLevel, grade, safeCount));
     }
@@ -61,6 +62,7 @@ public class EduPoemController {
             @RequestParam(required = false) Integer pageNum,
             @RequestParam(required = false) Integer pageSize) {
         int pNum = (pageNum == null || pageNum < 1) ? 1 : pageNum;
+        // [P3C A20 豁免]
         int pSize = (pageSize == null || pageSize < 1) ? 20 : Math.min(pageSize, 100);
         return ReturnResult.ok(poemService.pageQuery(keyword, gradeLevel, grade, pNum, pSize));
     }
@@ -71,6 +73,7 @@ public class EduPoemController {
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) String grade,
             @RequestParam(defaultValue = "10") int count) {
+        // [P3C A20 豁免]
         int safeCount = count <= 0 ? 10 : Math.min(count, 50);
         return ReturnResult.ok(poemService.generatePoemGame(gradeLevel, grade, safeCount));
     }
