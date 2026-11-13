@@ -70,8 +70,8 @@
 
         <div v-if="segmentError" class="idx-error">{{ segmentError }}</div>
 
-        <div class="idx-scroll">
-          <section v-for="group in indexGroups" :key="group.key" class="idx-group">
+        <div class="idx-scroll" @scroll.passive="onIndexScroll">
+          <section v-for="group in visibleIndexGroups" :key="group.key" class="idx-group">
             <header class="idx-group-head">
               <ReIcon :name="group.icon" :size="12" />
               <span>{{ group.label }}</span>
@@ -99,8 +99,11 @@
               </span>
               <i v-if="row.checked" class="idx-check"><ReIcon name="Select" :size="12" /></i>
             </button>
-            <p v-if="!group.rows.length" class="idx-empty">暂无{{ group.label }}，点下方新建</p>
+            <p v-if="group.totalRows === 0" class="idx-empty">暂无{{ group.label }}，点下方新建</p>
           </section>
+          <div v-if="loadedIndexRows < tableCount" class="idx-more">
+            滚动加载更多（{{ loadedIndexRows }} / {{ tableCount }}）
+          </div>
         </div>
 
         <div class="idx-foot">
@@ -1185,6 +1188,45 @@ const indexGroups = computed<IndexGroup[]>(() => {
 
 /** 索引里的总行数 */
 const tableCount = computed(() => indexGroups.value.reduce((sum, group) => sum + group.rows.length, 0));
+
+/** 索引每次滚动加载的行数 */
+const RAIL_PAGE = 30;
+/** 已加载行数（跨分组累计） */
+const railLimit = ref(RAIL_PAGE);
+
+/**
+ * 索引可见分组：按分组顺序累计切片。
+ *
+ * <p>保留原有分组结构（含空分组），只截断每组行数；{@code totalRows} 是切片前的
+ * 行数，模板用它区分「本来就没有行」和「有行但还没滚动加载到」。</p>
+ */
+const visibleIndexGroups = computed(() => {
+  let remaining = railLimit.value;
+  return indexGroups.value.map((group) => {
+    const totalRows = group.rows.length;
+    const rows = remaining > 0 ? group.rows.slice(0, remaining) : [];
+    remaining -= rows.length;
+    return { ...group, rows, totalRows };
+  });
+});
+
+/** 已加载行数 */
+const loadedIndexRows = computed(() =>
+  visibleIndexGroups.value.reduce((sum, group) => sum + group.rows.length, 0),
+);
+
+/** 索引滚动到底部时加载更多 */
+function onIndexScroll(e: Event): void {
+  const el = e.target as HTMLElement;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24 && railLimit.value < tableCount.value) {
+    railLimit.value += RAIL_PAGE;
+  }
+}
+
+/** 搜索 / 状态筛选 / 切分段时回到第一屏 */
+watch([keyword, statusFilter, segment], () => {
+  railLimit.value = RAIL_PAGE;
+});
 
 /** 选中账号 */
 const activeAccount = computed(
@@ -2492,6 +2534,13 @@ onMounted(loadAll);
   margin: 0;
   padding: 4px 8px 8px;
   font-size: 11px;
+  color: var(--text-tertiary);
+}
+/* 滚动分页：还有未加载的行时给一条提示（滚到底自动追加） */
+.idx-more {
+  padding: 8px 8px 12px;
+  font-size: 11px;
+  text-align: center;
   color: var(--text-tertiary);
 }
 .idx-foot {

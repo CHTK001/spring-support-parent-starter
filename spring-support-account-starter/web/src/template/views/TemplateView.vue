@@ -89,7 +89,7 @@
           </div>
           <template v-else>
             <div
-              v-for="item in filteredItems"
+              v-for="item in visibleItems"
               :key="item.key"
               class="entry"
               :class="{
@@ -383,7 +383,7 @@
  * <p>消息模板数据来自宿主后端 `/api/channels/templates`（部署级共享），
  * 文档模板来自模板后端 `/api/template/page`（独立模板服务，远程承载）。</p>
  */
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import ReButton from '@repo/ui/re-button'
@@ -555,6 +555,18 @@ const filteredItems = computed(() => {
   })
 })
 
+/** 左栏每次滚动加载的条数 */
+const RAIL_PAGE = 30
+/** 已加载条数（滚动分页，前端切片） */
+const railLimit = ref(RAIL_PAGE)
+/** 当前可见的模板（消息 + 文档合并后按滚动分页） */
+const visibleItems = computed(() => filteredItems.value.slice(0, railLimit.value))
+
+/** 搜索 / 类型筛选变化时回到第一屏 */
+watch([keyword, typeFilter], () => {
+  railLimit.value = RAIL_PAGE
+})
+
 /** 加载消息模板 */
 async function loadMessages(): Promise<void> {
   msgLoading.value = true
@@ -593,11 +605,12 @@ async function loadDocs(reset = false): Promise<void> {
   }
 }
 
-/** 左栏滚动到底部时加载更多文档模板 */
+/** 左栏滚动到底部时加载更多文档模板（并追加前端已加载条数） */
 function onRailScroll(e: Event): void {
   const el = e.target as HTMLElement
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 48) {
     if (typeFilter.value !== 'sms' && typeFilter.value !== 'email') void loadDocs()
+    if (railLimit.value < filteredItems.value.length) railLimit.value += RAIL_PAGE
   }
 }
 
@@ -975,8 +988,15 @@ onMounted(async () => {
 .bar__filters {
   display: flex;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .filter {
@@ -984,12 +1004,15 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   padding: 2px 10px;
+  margin: 0;
   font-size: 12px;
   line-height: 20px;
+  white-space: nowrap;
   color: var(--el-text-color-regular);
   background: none;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 999px;
+  box-shadow: none;
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 

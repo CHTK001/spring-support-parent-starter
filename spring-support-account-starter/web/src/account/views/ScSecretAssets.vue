@@ -66,13 +66,13 @@
     <div class="body">
       <!-- 左栏：密钥列表 -->
       <aside class="rail">
-        <div class="rail__list">
+        <div class="rail__list" @scroll.passive="onRailScroll">
           <div v-if="loading && !secrets.length" class="rail__state">加载中…</div>
           <div v-else-if="!filtered.length" class="rail__state">
             {{ keyword || typeFilter !== 'all' ? '没有匹配的密钥' : '暂无密钥，点右上角「新建密钥」创建' }}
           </div>
           <button
-            v-for="item in filtered"
+            v-for="item in visibleItems"
             v-else
             :key="item.secretId"
             type="button"
@@ -106,7 +106,7 @@
         </div>
 
         <footer class="rail__foot">
-          <span>共 {{ secrets.length }} 条密钥</span>
+          <span>已加载 {{ visibleItems.length }} / {{ filtered.length }} 条，滚动加载更多</span>
         </footer>
       </aside>
 
@@ -233,7 +233,7 @@
  *
  * <p>Secret 只进不出：列表与详情只显示「是否已配置」，明文仅在新增/替换时由后端落库。</p>
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { message } from '@repo/core'
 import ReButton from '@repo/ui/re-button'
 import ReIcon from '@repo/ui/re-icon'
@@ -332,6 +332,26 @@ const filtered = computed(() => {
     if (!k) return true
     return `${item.name || ''} ${item.accessKey || ''} ${item.remark || ''}`.toLowerCase().includes(k)
   })
+})
+
+/** 左栏每次滚动加载的条数 */
+const RAIL_PAGE = 30
+/** 已加载条数（滚动分页） */
+const railLimit = ref(RAIL_PAGE)
+/** 当前可见的密钥（滚动分页切片） */
+const visibleItems = computed(() => filtered.value.slice(0, railLimit.value))
+
+/** 左栏滚动到底部时加载更多 */
+function onRailScroll(e: Event): void {
+  const el = e.target as HTMLElement
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24 && railLimit.value < filtered.value.length) {
+    railLimit.value += RAIL_PAGE
+  }
+}
+
+/** 搜索 / 类型筛选变化时回到第一屏 */
+watch([keyword, typeFilter], () => {
+  railLimit.value = RAIL_PAGE
 })
 
 /** 加载密钥列表 */
@@ -486,8 +506,15 @@ onMounted(load)
 .bar__filters {
   display: flex;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .filter {
@@ -495,12 +522,15 @@ onMounted(load)
   align-items: center;
   gap: 4px;
   padding: 2px 10px;
+  margin: 0;
   font-size: 12px;
   line-height: 20px;
+  white-space: nowrap;
   color: var(--el-text-color-regular);
   background: none;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 999px;
+  box-shadow: none;
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 
