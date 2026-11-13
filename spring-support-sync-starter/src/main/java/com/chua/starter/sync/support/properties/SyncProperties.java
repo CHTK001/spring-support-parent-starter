@@ -54,11 +54,29 @@ public class SyncProperties {
     /**
      * 同步消息传输加密密钥。
      * <p>
-     * 服务端与客户端需配置一致。配置后，消息 payload 在传输层自动 AES-GCM 加密，
-     * 使用方（业务 处理器）无感知；未配置时明文传输（向后兼容）。
+     * 服务端与客户端需配置一致。配置后，消息 payload 在传输层自动 AES-256-GCM 加密，
+     * 每条消息用随机盐经 HKDF-SHA256 派生独立密钥，使用方（业务处理器）无感知；
+     * 未配置时明文传输（向后兼容）。
+     * </p>
+     * <p>
+     * 加密或解密失败会抛异常，不会再静默降级为明文。旧版本（固定密钥 + 随机 IV）
+     * 的密文仍可读，因此升级时先升级接收端、再升级发送端即可平滑过渡。
      * </p>
      */
     private String cryptoSecret;
+
+    /**
+     * 同步消息加密版本。
+     * <p>
+     * 2：每条消息随机盐 + HKDF 派生独立密钥（默认，推荐）；
+     * 1：旧版固定密钥，仅用于滚动升级过渡。
+     * </p>
+     * <p>
+     * 升级顺序：新节点先设为 1 与旧节点互通，全部升级完成后再统一改为 2。
+     * 解密端始终同时兼容 1 与 2。
+     * </p>
+     */
+    private Integer cryptoVersion = 2;
 
     /**
      * 数据同步交换配置
@@ -176,6 +194,7 @@ public class SyncProperties {
         target.client = ClientConfig.copyOf(source.client);
         target.dataSync = DataSyncConfig.copyOf(source.dataSync);
         target.cryptoSecret = source.cryptoSecret;
+        target.cryptoVersion = source.cryptoVersion;
         return target;
     }
 
@@ -195,6 +214,24 @@ public class SyncProperties {
      */
     public void setCryptoSecret(String cryptoSecret) {
         this.cryptoSecret = cryptoSecret;
+    }
+
+    /**
+     * 获取加密版本
+     *
+     * @return 2=每消息派生（默认），1=旧版固定密钥
+     */
+    public Integer getCryptoVersion() {
+        return cryptoVersion;
+    }
+
+    /**
+     * 设置加密版本
+     *
+     * @param cryptoVersion 2=每消息派生（默认），1=旧版固定密钥
+     */
+    public void setCryptoVersion(Integer cryptoVersion) {
+        this.cryptoVersion = cryptoVersion;
     }
 
     // ==================== 服务端配置 ====================

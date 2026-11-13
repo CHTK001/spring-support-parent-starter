@@ -479,7 +479,13 @@ public class SyncServerInstance {
        * @param data 数据
        */
     private void handleServerMessage(String clientId, String topic, Object data) {
-        data = SyncCryptoUtils.decrypt(parseIfNeeded(data), syncProperties);
+        try {
+            data = SyncCryptoUtils.decrypt(parseIfNeeded(data), syncProperties);
+        } catch (IllegalArgumentException ex) {
+            log.error("[SyncServer:{}] 消息解密失败，已丢弃: clientId={}, topic={}, reason={}",
+                    instanceConfig.getName(), clientId, topic, ex.getMessage());
+            return;
+        }
         log.info("[SyncServer:{}] 收到消息: clientId={}, topic={}, data={}",
                 instanceConfig.getName(), clientId, topic, data);
         if (handleSystemTopic(clientId, topic, data)) {

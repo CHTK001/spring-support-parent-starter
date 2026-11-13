@@ -253,7 +253,13 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     */
     public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
         delegate.subscribe(topic, (sessionId, message) -> {
-            Object decrypted = SyncCryptoUtils.decrypt(parseIfNeeded(message), syncProperties);
+            Object decrypted;
+            try {
+                decrypted = SyncCryptoUtils.decrypt(parseIfNeeded(message), syncProperties);
+            } catch (IllegalArgumentException ex) {
+                log.error("[SyncClient] 消息解密失败，已丢弃: topic={}, reason={}", topic, ex.getMessage());
+                return;
+            }
             if (decrypted instanceof java.util.Map<?, ?> map) {
                 handler.handle(topic, sessionId, (java.util.Map<String, Object>) map);
             }
