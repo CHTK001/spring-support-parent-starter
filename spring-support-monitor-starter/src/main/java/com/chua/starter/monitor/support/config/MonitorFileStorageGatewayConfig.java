@@ -75,9 +75,11 @@ import org.springframework.core.Ordered;
 public class MonitorFileStorageGatewayConfig {
 
     /**
-     * 网关存储桶名称（与前端 app.yaml bucket、FileAssetServiceImpl#LOCAL_BUCKET 对齐）
+     * 网关存储桶名称（与前端 app.yaml bucket、FileAssetServiceImpl#LOCAL_BUCKET 对齐）。
+     * 取 default：前端 filestorageApi.DEFAULT_BUCKET 与 BucketSetting.bucket 本就是 default，
+     * 且不与 FileStorageServerFilter 的静态资源保留前缀（/assets/ 等）冲突。
      */
-    public static final String BUCKET = "localFileStorage";
+    public static final String BUCKET = "default";
 
     /**
      * 创建文件存储模板并挂载 monitor 本地后端为网关桶。
@@ -123,8 +125,8 @@ public class MonitorFileStorageGatewayConfig {
      * <p>前端进文件管理页前必须先问这个接口「文件服务在哪、桶叫什么」，
      * 拿到结果再决定用嵌入式相对路径还是独立端口；拿不到就只能按
      * localStorage → app.yaml → window.location.origin 逐级回退，于是同一个页面
-     * 会散出 {@code /fs/*} 与 {@code /localFileStorage} 两种请求形态——
-     * 代理只要少配一个前缀就 502（本地 dev 实测：{@code /localFileStorage} 502，
+     * 会散出 {@code /fs/*} 与 {@code /default} 两种请求形态——
+     * 代理只要少配一个前缀就 502（本地 dev 实测：{@code /default} 502，
      * 页面报「列表查询失败（HTTP 502）」）。</p>
      *
      * <p>该控制器原本由被排除的 {@code FileSystemAutoConfiguration} 注册，排除后

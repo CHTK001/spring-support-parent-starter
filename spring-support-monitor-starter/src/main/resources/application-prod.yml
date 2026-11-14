@@ -88,4 +88,25 @@ plugin:
   file-storage:
     # 文件服务器私有桶保持开启：enable=false 或留空时按公共桶运行，
     # 目录列表与文件内容将对能连到端口的人可读
-    private-buckets: localFileStorage
+    private-buckets: default
+
+# ===========================================
+# Actuator 暴露面（生产收窄）
+# ===========================================
+# 默认 application.yml 为发布管理「观测与诊断」开满了诊断端点（env / beans / configprops /
+# threaddump / loggers ...），那是**本地联调**口径：发布管理需要能逐个端点验收。
+# 生产不能沿用：
+#   - /actuator/loggers 允许 POST 改运行期日志级别（刷 DEBUG 打满磁盘 / 关掉安全日志）；
+#   - /actuator/env、/actuator/configprops 会吐出配置项（Spring 只对 password/secret/key
+#     这类键做脱敏，其余原样）；
+#   - oauth-client 的内置默认白名单里有 /actuator/**，即这些端点在生产**不需要凭据**。
+# 白名单管「要不要鉴权」，暴露面管「有没有这个端点」——两道都挡才是完整修复。
+# 需要排障时用临时 profile 覆盖，而不是把生产改回全开。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never

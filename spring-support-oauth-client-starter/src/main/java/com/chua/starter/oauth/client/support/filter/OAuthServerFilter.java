@@ -44,9 +44,9 @@ import java.util.Set;
    *
    * <h3>私有桶来源（优先级从高到低）</h3>
    * <ol>
-   *   <li>节点 config JSON：{@code {"privateBuckets": "localFileStorage,minio"}}（服务管理节点启动时下发）；</li>
-   *   <li>初始化参数：{@code privateBuckets=localFileStorage,minio}；</li>
-   *   <li>环境配置：{@code plugin.oauth.file-storage.private-buckets=localFileStorage,minio}。</li>
+   *   <li>节点 config JSON：{@code {"privateBuckets": "default,minio"}}（服务管理节点启动时下发）；</li>
+   *   <li>初始化参数：{@code privateBuckets=default,minio}；</li>
+   *   <li>环境配置：{@code plugin.oauth.file-storage.private-buckets=default,minio}。</li>
    * </ol>
    * <p>{@code *} 表示全部桶私有；一次性链接路径 {@code /ot/**} 本身即凭证，始终放行。</p>
    *

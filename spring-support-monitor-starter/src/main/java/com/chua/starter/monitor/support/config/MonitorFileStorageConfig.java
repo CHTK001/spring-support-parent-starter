@@ -30,9 +30,12 @@ import org.springframework.context.annotation.Configuration;
 public class MonitorFileStorageConfig {
 
     /**
-     * 本地文件存储 Bean 名称（服务端过滤器工厂 通过 获取Bean名称for类型 发现并注册为文件服务器存储桶）
+     * 本地文件存储 Bean 名称（= 对外桶名，见 MonitorFileStorageGatewayConfig#BUCKET，
+     * 服务端过滤器工厂按 Bean 名注册为文件服务器存储桶）。取 default 与前端
+     * filestorageApi.DEFAULT_BUCKET、BucketSetting.bucket 一致，且不与静态资源前缀冲突。
+     * 方法名保留 localFileStorage 只是 Java 内部标识符，不出现在 URL / 配置里。
      */
-    public static final String LOCAL_STORAGE_BEAN_NAME = "localFileStorage";
+    public static final String LOCAL_STORAGE_BEAN_NAME = "default";
 
     /**
      * 录制本地存储根目录

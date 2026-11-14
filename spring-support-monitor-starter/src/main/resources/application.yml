@@ -172,7 +172,7 @@ plugin:
     # 文件服务器私有桶（逗号分隔，* 表示全部）：由服务管理节点自动挂载的 OAuthServerFilter 执行鉴权；
     # enable=false 或留空时文件服务器按公共桶运行；/ot 一次性链接本身即凭证，始终放行
     file-storage:
-      private-buckets: localFileStorage
+      private-buckets: default
   # 服务器目录浏览（filesystem-starter 的 FileDirController）：数据同步的「选择文件 / 文件夹」
   # 和 AI 的目录选择器都走 /v2/file/dir/list。接口本身是 @Permission(admin/superadmin)，
   # 生产由 OAuth 把关。控制器由本应用的 MonitorFileStorageGatewayConfig#fileDirController
@@ -182,10 +182,10 @@ plugin:
     dir-list: true
     # 默认存储桶：/v2/file/server-config 会把这里的值作为 bucket 下发给前端，
     # 前端拿它拼 /fs/{bucket}。必须与 MonitorFileStorageGatewayConfig.BUCKET
-    # （= localFileStorage，即网关实际注册的桶名）一致。
+    # （= default，即网关实际注册的桶名）一致。
     # 不配时该字段为 null，前端回退到自己的默认值 local —— 落到一个不存在的桶，
     # 文件管理页直接 404/空列表，且报错信息与「服务没起来」无法区分。
-    default-provider: localFileStorage
+    default-provider: default
   # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
   # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
   # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。
@@ -292,6 +292,23 @@ plugin:
       # 回写到报文表，让离线导入与实时抓包的「协议还原」显示完整。生产默认开启，
       # 嫌解析慢或不需要时可以设为 false
       json-restore: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 发布管理「项目 → 观测与诊断」直接读这些端点（本地联调开满，逐个端点可验收）：
+        #   指标 / 日志管理（可 POST 改级别） / 请求记录（httpexchanges，链路追踪回退数据源）
+        #   以及「其它端点」页签里的 env / beans / mappings / configprops / scheduledtasks /
+        #   conditions / threaddump / startup。
+        # 注意：框架的 DatabaseSettingEnvironmentPostProcessor 会把 sys_setting 里的
+        # 「启动期默认设置」种成 '*'，但那份属性源优先级最低（addLast），这里的显式配置能盖住它。
+        # 生产 profile（application-prod.yml）收窄到 health,info —— 暴露面与白名单两道都要挡。
+        include: health,info,metrics,loggers,env,beans,mappings,configprops,scheduledtasks,conditions,threaddump,startup,caches,httpexchanges
+  endpoint:
+    health:
+      # 不对外暴露组件明细（DB / 磁盘等），避免信息泄露
+      show-details: never
 
 logging:
   level:

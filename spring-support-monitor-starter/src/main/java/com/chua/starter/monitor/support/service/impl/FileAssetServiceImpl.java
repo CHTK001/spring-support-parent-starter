@@ -40,7 +40,7 @@ public class FileAssetServiceImpl implements FileAssetService {
     /**
      * 默认存储桶 Bean 名称（本地磁盘后端）
      */
-    private static final String LOCAL_BUCKET = "localFileStorage";
+    private static final String LOCAL_BUCKET = "default";
 
     /**
      * 单次列表默认上限
