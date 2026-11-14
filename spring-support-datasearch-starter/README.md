@@ -174,6 +174,31 @@ my-weather=com.example.weather.MyWeatherProvider
 
 **生效**：把 jar 放进宿主 classpath 即可，无需改本模块。装配顺序即 SPI 注册顺序（`SpiProviders#list` 用 `LinkedHashMap` 去重保序），天气侧逐个尝试、**优先采用带 WMO 天气码的结果**，全部缺码时才退回首个结果。
 
+### 5.3 余额查询内核（credit/）
+
+`credit/` 目录是「上游余额 / 积分读数」的共用内核，账户页与 AI 供应商页都通过
+`CreditQueries.query(CreditQuery)` 消费，差异全在 `CreditQueryProvider` SPI 实现里：
+
+| 实现（`kind`） | 用途 |
+|---|---|
+| `expression` | 通用「地址 + 字段表达式」，没专用实现的上游走这里 |
+| `new-api` / `sub2api` / `openai` | 中转站 / OpenAI 官方 |
+| `host` | 厂商官方端点，按 `providerId` 取内置地址与表达式 |
+
+- **收录口径**：只登记「官方文档明确写了余额 / 额度端点」的厂商，不猜地址、不标「支持」。
+  现有 11 家 Bearer 预设 + 4 家 AK/SK 签名预设，清单与逐家依据见
+  `HostCreditQueryProvider.HOSTS` 与各 README 的「已收录 / 不收录」小节。
+- **字段表达式**（`CreditExpressions`）：`$ ¥ ￥ € £` 币种前缀、点路径 / 数组下标 / `*` 通配、
+  空格包围的 `* N` / `/ N` 换算、`%` 比例、`!` 已用占比翻转、`;` 多段。
+- **AK/SK 签名**（`CreditSigner`）：阿里云 BSS、火山引擎、百度智能云、七牛四家要按各家规范
+  对请求做 HMAC 签名，只发 Bearer 查不到。签名器直接产出「完整 URL + 最终请求头 + body」，
+  `CreditHttp` 原样发出、不二次编码，避免签名字节与实际请求错位（这类错位只表现为上层 401）。
+  `signType` 由 host 预设按厂商注入，AK/SK 由账户页「余额查询」配置加密落库、查询前解密传入；
+  缺 AK/SK 时返回明确提示，不发必然 401 的请求。四种方案的文档链接与字节级口径见
+  `CreditSigner` 类注释。
+- **失败语义**：查不到一律返回 `CreditResult.fail(...)`（不抛异常），页面按原文提示；
+  「N 个上游逐个查」不会因为某一家超时把整页带崩。
+
 ## 六、与其它 starter 的关系
 
 - **上游**：`utils-support-datasearch-starter`（全部数据源 SPI 与 `WeatherInfo` 等模型）、`utils-support-common-starter`（`ReturnResult`、`ServiceProvider`、`IpPosition`）、`spring-support-oauth-client-starter`（`@TokenForIgnore`）。

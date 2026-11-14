@@ -79,6 +79,8 @@ class CreditConfigServiceTest {
                 sys_account_credit_config_method VARCHAR(8),
                 sys_account_credit_config_header VARCHAR(64),
                 sys_account_credit_config_token VARCHAR(1024),
+                sys_account_credit_config_ak VARCHAR(1024),
+                sys_account_credit_config_sk VARCHAR(1024),
                 sys_account_credit_config_expr VARCHAR(512),
                 sys_account_credit_config_billing VARCHAR(16),
                 sys_account_credit_config_status TINYINT NOT NULL DEFAULT 1,

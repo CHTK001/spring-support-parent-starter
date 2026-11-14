@@ -319,11 +319,26 @@ public class MyCreditProvider implements ChannelUpstreamProvider {
   `DELETE …/{providerId}`、`GET …/kinds`（可用实现，页面下拉直接用）、`POST …/test`（按表单内容试查一次，不落库）。
 - 内置实现（`kinds` 返回的就是这些）：`expression` 通用字段表达式、`new-api`（`GET /api/usage/token`）、
   `sub2api`、`openai`（`GET /v1/dashboard/billing/credit_grants`）、`host`（只给上游 id，地址由实现自己拼）。
-- `host` 预设收录（地址与字段取自官方文档原文，并逐条用假令牌探活过路由）：`deepseek`、`moonshot`、
-  `siliconflow`、`openrouter`、`novita-ai`、`requesty`、`llmgateway`、`deepinfra`、`together`、`stepfun`，
-  以及 `opencode-go`（Go 套餐三个窗口的已用百分比；该路径官方文档未记载，属探活确认，文档只说用量去
-  Console 看）。都用真实 key 跑过之前，页面只会显示上游原文，字段不对就在供应商编辑页覆盖
-  `credit_url` / `credit_expression`。需要 AK/SK 签名的厂商（阿里云、火山、百度、七牛）不收录——本实现只发 Bearer。
+- `host` 预设分两类，地址与字段都取自官方文档原文：
+  - **Bearer 类（11 家）**：`deepseek`、`moonshot`、`siliconflow`、`openrouter`、`novita-ai`、`requesty`、
+    `llmgateway`、`deepinfra`、`together`、`stepfun`，以及 `opencode-go`（Go 套餐三个窗口的已用百分比；
+    该路径官方文档未记载，属探活确认，文档只说用量去 Console 看）。逐条用假令牌探活过路由
+    （真路径不是 404、同前缀捏造路径 404）。都用真实 key 跑过之前，页面只显示上游原文，字段不对就在
+    供应商编辑页覆盖 `credit_url` / `credit_expression`。
+  - **AK/SK 签名类（4 家）**：`aliyun-bss`（阿里云 BSS `QueryAccountBalance`）、`volc-billing`
+    （火山 `QueryBalanceAcct`）、`baidu-bce`（百度财务 `POST /v1/finance/cash/balance`）、`qiniu`
+    （七牛 `GET /billing-api/v1/account/balance-overview`）。这四家要按各家规范对请求做 HMAC 签名，
+    由 datasearch 的 `CreditSigner` 完成（七牛 `Qiniu` 凭证 / 火山 `HMAC-SHA256` / 百度 `bce-auth-v1` /
+    阿里 BSS `HMAC-SHA1` RPC 老签名）。**在本表的「余额查询」里把 `kind` 选成 `host`、
+    provider id 填成上面四个之一，再填 Access Key / Secret Key 即可**：地址、字段表达式、
+    签名方案都由预设自动补齐，不用手填（`kind` 留空会回落通用表达式、不会签名）。
+    两把密钥与令牌同口径加密落库（`enc:` 前缀，接口只回 `hasAccessKey` / `hasSecretKey`），
+    留空或掩码表示不改。缺 AK/SK 时返回明确提示，不发必然 401 的请求。
+    这四家端点/字段来自官方文档原文，但**未做真链路探活、也未绑真 key 验过字段**，字段口径若与上游
+    不一致，用 `credit_expression` 覆盖即可。
+- **不收录的厂商**：官方文档没写余额 / 额度端点的（`zhipu`、`zai`、`chutes`、`fireworks`、`helicone`、
+  `302ai`、`hyper`、`kilo` 等 20+ 家）一律不猜地址、不标「支持」。这类上游若确实有可用余额源，
+  走通用「地址 + 字段表达式」配置（`kind` 留空或 `expression`），由页面填真实地址即可，不写进预设。
 - 表达式语法：`$ ¥ ￥ € £` 币种前缀；点路径，数字段是数组下标，`*` 通配展开；空格包围的 `* N` / `/ N` 做换算；
   `%` 后缀表示原值是比例、乘 100；`!` 前缀表示上游给的是「已用百分比」、取 100-值（单位自动是 `%`）；
   `;` 分多段。例：`$data.total_available / 500000`、`$remaining; $used`、`!usage.rolling.percent`。

@@ -54,6 +54,22 @@ public class CreditQuery implements Serializable {
     private String tokenHeader;
 
     /**
+     * 签名方案（qiniu / volc / bce / aliyun-bss），非空时按 AK/SK 对请求做 HMAC 签名。
+     * 由 host 预设按厂商注入，页面不必手填；空时仍走原有的 Bearer / 自定义头链路。
+     */
+    private String signType;
+
+    /**
+     * Access Key（AK/SK 签名用；落库前由调用方加密，查询前解密）
+     */
+    private String accessKey;
+
+    /**
+     * Secret Key（AK/SK 签名用；落库前由调用方加密，查询前解密）
+     */
+    private String secretKey;
+
+    /**
      * 字段表达式，如 {@code $data.total_available / 500000}、{@code ¥balance}、{@code $a; $b}
      */
     private String expression;

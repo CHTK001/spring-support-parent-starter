@@ -66,6 +66,18 @@ public class SysAccountCreditConfig implements Serializable {
     private String token;
 
     /**
+     * Access Key（AK/SK 签名类余额接口用；落库密文，接口不回显）
+     */
+    @TableField("sys_account_credit_config_ak")
+    private String accessKey;
+
+    /**
+     * Secret Key（AK/SK 签名类余额接口用；落库密文，接口不回显）
+     */
+    @TableField("sys_account_credit_config_sk")
+    private String secretKey;
+
+    /**
      * 字段表达式，多段用分号分隔（如 {@code $data.total_available / 500000}）
      */
     @TableField("sys_account_credit_config_expr")
@@ -113,4 +125,16 @@ public class SysAccountCreditConfig implements Serializable {
      */
     @TableField(exist = false)
     private Boolean hasToken;
+
+    /**
+     * 是否已配置 Access Key（非持久化字段，列表 / 详情接口回显用）
+     */
+    @TableField(exist = false)
+    private Boolean hasAccessKey;
+
+    /**
+     * 是否已配置 Secret Key（非持久化字段，列表 / 详情接口回显用）
+     */
+    @TableField(exist = false)
+    private Boolean hasSecretKey;
 }

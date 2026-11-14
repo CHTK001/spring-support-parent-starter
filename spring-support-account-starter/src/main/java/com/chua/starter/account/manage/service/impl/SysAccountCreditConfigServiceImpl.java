@@ -98,6 +98,14 @@ public class SysAccountCreditConfigServiceImpl implements SysAccountCreditConfig
         if (token != null && !secretCodec.isMasked(token)) {
             target.setToken(secretCodec.encrypt(token));
         }
+        String accessKey = trimToNull(body.getAccessKey());
+        if (accessKey != null && !secretCodec.isMasked(accessKey)) {
+            target.setAccessKey(secretCodec.encrypt(accessKey));
+        }
+        String secretKey = trimToNull(body.getSecretKey());
+        if (secretKey != null && !secretCodec.isMasked(secretKey)) {
+            target.setSecretKey(secretCodec.encrypt(secretKey));
+        }
         if (existing == null) {
             target.setDeleted(0);
             target.setCreatedAt(now);
@@ -137,7 +145,10 @@ public class SysAccountCreditConfigServiceImpl implements SysAccountCreditConfig
         if (row == null || row.getStatus() == null || row.getStatus() != 1) {
             return null;
         }
-        return toQuery(row, storedToken(row));
+        return toQuery(row.getProviderId(), row,
+                secretCodec.decrypt(row.getToken()),
+                secretCodec.decrypt(row.getAccessKey()),
+                secretCodec.decrypt(row.getSecretKey()));
     }
 
     /**
@@ -151,11 +162,11 @@ public class SysAccountCreditConfigServiceImpl implements SysAccountCreditConfig
         String providerId = requireProvider(input.getProviderId());
         assertUsable(input);
         SysAccountCreditConfig saved = configMapper.selectById(providerId);
-        String token = trimToNull(input.getToken());
-        if (token == null || secretCodec.isMasked(token)) {
-            token = storedToken(saved);
-        }
-        CreditResult result = CreditQueries.query(toQuery(providerId, input, token));
+        // 试查不落库：令牌 / AK / SK 留空或掩码时沿用已存密文（解密后传进查询）
+        String token = resolvePlain(input.getToken(), saved == null ? null : saved.getToken());
+        String accessKey = resolvePlain(input.getAccessKey(), saved == null ? null : saved.getAccessKey());
+        String secretKey = resolvePlain(input.getSecretKey(), saved == null ? null : saved.getSecretKey());
+        CreditResult result = CreditQueries.query(toQuery(providerId, input, token, accessKey, secretKey));
         log.info("[account] 试查余额: provider={}, ok={}, error={}",
                 providerId, result.isOk(), result.getError());
         return result;
@@ -164,23 +175,15 @@ public class SysAccountCreditConfigServiceImpl implements SysAccountCreditConfig
     /**
      * 把配置转成查询请求。
      *
-     * @param row   配置
-     * @param token 已解密的令牌
-     * @return 查询请求
-     */
-    private CreditQuery toQuery(SysAccountCreditConfig row, String token) {
-        return toQuery(row.getProviderId(), row, token);
-    }
-
-    /**
-     * 把配置转成查询请求。
-     *
      * @param providerId 上游 id
      * @param row        配置（可含请求字段）
      * @param token      令牌明文（可空）
+     * @param accessKey  Access Key 明文（可空，AK/SK 签名类用）
+     * @param secretKey  Secret Key 明文（可空，AK/SK 签名类用）
      * @return 查询请求
      */
-    private CreditQuery toQuery(String providerId, SysAccountCreditConfig row, String token) {
+    private CreditQuery toQuery(String providerId, SysAccountCreditConfig row,
+                                String token, String accessKey, String secretKey) {
         CreditQuery query = new CreditQuery();
         query.setKind(trimToNull(row.getKind()));
         query.setProviderId(providerId);
@@ -188,19 +191,26 @@ public class SysAccountCreditConfigServiceImpl implements SysAccountCreditConfig
         query.setMethod(trimToNull(row.getMethod()));
         query.setToken(token);
         query.setTokenHeader(trimToNull(row.getTokenHeader()));
+        query.setAccessKey(accessKey);
+        query.setSecretKey(secretKey);
         query.setExpression(trimToNull(row.getExpression()));
         query.setBilling(trimToNull(row.getBilling()));
         return query;
     }
 
     /**
-     * 读取已存令牌并解密。
+     * 取某个敏感字段的明文：表单给了明文（非掩码）就用表单值，否则取已存值并解密。
      *
-     * @param row 配置（可空）
-     * @return 明文令牌；未配置返回 {@code null}
+     * @param input  表单值
+     * @param stored 已存值（可能是密文，可空）
+     * @return 明文；都没给时返回 {@code null}
      */
-    private String storedToken(SysAccountCreditConfig row) {
-        return row == null ? null : secretCodec.decrypt(row.getToken());
+    private String resolvePlain(String input, String stored) {
+        String text = trimToNull(input);
+        if (text != null && !secretCodec.isMasked(text)) {
+            return text;
+        }
+        return secretCodec.decrypt(stored);
     }
 
     /**
@@ -249,6 +259,10 @@ public class SysAccountCreditConfigServiceImpl implements SysAccountCreditConfig
         }
         config.setHasToken(StringUtils.isNotBlank(config.getToken()));
         config.setToken(null);
+        config.setHasAccessKey(StringUtils.isNotBlank(config.getAccessKey()));
+        config.setAccessKey(null);
+        config.setHasSecretKey(StringUtils.isNotBlank(config.getSecretKey()));
+        config.setSecretKey(null);
         return config;
     }
 

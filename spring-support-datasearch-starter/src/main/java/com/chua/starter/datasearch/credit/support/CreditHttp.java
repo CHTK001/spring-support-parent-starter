@@ -58,6 +58,11 @@ public final class CreditHttp {
         if (url == null || url.isBlank()) {
             throw new IllegalStateException("未配置余额地址");
         }
+        // AK/SK 签名方案走独立出口：签名器已按各家规范产出「完整 URL + 最终请求头」，
+        // 这里原样发出，不再补 Bearer、不再二次编码，避免签名字节与实际请求错位。
+        if (query.getSignType() != null && !query.getSignType().isBlank()) {
+            return fetchSigned(CreditSigner.sign(query, url.trim()));
+        }
         HttpClientBuilder builder = HttpClientFactory.of(url.trim());
         builder.accept("application/json");
         builder.header("User-Agent", "spring-support-datasearch/1.0");
@@ -93,6 +98,44 @@ public final class CreditHttp {
                 }
             }
         }
+        try {
+            ClientResponse response = execute(builder, method);
+            String text = response.getBodyString();
+            if (!response.isSuccess()) {
+                throw new IllegalStateException("HTTP " + response.getStatusCode() + " " + snippet(text));
+            }
+            return text;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("请求失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 发出一次已签名的请求。
+     *
+     * <p>签名器给出的地址与请求头就是最终形态：地址已含签名参数、头已含签名值，
+     * 这里只做「建请求 → 按方法执行 → 判 2xx」，绝不追加 {@code Bearer} 或改 URL，
+     * 否则签名会与请求不一致。</p>
+     *
+     * @param signed 签名后的请求
+     * @return 响应正文
+     * @throws IllegalStateException 网络异常或非 2xx
+     */
+    private static String fetchSigned(CreditSigner.Signed signed) {
+        HttpClientBuilder builder = HttpClientFactory.of(signed.getUrl());
+        builder.accept("application/json");
+        builder.header("User-Agent", "spring-support-datasearch/1.0");
+        for (Map.Entry<String, String> entry : signed.getHeaders().entrySet()) {
+            builder.header(entry.getKey(), entry.getValue());
+        }
+        String body = signed.getBody();
+        if (body != null && !body.isEmpty()) {
+            // Content-Type 已由签名器写进 headers，这里只设 body，不再 json() 重复设头
+            builder.body(body);
+        }
+        String method = signed.getMethod() == null ? "GET" : signed.getMethod().toUpperCase();
         try {
             ClientResponse response = execute(builder, method);
             String text = response.getBodyString();
