@@ -28,20 +28,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * ONNX 虚拟供应商物化服务。
+ * ONNX 供应商的模型镜像同步服务。
  *
- * <p>背景：ONNX 供应商与模型原先完全由 {@link ModelRegistry} 在内存中动态拼装
- * （见 {@code ApiProviderController#buildOnnxProvider}），不落 {@code sys_ai_provider}
- * 表。这导致后台的「编辑供应商」「删除供应商」「修改模型 ID」等操作全部 404，
- * 因为这些接口都以 {@code requireProvider()} 查库为前提。</p>
+ * <p><b>不创建供应商行</b>：ONNX 与其它供应商一样，要用户在「添加供应商」里
+ * 自己添加（{@code platform = 'onnx'}）。本服务只在<strong>该行已存在</strong>时
+ * 把 {@link ModelRegistry} 里已就绪的本地 ONNX 模型镜像进
+ * {@code sys_ai_provider_model}，让「编辑供应商」「删除供应商」「修改模型 ID」
+ * 这些以 {@code requireProvider()} 查库为前提的接口有数据可操作。</p>
  *
- * <p>本服务在应用启动后把 ONNX 供应商<strong>物化</strong>到库中：</p>
- * <ul>
- *   <li>{@code sys_ai_provider} 写入一行 {@code provider_id = 'onnx'}、{@code platform = 'onnx'}；</li>
- *   <li>{@code sys_ai_provider_model} 为每个已注册 ONNX 模型写入一行镜像，
- *       {@code model} 即 modelId（外部目录模型为其目录路径），并以
- *       {@code capabilities[0].protocol = 'onnx'} 标记，供运行时区分。</li>
- * </ul>
+ * <p>之所以不再自动建行：用户没添加过的供应商凭空出现在列表里是错的（用户口径
+ * 2026-11-14）。行不存在时本服务直接跳过，不做任何持久化。</p>
+ *
+ * <p>镜像口径：{@code sys_ai_provider_model} 为每个已注册 ONNX 模型写一行，
+ * {@code model} 即 modelId（外部目录模型为其目录路径），并以
+ * {@code capabilities[0].protocol = 'onnx'} 标记，供运行时区分。</p>
  *
  * <p><b>不影响 AI 业务流程</b>：模型能力的实际解析仍走 {@link ModelRegistry}
  * （按 modelId → relativePath → classpath → downloadUrl），本服务只负责
@@ -82,24 +82,9 @@ public class OnnxProviderMaterializer {
     private static final String AUTH_SCHEME = "api_key";
 
     /**
-     * 供应商显示名。
-     */
-    private static final String PROVIDER_NAME = "ONNX 本地推理";
-
-    /**
-     * 供应商描述。
-     */
-    private static final String PROVIDER_DESC = "本地 ONNX 推理模型（由模型注册表动态同步）";
-
-    /**
      * 历史遗留的 appkey 占位串：ONNX 的 appkey 语义是本地模型目录，该固定值需要被刷新掉
      */
     private static final String LEGACY_API_KEY = "local-onnx";
-
-    /**
-     * 供应商排序（排在最前，与原先虚拟实现一致）。
-     */
-    private static final int PROVIDER_SORT = -2;
 
     /**
      * ONNX 基础地址：指向本机推理服务，与其它提供商同构，只是地址是本地的。
@@ -138,7 +123,9 @@ public class OnnxProviderMaterializer {
     private final AiModelCatalogService aiModelCatalogService;
 
     /**
-     * 应用启动完成后物化 ONNX 供应商及其模型。
+     * 应用启动完成后同步 ONNX 模型镜像。
+     *
+     * <p>只在用户已添加 ONNX 供应商时同步；没有这一行就什么都不写。</p>
      */
     @EventListener(ApplicationReadyEvent.class)
     @Transactional(rollbackFor = Exception.class)
@@ -156,41 +143,46 @@ public class OnnxProviderMaterializer {
             return;
         }
         try {
-            SysAiProvider provider = ensureProvider();
-            int models = syncModels();
-            syncProviderDevice();
-            log.info("[OnnxProvider] 物化完成 provider={} 新增模型={} 恢复目录={}",
+            SysAiProvider provider = findExistingProvider();
+            if (provider == null) {
+                log.info("[OnnxProvider] 未添加 ONNX 供应商，跳过模型镜像同步（恢复目录={}）", restored);
+                return;
+            }
+            int models = syncModels(provider.getProviderId());
+            syncProviderDevice(provider.getProviderId());
+            log.info("[OnnxProvider] 同步完成 provider={} 新增模型={} 恢复目录={}",
                     provider.getProviderId(), models, restored);
         } catch (Exception e) {
-            log.warn("[OnnxProvider] 物化失败（不影响 AI 能力解析）: {}", e.getMessage());
+            log.warn("[OnnxProvider] 同步失败（不影响 AI 能力解析）: {}", e.getMessage());
         }
     }
 
     /**
-     * 确保 ONNX 供应商行存在。
+     * 查找用户已添加的 ONNX 供应商行。
      *
-     * @return 供应商行
+     * <p>ONNX 与其它供应商一样由用户自己在「添加供应商」里添加，本服务<strong>只查不建</strong>：
+     * 没有这一行就直接跳过同步，不往库里塞用户没要过的供应商。</p>
+     *
+     * <p>标识优先按 {@link #ONNX_PROVIDER_ID} 命中，未命中时按平台列兜底——
+     * 兼容标识被改过、平台仍是 onnx 的历史行（与
+     * {@code ApiProviderController#isOnnxRow} 同口径）。</p>
+     *
+     * @return 供应商行；用户未添加时返回 {@code null}
      */
-    private SysAiProvider ensureProvider() {
+    private SysAiProvider findExistingProvider() {
         SysAiProvider existing = providerMapper.selectById(ONNX_PROVIDER_ID);
-        long now = System.currentTimeMillis();
-        if (existing != null) {
-            return backfillLocalEndpoint(existing, now);
+        if (existing == null) {
+            existing = providerMapper.selectList(
+                            new LambdaQueryWrapper<SysAiProvider>()
+                                    .like(SysAiProvider::getPlatform, PLATFORM))
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
         }
-        SysAiProvider provider = new SysAiProvider();
-        provider.setProviderId(ONNX_PROVIDER_ID);
-        provider.setPlatform(PLATFORM);
-        provider.setName(PROVIDER_NAME);
-        provider.setBaseUrl(onnxBaseUrl);
-        provider.setAuthScheme(AUTH_SCHEME);
-        provider.setCredentials(localCredentials());
-        provider.setEnabled(Boolean.TRUE);
-        provider.setSortOrder(PROVIDER_SORT);
-        provider.setCreatedAt(now);
-        provider.setUpdatedAt(now);
-        providerMapper.insert(provider);
-        log.info("[OnnxProvider] 已创建 ONNX 供应商行 provider_id={} base_url={}", ONNX_PROVIDER_ID, onnxBaseUrl);
-        return provider;
+        if (existing == null) {
+            return null;
+        }
+        return backfillLocalEndpoint(existing, System.currentTimeMillis());
     }
 
     /**
@@ -324,14 +316,32 @@ public class OnnxProviderMaterializer {
     }
 
     /**
-     * 同步 ONNX 模型镜像行。
-     *
-     * <p>只补派生字段，不覆盖人工维护的字段（enabled / alias / 上下文长度 / 采样参数等）。</p>
+     * 同步 ONNX 模型镜像行（标识固定为 {@link #ONNX_PROVIDER_ID}）。
      *
      * @return 本次新增的模型行数
      */
     @Transactional(rollbackFor = Exception.class)
     public int syncModels() {
+        return syncModels(ONNX_PROVIDER_ID);
+    }
+
+    /**
+     * 同步指定 ONNX 供应商的模型镜像行。
+     *
+     * <p>只补派生字段，不覆盖人工维护的字段（enabled / alias / 上下文长度 / 采样参数等）。</p>
+     *
+     * <p>供应商行不存在时直接返回 0：ONNX 由用户自己添加，没添加过就不该凭空出现模型行。</p>
+     *
+     * @param providerId ONNX 供应商标识
+     * @return 本次新增的模型行数
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int syncModels(String providerId) {
+        if (providerId == null || providerId.isBlank()
+                || providerMapper.selectById(providerId) == null) {
+            log.info("[OnnxProvider] 供应商 {} 不存在，跳过模型镜像同步", providerId);
+            return 0;
+        }
         // 权威数据源是「用户通过 ReFileSystem 选中的目录清单」，不是 ModelRegistry.getAll()：
         // 外部目录在注册表里是独立结构，不会出现在 getAll() 中（那里只有内置模板目录），
         // 依赖它会随注册表实现与启动顺序漂移。ONNX 的 appkey 就是这个路径，
@@ -345,7 +355,7 @@ public class OnnxProviderMaterializer {
         int purged = 0;
         try {
             purged = providerModelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getProviderId, ONNX_PROVIDER_ID)
+                    .eq(SysAiProviderModel::getProviderId, providerId)
                     .likeRight(SysAiProviderModel::getModel, "/"));
         } catch (Exception e) {
             log.warn("[OnnxProvider] 清理历史路径型模型行失败: {}", e.getMessage());
@@ -355,7 +365,7 @@ public class OnnxProviderMaterializer {
         }
         List<SysAiProviderModel> existing = providerModelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, ONNX_PROVIDER_ID));
+                        .eq(SysAiProviderModel::getProviderId, providerId));
         int created = 0;
         int skipped = 0;
         long now = System.currentTimeMillis();
@@ -393,7 +403,7 @@ public class OnnxProviderMaterializer {
                 providerModelMapper.updateByKey(hit);
             } else {
                 SysAiProviderModel row = new SysAiProviderModel();
-                row.setProviderId(ONNX_PROVIDER_ID);
+                row.setProviderId(providerId);
                 row.setModel(modelName);
                 row.setEnabled(Boolean.TRUE);
                 row.setSortOrder(0);
@@ -411,7 +421,7 @@ public class OnnxProviderMaterializer {
         Set<String> existingNames = new HashSet<>();
         for (SysAiProviderModel row : providerModelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, ONNX_PROVIDER_ID))) {
+                        .eq(SysAiProviderModel::getProviderId, providerId))) {
             existingNames.add(row.getModel());
         }
         List<Map<String, Object>> details;
@@ -431,7 +441,7 @@ public class OnnxProviderMaterializer {
                 continue;
             }
             SysAiProviderModel row = new SysAiProviderModel();
-            row.setProviderId(ONNX_PROVIDER_ID);
+            row.setProviderId(providerId);
             row.setModel(modelId);
             row.setEnabled(Boolean.TRUE);
             row.setSortOrder(0);
@@ -459,15 +469,32 @@ public class OnnxProviderMaterializer {
      * <p>设备值为空、{@code auto} 或非法值时清除覆盖，让模型级参数重新生效。</p>
      */
     public void syncProviderDevice() {
-        SysAiProvider provider = providerMapper.selectById(ONNX_PROVIDER_ID);
+        syncProviderDevice(ONNX_PROVIDER_ID);
+    }
+
+    /**
+     * 同步指定 ONNX 供应商的推理设备覆盖。
+     *
+     * <p>ONNX 供应商只允许一行（见 {@code ApiProviderController#requireNotDuplicateProvider}），
+     * 因此这里整体重建覆盖集是安全的：不会有两个 ONNX 行互相清掉对方的覆盖。</p>
+     *
+     * @param providerId ONNX 供应商标识
+     */
+    public void syncProviderDevice(String providerId) {
+        if (providerId == null || providerId.isBlank()) {
+            return;
+        }
+        SysAiProvider provider = providerMapper.selectById(providerId);
         if (provider == null) {
-            log.info("[OnnxProvider] 推理设备同步跳过：ONNX 供应商不存在");
+            // 行已删除：运行时也不能继续沿用已下线供应商的设备覆盖
+            ModelParams.clearDeviceOverrides();
+            log.info("[OnnxProvider] 推理设备同步跳过：ONNX 供应商 {} 不存在，已清除设备覆盖", providerId);
             return;
         }
         String device = providerDevice(provider.getExtra());
         List<SysAiProviderModel> models = providerModelMapper.selectList(
                 new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, ONNX_PROVIDER_ID));
+                        .eq(SysAiProviderModel::getProviderId, providerId));
         // 每次重建覆盖集：模型删除 / 改名后，旧 modelId 的覆盖不能残留在运行时。
         ModelParams.clearDeviceOverrides();
         for (SysAiProviderModel model : models) {
@@ -476,7 +503,7 @@ public class OnnxProviderMaterializer {
             }
         }
         log.info("[OnnxProvider] 推理设备已同步 provider={} device={} models={}",
-                ONNX_PROVIDER_ID, device == null ? "auto(模型级)" : device, models.size());
+                providerId, device == null ? "auto(模型级)" : device, models.size());
     }
 
     /**

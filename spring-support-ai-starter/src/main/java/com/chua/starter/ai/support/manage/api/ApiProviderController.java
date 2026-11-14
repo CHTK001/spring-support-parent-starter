@@ -178,13 +178,15 @@ public class ApiProviderController {
 
     /**
      * ONNX 供应商标识：与其余提供商一样是 {@code sys_ai_provider} 表里的真实一行，
-     * 由 {@link com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer} 物化维护。
+     * 由<strong>用户自己添加</strong>（落库时统一用该标识），
+     * {@link com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer}
+     * 只在该行存在时同步模型镜像，不再自动建行。
      */
     private static final String ONNX_PROVIDER_ID =
             com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer.ONNX_PROVIDER_ID;
 
     /**
-     * 判断供应商标识是否为内置的 ONNX 供应商。
+     * 判断供应商标识是否为 ONNX 本地推理供应商。
      *
      * @param providerId 供应商标识
      * @return true=ONNX 供应商
@@ -194,7 +196,20 @@ public class ApiProviderController {
     }
 
     /**
-     * 判断供应商行是否为内置 ONNX 供应商（按标识或平台判定）。
+     * 判断平台标识是否属于 ONNX 本地推理。
+     *
+     * <p>前端选「ONNX 本地推理」模板后落的 platform 就是 onnx；这里用包含判断，
+     * 与 {@link #isOnnxRow} / 模型拉取的平台分支同口径。</p>
+     *
+     * @param platform 平台标识
+     * @return true=ONNX 平台
+     */
+    private static boolean isOnnxPlatform(String platform) {
+        return platform != null && platform.toLowerCase(Locale.ROOT).contains("onnx");
+    }
+
+    /**
+     * 判断供应商行是否为 ONNX 供应商（按标识或平台判定）。
      *
      * @param provider 供应商行
      * @return true=ONNX 供应商
@@ -203,9 +218,7 @@ public class ApiProviderController {
         if (provider == null) {
             return false;
         }
-        return isOnnxProvider(provider.getProviderId())
-                || (provider.getPlatform() != null
-                        && provider.getPlatform().toLowerCase(Locale.ROOT).contains("onnx"));
+        return isOnnxProvider(provider.getProviderId()) || isOnnxPlatform(provider.getPlatform());
     }
 
     /**
@@ -240,24 +253,40 @@ public class ApiProviderController {
      *
      * <p>两条口径：</p>
      * <ul>
-     *   <li>ONNX 是内置单行，任何新增或克隆请求都不允许再落一条 ONNX 平台供应商 ——
-     *       要改它的地址或凭证只能编辑那一行；</li>
+     *   <li>ONNX <strong>和其它供应商一样由用户自己添加</strong>（2026-11-14 用户口径：
+     *       自动出现一行是错的），但仍只保留一行 —— 本地推理同一时刻只对应一套模型
+     *       目录与推理设备，两行会互相覆盖。已有 ONNX 行时不允许再新增或克隆；</li>
      *   <li>其余供应商按「同平台 + 同名称（去空格、忽略大小写）」判重，
      *       避免列表里出现两个都叫 DeepSeek 的条目导致默认模型选择歧义。</li>
      * </ul>
      *
      * @param platform         平台标识
      * @param name             供应商名称
-     * @param excludeProviderId 需要跳过的供应商标识（克隆时为源供应商，可为 null）
+     * @param excludeProviderId 需要跳过的供应商标识（编辑 / 克隆时为源供应商，可为 null）
      */
     private void requireNotDuplicateProvider(String platform, String name, String excludeProviderId) {
         String platformKey = platform == null ? "" : platform.trim().toLowerCase(Locale.ROOT);
-        // 排除自身：编辑 ONNX 那一行是合法操作（改地址、改凭证、改名称），
-        // 只有「把别的供应商改成 ONNX」或「新建一个 ONNX 同名货」才需要拦。
-        boolean onnxSelfRow = isOnnxProvider(excludeProviderId);
-        if (!onnxSelfRow && (platformKey.contains("onnx") || isOnnxProvider(name))) {
+        boolean wantsOnnx = platformKey.contains("onnx");
+        // 只有本地推理供应商能叫 onnx：云 API 行取这个名字只会让页面显示成「本地」。
+        if (!wantsOnnx && isOnnxProvider(name)) {
             throw new ApiException(ApiErrorCode.CONFLICT,
-                    "ONNX 供应商为内置单行，不允许重复新增；如需调整请直接编辑该供应商");
+                    "「onnx」是本地推理供应商专用名称，云 API 供应商请改用其它名称");
+        }
+        if (wantsOnnx) {
+            // 排除自身：编辑已有 ONNX 行（改名称、改凭证）是合法操作，
+            // 只有「库里已有一行 ONNX 时再落一行」才需要拦。
+            List<SysAiProvider> onnxRows = providerMapper.selectList(
+                    new LambdaQueryWrapper<SysAiProvider>()
+                            .and(w -> w.eq(SysAiProvider::getProviderId, ONNX_PROVIDER_ID)
+                                    .or()
+                                    .like(SysAiProvider::getPlatform, ONNX_PROVIDER_ID)));
+            for (SysAiProvider candidate : onnxRows) {
+                if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
+                    continue;
+                }
+                throw new ApiException(ApiErrorCode.CONFLICT,
+                        "已有 ONNX 供应商，只允许一行；如需调整请直接编辑该供应商");
+            }
         }
         String nameKey = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
         if (nameKey.isEmpty()) {
@@ -553,19 +582,24 @@ public class ApiProviderController {
     @PostMapping("/providers")
     @Transactional
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
+        String platform = requireStr(body, "platform");
+        String name = requireStr(body, "name");
         String providerId = str(body, "provider_id");
+        // ONNX 行统一落成固定标识 'onnx'：本地模型目录回显、模型镜像同步、本地模型拉取
+        // 兜底等多处都按该标识定位，生成时间戳 id 会让这些能力全部失配。
+        if (isOnnxPlatform(platform)) {
+            providerId = ONNX_PROVIDER_ID;
+        }
         if (providerId == null || providerId.isBlank()) {
             providerId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
         }
         if (providerMapper.selectById(providerId) != null) {
             throw new ApiException(ApiErrorCode.CONFLICT, "provider_id 已存在: " + providerId);
         }
-        String platform = requireStr(body, "platform");
-        String name = requireStr(body, "name");
         // 路由组供应商：模型来自「已添加的模型库」，没有上游地址可填，
         // 因此不校验同平台重名（同一平台可以建多个不同策略的路由组）。
         if (!ProviderRouteTargets.isRouterGroup(platform)) {
-            // ONNX 为内置单行，不允许再新增一条同平台的供应商；其余供应商按「平台+名称」判重
+            // ONNX 只允许一行本地推理；其余供应商按「平台+名称」判重
             requireNotDuplicateProvider(platform, name, null);
         }
         long now = System.currentTimeMillis();
@@ -583,6 +617,13 @@ public class ApiProviderController {
             entity.setBaseUrl(routerBaseUrl == null ? "" : routerBaseUrl);
             entity.setAuthScheme(str(body, "auth_scheme") != null && !str(body, "auth_scheme").isBlank()
                 ? str(body, "auth_scheme") : "none");
+        } else if (isOnnxPlatform(platform)) {
+            // ONNX 是本地推理：前端不采集地址，base_url 留空占位，由同步服务按
+            // ai.onnx.base-url 回填；认证方式与其它提供商统一为 api_key。
+            String onnxBaseUrl = str(body, "base_url");
+            entity.setBaseUrl(onnxBaseUrl == null ? "" : onnxBaseUrl);
+            String onnxAuth = str(body, "auth_scheme");
+            entity.setAuthScheme(onnxAuth == null || onnxAuth.isBlank() ? "api_key" : onnxAuth);
         } else {
             entity.setBaseUrl(requireStr(body, "base_url"));
             entity.setAuthScheme(requireStr(body, "auth_scheme"));
@@ -609,6 +650,17 @@ public class ApiProviderController {
         for (Map<String, Object> conn : connections) {
             SysAiProviderConnection connEntity = toConnectionEntity(providerId, conn, now);
             connectionMapper.insert(connEntity);
+        }
+
+        // ONNX 刚由用户添加：立刻把本地模型镜像与推理设备同步过来，
+        // 否则页面上要等到下次启动才看得到模型（用户加完却是空列表）。
+        if (isOnnxRow(entity)) {
+            try {
+                onnxProviderMaterializer.syncModels(providerId);
+                onnxProviderMaterializer.syncProviderDevice(providerId);
+            } catch (Exception e) {
+                log.warn("[OnnxProvider] 新增后同步模型失败（不影响供应商行）: {}", e.getMessage());
+            }
         }
 
         // 查询完整数据返回
@@ -728,8 +780,9 @@ public class ApiProviderController {
     /**
      * 解析批量删除的供应商 id 列表，并在删除前拦截非法请求。
      *
-     * <p>整批定位先于任何写操作：空 id、不存在的 id、批量里混入 ONNX 供应商，都会
-     * 直接拦截整批，不允许部分删除。</p>
+     * <p>整批定位先于任何写操作：空 id、不存在的 id 都会直接拦截整批，
+     * 不允许部分删除。ONNX 供应商由用户自己添加，因此和普通供应商一样可删
+     * （删除后模型镜像与运行时设备覆盖一并清理）。</p>
      *
      * @param body 请求体，须含 {@code ids} 数组（provider_id 字符串）
      * @return 待删除的供应商 id 列表
@@ -746,10 +799,7 @@ public class ApiProviderController {
             if (id == null || id.isBlank()) {
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "id 不能为空");
             }
-            SysAiProvider target = requireProvider(id);
-            if (isOnnxRow(target)) {
-                throw new ApiException(ApiErrorCode.INVALID_PARAM, "ONNX 供应商为内置单行，不允许删除");
-            }
+            requireProvider(id);
             targets.add(id);
         }
         return targets;
@@ -792,6 +842,8 @@ public class ApiProviderController {
                 .filter(s -> s != null && !s.trim().isEmpty())
                 .map(String::trim)
                 .toList();
+        // ONNX 行删除后要清掉运行时的推理设备覆盖（行在时由同步服务维护）
+        SysAiProvider target = providerMapper.selectById(providerId);
 
         providerMapper.deleteById(providerId);
         modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
@@ -804,6 +856,9 @@ public class ApiProviderController {
         connectionMapper.delete(new LambdaQueryWrapper<SysAiProviderConnection>()
                 .eq(SysAiProviderConnection::getProviderId, providerId));
         clearGlobalSettingsReferencing(providerId, ownedModels);
+        if (isOnnxRow(target)) {
+            onnxProviderMaterializer.syncProviderDevice(providerId);
+        }
         log.info("删除供应商 {}，级联删除其模型与全部连接", providerId);
     }
 
@@ -1500,8 +1555,8 @@ public class ApiProviderController {
     @GetMapping("/providers/{provider_id}/remote_models")
     public ApiResult<?> fetchRemoteModels(@PathVariable("provider_id") String providerId) {
         try {
-            // ONNX 是后端注入的虚拟提供商，不落在 provider 表里，
-            // 直接走本地模型门面，避免 requireProvider() 报「provider 不存在」
+            // ONNX 行由用户自己添加；万一库中没有该行（已删除 / 标识未落成 onnx），
+            // 本地模型仍可直接从模型门面取，避免 requireProvider() 报「provider 不存在」
             if (isVirtualLocalProvider(providerId)) {
                 Map<String, Object> local = fetchLocalModelsFromFacade();
                 @SuppressWarnings("unchecked")
@@ -2552,7 +2607,7 @@ public class ApiProviderController {
         qw.orderByAsc(SysAiProviderModel::getCreatedAt);
 
         List<SysAiProviderModel> models = modelMapper.selectList(qw);
-        // ONNX 是仅管理员可见的内置单行，其模型同样不外泄
+        // ONNX 供应商（用户自己添加、仅管理员可见）的模型同样不外泄
         boolean admin = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
         List<Map<String, Object>> items = new ArrayList<>(8); // 模型数量不可预估
         for (SysAiProviderModel model : models) {
@@ -5213,7 +5268,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     private void refreshOnnxDevice(SysAiProvider provider) {
         if (isOnnxRow(provider)) {
-            onnxProviderMaterializer.syncProviderDevice();
+            onnxProviderMaterializer.syncProviderDevice(provider.getProviderId());
         }
     }
 
@@ -5919,7 +5974,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         String dir = body == null ? null : String.valueOf(body.getOrDefault("dir", "")).trim();
         String template = body == null ? null : String.valueOf(body.getOrDefault("template", "")).trim();
         try {
-            return ApiResult.ok(onnxExternalDirectoryService.add(dir, template));
+            Map<String, Object> added = onnxExternalDirectoryService.add(dir, template);
+            // 绑定目录后立即镜像进模型表，页面才能当场看到新模型；
+            // 用户还没添加 ONNX 供应商时 syncModels 自己跳过（不凭空写模型行）。
+            onnxProviderMaterializer.syncModels();
+            return ApiResult.ok(added);
         } catch (IllegalArgumentException ex) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, ex.getMessage());
         }
