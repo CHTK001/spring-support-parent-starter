@@ -2,6 +2,7 @@ package com.chua.starter.account.manage.service;
 
 import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.store.SysAccount;
+import com.chua.starter.account.manage.store.SysAccountSecret;
 
 import java.util.List;
 import java.util.Map;
@@ -121,4 +122,17 @@ public interface ManageAccountService {
      * @return 明文凭据；账号不存在或未配置时返回 {@code null}
      */
     String resolveSecret(String accountId);
+
+    /**
+     * 把账号内联凭据收录到密钥库，并让账号改为引用该密钥。
+     *
+     * <p>账号里直接填写的 AccessKey/Secret（未引用密钥库）可一键收录：按账号种类映射
+     * 密钥类型（API_KEY→api / EMAIL→mail / SMS→sms），凭据加密落到
+     * {@code sys_account_secret}，账号 {@code config.secretId} 指向新密钥。
+     * 已引用密钥的账号直接返回现有密钥，不重复收录。</p>
+     *
+     * @param accountId 账号标识
+     * @return 收录后的密钥（不含明文 Secret）
+     */
+    SysAccountSecret collectSecret(String accountId);
 }

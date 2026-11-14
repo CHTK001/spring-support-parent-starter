@@ -48,6 +48,12 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-mybatis-starter</artifactId>
     </dependency>
+    <!-- 余额查询 SPI（CreditQueryProvider）：上游余额配置存在本模块，
+           真正「去哪查 / 取哪个字段」的实现由 datasearch 模块提供，避免各家口径散落 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasearch-starter</artifactId>
+    </dependency>
     <!-- Swagger Annotations（/v2/channels 接口文档） -->
     <dependency>
       <groupId>io.swagger.core.v3</groupId>

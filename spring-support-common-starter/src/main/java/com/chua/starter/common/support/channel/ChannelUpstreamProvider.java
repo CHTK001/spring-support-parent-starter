@@ -58,4 +58,32 @@ public interface ChannelUpstreamProvider {
     default Map<String, Object> modelMeta(Map<String, Object> model) {
         return new LinkedHashMap<>(0);
     }
+
+    /**
+     * 余额 / 积分读数的补充实现（可选）。
+     *
+     * <p>网关对某些上游没有余额接口（SiliconFlow 已下线 {@code /v1/user/info}），
+     * 额度卡上就只剩一句「读不到」。宿主要接自己的余额源时实现本方法：渠道实现
+     * 只在<b>网关读不到</b>这个上游时采用这里的快照，网关有读数时不调用。</p>
+     *
+     * <p><b>返回 {@code null} 表示「不接管」</b>，调用方继续问下一个实现、最后回落到
+     * 网关的原始结果。确实查到、或者确实查到失败原因，才返回 Map，不要用空 Map 占位。</p>
+     *
+     * <p>返回键与 {@code ChannelCreditProvider#credit(Map)} 一致：{@code remain} /
+     * {@code total} / {@code unit}（{@code credit|token|currency}）/ {@code currency} /
+     * {@code packages}（每项 {@code {name,remain,size,display,expiresAt}}）/
+     * {@code updatedAt} / {@code error}；另可给 {@code seeAt}（查看余额的网页）。</p>
+     *
+     * <p>实现应<b>永不抛异常</b>：失败写 {@code error} 返回；抛出的异常会被当作
+     * 「不接管」吞掉，页面不会因此报错，但也拿不到你的余额。</p>
+     *
+     * @param providerId  网关里的上游 id（如 {@code siliconflow}）
+     * @param account     上游账号（可为空；空表示该上游合计）
+     * @param credentials 网关连接凭据（只读，不要修改）
+     * @return 积分快照；不接管返回 {@code null}
+     */
+    default Map<String, Object> credit(String providerId, String account,
+                                       Map<String, Object> credentials) {
+        return null;
+    }
 }

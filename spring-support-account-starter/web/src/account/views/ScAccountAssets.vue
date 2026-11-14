@@ -310,6 +310,14 @@
             <ReButton
               text
               :show-text="false"
+              icon="Key"
+              :icon-size="28"
+              tip="收录到密钥管理"
+              @click="collectSecretOf(activeAccount)"
+            />
+            <ReButton
+              text
+              :show-text="false"
               icon="CopyDocument"
               :icon-size="28"
               tip="复制为新账号"
@@ -701,6 +709,7 @@ import {
   batchUpdateAccountStatus,
   batchVerifyAccounts,
   claimTempMailbox,
+  collectAccountSecret,
   deleteAccount,
   deleteAccountAppKey,
   deleteAccountCookie,
@@ -1506,6 +1515,7 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
           : [
           { key: 'edit', label: '编辑账号', icon: 'EditPen' },
           { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
+          { key: 'collect-secret', label: '收录到密钥管理', icon: 'Key' },
           ...(group.key === 'EMAIL' || group.key === 'SMS'
             ? [{ key: 'open-console', label: group.key === 'EMAIL' ? '打开邮箱' : '打开短信', icon: 'Message', divided: true }]
             : []),
@@ -1567,6 +1577,7 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
   if (!target) return;
   if (item.key === 'edit') openEdit(target);
   else if (item.key === 'verify') void onVerify(target);
+  else if (item.key === 'collect-secret') void collectSecretOf(target);
   else if (item.key === 'open-console') openConsole(target);
   else if (item.key === 'sync-sms-templates') void syncSmsTemplatesOf(target);
   else if (item.key === 'copy-address') void copyAddress(target);
@@ -1833,6 +1844,26 @@ async function onVerify(row: SysAccount | null): Promise<void> {
     message.error(e?.message || '校验失败');
   } finally {
     verifyingId.value = null;
+  }
+}
+
+/**
+ * 把账号内联凭据收录到密钥管理（反哺）。
+ *
+ * <p>账号里直接填写的 AccessKey / Secret 常常散落多份，收录后统一存进
+ * {@code sys_account_secret} 并按账号种类标注类型（API_KEY→通用 API /
+ * EMAIL→邮件 / SMS→短信），账号改为引用这条密钥；之后再改密钥只需改一处。</p>
+ *
+ * @param row 账号
+ */
+async function collectSecretOf(row: SysAccount | null): Promise<void> {
+  if (!row) return;
+  try {
+    const saved = await collectAccountSecret(row.accountId);
+    message.success(`已收录到密钥管理：${saved.name || ''}`);
+    await loadAll();
+  } catch (e: any) {
+    message.error(e?.message || '收录到密钥管理失败');
   }
 }
 

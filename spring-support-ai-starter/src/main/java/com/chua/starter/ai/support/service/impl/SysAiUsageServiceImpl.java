@@ -80,6 +80,11 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     private final SysAiPricingService pricingService;
 
       /**
+       * 模型指标：每轮实测 tok/s 回写，模型管理「速度」格读这一份。
+       */
+    private final com.chua.starter.ai.support.manage.service.SysAiModelMetricsService sysAiModelMetricsService;
+
+      /**
        * IP 地址转物理地址服务（spring-支持-通用，带 Redis 缓存）
        */
     private final IptablesService iptablesService;
@@ -175,6 +180,9 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
         entity.setSysAiUsageSource("chat");
         usageMapper.insert(entity);
+        // 实测输出速度回写模型指标：模型管理「速度」格直接读它（官方指标源未收录的
+        // 自建通道也有值）。失败只降级为「没有速度」，不影响用量记账。
+        sysAiModelMetricsService.recordObservedSpeed(provider, model, usage.tokensPerSecond());
         log.debug("[Usage] 记录成功: group={}, model={}, tokens={}, cost={}",
                 groupName, model, usage.getTotalTokens(), entity.getSysAiUsageTotalCost());
         notifyLiveStream();

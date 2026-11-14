@@ -27,6 +27,9 @@ public interface SysAccountSecretService {
     /**
      * 按类型过滤的密钥列表（账号引用密钥时按类型挑选）。
      *
+     * <p>类型支持多值存储（{@code sms,storage}），过滤按 token 命中：
+     * 只要密钥的类型里包含该类型就会被返回。</p>
+     *
      * @param secretType 密钥类型（sms / storage / payment / mail / api / other，可空表示不限）
      * @return 密钥列表（不含明文 Secret）
      */

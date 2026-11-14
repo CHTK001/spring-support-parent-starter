@@ -32,7 +32,8 @@ import org.junit.jupiter.api.Test;
 /**
  * 发布级 SkyWalking APM 注入的回归探针。
  *
- * <p>APM 注入是「改配置就改行为」的纯字符串拼接逻辑：注入三条 JVM 参数、项目级配置优先、
+ * <p>APM 注入是「改配置就改行为」的纯字符串拼接逻辑：注入四条 JVM 参数（agent /
+ * service_name / backend / 归属标记）、项目级配置优先、
  * 发布配置变更后同步到下属项目、关闭时清理。这些分支在编译期全部无感，而一旦拼错
  * （参数名漏个点、路径为空仍拼出 {@code -javaagent:null}、项目自己写的 agent 被发布级覆盖、
  * 重复同步叠加出两组 {@code -javaagent:}）只会在真机启动或链路采集不到时才发现，
@@ -51,7 +52,7 @@ import org.junit.jupiter.api.Test;
  *   <li>E：复制项目到其它发布时按目标发布注入（{@code copyProjects}）</li>
  * </ol>
  *
- * <p>F 段把「APM 参数判定」当作契约单独锁定：注入的三条参数必须全部能被
+ * <p>F 段把「APM 参数判定」当作契约单独锁定：注入的四条参数必须全部能被
  * {@code isApmArg} 识别，否则第二次同步会重复注入第二组 {@code -javaagent:}，
  * 直接导致 JVM 启动失败（同端口两个 agent 争用）。</p>
  *
@@ -87,6 +88,15 @@ public final class ReleaseApmProbe {
      * 发布级 service_name 前缀样例。
      */
     private static final String PREFIX = "ms";
+
+    /**
+     * 发布注入标记前缀（后接发布 ID）。
+     *
+     * <p>生产侧给「发布注入的」参数加一个显式归属标记：同步与清理只认带本发布标记的参数，
+     * 项目自己声明的 APM 即使值与发布配置完全相同也不会被误覆盖/误删。探针的期望值
+     * 必须包含它，否则断言的是旧的三参数契约。</p>
+     */
+    private static final String OWNER = "-Dskywalking.scnet.release_owner=";
 
     /**
      * 参数序列化器：与生产同一套 Jackson（生产用同一 ObjectMapper 写出 jvmArgs）。
@@ -142,15 +152,16 @@ public final class ReleaseApmProbe {
     }
 
     private void sectionAInjectionMatrix() {
-        // A1 基线：开关开启且 jar / OAP 地址就绪 → 三条参数按固定顺序落在最前
+        // A1 基线：开关开启且 jar / OAP 地址就绪 → 四条参数按固定顺序落在最前
         Harness base = harness(release(1L, true, JAR, PREFIX, BACKEND));
         MsServerProject injected = project(11L, 1L, "demo", null);
         applyApm(base.impl, injected);
-        check("A1 开关开启且 jar/OAP 就绪时注入三条参数（顺序：agent → service_name → backend）",
+        check("A1 开关开启且 jar/OAP 就绪时注入四条参数（顺序：agent → service_name → backend → 归属标记）",
                 argsOf("A1", injected).equals(List.of(
                         "-javaagent:" + JAR,
                         "-Dskywalking.agent.service_name=" + PREFIX + "-demo",
-                        "-Dskywalking.collector.backend_service=" + BACKEND)),
+                        "-Dskywalking.collector.backend_service=" + BACKEND,
+                        OWNER + 1L)),
                 injected.getJvmArgs());
 
         // A2~A7 五个「不注入」条件：任一缺失都必须整体不注入，绝不能拼出半截参数
@@ -205,7 +216,7 @@ public final class ReleaseApmProbe {
                 argsOf("A10c", normalName).contains("-Dskywalking.agent.service_name=demo"),
                 normalName.getJvmArgs());
 
-        // A11 项目已有的非 APM 参数必须保留，且排在注入的三条之后（agent 必须在 -jar 之前、
+        // A11 项目已有的非 APM 参数必须保留，且排在注入的四条之后（agent 必须在 -jar 之前、
         // 也不能打乱用户显式指定的 -Xmx / profiles 顺序）
         Harness keep = harness(release(13L, true, JAR, PREFIX, BACKEND));
         MsServerProject withArgs = project(113L, 13L, "demo",
@@ -216,6 +227,7 @@ public final class ReleaseApmProbe {
                         "-javaagent:" + JAR,
                         "-Dskywalking.agent.service_name=" + PREFIX + "-demo",
                         "-Dskywalking.collector.backend_service=" + BACKEND,
+                        OWNER + 13L,
                         "-Xmx512m",
                         "--spring.profiles.active=prod")),
                 withArgs.getJvmArgs());
@@ -255,6 +267,7 @@ public final class ReleaseApmProbe {
                         "-javaagent:" + JAR,
                         "-Dskywalking.agent.service_name=" + PREFIX + "-demo",
                         "-Dskywalking.collector.backend_service=" + BACKEND,
+                        OWNER + 17L,
                         "--server.port=8112",
                         "--spring.profiles.active=prod")),
                 bareArgs.getJvmArgs());
@@ -290,11 +303,12 @@ public final class ReleaseApmProbe {
         MsServerProject created = request(1L, "demo", null);
         ReturnResult<MsServerProject> result = h.impl.createProject(created);
         check("B0 createProject 成功", result.isOk(), String.valueOf(result.getMsg()));
-        check("B1 createProject 落库前已注入三条 APM 参数",
+        check("B1 createProject 落库前已注入四条 APM 参数",
                 argsOf("B1", created).equals(List.of(
                         "-javaagent:" + JAR,
                         "-Dskywalking.agent.service_name=" + PREFIX + "-demo",
-                        "-Dskywalking.collector.backend_service=" + BACKEND)),
+                        "-Dskywalking.collector.backend_service=" + BACKEND,
+                        OWNER + 1L)),
                 created.getJvmArgs());
         check("B1b 落库的实例就是被改写过的那一份（不是另存一份原始 jvmArgs）",
                 h.projects.inserted.size() == 1
@@ -347,18 +361,20 @@ public final class ReleaseApmProbe {
         ReturnResult<MsServerRelease> updated = h.impl.updateRelease(1L, payload(true, JAR, PREFIX, BACKEND));
         check("C0 updateRelease 成功", updated.isOk(), String.valueOf(updated.getMsg()));
 
-        check("C1 开关由关转开：项目原有参数保留，APM 三条补在最前",
+        check("C1 开关由关转开：项目原有参数保留，APM 四条补在最前",
                 argsOf("C1", alpha).equals(List.of(
                         "-javaagent:" + JAR,
                         "-Dskywalking.agent.service_name=" + PREFIX + "-alpha",
                         "-Dskywalking.collector.backend_service=" + BACKEND,
+                        OWNER + 1L,
                         "-Xmx1g")),
                 alpha.getJvmArgs());
         check("C2 jvmArgs 为 null 的项目同样能被补上（null 不是注入障碍）",
                 argsOf("C2", beta).equals(List.of(
                         "-javaagent:" + JAR,
                         "-Dskywalking.agent.service_name=" + PREFIX + "-beta",
-                        "-Dskywalking.collector.backend_service=" + BACKEND)),
+                        "-Dskywalking.collector.backend_service=" + BACKEND,
+                        OWNER + 1L)),
                 beta.getJvmArgs());
         check("C3 项目级 APM 的项目被跳过：一个字不改，也不触发一次多余的 updateById",
                 own.equals(gamma.getJvmArgs()) && h.projects.updated.size() == 2,
@@ -392,7 +408,7 @@ public final class ReleaseApmProbe {
      * D 段：开关关闭、jar 或 OAP 地址失效时必须清理「本发布注入的」APM 行；
      * 项目自己声明的 APM（自研 agent、自有 OAP 地址）一律不动。
      *
-     * <p>这一段是「关闭开关到底有没有用」的唯一证据：注入是把三条参数复制进项目 jvmArgs，
+     * <p>这一段是「关闭开关到底有没有用」的唯一证据：注入是把四条参数复制进项目 jvmArgs，
      * 落库后发布侧再无记录可查，若清理只按「项目里有没有 skywalking 参数」判断，
      * 关闭开关就永远清不掉（清空分支成为死代码），而按「有就删」又会删掉项目自研 agent。</p>
      */
@@ -403,16 +419,17 @@ public final class ReleaseApmProbe {
     }
 
     private void sectionDClearOnDisable() {
-        // D1 关闭开关 → 本发布注入的三行被清掉，项目自有参数保留
+        // D1 关闭开关 → 本发布注入的四行被清掉，项目自有参数保留
         Harness h = harness(release(1L, true, JAR, PREFIX, BACKEND));
         MsServerProject alpha = project(21L, 1L, "alpha", json(
                 "-javaagent:" + JAR,
                 "-Dskywalking.agent.service_name=" + PREFIX + "-alpha",
                 "-Dskywalking.collector.backend_service=" + BACKEND,
+                OWNER + 1L,
                 "-Xmx1g"));
         h.projectsOf(alpha);
         h.impl.updateRelease(1L, payload(false, null, null, null));
-        check("D1 关闭开关后本发布注入的 APM 三行被清理、项目自有参数保留",
+        check("D1 关闭开关后本发布注入的 APM 四行（含归属标记）被清理、项目自有参数保留",
                 json("-Xmx1g").equals(alpha.getJvmArgs()), alpha.getJvmArgs());
 
         // D2 项目级 APM 永远不受发布级开关影响（发布侧不接管别人的 agent）
@@ -439,6 +456,7 @@ public final class ReleaseApmProbe {
                 "-javaagent:" + JAR,
                 "-Dskywalking.agent.service_name=" + PREFIX + "-beta",
                 "-Dskywalking.collector.backend_service=" + BACKEND,
+                OWNER + 4L,
                 "-Xmx3g"));
         h4.projectsOf(beta);
         h4.impl.updateRelease(4L, payload(null, "", null, null));
@@ -450,7 +468,8 @@ public final class ReleaseApmProbe {
         MsServerProject omega = project(25L, 5L, "omega", json(
                 "-javaagent:" + JAR,
                 "-Dskywalking.agent.service_name=" + PREFIX + "-omega",
-                "-Dskywalking.collector.backend_service=" + BACKEND));
+                "-Dskywalking.collector.backend_service=" + BACKEND,
+                OWNER + 5L));
         h5.projectsOf(omega);
         h5.impl.updateRelease(5L, payload(null, null, null, ""));
         check("D5 OAP 地址被清空时本发布注入的行被清理",
@@ -465,6 +484,7 @@ public final class ReleaseApmProbe {
                 "-javaagent:" + JAR,
                 "-Dskywalking.agent.service_name=" + PREFIX + "-keep",
                 "-Dskywalking.collector.backend_service=" + BACKEND,
+                OWNER + 6L,
                 "--spring.profiles.active=prod"));
         h6.projectsOf(keep);
         h6.impl.updateRelease(6L, payload(false, null, null, null));
@@ -523,6 +543,7 @@ public final class ReleaseApmProbe {
                         "-javaagent:" + JAR2,
                         "-Dskywalking.agent.service_name=prod-alpha",
                         "-Dskywalking.collector.backend_service=" + BACKEND2,
+                        OWNER + 2L,
                         "-Xmx1g")),
                 copy.getJvmArgs());
         check("E2 副本的复制语义未被 APM 注入破坏（id/pid/状态/服务名清空，指向目标发布）",
@@ -585,7 +606,7 @@ public final class ReleaseApmProbe {
     // ==================== F. APM 参数判定契约 ====================
 
     /**
-     * F 段：{@code isApmArg} 的识别范围必须与注入的三条参数互为闭环。
+     * F 段：{@code isApmArg} 的识别范围必须与注入的四条参数互为闭环。
      *
      * <p>这是「幂等」与「项目级优先」两条规则能够成立的前提：只要有一条注入参数识别不了，
      * 下一次同步就会再注入一组 {@code -javaagent:}，JVM 直接起不来。</p>
@@ -602,8 +623,11 @@ public final class ReleaseApmProbe {
         applyApm(h.impl, project);
         List<String> args = argsOf("F1", project);
 
-        check("F1 注入的三条参数全部能被 isApmArg 识别（否则二次同步会重复注入）",
-                args.size() == 3 && args.stream().allMatch(a -> apm(h.impl, a)), String.valueOf(args));
+        check("F1 注入的四条参数全部能被 isApmArg 识别（否则二次同步会重复注入）",
+                args.size() == 4 && args.stream().allMatch(a -> apm(h.impl, a)), String.valueOf(args));
+        check("F1b 归属标记本身也算 APM 参数（清理时不会残留在项目里）",
+                apm(h.impl, OWNER + 1L) && apm(h.impl, OWNER + 1L),
+                "owner=" + (OWNER + 1L));
         check("F2 普通 JVM 参数不被误判为 APM（-Xmx / -Dserver.port / 空串）",
                 !apm(h.impl, "-Xmx512m") && !apm(h.impl, "-Dserver.port=8112")
                         && !apm(h.impl, "") && !apm(h.impl, "--spring.profiles.active=prod"),

@@ -336,6 +336,7 @@ public class MyGlobalSettingProvider implements GlobalSettingProvider {
 11. **本地模型目录缺失时能力不可用**：ONNX 供应商按 `<模型目录>/<modelId>/model.onnx` 读取，缺文件只报「未配置」，不会回退到云端。
 12. **技能与角色是资源文件**：内置技能在 `src/main/resources/skills-builtin/*`、角色在 `characters-builtin/*`，新增后要重新打包（或走对应 SPI 的在线/离线来源）。
 13. **示例配置不能当 `application.yml`**：`ai-starter.yml` 只由示例应用 `spring.config.import` 引入，改名会整份顶掉宿主配置。
+14. **人脸 / OCR 依赖的 OpenCV 在老旧节点上必然不可用**：`org.openpnp:opencv` 4.x 的原生库最低要求 glibc 2.27（4.8/4.9 要 2.29），CentOS 7（glibc 2.17）加载必失败，**调版本号无解**。此时 `/v2/face/config/models`、`/v2/face/models` 返回空清单（原因只进日志 WARN），人脸页显示「没有可用模型」；检测/比对等接口返回 `code != 0` 的失败信封——都不会再是 500。完整版本对照表见 `utils-support-deeplearning-starter/README.md` 的「OpenCV 原生库与 glibc 对应关系」。
 
 ## 八、附录：Actuator 只读端点
 

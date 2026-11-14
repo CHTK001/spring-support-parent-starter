@@ -6,6 +6,7 @@ import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.common.support.channel.ChannelException;
 import com.chua.starter.common.support.channel.ChannelUpstreamAdmin;
 import com.chua.starter.common.support.channel.ChannelUpstreamCodec;
+import com.chua.starter.common.support.channel.ChannelUpstreamProvider;
 import com.chua.starter.common.support.channel.MagpieSupport;
 
 import java.util.ArrayList;
@@ -404,7 +405,8 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     @Override
     public Map<String, Object> quotas(Map<String, Object> credentials, String provider, String user) {
         Map<String, Object> out = new LinkedHashMap<>(2);
-        out.put("quotas", MagpieAdminClient.adminQuotas(credentials, provider, user));
+        out.put("quotas", withCustomCredit(
+                MagpieAdminClient.adminQuotas(credentials, provider, user), provider, user, credentials));
         return out;
     }
 
@@ -421,9 +423,167 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
         if (provider == null || provider.isBlank()) {
             throw new ChannelException(ChannelException.CODE_INVALID_PARAM, "必须指定要刷新的 provider");
         }
+        String wanted = provider.trim();
         Map<String, Object> out = new LinkedHashMap<>(2);
-        out.put("quotas", MagpieAdminClient.refreshQuota(credentials, provider.trim(), user));
+        List<Map<String, Object>> quotas;
+        try {
+            quotas = MagpieAdminClient.refreshQuota(credentials, wanted, user);
+        } catch (ChannelException e) {
+            // 网关这条上游根本没有读额度的端点时刷新会失败；只要自建余额源能给出读数，
+            // 这次刷新就算成功（按钮上「刷新」的语义是「重新读一次」，不限定走网关）。
+            List<Map<String, Object>> custom = withCustomCredit(List.of(), wanted, user, credentials);
+            if (custom.isEmpty()) {
+                throw e;
+            }
+            out.put("quotas", custom);
+            return out;
+        }
+        out.put("quotas", withCustomCredit(quotas, wanted, user, credentials));
         return out;
+    }
+
+    /**
+     * 网关额度卡补齐自建读数。
+     *
+     * <p>只处理「点名了一个上游」的调用（账号卡）：全量列表不逐家代查，否则一次打开
+     * 上游页签会把 44 家上游各问一遍自建源。点名上游时，若网关没有它的卡、或卡里
+     * 既没有窗口也没有余额（SiliconFlow 下线余额接口就是这种），才问
+     * {@link ChannelUpstreamProvider#credit(String, String, Map)}：</p>
+     * <ul>
+     *   <li>自建源给了读数：填进同一张卡（保留网关原有的 {@code seeAt} 等字段），
+     *       去掉 {@code error}，标 {@code source=spi}；没有卡就补一张；</li>
+     *   <li>自建源只给了原因：网关有卡就保留网关原文；没有卡才补一条自建失败；</li>
+     *   <li>自建源不接管：原样返回，页面继续显示网关的原因。</li>
+     * </ul>
+     *
+     * <p>包内可见是为了单测：注入假实现即可验证补齐 / 不补齐 / 追加三种分支。</p>
+     *
+     * @param quotas      网关额度卡
+     * @param provider    上游 id（为空表示全量，直接原样返回）
+     * @param user        上游账号（可空）
+     * @param credentials 网关连接凭据（只读）
+     * @param impls       自建余额实现列表
+     * @return 补齐后的额度卡
+     */
+    static List<Map<String, Object>> withCustomCredit(List<Map<String, Object>> quotas, String provider,
+                                                      String user, Map<String, Object> credentials,
+                                                      List<ChannelUpstreamProvider> impls) {
+        if (MagpieSupport.isBlank(provider) || quotas == null) {
+            return quotas;
+        }
+        String wanted = provider.trim();
+        Map<String, Object> card = null;
+        for (Map<String, Object> row : quotas) {
+            if (row != null && wanted.equalsIgnoreCase(MagpieUpstreamCreditSpi.text(row.get("provider")))
+                    && matchesUser(row, user)) {
+                card = row;
+                break;
+            }
+        }
+        if (!unreadable(card)) {
+            return quotas;
+        }
+        Map<String, Object> snapshot = MagpieUpstreamCreditSpi.credit(impls, wanted, user, credentials);
+        if (snapshot == null) {
+            return quotas;
+        }
+        List<Map<String, Object>> windows = MagpieUpstreamCreditSpi.windowsOf(snapshot);
+        String error = MagpieUpstreamCreditSpi.text(snapshot.get("error"));
+        if (windows.isEmpty()) {
+            // 自建源也只给得出失败原因：网关有原文就别覆盖，没有卡才补一条
+            if (card != null || error.isEmpty()) {
+                return quotas;
+            }
+            List<Map<String, Object>> out = new ArrayList<>(quotas.size() + 1);
+            out.addAll(quotas);
+            out.add(failureCard(wanted, error));
+            return out;
+        }
+        Map<String, Object> filled = card == null
+                ? new LinkedHashMap<>(8) : new LinkedHashMap<>(card);
+        filled.remove("error");
+        filled.put("provider", wanted);
+        if (MagpieUpstreamCreditSpi.text(filled.get("name")).isEmpty()) {
+            filled.put("name", wanted);
+        }
+        filled.put("windows", windows);
+        filled.put("source", "spi");
+        filled.put("readAt", MagpieUpstreamCreditSpi.readAtOf(snapshot));
+        if (card == null) {
+            List<Map<String, Object>> out = new ArrayList<>(quotas.size() + 1);
+            out.addAll(quotas);
+            out.add(filled);
+            return out;
+        }
+        List<Map<String, Object>> out = new ArrayList<>(quotas.size());
+        for (Map<String, Object> row : quotas) {
+            out.add(row == card ? filled : row);
+        }
+        return out;
+    }
+
+    /**
+     * 补齐自建读数（走真实 SPI 注册表）。
+     *
+     * @param quotas      网关额度卡
+     * @param provider    上游 id
+     * @param user        上游账号（可空）
+     * @param credentials 网关连接凭据
+     * @return 补齐后的额度卡
+     */
+    private static List<Map<String, Object>> withCustomCredit(List<Map<String, Object>> quotas, String provider,
+                                                             String user, Map<String, Object> credentials) {
+        return withCustomCredit(quotas, provider, user, credentials, MagpieUpstreamCreditSpi.providers());
+    }
+
+    /**
+     * 网关这张卡是否没有可用读数。
+     *
+     * <p>「有窗口」或「有余额值」都算读到了（余额卡只有 {@code balance} 没有窗口，
+     * 不能因为窗口为空就当成读不到）。</p>
+     *
+     * @param card 额度卡
+     * @return true 表示网关读不到
+     */
+    private static boolean unreadable(Map<String, Object> card) {
+        if (card == null) {
+            return true;
+        }
+        if (card.get("windows") instanceof List<?> windows && !windows.isEmpty()) {
+            return false;
+        }
+        return MagpieUpstreamCreditSpi.text(card.get("balance")).isEmpty();
+    }
+
+    /**
+     * 卡上的账号是否与请求一致（没点名账号时任何卡都算）。
+     *
+     * @param card 额度卡
+     * @param user 请求的账号（可空）
+     * @return true 表示命中
+     */
+    private static boolean matchesUser(Map<String, Object> card, String user) {
+        if (MagpieSupport.isBlank(user)) {
+            return true;
+        }
+        String cardUser = MagpieUpstreamCreditSpi.text(card.get("user"));
+        return cardUser.isEmpty() || cardUser.equalsIgnoreCase(user.trim());
+    }
+
+    /**
+     * 自建源读失败、网关也没有这张卡时补的说明卡。
+     *
+     * @param provider 上游 id
+     * @param error    失败原因
+     * @return 额度卡
+     */
+    private static Map<String, Object> failureCard(String provider, String error) {
+        Map<String, Object> card = new LinkedHashMap<>(4);
+        card.put("provider", provider);
+        card.put("name", provider);
+        card.put("error", error);
+        card.put("source", "spi");
+        return card;
     }
 
     // ── 私有辅助 ──

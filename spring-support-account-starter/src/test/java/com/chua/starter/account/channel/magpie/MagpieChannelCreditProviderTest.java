@@ -234,8 +234,8 @@ class MagpieChannelCreditProviderTest {
     }
 
     @Test
-    @DisplayName("余额卡按货币口径，金额字符串去掉符号与千分位")
-    void balanceCardUsesCurrencyUnit() {
+    @DisplayName("余额卡只给带符号的原文时保留原文，不折算成整数")
+    void balanceCardKeepsRawText() {
         Map<String, Object> quota = new LinkedHashMap<>();
         quota.put("provider", "openrouter");
         quota.put("name", "openrouter");
@@ -245,10 +245,16 @@ class MagpieChannelCreditProviderTest {
 
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(List.of(quota));
 
-        assertEquals(1235L, result.get("remain"));
-        assertEquals("currency", result.get("unit"));
+        // 余额是厂商文案（带币种符号与小数）：早先按整数解析会把 $0.0064 抹成 0，
+        // 余额直接显示成「用光」，所以现在保留原文、由前端照抄展示。
+        assertNull(result.get("remain"));
+        assertEquals("$1,234.6", result.get("text"));
         assertEquals(1_700_000_000_000L, result.get("expiresAt"));
-        assertEquals("openrouter", packages(result).get(0).get("name"));
+        Map<String, Object> row = packages(result).get(0);
+        assertEquals("openrouter", row.get("name"));
+        assertEquals("$1,234.6", row.get("display"));
+        assertEquals("currency", row.get("unit"));
+        assertEquals("USD", row.get("currency"));
     }
 
     @Test
@@ -267,9 +273,9 @@ class MagpieChannelCreditProviderTest {
         Map<String, Object> result = MagpieChannelCreditProvider.snapshot(quotas);
 
         assertEquals(7L, result.get("remain"));
-        String warning = String.valueOf(result.get("warning"));
-        assertTrue(warning.contains("gemini: token expired"), warning);
-        assertFalse(warning.isBlank());
+        // 上游原文（401 / token expired / HTML 片段）不往界面透，只说「这一家读不到」，
+        // 细节交给上游日志；否则卡片上会出现一坨看起来像故障的诊断文本。
+        assertEquals("「gemini」余额读取失败", String.valueOf(result.get("warning")));
     }
 
     // ── 夹具 ──

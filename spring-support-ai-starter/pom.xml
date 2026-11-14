@@ -100,25 +100,25 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-openai-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- MOSS 开放平台（mosi.cn）：文生图 MossImageClient + 语音合成 MossTextToAudioClient -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-mosi-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- 智谱 GLM ChatClient（zhipu/glm SPI） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-zhipu-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- Z.AI ChatClient（zai SPI） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-zai-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- 深度学习能力（OCR 识别、向量模型等） -->
     <dependency>
@@ -129,37 +129,37 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-deeplearning-agentscope-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- iLink 微信 Bot 扫码登录 SDK -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-ilink-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- 飞书 Bot（凭据配置型：appId/appSecret） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-feishu-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- QQ Bot（凭据配置型：appId/appSecret，WebSocket 长连接） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-qq-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- 钉钉 Bot（凭据配置型：AppKey/AppSecret，Stream 长连接，无需公网回调） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-dingding-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- WhatsApp Cloud API Bot（凭据配置型：phone_number_id/access_token/app_secret/verify_token，Webhook 收发） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-whatsapp-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现）。
          注意：这里只引「实现」，不引「权重」——具体模型构件（utils-support-models-onnx-*）
@@ -196,30 +196,30 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-milvus-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- RAG 文档文本提取：PDF / Word（按扩展名自动分发） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-pdf-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-word-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- RAG 文档文本提取：Tika 通用兜底（pptx/ppt/html/xml/rtf/epub/msg/eml 等） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-tika-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- 网页正文提取（JSoup）：知识库按网址采集时需要去脚本/样式/导航并还原 HTML 实体 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-crawler-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <dependency>
       <groupId>org.jsoup</groupId>
@@ -230,7 +230,7 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-datasearch-starter</artifactId>
-      <version>4.0.0.50</version>
+      <version>4.0.0.51</version>
     </dependency>
     <!-- r2dbc-spi 锁定 0.9.1，防止 Spring Boot BOM 升级到 1.0.x（移除了 ConnectionFactoryOptions） -->
     <dependency>

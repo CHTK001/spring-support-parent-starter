@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,8 +22,11 @@ import java.util.Map;
  *
  * <p>与 {@link ApiSettingController} 的区别：后者带
  * {@code @ConditionalOnMissingClass(SysSettingController)}，在内置 common-service
- * 的实现时整个 Bean 不加载；本控制器<b>不带条件</b>，只补这两个缺失路径，
- * 因此不会与 {@code /v2/setting/default} 冲突。</p>
+ * 的实现时整个 Bean 不加载；本控制器<b>同样带该条件</b>——带 common-service
+ * 的应用由 SysSettingController 提供真实的 /v2/setting/list 与 /v2/setting/sso/providers，
+ * 本控制器让位，避免运行期 Ambiguous mapping（会直接 409「操作状态异常」，
+ * 前端 codec 运行时开关就永远读不到）；不带 common-service 的应用（如控制台）
+ * 才由本控制器补这两个缺失路径。</p>
  *
  * @author CH
  * @since 4.0.0.51
@@ -30,6 +34,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/v2/setting")
+@ConditionalOnMissingClass("com.chua.starter.service.controller.SysSettingController")
 public class ApiSettingCompatController {
 
     /**

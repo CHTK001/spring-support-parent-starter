@@ -79,8 +79,9 @@
             class="entry"
             :class="{ 'is-active': selected?.secretId === item.secretId, 'is-off': item.status === 0 }"
             @click="select(item)"
+            @contextmenu.prevent="openCtx($event, item)"
           >
-            <span class="entry__mark" :class="`is-${typeKey(item)}`">
+            <span class="entry__mark" :class="`is-${primaryType(item)}`">
               <ReIcon :name="typeIcon(item)" :size="15" />
             </span>
             <span class="entry__main">
@@ -88,12 +89,12 @@
                 <span class="entry__name" :title="item.name">{{ item.name || '未命名密钥' }}</span>
                 <span
                   class="entry__dot"
-                  :class="item.status === 0 ? 'is-off' : item.hasSecret ? 'is-on' : 'is-warn'"
-                  :title="item.status === 0 ? '已停用' : item.hasSecret ? '凭据已配置' : 'Secret 待补'"
+                  :class="item.status === 0 ? 'is-off' : 'is-on'"
+                  :title="item.status === 0 ? '已停用' : '已启用'"
                 />
               </span>
               <span class="entry__code mono">
-                {{ typeLabel(item.secretType) }} · {{ item.provider || 'custom' }}
+                {{ typeLabelOf(item) }} · {{ providerLabel(item.provider) }}
                 {{ item.accessKey ? ` · ${maskAccessKey(item.accessKey)}` : '' }}
               </span>
             </span>
@@ -114,13 +115,17 @@
       <section class="detail">
         <template v-if="selected">
           <header class="detail__head">
-            <span class="detail__mark" :class="`is-${typeKey(selected)}`">
+            <span class="detail__mark" :class="`is-${primaryType(selected)}`">
               <ReIcon :name="typeIcon(selected)" :size="16" />
             </span>
             <div class="detail__title">
               <h2 :title="selected.name">{{ selected.name || '未命名密钥' }}</h2>
               <p>
-                {{ typeLabel(selected.secretType) }} · {{ selected.provider || 'custom' }}
+                {{ typeLabelOf(selected) }} · 厂商
+                <span class="provider-inline">
+                  <ProviderLogo :provider="selected.provider" :size="14" />
+                  {{ providerLabel(selected.provider) }}
+                </span>
                 <span v-if="selected.accessKey" class="mono"> · {{ selected.accessKey }}</span>
               </p>
             </div>
@@ -141,11 +146,22 @@
             <div class="facts">
               <div class="fact">
                 <span class="k">密钥类型</span>
-                <span class="v">{{ typeLabel(selected.secretType) }}</span>
+                <span class="v">
+                  <span v-for="t in typeKeys(selected)" :key="t" class="type-tag" :class="`is-${t}`">
+                    {{ TYPE_LABELS[t] }}
+                  </span>
+                  <span v-if="!typeKeys(selected).length" class="v-muted">未分类</span>
+                </span>
               </div>
               <div class="fact">
                 <span class="k">用途 / 厂商</span>
-                <span class="v">{{ selected.provider || '—' }}</span>
+                <span class="v">
+                  <span class="provider-inline">
+                    <ProviderLogo :provider="selected.provider" :size="16" />
+                    {{ providerLabel(selected.provider) }}
+                  </span>
+                  <span v-if="selected.provider" class="v-code mono">{{ selected.provider }}</span>
+                </span>
               </div>
               <div class="fact">
                 <span class="k">AccessKeyId</span>
@@ -186,7 +202,7 @@
               tip="删除密钥"
               :icon-size="28"
               type="danger"
-              @click="removeSelected"
+              @click="remove()"
             />
             <span class="detail__foot-right">
               <ReButton
@@ -195,7 +211,7 @@
                 icon="SwitchButton"
                 :tip="selected.status === 0 ? '启用' : '停用'"
                 :icon-size="28"
-                @click="toggleStatus"
+                @click="toggleStatus()"
               />
               <ReButton
                 text
@@ -216,6 +232,22 @@
           <span>从左侧选择密钥查看详情；点右上角「新建密钥」创建</span>
         </div>
       </section>
+    </div>
+
+    <!-- 右键菜单：密钥行的便捷操作（与账号页同一套视觉） -->
+    <div v-if="ctxMenu" class="ctx-layer" @click="ctxMenu = null" @contextmenu.prevent="ctxMenu = null">
+      <ul class="ctx-menu" :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }" @click.stop>
+        <li
+          v-for="item in ctxItems"
+          :key="item.key"
+          class="ctx-item"
+          :class="{ 'is-divided': item.divided }"
+          @click="runCtx(item.key)"
+        >
+          <ReIcon :name="item.icon" :size="13" />
+          <span>{{ item.label }}</span>
+        </li>
+      </ul>
     </div>
 
     <!-- 新建 / 编辑弹窗 -->
@@ -248,6 +280,9 @@ import {
 } from '../api/account'
 import { errorText } from '../../shared/errorText'
 import { confirmThen } from '../../shared/confirmThen'
+import { copyText } from '../../shared/clipboard'
+import { providerLabel } from '../secretProviders'
+import ProviderLogo from './components/ProviderLogo.vue'
 import SecretDialog from './components/SecretDialog.vue'
 
 /** 密钥类型：后端 secretType 的取值集合 */
@@ -292,21 +327,81 @@ const selected = ref<SysAccountSecret | null>(null)
 const formVisible = ref(false)
 const editing = ref<SysAccountSecret | null>(null)
 
-/** 类型取值：空值归为 other */
-function typeKey(item: SysAccountSecret): SecretType {
-  const raw = String(item.secretType || '').toLowerCase() as SecretType
-  return TYPE_ORDER.includes(raw) ? raw : 'other'
+/** 右键菜单（坐标 + 目标密钥） */
+const ctxMenu = ref<{ x: number; y: number; item: SysAccountSecret } | null>(null)
+
+/**
+ * 右键菜单项。
+ *
+ * <p>与详情底部按钮同一套动作，只是少了「打开」这一步：右键即可编辑 / 启停 /
+ * 复制 AccessKey / 删除，避免每次都先去右栏。</p>
+ */
+const ctxItems = computed(() => {
+  const item = ctxMenu.value?.item
+  return [
+    { key: 'edit', label: '编辑密钥', icon: 'EditPen' },
+    {
+      key: 'toggle',
+      label: item?.status === 0 ? '启用密钥' : '停用密钥',
+      icon: item?.status === 0 ? 'Select' : 'SwitchButton',
+    },
+    { key: 'copy-key', label: '复制 AccessKeyId', icon: 'CopyDocument', divided: true },
+    { key: 'delete', label: '删除密钥', icon: 'Delete', divided: true },
+  ]
+})
+
+/** 打开右键菜单 */
+function openCtx(event: MouseEvent, item: SysAccountSecret): void {
+  ctxMenu.value = { x: event.clientX, y: event.clientY, item }
+  // 右键同时把该行设为选中，右栏详情跟着走
+  selected.value = item
 }
 
-/** 类型中文名 */
-function typeLabel(secretType?: string | null): string {
-  const raw = String(secretType || '').toLowerCase() as SecretType
-  return TYPE_LABELS[TYPE_ORDER.includes(raw) ? raw : 'other']
+/** 执行右键菜单项 */
+function runCtx(key: string): void {
+  const menu = ctxMenu.value
+  ctxMenu.value = null
+  const item = menu?.item
+  if (!item) return
+  if (key === 'edit') openEdit(item)
+  else if (key === 'toggle') void toggleStatus(item)
+  else if (key === 'copy-key') void copyAccessKey(item)
+  else if (key === 'delete') void remove(item)
+}
+
+/** 复制 AccessKeyId（没有则不复制，避免把「—」写进剪贴板） */
+async function copyAccessKey(item: SysAccountSecret): Promise<void> {
+  if (!item.accessKey) {
+    message.warning('该密钥还没有 AccessKeyId')
+    return
+  }
+  const ok = await copyText(item.accessKey)
+  if (ok) message.success('AccessKeyId 已复制')
+}
+
+/** 类型取值：一条密钥可以有多个类型（{@code sms,storage}），按 token 拆开 */
+function typeKeys(item: SysAccountSecret): SecretType[] {
+  const tokens = String(item.secretType || '')
+    .split(',')
+    .map((token) => token.trim().toLowerCase() as SecretType)
+    .filter((token) => TYPE_ORDER.includes(token))
+  return tokens
+}
+
+/** 主类型：图标与配色按第一个类型走 */
+function primaryType(item: SysAccountSecret): SecretType {
+  return typeKeys(item)[0] ?? 'other'
+}
+
+/** 多值类型中文名（列表与详情共用，未分类时明确写「未分类」） */
+function typeLabelOf(item: SysAccountSecret): string {
+  const keys = typeKeys(item)
+  return keys.length ? keys.map((key) => TYPE_LABELS[key]).join(' / ') : '未分类'
 }
 
 /** 类型图标 */
 function typeIcon(item: SysAccountSecret): string {
-  return TYPE_ICONS[typeKey(item)]
+  return TYPE_ICONS[primaryType(item)]
 }
 
 /** AccessKey 尾段展示（首 4 位 + 尾 4 位） */
@@ -315,9 +410,9 @@ function maskAccessKey(accessKey: string): string {
   return `${accessKey.slice(0, 4)}…${accessKey.slice(-4)}`
 }
 
-/** 类型筛选条（带数量） */
+/** 类型筛选条（带数量）：多类型密钥在每个命中类型下都会计数 */
 const typeFilters = computed(() => {
-  const count = (t: SecretType) => secrets.value.filter((s) => typeKey(s) === t).length
+  const count = (t: SecretType) => secrets.value.filter((s) => typeKeys(s).includes(t)).length
   return [
     { key: 'all' as const, label: '全部', n: secrets.value.length },
     ...TYPE_ORDER.map((t) => ({ key: t, label: TYPE_LABELS[t], n: count(t) }))
@@ -328,7 +423,7 @@ const typeFilters = computed(() => {
 const filtered = computed(() => {
   const k = keyword.value.trim().toLowerCase()
   return secrets.value.filter((item) => {
-    if (typeFilter.value !== 'all' && typeKey(item) !== typeFilter.value) return false
+    if (typeFilter.value !== 'all' && !typeKeys(item).includes(typeFilter.value as SecretType)) return false
     if (!k) return true
     return `${item.name || ''} ${item.accessKey || ''} ${item.remark || ''}`.toLowerCase().includes(k)
   })
@@ -404,9 +499,9 @@ function onSaved(): void {
   void load()
 }
 
-/** 启用 / 停用 */
-async function toggleStatus(): Promise<void> {
-  const item = selected.value
+/** 启用 / 停用（不传参表示对选中项操作） */
+async function toggleStatus(target?: SysAccountSecret | null): Promise<void> {
+  const item = target ?? selected.value
   if (!item) return
   try {
     await updateAccountSecret(item.secretId, { ...item, status: item.status === 0 ? 1 : 0 })
@@ -417,9 +512,9 @@ async function toggleStatus(): Promise<void> {
   }
 }
 
-/** 删除 */
-async function removeSelected(): Promise<void> {
-  const item = selected.value
+/** 删除（不传参表示对选中项操作） */
+async function remove(target?: SysAccountSecret | null): Promise<void> {
+  const item = target ?? selected.value
   if (!item) return
   const ok = await confirmThen(
     message.confirm,
@@ -430,7 +525,7 @@ async function removeSelected(): Promise<void> {
   try {
     await deleteAccountSecret(item.secretId)
     message.success('密钥已删除')
-    selected.value = null
+    if (selected.value?.secretId === item.secretId) selected.value = null
     await load()
   } catch (err) {
     message.error(errorText(err))
@@ -942,5 +1037,104 @@ onMounted(load)
 
 .mono {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* ---------- 详情：类型标签 / 厂商翻译 ---------- */
+.fact .v {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.type-tag {
+  flex: none;
+  padding: 0 7px;
+  font-size: 11.5px;
+  line-height: 19px;
+  color: var(--text-secondary);
+  background: var(--bg-fill);
+  border: 1px solid var(--border-subtle, var(--border-default));
+  border-radius: 999px;
+
+  &.is-sms {
+    color: var(--el-color-success);
+    border-color: var(--el-color-success-light-7);
+    background: var(--el-color-success-light-9);
+  }
+
+  &.is-mail {
+    color: var(--el-color-primary);
+    border-color: var(--el-color-primary-light-7);
+    background: var(--el-color-primary-light-9);
+  }
+
+  &.is-storage {
+    color: var(--el-color-warning);
+    border-color: var(--el-color-warning-light-7);
+    background: var(--el-color-warning-light-9);
+  }
+
+  &.is-payment {
+    color: var(--el-color-danger);
+    border-color: var(--el-color-danger-light-7);
+    background: var(--el-color-danger-light-9);
+  }
+}
+
+.provider-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.v-code {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+
+.v-muted {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- 右键菜单（与账号资产页同一套） ---------- */
+.ctx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+}
+
+.ctx-menu {
+  position: fixed;
+  min-width: 172px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg-elevated, var(--bg-container));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-fill);
+  }
+
+  &.is-divided {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-subtle, var(--border-default));
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
 }
 </style>

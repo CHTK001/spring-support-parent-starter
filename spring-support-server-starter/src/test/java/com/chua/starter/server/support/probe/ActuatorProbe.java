@@ -239,6 +239,36 @@ public final class ActuatorProbe {
     }
 
     /**
+     * 日志列表压缩：完整 JSON 与「被 64KB 截断」的 JSON 都要给出可用结果。
+     *
+     * <p>真实应用 loggers 响应几百 KB，远端执行通道会在 64KB 处截断，
+     * 原样 JSON.parse 必然失败；这段保证页面至少能拿到前缀里的条目并知道被截断了。</p>
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void compactsLoggersPayload() {
+        String full = "{\"levels\":[\"INFO\",\"DEBUG\"],\"loggers\":{"
+                + "\"ROOT\":{\"configuredLevel\":\"INFO\",\"effectiveLevel\":\"INFO\"},"
+                + "\"com.chua\":{\"effectiveLevel\":\"DEBUG\"}}}";
+        java.util.Map<String, Object> packed =
+                com.chua.starter.server.support.util.ActuatorLoggers.compact(full);
+        java.util.List<java.util.Map<String, String>> rows =
+                (java.util.List<java.util.Map<String, String>>) packed.get("loggers");
+        Assertions.assertEquals(2, rows.size());
+        Assertions.assertEquals(Boolean.FALSE, packed.get("truncated"));
+        Assertions.assertEquals("INFO", rows.get(0).get("configuredLevel"));
+
+        String cut = full.substring(0, full.indexOf("\"com.chua\"") + 12);
+        java.util.Map<String, Object> packedCut =
+                com.chua.starter.server.support.util.ActuatorLoggers.compact(cut);
+        java.util.List<java.util.Map<String, String>> cutRows =
+                (java.util.List<java.util.Map<String, String>>) packedCut.get("loggers");
+        Assertions.assertEquals(Boolean.TRUE, packedCut.get("truncated"));
+        Assertions.assertFalse(cutRows.isEmpty(), "截断后至少要抠出 ROOT");
+        Assertions.assertEquals("ROOT", cutRows.get(0).get("name"));
+    }
+
+    /**
      * 找一个可用的 PowerShell 宿主。
      *
      * @return 可执行文件路径；没有时返回 null

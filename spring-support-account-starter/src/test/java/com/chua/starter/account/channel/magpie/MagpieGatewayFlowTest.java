@@ -17,6 +17,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -120,8 +121,13 @@ class MagpieGatewayFlowTest {
         assertEquals("pro", credit.get("plan"));
         List<?> packages = (List<?>) credit.get("packages");
         assertEquals(2, packages.size());
-        String warning = String.valueOf(credit.get("warning"));
-        assertTrue(warning.contains("单位不一致"));
+        // 两种单位不再拼成一句「单位不一致」的警告，而是各成一条 units，由前端分条展示；
+        // 相加才是错的（会报出 12 + 30 = 42 这种跨单位的假余额）。
+        List<?> units = (List<?>) credit.get("units");
+        assertEquals(2, units.size());
+        assertEquals("currency", ((Map<?, ?>) units.get(0)).get("unit"));
+        assertEquals("credit", ((Map<?, ?>) units.get(1)).get("unit"));
+        assertNull(credit.get("warning"));
     }
 
     @Test

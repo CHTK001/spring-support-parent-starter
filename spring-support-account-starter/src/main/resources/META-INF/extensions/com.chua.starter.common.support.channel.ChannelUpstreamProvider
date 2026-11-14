@@ -1,1 +1,2 @@
 com.chua.starter.account.channel.magpie.MagpieUpstreamProvider
+com.chua.starter.account.channel.magpie.MagpieDbCreditProvider

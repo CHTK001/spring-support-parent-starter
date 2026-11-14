@@ -71,7 +71,9 @@ public class SysAccountSecretServiceImpl implements SysAccountSecretService {
     public List<SysAccountSecret> listByType(String secretType) {
         LambdaQueryWrapper<SysAccountSecret> wrapper = Wrappers.lambdaQuery();
         if (StringUtils.isNotBlank(secretType)) {
-            wrapper.eq(SysAccountSecret::getSecretType, secretType.trim());
+            // 类型支持多值（逗号分隔），按 token 子串匹配即可：
+            // 六个取值互不为子串，like 不会误命中
+            wrapper.like(SysAccountSecret::getSecretType, secretType.trim());
         }
         applyOwnership(wrapper);
         wrapper.orderByDesc(SysAccountSecret::getUpdatedAt).orderByDesc(SysAccountSecret::getCreatedAt);

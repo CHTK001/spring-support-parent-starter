@@ -27,7 +27,7 @@
     <description>APM 热点观测：REST 暴露 APM 数据 + 自注入 Agent + 前端静态托管</description>
 
     <properties>
-        <utils.version>4.0.0.50</utils.version>
+        <utils.version>4.0.0.51</utils.version>
     </properties>
 
     <dependencies>

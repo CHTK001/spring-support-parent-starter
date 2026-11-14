@@ -6,6 +6,7 @@ import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
+import com.chua.starter.account.manage.store.SysAccountSecret;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -135,6 +136,17 @@ public class AccountController {
     @PostMapping("/{accountId}/verify")
     public ApiResult<Map<String, Object>> verify(@PathVariable("accountId") String accountId) {
         return ApiResult.ok(accountService.verify(accountId));
+    }
+
+    /**
+     * 把账号内联凭据收录到密钥库（反哺）。
+     *
+     * @param accountId 账号标识
+     * @return 收录后的密钥（不含明文 Secret）
+     */
+    @PostMapping("/{accountId}/secret/collect")
+    public ApiResult<SysAccountSecret> collectSecret(@PathVariable("accountId") String accountId) {
+        return ApiResult.ok(accountService.collectSecret(accountId));
     }
 
     /**

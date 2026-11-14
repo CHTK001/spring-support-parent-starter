@@ -751,6 +751,22 @@ public class ReleaseController {
     }
 
     /**
+     * 把主机文件里的产物投放到目标主机的 uploads/（只投放，不升级）。
+     *
+     * @param id  项目标识
+     * @param key 主机文件 key
+     * @return 目标机最终包路径
+     */
+    @Operation(summary = "把主机文件产物投放到项目主机 uploads（不升级）")
+    @PostMapping("/project/{id}/push/from-host-file")
+    public ReturnResult<String> pushFromHostFile(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> body) {
+        Object key = body == null ? null : body.get("key");
+        return releaseService.pushHostFileToProject(id, key == null ? null : String.valueOf(key));
+    }
+
+    /**
      * SkyWalking OAP 可达性探测（右下角状态灯）。
      *
      * @param releaseId 发布标识

@@ -1,0 +1,6 @@
+# 余额查询实现：新增一家只要加一行，页面按 kind 选择
+com.chua.starter.datasearch.credit.spi.impl.ExpressionCreditQueryProvider
+com.chua.starter.datasearch.credit.spi.impl.NewApiCreditQueryProvider
+com.chua.starter.datasearch.credit.spi.impl.Sub2ApiCreditQueryProvider
+com.chua.starter.datasearch.credit.spi.impl.OpenAiCreditQueryProvider
+com.chua.starter.datasearch.credit.spi.impl.HostCreditQueryProvider

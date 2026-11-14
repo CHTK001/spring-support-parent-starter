@@ -252,8 +252,17 @@ public final class ReleaseScriptProbe {
         check("B3 Windows 停止段排除自身 $PID",
                 wb.stop().contains("$_.ProcessId -ne $PID"),
                 wb.stop());
-        check("B4 Windows 停止段模式经自安全处理（[s]moke）",
-                wb.stop().contains("[s]moke"),
+        // B4 归属判据：Windows 停止段的孤儿兜底不再按「主入口名」匹配 —— 同机两个同名
+        // 主入口的项目会互相误杀（实测批量升级：一个项目的停服步骤把另一个项目的进程
+        // 杀掉，随后两者的 PID 解析都指向同一个进程）。改为「本项目日志重定向目标 /
+        // 项目目录」的路径边界正则，并排除脚本自身（命令行含 Get-CimInstance 的那个）。
+        check("B4 Windows 停止段孤儿兜底按项目路径边界判定，不按主入口名",
+                wb.stop().contains("[regex]::Escape")
+                        && wb.stop().contains("([\\\\/\\s\\x22]|$)")
+                        && wb.stop().contains("$op.CommandLine.Contains('Get-CimInstance')"),
+                wb.stop());
+        check("B4a 归属判据里不出现主入口名（同名项目互杀的正是「按入口名匹配」）",
+                !wb.stop().contains("smoke"),
                 wb.stop());
         // 启动校验必须有稳定窗口：否则 `cmd /c` 解析失败（如 java 不在机器级 PATH）时
         // 会「先存在、随即退出」而被判成启动成功（真实踩到过）

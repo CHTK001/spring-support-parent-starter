@@ -12,8 +12,10 @@ import com.chua.starter.account.manage.model.AccountBatchFailure;
 import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.security.AccountSecretCodec;
 import com.chua.starter.account.manage.service.ManageAccountService;
+import com.chua.starter.account.manage.service.SysAccountSecretService;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
+import com.chua.starter.account.manage.store.SysAccountSecret;
 import com.chua.starter.account.spi.AccountVerifier;
 import com.chua.starter.account.support.AccountUserContext;
 import lombok.RequiredArgsConstructor;
@@ -87,6 +89,11 @@ public class ManageAccountServiceImpl implements ManageAccountService {
      * 敏感值编解码器
      */
     private final AccountSecretCodec secretCodec;
+
+    /**
+     * 密钥库服务（账号内联凭据收录用）
+     */
+    private final SysAccountSecretService secretService;
 
     /**
      * {@inheritDoc}
@@ -290,7 +297,8 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         SysAccount account = requireAccount(accountId);
         assertWritable(account);
         Map<String, Object> detail = null;
-        String plainSecret = secretCodec.decrypt(account.getSecret());
+        // 与调用方一致：引用密钥库时校验的是密钥里那把，而不是账号里的旧副本
+        String plainSecret = resolveSecret(accountId);
         AccountVerifier verifier = findVerifier(account.getKind());
         if (verifier != null) {
             try {
@@ -386,7 +394,81 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         if (account == null) {
             return null;
         }
+        // 引用密钥库时以密钥为准：换密钥只需改一处，所有引用它的账号一起生效
+        Object refId = account.getConfig() == null ? null : account.getConfig().get("secretId");
+        String referencedId = refId == null ? null : String.valueOf(refId);
+        if (StringUtils.isNotBlank(referencedId)) {
+            String plain = secretService.resolveSecret(referencedId);
+            if (StringUtils.isNotBlank(plain)) {
+                return plain;
+            }
+            log.warn("[account] 账号引用的密钥取不到明文，回退账号自身凭据: accountId={}, secretId={}",
+                    accountId, referencedId);
+        }
         return secretCodec.decrypt(account.getSecret());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public SysAccountSecret collectSecret(String accountId) {
+        SysAccount account = requireAccount(accountId);
+        assertVisible(account);
+        // 已引用且密钥仍可见：直接返回，避免重复收录
+        Object refId = account.getConfig() == null ? null : account.getConfig().get("secretId");
+        String referencedId = refId == null ? null : String.valueOf(refId);
+        if (StringUtils.isNotBlank(referencedId)) {
+            try {
+                return secretService.requireVisible(referencedId);
+            } catch (ApiException ignore) {
+                log.warn("[account] 账号引用的密钥已失效，重新收录: accountId={}, secretId={}",
+                        accountId, referencedId);
+            }
+        }
+        String plain = secretCodec.decrypt(account.getSecret());
+        if (StringUtils.isBlank(plain)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "账号尚未配置凭据，无法收录到密钥管理");
+        }
+        String displayName = StringUtils.defaultString(account.getName(), account.getCode());
+        SysAccountSecret input = new SysAccountSecret();
+        input.setName(displayName);
+        input.setProvider(StringUtils.defaultString(account.getVendor(), "custom"));
+        input.setSecretType(secretTypeOf(account.getKind()));
+        input.setAccessKey(account.getUsername());
+        input.setSecret(plain);
+        input.setOwner(account.getOwner());
+        input.setStatus(account.getStatus());
+        input.setRemark("来自账号：" + StringUtils.defaultString(displayName, accountId));
+        SysAccountSecret created = secretService.create(input);
+        // 账号改为引用新密钥（保留账号自身密文，回滚/兼容都不受影响）
+        Map<String, Object> config = account.getConfig() == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(account.getConfig());
+        config.put("secretId", created.getSecretId());
+        account.setConfig(config);
+        account.setUpdatedAt(System.currentTimeMillis());
+        accountMapper.updateById(account);
+        log.info("[account] 账号凭据已收录到密钥库: accountId={}, secretId={}",
+                accountId, created.getSecretId());
+        return created;
+    }
+
+    /**
+     * 账号种类 → 密钥类型（与前端 {@code SECRET_TYPE_BY_KIND} 一致）。
+     *
+     * @param kind 账号种类
+     * @return sms / mail / api
+     */
+    private String secretTypeOf(String kind) {
+        if (AccountKind.SMS.equalsIgnoreCase(kind)) {
+            return "sms";
+        }
+        if (AccountKind.EMAIL.equalsIgnoreCase(kind)) {
+            return "mail";
+        }
+        return "api";
     }
 
     /**

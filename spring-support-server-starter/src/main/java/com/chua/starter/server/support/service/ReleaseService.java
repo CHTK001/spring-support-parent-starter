@@ -347,6 +347,18 @@ public interface ReleaseService {
     ReturnResult<String> upgradeFromHostFile(Long id, String key, Map<String, Object> config);
 
     /**
+     * 把主机文件里的产物投放到目标主机的 uploads/（只投放，不触发升级）。
+     *
+     * <p>「主机文件」操作列的「上传项目」用它：把包先推到目标机，是否升级、
+     * 什么时候升级由用户在发布管理里决定。目标机上的最终路径由实现返回。</p>
+     *
+     * @param id  项目ID
+     * @param key 主机文件 key（相对文件存储根目录）
+     * @return 目标机上的最终包路径
+     */
+    ReturnResult<String> pushHostFileToProject(Long id, String key);
+
+    /**
      * SkyWalking OAP 可达性探测（发布页右下角状态灯）。
      *
      * @param releaseId 发布ID

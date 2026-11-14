@@ -323,8 +323,11 @@ public class HostFileServiceImpl implements HostFileService {
                     digest.update(buffer, 0, read);
                 }
             }
-            return ReturnResult.ok(new HostFileDigestVO(HexFormat.of().formatHex(digest.digest()),
-                    Files.size(file), System.currentTimeMillis() - start));
+            String hex = HexFormat.of().formatHex(digest.digest());
+            // 按需计算也顺手入库（来源 SERVER）：同文件再点一次就命中台账，
+            // 且列表刷新后直接显示，不用等下一次上传
+            digestRepository.save(resolveDigestBucket(bucket), normalized, hex, Files.size(file), "SERVER");
+            return ReturnResult.ok(new HostFileDigestVO(hex, Files.size(file), System.currentTimeMillis() - start));
         } catch (NoSuchAlgorithmException | IOException e) {
             log.error("[主机文件] 计算 MD5 失败: key={}", normalized, e);
             return ReturnResult.error("计算 MD5 失败: " + messageOf(e));

@@ -43,6 +43,7 @@ import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.spi.SystemServiceProvider;
 import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
+import com.chua.starter.server.support.util.ActuatorLoggers;
 import com.chua.starter.server.support.util.DockerProjectSettings;
 import com.chua.starter.server.support.util.HostPlatforms;
 import com.chua.starter.server.support.util.ProjectScripts;
@@ -1864,8 +1865,32 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @param config 升级配置（与手动升级同一套字段）
      * @return 异步任务标识
      */
+    /**
+     * 用「主机文件」里的产物升级：先把文件推到目标主机的 uploads/，再走正常升级。
+     *
+     * <p>发布管理不再接收浏览器直传：包统一先落到运行本服务的这台机器的文件存储里，
+     * 这里只负责把选中的 key 还原成本机绝对路径、SFTP 投放、再复用 {@link #runUpgrade}。
+     * 目标机上的最终路径由 SFTP 返回，避免调用方猜目录规则。</p>
+     *
+     * @param id     项目标识
+     * @param key    主机文件 key（相对文件存储根目录）
+     * @param config 升级配置（与手动升级同一套字段）
+     * @return 异步任务标识
+     */
     @Override
     public ReturnResult<String> upgradeFromHostFile(Long id, String key, Map<String, Object> config) {
+        ReturnResult<String> pushed = pushHostFileToProject(id, key);
+        if (!pushed.isOk()) {
+            return ReturnResult.error(pushed.getMsg());
+        }
+        Map<String, Object> cfg = config == null
+                ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(config);
+        cfg.put("packagePath", pushed.getData());
+        return runUpgrade(id, cfg);
+    }
+
+    @Override
+    public ReturnResult<String> pushHostFileToProject(Long id, String key) {
         if (isBlank(key)) {
             return ReturnResult.error("请先在主机文件里选择产物");
         }
@@ -1908,7 +1933,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 Files.createDirectories(targetDir);
                 Files.copy(localFile, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception e) {
-                log.error("[主机文件升级] 本机投放失败: {} -> {}", localFile, target, e);
+                log.error("[主机文件投放] 本机投放失败: {} -> {}", localFile, target, e);
                 return ReturnResult.error("投放到本机 uploads 失败: " + e.getMessage());
             }
             remotePackage = target.toAbsolutePath().toString();
@@ -1924,10 +1949,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             }
             remotePackage = up.getData();
         }
-        Map<String, Object> cfg = config == null
-                ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(config);
-        cfg.put("packagePath", remotePackage);
-        return runUpgrade(id, cfg);
+        return ReturnResult.ok(remotePackage);
     }
 
       /**
@@ -4106,6 +4128,15 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         out.put("status", statusCode);
         out.put("body", body);
+        // 日志列表动辄几百 KB（一个应用几千个 logger），而远端命令输出会在 64KB 处截断，
+        // 直接交给前端 JSON.parse 必然失败。这里就地压成 name/级别三列，并如实告知是否截断。
+        if ("loggers".equals(endpoint) && statusCode == 200) {
+            Map<String, Object> compact = ActuatorLoggers.compact(body);
+            out.put("levels", compact.get("levels"));
+            out.put("loggers", compact.get("loggers"));
+            out.put("truncated", compact.get("truncated"));
+            out.put("body", "");
+        }
         if (statusCode == 0) {
             out.put("message", "目标不可达或超时");
         } else if (statusCode == 404) {

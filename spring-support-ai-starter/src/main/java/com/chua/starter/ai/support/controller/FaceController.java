@@ -905,7 +905,18 @@ public class FaceController {
     @Operation(summary = "人脸模型清单", description = "枚举可用的人脸检测/特征/活体/超分等模型")
     @GetMapping("/models")
     public ReturnResult<?> models() {
-        return ReturnResult.ok(faceService.listModels());
+        try {
+            return ReturnResult.ok(faceService.listModels());
+        } catch (Throwable e) {
+            // 枚举模型要走 FaceDetector.create → AbstractIdentificationEngine.getInstance，
+            // 其构造里会加载 OpenCV 原生库；宿主机 glibc 不足时这里抛的是 LinkageError 家族
+            // （UnsatisfiedLinkError / ExceptionInInitializerError / NoClassDefFoundError），
+            // 不是 Exception，放出去就是 500，会把人脸页整页带黑。
+            // 对调用方来说等价于「引擎这边没有可用模型」：返回空清单 + 原因，前端按
+            // 「只信模型管理里的候选」降级，页面照常可用。
+            log.warn("[Face] 人脸模型清单不可用（多为宿主机缺 OpenCV 原生库）：{}", e.toString());
+            return ReturnResult.ok(Map.of("models", List.of(), "reason", String.valueOf(e)));
+        }
     }
 
     /**

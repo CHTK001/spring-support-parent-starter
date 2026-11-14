@@ -243,6 +243,37 @@
 - `ChannelUpstreamCodec`：`META-INF/extensions/com.chua.starter.common.support.channel.ChannelUpstreamCodec`
 - `ChannelUpstreamProvider`：`META-INF/extensions/com.chua.starter.common.support.channel.ChannelUpstreamProvider`
 
+### 上游余额的自建回落
+
+网关里有些上游没有余额查询接口（magpie 的 SiliconFlow 已下线 `/v1/user/info`），额度卡上只剩一句「读不到」。宿主可以实现 `ChannelUpstreamProvider#credit` 接自己的余额源：
+
+```java
+@Spi("magpie-my-credit") // 别名必须唯一：同名实现会被 SPI 容器只保留一个
+public class MyCreditProvider implements ChannelUpstreamProvider {
+
+    @Override
+    public String channel() {
+        return MagpieSupport.CHANNEL; // 只对 magpie 渠道生效
+    }
+
+    @Override
+    public boolean supports(String providerId) {
+        return "siliconflow".equals(providerId); // 只接管这一家
+    }
+
+    @Override
+    public Map<String, Object> credit(String providerId, String account, Map<String, Object> credentials) {
+        // credentials 里只有网关连接信息（baseUrl / gatewayKey / pageKey），没有上游自己的 API Key
+        return Map.of("remain", 12, "total", 100, "unit", "credit");
+    }
+}
+```
+
+- 返回 `null` 表示「不接管」，会继续问下一个实现；抛异常也只当不接管，不影响页面。
+- 顺序固定：网关有读数时不调用自建源；网关读不到（没有这张卡，或卡里既无窗口也无余额）才回落。
+- 实现类用 `@Spi` 注册即可，Spring 环境下会被自动装配，可以 `@Autowired` 别的 Bean。
+- 返回值按 `remain` / `total` / `unit` / `currency` / `packages` / `text` 渲染；`packages` 每项支持 `name`、`remain`、`size`、`unit`、`currency`、`display`、`expiresAt`。页面会把来源标成「自建」。
+
 ## 十、通用场景
 
 AI 控制台、设备台要接渠道时，注入账号域提供的 Service 或按 `ChatChannelProvider` 等 SPI 消费；发验证码、通知走 `MessageTemplateService`；注册收码用临时邮箱（`TempMailService`）。

@@ -41,7 +41,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-filestorage-starter</artifactId>
-            <version>4.0.0.50</version>
+            <version>4.0.0.51</version>
         </dependency>
         <!-- 文件预览前端资源（file-viewer）由纯资源制品提供，starter 不再内置 -->
         <dependency>
@@ -53,12 +53,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
-            <version>4.0.0.50</version>
+            <version>4.0.0.51</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-cad-starter</artifactId>
-            <version>4.0.0.50</version>
+            <version>4.0.0.51</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

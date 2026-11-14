@@ -29,7 +29,7 @@
     <description>Java Agent 自动注入：引入依赖即自动 RuntimeBoot.attachSelf 自注入当前 JVM</description>
 
     <properties>
-        <utils.version>4.0.0.50</utils.version>
+        <utils.version>4.0.0.51</utils.version>
     </properties>
 
     <dependencies>

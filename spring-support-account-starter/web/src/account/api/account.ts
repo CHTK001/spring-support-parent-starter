@@ -137,6 +137,15 @@ export const deleteAccount = (accountId: string) =>
 export const verifyAccount = (accountId: string) =>
   http().post(`${B}/${accountId}/verify`).then(r => unwrap<AccountVerifyResult>(r));
 
+/**
+ * 把账号内联凭据收录到密钥库（反哺）。
+ *
+ * <p>账号里直接填写的 AccessKey / Secret 会被加密落到 {@code sys_account_secret}，
+ * 并把账号 {@code config.secretId} 指向新密钥；已引用密钥的账号直接返回现有密钥。</p>
+ */
+export const collectAccountSecret = (accountId: string) =>
+  http().post(`${B}/${accountId}/secret/collect`).then(r => unwrap<SysAccountSecret>(r));
+
 /* ==================== 批量操作 ==================== */
 
 /** 批量操作中的单条失败 */
@@ -300,9 +309,13 @@ export const deleteAccountCookie = (cookieId: string) =>
 export interface SysAccountSecret {
   secretId: string;
   name?: string;
-  /** 用途 / 厂商：aliyun / tencent / huawei / custom */
+  /** 用途 / 厂商：aliyun / tencent / huawei / aws / custom…（见 secretProviders.ts） */
   provider?: string | null;
-  /** 密钥类型：sms / mail / storage / payment / api / other */
+  /**
+   * 密钥类型，多值用半角逗号分隔（如 {@code sms,storage}）。
+   *
+   * <p>一条密钥可能同时服务多个业务，因此不是枚举单值；单值历史数据照常兼容。</p>
+   */
   secretType?: string | null;
   /** AccessKeyId（可明文查询） */
   accessKey?: string | null;

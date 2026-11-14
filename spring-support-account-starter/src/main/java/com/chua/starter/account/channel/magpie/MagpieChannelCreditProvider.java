@@ -3,6 +3,7 @@ package com.chua.starter.account.channel.magpie;
 
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.common.support.channel.ChannelCreditProvider;
+import com.chua.starter.common.support.channel.ChannelUpstreamProvider;
 import com.chua.starter.common.support.channel.MagpieSupport;
 
 import java.util.ArrayList;
@@ -122,32 +123,92 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
     @Override
     public Map<String, Object> creditFor(String vendor, String provider, String account,
                                          Map<String, Object> credentials) {
-        Map<String, Object> result = new LinkedHashMap<>(10);
-        String baseUrl = MagpieSupport.baseUrl(credentials);
-        String gatewayKey = MagpieSupport.gatewayKey(credentials);
-        String pageKey = MagpieSupport.pageKey(credentials);
-
+        List<Map<String, Object>> quotas = null;
         // 管理面的 /api/usage/quotas 比数据面多出签到状态与插件账号，
         // 配了页面 Key 就优先用它；读不到或为空时回落到数据面，保持旧行为。
-        if (!MagpieSupport.isBlank(pageKey)) {
+        if (!MagpieSupport.isBlank(MagpieSupport.pageKey(credentials))) {
             try {
                 List<Map<String, Object>> adminQuotas = MagpieAdminClient.adminQuotas(credentials, null, null);
                 if (!adminQuotas.isEmpty()) {
-                    return snapshotOf(scoped(adminQuotas, vendor, provider, account), vendor, account);
+                    quotas = adminQuotas;
                 }
             } catch (Exception ignored) {
                 // 页面 Key 失效 / 管理面没开：继续走数据面
             }
         }
-
-        List<Map<String, Object>> quotas;
-        try {
-            quotas = MagpieAdminClient.quotas(baseUrl, gatewayKey);
-        } catch (Exception e) {
-            result.put("error", "余额查询失败，请稍后重试");
-            return result;
+        if (quotas == null) {
+            try {
+                quotas = MagpieAdminClient.quotas(MagpieSupport.baseUrl(credentials),
+                        MagpieSupport.gatewayKey(credentials));
+            } catch (Exception ignored) {
+                // 网关两个面都读不到：自建余额源仍给一次机会（它可能根本不经过网关）
+                Map<String, Object> custom = MagpieUpstreamCreditSpi.credit(provider, account, credentials);
+                if (custom != null) {
+                    return spiSnapshot(custom);
+                }
+                Map<String, Object> result = new LinkedHashMap<>(10);
+                result.put("error", "余额查询失败，请稍后重试");
+                return result;
+            }
         }
-        return snapshotOf(scoped(quotas, vendor, provider, account), vendor, account);
+        return resolve(quotas, MagpieUpstreamCreditSpi.providers(), vendor, provider, account, credentials);
+    }
+
+    /**
+     * 额度卡 → 积分快照，网关读不到这个上游时问自建余额源。
+     *
+     * <p>顺序固定：先按渠道 / 上游 / 账号收窄网关额度卡；收窄后为空（网关根本没给
+     * 这个上游的读数）才问 {@link ChannelUpstreamProvider#credit(String, String, Map)}。
+     * 网关有数字时一律不调用自建源，两套数字不能混着显示。</p>
+     *
+     * <p>包内可见是为了单测：注入假实现即可验证回落顺序与「一个实现抛异常不影响下一个」。</p>
+     *
+     * @param quotas      网关额度卡
+     * @param impls       自建余额实现列表
+     * @param vendor      业务渠道标识
+     * @param provider    网关上游 id（可空）
+     * @param account     上游账号（可空）
+     * @param credentials 网关连接凭据（只读）
+     * @return 积分快照
+     */
+    static Map<String, Object> resolve(List<Map<String, Object>> quotas, List<ChannelUpstreamProvider> impls,
+                                       String vendor, String provider, String account,
+                                       Map<String, Object> credentials) {
+        List<Map<String, Object>> scoped = scoped(quotas, vendor, provider, account);
+        if ((scoped == null || scoped.isEmpty()) && !MagpieSupport.isBlank(provider)) {
+            Map<String, Object> custom = MagpieUpstreamCreditSpi.credit(impls, provider, account, credentials);
+            if (custom != null) {
+                return spiSnapshot(custom);
+            }
+        }
+        return snapshotOf(scoped, vendor, account);
+    }
+
+    /**
+     * 自建余额快照 → 渠道积分契约。
+     *
+     * <p>自建实现按契约给字段，这里只补两件事：{@code source=spi}（页面要标明这个数字
+     * 不是网关给的）与缺失的 {@code updatedAt}；另外挡住「什么都没给」的占位实现——
+     * 否则页面会显示「尚未查询」，看起来像没查。</p>
+     *
+     * @param snapshot 自建读数
+     * @return 与 {@code /credit} 同形的读数
+     */
+    static Map<String, Object> spiSnapshot(Map<String, Object> snapshot) {
+        Map<String, Object> out = new LinkedHashMap<>(snapshot == null ? 4 : snapshot.size() + 2);
+        if (snapshot != null) {
+            out.putAll(snapshot);
+        }
+        out.putIfAbsent("updatedAt", System.currentTimeMillis());
+        out.put("source", "spi");
+        boolean hasValue = out.get("remain") != null || out.get("total") != null
+                || out.get("text") != null
+                || (out.get("packages") instanceof List<?> packages && !packages.isEmpty())
+                || (out.get("units") instanceof List<?> units && !units.isEmpty());
+        if (out.get("error") == null && !hasValue) {
+            out.put("error", "自建余额查询没有返回读数");
+        }
+        return out;
     }
 
     /**

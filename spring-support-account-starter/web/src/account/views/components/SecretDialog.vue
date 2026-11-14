@@ -2,7 +2,7 @@
   <ReDialog
     v-model="visible"
     :title="isEdit ? '编辑密钥' : '新增密钥'"
-    width="560px"
+    width="610px"
     append-to-body
     destroy-on-close
     :close-on-click-modal="false"
@@ -12,25 +12,48 @@
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="如 阿里云短信-生产" maxlength="128" />
         </el-form-item>
-        <el-form-item label="密钥类型" prop="secretType">
-          <el-select v-model="form.secretType" placeholder="选择密钥类型" class="w-full">
-            <el-option label="短信" value="sms" />
-            <el-option label="邮件" value="mail" />
-            <el-option label="对象存储" value="storage" />
-            <el-option label="支付" value="payment" />
-            <el-option label="通用 API" value="api" />
-            <el-option label="其他" value="other" />
+        <el-form-item label="密钥类型">
+          <el-select
+            v-model="secretTypes"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择密钥类型（可多选）"
+            class="w-full"
+          >
+            <el-option v-for="t in TYPE_OPTIONS" :key="t.value" :label="t.label" :value="t.value">
+              <span class="opt">
+                <span class="opt__dot" :style="{ background: t.color }" />
+                <span>{{ t.label }}</span>
+              </span>
+            </el-option>
           </el-select>
-          <span class="form-hint">账号引用密钥时按类型挑选（如短信账号只挑短信密钥）。</span>
+          <span class="form-hint">可多选：一条密钥可能同时服务多个业务（如短信 + 对象存储）。</span>
         </el-form-item>
       </div>
       <div class="form-grid">
         <el-form-item label="用途 / 厂商">
-          <el-select v-model="form.provider" placeholder="选择或输入" allow-create filterable clearable class="w-full">
-            <el-option label="阿里云" value="aliyun" />
-            <el-option label="腾讯云" value="tencent" />
-            <el-option label="华为云" value="huawei" />
-            <el-option label="自定义" value="custom" />
+          <el-select
+            v-model="form.provider"
+            placeholder="选择或输入厂商"
+            allow-create
+            filterable
+            clearable
+            class="w-full"
+          >
+            <!-- 选中后输入框里也显示 logo，不只是下拉里 -->
+            <template #label="{ value }">
+              <span class="opt opt--picked">
+                <ProviderLogo :provider="value" :size="14" />
+                <span class="opt__text">{{ providerLabel(value) }}</span>
+              </span>
+            </template>
+            <el-option v-for="p in SECRET_PROVIDERS" :key="p.value" :label="p.label" :value="p.value">
+              <span class="opt">
+                <ProviderLogo :provider="p.value" :size="16" />
+                <span>{{ p.label }}</span>
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="AccessKeyId">
@@ -40,8 +63,9 @@
       <el-form-item label="AccessKeySecret" prop="secret">
         <el-input
           v-model="form.secret"
-          type="textarea"
-          :rows="3"
+          type="password"
+          show-password
+          autocomplete="new-password"
           :placeholder="secretPlaceholder"
           spellcheck="false"
         />
@@ -51,11 +75,11 @@
         <el-form-item label="Region">
           <el-input v-model="form.region" placeholder="如 cn-hangzhou" maxlength="64" />
         </el-form-item>
-        <el-form-item v-if="isEdit" label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
+        <el-form-item label="状态">
+          <ReRadioGroup v-model="form.status" button capsule>
+            <ReRadioButton :value="1">启用</ReRadioButton>
+            <ReRadioButton :value="0">停用</ReRadioButton>
+          </ReRadioGroup>
         </el-form-item>
       </div>
       <el-form-item label="服务地址">
@@ -87,12 +111,25 @@ import { computed, ref, watch } from 'vue';
 import { message } from '@repo/core';
 import ReButton from '@repo/ui/re-button';
 import ReDialog from '@repo/ui/re-dialog';
+import { ReRadioButton, ReRadioGroup } from '@repo/ui/re-kit';
 
 import {
   createAccountSecret,
   updateAccountSecret,
   type SysAccountSecret,
 } from '../../api/account';
+import { SECRET_PROVIDERS, providerLabel } from '../../secretProviders';
+import ProviderLogo from './ProviderLogo.vue';
+
+/** 密钥类型选项（与后端 secretType 词表一致） */
+const TYPE_OPTIONS = [
+  { value: 'sms', label: '短信', color: '#67c23a' },
+  { value: 'mail', label: '邮件', color: '#409eff' },
+  { value: 'storage', label: '对象存储', color: '#e6a23c' },
+  { value: 'payment', label: '支付', color: '#f56c6c' },
+  { value: 'api', label: '通用 API', color: '#909399' },
+  { value: 'other', label: '其他', color: '#b1b3b8' },
+];
 
 const props = defineProps<{
   modelValue: boolean;
@@ -130,6 +167,23 @@ const form = ref<SysAccountSecret>({
 /** 表单引用 */
 const formRef = ref();
 
+/**
+ * 密钥类型（多选）。
+ *
+ * <p>后端一列 {@code secret_type} 存逗号分隔的多值（如 {@code sms,storage}），
+ * 这里用数组承接多选，提交时再拼成字符串，读取时按 token 拆开。</p>
+ */
+const secretTypes = ref<string[]>(['sms']);
+
+/** 类型串 → 类型数组（兼容单值历史数据） */
+function parseTypes(raw?: string | null): string[] {
+  const valid = TYPE_OPTIONS.map((item) => item.value);
+  return String(raw || '')
+    .split(',')
+    .map((token) => token.trim().toLowerCase())
+    .filter((token) => valid.includes(token));
+}
+
 /** 保存中 */
 const saving = ref(false);
 
@@ -149,7 +203,6 @@ const secretHint = computed(() =>
 /** 校验规则 */
 const rules = computed(() => ({
   name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
-  secretType: [{ required: true, message: '请选择密钥类型', trigger: 'change' }],
   secret: isEdit.value ? [] : [{ required: true, message: '请粘贴 AccessKeySecret', trigger: 'blur' }],
 }));
 
@@ -171,6 +224,8 @@ watch(
       remark: source?.remark ?? '',
       status: source?.status ?? 1,
     };
+    const parsed = parseTypes(source?.secretType);
+    secretTypes.value = parsed.length ? parsed : ['sms'];
     formRef.value?.clearValidate?.();
   },
 );
@@ -178,6 +233,10 @@ watch(
 /** 提交 */
 async function submit(): Promise<void> {
   if (saving.value) return;
+  if (!secretTypes.value.length) {
+    message.error('请至少选择一个密钥类型');
+    return;
+  }
   const valid = await formRef.value?.validate?.().catch(() => false);
   if (!valid) return;
   saving.value = true;
@@ -185,6 +244,7 @@ async function submit(): Promise<void> {
     const payload: SysAccountSecret = {
       ...form.value,
       name: form.value.name?.trim(),
+      secretType: secretTypes.value.join(','),
       accessKey: form.value.accessKey?.trim(),
       region: form.value.region?.trim(),
       endpoint: form.value.endpoint?.trim(),
@@ -229,4 +289,31 @@ async function submit(): Promise<void> {
 .w-full {
   width: 100%;
 }
+
+/* 下拉选项：类型色点 / 厂商 logo + 名称 */
+.opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 输入框里已选中的一项：logo + 名称，超长省略 */
+.opt--picked {
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.opt__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opt__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
 </style>

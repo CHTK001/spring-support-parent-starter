@@ -194,6 +194,22 @@ public class SysAiModelMetricsService {
             }
             SysAiModelMetrics cur = getByKey(key);
             if (cur == null) {
+                // 自建通道/官方指标源未收录的模型：本地有实测速度就建行，否则模型管理
+                // 的「速度」永远显示「指标源未采集」（2026-11-14 用户口径）。
+                SysAiModelMetrics created = new SysAiModelMetrics();
+                created.setModelKey(key);
+                created.setModelName(model);
+                created.setProvider(provider);
+                created.setAvgOutputSpeedTps(BigDecimal.valueOf(row.avgSpeedTps()));
+                created.setCreateTime(now);
+                created.setUpdateTime(now);
+                try {
+                    if (metricsMapper.insert(created) > 0) {
+                        updated++;
+                    }
+                } catch (Exception e) {
+                    log.debug("[ModelMetrics] 新建指标行失败 key={}: {}", key, e.getMessage());
+                }
                 continue;
             }
             LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
@@ -206,6 +222,58 @@ public class SysAiModelMetricsService {
         }
         log.info("[ModelMetrics] 本地平均输出速度回填完成：{} 行（原始分组 {} 组）", updated, rows.size());
         return updated;
+    }
+
+    /**
+     * 单轮实测输出速度回写（本地用量驱动）。
+     *
+     * <p>模型管理「速度」格读的是本表：官方指标源给的 {@code output_speed_tps} 只覆盖
+     * 它收录的模型，自建通道/新接入模型往往没有值（界面显示「指标源未采集」）。
+     * 这里把每轮真实对话的 tok/s（输出 tokens ÷ 模型生成耗时）写进
+     * {@code avg_output_speed_tps}：缺失行直接建行，已有行按指数滑动平均
+     * （0.7 旧 + 0.3 新）平滑，避免单轮抖动把速度带偏。</p>
+     *
+     * @param provider 服务商标识（与用量表同一口径）
+     * @param model    模型名
+     * @param tps      本轮输出速度（token/秒）
+     */
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public void recordObservedSpeed(String provider, String model, Double tps) {
+        if (tps == null || tps <= 0 || provider == null || provider.isBlank()
+                || model == null || model.isBlank()) {
+            return;
+        }
+        try {
+            String key = truncate(enrichment.normalizeKey(provider + "/" + model), 160);
+            if (!StringUtils.hasText(key)) {
+                return;
+            }
+            SysAiModelMetrics cur = metricsMapper.selectOne(new LambdaQueryWrapper<SysAiModelMetrics>()
+                    .eq(SysAiModelMetrics::getModelKey, key).last("limit 1"));
+            long now = System.currentTimeMillis();
+            BigDecimal observed = BigDecimal.valueOf(tps);
+            if (cur == null) {
+                SysAiModelMetrics created = new SysAiModelMetrics();
+                created.setModelKey(key);
+                created.setModelName(model);
+                created.setProvider(provider);
+                created.setAvgOutputSpeedTps(observed);
+                created.setCreateTime(now);
+                created.setUpdateTime(now);
+                metricsMapper.insert(created);
+                return;
+            }
+            BigDecimal prev = cur.getAvgOutputSpeedTps();
+            double next = prev == null ? tps : prev.doubleValue() * 0.7 + tps * 0.3;
+            LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
+            uw.eq(SysAiModelMetrics::getId, cur.getId());
+            uw.set(SysAiModelMetrics::getAvgOutputSpeedTps, BigDecimal.valueOf(next));
+            uw.set(SysAiModelMetrics::getUpdateTime, now);
+            metricsMapper.update(null, uw);
+        } catch (Exception e) {
+            // 指标回写失败不影响用量记账：速度只是展示项
+            log.debug("[ModelMetrics] 实测速度回写失败 provider={} model={}: {}", provider, model, e.getMessage());
+        }
     }
 
     /**

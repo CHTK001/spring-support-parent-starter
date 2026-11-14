@@ -185,7 +185,7 @@
         <revision>4.0.0.51</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
         <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
-        <utils.version>4.0.0.50</utils.version>
+        <utils.version>4.0.0.51</utils.version>
         <spring.boot.version>4.1.1</spring.boot.version>
         <reactor.core.version>3.8.7</reactor.core.version>
         <!-- javax 命名空间的 JAXB 实现版本：winrm4j/CXF 走 javax.xml.bind，

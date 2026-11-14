@@ -60,15 +60,28 @@
         <el-col v-if="useKeyRef" :span="24">
           <el-form-item label="选择密钥">
             <el-select v-model="form.secretId" filterable placeholder="从密钥管理里选择" class="w-full">
+              <!-- 选中后输入框里也显示该密钥的厂商 logo -->
+              <template #label="{ value }">
+                <span class="opt opt--picked">
+                  <ProviderLogo :provider="pickedSecret(value)?.provider" :size="14" />
+                  <span class="opt__text">{{ pickedSecret(value)?.name || pickedSecret(value)?.accessKey || '' }}</span>
+                </span>
+              </template>
               <el-option
                 v-for="item in secretOptions"
                 :key="item.secretId"
-                :label="`${item.name || item.accessKey}（${typeLabel(item.secretType)} · ${item.provider || 'custom'}）`"
+                :label="`${item.name || item.accessKey}（${typeLabel(item.secretType)} · ${providerLabel(item.provider)}）`"
                 :value="item.secretId"
-              />
+              >
+                <span class="opt">
+                  <ProviderLogo :provider="item.provider" :size="16" />
+                  <span>{{ item.name || item.accessKey }}</span>
+                  <span class="opt__meta">{{ typeLabel(item.secretType) }} · {{ providerLabel(item.provider) }}</span>
+                </span>
+              </el-option>
             </el-select>
             <div class="field-hint">
-              只列出「{{ typeLabel(SECRET_TYPE_BY_KIND[form.kind]) }}」类型的密钥；调用时使用该密钥的
+              列表已标注类型，同类型优先；没有同类型时可任选一条使用。调用时使用该密钥的
               AccessKeyId / Secret，换密钥不必改账号。可去「密钥管理」新建。
             </div>
           </el-form-item>
@@ -237,6 +250,8 @@ import type { FormInstance, FormRules } from 'element-plus';
 import ReDialog from '@repo/ui/re-dialog';
 import ReButton from '@repo/ui/re-button';
 import MessageTemplateSelect from '../../template/components/MessageTemplateSelect.vue';
+import { providerLabel } from '../secretProviders';
+import ProviderLogo from '../views/components/ProviderLogo.vue';
 import {
   claimTempMailbox,
   createAccount,
@@ -429,7 +444,7 @@ const useKeyRef = computed(
   () => (form.kind === 'SMS' || form.kind === 'API_KEY') && form.keyMode === 'ref',
 );
 
-/** 密钥类型中文名（与密钥管理页保持一致） */
+/** 密钥类型中文名（多值取第一个，保持下拉行紧凑；与密钥管理页同一套词表） */
 function typeLabel(secretType?: string | null): string {
   const map: Record<string, string> = {
     sms: '短信',
@@ -439,7 +454,8 @@ function typeLabel(secretType?: string | null): string {
     api: '通用 API',
     other: '其他',
   };
-  return map[String(secretType || '').toLowerCase()] ?? '其他';
+  const first = String(secretType || '').split(',')[0].trim().toLowerCase();
+  return map[first] ?? '未分类';
 }
 
 /** 账号种类 → 可选的密钥类型 */
@@ -452,12 +468,32 @@ const SECRET_TYPE_BY_KIND: Record<AccountKind, string> = {
 /** 密钥库全量（供 secretOptions 过滤） */
 const secretList = ref<SysAccountSecret[]>([]);
 
-/** 密钥库选项（按当前账号种类对应的密钥类型过滤） */
-const secretOptions = computed(() =>
-  secretList.value.filter((item) =>
-    !item.secretType || item.secretType === SECRET_TYPE_BY_KIND[form.kind],
-  ),
-);
+/**
+ * 密钥库选项：全部可选，同类型排前面。
+ *
+ * <p>一条密钥可能有多个类型（{@code sms,storage}），命中任一类型即视为同类型；
+ * 仍在全量里排序而不是过滤，避免账号种类与密钥类型不匹配时下拉为空。</p>
+ */
+const secretOptions = computed(() => {
+  const expected = SECRET_TYPE_BY_KIND[form.kind];
+  const tokensOf = (item: SysAccountSecret) =>
+    String(item.secretType || '')
+      .split(',')
+      .map((token) => token.trim().toLowerCase())
+      .filter(Boolean);
+  const score = (item: SysAccountSecret) => {
+    const tokens = tokensOf(item);
+    if (!tokens.length) return 1;
+    return tokens.includes(expected) ? 0 : 2;
+  };
+  return [...secretList.value].sort((a, b) => score(a) - score(b));
+});
+
+/** 按 secretId 取密钥库里的那一条（输入框里显示 logo 与名称用） */
+function pickedSecret(secretId?: string | null): SysAccountSecret | undefined {
+  if (!secretId) return undefined;
+  return secretList.value.find((item) => item.secretId === secretId);
+}
 
 /**
  * 加载密钥库选项。
@@ -712,5 +748,32 @@ watch(
 }
 .w-full {
   width: 100%;
+}
+
+/* 密钥下拉：厂商 logo + 名称 + 类型/厂商说明 */
+.opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 输入框里已选中的一项：logo + 名称，超长省略 */
+.opt--picked {
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.opt__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opt__meta {
+  margin-left: auto;
+  padding-left: 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 </style>
