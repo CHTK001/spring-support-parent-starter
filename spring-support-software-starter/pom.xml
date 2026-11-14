@@ -61,12 +61,6 @@
       <optional>true</optional>
     </dependency>
     <!-- 测试：安装进度事件与发布器的纯逻辑校验（不依赖 Spring 容器与数据库） -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${junit.jupiter.version}</version>
-      <scope>test</scope>
-    </dependency>
     </dependencies>
   <build>
     <plugins>

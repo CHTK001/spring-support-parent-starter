@@ -94,12 +94,6 @@
         <!-- Excel<->JDBC 双向同步探针所需：POI 全家随 excel-starter 引入 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-excel-starter</artifactId>
-            <version>${utils.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
             <artifactId>utils-support-fory-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>

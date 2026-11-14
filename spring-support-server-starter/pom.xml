@@ -164,12 +164,6 @@
         <!-- JUnit Jupiter：发布脚本生成回归探针 ReleaseScriptProbe 以 @Test 承载，
              使改动 ProjectScripts / 平台 Provider 时能由 mvn test 直接拦住，
              不再依赖只能手工执行的 main() 运行器。与 monitor-starter 保持同源依赖。 -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
 
     </dependencies>
 

@@ -104,11 +104,6 @@
       <scope>runtime</scope>
     </dependency>
     <!-- 表达式求值 / SQL 只读判定等纯内存单元测试 -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <resources>

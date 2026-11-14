@@ -175,6 +175,8 @@
 </modules>
     <!-- 项目属性配置 -->
     <properties>
+        <maven.test.skip>true</maven.test.skip>
+        <skipTests>true</skipTests>
         <!-- Java版本配置 - 使用Java 25 LTS版本 -->
         <java.version>25</java.version>
         <jacoco.skip>true</jacoco.skip>

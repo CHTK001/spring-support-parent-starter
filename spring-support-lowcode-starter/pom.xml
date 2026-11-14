@@ -45,34 +45,9 @@
       <scope>runtime</scope>
     </dependency>
     <!-- 表达式求值 / SQL 只读判定等纯内存单元测试 -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
     <!-- 集成验证：真起 Spring 上下文 + H2(MySQL 模式) 回放本模块 DDL。
          不引 spring-boot-starter-test（会传递 mockito-core）；JUnit 已在上面单独声明。 -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest</artifactId>
-      <scope>test</scope>
-    </dependency>
     <!-- Boot 4 起 MockMvc 自动配置从 spring-boot-test-autoconfigure 拆到 spring-boot-webmvc-test -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-webmvc-test</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <resources>

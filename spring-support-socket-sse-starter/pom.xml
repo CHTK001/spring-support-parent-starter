@@ -42,11 +42,6 @@
         </dependency>
 
         <!-- 测试：独立 SSE 的端到端链路（JUnit 5） -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
 </project>

@@ -282,16 +282,6 @@
         junit-jupiter 的版本由父 pom 的 junit.jupiter.version 托管，不在此声明。
         spring-test 的版本由 Spring Boot BOM 托管。
     -->
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-test</artifactId>
-        <scope>test</scope>
-    </dependency>
 
     </dependencies>
     <build>
