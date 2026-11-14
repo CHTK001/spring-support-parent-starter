@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.annotations.SysLog;
+import com.chua.starter.monitor.support.server.ServerEventStreamRegistry;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
@@ -14,6 +15,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +52,11 @@ public class ServerManageController {
      * 服务管理
     */
     private final ServerManageService serverManageService;
+
+    /**
+     * 全局状态变更 SSE 注册表
+     */
+    private final ServerEventStreamRegistry serverEventStreamRegistry;
 
     /**
      * 查询全部节点。
@@ -93,6 +102,28 @@ public class ServerManageController {
     @GetMapping("/summary")
     public ReturnResult<ServerNodeSummary> summary() {
         return serverManageService.summary();
+    }
+
+    /**
+     * 全局状态变更流（POST SSE）。
+     *
+     * <p>服务管理页只建立这一条长连接：服务端在节点定义 / 运行态变化时推
+     * {@code changed} 帧，前端收到后静默重取，替代原先每 10 秒的短轮询。
+     * 用 POST 而非 GET，与全局 {@code /sse/connect} 的 POST SSE 约定一致。</p>
+     *
+     * <p>响应是 {@link SseEmitter}（{@code ResponseBodyEmitter} 子类），
+     * 全局的 {@code ApiUniformResponseBodyAdvice} 与响应加密 advice 都会
+     * 对它放行，不会被包成 {@code {code,data,msg}} 信封。</p>
+     *
+     * @return SSE 连接
+     */
+    @Operation(summary = "服务全局状态变更流（POST SSE，替代短轮询）",
+            description = "建连即回 ready；节点定义或运行态变化时推 changed；断线由前端自动重连")
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<SseEmitter> stream() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(serverEventStreamRegistry.subscribe());
     }
 
     /**
