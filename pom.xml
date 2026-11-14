@@ -140,10 +140,8 @@
         <module>spring-support-tunnel-tailscale-starter</module>
         <!-- 教育AI模块 -->
         <module>spring-support-eduai-starter</module>
-        <module>spring-support-collect-starter</module>
         <!-- 设备管理模块（海康/大华等平台接入） -->
         <module>spring-support-device-starter</module>
-        <module>spring-support-account-starter</module>
         <!-- 模板管理已并入账号管理模块（spring-support-account-starter），不再单独成模块 -->
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datasource-hub-starter</module>
