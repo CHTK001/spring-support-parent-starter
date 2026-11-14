@@ -571,6 +571,34 @@ public class ProjectTaskService {
 
     // ==================== 本机执行 ====================
 
+    /** 平台所在机器的操作系统是否为 Windows（决定本机命令用什么 shell 下发） */
+    private static final boolean LOCAL_WINDOWS =
+            System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("win");
+
+    /**
+     * 构造本机命令进程：Windows 走 PowerShell（EncodedCommand 规避中文/引号转义），
+     * 其它平台走 POSIX shell。
+     *
+     * <p>本机主机的脚本由 {@code expandProjectScripts} 按目标平台生成 ——
+     * 平台是 Linux 时给的就是 shell 命令，不能再套 powershell.exe（那里根本没有这个可执行文件）。</p>
+     *
+     * @param command 目标平台脚本
+     * @return 进程构造器（调用方负责 redirectErrorStream / start）
+     */
+    private static ProcessBuilder localProcessBuilder(String command) {
+        if (!LOCAL_WINDOWS) {
+            return new ProcessBuilder("/bin/sh", "-c", command);
+        }
+        String script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+                + "$ProgressPreference='SilentlyContinue';"
+                + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
+                + command;
+        String encoded = Base64.getEncoder()
+                .encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
+        return new ProcessBuilder("powershell.exe", "-NoProfile",
+                "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded);
+    }
+
     /** 本机一步执行的结果（只需要退出码与合并输出） */
     private static final class LocalExecResult {
         private final int exitCode;
@@ -596,16 +624,9 @@ public class ProjectTaskService {
      */
     private LocalExecResult execLocalStep(String psCommand,
                                           java.util.function.Consumer<String> lineHandler) {
-        String script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
-                + "$ProgressPreference='SilentlyContinue';"
-                + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
-                + psCommand;
-        String encoded = Base64.getEncoder()
-                .encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
         StringBuilder merged = new StringBuilder();
         try {
-            ProcessBuilder builder = new ProcessBuilder("powershell.exe", "-NoProfile",
-                    "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded);
+            ProcessBuilder builder = localProcessBuilder(psCommand);
             builder.redirectErrorStream(true);
             Process process = builder.start();
             try (BufferedReader reader = new BufferedReader(
@@ -638,16 +659,9 @@ public class ProjectTaskService {
      * @return 关闭句柄：关闭即终止进程
      */
     private AutoCloseable followLocalLog(String psCommand, java.util.function.Consumer<String> onLine) {
-        String script = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
-                + "$ProgressPreference='SilentlyContinue';"
-                + "$PSDefaultParameterValues['Get-Content:Encoding']='UTF8';"
-                + psCommand;
-        String encoded = Base64.getEncoder()
-                .encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
         Process process;
         try {
-            process = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive",
-                    "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded)
+            process = localProcessBuilder(psCommand)
                     .redirectErrorStream(true)
                     .start();
         } catch (Exception e) {

@@ -43,6 +43,7 @@ import com.chua.starter.server.support.spi.ProjectTypeProviderRegistry;
 import com.chua.starter.server.support.spi.SystemServiceContext;
 import com.chua.starter.server.support.spi.SystemServiceProvider;
 import com.chua.starter.server.support.spi.SystemServiceProviderRegistry;
+import com.chua.starter.server.support.util.ActuatorHttpTrace;
 import com.chua.starter.server.support.util.ActuatorLoggers;
 import com.chua.starter.server.support.util.DockerProjectSettings;
 import com.chua.starter.server.support.util.HostPlatforms;
@@ -2782,9 +2783,11 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (targetHost == null) {
             return ReturnResult.error("目标主机不存在: " + release.getHostId());
         }
-          // 发布模块基于 OpenSSH 执行：主机须开启 SSH（Linux/macOS 默认开，Windows 默认关）
+          // 发布模块基于 OpenSSH 执行：远程主机须开启 SSH（Linux/macOS 默认开，Windows 默认关）。
+          // 本机（collect_mode=LOCAL）主机由平台在本地执行，不占 SSH，故不受该开关限制。
+        boolean localHost = "LOCAL".equalsIgnoreCase(targetHost.getServerHostCollectMode());
         Boolean sshOn = resolveSshEnabled(targetHost);
-        if (!sshOn) {
+        if (!sshOn && !localHost) {
             return ReturnResult.error("目标主机「" + targetHost.getServerHostName()
                       + "」未开启 SSH（Windows 需启用 OpenSSH 并打开「开启 SSH」开关），无法执行发布操作");
         }
@@ -4156,6 +4159,14 @@ public class ReleaseServiceImpl implements ReleaseService {
             Map<String, Object> compact = ActuatorLoggers.compact(body);
             out.put("levels", compact.get("levels"));
             out.put("loggers", compact.get("loggers"));
+            out.put("truncated", compact.get("truncated"));
+            out.put("body", "");
+        }
+        // httptrace / httpexchanges 动辄几百 KB（100 条记录 × 完整 headers），同 loggers 的坑：
+        // 远端命令在 64KB 截断，原样交给前端 JSON.parse 必然失败。这里压成逐条记录并如实告知截断。
+        if (("httptrace".equals(endpoint) || "httpexchanges".equals(endpoint)) && statusCode == 200) {
+            Map<String, Object> compact = ActuatorHttpTrace.compact(body);
+            out.put("records", compact.get("records"));
             out.put("truncated", compact.get("truncated"));
             out.put("body", "");
         }
