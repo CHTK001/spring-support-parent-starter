@@ -140,13 +140,13 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     public InputOptimizeResponse optimize(InputOptimizeRequest request) {
         String input = StringUtils.defaultString(request.input(), "");
         if (StringUtils.isBlank(input)) {
-            return InputOptimizeResponse.of(input, input, "", 0L);
+            return InputOptimizeResponse.of(input, input, "", 0L, InputOptimizeResponse.STATUS_BLANK);
         }
 
         // 是否启用输入优化
         boolean enabled = globalSettingReader.getBool(GROUP, "optimizer_enabled", true);
         if (!enabled) {
-            return InputOptimizeResponse.of(input, input, "", 0L);
+            return InputOptimizeResponse.of(input, input, "", 0L, InputOptimizeResponse.STATUS_DISABLED);
         }
 
         long start = System.currentTimeMillis();
@@ -167,7 +167,11 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
             }
             String model = ModelClientResolver.normalize(qualifiedModel);
             if (client == null) {
-                return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start);
+                // 静默回退过：这里原样返回原文且不打日志，调用方只能从「文本没变」去猜，
+                // 于是前端把「没配可用模型」说成「模型认为已经够具体」。状态与日志都补上。
+                log.warn("[InputOptimize] 没有可用的优化模型客户端（model={}），本次未调用模型", qualifiedModel);
+                return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start,
+                        InputOptimizeResponse.STATUS_UNAVAILABLE);
             }
 
             // 解析提示词：请求 > 全局配置 > 场景内置默认 > 通用内置默认
@@ -206,12 +210,18 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
                     .chatSync(userPrompt);
 
             if (StringUtils.isBlank(optimized)) {
-                return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start);
+                return InputOptimizeResponse.of(input, input, model, System.currentTimeMillis() - start,
+                        InputOptimizeResponse.STATUS_EMPTY);
             }
-            return InputOptimizeResponse.of(input, optimized, model, System.currentTimeMillis() - start);
+            // 模型照抄原文时也要如实标注，别让调用方以为「这是一次成功的改写」
+            String status = optimized.trim().equals(input.trim())
+                    ? InputOptimizeResponse.STATUS_UNCHANGED
+                    : InputOptimizeResponse.STATUS_OK;
+            return InputOptimizeResponse.of(input, optimized, model, System.currentTimeMillis() - start, status);
         } catch (Exception e) {
             log.warn("[InputOptimize] 输入优化失败，返回原始输入: {}", e.getMessage());
-            return InputOptimizeResponse.of(input, input, "", System.currentTimeMillis() - start);
+            return InputOptimizeResponse.of(input, input, "", System.currentTimeMillis() - start,
+                    InputOptimizeResponse.STATUS_FAILED);
         }
     }
 }
