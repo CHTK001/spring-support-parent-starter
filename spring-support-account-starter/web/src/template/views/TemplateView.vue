@@ -4,7 +4,7 @@
   布局：
     - 顶部操作条：标题 + 总数、搜索、类型筛选（全部 / 短信 / 邮件 / 文档 / 其他）、
       刷新、新建模板（短信 / 邮件 / 文档）。
-    - 左栏 300px 模板列表：模板数据直接上轨，滚动分页；
+    - 左栏 280px 模板列表（可拖拽调宽）：模板数据直接上轨，滚动分页；
       条目展示名称、状态点 / 默认角标、编码、类型 chip；
       消息模板（短信 / 邮件）是普通类型，不再单独占特殊入口。
     - 右栏详情卡面：左键点击左侧模板 -> 预览；
@@ -74,7 +74,7 @@
     </header>
 
     <!-- ==================== 主体：左列表 + 右详情 ==================== -->
-    <div class="tpl__body">
+    <div class="tpl__body" :style="{ '--rail-width': railWidth + 'px' }">
       <!-- 左栏：模板列表（滚动分页） -->
       <aside class="rail">
         <div
@@ -100,6 +100,7 @@
               tabindex="0"
               @click="selectItem(item)"
               @keydown.enter="selectItem(item)"
+              @contextmenu.prevent="openCtx($event, item)"
             >
               <span class="entry__mark" :class="`is-${item.type}`">
                 <ReIcon :name="itemIcon(item)" :size="15" />
@@ -154,6 +155,15 @@
           </span>
         </footer>
       </aside>
+
+      <!-- 分栏手柄：拖拽改左栏宽度，双击复位，偏好存本地 -->
+      <ReRailSplit
+        v-model:width="railWidth"
+        class="tpl-split"
+        storage-key="template.rail.width.v1"
+        :default-width="280"
+        label="拖拽调整模板列表宽度"
+      />
 
       <!-- 右栏：详情卡面（预览 / 编辑 / 设计） -->
       <section class="detail">
@@ -369,6 +379,22 @@
         <ReButton type="primary" :loading="docSaving" @click="onDocFormConfirm">确定</ReButton>
       </template>
     </ReDialog>
+
+    <!-- 右键菜单：模板行的便捷操作（与账号 / 密钥页同一套视觉） -->
+    <div v-if="ctxMenu" class="ctx-layer" @click="ctxMenu = null" @contextmenu.prevent="ctxMenu = null">
+      <ul class="ctx-menu" :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }" @click.stop>
+        <li
+          v-for="m in ctxItems"
+          :key="m.key"
+          class="ctx-item"
+          :class="{ 'is-divided': m.divided }"
+          @click="runCtx(m.key)"
+        >
+          <ReIcon :name="m.icon" :size="13" />
+          <span>{{ m.label }}</span>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -391,6 +417,7 @@ import ReDialog from '@repo/ui/re-dialog'
 import ReIcon from '@repo/ui/re-icon'
 import ReInput from '@repo/ui/re-input'
 import ReSelect from '@repo/ui/re-select'
+import ReRailSplit, { readRailWidth } from '@repo/ui/re-rail-split'
 
 import { templateApi } from '../api/templateApi'
 import {
@@ -399,6 +426,7 @@ import {
   type MessageTemplateRenderResult
 } from '../api/messageTemplateApi'
 import { errorText } from '../../shared/errorText'
+import { copyText } from '../../shared/clipboard'
 import type { ProviderInfo, TemplateInfo } from '../types/template'
 import TemplatePreviewView from '../views/TemplatePreviewView.vue'
 import TemplateDesigner from '../views/TemplateDesigner.vue'
@@ -408,6 +436,11 @@ const router = useRouter()
 
 /** 宿主传入的初始类型：message 时自动选中第一条消息模板 */
 const props = defineProps<{ type?: string }>()
+
+/** 左栏宽度偏好键（与账号资产 / 密钥页同一套分栏） */
+const RAIL_WIDTH_KEY = 'template.rail.width.v1'
+/** 左栏宽度：可拖拽，双击复位，偏好存本地 */
+const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 280))
 
 // ==================== 统一模板项 ====================
 type TplType = 'sms' | 'email' | 'document' | 'label' | 'other'
@@ -815,6 +848,76 @@ async function removeSelected(): Promise<void> {
   }
 }
 
+// ==================== 左栏条目右键菜单 ====================
+interface CtxItem { key: string; label: string; icon: string; divided?: boolean }
+
+/** 右键菜单（坐标 + 目标模板） */
+const ctxMenu = ref<{ x: number; y: number; item: TplItem } | null>(null)
+
+/**
+ * 右键菜单项：按模板来源区分可用动作。
+ *
+ * <p>消息模板可设为默认；hiprint 文档模板可进设计器；删除 / 复制编码 /
+ * 预览 / 编辑对三类都通用。动作与右栏详情底部按钮是同一套，只是省去先点开。</p>
+ */
+const ctxItems = computed<CtxItem[]>(() => {
+  const item = ctxMenu.value?.item
+  if (!item) return []
+  const rows: CtxItem[] = [
+    { key: 'preview', label: '查看预览', icon: 'View' },
+    { key: 'edit', label: '编辑模板', icon: 'EditPen' },
+  ]
+  if (item.source === 'hiprint') rows.push({ key: 'design', label: '进入设计器', icon: 'MagicStick' })
+  if (item.source === 'message' && !item.isDefault) rows.push({ key: 'default', label: '设为默认', icon: 'Star' })
+  rows.push({ key: 'copy', label: '复制模板编码', icon: 'CopyDocument', divided: true })
+  rows.push({ key: 'delete', label: '删除模板', icon: 'Delete', divided: true })
+  return rows
+})
+
+/** 打开右键菜单：同时选中该行，右栏详情跟着走 */
+function openCtx(event: MouseEvent, item: TplItem): void {
+  ctxMenu.value = { x: event.clientX, y: event.clientY, item }
+  void selectItem(item)
+}
+
+/** 执行右键菜单项 */
+function runCtx(key: string): void {
+  const menu = ctxMenu.value
+  ctxMenu.value = null
+  const item = menu?.item
+  if (!item) return
+  if (key === 'preview') void selectItem(item)
+  else if (key === 'edit') startEdit(item)
+  else if (key === 'design') enterDesign()
+  else if (key === 'default') void setDefaultOf(item)
+  else if (key === 'copy') void copyCodeOf(item)
+  else if (key === 'delete') void removeSelected()
+}
+
+/** 右键：设为该种类默认模板（仅消息模板） */
+async function setDefaultOf(item: TplItem): Promise<void> {
+  if (item.source !== 'message' || !item.id) return
+  try {
+    await messageTemplateApi.setDefault(item.id)
+    ElMessage.success('已设为默认模板')
+    await loadMessages()
+    const fresh = msgItems.value.find(i => i.id === item.id)
+    if (fresh) void selectItem(fresh)
+  } catch (err) {
+    ElMessage.error(errorText(err))
+  }
+}
+
+/** 右键：复制模板编码 */
+async function copyCodeOf(item: TplItem): Promise<void> {
+  if (!item.code) {
+    ElMessage.warning('该模板还没有编码')
+    return
+  }
+  const ok = await copyText(item.code)
+  if (ok) ElMessage.success('模板编码已复制')
+}
+
 // ==================== 文档模板：弹窗新建 / 编辑 ====================
 const docFormVisible = ref(false)
 const docFormTitle = ref('')
@@ -1043,16 +1146,18 @@ onMounted(async () => {
 .tpl__body {
   display: flex;
   flex: 1;
-  gap: 12px;
+  /* 间距交给分栏手柄本身，避免 gap + 手柄叠出一段空档 */
+  gap: 0;
   min-height: 0;
 }
 
 /* ==================== 左栏：模板列表 ==================== */
 .rail {
   display: flex;
-  flex: 0 0 300px;
+  flex: none;
   flex-direction: column;
-  width: 300px;
+  /* 宽度由分栏手柄写入 --rail-width（可拖拽，存本地偏好） */
+  width: var(--rail-width, 280px);
   min-height: 0;
   overflow: hidden;
   background: var(--bg-container);
@@ -1570,5 +1675,60 @@ onMounted(async () => {
 
 .mono {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* ---------- 右键菜单（与账号 / 密钥页同一套） ---------- */
+.ctx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+}
+
+.ctx-menu {
+  position: fixed;
+  min-width: 172px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg-elevated, var(--bg-container));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-fill);
+  }
+
+  &.is-divided {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-subtle, var(--border-default));
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+}
+
+/* 窄屏降为上下结构，收起左右分栏手柄 */
+@media (max-width: 940px) {
+  .tpl__body {
+    flex-direction: column;
+  }
+  .rail {
+    width: auto;
+    max-height: 340px;
+  }
+  .tpl-split {
+    display: none;
+  }
 }
 </style>
