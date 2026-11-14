@@ -294,6 +294,11 @@ plugin:
       json-restore: true
 
 management:
+  info:
+    env:
+      # /actuator/info 默认是 {}（没有任何 info contributor），发布管理「其它端点」
+      # 点开 info 就只剩一对花括号。这里把 app.* 暴露出去，至少能看到部署的是哪个应用。
+      enabled: true
   endpoints:
     web:
       exposure:
@@ -309,6 +314,12 @@ management:
     health:
       # 不对外暴露组件明细（DB / 磁盘等），避免信息泄露
       show-details: never
+
+# 与上面的 management.info.env.enabled 配套：info 端点回显这些属性
+info:
+  app:
+    name: ${spring.application.name:monitor}
+    description: 服务器 / 设备 / APM 运维控制台
 
 logging:
   level:
