@@ -4128,6 +4128,32 @@ public class ReleaseServiceImpl implements ReleaseService {
         out.put("status", 0);
         out.put("body", "");
         long start = System.currentTimeMillis();
+        // 本机主机就是平台所在机器：直接从 JVM 发 HTTP 读，不必为一次 GET 起
+        // PowerShell/curl 子进程。实测经 shell 单次 6~16s（子进程启动 + 安全软件
+        // 拦截 + base64 往返），直连是几十毫秒；顺带绕开 stdout 64KB 一类截断风险。
+        if (ctx.host != null && "LOCAL".equalsIgnoreCase(ctx.host.getServerHostCollectMode())) {
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(java.time.Duration.ofSeconds(2))
+                        .build();
+                HttpRequest request = HttpRequest.newBuilder(URI.create(local))
+                        .timeout(java.time.Duration.ofSeconds(8))
+                        .GET()
+                        .build();
+                HttpResponse<String> response = client.send(request,
+                        HttpResponse.BodyHandlers.ofString(java.nio.charset.StandardCharsets.UTF_8));
+                String text = response.body() == null ? "" : response.body();
+                if (text.length() > ACT_BODY_MAX) {
+                    text = text.substring(0, ACT_BODY_MAX);
+                }
+                out.put("status", response.statusCode());
+                out.put("body", text);
+            } catch (Exception e) {
+                out.put("message", "目标不可达或超时: " + e.getClass().getSimpleName());
+            }
+            out.put("elapsedMs", System.currentTimeMillis() - start);
+            return ReturnResult.ok(finishActuatorPayload(out, endpoint));
+        }
         String command = ctx.windows ? windowsActuatorGetCommand(local) : posixActuatorGetCommand(local);
         ReturnResult<List<MsExecLog>> result = execService.runCommand(
                 Collections.singletonList(ctx.hostId), command, 30, null);
@@ -4153,6 +4179,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         }
         out.put("status", statusCode);
         out.put("body", body);
+        return ReturnResult.ok(finishActuatorPayload(out, endpoint));
+    }
+
+    /**
+     * Actuator 读取结果的统一收尾：压缩大响应体、给出失败原因。
+     *
+     * <p>本机直连与远端 shell 两条读取路径共用，避免两边口径漂移。</p>
+     *
+     * @param out      待回传的结果
+     * @param endpoint 端点名
+     * @return 同一结果对象
+     */
+    private static Map<String, Object> finishActuatorPayload(Map<String, Object> out, String endpoint) {
+        String body = out.get("body") instanceof String ? (String) out.get("body") : "";
+        int statusCode = out.get("status") instanceof Number ? ((Number) out.get("status")).intValue() : 0;
         // 日志列表动辄几百 KB（一个应用几千个 logger），而远端命令输出会在 64KB 处截断，
         // 直接交给前端 JSON.parse 必然失败。这里就地压成 name/级别三列，并如实告知是否截断。
         if ("loggers".equals(endpoint) && statusCode == 200) {
@@ -4171,13 +4212,15 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("body", "");
         }
         if (statusCode == 0) {
-            out.put("message", "目标不可达或超时");
+            if (!out.containsKey("message")) {
+                out.put("message", "目标不可达或超时");
+            }
         } else if (statusCode == 404) {
             out.put("message", "端点未暴露：检查 management.endpoints.web.exposure.include");
         } else if (statusCode >= 400) {
             out.put("message", "Actuator 返回 HTTP " + statusCode);
         }
-        return ReturnResult.ok(out);
+        return out;
     }
 
     @Override
