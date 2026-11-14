@@ -8,10 +8,12 @@ import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.manage.mapper.ManageAccountMapper;
 import com.chua.starter.account.manage.mapper.SysAccountAppKeyMapper;
 import com.chua.starter.account.manage.mapper.SysAccountCookieMapper;
+import com.chua.starter.account.manage.mapper.SysAccountSecretMapper;
 import com.chua.starter.account.manage.security.AccountSecretCodec;
 import com.chua.starter.account.manage.service.impl.ManageAccountServiceImpl;
 import com.chua.starter.account.manage.service.impl.SysAccountAppKeyServiceImpl;
 import com.chua.starter.account.manage.service.impl.SysAccountCookieServiceImpl;
+import com.chua.starter.account.manage.service.impl.SysAccountSecretServiceImpl;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.manage.store.SysAccountAppKey;
@@ -168,6 +170,28 @@ class AccountServiceUnitTest {
             """;
 
     /**
+     * 密钥表建表语句（与 V6.6__add_account_secret.sql 列一一对应）
+     */
+    private static final String DDL_SECRET = """
+            CREATE TABLE sys_account_secret (
+                sys_account_secret_id VARCHAR(64) NOT NULL PRIMARY KEY,
+                sys_account_secret_name VARCHAR(128) NOT NULL,
+                sys_account_secret_provider VARCHAR(64),
+                sys_account_secret_type VARCHAR(128),
+                sys_account_secret_access_key VARCHAR(255),
+                sys_account_secret_secret VARCHAR(2048),
+                sys_account_secret_region VARCHAR(64),
+                sys_account_secret_endpoint VARCHAR(512),
+                sys_account_secret_owner VARCHAR(64),
+                sys_account_secret_status TINYINT NOT NULL DEFAULT 1,
+                sys_account_secret_remark VARCHAR(512),
+                sys_account_secret_deleted TINYINT NOT NULL DEFAULT 0,
+                sys_account_secret_created_at BIGINT,
+                sys_account_secret_updated_at BIGINT
+            )
+            """;
+
+    /**
      * 真实编解码器（AES-GCM，验证加密往返）
      */
     private AccountSecretCodec secretCodec;
@@ -188,9 +212,19 @@ class AccountServiceUnitTest {
     private SysAccountCookieMapper cookieMapper;
 
     /**
+     * 真实密钥映射器
+     */
+    private SysAccountSecretMapper secretMapper;
+
+    /**
      * 真实账号服务
      */
     private ManageAccountServiceImpl accountService;
+
+    /**
+     * 真实密钥库服务（账号创建时按 secretId 取用密钥）
+     */
+    private SysAccountSecretServiceImpl secretService;
 
     /**
      * 真实访问密钥服务
@@ -220,19 +254,23 @@ class AccountServiceUnitTest {
             statement.execute(DDL_ACCOUNT);
             statement.execute(DDL_APP_KEY);
             statement.execute(DDL_COOKIE);
+            statement.execute(DDL_SECRET);
         }
         MybatisConfiguration configuration = new MybatisConfiguration();
         configuration.setEnvironment(new Environment("account-test", new JdbcTransactionFactory(), dataSource));
         configuration.addMapper(ManageAccountMapper.class);
         configuration.addMapper(SysAccountAppKeyMapper.class);
         configuration.addMapper(SysAccountCookieMapper.class);
+        configuration.addMapper(SysAccountSecretMapper.class);
         SqlSessionFactory factory = new MybatisSqlSessionFactoryBuilder().build(configuration);
         sqlSession = factory.openSession(true);
         accountMapper = sqlSession.getMapper(ManageAccountMapper.class);
         appKeyMapper = sqlSession.getMapper(SysAccountAppKeyMapper.class);
         cookieMapper = sqlSession.getMapper(SysAccountCookieMapper.class);
+        secretMapper = sqlSession.getMapper(SysAccountSecretMapper.class);
         secretCodec = new AccountSecretCodec(SECRET_KEY);
-        accountService = new ManageAccountServiceImpl(accountMapper, secretCodec);
+        secretService = new SysAccountSecretServiceImpl(secretMapper, secretCodec);
+        accountService = new ManageAccountServiceImpl(accountMapper, secretCodec, secretService);
         appKeyService = new SysAccountAppKeyServiceImpl(appKeyMapper, secretCodec);
         cookieService = new SysAccountCookieServiceImpl(cookieMapper, secretCodec);
     }

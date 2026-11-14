@@ -274,6 +274,29 @@ public class MyCreditProvider implements ChannelUpstreamProvider {
 - 实现类用 `@Spi` 注册即可，Spring 环境下会被自动装配，可以 `@Autowired` 别的 Bean。
 - 返回值按 `remain` / `total` / `unit` / `currency` / `packages` / `text` 渲染；`packages` 每项支持 `name`、`remain`、`size`、`unit`、`currency`、`display`、`expiresAt`。页面会把来源标成「自建」。
 
+### 余额查询配置（页面填，不用写代码）
+
+多数上游不需要上面那套自定义实现：账号模块自带一张配置表，页面在「渠道 → 网关上游 → 上游详情 → 余额查询」里
+填「去哪查、余额在哪个字段」即可，改配置不用重新发版。
+
+- 表：`sys_account_credit_config`，主键就是网关的 provider id，一个上游最多一条；`kind` 为空按通用表达式处理。
+- 接口：`GET /api/accounts/credit-configs`（全部）、`GET …/{providerId}`、`PUT …/{providerId}`（新增 / 覆盖）、
+  `DELETE …/{providerId}`、`GET …/kinds`（可用实现，页面下拉直接用）、`POST …/test`（按表单内容试查一次，不落库）。
+- 内置实现（`kinds` 返回的就是这些）：`expression` 通用字段表达式、`new-api`（`GET /api/usage/token`）、
+  `sub2api`、`openai`（`GET /v1/dashboard/billing/credit_grants`）、`host`（只给上游 id，地址由实现自己拼）。
+- `host` 预设收录（地址与字段取自官方文档原文，并逐条用假令牌探活过路由）：`deepseek`、`moonshot`、
+  `siliconflow`、`openrouter`、`novita-ai`、`requesty`、`llmgateway`、`deepinfra`、`together`、`stepfun`，
+  以及 `opencode-go`（Go 套餐三个窗口的已用百分比；该路径官方文档未记载，属探活确认，文档只说用量去
+  Console 看）。都用真实 key 跑过之前，页面只会显示上游原文，字段不对就在供应商编辑页覆盖
+  `credit_url` / `credit_expression`。需要 AK/SK 签名的厂商（阿里云、火山、百度、七牛）不收录——本实现只发 Bearer。
+- 表达式语法：`$ ¥ ￥ € £` 币种前缀；点路径，数字段是数组下标，`*` 通配展开；空格包围的 `* N` / `/ N` 做换算；
+  `%` 后缀表示原值是比例、乘 100；`!` 前缀表示上游给的是「已用百分比」、取 100-值（单位自动是 `%`）；
+  `;` 分多段。例：`$data.total_available / 500000`、`$remaining; $used`、`!usage.rolling.percent`。
+- 令牌落库为 `enc:` 前缀密文，读接口只回 `hasToken`；编辑时留空或传掩码表示不修改。
+- 取值顺序：网关（magpie 额度卡）有读数就不问自建源；网关读不到才走这张表。本模块的实现只在
+  「这个上游配了能查的配置」时接管（`supports` 判空），没配就继续问其它 `ChannelUpstreamProvider`，页面不会因此报错。
+- 额度卡上每一段读数来自 `packages`，一段一行；查不到时只显示失败原因（例如上游返回的 `HTTP 401`），不会留空白。
+
 ## 十、通用场景
 
 AI 控制台、设备台要接渠道时，注入账号域提供的 Service 或按 `ChatChannelProvider` 等 SPI 消费；发验证码、通知走 `MessageTemplateService`；注册收码用临时邮箱（`TempMailService`）。

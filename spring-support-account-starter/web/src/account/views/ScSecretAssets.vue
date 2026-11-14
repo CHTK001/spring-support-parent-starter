@@ -1084,7 +1084,7 @@ onMounted(load)
 .provider-inline {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 
 .v-code {

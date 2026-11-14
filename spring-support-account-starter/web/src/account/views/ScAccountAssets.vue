@@ -6,34 +6,6 @@
       <button type="button" @click="loadAll">重试</button>
     </div>
 
-    <!-- 批量操作条：勾选后才出现，不占常态版面 -->
-    <div v-if="isAccountSegment && selectedAccountIds.length" class="batch-bar">
-      <span class="batch-count">已选 <b>{{ selectedAccountIds.length }}</b> 项</span>
-      <span class="batch-actions">
-        <ReButton show-text size="small" icon="CircleCheck" :loading="batchBusy" @click="batchVerify">
-          批量校验
-        </ReButton>
-        <ReButton show-text size="small" icon="SwitchButton" :loading="batchBusy" @click="batchSetStatus(1)">
-          批量启用
-        </ReButton>
-        <ReButton show-text size="small" icon="TurnOff" :loading="batchBusy" @click="batchSetStatus(0)">
-          批量停用
-        </ReButton>
-        <ReButton
-          show-text
-          size="small"
-          icon="Delete"
-          type="danger"
-          plain
-          :loading="batchBusy"
-          @click="batchRemove"
-        >
-          批量删除
-        </ReButton>
-        <button type="button" class="batch-clear" @click="clearAccountSelection">取消选择</button>
-      </span>
-    </div>
-
     <div class="ws" :style="{ '--idx-width': railWidth + 'px' }">
       <!-- ==================== 左侧：分组索引 ==================== -->
       <aside class="idx" aria-label="资产索引">
@@ -45,6 +17,67 @@
           <button type="button" class="icon-btn" title="刷新" aria-label="刷新" @click="loadAll">
             <ReIcon name="RefreshLeft" :size="14" />
           </button>
+          <!-- 批量选择模式开关：进模式后单击索引行即勾选，不必每行右键 / 按 Ctrl -->
+          <button
+            v-if="isAccountSegment"
+            type="button"
+            class="icon-btn"
+            :class="{ 'is-on': batchMode }"
+            :title="batchMode ? '退出批量选择（Esc）' : '批量选择'"
+            :aria-label="batchMode ? '退出批量选择' : '批量选择'"
+            :aria-pressed="batchMode"
+            @click="toggleBatchMode"
+          >
+            <ReIcon name="Select" :size="14" />
+          </button>
+        </div>
+
+        <!-- 批量操作条：进入批量选择后出现，贴在搜索框下方，图标按钮 + 提示压成一行 -->
+        <div v-if="isAccountSegment && batchMode" class="batch-bar">
+          <span class="batch-count" :class="{ 'is-empty': !selectedAccountIds.length }">
+            <template v-if="selectedAccountIds.length">已选 <b>{{ selectedAccountIds.length }}</b> 项</template>
+            <template v-else>单击左侧账号勾选</template>
+          </span>
+          <span class="batch-tools">
+            <ReButton
+              layout="square"
+              size="small"
+              icon="CircleCheck"
+              tip="批量校验"
+              :loading="batchBusy"
+              :disabled="!selectedAccountIds.length"
+              @click="batchVerify"
+            />
+            <ReButton
+              layout="square"
+              size="small"
+              icon="SwitchButton"
+              tip="批量启用"
+              :loading="batchBusy"
+              :disabled="!selectedAccountIds.length"
+              @click="batchSetStatus(1)"
+            />
+            <ReButton
+              layout="square"
+              size="small"
+              icon="TurnOff"
+              tip="批量停用"
+              :loading="batchBusy"
+              :disabled="!selectedAccountIds.length"
+              @click="batchSetStatus(0)"
+            />
+            <ReButton
+              layout="square"
+              size="small"
+              icon="Delete"
+              type="danger"
+              tip="批量删除"
+              :loading="batchBusy"
+              :disabled="!selectedAccountIds.length"
+              @click="batchRemove"
+            />
+          </span>
+          <button type="button" class="batch-clear" @click="toggleBatchMode">取消</button>
         </div>
 
         <!-- 行内统计：数字即筛选入口，压缩成一条不抢版面 -->
@@ -88,7 +121,10 @@
               @dblclick="openIndexRow(group, row)"
               @contextmenu.prevent="openIndexMenu($event, group, row)"
             >
-              <i class="dot" :class="'is-' + row.tone"></i>
+              <span v-if="batchMode && row.checkable" class="idx-box" :class="{ 'is-on': row.checked }" aria-hidden="true">
+                <ReIcon v-if="row.checked" name="Select" :size="10" />
+              </span>
+              <i v-else class="dot" :class="'is-' + row.tone"></i>
               <span class="idx-main">
                 <span class="idx-name">{{ row.name }}</span>
                 <span class="idx-sub">{{ row.sub }}</span>
@@ -97,7 +133,6 @@
                 <span v-if="row.tag" class="idx-tag" :class="'is-' + row.tagTone">{{ row.tag }}</span>
                 <span class="idx-time">{{ row.meta }}</span>
               </span>
-              <i v-if="row.checked" class="idx-check"><ReIcon name="Select" :size="12" /></i>
             </button>
             <p v-if="group.totalRows === 0" class="idx-empty">暂无{{ group.label }}，点下方新建</p>
           </section>
@@ -210,13 +245,70 @@
 
             <!-- 凭据 -->
             <div v-else-if="mainTab === 'credential'" class="pane">
-              <div class="cred-card" :class="activeAccount.hasSecret ? 'is-ok' : 'is-warn'">
-                <ReIcon :name="activeAccount.hasSecret ? 'CircleCheckFilled' : 'WarningFilled'" :size="16" />
+              <div class="cred-card" :class="hasCredential ? 'is-ok' : 'is-warn'">
+                <ReIcon :name="hasCredential ? 'CircleCheckFilled' : 'WarningFilled'" :size="16" />
                 <div>
-                  <b>{{ activeAccount.hasSecret ? '凭据已配置' : '凭据尚未配置' }}</b>
-                  <span>敏感值只进不出：读取接口只返回「是否已配置」，编辑时留空表示不修改。</span>
+                  <b>{{ hasCredential ? '凭据已配置' : '凭据尚未配置' }}</b>
+                  <span>
+                    {{
+                      referencedSecretId
+                        ? '校验时使用引用的密钥；账号自身凭据可留空。敏感值只进不出，编辑时留空表示不修改。'
+                        : '敏感值只进不出：读取接口只返回「是否已配置」，编辑时留空表示不修改。'
+                    }}
+                  </span>
                 </div>
               </div>
+
+              <!-- 引用的密钥：回填「密钥管理」里那一条的真实数据，不重复展示裸 UUID -->
+              <div class="secret-ref">
+                <header class="secret-ref-head">
+                  <ProviderLogo v-if="referencedSecret" :provider="referencedSecret.provider" :size="18" />
+                  <b>{{ referencedSecret ? referencedSecret.name || '未命名密钥' : '未引用密钥管理里的密钥' }}</b>
+                  <ReTag
+                    v-if="referencedSecret"
+                    :type="referencedSecret.status === 0 ? 'info' : 'success'"
+                    effect="plain"
+                    size="small"
+                  >
+                    {{ referencedSecret.status === 0 ? '停用' : '启用' }}
+                  </ReTag>
+                  <button type="button" class="secret-ref-link" @click="openSecretAssets">去密钥管理</button>
+                </header>
+                <div v-if="referencedSecret" class="facts">
+                  <div class="fact is-wide">
+                    <span class="k">AccessKeyId</span>
+                    <span class="v mono">{{ referencedSecret.accessKey || '—' }}</span>
+                  </div>
+                  <div class="fact">
+                    <span class="k">用途 / 厂商</span>
+                    <span class="v">{{ providerLabel(referencedSecret.provider) }}</span>
+                  </div>
+                  <div class="fact">
+                    <span class="k">AccessKeySecret</span>
+                    <span class="v">{{ referencedSecret.hasSecret ? '已配置' : '待补' }}</span>
+                  </div>
+                  <div class="fact">
+                    <span class="k">Region</span>
+                    <span class="v">{{ referencedSecret.region || '—' }}</span>
+                  </div>
+                  <div class="fact">
+                    <span class="k">服务地址</span>
+                    <span class="v mono">{{ referencedSecret.endpoint || '厂商默认' }}</span>
+                  </div>
+                  <div class="fact is-wide">
+                    <span class="k">最近更新</span>
+                    <span class="v">{{ formatTime(referencedSecret.updatedAt) }}</span>
+                  </div>
+                </div>
+                <p v-else class="pane-tip">
+                  {{
+                    referencedSecretId
+                      ? `引用的密钥不在可见列表里（${referencedSecretId}），可能已被删除或不属于当前账号。`
+                      : '凭据直接填在本账号里；要在多处复用同一把钥匙，去「密钥管理」新建后在编辑弹窗里选择。'
+                  }}
+                </p>
+              </div>
+
               <h4 class="pane-title">类型专属配置</h4>
               <div v-if="configRows.length" class="facts">
                 <div v-for="item in configRows" :key="item.key" class="fact">
@@ -680,7 +772,8 @@
 </template>
 
 <script setup lang="ts" name="ScAccountAssets">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import {
   ChatDotRound,
   CircleCheck,
@@ -704,6 +797,7 @@ import AccountFormDialog from '../components/AccountFormDialog.vue';
 import MailboxDrawer from '../components/MailboxDrawer.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
 import CookieDialog from './components/CookieDialog.vue';
+import ProviderLogo from './components/ProviderLogo.vue';
 import {
   batchDeleteAccounts,
   batchUpdateAccountStatus,
@@ -718,6 +812,7 @@ import {
   listAccountAppKeys,
   listAccountCookies,
   listAccounts,
+  listAccountSecrets,
   rotateAccountAppKey,
   syncAccountSmsTemplates,
   tempMailExpireAt,
@@ -731,7 +826,9 @@ import {
   type SysAccount,
   type SysAccountAppKey,
   type SysAccountCookie,
+  type SysAccountSecret,
 } from '../api/account';
+import { providerLabel } from '../secretProviders';
 import { accountConsoleUrl } from '../utils/accountLinks';
 import { confirmThen } from '../../shared/confirmThen';
 import { copyText } from '../../shared/clipboard';
@@ -759,6 +856,9 @@ type Segment = 'ALL' | AccountKind | 'APPKEY' | 'COOKIE' | 'TEMP_MAIL';
 /** 账号状态筛选 */
 type StatusFilter = 'all' | 'on' | 'pending' | 'invalid';
 
+/** 路由：凭据页签里跳到「密钥管理」看被引用的那条密钥 */
+const router = useRouter();
+
 /** 页面视图：账号资产是本页主体，模板管理与消息模板是账号管理下的子功能 */
 /** 统一账号 */
 const accountList = ref<SysAccount[]>([]);
@@ -766,6 +866,8 @@ const accountList = ref<SysAccount[]>([]);
 const appKeyList = ref<SysAccountAppKey[]>([]);
 /** Cookie */
 const cookieList = ref<SysAccountCookie[]>([]);
+/** 密钥管理里的厂商密钥（账号 config.secretId 引用其中的一条） */
+const secretList = ref<SysAccountSecret[]>([]);
 
 /** 加载中 */
 const loading = ref(false);
@@ -796,6 +898,8 @@ const verifyingId = ref<string | null>(null);
 
 /** 账号表格勾选的账号标识 */
 const selectedAccountIds = ref<string[]>([]);
+/** 批量选择模式：进模式后单击索引行即勾选，不必再按 Ctrl / 右键 */
+const batchMode = ref(false);
 /** 批量操作进行中 */
 const batchBusy = ref(false);
 /** 临时邮箱领取中 */
@@ -1065,6 +1169,8 @@ interface IndexRow {
   selected: boolean;
   /** 是否加入批量选择 */
   checked: boolean;
+  /** 是否参与批量选择（账号行才可勾选，AppKey / Cookie 不进批量接口） */
+  checkable: boolean;
 }
 
 /** 索引分组 */
@@ -1129,6 +1235,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
         status: row.status,
         selected: selectedAccountId.value === row.accountId,
         checked: selectedAccountIds.value.includes(row.accountId),
+        checkable: true,
       }));
     groups.push({ key: def.kind, label: def.label, icon: def.icon, rows });
   }
@@ -1152,6 +1259,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
           status: row.status,
           selected: selectedAccountId.value === row.accountId,
           checked: selectedAccountIds.value.includes(row.accountId),
+          checkable: true,
         };
       }),
   });
@@ -1172,6 +1280,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
         status: row.status,
         selected: selectedAppKeyId.value === row.appKeyId,
         checked: false,
+        checkable: false,
       })),
     });
     groups.push({
@@ -1189,6 +1298,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
         status: row.status,
         selected: selectedCookieId.value === row.cookieId,
         checked: false,
+        checkable: false,
       })),
     });
   }
@@ -1263,7 +1373,40 @@ function hasMailbox(row: SysAccount | null | undefined): boolean {
   return row?.kind === 'EMAIL' || row?.kind === 'SMS';
 }
 
-/** 类型专属配置展示行 */
+/**
+ * 账号引用的密钥（{@code config.secretId} 指向「密钥管理」里的那一条）。
+ *
+ * <p>凭据页签要回答的是「这条账号到底在用哪把钥匙」，所以这里回填密钥本体的
+ * 名称 / 厂商 / AccessKeyId / 状态；密钥被删或没权限看时退回 null，页面仍显示 secretId。</p>
+ */
+const referencedSecret = computed(() => {
+  const config = (activeAccount.value?.config || {}) as Record<string, unknown>;
+  const secretId = String(config.secretId ?? '').trim();
+  if (!secretId) return null;
+  return secretList.value.find(item => item.secretId === secretId) ?? null;
+});
+
+/** 引用密钥的原始 id（密钥不在可见列表里时的兜底展示） */
+const referencedSecretId = computed(() => {
+  const config = (activeAccount.value?.config || {}) as Record<string, unknown>;
+  return String(config.secretId ?? '').trim();
+});
+
+/**
+ * 凭据是否「可用」。
+ *
+ * <p>两种来源都算配置过：账号自身填的明文凭据（{@code hasSecret}），
+ * 或 {@code config.secretId} 引用的密钥库条目。只看 {@code hasSecret} 会让
+ * 纯引用型账号被误判成「凭据尚未配置」。</p>
+ */
+const hasCredential = computed(() => Boolean(activeAccount.value?.hasSecret || referencedSecretId.value));
+
+/** 跳到密钥管理查看被引用的那条密钥 */
+function openSecretAssets(): void {
+  void router.push({ name: 'SecretAssets' });
+}
+
+/** 类型专属配置展示行（{@code secretId} 已由「引用的密钥」单独展示，不重复列 UUID） */
 const configRows = computed(() => {
   const config = (activeAccount.value?.config || {}) as Record<string, unknown>;
   const labels: Record<string, string> = {
@@ -1276,7 +1419,7 @@ const configRows = computed(() => {
     webUrl: '控制台地址',
   };
   return Object.entries(config)
-    .filter(([, value]) => value !== null && value !== undefined && value !== '')
+    .filter(([key, value]) => key !== 'secretId' && value !== null && value !== undefined && value !== '')
     .map(([key, value]) => ({
       key,
       label: labels[key] || key,
@@ -1287,18 +1430,20 @@ const configRows = computed(() => {
 // ==================== 加载 ====================
 
 /**
- * 加载三份数据。
+ * 加载四份数据。
  *
- * <p>用 {@code allSettled}：AppKey / Cookie 接口在未登录时可能 403，
- * 不该因此把账号列表一起打成空白页。</p>
+ * <p>用 {@code allSettled}：AppKey / Cookie / 密钥接口在未登录时可能 403，
+ * 不该因此把账号列表一起打成空白页。密钥只用来回填「凭据」页签里被引用的那一条，
+ * 取不到就退化成只显示 {@code secretId}，不影响账号本体。</p>
  */
 async function loadAll(): Promise<void> {
   loading.value = true;
   loadError.value = '';
-  const [accounts, keys, cookies] = await Promise.allSettled([
+  const [accounts, keys, cookies, secrets] = await Promise.allSettled([
     listAccounts(),
     listAccountAppKeys(),
     listAccountCookies(),
+    listAccountSecrets(),
   ]);
   if (accounts.status === 'fulfilled') {
     accountList.value = accounts.value ?? [];
@@ -1318,6 +1463,7 @@ async function loadAll(): Promise<void> {
   } else {
     cookieError.value = 'Cookie 加载失败：' + errText(cookies.reason);
   }
+  secretList.value = secrets.status === 'fulfilled' ? (secrets.value ?? []) : [];
   loading.value = false;
   // 数据整体替换后旧勾选已经没有对应行，继续保留只会让「已选 N 项」与实际不符
   clearAccountSelection();
@@ -1436,16 +1582,15 @@ const ctxMenu = ref<{
 } | null>(null);
 
 /**
- * 选中索引行。
+ * 定位到某一行：只切右侧详情，不动批量勾选。
  *
- * <p>单击只切换右侧详情，不改左侧分组结构：点一条 AppKey 不会让账号分组消失。
- * 按住 Ctrl / ⌘ 单击账号行则把它加入批量选择，用于批量校验 / 启停 / 删除。</p>
+ * <p>右键菜单与单击共用这段：右键只负责弹出菜单，勾选交给菜单项，
+ * 否则在批量模式里右键一行会先被勾上，菜单首项跟着变成「取消批量选择」。</p>
  *
  * @param group 分组
  * @param row 行
- * @param event 鼠标事件
  */
-function selectIndexRow(group: IndexGroup, row: IndexRow, event?: MouseEvent): void {
+function focusIndexRow(group: IndexGroup, row: IndexRow): void {
   segment.value = group.key;
   if (group.key === 'APPKEY') {
     selectedAppKeyId.value = row.id;
@@ -1453,12 +1598,28 @@ function selectIndexRow(group: IndexGroup, row: IndexRow, event?: MouseEvent): v
     selectedCookieId.value = row.id;
   } else {
     selectedAccountId.value = row.id;
-    if (event?.ctrlKey || event?.metaKey || event?.shiftKey) {
-      const ids = selectedAccountIds.value;
-      selectedAccountIds.value = ids.includes(row.id) ? ids.filter(id => id !== row.id) : [...ids, row.id];
-    }
   }
   mainTab.value = 'overview';
+}
+
+/**
+ * 选中索引行。
+ *
+ * <p>单击只切换右侧详情，不改左侧分组结构：点一条 AppKey 不会让账号分组消失。
+ * 批量选择模式下（点工具栏「批量选择」进入）单击账号行即勾选 / 取消勾选；
+ * 未进模式时按住 Ctrl / ⌘ 单击也能直接进模式并勾上当前行。</p>
+ *
+ * @param group 分组
+ * @param row 行
+ * @param event 鼠标事件
+ */
+function selectIndexRow(group: IndexGroup, row: IndexRow, event?: MouseEvent): void {
+  focusIndexRow(group, row);
+  if (group.key === 'APPKEY' || group.key === 'COOKIE') return;
+  if (batchMode.value || event?.ctrlKey || event?.metaKey || event?.shiftKey) {
+    batchMode.value = true;
+    toggleBatchSelect(row.id);
+  }
 }
 
 /**
@@ -1491,7 +1652,7 @@ function openIndexRow(group: IndexGroup, row: IndexRow): void {
  * @param row 行
  */
 function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): void {
-  selectIndexRow(group, row);
+  focusIndexRow(group, row);
   const items = group.key === 'APPKEY'
     ? [
         { key: 'copy-key', label: '复制 AppKey', icon: 'CopyDocument' },
@@ -1513,6 +1674,7 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
             { key: 'destroy-temp', label: '销毁临时邮箱', icon: 'Delete', divided: true },
           ]
           : [
+          { key: 'batch-select', label: selectedAccountIds.value.includes(row.id) ? '取消批量选择' : '批量选择', icon: 'Select' },
           { key: 'edit', label: '编辑账号', icon: 'EditPen' },
           { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
           { key: 'collect-secret', label: '收录到密钥管理', icon: 'Key' },
@@ -1575,7 +1737,8 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
   }
   const target = accountList.value.find(entry => entry.accountId === row.id);
   if (!target) return;
-  if (item.key === 'edit') openEdit(target);
+  if (item.key === 'batch-select') toggleBatchSelect(target.accountId);
+  else if (item.key === 'edit') openEdit(target);
   else if (item.key === 'verify') void onVerify(target);
   else if (item.key === 'collect-secret') void collectSecretOf(target);
   else if (item.key === 'open-console') openConsole(target);
@@ -1591,9 +1754,35 @@ function runCtx(item: { key: string; disabled?: boolean }): void {
 
 // ==================== 批量操作 ====================
 
-/** 清空勾选（数据刷新 / 切分段后必须清，避免把已消失的 id 提交上去） */
+/** 清空勾选并退出批量模式（数据刷新 / 切分段 / 批量执行后必须清，避免把已消失的 id 提交上去） */
 function clearAccountSelection(): void {
   selectedAccountIds.value = [];
+  batchMode.value = false;
+}
+
+/** 切换批量选择模式：进模式后单击索引行即勾选，取消则连同勾选一起清掉 */
+function toggleBatchMode(): void {
+  if (batchMode.value) clearAccountSelection();
+  else batchMode.value = true;
+}
+
+/**
+ * 切换一行账号的批量勾选状态。
+ *
+ * <p>工具栏「批量选择」、右键菜单项与 Ctrl / ⌘ 单击走同一条路径：只改勾选集，不动右侧详情。
+ * 勾选不该顺带把详情滚回顶部，否则连着勾十条要点十次回来。</p>
+ *
+ * @param accountId 账号标识
+ */
+function toggleBatchSelect(accountId: string): void {
+  const ids = selectedAccountIds.value;
+  if (ids.includes(accountId)) {
+    selectedAccountIds.value = ids.filter(id => id !== accountId);
+    return;
+  }
+  selectedAccountIds.value = [...ids, accountId];
+  // 勾上任何一条就进模式：右键菜单 / Ctrl 单击进入后，后续单击行可以直接继续勾
+  batchMode.value = true;
 }
 
 /**
@@ -2259,7 +2448,23 @@ function errText(error: unknown): string {
   return String(error ?? '未知错误');
 }
 
-onMounted(loadAll);
+/**
+ * Esc 退出批量选择。
+ *
+ * <p>批量模式开着但一条没勾时，用户的第一反应是按 Esc 而不是回来点「取消」；
+ * 这里只在模式确实开着时处理，不拦截弹窗自己的 Esc。</p>
+ *
+ * @param event 键盘事件
+ */
+function onWindowKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && batchMode.value) clearAccountSelection();
+}
+
+onMounted(() => {
+  void loadAll();
+  window.addEventListener('keydown', onWindowKeydown);
+});
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
 </script>
 
 <style scoped>
@@ -2297,6 +2502,9 @@ onMounted(loadAll);
 .idx {
   /* 宽度由分栏手柄写入 --idx-width（可拖拽，存本地偏好） */
   width: var(--idx-width, 304px);
+  /* 批量条按索引栏自身宽度换行，而不是按视口宽度 */
+  container-type: inline-size;
+  container-name: rail;
   flex: none;
   min-height: 0;
   display: flex;
@@ -2334,6 +2542,12 @@ onMounted(loadAll);
 .icon-btn:hover {
   color: var(--el-color-primary);
   border-color: var(--el-color-primary-light-5);
+}
+/* 批量选择开关打开时的按下态：和图标的灰底区分开，一眼能看出现在点行是「勾选」不是「查看」 */
+.icon-btn.is-on {
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary-light-5);
+  background: var(--el-color-primary-light-9);
 }
 
 /* 行内统计：数字即筛选入口，压缩成两行，不抢索引版面 */
@@ -2479,6 +2693,14 @@ onMounted(loadAll);
   background: var(--el-color-primary-light-9);
   border-color: var(--el-color-primary-light-7);
 }
+/* 已勾选：底色 + 名称变主色，扫一眼就能数清勾了哪几条（不只靠左侧 14px 方块） */
+.idx-row.is-checked {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-7);
+}
+.idx-row.is-checked .idx-name {
+  color: var(--el-color-primary-dark-2);
+}
 .idx-row.is-off .idx-name {
   color: var(--text-tertiary);
 }
@@ -2554,12 +2776,21 @@ onMounted(loadAll);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.idx-check {
-  position: absolute;
-  left: 2px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--el-color-primary);
+/* 批量模式下的勾选框：替掉左侧状态圆点，点整行即切换 */
+.idx-box {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--bg-container);
+  color: #fff;
+}
+.idx-box.is-on {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary);
 }
 .idx-empty {
   margin: 0;
@@ -2746,10 +2977,19 @@ onMounted(loadAll);
   padding: 5px 0;
   border-bottom: 1px dashed var(--border-subtle);
 }
+/* 长值（如 AccessKeyId）跨两列，避免被挤成两三行 */
+.fact.is-wide {
+  grid-column: span 2;
+}
 .fact .k {
   flex: 0 0 84px;
   font-size: 11.5px;
   color: var(--text-tertiary);
+  white-space: nowrap;
+}
+/* 密钥的键名比中文标签宽，单独给固定列宽，标签不折断 */
+.secret-ref .fact .k {
+  flex: 0 0 104px;
 }
 .fact .v {
   flex: 1;
@@ -2800,6 +3040,45 @@ onMounted(loadAll);
 }
 .cred-card.is-warn b {
   color: var(--sev-p2-text);
+}
+
+/* 凭据页签：账号引用的那条密钥（只读回填，与「密钥管理」同源） */
+.secret-ref {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-container);
+}
+.secret-ref-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.secret-ref-head b {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secret-ref-link {
+  flex: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--el-color-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.secret-ref-link:hover {
+  text-decoration: underline;
 }
 
 .verify-hero {
@@ -3012,42 +3291,76 @@ onMounted(loadAll);
   cursor: pointer;
 }
 
-/* ---------- 批量操作条（Ctrl/⌘ 单击索引行进入多选） ---------- */
+/* ---------- 批量操作条（Ctrl/⌘ 单击索引行进入多选，贴在搜索框下方） ---------- */
 .batch-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 12px;
+  flex-wrap: nowrap;
+  gap: 4px;
+  flex: none;
+  margin: 0 10px 8px;
+  padding: 4px 8px;
   border: 1px solid var(--el-color-primary-light-7);
   border-radius: var(--radius-md);
   background: var(--el-color-primary-light-9);
   font-size: 12px;
+  line-height: 18px;
   color: var(--text-secondary);
-  flex: none;
+}
+.batch-count {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .batch-count b {
   color: var(--el-color-primary-dark-2);
   font-variant-numeric: tabular-nums;
 }
-.batch-actions {
+/* 还没勾选时给一句操作提示，别只留一个「已选 0 项」 */
+.batch-count.is-empty {
+  color: var(--text-tertiary);
+}
+/* 类名避开 koi 全局 .batch-actions（那是通栏样式，带 8/12 内边距与边框，会把这行撑成两行） */
+.batch-tools {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-left: auto;
+  flex: none;
 }
 .batch-clear {
+  flex: none;
   border: 0;
   background: none;
   font: inherit;
   font-size: 11.5px;
+  line-height: 18px;
+  padding: 0;
   color: var(--text-tertiary);
   cursor: pointer;
   text-decoration: underline;
 }
 .batch-clear:hover {
   color: var(--text-primary);
+}
+
+/* 索引栏被拖窄（默认 304px，最小 200px）时一行放不下 4 个图标按钮 + 取消：
+   折成「计数 + 取消」/「图标按钮」两行，避免按钮被裁掉或横向溢出 */
+@container rail (max-width: 262px) {
+  .batch-bar {
+    flex-wrap: wrap;
+  }
+  .batch-count {
+    flex: 1 1 auto;
+  }
+  .batch-clear {
+    order: 1;
+    margin-left: auto;
+  }
+  .batch-tools {
+    order: 2;
+    flex: 1 0 100%;
+  }
 }
 
 /* ---------- 等宽文本（地址、编码、AppKey） ---------- */
