@@ -11,7 +11,7 @@
 | 自动装配 | `AccountAutoConfiguration`、`TemplateAutoConfiguration`（`AutoConfiguration.imports`） |
 | 控制器 | 13 个（`MailboxController`, `SmsTemplateSyncController`, `TempMailController`, `AccountAppKeyController`, `AccountController`, `AccountCookieController`） |
 | Service | 9 个 |
-| SPI | 11 个（`AccountInboxProvider`、`AccountVerifier`、`ChatChannelProvider`、`ImageChannelProvider`、`Model3DChannelProvider`、`VideoChannelProvider`） |
+| SPI | 12 个（`AccountKindProvider`、`AccountInboxProvider`、`AccountVerifier`、`ChatChannelProvider`、`ImageChannelProvider`、`Model3DChannelProvider`、`VideoChannelProvider`） |
 | 建表脚本 | 6 个 SQL 文件 |
 
 ## 二、引入
@@ -104,7 +104,7 @@
 | 方法 | 路径 | Java 方法 | 说明 |
 | --- | --- | --- | --- |
 | GET | `/api/accounts` | `list` | 账号列表。 |
-| GET | `/api/accounts/kinds` | `kinds` | 受支持的账号种类。 |
+| GET | `/api/accounts/kinds` | `kinds` | 受支持的账号种类（含 `label` / `icon` / `secretType` / `fields` / `capabilities` 元数据）。 |
 | GET | `/api/accounts/{accountId}` | `get` | 账号详情。 |
 | POST | `/api/accounts` | `create` | 新增账号。 |
 | PUT | `/api/accounts/{accountId}` | `update` | 更新账号。 |
@@ -231,6 +231,7 @@
 
 ## 九、SPI 扩展点
 
+- `AccountKindProvider`：`META-INF/extensions/com.chua.starter.account.spi.AccountKindProvider`
 - `AccountInboxProvider`：`META-INF/extensions/com.chua.starter.account.spi.AccountInboxProvider`
 - `AccountVerifier`：`META-INF/extensions/com.chua.starter.account.spi.AccountVerifier`
 - `ChatChannelProvider`：`META-INF/extensions/com.chua.starter.account.spi.ChatChannelProvider`
@@ -242,6 +243,40 @@
 - `ChannelUpstreamAdmin`：`META-INF/extensions/com.chua.starter.common.support.channel.ChannelUpstreamAdmin`
 - `ChannelUpstreamCodec`：`META-INF/extensions/com.chua.starter.common.support.channel.ChannelUpstreamCodec`
 - `ChannelUpstreamProvider`：`META-INF/extensions/com.chua.starter.common.support.channel.ChannelUpstreamProvider`
+
+### 账号种类（`AccountKindProvider`）
+
+新增一种账号（例如「对象存储密钥」）只实现该 SPI 并在 `META-INF/extensions` 登记，service 与 `/api/accounts/kinds` 自动生效，不必改 core：
+
+```java
+@Spi("object-storage")
+public class ObjectStorageKindProvider implements AccountKindProvider {
+
+    @Override
+    public String kind() { return "OBJECT_STORAGE"; }   // 稳定落库值，落库后不可改名
+
+    @Override
+    public String label() { return "对象存储"; }
+
+    @Override
+    public String secretType() { return "api"; }         // 收录到密钥库时的归类
+
+    @Override
+    public List<AccountField> fields() {                 // 前端按此渲染表单
+        return List.of(AccountField.required("name", "账号名称", null),
+                AccountField.secret("secret", "SecretKey", "AccessKeySecret"));
+    }
+
+    @Override
+    public Set<AccountCapability> capabilities() {
+        return Set.of(AccountCapability.SECRET_LIBRARY);
+    }
+}
+```
+
+能力位只声明**真有实现**的：`VERIFY` 需要对应 `AccountVerifier`，`INBOX` 需要 `AccountInboxProvider`，未装实现不得标为支持。
+
+以下留在 core，**不**开放给本 SPI：表结构与 `code` 唯一、`owner` 归属隔离、凭据加解密与掩码、事务与批量语义、HTTP 路径与信封。原因是这些是安全与契约边界，交给第三方实现等于让它绕过归属检查读取他人凭据。`validate(account, plainSecret)` 收到的明文由编排层解密后传入，实现不得持久化或回显。
 
 ### 上游余额的自建回落
 

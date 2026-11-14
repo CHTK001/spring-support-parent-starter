@@ -1,12 +1,13 @@
 package com.chua.starter.account.manage.controller;
 
+import com.chua.starter.account.AccountKindCatalog;
 import com.chua.starter.account.common.ApiResult;
 import com.chua.starter.account.manage.model.AccountBatchRequest;
 import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.service.ManageAccountService;
-import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.manage.store.SysAccountSecret;
+import com.chua.starter.account.spi.AccountKindProvider;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,14 +73,27 @@ public class AccountController {
     /**
      * 受支持的账号种类。
      *
-     * @return 种类清单
+     * <p>元数据由 {@code AccountKindProvider} SPI 声明：{@code value} / {@code label}
+     * 保持原有契约（老前端不受影响），{@code icon} / {@code secretType} / {@code fields} /
+     * {@code capabilities} 供前端渲染表单与决定按钮显隐，新增种类不必再改本接口。</p>
+     *
+     * @return 种类清单（按 {@code order} 升序）
      */
     @GetMapping("/kinds")
     public ApiResult<List<Map<String, Object>>> kinds() {
-        return ApiResult.ok(List.of(
-                Map.of("value", AccountKind.API_KEY, "label", "API 密钥"),
-                Map.of("value", AccountKind.EMAIL, "label", "邮箱账号"),
-                Map.of("value", AccountKind.SMS, "label", "短信账号")));
+        List<Map<String, Object>> kinds = new ArrayList<>();
+        for (AccountKindProvider provider : AccountKindCatalog.sorted()) {
+            Map<String, Object> item = new LinkedHashMap<>(8);
+            item.put("value", provider.kind());
+            item.put("label", provider.label());
+            item.put("icon", provider.icon());
+            item.put("secretType", provider.secretType());
+            item.put("order", provider.order());
+            item.put("fields", provider.fields());
+            item.put("capabilities", provider.capabilities());
+            kinds.add(item);
+        }
+        return ApiResult.ok(kinds);
     }
 
     /**

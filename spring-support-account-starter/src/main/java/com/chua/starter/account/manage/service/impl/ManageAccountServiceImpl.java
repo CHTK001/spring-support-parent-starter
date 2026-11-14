@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.account.AccountKindCatalog;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.manage.mapper.ManageAccountMapper;
@@ -13,9 +14,9 @@ import com.chua.starter.account.manage.model.AccountBatchResult;
 import com.chua.starter.account.manage.security.AccountSecretCodec;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.service.SysAccountSecretService;
-import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.manage.store.SysAccountSecret;
+import com.chua.starter.account.spi.AccountKindProvider;
 import com.chua.starter.account.spi.AccountVerifier;
 import com.chua.starter.account.support.AccountUserContext;
 import lombok.RequiredArgsConstructor;
@@ -178,6 +179,9 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         account.setDeleted(0);
         account.setCreatedAt(now);
         account.setUpdatedAt(now);
+        // 种类专属默认值先补，再做种类必填校验；validate 拿本次提交的明文，不读账号里的密文
+        AccountKindCatalog.applyDefaults(account);
+        AccountKindCatalog.validate(account, trimToNull(input.getSecret()));
         accountMapper.insert(account);
         if (Boolean.TRUE.equals(account.getDefaultAccount())) {
             clearOtherDefaults(account);
@@ -216,10 +220,14 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         existing.setDefaultAccount(Boolean.TRUE.equals(input.getDefaultAccount()));
         // 前端回传掩码或留空表示「不修改」，只有明文才覆盖
         String secret = trimToNull(input.getSecret());
-        if (secret != null && !secretCodec.isMasked(secret)) {
-            existing.setSecret(secretCodec.encrypt(secret));
+        String plainSecret = secret != null && !secretCodec.isMasked(secret) ? secret : null;
+        if (plainSecret != null) {
+            existing.setSecret(secretCodec.encrypt(plainSecret));
         }
         existing.setUpdatedAt(System.currentTimeMillis());
+        // 更新不改默认值（applyDefaults 只在新增时补），只跑种类校验；
+        // 未修改凭据时传 null，避免把掩码当明文交给实现
+        AccountKindCatalog.validate(existing, plainSecret);
         accountMapper.updateById(existing);
         if (Boolean.TRUE.equals(existing.getDefaultAccount())) {
             clearOtherDefaults(existing);
@@ -458,17 +466,13 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     /**
      * 账号种类 → 密钥类型（与前端 {@code SECRET_TYPE_BY_KIND} 一致）。
      *
+     * <p>映射由 {@code AccountKindProvider#secretType()} 声明，新增种类不必再改这里。</p>
+     *
      * @param kind 账号种类
      * @return sms / mail / api
      */
     private String secretTypeOf(String kind) {
-        if (AccountKind.SMS.equalsIgnoreCase(kind)) {
-            return "sms";
-        }
-        if (AccountKind.EMAIL.equalsIgnoreCase(kind)) {
-            return "mail";
-        }
-        return "api";
+        return AccountKindCatalog.secretTypeOf(kind);
     }
 
     /**
@@ -671,16 +675,18 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     /**
      * 校验并规范化账号种类。
      *
+     * <p>受支持种类由 {@code AccountKindProvider} SPI 声明，新增种类不必再改这里；
+     * 未注册任何实现时由 {@code AccountKindCatalog} 回落到内置常量。</p>
+     *
      * @param kind 原始种类
      * @return 规范化后的种类
      */
     private String requireKind(String kind) {
-        String value = trimToNull(kind);
+        String value = AccountKindProvider.normalize(kind);
         if (value == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "账号种类不能为空");
         }
-        value = value.toUpperCase();
-        if (!AccountKind.supported(value)) {
+        if (!AccountKindCatalog.supported(value)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的账号种类: " + kind);
         }
         return value;

@@ -633,4 +633,33 @@ class AccountServiceUnitTest {
         assertEquals(ApiErrorCode.FORBIDDEN, error.getErrorCode());
         assertNotNull(cookieMapper.selectById("cookie-2"));
     }
+
+    /**
+     * 新增账号：未注册的种类直接拒绝（种类白名单来自 SPI，不再写死三个常量）。
+     */
+    @Test
+    @DisplayName("新增账号：未注册的种类直接拒绝")
+    void createRejectsUnknownKind() {
+        SysAccount input = newAccountInput();
+        input.setKind("UNKNOWN_KIND");
+
+        ApiException error = assertThrows(ApiException.class, () -> accountService.create(input));
+
+        assertEquals(ApiErrorCode.INVALID_PARAM, error.getErrorCode());
+        assertEquals(0, accountMapper.selectCount(null), "非法种类不应落库");
+    }
+
+    /**
+     * 新增账号：种类大小写不敏感，落库统一大写。
+     */
+    @Test
+    @DisplayName("新增账号：种类落库统一大写")
+    void createNormalizesKindCase() {
+        SysAccount input = newAccountInput();
+        input.setKind(" email ");
+
+        SysAccount saved = accountService.create(input);
+
+        assertEquals(AccountKind.EMAIL, accountMapper.selectById(saved.getAccountId()).getKind());
+    }
 }
