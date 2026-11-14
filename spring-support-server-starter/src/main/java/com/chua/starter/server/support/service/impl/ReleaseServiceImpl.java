@@ -4229,7 +4229,8 @@ public class ReleaseServiceImpl implements ReleaseService {
             return null;
         }
         if (!value.matches("(health|info|metrics|loggers|env|beans|mappings|threaddump"
-                + "|conditions|configprops|scheduledtasks|caches|startup)"
+                + "|conditions|configprops|scheduledtasks|caches|startup"
+                + "|httptrace|httpexchanges)"
                 + "(/[A-Za-z0-9_.$-]+)?")) {
             return null;
         }
