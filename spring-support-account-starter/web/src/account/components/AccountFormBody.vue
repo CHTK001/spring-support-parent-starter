@@ -205,6 +205,20 @@
       </el-col>
     </el-row>
 
+    <!-- 用途能力：一条账号可以同时是邮箱、大语言、存储……左栏图标条读的就是这里 -->
+    <div class="form-section" data-section="capability">用途能力</div>
+    <el-form-item label="能力标记">
+      <el-checkbox-group v-model="form.capabilities" class="cap-group">
+        <el-checkbox-button v-for="tag in ACCOUNT_CAPABILITY_TAGS" :key="tag.key" :value="tag.key">
+          <ReIcon :name="tag.icon" :size="12" />
+          <span>{{ tag.label }}</span>
+        </el-checkbox-button>
+      </el-checkbox-group>
+      <div class="field-hint">
+        可多选，左栏按标记显示能力图标。一条也不选时按账号种类显示默认能力（邮箱收/发信、短信、接口调用）。
+      </div>
+    </el-form-item>
+
     <div class="form-section" data-section="status">状态与归属</div>
     <el-row :gutter="16">
       <el-col :span="8">
@@ -241,8 +255,10 @@ import { computed, reactive, ref, watch } from 'vue';
 import { message } from '@repo/core';
 import type { FormInstance, FormRules } from 'element-plus';
 import ReButton from '@repo/ui/re-button';
+import ReIcon from '@repo/ui/re-icon';
 import MessageTemplateSelect from '../../template/components/MessageTemplateSelect.vue';
 import { providerLabel } from '../secretProviders';
+import { ACCOUNT_CAPABILITY_TAGS, readCapabilityKeys } from '../capabilities';
 import ProviderLogo from '../views/components/ProviderLogo.vue';
 import {
   claimTempMailbox,
@@ -320,7 +336,7 @@ const VENDOR_LABELS: Record<AccountKind, string> = {
 const VENDOR_PLACEHOLDERS: Record<AccountKind, string> = {
   API_KEY: '如 hikvision / aliyun / openai',
   EMAIL: '如 qq / 163 / smtp',
-  SMS: '如 aliyun / tencent / huawei',
+  SMS: '如 aliyun / tencent / baidu（或中文厂商名）',
 };
 
 /** 登录名字段标签 */
@@ -378,6 +394,8 @@ interface AccountForm {
   secretId: string;
   /** 账号来源：custom 自定义（手动填写）/ temp 临时（系统领取） */
   sourceMode: 'custom' | 'temp';
+  /** 用途能力标记（{@code config.capabilities}，空数组表示按种类兜底） */
+  capabilities: string[];
 }
 
 /** 空表单 */
@@ -405,6 +423,7 @@ function emptyForm(): AccountForm {
     keyMode: 'inline',
     secretId: '',
     sourceMode: 'custom',
+    capabilities: [],
   };
 }
 
@@ -546,6 +565,8 @@ function fillForm(): void {
   form.secretId = readString(config, 'secretId');
   form.keyMode = form.secretId ? 'ref' : 'inline';
   form.sourceMode = isTempMail(source) ? 'temp' : 'custom';
+  // 只读显式标记：空数组交给左栏按种类兜底，不把默认值写进账号
+  form.capabilities = readCapabilityKeys(config);
   const port = Number(config.port);
   form.port = Number.isFinite(port) && port > 0 ? port : 465;
   form.ssl = config.ssl == null ? true : Boolean(config.ssl);
@@ -634,6 +655,7 @@ function buildPayload(): SysAccount {
   setOrDelete('appId', form.kind === 'SMS' ? form.appId.trim() : '');
   setOrDelete('secretId', useKeyRef.value ? form.secretId : '');
   setOrDelete('webUrl', form.webUrl.trim());
+  setOrDelete('capabilities', form.capabilities.length ? [...form.capabilities] : '');
 
   const payload: SysAccount = {
     accountId: account?.accountId || '',
@@ -750,6 +772,35 @@ watch(
 }
 .w-full {
   width: 100%;
+}
+
+/* 能力标记：一排水滴形胶囊，靠间距而不是连体边框区分（koi 里没有连体按钮组） */
+.cap-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cap-group :deep(.el-checkbox-button__inner) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-container);
+  color: var(--text-secondary);
+  font-size: 12px;
+  box-shadow: none;
+  transition: background 0.15s var(--ease-out, ease), border-color 0.15s var(--ease-out, ease), color 0.15s var(--ease-out, ease);
+}
+.cap-group :deep(.el-checkbox-button__inner:hover) {
+  border-color: var(--el-color-primary-light-5);
+  color: var(--text-primary);
+}
+.cap-group :deep(.el-checkbox-button.is-checked .el-checkbox-button__inner) {
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 
 /* 底部保存条：常驻表单与弹窗共用 */

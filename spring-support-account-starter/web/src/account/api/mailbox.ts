@@ -1,10 +1,11 @@
 import { http, unwrapResult } from '@repo/utils';
 
 /**
- * 收 / 发信箱接口封装。
+ * 邮箱收发 / 短信发信接口封装。
  *
- * <p>后端挂在统一账号下面（{@code /api/accounts/{accountId}/mailbox}），
- * 收信来自收信 SPI、发信走 MessagePush；本文件只做传输层解包，
+ * <p>后端挂在统一账号下面（{@code /api/accounts/{accountId}/mailbox}）：
+ * 邮箱收信来自收信 SPI（IMAP）、发信走 MessagePush；短信没有收件箱，
+ * 只按账号凭据走 MessagePush 发信。本文件只做传输层解包，
  * 不缓存任何信件内容，也不碰明文凭据。</p>
  */
 

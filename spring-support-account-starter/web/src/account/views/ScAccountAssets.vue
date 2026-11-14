@@ -1,5 +1,53 @@
 <template>
   <div class="account-assets">
+    <!-- 顶部卡片：标题 / 搜索 / 过滤 / 动作（版式对齐密钥管理，过滤不再压在左栏） -->
+    <header class="bar">
+      <div class="bar-title">
+        <h1>账号资产</h1>
+        <span class="bar-count">{{ tableCount }}</span>
+      </div>
+
+      <label class="search bar-search">
+        <ReIcon class="search-icon" name="Search" :size="13" />
+        <input v-model="keyword" :placeholder="searchPlaceholder" />
+      </label>
+
+      <div class="bar-filters" role="group" aria-label="按状态过滤">
+        <button
+          v-for="cell in kpiCells"
+          :key="cell.key"
+          type="button"
+          class="filter"
+          :class="{ 'is-on': cell.on }"
+          :title="cell.hint"
+          @click="cell.run()"
+        >
+          <span class="filter-label">{{ cell.label }}</span>
+          <b class="filter-n" :class="cell.tone">{{ cell.value }}</b>
+        </button>
+      </div>
+
+      <div class="bar-acts">
+        <button type="button" class="icon-btn" title="刷新" aria-label="刷新" @click="loadAll">
+          <ReIcon name="RefreshLeft" :size="14" />
+        </button>
+        <!-- 批量选择模式开关：进模式后单击索引行即勾选，不必每行右键 / 按 Ctrl -->
+        <button
+          v-if="isAccountSegment"
+          type="button"
+          class="icon-btn"
+          :class="{ 'is-on': batchMode }"
+          :title="batchMode ? '退出批量选择（Esc）' : '批量选择'"
+          :aria-label="batchMode ? '退出批量选择' : '批量选择'"
+          :aria-pressed="batchMode"
+          @click="toggleBatchMode"
+        >
+          <ReIcon name="Select" :size="14" />
+        </button>
+        <ReButton show-text size="small" icon="Plus" type="primary" @click="openCreate">{{ createLabel }}</ReButton>
+      </div>
+    </header>
+
     <div class="stage">
     <div v-if="loadError" class="alert">
       <span>账号列表加载失败：{{ loadError }}</span>
@@ -9,30 +57,7 @@
     <div class="ws" :style="{ '--idx-width': railWidth + 'px' }">
       <!-- ==================== 左侧：分组索引 ==================== -->
       <aside class="idx" aria-label="资产索引">
-        <div class="idx-tools">
-          <label class="search">
-            <ReIcon class="search-icon" name="Search" :size="13" />
-            <input v-model="keyword" :placeholder="searchPlaceholder" />
-          </label>
-          <button type="button" class="icon-btn" title="刷新" aria-label="刷新" @click="loadAll">
-            <ReIcon name="RefreshLeft" :size="14" />
-          </button>
-          <!-- 批量选择模式开关：进模式后单击索引行即勾选，不必每行右键 / 按 Ctrl -->
-          <button
-            v-if="isAccountSegment"
-            type="button"
-            class="icon-btn"
-            :class="{ 'is-on': batchMode }"
-            :title="batchMode ? '退出批量选择（Esc）' : '批量选择'"
-            :aria-label="batchMode ? '退出批量选择' : '批量选择'"
-            :aria-pressed="batchMode"
-            @click="toggleBatchMode"
-          >
-            <ReIcon name="Select" :size="14" />
-          </button>
-        </div>
-
-        <!-- 批量操作条：进入批量选择后出现，贴在搜索框下方，图标按钮 + 提示压成一行 -->
+        <!-- 批量操作条：进入批量选择后出现，贴在索引顶部，图标按钮 + 提示压成一行 -->
         <div v-if="isAccountSegment && batchMode" class="batch-bar">
           <span class="batch-count" :class="{ 'is-empty': !selectedAccountIds.length }">
             <template v-if="selectedAccountIds.length">已选 <b>{{ selectedAccountIds.length }}</b> 项</template>
@@ -80,71 +105,81 @@
           <button type="button" class="batch-clear" @click="toggleBatchMode">取消</button>
         </div>
 
-        <!-- 行内统计：数字即筛选入口，压缩成一条不抢版面 -->
-        <div class="stat-row">
-          <button
-            v-for="cell in kpiCells"
-            :key="cell.key"
-            type="button"
-            class="stat"
-            :class="{ 'is-on': cell.on }"
-            :title="cell.hint"
-            @click="cell.run()"
-          >
-            <b :class="cell.tone">{{ cell.value }}</b>
-            <span>{{ cell.label }}</span>
-          </button>
-        </div>
-
-        <div v-if="statusFilter !== 'all'" class="idx-filter">
-          仅看「{{ statusFilterLabel }}」
-          <button type="button" @click="statusFilter = 'all'">清除</button>
-        </div>
-
         <div v-if="segmentError" class="idx-error">{{ segmentError }}</div>
 
-        <div class="idx-scroll" @scroll.passive="onIndexScroll">
-          <section v-for="group in visibleIndexGroups" :key="group.key" class="idx-group">
+        <div class="idx-scroll">
+          <section v-for="group in pagedGroups" :key="group.key" class="idx-group">
             <header class="idx-group-head">
               <ReIcon :name="group.icon" :size="12" />
               <span>{{ group.label }}</span>
-              <b>{{ group.rows.length }}</b>
+              <b>{{ group.total ?? group.rows.length }}</b>
             </header>
-            <button
-              v-for="row in group.rows"
-              :key="row.id"
-              type="button"
-              class="idx-row"
-              :class="{ 'is-on': row.selected, 'is-off': row.status === 0, 'is-checked': row.checked }"
-              :title="row.name"
-              @click="selectIndexRow(group, row, $event)"
-              @dblclick="openIndexRow(group, row)"
-              @contextmenu.prevent="openIndexMenu($event, group, row)"
-            >
-              <span v-if="batchMode && row.checkable" class="idx-box" :class="{ 'is-on': row.checked }" aria-hidden="true">
-                <ReIcon v-if="row.checked" name="Select" :size="10" />
-              </span>
-              <i v-else class="dot" :class="'is-' + row.tone"></i>
-              <span class="idx-main">
-                <span class="idx-name">{{ row.name }}</span>
-                <span class="idx-sub">{{ row.sub }}</span>
-              </span>
-              <span class="idx-meta">
-                <span v-if="row.tag" class="idx-tag" :class="'is-' + row.tagTone">{{ row.tag }}</span>
-                <span class="idx-time">{{ row.meta }}</span>
-              </span>
-            </button>
-            <p v-if="group.totalRows === 0" class="idx-empty">暂无{{ group.label }}，点下方新建</p>
+            <!-- 层级：分组是一级，行缩进一级，竖虚线 + 折角短横把两级连起来 -->
+            <div v-if="group.rows.length" class="idx-branch">
+              <button
+                v-for="row in group.rows"
+                :key="row.id"
+                type="button"
+                class="idx-row"
+                :class="{ 'is-on': row.selected, 'is-off': row.status === 0, 'is-checked': row.checked }"
+                :title="row.name"
+                @click="selectIndexRow(group, row, $event)"
+                @dblclick="openIndexRow(group, row)"
+                @contextmenu.prevent="openIndexMenu($event, group, row)"
+              >
+                <span v-if="batchMode && row.checkable" class="idx-box" :class="{ 'is-on': row.checked }" aria-hidden="true">
+                  <ReIcon v-if="row.checked" name="Select" :size="10" />
+                </span>
+                <span class="idx-main">
+                  <span class="idx-name">{{ row.name }}</span>
+                  <!-- 能力条：一条账号可标多个用途，逐个悬停出名字；没打标记时按种类兜底 -->
+                  <span v-if="row.caps?.length" class="idx-caps">
+                    <span
+                      v-for="cap in row.caps || []"
+                      :key="cap.key"
+                      class="idx-cap"
+                      :title="cap.label"
+                      :aria-label="cap.label"
+                    >
+                      <ReIcon :name="cap.icon" :size="11" />
+                    </span>
+                  </span>
+                  <span v-else class="idx-sub">{{ row.sub }}</span>
+                </span>
+                <span v-if="row.tag && !row.caps?.length" class="idx-meta">
+                  <span v-if="row.tag" class="idx-tag" :class="'is-' + row.tagTone">{{ row.tag }}</span>
+                  <span class="idx-time">{{ row.meta }}</span>
+                </span>
+              </button>
+            </div>
+            <p v-if="!group.total" class="idx-empty">暂无{{ group.label }}，点下方新建</p>
           </section>
-          <div v-if="loadedIndexRows < tableCount" class="idx-more">
-            滚动加载更多（{{ loadedIndexRows }} / {{ tableCount }}）
-          </div>
         </div>
 
-        <div class="idx-foot">
-          <span>{{ tableCount }} 项</span>
-          <ReButton show-text size="small" icon="Plus" type="primary" @click="openCreate">{{ createLabel }}</ReButton>
-        </div>
+        <!-- 页码条：整栏按页翻，不再靠滚动加载 -->
+        <nav v-if="railPages > 1" class="idx-pager" aria-label="资产索引翻页">
+          <button
+            type="button"
+            class="idx-page-btn"
+            :disabled="railPage <= 1"
+            title="上一页"
+            aria-label="上一页"
+            @click="railPage = Math.max(1, railPage - 1)"
+          >
+            <ReIcon name="ArrowLeft" :size="12" />
+          </button>
+          <span class="idx-page-info">第 {{ railPage }} / {{ railPages }} 页</span>
+          <button
+            type="button"
+            class="idx-page-btn"
+            :disabled="railPage >= railPages"
+            title="下一页"
+            aria-label="下一页"
+            @click="railPage = Math.min(railPages, railPage + 1)"
+          >
+            <ReIcon name="ArrowRight" :size="12" />
+          </button>
+        </nav>
       </aside>
 
       <!-- 分栏手柄：拖拽改索引宽度，双击复位，偏好存本地 -->
@@ -152,7 +187,7 @@
         v-model:width="railWidth"
         class="ws-split"
         storage-key="account.rail.width.v1"
-        :default-width="304"
+        :default-width="280"
         label="拖拽调整资产索引宽度"
       />
 
@@ -349,22 +384,22 @@
               <p class="pane-tip">校验会真实发起一次握手：API 密钥校验凭据是否存在，邮箱走 IMAP 登录，短信走模板可用性检查。</p>
             </div>
 
-            <!-- 收信箱 -->
+            <!-- 邮箱收发 / 短信发信 -->
             <div v-else class="pane">
               <div class="mail-hero">
                 <span class="main-mark" :class="'is-' + kindClass(activeAccount.kind)">
                   <ReIcon :name="kindIcon(activeAccount.kind)" :size="16" />
                 </span>
                 <div class="mail-copy">
-                  <b>{{ activeAccount.kind === 'EMAIL' ? '收 / 发信箱' : '短信收 / 发信箱' }}</b>
+                  <b>{{ activeAccount.kind === 'EMAIL' ? '收 / 发信箱' : '短信发信' }}</b>
                   <span>
                     {{ activeAccount.kind === 'EMAIL'
                       ? '收信走 IMAP，发信走 SMTP，全部在应用内抽屉完成，不跳外部门户；打开即拉最新邮件，未读排在前面。'
-                      : '发信走 MessagePush；未安装短信收信能力时抽屉会给出降级提示。' }}
+                      : '发送走 MessagePush；短信没有收件箱，打开后直接写短信。' }}
                   </span>
                 </div>
                 <ReButton type="primary" icon="Message" show-text @click="openConsole(activeAccount)">
-                  {{ activeAccount.kind === 'EMAIL' ? '打开邮箱' : '打开短信' }}
+                  {{ activeAccount.kind === 'EMAIL' ? '打开邮箱' : '写短信' }}
                 </ReButton>
               </div>
               <div class="facts">
@@ -421,7 +456,7 @@
               :show-text="false"
               :icon="activeAccount.kind === 'EMAIL' ? 'Message' : 'ChatDotRound'"
               :icon-size="28"
-              :tip="activeAccount.kind === 'EMAIL' ? '打开邮箱' : '打开短信'"
+              :tip="activeAccount.kind === 'EMAIL' ? '打开邮箱' : '写短信'"
               @click="openConsole(activeAccount)"
             />
             <span class="foot-gap"></span>
@@ -749,7 +784,7 @@
     <!-- 新增 / 编辑 Cookie -->
     <CookieDialog v-model="cookieFormVisible" :cookie="editingCookie" @saved="onCookieSaved" />
 
-    <!-- 收 / 发信箱：邮箱走 IMAP / SMTP，短信走 MessagePush -->
+    <!-- 邮箱收发 / 短信发信：邮箱走 IMAP / SMTP，短信走 MessagePush -->
     <MailboxDrawer
       v-model="mailboxVisible"
       :account="mailboxAccount"
@@ -829,9 +864,11 @@ import {
   type SysAccountSecret,
 } from '../api/account';
 import { providerLabel } from '../secretProviders';
+import { capabilityTagsOf, type AccountCapabilityTag } from '../capabilities';
 import { accountConsoleUrl } from '../utils/accountLinks';
 import { confirmThen } from '../../shared/confirmThen';
 import { copyText } from '../../shared/clipboard';
+import { errorText } from '../../shared/errorText';
 
 /**
  * 账号资产 —— monitor 的统一账号工作台（设计方向 B）。
@@ -884,7 +921,7 @@ const keyword = ref('');
 
 /* ---------- 左侧索引宽度（可拖拽，偏好存本地） ---------- */
 const RAIL_WIDTH_KEY = 'account.rail.width.v1';
-const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 304));
+const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 280));
 /** 账号状态筛选 */
 const statusFilter = ref<StatusFilter>('all');
 
@@ -921,7 +958,7 @@ const secretVisible = ref(false);
 const secretValue = ref('');
 const secretName = ref('');
 
-/** 收 / 发信箱抽屉（邮箱 IMAP、短信 MessagePush） */
+/** 邮箱收发 / 短信发信抽屉（邮箱 IMAP、短信 MessagePush） */
 const mailboxVisible = ref(false);
 const mailboxAccount = ref<SysAccount | null>(null);
 /** 账号 → 收件箱未读数（抽屉打开后回填，用于页签角标；不预拉免得多开 IMAP 会话） */
@@ -994,17 +1031,6 @@ const tempMailCount = computed(() => accountList.value.filter(row => isTempMail(
 const channelCount = computed(
   () => new Set(accountList.value.map(row => row.channelKey).filter(Boolean)).size,
 );
-
-/** 状态筛选文案 */
-const statusFilterLabel = computed(() => {
-  const map: Record<StatusFilter, string> = {
-    all: '全部',
-    on: '启用中',
-    pending: '凭据待补',
-    invalid: '校验失败',
-  };
-  return map[statusFilter.value];
-});
 
 /** KPI 单元格 */
 const kpiCells = computed<
@@ -1161,8 +1187,6 @@ interface IndexRow {
   tag: string;
   /** 标签语义 */
   tagTone: 'ok' | 'warn' | 'bad' | 'idle';
-  /** 左侧圆点语义 */
-  tone: 'ok' | 'warn' | 'bad' | 'idle';
   /** 启停状态（0 停用；无启停概念时为 undefined） */
   status?: number;
   /** 是否选中 */
@@ -1171,6 +1195,8 @@ interface IndexRow {
   checked: boolean;
   /** 是否参与批量选择（账号行才可勾选，AppKey / Cookie 不进批量接口） */
   checkable: boolean;
+  /** 用途能力（账号行才有：标记 + 种类兜底） */
+  caps?: AccountCapabilityTag[];
 }
 
 /** 索引分组 */
@@ -1181,19 +1207,10 @@ interface IndexGroup {
   label: string;
   /** 分组图标 */
   icon: string;
-  /** 分组行 */
+  /** 分组行（当页切片；分组自身总行数见 {@link total}） */
   rows: IndexRow[];
-}
-
-/**
- * 账号行的圆点语义。
- *
- * <p>停用优先于校验状态：一条已停用的账号即便校验有效，也不该显示成绿的。</p>
- */
-function accountTone(row: SysAccount): 'ok' | 'warn' | 'bad' | 'idle' {
-  if (row.status === 0) return 'idle';
-  if (!row.hasSecret) return 'warn';
-  return verifyTone(row.verifyStatus);
+  /** 分组总行数（分页后仍显示完整条数，不跟着当页条数变） */
+  total?: number;
 }
 
 /**
@@ -1231,7 +1248,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
         meta: formatShort(row.updatedAt),
         tag: row.status === 0 ? '停用' : verifyLabel(row.verifyStatus),
         tagTone: row.status === 0 ? 'idle' : row.hasSecret ? verifyTone(row.verifyStatus) : 'warn',
-        tone: accountTone(row),
+        caps: capabilityTagsOf(row.config, row.kind),
         status: row.status,
         selected: selectedAccountId.value === row.accountId,
         checked: selectedAccountIds.value.includes(row.accountId),
@@ -1255,7 +1272,7 @@ const indexGroups = computed<IndexGroup[]>(() => {
           meta: tempRemainText(row),
           tag: expiredMail ? '过期' : '临时',
           tagTone: expiredMail ? 'bad' : 'ok',
-          tone: expiredMail ? 'bad' : 'ok',
+          caps: capabilityTagsOf(row.config, row.kind),
           status: row.status,
           selected: selectedAccountId.value === row.accountId,
           checked: selectedAccountIds.value.includes(row.accountId),
@@ -1276,7 +1293,6 @@ const indexGroups = computed<IndexGroup[]>(() => {
         meta: formatShort(row.lastUsedAt),
         tag: row.status === 0 ? '停用' : expired(row.expireAt) ? '过期' : '启用',
         tagTone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
-        tone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
         status: row.status,
         selected: selectedAppKeyId.value === row.appKeyId,
         checked: false,
@@ -1294,7 +1310,6 @@ const indexGroups = computed<IndexGroup[]>(() => {
         meta: formatShort(row.updatedAt),
         tag: row.status === 0 ? '停用' : expired(row.expireAt) ? '过期' : '启用',
         tagTone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
-        tone: row.status === 0 ? 'idle' : expired(row.expireAt) ? 'bad' : 'ok',
         status: row.status,
         selected: selectedCookieId.value === row.cookieId,
         checked: false,
@@ -1308,43 +1323,70 @@ const indexGroups = computed<IndexGroup[]>(() => {
 /** 索引里的总行数 */
 const tableCount = computed(() => indexGroups.value.reduce((sum, group) => sum + group.rows.length, 0));
 
-/** 索引每次滚动加载的行数 */
-const RAIL_PAGE = 30;
-/** 已加载行数（跨分组累计） */
-const railLimit = ref(RAIL_PAGE);
+/** 索引每页行数：左栏按页翻，不做无限滚动 */
+const RAIL_PAGE_SIZE = 20;
+
+/** 索引当前页（从 1 起） */
+const railPage = ref(1);
+
+/** 索引总页数（空列表也算 1 页，页码条才不会塌掉） */
+const railPages = computed(() => Math.max(1, Math.ceil(tableCount.value / RAIL_PAGE_SIZE)));
 
 /**
- * 索引可见分组：按分组顺序累计切片。
+ * 索引分页：先把分组摊平，按页切片，再按分组聚回来。
  *
- * <p>保留原有分组结构（含空分组），只截断每组行数；{@code totalRows} 是切片前的
- * 行数，模板用它区分「本来就没有行」和「有行但还没滚动加载到」。</p>
+ * <p>左栏是两级结构（分组 → 行），分页不能按组各切一刀 —— 那样每组都得挂一个
+ * 翻页器。这里用「整栏共用一个页码条」：当页有行的分组才出现，分组头后面的数字
+ * 仍是该组的总行数；空分组只在第一页提示一次。</p>
  */
-const visibleIndexGroups = computed(() => {
-  let remaining = railLimit.value;
-  return indexGroups.value.map((group) => {
-    const totalRows = group.rows.length;
-    const rows = remaining > 0 ? group.rows.slice(0, remaining) : [];
-    remaining -= rows.length;
-    return { ...group, rows, totalRows };
-  });
+const pagedGroups = computed<IndexGroup[]>(() => {
+  const start = (railPage.value - 1) * RAIL_PAGE_SIZE;
+  const end = start + RAIL_PAGE_SIZE;
+  let passed = 0;
+  const out: IndexGroup[] = [];
+  for (const group of indexGroups.value) {
+    const total = group.rows.length;
+    const from = Math.max(0, start - passed);
+    const to = Math.min(total, end - passed);
+    passed += total;
+    const rows = to > from ? group.rows.slice(from, to) : [];
+    if (rows.length || (!total && railPage.value === 1)) out.push({ ...group, total, rows });
+  }
+  return out;
 });
 
-/** 已加载行数 */
-const loadedIndexRows = computed(() =>
-  visibleIndexGroups.value.reduce((sum, group) => sum + group.rows.length, 0),
-);
-
-/** 索引滚动到底部时加载更多 */
-function onIndexScroll(e: Event): void {
-  const el = e.target as HTMLElement;
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24 && railLimit.value < tableCount.value) {
-    railLimit.value += RAIL_PAGE;
+/**
+ * 某一行在索引里的页号。
+ *
+ * <p>选中项换到别的页时把左栏翻过去，否则详情换了一条、索引里却看不见它。</p>
+ *
+ * @param id 行的资产标识（账号 / AppKey / Cookie 共用一套索引）
+ * @returns 1 起的页号，找不到时回第一页
+ */
+function pageOfRow(id: string): number {
+  let passed = 0;
+  for (const group of indexGroups.value) {
+    const at = group.rows.findIndex(row => row.id === id);
+    if (at >= 0) return Math.floor((passed + at) / RAIL_PAGE_SIZE) + 1;
+    passed += group.rows.length;
   }
+  return 1;
 }
 
-/** 搜索 / 状态筛选 / 切分段时回到第一屏 */
+/** 搜索 / 状态筛选 / 切分段时回到第一页 */
 watch([keyword, statusFilter, segment], () => {
-  railLimit.value = RAIL_PAGE;
+  railPage.value = 1;
+});
+
+// 行变少（删除 / 过滤 / 换分段）时把页码收回最后一页，别停在一张空页上
+watch(railPages, (total) => {
+  if (railPage.value > total) railPage.value = total;
+});
+
+// 选中项落在别的页：左栏跟着翻页
+watch([selectedAccountId, selectedAppKeyId, selectedCookieId], () => {
+  const id = selectedAccountId.value || selectedAppKeyId.value || selectedCookieId.value;
+  if (id) railPage.value = pageOfRow(id);
 });
 
 /** 选中账号 */
@@ -1679,7 +1721,7 @@ function openIndexMenu(event: MouseEvent, group: IndexGroup, row: IndexRow): voi
           { key: 'verify', label: '校验凭据', icon: 'CircleCheck' },
           { key: 'collect-secret', label: '收录到密钥管理', icon: 'Key' },
           ...(group.key === 'EMAIL' || group.key === 'SMS'
-            ? [{ key: 'open-console', label: group.key === 'EMAIL' ? '打开邮箱' : '打开短信', icon: 'Message', divided: true }]
+            ? [{ key: 'open-console', label: group.key === 'EMAIL' ? '打开邮箱' : '写短信', icon: 'Message', divided: true }]
             : []),
           ...(group.key === 'SMS'
             ? [{ key: 'sync-sms-templates', label: '同步短信模板', icon: 'Refresh' }]
@@ -1994,17 +2036,17 @@ function onSaved(saved: SysAccount): void {
 }
 
 /**
- * 打开收 / 发信箱。
+ * 打开邮箱或写短信。
  *
- * <p>不再跳向外部门户：邮箱走 IMAP 收信 + SMTP 发信，短信走 MessagePush，
- * 全部在应用内抽屉里完成，因此这里只负责把账号交给抽屉。</p>
+ * <p>不再跳向外部门户：邮箱走 IMAP 收信 + SMTP 发信，短信走 MessagePush
+ * 且没有收件箱，全部在应用内抽屉里完成，因此这里只负责把账号交给抽屉。</p>
  *
  * @param row 账号
  */
 function openConsole(row: SysAccount | null): void {
   if (!row) return;
   if (!hasMailbox(row)) {
-    message.warning('该账号种类没有收 / 发信箱');
+    message.warning('该账号种类没有邮箱或短信发信能力');
     return;
   }
   mailboxAccount.value = row;
@@ -2057,7 +2099,7 @@ async function collectSecretOf(row: SysAccount | null): Promise<void> {
 }
 
 /**
- * 同步短信账号对应厂商的云端模板。
+ * 同步短信账号对应厂商的短信模板。
  *
  * <p>厂商由账号 vendor 决定，后端走 MessagePush SPI 的 listTemplates()，
  * 前端不区分阿里 / 腾讯 / 百度。</p>
@@ -2068,11 +2110,17 @@ async function syncSmsTemplatesOf(row: SysAccount | null): Promise<void> {
   if (!row) return;
   try {
     const result = await syncAccountSmsTemplates(row.accountId);
+    if (result.fetched === 0) {
+      message.warning(
+        `未拉取到短信模板（${result.provider}）：阿里云只同步审核通过的模板，腾讯 / 百度当前只返回已登记模板`,
+      );
+      return;
+    }
     message.success(
-      `模板同步完成：新增 ${result.created}，更新 ${result.updated}，跳过 ${result.skipped}（${result.provider}）`,
+      `模板同步完成：拉取 ${result.fetched}，新增 ${result.created}，更新 ${result.updated}，跳过 ${result.skipped}（${result.provider}）`,
     );
   } catch (e: any) {
-    message.error(e?.message || '同步短信模板失败');
+    message.error(errorText(e, '同步短信模板失败'));
   }
 }
 
@@ -2478,6 +2526,122 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   gap: 10px;
 }
 
+/* ---------- 顶部卡片：标题 / 搜索 / 过滤 / 动作（对齐密钥管理） ---------- */
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: var(--bg-container);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.bar-title {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bar-title h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 26px;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+.bar-count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--el-color-primary-light-9);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--el-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+/* 搜索框复用左栏那套 .search：高度与过滤胶囊对齐成同一条横线。
+   .search 在本文件靠后、同权重会覆盖，这里用双类名压过去。 */
+.search.bar-search {
+  flex: none;
+  width: 220px;
+  min-width: 180px;
+  height: 26px;
+  padding: 0 9px;
+}
+.bar-filters {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.bar-filters::-webkit-scrollbar {
+  display: none;
+}
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s var(--ease-out, ease), border-color 0.15s var(--ease-out, ease), background 0.15s var(--ease-out, ease);
+}
+.filter:hover {
+  color: var(--el-color-primary);
+}
+.filter.is-on {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-7);
+}
+.filter-n {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+.filter-label {
+  line-height: 1;
+}
+.filter-n.is-ok {
+  color: var(--status-success);
+  opacity: 1;
+}
+.filter-n.is-warn {
+  color: var(--status-warning);
+  opacity: 1;
+}
+.filter-n.is-bad {
+  color: var(--status-error);
+  opacity: 1;
+}
+.bar-acts {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* 行内所有控件统一 26px：搜索框 / 过滤胶囊 / 图标按钮 / 新建按钮落在同一条水平线上 */
+.bar-acts :deep(.el-button) {
+  height: 26px;
+}
+
 /* ---------- 内容舞台 ---------- */
 .stage {
   flex: 1 1 auto;
@@ -2501,7 +2665,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
 /* ---------- 左侧分组索引 ---------- */
 .idx {
   /* 宽度由分栏手柄写入 --idx-width（可拖拽，存本地偏好） */
-  width: var(--idx-width, 304px);
+  width: var(--idx-width, 280px);
   /* 批量条按索引栏自身宽度换行，而不是按视口宽度 */
   container-type: inline-size;
   container-name: rail;
@@ -2515,21 +2679,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
-.idx-tools {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 10px 8px;
-  flex: none;
-}
-.idx-tools .search {
-  flex: 1;
-  min-width: 0;
-}
 .icon-btn {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   border: 1px solid var(--border-default);
@@ -2550,86 +2703,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   background: var(--el-color-primary-light-9);
 }
 
-/* 行内统计：数字即筛选入口，压缩成两行，不抢索引版面 */
-.stat-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0 10px 8px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--border-subtle);
-  flex: none;
-}
-.stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-  padding: 5px 8px;
-  border: 0;
-  background: var(--bg-container);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s var(--ease-out);
-}
-.stat:hover {
-  background: var(--bg-fill);
-}
-.stat.is-on {
-  background: var(--el-color-primary-light-9);
-}
-.stat b {
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
-}
-.stat b.is-ok {
-  color: var(--status-success);
-}
-.stat b.is-warn {
-  color: var(--status-warning);
-}
-.stat b.is-bad {
-  color: var(--status-error);
-}
-.stat span {
-  font-size: 10.5px;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.idx-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 10px 8px;
-  padding: 5px 9px;
-  border: 1px solid var(--el-color-primary-light-7);
-  border-radius: var(--radius-sm);
-  background: var(--el-color-primary-light-9);
-  font-size: 11px;
-  color: var(--el-color-primary-dark-2);
-  flex: none;
-}
-.idx-filter button {
-  margin-left: auto;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 11px;
-  color: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-}
 .idx-error {
-  margin: 0 10px 8px;
+  margin: 8px 10px 8px;
   padding: 6px 9px;
   border: 1px dashed var(--sev-p0-border);
   border-radius: var(--radius-sm);
@@ -2642,7 +2717,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 6px 6px;
+  padding: 6px 6px;
 }
 .idx-group + .idx-group {
   margin-top: 4px;
@@ -2704,21 +2779,27 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
 .idx-row.is-off .idx-name {
   color: var(--text-tertiary);
 }
-.dot {
+/* 能力条：一条账号可标多个用途；浅灰小方块，悬停加深并出名字 */
+.idx-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+.idx-cap {
   flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-quaternary, var(--border-default));
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--bg-fill);
+  color: var(--text-tertiary);
+  transition: background 0.12s var(--ease-out, ease), color 0.12s var(--ease-out, ease);
 }
-.dot.is-ok {
-  background: var(--status-success);
-}
-.dot.is-warn {
-  background: var(--status-warning);
-}
-.dot.is-bad {
-  background: var(--status-error);
+.idx-cap:hover {
+  background: var(--border-default);
+  color: var(--text-primary);
 }
 .idx-main {
   flex: 1;
@@ -2798,31 +2879,59 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   font-size: 11px;
   color: var(--text-tertiary);
 }
-/* 滚动分页：还有未加载的行时给一条提示（滚到底自动追加） */
-.idx-more {
-  padding: 8px 8px 12px;
-  font-size: 11px;
-  text-align: center;
-  color: var(--text-tertiary);
+/* 层级：分组是父级，行向右缩进一级，竖虚线引导 + 每行一段短折线 */
+.idx-branch {
+  position: relative;
+  margin: 0 2px 2px 13px;
+  padding-left: 10px;
+  border-left: 1px dashed var(--border-default);
 }
-.idx-foot {
+/* 行到引导线的那一小段横线，读起来是「挂在分组下面」而不是另起一块 */
+.idx-branch > .idx-row::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 8px;
+  border-top: 1px dashed var(--border-default);
+  pointer-events: none;
+}
+/* 页码条：整栏按页翻，一行一页地换，不做无限滚动 */
+.idx-pager {
   flex: none;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-top: 1px solid var(--border-subtle);
-  background: var(--bg-container);
 }
-.idx-foot > span {
+.idx-page-btn {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-container);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+.idx-page-btn:hover:not(:disabled) {
+  background: var(--bg-fill);
+  color: var(--text-primary);
+}
+.idx-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.idx-page-info {
   font-size: 11px;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
-.idx-foot > :last-child {
-  margin-left: auto;
-}
-
 /* ---------- 右侧详情工作区 ---------- */
 .main {
   flex: 1 1 auto;
@@ -3298,7 +3407,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   flex-wrap: nowrap;
   gap: 4px;
   flex: none;
-  margin: 0 10px 8px;
+  margin: 8px 10px 8px;
   padding: 4px 8px;
   border: 1px solid var(--el-color-primary-light-7);
   border-radius: var(--radius-md);
@@ -3344,7 +3453,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   color: var(--text-primary);
 }
 
-/* 索引栏被拖窄（默认 304px，最小 200px）时一行放不下 4 个图标按钮 + 取消：
+/* 索引栏被拖窄（默认 280px，最小 200px）时一行放不下 4 个图标按钮 + 取消：
    折成「计数 + 取消」/「图标按钮」两行，避免按钮被裁掉或横向溢出 */
 @container rail (max-width: 262px) {
   .batch-bar {
@@ -3411,7 +3520,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stat,
   .idx-row,
   .main-tab,
   .icon-btn,

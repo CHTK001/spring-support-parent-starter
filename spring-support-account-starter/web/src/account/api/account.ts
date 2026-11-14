@@ -363,7 +363,7 @@ export const deleteAccountSecret = (secretId: string) =>
 export interface SmsTemplateSyncResult {
   /** 实际使用的短信通道（由账号 vendor 解析） */
   provider: string;
-  /** 云端拉到的模板数 */
+  /** 通道 listTemplates() 返回的模板数（阿里云为云端审核通过的，腾讯 / 百度可能只是本地已登记模板） */
   fetched: number;
   /** 新增数 */
   created: number;
@@ -376,7 +376,9 @@ export interface SmsTemplateSyncResult {
 /**
  * 同步指定短信账号对应厂商的模板。
  *
- * <p>不绑定厂商：后端按账号 vendor 解析 MessagePush SPI 的 listTemplates()。</p>
+ * <p>不绑定厂商：后端按账号 vendor 解析 MessagePush SPI 的 listTemplates()。
+ * 注意各通道能力不同：阿里云只返回审核通过的云端模板，腾讯 / 百度当前
+ * 只返回本进程已登记模板，fetched=0 不一定是失败，界面会据此区分提示。</p>
  */
 export const syncAccountSmsTemplates = (accountId: string) =>
   http().post(`${B}/${accountId}/sms/templates/sync`).then(r => unwrap<SmsTemplateSyncResult>(r));

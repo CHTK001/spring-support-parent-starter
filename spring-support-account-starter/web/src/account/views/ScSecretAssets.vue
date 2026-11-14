@@ -9,7 +9,7 @@
 
   版式（对齐模板资产页）：
     - 顶部操作条：标题 + 总数、搜索、类型筛选（全部 / 短信 / 邮件 / 对象存储 / 支付 / 通用 API / 其他，带数量）、刷新、新建密钥；
-    - 左栏 300px 密钥列表：名称、类型、厂商、AccessKey 尾段、启用状态点；
+    - 左栏 280px 密钥列表（可拖拽调宽）：名称、类型、厂商、AccessKey 尾段、启用状态点；
     - 右栏详情：凭据状态卡 + 字段明细，底部左下删除、右下编辑。
 -->
 <template>
@@ -63,7 +63,7 @@
     </header>
 
     <!-- ==================== 主体：左列表 + 右详情 ==================== -->
-    <div class="body">
+    <div class="body" :style="{ '--rail-width': railWidth + 'px' }">
       <!-- 左栏：密钥列表 -->
       <aside class="rail">
         <div class="rail__list" @scroll.passive="onRailScroll">
@@ -110,6 +110,15 @@
           <span>已加载 {{ visibleItems.length }} / {{ filtered.length }} 条，滚动加载更多</span>
         </footer>
       </aside>
+
+      <!-- 分栏手柄：拖拽改左栏宽度，双击复位，偏好存本地 -->
+      <ReRailSplit
+        v-model:width="railWidth"
+        class="secret-split"
+        storage-key="secret.rail.width.v1"
+        :default-width="280"
+        label="拖拽调整密钥列表宽度"
+      />
 
       <!-- 右栏：详情 -->
       <section class="detail">
@@ -284,6 +293,12 @@ import { copyText } from '../../shared/clipboard'
 import { providerLabel } from '../secretProviders'
 import ProviderLogo from './components/ProviderLogo.vue'
 import SecretDialog from './components/SecretDialog.vue'
+import ReRailSplit, { readRailWidth } from '@repo/ui/re-rail-split'
+
+/** 左栏宽度偏好键（与账号资产页同一套分栏） */
+const RAIL_WIDTH_KEY = 'secret.rail.width.v1'
+/** 左栏宽度：可拖拽，双击复位，偏好存本地 */
+const railWidth = ref(readRailWidth(RAIL_WIDTH_KEY, 280))
 
 /** 密钥类型：后端 secretType 的取值集合 */
 export type SecretType = 'sms' | 'mail' | 'storage' | 'payment' | 'api' | 'other'
@@ -656,15 +671,17 @@ onMounted(load)
 .body {
   display: flex;
   flex: 1;
-  gap: 12px;
+  /* 间距交给分栏手柄本身，避免 gap + 手柄叠出一段空档 */
+  gap: 0;
   min-height: 0;
 }
 
 .rail {
   display: flex;
-  flex: 0 0 300px;
+  flex: none;
   flex-direction: column;
-  width: 300px;
+  /* 宽度由分栏手柄写入 --rail-width（可拖拽，存本地偏好） */
+  width: var(--rail-width, 280px);
   min-height: 0;
   overflow: hidden;
   background: var(--bg-container);
@@ -1135,6 +1152,20 @@ onMounted(load)
     padding-top: 8px;
     border-top: 1px solid var(--border-subtle, var(--border-default));
     border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+}
+
+/* 窄屏降为上下结构，收起左右分栏手柄 */
+@media (max-width: 940px) {
+  .body {
+    flex-direction: column;
+  }
+  .rail {
+    width: auto;
+    max-height: 340px;
+  }
+  .secret-split {
+    display: none;
   }
 }
 </style>

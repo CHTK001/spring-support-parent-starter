@@ -11,7 +11,7 @@
       <!-- 加载概览 -->
       <div v-if="loadingOverview" class="mb-state">
         <ReIcon name="Loading" :size="18" class="spin" />
-        <span>正在连接收信服务…</span>
+        <span>{{ isEmail ? '正在连接收信服务…' : '正在读取短信通道…' }}</span>
       </div>
 
       <template v-else>
@@ -26,8 +26,8 @@
         </div>
 
         <div class="mb-body">
-          <!-- 文件夹轨 -->
-          <aside class="mb-folders">
+          <!-- 文件夹轨：短信没有收件箱，只有真有收信文件夹时才显示 -->
+          <aside v-if="showFolderRail" class="mb-folders">
             <button
               v-for="folder in folders"
               :key="folder.key"
@@ -43,7 +43,7 @@
             </button>
 
             <div v-if="!folders.length" class="mb-folder-hint">
-              {{ overview?.supported ? '暂无可用文件夹' : '收信未接入' }}
+              {{ overview?.supported ? '暂无可用文件夹' : (isEmail ? '收信未接入' : '暂无收信文件夹') }}
             </div>
 
             <div class="mb-folder-foot">
@@ -68,7 +68,7 @@
                   class="mb-unread"
                   :class="{ 'is-on': onlyUnread }"
                   :aria-pressed="onlyUnread"
-                  :title="onlyUnread ? '显示全部邮件' : '只看未读邮件'"
+                  :title="onlyUnread ? (isEmail ? '显示全部邮件' : '显示全部消息') : (isEmail ? '只看未读邮件' : '只看未读消息')"
                   @click="toggleOnlyUnread"
                 >
                   <ReIcon name="Message" :size="12" />
@@ -89,10 +89,14 @@
                 </ReButton>
                 <label class="mb-search">
                   <ReIcon name="Search" :size="13" />
-                  <input v-model="keyword" placeholder="搜索主题 / 发件人" @keyup.enter="reloadMessages()" />
+                  <input
+                    v-model="keyword"
+                    :placeholder="isEmail ? '搜索主题 / 发件人' : '搜索内容 / 号码'"
+                    @keyup.enter="reloadMessages()"
+                  />
                 </label>
                 <ReButton v-if="overview?.sendable" show-text icon="EditPen" type="primary" @click="startCompose()">
-                  写信
+                  {{ isEmail ? '写信' : '写短信' }}
                 </ReButton>
               </div>
 
@@ -104,23 +108,23 @@
                 border
                 stripe
                 class="mb-table"
-                empty-text="这个文件夹没有邮件"
+                :empty-text="isEmail ? '这个文件夹没有邮件' : '没有短消息'"
                 :settings="{ highlightCurrentRow: true }"
                 :config="{ pagination: { enable: false }, toolbar: { enable: false } }"
                 @row-click="openMessage"
               >
-                <ReTableColumn label="发件人" min-width="180">
+                <ReTableColumn :label="isEmail ? '发件人' : '发送号码'" min-width="180">
                   <template #default="{ row }">
                     <div class="mb-from" :class="{ 'is-unread': row.unread }">
                       <i class="mb-dot"></i>
-                      <span class="ellipsis" :title="row.from">{{ row.from || '（未知发件人）' }}</span>
+                      <span class="ellipsis" :title="row.from">{{ row.from || (isEmail ? '（未知发件人）' : '（未知号码）') }}</span>
                     </div>
                   </template>
                 </ReTableColumn>
-                <ReTableColumn label="主题" min-width="280">
+                <ReTableColumn :label="isEmail ? '主题' : '内容'" min-width="280">
                   <template #default="{ row }">
                     <div class="mb-subject" :class="{ 'is-unread': row.unread }">
-                      <span class="ellipsis" :title="row.subject">{{ row.subject || '（无主题）' }}</span>
+                      <span class="ellipsis" :title="messageTitle(row)">{{ messageTitle(row) }}</span>
                       <ReTag v-if="row.hasAttachment" type="info" size="small" effect="plain">附件</ReTag>
                     </div>
                     <div class="mb-preview ellipsis">{{ row.preview || '—' }}</div>
@@ -135,12 +139,12 @@
 
               <div v-else class="mb-state mb-state--block">
                 <ReIcon name="Message" :size="18" />
-                <span>{{ isEmail ? '这个账号还没有可用的收件文件夹' : '短信账号没有收件箱，可直接写信发送' }}</span>
+                <span>{{ isEmail ? '这个账号还没有可用的收件文件夹' : '短信账号没有收件箱，可直接写短信发送' }}</span>
               </div>
 
               <div class="mb-more">
                 <ReButton v-if="hasMore" plain :loading="loadingMessages" @click="loadMore">加载更多</ReButton>
-                <span v-else-if="messages.length" class="mb-end">已到最早一封</span>
+                <span v-else-if="messages.length" class="mb-end">{{ isEmail ? '已到最早一封' : '没有更多消息' }}</span>
               </div>
             </template>
 
@@ -151,8 +155,8 @@
                   <ReIcon name="ArrowLeft" :size="14" />
                   <span>返回</span>
                 </button>
-                <span class="mb-title ellipsis" :title="activeMessage?.subject">
-                  {{ activeMessage?.subject || '（无主题）' }}
+                <span class="mb-title ellipsis" :title="activeMessage ? messageTitle(activeMessage) : ''">
+                  {{ activeMessage ? messageTitle(activeMessage) : '' }}
                 </span>
                 <template v-if="activeMessage">
                   <ReButton v-if="isEmail" show-text icon="Message" @click="replyMessage">回复</ReButton>
@@ -179,19 +183,19 @@
                   </ReButton>
                 </template>
                 <ReButton v-if="overview?.sendable" show-text icon="EditPen" @click="startCompose()">
-                  写信
+                  {{ isEmail ? '写信' : '写短信' }}
                 </ReButton>
               </div>
 
               <div v-if="loadingMessage" class="mb-state">
                 <ReIcon name="Loading" :size="18" class="spin" />
-                <span>正在读取邮件…</span>
+                <span>{{ isEmail ? '正在读取邮件…' : '正在读取消息…' }}</span>
               </div>
 
               <div v-else-if="activeMessage" class="mb-detail">
                 <dl class="mb-head">
-                  <div><dt>发件人</dt><dd>{{ activeMessage.from || '—' }}</dd></div>
-                  <div><dt>收件人</dt><dd>{{ activeMessage.to || '—' }}</dd></div>
+                  <div><dt>{{ isEmail ? '发件人' : '发送号码' }}</dt><dd>{{ activeMessage.from || '—' }}</dd></div>
+                  <div><dt>{{ isEmail ? '收件人' : '接收号码' }}</dt><dd>{{ activeMessage.to || '—' }}</dd></div>
                   <div v-if="activeMessage.cc"><dt>抄送</dt><dd>{{ activeMessage.cc }}</dd></div>
                   <div><dt>时间</dt><dd>{{ formatFullTime(activeMessage.sentAt) }}</dd></div>
                   <div v-if="activeMessage.attachments?.length">
@@ -220,7 +224,7 @@
             <!-- ==================== 写信 ==================== -->
             <template v-else>
               <div class="mb-toolbar">
-                <button type="button" class="mb-back" @click="backToList">
+                <button v-if="showFolderRail" type="button" class="mb-back" @click="backToList">
                   <ReIcon name="ArrowLeft" :size="14" />
                   <span>返回</span>
                 </button>
@@ -274,16 +278,16 @@
 
 <script setup lang="ts">
 /**
- * 收 / 发信箱抽屉。
+ * 邮箱收发 / 短信发信抽屉。
  *
  * <p><b>为什么不是跳转网页版</b>：账号页右键「打开邮箱」要打开的是这个账号<b>真实</b>的
- * 收信箱 / 已发送，而不是邮箱服务商的登录页。收信由后端收信 SPI（IMAP）直连，
- * 发信走 {@code MessagePush}，因此这里没有 {@code window.open}。</p>
+ * 收信箱 / 已发送，而不是邮箱服务商的登录页。邮件收信由后端收信 SPI（IMAP）直连；
+ * 短信没有收件箱，只按账号凭据走 {@code MessagePush} 发信，因此这里没有 {@code window.open}。</p>
  *
- * <p>三种模式共用右侧主区：列表（分页取信）→ 详情（HTML 放沙箱 iframe）→ 写信。
- * 抽屉宽度 980，左栏只放文件夹，主区留给内容，移动端窄屏时自动收窄。</p>
+ * <p>三种模式共用右侧主区：邮件列表（分页取信）→ 详情（HTML 放沙箱 iframe）→ 写信；
+ * 短信默认直接进入写短信，发完仍留在写短信。</p>
  *
- * <p><b>进入即优先收信</b>：打开抽屉立刻连 IMAP 取最新一页，并请求 {@code preferUnread}，
+ * <p><b>邮箱进入即优先收信</b>：打开抽屉立刻连 IMAP 取最新一页，并请求 {@code preferUnread}，
  * 未读邮件排在前面（服务端 {@code SEARCH UNSEEN}）；工具栏还提供「只看未读」。
  * 抽屉重新可见时静默刷新一次，不做定时轮询，避免 IMAP 会话被反复开关。</p>
  */
@@ -378,6 +382,19 @@ const form = reactive({
 /** 是否邮件账号 */
 const isEmail = computed(() => props.account?.kind === 'EMAIL');
 
+/** 是否显示文件夹轨：短信没有收件箱，只有真的返回收信文件夹才显示 */
+const showFolderRail = computed(() => isEmail.value || folders.value.length > 0);
+
+/** 首次概览是否已决定默认模式（静默刷新不把正在写的短信顶回列表） */
+const autoComposeDone = ref(false);
+
+/** 列表 / 详情标题：邮件用主题，短信没有主题，用内容摘要 */
+function messageTitle(msg: MailboxMessage): string {
+  return isEmail.value
+    ? (msg.subject || '（无主题）')
+    : (msg.subject || msg.preview || '（无内容）');
+}
+
 /** 抽屉标题 */
 const drawerTitle = computed(() => {
   const name = props.account?.name || props.account?.username || '';
@@ -445,6 +462,7 @@ watch(
   open => {
     if (!open) return;
     mode.value = 'list';
+    autoComposeDone.value = false;
     messages.value = [];
     activeMessage.value = null;
     keyword.value = '';
@@ -526,8 +544,14 @@ async function loadOverview(quiet = false): Promise<void> {
     if (quiet) return;
     overview.value = null;
     folders.value = [];
-    message.error(e?.message || '收信箱连接失败');
+    message.error(e?.message || (isEmail.value ? '收信箱连接失败' : '短信通道连接失败'));
   } finally {
+    // 短信没有收件箱：首次概览回来后直接进写短信，别停在「没有邮件」的空列表。
+    // 只判一次，之后的静默刷新 / 重试都不会打断用户正在编辑的内容。
+    if (!autoComposeDone.value && overview.value) {
+      autoComposeDone.value = true;
+      if (!isEmail.value && !activeFolder.value) mode.value = 'compose';
+    }
     if (!quiet) loadingOverview.value = false;
   }
 }
@@ -560,7 +584,7 @@ async function reloadMessages(quiet = false): Promise<void> {
     if (quiet) return;
     messages.value = [];
     hasMore.value = false;
-    message.error(e?.message || '收取邮件失败');
+    message.error(e?.message || (isEmail.value ? '收取邮件失败' : '读取消息失败'));
   } finally {
     if (!quiet) loadingMessages.value = false;
   }
@@ -624,7 +648,7 @@ async function openMessage(row: Record<string, unknown>): Promise<void> {
       void autoMarkRead(detail);
     }
   } catch (e: any) {
-    message.error(e?.message || '读取邮件失败');
+    message.error(e?.message || (isEmail.value ? '读取邮件失败' : '读取消息失败'));
   } finally {
     loadingMessage.value = false;
   }
@@ -691,20 +715,20 @@ async function removeMessage(): Promise<void> {
   if (!account?.accountId || !current || deletingMessage.value) return;
   const confirmed = await confirmThen(
     message.confirm,
-    `确认删除「${current.subject || '（无主题）'}」？删除后无法从本界面恢复。`,
-    '删除邮件',
+    `确认删除「${messageTitle(current)}」？删除后无法从本界面恢复。`,
+    isEmail.value ? '删除邮件' : '删除消息',
   );
   if (!confirmed) return;
   deletingMessage.value = true;
   try {
     await deleteMailboxMessage(account.accountId, current.id, activeFolder.value);
-    message.success('邮件已删除');
+    message.success(isEmail.value ? '邮件已删除' : '消息已删除');
     mode.value = 'list';
     activeMessage.value = null;
     await reloadMessages();
     void refreshFolderCounters();
   } catch (e: any) {
-    message.error(e?.message || '删除邮件失败');
+    message.error(e?.message || (isEmail.value ? '删除邮件失败' : '删除消息失败'));
   } finally {
     deletingMessage.value = false;
   }
@@ -775,10 +799,10 @@ async function markAllRead(): Promise<void> {
       }
     }
     if (done) {
-      message.success(`已把 ${done} 封邮件标为已读`);
+      message.success(isEmail.value ? `已把 ${done} 封邮件标为已读` : `已把 ${done} 条消息标为已读`);
       await reloadMessages(true);
     } else {
-      message.info('当前文件夹没有可标记的未读邮件');
+      message.info(isEmail.value ? '当前文件夹没有可标记的未读邮件' : '当前没有可标记的未读消息');
     }
     void refreshFolderCounters();
   } catch (e: any) {
@@ -806,16 +830,19 @@ function quoteBody(msg: MailboxMessage): string {
   const text = msg.contentType === 'html'
     ? raw.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')
     : raw;
-  return [
+  const lines = [
     '',
     '',
-    '---------- 原始邮件 ----------',
-    `发件人：${msg.from || '—'}`,
+    `---------- 原始${isEmail.value ? '邮件' : '消息'} ----------`,
+    `${isEmail.value ? '发件人' : '发送号码'}：${msg.from || '—'}`,
     `时间：${formatFullTime(msg.sentAt)}`,
-    `主题：${msg.subject || '（无主题）'}`,
-    '',
-    text.trim(),
-  ].join('\n');
+  ];
+  // 短信没有主题，引用正文不再拼一段「主题：」
+  if (isEmail.value) {
+    lines.push(`主题：${msg.subject || '（无主题）'}`);
+  }
+  lines.push('', text.trim());
+  return lines.join('\n');
 }
 
 /** 回复：填好收件人与引用正文，进入写信模式 */
@@ -889,9 +916,12 @@ async function submitSend(): Promise<void> {
     });
     if (result?.success) {
       message.success(isEmail.value ? '邮件已发送' : '短信已提交');
-      mode.value = 'list';
       resetForm();
-      void reloadMessages();
+      // 短信没有收件箱：发完留在写短信，别退回一张空的邮件列表
+      if (showFolderRail.value) {
+        mode.value = 'list';
+        void reloadMessages();
+      }
     } else {
       message.error(result?.message || '发送失败');
     }
