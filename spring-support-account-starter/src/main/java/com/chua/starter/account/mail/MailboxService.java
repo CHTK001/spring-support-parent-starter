@@ -297,8 +297,7 @@ public class MailboxService {
     private Map<String, Object> sendSms(SysAccount account, String secret, MailboxSendRequest request) {
         String alias = smsAlias(account.getVendor());
         if (alias == null) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM,
-                    "短信账号未填写受支持的服务商（aliyun / tencent / baidu）");
+            throw unsupportedVendor(account.getVendor());
         }
         MessagePush push = createSmsPush(alias, account, secret);
         if (push == null) {
@@ -344,8 +343,7 @@ public class MailboxService {
         }
         String alias = smsAlias(account.getVendor());
         if (alias == null) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM,
-                    "短信账号未填写受支持的服务商（aliyun / tencent / baidu）");
+            throw unsupportedVendor(account.getVendor());
         }
         MessagePush push = createSmsPush(alias, account, accountService.resolveSecret(accountId));
         if (push == null) {
@@ -471,16 +469,29 @@ public class MailboxService {
         if (value.isEmpty()) {
             return null;
         }
-        if (value.contains("ali")) {
+        // 中文厂商名与英文别名一视同仁：阿里云 / 腾讯云 / 百度云在账号里也常见
+        if (value.contains("ali") || value.contains("阿里")) {
             return "alibaba-sms";
         }
-        if (value.contains("tencent") || value.contains("qcloud")) {
+        if (value.contains("tencent") || value.contains("qcloud") || value.contains("腾讯")) {
             return "tencent-sms";
         }
-        if (value.contains("baidu")) {
+        if (value.contains("baidu") || value.contains("百度")) {
             return "baidu-sms";
         }
         return null;
+    }
+
+    /**
+     * 构造「短信厂商不受支持」异常：带上账号实际填写的 vendor，便于用户定位问题。
+     *
+     * @param vendor 账号填写的厂商
+     * @return 可直接抛出的异常
+     */
+    private ApiException unsupportedVendor(String vendor) {
+        String shown = StringUtils.isBlank(vendor) ? "（未填写）" : vendor.trim();
+        return new ApiException(ApiErrorCode.INVALID_PARAM,
+                "短信账号的服务商「" + shown + "」不受支持；请填写阿里云 / 腾讯云 / 百度云（aliyun / tencent / baidu）");
     }
 
     /**

@@ -20,8 +20,13 @@ import java.util.Map;
  * 短信模板同步。
  *
  * <p>不绑定厂商：按账号 {@code vendor} 解析 {@link MessagePush} SPI，调用通用的
- * {@link MessagePush#listTemplates()}，把云端模板按 {@code templateCode} 落到
+ * {@link MessagePush#listTemplates()}，把取回的模板按 {@code templateCode} 落到
  * 消息模板表（kind=SMS）。阿里 / 腾讯 / 百度等实现由宿主按需引入。</p>
+ *
+ * <p><b>能力边界</b>：并非所有通道都会查厂商云端。阿里云实现查
+ * {@code QuerySmsTemplateList} 且只保留 {@code AUDIT_PASS} 审核通过的模板；
+ * 腾讯 / 百度当前只返回本进程已登记的模板（{@code fetched} 可能为 0），
+ * 不代表「云端没有模板」或「同步失败」。界面据此区分提示。</p>
  *
  * <p>同一 code 已存在时更新名称与内容，保留原有默认 / 排序 / 启停设置。</p>
  *
