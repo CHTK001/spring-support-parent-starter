@@ -345,6 +345,21 @@ public class MyLlmCreditProvider implements ChannelCreditProvider {
 2. **字段以本模块注释里的实测响应为准**：每个实现类头都写了端点、鉴权头形态和响应示例；上游改字段时改这里，不要靠猜。
    没绑真实账号跑通的渠道，页面显示的是上游原文（401/403 也算原文），不是「已支持」的结论。
 
+**厂商余额端点：已收录 / 不收录**
+
+余额查询内核在 `spring-support-datasearch-starter`（`credit/` 目录），本模块与账户页共用同一套
+`CreditQueryProvider` SPI。收录口径只看一条：**官方文档明确写了余额 / 额度端点**。
+
+| 分类 | 厂商 | 依据 |
+|---|---|---|
+| 已收录 · Bearer（11） | `deepseek` `moonshot` `siliconflow` `openrouter` `novita-ai` `requesty` `llmgateway` `deepinfra` `together` `stepfun` `opencode-go` | 官方端点或探活确认路径，见 `HostCreditQueryProvider.HOSTS` |
+| 已收录 · AK/SK 签名（4） | `aliyun-bss` `volc-billing` `baidu-bce` `qiniu` | 阿里云 BSS `QueryAccountBalance`、火山 `QueryBalanceAcct`、百度财务 `/v1/finance/cash/balance`、七牛 `/billing-api/v1/account/balance-overview`；签名由 `CreditSigner` 完成，AK/SK 在账户页「余额查询」配置里加密落库 |
+| 不收录 | `zhipu` `zai` `chutes` `fireworks` `helicone` `302ai` `hyper` `kilo` 等 20+ 家 | 官方文档没有余额 / 额度查询端点，不猜地址、不标「支持」；确有余额源的走页面「地址 + 字段表达式」通用配置 |
+
+`opencode-go` 是唯一「路径探活可证、文档无字」的例外（官方只说用量去 Console 看），已在代码注释里标明。
+4 家签名类端点/字段来自官方文档原文，但**未做真链路探活、未绑真 key 验字段**，首次绑真 key 前只显示上游原文；
+字段口径不一致时用 `credit_expression` 覆盖。完备清单与配置方式见 `spring-support-account-starter/README.md` 的「余额查询配置」。
+
 ## 六、与其它 starter 的关系
 
 - **底层能力**：`utils-support-deeplearning-starter` 提供 `ChatClient`、`ImageClient`、OCR / 人脸 / 版面等实现；本模块只做 Spring 装配与配置分发，不重复定义这些类型。

@@ -344,10 +344,12 @@ public class AiRoleController {
     /**
      * 删除角色（逻辑删除）。
      *
-     * <p>通用助手（id=1 / code=general-assistant）为系统内置助手，禁止删除。
+     * <p>通用助手（code=general-assistant）为系统内置助手，禁止删除。
      * 前端已隐藏/拦截删除按钮，这里仍由后端兜底，直接 403，防止绕过页面调用
-     * {@code DELETE /v2/roles/1} 删掉内置角色。后续若数据库主键迁移，
-     * code=general-assistant 仍命中同一保护。</p>
+     * {@code DELETE /v2/roles/{id}} 删掉内置角色。</p>
+     *
+     * <p>2026-11-14 改为只按 code 判定：此前无条件拦截主键 1，而种子角色
+     * （三国角色库「刘备」）会占用 id=1，导致普通角色永远删不掉。</p>
      *
      * @param id 角色主键
      * @return 是否成功
@@ -356,9 +358,6 @@ public class AiRoleController {
     @Operation(summary = "删除角色")
     @DeleteMapping("/{id}")
     public boolean delete(@Parameter(description = "角色主键") @PathVariable Integer id) {
-        if (Integer.valueOf(1).equals(id)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手为系统内置，不允许删除");
-        }
         SysAiRole existing = roleService.getById(id);
         if (existing != null && "general-assistant".equals(existing.getCode())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手为系统内置，不允许删除");

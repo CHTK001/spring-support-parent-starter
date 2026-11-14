@@ -149,9 +149,9 @@ public class AiBotChatService {
     private final Map<String, BotClient> runningBots = new ConcurrentHashMap<>();
 
     /**
-     * 通用助手角色主键（id=1，系统内置）。
+     * 通用助手编码（系统内置，按 code 定位，不依赖主键）。
      */
-    private static final Integer GENERAL_ASSISTANT_ID = 1;
+    private static final String GENERAL_ASSISTANT_CODE = "general-assistant";
 
     /**
      * 应用上下文刷新后加载所有已绑定的微信 机器人 并启动消息轮询。
@@ -1180,20 +1180,46 @@ public class AiBotChatService {
      * @return 生效的系统提示词，无则返回 {@code null}
      */
     private String resolveSystemPrompt(SysAiBotBinding bot) {
-        Integer selectedRoleId = bot != null && bot.getRoleId() != null
-                ? bot.getRoleId() : GENERAL_ASSISTANT_ID;
-        String rolePrompt = resolveRolePrompt(selectedRoleId);
+        String rolePrompt = resolveRolePrompt(bot == null ? null : bot.getRoleId());
         if (rolePrompt != null && !rolePrompt.isBlank()) {
             return rolePrompt;
         }
-        if (!GENERAL_ASSISTANT_ID.equals(selectedRoleId)) {
-            String defaultPrompt = resolveRolePrompt(GENERAL_ASSISTANT_ID);
-            if (defaultPrompt != null && !defaultPrompt.isBlank()) {
-                return defaultPrompt;
-            }
+        String defaultPrompt = resolveGeneralAssistantPrompt();
+        if (defaultPrompt != null && !defaultPrompt.isBlank()) {
+            return defaultPrompt;
         }
         String global = globalSettingReader.getStr("bot", "system_prompt");
         return (global == null || global.isBlank()) ? null : global.trim();
+    }
+
+    /**
+     * 解析内置通用助手（code=general-assistant）的提示词。
+     *
+     * <p>2026-11-14 由固定主键 1 改为按 code 定位：种子角色会占用小主键，
+     * 按 id 兜底会让机器人拿到别的角色人设（例如三国角色「刘备」）。</p>
+     *
+     * @return 提示词正文；通用助手不存在或未配置时返回 {@code null}
+     */
+    private String resolveGeneralAssistantPrompt() {
+        try {
+            SysAiRole role = sysAiRoleMapper.selectOne(
+                    Wrappers.<SysAiRole>lambdaQuery()
+                            .eq(SysAiRole::getCode, GENERAL_ASSISTANT_CODE)
+                            .eq(SysAiRole::getDeleted, 0)
+                            .orderByAsc(SysAiRole::getId)
+                            .last("LIMIT 1"));
+            if (role == null) {
+                log.warn("[BotChat] 通用助手角色缺失 code={}", GENERAL_ASSISTANT_CODE);
+                return null;
+            }
+            String prompt = sysAiRolePromptResolver.resolve(role, SysAiRolePromptResolver.MODE_BUILD);
+            log.info("[BotChat] 解析通用助手提示词 roleId={} found={}",
+                    role.getId(), !(prompt == null || prompt.isBlank()));
+            return prompt;
+        } catch (Exception e) {
+            log.warn("[BotChat] 解析通用助手提示词失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

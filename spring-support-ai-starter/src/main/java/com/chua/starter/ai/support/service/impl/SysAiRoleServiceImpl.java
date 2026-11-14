@@ -39,10 +39,13 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     private static final int DELETE_NOT_DELETED = 0;
 
     /**
-     * 通用助手主键：sys_ai_role.id=1（code=general-assistant），系统内置，
+     * 通用助手编码：code=general-assistant，系统内置，
      * 不允许删除、不允许改 code（前端同样约束，接口层兜底）。
+     *
+     * <p>只认 code、不认主键：种子角色（三国角色库等）自增主键同样会占用小 id，
+     * 按 id 判定会把普通角色误认成通用助手。</p>
      */
-    public static final Integer GENERAL_ASSISTANT_ID = 1;
+    public static final String GENERAL_ASSISTANT_CODE = "general-assistant";
 
     /**
      * 角色 映射器
@@ -51,6 +54,10 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
 
     /**
      * 查询当前用户所有未删除的角色列表，按排序值升序。
+     *
+     * <p>排除 world-sim 来源：世界沙盒 AI 生成的模拟 NPC 复用了本表，但不是
+     * 用户维护的角色，不应出现在「角色管理」。列 NOT NULL 默认 user，直接用
+     * ne 即可，无需额外判 NULL。</p>
      *
      * @return 角色列表
      */
@@ -64,11 +71,15 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
                 Wrappers.lambdaQuery(SysAiRole.class)
                         .eq(SysAiRole::getUserId, userId)
                         .eq(SysAiRole::getDeleted, DELETE_NOT_DELETED)
+                        .ne(SysAiRole::getSource, SysAiRole.SOURCE_WORLD_SIM)
                         .orderByAsc(SysAiRole::getSort));
     }
 
     /**
      * 查询当前用户所有启用状态的角色列表，按排序值升序。
+     *
+     * <p>与 list() 同口径：排除世界沙盒模拟 NPC，避免「角色管理看不到、
+     * 但启用角色下拉里还能选到」的漏网。</p>
      *
      * @return 启用角色列表
      */
@@ -83,6 +94,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
                         .eq(SysAiRole::getUserId, userId)
                         .eq(SysAiRole::getDeleted, DELETE_NOT_DELETED)
                         .eq(SysAiRole::getStatus, STATUS_ENABLED)
+                        .ne(SysAiRole::getSource, SysAiRole.SOURCE_WORLD_SIM)
                         .orderByAsc(SysAiRole::getSort));
     }
 
@@ -193,9 +205,12 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     /**
      * 逻辑删除当前用户的角色。
      *
-     * <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」）
+     * <p>2026-10-14 新增通用助手保护：code=general-assistant（「通用助手」）
      * 是系统内置角色，不允许删除（前端同样隐藏删除按钮，但接口必须自己兜底，
      * 防止绕过前端直接调 DELETE）。返回 false，前端按删除失败提示。</p>
+     *
+     * <p>2026-11-14 改为只按 code 判定：此前按固定主键 1 判定，一旦种子角色
+     * 占用了 id=1（三国角色库「刘备」），该角色会被误当通用助手、永远删不掉。</p>
      *
      * @param id 角色主键
      * @return 是否成功
@@ -205,12 +220,12 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         if (id == null) {
             return false;
         }
-        if (GENERAL_ASSISTANT_ID.equals(id)) {
-            log.warn("[Role] 拒绝删除通用助手（id=1，系统内置）");
-            return false;
-        }
         SysAiRole existing = sysAiRoleMapper.selectById(id);
         if (!owns(existing)) {
+            return false;
+        }
+        if (GENERAL_ASSISTANT_CODE.equals(existing.getCode())) {
+            log.warn("[Role] 拒绝删除通用助手（code=general-assistant，系统内置）");
             return false;
         }
         // 使用 mybatis-Plus 内置 deleteById：@TableLogic 逻辑删除（设置 删除=1）

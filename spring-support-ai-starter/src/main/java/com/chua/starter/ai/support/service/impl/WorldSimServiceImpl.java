@@ -598,6 +598,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             String persona = str(d.get("persona"), "");
             SysAiRole role = new SysAiRole();
             role.setUserId(userId);
+            // 标记为世界沙盒模拟 NPC：角色管理列表按 sys_ai_role_source 过滤，
+            // 世界沙盒内部按 role_id 直查人设不受影响。
+            role.setSource(SysAiRole.SOURCE_WORLD_SIM);
             role.setName(name);
             role.setCode("ws-" + worldId + "-" + System.currentTimeMillis() + "-" + sort);
             role.setDescription(persona.length() > 120 ? persona.substring(0, 120) : persona);

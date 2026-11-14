@@ -1256,9 +1256,27 @@ public class ServiceInstanceManager {
      */
     private void handleModelsList(HttpExchange exchange, String flavor, Caller caller) {
         try {
-            List<String> models = new ArrayList<>(registry.getModels());
-            // /models 必须与 /chat/completions 同一口径：调用方看不到的模型，也不许出现在清单里
-            models = new ArrayList<>(AppKeyModelScope.filter(allowedModels(caller), models));
+            // /models 必须与 /chat/completions 同一口径：实例放行哪个模型，清单就报哪个。
+            // 真源是「允许范围」，注册表只是本机已装配的 ChatClient 目录 —— 实例按模型透传给
+            // 上游时注册表通常是空的，若照旧与注册表取交集，清单会恒为空；而 Claude Code
+            // 这类客户端会先取 /v1/models 校验 --model，清单为空就判「模型不可用」，
+            // 请求根本发不出去（与 /chat/completions 的放行结果自相矛盾）。
+            Set<String> allowed = allowedModels(caller);
+            List<String> models;
+            if (allowed != null) {
+                // 空集合＝一个都不许（分组不存在 / 已停用），清单同样为空
+                models = new ArrayList<>(allowed);
+            } else {
+                // 不限制模型时按注册表报；注册表也空（未装配任何 ChatClient）时，
+                // 至少报出实际生效的默认模型，别让清单空着
+                models = new ArrayList<>(registry.getModels());
+                if (models.isEmpty()) {
+                    String fallback = defaultModel();
+                    if (fallback != null && !fallback.isBlank()) {
+                        models.add(fallback.trim());
+                    }
+                }
+            }
             Object payload;
             if ("gemini".equals(flavor)) {
                 List<Map<String, Object>> items = new ArrayList<>();
@@ -1319,10 +1337,39 @@ public class ServiceInstanceManager {
                 request.setTopP(Double.valueOf(str(gc.get("topP"))));
             }
         }
-        // 完整上下文已在 messages；prompt 留空避免重复
-        request.setPrompt("");
+        // 完整上下文已在 messages，但下游门面（Agent 实现）只读 prompt：
+        // prompt 置空会让上游把整次请求判成「输入为空」（实例端口 502），
+        // 所以这里用最后一条用户输入兜底，历史仍由 messages 承载。
+        request.setPrompt(lastUserPrompt(messages));
         applyOpenAiTools(request, body);
         return request;
+    }
+
+    /**
+     * 取 messages 里最后一条用户消息的文本，作为门面 / Agent 的输入。
+     *
+     * <p>实例端口按 OpenAI / Claude 的形状把完整历史放进 {@code messages}，
+     * 而下游门面只消费 {@code prompt}。两者口径不一致时，上游看到的是空输入，
+     * 客户端拿到的却是 502 —— 排除空输入是这里唯一要做的事，上下文不改写。</p>
+     *
+     * @param messages 归一化后的消息列表，可为 null 或空
+     * @return 最后一条用户消息文本；没有用户消息时返回空字符串
+     */
+    private String lastUserPrompt(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return "";
+        }
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            Map<String, Object> msg = messages.get(i);
+            if (msg == null || !"user".equals(str(msg.get("role")))) {
+                continue;
+            }
+            String text = str(msg.get("content"));
+            if (!text.isBlank()) {
+                return text;
+            }
+        }
+        return "";
     }
 
     /**

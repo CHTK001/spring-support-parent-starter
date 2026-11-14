@@ -49,6 +49,11 @@ import java.util.concurrent.TimeUnit;
 public class CharacterAvatarController {
 
     /**
+     * 通用助手编码（系统内置，按 code 定位，不依赖主键）。
+     */
+    private static final String GENERAL_ASSISTANT_CODE = "general-assistant";
+
+    /**
      * 角色服务
      */
     private final SysAiRoleService roleService;
@@ -62,10 +67,13 @@ public class CharacterAvatarController {
     /**
      * 上传（更新）角色头像。
      *
-     * <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」）
+     * <p>2026-10-14 新增通用助手保护：code=general-assistant（「通用助手」）
      * 头像由产品统一维护，不开放上传 —— 直接 403，前端同样拦截（character.api
      * updateCharacter 锁 avatarUrl/avatarFile），但接口必须自己兜底，
      * 防止绕过前端直接 POST。</p>
+     *
+     * <p>2026-11-14 改为按 code 判定：种子角色（三国角色库等）会占用 id=1，
+     * 按主键判定会让普通角色的头像永远传不上去。</p>
      *
      * @param id     角色主键
      * @param avatar 头像图片文件
@@ -75,7 +83,7 @@ public class CharacterAvatarController {
     @PostMapping("/{id}/avatars")
     public Map<String, Object> uploadAvatar(@PathVariable Integer id,
                                             @RequestParam("avatar") MultipartFile avatar) throws IOException {
-        if (Integer.valueOf(1).equals(id)) {
+        if (isGeneralAssistant(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手头像由产品统一维护，不允许上传");
         }
         if (avatar == null || avatar.isEmpty()) {
@@ -111,12 +119,16 @@ public class CharacterAvatarController {
 
     /**
      * 读取角色头像（二进制）。
-    /**
-     * 读取角色头像（二进制）。 <p>2026-10-14 新增通用助手保护：id=1（code=general-assistant，「通用助手」） 头像由产品统一维护，不开放上传/删除。这里对读取做兜底 —— 即使头像文件 或 avatar 字段缺失，也不 404，前端 Avatar 组件拿到空会显示首字占位， 产品 logo 由前端静态资源统一提供（与上传链路解耦）。</p>
+     *
+     * <p>2026-10-14 新增通用助手保护：code=general-assistant（「通用助手」）
+     * 头像由产品统一维护，不开放上传/删除。这里对读取做兜底 —— 即使头像文件
+     * 或 avatar 字段缺失，也不 404，前端 Avatar 组件拿到空会显示首字占位，
+     * 产品 logo 由前端静态资源统一提供（与上传链路解耦）。</p>
+     *
      * @param id 角色主键
      * @return 图片字节流
      * @throws IOException 异常
-    */
+     */
     @Operation(summary = "读取角色头像")
     @GetMapping("/{id}/avatar")
     public ResponseEntity<byte[]> getAvatar(@PathVariable Integer id) throws IOException {
@@ -137,8 +149,8 @@ public class CharacterAvatarController {
     /**
      * 删除角色头像（恢复默认首字头像）。
      *
-     * <p>2026-10-14 新增通用助手保护：id=1 头像由产品统一维护，不开放删除 ——
-     * 直接 403（与上传接口同口径）。</p>
+     * <p>2026-10-14 新增通用助手保护：通用助手头像由产品统一维护，不开放删除 ——
+     * 直接 403（与上传接口同口径）。2026-11-14 起按 code 判定，不再看主键 1。</p>
      *
      * @param id 角色主键
      * @return 操作结果
@@ -146,7 +158,7 @@ public class CharacterAvatarController {
     @Operation(summary = "删除角色头像")
     @PostMapping("/{id}/avatar/clear")
     public Map<String, Object> clearAvatar(@PathVariable Integer id) {
-        if (Integer.valueOf(1).equals(id)) {
+        if (isGeneralAssistant(id)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "通用助手头像由产品统一维护，不允许删除");
         }
         final SysAiRole role = roleService.getById(id);
@@ -162,6 +174,23 @@ public class CharacterAvatarController {
         final Map<String, Object> result = new HashMap<>();
         result.put("success", true);
         return result;
+    }
+
+    /**
+     * 是否为内置通用助手（code=general-assistant）。
+     *
+     * <p>只认 code、不认主键：种子角色（三国角色库等）自增主键同样会占用小 id，
+     * 按 id 判定会把普通角色误当成通用助手。</p>
+     *
+     * @param id 角色主键
+     * @return 是通用助手返回 {@code true}
+     */
+    private boolean isGeneralAssistant(Integer id) {
+        if (id == null) {
+            return false;
+        }
+        final SysAiRole role = roleService.getById(id);
+        return role != null && GENERAL_ASSISTANT_CODE.equals(role.getCode());
     }
 
     /**

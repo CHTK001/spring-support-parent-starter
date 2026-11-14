@@ -891,6 +891,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     }
                     return dbClient;
                 }
+                // 路由组构建失败（成员为空/成员供应商停用/成员都没可用 Key）时，
+                // 绝不能继续回落到注册中心：那里的默认客户端会把组名当模型名发上游，
+                // 上游再按自己的订阅分组判一句 "Model <组名> is not available ..."，
+                // 用户看到的就成了一个和所选模型无关的 404。这里直接判为不可用。
+                if (ProviderRouteTargets.isRouterGroup(dbProvider.getPlatform())) {
+                    log.error("[AiChat] 路由组无可用的成员客户端，拒绝回落默认客户端 provider={} name={} model={}",
+                            dbProvider.getProviderId(), dbProvider.getName(), model);
+                    return null;
+                }
             }
         }
 
@@ -1093,6 +1102,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                 .eq(SysAiProviderModel::getModel, model)
                                 .eq(SysAiProviderModel::getEnabled, true)
                                 .orderByAsc(SysAiProviderModel::getProviderId));
+                if (candidates.isEmpty()) {
+                    // 路由组在模型面板里只暴露一条「组名即模型」的虚拟模型
+                    // （见 ApiProviderController#routerGroupVirtualModel），它没有 provider_model 行。
+                    // 这里按组名/组 ID 命中路由组供应商；否则调用方会继续回落到注册中心的默认客户端，
+                    // 把「路由组」当成模型名发给上游，上游回一句 "Model 路由组 is not available ..."，
+                    // 用户看到的就是这个 404（与所选模型毫无关系）。
+                    SysAiProvider grouped = findEnabledRouterGroup(model);
+                    if (grouped != null) {
+                        log.info("[AiChat] 路由 model={} -> 路由组供应商={}({})（按组名命中）",
+                                model, grouped.getProviderId(), grouped.getPlatform());
+                        return grouped;
+                    }
+                }
                 if (candidates.size() > 1) {
                     log.warn("[AiChat] 模型 {} 在 {} 个供应商下同名（{}），请求未指定供应商，取第一家；"
                                     + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
@@ -1111,6 +1133,42 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return null;
         } catch (Exception e) {
             log.warn("[AiChat] 解析 DB provider 失败 model={}: {}", model, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 按「组名或组 ID」查找启用的路由组供应商。
+     *
+     * <p>前端对路由组只暴露一条虚拟模型（模型名 = 组名），它不对应任何
+     * {@code sys_ai_provider_model} 行。这里负责把它还原成路由组供应商，
+     * 避免落到默认客户端后把组名当模型名发上游。</p>
+     *
+     * @param model 模型名（也可能是路由组 ID）
+     * @return 启用的路由组供应商；未命中返回 {@code null}
+     */
+    private SysAiProvider findEnabledRouterGroup(String model) {
+        if (model == null || model.isBlank()) {
+            return null;
+        }
+        try {
+            SysAiProvider byId = sysAiProviderMapper.selectById(model);
+            if (byId != null && Boolean.TRUE.equals(byId.getEnabled())
+                    && ProviderRouteTargets.isRouterGroup(byId.getPlatform())) {
+                return byId;
+            }
+            List<SysAiProvider> groups = sysAiProviderMapper.selectList(
+                    new LambdaQueryWrapper<SysAiProvider>()
+                            .eq(SysAiProvider::getName, model)
+                            .eq(SysAiProvider::getEnabled, true));
+            for (SysAiProvider group : groups) {
+                if (ProviderRouteTargets.isRouterGroup(group.getPlatform())) {
+                    return group;
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("[AiChat] 按组名解析路由组失败 model={}: {}", model, e.getMessage());
             return null;
         }
     }

@@ -24,6 +24,14 @@ import java.time.LocalDateTime;
 public class SysAiRole {
 
     /**
+     * 世界沙盒 AI 生成的模拟角色来源值。
+     *
+     * <p>角色列表（SysAiRoleServiceImpl.list / listEnabled）据此过滤；值必须与
+     * V6.11__init_all_ai.sql 写入与回填的值一致，勿在别处硬编码同一字符串。</p>
+     */
+    public static final String SOURCE_WORLD_SIM = "world-sim";
+
+    /**
      * 角色主键 标识
      */
     @TableId(value = "sys_ai_role_id", type = IdType.AUTO)
@@ -49,6 +57,16 @@ public class SysAiRole {
      */
     @TableField("sys_ai_role_code")
     private String code; // 编码
+
+    /**
+     * 角色来源：{@code user} 用户自建 / 市场添加 / 种子角色库；
+     * {@code world-sim} 世界沙盒 AI 生成的模拟 NPC（见 {@link #SOURCE_WORLD_SIM}）。
+     *
+     * <p>列为 NOT NULL DEFAULT 'user'：实体留空时 MyBatis-Plus 不写该列，由
+     * 数据库补默认值；只有世界沙盒造角色时显式写入 world-sim。</p>
+     */
+    @TableField("sys_ai_role_source")
+    private String source;
 
     /**
      * 角色描述
