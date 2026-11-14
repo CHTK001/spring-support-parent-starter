@@ -1,9 +1,11 @@
 package com.chua.starter.monitor.support.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
+import com.chua.starter.monitor.support.server.model.ServerNodeSummary;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
 import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
 
@@ -27,6 +29,33 @@ public interface ServerManageService {
      * @return 节点视图列表
      */
     ReturnResult<List<ServerNodeView>> list();
+
+    /**
+     * 分页查询节点（含运行状态）。
+     *
+     * <p>过滤与排序口径见 {@code ServerNodePager}：关键字命中名称 / 协议 / 监听
+     * / 后端 / 报错，协议与状态精确匹配，状态排序把异常排最前。</p>
+     *
+     * @param keyword  关键字，空则不过滤
+     * @param protocol 协议编码，空则不过滤
+     * @param status   运行状态（RUNNING / STOPPED / ERROR），空则不过滤
+     * @param sort     排序口径：name / port / status
+     * @param page     页码，从 1 开始
+     * @param size     每页条数，服务端封顶 500
+     * @return 分页结果
+     */
+    ReturnResult<Page<ServerNodeView>> page(String keyword, String protocol, String status,
+                                            String sort, Integer page, Integer size);
+
+    /**
+     * 节点统计摘要与名称表。
+     *
+     * <p>分页后前端只拿到当前页，左栏计数与新建表单的重名校验需要全量规模，
+     * 因此单独给出这份轻量摘要，避免为了两个数字再拉一遍全量视图。</p>
+     *
+     * @return 统计摘要
+     */
+    ReturnResult<ServerNodeSummary> summary();
 
     /**
      * 查询单个节点（含运行状态）。

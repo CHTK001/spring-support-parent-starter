@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.network.server.Server;
@@ -12,12 +13,14 @@ import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
 import com.chua.starter.monitor.support.operlog.ServerOperLogNodeSnapshot;
+import com.chua.starter.monitor.support.server.ServerNodePager;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry.RuntimeServer;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
+import com.chua.starter.monitor.support.server.model.ServerNodeSummary;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
 import com.chua.starter.monitor.support.server.model.ServerPluginParamVO;
 import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
@@ -71,16 +74,55 @@ public class ServerManageServiceImpl implements ServerManageService {
     @Override
     public ReturnResult<List<ServerNodeView>> list() {
         try {
-            List<MsServerNode> nodes = nodeMapper.selectList(
-                    new LambdaQueryWrapper<MsServerNode>().orderByAsc(MsServerNode::getId));
-            List<ServerNodeView> views = new ArrayList<>();
-            for (MsServerNode node : nodes) {
-                views.add(toView(node));
-            }
-            return ReturnResult.ok(views);
+            return ReturnResult.ok(loadViews());
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<Page<ServerNodeView>> page(String keyword, String protocol, String status,
+                                                   String sort, Integer page, Integer size) {
+        try {
+            List<ServerNodeView> filtered = ServerNodePager.filter(loadViews(), keyword, protocol, status);
+            ServerNodePager.sort(filtered, sort);
+            int current = ServerNodePager.pageOf(page);
+            int pageSize = ServerNodePager.sizeOf(size);
+            Page<ServerNodeView> result = new Page<>(current, pageSize, filtered.size());
+            result.setRecords(ServerNodePager.slice(filtered, current, pageSize));
+            return ReturnResult.ok(result);
+        } catch (Exception e) {
+            log.error("[ServerManage] 节点分页查询失败 - {}", e.getMessage(), e);
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<ServerNodeSummary> summary() {
+        try {
+            return ReturnResult.ok(ServerNodePager.summarize(loadViews()));
+        } catch (Exception e) {
+            log.error("[ServerManage] 节点统计失败 - {}", e.getMessage(), e);
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 装配全量节点视图（实体 + 运行态）。
+     *
+     * <p>分页 / 统计 / 列表三处都从同一个装配过程取数：状态是运行态的，
+     * 不能只读库表，否则「已停止」的服务会被当成运行中。</p>
+     *
+     * @return 节点视图列表
+     */
+    private List<ServerNodeView> loadViews() {
+        List<MsServerNode> nodes = nodeMapper.selectList(
+                new LambdaQueryWrapper<MsServerNode>().orderByAsc(MsServerNode::getId));
+        List<ServerNodeView> views = new ArrayList<>();
+        for (MsServerNode node : nodes) {
+            views.add(toView(node));
+        }
+        return views;
     }
 
     @Override

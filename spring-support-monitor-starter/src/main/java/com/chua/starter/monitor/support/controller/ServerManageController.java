@@ -1,10 +1,12 @@
 package com.chua.starter.monitor.support.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
+import com.chua.starter.monitor.support.server.model.ServerNodeSummary;
 import com.chua.starter.monitor.support.server.model.ServerNodeView;
 import com.chua.starter.monitor.support.server.model.ServerProtocolMetaVO;
 import com.chua.starter.monitor.support.service.ServerManageService;
@@ -56,6 +58,41 @@ public class ServerManageController {
     @GetMapping
     public ReturnResult<List<ServerNodeView>> list() {
         return serverManageService.list();
+    }
+
+    /**
+     * 分页查询节点。
+     *
+     * @param keyword  关键字（名称 / 协议 / 监听 / 后端 / 报错），空则不过滤
+     * @param protocol 协议编码，空则不过滤
+     * @param status   运行状态，空则不过滤
+     * @param sort     排序口径：name / port / status
+     * @param page     页码，从 1 开始
+     * @param size     每页条数，服务端封顶 500
+     * @return 分页结果
+     */
+    @Operation(summary = "分页查询服务器节点",
+            description = "过滤与排序在运行态装配后完成（status 是运行时状态，不是库列）")
+    @GetMapping("/page")
+    public ReturnResult<Page<ServerNodeView>> page(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String protocol,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return serverManageService.page(keyword, protocol, status, sort, page, size);
+    }
+
+    /**
+     * 节点统计摘要与名称表。
+     *
+     * @return 统计摘要
+     */
+    @Operation(summary = "服务器节点统计摘要", description = "左栏计数与新建表单重名校验用")
+    @GetMapping("/summary")
+    public ReturnResult<ServerNodeSummary> summary() {
+        return serverManageService.summary();
     }
 
     /**
