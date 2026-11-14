@@ -261,6 +261,7 @@ String ocrModel  = modelResolver.resolve("ocr");    // 按能力键解析
 | `com.chua.common.support.ai.rag.GlobalSettingProvider` | 实现 `GlobalSettingProvider` 并 `@Spi("<group>")` 声明分组与新字段 | `GlobalSettingDefinitions` 启动预热，`/v2/global-setting-definitions` 与设置页自动出现 |
 | `com.chua.common.support.datasearch.usage.spi.UsageParser` | 实现 `UsageParser`（Spring Bean 或 SPI 实现均可） | 名称出现在「用量配置 → Provider 白名单」；`UsageAggregationTask` 定时拉取 |
 | `AgentProvider` | 由 `AgentProviderFactory` 按 `runtime.agent_impl` 选择 | 不可用时降级到 `agentscope` 并在设置页显示原因 |
+| `com.chua.starter.common.support.channel.ChannelCreditProvider` | 实现 `credit(credentials)`（只读、永不抛异常，失败写 `error`），`@Spi("<channel>")` 登记 | 渠道页「积分」页签、`POST /api/channels/{channel}/credit`；网关托管时以网关读数为准 |
 
 **示例一：新增一个对话客户端**
 
@@ -311,6 +312,38 @@ public class MyGlobalSettingProvider implements GlobalSettingProvider {
 ```
 
 登记到 `META-INF/extensions/com.chua.common.support.ai.rag.GlobalSettingProvider` 后，启动预热即收录，`/actuator/ai-config` 的 `groupCount` 与 `groups` 会多出该组。
+
+**示例三：给渠道加余额 / 积分读数**
+
+```java
+@Spi("my-llm")
+public class MyLlmCreditProvider implements ChannelCreditProvider {
+
+    /** 只读：绝不能在这里触发签到等写操作 */
+    @Override
+    public Map<String, Object> credit(Map<String, Object> credentials) {
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        try {
+            out.put("remain", 1200L);
+            out.put("unit", "credit");
+        } catch (Exception e) {
+            out.put("error", "余额查询失败，请稍后重试");   // 不抛异常，页面只显示这句
+        }
+        return out;
+    }
+}
+```
+
+登记到 `META-INF/extensions/com.chua.starter.common.support.channel.ChannelCreditProvider`。本模块现登记 13 个渠道实现：
+`eac`、`gemini`、`loomy`、`opencode`、`raccoon`、`zcode`、`qoder`、`qoder-cn`、`minimax`、`cline`、`trae`、`workbuddy`、`lobsterai`。
+`kilo` 未登记：它的免费池是 keyless，没有余额可读，接口回 `渠道不支持积分查询: kilo`，比编一个 0 准确。
+
+读数口径有两条，先记住再排查：
+
+1. **网关优先，不回退**：渠道在 magpie 里有上游时，`/credit` 只问网关额度卡，网关报错就原样显示（例如「超时，请稍后再试」），
+   本地自建实现不再参与——回退只会把网关的问题藏起来。自建实现只在未托管渠道上生效（本地实测 `eac` 走的就是自建实现）。
+2. **字段以本模块注释里的实测响应为准**：每个实现类头都写了端点、鉴权头形态和响应示例；上游改字段时改这里，不要靠猜。
+   没绑真实账号跑通的渠道，页面显示的是上游原文（401/403 也算原文），不是「已支持」的结论。
 
 ## 六、与其它 starter 的关系
 

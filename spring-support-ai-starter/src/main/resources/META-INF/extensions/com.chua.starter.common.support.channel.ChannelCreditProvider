@@ -1,7 +1,13 @@
 com.chua.starter.ai.support.spi.impl.ClineChannelCreditProvider
+com.chua.starter.ai.support.spi.impl.EacChannelCreditProvider
+com.chua.starter.ai.support.spi.impl.GeminiChannelCreditProvider
 com.chua.starter.ai.support.spi.impl.LobsteraiChannelCreditProvider
+com.chua.starter.ai.support.spi.impl.LoomyChannelCreditProvider
 com.chua.starter.ai.support.spi.impl.MinimaxChannelCreditProvider
+com.chua.starter.ai.support.spi.impl.OpencodeChannelCreditProvider
 com.chua.starter.ai.support.spi.impl.QoderChannelCreditProvider
 com.chua.starter.ai.support.spi.impl.QoderCnChannelCreditProvider
+com.chua.starter.ai.support.spi.impl.RaccoonChannelCreditProvider
 com.chua.starter.ai.support.spi.impl.TraeChannelCreditProvider
 com.chua.starter.ai.support.spi.impl.WorkBuddyChannelCreditProvider
+com.chua.starter.ai.support.spi.impl.ZcodeChannelCreditProvider

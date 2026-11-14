@@ -13,9 +13,10 @@ import java.util.Map;
 /**
  * 厂商官方余额接口（按厂商标识取默认地址与表达式）。
  *
- * <p>只收录「官方文档明确写了余额接口」的几家，地址与字段按官方口径填写；这些口径
- * 没有在本机逐家用真实 key 实测，页面上允许改地址 / 表达式覆盖，改完以自己的配置为准。
- * 没有余额接口的厂商不要往这里加。</p>
+ * <p>只收录「官方文档明确写了余额 / 额度接口」的几家，地址与字段按官方文档原文填写，
+ * 并逐条用假令牌探活过路由（真路径不是 404、同前缀捏造的路径 404，才是真的存在）。
+ * 这些口径没有在本机用真实 key 逐家实测，页面上允许改地址 / 表达式覆盖，改完以自己的配置为准。
+ * 没有余额接口、或要 AK/SK 签名（我们只发 Bearer）的厂商不要往这里加。</p>
  *
  * @author CH
  * @since 4.0.0.54
@@ -37,6 +38,28 @@ public class HostCreditQueryProvider implements CreditQueryProvider {
                 "¥data.totalBalance; ¥data.balance"));
         HOSTS.put("openrouter", new HostSpec("https://openrouter.ai/api/v1/credits",
                 "$data.total_credits; $data.total_usage"));
+        // 以下六家的地址/字段都是从官方文档页原文里逐字抠出来的，并用假令牌探活过
+        //（真路径不是 404、同前缀捏造的路径 404）；但都还没用真实 key 跑过一次，
+        // 首次绑真 key 时页面会显示上游原文，地址与表达式都可在页面上覆盖。
+        HOSTS.put("novita-ai", new HostSpec("https://api.novita.ai/openapi/v1/billing/balance/detail",
+                "$availableBalance / 10000; $cashBalance / 10000"));
+        HOSTS.put("requesty", new HostSpec("https://api-v2.requesty.ai/v1/manage/org",
+                "$balance"));
+        HOSTS.put("llmgateway", new HostSpec("https://api.llmgateway.io/v1/key",
+                "$data.devPlanCreditsRemaining"));
+        HOSTS.put("deepinfra", new HostSpec("https://api.deepinfra.com/payment/usage?from=current",
+                "$months.0.total_cost"));
+        HOSTS.put("together", new HostSpec("https://api.together.ai/v1/billing/usage",
+                "$data.0.line_items.0.cost"));
+        HOSTS.put("stepfun", new HostSpec("https://api.stepfun.com/v1/accounts",
+                "¥balance; ¥total_cash_balance; ¥total_voucher_balance"));
+        // OpenCode Go 订阅没有绝对额度，只回三个窗口的「已用百分比」（! 前缀 = 100 - 已用），
+        // 三条一起读，页面按第一条（滚动 5 小时）当主读数。
+        // 注意：这条路径不在官方文档里（文档只说「用量去 Console 看」，唯一的公开读数是
+        // 每次响应的 usage.opencode.allowance），是按 magpie 社区插件口径查的，
+        // 并用假令牌探活确认存在（真路径 401，同前缀捏造路径 404）。
+        HOSTS.put("opencode-go", new HostSpec("https://opencode.ai/zen/go/v1/usage",
+                "!usage.rolling.percent; !usage.weekly.percent; !usage.monthly.percent"));
     }
 
     @Override

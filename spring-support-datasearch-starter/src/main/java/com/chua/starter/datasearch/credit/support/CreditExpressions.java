@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
  * 字段路径   data.user_quota.total    → 点路径，数字段按数组下标，* 为通配展开
  * 单位换算   ... / 500000             → 除法（含空格），同理 * 2
  * 百分比     ... %                    → 原值是比例，乘 100 后按百分比展示
+ * 已用占比   !usage.rolling.percent   → 上游给的是「已用百分比」，取 100 - 值 当剩余
  * 多段       $remaining; $used        → 分号分隔，逐段读出
  * </pre>
  *
@@ -58,7 +59,17 @@ public final class CreditExpressions {
 
     private static final String PERCENT = "%";
 
+    /**
+     * 已用占比前缀：上游给的是「已用百分比」，取 100 - 值 当剩余
+     */
+    private static final String USED_PREFIX = "!";
+
     private static final String PERCENT_MULTIPLIER = "100";
+
+    /**
+     * 满额百分比
+     */
+    private static final BigDecimal FULL_PERCENT = new BigDecimal(PERCENT_MULTIPLIER);
 
     private static final int SCALE_DIGITS = 6;
 
@@ -139,6 +150,10 @@ public final class CreditExpressions {
         if (percent) {
             text = text.substring(0, text.length() - 1).trim();
         }
+        boolean used = text.startsWith(USED_PREFIX);
+        if (used) {
+            text = text.substring(USED_PREFIX.length()).trim();
+        }
         BigDecimal factor = null;
         String operator = null;
         Matcher matcher = SCALE.matcher(text);
@@ -164,10 +179,14 @@ public final class CreditExpressions {
             if (percent) {
                 value = value.multiply(new BigDecimal(PERCENT_MULTIPLIER));
             }
+            if (used) {
+                // 上游的「已用占比」翻成剩余占比：100 - 已用
+                value = FULL_PERCENT.subtract(value);
+            }
             BalancePart part = new BalancePart();
             part.setLabel(hit.label.isEmpty() ? text : hit.label);
             part.setAmount(value.setScale(SCALE_DIGITS, RoundingMode.HALF_UP).stripTrailingZeros());
-            part.setCurrency(percent ? PERCENT : (currency != null ? currency : fallbackCurrency));
+            part.setCurrency(percent || used ? PERCENT : (currency != null ? currency : fallbackCurrency));
             parts.add(part);
         }
         return parts;

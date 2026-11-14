@@ -29,6 +29,11 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.chat.MagpieRouteSource;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.datasearch.credit.model.BalancePart;
+import com.chua.starter.datasearch.credit.model.CreditQuery;
+import com.chua.starter.datasearch.credit.model.CreditResult;
+import com.chua.starter.datasearch.credit.spi.impl.HostCreditQueryProvider;
+import com.chua.starter.datasearch.credit.support.CreditQueries;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +52,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
@@ -419,6 +425,22 @@ public class ApiProviderController {
      * 首字延迟按秒采信的上限：指标库该列混有历史毫秒数据，超过该值一律丢弃。
      */
     private static final long TRUSTED_FIRST_TOKEN_MAX_SECONDS = 30L;
+
+    /**
+     * 余额自动回落时依次尝试的中转站实现（厂商官方与 OpenAI 官方由品牌/地址单独前置）。
+     */
+    private static final List<String> AUTO_CREDIT_KINDS = List.of("new-api", "sub2api");
+
+    /**
+     * 有官方余额口径的厂商（与 {@code HostCreditQueryProvider} 收录一致）。
+     */
+    private static final Set<String> CREDIT_HOST_BRANDS = Set.of("deepseek", "moonshot", "siliconflow",
+            "openrouter", "opencode-go", "novita-ai", "requesty", "llmgateway", "deepinfra", "together", "stepfun");
+
+    /**
+     * 余额查询失败原因的回传长度上限（字符），避免多家错误拼成一大段。
+     */
+    private static final int CREDIT_ERROR_LIMIT = 400;
 
     // ==================== 提供者 ====================
 
@@ -1598,6 +1620,324 @@ public class ApiProviderController {
         out.put("ok_count", okCount);
         out.put("results", results);
         return ApiResult.ok(out);
+    }
+
+    /**
+     * 供应商余额与用量（只读）。
+     *
+     * <p>把一个供应商的每个 Key 当成一次独立的余额读数：Key 即令牌，地址取供应商的
+     * 上游地址（或 {@code extra.credit_url}），查询实现由 {@code extra.credit_kind}
+     * 指定；没指定时按「厂商官方 → OpenAI 官方 → new-api 中转站 → sub2api 中转站」
+     * 依次回落，第一条查到数的实现胜出。余额口径完全复用 {@link CreditQueries}
+     * （与渠道管理页同一套 SPI），本接口只负责把 N 个 Key 的读数收成一份可直接渲染的
+     * 结构，不承载任何厂商特有的字段解析。</p>
+     *
+     * <p>失败不抛异常：单个 Key 查不到只在该行写 {@code error}，页面照常有数据可看。
+     * 汇总余额只累加与第一条成功读数同币种的行，避免 USD 与 CNY 直接相加。</p>
+     *
+     * @param providerId 供应商标识
+     * @return { provider_id, url, kind, ok, currency, total:{remain,used,total}, keys:[...] }
+     */
+    @Permission("admin")
+    @GetMapping("/providers/{provider_id}/credit")
+    public ApiResult<Map<String, Object>> providerCredit(@PathVariable("provider_id") String providerId) {
+        SysAiProvider entity = requireProvider(providerId);
+        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        String baseUrl = entity.getBaseUrl() == null ? "" : entity.getBaseUrl().trim();
+        String configuredKind = str(extra, "credit_kind");
+        List<String> keys = extractAllKeys(entity.getCredentials());
+        List<Map<String, Object>> rows = new ArrayList<>(keys.size());
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("provider_id", providerId);
+        out.put("url", baseUrl);
+        out.put("kind", configuredKind == null ? "auto" : configuredKind);
+        if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
+            out.put("ok", false);
+            out.put("message", "未配置上游地址，无法查询余额");
+            out.put("keys", rows);
+            return ApiResult.ok(out);
+        }
+        if (keys.isEmpty()) {
+            out.put("ok", false);
+            out.put("message", "没有可用的 Key，无法查询余额");
+            out.put("keys", rows);
+            return ApiResult.ok(out);
+        }
+        BigDecimal sumRemain = BigDecimal.ZERO;
+        BigDecimal sumUsed = BigDecimal.ZERO;
+        String currency = null;
+        for (int i = 0; i < keys.size(); i++) {
+            Map<String, Object> row = creditOfKey(entity, extra, keys.get(i), i);
+            rows.add(row);
+            if (!(row.get("remain") instanceof BigDecimal remain)) {
+                continue;
+            }
+            String rowCurrency = (String) row.get("currency");
+            if (currency == null) {
+                currency = rowCurrency;
+            }
+            if (currency == null || currency.equals(rowCurrency)) {
+                sumRemain = sumRemain.add(remain);
+                if (row.get("used") instanceof BigDecimal used) {
+                    sumUsed = sumUsed.add(used);
+                }
+            }
+        }
+        boolean anyOk = rows.stream().anyMatch(row -> Boolean.TRUE.equals(row.get("ok")));
+        out.put("ok", anyOk);
+        out.put("currency", currency);
+        out.put("total", creditTotal(sumRemain, sumUsed));
+        out.put("keys", rows);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 单个 Key 的余额读数：按候选实现依次尝试，第一条成功的胜出。
+     *
+     * <p>全部失败时把各实现的错误拼进一行返回，页面据此提示「为什么查不到」，
+     * 而不是笼统显示查询失败。</p>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @param key    API Key（作为查询令牌）
+     * @param index  Key 序号（从 0 开始，页面按它排序）
+     * @return 单个 Key 的读数行
+     */
+    private Map<String, Object> creditOfKey(SysAiProvider entity, Map<String, Object> extra,
+                                            String key, int index) {
+        List<CreditQuery> queries = creditCandidates(entity, extra, key);
+        List<String> failures = new ArrayList<>(queries.size());
+        for (CreditQuery query : queries) {
+            CreditResult result = CreditQueries.query(query);
+            if (result.isOk()) {
+                return creditRow(result, index, key);
+            }
+            String reason = result.getError() == null ? "未返回余额" : result.getError();
+            failures.add(query.getKind() + ": " + reason);
+        }
+        Map<String, Object> row = new LinkedHashMap<>(4);
+        row.put("index", index);
+        row.put("mask", maskKey(key));
+        row.put("ok", false);
+        row.put("error", creditErrorText(failures));
+        return row;
+    }
+
+    /**
+     * 组装候选余额查询：显式配置优先，否则按厂商与地址自动回落。
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @param key    查询令牌
+     * @return 候选查询（按尝试顺序）
+     */
+    private List<CreditQuery> creditCandidates(SysAiProvider entity, Map<String, Object> extra, String key) {
+        String kind = str(extra, "credit_kind");
+        // 「自动」在表单里是删除键；历史上若已存成字面量 auto，按未配置处理
+        if (kind != null && "auto".equalsIgnoreCase(kind.trim())) {
+            kind = null;
+        }
+        String explicitUrl = str(extra, "credit_url");
+        String expression = str(extra, "credit_expression");
+        String brand = creditBrand(entity, extra);
+        List<String> kinds = new ArrayList<>(5);
+        if (kind != null) {
+            kinds.add(kind);
+        } else {
+            if (brand != null && HostCreditQueryProvider.supportsHost(brand)) {
+                kinds.add("host");
+            }
+            if (isOfficialOpenAi(entity.getBaseUrl())) {
+                kinds.add("openai");
+            }
+            kinds.addAll(AUTO_CREDIT_KINDS);
+            if (expression != null) {
+                kinds.add(CreditQueries.KIND_EXPRESSION);
+            }
+        }
+        List<CreditQuery> queries = new ArrayList<>(kinds.size());
+        for (String candidate : kinds) {
+            CreditQuery query = new CreditQuery();
+            query.setKind(candidate);
+            query.setProviderId(brand);
+            query.setExpression(expression);
+            // 厂商官方 / OpenAI 官方实现自带地址，只有显式配了地址才覆盖；
+            // new-api / sub2api 需要站点根地址，没配就用供应商的上游地址
+            boolean builtinUrl = "host".equals(candidate) || "openai".equals(candidate);
+            String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
+            query.setUrl(url);
+            applyCreditAuth(query, entity, extra, key);
+            queries.add(query);
+        }
+        return queries;
+    }
+
+    /**
+     * 把供应商的认证方式带到余额请求上。
+     *
+     * <p>口径与出站聊天请求一致：头名取 {@code extra.auth_header}（缺省
+     * {@code Authorization}），前缀取 {@code extra.auth_prefix}（自定义头缺省无前缀）。
+     * 自定义头走 {@link CreditQuery#header}，标准头走令牌字段，交给请求出口统一补前缀。</p>
+     *
+     * @param query  余额查询
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @param key    API Key
+     */
+    private static void applyCreditAuth(CreditQuery query, SysAiProvider entity, Map<String, Object> extra, String key) {
+        if (AuthHeaders.isNone(entity.getAuthScheme())) {
+            return;
+        }
+        String rawHeader = strOf(extra, "auth_header");
+        String header = AuthHeaders.headerName(rawHeader);
+        String prefix = AuthHeaders.headerPrefix(rawHeader, strOf(extra, "auth_prefix"));
+        String value = prefix + key;
+        if (AuthHeaders.DEFAULT_HEADER.equalsIgnoreCase(header)) {
+            query.setToken(value);
+        } else {
+            query.header(header, value);
+        }
+    }
+
+    /**
+     * 供应商对应的厂商标识（用于 host 余额实现）。
+     *
+     * <p>优先取 {@code extra.credit_host}，其次平台名，最后从上游地址的域名推断；
+     * 推断不出时回落平台名，非收录厂商会由实现返回「未收录」。</p>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 厂商标识；都取不到时为 null
+     */
+    private static String creditBrand(SysAiProvider entity, Map<String, Object> extra) {
+        String explicit = strOf(extra, "credit_host");
+        if (explicit != null) {
+            return explicit.trim().toLowerCase(Locale.ROOT);
+        }
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (CREDIT_HOST_BRANDS.contains(platform)) {
+            return platform;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        if (host != null) {
+            for (String brand : CREDIT_HOST_BRANDS) {
+                if (host.contains(brand)) {
+                    return brand;
+                }
+            }
+        }
+        if (!platform.isBlank()) {
+            return platform;
+        }
+        return host;
+    }
+
+    /**
+     * 上游地址是否是 OpenAI 官方（官方余额接口只对它有意义）。
+     *
+     * @param url 上游地址
+     * @return 官方域名时为 true
+     */
+    private static boolean isOfficialOpenAi(String url) {
+        String host = hostOf(url);
+        return host != null && ("api.openai.com".equals(host) || host.endsWith(".openai.com"));
+    }
+
+    /**
+     * 取地址的域名。
+     *
+     * @param url 地址
+     * @return 小写域名；地址非法或缺失时为 null
+     */
+    private static String hostOf(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            String host = URI.create(url.trim()).getHost();
+            return host == null ? null : host.toLowerCase(Locale.ROOT);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Map 取值（静态版，供静态辅助方法使用）。
+     *
+     * @param map 映射
+     * @param key 键
+     * @return 非空字符串；空串或缺失为 null
+     */
+    private static String strOf(Map<String, Object> map, String key) {
+        Object value = map == null ? null : map.get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value);
+        return text.isBlank() ? null : text;
+    }
+
+    /**
+     * 一次查询结果 → 页面读数行。
+     *
+     * <p>约定 {@code parts[0]} 是剩余、{@code parts[1]} 是已用/用量，总量是两者之和；
+     * 只有一段时把这一段同时当作总量。</p>
+     *
+     * @param result 查询结果
+     * @param index  Key 序号
+     * @param key    API Key（生成脱敏展示）
+     * @return 读数行
+     */
+    private static Map<String, Object> creditRow(CreditResult result, int index, String key) {
+        List<BalancePart> rawParts = result.getParts() == null ? List.of() : result.getParts();
+        List<Map<String, Object>> parts = new ArrayList<>(rawParts.size());
+        for (BalancePart part : rawParts) {
+            Map<String, Object> item = new LinkedHashMap<>(4);
+            item.put("label", part.getLabel());
+            item.put("amount", part.getAmount());
+            item.put("currency", part.getCurrency());
+            parts.add(item);
+        }
+        BigDecimal remain = rawParts.isEmpty() ? null : rawParts.get(0).getAmount();
+        BigDecimal used = rawParts.size() > 1 ? rawParts.get(1).getAmount() : null;
+        Map<String, Object> row = new LinkedHashMap<>(12);
+        row.put("index", index);
+        row.put("mask", maskKey(key));
+        row.put("ok", true);
+        row.put("source", result.getSource());
+        row.put("remain", remain);
+        row.put("used", used);
+        row.put("total", remain == null ? null : (used == null ? remain : remain.add(used)));
+        row.put("currency", result.getCurrency());
+        row.put("parts", parts);
+        return row;
+    }
+
+    /**
+     * 汇总余额。
+     *
+     * @param remain 各 Key 剩余之和
+     * @param used   各 Key 已用之和
+     * @return { remain, used, total }
+     */
+    private static Map<String, Object> creditTotal(BigDecimal remain, BigDecimal used) {
+        Map<String, Object> total = new LinkedHashMap<>(4);
+        total.put("remain", remain);
+        total.put("used", used);
+        total.put("total", remain.add(used));
+        return total;
+    }
+
+    /**
+     * 各实现的失败原因合成一行提示。
+     *
+     * @param failures 失败原因
+     * @return 提示文本（过长时截断）
+     */
+    private static String creditErrorText(List<String> failures) {
+        String text = failures.isEmpty() ? "没有可用的余额查询实现" : String.join("；", failures);
+        return text.length() <= CREDIT_ERROR_LIMIT ? text : text.substring(0, CREDIT_ERROR_LIMIT) + "…";
     }
 
     /**
