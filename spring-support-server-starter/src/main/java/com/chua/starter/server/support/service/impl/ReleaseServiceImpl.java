@@ -805,9 +805,12 @@ public class ReleaseServiceImpl implements ReleaseService {
       */
     public ReturnResult<Void> deleteProject(Long id) {
         MsServerProject exists = projectMapper.selectById(id);
+        // 不存在就报错：以前直接 deleteById 也回「操作成功」，前端会以为删掉了
+        if (exists == null) {
+            return ReturnResult.error("项目不存在或已被删除");
+        }
         projectMapper.deleteById(id);
-        recordSyncOp(id, exists == null ? null : exists.getProjectName(),
-                exists == null ? null : exists.getReleaseId(), "delete", true, "删除成功");
+        recordSyncOp(id, exists.getProjectName(), exists.getReleaseId(), "delete", true, "删除成功");
         return ReturnResult.success();
     }
 
@@ -3652,6 +3655,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         String uiCode;
         String healthJson;
         String metricsJson;
+        String heapJson;
         if (ctx.windows) {
             Map<String, String> kv = new LinkedHashMap<>();
             for (String line : (output == null ? "" : output).replace("\r", "").split("\n")) {
@@ -3664,12 +3668,14 @@ public class ReleaseServiceImpl implements ReleaseService {
             uiCode = kv.getOrDefault("UI", "");
             healthJson = decodeBase64(kv.get("HEALTH"));
             metricsJson = decodeBase64(kv.get("METRICS"));
+            heapJson = decodeBase64(kv.get("HEAP"));
         } else {
             String[] lines = (output == null ? "" : output).replace("\r", "").split("\n", -1);
             docsCode = lines.length > 0 ? lines[0].trim() : "";
             uiCode = lines.length > 1 ? lines[1].trim() : "";
             healthJson = lines.length > 2 ? lines[2].trim() : "";
             metricsJson = lines.length > 3 ? lines[3].trim() : "";
+            heapJson = lines.length > 4 ? lines[4].trim() : "";
         }
         boolean swagger = "200".equals(docsCode) || "200".equals(uiCode);
         boolean actuator = healthJson.startsWith("{") || metricsJson.startsWith("{");
@@ -3701,6 +3707,22 @@ public class ReleaseServiceImpl implements ReleaseService {
                 }
             } catch (Exception ignored) {
                   // 指标摘要只是增强信息，解析失败不影响按钮可用性
+            }
+        }
+        if (heapJson.startsWith("{")) {
+            try {
+                Map<String, Object> heap = JSON.readValue(heapJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() { });
+                Object measurements = heap.get("measurements");
+                if (measurements instanceof List<?> list && !list.isEmpty()
+                        && list.get(0) instanceof Map<?, ?> first) {
+                    Object value = first.get("value");
+                    if (value instanceof Number number && number.longValue() > 0) {
+                        out.put("heapUsedBytes", number.longValue());
+                    }
+                }
+            } catch (Exception ignored) {
+                // 堆内存只用于系统信息页的一格指标，拿不到就让前端显示「—」
             }
         }
         return ReturnResult.ok(out);
@@ -4406,7 +4428,11 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
     /**
-     * POSIX 端点探测命令：4 行输出，依次是 api-docs / swagger-ui 的状态码和 health / metrics 的 JSON。
+     * POSIX 端点探测命令：5 行输出，依次是 api-docs / swagger-ui 的状态码，
+     * health / metrics 的 JSON，以及堆内存用量（只取 area:heap 这一条）。
+     *
+     * <p>URL 带查询串，必须整体加引号：不加的话 shell 会把 {@code ?} 当通配符展开，
+     * 查询串被丢掉后拿回来的是「所有内存区合计」，跨区加总会偏大。</p>
      *
      * @param base 目标主机上的服务根地址（如 http://127.0.0.1:8080）
      * @return shell 命令
@@ -4415,7 +4441,8 @@ public class ReleaseServiceImpl implements ReleaseService {
         return "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/v3/api-docs; echo; "
                 + "curl -s -m 4 -o /dev/null -w '%{http_code}' " + base + "/swagger-ui/index.html; echo; "
                 + "curl -s -m 4 " + base + "/actuator/health; echo; "
-                + "curl -s -m 4 " + base + "/actuator/metrics; echo";
+                + "curl -s -m 4 " + base + "/actuator/metrics; echo; "
+                + "curl -s -m 4 '" + base + "/actuator/metrics/jvm.memory.used?tag=area:heap'; echo";
     }
 
     /**
@@ -4433,6 +4460,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         String ui = base + "/swagger-ui/index.html";
         String health = base + "/actuator/health";
         String metrics = base + "/actuator/metrics";
+        String heap = base + "/actuator/metrics/jvm.memory.used?tag=area:heap";
         return "$ProgressPreference='SilentlyContinue'\n"
                 + "$ErrorActionPreference='SilentlyContinue'\n"
                 + "function __code($u){ try { return [int](Invoke-WebRequest -UseBasicParsing -TimeoutSec 4 -Uri $u).StatusCode } "
@@ -4447,7 +4475,8 @@ public class ReleaseServiceImpl implements ReleaseService {
                 + "Write-Output ('DOCS=' + (__code '" + docs + "'))\n"
                 + "Write-Output ('UI=' + (__code '" + ui + "'))\n"
                 + "Write-Output ('HEALTH=' + (__body '" + health + "'))\n"
-                + "Write-Output ('METRICS=' + (__body '" + metrics + "'))\n";
+                + "Write-Output ('METRICS=' + (__body '" + metrics + "'))\n"
+                + "Write-Output ('HEAP=' + (__body '" + heap + "'))\n";
     }
 
     /**
