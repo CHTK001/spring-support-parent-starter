@@ -412,6 +412,24 @@ public class ServerFilterFactory {
         throw new IllegalArgumentException(key + " 取值非法: " + value + "，可选值: " + Arrays.toString(constants));
     }
 
+    /**
+     * 把容器内的 FileStorage Bean 名映射成「对外桶名」。
+     *
+     * <p>本地后端 Bean 名 ({@code monitorLocalStorage}) 刻意与桶名 ({@code default}) 不同：
+     * springdoc 会占用 {@code default} 这个名字注册 GroupedOpenApi，Bean 名不能复用它。
+     * 服务管理创建 file-storage 节点时按 Bean 名注册桶，这里必须把内部标识符换回对外桶名，
+     * 否则 {@code /fs/monitorLocalStorage/} 能进而 {@code /fs/default/} 会 404。</p>
+     *
+     * @param beanName 容器内 Bean 名
+     * @return 对外桶名
+     */
+    private String bucketFor(String beanName) {
+        return com.chua.starter.monitor.support.config.MonitorFileStorageConfig.LOCAL_STORAGE_BEAN_NAME
+                .equals(beanName)
+                ? com.chua.starter.monitor.support.config.MonitorFileStorageGatewayConfig.BUCKET
+                : beanName;
+    }
+
       /**
        * 自动发现 Spring 容器中的 文件storage Bean 并注册为存储桶。
        *
@@ -433,9 +451,9 @@ public class ServerFilterFactory {
             String[] beanNames = applicationContext.getBeanNamesForType(storageClass);
             for (String beanName : beanNames) {
                 Object storage = applicationContext.getBean(beanName);
-                addStorage.invoke(filter, beanName, storage);
+                addStorage.invoke(filter, bucketFor(beanName), storage);
                 registered++;
-                log.info("[ServerFilterFactory] 注册文件存储桶(Bean): {} -> {}", beanName, storage.getClass().getSimpleName());
+                log.info("[ServerFilterFactory] 注册文件存储桶(Bean): {} -> {}", bucketFor(beanName), storage.getClass().getSimpleName());
             }
 
               // 2) 兜底: 文件storagetemplate 的 storage映射 常以内部 映射 形式持有 提供者,

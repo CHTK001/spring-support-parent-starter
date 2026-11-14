@@ -52,10 +52,18 @@ import org.springframework.core.Ordered;
  * 本地单模块测试未加载 ai-starter 上下文，漏掉了该冲突。</p>
  *
  * <p>存储后端复用 {@link MonitorFileStorageConfig} 注册的本地后端 Bean，
- * 以 Bean 名 {@value #BUCKET} 注册为网关存储桶——与前端
- * {@code app.yaml otherConfig.filestorage.bucket} 及
+ * 在 {@link FileStorageTemplate#storageMap} 中以桶名 {@value #BUCKET} 注册为网关存储桶——
+ * 与前端 {@code app.yaml otherConfig.filestorage.bucket} 及
  * {@code FileAssetServiceImpl#LOCAL_BUCKET} 对齐，且与「服务管理」
- * file-storage 节点的按 Bean 名注册桶语义一致（文件资产页与网关共用同一后端）。</p>
+ * file-storage 节点的按桶名注册语义一致（文件资产页与网关共用同一后端）。</p>
+ *
+ * <p><b>Bean 名与桶名刻意解耦</b>：容器内本地后端 Bean 名是
+ * {@link MonitorFileStorageConfig#LOCAL_STORAGE_BEAN_NAME}，不能用 {@value #BUCKET}
+ * （springdoc 会占用 {@code default} 这个名字注册 GroupedOpenApi，在
+ * {@code allow-bean-definition-overriding=true} 下会把本地后端 Bean 定义覆盖掉，
+ * 导致 {@code storageMap} 为空、{@code /buckets} 返回空数组、{@code /fs/default} 503）。
+ * 网关只用该 Bean 取到实例，再以 {@value #BUCKET} 为键放进 storageMap，
+ * 因此 URL / 配置 / 前端看到的桶名仍是 {@value #BUCKET}。</p>
  *
  * <p>开关：{@code plugin.filesystem.storage-server.enable}（默认 true，
  * 留空即随应用启动，置 false 关闭网关）；形态
@@ -103,7 +111,33 @@ public class MonitorFileStorageGatewayConfig {
                                                    ApplicationContext applicationContext) {
         FileStorageTemplate template = new FileStorageTemplate(properties);
         template.initialize();
-        Object backend = applicationContext.getBean(MonitorFileStorageConfig.LOCAL_STORAGE_BEAN_NAME);
+        // 按「内部 Bean 名」取本地后端，再以「对外桶名」BUCKET 放进 storageMap：
+        // 两者刻意不同。Bean 名不能叫 default —— springdoc 的
+        // SpringdocActuatorBeanFactoryConfigurer 会 registerSingleton("default", GroupedOpenApi)，
+        // 在 allow-bean-definition-overriding=true 下 getBean("default") 取到的会是 GroupedOpenApi
+        // 而非 FileStorage，本地后端就此丢失（storageMap 为空 → /buckets []、/fs/default 503）。
+        Object backend = null;
+        try {
+            backend = applicationContext.getBean(MonitorFileStorageConfig.LOCAL_STORAGE_BEAN_NAME);
+        } catch (org.springframework.beans.factory.NoSuchBeanDefinitionException ignored) {
+            // 本地后端未装配（例如关掉了存储模块），走下面的按类型兜底
+        }
+        if (!(backend instanceof FileStorage)) {
+            // 兜底：即便该名字被别的定义占用，也优先找 monitor 自己的本地磁盘后端。
+            // orderedStream().findFirst() 而不是 getIfAvailable()：容器里可能同时有
+            // sysLocalFileStorage 等多个 FileStorage，getIfAvailable() 会抛 NoUniqueBeanDefinitionException。
+            java.util.Map<String, FileStorage> candidates = applicationContext.getBeansOfType(FileStorage.class);
+            backend = candidates.get(MonitorFileStorageConfig.LOCAL_STORAGE_BEAN_NAME);
+            if (backend == null) {
+                // 再退一步：取类名含 LocalFileStorage 的那个（monitor 反射创建的本地后端）
+                backend = candidates.values().stream()
+                        .filter(s -> s.getClass().getName().contains("LocalFileStorage"))
+                        .findFirst().orElse(null);
+            }
+            if (backend == null) {
+                backend = candidates.values().stream().findFirst().orElse(null);
+            }
+        }
         if (backend instanceof FileStorage storage) {
             template.addStorage(BUCKET, storage);
             // 本地后端无条件作为默认 Provider：上传任务/小文件直传在不显式选

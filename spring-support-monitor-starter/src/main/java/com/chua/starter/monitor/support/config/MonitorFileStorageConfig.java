@@ -30,12 +30,21 @@ import org.springframework.context.annotation.Configuration;
 public class MonitorFileStorageConfig {
 
     /**
-     * 本地文件存储 Bean 名称（= 对外桶名，见 MonitorFileStorageGatewayConfig#BUCKET，
-     * 服务端过滤器工厂按 Bean 名注册为文件服务器存储桶）。取 default 与前端
-     * filestorageApi.DEFAULT_BUCKET、BucketSetting.bucket 一致，且不与静态资源前缀冲突。
-     * 方法名保留 localFileStorage 只是 Java 内部标识符，不出现在 URL / 配置里。
+     * 本地文件存储 Spring Bean 名称（<b>内部标识符，刻意不等于对外桶名</b>）。
+     *
+     * <p>对外桶名是 {@code default}（见 {@link MonitorFileStorageGatewayConfig#BUCKET}、
+     * {@code plugin.filesystem.default-provider}、前端 {@code app.yaml bucket}），由网关
+     * 以 {@code storageMap} 的键注册，URL 形如 {@code /fs/default/}。这里若把 Bean 名也取
+     * {@code default}，会与 springdoc 的 {@code registerSingleton("default", GroupedOpenApi)}
+     * 撞名：应用开启了 {@code allow-bean-definition-overriding}，运行期
+     * {@code getBean("default")} 取到的是 {@code GroupedOpenApi} 而非 {@code FileStorage}，
+     * 于是 {@code fileStorageTemplate()} 跳过 {@code addStorage}、{@code storageMap} 为空，
+     * 表现为 {@code /v2/file/upload-task/buckets} 返回 {@code []}、{@code /fs/default} 返回 503。
+     * 因此 Bean 名与桶名解耦：容器内用本名，网关 {@code storageMap} 里仍用 {@code default}。</p>
+     *
+     * <p>方法名保留 {@code localFileStorage} 只是 Java 内部标识符，不出现在 URL / 配置里。</p>
      */
-    public static final String LOCAL_STORAGE_BEAN_NAME = "default";
+    public static final String LOCAL_STORAGE_BEAN_NAME = "monitorLocalStorage";
 
     /**
      * 录制本地存储根目录

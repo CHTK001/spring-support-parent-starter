@@ -2102,7 +2102,7 @@ plugin:
 | `datasearchConflictResolve` | `DatasearchConflictResolve` | 数据搜索接口的控制器冲突消歧器。 宿主同时装入了旧版 system/service 控制器（ /v2/holiday/get、 /v2/ip/lookup） 与 datasearch 版的新控制器，同路径双映射在 AuthFilter#isPass() 中引发 Ambiguous handler methods mapped 异常，构造 403 拦截点，使 HEAD 探测被前端判为 "未实现"并… |
 | `monitorSchemaInitializer` | `ApplicationDataSourceScriptDatabaseInitializer` | 建表脚本初始化器。 框架的 datasource 插件会额外注册多个 DataSource Bean，Spring Boot 的 DataSourceInitializationAutoConfiguration 因 @ConditionalOnSingleCandidate(DataSource.class) 静默退避， spring.sql.init.schema-locations 于是从… |
 | `monitorServiceInfoContributor` | `ServiceInfoContributor` | 监控模块的 服务信息 贡献者。 |
-| `default` | `Object` | 注册本地磁盘存储后端（对外桶名 default，Java 方法名仍为 localFileStorage）。 |
+| `monitorLocalStorage` | `Object` | 注册本地磁盘存储后端。Bean 名与对外桶名刻意不同：对外桶名是 `default`，但 springdoc 会占用 `default` 注册 GroupedOpenApi，Bean 名不能复用；网关以 `storageMap` 的键 `default` 对外提供（Java 方法名仍为 localFileStorage）。 |
 | `fileStorageTemplate` | `FileStorageTemplate` | 创建文件存储模板并挂载 monitor 本地后端为网关桶。 模板先按 plugin.filesystem.providers 初始化（monitor 未配置时 仅告警跳过），再把 MonitorFileStorageConfig 的本地后端以 {@value #BUCKET} 为名注册进 storageMap——FileStorageServerLauncher 启动时 将 storageMap… |
 | `fileServerConfigController` | `FileServerConfigController` | 文件服务器运行期配置接口（GET /v2/file/server-config）。 前端进文件管理页前必须先问这个接口「文件服务在哪、桶叫什么」， 拿到结果再决定用嵌入式相对路径还是独立端口；拿不到就只能按 localStorage → app.yaml → window.location.origin 逐级回退，于是同一个页面 会散出 /fs/* 与 /default 两种请… |
 | `uploadTaskManager` | `UploadTaskManager` | 上传任务管理器（时间轮调度 + 虚拟线程分片合并）。 与 FileServerConfigController 同理：FileSystemAutoConfiguration 整链被排除后，任务化分片上传的 UploadTaskController 与 UploadTaskManager 一并消失。它们只依赖本配置已装配的 FileStorageTemplate（#fileStorageTempl… |

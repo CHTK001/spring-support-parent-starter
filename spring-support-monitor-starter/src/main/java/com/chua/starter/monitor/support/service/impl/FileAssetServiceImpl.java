@@ -12,6 +12,7 @@ import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.starter.monitor.support.model.FileAssetContentVO;
 import com.chua.starter.monitor.support.model.FileAssetItemVO;
 import com.chua.starter.monitor.support.service.FileAssetService;
+import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +20,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 /**
  * 文件资产服务实现
@@ -38,7 +37,7 @@ import java.util.Set;
 public class FileAssetServiceImpl implements FileAssetService {
 
     /**
-     * 默认存储桶 Bean 名称（本地磁盘后端）
+     * 默认存储桶（对外桶名；也是 {@code FileStorageTemplate.storageMap} 的键）
      */
     private static final String LOCAL_BUCKET = "default";
 
@@ -138,39 +137,67 @@ public class FileAssetServiceImpl implements FileAssetService {
 
     @Override
     public List<String> buckets() {
-        Set<String> names = new LinkedHashSet<>();
-        for (String name : applicationContext.getBeanNamesForType(FileStorage.class)) {
-            names.add(name);
+        // 权威来源是 FileStorageTemplate.storageMap 的键（= 对外桶名 default），
+        // 不能再用 getBeanNamesForType(FileStorage.class)：本地后端 Bean 名刻意与桶名解耦，
+        // 用 Bean 名会把内部标识符（monitorLocalStorage）当成桶暴露出去。
+        FileStorageTemplate template = applicationContext.getBeanProvider(FileStorageTemplate.class)
+                .getIfAvailable();
+        if (template != null) {
+            List<String> names = new ArrayList<>(template.getStorageNames());
+            if (!names.isEmpty()) {
+                return names;
+            }
         }
-        if (names.isEmpty() && applicationContext.containsBean(LOCAL_BUCKET)) {
-            names.add(LOCAL_BUCKET);
+        // 兜底：没有模板（例如 file-storage 插件节点独立装配）时，按类型找后端，
+        // 但对外仍以默认桶名呈现，避免把内部 Bean 名泄到页面上。
+        if (!applicationContext.getBeansOfType(FileStorage.class).isEmpty()) {
+            return List.of(LOCAL_BUCKET);
         }
-        return new ArrayList<>(names);
+        return List.of();
     }
 
     /**
      * 解析存储后端。
      *
+     * <p>桶名是 {@code FileStorageTemplate.storageMap} 的键（对外桶名，默认 default），
+     * 与容器内 Spring Bean 名无关——本地后端 Bean 名刻意不等于桶名，避免与 springdoc
+     * 的 {@code default} 分组 Bean 撞名导致 storageMap 为空。</p>
+     *
      * @param bucket 存储桶名称，为空取默认存储
      * @return 文件存储实例
      */
     private FileStorage storage(String bucket) {
-        if (bucket != null && !bucket.isBlank()) {
-            String name = bucket.trim();
-            if (!applicationContext.containsBean(name)) {
-                throw new IllegalArgumentException("存储桶不存在: " + name);
+        FileStorageTemplate template = applicationContext.getBeanProvider(FileStorageTemplate.class)
+                .getIfAvailable();
+        String name = (bucket == null || bucket.isBlank()) ? LOCAL_BUCKET : bucket.trim();
+        if (template != null) {
+            FileStorage storage = template.getStorage(name);
+            if (storage != null) {
+                return storage;
             }
-            Object bean = applicationContext.getBean(name);
-            if (!(bean instanceof FileStorage storage)) {
-                throw new IllegalArgumentException("存储桶不是文件存储: " + name);
+            // 未显式指定桶时回退到模板里第一个可用后端
+            if (bucket == null || bucket.isBlank()) {
+                List<String> names = template.getStorageNames();
+                if (!names.isEmpty()) {
+                    return template.getStorage(names.get(0));
+                }
             }
-            return storage;
         }
         List<String> available = buckets();
         if (available.isEmpty()) {
             throw new IllegalStateException("未配置文件存储后端，请在「服务管理」创建 file-storage 节点或启用 filesystem 存储");
         }
-        return applicationContext.getBean(available.get(0), FileStorage.class);
+        if (!available.contains(name)) {
+            throw new IllegalArgumentException("存储桶不存在: " + name);
+        }
+        // 模板不可用时的兜底：按类型取第一个 FileStorage 实例
+        // （orderedStream().findFirst() 避免多个 FileStorage 时 getIfAvailable() 抛 NoUniqueBeanDefinitionException）
+        FileStorage fallback = applicationContext.getBeanProvider(FileStorage.class).orderedStream()
+                .findFirst().orElse(null);
+        if (fallback != null) {
+            return fallback;
+        }
+        throw new IllegalStateException("未配置文件存储后端，请在「服务管理」创建 file-storage 节点或启用 filesystem 存储");
     }
 
     /**
