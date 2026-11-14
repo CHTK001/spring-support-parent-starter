@@ -143,9 +143,22 @@ plugin:
       host: 0.0.0.0
       port: ${MONITOR_SYNC_PORT:19380}
       protocol: tcp
-  # 本地联调免鉴权：monitor 全部 /ms/** 接口加入 OAuth 白名单（无远程鉴权服务时直接放行）
+  # 本地联调：/ms/** 免鉴权放行。
+  # <b>但 OAuth 客户端必须保持启用</b>：AuthClientConfiguration 同时负责注册
+  # @UserValue 参数解析器。关掉后 Spring 会把 @UserValue("roles") Set<String>
+  # 当作普通模型属性去实例化 Set 接口，抛
+  # IllegalStateException("No primary or single unique constructor found for interface java.util.Set")，
+  # 全局异常处理再把它映射成 HTTP 409「操作状态异常」——登录日志、头像框佩戴等
+  # 所有声明 @UserValue("roles") 的端点都会挂。
+  # 本地不连远端鉴权服务：static 协议用 plugin.oauth.temp.user 在进程内验签，
+  # local-admin-fallback 保持「取不到用户上下文按本地 admin 放行」（生产在
+  # application-prod.yml 显式关闭）。
   oauth:
-    enable: false
+    enable: true
+    protocol: static
+    local-admin-fallback: true
+    temp:
+      user: ${OAUTH_TEMP_USER:admin:admin123}
     whitelist:
       - /ms/**
       # 登录页挂载/登录态落地前拉取默认配置，不带有效令牌；不放行会 403 被前端误判登录失效
