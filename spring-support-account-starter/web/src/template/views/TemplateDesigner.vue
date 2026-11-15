@@ -292,6 +292,10 @@ const settingContainerId = computed(() => `hiprint-setting-${templateId.value}`)
 
 /** 模板名（只读显示） */
 const templateName = ref('')
+/** 名称占位：模板本身没有名字时只用于显示，不回写（否则会把空名称写成「未命名模板」） */
+const UNNAMED_TEMPLATE = '未命名模板'
+/** 最近一次从后端加载的 content（切回拖拽模式时重建画布用） */
+const loadedContent = ref('')
 
 /** 左侧面板显隐 */
 const leftVisible = ref(true)
@@ -310,7 +314,7 @@ const designModes: Array<{ key: DesignerMode; label: string; icon: string }> = [
 const printerVisible = ref(false)
 /** 选中的（或欲用的）打印机名 */
 const selectedPrinter = ref('')
-/** 默认的打印机（后端设的默认 → 「打印」不弹抽屉，直接选它） */
+/** 默认打印机（后端设的默认 → 「打印」不弹抽屉，直接选它） */
 const defaultPrinter = ref('')
 /** 保存/打印按键态 */
 const saving = ref(false)
@@ -440,22 +444,47 @@ onMounted(async () => {
 
   try {
     const payload: TemplateDesignerPayload = await templateApi.designer(id)
-    templateName.value = payload.info.name || payload.info.subtitle || '未命名模板'
+    // 后端实体字段是 templateInfoName（短字段 name 不存在），回退副标题与占位名
+    templateName.value = payload.info?.templateInfoName || payload.info?.templateInfoSubtitle || UNNAMED_TEMPLATE
     // Vue 沙盒默认源码：模板已有的 content（可能为 hiprint JSON），为空则给一份开箱即用的示例
     const rawContent = toContentString(payload.content)
+    loadedContent.value = rawContent
     const isHiprintJson = /^[\{\[]/.test(rawContent.trim())
     mode.value = payload.mode === 'sandbox' || !isHiprintJson ? 'sandbox' : 'drag'
     sandboxSource.value = rawContent.trim() ? rawContent : STARTER_SANDBOX_SOURCE
     sandboxVars.value = STARTER_SANDBOX_VARS
 
-    // 先取默认的打印机（后端的打印机列表里有 isDefault 标记），让「打印」直接选它
+    // 先取默认打印机（后端打印机列表里有 isDefault 标记），让「打印」直接选它
     await loadDefaultPrinter()
     // 拖拽模式才初始化 hiprint 画布（Vue 沙盒模式完全用不到 hiprint，不初始化）
-    if (mode.value === 'drag') await createDesign(rawContent || '')
+    if (mode.value === 'drag') {
+      // 画布容器是 v-if 渲染的，等 DOM 挂上再建，否则 hiprint 拿不到容器
+      await nextTick()
+      await createDesign(rawContent || '')
+    }
   } catch (err) {
     ElMessage.error(errorText(err))
     router.replace('/template')
   }
+})
+
+/**
+ * 切到「拖拽设计」时才建画布。
+ *
+ * <p>沙盒模式下画布容器不在 DOM 里，直接 createDesign 会拿到空容器；
+ * 因此等 nextTick 渲染完再建，并把沙盒里已保存的内容带过去。</p>
+ */
+watch(mode, async (next, prev) => {
+  if (next !== 'drag' || prev === 'drag') return
+  await nextTick()
+  const content = printTemplate.value ? printTemplate.value.getJson() : loadedContent.value
+  const raw = typeof content === 'string' ? content.trim() : (content ? JSON.stringify(content) : '')
+  if (raw && !/^[\{\[]/.test(raw)) {
+    // 当前 content 是 Vue 沙盒源码：拖拽画布吃不了，别让用户对着空白画布猜
+    ElMessage.warning('当前模板内容是 Vue 沙盒源码，拖拽设计需要 hiprint 描述；右栏「Vue 沙盒」可继续编辑')
+    return
+  }
+  await createDesign(raw)
 })
 
 /** 把后端 content 统一成字符串（可能是 JSON 对象 / 字符串 / 空） */
@@ -469,7 +498,7 @@ function toContentString(content: unknown): string {
   }
 }
 
-/** 加载默认的打印机 */
+/** 加载默认打印机 */
 async function loadDefaultPrinter(): Promise<void> {
   try {
     const list = await templateApi.printerList()
@@ -572,6 +601,12 @@ function onRedo(): void {
   ElMessage.info('重做')
 }
 
+/** 保存时回写的模板名：占位名不回写，避免把没名字的模板改成「未命名模板」 */
+function saveName(): string | undefined {
+  const name = templateName.value?.trim()
+  return !name || name === UNNAMED_TEMPLATE ? undefined : name
+}
+
 /** 保存：拖拽写 getJson()，沙盒写模板源码，都落到 content */
 async function onSave(): Promise<void> {
   if (!props.customDesign) {
@@ -589,10 +624,6 @@ async function onSave(): Promise<void> {
         return
       }
       content = tpl.getJson()
-      await templateApi.update(templateId.value, {
-        content,
-        name: templateName.value
-      })
     } else {
       if (!sandboxSource.value.trim()) {
         ElMessage.warning('模板代码不能为空')
@@ -600,11 +631,18 @@ async function onSave(): Promise<void> {
         return
       }
       content = sandboxSource.value
-      await templateApi.update(templateId.value, {
-        content,
-        name: templateName.value
-      })
     }
+    await templateApi.update(templateId.value, {
+      content,
+      name: saveName()
+    })
+    // 设计保存留痕：日志页能回看「谁在什么时候改过这张模板」
+    void templateApi.log({
+      templateId: templateId.value,
+      templateName: templateName.value,
+      action: 'design',
+      parameters: { mode: mode.value, length: content.length }
+    }).catch(() => undefined)
     ElMessage.success('保存成功')
     emit('saved')
   } catch (err) {
@@ -668,6 +706,7 @@ async function onPrintWith(tpl: any, name: string): Promise<void> {
   try {
     tpl.print({}, { printer: name, smartPrint: false }, () => {
       ElMessage.info(`已发送到「${name}」`)
+      void templateApi.print(templateId.value, { printer: name, copies: 1 }).catch(() => undefined)
     })
   } catch (err) {
     ElMessage.error(errorText(err))

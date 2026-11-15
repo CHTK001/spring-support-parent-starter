@@ -5,8 +5,8 @@
   仅加载模板设计描述并以 hiprint 的 print 模式渲染，不含设计器外壳与操作控件。
   流程：
     - 加载模板设计描述；创建只读 PrintTemplate（不进入 design，仅出 print 页面）
-    - 有默认打印机：点第三方的打直接发；没有：弹 RePrinter selector 抽屉选机再发
-  第三方的打（ dispatched to the print engine via tpl.print ）：
+    - 有默认打印机：点「打印」直接发；没有：弹 RePrinter selector 抽屉选机再发
+  打印机（dispatched to the print engine via tpl.print）：
     - tpl.print({}, { printer: name, smartPrint: false }, cb)
 
   注意：预览区用 print-lock.css 铺满画纸（page-break-after），样式为只读渲染。
@@ -27,10 +27,10 @@
           @click="onPrint"
         >
           <ReIcon name="Printer" :size="12" />
-          第三方的打
+          打印
         </ReButton>
         <ReButton text type="primary" :disabled="!tpl" @click="onSelectPrinter">
-          选第三方的打
+          选择打印机
         </ReButton>
       </div>
     </header>
@@ -39,15 +39,15 @@
     <div class="preview__body" ref="bodyRef">
       <div class="preview__empty" v-if="loading">加载中...</div>
       <div
-        v-else-if="!tpl && !loading"
+        v-else-if="!tpl"
         class="preview__empty preview__empty--error"
       >
-        未加载到预览内容
+        {{ renderError || '未加载到预览内容' }}
       </div>
       <div id="preview-hiprint" ref="tplRef" class="preview__canvas"></div>
     </div>
 
-    <!-- ==================== 第三方的打：打印机选择抽屉 ==================== -->
+    <!-- ==================== 打印机选择抽屉 ==================== -->
     <ReDrawer
       v-model="printerVisible"
       :title="''"
@@ -58,7 +58,7 @@
     >
       <RePrinter
         mode="selector"
-        title="第三方的打"
+        title="选择打印机"
         :printer="selectedPrinter"
         @print="onPrinterConfirm"
       />
@@ -103,9 +103,9 @@ const id = computed(() => props.templateId || (route.params.id as string) || '')
 
 /** 模板名（只读显示） */
 const templateName = ref('')
-/** 第三方的打：后端存的那台默认打印机（从 isDefault 取） */
+/** 后端存的那台默认打印机（从 isDefault 取） */
 const defaultPrinter = ref('')
-/** 第三方的打：选机抽屉回写（选中的打印机名） */
+/** 选机抽屉回写（所选打印机名） */
 const selectedPrinter = ref('')
 const printerVisible = ref(false)
 
@@ -114,12 +114,14 @@ const bodyRef = ref<HTMLDivElement | null>(null)
 const tplRef = ref<HTMLDivElement | null>(null)
 const loading = ref(true)
 const saving = ref(false)
+/** 无法渲染时的具体原因（内容不是 hiprint 模板 / 渲染异常），空态直接展示 */
+const renderError = ref('')
 /** 只读 PrintTemplate（不进入 design 模式） */
 const tpl = ref<any>(null)
 /** hiprint 是否已 init（全局只初始化一次） */
 let hiprintInitialized = false
 
-/** 加载默认的第三方的打（从后端的打印机列表取 isDefault 标记） */
+/** 加载默认打印机（从后端打印机列表取 isDefault 标记） */
 async function loadDefaultPrinter(): Promise<void> {
   try {
     const list = await templateApi.printerList()
@@ -127,14 +129,14 @@ async function loadDefaultPrinter(): Promise<void> {
     defaultPrinter.value = found?.name ?? ''
     selectedPrinter.value = found?.name ?? ''
     if (found) {
-      ElMessage.info(`已选默认第三方的打：${found.name}`)
+      ElMessage.info(`默认打印机：${found.name}`)
     }
   } catch (_err) {
     /* 没有打印机就手动选（抽屉兜底） */
   }
 }
 
-/** 第三方的打：有默认机直接发，没有弹选机抽屉 */
+/** 有默认机直接发，没有弹选机抽屉 */
 function onPrint(): void {
   if (!tpl.value) {
     ElMessage.warning('工作区为空')
@@ -151,14 +153,14 @@ function onSelectPrinter(): void {
   printerVisible.value = true
 }
 
-/** 按指定第三方的打发起（把第三方的打名和连接参数交给底层引擎） */
+/** 按指定打印机发起（把打印机名和连接参数交给底层引擎） */
 function onPrintWith(tpl: any, name: string): void {
   if (!name) {
-    ElMessage.warning('请选择一台第三方的打')
+    ElMessage.warning('请选择一台打印机')
     return
   }
   if (!tpl.print) {
-    ElMessage.error('第三方的打无法发起')
+    ElMessage.error('打印机无法发起')
     return
   }
   saving.value = true
@@ -168,6 +170,8 @@ function onPrintWith(tpl: any, name: string): void {
       { printer: name, smartPrint: false },
       () => {
         ElMessage.info(`已发送到「${name}」`)
+        // 打印确实发出后才回写日志（失败时不留下「打过」的假记录）
+        void templateApi.print(id.value, { printer: name, copies: 1 }).catch(() => undefined)
       }
     )
   } catch (err) {
@@ -192,7 +196,19 @@ function onBack(): void {
  * 不进入 design（不拿设计器外壳与拖拽控件）。
  */
 function renderPrintPages(content: string): void {
-  if (!content || !window.hiprint) {
+  renderError.value = ''
+  if (!content || !content.trim()) {
+    renderError.value = '该模板还没有设计内容，请先在设计器里保存一次'
+    return
+  }
+  // 只有 hiprint 产物（JSON 数组 / 对象）能出 print 页面；短信、邮件等纯文本模板直接给明确提示
+  const trimmed = content.trim()
+  if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+    renderError.value = '该模板不是打印模板（内容为短信 / 邮件等文本），无法预览打印版面'
+    return
+  }
+  if (!window.hiprint) {
+    renderError.value = '打印引擎未就绪，请刷新页面后重试'
     return
   }
   // 全局初始化一次（避免主题/框架重建时重复）
@@ -200,7 +216,7 @@ function renderPrintPages(content: string): void {
     try {
       hiprint.init({})
       hiprintInitialized = true
-    } catch (_err) { /* hiprint 未注入则不阻塞（第三方的打用 msg 兜底） */ }
+    } catch (_err) { /* hiprint 未注入则不阻塞（打印机用 msg 兜底） */ }
   }
   try {
     const tplInstance = new window.hiprint.PrintTemplate({
@@ -211,7 +227,7 @@ function renderPrintPages(content: string): void {
     tpl.value = tplInstance
     const $container = $(tplRef.value)
     if (!$container.length) return
-    // getHtml 返回的是 print-locked 的页面元素：到样式的页面、补充分页
+    // getHtml 返回的是 print-locked 的页面元素：套用只读样式、补充分页
     const $pages = tplInstance.getHtml?.() as any
     if ($pages && $pages.length) {
       $pages.removeClass('design').addClass('preview')
@@ -219,6 +235,7 @@ function renderPrintPages(content: string): void {
     }
   } catch (err) {
     tpl.value = null
+    renderError.value = `预览渲染失败：${errorText(err)}`
     ElMessage.error(`预览渲染：${errorText(err)}`)
   }
 }
@@ -233,12 +250,25 @@ onMounted(async () => {
   try {
     const payload = await templateApi.designer(id.value)
     template.value = payload
-    templateName.value = payload.info.name || payload.info.subtitle || '未命名模板'
+    templateName.value = payload.info?.templateInfoName || payload.info?.subtitle || '未命名模板'
     await loadDefaultPrinter()
-    // 只读画出第三方的打页面
+    // 只读画出打印页面
     renderPrintPages(payload.content)
+    // 预览动作留痕：日志页能回看「谁在什么时候看过这张模板」
+    void templateApi.log({
+      templateId: id.value,
+      templateName: templateName.value,
+      action: 'preview',
+      parameters: {}
+    }).catch(() => undefined)
   } catch (err) {
-    ElMessage.error(errorText(err))
+    const text = errorText(err)
+    // 消息模板 / 组卷模板不在 template_info 里：说清楚「为什么进不来」，别只丢一句「模板不存在」
+    ElMessage.error(
+      text.includes('模板不存在')
+        ? '该模板不是文档打印模板（消息 / 组卷模板请在各自页面查看），无法预览打印版面'
+        : text
+    )
     void router.replace('/template')
   } finally {
     loading.value = false

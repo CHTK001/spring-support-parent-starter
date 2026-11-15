@@ -6,13 +6,19 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.starter.account.support.AccountUserContext;
 import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.template.support.entity.TemplateInfo;
+import com.chua.starter.template.support.entity.TemplateLog;
 import com.chua.starter.template.support.entity.TemplatePrinter;
 import com.chua.starter.template.support.mapper.TemplateInfoMapper;
+import com.chua.starter.template.support.mapper.TemplateLogMapper;
 import com.chua.starter.template.support.mapper.TemplatePrinterMapper;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
+import com.chua.starter.template.support.model.TemplateLogQuery;
+import com.chua.starter.template.support.model.TemplateLogRecord;
 import com.chua.starter.template.support.model.TemplatePageQuery;
+import com.chua.starter.template.support.model.TemplatePrintRequest;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
 import com.chua.starter.template.support.model.TemplateSourceRequest;
 import com.chua.starter.template.support.model.TemplateSourceDetail;
@@ -21,15 +27,21 @@ import com.chua.starter.template.support.service.ProviderSource;
 import com.chua.starter.template.support.service.ProviderSourceRegistry;
 import com.chua.starter.template.support.service.TemplateService;
 import com.chua.starter.template.support.util.TemplateContentParams;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.chua.common.support.utils.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 模板服务实现
@@ -49,6 +61,11 @@ public class TemplateServiceImpl implements TemplateService {
     private final TemplatePrinterMapper templatePrinterMapper;
 
     /**
+     * 调用日志映射器（预览 / 设计 / 打印 / 同步 轨迹）
+     */
+    private final TemplateLogMapper templateLogMapper;
+
+    /**
      * 来源提供商注册表：固定模板（message / paper）的完整信息在来源模块里，
      * 这里按来源反查维护它的模块（见 {@link ProviderSource#detail}）。
      */
@@ -56,9 +73,11 @@ public class TemplateServiceImpl implements TemplateService {
 
     public TemplateServiceImpl(TemplateInfoMapper templateInfoMapper,
                                TemplatePrinterMapper templatePrinterMapper,
+                               TemplateLogMapper templateLogMapper,
                                ProviderSourceRegistry providerSourceRegistry) {
         this.templateInfoMapper = templateInfoMapper;
         this.templatePrinterMapper = templatePrinterMapper;
+        this.templateLogMapper = templateLogMapper;
         this.providerSourceRegistry = providerSourceRegistry;
     }
 
@@ -479,5 +498,105 @@ public class TemplateServiceImpl implements TemplateService {
             default:
                 return null;
         }
+    }
+
+    @Override
+    public PageResult<TemplateLogRecord> pageLogs(TemplateLogQuery query) {
+        TemplateLogQuery q = query == null ? new TemplateLogQuery() : query.normalize();
+        Page<TemplateLog> page = new Page<>(q.getPage(), q.getSize());
+        LambdaQueryWrapper<TemplateLog> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(q.getTemplateId())) {
+            wrapper.eq(TemplateLog::getTemplateLogTemplateId, q.getTemplateId());
+        }
+        if (StringUtils.hasText(q.getTemplateName())) {
+            wrapper.like(TemplateLog::getTemplateLogTemplateName, q.getTemplateName());
+        }
+        if (StringUtils.hasText(q.getAction())) {
+            wrapper.eq(TemplateLog::getTemplateLogAction, q.getAction());
+        }
+        if (StringUtils.hasText(q.getIp())) {
+            wrapper.eq(TemplateLog::getTemplateLogIp, q.getIp());
+        }
+        // 最新的一条排在最前：日志页关注的是「刚刚发生了什么」
+        wrapper.orderByDesc(TemplateLog::getTemplateLogCreatedAt);
+        IPage<TemplateLog> iPage = templateLogMapper.selectPage(page, wrapper);
+        PageResult<TemplateLogRecord> result = new PageResult<>();
+        result.setPageNo(iPage.getCurrent());
+        result.setPageSize(iPage.getSize());
+        result.setTotal(iPage.getTotal());
+        result.setTotalPage(iPage.getPages());
+        List<TemplateLogRecord> records = new ArrayList<>(iPage.getRecords().size());
+        for (TemplateLog entity : iPage.getRecords()) {
+            records.add(TemplateLogRecord.of(entity));
+        }
+        result.setRecords(records);
+        return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean recordLog(TemplateLogRecord record) {
+        if (record == null || !StringUtils.hasText(record.getAction())) {
+            return false;
+        }
+        // 模板名称缺失时按模板 ID 回查，保证列表上能看懂是哪张模板
+        if (!StringUtils.hasText(record.getTemplateName()) && StringUtils.hasText(record.getTemplateId())) {
+            TemplateInfo template = templateInfoMapper.selectById(record.getTemplateId());
+            if (template != null) {
+                record.setTemplateName(template.getTemplateInfoName());
+            }
+        }
+        // 调用方 IP 与操作人由服务端补齐，前端不需要也不能伪造
+        if (!StringUtils.hasText(record.getIp())) {
+            record.setIp(currentIp());
+        }
+        if (!StringUtils.hasText(record.getOperator())) {
+            record.setOperator(AccountUserContext.currentUserId());
+        }
+        // 时间统一由服务端写，不信任前端传值
+        record.setTime(LocalDateTime.now());
+        templateLogMapper.insert(record.toEntity());
+        log.info("[Template] 记录调用日志: templateId={}, action={}, ip={}",
+                record.getTemplateId(), record.getAction(), record.getIp());
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean print(String id, TemplatePrintRequest request) {
+        if (!StringUtils.hasText(id)) {
+            return false;
+        }
+        TemplateInfo template = templateInfoMapper.selectById(id);
+        if (template == null || Integer.valueOf(1).equals(template.getTemplateInfoDeleted())) {
+            throw new IllegalArgumentException("模板不存在: " + id);
+        }
+        // 打印参数原样留档：打印机 / 份数 / 变量（排查「打出来不对」时全靠它）
+        Map<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("printer", request == null ? null : request.getPrinter());
+        parameters.put("copies", request == null || request.getCopies() == null ? 1 : request.getCopies());
+        if (request != null && request.getParams() != null) {
+            parameters.put("params", request.getParams());
+        }
+        TemplateLogRecord record = new TemplateLogRecord();
+        record.setTemplateId(id);
+        record.setTemplateName(template.getTemplateInfoName());
+        record.setAction("print");
+        record.setParameters(parameters);
+        return recordLog(record);
+    }
+
+    /**
+     * 当前请求的调用方 IP（非 Web 线程返回 {@code null}）
+     *
+     * @return 调用方 IP
+     */
+    private static String currentIp() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servletAttributes) {
+            HttpServletRequest request = servletAttributes.getRequest();
+            return request == null ? null : request.getRemoteAddr();
+        }
+        return null;
     }
 }

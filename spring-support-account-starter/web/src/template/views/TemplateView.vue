@@ -130,11 +130,11 @@
             </div>
           </template>
           <div v-if="docLoading" class="rail__loading">加载更多…</div>
-          <div v-else-if="docEnd && docItems.length" class="rail__loading">已到底</div>
         </div>
 
         <footer class="rail__foot">
-          <span>滚动加载更多模板</span>
+          <!-- 状态文案只在这行出现：到底就写「已到底」，别和「滚动加载更多」同时出现 -->
+          <span>{{ docLoading ? '加载更多…' : docEnd ? '已到底' : '滚动加载更多模板' }}</span>
           <span class="rail__actions">
             <ReButton
               text
@@ -498,7 +498,7 @@ function normalizeDoc(record: Record<string, unknown>): TemplateInfo {
     type: (pick<string>('type', 'templateInfoType') ?? 'other') as TemplateInfo['type'],
     status: (pick<string>('status', 'templateInfoStatus') ?? 'draft') as TemplateInfo['status'],
     source: (pick<string>('source', 'templateInfoSource') ?? 'hiprint') as TemplateInfo['source'],
-    providerId: pick<string>('providerId', 'templateInfoProviderId'),
+    providerId: pick<string>('providerId', 'templateInfoProvider'),
     sourceId: pick<string>('sourceId', 'templateInfoSourceId'),
     sourceCode: pick<string>('sourceCode', 'templateInfoSourceCode'),
     creator: String(pick<string>('creator', 'templateInfoCreator') ?? ''),

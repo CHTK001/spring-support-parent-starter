@@ -2,7 +2,10 @@ package com.chua.starter.template.support.controller;
 
 import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
+import com.chua.starter.template.support.model.TemplateLogQuery;
+import com.chua.starter.template.support.model.TemplateLogRecord;
 import com.chua.starter.template.support.model.TemplatePageQuery;
+import com.chua.starter.template.support.model.TemplatePrintRequest;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
 import com.chua.starter.template.support.model.TemplateSourceInfo;
 import com.chua.starter.template.support.model.TemplateSourceDetail;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -73,14 +77,51 @@ public class TemplateController {
     }
 
     /**
+     * 分页查询调用日志（预览 / 设计 / 打印 / 同步）
+     *
+     * <p>必须注册在 {@link #getTemplate(String)} 之前：{@code /{id}} 会吞掉
+     * 所有同层路径，日志页此前因此拿到空信封。</p>
+     *
+     * @param query 查询条件
+     * @return 日志分页结果
+     */
+    @GetMapping("/logs")
+    public PageResult<TemplateLogRecord> pageLogs(TemplateLogQuery query) {
+        return templateService.pageLogs(query);
+    }
+
+    /**
+     * 记录一条调用日志（预览 / 设计 / 打印）
+     *
+     * @param record 日志内容
+     * @return 是否写入成功
+     */
+    @PostMapping("/logs")
+    public Boolean recordLog(@RequestBody TemplateLogRecord record) {
+        return templateService.recordLog(record);
+    }
+
+    /**
      * 获取模板
      *
-     * @param id 模板 标识
+     * @param id 模板 标识（32 位十六进制或 UUID）
      * @return 模板信息实体
      */
     @GetMapping("/{id}")
     public TemplateInfo getTemplate(@PathVariable String id) {
         return templateService.getTemplate(id);
+    }
+
+    /**
+     * 确认打印（本地打印引擎已发出后回写调用日志）
+     *
+     * @param id      模板 标识
+     * @param request 打印参数（打印机 / 份数 / 变量）
+     * @return 是否记录成功
+     */
+    @PostMapping("/{id}/print")
+    public Boolean printTemplate(@PathVariable String id, @RequestBody(required = false) TemplatePrintRequest request) {
+        return templateService.print(id, request);
     }
 
     /**
@@ -204,7 +245,9 @@ public class TemplateController {
      */
     @PostMapping("/sync")
     public Map<String, Integer> syncAllSources() {
-        return syncerRegistry.sync(null);
+        Map<String, Integer> result = syncerRegistry.sync(null);
+        recordSyncLog(result);
+        return result;
     }
 
     /**
@@ -215,7 +258,30 @@ public class TemplateController {
      */
     @PostMapping("/sync/{source}")
     public Map<String, Integer> syncSource(@PathVariable String source) {
-        return syncerRegistry.sync(source);
+        Map<String, Integer> result = syncerRegistry.sync(source);
+        recordSyncLog(result);
+        return result;
+    }
+
+    /**
+     * 同步动作留痕（按来源各写一条，日志页据此回看「哪次同步拉了多少条」）
+     *
+     * @param result source → 模板数
+     */
+    private void recordSyncLog(Map<String, Integer> result) {
+        if (result == null) {
+            return;
+        }
+        for (Map.Entry<String, Integer> entry : result.entrySet()) {
+            TemplateLogRecord record = new TemplateLogRecord();
+            record.setTemplateId(entry.getKey());
+            record.setTemplateName(entry.getKey());
+            record.setAction("sync");
+            Map<String, Object> parameters = new LinkedHashMap<>();
+            parameters.put("count", entry.getValue());
+            record.setParameters(parameters);
+            templateService.recordLog(record);
+        }
     }
 
     /**

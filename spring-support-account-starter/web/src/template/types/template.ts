@@ -149,6 +149,45 @@ export interface TemplateInfo {
   content?: string
   /** 备注 */
   remark?: string
+
+  // ==================== 后端实体原始字段 ====================
+  // 模板接口直接返回 TemplateInfo 实体，字段带 `templateInfo` 前缀；
+  // 列表/详情在 normalizeDoc 里归一成上面的短字段名，这里保留原始字段供透传与回填。
+
+  /** 后端主键（= id） */
+  templateInfoId?: string
+  /** 后端模板名称（= name） */
+  templateInfoName?: string
+  /** 后端副标题（= subtitle） */
+  templateInfoSubtitle?: string
+  /** 后端模板语言（= language） */
+  templateInfoLanguage?: string
+  /** 后端模板类型（= type） */
+  templateInfoType?: string
+  /** 后端模板状态（= status） */
+  templateInfoStatus?: string
+  /** 后端模板内容（= content） */
+  templateInfoContent?: string
+  /** 后端备注（= remark） */
+  templateInfoRemark?: string
+  /** 后端创建者（= creator） */
+  templateInfoCreator?: string
+  /** 后端最后修改者（= modifier） */
+  templateInfoModifier?: string
+  /** 后端来源（= source） */
+  templateInfoSource?: string
+  /** 后端来源行 ID（= sourceId） */
+  templateInfoSourceId?: string
+  /** 后端三方模板 ID（= sourceCode） */
+  templateInfoSourceCode?: string
+  /** 后端来源提供方（= providerId） */
+  templateInfoProvider?: string
+  /** 后端软删除标记：0 正常、1 删除 */
+  templateInfoDeleted?: number
+  /** 后端创建时间（= createdAt） */
+  templateInfoCreatedAt?: string
+  /** 后端更新时间（= updatedAt） */
+  templateInfoUpdatedAt?: string
 }
 
 /** 模板分页查询条件 */
@@ -195,7 +234,7 @@ export interface TemplateDesignerPayload {
  * @author CH
  */
 export interface PrinterConfig {
-  /** 打印机设备名（在 hiprint 中识别的打印机名） */
+  /** 打印机设备名（hiprint 中用于识别打印机的名称） */
   name: string
   /** 型号/打印机类型（如 HP LaserJet Pro / 热敏云） */
   type?: string
@@ -222,8 +261,8 @@ export interface PrinterConfig {
  * @author CH
  */
 export interface LogRecord {
-  /** 日志 ID */
-  id: string
+  /** 日志 ID（由服务端补齐，前端不必传） */
+  id?: string
   /** 模板 ID（同步类操作记录提供商 ID） */
   templateId: string
   /** 模板名称（同步类操作记录提供商名称） */
@@ -232,10 +271,10 @@ export interface LogRecord {
   action: 'preview' | 'design' | 'print' | 'sync'
   /** 调用参数（打印时传给打印引擎的参数） */
   parameters: Record<string, any>
-  /** 创建时间 */
-  time: string
-  /** 调用方 IP */
-  ip: string
+  /** 创建时间（由服务端补齐，前端不必传） */
+  time?: string
+  /** 调用方 IP（由服务端补齐，前端不必传） */
+  ip?: string
   /** 操作人 */
   operator?: string
 }

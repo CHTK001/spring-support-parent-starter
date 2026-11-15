@@ -2,7 +2,10 @@ package com.chua.starter.template.support.service;
 
 import com.chua.starter.mybatis.entity.PageResult;
 import com.chua.starter.template.support.model.TemplateDesignerPayload;
+import com.chua.starter.template.support.model.TemplateLogQuery;
+import com.chua.starter.template.support.model.TemplateLogRecord;
 import com.chua.starter.template.support.model.TemplatePageQuery;
+import com.chua.starter.template.support.model.TemplatePrintRequest;
 import com.chua.starter.template.support.model.TemplateSaveRequest;
 import com.chua.starter.template.support.model.TemplateSourceRequest;
 import com.chua.starter.template.support.model.TemplateSourceDetail;
@@ -135,4 +138,32 @@ public interface TemplateService {
      * @param printer 打印机参数
      */
     void setPrinter(PrinterConfig printer);
+
+    /**
+     * 分页查询调用日志（预览 / 设计 / 打印 / 同步）
+     *
+     * @param query 查询条件
+     * @return 日志分页结果
+     */
+    PageResult<TemplateLogRecord> pageLogs(TemplateLogQuery query);
+
+    /**
+     * 记录一条调用日志
+     *
+     * <p>由应用侧在用户真正执行操作后调用：调用方 IP 与操作人由服务端补齐，
+     * 模板名称缺失时按模板 ID 回查。</p>
+     *
+     * @param record 日志内容
+     * @return 是否写入成功
+     */
+    boolean recordLog(TemplateLogRecord record);
+
+    /**
+     * 确认打印（本地打印引擎已发出后回写一条调用日志）
+     *
+     * @param id      模板 标识
+     * @param request 打印参数（打印机 / 份数 / 变量）
+     * @return 是否记录成功
+     */
+    boolean print(String id, TemplatePrintRequest request);
 }

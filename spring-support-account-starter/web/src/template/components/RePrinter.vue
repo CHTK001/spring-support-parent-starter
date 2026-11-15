@@ -2,17 +2,17 @@
   RePrinter —— 打印机管理面板（独立组件）
 
   职责（第三方打印的全部接口在这个组件里收口）：
-    - 打印机列表：所有已接入的打印机（本地 / 局域网 / 第三方云），展示地址/端口/Token 等连接参数
+    - 打印机列表：已接入的所有打印机（本地 / 局域网 / 第三方云），展示地址/端口/Token 等连接参数
     - 默认打印机：支持在表格/列表里把任意一台设为默认（设置后前端打印直接选它）
     - 新增/编辑：地址/端口/Token/认证名 由本组件的表单维护
     - 发现：把外部 Agent（局域网/代理）扫描到的设备接入进来
     - selector 模式：在模板设计器的「打印」流里选打印机并确认；
-      宿主传入 PrintTemplate 时本组件直接发起第三方的打（让盒子选）；
-      不传时把选中的打印机名抛回给宿主，宿主调用 tpl.print 把第三方的参数递进去。
+      宿主传入 PrintTemplate 时本组件直接发起打印（让盒子选）；
+      不传时把所选打印机名抛回给宿主，宿主调用 tpl.print 把打印机参数递进去。
 
   mode 由宿主决定：
     - "page"   打印机管理页面（ReTable 驱动，全量操作）
-    - "selector" 打印机选择器（轻量列表 + 确认并第三方的打印）
+    - "selector" 打印机选择器（轻量列表 + 确认打印）
 
   @since 4.0.0.60
   @author CH
@@ -37,7 +37,7 @@
       </div>
     </header>
 
-    <!-- ==================== page 模式：ReTable 驱动的打印机列表 ==================== -->
+    <!-- ==================== page 模式：ReTable 驱动打印机列表 ==================== -->
     <ReTable
       v-if="mode === 'page'"
       ref="tableRef"
@@ -81,7 +81,7 @@
       </template>
     </ReTable>
 
-    <!-- ==================== selector 模式：轻量的打印机列表 ==================== -->
+    <!-- ==================== selector 模式：轻量打印机列表 ==================== -->
     <div v-else class="re-printer__list">
       <div v-if="loading" class="re-printer__empty">加载中...</div>
       <div v-else-if="!printers.length" class="re-printer__empty">
@@ -117,9 +117,9 @@
         </div>
       </div>
 
-      <!-- 确认并第三方的打印 -->
+      <!-- 确认打印 -->
       <div class="re-printer__footer">
-        <ReButton type="primary" :disabled="!selectedName" @click="onPrint">确认并第三方的打印</ReButton>
+        <ReButton type="primary" @click="onPrint">确认打印</ReButton>
       </div>
     </div>
 
@@ -160,11 +160,11 @@
 /**
  * RePrinter —— 打印机管理面板（独立组件）
  *
- * 与第三方的打印对接流程：
- *   1) 页面加载时从后端拉取已接入的打印机列表
+ * 与打印机对接流程：
+ *   1) 页面加载时从后端拉取已接入打印机列表
  *   2) 默认打印机自动打在角标上（宿主点「打印」时直接选它）
- *   3) 宿主传入 tpl（PrintTemplate）时，点「确认并第三方的打印」直接调
- *      tpl.print({}, { printer: name, smartPrint: false }, cb) 达成第三方的打；
+ *   3) 宿主传入 tpl（PrintTemplate）时，点「确认打印」直接调
+ *      tpl.print({}, { printer: name, smartPrint: false }, cb) 完成打印；
  *      不传 tpl 时抛回 { name }，由宿主自行发起 tpl.print
  */
 import { computed, onMounted, ref, watch } from 'vue'
@@ -184,13 +184,13 @@ const props = defineProps<{
   title?: string
   /** 模式：page | selector */
   mode?: 'page' | 'selector'
-  /** 已选的打印机名（selector 模式下双向绑定） */
+  /** 所选打印机名（selector 模式下双向绑定） */
   printer?: string
-  /** hiprint 的 PrintTemplate（传入时本组件直接发起第三方的打印） */
+  /** hiprint 的 PrintTemplate（传入时本组件直接发起打印） */
   tpl?: any
 }>()
 const emit = defineEmits<{
-  /** 确认并第三方的打印（传给桌面端：打印机名） */
+  /** 确认打印（传给桌面端：打印机名） */
   print: [name: string]
   /** 编辑打印机行（page 模式） */
   edit: [row: PrinterConfig]
@@ -208,7 +208,7 @@ const saving = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 
-/** 选中的打印机名（selector 模式，可被宿主的 printer 回写） */
+/** 所选打印机名（selector 模式，可被宿主的 printer 回写） */
 const selectedName = ref(props.printer)
 watch(() => props.printer, (v: string | undefined) => {
   selectedName.value = v
@@ -253,12 +253,21 @@ function host(row: PrinterConfig): string {
 
 /** 发现打印机（由后端局域网/代理扫描，这里只刷新） */
 async function onDiscover(): Promise<void> {
+  loading.value = true
   try {
-    await templateApi.discoverPrinters()
+    const found = await templateApi.discoverPrinters()
     await loadPrinters({ page: page.value, pageSize: pageSize.value, params: {} })
-    tableRef.value?.reload()
+    await tableRef.value?.reload?.()
+    const count = Array.isArray(found) ? found.length : 0
+    if (count > 0) {
+      ElMessage.success(`发现 ${count} 台打印机`)
+    } else {
+      ElMessage.warning('没有发现可用打印机，请检查打印机服务或手动添加')
+    }
   } catch (err) {
     ElMessage.error(errorText(err))
+  } finally {
+    loading.value = false
   }
 }
 
@@ -269,7 +278,7 @@ function onRowClick(row: Record<string, unknown>): void {
   }
 }
 
-/** 选择打印机（selector 模式：点击行 = 选机，下一页的“确认并第三方的打”以选中的为准） */
+/** 选择打印机（selector 模式：点击行 = 选机，「确认打印」以选中的为准） */
 function onSelect(name: string): void {
   if (props.mode === 'selector') {
     selectedName.value = name
@@ -358,21 +367,21 @@ async function onFormConfirm(): Promise<void> {
   }
 }
 
-// ==================== 第三方的打印 ====================
-/** 确认并第三方的打印 */
+// ==================== 打印 ====================
+/** 确认打印 */
 async function onPrint(): Promise<void> {
   const name = selectedName.value
   if (!name) {
     ElMessage.warning('请先选择一台打印机')
     return
   }
-  // 宿主传了 PrintTemplate：本组件直接发起第三方的打 / 打印
+  // 宿主传了 PrintTemplate：本组件直接发起打印
   if (props.tpl && props.tpl.print) {
     const tpl = props.tpl
     saving.value = true
     try {
       tpl.print({}, { printer: name, smartPrint: false }, () => {
-        ElMessage.info(`已发送到 ${name}（第三方的打印）`)
+        ElMessage.info(`已发送到 ${name}`)
       })
     } catch (err) {
       ElMessage.error(errorText(err))
