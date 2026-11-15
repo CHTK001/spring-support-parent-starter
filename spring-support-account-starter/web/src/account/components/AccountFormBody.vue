@@ -662,7 +662,8 @@ function buildPayload(): SysAccount {
     name: form.name.trim(),
     code: form.code.trim(),
     kind: form.kind,
-    vendor: form.vendor.trim() || undefined,
+    // 厂商允许清空：传空串（而不是 undefined）让后端能区分「没改」与「清空」
+    vendor: form.vendor.trim(),
     username: form.username.trim() || undefined,
     endpoint: form.endpoint.trim() || undefined,
     config,

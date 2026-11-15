@@ -229,6 +229,13 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         // 未修改凭据时传 null，避免把掩码当明文交给实现
         AccountKindCatalog.validate(existing, plainSecret);
         accountMapper.updateById(existing);
+        // 「厂商」清空：NOT_NULL 更新策略会跳过 null，前端传空串即表示清空，这里显式写回 null，
+        // 否则厂商永远改不掉（同步源识别依据 vendor，见 alibaba-sms 的判定）
+        if (input.getVendor() != null && trimToNull(input.getVendor()) == null) {
+            accountMapper.update(null, new LambdaUpdateWrapper<SysAccount>()
+                    .eq(SysAccount::getAccountId, existing.getAccountId())
+                    .set(SysAccount::getVendor, null));
+        }
         if (Boolean.TRUE.equals(existing.getDefaultAccount())) {
             clearOtherDefaults(existing);
         }
