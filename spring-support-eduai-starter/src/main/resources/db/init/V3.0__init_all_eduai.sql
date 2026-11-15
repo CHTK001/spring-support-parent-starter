@@ -1,5 +1,5 @@
 -- =====================================================================
--- V2.0__init_all_eduai.sql - spring-support-eduai-starter 全量表结构
+-- V3.0__init_all_eduai.sql - spring-support-eduai-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口。此前分散的
 --   V1.2 / V1.3 / V1.4 / V1.5 / V1.6 / V1.9 / V1.13 的 init_all
@@ -10,6 +10,17 @@
 --   1. 原来靠 ALTER 补的列，一律折进建表语句 —— 新库一次建全；
 --   2. 存量库补列的 ALTER 仍保留在文件末尾（information_schema 判存 + 动态 DDL），
 --      否则老库缺列；新建库上这些语句会因列已存在而跳过。
+--
+-- 版本递进: V2.1 -> V3.0。原 V2.7 ~ V2.10 / V2.13 ~ V2.18 增量脚本
+--   均在本次收敛中并入本文件。其中两条类型放宽（V2.13 edu_word.word_structure
+--   放宽为 LONGTEXT、V2.17 edu_poem 译文/赏析/注释放宽为 MEDIUMTEXT）已折进
+--   建表语句（新库一次建宽），并在文件末尾保留存量库兼容 MODIFY；
+--   其余 8 条（V2.7 / V2.8 / V2.9 / V2.10 / V2.14 / V2.15 / V2.16 / V2.18）
+--   均为数据修复（collect_flow DSL / collect_task 悬挂任务 / edu_fun_config 清理），
+--   属数据类语句，移交 V3.0__initdata_all_eduai.sql。
+--   FlywayLike 按「脚本名 + 版本」记账，命中成功记录即跳过（checksum 变化
+--   只做校验、不会触发重跑），故合并增量必须递进版本号，否则存量库不会
+--   重跑、并入的补列与建表不会生效。
 --
 -- 约束: 含 MySQL 专属语法（SET @var + PREPARE 动态 DDL、COMMENT 内联注释）。
 --   MariaDB 11.8 实测不接受 ADD COLUMN IF NOT EXISTS（语句报错、列不会建成），
@@ -601,9 +612,9 @@ CREATE TABLE IF NOT EXISTS edu_poem (
     poem_author VARCHAR(64) COMMENT '作者',
     poem_dynasty VARCHAR(32) COMMENT '朝代，如 唐代/宋代',
     poem_content TEXT NOT NULL COMMENT '正文（整首，句间用换行或标点分隔）',
-    poem_translation TEXT COMMENT '白话译文',
-    poem_appreciation TEXT COMMENT '赏析',
-    poem_notes TEXT COMMENT '注释',
+    poem_translation MEDIUMTEXT COMMENT '白话译文（V2.17 起放宽为 MEDIUMTEXT：译文可远超 TEXT 的 64KB，实测单行 116011 字节）',
+    poem_appreciation MEDIUMTEXT COMMENT '赏析（V2.17 起放宽为 MEDIUMTEXT）',
+    poem_notes MEDIUMTEXT COMMENT '注释（V2.17 起放宽为 MEDIUMTEXT）',
     poem_tags VARCHAR(500) COMMENT '标签，逗号分隔',
     poem_difficulty INT DEFAULT 1 COMMENT '难度: 1-5',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -1364,6 +1375,35 @@ PREPARE stmt_hanzi_meaning_text FROM @sql_hanzi_meaning_text;
 EXECUTE stmt_hanzi_meaning_text;
 DEALLOCATE PREPARE stmt_hanzi_meaning_text;
 
+-- ---------- edu_word：结构位放宽为大文本（原 V2.13__widen_edu_word_structure.sql，已并入本文件） ----------
+-- 歇后语流程把谜面（最长 41 字）存 word_structure，VARCHAR(32) 会整批拒绝写入。
+SET @has_word_structure_wide := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_word' AND COLUMN_NAME = 'word_structure'
+      AND LOWER(DATA_TYPE) <> 'longtext'
+);
+SET @sql_word_structure_wide := IF(@has_word_structure_wide > 0,
+    'ALTER TABLE edu_word MODIFY COLUMN word_structure LONGTEXT COMMENT ''结构 / 词性，如：偏正式、动宾式、名词（歇后语谜面亦存此处）''',
+    'SELECT 1');
+PREPARE stmt_word_structure_wide FROM @sql_word_structure_wide;
+EXECUTE stmt_word_structure_wide;
+DEALLOCATE PREPARE stmt_word_structure_wide;
+
+-- ---------- edu_poem：译文/赏析/注释放宽为 MEDIUMTEXT（原 V2.17__widen_edu_poem_text.sql，已并入本文件） ----------
+-- 古文岛详情页长文可超 TEXT 上限（实测单行 116011 字节），三列一并放宽。
+SET @has_poem_text_wide := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_poem'
+      AND COLUMN_NAME IN ('poem_translation', 'poem_appreciation', 'poem_notes')
+      AND LOWER(DATA_TYPE) <> 'mediumtext'
+);
+SET @sql_poem_text_wide := IF(@has_poem_text_wide > 0,
+    'ALTER TABLE edu_poem MODIFY COLUMN poem_translation MEDIUMTEXT COMMENT ''白话译文'' , MODIFY COLUMN poem_appreciation MEDIUMTEXT COMMENT ''赏析'' , MODIFY COLUMN poem_notes MEDIUMTEXT COMMENT ''注释''',
+    'SELECT 1');
+PREPARE stmt_poem_text_wide FROM @sql_poem_text_wide;
+EXECUTE stmt_poem_text_wide;
+DEALLOCATE PREPARE stmt_poem_text_wide;
+
 -- =====================================================================
 -- V2.3__init_edu_collect_flows.sql - 教育语料采集流程扩充
 -- 通道: NORMAL（V版本号__任意.sql，同步执行，按「文件名 + 版本号」记账只跑一次）
@@ -1672,7 +1712,7 @@ CREATE TABLE IF NOT EXISTS edu_word (
     word_synonyms VARCHAR(255) COMMENT '近义词 / 相似词语（逗号分隔）',
     word_antonyms VARCHAR(255) COMMENT '反义词 / 反向词语（逗号分隔）',
     word_homophones VARCHAR(255) COMMENT '同音词（逗号分隔）',
-    word_structure VARCHAR(32) COMMENT '结构 / 词性，如：偏正式、动宾式、名词',
+    word_structure LONGTEXT COMMENT '结构 / 词性，如：偏正式、动宾式、名词（V2.13 起放宽为大文本：歇后语流程把谜面存这里，最长 41 字）',
     word_kind VARCHAR(20) DEFAULT 'WORD' COMMENT '语料类型：WORD 词语 / XIEHOUYU 歇后语 / PHRASE 短语',
     word_grade_level VARCHAR(20) COMMENT '适用学段（中文名）：小学/初中/高中/大学；NULL 表示不限',
     word_status TINYINT DEFAULT 1 COMMENT '状态：0 停用 / 1 启用',

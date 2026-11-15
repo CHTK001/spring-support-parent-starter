@@ -1,10 +1,20 @@
 -- =====================================================================
--- V2.0__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
+-- V5.0__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
 -- 模块: spring-support-monitor-starter
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
--- 说明: 本文件是该模块唯一的建表入口。此前分散的
---   V1.0__init_all_monitor.sql 与 V1.5__init_tshark.sql
---   已在本次收敛中并入本文件并删除。
+-- 说明: 本文件是该模块唯一的建表入口；本目录 INIT 通道只保留本文件，
+--   INITDATA 通道只保留 V5.0__initdata_all_monitor.sql。此前分散的
+--   V1.0__init_all_monitor.sql、V1.5__init_tshark.sql 已在历史收敛中并入，
+--   本次收敛又把 V4.0.0.44 / 45 / 52 / 53 / 54 / 55 / 56 / 57 / 58 九个
+--   增量并入本文件并删除（V4.0.0.59 为 device 模块表补列，已由 device
+--   模块 init 全量承载，直接删除）。
+-- 版本递进: V2.1 -> V5.0。FlywayLike 按「脚本名 + 版本」记账，命中成功记录
+--   即跳过（checksum 变化只做校验、不会触发重跑），故每新增补列都必须递进
+--   版本号，否则存量库不会重跑、新列补不进去。
+-- 约束: MySQL 专属语法（ENGINE=InnoDB / COMMENT 内联注释 / SET @var + PREPARE 动态 DDL）。
+--   MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS、MariaDB 11.8 同样拒绝，
+--   故补列一律沿用 information_schema 判存的动态 DDL 写法。
+-- =====================================================================
 --
 -- 表归位: ms_monitor_nginx_metric 的实体 MsMonitorNginxMetric 属于
 --   spring-support-datasource-hub-starter，本次收敛已把它的建表语句
@@ -626,3 +636,283 @@ SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
         'SELECT 1',
         'ALTER TABLE `ms_tshark_packet` ADD COLUMN `ms_tshark_packet_frame_no` BIGINT DEFAULT NULL COMMENT ''tshark 帧号(frame.number)'''));
 PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- ============================================================
+-- [二] 增量并入的新表（源自原 V4.0.0.44 / 45 / 52 / 55 / 56）
+-- ============================================================
+
+-- ----------------------------------------------------------
+-- 23. 数据同步执行日志
+-- 由 SyncTaskRunLogBuffer 在一次执行结束时写入、SyncTaskServiceImpl 读回。
+-- 一次执行一行，正文用 LONGTEXT 存「时间<TAB>级别<TAB>内容」逐行拼接；
+-- 不建外键：任务删除后日志仍需保留以便事后追溯；由保留策略按时间裁剪。
+-- read_count / write_count 原名 V4.0.0.45 的补列，已内联进建表：
+--   列表页只需行数标题，正文在点开详情时才整体读回；存量行读/写为 NULL，
+--   详情页仍会从正文动态解析作为兜底。
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ms_sync_task_run_log` (
+    `id`                                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `ms_sync_task_run_log_task_id`          BIGINT       NOT NULL COMMENT '任务 ID(ms_sync_task.id)，任务删除后本行保留',
+    `ms_sync_task_run_log_trigger`          VARCHAR(16)  NOT NULL DEFAULT 'MANUAL' COMMENT '触发方式 MANUAL手动/SCHEDULED定时/REALTIME实时录入',
+    `ms_sync_task_run_log_status`           VARCHAR(16)  NOT NULL COMMENT '执行状态 SUCCESS/FAILED',
+    `ms_sync_task_run_log_run_time`         DATETIME     NOT NULL COMMENT '执行开始时刻',
+    `ms_sync_task_run_log_cost_ms`          BIGINT       DEFAULT NULL COMMENT '本次执行总耗时(毫秒)',
+    `ms_sync_task_run_log_lines`            LONGTEXT     DEFAULT NULL COMMENT '过程日志正文：逐行「时间\t级别\t内容」，换行分隔',
+    `ms_sync_task_run_log_line_count`       INT          NOT NULL DEFAULT 0 COMMENT '日志行数（列表展示用，免解析正文）',
+    `ms_sync_task_run_log_read_count`       BIGINT       DEFAULT NULL COMMENT '本轮读取行数（执行结束时从过程日志解析）',
+    `ms_sync_task_run_log_write_count`      BIGINT       DEFAULT NULL COMMENT '本轮写入行数（执行结束时从过程日志解析）',
+    `ms_sync_task_run_log_create_time`      DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '入库时刻',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_sync_task_run_log_task_time` (`ms_sync_task_run_log_task_id`, `ms_sync_task_run_log_run_time`),
+    KEY `idx_ms_sync_task_run_log_time` (`ms_sync_task_run_log_run_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据同步执行日志';
+
+-- ----------------------------------------------------------
+-- 24. 服务管理节点操作日志
+-- 一行 = 一次操作，由 @SysLog 切面发事件、ServerOperLogListener 落库。
+-- 保留窗口由 ServerOperLogScheduler 滚动清理。
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ms_server_oper_log`
+(
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `node_id`     BIGINT       NOT NULL COMMENT '节点 id（ms_server_node.id）',
+    `node_name`   VARCHAR(128) NULL DEFAULT '' COMMENT '节点名称（冗余，节点删除后仍可读）',
+    `action`      VARCHAR(64)  NOT NULL COMMENT '操作码：CREATE/UPDATE/HOT_UPDATE/FILTER_*/START/STOP/DELETE',
+    `action_name` VARCHAR(128) NULL DEFAULT '' COMMENT '操作中文名',
+    `target`      VARCHAR(255) NULL DEFAULT '' COMMENT '操作对象（协议与监听地址摘要），可空',
+    `detail`      TEXT         NULL COMMENT '补充说明',
+    `success`     TINYINT      NULL COMMENT '1 成功 / 0 失败 / NULL 未判定',
+    `cost_ms`     BIGINT       NULL COMMENT '耗时（毫秒）',
+    `operator`    VARCHAR(64)  NULL DEFAULT '' COMMENT '操作人',
+    `client_ip`   VARCHAR(64)  NULL DEFAULT '' COMMENT '客户端 IP',
+    `request_url` VARCHAR(512) NULL DEFAULT '' COMMENT '请求路径（用于回溯与排查）',
+    `create_time` DATETIME     NOT NULL COMMENT '操作时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_server_oper_log_node_time` (`node_id`, `create_time`),
+    KEY `idx_ms_server_oper_log_action` (`node_id`, `action`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='服务管理节点操作日志';
+
+-- ----------------------------------------------------------
+-- 25. APM 操作日志
+-- 一行 = 一次 APM 写操作，由 ApmDispatcher 回调 ApmOperLogSink 落库。
+-- 只记写操作（POST）；保留窗口由 ApmOperLogScheduler 滚动清理。
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ms_apm_oper_log`
+(
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `action`      VARCHAR(64)  NOT NULL COMMENT '操作码：CONFIG_UPDATE/DETECT',
+    `action_name` VARCHAR(128) NULL DEFAULT '' COMMENT '操作中文名',
+    `target`      VARCHAR(255) NULL DEFAULT '' COMMENT '操作对象（本次改动的设置项）',
+    `detail`      TEXT         NULL COMMENT '补充说明',
+    `success`     TINYINT      NULL COMMENT '1 成功 / 0 失败 / NULL 未判定',
+    `cost_ms`     BIGINT       NULL COMMENT '耗时（毫秒）',
+    `operator`    VARCHAR(64)  NULL DEFAULT '' COMMENT '操作人',
+    `client_ip`   VARCHAR(64)  NULL DEFAULT '' COMMENT '客户端 IP',
+    `request_url` VARCHAR(512) NULL DEFAULT '' COMMENT '请求路径（用于回溯与排查）',
+    `create_time` DATETIME     NOT NULL COMMENT '操作时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_ms_apm_oper_log_time` (`create_time`),
+    KEY `idx_ms_apm_oper_log_action` (`action`, `create_time`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='APM 操作日志';
+
+-- ----------------------------------------------------------
+-- 26. ACME 账户 / 证书 / 订单（证书管理）
+-- 语句全部 IF NOT EXISTS，存量库重复执行安全。
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `monitor_acme_account` (
+  `acme_account_id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `acme_account_email` varchar(255) NULL DEFAULT NULL COMMENT '账号邮箱',
+  `acme_account_server` varchar(255) NULL DEFAULT NULL COMMENT 'ACME 服务端点',
+  `acme_account_provider_type` varchar(32) NOT NULL DEFAULT 'acme' COMMENT '证书服务商类型(acme=ACME协议/acme4j、cas=阿里云CAS)',
+  `acme_account_status` varchar(255) NULL DEFAULT NULL COMMENT '账户状态',
+  `acme_account_private_key_pem` text NULL DEFAULT NULL COMMENT '账户私钥（PEM）',
+  `acme_account_eab_kid` varchar(255) NULL DEFAULT NULL COMMENT 'EAB Key ID (ZeroSSL 等需要)',
+  `acme_account_eab_hmac_key` varchar(512) NULL DEFAULT NULL COMMENT 'EAB HMAC Key (Base64 编码)',
+  `acme_account_timeout_seconds` int NULL DEFAULT 60 COMMENT 'ACME 网络请求超时（秒）',
+  `acme_account_remark` varchar(255) NULL DEFAULT NULL COMMENT '备注',
+  `create_name` varchar(255) NULL DEFAULT NULL COMMENT '创建人姓名',
+  `create_by` int NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime(6) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(6) NULL DEFAULT NULL COMMENT '更新时间',
+  `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
+  `update_by` int NULL DEFAULT NULL COMMENT '更新人',
+  PRIMARY KEY (`acme_account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ACME 账户表';
+
+CREATE TABLE IF NOT EXISTS `monitor_acme_certificate` (
+  `acme_cert_id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `acme_account_id` int NULL DEFAULT NULL COMMENT '账户ID',
+  `acme_cert_primary_domain` varchar(255) NULL DEFAULT NULL COMMENT '主域名',
+  `acme_cert_san` varchar(255) NULL DEFAULT NULL COMMENT '备用域名(SAN)，逗号分隔',
+  `acme_cert_challenge_type` varchar(255) NULL DEFAULT NULL COMMENT '挑战类型（HTTP-01/DNS-01）',
+  `acme_cert_status` varchar(255) NULL DEFAULT NULL COMMENT '证书状态',
+  `acme_cert_not_before` varchar(255) NULL DEFAULT NULL COMMENT '有效期起',
+  `acme_cert_not_after` varchar(255) NULL DEFAULT NULL COMMENT '有效期止',
+  `acme_cert_renew_at` varchar(255) NULL DEFAULT NULL COMMENT '计划续签日期',
+  `acme_cert_chain_pem` text NULL COMMENT '证书PEM（含链）',
+  `acme_cert_key_pem` text NULL COMMENT '私钥PEM',
+  `acme_cert_last_error` varchar(255) NULL DEFAULT NULL COMMENT '最近错误',
+  `acme_cert_deploy_mode` varchar(20) NULL DEFAULT 'manual' COMMENT '部署模式：local(本机自动)/manual(手动)',
+  `acme_cert_webroot_path` varchar(255) NULL DEFAULT NULL COMMENT '本机模式webroot路径',
+  `create_name` varchar(255) NULL DEFAULT NULL COMMENT '创建人姓名',
+  `create_by` int NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime(6) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(6) NULL DEFAULT NULL COMMENT '更新时间',
+  `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
+  `update_by` int NULL DEFAULT NULL COMMENT '更新人',
+  PRIMARY KEY (`acme_cert_id`),
+  KEY `monitor_acme_certificate_idx_account_id` (`acme_account_id`),
+  KEY `monitor_acme_certificate_idx_domain` (`acme_cert_primary_domain`),
+  KEY `monitor_acme_certificate_idx_status` (`acme_cert_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ACME 证书表';
+
+CREATE TABLE IF NOT EXISTS `monitor_acme_order` (
+  `acme_order_id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `acme_account_id` int NULL DEFAULT NULL COMMENT '账户ID',
+  `acme_cert_id` int NULL DEFAULT NULL COMMENT '证书ID',
+  `acme_order_url` varchar(255) NULL DEFAULT NULL COMMENT '订单URL',
+  `acme_authz_urls` text NULL COMMENT '授权URL列表(JSON)',
+  `acme_order_status` varchar(255) NULL DEFAULT NULL COMMENT '状态',
+  `acme_certificate_url` varchar(255) NULL DEFAULT NULL COMMENT '最终证书URL',
+  `create_name` varchar(255) NULL DEFAULT NULL COMMENT '创建人姓名',
+  `create_by` int NULL DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime(6) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime(6) NULL DEFAULT NULL COMMENT '更新时间',
+  `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
+  `update_by` int NULL DEFAULT NULL COMMENT '更新人',
+  PRIMARY KEY (`acme_order_id`),
+  KEY `monitor_acme_order_idx_account_id` (`acme_account_id`),
+  KEY `monitor_acme_order_idx_cert_id` (`acme_cert_id`),
+  KEY `monitor_acme_order_idx_status` (`acme_order_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ACME 订单表';
+
+-- ============================================================
+-- [三] 存量库兼容 ALTER（源自原 V4.0.0.45 / 53 / 57 / 58）
+--
+-- 上面的 CREATE TABLE IF NOT EXISTS 对**已存在**的表不会补列/补索引，
+-- 故此处在建表之后用 information_schema 判存补齐（与 ai 模块 init 脚本
+-- 同一套写法，MySQL 8.4 / MariaDB 11.8 均不支持 ADD COLUMN IF NOT EXISTS，
+-- 存储过程 + DELIMITER 又会被 FlywayLike 按分号切坏，故用 SET @ddl +
+-- PREPARE 动态 DDL；列/索引已存在时执行 DO 0，可重复执行）。
+--
+-- 注：SET @ddl = ... 是 MySQL 语法，H2 下会失败；内置迁移器已支持
+--     continue-on-error（单条失败记日志继续），故 H2 环境安全跳过这些语句。
+-- ============================================================
+
+-- ms_sync_task_run_log 读/写行数（V4.0.0.45）
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_sync_task_run_log')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_sync_task_run_log'
+             AND COLUMN_NAME = 'ms_sync_task_run_log_read_count'),
+    'ALTER TABLE `ms_sync_task_run_log` ADD COLUMN `ms_sync_task_run_log_read_count` BIGINT DEFAULT NULL COMMENT ''本轮读取行数（执行结束时从过程日志解析）'' AFTER `ms_sync_task_run_log_line_count`',
+    'DO 0'));
+PREPARE ms_sync_run_log_stmt FROM @ddl;
+EXECUTE ms_sync_run_log_stmt;
+DEALLOCATE PREPARE ms_sync_run_log_stmt;
+
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_sync_task_run_log')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_sync_task_run_log'
+             AND COLUMN_NAME = 'ms_sync_task_run_log_write_count'),
+    'ALTER TABLE `ms_sync_task_run_log` ADD COLUMN `ms_sync_task_run_log_write_count` BIGINT DEFAULT NULL COMMENT ''本轮写入行数（执行结束时从过程日志解析）'' AFTER `ms_sync_task_run_log_read_count`',
+    'DO 0'));
+PREPARE ms_sync_run_log_stmt FROM @ddl;
+EXECUTE ms_sync_run_log_stmt;
+DEALLOCATE PREPARE ms_sync_run_log_stmt;
+
+-- ms_monitor_alarm_policy 归属主机列 + 索引（V4.0.0.53 / 58）
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_monitor_alarm_policy')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_monitor_alarm_policy'
+             AND COLUMN_NAME = 'ms_server_host_id'),
+    'ALTER TABLE `ms_monitor_alarm_policy` ADD COLUMN `ms_server_host_id` BIGINT NULL COMMENT ''归属主机ID,空为全局策略''',
+    'DO 0'));
+PREPARE ms_alarm_policy_host_stmt FROM @ddl;
+EXECUTE ms_alarm_policy_host_stmt;
+DEALLOCATE PREPARE ms_alarm_policy_host_stmt;
+
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_monitor_alarm_policy')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.STATISTICS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_monitor_alarm_policy'
+             AND INDEX_NAME = 'idx_ms_monitor_alarm_policy_host'),
+    'ALTER TABLE `ms_monitor_alarm_policy` ADD KEY `idx_ms_monitor_alarm_policy_host` (`ms_server_host_id`)',
+    'DO 0'));
+PREPARE ms_alarm_policy_host_idx_stmt FROM @ddl;
+EXECUTE ms_alarm_policy_host_idx_stmt;
+DEALLOCATE PREPARE ms_alarm_policy_host_idx_stmt;
+
+-- ms_host_metric_history 网络收发列（V4.0.0.57）
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_host_metric_history')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_host_metric_history'
+             AND COLUMN_NAME = 'ms_host_metric_history_net_rx_kbs'),
+    'ALTER TABLE `ms_host_metric_history` ADD COLUMN `ms_host_metric_history_net_rx_kbs` DOUBLE DEFAULT NULL',
+    'DO 0'));
+PREPARE ms_host_net_io_stmt FROM @ddl;
+EXECUTE ms_host_net_io_stmt;
+DEALLOCATE PREPARE ms_host_net_io_stmt;
+
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_host_metric_history')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_host_metric_history'
+             AND COLUMN_NAME = 'ms_host_metric_history_net_tx_kbs'),
+    'ALTER TABLE `ms_host_metric_history` ADD COLUMN `ms_host_metric_history_net_tx_kbs` DOUBLE DEFAULT NULL',
+    'DO 0'));
+PREPARE ms_host_net_io_stmt FROM @ddl;
+EXECUTE ms_host_net_io_stmt;
+DEALLOCATE PREPARE ms_host_net_io_stmt;
+
+-- ms_server_host 台账网络收发列（V4.0.0.57；表归属 server 模块，此处只为存量库补列）
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_server_host')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_server_host'
+             AND COLUMN_NAME = 'ms_server_host_net_rx_kbs'),
+    'ALTER TABLE `ms_server_host` ADD COLUMN `ms_server_host_net_rx_kbs` DECIMAL(12,2) NULL',
+    'DO 0'));
+PREPARE ms_host_net_io_stmt FROM @ddl;
+EXECUTE ms_host_net_io_stmt;
+DEALLOCATE PREPARE ms_host_net_io_stmt;
+
+SET @ddl = (SELECT IF(
+    EXISTS(SELECT 1 FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_server_host')
+    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME = 'ms_server_host'
+             AND COLUMN_NAME = 'ms_server_host_net_tx_kbs'),
+    'ALTER TABLE `ms_server_host` ADD COLUMN `ms_server_host_net_tx_kbs` DECIMAL(12,2) NULL',
+    'DO 0'));
+PREPARE ms_host_net_io_stmt FROM @ddl;
+EXECUTE ms_host_net_io_stmt;
+DEALLOCATE PREPARE ms_host_net_io_stmt;

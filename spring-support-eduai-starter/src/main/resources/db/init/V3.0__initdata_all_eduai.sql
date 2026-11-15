@@ -1,10 +1,16 @@
 -- =====================================================================
--- V2.0__initdata_all_eduai.sql - spring-support-eduai-starter 全量种子
+-- V3.0__initdata_all_eduai.sql - spring-support-eduai-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；表结构就位后执行。
 -- 说明: 本文件是该模块唯一的种子数据入口。此前分散的
 --   V1.1 / V1.7 / V1.8 / V1.10 / V1.11 / V1.12 已在本次收敛中并入本文件并删除。
 --   V1.1 是体积最大的种子（成语 / 谚语 / 昆虫 / 采集任务配置），
 --   由 tools/gen-*-seed.py 生成，不要手工编辑。
+-- 版本递进: V2.1 -> V3.0。原 V2.7 / V2.8 / V2.9 / V2.10 / V2.14 / V2.15 /
+--   V2.16 / V2.18 八个数据修复增量脚本（collect_flow DSL / collect_task
+--   悬挂任务 / edu_fun_config 清理）已在本次收敛中并入文末 [9] 节并删除；
+--   两条结构放宽（V2.13 word_structure、V2.17 poem 三列）进入
+--   V3.0__init_all_eduai.sql。FlywayLike 按「脚本名 + 版本」记账，
+--   合并增量须递进版本号，否则存量库不会重跑。
 -- 约束: 全部语句必须幂等（INSERT IGNORE / ON DUPLICATE KEY / 条件 UPDATE），
 --   可反复执行。data-scan-mode=ONCE 时只在空库执行一次。
 -- =====================================================================
@@ -30461,4 +30467,189 @@ FROM edu_hanzi h
 WHERE h.hanzi_char = '讌'
   AND NOT EXISTS (SELECT 1 FROM edu_hanzi_tongjia t
                   WHERE t.tongjia_hanzi_id = h.hanzi_id AND t.tongjia_char = '宴');
+
+-- =====================================================================
+-- [9] 语料采集流程数据修复（原 V2.7 / V2.8 / V2.9 / V2.10 / V2.14 /
+--      V2.15 / V2.16 / V2.18 增量脚本，本次收敛已删除，语句并入本节）
+-- 通道说明：collect_flow / collect_task / edu_fun_config 是采集平台或
+--   教育模块的表。生产分库时这些表可能不在 eduai 库，框架按元数据
+--   判存跳过；本地单库（采集 starter 与 eduai 同库）时正常落库。
+-- 幂等：全部 UPDATE/DELETE 带命中条件或状态流转，可反复执行。
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- [9.1] 修正 V2.6 六条流程的种子 URL 引用（原 V2.7__fix_edu_collect_flows_url_ref.sql）
+-- 请求节点执行后会覆盖 variables.url，故 URL 列表要用 Start 节点的
+-- 默认输出变量 data（${data[0]}），而不是 ${url[0]}。
+-- ---------------------------------------------------------------------
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '${url[0]}', '${data[0]}'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` = 'edu_word_textbook'
+  AND `collect_flow_dsl` LIKE '%${url[0]}%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '${url[0]}', '${data[0]}'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` = 'edu_hanzi_moe_table'
+  AND `collect_flow_dsl` LIKE '%${url[0]}%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '${url[0]}', '${data[0]}'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` = 'edu_poem_lunyu'
+  AND `collect_flow_dsl` LIKE '%${url[0]}%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '${url[0]}', '${data[0]}'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` = 'edu_poem_shijing'
+  AND `collect_flow_dsl` LIKE '%${url[0]}%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '${url[0]}', '${data[0]}'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` = 'edu_poem_chuci'
+  AND `collect_flow_dsl` LIKE '%${url[0]}%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '${url[0]}', '${data[0]}'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` = 'edu_poem_songci'
+  AND `collect_flow_dsl` LIKE '%${url[0]}%';
+
+-- ---------------------------------------------------------------------
+-- [9.2] 修正种子 URL 被写成「...<文件名>.CLOB」（原 V2.8__fix_edu_collect_seed_url.sql）
+-- 方言转换器改写类型名时误伤字符串里的 .json，落库成 .CLOB 伪后缀。
+-- ---------------------------------------------------------------------
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '.CLOB', '.json'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%.CLOB%';
+
+-- ---------------------------------------------------------------------
+-- [9.3] 修正流程 DSL 里被方言转换器改坏的种子 URL / 来源字段伪后缀
+--       （原 V2.9__fix_edu_collect_flow_pseudo_suffix.sql）
+-- 只改 edu_* 流程的 collect_flow_dsl：.CLOB 还原 .json、
+-- jsdelivr 镜像的 at 残留还原为 @。
+-- ---------------------------------------------------------------------
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '.CLOB', '.json'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%.CLOB%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'xinhuaat master', 'xinhua@master'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%xinhuaat master%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'at master/', '@master/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%at master/%';
+
+-- ---------------------------------------------------------------------
+-- [9.4] 修正 jsdelivr 镜像路径里的 `xinhuaat master`（原 V2.10__fix_edu_jsdelivr_username.sql）
+-- ---------------------------------------------------------------------
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'xinhuaat master', 'xinhua/master'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%xinhuaat master%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'at master', '/master'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%at master%';
+
+-- ---------------------------------------------------------------------
+-- [9.5] 清理悬挂的采集任务（原 V2.14__reset_edu_collect_hanging_tasks.sql）
+-- 进程强杀导致任务永久停在 READY/RUNNING，引擎并发闸门会拦截同流程
+-- 新任务；重启时统一收敛为 FAILURE。
+-- ---------------------------------------------------------------------
+UPDATE `collect_task`
+SET `collect_task_status` = 'FAILURE',
+    `collect_task_error` = '服务重启时该任务仍在执行中，已标记为失败（可重新发起采集）'
+WHERE `collect_task_status` IN ('READY', 'RUNNING');
+
+-- ---------------------------------------------------------------------
+-- [9.6] 采集种子统一改走可用代理（原 V2.15__fix_edu_collect_seeds_via_proxy.sql）
+-- raw.githubusercontent.com 502、jsdelivr 对 >20MB 文件 403 期间，
+-- 实测 ghfast.top 代理可用；顺带还原被吞损的 at 分隔符。
+-- ---------------------------------------------------------------------
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'pwxcoo/chinese-xinhuaat ', 'pwxcoo/chinese-xinhua/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%pwxcoo/chinese-xinhuaat %';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'chinese-poetry/chinese-poetry-zhCNat ', 'chinese-poetry/chinese-poetry-zhCN/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%chinese-poetry/chinese-poetry-zhCNat %';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'chinese-poetry/chinese-poetryat ', 'chinese-poetry/chinese-poetry/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%chinese-poetry/chinese-poetryat %';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '7jul/yuwen_wordsat ', '7jul/yuwen_words/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%7jul/yuwen_wordsat %';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'https://fastly.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%fastly.jsdelivr.net/gh/%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'https://cdn.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%cdn.jsdelivr.net/gh/%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'https://ghfast.top/https://raw.githubusercontent.com/', 'https://raw.githubusercontent.com/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%ghfast.top/https://raw.githubusercontent.com/%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, 'https://raw.githubusercontent.com/', 'https://ghfast.top/https://raw.githubusercontent.com/'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%https://raw.githubusercontent.com/%';
+
+UPDATE `collect_flow`
+SET `collect_flow_dsl` = REPLACE(`collect_flow_dsl`, '"name":"timeout","value":"300000"', '"name":"timeout","value":"900000"'),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_dsl` LIKE '%"name":"timeout","value":"300000"%';
+
+-- ---------------------------------------------------------------------
+-- [9.7] 修正流程备注里的伪后缀（原 V2.16__fix_edu_collect_flow_remark_suffix.sql）
+-- ---------------------------------------------------------------------
+UPDATE `collect_flow`
+SET `collect_flow_remark` = REPLACE(`collect_flow_remark`, '.CLOB', ''),
+    `update_time` = CURRENT_TIMESTAMP
+WHERE `collect_flow_code` LIKE 'edu\_%' ESCAPE '\'
+  AND `collect_flow_remark` LIKE '%.CLOB%';
+
+-- ---------------------------------------------------------------------
+-- [9.8] 清理学段为空的通用门户菜单（原 V2.18__remove_generic_fun_config.sql）
+-- 只删 5 个已知编码的趣味模块通用行，避免误删管理员新增的通用行。
+-- ---------------------------------------------------------------------
+DELETE FROM `edu_fun_config`
+WHERE `fun_config_grade_level` IS NULL
+  AND `module_code` IN ('INSECT', 'IDIOM_GAME', 'poem-challenge', 'IDIOM_BANK', 'poem-game');
 

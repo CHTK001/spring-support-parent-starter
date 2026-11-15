@@ -1,8 +1,13 @@
 -- =====================================================================
--- V1.0__init_all_api_collect.sql - spring-support-collect-starter 全量 DDL
+-- V2.0__init_all_api_collect.sql - spring-support-collect-starter 全量表结构
 -- 通道: INIT 同步建表（MySQL 8 语法，H2 MODE=MySQL 回放），索引按 INDEX `表名_idx_/uk_列` 内联声明。
 -- 种子数据见 V1.0__initdata_all_api_collect.sql（INITDATA 通道，幂等）。
 -- 列名统一带表名前缀，公共审计列沿用 SysBase（create_*/update_*）。
+-- 版本递进: V1.0 -> V2.0。原 V1.1__add_collect_setting.sql 的 collect_setting 已并入
+--   本文件（见 collect_function 之后的段落），增量脚本已删除。FlywayLike 按
+--   「脚本名 + 版本」记账，命中成功记录即跳过（checksum 变化只做校验、不会触发
+--   重跑），故合并增量必须递进版本号，否则存量库不会重跑、collect_setting
+--   补不进去；本文件全部 CREATE TABLE IF NOT EXISTS，老库重跑自动补齐缺失表。
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -242,6 +247,24 @@ CREATE TABLE IF NOT EXISTS `collect_function` (
     PRIMARY KEY (`collect_function_id`),
     UNIQUE INDEX `collect_function_uk_name` (`collect_function_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据采集-自定义函数';
+
+-- ---------------------------------------------------------------------
+-- 采集平台运行参数（界面可配；原 V1.1__add_collect_setting.sql，已并入本文件）
+-- 只存界面覆盖值，缺省仍以 yml 的 plugin.collect.* 为准。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `collect_setting` (
+    `collect_setting_id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `collect_setting_key` varchar(128) NOT NULL COMMENT '配置键（plugin.collect.* 的短名）',
+    `collect_setting_value` varchar(2000) NULL DEFAULT NULL COMMENT '配置值，统一按字符串存储',
+    `create_name` varchar(255) NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by` int NULL DEFAULT NULL COMMENT '创建人',
+    `create_time` datetime(6) NULL DEFAULT NULL COMMENT '创建时间',
+    `update_time` datetime(6) NULL DEFAULT NULL COMMENT '更新时间',
+    `update_name` varchar(255) NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by` int NULL DEFAULT NULL COMMENT '更新人',
+    PRIMARY KEY (`collect_setting_id`),
+    UNIQUE INDEX `collect_setting_uk_key` (`collect_setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据采集-平台运行参数';
 
 -- ---------------------------------------------------------------------
 -- 采集告警规则（失败次数/零产出/数据量骤降/节点超时/错误率）

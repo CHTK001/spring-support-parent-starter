@@ -1,5 +1,5 @@
 -- =====================================================================
--- V2.0__init_all_device.sql - spring-support-device-starter 全量表结构
+-- V2.4__init_all_device.sql - spring-support-device-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口。此前分散的
 --   V1.0__init_all_device.sql / V1.1__add_cloud_yao_fields.sql /
@@ -12,6 +12,14 @@
 --      不再依赖「先建表再补列」的两段式；
 --   2. 存量库补列的 ALTER 仍原样保留在文件末尾（information_schema 判存 + 动态 DDL），
 --      否则老库缺列；新建库上这些语句会因列已存在而跳过。
+--
+-- 版本递进: V2.0 -> V2.4。原 V2.1__fix_device_collation.sql（collation 统一）、
+--   V2.2__device_timeseries.sql（device_series_point）、V2.3__device_schema_repair.sql
+--   （老库补齐 device_person / device_metric_latest / 车辆系列表 / credential 补列）
+--   均已并入本文件并删除。FlywayLike 按「脚本名 + 版本」记账，命中成功记录即跳过
+--   （checksum 变化只做校验、不会触发重跑），故合并增量必须递进版本号，否则存量库
+--   不会重跑、并入的表与补列不会生效；本文件全部语句幂等（CREATE TABLE IF NOT EXISTS
+--   + information_schema 判存的动态 DDL），老库重跑自动补齐缺失对象。
 --
 -- 约束: MySQL 专属语法（COMMENT 内联注释 / ENGINE=InnoDB / SET @var + PREPARE 动态 DDL）。
 --   MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS、MariaDB 11.8 同样拒绝，
@@ -969,3 +977,15 @@ CREATE TABLE IF NOT EXISTS device_vehicle_pass_cursor (
     device_vehicle_pass_cursor_updated_at  DATETIME DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (device_vehicle_pass_cursor_device_id)
 ) COMMENT '过车拉取游标';
+
+-- ---------------------------------------------------------------------
+-- [兼容段] 排序规则统一（原 V2.1__fix_device_collation.sql，已并入本文件）
+-- 设备台账与分组关联表的排序规则必须一致。
+-- 历史库里 device_info 继承了库默认的 utf8mb4_general_ci，而 device_group /
+-- device_group_device 是 utf8mb4_unicode_ci，分组筛选的 EXISTS 会直接报
+-- "Illegal mix of collations"（表现为设备列表 500、前端提示「加载设备列表失败」）。
+-- 这里统一到 utf8mb4_unicode_ci；重复执行无副作用。
+-- ---------------------------------------------------------------------
+ALTER TABLE device_info CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE device_group CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE device_group_device CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

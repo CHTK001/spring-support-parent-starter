@@ -1,16 +1,28 @@
 -- =====================================================================
--- V2.0__init_all_server.sql - spring-support-server-starter 全量表结构
+-- V3.0__init_all_server.sql - spring-support-server-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口。此前分散的
 --   V1.0__init_all_server.sql 已在本次收敛中并入本文件并删除。
+--   V2.1__add_git_auto_deploy.sql / V2.2__add_release_schedule.sql /
+--   V2.3__add_project_op_log.sql / V2.4__add_jdk_home.sql /
+--   V2.5__drop_upload_auto_upgrade.sql / V2.6__add_release_skywalking.sql
+--   已在本次版本递进（V2.0 -> V3.0）中并入本文件并删除。
+-- 版本递进原因: FlywayLike 按「脚本名 + 版本」记账，命中成功记录即跳过
+--   （checksum 变化只做校验、不会触发重跑），故合并增量必须递进版本号，
+--   否则存量库不会重跑、并入的补列与建表不会生效。
+-- 约束: MySQL 专属语法（COMMENT 内联注释 / ENGINE=InnoDB /
+--   SET @var + PREPARE 动态 DDL）。MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS、
+--   MariaDB 11.8 同样拒绝，故存量库补列/删列一律沿用 information_schema
+--   判存的动态 DDL 写法，可重复执行。
 -- =====================================================================
 -- =====================================================================
 -- 服务器资产模块 DDL 初始化脚本 (spring-support-server-starter) 合并版
 -- 目标库: MySQL 8.0+ / 兼容 H2 MySQL 模式
 -- 说明: 表名与列名均以 ms_server_* 前缀组织, 与监控模块(ms_monitor_*)风格一致
--- 本文件为唯一 DDL: 全部建表 + 主机延迟检测补列 + 系统配置初始化数据
+-- 本文件为唯一 DDL: 全部建表 + 存量库兼容段（information_schema 判存动态 DDL）
 -- 来源: 原 V1.0__init_server + V1.1__add_host_delay_detect + V1.0__initdata_server
--- 幂等: 建表 IF NOT EXISTS, 补列 IF NOT EXISTS, INSERT IGNORE
+-- 幂等: 建表 IF NOT EXISTS, 补列/删列 information_schema 判存, INSERT IGNORE
+-- 存量库兼容段见文件尾部（原 V2.1 ~ V2.6 的补列/删列，已并入并删除）
 -- @author CH
 -- @since 4.0.0.42
 -- =====================================================================
@@ -347,7 +359,6 @@ CREATE TABLE IF NOT EXISTS ms_server_project (
     upload_extract TINYINT      NULL DEFAULT 1          COMMENT '上传时是否自动解压(jar不解压;zip/tar解压;模型上传设0保留原文件)',
     upload_target_dir VARCHAR(255) NULL                 COMMENT '上传目标目录(相对项目地址,如models/onnx;jar类留空则投放到主入口)',
     deploy_type    VARCHAR(16)  NULL DEFAULT 'main'     COMMENT '分离式部署类型: main=仅主包; lib=仅依赖; both=全部',
-    upload_auto_upgrade TINYINT NULL DEFAULT 0          COMMENT '上传完成后是否自动升级(0=只上传,1=上传后升级)',
     schedule_enabled TINYINT    NULL DEFAULT 0          COMMENT '是否启用定时发布(一次性)',
     schedule_time  DATETIME     NULL                    COMMENT '定时发布时间(一次性)',
     schedule_status VARCHAR(16) NULL DEFAULT 'NONE'     COMMENT '定时发布状态: NONE/PENDING/DONE/FAILED/CANCELED',
@@ -362,7 +373,36 @@ CREATE TABLE IF NOT EXISTS ms_server_project (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '项目管理';
 
 -- ---------------------------------------------------------------------
--- 14. 发布管理
+-- 14b. 项目操作日志（原 V2.3__add_project_op_log.sql，已并入本文件）
+-- 所有项目操作（创建/修改/删除/启动/停止/重启/升级/备份/回滚/Git发布/
+-- 挂载系统服务等）都落一条记录，供「日志管理」按项目/操作/状态检索。
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_server_project_op_log
+(
+    id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    project_id      BIGINT       NULL                    COMMENT '项目ID',
+    project_name    VARCHAR(128) NULL                    COMMENT '项目名称(冗余,项目删除后仍可读)',
+    release_id      BIGINT       NULL                    COMMENT '发布ID',
+    operation       VARCHAR(64)  NOT NULL                COMMENT '操作类型: create/update/delete/start/stop/restart/upgrade/backup/rollback/deploy/install-service 等',
+    operation_label VARCHAR(64)  NULL                    COMMENT '操作中文名(展示用)',
+    status          VARCHAR(16)  NOT NULL                COMMENT '状态: RUNNING/SUCCESS/FAILED',
+    message         VARCHAR(2000) NULL                   COMMENT '结果说明或失败原因',
+    task_id         VARCHAR(64)  NULL                    COMMENT '异步任务标识(同步操作为空)',
+    operator_name   VARCHAR(64)  NULL                    COMMENT '触发人',
+    start_time      DATETIME     NULL                    COMMENT '开始时间',
+    end_time        DATETIME     NULL                    COMMENT '结束时间(RUNNING时为空)',
+    duration_ms     BIGINT       NULL                    COMMENT '耗时(毫秒)',
+    PRIMARY KEY (id),
+    KEY idx_op_log_project (project_id),
+    KEY idx_op_log_release (release_id),
+    KEY idx_op_log_task (task_id),
+    KEY idx_op_log_time (start_time),
+    KEY idx_op_log_status (status)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='发布管理-项目操作日志';
+
+-- ---------------------------------------------------------------------
+-- 15. 发布管理
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ms_server_release (
     id           BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -381,12 +421,84 @@ CREATE TABLE IF NOT EXISTS ms_server_release (
     KEY idx_server_release_host (host_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '发布管理';
 
+-- =====================================================================
+-- [兼容段] 存量库补齐（原 V2.1 ~ V2.6 增量已并入并删除）
+--
+-- 背景：V2.0 是「唯一建表入口」，但历史演进中 ms_server_project /
+--   ms_server_release 的补列与删列曾以独立增量脚本下发；已经被标记执行过
+--   V2.0 的库存不到这些新增内容（表现：发布管理打开即 500「Unknown column」）。
+--
+-- 约束：全部语句幂等 —— MySQL 8.4 / MariaDB 11.8 都拒绝 ADD/DROP COLUMN
+--   IF NOT EXISTS，一律走 information_schema 判存 + PREPARE 动态 DDL，
+--   新库（上面 CREATE TABLE 已内联）与老库（缺列/多列）都可反复执行。
+-- =====================================================================
+
 -- ---------------------------------------------------------------------
--- 历史增量列（V1.1 延迟检测 / V1.10 / V1.11、主机扩展采集字段）已全部并入上面的
--- CREATE TABLE 全量定义，此处不再输出兼容 ALTER：
---   1) 新库由全量建表覆盖，不需要补列；
---   2) MySQL 的 ADD COLUMN 不支持 IF NOT EXISTS，保留这些语句只会在每次启动产生语法错误，
---      再被 continue-on-error 静默吞掉，并向版本表写入 FAILED 记录；
---   3) 存量库确需补列时，走独立的一次性 ALTER 变更单，不混进初始化脚本。
+-- [V2.1] ms_server_project: Git 自动发布 + 分离式部署列
 -- ---------------------------------------------------------------------
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_url'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_url VARCHAR(512) NULL COMMENT ''Git仓库地址'' AFTER nginx_dir');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_branch'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_branch VARCHAR(128) NULL DEFAULT ''main'' COMMENT ''Git分支'' AFTER git_url');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_auth_type'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_auth_type VARCHAR(16) NULL DEFAULT ''none'' COMMENT ''Git认证: none/token'' AFTER git_branch');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_token'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_token VARCHAR(512) NULL COMMENT ''Git访问令牌'' AFTER git_auth_type');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_build_goals'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_build_goals VARCHAR(255) NULL DEFAULT ''clean,package'' COMMENT ''Maven构建目标'' AFTER git_token');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_skip_tests'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_skip_tests TINYINT NULL DEFAULT 1 COMMENT ''是否跳过测试'' AFTER git_build_goals');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'maven_home'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN maven_home VARCHAR(512) NULL COMMENT ''Maven安装路径(留空则自动检测/下载)'' AFTER git_skip_tests');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'maven_version'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN maven_version VARCHAR(32) NULL DEFAULT ''3.9.9'' COMMENT ''Maven版本(自动下载时使用)'' AFTER maven_home');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'upload_extract'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN upload_extract TINYINT NULL DEFAULT 1 COMMENT ''上传时是否自动解压(jar不解压;zip/tar解压;模型上传设0保留原文件)'' AFTER maven_version');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'upload_target_dir'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN upload_target_dir VARCHAR(255) NULL COMMENT ''上传目标目录(相对项目地址,如models/onnx;jar类留空则投放到主入口)'' AFTER upload_extract');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'deploy_type'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN deploy_type VARCHAR(16) NULL DEFAULT ''main'' COMMENT ''分离式部署类型: main=仅主包; lib=仅依赖; both=全部'' AFTER upload_target_dir');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ---------------------------------------------------------------------
+-- [V2.2] ms_server_project: 定时发布 / Git 轮询列（upload_auto_upgrade 见下方 [V2.5] 删除）
+-- ---------------------------------------------------------------------
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'schedule_enabled'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN schedule_enabled TINYINT NULL DEFAULT 0 COMMENT ''是否启用定时发布(一次性)'' AFTER deploy_type');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'schedule_time'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN schedule_time DATETIME NULL COMMENT ''定时发布时间(一次性)'' AFTER schedule_enabled');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'schedule_status'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN schedule_status VARCHAR(16) NULL DEFAULT ''NONE'' COMMENT ''定时发布状态: NONE/PENDING/DONE/FAILED/CANCELED'' AFTER schedule_time');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_poll_enabled'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_poll_enabled TINYINT NULL DEFAULT 0 COMMENT ''是否启用Git定时拉取自动发布'' AFTER schedule_status');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_poll_cron'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_poll_cron VARCHAR(64) NULL DEFAULT ''0 */5 * * * ?'' COMMENT ''Git轮询cron表达式'' AFTER git_poll_enabled');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'git_last_commit'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN git_last_commit VARCHAR(64) NULL COMMENT ''最近一次检测到的远端Git提交'' AFTER git_poll_cron');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ---------------------------------------------------------------------
+-- [V2.4] ms_server_project: 项目级 JDK 安装路径
+-- ---------------------------------------------------------------------
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'jdk_home'), 'SELECT 1', 'ALTER TABLE ms_server_project ADD COLUMN jdk_home VARCHAR(512) NULL COMMENT ''JDK安装路径(留空则用PATH上的java)'' AFTER maven_version');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ---------------------------------------------------------------------
+-- [V2.5] ms_server_project: 清理「安装包上传 / 上传后自动升级」遗留字段
+-- 发布管理的产物已改为目标主机上的现成文件，不再接收本机上传；
+-- 该列已无任何读写，删除后仅丢失已废弃开关的历史值。
+-- ---------------------------------------------------------------------
+SET @sql := IF(NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_project' AND COLUMN_NAME = 'upload_auto_upgrade'), 'SELECT 1', 'ALTER TABLE ms_server_project DROP COLUMN upload_auto_upgrade');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- ---------------------------------------------------------------------
+-- [V2.6] ms_server_release: 发布级 SkyWalking 注入列
+-- （新库已在上面 CREATE TABLE 内联；本段只给「先有表、后加字段」的存量库补列）
+-- ---------------------------------------------------------------------
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_release' AND COLUMN_NAME = 'sw_enabled'), 'SELECT 1', 'ALTER TABLE ms_server_release ADD COLUMN sw_enabled TINYINT NULL COMMENT ''是否启用 SkyWalking（0/1）''');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_release' AND COLUMN_NAME = 'sw_jar_path'), 'SELECT 1', 'ALTER TABLE ms_server_release ADD COLUMN sw_jar_path VARCHAR(512) NULL COMMENT ''agent jar 路径（目标主机）''');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_release' AND COLUMN_NAME = 'sw_service_name_prefix'), 'SELECT 1', 'ALTER TABLE ms_server_release ADD COLUMN sw_service_name_prefix VARCHAR(128) NULL COMMENT ''service_name 前缀''');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_server_release' AND COLUMN_NAME = 'sw_backend_service'), 'SELECT 1', 'ALTER TABLE ms_server_release ADD COLUMN sw_backend_service VARCHAR(128) NULL COMMENT ''OAP 地址（collector.backend_service）''');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
