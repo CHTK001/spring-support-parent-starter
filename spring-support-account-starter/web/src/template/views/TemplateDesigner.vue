@@ -93,7 +93,7 @@
                 v-for="item in componentList"
                 :key="item.tid"
                 class="ep-draggable-item"
-                :data-tid="item.tid"
+                :tid="item.tid"
                 :title="item.label"
               >
                 <div class="ep-draggable-item__label">{{ item.label }}</div>
@@ -104,7 +104,7 @@
                 v-for="item in sourceList"
                 :key="item.tid"
                 class="ep-draggable-item"
-                :data-tid="item.tid"
+                :tid="item.tid"
                 :title="item.label"
               >
                 <div class="ep-draggable-item__label">{{ item.label }}</div>
@@ -334,25 +334,32 @@ const tabs = [
   { key: 'sources', label: '数据源' }
 ]
 
-/** 左侧组件列表 */
+/**
+ * 左侧组件列表。
+ *
+ * <p>tid 必须与 hiprint 默认 provider 注册的 tid 完全一致（形如 <code>defaultModule.text</code>），
+ * 否则 <code>buildByHtml</code> 匹配不到元素类型，拖拽静默失效。</p>
+ */
 const componentList = ref<{ tid: string; label: string }[]>([
-  { tid: 'text', label: '单行文本' },
-  { tid: 'longText', label: '多行文本' },
-  { tid: 'text2', label: '多段文本' },
-  { tid: 'table', label: '表格' },
-  { tid: 'barcode', label: '条形码' },
-  { tid: 'qrcode', label: '二维码' },
-  { tid: 'image', label: '图片' },
-  { tid: 'rect', label: '矩形' },
-  { tid: 'oval', label: '椭圆' },
-  { tid: 'vline', label: '竖线' },
-  { tid: 'hline', label: '横线' }
+  { tid: 'defaultModule.text', label: '单行文本' },
+  { tid: 'defaultModule.longText', label: '多行文本' },
+  { tid: 'defaultModule.table', label: '表格' },
+  { tid: 'defaultModule.emptyTable', label: '空白表格' },
+  { tid: 'defaultModule.barcode', label: '条形码' },
+  { tid: 'defaultModule.qrcode', label: '二维码' },
+  { tid: 'defaultModule.image', label: '图片' },
+  { tid: 'defaultModule.html', label: 'HTML' },
+  { tid: 'defaultModule.rect', label: '矩形' },
+  { tid: 'defaultModule.oval', label: '椭圆' },
+  { tid: 'defaultModule.vline', label: '竖线' },
+  { tid: 'defaultModule.hline', label: '横线' }
 ])
 
 /** 数据源列表（虚拟） */
 const sourceList = ref<{ tid: string; label: string }[]>([
-  { tid: 'text', label: '静态文本' },
-  { tid: 'longText', label: '长文本' }
+  { tid: 'defaultModule.text', label: '静态文本' },
+  { tid: 'defaultModule.longText', label: '长文本' },
+  { tid: 'defaultModule.customText', label: '自定义文本' }
 ])
 
 /** 撤销 / 重做开关 */
@@ -487,6 +494,16 @@ watch(mode, async (next, prev) => {
   await createDesign(raw)
 })
 
+/**
+ * 切换「模板组件 / 数据源」会让左侧面板重建 DOM，新节点上没有 hiprint 的
+ * draggable 数据，拖拽会静默失效，所以每次重建后都要重新绑定。
+ */
+watch(dragTab, async () => {
+  if (mode.value !== 'drag') return
+  await nextTick()
+  buildDraggableItems()
+})
+
 /** 把后端 content 统一成字符串（可能是 JSON 对象 / 字符串 / 空） */
 function toContentString(content: unknown): string {
   if (content == null) return ''
@@ -495,6 +512,28 @@ function toContentString(content: unknown): string {
     return JSON.stringify(content, null, 2)
   } catch {
     return String(content)
+  }
+}
+
+/**
+ * 把设计描述字符串解析成 hiprint 需要的对象。
+ *
+ * <p>hiprint 的 <code>template</code> 选项要求对象：内部直接读 <code>t.panels</code>，
+ * 传字符串会被当成「没有 panels」的空模板，画布渲染不出任何元素。
+ * 空串 / 非法 JSON 一律给空模板，避免进入设计器时抛错。</p>
+ *
+ * @param content 设计描述（JSON 字符串 / 空串）
+ * @returns hiprint 模板对象
+ */
+function parseTemplateJson(content: string): Record<string, unknown> {
+  const raw = (content ?? '').trim()
+  if (!raw) return {}
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
+  } catch {
+    // 不是合法 JSON（例如 Vue 沙盒源码）：给空模板，别让设计器崩在初始化
+    return {}
   }
 }
 
@@ -515,13 +554,11 @@ async function loadDefaultPrinter(): Promise<void> {
 
 /** hiprint 框架是否已经过 init */
 let hiprintInitialized = false
-/** 左侧面板的拖拽元素是否已经注册 */
-let draggedItemsRegistered = false
 
 /**
  * 创建 PrintTemplate 并设计画布（首次进入 / 主题变更后重建画布都走它）。
  *
- * @param template hiprint JSON 描述（主题变更后这里是应用了主题的描述）
+ * @param template hiprint 设计描述（JSON 字符串，空串代表空白画布）
  */
 async function createDesign(template: string): Promise<void> {
   // 1. 把 jquery 挂到 window 上（hiprint UMD 版用 window.jQuery）
@@ -536,15 +573,16 @@ async function createDesign(template: string): Promise<void> {
     hiprintInitialized = true
   }
 
-  // 3. 把左侧的 .ep-draggable-item 注册为可拖拽元素——只注册一次
-  if (!draggedItemsRegistered) {
-    buildDraggableItems()
-    draggedItemsRegistered = true
-  }
+  // 3. 把左侧的 .ep-draggable-item 注册为可拖拽元素
+  //    左侧面板每次切换标签页都会重建 DOM，新节点上没有 hiprint 的 draggable 数据，
+  //    所以这里每次 createDesign 都重新绑定（幂等，重复绑定无副作用）
+  buildDraggableItems()
 
   // 4. 创建 PrintTemplate 并进入设计器
+  //    hiprint 的 template 选项要的是对象（内部读 t.panels），传字符串会当成空模板，
+  //    表现为「保存成功但重新进入画布空白」
   const tpl = new hiprint.PrintTemplate({
-    template,
+    template: parseTemplateJson(template),
     settingContainer: '#' + settingContainerId.value,
     paginationContainer: '.hiprint-printPagination',
     providers: [new defaultElementTypeProvider()],
@@ -578,6 +616,7 @@ function buildDraggableItems(): void {
   const panel = libraryRef.value
   if (!panel) return
   const items = panel.querySelectorAll('.ep-draggable-item') as NodeListOf<HTMLElement>
+  if (!items.length) return
   const $items = $(items) as any
   if (window.hiprint?.PrintElementTypeManager?.buildByHtml) {
     window.hiprint.PrintElementTypeManager.buildByHtml($items)
@@ -623,7 +662,9 @@ async function onSave(): Promise<void> {
         saving.value = false
         return
       }
-      content = tpl.getJson()
+      // getJson() 返回的是对象（不是字符串），而后端 content 是 String，
+      // 直接传对象 Jackson 转不成字符串会抛「'content'格式不正确」
+      content = JSON.stringify(tpl.getJson())
     } else {
       if (!sandboxSource.value.trim()) {
         ElMessage.warning('模板代码不能为空')
@@ -733,7 +774,8 @@ async function onThemeChange(id: string): Promise<void> {
     return
   }
   try {
-    const json = tpl.getJson()
+    // getJson() 返回对象，applyTheme 需要字符串/对象都可，这里统一成字符串再回写
+    const json = JSON.stringify(tpl.getJson())
     const themed = applyTheme(json, t)
     selectedTheme.value = t
     await rebuildDesign(themed)
