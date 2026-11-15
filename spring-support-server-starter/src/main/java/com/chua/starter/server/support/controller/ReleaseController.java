@@ -196,6 +196,19 @@ public class ReleaseController {
     }
 
     /**
+     * 启用 / 禁用项目：只动台账开关，不启动也不停止进程。
+     *
+     * @param id      项目标识
+     * @param enabled 目标状态
+     * @return 更新后的项目
+     */
+    @Operation(summary = "启用 / 禁用项目")
+    @PutMapping("/project/{id}/enabled")
+    public ReturnResult<MsServerProject> toggleProject(@PathVariable Long id, @RequestParam boolean enabled) {
+        return releaseService.toggleProject(id, enabled);
+    }
+
+    /**
      * 生成内置四段脚本（前端一键生成/预览的唯一权威来源，与执行期一致）。
      *
      * @param hostId      目标主机标识

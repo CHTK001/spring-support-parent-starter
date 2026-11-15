@@ -68,6 +68,18 @@ public interface ReleaseService {
     ReturnResult<MsServerProject> updateProject(Long id, MsServerProject project);
 
     /**
+     * 启用 / 禁用项目
+     *
+     * <p>只切换台账开关，不动已有进程；操作日志写 toggle（启用/禁用），
+     * 与「修改项目」区分开，前端「启用/禁用」筛选才有数据。</p>
+     *
+     * @param id      项目标识
+     * @param enabled 目标状态
+     * @return 更新后的项目
+     */
+    ReturnResult<MsServerProject> toggleProject(Long id, boolean enabled);
+
+    /**
      * 生成内置四段脚本（启动/停止/重启/状态）。
      *
      * <p>这是前端「一键生成脚本」与服务端默认模板的<strong>唯一权威来源</strong>：

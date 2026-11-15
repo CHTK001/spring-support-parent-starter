@@ -748,6 +748,21 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.ok(exists);
     }
 
+    @Override
+    public ReturnResult<MsServerProject> toggleProject(Long id, boolean enabled) {
+        MsServerProject exists = id == null ? null : projectMapper.selectById(id);
+        if (exists == null) {
+            return ReturnResult.error("项目不存在: " + id);
+        }
+        exists.setEnabled(enabled);
+        exists.setUpdateTime(LocalDateTime.now());
+        projectMapper.updateById(exists);
+        // 单独记 toggle：updateProject 的「修改项目」混着开关，前端按「启用/禁用」筛选会永远查不到
+        recordSyncOp(exists.getId(), exists.getProjectName(), exists.getReleaseId(),
+                "toggle", true, enabled ? "已激活" : "已禁用");
+        return ReturnResult.ok(exists);
+    }
+
       /**
        * 生成内置四段脚本：与执行期（prepare→expandProjectScripts）走完全相同的模板与展开路径，
        * 保证前端预览 / 一键生成与真正下发的脚本逐字一致。
