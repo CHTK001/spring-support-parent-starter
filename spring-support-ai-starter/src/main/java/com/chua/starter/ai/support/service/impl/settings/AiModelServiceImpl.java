@@ -16,6 +16,7 @@ import com.chua.starter.ai.support.service.settings.AiModelService;
 import com.chua.common.support.lang.json.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,16 @@ import java.util.stream.Collectors;
 public class AiModelServiceImpl implements AiModelService {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * {@code sys_ai_model_name} / {@code sys_ai_model_code} 的列宽（VARCHAR(255)）。
+     */
+    private static final int NAME_MAX_LENGTH = 255;
+
+    /**
+     * {@code sys_ai_model_description} / capabilities / pipelines / aliases 的列宽（VARCHAR(512)）。
+     */
+    private static final int TEXT_MAX_LENGTH = 512;
 
     private final AiModelMapper modelMapper;
     private final SysAiManufacturerMapper manufacturerMapper;
@@ -76,6 +87,7 @@ public class AiModelServiceImpl implements AiModelService {
     public AiModelDTO create(AiModelDTO model) {
         requireWritable();
         SysAiModel entity = toEntity(model);
+        validate(entity);
         // 模型清单归属创建者本人：普通账号建出来的东西只在自己名下可见
         entity.setUserId(AiUserContext.requireUserId());
         LocalDateTime now = LocalDateTime.now();
@@ -87,7 +99,15 @@ public class AiModelServiceImpl implements AiModelService {
         if (entity.getModelDeleted() == null) {
             entity.setModelDeleted(0);
         }
-        modelMapper.insert(entity);
+        try {
+            modelMapper.insert(entity);
+        } catch (DuplicateKeyException e) {
+            // 唯一键 sys_ai_model_owner_code（user_id, code）：同一账号下模型标识不能重名。
+            // 不接住的话，异常会落到 common-starter 的 ApiExceptionAdvice#handleDataAccessException
+            // （带 @ResponseStatus(INTERNAL_SERVER_ERROR)），业务级重复被兜成 HTTP 500。
+            log.warn("[SysAiModel] 模型标识重复 owner={} code={}", entity.getUserId(), entity.getModelCode());
+            throw new ApiException(ApiErrorCode.CONFLICT, "模型标识已存在: " + entity.getModelCode());
+        }
         log.debug("[SysAiModel] create success: id={}, code={}, owner={}",
                 entity.getModelId(), entity.getModelCode(), entity.getUserId());
         return toDto(entity, resolveProviderName(entity.getModelProviderId(), null));
@@ -104,11 +124,18 @@ public class AiModelServiceImpl implements AiModelService {
     public AiModelDTO update(Long modelId, AiModelDTO model) {
         SysAiModel existing = requireWritableModel(modelId);
         SysAiModel entity = toEntity(model);
+        validate(entity);
         entity.setModelId(modelId);
         // 归属不可通过更新转移，否则就能把别人的模型「过户」到自己名下
         entity.setUserId(existing.getUserId());
         entity.setModelUpdateTime(LocalDateTime.now());
-        modelMapper.updateById(entity);
+        try {
+            modelMapper.updateById(entity);
+        } catch (DuplicateKeyException e) {
+            // 改成同账号下已存在的 code：同 create，把业务级重复留在 409，而不是兜成 500
+            log.warn("[SysAiModel] 模型标识重复 id={} code={}", modelId, entity.getModelCode());
+            throw new ApiException(ApiErrorCode.CONFLICT, "模型标识已存在: " + entity.getModelCode());
+        }
         log.debug("[SysAiModel] update success: id={}", modelId);
         return toDto(modelMapper.selectById(modelId), resolveProviderName(entity.getModelProviderId(), null));
     }
@@ -342,12 +369,55 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     /**
+     * 入参校验：把建表约束（NOT NULL / 列宽）提到业务层，避免撞库后被兜成 HTTP 500。
+     *
+     * <p>{@code sys_ai_model}（{@code db/init/V6.11__init_all_ai.sql}）里
+     * {@code sys_ai_model_name} / {@code sys_ai_model_code} 是 {@code NOT NULL} 且 VARCHAR(255)，
+     * 描述与各 JSON 列是 VARCHAR(512)。此前不校验：字段缺失撞 NOT NULL、内容超长撞列宽，
+     * 都会落到 common-starter 的 {@code ApiExceptionAdvice#handleDataAccessException}
+     * （带 {@code @ResponseStatus(INTERNAL_SERVER_ERROR)}），于是业务级参数问题被兜成 HTTP 500。</p>
+     *
+     * @param entity 待落库实体
+     */
+    private void validate(SysAiModel entity) {
+        if (entity.getModelName() == null || entity.getModelName().isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "模型名称不能为空");
+        }
+        if (entity.getModelCode() == null || entity.getModelCode().isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "模型标识不能为空");
+        }
+        requireMaxLength("模型名称", entity.getModelName(), NAME_MAX_LENGTH);
+        requireMaxLength("模型标识", entity.getModelCode(), NAME_MAX_LENGTH);
+        requireMaxLength("模型描述", entity.getModelDescription(), TEXT_MAX_LENGTH);
+        requireMaxLength("能力标签", entity.getModelCapabilities(), TEXT_MAX_LENGTH);
+        requireMaxLength("必填管线", entity.getModelRequiredPipelines(), TEXT_MAX_LENGTH);
+        requireMaxLength("非必填管线", entity.getModelOptionalPipelines(), TEXT_MAX_LENGTH);
+        requireMaxLength("模型别名", entity.getModelAliases(), TEXT_MAX_LENGTH);
+    }
+
+    /**
+     * 列宽守卫：超长直接 400，而不是让数据库截断 / 报错后再被兜成 500。
+     *
+     * @param label 字段中文名，进提示语
+     * @param value 字段值，允许为 null
+     * @param max   列宽
+     */
+    private void requireMaxLength(String label, String value, int max) {
+        if (value != null && value.length() > max) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, label + "长度不能超过 " + max + " 个字符");
+        }
+    }
+
+    /**
      * 转为实体。
      *
      * @param dto 方法入参 dto
      * @return SysAi模型 对象
      */
     private SysAiModel toEntity(AiModelDTO dto) {
+        if (dto == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "请求体不能为空");
+        }
         SysAiModel entity = new SysAiModel();
         entity.setModelName(dto.getName());
         entity.setModelCode(dto.getCode());
