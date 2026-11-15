@@ -4211,6 +4211,13 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("truncated", compact.get("truncated"));
             out.put("body", "");
         }
+        // 512KB 以上的端点（beans / mappings / startup）会被截断，前端拿到的是半截 JSON。
+        // 这里如实说明，别让用户以为端点返回坏了。
+        Object rawBody = out.get("body");
+        if (rawBody instanceof String && ((String) rawBody).length() >= ACT_BODY_MAX
+                && !out.containsKey("message") && statusCode == 200) {
+            out.put("message", "响应过大，只显示前 " + (ACT_BODY_MAX / 1024) + "KB（端点本身返回更完整）");
+        }
         if (statusCode == 0) {
             if (!out.containsKey("message")) {
                 out.put("message", "目标不可达或超时");
@@ -4246,16 +4253,44 @@ public class ReleaseServiceImpl implements ReleaseService {
         // 空级别表示清除项目级配置、继承上级：Actuator 用 configuredLevel=null 表达
         String payload = target.isEmpty()
                 ? "{\"configuredLevel\":null}" : "{\"configuredLevel\":\"" + target + "\"}";
-        String command = ctx.windows
-                ? windowsActuatorPostCommand(local, payload) : posixActuatorPostCommand(local, payload);
         long start = System.currentTimeMillis();
-        ReturnResult<List<MsExecLog>> result = execService.runCommand(
-                Collections.singletonList(ctx.hostId), command, 30, null);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("logger", logger);
         out.put("level", target.isEmpty() ? "继承" : target);
         out.put("status", 0);
         out.put("ok", false);
+        // 本机主机（平台所在机器）直接 POST，理由同 actuatorFetch：一次改级别
+        // 经 shell 要 5~9s，运行期热更新本应是几十毫秒的事。
+        if (ctx.host != null && "LOCAL".equalsIgnoreCase(ctx.host.getServerHostCollectMode())) {
+            int code = 0;
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(java.time.Duration.ofSeconds(2))
+                        .build();
+                HttpRequest request = HttpRequest.newBuilder(URI.create(local))
+                        .timeout(java.time.Duration.ofSeconds(8))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(payload,
+                                java.nio.charset.StandardCharsets.UTF_8))
+                        .build();
+                HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+                code = response.statusCode();
+            } catch (Exception e) {
+                out.put("message", "目标不可达或超时: " + e.getClass().getSimpleName());
+            }
+            out.put("status", code);
+            // Actuator 改级别成功返回 204，部分网关包一层会回 200
+            out.put("ok", code == 204 || code == 200);
+            if (code > 0 && !Boolean.TRUE.equals(out.get("ok"))) {
+                out.put("message", "目标未接受本次修改（HTTP " + code + "）");
+            }
+            out.put("elapsedMs", System.currentTimeMillis() - start);
+            return ReturnResult.ok(out);
+        }
+        String command = ctx.windows
+                ? windowsActuatorPostCommand(local, payload) : posixActuatorPostCommand(local, payload);
+        ReturnResult<List<MsExecLog>> result = execService.runCommand(
+                Collections.singletonList(ctx.hostId), command, 30, null);
         out.put("elapsedMs", System.currentTimeMillis() - start);
         if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
             out.put("message", "修改日志级别失败: " + result.getMsg());
