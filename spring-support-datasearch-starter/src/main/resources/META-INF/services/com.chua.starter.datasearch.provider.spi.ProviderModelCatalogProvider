@@ -1,0 +1,2 @@
+# 模型目录实现：新增一种来源（公开目录 / 厂商控制台 / 本地缓存）加一行
+com.chua.starter.datasearch.provider.spi.impl.ModelsDevCatalogProvider

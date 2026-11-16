@@ -1,0 +1,2 @@
+# 厂商限制查询实现：新增一种来源加一行
+com.chua.starter.datasearch.provider.spi.impl.RegistryProviderLimitProvider
