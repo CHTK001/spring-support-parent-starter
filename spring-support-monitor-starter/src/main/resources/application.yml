@@ -186,6 +186,14 @@ plugin:
     # 不配时该字段为 null，前端回退到自己的默认值 local —— 落到一个不存在的桶，
     # 文件管理页直接 404/空列表，且报错信息与「服务没起来」无法区分。
     default-provider: default
+  # OSGi 插件中心（前端 @pages/osgi 「插件中心」分组，/osgi/**）：
+  # spring-support-osgi-starter 已随本模块引入；endpoint.enabled 默认 false，
+  # 显式开启才装配 OsgiMonitorController（bundle 管理 REST，带 Bearer 鉴权）。
+  # Felix 框架本身（plugin.osgi.enabled 默认 true）会随进程启动；管理页的
+  # 源码热改（osgi.source.*）monitor 不需要，保持默认关闭。
+  osgi:
+    endpoint:
+      enabled: true
   # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
   # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
   # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。
