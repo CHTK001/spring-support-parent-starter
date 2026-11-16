@@ -13,6 +13,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.chat.MagpieRouteSource;
 import com.chua.starter.ai.support.chat.ModelClientResolver;
+import com.chua.starter.ai.support.service.ChannelHealthService;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.common.support.channel.ChannelCreditProvider;
 import com.chua.starter.common.support.channel.ChannelException;
@@ -110,6 +111,11 @@ public class ApiChannelAuthController {
      * 模型客户端解析器：同上，清掉 5 分钟的 {@code routeCache}
      */
     private final ModelClientResolver modelClientResolver;
+
+    /**
+     * 渠道健康探针服务：凭据续期/重新登录后复位该连接的 DOWN 状态
+     */
+    private final ChannelHealthService channelHealthService;
 
     /**
      * 编程式事务：SSE 流程跑在独立线程池里，{@code @Transactional} 不生效，
@@ -828,7 +834,31 @@ public class ApiChannelAuthController {
         // 包进编程式事务：本方法既会被 pollChannel（已有 @Transactional）调用，
         // 也会被 SSE 线程调用（无事务）。@Transactional 自调用不生效，
         // 用 TransactionTemplate 才能保证两条写操作原子。
-        return transactionTemplate.execute(status -> doPersistCredentials(channel, credentials, label, owner));
+        Map<String, Object> out = transactionTemplate.execute(
+                status -> doPersistCredentials(channel, credentials, label, owner));
+        // 新凭据刚落库：把该连接的旧健康状态复位并清渠道路由缓存。否则上一个令牌
+        // 走到 DOWN 的渠道，即使刚重新登录成功，也要等探针连续成功 N 次才回到路由表，
+        // 中间这段时间免费渠道里看不到它的模型。
+        afterCredentialsRenewed(out == null ? null : asString(out.get("connectionId")));
+        return out;
+    }
+
+    /**
+     * 凭据续期/重新登录成功后：复位健康状态并立即失效渠道路由缓存。
+     *
+     * @param connectionId 连接标识（为空则不做任何事）
+     */
+    private void afterCredentialsRenewed(String connectionId) {
+        if (connectionId == null || connectionId.isBlank()) {
+            return;
+        }
+        try {
+            channelHealthService.resetState(connectionId);
+        } catch (Exception e) {
+            log.warn("[ChannelAuth] 复位渠道健康状态失败 connection={} : {}",
+                    connectionId, e.getMessage());
+        }
+        modelClientResolver.invalidateRouteCache();
     }
 
     /**
@@ -1044,6 +1074,8 @@ public class ApiChannelAuthController {
         conn.setCredentials(merged);
         conn.setUpdatedAt(System.currentTimeMillis());
         connectionMapper.updateById(conn);
+        // 续期成功即刻可用：复位该连接的健康状态并清路由缓存
+        afterCredentialsRenewed(conn.getConnectionId());
 
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("ok", true);

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -127,6 +128,21 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     private static final String FALLBACK_PATH = "/";
 
     /**
+     * 过期令牌续期的冷却时间（毫秒）：refresh_token 失效时不至于每次探针都打上游
+     */
+    private static final long REFRESH_COOLDOWN_MILLIS = 5 * 60 * 1000L;
+
+    /**
+     * 凭据状态：可用（渠道实现 {@code status()} 返回的 state）
+     */
+    private static final String CREDENTIAL_VALID = "valid";
+
+    /**
+     * 凭据状态：已到期，可按 refresh_token 续期
+     */
+    private static final String CREDENTIAL_EXPIRED = "expired";
+
+    /**
      * 渠道鉴权 SPI 实现映射（懒加载，首次调用时从 SPI 注册表拉取）
      */
     private volatile Map<String, AccountChannelAuthManager> channelManagers;
@@ -139,6 +155,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                     .expireAfterWrite(1, TimeUnit.SECONDS)
                     .maximumSize(4096)
                     .build();
+
+    /**
+     * 最近一次续期尝试时刻：connectionId → 毫秒时间戳（失败冷却用，见 {@link #REFRESH_COOLDOWN_MILLIS}）
+     */
+    private final Map<String, Long> refreshAttempts = new ConcurrentHashMap<>();
 
     // ==================== 设置读取 ====================
 
@@ -620,13 +641,85 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         try {
             long start = System.currentTimeMillis();
             Map<String, Object> status = impl.status(conn.getCredentials());
+            String state = stateOf(status);
+            // 令牌过期是 OAuth 渠道的常态，不是故障：先按 refresh_token 续期再判。
+            // 不续期的话探针每次都记一次失败，连续 3 次后连接被置 DOWN，
+            // 路由层（ModelClientResolver）就会把整条渠道的模型从免费渠道里剔除 ——
+            // 表现为「渠道管理里模型是开着的，免费渠道里一个都看不到」。
+            if (CREDENTIAL_EXPIRED.equals(state)) {
+                Map<String, Object> renewed = renewCredentials(conn, impl);
+                if (renewed != null) {
+                    status = impl.status(renewed);
+                    state = stateOf(status);
+                    if (CREDENTIAL_VALID.equals(state)) {
+                        // 续期成功即复位失败计数：否则 DOWN 状态要再连续成功 N 次才解除，
+                        // 模型会白等几个探针周期。
+                        resetState(connectionId);
+                    }
+                }
+            }
             long latency = System.currentTimeMillis() - start;
-            String state = (String) status.get("state");
-            if ("valid".equals(state)) markSuccess(connectionId, 200, (int) latency, provider, conn);
-            else markFailure(connectionId, 0, "auth status: " + state, provider, conn);
+            if (CREDENTIAL_VALID.equals(state)) {
+                markSuccess(connectionId, 200, (int) latency, provider, conn);
+            } else {
+                markFailure(connectionId, 0, "auth status: " + state, provider, conn);
+            }
         } catch (Exception e) {
             markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage(), ""), null, null);
         }
+    }
+
+    /**
+     * 用 refresh_token 换新凭据并落库。
+     *
+     * <p>失败（refresh_token 被吊销、渠道不支持续期）只记日志并进入冷却，
+     * 由探针按 {@link #REFRESH_COOLDOWN_MILLIS} 节流，不阻断其它渠道。</p>
+     *
+     * @param conn 连接（续期成功后原地更新并写回库）
+     * @param impl 渠道实现
+     * @return 新凭据；续期失败或处于冷却期返回 {@code null}
+     */
+    private Map<String, Object> renewCredentials(SysAiProviderConnection conn,
+                                                 AccountChannelAuthManager impl) {
+        String connectionId = conn.getConnectionId();
+        long now = System.currentTimeMillis();
+        Long last = refreshAttempts.get(connectionId);
+        if (last != null && now - last < REFRESH_COOLDOWN_MILLIS) {
+            return null;
+        }
+        refreshAttempts.put(connectionId, now);
+        try {
+            Map<String, Object> renewed = impl.refresh(conn.getCredentials());
+            if (renewed == null || renewed.isEmpty()) {
+                log.warn("[ChannelHealthProbe] 续期返回空凭据 connection={} channel={}",
+                        connectionId, conn.getProviderId());
+                return null;
+            }
+            conn.setCredentials(renewed);
+            conn.setUpdatedAt(now);
+            connectionMapper.updateById(conn);
+            // 立即让路由与客户端缓存失效，新模型不用等 5 分钟 TTL
+            eventPublisher.publishEvent(
+                    new ChannelHealthProbeEvent(this, downConnections(), 0, false));
+            log.info("[ChannelHealthProbe] 令牌续期成功 connection={} channel={}",
+                    connectionId, conn.getProviderId());
+            return renewed;
+        } catch (Exception e) {
+            log.warn("[ChannelHealthProbe] 令牌续期失败 connection={} channel={} : {}",
+                    connectionId, conn.getProviderId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 取渠道状态里的 {@code state} 字段。
+     *
+     * @param status 渠道状态
+     * @return 状态字符串（{@code valid} / {@code expired} / {@code invalid} 等）；缺失返回空串
+     */
+    private static String stateOf(Map<String, Object> status) {
+        Object state = status == null ? null : status.get("state");
+        return state == null ? "" : String.valueOf(state);
     }
 
     // ==================== HTTP 探针 ====================
