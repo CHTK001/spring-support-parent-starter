@@ -103,7 +103,17 @@ public class SessionGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("thinking_placeholder_phrases", "", "STRING",
                         "「AI 正在思考…」占位文案（一行一句，随机轮换且不会连着重复）："
                                 + "AI 答复的首字还没回来时，气泡里显示的就是这里的一句话；留空则使用内置的默认文案"
-                                + "（前端消费：ThinkingPlaceholder.vue 直接读该字段）", 7)
+                                + "（前端消费：ThinkingPlaceholder.vue 直接读该字段）", 7),
+                /*
+                 * 「最后一条回复默认折叠」：用户可在会话配置里决定最新一轮 AI 回复的正文
+                 * 是默认收成一行（点击展开）还是一直展开全文。开关关闭（默认 false）时，
+                 * 与轨迹页等只读视图一致，全部正文常驻可见；开关打开后，每条回复的
+                 * 正文默认只占一行，悬停出左侧折叠箭头，点击箭头或预览行展开全文。
+                 * 前端消费：TurnItem.vue 读取该值作为 ProcessTimeline 的 collapsible-content。
+                 */
+                new SettingItem("collapse_last_reply", "false", "BOOLEAN",
+                        "是否折叠最后一条回复的正文（开启后，最新一轮 AI 回复的正文默认只显示一行预览，"
+                                + "点击左侧图标位的箭头或预览行即可展开全文；关闭则每条回复都一直展开全文）", 8)
         );
     }
 }
