@@ -607,6 +607,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      *
      * @param tableName 表名
      * @param body      外键定义（name / columns / refTable / refColumns / onUpdate / onDelete）
+     * @param datasourceId 数据源 ID（可空）
+     * @param database  库名（可空）
      * @return 是否成功
      */
     @Operation(summary = "新增外键")
@@ -997,6 +999,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 获取数据库表列表。
+     *
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 表列表
      */
     @Operation(summary = "获取数据库表列表")
     @GetMapping("tables")
@@ -1032,6 +1038,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 获取表结构。
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 列定义列表
      */
     @Operation(summary = "获取表结构")
     @GetMapping("table/{tableName}/columns")
@@ -1121,6 +1132,18 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      *
      * <p>安全豁免：表名、排序列先经标识符白名单与 JDBC 元数据校验；分页值使用
      * PreparedStatement 绑定。</p>
+     *
+     * @param tableName    表名
+     * @param page         页码（默认 1）
+     * @param pageSize     每页条数（默认 50，上限 500）
+     * @param orderBy      排序列（可空）
+     * @param orderDir     排序方向（ASC / DESC，默认 ASC）
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @param count        是否返回总数（默认 true）
+     * @param where        自由文本 WHERE 条件（可空）
+     * @param filters      结构化筛选条件（可空）
+     * @return 表数据分页结果
      */
     @Operation(summary = "获取表数据")
     @GetMapping("table/{tableName}/data")
@@ -1737,6 +1760,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             /** 前端勾选/编辑后的部署脚本；非空时直接执行它，缺省时才在服务端重算 diff */
             String script
     ) {
+        /**
+         * 取「遇错即停」的默认值（未配置时为 true）
+         *
+         * @return true 表示遇错即停
+         */
         boolean stopOnErrorOrDefault() {
             return stopOnError == null || stopOnError;
         }
@@ -1761,7 +1789,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * {@code USE} + {@code Statement} 逐条跑，不引入独立事务 ——
      * 中途失败时已执行的语句保持生效，前端日志能标出「错在哪条」。</p>
      *
-     * @param request 源/目标数据源与库 + 执行选项
+     * @param request      源/目标数据源与库 + 执行选项
+     * @param httpResponse HTTP 响应（用于设置 SSE 响应头）
      * @return SSE 流
      */
     @Operation(summary = "结构同步（SSE 流式执行）")
@@ -2454,6 +2483,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 删除表。
      *
      * <p>安全豁免：表名经标识符白名单与 JDBC 元数据校验后才进入 MySQL 底层方言 DDL。</p>
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 是否成功
      */
     @Operation(summary = "删除表")
     @SysLog(name = "删除表")
@@ -2486,6 +2520,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      *
      * <p>这里补 {@code DROP VIEW}，让视图与表一样可删。安全豁免与
      * {@code dropTable} 同口径：对象名经标识符白名单与元数据存在性校验后才进底层方言。</p>
+     *
+     * @param viewName     视图名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 是否成功
      */
     @Operation(summary = "删除视图")
     @SysLog(name = "删除视图")
@@ -2662,6 +2701,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     /** 可抛受检异常的 Supplier，配合 callDb 把 SQLException 转成可读错误 */
     @FunctionalInterface
     private interface ThrowingSupplier<T> {
+        /**
+         * 执行操作并返回结果
+         *
+         * @return 操作结果
+         * @throws Exception 底层异常
+         */
         T get() throws Exception;
     }
 
@@ -2710,6 +2755,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 执行一次表级 DML/DDL 操作，把底层异常换成可读原因而不是 500 堆栈。
+     *
+     * @param action   操作名（用于错误提示）
+     * @param supplier 实际执行体
+     * @return 操作结果
      */
     private <T> ReturnResult<T> callDb(String action, ThrowingSupplier<T> supplier) {
         try {
@@ -2750,12 +2799,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * require Table
-     * @param conn 参数
-     * @param table 字符串
-     * @return 返回值
-     * @throws java.sql.SQLException 异常
-    */
+     * 校验表存在（依次尝试 catalog/schema 组合）。
+     *
+     * @param conn  数据库连接
+     * @param table 表名
+     * @throws java.sql.SQLException 表不存在时抛出
+     */
     private static void requireTable(java.sql.Connection conn, String table) throws java.sql.SQLException {
         java.sql.DatabaseMetaData metadata = conn.getMetaData();
         // 依次尝试 (catalog,schema) / (catalog,null) / (null,schema) / (null,null)：
@@ -2768,6 +2817,16 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
+    /**
+     * 在指定 catalog/schema 下查询表是否存在（含视图）。
+     *
+     * @param metadata JDBC 元数据
+     * @param catalog  catalog（可空）
+     * @param schema   schema（可空）
+     * @param table    表名
+     * @return true 表示存在
+     * @throws java.sql.SQLException 元数据查询失败时抛出
+     */
     private static boolean hasTable(java.sql.DatabaseMetaData metadata, String catalog,
                                    String schema, String table) throws java.sql.SQLException {
         try (java.sql.ResultSet rs = metadata.getTables(catalog, schema, table, new String[]{"TABLE", "VIEW"})) {
@@ -2781,13 +2840,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * require Column
-     * @param column 字符串
-     * @param conn 参数
-     * @param table 字符串
-     * @return 返回值
-     * @throws java.sql.SQLException 异常
-    */
+     * 校验列存在（依次尝试 catalog/schema 组合）。
+     *
+     * @param conn   数据库连接
+     * @param table  表名
+     * @param column 列名
+     * @throws java.sql.SQLException 列不存在时抛出
+     */
     private static void requireColumn(java.sql.Connection conn, String table, String column) throws java.sql.SQLException {
         requireTable(conn, table);
         java.sql.DatabaseMetaData metadata = conn.getMetaData();
@@ -2799,6 +2858,17 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
     }
 
+    /**
+     * 在指定 catalog/schema 下查询列是否存在。
+     *
+     * @param metadata JDBC 元数据
+     * @param catalog  catalog（可空）
+     * @param schema   schema（可空）
+     * @param table    表名
+     * @param column   列名
+     * @return true 表示存在
+     * @throws java.sql.SQLException 元数据查询失败时抛出
+     */
     private static boolean hasColumn(java.sql.DatabaseMetaData metadata, String catalog,
                                      String schema, String table, String column) throws java.sql.SQLException {
         try (java.sql.ResultSet rs = metadata.getColumns(catalog, schema, table, column)) {
@@ -2811,6 +2881,14 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         return false;
     }
 
+    /**
+     * 校验列尚不存在（新增列前调用，避免重复列）。
+     *
+     * @param conn   数据库连接
+     * @param table  表名
+     * @param column 列名
+     * @throws java.sql.SQLException 列已存在时抛出
+     */
     private static void requireMissingColumn(java.sql.Connection conn, String table, String column)
             throws java.sql.SQLException {
         requireTable(conn, table);
@@ -2822,13 +2900,13 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     }
 
     /**
-     * require Index
-     * @param conn 参数
-     * @param index 字符串
-     * @param table 字符串
-     * @return 返回值
-     * @throws java.sql.SQLException 异常
-    */
+     * 校验索引存在
+     *
+     * @param conn  数据库连接
+     * @param table 表名
+     * @param index 索引名
+     * @throws java.sql.SQLException 索引不存在时抛出
+     */
     private static void requireIndex(java.sql.Connection conn, String table, String index) throws java.sql.SQLException {
         requireTable(conn, table);
         try (java.sql.ResultSet rs = conn.getMetaData().getIndexInfo(conn.getCatalog(), conn.getSchema(), table, false, true)) {
@@ -2875,6 +2953,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 更新单元格：按主键等值条件定位，PreparedStatement 绑定值防注入。
      *
      * <p>安全豁免：表名、目标列和主键列均经标识符白名单与 JDBC 元数据双重校验。</p>
+     *
+     * @param tableName    表名
+     * @param body        请求体（含 column / newValue / primaryKey）
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 受影响行数
      */
     @Operation(summary = "更新单元格")
     @SysLog(name = "编辑单元格")
@@ -3029,6 +3113,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
 
     /**
      * 读取表索引列表（经 DatabaseMetaData.getIndexInfo）。
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 索引行列（indexName / columnName / nonUnique / indexType / seqInIndex）
      */
     @Operation(summary = "获取表索引")
     @GetMapping("table/{tableName}/indexes")
@@ -3069,6 +3158,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 新建索引（支持联合列与唯一索引）。
      *
      * <p>安全豁免：索引名、表名和索引列经标识符白名单及 JDBC 元数据校验后进入 MySQL 底层方言 DDL。</p>
+     *
+     * @param tableName    表名
+     * @param body         请求体（含 indexName / columns / unique / primary / indexType / prefixes）
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 是否成功
      */
     @Operation(summary = "新建索引")
     @SysLog(name = "新建索引")
@@ -3127,6 +3222,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 删除索引。
      *
      * <p>安全豁免：索引名和表名经标识符白名单及 JDBC 元数据校验。</p>
+     *
+     * @param tableName    表名
+     * @param indexName    索引名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 是否成功
      */
     @Operation(summary = "删除索引")
     @SysLog(name = "删除索引")
@@ -3811,6 +3912,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 清空表：优先 TRUNCATE，不支持的内核退化为 DELETE FROM。
      *
      * <p>安全豁免：表名经标识符白名单和 JDBC 元数据校验后才进入数据库方言 DDL。</p>
+     *
+     * @param tableName    表名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @param txId         事务 ID（可空，指定时在事务内执行）
+     * @return 是否成功
      */
     @Operation(summary = "清空表")
     @SysLog(name = "清空表")
@@ -3959,8 +4066,10 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * <p>走完整列定义：类型全集 + UNSIGNED/ZEROFILL + 字符集/排序规则 +
      * AUTO_INCREMENT + ON UPDATE + ENUM/SET 取值 + 生成列 + 注释。</p>
      *
-     * @param tableName 表名
-     * @param body      列定义
+     * @param tableName    表名
+     * @param body         列定义请求体
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
      * @return 是否成功
      */
     @Operation(summary = "新增列")
@@ -3987,9 +4096,11 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
     /**
      * 修改列（ALTER TABLE MODIFY COLUMN）。
      *
-     * @param tableName  表名
-     * @param columnName 列名
-     * @param body       完整列定义（列名以路径参数为准）
+     * @param tableName    表名
+     * @param columnName   列名
+     * @param body         完整列定义（列名以路径参数为准）
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
      * @return 是否成功
      */
     @Operation(summary = "修改列")
@@ -4028,6 +4139,12 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 删除列（ALTER TABLE DROP COLUMN）。
      *
      * <p>安全豁免：表名和列名经标识符白名单及 JDBC 元数据校验。</p>
+     *
+     * @param tableName    表名
+     * @param columnName   列名
+     * @param datasourceId 数据源 ID（可空）
+     * @param database     库名（可空）
+     * @return 是否成功
      */
     @Operation(summary = "删除列")
     @SysLog(name = "删除列")

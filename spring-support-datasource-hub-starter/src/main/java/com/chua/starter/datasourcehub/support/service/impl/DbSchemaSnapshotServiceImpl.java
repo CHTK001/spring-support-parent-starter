@@ -253,6 +253,11 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
 
     /**
      * 仿 DbConsoleController#callDb：把数据库操作包装成 ReturnResult
+     *
+     * @param action   操作名称
+     * @param supplier 数据库操作
+     * @param <T>      返回值类型
+     * @return 成功或失败的结果
      */
     private <T> ReturnResult<T> callDb(String action, ThrowingSupplier<T> supplier) {
         try {
@@ -268,6 +273,11 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
 
     /**
      * 仿 DbConsoleController#useSchema：不改变连接池，只切当前 catalog/schema（用完还原）
+     *
+     * @param conn     数据库连接
+     * @param database 目标库名（可空，空则不切换）
+     * @return 作用域对象（close() 时还原原库）
+     * @throws SQLException 切换失败时抛出
      */
     private SchemaScope useSchema(Connection conn, String database) throws SQLException {
         String original = currentDatabase(conn);
@@ -292,6 +302,10 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
     /**
      * 当前库名：优先 SELECT DATABASE()（MySQL），H2/PostgreSQL/ClickHouse 回退到
      * getSchema()/getCatalog()。
+     *
+     * @param conn 数据库连接
+     * @return 当前库名
+     * @throws SQLException 查询失败时抛出
      */
     private static String currentDatabase(Connection conn) throws SQLException {
         try (Statement st = conn.createStatement();
@@ -313,6 +327,12 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
         return schema == null || schema.isBlank() ? (catalog == null ? "" : catalog) : schema;
     }
 
+    /**
+     * 是否为 MySQL/MariaDB 内核
+     *
+     * @param conn 数据库连接
+     * @return true 表示 MySQL/MariaDB
+     */
     private static boolean isMysql(Connection conn) {
         try {
             String product = conn.getMetaData().getDatabaseProductName();
@@ -323,7 +343,12 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
         }
     }
 
-    /** describeSqlError 方法 */
+    /**
+     * 精简 SQL 错误信息：只保留前 200 字符，避免把底层异常全文打到界面上
+     *
+     * @param raw 原始错误信息
+     * @return 精简后的错误信息
+     */
     private static String describeSqlError(String raw) {
         if (raw == null) {
             return "未提供原因";
@@ -333,6 +358,9 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
 
     /**
      * 出错的 SQL 文本标题（日志/错误信息用，不含完整正文以免打满屏幕）
+     *
+     * @param sql SQL 文本
+     * @return 最多 120 字符的标题文本
      */
     private static String statementLabel(String sql) {
         String s = sql == null ? "" : sql.strip();
@@ -347,6 +375,12 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
      *
      * <p>逻辑在 {@link DbTableSpec#showCreateTable(Connection, String, String)} 统一管理：
      * 拍快照源的 DDL 与显示源必须同出一处，否则回滚质量与页面显示会分叉</p>
+     *
+     * @param conn     数据库连接
+     * @param database 目标库名
+     * @param table    表名
+     * @return 表结构快照
+     * @throws Exception 读取表定义失败时抛出
      */
     private DbTableSpec buildTableSpec(Connection conn, String database, String table) throws Exception {
         return DbTableSpec.showCreateTable(conn, database, table);
@@ -354,6 +388,9 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
 
     /**
      * 从 JSON 正文中取出表结构快照：正文损坏时返回 null（调用方处理）
+     *
+     * @param snapshot 快照 JSON 正文
+     * @return 表结构快照，正文为空或损坏时返回 null
      */
     private DbTableSpec parseSpec(String snapshot) {
         if (snapshot == null || snapshot.isBlank()) {
@@ -367,7 +404,21 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
         }
     }
 
+    /**
+     * 执行操作。
+     *
+     * @param <T> 结果类型
+     * @return 操作结果
+     * @throws Exception 操作失败时抛出
+     */
     private interface ThrowingSupplier<T> {
+        /**
+         * 执行操作。
+         *
+         * @param <T> 结果类型
+         * @return 操作结果
+         * @throws Exception 操作失败时抛出
+         */
         T get() throws Exception;
     }
 
@@ -378,15 +429,31 @@ public class DbSchemaSnapshotServiceImpl implements DbSchemaSnapshotService {
         private final Connection conn;
         private final String original;
 
+        /**
+         * 构造作用域
+         *
+         * @param conn     数据库连接
+         * @param original 切换前的原库名（可空）
+         */
         SchemaScope(Connection conn, String original) {
             this.conn = conn;
             this.original = original;
         }
 
+        /**
+         * 原库名
+         *
+         * @return 切换前的原库名
+         */
         String database() {
             return original;
         }
 
+        /**
+         * 数据库连接
+         *
+         * @return 连接
+         */
         Connection conn() {
             return conn;
         }

@@ -118,6 +118,9 @@ public final class DbStructureDiff {
     ) {
     }
 
+    /**
+     * 工具类私有构造器，禁止实例化。
+     */
     private DbStructureDiff() {
     }
 
@@ -354,7 +357,14 @@ public final class DbStructureDiff {
     private static final java.util.regex.Pattern REFERENCES =
             java.util.regex.Pattern.compile("REFERENCES\\s+`([^`]+)`", java.util.regex.Pattern.CASE_INSENSITIVE);
 
-    /** 比对列 */
+    /**
+     * 比对两库的列：逐项报类型/可空/默认值/注释差异。
+     *
+     * @param items 差异清单（追加写入）
+     * @param table 表名
+     * @param src   源库表快照
+     * @param dst   目标库表快照
+     */
     private static void diffColumns(List<DiffItem> items, String table,
                                     TableSnapshot src, TableSnapshot dst) {
         for (Map.Entry<String, ColumnSnapshot> e : src.columns.entrySet()) {
@@ -395,7 +405,14 @@ public final class DbStructureDiff {
         }
     }
 
-    /** 比对索引 */
+    /**
+     * 比对索引：缺索引报 MISSING_INDEX，同名不同义报重建 DDL。
+     *
+     * @param items 差异清单（追加写入）
+     * @param table 表名
+     * @param src   源库表快照
+     * @param dst   目标库表快照
+     */
     private static void diffIndexes(List<DiffItem> items, String table,
                                     TableSnapshot src, TableSnapshot dst) {
         for (Map.Entry<String, IndexSnapshot> e : src.indexes.entrySet()) {
@@ -419,7 +436,14 @@ public final class DbStructureDiff {
         }
     }
 
-    /** 比对外键 */
+    /**
+     * 比对外键：目标库按身份（name+列+引用）缺失的报 MISSING_FOREIGN_KEY。
+     *
+     * @param items 差异清单（追加写入）
+     * @param table 表名
+     * @param src   源库表快照
+     * @param dst   目标库表快照
+     */
     private static void diffForeignKeys(List<DiffItem> items, String table,
                                         TableSnapshot src, TableSnapshot dst) {
         Set<String> dstKeys = new LinkedHashSet<>();
@@ -482,7 +506,12 @@ public final class DbStructureDiff {
                 + " ON " + q(table) + " (" + s.columns() + ");";
     }
 
-    /** 标识符转义（反引号成对） */
+    /**
+     * 标识符转义（反引号成对）。
+     *
+     * @param name 标识符
+     * @return 转义后的标识符
+     */
     private static String q(String name) {
         return SqlName.quoteMysql(name, "标识符");
     }
@@ -612,7 +641,16 @@ public final class DbStructureDiff {
                 + "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     }
 
-    /** 读列 */
+    /**
+     * 读一列元数据为列快照。
+     *
+     * @param md     数据库元数据
+     * @param cat    库名（可为空）
+     * @param schema 模式名（可为空）
+     * @param table  表名
+     * @return 列名（小写）→ 列快照
+     * @throws SQLException 读元数据失败
+     */
     private static Map<String, ColumnSnapshot> readColumns(DatabaseMetaData md, String cat,
                                                             String schema, String table) throws SQLException {
         Map<String, ColumnSnapshot> out = new LinkedHashMap<>();
@@ -652,6 +690,15 @@ public final class DbStructureDiff {
      * {@code enum} 列表等用户输入），而这里拿到的是**内核报告的**列定义，
      * 两者的输入形态不同。硬套会把 {@code COLUMN_SIZE} 当成长度、
      * 把内核返回的默认值再转义一次。</p>
+     *
+     * @param type      类型名（如 VARCHAR）
+     * @param size      长度（COLUMN_SIZE，<=0 表示不适用）
+     * @param digits    小数位（DECIMAL/NUMERIC 等，<=0 表示不适用）
+     * @param nullable  NOT NULL / NULL
+     * @param def       默认值（可为 null）
+     * @param remark    列注释（可为 null）
+     * @param autoInc   是否自增
+     * @return DDL 片段
      */
     private static String columnDdl(String type, int size, int digits, String nullable,
                                     Object def, String remark, boolean autoInc) {
@@ -705,7 +752,16 @@ public final class DbStructureDiff {
         return base;
     }
 
-    /** 读索引（列序按 ORDINAL_POSITION 排） */
+    /**
+     * 读索引（列序按 ORDINAL_POSITION 排）。
+     *
+     * @param md     数据库元数据
+     * @param cat    库名（可为空）
+     * @param schema 模式名（可为空）
+     * @param table  表名
+     * @return 索引名 → 索引快照
+     * @throws SQLException 读元数据失败
+     */
     private static Map<String, IndexSnapshot> readIndexes(DatabaseMetaData md, String cat,
                                                           String schema, String table) throws SQLException {
         Map<String, Map<Integer, String>> cols = new LinkedHashMap<>();
@@ -742,7 +798,16 @@ public final class DbStructureDiff {
         return out;
     }
 
-    /** 读外键 */
+    /**
+     * 读外键。
+     *
+     * @param md     数据库元数据
+     * @param cat    库名（可为空）
+     * @param schema 模式名（可为空）
+     * @param table  表名
+     * @return 外键快照列表
+     * @throws SQLException 读元数据失败
+     */
     private static List<ForeignKeySnapshot> readForeignKeys(DatabaseMetaData md, String cat,
                                                             String schema, String table) throws SQLException {
         List<ForeignKeySnapshot> out = new ArrayList<>();
