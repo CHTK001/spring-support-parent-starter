@@ -9,6 +9,7 @@ import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
 import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobLogContentVO;
 import com.chua.starter.job.support.manage.vo.JobNodeVO;
 import com.chua.starter.job.support.manage.vo.JobLogVO;
 import com.chua.starter.job.support.manage.vo.JobRuntimeVO;
@@ -171,6 +172,22 @@ public class JobManageController {
     @GetMapping("/log/page")
     public ReturnResult<PageResult<JobLogVO>> pageLogs(JobLogQuery query) {
         return governance.pageLogs(query);
+    }
+
+    /**
+     * 读取单次执行的日志正文。
+     *
+     * <p>日志行只存结果说明（截断在 4000 字符），完整正文在每次执行一个的文件里，
+     * 路径由日志行的 {@code filePath} 给出。这里按该路径把正文读出来，供调度工作台
+     * 「查看日志」用；与采集控制台出口 {@code /v2/scheduler/log/content} 是同一份实现。</p>
+     *
+     * @param filePath 日志文件相对路径（取自日志行）
+     * @return 日志正文
+     */
+    @Operation(summary = "读取单次执行的日志正文")
+    @GetMapping("/log/content")
+    public ReturnResult<JobLogContentVO> logContent(@RequestParam String filePath) {
+        return governance.logContent(filePath);
     }
 
     /**
