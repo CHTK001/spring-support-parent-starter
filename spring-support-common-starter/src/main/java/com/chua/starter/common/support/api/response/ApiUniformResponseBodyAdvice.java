@@ -9,6 +9,7 @@ import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.io.Resource;
 import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,8 +26,6 @@ import reactor.core.publisher.Flux;
 // 注：Method 为 Spring ResponseBodyAdvice 接口签名要求，豁免
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
-
-import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 
 /**
    * 统一返回值处理
@@ -80,6 +79,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
 
         if (o instanceof org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
                 || o instanceof byte[]
+                || o instanceof Resource
                 || o instanceof ResponseEntity
                 || o instanceof Callable
                 || o instanceof DeferredResult
@@ -169,7 +169,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
 
    // 检查类级别注解或响应实体类型
         if (AnnotationUtils.findAnnotation(controllerClass, ApiReturnFormatIgnore.class) != null ||
-                isAssignableFrom(ResponseEntity.class, method.getReturnType())) {
+                ResponseEntity.class.isAssignableFrom(method.getReturnType())) {
             return true;
         }
 
