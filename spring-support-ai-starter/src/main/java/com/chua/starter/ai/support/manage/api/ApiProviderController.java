@@ -467,10 +467,11 @@ public class ApiProviderController {
     /**
      * 余额自动回落时依次尝试的中转站实现（厂商官方与 OpenAI 官方由品牌/地址单独前置）。
      *
-     * <p>顺序按「一次命中概率」排：new-api 的 {@code /api/usage/token} 最普遍，
-     * 其次是各站点普遍沿用的 OpenAI dashboard 计费接口，最后才是 sub2api 的 {@code /v1/usage}。</p>
+     * <p>只保留各站点普遍沿用的 OpenAI dashboard 计费接口（one-api / new-api / voapi 系通用）；
+     * new-api 的 {@code /api/usage/token} 与 sub2api 的 {@code /v1/usage} 两个中转专用协议
+     * 已按产品决定移除，不再自动探测。</p>
      */
-    private static final List<String> AUTO_CREDIT_KINDS = List.of("new-api", "billing", "sub2api");
+    private static final List<String> AUTO_CREDIT_KINDS = List.of("billing");
 
     /**
      * 有官方余额口径的厂商（Bearer 类），由 {@code HostCreditQueryProvider} 自述，
@@ -1694,7 +1695,7 @@ public class ApiProviderController {
      *
      * <p>把一个供应商的每个 Key 当成一次独立的余额读数：Key 即令牌，地址取供应商的
      * 上游地址（或 {@code extra.credit_url}），查询实现由 {@code extra.credit_kind}
-     * 指定；没指定时按「厂商官方 → OpenAI 官方 → new-api 中转站 → sub2api 中转站」
+     * 指定；没指定时按「厂商官方 → OpenAI 官方 → OpenAI 兼容计费」
      * 依次回落，第一条查到数的实现胜出。余额口径完全复用 {@link CreditQueries}
      * （与渠道管理页同一套 SPI），本接口只负责把 N 个 Key 的读数收成一份可直接渲染的
      * 结构，不承载任何厂商特有的字段解析。</p>
@@ -1718,7 +1719,7 @@ public class ApiProviderController {
         out.put("provider_id", providerId);
         out.put("url", baseUrl);
         out.put("kind", configuredKind == null ? "auto" : configuredKind);
-        // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → new-api → billing → sub2api → 表达式」
+        // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → 表达式」
         out.put("candidates", candidateKinds(entity, extra));
         // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ relay（中转站按协议探测）/
         // manual（页面上指定了唯一实现）/ none（没有上游地址，查不了）
@@ -1823,7 +1824,7 @@ public class ApiProviderController {
             // Key 所属站点：host / openai 用它自证「这把 Key 是不是这家的」
             query.setOriginUrl(entity.getBaseUrl());
             // 厂商官方 / OpenAI 官方实现自带地址，只有显式配了地址才覆盖；
-            // new-api / billing / sub2api 需要站点根地址，没配就用供应商的上游地址
+            // billing 需要站点根地址，没配就用供应商的上游地址
             boolean builtinUrl = "host".equals(candidate) || "openai".equals(candidate);
             String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
             query.setUrl(url);
@@ -1877,7 +1878,7 @@ public class ApiProviderController {
      * <ul>
      *   <li>{@code official}：厂商在 {@code HostCreditQueryProvider} 里有官方预设；</li>
      *   <li>{@code openai}：上游就是 OpenAI 官方；</li>
-     *   <li>{@code relay}：中转 / 聚合站，按协议依次探测（new-api → billing → sub2api）；</li>
+     *   <li>{@code relay}：中转 / 聚合站，按协议依次探测（OpenAI 兼容计费）；</li>
      *   <li>{@code manual}：页面上指定了唯一实现（含自定义地址 + 表达式）；</li>
      *   <li>{@code none}：没有上游地址，没有可查的东西。</li>
      * </ul>
@@ -2541,7 +2542,14 @@ public class ApiProviderController {
             }
             Object single = credentials.get("api_key");
             if (single instanceof String s && !s.isBlank()) {
-                set.add(s);
+                // 多 Key 以逗号拼接存储（与 api_keys 列表、列表统计 api_key_count 的口径一致），
+                // 按逗号拆开后逐项入集，避免只取到单个 Key 导致余额面板少显示
+                for (String part : s.split(",")) {
+                    String trimmed = part.trim();
+                    if (!trimmed.isEmpty()) {
+                        set.add(trimmed);
+                    }
+                }
             }
         }
         return new ArrayList<>(set);
