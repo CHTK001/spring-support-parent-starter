@@ -3,8 +3,10 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.common.support.ai.chat.AuthHeaders;
+import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientIndicator;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
 import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
 import com.chua.common.support.ai.chat.route.RouteTarget;
@@ -186,6 +188,15 @@ public class ApiProviderController {
      */
     private static final String ONNX_PROVIDER_ID =
             com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer.ONNX_PROVIDER_ID;
+
+    /**
+     * 渠道管理为「内置模型渠道」物化出来的 provider 行前缀。
+     *
+     * <p>渠道标识形如 {@code chat-duckduckgo}，落库时统一大写成
+     * {@code CHAT-DUCKDUCKGO}；对应的 ChatClient SPI 扩展名是去掉前缀后的
+     * {@code duckduckgo}。模型拉取与运行时解析都按同一口径还原。</p>
+     */
+    private static final String CHAT_CHANNEL_PREFIX = "chat-";
 
     /**
      * 判断供应商标识是否为 ONNX 本地推理供应商。
@@ -638,8 +649,18 @@ public class ApiProviderController {
             String onnxAuth = str(body, "auth_scheme");
             entity.setAuthScheme(onnxAuth == null || onnxAuth.isBlank() ? "api_key" : onnxAuth);
         } else {
-            entity.setBaseUrl(requireStr(body, "base_url"));
-            entity.setAuthScheme(requireStr(body, "auth_scheme"));
+            String authScheme = str(body, "auth_scheme");
+            // 免登录供应商（auth_scheme=none，如内置对话渠道 DuckDuckGo）没有上游地址：
+            // 模型清单由 ChatClient SPI 自己提供，base_url 允许留空占位，不能按云端供应商
+            // 那样「地址必填」——否则「从提供商获取模型列表」对这类渠道永远建不起来。
+            if (authScheme != null && "none".equalsIgnoreCase(authScheme.trim())) {
+                String keylessBaseUrl = str(body, "base_url");
+                entity.setBaseUrl(keylessBaseUrl == null ? "" : keylessBaseUrl);
+                entity.setAuthScheme("none");
+            } else {
+                entity.setBaseUrl(requireStr(body, "base_url"));
+                entity.setAuthScheme(requireStr(body, "auth_scheme"));
+            }
         }
         entity.setCredentials(uncheckedCast(body.get("credentials")));
         entity.setEnabled(bool(body, "enabled", true));
@@ -4679,6 +4700,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (ProviderRouteTargets.isFreeChannel(platform)) {
             return fetchFreeChannelRoutes(providerId, extra);
         }
+        // 免登录内置渠道（DuckDuckGo 等）：没有上游地址，模型目录由 ChatClient SPI 自己给出，
+        // 不能按云端供应商去请求 {base_url}/models，也不能报「base_url 未配置」。
+        Map<String, Object> builtinModels = fetchKeylessBuiltinModels(platform, baseUrl, auth);
+        if (builtinModels != null) {
+            return builtinModels;
+        }
         // 基础地址缺失直接判参数错误
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
@@ -4711,6 +4738,77 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         out.put("models", models);
         if (fixedBaseUrl != null) {
             out.put("fixed_base_url", fixedBaseUrl);
+        }
+        return out;
+    }
+
+    /**
+     * 免登录内置渠道的模型清单（不发任何 HTTP 请求）。
+     *
+     * <p>DuckDuckGo 这类渠道由 {@code ChatClient} 扩展自身提供模型表（{@code models()}），
+     * 供应商行没有 base_url、也没有 Key。此前「从提供商获取模型列表」固定按
+     * {@code {base_url}/models} 拉取，这类渠道一律卡在「base_url 未配置」。</p>
+     *
+     * <p>触发条件（同时满足，避免误伤正常云端供应商）：</p>
+     * <ul>
+     *   <li>base_url 为空；</li>
+     *   <li>auth_scheme=none，或 platform 是渠道管理物化的 {@code chat-<渠道>} 行。</li>
+     * </ul>
+     *
+     * @param platform 平台标识（{@code duckduckgo} / {@code CHAT-DUCKDUCKGO} 等）
+     * @param baseUrl  基础地址（为空才走本分支）
+     * @param auth     鉴权参数
+     * @return 与其它供应商同形态的 {@code {models:[...]}}；不适用时返回 {@code null}
+     */
+    private Map<String, Object> fetchKeylessBuiltinModels(String platform, String baseUrl, UpstreamAuth auth) {
+        if (baseUrl != null && !baseUrl.isBlank()) {
+            return null;
+        }
+        String platformLower = platform == null ? "" : platform.trim().toLowerCase(Locale.ROOT);
+        boolean keyless = platformLower.startsWith(CHAT_CHANNEL_PREFIX)
+                || (auth != null && "none".equalsIgnoreCase(String.valueOf(auth.scheme()).trim()));
+        if (!keyless || platformLower.isEmpty()) {
+            return null;
+        }
+        String clientName = platformLower.startsWith(CHAT_CHANNEL_PREFIX)
+                ? platformLower.substring(CHAT_CHANNEL_PREFIX.length())
+                : platformLower;
+        ChatClient client = ChatClient.create(ChatClientSetting.builder().provider(clientName).build());
+        if (client == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "该供应商没有上游地址，且未找到内置对话客户端: " + clientName);
+        }
+        List<ModelDefinition> definitions;
+        try {
+            definitions = client.models();
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.BAD_GATEWAY,
+                    "内置对话客户端读取模型清单失败: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+        }
+        List<Map<String, Object>> models = new ArrayList<>(8);
+        if (definitions != null) {
+            for (ModelDefinition definition : definitions) {
+                if (definition == null || definition.getId() == null || definition.getId().isBlank()) {
+                    continue;
+                }
+                String modelId = definition.getId().trim();
+                Map<String, Object> row = new LinkedHashMap<>(6);
+                row.put("id", modelId);
+                String displayName = definition.getName();
+                row.put("name", displayName == null || displayName.isBlank() ? modelId : displayName);
+                row.put("tasks", inferTasks(modelId));
+                row.put("traits", List.of("streaming"));
+                String description = definition.getDescription();
+                if (description != null && !description.isBlank()) {
+                    row.put("description", description);
+                }
+                models.add(row);
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("models", models);
+        if (models.isEmpty()) {
+            out.put("hint", "该渠道未提供模型清单");
         }
         return out;
     }

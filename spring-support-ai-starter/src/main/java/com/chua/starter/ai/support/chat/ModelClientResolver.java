@@ -362,11 +362,12 @@ public class ModelClientResolver {
                 ? mergedRoutes(provider, ownerScope)
                 : null;
         if (keys.isEmpty()) {
-            if (!ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
+            if (!allowsKeyless(provider)) {
                 log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
                 return Map.of();
             }
-            // 免费渠道允许无 key：部分上游免鉴权，缺失时由客户端按路由决定是否发送认证头
+            // 免费渠道 / 免登录渠道允许无 key：上游本身不鉴权，
+            // 缺失时由客户端按路由与 auth_scheme 决定是否发送认证头
             keys = new ArrayList<>();
             keys.add(null);
         }
@@ -383,6 +384,66 @@ public class ModelClientResolver {
             result.put(key == null ? "" : key, raw.model(model));
         }
         return result;
+    }
+
+    /**
+     * 免登录对话渠道的 provider 行前缀。
+     *
+     * <p>渠道管理把「内置模型渠道」（DuckDuckGo / Trae 这类免登录对话渠道）的模型
+     * 落库到 {@code chat-<渠道>} 大写的 provider 行上，而 ChatClient SPI 注册的是
+     * 渠道自身的扩展名（{@code duckduckgo}）。解析客户端时按该前缀还原。</p>
+     */
+    private static final String CHAT_CHANNEL_PREFIX = "chat-";
+
+    /**
+     * 该供应商是否允许「无 Key」构建客户端。
+     *
+     * <p>两类供应商本来就没有 Key：</p>
+     * <ul>
+     *   <li>免费渠道（{@code free-channel}）：路由表里的上游可能免鉴权；</li>
+     *   <li>免登录内置渠道：渠道管理物化出来的 {@code chat-*} 行，以及
+     *       {@code auth_scheme=none} 的供应商（如 DuckDuckGo），凭据由客户端自己处理。</li>
+     * </ul>
+     *
+     * <p>缺了这条判断，这些供应商的模型行虽然能在模型管理里看到，
+     * 但会话选中时 {@link #keyedClients} 收集不到 Key 就会返回空表，
+     * 表现为「模型已启用却永远解析不到客户端」。</p>
+     *
+     * @param provider 供应商
+     * @return 允许无 Key 时返回 {@code true}
+     */
+    private static boolean allowsKeyless(SysAiProvider provider) {
+        if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
+            return true;
+        }
+        String authScheme = provider.getAuthScheme();
+        if (authScheme != null && "none".equalsIgnoreCase(authScheme.trim())) {
+            return true;
+        }
+        String platform = provider.getPlatform();
+        return platform != null && platform.trim().toLowerCase(java.util.Locale.ROOT)
+                .startsWith(CHAT_CHANNEL_PREFIX);
+    }
+
+    /**
+     * 把供应商平台标识翻译成 ChatClient SPI 扩展名。
+     *
+     * <p>免登录对话渠道的 {@code chat-<渠道>} 行去掉前缀（{@code CHAT-DUCKDUCKGO} →
+     * {@code duckduckgo}），其它平台原样返回 —— SPI 查找本身大小写不敏感。</p>
+     *
+     * @param platform 供应商平台标识
+     * @return SPI 扩展名；入参为空返回 {@code null}
+     */
+    static String clientProviderOf(String platform) {
+        if (platform == null) {
+            return null;
+        }
+        String value = platform.trim();
+        if (value.length() > CHAT_CHANNEL_PREFIX.length()
+                && value.toLowerCase(java.util.Locale.ROOT).startsWith(CHAT_CHANNEL_PREFIX)) {
+            return value.substring(CHAT_CHANNEL_PREFIX.length());
+        }
+        return value;
     }
 
     /**
@@ -537,7 +598,9 @@ public class ModelClientResolver {
                                             Map<String, String> extraHeaders,
                                             Map<String, RouteTarget> channelRoutes, String model) {
         return ChatClientSetting.builder()
-                .provider(provider.getPlatform())
+                // 免登录对话渠道物化出来的 chat-<渠道> 行要去掉前缀再查 ChatClient SPI，
+                // 否则 create("CHAT-DUCKDUCKGO") 找不到 DuckChatClient，导致模型永远解析不到客户端
+                .provider(clientProviderOf(provider.getPlatform()))
                 .appKey(apiKey)
                 .baseUrl(resolveBaseUrl(provider, model))
                 .extraHeaders(extraHeaders)
