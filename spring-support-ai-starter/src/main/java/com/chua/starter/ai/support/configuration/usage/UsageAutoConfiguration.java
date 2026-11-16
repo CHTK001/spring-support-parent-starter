@@ -53,6 +53,7 @@ public class UsageAutoConfiguration {
                                                SysAiUsageDailyMapper dailyMapper,
                                                UsageLiveStreamHub usageLiveStreamHub,
                                                SysAiPricingService pricingService,
+                                               SysAiModelMetricsService modelMetricsService,
                                                IptablesService iptablesService) {
         /**
          * sysaiusage服务impl。
@@ -61,10 +62,11 @@ public class UsageAutoConfiguration {
          * @param dailyMapper daily映射器
          * @param usageLiveStreamHub 实时推送中枢
          * @param pricingService pricing服务
+         * @param modelMetricsService 模型指标服务
          * @param iptablesService iptables服务
          * @return sysAIusage服务impl的结果
          */
-        return new SysAiUsageServiceImpl(usageMapper, modelAliasService, dailyMapper, usageLiveStreamHub, pricingService, iptablesService);
+        return new SysAiUsageServiceImpl(usageMapper, modelAliasService, dailyMapper, usageLiveStreamHub, pricingService, modelMetricsService, iptablesService);
     }
 
     @Bean
