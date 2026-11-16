@@ -367,6 +367,12 @@
       <version>3.18.2</version>
     </dependency>
     <!-- 单元测试：版本由继承的 spring-boot-dependencies 统一管理 -->
+    <!-- 仅用 JUnit 5，不引 spring-boot-starter-test（它会传递 mockito，项目规约禁用） -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

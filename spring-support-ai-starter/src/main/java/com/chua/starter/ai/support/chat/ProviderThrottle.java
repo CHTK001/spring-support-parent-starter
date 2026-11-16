@@ -10,9 +10,10 @@ import java.util.concurrent.TimeUnit;
 /**
  * 供应商级限流闸门：并发上限 + 每分钟请求数。
  *
- * <p>配置来自供应商 {@code extra}：{@code max_concurrency}（并发上限）与
- * {@code requests_per_minute}（每分钟请求数）；缺省或 ≤0 表示不限制，
- * 此时 {@link #acquire} 直接返回空许可，不产生任何开销。</p>
+ * <p>配置由 {@link ModelClientResolver#throttleOf(String)} 解析后传入：同步落库的
+ * {@code extra.provider_limits.declared} 优先，其次 {@code extra.limits_manual}，
+ * 最后回退到供应商表单的 {@code extra.max_concurrency} / {@code extra.requests_per_minute}；
+ * 缺省或 ≤0 表示不限制，此时 {@link #acquire} 直接返回空许可，不产生任何开销。</p>
  *
  * <p>两道闸门按「供应商」维度共享：同一供应商下的所有 Key 共用一份配额。
  * 拿不到许可时最多等待 {@code waitMillis}，超时返回 {@code null}，由调用方

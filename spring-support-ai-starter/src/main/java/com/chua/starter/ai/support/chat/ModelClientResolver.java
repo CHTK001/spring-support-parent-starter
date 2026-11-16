@@ -152,8 +152,8 @@ public class ModelClientResolver {
             return null;
         }
         Map<String, Object> extra = provider.getExtra() == null ? Map.of() : provider.getExtra();
-        return new ThrottleSpec(provider.getProviderId(),
-                extraInt(extra, "max_concurrency"), extraInt(extra, "requests_per_minute"));
+        ThrottleLimits limits = resolveThrottleLimits(extra);
+        return new ThrottleSpec(provider.getProviderId(), limits.concurrency(), limits.rpm());
     }
 
     /**
@@ -164,6 +164,58 @@ public class ModelClientResolver {
      * @param rpm         每分钟请求数（≤0 不限制）
      */
     public record ThrottleSpec(String providerId, int concurrency, int rpm) {
+    }
+
+    /**
+     * 供应商级限流数值（未含供应商 ID，便于单测）。
+     *
+     * @param concurrency 并发上限（≤0 不限制）
+     * @param rpm         每分钟请求数（≤0 不限制）
+     */
+    record ThrottleLimits(int concurrency, int rpm) {
+    }
+
+    /**
+     * 解析供应商限流数值：同步落库的官方限制 → 手动限制 → 表单字段，逐维度回退。
+     *
+     * <p>取值路径：</p>
+     * <ol>
+     *   <li>{@code extra.provider_limits.declared}（「同步」落库、以及文档登记表里核对过的口径）；</li>
+     *   <li>{@code extra.limits_manual}（管理员按后台账单手填）；</li>
+     *   <li>{@code extra.max_concurrency} / {@code extra.requests_per_minute}（供应商表单原字段）。</li>
+     * </ol>
+     *
+     * <p>逐维度回退：同步只拿到频率、没拿到并发时，并发继续往下找，不将就 0。
+     * 0 / 负值一律视为「未配置」继续回退；{@code model_concurrency} 是按模型的，
+     * 不参与供应商级闸门（这里只取账号级 {@code concurrency}）。</p>
+     *
+     * @param extra 供应商扩展配置（可空）
+     * @return 限流数值
+     */
+    static ThrottleLimits resolveThrottleLimits(Map<String, Object> extra) {
+        return new ThrottleLimits(
+                firstPositiveLimit(extra, "concurrency", "max_concurrency"),
+                firstPositiveLimit(extra, "requests_per_minute", "requests_per_minute"));
+    }
+
+    /**
+     * 按优先级取一个限流维度。
+     *
+     * @param extra    供应商扩展配置
+     * @param limitKey 限制口径里的键名（同步报告 / 手动配置共用）
+     * @param formKey  供应商表单里的原键名
+     * @return 第一个大于 0 的值；都没配上返回 0（不限制）
+     */
+    private static int firstPositiveLimit(Map<String, Object> extra, String limitKey, String formKey) {
+        int synced = extraInt(extraMap(extraMap(extra, "provider_limits"), "declared"), limitKey);
+        if (synced > 0) {
+            return synced;
+        }
+        int manual = extraInt(extraMap(extra, "limits_manual"), limitKey);
+        if (manual > 0) {
+            return manual;
+        }
+        return extraInt(extra, formKey);
     }
 
     /**
