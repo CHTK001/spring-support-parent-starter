@@ -1063,9 +1063,13 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             // 速度存「合计 + 样本数」，读取侧用 合计/样本数 还原均值（AVG 不可跨行相加）
             daily.setTotalTokensPerSecond(row.totalTokensPerSecond() != null ? row.totalTokensPerSecond() : 0D);
             daily.setTpsSamples(row.tpsSamples() != null ? row.tpsSamples() : 0L);
-            // 实际费用缺失（未记录）时用标准价兜底，保证统计口径一致
+            // 实际费用只累加明细里真实记录的金额，缺失（未记录 / 免费模型）就是 0。
+            // 这里曾用「actualCost != 0 ? actualCost : standardCost」兜底，把实付为 0 的分组
+            // 按当前定价估成钱：日汇总合计因此比明细多出约 1,397 元（免费模型被计价），
+            // 页面上「总消费」和明细页脚对不上，用户无法核对。估算值只放 standardCost，
+            // 由「标准价 / 相对标准价 / 节省」那几处读数单独展示，两者不混。
             double actualCost = row.totalCost() != null ? row.totalCost() : 0.0;
-            daily.setTotalCost(actualCost != 0 ? actualCost : standardCost.doubleValue());
+            daily.setTotalCost(actualCost);
             daily.setStandardCost(standardCost.doubleValue());
 
             dailyMapper.insert(daily);
