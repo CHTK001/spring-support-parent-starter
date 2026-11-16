@@ -21,6 +21,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.service.ChannelHealthService;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
+import com.chua.starter.common.support.channel.KeylessChatChannel;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -1051,11 +1052,68 @@ public class ModelClientResolver {
                 log.info("[ModelClientResolver] 渠道路由 {} 注册 {} 个模型 {} 个账号",
                         provider.getPlatform(), models.size(), apiKeys.size());
             }
+            // 免登录对话渠道（DuckDuckGo / Trae 等）：没有上游地址、没有账号，协议与会话
+            // 都由 ChatClient SPI 自己持有。它们的模型同样是「渠道管理里已开启的模型」，
+            // 必须并进免费渠道的路由表，否则免费渠道的模型清单里永远看不到这几个渠道。
+            collectKeylessRoutes(routes);
         } catch (Exception e) {
             log.warn("[ModelClientResolver] 收集渠道路由失败: {}", e.getMessage());
         }
         routeCache.put(ownerScope, new CachedRoutes(routes, now));
         return routes;
+    }
+
+    /**
+     * 把免登录对话渠道的内置模型并进路由表。
+     *
+     * <p>渠道实现住在账号模块（{@code ChatChannelProvider}），而 AI 模块按设计不反向依赖
+     * 账号模块，因此通过 common-starter 的中立契约 {@link KeylessChatChannel} 发现。
+     * 路由目标只带 {@code provider}（ChatClient 扩展名）与 {@code authScheme=none}：
+     * 这类渠道没有 baseUrl，{@code FreeChannelChatClient} 按扩展名直接建客户端。</p>
+     *
+     * <p>只注册模型键，不注册渠道前缀键：渠道标识（{@code chat-duckduckgo}）不是可选模型，
+     * 混进清单会让页面出现一个叫 {@code chat-duckduckgo} 的「模型」。</p>
+     *
+     * @param routes 目标路由表（原地写入）
+     */
+    private void collectKeylessRoutes(Map<String, RouteTarget> routes) {
+        Map<String, KeylessChatChannel> channels;
+        try {
+            channels = ServiceProvider.of(KeylessChatChannel.class).list();
+        } catch (Exception e) {
+            log.debug("[ModelClientResolver] 免登录对话渠道未接入: {}", e.getMessage());
+            return;
+        }
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        for (KeylessChatChannel channel : channels.values()) {
+            if (channel == null || StringUtils.isBlank(channel.channel())
+                    || StringUtils.isBlank(channel.extension()) || !seen.add(channel.channel())) {
+                continue;
+            }
+            RouteTarget target = RouteTarget.builder()
+                    .provider(channel.extension())
+                    .baseUrl("")
+                    .authScheme("none")
+                    .build();
+            int registered = 0;
+            try {
+                List<Map<String, Object>> models = channel.listModels();
+                if (models != null) {
+                    for (Map<String, Object> model : models) {
+                        Object id = model == null ? null : model.get("id");
+                        if (id == null || StringUtils.isBlank(String.valueOf(id))) {
+                            continue;
+                        }
+                        routes.putIfAbsent(String.valueOf(id), target);
+                        registered++;
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[ModelClientResolver] 免登录渠道 {} 模型清单读取失败: {}",
+                        channel.channel(), e.getMessage());
+            }
+            log.info("[ModelClientResolver] 免登录渠道 {} 注册 {} 个模型", channel.channel(), registered);
+        }
     }
 
     /**

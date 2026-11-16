@@ -162,12 +162,22 @@ public class ChatChannelController {
             if (impl == null) {
                 continue;
             }
-            Map<String, Object> item = new LinkedHashMap<>(5);
+            Map<String, Object> item = new LinkedHashMap<>(6);
             item.put("channel", impl.channel());
             item.put("displayName", impl.displayName());
             item.put("extension", impl.extension());
             item.put("priority", impl.priority());
             item.put("supportsImage", impl.supportsImage());
+            // 内置模型清单：渠道管理页要能在「免登录对话渠道」下直接看到模型，
+            // 免费渠道的模型目录也用同一份（经 KeylessChatChannel 契约汇总）。
+            try {
+                List<Map<String, Object>> models = impl.listModels();
+                item.put("models", models == null ? List.of() : models);
+            } catch (Exception e) {
+                // 登录态缺失等情况下模型表可能读不到：给空清单，不让整页 500
+                item.put("models", List.of());
+                item.put("modelsError", e.getMessage());
+            }
             channels.add(item);
         }
         payload.put("channels", channels);

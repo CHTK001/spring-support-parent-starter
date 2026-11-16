@@ -3,6 +3,10 @@ package com.chua.starter.account.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.account.spi.ChatChannelProvider;
+import com.chua.starter.common.support.channel.KeylessChatChannel;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Trae 对话渠道 —— 把 Trae IDE 的本地登录态包装进渠道管理。
@@ -22,7 +26,7 @@ import com.chua.starter.account.spi.ChatChannelProvider;
  * @since 4.0.0.51
  */
 @Spi("chat-trae")
-public class TraeChatChannel implements ChatChannelProvider {
+public class TraeChatChannel implements ChatChannelProvider, KeylessChatChannel {
 
     /**
      * 渠道标识（前端路由 / 持久化用）
@@ -82,5 +86,17 @@ public class TraeChatChannel implements ChatChannelProvider {
     @Override
     public boolean supportsImage() {
         return true;
+    }
+
+    /**
+     * 渠道内置模型清单（免费渠道的模型目录也读这一份）。
+     *
+     * <p>直接复用 {@link ChatChannelProvider#listModels()}：静态模型表，无登录态时也能读。</p>
+     *
+     * @return 模型列表
+     */
+    @Override
+    public List<Map<String, Object>> listModels() {
+        return ChatChannelProvider.super.listModels();
     }
 }
