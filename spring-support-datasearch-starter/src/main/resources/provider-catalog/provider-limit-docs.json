@@ -414,19 +414,6 @@
       "verified": false
     },
     {
-      "id": "openai",
-      "name": "OpenAI",
-      "aliases": [
-        "dots",
-        "openai"
-      ],
-      "hosts": [
-        "note3-prev-api.askdiandian.com"
-      ],
-      "doc": "https://platform.openai.com/docs/models",
-      "verified": false
-    },
-    {
       "id": "abacus",
       "name": "Abacus",
       "aliases": [
