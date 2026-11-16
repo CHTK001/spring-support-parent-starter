@@ -71,6 +71,13 @@ public class SysAiCompanionStore {
 
     /**
      * 构造注入；启动时自动补列。
+     *
+     * @param companionMapper 伙伴表映射器
+     * @param memoryMapper    记忆表映射器
+     * @param skillMapper     技能表映射器
+     * @param figureMapper    形象表映射器
+     * @param configMapper    共享配置表映射器
+     * @param dataSource      数据源（启动建表）
      */
     public SysAiCompanionStore(SysAiCompanionMapper companionMapper,
                                SysAiCompanionMemoryMapper memoryMapper,
@@ -387,10 +394,26 @@ public class SysAiCompanionStore {
     }
 
     @FunctionalInterface
-    private interface Getter { Map<String, Object> get(); }
+    private interface Getter {
+
+        /**
+         * 读取现有值。
+         *
+         * @return 现有值 Map
+         */
+        Map<String, Object> get();
+    }
 
     @FunctionalInterface
-    private interface Setter { void set(Map<String, Object> v); }
+    private interface Setter {
+
+        /**
+         * 写回新值。
+         *
+         * @param v 新值 Map
+         */
+        void set(Map<String, Object> v);
+    }
 
     /**
      * 映射 字段合并：空 patch 值清除；否则在现有值上合并 patch 键。
@@ -563,6 +586,16 @@ public class SysAiCompanionStore {
         return memory;
     }
 
+    /**
+     * 更新记忆（乐观：只更新非空字段，归属不匹配拒绝）。
+     *
+     * @param memoryId    记忆 ID
+     * @param companionId 归属伙伴 ID（可空，非空且不匹配时拒绝）
+     * @param content     新内容（可空）
+     * @param pinned      置顶标记（可空）
+     * @param status      状态（可空）
+     * @return 更新后的记忆
+     */
     public SysAiCompanionMemory updateMemory(String memoryId, String companionId,
                                              String content, Boolean pinned, String status) {
         SysAiCompanionMemory memory = getMemory(memoryId);
@@ -727,6 +760,15 @@ public class SysAiCompanionStore {
         return skillMapper.selectList(wrapper);
     }
 
+    /**
+     * 更新技能（乐观：只更新非空字段，归属不匹配拒绝）。
+     *
+     * @param skillId     技能 ID
+     * @param companionId 归属伙伴 ID（可空，非空且不匹配时拒绝）
+     * @param content     新内容（可空）
+     * @param status      状态（可空）
+     * @return 更新后的技能
+     */
     public SysAiCompanionSkill updateSkill(String skillId, String companionId,
                                            String content, String status) {
         SysAiCompanionSkill skill = getSkill(skillId);
@@ -820,6 +862,15 @@ public class SysAiCompanionStore {
         return figure;
     }
 
+    /**
+     * 更新形象（乐观：只更新非空字段，内置共享形象按管理员口径校验写入权）。
+     *
+     * @param figureId 形象 ID
+     * @param name     新名称（可空）
+     * @param headBox  头部框位置（可空）
+     * @param sizeTier 尺寸档位（可空）
+     * @return 更新后的形象
+     */
     public SysAiCompanionFigure updateFigure(String figureId, String name,
                                              Map<String, Object> headBox, String sizeTier) {
         SysAiCompanionFigure figure = getFigure(figureId);

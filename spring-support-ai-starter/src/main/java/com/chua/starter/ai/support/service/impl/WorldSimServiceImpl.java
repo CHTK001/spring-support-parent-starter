@@ -755,7 +755,13 @@ public class WorldSimServiceImpl implements WorldSimService {
         return out;
     }
 
-    /** 场景名或序号 → 场景 ID；对不上时落到第一个场景，保证新角色至少有个位置 */
+    /**
+     * 场景名或序号 → 场景 ID；对不上时落到第一个场景，保证新角色至少有个位置
+     *
+     * @param scenes 场景列表
+     * @param ref    场景名或序号
+     * @return 场景 ID
+     */
     private static Long resolveSceneId(List<SysAiWorldScene> scenes, Object ref) {
         String key = str(ref, null);
         if (key != null) {
@@ -776,7 +782,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return scenes.get(0).getId();
     }
 
-    /** 好感度钳制到 [-100,100]，非法值按 0 */
+    /**
+     * 好感度钳制到 [-100,100]，非法值按 0
+     *
+     * @param v 原始值
+     * @return 钳制后的好感度
+     */
     private static int clampAffinity(Object v) {
         int n = 0;
         if (v != null) {
@@ -1670,7 +1681,14 @@ public class WorldSimServiceImpl implements WorldSimService {
         return out;
     }
 
-    /** 场景 ID（可能是 Integer/Long/String 的 JSON 值）→ 场景名，找不到返回 null */    private static String sceneNameById(Map<Long, String> names, Object rawId) {
+    /**
+     * 场景 ID（可能是 Integer/Long/String 的 JSON 值）→ 场景名，找不到返回 null
+     *
+     * @param names 场景 ID -> 场景名映射
+     * @param rawId 原始 ID 值
+     * @return 场景名，未找到返回 null
+     */
+    private static String sceneNameById(Map<Long, String> names, Object rawId) {
         if (rawId == null) {
             return null;
         }
@@ -1797,7 +1815,11 @@ public class WorldSimServiceImpl implements WorldSimService {
         return sb.toString();
     }
 
-    /** 编剧单元模型：世界级「导演模型」优先，其次设置 sim.script_model，最后用生效对话模型 */
+    /**
+     * 编剧单元模型：世界级「导演模型」优先，其次设置 sim.script_model，最后用生效对话模型
+     *
+     * @return 编剧模型
+     */
     private String scriptModel() {
         String model = globalSettingReader.getStr("sim", "script_model");
         if (model == null || model.isBlank()) {
@@ -1806,7 +1828,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return model;
     }
 
-    /** 按世界取编剧模型：世界配置了导演模型就用它，否则回落全局 */
+    /**
+     * 按世界取编剧模型：世界配置了导演模型就用它，否则回落全局
+     *
+     * @param world 世界（可空）
+     * @return 编剧模型
+     */
     private String scriptModel(SysAiWorld world) {
         if (world != null) {
             String director = world.getDirectorModel();
@@ -1817,7 +1844,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return scriptModel();
     }
 
-    /** 按世界 ID 取编剧模型（内部会加载世界；世界不存在时回落全局） */
+    /**
+     * 按世界 ID 取编剧模型（内部会加载世界；世界不存在时回落全局）
+     *
+     * @param worldId 世界 ID（可空）
+     * @return 编剧模型
+     */
     private String scriptModel(Long worldId) {
         return scriptModel(worldId == null ? null : worldMapper.selectById(worldId));
     }
@@ -2338,7 +2370,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return MEDIA_OK;
     }
 
-    /** 在素材序列里找下一个「还没建任务、有提示词」的目标；无提示词的直接标成放行 */
+    /**
+     * 在素材序列里找下一个「还没建任务、有提示词」的目标；无提示词的直接标成放行
+     *
+     * @param materials 本幕全部素材
+     * @return 下一个待建任务的素材，没有则返回 null
+     */
     private Material nextTarget(List<Material> materials) {
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
@@ -2354,7 +2391,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return null;
     }
 
-    /** 媒体序列 / 它落盘的剧本节点。 */
+    /**
+     * 媒体序列 / 它落盘的剧本节点。
+     *
+     * @param scriptJson 剧本 JSON
+     * @return 素材列表
+     */
     private List<Material> mediaItems(Map<String, Object> scriptJson) {
         List<Material> items = new ArrayList<>();
         collect(ActScript.SCENES, scriptJson, items, "scene", "desc");
@@ -2371,6 +2413,9 @@ public class WorldSimServiceImpl implements WorldSimService {
      * </pre></p>
      *
      * @param key       剧本列表键
+     * @param scriptJson 剧本 JSON
+     * @param items     素材收集目标
+     * @param role      节点种类（scene/transition/prop）
      * @param nameField 取提示词的字段（场景 desc / 过场 text / 道具 name）
      */
     private void collect(String key, Map<String, Object> scriptJson, List<Material> items,
@@ -2771,7 +2816,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return MEDIA_VIDEO_SIZE;
     }
 
-    /** 剧本资产完成度 */
+    /**
+     * 剧本资产完成度
+     *
+     * @param script 剧本 JSON 文本
+     * @return 完成度统计（total/done），解析失败时原样返回剧本
+     */
     private Object assetProgressJson(String script) {
         try {
             List<Material> items = mediaItems(Json.fromJson(script, Map.class));
@@ -2794,6 +2844,12 @@ public class WorldSimServiceImpl implements WorldSimService {
      * 整幕表演（保留给一次性演完全部的场景）。
      *
      * <p>演出已改成分场增量，正常路径不再走这里，留作整幕重演的兜底实现。</p>
+     *
+     * @param worldId 世界ID
+     * @param actNo   幕次号
+     * @param script  剧本 JSON 文本
+     * @param act     幕次行
+     * @return 演出后的剧本 JSON 文本
      */
     private String playAct(Long worldId, Integer actNo, String script, SysAiWorldAct act) {
         Map<String, Object> json = Json.fromJson(script, Map.class);
@@ -2860,7 +2916,14 @@ public class WorldSimServiceImpl implements WorldSimService {
         scene.put(ActScript.SCENE_PLAY, seqLabel(order) + " " + name + "\n" + result.text().trim());
     }
 
-    /** 把表演后的剧本转成用户侧的故事片段 */
+    /**
+     * 把表演后的剧本转成用户侧的故事片段
+     *
+     * @param worldId 世界ID
+     * @param actNo   幕次号
+     * @param script  表演后的剧本 JSON 文本
+     * @return 故事片段 JSON 文本
+     */
     private String playStory(Long worldId, Integer actNo, String script) {
         Map<String, Object> json = Json.fromJson(script, Map.class);
         Map<String, Object> head = new LinkedHashMap<>();
@@ -2892,7 +2955,12 @@ public class WorldSimServiceImpl implements WorldSimService {
      * 私有辅助
      * ====================================================================== */
 
-    /** 补正幕次编号（下一个幕次编号） */
+    /**
+     * 补正幕次编号（下一个幕次编号）
+     *
+     * @param worldId 世界ID
+     * @return 下一个幕次编号
+     */
     private int actNextNo(Long worldId) {
         SysAiWorldAct one = actMapper.selectOne(
                 new LambdaQueryWrapper<SysAiWorldAct>()
@@ -2902,7 +2970,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return one == null ? 1 : (one.getActNo() == null ? 1 : one.getActNo() + 1);
     }
 
-    /** 幕次行 → JSON 展示行 */
+    /**
+     * 幕次行 → JSON 展示行
+     *
+     * @param act 幕次行
+     * @return 展示行
+     */
     private Map<String, Object> actRow(SysAiWorldAct act) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", act.getId());
@@ -2918,7 +2991,11 @@ public class WorldSimServiceImpl implements WorldSimService {
         return row;
     }
 
-    /** 幕次列表维度的缓存失效 */
+    /**
+     * 幕次列表维度的缓存失效
+     *
+     * @param worldId 世界ID
+     */
     public void evictActCaches(Long worldId) {
         if (worldId == null) return;
         String userId = AiUserContext.currentUserId();
@@ -2933,7 +3010,13 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
     }
 
-    /** 角色（世界 NPC）标签 */
+    /**
+     * 角色（世界 NPC）标签
+     *
+     * @param worldId 世界ID
+     * @param npcsObj NPC ID 列表（JSON 值）
+     * @return 角色名拼接标签
+     */
     private String npcsLabel(Long worldId, Object npcsObj) {
         if (npcsObj == null || !(npcsObj instanceof List<?> l)) return "-";
         StringBuilder sb = new StringBuilder();
@@ -2949,7 +3032,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return sb.length() == 0 ? "-" : sb.toString();
     }
 
-    /** 分场序号：1 → 一，11 → 十一（正文小标题用它，观众一眼看出场次递增） */
+    /**
+     * 分场序号：1 → 一，11 → 十一（正文小标题用它，观众一眼看出场次递增）
+     *
+     * @param n 序号
+     * @return 中文序号
+     */
     private static String seqLabel(int n) {
         String[] digits = {"一", "二", "三", "四", "五", "六", "七", "八", "九"};
         if (n <= 0) {
@@ -2964,7 +3052,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return String.valueOf(n);
     }
 
-    /** 安全转 Long */
+    /**
+     * 安全转 Long
+     *
+     * @param o 原始值
+     * @return Long 值，转换失败返回 0L
+     */
     private static Long parseLong(Object o) {
         try {
             Long v = Long.valueOf(String.valueOf(o));
@@ -2974,14 +3067,25 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
     }
 
-    /** 字符串安全补 */
+    /**
+     * 字符串安全补
+     *
+     * @param o        原始值
+     * @param fallback 空值时回落
+     * @return 字符串值
+     */
     private static String str(Object o, String fallback) {
         if (o == null) return fallback;
         if (o instanceof String s) return s.trim().isEmpty() ? fallback : s.trim();
         return String.valueOf(o);
     }
 
-    /** 场景列表（返回剧本 JSON 树里的活动节点，写回即落盘） */
+    /**
+     * 场景列表（返回剧本 JSON 树里的活动节点，写回即落盘）
+     *
+     * @param o 剧本中的场景节点
+     * @return 场景列表
+     */
     private List<Map<String, Object>> sceneList(Object o) {
         if (o == null || !(o instanceof List<?> l)) return new ArrayList<>();
         List<Map<String, Object>> out = new ArrayList<>();
@@ -3009,7 +3113,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         return out;
     }
 
-    /** 计算已完成的场景数（有 playText 的场景） */
+    /**
+     * 计算已完成的场景数（有 playText 的场景）
+     *
+     * @param script 剧本 JSON 文本
+     * @return 已完成场景数
+     */
     private int scenesDone(String script) {
         try {
             Map<String, Object> json = Json.fromJson(script, Map.class);
@@ -3024,7 +3133,13 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
     }
 
-    /** 写幕次 finished 消息 */
+    /**
+     * 写幕次 finished 消息
+     *
+     * @param worldId 世界ID
+     * @param act     幕次行
+     * @return 追加的事件
+     */
     private SysAiWorldEvent appendActEvent(Long worldId, SysAiWorldAct act) {
         SysAiWorldEvent e = new SysAiWorldEvent();
         e.setWorldId(worldId);
@@ -3070,6 +3185,14 @@ public class WorldSimServiceImpl implements WorldSimService {
 
         private final Map<String, Object> head;
 
+        /**
+         * 构造素材载体。
+         *
+         * @param node        所属的剧本节点
+         * @param field       媒体通道（mediaImage / mediaVideo）
+         * @param promptField 取提示词用的字段名
+         * @param head        媒体头
+         */
         private Material(Map<String, Object> node, String field, String promptField, Map<String, Object> head) {
             this.node = node;
             this.field = field;
@@ -3077,27 +3200,47 @@ public class WorldSimServiceImpl implements WorldSimService {
             this.head = head;
         }
 
-        /** 媒体头 */
+        /**
+         * 媒体头
+         *
+         * @return 媒体头
+         */
         public Map<String, Object> head() {
             return head;
         }
 
-        /** 任务号 */
+        /**
+         * 任务号
+         *
+         * @return 任务号
+         */
         public String taskId() {
             return (String) head.get("taskId");
         }
 
-        /** 所属节点（场景 / 过场 / 道具） */
+        /**
+         * 所属节点（场景 / 过场 / 道具）
+         *
+         * @return 所属节点
+         */
         public Map<String, Object> node() {
             return node;
         }
 
-        /** 是否视频通道 */
+        /**
+         * 是否视频通道
+         *
+         * @return true 表示视频通道
+         */
         public boolean video() {
             return ActScript.MEDIA_VIDEO_KEY.equals(field);
         }
 
-        /** 取提示词用的字段名（场景 desc / 过场 text / 道具 name） */
+        /**
+         * 取提示词用的字段名（场景 desc / 过场 text / 道具 name）
+         *
+         * @return 提示词字段名
+         */
         public String promptField() {
             return promptField;
         }

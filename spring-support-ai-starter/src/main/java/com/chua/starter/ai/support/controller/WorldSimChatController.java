@@ -291,6 +291,14 @@ public class WorldSimChatController {
      *
      * <p>与酒馆的关键差异：系统提示词 = 角色人设 + 世界状态 + 场景描述 + 关系网摘要，
      * 让 NPC 的回答带着世界与关系的"味道"。</p>
+     *
+     * @param out     输出流（SSE）
+     * @param world   世界
+     * @param scene   场景（可空）
+     * @param present 在场 NPC 列表
+     * @param member  本轮发言的 NPC
+     * @param prompt  用户输入
+     * @return 流式回复结果（模型 / 提供方 / 文本）
      */
     private Streamed streamOne(OutputStream out, SysAiWorld world, SysAiWorldScene scene,
                                List<SysAiWorldNpc> present, SysAiWorldNpc member, String prompt) {
@@ -378,6 +386,13 @@ public class WorldSimChatController {
 
     /**
      * 组装 NPC 的系统提示词：人设 + 世界状态 + 场景 + 关系网。
+     *
+     * @param world   世界
+     * @param scene   场景（可空）
+     * @param member  发言 NPC
+     * @param role    发言 NPC 角色（可空）
+     * @param present 在场 NPC 列表
+     * @return 系统提示词文本
      */
     private String buildSystemPrompt(SysAiWorld world, SysAiWorldScene scene,
                                      SysAiWorldNpc member, SysAiRole role,
@@ -433,7 +448,17 @@ public class WorldSimChatController {
         return sb.toString();
     }
 
-    /** 解析本轮回复 NPC：@ > 自动路由 > 首位 */
+    /**
+     * 解析本轮回复 NPC：@ > 自动路由 > 首位。
+     *
+     * @param world     世界
+     * @param scene     当前场景
+     * @param allNpcs   世界内全部 NPC
+     * @param sceneNpcs 场景内 NPC
+     * @param atRoleId  @ 的 NPC ID（可空）
+     * @param content   用户输入
+     * @return 应回复的 NPC
+     */
     private SysAiWorldNpc resolveSpeaker(SysAiWorld world, SysAiWorldScene scene,
                                          List<SysAiWorldNpc> allNpcs, List<SysAiWorldNpc> sceneNpcs,
                                          Integer atRoleId, String content) {
@@ -454,7 +479,15 @@ public class WorldSimChatController {
         return sceneNpcs.get(0);
     }
 
-    /** 路由模型：按场景上下文挑一位最该接话的 NPC */
+    /**
+     * 路由模型：按场景上下文挑一位最该接话的 NPC。
+     *
+     * @param world   世界
+     * @param scene   当前场景
+     * @param npcs    候选 NPC 列表
+     * @param content 用户输入
+     * @return 被选中的 NPC，路由失败时返回 null
+     */
     private SysAiWorldNpc autoRoute(SysAiWorld world, SysAiWorldScene scene,
                                     List<SysAiWorldNpc> npcs, String content) {
         try {
@@ -571,6 +604,12 @@ public class WorldSimChatController {
     /**
      * 本轮互动后的关系演化：让模型读一遍主回复，判断主回复者对在场其他 NPC
      * 的态度是友好还是刻薄，把好感度增量解析出来落库。失败静默（不影响主流程）。
+     *
+     * @param world     世界
+     * @param scene     当前场景（可空）
+     * @param present   在场 NPC 列表
+     * @param speaker   主回复者
+     * @param userPrompt 用户输入
      */
     private void adjustAffinityAfterTurn(SysAiWorld world, SysAiWorldScene scene,
                                          List<SysAiWorldNpc> present,
@@ -719,14 +758,12 @@ public class WorldSimChatController {
         }
     }
 
-    /* ============================================================================
-     * 时间推进（世界动态）
     /**
      * 时间推进（世界动态）
-     * @param Map<String 参数
-     * @param body 参数
-     * @return 返回值
-    */
+     *
+     * @param body 请求体（含 worldId）
+     * @return 推进结果（world / event / participants / message）
+     */
     @PostMapping("/advance")
     public Map<String, Object> advance(@RequestBody Map<String, Object> body) {
         Long worldId = body.get("worldId") == null ? null : Long.valueOf(String.valueOf(body.get("worldId")));
@@ -855,7 +892,12 @@ public class WorldSimChatController {
         return m;
     }
 
-    /** 世界归属账号（观众派发的消息以世界主人身份落库，便于原主人登录后仍能回看） */
+    /**
+     * 世界归属账号（观众派发的消息以世界主人身份落库，便于原主人登录后仍能回看）。
+     *
+     * @param worldId 世界 ID
+     * @return 世界归属账号，缺失时返回兜底值
+     */
     private String worldOwnerId(Long worldId) {
         SysAiWorld w = worldMapper.selectById(worldId);
         return w == null || w.getUserId() == null ? "local-admin-fallback" : w.getUserId();
@@ -1017,12 +1059,12 @@ public class WorldSimChatController {
         return "第 " + day + " 天 " + part;
     }
 
-    /* ============================================================================
     /**
-     * 内部工具
-     * @param id 长整数
-     * @return 返回值
-    */
+     * 校验世界归属：不存在 / 只读账号 / 非本人操作时抛出异常，通过则返回世界。
+     *
+     * @param id 世界 ID
+     * @return 归属校验通过的世界
+     */
     private SysAiWorld requireOwned(Long id) {
         SysAiWorld w = worldMapper.selectById(id);
         if (w == null) {
@@ -1088,6 +1130,11 @@ public class WorldSimChatController {
      *
      * <p>观众只有观看权，不能替角色说话；空提示词又会让模型无话可说。
      * 这里取上一条消息（旁白或某位的台词）作为引子，没有历史时按场景开场。</p>
+     *
+     * @param worldId 世界 ID
+     * @param sceneId 场景 ID（可空）
+     * @param hint    观众填写的引子（可空）
+     * @return 引子文本
      */
     private String spectatorCue(Long worldId, Long sceneId, String hint) {
         String seed = hint == null ? "" : hint.trim();
