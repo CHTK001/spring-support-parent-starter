@@ -293,6 +293,12 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
                 .orElseGet(() -> channelState(connectionId));
     }
 
+    /**
+     * 构造 UNKNOWN 默认健康记录行（库中无记录时兜底）。
+     *
+     * @param connectionId 连接标识
+     * @return 健康记录行（state=UNKNOWN）
+     */
     private ChannelHealth channelState(String connectionId) {
         ChannelHealth h = new ChannelHealth();
         h.setId(connectionId);
@@ -591,6 +597,12 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         return conn;
     }
 
+    /**
+     * 按供应商 ID 查已启用的供应商，不存在时抛异常。
+     *
+     * @param providerId 供应商 ID
+     * @return 已启用的供应商
+     */
     private SysAiProvider provider(String providerId) {
         SysAiProvider provider = providerMapper.selectById(providerId);
         if (provider == null || provider.getEnabled() == null || !provider.getEnabled()) {
@@ -847,11 +859,29 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         routableCache.invalidate(connectionId);
     }
 
+    /**
+     * 记录一次探针成功。
+     *
+     * @param connectionId 连接标识
+     * @param status       HTTP 状态码
+     * @param latency      延迟（毫秒）
+     * @param provider     供应商（可空）
+     * @param conn         连接（可空）
+     */
     private void markSuccess(String connectionId, int status, int latency,
                              SysAiProvider provider, SysAiProviderConnection conn) {
         mark(connectionId, true, status, latency, null, provider, conn);
     }
 
+    /**
+     * 记录一次探针失败。
+     *
+     * @param connectionId 连接标识
+     * @param status       HTTP 状态码
+     * @param error        错误信息
+     * @param provider     供应商（可空）
+     * @param conn         连接（可空）
+     */
     private void markFailure(String connectionId, int status, String error,
                              SysAiProvider provider, SysAiProviderConnection conn) {
         mark(connectionId, false, status, 0, error, provider, conn);
@@ -922,7 +952,16 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
 
     // ==================== 探针执行 ====================
 
-    /** send 方法 */
+    /**
+     * 发起一次 HTTP GET 探针请求。
+     *
+     * @param url        目标 URL
+     * @param header     Authorization 头（可空）
+     * @param proxy      代理地址（host:port，可空）
+     * @param timeoutSec 连接/读取超时（秒）
+     * @return 响应
+     * @throws Exception 请求失败
+     */
     private ClientResponse send(String url, String header, String proxy, int timeoutSec) throws Exception {
         try {
             HttpClientBuilder builder = HttpClientFactory.of(url);
@@ -1031,6 +1070,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         return channel == null ? null : managers.get(channel);
     }
 
+    /**
+     * 渠道鉴权 SPI 实现列表（懒加载，幂等）。
+     *
+     * @return platform → 渠道鉴权实现映射
+     */
     private Map<String, AccountChannelAuthManager> channelManagers() {
         Map<String, AccountChannelAuthManager> local = channelManagers;
         if (local == null) {
@@ -1078,7 +1122,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         return h;
     }
 
-    /** saveHealth 方法 */
+    /**
+     * 保存健康记录（不存在则插入，存在则更新）。
+     *
+     * @param h 健康记录行
+     */
     private void saveHealth(ChannelHealth h) {
         if (channelHealthMapper.selectCount(
                 new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getId, h.getId())) == 0) {
