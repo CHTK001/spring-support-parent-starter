@@ -15,30 +15,71 @@ import java.util.List;
  */
 public interface DeviceGroupService {
 
-    /** 查询分组树（用于左侧树） */
+    /**
+     * 查询分组树（用于左侧树）。
+     *
+     * @return 分组树节点列表
+     */
     List<DeviceGroupTreeNode> tree();
 
-    /** 创建分组 */
+    /**
+     * 创建分组。
+     *
+     * @param req 创建请求
+     */
     void create(DeviceGroupRequest req);
 
-    /** 更新分组 */
+    /**
+     * 更新分组。
+     *
+     * @param groupId 分组 ID
+     * @param req     更新请求
+     */
     void update(String groupId, DeviceGroupRequest req);
 
-    /** 删除分组（自动迁移设备到根） */
+    /**
+     * 删除分组（自动迁移设备到根）。
+     *
+     * @param groupId 分组 ID
+     */
     void delete(String groupId);
 
-    /** 批量分配设备到分组 */
+    /**
+     * 批量分配设备到分组。
+     *
+     * @param groupId   分组 ID
+     * @param deviceIds 设备 ID 列表
+     */
     void assignDevices(String groupId, List<String> deviceIds);
 
-    /** 查询分组下的设备ID列表 */
+    /**
+     * 查询分组下的设备 ID 列表。
+     *
+     * @param groupId 分组 ID
+     * @return 设备 ID 列表
+     */
     List<String> groupDeviceIds(String groupId);
 
-    /** 查询设备所属分组ID列表 */
+    /**
+     * 查询设备所属分组 ID 列表。
+     *
+     * @param deviceId 设备 ID
+     * @return 分组 ID 列表
+     */
     List<String> deviceGroupIds(String deviceId);
 
-    /** 所有设备-分组关联（设备列表回显分组用） */
+    /**
+     * 所有设备-分组关联（设备列表回显分组用）。
+     *
+     * @return 关联列表
+     */
     List<DeviceGroupDevice> assignments();
 
-    /** 设置某台设备的所属分组（全量替换该设备的关联） */
+    /**
+     * 设置某台设备的所属分组（全量替换该设备的关联）。
+     *
+     * @param deviceId 设备 ID
+     * @param groupIds 分组 ID 列表
+     */
     void assignDeviceGroups(String deviceId, List<String> groupIds);
 }
