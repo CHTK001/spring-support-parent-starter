@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.manage.limit;
+package com.chua.starter.datasearch.provider.limit;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,9 +16,13 @@ import java.util.Map;
  * RPM/TPM、计费页写按字符或按张计价），<b>拿不到的维度保持 {@code null}</b>，
  * 不写 0、不猜数值。前端按 null 显示「未公布」，而不是把 0 当成真实限制。</p>
  *
- * <p>来源优先级与判定见 {@link ProviderLimits}。{@code verified} 只表示
+ * <p>来源优先级与判定见 {@link ProviderLimitCollector}。{@code verified} 只表示
  * 「数值经过官方文档逐项核对」，{@code false} 表示文档只说明了限制机制
  * （按账户等级 / 按响应头动态下发），本次没有逐档取数。</p>
+ *
+ * <p>本类属于「<b>怎么拿</b>」的机制侧产物（{@link ProviderLimitMechanism} 的返回值），
+ * 与「<b>去哪拿</b>」的数据侧 {@link com.chua.starter.datasearch.provider.model.ProviderLimitInfo}
+ * （登记表里写了什么）区分开：前者是本次探测的快照，后者是静态登记项。</p>
  *
  * @since 4.0.0.51
  * @author CH

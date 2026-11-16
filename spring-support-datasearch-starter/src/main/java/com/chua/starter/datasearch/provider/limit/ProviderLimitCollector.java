@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.manage.limit;
+package com.chua.starter.datasearch.provider.limit;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 限制探测统一入口：把 {@link ProviderLimitSpi} 里的机制串成一条可解释的链路。
+ * 限制探测统一入口：把 {@link ProviderLimitMechanisms} 里的机制串成一条可解释的链路。
  *
  * <p>输出结构（直接落 {@code extra.provider_limits} 并原样回给前端）：</p>
  * <pre>
@@ -28,9 +28,9 @@ import java.util.Map;
  * @since 4.0.0.51
  * @author CH
  */
-public final class ProviderLimits {
+public final class ProviderLimitCollector {
 
-    private ProviderLimits() {
+    private ProviderLimitCollector() {
     }
 
     /**
@@ -38,8 +38,8 @@ public final class ProviderLimits {
      *
      * @return 机制实现
      */
-    public static List<ProviderLimitProvider> providers() {
-        return ProviderLimitSpi.providers();
+    public static List<ProviderLimitMechanism> mechanisms() {
+        return ProviderLimitMechanisms.mechanisms();
     }
 
     /**
@@ -48,12 +48,7 @@ public final class ProviderLimits {
      * @return 机制标识
      */
     public static List<String> kinds() {
-        List<ProviderLimitProvider> providers = providers();
-        List<String> kinds = new ArrayList<>(providers.size());
-        for (ProviderLimitProvider provider : providers) {
-            kinds.add(provider.kind());
-        }
-        return kinds;
+        return ProviderLimitMechanisms.kinds();
     }
 
     /**
@@ -65,20 +60,20 @@ public final class ProviderLimits {
     public static Map<String, Object> collect(ProviderLimitContext context) {
         Map<String, Object> declared = null;
         Map<String, Object> observed = null;
-        List<ProviderLimitProvider> providers = providers();
-        List<Map<String, Object>> attempted = new ArrayList<>(providers.size());
-        for (ProviderLimitProvider provider : providers) {
+        List<ProviderLimitMechanism> mechanisms = mechanisms();
+        List<Map<String, Object>> attempted = new ArrayList<>(mechanisms.size());
+        for (ProviderLimitMechanism mechanism : mechanisms) {
             Map<String, Object> row = new LinkedHashMap<>(4);
-            row.put("kind", provider.kind());
+            row.put("kind", mechanism.kind());
             try {
-                ProviderLimit limit = provider.query(context);
+                ProviderLimit limit = mechanism.query(context);
                 if (limit == null || !limit.hasValues()) {
                     row.put("status", "miss");
                 } else {
                     row.put("status", "hit");
                     row.put("source", limit.getSource());
                     Map<String, Object> map = limit.toMap();
-                    if ("header".equals(provider.kind())) {
+                    if ("header".equals(mechanism.kind())) {
                         observed = map;
                     } else if (declared == null) {
                         declared = map;

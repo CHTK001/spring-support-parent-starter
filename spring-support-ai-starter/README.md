@@ -388,11 +388,12 @@ one-api / new-api / voapi / veloera 系站点普遍沿用；两次请求都成�
 
 | 分节 | 数据来源 | 落点 |
 |---|---|---|
-| `limits` | `ProviderLimits`：`extra.limits_manual` → `ProviderLimitPresets` 官方文档预设 → 本次 `/models` 响应头（`x-ratelimit-*` / `ratelimit-policy` / `anthropic-ratelimit-*`） | `sys_ai_provider.extra.provider_limits` |
+| `limits` | `ProviderLimitCollector`：`extra.limits_manual` → `ProviderLimitPresets` 官方文档预设 → 本次 `/models` 响应头（`x-ratelimit-*` / `ratelimit-policy` / `anthropic-ratelimit-*`） | `sys_ai_provider.extra.provider_limits` |
 | `pricing` | 官方指标源（`ChatClientIndicators`）+ 上游 `/models` 的 pricing | `sys_ai_model_metrics`（计费取价）+ 服务商模型行 |
 | `descriptions` | 上游 `/models` 的 `description` / `summary` | `sys_ai_provider_model.description`，默认只补空值 |
 
-限制机制与余额同构：一种机制一个实现（`ProviderLimitProvider`），不逐家写死。官方文档只核对过
+限制机制与余额同构：一种机制一个实现（`ProviderLimitMechanism`，机制实现与厂商数据同在
+`spring-support-datasearch-starter`，本模块只做消费方），不逐家写死。官方文档只核对过
 DeepSeek（账号级并发）与 Moss（计费口径）两条，其余厂商靠响应头动态观测或 `extra.limits_manual`
 手填；拿不到的维度保持 `null`，页面显示「未收录」，不写 0。上游计费价格只在指标行没有价格时写入，
 已有官方价格不被覆盖；同一来源（`upstream:/models`）则随上游刷新。

@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.manage.limit;
+package com.chua.starter.datasearch.provider.limit;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,7 +20,7 @@ import java.util.Map;
  * @since 4.0.0.51
  * @author CH
  */
-public class HeaderProviderLimitProvider implements ProviderLimitProvider {
+public class HeaderLimitMechanism implements ProviderLimitMechanism {
 
     @Override
     public String kind() {

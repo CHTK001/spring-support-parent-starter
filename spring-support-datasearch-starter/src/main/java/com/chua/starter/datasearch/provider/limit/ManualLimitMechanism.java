@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.manage.limit;
+package com.chua.starter.datasearch.provider.limit;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +22,7 @@ import java.util.Map;
  * @since 4.0.0.51
  * @author CH
  */
-public class ManualProviderLimitProvider implements ProviderLimitProvider {
+public class ManualLimitMechanism implements ProviderLimitMechanism {
 
     /**
      * 手动配置在 extra 中的键名。

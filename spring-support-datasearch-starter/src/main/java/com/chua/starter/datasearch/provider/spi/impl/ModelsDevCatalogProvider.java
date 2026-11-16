@@ -23,7 +23,9 @@ import java.util.zip.GZIPInputStream;
  * <p>快照由 {@code pages/ai/docs/gen-providers-doc.js} 同源脚本生成：厂商、别名、
  * 官方文档入口取自模板库与 models.dev，模型说明 / 价格 / 上下文 / 模态 / 能力位取自
  * models.dev 的模型字段。{@code streaming} / {@code asyncSupported} 目录里没有，
- * 一律留空。</p>
+ * 该实现一律留空；需要这两个维度时由
+ * {@link com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities}
+ * 按接入协议 / 端点实测补位（不在此处猜）。</p>
  *
  * <p>匹配顺序：先精确命中 {@code aliases}，再按主机名（相等或子域）匹配。</p>
  *

@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.manage.limit;
+package com.chua.starter.datasearch.provider.limit;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 限制探测上下文：把「测谁」所需的最小信息集中传入，避免各实现重复拼装。
+ * 限制探测上下文：把「测谁」所需的最小信息集中传入，避免各机制实现重复拼装。
+ *
+ * <p>只承载传输层事实（地址、鉴权、代理、上次响应头）与宿主透传的 {@code extra}，
+ * 因此本类不依赖任何宿主模块的存储模型：宿主把 {@code SysAiProvider} 的字段
+ * 摊平进来即可，datasearch 不需要反过来依赖宿主的实体类。</p>
  *
  * @since 4.0.0.51
  * @author CH

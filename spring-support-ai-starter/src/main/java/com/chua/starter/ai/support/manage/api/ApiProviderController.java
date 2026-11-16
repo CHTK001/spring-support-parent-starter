@@ -21,8 +21,6 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.limit.ProviderLimitContext;
-import com.chua.starter.ai.support.manage.limit.ProviderLimits;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
@@ -32,6 +30,8 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.chat.MagpieRouteSource;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
+import com.chua.starter.datasearch.provider.limit.ProviderLimitCollector;
+import com.chua.starter.datasearch.provider.limit.ProviderLimitContext;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.datasearch.credit.model.BalancePart;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
@@ -6300,7 +6300,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      *
      * <p>与原「同步价格」的差别：</p>
      * <ul>
-     *   <li><b>限制</b>：走 {@link ProviderLimits} 的三段链路（手动配置 → 官方文档预设
+     *   <li><b>限制</b>：走 {@link ProviderLimitCollector} 的三段链路（手动配置 → 官方文档预设
      *       → 上游响应头），结果落到 {@code sys_ai_provider.extra.provider_limits}；</li>
      *   <li><b>计费标准</b>：官方指标源（{@link ChatClientIndicator}）与上游
      *       {@code /models} 自带 pricing 两条都写进 {@code sys_ai_model_metrics}；</li>
@@ -6386,7 +6386,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 .extra(entity.getExtra())
                 .responseHeaders(headers)
                 .build();
-        Map<String, Object> report = ProviderLimits.collect(context);
+        Map<String, Object> report = ProviderLimitCollector.collect(context);
         report.put("supported", report.get("declared") != null || report.get("observed") != null);
         report.put("pricing_url", ChatClientIndicators.officialPricingUrl(entity.getPlatform()));
 

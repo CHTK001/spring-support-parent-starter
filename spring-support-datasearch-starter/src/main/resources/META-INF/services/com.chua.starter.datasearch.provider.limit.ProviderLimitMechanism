@@ -1,0 +1,4 @@
+# 限制机制实现（怎么拿）：一种机制一行
+com.chua.starter.datasearch.provider.limit.ManualLimitMechanism
+com.chua.starter.datasearch.provider.limit.DocLimitMechanism
+com.chua.starter.datasearch.provider.limit.HeaderLimitMechanism

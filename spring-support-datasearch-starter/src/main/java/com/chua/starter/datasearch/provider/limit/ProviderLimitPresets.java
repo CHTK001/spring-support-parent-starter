@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.manage.limit;
+package com.chua.starter.datasearch.provider.limit;
 
 import com.chua.starter.datasearch.provider.model.ProviderLimitInfo;
 import com.chua.starter.datasearch.provider.support.ProviderLimits;
@@ -12,17 +12,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 官方限制登记表的适配层。
+ * 官方限制登记表的适配层：把「数据侧」登记项翻成「机制侧」快照。
  *
- * <p>数据与匹配规则都属于「厂商定义」，放在
- * {@code spring-support-datasearch-starter} 的
- * {@link com.chua.starter.datasearch.provider.spi.ProviderLimitProvider} SPI 里：
- * 资源 {@code provider-catalog/provider-limit-docs.json} 由 models.dev 目录与模板库生成，
- * 匹配顺序即实现顺序。本类只做两件事：把 datasearch 的登记项翻成 {@link ProviderLimit}
- * 并转成 {@link Entry}，供 {@link DocProviderLimitProvider} 与 {@link ProviderLimits} 使用。</p>
+ * <p>数据与匹配规则属于厂商定义，由 {@link com.chua.starter.datasearch.provider.spi.ProviderLimitProvider}
+ * SPI 提供（资源 {@code provider-catalog/provider-limit-docs.json}，由 models.dev 目录与模板库生成）。
+ * 本类只负责把 {@link ProviderLimitInfo} 翻成 {@link ProviderLimit} 并转成 {@link Entry}，
+ * 供 {@link DocLimitMechanism} 与 {@link ProviderLimitCollector} 使用。</p>
  *
- * <p>新增数据源（厂商控制台、私有登记表）实现 datasearch 的 SPI 并在
- * {@code META-INF/services} 登记即可，本模块不需要改动。</p>
+ * <p>新增数据源（厂商控制台、私有登记表）实现数据侧 SPI 并在 {@code META-INF/services}
+ * 登记即可，本类不需要改动。</p>
  *
  * @since 4.0.0.51
  * @author CH
@@ -156,7 +154,7 @@ public final class ProviderLimitPresets {
     }
 
     /**
-     * datasearch 登记项 → 本模块 Entry。
+     * 数据侧登记项 → 机制侧 Entry。
      *
      * @param info 登记项
      * @return Entry

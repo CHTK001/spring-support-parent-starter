@@ -9,8 +9,10 @@ import java.util.List;
  * 模型信息（来自公开目录或上游 /models）。
  *
  * <p>字段口径：价格都是 <b>USD / 百万 token</b>；{@link #streaming} 与
- * {@link #asyncSupported} 目前没有公开目录提供，保持 {@code null} 表示「未收录」，
- * 不按协议默认成 true —— 调用方需要自己判断「未知」和「不支持」。</p>
+ * {@link #asyncSupported} 目前没有公开目录提供，由
+ * {@link com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities}
+ * 按「流式走协议、异步只认实测」的口径补位，{@code null} 表示「未收录」——
+ * 调用方需要自己判断「未知」和「不支持」，不能把 null 当 false 用。</p>
  *
  * @author CH
  * @since 4.0.0.55
@@ -111,9 +113,19 @@ public class ProviderModelInfo implements Serializable {
     private Boolean streaming;
 
     /**
+     * 流式结论的来源（protocol / doc / probe；未收录为 null）
+     */
+    private String streamingSource;
+
+    /**
      * 是否支持异步调用（目录未提供时为 null）
      */
     private Boolean asyncSupported;
+
+    /**
+     * 异步结论的来源（protocol / doc / probe；未收录为 null）
+     */
+    private String asyncSource;
 
     /**
      * 知识截止日期

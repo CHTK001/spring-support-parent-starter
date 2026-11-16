@@ -11,6 +11,7 @@ import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.model.PriceWindow;
 import com.chua.starter.datasearch.provider.support.ProviderModelCatalogs;
 import com.chua.starter.datasearch.provider.support.ProviderPricings;
+import com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 模型目录同步：公开目录（models.dev）→ 服务商模型行 + 指标库。
@@ -37,7 +40,9 @@ import java.util.Map;
  * </ul>
  *
  * <p>模型识别按 id 精确匹配，其次按别名（模型行 alias 或目录 id）忽略大小写匹配。
- * 目录没有的字段一律不写；流式 / 异步目录不提供，返回 {@code null} 表示「未收录」。</p>
+ * 目录没有的字段一律不写；流式 / 异步按
+ * {@link com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities}
+ * 的口径补位（流式走协议、异步只认实测端点），判定不了就返回 {@code null} 表示「未收录」。</p>
  *
  * @author CH
  * @since 4.0.0.55
@@ -94,6 +99,14 @@ public class ProviderCatalogSyncService {
             catalog.setPricingError(refresh.getError());
         }
 
+        // 流式 / 异步：models.dev 没有这两个字段，按协议级口径补位；
+        // 判定不了（协议未知 / 厂商未实测）就留 null = 未收录，不默认成支持。
+        String protocol = providerProtocol(provider);
+        Boolean streaming = ProviderProtocolCapabilities.supportsStreaming(protocol);
+        Boolean asyncSupported = ProviderProtocolCapabilities.supportsAsync(provider.getPlatform(), protocol);
+        String streamingSource = ProviderProtocolCapabilities.streamingSource(protocol);
+        String asyncSource = ProviderProtocolCapabilities.asyncSource(provider.getPlatform(), protocol);
+
         List<Map<String, Object>> rows = new ArrayList<>(catalog.getModels().size());
         for (ProviderModelInfo model : catalog.getModels()) {
             Map<String, Object> metrics = metricsOf(model, catalog.getPricingRules());
@@ -121,13 +134,49 @@ public class ProviderCatalogSyncService {
         out.put("pricing_live", catalog.getPricingLive());
         out.put("pricing_fetched_at", catalog.getPricingFetchedAt());
         out.put("pricing_error", catalog.getPricingError());
-        // 目录不提供流式 / 异步标记：显式回 null，前端显示「未收录」
-        out.put("streaming", null);
-        out.put("async", null);
+        // 流式 / 异步：目录不提供，按协议级口径判定后的结论与来源一起回传，
+        // 前端据此区分「支持（来源：协议）」与「未收录」。
+        out.put("streaming", streaming);
+        out.put("streaming_source", streamingSource);
+        out.put("async", asyncSupported);
+        out.put("async_source", asyncSource);
         log.info("[ProviderSync] provider={} 目录={} 模型={} 说明更新={} 计费新增={}",
                 provider.getProviderId(), catalog.getProviderId(), catalog.getModels().size(),
                 ((Map<?, ?>) out.get("descriptions")).get("updated"), pricing.getInserted());
         return out;
+    }
+
+    /**
+     * 解析服务商的接入协议：取已配置模型行能力位里的 {@code protocol}。
+     *
+     * <p>一个服务商只应有一种协议（保存时协议会同步写到该服务商的全部模型），
+     * 因此只有「恰好一种」时才认定；混装、或还没配置任何模型时返回 {@code null} ——
+     * 协议不确定就不给流式 / 异步下结论。</p>
+     *
+     * @param provider 服务商行
+     * @return 协议标识（小写）；无法确定返回 null
+     */
+    private String providerProtocol(SysAiProvider provider) {
+        if (provider.getProviderId() == null) {
+            return null;
+        }
+        List<SysAiProviderModel> rows = providerModelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, provider.getProviderId()));
+        Set<String> protocols = new LinkedHashSet<>(4);
+        for (SysAiProviderModel row : rows) {
+            List<Map<String, Object>> caps = row.getCapabilities();
+            if (caps == null) {
+                continue;
+            }
+            for (Map<String, Object> cap : caps) {
+                Object protocol = cap == null ? null : cap.get("protocol");
+                if (protocol != null && !String.valueOf(protocol).isBlank()) {
+                    protocols.add(String.valueOf(protocol).trim().toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+        return protocols.size() == 1 ? protocols.iterator().next() : null;
     }
 
     /**
@@ -232,6 +281,9 @@ public class ProviderCatalogSyncService {
 
     /**
      * 单条目录模型 → 指标键（与模型指标配置表、模型行回填链路同一套键名）。
+     *
+     * <p>流式 / 异步不进这里：{@code sys_ai_model_metrics} 是定列表，
+     * 没有对应列，写进来会被静默丢弃；这两项按服务商维度在同步报告里回传。</p>
      *
      * @param model 目录模型
      * @param rules 厂商定价规则（峰谷 / 按 N 次）

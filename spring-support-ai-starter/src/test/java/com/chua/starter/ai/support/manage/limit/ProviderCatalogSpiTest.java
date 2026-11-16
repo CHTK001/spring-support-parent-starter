@@ -1,8 +1,11 @@
 package com.chua.starter.ai.support.manage.limit;
 
+import com.chua.starter.datasearch.provider.limit.ProviderLimit;
+import com.chua.starter.datasearch.provider.limit.ProviderLimitPresets;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
 import com.chua.starter.datasearch.provider.support.ProviderModelCatalogs;
+import com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -83,11 +86,32 @@ class ProviderCatalogSpiTest {
     }
 
     @Test
-    void streamingAndAsyncStayUnknown() {
+    void catalogStaysSilentOnStreamingWhileProtocolRuleFills() {
         ProviderModelCatalog catalog = ProviderModelCatalogs.of("qwen", DASHSCOPE);
         assertNotNull(catalog);
-        // 公开目录没有流式 / 异步字段：保持 null（未收录），不按协议默认成 true
+        // 目录侧仍然不猜：models.dev 没有这两个字段，一律留空
         assertTrue(catalog.getModels().stream().allMatch(m -> m.getStreaming() == null));
         assertTrue(catalog.getModels().stream().allMatch(m -> m.getAsyncSupported() == null));
+
+        // 协议级口径（A′）：三种协议的流式是协议必备行为，命中即支持，来源 protocol
+        for (String protocol : List.of("openai", "anthropic", "gemini")) {
+            assertEquals(Boolean.TRUE, ProviderProtocolCapabilities.supportsStreaming(protocol), protocol);
+            assertEquals(ProviderProtocolCapabilities.SOURCE_PROTOCOL,
+                    ProviderProtocolCapabilities.streamingSource(protocol), protocol);
+        }
+        // 协议不在名单内不猜
+        assertNull(ProviderProtocolCapabilities.supportsStreaming("ollama"));
+        assertNull(ProviderProtocolCapabilities.streamingSource(null));
+
+        // 异步只认端点实测过的官方厂商；中转自称 openai 兼容也不算
+        assertEquals(Boolean.TRUE, ProviderProtocolCapabilities.supportsAsync("openai", "openai"));
+        assertEquals(Boolean.TRUE, ProviderProtocolCapabilities.supportsAsync("anthropic", "anthropic"));
+        assertEquals(Boolean.TRUE, ProviderProtocolCapabilities.supportsAsync("google", "gemini"));
+        assertEquals(ProviderProtocolCapabilities.SOURCE_PROBE,
+                ProviderProtocolCapabilities.asyncSource("anthropic", "anthropic"));
+        assertNull(ProviderProtocolCapabilities.supportsAsync("openrouter", "openai"));
+        assertNull(ProviderProtocolCapabilities.asyncSource("siliconflow", "openai"));
+        // 厂商与协议对不上时同样不下结论
+        assertNull(ProviderProtocolCapabilities.supportsAsync("openai", "gemini"));
     }
 }
