@@ -1,7 +1,7 @@
 -- =====================================================================
 -- V2.0__init_all_api_collect.sql - spring-support-collect-starter 全量表结构
 -- 通道: INIT 同步建表（MySQL 8 语法，H2 MODE=MySQL 回放），索引按 INDEX `表名_idx_/uk_列` 内联声明。
--- 种子数据见 V1.0__initdata_all_api_collect.sql（INITDATA 通道，幂等）。
+-- 种子数据见 V2.0__initdata_all_api_collect.sql（INITDATA 通道，幂等）。
 -- 列名统一带表名前缀，公共审计列沿用 SysBase（create_*/update_*）。
 -- 版本递进: V1.0 -> V2.0。原 V1.1__add_collect_setting.sql 的 collect_setting 已并入
 --   本文件（见 collect_function 之后的段落），增量脚本已删除。FlywayLike 按

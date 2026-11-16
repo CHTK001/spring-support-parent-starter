@@ -211,7 +211,7 @@ plugin:
 **第一步**：引入依赖（见第二节），宿主需已具备数据源与 MyBatis-Plus。
 
 **第二步**：建表。模块自带 `src/main/resources/db/init/V2.0__init_all_device.sql` 与
-`V2.0__initdata_all_device.sql`，由 `spring-support-datasource-starter` 的脚本机制执行；
+`V2.4__initdata_all_device.sql`，由 `spring-support-datasource-starter` 的脚本机制执行；
 存量库另由 `V2.2__device_timeseries.sql` 补 `device_series_point`（时序明细表）。
 未使用该能力时需手工执行这几个脚本。
 

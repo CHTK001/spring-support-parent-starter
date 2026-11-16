@@ -1,5 +1,5 @@
 -- =====================================================================
--- V2.0__initdata_all_device.sql - spring-support-device-starter 全量种子
+-- V2.4__initdata_all_device.sql - spring-support-device-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；表结构就位后执行。
 -- 说明: 本文件是该模块唯一的种子数据入口。此前分散的
 --   V1.0.1__initdata_all_device.sql 与 V1.2__device_task_state_index.sql

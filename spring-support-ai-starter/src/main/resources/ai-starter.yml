@@ -239,8 +239,8 @@ plugin:
   datasource:
     script:
       # 建表与种子数据统一由 datasource-starter 的 FlywayLike 机制执行，
-      # 走 classpath*:db/init/*.sql 扫描（本模块的 V5.1__init_all_ai.sql /
-      # V5.1__initdata_all_ai.sql 及其他模块 jar 里的脚本一并纳入）。
+      # 走 classpath*:db/init/*.sql 扫描（本模块的 V6.11__init_all_ai.sql /
+      # V6.11__initdata_all_ai.sql 及其他模块 jar 里的脚本一并纳入）。
       enable: true
       # ALWAYS：表结构脚本每次启动都扫，是否真执行由 sys_database_version 的
       # 「脚本名+版本」执行记录决定（已成功过的不会重跑）；补列语句靠版本号递进

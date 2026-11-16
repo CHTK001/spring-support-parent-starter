@@ -1,5 +1,5 @@
 -- =====================================================================
--- V5.1__initdata_all_ai.sql - spring-support-ai-starter 全量种子
+-- V6.11__initdata_all_ai.sql - spring-support-ai-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；表结构就位后执行。
 -- 说明: 本文件是该模块唯一的种子数据入口。此前分散的
 --   V1.0__initdata_all_ai.sql（空占位）与 V4.0.0.49 / V4.0.0.55 的种子

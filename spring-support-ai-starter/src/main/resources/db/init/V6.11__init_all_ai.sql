@@ -2,7 +2,7 @@
 -- V6.11__init_all_ai.sql - spring-support-ai-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口；本目录 INIT 通道只保留本文件，
---   INITDATA 通道只保留 V5.1__initdata_all_ai.sql。此前分散的
+--   INITDATA 通道只保留 V6.11__initdata_all_ai.sql。此前分散的
 --   V1.0__init_all_ai.sql、V4.0.0.46 ~ V4.0.0.57 的增量脚本，以及
 --   V5.2 / V5.3 / V5.6 / V5.7 / V5.8 / V5.9 / V5.10 / V6.1 / V6.2 /
 --   V6.4 / V6.5 / V6.6 / V6.7 / V6.8 / V6.9 各增量，均在收敛中并入本文件

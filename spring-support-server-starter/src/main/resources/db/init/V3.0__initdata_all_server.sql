@@ -1,5 +1,5 @@
 -- =====================================================================
--- V2.0__initdata_all_server.sql - spring-support-server-starter 全量种子
+-- V3.0__initdata_all_server.sql - spring-support-server-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；表结构就位后执行。
 -- 说明: 本文件是该模块唯一的种子数据入口。此前分散的
 --   V1.0__initdata_all_server.sql 已在本次收敛中并入本文件并删除。

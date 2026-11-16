@@ -92,7 +92,8 @@
 | 脚本 | 建表数 | 表名（前 12 个） |
 | --- | --- | --- |
 | `db/h2/V4.0.0.51__httpman.sql` | 4 | `ms_httpman_collection`, `ms_httpman_request`, `ms_httpman_history`, `ms_httpman_variable` |
-| `db/init/V4.0.0.51__httpman.sql` | 4 | `ms_httpman_collection`, `ms_httpman_request`, `ms_httpman_history`, `ms_httpman_variable` |
+| `db/init/V1.0__init_all_httpman.sql` | 4 | `ms_httpman_collection`, `ms_httpman_request`, `ms_httpman_history`, `ms_httpman_variable` |
+| `db/init/V1.0__initdata_all_httpman.sql` | — | 种子占位（本模块无预置数据，保留以对齐「一个 init + 一个 initdata」规范） |
 
 ## 九、通用场景
 

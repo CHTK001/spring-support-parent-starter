@@ -252,8 +252,8 @@
 
 | 脚本 | 建表数 | 表名（前 12 个） |
 | --- | --- | --- |
-| `db/init/V1.0__init_all_api_collect.sql` | 12 | `collect_category`, `collect_flow`, `collect_datasource`, `collect_variable`, `collect_task`, `collect_task_log`, `collect_field`, `collect_record`, `collect_notice`, `collect_function`, `collect_alert_rule`, `collect_flow_version` |
-| `db/init/V1.0__initdata_all_api_collect.sql` | 0 | — |
+| `db/init/V2.0__init_all_api_collect.sql` | 12 | `collect_category`, `collect_flow`, `collect_datasource`, `collect_variable`, `collect_task`, `collect_task_log`, `collect_field`, `collect_record`, `collect_notice`, `collect_function`, `collect_alert_rule`, `collect_flow_version` |
+| `db/init/V2.0__initdata_all_api_collect.sql` | 0 | — |
 | `db/init/V1.1__add_collect_setting.sql` | 1 | `collect_setting` |
 
 ## 九、通用场景

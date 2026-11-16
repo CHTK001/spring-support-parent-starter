@@ -1,8 +1,11 @@
 -- =====================================================================
--- V4.0.0.51__httpman.sql - spring-support-httpman-starter 建表脚本
+-- V1.0__init_all_httpman.sql - spring-support-httpman-starter 建表脚本
 -- 模块: spring-support-httpman-starter
 -- 通道: INIT 建表（幂等：IF NOT EXISTS + 补列）
 -- 说明: 接口调试控制台（HttpMan）能力，Postman 风格：集合 / 请求 / 历史 / 变量。
+--       本文件是该模块唯一建表入口（原 V4.0.0.51__httpman.sql 按
+--       「一个 init + 一个 initdata」规范收敛改名，种子占位见
+--       V1.0__initdata_all_httpman.sql）。
 -- 命名规范: 列名使用完整表名作为前缀，如 ms_httpman_request_id
 -- 数据库: MySQL 8.x，由 FlywayLike（plugin.datasource.script）自动扫描
 -- 幂等: 建表 IF NOT EXISTS，重复执行安全

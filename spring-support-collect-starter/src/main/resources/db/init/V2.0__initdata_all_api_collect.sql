@@ -1,5 +1,5 @@
 -- =====================================================================
--- V1.0__initdata_all_api_collect.sql - spring-support-collect-starter 全量种子
+-- V2.0__initdata_all_api_collect.sql - spring-support-collect-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；全部幂等（INSERT IGNORE 按主键/唯一索引去重）。
 --
 -- ⚠️ 示例已收敛：采集平台的示例流程统一由 eduai-starter 的初始化数据提供
