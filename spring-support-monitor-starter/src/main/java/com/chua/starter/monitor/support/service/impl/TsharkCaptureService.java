@@ -308,6 +308,18 @@ public class TsharkCaptureService {
        */
     private final TsharkRetentionProperties retentionProperties;
 
+    /**
+     * 构造抓包服务（对话期间窗口内共享的解析/还原/清理入口）。
+     *
+     * @param sessionMapper          会话 Mapper
+     * @param packetMapper           报文 Mapper
+     * @param pushService            实时推送服务（Socket 未启用时静默跳过）
+     * @param streamRegistryProvider 数据包实时推送注册表提供者（可空）
+     * @param tsharkRuntime          tshark 运行时
+     * @param sqliteRegistry         SQLite 报文库注册表
+     * @param installProperties      安装配置
+     * @param retentionProperties    抓包数据保留策略
+     */
     public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
                                 MsTsharkPacketMapper packetMapper,
                                 MonitorPushService pushService,
@@ -1498,6 +1510,9 @@ public class TsharkCaptureService {
 
       /**
        * 按 frame.number（pcap 内自然序、同一会话唯一）解析帧号，解析失败返回 null。
+       *
+       * @param value 帧号文本
+       * @return 帧号；解析失败返回 null
        */
     private static Long parseFrameNo(String value) {
         if (value == null || value.isBlank()) {
@@ -2011,7 +2026,15 @@ public class TsharkCaptureService {
         return null;
     }
 
-      /** 报文属于该流：正向或反向均可。 */
+      /** 报文属于该流：正向或反向均可。
+       *
+       * @param p      报文
+       * @param cIp    客户端 IP
+       * @param cPort  客户端端口
+       * @param sIp    服务端 IP
+       * @param sPort  服务端端口
+       * @return 四元组任一方向匹配返回 true
+       */
     private static boolean isSameFlow(MsTsharkPacket p, String cIp, Integer cPort,
                                       String sIp, Integer sPort) {
         return (eq(p.getSourceIp(), cIp) && eq(p.getSourcePort(), cPort)
@@ -2068,6 +2091,14 @@ public class TsharkCaptureService {
 
       /**
        * 把一条流按时间排好、解析标志位、判定握手次数与关闭状态。
+       *
+       * @param sessionId 会话标识
+       * @param cIp       客户端 IP
+       * @param cPort     客户端端口
+       * @param sIp       服务端 IP
+       * @param sPort     服务端端口
+       * @param flow      按时间排好的整条流
+       * @return 握手分析结果
        */
     private TsharkHandshakeVO buildHandshake(Long sessionId, String cIp, Integer cPort,
                                             String sIp, Integer sPort, List<MsTsharkPacket> flow) {
@@ -2563,6 +2594,12 @@ public class TsharkCaptureService {
 
       /**
        * 请求头：起始行 {@code GET /api/x HTTP/1.1} + 逐行头字段。
+       *
+       * @param method  请求方法
+       * @param uri     请求 URI
+       * @param version HTTP 版本
+       * @param lines   逐行头字段文本
+       * @return 请求头文本；无可拼内容返回 null
        */
     private static String httpRequestHead(String method, String uri, String version, String lines) {
         String m = blankToNull(method);
@@ -2591,6 +2628,12 @@ public class TsharkCaptureService {
 
       /**
        * 响应头：状态行 {@code HTTP/1.1 200 OK} + 逐行头字段。
+       *
+       * @param code    状态码
+       * @param phrase  状态短语
+       * @param version HTTP 版本
+       * @param lines   逐行头字段文本
+       * @return 响应头文本；无可拼内容返回 null
        */
     private static String httpResponseHead(String code, String phrase, String version, String lines) {
         String c = blankToNull(code);
@@ -3204,6 +3247,10 @@ public class TsharkCaptureService {
 
       /**
        * 是否就是指定 id 的报文。
+       *
+       * @param packet 报文（可为 null）
+       * @param id     报文 id
+       * @return 报文非空且 id 相等返回 true
        */
     private static boolean isSamePacket(MsTsharkPacket packet, Long id) {
         return packet != null && packet.getId() != null && packet.getId().equals(id);
@@ -3241,6 +3288,9 @@ public class TsharkCaptureService {
 
       /**
        * 非空且非空白。
+       *
+       * @param value 文本（可为 null）
+       * @return 非空且非空白返回 true
        */
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
@@ -3273,7 +3323,8 @@ public class TsharkCaptureService {
        *
        * <p>路径不可读时直接跳过并记一条 warn —— 抓包不能因为一个调试用文件缺失就整体失败。</p>
        *
-       * @param cmd tshark 命令
+       * @param cmd        tshark 命令
+       * @param sessionId  会话标识（决定优先读哪份 keylog）
        */
     private void applyTlsKeylog(List<String> cmd, Long sessionId) {
         Path keylog = sessionId == null ? null : this.sessionKeylogs.get(sessionId);
@@ -3508,7 +3559,16 @@ public class TsharkCaptureService {
         return ReturnResult.ok(result);
     }
 
-    /** addAnomaly 方法 */
+    /**
+     * 把一条异常统计行的计数 > 0 时加入结果列表。
+     *
+     * @param out      结果列表
+     * @param row      异常统计行（key → 计数）
+     * @param key      行内计数键
+     * @param label    展示名
+     * @param severity 严重级别（danger / warning / info）
+     * @param filter   tshark 过滤表达式
+     */
     private static void addAnomaly(List<TsharkAnomalyVO> out, Map<String, Object> row, String key,
                                    String label, String severity, String filter) {
         Object v = row.get(key);

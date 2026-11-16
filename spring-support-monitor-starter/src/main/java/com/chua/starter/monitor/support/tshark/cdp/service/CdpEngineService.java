@@ -242,6 +242,8 @@ public class CdpEngineService {
      * 被外部关掉、WS 可能已断开，那时状态仍是 {@code STARTED}，界面显示正常
      * 却什么都操作不了。所以这里先校验端口与通道是否真的活着，不活就按
      * STOPPED 重来。</p>
+     *
+     * @return 启动后的状态
      */
     public synchronized Status start() {
         if (state == Status.STARTED) {
@@ -598,6 +600,8 @@ public class CdpEngineService {
 
     /**
      * 拉取版本信息
+     *
+     * @return 版本信息映射（含 webSocketDebuggerUrl / version 等）；还没上线时返回空映射
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> version() {
@@ -706,6 +710,8 @@ public class CdpEngineService {
 
     /**
      * 调试端口是否已在监听
+     *
+     * @return true 表示端口可连接
      */
     private boolean isDebugPortListening() {
         try (java.net.Socket socket = new java.net.Socket()) {
@@ -754,6 +760,8 @@ public class CdpEngineService {
      * 自己会再派生一层浏览器进程。只 destroy 启动器时，浏览器进程仍然活着、
      * 9222 端口仍然响应、页面还在——界面却显示「已停止」，这是最误导人的状态。
      * 因此按进程树强杀，并回收端口。</p>
+     *
+     * @return 停止后的状态（端口未释放时为 FAILED）
      */
     public synchronized Status stop() {
         // 只有「确实可能还活着东西」的状态才需要清理：
@@ -819,6 +827,8 @@ public class CdpEngineService {
 
     /**
      * 获取所有已打开的目标
+     *
+     * @return 目标列表；失败时返回空列表
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> targets() {
@@ -871,6 +881,9 @@ public class CdpEngineService {
      *
      * <p>新建完成后立刻把这个页面接上页面级事件域（{@code Runtime.enable} / {@code Network.enable}）：
      * 否则用户在没点过这个页面之前，它的 console / network 永远不会出现在面板里。</p>
+     *
+     * @param params 创建目标参数（如 url）
+     * @return 创建结果（含 targetId）；失败时可能为 null
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> createTarget(Map<String, Object> params) {
@@ -886,6 +899,9 @@ public class CdpEngineService {
 
     /**
      * 关闭目标
+     *
+     * @param targetId 页面标识
+     * @return 关闭结果；失败时可能为 null
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> closeTarget(String targetId) {
@@ -945,6 +961,11 @@ public class CdpEngineService {
 
     /**
      * 通过页面级客户端调用 CDP 命令
+     *
+     * @param targetId 页面标识
+     * @param method   CDP 方法名
+     * @param params   调用参数
+     * @return 调用结果（含 result 或 error 等信息）
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> pageCall(String targetId, String method, Map<String, Object> params) {
@@ -953,6 +974,12 @@ public class CdpEngineService {
 
     /**
      * 通过页面级客户端调用 CDP 命令（自定义超时）
+     *
+     * @param targetId 页面标识
+     * @param method   CDP 方法名
+     * @param params   调用参数
+     * @param timeout  超时时间
+     * @return 调用结果（含 result 或 error 等信息）
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> pageCall(String targetId, String method, Map<String, Object> params, Duration timeout) {
@@ -1007,6 +1034,9 @@ public class CdpEngineService {
 
     /**
      * 取数值（CDP 里尺寸可能是 Integer / Double / Long）
+     *
+     * @param value 待转换值
+     * @return 数值，无法解析时返回 0
      */
     private static double toDouble(Object value) {
         if (value instanceof Number number) {
@@ -1021,6 +1051,10 @@ public class CdpEngineService {
 
     /**
      * 通过页面级客户端调用 CDP 事件
+     *
+     * @param targetId 页面标识
+     * @param method   事件方法名
+     * @param handler  事件处理器
      */
     public void pageOn(String targetId, String method, Consumer<Map<String, Object>> handler) {
         CdpWsClient client = pageClient(targetId);
@@ -1045,6 +1079,8 @@ public class CdpEngineService {
 
     /**
      * 获取当前的页面
+     *
+     * @return 类型为 page 的目标列表
      */
     public List<Map<String, Object>> pages() {
         List<Map<String, Object>> targets = targets();
@@ -1075,6 +1111,8 @@ public class CdpEngineService {
 
     /**
      * 当前页面的数量
+     *
+     * @return 目标总数
      */
     private int targetCount() {
         return targets().size();

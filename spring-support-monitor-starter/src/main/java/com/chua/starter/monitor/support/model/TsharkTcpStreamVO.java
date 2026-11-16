@@ -54,6 +54,15 @@ public class TsharkTcpStreamVO implements Serializable {
         public TcpStreamFrame() {
         }
 
+        /**
+         * 构造一帧 TCP 流数据。
+         *
+         * @param frameNo pcap 内自然递增的帧号
+         * @param time    帧时间
+         * @param payload 载荷十六进制（tshark -x）
+         * @param text    载荷文字（tshark -T fields 人可读摘要）
+         * @param offset  该帧相对于流的 START 时间偏移（秒）
+         */
         public TcpStreamFrame(Long frameNo, String time, String payload, String text, double offset) {
             this.frameNo = frameNo;
             this.time = time;
@@ -62,14 +71,29 @@ public class TsharkTcpStreamVO implements Serializable {
             this.offset = offset;
         }
 
+        /**
+         * 获取帧号。
+         *
+         * @return 帧号
+         */
         public Long getFrameNo() {
             return this.frameNo;
         }
 
+        /**
+         * 设置帧号。
+         *
+         * @param frameNo 帧号
+         */
         public void setFrameNo(Long frameNo) {
             this.frameNo = frameNo;
         }
 
+        /**
+         * 获取帧时间。
+         *
+         * @return 帧时间
+         */
         public String getTime() {
             return this.time;
         }
@@ -118,22 +142,47 @@ public class TsharkTcpStreamVO implements Serializable {
         }
     }
 
+    /**
+     * 获取会话 ID。
+     *
+     * @return 会话 ID
+     */
     public Long getSessionId() {
         return this.sessionId;
     }
 
+    /**
+     * 设置会话 ID。
+     *
+     * @param sessionId 会话 ID
+     */
     public void setSessionId(Long sessionId) {
         this.sessionId = sessionId;
     }
 
+    /**
+     * 获取协议。
+     *
+     * @return 协议名
+     */
     public String getProtocol() {
         return this.protocol;
     }
 
+    /**
+     * 设置协议。
+     *
+     * @param protocol 协议名
+     */
     public void setProtocol(String protocol) {
         this.protocol = protocol;
     }
 
+    /**
+     * 获取源地址（主机是否为本端由 sourceSide 标识）。
+     *
+     * @return 源地址
+     */
     public String getSrc() {
         return this.src;
     }
@@ -183,6 +232,11 @@ public class TsharkTcpStreamVO implements Serializable {
         this.sourceSide = sourceSide;
     }
 
+    /**
+     * 获取帧列表。
+     *
+     * @return 帧列表
+     */
     public java.util.List<TcpStreamFrame> getFrames() {
         return this.frames;
     }
