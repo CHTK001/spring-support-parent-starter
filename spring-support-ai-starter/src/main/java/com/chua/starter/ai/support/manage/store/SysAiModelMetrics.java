@@ -309,6 +309,18 @@ public class SysAiModelMetrics implements Serializable {
     private Boolean functionCalling; // 函数调用
 
     /**
+     * 是否支持流式输出（按协议判定，未收录为 null）
+     */
+    @TableField("sys_ai_model_metrics_support_streaming")
+    private Boolean streaming; // 流式输出
+
+    /**
+     * 是否支持异步调用（官方 Batch / 后台任务，未收录为 null）
+     */
+    @TableField("sys_ai_model_metrics_support_async")
+    private Boolean asyncSupported; // 异步调用
+
+    /**
      * 手动锁定字段名集合（同步时这些字段不覆盖）
      */
     @TableField(value = "sys_ai_model_metrics_manual_locked", typeHandler = JacksonTypeHandler.class)

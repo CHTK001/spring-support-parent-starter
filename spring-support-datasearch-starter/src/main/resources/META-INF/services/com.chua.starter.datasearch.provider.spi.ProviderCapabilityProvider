@@ -1,0 +1,2 @@
+# 能力位(流式/异步):登记表口径优先,缺失时按协议推断流式
+com.chua.starter.datasearch.provider.spi.impl.ProtocolCapabilityProvider

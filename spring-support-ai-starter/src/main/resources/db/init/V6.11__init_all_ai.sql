@@ -1377,6 +1377,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model_metrics` (
     `sys_ai_model_metrics_support_web_search`    TINYINT(1)    NULL COMMENT '是否支持联网检索',
     `sys_ai_model_metrics_support_image_input`   TINYINT(1)    NULL COMMENT '是否支持视觉输入',
     `sys_ai_model_metrics_support_function_call` TINYINT(1)    NULL COMMENT '是否支持函数调用',
+    `sys_ai_model_metrics_support_streaming`     TINYINT(1)    NULL COMMENT '是否支持流式输出',
+    `sys_ai_model_metrics_support_async`         TINYINT(1)    NULL COMMENT '是否支持异步调用（Batch / 后台任务）',
     `sys_ai_model_metrics_manual_locked`         TEXT          NULL COMMENT '手动锁定字段名 JSON 数组',
     `sys_ai_model_metrics_pricing_rules`         TEXT          NULL COMMENT '峰谷 / 按 N 次定价规则 JSON',
     `sys_ai_model_metrics_manual_updated_at`     BIGINT        NULL COMMENT '手动更新时间（毫秒）',

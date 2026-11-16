@@ -107,6 +107,19 @@ public class ProviderCatalogSyncService {
         String streamingSource = ProviderProtocolCapabilities.streamingSource(protocol);
         String asyncSource = ProviderProtocolCapabilities.asyncSource(provider.getPlatform(), protocol);
 
+        // 目录不提供这两个字段：把结论写回模型信息，metricsOf 会带进指标库与模型行，
+        // 指标表（sys_ai_model_metrics）据此更新 support_streaming / support_async。
+        for (ProviderModelInfo model : catalog.getModels()) {
+            if (model.getStreaming() == null && streaming != null) {
+                model.setStreaming(streaming);
+                model.setStreamingSource(streamingSource);
+            }
+            if (model.getAsyncSupported() == null && asyncSupported != null) {
+                model.setAsyncSupported(asyncSupported);
+                model.setAsyncSource(asyncSource);
+            }
+        }
+
         List<Map<String, Object>> rows = new ArrayList<>(catalog.getModels().size());
         for (ProviderModelInfo model : catalog.getModels()) {
             Map<String, Object> metrics = metricsOf(model, catalog.getPricingRules());
@@ -252,6 +265,8 @@ public class ProviderCatalogSyncService {
         int attachment = 0;
         int context = 0;
         int priced = 0;
+        int streaming = 0;
+        int async = 0;
         for (ProviderModelInfo model : catalog.getModels()) {
             if (Boolean.TRUE.equals(model.getReasoning())) {
                 reasoning++;
@@ -268,6 +283,12 @@ public class ProviderCatalogSyncService {
             if (model.getPriceInputPerMusd() != null || model.getPriceOutputPerMusd() != null) {
                 priced++;
             }
+            if (Boolean.TRUE.equals(model.getStreaming())) {
+                streaming++;
+            }
+            if (Boolean.TRUE.equals(model.getAsyncSupported())) {
+                async++;
+            }
         }
         Map<String, Object> out = new LinkedHashMap<>(8);
         out.put("models", catalog.getModels().size());
@@ -276,6 +297,8 @@ public class ProviderCatalogSyncService {
         out.put("attachment", attachment);
         out.put("context_window", context);
         out.put("priced", priced);
+        out.put("streaming", streaming);
+        out.put("async", async);
         return out;
     }
 
@@ -299,6 +322,8 @@ public class ProviderCatalogSyncService {
         put(metrics, "max_output_tokens", model.getMaxOutputTokens());
         put(metrics, "reasoning", model.getReasoning());
         put(metrics, "function_calling", model.getToolCall());
+        put(metrics, "streaming", model.getStreaming());
+        put(metrics, "async", model.getAsyncSupported());
         put(metrics, "attachment", model.getAttachment());
         put(metrics, "temperature", model.getTemperature());
         put(metrics, "open_weights", model.getOpenWeights());

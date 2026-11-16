@@ -1,0 +1,6829 @@
+{
+  "generated_at": "2026-11-16",
+  "source": "pages/ai/src/components/models/model.constants.ts（PROVIDER_TEMPLATES 213 家）+ https://models.dev/api.json + provider-limit-docs.json",
+  "note": "统一供应商登记表：一家一条，供限制 / 目录 / 定价 / 余额 / 能力（流式、异步）各 SPI 共用，避免每个 SPI 各维护一份匹配逻辑。credit.mode：official=官方余额接口已登记；probe=OpenAI 兼容探测；none=无远端账户。capabilities 口径 A′（2026-11-16 定版）：streaming 按协议判定（openai / anthropic / gemini 的 SSE 是协议必备行为，来源 protocol）；async 只认官方批量端点实测过的厂商（openai / anthropic / google，来源 probe），其余 null=未收录（不把未知写成不支持）。",
+  "count": 213,
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "description": "GPT 系列模型官方 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.openai.com/v1",
+      "hosts": [
+        "api.openai.com"
+      ],
+      "doc": "https://platform.openai.com/docs/guides/rate-limits",
+      "modelsDevId": "openai",
+      "aliases": [
+        "openai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": true,
+        "asyncSource": "probe",
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "description": "Claude 系列模型官方 API",
+      "protocol": "anthropic",
+      "baseUrl": "https://api.anthropic.com/v1",
+      "hosts": [
+        "api.anthropic.com"
+      ],
+      "doc": "https://docs.anthropic.com/en/api/rate-limits",
+      "modelsDevId": "anthropic",
+      "aliases": [
+        "anthropic",
+        "claude"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": true,
+        "asyncSource": "probe",
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "google",
+      "name": "Google Gemini",
+      "description": "Google Gemini 模型，需代理",
+      "protocol": "gemini",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "hosts": [
+        "generativelanguage.googleapis.com"
+      ],
+      "doc": "https://ai.google.dev/gemini-api/docs/models",
+      "modelsDevId": "google",
+      "aliases": [
+        "google"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": true,
+        "asyncSource": "probe",
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "description": "Grok 系列模型官方 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.x.ai/v1",
+      "hosts": [
+        "api.x.ai"
+      ],
+      "doc": "https://docs.x.ai/docs/models",
+      "modelsDevId": "xai",
+      "aliases": [
+        "xai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "description": "Mistral 大模型官方 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.mistral.ai/v1",
+      "hosts": [
+        "api.mistral.ai"
+      ],
+      "doc": "https://docs.mistral.ai/getting-started/models/",
+      "modelsDevId": "mistral",
+      "aliases": [
+        "mistral"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "description": "Groq 超高速推理 API（LPU 芯片）",
+      "protocol": "openai",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "hosts": [
+        "api.groq.com"
+      ],
+      "doc": "https://console.groq.com/docs/models",
+      "modelsDevId": "groq",
+      "aliases": [
+        "groq"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "together",
+      "name": "Together AI",
+      "description": "开源模型推理托管平台",
+      "protocol": "openai",
+      "baseUrl": "https://api.together.ai/v1",
+      "hosts": [
+        "api.together.ai"
+      ],
+      "doc": "https://docs.together.ai/docs/serverless-models",
+      "modelsDevId": "togetherai",
+      "aliases": [
+        "together",
+        "togetherai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "together",
+        "currency": "usd"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "description": "Cerebras 超低延迟推理 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.cerebras.ai/v1",
+      "hosts": [
+        "api.cerebras.ai"
+      ],
+      "doc": "https://inference-docs.cerebras.ai/models/overview",
+      "modelsDevId": "cerebras",
+      "aliases": [
+        "cerebras"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "description": "企业级模型与 RAG 平台",
+      "protocol": "openai",
+      "baseUrl": "https://api.cohere.ai/v2",
+      "hosts": [
+        "api.cohere.ai"
+      ],
+      "doc": "https://docs.cohere.com/docs/models",
+      "modelsDevId": "cohere",
+      "aliases": [
+        "cohere"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "description": "在线搜索增强对话 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.perplexity.ai",
+      "hosts": [
+        "api.perplexity.ai"
+      ],
+      "doc": "https://docs.perplexity.ai",
+      "modelsDevId": "perplexity",
+      "aliases": [
+        "perplexity"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face Inference",
+      "description": "Hugging Face 推理端点",
+      "protocol": "openai",
+      "baseUrl": "https://api-inference.huggingface.co/models",
+      "hosts": [
+        "api-inference.huggingface.co"
+      ],
+      "doc": "https://huggingface.co/docs/inference-providers",
+      "modelsDevId": "huggingface",
+      "aliases": [
+        "huggingface"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA NIM",
+      "description": "英伟达 AI 推理平台，免费使用多种模型",
+      "protocol": "openai",
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "hosts": [
+        "integrate.api.nvidia.com"
+      ],
+      "doc": "https://docs.api.nvidia.com/nim/",
+      "modelsDevId": "nvidia",
+      "aliases": [
+        "nvidia"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "description": "聚合 API，支持数百个模型",
+      "protocol": "openai",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "hosts": [
+        "openrouter.ai"
+      ],
+      "doc": "https://openrouter.ai/models",
+      "modelsDevId": "openrouter",
+      "aliases": [
+        "openrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "openrouter",
+        "currency": "usd"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "commandcode",
+      "name": "commandcode",
+      "description": "聚合 API，支持数百个模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.commandcode.ai/provider/v1",
+      "hosts": [
+        "api.commandcode.ai"
+      ],
+      "doc": "https://commandcode.ai/docs/provider",
+      "modelsDevId": "commandcode",
+      "aliases": [
+        "commandcode"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "agnes",
+      "name": "Agnes AI",
+      "description": "聚合 API，免费使用多种模型",
+      "protocol": "openai",
+      "baseUrl": "https://apihub.agnes-ai.cn/v1",
+      "hosts": [
+        "apihub.agnes-ai.cn"
+      ],
+      "doc": "https://agnes-ai.com/doc",
+      "modelsDevId": "agnes",
+      "aliases": [
+        "agnes"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "free-channel",
+      "name": "免费渠道",
+      "description": "渠道管理统一入口：模型来自渠道管理所有已开启的模型，按模型自动切换上游地址与凭据",
+      "protocol": "openai",
+      "baseUrl": null,
+      "hosts": [],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "free-channel"
+      ],
+      "capabilities": {
+        "streaming": null,
+        "streamingSource": null,
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "none",
+        "kind": "none",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "duckduckgo",
+      "name": "DuckDuckGo",
+      "description": "免登录对话渠道，无需 API 地址与 Key（模型由内置客户端提供）",
+      "protocol": "openai",
+      "baseUrl": null,
+      "hosts": [],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "duckduckgo"
+      ],
+      "capabilities": {
+        "streaming": null,
+        "streamingSource": null,
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "none",
+        "kind": "none",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "description": "免费开源 API，支持多种模型",
+      "protocol": "openai",
+      "baseUrl": "https://opencode.ai/zen/v1",
+      "hosts": [
+        "opencode.ai"
+      ],
+      "doc": "https://opencode.ai/v2/docs/console/models/",
+      "modelsDevId": "opencode",
+      "aliases": [
+        "opencode"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow 硅基流动",
+      "description": "国内 AI 模型平台，支持 DeepSeek、Qwen 等",
+      "protocol": "openai",
+      "baseUrl": "https://api.siliconflow.cn/v1",
+      "hosts": [
+        "api.siliconflow.cn"
+      ],
+      "doc": "https://cloud.siliconflow.com/models",
+      "modelsDevId": "siliconflow",
+      "aliases": [
+        "siliconflow"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "siliconflow",
+        "currency": "cny"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "bai",
+      "name": "b.ai",
+      "description": "免费 AI 模型平台，支持 DeepSeek 等",
+      "protocol": "openai",
+      "baseUrl": "https://api.b.ai/v1",
+      "hosts": [
+        "api.b.ai"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "bai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ai302",
+      "name": "AI302",
+      "description": "AI302.com 聚合 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.ai302.com/v1",
+      "hosts": [
+        "api.ai302.com",
+        "api.302.ai"
+      ],
+      "doc": "https://doc.302.ai",
+      "modelsDevId": "302ai",
+      "aliases": [
+        "ai302"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "router-group",
+      "name": "路由组",
+      "description": "本地化管理抽象，成员来自模型库，按组内策略挑选真实调用的模型",
+      "protocol": "openai",
+      "baseUrl": null,
+      "hosts": [],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "router-group"
+      ],
+      "capabilities": {
+        "streaming": null,
+        "streamingSource": null,
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "none",
+        "kind": "none",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "description": "深度求索大模型官方 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "hosts": [
+        "api.deepseek.com"
+      ],
+      "doc": "https://api-docs.deepseek.com/quick_start/rate_limit",
+      "modelsDevId": "deepseek",
+      "aliases": [
+        "deepseek"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "deepseek",
+        "currency": "cny"
+      },
+      "limits": {
+        "verified": true,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "qwen",
+      "name": "通义千问",
+      "description": "阿里通义千问大模型（百炼平台）",
+      "protocol": "openai",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "hosts": [
+        "dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "modelsDevId": "alibaba",
+      "aliases": [
+        "qwen",
+        "alibaba"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zhipu",
+      "name": "智谱 AI",
+      "description": "智谱 GLM 系列模型",
+      "protocol": "openai",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "hosts": [
+        "open.bigmodel.cn"
+      ],
+      "doc": "https://docs.bigmodel.cn/cn/guide/start/pricing",
+      "modelsDevId": "zhipuai",
+      "aliases": [
+        "zhipu",
+        "zhipuai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot",
+      "description": "月之暗面 Kimi 模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "hosts": [
+        "api.moonshot.cn"
+      ],
+      "doc": "https://platform.moonshot.ai/docs/api/chat",
+      "modelsDevId": "moonshotai",
+      "aliases": [
+        "moonshot",
+        "moonshotai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "moonshot",
+        "currency": "cny"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "description": "MiniMax 海螺 AI 模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.minimaxi.chat/v1",
+      "hosts": [
+        "api.minimaxi.chat"
+      ],
+      "doc": "https://platform.minimax.io/docs/guides/quickstart",
+      "modelsDevId": "minimax",
+      "aliases": [
+        "minimax"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "baichuan",
+      "name": "百川",
+      "description": "百川智能大模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.baichuan-ai.com/v1",
+      "hosts": [
+        "api.baichuan-ai.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "baichuan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "stepfun",
+      "name": "阶跃星辰",
+      "description": "阶跃星辰 Step 系列模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.stepfun.com/v1",
+      "hosts": [
+        "api.stepfun.com"
+      ],
+      "doc": "https://platform.stepfun.com/docs/zh/overview/concept",
+      "modelsDevId": "stepfun",
+      "aliases": [
+        "stepfun"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "stepfun",
+        "currency": "cny"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "qianfan",
+      "name": "百度千帆",
+      "description": "百度智能云大模型平台",
+      "protocol": "openai",
+      "baseUrl": "https://qianfan.baidubce.com/v2",
+      "hosts": [
+        "qianfan.baidubce.com",
+        "dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "modelsDevId": "alibaba",
+      "aliases": [
+        "qianfan",
+        "alibaba"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "baidu",
+      "name": "百度智能云",
+      "description": "百度智能云文心/千帆模型",
+      "protocol": "openai",
+      "baseUrl": "https://qianfan.baidubce.com/v2",
+      "hosts": [
+        "qianfan.baidubce.com",
+        "dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "modelsDevId": "alibaba",
+      "aliases": [
+        "baidu",
+        "alibaba"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "sensenova",
+      "name": "SenseNova 商汤",
+      "description": "商汤科技大模型平台",
+      "protocol": "openai",
+      "baseUrl": "https://token.sensenova.cn/v1",
+      "hosts": [
+        "token.sensenova.cn"
+      ],
+      "doc": "https://platform.sensenova.cn/docs",
+      "modelsDevId": "sensenova",
+      "aliases": [
+        "sensenova"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "moss",
+      "name": "Moss",
+      "description": "Moss 开放平台（mosi.cn），语音合成 / 图像生成",
+      "protocol": "openai",
+      "baseUrl": "https://api.mosi.cn/v1",
+      "hosts": [
+        "api.mosi.cn"
+      ],
+      "doc": "https://platform.moss.cn/docs/errors-and-limits/limits",
+      "modelsDevId": null,
+      "aliases": [
+        "moss"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": true,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "volcengine",
+      "name": "火山引擎",
+      "description": "字节跳动豆包 Doubao 模型",
+      "protocol": "openai",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "hosts": [
+        "ark.cn-beijing.volces.com"
+      ],
+      "doc": "https://www.volcengine.com/docs/82379/1330310",
+      "modelsDevId": "volcengine",
+      "aliases": [
+        "volcengine"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "spark",
+      "name": "讯飞星火",
+      "description": "科大讯飞星火大模型",
+      "protocol": "openai",
+      "baseUrl": "https://spark-api.cn-huabei-1.xf-yun.com/v1",
+      "hosts": [
+        "spark-api.cn-huabei-1.xf-yun.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "spark"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "flytek",
+      "name": "科大讯飞",
+      "description": "讯飞开放平台星火系列",
+      "protocol": "openai",
+      "baseUrl": "https://spark-api.cn-huabei-1.xf-yun.com/v1",
+      "hosts": [
+        "spark-api.cn-huabei-1.xf-yun.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "flytek"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "baidu-wenxin",
+      "name": "文心一言",
+      "description": "百度文心一言大模型",
+      "protocol": "openai",
+      "baseUrl": "https://qianfan.baidubce.com/v2",
+      "hosts": [
+        "qianfan.baidubce.com",
+        "dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "modelsDevId": "alibaba",
+      "aliases": [
+        "baidu-wenxin",
+        "alibaba"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tencent",
+      "name": "腾讯混元",
+      "description": "腾讯混元大模型（Cloud API）",
+      "protocol": "openai",
+      "baseUrl": "https://api.hunyuan.cloud.tencent.com/v1",
+      "hosts": [
+        "api.hunyuan.cloud.tencent.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "tencent"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "hunyuan",
+      "name": "腾讯混元",
+      "description": "腾讯混元 Hunyuan 大模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.hunyuan.cloud.tencent.com/v1",
+      "hosts": [
+        "api.hunyuan.cloud.tencent.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "hunyuan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "modelscope",
+      "name": "魔搭 ModelScope",
+      "description": "阿里达摩院模型社区，免费使用多种开源模型",
+      "protocol": "openai",
+      "baseUrl": "https://api-inference.modelscope.cn/v1",
+      "hosts": [
+        "api-inference.modelscope.cn"
+      ],
+      "doc": "https://modelscope.cn/docs/model-service/API-Inference/intro",
+      "modelsDevId": "modelscope",
+      "aliases": [
+        "modelscope"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "360ai",
+      "name": "360 智脑",
+      "description": "360 安全智脑大模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.360.cn/v1",
+      "hosts": [
+        "api.360.cn"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "360ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "doubao",
+      "name": "豆包",
+      "description": "字节跳动豆包大模型（火山引擎）",
+      "protocol": "openai",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "hosts": [
+        "ark.cn-beijing.volces.com"
+      ],
+      "doc": "https://www.volcengine.com/docs/82379/1330310",
+      "modelsDevId": "volcengine",
+      "aliases": [
+        "doubao"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "shusheng",
+      "name": "书生",
+      "description": "书生大模型平台（好未来 InternAgent）",
+      "protocol": "openai",
+      "baseUrl": "https://discovery-api.intern-ai.org.cn/v1",
+      "hosts": [
+        "discovery-api.intern-ai.org.cn"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "shusheng"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "azure",
+      "name": "Azure OpenAI",
+      "description": "微软 Azure OpenAI 服务",
+      "protocol": "openai",
+      "baseUrl": "https://YOUR-RESOURCE.openai.azure.com/openai/v1",
+      "hosts": [
+        "your-resource.openai.azure.com"
+      ],
+      "doc": "https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models",
+      "modelsDevId": "azure",
+      "aliases": [
+        "azure"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "aws-bedrock",
+      "name": "AWS Bedrock",
+      "description": "亚马逊 Bedrock 模型平台",
+      "protocol": "openai",
+      "baseUrl": "https://bedrock-runtime.us-east-1.amazonaws.com",
+      "hosts": [
+        "bedrock-runtime.us-east-1.amazonaws.com"
+      ],
+      "doc": "https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html",
+      "modelsDevId": "amazon-bedrock",
+      "aliases": [
+        "aws-bedrock",
+        "amazon-bedrock"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "description": "本地 Ollama 模型",
+      "protocol": "openai",
+      "baseUrl": "http://localhost:11434/v1",
+      "hosts": [
+        "localhost"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "ollama"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "onnx",
+      "name": "ONNX 本地推理",
+      "description": "本地 ONNX 模型（OCR / 人脸 / 向量 / 版面分析），模型文件放在服务器上",
+      "protocol": "openai",
+      "baseUrl": null,
+      "hosts": [],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "onnx"
+      ],
+      "capabilities": {
+        "streaming": null,
+        "streamingSource": null,
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "none",
+        "kind": "none",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "newapi",
+      "name": "NewAPI",
+      "description": "国产 API 聚合平台，支持 GPT、Claude、DeepSeek 等数十个模型",
+      "protocol": "openai",
+      "baseUrl": "https://newapi.io",
+      "hosts": [
+        "newapi.io"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "newapi"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "dots",
+      "name": "Dots Studio",
+      "description": "小红书 Dots Studio 点点大模型",
+      "protocol": "openai",
+      "baseUrl": "https://note3-prev-api.askdiandian.com/v1",
+      "hosts": [
+        "note3-prev-api.askdiandian.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "dots"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "302ai",
+      "name": "302.AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.302.ai/v1",
+      "hosts": [
+        "api.302.ai",
+        "api.ai302.com"
+      ],
+      "doc": "https://doc.302.ai",
+      "modelsDevId": "302ai",
+      "aliases": [
+        "302ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "abacus",
+      "name": "Abacus",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://routellm.abacus.ai/v1",
+      "hosts": [
+        "routellm.abacus.ai"
+      ],
+      "doc": "https://abacus.ai/help/api",
+      "modelsDevId": "abacus",
+      "aliases": [
+        "abacus"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "abliteration-ai",
+      "name": "abliteration.ai",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.abliteration.ai/v1",
+      "hosts": [
+        "api.abliteration.ai"
+      ],
+      "doc": "https://docs.abliteration.ai/models",
+      "modelsDevId": "abliteration-ai",
+      "aliases": [
+        "abliteration-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "above",
+      "name": "above.dev",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.above.dev/v1",
+      "hosts": [
+        "api.above.dev"
+      ],
+      "doc": "https://above.dev/docs",
+      "modelsDevId": "above",
+      "aliases": [
+        "above"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "agentrouter",
+      "name": "AgentRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://agentrouter.org/v1",
+      "hosts": [
+        "agentrouter.org"
+      ],
+      "doc": "https://agentrouter.org/docs/opencode.html",
+      "modelsDevId": "agentrouter",
+      "aliases": [
+        "agentrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ai-router",
+      "name": "AI-ROUTER",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.ai-router.dev/v1",
+      "hosts": [
+        "api.ai-router.dev"
+      ],
+      "doc": "https://ai-router.dev/openai-compatible-api-gateway/",
+      "modelsDevId": "ai-router",
+      "aliases": [
+        "ai-router"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ai21",
+      "name": "AI21 Labs",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.ai21.com/studio/v1",
+      "hosts": [
+        "api.ai21.com"
+      ],
+      "doc": "https://docs.ai21.com/docs/jamba-foundation-models",
+      "modelsDevId": "ai21",
+      "aliases": [
+        "ai21"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "aiand",
+      "name": "ai&",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.aiand.com/v1",
+      "hosts": [
+        "api.aiand.com"
+      ],
+      "doc": "https://docs.aiand.com/",
+      "modelsDevId": "aiand",
+      "aliases": [
+        "aiand"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "aimlapi",
+      "name": "AI/ML API",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.aimlapi.com/v1",
+      "hosts": [
+        "api.aimlapi.com"
+      ],
+      "doc": "https://docs.aimlapi.com",
+      "modelsDevId": "aimlapi",
+      "aliases": [
+        "aimlapi"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ainetcafe",
+      "name": "ainetcafe",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://microquickjs.com/v1",
+      "hosts": [
+        "microquickjs.com"
+      ],
+      "doc": "https://ainetcafe.com/k3/guides/",
+      "modelsDevId": "ainetcafe",
+      "aliases": [
+        "ainetcafe"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "aixy",
+      "name": "Aixy",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.aixy-gateway.com/v1",
+      "hosts": [
+        "api.aixy-gateway.com"
+      ],
+      "doc": "https://docs.aixy-gateway.com/integrations/overview",
+      "modelsDevId": "aixy",
+      "aliases": [
+        "aixy"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "aki-io",
+      "name": "AKI.IO",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://aki.io/v1",
+      "hosts": [
+        "aki.io"
+      ],
+      "doc": "https://aki.io/docs/",
+      "modelsDevId": "aki-io",
+      "aliases": [
+        "aki-io"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ambient",
+      "name": "Ambient",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.ambient.xyz/v1",
+      "hosts": [
+        "api.ambient.xyz"
+      ],
+      "doc": "https://ambient.xyz",
+      "modelsDevId": "ambient",
+      "aliases": [
+        "ambient"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "amd",
+      "name": "AMD",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://developer.amd.com.cn/radeon/api/v1",
+      "hosts": [
+        "developer.amd.com.cn"
+      ],
+      "doc": "https://developer.amd.com.cn/radeon/tokenfactory",
+      "modelsDevId": "amd",
+      "aliases": [
+        "amd"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "anyapi",
+      "name": "AnyAPI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.anyapi.ai/v1",
+      "hosts": [
+        "api.anyapi.ai"
+      ],
+      "doc": "https://docs.anyapi.ai",
+      "modelsDevId": "anyapi",
+      "aliases": [
+        "anyapi"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "arcee",
+      "name": "Arcee",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.arcee.ai/api/v1",
+      "hosts": [
+        "api.arcee.ai"
+      ],
+      "doc": "https://docs.arcee.ai",
+      "modelsDevId": "arcee",
+      "aliases": [
+        "arcee"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "auriko",
+      "name": "Auriko",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.auriko.ai/v1",
+      "hosts": [
+        "api.auriko.ai"
+      ],
+      "doc": "https://docs.auriko.ai",
+      "modelsDevId": "auriko",
+      "aliases": [
+        "auriko"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "baseten",
+      "name": "Baseten",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.baseten.co/v1",
+      "hosts": [
+        "inference.baseten.co"
+      ],
+      "doc": "https://docs.baseten.co/inference/model-apis/overview",
+      "modelsDevId": "baseten",
+      "aliases": [
+        "baseten"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "bee",
+      "name": "Bee by HEOSSI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.bee.heossi.com/bee",
+      "hosts": [
+        "api.bee.heossi.com"
+      ],
+      "doc": "https://bee.heossi.com/docs/sdks",
+      "modelsDevId": "bee",
+      "aliases": [
+        "bee"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "berget",
+      "name": "Berget.AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.berget.ai/v1",
+      "hosts": [
+        "api.berget.ai"
+      ],
+      "doc": "https://api.berget.ai",
+      "modelsDevId": "berget",
+      "aliases": [
+        "berget"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "blueclaw",
+      "name": "Blue Claw",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://openai.blueclaw.network/v1",
+      "hosts": [
+        "openai.blueclaw.network"
+      ],
+      "doc": "https://blueclaw.network",
+      "modelsDevId": "blueclaw",
+      "aliases": [
+        "blueclaw"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "bothub",
+      "name": "Bothub",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://openai.bothub.ru/v1",
+      "hosts": [
+        "openai.bothub.ru"
+      ],
+      "doc": "https://bothub.ru/models",
+      "modelsDevId": "bothub",
+      "aliases": [
+        "bothub"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "boundless",
+      "name": "Boundless",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.inference.boundless.network/v1",
+      "hosts": [
+        "api.inference.boundless.network"
+      ],
+      "doc": "https://inference.boundless.network/models",
+      "modelsDevId": "boundless",
+      "aliases": [
+        "boundless"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "chutes",
+      "name": "Chutes",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://llm.chutes.ai/v1",
+      "hosts": [
+        "llm.chutes.ai"
+      ],
+      "doc": "https://llm.chutes.ai/v1/models",
+      "modelsDevId": "chutes",
+      "aliases": [
+        "chutes"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "clarifai",
+      "name": "Clarifai",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.clarifai.com/v2/ext/openai/v1",
+      "hosts": [
+        "api.clarifai.com"
+      ],
+      "doc": "https://docs.clarifai.com/compute/inference/",
+      "modelsDevId": "clarifai",
+      "aliases": [
+        "clarifai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "claudinio",
+      "name": "Claudinio",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.claudin.io/v1",
+      "hosts": [
+        "api.claudin.io"
+      ],
+      "doc": "https://claudin.io",
+      "modelsDevId": "claudinio",
+      "aliases": [
+        "claudinio"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "cline",
+      "name": "ClinePass",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.cline.bot/api/v1",
+      "hosts": [
+        "api.cline.bot"
+      ],
+      "doc": "https://docs.cline.bot/getting-started/clinepass",
+      "modelsDevId": "cline-pass",
+      "aliases": [
+        "cline",
+        "cline-pass"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "cloudferro-sherlock",
+      "name": "CloudFerro Sherlock",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api-sherlock.cloudferro.com/openai/v1/",
+      "hosts": [
+        "api-sherlock.cloudferro.com"
+      ],
+      "doc": "https://docs.sherlock.cloudferro.com/",
+      "modelsDevId": "cloudferro-sherlock",
+      "aliases": [
+        "cloudferro-sherlock"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "coralbricks",
+      "name": "CoralBricks",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.coralbricks.ai/v1",
+      "hosts": [
+        "inference.coralbricks.ai"
+      ],
+      "doc": "https://www.coralbricks.ai/docs",
+      "modelsDevId": "coralbricks",
+      "aliases": [
+        "coralbricks"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "cortecs",
+      "name": "Cortecs",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.cortecs.ai/v1",
+      "hosts": [
+        "api.cortecs.ai"
+      ],
+      "doc": "https://api.cortecs.ai/v1/models",
+      "modelsDevId": "cortecs",
+      "aliases": [
+        "cortecs"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "crossmodel",
+      "name": "CrossModel",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.crossmodel.ai/v1",
+      "hosts": [
+        "api.crossmodel.ai"
+      ],
+      "doc": "https://www.crossmodel.ai/docs",
+      "modelsDevId": "crossmodel",
+      "aliases": [
+        "crossmodel"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "crusoe",
+      "name": "Crusoe",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.inference.crusoecloud.com/v1",
+      "hosts": [
+        "api.inference.crusoecloud.com"
+      ],
+      "doc": "https://docs.crusoecloud.com/managed-inference/overview",
+      "modelsDevId": "crusoe",
+      "aliases": [
+        "crusoe"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "daoxe",
+      "name": "DaoXE",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://daoxe.com/v1",
+      "hosts": [
+        "daoxe.com"
+      ],
+      "doc": "https://daoxe.com/pricing",
+      "modelsDevId": "daoxe",
+      "aliases": [
+        "daoxe"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "digitalocean",
+      "name": "DigitalOcean",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.do-ai.run/v1",
+      "hosts": [
+        "inference.do-ai.run"
+      ],
+      "doc": "https://docs.digitalocean.com/products/gradient-ai-platform/details/models/",
+      "modelsDevId": "digitalocean",
+      "aliases": [
+        "digitalocean"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "dinference",
+      "name": "DInference",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.dinference.com/v1",
+      "hosts": [
+        "api.dinference.com"
+      ],
+      "doc": "https://dinference.com",
+      "modelsDevId": "dinference",
+      "aliases": [
+        "dinference"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "drun",
+      "name": "D.Run (China)",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://chat.d.run/v1",
+      "hosts": [
+        "chat.d.run"
+      ],
+      "doc": "https://www.d.run",
+      "modelsDevId": "drun",
+      "aliases": [
+        "drun"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ebcloud",
+      "name": "EBCloud",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://maas-api.ebcloud.com/v1",
+      "hosts": [
+        "maas-api.ebcloud.com"
+      ],
+      "doc": "https://docs.ebtech.com/ai/model-api.html",
+      "modelsDevId": "ebcloud",
+      "aliases": [
+        "ebcloud"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "echo",
+      "name": "Echo",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://echo.tracerml.ai/v1",
+      "hosts": [
+        "echo.tracerml.ai"
+      ],
+      "doc": "https://echo.tracerml.ai/docs/api",
+      "modelsDevId": "echo",
+      "aliases": [
+        "echo"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "edenai",
+      "name": "Eden AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.edenai.run/v3",
+      "hosts": [
+        "api.edenai.run"
+      ],
+      "doc": "https://docs.edenai.co",
+      "modelsDevId": "edenai",
+      "aliases": [
+        "edenai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "empiriolabs",
+      "name": "EmpirioLabs AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.empiriolabs.ai/v1",
+      "hosts": [
+        "api.empiriolabs.ai"
+      ],
+      "doc": "https://docs.empiriolabs.ai",
+      "modelsDevId": "empiriolabs",
+      "aliases": [
+        "empiriolabs"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "engy",
+      "name": "engy",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.engy.ai/v1",
+      "hosts": [
+        "api.engy.ai"
+      ],
+      "doc": "https://engy.ai/pricing",
+      "modelsDevId": "engy",
+      "aliases": [
+        "engy"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "evroc",
+      "name": "evroc",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://models.think.evroc.com/v1",
+      "hosts": [
+        "models.think.evroc.com"
+      ],
+      "doc": "https://docs.evroc.com/products/think/overview.html",
+      "modelsDevId": "evroc",
+      "aliases": [
+        "evroc"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "fastrouter",
+      "name": "FastRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://go.fastrouter.ai/api/v1",
+      "hosts": [
+        "go.fastrouter.ai"
+      ],
+      "doc": "https://fastrouter.ai/models",
+      "modelsDevId": "fastrouter",
+      "aliases": [
+        "fastrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "fireworks-ai",
+      "name": "Fireworks AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.fireworks.ai/inference/v1/",
+      "hosts": [
+        "api.fireworks.ai"
+      ],
+      "doc": "https://fireworks.ai/docs/",
+      "modelsDevId": "fireworks-ai",
+      "aliases": [
+        "fireworks-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "freemodel",
+      "name": "FreeModel",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://cc.freemodel.dev/v1",
+      "hosts": [
+        "cc.freemodel.dev"
+      ],
+      "doc": "https://freemodel.dev",
+      "modelsDevId": "freemodel",
+      "aliases": [
+        "freemodel"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "friendli",
+      "name": "Friendli",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.friendli.ai/serverless/v1",
+      "hosts": [
+        "api.friendli.ai"
+      ],
+      "doc": "https://friendli.ai/docs/guides/serverless_endpoints/introduction",
+      "modelsDevId": "friendli",
+      "aliases": [
+        "friendli"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "frogbot",
+      "name": "FrogBot",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://app.frogbot.ai/api/v1",
+      "hosts": [
+        "app.frogbot.ai"
+      ],
+      "doc": "https://docs.frogbot.ai",
+      "modelsDevId": "frogbot",
+      "aliases": [
+        "frogbot"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "github-copilot",
+      "name": "GitHub Copilot",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.githubcopilot.com",
+      "hosts": [
+        "api.githubcopilot.com"
+      ],
+      "doc": "https://docs.github.com/en/copilot",
+      "modelsDevId": "github-copilot",
+      "aliases": [
+        "github-copilot"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "gmicloud",
+      "name": "GMI Cloud",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.gmi-serving.com/v1",
+      "hosts": [
+        "api.gmi-serving.com"
+      ],
+      "doc": "https://docs.gmicloud.ai/inference-engine/api-reference/llm-api-reference",
+      "modelsDevId": "gmicloud",
+      "aliases": [
+        "gmicloud"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "greenpt",
+      "name": "GreenPT",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.greenpt.ai/v1",
+      "hosts": [
+        "api.greenpt.ai"
+      ],
+      "doc": "https://docs.greenpt.ai",
+      "modelsDevId": "greenpt",
+      "aliases": [
+        "greenpt"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "helicone",
+      "name": "Helicone",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://ai-gateway.helicone.ai/v1",
+      "hosts": [
+        "ai-gateway.helicone.ai"
+      ],
+      "doc": "https://helicone.ai/models",
+      "modelsDevId": "helicone",
+      "aliases": [
+        "helicone"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "hetzner",
+      "name": "Hetzner",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.hetzner.com/api/v1",
+      "hosts": [
+        "inference.hetzner.com"
+      ],
+      "doc": "https://experiments.hetzner.com/docs/inference",
+      "modelsDevId": "hetzner",
+      "aliases": [
+        "hetzner"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "hpc-ai",
+      "name": "HPC-AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.hpc-ai.com/inference/v1",
+      "hosts": [
+        "api.hpc-ai.com"
+      ],
+      "doc": "https://www.hpc-ai.com/doc/docs/quickstart/",
+      "modelsDevId": "hpc-ai",
+      "aliases": [
+        "hpc-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "hyper",
+      "name": "Charm Hyper",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://hyper.charm.land/v1",
+      "hosts": [
+        "hyper.charm.land"
+      ],
+      "doc": "https://hyper.charm.land",
+      "modelsDevId": "hyper",
+      "aliases": [
+        "hyper"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "iflowcn",
+      "name": "iFlow",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://apis.iflow.cn/v1",
+      "hosts": [
+        "apis.iflow.cn"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "iflowcn"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "impossibl",
+      "name": "Impossibl",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.impossibl.com/v1",
+      "hosts": [
+        "api.impossibl.com"
+      ],
+      "doc": "https://impossibl.com/docs/models",
+      "modelsDevId": "impossibl",
+      "aliases": [
+        "impossibl"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "inception",
+      "name": "Inception",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.inceptionlabs.ai/v1/",
+      "hosts": [
+        "api.inceptionlabs.ai"
+      ],
+      "doc": "https://docs.inceptionlabs.ai/get-started/models",
+      "modelsDevId": "inception",
+      "aliases": [
+        "inception"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "inceptron",
+      "name": "Inceptron",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.inceptron.io/v1",
+      "hosts": [
+        "api.inceptron.io"
+      ],
+      "doc": "https://docs.inceptron.io",
+      "modelsDevId": "inceptron",
+      "aliases": [
+        "inceptron"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "inco",
+      "name": "Inco",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.inco.ai/v1",
+      "hosts": [
+        "api.inco.ai"
+      ],
+      "doc": "https://platform.inco.ai/docs",
+      "modelsDevId": "inco",
+      "aliases": [
+        "inco"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "infer",
+      "name": "Infer by Flow7",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://infer.flow7.org/v1",
+      "hosts": [
+        "infer.flow7.org"
+      ],
+      "doc": "https://infer.flow7.org/opencode",
+      "modelsDevId": "infer",
+      "aliases": [
+        "infer"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "inference",
+      "name": "Inference",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.net/v1",
+      "hosts": [
+        "inference.net"
+      ],
+      "doc": "https://inference.net/models",
+      "modelsDevId": "inference",
+      "aliases": [
+        "inference"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "inferx",
+      "name": "InferX",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://model.inferx.net/endpoints/v1",
+      "hosts": [
+        "model.inferx.net"
+      ],
+      "doc": "https://model.inferx.net/endpoints",
+      "modelsDevId": "inferx",
+      "aliases": [
+        "inferx"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "io-net",
+      "name": "IO.NET",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.intelligence.io.solutions/api/v1",
+      "hosts": [
+        "api.intelligence.io.solutions"
+      ],
+      "doc": "https://io.net/docs/guides/intelligence/io-intelligence",
+      "modelsDevId": "io-net",
+      "aliases": [
+        "io-net"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "iteracompute",
+      "name": "IteraCompute",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.iteracompute.com/v1",
+      "hosts": [
+        "api.iteracompute.com"
+      ],
+      "doc": "https://iteracompute.com/docs.html",
+      "modelsDevId": "iteracompute",
+      "aliases": [
+        "iteracompute"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "jalapeno",
+      "name": "Jalapeno Cloud",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.jalapeno-cloud.ai/v1",
+      "hosts": [
+        "api.jalapeno-cloud.ai"
+      ],
+      "doc": "https://www.jalapeno-cloud.ai/docs/",
+      "modelsDevId": "jalapeno",
+      "aliases": [
+        "jalapeno"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "jiekou",
+      "name": "Jiekou.AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.jiekou.ai/openai",
+      "hosts": [
+        "api.jiekou.ai"
+      ],
+      "doc": "https://docs.jiekou.ai/docs/support/quickstart?utm_source=github_models.dev",
+      "modelsDevId": "jiekou",
+      "aliases": [
+        "jiekou"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "kenari",
+      "name": "Kenari",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://kenari.id/v1",
+      "hosts": [
+        "kenari.id"
+      ],
+      "doc": "https://kenari.id/docs",
+      "modelsDevId": "kenari",
+      "aliases": [
+        "kenari"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "kilo",
+      "name": "Kilo Gateway",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.kilo.ai/api/gateway",
+      "hosts": [
+        "api.kilo.ai"
+      ],
+      "doc": "https://kilo.ai",
+      "modelsDevId": "kilo",
+      "aliases": [
+        "kilo"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "klokintegration",
+      "name": "klokintegration.se",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api-gw.klok.ipaas.se/proxy/kloker-key/v1",
+      "hosts": [
+        "api-gw.klok.ipaas.se"
+      ],
+      "doc": "https://klokintegration.se/docs/ai-api",
+      "modelsDevId": "klokintegration",
+      "aliases": [
+        "klokintegration"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "kosmik",
+      "name": "Kosmik Compute",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.koscompute.com/v1",
+      "hosts": [
+        "api.koscompute.com"
+      ],
+      "doc": "https://api.koscompute.com/docs/",
+      "modelsDevId": "kosmik",
+      "aliases": [
+        "kosmik"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "kuae-cloud-coding-plan",
+      "name": "KUAE Cloud Coding Plan",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://coding-plan-endpoint.kuaecloud.net/v1",
+      "hosts": [
+        "coding-plan-endpoint.kuaecloud.net"
+      ],
+      "doc": "https://docs.mthreads.com/kuaecloud/kuaecloud-doc-online/coding_plan/",
+      "modelsDevId": "kuae-cloud-coding-plan",
+      "aliases": [
+        "kuae-cloud-coding-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "lilac",
+      "name": "Lilac",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.getlilac.com/v1",
+      "hosts": [
+        "api.getlilac.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "lilac"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "liquid",
+      "name": "Liquid Inference",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://router.inference.ai.exchange/v1",
+      "hosts": [
+        "router.inference.ai.exchange"
+      ],
+      "doc": "https://inference.ai.exchange/docs",
+      "modelsDevId": "liquid",
+      "aliases": [
+        "liquid"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "llama",
+      "name": "Llama",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.llama.com/compat/v1/",
+      "hosts": [
+        "api.llama.com"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "llama"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "llmgateway",
+      "name": "DevPass (LLM Gateway)",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.llmgateway.io/v1",
+      "hosts": [
+        "api.llmgateway.io"
+      ],
+      "doc": "https://llmgateway.io/docs",
+      "modelsDevId": "llmgateway",
+      "aliases": [
+        "llmgateway"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "llmgateway",
+        "currency": "usd"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "llmgateway-providers",
+      "name": "LLM Gateway",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.llmgateway.io/v1",
+      "hosts": [
+        "api.llmgateway.io"
+      ],
+      "doc": "https://llmgateway.io/docs",
+      "modelsDevId": "llmgateway-providers",
+      "aliases": [
+        "llmgateway-providers"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "llmtech",
+      "name": "LLM Tech",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.llmtech.eu/v1",
+      "hosts": [
+        "api.llmtech.eu"
+      ],
+      "doc": "https://llmtech.eu/models/qwen3.8-27b",
+      "modelsDevId": "llmtech",
+      "aliases": [
+        "llmtech"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "llmtr",
+      "name": "LLMTR",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://llmtr.com/v1",
+      "hosts": [
+        "llmtr.com"
+      ],
+      "doc": "https://llmtr.com/docs",
+      "modelsDevId": "llmtr",
+      "aliases": [
+        "llmtr"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "longcat",
+      "name": "LongCat",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.longcat.chat/openai",
+      "hosts": [
+        "api.longcat.chat"
+      ],
+      "doc": "https://longcat.chat/platform/docs/",
+      "modelsDevId": "longcat",
+      "aliases": [
+        "longcat"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "lowrouter",
+      "name": "LowRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.lowrouter.ai/v1",
+      "hosts": [
+        "api.lowrouter.ai"
+      ],
+      "doc": "https://lowrouter.ai/docs/models/available",
+      "modelsDevId": "lowrouter",
+      "aliases": [
+        "lowrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "lucidquery",
+      "name": "LucidQuery",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.lucidquery.com/v1",
+      "hosts": [
+        "api.lucidquery.com"
+      ],
+      "doc": "https://lucidquery.com/docs",
+      "modelsDevId": "lucidquery",
+      "aliases": [
+        "lucidquery"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "meganova",
+      "name": "Meganova",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.meganova.ai/v1",
+      "hosts": [
+        "api.meganova.ai"
+      ],
+      "doc": "https://docs.meganova.ai",
+      "modelsDevId": "meganova",
+      "aliases": [
+        "meganova"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "melious",
+      "name": "Melious",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.melious.ai/v1",
+      "hosts": [
+        "api.melious.ai"
+      ],
+      "doc": "https://melious.ai/docs/reference/models",
+      "modelsDevId": "melious",
+      "aliases": [
+        "melious"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "merge-gateway",
+      "name": "Merge Gateway",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api-gateway.merge.dev/v1/ai-sdk",
+      "hosts": [
+        "api-gateway.merge.dev"
+      ],
+      "doc": "https://docs.merge.dev/merge-gateway",
+      "modelsDevId": "merge-gateway",
+      "aliases": [
+        "merge-gateway"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "meta",
+      "name": "Meta",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.meta.ai/v1",
+      "hosts": [
+        "api.meta.ai"
+      ],
+      "doc": "https://dev.meta.ai/docs",
+      "modelsDevId": "meta",
+      "aliases": [
+        "meta"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "mixlayer",
+      "name": "Mixlayer",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://models.mixlayer.ai/v1",
+      "hosts": [
+        "models.mixlayer.ai"
+      ],
+      "doc": "https://docs.mixlayer.com",
+      "modelsDevId": "mixlayer",
+      "aliases": [
+        "mixlayer"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "moark",
+      "name": "Moark",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://moark.com/v1",
+      "hosts": [
+        "moark.com"
+      ],
+      "doc": "https://moark.com/docs/openapi/v1#tag/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90",
+      "modelsDevId": "moark",
+      "aliases": [
+        "moark"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "modal",
+      "name": "Modal",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.us-west.modal.direct/v1",
+      "hosts": [
+        "inference.us-west.modal.direct"
+      ],
+      "doc": "https://modal.com/docs/guide/endpoints",
+      "modelsDevId": "modal",
+      "aliases": [
+        "modal"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "model-oracle-ai",
+      "name": "Model Oracle AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.modeloracle.com/api/v1",
+      "hosts": [
+        "api.modeloracle.com"
+      ],
+      "doc": "https://modeloracle.com/setup/",
+      "modelsDevId": "model-oracle-ai",
+      "aliases": [
+        "model-oracle-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "modelis",
+      "name": "Modelis",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://modelishub.com/v1",
+      "hosts": [
+        "modelishub.com"
+      ],
+      "doc": "https://modelishub.com/pricing",
+      "modelsDevId": "modelis",
+      "aliases": [
+        "modelis"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "morph",
+      "name": "Morph",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.morphllm.com/v1",
+      "hosts": [
+        "api.morphllm.com"
+      ],
+      "doc": "https://docs.morphllm.com/api-reference/introduction",
+      "modelsDevId": "morph",
+      "aliases": [
+        "morph"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "nan",
+      "name": "NaN",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.nan.builders/v1",
+      "hosts": [
+        "api.nan.builders"
+      ],
+      "doc": "https://nan.builders/docs/models",
+      "modelsDevId": "nan",
+      "aliases": [
+        "nan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "nano-gpt",
+      "name": "NanoGPT",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://nano-gpt.com/api/v1",
+      "hosts": [
+        "nano-gpt.com"
+      ],
+      "doc": "https://docs.nano-gpt.com",
+      "modelsDevId": "nano-gpt",
+      "aliases": [
+        "nano-gpt"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "nearai",
+      "name": "NEAR AI Cloud",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://cloud-api.near.ai/v1",
+      "hosts": [
+        "cloud-api.near.ai"
+      ],
+      "doc": "https://docs.near.ai/",
+      "modelsDevId": "nearai",
+      "aliases": [
+        "nearai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "nebius",
+      "name": "Nebius Token Factory",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.tokenfactory.nebius.com/v1",
+      "hosts": [
+        "api.tokenfactory.nebius.com"
+      ],
+      "doc": "https://docs.tokenfactory.nebius.com/",
+      "modelsDevId": "nebius",
+      "aliases": [
+        "nebius"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "neosmith",
+      "name": "NeoSmith",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://router.neosmith.ai/v1",
+      "hosts": [
+        "router.neosmith.ai"
+      ],
+      "doc": "https://neosmith.ai/docs",
+      "modelsDevId": "neosmith",
+      "aliases": [
+        "neosmith"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "neuralwatt",
+      "name": "Neuralwatt",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.neuralwatt.com/v1",
+      "hosts": [
+        "api.neuralwatt.com"
+      ],
+      "doc": "https://portal.neuralwatt.com/docs",
+      "modelsDevId": "neuralwatt",
+      "aliases": [
+        "neuralwatt"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "novita-ai",
+      "name": "Novita AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.novita.ai/openai",
+      "hosts": [
+        "api.novita.ai"
+      ],
+      "doc": "https://novita.ai/docs/guides/introduction",
+      "modelsDevId": "novita-ai",
+      "aliases": [
+        "novita-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "novita-ai",
+        "currency": "usd"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "oci",
+      "name": "OCI Generative AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1",
+      "hosts": [
+        "inference.generativeai.us-chicago-1.oci.oraclecloud.com"
+      ],
+      "doc": "https://docs.oracle.com/en-us/iaas/Content/generative-ai/pretrained-models.htm",
+      "modelsDevId": "oci",
+      "aliases": [
+        "oci"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ofox",
+      "name": "Ofox",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.ofox.ai/v1",
+      "hosts": [
+        "api.ofox.ai"
+      ],
+      "doc": "https://ofox.ai/docs",
+      "modelsDevId": "ofox",
+      "aliases": [
+        "ofox"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ollama-cloud",
+      "name": "Ollama Cloud",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://ollama.com/v1",
+      "hosts": [
+        "ollama.com"
+      ],
+      "doc": "https://docs.ollama.com/cloud",
+      "modelsDevId": "ollama-cloud",
+      "aliases": [
+        "ollama-cloud"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "opencode-go",
+      "name": "OpenCode Go",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://opencode.ai/inference/go/openai/v1",
+      "hosts": [
+        "opencode.ai"
+      ],
+      "doc": "https://opencode.ai/v2/docs/console/go/",
+      "modelsDevId": "opencode-go",
+      "aliases": [
+        "opencode-go"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "opencode-go",
+        "currency": "%"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "openreason",
+      "name": "OpenReason",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.openreason.app/v1",
+      "hosts": [
+        "api.openreason.app"
+      ],
+      "doc": "https://openreason.app/docs",
+      "modelsDevId": "openreason",
+      "aliases": [
+        "openreason"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "opper",
+      "name": "Opper",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.opper.ai/v3/compat",
+      "hosts": [
+        "api.opper.ai"
+      ],
+      "doc": "https://opper.ai/models",
+      "modelsDevId": "opper",
+      "aliases": [
+        "opper"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "orcarouter",
+      "name": "OrcaRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.orcarouter.ai/v1",
+      "hosts": [
+        "api.orcarouter.ai"
+      ],
+      "doc": "https://docs.orcarouter.ai",
+      "modelsDevId": "orcarouter",
+      "aliases": [
+        "orcarouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "ovhcloud",
+      "name": "OVHcloud AI Endpoints",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+      "hosts": [
+        "oai.endpoints.kepler.ai.cloud.ovh.net"
+      ],
+      "doc": "https://www.ovhcloud.com/en/public-cloud/ai-endpoints/catalog//",
+      "modelsDevId": "ovhcloud",
+      "aliases": [
+        "ovhcloud"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "pareto",
+      "name": "Pareto Inference",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.paretoinference.com/v1",
+      "hosts": [
+        "api.paretoinference.com"
+      ],
+      "doc": "https://docs.paretoinference.com/",
+      "modelsDevId": "pareto",
+      "aliases": [
+        "pareto"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "pendra",
+      "name": "Pendra",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.pendra.ai/api/v1",
+      "hosts": [
+        "api.pendra.ai"
+      ],
+      "doc": "https://pendra.ai/docs/integrations/opencode",
+      "modelsDevId": "pendra",
+      "aliases": [
+        "pendra"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "perplexity-agent",
+      "name": "Perplexity Agent",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.perplexity.ai/v1",
+      "hosts": [
+        "api.perplexity.ai"
+      ],
+      "doc": "https://docs.perplexity.ai/docs/agent-api/models",
+      "modelsDevId": "perplexity-agent",
+      "aliases": [
+        "perplexity-agent"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "pioneer",
+      "name": "Pioneer",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.fastino.ai/v1",
+      "hosts": [
+        "api.fastino.ai"
+      ],
+      "doc": "https://agent.pioneer.ai/llms.txt",
+      "modelsDevId": "pioneer",
+      "aliases": [
+        "pioneer"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "poe",
+      "name": "Poe",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.poe.com/v1",
+      "hosts": [
+        "api.poe.com"
+      ],
+      "doc": "https://creator.poe.com/docs/external-applications/openai-compatible-api",
+      "modelsDevId": "poe",
+      "aliases": [
+        "poe"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "poolside",
+      "name": "Poolside",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.poolside.ai/v1",
+      "hosts": [
+        "inference.poolside.ai"
+      ],
+      "doc": "https://platform.poolside.ai",
+      "modelsDevId": "poolside",
+      "aliases": [
+        "poolside"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "prime",
+      "name": "Prime Inference",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.pinference.ai/api/v1",
+      "hosts": [
+        "api.pinference.ai"
+      ],
+      "doc": "https://docs.primeintellect.ai/inference/overview",
+      "modelsDevId": "prime",
+      "aliases": [
+        "prime"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "qihang-ai",
+      "name": "QiHang",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.qhaigc.net/v1",
+      "hosts": [
+        "api.qhaigc.net"
+      ],
+      "doc": "https://www.qhaigc.net/docs",
+      "modelsDevId": "qihang-ai",
+      "aliases": [
+        "qihang-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "qiniu-ai",
+      "name": "Qiniu 七牛",
+      "description": "七牛云 AI 大模型推理（OpenAI 兼容）",
+      "protocol": "openai",
+      "baseUrl": "https://api.qnaigc.com/v1",
+      "hosts": [
+        "api.qnaigc.com"
+      ],
+      "doc": "https://developer.qiniu.com/aitokenapi",
+      "modelsDevId": "qiniu-ai",
+      "aliases": [
+        "qiniu-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "reflection",
+      "name": "Reflection",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.reflection.ai/openai/v1",
+      "hosts": [
+        "api.reflection.ai"
+      ],
+      "doc": "https://developers.reflection.ai/models",
+      "modelsDevId": "reflection",
+      "aliases": [
+        "reflection"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "regolo-ai",
+      "name": "Regolo AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.regolo.ai/v1",
+      "hosts": [
+        "api.regolo.ai"
+      ],
+      "doc": "https://docs.regolo.ai/",
+      "modelsDevId": "regolo-ai",
+      "aliases": [
+        "regolo-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "requesty",
+      "name": "Requesty",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://router.requesty.ai/v1",
+      "hosts": [
+        "router.requesty.ai"
+      ],
+      "doc": "https://requesty.ai/solution/llm-routing/models",
+      "modelsDevId": "requesty",
+      "aliases": [
+        "requesty"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "official",
+        "kind": "registry",
+        "providerId": "requesty",
+        "currency": "usd"
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "routing-run",
+      "name": "routing.run",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.routing.run/v1",
+      "hosts": [
+        "api.routing.run"
+      ],
+      "doc": "https://docs.routing.run/api-reference/models",
+      "modelsDevId": "routing-run",
+      "aliases": [
+        "routing-run"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "runinfra",
+      "name": "RunInfra",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.runinfra.ai/v1",
+      "hosts": [
+        "api.runinfra.ai"
+      ],
+      "doc": "https://runinfra.ai/docs",
+      "modelsDevId": "runinfra",
+      "aliases": [
+        "runinfra"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "sakana",
+      "name": "Sakana AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.sakana.ai/v1",
+      "hosts": [
+        "api.sakana.ai"
+      ],
+      "doc": "https://console.sakana.ai/models",
+      "modelsDevId": "sakana",
+      "aliases": [
+        "sakana"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "sambanova",
+      "name": "SambaNova",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.sambanova.ai/v1",
+      "hosts": [
+        "api.sambanova.ai"
+      ],
+      "doc": "https://docs.sambanova.ai/cloud/docs/get-started/supported-models",
+      "modelsDevId": "sambanova",
+      "aliases": [
+        "sambanova"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "sarvam",
+      "name": "Sarvam AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.sarvam.ai/v1",
+      "hosts": [
+        "api.sarvam.ai"
+      ],
+      "doc": "https://docs.sarvam.ai/api-reference-docs/getting-started/models",
+      "modelsDevId": "sarvam",
+      "aliases": [
+        "sarvam"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "scaleway",
+      "name": "Scaleway",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.scaleway.ai/v1",
+      "hosts": [
+        "api.scaleway.ai"
+      ],
+      "doc": "https://www.scaleway.com/en/docs/generative-apis/",
+      "modelsDevId": "scaleway",
+      "aliases": [
+        "scaleway"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "scnet-token-plan",
+      "name": "SCNet Token Plan",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.scnet.cn/api/llm/v1",
+      "hosts": [
+        "api.scnet.cn"
+      ],
+      "doc": "https://www.scnet.cn/ac/openapi/doc/2.0/moduleapi/plans/token-plan.html",
+      "modelsDevId": "scnet-token-plan",
+      "aliases": [
+        "scnet-token-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "scx-ai",
+      "name": "SCX.ai",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.scx.ai/v1",
+      "hosts": [
+        "api.scx.ai"
+      ],
+      "doc": "https://platform.scx.ai/docs",
+      "modelsDevId": "scx-ai",
+      "aliases": [
+        "scx-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "stackit",
+      "name": "STACKIT",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.openai-compat.model-serving.eu01.onstackit.cloud/v1",
+      "hosts": [
+        "api.openai-compat.model-serving.eu01.onstackit.cloud"
+      ],
+      "doc": "https://docs.stackit.cloud/products/data-and-ai/ai-model-serving/basics/available-shared-models",
+      "modelsDevId": "stackit",
+      "aliases": [
+        "stackit"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "standardcompute",
+      "name": "Standard Compute",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.stdcmpt.com/v1",
+      "hosts": [
+        "api.stdcmpt.com"
+      ],
+      "doc": "https://docs.standardcompute.com/models",
+      "modelsDevId": "standardcompute",
+      "aliases": [
+        "standardcompute"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "subconscious",
+      "name": "Subconscious",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.subconscious.dev/v1",
+      "hosts": [
+        "api.subconscious.dev"
+      ],
+      "doc": "https://docs.subconscious.dev",
+      "modelsDevId": "subconscious",
+      "aliases": [
+        "subconscious"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "submodel",
+      "name": "submodel",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://llm.submodel.ai/v1",
+      "hosts": [
+        "llm.submodel.ai"
+      ],
+      "doc": "https://submodel.gitbook.io",
+      "modelsDevId": "submodel",
+      "aliases": [
+        "submodel"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "synthetic",
+      "name": "Synthetic",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.synthetic.new/openai/v1",
+      "hosts": [
+        "api.synthetic.new"
+      ],
+      "doc": "https://synthetic.new/pricing",
+      "modelsDevId": "synthetic",
+      "aliases": [
+        "synthetic"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tempr",
+      "name": "Tempr Gateway",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.temprhq.io/v1",
+      "hosts": [
+        "api.temprhq.io"
+      ],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "tempr"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tencent-coding-plan",
+      "name": "Tencent Coding Plan (China)",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.lkeap.cloud.tencent.com/coding/v3",
+      "hosts": [
+        "api.lkeap.cloud.tencent.com"
+      ],
+      "doc": "https://cloud.tencent.com/document/product/1772/128947",
+      "modelsDevId": "tencent-coding-plan",
+      "aliases": [
+        "tencent-coding-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tencent-token-plan",
+      "name": "Tencent Token Plan",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.lkeap.cloud.tencent.com/plan/v3",
+      "hosts": [
+        "api.lkeap.cloud.tencent.com"
+      ],
+      "doc": "https://cloud.tencent.com/document/product/1823/130060",
+      "modelsDevId": "tencent-token-plan",
+      "aliases": [
+        "tencent-token-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tencent-tokenhub",
+      "name": "Tencent TokenHub",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://tokenhub.tencentmaas.com/v1",
+      "hosts": [
+        "tokenhub.tencentmaas.com"
+      ],
+      "doc": "https://cloud.tencent.com/document/product/1823/130050",
+      "modelsDevId": "tencent-tokenhub",
+      "aliases": [
+        "tencent-tokenhub"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tensorx",
+      "name": "TensorX",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.tensorx.ai/v1",
+      "hosts": [
+        "api.tensorx.ai"
+      ],
+      "doc": "https://docs.tensorx.ai/",
+      "modelsDevId": "tensorx",
+      "aliases": [
+        "tensorx"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "the-grid-ai",
+      "name": "The Grid AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.thegrid.ai/v1",
+      "hosts": [
+        "api.thegrid.ai"
+      ],
+      "doc": "https://thegrid.ai/docs",
+      "modelsDevId": "the-grid-ai",
+      "aliases": [
+        "the-grid-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "thinkingmachines",
+      "name": "Thinking Machines",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://tinker.thinkingmachines.dev/services/tinker-prod/anthropic/api/v1",
+      "hosts": [
+        "tinker.thinkingmachines.dev"
+      ],
+      "doc": "https://tinker-docs.thinkingmachines.ai/tinker/compatible-apis/anthropic/",
+      "modelsDevId": "thinkingmachines",
+      "aliases": [
+        "thinkingmachines"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tinfoil",
+      "name": "Tinfoil",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://inference.tinfoil.sh/v1",
+      "hosts": [
+        "inference.tinfoil.sh"
+      ],
+      "doc": "https://docs.tinfoil.sh",
+      "modelsDevId": "tinfoil",
+      "aliases": [
+        "tinfoil"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tokengo",
+      "name": "TokenGo",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.tokengo.com/v1",
+      "hosts": [
+        "api.tokengo.com"
+      ],
+      "doc": "https://www.tokengo.com/docs",
+      "modelsDevId": "tokengo",
+      "aliases": [
+        "tokengo"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "tokenrouter",
+      "name": "TokenRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.tokenrouter.com/v1",
+      "hosts": [
+        "api.tokenrouter.com"
+      ],
+      "doc": "https://www.tokenrouter.com/docs/tokenrouter-feature-guide/",
+      "modelsDevId": "tokenrouter",
+      "aliases": [
+        "tokenrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "trustedrouter",
+      "name": "TrustedRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.trustedrouter.com/v1",
+      "hosts": [
+        "api.trustedrouter.com"
+      ],
+      "doc": "https://trustedrouter.com/docs",
+      "modelsDevId": "trustedrouter",
+      "aliases": [
+        "trustedrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "umans-ai",
+      "name": "Umans AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.code.umans.ai/v1",
+      "hosts": [
+        "api.code.umans.ai"
+      ],
+      "doc": "https://app.umans.ai/offers/code/docs/orgs",
+      "modelsDevId": "umans-ai",
+      "aliases": [
+        "umans-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "umans-ai-coding-plan",
+      "name": "Umans AI Coding Plan",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.code.umans.ai/v1",
+      "hosts": [
+        "api.code.umans.ai"
+      ],
+      "doc": "https://app.umans.ai/offers/code/docs",
+      "modelsDevId": "umans-ai-coding-plan",
+      "aliases": [
+        "umans-ai-coding-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "unorouter",
+      "name": "UnoRouter",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.unorouter.com/v1",
+      "hosts": [
+        "api.unorouter.com"
+      ],
+      "doc": "https://unorouter.com/models",
+      "modelsDevId": "unorouter",
+      "aliases": [
+        "unorouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "upstage",
+      "name": "Upstage",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.upstage.ai/v1/solar",
+      "hosts": [
+        "api.upstage.ai"
+      ],
+      "doc": "https://developers.upstage.ai/docs/apis/chat",
+      "modelsDevId": "upstage",
+      "aliases": [
+        "upstage"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "vancine",
+      "name": "Vancine",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://vancine.com/v1",
+      "hosts": [
+        "vancine.com"
+      ],
+      "doc": "https://vancine.com/docs",
+      "modelsDevId": "vancine",
+      "aliases": [
+        "vancine"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "vispark",
+      "name": "Vispark",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.lab.vispark.in/v1",
+      "hosts": [
+        "api.lab.vispark.in"
+      ],
+      "doc": "https://lab.vispark.in/#vision",
+      "modelsDevId": "vispark",
+      "aliases": [
+        "vispark"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "vivgrid",
+      "name": "Vivgrid",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.vivgrid.com/v1",
+      "hosts": [
+        "api.vivgrid.com"
+      ],
+      "doc": "https://docs.vivgrid.com/models",
+      "modelsDevId": "vivgrid",
+      "aliases": [
+        "vivgrid"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "vultr",
+      "name": "Vultr",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.vultrinference.com/v1",
+      "hosts": [
+        "api.vultrinference.com"
+      ],
+      "doc": "https://api.vultrinference.com/",
+      "modelsDevId": "vultr",
+      "aliases": [
+        "vultr"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "wafer.ai",
+      "name": "Wafer",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://pass.wafer.ai/v1",
+      "hosts": [
+        "pass.wafer.ai"
+      ],
+      "doc": "https://docs.wafer.ai/serverless/models",
+      "modelsDevId": "wafer.ai",
+      "aliases": [
+        "wafer.ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "wallaby",
+      "name": "Wallaby",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.wallabytoken.com/v1",
+      "hosts": [
+        "api.wallabytoken.com"
+      ],
+      "doc": "https://wallabytoken.com/docs",
+      "modelsDevId": "wallaby",
+      "aliases": [
+        "wallaby"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "wandb",
+      "name": "CoreWeave",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.inference.wandb.ai/v1",
+      "hosts": [
+        "api.inference.wandb.ai"
+      ],
+      "doc": "https://docs.wandb.ai/inference",
+      "modelsDevId": "wandb",
+      "aliases": [
+        "wandb"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "xiaomi",
+      "name": "Xiaomi",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.xiaomimimo.com/v1",
+      "hosts": [
+        "api.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "modelsDevId": "xiaomi",
+      "aliases": [
+        "xiaomi"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "xiaomi-token-plan-ams",
+      "name": "Xiaomi Token Plan (Europe)",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://token-plan-ams.xiaomimimo.com/v1",
+      "hosts": [
+        "token-plan-ams.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "modelsDevId": "xiaomi-token-plan-ams",
+      "aliases": [
+        "xiaomi-token-plan-ams"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "xiaomi-token-plan-cn",
+      "name": "Xiaomi Token Plan (China)",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://token-plan-cn.xiaomimimo.com/v1",
+      "hosts": [
+        "token-plan-cn.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "modelsDevId": "xiaomi-token-plan-cn",
+      "aliases": [
+        "xiaomi-token-plan-cn"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "xiaomi-token-plan-sgp",
+      "name": "Xiaomi Token Plan (Singapore)",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://token-plan-sgp.xiaomimimo.com/v1",
+      "hosts": [
+        "token-plan-sgp.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "modelsDevId": "xiaomi-token-plan-sgp",
+      "aliases": [
+        "xiaomi-token-plan-sgp"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "xpersona",
+      "name": "Xpersona",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://www.xpersona.co/v1",
+      "hosts": [
+        "www.xpersona.co"
+      ],
+      "doc": "https://www.xpersona.co/docs",
+      "modelsDevId": "xpersona",
+      "aliases": [
+        "xpersona"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zai",
+      "name": "Z.AI",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.z.ai/api/paas/v4",
+      "hosts": [
+        "api.z.ai"
+      ],
+      "doc": "https://docs.z.ai/guides/overview/pricing",
+      "modelsDevId": "zai",
+      "aliases": [
+        "zai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zai-coding-plan",
+      "name": "Z.AI Coding Plan",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.z.ai/api/coding/paas/v4",
+      "hosts": [
+        "api.z.ai"
+      ],
+      "doc": "https://docs.z.ai/devpack/overview",
+      "modelsDevId": "zai-coding-plan",
+      "aliases": [
+        "zai-coding-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zeldoc",
+      "name": "Zeldoc",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://api.zeldoc.ai/v1",
+      "hosts": [
+        "api.zeldoc.ai"
+      ],
+      "doc": "https://docs.zeldoc.ai",
+      "modelsDevId": "zeldoc",
+      "aliases": [
+        "zeldoc"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zenifra",
+      "name": "Zenifra",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://ai.zenifra.com/v1",
+      "hosts": [
+        "ai.zenifra.com"
+      ],
+      "doc": "https://docs.zenifra.com",
+      "modelsDevId": "zenifra",
+      "aliases": [
+        "zenifra"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zenmux",
+      "name": "ZenMux",
+      "description": null,
+      "protocol": "openai",
+      "baseUrl": "https://zenmux.ai/api/v1",
+      "hosts": [
+        "zenmux.ai"
+      ],
+      "doc": "https://docs.zenmux.ai",
+      "modelsDevId": "zenmux",
+      "aliases": [
+        "zenmux"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "custom",
+      "name": "自定义供应商",
+      "description": "自定义 OpenAI 兼容协议的供应商",
+      "protocol": "openai",
+      "baseUrl": null,
+      "hosts": [],
+      "doc": null,
+      "modelsDevId": null,
+      "aliases": [
+        "custom"
+      ],
+      "capabilities": {
+        "streaming": null,
+        "streamingSource": null,
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "none",
+        "kind": "none",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    }
+  ]
+}

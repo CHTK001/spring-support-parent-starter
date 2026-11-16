@@ -5,3 +5,5 @@ com.chua.starter.datasearch.credit.spi.impl.NewApiCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.Sub2ApiCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.OpenAiCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.HostCreditQueryProvider
+# 新口径:官方余额口径读 provider-credit-endpoints.json(与 host 同一份数据,不会漂移)
+com.chua.starter.datasearch.credit.spi.impl.RegistryCreditQueryProvider

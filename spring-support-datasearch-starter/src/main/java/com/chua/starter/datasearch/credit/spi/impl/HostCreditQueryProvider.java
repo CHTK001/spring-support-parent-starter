@@ -1,100 +1,28 @@
 package com.chua.starter.datasearch.credit.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
-import com.chua.starter.datasearch.credit.model.CreditQuery;
-import com.chua.starter.datasearch.credit.model.CreditResult;
-import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
-import com.chua.starter.datasearch.credit.support.CreditExpressions;
-import com.chua.starter.datasearch.credit.support.CreditHttp;
+import com.chua.starter.datasearch.credit.support.ProviderCreditEndpoints;
 
-import java.net.URI;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 /**
- * 厂商官方余额接口（按厂商标识取默认地址与表达式）。
+ * 厂商官方余额接口（历史标识 {@code host}）。
  *
- * <p>只收录「官方文档明确写了余额 / 额度接口」的厂商，地址与字段按官方文档原文填写。
- * 分两类：</p>
- * <ul>
- *   <li><b>Bearer 类</b>（11 家）：地址与字段逐条用假令牌探活过路由（真路径不是 404、
- *       同前缀捏造的路径 404，才是真的存在）；这些口径没有在本机用真实 key 逐家实测，
- *       页面上允许改地址 / 表达式覆盖，改完以自己的配置为准。</li>
- *   <li><b>AK/SK 签名类</b>（4 家：阿里云 BSS / 火山 billing / 百度财务 / 七牛）：
- *       端点与返回字段同样来自官方文档原文，但要按各家规范对请求做 HMAC 签名，
- *       由 {@code CreditSigner} 完成，缺 AK/SK 时返回明确提示而不是发一个必然 401 的请求。
- *       这四家没做过真链路探活（不允许向厂商端点发请求），字段口径若与上游不一致，
- *       页面用 {@code credit_expression} 覆盖即可。</li>
- * </ul>
+ * <p>口径已迁到数据登记表 {@code provider-catalog/provider-credit-endpoints.json}，
+ * 与 {@link RegistryCreditQueryProvider} 读同一份数据：这里保留 {@code host} 标识与
+ * 静态判定方法，历史配置（{@code extra.credit_kind=host}）与 AI 供应商余额面板
+ * 无需改动即可继续工作。</p>
  *
- * <p>凡是官方文档没写余额 / 额度端点的厂商一律不收录、不猜地址；
- * 需要支持的，走通用「地址 + 表达式」配置，不在这里加。</p>
+ * <p>登记表只收录「官方文档明确写了余额 / 额度接口」的厂商：11 家 Bearer 口径
+ * （地址与字段逐条用假令牌探活过路由）与 4 家账户级 AK/SK 签名类（阿里云 BSS /
+ * 火山 billing / 百度财务 / 七牛）。官方文档没写余额端点的厂商一律不收录、不猜地址，
+ * 走通用「地址 + 表达式」配置。</p>
  *
  * @author CH
  * @since 4.0.0.54
  */
 @Spi("host")
-public class HostCreditQueryProvider implements CreditQueryProvider {
-
-    /**
-     * 厂商标识 → 默认口径
-     */
-    private static final Map<String, HostSpec> HOSTS = new LinkedHashMap<>();
-
-    static {
-        HOSTS.put("deepseek", new HostSpec("https://api.deepseek.com/user/balance",
-                "¥balance_infos.0.total_balance; ¥balance_infos.0.granted_balance"));
-        HOSTS.put("moonshot", new HostSpec("https://api.moonshot.cn/v1/users/me/balance",
-                "¥data.available_balance; ¥data.voucher_balance"));
-        HOSTS.put("siliconflow", new HostSpec("https://api.siliconflow.cn/v1/user/info",
-                "¥data.totalBalance; ¥data.balance"));
-        HOSTS.put("openrouter", new HostSpec("https://openrouter.ai/api/v1/credits",
-                "$data.total_credits; $data.total_usage"));
-        // 以下六家的地址/字段都是从官方文档页原文里逐字抠出来的，并用假令牌探活过
-        //（真路径不是 404、同前缀捏造的路径 404）；但都还没用真实 key 跑过一次，
-        // 首次绑真 key 时页面会显示上游原文，地址与表达式都可在页面上覆盖。
-        HOSTS.put("novita-ai", new HostSpec("https://api.novita.ai/openapi/v1/billing/balance/detail",
-                "$availableBalance / 10000; $cashBalance / 10000"));
-        HOSTS.put("requesty", new HostSpec("https://api-v2.requesty.ai/v1/manage/org",
-                "$balance"));
-        HOSTS.put("llmgateway", new HostSpec("https://api.llmgateway.io/v1/key",
-                "$data.devPlanCreditsRemaining"));
-        HOSTS.put("deepinfra", new HostSpec("https://api.deepinfra.com/payment/usage?from=current",
-                "$months.0.total_cost"));
-        HOSTS.put("together", new HostSpec("https://api.together.ai/v1/billing/usage",
-                "$data.0.line_items.0.cost"));
-        HOSTS.put("stepfun", new HostSpec("https://api.stepfun.com/v1/accounts",
-                "¥balance; ¥total_cash_balance; ¥total_voucher_balance"));
-        // OpenCode Go 订阅没有绝对额度，只回三个窗口的「已用百分比」（! 前缀 = 100 - 已用），
-        // 三条一起读，页面按第一条（滚动 5 小时）当主读数。
-        // 注意：这条路径不在官方文档里（文档只说「用量去 Console 看」，唯一的公开读数是
-        // 每次响应的 usage.opencode.allowance），是按 magpie 社区插件口径查的，
-        // 并用假令牌探活确认存在（真路径 401，同前缀捏造路径 404）。
-        HOSTS.put("opencode-go", new HostSpec("https://opencode.ai/zen/go/v1/usage",
-                "!usage.rolling.percent; !usage.weekly.percent; !usage.monthly.percent", null));
-        // ===== 以下 4 家为 AK/SK 签名类：端点与字段均来自官方文档原文，签名由 CreditSigner 完成。
-        // 未做真链路探活（本阶段不向厂商端点发请求），字段口径若与上游不一致，页面用 credit_expression 覆盖。
-        // 阿里云 BSS QueryAccountBalance（BssOpenApi 2017-12-14，business.aliyuncs.com，RPC 老签名 HMAC-SHA1）：
-        // 响应 Data.AvailableAmount / AvailableCashAmount / Currency，金额单位与币种原文一致。
-        HOSTS.put("aliyun-bss", new HostSpec("https://business.aliyuncs.com/",
-                "¥Data.AvailableAmount; ¥Data.AvailableCashAmount", "aliyun-bss"));
-        // 火山引擎 QueryBalanceAcct（billing.volcengineapi.com，2022-01-01，HMAC-SHA256）：
-        // 响应 Result.AvailableBalance / CashBalance / ArrearsBalance / CreditLimit / FreezeAmount。
-        HOSTS.put("volc-billing", new HostSpec("https://billing.volcengineapi.com/",
-                "¥Result.AvailableBalance; ¥Result.CashBalance; ¥Result.ArrearsBalance", "volc"));
-        // 百度智能云财务现金余额（POST /v1/finance/cash/balance，billing.baidubce.com，bce-auth-v1）：
-        // 响应 cashBalance（字符串金额，如 "850.0000"）。
-        HOSTS.put("baidu-bce", new HostSpec("https://billing.baidubce.com/v1/finance/cash/balance",
-                "¥cashBalance", "bce"));
-        // 七牛财务账户余额概览（GET /billing-api/v1/account/balance-overview，api.qiniu.com，Qiniu 管理凭证）：
-        // 响应 data.available_balance / cash_balance 等为 8 位小数整数，需 / 100000000 换算成元。
-        HOSTS.put("qiniu", new HostSpec("https://api.qiniu.com/billing-api/v1/account/balance-overview",
-                "¥data.available_balance / 100000000; ¥data.cash_balance / 100000000", "qiniu"));
-    }
+public class HostCreditQueryProvider extends RegistryCreditQueryProvider {
 
     @Override
     public String name() {
@@ -105,192 +33,41 @@ public class HostCreditQueryProvider implements CreditQueryProvider {
      * 是否收录了「Bearer 类」厂商的余额端点。
      *
      * <p>供 AI 供应商余额面板判断「要不要自动加一条 host 候选」：那侧按 API Key 逐个查，
-     * 拿不到 AK/SK，所以 4 家签名类预设不参与自动候选（命中只会多一条必然 401 的失败行）。
-     * 账户侧走显式 {@code kind=host} + providerId，仍可命中全部 15 个预设，不受此判断影响。</p>
-     *
-     * <p>本集合由 {@link #bearerBrands()} 派生，两者不会再漂移。</p>
+     * 拿不到 AK/SK，所以 4 家签名类预设不参与自动候选（命中只会多一条必然 401 的失败行）。</p>
      *
      * @param providerId 厂商标识
      * @return 是 Bearer 类预设为 true
      */
     public static boolean supportsHost(String providerId) {
-        if (providerId == null) {
-            return false;
-        }
-        HostSpec spec = HOSTS.get(providerId.trim().toLowerCase());
-        return spec != null && spec.signType == null;
+        return ProviderCreditEndpoints.supportsHost(providerId);
     }
 
     /**
      * 全部已收录的厂商标识（含 AK/SK 签名类）。
      *
-     * <p>调用方据此判断「这家厂商是否走官方余额口径」，不必再维护一份重复清单；
-     * 加预设只改本类的 {@code HOSTS}，页面与接口自动跟上。</p>
-     *
      * @return 厂商标识集合（只读）
      */
     public static Set<String> brands() {
-        return Collections.unmodifiableSet(HOSTS.keySet());
+        return ProviderCreditEndpoints.brands();
     }
 
     /**
      * Bearer 类厂商标识（不含 AK/SK 签名类）。
      *
-     * <p>走 API Key 逐个查余额的场景（如 AI 供应商面板）拿不到 AK/SK，
-     * 只能用这一份；签名类命中只会多一条必然失败的候选。</p>
-     *
      * @return 厂商标识集合（只读）
      */
     public static Set<String> bearerBrands() {
-        Set<String> brands = new LinkedHashSet<>(HOSTS.size());
-        for (Map.Entry<String, HostSpec> entry : HOSTS.entrySet()) {
-            if (entry.getValue().signType == null) {
-                brands.add(entry.getKey());
-            }
-        }
-        return Collections.unmodifiableSet(brands);
+        return ProviderCreditEndpoints.bearerBrands();
     }
 
     /**
      * 预设域名是否与 Key 所属站点一致。
-     *
-     * <p>余额接口必须与 Key 同源：中转站的 Key 拿去问厂商官方接口，只会拿到 401，
-     * 而且会把「Key 无效」这种假结论写进页面。所以 {@code host} 候选先做这道判断：
-     * 上游地址为空（用户只选了厂商）视为一致；域名相同或互为子域视为一致；
-     * 其余一律不一致，交由调用方跳过该候选、改走中转探测。</p>
      *
      * @param providerId 厂商标识
      * @param baseUrl    供应商配置里的上游地址
      * @return 一致或无法判断时 {@code true}
      */
     public static boolean sameOrigin(String providerId, String baseUrl) {
-        if (baseUrl == null || baseUrl.isBlank()) {
-            return true;
-        }
-        HostSpec spec = providerId == null ? null : HOSTS.get(providerId.trim().toLowerCase(Locale.ROOT));
-        if (spec == null) {
-            return false;
-        }
-        String preset = hostOf(spec.url);
-        String actual = hostOf(baseUrl);
-        if (preset == null || actual == null) {
-            return true;
-        }
-        if (preset.equals(actual) || preset.endsWith("." + actual) || actual.endsWith("." + preset)) {
-            return true;
-        }
-        // 同一厂商常用不同子域（调用走 router.requesty.ai、管理面走 api-v2.requesty.ai），按主域再放行一次；
-        // 中转站与厂商不会是同一个主域，所以这层放宽不会把 Key 借给别家
-        String presetDomain = baseDomain(preset);
-        return presetDomain != null && presetDomain.equals(baseDomain(actual));
-    }
-
-    /**
-     * 取主域（{@code api-v2.requesty.ai → requesty.ai}，{@code api.foo.com.cn → foo.com.cn}）。
-     *
-     * @param host 域名
-     * @return 主域；无法判断时返回原值
-     */
-    private static String baseDomain(String host) {
-        if (host == null) {
-            return null;
-        }
-        String[] parts = host.split("\\.");
-        if (parts.length <= 2) {
-            return host;
-        }
-        String second = parts[parts.length - 2];
-        boolean compound = parts[parts.length - 1].length() == 2
-                && ("com".equals(second) || "net".equals(second) || "org".equals(second)
-                || "gov".equals(second) || "edu".equals(second));
-        int keep = compound ? 3 : 2;
-        if (parts.length <= keep) {
-            return host;
-        }
-        return String.join(".", java.util.Arrays.copyOfRange(parts, parts.length - keep, parts.length));
-    }
-
-    /**
-     * 取地址的域名。
-     *
-     * @param url 地址
-     * @return 小写域名；地址非法或缺失时为 {@code null}
-     */
-    private static String hostOf(String url) {
-        if (url == null || url.isBlank()) {
-            return null;
-        }
-        try {
-            String host = URI.create(url.trim()).getHost();
-            return host == null ? null : host.toLowerCase(Locale.ROOT);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    /**
-     * 按厂商口径查询余额。
-     *
-     * @param query 请求
-     * @return 结果；厂商未收录或查不到时 error 有值
-     */
-    @Override
-    public CreditResult query(CreditQuery query) {
-        String providerId = query.getProviderId() == null ? null : query.getProviderId().trim().toLowerCase();
-        HostSpec spec = providerId == null ? null : HOSTS.get(providerId);
-        if (spec == null) {
-            return CreditResult.fail(name(), "未收录该厂商的余额接口: " + query.getProviderId());
-        }
-        // 兜底：即使调用方没先筛候选，也不拿别家的 Key 去问这家的官方接口
-        if (!sameOrigin(providerId, query.getOriginUrl())) {
-            return CreditResult.fail(name(),
-                    "Key 属于 " + hostOf(query.getOriginUrl()) + "，不是 " + providerId
-                            + " 的站点，已跳过官方余额接口");
-        }
-        try {
-            String url = query.getUrl() == null || query.getUrl().isBlank() ? spec.url : query.getUrl();
-            // AK/SK 签名类由预设注入签名方案，交给 CreditSigner / CreditHttp 独立出口处理；
-            // 用户若已显式指定签名方案则尊重用户配置，不覆盖。
-            if (spec.signType != null && (query.getSignType() == null || query.getSignType().isBlank())) {
-                query.setSignType(spec.signType);
-            }
-            String raw = CreditHttp.fetch(query, url);
-            String expression = query.getExpression() == null || query.getExpression().isBlank()
-                    ? spec.expression : query.getExpression();
-            return CreditExpressions.parse(expression, raw, name(), query.getBilling());
-        } catch (RuntimeException e) {
-            return CreditResult.fail(name(), e.getMessage());
-        }
-    }
-
-    /**
-     * 厂商余额口径。
-     */
-    private static final class HostSpec {
-
-        /**
-         * 默认地址
-         */
-        private final String url;
-
-        /**
-         * 默认表达式
-         */
-        private final String expression;
-
-        /**
-         * 签名方案（qiniu / volc / bce / aliyun-bss），为空表示走 Bearer
-         */
-        private final String signType;
-
-        private HostSpec(String url, String expression) {
-            this(url, expression, null);
-        }
-
-        private HostSpec(String url, String expression, String signType) {
-            this.url = url;
-            this.expression = expression;
-            this.signType = signType;
-        }
+        return ProviderCreditEndpoints.sameOrigin(providerId, baseUrl);
     }
 }
