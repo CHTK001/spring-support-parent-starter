@@ -967,6 +967,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group` (
     `sys_ai_group_desc` VARCHAR(256) DEFAULT '' COMMENT '',
     `sys_ai_group_models` TEXT DEFAULT NULL COMMENT '(JSON)',
     `sys_ai_group_app_key_ids` TEXT DEFAULT NULL COMMENT ' AppKey ID (JSON)',
+    `sys_ai_group_default_role_id` BIGINT DEFAULT NULL COMMENT '默认角色 ID（sys_ai_role.sys_ai_role_id），空 = 不设分组级角色',
     `sys_ai_group_enabled` INT DEFAULT 1 COMMENT '',
     `sys_ai_group_sort` INT DEFAULT 0 COMMENT '',
     `sys_ai_group_status` INT DEFAULT 1 COMMENT '1 0 ',
@@ -2130,6 +2131,9 @@ SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
         'SELECT 1',
         'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_role_id` INT NULL COMMENT ''绑定的 AI 角色ID（sys_ai_role.sys_ai_role_id）'' AFTER `sys_ai_bot_binding_model`'));
 PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- 分组默认角色（sys_ai_group_default_role_id）的存量库补列见 V6.12：
+-- 本文件（V6.11）已被执行过的库不会再跑第二遍，补列必须放在新版本脚本里。
 -- =====================================================================
 -- 存量库补列 / 种子（原 V4.0.0.48 / V4.0.0.49 / V4.0.0.54 / V4.0.0.55 / V4.0.0.56，
 -- 已并入本文件）

@@ -129,6 +129,14 @@ public class AiGroupServiceImpl implements AiGroupService {
             entity.setGroupAppKeyIds(Json.toJson(appKeyIdsOf(groupId)));
         }
         groupMapper.updateById(entity);
+        // 默认角色的「清空」语义：DTO 传 0 表示显式不设角色。
+        // updateById 会跳过 null 字段，所以清空必须再走一次显式 set(null)，
+        // 否则界面上把角色清掉、保存后又会读回旧值。
+        if (group.getDefaultRoleId() != null && group.getDefaultRoleId() == 0L) {
+            groupMapper.update(null, new LambdaUpdateWrapper<SysAiGroup>()
+                    .eq(SysAiGroup::getGroupId, groupId)
+                    .set(SysAiGroup::getDefaultRoleId, null));
+        }
         return toDto(groupMapper.selectById(groupId), appKeyIdsOf(groupId));
     }
 
@@ -254,6 +262,7 @@ public class AiGroupServiceImpl implements AiGroupService {
         dto.setModels(parseStringList(entity.getGroupModels()));
         dto.setAppKeyIds(appKeyIds != null ? appKeyIds : parseLongList(entity.getGroupAppKeyIds()));
         dto.setCreatedAt(entity.getGroupCreateTime() != null ? entity.getGroupCreateTime().format(FORMATTER) : null);
+        dto.setDefaultRoleId(entity.getDefaultRoleId());
         return dto;
     }
 
@@ -275,6 +284,11 @@ public class AiGroupServiceImpl implements AiGroupService {
         }
         if (dto.getAppKeyIds() != null) {
             entity.setGroupAppKeyIds(Json.toJson(dto.getAppKeyIds()));
+        }
+        // 分组默认角色只写调用方明确给出的值（updateById 跳过 null），避免「不改模型/成员」时
+        // 把库里已有的默认角色清空；0 是「显式不设角色」的哨兵，由 update 另行 set(null)。
+        if (dto.getDefaultRoleId() != null && dto.getDefaultRoleId() > 0L) {
+            entity.setDefaultRoleId(dto.getDefaultRoleId());
         }
         return entity;
     }

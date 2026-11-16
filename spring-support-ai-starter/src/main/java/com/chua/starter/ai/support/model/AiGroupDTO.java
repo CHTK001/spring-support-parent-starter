@@ -70,4 +70,16 @@ public class AiGroupDTO implements Serializable {
      * 创建时间AT
     */
     private String createdAt;
+
+    /**
+     * 分组默认角色 id：分组级系统提示词 / 默认能力的兜底角色；为空 = 不设分组级角色。
+     *
+     * <p>角色解析层级合并为「分组默认角色 → 分形态表 → 全局默认」（与角色自身
+     * model / temperature 的回退语义一致：分组没设就沿用全局）。</p>
+     */
+    @Schema(description = "分组默认角色 ID")
+    /**
+     * 分组默认角色
+     */
+    private Long defaultRoleId;
 }

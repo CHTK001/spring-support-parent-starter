@@ -884,6 +884,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group` (
     `sys_ai_group_desc` VARCHAR(256) DEFAULT '' COMMENT '',
     `sys_ai_group_models` TEXT DEFAULT NULL COMMENT '(JSON)',
     `sys_ai_group_app_key_ids` TEXT DEFAULT NULL COMMENT ' AppKey ID (JSON)',
+    `sys_ai_group_default_role_id` BIGINT DEFAULT NULL COMMENT '默认角色 ID（sys_ai_role.sys_ai_role_id），空 = 不设分组级角色',
     `sys_ai_group_enabled` INT DEFAULT 1 COMMENT '',
     `sys_ai_group_sort` INT DEFAULT 0 COMMENT '',
     `sys_ai_group_status` INT DEFAULT 1 COMMENT '1 0 ',

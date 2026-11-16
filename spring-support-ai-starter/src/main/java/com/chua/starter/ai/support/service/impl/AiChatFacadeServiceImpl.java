@@ -40,6 +40,7 @@ import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiGroupRoleResolver;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -115,6 +116,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ChatStreamRegistry chatStreamRegistry; // 活跃流注册表：停止会话时中断在执行的那一轮
     private final SysAiAppKeyService sysAiAppKeyService; // appKey 台账：Token 总量配额的唯一累计写入口
     private final SysAiServiceAccessLogMapper accessLogMapper; // 访问日志：路由拓扑页「入站流量」的唯一写入口
+    private final SysAiGroupRoleResolver sysAiGroupRoleResolver; // 分组默认角色（分组 → 角色 → 分形态提示词）
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -1207,6 +1209,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      */
     private ChatClient configureClient(ChatClient client, AiChatRequest request) {
         ChatClient c = client;
+        // 分组默认角色必须赶在 system 下发之前落进 request：
+        // 调用方显式给了提示词（或消息里自带 system）时它不生效，交给调用方。
+        applyGroupDefaultRole(request);
         if (request.getModel() != null && !request.getModel().isBlank()) {
             c = c.model(request.getModel());
         }
@@ -1927,6 +1932,97 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         String s = String.valueOf(v).trim();
         return s.isEmpty() ? null : s;
+    }
+
+    /**
+     * 应用分组默认角色：把分组的默认角色按当前形态解析成系统提示词写进请求。
+     *
+     * <p>只在「调用方没给提示词」时生效：显式 {@code systemPrompt} 或消息里自带的
+     * {@code system} 消息都算调用方已指定，分组默认值不覆盖它们（默认值的语义就是
+     * 「没指定时用我」）。分组与 Key 的归属真源仍是
+     * {@code sys_ai_app_key.sys_ai_app_key_group_id}。</p>
+     *
+     * @param request 对话请求，可为 null
+     */
+    private void applyGroupDefaultRole(AiChatRequest request) {
+        if (request == null) {
+            return;
+        }
+        String explicit = request.getSystemPrompt();
+        if (explicit != null && !explicit.isBlank()) {
+            return;
+        }
+        if (hasSystemMessage(request.getMessages())) {
+            return;
+        }
+        Integer groupId = resolveGroupId(request);
+        if (groupId == null) {
+            return;
+        }
+        try {
+            String prompt = sysAiGroupRoleResolver.systemPrompt(groupId, request.getMode());
+            if (prompt != null && !prompt.isBlank()) {
+                request.setSystemPrompt(prompt);
+                log.info("[AiChat] 命中分组默认角色提示词 groupId={} mode={} 长度={}",
+                        groupId, request.getMode(), prompt.length());
+            }
+        } catch (Exception e) {
+            log.warn("[AiChat] 应用分组默认角色失败 groupId={}: {}", groupId, e.getMessage());
+        }
+    }
+
+    /**
+     * 判断消息列表里是否已有 {@code system} 角色消息。
+     *
+     * @param messages 消息列表，可为 null
+     * @return 存在 system 消息时返回 true
+     */
+    private static boolean hasSystemMessage(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return false;
+        }
+        for (Map<String, Object> msg : messages) {
+            if (msg != null && "system".equals(String.valueOf(msg.get("role")))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 取本次调用所属分组主键。
+     *
+     * <p>优先级：请求参数 {@code _groupId}（网关按 Key 解析后显式下发）→
+     * {@code _appKey} 反查 Key 的分组。两者都没有时返回 null（不受分组约束）。</p>
+     *
+     * @param request 对话请求，可为 null
+     * @return 分组主键；无法确定时返回 null
+     */
+    private Integer resolveGroupId(AiChatRequest request) {
+        if (request == null || request.getParameters() == null) {
+            return null;
+        }
+        Object raw = request.getParameters().get("_groupId");
+        if (raw instanceof Number number) {
+            return number.intValue();
+        }
+        if (raw != null && !String.valueOf(raw).isBlank()) {
+            try {
+                return Integer.valueOf(String.valueOf(raw).trim());
+            } catch (NumberFormatException ignored) {
+                log.debug("[AiChat] _groupId 非数字，按 Key 反查: {}", raw);
+            }
+        }
+        String appKey = appKeyOf(request);
+        if (appKey == null) {
+            return null;
+        }
+        try {
+            return sysAiAppKeyService.getGroupIdByAppKey(appKey);
+        } catch (Exception e) {
+            log.warn("[AiChat] 按 appKey 反查分组失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
