@@ -480,16 +480,6 @@ public class ReidClientManager {
     }
 
     /**
-     * 读取默认摄像头标识。
-     *
-     * @return 摄像头标识；未配置返回 {@code null}
-     */
-    public String defaultCameraId() {
-        String value = settingReader.getStr(GROUP, "default_camera_id");
-        return StringUtils.isBlank(value) ? null : value;
-    }
-
-    /**
      * 构建重识别配置摘要（供日志/健康检查）。
      *
      * <p>检测与特征模型取自 {@code face} 分组（重识别管线共用同一批模型），

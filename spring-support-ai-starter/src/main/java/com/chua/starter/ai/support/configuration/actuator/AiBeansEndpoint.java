@@ -53,10 +53,13 @@ public class AiBeansEndpoint {
 
     /**
      * 重识别相关配置字段
+     *
+     * <p>2026-11-16：移除 {@code default_camera_id} —— ReID 已不依赖摄像头（图片可直接用），
+     * 该摄像头默认标识属于已移除的摄像头依赖项，不再展示。</p>
      */
     private static final List<String> REID_FIELDS = List.of(
             "reid_feature_model", "reid_feature_dimension", "reid_threshold",
-            "reid_match_threshold", "track_threshold", "default_camera_id");
+            "reid_match_threshold", "track_threshold");
 
     /**
      * RAG 相关配置字段

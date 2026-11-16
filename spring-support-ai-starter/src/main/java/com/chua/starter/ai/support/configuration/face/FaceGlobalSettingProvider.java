@@ -123,8 +123,7 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("track_max_tracks", "10000", "NUMBER",
                         "轨迹容量上限（超出淘汰最久未出现的轨迹）", 39),
                 new SettingItem("track_ttl_seconds", "0", "NUMBER",
-                        "轨迹保留时长（秒）；0 表示永久保留", 40),
-                new SettingItem("default_camera_id", "", "STRING", "默认摄像头标识（未指定时使用）", 41)
+                        "轨迹保留时长（秒）；0 表示永久保留", 40)
         );
     }
 }

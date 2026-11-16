@@ -172,7 +172,7 @@ public class AiReidServiceImpl implements AiReidService {
         }
         String resolvedCamera = StringUtils.isNotBlank(cameraId)
                 ? cameraId
-                : clientManager.defaultCameraId();
+                : "";
         String resolvedSource = StringUtils.isNotBlank(sourceId)
                 ? sourceId
                 : "frame-" + System.currentTimeMillis();
@@ -418,11 +418,8 @@ public class AiReidServiceImpl implements AiReidService {
         if (name == null) {
             name = id;
         }
-        // 没传摄像头就按当前组的配置走默认值
+        // Q4.1：ReID 不依赖摄像头（图片可直接用），未传摄像头标识时不再回退默认值（默认摄像头标识已移除）
         String cameraId = strOf(meta, "cameraId");
-        if (StringUtils.isBlank(cameraId)) {
-            cameraId = clientManager.defaultCameraId();
-        }
         BigDecimal lat = numberOf(meta.get("lat"));
         BigDecimal lng = numberOf(meta.get("lng"));
 
