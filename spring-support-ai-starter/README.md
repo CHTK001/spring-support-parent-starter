@@ -383,7 +383,25 @@ one-api / new-api / voapi / veloera 系站点普遍沿用；两次请求都成�
 那种请求只会 401，然后把「Key 无效」这种假结论写进页面。同一厂商的不同子域（调用走
 `router.requesty.ai`、管理面走 `api-v2.requesty.ai`）按主域放行。
 
-逐家覆盖情况见 `pages/ai/docs/提供商.md`（215 行模板 / 212 个唯一 id，由
+**供应商「同步」（`POST /api/providers/{id}/sync`）**：一次点击完成限制、计费标准、模型描述三件事，
+结果按分节返回，失败也只失败对应分节（上游目录拉不到时，限制与官方指标源仍各自完成）：
+
+| 分节 | 数据来源 | 落点 |
+|---|---|---|
+| `limits` | `ProviderLimits`：`extra.limits_manual` → `ProviderLimitPresets` 官方文档预设 → 本次 `/models` 响应头（`x-ratelimit-*` / `ratelimit-policy` / `anthropic-ratelimit-*`） | `sys_ai_provider.extra.provider_limits` |
+| `pricing` | 官方指标源（`ChatClientIndicators`）+ 上游 `/models` 的 pricing | `sys_ai_model_metrics`（计费取价）+ 服务商模型行 |
+| `descriptions` | 上游 `/models` 的 `description` / `summary` | `sys_ai_provider_model.description`，默认只补空值 |
+
+限制机制与余额同构：一种机制一个实现（`ProviderLimitProvider`），不逐家写死。官方文档只核对过
+DeepSeek（账号级并发）与 Moss（计费口径）两条，其余厂商靠响应头动态观测或 `extra.limits_manual`
+手填；拿不到的维度保持 `null`，页面显示「未收录」，不写 0。上游计费价格只在指标行没有价格时写入，
+已有官方价格不被覆盖；同一来源（`upstream:/models`）则随上游刷新。
+
+限制写进 `extra.provider_limits` 后，供应商详情头部会直接显示上次同步的摘要（并发 / RPM / 计费口径，
+悬停看全文与来源），不必再点一次同步才知道当前口径。已知缺口：`extra.limits_manual` 目前只有配置字段，
+管理面还没有「并发 / RPM / 配额」的输入控件。
+
+逐家覆盖情况见 `pages/ai/docs/提供商.md`（215 行模板 / 212 个唯一 id，第四列逐家标注限制走哪条路，由
 `pages/ai/docs/gen-providers-doc.js` 从模板与预设直接生成）。
 
 ## 六、与其它 starter 的关系

@@ -520,6 +520,210 @@ public class SysAiModelMetricsService {
     }
 
     /**
+     * 上游 {@code /models} 计费快照 → 指标库 + 服务商模型行。
+     *
+     * <p>「同步」里计费标准有两条来源：官方指标源（{@link #syncFromIndicator}）
+     * 与上游 {@code /models} 自带的 pricing 字段。后者对中转站 / 网关尤其重要
+     * —— 它们没有 Models.dev 收录，但目录里本来就有价格。本方法把价格写进
+     * {@code sys_ai_model_metrics}（计费取价表）并回写服务商模型行：</p>
+     * <ul>
+     *   <li>指标行不存在：按模型键新增（只带价格字段，其它维度留空）</li>
+     *   <li>指标行已存在：<b>已有价格不覆盖</b>；只有该行来源本来就是
+     *       {@code upstream:/models} 时才随上游刷新，手动锁定的字段跳过</li>
+     *   <li>服务商模型行：复用 {@link #applyToProviderModels}，模型卡片立即刷新</li>
+     * </ul>
+     *
+     * @param providerId 服务商标识
+     * @param rows       上游 {@code /models} 行（含 {@code metrics} 与模型名）
+     * @param sourceUrl  上游地址
+     * @return 同步统计
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public UpstreamPricingResult syncUpstreamPricing(String providerId,
+                                                     List<Map<String, Object>> rows,
+                                                     String sourceUrl) {
+        if (providerId == null || providerId.isBlank() || rows == null || rows.isEmpty()) {
+            return new UpstreamPricingResult(0, 0, 0);
+        }
+        String source = "upstream:/models";
+        long now = System.currentTimeMillis();
+        Map<String, Map<String, Object>> pricing = new LinkedHashMap<>(16);
+        for (Map<String, Object> row : rows) {
+            if (row == null || !(row.get("metrics") instanceof Map<?, ?> raw)) {
+                continue;
+            }
+            String name = row.get("id") instanceof String id ? id : null;
+            if (name == null && row.get("name") instanceof String display) {
+                name = display;
+            }
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            Map<String, Object> snapshot = new LinkedHashMap<>(4);
+            for (String key : UPSTREAM_PRICE_KEYS) {
+                Object value = raw.get(key);
+                if (value != null) {
+                    snapshot.put(key, value);
+                }
+            }
+            if (!snapshot.isEmpty()) {
+                pricing.putIfAbsent(name, snapshot);
+            }
+        }
+        if (pricing.isEmpty()) {
+            return new UpstreamPricingResult(0, 0, 0);
+        }
+
+        Map<String, SysAiModelMetrics> existing = new HashMap<>();
+        for (SysAiModelMetrics m : metricsMapper.selectList(null)) {
+            if (m.getModelKey() != null) {
+                existing.put(m.getModelKey(), m);
+            }
+        }
+        int updated = 0;
+        int inserted = 0;
+        for (Map.Entry<String, Map<String, Object>> entry : pricing.entrySet()) {
+            String modelId = entry.getKey();
+            Map<String, Object> snapshot = entry.getValue();
+            String key = truncate(enrichment.normalizeKey(modelId), 160);
+            if (key.isEmpty()) {
+                continue;
+            }
+            SysAiModelMetrics cur = existing.get(key);
+            if (cur == null) {
+                SysAiModelMetrics entity = new SysAiModelMetrics();
+                entity.setModelKey(key);
+                entity.setModelName(modelId);
+                entity.setProvider(providerId);
+                entity.setSource(source);
+                entity.setCreateTime(now);
+                entity.setUpdateTime(now);
+                applyMetricsToEntity(entity, snapshot);
+                metricsMapper.insert(entity);
+                existing.put(key, entity);
+                inserted++;
+                continue;
+            }
+            Set<String> locked = cur.getManualLocked() == null
+                    ? Set.of() : new HashSet<>(cur.getManualLocked());
+            boolean owned = source.equals(cur.getSource());
+            LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
+            uw.eq(SysAiModelMetrics::getId, cur.getId());
+            boolean changed = false;
+            for (String priceKey : UPSTREAM_PRICE_KEYS) {
+                if (!snapshot.containsKey(priceKey) || locked.contains(priceKey)) {
+                    continue;
+                }
+                if (priceValue(cur, priceKey) != null && !owned) {
+                    continue;
+                }
+                BigDecimal value = bd(snapshot, priceKey);
+                if (value == null) {
+                    continue;
+                }
+                uw.set(priceColumn(priceKey), value);
+                changed = true;
+            }
+            if (!changed) {
+                continue;
+            }
+            uw.set(SysAiModelMetrics::getUpdateTime, now);
+            metricsMapper.update(null, uw);
+            updated++;
+        }
+
+        int providerModels = applyToProviderModels(providerId, pricing, source, sourceUrl, now);
+        log.info("[ModelMetrics] 上游计费同步 provider={}：更新 {}，新增 {}，回写模型行 {}",
+                providerId, updated, inserted, providerModels);
+        return new UpstreamPricingResult(updated, inserted, providerModels);
+    }
+
+    /**
+     * 上游价格键清单。
+     */
+    private static final String[] UPSTREAM_PRICE_KEYS = {
+            "price_input_per_musd", "price_output_per_musd",
+            "price_cache_hit_per_musd", "price_cache_write_per_musd", "cost_per_task"
+    };
+
+    /**
+     * 价格键 → 指标库列。
+     *
+     * @param key 价格键
+     * @return 列引用
+     */
+    private static SFunction<SysAiModelMetrics, ?> priceColumn(String key) {
+        return switch (key) {
+            case "price_input_per_musd" -> SysAiModelMetrics::getPriceInputPerMusd;
+            case "price_output_per_musd" -> SysAiModelMetrics::getPriceOutputPerMusd;
+            case "price_cache_hit_per_musd" -> SysAiModelMetrics::getPriceCacheHitPerMusd;
+            case "price_cache_write_per_musd" -> SysAiModelMetrics::getPriceCacheWritePerMusd;
+            default -> SysAiModelMetrics::getCostPerTask;
+        };
+    }
+
+    /**
+     * 读指标行当前的价格值。
+     *
+     * @param row 指标行
+     * @param key 价格键
+     * @return 当前值
+     */
+    private static BigDecimal priceValue(SysAiModelMetrics row, String key) {
+        return switch (key) {
+            case "price_input_per_musd" -> row.getPriceInputPerMusd();
+            case "price_output_per_musd" -> row.getPriceOutputPerMusd();
+            case "price_cache_hit_per_musd" -> row.getPriceCacheHitPerMusd();
+            case "price_cache_write_per_musd" -> row.getPriceCacheWritePerMusd();
+            default -> row.getCostPerTask();
+        };
+    }
+
+    /**
+     * 上游计费同步结果。
+     */
+    public static final class UpstreamPricingResult {
+
+        private final int updated;
+        private final int inserted;
+        private final int providerModels;
+
+        private UpstreamPricingResult(int updated, int inserted, int providerModels) {
+            this.updated = updated;
+            this.inserted = inserted;
+            this.providerModels = providerModels;
+        }
+
+        /**
+         * 更新的指标行数。
+         *
+         * @return 行数
+         */
+        public int getUpdated() {
+            return updated;
+        }
+
+        /**
+         * 新增的指标行数。
+         *
+         * @return 行数
+         */
+        public int getInserted() {
+            return inserted;
+        }
+
+        /**
+         * 回写的服务商模型行数。
+         *
+         * @return 行数
+         */
+        public int getProviderModels() {
+            return providerModels;
+        }
+    }
+
+    /**
      * 按服务商平台解析对应的 {@link ChatClientIndicator}，与前端「自动获取」
      * 走同一套 {@link ChatClientIndicators} 映射；配置了
      * {@code extra.metrics_url} 且无内置实现时用 {@link HttpChatClientIndicator} 兜底。

@@ -19,6 +19,8 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.limit.ProviderLimitContext;
+import com.chua.starter.ai.support.manage.limit.ProviderLimits;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
@@ -318,6 +320,13 @@ public class ApiProviderController {
      * 上游模型列表接口超时时间（秒）
      */
     private static final Duration UPSTREAM_TIMEOUT = Duration.ofSeconds(15);
+
+    /**
+     * 最近一次上游 {@code /models} 响应头（供「同步」里的限制探测复用同一请求）。
+     *
+     * <p>请求线程内使用，取走后立即移除，避免线程池复用导致串数据。</p>
+     */
+    private final ThreadLocal<Map<String, List<String>>> lastUpstreamHeaders = new ThreadLocal<>();
 
     /**
      * uuidv7 格式正则：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
@@ -4905,6 +4914,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
         }
+        // 每次请求前清空，避免线程池复用时带上上一次的响应头
+        lastUpstreamHeaders.remove();
         baseUrl = baseUrl.trim();
         // 凭证里的 Key 可能带首尾空白（复制粘贴 / 多行输入），先归一化再发请求
         if (apiKey != null) {
@@ -4949,6 +4960,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             if (status < 200 || status >= 300) {
                 throw new ApiException(ApiErrorCode.BAD_GATEWAY, "供应商模型接口返回 " + status);
             }
+            // 限制探测复用同一次请求的响应头（x-ratelimit-* / ratelimit-*），不额外发一次。
+            // 只在拿到 2xx 时留存：401 / 429 的响应头来自失败的候选（鉴权不对 / 已被限流），
+            // 拿它当这家供应商的限额只会写进一条假口径。
+            lastUpstreamHeaders.set(new LinkedHashMap<>(response.headers().map()));
             return googleProtocol ? parseGoogleModels(response.body()) : parseOpenAiModels(response.body());
         } catch (ApiException e) {
             // 业务异常直接向上抛出
@@ -6164,5 +6179,267 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         provider.put("created_at", now);
         provider.put("updated_at", now);
         return provider;
+    }
+
+    /**
+     * 供应商「同步」：限制 + 计费标准 + 模型描述一次完成。
+     *
+     * <p>与原「同步价格」的差别：</p>
+     * <ul>
+     *   <li><b>限制</b>：走 {@link ProviderLimits} 的三段链路（手动配置 → 官方文档预设
+     *       → 上游响应头），结果落到 {@code sys_ai_provider.extra.provider_limits}；</li>
+     *   <li><b>计费标准</b>：官方指标源（{@link ChatClientIndicator}）与上游
+     *       {@code /models} 自带 pricing 两条都写进 {@code sys_ai_model_metrics}；</li>
+     *   <li><b>模型描述</b>：把上游目录里的 description / summary 补到已配置模型行，
+     *       默认只补空值（{@code overwrite_descriptions=true} 才覆盖）。</li>
+     * </ul>
+     *
+     * <p>上游只请求一次 {@code GET /models}：描述与计费共用这份目录，限制复用同一次
+     * 请求的响应头。拉取失败不会让整个同步失败 —— 限制与官方指标源仍可独立完成，
+     * 失败原因在 {@code fetch_error} / 各分节里如实返回。</p>
+     *
+     * @param providerId 提供商标识
+     * @param body       可选 { try_fix, overwrite_descriptions }
+     * @return 各分节同步结果
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/sync")
+    @Transactional
+    public ApiResult<Map<String, Object>> syncProvider(@PathVariable("provider_id") String providerId,
+                                                       @RequestBody(required = false) Map<String, Object> body) {
+        SysAiProvider entity = requireProvider(providerId);
+        boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
+        boolean overwriteDescriptions = body != null
+                && Boolean.TRUE.equals(body.get("overwrite_descriptions"));
+        long now = System.currentTimeMillis();
+        Map<String, Object> out = new LinkedHashMap<>(10);
+        out.put("provider_id", providerId);
+        out.put("synced_at", now);
+
+        List<Map<String, Object>> upstreamModels = new ArrayList<>(0);
+        String fetchError = null;
+        try {
+            Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
+                    entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
+                    entity.getProxy(), tryFix, entity.getExtra(), entity.getProviderId());
+            if (upstream.get("models") instanceof List<?> raw) {
+                for (Object item : raw) {
+                    if (item instanceof Map<?, ?>) {
+                        upstreamModels.add(uncheckedCast(item));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            fetchError = e.getMessage() == null ? e.toString() : e.getMessage();
+        }
+        // 取走即清：ThreadLocal 不能留到下一次请求
+        Map<String, List<String>> headers = lastUpstreamHeaders.get();
+        lastUpstreamHeaders.remove();
+        out.put("models", upstreamModels.size());
+
+        Map<String, Object> limits = syncProviderLimits(entity, headers);
+        out.put("limits", limits);
+        out.put("descriptions", syncProviderDescriptions(entity, upstreamModels,
+                overwriteDescriptions, fetchError, now));
+        out.put("pricing", syncProviderPricing(entity, upstreamModels, fetchError, limits));
+        if (fetchError != null) {
+            out.put("fetch_error", fetchError);
+        }
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 限制同步：探测并持久化到 {@code extra.provider_limits}。
+     *
+     * @param entity  提供商行
+     * @param headers 本次上游 {@code /models} 响应头（可为空）
+     * @return 限制报告（declared / observed / attempted / supported / pricing_url）
+     */
+    private Map<String, Object> syncProviderLimits(SysAiProvider entity, Map<String, List<String>> headers) {
+        ProviderLimitContext context = ProviderLimitContext.builder()
+                .platform(entity.getPlatform())
+                .baseUrl(entity.getBaseUrl())
+                .apiKey(extractApiKey(entity.getCredentials()))
+                .authScheme(entity.getAuthScheme())
+                .authHeader(extraString(entity.getExtra(), "auth_header"))
+                .authPrefix(extraString(entity.getExtra(), "auth_prefix"))
+                .extraHeaders(extractExtraHeaders(entity.getExtra()))
+                .proxy(entity.getProxy())
+                .extra(entity.getExtra())
+                .responseHeaders(headers)
+                .build();
+        Map<String, Object> report = ProviderLimits.collect(context);
+        report.put("supported", report.get("declared") != null || report.get("observed") != null);
+        report.put("pricing_url", ChatClientIndicators.officialPricingUrl(entity.getPlatform()));
+
+        Map<String, Object> extra = entity.getExtra() == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(entity.getExtra());
+        extra.put("provider_limits", report);
+        SysAiProvider update = new SysAiProvider();
+        update.setProviderId(entity.getProviderId());
+        update.setExtra(extra);
+        update.setUpdatedAt(System.currentTimeMillis());
+        // 必须走 updateById：Wrapper.set(extra) 不走 TypeHandler，会写成序列化字节
+        providerMapper.updateById(update);
+        log.info("[ProviderSync] provider={} 限制来源={} declared={} observed={}",
+                entity.getProviderId(), report.get("source"),
+                report.get("declared") != null, report.get("observed") != null);
+        return report;
+    }
+
+    /**
+     * 模型描述同步：上游目录 → 已配置模型行的 {@code description}。
+     *
+     * <p>默认只补空值（不覆盖管理员手写的描述）；{@code overwrite=true} 时才用上游
+     * 文本覆盖。上游条目按模型 id 优先、展示名兜底匹配，避免把 OpenRouter 这类
+     * 「name 是展示名」的目录匹配错。</p>
+     *
+     * @param entity      提供商行
+     * @param upstream    上游模型目录
+     * @param overwrite   是否覆盖已有描述
+     * @param fetchError  上游拉取失败原因（空表示成功）
+     * @param now         本次同步时间
+     * @return 统计与失败原因
+     */
+    private Map<String, Object> syncProviderDescriptions(SysAiProvider entity,
+                                                         List<Map<String, Object>> upstream,
+                                                         boolean overwrite, String fetchError, long now) {
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        int fetched = upstream == null ? 0 : upstream.size();
+        out.put("supported", fetchError == null);
+        out.put("fetched", fetched);
+        out.put("updated", 0);
+        out.put("unchanged", 0);
+        out.put("missing", 0);
+        if (fetchError != null) {
+            out.put("message", "拉取上游模型目录失败：" + fetchError);
+            return out;
+        }
+        if (fetched == 0) {
+            out.put("message", "上游未返回模型目录");
+            return out;
+        }
+        Map<String, SysAiProviderModel> existing = new HashMap<>(16);
+        for (SysAiProviderModel row : modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiProviderModel>()
+                        .eq(SysAiProviderModel::getProviderId, entity.getProviderId()))) {
+            if (row.getModel() != null) {
+                existing.put(row.getModel(), row);
+            }
+        }
+        int updated = 0;
+        int unchanged = 0;
+        int missing = 0;
+        for (Map<String, Object> m : upstream) {
+            String id = m.get("id") instanceof String s ? s : null;
+            String name = m.get("name") instanceof String s ? s : null;
+            SysAiProviderModel row = id == null ? null : existing.get(id);
+            if (row == null && name != null) {
+                row = existing.get(name);
+            }
+            if (row == null) {
+                missing++;
+                continue;
+            }
+            Object rawDescription = m.get("description");
+            String description = rawDescription instanceof String s && !s.isBlank() ? s.trim() : null;
+            if (description == null) {
+                unchanged++;
+                continue;
+            }
+            boolean hasCurrent = row.getDescription() != null && !row.getDescription().isBlank();
+            if (hasCurrent && !overwrite) {
+                unchanged++;
+                continue;
+            }
+            if (description.equals(row.getDescription())) {
+                unchanged++;
+                continue;
+            }
+            row.setDescription(description);
+            row.setUpdatedAt(now);
+            modelMapper.update(row, new LambdaUpdateWrapper<SysAiProviderModel>()
+                    .eq(SysAiProviderModel::getProviderId, row.getProviderId())
+                    .eq(SysAiProviderModel::getModel, row.getModel()));
+            updated++;
+        }
+        out.put("updated", updated);
+        out.put("unchanged", unchanged);
+        out.put("missing", missing);
+        if (updated == 0) {
+            out.put("message", "上游未提供新的模型描述");
+        }
+        return out;
+    }
+
+    /**
+     * 计费标准同步：官方指标源 + 上游 {@code /models} pricing。
+     *
+     * @param entity   提供商行
+     * @param upstream 上游模型目录
+     * @param fetchError 上游拉取失败原因（空表示成功）
+     * @param limits   限制报告（取 {@code billing_basis}）
+     * @return 计费同步分节
+     */
+    private Map<String, Object> syncProviderPricing(SysAiProvider entity,
+                                                    List<Map<String, Object>> upstream,
+                                                    String fetchError,
+                                                    Map<String, Object> limits) {
+        Map<String, Object> out = new LinkedHashMap<>(12);
+        ChatClientIndicator indicator = resolveIndicator(entity);
+        if (indicator != null) {
+            SysAiModelMetricsService.SyncResult result =
+                    sysAiModelMetricsService.syncFromIndicator(indicator, entity.getProviderId());
+            out.put("supported", true);
+            out.put("source", indicator.source());
+            out.put("source_url", indicator.sourceUrl());
+            out.put("models", indicator.modelMetrics() == null ? 0 : indicator.modelMetrics().size());
+            out.put("updated", result.getUpdated());
+            out.put("inserted", result.getInserted());
+            out.put("provider_models", result.getProviderModels());
+        } else {
+            out.put("supported", false);
+            out.put("source", null);
+            out.put("source_url", null);
+            out.put("updated", 0);
+            out.put("inserted", 0);
+            out.put("provider_models", 0);
+            out.put("pricing_url", ChatClientIndicators.officialPricingUrl(entity.getPlatform()));
+        }
+        Object billingBasis = billingBasisOf(limits);
+        if (billingBasis != null) {
+            out.put("billing_basis", billingBasis);
+        }
+        if (fetchError == null) {
+            SysAiModelMetricsService.UpstreamPricingResult upstreamPricing =
+                    sysAiModelMetricsService.syncUpstreamPricing(entity.getProviderId(), upstream,
+                            entity.getBaseUrl());
+            Map<String, Object> upstreamRow = new LinkedHashMap<>(4);
+            upstreamRow.put("updated", upstreamPricing.getUpdated());
+            upstreamRow.put("inserted", upstreamPricing.getInserted());
+            upstreamRow.put("provider_models", upstreamPricing.getProviderModels());
+            out.put("upstream", upstreamRow);
+        } else {
+            out.put("upstream_error", fetchError);
+        }
+        return out;
+    }
+
+    /**
+     * 从限制报告里取计费口径（declared 优先，其次 observed）。
+     *
+     * @param limits 限制报告
+     * @return 计费口径文本；没有返回 null
+     */
+    private static Object billingBasisOf(Map<String, Object> limits) {
+        if (limits == null) {
+            return null;
+        }
+        for (String key : new String[]{"declared", "observed"}) {
+            if (limits.get(key) instanceof Map<?, ?> map && map.get("billing_basis") != null) {
+                return map.get("billing_basis");
+            }
+        }
+        return null;
     }
 }
