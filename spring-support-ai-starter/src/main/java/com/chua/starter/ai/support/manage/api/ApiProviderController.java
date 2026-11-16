@@ -1811,6 +1811,8 @@ public class ApiProviderController {
             query.setKind(candidate);
             query.setProviderId(brand);
             query.setExpression(expression);
+            // Key 所属站点：host / openai 用它自证「这把 Key 是不是这家的」
+            query.setOriginUrl(entity.getBaseUrl());
             // 厂商官方 / OpenAI 官方实现自带地址，只有显式配了地址才覆盖；
             // new-api / billing / sub2api 需要站点根地址，没配就用供应商的上游地址
             boolean builtinUrl = "host".equals(candidate) || "openai".equals(candidate);
@@ -1843,7 +1845,9 @@ public class ApiProviderController {
         }
         List<String> kinds = new ArrayList<>(5);
         String brand = creditBrand(entity, extra);
-        if (brand != null && HostCreditQueryProvider.supportsHost(brand)) {
+        // 官方预设只在这家 Key 确实属于该厂商站点时才试：中转站的 Key 问厂商官方接口只会 401
+        if (brand != null && HostCreditQueryProvider.supportsHost(brand)
+                && HostCreditQueryProvider.sameOrigin(brand, entity.getBaseUrl())) {
             kinds.add("host");
         }
         if (isOfficialOpenAi(entity.getBaseUrl())) {
@@ -1878,7 +1882,8 @@ public class ApiProviderController {
             return "manual";
         }
         String brand = creditBrand(entity, extra);
-        if (brand != null && HostCreditQueryProvider.supportsHost(brand)) {
+        if (brand != null && HostCreditQueryProvider.supportsHost(brand)
+                && HostCreditQueryProvider.sameOrigin(brand, entity.getBaseUrl())) {
             return "official";
         }
         if (isOfficialOpenAi(entity.getBaseUrl())) {

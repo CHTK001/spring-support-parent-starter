@@ -7,9 +7,11 @@ import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
 import com.chua.starter.datasearch.credit.support.CreditExpressions;
 import com.chua.starter.datasearch.credit.support.CreditHttp;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -150,6 +152,83 @@ public class HostCreditQueryProvider implements CreditQueryProvider {
     }
 
     /**
+     * 预设域名是否与 Key 所属站点一致。
+     *
+     * <p>余额接口必须与 Key 同源：中转站的 Key 拿去问厂商官方接口，只会拿到 401，
+     * 而且会把「Key 无效」这种假结论写进页面。所以 {@code host} 候选先做这道判断：
+     * 上游地址为空（用户只选了厂商）视为一致；域名相同或互为子域视为一致；
+     * 其余一律不一致，交由调用方跳过该候选、改走中转探测。</p>
+     *
+     * @param providerId 厂商标识
+     * @param baseUrl    供应商配置里的上游地址
+     * @return 一致或无法判断时 {@code true}
+     */
+    public static boolean sameOrigin(String providerId, String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return true;
+        }
+        HostSpec spec = providerId == null ? null : HOSTS.get(providerId.trim().toLowerCase(Locale.ROOT));
+        if (spec == null) {
+            return false;
+        }
+        String preset = hostOf(spec.url);
+        String actual = hostOf(baseUrl);
+        if (preset == null || actual == null) {
+            return true;
+        }
+        if (preset.equals(actual) || preset.endsWith("." + actual) || actual.endsWith("." + preset)) {
+            return true;
+        }
+        // 同一厂商常用不同子域（调用走 router.requesty.ai、管理面走 api-v2.requesty.ai），按主域再放行一次；
+        // 中转站与厂商不会是同一个主域，所以这层放宽不会把 Key 借给别家
+        String presetDomain = baseDomain(preset);
+        return presetDomain != null && presetDomain.equals(baseDomain(actual));
+    }
+
+    /**
+     * 取主域（{@code api-v2.requesty.ai → requesty.ai}，{@code api.foo.com.cn → foo.com.cn}）。
+     *
+     * @param host 域名
+     * @return 主域；无法判断时返回原值
+     */
+    private static String baseDomain(String host) {
+        if (host == null) {
+            return null;
+        }
+        String[] parts = host.split("\\.");
+        if (parts.length <= 2) {
+            return host;
+        }
+        String second = parts[parts.length - 2];
+        boolean compound = parts[parts.length - 1].length() == 2
+                && ("com".equals(second) || "net".equals(second) || "org".equals(second)
+                || "gov".equals(second) || "edu".equals(second));
+        int keep = compound ? 3 : 2;
+        if (parts.length <= keep) {
+            return host;
+        }
+        return String.join(".", java.util.Arrays.copyOfRange(parts, parts.length - keep, parts.length));
+    }
+
+    /**
+     * 取地址的域名。
+     *
+     * @param url 地址
+     * @return 小写域名；地址非法或缺失时为 {@code null}
+     */
+    private static String hostOf(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            String host = URI.create(url.trim()).getHost();
+            return host == null ? null : host.toLowerCase(Locale.ROOT);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
      * 按厂商口径查询余额。
      *
      * @param query 请求
@@ -161,6 +240,12 @@ public class HostCreditQueryProvider implements CreditQueryProvider {
         HostSpec spec = providerId == null ? null : HOSTS.get(providerId);
         if (spec == null) {
             return CreditResult.fail(name(), "未收录该厂商的余额接口: " + query.getProviderId());
+        }
+        // 兜底：即使调用方没先筛候选，也不拿别家的 Key 去问这家的官方接口
+        if (!sameOrigin(providerId, query.getOriginUrl())) {
+            return CreditResult.fail(name(),
+                    "Key 属于 " + hostOf(query.getOriginUrl()) + "，不是 " + providerId
+                            + " 的站点，已跳过官方余额接口");
         }
         try {
             String url = query.getUrl() == null || query.getUrl().isBlank() ? spec.url : query.getUrl();

@@ -39,6 +39,15 @@ public class CreditQuery implements Serializable {
     private String url;
 
     /**
+     * 这个 Key 所属站点的上游地址（供应商配置里的 base_url）。
+     *
+     * <p>余额接口必须与 Key 同源：中转站的 Key 只能查中转站自己的额度接口，
+     * 厂商的 Key 只能查厂商自己的。{@code host} 实现用它和预设域名比对，
+     * 不一致时拒绝发请求，避免「拿别家的 Key 去问这家要余额」。</p>
+     */
+    private String originUrl;
+
+    /**
      * HTTP 方法（GET / POST / PUT），默认 GET
      */
     private String method;

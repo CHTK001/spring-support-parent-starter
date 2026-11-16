@@ -192,7 +192,13 @@ my-weather=com.example.weather.MyWeatherProvider
   现有 11 家 Bearer 预设 + 4 家 AK/SK 签名预设，清单与逐家依据见
   `HostCreditQueryProvider.HOSTS` 与各 README 的「已收录 / 不收录」小节。
   品牌清单由 `HostCreditQueryProvider.brands()` / `bearerBrands()` 自述，消费方不再各存一份。
-- **中转站覆盖面**：把上游地址当站点根地址，按 `new-api → billing → sub2api` 依次探测，
+- **同源约束**：余额接口必须与 Key 同源。`host` / `openai` 这两个自带地址的实现会先比
+  `CreditQuery.originUrl`（供应商的 `base_url`）与预设域名：域名相同、互为子域或同一主域
+  （`router.requesty.ai` 与 `api-v2.requesty.ai`）才放行；对不上就返回
+  「Key 属于 xxx，不是 yyy 的站点，已跳过官方余额接口」。中转站的 Key 只能查中转站自己的
+  额度接口，拿来问厂商官方接口只会 401，然后把「Key 无效」这种假结论写进页面。
+- **中转站覆盖面**：把上游地址当站点根地址，按调用方给定的候选顺序依次探测（模型管理页的顺序由
+  `ApiProviderController.AUTO_CREDIT_KINDS` 决定），
   第一条查到数的胜出。`billing` 两次请求都必须成功才给结论（只拿到上限不冒充余额），
   换算是「剩余 = 上限 − total_usage / 100」；站点口径不同就在页面上改用 `expression` 自填。
 - **字段表达式**（`CreditExpressions`）：`$ ¥ ￥ € £` 币种前缀、点路径 / 数组下标 / `*` 通配、

@@ -47,13 +47,40 @@ public class OpenAiCreditQueryProvider implements CreditQueryProvider {
     @Override
     public CreditResult query(CreditQuery query) {
         try {
-            String url = query.getUrl() == null || query.getUrl().isBlank() ? DEFAULT_URL : query.getUrl();
+            boolean builtin = query.getUrl() == null || query.getUrl().isBlank();
+            // 同源校验：官方接口只在 Key 确实属于 OpenAI 时才问；中转站的 Key 问它只会 401
+            if (builtin && query.getOriginUrl() != null && !query.getOriginUrl().isBlank()) {
+                String host = hostOf(query.getOriginUrl());
+                if (host != null && !"api.openai.com".equals(host) && !host.endsWith(".openai.com")) {
+                    return CreditResult.fail(name(),
+                            "Key 属于 " + host + "，不是 OpenAI 官方站点，已跳过官方额度接口");
+                }
+            }
+            String url = builtin ? DEFAULT_URL : query.getUrl();
             String raw = CreditHttp.fetch(query, url);
             String expression = query.getExpression() == null || query.getExpression().isBlank()
                     ? DEFAULT_EXPRESSION : query.getExpression();
             return CreditExpressions.parse(expression, raw, name(), query.getBilling());
         } catch (RuntimeException e) {
             return CreditResult.fail(name(), e.getMessage());
+        }
+    }
+
+    /**
+     * 取地址的域名。
+     *
+     * @param url 地址
+     * @return 小写域名；地址非法或缺失时为 {@code null}
+     */
+    private static String hostOf(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            String host = java.net.URI.create(url.trim()).getHost();
+            return host == null ? null : host.toLowerCase(java.util.Locale.ROOT);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 }

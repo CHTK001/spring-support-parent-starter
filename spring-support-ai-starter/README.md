@@ -368,15 +368,23 @@ public class MyLlmCreditProvider implements ChannelCreditProvider {
 |---|---|---|
 | `official` | 厂商有官方预设 | `host` |
 | `openai` | 上游是 OpenAI 官方 | `openai` |
-| `relay` | 中转 / 聚合站，地址当站点根地址探测 | `new-api` → `billing` → `sub2api` |
+| `relay` | 中转 / 聚合站，用 `base_url` 当站点根地址探测 | `AUTO_CREDIT_KINDS` 列出的实现，按序试 |
 | `manual` | 页面上指定了唯一实现（含自定义地址 + 表达式） | 指定的那一个 |
 | `none` | 没有上游地址，没有可查的余额 | — |
 
 `billing` 是 OpenAI 老 dashboard 计费口径（`/v1/dashboard/billing/subscription` + `/usage`），
 one-api / new-api / voapi / veloera 系站点普遍沿用；两次请求都成功才给结论，只拿到上限不冒充余额。
-全部候选都失败时，接口把每个实现的原始错误拼进该 Key 的 `error`，页面在卡片下面显示
-「已尝试：厂商官方 → new-api → OpenAI 兼容计费 → sub2api」，用户据此判断该换哪条口径，
+全部候选都失败时，接口把每个实现的原始错误拼进该 Key 的 `error`，页面在卡片下面按实际尝试顺序显示
+「已尝试：厂商官方 → …」，用户据此判断该换哪条口径，
 而不是只看到一句「查询失败」。响应里的 `candidates` 是本次实际尝试顺序的唯一来源。
+
+**余额接口必须与 Key 同源**（`HostCreditQueryProvider.sameOrigin`）：`base_url` 用来证明「这把 Key 是这个站点的」。域名和厂商预设对不上时（中转站的 Key、或者换了上游地址的模板），`host` 候选会被直接跳过并改走中转探测；`host` / `openai` 实现内部还有一道兜底，真的被直接调用时也只返回
+「Key 属于 xxx，不是 yyy 的站点，已跳过官方余额接口」，不会拿别家的 Key 去问这家的官方接口——
+那种请求只会 401，然后把「Key 无效」这种假结论写进页面。同一厂商的不同子域（调用走
+`router.requesty.ai`、管理面走 `api-v2.requesty.ai`）按主域放行。
+
+逐家覆盖情况见 `pages/ai/docs/提供商.md`（215 行模板 / 212 个唯一 id，由
+`pages/ai/docs/gen-providers-doc.js` 从模板与预设直接生成）。
 
 ## 六、与其它 starter 的关系
 
