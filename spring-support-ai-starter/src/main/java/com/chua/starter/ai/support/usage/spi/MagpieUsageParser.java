@@ -123,7 +123,8 @@ public class MagpieUsageParser implements UsageParser {
     private List<AiUsage> fetchRows(String baseUrl, Map<String, String> headers) {
         List<AiUsage> rows = new ArrayList<>();
         int offset = 0;
-        for (int page = 0; page < 500 && rows.size() > 0; page++) {
+        // 首页必须无条件进入：rows 是本方法新建的空列表，用 rows.size() > 0 作条件会让循环一次都不执行
+        for (int page = 0; page < 500 && (page == 0 || !rows.isEmpty()); page++) {
             // 单页拉取
             String url = baseUrl + USAGE_PATH + "?period=today&account=&provider=&offset=" + offset
                     + "&limit=" + PAGE_SIZE;
