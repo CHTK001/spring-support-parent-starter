@@ -25,34 +25,69 @@ public class PacketRestoreFrame implements Serializable {
     public PacketRestoreFrame() {
     }
 
+    /**
+     * 构造报文回填参数（帧号 + 原始 JSON + 还原明文）。
+     *
+     * @param frameNo      pcap 内自然递增的帧号（frame.number）
+     * @param rawData      tshark -T json 返回的单包完整 JSON
+     * @param restoredText 还原出的协议明文
+     */
     public PacketRestoreFrame(Long frameNo, String rawData, String restoredText) {
         this.frameNo = frameNo;
         this.rawData = rawData;
         this.restoredText = restoredText;
     }
 
+    /**
+     * 获取帧号。
+     *
+     * @return 帧号
+     */
     public Long getFrameNo() {
         return this.frameNo;
     }
 
+    /**
+     * 设置帧号。
+     *
+     * @param frameNo 帧号
+     */
     public void setFrameNo(Long frameNo) {
         this.frameNo = frameNo;
     }
 
+    /**
+     * 获取单包完整 JSON。
+     *
+     * @return 原始 JSON
+     */
     public String getRawData() {
         return this.rawData;
     }
 
+    /**
+     * 设置单包完整 JSON。
+     *
+     * @param rawData 原始 JSON
+     */
     public void setRawData(String rawData) {
         this.rawData = rawData;
     }
 
-    /** getRestoredText 方法 */
+    /**
+     * 获取还原出的协议明文。
+     *
+     * @return 协议明文
+     */
     public String getRestoredText() {
         return this.restoredText;
     }
 
-    /** setRestoredText 方法 */
+    /**
+     * 设置还原出的协议明文。
+     *
+     * @param restoredText 协议明文
+     */
     public void setRestoredText(String restoredText) {
         this.restoredText = restoredText;
     }

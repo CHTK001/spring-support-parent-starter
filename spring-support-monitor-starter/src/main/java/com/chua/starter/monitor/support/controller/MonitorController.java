@@ -564,6 +564,13 @@ public class MonitorController {
         return metricService.getLatestJvm(monitorId);
     }
 
+    /**
+     * 获取 CPU 历史指标。
+     *
+     * @param monitorId 监控资产 ID
+     * @param hours     过去 N 小时（可选，空则全部）
+     * @return CPU 历史指标列表
+     */
     @Operation(summary = "获取 CPU 历史指标")
     @GetMapping("/metric/cpu/history/{monitorId}")
     public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(
@@ -573,6 +580,13 @@ public class MonitorController {
         return metricService.getCpuHistory(monitorId, start, null);
     }
 
+    /**
+     * 获取内存历史指标。
+     *
+     * @param monitorId 监控资产 ID
+     * @param hours     过去 N 小时（可选，空则全部）
+     * @return 内存历史指标列表
+     */
     @Operation(summary = "获取内存历史指标")
     @GetMapping("/metric/memory/history/{monitorId}")
     public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(
@@ -582,6 +596,13 @@ public class MonitorController {
         return metricService.getMemoryHistory(monitorId, start, null);
     }
 
+    /**
+     * 获取 JVM 历史指标。
+     *
+     * @param monitorId 监控资产 ID
+     * @param hours     过去 N 小时（可选，空则全部）
+     * @return JVM 历史指标列表
+     */
     @Operation(summary = "获取 JVM 历史指标")
     @GetMapping("/metric/jvm/history/{monitorId}")
     public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(
@@ -591,6 +612,13 @@ public class MonitorController {
         return metricService.getJvmHistory(monitorId, start, null);
     }
 
+    /**
+     * 获取网络历史指标。
+     *
+     * @param monitorId 监控资产 ID
+     * @param hours     过去 N 小时（可选，空则全部）
+     * @return 网络历史指标列表
+     */
     @Operation(summary = "获取网络历史指标")
     @GetMapping("/metric/network/history/{monitorId}")
     public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(
@@ -627,6 +655,13 @@ public class MonitorController {
         return metricService.getLatestRedisMetric(monitorId);
     }
 
+    /**
+     * 获取 Redis 历史指标。
+     *
+     * @param monitorId 监控资产 ID
+     * @param hours     过去 N 小时（可选，空则全部）
+     * @return Redis 历史指标列表
+     */
     @Operation(summary = "获取 Redis 历史指标")
     @GetMapping("/metric/redis/history/{monitorId}")
     public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(
@@ -994,6 +1029,13 @@ public class MonitorController {
         }
     }
 
+    /**
+     * 扫描 Redis Keys（SCAN 游标，单批 100 个）。
+     *
+     * @param taskId  任务 ID
+     * @param pattern 匹配模式（默认 "*"）
+     * @return 扫描结果（键列表 + 下一个游标）
+     */
     @Operation(summary = "扫描 Redis Keys")
     @GetMapping("/operation/redis/{taskId}/keys")
     public Mono<OperationProvider.ScanResult> scanKeys(
@@ -1024,6 +1066,15 @@ public class MonitorController {
         return getKeyDetail(taskId, key);
     }
 
+    /**
+     * 写入 Redis Key。
+     *
+     * @param taskId 任务 ID
+     * @param key    Key 名
+     * @param value  键值文本
+     * @param ttl    过期秒数（可选，空则不设过期）
+     * @return 是否写入成功
+     */
     @Operation(summary = "写入 Redis Key")
     @PutMapping("/operation/redis/{taskId}/kv/{key}")
     public Mono<Boolean> setValue(@PathVariable Long taskId, @PathVariable String key,
@@ -1051,6 +1102,14 @@ public class MonitorController {
         });
     }
 
+    /**
+     * 设置过期时间。
+     *
+     * @param taskId     任务 ID
+     * @param key        Key 名
+     * @param ttlSeconds 过期秒数
+     * @return 是否设置成功
+     */
     @Operation(summary = "设置过期时间")
     @PostMapping("/operation/redis/{taskId}/expire/{key}")
     public Mono<Boolean> expire(@PathVariable Long taskId, @PathVariable String key,
