@@ -44,24 +44,47 @@ public class HttpmanController {
 
     // ==================== 集合 ====================
 
+    /**
+     * 集合树列表
+     *
+     * @return 集合列表
+     */
     @Operation(summary = "集合树")
     @GetMapping("/collections")
     public ReturnResult<List<MsHttpmanCollection>> collections() {
         return ReturnResult.ok(httpmanService.listCollections());
     }
 
+    /**
+     * 新增集合
+     *
+     * @param collection 集合信息
+     * @return 创建后的集合
+     */
     @Operation(summary = "新增集合")
     @PostMapping("/collections")
     public ReturnResult<MsHttpmanCollection> addCollection(@RequestBody MsHttpmanCollection collection) {
         return ReturnResult.ok(httpmanService.createCollection(collection));
     }
 
+    /**
+     * 修改集合
+     *
+     * @param collection 集合信息（含 id）
+     * @return 更新后的集合
+     */
     @Operation(summary = "修改集合")
     @PutMapping("/collections/{id}")
     public ReturnResult<MsHttpmanCollection> updateCollection(@RequestBody MsHttpmanCollection collection) {
         return ReturnResult.ok(httpmanService.updateCollection(collection));
     }
 
+    /**
+     * 删除集合
+     *
+     * @param id 集合 ID
+     * @return 操作结果
+     */
     @Operation(summary = "删除集合")
     @DeleteMapping("/collections/{id}")
     public ReturnResult<Void> deleteCollection(@PathVariable String id) {
@@ -71,6 +94,13 @@ public class HttpmanController {
 
     // ==================== 请求 ====================
 
+    /**
+     * 请求列表（可按集合/父节点过滤）
+     *
+     * @param collectionId 集合 ID（可空）
+     * @param parentId     父节点 ID（可空）
+     * @return 请求列表
+     */
     @Operation(summary = "请求列表")
     @GetMapping("/requests")
     public ReturnResult<List<MsHttpmanRequest>> requests(@RequestParam(required = false) String collectionId,
@@ -78,24 +108,49 @@ public class HttpmanController {
         return ReturnResult.ok(httpmanService.listRequests(collectionId, parentId));
     }
 
+    /**
+     * 新增请求
+     *
+     * @param save 请求保存信息
+     * @return 创建后的请求
+     */
     @Operation(summary = "新增请求")
     @PostMapping("/requests")
     public ReturnResult<MsHttpmanRequest> addRequest(@RequestBody HttpmanRequestSave save) {
         return ReturnResult.ok(httpmanService.saveRequest(save));
     }
 
+    /**
+     * 修改请求
+     *
+     * @param id   请求 ID
+     * @param save 请求保存信息
+     * @return 更新后的请求
+     */
     @Operation(summary = "修改请求")
     @PutMapping("/requests/{id}")
     public ReturnResult<MsHttpmanRequest> updateRequest(@PathVariable String id, @RequestBody HttpmanRequestSave save) {
         return ReturnResult.ok(httpmanService.updateRequest(id, save));
     }
 
+    /**
+     * 请求详情
+     *
+     * @param id 请求 ID
+     * @return 请求详情
+     */
     @Operation(summary = "请求详情")
     @GetMapping("/requests/{id}")
     public ReturnResult<MsHttpmanRequest> requestDetail(@PathVariable String id) {
         return ReturnResult.ok(httpmanService.getRequest(id));
     }
 
+    /**
+     * 删除请求
+     *
+     * @param id 请求 ID
+     * @return 操作结果
+     */
     @Operation(summary = "删除请求")
     @DeleteMapping("/requests/{id}")
     public ReturnResult<Void> deleteRequest(@PathVariable String id) {
@@ -105,6 +160,13 @@ public class HttpmanController {
 
     // ==================== 执行 ====================
 
+    /**
+     * 执行请求：执行一条已存储的请求并记录运行历史
+     *
+     * @param id       请求 ID
+     * @param override 临时覆盖参数（可空，地址/正文/方法，不落库）
+     * @return 执行结果
+     */
     @Operation(summary = "执行请求", description = "执行一条已存储的请求并记录运行历史")
     @PostMapping("/requests/{id}/execute")
     public ReturnResult<Map<String, Object>> execute(@PathVariable String id,
@@ -123,6 +185,12 @@ public class HttpmanController {
         return httpmanService.executeAndRecord(request, request.getRequestCollectionId());
     }
 
+    /**
+     * 测试执行请求：执行一条已存储的请求但不记录历史
+     *
+     * @param id 请求 ID
+     * @return 执行结果
+     */
     @Operation(summary = "执行请求（不记录历史）")
     @PostMapping("/requests/{id}/test")
     public ReturnResult<Map<String, Object>> test(@PathVariable String id) {
@@ -135,18 +203,36 @@ public class HttpmanController {
 
     // ==================== 历史 ====================
 
+    /**
+     * 历史分页查询
+     *
+     * @param query 历史查询条件
+     * @return 历史分页结果
+     */
     @Operation(summary = "历史分页")
     @GetMapping("/history")
     public ReturnResult<PageResult<Map<String, Object>>> history(HttpmanHistoryQuery query) {
         return ReturnResult.ok(httpmanService.pageHistory(query));
     }
 
+    /**
+     * 历史详情
+     *
+     * @param id 历史记录 ID
+     * @return 历史详情
+     */
     @Operation(summary = "历史详情")
     @GetMapping("/history/{id}")
     public ReturnResult<Map<String, Object>> historyDetail(@PathVariable String id) {
         return ReturnResult.ok(httpmanService.getHistory(id));
     }
 
+    /**
+     * 删除历史
+     *
+     * @param id 历史记录 ID
+     * @return 操作结果
+     */
     @Operation(summary = "删除历史")
     @DeleteMapping("/history/{id}")
     public ReturnResult<Void> deleteHistory(@PathVariable String id) {
@@ -154,6 +240,12 @@ public class HttpmanController {
         return ReturnResult.ok();
     }
 
+    /**
+     * 清理历史：删除超过保留天数的历史记录
+     *
+     * @param retentionDays 保留天数（默认 30）
+     * @return 操作结果
+     */
     @Operation(summary = "清理历史")
     @PostMapping("/history/clean")
     public ReturnResult<Void> cleanHistory(@RequestParam(defaultValue = "30") int retentionDays) {
@@ -163,6 +255,13 @@ public class HttpmanController {
 
     // ==================== 变量 ====================
 
+    /**
+     * 变量列表（可按作用域/集合过滤）
+     *
+     * @param scope        作用域（可空）
+     * @param collectionId 集合 ID（可空）
+     * @return 变量列表
+     */
     @Operation(summary = "变量列表")
     @GetMapping("/variables")
     public ReturnResult<List<MsHttpmanVariable>> variables(@RequestParam(required = false) String scope,
@@ -170,6 +269,12 @@ public class HttpmanController {
         return ReturnResult.ok(httpmanService.listVariables(scope, collectionId));
     }
 
+    /**
+     * 新增变量
+     *
+     * @param save 变量保存信息
+     * @return 创建后的变量
+     */
     @Operation(summary = "新增变量")
     @PostMapping("/variables")
     public ReturnResult<MsHttpmanVariable> addVariable(@RequestBody HttpmanVariableSave save) {
@@ -182,6 +287,13 @@ public class HttpmanController {
         return ReturnResult.ok(httpmanService.createVariable(variable));
     }
 
+    /**
+     * 修改变量
+     *
+     * @param id   变量 ID
+     * @param save 变量保存信息
+     * @return 更新后的变量
+     */
     @Operation(summary = "修改变量")
     @PutMapping("/variables/{id}")
     public ReturnResult<MsHttpmanVariable> updateVariable(@PathVariable String id, @RequestBody HttpmanVariableSave save) {
@@ -195,6 +307,12 @@ public class HttpmanController {
         return ReturnResult.ok(httpmanService.updateVariable(variable));
     }
 
+    /**
+     * 删除变量
+     *
+     * @param id 变量 ID
+     * @return 操作结果
+     */
     @Operation(summary = "删除变量")
     @DeleteMapping("/variables/{id}")
     public ReturnResult<Void> deleteVariable(@PathVariable String id) {

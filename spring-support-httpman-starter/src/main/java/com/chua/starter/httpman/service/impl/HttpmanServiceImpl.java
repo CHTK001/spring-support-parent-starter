@@ -66,6 +66,15 @@ public class HttpmanServiceImpl implements HttpmanService {
 
     private final HttpmanProxyExecutor executor;
 
+    /**
+     * 构造 Httpman 服务实现（内置代理执行器）。
+     *
+     * @param properties       Httpman 配置
+     * @param collectionMapper 集合映射器
+     * @param requestMapper    请求映射器
+     * @param historyMapper    历史映射器
+     * @param variableMapper   变量映射器
+     */
     public HttpmanServiceImpl(HttpmanProperties properties,
                               MsHttpmanCollectionMapper collectionMapper,
                               MsHttpmanRequestMapper requestMapper,
@@ -251,7 +260,14 @@ public class HttpmanServiceImpl implements HttpmanService {
     }
 
     /**
-     * 创建历史记录（脱敏后落库）
+     * 创建历史记录（脱敏后落库）。
+     *
+     * @param request  原始请求
+     * @param response 响应结果
+     * @param url      实际请求 URL
+     * @param body     实际请求体
+     * @param result   结果 Map（回填 historyId）
+     * @return 回填 historyId 后的结果 Map
      */
     private Map<String, Object> createHistoryRecord(MsHttpmanRequest request, HttpmanResponse response,
                                                     String url, String body, Map<String, Object> result) {
@@ -405,7 +421,11 @@ public class HttpmanServiceImpl implements HttpmanService {
     // ==================== 工具 ====================
 
     /**
-     * 替换请求中的 {{variable}} 占位符
+     * 替换请求中的 {{variable}} 占位符。
+     *
+     * @param text      原始文本（可为 null）
+     * @param variables 变量映射（name → value）
+     * @return 替换后的文本；入参为 null 时返回 null
      */
     private String resolvePlaceholders(String text, Map<String, String> variables) {
         if (text == null) {
@@ -421,7 +441,10 @@ public class HttpmanServiceImpl implements HttpmanService {
     }
 
     /**
-     * 解析请求头 JSON 数组 [{"name":"X","value":"Y"}]
+     * 解析请求头 JSON 数组 [{"name":"X","value":"Y"}] 为 Map。
+     *
+     * @param json 请求头 JSON 文本
+     * @return name → value 映射（重复 name 取最后一个）
      */
     private Map<String, String> parseHeaderMap(String json) {
         List<Map<String, String>> list = parseHeaderList(json);
@@ -432,7 +455,10 @@ public class HttpmanServiceImpl implements HttpmanService {
     }
 
     /**
-     * 解析查询参数 JSON 数组 [{"name":"X","value":"Y"}]
+     * 解析查询参数 JSON 数组 [{"name":"X","value":"Y"}] 为多值 Map。
+     *
+     * @param json 查询参数 JSON 文本
+     * @return name → 值列表映射；空输入时返回空 Map
      */
     private Map<String, List<String>> parseParamMap(String json) {
         List<Map<String, String>> list = parseHeaderList(json);
@@ -444,6 +470,12 @@ public class HttpmanServiceImpl implements HttpmanService {
                 Collectors.mapping(m -> m.get("value") == null ? "" : m.get("value"), Collectors.toList())));
     }
 
+    /**
+     * 解析 JSON 数组文本为 name/value 节点列表。
+     *
+     * @param json JSON 数组文本；空文本或 "[]" 返回空列表
+     * @return 节点列表
+     */
     private List<Map<String, String>> parseHeaderList(String json) {
         if (!StringUtils.hasText(json) || "[]".equals(json)) {
             return new ArrayList<>();
@@ -455,7 +487,12 @@ public class HttpmanServiceImpl implements HttpmanService {
         }
     }
 
-    /** JSON 序列化（受检异常包装为运行时异常） */
+    /**
+     * JSON 序列化（受检异常包装为运行时异常）。
+     *
+     * @param obj 待序列化对象
+     * @return JSON 文本
+     */
     private String writJson(Object obj) {
         try {
             return JSON.writeValueAsString(obj);
@@ -464,6 +501,13 @@ public class HttpmanServiceImpl implements HttpmanService {
         }
     }
 
+    /**
+     * 解析请求头 JSON 并做变量替换与敏感头脱敏，返回 name → value 映射。
+     *
+     * @param json      请求头 JSON 文本
+     * @param variables 变量映射（{{name}} 占位符替换）
+     * @return 处理后的请求头映射
+     */
     private Map<String, String> resolveHeaderMap(String json, Map<String, String> variables) {
         List<Map<String, String>> list = parseHeaderList(json);
         Map<String, String> map = new HashMap<>();
@@ -483,6 +527,13 @@ public class HttpmanServiceImpl implements HttpmanService {
         return map;
     }
 
+    /**
+     * 解析请求头/响应头 JSON，按开关对敏感头脱敏。
+     *
+     * @param json JSON 数组文本
+     * @param mask 是否执行敏感头脱敏
+     * @return 节点列表（脱敏后的副本）
+     */
     private List<Map<String, String>> resolveSensitiveList(String json, boolean mask) {
         List<Map<String, String>> list = parseHeaderList(json);
         if (!mask) {
@@ -491,7 +542,13 @@ public class HttpmanServiceImpl implements HttpmanService {
         return list.stream().map(this::maskSensitive).collect(Collectors.toList());
     }
 
-    /** Map<String,String> => 脱敏后保存为 JSON 数组列表 */
+    /**
+     * Map&lt;String,String&gt; =&gt; 脱敏后保存为 JSON 数组列表。
+     *
+     * @param map 头映射（可为 null 或空）
+     * @param mask 是否执行敏感头脱敏
+     * @return 节点列表
+     */
     private List<Map<String, String>> resolveSensitiveList(Map<String, String> map, boolean mask) {
         List<Map<String, String>> list = new ArrayList<>();
         if (map == null || map.isEmpty()) {
@@ -506,7 +563,12 @@ public class HttpmanServiceImpl implements HttpmanService {
         return list;
     }
 
-    /** 单一节点脱敏 */
+    /**
+     * 单一节点脱敏：name 命中敏感键时把 value 置为 ******。
+     *
+     * @param m 头节点（name/value）
+     * @return 脱敏后的节点副本；非敏感头原样返回
+     */
     private Map<String, String> maskSensitive(Map<String, String> m) {
         String name = m.get("name");
         if (name == null || !HttpmanProxyExecutor.SENSITIVE_KEYS.contains(name.toLowerCase())) {
@@ -517,6 +579,12 @@ public class HttpmanServiceImpl implements HttpmanService {
         return copy;
     }
 
+    /**
+     * 历史记录转前端展示 Map（驼峰字段）。
+     *
+     * @param history 历史记录
+     * @return 展示用 Map
+     */
     private Map<String, Object> historyToMap(MsHttpmanHistory history) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", history.getHistoryId());
