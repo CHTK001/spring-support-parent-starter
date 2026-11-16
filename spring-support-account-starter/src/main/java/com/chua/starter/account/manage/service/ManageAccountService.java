@@ -124,6 +124,37 @@ public interface ManageAccountService {
     String resolveSecret(String accountId);
 
     /**
+     * 按标识取账号，<b>不校验当前用户归属</b>。
+     *
+     * <p>供验证码、通知、调度告警等<b>系统级发送</b>使用：这些场景要么没有登录态
+     * （注册 / 登录验证码），要么根本不在用户会话里（定时任务），按归属做可见性断言
+     * 会把管理员配置的公共账号一起挡掉。普通业务读取账号请用 {@link #get(String)}，
+     * 它会按归属断言可见性。</p>
+     *
+     * @param accountId 账号标识
+     * @return 账号（敏感字段未清空）；不存在返回 {@code null}
+     */
+    SysAccount getInternal(String accountId);
+
+    /**
+     * 解析指定种类的默认账号，<b>不校验当前用户归属</b>。
+     *
+     * <p>解析顺序：</p>
+     * <ol>
+     *   <li>部署级（{@code owner} 为空）的启用账号，其中标记「默认」的优先、其次取最近更新的；</li>
+     *   <li>部署级没有可用账号时，退到任意归属下标记「默认」的启用账号；</li>
+     *   <li>都没有返回 {@code null}。</li>
+     * </ol>
+     *
+     * <p>先看部署级是因为系统级发送没有用户上下文，公共账号才是正确来源；个人账号只在
+     * 确实没有公共账号时兜底，避免「管理员建好账号却发不出去」。</p>
+     *
+     * @param kind 账号种类（{@code API_KEY} / {@code EMAIL} / {@code SMS}）
+     * @return 默认账号（敏感字段已清空）；没有可用账号返回 {@code null}
+     */
+    SysAccount resolveDefault(String kind);
+
+    /**
      * 把账号内联凭据收录到密钥库，并让账号改为引用该密钥。
      *
      * <p>账号里直接填写的 AccessKey/Secret（未引用密钥库）可一键收录：按账号种类映射

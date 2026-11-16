@@ -9,6 +9,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.email.support.EmailPush;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
+import com.chua.starter.account.mail.impl.EmailInboxProvider;
 import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.service.SysAccountSecretService;
@@ -16,8 +17,10 @@ import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.manage.store.SysAccountSecret;
 import com.chua.starter.account.spi.AccountInboxProvider;
+import com.chua.starter.account.spi.AccountSelection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Constructor;
@@ -85,6 +88,14 @@ public class MailboxService {
      * 账号密钥库（账号 config.secretId 引用时从这里取凭据）
      */
     private final SysAccountSecretService secretService;
+
+    /**
+     * 业务配置选定的账号（可选）。
+     *
+     * <p>配置管理为邮件 / 短信指定了具体账号时优先使用它；没有实现时退回
+     * {@link ManageAccountService#resolveDefault(String)}，不改变既有部署的行为。</p>
+     */
+    private final ObjectProvider<AccountSelection> accountSelection;
 
     /**
      * 信箱概览：能否收信 / 发信、可用文件夹。
@@ -211,7 +222,127 @@ public class MailboxService {
      * @return 发送结果（{@code success} / {@code provider} / {@code messageId} / {@code message}）
      */
     public Map<String, Object> send(String accountId, MailboxSendRequest request) {
-        SysAccount account = requireAccount(accountId);
+        return doSend(requireAccount(accountId), request);
+    }
+
+    /**
+     * 用指定种类的<b>默认账号</b>发信（系统级发送入口）。
+     *
+     * <p>验证码、通知、调度告警这些场景既没有「用户选中的账号」，也常常没有登录态：
+     * 由 {@link ManageAccountService#resolveDefault(String)} 解析该种类的默认账号
+     * （部署级优先），再走同一套发信实现。账号模块因此成为这些发送业务唯一的口径。</p>
+     *
+     * @param kind    账号种类（{@code EMAIL} / {@code SMS}）
+     * @param request 发信内容
+     * @return 发送结果（{@code success} / {@code provider} / {@code messageId} / {@code message}）
+     */
+    public Map<String, Object> sendByKind(String kind, MailboxSendRequest request) {
+        SysAccount account = defaultAccount(kind);
+        if (account == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, missingAccountMessage(kind));
+        }
+        return doSend(account, request);
+    }
+
+    /**
+     * 取指定种类的默认账号（部署级优先，不校验当前用户归属）。
+     *
+     * <p>配置管理里为该种类指定了账号（经 {@link AccountSelection} 读取）时优先用它；
+     * 指定值缺失、已停用或种类不匹配时回退默认解析，避免配置失效导致发送整体不可用。</p>
+     *
+     * @param kind 账号种类
+     * @return 默认账号（敏感字段已清空）；没有可用账号返回 {@code null}
+     */
+    public SysAccount defaultAccount(String kind) {
+        SysAccount selected = selectedAccount(kind);
+        return selected != null ? selected : accountService.resolveDefault(kind);
+    }
+
+    /**
+     * 取业务配置选定的账号。
+     *
+     * @param kind 账号种类
+     * @return 账号（敏感字段已清空）；未配置或不可用返回 {@code null}
+     */
+    private SysAccount selectedAccount(String kind) {
+        AccountSelection selection = accountSelection.getIfAvailable();
+        if (selection == null) {
+            return null;
+        }
+        String accountId;
+        try {
+            accountId = selection.selectAccountId(kind);
+        } catch (Exception e) {
+            log.warn("[mailbox] 读取账号选择失败，回退默认账号: kind={}, error={}", kind, e.getMessage());
+            return null;
+        }
+        if (StringUtils.isBlank(accountId)) {
+            return null;
+        }
+        SysAccount account = accountService.getInternal(accountId.trim());
+        if (account == null
+                || !StringUtils.equalsIgnoreCase(kind, account.getKind())
+                || !Integer.valueOf(1).equals(account.getStatus())) {
+            log.warn("[mailbox] 配置选定的账号不可用，回退默认账号: kind={}, accountId={}", kind, accountId);
+            return null;
+        }
+        // getInternal 返回的是原始实体（含密文），对外只给清空敏感字段的视图
+        account.setSecret(null);
+        return account;
+    }
+
+    /**
+     * 指定种类是否具备发信能力（默认账号存在且 SMTP / 厂商配置完整）。
+     *
+     * <p>给验证码渠道和调度告警做「是否已配置」判断用：不再让调用方去读
+     * {@code sys_setting} 里的 smtp / sms 分组。</p>
+     *
+     * @param kind 账号种类
+     * @return 可发信返回 {@code true}
+     */
+    public boolean sendable(String kind) {
+        SysAccount account = defaultAccount(kind);
+        return account != null && isSendable(account);
+    }
+
+    /**
+     * 取邮件默认账号的连通性探测目标（系统级，不校验当前用户归属）。
+     *
+     * <p>给「邮箱服务器连通性检测」用：调用方拿到目标后自己完成一次 SMTP / IMAP 握手，
+     * 主机、端口、加密方式与明文凭据全部由本方法解析，避免探测端再写一套推导规则。</p>
+     *
+     * @return 探测目标；没有可用的邮件默认账号返回 {@code null}
+     */
+    public MailProbeTarget mailProbeTarget() {
+        SysAccount account = defaultAccount(KIND_EMAIL);
+        if (account == null) {
+            return null;
+        }
+        MailProbeTarget target = new MailProbeTarget();
+        target.setAccountId(account.getAccountId());
+        target.setAccountName(StringUtils.defaultString(account.getName(), account.getUsername()));
+        target.setHost(smtpHost(account));
+        target.setPort(smtpPort(account));
+        target.setUsername(account.getUsername());
+        target.setPassword(StringUtils.defaultString(
+                accountService.resolveSecret(account.getAccountId()), ""));
+        target.setSsl(ssl(account));
+        // 与 emailPush 同一口径：只有非隐式 TLS 的端口才谈得上 STARTTLS 升级
+        target.setStarttls(!ssl(account));
+        target.setImapHost(EmailInboxProvider.imapHost(account));
+        target.setImapPort(EmailInboxProvider.imapPort(account));
+        return target;
+    }
+
+    /**
+     * 发信实现（邮件 / 短信统一入口）。
+     *
+     * @param account 账号
+     * @param request 发信内容
+     * @return 发送结果
+     */
+    private Map<String, Object> doSend(SysAccount account, MailboxSendRequest request) {
+        String accountId = account.getAccountId();
         if (request == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "发信内容不能为空");
         }
@@ -231,6 +362,17 @@ public class MailboxService {
     }
 
     /**
+     * 「缺少可用账号」的提示文案。
+     *
+     * @param kind 账号种类
+     * @return 提示
+     */
+    private String missingAccountMessage(String kind) {
+        return "未配置可用的" + (KIND_EMAIL.equalsIgnoreCase(kind) ? "邮件" : "短信")
+                + "账号，请先在账号管理里添加并设为默认";
+    }
+
+    /**
      * 发送邮件（MessagePush 在 email 通道上的实现）。
      *
      * @param account 账号
@@ -239,6 +381,29 @@ public class MailboxService {
      * @return 发送结果
      */
     private Map<String, Object> sendMail(SysAccount account, String secret, MailboxSendRequest request) {
+        MessagePush push = emailPush(account, secret);
+        MessageRequest message = MessageRequest.builder()
+                .to(request.getTo().trim())
+                .cc(request.getCc())
+                .subject(StringUtils.defaultString(request.getSubject(), ""))
+                .content(StringUtils.defaultString(request.getContent(), ""))
+                .contentType("html".equalsIgnoreCase(request.getContentType()) ? "html" : "text")
+                .build();
+        try {
+            return result(push.getProvider(), push.send(message));
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "邮件发送失败：" + rootMessage(e), e);
+        }
+    }
+
+    /**
+     * 组装邮件发送通道（把账号的 SMTP 配置翻译成 {@link EmailPush} 的环境参数）。
+     *
+     * @param account 邮件账号
+     * @param secret  明文凭据
+     * @return 已注入该账号 SMTP 配置的通道
+     */
+    private MessagePush emailPush(SysAccount account, String secret) {
         String host = smtpHost(account);
         if (StringUtils.isBlank(host)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "邮箱账号缺少 SMTP 主机（服务地址）");
@@ -270,20 +435,8 @@ public class MailboxService {
             environment.set("smtp.starttls", String.valueOf(ssl));
         }
 
-        // 声明为 MessagePush 契约调用：邮件能力由 utils 的发信 SPI 提供，本模块不直连 SMTP
-        MessagePush push = new EmailPush(environment);
-        MessageRequest message = MessageRequest.builder()
-                .to(request.getTo().trim())
-                .cc(request.getCc())
-                .subject(StringUtils.defaultString(request.getSubject(), ""))
-                .content(StringUtils.defaultString(request.getContent(), ""))
-                .contentType("html".equalsIgnoreCase(request.getContentType()) ? "html" : "text")
-                .build();
-        try {
-            return result(push.getProvider(), push.send(message));
-        } catch (Exception e) {
-            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "邮件发送失败：" + rootMessage(e), e);
-        }
+        // 邮件能力由 utils 的发信 SPI 提供，本模块不直连 SMTP
+        return new EmailPush(environment);
     }
 
     /**
@@ -303,28 +456,22 @@ public class MailboxService {
         if (push == null) {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "当前部署未安装短信通道：" + alias);
         }
+        // 运营商模板码：请求显式指定优先，其次取账号配置的默认模板
+        String templateCode = StringUtils.trimToNull(request.getTemplateCode());
+        if (templateCode == null) {
+            templateCode = configString(account, "templateCode");
+        }
         MessageRequest message = MessageRequest.builder()
                 .to(request.getTo().trim())
                 .subject(StringUtils.defaultString(request.getSubject(), ""))
                 .content(StringUtils.defaultString(request.getContent(), ""))
-                .templateId(request.getTemplateCode())
+                .templateId(templateCode)
                 .templateParams(request.getTemplateParams())
                 .build();
         try {
-            String templateCode = StringUtils.trimToNull(request.getTemplateCode());
-            if (templateCode == null) {
-                templateCode = configString(account, "templateCode");
-            }
-            MessageResponse response;
-            if (templateCode == null) {
-                response = push.send(message);
-            } else {
-                Map<String, String> params = request.getTemplateParams() == null
-                        ? Map.of()
-                        : request.getTemplateParams();
-                response = push.sendTemplate(templateCode, params, message);
-            }
-            return result(push.getProvider(), response);
+            // 短信实现统一读 MessageRequest 的 templateId + templateParams（sendTemplate 需要
+            // 实现已注册模板元数据，运营商实现多数没有，会误报「模板不存在」）
+            return result(push.getProvider(), push.send(message));
         } catch (Exception e) {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "短信发送失败：" + rootMessage(e), e);
         }
@@ -333,11 +480,11 @@ public class MailboxService {
     /**
      * 解析账号对应的短信通道（按 vendor 查 MessagePush SPI，不绑定任何厂商）。
      *
-     * @param accountId 账号标识
+     * @param accountId 账号标识；为空时取短信默认账号
      * @return 已注入该账号密钥 / 签名 / 模板码的通道
      */
     public MessagePush smsPush(String accountId) {
-        SysAccount account = requireAccount(accountId);
+        SysAccount account = resolveAccount(accountId, KIND_SMS);
         if (!KIND_SMS.equalsIgnoreCase(account.getKind())) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号不是短信账号");
         }
@@ -345,11 +492,49 @@ public class MailboxService {
         if (alias == null) {
             throw unsupportedVendor(account.getVendor());
         }
-        MessagePush push = createSmsPush(alias, account, accountService.resolveSecret(accountId));
+        MessagePush push = createSmsPush(alias, account, accountService.resolveSecret(account.getAccountId()));
         if (push == null) {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "当前部署未安装短信通道：" + alias);
         }
         return push;
+    }
+
+    /**
+     * 解析邮件发送通道（与 {@link #smsPush(String)} 对称）。
+     *
+     * <p>给「消息模板推送」这类需要自己逐接收人发送、并自行落日志的调用方用：
+     * 拿到通道实例后由调用方决定发给谁、发几次。</p>
+     *
+     * @param accountId 账号标识；为空时取邮件默认账号
+     * @return 已注入该账号 SMTP 配置的通道
+     */
+    public MessagePush mailPush(String accountId) {
+        SysAccount account = resolveAccount(accountId, KIND_EMAIL);
+        if (!KIND_EMAIL.equalsIgnoreCase(account.getKind())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号不是邮件账号");
+        }
+        return emailPush(account, accountService.resolveSecret(account.getAccountId()));
+    }
+
+    /**
+     * 解析发信账号：显式指定标识优先，未指定时取该种类的默认账号。
+     *
+     * <p>显式指定的账号仍走归属可见性断言；默认账号来自
+     * {@link ManageAccountService#resolveDefault(String)}，用于无用户上下文的系统级发送。</p>
+     *
+     * @param accountId 账号标识（可空）
+     * @param kind      账号种类
+     * @return 账号
+     */
+    private SysAccount resolveAccount(String accountId, String kind) {
+        if (StringUtils.isNotBlank(accountId)) {
+            return requireAccount(accountId);
+        }
+        SysAccount account = defaultAccount(kind);
+        if (account == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, missingAccountMessage(kind));
+        }
+        return account;
     }
 
     /**

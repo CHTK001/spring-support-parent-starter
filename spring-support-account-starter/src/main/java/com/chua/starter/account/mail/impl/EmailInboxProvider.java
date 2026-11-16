@@ -793,12 +793,12 @@ public class EmailInboxProvider implements AccountInboxProvider {
     }
 
     /**
-     * IMAP 主机（包内共享：收信与凭据校验同一口径）。
+     * IMAP 主机（收信、凭据校验与连通性探测同一口径）。
      *
      * @param account 账号
      * @return 主机；无法解析返回 {@code null}
      */
-    static String imapHost(SysAccount account) {
+    public static String imapHost(SysAccount account) {
         String explicit = configString(account, "imapHost");
         if (explicit != null) {
             return explicit;
@@ -821,12 +821,12 @@ public class EmailInboxProvider implements AccountInboxProvider {
     }
 
     /**
-     * IMAP 端口（包内共享：收信与凭据校验同一口径）。
+     * IMAP 端口（收信、凭据校验与连通性探测同一口径）。
      *
      * @param account 账号
      * @return 端口
      */
-    static int imapPort(SysAccount account) {
+    public static int imapPort(SysAccount account) {
         Object explicit = account.getConfig() == null ? null : account.getConfig().get("imapPort");
         if (explicit != null) {
             try {
@@ -842,12 +842,6 @@ public class EmailInboxProvider implements AccountInboxProvider {
     }
 
     /**
-     * 是否使用 SSL。
-     *
-     * @param account 账号
-     * @return SSL 返回 {@code true}（未配置时默认 true）
-     */
-    /**
      * 是否使用 SSL（包内共享）。
      *
      * @param account 账号
@@ -858,13 +852,6 @@ public class EmailInboxProvider implements AccountInboxProvider {
         return ssl == null || Boolean.parseBoolean(String.valueOf(ssl));
     }
 
-    /**
-     * 读取配置字符串。
-     *
-     * @param account 账号
-     * @param key     配置键
-     * @return 非空字符串；不存在返回 {@code null}
-     */
     /**
      * 读取配置字符串（包内共享）。
      *

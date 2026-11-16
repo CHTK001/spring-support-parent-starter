@@ -427,6 +427,59 @@ public class ManageAccountServiceImpl implements ManageAccountService {
      * {@inheritDoc}
      */
     @Override
+    public SysAccount getInternal(String accountId) {
+        if (StringUtils.isBlank(accountId)) {
+            return null;
+        }
+        return accountMapper.selectById(accountId);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public SysAccount resolveDefault(String kind) {
+        if (StringUtils.isBlank(kind)) {
+            return null;
+        }
+        String normalized = kind.trim();
+        // 先看部署级账号：系统级发送（注册 / 登录验证码、调度告警）没有用户上下文，
+        // 公共账号才是正确来源；个人账号只在没有公共账号时兜底
+        SysAccount deploymentLevel = selectDefaultAccount(normalized, true);
+        return deploymentLevel != null ? deploymentLevel : selectDefaultAccount(normalized, false);
+    }
+
+    /**
+     * 取默认账号：标记「默认」的优先，其次最近更新的。
+     *
+     * <p>同时做两层收窄，避免默认账号解析出「多条候选、结果随机」：</p>
+     * <ul>
+     *   <li>只取启用账号（{@code status = 1}），停用账号不该被系统级发送挑中；</li>
+     *   <li>{@code deploymentLevel} 为真时只取部署级（{@code owner} 为空）账号。</li>
+     * </ul>
+     *
+     * @param kind            账号种类
+     * @param deploymentLevel 是否只取部署级账号
+     * @return 账号（敏感字段已清空）；没有可用账号返回 {@code null}
+     */
+    private SysAccount selectDefaultAccount(String kind, boolean deploymentLevel) {
+        LambdaQueryWrapper<SysAccount> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(SysAccount::getKind, kind)
+                .eq(SysAccount::getStatus, 1)
+                .orderByDesc(SysAccount::getDefaultAccount)
+                .orderByDesc(SysAccount::getUpdatedAt)
+                .orderByDesc(SysAccount::getCreatedAt)
+                .last("limit 1");
+        if (deploymentLevel) {
+            wrapper.isNull(SysAccount::getOwner);
+        }
+        return mask(accountMapper.selectOne(wrapper));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public SysAccountSecret collectSecret(String accountId) {
         SysAccount account = requireAccount(accountId);
