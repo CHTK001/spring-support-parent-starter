@@ -141,7 +141,8 @@ models/onnx/<modelId>/model.onnx
 ```
 PaperClient.available() == false
   → 抛出可操作异常：「试卷识别管线不可用：请检查 ocr/paper 分组与模型资产是否就绪」
-  → 无版面模型时 PaperPipeline 退化为整图 OCR（版面是增强能力，缺失不阻断）
+  → 无版面模型时 PaperPipeline 退化为整图 OCR（版面本身是增强能力，缺失不阻断）
+    但「既无版面模型、也无结构化大模型」时不可用：整图 OCR 只有文字块、切不出题
 ```
 
 ---

@@ -303,7 +303,18 @@ public class PaperClientManager implements PaperClient {
     @Override
     public boolean available() {
         PaperPipeline pp = pipeline();
-        return pp != null && pp.available();
+        if (pp == null || !pp.available()) {
+            return false;
+        }
+        // 版面模型是「切题」的硬前提：没有它 OCR 只能整图出块，拿不到题号/题干/作答的边界。
+        // 配了结构化大模型（engine=ocr+llm）时仍可由大模型从整页文本切题，因此只在
+        // 「无版面模型 + 无结构化大模型」时判不可用 —— 那种配置下调用方会拿到 0 道题，
+        // 与其让前端显示「可用」再静默出空结果，不如提前判不可用（见 AI-INTEGRATION-SEQUENCE）。
+        if (StringUtils.isBlank(layoutModel()) && !ENGINE_OCR_LLM.equals(engine())) {
+            log.info("[PaperClientManager] 试卷识别不可用：版面模型与结构化大模型都未配置");
+            return false;
+        }
+        return true;
     }
 
     /**

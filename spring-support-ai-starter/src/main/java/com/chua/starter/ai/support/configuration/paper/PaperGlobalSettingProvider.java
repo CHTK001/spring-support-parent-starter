@@ -64,8 +64,9 @@ public class PaperGlobalSettingProvider implements GlobalSettingProvider {
                 // 引擎不再提供配置项：由 PaperClientManager.engine() 按模型配置推导
                 // （配了 llm_model → ocr+llm，否则 ocr）。移除后设置页
                 // 少一个「识别引擎」下拉，用户不用理解双管线细节。
-                // 版面模型：留空时回落到 layout 分组（装配见 PaperClientManager#resolveLayoutDetector）
-                new GlobalSettingProvider.SettingItem("layout_model", "", "STRING", "版面分析模型（留空复用 layout 分组；阈值与设备请到「版面分析」分组设置）", 2),
+                // 版面模型：必选（试卷按版面文本区切题）；留空时回落到 layout 分组
+                // （装配见 PaperClientManager#resolveLayoutDetector，可用性门槛见 available()）
+                new GlobalSettingProvider.SettingItem("layout_model", "", "STRING", "版面分析模型（必选：试卷按版面文本区切题；留空复用 layout 分组，阈值与设备请到「版面分析」分组设置）", 2),
                 // OCR 模型：留空时回落到 ocr 分组（装配见 PaperClientManager#resolveOcrPipeline）
                 new GlobalSettingProvider.SettingItem("ocr_detector_model", "", "STRING", "文字检测模型（留空复用 ocr 分组；置信度阈值与设备请到「OCR」分组设置）", 4),
                 new GlobalSettingProvider.SettingItem("ocr_recognizer_model", "", "STRING", "文字识别模型（留空复用 ocr 分组）", 5),
