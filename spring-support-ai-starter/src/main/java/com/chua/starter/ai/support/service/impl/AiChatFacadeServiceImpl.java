@@ -1334,6 +1334,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @return Agent 包装客户端或原直连客户端
      */
     private ChatClient maybeWrapAgent(ChatClient configured, AiChatRequest request) {
+        // 实例端口（/v1 协议网关）是程序化透传：调用方没有业务会话，也没有工作间。
+        // 这类请求若走 Agent 运行时，会为每一次 API 调用拉起 opencode 子进程
+        // （首启慢到调用方超时；实测 OpenAI/Claude 端口 15s 无任何出字），
+        // 而协议网关要的只是上游模型的直答。usageSource=service 由
+        // ServiceInstanceManager.buildRequest 独占写入，是端口侧唯一来源标记，
+        // 见到它就直连上游，AI 控制台的会话/工具行为不受影响。
+        if ("service".equals(request.getUsageSource())) {
+            return configured;
+        }
         boolean admin = AiUserContext.isAdmin();
 
         Map<String, Object> roleSettings = request.getRoleSettings();
