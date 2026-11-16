@@ -192,6 +192,42 @@ function onBack(): void {
 }
 
 /**
+ * 把设计描述字符串解析成 hiprint 需要的对象。
+ *
+ * <p>hiprint 的 {@code template} 只认对象：内部直接读 {@code t.panels}，
+ * 传字符串会被当成「没有 panels」的空模板，画布渲染出空壳。</p>
+ *
+ * @param content 设计描述（JSON 字符串）
+ * @returns 解析出的对象 / 数组；不是合法 JSON 返回 null
+ */
+function parseTemplateObject(content: string): Record<string, unknown> | unknown[] | null {
+  try {
+    const parsed: unknown = JSON.parse(content)
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown> | unknown[]) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 画纸上是否有可用于打印的元件。
+ *
+ * <p>只有画纸（panels）而 {@code printElements} 全空，等于这张模板还没设计过内容；
+ * hiprint 仍然会返回一个空壳页面，画布看起来一片空白，必须先给明确空态。</p>
+ *
+ * @param template 解析后的设计描述
+ * @returns 至少一个元件时为 true
+ */
+function hasPrintElements(template: Record<string, unknown> | unknown[]): boolean {
+  const panels = Array.isArray(template) ? template : (template as { panels?: unknown }).panels
+  if (!Array.isArray(panels)) return false
+  return panels.some((panel) => {
+    const elements = (panel as { printElements?: unknown })?.printElements
+    return Array.isArray(elements) && elements.length > 0
+  })
+}
+
+/**
  * 只读画出 print 页面：创建 PrintTemplate 并调用 getHtml 把 print 页面结构追加到预览区，
  * 不进入 design（不拿设计器外壳与拖拽控件）。
  */
@@ -211,6 +247,15 @@ function renderPrintPages(content: string): void {
     renderError.value = '打印引擎未就绪，请刷新页面后重试'
     return
   }
+  const templateObject = parseTemplateObject(trimmed)
+  if (!templateObject) {
+    renderError.value = '该模板的设计内容无法解析，请在设计器里重新保存一次'
+    return
+  }
+  if (!hasPrintElements(templateObject)) {
+    renderError.value = '该模板还没有设计内容，请先在设计器里保存一次'
+    return
+  }
   // 全局初始化一次（避免主题/框架重建时重复）
   if (!hiprintInitialized) {
     try {
@@ -220,7 +265,7 @@ function renderPrintPages(content: string): void {
   }
   try {
     const tplInstance = new window.hiprint.PrintTemplate({
-      template: content,
+      template: templateObject,
       dataMode: 1,
       history: false
     })
@@ -328,6 +373,19 @@ onBeforeUnmount(() => {
 }
 
 .preview__canvas {
-  /* 只读 print 页面容器 */
+  /* 只读 print 页面容器：留出纸张间距，多页时逐张往下排 */
+  padding: 16px;
+
+  /* hiprint 的 print 页面本身是透明背景（打印用，不该有底色），
+     放到灰色底上就看不出纸张边界，预览里补一层白纸 + 投影 */
+  :deep(.hiprint-printPaper) {
+    margin: 0 auto 16px;
+    background: rgb(255 255 255);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 4px 16px rgb(0 0 0 / 6%);
+  }
+
+  :deep(.hiprint-printPaper:last-child) {
+    margin-bottom: 0;
+  }
 }
 </style>
