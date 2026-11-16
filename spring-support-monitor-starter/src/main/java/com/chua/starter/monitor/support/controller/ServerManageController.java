@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.monitor.support.server.ServerEventStreamRegistry;
+import com.chua.starter.monitor.support.server.model.FrpRuleManageVO;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
@@ -285,5 +286,50 @@ public class ServerManageController {
     @GetMapping("/proxies")
     public ReturnResult<List<ServerNodeView>> proxies() {
         return serverManageService.proxies();
+    }
+
+    /**
+     * 查询 FRP 节点的规则全表。
+     *
+     * @param id FRP 节点标识
+     * @return 规则管理视图
+     */
+    @Operation(summary = "查询 FRP 节点规则", description = "在线客户端 + 暴露规则(提供方) + 映射规则(访问方)，仅运行中的 FRP 节点可查")
+    @GetMapping("/{id}/frp/rules")
+    public ReturnResult<FrpRuleManageVO> frpRules(@PathVariable Long id) {
+        return serverManageService.frpRules(id);
+    }
+
+    /**
+     * 下推一条新 FRP 规则给客户端。
+     *
+     * @param id      FRP 节点标识
+     * @param request 规则请求
+     * @return 空数据
+     */
+    @Operation(summary = "下推 FRP 规则", description = "管理端新增规则后下推给指定客户端，客户端登记并起停本地监听")
+    @SysLog(name = "下推 FRP 规则", content = "节点 #{#arg0} 客户端 #{#arg1.clientId} 类型 #{#arg1.type} "
+            + "#{#arg1.targetHost}:#{#arg1.targetPort} -> 本地 #{#arg1.localPort}")
+    @PostMapping("/{id}/frp/rules")
+    public ReturnResult<Void> frpPushRule(@PathVariable Long id,
+                                          @RequestBody FrpRuleManageVO.FrpRuleRequest request) {
+        return serverManageService.frpPushRule(id, request);
+    }
+
+    /**
+     * 撤销一条 FRP 规则。
+     *
+     * @param id     FRP 节点标识
+     * @param type   规则类型：expose=暴露规则 / map=映射规则
+     * @param ruleId 规则标识
+     * @return 空数据
+     */
+    @Operation(summary = "撤销 FRP 规则", description = "服务端移除登记并下推 EXPOSE_DEL / MAP_DEL 给所属客户端")
+    @SysLog(name = "撤销 FRP 规则", content = "节点 #{#arg0} 类型 #{#arg1} 规则 #{#arg2}")
+    @DeleteMapping("/{id}/frp/rules/{type}/{ruleId}")
+    public ReturnResult<Void> frpRevokeRule(@PathVariable Long id,
+                                            @PathVariable String type,
+                                            @PathVariable String ruleId) {
+        return serverManageService.frpRevokeRule(id, type, ruleId);
     }
 }

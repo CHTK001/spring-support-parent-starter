@@ -43,7 +43,17 @@ public enum ServerNodeProtocol {
      * <p>由 {@code ServerNodeRegistry} 直接构造 {@code RoomServer}（无 @Spi），
      * 与 SIP 同路：节点落库 {@code ms_server_node}，可独立启停。</p>
      */
-    ROOM("ROOM", "room", 18083, "room", false, "P2P 房间信令服务器");
+    ROOM("ROOM", "room", 18083, "room", false, "P2P 房间信令服务器"),
+
+    /**
+     * FRP 内网穿透服务器（单端口信令 + 数据平面，需要 令牌 认证）
+     *
+     * <p>由 {@code ServerNodeRegistry} 直接构造 {@code FrpServer}（无 @Spi），
+     * 与 SIP 同路：节点落库 {@code ms_server_node}，可独立启停。
+     * 映射规则为显式三元组（目标地址、目标端口、本地端口），
+     * 由各节点客户端上报，服务端按 {@code targetHost:targetPort} 精确路由。</p>
+     */
+    FRP("FRP", "frp", 19470, "frp", false, "FRP 内网穿透服务器");
 
     /**
      * 存储编码

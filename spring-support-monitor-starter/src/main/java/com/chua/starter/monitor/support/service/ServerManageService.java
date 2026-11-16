@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.server.model.FrpRuleManageVO;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
 import com.chua.starter.monitor.support.server.model.ServerNodeRequest;
@@ -167,4 +168,37 @@ public interface ServerManageService {
      * @return 代理节点视图列表
      */
     ReturnResult<List<ServerNodeView>> proxies();
+
+    /**
+     * 查询 FRP 节点的规则全表（服务端统管口径）。
+     *
+     * <p>返回该 FRP 节点在线客户端、暴露规则（提供方）与映射规则（访问方），
+     * 供服务管理页 FRP 专属面板展示。仅运行中的 FRP 节点可查。</p>
+     *
+     * @param id FRP 节点标识
+     * @return 规则管理视图
+     */
+    ReturnResult<FrpRuleManageVO> frpRules(Long id);
+
+    /**
+     * 下推一条新 FRP 规则给客户端（管理端在专属 UI 新增）。
+     *
+     * @param id      FRP 节点标识
+     * @param request 规则请求（clientId / type / targetHost / targetPort / localPort）
+     * @return 空数据
+     */
+    ReturnResult<Void> frpPushRule(Long id, FrpRuleManageVO.FrpRuleRequest request);
+
+    /**
+     * 撤销一条 FRP 规则（管理端在专属 UI 删除）。
+     *
+     * <p>服务端移除规则登记并下推 EXPOSE_DEL / MAP_DEL 给所属客户端，
+     * 客户端据此停止本地监听并移除重连重放记录。</p>
+     *
+     * @param id     FRP 节点标识
+     * @param type   规则类型：expose=暴露规则 / map=映射规则
+     * @param ruleId 规则标识
+     * @return 空数据
+     */
+    ReturnResult<Void> frpRevokeRule(Long id, String type, String ruleId);
 }

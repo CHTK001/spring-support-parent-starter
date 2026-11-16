@@ -8,6 +8,8 @@ import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.network.server.proxy.AioTcpProxyServer;
 import com.chua.common.support.network.sip.SipConfig;
 import com.chua.common.support.network.sip.SipServer;
+import com.chua.common.support.network.frp.FrpConfig;
+import com.chua.common.support.network.frp.FrpServer;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
@@ -49,6 +51,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>HTTP_PROXY：{@code HttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort）</li>
  *   <li>TCP_PROXY：{@code TcpProxyServer(setting, backend)}</li>
  *   <li>SIP：{@code SipServer(SipConfig)}（token 取 config.token）</li>
+ *   <li>ROOM：{@code RoomServer(setting, RoomProperties)}（房间引擎 + 定向下发）</li>
+ *   <li>FRP：{@code FrpServer(FrpConfig)}（token 取 config.token）</li>
  * </ul>
  *
  * <p>应用就绪后自动拉起 {@code enabled=1} 的节点；单节点启动失败仅记录错误，不影响其他节点。</p>
@@ -435,6 +439,7 @@ public class ServerNodeRegistry {
             case TCP_PROXY -> buildProxyServer(createProxyServer("tcp-proxy", setting, resolveBackend(config)), node, descriptors, managed);
             case SIP -> buildSipServer(node, config, descriptors, managed);
             case ROOM -> buildRoomServer(node, config, setting, descriptors, managed);
+            case FRP -> buildFrpServer(node, config, descriptors, managed);
         };
     }
 
@@ -571,6 +576,33 @@ public class ServerNodeRegistry {
             builder.dataPlaneMode(String.valueOf(dataPlaneMode));
         }
         SipServer server = new SipServer(builder.build());
+        attachFilters(server, node, descriptors, server.getSetting(), managed);
+        return server;
+    }
+
+    /**
+     * 构建 FRP 服务器并挂载插件。
+     *
+     * <p>与 SIP 同路：无 @Spi，直接构造 {@link FrpServer}。
+     * 协议配置从节点 config 读取：{@code token} 为共享认证令牌，
+     * 缺省值由 {@link FrpConfig} 自己兜底（默认 token 见 {@link FrpConfig#DEFAULT_TOKEN}）。</p>
+     *
+     * @param node        节点定义
+     * @param config      协议配置
+     * @param descriptors 插件描述
+     * @param managed     托管过滤器收集器
+     * @return 服务器实例
+     */
+    private Server buildFrpServer(MsServerNode node, Map<String, Object> config,
+                                  List<ServerFilterDescriptor> descriptors, List<ServerFilter> managed) {
+        FrpConfig.Builder builder = FrpConfig.builder()
+                .host(node.getHost())
+                .port(node.getPort());
+        Object token = config.get("token");
+        if (token != null && !String.valueOf(token).isBlank()) {
+            builder.token(String.valueOf(token));
+        }
+        FrpServer server = new FrpServer(builder.build());
         attachFilters(server, node, descriptors, server.getSetting(), managed);
         return server;
     }
@@ -1109,6 +1141,7 @@ public class ServerNodeRegistry {
             case TCP_PROXY -> "tcp";
             case SIP -> "sip";
             case ROOM -> "ws";
+            case FRP -> "frp";
         };
         return scheme + "://" + (node.getHost() == null || node.getHost().isBlank() ? "0.0.0.0" : node.getHost())
                 + ":" + (node.getPort() != null ? node.getPort() : protocol.getDefaultPort()) + "/";

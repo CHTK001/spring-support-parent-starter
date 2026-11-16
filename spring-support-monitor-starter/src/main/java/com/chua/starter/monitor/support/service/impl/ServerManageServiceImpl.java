@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.frp.FrpServer;
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.filter.ServerFilter;
 import com.chua.common.support.spi.ServiceProvider;
@@ -16,6 +17,7 @@ import com.chua.starter.monitor.support.operlog.ServerOperLogNodeSnapshot;
 import com.chua.starter.monitor.support.server.ServerNodePager;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry.RuntimeServer;
+import com.chua.starter.monitor.support.server.model.FrpRuleManageVO;
 import com.chua.starter.monitor.support.server.model.ServerFilterDescriptor;
 import com.chua.starter.monitor.support.server.model.ServerFilterTypeMetaVO;
 import com.chua.starter.monitor.support.server.model.ServerHotUpdateResult;
@@ -38,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * 服务管理 —— 协议服务器节点管理服务实现。
@@ -1101,5 +1104,115 @@ public class ServerManageServiceImpl implements ServerManageService {
             params.add(new ServerPluginParamVO(o.getName(), o.getDefaultValue(), o.getDescribe(), o.getType(), null));
         }
         return params;
+    }
+
+    @Override
+    public ReturnResult<FrpRuleManageVO> frpRules(Long id) {
+        try {
+            FrpServer frpServer = requireFrpServer(id);
+            FrpRuleManageVO vo = new FrpRuleManageVO();
+            vo.setClients(frpServer.getConnectedClients());
+            vo.setExposes(frpServer.listExposeRules().stream()
+                    .map(rule -> new FrpRuleManageVO.FrpRuleItem(
+                            rule.ruleId(), rule.clientId(), rule.targetHost(), rule.targetPort(), rule.localPort()))
+                    .toList());
+            vo.setMaps(frpServer.listMapRules().stream()
+                    .map(rule -> new FrpRuleManageVO.FrpRuleItem(
+                            rule.ruleId(), rule.clientId(), rule.targetHost(), rule.targetPort(), rule.localPort()))
+                    .toList());
+            return ReturnResult.ok(vo);
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<Void> frpPushRule(Long id, FrpRuleManageVO.FrpRuleRequest request) {
+        try {
+            if (request == null || request.getClientId() == null || request.getClientId().isBlank()
+                    || request.getTargetHost() == null || request.getTargetHost().isBlank()
+                    || request.getTargetPort() == null || request.getLocalPort() == null) {
+                return ReturnResult.error("规则参数不完整: 需要 clientId / targetHost / targetPort / localPort");
+            }
+            int targetPort = request.getTargetPort();
+            int localPort = request.getLocalPort();
+            if (targetPort <= 0 || targetPort > 65535 || localPort <= 0 || localPort > 65535) {
+                return ReturnResult.error("端口范围非法: 应为 1-65535");
+            }
+            boolean expose;
+            if ("expose".equalsIgnoreCase(request.getType()) || "EXPOSE".equalsIgnoreCase(request.getType())) {
+                expose = true;
+            } else if ("map".equalsIgnoreCase(request.getType()) || "MAP".equalsIgnoreCase(request.getType())) {
+                expose = false;
+            } else {
+                return ReturnResult.error("规则类型非法: " + request.getType() + "（仅支持 expose / map）");
+            }
+            String ruleId = UUID.randomUUID().toString();
+            boolean pushed = requireFrpServer(id)
+                    .pushRule(request.getClientId(), ruleId, request.getTargetHost(), targetPort, localPort, expose);
+            if (!pushed) {
+                return ReturnResult.error("下推失败: 客户端不在线: " + request.getClientId());
+            }
+            return ReturnResult.success();
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    @Override
+    public ReturnResult<Void> frpRevokeRule(Long id, String type, String ruleId) {
+        try {
+            if (ruleId == null || ruleId.isBlank()) {
+                return ReturnResult.error("规则标识不能为空");
+            }
+            FrpServer frpServer = requireFrpServer(id);
+            boolean revoked;
+            if ("expose".equalsIgnoreCase(type) || "EXPOSE".equalsIgnoreCase(type)) {
+                // 需要 clientId：从规则表反查
+                FrpServer.ExposeRuleView rule = frpServer.listExposeRules().stream()
+                        .filter(r -> ruleId.equals(r.ruleId()))
+                        .findFirst()
+                        .orElse(null);
+                if (rule == null) {
+                    return ReturnResult.error("暴露规则不存在: " + ruleId);
+                }
+                revoked = frpServer.revokeExpose(rule.clientId(), ruleId);
+            } else if ("map".equalsIgnoreCase(type) || "MAP".equalsIgnoreCase(type)) {
+                FrpServer.MapRuleView rule = frpServer.listMapRules().stream()
+                        .filter(r -> ruleId.equals(r.ruleId()))
+                        .findFirst()
+                        .orElse(null);
+                if (rule == null) {
+                    return ReturnResult.error("映射规则不存在: " + ruleId);
+                }
+                revoked = frpServer.revokeMap(rule.clientId(), ruleId);
+            } else {
+                return ReturnResult.error("规则类型非法: " + type + "（仅支持 expose / map）");
+            }
+            if (!revoked) {
+                return ReturnResult.error("撤销失败: 客户端已离线或规则状态变化");
+            }
+            return ReturnResult.success();
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 取指定节点的 FRP 服务器实例（必须是运行中的 FRP 节点）。
+     *
+     * @param id 节点标识
+     * @return FRP 服务器实例
+     */
+    private FrpServer requireFrpServer(Long id) {
+        MsServerNode node = nodeMapper.selectById(id);
+        if (node == null) {
+            throw new IllegalArgumentException("节点不存在: " + id);
+        }
+        RuntimeServer runtime = nodeRegistry.get(id);
+        if (runtime == null || runtime.getServer() == null || !(runtime.getServer() instanceof FrpServer frpServer)) {
+            throw new IllegalArgumentException("节点未运行或不是 FRP 服务器: " + id + " (" + node.getProtocol() + ")");
+        }
+        return frpServer;
     }
 }
