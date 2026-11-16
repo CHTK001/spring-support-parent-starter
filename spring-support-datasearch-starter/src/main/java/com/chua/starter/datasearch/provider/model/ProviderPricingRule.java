@@ -124,9 +124,25 @@ public class ProviderPricingRule implements Serializable {
         }
         String pattern = modelPattern.trim();
         if (!pattern.contains("*")) {
-            return pattern.equalsIgnoreCase(modelId);
+            if (pattern.equalsIgnoreCase(modelId)) {
+                return true;
+            }
+            // 官方价格页用展示名、目录用 slug 时，标点差异不应导致漏配：
+            // 「MiniMax M3」与「MiniMax-M3」归一化后相同即可命中。
+            return normalize(pattern).equals(normalize(modelId));
         }
         String regex = pattern.replace(".", "\\.").replace("*", ".*");
         return modelId.matches("(?i)^" + regex + "$");
+    }
+
+    /**
+     * 模型名归一化：只保留字母数字，忽略大小写与空格 / 连字符 / 点。
+     *
+     * @param value 原值
+     * @return 归一化值
+     */
+    private static String normalize(String value) {
+        return value == null ? "" : value.toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
     }
 }

@@ -655,10 +655,13 @@ public class ApiProviderController {
             entity.setAuthScheme(onnxAuth == null || onnxAuth.isBlank() ? "api_key" : onnxAuth);
         } else {
             String authScheme = str(body, "auth_scheme");
-            // 免登录供应商（auth_scheme=none，如内置对话渠道 DuckDuckGo）没有上游地址：
-            // 模型清单由 ChatClient SPI 自己提供，base_url 允许留空占位，不能按云端供应商
-            // 那样「地址必填」——否则「从提供商获取模型列表」对这类渠道永远建不起来。
-            if (authScheme != null && "none".equalsIgnoreCase(authScheme.trim())) {
+            // 免费渠道是渠道管理的统一入口：模型与上游地址/凭据都由渠道管理维护，
+            // 本行只做路由聚合，地址允许留空（不再填 free.nomifun.com 之类的占位地址）。
+            if (ProviderRouteTargets.isFreeChannel(platform)) {
+                String freeBaseUrl = str(body, "base_url");
+                entity.setBaseUrl(freeBaseUrl == null ? "" : freeBaseUrl);
+                entity.setAuthScheme(authScheme == null || authScheme.isBlank() ? "none" : authScheme);
+            } else if (authScheme != null && "none".equalsIgnoreCase(authScheme.trim())) {
                 String keylessBaseUrl = str(body, "base_url");
                 entity.setBaseUrl(keylessBaseUrl == null ? "" : keylessBaseUrl);
                 entity.setAuthScheme("none");

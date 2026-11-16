@@ -1,10 +1,12 @@
 package com.chua.starter.datasearch.provider.spi.impl;
 
+import com.chua.starter.datasearch.provider.model.PricingSourceConfig;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.spi.ProviderPricingProvider;
 import com.chua.starter.datasearch.provider.support.DeepSeekPricingSource;
 import com.chua.starter.datasearch.provider.support.MoonshotPricingSource;
+import com.chua.starter.datasearch.provider.support.PricingPageSource;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,8 +62,8 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
     /**
      * 点击同步时的实时刷新。
      *
-     * <p>DeepSeek 官方价格页有稳定结构，直接抓取并解析；其它厂商先沿用登记表，
-     * 后续补抓取器时只改这里。</p>
+     * <p>DeepSeek / Moonshot 有专用解析器；其余厂商只要登记项里带 {@code source}
+     * （官方 URL + 通用读取方式）就走 {@link PricingPageSource}，不再为每家新增 Java 分支。</p>
      *
      * @param platform 平台类型
      * @param baseUrl  上游基础地址
@@ -72,6 +74,18 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
         Entry entry = find(platform, baseUrl);
         if (entry == null) {
             return ProviderPricingRefresh.unsupported();
+        }
+        if (entry.source != null) {
+            ProviderPricingRefresh refresh = PricingPageSource.fetch(entry.source, entry.doc);
+            if (refresh.isSupported() && refresh.getRules() != null) {
+                for (ProviderPricingRule rule : refresh.getRules()) {
+                    rule.setProviderId(entry.id);
+                    if (rule.getSourceUrl() == null || rule.getSourceUrl().isBlank()) {
+                        rule.setSourceUrl(entry.doc);
+                    }
+                }
+            }
+            return refresh;
         }
         if ("deepseek".equalsIgnoreCase(entry.id)) {
             return DeepSeekPricingSource.fetch(entry.doc);
@@ -154,7 +168,7 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
                     // 允许「只有官方价格页、没有静态规则」的实时抓取项（如 Moonshot）：
                     // 规则在点击同步时抓，不能因为 rules 为空就把整个登记项丢掉。
                     if (entry != null && (!entry.rules.isEmpty() || entry.doc != null
-                            || !entry.hosts.isEmpty())) {
+                            || entry.source != null || !entry.hosts.isEmpty())) {
                         loaded.add(entry);
                     }
                 }
@@ -184,6 +198,9 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
         entry.id = id;
         entry.name = node.path("name").asText(id);
         entry.doc = node.path("doc").isTextual() ? node.path("doc").asText() : null;
+        if (node.path("source").isObject()) {
+            entry.source = MAPPER.convertValue(node.path("source"), PricingSourceConfig.class);
+        }
         entry.aliases = strings(node.path("aliases"));
         entry.hosts = strings(node.path("hosts"));
         boolean verified = node.path("verified").asBoolean(false);
@@ -268,6 +285,11 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
          * 官方价格页
          */
         private String doc;
+
+        /**
+         * 通用价格页读取配置
+         */
+        private PricingSourceConfig source;
 
         /**
          * 别名

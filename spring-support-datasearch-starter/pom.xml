@@ -55,6 +55,13 @@
             <artifactId>utils-support-datasearch-starter</artifactId>
         </dependency>
 
+        <!-- HTML 解析：官方价格页的表格 / 卡片 / role-grid 统一读取 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.23.2</version>
+        </dependency>
+
         <!-- ReturnResult 统一响应、ServiceProvider SPI 装载 -->
         <dependency>
             <groupId>com.chua</groupId>

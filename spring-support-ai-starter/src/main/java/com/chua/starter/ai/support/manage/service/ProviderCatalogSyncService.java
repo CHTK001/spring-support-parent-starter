@@ -265,6 +265,11 @@ public class ProviderCatalogSyncService {
             metrics.put("output_modalities", model.getOutputModalities());
         }
         List<ProviderPricingRule> hits = ProviderPricings.forModel(rules, model.getId());
+        // 官方价格页写的是展示名（如 Claude Opus 5.5 / GPT-6 Astra），目录 id 是 slug；
+        // 先按 id 精确匹配，再按展示名匹配，避免为了对齐 id 在解析器里写厂商映射。
+        if (hits.isEmpty() && model.getName() != null && !model.getName().isBlank()) {
+            hits = ProviderPricings.forModel(rules, model.getName());
+        }
         if (!hits.isEmpty()) {
             List<Map<String, Object>> ruleMaps = new ArrayList<>(hits.size());
             for (ProviderPricingRule rule : hits) {

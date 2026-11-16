@@ -166,6 +166,103 @@
       "doc": "https://platform.moonshot.cn/docs/pricing/chat",
       "verified": true,
       "rules": []
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode Console",
+      "aliases": ["opencode"],
+      "hosts": ["opencode.ai", "api.opencode.ai"],
+      "doc": "https://opencode.ai/docs/zen",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "html-table",
+        "url": "https://opencode.ai/docs/zen",
+        "currency": "USD",
+        "quantity": 1000000,
+        "columns": {
+          "Input": "input_cache_miss",
+          "Output": "output",
+          "Cached Read": "input_cache_hit",
+          "Cached Write": "input_cache_write"
+        },
+        "note": "OpenCode Console 官方价格页（每百万 token，USD）"
+      }
+    },
+    {
+      "id": "commandcode",
+      "name": "Command Code",
+      "aliases": ["commandcode"],
+      "hosts": ["api.commandcode.ai", "commandcode.ai"],
+      "doc": "https://commandcode.ai/docs/resources/pricing-limits",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "html-grid",
+        "url": "https://commandcode.ai/docs/resources/pricing-limits",
+        "row_selector": "[role=row]",
+        "strip_prefixes": ["Tencent "],
+        "strip_suffixes": ["FREE", " (latest)", "-50%"],
+        "currency": "USD",
+        "quantity": 1000000,
+        "columns": {
+          "Input": "input_cache_miss",
+          "Output": "output",
+          "Cache Read": "input_cache_hit",
+          "Cache Write": "input_cache_write"
+        },
+        "note": "Command Code 官方 Pricing & Limits 页（每百万 token，USD）"
+      }
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic / Claude",
+      "aliases": ["anthropic", "claude"],
+      "hosts": ["api.anthropic.com", "anthropic.com"],
+      "doc": "https://www.anthropic.com/pricing",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "html-cards",
+        "url": "https://www.anthropic.com/pricing",
+        "card_selector": "[class*=modelCard]",
+        "title_selector": "h3",
+        "price_row_selector": "[class*=priceRow]",
+        "label_selector": "[class*=priceLabel]",
+        "value_selector": "[class*=priceValue]",
+        "model_prefix": "Claude ",
+        "currency": "USD",
+        "quantity": 1000000,
+        "columns": {
+          "Read": "input_cache_hit",
+          "Write": "input_cache_write",
+          "Input": "input_cache_miss",
+          "Output": "output"
+        },
+        "note": "Anthropic 官方 pricing 页（每百万 token，USD）"
+      }
+    },
+    {
+      "id": "agnes",
+      "name": "Agnes AI",
+      "aliases": ["agnes", "agnes-ai"],
+      "hosts": ["apihub.agnes-ai.cn", "agnes-ai.com"],
+      "doc": "https://agnes-ai.com/en/docs/pricing",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "named-regex",
+        "url": "https://agnes-ai.com/en/docs/pricing",
+        "currency": "USD",
+        "quantity": 1000000,
+        "pattern": "(?s)(?<model>agnes-[a-z0-9.\\-]+)\\s+(?:Coming soon\\s+)?Cached input\\s+\\$[0-9.]+\\s*/\\s*M\\s+\\$(?<cacheHit>[0-9.]+)\\s*/\\s*M\\s+Input tokens\\s+\\$[0-9.]+\\s*/\\s*M\\s+\\$(?<input>[0-9.]+)\\s*/\\s*M\\s+Output tokens\\s+\\$[0-9.]+\\s*/\\s*M\\s+\\$(?<output>[0-9.]+)\\s*/\\s*M",
+        "group_items": {
+          "cacheHit": "input_cache_hit",
+          "input": "input_cache_miss",
+          "output": "output"
+        },
+        "note": "Agnes 官方 Model Pricing 页（按当前 Angel User Trial Price，USD / 百万 token；页面同时列 list price）"
+      }
     }
   ]
 }
