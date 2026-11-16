@@ -4,11 +4,13 @@ import com.chua.starter.datasearch.provider.limit.ProviderLimit;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitPresets;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
+import com.chua.starter.datasearch.provider.support.ProviderCapabilities;
 import com.chua.starter.datasearch.provider.support.ProviderModelCatalogs;
 import com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -86,12 +88,17 @@ class ProviderCatalogSpiTest {
     }
 
     @Test
-    void catalogStaysSilentOnStreamingWhileProtocolRuleFills() {
+    void catalogMirrorsCapabilityWhileProtocolRuleFills() {
         ProviderModelCatalog catalog = ProviderModelCatalogs.of("qwen", DASHSCOPE);
         assertNotNull(catalog);
-        // 目录侧仍然不猜：models.dev 没有这两个字段，一律留空
-        assertTrue(catalog.getModels().stream().allMatch(m -> m.getStreaming() == null));
-        assertTrue(catalog.getModels().stream().allMatch(m -> m.getAsyncSupported() == null));
+        // 目录本身不带这两个字段（models.dev 没有），由能力位 SPI 统一补齐；
+        // 所以断言「与能力位一致」，不是「一律留空」——登记表给出 true 时目录就是 true。
+        Boolean streaming = ProviderCapabilities.streaming("qwen", DASHSCOPE);
+        Boolean asyncSupported = ProviderCapabilities.asyncSupported("qwen", DASHSCOPE);
+        assertTrue(catalog.getModels().stream().allMatch(m -> Objects.equals(m.getStreaming(), streaming)),
+                "目录的流式口径应与能力位一致，当前能力位 " + streaming);
+        assertTrue(catalog.getModels().stream().allMatch(m -> Objects.equals(m.getAsyncSupported(), asyncSupported)),
+                "目录的异步口径应与能力位一致，当前能力位 " + asyncSupported);
 
         // 协议级口径（A′）：三种协议的流式是协议必备行为，命中即支持，来源 protocol
         for (String protocol : List.of("openai", "anthropic", "gemini")) {

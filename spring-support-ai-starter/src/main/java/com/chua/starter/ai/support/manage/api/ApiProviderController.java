@@ -32,6 +32,7 @@ import com.chua.starter.ai.support.chat.MagpieRouteSource;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitCollector;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitContext;
+import com.chua.starter.datasearch.provider.support.ProviderRegistries;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.datasearch.credit.model.BalancePart;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
@@ -486,6 +487,9 @@ public class ApiProviderController {
      * <p>只保留各站点普遍沿用的 OpenAI dashboard 计费接口（one-api / new-api / voapi 系通用）；
      * new-api 的 {@code /api/usage/token} 与 sub2api 的 {@code /v1/usage} 两个中转专用协议
      * 已按产品决定移除，不再自动探测。</p>
+     *
+     * <p>只在「上游不是厂商官方站点」时才进候选：官方站点上没有这个接口，
+     * 拿官方 Key 去打只会 404。判定见 {@link #isOfficialSite(SysAiProvider)}。</p>
      */
     private static final List<String> AUTO_CREDIT_KINDS = List.of("billing");
 
@@ -1750,12 +1754,24 @@ public class ApiProviderController {
         out.put("kind", configuredKind == null ? "auto" : configuredKind);
         // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → 表达式」
         out.put("candidates", candidateKinds(entity, extra));
-        // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ relay（中转站按协议探测）/
-        // manual（页面上指定了唯一实现）/ none（没有上游地址，查不了）
-        out.put("level", creditLevel(entity, extra));
+        // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ uncovered（官方站点但未收录余额接口）/
+        // relay（中转站按协议探测）/ manual（页面上指定了唯一实现）/ none（没有上游地址，查不了）
+        String level = creditLevel(entity, extra);
+        out.put("level", level);
         if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
             out.put("ok", false);
             out.put("message", "未配置上游地址，无法查询余额");
+            out.put("keys", rows);
+            return ApiResult.ok(out);
+        }
+        if ("uncovered".equals(level)) {
+            String host = hostOf(baseUrl);
+            String vendor = entity.getPlatform() == null || entity.getPlatform().isBlank()
+                    ? "该厂商" : entity.getPlatform();
+            out.put("ok", false);
+            out.put("message", "上游是 " + vendor + " 官方站点（" + (host == null ? baseUrl : host) + "），"
+                    + "本系统未收录它的余额接口；官方站点上没有中转计费协议，不做探测。"
+                    + "可在「余额」里配自定义地址与字段表达式。");
             out.put("keys", rows);
             return ApiResult.ok(out);
         }
@@ -1892,7 +1908,12 @@ public class ApiProviderController {
         if (isOfficialOpenAi(entity.getBaseUrl())) {
             kinds.add("openai");
         }
-        kinds.addAll(AUTO_CREDIT_KINDS);
+        // 探测只对「上游不是厂商官方站点」有意义：官方站点没有 OpenAI 兼容计费接口，
+        // 拿官方 Key 去问 /v1/dashboard/billing/* 只会 404，纯属白发一次请求。
+        // 显式配了 credit_url 时以用户配置为准，照旧探测。
+        if (str(extra, "credit_url") != null || !isOfficialSite(entity)) {
+            kinds.addAll(AUTO_CREDIT_KINDS);
+        }
         if (str(extra, "credit_expression") != null) {
             kinds.add(CreditQueries.KIND_EXPRESSION);
         }
@@ -1902,11 +1923,12 @@ public class ApiProviderController {
     /**
      * 余额口径分级（只读判定，不出网）。
      *
-     * <p>200+ 家供应商不可能逐家写死余额实现，页面按这四级告诉用户「这家凭什么能查 /
+     * <p>200+ 家供应商不可能逐家写死余额实现，页面按这几级告诉用户「这家凭什么能查 /
      * 为什么查不到」，而不是只回一句失败：</p>
      * <ul>
-     *   <li>{@code official}：厂商在 {@code HostCreditQueryProvider} 里有官方预设；</li>
+     *   <li>{@code official}：厂商在余额登记表里有官方预设；</li>
      *   <li>{@code openai}：上游就是 OpenAI 官方；</li>
+     *   <li>{@code uncovered}：上游是厂商官方站点，但没有可用的官方余额接口；</li>
      *   <li>{@code relay}：中转 / 聚合站，按协议依次探测（OpenAI 兼容计费）；</li>
      *   <li>{@code manual}：页面上指定了唯一实现（含自定义地址 + 表达式）；</li>
      *   <li>{@code none}：没有上游地址，没有可查的东西。</li>
@@ -1916,7 +1938,8 @@ public class ApiProviderController {
      * @param extra  供应商扩展配置
      * @return 分级标识
      */
-    private String creditLevel(SysAiProvider entity, Map<String, Object> extra) {        String kind = str(extra, "credit_kind");
+    private String creditLevel(SysAiProvider entity, Map<String, Object> extra) {
+        String kind = str(extra, "credit_kind");
         if (kind != null && !"auto".equalsIgnoreCase(kind.trim())) {
             return "manual";
         }
@@ -1934,7 +1957,30 @@ public class ApiProviderController {
         }
         boolean remote = (entity.getBaseUrl() != null && !entity.getBaseUrl().isBlank())
                 || str(extra, "credit_url") != null;
-        return remote ? "relay" : "none";
+        if (!remote) {
+            return "none";
+        }
+        // 官方站点但没有可用的官方余额接口：不当中转站，一个请求都不发。
+        // 官方站点上没有 OpenAI 兼容计费接口，探测只会 404，还会把「查不到」写成假结论。
+        // 例外：页面显式配了 credit_url（自定义地址）时以用户配置为准，照旧探测。
+        if (str(extra, "credit_url") == null && isOfficialSite(entity)) {
+            return "uncovered";
+        }
+        return "relay";
+    }
+
+    /**
+     * 上游是否是该供应商自己的官方站点。
+     *
+     * <p>依据是供应商登记表里每家的 {@code hosts}（与目录 / 定价 / 能力位共用同一份数据），
+     * 见 {@link ProviderRegistries#isOfficialSite(String, String)}。登记表未收录的供应商
+     * 返回 {@code false}，按中转处理，维持原有回落链路。</p>
+     *
+     * @param entity 供应商
+     * @return 官方站点为 true
+     */
+    private static boolean isOfficialSite(SysAiProvider entity) {
+        return ProviderRegistries.isOfficialSite(entity.getPlatform(), entity.getBaseUrl());
     }
 
     /**

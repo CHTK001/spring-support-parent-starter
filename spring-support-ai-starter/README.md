@@ -352,7 +352,7 @@ public class MyLlmCreditProvider implements ChannelCreditProvider {
 
 | 分类 | 厂商 | 依据 |
 |---|---|---|
-| 已收录 · Bearer（11） | `deepseek` `moonshot` `siliconflow` `openrouter` `novita-ai` `requesty` `llmgateway` `deepinfra` `together` `stepfun` `opencode-go` | 官方端点或探活确认路径，见 `HostCreditQueryProvider.HOSTS` |
+| 已收录 · Bearer（11） | `deepseek` `moonshot` `siliconflow` `openrouter` `novita-ai` `requesty` `llmgateway` `deepinfra` `together` `stepfun` `opencode-go` | 官方端点或探活确认路径，见 `provider-credit-endpoints.json`（`HostCreditQueryProvider` 读它） |
 | 已收录 · AK/SK 签名（4） | `aliyun-bss` `volc-billing` `baidu-bce` `qiniu` | 阿里云 BSS `QueryAccountBalance`、火山 `QueryBalanceAcct`、百度财务 `/v1/finance/cash/balance`、七牛 `/billing-api/v1/account/balance-overview`；签名由 `CreditSigner` 完成，AK/SK 在账户页「余额查询」配置里加密落库 |
 | 不收录 | `zhipu` `zai` `chutes` `fireworks` `helicone` `302ai` `hyper` `kilo` 等 20+ 家 | 官方文档没有余额 / 额度查询端点，不猜地址、不标「支持」；确有余额源的走页面「地址 + 字段表达式」通用配置 |
 
@@ -368,9 +368,16 @@ public class MyLlmCreditProvider implements ChannelCreditProvider {
 |---|---|---|
 | `official` | 厂商有官方预设 | `host` |
 | `openai` | 上游是 OpenAI 官方 | `openai` |
-| `relay` | 中转 / 聚合站，用 `base_url` 当站点根地址探测 | `AUTO_CREDIT_KINDS` 列出的实现，按序试 |
+| `uncovered` | 上游是厂商官方站点，但没有收录它的余额接口：一个请求都不发 | — |
+| `relay` | 上游不是厂商官方站点（中转 / 聚合站 / 自建网关），按协议探测 | `AUTO_CREDIT_KINDS` 列出的实现，按序试 |
 | `manual` | 页面上指定了唯一实现（含自定义地址 + 表达式） | 指定的那一个 |
 | `none` | 没有上游地址，没有可查的余额 | — |
+
+`uncovered` 与 `relay` 的分界线是**上游是不是厂商自己的官方站点**：官方站点上没有 OpenAI 兼容计费协议，
+拿官方 Key 去问 `/v1/dashboard/billing/*` 只会 404，所以不打这个请求，直接回「本系统未收录它的余额接口」，
+页面显示「官方站点·未收录」。判定依据是 `provider-registry.json` 每家的 `hosts`
+（主机名相等或互为主子域即算官方站点，见 `ProviderRegistries.isOfficialSite`）。
+例外：页面「余额」里显式配了 `credit_url` 时以用户配置为准，照旧探测。
 
 `billing` 是 OpenAI 老 dashboard 计费口径（`/v1/dashboard/billing/subscription` + `/usage`），
 one-api / new-api / voapi / veloera 系站点普遍沿用；两次请求都成功才给结论，只拿到上限不冒充余额。
@@ -378,7 +385,7 @@ one-api / new-api / voapi / veloera 系站点普遍沿用；两次请求都成�
 「已尝试：厂商官方 → …」，用户据此判断该换哪条口径，
 而不是只看到一句「查询失败」。响应里的 `candidates` 是本次实际尝试顺序的唯一来源。
 
-**余额接口必须与 Key 同源**（`HostCreditQueryProvider.sameOrigin`）：`base_url` 用来证明「这把 Key 是这个站点的」。域名和厂商预设对不上时（中转站的 Key、或者换了上游地址的模板），`host` 候选会被直接跳过并改走中转探测；`host` / `openai` 实现内部还有一道兜底，真的被直接调用时也只返回
+**余额接口必须与 Key 同源**（`HostCreditQueryProvider.sameOrigin`）：`base_url` 用来证明「这把 Key 是这个站点的」。域名和厂商预设对不上时（中转站的 Key、或者换了上游地址的模板），`host` 候选会被直接跳过：地址不是该厂商官方站点才改走中转探测，是官方站点但没收录接口则按 `uncovered` 早退；`host` / `openai` 实现内部还有一道兜底，真的被直接调用时也只返回
 「Key 属于 xxx，不是 yyy 的站点，已跳过官方余额接口」，不会拿别家的 Key 去问这家的官方接口——
 那种请求只会 401，然后把「Key 无效」这种假结论写进页面。同一厂商的不同子域（调用走
 `router.requesty.ai`、管理面走 `api-v2.requesty.ai`）按主域放行。
