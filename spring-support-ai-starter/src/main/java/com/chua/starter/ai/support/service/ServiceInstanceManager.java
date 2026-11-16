@@ -1176,7 +1176,9 @@ public class ServiceInstanceManager {
                     continue;
                 }
                 String role = "model".equals(str(cm.get("role"))) ? "assistant" : str(cm.get("role"));
-                String text = geminiPartsText(cm.get("parts"));
+                // geminiPartsText 的入参是「内容对象」（内含 parts），不是 parts 列表本身；
+                // 传列表会被判成非 Map 直接返回空串，导致 prompt 为空、上游报「输入为空」。
+                String text = geminiPartsText(cm);
                 Map<String, Object> msg = new LinkedHashMap<>();
                 msg.put("role", role.isBlank() ? "user" : role);
                 msg.put("content", text);
