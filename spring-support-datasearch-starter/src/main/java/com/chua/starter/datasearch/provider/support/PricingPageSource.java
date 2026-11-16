@@ -41,6 +41,9 @@ public final class PricingPageSource {
     private static final Pattern PRICE = Pattern.compile("[-+]?[0-9]+(?:\\.[0-9]+)?");
     private static final Pattern NAMED_GROUP = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
 
+    /**
+     * 工具类私有构造器，禁止实例化。
+     */
     private PricingPageSource() {
     }
 
@@ -121,6 +124,12 @@ public final class PricingPageSource {
 
     /**
      * 标准 HTML 表格。
+     *
+     * @param doc       解析后的文档
+     * @param config    来源配置
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
+     * @return 解析出的价格规则列表（可能为空）
      */
     private static List<ProviderPricingRule> parseTable(Document doc, PricingSourceConfig config,
                                                         String sourceUrl, String fetchedAt) {
@@ -174,6 +183,12 @@ public final class PricingPageSource {
 
     /**
      * div 网格：每行由 {@code role="row"} 标记，直接子 div 是单元格。
+     *
+     * @param doc       解析后的文档
+     * @param config    来源配置
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
+     * @return 解析出的价格规则列表（可能为空）
      */
     private static List<ProviderPricingRule> parseGrid(Document doc, PricingSourceConfig config,
                                                        String sourceUrl, String fetchedAt) {
@@ -218,6 +233,12 @@ public final class PricingPageSource {
 
     /**
      * 模型卡片：标题 + 一组 label/value 价格行。
+     *
+     * @param doc       解析后的文档
+     * @param config    来源配置
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
+     * @return 解析出的价格规则列表（可能为空）
      */
     private static List<ProviderPricingRule> parseCards(Document doc, PricingSourceConfig config,
                                                         String sourceUrl, String fetchedAt) {
@@ -258,6 +279,13 @@ public final class PricingPageSource {
 
     /**
      * 正文命名正则：每次匹配是一行，命名组即计费项。
+     *
+     * @param text      页面正文文本
+     * @param config    来源配置
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
+     * @return 解析出的价格规则列表（可能为空）
+     * @throws IllegalArgumentException pattern 未配置或缺少 model 命名组
      */
     private static List<ProviderPricingRule> parseNamedRegex(String text, PricingSourceConfig config,
                                                              String sourceUrl, String fetchedAt) {
@@ -299,6 +327,10 @@ public final class PricingPageSource {
 
     /**
      * 捕获组名 → 计费项；没配置映射时把组名直接当计费项。
+     *
+     * @param group  命名组名
+     * @param config 来源配置
+     * @return 计费项名称
      */
     private static String groupItem(String group, PricingSourceConfig config) {
         Map<String, String> mapping = config.getGroupItems();
@@ -310,6 +342,15 @@ public final class PricingPageSource {
 
     /**
      * 写一条规则；空值 / 占位符直接跳过。
+     *
+     * @param rules     接收规则的目标列表
+     * @param seen      去重集合
+     * @param model     模型名
+     * @param item      计费项
+     * @param rawPrice  原始价格文本
+     * @param config    来源配置
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
      */
     private static void add(List<ProviderPricingRule> rules, Set<String> seen,
                             String model, String item, String rawPrice,
@@ -338,6 +379,10 @@ public final class PricingPageSource {
 
     /**
      * 表头 → 列计费项。
+     *
+     * @param headers 表头文本列表
+     * @param config  来源配置
+     * @return 列下标 → 计费项映射（可能为空）
      */
     private static Map<Integer, String> itemColumns(List<String> headers, PricingSourceConfig config) {
         Map<Integer, String> out = new LinkedHashMap<>();
@@ -360,6 +405,10 @@ public final class PricingPageSource {
 
     /**
      * 找列下标：按归一化后的完整匹配，找不到再按包含匹配。
+     *
+     * @param headers 表头文本列表
+     * @param name    要找的列名
+     * @return 列下标，找不到返回 -1
      */
     private static int columnIndex(List<String> headers, String name) {
         String wanted = normalize(name);
@@ -378,6 +427,9 @@ public final class PricingPageSource {
 
     /**
      * 直接子 div 的文本；卡片内的 span/p 不会被误当成下一列。
+     *
+     * @param row 行元素
+     * @return 单元格文本列表
      */
     private static List<String> directCellTexts(Element row) {
         List<String> cells = new ArrayList<>();
@@ -391,6 +443,9 @@ public final class PricingPageSource {
 
     /**
      * 卡片价格标签 → 计费项。
+     *
+     * @param label 价格标签文本
+     * @return 计费项名称，无法识别时返回 null
      */
     private static String cardItem(String label) {
         String value = label == null ? "" : label.trim().toLowerCase(Locale.ROOT);
@@ -411,6 +466,10 @@ public final class PricingPageSource {
 
     /**
      * 官方模型名 → 目录模型名。
+     *
+     * @param raw    原始模型名
+     * @param config 来源配置
+     * @return 规整后的模型名，空输入返回空串
      */
     private static String model(String raw, PricingSourceConfig config) {
         String value = raw == null ? "" : raw.trim().replaceAll("\\s+", " ");
@@ -438,6 +497,10 @@ public final class PricingPageSource {
 
     /**
      * 价格文本 → 数值；Free 写 0，横杠/空值不写。
+     *
+     * @param raw         原始价格文本
+     * @param includeFree 是否把 Free 计为 0
+     * @return 价格数值，无法解析时返回 null
      */
     private static BigDecimal price(String raw, boolean includeFree) {
         if (raw == null) {
@@ -456,6 +519,9 @@ public final class PricingPageSource {
 
     /**
      * 归一化表头 / 列名：小写，去掉空格、斜杠和标点，保留字母数字。
+     *
+     * @param value 原始文本
+     * @return 归一化文本
      */
     private static String normalize(String value) {
         return value == null ? "" : value.toLowerCase(Locale.ROOT)
@@ -465,6 +531,9 @@ public final class PricingPageSource {
 
     /**
      * 空串判断。
+     *
+     * @param value 待判断文本
+     * @return true 表示 null 或空白
      */
     private static boolean blank(String value) {
         return value == null || value.isBlank();

@@ -53,6 +53,9 @@ public final class DeepSeekPricingSource {
                     + "\\s+\\$\\s*([0-9]+(?:\\.[0-9]+)?)",
             Pattern.CASE_INSENSITIVE);
 
+    /**
+     * 工具类私有构造器，禁止实例化。
+     */
     private DeepSeekPricingSource() {
     }
 
@@ -149,6 +152,18 @@ public final class DeepSeekPricingSource {
 
     /**
      * 解析模型 token 的峰谷价。
+     *
+     * @param rules     接收规则的目标列表
+     * @param models    模型 ID 列表
+     * @param text      页面纯文本
+     * @param start     区段起始标记
+     * @param end       区段结束标记
+     * @param item      计费项（input_cache_hit / input_cache_miss / output）
+     * @param windows   高峰时段
+     * @param policy    闲时说明
+     * @param peak      是否启用峰谷价
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
      */
     private static void addTokenRules(List<ProviderPricingRule> rules, List<String> models, String text,
                                       String start, String end, String item, List<PriceWindow> windows,
@@ -181,6 +196,21 @@ public final class DeepSeekPricingSource {
 
     /**
      * 构建一条规则。
+     *
+     * @param model          模型名
+     * @param item           计费项
+     * @param unit           计费单位
+     * @param quantity       数量
+     * @param peakPrice      高峰价（可空）
+     * @param offPeakPrice   闲时价（可空）
+     * @param standardPrice  标准价（可空）
+     * @param windows        高峰时段（可空）
+     * @param policy         闲时说明（可空）
+     * @param note           备注
+     * @param sourceUrl      来源地址
+     * @param fetchedAt      抓取时间
+     * @param peak           是否启用峰谷价
+     * @return 构建完成的规则
      */
     private static ProviderPricingRule rule(String model, String item, String unit, BigDecimal quantity,
                                             BigDecimal peakPrice, BigDecimal offPeakPrice,
@@ -210,6 +240,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * 模型名。
+     *
+     * @param text 页面纯文本
+     * @return 模型 ID 列表（可能为空）
      */
     private static List<String> models(String text) {
         List<String> ids = new ArrayList<>(2);
@@ -229,6 +262,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * 高峰时段：UTC 周一至周五，页面上写了几段就解析几段。
+     *
+     * @param text 页面纯文本
+     * @return 高峰时段列表（可能为空）
      */
     private static List<PriceWindow> windows(String text) {
         List<PriceWindow> windows = new ArrayList<>(2);
@@ -251,6 +287,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * 闲时说明。
+     *
+     * @param text 页面纯文本
+     * @return 闲时说明文本，未匹配到时返回 null
      */
     private static String policy(String text) {
         Matcher matcher = Pattern.compile("Off-peak rates[^.]*\\.(?:[^.]*\\.)?").matcher(text);
@@ -259,6 +298,11 @@ public final class DeepSeekPricingSource {
 
     /**
      * 取两个标记之间的文本。
+     *
+     * @param text  全文
+     * @param start 起始标记
+     * @param end   结束标记
+     * @return 两标记之间的文本；起始标记缺失时返回 null，结束标记缺失时取到末尾
      */
     private static String between(String text, String start, String end) {
         int from = text.indexOf(start);
@@ -271,6 +315,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * 取金额列表。
+     *
+     * @param text 含金额的文本
+     * @return 金额列表（可能为空）
      */
     private static List<BigDecimal> moneyList(String text) {
         List<BigDecimal> list = new ArrayList<>(2);
@@ -283,6 +330,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * 金额。
+     *
+     * @param value 金额文本（如 "1,234.56"）
+     * @return 解析后的金额
      */
     private static BigDecimal money(String value) {
         return new BigDecimal(value.replace(",", ""));
@@ -290,6 +340,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * 数量。
+     *
+     * @param value 数量文本（如 "1,000"）
+     * @return 解析后的数量
      */
     private static BigDecimal quantity(String value) {
         return new BigDecimal(value.replace(",", ""));
@@ -297,6 +350,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * HH:mm → 当天分钟数。
+     *
+     * @param time 时间文本（HH:mm）
+     * @return 当天分钟数
      */
     private static int minutes(String time) {
         String[] parts = time.split(":");
@@ -305,6 +361,9 @@ public final class DeepSeekPricingSource {
 
     /**
      * HTML → 纯文本。
+     *
+     * @param html 原始 HTML
+     * @return 归一化后的纯文本
      */
     private static String text(String html) {
         return html.replaceAll("(?is)<script.*?</script>", " ")
