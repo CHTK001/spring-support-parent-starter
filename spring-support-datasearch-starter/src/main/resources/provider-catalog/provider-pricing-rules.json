@@ -263,6 +263,68 @@
         },
         "note": "Agnes 官方 Model Pricing 页（按当前 Angel User Trial Price，USD / 百万 token；页面同时列 list price）"
       }
+    },
+    {
+      "id": "opencode-go",
+      "name": "OpenCode Go",
+      "aliases": ["opencode-go"],
+      "hosts": ["opencode.ai", "api.opencode.ai"],
+      "doc": "https://opencode.ai/docs/console/go/",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "html-table",
+        "url": "https://opencode.ai/docs/console/go/",
+        "currency": "USD",
+        "quantity": 1000000,
+        "columns": {
+          "Input": "input_cache_miss",
+          "Output": "output",
+          "Cached Read": "input_cache_hit",
+          "Cached Write": "input_cache_write"
+        },
+        "note": "OpenCode Go 官方用量限制页（每百万 token，USD；Go / Go Plus / Go Teams 同价；只取完整模型名，分档与峰谷行不合并）"
+      }
+    },
+    {
+      "id": "nano-gpt",
+      "name": "NanoGPT",
+      "aliases": ["nano-gpt", "nanogpt"],
+      "hosts": ["nano-gpt.com", "api.nano-gpt.com"],
+      "doc": "https://nano-gpt.com/pricing",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "html-table",
+        "url": "https://nano-gpt.com/pricing",
+        "currency": "USD",
+        "quantity": 1000000,
+        "columns": {
+          "Input": "input_cache_miss",
+          "Output": "output"
+        },
+        "note": "NanoGPT 官方 Pricing 页（常用模型列表价，USD / 百万 token；页面无登录时只列常用模型）"
+      }
+    },
+    {
+      "id": "aimlapi",
+      "name": "AI/ML API",
+      "aliases": ["aimlapi", "ai-ml-api"],
+      "hosts": ["api.aimlapi.com", "aimlapi.com"],
+      "doc": "https://docs.aimlapi.com",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "html-table",
+        "url": "https://aimlapi.com/ai-ml-api-pricing",
+        "currency": "USD",
+        "quantity": 1000000,
+        "columns": {
+          "Input": "input_cache_miss",
+          "Output": "output"
+        },
+        "note": "AI/ML API 官方 Pricing 页（Language Models per 1M tokens，USD；Input 单元格内的 cache 子价不拆分）"
+      }
     }
   ]
 }
