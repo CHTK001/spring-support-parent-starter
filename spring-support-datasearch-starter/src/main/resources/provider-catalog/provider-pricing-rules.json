@@ -396,6 +396,28 @@
         },
         "note": "LLM Gateway 官方 /v1/models JSON（USD / 百万 token；仅 canonical 模型价，免费路由不写入；provider 变体 llmgateway-providers 的价差不套用）"
       }
+    },
+    {
+      "id": "llmgateway-providers",
+      "name": "LLM Gateway (provider mapping)",
+      "aliases": ["llmgateway-providers"],
+      "hosts": [],
+      "doc": "https://llmgateway.io/models",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "named-regex",
+        "url": "https://api.llmgateway.io/v1/models?mapped=true",
+        "currency": "USD",
+        "quantity": 1000000,
+        "include_free": false,
+        "pattern": "\"id\"\\s*:\\s*\"(?<model>[^\"]+)\"\\s*,\\s*\"name\"\\s*:\\s*\"[^\"]*\"\\s*,\\s*\"display_name\"\\s*:\\s*\"[^\"]*\"(?:(?!\"id\"\\s*:\\s*\"[^\"]*\"\\s*,\\s*\"name\"\\s*:)[\\s\\S]){0,16000}?\"pricing\"\\s*:\\s*\\{[^}]*?\"prompt\"\\s*:\\s*\"(?<input>[0-9]+(?:\\.[0-9]+)?[eE]-6)\"[^}]*?\"completion\"\\s*:\\s*\"(?<output>[0-9]+(?:\\.[0-9]+)?[eE]-6)\"",
+        "group_items": {
+          "input": "input_cache_miss",
+          "output": "output"
+        },
+        "note": "LLM Gateway 官方 /v1/models?mapped=true（每个 provider 映射一条，id 为 provider/externalId；USD / 百万 token；仅写入 e-6 科学计数法的 397/468 个模型，普通小数 per-token 价不写入，避免把 per-token 当 per-million）"
+      }
     }
   ]
 }
