@@ -663,14 +663,20 @@ public class SysAiModelMetricsService {
                 changed = true;
             }
             List<Map<String, Object>> rules = rulesOf(snapshot.get("pricing_rules"));
-            if (rules != null && !locked.contains("pricing_rules")
-                    && !rules.equals(cur.getPricingRules())) {
-                // JSON 字段不能用 Wrapper.set（不走 TypeHandler），单独走 updateById
-                SysAiModelMetrics rulesUpdate = new SysAiModelMetrics();
-                rulesUpdate.setId(cur.getId());
-                rulesUpdate.setPricingRules(rules);
-                metricsMapper.updateById(rulesUpdate);
-                changed = true;
+            if (rules != null && !locked.contains("pricing_rules")) {
+                // 同一模型可能由多家上游提供，价格不同；指标行按 model_key 全局唯一，
+                // 不能拿后同步的厂商覆盖先同步的厂商。按 provider_id 合并，
+                // 保留其它厂商的规则，只替换本厂商这一组。
+                List<Map<String, Object>> merged = mergeProviderRules(
+                        cur.getPricingRules(), rules, providerId);
+                if (!merged.equals(cur.getPricingRules())) {
+                    // JSON 字段不能用 Wrapper.set（不走 TypeHandler），单独走 updateById
+                    SysAiModelMetrics rulesUpdate = new SysAiModelMetrics();
+                    rulesUpdate.setId(cur.getId());
+                    rulesUpdate.setPricingRules(merged);
+                    metricsMapper.updateById(rulesUpdate);
+                    changed = true;
+                }
             }
             if (!changed) {
                 continue;
@@ -1214,6 +1220,42 @@ public class SysAiModelMetricsService {
         e.setElo(bd(m, "elo"));
         e.setCostPerTask(bd(m, "cost_per_task"));
         e.setPricingRules(rulesOf(m.get("pricing_rules")));
+    }
+
+    /**
+     * 合并同一模型的定价规则：替换本厂商这一组，保留其它厂商的规则。
+     *
+     * @param current    数据库现有规则
+     * @param incoming   本次同步规则
+     * @param providerId 本次厂商
+     * @return 合并后的规则
+     */
+    private static List<Map<String, Object>> mergeProviderRules(List<Map<String, Object>> current,
+                                                                 List<Map<String, Object>> incoming,
+                                                                 String providerId) {
+        if (current == null || current.isEmpty()) {
+            return incoming;
+        }
+        // providerId 是网关注册的临时/实例 id，规则里的 provider_id 是定价登记表的厂商 id
+        // （如 anthropic / opencode）。合并时以规则自带厂商 id 为准，否则同一厂商会
+        // 在每次同步时被当成「其它厂商」保留下来，越叠越多。
+        String ruleOwner = providerId;
+        for (Map<String, Object> rule : incoming) {
+            Object id = rule == null ? null : rule.get("provider_id");
+            if (id != null && !String.valueOf(id).isBlank()) {
+                ruleOwner = String.valueOf(id);
+                break;
+            }
+        }
+        List<Map<String, Object>> merged = new ArrayList<>(current.size() + incoming.size());
+        for (Map<String, Object> rule : current) {
+            Object id = rule == null ? null : rule.get("provider_id");
+            if (id == null || !ruleOwner.equals(String.valueOf(id))) {
+                merged.add(rule);
+            }
+        }
+        merged.addAll(incoming);
+        return merged;
     }
 
     /**
