@@ -7,7 +7,6 @@ import com.chua.common.support.ai.chat.aggregate.MultiKeyChatClient;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupChatClient;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting;
 import com.chua.common.support.ai.chat.route.RouteTarget;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.task.cooldown.Backoff;
 import com.chua.common.support.task.cooldown.CooldownPolicies;
 import com.chua.common.support.task.cooldown.CooldownPolicy;
@@ -20,8 +19,6 @@ import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.service.ChannelHealthService;
-import com.chua.starter.common.support.channel.AccountChannelAuthManager;
-import com.chua.starter.common.support.channel.KeylessChatChannel;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -39,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -103,9 +101,14 @@ public class ModelClientResolver {
     private final ChannelHealthService channelHealthService;
 
     /**
-     * Magpie 网关路由源：把网关动态模型并入免费渠道路由表（最低优先级）
+     * 渠道路由源（账号渠道 / 免登录渠道 / magpie 网关），按 {@link ChannelRouteSource#order()} 叠加
      */
-    private final MagpieRouteSource magpieRouteSource;
+    private final List<ChannelRouteSource> routeSourceBeans;
+
+    /**
+     * 排好序的路由源（启动后不变，双重检查初始化）
+     */
+    private volatile List<ChannelRouteSource> routeSources;
 
     /**
      * 路由组业务（成员表读写与配置解析）
@@ -947,205 +950,90 @@ public class ModelClientResolver {
     }
 
     /**
-     * 收集所有 OAuth 渠道的路由目标（多账号聚合）。
+     * 收集动态渠道路由（免费渠道模型池）。
      *
-     * <p>遍历所有 {@code auth_scheme=oauth} 的启用供应商，找到对应 SPI 实现，
-     * 查询其连接（按 ownerScope 过滤），调用 {@link AccountChannelAuthManager#toRouteTarget}
-     * 把每个连接的 access_token 转为 RouteTarget，聚合同一渠道的多个账号到同一个
-     * {@code apiKeys} 列表。返回的路由按渠道名 + 模型名注册，供 FreeChannelChatClient
-     * 按模型名路由并触发 429 failover。</p>
-     *
-     * <p>缓存 5 分钟，按 ownerScope 隔离。</p>
+     * <p>路由来自若干 {@link ChannelRouteSource}：账号渠道（OAuth 连接聚合）、免登录对话渠道
+     * （DuckDuckGo / Trae）等主源先用先得，兜底源（magpie 网关、免登录渠道）只在空位上补，
+     * 免得网关/渠道的内置模型名盖掉真实上游。缓存 5 分钟，按 ownerScope 隔离。</p>
      *
      * @param ownerScope 归属作用域
      * @return 渠道路由表；无可用渠道时返回空 Map
      */
     public Map<String, RouteTarget> collectChannelRoutes(String ownerScope) {
+        return resolvedRoutes(ownerScope).routes();
+    }
+
+    /**
+     * 动态渠道路由（含兜底源标记），按 ownerScope 缓存 5 分钟。
+     *
+     * @param ownerScope 归属作用域
+     * @return 路由快照
+     */
+    private CachedRoutes resolvedRoutes(String ownerScope) {
         long now = System.currentTimeMillis();
         CachedRoutes cached = routeCache.get(ownerScope);
         if (cached != null && now - cached.builtAt() < CACHE_TTL_MILLIS) {
-            return cached.routes();
+            return cached;
         }
         Map<String, RouteTarget> routes = new LinkedHashMap<>();
-        try {
-            // 查询所有 OAuth 渠道供应商
-            List<SysAiProvider> oauthProviders = providerMapper.selectList(
-                    Wrappers.<SysAiProvider>lambdaQuery()
-                            .eq(SysAiProvider::getAuthScheme, "oauth")
-                            .eq(SysAiProvider::getEnabled, true));
-            for (SysAiProvider provider : oauthProviders) {
-                // 找到对应 SPI
-                AccountChannelAuthManager spi = findSpi(provider.getPlatform());
-                if (spi == null) {
-                    continue;
-                }
-                // 查询连接（按 ownerScope 过滤）
-                LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                        new LambdaQueryWrapper<SysAiProviderConnection>()
-                                .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
-                if ("_free".equals(ownerScope)) {
-                    // 免费渠道是**共享池**：渠道本身是通用资源，不按绑定者隔离 ——
-                    // 谁绑的账号都汇进同一条路由，所有人共用（用户口径：「整个渠道都是通用的」）。
-                    // 之前这里限 user_id IS NULL，导致 admin 绑的 opencode 82 个模型进不了免费池。
-                } else if ("_sys".equals(ownerScope)) {
-                    wrapper.isNull(SysAiProviderConnection::getUserId);
-                } else {
-                    boolean admin = AiUserContext.isAdmin();
-                    String userId = ownerScope;
-                    wrapper.and(w -> {
-                        w.eq(SysAiProviderConnection::getUserId, userId);
-                        if (admin) {
-                            w.or().isNull(SysAiProviderConnection::getUserId);
-                        }
-                    });
-                }
-                List<SysAiProviderConnection> connections = connectionMapper.selectList(wrapper);
-                if (connections.isEmpty()) {
-                    continue;
-                }
-                // 聚合同一渠道的所有账号（剔除下线的连接）
-                List<String> apiKeys = new ArrayList<>();
-                RouteTarget template = null;
-                for (SysAiProviderConnection conn : connections) {
-                    if (isDown(conn)) {
-                        continue;
-                    }
-                    RouteTarget target = spi.toRouteTarget(conn.getCredentials());
-                    if (target == null) {
-                        continue;
-                    }
-                    // 免鉴权渠道（authScheme=none）的 apiKey 为空串，允许通过
-                    if (StringUtils.isBlank(target.getApiKey())
-                            && !"none".equals(target.getAuthScheme())) {
-                        continue;
-                    }
-                    if (template == null) {
-                        template = target;
-                    }
-                    apiKeys.add(target.getApiKey());
-                }
-                if (apiKeys.isEmpty() || template == null) {
-                    continue;
-                }
-                // 构建聚合路由：同一渠道多个账号的 apiKeys
-                RouteTarget merged = RouteTarget.builder()
-                        .provider(template.getProvider())
-                        .baseUrl(template.getBaseUrl())
-                        .authScheme(template.getAuthScheme())
-                        .authHeader(template.getAuthHeader())
-                        .authPrefix(template.getAuthPrefix())
-                        .apiKeys(apiKeys)
-                        .headers(template.getHeaders())
-                        .autoSwitchOnRateLimit(true)
-                        .build();
-                // 查询模型名并注册路由
-                List<SysAiProviderModel> models = providerModelMapper.selectList(
-                        Wrappers.<SysAiProviderModel>lambdaQuery()
-                                .eq(SysAiProviderModel::getProviderId, provider.getProviderId())
-                                .eq(SysAiProviderModel::getEnabled, true));
-                // 按渠道名注册（prefix match）
-                routes.put(provider.getPlatform(), merged);
-                // 按模型名注册（exact match）
-                for (SysAiProviderModel m : models) {
-                    routes.put(m.getModel(), merged);
-                }
-                log.info("[ModelClientResolver] 渠道路由 {} 注册 {} 个模型 {} 个账号",
-                        provider.getPlatform(), models.size(), apiKeys.size());
-            }
-            // 免登录对话渠道（DuckDuckGo / Trae 等）：没有上游地址、没有账号，协议与会话
-            // 都由 ChatClient SPI 自己持有。它们的模型同样是「渠道管理里已开启的模型」，
-            // 必须并进免费渠道的路由表，否则免费渠道的模型清单里永远看不到这几个渠道。
-            collectKeylessRoutes(routes);
-        } catch (Exception e) {
-            log.warn("[ModelClientResolver] 收集渠道路由失败: {}", e.getMessage());
-        }
-        routeCache.put(ownerScope, new CachedRoutes(routes, now));
-        return routes;
+        Set<String> fallbackKeys = new LinkedHashSet<>();
+        applyRouteSources(routes, fallbackKeys, ownerScope);
+        CachedRoutes built = new CachedRoutes(routes, fallbackKeys, now);
+        routeCache.put(ownerScope, built);
+        return built;
     }
 
     /**
-     * 把免登录对话渠道的内置模型并进路由表。
+     * 按优先级把所有渠道路由源叠加到目标表。
      *
-     * <p>渠道实现住在账号模块（{@code ChatChannelProvider}），而 AI 模块按设计不反向依赖
-     * 账号模块，因此通过 common-starter 的中立契约 {@link KeylessChatChannel} 发现。
-     * 路由目标只带 {@code provider}（ChatClient 扩展名）与 {@code authScheme=none}：
-     * 这类渠道没有 baseUrl，{@code FreeChannelChatClient} 按扩展名直接建客户端。</p>
+     * <p>{@link ChannelRouteSource#order()} 小的先叠加；{@link ChannelRouteSource#fallbackOnly()}
+     * 的源用 {@code putIfAbsent}，不覆盖已存在的模型名。单个源失败只记日志，
+     * 不影响其余渠道（账号模块未引入、网关不可达都不能拖垮整张路由表）。</p>
      *
-     * <p>只注册模型键，不注册渠道前缀键：渠道标识（{@code chat-duckduckgo}）不是可选模型，
-     * 混进清单会让页面出现一个叫 {@code chat-duckduckgo} 的「模型」。</p>
-     *
-     * @param routes 目标路由表（原地写入）
+     * @param target       目标路由表（原地写入）
+     * @param fallbackKeys 兜底源命中过的模型名（原地写入，可为 {@code null}）
+     * @param ownerScope   归属作用域
      */
-    private void collectKeylessRoutes(Map<String, RouteTarget> routes) {
-        Map<String, KeylessChatChannel> channels;
-        try {
-            channels = ServiceProvider.of(KeylessChatChannel.class).list();
-        } catch (Exception e) {
-            log.debug("[ModelClientResolver] 免登录对话渠道未接入: {}", e.getMessage());
-            return;
-        }
-        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
-        for (KeylessChatChannel channel : channels.values()) {
-            if (channel == null || StringUtils.isBlank(channel.channel())
-                    || StringUtils.isBlank(channel.extension()) || !seen.add(channel.channel())) {
-                continue;
-            }
-            RouteTarget target = RouteTarget.builder()
-                    .provider(channel.extension())
-                    .baseUrl("")
-                    .authScheme("none")
-                    .build();
-            int registered = 0;
+    private void applyRouteSources(Map<String, RouteTarget> target, Set<String> fallbackKeys,
+                                   String ownerScope) {
+        for (ChannelRouteSource source : channelRouteSources()) {
             try {
-                List<Map<String, Object>> models = channel.listModels();
-                if (models != null) {
-                    for (Map<String, Object> model : models) {
-                        Object id = model == null ? null : model.get("id");
-                        if (id == null || StringUtils.isBlank(String.valueOf(id))) {
-                            continue;
+                Map<String, RouteTarget> part = source.routes(ownerScope);
+                if (part == null || part.isEmpty()) {
+                    continue;
+                }
+                if (source.fallbackOnly()) {
+                    for (Map.Entry<String, RouteTarget> entry : part.entrySet()) {
+                        if (target.putIfAbsent(entry.getKey(), entry.getValue()) == null
+                                && fallbackKeys != null) {
+                            fallbackKeys.add(entry.getKey());
                         }
-                        routes.putIfAbsent(String.valueOf(id), target);
-                        registered++;
                     }
+                } else {
+                    target.putAll(part);
                 }
             } catch (Exception e) {
-                log.debug("[ModelClientResolver] 免登录渠道 {} 模型清单读取失败: {}",
-                        channel.channel(), e.getMessage());
+                log.warn("[ModelClientResolver] 渠道路由源 {} 叠加失败: {}", source.name(), e.getMessage());
             }
-            log.info("[ModelClientResolver] 免登录渠道 {} 注册 {} 个模型", channel.channel(), registered);
         }
     }
 
     /**
-     * 根据平台名查找对应的 OAuth 渠道 SPI 实现。
+     * 路由源列表（按 order 升序，启动后不变）。
      *
-     * @param platform 平台名（如 "loomy", "qoder", "workbuddy"）
-     * @return SPI 实例；未找到返回 null
+     * @return 路由源
      */
-    private AccountChannelAuthManager findSpi(String platform) {
-        if (platform == null || platform.isBlank()) {
-            return null;
-        }
-        // 渠道供应商的 platform 在库里可能是大写（实测 OPENCODE / CLINE / GEMINI），
-        // 而 SPI 注册名是小写（@Spi("opencode")）。大小写不匹配会让整条渠道被跳过，
-        // 表现为「渠道页有模型、免费池里一个都没有」，所以两种写法都试。
-        String trimmed = platform.trim();
-        try {
-            AccountChannelAuthManager hit = ServiceProvider.of(AccountChannelAuthManager.class)
-                    .getExtension(trimmed);
-            if (hit != null) {
-                return hit;
+    private List<ChannelRouteSource> channelRouteSources() {
+        if (routeSources == null) {
+            synchronized (this) {
+                if (routeSources == null) {
+                    List<ChannelRouteSource> sorted = new ArrayList<>(routeSourceBeans);
+                    sorted.sort(java.util.Comparator.comparingInt(ChannelRouteSource::order));
+                    routeSources = List.copyOf(sorted);
+                }
             }
-        } catch (Exception ignored) {
-            // 继续尝试小写
         }
-        try {
-            return ServiceProvider.of(AccountChannelAuthManager.class)
-                    .getExtension(trimmed.toLowerCase(java.util.Locale.ROOT));
-        } catch (Exception e) {
-            log.debug("[ModelClientResolver] 未找到 SPI: {}", platform);
-            return null;
-        }
+        return routeSources;
     }
 
     /**
@@ -1154,29 +1042,29 @@ public class ModelClientResolver {
      * <p>免费渠道供应商（{@code free-channel}）的路由由两部分组成：</p>
      * <ul>
      *   <li>静态路由：管理员在供应商 extra 中手写的 {@code routes} 配置</li>
-     *   <li>动态路由：由 {@link #collectChannelRoutes} 从 OAuth 渠道连接自动收集</li>
+     *   <li>动态路由：由各 {@link ChannelRouteSource} 自动收集（账号渠道 / 免登录渠道 / 网关兜底）</li>
      * </ul>
      *
-     * <p>动态路由覆盖静态路由（自动同步优先于手动配置）。</p>
+     * <p>主源（有 baseUrl 与账号的真实上游）覆盖静态路由；兜底源（magpie 网关、免登录渠道）
+     * 只在空位上补，不覆盖静态路由。</p>
      *
      * @param provider   供应商
      * @param ownerScope 归属作用域
      * @return 合并后的路由表
      */
     public Map<String, RouteTarget> mergedRoutes(SysAiProvider provider, String ownerScope) {
-        Map<String, RouteTarget> staticRoutes = ProviderRouteTargets.fromExtra(provider.getExtra());
-        Map<String, RouteTarget> dynamicRoutes = collectChannelRoutes(ownerScope);
         Map<String, RouteTarget> merged = new LinkedHashMap<>();
+        Map<String, RouteTarget> staticRoutes = ProviderRouteTargets.fromExtra(provider.getExtra());
         if (staticRoutes != null) {
             merged.putAll(staticRoutes);
         }
-        merged.putAll(dynamicRoutes);
-        // Magpie 网关：动态模型目录，最低优先级（不覆盖任何显式渠道路由）。
-        // 失败时返回空表，不影响其余路由。
-        try {
-            magpieRouteSource.routes(ownerScope).forEach(merged::putIfAbsent);
-        } catch (Exception e) {
-            log.debug("[ModelClientResolver] 合并 Magpie 路由失败: {}", e.getMessage());
+        CachedRoutes dynamic = resolvedRoutes(ownerScope);
+        for (Map.Entry<String, RouteTarget> entry : dynamic.routes().entrySet()) {
+            if (dynamic.fallbackKeys().contains(entry.getKey())) {
+                merged.putIfAbsent(entry.getKey(), entry.getValue());
+            } else {
+                merged.put(entry.getKey(), entry.getValue());
+            }
         }
         return merged;
     }
@@ -1278,9 +1166,11 @@ public class ModelClientResolver {
     /**
      * 渠道路由缓存条目。
      *
-     * @param routes  路由表
-     * @param builtAt 构建时间戳
+     * @param routes       路由表
+     * @param fallbackKeys 由兜底源贡献的模型名（合并静态路由时不得覆盖）
+     * @param builtAt      构建时间戳
      */
-    private record CachedRoutes(Map<String, RouteTarget> routes, long builtAt) {
+    private record CachedRoutes(Map<String, RouteTarget> routes, Set<String> fallbackKeys,
+                                long builtAt) {
     }
 }

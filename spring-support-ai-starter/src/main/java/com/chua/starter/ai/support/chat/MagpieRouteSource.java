@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class MagpieRouteSource {
+public class MagpieRouteSource implements ChannelRouteSource {
 
     /**
      * 渠道 / 前缀标识。
@@ -84,12 +84,29 @@ public class MagpieRouteSource {
      */
     private final Map<String, Cached> cache = new ConcurrentHashMap<>();
 
+    @Override
+    public String name() {
+        return CHANNEL;
+    }
+
+    @Override
+    public int order() {
+        return 20;
+    }
+
+    @Override
+    public boolean fallbackOnly() {
+        // 网关模型名（gpt-4o 之类）极易与真实上游撞名，只能填空位
+        return true;
+    }
+
     /**
      * 当前可用的 magpie 路由。
      *
      * @param ownerScope 归属作用域（{@code _free} / {@code _sys} / 用户标识）
      * @return 路由表；网关未绑定或不可达时返回空 Map
      */
+    @Override
     public Map<String, RouteTarget> routes(String ownerScope) {
         Snapshot snapshot = snapshot(ownerScope);
         if (snapshot == null) {
