@@ -1,0 +1,246 @@
+{
+  "generated_at": "2026-11-16",
+  "source": "HostCreditQueryProvider 的 15 条官方预设迁移为数据 + 账户级 4 家",
+  "note": "只登记官方文档明确写了余额 / 额度接口的厂商；未收录的厂商走 OpenAI 兼容探测（billing / new-api / sub2api / 表达式），不在这里猜地址。",
+  "count": 15,
+  "entries": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "aliases": [
+        "deepseek"
+      ],
+      "hosts": [
+        "api.deepseek.com"
+      ],
+      "url": "https://api.deepseek.com/user/balance",
+      "expression": "¥balance_infos.0.total_balance; ¥balance_infos.0.granted_balance",
+      "currency": "cny",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot",
+      "aliases": [
+        "moonshot"
+      ],
+      "hosts": [
+        "api.moonshot.cn"
+      ],
+      "url": "https://api.moonshot.cn/v1/users/me/balance",
+      "expression": "¥data.available_balance; ¥data.voucher_balance",
+      "currency": "cny",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow 硅基流动",
+      "aliases": [
+        "siliconflow"
+      ],
+      "hosts": [
+        "api.siliconflow.cn"
+      ],
+      "url": "https://api.siliconflow.cn/v1/user/info",
+      "expression": "¥data.totalBalance; ¥data.balance",
+      "currency": "cny",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "aliases": [
+        "openrouter"
+      ],
+      "hosts": [
+        "openrouter.ai"
+      ],
+      "url": "https://openrouter.ai/api/v1/credits",
+      "expression": "$data.total_credits; $data.total_usage",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "novita-ai",
+      "name": "Novita AI",
+      "aliases": [
+        "novita-ai"
+      ],
+      "hosts": [
+        "api.novita.ai"
+      ],
+      "url": "https://api.novita.ai/openapi/v1/billing/balance/detail",
+      "expression": "$availableBalance / 10000; $cashBalance / 10000",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "requesty",
+      "name": "Requesty",
+      "aliases": [
+        "requesty"
+      ],
+      "hosts": [
+        "router.requesty.ai"
+      ],
+      "url": "https://api-v2.requesty.ai/v1/manage/org",
+      "expression": "$balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "llmgateway",
+      "name": "DevPass (LLM Gateway)",
+      "aliases": [
+        "llmgateway"
+      ],
+      "hosts": [
+        "api.llmgateway.io"
+      ],
+      "url": "https://api.llmgateway.io/v1/key",
+      "expression": "$data.devPlanCreditsRemaining",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "deepinfra",
+      "name": "deepinfra",
+      "aliases": [
+        "deepinfra"
+      ],
+      "hosts": [],
+      "url": "https://api.deepinfra.com/payment/usage?from=current",
+      "expression": "$months.0.total_cost",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "together",
+      "name": "Together AI",
+      "aliases": [
+        "together"
+      ],
+      "hosts": [
+        "api.together.ai"
+      ],
+      "url": "https://api.together.ai/v1/billing/usage",
+      "expression": "$data.0.line_items.0.cost",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "stepfun",
+      "name": "阶跃星辰",
+      "aliases": [
+        "stepfun"
+      ],
+      "hosts": [
+        "api.stepfun.com"
+      ],
+      "url": "https://api.stepfun.com/v1/accounts",
+      "expression": "¥balance; ¥total_cash_balance; ¥total_voucher_balance",
+      "currency": "cny",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，已用假令牌探活过路由"
+    },
+    {
+      "id": "opencode-go",
+      "name": "OpenCode Go",
+      "aliases": [
+        "opencode-go"
+      ],
+      "hosts": [
+        "opencode.ai"
+      ],
+      "url": "https://opencode.ai/zen/go/v1/usage",
+      "expression": "!usage.rolling.percent; !usage.weekly.percent; !usage.monthly.percent",
+      "currency": "%",
+      "signType": null,
+      "verified": false,
+      "notes": "社区口径，非官方文档；仅返回已用百分比"
+    },
+    {
+      "id": "aliyun-bss",
+      "name": "阿里云 BSS（账户余额）",
+      "aliases": [
+        "aliyun-bss"
+      ],
+      "hosts": [
+        "business.aliyuncs.com"
+      ],
+      "url": "https://business.aliyuncs.com/",
+      "expression": "¥Data.AvailableAmount; ¥Data.AvailableCashAmount",
+      "currency": "cny",
+      "signType": "aliyun-bss",
+      "verified": true,
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+    },
+    {
+      "id": "volc-billing",
+      "name": "火山引擎 Billing（账户余额）",
+      "aliases": [
+        "volc-billing"
+      ],
+      "hosts": [
+        "billing.volcengineapi.com"
+      ],
+      "url": "https://billing.volcengineapi.com/",
+      "expression": "¥Result.AvailableBalance; ¥Result.CashBalance; ¥Result.ArrearsBalance",
+      "currency": "cny",
+      "signType": "volc",
+      "verified": true,
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+    },
+    {
+      "id": "baidu-bce",
+      "name": "百度智能云财务（现金余额）",
+      "aliases": [
+        "baidu-bce"
+      ],
+      "hosts": [
+        "billing.baidubce.com"
+      ],
+      "url": "https://billing.baidubce.com/v1/finance/cash/balance",
+      "expression": "¥cashBalance",
+      "currency": "cny",
+      "signType": "bce",
+      "verified": true,
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+    },
+    {
+      "id": "qiniu",
+      "name": "七牛云财务（账户余额）",
+      "aliases": [
+        "qiniu"
+      ],
+      "hosts": [
+        "api.qiniu.com"
+      ],
+      "url": "https://api.qiniu.com/billing-api/v1/account/balance-overview",
+      "expression": "¥data.available_balance / 100000000; ¥data.cash_balance / 100000000",
+      "currency": "cny",
+      "signType": "qiniu",
+      "verified": true,
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+    }
+  ]
+}

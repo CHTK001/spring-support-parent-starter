@@ -439,7 +439,7 @@ public class ApiProviderController {
             "price_cache_hit_per_musd", "price_cache_write_per_musd",
             "intelligence_index", "output_speed_tps", "latency_first_token_seconds",
             "probe_latency_ms", "icon_url", "reasoning_model", "web_search",
-            "image_input", "function_calling", "context_window_tokens",
+            "image_input", "function_calling", "streaming", "async", "context_window_tokens",
             "hle_score", "omniscience_index",
             "gpqa_score",
             "aime25_score",

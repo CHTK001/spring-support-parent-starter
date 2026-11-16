@@ -1,0 +1,2 @@
+# 供应商登记表:一家一条(名称/说明/协议/地址/别名/models.dev 目录键/能力/余额口径)
+com.chua.starter.datasearch.provider.spi.impl.RegistryProviderRegistry

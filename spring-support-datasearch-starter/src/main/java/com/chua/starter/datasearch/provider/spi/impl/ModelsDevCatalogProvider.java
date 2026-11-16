@@ -1,9 +1,13 @@
 package com.chua.starter.datasearch.provider.spi.impl;
 
+import com.chua.starter.datasearch.provider.model.ProviderCapability;
+import com.chua.starter.datasearch.provider.model.ProviderDescriptor;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
 import com.chua.starter.datasearch.provider.spi.ProviderModelCatalogProvider;
+import com.chua.starter.datasearch.provider.support.ProviderCapabilities;
 import com.chua.starter.datasearch.provider.support.ProviderPricings;
+import com.chua.starter.datasearch.provider.support.ProviderRegistries;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -23,11 +27,13 @@ import java.util.zip.GZIPInputStream;
  * <p>快照由 {@code pages/ai/docs/gen-providers-doc.js} 同源脚本生成：厂商、别名、
  * 官方文档入口取自模板库与 models.dev，模型说明 / 价格 / 上下文 / 模态 / 能力位取自
  * models.dev 的模型字段。{@code streaming} / {@code asyncSupported} 目录里没有，
- * 该实现一律留空；需要这两个维度时由
+ * 由能力位 SPI（{@code ProviderCapabilityProvider}）补齐，判定口径仍是
  * {@link com.chua.starter.datasearch.provider.support.ProviderProtocolCapabilities}
- * 按接入协议 / 端点实测补位（不在此处猜）。</p>
+ * 的「流式走协议、异步只认实测端点」；仍无口径时保持 {@code null} 表示「未收录」。</p>
  *
- * <p>匹配顺序：先精确命中 {@code aliases}，再按主机名（相等或子域）匹配。</p>
+ * <p>匹配顺序：先按供应商登记表的 {@code modelsDevId} 取（解决 {@code together →
+ * togetherai}、{@code qwen → alibaba} 这类别名），再精确命中 {@code aliases}，
+ * 最后按主机名（相等或子域）匹配。</p>
  *
  * @author CH
  * @since 4.0.0.55
@@ -85,6 +91,20 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
         }
         catalog.setModels(models);
         catalog.setPricingRules(ProviderPricings.of(platform, baseUrl));
+        // 目录没有流式 / 异步字段：由能力位 SPI 补齐（流式走协议、异步只认实测端点）
+        ProviderCapability capability = ProviderCapabilities.of(platform, baseUrl);
+        if (capability != null) {
+            for (ProviderModelInfo model : models) {
+                if (capability.getStreaming() != null) {
+                    model.setStreaming(capability.getStreaming());
+                    model.setStreamingSource(capability.getStreamingSource());
+                }
+                if (capability.getAsyncSupported() != null) {
+                    model.setAsyncSupported(capability.getAsyncSupported());
+                    model.setAsyncSource(capability.getAsyncSource());
+                }
+            }
+        }
         return catalog;
     }
 
@@ -107,6 +127,16 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
      */
     private JsonNode findProvider(String platform, String baseUrl) {
         Snapshot current = snapshot();
+        // 登记表给出 models.dev 目录键：别名与前端 id 不一致时（together → togetherai、
+        // qwen → alibaba、aws-bedrock → amazon-bedrock）先按目录键取，避免只靠字符串碰运气
+        ProviderDescriptor descriptor = ProviderRegistries.find(platform, baseUrl);
+        String modelsDevId = descriptor == null ? null : descriptor.getModelsDevId();
+        if (modelsDevId != null && !modelsDevId.isBlank()) {
+            JsonNode hit = current.providers.get(modelsDevId);
+            if (hit != null) {
+                return hit;
+            }
+        }
         String id = normalize(platform);
         if (!id.isEmpty()) {
             JsonNode hit = current.byAlias.get(id);
@@ -162,7 +192,7 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
         model.setKnowledge(text(node, "knowledge"));
         model.setReleaseDate(text(node, "release_date"));
         model.setLastUpdated(text(node, "last_updated"));
-        // 目录未提供流式 / 异步标记：保持 null，不按协议默认成 true
+        // 目录没有流式 / 异步字段：先留空，由 query() 用能力位统一补齐
         return model;
     }
 

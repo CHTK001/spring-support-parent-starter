@@ -383,6 +383,7 @@ public class SysAiModelMetricsService {
             "context_window_tokens", "max_output_tokens",
             "reasoning", "web_search", "image_input", "audio_input", "video_input",
             "pdf_input", "attachment", "temperature", "function_calling",
+            "streaming", "async",
             "json_mode", "structured_output", "open_weights", "intelligence_index",
             "model_name", "model_family", "knowledge_cutoff", "release_date", "last_updated",
             "reasoning_efforts", "reasoning_option_types", "pricing_rules"
@@ -590,6 +591,13 @@ public class SysAiModelMetricsService {
                     snapshot.put(key, value);
                 }
             }
+            // 能力位与价格一起落：新建行需要它，已有行只在列为空时补
+            for (String key : UPSTREAM_CAPABILITY_KEYS) {
+                Object value = raw.get(key);
+                if (value != null) {
+                    snapshot.put(key, value);
+                }
+            }
             // 定价规则不是「价格列」，不能混进 UPSTREAM_PRICE_KEYS，但要跟价格一起落
             // sys_ai_model_metrics 的 TEXT 列；否则只会写进服务商模型行，指标库仍为空。
             if (raw.get("pricing_rules") instanceof List<?> rules && !rules.isEmpty()) {
@@ -662,6 +670,17 @@ public class SysAiModelMetricsService {
                 uw.set(priceColumn(priceKey), value);
                 changed = true;
             }
+            // 能力位（流式 / 异步）不是价格列：只补空值，已有值（含人工锁定）不覆盖
+            if (!locked.contains("streaming") && cur.getStreaming() == null
+                    && snapshot.get("streaming") instanceof Boolean streaming) {
+                uw.set(SysAiModelMetrics::getStreaming, streaming);
+                changed = true;
+            }
+            if (!locked.contains("async") && cur.getAsyncSupported() == null
+                    && snapshot.get("async") instanceof Boolean async) {
+                uw.set(SysAiModelMetrics::getAsyncSupported, async);
+                changed = true;
+            }
             List<Map<String, Object>> rules = rulesOf(snapshot.get("pricing_rules"));
             if (rules != null && !locked.contains("pricing_rules")) {
                 // 同一模型可能由多家上游提供，价格不同；指标行按 model_key 全局唯一，
@@ -699,6 +718,13 @@ public class SysAiModelMetricsService {
     private static final String[] UPSTREAM_PRICE_KEYS = {
             "price_input_per_musd", "price_output_per_musd",
             "price_cache_hit_per_musd", "price_cache_write_per_musd", "cost_per_task"
+    };
+
+    /**
+     * 上游 / 目录能力位键清单（不是价格列，只补空值）。
+     */
+    private static final String[] UPSTREAM_CAPABILITY_KEYS = {
+            "streaming", "async"
     };
 
     /**
@@ -1212,6 +1238,8 @@ public class SysAiModelMetricsService {
         e.setWebSearch(boolOf(m, "web_search"));
         e.setImageInput(boolOf(m, "image_input"));
         e.setFunctionCalling(boolOf(m, "function_calling"));
+        e.setStreaming(boolOf(m, "streaming"));
+        e.setAsyncSupported(boolOf(m, "async"));
         e.setJsonMode(boolOf(m, "json_mode"));
         e.setOpenaiCompatible(boolOf(m, "openai_compatible"));
         e.setIntelligenceIndex(bd(m, "intelligence_index"));

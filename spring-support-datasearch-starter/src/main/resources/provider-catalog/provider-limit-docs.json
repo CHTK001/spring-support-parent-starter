@@ -2357,7 +2357,7 @@
       "hosts": [
         "qianfan.baidubce.com"
       ],
-      "doc": null,
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
       "verified": false,
       "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
     },
@@ -2370,7 +2370,7 @@
       "hosts": [
         "qianfan.baidubce.com"
       ],
-      "doc": null,
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
       "verified": false,
       "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
     },
@@ -2409,7 +2409,7 @@
       "hosts": [
         "qianfan.baidubce.com"
       ],
-      "doc": null,
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
       "verified": false,
       "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
     },
@@ -2503,6 +2503,231 @@
       "doc": null,
       "verified": false,
       "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "together",
+      "name": "Together AI",
+      "aliases": [
+        "together",
+        "togetherai"
+      ],
+      "hosts": [
+        "api.together.ai"
+      ],
+      "doc": "https://docs.together.ai/docs/serverless-models",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "free-channel",
+      "name": "免费渠道",
+      "aliases": [
+        "free-channel"
+      ],
+      "hosts": [],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "ai302",
+      "name": "AI302",
+      "aliases": [
+        "ai302",
+        "302ai"
+      ],
+      "hosts": [
+        "api.ai302.com",
+        "api.302.ai"
+      ],
+      "doc": "https://doc.302.ai",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "router-group",
+      "name": "路由组",
+      "aliases": [
+        "router-group"
+      ],
+      "hosts": [],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "qwen",
+      "name": "通义千问",
+      "aliases": [
+        "qwen",
+        "alibaba"
+      ],
+      "hosts": [
+        "dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "zhipu",
+      "name": "智谱 AI",
+      "aliases": [
+        "zhipu",
+        "zhipuai"
+      ],
+      "hosts": [
+        "open.bigmodel.cn"
+      ],
+      "doc": "https://docs.bigmodel.cn/cn/guide/start/pricing",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot",
+      "aliases": [
+        "moonshot",
+        "moonshotai"
+      ],
+      "hosts": [
+        "api.moonshot.cn"
+      ],
+      "doc": "https://platform.moonshot.ai/docs/api/chat",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "doubao",
+      "name": "豆包",
+      "aliases": [
+        "doubao",
+        "volcengine"
+      ],
+      "hosts": [
+        "ark.cn-beijing.volces.com"
+      ],
+      "doc": "https://www.volcengine.com/docs/82379/1330310",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "aws-bedrock",
+      "name": "AWS Bedrock",
+      "aliases": [
+        "aws-bedrock",
+        "amazon-bedrock"
+      ],
+      "hosts": [
+        "bedrock-runtime.us-east-1.amazonaws.com"
+      ],
+      "doc": "https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "aliases": [
+        "ollama"
+      ],
+      "hosts": [
+        "localhost"
+      ],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "onnx",
+      "name": "ONNX 本地推理",
+      "aliases": [
+        "onnx"
+      ],
+      "hosts": [],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "newapi",
+      "name": "NewAPI",
+      "aliases": [
+        "newapi"
+      ],
+      "hosts": [
+        "newapi.io"
+      ],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "dots",
+      "name": "Dots Studio",
+      "aliases": [
+        "dots"
+      ],
+      "hosts": [
+        "note3-prev-api.askdiandian.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "cline",
+      "name": "ClinePass",
+      "aliases": [
+        "cline",
+        "cline-pass"
+      ],
+      "hosts": [
+        "api.cline.bot"
+      ],
+      "doc": "https://docs.cline.bot/getting-started/clinepass",
+      "verified": false,
+      "limits": {},
+      "notes": "仅登记官方文档入口，限制数值未逐条核对"
+    },
+    {
+      "id": "llama",
+      "name": "Llama",
+      "aliases": [
+        "llama"
+      ],
+      "hosts": [
+        "api.llama.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
+    },
+    {
+      "id": "custom",
+      "name": "自定义供应商",
+      "aliases": [
+        "custom"
+      ],
+      "hosts": [],
+      "doc": null,
+      "verified": false,
+      "limits": {},
+      "notes": "暂无官方限制文档入口"
     }
   ]
 }
