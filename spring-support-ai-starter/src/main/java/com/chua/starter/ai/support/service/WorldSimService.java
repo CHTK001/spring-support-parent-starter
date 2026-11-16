@@ -24,47 +24,117 @@ public interface WorldSimService {
 
     /* ---------------- 世界 ---------------- */
 
-    /** 当前用户的世界列表（含场景数 / NPC 数 / 最近事件） */
+    /**
+     * 当前用户的世界列表（含场景数 / NPC 数 / 最近事件）
+     *
+     * @return 世界列表
+     */
     List<Map<String, Object>> listWorlds();
 
-    /** 世界详情视图（世界配置 + 场景 + NPC + 关系网 + 最近事件），带缓存 */
+    /**
+     * 世界详情视图（世界配置 + 场景 + NPC + 关系网 + 最近事件），带缓存
+     *
+     * @param worldId 世界ID
+     * @return 世界详情视图
+     */
     Map<String, Object> worldView(Long worldId);
 
-    /** 创建世界（导演模型/演员可空） */
+    /**
+     * 创建世界（导演模型/演员可空）
+     *
+     * @param name          世界名称
+     * @param description   世界描述
+     * @param era           时代背景
+     * @param directorModel 导演模型（可空）
+     * @param actorRoles    演员角色（可空）
+     * @return 创建的世界
+     */
     SysAiWorld createWorld(String name, String description, String era, String directorModel, String actorRoles);
 
-    /** 更新世界配置（名称/世界观/时代/天气/状态） */
+    /**
+     * 更新世界配置（名称/世界观/时代/天气/状态）
+     *
+     * @param id   世界ID
+     * @param body 更新内容
+     * @return 更新后的世界
+     */
     SysAiWorld updateWorld(Long id, Map<String, Object> body);
 
-    /** 删世界（级联删场景/NPC/关系/事件/消息） */
+    /**
+     * 删世界（级联删场景/NPC/关系/事件/消息）
+     *
+     * @param id 世界ID
+     */
     void deleteWorld(Long id);
 
     /* ---------------- 场景 ---------------- */
 
-    /** 世界场景列表 */
+    /**
+     * 世界场景列表
+     *
+     * @param worldId 世界ID
+     * @return 场景列表
+     */
     List<SysAiWorldScene> listScenes(Long worldId);
 
-    /** 新建场景 */
+    /**
+     * 新建场景
+     *
+     * @param worldId 世界ID
+     * @param body    场景内容（名称/描述/排序）
+     * @return 新建的场景
+     */
     SysAiWorldScene createScene(Long worldId, Map<String, Object> body);
 
-    /** 更新场景（名称/描述/排序） */
+    /**
+     * 更新场景（名称/描述/排序）
+     *
+     * @param id   场景ID
+     * @param body 更新内容
+     * @return 更新后的场景
+     */
     SysAiWorldScene updateScene(Long id, Map<String, Object> body);
 
-    /** 删场景（该场景下的世界NPC scene_id 置空） */
+    /**
+     * 删场景（该场景下的世界NPC scene_id 置空）
+     *
+     * @param id 场景ID
+     */
     void deleteScene(Long id);
 
     /* ---------------- 世界 NPC ---------------- */
 
-    /** 世界 NPC 列表（合并角色：名字/头像/系统提示词/模型） */
+    /**
+     * 世界 NPC 列表（合并角色：名字/头像/系统提示词/模型）
+     *
+     * @param worldId 世界ID
+     * @return NPC 列表
+     */
     List<Map<String, Object>> listNpcs(Long worldId);
 
-    /** 添加角色为世界 NPC（body: roleId/sceneId/nickname/avatar/modelOverride/temperature/persona/isActive） */
+    /**
+     * 添加角色为世界 NPC（body: roleId/sceneId/nickname/avatar/modelOverride/temperature/persona/isActive）
+     *
+     * @param worldId 世界ID
+     * @param body    新增内容
+     * @return 新增的世界 NPC
+     */
     SysAiWorldNpc addNpc(Long worldId, Map<String, Object> body);
 
-    /** 更新世界 NPC（换场景 / 昵称 / 模型 / 温度 / 人设 / 是否参与推进） */
+    /**
+     * 更新世界 NPC（换场景 / 昵称 / 模型 / 温度 / 人设 / 是否参与推进）
+     *
+     * @param id   NPC ID
+     * @param body 更新内容
+     * @return 更新后的世界 NPC
+     */
     SysAiWorldNpc updateNpc(Long id, Map<String, Object> body);
 
-    /** 移除世界 NPC（级联删相关关系） */
+    /**
+     * 移除世界 NPC（级联删相关关系）
+     *
+     * @param id NPC ID
+     */
     void removeNpc(Long id);
 
     /**
@@ -79,53 +149,138 @@ public interface WorldSimService {
 
     /* ---------------- 关系 ---------------- */
 
-    /** 世界关系网（合并双方名字/头像） */
+    /**
+     * 世界关系网（合并双方名字/头像）
+     *
+     * @param worldId 世界ID
+     * @return 关系列表
+     */
     List<Map<String, Object>> listRelationships(Long worldId);
 
-    /** 更新关系（好感度/标签/备注） */
+    /**
+     * 更新关系（好感度/标签/备注）
+     *
+     * @param id   关系ID
+     * @param body 更新内容
+     * @return 更新后的关系
+     */
     SysAiWorldRelationship updateRelationship(Long id, Map<String, Object> body);
 
-    /** 好感度增减（越界钳制 [-100,100]，无记录则补建），返回最新值 */
+    /**
+     * 好感度增减（越界钳制 [-100,100]，无记录则补建），返回最新值
+     *
+     * @param worldId   世界ID
+     * @param fromNpcId 发起NPC ID
+     * @param toNpcId   目标NPC ID
+     * @param delta     增减量
+     * @return 最新好感度
+     */
     int applyAffinity(Long worldId, Long fromNpcId, Long toNpcId, int delta);
 
     /* ---------------- 事件时间线 ---------------- */
 
-    /** 事件时间线（按时间倒序，可限定场景与条数） */
+    /**
+     * 事件时间线（按时间倒序，可限定场景与条数）
+     *
+     * @param worldId 世界ID
+     * @param sceneId 场景ID（可空）
+     * @param limit   条数上限（可空）
+     * @return 事件列表
+     */
     List<SysAiWorldEvent> listEvents(Long worldId, Long sceneId, Integer limit);
 
-    /** 追加一条事件（advance/chat/system） */
+    /**
+     * 追加一条事件（advance/chat/system）
+     *
+     * @param worldId   世界ID
+     * @param sceneId   场景ID
+     * @param eventType 事件类型
+     * @param roleIds   相关角色ID（可空）
+     * @param title     事件标题
+     * @param content   事件内容
+     * @return 追加的事件
+     */
     SysAiWorldEvent appendEvent(Long worldId, Long sceneId, String eventType,
                                 String roleIds, String title, String content);
 
     /* ---------------- 场景对话 ---------------- */
 
-    /** 场景对话历史（按时间正序） */
+    /**
+     * 场景对话历史（按时间正序）
+     *
+     * @param worldId 世界ID
+     * @param sceneId 场景ID
+     * @return 消息列表
+     */
     List<SysAiWorldMessage> listMessages(Long worldId, Long sceneId);
 
-    /** 落库一条场景消息 */
+    /**
+     * 落库一条场景消息
+     *
+     * @param message 场景消息
+     * @return 落库后的消息
+     */
     SysAiWorldMessage saveMessage(SysAiWorldMessage message);
 
-    /** 使世界视图/列表缓存失效（对话、推进等 Service 外写操作后调用） */
+    /**
+     * 使世界视图/列表缓存失效（对话、推进等 Service 外写操作后调用）
+     *
+     * @param worldId 世界ID
+     */
     void evictWorldCaches(Long worldId);
 
     /* ---------------- 剧本模拟（幕次） ---------------- */
 
-    /** 幕次列表（状态 / 阶段 / 完成度 / 剧本落盘标记） */
+    /**
+     * 幕次列表（状态 / 阶段 / 完成度 / 剧本落盘标记）
+     *
+     * @param worldId 世界ID
+     * @return 幕次列表
+     */
     List<Map<String, Object>> listActs(Long worldId);
 
-    /** 创建幕次（writing，落盘空剧本文件） */
+    /**
+     * 创建幕次（writing，落盘空剧本文件）
+     *
+     * @param worldId 世界ID
+     * @return 创建的幕次
+     */
     SysAiWorldAct createAct(Long worldId);
 
-    /** 幕次详情（元数据 + 剧本 + 素材完成度） */
+    /**
+     * 幕次详情（元数据 + 剧本 + 素材完成度）
+     *
+     * @param worldId 世界ID
+     * @param actNo   幕次号
+     * @return 幕次详情
+     */
     Map<String, Object> actDetail(Long worldId, Integer actNo);
 
-    /** 推进幕次：writing -> props_ok -> playing -> replay，一步一调 */
+    /**
+     * 推进幕次：writing -> props_ok -> playing -> replay，一步一调
+     *
+     * @param worldId 世界ID
+     * @param actNo   幕次号
+     * @return 推进结果
+     */
     Map<String, Object> advanceAct(Long worldId, Integer actNo);
 
-    /** 重播已演完的幕次（回滚到 playing） */
+    /**
+     * 重播已演完的幕次（回滚到 playing）
+     *
+     * @param worldId 世界ID
+     * @param actNo   幕次号
+     * @return 重播结果
+     */
     Map<String, Object> replayAct(Long worldId, Integer actNo);
 
-    /** 结文：replay -> finished */
+    /**
+     * 结文：replay -> finished
+     *
+     * @param worldId 世界ID
+     * @param actNo   幕次号
+     * @return 结文后的幕次
+     */
     SysAiWorldAct finishAct(Long worldId, Integer actNo);
 
     /**
@@ -140,6 +295,10 @@ public interface WorldSimService {
      */
     List<Map<String, Object>> listStories(Long worldId, Integer actNo);
 
-    /** 使幕次维度的世界视图/列表缓存失效 */
+    /**
+     * 使幕次维度的世界视图/列表缓存失效
+     *
+     * @param worldId 世界ID
+     */
     void evictActCaches(Long worldId);
 }
