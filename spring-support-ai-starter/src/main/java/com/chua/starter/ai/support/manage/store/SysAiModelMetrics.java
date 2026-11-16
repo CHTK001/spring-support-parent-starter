@@ -10,6 +10,7 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 全量模型指标库（数据源：Artificial Analysis）。
@@ -312,6 +313,12 @@ public class SysAiModelMetrics implements Serializable {
      */
     @TableField(value = "sys_ai_model_metrics_manual_locked", typeHandler = JacksonTypeHandler.class)
     private List<String> manualLocked; // 锁定字段
+
+    /**
+     * 峰谷 / 按 N 次定价规则（官方价格页核对；JSON 数组）
+     */
+    @TableField(value = "sys_ai_model_metrics_pricing_rules", typeHandler = JacksonTypeHandler.class)
+    private List<Map<String, Object>> pricingRules;
 
     /**
      * 手动修改时间（毫秒）

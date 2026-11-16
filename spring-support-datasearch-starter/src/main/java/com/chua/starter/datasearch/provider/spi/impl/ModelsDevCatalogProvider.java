@@ -3,6 +3,7 @@ package com.chua.starter.datasearch.provider.spi.impl;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
 import com.chua.starter.datasearch.provider.spi.ProviderModelCatalogProvider;
+import com.chua.starter.datasearch.provider.support.ProviderPricings;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,7 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
             });
         }
         catalog.setModels(models);
+        catalog.setPricingRules(ProviderPricings.of(platform, baseUrl));
         return catalog;
     }
 

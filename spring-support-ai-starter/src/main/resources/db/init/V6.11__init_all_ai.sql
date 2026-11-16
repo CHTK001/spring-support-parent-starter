@@ -1378,6 +1378,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model_metrics` (
     `sys_ai_model_metrics_support_image_input`   TINYINT(1)    NULL COMMENT '是否支持视觉输入',
     `sys_ai_model_metrics_support_function_call` TINYINT(1)    NULL COMMENT '是否支持函数调用',
     `sys_ai_model_metrics_manual_locked`         TEXT          NULL COMMENT '手动锁定字段名 JSON 数组',
+    `sys_ai_model_metrics_pricing_rules`         TEXT          NULL COMMENT '峰谷 / 按 N 次定价规则 JSON',
     `sys_ai_model_metrics_manual_updated_at`     BIGINT        NULL COMMENT '手动更新时间（毫秒）',
     `sys_ai_model_metrics_manual_updated_by`     VARCHAR(64)   NULL COMMENT '手动更新人',
     `sys_ai_model_metrics_source`                VARCHAR(40)   NULL COMMENT '数据源 artificialanalysis',

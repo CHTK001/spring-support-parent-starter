@@ -41,4 +41,9 @@ public class ProviderModelCatalog implements Serializable {
      * 模型清单
      */
     private List<ProviderModelInfo> models = new ArrayList<>();
+
+    /**
+     * 峰谷 / 按 N 次定价规则（官方价格页核对；可空）
+     */
+    private List<ProviderPricingRule> pricingRules = new ArrayList<>();
 }

@@ -727,6 +727,19 @@
       "verified": false
     },
     {
+      "id": "cline-pass",
+      "name": "ClinePass",
+      "aliases": [
+        "cline",
+        "cline-pass"
+      ],
+      "hosts": [
+        "api.cline.bot"
+      ],
+      "doc": "https://docs.cline.bot/getting-started/clinepass",
+      "verified": false
+    },
+    {
       "id": "cloudferro-sherlock",
       "name": "CloudFerro Sherlock",
       "aliases": [
@@ -2311,6 +2324,17 @@
       "verified": false
     },
     {
+      "id": "duckduckgo",
+      "name": "DuckDuckGo",
+      "aliases": [
+        "duckduckgo"
+      ],
+      "hosts": [],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
       "id": "bai",
       "name": "b.ai",
       "aliases": [
@@ -2449,19 +2473,6 @@
       ],
       "hosts": [
         "discovery-api.intern-ai.org.cn"
-      ],
-      "doc": null,
-      "verified": false,
-      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
-    },
-    {
-      "id": "cline",
-      "name": "ClinePass",
-      "aliases": [
-        "cline"
-      ],
-      "hosts": [
-        "api.cline.bot"
       ],
       "doc": null,
       "verified": false,

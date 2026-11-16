@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-11-16",
+  "source": "官方价格页逐项核对；只收录能明确表达峰谷 / 按 N 次计价的价格，标准目录价仍由 models.dev 快照提供",
+  "entries": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "aliases": ["deepseek"],
+      "hosts": ["api.deepseek.com"],
+      "doc": "https://api-docs.deepseek.com/quick_start/pricing",
+      "verified": true,
+      "rules": [
+        {
+          "model_pattern": "deepseek-flash",
+          "item": "input_cache_hit",
+          "unit": "token",
+          "quantity": 1000000,
+          "peak_price": 0.006,
+          "off_peak_price": 0.003,
+          "currency": "USD",
+          "peak_windows": [
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 60, "end_minute": 240},
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 360, "end_minute": 600}
+          ],
+          "off_peak_policy": "其余时段，含周末与中国法定节假日全天",
+          "note": "官方口径：闲时为高峰价的一半；高峰为 UTC 周一至周五 01:00-04:00、06:00-10:00",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "deepseek-flash",
+          "item": "input_cache_miss",
+          "unit": "token",
+          "quantity": 1000000,
+          "peak_price": 0.3,
+          "off_peak_price": 0.15,
+          "currency": "USD",
+          "peak_windows": [
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 60, "end_minute": 240},
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 360, "end_minute": 600}
+          ],
+          "off_peak_policy": "其余时段，含周末与中国法定节假日全天",
+          "note": "官方口径：闲时为高峰价的一半；高峰为 UTC 周一至周五 01:00-04:00、06:00-10:00",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "deepseek-flash",
+          "item": "output",
+          "unit": "token",
+          "quantity": 1000000,
+          "peak_price": 1.2,
+          "off_peak_price": 0.6,
+          "currency": "USD",
+          "peak_windows": [
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 60, "end_minute": 240},
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 360, "end_minute": 600}
+          ],
+          "off_peak_policy": "其余时段，含周末与中国法定节假日全天",
+          "note": "官方口径：闲时为高峰价的一半；高峰为 UTC 周一至周五 01:00-04:00、06:00-10:00",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "deepseek-v4-pro",
+          "item": "input_cache_hit",
+          "unit": "token",
+          "quantity": 1000000,
+          "peak_price": 0.044,
+          "off_peak_price": 0.022,
+          "currency": "USD",
+          "peak_windows": [
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 60, "end_minute": 240},
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 360, "end_minute": 600}
+          ],
+          "off_peak_policy": "其余时段，含周末与中国法定节假日全天",
+          "note": "官方口径：闲时为高峰价的一半；高峰为 UTC 周一至周五 01:00-04:00、06:00-10:00",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "deepseek-v4-pro",
+          "item": "input_cache_miss",
+          "unit": "token",
+          "quantity": 1000000,
+          "peak_price": 1.32,
+          "off_peak_price": 0.66,
+          "currency": "USD",
+          "peak_windows": [
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 60, "end_minute": 240},
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 360, "end_minute": 600}
+          ],
+          "off_peak_policy": "其余时段，含周末与中国法定节假日全天",
+          "note": "官方口径：闲时为高峰价的一半；高峰为 UTC 周一至周五 01:00-04:00、06:00-10:00",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "deepseek-v4-pro",
+          "item": "output",
+          "unit": "token",
+          "quantity": 1000000,
+          "peak_price": 3.96,
+          "off_peak_price": 1.98,
+          "currency": "USD",
+          "peak_windows": [
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 60, "end_minute": 240},
+            {"timezone": "UTC", "weekdays": [1, 2, 3, 4, 5], "start_minute": 360, "end_minute": 600}
+          ],
+          "off_peak_policy": "其余时段，含周末与中国法定节假日全天",
+          "note": "官方口径：闲时为高峰价的一半；高峰为 UTC 周一至周五 01:00-04:00、06:00-10:00",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "*",
+          "item": "search",
+          "unit": "search",
+          "quantity": 1000,
+          "standard_price": 0.75,
+          "currency": "USD",
+          "note": "搜索（文本 / 图片）按次计费，$0.75 / 1000 次；直接调用与模型工具调用同价",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "*",
+          "item": "fetch",
+          "unit": "fetch",
+          "quantity": 1000,
+          "standard_price": 0.75,
+          "currency": "USD",
+          "note": "网页抓取按次计费，$0.75 / 1000 次",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "*",
+          "item": "file_parse",
+          "unit": "page",
+          "quantity": 1000,
+          "standard_price": 0.225,
+          "currency": "USD",
+          "note": "文件解析 / OCR 按页计费，$0.225 / 1000 页",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "*",
+          "item": "tts",
+          "unit": "character",
+          "quantity": 10000,
+          "standard_price": 0.225,
+          "currency": "USD",
+          "note": "限时 5 折价 $0.225 / 万字符（目录价 $0.45 / 万字符）",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        },
+        {
+          "model_pattern": "*",
+          "item": "asr",
+          "unit": "hour",
+          "quantity": 1,
+          "standard_price": 0.058,
+          "currency": "USD",
+          "note": "限时 5 折价 $0.058 / 音频小时（目录价 $0.116 / 小时）",
+          "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
+        }
+      ]
+    }
+  ]
+}

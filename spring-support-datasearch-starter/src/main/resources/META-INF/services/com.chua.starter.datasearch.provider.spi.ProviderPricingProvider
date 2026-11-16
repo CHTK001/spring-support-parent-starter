@@ -1,0 +1,2 @@
+# 定价规则实现：新增一种来源（官方价格页 / 渠道账单 / 自建登记表）加一行
+com.chua.starter.datasearch.provider.spi.impl.RegistryProviderPricingProvider

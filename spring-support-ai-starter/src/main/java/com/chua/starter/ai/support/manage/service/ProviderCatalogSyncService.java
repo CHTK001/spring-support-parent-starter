@@ -6,7 +6,10 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
+import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
+import com.chua.starter.datasearch.provider.model.PriceWindow;
 import com.chua.starter.datasearch.provider.support.ProviderModelCatalogs;
+import com.chua.starter.datasearch.provider.support.ProviderPricings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,7 +85,7 @@ public class ProviderCatalogSyncService {
 
         List<Map<String, Object>> rows = new ArrayList<>(catalog.getModels().size());
         for (ProviderModelInfo model : catalog.getModels()) {
-            Map<String, Object> metrics = metricsOf(model);
+            Map<String, Object> metrics = metricsOf(model, catalog.getPricingRules());
             if (metrics.isEmpty()) {
                 continue;
             }
@@ -98,10 +101,12 @@ public class ProviderCatalogSyncService {
         pricingOut.put("inserted", pricing.getInserted());
         pricingOut.put("provider_models", pricing.getProviderModels());
         pricingOut.put("source", SOURCE);
+        pricingOut.put("rules_count", catalog.getPricingRules() == null ? 0 : catalog.getPricingRules().size());
         out.put("pricing", pricingOut);
 
         out.put("descriptions", syncDescriptions(provider.getProviderId(), catalog));
         out.put("capabilities", capabilityCounts(catalog));
+        out.put("pricing_rules", catalog.getPricingRules() == null ? 0 : catalog.getPricingRules().size());
         // 目录不提供流式 / 异步标记：显式回 null，前端显示「未收录」
         out.put("streaming", null);
         out.put("async", null);
@@ -215,9 +220,10 @@ public class ProviderCatalogSyncService {
      * 单条目录模型 → 指标键（与模型指标配置表、模型行回填链路同一套键名）。
      *
      * @param model 目录模型
+     * @param rules 厂商定价规则（峰谷 / 按 N 次）
      * @return 指标
      */
-    private Map<String, Object> metricsOf(ProviderModelInfo model) {
+    private Map<String, Object> metricsOf(ProviderModelInfo model, List<ProviderPricingRule> rules) {
         Map<String, Object> metrics = new LinkedHashMap<>(24);
         put(metrics, "price_input_per_musd", model.getPriceInputPerMusd());
         put(metrics, "price_output_per_musd", model.getPriceOutputPerMusd());
@@ -244,7 +250,51 @@ public class ProviderCatalogSyncService {
         if (model.getOutputModalities() != null) {
             metrics.put("output_modalities", model.getOutputModalities());
         }
+        List<ProviderPricingRule> hits = ProviderPricings.forModel(rules, model.getId());
+        if (!hits.isEmpty()) {
+            List<Map<String, Object>> ruleMaps = new ArrayList<>(hits.size());
+            for (ProviderPricingRule rule : hits) {
+                ruleMaps.add(pricingRuleMap(rule));
+            }
+            metrics.put("pricing_rules", ruleMaps);
+        }
         return metrics;
+    }
+
+    /**
+     * 定价规则 → 下划线键 Map（落 metrics JSON 与 TEXT 列，前端直接读）。
+     *
+     * @param rule 规则
+     * @return Map
+     */
+    private static Map<String, Object> pricingRuleMap(ProviderPricingRule rule) {
+        Map<String, Object> map = new LinkedHashMap<>(16);
+        put(map, "provider_id", rule.getProviderId());
+        put(map, "model_pattern", rule.getModelPattern());
+        put(map, "item", rule.getItem());
+        put(map, "unit", rule.getUnit());
+        put(map, "quantity", rule.getQuantity());
+        put(map, "peak_price", rule.getPeakPrice());
+        put(map, "off_peak_price", rule.getOffPeakPrice());
+        put(map, "standard_price", rule.getStandardPrice());
+        put(map, "currency", rule.getCurrency());
+        put(map, "off_peak_policy", rule.getOffPeakPolicy());
+        put(map, "note", rule.getNote());
+        put(map, "source_url", rule.getSourceUrl());
+        put(map, "verified", rule.getVerified());
+        if (rule.getPeakWindows() != null && !rule.getPeakWindows().isEmpty()) {
+            List<Map<String, Object>> windows = new ArrayList<>(rule.getPeakWindows().size());
+            for (PriceWindow window : rule.getPeakWindows()) {
+                Map<String, Object> row = new LinkedHashMap<>(4);
+                put(row, "timezone", window.getTimezone());
+                put(row, "weekdays", window.getWeekdays());
+                put(row, "start_minute", window.getStartMinute());
+                put(row, "end_minute", window.getEndMinute());
+                windows.add(row);
+            }
+            map.put("peak_windows", windows);
+        }
+        return map;
     }
 
     /**

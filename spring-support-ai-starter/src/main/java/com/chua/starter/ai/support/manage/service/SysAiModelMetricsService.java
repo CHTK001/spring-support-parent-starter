@@ -385,7 +385,7 @@ public class SysAiModelMetricsService {
             "pdf_input", "attachment", "temperature", "function_calling",
             "json_mode", "structured_output", "open_weights", "intelligence_index",
             "model_name", "model_family", "knowledge_cutoff", "release_date", "last_updated",
-            "reasoning_efforts", "reasoning_option_types"
+            "reasoning_efforts", "reasoning_option_types", "pricing_rules"
     };
 
     /**
@@ -655,6 +655,16 @@ public class SysAiModelMetricsService {
                     continue;
                 }
                 uw.set(priceColumn(priceKey), value);
+                changed = true;
+            }
+            List<Map<String, Object>> rules = rulesOf(snapshot.get("pricing_rules"));
+            if (rules != null && !locked.contains("pricing_rules")
+                    && !rules.equals(cur.getPricingRules())) {
+                // JSON 字段不能用 Wrapper.set（不走 TypeHandler），单独走 updateById
+                SysAiModelMetrics rulesUpdate = new SysAiModelMetrics();
+                rulesUpdate.setId(cur.getId());
+                rulesUpdate.setPricingRules(rules);
+                metricsMapper.updateById(rulesUpdate);
                 changed = true;
             }
             if (!changed) {
@@ -1198,6 +1208,27 @@ public class SysAiModelMetricsService {
         e.setLatencyFirstTokenSeconds(bd(m, "latency_first_token_seconds"));
         e.setElo(bd(m, "elo"));
         e.setCostPerTask(bd(m, "cost_per_task"));
+        e.setPricingRules(rulesOf(m.get("pricing_rules")));
+    }
+
+    /**
+     * 把定价规则 JSON 转成可落 TEXT 列的 Map 列表。
+     *
+     * @param value 原始值
+     * @return 规则列表；非数组或为空时返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> rulesOf(Object value) {
+        if (!(value instanceof List<?> list) || list.isEmpty()) {
+            return null;
+        }
+        List<Map<String, Object>> rules = new ArrayList<>(list.size());
+        for (Object item : list) {
+            if (item instanceof Map<?, ?> map) {
+                rules.add((Map<String, Object>) map);
+            }
+        }
+        return rules.isEmpty() ? null : rules;
     }
 
     /**
