@@ -1012,8 +1012,10 @@ public class ModelClientResolver {
                 } else {
                     target.putAll(part);
                 }
-            } catch (Exception e) {
-                log.warn("[ModelClientResolver] 渠道路由源 {} 叠加失败: {}", source.name(), e.getMessage());
+            } catch (Exception | LinkageError e) {
+                // LinkageError：可选模块（账号模块的 KeylessChatChannel 契约）在部署里版本不一致时
+                // 类加载会失败。免费渠道不能因此整张 500 —— 少一个源，其余渠道照常路由。
+                log.warn("[ModelClientResolver] 渠道路由源 {} 叠加失败: {}", source.name(), e.toString());
             }
         }
     }
