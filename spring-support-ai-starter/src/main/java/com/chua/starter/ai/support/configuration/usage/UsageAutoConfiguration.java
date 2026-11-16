@@ -43,10 +43,16 @@ public class UsageAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(SysAiUsageService.class)
     /**
-     * sysaiusage服务
-     * @param usageMapper usage映射器
-     * @param dailyMapper daily映射器
-     * @param pricingService pricing服务
+     * 注册用量服务 Bean。
+     *
+     * @param usageMapper        用量明细映射器
+     * @param modelAliasService  模型别名服务
+     * @param dailyMapper        用量日汇总映射器
+     * @param usageLiveStreamHub 实时推送中枢
+     * @param pricingService     计费服务
+     * @param modelMetricsService 模型指标服务
+     * @param iptablesService    iptables 服务
+     * @return 用量服务实现
      */
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
                                                ModelAliasService modelAliasService,
@@ -72,11 +78,13 @@ public class UsageAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(SysAiPricingService.class)
     /**
-     * sysaipricing服务
-     * @param pricingMapper     定价 映射器
-     * @param metricsEnrichment AA 模型指标服务（含定价缓存）
-     * @param modelMetricsService 全量指标库服务
+     * 注册计费服务 Bean。
+     *
+     * @param pricingMapper         定价映射器
+     * @param metricsEnrichment     AA 模型指标服务（含定价缓存）
+     * @param modelMetricsService   全量指标库服务
      * @param providerMetricService 供应商指标系数服务
+     * @return 计费服务实现
      */
     public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper,
                                                    AiModelMetricsEnrichmentService metricsEnrichment,
@@ -96,10 +104,11 @@ public class UsageAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(UsageRecorderInterceptor.class)
     /**
-     * usagerecorder拦截器
+     * 注册用量拦截器 Bean。
      *
-     * @param usageService usage服务
-     * @return usagerecorder拦截器的结果
+     * @param usageService  用量服务
+     * @param settingReader 全局设置读取器
+     * @return 用量记录拦截器
      */
     public UsageRecorderInterceptor usageRecorderInterceptor(SysAiUsageService usageService,
                                                                GlobalSettingReader settingReader) {
@@ -115,13 +124,15 @@ public class UsageAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(UsageAggregationTask.class)
     /**
-     * usageaggregation任务
-     * @param usageMapper usage映射器
-     * @param dailyMapper daily映射器
-     * @param settingReader setting读取
-     * @param pricingService pricing服务
-     * @param syncLogMapper 用量同步日志 映射器
-     * @param modelMetricsService 模型指标库服务（回填本地平均输出速度）
+     * 注册用量聚合任务 Bean。
+     *
+     * @param usageMapper          用量明细映射器
+     * @param dailyMapper          用量日汇总映射器
+     * @param settingReader        全局设置读取器
+     * @param pricingService       计费服务
+     * @param syncLogMapper        用量同步日志映射器
+     * @param modelMetricsService  模型指标库服务（回填本地平均输出速度）
+     * @return 用量聚合任务
      */
     public UsageAggregationTask usageAggregationTask(SysAiUsageMapper usageMapper,
                                                      SysAiUsageDailyMapper dailyMapper,

@@ -165,6 +165,13 @@ public class AIChatController extends BaseAiController {
      * <p>
      * 将用户消息保存到会话记录，调用 AI 门面服务进行流式推理，
      * 并将 AI 回复也保存到消息记录。
+     *
+     * @param dialogId       会话 ID
+     * @param model          指定模型（可空，为空时落到默认聚合模型）
+     * @param messages       本轮消息列表（可空）
+     * @param files          附件文件列表（可空）
+     * @param servletRequest 当前 HTTP 请求
+     * @return SSE 事件发射器（流式回复）
      */
     @Operation(summary = "AI 聊天", description = "向指定会话发送消息并获取 AI 流式回复（SSE）")
     @Permission("admin")
@@ -543,6 +550,12 @@ public class AIChatController extends BaseAiController {
                 getBooleanSetting("validate", VALIDATE_DEFAULT));
     }
 
+    /**
+     * 取第一个非空白字符串。
+     *
+     * @param values 候选值列表
+     * @return 第一个非空白值；全部为空时返回 null
+     */
     private static String firstNonBlank(String... values) {
         if (values == null) return null;
         for (String value : values) {
@@ -574,12 +587,26 @@ public class AIChatController extends BaseAiController {
         return StringUtils.isNotBlank(value) ? value : defaultValue;
     }
 
+    /**
+     * 从全局设置读取布尔配置，未配置时返回默认值；非 false/0 视为真。
+     *
+     * @param field        配置字段名（runtime 分组）
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     private boolean getBooleanSetting(String field, boolean defaultValue) {
         String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
         if (value == null) return defaultValue;
         return !"false".equalsIgnoreCase(value) && !"0".equalsIgnoreCase(value);
     }
 
+    /**
+     * 从全局设置读取整数配置，未配置或解析失败时返回默认值。
+     *
+     * @param field        配置字段名（runtime 分组）
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
     private int getIntegerSetting(String field, int defaultValue) {
         String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
         if (value == null || value.trim().isEmpty()) return defaultValue;

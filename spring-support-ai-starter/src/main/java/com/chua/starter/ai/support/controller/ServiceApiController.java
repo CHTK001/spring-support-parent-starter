@@ -72,7 +72,8 @@ public class ServiceApiController {
     /**
      * 列出全部对外服务实例及其运行状态。
      *
-     * @return 服务实例列表响应
+     * @param hours 统计窗口小时数（1-720，默认 24，越界自动收敛）
+     * @return 服务实例列表响应（instances + statsWindowHours）
      */
     @GetMapping("/v2/service/instances")
     public Map<String, Object> listInstances(
@@ -127,11 +128,12 @@ public class ServiceApiController {
     }
 
     /**
-     * 读取「近 {@link #STATS_WINDOW_HOURS} 小时」的实例聚合。
+     * 读取「近 windowHours 小时」的实例聚合。
      *
      * <p>统计失败不能把实例列表打挂：日志表结构异常时返回空表，页面退化成
      * 「只有端口和状态」而不是整块空白。</p>
      *
+     * @param windowHours 统计窗口小时数
      * @return instanceId → 聚合行
      */
     private Map<String, SysAiServiceAccessLogMapper.InstanceStatRow> loadInstanceStats(int windowHours) {
@@ -293,8 +295,10 @@ public class ServiceApiController {
      * 查询服务访问日志。
      *
      * @param instanceId 服务实例标识，为空时不限定实例
-     * @param limit 返回记录数上限
-     * @return 访问日志列表响应
+     * @param limit      返回记录数上限
+     * @param hours      统计窗口小时数（1-720，默认 24）
+     * @param onlyFailed 是否只看失败（status &gt;= 400）
+     * @return 访问日志列表响应（logs + windowHours）
      */
     @GetMapping("/v2/service/logs")
     public Map<String, Object> listLogs(@RequestParam(required = false) String instanceId,
@@ -327,6 +331,7 @@ public class ServiceApiController {
      *
      * @param source out=标准输出（默认），err=标准错误
      * @param lines  返回的最大行数
+     * @return 运行日志结果（path/exists/lastModified/truncated/lines）
      */
     @GetMapping("/v2/service/runtime-logs")
     public Map<String, Object> runtimeLogs(@RequestParam(defaultValue = "out") String source,

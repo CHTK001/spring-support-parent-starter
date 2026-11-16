@@ -323,7 +323,22 @@ public class ServiceInstanceManager {
         }
     }
 
-    /** writeOpenAiStream 方法 */
+    /**
+     * 把一段模型输出写为 OpenAI 流式分片：先 reasoning_content、再 content，
+     * 收尾时发 finish 帧（工具调用时为 tool_calls），
+     * 并按请求的 stream_options.include_usage 决定是否附 usage 帧。
+     *
+     * @param st        流式状态，不能为 null
+     * @param id        分片所属响应标识
+     * @param created   创建时间戳（秒）
+     * @param model     实际生效的模型名
+     * @param text      正文增量文本，可为 null 或空
+     * @param reasoning 思考增量文本，可为 null 或空
+     * @param finish    是否为收尾帧
+     * @param usage     本次调用用量，收尾且需要时报
+     * @param reqBody   原始请求体（读 stream_options）
+     * @throws IOException 回写 SSE 分片失败时抛出
+     */
     private void writeOpenAiStream(StreamState st, String id, long created, String model,
                                    String text, String reasoning, boolean finish, AiUsage usage,
                                    Map<String, Object> reqBody) throws IOException {
@@ -361,6 +376,13 @@ public class ServiceInstanceManager {
     /**
      * 把底层流式 tool_calls 增量翻译为 OpenAI delta.tool_calls：首帧带 id/type/function.name，
      * 后续帧 function.arguments 片段；并标记本轮 finish_reason=tool_calls。
+     *
+     * @param st        流式状态，不能为 null
+     * @param id        分片所属响应标识
+     * @param created   创建时间戳（秒）
+     * @param model     实际生效的模型名
+     * @param toolCalls 待翻译的工具调用列表
+     * @throws IOException 回写 SSE 分片失败时抛出
      */
     private void writeOpenAiToolCalls(StreamState st, String id, long created, String model,
                                       List<ChatToolCallData> toolCalls) throws IOException {
@@ -947,6 +969,19 @@ public class ServiceInstanceManager {
         }
     }
 
+    /**
+     * 把一段模型输出写为 Anthropic 流式分片：动态块 thinking → text → tool_use，
+     * 块下标按开启顺序分配，收尾时调用 {@link #finishCcStream(StreamState, AiUsage)}。
+     *
+     * @param st        流式状态，不能为 null
+     * @param id        本次响应标识
+     * @param model     实际生效的模型名
+     * @param text      正文增量文本，可为 null 或空
+     * @param reasoning 思考增量文本，可为 null 或空
+     * @param finish    是否为收尾帧
+     * @param usage     本次调用用量，收尾时使用
+     * @throws IOException 回写 SSE 事件失败时抛出
+     */
     private void writeCcStream(StreamState st, String id, String model, String text, String reasoning,
                                boolean finish, AiUsage usage) throws IOException {
         // 动态块：thinking → text → tool_use，块下标按开启顺序分配
@@ -1310,7 +1345,16 @@ public class ServiceInstanceManager {
 
     // ==================== 统一 Facade 调用与帧编排 ====================
 
-    /** buildRequest 方法 */
+    /**
+     * 按 OpenAI / Gemini 请求体构造内部聊天请求：透传 temperature/max_tokens/top_p 与
+     * Gemini generationConfig 兼容字段，prompt 取最后一条用户消息兜底，并翻译 tools/tool_choice。
+     *
+     * @param inst     服务实例（取用户身份）
+     * @param body     OpenAI / Gemini 请求体，不能为 null
+     * @param messages 归一化后的消息列表
+     * @param model    请求的模型名
+     * @return 构造完成的内部聊天请求（始终 stream=true）
+     */
     private AiChatRequest buildRequest(SysAiServiceInstance inst, Map<String, Object> body,
                                        List<Map<String, Object>> messages, String model) {
         AiChatRequest request = new AiChatRequest();
@@ -1423,7 +1467,20 @@ public class ServiceInstanceManager {
         }
     }
 
-    /** runFacade 方法 */
+    /**
+     * 以实例所属用户身份运行门面流式调用：按 mode 把增量分片写入对应协议的 SSE 帧
+     * （openai / cc / gemini / openai_nonstream），结束帧与工具调用帧同样按模式分发。
+     *
+     * @param inst     服务实例（提供用户身份与端口上下文）
+     * @param request  内部聊天请求，不能为 null
+     * @param exchange 当前 HTTP 交换对象
+     * @param st       流式状态，不能为 null
+     * @param mode     调用模式（openai / cc / gemini / openai_nonstream）
+     * @param id       响应标识
+     * @param effModel 实际生效的模型名
+     * @param reqBody  原始请求体（供 OpenAI 流透传）
+     * @param caller   调用方身份（鉴权通过后不为 null）
+     */
     private void runFacade(SysAiServiceInstance inst, AiChatRequest request, HttpExchange exchange,
                            StreamState st, String mode, String id, String effModel,
                            Map<String, Object> reqBody, Caller caller) {
@@ -1624,6 +1681,19 @@ public class ServiceInstanceManager {
         return "unknown";
     }
 
+    /**
+     * 落一条访问日志（端点 / 方法 / 模型 / 协议 / 状态 / Token 用量 / 延迟 / 来源 IP），
+     * 并记下凭证归属。失败仅告警，不回写响应。
+     *
+     * @param inst     服务实例（提供实例 ID 与用户 ID）
+     * @param exchange 当前 HTTP 交换对象（取路径 / 方法 / 来源 IP）
+     * @param model    实际生效的模型名
+     * @param protocol 协议标识
+     * @param status   响应状态码
+     * @param usage    本次调用用量，可为 null
+     * @param latency  调用耗时（毫秒）
+     * @param caller   调用方身份，可为 null
+     */
     private void writeAccessLog(SysAiServiceInstance inst, HttpExchange exchange, String model,
                                 String protocol, int status, AiUsage usage, long latency, Caller caller) {
         try {
@@ -1668,11 +1738,23 @@ public class ServiceInstanceManager {
         /** appKey 行（含分组 / 限定模型 / 额度列） */
         private final SysAiAppKey appKeyRow;
 
+        /**
+         * 构造调用方身份。
+         *
+         * @param appKey    appKey 值（唯一凭证）
+         * @param appKeyRow appKey 行（含分组 / 限定模型 / 额度列）
+         */
         private Caller(String appKey, SysAiAppKey appKeyRow) {
             this.appKey = appKey;
             this.appKeyRow = appKeyRow;
         }
 
+        /**
+         * 由 appKey 行构造调用方身份。
+         *
+         * @param row appKey 行，不能为 null
+         * @return 调用方身份
+         */
         static Caller ofAppKey(SysAiAppKey row) {
             return new Caller(row.getAppKey(), row);
         }

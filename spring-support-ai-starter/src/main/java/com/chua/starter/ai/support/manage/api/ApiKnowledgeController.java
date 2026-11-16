@@ -417,6 +417,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(toBaseResponse(base));
     }
 
+    /**
+     * 更新知识库（部分字段：名称/描述/标签/公开/分片参数）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（含待更新字段）
+     * @return 更新后的知识库
+     */
     @PutMapping("/bases/{knowledge_base_id}")
     public ApiResult<Map<String, Object>> updateBase(@PathVariable String knowledge_base_id,
                                                      @RequestBody Map<String, Object> body) {
@@ -454,6 +461,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(toBaseResponse(base));
     }
 
+    /**
+     * 删除知识库（可选真删目录与向量）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param purge             是否连同目录文件一并删除（空或非 false 视为真删）
+     * @return 操作结果
+     */
     @DeleteMapping("/bases/{knowledge_base_id}")
     public ApiResult<Void> deleteBase(@PathVariable String knowledge_base_id,
                                       @RequestParam(required = false) String purge) {
@@ -536,6 +550,13 @@ public class ApiKnowledgeController {
     // AI 生成 / 润色
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * 用 AI 为知识库生成简介（可回写 README.md）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（overwrite_readme / provider_id / model）
+     * @return 生成结果（description / readme_written / base）
+     */
     @PostMapping("/bases/{knowledge_base_id}/autogen")
     public ApiResult<Map<String, Object>> autogenBase(@PathVariable String knowledge_base_id,
                                                       @RequestBody Map<String, Object> body) {
@@ -850,6 +871,13 @@ public class ApiKnowledgeController {
         return failedFiles >= files ? "failed" : "partial";
     }
 
+    /**
+     * 设置知识库来源（URL 抓取配置）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（含 source）
+     * @return 更新后的知识库
+     */
     @PutMapping("/bases/{knowledge_base_id}/source")
     public ApiResult<Map<String, Object>> setSource(@PathVariable String knowledge_base_id,
                                                     @RequestBody Map<String, Object> body) {
@@ -885,6 +913,13 @@ public class ApiKnowledgeController {
     // 文件 / 目录浏览
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * 列举目录下的文件
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param path              相对路径（可空，默认根目录）
+     * @return 文件条目列表
+     */
     @GetMapping("/bases/{knowledge_base_id}/files")
     public ApiResult<List<Map<String, Object>>> listFiles(@PathVariable String knowledge_base_id,
                                                           @RequestParam(required = false) String path) {
@@ -921,6 +956,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(files);
     }
 
+    /**
+     * 列举目录树（含文档索引状态）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param path              相对路径（可空，默认根目录）
+     * @return 目录树条目列表
+     */
     @GetMapping("/bases/{knowledge_base_id}/tree")
     public ApiResult<List<Map<String, Object>>> listTree(@PathVariable String knowledge_base_id,
                                                          @RequestParam(required = false) String path) {
@@ -945,6 +987,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(tree);
     }
 
+    /**
+     * 创建目录
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（含 path）
+     * @return 创建后的目录条目
+     */
     @PostMapping("/bases/{knowledge_base_id}/folder")
     public ApiResult<Map<String, Object>> createFolder(@PathVariable String knowledge_base_id,
                                                        @RequestBody Map<String, Object> body) {
@@ -973,6 +1022,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(treeEntry(knowledge_base_id, root, folder));
     }
 
+    /**
+     * 删除目录（递归删除并回收向量）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param path              相对路径
+     * @return 操作结果
+     */
     @DeleteMapping("/bases/{knowledge_base_id}/folder")
     public ApiResult<Void> deleteFolder(@PathVariable String knowledge_base_id,
                                         @RequestParam String path) {
@@ -1047,6 +1103,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(out);
     }
 
+    /**
+     * 重命名文件或目录（并重建索引）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（含 path / new_name）
+     * @return 重命名后的条目
+     */
     @PostMapping("/bases/{knowledge_base_id}/tree/rename")
     public ApiResult<Map<String, Object>> renameTreeEntry(@PathVariable String knowledge_base_id,
                                                          @RequestBody Map<String, Object> body) {
@@ -1113,6 +1176,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(treeEntry(knowledge_base_id, root, renamed));
     }
 
+    /**
+     * 读取文本文件内容（走文件存储 SPI）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param path              相对路径
+     * @return 文件内容（rel_path / content / size / modified_at）
+     */
     @GetMapping("/bases/{knowledge_base_id}/file")
     public ApiResult<Map<String, Object>> readFile(@PathVariable String knowledge_base_id,
                                                    @RequestParam String path) {
@@ -1165,6 +1235,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * 写入文本文件（过扩展名白名单并重建索引）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（含 path / content）
+     * @return 操作结果
+     */
     @PutMapping("/bases/{knowledge_base_id}/file")
     public ApiResult<Void> writeFile(@PathVariable String knowledge_base_id,
                                      @RequestBody Map<String, Object> body) {
@@ -1309,6 +1386,13 @@ public class ApiKnowledgeController {
         return name.length() > 80 ? name.substring(0, 80) : name;
     }
 
+    /**
+     * 删除文件（并回收向量）
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param path              相对路径
+     * @return 操作结果
+     */
     @DeleteMapping("/bases/{knowledge_base_id}/file")
     public ApiResult<Void> deleteFile(@PathVariable String knowledge_base_id,
                                       @RequestParam String path) {
@@ -1565,6 +1649,10 @@ public class ApiKnowledgeController {
 
     /**
      * 获取绑定（通过路径变量，适用于无斜杠的 标识）。
+     *
+     * @param kind      绑定种类
+     * @param target_id 目标标识
+     * @return 绑定信息
      */
     @GetMapping("/binding/{kind}/{target_id}")
     public ApiResult<Map<String, Object>> getBinding(@PathVariable String kind,
@@ -1574,6 +1662,10 @@ public class ApiKnowledgeController {
 
     /**
      * 获取绑定（通过查询参数，支持 Target_标识 中包含斜杠的路径）。
+     *
+     * @param kind      绑定种类
+     * @param target_id 目标标识
+     * @return 绑定信息
      */
     @GetMapping("/binding")
     public ApiResult<Map<String, Object>> getBindingByQuery(@RequestParam String kind,
@@ -1583,6 +1675,11 @@ public class ApiKnowledgeController {
 
     /**
      * 设置绑定（通过查询参数，支持 Target_标识 中包含斜杠的路径）。
+     *
+     * @param kind      绑定种类
+     * @param target_id 目标标识
+     * @param body      请求体（enabled / writeback / kb_ids 等）
+     * @return 绑定信息
      */
     @PostMapping("/binding")
     public ApiResult<Map<String, Object>> setBindingByQuery(@RequestParam String kind,
@@ -1635,6 +1732,13 @@ public class ApiKnowledgeController {
     // 导入 / 导出
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * 导出知识库为 ZIP 包
+     *
+     * @param knowledge_base_id 知识库 ID
+     * @param body              请求体（含 dest_path）
+     * @return 导出结果（dest_path）
+     */
     @PostMapping("/bases/{knowledge_base_id}/export")
     public ApiResult<Map<String, Object>> exportBase(@PathVariable String knowledge_base_id,
                                                      @RequestBody Map<String, Object> body) {
@@ -1796,6 +1900,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(tag);
     }
 
+    /**
+     * 更新标签（名称/颜色/排序，部分更新）
+     *
+     * @param key  标签 key
+     * @param body 请求体（含 label / color / sortOrder）
+     * @return 操作结果
+     */
     @PutMapping("/tags/{key}")
     public ApiResult<Void> updateTag(@PathVariable String key,
                                      @RequestBody Map<String, Object> body) {

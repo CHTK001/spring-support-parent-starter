@@ -33,6 +33,11 @@ public class ConnectorController {
     private final AiBotBindingService botBindingService;
     private final AiBotChatService aiBotChatService;
 
+    /**
+     * 连接器类型列表（微信 / 飞书 / 钉钉 / QQ / WhatsApp）
+     *
+     * @return 连接器类型列表
+     */
     @GetMapping("/types")
     public ReturnResult<List<Map<String, Object>>> getConnectorTypes() {
         List<Map<String, Object>> types = new ArrayList<>();
@@ -85,6 +90,11 @@ public class ConnectorController {
         return ReturnResult.success(types);
     }
 
+    /**
+     * 已绑定的连接器列表（管理员可见全量，普通用户仅本人归属）
+     *
+     * @return 绑定列表
+     */
     @GetMapping("/bound")
     public ReturnResult<List<Map<String, Object>>> getBoundConnectors() {
         List<SysAiBotBinding> bindings = botBindingService.listAll();
@@ -114,6 +124,12 @@ public class ConnectorController {
         return ReturnResult.success(result);
     }
 
+    /**
+     * 按 ID 获取连接器详情
+     *
+     * @param id 连接器 ID
+     * @return 连接器详情
+     */
     @GetMapping("/{id}")
     public ReturnResult<Map<String, Object>> getConnectorById(@PathVariable Long id) {
         SysAiBotBinding binding = botBindingService.getById(id);
@@ -136,6 +152,12 @@ public class ConnectorController {
         return ReturnResult.success(result);
     }
 
+    /**
+     * 获取连接器的会话列表
+     *
+     * @param id 连接器 ID
+     * @return 会话列表
+     */
     @GetMapping("/{id}/conversations")
     public ReturnResult<List<Map<String, Object>>> getConnectorConversations(@PathVariable Long id) {
         return ReturnResult.success(
@@ -145,7 +167,9 @@ public class ConnectorController {
     /**
      * 获取某会话的消息列表（按时间升序，构成该会话独立上下文）。
      *
+     * @param id     连接器 ID
      * @param chatId 会话标识（联系人/群 openid）
+     * @return 消息列表
      */
     @GetMapping("/{id}/messages")
     public ReturnResult<List<Map<String, Object>>> getConnectorMessages(
@@ -169,6 +193,13 @@ public class ConnectorController {
         return ReturnResult.success(result);
     }
 
+    /**
+     * 清空某会话的消息记录
+     *
+     * @param id     连接器 ID
+     * @param chatId 会话标识
+     * @return 删除的消息条数
+     */
     @DeleteMapping("/{id}/conversations")
     public ReturnResult<Integer> clearConversation(@PathVariable Long id, @RequestParam String chatId) {
         int deleted = aiBotChatService.clearConversation(id, chatId, AiBotCaller.fromLogin());
@@ -198,6 +229,9 @@ public class ConnectorController {
     /**
      * 绑定连接器（凭据型：feishu / qq，使用 App ID + App Secret）。
      * <p>校验并写入绑定后，立即纳入 {@link AiBotChatService} 托管运行。</p>
+     *
+     * @param request 绑定请求体（type / appId / appSecret 等）
+     * @return 新绑定 ID
      */
     @PostMapping("/bind")
     public ReturnResult<Long> bindConnector(@RequestBody Map<String, Object> request) {
@@ -233,6 +267,13 @@ public class ConnectorController {
         return ReturnResult.success(id);
     }
 
+    /**
+     * 手动向会话发送一条消息
+     *
+     * @param id      连接器 ID
+     * @param request 请求体（chatId / content）
+     * @return 提示文本
+     */
     @PostMapping("/{id}/send")
     public ReturnResult<String> sendMessage(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         String chatId = request.get("chatId") == null ? "" : String.valueOf(request.get("chatId")).trim();
@@ -253,6 +294,10 @@ public class ConnectorController {
      * <p>请求体：{@code {"chatId":"会话标识","prompt":"问题","contextCount":10}}
      * （prompt 必填；contextCount 可空，空则用绑定配置的上下文条数）。
      * 返回 AI 回复内容与是否发送成功。</p>
+     *
+     * @param id      连接器 ID
+     * @param request 请求体（chatId / prompt / contextCount）
+     * @return AI 回复内容与发送结果
      */
     @PostMapping("/{id}/ai-send")
     public ReturnResult<Map<String, Object>> aiSend(@PathVariable Long id,
@@ -276,6 +321,10 @@ public class ConnectorController {
 
     /**
      * 编辑已绑定连接器（修改展示名称 / 对话模型）。
+     *
+     * @param id      连接器 ID
+     * @param request 请求体（nickname / model / roleId / mentionOnly / random* / mcpServerIds）
+     * @return 提示文本
      */
     @PutMapping("/{id}")
     public ReturnResult<String> updateConnector(@PathVariable Long id,
@@ -333,6 +382,9 @@ public class ConnectorController {
 
     /**
      * 解绑连接器
+     *
+     * @param id 连接器 ID
+     * @return 提示文本
      */
     @DeleteMapping("/{id}")
     public ReturnResult<String> unbindConnector(@PathVariable Long id) {

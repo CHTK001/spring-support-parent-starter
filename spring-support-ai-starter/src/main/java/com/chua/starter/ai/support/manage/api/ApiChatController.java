@@ -143,12 +143,14 @@ public class ApiChatController {
         }
     }
 
+    /**
+     * 会话列表分页查询
+     *
+     * @param page      页码（默认 1）
+     * @param page_size 每页条数（默认 50）
+     * @return 分页结果（items / total / page / page_size / has_more）
+     */
     @GetMapping
-      /**
-       * 列表。
-       * @param "1" "1"
-       * @return 列表的结果
-       */
     public ApiResult<Map<String, Object>> list(@RequestParam(required = false, defaultValue = "1") int page,
                                                @RequestParam(required = false, defaultValue = "50") int page_size) {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> paging =
@@ -223,6 +225,13 @@ public class ApiChatController {
         return ApiResult.ok();
     }
 
+    /**
+     * 发送消息：保存用户消息并异步流式生成回复
+     *
+     * @param conversationId 会话 ID
+     * @param body           请求体（含 content）
+     * @return 发送结果（msg_id / replayed / completed）
+     */
     @PostMapping("/{conversationId}/messages")
     public ApiResult<Map<String, Object>> sendMessage(@PathVariable String conversationId,
                                                        @RequestBody Map<String, Object> body) {
@@ -340,6 +349,18 @@ public class ApiChatController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * 会话消息分页查询
+     *
+     * @param conversationId 会话 ID
+     * @param page           页码（默认 1）
+     * @param page_size      每页条数（默认 50）
+     * @param order          排序方向（可空）
+     * @param content_mode   内容模式（可空）
+     * @param cursor         游标（可空）
+     * @param day            按天过滤（可空）
+     * @return 分页结果（items / total / page / page_size / has_more）
+     */
     @GetMapping("/{conversationId}/messages")
     public ApiResult<Map<String, Object>> listMessages(@PathVariable String conversationId,
                                                        @RequestParam(required = false, defaultValue = "1") int page,
@@ -360,6 +381,13 @@ public class ApiChatController {
         return ApiResult.ok(pageResult);
     }
 
+    /**
+     * 获取单条消息
+     *
+     * @param conversationId 会话 ID
+     * @param messageId      消息 ID
+     * @return 消息详情
+     */
     @GetMapping("/{conversationId}/messages/{messageId}")
     public ApiResult<Map<String, Object>> getMessage(@PathVariable String conversationId,
                                                     @PathVariable String messageId) {
@@ -477,6 +505,13 @@ public class ApiChatController {
         return ApiResult.ok(true);
     }
 
+    /**
+     * 设置会话召唤配置（伙伴 / 记忆 / 技能排除）
+     *
+     * @param conversationId 会话 ID
+     * @param body           请求体（companion_id / memory_ids / skill_exclusions）
+     * @return 召唤配置
+     */
     @PutMapping("/{conversationId}/summon")
     public ApiResult<Map<String, Object>> setSummon(@PathVariable String conversationId,
                                                     @RequestBody Map<String, Object> body) {
@@ -544,6 +579,13 @@ public class ApiChatController {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现斜杠命令目录");
     }
 
+    /**
+     * 侧问（占位，未实现）
+     *
+     * @param conversationId 会话 ID
+     * @param body           请求体
+     * @return 侧问结果（未实现时抛 NOT_IMPLEMENTED）
+     */
     @PostMapping("/{conversationId}/side-question")
     public ApiResult<Map<String, Object>> sideQuestion(@PathVariable String conversationId,
                                                        @RequestBody Map<String, Object> body) {
@@ -562,6 +604,14 @@ public class ApiChatController {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话产物存储");
     }
 
+    /**
+     * 部分更新会话产物（占位，未实现）
+     *
+     * @param conversationId          会话 ID
+     * @param conversationArtifactId  产物 ID
+     * @param body                    请求体
+     * @return 产物（未实现时抛 NOT_IMPLEMENTED）
+     */
     @PatchMapping("/{conversationId}/artifacts/{conversationArtifactId}")
     public ApiResult<Map<String, Object>> patchArtifact(@PathVariable String conversationId,
                                                         @PathVariable String conversationArtifactId,
@@ -570,6 +620,14 @@ public class ApiChatController {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话产物存储");
     }
 
+    /**
+     * 新建会话产物（占位，未实现）
+     *
+     * @param conversationId          会话 ID
+     * @param conversationArtifactId  产物 ID
+     * @param body                    请求体
+     * @return 产物（未实现时抛 NOT_IMPLEMENTED）
+     */
     @PutMapping("/{conversationId}/artifacts/{conversationArtifactId}")
     public ApiResult<Map<String, Object>> putArtifact(@PathVariable String conversationId,
                                                       @PathVariable String conversationArtifactId,
@@ -578,6 +636,14 @@ public class ApiChatController {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现会话产物存储");
     }
 
+    /**
+     * 会话工作区浏览（占位，未实现）
+     *
+     * @param conversationId 会话 ID
+     * @param path           相对路径（可空）
+     * @param search         搜索关键字（可空）
+     * @return 工作区条目（未实现时抛 NOT_IMPLEMENTED）
+     */
     @GetMapping("/{conversationId}/workspace")
     public ApiResult<List<Map<String, Object>>> getWorkspace(@PathVariable String conversationId,
                                                              @RequestParam(required = false) String path,
@@ -601,6 +667,13 @@ public class ApiChatController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * 设置会话模式（chat 等）
+     *
+     * @param conversationId 会话 ID
+     * @param body           请求体（含 mode）
+     * @return 更新后的模式
+     */
     @PutMapping("/{conversationId}/mode")
     public ApiResult<Map<String, Object>> setMode(@PathVariable String conversationId,
                                                   @RequestBody Map<String, Object> body) {
@@ -616,6 +689,14 @@ public class ApiChatController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * 审批预检（占位，未实现）
+     *
+     * @param conversationId 会话 ID
+     * @param action         动作
+     * @param command_type   命令类型（可空）
+     * @return 审批策略（未实现时抛 NOT_IMPLEMENTED）
+     */
     @GetMapping("/{conversationId}/approvals/check")
     public ApiResult<Map<String, Object>> checkApproval(@PathVariable String conversationId,
                                                         @RequestParam String action,
@@ -635,6 +716,14 @@ public class ApiChatController {
         return ApiResult.ok(new ArrayList<>());
     }
 
+    /**
+     * 确认请求处理（占位，未实现）
+     *
+     * @param conversationId 会话 ID
+     * @param callId         调用 ID
+     * @param body           请求体
+     * @return 操作结果（未实现时抛 NOT_IMPLEMENTED）
+     */
     @PostMapping("/{conversationId}/confirmations/{callId}/confirm")
     public ApiResult<Void> confirm(@PathVariable String conversationId,
                                    @PathVariable String callId,
@@ -643,12 +732,27 @@ public class ApiChatController {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现确认请求处理");
     }
 
+    /**
+     * 引导/转向：以新输入发起一轮流式生成
+     *
+     * @param conversationId 会话 ID
+     * @param body           请求体（含 content）
+     * @return 发送结果（msg_id / replayed / completed）
+     */
     @PostMapping("/{conversationId}/steer")
     public ApiResult<Map<String, Object>> steer(@PathVariable String conversationId,
                                                 @RequestBody Map<String, Object> body) {
         return doStreamTurn(conversationId, (String) body.get("content"));
     }
 
+    /**
+     * 编辑重发：截断该消息之后的记录并重新发起生成
+     *
+     * @param conversationId 会话 ID
+     * @param messageId      消息 ID
+     * @param body           请求体（含 content）
+     * @return 发送结果（msg_id / replayed / completed）
+     */
     @PostMapping("/{conversationId}/messages/{messageId}/edit-resubmit")
     public ApiResult<Map<String, Object>> editResubmit(@PathVariable String conversationId,
                                                        @PathVariable String messageId,
@@ -668,6 +772,14 @@ public class ApiChatController {
         return doStreamTurn(conversationId, input);
     }
 
+    /**
+     * 知识回写重试（占位，未实现）
+     *
+     * @param conversationId 会话 ID
+     * @param messageId      消息 ID
+     * @param body           请求体
+     * @return 操作结果（未实现时抛 NOT_IMPLEMENTED）
+     */
     @PostMapping("/{conversationId}/messages/{messageId}/knowledge-writeback/retry")
     public ApiResult<Void> retryKnowledgeWriteback(@PathVariable String conversationId,
                                                    @PathVariable String messageId,
@@ -677,6 +789,15 @@ public class ApiChatController {
         throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前对话服务未实现知识回写重试");
     }
 
+    /**
+     * 推送错误完成事件：保存错误消息并推送带错误语义的 turn.completed
+     *
+     * @param conversationId 会话 ID
+     * @param turnId         turn ID
+     * @param assistantMsgId 助手消息 ID
+     * @param modelName      模型名（可空）
+     * @param error          异常
+     */
     private void pushTurnError(String conversationId, String turnId, String assistantMsgId,
                                String modelName, Throwable error) {
         String errorMessage = error == null || error.getMessage() == null || error.getMessage().isBlank()

@@ -586,6 +586,13 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 删除执行（按期望版本校验后移除执行与步骤）
+     *
+     * @param executionId     执行标识
+     * @param expected_version 期望版本（默认 1）
+     * @return 操作结果
+     */
     @DeleteMapping("/agent-executions/{executionId}")
     public ApiResult<Void> deleteExecution(@PathVariable String executionId,
                                            @RequestParam(required = false, defaultValue = "1") long expected_version) {
@@ -606,6 +613,13 @@ public class ApiAgentController {
         return ApiResult.ok();
     }
 
+    /**
+     * 重命名执行
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（含 name）
+     * @return 更新后的执行详情
+     */
     @PatchMapping("/agent-executions/{executionId}/rename")
     public ApiResult<Map<String, Object>> renameExecution(@PathVariable String executionId,
                                                           @RequestBody Map<String, Object> body) {
@@ -626,6 +640,13 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 重新规划执行（递增版本）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 更新后的执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/replan")
     public ApiResult<Map<String, Object>> replanExecution(@PathVariable String executionId,
                                                           @RequestBody(required = false) Map<String, Object> body) {
@@ -643,6 +664,13 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 调整执行（递增版本）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 更新后的执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/adjust")
     public ApiResult<Map<String, Object>> adjustExecution(@PathVariable String executionId,
                                                           @RequestBody(required = false) Map<String, Object> body) {
@@ -660,30 +688,65 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 审批执行（状态置为 approved）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/approve")
     public ApiResult<Map<String, Object>> approveExecution(@PathVariable String executionId,
                                                            @RequestBody(required = false) Map<String, Object> body) {
         return commandExecution(executionId, "approved");
     }
 
+    /**
+     * 暂停执行（状态置为 paused）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/pause")
     public ApiResult<Map<String, Object>> pauseExecution(@PathVariable String executionId,
                                                          @RequestBody(required = false) Map<String, Object> body) {
         return commandExecution(executionId, "paused");
     }
 
+    /**
+     * 恢复执行（状态置为 running）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/resume")
     public ApiResult<Map<String, Object>> resumeExecution(@PathVariable String executionId,
                                                           @RequestBody(required = false) Map<String, Object> body) {
         return commandExecution(executionId, "running");
     }
 
+    /**
+     * 取消执行（状态置为 cancelled）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/cancel")
     public ApiResult<Map<String, Object>> cancelExecution(@PathVariable String executionId,
                                                           @RequestBody(required = false) Map<String, Object> body) {
         return commandExecution(executionId, "cancelled");
     }
 
+    /**
+     * 向执行追加步骤（自增版本并推送变更）
+     *
+     * @param executionId 执行标识
+     * @param body        请求体（含 steps 列表）
+     * @return 更新后的执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/steps")
     public ApiResult<Map<String, Object>> addSteps(@PathVariable String executionId,
                                                    @RequestBody Map<String, Object> body) {
@@ -716,6 +779,14 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 更新步骤字段（step_id / execution_id 受保护不可覆盖）
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param body        请求体（含待更新字段）
+     * @return 更新后的步骤
+     */
     @PatchMapping("/agent-executions/{executionId}/steps/{stepId}")
     public ApiResult<Map<String, Object>> updateStep(@PathVariable String executionId,
                                                       @PathVariable String stepId,
@@ -740,6 +811,14 @@ public class ApiAgentController {
         return ApiResult.ok(step);
     }
 
+    /**
+     * 将步骤指派给参与人
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param body        请求体（含 assigned_participant_id）
+     * @return 更新后的步骤
+     */
     @PutMapping("/agent-executions/{executionId}/steps/{stepId}/reassign")
     public ApiResult<Map<String, Object>> reassignStep(@PathVariable String executionId,
                                                        @PathVariable String stepId,
@@ -751,6 +830,14 @@ public class ApiAgentController {
         return ApiResult.ok(step);
     }
 
+    /**
+     * 引导步骤执行方向
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 操作结果
+     */
     @PostMapping("/agent-executions/{executionId}/steps/{stepId}/steer")
     public ApiResult<Void> steerStep(@PathVariable String executionId,
                                       @PathVariable String stepId,
@@ -759,6 +846,14 @@ public class ApiAgentController {
         return ApiResult.ok();
     }
 
+    /**
+     * 重试步骤（自增版本并推送变更）
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 更新后的执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/steps/{stepId}/retry")
     public ApiResult<Map<String, Object>> retryStep(@PathVariable String executionId,
                                                      @PathVariable String stepId,
@@ -777,6 +872,14 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 采纳步骤结果（自增版本并推送变更）
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 更新后的执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/steps/{stepId}/adopt")
     public ApiResult<Map<String, Object>> adoptStep(@PathVariable String executionId,
                                                      @PathVariable String stepId,
@@ -795,6 +898,14 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 配置步骤参数（step_id / execution_id 受保护不可覆盖）
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param body        请求体（含待配置字段）
+     * @return 更新后的步骤
+     */
     @PatchMapping("/agent-executions/{executionId}/steps/{stepId}/configure")
     public ApiResult<Map<String, Object>> configureStep(@PathVariable String executionId,
                                                         @PathVariable String stepId,
@@ -808,6 +919,15 @@ public class ApiAgentController {
         return ApiResult.ok(step);
     }
 
+    /**
+     * 提交尝试答案（自增版本并推送变更）
+     *
+     * @param executionId 执行标识
+     * @param stepId      步骤标识
+     * @param attemptId   尝试标识
+     * @param body        请求体（可空，暂未使用）
+     * @return 更新后的执行详情
+     */
     @PostMapping("/agent-executions/{executionId}/steps/{stepId}/attempts/{attemptId}/answer")
     public ApiResult<Map<String, Object>> answerAttempt(@PathVariable String executionId,
                                                         @PathVariable String stepId,
@@ -827,6 +947,14 @@ public class ApiAgentController {
         return ApiResult.ok(toExecutionDetail(exec));
     }
 
+    /**
+     * 列出执行事件（分页）
+     *
+     * @param executionId   执行标识
+     * @param after_sequence 起始序列（可空）
+     * @param limit          每页条数（默认 50）
+     * @return 事件分页（items / total / has_more）
+     */
     @GetMapping("/agent-executions/{executionId}/events")
     public ApiResult<Map<String, Object>> listEvents(@PathVariable String executionId,
                                                      @RequestParam(required = false) Long after_sequence,
@@ -839,6 +967,14 @@ public class ApiAgentController {
         return ApiResult.ok(page);
     }
 
+    /**
+     * 获取执行工作区文件列表
+     *
+     * @param executionId 执行标识
+     * @param path        目录路径（可空）
+     * @param search      搜索关键词（可空）
+     * @return 工作区文件列表
+     */
     @GetMapping("/agent-executions/{executionId}/workspace")
     public ApiResult<List<Map<String, Object>>> executionWorkspace(@PathVariable String executionId,
                                                                   @RequestParam(required = false) String path,
@@ -890,6 +1026,13 @@ public class ApiAgentController {
         return ApiResult.ok(toTemplateDetail(tpl));
     }
 
+    /**
+     * 更新模板（名称 / 描述）
+     *
+     * @param templateId 模板标识
+     * @param body       请求体（含 name / description）
+     * @return 更新后的模板详情
+     */
     @PutMapping("/agent-execution-templates/{templateId}")
     public ApiResult<Map<String, Object>> updateTemplate(@PathVariable String templateId,
                                                           @RequestBody Map<String, Object> body) {
@@ -904,6 +1047,13 @@ public class ApiAgentController {
         return ApiResult.ok(toTemplateDetail(tpl));
     }
 
+    /**
+     * 删除模板（按期望版本校验后移除模板及其参与人）
+     *
+     * @param templateId       模板标识
+     * @param expected_version 期望版本（默认 1）
+     * @return 操作结果
+     */
     @DeleteMapping("/agent-execution-templates/{templateId}")
     public ApiResult<Void> deleteTemplate(@PathVariable String templateId,
                                           @RequestParam(required = false, defaultValue = "1") long expected_version) {
@@ -913,6 +1063,13 @@ public class ApiAgentController {
         return ApiResult.ok();
     }
 
+    /**
+     * 基于模板创建执行
+     *
+     * @param templateId 模板标识
+     * @param body       请求体（可空，暂未使用）
+     * @return 创建的执行详情
+     */
     @PostMapping("/agent-execution-templates/{templateId}/create-execution")
     public ApiResult<Map<String, Object>> createExecutionFromTemplate(@PathVariable String templateId,
                                                                       @RequestBody(required = false) Map<String, Object> body) {

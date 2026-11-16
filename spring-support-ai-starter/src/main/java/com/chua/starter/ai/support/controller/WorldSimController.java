@@ -199,7 +199,13 @@ public class WorldSimController {
         worldSimService.removeNpc(id);
     }
 
-    /** 让 AI 按世界现状自己造角色（body: count / hint） */
+    /**
+     * 让 AI 按世界现状自己造角色（body: count / hint）。
+     *
+     * @param id   世界 ID
+     * @param body 请求体（count 数量 / hint 提示，均可空）
+     * @return 新建的 NPC 列表
+     */
     @PostMapping("/worlds/{id}/npcs/ai-create")
     public List<Map<String, Object>> createNpcsByAi(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> b = body == null ? Map.of() : body;
@@ -241,7 +247,14 @@ public class WorldSimController {
 
     /* ---------------- 事件时间线 ---------------- */
 
-    /** 事件时间线（倒序，可限定场景与条数） */
+    /**
+     * 事件时间线（倒序，可限定场景与条数）。
+     *
+     * @param id      世界 ID
+     * @param sceneId 场景 ID（可空，空则全部场景）
+     * @param limit   返回条数上限（可空）
+     * @return 事件列表
+     */
     @GetMapping("/worlds/{id}/events")
     public List<SysAiWorldEvent> listEvents(@PathVariable Long id,
                                             @RequestParam(required = false) Long sceneId,
@@ -264,43 +277,83 @@ public class WorldSimController {
 
     /* ---------------- 剧本幕次（Act） ---------------- */
 
-    /** 幕次列表（按编号排序，含完成度与剧本落盘标记） */
+    /**
+     * 幕次列表（按编号排序，含完成度与剧本落盘标记）。
+     *
+     * @param id 世界 ID
+     * @return 幕次列表
+     */
     @GetMapping("/worlds/{id}/acts")
     public List<Map<String, Object>> listActs(@PathVariable Long id) {
         return worldSimService.listActs(id);
     }
 
-    /** 创建幕次（writing，落盘空剧本文件） */
+    /**
+     * 创建幕次（writing，落盘空剧本文件）。
+     *
+     * @param id 世界 ID
+     * @return 新建的幕次
+     */
     @PostMapping("/worlds/{id}/acts")
     public SysAiWorldAct createAct(@PathVariable Long id) {
         return worldSimService.createAct(id);
     }
 
-    /** 幕次详情（元数据 + 剧本 + 素材完成度） */
+    /**
+     * 幕次详情（元数据 + 剧本 + 素材完成度）。
+     *
+     * @param id    世界 ID
+     * @param actNo 幕次编号
+     * @return 幕次详情
+     */
     @GetMapping("/worlds/{id}/acts/{actNo}")
     public Map<String, Object> actDetail(@PathVariable Long id, @PathVariable Integer actNo) {
         return worldSimService.actDetail(id, actNo);
     }
 
-    /** 推进幕次：writing -> props_ok -> playing -> replay，一步一调 */
+    /**
+     * 推进幕次：writing -&gt; props_ok -&gt; playing -&gt; replay，一步一调。
+     *
+     * @param id    世界 ID
+     * @param actNo 幕次编号
+     * @return 推进后的幕次信息
+     */
     @PostMapping("/worlds/{id}/acts/{actNo}/advance")
     public Map<String, Object> advanceAct(@PathVariable Long id, @PathVariable Integer actNo) {
         return worldSimService.advanceAct(id, actNo);
     }
 
-    /** 重播已演完的幕次（状态回滚到 playing，所见素材保留） */
+    /**
+     * 重播已演完的幕次（状态回滚到 playing，所见素材保留）。
+     *
+     * @param id    世界 ID
+     * @param actNo 幕次编号
+     * @return 重播后的幕次信息
+     */
     @PostMapping("/worlds/{id}/acts/{actNo}/replay")
     public Map<String, Object> replayAct(@PathVariable Long id, @PathVariable Integer actNo) {
         return worldSimService.replayAct(id, actNo);
     }
 
-    /** 结文：replay -> finished，落一条世界事件 */
+    /**
+     * 结文：replay -&gt; finished，落一条世界事件。
+     *
+     * @param id    世界 ID
+     * @param actNo 幕次编号
+     * @return 结文后的幕次
+     */
     @PostMapping("/worlds/{id}/acts/{actNo}/finish")
     public SysAiWorldAct finishAct(@PathVariable Long id, @PathVariable Integer actNo) {
         return worldSimService.finishAct(id, actNo);
     }
 
-    /** 演出正文（只读）：不传 actNo 返回全部已演幕次，传了只看那一幕 */
+    /**
+     * 演出正文（只读）：不传 actNo 返回全部已演幕次，传了只看那一幕。
+     *
+     * @param id    世界 ID
+     * @param actNo 幕次编号（可空）
+     * @return 演出正文列表
+     */
     @GetMapping("/worlds/{id}/story")
     public List<Map<String, Object>> listStory(@PathVariable Long id,
                                                @RequestParam(required = false) Integer actNo) {

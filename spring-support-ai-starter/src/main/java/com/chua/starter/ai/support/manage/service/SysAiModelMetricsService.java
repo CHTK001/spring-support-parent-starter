@@ -769,6 +769,13 @@ public class SysAiModelMetricsService {
         private final int inserted;
         private final int providerModels;
 
+        /**
+         * 构造计费同步结果。
+         *
+         * @param updated        更新的指标行数
+         * @param inserted       新增的指标行数
+         * @param providerModels 回写的服务商模型行数
+         */
         private UpstreamPricingResult(int updated, int inserted, int providerModels) {
             this.updated = updated;
             this.inserted = inserted;
@@ -1311,6 +1318,12 @@ public class SysAiModelMetricsService {
      *
      * <p>只有指标 Map 中<b>存在</b>的键才写入：缺失表示该来源没有提供这一维度，
      * 不能把已有价格 / 上下文清空。</p>
+     *
+     * @param metrics 指标 Map（仅存在的键参与更新）
+     * @param locked  锁定字段名集合（不覆盖）
+     * @param source  数据来源（非空时更新来源列）
+     * @param now     更新时间戳
+     * @param uw      待填充的更新包装器
      */
     private void buildIndicatorUpdate(Map<String, Object> metrics, Set<String> locked,
                                        String source, long now,
@@ -1406,6 +1419,13 @@ public class SysAiModelMetricsService {
          */
         private final int providerModels;
 
+        /**
+         * 构造指标同步结果。
+         *
+         * @param updated        更新的指标行数
+         * @param inserted       新增的指标行数
+         * @param providerModels 回写的服务商模型行数
+         */
         private SyncResult(int updated, int inserted, int providerModels) {
             this.updated = updated;
             this.inserted = inserted;
@@ -1509,6 +1529,11 @@ public class SysAiModelMetricsService {
 
     /**
      * 构建同步更新语句（锁定字段跳过，其余含图标/能力标志全部更新）。
+     *
+     * @param r      同步指标记录
+     * @param locked 锁定字段名集合（不覆盖）
+     * @param now    更新时间戳
+     * @param uw     待填充的更新包装器
      */
     private void buildSyncUpdate(MetricsRecord r, Set<String> locked, long now,
                                  LambdaUpdateWrapper<SysAiModelMetrics> uw) {
@@ -1631,6 +1656,14 @@ public class SysAiModelMetricsService {
 
     /**
      * 手动更新落库（统一构造 UpdateWrapper）。
+     *
+     * @param cur         当前指标行
+     * @param values      待更新的字段值映射（字段名 → 值）
+     * @param normLocked  规范化后仍锁定的字段名列表
+     * @param unlocked    解锁字段名列表（回填指标源当前值）
+     * @param aaRec       指标源记录（解锁字段取值）
+     * @param operator    操作人
+     * @param now         更新时间戳
      */
     private void applyManualUpdate(SysAiModelMetrics cur, Map<String, BigDecimal> values,
                                    List<String> normLocked, List<String> unlocked,
@@ -1794,6 +1827,8 @@ public class SysAiModelMetricsService {
 
     /**
      * 可编辑字段 → 列映射。
+     *
+     * @return 字段名到实体列函数（SFunction）的映射
      */
     private static Map<String, SFunction<SysAiModelMetrics, ?>> fieldCol() {
         Map<String, SFunction<SysAiModelMetrics, ?>> m = new HashMap<>();

@@ -118,6 +118,13 @@ public class ApiCompanionController {
         return ApiResult.ok(withStatus(toProfile(companionStore.getCompanion(companionId))));
     }
 
+    /**
+     * 更新伙伴配置（PATCH 部分字段）
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（含待更新字段）
+     * @return 更新后的伙伴档案
+     */
     @PatchMapping("/companions/{companionId}")
     public ApiResult<Map<String, Object>> patchCompanion(@PathVariable String companionId,
                                                           @RequestBody Map<String, Object> body) {
@@ -140,6 +147,13 @@ public class ApiCompanionController {
         return ApiResult.ok();
     }
 
+    /**
+     * 应用形象预设
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（预设内容）
+     * @return 更新后的伙伴档案
+     */
     @PostMapping("/companions/{companionId}/apply-preset")
     public ApiResult<Map<String, Object>> applyPreset(@PathVariable String companionId,
                                                       @RequestBody Map<String, Object> body) {
@@ -159,6 +173,13 @@ public class ApiCompanionController {
         return ApiResult.ok(statusOf(companion));
     }
 
+    /**
+     * 设置伙伴形象（前端两阶段上传，此处记录 source_path）
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（含 source_path）
+     * @return 更新后的伙伴档案
+     */
     @PostMapping("/companions/{companionId}/figure")
     public ApiResult<Map<String, Object>> setFigure(@PathVariable String companionId,
                                                     @RequestBody Map<String, Object> body) {
@@ -232,18 +253,39 @@ public class ApiCompanionController {
 
     // ==================== 技能 ====================
 
+    /**
+     * 从会话抽取技能（占位实现）
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（会话信息）
+     * @return 抽取结果
+     */
     @PostMapping("/companions/{companionId}/skills/from-session")
     public ApiResult<String> skillsFromSession(@PathVariable String companionId,
                                                @RequestBody Map<String, Object> body) {
         return ApiResult.ok(null);
     }
 
+    /**
+     * 运行一次学习（占位实现，返回空结果）
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（可空，暂未使用）
+     * @return 学习运行结果
+     */
     @PostMapping("/companions/{companionId}/learn/run")
     public ApiResult<Map<String, Object>> learnRun(@PathVariable String companionId,
                                                    @RequestBody Map<String, Object> body) {
         return ApiResult.ok(Map.of("status", "completed", "events_processed", 0, "memories_added", 0));
     }
 
+    /**
+     * 获取周报摘要（默认近 7 天）
+     *
+     * @param companionId 伙伴 ID
+     * @param days        统计天数（可空，默认 7）
+     * @return 周报摘要
+     */
     @GetMapping("/companions/{companionId}/weekly-digest")
     public ApiResult<Map<String, Object>> weeklyDigest(@PathVariable String companionId,
                                                        @RequestParam(required = false) Integer days) {
@@ -252,6 +294,14 @@ public class ApiCompanionController {
                 "skills_learned", 0, "memories_added", 0, "new_skill_names", List.of()));
     }
 
+    /**
+     * 列出历史摘要（分页）
+     *
+     * @param companionId 伙伴 ID
+     * @param page        页码（可空）
+     * @param page_size   每页条数（可空）
+     * @return 摘要列表
+     */
     @GetMapping("/companions/{companionId}/digests")
     public ApiResult<List<Map<String, Object>>> listDigests(@PathVariable String companionId,
                                                             @RequestParam(required = false) Integer page,
@@ -269,6 +319,15 @@ public class ApiCompanionController {
         return ApiResult.ok(List.of());
     }
 
+    /**
+     * 列出伙伴技能（分页）
+     *
+     * @param companionId 伙伴 ID
+     * @param status      技能状态过滤（可空）
+     * @param limit       每页条数（可空）
+     * @param offset      偏移量（可空）
+     * @return 技能列表（items / total）
+     */
     @GetMapping("/companions/{companionId}/skills")
     public ApiResult<Map<String, Object>> listSkills(@PathVariable String companionId,
                                                      @RequestParam(required = false) String status,
@@ -284,6 +343,13 @@ public class ApiCompanionController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * 创建技能
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（含 skill_name / description / content / status）
+     * @return 创建后的技能
+     */
     @PostMapping("/companions/{companionId}/skills")
     public ApiResult<Map<String, Object>> createSkill(@PathVariable String companionId,
                                                       @RequestBody Map<String, Object> body) {
@@ -298,6 +364,13 @@ public class ApiCompanionController {
         return ApiResult.ok(toSkill(skill));
     }
 
+    /**
+     * 获取技能内容
+     *
+     * @param companionId 伙伴 ID
+     * @param skillId     技能 ID
+     * @return 技能与内容
+     */
     @GetMapping("/companions/{companionId}/skills/{skillId}")
     public ApiResult<Map<String, Object>> getSkillContent(@PathVariable String companionId,
                                                           @PathVariable String skillId) {
@@ -308,6 +381,14 @@ public class ApiCompanionController {
         return ApiResult.ok(result);
     }
 
+    /**
+     * 更新技能（内容 / 状态）
+     *
+     * @param companionId 伙伴 ID
+     * @param skillId     技能 ID
+     * @param body        请求体（含 content / status）
+     * @return 更新后的技能
+     */
     @PutMapping("/companions/{companionId}/skills/{skillId}")
     public ApiResult<Map<String, Object>> updateSkill(@PathVariable String companionId,
                                                       @PathVariable String skillId,
@@ -318,6 +399,13 @@ public class ApiCompanionController {
         return ApiResult.ok(toSkill(updated));
     }
 
+    /**
+     * 删除技能
+     *
+     * @param companionId 伙伴 ID
+     * @param skillId     技能 ID
+     * @return 操作结果
+     */
     @DeleteMapping("/companions/{companionId}/skills/{skillId}")
     public ApiResult<Void> deleteSkill(@PathVariable String companionId,
                                        @PathVariable String skillId) {
@@ -325,6 +413,14 @@ public class ApiCompanionController {
         return ApiResult.ok();
     }
 
+    /**
+     * 决定技能去留（accept 为 true 置 active，否则置 archived）
+     *
+     * @param companionId 伙伴 ID
+     * @param skillId     技能 ID
+     * @param body        请求体（含 accept）
+     * @return 更新后的技能
+     */
     @PostMapping("/companions/{companionId}/skills/{skillId}/decide")
     public ApiResult<Map<String, Object>> decideSkill(@PathVariable String companionId,
                                                       @PathVariable String skillId,
@@ -337,6 +433,14 @@ public class ApiCompanionController {
 
     // ==================== 记忆 ====================
 
+    /**
+     * 列出记忆（按伙伴过滤，分页）
+     *
+     * @param companion_id 伙伴 ID（可空，不过滤）
+     * @param page         页码（可空）
+     * @param page_size    每页条数（可空）
+     * @return 记忆列表（items / total）
+     */
     @GetMapping("/memories")
     public ApiResult<Map<String, Object>> listMemories(@RequestParam(required = false) String companion_id,
                                                        @RequestParam(required = false) Integer page,
@@ -374,6 +478,13 @@ public class ApiCompanionController {
         return ApiResult.ok(wire);
     }
 
+    /**
+     * 更新记忆（内容 / 置顶 / 状态，可部分更新）
+     *
+     * @param memoryId 记忆 ID
+     * @param body     请求体（含 companion_id / content / pinned / status）
+     * @return 操作结果
+     */
     @PutMapping("/memories/{memoryId}")
     public ApiResult<Void> updateMemory(@PathVariable String memoryId,
                                         @RequestBody Map<String, Object> body) {
@@ -385,6 +496,13 @@ public class ApiCompanionController {
         return ApiResult.ok();
     }
 
+    /**
+     * 删除记忆
+     *
+     * @param memoryId     记忆 ID
+     * @param companion_id 伙伴 ID（可空，归属校验用）
+     * @return 操作结果
+     */
     @DeleteMapping("/memories/{memoryId}")
     public ApiResult<Void> deleteMemory(@PathVariable String memoryId,
                                         @RequestParam(required = false) String companion_id) {
@@ -473,9 +591,11 @@ public class ApiCompanionController {
     }
 
     /**
-     * PATCH 形象（兼容前端 更新figure/renamefigure 的 PATCH 请求）。
-     * @param figureId figureid
-     * @return 删除figure的结果
+     * PATCH 形象（兼容前端更新 figure 的 PATCH 请求）
+     *
+     * @param figureId 形象 ID
+     * @param body     请求体（含 name / head_box / size_tier）
+     * @return 更新后的形象
      */
     @PatchMapping("/figures/{figureId}")
     public ApiResult<Map<String, Object>> patchFigure(@PathVariable String figureId,
@@ -487,6 +607,13 @@ public class ApiCompanionController {
         return ApiResult.ok(toFigure(updated));
     }
 
+    /**
+     * 更新形象（PUT 全量）
+     *
+     * @param figureId 形象 ID
+     * @param body     请求体（含 name / head_box / size_tier）
+     * @return 更新后的形象
+     */
     @PutMapping("/figures/{figureId}")
     public ApiResult<Map<String, Object>> updateFigure(@PathVariable String figureId,
                                                        @RequestBody Map<String, Object> body) {
@@ -600,6 +727,13 @@ public class ApiCompanionController {
         return ApiResult.ok(Map.of("dest_path", strOr(body.get("dest_path"), ""), "exported", 0));
     }
 
+    /**
+     * 导出伙伴数据（占位实现）
+     *
+     * @param companionId 伙伴 ID
+     * @param body        请求体（含 dest_path）
+     * @return 导出结果（dest_path / exported）
+     */
     @PostMapping("/export/companions/{companionId}")
     public ApiResult<Map<String, Object>> exportCompanion(@PathVariable String companionId,
                                                           @RequestBody Map<String, Object> body) {
