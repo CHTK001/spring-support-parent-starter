@@ -63,6 +63,18 @@ public class WebSearchService {
     private final ObjectMapper objectMapper;
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
+    /**
+     * 插件开关所在分组：与 {@code PluginsController}（PUT /v2/plugins/global）、
+     * {@code AiPluginCatalogServiceImpl#isPluginEnabled} 同源，都落在
+     * {@code sys_ai_global_setting} 的 {@code plugins} 分组。
+     */
+    private static final String PLUGIN_GROUP = "plugins";
+
+    /**
+     * 网络搜索插件的开关键（设置中心「搜索设置 → 网络搜索插件」写的就是它）
+     */
+    private static final String PLUGIN_KEY = "web-search";
+
     private final HttpClient http = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
             .connectTimeout(Duration.ofSeconds(12))
@@ -87,6 +99,20 @@ public class WebSearchService {
      */
     public List<WebResult> search(String query) {
         return search(query, 6);
+    }
+
+    /**
+     * 读取「网络搜索插件」开关。
+     *
+     * @return true 表示允许联网检索；读不到配置或读取异常时按默认开启处理
+     */
+    private boolean isPluginEnabled() {
+        try {
+            return sysAiGlobalSettingService.getBoolean(PLUGIN_GROUP, PLUGIN_KEY, true);
+        } catch (Exception e) {
+            log.warn("[WebSearch] 读取插件开关失败，按默认开启处理: {}", e.getMessage());
+            return true;
+        }
     }
 
     /**
@@ -154,6 +180,15 @@ public class WebSearchService {
      */
     public List<WebResult> search(String query, int count) {
         if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        // 「网络搜索插件」开关的消费端。
+        // 此前这个开关只写不读：PUT /v2/plugins/global 把 plugins.web-search 落进库里，
+        // 但没有任何代码读它，页面上关掉了联网检索照样发请求 —— 界面的承诺是假的。
+        // 默认值与 AiPluginCatalogServiceImpl#DEFAULT_PLUGIN_ENABLED 保持一致（未配置=开）。
+        if (!isPluginEnabled()) {
+            log.info("[WebSearch] 网络搜索插件已关闭（plugins.{}=false），跳过联网检索: {}",
+                    PLUGIN_KEY, query);
             return List.of();
         }
         query = refineQuery(query);
