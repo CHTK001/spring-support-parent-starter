@@ -220,6 +220,7 @@ public class MagpieChannelCreditProvider implements ChannelCreditProvider {
      *
      * @param quotas 网关返回的额度卡
      * @param vendor 业务渠道标识
+     * @param provider 上游实例标识（可空；非空时只保留该实例的卡，且必须是本渠道候选）
      * @param account 上游账号（可空）
      * @return 过滤后的额度卡
      */

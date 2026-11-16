@@ -61,6 +61,7 @@ public record TemplateSaveRequest(
     /**
      * 构造模板实体
      *
+     * @param id 模板 ID（新建时传 {@code null}，由落库方生成）
      * @return 模板信息实体
      */
     public TemplateInfo toEntity(String id) {

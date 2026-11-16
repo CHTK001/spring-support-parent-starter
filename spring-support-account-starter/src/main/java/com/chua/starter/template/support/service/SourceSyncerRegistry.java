@@ -35,6 +35,11 @@ public class SourceSyncerRegistry {
     /** 来源计数：source → 库中该来源的模板数（最后充满的统计） */
     private final Map<String, Integer> countMap = new ConcurrentHashMap<>();
 
+    /**
+     * 构建来源模板同步器注册表
+     *
+     * @param syncers 各来源模块注册的模板同步器列表（可为空）
+     */
     public SourceSyncerRegistry(List<SourceSyncer> syncers) {
         if (syncers == null || syncers.isEmpty()) {
             log.info("[Template] 未发现来源模板同步器，库内仅展示自行创建的模板");

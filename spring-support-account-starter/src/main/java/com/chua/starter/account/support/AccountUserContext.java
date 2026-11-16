@@ -41,6 +41,9 @@ public final class AccountUserContext {
     private static final String USER_RESUME =
             "com.chua.starter.oauth.client.support.user.UserResume";
 
+    /**
+     * 工具类，禁止实例化
+     */
     private AccountUserContext() {
     }
 

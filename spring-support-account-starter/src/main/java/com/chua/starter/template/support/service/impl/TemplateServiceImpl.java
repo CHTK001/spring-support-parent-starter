@@ -71,6 +71,14 @@ public class TemplateServiceImpl implements TemplateService {
      */
     private final ProviderSourceRegistry providerSourceRegistry;
 
+    /**
+     * 构造模板服务
+     *
+     * @param templateInfoMapper 模板信息映射器
+     * @param templatePrinterMapper 模板打印映射器
+     * @param templateLogMapper 调用日志映射器（预览 / 设计 / 打印 / 同步 轨迹）
+     * @param providerSourceRegistry 来源提供商注册表
+     */
     public TemplateServiceImpl(TemplateInfoMapper templateInfoMapper,
                                TemplatePrinterMapper templatePrinterMapper,
                                TemplateLogMapper templateLogMapper,

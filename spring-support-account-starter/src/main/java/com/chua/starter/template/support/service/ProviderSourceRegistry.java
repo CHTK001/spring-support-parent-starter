@@ -29,6 +29,11 @@ public class ProviderSourceRegistry {
     /** 来源标识 → 来源 */
     private final Map<String, ProviderSource> sourceMap = new LinkedHashMap<>();
 
+    /**
+     * 构建来源提供商注册表
+     *
+     * @param sources 各来源模块上报的提供商列表（可为空）
+     */
     public ProviderSourceRegistry(List<ProviderSource> sources) {
         if (sources == null || sources.isEmpty()) {
             log.info("[Template] 未发现来源提供商上报者，左栏只展示库内提供商");
