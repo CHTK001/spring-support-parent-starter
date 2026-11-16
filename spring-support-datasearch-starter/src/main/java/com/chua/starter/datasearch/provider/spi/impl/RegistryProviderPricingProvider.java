@@ -4,6 +4,7 @@ import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.spi.ProviderPricingProvider;
 import com.chua.starter.datasearch.provider.support.DeepSeekPricingSource;
+import com.chua.starter.datasearch.provider.support.MoonshotPricingSource;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -74,6 +75,9 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
         }
         if ("deepseek".equalsIgnoreCase(entry.id)) {
             return DeepSeekPricingSource.fetch(entry.doc);
+        }
+        if ("moonshot".equalsIgnoreCase(entry.id)) {
+            return MoonshotPricingSource.fetch(entry.doc);
         }
         return ProviderPricingRefresh.unsupported();
     }
@@ -147,7 +151,10 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
                 JsonNode root = MAPPER.readTree(in);
                 for (JsonNode node : root.path("entries")) {
                     Entry entry = parse(node);
-                    if (entry != null && !entry.rules.isEmpty()) {
+                    // 允许「只有官方价格页、没有静态规则」的实时抓取项（如 Moonshot）：
+                    // 规则在点击同步时抓，不能因为 rules 为空就把整个登记项丢掉。
+                    if (entry != null && (!entry.rules.isEmpty() || entry.doc != null
+                            || !entry.hosts.isEmpty())) {
                         loaded.add(entry);
                     }
                 }

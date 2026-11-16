@@ -6,6 +6,7 @@ import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.support.ProviderModelCatalogs;
 import com.chua.starter.datasearch.provider.support.ProviderPricings;
 import com.chua.starter.datasearch.provider.support.DeepSeekPricingSource;
+import com.chua.starter.datasearch.provider.support.MoonshotPricingSource;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -135,5 +136,42 @@ class ProviderPricingSpiTest {
         assertTrue(refresh.isSupported());
         assertFalse(refresh.getError() == null || refresh.getError().isBlank());
         assertTrue(refresh.getRules().isEmpty());
+    }
+
+    @Test
+    void moonshotLivePageParsesK3AndK2Tables() {
+        String html = "<script>"
+                + "DocTable,{columns:[...],rows:[[_jsx(_components.a,{href:`/guide/k3`,children:`kimi-k3.1-pro`}),"
+                + "`¥13.00 / MTok`,`¥70.00 / MTok`,`¥1.30 / MTok`,`¥13.00 / MTok`,`¥26.00 / MTok`],"
+                + "[_jsx(_components.a,{href:`/guide/k3`,children:`kimi-k3.1-pro-highspeed`}),"
+                + "`¥26.00 / MTok`,`¥136.00 / MTok`,`¥1.30 / MTok`,`¥26.00 / MTok`,`¥52.00 / MTok`],"
+                + "[_jsx(_components.a,{href:`/guide/k3`,children:`kimi-k3`}),"
+                + "`¥20.00 / MTok`,`¥100.00 / MTok`,`¥2.00 / MTok`,`¥20.00 / MTok`,`¥40.00 / MTok`]]})"
+                + "DocTable,{columns:[...],rows:[[`kimi-k2.7-code`,`¥6.50 / MTok`,`¥27.00 / MTok`,`¥1.30 / MTok`],"
+                + "[`kimi-k2.7-code-highspeed`,`¥13.00 / MTok`,`¥54.00 / MTok`,`¥2.60 / MTok`],"
+                + "[`kimi-k2.6`,`¥6.50 / MTok`,`¥27.00 / MTok`,`¥1.10 / MTok`]]})"
+                + "</script>";
+        var refresh = MoonshotPricingSource.parse(html, MoonshotPricingSource.URL, "2026-11-16T00:00:00Z");
+        assertTrue(refresh.isLive());
+        assertEquals(null, refresh.getError());
+        List<ProviderPricingRule> rules = refresh.getRules();
+        assertEquals(24, rules.size(), "K3 三行五列 + K2 三行三列");
+        ProviderPricingRule proOutput = rules.stream()
+                .filter(r -> "kimi-k3.1-pro".equals(r.getModelPattern()) && "output".equals(r.getItem()))
+                .findFirst().orElseThrow();
+        // 样本写 70，不是登记表的 68：证明读的是页面当前价
+        assertEquals(0, proOutput.getStandardPrice().compareTo(new BigDecimal("70.00")));
+        assertEquals("CNY", proOutput.getCurrency());
+        ProviderPricingRule proWrite1h = rules.stream()
+                .filter(r -> "kimi-k3.1-pro".equals(r.getModelPattern())
+                        && "input_cache_write_1h".equals(r.getItem()))
+                .findFirst().orElseThrow();
+        assertEquals(0, proWrite1h.getStandardPrice().compareTo(new BigDecimal("26.00")));
+        ProviderPricingRule k2Cache = rules.stream()
+                .filter(r -> "kimi-k2.7-code".equals(r.getModelPattern())
+                        && "input_cache_hit".equals(r.getItem()))
+                .findFirst().orElseThrow();
+        assertEquals(0, k2Cache.getStandardPrice().compareTo(new BigDecimal("1.30")));
+        assertEquals("2026-11-16T00:00:00Z", proOutput.getFetchedAt());
     }
 }

@@ -157,6 +157,15 @@
           "source_url": "https://api-docs.deepseek.com/quick_start/pricing"
         }
       ]
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot / Kimi",
+      "aliases": ["moonshot", "moonshotai", "kimi"],
+      "hosts": ["api.moonshot.cn", "api.moonshot.ai", "platform.moonshot.cn"],
+      "doc": "https://platform.moonshot.cn/docs/pricing/chat",
+      "verified": true,
+      "rules": []
     }
   ]
 }
