@@ -7,8 +7,11 @@ import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
 import com.chua.starter.datasearch.credit.support.CreditExpressions;
 import com.chua.starter.datasearch.credit.support.CreditHttp;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 厂商官方余额接口（按厂商标识取默认地址与表达式）。
@@ -103,7 +106,7 @@ public class HostCreditQueryProvider implements CreditQueryProvider {
      * 拿不到 AK/SK，所以 4 家签名类预设不参与自动候选（命中只会多一条必然 401 的失败行）。
      * 账户侧走显式 {@code kind=host} + providerId，仍可命中全部 15 个预设，不受此判断影响。</p>
      *
-     * <p>本集合与 {@code ApiProviderController.CREDIT_HOST_BRANDS}（11 家）保持一致。</p>
+     * <p>本集合由 {@link #bearerBrands()} 派生，两者不会再漂移。</p>
      *
      * @param providerId 厂商标识
      * @return 是 Bearer 类预设为 true
@@ -114,6 +117,36 @@ public class HostCreditQueryProvider implements CreditQueryProvider {
         }
         HostSpec spec = HOSTS.get(providerId.trim().toLowerCase());
         return spec != null && spec.signType == null;
+    }
+
+    /**
+     * 全部已收录的厂商标识（含 AK/SK 签名类）。
+     *
+     * <p>调用方据此判断「这家厂商是否走官方余额口径」，不必再维护一份重复清单；
+     * 加预设只改本类的 {@code HOSTS}，页面与接口自动跟上。</p>
+     *
+     * @return 厂商标识集合（只读）
+     */
+    public static Set<String> brands() {
+        return Collections.unmodifiableSet(HOSTS.keySet());
+    }
+
+    /**
+     * Bearer 类厂商标识（不含 AK/SK 签名类）。
+     *
+     * <p>走 API Key 逐个查余额的场景（如 AI 供应商面板）拿不到 AK/SK，
+     * 只能用这一份；签名类命中只会多一条必然失败的候选。</p>
+     *
+     * @return 厂商标识集合（只读）
+     */
+    public static Set<String> bearerBrands() {
+        Set<String> brands = new LinkedHashSet<>(HOSTS.size());
+        for (Map.Entry<String, HostSpec> entry : HOSTS.entrySet()) {
+            if (entry.getValue().signType == null) {
+                brands.add(entry.getKey());
+            }
+        }
+        return Collections.unmodifiableSet(brands);
     }
 
     /**

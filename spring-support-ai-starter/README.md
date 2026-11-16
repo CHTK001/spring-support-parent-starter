@@ -360,6 +360,24 @@ public class MyLlmCreditProvider implements ChannelCreditProvider {
 4 家签名类端点/字段来自官方文档原文，但**未做真链路探活、未绑真 key 验字段**，首次绑真 key 前只显示上游原文；
 字段口径不一致时用 `credit_expression` 覆盖。完备清单与配置方式见 `spring-support-account-starter/README.md` 的「余额查询配置」。
 
+**AI 供应商余额（`GET /api/providers/{id}/credit`）是怎么查的**
+
+模型管理里 200+ 家供应商不可能逐家写死余额实现，接口按四级口径判定并回传，页面据此显示分级与「已尝试」链路：
+
+| `level` | 含义 | 候选实现 |
+|---|---|---|
+| `official` | 厂商有官方预设 | `host` |
+| `openai` | 上游是 OpenAI 官方 | `openai` |
+| `relay` | 中转 / 聚合站，地址当站点根地址探测 | `new-api` → `billing` → `sub2api` |
+| `manual` | 页面上指定了唯一实现（含自定义地址 + 表达式） | 指定的那一个 |
+| `none` | 没有上游地址，没有可查的余额 | — |
+
+`billing` 是 OpenAI 老 dashboard 计费口径（`/v1/dashboard/billing/subscription` + `/usage`），
+one-api / new-api / voapi / veloera 系站点普遍沿用；两次请求都成功才给结论，只拿到上限不冒充余额。
+全部候选都失败时，接口把每个实现的原始错误拼进该 Key 的 `error`，页面在卡片下面显示
+「已尝试：厂商官方 → new-api → OpenAI 兼容计费 → sub2api」，用户据此判断该换哪条口径，
+而不是只看到一句「查询失败」。响应里的 `candidates` 是本次实际尝试顺序的唯一来源。
+
 ## 六、与其它 starter 的关系
 
 - **底层能力**：`utils-support-deeplearning-starter` 提供 `ChatClient`、`ImageClient`、OCR / 人脸 / 版面等实现；本模块只做 Spring 装配与配置分发，不重复定义这些类型。

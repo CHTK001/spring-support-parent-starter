@@ -457,14 +457,17 @@ public class ApiProviderController {
 
     /**
      * 余额自动回落时依次尝试的中转站实现（厂商官方与 OpenAI 官方由品牌/地址单独前置）。
+     *
+     * <p>顺序按「一次命中概率」排：new-api 的 {@code /api/usage/token} 最普遍，
+     * 其次是各站点普遍沿用的 OpenAI dashboard 计费接口，最后才是 sub2api 的 {@code /v1/usage}。</p>
      */
-    private static final List<String> AUTO_CREDIT_KINDS = List.of("new-api", "sub2api");
+    private static final List<String> AUTO_CREDIT_KINDS = List.of("new-api", "billing", "sub2api");
 
     /**
-     * 有官方余额口径的厂商（与 {@code HostCreditQueryProvider} 收录一致）。
+     * 有官方余额口径的厂商（Bearer 类），由 {@code HostCreditQueryProvider} 自述，
+     * 避免两处清单各改各的。
      */
-    private static final Set<String> CREDIT_HOST_BRANDS = Set.of("deepseek", "moonshot", "siliconflow",
-            "openrouter", "opencode-go", "novita-ai", "requesty", "llmgateway", "deepinfra", "together", "stepfun");
+    private static final Set<String> CREDIT_HOST_BRANDS = HostCreditQueryProvider.bearerBrands();
 
     /**
      * 余额查询失败原因的回传长度上限（字符），避免多家错误拼成一大段。
@@ -1706,6 +1709,11 @@ public class ApiProviderController {
         out.put("provider_id", providerId);
         out.put("url", baseUrl);
         out.put("kind", configuredKind == null ? "auto" : configuredKind);
+        // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → new-api → billing → sub2api → 表达式」
+        out.put("candidates", candidateKinds(entity, extra));
+        // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ relay（中转站按协议探测）/
+        // manual（页面上指定了唯一实现）/ none（没有上游地址，查不了）
+        out.put("level", creditLevel(entity, extra));
         if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
             out.put("ok", false);
             out.put("message", "未配置上游地址，无法查询余额");
@@ -1787,37 +1795,24 @@ public class ApiProviderController {
      * @return 候选查询（按尝试顺序）
      */
     private List<CreditQuery> creditCandidates(SysAiProvider entity, Map<String, Object> extra, String key) {
+        List<String> kinds = candidateKinds(entity, extra);
         String kind = str(extra, "credit_kind");
-        // 「自动」在表单里是删除键；历史上若已存成字面量 auto，按未配置处理
         if (kind != null && "auto".equalsIgnoreCase(kind.trim())) {
             kind = null;
         }
         String explicitUrl = str(extra, "credit_url");
         String expression = str(extra, "credit_expression");
         String brand = creditBrand(entity, extra);
-        List<String> kinds = new ArrayList<>(5);
-        if (kind != null) {
-            kinds.add(kind);
-        } else {
-            if (brand != null && HostCreditQueryProvider.supportsHost(brand)) {
-                kinds.add("host");
-            }
-            if (isOfficialOpenAi(entity.getBaseUrl())) {
-                kinds.add("openai");
-            }
-            kinds.addAll(AUTO_CREDIT_KINDS);
-            if (expression != null) {
-                kinds.add(CreditQueries.KIND_EXPRESSION);
-            }
-        }
-        List<CreditQuery> queries = new ArrayList<>(kinds.size());
-        for (String candidate : kinds) {
+        // 显式指定唯一实现时，候选只有它一条
+        List<String> attempts = kind != null ? List.of(kind) : kinds;
+        List<CreditQuery> queries = new ArrayList<>(attempts.size());
+        for (String candidate : attempts) {
             CreditQuery query = new CreditQuery();
             query.setKind(candidate);
             query.setProviderId(brand);
             query.setExpression(expression);
             // 厂商官方 / OpenAI 官方实现自带地址，只有显式配了地址才覆盖；
-            // new-api / sub2api 需要站点根地址，没配就用供应商的上游地址
+            // new-api / billing / sub2api 需要站点根地址，没配就用供应商的上游地址
             boolean builtinUrl = "host".equals(candidate) || "openai".equals(candidate);
             String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
             query.setUrl(url);
@@ -1825,6 +1820,92 @@ public class ApiProviderController {
             queries.add(query);
         }
         return queries;
+    }
+
+    /**
+     * 自动识别时按顺序尝试的实现标识。
+     *
+     * <p>也是页面「已尝试」链路的唯一来源：查不到余额时把它显示出来，
+     * 用户就能判断该换哪条口径（或该去配 credit_url + 表达式）。</p>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 实现标识（按尝试顺序）
+     */
+    private List<String> candidateKinds(SysAiProvider entity, Map<String, Object> extra) {
+        String kind = str(extra, "credit_kind");
+        // 「自动」在表单里是删除键；历史上若已存成字面量 auto，按未配置处理
+        if (kind != null && "auto".equalsIgnoreCase(kind.trim())) {
+            kind = null;
+        }
+        if (kind != null) {
+            return List.of(kind);
+        }
+        List<String> kinds = new ArrayList<>(5);
+        String brand = creditBrand(entity, extra);
+        if (brand != null && HostCreditQueryProvider.supportsHost(brand)) {
+            kinds.add("host");
+        }
+        if (isOfficialOpenAi(entity.getBaseUrl())) {
+            kinds.add("openai");
+        }
+        kinds.addAll(AUTO_CREDIT_KINDS);
+        if (str(extra, "credit_expression") != null) {
+            kinds.add(CreditQueries.KIND_EXPRESSION);
+        }
+        return kinds;
+    }
+
+    /**
+     * 余额口径分级（只读判定，不出网）。
+     *
+     * <p>200+ 家供应商不可能逐家写死余额实现，页面按这四级告诉用户「这家凭什么能查 /
+     * 为什么查不到」，而不是只回一句失败：</p>
+     * <ul>
+     *   <li>{@code official}：厂商在 {@code HostCreditQueryProvider} 里有官方预设；</li>
+     *   <li>{@code openai}：上游就是 OpenAI 官方；</li>
+     *   <li>{@code relay}：中转 / 聚合站，按协议依次探测（new-api → billing → sub2api）；</li>
+     *   <li>{@code manual}：页面上指定了唯一实现（含自定义地址 + 表达式）；</li>
+     *   <li>{@code none}：没有上游地址，没有可查的东西。</li>
+     * </ul>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 分级标识
+     */
+    private String creditLevel(SysAiProvider entity, Map<String, Object> extra) {        String kind = str(extra, "credit_kind");
+        if (kind != null && !"auto".equalsIgnoreCase(kind.trim())) {
+            return "manual";
+        }
+        String brand = creditBrand(entity, extra);
+        if (brand != null && HostCreditQueryProvider.supportsHost(brand)) {
+            return "official";
+        }
+        if (isOfficialOpenAi(entity.getBaseUrl())) {
+            return "openai";
+        }
+        // 本地推理（ONNX / 本机地址）没有远端账户，不存在余额可查
+        if (isLocalEndpoint(entity.getBaseUrl())) {
+            return "none";
+        }
+        boolean remote = (entity.getBaseUrl() != null && !entity.getBaseUrl().isBlank())
+                || str(extra, "credit_url") != null;
+        return remote ? "relay" : "none";
+    }
+
+    /**
+     * 上游地址是否指向本机（本地推理没有远端账户余额）。
+     *
+     * @param url 上游地址
+     * @return 本机地址为 true
+     */
+    private static boolean isLocalEndpoint(String url) {
+        String host = hostOf(url);
+        if (host == null) {
+            return false;
+        }
+        return "localhost".equals(host) || "127.0.0.1".equals(host) || "0.0.0.0".equals(host)
+                || "::1".equals(host) || "[::1]".equals(host);
     }
 
     /**
@@ -4969,10 +5050,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 }
                 String displayName = item.path("displayName").asText(id);
                 Map<String, Object> m = upstreamModelRow(id, displayName, item);
-                String description = item.path("description").asText(null);
-                if (description != null && !description.isBlank()) {
-                    m.put("description", description);
-                }
+                // description 已由 upstreamModelRow 统一读取（description / summary），
+                // 这里不再单独补一次，避免两处口径分叉。
                 Map<String, Object> extra = new LinkedHashMap<>(4);
                 // temperature 字段存在即表示支持采样温度（默认 1.0），不是「取值」
                 if (item.has("temperature") && item.get("temperature").isNumber()) {
@@ -5020,6 +5099,16 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         m.put("name", name);
         m.put("tasks", inferTasks(id));
         m.put("traits", List.of("streaming"));
+        // 模型描述：OpenAI 兼容目录（OpenRouter / intern-ai 等）用 description，
+        // 少数网关用 summary。此前只有 Google 分支单独补了 description，其余协议
+        // 一律拿不到 —— 「从提供商获取」列表与保存后的模型副标题都因此为空。
+        String description = textOrNull(item, "description");
+        if (description == null) {
+            description = textOrNull(item, "summary");
+        }
+        if (description != null) {
+            m.put("description", description);
+        }
         Map<String, Object> metrics = HttpChatClientIndicator.parseModelMetrics(item);
         if (!metrics.isEmpty()) {
             m.put("metrics", metrics);
@@ -5139,6 +5228,31 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (value != null) {
             row.put(key, value);
         }
+    }
+
+    /**
+     * 读取文本字段（缺失 / 非文本 / 空白返回 null）。
+     *
+     * <p>{@code asText(null)} 在节点存在但为 JSON null 时会回字符串 {@code "null"}，
+     * 直接用会把字面量 {@code "null"} 写进模型描述；这里统一走一次判空与去空白。</p>
+     *
+     * @param node 节点
+     * @param key  字段名
+     * @return 文本；无有效值时 null
+     */
+    private static String textOrNull(com.fasterxml.jackson.databind.JsonNode node, String key) {
+        if (node == null) {
+            return null;
+        }
+        com.fasterxml.jackson.databind.JsonNode value = node.get(key);
+        if (value == null || value.isNull() || !value.isValueNode()) {
+            return null;
+        }
+        String text = value.asText();
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        return text.trim();
     }
 
     /**

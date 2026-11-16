@@ -182,12 +182,19 @@ my-weather=com.example.weather.MyWeatherProvider
 | 实现（`kind`） | 用途 |
 |---|---|
 | `expression` | 通用「地址 + 字段表达式」，没专用实现的上游走这里 |
-| `new-api` / `sub2api` / `openai` | 中转站 / OpenAI 官方 |
+| `new-api` | new-api / one-api 中转站：`GET /api/usage/token` |
+| `billing` | OpenAI 兼容计费口径（one-api / new-api / voapi / veloera 等）：`GET /v1/dashboard/billing/subscription` + `/usage` |
+| `sub2api` | sub2api 中转站：`GET /v1/usage` |
+| `openai` | OpenAI 官方额度接口 |
 | `host` | 厂商官方端点，按 `providerId` 取内置地址与表达式 |
 
 - **收录口径**：只登记「官方文档明确写了余额 / 额度端点」的厂商，不猜地址、不标「支持」。
   现有 11 家 Bearer 预设 + 4 家 AK/SK 签名预设，清单与逐家依据见
   `HostCreditQueryProvider.HOSTS` 与各 README 的「已收录 / 不收录」小节。
+  品牌清单由 `HostCreditQueryProvider.brands()` / `bearerBrands()` 自述，消费方不再各存一份。
+- **中转站覆盖面**：把上游地址当站点根地址，按 `new-api → billing → sub2api` 依次探测，
+  第一条查到数的胜出。`billing` 两次请求都必须成功才给结论（只拿到上限不冒充余额），
+  换算是「剩余 = 上限 − total_usage / 100」；站点口径不同就在页面上改用 `expression` 自填。
 - **字段表达式**（`CreditExpressions`）：`$ ¥ ￥ € £` 币种前缀、点路径 / 数组下标 / `*` 通配、
   空格包围的 `* N` / `/ N` 换算、`%` 比例、`!` 已用占比翻转、`;` 多段。
 - **AK/SK 签名**（`CreditSigner`）：阿里云 BSS、火山引擎、百度智能云、七牛四家要按各家规范

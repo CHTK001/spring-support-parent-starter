@@ -318,6 +318,7 @@ public class MyCreditProvider implements ChannelUpstreamProvider {
 - 接口：`GET /api/accounts/credit-configs`（全部）、`GET …/{providerId}`、`PUT …/{providerId}`（新增 / 覆盖）、
   `DELETE …/{providerId}`、`GET …/kinds`（可用实现，页面下拉直接用）、`POST …/test`（按表单内容试查一次，不落库）。
 - 内置实现（`kinds` 返回的就是这些）：`expression` 通用字段表达式、`new-api`（`GET /api/usage/token`）、
+  `billing`（OpenAI 兼容计费：`/v1/dashboard/billing/subscription` + `/usage`，one-api / new-api / voapi 系站点通用）、
   `sub2api`、`openai`（`GET /v1/dashboard/billing/credit_grants`）、`host`（只给上游 id，地址由实现自己拼）。
 - `host` 预设分两类，地址与字段都取自官方文档原文：
   - **Bearer 类（11 家）**：`deepseek`、`moonshot`、`siliconflow`、`openrouter`、`novita-ai`、`requesty`、
