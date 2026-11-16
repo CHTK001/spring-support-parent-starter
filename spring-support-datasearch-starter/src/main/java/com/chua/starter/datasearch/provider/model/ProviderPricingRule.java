@@ -105,6 +105,11 @@ public class ProviderPricingRule implements Serializable {
     private Boolean verified;
 
     /**
+     * 本规则的抓取时间（ISO-8601；静态登记表为空）
+     */
+    private String fetchedAt;
+
+    /**
      * 判断模型是否命中本规则。
      *
      * @param modelId 模型标识

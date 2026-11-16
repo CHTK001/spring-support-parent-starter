@@ -1,7 +1,9 @@
 package com.chua.starter.datasearch.provider.spi.impl;
 
+import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.spi.ProviderPricingProvider;
+import com.chua.starter.datasearch.provider.support.DeepSeekPricingSource;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +54,28 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
     public List<ProviderPricingRule> query(String platform, String baseUrl) {
         Entry entry = find(platform, baseUrl);
         return entry == null ? Collections.emptyList() : entry.rules;
+    }
+
+    /**
+     * 点击同步时的实时刷新。
+     *
+     * <p>DeepSeek 官方价格页有稳定结构，直接抓取并解析；其它厂商先沿用登记表，
+     * 后续补抓取器时只改这里。</p>
+     *
+     * @param platform 平台类型
+     * @param baseUrl  上游基础地址
+     * @return 刷新结果
+     */
+    @Override
+    public ProviderPricingRefresh refresh(String platform, String baseUrl) {
+        Entry entry = find(platform, baseUrl);
+        if (entry == null) {
+            return ProviderPricingRefresh.unsupported();
+        }
+        if ("deepseek".equalsIgnoreCase(entry.id)) {
+            return DeepSeekPricingSource.fetch(entry.doc);
+        }
+        return ProviderPricingRefresh.unsupported();
     }
 
     @Override

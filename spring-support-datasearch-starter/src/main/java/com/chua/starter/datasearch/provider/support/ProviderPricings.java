@@ -1,5 +1,6 @@
 package com.chua.starter.datasearch.provider.support;
 
+import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.spi.ProviderPricingProvider;
 import com.chua.starter.datasearch.support.SpiProviders;
@@ -50,6 +51,23 @@ public final class ProviderPricings {
             }
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * 点击同步时刷新价格（实现按顺序取第一个有实时抓取能力的来源）。
+     *
+     * @param platform 平台类型
+     * @param baseUrl  上游基础地址
+     * @return 刷新结果；没有实时实现时 supported=false
+     */
+    public static ProviderPricingRefresh refresh(String platform, String baseUrl) {
+        for (ProviderPricingProvider provider : providers()) {
+            ProviderPricingRefresh refresh = provider.refresh(platform, baseUrl);
+            if (refresh != null && refresh.isSupported()) {
+                return refresh;
+            }
+        }
+        return ProviderPricingRefresh.unsupported();
     }
 
     /**

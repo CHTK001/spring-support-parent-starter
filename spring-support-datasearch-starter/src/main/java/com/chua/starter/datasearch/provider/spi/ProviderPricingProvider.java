@@ -1,5 +1,6 @@
 package com.chua.starter.datasearch.provider.spi;
 
+import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 
 import java.util.List;
@@ -44,6 +45,18 @@ public interface ProviderPricingProvider {
      * @return 规则列表；未收录返回空列表
      */
     List<ProviderPricingRule> query(String platform, String baseUrl);
+
+    /**
+     * 点击同步时刷新价格：有官方价格页抓取实现的厂商覆盖本方法，实时抓取；
+     * 没有实现的返回 {@link ProviderPricingRefresh#unsupported()}，调用方沿用旧规则。
+     *
+     * @param platform 平台类型
+     * @param baseUrl  上游基础地址
+     * @return 刷新结果
+     */
+    default ProviderPricingRefresh refresh(String platform, String baseUrl) {
+        return ProviderPricingRefresh.unsupported();
+    }
 
     /**
      * 本实现收录的规则条数（覆盖率统计，非必须）。

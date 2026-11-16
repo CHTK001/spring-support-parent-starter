@@ -46,4 +46,19 @@ public class ProviderModelCatalog implements Serializable {
      * 峰谷 / 按 N 次定价规则（官方价格页核对；可空）
      */
     private List<ProviderPricingRule> pricingRules = new ArrayList<>();
+
+    /**
+     * 本次规则是否来自点击同步时的实时抓取
+     */
+    private Boolean pricingLive;
+
+    /**
+     * 实时抓取时间（ISO-8601）
+     */
+    private String pricingFetchedAt;
+
+    /**
+     * 实时抓取失败原因；成功或未尝试时为空
+     */
+    private String pricingError;
 }

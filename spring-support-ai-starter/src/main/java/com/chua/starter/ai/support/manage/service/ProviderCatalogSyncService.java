@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
+import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.model.PriceWindow;
 import com.chua.starter.datasearch.provider.support.ProviderModelCatalogs;
@@ -83,6 +84,16 @@ public class ProviderCatalogSyncService {
         out.put("doc", catalog.getDoc());
         out.put("models", catalog.getModels().size());
 
+        // 点击同步时实时抓官方价格页；抓取失败就不写规则，保留库里的上一次价格。
+        ProviderPricingRefresh refresh = ProviderPricings.refresh(
+                provider.getPlatform(), provider.getBaseUrl());
+        if (refresh.isSupported()) {
+            catalog.setPricingRules(refresh.getRules());
+            catalog.setPricingLive(refresh.isLive());
+            catalog.setPricingFetchedAt(refresh.getFetchedAt());
+            catalog.setPricingError(refresh.getError());
+        }
+
         List<Map<String, Object>> rows = new ArrayList<>(catalog.getModels().size());
         for (ProviderModelInfo model : catalog.getModels()) {
             Map<String, Object> metrics = metricsOf(model, catalog.getPricingRules());
@@ -107,6 +118,9 @@ public class ProviderCatalogSyncService {
         out.put("descriptions", syncDescriptions(provider.getProviderId(), catalog));
         out.put("capabilities", capabilityCounts(catalog));
         out.put("pricing_rules", catalog.getPricingRules() == null ? 0 : catalog.getPricingRules().size());
+        out.put("pricing_live", catalog.getPricingLive());
+        out.put("pricing_fetched_at", catalog.getPricingFetchedAt());
+        out.put("pricing_error", catalog.getPricingError());
         // 目录不提供流式 / 异步标记：显式回 null，前端显示「未收录」
         out.put("streaming", null);
         out.put("async", null);
@@ -282,6 +296,7 @@ public class ProviderCatalogSyncService {
         put(map, "note", rule.getNote());
         put(map, "source_url", rule.getSourceUrl());
         put(map, "verified", rule.getVerified());
+        put(map, "fetched_at", rule.getFetchedAt());
         if (rule.getPeakWindows() != null && !rule.getPeakWindows().isEmpty()) {
             List<Map<String, Object>> windows = new ArrayList<>(rule.getPeakWindows().size());
             for (PriceWindow window : rule.getPeakWindows()) {
