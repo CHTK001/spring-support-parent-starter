@@ -6,13 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 限制探测统一入口：把各 {@link ProviderLimitProvider} 串成一条可解释的链路。
+ * 限制探测统一入口：把 {@link ProviderLimitSpi} 里的机制串成一条可解释的链路。
  *
  * <p>输出结构（直接落 {@code extra.provider_limits} 并原样回给前端）：</p>
  * <pre>
  * {
- *   "declared": { ... },       // 手动配置 / 官方文档声明的限制
+ *   "declared": { ... },       // 手动配置 / 官方文档登记表里核对过的口径
  *   "observed": { ... },       // 上游响应头动态观测到的限制
+ *   "doc_url": "https://...",  // 官方文档入口（200+ 家登记表提供，不代表页面写了数值）
+ *   "doc_source": "moonshotai",
  *   "source": "deepseek",
  *   "source_url": "https://...",
  *   "captured_at": 1700000000000,
@@ -21,32 +23,23 @@ import java.util.Map;
  * </pre>
  *
  * <p>与余额查询一样，链路必须可解释：哪条命中、哪条未命中、哪条报错都要能看见，
- * 不能只给一个空对象让用户猜。</p>
+ * 不能只给一个空对象让用户猜。文档入口与数值分开回传 —— 有文档不等于有限制。</p>
  *
  * @since 4.0.0.51
  * @author CH
  */
 public final class ProviderLimits {
 
-    /**
-     * 内置机制，顺序即优先级（手动 > 官方文档 > 响应头）。
-     */
-    private static final List<ProviderLimitProvider> PROVIDERS = List.of(
-            new ManualProviderLimitProvider(),
-            new DocProviderLimitProvider(),
-            new HeaderProviderLimitProvider()
-    );
-
     private ProviderLimits() {
     }
 
     /**
-     * 内置机制清单。
+     * 内置机制清单（经 SPI 装载，含外部扩展）。
      *
      * @return 机制实现
      */
     public static List<ProviderLimitProvider> providers() {
-        return PROVIDERS;
+        return ProviderLimitSpi.providers();
     }
 
     /**
@@ -55,8 +48,9 @@ public final class ProviderLimits {
      * @return 机制标识
      */
     public static List<String> kinds() {
-        List<String> kinds = new ArrayList<>(PROVIDERS.size());
-        for (ProviderLimitProvider provider : PROVIDERS) {
+        List<ProviderLimitProvider> providers = providers();
+        List<String> kinds = new ArrayList<>(providers.size());
+        for (ProviderLimitProvider provider : providers) {
             kinds.add(provider.kind());
         }
         return kinds;
@@ -66,13 +60,14 @@ public final class ProviderLimits {
      * 执行探测。
      *
      * @param context 探测上下文
-     * @return 结果报告（declared / observed / attempted / captured_at）
+     * @return 结果报告（declared / observed / doc_url / attempted / captured_at）
      */
     public static Map<String, Object> collect(ProviderLimitContext context) {
         Map<String, Object> declared = null;
         Map<String, Object> observed = null;
-        List<Map<String, Object>> attempted = new ArrayList<>(PROVIDERS.size());
-        for (ProviderLimitProvider provider : PROVIDERS) {
+        List<ProviderLimitProvider> providers = providers();
+        List<Map<String, Object>> attempted = new ArrayList<>(providers.size());
+        for (ProviderLimitProvider provider : providers) {
             Map<String, Object> row = new LinkedHashMap<>(4);
             row.put("kind", provider.kind());
             try {
@@ -97,7 +92,7 @@ public final class ProviderLimits {
         }
 
         long now = System.currentTimeMillis();
-        Map<String, Object> out = new LinkedHashMap<>(10);
+        Map<String, Object> out = new LinkedHashMap<>(14);
         out.put("declared", declared);
         out.put("observed", observed);
         Object source = declared != null ? declared.get("source")
@@ -106,8 +101,39 @@ public final class ProviderLimits {
                 : observed != null ? observed.get("source_url") : null;
         out.put("source", source);
         out.put("source_url", sourceUrl);
+        // 登记表覆盖 200+ 家：官方文档入口单独回传，只有文档没有数值时也能在前端给链接
+        if (context != null) {
+            String docUrl = ProviderLimitPresets.docUrl(context.getPlatform(), context.getBaseUrl());
+            String docSource = ProviderLimitPresets.docSource(context.getPlatform(), context.getBaseUrl());
+            if (docUrl != null) {
+                out.put("doc_url", docUrl);
+            }
+            if (docSource != null) {
+                out.put("doc_source", docSource);
+            }
+            attachDoc(attempted, "doc", docUrl);
+        }
         out.put("captured_at", now);
         out.put("attempted", attempted);
         return out;
+    }
+
+    /**
+     * 把文档入口挂到对应机制的尝试记录上，避免「未命中」看不出查过哪份文档。
+     *
+     * @param attempted 尝试记录
+     * @param kind      机制标识
+     * @param docUrl    文档地址
+     */
+    private static void attachDoc(List<Map<String, Object>> attempted, String kind, String docUrl) {
+        if (docUrl == null) {
+            return;
+        }
+        for (Map<String, Object> row : attempted) {
+            if (kind.equals(row.get("kind"))) {
+                row.put("doc", docUrl);
+                return;
+            }
+        }
     }
 }

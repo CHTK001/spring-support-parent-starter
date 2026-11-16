@@ -35,6 +35,11 @@ public class ManualProviderLimitProvider implements ProviderLimitProvider {
     }
 
     @Override
+    public int order() {
+        return 10;
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public ProviderLimit query(ProviderLimitContext context) {
         if (context == null || context.getExtra() == null) {

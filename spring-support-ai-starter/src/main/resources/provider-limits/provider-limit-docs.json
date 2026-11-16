@@ -1,0 +1,2510 @@
+{
+  "generated_at": "2026-11-16",
+  "source": "pages/ai/src/components/models/model.constants.ts（模板库）+ https://models.dev/api.json（厂商 doc 字段）",
+  "note": "doc 是厂商官方文档入口（多为模型/接口文档，非限制页）；verified=true 仅表示限制数值/计费口径按官方原文核对过。",
+  "entries": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "aliases": [
+        "deepseek"
+      ],
+      "hosts": [
+        "api.deepseek.com"
+      ],
+      "doc": "https://api-docs.deepseek.com/quick_start/rate_limit",
+      "verified": true,
+      "limits": {
+        "model_concurrency": {
+          "deepseek-flash": 2500,
+          "deepseek-v4-pro": 500
+        }
+      },
+      "notes": "账号级并发：同一账号下所有 API Key 合并计算，请求从发出到响应结束算一个并发；超出返回 HTTP 429。官方未公布固定 RPM/TPM。"
+    },
+    {
+      "id": "moss",
+      "name": "Moss",
+      "aliases": [
+        "moss"
+      ],
+      "hosts": [
+        "api.mosi.cn"
+      ],
+      "doc": "https://platform.moss.cn/docs/errors-and-limits/limits",
+      "verified": true,
+      "limits": {
+        "billing_basis": "语音合成 / 音色设计按输入字符；转写按输入音视频时长；生图按张（按总像素分档）；提示词增强按次加收",
+        "currency": "CNY"
+      },
+      "notes": "公开 API 无固定并发/RPM 数值：请求限制由网关、文件服务、模型服务与计费系统共同决定，实际限制以服务端错误码为准。文本模型 Nex 当前限时免费（计费来源：platform.moss.cn/app/pricing）。"
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "aliases": [
+        "openai"
+      ],
+      "hosts": [
+        "api.openai.com"
+      ],
+      "doc": "https://platform.openai.com/docs/guides/rate-limits",
+      "verified": false,
+      "limits": {
+        "billing_basis": "按 token（输入 / 输出分别计价）",
+        "currency": "USD"
+      },
+      "notes": "按账户 usage tier 分级限制 RPM / TPM，数值随等级提升；网关在响应头返回 x-ratelimit-*（limit / remaining / reset）。本次未逐档核对固定数值。"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "aliases": [
+        "anthropic",
+        "claude"
+      ],
+      "hosts": [
+        "api.anthropic.com"
+      ],
+      "doc": "https://docs.anthropic.com/en/api/rate-limits",
+      "verified": false,
+      "limits": {
+        "billing_basis": "按 token（输入 / 输出分别计价）",
+        "currency": "USD"
+      },
+      "notes": "按 usage tier 分级限制 RPM / ITPM / OTPM；响应头返回 anthropic-ratelimit-*。本次未逐档核对固定数值。"
+    },
+    {
+      "id": "gemini",
+      "name": "Google Gemini",
+      "aliases": [
+        "google",
+        "gemini",
+        "google-ai-studio"
+      ],
+      "hosts": [
+        "generativelanguage.googleapis.com"
+      ],
+      "doc": "https://ai.google.dev/gemini-api/docs/rate-limits",
+      "verified": false,
+      "limits": {
+        "billing_basis": "按 token（部分模型按请求）",
+        "currency": "USD"
+      },
+      "notes": "按项目 / 账户等级设置 RPM / TPM / RPD 配额，数值随等级与模型变化。本次未逐档核对固定数值。"
+    },
+    {
+      "id": "google",
+      "name": "Google",
+      "aliases": [
+        "google"
+      ],
+      "hosts": [
+        "generativelanguage.googleapis.com"
+      ],
+      "doc": "https://ai.google.dev/gemini-api/docs/models",
+      "verified": false
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "aliases": [
+        "xai"
+      ],
+      "hosts": [
+        "api.x.ai"
+      ],
+      "doc": "https://docs.x.ai/docs/models",
+      "verified": false
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "aliases": [
+        "mistral"
+      ],
+      "hosts": [
+        "api.mistral.ai"
+      ],
+      "doc": "https://docs.mistral.ai/getting-started/models/",
+      "verified": false
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "aliases": [
+        "groq"
+      ],
+      "hosts": [
+        "api.groq.com"
+      ],
+      "doc": "https://console.groq.com/docs/models",
+      "verified": false
+    },
+    {
+      "id": "togetherai",
+      "name": "Together AI",
+      "aliases": [
+        "together",
+        "togetherai"
+      ],
+      "hosts": [
+        "api.together.ai"
+      ],
+      "doc": "https://docs.together.ai/docs/serverless-models",
+      "verified": false
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "aliases": [
+        "cerebras"
+      ],
+      "hosts": [
+        "api.cerebras.ai"
+      ],
+      "doc": "https://inference-docs.cerebras.ai/models/overview",
+      "verified": false
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "aliases": [
+        "cohere"
+      ],
+      "hosts": [
+        "api.cohere.ai"
+      ],
+      "doc": "https://docs.cohere.com/docs/models",
+      "verified": false
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "aliases": [
+        "perplexity"
+      ],
+      "hosts": [
+        "api.perplexity.ai"
+      ],
+      "doc": "https://docs.perplexity.ai",
+      "verified": false
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "aliases": [
+        "huggingface"
+      ],
+      "hosts": [
+        "api-inference.huggingface.co"
+      ],
+      "doc": "https://huggingface.co/docs/inference-providers",
+      "verified": false
+    },
+    {
+      "id": "nvidia",
+      "name": "Nvidia",
+      "aliases": [
+        "nvidia"
+      ],
+      "hosts": [
+        "integrate.api.nvidia.com"
+      ],
+      "doc": "https://docs.api.nvidia.com/nim/",
+      "verified": false
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "aliases": [
+        "openrouter"
+      ],
+      "hosts": [
+        "openrouter.ai"
+      ],
+      "doc": "https://openrouter.ai/models",
+      "verified": false
+    },
+    {
+      "id": "commandcode",
+      "name": "CommandCode",
+      "aliases": [
+        "commandcode"
+      ],
+      "hosts": [
+        "api.commandcode.ai"
+      ],
+      "doc": "https://commandcode.ai/docs/provider",
+      "verified": false
+    },
+    {
+      "id": "agnes",
+      "name": "Agnes AI",
+      "aliases": [
+        "agnes"
+      ],
+      "hosts": [
+        "apihub.agnes-ai.cn"
+      ],
+      "doc": "https://agnes-ai.com/doc",
+      "verified": false
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "aliases": [
+        "opencode"
+      ],
+      "hosts": [
+        "opencode.ai"
+      ],
+      "doc": "https://opencode.ai/v2/docs/console/models/",
+      "verified": false
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow",
+      "aliases": [
+        "siliconflow"
+      ],
+      "hosts": [
+        "api.siliconflow.cn"
+      ],
+      "doc": "https://cloud.siliconflow.com/models",
+      "verified": false
+    },
+    {
+      "id": "302ai",
+      "name": "AI302",
+      "aliases": [
+        "302ai",
+        "ai302"
+      ],
+      "hosts": [
+        "api.302.ai",
+        "api.ai302.com"
+      ],
+      "doc": "https://doc.302.ai",
+      "verified": false
+    },
+    {
+      "id": "alibaba",
+      "name": "通义千问",
+      "aliases": [
+        "alibaba",
+        "qwen"
+      ],
+      "hosts": [
+        "dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "verified": false
+    },
+    {
+      "id": "zhipuai",
+      "name": "智谱 AI",
+      "aliases": [
+        "zhipu",
+        "zhipuai"
+      ],
+      "hosts": [
+        "open.bigmodel.cn"
+      ],
+      "doc": "https://docs.bigmodel.cn/cn/guide/start/pricing",
+      "verified": false
+    },
+    {
+      "id": "moonshotai",
+      "name": "Moonshot",
+      "aliases": [
+        "moonshot",
+        "moonshotai"
+      ],
+      "hosts": [
+        "api.moonshot.cn"
+      ],
+      "doc": "https://platform.moonshot.ai/docs/api/chat",
+      "verified": false
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "aliases": [
+        "minimax"
+      ],
+      "hosts": [
+        "api.minimaxi.chat"
+      ],
+      "doc": "https://platform.minimax.io/docs/guides/quickstart",
+      "verified": false
+    },
+    {
+      "id": "stepfun",
+      "name": "阶跃星辰",
+      "aliases": [
+        "stepfun"
+      ],
+      "hosts": [
+        "api.stepfun.com"
+      ],
+      "doc": "https://platform.stepfun.com/docs/zh/overview/concept",
+      "verified": false
+    },
+    {
+      "id": "sensenova",
+      "name": "SenseNova 商汤",
+      "aliases": [
+        "sensenova"
+      ],
+      "hosts": [
+        "token.sensenova.cn"
+      ],
+      "doc": "https://platform.sensenova.cn/docs",
+      "verified": false
+    },
+    {
+      "id": "volcengine",
+      "name": "豆包",
+      "aliases": [
+        "doubao",
+        "volcengine"
+      ],
+      "hosts": [
+        "ark.cn-beijing.volces.com"
+      ],
+      "doc": "https://www.volcengine.com/docs/82379/1330310",
+      "verified": false
+    },
+    {
+      "id": "modelscope",
+      "name": "ModelScope",
+      "aliases": [
+        "modelscope"
+      ],
+      "hosts": [
+        "api-inference.modelscope.cn"
+      ],
+      "doc": "https://modelscope.cn/docs/model-service/API-Inference/intro",
+      "verified": false
+    },
+    {
+      "id": "azure",
+      "name": "Azure",
+      "aliases": [
+        "azure"
+      ],
+      "hosts": [
+        "your-resource.openai.azure.com"
+      ],
+      "doc": "https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models",
+      "verified": false
+    },
+    {
+      "id": "amazon-bedrock",
+      "name": "AWS Bedrock",
+      "aliases": [
+        "amazon-bedrock",
+        "aws-bedrock"
+      ],
+      "hosts": [
+        "bedrock-runtime.us-east-1.amazonaws.com"
+      ],
+      "doc": "https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html",
+      "verified": false
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "aliases": [
+        "dots",
+        "openai"
+      ],
+      "hosts": [
+        "note3-prev-api.askdiandian.com"
+      ],
+      "doc": "https://platform.openai.com/docs/models",
+      "verified": false
+    },
+    {
+      "id": "abacus",
+      "name": "Abacus",
+      "aliases": [
+        "abacus"
+      ],
+      "hosts": [
+        "routellm.abacus.ai"
+      ],
+      "doc": "https://abacus.ai/help/api",
+      "verified": false
+    },
+    {
+      "id": "abliteration-ai",
+      "name": "abliteration.ai",
+      "aliases": [
+        "abliteration-ai"
+      ],
+      "hosts": [
+        "api.abliteration.ai"
+      ],
+      "doc": "https://docs.abliteration.ai/models",
+      "verified": false
+    },
+    {
+      "id": "above",
+      "name": "above.dev",
+      "aliases": [
+        "above"
+      ],
+      "hosts": [
+        "api.above.dev"
+      ],
+      "doc": "https://above.dev/docs",
+      "verified": false
+    },
+    {
+      "id": "agentrouter",
+      "name": "AgentRouter",
+      "aliases": [
+        "agentrouter"
+      ],
+      "hosts": [
+        "agentrouter.org"
+      ],
+      "doc": "https://agentrouter.org/docs/opencode.html",
+      "verified": false
+    },
+    {
+      "id": "ai-router",
+      "name": "AI-ROUTER",
+      "aliases": [
+        "ai-router"
+      ],
+      "hosts": [
+        "api.ai-router.dev"
+      ],
+      "doc": "https://ai-router.dev/openai-compatible-api-gateway/",
+      "verified": false
+    },
+    {
+      "id": "ai21",
+      "name": "AI21 Labs",
+      "aliases": [
+        "ai21"
+      ],
+      "hosts": [
+        "api.ai21.com"
+      ],
+      "doc": "https://docs.ai21.com/docs/jamba-foundation-models",
+      "verified": false
+    },
+    {
+      "id": "aiand",
+      "name": "ai&",
+      "aliases": [
+        "aiand"
+      ],
+      "hosts": [
+        "api.aiand.com"
+      ],
+      "doc": "https://docs.aiand.com/",
+      "verified": false
+    },
+    {
+      "id": "aimlapi",
+      "name": "AI/ML API",
+      "aliases": [
+        "aimlapi"
+      ],
+      "hosts": [
+        "api.aimlapi.com"
+      ],
+      "doc": "https://docs.aimlapi.com",
+      "verified": false
+    },
+    {
+      "id": "ainetcafe",
+      "name": "ainetcafe",
+      "aliases": [
+        "ainetcafe"
+      ],
+      "hosts": [
+        "microquickjs.com"
+      ],
+      "doc": "https://ainetcafe.com/k3/guides/",
+      "verified": false
+    },
+    {
+      "id": "aixy",
+      "name": "Aixy",
+      "aliases": [
+        "aixy"
+      ],
+      "hosts": [
+        "api.aixy-gateway.com"
+      ],
+      "doc": "https://docs.aixy-gateway.com/integrations/overview",
+      "verified": false
+    },
+    {
+      "id": "aki-io",
+      "name": "AKI.IO",
+      "aliases": [
+        "aki-io"
+      ],
+      "hosts": [
+        "aki.io"
+      ],
+      "doc": "https://aki.io/docs/",
+      "verified": false
+    },
+    {
+      "id": "ambient",
+      "name": "Ambient",
+      "aliases": [
+        "ambient"
+      ],
+      "hosts": [
+        "api.ambient.xyz"
+      ],
+      "doc": "https://ambient.xyz",
+      "verified": false
+    },
+    {
+      "id": "amd",
+      "name": "AMD",
+      "aliases": [
+        "amd"
+      ],
+      "hosts": [
+        "developer.amd.com.cn"
+      ],
+      "doc": "https://developer.amd.com.cn/radeon/tokenfactory",
+      "verified": false
+    },
+    {
+      "id": "anyapi",
+      "name": "AnyAPI",
+      "aliases": [
+        "anyapi"
+      ],
+      "hosts": [
+        "api.anyapi.ai"
+      ],
+      "doc": "https://docs.anyapi.ai",
+      "verified": false
+    },
+    {
+      "id": "arcee",
+      "name": "Arcee",
+      "aliases": [
+        "arcee"
+      ],
+      "hosts": [
+        "api.arcee.ai"
+      ],
+      "doc": "https://docs.arcee.ai",
+      "verified": false
+    },
+    {
+      "id": "auriko",
+      "name": "Auriko",
+      "aliases": [
+        "auriko"
+      ],
+      "hosts": [
+        "api.auriko.ai"
+      ],
+      "doc": "https://docs.auriko.ai",
+      "verified": false
+    },
+    {
+      "id": "baseten",
+      "name": "Baseten",
+      "aliases": [
+        "baseten"
+      ],
+      "hosts": [
+        "inference.baseten.co"
+      ],
+      "doc": "https://docs.baseten.co/inference/model-apis/overview",
+      "verified": false
+    },
+    {
+      "id": "bee",
+      "name": "Bee by HEOSSI",
+      "aliases": [
+        "bee"
+      ],
+      "hosts": [
+        "api.bee.heossi.com"
+      ],
+      "doc": "https://bee.heossi.com/docs/sdks",
+      "verified": false
+    },
+    {
+      "id": "berget",
+      "name": "Berget.AI",
+      "aliases": [
+        "berget"
+      ],
+      "hosts": [
+        "api.berget.ai"
+      ],
+      "doc": "https://api.berget.ai",
+      "verified": false
+    },
+    {
+      "id": "blueclaw",
+      "name": "Blue Claw",
+      "aliases": [
+        "blueclaw"
+      ],
+      "hosts": [
+        "openai.blueclaw.network"
+      ],
+      "doc": "https://blueclaw.network",
+      "verified": false
+    },
+    {
+      "id": "bothub",
+      "name": "Bothub",
+      "aliases": [
+        "bothub"
+      ],
+      "hosts": [
+        "openai.bothub.ru"
+      ],
+      "doc": "https://bothub.ru/models",
+      "verified": false
+    },
+    {
+      "id": "boundless",
+      "name": "Boundless",
+      "aliases": [
+        "boundless"
+      ],
+      "hosts": [
+        "api.inference.boundless.network"
+      ],
+      "doc": "https://inference.boundless.network/models",
+      "verified": false
+    },
+    {
+      "id": "chutes",
+      "name": "Chutes",
+      "aliases": [
+        "chutes"
+      ],
+      "hosts": [
+        "llm.chutes.ai"
+      ],
+      "doc": "https://llm.chutes.ai/v1/models",
+      "verified": false
+    },
+    {
+      "id": "clarifai",
+      "name": "Clarifai",
+      "aliases": [
+        "clarifai"
+      ],
+      "hosts": [
+        "api.clarifai.com"
+      ],
+      "doc": "https://docs.clarifai.com/compute/inference/",
+      "verified": false
+    },
+    {
+      "id": "claudinio",
+      "name": "Claudinio",
+      "aliases": [
+        "claudinio"
+      ],
+      "hosts": [
+        "api.claudin.io"
+      ],
+      "doc": "https://claudin.io",
+      "verified": false
+    },
+    {
+      "id": "cloudferro-sherlock",
+      "name": "CloudFerro Sherlock",
+      "aliases": [
+        "cloudferro-sherlock"
+      ],
+      "hosts": [
+        "api-sherlock.cloudferro.com"
+      ],
+      "doc": "https://docs.sherlock.cloudferro.com/",
+      "verified": false
+    },
+    {
+      "id": "coralbricks",
+      "name": "CoralBricks",
+      "aliases": [
+        "coralbricks"
+      ],
+      "hosts": [
+        "inference.coralbricks.ai"
+      ],
+      "doc": "https://www.coralbricks.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "cortecs",
+      "name": "Cortecs",
+      "aliases": [
+        "cortecs"
+      ],
+      "hosts": [
+        "api.cortecs.ai"
+      ],
+      "doc": "https://api.cortecs.ai/v1/models",
+      "verified": false
+    },
+    {
+      "id": "crossmodel",
+      "name": "CrossModel",
+      "aliases": [
+        "crossmodel"
+      ],
+      "hosts": [
+        "api.crossmodel.ai"
+      ],
+      "doc": "https://www.crossmodel.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "crusoe",
+      "name": "Crusoe",
+      "aliases": [
+        "crusoe"
+      ],
+      "hosts": [
+        "api.inference.crusoecloud.com"
+      ],
+      "doc": "https://docs.crusoecloud.com/managed-inference/overview",
+      "verified": false
+    },
+    {
+      "id": "daoxe",
+      "name": "DaoXE",
+      "aliases": [
+        "daoxe"
+      ],
+      "hosts": [
+        "daoxe.com"
+      ],
+      "doc": "https://daoxe.com/pricing",
+      "verified": false
+    },
+    {
+      "id": "digitalocean",
+      "name": "DigitalOcean",
+      "aliases": [
+        "digitalocean"
+      ],
+      "hosts": [
+        "inference.do-ai.run"
+      ],
+      "doc": "https://docs.digitalocean.com/products/gradient-ai-platform/details/models/",
+      "verified": false
+    },
+    {
+      "id": "dinference",
+      "name": "DInference",
+      "aliases": [
+        "dinference"
+      ],
+      "hosts": [
+        "api.dinference.com"
+      ],
+      "doc": "https://dinference.com",
+      "verified": false
+    },
+    {
+      "id": "drun",
+      "name": "D.Run (China)",
+      "aliases": [
+        "drun"
+      ],
+      "hosts": [
+        "chat.d.run"
+      ],
+      "doc": "https://www.d.run",
+      "verified": false
+    },
+    {
+      "id": "ebcloud",
+      "name": "EBCloud",
+      "aliases": [
+        "ebcloud"
+      ],
+      "hosts": [
+        "maas-api.ebcloud.com"
+      ],
+      "doc": "https://docs.ebtech.com/ai/model-api.html",
+      "verified": false
+    },
+    {
+      "id": "echo",
+      "name": "Echo",
+      "aliases": [
+        "echo"
+      ],
+      "hosts": [
+        "echo.tracerml.ai"
+      ],
+      "doc": "https://echo.tracerml.ai/docs/api",
+      "verified": false
+    },
+    {
+      "id": "edenai",
+      "name": "Eden AI",
+      "aliases": [
+        "edenai"
+      ],
+      "hosts": [
+        "api.edenai.run"
+      ],
+      "doc": "https://docs.edenai.co",
+      "verified": false
+    },
+    {
+      "id": "empiriolabs",
+      "name": "EmpirioLabs AI",
+      "aliases": [
+        "empiriolabs"
+      ],
+      "hosts": [
+        "api.empiriolabs.ai"
+      ],
+      "doc": "https://docs.empiriolabs.ai",
+      "verified": false
+    },
+    {
+      "id": "engy",
+      "name": "engy",
+      "aliases": [
+        "engy"
+      ],
+      "hosts": [
+        "api.engy.ai"
+      ],
+      "doc": "https://engy.ai/pricing",
+      "verified": false
+    },
+    {
+      "id": "evroc",
+      "name": "evroc",
+      "aliases": [
+        "evroc"
+      ],
+      "hosts": [
+        "models.think.evroc.com"
+      ],
+      "doc": "https://docs.evroc.com/products/think/overview.html",
+      "verified": false
+    },
+    {
+      "id": "fastrouter",
+      "name": "FastRouter",
+      "aliases": [
+        "fastrouter"
+      ],
+      "hosts": [
+        "go.fastrouter.ai"
+      ],
+      "doc": "https://fastrouter.ai/models",
+      "verified": false
+    },
+    {
+      "id": "fireworks-ai",
+      "name": "Fireworks AI",
+      "aliases": [
+        "fireworks-ai"
+      ],
+      "hosts": [
+        "api.fireworks.ai"
+      ],
+      "doc": "https://fireworks.ai/docs/",
+      "verified": false
+    },
+    {
+      "id": "freemodel",
+      "name": "FreeModel",
+      "aliases": [
+        "freemodel"
+      ],
+      "hosts": [
+        "cc.freemodel.dev"
+      ],
+      "doc": "https://freemodel.dev",
+      "verified": false
+    },
+    {
+      "id": "friendli",
+      "name": "Friendli",
+      "aliases": [
+        "friendli"
+      ],
+      "hosts": [
+        "api.friendli.ai"
+      ],
+      "doc": "https://friendli.ai/docs/guides/serverless_endpoints/introduction",
+      "verified": false
+    },
+    {
+      "id": "frogbot",
+      "name": "FrogBot",
+      "aliases": [
+        "frogbot"
+      ],
+      "hosts": [
+        "app.frogbot.ai"
+      ],
+      "doc": "https://docs.frogbot.ai",
+      "verified": false
+    },
+    {
+      "id": "github-copilot",
+      "name": "GitHub Copilot",
+      "aliases": [
+        "github-copilot"
+      ],
+      "hosts": [
+        "api.githubcopilot.com"
+      ],
+      "doc": "https://docs.github.com/en/copilot",
+      "verified": false
+    },
+    {
+      "id": "gmicloud",
+      "name": "GMI Cloud",
+      "aliases": [
+        "gmicloud"
+      ],
+      "hosts": [
+        "api.gmi-serving.com"
+      ],
+      "doc": "https://docs.gmicloud.ai/inference-engine/api-reference/llm-api-reference",
+      "verified": false
+    },
+    {
+      "id": "greenpt",
+      "name": "GreenPT",
+      "aliases": [
+        "greenpt"
+      ],
+      "hosts": [
+        "api.greenpt.ai"
+      ],
+      "doc": "https://docs.greenpt.ai",
+      "verified": false
+    },
+    {
+      "id": "helicone",
+      "name": "Helicone",
+      "aliases": [
+        "helicone"
+      ],
+      "hosts": [
+        "ai-gateway.helicone.ai"
+      ],
+      "doc": "https://helicone.ai/models",
+      "verified": false
+    },
+    {
+      "id": "hetzner",
+      "name": "Hetzner",
+      "aliases": [
+        "hetzner"
+      ],
+      "hosts": [
+        "inference.hetzner.com"
+      ],
+      "doc": "https://experiments.hetzner.com/docs/inference",
+      "verified": false
+    },
+    {
+      "id": "hpc-ai",
+      "name": "HPC-AI",
+      "aliases": [
+        "hpc-ai"
+      ],
+      "hosts": [
+        "api.hpc-ai.com"
+      ],
+      "doc": "https://www.hpc-ai.com/doc/docs/quickstart/",
+      "verified": false
+    },
+    {
+      "id": "hyper",
+      "name": "Charm Hyper",
+      "aliases": [
+        "hyper"
+      ],
+      "hosts": [
+        "hyper.charm.land"
+      ],
+      "doc": "https://hyper.charm.land",
+      "verified": false
+    },
+    {
+      "id": "impossibl",
+      "name": "Impossibl",
+      "aliases": [
+        "impossibl"
+      ],
+      "hosts": [
+        "api.impossibl.com"
+      ],
+      "doc": "https://impossibl.com/docs/models",
+      "verified": false
+    },
+    {
+      "id": "inception",
+      "name": "Inception",
+      "aliases": [
+        "inception"
+      ],
+      "hosts": [
+        "api.inceptionlabs.ai"
+      ],
+      "doc": "https://docs.inceptionlabs.ai/get-started/models",
+      "verified": false
+    },
+    {
+      "id": "inceptron",
+      "name": "Inceptron",
+      "aliases": [
+        "inceptron"
+      ],
+      "hosts": [
+        "api.inceptron.io"
+      ],
+      "doc": "https://docs.inceptron.io",
+      "verified": false
+    },
+    {
+      "id": "inco",
+      "name": "Inco",
+      "aliases": [
+        "inco"
+      ],
+      "hosts": [
+        "api.inco.ai"
+      ],
+      "doc": "https://platform.inco.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "infer",
+      "name": "Infer by Flow7",
+      "aliases": [
+        "infer"
+      ],
+      "hosts": [
+        "infer.flow7.org"
+      ],
+      "doc": "https://infer.flow7.org/opencode",
+      "verified": false
+    },
+    {
+      "id": "inference",
+      "name": "Inference",
+      "aliases": [
+        "inference"
+      ],
+      "hosts": [
+        "inference.net"
+      ],
+      "doc": "https://inference.net/models",
+      "verified": false
+    },
+    {
+      "id": "inferx",
+      "name": "InferX",
+      "aliases": [
+        "inferx"
+      ],
+      "hosts": [
+        "model.inferx.net"
+      ],
+      "doc": "https://model.inferx.net/endpoints",
+      "verified": false
+    },
+    {
+      "id": "io-net",
+      "name": "IO.NET",
+      "aliases": [
+        "io-net"
+      ],
+      "hosts": [
+        "api.intelligence.io.solutions"
+      ],
+      "doc": "https://io.net/docs/guides/intelligence/io-intelligence",
+      "verified": false
+    },
+    {
+      "id": "iteracompute",
+      "name": "IteraCompute",
+      "aliases": [
+        "iteracompute"
+      ],
+      "hosts": [
+        "api.iteracompute.com"
+      ],
+      "doc": "https://iteracompute.com/docs.html",
+      "verified": false
+    },
+    {
+      "id": "jalapeno",
+      "name": "Jalapeno Cloud",
+      "aliases": [
+        "jalapeno"
+      ],
+      "hosts": [
+        "api.jalapeno-cloud.ai"
+      ],
+      "doc": "https://www.jalapeno-cloud.ai/docs/",
+      "verified": false
+    },
+    {
+      "id": "jiekou",
+      "name": "Jiekou.AI",
+      "aliases": [
+        "jiekou"
+      ],
+      "hosts": [
+        "api.jiekou.ai"
+      ],
+      "doc": "https://docs.jiekou.ai/docs/support/quickstart?utm_source=github_models.dev",
+      "verified": false
+    },
+    {
+      "id": "kenari",
+      "name": "Kenari",
+      "aliases": [
+        "kenari"
+      ],
+      "hosts": [
+        "kenari.id"
+      ],
+      "doc": "https://kenari.id/docs",
+      "verified": false
+    },
+    {
+      "id": "kilo",
+      "name": "Kilo Gateway",
+      "aliases": [
+        "kilo"
+      ],
+      "hosts": [
+        "api.kilo.ai"
+      ],
+      "doc": "https://kilo.ai",
+      "verified": false
+    },
+    {
+      "id": "klokintegration",
+      "name": "klokintegration.se",
+      "aliases": [
+        "klokintegration"
+      ],
+      "hosts": [
+        "api-gw.klok.ipaas.se"
+      ],
+      "doc": "https://klokintegration.se/docs/ai-api",
+      "verified": false
+    },
+    {
+      "id": "kosmik",
+      "name": "Kosmik Compute",
+      "aliases": [
+        "kosmik"
+      ],
+      "hosts": [
+        "api.koscompute.com"
+      ],
+      "doc": "https://api.koscompute.com/docs/",
+      "verified": false
+    },
+    {
+      "id": "kuae-cloud-coding-plan",
+      "name": "KUAE Cloud Coding Plan",
+      "aliases": [
+        "kuae-cloud-coding-plan"
+      ],
+      "hosts": [
+        "coding-plan-endpoint.kuaecloud.net"
+      ],
+      "doc": "https://docs.mthreads.com/kuaecloud/kuaecloud-doc-online/coding_plan/",
+      "verified": false
+    },
+    {
+      "id": "liquid",
+      "name": "Liquid Inference",
+      "aliases": [
+        "liquid"
+      ],
+      "hosts": [
+        "router.inference.ai.exchange"
+      ],
+      "doc": "https://inference.ai.exchange/docs",
+      "verified": false
+    },
+    {
+      "id": "llmgateway",
+      "name": "DevPass (LLM Gateway)",
+      "aliases": [
+        "llmgateway"
+      ],
+      "hosts": [
+        "api.llmgateway.io"
+      ],
+      "doc": "https://llmgateway.io/docs",
+      "verified": false
+    },
+    {
+      "id": "llmgateway-providers",
+      "name": "LLM Gateway",
+      "aliases": [
+        "llmgateway-providers"
+      ],
+      "hosts": [
+        "api.llmgateway.io"
+      ],
+      "doc": "https://llmgateway.io/docs",
+      "verified": false
+    },
+    {
+      "id": "llmtech",
+      "name": "LLM Tech",
+      "aliases": [
+        "llmtech"
+      ],
+      "hosts": [
+        "api.llmtech.eu"
+      ],
+      "doc": "https://llmtech.eu/models/qwen3.8-27b",
+      "verified": false
+    },
+    {
+      "id": "llmtr",
+      "name": "LLMTR",
+      "aliases": [
+        "llmtr"
+      ],
+      "hosts": [
+        "llmtr.com"
+      ],
+      "doc": "https://llmtr.com/docs",
+      "verified": false
+    },
+    {
+      "id": "longcat",
+      "name": "LongCat",
+      "aliases": [
+        "longcat"
+      ],
+      "hosts": [
+        "api.longcat.chat"
+      ],
+      "doc": "https://longcat.chat/platform/docs/",
+      "verified": false
+    },
+    {
+      "id": "lowrouter",
+      "name": "LowRouter",
+      "aliases": [
+        "lowrouter"
+      ],
+      "hosts": [
+        "api.lowrouter.ai"
+      ],
+      "doc": "https://lowrouter.ai/docs/models/available",
+      "verified": false
+    },
+    {
+      "id": "lucidquery",
+      "name": "LucidQuery",
+      "aliases": [
+        "lucidquery"
+      ],
+      "hosts": [
+        "api.lucidquery.com"
+      ],
+      "doc": "https://lucidquery.com/docs",
+      "verified": false
+    },
+    {
+      "id": "meganova",
+      "name": "Meganova",
+      "aliases": [
+        "meganova"
+      ],
+      "hosts": [
+        "api.meganova.ai"
+      ],
+      "doc": "https://docs.meganova.ai",
+      "verified": false
+    },
+    {
+      "id": "melious",
+      "name": "Melious",
+      "aliases": [
+        "melious"
+      ],
+      "hosts": [
+        "api.melious.ai"
+      ],
+      "doc": "https://melious.ai/docs/reference/models",
+      "verified": false
+    },
+    {
+      "id": "merge-gateway",
+      "name": "Merge Gateway",
+      "aliases": [
+        "merge-gateway"
+      ],
+      "hosts": [
+        "api-gateway.merge.dev"
+      ],
+      "doc": "https://docs.merge.dev/merge-gateway",
+      "verified": false
+    },
+    {
+      "id": "meta",
+      "name": "Meta",
+      "aliases": [
+        "meta"
+      ],
+      "hosts": [
+        "api.meta.ai"
+      ],
+      "doc": "https://dev.meta.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "mixlayer",
+      "name": "Mixlayer",
+      "aliases": [
+        "mixlayer"
+      ],
+      "hosts": [
+        "models.mixlayer.ai"
+      ],
+      "doc": "https://docs.mixlayer.com",
+      "verified": false
+    },
+    {
+      "id": "moark",
+      "name": "Moark",
+      "aliases": [
+        "moark"
+      ],
+      "hosts": [
+        "moark.com"
+      ],
+      "doc": "https://moark.com/docs/openapi/v1#tag/%E6%96%87%E6%9C%AC%E7%94%9F%E6%88%90",
+      "verified": false
+    },
+    {
+      "id": "modal",
+      "name": "Modal",
+      "aliases": [
+        "modal"
+      ],
+      "hosts": [
+        "inference.us-west.modal.direct"
+      ],
+      "doc": "https://modal.com/docs/guide/endpoints",
+      "verified": false
+    },
+    {
+      "id": "model-oracle-ai",
+      "name": "Model Oracle AI",
+      "aliases": [
+        "model-oracle-ai"
+      ],
+      "hosts": [
+        "api.modeloracle.com"
+      ],
+      "doc": "https://modeloracle.com/setup/",
+      "verified": false
+    },
+    {
+      "id": "modelis",
+      "name": "Modelis",
+      "aliases": [
+        "modelis"
+      ],
+      "hosts": [
+        "modelishub.com"
+      ],
+      "doc": "https://modelishub.com/pricing",
+      "verified": false
+    },
+    {
+      "id": "morph",
+      "name": "Morph",
+      "aliases": [
+        "morph"
+      ],
+      "hosts": [
+        "api.morphllm.com"
+      ],
+      "doc": "https://docs.morphllm.com/api-reference/introduction",
+      "verified": false
+    },
+    {
+      "id": "nan",
+      "name": "NaN",
+      "aliases": [
+        "nan"
+      ],
+      "hosts": [
+        "api.nan.builders"
+      ],
+      "doc": "https://nan.builders/docs/models",
+      "verified": false
+    },
+    {
+      "id": "nano-gpt",
+      "name": "NanoGPT",
+      "aliases": [
+        "nano-gpt"
+      ],
+      "hosts": [
+        "nano-gpt.com"
+      ],
+      "doc": "https://docs.nano-gpt.com",
+      "verified": false
+    },
+    {
+      "id": "nearai",
+      "name": "NEAR AI Cloud",
+      "aliases": [
+        "nearai"
+      ],
+      "hosts": [
+        "cloud-api.near.ai"
+      ],
+      "doc": "https://docs.near.ai/",
+      "verified": false
+    },
+    {
+      "id": "nebius",
+      "name": "Nebius Token Factory",
+      "aliases": [
+        "nebius"
+      ],
+      "hosts": [
+        "api.tokenfactory.nebius.com"
+      ],
+      "doc": "https://docs.tokenfactory.nebius.com/",
+      "verified": false
+    },
+    {
+      "id": "neosmith",
+      "name": "NeoSmith",
+      "aliases": [
+        "neosmith"
+      ],
+      "hosts": [
+        "router.neosmith.ai"
+      ],
+      "doc": "https://neosmith.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "neuralwatt",
+      "name": "Neuralwatt",
+      "aliases": [
+        "neuralwatt"
+      ],
+      "hosts": [
+        "api.neuralwatt.com"
+      ],
+      "doc": "https://portal.neuralwatt.com/docs",
+      "verified": false
+    },
+    {
+      "id": "novita-ai",
+      "name": "Novita AI",
+      "aliases": [
+        "novita-ai"
+      ],
+      "hosts": [
+        "api.novita.ai"
+      ],
+      "doc": "https://novita.ai/docs/guides/introduction",
+      "verified": false
+    },
+    {
+      "id": "oci",
+      "name": "OCI Generative AI",
+      "aliases": [
+        "oci"
+      ],
+      "hosts": [
+        "inference.generativeai.us-chicago-1.oci.oraclecloud.com"
+      ],
+      "doc": "https://docs.oracle.com/en-us/iaas/Content/generative-ai/pretrained-models.htm",
+      "verified": false
+    },
+    {
+      "id": "ofox",
+      "name": "Ofox",
+      "aliases": [
+        "ofox"
+      ],
+      "hosts": [
+        "api.ofox.ai"
+      ],
+      "doc": "https://ofox.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "ollama-cloud",
+      "name": "Ollama Cloud",
+      "aliases": [
+        "ollama-cloud"
+      ],
+      "hosts": [
+        "ollama.com"
+      ],
+      "doc": "https://docs.ollama.com/cloud",
+      "verified": false
+    },
+    {
+      "id": "opencode-go",
+      "name": "OpenCode Go",
+      "aliases": [
+        "opencode-go"
+      ],
+      "hosts": [
+        "opencode.ai"
+      ],
+      "doc": "https://opencode.ai/v2/docs/console/go/",
+      "verified": false
+    },
+    {
+      "id": "openreason",
+      "name": "OpenReason",
+      "aliases": [
+        "openreason"
+      ],
+      "hosts": [
+        "api.openreason.app"
+      ],
+      "doc": "https://openreason.app/docs",
+      "verified": false
+    },
+    {
+      "id": "opper",
+      "name": "Opper",
+      "aliases": [
+        "opper"
+      ],
+      "hosts": [
+        "api.opper.ai"
+      ],
+      "doc": "https://opper.ai/models",
+      "verified": false
+    },
+    {
+      "id": "orcarouter",
+      "name": "OrcaRouter",
+      "aliases": [
+        "orcarouter"
+      ],
+      "hosts": [
+        "api.orcarouter.ai"
+      ],
+      "doc": "https://docs.orcarouter.ai",
+      "verified": false
+    },
+    {
+      "id": "ovhcloud",
+      "name": "OVHcloud AI Endpoints",
+      "aliases": [
+        "ovhcloud"
+      ],
+      "hosts": [
+        "oai.endpoints.kepler.ai.cloud.ovh.net"
+      ],
+      "doc": "https://www.ovhcloud.com/en/public-cloud/ai-endpoints/catalog//",
+      "verified": false
+    },
+    {
+      "id": "pareto",
+      "name": "Pareto Inference",
+      "aliases": [
+        "pareto"
+      ],
+      "hosts": [
+        "api.paretoinference.com"
+      ],
+      "doc": "https://docs.paretoinference.com/",
+      "verified": false
+    },
+    {
+      "id": "pendra",
+      "name": "Pendra",
+      "aliases": [
+        "pendra"
+      ],
+      "hosts": [
+        "api.pendra.ai"
+      ],
+      "doc": "https://pendra.ai/docs/integrations/opencode",
+      "verified": false
+    },
+    {
+      "id": "perplexity-agent",
+      "name": "Perplexity Agent",
+      "aliases": [
+        "perplexity-agent"
+      ],
+      "hosts": [
+        "api.perplexity.ai"
+      ],
+      "doc": "https://docs.perplexity.ai/docs/agent-api/models",
+      "verified": false
+    },
+    {
+      "id": "pioneer",
+      "name": "Pioneer",
+      "aliases": [
+        "pioneer"
+      ],
+      "hosts": [
+        "api.fastino.ai"
+      ],
+      "doc": "https://agent.pioneer.ai/llms.txt",
+      "verified": false
+    },
+    {
+      "id": "poe",
+      "name": "Poe",
+      "aliases": [
+        "poe"
+      ],
+      "hosts": [
+        "api.poe.com"
+      ],
+      "doc": "https://creator.poe.com/docs/external-applications/openai-compatible-api",
+      "verified": false
+    },
+    {
+      "id": "poolside",
+      "name": "Poolside",
+      "aliases": [
+        "poolside"
+      ],
+      "hosts": [
+        "inference.poolside.ai"
+      ],
+      "doc": "https://platform.poolside.ai",
+      "verified": false
+    },
+    {
+      "id": "prime",
+      "name": "Prime Inference",
+      "aliases": [
+        "prime"
+      ],
+      "hosts": [
+        "api.pinference.ai"
+      ],
+      "doc": "https://docs.primeintellect.ai/inference/overview",
+      "verified": false
+    },
+    {
+      "id": "qihang-ai",
+      "name": "QiHang",
+      "aliases": [
+        "qihang-ai"
+      ],
+      "hosts": [
+        "api.qhaigc.net"
+      ],
+      "doc": "https://www.qhaigc.net/docs",
+      "verified": false
+    },
+    {
+      "id": "qiniu-ai",
+      "name": "Qiniu",
+      "aliases": [
+        "qiniu-ai"
+      ],
+      "hosts": [
+        "api.qnaigc.com"
+      ],
+      "doc": "https://developer.qiniu.com/aitokenapi",
+      "verified": false
+    },
+    {
+      "id": "reflection",
+      "name": "Reflection",
+      "aliases": [
+        "reflection"
+      ],
+      "hosts": [
+        "api.reflection.ai"
+      ],
+      "doc": "https://developers.reflection.ai/models",
+      "verified": false
+    },
+    {
+      "id": "regolo-ai",
+      "name": "Regolo AI",
+      "aliases": [
+        "regolo-ai"
+      ],
+      "hosts": [
+        "api.regolo.ai"
+      ],
+      "doc": "https://docs.regolo.ai/",
+      "verified": false
+    },
+    {
+      "id": "requesty",
+      "name": "Requesty",
+      "aliases": [
+        "requesty"
+      ],
+      "hosts": [
+        "router.requesty.ai"
+      ],
+      "doc": "https://requesty.ai/solution/llm-routing/models",
+      "verified": false
+    },
+    {
+      "id": "routing-run",
+      "name": "routing.run",
+      "aliases": [
+        "routing-run"
+      ],
+      "hosts": [
+        "api.routing.run"
+      ],
+      "doc": "https://docs.routing.run/api-reference/models",
+      "verified": false
+    },
+    {
+      "id": "runinfra",
+      "name": "RunInfra",
+      "aliases": [
+        "runinfra"
+      ],
+      "hosts": [
+        "api.runinfra.ai"
+      ],
+      "doc": "https://runinfra.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "sakana",
+      "name": "Sakana AI",
+      "aliases": [
+        "sakana"
+      ],
+      "hosts": [
+        "api.sakana.ai"
+      ],
+      "doc": "https://console.sakana.ai/models",
+      "verified": false
+    },
+    {
+      "id": "sambanova",
+      "name": "SambaNova",
+      "aliases": [
+        "sambanova"
+      ],
+      "hosts": [
+        "api.sambanova.ai"
+      ],
+      "doc": "https://docs.sambanova.ai/cloud/docs/get-started/supported-models",
+      "verified": false
+    },
+    {
+      "id": "sarvam",
+      "name": "Sarvam AI",
+      "aliases": [
+        "sarvam"
+      ],
+      "hosts": [
+        "api.sarvam.ai"
+      ],
+      "doc": "https://docs.sarvam.ai/api-reference-docs/getting-started/models",
+      "verified": false
+    },
+    {
+      "id": "scaleway",
+      "name": "Scaleway",
+      "aliases": [
+        "scaleway"
+      ],
+      "hosts": [
+        "api.scaleway.ai"
+      ],
+      "doc": "https://www.scaleway.com/en/docs/generative-apis/",
+      "verified": false
+    },
+    {
+      "id": "scnet-token-plan",
+      "name": "SCNet Token Plan",
+      "aliases": [
+        "scnet-token-plan"
+      ],
+      "hosts": [
+        "api.scnet.cn"
+      ],
+      "doc": "https://www.scnet.cn/ac/openapi/doc/2.0/moduleapi/plans/token-plan.html",
+      "verified": false
+    },
+    {
+      "id": "scx-ai",
+      "name": "SCX.ai",
+      "aliases": [
+        "scx-ai"
+      ],
+      "hosts": [
+        "api.scx.ai"
+      ],
+      "doc": "https://platform.scx.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "stackit",
+      "name": "STACKIT",
+      "aliases": [
+        "stackit"
+      ],
+      "hosts": [
+        "api.openai-compat.model-serving.eu01.onstackit.cloud"
+      ],
+      "doc": "https://docs.stackit.cloud/products/data-and-ai/ai-model-serving/basics/available-shared-models",
+      "verified": false
+    },
+    {
+      "id": "standardcompute",
+      "name": "Standard Compute",
+      "aliases": [
+        "standardcompute"
+      ],
+      "hosts": [
+        "api.stdcmpt.com"
+      ],
+      "doc": "https://docs.standardcompute.com/models",
+      "verified": false
+    },
+    {
+      "id": "subconscious",
+      "name": "Subconscious",
+      "aliases": [
+        "subconscious"
+      ],
+      "hosts": [
+        "api.subconscious.dev"
+      ],
+      "doc": "https://docs.subconscious.dev",
+      "verified": false
+    },
+    {
+      "id": "submodel",
+      "name": "submodel",
+      "aliases": [
+        "submodel"
+      ],
+      "hosts": [
+        "llm.submodel.ai"
+      ],
+      "doc": "https://submodel.gitbook.io",
+      "verified": false
+    },
+    {
+      "id": "synthetic",
+      "name": "Synthetic",
+      "aliases": [
+        "synthetic"
+      ],
+      "hosts": [
+        "api.synthetic.new"
+      ],
+      "doc": "https://synthetic.new/pricing",
+      "verified": false
+    },
+    {
+      "id": "tencent-coding-plan",
+      "name": "Tencent Coding Plan (China)",
+      "aliases": [
+        "tencent-coding-plan"
+      ],
+      "hosts": [
+        "api.lkeap.cloud.tencent.com"
+      ],
+      "doc": "https://cloud.tencent.com/document/product/1772/128947",
+      "verified": false
+    },
+    {
+      "id": "tencent-token-plan",
+      "name": "Tencent Token Plan",
+      "aliases": [
+        "tencent-token-plan"
+      ],
+      "hosts": [
+        "api.lkeap.cloud.tencent.com"
+      ],
+      "doc": "https://cloud.tencent.com/document/product/1823/130060",
+      "verified": false
+    },
+    {
+      "id": "tencent-tokenhub",
+      "name": "Tencent TokenHub",
+      "aliases": [
+        "tencent-tokenhub"
+      ],
+      "hosts": [
+        "tokenhub.tencentmaas.com"
+      ],
+      "doc": "https://cloud.tencent.com/document/product/1823/130050",
+      "verified": false
+    },
+    {
+      "id": "tensorx",
+      "name": "TensorX",
+      "aliases": [
+        "tensorx"
+      ],
+      "hosts": [
+        "api.tensorx.ai"
+      ],
+      "doc": "https://docs.tensorx.ai/",
+      "verified": false
+    },
+    {
+      "id": "the-grid-ai",
+      "name": "The Grid AI",
+      "aliases": [
+        "the-grid-ai"
+      ],
+      "hosts": [
+        "api.thegrid.ai"
+      ],
+      "doc": "https://thegrid.ai/docs",
+      "verified": false
+    },
+    {
+      "id": "thinkingmachines",
+      "name": "Thinking Machines",
+      "aliases": [
+        "thinkingmachines"
+      ],
+      "hosts": [
+        "tinker.thinkingmachines.dev"
+      ],
+      "doc": "https://tinker-docs.thinkingmachines.ai/tinker/compatible-apis/anthropic/",
+      "verified": false
+    },
+    {
+      "id": "tinfoil",
+      "name": "Tinfoil",
+      "aliases": [
+        "tinfoil"
+      ],
+      "hosts": [
+        "inference.tinfoil.sh"
+      ],
+      "doc": "https://docs.tinfoil.sh",
+      "verified": false
+    },
+    {
+      "id": "tokengo",
+      "name": "TokenGo",
+      "aliases": [
+        "tokengo"
+      ],
+      "hosts": [
+        "api.tokengo.com"
+      ],
+      "doc": "https://www.tokengo.com/docs",
+      "verified": false
+    },
+    {
+      "id": "tokenrouter",
+      "name": "TokenRouter",
+      "aliases": [
+        "tokenrouter"
+      ],
+      "hosts": [
+        "api.tokenrouter.com"
+      ],
+      "doc": "https://www.tokenrouter.com/docs/tokenrouter-feature-guide/",
+      "verified": false
+    },
+    {
+      "id": "trustedrouter",
+      "name": "TrustedRouter",
+      "aliases": [
+        "trustedrouter"
+      ],
+      "hosts": [
+        "api.trustedrouter.com"
+      ],
+      "doc": "https://trustedrouter.com/docs",
+      "verified": false
+    },
+    {
+      "id": "umans-ai",
+      "name": "Umans AI",
+      "aliases": [
+        "umans-ai"
+      ],
+      "hosts": [
+        "api.code.umans.ai"
+      ],
+      "doc": "https://app.umans.ai/offers/code/docs/orgs",
+      "verified": false
+    },
+    {
+      "id": "umans-ai-coding-plan",
+      "name": "Umans AI Coding Plan",
+      "aliases": [
+        "umans-ai-coding-plan"
+      ],
+      "hosts": [
+        "api.code.umans.ai"
+      ],
+      "doc": "https://app.umans.ai/offers/code/docs",
+      "verified": false
+    },
+    {
+      "id": "unorouter",
+      "name": "UnoRouter",
+      "aliases": [
+        "unorouter"
+      ],
+      "hosts": [
+        "api.unorouter.com"
+      ],
+      "doc": "https://unorouter.com/models",
+      "verified": false
+    },
+    {
+      "id": "upstage",
+      "name": "Upstage",
+      "aliases": [
+        "upstage"
+      ],
+      "hosts": [
+        "api.upstage.ai"
+      ],
+      "doc": "https://developers.upstage.ai/docs/apis/chat",
+      "verified": false
+    },
+    {
+      "id": "vancine",
+      "name": "Vancine",
+      "aliases": [
+        "vancine"
+      ],
+      "hosts": [
+        "vancine.com"
+      ],
+      "doc": "https://vancine.com/docs",
+      "verified": false
+    },
+    {
+      "id": "vispark",
+      "name": "Vispark",
+      "aliases": [
+        "vispark"
+      ],
+      "hosts": [
+        "api.lab.vispark.in"
+      ],
+      "doc": "https://lab.vispark.in/#vision",
+      "verified": false
+    },
+    {
+      "id": "vivgrid",
+      "name": "Vivgrid",
+      "aliases": [
+        "vivgrid"
+      ],
+      "hosts": [
+        "api.vivgrid.com"
+      ],
+      "doc": "https://docs.vivgrid.com/models",
+      "verified": false
+    },
+    {
+      "id": "vultr",
+      "name": "Vultr",
+      "aliases": [
+        "vultr"
+      ],
+      "hosts": [
+        "api.vultrinference.com"
+      ],
+      "doc": "https://api.vultrinference.com/",
+      "verified": false
+    },
+    {
+      "id": "wafer.ai",
+      "name": "Wafer",
+      "aliases": [
+        "wafer.ai"
+      ],
+      "hosts": [
+        "pass.wafer.ai"
+      ],
+      "doc": "https://docs.wafer.ai/serverless/models",
+      "verified": false
+    },
+    {
+      "id": "wallaby",
+      "name": "Wallaby",
+      "aliases": [
+        "wallaby"
+      ],
+      "hosts": [
+        "api.wallabytoken.com"
+      ],
+      "doc": "https://wallabytoken.com/docs",
+      "verified": false
+    },
+    {
+      "id": "wandb",
+      "name": "CoreWeave",
+      "aliases": [
+        "wandb"
+      ],
+      "hosts": [
+        "api.inference.wandb.ai"
+      ],
+      "doc": "https://docs.wandb.ai/inference",
+      "verified": false
+    },
+    {
+      "id": "xiaomi",
+      "name": "Xiaomi",
+      "aliases": [
+        "xiaomi"
+      ],
+      "hosts": [
+        "api.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "verified": false
+    },
+    {
+      "id": "xiaomi-token-plan-ams",
+      "name": "Xiaomi Token Plan (Europe)",
+      "aliases": [
+        "xiaomi-token-plan-ams"
+      ],
+      "hosts": [
+        "token-plan-ams.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "verified": false
+    },
+    {
+      "id": "xiaomi-token-plan-cn",
+      "name": "Xiaomi Token Plan (China)",
+      "aliases": [
+        "xiaomi-token-plan-cn"
+      ],
+      "hosts": [
+        "token-plan-cn.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "verified": false
+    },
+    {
+      "id": "xiaomi-token-plan-sgp",
+      "name": "Xiaomi Token Plan (Singapore)",
+      "aliases": [
+        "xiaomi-token-plan-sgp"
+      ],
+      "hosts": [
+        "token-plan-sgp.xiaomimimo.com"
+      ],
+      "doc": "https://platform.xiaomimimo.com/#/docs",
+      "verified": false
+    },
+    {
+      "id": "xpersona",
+      "name": "Xpersona",
+      "aliases": [
+        "xpersona"
+      ],
+      "hosts": [
+        "www.xpersona.co"
+      ],
+      "doc": "https://www.xpersona.co/docs",
+      "verified": false
+    },
+    {
+      "id": "zai",
+      "name": "Z.AI",
+      "aliases": [
+        "zai"
+      ],
+      "hosts": [
+        "api.z.ai"
+      ],
+      "doc": "https://docs.z.ai/guides/overview/pricing",
+      "verified": false
+    },
+    {
+      "id": "zai-coding-plan",
+      "name": "Z.AI Coding Plan",
+      "aliases": [
+        "zai-coding-plan"
+      ],
+      "hosts": [
+        "api.z.ai"
+      ],
+      "doc": "https://docs.z.ai/devpack/overview",
+      "verified": false
+    },
+    {
+      "id": "zeldoc",
+      "name": "Zeldoc",
+      "aliases": [
+        "zeldoc"
+      ],
+      "hosts": [
+        "api.zeldoc.ai"
+      ],
+      "doc": "https://docs.zeldoc.ai",
+      "verified": false
+    },
+    {
+      "id": "zenifra",
+      "name": "Zenifra",
+      "aliases": [
+        "zenifra"
+      ],
+      "hosts": [
+        "ai.zenifra.com"
+      ],
+      "doc": "https://docs.zenifra.com",
+      "verified": false
+    },
+    {
+      "id": "zenmux",
+      "name": "ZenMux",
+      "aliases": [
+        "zenmux"
+      ],
+      "hosts": [
+        "zenmux.ai"
+      ],
+      "doc": "https://docs.zenmux.ai",
+      "verified": false
+    },
+    {
+      "id": "bai",
+      "name": "b.ai",
+      "aliases": [
+        "bai"
+      ],
+      "hosts": [
+        "api.b.ai"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "baichuan",
+      "name": "百川",
+      "aliases": [
+        "baichuan"
+      ],
+      "hosts": [
+        "api.baichuan-ai.com",
+        "api.baichuan-intl.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "qianfan",
+      "name": "百度千帆",
+      "aliases": [
+        "qianfan"
+      ],
+      "hosts": [
+        "qianfan.baidubce.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "baidu",
+      "name": "百度智能云",
+      "aliases": [
+        "baidu"
+      ],
+      "hosts": [
+        "qianfan.baidubce.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "spark",
+      "name": "讯飞星火",
+      "aliases": [
+        "spark"
+      ],
+      "hosts": [
+        "spark-api.cn-huabei-1.xf-yun.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "flytek",
+      "name": "科大讯飞",
+      "aliases": [
+        "flytek"
+      ],
+      "hosts": [
+        "spark-api.cn-huabei-1.xf-yun.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "baidu-wenxin",
+      "name": "文心一言",
+      "aliases": [
+        "baidu-wenxin"
+      ],
+      "hosts": [
+        "qianfan.baidubce.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "tencent",
+      "name": "腾讯混元",
+      "aliases": [
+        "tencent"
+      ],
+      "hosts": [
+        "api.hunyuan.cloud.tencent.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "hunyuan",
+      "name": "腾讯混元",
+      "aliases": [
+        "hunyuan"
+      ],
+      "hosts": [
+        "api.hunyuan.cloud.tencent.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "360ai",
+      "name": "360 智脑",
+      "aliases": [
+        "360ai"
+      ],
+      "hosts": [
+        "api.360.cn"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "shusheng",
+      "name": "书生",
+      "aliases": [
+        "shusheng"
+      ],
+      "hosts": [
+        "discovery-api.intern-ai.org.cn"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "cline",
+      "name": "ClinePass",
+      "aliases": [
+        "cline"
+      ],
+      "hosts": [
+        "api.cline.bot"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "iflowcn",
+      "name": "iFlow",
+      "aliases": [
+        "iflowcn"
+      ],
+      "hosts": [
+        "apis.iflow.cn"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "lilac",
+      "name": "Lilac",
+      "aliases": [
+        "lilac"
+      ],
+      "hosts": [
+        "api.getlilac.com"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    },
+    {
+      "id": "tempr",
+      "name": "Tempr Gateway",
+      "aliases": [
+        "tempr"
+      ],
+      "hosts": [
+        "api.temprhq.io"
+      ],
+      "doc": null,
+      "verified": false,
+      "notes": "官方文档未收录（models.dev 目录无此厂商）：并发 / 频率只能靠响应头观测或 extra.limits_manual 手填，不编数值。"
+    }
+  ]
+}

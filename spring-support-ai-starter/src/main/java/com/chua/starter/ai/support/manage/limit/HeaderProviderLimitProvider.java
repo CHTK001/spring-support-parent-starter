@@ -28,6 +28,11 @@ public class HeaderProviderLimitProvider implements ProviderLimitProvider {
     }
 
     @Override
+    public int order() {
+        return 30;
+    }
+
+    @Override
     public ProviderLimit query(ProviderLimitContext context) {
         if (context == null || context.getResponseHeaders() == null
                 || context.getResponseHeaders().isEmpty()) {

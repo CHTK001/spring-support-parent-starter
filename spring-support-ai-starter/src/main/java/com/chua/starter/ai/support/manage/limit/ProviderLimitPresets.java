@@ -1,143 +1,287 @@
 package com.chua.starter.ai.support.manage.limit;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.InputStream;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * 官方限制文档预设表。
+ * 官方限制登记表：数据来自 {@code provider-limits/provider-limit-docs.json}，不再逐家写死在 Java 里。
  *
- * <p><b>收录口径</b>：只收「官方文档明确写了」的内容。数值来自文档的标
- * {@code verified=true}；文档只说明限制机制（按账户等级、按响应头动态下发）
- * 而没有固定数值的，标 {@code verified=false}，精确数值交给
- * {@link HeaderProviderLimitProvider} 从上游响应头观测，不在这里编造。</p>
+ * <p>登记表覆盖前端模板库的全部提供商（200+ 家），每条包含：</p>
+ * <ul>
+ *   <li>{@code aliases}：业务 provider id 与 models.dev 厂商键，按精确匹配；</li>
+ *   <li>{@code hosts}：模板库默认地址的主机名，按「相等或子域」匹配；</li>
+ *   <li>{@code doc}：厂商官方文档入口（models.dev 目录的 {@code doc} 字段）；</li>
+ *   <li>{@code limits} / {@code notes} / {@code verified}：只有核对过官方原文的条目才有数值或计费口径。</li>
+ * </ul>
  *
- * <p>收录范围是「机制 + 少数已核对的官方口径」，不是逐家服务商硬编码 ——
- * 200+ 提供商里的绝大多数由响应头观测（{@link HeaderProviderLimitProvider}）
- * 与手动配置（{@link ManualProviderLimitProvider}）覆盖。</p>
+ * <p>匹配顺序：先精确命中 {@code aliases}（一家一个键，不会串行），再按主机名匹配。
+ * 前面条目优先，因此精选条目写在文件最前，能压过同键的通用条目。</p>
+ *
+ * <p>{@link #find} 只返回「有可展示口径」的条目；只有文档入口、没有数值的条目
+ * 由 {@link #docUrl} 单独回传，避免把「有文档」说成「有限制」。</p>
  *
  * @since 4.0.0.51
  * @author CH
  */
 public final class ProviderLimitPresets {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ProviderLimitPresets.class);
+
+    /**
+     * 登记表资源路径
+     */
+    private static final String RESOURCE = "/provider-limits/provider-limit-docs.json";
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * 懒加载的登记表；加载失败时为只含空列表的哨兵，避免反复读盘
+     */
+    private static volatile List<Entry> entries;
+
     private ProviderLimitPresets() {
     }
 
     /**
-     * 按平台 / 地址匹配预设。
+     * 一条登记项。
      *
-     * @param platform 平台类型
+     * @param id       厂商键
+     * @param name     展示名
+     * @param aliases  精确匹配的 provider id
+     * @param hosts    主机名匹配
+     * @param doc      官方文档入口（可为 null）
+     * @param verified 数值 / 计费口径是否按官方原文核对过
+     * @param limits   已核对的口径（下划线键，可空）
+     * @param notes    补充说明
+     */
+    public record Entry(String id,
+                        String name,
+                        List<String> aliases,
+                        List<String> hosts,
+                        String doc,
+                        boolean verified,
+                        Map<String, Object> limits,
+                        String notes) {
+
+        /**
+         * 转成限制快照；没有数值 / 计费口径时返回的对象 {@link ProviderLimit#hasValues()} 为 false。
+         *
+         * @return 限制快照
+         */
+        public ProviderLimit toLimit() {
+            Map<String, Object> source = limits == null ? Map.of() : limits;
+            ProviderLimit.ProviderLimitBuilder builder = ProviderLimit.builder()
+                    .kind("doc")
+                    .source(id)
+                    .sourceUrl(doc)
+                    .verified(verified)
+                    .concurrency(intOf(source, "concurrency"))
+                    .requestsPerMinute(intOf(source, "requests_per_minute"))
+                    .requestsPerHour(intOf(source, "requests_per_hour"))
+                    .requestsPerDay(intOf(source, "requests_per_day"))
+                    .tokensPerMinute(intOf(source, "tokens_per_minute"))
+                    .tokensPerDay(intOf(source, "tokens_per_day"))
+                    .monthlyRequestQuota(longOf(source, "monthly_request_quota"))
+                    .monthlyTokenQuota(longOf(source, "monthly_token_quota"))
+                    .billingBasis(textOf(source, "billing_basis"))
+                    .currency(textOf(source, "currency"))
+                    .notes(notes)
+                    .capturedAt(System.currentTimeMillis());
+            Map<String, Integer> perModel = mapOfInt(source.get("model_concurrency"));
+            if (!perModel.isEmpty()) {
+                builder.modelConcurrency(perModel);
+            }
+            return builder.build();
+        }
+    }
+
+    /**
+     * 按平台 / 地址查限制快照。
+     *
+     * @param platform 平台类型（provider id）
      * @param baseUrl  上游基础地址
-     * @return 预设；无匹配返回 null
+     * @return 限制快照；未登记或只有文档入口没有数值时返回 null
      */
     public static ProviderLimit find(String platform, String baseUrl) {
-        String p = platform == null ? "" : platform.toLowerCase(Locale.ROOT).trim();
+        Entry entry = entryOf(platform, baseUrl);
+        if (entry == null) {
+            return null;
+        }
+        ProviderLimit limit = entry.toLimit();
+        return limit.hasValues() ? limit : null;
+    }
+
+    /**
+     * 按平台 / 地址查登记项。
+     *
+     * @param platform 平台类型（provider id）
+     * @param baseUrl  上游基础地址
+     * @return 登记项；未登记返回 null
+     */
+    public static Entry entryOf(String platform, String baseUrl) {
+        String id = normalize(platform);
         String host = hostOf(baseUrl);
-        if (p.contains("deepseek") || host.contains("deepseek.com")) {
-            return deepseek();
+        for (Entry entry : entries()) {
+            if (!id.isEmpty() && entry.aliases().contains(id)) {
+                return entry;
+            }
         }
-        if (p.contains("moss") || host.contains("moss.cn")) {
-            return moss();
+        if (host.isEmpty()) {
+            return null;
         }
-        if (p.contains("openai") && host.contains("openai.com")) {
-            return openAi();
-        }
-        if ((p.contains("anthropic") || p.contains("claude")) && host.contains("anthropic.com")) {
-            return anthropic();
-        }
-        if ((p.contains("gemini") || p.contains("google")) && host.contains("googleapis.com")) {
-            return gemini();
+        for (Entry entry : entries()) {
+            for (String candidate : entry.hosts()) {
+                if (host.equals(candidate) || host.endsWith("." + candidate)) {
+                    return entry;
+                }
+            }
         }
         return null;
     }
 
     /**
-     * DeepSeek：账号级并发，官方按模型给出固定值。
+     * 官方文档入口（只有文档、没有数值时也能拿到）。
      *
-     * @return 限制快照
+     * @param platform 平台类型
+     * @param baseUrl  上游基础地址
+     * @return 文档地址；未登记或无文档返回 null
      */
-    private static ProviderLimit deepseek() {
-        Map<String, Integer> perModel = new LinkedHashMap<>(2);
-        perModel.put("deepseek-flash", 2500);
-        perModel.put("deepseek-v4-pro", 500);
-        return ProviderLimit.builder()
-                .source("deepseek")
-                .sourceUrl("https://api-docs.deepseek.com/quick_start/rate_limit")
-                .verified(true)
-                .modelConcurrency(perModel)
-                .notes("账号级并发：同一账号下所有 API Key 合并计算，请求从发出到响应结束算一个并发；"
-                        + "超出返回 HTTP 429。官方未公布固定 RPM/TPM。")
-                .build();
+    public static String docUrl(String platform, String baseUrl) {
+        Entry entry = entryOf(platform, baseUrl);
+        return entry == null ? null : entry.doc();
     }
 
     /**
-     * Moss：官方未公布固定并发/RPM，计费口径按模态区分（计费页已核对）。
+     * 命中的登记者标识（用于报告里说明文档来源）。
      *
-     * @return 限制快照
+     * @param platform 平台类型
+     * @param baseUrl  上游基础地址
+     * @return 厂商键；未登记返回 null
      */
-    private static ProviderLimit moss() {
-        return ProviderLimit.builder()
-                .source("moss")
-                .sourceUrl("https://platform.moss.cn/docs/errors-and-limits/limits")
-                .verified(true)
-                .billingBasis("语音合成 / 音色设计按输入字符；转写按输入音视频时长；"
-                        + "生图按张（按总像素分档）；提示词增强按次加收")
-                .currency("CNY")
-                .notes("公开 API 无固定并发/RPM 数值：请求限制由网关、文件服务、模型服务与计费系统共同决定，"
-                        + "实际限制以服务端错误码为准。文本模型 Nex 当前限时免费（计费来源：platform.moss.cn/app/pricing）。")
-                .build();
+    public static String docSource(String platform, String baseUrl) {
+        Entry entry = entryOf(platform, baseUrl);
+        return entry == null ? null : entry.id();
     }
 
     /**
-     * OpenAI：按 usage tier 分级，具体数值随账户等级变化。
+     * 登记条目数。
      *
-     * @return 限制快照
+     * @return 条目数
      */
-    private static ProviderLimit openAi() {
-        return ProviderLimit.builder()
-                .source("openai")
-                .sourceUrl("https://platform.openai.com/docs/guides/rate-limits")
-                .verified(false)
-                .billingBasis("按 token（输入 / 输出分别计价）")
-                .currency("USD")
-                .notes("按账户 usage tier 分级限制 RPM / TPM，数值随等级提升；"
-                        + "网关在响应头返回 x-ratelimit-*（limit / remaining / reset）。本次未逐档核对固定数值。")
-                .build();
+    public static int size() {
+        return entries().size();
     }
 
     /**
-     * Anthropic：按 usage tier 分级。
+     * 全部登记项（只读）。
      *
-     * @return 限制快照
+     * @return 登记项
      */
-    private static ProviderLimit anthropic() {
-        return ProviderLimit.builder()
-                .source("anthropic")
-                .sourceUrl("https://docs.anthropic.com/en/api/rate-limits")
-                .verified(false)
-                .billingBasis("按 token（输入 / 输出分别计价）")
-                .currency("USD")
-                .notes("按 usage tier 分级限制 RPM / ITPM / OTPM；响应头返回 anthropic-ratelimit-*。"
-                        + "本次未逐档核对固定数值。")
-                .build();
+    public static List<Entry> entries() {
+        List<Entry> current = entries;
+        if (current != null) {
+            return current;
+        }
+        return load();
     }
 
     /**
-     * Google Gemini：按项目 / 账户等级设置配额。
+     * 读取登记表；失败时返回空列表并留一条告警，不影响同步主流程。
      *
-     * @return 限制快照
+     * @return 登记项
      */
-    private static ProviderLimit gemini() {
-        return ProviderLimit.builder()
-                .source("gemini")
-                .sourceUrl("https://ai.google.dev/gemini-api/docs/rate-limits")
-                .verified(false)
-                .billingBasis("按 token（部分模型按请求）")
-                .currency("USD")
-                .notes("按项目 / 账户等级设置 RPM / TPM / RPD 配额，数值随等级与模型变化。"
-                        + "本次未逐档核对固定数值。")
-                .build();
+    private static synchronized List<Entry> load() {
+        if (entries != null) {
+            return entries;
+        }
+        List<Entry> loaded = new ArrayList<>(256);
+        try (InputStream in = ProviderLimitPresets.class.getResourceAsStream(RESOURCE)) {
+            if (in == null) {
+                LOG.warn("[ProviderLimit] 登记表缺失：{}", RESOURCE);
+            } else {
+                JsonNode root = MAPPER.readTree(in);
+                for (JsonNode node : root.path("entries")) {
+                    Entry entry = parse(node);
+                    if (entry != null) {
+                        loaded.add(entry);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.warn("[ProviderLimit] 登记表解析失败，回退到响应头 / 手动：{}", e.toString());
+            loaded.clear();
+        }
+        entries = Collections.unmodifiableList(loaded);
+        LOG.info("[ProviderLimit] 登记表 {} 条，官方文档入口 {} 条",
+                entries.size(), entries.stream().filter(e -> e.doc() != null).count());
+        return entries;
+    }
+
+    /**
+     * 解析单条登记项。
+     *
+     * @param node JSON 节点
+     * @return 登记项；缺 id 时返回 null
+     */
+    private static Entry parse(JsonNode node) {
+        String id = node.path("id").asText("").trim();
+        if (id.isEmpty()) {
+            return null;
+        }
+        List<String> aliases = strings(node.path("aliases"));
+        if (!aliases.contains(id)) {
+            aliases.add(id);
+        }
+        String doc = node.path("doc").isTextual() ? node.path("doc").asText().trim() : null;
+        Map<String, Object> limits = MAPPER.convertValue(node.path("limits"), Map.class);
+        return new Entry(id,
+                node.path("name").asText(id),
+                List.copyOf(aliases),
+                List.copyOf(strings(node.path("hosts"))),
+                doc == null || doc.isEmpty() ? null : doc,
+                node.path("verified").asBoolean(false),
+                limits == null ? Map.of() : limits,
+                node.path("notes").isTextual() ? node.path("notes").asText() : null);
+    }
+
+    /**
+     * 读字符串数组。
+     *
+     * @param node 数组节点
+     * @return 小写去空后的字符串
+     */
+    private static List<String> strings(JsonNode node) {
+        List<String> list = new ArrayList<>(4);
+        if (node != null && node.isArray()) {
+            for (JsonNode item : node) {
+                String text = normalize(item.asText(""));
+                if (!text.isEmpty() && !list.contains(text)) {
+                    list.add(text);
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 归一化 provider id / 主机名：小写去空白。
+     *
+     * @param value 原值
+     * @return 归一化结果
+     */
+    private static String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -151,11 +295,70 @@ public final class ProviderLimitPresets {
             return "";
         }
         try {
-            java.net.URI uri = java.net.URI.create(url.trim());
-            String host = uri.getHost();
+            String host = URI.create(url.trim()).getHost();
             return host == null ? "" : host.toLowerCase(Locale.ROOT);
         } catch (Exception e) {
             return "";
         }
+    }
+
+    /**
+     * 读整数字段。
+     *
+     * @param map 口径
+     * @param key 键
+     * @return 值；缺失或非数字返回 null
+     */
+    private static Integer intOf(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return null;
+    }
+
+    /**
+     * 读长整数字段。
+     *
+     * @param map 口径
+     * @param key 键
+     * @return 值；缺失或非数字返回 null
+     */
+    private static Long longOf(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    /**
+     * 读文本字段。
+     *
+     * @param map 口径
+     * @param key 键
+     * @return 文本；缺失返回 null
+     */
+    private static String textOf(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value instanceof String text && !text.isBlank() ? text : null;
+    }
+
+    /**
+     * 读「模型名 → 并发上限」。
+     *
+     * @param raw 原值
+     * @return 有序映射；非对象返回空
+     */
+    private static Map<String, Integer> mapOfInt(Object raw) {
+        Map<String, Integer> out = new LinkedHashMap<>(4);
+        if (raw instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() instanceof Number number) {
+                    out.put(String.valueOf(entry.getKey()), number.intValue());
+                }
+            }
+        }
+        return out;
     }
 }
