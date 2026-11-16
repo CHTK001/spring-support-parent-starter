@@ -756,12 +756,13 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         if (endDate != null) {
             wrapper.le(SysAiUsageDaily::getStatDate, endDate);
         }
-        if (includeOrphanEffective()) {
-            wrapper.and(w -> w.eq(SysAiUsageDaily::getUserId, userId).or().isNull(SysAiUsageDaily::getUserId));
-        } else {
-            wrapper.eq(SysAiUsageDaily::getUserId, userId);
+        if (userId != null && !userId.isBlank()) {
+            if (includeOrphanEffective()) {
+                wrapper.and(w -> w.eq(SysAiUsageDaily::getUserId, userId).or().isNull(SysAiUsageDaily::getUserId));
+            } else {
+                wrapper.eq(SysAiUsageDaily::getUserId, userId);
+            }
         }
-        List<SysAiUsageDaily> list = dailyMapper.selectList(wrapper);
         // 注意：UsageStatistics 的字段是包装类型（Long/Double），直接 += 会从 null 拆箱，
         // 先累加到局部基本类型，最后一次性赋值。
         long calls = 0L;

@@ -110,8 +110,9 @@ public class UsageController {
        * @return AI 用量分页结果
        */
     @Operation(summary = "用量列表",
-            description = "分页查询用量明细。口径：所有账号都只查本人具名明细（管理员不跨账号）；"
-                      + "管理员额外可见无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
+            description = "分页查询用量明细。口径：普通账号只查本人明细；"
+                      + "管理员查询范围为全部账号（含定时同步进来的外部工具用量 opencode/claude-code 等，"
+                      + "其归属可能是 admin 兜底值或空值）")
     @GetMapping("/list")
     public ReturnResult<AiUsagePageVO<SysAiUsage>> list(
             @RequestParam(required = false) String groupName,
@@ -137,8 +138,8 @@ public class UsageController {
        * @return AI 用量统计结果
        */
     @Operation(summary = "用量统计",
-            description = "汇总统计。口径：所有账号都只统计本人具名明细（管理员不跨账号）；"
-                      + "管理员额外计入无主明细（user_id 为空，即定时同步进来的外部工具用量 opencode/claude-code 等）")
+            description = "汇总统计。口径：普通账号只统计本人明细；管理员统计范围为全部账号"
+                      + "（含定时同步进来的外部工具用量 opencode/claude-code 等）")
     @GetMapping("/statistics")
     public ReturnResult<AiUsageStatisticsVO> statistics(
             @RequestParam(required = false) String groupName,
@@ -170,7 +171,7 @@ public class UsageController {
        * @param endTime 趋势结束时间，为空时不限定
        * @return 按天或按小时聚合的用量趋势
        */
-    @Operation(summary = "用量趋势", description = "按天聚合返回 Token 使用趋势；普通用户只看本人明细的按天聚合")
+    @Operation(summary = "用量趋势", description = "按天聚合返回 Token 使用趋势；普通用户只看本人明细，管理员看全部账号")
     @GetMapping("/trend")
     public ReturnResult<List<AiUsageTrendPointVO>> trend(
             @RequestParam(required = false) String provider,
@@ -620,15 +621,23 @@ public class UsageController {
     }
 
       /**
-       * 当前请求的用量统计口径：仅跨账号放行时返回 {@code null}（看全量），否则返回本人 ID。
+       * 当前请求的用量统计口径。
        *
-       * <p><b>注意与「无主数据」是两回事</b>：这里决定的是「能否读他人的具名数据」，
-       * 恒为本人 ID（{@code canAccessOthersData()} 恒 false，管理员也不跨账号）。
-       * 至于 {@code user_id IS NULL} 的无主明细（定时同步的外部工具用量，约占全量 Token 三分之一），
-       * 由各查询的 {@code includeOrphan} 开关单独决定，仅管理员为 true。
-       * 两者叠加的结果是：管理员看到「自己的 + 无主的」，但看不到 alice / bob 的具名数据。</p>
+       * <p><b>管理员的查询范围是全部账号</b>：用量是本机/本系统的账单数据，
+       * 管理员需要能看到所有工具的消耗（含定时任务同步进来、没有登录态的外部工具用量），
+       * 因此管理员返回 {@code null}，各查询据此不加归属条件。
+       * 普通账号仍严格限定本人，账号隔离不受影响。</p>
        *
-       * @return 归属用户标识；跨账号放行时为 null
+       * <p>这里刻意不复用 {@link AiUserContext#canAccessOthersData()}：后者裁决的是
+       * 会话、记忆、库表等业务对象的跨账号读写，恒为 {@code false}，与「用量账单的统计范围」
+       * 不是同一条口径。</p>
+       *
+       * @return 归属用户标识；管理员（看全部账号）为 {@code null}
        */
     private String currentScopeUserId() {
-        return AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();    }}
+        // 调度线程等无登录态的场景取不到身份，这里先判定管理员再要求登录
+        if (AiUserContext.isAdmin()) {
+            return null;
+        }
+        return AiUserContext.requireUserId();
+    }}
