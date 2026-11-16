@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -93,17 +95,24 @@ public class ImageSearchController {
     /**
      * 以图搜图可用状态。
      *
+     * <p><b>必须带 {@code group}：</b>{@code count} 与 {@code dimension} 是**该分组底库**
+     * 的属性，不是全局属性。底库按（账号, 分组）隔离，每组各有目录、快照与向量索引，
+     * 不传分组就会读到默认组的数字 —— 在非默认组里表现为「明明有图却显示 0 条 / — 维」。</p>
+     *
+     * @param group 分组名；不传/空 = 默认组 default
      * @return {@code available} 表示是否已配置特征模型，{@code model} 为当前模型标识
      */
-    @Operation(summary = "以图搜图状态", description = "返回是否已配置特征模型及当前模型标识")
+    @Operation(summary = "以图搜图状态", description = "返回是否已配置特征模型、当前模型标识与该分组的底库规模")
     @GetMapping("/status")
-    public ReturnResult<Map<String, Object>> status() {
+    public ReturnResult<Map<String, Object>> status(@RequestParam(value = "group", required = false) String group) {
+        ImageSearchStore store = storeOf(group);
         Map<String, Object> out = new LinkedHashMap<>(6);
-        out.put("available", imageSearchStores.available());
-        out.put("model", imageSearchStores.currentModel());
-        out.put("storage", imageSearchStores.currentStorageEngine());
-        out.put("count", imageSearchStores.size());
-        out.put("dimension", imageSearchStores.dimension());
+        out.put("available", store.available());
+        out.put("model", store.currentModel());
+        out.put("storage", store.currentStorageEngine());
+        out.put("count", store.size());
+        out.put("dimension", store.dimension());
+        out.put("group", AiLibraryGroups.normalize(group));
         return ReturnResult.ok(out);
     }
 
@@ -169,10 +178,12 @@ public class ImageSearchController {
         try {
             int k = resolveTopK(topK);
             float[] query = imageSearchStores.extract(file.getBytes());
-            List<ImageSearchStore.Match> matches = storeOf(group).search(query, k, minSimilarity());
+            ImageSearchStore store = storeOf(group);
+            List<ImageSearchStore.Match> matches = store.search(query, k, minSimilarity());
             List<Map<String, Object>> out = new ArrayList<>(matches.size());
             for (ImageSearchStore.Match m : matches) {
-                out.add(toItem(m.image(), m.score()));
+                // 命中项来自当前请求的这个分组，url 必须带同一个分组
+                out.add(toItem(m.image(), m.score(), AiLibraryGroups.normalize(group)));
             }
             return ReturnResult.ok(out);
         } catch (Exception ex) {
@@ -197,13 +208,14 @@ public class ImageSearchController {
                                                   @RequestParam(value = "keyword", required = false) String keyword,
                                                    @RequestParam(value = "group", required = false) String group) {
         try {
-            Map<String, Object> raw = storeOf(group).list(page, size, keyword);
+            String normalized = AiLibraryGroups.normalize(group);
+            Map<String, Object> raw = storeOf(normalized).list(page, size, keyword);
             Object items = raw.get("items");
             List<Map<String, Object>> out = new ArrayList<>();
             if (items instanceof List<?> list) {
                 for (Object o : list) {
                     if (o instanceof ImageSearchStore.StoredImage img) {
-                        out.add(toItem(img, null));
+                        out.add(toItem(img, null, normalized));
                     }
                 }
             }
@@ -271,13 +283,22 @@ public class ImageSearchController {
      * <p>本次改动之前入库的历史记录没有落盘原图（快照里只存了最长边 240px 的
      * 缩略图），此时自动回退返回缩略图，保证前端不出现裂图。</p>
      *
-     * @param id 记录标识
+     * <p><b>必须带 {@code group}：</b>记录 id 是**分组内序号**（每个分组各自从 1 开始
+     * 编号），所以同一个 id 在不同分组里指向不同的图。不带分组时按默认组解释，
+     * 在非默认组里要么取不到（404），要么取到默认组那条同号的图 —— 后者更糟：
+     * 界面上会安静地显示一张不相干的图。{@link #toItem} 下发的 {@code url}
+     * 因此也带上了分组。</p>
+     *
+     * @param id    记录标识（分组内序号）
+     * @param group 分组名；不传/空 = 默认组 default
      * @return 原图字节；记录不存在时返回 404
      */
-    @Operation(summary = "图片原图", description = "按标识返回底库图片的原图字节（无原图时回退缩略图）")
+    @Operation(summary = "图片原图", description = "按标识返回该分组底库图片的原图字节（无原图时回退缩略图）")
     @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> image(@PathVariable("id") long id) {
-        byte[] original = imageSearchStores.readOriginal(id);
+    public ResponseEntity<byte[]> image(@PathVariable("id") long id,
+                                        @RequestParam(value = "group", required = false) String group) {
+        ImageSearchStore store = storeOf(group);
+        byte[] original = store.readOriginal(id);
         if (original != null && original.length > 0) {
             return ResponseEntity.ok()
                     .contentType(imageMediaType(original))
@@ -285,7 +306,7 @@ public class ImageSearchController {
                     .cacheControl(CacheControl.maxAge(Duration.ofSeconds(300)).cachePrivate())
                     .body(original);
         }
-        byte[] thumb = imageSearchStores.readThumbnail(id);
+        byte[] thumb = store.readThumbnail(id);
         if (thumb == null) {
             return ResponseEntity.notFound().build();
         }
@@ -392,16 +413,21 @@ public class ImageSearchController {
      *
      * @param img   底库记录
      * @param score 相似度，列表场景传 null
+     * @param group 该记录所属分组（拼进 {@code url}，否则前端取图会落到默认组）
      * @return 前端条目（含 id/vectorId/name/tags/thumbnail/url/hasOriginal/width/height/score）
      */
-    private static Map<String, Object> toItem(ImageSearchStore.StoredImage img, Double score) {
+    private static Map<String, Object> toItem(ImageSearchStore.StoredImage img, Double score, String group) {
         Map<String, Object> item = new LinkedHashMap<>(10);
         item.put("id", img.getId());
         item.put("vectorId", "img-" + img.getId());
         item.put("name", img.getName());
         item.put("tags", img.getTags() == null ? List.of() : img.getTags());
         item.put("thumbnail", img.getThumb());
-        item.put("url", "/image-search/" + img.getId() + "/image");
+        // 分组必须进地址：id 是分组内序号，不带 group 的地址会落到默认组，
+        // 在非默认组里要么 404，要么取到默认组同号的另一张图。
+        String normalized = AiLibraryGroups.normalize(group);
+        item.put("url", "/image-search/" + img.getId() + "/image?group=" + encodeGroup(normalized));
+        item.put("group", normalized);
         // 上面这个是**相对 base 的路径**，不是完整 URL，所以刻意不带 /v2。
         // 客户端会把它拼在自己的 baseURL 之后，而 baseURL 本身已经含 /v2
         // （Web 模式 /v2、Electron 模式 http://host:8787/v2）。
@@ -418,5 +444,23 @@ public class ImageSearchController {
         item.put("createdAt", img.getCreatedAt());
         item.put("score", score);
         return item;
+    }
+
+    /**
+     * 把分组名编码成可放进查询串的片段。
+     *
+     * <p>分组名允许中文（见 {@link AiLibraryGroups#valid(String)}），直接拼进 URL
+     * 会被客户端按非法字符处理或截断，所以统一走百分号编码；编码失败时退回原值，
+     * 宁可地址不完美也不要因为一个分组名把整条记录变成 500。</p>
+     *
+     * @param group 已归一化的分组名
+     * @return 可安全拼进查询串的分组名
+     */
+    private static String encodeGroup(String group) {
+        try {
+            return URLEncoder.encode(group, StandardCharsets.UTF_8);
+        } catch (Exception ex) {
+            return group;
+        }
     }
 }
