@@ -590,6 +590,11 @@ public class SysAiModelMetricsService {
                     snapshot.put(key, value);
                 }
             }
+            // 定价规则不是「价格列」，不能混进 UPSTREAM_PRICE_KEYS，但要跟价格一起落
+            // sys_ai_model_metrics 的 TEXT 列；否则只会写进服务商模型行，指标库仍为空。
+            if (raw.get("pricing_rules") instanceof List<?> rules && !rules.isEmpty()) {
+                snapshot.put("pricing_rules", rules);
+            }
             if (!snapshot.isEmpty()) {
                 pricing.putIfAbsent(name, snapshot);
             }
