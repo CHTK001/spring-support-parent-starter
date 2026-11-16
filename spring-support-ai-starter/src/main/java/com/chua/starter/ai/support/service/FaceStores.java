@@ -317,8 +317,11 @@ public class FaceStores {
             try {
                 storage = models.buildStorageFor(st.dir.resolve(INDEX_NAME));
                 temporary = true;
-            } catch (Exception ex) {
-                log.warn("[Face] 删除前重建向量存储失败，向量可能在索引中残留: id={} -> {}", id, ex.getMessage());
+            } catch (Throwable ex) {
+                // Throwable：构建期抛的是 Error 的概率不低（预览特性未开启、
+                // 依赖缺失、OOM），catch (Exception) 会让删除接口直接 500，
+                // 而向量残留恰恰是删除最不能留下的东西 —— 记清楚再继续。
+                log.warn("[Face] 删除前重建向量存储失败，向量可能在索引中残留: id={} -> {}", id, ex.toString());
                 return;
             }
         }
@@ -1355,8 +1358,24 @@ public class FaceStores {
                             account, dir.resolve(SNAPSHOT_NAME), ex.getMessage());
                 }
             }
-            storage = models.buildStorageFor(dir.resolve(INDEX_NAME));
-            pipeline = models.buildPipelineWith(storage);
+            try {
+                storage = models.buildStorageFor(dir.resolve(INDEX_NAME));
+                pipeline = models.buildPipelineWith(storage);
+            } catch (Throwable ex) {
+                // 引擎构建失败不能连带把「底库列表」拖下水：档案权威在 DB，
+                // 列表/分组/档案编辑都不需要管线，只有登记与检索需要。
+                // 这里降级成「人脸能力未启用」，让页面至少能看、能改。
+                //
+                // 必须是 Throwable 而不是 Exception：构建期抛出的是 Error
+                // （UnsupportedClassVersionError（预览特性未开启）、
+                // NoClassDefFoundError（模型依赖缺失）、OutOfMemoryError），
+                // catch (Exception) 一个都抓不住，会一路逃到全局兜底变成
+                // 500「系统繁忙」，列表页只剩一个空表。
+                storage = null;
+                pipeline = null;
+                log.warn("[Face] 账号 '{}' 分组 '{}' 人脸引擎构建失败，降级为未启用: {}",
+                        account, group, ex.toString());
+            }
             if (pipeline == null) {
                 log.info("[Face] 账号 '{}' 人脸检测模型未配置，人脸能力未启用", account);
                 return;
