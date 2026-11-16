@@ -300,8 +300,9 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
        * 新写入路径漏了兜底，管理员仍能看到这批数据，而不是像以前那样静默消失。</p>
        *
        * <p>与 {@link com.chua.starter.ai.support.util.AiUserContext#canAccessOthersData()} 是两件事：
-       * 后者管的是「能否读他人的具名数据」（恒为 false，管理员也不跨账号），
-       * 这里管的是「能否读<b>没有主人</b>的数据」。管理员依然看不到 alice / bob 的具名记录。</p>
+       * 后者管的是「能否读写他人的具名业务对象」（会话、记忆、库表，恒为 false）；
+       * 这里管的是无主数据（没有主人的历史同步行）：管理员的查询范围本来就是全部账号。
+        * 因此 {@code userId} 为空时这一支不触发，只在「指定账号」时补一层兜底。</p>
        *
        * <p>定时任务线程里没有登录态，{@code isAdmin()} 天然为 false，因此回填类调用
        * （如 {@link #getDailyTrend} 被聚合任务复用）不会误放行。</p>
@@ -698,7 +699,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
        * @param model     模型（可为空）
        * @param startTime 开始时间（可为空）
        * @param endTime   结束时间（可为空）
-       * @param userId    归属用户，不能为空
+       * @param userId    归属用户，可为空；为空时统计全部账号（管理员口径）
        * @return 聚合统计结果
        */
     private UsageStatistics statisticsFromDetail(String groupName, String provider, String model,

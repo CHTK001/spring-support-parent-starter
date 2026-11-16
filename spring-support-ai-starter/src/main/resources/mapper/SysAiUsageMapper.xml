@@ -46,8 +46,10 @@
                 是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
                 而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
 
-                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                注意这<b>不等于</b>放开跨账号：这里的 OR 只补「无主行」，不读他人具名数据。
                 includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+                管理员的用量查询范围是全部账号，控制器直接传 userId=null，
+                于是下面两支都不拼，等价于不加归属条件。
             -->
             <choose>
                 <when test="userId != null and userId != '' and includeOrphan">
@@ -106,8 +108,10 @@
                 是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
                 而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
 
-                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                注意这<b>不等于</b>放开跨账号：这里的 OR 只补「无主行」，不读他人具名数据。
                 includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+                管理员的用量查询范围是全部账号，控制器直接传 userId=null，
+                于是下面两支都不拼，等价于不加归属条件。
             -->
             <choose>
                 <when test="userId != null and userId != '' and includeOrphan">
@@ -156,8 +160,10 @@
                 是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
                 而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
 
-                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                注意这<b>不等于</b>放开跨账号：这里的 OR 只补「无主行」，不读他人具名数据。
                 includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+                管理员的用量查询范围是全部账号，控制器直接传 userId=null，
+                于是下面两支都不拼，等价于不加归属条件。
             -->
             <choose>
                 <when test="userId != null and userId != '' and includeOrphan">
@@ -208,8 +214,10 @@
                 是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
                 而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
 
-                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                注意这<b>不等于</b>放开跨账号：这里的 OR 只补「无主行」，不读他人具名数据。
                 includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+                管理员的用量查询范围是全部账号，控制器直接传 userId=null，
+                于是下面两支都不拼，等价于不加归属条件。
             -->
             <choose>
                 <when test="userId != null and userId != '' and includeOrphan">
@@ -268,8 +276,10 @@
                 是为了万一将来某个新写入路径漏了 resolveOwner，管理员仍能看到这批数据
                 而不是又一次静默丢失；等确认历史 NULL 全部清零后可以摘掉。
 
-                注意这<b>不等于</b>放开跨账号：admin 依然看不到 alice/bob 的具名数据。
+                注意这<b>不等于</b>放开跨账号：这里的 OR 只补「无主行」，不读他人具名数据。
                 includeOrphan 为基本类型 boolean，缺省 false，普通账号路径不会误放行。
+                管理员的用量查询范围是全部账号，控制器直接传 userId=null，
+                于是下面两支都不拼，等价于不加归属条件。
             -->
             <choose>
                 <when test="userId != null and userId != '' and includeOrphan">
