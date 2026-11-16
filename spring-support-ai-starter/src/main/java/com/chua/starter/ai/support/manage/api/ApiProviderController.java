@@ -151,6 +151,11 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.manage.service.SysAiModelMetricsService sysAiModelMetricsService;
 
     /**
+     * 模型目录同步（models.dev 说明 / 能力位 / 计费）
+     */
+    private final com.chua.starter.ai.support.manage.service.ProviderCatalogSyncService providerCatalogSyncService;
+
+    /**
      * ONNX 供应商物化服务：ONNX 供应商与模型镜像同步
      */
     private final com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer onnxProviderMaterializer;
@@ -6297,7 +6302,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      *   <li><b>计费标准</b>：官方指标源（{@link ChatClientIndicator}）与上游
      *       {@code /models} 自带 pricing 两条都写进 {@code sys_ai_model_metrics}；</li>
      *   <li><b>模型描述</b>：把上游目录里的 description / summary 补到已配置模型行，
-     *       默认只补空值（{@code overwrite_descriptions=true} 才覆盖）。</li>
+     *       默认只补空值（{@code overwrite_descriptions=true} 才覆盖），缺失的再由
+     *       公开目录（models.dev）补位；</li>
+     *   <li><b>公开目录</b>：models.dev 的说明 / 上下文 / 多模态 / 能力位 / 计费标准，
+     *       价格写入 {@code sys_ai_model_metrics}，其余只补空值。</li>
      * </ul>
      *
      * <p>上游只请求一次 {@code GET /models}：描述与计费共用这份目录，限制复用同一次
@@ -6348,6 +6356,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         out.put("descriptions", syncProviderDescriptions(entity, upstreamModels,
                 overwriteDescriptions, fetchError, now));
         out.put("pricing", syncProviderPricing(entity, upstreamModels, fetchError, limits));
+        out.put("catalog", providerCatalogSyncService.sync(entity));
         if (fetchError != null) {
             out.put("fetch_error", fetchError);
         }

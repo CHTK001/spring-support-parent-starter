@@ -543,12 +543,35 @@ public class SysAiModelMetricsService {
     public UpstreamPricingResult syncUpstreamPricing(String providerId,
                                                      List<Map<String, Object>> rows,
                                                      String sourceUrl) {
+        return syncUpstreamPricing(providerId, rows, sourceUrl, "upstream:/models");
+    }
+
+    /**
+     * 目录计费 / 能力快照 → 指标库 + 服务商模型行（可指定数据源）。
+     *
+     * <p>与 {@link #syncUpstreamPricing(String, List, String)} 同一条链路，差别只在
+     * {@code source}：公开目录（models.dev）写入的行要能被识别成区别于上游
+     * {@code /models} 的来源，刷新 / 手动锁定的判定才不会串。</p>
+     *
+     * @param providerId 服务商标识
+     * @param rows       目录行（含 {@code metrics} 与模型名）
+     * @param sourceUrl  数据源地址
+     * @param source     数据源标识
+     * @return 同步统计
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public UpstreamPricingResult syncUpstreamPricing(String providerId,
+                                                     List<Map<String, Object>> rows,
+                                                     String sourceUrl,
+                                                     String source) {
         if (providerId == null || providerId.isBlank() || rows == null || rows.isEmpty()) {
             return new UpstreamPricingResult(0, 0, 0);
         }
-        String source = "upstream:/models";
+        String dataSource = source == null || source.isBlank() ? "upstream:/models" : source;
         long now = System.currentTimeMillis();
         Map<String, Map<String, Object>> pricing = new LinkedHashMap<>(16);
+        Map<String, Map<String, Object>> enriched = new LinkedHashMap<>(16);
         for (Map<String, Object> row : rows) {
             if (row == null || !(row.get("metrics") instanceof Map<?, ?> raw)) {
                 continue;
@@ -570,8 +593,17 @@ public class SysAiModelMetricsService {
             if (!snapshot.isEmpty()) {
                 pricing.putIfAbsent(name, snapshot);
             }
+            Map<String, Object> full = new LinkedHashMap<>(raw.size());
+            raw.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    full.put(String.valueOf(k), v);
+                }
+            });
+            if (!full.isEmpty()) {
+                enriched.putIfAbsent(name, full);
+            }
         }
-        if (pricing.isEmpty()) {
+        if (pricing.isEmpty() && enriched.isEmpty()) {
             return new UpstreamPricingResult(0, 0, 0);
         }
 
@@ -596,7 +628,7 @@ public class SysAiModelMetricsService {
                 entity.setModelKey(key);
                 entity.setModelName(modelId);
                 entity.setProvider(providerId);
-                entity.setSource(source);
+                entity.setSource(dataSource);
                 entity.setCreateTime(now);
                 entity.setUpdateTime(now);
                 applyMetricsToEntity(entity, snapshot);
@@ -607,7 +639,7 @@ public class SysAiModelMetricsService {
             }
             Set<String> locked = cur.getManualLocked() == null
                     ? Set.of() : new HashSet<>(cur.getManualLocked());
-            boolean owned = source.equals(cur.getSource());
+            boolean owned = dataSource.equals(cur.getSource());
             LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
             uw.eq(SysAiModelMetrics::getId, cur.getId());
             boolean changed = false;
@@ -633,7 +665,8 @@ public class SysAiModelMetricsService {
             updated++;
         }
 
-        int providerModels = applyToProviderModels(providerId, pricing, source, sourceUrl, now);
+        int providerModels = applyToProviderModels(providerId,
+                enriched.isEmpty() ? pricing : enriched, dataSource, sourceUrl, now);
         log.info("[ModelMetrics] 上游计费同步 provider={}：更新 {}，新增 {}，回写模型行 {}",
                 providerId, updated, inserted, providerModels);
         return new UpstreamPricingResult(updated, inserted, providerModels);
