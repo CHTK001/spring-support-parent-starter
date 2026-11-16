@@ -36,6 +36,13 @@ public class CollectTaskController {
 
     private final CollectTaskService taskService;
 
+    /**
+     * 任务分页列表。
+     *
+     * @param query     分页查询条件
+     * @param condition 任务过滤条件
+     * @return 任务分页结果
+     */
     @Operation(summary = "任务分页列表")
     @GetMapping("/page")
     public ReturnPageResult<CollectTaskVO> page(@ParameterObject Query<CollectTask> query,
@@ -43,30 +50,61 @@ public class CollectTaskController {
         return PageResultUtils.ok(taskService.pageTasks(query.createPage(), condition));
     }
 
+    /**
+     * 任务详情。
+     *
+     * @param taskId 任务 ID
+     * @return 任务详情
+     */
     @Operation(summary = "任务详情")
     @GetMapping("/detail")
     public ReturnResult<CollectTaskVO> detail(@RequestParam Long taskId) {
         return ReturnResult.ok(taskService.detail(taskId));
     }
 
+    /**
+     * 节点执行日志。
+     *
+     * @param taskId 任务 ID
+     * @return 节点执行日志列表
+     */
     @Operation(summary = "节点执行日志")
     @GetMapping("/logs")
     public ReturnResult<List<CollectTaskLogVO>> logs(@RequestParam Long taskId) {
         return ReturnResult.ok(taskService.logs(taskId));
     }
 
+    /**
+     * 节点最近状态。
+     *
+     * @param taskId 任务 ID
+     * @return 节点最近状态列表
+     */
     @Operation(summary = "节点最近状态")
     @GetMapping("/node-states")
     public ReturnResult<List<CollectTaskLogVO>> nodeStates(@RequestParam Long taskId) {
         return ReturnResult.ok(taskService.nodeStates(taskId));
     }
 
+    /**
+     * 删除任务。
+     *
+     * @param taskId 任务 ID
+     * @return 是否删除成功
+     */
     @Operation(summary = "删除任务")
     @DeleteMapping("/delete")
     public ReturnResult<Boolean> delete(@RequestParam Long taskId) {
         return ReturnResult.ok(taskService.deleteTask(taskId));
     }
 
+    /**
+     * 清理历史任务。
+     *
+     * @param flowId 流程 ID（可空，空则清理全部）
+     * @param days   保留天数（默认 7，更早的任务被清理）
+     * @return 清理的任务数
+     */
     @Operation(summary = "清理历史任务")
     @PostMapping("/clean")
     public ReturnResult<Integer> clean(@RequestParam(required = false) Integer flowId,
@@ -74,14 +112,25 @@ public class CollectTaskController {
         return ReturnResult.ok(taskService.cleanTasks(flowId, days));
     }
 
-    /** 任务质量报告：从节点日志聚合质量指标 */
+    /**
+     * 任务质量报告：从节点日志聚合质量指标。
+     *
+     * @param taskId 任务 ID
+     * @return 质量报告
+     */
     @Operation(summary = "任务质量报告")
     @GetMapping("/quality")
     public ReturnResult<CollectQualityVO> quality(@RequestParam Long taskId) {
         return ReturnResult.ok(taskService.quality(taskId));
     }
 
-    /** 流程执行历史统计（趋势 + 节点耗时） */
+    /**
+     * 流程执行历史统计（趋势 + 节点耗时）。
+     *
+     * @param flowId 流程 ID
+     * @param days   统计天数（默认 30）
+     * @return 执行历史统计
+     */
     @Operation(summary = "执行历史统计")
     @GetMapping("/stats")
     public ReturnResult<CollectStatsVO> stats(
@@ -90,7 +139,12 @@ public class CollectTaskController {
         return ReturnResult.ok(taskService.stats(flowId, days));
     }
 
-    /** 运行中任务的实时节点状态（供前端轮询） */
+    /**
+     * 运行中任务的实时节点状态（供前端轮询）。
+     *
+     * @param taskId 任务 ID
+     * @return 实时节点状态列表
+     */
     @Operation(summary = "实时节点状态")
     @GetMapping("/live")
     public ReturnResult<List<CollectTaskLogVO>> live(@RequestParam Long taskId) {

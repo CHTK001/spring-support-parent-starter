@@ -193,9 +193,11 @@ public class JobAutoConfiguration {
      * {@code plugin.job.manage.enable=true}。宿主若要换一个认证口径 (如自带控制台会话),
      * 复用本 bean 再挂自己的出口即可。</p>
      *
-     * @param jobOperator       任务治理接口
-     * @param jobLogRepository  执行日志读取侧
-     * @param jobLeaderElector  本地选主状态
+     * @param jobOperator              任务治理接口
+     * @param jobLogRepository         执行日志读取侧
+     * @param jobLeaderElector         本地选主状态
+     * @param remoteHandlerRegistry    执行器处理器清单注册表
+     * @param glueSyncServiceProvider  脚本正文同步服务提供者（可空，未注册时为 null）
      * @return 治理实现
      */
     @Bean
@@ -365,6 +367,9 @@ public class JobAutoConfiguration {
 
     /**
      * MyBatis-Plus 行锁版 Leader 选举 (依赖 MyBatis-Plus 时覆盖默认)。
+     *
+     * @param clusterMapper 集群选主行锁 Mapper
+     * @return Leader 选举解析器
      */
     @Bean
     @ConditionalOnMissingBean
@@ -476,6 +481,14 @@ public class JobAutoConfiguration {
 
     /**
      * 调度器 角色: bind 同步, 把 bus 的 CMD 推到远端, 并落库 任务-日志。
+     *
+     * @param jobSyncServer            同步服务端
+     * @param jobSyncBus               事件总线
+     * @param jobLogSink               日志落地目标
+     * @param jobNodeId                当前节点标识
+     * @param remoteHandlerRegistry    执行器处理器清单注册表
+     * @param glueSyncServiceProvider  脚本正文同步服务提供者（可空）
+     * @return 调度器同步绑定器
      */
     @Bean
     @ConditionalOnMissingBean
@@ -527,6 +540,14 @@ public class JobAutoConfiguration {
      *   <li>抢占成功时 {@link ClusterElectionHeartbeat} 注册为 Spring Bean 持续续约;</li>
      *   <li>{@link JobLeaderLoop} 启动单秒扫描循环。</li>
      * </ol>
+     *
+     * @param jobLeaderElector          本地选主状态
+     * @param jobLeaderElectionResolver 选主解析器（抢占 Leader）
+     * @param jobRepository             任务仓库
+     * @param jobSyncBus                事件总线
+     * @param jobNodeId                 当前节点标识
+     * @param environment               Spring 环境（解析 electionNamespace）
+     * @return 作业 Leader 循环
      */
     @Bean
     @ConditionalOnMissingBean
@@ -545,20 +566,16 @@ public class JobAutoConfiguration {
         if (acquired) {
             jobLeaderElector.markLeader(electionNamespace);
         }
-        /**
-         * 作业Leader循环。
-         * @param properties 属性
-         * @param jobLeaderElector 作业 Leader 选举器
-         * @param jobNodeId 作业节点标识
-         * @param jobRepository 作业仓库
-         * @param jobSyncBus 作业同步bus
-         * @return 作业Leader循环的结果
-         */
         return new JobLeaderLoop(properties, jobLeaderElector, jobNodeId, jobRepository, jobSyncBus);
     }
 
     /**
      * 调度器 角色: Leader 续约心跳守护线程。
+     *
+     * @param jobLeaderElector          本地选主状态
+     * @param jobLeaderElectionResolver 选主解析器（续约）
+     * @param environment               Spring 环境（解析 electionNamespace）
+     * @return 已启动的续约心跳
      */
     @Bean
     @ConditionalOnMissingBean
@@ -656,6 +673,12 @@ public class JobAutoConfiguration {
 
     /**
      * 执行器 角色: 绑定 同步客户端 与本地事件总线。
+     *
+     * @param jobSyncClient      真实同步客户端
+     * @param jobSyncBus         事件总线
+     * @param jobNodeId          当前节点标识
+     * @param applicationContext Spring 应用上下文
+     * @return 执行器同步绑定器
      */
     @Bean
     @ConditionalOnMissingBean
@@ -669,6 +692,13 @@ public class JobAutoConfiguration {
 
     /**
      * 执行器 角色: 任务执行器。
+     *
+     * @param jobHandlerFactory      作业处理器工厂
+     * @param jobSyncBus             事件总线
+     * @param jobNodeId              当前节点标识
+     * @param alarmNotifierProvider  告警通道提供者（可空）
+     * @param applicationContext     Spring 应用上下文
+     * @return 作业执行器
      */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
@@ -707,6 +737,14 @@ public class JobAutoConfiguration {
 
     /**
      * 单个 角色: 本机自认 Leader, 通过本地 CAS 解析器 (MyBatis 未启用时)。
+     *
+     * @param jobLeaderElector          本地选主状态
+     * @param jobLeaderElectionResolver 选主解析器（抢占 Leader）
+     * @param jobRepository             任务仓库
+     * @param jobSyncBus                事件总线
+     * @param jobNodeId                 当前节点标识
+     * @param environment               Spring 环境（解析 electionNamespace）
+     * @return 作业 Leader 循环
      */
     @Bean
     @ConditionalOnMissingBean
@@ -739,6 +777,11 @@ public class JobAutoConfiguration {
 
     /**
      * 单个 角色心跳守护线程 (与 调度器 共享同一实现)。
+     *
+     * @param jobLeaderElector          本地选主状态
+     * @param jobLeaderElectionResolver 选主解析器（续约）
+     * @param environment               Spring 环境（解析 electionNamespace）
+     * @return 已启动的续约心跳
      */
     @Bean
     @ConditionalOnMissingBean
@@ -760,6 +803,13 @@ public class JobAutoConfiguration {
 
     /**
      * 单个 角色: 本地执行器, 消费本地 bus CMD 事件并执行。
+     *
+     * @param jobHandlerFactory      作业处理器工厂
+     * @param jobSyncBus             事件总线
+     * @param jobNodeId              当前节点标识
+     * @param alarmNotifierProvider  告警通道提供者（可空）
+     * @param applicationContext     Spring 应用上下文
+     * @return 作业执行器
      */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean

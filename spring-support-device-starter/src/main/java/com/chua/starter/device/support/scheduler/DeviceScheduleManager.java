@@ -145,6 +145,9 @@ public class DeviceScheduleManager {
         }
     }
 
+    /**
+     * 停止调度器：取消全部已注册任务并关闭时间轮
+     */
     @PreDestroy
     public void stop() {
         cancelAll(credentialTasks);
@@ -269,6 +272,9 @@ public class DeviceScheduleManager {
 
     /**
      * 凭据级任务的 Tick 门：read config → shouldRun → markRunning → body → markFinished
+     *
+     * @param source 任务来源分类
+     * @param credId 凭据 ID
      */
     private void tickCredential(CredentialTask source, String credId) {
         DeviceProviderCredential credential = credentialService.get(credId);
@@ -344,13 +350,22 @@ public class DeviceScheduleManager {
         }
     }
 
-    /** 注册全局 Tick（从 `device_task_state` 读 state 行，固定间隔 tick） */
+    /**
+     * 注册全局 Tick（从 `device_task_state` 读 state 行，固定间隔 tick）
+     *
+     * @param taskName 任务名
+     * @param body     任务体
+     */
     private void tick(String taskName, Runnable body) {
         ScheduledTask task = timeScheduler.scheduleFixedRate(taskName, body, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
         tickTasks.put(taskName, task);
     }
 
-    /** 取消任务（注册的 future） */
+    /**
+     * 取消任务（注册的 future）
+     *
+     * @param tasks 任务注册表
+     */
     private void cancelAll(Map<String, ScheduledTask> tasks) {
         for (ScheduledTask task : tasks.values()) {
             try {
@@ -362,6 +377,13 @@ public class DeviceScheduleManager {
         tasks.clear();
     }
 
+    /**
+     * 取消指定任务并移除注册
+     *
+     * @param taskName 任务名
+     * @param tasks    任务注册表
+     * @return 被取消的定时任务（未注册时为 {@code null}）
+     */
     private ScheduledTask cancel(String taskName, Map<String, ScheduledTask> tasks) {
         ScheduledTask task = tasks.remove(taskName);
         if (task != null) {
@@ -374,7 +396,12 @@ public class DeviceScheduleManager {
         return task;
     }
 
-    /** 注册表里已存在的 tick（全局或凭据级） */
+    /**
+     * 注册表里已存在的 tick（全局或凭据级）
+     *
+     * @param taskName 任务名
+     * @return 已注册的定时任务（未注册时为 {@code null}）
+     */
     private ScheduledTask registered(String taskName) {
         ScheduledTask task = tickTasks.get(taskName);
         if (task != null) {
@@ -383,7 +410,12 @@ public class DeviceScheduleManager {
         return credentialTasks.get(taskName);
     }
 
-    /** 取任务状态行上的间隔（任务页改过就在行上），没有则回落默认 30 秒 */
+    /**
+     * 取任务状态行上的间隔（任务页改过就在行上），没有则回落默认 30 秒
+     *
+     * @param taskName 任务名
+     * @return 生效间隔秒
+     */
     private Integer taskStateInterval(String taskName) {
         DeviceTaskState stateRow;
         try {
@@ -400,7 +432,9 @@ public class DeviceScheduleManager {
     }
 
     /**
-     * 设备离线检测
+     * 设备离线检测：探测会话在线状态，离线时注销会话并按周期尝试重连
+     *
+     * @param devices 待检测设备列表
      */
     private void doOfflineCheck(List<DeviceInfo> devices) {
         int recoveries = 0;
@@ -498,6 +532,12 @@ public class DeviceScheduleManager {
         }
     }
 
+    /**
+     * 设备是否已到重连尝试周期（距上次离线超过恢复间隔）
+     *
+     * @param device 设备信息
+     * @return 到期返回 {@code true}
+     */
     private boolean isRecoveryDue(DeviceInfo device) {
         LocalDateTime lastOfflineAt = device.getDeviceInfoLastOfflineAt();
         if (lastOfflineAt == null) {
@@ -506,6 +546,11 @@ public class DeviceScheduleManager {
         return Duration.between(lastOfflineAt, LocalDateTime.now()).getSeconds() >= RECOVERY_INTERVAL_SEC;
     }
 
+    /**
+     * 尝试重连设备：成功更新在线状态，失败标记离线并记日志
+     *
+     * @param device 设备信息
+     */
     private void tryRecover(DeviceInfo device) {
         try {
             deviceService.reconnect(device.getDeviceInfoId());
@@ -518,6 +563,9 @@ public class DeviceScheduleManager {
 
     /**
      * 凭据 ID 反推（任务名 → credId）
+     *
+     * @param taskName 任务名
+     * @return 凭据 ID（非凭据级任务时为 {@code null}）
      */
     private String credentialIdOf(String taskName) {
         int sep = taskName.lastIndexOf('_');
@@ -526,6 +574,9 @@ public class DeviceScheduleManager {
 
     /**
      * 任务名 → 凭据级任务来源；不是凭据级任务返回 null
+     *
+     * @param taskName 任务名
+     * @return 任务来源分类（非凭据级任务时为 {@code null}）
      */
     private CredentialTask sourceOf(String taskName) {
         for (CredentialTask source : CredentialTask.values()) {
@@ -565,6 +616,15 @@ public class DeviceScheduleManager {
         private final java.util.function.Function<DeviceProviderCredential, Boolean> enabled;
         private final java.util.function.Function<DeviceProviderCredential, Integer> interval;
 
+        /**
+         * 凭据级任务分类构造器
+         *
+         * @param prefix     任务名前缀
+         * @param description 分类描述
+         * @param capability 所需能力位
+         * @param enabled    开关读取函数
+         * @param interval   间隔读取函数
+         */
         CredentialTask(String prefix, String description, DeviceCapability capability,
                        java.util.function.Function<DeviceProviderCredential, Boolean> enabled,
                        java.util.function.Function<DeviceProviderCredential, Integer> interval) {
@@ -575,23 +635,43 @@ public class DeviceScheduleManager {
             this.interval = interval;
         }
 
-        /** 开关是否开启（凭据整体停用时一律不跑） */
+        /**
+         * 开关是否开启（凭据整体停用时一律不跑）
+         *
+         * @param credential 凭据
+         * @return 开启返回 {@code true}
+         */
         boolean acts(DeviceProviderCredential credential) {
             return Boolean.TRUE.equals(credential.getDeviceCredentialEnabled())
                     && Boolean.TRUE.equals(enabled.apply(credential));
         }
 
-        /** 间隔秒 */
+        /**
+         * 间隔秒
+         *
+         * @param credential 凭据
+         * @return 配置间隔秒
+         */
         Integer intervalOf(DeviceProviderCredential credential) {
             return interval.apply(credential);
         }
 
-        /** 任务名 = prefix_ + 凭据 ID */
+        /**
+         * 任务名 = prefix_ + 凭据 ID
+         *
+         * @param credId 凭据 ID
+         * @return 任务名
+         */
         String name(String credId) {
             return prefix + "_" + credId;
         }
 
-        /** 描述（任务状态行） */
+        /**
+         * 描述（任务状态行）
+         *
+         * @param credential 凭据
+         * @return 任务描述文本
+         */
         String description(DeviceProviderCredential credential) {
             return credential.getDeviceCredentialName() + "（" + description + "）";
         }
@@ -629,6 +709,10 @@ public class DeviceScheduleManager {
 
     /**
      * 凭据级任务体：按来源把任务要求成可执行的 Runnable
+     *
+     * @param source 任务来源分类
+     * @param credId 凭据 ID
+     * @return 可执行的任务体
      */
     private Runnable body(CredentialTask source, String credId) {
         return switch (source) {

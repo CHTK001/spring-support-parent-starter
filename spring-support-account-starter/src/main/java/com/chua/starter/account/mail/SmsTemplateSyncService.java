@@ -23,10 +23,12 @@ import java.util.Map;
  * {@link MessagePush#listTemplates()}，把取回的模板按 {@code templateCode} 落到
  * 消息模板表（kind=SMS）。阿里 / 腾讯 / 百度等实现由宿主按需引入。</p>
  *
- * <p><b>能力边界</b>：并非所有通道都会查厂商云端。阿里云实现查
+ * <p><b>能力边界</b>：各通道实现都查厂商云端。阿里云实现查
  * {@code QuerySmsTemplateList} 且只保留 {@code AUDIT_PASS} 审核通过的模板；
- * 腾讯 / 百度当前只返回本进程已登记的模板（{@code fetched} 可能为 0），
- * 不代表「云端没有模板」或「同步失败」。界面据此区分提示。</p>
+ * 腾讯云实现查 {@code DescribeSmsTemplateList}（v20210111）且只保留审核状态码为 0
+ * （审核通过且已生效）的模板；百度云实现查 {@code /sms/v3/template} 且只保留
+ * {@code READY}（审核通过，模板可用）的模板。云端没有模板时 {@code fetched} 为 0，
+ * 即为真实空读数。界面据此区分提示。</p>
  *
  * <p>同一 code 已存在时更新名称与内容，保留原有默认 / 排序 / 启停设置。</p>
  *

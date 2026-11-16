@@ -19,16 +19,25 @@ public interface ReleaseService {
 
     /**
      * 获取发布列表
+     *
+     * @return 发布列表
      */
     ReturnResult<List<MsServerRelease>> listReleases();
 
     /**
      * 创建发布
+     *
+     * @param release 发布信息
+     * @return 创建后的发布
      */
     ReturnResult<MsServerRelease> createRelease(MsServerRelease release);
 
     /**
      * 更新发布
+     *
+     * @param id      发布ID
+     * @param release 发布信息
+     * @return 更新后的发布
      */
     ReturnResult<MsServerRelease> updateRelease(Long id, MsServerRelease release);
 
@@ -49,21 +58,34 @@ public interface ReleaseService {
 
     /**
      * 删除发布
+     *
+     * @param id 发布ID
+     * @return 操作结果
      */
     ReturnResult<Void> deleteRelease(Long id);
 
     /**
      * 获取项目列表
+     *
+     * @param releaseId 发布ID
+     * @return 项目列表
      */
     ReturnResult<List<MsServerProject>> listProjects(Long releaseId);
 
     /**
      * 创建项目
+     *
+     * @param project 项目信息
+     * @return 创建后的项目
      */
     ReturnResult<MsServerProject> createProject(MsServerProject project);
 
     /**
      * 更新项目
+     *
+     * @param id      项目ID
+     * @param project 项目信息
+     * @return 更新后的项目
      */
     ReturnResult<MsServerProject> updateProject(Long id, MsServerProject project);
 
@@ -104,41 +126,66 @@ public interface ReleaseService {
 
     /**
      * 删除项目
+     *
+     * @param id 项目ID
+     * @return 操作结果
      */
     ReturnResult<Void> deleteProject(Long id);
 
     /**
      * 启动项目（异步，返回 taskId，进度经 socket 推送）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> startProject(Long id);
 
     /**
      * 停止项目（异步，返回 taskId）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> stopProject(Long id);
 
     /**
      * 重启项目（异步，返回 taskId）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> restartProject(Long id);
 
     /**
      * 升级项目（异步，返回 taskId）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> upgradeProject(Long id);
 
     /**
      * 备份项目（异步，返回 taskId）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> backupProject(Long id);
 
     /**
      * 回滚项目（异步，返回 taskId）。backupName 为空时恢复最新备份，否则恢复指定备份
+     *
+     * @param id         项目ID
+     * @param backupName 备份标识（可空）
+     * @return 异步任务标识
      */
     ReturnResult<String> rollbackProject(Long id, String backupName);
 
     /**
      * 列出项目 backups/ 目录下的备份记录（名称 / 时间 / 大小），用于编辑页展示
+     *
+     * @param id 项目ID
+     * @return 备份记录列表
      */
     ReturnResult<List<com.chua.starter.server.support.model.vo.ProjectBackupVO>> listBackups(Long id);
 
@@ -146,6 +193,9 @@ public interface ReleaseService {
      * 获取项目日志（一次性 tail，用于打开时的初始内容）
      *
      * <p>读取行数取项目「系统配置 → 日志读取行数」，未配置时为默认 100 行。</p>
+     *
+     * @param id 项目ID
+     * @return 日志文本
      */
     ReturnResult<String> getProjectLog(Long id);
 
@@ -177,6 +227,7 @@ public interface ReleaseService {
      * 停止实时日志
      *
      * @param sessionId 日志会话ID
+     * @return 操作结果
      */
     ReturnResult<Void> stopProjectLog(String sessionId);
 
@@ -227,8 +278,9 @@ public interface ReleaseService {
     /**
      * 搜索软件包
      *
-     * @param hostId 主机ID
+     * @param hostId  主机ID
      * @param keyword 关键词
+     * @return 软件包列表
      */
     ReturnResult<List<SoftwarePackage>> searchSoftware(Long hostId, String keyword);
 
@@ -236,7 +288,8 @@ public interface ReleaseService {
      * 安装软件（异步，返回 taskId，实时进度经 socket 推送）
      *
      * @param hostId 主机ID
-     * @param name 软件包名
+     * @param name   软件包名
+     * @return 异步任务标识
      */
     ReturnResult<String> installSoftware(Long hostId, String name);
 
@@ -244,6 +297,7 @@ public interface ReleaseService {
      * 列出主机上已安装的软件（同步执行，返回已安装包列表；依赖包管理器 supported 命令）
      *
      * @param hostId 主机ID
+     * @return 已安装软件包列表
      */
     ReturnResult<List<SoftwarePackage>> listInstalledSoftware(Long hostId);
 
@@ -251,7 +305,8 @@ public interface ReleaseService {
      * 卸载软件（异步，返回 taskId，实时进度经 socket 推送）
      *
      * @param hostId 主机ID
-     * @param name 软件包名
+     * @param name   软件包名
+     * @return 异步任务标识
      */
     ReturnResult<String> uninstallSoftware(Long hostId, String name);
 
@@ -259,7 +314,8 @@ public interface ReleaseService {
      * 升级软件到仓库最新版（异步，返回 taskId，实时进度经 socket 推送）
      *
      * @param hostId 主机ID
-     * @param name 软件包名
+     * @param name   软件包名
+     * @return 异步任务标识
      */
     ReturnResult<String> upgradeSoftware(Long hostId, String name);
 
@@ -284,6 +340,9 @@ public interface ReleaseService {
 
     /**
      * 查询项目运行状态（同步执行状态脚本，返回输出）
+     *
+     * @param id 项目ID
+     * @return 状态输出
      */
     ReturnResult<String> statusProject(Long id);
 
@@ -291,11 +350,17 @@ public interface ReleaseService {
 
     /**
      * 将项目挂载为系统服务（Linux systemd / Windows 计划任务），按 autostart/guardian 配置启用开机自启与守护（异步，返回 taskId）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> installService(Long id);
 
     /**
      * 卸载系统服务（停止 / 禁用 / 删除服务与守护任务，清空 serviceName）（异步，返回 taskId）
+     *
+     * @param id 项目ID
+     * @return 异步任务标识
      */
     ReturnResult<String> uninstallService(Long id);
 
@@ -345,6 +410,7 @@ public interface ReleaseService {
      *
      * @param id     项目ID
      * @param config 升级配置
+     * @return 异步任务标识
      */
     ReturnResult<String> runUpgrade(Long id, Map<String, Object> config);
 

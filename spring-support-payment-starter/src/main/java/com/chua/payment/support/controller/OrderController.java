@@ -70,9 +70,14 @@ public class OrderController {
     @Operation(summary = "分页查询订单")
     @GetMapping("/list")
     /**
-     * 列表订单
+     * 分页查询订单。
      *
-     * @return 列表订单的结果
+     * @param page       页码（默认 1）
+     * @param size       每页条数（默认 10）
+     * @param merchantId 商户 ID（可空）
+     * @param orderNo    订单号（可空）
+     * @param status     订单状态（可空）
+     * @return 分页结果
      */
     public Result<PageResult<OrderVO>> listOrders(@RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "10") int size,
@@ -86,11 +91,13 @@ public class OrderController {
     @Operation(summary = "查询商户订单")
     @GetMapping("/merchant/{merchantId}")
     /**
-     * 商户订单列表
-     * @param merchantId merchantid
-     * @param page page
-     * @param size 大小
-     * @param status 状态
+     * 商户订单列表。
+     *
+     * @param merchantId 商户 ID
+     * @param page       页码（默认 1）
+     * @param size       每页条数（默认 10）
+     * @param status     订单状态（可空）
+     * @return 商户订单分页结果
      */
     public Result<PageResult<OrderVO>> listMerchantOrders(@PathVariable Long merchantId,
                                                           @RequestParam(defaultValue = "1") int page,
@@ -114,9 +121,11 @@ public class OrderController {
     @Operation(summary = "真实发起支付")
     @PostMapping("/{id}/pay")
     /**
-     * 支付订单
-     * @param id 标识
-     * @param dto dto
+     * 支付订单。
+     *
+     * @param id  订单 ID
+     * @param dto 支付参数（可空）
+     * @return 支付结果
      */
     public Result<PaymentResult> payOrder(@PathVariable Long id,
                                           @RequestBody(required = false) OrderPayDTO dto) {
@@ -137,9 +146,11 @@ public class OrderController {
     @Operation(summary = "发起支付")
     @PutMapping("/{id}/pay-start")
     /**
-     * 开始支付
-     * @param id 标识
-     * @param dto dto
+     * 开始支付（发起支付前置动作）。
+     *
+     * @param id  订单 ID
+     * @param dto 操作参数（可空，取操作人）
+     * @return 是否成功
      */
     public Result<Boolean> startPay(@PathVariable Long id,
                                     @RequestBody(required = false) OrderOperateDTO dto) {
@@ -149,9 +160,11 @@ public class OrderController {
     @Operation(summary = "标记支付成功")
     @PutMapping("/{id}/pay-success")
     /**
-     * 支付成功
-     * @param id 标识
-     * @param dto dto
+     * 标记支付成功。
+     *
+     * @param id  订单 ID
+     * @param dto 操作参数（可空，取已付金额 / 第三方订单号 / 操作人）
+     * @return 是否成功
      */
     public Result<Boolean> paySuccess(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
@@ -165,9 +178,11 @@ public class OrderController {
     @Operation(summary = "标记支付失败")
     @PutMapping("/{id}/pay-fail")
     /**
-     * 支付失败
-     * @param id 标识
-     * @param dto dto
+     * 标记支付失败。
+     *
+     * @param id  订单 ID
+     * @param dto 操作参数（可空，取备注 / 操作人）
+     * @return 是否成功
      */
     public Result<Boolean> payFail(@PathVariable Long id,
                                    @RequestBody(required = false) OrderOperateDTO dto) {
@@ -177,10 +192,12 @@ public class OrderController {
     @Operation(summary = "取消订单", description = "refund=true: 已支付订单发起退款并取消；refund=false: 不退款仅取消(PENDING/PAYING)")
     @PutMapping("/{id}/cancel")
     /**
-     * 取消订单
-     * @param id 标识
-     * @param refund 是否退款
-     * @param dto dto
+     * 取消订单。
+     *
+     * @param id     订单 ID
+     * @param refund 是否退款（true: 已支付订单发起退款并取消；false: 不退款仅取消 PENDING/PAYING）
+     * @param dto    操作参数（可空，取操作人 / 备注）
+     * @return 是否成功
      */
     public Result<Boolean> cancelOrder(@PathVariable Long id,
                                        @RequestParam(defaultValue = "false") boolean refund,
@@ -194,9 +211,11 @@ public class OrderController {
     @Operation(summary = "完成订单")
     @PutMapping("/{id}/complete")
     /**
-     * 完成订单
-     * @param id 标识
-     * @param dto dto
+     * 完成订单。
+     *
+     * @param id  订单 ID
+     * @param dto 操作参数（可空，取操作人）
+     * @return 是否成功
      */
     public Result<Boolean> completeOrder(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
@@ -206,9 +225,11 @@ public class OrderController {
     @Operation(summary = "申请退款")
     @PostMapping("/{id}/refund")
     /**
-     * 退款订单
-     * @param id 标识
-     * @param dto dto
+     * 退款订单。
+     *
+     * @param id  订单 ID
+     * @param dto 退款申请参数
+     * @return 是否成功
      */
     public Result<Boolean> refundOrder(@PathVariable Long id,
                                        @RequestBody RefundApplyDTO dto) {
@@ -218,9 +239,11 @@ public class OrderController {
     @Operation(summary = "标记退款成功")
     @PutMapping("/{id}/refund-success")
     /**
-     * 退款成功
-     * @param id 标识
-     * @param dto dto
+     * 标记退款成功。
+     *
+     * @param id  订单 ID
+     * @param dto 操作参数（可空，取退款金额 / 操作人）
+     * @return 是否成功
      */
     public Result<Boolean> refundSuccess(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
@@ -230,9 +253,11 @@ public class OrderController {
     @Operation(summary = "标记退款失败")
     @PutMapping("/{id}/refund-fail")
     /**
-     * 退款失败
-     * @param id 标识
-     * @param dto dto
+     * 标记退款失败。
+     *
+     * @param id  订单 ID
+     * @param dto 操作参数（可空，取备注 / 操作人）
+     * @return 是否成功
      */
     public Result<Boolean> refundFail(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
