@@ -325,6 +325,77 @@
         },
         "note": "AI/ML API 官方 Pricing 页（Language Models per 1M tokens，USD；Input 单元格内的 cache 子价不拆分）"
       }
+    },
+    {
+      "id": "alibaba",
+      "name": "Alibaba Cloud Model Studio / Qwen",
+      "aliases": ["alibaba", "qwen", "dashscope"],
+      "hosts": ["dashscope.aliyuncs.com", "dashscope-intl.aliyuncs.com", "api.alibabacloud.com", "alibabacloud.com"],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "named-regex",
+        "url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "currency": "USD",
+        "quantity": 1000000,
+        "pattern": "(?<model>(?:qwen|qvq|qwq|deepseek|glm|kimi|moonshot|minimax|llama)[a-z0-9.\\-]*)(?:\\s+[^$]{0,200}?)\\s*\\$\\s*(?<input>[0-9]+(?:\\.[0-9]+)?)\\s+\\$\\s*(?<output>[0-9]+(?:\\.[0-9]+)?)",
+        "group_items": {
+          "input": "input_cache_miss",
+          "output": "output"
+        },
+        "note": "阿里云百炼官方 Model Studio 定价页（USD / 百万 token；同一模型多地域时取页面首个价格）"
+      }
+    },
+    {
+      "id": "edenai",
+      "name": "Eden AI",
+      "aliases": ["edenai", "eden-ai"],
+      "hosts": ["api.edenai.run", "edenai.co"],
+      "doc": "https://www.edenai.co/models",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "named-regex",
+        "url": "https://www.edenai.co/models",
+        "currency": "USD",
+        "quantity": 1000000,
+        "pattern": "(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},\\s+\\d{4}\\s+(?<model>[A-Za-z~][^$]{1,80}?)\\s+\\$\\s*(?<input>[0-9]+(?:\\.[0-9]+)?)\\s+\\$\\s*(?<output>[0-9]+(?:\\.[0-9]+)?)",
+        "group_items": {
+          "input": "input_cache_miss",
+          "output": "output"
+        },
+        "strip_suffixes": [
+          "Multiverse Computing", "Thinking Machines", "Fireworks AI", "Google Cloud",
+          "Tencent Cloud", "Together AI", "Moonshot AI", "Mistral AI", "Infomaniak",
+          "DeepInfra", "Anthropic", "Cohere", "DeepSeek", "GreenPT", "Minimax",
+          "NVIDIA", "OpenAI", "Reflection", "StepFun", "Xiaomi", "Writer", "Z.ai",
+          "Meta", "Qwen", "xAI"
+        ],
+        "note": "Eden AI 官方模型目录（上游目录价，USD / 百万 token；不含 5.5% 平台费；仅页面当前渲染的 99 行）"
+      }
+    },
+    {
+      "id": "llmgateway",
+      "name": "LLM Gateway",
+      "aliases": ["llmgateway"],
+      "hosts": [],
+      "doc": "https://llmgateway.io/models",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "named-regex",
+        "url": "https://api.llmgateway.io/v1/models",
+        "currency": "USD",
+        "quantity": 1000000,
+        "include_free": false,
+        "pattern": "\"id\"\\s*:\\s*\"(?<model>[^\"]+)\"\\s*,\\s*\"name\"\\s*:\\s*\"[^\"]*\"\\s*,\\s*\"display_name\"\\s*:\\s*\"[^\"]*\"[\\s\\S]{0,16000}?\\}\\s*\\]\\s*,\\s*\"pricing\"\\s*:\\s*\\{[^}]*?\"prompt\"\\s*:\\s*\"(?<input>[^\"]+)\"[^}]*?\"completion\"\\s*:\\s*\"(?<output>[^\"]+)\"",
+        "group_items": {
+          "input": "input_cache_miss",
+          "output": "output"
+        },
+        "note": "LLM Gateway 官方 /v1/models JSON（USD / 百万 token；仅 canonical 模型价，免费路由不写入；provider 变体 llmgateway-providers 的价差不套用）"
+      }
     }
   ]
 }
