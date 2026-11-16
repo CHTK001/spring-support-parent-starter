@@ -77,6 +77,12 @@ public class RoomService {
         return thread;
     });
 
+    /**
+     * 构造 P2P 房间信令引擎
+     *
+     * @param properties 房间超时/回收等配置
+     * @param sender     信令下发出口
+     */
     public RoomService(RoomProperties properties, RoomSender sender) {
         this.properties = properties;
         this.sender = sender;
@@ -294,6 +300,9 @@ public class RoomService {
 
     /**
      * 获取房间中的活跃端点
+     *
+     * @param roomId 房间编号
+     * @return 活跃端点数量（房间不存在时为 0）
      */
     public int getActivePeerCount(String roomId) {
         RoomState room = rooms.get(roomId);
@@ -302,6 +311,9 @@ public class RoomService {
 
     /**
      * 获取房间台账
+     *
+     * @param roomId 房间编号
+     * @return 房间状态（不存在时为空）
      */
     public Optional<RoomState> getRoom(String roomId) {
         return Optional.ofNullable(rooms.get(roomId));
@@ -309,6 +321,9 @@ public class RoomService {
 
     /**
      * 获取通过连接 ID 关联的端点
+     *
+     * @param connectionId WebSocket 会话 ID
+     * @return 端点会话（未关联时为空）
      */
     public Optional<PeerSession> getPeer(String connectionId) {
         return Optional.ofNullable(peers.get(connectionId));
@@ -328,6 +343,12 @@ public class RoomService {
 
     /**
      * 加入房间（新接入 / 续练不通过）
+     *
+     * @param room          房间状态
+     * @param slotId        端点号
+     * @param peerSessionId 对等端点的 SessionID
+     * @param connectionId  当前 WebSocket 会话 ID
+     * @param existing      房间是否早先已存在（决定是否升代数/清槽位）
      */
     private void joinRoom(RoomState room, String slotId, String peerSessionId, String connectionId, boolean existing) {
         SlotState slot = new SlotState(slotId);
@@ -397,6 +418,11 @@ public class RoomService {
 
     /**
      * 恢复旧连接（续练）
+     *
+     * @param room         房间状态
+     * @param token        恢复令牌
+     * @param slot         待恢复的槽位
+     * @param connectionId 新连接 ID
      */
     private void resumeConnection(RoomState room, ResumeToken token, SlotState slot, String connectionId) {
         String slotId = token.getSlotId();
@@ -424,7 +450,13 @@ public class RoomService {
         updateSlotActive(room, slot, connectionId);
     }
 
-    /** updateSlotActive 方法 */
+    /**
+     * 将槽位挂到新连接：刷新租约与在线时间
+     *
+     * @param room         房间状态
+     * @param slot         槽位
+     * @param connectionId 当前 WebSocket 会话 ID
+     */
     private void updateSlotActive(RoomState room, SlotState slot, String connectionId) {
         slot.setConnectedAt(System.currentTimeMillis());
         slot.setLeaseExpiresAt(System.currentTimeMillis() + properties.getTimeouts().getLeaseExpiresMs());
@@ -433,7 +465,12 @@ public class RoomService {
         peers.put(connectionId, new PeerSession(room, slot));
     }
 
-    /** leavePeer 方法 */
+    /**
+     * 通知对端当前端点已离开
+     *
+     * @param room   房间状态
+     * @param slotId 离开的端点号
+     */
     private void leavePeer(RoomState room, String slotId) {
         String otherSlotId = room.getOtherSlotId(slotId);
         if (otherSlotId == null) {
@@ -449,6 +486,9 @@ public class RoomService {
 
     /**
      * 对端断开（无 leave 信号）
+     *
+     * @param room   房间状态
+     * @param slotId 断开的端点号
      */
     private void notifyPeerDisconnect(RoomState room, String slotId) {
         String otherSlotId = room.getOtherSlotId(slotId);
@@ -464,6 +504,13 @@ public class RoomService {
         findPeer(room, otherSlotId).ifPresent(p -> send(p.connectionId(), disconnected.toJson()));
     }
 
+    /**
+     * 断开端点：移除连接映射并断开槽位
+     *
+     * @param connectionId WebSocket 会话 ID
+     * @param room         房间状态
+     * @param slotId       端点号
+     */
     private void disconnectPeer(String connectionId, RoomState room, String slotId) {
         peers.remove(connectionId);
         if (room != null && slotId != null) {
@@ -471,6 +518,13 @@ public class RoomService {
         }
     }
 
+    /**
+     * 到期清理端点：移除连接映射、断开槽位并清除恢复令牌
+     *
+     * @param connectionId WebSocket 会话 ID
+     * @param peer         端点会话
+     * @param now          当前时间戳
+     */
     private void expirePeer(String connectionId, PeerSession peer, long now) {
         RoomState room = peer.room();
         String slotId = peer.slot().getSlotId();
@@ -479,7 +533,11 @@ public class RoomService {
         clearResumeToken(room, slotId);
     }
 
-    /** clearResumeToken 方法 */
+    /**
+     * 按连接 ID 清除该端点的恢复令牌
+     *
+     * @param connectionId WebSocket 会话 ID
+     */
     private void clearResumeToken(String connectionId) {
         PeerSession peer = peers.get(connectionId);
         if (peer != null) {
@@ -487,12 +545,23 @@ public class RoomService {
         }
     }
 
-    /** clearResumeToken 方法 */
+    /**
+     * 清除指定房间/端点的恢复令牌
+     *
+     * @param room   房间状态
+     * @param slotId 端点号
+     */
     private void clearResumeToken(RoomState room, String slotId) {
         resumeTokens.values().removeIf(t -> t.getRoomId().equals(room.getRoomId()) && t.getSlotId().equals(slotId));
     }
 
-    /** emitResumeToken 方法 */
+    /**
+     * 生成恢复令牌并登记（附带回收到期令牌）
+     *
+     * @param room   房间状态
+     * @param slotId 端点号
+     * @return 恢复令牌串
+     */
     private String emitResumeToken(RoomState room, String slotId) {
         long timestamp = System.currentTimeMillis();
         String raw = Base64.getEncoder().encodeToString((room.getRoomId() + ":" + slotId + ":" + room.getEpoch() + ":" + timestamp)
@@ -515,6 +584,13 @@ public class RoomService {
     return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
+    /**
+     * 按房间与端点号查找端点会话
+     *
+     * @param room   房间状态
+     * @param slotId 端点号
+     * @return 端点会话（未找到时为空）
+     */
     private Optional<PeerSession> findPeer(RoomState room, String slotId) {
         for (PeerSession peer : peers.values()) {
             if (peer.room() == room && peer.slot().getSlotId().equals(slotId)) {
@@ -526,6 +602,12 @@ public class RoomService {
 
     /**
      * 组装 welcome 信封（当前端点加入房间以后）
+     *
+     * @param room        房间状态
+     * @param slotId      当前端点号
+     * @param resumed     是否续接成功
+     * @param resumeToken 返回给客户端的恢复令牌
+     * @return welcome 信令
      */
     private RoomMessage buildWelcome(RoomState room, String slotId, boolean resumed, String resumeToken) {
         String peerId = room.getOtherSlotId(slotId);
@@ -566,6 +648,15 @@ public class RoomService {
         /** 截止时间（ms） */
         private Long expiresAt;
 
+        /**
+         * 续练令牌构造器
+         *
+         * @param token     令牌串
+         * @param roomId    房间编号
+         * @param slotId    端点 SlotID
+         * @param epoch     房间代数
+         * @param expiresAt 截止时间（ms）
+         */
         ResumeToken(String token, String roomId, String slotId, Long epoch, Long expiresAt) {
             this.token = token;
             this.roomId = roomId;

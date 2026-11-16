@@ -109,28 +109,56 @@ public class RoomMessage {
 
     /**
      * 创建信封
+     *
+     * @param type 信封类型
      */
     public RoomMessage(String type) {
         this.type = type;
         this.id = java.util.UUID.randomUUID().toString();
     }
 
+    /**
+     * 创建信封构建器
+     *
+     * @param type 信封类型
+     * @return 信封构建器
+     */
     public static RoomMessageBuilder builder(String type) {
         return new RoomMessageBuilder(type);
     }
 
+    /**
+     * 获取信封类型
+     *
+     * @return 信封类型
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * 获取信封标识（UUID）
+     *
+     * @return 信封标识
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * 获取房间编号
+     *
+     * @return 房间编号
+     */
     public String getRoomId() {
         return roomId;
     }
 
+    /**
+     * 获取信令负载（WebRTC offer / answer / candidate）
+     *
+     * @return 信令负载
+     */
     public String getPayload() {
         return payload;
     }
@@ -235,16 +263,28 @@ public class RoomMessage {
         return heartbeatProtocol;
     }
 
+    /**
+     * 获取离开原因
+     *
+     * @return 离开原因
+     */
     public String getReason() {
         return reason;
     }
 
+    /**
+     * 获取重试时间（ms）
+     *
+     * @return 重试时间（ms）
+     */
     public Long getRetryAfterMs() {
         return retryAfterMs;
     }
 
     /**
      * JSON 序列化
+     *
+     * @return JSON 字符串
      */
     public String toJson() {
         try {
@@ -274,91 +314,174 @@ public class RoomMessage {
 
         private final RoomMessage msg;
 
+        /**
+         * 创建信封构建器
+         *
+         * @param type 信封类型
+         */
         public RoomMessageBuilder(String type) {
             this.msg = new RoomMessage(type);
         }
 
+        /**
+         * 设置房间编号
+         *
+         * @param roomId 房间编号
+         * @return 本构建器
+         */
         public RoomMessageBuilder roomId(String roomId) {
             this.msg.roomId = roomId;
             return this;
         }
 
+        /**
+         * 设置信令负载（WebRTC offer / answer / candidate）
+         *
+         * @param payload 信令负载
+         * @return 本构建器
+         */
         public RoomMessageBuilder payload(String payload) {
             this.msg.payload = payload;
             return this;
         }
 
+        /**
+         * 设置当前端点的 SlotID
+         *
+         * @param slotId SlotID
+         * @return 本构建器
+         */
         public RoomMessageBuilder slotId(String slotId) {
             this.msg.slotId = slotId;
             return this;
         }
 
+        /**
+         * 设置当前对端的 SlotID
+         *
+         * @param peerId 对端 SlotID
+         * @return 本构建器
+         */
         public RoomMessageBuilder peerId(String peerId) {
             this.msg.peerId = peerId;
             return this;
         }
 
-        /** offererSlotId 方法 */
+        /**
+         * 设置发起端点的 SlotID
+         *
+         * @param offererSlotId 发起端点 SlotID
+         * @return 本构建器
+         */
         public RoomMessageBuilder offererSlotId(String offererSlotId) {
             this.msg.offererSlotId = offererSlotId;
             return this;
         }
 
-        /** peerCount 方法 */
+        /**
+         * 设置房间投入的端点总数
+         *
+         * @param peerCount 端点总数
+         * @return 本构建器
+         */
         public RoomMessageBuilder peerCount(Integer peerCount) {
             this.msg.peerCount = peerCount;
             return this;
         }
 
-        /** resumed 方法 */
+        /**
+         * 设置是否已经恢复（续接旧连接）
+         *
+         * @param resumed 是否恢复
+         * @return 本构建器
+         */
         public RoomMessageBuilder resumed(Boolean resumed) {
             this.msg.resumed = resumed;
             return this;
         }
 
-        /** initiator 方法 */
+        /**
+         * 设置是否正在重新加入
+         *
+         * @param initiator 是否重新加入
+         * @return 本构建器
+         */
         public RoomMessageBuilder initiator(Boolean initiator) {
             this.msg.initiator = initiator;
             return this;
         }
 
-        /** epoch 方法 */
+        /**
+         * 设置当前房间代数
+         *
+         * @param epoch 房间代数
+         * @return 本构建器
+         */
         public RoomMessageBuilder epoch(Long epoch) {
             this.msg.epoch = epoch;
             return this;
         }
 
-        /** resumeToken 方法 */
+        /**
+         * 设置恢复令牌（后续续连 / 重连用）
+         *
+         * @param resumeToken 恢复令牌
+         * @return 本构建器
+         */
         public RoomMessageBuilder resumeToken(String resumeToken) {
             this.msg.resumeToken = resumeToken;
             return this;
         }
 
-        /** reason 方法 */
+        /**
+         * 设置离开原因
+         *
+         * @param reason 离开原因
+         * @return 本构建器
+         */
         public RoomMessageBuilder reason(String reason) {
             this.msg.reason = reason;
             return this;
         }
 
-        /** retryAfterMs 方法 */
+        /**
+         * 设置重试时间（ms）
+         *
+         * @param retryAfterMs 重试时间（ms）
+         * @return 本构建器
+         */
         public RoomMessageBuilder retryAfterMs(Long retryAfterMs) {
             this.msg.retryAfterMs = retryAfterMs;
             return this;
         }
 
-        /** heartbeatProtocol 方法 */
+        /**
+         * 设置心跳协议版本（v3 内部格式，不下发到客户端）
+         *
+         * @param heartbeatProtocol 心跳协议版本
+         * @return 本构建器
+         */
         public RoomMessageBuilder heartbeatProtocol(String heartbeatProtocol) {
             this.msg.heartbeatProtocol = heartbeatProtocol;
             return this;
         }
 
-        /** id 方法 */
+        /**
+         * 设置信封标识（UUID）
+         *
+         * @param id 信封标识
+         * @return 本构建器
+         */
         public RoomMessageBuilder id(String id) {
             this.msg.id = id;
             return this;
         }
 
-        /** build 方法 */
+        /**
+         * 构建信封
+         *
+         * @return 完成的信封
+         */
         public RoomMessage build() {
             return msg;
         }
