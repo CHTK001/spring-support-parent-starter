@@ -418,6 +418,28 @@
         },
         "note": "LLM Gateway 官方 /v1/models?mapped=true（每个 provider 映射一条，id 为 provider/externalId；USD / 百万 token；仅写入 e-6 科学计数法的 397/468 个模型，普通小数 per-token 价不写入，避免把 per-token 当 per-million）"
       }
+    },
+    {
+      "id": "merge-gateway",
+      "name": "Merge Gateway",
+      "aliases": ["merge-gateway"],
+      "hosts": [],
+      "doc": "https://docs.merge.dev/merge-gateway/models/catalog",
+      "verified": true,
+      "rules": [],
+      "source": {
+        "type": "named-regex",
+        "url": "https://docs.merge.dev/merge-gateway/models/catalog",
+        "currency": "USD",
+        "quantity": 1000000,
+        "include_free": false,
+        "pattern": "(?<model>[A-Za-z][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*)(?:(?![A-Za-z][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*)[\\s\\S]){1,80}?\\s+[0-9]+(?:\\.[0-9]+)?[KMB]?\\s+[0-9]+(?:\\.[0-9]+)?[KMB]?\\s+\\$(?<input>[0-9]+(?:\\.[0-9]+)?)/M\\s+\\$(?<output>[0-9]+(?:\\.[0-9]+)?)/M",
+        "group_items": {
+          "input": "input_cache_miss",
+          "output": "output"
+        },
+        "note": "Merge Gateway 官方 Model catalog（USD / 百万 token；只写标准 Input/Output 价，表 328 行解析出 263 行，目录 206 个模型命中 167 个；12 个分档价（>100K/>272K）、6 个 Free/未标价/按分钟价、21 个目录有但 catalog 未列，均不写入）"
+      }
     }
   ]
 }
