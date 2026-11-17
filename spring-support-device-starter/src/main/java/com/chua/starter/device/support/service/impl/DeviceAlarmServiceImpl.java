@@ -59,7 +59,8 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
             throw new IllegalArgumentException("告警不存在: " + id);
         }
         entity.setDeviceAlarmStatus(status);
-        entity.setDeviceAlarmHandler(handler);
+        // handler 空串（前端不传）落 null，避免查「处理人」时出现空壳字符串
+        entity.setDeviceAlarmHandler(StringUtils.hasText(handler) ? handler : null);
         entity.setDeviceAlarmHandledAt(LocalDateTime.now());
         alarmMapper.updateById(entity);
         return entity;
