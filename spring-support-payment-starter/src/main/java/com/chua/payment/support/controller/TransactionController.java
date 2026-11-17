@@ -46,6 +46,7 @@ public class TransactionController {
        * @param orderNo 订单号
        * @param pageNum pagenum
        * @param pageSize page大小
+       * @return 交易流水分页结果
        */
     public Result<PageResult<TransactionRecord>> listByOrderNo(@PathVariable String orderNo,
                                                                @RequestParam(defaultValue = "1") int pageNum,
@@ -59,6 +60,7 @@ public class TransactionController {
        * @param merchantId merchantid
        * @param pageNum pagenum
        * @param pageSize page大小
+       * @return 交易流水分页结果
        */
     public Result<PageResult<TransactionRecord>> listByMerchantId(@PathVariable Long merchantId,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
@@ -68,8 +70,15 @@ public class TransactionController {
 
     @GetMapping("/page")
       /**
-       * 分页查询
+       * 分页查询交易流水。
        *
+       * @param pageNum         页码（默认 1）
+       * @param pageSize        每页条数（默认 10）
+       * @param merchantId      商户标识（可选）
+       * @param orderNo         订单号（可选）
+       * @param transactionType 交易类型（可选）
+       * @param status          流水状态（可选）
+       * @return 交易流水分页结果
        */
     public Result<PageResult<TransactionRecord>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,

@@ -57,6 +57,7 @@ public class CurrentAccountOrderController {
        * @param size 大小
        * @param orderNo 订单号
        * @param status 状态
+       * @return 当前账户订单分页结果
        */
     public Result<PageResult<OrderVO>> listOrders(HttpServletRequest request,
                                                   @RequestParam(defaultValue = "1") int page,
@@ -112,6 +113,7 @@ public class CurrentAccountOrderController {
        * @param orderNo 订单号
        * @param transactionType 交易类型
        * @param status 状态
+       * @return 交易流水分页结果
        */
     public Result<PageResult<TransactionRecord>> listTransactions(HttpServletRequest request,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
@@ -134,6 +136,7 @@ public class CurrentAccountOrderController {
        * @param request 请求
        * @param id 标识
        * @param reason 取消原因
+       * @return 是否取消成功
        */
     public Result<Boolean> cancelOrder(HttpServletRequest request,
                                        @PathVariable Long id,

@@ -83,6 +83,13 @@ public class ConcurrentEndpoint {
     private final CircuitBreakerConfigRepository cbRepo; // cbrepo
     private final DistributedLockConfigRepository lockRepo; // 锁repo
 
+    /**
+     * 构造端点，按需取配置存储仓库（未配置 datasource 时可为空）。
+     *
+     * @param rateLimiterRepo 限流配置仓库提供者
+     * @param cbRepo          熔断配置仓库提供者
+     * @param lockRepo        分布式锁配置仓库提供者
+     */
     public ConcurrentEndpoint(ObjectProvider<RateLimiterConfigRepository> rateLimiterRepo,
                               ObjectProvider<CircuitBreakerConfigRepository> cbRepo,
                               ObjectProvider<DistributedLockConfigRepository> lockRepo) {
@@ -133,7 +140,12 @@ public class ConcurrentEndpoint {
 
     /**
      * POST /{指标}/{名称}：配置保存
-    */
+     *
+     * @param metric 指标（ratelimiter/circuitbreaker/lock）
+     * @param name   配置名称
+     * @param body   配置内容
+     * @return 保存结果或错误信息
+     */
     @WriteOperation
     public Map<String, Object> save(@Selector String metric, @Selector String name,
                                     Map<String, Object> body) {
@@ -221,7 +233,12 @@ public class ConcurrentEndpoint {
 
     /**
      * POST /{指标}/{名称}/reset：单点复位（当前仅熔断器支持）
-    */
+     *
+     * @param metric 指标
+     * @param name   配置名称
+     * @param action 动作（须为 reset）
+     * @return 复位结果或错误信息
+     */
     @WriteOperation
     public Map<String, Object> resetOne(@Selector String metric, @Selector String name,
                                         @Selector String action) {

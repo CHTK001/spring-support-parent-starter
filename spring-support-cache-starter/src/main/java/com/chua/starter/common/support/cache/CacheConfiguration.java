@@ -98,6 +98,11 @@ public class CacheConfiguration {
      * <p>
      * 用于生成包含租户、应用、平台等上下文的缓存键。
      * </p>
+     *
+     * @param applicationContext 应用上下文
+     * @param properties         缓存配置
+     * @param tenantIdProvider   租户标识提供者（可空）
+     * @return 租户缓存键生成器
      */
     @Bean("tenantedKeyGenerator")
     @ConditionalOnMissingBean(name = "tenantedKeyGenerator")
@@ -147,6 +152,10 @@ public class CacheConfiguration {
  * 提供手动缓存操作方法，内部自动使用 tenantedKey生成器 拼接完整缓存键，
  * 保证手动操作与 {@code @Cacheable} 等注解生成的 Key 一致。
  * </p>
+ *
+ * @param multiLevelCacheManager 多级缓存管理器
+ * @param tenantedKeyGenerator   tenantedKey 键生成器
+ * @return 缓存操作模板
  */
 @Bean
 @ConditionalOnMissingBean(CacheTemplate.class)
@@ -169,6 +178,9 @@ public CacheTemplate cacheTemplate(
  * 支持 Key 与 Key生成器 共用的 缓存习俗注解parser；
  * 若依赖 @条件onmissingBean 会被 @enable缓存 默认的标准解析器抢注，
  * 导致 Key+Key生成器 同时使用时报 illegal状态异常。</p>
+ *
+ * @param parser 自定义缓存注解解析器
+ * @return 缓存操作源
  */
     @Bean
     @Primary

@@ -66,8 +66,15 @@ public class WechatPayScoreOrderController {
     @Operation(summary = "分页查询微信支付分订单")
     @GetMapping("/page")
       /**
-       * 分页查询
+       * 分页查询微信支付分订单。
        *
+       * @param pageNum    页码（默认 1）
+       * @param pageSize   每页条数（默认 10）
+       * @param merchantId 商户标识（可选）
+       * @param channelId  支付渠道标识（可选）
+       * @param openId     用户 openId（可选）
+       * @param state      订单状态（可选）
+       * @return 微信支付分订单分页结果
        */
     public Result<PageResult<WechatPayScoreOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
@@ -100,6 +107,7 @@ public class WechatPayScoreOrderController {
        * 完结
        * @param outOrderNo 商户订单号
        * @param dto dto
+       * @return 完结后的订单结果
        */
     public Result<WechatPayScoreOrderVO> complete(@PathVariable String outOrderNo,
                                                   @RequestBody(required = false) WechatPayScoreCompleteDTO dto) {
@@ -112,6 +120,7 @@ public class WechatPayScoreOrderController {
        * 取消
        * @param outOrderNo 商户订单号
        * @param dto dto
+       * @return 取消后的订单结果
        */
     public Result<WechatPayScoreOrderVO> cancel(@PathVariable String outOrderNo,
                                                 @RequestBody(required = false) WechatPayScoreCancelDTO dto) {

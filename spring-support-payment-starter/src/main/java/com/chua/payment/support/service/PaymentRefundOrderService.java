@@ -57,6 +57,7 @@ public interface PaymentRefundOrderService {
     /**
      * 分页查询退款单。
      * @param request 请求参数
+     * @return 退款单分页结果
      */
     Page<RefundOrderVO> page(RefundOrderQueryRequest request);
 
@@ -102,6 +103,14 @@ public interface PaymentRefundOrderService {
      */
     BigDecimal sumRefundedAmount(Long orderId);
 
+    /**
+     * 标记退款单为退款处理中。
+     * @param refundNo          退款单号
+     * @param thirdPartyRefundNo 第三方退款单号
+     * @param responsePayload   渠道响应报文
+     * @param remark            备注
+     * @return 标记后的退款单
+     */
     PaymentRefundOrder markProcessing(String refundNo,
                                       String thirdPartyRefundNo,
                                       String responsePayload,
@@ -114,6 +123,14 @@ public interface PaymentRefundOrderService {
      */
     PaymentRefundOrder markRefunded(MarkRefundedDTO dto);
 
+    /**
+     * 标记退款单为退款失败。
+     * @param refundNo        退款单号
+     * @param responsePayload 渠道响应报文
+     * @param operator        操作人
+     * @param remark          备注
+     * @return 标记后的退款单
+     */
     PaymentRefundOrder markFailed(String refundNo,
                                   String responsePayload,
                                   String operator,

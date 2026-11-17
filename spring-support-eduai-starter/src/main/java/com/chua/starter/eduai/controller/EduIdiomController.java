@@ -40,6 +40,14 @@ public class EduIdiomController {
 
     private final EduIdiomGradeMapper idiomGradeMapper;
 
+    /**
+     * 获取成语列表（按学段/年级过滤，数量有上限防止扫全表）。
+     *
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param count      期望条数（实际夹在 1~200）
+     * @return 成语列表
+     */
     @Operation(summary = "获取成语列表")
     @GetMapping("/list")
     public ReturnResult<List<EduIdiom>> list(
@@ -52,6 +60,17 @@ public class EduIdiomController {
         return ReturnResult.ok(idiomService.listByGradeLevel(gradeLevel, grade, safeCount));
     }
 
+    /**
+     * 分页查询成语（关键词/学段/年级/难度过滤，分页参数有兜底）。
+     *
+     * @param keyword    关键词（可空）
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param difficulty 难度（可空）
+     * @param pageNum    页码（可空，默认 1）
+     * @param pageSize   每页条数（可空，默认 20，上限 100）
+     * @return 成语分页结果
+     */
     @Operation(summary = "分页查询成语")
     @GetMapping("/page")
     public ReturnResult<PageResult<EduIdiom>> page(
@@ -68,6 +87,14 @@ public class EduIdiomController {
         return ReturnResult.ok(idiomService.pageQuery(keyword, gradeLevel, grade, difficulty, pNum, pSize));
     }
 
+    /**
+     * 生成成语消消乐游戏数据。
+     *
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param count      期望条目数（实际夹在 1~50）
+     * @return 游戏数据
+     */
     @Operation(summary = "生成成语消消乐游戏数据")
     @GetMapping("/game/generate")
     public ReturnResult<Map<String, Object>> generateGame(

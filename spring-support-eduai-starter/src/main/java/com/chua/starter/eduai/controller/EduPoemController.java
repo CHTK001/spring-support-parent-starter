@@ -42,6 +42,14 @@ public class EduPoemController {
 
     private final EduPoemGradeMapper poemGradeMapper;
 
+    /**
+     * 获取古诗列表（按学段/年级过滤，数量有上限防止扫全表）。
+     *
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param count      期望条数（实际夹在 1~200）
+     * @return 古诗列表
+     */
     @Operation(summary = "获取古诗列表")
     @GetMapping("/list")
     public ReturnResult<List<EduPoem>> list(
@@ -53,6 +61,16 @@ public class EduPoemController {
         return ReturnResult.ok(poemService.listByGradeLevel(gradeLevel, grade, safeCount));
     }
 
+    /**
+     * 分页查询古诗（关键词/学段/年级过滤，分页参数有兜底）。
+     *
+     * @param keyword    关键词（可空）
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param pageNum    页码（可空，默认 1）
+     * @param pageSize   每页条数（可空，默认 20，上限 100）
+     * @return 古诗分页结果
+     */
     @Operation(summary = "分页查询古诗")
     @GetMapping("/page")
     public ReturnResult<PageResult<EduPoem>> page(
@@ -67,6 +85,14 @@ public class EduPoemController {
         return ReturnResult.ok(poemService.pageQuery(keyword, gradeLevel, grade, pNum, pSize));
     }
 
+    /**
+     * 生成古诗游戏数据（补全下句）。
+     *
+     * @param gradeLevel 学段（可空）
+     * @param grade      年级（可空）
+     * @param count      期望题目数（实际夹在 1~50）
+     * @return 游戏数据
+     */
     @Operation(summary = "生成古诗游戏数据（补全下句）")
     @GetMapping("/game/generate")
     public ReturnResult<Map<String, Object>> generateGame(

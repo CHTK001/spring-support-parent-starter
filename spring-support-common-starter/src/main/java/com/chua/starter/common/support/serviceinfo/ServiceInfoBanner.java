@@ -149,6 +149,9 @@ final class ServiceInfoBanner {
     /**
      * 端点去重: 同一路径只保留一条, 重复时保留 URL 更完整的那条
      * (例如 {@code /doc.html} 与 {@code http://host/doc.html} 由不同 启动 重复注册, 视为同一端点)。
+     *
+     * @param source 原始端点集合
+     * @return 去重后的端点列表
      */
     private static List<ServiceInfoRegistry.EndpointInfo> dedupeEndpoints(
             Collection<ServiceInfoRegistry.EndpointInfo> source) {
@@ -169,6 +172,9 @@ final class ServiceInfoBanner {
      * (例如 {@code Knife4j接口文档} 与 {@code Knife4j 接口文档} 由不同 启动 重复注册)。
      *
      * <p>取值不同的同名开关不会被合并, 以便暴露配置冲突。</p>
+     *
+     * @param source 原始开关集合
+     * @return 按分组聚合去重后的开关表
      */
     private static Map<String, List<ServiceInfoRegistry.FlagInfo>> dedupeFlags(
             Collection<ServiceInfoRegistry.FlagInfo> source) {
@@ -222,8 +228,8 @@ final class ServiceInfoBanner {
     // ------------------------------------------------------------------ 度量与布局
 
     /**
-     * 第一遍扫描得到的度量结果, 负责反推列宽并生成所有行
-    */
+     * 第一遍扫描得到的度量结果, 负责反推列宽并生成所有行。
+     */
     private static final class Metrics {
         private final List<ServiceInfoRegistry.EndpointInfo> endpoints;
         private final Map<String, List<ServiceInfoRegistry.FlagInfo>> groups;
@@ -233,6 +239,12 @@ final class ServiceInfoBanner {
         private final int maxFlagLabel;
         private final int maxStatus;
 
+        /**
+         * 构造度量器: 第一遍扫描所有端点与开关, 反推各列最大宽度。
+         *
+         * @param endpoints 去重后的端点列表
+         * @param groups    去重并分组后的开关表
+         */
         Metrics(List<ServiceInfoRegistry.EndpointInfo> endpoints,
                 Map<String, List<ServiceInfoRegistry.FlagInfo>> groups) {
             this.endpoints = endpoints;

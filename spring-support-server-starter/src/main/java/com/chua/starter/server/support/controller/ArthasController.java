@@ -52,6 +52,14 @@ public class ArthasController {
         return arthasService.getArthasStatus(id);
     }
 
+    /**
+     * 运行时挂载 Arthas 到目标 JVM。
+     *
+     * @param id           项目标识
+     * @param arthasJarPath Arthas jar 路径（可空，使用默认路径）
+     * @param telnetPort   telnet 端口（可空，使用默认端口）
+     * @return 挂载结果信息
+     */
     @Operation(summary = "运行时挂载 Arthas 到目标 JVM")
     @PostMapping("/project/{id}/attach")
     public ReturnResult<String> attachArthas(
@@ -72,6 +80,13 @@ public class ArthasController {
         return arthasService.detachArthas(id);
     }
 
+    /**
+     * 在 Arthas 终端执行命令。
+     *
+     * @param id      项目标识
+     * @param command 要执行的命令
+     * @return 命令执行结果
+     */
     @Operation(summary = "在 Arthas 终端执行命令")
     @PostMapping("/project/{id}/exec")
     public ReturnResult<String> execArthasCommand(
@@ -80,6 +95,13 @@ public class ArthasController {
         return arthasService.execArthasCommand(id, command);
     }
 
+    /**
+     * 获取 Arthas 终端输出。
+     *
+     * @param id    项目标识
+     * @param lines 读取行数（默认 50）
+     * @return 终端输出内容
+     */
     @Operation(summary = "获取 Arthas 终端输出")
     @GetMapping("/project/{id}/console")
     public ReturnResult<String> getArthasConsole(

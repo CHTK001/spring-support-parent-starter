@@ -173,13 +173,13 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
       /**
-       * 指标评估主流程（采集类监控项与主机自身指标共用）
+       * 指标评估主流程（采集类监控项与主机自身指标共用）。
        *
-       * at param targetId   评估目标 标识（监控项 或 主机）
-       * at param hostScope  主机 标识：非空表示目标就是这台主机；为空表示采集类监控项，先反查其绑定主机
-       * at param targetName 目标名
-       * at param metricName 指标名
-       * at param value      指标值
+       * @param targetId   评估目标 标识（监控项 或 主机）
+       * @param hostScope  主机 标识：非空表示目标就是这台主机；为空表示采集类监控项，先反查其绑定主机
+       * @param targetName 目标名
+       * @param metricName 指标名
+       * @param value      指标值
        */
     private void evaluateInternal(Long targetId, Long hostScope, String targetName, String metricName, double value) {
         if (targetId == null || metricName == null || value != value) {
@@ -856,10 +856,10 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
       /**
-       * 反查监控项绑定的服务器主机
+       * 反查监控项绑定的服务器主机。
        *
-       * at param monitorId 监控项 标识
-       * at return 主机 标识，未绑定返回 空
+       * @param monitorId 监控项 标识
+       * @return 主机 标识，未绑定返回 空
        */
     private Long resolveMonitorHostId(Long monitorId) {
         try {
@@ -872,15 +872,15 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
     }
 
       /**
-       * 策略归属是否允许该主机命中
+       * 策略归属是否允许该主机命中。
        *
        * <p>策略未归属主机（全局）时对所有主机生效；归属主机的策略只在这台主机上生效。
        * 目标侧拿不到主机归属（纯指标类监控项）时按全局处理，
        * 否则「项目守护」这类与主机无关的阈值会因为查不到主机而全部失效。</p>
        *
-       * at param rule   规则（已带策略归属）
-       * at param hostId 主机 标识
-       * at return 是否允许命中
+       * @param rule   规则（已带策略归属）
+       * @param hostId 主机 标识
+       * @return 是否允许命中
        */
     private boolean hostAllows(MsMonitorAlarmRule rule, Long hostId) {
         Long policyHostId = rule.getMsMonitorAlarmRulePolicyHostId();

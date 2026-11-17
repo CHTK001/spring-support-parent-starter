@@ -311,6 +311,17 @@ public class YoloTrainProvider implements TrainProvider {
         throw new IllegalStateException("python 训练服务未在 " + START_TIMEOUT_MS + "ms 内就绪");
     }
 
+    /**
+     * 启动 python 训练服务训练任务。
+     *
+     * @param client    HTTP 客户端
+     * @param port      python 训练服务端口
+     * @param arg       训练参数
+     * @param dataYaml  数据集 yaml 文件路径
+     * @param datasetDir 数据集目录
+     * @param ctx       训练上下文（保存路径等）
+     * @throws Exception 请求或响应失败时抛出
+     */
     private void startTraining(HttpClient client, int port, TrainArgument arg,
                                Path dataYaml, Path datasetDir, TrainContext ctx) throws Exception {
         Map<String, Object> body = new HashMap<>();
@@ -341,6 +352,20 @@ public class YoloTrainProvider implements TrainProvider {
         log.info("[YOLO] 训练请求已下发: dataYaml={}, dataset={}", dataYaml, datasetDir);
     }
 
+    /**
+     * 轮询训练状态直到完成、失败或超时。
+     *
+     * @param client     HTTP 客户端
+     * @param port       python 训练服务端口
+     * @param process    训练子进程（用于探活）
+     * @param total      总样本数
+     * @param ctx        训练上下文
+     * @param progress   训练进度
+     * @param listener   训练监听器（可空）
+     * @param startMs    开始时间戳
+     * @return 训练结果
+     * @throws Exception 轮询过程中出错时抛出
+     */
     private TrainResult pollUntilDone(HttpClient client, int port, Process process, int total, TrainContext ctx,
                                       TrainProgress progress, TrainListener listener, long startMs)
             throws Exception {

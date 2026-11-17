@@ -318,6 +318,12 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
         private final String name;
         private final Long projectId;
 
+        /**
+         * 构造一次性发布处理器。
+         *
+         * @param name      任务名
+         * @param projectId 项目标识
+         */
         private PublishJobHandler(String name, Long projectId) {
             this.name = name;
             this.projectId = projectId;
@@ -391,6 +397,12 @@ public class ReleaseScheduleServiceImpl implements ReleaseScheduleService {
         private final String name;
         private final Long projectId;
 
+        /**
+         * 构造 Git 轮询处理器。
+         *
+         * @param name      任务名
+         * @param projectId 项目标识
+         */
         private GitPollJobHandler(String name, Long projectId) {
             this.name = name;
             this.projectId = projectId;

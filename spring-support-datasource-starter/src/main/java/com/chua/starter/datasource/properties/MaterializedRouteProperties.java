@@ -84,6 +84,7 @@ public class MaterializedRouteProperties {
      * @param legacyKey legacyKey
      * @param currentValue 当前值
      * @param legacyValue legacy值
+     * @return 布尔配置值
      */
     private static boolean readBoolean(Environment environment,
                                        String currentKey,
@@ -106,6 +107,7 @@ public class MaterializedRouteProperties {
      * @param legacyKey legacyKey
      * @param currentValue 当前值
      * @param legacyValue legacy值
+     * @return 长整数配置值
      */
     private static long readLong(Environment environment,
                                  String currentKey,
@@ -128,6 +130,7 @@ public class MaterializedRouteProperties {
      * @param legacyKey legacyKey
      * @param currentValue 当前值
      * @param legacyValue legacy值
+     * @return 字符串配置值
      */
     private static String readString(Environment environment,
                                      String currentKey,

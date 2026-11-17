@@ -37,6 +37,7 @@ public interface WalletAccountService {
     /**
      * 充值。
      * @param dto dto
+     * @return 充值后的钱包账户
      */
     WalletAccountVO recharge(WalletRechargeDTO dto);
 
@@ -69,6 +70,7 @@ public interface WalletAccountService {
     /**
      * 冻结提现余额（提现专用），从可用余额划转到冻结余额，不立即扣减。
      * @param dto dto
+     * @return 冻结后的钱包账户
      */
     WalletAccountVO freezeForWithdraw(WalletWithdrawDTO dto);
 
@@ -104,6 +106,7 @@ public interface WalletAccountService {
     /**
      * 提现。
      * @param dto dto
+     * @return 提现后的钱包账户
      */
     WalletAccountVO withdraw(WalletWithdrawDTO dto);
 

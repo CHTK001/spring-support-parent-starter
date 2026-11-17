@@ -75,8 +75,15 @@ public class RefundOrderController {
     @GetMapping("/page")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
       /**
-       * 分页查询
+       * 分页查询退款单。
        *
+       * @param pageNum    页码（默认 1）
+       * @param pageSize   每页条数（默认 10）
+       * @param merchantId 商户标识（可选）
+       * @param orderNo    订单号（可选）
+       * @param refundNo   退款单号（可选）
+       * @param status     退款状态（可选）
+       * @return 退款单分页结果
        */
     public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
@@ -96,6 +103,7 @@ public class RefundOrderController {
        * 标记退款成功
        * @param id 标识
        * @param dto dto
+       * @return 是否标记成功
        */
     public Result<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
@@ -116,6 +124,7 @@ public class RefundOrderController {
        * 标记退款失败
        * @param id 标识
        * @param dto dto
+       * @return 是否标记成功
        */
     public Result<Boolean> markRefundFail(@PathVariable Long id,
                                           @RequestBody(required = false) RefundOperateDTO dto) {
