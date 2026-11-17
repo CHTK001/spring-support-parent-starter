@@ -119,7 +119,12 @@ public record JobLogEvent(
     /**
      * 构造成功事件 (含日志内容与本轮触发方式)。
      *
-     * @param triggerType 本轮触发方式, 为空时由落库侧回退台账的调度类型
+     * @param jobName      作业名称
+     * @param costMs       耗时（毫秒）
+     * @param executedAtMs 执行时间（毫秒）
+     * @param nodeId       节点标识
+     * @param logContent   日志内容
+     * @param triggerType  本轮触发方式, 为空时由落库侧回退台账的调度类型
      * @return 成功的结果
      */
     public static JobLogEvent success(String jobName, long costMs, long executedAtMs, String nodeId,
@@ -130,6 +135,13 @@ public record JobLogEvent(
 
     /**
      * 构造失败事件 (无日志内容)。
+     *
+     * @param jobName      作业名称
+     * @param costMs       耗时（毫秒）
+     * @param throwable    异常
+     * @param executedAtMs 执行时间（毫秒）
+     * @param nodeId       节点标识
+     * @return 失败的结果
      */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
                                       long executedAtMs, String nodeId) {
@@ -138,8 +150,14 @@ public record JobLogEvent(
 
     /**
      * 构造失败事件 (含日志内容)。
-     * @param throwable 抛出
-     * @return extract消息的结果
+     *
+     * @param jobName      作业名称
+     * @param costMs       耗时（毫秒）
+     * @param throwable    异常
+     * @param executedAtMs 执行时间（毫秒）
+     * @param nodeId       节点标识
+     * @param logContent   日志内容
+     * @return 失败的结果
      */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
                                       long executedAtMs, String nodeId, String logContent) {
@@ -151,7 +169,13 @@ public record JobLogEvent(
     /**
      * 构造失败事件 (含日志内容与本轮触发方式)。
      *
-     * @param triggerType 本轮触发方式, 为空时由落库侧回退台账的调度类型
+     * @param jobName      作业名称
+     * @param costMs       耗时（毫秒）
+     * @param throwable    异常
+     * @param executedAtMs 执行时间（毫秒）
+     * @param nodeId       节点标识
+     * @param logContent   日志内容
+     * @param triggerType  本轮触发方式, 为空时由落库侧回退台账的调度类型
      * @return 失败的结果
      */
     public static JobLogEvent failure(String jobName, long costMs, Throwable throwable,
@@ -163,6 +187,15 @@ public record JobLogEvent(
 
     /**
      * 兼容不关心触发方式的构造 (8 参)。
+     *
+     * @param jobName      作业名称
+     * @param status       执行状态
+     * @param costMs       耗时（毫秒）
+     * @param exception    异常消息（可为 null）
+     * @param executedAtMs 执行时间（毫秒）
+     * @param nodeId       节点标识
+     * @param timestamp    事件时间戳
+     * @param logContent   日志内容
      */
     public JobLogEvent(String jobName, Status status, long costMs, String exception, long executedAtMs,
                        String nodeId, Instant timestamp, String logContent) {
