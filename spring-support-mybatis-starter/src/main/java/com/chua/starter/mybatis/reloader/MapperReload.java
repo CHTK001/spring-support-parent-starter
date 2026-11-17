@@ -394,12 +394,6 @@ public class MapperReload implements Reload, DisposableBean {
             watchThread.setDaemon(true);
             watchThread.start();
             
-              /**
-               * hotreloadwatcher。
-               * @param watchService watch服务
-               * @param watchThread watchthread
-               * @return HotReloadWatcher的结果
-               */
             return new HotReloadWatcher(watchService, watchThread);
         } catch (IOException e) {
             log.error("Failed to create watch service for path: {}", path, e);

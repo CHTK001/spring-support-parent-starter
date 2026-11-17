@@ -32,12 +32,6 @@ import java.util.Map;
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
-/**
- * 删除onlyself拦截器类。
- *
- * @author CH
- * @since 4.0.0
- */
 public class DeleteOnlySelfInterceptor implements Interceptor {
     /**
      * 日志
@@ -183,12 +177,6 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
             additionalParameters.put("userId", userId);
         } catch (Exception e) {
             log.error("更新BoundSql失败", e);
-            /**
-             * runtime异常。
-             * @param "更新BoundSql失败" "更新boundsql失败"
-             * @param e e
-             * @return runtime异常的结果
-             */
             throw new RuntimeException("更新BoundSql失败", e);
         }
     }

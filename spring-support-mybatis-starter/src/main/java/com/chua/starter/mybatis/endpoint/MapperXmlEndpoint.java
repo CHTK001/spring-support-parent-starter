@@ -201,18 +201,8 @@ public class MapperXmlEndpoint {
         Resource[] resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:**/" + filename);
         if (resources.length > 0 && resources[0].isReadable()) {
-            /**
-             * 字符串。
-             * @param resources[0].getInputStream( resources[0].获取输入流(
-             * @return 字符串的结果
-             */
             return new String(resources[0].getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         }
-        /**
-         * io异常。
-         * @param filename 文件名
-         * @return io异常的结果
-         */
         throw new IOException("找不到资源: " + filename);
     }
 }

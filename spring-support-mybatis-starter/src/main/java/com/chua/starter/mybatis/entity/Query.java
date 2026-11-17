@@ -106,23 +106,23 @@ public class Query<T> implements Serializable {
      */
     private static final int ORDER_ASC_LENGTH = 3;
 
+    /**
+     * 页
+    */
     @Schema(description = "页码，从 1 开始", requiredMode = Schema.RequiredMode.REQUIRED,example = "1")
     @NotNull(message = "页码不能为空")
     @Min(value = 1, message = "页码最小值为 1")
     @RequestParamMapping({"page", "pageNo", "pageNumber", "pageNum", "current"})
-    /**
-     * 页
-    */
     private Integer page = PAGE_NO;
 
+    /**
+     * 每页大小
+    */
     @Schema(description = "每页条数，最大值为 100", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
     @NotNull(message = "每页条数不能为空")
     @Min(value = 1, message = "每页条数最小值为 1")
     @Max(value = 100, message = "每页条数最大值为 100")
     @RequestParamMapping({"pageSize", "size", "count"})
-    /**
-     * 每页大小
-    */
     private Integer pageSize = PAGE_SIZE;
 
     /**
@@ -150,9 +150,6 @@ public class Query<T> implements Serializable {
     @Min(value = 1, message = "查询字段, 多个逗号分隔")
     @Max(value = 100, message = "查询字段, 多个逗号分隔")
     @RequestParamMapping({"prop", "field"})
-    /**
-     * Prop
-    */
     private String[] prop = new String[0];
 
     /**
@@ -166,9 +163,6 @@ public class Query<T> implements Serializable {
     @Min(value = 1, message = "排序字段, 多个逗号分隔")
     @Max(value = 100, message = "排序字段, 多个逗号分隔")
     @RequestParamMapping({"order", "sortBy", "sort", "orderBy"})
-    /**
-     * 排序
-    */
     private String order;
 
 

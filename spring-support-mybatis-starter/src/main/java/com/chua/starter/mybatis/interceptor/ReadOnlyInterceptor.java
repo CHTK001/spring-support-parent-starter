@@ -22,12 +22,6 @@ import org.apache.ibatis.plugin.Signature;
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
-/**
- * 读取only拦截器类。
- *
- * @author CH
- * @since 4.0.0
- */
 public class ReadOnlyInterceptor implements Interceptor {
     /**
      * 日志

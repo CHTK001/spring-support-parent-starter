@@ -58,12 +58,6 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler
             .class, CacheKey.class, BoundSql.class}),
 })
-/**
-   * 物化SQL拦截器类。
-   *
-   * @author CH
-   * @since 4.0.0
-   */
 public class MaterializedSqlInterceptor implements Interceptor {
       /**
        * 日志

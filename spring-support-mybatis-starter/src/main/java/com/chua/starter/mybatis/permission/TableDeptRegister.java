@@ -315,12 +315,6 @@ public class TableDeptRegister implements DeptRegister {
         if (null == where) {
             return normalizedPermissionCondition;
         }
-          /**
-           * 和expression。
-           * @param where where
-           * @param normalizedPermissionCondition normalized权限条件
-           * @return AndExpression的结果
-           */
         return new AndExpression(where, normalizedPermissionCondition);
     }
 
@@ -396,20 +390,8 @@ public class TableDeptRegister implements DeptRegister {
     private Column createDeptColumn() {
         if (deptAlias != null && !deptAlias.isEmpty()) {
             Table aliasTable = new Table(deptAlias);
-              /**
-               * Column。
-               * @param aliasTable 别名table
-               * @param deptIdColumn deptidcolumn
-               * @return Column的结果
-               */
             return new Column(aliasTable, deptIdColumn);
         }
-          /**
-           * Column。
-           * @param table table
-           * @param deptIdColumn deptidcolumn
-           * @return Column的结果
-           */
         return new Column(table, deptIdColumn);
     }
 
@@ -421,20 +403,8 @@ public class TableDeptRegister implements DeptRegister {
     private Column createUserColumn() {
         if (userAlias != null && !userAlias.isEmpty()) {
             Table aliasTable = new Table(userAlias);
-              /**
-               * Column。
-               * @param aliasTable 别名table
-               * @param createByColumn 创建bycolumn
-               * @return Column的结果
-               */
             return new Column(aliasTable, createByColumn);
         }
-          /**
-           * Column。
-           * @param table table
-           * @param createByColumn 创建bycolumn
-           * @return Column的结果
-           */
         return new Column(table, createByColumn);
     }
 

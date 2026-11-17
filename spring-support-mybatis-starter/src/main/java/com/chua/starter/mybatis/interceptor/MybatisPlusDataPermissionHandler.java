@@ -133,12 +133,6 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         } catch (Exception e) {
             log.error("数据权限处理异常, mappedStatementId: {}", mappedStatementId, e);
             // 异常时抛出异常，而不是静默返回空结果，避免掩盖问题
-            /**
-             * runtime异常。
-             * @param mappedStatementId mapped对账单标识
-             * @param e e
-             * @return runtime异常的结果
-             */
             throw new RuntimeException("数据权限处理失败: " + mappedStatementId, e);
         }
     }
@@ -196,22 +190,12 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             // 先查找方法级别的注解
             DataScope methodAnnotation = findMethodAnnotation(mapperClass, methodName);
             if (methodAnnotation != null) {
-                /**
-                 * 数据scope信息。
-                 * @param methodAnnotation 方法注解
-                 * @return 数据scope信息的结果
-                 */
                 return new DataScopeInfo(methodAnnotation);
             }
 
             // 再查找类级别的注解
             DataScope classAnnotation = mapperClass.getAnnotation(DataScope.class);
             if (classAnnotation != null) {
-                /**
-                 * 数据scope信息。
-                 * @param classAnnotation 类注解
-                 * @return 数据scope信息的结果
-                 */
                 return new DataScopeInfo(classAnnotation);
             }
 
@@ -286,17 +270,6 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
                 ? dataScopeInfo.userAlias : null;
 
         if (hasManagedDeptLeaderScope(currentUser)) {
-            /**
-             * tabledept注册。
-             * @param table table
-             * @param null 空
-             * @param currentUser 当前用户
-             * @param dataPermission 数据权限
-             * @param dataScopeProperties 数据scope属性
-             * @param deptAlias dept别名
-             * @param userAlias 用户别名
-             * @return tabledept注册的结果
-             */
             return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
         }
 
@@ -304,17 +277,6 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             return null;
         }
 
-        /**
-         * tabledept注册。
-         * @param table table
-         * @param null 空
-         * @param currentUser 当前用户
-         * @param dataPermission 数据权限
-         * @param dataScopeProperties 数据scope属性
-         * @param deptAlias dept别名
-         * @param userAlias 用户别名
-         * @return tabledept注册的结果
-         */
         return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
     }
 

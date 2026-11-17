@@ -50,12 +50,6 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler
             .class, CacheKey.class, BoundSql.class}),
 })
-/**
-   * SlowSQLDetectInterceptor类，提供相关能力。
-   *
-   * @author CH
-   * @since 1.0.0
-   */
 public class SlowSqlDetectInterceptor implements Interceptor {
       /**
        * 日志

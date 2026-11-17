@@ -35,12 +35,6 @@ import java.util.Map;
         @Signature(type = ResultSetHandler.class, method = "handleResultSets",
                 args = {Statement.class})
 })
-/**
- * 字段加密拦截器类。
- *
- * @author CH
- * @since 4.0.0
- */
 public class CryptoInterceptor implements Interceptor {
     /**
      * 日志
@@ -158,11 +152,6 @@ public class CryptoInterceptor implements Interceptor {
                 field.set(obj, processedValue);
             } catch (IllegalAccessException e) {
                 log.error("处理加密字段失败: {}", fieldInfo.field().getName(), e);
-                /**
-                 * runtime异常。
-                 * @param fieldInfo.field( 字段信息.字段(
-                 * @return runtime异常的结果
-                 */
                 throw new RuntimeException("处理加密字段失败: " + fieldInfo.field().getName(), e);
             }
         }

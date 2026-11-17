@@ -33,12 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
             .RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis
             .mapping.BoundSql.class}),
 })
-/**
-   * 映射器数据源拦截器类。
-   *
-   * @author CH
-   * @since 4.0.0
-   */
 public class MapperDataSourceInterceptor implements Interceptor {
       /**
        * 日志

@@ -14,9 +14,6 @@ public class DelegatePage<T>{
      * 每页显示条数，默认 10
      */
     @ColumnIgnore
-    /**
-     * 每页大小
-    */
     // [P3C A20 豁免]
     protected long pageSize = 10;
 
@@ -24,18 +21,12 @@ public class DelegatePage<T>{
      * 当前页
      */
     @ColumnIgnore
-    /**
-     * 页NO
-    */
     protected long pageNo = 0;
 
     /**
      * 当前页
      */
     @ColumnIgnore
-    /**
-     * 页
-    */
     protected long page = 0;
 
     /**
