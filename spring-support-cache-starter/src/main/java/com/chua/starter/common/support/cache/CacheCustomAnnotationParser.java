@@ -95,45 +95,15 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         return ops;
     }
 
-    @Nullable
     /**
-     * 解析缓存注解
-     * @param cachingConfig 缓存配置
-     * @param ae ae
-     * @param localOnly 本地only
-     * @param CACHE_OPERATION_ANNOTATIONS 缓存_OPERATION_注解
-     * @param CACHE_OPERATION_ANNOTATIONS 缓存_OPERATION_注解
-     * @param cachingConfig 缓存配置
-     * @param cacheable cacheable
-     * @param cachingConfig 缓存配置
-     * @param cacheEvict 缓存evict
-     * @param cachingConfig 缓存配置
-     * @param cachePut 缓存放入
-     * @param cachingConfig 缓存配置
-     * @param caching caching
-     * @param ops ops
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cacheable cacheable
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param caching caching
-     * @param ops ops
-     * @param defaultConfig 默认配置
-     * @param cacheable cacheable
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param target Target
-     * @param builder 构建器
+     * 解析元素上的缓存注解为缓存操作集合。
+     *
+     * @param cachingConfig 默认缓存配置
+     * @param ae            带注解的元素（方法/类）
+     * @param localOnly     是否只取本元素合并注解（false 时向上查找父类/接口）
+     * @return 缓存操作集合；无注解时返回 null
      */
+    @Nullable
     private Collection<CacheOperation> parseCacheAnnotations(
             DefaultCacheConfig cachingConfig, AnnotatedElement ae, boolean localOnly) {
 
@@ -157,28 +127,12 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析缓存注解
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cacheable cacheable
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param caching caching
-     * @param ops ops
-     * @param defaultConfig 默认配置
-     * @param cacheable cacheable
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param target Target
-     * @param builder 构建器
+     * 解析 @Cacheable 注解为可缓存操作。
+     *
+     * @param ae            带注解的元素（方法/类）
+     * @param defaultConfig 默认缓存配置
+     * @param cacheable     @Cacheable 注解
+     * @return 可缓存操作
      */
     private CacheableOperation parseCacheableAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Cacheable cacheable) {
@@ -199,25 +153,12 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析evict注解
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param caching caching
-     * @param ops ops
-     * @param defaultConfig 默认配置
-     * @param cacheable cacheable
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param target Target
-     * @param builder 构建器
+     * 解析 @CacheEvict 注解为缓存驱逐操作。
+     *
+     * @param ae            带注解的元素（方法/类）
+     * @param defaultConfig 默认缓存配置
+     * @param cacheEvict    @CacheEvict 注解
+     * @return 缓存驱逐操作
      */
     private CacheEvictOperation parseEvictAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CacheEvict cacheEvict) {
@@ -238,22 +179,12 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析放入注解
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param ae ae
-     * @param defaultConfig 默认配置
-     * @param caching caching
-     * @param ops ops
-     * @param defaultConfig 默认配置
-     * @param cacheable cacheable
-     * @param defaultConfig 默认配置
-     * @param cacheEvict 缓存evict
-     * @param defaultConfig 默认配置
-     * @param cachePut 缓存放入
-     * @param target Target
-     * @param builder 构建器
+     * 解析 @CachePut 注解为缓存写入操作。
+     *
+     * @param ae            带注解的元素（方法/类）
+     * @param defaultConfig 默认缓存配置
+     * @param cachePut      @CachePut 注解
+     * @return 缓存写入操作
      */
     private CacheOperation parsePutAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CachePut cachePut) {
