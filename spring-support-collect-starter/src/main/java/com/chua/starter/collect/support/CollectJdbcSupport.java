@@ -345,6 +345,13 @@ public class CollectJdbcSupport {
 
     /**
      * 执行一次预编译批处理并统计真正写入的行数。
+     *
+     * @param connection 数据库连接
+     * @param sql        预编译 SQL
+     * @param columns    列名列表
+     * @param rows       数据行
+     * @return 实际写入的行数
+     * @throws SQLException SQL 执行失败
      */
     private int executeBatch(Connection connection, String sql, List<String> columns,
                              List<Map<String, Object>> rows) throws SQLException {
@@ -372,6 +379,13 @@ public class CollectJdbcSupport {
      *
      * <p>批量失败后走这条路，行数通常只有几百到几千，逐行执行慢一些但语义清晰：
      * 重复数据不写、也不报错，真正的异常（列不存在、类型不匹配）仍然让任务失败。</p>
+     *
+     * @param connection 数据库连接
+     * @param sql        预编译 SQL
+     * @param columns    列名列表
+     * @param rows       数据行
+     * @return 实际插入的行数
+     * @throws SQLException SQL 执行失败
      */
     private int insertSkippingDuplicates(Connection connection, String sql, List<String> columns,
                                          List<Map<String, Object>> rows) throws SQLException {
@@ -398,6 +412,9 @@ public class CollectJdbcSupport {
      *
      * <p>各库的错误码不同：MySQL/MariaDB 1062、SQL Server 2601/2627、PostgreSQL/H2 23505；
      * 另外 SQLState 23 段是完整性约束，再按消息里的 duplicate 兜一层。</p>
+     *
+     * @param failure 待判断的 SQL 异常
+     * @return 是否唯一键/主键冲突
      */
     private static boolean isDuplicateKey(SQLException failure) {
         for (SQLException ex = failure; ex != null; ex = ex.getNextException()) {
@@ -510,8 +527,13 @@ public class CollectJdbcSupport {
      * 只在命中分支走 UPDATE 还是直接跳过。两侧各写一份拼接 SQL 的实现，
      * 以后改标识符白名单 / 参数绑定这类安全相关的代码必然漏改一边。</p>
      *
+     * @param reference   数据源引用
+     * @param table      目标表
+     * @param keys       业务主键列，必须都出现在待写入行的键里
+     * @param rows       待写入行，列集合取所有行的键并集
      * @param skipExisting true 表示命中即跳过（不更新）；false 表示命中即更新
      * @param fillBlank    true 表示命中行只补库里为空的列；false 表示按新值覆盖
+     * @return 写入结果（新增/更新/跳过计数）
      */
     private KeyWriteResult writeByKey(String reference, String table, List<String> keys,
                                       List<Map<String, Object>> rows, boolean skipExisting,
