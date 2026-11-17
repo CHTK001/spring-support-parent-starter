@@ -53,12 +53,14 @@ public class MpWalletController {
        */
     private final PaymentAccountPrincipalResolver principalResolver;
 
-    @GetMapping
-      /**
+    /**
        * 获取钱包
+       *
        * @param request 请求
-       * @param merchantId merchantid
+       * @param merchantId 商户标识
+       * @return 钱包账户信息
        */
+    @GetMapping
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
@@ -68,16 +70,18 @@ public class MpWalletController {
         return Result.success(walletAccountService.getAccount(merchantId, userId));
     }
 
-    @GetMapping("/log/page")
-      /**
+    /**
        * 流水列表
+       *
        * @param request 请求
-       * @param pageNum pagenum
-       * @param pageSize page大小
-       * @param merchantId merchantid
-       * @param bizType 业务类型
-       * @param bizNo 业务单号
+       * @param pageNum 页码（默认 1）
+       * @param pageSize 每页条数（默认 10）
+       * @param merchantId 商户标识
+       * @param bizType 业务类型（可空）
+       * @param bizNo 业务单号（可空）
+       * @return 流水分页结果
        */
+    @GetMapping("/log/page")
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
@@ -93,16 +97,18 @@ public class MpWalletController {
         return Result.success(PageResult.of(page));
     }
 
-    @GetMapping("/order/page")
-      /**
+    /**
        * 订单列表
+       *
        * @param request 请求
-       * @param pageNum pagenum
-       * @param pageSize page大小
-       * @param merchantId merchantid
-       * @param orderType 订单类型
-       * @param status 状态
+       * @param pageNum 页码（默认 1）
+       * @param pageSize 每页条数（默认 10）
+       * @param merchantId 商户标识
+       * @param orderType 订单类型（可空）
+       * @param status 状态（可空）
+       * @return 订单分页结果
        */
+    @GetMapping("/order/page")
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
@@ -117,12 +123,14 @@ public class MpWalletController {
         return Result.success(PageResult.of(page));
     }
 
-    @PostMapping("/withdraw")
-      /**
-       * 提现
+    /**
+       * 提现（冻结余额并创建提现订单）
+       *
        * @param request 请求
-       * @param dto dto
+       * @param dto 提现请求参数
+       * @return 创建的提现订单
        */
+    @PostMapping("/withdraw")
     public Result<WalletOrder> withdraw(HttpServletRequest request,
                                         @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
@@ -163,12 +171,14 @@ public class MpWalletController {
         return Result.success(order);
     }
 
-    @PostMapping("/transfer")
-      /**
+    /**
        * 转账
+       *
        * @param request 请求
-       * @param dto dto
+       * @param dto 转账请求参数
+       * @return 转账结果
        */
+    @PostMapping("/transfer")
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);

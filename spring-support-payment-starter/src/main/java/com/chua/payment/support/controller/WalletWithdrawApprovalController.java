@@ -50,14 +50,16 @@ public class WalletWithdrawApprovalController {
      */
     private final PaymentAccountPrincipalResolver principalResolver;
 
-    @GetMapping("/page")
     /**
-     * 分页
+     * 分页查询提现审批列表
+     *
      * @param request 请求
-     * @param pageNum pagenum
-     * @param pageSize page大小
-     * @param status 状态
+     * @param pageNum 页码（默认 1）
+     * @param pageSize 每页条数（默认 10）
+     * @param status 审批状态（可空）
+     * @return 分页结果
      */
+    @GetMapping("/page")
     public Result<PageResult<WalletWithdrawApproval>> page(HttpServletRequest request,
                                                             @RequestParam(defaultValue = "1") int pageNum,
                                                             @RequestParam(defaultValue = "10") int pageSize,
@@ -113,13 +115,15 @@ public class WalletWithdrawApprovalController {
         return Result.success("审批通过，提现订单已创建");
     }
 
-    @PostMapping("/{id}/reject")
     /**
-     * 审批拒绝
-     * @param id 标识
-     * @param reason 拒绝原因
+     * 审批拒绝（解冻余额并更新状态）
+     *
+     * @param id 审批标识
+     * @param reason 拒绝原因（可空）
      * @param request 请求
+     * @return 拒绝结果
      */
+    @PostMapping("/{id}/reject")
     public Result<String> reject(@PathVariable Long id,
                                  @RequestParam(required = false) String reason,
                                  HttpServletRequest request) {
@@ -144,9 +148,12 @@ public class WalletWithdrawApprovalController {
 
     /**
      * 提现到账确认（商户回調成功）
+     *
      * @param orderNo 钱包订单号
-     * @param thirdPartyOrderNo 第三方订单号
-     * @param responsePayload 第三方响应报文
+     * @param thirdPartyOrderNo 第三方订单号（可空）
+     * @param responsePayload 第三方响应报文（可空）
+     * @param request 请求
+     * @return 确认结果
      */
     @PostMapping("/{orderNo}/withdrawal/success")
     public Result<String> withdrawalSuccess(@PathVariable String orderNo,
@@ -172,9 +179,12 @@ public class WalletWithdrawApprovalController {
 
     /**
      * 提现失败回调（商户处理失败，审核通过但提现未到账）
+     *
      * @param orderNo 钱包订单号
-     * @param responsePayload 第三方响应报文
-     * @param reason 失败原因
+     * @param responsePayload 第三方响应报文（可空）
+     * @param reason 失败原因（可空）
+     * @param request 请求
+     * @return 处理结果
      */
     @PostMapping("/{orderNo}/withdrawal/fail")
     public Result<String> withdrawalFail(@PathVariable String orderNo,
@@ -199,6 +209,7 @@ public class WalletWithdrawApprovalController {
      * 权限校验
      *
      * @param request 请求
+     * @return 校验失败时的错误结果；通过时返回 null
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
