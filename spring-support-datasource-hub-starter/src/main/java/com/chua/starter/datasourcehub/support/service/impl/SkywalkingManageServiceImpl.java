@@ -348,6 +348,12 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
 
     // ==================== 状态/计数器的静默查询 ====================
 
+    /**
+     * 静默探测引擎状态（失败返回 unavailable 占位，不抛异常）。
+     *
+     * @param engine 引擎
+     * @return 状态结果
+     */
     private static OtnlStatus statusSilently(SkywalkingOtnlEngine engine) {
         try {
             return engine.status();
@@ -357,6 +363,12 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
         }
     }
 
+    /**
+     * 静默统计告警（失败返回空列表，不抛异常）。
+     *
+     * @param engine 引擎
+     * @return 告警列表
+     */
     private static List<OtnlAlarm> alarmSilently(SkywalkingOtnlEngine engine) {
         try {
             return engine.alarms(OtnlQuery.empty());
@@ -366,6 +378,12 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
         }
     }
 
+    /**
+     * 静默统计服务数（失败返回 0，不抛异常）。
+     *
+     * @param engine 引擎
+     * @return 服务数
+     */
     private static int serviceCountSilently(SkywalkingOtnlEngine engine) {
         try {
             return engine.services(OtnlQuery.empty()).size();
@@ -375,7 +393,12 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
         }
     }
 
-    /** recentAlarmCountSilently 方法 */
+    /**
+     * 静默统计最近告警数（失败返回 0，不抛异常）。
+     *
+     * @param engine 引擎
+     * @return 最近告警数
+     */
     private static int recentAlarmCountSilently(SkywalkingOtnlEngine engine) {
         try {
             OtnlQuery query = OtnlQuery.lastMinutes(RECENT_ALARM_MINUTES);
@@ -388,6 +411,12 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
 
     // ==================== 工具 ====================
 
+    /**
+     * OtnlTag 列表转 TagVO 列表（空输入返回空列表）。
+     *
+     * @param tags 标签列表（可为 null）
+     * @return TagVO 列表
+     */
     private static List<TagVO> toTagList(List<OtnlTag> tags) {
         if (tags == null) {
             return List.of();
@@ -399,7 +428,12 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
         return result;
     }
 
-    /** trim 方法 */
+    /**
+     * 去首尾空白（null 视为空串）。
+     *
+     * @param value 文本（可为 null）
+     * @return 去空白后的文本
+     */
     private static String trim(String value) {
         return value == null ? "" : value.trim();
     }

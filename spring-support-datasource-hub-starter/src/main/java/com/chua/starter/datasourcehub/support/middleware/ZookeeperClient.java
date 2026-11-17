@@ -692,32 +692,55 @@ public class ZookeeperClient {
         private volatile long lastUsed;
 
         /**
-         * Session
-         * @param curator 参数
-         * @return 返回值
-        */
+         * 构造 Session。
+         *
+         * @param curator Curator 客户端
+         */
         Session(CuratorFramework curator) {
             this.curator = curator;
             this.lastUsed = System.currentTimeMillis();
         }
 
+        /**
+         * 获取 Curator 客户端。
+         *
+         * @return Curator 客户端
+         */
         CuratorFramework curator() {
             return curator;
         }
 
+        /**
+         * 是否已连接（标记连接且 Curator 状态为 STARTED）。
+         *
+         * @return 是否已连接
+         */
         boolean connected() {
             return connected && curator.getState() == CuratorFrameworkState.STARTED;
         }
 
+        /**
+         * 标记连接状态并刷新最近使用时间。
+         *
+         * @param value 是否已连接
+         */
         void markConnected(boolean value) {
             this.connected = value;
             this.lastUsed = System.currentTimeMillis();
         }
 
+        /**
+         * 刷新最近使用时间。
+         */
         void touch() {
             this.lastUsed = System.currentTimeMillis();
         }
 
+        /**
+         * 获取最近使用时间（毫秒）。
+         *
+         * @return 最近使用时间（毫秒）
+         */
         long lastUsed() {
             return lastUsed;
         }
