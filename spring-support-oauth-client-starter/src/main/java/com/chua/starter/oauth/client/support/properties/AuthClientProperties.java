@@ -364,9 +364,10 @@ public class AuthClientProperties {
     /**
      * AI appKey 本地认证配置
      * <p>
-     * 启用后，o认证 过滤器对 Bearer 令牌 先做本地 AI appKey 校验
-     * （通过 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查表，无需 映射器）。
-     * 用于单机部署或外部 o认证 服务不可达时的 AI appKey 认证。
+     * 启用后，o认证 过滤器对 Bearer 令牌 先做本地 AI appKey 校验。
+     * appKey 台账属于 AI 模块，查询通过
+     * {@link com.chua.starter.common.support.appkey.AppKeyAuthenticator} 契约由 AI 模块提供，
+     * 本模块不再配置表名 / 列名，也不直连 AI 的持久层。
      * </p>
      */
     private AiAppKey aiAppKey = new AiAppKey();
@@ -383,31 +384,6 @@ public class AuthClientProperties {
          * 是否启用 AI appKey 本地认证
          */
         private boolean enabled = false;
-
-        /**
-         * appKey 表名（动态表，默认 AI 模块的 sys_AI_app_Key）
-         */
-        private String tableName = "sys_ai_app_key";
-
-        /**
-         * appKey 列名（默认 sys_AI_app_Key_app_Key）
-         */
-        private String appKeyColumn = "sys_ai_app_key_app_key";
-
-        /**
-         * 状态列名（1 启用 / 0 停用，默认 sys_AI_app_Key_状态）
-         */
-        private String statusColumn = "sys_ai_app_key_status";
-
-        /**
-         * 过期时间列名（默认 sys_AI_app_Key_expire_datetime，可为空）
-         */
-        private String expireTimeColumn = "sys_ai_app_key_expire_datetime";
-
-        /**
-         * 用户名列（返回给认证结果使用，默认取 appKeycolumn）
-         */
-        private String usernameColumn;
     }
 
 

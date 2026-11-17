@@ -486,12 +486,11 @@ public class WebRequest {
         if (StringUtils.isBlank(token)) {
             return null;
         }
-        Map<String, Object> row = support.verifyAppKey(token);
-        if (row == null) {
+        String username = support.authenticate(token);
+        if (username == null) {
             log.debug("[WebRequest鉴权]AI AppKey 校验未命中: {}", protocol);
             return null;
         }
-        String username = support.resolveUsername(row, token);
         UserResume userResume = new UserResume()
                 .setUsername(username)
                 .setNickName(username)

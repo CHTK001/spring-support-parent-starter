@@ -41,12 +41,8 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
-        <!-- 数据源引擎 - 提供 JdbcEngine 动态表查询（AI AppKey 校验，无需 Mapper） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-datasource-starter</artifactId>
-            <optional>true</optional>
-        </dependency>
+        <!-- appKey 台账查询已改为依赖 spring-support-common-starter 的 AppKeyAuthenticator 契约，
+             AI 模块提供实现；本模块不再需要数据源引擎（JdbcEngine）也不直连 AI 的持久层。 -->
 
         <dependency>
             <groupId>me.zhyd.oauth</groupId>

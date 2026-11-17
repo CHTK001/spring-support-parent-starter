@@ -370,24 +370,23 @@ public class AuthClientConfiguration
     /**
      * AI appKey 本地认证支持
      * <p>
-     * 基于 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查询 appKey 表，
-     * 无需编写 映射器，用于单机部署或外部 o认证 服务不可达时的 AI appKey 认证。
-     * 仅在 {@code plugin.oauth.ai-app-key.enabled=true} 且存在 数据源 时装配。
+     * appKey 台账属于 AI 模块，本类只做启用判定与委派，台账查询通过
+     * {@link com.chua.starter.common.support.appkey.AppKeyAuthenticator} 契约由 AI 模块提供，
+     * 不直连 AI 的持久层。仅在 {@code plugin.oauth.ai-app-key.enabled=true} 时装配。
      * </p>
      *
-     * @param authClientProperties o认证 客户端配置
-     * @param dataSource           应用数据源
+     * @param authClientProperties  o认证 客户端配置
+     * @param authenticatorProvider appKey 台账认证实现（AI 模块提供，可为空）
      * @return AI appKey 认证支持实例
      */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.oauth.ai-app-key", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
     public AiAppKeySupport aiAppKeySupport(AuthClientProperties authClientProperties,
-                                           javax.sql.DataSource dataSource) {
-        AiAppKeySupport support = new AiAppKeySupport(authClientProperties, dataSource);
+                                           org.springframework.beans.factory.ObjectProvider<com.chua.starter.common.support.appkey.AppKeyAuthenticator> authenticatorProvider) {
+        AiAppKeySupport support = new AiAppKeySupport(authClientProperties, authenticatorProvider);
         AiAppKeySupport.register(support);
-        log.info("[AuthClientConfiguration] 已启用 AI AppKey 本地认证 - 表: {}",
-                authClientProperties.getAiAppKey().getTableName());
+        log.info("[AuthClientConfiguration] 已启用 AI AppKey 本地认证 - 台账由 AI 模块提供");
         return support;
     }
 
