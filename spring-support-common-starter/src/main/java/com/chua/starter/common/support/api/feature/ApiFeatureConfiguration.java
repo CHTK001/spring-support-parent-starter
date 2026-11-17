@@ -12,16 +12,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
-import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import java.util.Map;
-
+import java.util.List;
 /**
  * API 功能开关自动配置。
  *
@@ -185,24 +181,15 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
      * 扫描api特征。
      */
     private void scanApiFeatures() {
-        Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
+        List<HandlerAnnotationScanner.ScannedHandler<ApiFeature>> scanned =
+                new HandlerAnnotationScanner(requestMappingHandlerMapping).scan(ApiFeature.class);
         ApiFeatureManager featureManager = apiFeatureManager();
 
         int count = 0;
-        for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMethods.entrySet()) {
-            HandlerMethod handlerMethod = entry.getValue();
-            RequestMappingInfo mappingInfo = entry.getKey();
-
-            // 先尝试方法级别注解，未命中再回退到类级别注解
-            ApiFeature apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiFeature.class);
-            if (apiFeature == null) {
-                apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), ApiFeature.class);
-            }
-
-            if (apiFeature != null) {
-                featureManager.registerFeature(apiFeature.value(), apiFeature, handlerMethod, mappingInfo);
-                count++;
-            }
+        for (HandlerAnnotationScanner.ScannedHandler<ApiFeature> item : scanned) {
+            featureManager.registerFeature(item.annotation().value(), item.annotation(),
+                    item.handlerMethod(), item.mappingInfo());
+            count++;
         }
 
         if (count > 0) {

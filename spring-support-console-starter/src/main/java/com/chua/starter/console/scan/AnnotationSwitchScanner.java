@@ -2,10 +2,9 @@ package com.chua.starter.console.scan;
 
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.annotations.ApiGray;
+import com.chua.starter.common.support.api.feature.HandlerAnnotationScanner;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.nio.charset.StandardCharsets;
@@ -13,8 +12,6 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 注解开关扫描器：扫描 Spring MVC 全部处理器上的 {@code @ApiFeature}/{@code @ApiGray}，
@@ -32,7 +29,7 @@ public class AnnotationSwitchScanner {
     private final RequestMappingHandlerMapping requestMappingHandlerMapping; // 请求mapping处理器mapping
 
     public AnnotationSwitchScanner(
-            @org.springframework.context.annotation.Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
+            @Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
@@ -45,43 +42,35 @@ public class AnnotationSwitchScanner {
         List<SwitchInventory.FeatureDescriptor> features = new ArrayList<>();
         List<SwitchInventory.GrayDescriptor> grays = new ArrayList<>();
 
-        Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
-        for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMethods.entrySet()) {
-            HandlerMethod handlerMethod = entry.getValue();
-            List<String> patterns = entry.getKey().getPatternValues().stream().sorted().collect(Collectors.toList());
+        HandlerAnnotationScanner scanner = new HandlerAnnotationScanner(requestMappingHandlerMapping);
 
-            ApiFeature apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiFeature.class);
-            if (apiFeature == null) {
-                apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), ApiFeature.class);
-            }
-            if (apiFeature != null) {
-                features.add(SwitchInventory.FeatureDescriptor.builder()
-                        .featureId(apiFeature.value())
-                        .defaultEnabled(apiFeature.defaultEnabled())
-                        .disabledMessage(apiFeature.disabledMessage())
-                        .disabledStatus(apiFeature.disabledStatus())
-                        .description(apiFeature.description())
-                        .group(apiFeature.group())
-                        .patterns(patterns)
-                        .build());
-            }
+        for (HandlerAnnotationScanner.ScannedHandler<ApiFeature> item
+                : scanner.scan(ApiFeature.class)) {
+            ApiFeature apiFeature = item.annotation();
+            features.add(SwitchInventory.FeatureDescriptor.builder()
+                    .featureId(apiFeature.value())
+                    .defaultEnabled(apiFeature.defaultEnabled())
+                    .disabledMessage(apiFeature.disabledMessage())
+                    .disabledStatus(apiFeature.disabledStatus())
+                    .description(apiFeature.description())
+                    .group(apiFeature.group())
+                    .patterns(item.patterns())
+                    .build());
+        }
 
-            ApiGray apiGray = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiGray.class);
-            if (apiGray == null) {
-                apiGray = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), ApiGray.class);
-            }
-            if (apiGray != null) {
-                grays.add(SwitchInventory.GrayDescriptor.builder()
-                        .pattern(apiGray.value())
-                        .percentage(apiGray.percentage())
-                        .roles(apiGray.roles())
-                        .users(apiGray.users())
-                        .headers(apiGray.headers())
-                        .rule(apiGray.rule())
-                        .forceGray(apiGray.forceGray())
-                        .patterns(patterns)
-                        .build());
-            }
+        for (HandlerAnnotationScanner.ScannedHandler<ApiGray> item
+                : scanner.scan(ApiGray.class)) {
+            ApiGray apiGray = item.annotation();
+            grays.add(SwitchInventory.GrayDescriptor.builder()
+                    .pattern(apiGray.value())
+                    .percentage(apiGray.percentage())
+                    .roles(apiGray.roles())
+                    .users(apiGray.users())
+                    .headers(apiGray.headers())
+                    .rule(apiGray.rule())
+                    .forceGray(apiGray.forceGray())
+                    .patterns(item.patterns())
+                    .build());
         }
 
         // 规范化 + 排序 + 哈希：稳定指纹
