@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.util.StringUtils;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -19,12 +17,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>实现 {@link SmartInitializingSingleton}：全部单例初始化完成后触发注入，
  * 异步模式（默认）在虚拟线程中执行，agentmain 的字节码 retransform 不阻塞启动。</p>
  *
- * <p>agent jar 定位顺序：</p>
- * <ol>
- *   <li>classpath 扫描（{@code com/chua/runtime/agent/RuntimeAgent.class}）</li>
- *   <li>Spring Boot fat jar 的 {@code BOOT-INF/lib/} 内 agent jar，解压到临时目录</li>
- *   <li>回退 {@link RuntimeBoot} 内建探测（{@code resolveSelfAgentPath()}）</li>
- * </ol>
+ * <p>agent jar 定位统一由 {@link RuntimeBoot} 内建探测完成
+ * （classpath 类扫描 → Spring Boot fat jar {@code BOOT-INF/lib/} 提取 → ProtectionDomain 回退），
+ * 本模块不再自实现定位逻辑。</p>
  *
  * <p>注入失败仅告警、不抛异常，保证宿主应用正常启动；通过 {@link #isAgentActive()}
  * 查询注入状态，业务方可据此降级。</p>
@@ -137,7 +132,6 @@ public class AgentAttachService implements SmartInitializingSingleton {
                 options = "port=" + properties.getShellPort();
             }
             RuntimeBoot.create()
-                    .withAgent(resolveAgentJar())
                     .withAgentOptions(options)
                     .attachSelf();
             agentActive = true;
@@ -221,53 +215,4 @@ public class AgentAttachService implements SmartInitializingSingleton {
         return status;
     }
 
-    /**
-     * 定位 agent jar 物理路径（classpath → fat jar BOOT-INF/lib）。
-     *
-     * <p>返回 {@code null} 时交由 {@link RuntimeBoot} 内建探测兜底
-     * （LaunchedClassLoader 不回填 {@code java.class.path} 的场景）。</p>
-     *
-     * @return agent jar 路径；定位不到返回 null
-     */
-    private static Path resolveAgentJar() {
-        String classPath = System.getProperty("java.class.path");
-        if (classPath == null) {
-            return null;
-        }
-        for (String entry : classPath.split(java.io.File.pathSeparator)) {
-            Path candidate = Path.of(entry);
-            if (!Files.isRegularFile(candidate)) {
-                continue;
-            }
-            try (java.util.jar.JarFile outer = new java.util.jar.JarFile(candidate.toFile())) {
-                java.util.jar.JarEntry target = null;
-                java.util.Enumeration<java.util.jar.JarEntry> entries = outer.entries();
-                while (entries.hasMoreElements()) {
-                    java.util.jar.JarEntry e = entries.nextElement();
-                    String name = e.getName();
-                    if (name.startsWith("BOOT-INF/lib/")
-                            && name.contains("utils-support-runtime-agent")
-                            && name.endsWith(".jar")) {
-                        target = e;
-                        break;
-                    }
-                }
-                if (target == null) {
-                    continue;
-                }
-                java.io.File dest = Files.createTempFile("agent-attach-", ".jar").toFile();
-                try (java.io.InputStream is = outer.getInputStream(target);
-                     java.io.OutputStream os = java.nio.file.Files.newOutputStream(dest.toPath())) {
-                    is.transferTo(os);
-                }
-                log.info("[AgentAttach] Agent jar 提取自 fat jar {} -> {}",
-                        target.getName(), dest.getAbsolutePath());
-                return dest.toPath();
-            } catch (Exception e) {
-                log.debug("[AgentAttach] 检查 {} 失败: {}", candidate, e.getMessage());
-            }
-        }
-        log.info("[AgentAttach] classpath 未见 agent jar，交由 RuntimeBoot 内建探测");
-        return null;
-    }
 }
