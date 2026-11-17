@@ -138,6 +138,9 @@ public final class DbExporter {
     public record ExportResult(String content, int rowCount, boolean truncated) {
     }
 
+    /**
+     * 禁止实例化（纯静态工具类）。
+     */
     private DbExporter() {
     }
 
@@ -166,6 +169,16 @@ public final class DbExporter {
         return new ExportResult(content, rows.size(), truncated);
     }
 
+    /**
+     * 构建数据查询（读取列并执行 SELECT）。
+     *
+     * @param conn   数据库连接
+     * @param table  表名
+     * @param option 导出选项
+     * @param limit  最大行数
+     * @return 列名与数据行
+     * @throws SQLException SQL 执行失败
+     */
     private static SqlQuery buildDataQuery(Connection conn, String table, ExportOptions option, int limit)
             throws SQLException {
         List<String> columns = readColumns(conn, table);
@@ -203,7 +216,17 @@ public final class DbExporter {
         return new SqlQuery(List.copyOf(columns), List.copyOf(rows));
     }
 
-    /** render 方法 */
+    /**
+     * 按目标格式渲染导出内容。
+     *
+     * @param table   表名
+     * @param columns 列名列表
+     * @param rows    数据行
+     * @param option  导出选项
+     * @param conn    数据库连接（SQL 格式需要 DDL）
+     * @return 渲染后的导出内容
+     * @throws Exception 序列化或读取失败
+     */
     private static String render(String table, List<String> columns, List<Map<String, Object>> rows,
                                  ExportOptions option, Connection conn) throws Exception {
         return switch (option.format()) {
@@ -215,7 +238,17 @@ public final class DbExporter {
         };
     }
 
-    /** renderSql 方法 */
+    /**
+     * 渲染 SQL 格式导出内容（DDL + INSERT）。
+     *
+     * @param table   表名
+     * @param columns 列名列表
+     * @param rows    数据行
+     * @param option  导出选项
+     * @param conn    数据库连接（读取 DDL）
+     * @return SQL 内容
+     * @throws Exception 读取 DDL 或写入失败
+     */
     private static String renderSql(String table, List<String> columns, List<Map<String, Object>> rows,
                                     ExportOptions option, Connection conn) throws Exception {
         StringBuilder out = new StringBuilder();
