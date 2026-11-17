@@ -2,7 +2,6 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.monitor.support.config.AgentDeployProperties;
 import com.chua.starter.monitor.support.model.AgentDeployProgressVO;
 import com.chua.starter.monitor.support.model.AgentHealthVO;
@@ -10,7 +9,6 @@ import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.spi.HostRemoteProvider;
@@ -88,11 +86,6 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             + "($f | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1)";
 
     /**
-     * 主机 映射器
-    */
-    private final MsServerHostMapper hostMapper;
-
-    /**
      * 主机服务（凭据解析）
     */
     private final ServerHostService serverHostService;
@@ -139,7 +132,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         if (hostId == null || action == null) {
             return ReturnResult.error("参数不完整：hostId/action 必填");
         }
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -176,7 +169,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         if (hostId == null) {
             return ReturnResult.error("主机标识不能为空");
         }
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -203,7 +196,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         if (hostId == null) {
             return ReturnResult.error("主机标识不能为空");
         }
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -230,7 +223,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         if (hostId == null) {
             return ReturnResult.error("主机标识不能为空");
         }
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -257,7 +250,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * @param hostId 主机标识
      */
     private void doInjectApm(Long hostId) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             push(hostId, 0, "主机不存在: " + hostId, "error");
             return;
@@ -284,8 +277,8 @@ public class AgentDeployServiceImpl implements AgentDeployService {
                 push(hostId, 0, "APM 注入配置未生效", "error");
                 return;
             }
-            host.setServerHostAgentEnabled(1);
-            hostMapper.updateById(host);
+            // Agent 开关由台账统一改写（属于台账的开关列，不走采集产物回写）
+            serverHostService.enableAgent(host.getId());
             push(hostId, 100, "APM JavaAgent 注入完成（jar=" + remoteJar + "）", "success");
             log.info("[agent-deploy] hostId={} APM JavaAgent 注入成功", hostId);
         } catch (Exception e) {
@@ -301,7 +294,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * @param hostId 主机标识
      */
     private void doUninjectApm(Long hostId) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             push(hostId, 0, "主机不存在: " + hostId, "error");
             return;
@@ -483,7 +476,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * @param action 动作
      */
     private void run(Long hostId, Action action) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return;
         }
@@ -494,7 +487,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
                 case INSTALL -> install(session, false);
                 case REINSTALL -> {
                     uninstall(session, false);
-                    Session fresh = open(hostMapper.selectById(hostId));
+                    Session fresh = open(serverHostService.findById(hostId));
                     install(fresh, true);
                 }
                 case UPGRADE -> upgrade(session);
@@ -632,9 +625,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         } else {
             session.exec(sudo(session) + "rm -rf " + dir, PROBE_TIMEOUT_SECONDS);
         }
-        MsServerHost host = session.host;
-        host.setServerHostAgentInstalled(0);
-        hostMapper.updateById(host);
+        MsServerHost patch = new MsServerHost();
+        patch.setId(session.host.getId());
+        patch.setServerHostAgentInstalled(0);
+        serverHostService.saveCollectState(patch);
         // 反向确认：/health 还在应答说明服务并没真停
         for (int i = 0; i < 6; i++) {
             if (agentClient.health(session.host) == null) {
@@ -648,11 +642,7 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         }
         // updateById 的字段策略会跳过 null，这三列必须显式置空，
         // 否则卸载后台账仍写着「已装 vX.Y 且刚采集过」，画像页会一直显示过期状态
-        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
-                .eq(MsServerHost::getId, host.getId())
-                .set(MsServerHost::getServerHostAgentVersion, null)
-                .set(MsServerHost::getServerHostAgentTime, null)
-                .set(MsServerHost::getServerHostAgentError, null));
+        serverHostService.clearAgentState(session.host.getId());
         if (pushFinal) {
             push(hostId, 100, "Agent 卸载完成", "success");
             log.info("[agent-deploy] hostId={} uninstall 成功", hostId);
@@ -691,20 +681,21 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             throw new IllegalStateException(label + "失败：期望版本 " + expectVersion
                     + "，实际 " + nullToEmpty(health.version()));
         }
-        MsServerHost host = session.host;
-        host.setServerHostAgentInstalled(1);
-        host.setServerHostAgentEnabled(1);
-        host.setServerHostAgentPort(agentClient.portOf(host));
-        host.setServerHostAgentVersion(nullToEmpty(health.version()));
-        host.setServerHostAgentTime(LocalDateTime.now());
-        host.setServerHostCollectMode(HostCollectType.AGENT.getCode());
-        hostMapper.updateById(host);
-        // 成功后清掉历史失败原因（updateById 跳过 null，必须显式置空）
-        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
-                .eq(MsServerHost::getId, host.getId())
-                .set(MsServerHost::getServerHostAgentError, null));
-        push(hostId, 100, "Agent " + label + "完成，版本 " + nullToEmpty(host.getServerHostAgentVersion()), "success");
-        log.info("[agent-deploy] hostId={} {} 成功，agent 版本 {}", hostId, label, host.getServerHostAgentVersion());
+        MsServerHost patch = new MsServerHost();
+        patch.setId(session.host.getId());
+        patch.setServerHostAgentInstalled(1);
+        patch.setServerHostAgentPort(agentClient.portOf(session.host));
+        patch.setServerHostAgentVersion(nullToEmpty(health.version()));
+        patch.setServerHostAgentTime(LocalDateTime.now());
+        // 只写本次部署产出的 Agent 运行列，SSH/采集间隔等用户配置保持库中现值
+        serverHostService.saveCollectState(patch);
+        // 采集方式切到 AGENT、打开 Agent 开关：由台账统一改写，避免用陈旧快照整行覆盖
+        serverHostService.switchCollectMode(session.host.getId(), HostCollectType.AGENT.getCode());
+        serverHostService.enableAgent(session.host.getId());
+        // 成功后清掉历史失败原因（null 跳过策略会忽略该列，必须显式置空）
+        serverHostService.clearAgentError(session.host.getId());
+        push(hostId, 100, "Agent " + label + "完成，版本 " + nullToEmpty(patch.getServerHostAgentVersion()), "success");
+        log.info("[agent-deploy] hostId={} {} 成功，agent 版本 {}", hostId, label, patch.getServerHostAgentVersion());
     }
 
     /**
@@ -864,9 +855,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         } finally {
             Files.deleteIfExists(tmp);
         }
-        MsServerHost host = session.host;
-        host.setServerHostAgentPort(port);
-        hostMapper.updateById(host);
+        MsServerHost portPatch = new MsServerHost();
+        portPatch.setId(session.host.getId());
+        portPatch.setServerHostAgentPort(port);
+        serverHostService.saveCollectState(portPatch);
     }
 
     /**
@@ -1134,12 +1126,13 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * @param message 失败原因
      */
     private void markFailure(Long hostId, String message) {
-        MsServerHost host = hostMapper.selectById(hostId);
-        if (host == null) {
+        if (hostId == null) {
             return;
         }
-        host.setServerHostAgentError(cut(message));
-        hostMapper.updateById(host);
+        MsServerHost patch = new MsServerHost();
+        patch.setId(hostId);
+        patch.setServerHostAgentError(cut(message));
+        serverHostService.saveCollectState(patch);
     }
 
     /**

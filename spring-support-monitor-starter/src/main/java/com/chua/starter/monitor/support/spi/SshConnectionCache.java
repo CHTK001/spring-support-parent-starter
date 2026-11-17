@@ -1,14 +1,10 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.monitor.support.spi;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.entity.MsServerHostIdentity;
-import com.chua.starter.server.support.entity.MsServerIdentity;
-import com.chua.starter.server.support.mapper.MsServerHostIdentityMapper;
-import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
 import com.chua.starter.monitor.support.config.MonitorSshProperties;
-import com.chua.starter.server.support.util.CredentialCipher;
+import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.service.ServerHostService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -85,19 +81,9 @@ public class SshConnectionCache {
 
     @Autowired(required = false)
       /**
-       * 主机IdentityMapper
+       * 主机台账与凭据解析门面（身份/密钥表由 server 模块维护）
       */
-    private MsServerHostIdentityMapper hostIdentityMapper;
-    @Autowired(required = false)
-      /**
-       * identityMapper
-      */
-    private MsServerIdentityMapper identityMapper;
-    @Autowired(required = false)
-      /**
-       * credentialCipher
-      */
-    private CredentialCipher credentialCipher;
+    private ServerHostService serverHostService;
     @Autowired(required = false)
       /**
        * ssh 超时配置（yaml 兜底）
@@ -150,173 +136,25 @@ public class SshConnectionCache {
         }
         return sshProperties == null ? 60L : Math.max(1L, sshProperties.getExecTimeoutSeconds());
     }
-    @Autowired(required = false)
-      /**
-       * 键Mapper
-      */
-    private com.chua.starter.server.support.mapper.MsServerKeyMapper keyMapper;
-
-      /**
-       * 主机绑定的登录凭据（SSH 口令/私钥与 WinRM 口令同源，均来自主机绑定的身份）。
-       *
-       * @param username   登录名
-       * @param password   口令或私钥口令，可为空
-       * @param privateKey 私钥内容，可为空
-       */
-    public record LoginCredential(String username, String password, String privateKey) {
-    }
-
       /**
        * 解析主机绑定的全部可用登录凭据，按优先级排序（非 root 优先）。
+       *
+       * <p>身份/密钥表属 server 模块（主机台账），凭据解析规则（地址账号优先、默认身份文件兜底、
+       * 本机回环账号）也由 server 定义；monitor 只消费解析结果。</p>
        *
        * @param host 主机，不允许为 null
        * @return 结果列表，无可用凭据时为空列表
        */
-    public List<LoginCredential> credentials(MsServerHost host) {
-        List<LoginCredential> result = new java.util.ArrayList<>();
-        if (hostIdentityMapper == null || identityMapper == null) {
-            return result;
+    public List<SshCredential> credentials(MsServerHost host) {
+        if (serverHostService == null || host == null || host.getId() == null) {
+            return List.of();
         }
         try {
-            List<MsServerHostIdentity> rels = hostIdentityMapper.selectList(
-                    new LambdaQueryWrapper<MsServerHostIdentity>()
-                            .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, host.getId())
-                            .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
-            List<LoginCredential> roots = new java.util.ArrayList<>();
-            for (MsServerHostIdentity rel : rels) {
-                MsServerIdentity id = identityMapper.selectById(rel.getMsServerHostIdentityIdentityId());
-                if (id == null) {
-                    continue;
-                }
-                String uname = id.getMsServerIdentityUsername();
-                if (uname == null) {
-                    continue;
-                }
-                LoginCredential cred = null;
-                if ("PUBLIC_KEY".equalsIgnoreCase(id.getMsServerIdentityAuthType())) {
-                    if (keyMapper != null && id.getMsServerIdentityKeyId() != null) {
-                        var key = keyMapper.selectById(id.getMsServerIdentityKeyId());
-                        if (key != null && key.getMsServerKeyPrivateKey() != null) {
-                            String privKey = credentialCipher != null ? credentialCipher.decrypt(key.getMsServerKeyPrivateKey()) : key.getMsServerKeyPrivateKey();
-                            String passPhrase = key.getMsServerKeyPassword() != null ? (credentialCipher != null ? credentialCipher
-                                .decrypt(key.getMsServerKeyPassword()) : key.getMsServerKeyPassword()) : null;
-                            cred = new LoginCredential(uname, passPhrase, privKey);
-                        }
-                    }
-                } else if ("NONE".equalsIgnoreCase(id.getMsServerIdentityAuthType())) {
-                      // 免密认证：目标主机已放行（authorized_keys 或允许空口令），
-                      // 凭据只承载用户名，密码/私钥均为 null；连接层不设空口令，
-                      // SshClient 会回落到默认身份文件走公钥认证
-                    cred = new LoginCredential(uname, null, null);
-                } else {
-                    String encPass = id.getMsServerIdentityPassword();
-                    if (encPass != null && !encPass.isBlank()) {
-                        String pass = credentialCipher != null ? credentialCipher.decrypt(encPass) : encPass;
-                        cred = new LoginCredential(uname, pass, null);
-                    }
-                }
-                if (cred != null) {
-                    if ("root".equalsIgnoreCase(uname)) {
-                        roots.add(cred);
-                    }
-                    else {
-                        result.add(cred);
-                    }
-                }
-            }
-            result.addAll(roots);
-              // 地址里的 user@ 前缀是网关分配的真实登录名，优先于台账身份里的历史账号
-            result = preferAddressAccount(host, result);
-              // 全部身份都只有口令、没有私钥时，补一组「只带账号」的兜底凭据：
-              // SshClient 收到无口令凭据会加载平台默认身份文件（~/.ssh/id_ed25519 等），
-              // 这是只开放 publickey 的网关唯一还能走通的路径。
-            result = appendDefaultKeyAccount(host, result);
-              // 本机自采集主机没有绑定身份时，用平台运行账号走回环免密
-            if (result.isEmpty() && isLocal(host)) {
-                String osUser = System.getProperty("user.name");
-                if (osUser != null && !osUser.isBlank()) {
-                    result.add(new LoginCredential(osUser, null, null));
-                }
-            }
+            return serverHostService.resolveCredentials(host.getId());
         } catch (Exception e) {
             log.warn("credentials failed host={}: {}", host.getId(), e.getMessage());
+            return List.of();
         }
-        return result;
-    }
-
-      /**
-       * 地址前缀账号优先。
-       *
-       * <p>{@code ibssh_xxx@ssh.instabox.sh} 里的 {@code ibssh_xxx} 是网关分配的登录名，
-       * 台账里绑定的身份账号可能是历史默认值（user/root），直接连必然认证失败。
-       * 这里用同一份口令/私钥先按地址账号试一次，再保留原身份作为回落。</p>
-       *
-       * @param host  主机
-       * @param creds 已解析的绑定身份凭据
-       * @return 地址账号排在前的凭据列表
-       */
-    private static List<LoginCredential> preferAddressAccount(MsServerHost host, List<LoginCredential> creds) {
-        String user = addressUser(host.getServerHostAddress());
-        if (user == null) {
-            return creds;
-        }
-        java.util.List<LoginCredential> merged = new java.util.ArrayList<>(creds.size() + 1);
-        boolean same = false;
-        for (LoginCredential c : creds) {
-            if (user.equalsIgnoreCase(c.username())) {
-                same = true;
-                break;
-            }
-        }
-        if (!same) {
-            for (LoginCredential c : creds) {
-                merged.add(new LoginCredential(user, c.password(), c.privateKey()));
-            }
-        }
-        merged.addAll(creds);
-        return merged;
-    }
-
-      /**
-       * 补一组「只带账号」的兜底凭据。
-       *
-       * <p>当全部绑定身份都是口令认证、没有任何私钥时，{@code SshClient} 只会发送口令。
-       * 但网关类目标（如 {@code ssh.instabox.sh}）常常只开放 publickey，口令方式根本
-       * 不在服务端的认证列表里，最终报 {@code No more authentication methods available}。
-       * 这里补一条无口令/无私钥的凭据，让连接层加载平台默认身份文件
-       * （{@code ~/.ssh/id_ed25519} 等）——平台公钥已被目标放行时即可连上。</p>
-       *
-       * @param host  主机
-       * @param creds 已解析的凭据
-       * @return 追加兜底项后的凭据列表
-       */
-    private static List<LoginCredential> appendDefaultKeyAccount(MsServerHost host, List<LoginCredential> creds) {
-        if (creds.isEmpty()) {
-            return creds;
-        }
-        boolean hasKey = false;
-        boolean hasKeyless = false;
-        for (LoginCredential c : creds) {
-            if (c.privateKey() != null && !c.privateKey().isBlank()) {
-                hasKey = true;
-            }
-            if (c.password() == null && (c.privateKey() == null || c.privateKey().isBlank())) {
-                hasKeyless = true;
-            }
-        }
-        if (hasKey || hasKeyless) {
-            return creds;
-        }
-        String user = addressUser(host.getServerHostAddress());
-        if (user == null) {
-            user = creds.get(0).username();
-        }
-        if (user == null || user.isBlank()) {
-            return creds;
-        }
-        java.util.List<LoginCredential> merged = new java.util.ArrayList<>(creds);
-        merged.add(new LoginCredential(user, null, null));
-        return merged;
     }
 
       /**
@@ -393,12 +231,12 @@ public class SshConnectionCache {
             c.expireAt = System.currentTimeMillis() + TTL_MS;
             return c.ssh;
         }
-        List<LoginCredential> creds = credentials(host);
+        List<SshCredential> creds = credentials(host);
         if (creds.isEmpty()) {
             throw new IllegalStateException("主机 " + host.getId() + " 未绑定 SSH 凭据，请先在主机资产配置身份");
         }
         Exception lastErr = null;
-        for (LoginCredential cred : creds) {
+        for (SshCredential cred : creds) {
             try {
                   // host.getServerHostAddress() 可能带 user@ 前缀（历史数据/粘贴导入），
                   // MINA SSHD 的 hostname 校验器拒绝 @ 字符，必须剥离；
@@ -450,7 +288,7 @@ public class SshConnectionCache {
         }
         throw new IllegalStateException("SSH 连接失败 host=" + host.getId() + " "
                   + host.getServerHostAddress() + ":" + (host.getServerHostPort() != null ? host.getServerHostPort() : 22)
-                  + " 账号=" + creds.stream().map(LoginCredential::username).distinct().reduce((a, b) -> a + "/" + b).orElse("-")
+                  + " 账号=" + creds.stream().map(SshCredential::username).distinct().reduce((a, b) -> a + "/" + b).orElse("-")
                   + " 已尝试 " + creds.size() + " 组凭据"
                   + (lastErr == null ? "" : "，最后原因: " + describe(lastErr))
                   + authHint(host, lastErr), lastErr);
@@ -614,12 +452,12 @@ public class SshConnectionCache {
             c.expireAt = System.currentTimeMillis() + TTL_MS;
             return c.sftp;
         }
-        List<LoginCredential> creds = credentials(host);
+        List<SshCredential> creds = credentials(host);
         if (creds.isEmpty()) {
             throw new IllegalStateException("主机 " + host.getId() + " 未绑定 SSH 凭据，请先在主机资产配置身份");
         }
         Exception lastErr = null;
-        for (LoginCredential cred : creds) {
+        for (SshCredential cred : creds) {
             try {
                   // host.getServerHostAddress() 可能带 user@ 前缀（历史数据/粘贴导入），
                   // MINA SSHD 的 hostname 校验器拒绝 @ 字符，必须剥离；

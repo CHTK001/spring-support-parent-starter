@@ -25,7 +25,7 @@ import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -85,10 +85,10 @@ public class SystemManageController {
     private static final int KEYWORD_SCAN = 10000;
 
     /**
-     * 主机 映射器
+     * 主机台账服务
      */
     @Autowired
-    private MsServerHostMapper hostMapper;
+    private ServerHostService serverHostService;
 
     /**
      * 采集通道路由器
@@ -113,7 +113,7 @@ public class SystemManageController {
      * @throws IllegalStateException 主机不存在或无可用通道
      */
     private HostChannel channelOf(Long hostId) {
-        MsServerHost host = hostId == null ? localHost() : hostMapper.selectById(hostId);
+        MsServerHost host = hostId == null ? localHost() : serverHostService.findById(hostId);
         if (host == null) {
             throw new IllegalStateException("主机不存在: " + hostId);
         }
@@ -169,13 +169,17 @@ public class SystemManageController {
             }
             if (hostId != null) {
                 MsServerHost host = ch.host();
+                // 采集到的操作系统主机名写入 os_hostname 列；显示名（serverHostName）是用户可编辑
+                // 的台账字段，不能由采集覆盖，否则用户改过的名称会被下一次刷新冲掉。
+                MsServerHost patch = new MsServerHost();
+                patch.setId(host.getId());
                 if (info.getHostname() != null && !info.getHostname().isEmpty()) {
-                    host.setServerHostName(info.getHostname());
+                    patch.setServerHostOsHostname(info.getHostname());
                 }
                 if (info.getCpuCores() != null) {
-                    host.setServerHostCpuCores(info.getCpuCores());
+                    patch.setServerHostCpuCores(info.getCpuCores());
                 }
-                hostMapper.updateById(host);
+                serverHostService.saveCollectState(patch);
             }
             return ReturnResult.ok(info);
         }).subscribeOn(Schedulers.boundedElastic())

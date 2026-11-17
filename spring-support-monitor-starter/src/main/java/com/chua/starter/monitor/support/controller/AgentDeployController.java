@@ -1,6 +1,5 @@
 package com.chua.starter.monitor.support.controller;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.config.AgentDeployProperties;
 import com.chua.starter.monitor.support.model.AgentConnectTestVO;
@@ -10,7 +9,7 @@ import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -51,9 +50,9 @@ public class AgentDeployController {
     private final AgentHttpClient agentClient;
 
     /**
-     * 主机 映射器
+     * 主机台账服务
     */
-    private final MsServerHostMapper hostMapper;
+    private final ServerHostService serverHostService;
 
     /**
      * 部署配置
@@ -117,7 +116,7 @@ public class AgentDeployController {
     @Operation(summary = "Agent状态")
     @GetMapping("/{id}/status")
     public ReturnResult<AgentDeployStatusVO> status(@PathVariable Long id) {
-        MsServerHost host = hostMapper.selectById(id);
+        MsServerHost host = serverHostService.findById(id);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + id);
         }
@@ -144,24 +143,27 @@ public class AgentDeployController {
     @Operation(summary = "测试Agent连接", description = "测试目标主机 Agent 是否可用")
     @GetMapping("/test/{id}")
     public ReturnResult<AgentConnectTestVO> testAgent(@PathVariable Long id) {
-        MsServerHost host = hostMapper.selectById(id);
+        MsServerHost host = serverHostService.findById(id);
         if (host == null) {
             return ReturnResult.error("主机不存在");
         }
         AgentHealthVO health = agentClient.health(host);
         if (health == null) {
-            host.setServerHostAgentError("连通性测试失败");
-            hostMapper.updateById(host);
+            MsServerHost patch = new MsServerHost();
+            patch.setId(id);
+            patch.setServerHostAgentError("连通性测试失败");
+            serverHostService.saveCollectState(patch);
             return ReturnResult.ok(new AgentConnectTestVO(false, null,
                     "Agent 连接失败: " + agentClient.portOf(host) + " 端口无响应或不可达"));
         }
-        host.setServerHostAgentInstalled(1);
-        host.setServerHostAgentVersion(health.version());
-        hostMapper.updateById(host);
-        // 成功后清掉历史失败原因（updateById 跳过 null，必须显式置空）
-        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
-                .eq(MsServerHost::getId, id)
-                .set(MsServerHost::getServerHostAgentError, null));
+        MsServerHost patch = new MsServerHost();
+        patch.setId(id);
+        patch.setServerHostAgentInstalled(1);
+        patch.setServerHostAgentVersion(health.version());
+        // 只写探活产出的 Agent 列，避免整行写回覆盖用户刚改的开关
+        serverHostService.saveCollectState(patch);
+        // 成功后清掉历史失败原因（null 跳过策略会忽略该列，必须显式置空）
+        serverHostService.clearAgentError(id);
         return ReturnResult.ok(new AgentConnectTestVO(true, health.version(), "Agent 连接成功"));
     }
 

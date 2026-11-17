@@ -139,7 +139,9 @@ public class CdpWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 通过 WS 把消息推给所有人
+     * 通过 WS 把消息推给所有人。
+     *
+     * @param text 待推送的文本
      */
     private void broadcast(String text) {
         for (WebSocketSession session : sessions) {
@@ -152,7 +154,10 @@ public class CdpWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 通过 WS 把消息推给指定的人
+     * 通过 WS 把消息推给指定的人。
+     *
+     * @param session 目标会话
+     * @param text    待推送的文本
      */
     private void send(WebSocketSession session, String text) {
         try {
@@ -163,7 +168,11 @@ public class CdpWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 把结果推给请求者（JSON-RPC 风格）
+     * 把结果推给请求者（JSON-RPC 风格）。
+     *
+     * @param session 目标会话
+     * @param id      请求 ID（为空时广播空结果）
+     * @param result  调用结果
      */
     private void sendResult(WebSocketSession session, Long id, Map<String, Object> result) {
         Map<String, Object> resp;
@@ -183,7 +192,11 @@ public class CdpWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 把错误推给请求者（JSON-RPC 风格）
+     * 把错误推给请求者（JSON-RPC 风格）。
+     *
+     * @param session 目标会话
+     * @param id      请求 ID（为空时忽略）
+     * @param error   错误消息
      */
     private void sendError(WebSocketSession session, Long id, String error) {
         if (id == null) {

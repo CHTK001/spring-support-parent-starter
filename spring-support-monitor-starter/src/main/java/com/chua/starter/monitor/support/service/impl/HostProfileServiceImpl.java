@@ -2,7 +2,6 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
@@ -28,7 +27,7 @@ import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.monitor.support.spi.impl.AgentProvider;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.util.HostPlatforms;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,9 +70,9 @@ public class HostProfileServiceImpl implements HostProfileService {
     private static final int KEYWORD_SCAN_LIMIT = 2000;
 
     /**
-     * 主机 映射器
+     * 主机台账服务
      */
-    private final MsServerHostMapper hostMapper;
+    private final ServerHostService serverHostService;
 
     /**
      * agent HTTP 客户端（仅用于取 Agent 端口）
@@ -92,7 +91,7 @@ public class HostProfileServiceImpl implements HostProfileService {
 
     @Override
     public ReturnResult<HostProfileVO> refresh(Long hostId, boolean persist) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -142,7 +141,7 @@ public class HostProfileServiceImpl implements HostProfileService {
 
     @Override
     public ReturnResult<HostProfileVO> snapshot(Long hostId) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -376,7 +375,7 @@ public class HostProfileServiceImpl implements HostProfileService {
      * @return 成功时为结果说明，失败时为原因
      */
     private ReturnResult<String> act(Long hostId, BiFunction<SystemInfoProvider, MsServerHost, HostActionVO> writer) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -400,7 +399,7 @@ public class HostProfileServiceImpl implements HostProfileService {
      * @return 分区数据
      */
     private <R> ReturnResult<R> collect(Long hostId, BiFunction<SystemInfoProvider, MsServerHost, R> reader) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -688,19 +687,9 @@ public class HostProfileServiceImpl implements HostProfileService {
         // 可能已被并发路径（用户保存、探测回写 sshEnabled 等）改过；整行写回会用旧值覆盖，
         // 实测表现为「用户把 win101 的 SSH 打开后，采集每 10~60s 又把它改回 0」，
         // 于是所有发布操作被「未开启 SSH」闸门周期性拦住。
-        // 这里把这些不属于采集产物的列显式置 null，借助 updateById 的 null 跳过策略保留库中现值。
-        host.setServerHostSshEnabled(null);
-        host.setServerHostOnlineEnabled(null);
-        host.setServerHostCollectEnabled(null);
-        host.setServerHostCollectMode(null);
-        host.setServerHostCollectInterval(null);
-        host.setServerHostDelayEnabled(null);
-        host.setServerHostDelayInterval(null);
-        host.setServerHostRemoteEnabled(null);
-        host.setServerHostAgentEnabled(null);
-        host.setServerHostStatus(null);
-        hostMapper.updateById(host);
-        // 采集成功即清掉历史失败原因（updateById 会跳过 null 字段，必须走显式置空）
+        // saveCollectState 只提交采集产物列，用户配置列由台账侧保持库中现值。
+        serverHostService.saveCollectState(host);
+        // 采集成功即清掉历史失败原因（null 跳过策略会忽略该列，必须走显式置空）
         clearError(host.getId());
     }
 
@@ -807,18 +796,14 @@ public class HostProfileServiceImpl implements HostProfileService {
      * @param reason 原因
      */
     private void markError(Long hostId, String reason) {
-        MsServerHost host = hostMapper.selectById(hostId);
-        if (host == null) {
-            return;
-        }
+        MsServerHost host = new MsServerHost();
+        host.setId(hostId);
         host.setServerHostAgentError(cut(reason));
         // 不在此把 agent_installed 置 0：installed 是部署生命周期状态（仅由部署=1/卸载=0 改变），
         // 一次瞬时采集超时/分区失败只记录原因，否则健康 Agent 会因偶发抖动被整体判不可用。
-        // 只写自己负责的一列：整行 updateById 会把这份快照里的 SSH 开关/采集开关等
+        // 只写自己负责的一列：整行写回会把这份快照里的 SSH 开关/采集开关等
         // 用户配置按旧值写回（用户刚改过就被覆盖），进而周期性阻断发布等操作。
-        hostMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<MsServerHost>()
-                .eq(MsServerHost::getId, hostId)
-                .set(MsServerHost::getServerHostAgentError, host.getServerHostAgentError()));
+        serverHostService.saveCollectState(host);
     }
 
     /**
@@ -830,9 +815,7 @@ public class HostProfileServiceImpl implements HostProfileService {
         if (hostId == null) {
             return;
         }
-        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
-                .eq(MsServerHost::getId, hostId)
-                .set(MsServerHost::getServerHostAgentError, null));
+        serverHostService.clearAgentError(hostId);
     }
 
     /**

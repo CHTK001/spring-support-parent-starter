@@ -6,7 +6,7 @@ import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.service.impl.MonitorPushService;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.scheduler.HostOnlineScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,9 +46,9 @@ public class HostRealtimePushConfiguration {
     private final ObjectProvider<AlarmEngineService> alarmEngineProvider;
 
     /**
-     * 主机 映射器（采集后重读最新台账）
+     * 主机台账服务（采集后重读最新台账）
     */
-    private final MsServerHostMapper hostMapper;
+    private final ServerHostService serverHostService;
 
     /**
      * 主机画像服务（AGENT 方式采集时拉 agent 快照，可能未装配）
@@ -188,7 +188,7 @@ public class HostRealtimePushConfiguration {
             }
         }
         try {
-            MsServerHost latest = hostMapper.selectById(host.getId());
+            MsServerHost latest = serverHostService.findById(host.getId());
             return latest == null ? host : latest;
         } catch (Exception e) {
             log.debug("[monitor] 采集后台账重读失败 hostId={}: {}", host.getId(), e.getMessage());

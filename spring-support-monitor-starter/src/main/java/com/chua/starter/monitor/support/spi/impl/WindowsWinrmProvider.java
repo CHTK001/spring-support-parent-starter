@@ -18,6 +18,7 @@ import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.model.SshCredential;
 import com.chua.winrm.support.client.WinRmExecClient;
 import lombok.extern.slf4j.Slf4j;
 
@@ -230,7 +231,7 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
        * @return 已连接的客户端，调用方负责关闭
        */
     private WinRmExecClient client(MsServerHost host) {
-        SshConnectionCache.LoginCredential cred = credential(host);
+        SshCredential cred = credential(host);
         WinRmExecClient client = WinRmExecClient.builder()
                 .host(host.getServerHostAddress())
                 .port(host.getServerHostPort() != null ? host.getServerHostPort() : 5985)
@@ -321,14 +322,14 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
        * @return 含登录名与口令的凭据
        * @throws IllegalStateException 既无绑定身份也无瞬态账号，避免用猜测账号反复试连
        */
-    private SshConnectionCache.LoginCredential credential(MsServerHost host) {
+    private SshCredential credential(MsServerHost host) {
         SshConnectionCache cache = resolvedCache;
         if (cache == null) {
             cache = SpringBeanUtils.getBean(SshConnectionCache.class);
             resolvedCache = cache;
         }
         if (cache != null) {
-            for (SshConnectionCache.LoginCredential cred : cache.credentials(host)) {
+            for (SshCredential cred : cache.credentials(host)) {
                 if (cred.password() != null && !cred.password().isBlank()) {
                     return cred;
                 }
@@ -337,7 +338,7 @@ public class WindowsWinrmProvider implements SystemInfoProvider {
         String account = host.getServerHostAccount();
         String password = host.getServerHostPassword();
         if (account != null && !account.isBlank() && password != null && !password.isBlank()) {
-            return new SshConnectionCache.LoginCredential(account, password, null);
+            return new SshCredential(account, password, null);
         }
         throw new IllegalStateException("主机 " + host.getId() + " 无带口令的 WinRM 凭据，请先在主机资产绑定登录身份"
                   + (account == null || account.isBlank() ? "" : "（WinRM 不支持公钥身份）"));

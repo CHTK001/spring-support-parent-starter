@@ -9,7 +9,7 @@ import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -54,9 +54,9 @@ import java.util.regex.Pattern;
 public class HostFileController {
 
     /**
-     * 主机台账 Mapper
+     * 主机台账服务
      */
-    private final MsServerHostMapper hostMapper;
+    private final ServerHostService serverHostService;
 
     /**
      * 系统信息 Provider 路由器
@@ -604,7 +604,7 @@ public class HostFileController {
      * @return 主机，不存在返回 null
      */
     private MsServerHost load(Long hostId) {
-        return hostMapper.selectById(hostId);
+        return serverHostService.findById(hostId);
     }
 
     /**

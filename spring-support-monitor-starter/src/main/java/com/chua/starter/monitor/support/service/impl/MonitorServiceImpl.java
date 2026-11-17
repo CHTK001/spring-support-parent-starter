@@ -12,7 +12,7 @@ import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorTaskMapper;
 import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -47,9 +47,9 @@ public class MonitorServiceImpl implements MonitorService {
     */
     private final MsMonitorGatewayMapper monitorGatewayMapper;
     /**
-     * 服务器主机 映射器, 用于解析监控项归属的主机
+     * 服务器主机 台账门面, 用于解析监控项归属的主机
     */
-    private final MsServerHostMapper serverHostMapper;
+    private final ServerHostService serverHostService;
 
     /**
      * 探针标识随机源（静态 最终 复用，线程安全）
@@ -209,7 +209,7 @@ public class MonitorServiceImpl implements MonitorService {
                 return ReturnResult.ok(bound);
             }
             // 存量数据从未写入绑定列，按主机地址回退匹配
-            MsServerHost host = serverHostMapper.selectById(hostId);
+            MsServerHost host = serverHostService.findById(hostId);
             if (host == null || StringUtils.isBlank(host.getServerHostAddress())) {
                 return ReturnResult.ok(Collections.emptyList());
             }
@@ -229,8 +229,7 @@ public class MonitorServiceImpl implements MonitorService {
         if (monitor == null || monitor.getMsServerHostId() != null) {
             return;
         }
-        MsServerHost byKey = StringUtils.isBlank(monitor.getMonitorAgentKey()) ? null
-                : selectHostByAgentKey(monitor.getMonitorAgentKey().trim());
+        MsServerHost byKey = selectHostByAgentKey(monitor.getMonitorAgentKey());
         if (byKey != null) {
             monitor.setMsServerHostId(byKey.getId());
             return;
@@ -239,9 +238,7 @@ public class MonitorServiceImpl implements MonitorService {
             return;
         }
         // 同地址多台主机时不猜归属，交给读取侧按地址回退匹配
-        List<MsServerHost> byAddress = serverHostMapper.selectList(new LambdaQueryWrapper<MsServerHost>()
-                .select(MsServerHost::getId)
-                .eq(MsServerHost::getServerHostAddress, monitor.getMonitorHost().trim()));
+        List<MsServerHost> byAddress = serverHostService.listByAddress(monitor.getMonitorHost());
         if (byAddress.size() == 1) {
             monitor.setMsServerHostId(byAddress.get(0).getId());
         }
@@ -254,9 +251,6 @@ public class MonitorServiceImpl implements MonitorService {
      * @return 命中的主机，未命中返回 空
      */
     private MsServerHost selectHostByAgentKey(String agentKey) {
-        return serverHostMapper.selectOne(new LambdaQueryWrapper<MsServerHost>()
-                .select(MsServerHost::getId)
-                .eq(MsServerHost::getServerHostAgentKey, agentKey)
-                .last("LIMIT 1"));
+        return StringUtils.isBlank(agentKey) ? null : serverHostService.findByAgentKey(agentKey.trim());
     }
 }

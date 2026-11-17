@@ -150,6 +150,90 @@ public interface ServerHostService {
     ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId, String protocol);
 
     /**
+     * 解析主机绑定的全部登录凭据（按绑定优先级，非 root 账号排在前面）
+     * <p>
+     * 与 {@link #resolveCredential} 的单条凭据不同，本方法返回全部可尝试的凭据，
+     * 供调用方在第一条认证失败时按顺序回退。同时处理两类运行时兜底：
+     * 地址写成 {@code user@host} 时该账号优先、全部身份仅口令时补一组「只带账号」的
+     * 默认身份文件凭据。返回值含明文口令/私钥，仅限运行时使用，禁止落库或输出日志。
+     * </p>
+     *
+     * @param hostId 主机 标识
+     * @return 凭据列表，主机不存在或无可用凭据时为空列表
+     */
+    List<SshCredential> resolveCredentials(Long hostId);
+
+    /**
+     * 按标识查询主机
+     *
+     * @param hostId 主机 标识
+     * @return 主机，不存在时返回 {@code null}
+     */
+    MsServerHost findById(Long hostId);
+
+    /**
+     * 按地址查询主机（同一地址可能存在多台，调用方自行判定归属）
+     *
+     * @param address 主机地址
+     * @return 主机列表，地址为空时返回空列表
+     */
+    List<MsServerHost> listByAddress(String address);
+
+    /**
+     * 按 Agent 探针标识查询主机
+     *
+     * @param agentKey 探针标识
+     * @return 命中的主机，未命中返回 空
+     */
+    MsServerHost findByAgentKey(String agentKey);
+
+    /**
+     * 回写主机采集运行时状态
+     * <p>
+     * 只写采集产物列（硬件规格、实时用量、在线状态、Agent 运行信息等），
+     * 用户配置列（SSH/采集/远控开关与间隔）不在此覆盖；{@code null} 字段保持库中现值，
+     * 避免用采集开始时的陈旧快照把并发修改的用户配置写回旧值。
+     * </p>
+     *
+     * @param host 主机（至少含主键）
+     * @return 结果
+     */
+    ReturnResult<Void> saveCollectState(MsServerHost host);
+
+    /**
+     * 切换主机采集方式（部署/卸载 Agent 等由部署流程决定的结果，统一经台账改写）
+     *
+     * @param hostId      主机 标识
+     * @param collectMode 采集方式编码
+     * @return 结果
+     */
+    ReturnResult<Void> switchCollectMode(Long hostId, String collectMode);
+
+    /**
+     * 启用主机 Agent（Agent 开关置 1）
+     *
+     * @param hostId 主机 标识
+     * @return 结果
+     */
+    ReturnResult<Void> enableAgent(Long hostId);
+
+    /**
+     * 清空 Agent 失败原因（部署/连通成功后调用；{@code updateById} 会跳过 null 字段，必须显式置空）
+     *
+     * @param hostId 主机 标识
+     * @return 结果
+     */
+    ReturnResult<Void> clearAgentError(Long hostId);
+
+    /**
+     * 清空 Agent 安装运行字段（版本、时间、失败原因），卸载完成后调用
+     *
+     * @param hostId 主机 标识
+     * @return 结果
+     */
+    ReturnResult<Void> clearAgentState(Long hostId);
+
+    /**
      * 硬件探测：SSH 连上目标主机，自动采集 CPU/内存/磁盘/系统版本/IP 并回写
      *
      * @param hostId 主机 标识

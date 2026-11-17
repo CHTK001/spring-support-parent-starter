@@ -4,6 +4,7 @@
 package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.nativeapi.NativeServices;
 import com.chua.common.support.nativeapi.NmapScanner;
@@ -790,6 +791,279 @@ public class ServerHostServiceImpl implements ServerHostService {
           // 密码认证：直接解密口令
         return ReturnResult.ok(new SshCredential(username,
                 cipher.decrypt(identity.getMsServerIdentityPassword()), null));
+    }
+
+    @Override
+    public List<SshCredential> resolveCredentials(Long hostId) {
+        MsServerHost host = hostId == null ? null : hostMapper.selectById(hostId);
+        if (host == null) {
+            return List.of();
+        }
+        List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
+                new LambdaQueryWrapper<MsServerHostIdentity>()
+                        .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
+                        .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
+        List<SshCredential> result = new ArrayList<>(relations.size());
+        List<SshCredential> roots = new ArrayList<>();
+        for (MsServerHostIdentity relation : relations) {
+            MsServerIdentity identity = identityMapper.selectById(relation.getMsServerHostIdentityIdentityId());
+            if (identity == null) {
+                continue;
+            }
+            String username = identity.getMsServerIdentityUsername();
+            if (isBlank(username)) {
+                continue;
+            }
+            SshCredential credential = null;
+            if (AuthType.PUBLIC_KEY.name().equalsIgnoreCase(identity.getMsServerIdentityAuthType())) {
+                if (identity.getMsServerIdentityKeyId() != null) {
+                    MsServerKey key = keyMapper.selectById(identity.getMsServerIdentityKeyId());
+                    if (key != null && !isBlank(key.getMsServerKeyPrivateKey())) {
+                        credential = new SshCredential(username,
+                                decryptQuietly(key.getMsServerKeyPassword(), hostId),
+                                decryptQuietly(key.getMsServerKeyPrivateKey(), hostId));
+                    }
+                }
+            } else if (AuthType.NONE.name().equalsIgnoreCase(identity.getMsServerIdentityAuthType())) {
+                  // 免密认证：凭据只承载用户名，连接层回落到默认身份文件走公钥认证
+                credential = new SshCredential(username, null, null);
+            } else if (!isBlank(identity.getMsServerIdentityPassword())) {
+                credential = new SshCredential(username,
+                        decryptQuietly(identity.getMsServerIdentityPassword(), hostId), null);
+            }
+            if (credential == null) {
+                continue;
+            }
+            if ("root".equalsIgnoreCase(username)) {
+                roots.add(credential);
+            } else {
+                result.add(credential);
+            }
+        }
+        result.addAll(roots);
+          // 地址里的 user@ 前缀是网关分配的真实登录名，优先于台账身份里的历史账号
+        result = preferAddressAccount(host, result);
+          // 全部身份都只有口令、没有私钥时，补一组「只带账号」的兜底凭据
+        result = appendDefaultKeyAccount(host, result);
+          // 本机自采集主机没有绑定身份时，用平台运行账号走回环免密
+        String collectMode = host.getServerHostCollectMode() == null
+                ? null : host.getServerHostCollectMode().trim();
+        if (result.isEmpty() && "LOCAL".equalsIgnoreCase(collectMode)) {
+            String osUser = System.getProperty("user.name");
+            if (!isBlank(osUser)) {
+                result.add(new SshCredential(osUser, null, null));
+            }
+        }
+        return result;
+    }
+
+      /**
+       * 地址前缀账号优先。
+       *
+       * <p>{@code ibssh_xxx@ssh.instabox.sh} 里的 {@code ibssh_xxx} 是网关分配的登录名，
+       * 台账里绑定的身份账号可能是历史默认值，直接连必然认证失败。这里用同一份口令/私钥
+       * 先按地址账号试一次，再保留原身份作为回落。</p>
+       *
+       * @param host  主机
+       * @param creds 已解析的绑定身份凭据
+       * @return 地址账号排在前的凭据列表
+       */
+    private List<SshCredential> preferAddressAccount(MsServerHost host, List<SshCredential> creds) {
+        String user = addressLoginUser(host.getServerHostAddress());
+        if (user == null) {
+            return creds;
+        }
+        boolean same = false;
+        for (SshCredential credential : creds) {
+            if (user.equalsIgnoreCase(credential.username())) {
+                same = true;
+                break;
+            }
+        }
+        if (same) {
+            return creds;
+        }
+        List<SshCredential> merged = new ArrayList<>(creds.size() + 1);
+        for (SshCredential credential : creds) {
+            merged.add(new SshCredential(user, credential.password(), credential.privateKey()));
+        }
+        merged.addAll(creds);
+        return merged;
+    }
+
+      /**
+       * 补一组「只带账号」的兜底凭据。
+       *
+       * <p>当全部绑定身份都是口令认证、没有任何私钥时，{@code SshClient} 只会发送口令；
+       * 而网关类目标常常只开放 publickey，这里补一条无口令/无私钥的凭据，
+       * 让连接层加载平台默认身份文件。</p>
+       *
+       * @param host  主机
+       * @param creds 已解析的凭据
+       * @return 追加兜底项后的凭据列表
+       */
+    private List<SshCredential> appendDefaultKeyAccount(MsServerHost host, List<SshCredential> creds) {
+        if (creds.isEmpty()) {
+            return creds;
+        }
+        boolean hasKey = false;
+        boolean hasKeyless = false;
+        for (SshCredential credential : creds) {
+            if (!isBlank(credential.privateKey())) {
+                hasKey = true;
+            }
+            if (credential.password() == null && isBlank(credential.privateKey())) {
+                hasKeyless = true;
+            }
+        }
+        if (hasKey || hasKeyless) {
+            return creds;
+        }
+        String user = addressLoginUser(host.getServerHostAddress());
+        if (user == null) {
+            user = creds.get(0).username();
+        }
+        if (isBlank(user)) {
+            return creds;
+        }
+        List<SshCredential> merged = new ArrayList<>(creds);
+        merged.add(new SshCredential(user, null, null));
+        return merged;
+    }
+
+    @Override
+    public MsServerHost findById(Long hostId) {
+        return hostId == null ? null : hostMapper.selectById(hostId);
+    }
+
+    @Override
+    public List<MsServerHost> listByAddress(String address) {
+        if (isBlank(address)) {
+            return List.of();
+        }
+        return hostMapper.selectList(new LambdaQueryWrapper<MsServerHost>()
+                .select(MsServerHost::getId)
+                .eq(MsServerHost::getServerHostAddress, address.trim()));
+    }
+
+    @Override
+    public MsServerHost findByAgentKey(String agentKey) {
+        if (isBlank(agentKey)) {
+            return null;
+        }
+        return hostMapper.selectOne(new LambdaQueryWrapper<MsServerHost>()
+                .select(MsServerHost::getId)
+                .eq(MsServerHost::getServerHostAgentKey, agentKey.trim())
+                .last("LIMIT 1"));
+    }
+
+    @Override
+    public ReturnResult<Void> saveCollectState(MsServerHost host) {
+        if (host == null || host.getId() == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+          // 只写采集产物列：null 列保持库中现值，避免陈旧快照覆盖并发修改的用户配置
+        LambdaUpdateWrapper<MsServerHost> write = new LambdaUpdateWrapper<>();
+        write.eq(MsServerHost::getId, host.getId());
+        boolean any = false;
+        any |= setIfPresent(write, MsServerHost::getServerHostOsVersion, host.getServerHostOsVersion());
+        any |= setIfPresent(write, MsServerHost::getServerHostOsArch, host.getServerHostOsArch());
+        any |= setIfPresent(write, MsServerHost::getServerHostOsHostname, host.getServerHostOsHostname());
+        any |= setIfPresent(write, MsServerHost::getServerHostJavaVersion, host.getServerHostJavaVersion());
+        any |= setIfPresent(write, MsServerHost::getServerHostCpuCores, host.getServerHostCpuCores());
+        any |= setIfPresent(write, MsServerHost::getServerHostMemoryMb, host.getServerHostMemoryMb());
+        any |= setIfPresent(write, MsServerHost::getServerHostDiskGb, host.getServerHostDiskGb());
+        any |= setIfPresent(write, MsServerHost::getServerHostUptimeSec, host.getServerHostUptimeSec());
+        any |= setIfPresent(write, MsServerHost::getServerHostPrivateIp, host.getServerHostPrivateIp());
+        any |= setIfPresent(write, MsServerHost::getServerHostPublicIp, host.getServerHostPublicIp());
+        any |= setIfPresent(write, MsServerHost::getServerHostCode, host.getServerHostCode());
+        any |= setIfPresent(write, MsServerHost::getServerHostMac, host.getServerHostMac());
+        any |= setIfPresent(write, MsServerHost::getServerHostNetworks, host.getServerHostNetworks());
+        any |= setIfPresent(write, MsServerHost::getServerHostCpuUsage, host.getServerHostCpuUsage());
+        any |= setIfPresent(write, MsServerHost::getServerHostMemUsage, host.getServerHostMemUsage());
+        any |= setIfPresent(write, MsServerHost::getServerHostDiskUsage, host.getServerHostDiskUsage());
+        any |= setIfPresent(write, MsServerHost::getServerHostDiskReadKbs, host.getServerHostDiskReadKbs());
+        any |= setIfPresent(write, MsServerHost::getServerHostDiskWriteKbs, host.getServerHostDiskWriteKbs());
+        any |= setIfPresent(write, MsServerHost::getServerHostNetRxKbs, host.getServerHostNetRxKbs());
+        any |= setIfPresent(write, MsServerHost::getServerHostNetTxKbs, host.getServerHostNetTxKbs());
+        any |= setIfPresent(write, MsServerHost::getServerHostSoftware, host.getServerHostSoftware());
+        any |= setIfPresent(write, MsServerHost::getServerHostOnline, host.getServerHostOnline());
+        any |= setIfPresent(write, MsServerHost::getServerHostOnlineTime, host.getServerHostOnlineTime());
+        any |= setIfPresent(write, MsServerHost::getServerHostLastCollectTime, host.getServerHostLastCollectTime());
+        any |= setIfPresent(write, MsServerHost::getServerHostAgentInstalled, host.getServerHostAgentInstalled());
+        any |= setIfPresent(write, MsServerHost::getServerHostAgentPort, host.getServerHostAgentPort());
+        any |= setIfPresent(write, MsServerHost::getServerHostAgentVersion, host.getServerHostAgentVersion());
+        any |= setIfPresent(write, MsServerHost::getServerHostAgentTime, host.getServerHostAgentTime());
+        any |= setIfPresent(write, MsServerHost::getServerHostAgentError, host.getServerHostAgentError());
+        if (!any) {
+            return ReturnResult.ok();
+        }
+        hostMapper.update(null, write);
+        return ReturnResult.ok();
+    }
+
+      /**
+       * 非空才写入更新条件（{@code null} 表示该列保持库中现值）。
+       *
+       * @param write  更新条件
+       * @param column 列
+       * @param value  值
+       * @return 是否写入
+       */
+    private static boolean setIfPresent(LambdaUpdateWrapper<MsServerHost> write,
+                                        com.baomidou.mybatisplus.core.toolkit.support.SFunction<MsServerHost, ?> column,
+                                        Object value) {
+        if (value == null) {
+            return false;
+        }
+        write.set(column, value);
+        return true;
+    }
+
+    @Override
+    public ReturnResult<Void> switchCollectMode(Long hostId, String collectMode) {
+        if (hostId == null || isBlank(collectMode)) {
+            return ReturnResult.error("主机标识与采集方式不能为空");
+        }
+        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                .eq(MsServerHost::getId, hostId)
+                .set(MsServerHost::getServerHostCollectMode, collectMode));
+        return ReturnResult.ok();
+    }
+
+    @Override
+    public ReturnResult<Void> enableAgent(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                .eq(MsServerHost::getId, hostId)
+                .set(MsServerHost::getServerHostAgentEnabled, 1));
+        return ReturnResult.ok();
+    }
+
+    @Override
+    public ReturnResult<Void> clearAgentError(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                .eq(MsServerHost::getId, hostId)
+                .set(MsServerHost::getServerHostAgentError, null));
+        return ReturnResult.ok();
+    }
+
+    @Override
+    public ReturnResult<Void> clearAgentState(Long hostId) {
+        if (hostId == null) {
+            return ReturnResult.error("主机标识不能为空");
+        }
+        hostMapper.update(null, new LambdaUpdateWrapper<MsServerHost>()
+                .eq(MsServerHost::getId, hostId)
+                .set(MsServerHost::getServerHostAgentVersion, null)
+                .set(MsServerHost::getServerHostAgentTime, null)
+                .set(MsServerHost::getServerHostAgentError, null));
+        return ReturnResult.ok();
     }
 
     @Override

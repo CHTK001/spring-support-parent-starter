@@ -9,7 +9,7 @@ import com.chua.starter.monitor.support.service.HostNetworkService;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -99,9 +99,9 @@ public class HostNetworkServiceImpl implements HostNetworkService {
             }catch{ 'ERR: '+$_.Exception.Message }
             """;
       /**
-       * 主机台账映射器
+       * 主机台账门面
        */
-    private final MsServerHostMapper hostMapper;
+    private final ServerHostService serverHostService;
 
       /**
        * 采集通道路由器
@@ -139,7 +139,7 @@ public class HostNetworkServiceImpl implements HostNetworkService {
 
     @Override
     public ReturnResult<List<NetworkAdapterDetailVO>> adapters(Long hostId) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -240,7 +240,7 @@ public class HostNetworkServiceImpl implements HostNetworkService {
         if (config == null) {
             return ReturnResult.error("配置不能为空");
         }
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
@@ -338,7 +338,7 @@ public class HostNetworkServiceImpl implements HostNetworkService {
        * @throws IllegalStateException 主机不存在/非 Windows/通道异常
        */
     private JsonNode readAdapter(Long hostId, String adapterName) {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
             throw new IllegalStateException("主机不存在: " + hostId);
         }

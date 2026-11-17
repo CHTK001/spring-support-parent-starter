@@ -6,7 +6,7 @@ import com.chua.starter.monitor.support.model.HostProfileVO;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.HostProfileService;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
+import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.spi.HostDetectProvider;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -39,10 +39,10 @@ public class AgentHostDetectProvider implements HostDetectProvider {
     private AgentHttpClient agentClient;
 
     /**
-     * 主机映射器
+     * 主机台账门面（查询与采集状态回写）
      */
     @Autowired
-    private MsServerHostMapper hostMapper;
+    private ServerHostService serverHostService;
 
     /**
      * 系统类型 AGENT。
@@ -77,7 +77,7 @@ public class AgentHostDetectProvider implements HostDetectProvider {
         if (!refreshed.isOk()) {
             return ReturnResult.error(refreshed.getMsg());
         }
-        MsServerHost latest = hostMapper.selectById(host.getId());
+        MsServerHost latest = serverHostService.findById(host.getId());
         return ReturnResult.ok(latest == null ? host : latest);
     }
 
@@ -108,12 +108,10 @@ public class AgentHostDetectProvider implements HostDetectProvider {
      * @param online 1 在线，0 离线
      */
     private void markOnline(Long hostId, int online) {
-        MsServerHost host = hostMapper.selectById(hostId);
-        if (host == null) {
-            return;
-        }
+        MsServerHost host = new MsServerHost();
+        host.setId(hostId);
         host.setServerHostOnline(online);
         host.setServerHostOnlineTime(java.time.LocalDateTime.now());
-        hostMapper.updateById(host);
+        serverHostService.saveCollectState(host);
     }
 }

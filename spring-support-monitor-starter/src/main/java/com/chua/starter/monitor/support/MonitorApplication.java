@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @SpringBootApplication
 @EnableTransactionManagement
-@MapperScan({"com.chua.starter.monitor.support.mapper", "com.chua.starter.server.support.mapper",
+@MapperScan({"com.chua.starter.monitor.support.mapper",
         "com.chua.starter.job.support.store"})
 public class MonitorApplication {
 
