@@ -93,6 +93,7 @@ public class PaymentOpsController {
        *
        * @param startDate 开始日期
        * @param endDate 结束日期
+       * @return 支付概览汇总 VO
        */
     public PaymentDashboardSummaryVO dashboardSummary(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd"
         ) LocalDate startDate,
@@ -124,6 +125,7 @@ public class PaymentOpsController {
        * 更新任务
        * @param taskKey 任务Key
        * @param dto dto
+       * @return 更新后的任务
        */
     public PaymentSchedulerTaskVO updateTask(@PathVariable String taskKey,
                                              @RequestBody PaymentSchedulerTaskUpdateDTO dto) {
@@ -145,7 +147,13 @@ public class PaymentOpsController {
       /**
        * 分页查询通知日志
        *
-       * @return 分页查询通知日志的结果
+       * @param pageNum       页码（默认 1）
+       * @param pageSize      每页条数（默认 10）
+       * @param notifyType    通知类型（可空）
+       * @param processStatus 处理状态（可空）
+       * @param orderNo       订单号（可空）
+       * @param refundNo      退款单号（可空）
+       * @return 通知日志分页结果
        */
     public PageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                        @RequestParam(defaultValue = "10") int pageSize,
@@ -177,7 +185,13 @@ public class PaymentOpsController {
       /**
        * 分页查询通知错误
        *
-       * @return 分页查询通知错误的结果
+       * @param pageNum    页码（默认 1）
+       * @param pageSize   每页条数（默认 10）
+       * @param notifyType 通知类型（可空）
+       * @param status     处理状态（可空）
+       * @param orderNo    订单号（可空）
+       * @param refundNo   退款单号（可空）
+       * @return 通知错误分页结果
        */
     public PageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
                                                            @RequestParam(defaultValue = "10") int pageSize,
@@ -305,6 +319,7 @@ public class PaymentOpsController {
        * @param strictScoped 是否强制作用域
        * @param effectivePriority 生效优先级
        * @param notes 备注
+       * @return 回调审计 VO
        */
     private PaymentCallbackAuditVO callbackAudit(String callbackType,
                                                 String callbackName,
@@ -332,6 +347,7 @@ public class PaymentOpsController {
        * @param callerOverrideField 调用方可覆盖字段
        * @param idempotentRule 幂等规则
        * @param notes 备注
+       * @return 订单号策略 VO
        */
     private PaymentOrderNumberStrategyVO orderNumberStrategy(String businessType,
                                                              String fieldName,

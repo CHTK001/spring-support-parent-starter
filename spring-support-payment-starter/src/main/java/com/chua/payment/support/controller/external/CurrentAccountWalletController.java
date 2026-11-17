@@ -83,6 +83,7 @@ public class CurrentAccountWalletController {
        * 获取钱包
        * @param request 请求
        * @param merchantId merchantid
+       * @return 钱包账户信息
        */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
@@ -102,6 +103,7 @@ public class CurrentAccountWalletController {
        * @param merchantId merchantid
        * @param bizType 业务类型
        * @param bizNo 业务单号
+       * @return 流水分页结果
        */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
@@ -127,6 +129,7 @@ public class CurrentAccountWalletController {
        * @param merchantId merchantid
        * @param orderType 订单类型
        * @param status 状态
+       * @return 订单分页结果
        */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
@@ -147,6 +150,7 @@ public class CurrentAccountWalletController {
        * 提现
        * @param request 请求
        * @param dto dto
+       * @return 提现审批记录
        */
     public Result<WalletWithdrawApproval> withdraw(HttpServletRequest request,
                                                     @RequestBody WalletWithdrawDTO dto) {
@@ -216,6 +220,7 @@ public class CurrentAccountWalletController {
        * @param approvalId 审批标识
        * @param reason 取消原因
        * @param request 请求
+       * @return 取消结果
        */
     @PostMapping("/withdraw/{approvalId}/cancel")
     public Result<Void> cancelWithdraw(@PathVariable Long approvalId,
@@ -251,6 +256,7 @@ public class CurrentAccountWalletController {
        * 转账
        * @param request 请求
        * @param dto dto
+       * @return 转账结果
        */
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
