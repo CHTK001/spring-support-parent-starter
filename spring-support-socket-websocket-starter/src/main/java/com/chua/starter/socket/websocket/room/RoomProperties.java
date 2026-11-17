@@ -48,18 +48,38 @@ public class RoomProperties {
         /** 无参与者房间回收时间（ms） */
         private long removeEmptyRoomMs = 240_000;
 
+        /**
+         * 获取端点续期时间。
+         *
+         * @return 端点续期时间（ms）
+         */
         public long getLeaseExpiresMs() {
             return leaseExpiresMs;
         }
 
+        /**
+         * 设置端点续期时间。
+         *
+         * @param leaseExpiresMs 端点续期时间（ms）
+         */
         public void setLeaseExpiresMs(long leaseExpiresMs) {
             this.leaseExpiresMs = leaseExpiresMs;
         }
 
+        /**
+         * 获取无参与者房间回收时间。
+         *
+         * @return 无参与者房间回收时间（ms）
+         */
         public long getRemoveEmptyRoomMs() {
             return removeEmptyRoomMs;
         }
 
+        /**
+         * 设置无参与者房间回收时间。
+         *
+         * @param removeEmptyRoomMs 无参与者房间回收时间（ms）
+         */
         public void setRemoveEmptyRoomMs(long removeEmptyRoomMs) {
             this.removeEmptyRoomMs = removeEmptyRoomMs;
         }
