@@ -220,6 +220,9 @@
             </ReTag>
           </header>
 
+          <!-- 用途能力条：全部用途一排铺开（图标+文字标签），当前账号已标记的高亮；点击即切换并保存 -->
+          <AccountCapBar :active-keys="activeCaps" @toggle="toggleCapability" />
+
           <nav class="main-tabs" role="tablist" aria-label="账号信息">
             <button
               v-for="tab in accountTabs"
@@ -840,6 +843,7 @@ import MailboxDrawer from '../components/MailboxDrawer.vue';
 import AppKeyDialog from './components/AppKeyDialog.vue';
 import CookieDialog from './components/CookieDialog.vue';
 import ProviderLogo from './components/ProviderLogo.vue';
+import AccountCapBar from './components/AccountCapBar.vue';
 import {
   batchDeleteAccounts,
   batchUpdateAccountStatus,
@@ -871,7 +875,11 @@ import {
   type SysAccountSecret,
 } from '../api/account';
 import { providerLabel } from '../secretProviders';
-import { capabilityTagsOf, type AccountCapabilityTag } from '../capabilities';
+import {
+  capabilityTagsOf,
+  readCapabilityKeys,
+  type AccountCapabilityTag,
+} from '../capabilities';
 import { accountConsoleUrl } from '../utils/accountLinks';
 import { confirmThen } from '../../shared/confirmThen';
 import { copyText } from '../../shared/clipboard';
@@ -2170,6 +2178,40 @@ async function toggleStatus(row: SysAccount): Promise<void> {
     await loadAll();
   } catch (e: any) {
     message.error(e?.message || '状态更新失败');
+  }
+}
+
+/** 右侧用途条的高亮集合：与左栏能力条同一口径（未手填标记时按种类兜底显示） */
+const activeCaps = computed(() => {
+  const account = activeAccount.value;
+  return new Set(capabilityTagsOf(account?.config, account?.kind).map(tag => tag.key));
+});
+
+/**
+ * 切换当前账号的一个用途标记并立即保存。
+ *
+ * <p>编辑基准是「手填标记」（readCapabilityKeys 不带种类兜底），与「编辑账号」表单
+ * 的保存语义一致：把兜底能力显式移除后 config 不再带该键，展示随之变灰；
+ * 标记清空时删除键，交回种类默认兜底。</p>
+ *
+ * @param tag 用途能力
+ */
+async function toggleCapability(tag: AccountCapabilityTag): Promise<void> {
+  const account = activeAccount.value;
+  if (!account) return;
+  const next = new Set(readCapabilityKeys(account.config));
+  const adding = !next.has(tag.key);
+  if (adding) next.add(tag.key);
+  else next.delete(tag.key);
+  const config: Record<string, unknown> = { ...(account.config || {}) };
+  if (next.size) config.capabilities = [...next];
+  else delete config.capabilities;
+  try {
+    await updateAccount(account.accountId, { ...account, config });
+    message.success(adding ? `已标记用途：${tag.label}` : `已移除用途：${tag.label}`);
+    await loadAll();
+  } catch (e: any) {
+    message.error(e?.message || '用途更新失败');
   }
 }
 
