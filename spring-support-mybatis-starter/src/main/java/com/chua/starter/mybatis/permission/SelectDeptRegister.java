@@ -55,11 +55,11 @@ public class SelectDeptRegister extends AbstractDeptRegister {
         super(plainSelect, where, user, dataPermission, scopeProperties);
     }
 
-    @Override
       /**
        * 注册
        * @return 返回值
       */
+    @Override
     public Expression register() {
           /**
            * findtable是否包含deptid。

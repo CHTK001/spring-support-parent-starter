@@ -21,7 +21,6 @@ import java.util.List;
 @MappedTypes(List.class)
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
-    @Override
     /**
      * 设置non空参数
      * @param i 整数
@@ -31,11 +30,11 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public void setNonNullParameter(PreparedStatement ps, int i, List<String> parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, Joiner.on(",").omitEmptyStrings().trimResults().join(parameter));
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnName 字符串
@@ -43,12 +42,12 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public List<String> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String string = rs.getString(columnName);
         return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnIndex 整数
@@ -56,12 +55,12 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public List<String> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String string = rs.getString(columnIndex);
         return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnIndex 整数
@@ -69,6 +68,7 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public List<String> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String string = cs.getString(columnIndex);
         return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);

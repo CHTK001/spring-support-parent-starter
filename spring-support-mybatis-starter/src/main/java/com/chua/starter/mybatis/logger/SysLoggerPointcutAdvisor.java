@@ -45,18 +45,17 @@ import java.util.Date;
 @Component
 public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
-    @Override
     /**
      * Matches
      * @param method 参数
      * @param targetClass 参数
      * @return 返回值
     */
+    @Override
     public boolean matches(Method method, Class<?> targetClass) {
         return method.isAnnotationPresent(SysLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
-    @Override
     /**
      * 创建operate日志记录器
      * @param invocation 参数
@@ -65,6 +64,7 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
      * @param throwable 可抛出异常
      * @return 返回值
     */
+    @Override
     protected void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
         SysLog sysLog = method.getDeclaredAnnotation(SysLog.class);

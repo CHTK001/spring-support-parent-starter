@@ -28,40 +28,40 @@ public class MysqlSqlMethodMarker implements SqlMethodMarker {
         this.timeout = timeout;
     }
 
-    @Override
     /**
      * Analysis
      * @param source 字符串
      * @return 返回值
     */
+    @Override
     public List<AbstractMethod> analysis(String source) {
         return Collections.emptyList();
     }
 
-    @Override
     /**
      * Refresh
      * @param name 字符串
      * @return 返回值
     */
+    @Override
     public void refresh(String name) {
 
     }
 
-    @Override
     /**
      * 销毁
      * @return 返回值
      * @throws Exception 异常
     */
+    @Override
     public void destroy() throws Exception {
 
     }
 
-    @Override
     /**
      * refresh全部
     */
+    @Override
     public void refreshAll() {
 
     }

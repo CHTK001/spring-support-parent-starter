@@ -233,7 +233,6 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return selectList(new LambdaQueryWrapper<T>().in(field, values));
     }
 
-    @Deprecated
     /**
      * 选择列表
      *
@@ -242,6 +241,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
      * @param value 值
      * @return 选择列表的结果
      */
+    @Deprecated
     default List<T> selectList(SFunction<T, ?> leField, SFunction<T, ?> geField, Object value) {
         return selectList(new LambdaQueryWrapper<T>().le(leField, value).ge(geField, value));
     }

@@ -104,13 +104,13 @@ public class MybatisPlusProperties {
     private List<ReloadDirectory> reloadDirectories;
 
 
-    @Data
     /**
      * SQL方法属性类。
      *
      * @author CH
      * @since 4.0.0
      */
+    @Data
     public static class SqlMethodProperties {
         /**
          * SQL来源

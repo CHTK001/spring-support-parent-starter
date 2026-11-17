@@ -189,7 +189,6 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
 
     // ========== 重写父类方法，方便链式调用 ==========
 
-    @Override
     /**
      * Eq
      * @param column 字符串
@@ -197,52 +196,53 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
      * @param val 对象
      * @return 返回值
     */
+    @Override
     public QueryWrapperX<T> eq(boolean condition, String column, Object val) {
         super.eq(condition, column, val);
         return this;
     }
 
-    @Override
     /**
      * Eq
      * @param column 字符串
      * @param val 对象
      * @return 返回值
     */
+    @Override
     public QueryWrapperX<T> eq(String column, Object val) {
         super.eq(column, val);
         return this;
     }
 
-    @Override
     /**
      * 订单bydesc
      * @param column 字符串
      * @return 返回值
     */
+    @Override
     public QueryWrapperX<T> orderByDesc(String column) {
         super.orderByDesc(true, column);
         return this;
     }
 
-    @Override
     /**
      * 最后一个
      * @param lastSql 字符串
      * @return 返回值
     */
+    @Override
     public QueryWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
-    @Override
     /**
      * 入
      * @param coll 参数
      * @param column 字符串
      * @return 返回值
     */
+    @Override
     public QueryWrapperX<T> in(String column, Collection<?> coll) {
         super.in(column, coll);
         return this;

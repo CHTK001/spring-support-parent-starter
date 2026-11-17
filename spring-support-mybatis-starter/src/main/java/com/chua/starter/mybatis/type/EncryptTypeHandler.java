@@ -42,7 +42,6 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     */
     private static String password;
 
-    @Override
     /**
      * 设置non空参数
      * @param i 整数
@@ -52,11 +51,11 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, encrypt(parameter));
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnName 字符串
@@ -64,12 +63,12 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
         return decrypt(value);
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnIndex 整数
@@ -77,12 +76,12 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
         return decrypt(value);
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnIndex 整数
@@ -90,6 +89,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
         return decrypt(value);
@@ -111,12 +111,6 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         }
         try {
             byte[] decoded = com.chua.common.support.lang.algorithm.crypto.Hex.decodeHex(value);
-            /**
-             * 字符串。
-             * @param decoded decoded
-             * @param java.nio.charset.StandardCharsets.UTF_8 Java.nio.字符集.标准字符集.UTF_8
-             * @return 字符串的结果
-             */
             return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
         } catch (RuntimeException ex) {
             if (encryptMode == EncryptMode.AUTO) {
@@ -144,12 +138,6 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
             byte[] encrypted = getEncryptor().encrypt(key, rawValue.getBytes(StandardCharsets.UTF_8));
             return Hex.encodeHexString(encrypted);
         } catch (Exception e) {
-            /**
-             * runtime异常。
-             * @param "加密失败" "加密失败"
-             * @param e e
-             * @return runtime异常的结果
-             */
             throw new RuntimeException("加密失败", e);
         }
     }

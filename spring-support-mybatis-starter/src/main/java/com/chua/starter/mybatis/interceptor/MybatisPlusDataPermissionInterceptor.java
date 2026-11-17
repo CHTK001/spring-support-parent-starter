@@ -80,7 +80,6 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
         this.authServiceSupplier = authServiceSupplier;
     }
 
-    @Override
       /**
        * 处理删除
        * @param delete 删除
@@ -89,6 +88,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
        * @param sql 字符串
        * @return 返回值
       */
+    @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -96,7 +96,6 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
         super.processDelete(delete, index, sql, obj);
     }
 
-    @Override
       /**
        * 处理更新
        * @param index 整数
@@ -105,6 +104,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
        * @param update 更新
        * @return 返回值
       */
+    @Override
     protected void processUpdate(Update update, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -112,7 +112,6 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
         super.processUpdate(update, index, sql, obj);
     }
 
-    @Override
       /**
        * 处理选择
        * @param index 整数
@@ -121,6 +120,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
        * @param sql 字符串
        * @return 返回值
       */
+    @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;

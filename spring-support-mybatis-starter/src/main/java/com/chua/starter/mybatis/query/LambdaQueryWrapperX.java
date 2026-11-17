@@ -182,7 +182,6 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
 
     // ========== 重写父类方法，方便链式调用 ==========
 
-    @Override
     /**
      * Eq
      * @param SFunction<T 参数
@@ -191,12 +190,12 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
      * @param val 对象
      * @return 返回值
     */
+    @Override
     public LambdaQueryWrapperX<T> eq(boolean condition, SFunction<T, ?> column, Object val) {
         super.eq(condition, column, val);
         return this;
     }
 
-    @Override
     /**
      * Eq
      * @param SFunction<T 参数
@@ -204,35 +203,35 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
      * @param val 对象
      * @return 返回值
     */
+    @Override
     public LambdaQueryWrapperX<T> eq(SFunction<T, ?> column, Object val) {
         super.eq(column, val);
         return this;
     }
 
-    @Override
     /**
      * 订单bydesc
      * @param SFunction<T 参数
      * @param column 参数
      * @return 返回值
     */
+    @Override
     public LambdaQueryWrapperX<T> orderByDesc(SFunction<T, ?> column) {
         super.orderByDesc(true, column);
         return this;
     }
 
-    @Override
     /**
      * 最后一个
      * @param lastSql 字符串
      * @return 返回值
     */
+    @Override
     public LambdaQueryWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
-    @Override
     /**
      * 入
      * @param SFunction<T 参数
@@ -240,6 +239,7 @@ public class LambdaQueryWrapperX<T> extends LambdaQueryWrapper<T> {
      * @param column 参数
      * @return 返回值
     */
+    @Override
     public LambdaQueryWrapperX<T> in(SFunction<T, ?> column, Collection<?> coll) {
         super.in(column, coll);
         return this;

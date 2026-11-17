@@ -105,6 +105,7 @@ public class MybatisPlusConfiguration {
        *
        * @param mybatisProperties MyBatis Plus配置属性
        * @param methodSecurityInterceptor 数据权限配置属性
+       * @param environment 环境
        */
     public MybatisPlusConfiguration(MybatisPlusProperties mybatisProperties,
                                     MybatisPlusDataScopeProperties methodSecurityInterceptor,
@@ -112,9 +113,6 @@ public class MybatisPlusConfiguration {
         this.mybatisProperties = mybatisProperties;
         this.methodSecurityInterceptor = methodSecurityInterceptor;
         this.environment = environment;
-          /**
-           * 同步encryptor属性。
-           */
         syncEncryptorProperties();
     }
 
@@ -171,7 +169,11 @@ public class MybatisPlusConfiguration {
       /**
        * 数据权限
        *
-       * @return OptimisticLockerInnerInterceptor
+       * @param dataPermissionHandler 数据权限处理器（可空，缺省时自动构建）
+       * @param methodSecurityInterceptor 数据权限配置属性
+       * @param authServiceProvider 认证服务提供者
+       * @param defaultAuthServiceProvider 默认认证服务提供者
+       * @return 数据权限拦截器
        */
     @Bean
     @ConditionalOnMissingBean
@@ -188,13 +190,6 @@ public class MybatisPlusConfiguration {
         if(null == dataPermissionHandler) {
             dataPermissionHandler = new MybatisPlusDataPermissionHandler(methodSecurityInterceptor, authServiceSupplier);
         }
-          /**
-           * mybatisplus数据权限拦截器。
-           * @param dataPermissionHandler 数据权限处理器
-           * @param methodSecurityInterceptor 方法安全性拦截器
-           * @param authServiceSupplier 认证服务供应商
-           * @return mybatisplus数据权限拦截器的结果
-           */
         return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor, authServiceSupplier);
     }
 
@@ -223,6 +218,7 @@ public class MybatisPlusConfiguration {
       /**
        * mybatisplus拦截器
        *
+       * @param innerInterceptorProvider 内部拦截器提供者
        * @return MybatisPlusInterceptor
        */
     @Bean
@@ -271,17 +267,19 @@ public class MybatisPlusConfiguration {
         return new SupportInjector(mybatisProperties);
     }
 
+    /**
+       * MyBatis配置customizer
+       *
+       * @param mybatisProperties MyBatis属性
+       * @param materializedSqlRouter 物化SQL数据源路由器（可空）
+       * @param materializedRouteProperties 物化路由属性（可空）
+       * @param multiDataSourceSettingProperties 多数据源设置属性
+       * @param applicationContext 应用上下文
+       * @param slowSqlDetectInterceptorProvider 慢SQL检测拦截器提供者
+       * @return MyBatis配置定制器
+       */
     @Bean
     @ConditionalOnMissingBean
-      /**
-       * MyBatis配置customizer
-       * @param mybatisProperties MyBatis属性
-       * @param materializedSqlRouter 物化sqlrouter
-       * @param materializedRouteProperties 物化route属性
-       * @param multiDataSourceSettingProperties multi数据源setting属性
-       * @param applicationContext application上下文
-       * @param slowSqlDetectInterceptorProvider slowsqldetect拦截器提供者
-       */
     public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties,
                                                                  @Autowired(required = false) MaterializedSqlDataSourceRouter materializedSqlRouter,
                                                                  @Autowired(required = false) MaterializedRouteProperties materializedRouteProperties,
@@ -344,6 +342,7 @@ public class MybatisPlusConfiguration {
        * @param dataSource               主数据源
        * @param mybatisPlusInterceptor   MyBatis Plus 拦截器
        * @param globalConfig             MyBatis Plus 全局配置
+       * @param metaObjectHandlerProvider 元对象处理器提供者（可空）
        * @return SqlSessionFactory 实例
        * @throws Exception 创建失败时抛出异常
        */
@@ -405,12 +404,12 @@ public class MybatisPlusConfiguration {
         System.setProperty(propertyName, value);
     }
 
-    @Bean
       /**
        * mybatisplus服务信息contributor
        *
        * @return mybatisplus服务信息contributor的结果
        */
+    @Bean
     public ServiceInfoContributor mybatisPlusServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("mybatis", "MyBatis", true, "MyBatis Plus模块", null);

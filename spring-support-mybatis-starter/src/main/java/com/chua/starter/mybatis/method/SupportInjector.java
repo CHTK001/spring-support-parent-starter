@@ -38,13 +38,13 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         this.mybatisProperties = mybatisProperties;
     }
 
-    @Override
       /**
        * 获取方法列表
        * @param mapperClass 参数
        * @param tableInfo 参数
        * @return 返回值
       */
+    @Override
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
         List<AbstractMethod> list = new ArrayList<>();
 
@@ -88,12 +88,12 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
                 new MysqlSqlMethodMarker(sqlMethodProperties.getTimeout(), sqlMethodProperties.isWatchdog());
     }
 
-    @Override
       /**
        * 销毁
        * @return 返回值
        * @throws Exception 异常
       */
+    @Override
     public void destroy() throws Exception {
         for (SqlMethodMarker sqlMethodMarker : cache.values()) {
             sqlMethodMarker.destroy();

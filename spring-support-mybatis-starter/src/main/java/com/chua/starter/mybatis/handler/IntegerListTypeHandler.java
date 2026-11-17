@@ -23,7 +23,6 @@ import java.util.List;
 @MappedTypes(List.class)
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
-    @Override
     /**
      * 设置non空参数
      * @param i 整数
@@ -33,6 +32,7 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public void setNonNullParameter(PreparedStatement ps, int i, List<Integer> parameter, JdbcType jdbcType) throws SQLException {
         StringBuilder sb = new StringBuilder();
         for (int idx = 0; idx < parameter.size(); idx++) {
@@ -44,7 +44,6 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
         ps.setString(i, sb.toString());
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnName 字符串
@@ -52,12 +51,12 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public List<Integer> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String string = rs.getString(columnName);
         return parseList(string);
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnIndex 整数
@@ -65,12 +64,12 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public List<Integer> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String string = rs.getString(columnIndex);
         return parseList(string);
     }
 
-    @Override
     /**
      * 获取空结果
      * @param columnIndex 整数
@@ -78,6 +77,7 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
      * @return 返回值
      * @throws SQLException 异常
     */
+    @Override
     public List<Integer> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String string = cs.getString(columnIndex);
         return parseList(string);

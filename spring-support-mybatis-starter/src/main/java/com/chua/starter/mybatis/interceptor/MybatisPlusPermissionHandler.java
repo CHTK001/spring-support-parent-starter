@@ -149,13 +149,13 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
         register.register();
     }
 
-    @Override
       /**
        * 获取sqlsegment
        * @param mappedStatementId 字符串
        * @param where 参数
        * @return 返回值
       */
+    @Override
     public Expression getSqlSegment(Expression where, String mappedStatementId) {
         return where;
     }

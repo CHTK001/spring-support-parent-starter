@@ -37,11 +37,11 @@ public class PageResultUtils {
         return ReturnPageResult.ok(pageResult);
     }
 
-    @SuppressWarnings("unchecked")
     /**
      * ok。
      * @return ok的结果
      */
+    @SuppressWarnings("unchecked")
     public static <T> ReturnPageResult<T> ok() {
         return (ReturnPageResult<T>) ReturnPageResult.empty();
     }
