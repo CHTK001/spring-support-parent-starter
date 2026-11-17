@@ -1,9 +1,13 @@
 package com.chua.starter.common.support.log;
 
+import com.chua.starter.common.support.constant.MdcConstant;
 import org.apache.hc.core5.http.HttpRequest;
 import org.apache.hc.core5.http.HttpRequestInterceptor;
 import org.apache.hc.core5.http.protocol.HttpContext;
 import org.slf4j.MDC;
+
+import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
+import static com.chua.starter.common.support.constant.MdcConstant.X_TRACE_ID;
 
 /**
  * http客户端 追踪标识拦截器（兼容 http客户端 5.x）。
@@ -12,15 +16,6 @@ import org.slf4j.MDC;
  */
 public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
 
-    /**
-     * 追踪_标识
-    */
-    private static final String TRACE_ID = "traceId";
-    /**
-     * X_追踪_标识
-    */
-    private static final String X_TRACE_ID = "X-Trace-Id";
-
     @Override
     /**
      * 处理
@@ -28,7 +23,7 @@ public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
      * @param entity 参数
      * @param request 参数
      * @return 返回值
-    */
+     */
     public void process(HttpRequest request, org.apache.hc.core5.http.EntityDetails entity, HttpContext context) {
         String traceId = MDC.get(TRACE_ID);
         if (traceId != null && !traceId.isEmpty()) {
@@ -36,4 +31,3 @@ public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
         }
     }
 }
-

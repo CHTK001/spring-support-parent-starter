@@ -5,6 +5,7 @@ import com.chua.starter.common.support.constant.MdcConstant;
 import com.chua.starter.common.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
 
 import java.io.IOException;
@@ -36,6 +37,11 @@ public class MdcHandlerFilter implements Filter {
                 traceId = UUID.randomUUID().toString().replace("-", "");
             }
             MDC.put(MdcConstant.TRACE_ID, traceId);
+
+            // 回写响应头：客户端可据此 traceId 在链路汇聚日志里检索整条链路
+            if (response instanceof HttpServletResponse httpResponse) {
+                httpResponse.setHeader(MdcConstant.X_TRACE_ID, traceId);
+            }
             
  // 设置用户标识，如果没有则设置为N/A
             String userId = RequestUtils.getUserId();
@@ -47,6 +53,12 @@ public class MdcHandlerFilter implements Filter {
             
             chain.doFilter(request, response);
         } finally {
+            // 请求边界是链路收口的最准信号：先 flush 该 traceId 的汇聚块，再清线程变量
+            try {
+                TraceLogPortal.flushCurrent(MDC.get(MdcConstant.TRACE_ID));
+            } catch (Throwable ignore) {
+                // 汇聚未启用或异常都不影响宿主
+            }
             MDC.clear();
         }
     }

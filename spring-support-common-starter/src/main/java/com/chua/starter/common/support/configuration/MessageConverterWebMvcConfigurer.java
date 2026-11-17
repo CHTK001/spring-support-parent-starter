@@ -40,7 +40,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -353,8 +353,16 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         log.info("[消息转换器]消息转换器初始化完成, 共注册 {} 个转换器", messageConverters.size());
         try {
             RestTemplate restTemplate = applicationContext.getBean(RestTemplate.class);
-            restTemplate.setInterceptors(Collections.singletonList(new RestTemplateTraceIdInterceptor()));
-            log.debug("[消息转换器]已为 RestTemplate 注册 TraceId 拦截器");
+            // 追加而非覆盖：避免清掉其它业务已注册的拦截器；同类型已存在则不重复添加
+            List<org.springframework.http.client.ClientHttpRequestInterceptor> interceptors =
+                    new ArrayList<>(restTemplate.getInterceptors());
+            boolean exists = interceptors.stream()
+                    .anyMatch(i -> i instanceof RestTemplateTraceIdInterceptor);
+            if (!exists) {
+                interceptors.add(new RestTemplateTraceIdInterceptor());
+                restTemplate.setInterceptors(interceptors);
+                log.debug("[消息转换器]已为 RestTemplate 追加 TraceId 拦截器");
+            }
         } catch (BeansException ignored) {
             log.debug("[消息转换器]RestTemplate Bean 未找到, 跳过 TraceId 拦截器注册");
         }
