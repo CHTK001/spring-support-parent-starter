@@ -413,6 +413,13 @@
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- 底层工具：解压 SPI（ExtractorFactory/Extractor），TsharkRuntime 便携包解压使用 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- MySQL 驱动（spring-boot:run 使用 MySQL profile 时需要） -->
         <dependency>
             <groupId>com.mysql</groupId>

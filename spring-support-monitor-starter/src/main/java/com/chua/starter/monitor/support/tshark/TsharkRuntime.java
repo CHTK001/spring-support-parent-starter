@@ -1,6 +1,8 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.monitor.support.tshark;
 
+import com.chua.common.support.network.download.extractor.Extractor;
+import com.chua.common.support.network.download.extractor.ExtractorFactory;
 import com.chua.starter.monitor.support.config.TsharkInstallProperties;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,8 +30,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -96,11 +97,6 @@ public class TsharkRuntime {
      * 下载阶段占进度条的区间：[0, 90]，留 10 给解压与自检。
      */
     private static final int DOWNLOAD_WEIGHT = 90;
-
-    /**
-     * 解压时最多允许的条目数，防 zip 炸弹。
-     */
-    private static final int MAX_UNZIP_ENTRIES = 5000;
 
     /**
      * 解压后查找可执行文件的最大目录深度。
@@ -907,25 +903,12 @@ public class TsharkRuntime {
      * @throws IOException 解压失败
      */
     private void unzip(Path zip, Path dir) throws IOException {
-        int count = 0;
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zip), StandardCharsets.UTF_8)) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (++count > MAX_UNZIP_ENTRIES) {
-                    throw new IOException("压缩包条目过多，已中止");
-                }
-                Path target = dir.resolve(entry.getName()).normalize();
-                if (!target.startsWith(dir)) {
-                    throw new IOException("压缩包包含非法路径：" + entry.getName());
-                }
-                if (entry.isDirectory()) {
-                    Files.createDirectories(target);
-                } else {
-                    Files.createDirectories(target.getParent());
-                    Files.copy(zis, target, StandardCopyOption.REPLACE_EXISTING);
-                }
-                zis.closeEntry();
-            }
+        Extractor extractor = ExtractorFactory.getExtractor(zip.getFileName().toString());
+        if (extractor == null) {
+            throw new IOException("不支持的压缩格式: " + zip.getFileName());
+        }
+        if (!extractor.extract(zip.toFile(), dir.toFile())) {
+            throw new IOException("ZIP 解压失败: " + zip);
         }
     }
 
