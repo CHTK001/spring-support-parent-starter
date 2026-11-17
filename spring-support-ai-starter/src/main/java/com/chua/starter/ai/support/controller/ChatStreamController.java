@@ -62,7 +62,7 @@ public class ChatStreamController {
     /**
      * 会话超时兜底值（分钟）：配置缺失/非法时用这个
      */
-    private static final int DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
+    private static final int DEFAULT_IDLE_TIMEOUT_MINUTES = 5;
 
     /**
      * 会话超时可配置区间下限（分钟）

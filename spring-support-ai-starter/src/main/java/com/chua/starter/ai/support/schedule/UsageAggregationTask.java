@@ -103,6 +103,31 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final int DAILY_GAP_FULL_BACKFILL_DAYS = 30;
 
     /**
+     * 用量状态：成功
+     */
+    private static final String STATUS_SUCCESS = "success";
+
+    /**
+     * 用量状态：失败（耗时超过会话超时上限被截断，数据保留）
+     */
+    private static final String STATUS_FAILED = "failed";
+
+    /**
+     * 会话超时默认值（分钟）：配置缺失/非法时，入库侧耗时截断的兜底上限。
+     */
+    private static final int DEFAULT_SESSION_TIMEOUT_MINUTES = 5;
+
+    /**
+     * 会话超时配置所在分组（设置中心 → 会话配置）
+     */
+    private static final String GROUP_SESSION = "session";
+
+    /**
+     * 会话超时配置字段名
+     */
+    private static final String FIELD_SESSION_IDLE_TIMEOUT = "stream_idle_timeout_minutes";
+
+    /**
      * 同步日志级别：错误
      */
     private static final String LOG_LEVEL_ERROR = "ERROR";
@@ -128,6 +153,15 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 全局设置读取工具（分组 全局：用量开关与上报间隔）
      */
     private final GlobalSettingReader settingReader;
+
+    /**
+     * 当前生效的会话超时上限（毫秒）：入库侧脏耗时截断的依据。
+     *
+     * <p>配置口径：{@code session.stream_idle_timeout_minutes}（分钟）。
+     * 缺失/非法时用默认 5 分钟；显式配置为 0 表示不限制（0=不截断）。
+     * 每轮同步开始时刷新一次，配置变更下一轮即生效。</p>
+     */
+    private volatile long sessionTimeoutMillis;
 
     /**
      * 用量 映射器
@@ -456,11 +490,32 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
+     * 刷新会话超时上限（毫秒），作为本轮入库侧耗时截断的依据。
+     *
+     * <p>读取 {@code session.stream_idle_timeout_minutes}（分钟）：缺失/非法时
+     * 用默认 {@value #DEFAULT_SESSION_TIMEOUT_MINUTES} 分钟；显式配置为 0
+     * 表示不限制，此时不截断。每轮同步开始时刷新一次，配置变更下一轮即生效。</p>
+     */
+    private void refreshSessionTimeout() {
+        try {
+            Integer minutes = settingReader.getIntOrNull(GROUP_SESSION, FIELD_SESSION_IDLE_TIMEOUT);
+            // 0=不限制：不截断任何耗时（但仍标记状态列，便于明细区分）
+            sessionTimeoutMillis = (minutes != null && minutes > 0) ? minutes * 60_000L : 0L;
+        } catch (Exception e) {
+            log.warn("[UsageAggregation] 读取会话超时配置失败，按默认 {} 分钟处理: {}",
+                    DEFAULT_SESSION_TIMEOUT_MINUTES, e.getMessage());
+            sessionTimeoutMillis = DEFAULT_SESSION_TIMEOUT_MINUTES * 60_000L;
+        }
+    }
+
+    /**
      * 通过 datasearch usageparser SPI 解析所有外部工具本地用量，写入本地用量表。
      * <p>注意：不使用 {@link Transactional}——外部解析可能耗时（每个 Parser 最多阻塞 120s），
      * 若包在事务里会长时间占用数据库连接导致连接池耗尽。逐条插入由 MyBatis 自动提交。</p>
      */
     public void syncExternalUsage() {
+        // 先刷新会话超时上限，本批所有耗时截断判定都用这一轮的值
+        refreshSessionTimeout();
         Map<String, UsageParser> parsers = collectParsers();
         if (parsers == null || parsers.isEmpty()) {
             log.debug("[UsageAggregation] 未发现 UsageParser 实现");
@@ -731,11 +786,30 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         record.setSysAiUsageCompletionTokens(usage.getOutputTokens());
         record.setSysAiUsageTotalTokens(usage.getTotalTokens());
         record.setSysAiUsageCachedTokens(usage.getCacheTokens());
-        record.setSysAiUsageTotalLatency(usage.getDurationMillis());
-        record.setSysAiUsageFirstTokenLatency(usage.getFirstTokenLatencyMillis());
-        // 解码速度 / 端到端吞吐
-        record.setSysAiUsageTokensPerSecond(usage.tokensPerSecond());
-        record.setSysAiUsageTotalTokensPerSecond(usage.totalTokensPerSecond());
+        // 脏耗时收口：耗时（总耗时/首字耗时）超过「会话超时」上限的记录，
+        // 一律截断为上限值并标记为失败（数据保留，不丢弃）；正常记录标记成功。
+        // 无耗时数据（null）无从判定，按成功处理。
+        Long latency = usage.getDurationMillis();
+        Long firstLatency = usage.getFirstTokenLatencyMillis();
+        boolean timeout = false;
+        long effLatency = latency != null ? latency : 0L;
+        if (latency != null && sessionTimeoutMillis > 0L && latency > sessionTimeoutMillis) {
+            effLatency = sessionTimeoutMillis;
+            timeout = true;
+        }
+        if (firstLatency != null && sessionTimeoutMillis > 0L
+                && firstLatency > sessionTimeoutMillis) {
+            // 首字耗时超过会话超时本身即失真（首字 ≤ 总耗时，物理上不可能）
+            timeout = true;
+        }
+        record.setSysAiUsageTotalLatency(timeout && latency != null ? sessionTimeoutMillis : latency);
+        record.setSysAiUsageFirstTokenLatency(
+                timeout && firstLatency != null ? sessionTimeoutMillis : firstLatency);
+        record.setSysAiUsageStatus(timeout ? STATUS_FAILED : STATUS_SUCCESS);
+        // 解码速度 / 端到端吞吐：用截断后的耗时重算，避免脏耗时派生出不可信速率；
+        // 外部已显式填充的速率优先（不覆盖）
+        record.setSysAiUsageTokensPerSecond(usage.tokensPerSecond(effLatency));
+        record.setSysAiUsageTotalTokensPerSecond(usage.totalTokensPerSecond(effLatency));
         record.setSysAiUsageInferenceStrength("默认");
         record.setSysAiUsageEndpoint("/v1/chat/completions");
         record.setSysAiUsageIp("127.0.0.1");

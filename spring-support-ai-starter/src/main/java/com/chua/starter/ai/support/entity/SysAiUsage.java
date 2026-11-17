@@ -178,6 +178,11 @@ public class SysAiUsage extends SysBase {
     private Integer sysAiUsageEstimatedTokens;
 
     /**
+     * 用量状态: success(成功)/failed(失败：耗时超过会话超时上限被截断)
+     */
+    private String sysAiUsageStatus;
+
+    /**
      * 获取分组名称，为空时返回默认值"默认"，保证前端展示有兜底。
      *
      * @return 分组名称，null 时返回"默认"
