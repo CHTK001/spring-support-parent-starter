@@ -11,14 +11,14 @@
   <properties>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-ssh-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-oauth-client-starter</artifactId>
-    </dependency>
+    <!--
+      依赖口径（report-client 是 monitor 的客户端，只承担子集能力）：
+      - 保留 job-starter 仅因 @Job 注解（com.chua.starter.job.support.annotation.Job）；
+      - 保留 utils-support-groovy-starter 仅因 GlueFactory 使用 groovy.lang.GroovyClassLoader；
+      - 已删除 0 引用的依赖：spring-support-ssh-starter / spring-support-oauth-client-starter /
+        spring-support-swagger-starter / utils-support-network-starter / spring-support-discovery-starter
+        （R5：不给客户端宿主平白带入 SSH / o认证 / Swagger / 服务发现）。
+    -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
@@ -34,18 +34,6 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-groovy-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-swagger-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-network-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-discovery-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
