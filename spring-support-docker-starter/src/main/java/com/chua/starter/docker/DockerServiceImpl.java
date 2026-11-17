@@ -11,7 +11,6 @@ import com.chua.starter.docker.spi.RegistryConfig;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.spi.RemoteExecResult;
@@ -87,12 +86,7 @@ public class DockerServiceImpl implements DockerService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 主机映射器
-     */
-    private final MsServerHostMapper hostMapper;
-
-    /**
-     * 主机服务（凭据解析）
+     * 主机服务（主机查询 + 凭据解析，统一走 server 模块契约，不直连其持久层）
      */
     private final ServerHostService serverHostService;
 
@@ -284,7 +278,7 @@ public class DockerServiceImpl implements DockerService {
                 }
                 String pullRef = registryService.pullRef(request.getRegistryId(), image);
                 String run = buildRunCommand(request, pullRef);
-                MsServerHost host = hostMapper.selectById(hostId);
+                MsServerHost host = requireHost(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -369,7 +363,7 @@ public class DockerServiceImpl implements DockerService {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
                 ensurePosix(hostId);
-                MsServerHost host = hostMapper.selectById(hostId);
+                MsServerHost host = requireHost(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -430,7 +424,7 @@ public class DockerServiceImpl implements DockerService {
             SshClient.TerminalOperation[] terminalRef = new SshClient.TerminalOperation[1];
             try {
                 ensurePosix(hostId);
-                MsServerHost host = hostMapper.selectById(hostId);
+                MsServerHost host = requireHost(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -567,7 +561,7 @@ public class DockerServiceImpl implements DockerService {
                     return;
                 }
                 String pullRef = registryService.pullRef(registryId, image.trim());
-                MsServerHost host = hostMapper.selectById(hostId);
+                MsServerHost host = requireHost(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -996,7 +990,7 @@ public class DockerServiceImpl implements DockerService {
         SshClients.Handle[] handleRef = new SshClients.Handle[1];
         try {
             ensurePosix(hostId);
-            MsServerHost host = hostMapper.selectById(hostId);
+            MsServerHost host = requireHost(hostId);
             ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
             if (!resolved.isOk()) {
                 sendEvent(emitter, "error", resolved.getMsg());
@@ -1206,15 +1200,28 @@ public class DockerServiceImpl implements DockerService {
     }
 
     /**
+     * 按标识取主机（经 server 模块契约 {@link ServerHostService#get(Long)}，不直连其持久层）
+     *
+     * @param hostId 主机标识
+     * @return 主机实体
+     * @throws IllegalStateException 主机不存在或凭据查询失败
+     */
+    private MsServerHost requireHost(Long hostId) {
+        ReturnResult<MsServerHost> result = serverHostService.get(hostId);
+        if (result == null || !result.isOk() || result.getData() == null) {
+            String msg = result == null ? "主机不存在" : result.getMsg();
+            throw new IllegalStateException(msg + ": " + hostId);
+        }
+        return result.getData();
+    }
+
+    /**
      * 校验主机为 POSIX 平台（Windows 无 POSIX shell）
      *
      * @param hostId 主机标识
      */
     private void ensurePosix(Long hostId) {
-        MsServerHost host = hostMapper.selectById(hostId);
-        if (host == null) {
-            throw new IllegalStateException("主机不存在: " + hostId);
-        }
+        MsServerHost host = requireHost(hostId);
         if (WindowsSshShell.isWindows(host)) {
             throw new UnsupportedOperationException("该主机为 Windows，暂不支持 Docker 管理");
         }
@@ -1229,7 +1236,7 @@ public class DockerServiceImpl implements DockerService {
      * @throws Exception 连接或执行失败
      */
     private RemoteExecResult execRemote(Long hostId, String command) throws Exception {
-        MsServerHost host = hostMapper.selectById(hostId);
+        MsServerHost host = requireHost(hostId);
         if (host == null) {
             throw new IllegalStateException("主机不存在: " + hostId);
         }
