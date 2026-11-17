@@ -5,11 +5,11 @@ import com.chua.starter.message.support.entity.SysMessageProvider;
 import com.chua.starter.message.support.entity.SysMessageTemplate;
 import com.chua.starter.message.support.mapper.SysMessageProviderMapper;
 import com.chua.starter.message.support.mapper.SysMessageTemplateMapper;
-import com.chua.starter.template.support.model.TemplateProviderInfo;
-import com.chua.starter.template.support.model.TemplateProviderSyncResult;
-import com.chua.starter.template.support.model.TemplateSourceDetail;
-import com.chua.starter.template.support.service.ProviderSource;
-import com.chua.starter.template.support.util.TemplateContentParams;
+import com.chua.starter.account.template.support.model.TemplateProviderInfo;
+import com.chua.starter.account.template.support.model.TemplateProviderSyncResult;
+import com.chua.starter.account.template.support.model.TemplateSourceDetail;
+import com.chua.starter.account.template.support.service.ProviderSource;
+import com.chua.starter.account.template.support.util.TemplateContentParams;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
