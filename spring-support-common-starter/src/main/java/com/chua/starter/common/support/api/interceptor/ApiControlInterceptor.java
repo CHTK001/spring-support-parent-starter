@@ -194,6 +194,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * <p>
      * 校验请求是否来自内网IP或白名单
      * </p>
+     *
+     * @param handlerMethod 处理器方法
+     * @param request       HTTP 请求
+     * @param response      HTTP 响应
+     * @return true 表示放行，false 表示已拦截写入响应
+     * @throws IOException 写响应失败
      */
     private boolean handleApiInternal(HandlerMethod handlerMethod, HttpServletRequest request,
                                       HttpServletResponse response) throws IOException {
@@ -271,17 +277,18 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
         // 非内网IP访问
         log.warn("非内网IP访问内部接口被拒绝: uri={}, clientIp={}", request.getRequestURI(), clientIp);
-        /**
-         * 写入响应。
-         * @param response 响应
-         * @param apiInternal.status( api内部.状态(
-         */
         writeResponse(response, apiInternal.status(), ReturnResult.error(apiInternal.message()));
         return false;
     }
 
     /**
      * 处理 @api特征 注解
+     *
+     * @param handlerMethod 处理器方法
+     * @param request       HTTP 请求
+     * @param response      HTTP 响应
+     * @return true 表示放行，false 表示已拦截写入响应
+     * @throws IOException 写响应失败
      */
     private boolean handleApiFeature(HandlerMethod handlerMethod, HttpServletRequest request,
                                      HttpServletResponse response) throws IOException {
@@ -304,12 +311,6 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
                     ? override.disabledStatus() : apiFeature.disabledStatus();
             String message = override != null && StringUtils.hasText(override.disabledMessage())
                     ? override.disabledMessage() : apiFeature.disabledMessage();
-            /**
-             * 写入响应。
-             * @param response 响应
-             * @param status 状态
-             * @param ReturnResult.error(message 申报结果.错误(消息
-             */
             writeResponse(response, status, ReturnResult.error(message));
             return false;
         }
@@ -319,6 +320,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
      * 处理 @apimock 注解
+     *
+     * @param handlerMethod 处理器方法
+     * @param request       HTTP 请求
+     * @param response      HTTP 响应
+     * @return true 表示放行，false 表示已写入 Mock 响应
+     * @throws IOException 写响应失败
      */
     private boolean handleApiMock(HandlerMethod handlerMethod, HttpServletRequest request,
                                   HttpServletResponse response) throws IOException {
@@ -378,6 +385,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * <p>
      * 支持语义化版本号（如 1.0.0, 1.0.0-release, 2.0.0-rc.1）进行比较
      * </p>
+     *
+     * @param handlerMethod 处理器方法
+     * @param request       HTTP 请求
+     * @param response      HTTP 响应
+     * @return true 表示放行，false 表示已拦截写入响应
+     * @throws IOException 写响应失败
      */
     private boolean handleApiDeprecated(HandlerMethod handlerMethod, HttpServletRequest request,
                                         HttpServletResponse response) throws IOException {
@@ -447,6 +460,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
     /**
      * 处理 @apigray 注解
+     *
+     * @param handlerMethod 处理器方法
+     * @param request       HTTP 请求
+     * @param response      HTTP 响应
+     * @return true 表示放行，false 表示已拦截写入响应
+     * @throws IOException 写响应失败
      */
     private boolean handleApiGray(HandlerMethod handlerMethod, HttpServletRequest request,
                                   HttpServletResponse response) throws IOException {
@@ -504,11 +523,6 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
             }
             
             // 返回未命中灰度的响应
-            /**
-             * 写入响应。
-             * @param response 响应
-             * @param apiGray.notInGrayStatus( apigray.not入graystatus(
-             */
             writeResponse(response, apiGray.notInGrayStatus(), 
                     ReturnResult.error(apiGray.notInGrayMessage()));
             return false;
@@ -533,6 +547,10 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * 已注册 {@link AuthService} 时只认它（身份由认证体系签发，客户端不可伪造）；
      * 未接入认证体系的应用才回退到 请求 attribute / 会话 的 "roles"（集合 或逗号分隔字符串）。
      * </p>
+     *
+     * @param request HTTP 请求
+     * @param session HTTP 会话（可为空）
+     * @return 角色集合（无角色时为空集合）
      */
     @SuppressWarnings("unchecked")
     private Collection<String> resolveRoles(HttpServletRequest request,
@@ -631,6 +649,12 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * （注解值即可写角色名也可写权限标识）；超级管理员放行全部受限出口。
      * 解析不出身份即拒绝——不信任任何客户端可写的请求头。
      * </p>
+     *
+     * @param handlerMethod 处理器方法
+     * @param request       HTTP 请求
+     * @param response      HTTP 响应
+     * @return true 表示放行，false 表示已拦截写入响应
+     * @throws IOException 写响应失败
      */
     private boolean handlePermission(HandlerMethod handlerMethod, HttpServletRequest request,
                                      HttpServletResponse response) throws IOException {
