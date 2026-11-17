@@ -476,6 +476,14 @@ public final class CreditSigner {
          */
         private final String body;
 
+        /**
+         * 构造签名请求。
+         *
+         * @param url     完整地址
+         * @param method  HTTP 方法
+         * @param headers 最终请求头
+         * @param body    请求体（可为空串；null 表示不带 body）
+         */
         private Signed(String url, String method, Map<String, String> headers, String body) {
             this.url = url;
             this.method = method;
@@ -483,18 +491,38 @@ public final class CreditSigner {
             this.body = body;
         }
 
+        /**
+         * 获取完整地址。
+         *
+         * @return 完整地址
+         */
         public String getUrl() {
             return url;
         }
 
+        /**
+         * 获取 HTTP 方法。
+         *
+         * @return HTTP 方法
+         */
         public String getMethod() {
             return method;
         }
 
+        /**
+         * 获取最终请求头。
+         *
+         * @return 最终请求头
+         */
         public Map<String, String> getHeaders() {
             return headers;
         }
 
+        /**
+         * 获取请求体。
+         *
+         * @return 请求体（可为空串；null 表示不带 body）
+         */
         public String getBody() {
             return body;
         }
