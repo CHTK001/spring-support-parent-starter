@@ -315,6 +315,17 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
 
     // ── 私有辅助 ──
 
+    /**
+     * 构建渠道凭据（exchange 响应 + 用户身份 + 设备标识）。
+     *
+     * @param exchange     交换令牌响应
+     * @param uid          用户 ID（可为 null）
+     * @param nickname     昵称（可为 null）
+     * @param enterpriseId 企业 ID（可为 null）
+     * @param machineId    机器 ID（可为 null）
+     * @param deviceId     设备 ID（可为 null）
+     * @return 渠道凭据
+     */
     private static Map<String, Object> buildCredential(
             Map<String, Object> exchange, String uid, String nickname, String enterpriseId,
             String machineId, String deviceId) {
@@ -363,7 +374,15 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return result;
     }
 
-    /** 调 GetUserInfo 补齐身份（失败返回 null，调用方回退回调值）。 */
+    /**
+     * 调 GetUserInfo 补齐身份（失败返回 null，调用方回退回调值）。
+     *
+     * @param accessToken        访问令牌
+     * @param fallbackUid        兜底用户 ID
+     * @param fallbackNickname   兜底昵称
+     * @param fallbackEnterpriseId 兜底企业 ID
+     * @return 用户信息（失败时 null）
+     */
     private static Map<String, Object> fetchUserInfo(
             String accessToken, String fallbackUid, String fallbackNickname, String fallbackEnterpriseId) {
         try {
@@ -615,7 +634,12 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return found ? total : null;
     }
 
-    /** 随机 32 hex（16 字节）。 */
+    /**
+     * 随机 hex 字符串（每字节两位）。
+     *
+     * @param byteCount 字节数
+     * @return hex 字符串
+     */
     static String randomHex(int byteCount) {
         byte[] bytes = new byte[byteCount];
         new SecureRandom().nextBytes(bytes);
@@ -626,7 +650,13 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return sb.toString();
     }
 
-    /** login_trace_id = machine_id XOR device_id 的 hex 表示（对齐原版）。 */
+    /**
+     * login_trace_id = machine_id XOR device_id 的 hex 表示（对齐原版）。
+     *
+     * @param machineId 机器 ID（16 字节 hex）
+     * @param deviceId  设备 ID（16 字节 hex）
+     * @return 逐字节异或后的 hex 表示
+     */
     static String machineTraceId(String machineId, String deviceId) {
         StringBuilder sb = new StringBuilder(32);
         for (int i = 0; i < 16; i++) {
@@ -637,6 +667,13 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
         return sb.toString();
     }
 
+    /**
+     * 追加 URL 查询参数（首个参数前不加 &amp;）。
+     *
+     * @param sb    缓冲
+     * @param key   参数键
+     * @param value 参数值
+     */
     static void appendParam(StringBuilder sb, String key, String value) {
         if (!sb.isEmpty()) {
             sb.append('&');
