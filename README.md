@@ -452,6 +452,23 @@ plugin:
 | `open-interface-log` | `boolean` | `false` | 开启接口日志 |
 | `slow-request-threshold-ms` | `long` | `3000` |  |
 
+**配置**（`plugin.log.portal.*`，`TracePortalProperties`，默认关闭）
+
+链路日志汇聚门户：按 `traceId` 把同一请求的日志归组，MDC 只在块头打印一次、正文只留 时间/级别/线程/logger/消息，
+解决异步/逐行输出导致 MDC 分散各行的问题。汇出到独立文件，不改动现有 CONSOLE/FILE/ASYNC。
+收口触发：请求边界（MdcHandlerFilter finally）、单链路条数上限、空闲 TTL、待收口链路数上限。
+
+| 字段 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `enabled` | `boolean` | `false` | 是否启用（默认关闭，对宿主零影响） |
+| `file` | `string` | `./logs/trace-portal.log` | 汇聚块输出文件 |
+| `max-events-per-trace` | `int` | `200` | 单链路最大缓冲条数，达到即收口 |
+| `idle-millis` | `long` | `3000` | 空闲多久自动收口（长连接/SSE 兜底） |
+| `max-pending-traces` | `int` | `512` | 最大待收口链路数，超过淘汰最老的 |
+| `sweep-interval-millis` | `long` | `1000` | 空闲清扫周期 |
+
+> 与 `watchlog/console`（业务显式构造的树形排版 SPI）正交：portal 是拦截 logback 事件、按 `MDC.traceId` 自动归组的采集 Appender，二者输入/触发/ SPI 均不同，不构成重复实现。
+
 **配置**（`plugin.thread.*`，`AsyncThreadPoolProperties`）
 
 | 字段 | 类型 | 默认值 | 说明 |

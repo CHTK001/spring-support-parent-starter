@@ -134,7 +134,7 @@
 | `temp.user` | `""` | 静态账号 `用户名:口令;...`，默认**刻意留空**；支持加盐摘要 `用户名:盐$MD5(盐+口令)` |
 | `temp.menu-path` | 空 | 临时账号菜单文件 |
 | `key.enabled` / `access-key` / `secret-key` | `false` | AK/SK 二次加密 |
-| `ai-app-key.enabled` / `table-name` / `app-key-column` / `status-column` / `expire-time-column` | `false` / `sys_ai_app_key` / `sys_ai_app_key_app_key` / `sys_ai_app_key_status` / `sys_ai_app_key_expire_datetime` | AI AppKey 本地校验 |
+| `ai-app-key.enabled` | `false` | AI AppKey 本地校验（台账查询由 AI 模块通过 `AppKeyAuthenticator` 契约提供） |
 | `fingerprint.global-verification` / `enable-client-verification` / `config-cache-timeout` | `false` / `false` / `3600` | 指纹校验 |
 
 **没有 `exclude-address` 这个配置项**：排除靠 `whitelist`（yaml 清单 / 外部文件 / 动态接口）实现，
@@ -327,5 +327,6 @@ public class AcmeProtocol extends AbstractProtocol {
 10. **认证信息有缓存延迟**：`cache-timeout` 默认 6 小时，权限变更 / 踢人在缓存窗口内可能不立即生效。
 11. **`AuthSessionUtils` 依赖请求上下文**：非 Web 线程（异步任务、定时任务）取不到
     `RequestContextHolder`，会返回空值而不是抛异常，调用方必须自己判空。
-12. **AI AppKey 需要数据源**：`ai-app-key.enabled=true` 且容器中有 `DataSource` 才装配
-    `AiAppKeySupport`，否则该开关静默无效。
+12. **AI AppKey 的台账属于 AI 模块**：`ai-app-key.enabled=true` 且类路径上存在 AI 模块提供的
+    `AppKeyAuthenticator` 实现时才真正生效；本模块不配置表名 / 列名，也不直连 AI 的持久层。
+    未装 AI 模块时该开关静默无效（继续走 o认证 协议），不会把请求判成认证失败。
