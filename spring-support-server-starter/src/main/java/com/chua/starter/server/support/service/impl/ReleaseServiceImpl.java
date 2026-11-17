@@ -641,6 +641,9 @@ public class ReleaseServiceImpl implements ReleaseService {
        *
        * <p>使用 {@code ObjectMapper.writeValueAsString} 时受检异常必须处理；序列化和项目经理 APM 参数
        * 脱落无关，抛错时按「原样」回写。</p>
+       *
+       * @param args 参数列表
+       * @return JSON 字符串（失败时按原样回写）
        */
     private String writeArgs(List<String> args) {
         try {
@@ -652,7 +655,10 @@ public class ReleaseServiceImpl implements ReleaseService {
     }
 
       /**
-       * 是否 APM 参数（已由项目自行声明）
+       * 是否 APM 参数（已由项目自行声明）。
+       *
+       * @param arg 参数
+       * @return 以 -javaagent: 或 -Dskywalking. 开头返回 true
        */
     private boolean isApmArg(String arg) {
         return arg.startsWith("-javaagent:") || arg.startsWith("-Dskywalking.");
@@ -1242,10 +1248,23 @@ public class ReleaseServiceImpl implements ReleaseService {
         return ReturnResult.success();
     }
 
+    /**
+     * 查询项目日志读取行数。
+     *
+     * @param id 项目 ID
+     * @return 日志读取行数
+     */
     public ReturnResult<Integer> getLogLines(Long id) {
         return ReturnResult.ok(resolveLogLines(id));
     }
 
+    /**
+     * 更新项目日志读取行数。
+     *
+     * @param id    项目 ID
+     * @param lines 行数（不能为空）
+     * @return 更新结果
+     */
     public ReturnResult<Void> updateLogLines(Long id, Integer lines) {
         if (lines == null) {
             return ReturnResult.error("行数不能为空");
@@ -2641,6 +2660,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        * 都不可用时自动下载 Maven 到临时目录。
        *
        * @param project 项目（含 Maven 配置）
+       * @return Maven 主目录绝对路径
        * @throws Exception 下载或解压失败
        */
     private String ensureMavenAvailable(MsServerProject project) throws Exception {
@@ -2690,6 +2710,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        * 自动下载 Maven 到临时目录并设置 maven.home 系统属性
        *
        * @param project 项目（含 Maven 版本配置）
+       * @return Maven 主目录绝对路径
        * @throws Exception 下载或解压失败
        */
     private String downloadMaven(MsServerProject project) throws Exception {
@@ -3556,6 +3577,12 @@ public class ReleaseServiceImpl implements ReleaseService {
         private final String key;
         private final String value;
 
+        /**
+         * 构造环境变量键值（仅服务启动器内部使用）。
+         *
+         * @param key   键
+         * @param value 值
+         */
         private EnvVar(String key, String value) {
             this.key = key;
             this.value = value;

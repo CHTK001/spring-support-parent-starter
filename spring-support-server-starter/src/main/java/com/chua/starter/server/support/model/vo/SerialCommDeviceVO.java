@@ -47,26 +47,56 @@ public class SerialCommDeviceVO {
      */
     private boolean available;
 
+    /**
+     * 获取系统端口名。
+     *
+     * @return 系统端口名
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * 设置系统端口名。
+     *
+     * @param name 系统端口名
+     */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * 获取系统路径（设备节点）。
+     *
+     * @return 系统路径
+     */
     public String getPath() {
         return path;
     }
 
+    /**
+     * 设置系统路径（设备节点）。
+     *
+     * @param path 系统路径
+     */
     public void setPath(String path) {
         this.path = path;
     }
 
+    /**
+     * 获取设备描述（厂商/设备名等）。
+     *
+     * @return 设备描述
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * 设置设备描述（厂商/设备名等）。
+     *
+     * @param description 设备描述
+     */
     public void setDescription(String description) {
         this.description = description;
     }
