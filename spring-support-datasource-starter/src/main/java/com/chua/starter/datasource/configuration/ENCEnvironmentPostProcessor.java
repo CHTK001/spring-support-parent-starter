@@ -2,6 +2,7 @@
 package com.chua.starter.datasource.configuration;
 
 import com.chua.common.support.reflection.ReflectUtils;
+import com.chua.common.support.config.EncValue;
 import com.chua.starter.datasource.support.AesPasswordDecryptor;
 import com.chua.starter.datasource.support.PasswordDecryptor;
 import lombok.extern.slf4j.Slf4j;
@@ -192,19 +193,16 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     /**
-     * 判断值是否为 ENC 加密格式
+     * 判断值是否为 ENC 加密格式（复用底层公共原语）
      * @param value 值
      * @return 是否enc值的结果
      */
     static boolean isEncValue(String value) {
-        if (value == null || value.isEmpty()) {
-            return false;
-        }
-        return value.startsWith("ENC(") && value.endsWith(")");
+        return EncValue.isEnc(value);
     }
 
     /**
-     * 解析并解密 ENC 值
+     * 解析并解密 ENC 值：先按公共原语做格式识别与包裹剥离，再按指定解密器解密
      *
      * @param encValue ENC 格式的值
      * @return 解密后的明文
