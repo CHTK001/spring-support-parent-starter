@@ -14,21 +14,45 @@ public class PaymentException extends RuntimeException {
      */
     private Integer code;
 
+    /**
+     * 以默认错误码 500 构造异常。
+     *
+     * @param message 异常消息
+     */
     public PaymentException(String message) {
         super(message);
         this.code = 500;
     }
 
+    /**
+     * 以指定错误码构造异常。
+     *
+     * @param code    错误码
+     * @param message 异常消息
+     */
     public PaymentException(Integer code, String message) {
         super(message);
         this.code = code;
     }
 
+    /**
+     * 以默认错误码 500 构造异常（带原因）。
+     *
+     * @param message 异常消息
+     * @param cause   根本原因
+     */
     public PaymentException(String message, Throwable cause) {
         super(message, cause);
         this.code = 500;
     }
 
+    /**
+     * 以指定错误码构造异常（带原因）。
+     *
+     * @param code    错误码
+     * @param message 异常消息
+     * @param cause   根本原因
+     */
     public PaymentException(Integer code, String message, Throwable cause) {
         super(message, cause);
         this.code = code;
