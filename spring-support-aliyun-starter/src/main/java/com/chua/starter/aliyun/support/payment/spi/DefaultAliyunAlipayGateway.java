@@ -1,6 +1,7 @@
 package com.chua.starter.aliyun.support.payment.spi;
 
 import com.alipay.api.AlipayApiException;
+import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.spi.annotations.Spi;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
@@ -30,7 +31,6 @@ import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayTradeQueryRespons
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayTransferRequest;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayTransferResponse;
 import com.chua.starter.aliyun.support.properties.AliyunAlipayProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -50,10 +50,6 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
      * 客户端工厂
     */
     private final AliyunAlipayClientFactory clientFactory = new AliyunAlipayClientFactory();
-    /**
-     * Objectmapper
-    */
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     /**
@@ -442,7 +438,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
      */
     private String toJson(Object value) {
         try {
-            return objectMapper.writeValueAsString(value);
+            return Json.toJson(value);
         } catch (Exception e) {
             /**
              * illegal状态异常。
