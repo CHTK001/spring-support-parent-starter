@@ -112,6 +112,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param startTime 开始时间（含），不能为 空
      * @param endTime   结束时间（不含），不能为 空
      * @param userId    归属用户（可为空，为空时聚合全部用户，日汇总回填即走该分支）
+     * @param includeOrphan 是否包含无归属的孤儿记录
      * @return 按天分组的聚合行列表，无数据时为空列表
      */
     List<DailyAggregateRow> selectDailyAggregate(
@@ -148,6 +149,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param startTime 开始时间（含）
      * @param endTime   结束时间（不含）
      * @param userId    归属用户（可为空）
+     * @param includeOrphan 是否包含无归属的孤儿记录
      * @return 按小时分组的聚合行列表
      */
     List<HourlyAggregateRow> selectHourlyAggregate(
@@ -187,6 +189,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param startTime 开始时间（可为空）
      * @param endTime   结束时间（可为空）
      * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @param includeOrphan 是否包含无归属的孤儿记录
      * @return 维度聚合行列表，无数据时为空列表
      */
     List<UsageSummaryRow> selectUsageSummary(
@@ -232,6 +235,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param startTime 开始时间（含），不能为 空
      * @param endTime   结束时间（不含），不能为 空
      * @param userId    归属用户（可为空，为空时聚合全部用户）
+     * @param includeOrphan 是否包含无归属的孤儿记录
      * @return 按天升序、同天内按令牌降序的聚合行列表
      */
     List<DailyModelRow> selectDailyModelAggregate(
@@ -281,4 +285,19 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      */
     @Select("SELECT DISTINCT DATE(sys_ai_usage_call_time) FROM sys_ai_usage")
     List<LocalDate> selectDistinctUsageDays();
+
+    /**
+     * 批量插入用量明细（一条多值 INSERT）。
+     *
+     * <p>外部工具同步一次可能交付上千行，逐条 {@code insert} 会把往返次数与事务日志
+     * 放大到不可接受；这里按调用方给定的批次一次性写入。<b>调用方必须自行把批量
+     * 控制在 500 行以内</b>（34 列 × 500 = 17000 个占位符，远低于 MySQL 65535 上限）。</p>
+     *
+     * <p>整批失败时调用方需要回退逐条插入：可能是某一行字段超长，逐条才能定位到具体失败行，
+     * 从而保留「单条失败不拖垮整批」的语义。</p>
+     *
+     * @param list 待插入的用量记录，不能为空
+     * @return 实际插入行数
+     */
+    int insertBatch(@Param("list") List<SysAiUsage> list);
 }

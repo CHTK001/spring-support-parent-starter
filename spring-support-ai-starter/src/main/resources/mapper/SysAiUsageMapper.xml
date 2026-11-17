@@ -323,4 +323,42 @@
         GROUP BY sys_ai_usage_provider, sys_ai_usage_model
     </select>
 
+    <!--
+        批量插入用量明细。
+        <p>外部工具同步一次可能交付上千行，逐条 insert 会把往返次数与事务日志放大到
+        不可接受，故合并成一条多值 INSERT。调用方须把批量控制在 500 行以内
+        （34 列 × 500 = 17000 个占位符，远低于 MySQL 65535 上限）。</p>
+        <p>{@code create_name}/{@code create_by}/{@code create_time} 不写：这三列均可空，
+        且存量行同样是 NULL，保持与逐条插入一致的落库形态（create_time 有默认值）。</p>
+    -->
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO sys_ai_usage
+        (sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model,
+        sys_ai_usage_call_type, sys_ai_usage_inference_strength, sys_ai_usage_endpoint,
+        sys_ai_usage_ip, sys_ai_usage_location, sys_ai_usage_type, sys_ai_usage_billing_mode,
+        sys_ai_usage_prompt_tokens, sys_ai_usage_completion_tokens, sys_ai_usage_total_tokens,
+        sys_ai_usage_input_cost, sys_ai_usage_output_cost, sys_ai_usage_total_cost,
+        sys_ai_usage_cached_tokens, sys_ai_usage_cached_cost, sys_ai_usage_input_price_per_1m,
+        sys_ai_usage_output_price_per_1m, sys_ai_usage_cache_read_price_per_1m,
+        sys_ai_usage_service_tier, sys_ai_usage_ratio, sys_ai_usage_original_cost,
+        sys_ai_usage_first_token_latency, sys_ai_usage_total_latency,
+        sys_ai_usage_tokens_per_second, sys_ai_usage_total_tokens_per_second,
+        sys_ai_usage_request_id, sys_ai_usage_user_id, sys_ai_usage_call_time,
+        sys_ai_usage_source, sys_ai_usage_estimated_tokens, sys_ai_usage_status) VALUES
+        <foreach collection="list" item="u" separator=",">
+            (#{u.sysAiUsageGroupName}, #{u.sysAiUsageProvider}, #{u.sysAiUsageModel},
+            #{u.sysAiUsageCallType}, #{u.sysAiUsageInferenceStrength}, #{u.sysAiUsageEndpoint},
+            #{u.sysAiUsageIp}, #{u.sysAiUsageLocation}, #{u.sysAiUsageType}, #{u.sysAiUsageBillingMode},
+            #{u.sysAiUsagePromptTokens}, #{u.sysAiUsageCompletionTokens}, #{u.sysAiUsageTotalTokens},
+            #{u.sysAiUsageInputCost}, #{u.sysAiUsageOutputCost}, #{u.sysAiUsageTotalCost},
+            #{u.sysAiUsageCachedTokens}, #{u.sysAiUsageCachedCost}, #{u.sysAiUsageInputPricePer1M},
+            #{u.sysAiUsageOutputPricePer1M}, #{u.sysAiUsageCacheReadPricePer1M},
+            #{u.sysAiUsageServiceTier}, #{u.sysAiUsageRatio}, #{u.sysAiUsageOriginalCost},
+            #{u.sysAiUsageFirstTokenLatency}, #{u.sysAiUsageTotalLatency},
+            #{u.sysAiUsageTokensPerSecond}, #{u.sysAiUsageTotalTokensPerSecond},
+            #{u.sysAiUsageRequestId}, #{u.sysAiUsageUserId}, #{u.sysAiUsageCallTime},
+            #{u.sysAiUsageSource}, #{u.sysAiUsageEstimatedTokens}, #{u.sysAiUsageStatus})
+        </foreach>
+    </insert>
+
 </mapper>

@@ -217,6 +217,32 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final int RETRY_QUEUE_LIMIT = 2000;
 
     /**
+     * 单轮外部同步的时间预算（秒）。
+     *
+     * <p>预算用尽即截断本轮流：解析器按游标续传，下一轮从「上一整页末尾」接着扫。
+     * 取 240 秒是为了在「一轮 5 分钟」的调度周期内留出落库与聚合的余量，
+     * 同时让 opencode 的旧库（约 150~170 秒/全量）也能在 2~3 轮内补齐。</p>
+     */
+    private static final int SYNC_BUDGET_SECONDS = 240;
+
+    /**
+     * 阻塞等待的宽限（秒）：预算到点会主动取消上游，这里只做兜底，
+     * 避免解析器实现不响应取消时把调度线程永久挂住。
+     */
+    private static final int SYNC_SLACK_SECONDS = 60;
+
+    /**
+     * 单页消费条数：与 opencode 解析器的分页大小一致，
+     * 保证「一整页消费完 → 游标推进到页末 → 这一页才落库」三者对齐。
+     */
+    private static final int SYNC_PAGE_SIZE = 2000;
+
+    /**
+     * 单次批量 INSERT 的行数：34 列 × 500 = 17000 个占位符，远低于 MySQL 65535 上限。
+     */
+    private static final int SYNC_INSERT_CHUNK = 500;
+
+    /**
      * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
      */
     @org.springframework.beans.factory.annotation.Autowired
@@ -512,6 +538,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 通过 datasearch usageparser SPI 解析所有外部工具本地用量，写入本地用量表。
      * <p>注意：不使用 {@link Transactional}——外部解析可能耗时（每个 Parser 最多阻塞 120s），
      * 若包在事务里会长时间占用数据库连接导致连接池耗尽。逐条插入由 MyBatis 自动提交。</p>
+     * <p><b>消费方式：逐页限流。</b>解析器按游标惰性分页（每页
+     * {@value #SYNC_PAGE_SIZE} 行），本方法每消费满一页就批量落库，
+     * 单轮时间预算 {@value #SYNC_BUDGET_SECONDS} 秒；预算用尽只是取消本轮，
+     * 下一轮从上一整页末尾续扫。旧实现一次性全量装载后 300 秒超时，整批丢弃，
+     * 于是「每轮都超时、数据永远入不了库」—— 这是本机 100 万行用量一条都没同步进来的根因。</p>
      */
     public void syncExternalUsage() {
         // 先刷新会话超时上限，本批所有耗时截断判定都用这一轮的值
@@ -553,83 +584,48 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 continue;
             }
             try {
-                List<AiUsage> batch = new ArrayList<>();
-                // 响应式流：限流消费，避免大表全量装载把内存打满
-                entry.getValue().streamAll()
-                        .doOnNext(batch::add)
-                        .blockLast(java.time.Duration.ofSeconds(300));
-                if (batch.isEmpty()) {
-                    continue;
-                }
-                // 按 requestId 去重：已入库的跳过，新记录（含历史缺口/在途完成）照插；
-                // 无 requestId 的解析器退回时间水位兜底，避免全量重复
-                Set<String> existingIds = existingRequestIds(entry.getKey(), batch);
-                Set<String> seenIds = new HashSet<>();
-                LocalDateTime since = maxCallTimeOfGroup(entry.getKey());
-                // 本轮需要重试的记录（上次插入失败的）。取出后先于水位判断执行 ——
-                // 它们大多没有 requestId，按水位必然被跳过，不特判就等于永远重试不到。
-                // 用**恒等**比较（IdentityHashMap）而非 equals：不同调用可能产出内容相同
-                // 但时间不同的记录，用 equals 会把「本次真正的新记录」误当成重试项放过水位。
+                GroupSyncContext ctx = new GroupSyncContext(entry.getKey(), maxCallTimeOfGroup(entry.getKey()));
+                // 上轮失败的重试批先落一次：它们大多没有 requestId，按时间水位必然被跳过，
+                // 必须先于本次流的去重判断执行（retrySet 用**恒等**比较，只豁免重试记录本身）
                 List<AiUsage> retryBatch = pollRetry(entry.getKey());
-                Set<AiUsage> retrySet = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
-                retrySet.addAll(retryBatch);
+                ctx.retrySet.addAll(retryBatch);
                 if (!retryBatch.isEmpty()) {
-                    batch = new ArrayList<>(batch);
-                    batch.addAll(0, retryBatch);
+                    flushBatch(ctx, retryBatch);
                 }
-                int inserted = 0;
-                int skipped = 0;
-                int failed = 0;
-                for (AiUsage usage : batch) {
-                    String requestId = usage.getRequestId();
-                    if (requestId != null && !requestId.isBlank()) {
-                        // 有稳定请求号：按 requestId 去重，历史缺口（在途/漏采）可在任一次同步补齐
-                        if (existingIds.contains(requestId) || !seenIds.add(requestId)) {
-                            skipped++;
-                            continue;
-                        }
-                    } else if (!retrySet.contains(usage)) {
-                        // 无请求号：退回时间水位，避免全量重复插入。
-                        // 重试记录豁免此判断 —— 它们上一轮就是被水位挡下来的，
-                        // 再走同一道判断等于原地踏步。
-                        LocalDateTime callTime = usage.getStartTime() != null
-                                ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
-                                : null;
-                        if (since != null && (callTime == null || !callTime.isAfter(since))) {
-                            skipped++;
-                            continue;
-                        }
-                    }
-                    try {
-                        SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
-                        if (record == null) {
-                            // 缺价 / 字段异常，构造不出记录。这条**必须留痕**：
-                            // 无 requestId 的记录没有第二次机会（见下方 failed 处理）。
-                            failed++;
-                            offerRetry(entry.getKey(), usage);
-                            continue;
-                        }
-                        usageMapper.insert(record);
-                        inserted++;
-                        total++;
-                        if (requestId != null && !requestId.isBlank()) {
-                            existingIds.add(requestId);
-                        }
-                    } catch (Throwable ex) {
-                        // 单条失败（缺价/字段异常等）不应拖垮整批
-                        failed++;
-                        offerRetry(entry.getKey(), usage);
-                        log.warn("[UsageAggregation] [{}] 单条用量入库失败: {} -> {}",
-                                entry.getKey(), usage.getRequestId(), ex.getMessage());
-                    }
-                }
+                // 单轮时间预算：解析器按游标续传，预算用尽即取消本轮流，
+                // 下一轮从「上一整页末尾」接着扫 —— 不会像整批装载那样 300 秒超时后全丢。
+                // 截断只对可续传（游标）解析器安全，当前仅 opencode 走这条路。
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(SYNC_BUDGET_SECONDS);
+                entry.getValue().streamAll()
+                        .takeWhile(ignored -> System.nanoTime() - deadline < 0L)
+                        // 页大小与解析器分页一致：一整页消费完，游标恰好推进到页末
+                        .buffer(SYNC_PAGE_SIZE)
+                        .doOnNext(page -> {
+                            ctx.delivered += page.size();
+                            try {
+                                flushBatch(ctx, page);
+                            } catch (Throwable ex) {
+                                // 兜底：游标在本页交付时已经推进，异常若逃逸会中断整轮流（后续页不再消费），
+                                // 而这一页也不会再被扫到。所以除了留痕，还要整页放回重试队列给第二次机会。
+                                // 失败数按整页计 —— 可能高估，因为回退逐条插入时已入库的那部分不会重复插入
+                                // （下一轮按 requestId 去重），只是计数偏大。
+                                ctx.failed += page.size();
+                                for (AiUsage usage : page) {
+                                    offerRetry(entry.getKey(), usage);
+                                }
+                                log.error("[UsageAggregation] [{}] 本页落库异常（{} 条），已整页转入重试队列: {}",
+                                        entry.getKey(), page.size(), ex.getMessage(), ex);
+                            }
+                        })
+                        .blockLast(java.time.Duration.ofSeconds(SYNC_BUDGET_SECONDS + SYNC_SLACK_SECONDS));
                 /**
                  * record日志。
                  * @param inserted) 日志水平仪信息
                  * @param entry.getKey( entry.获取键(
                  */
-                recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量（新增 %d）", entry.getKey(), batch.size(), inserted));
-                if (failed > 0) {
+                recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量（新增 %d，跳过 %d）",
+                        entry.getKey(), ctx.delivered + retryBatch.size(), ctx.inserted, ctx.skipped));
+                if (ctx.failed > 0) {
                     // 失败数必须进日志、且提到 ERROR 级别。此前这里只有一条 WARN，
                     // 且「同步 N 条（新增 M）」看不出 N-M 去哪了：
                     // 对无 requestId 的数据源，这些记录会被后续成功记录推高的水位
@@ -638,8 +634,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                     // 进程重启后仍未救回的，这里就是唯一的线索。
                     recordLog(LOG_LEVEL_ERROR, String.format(
                             "[%s] 有 %d 条用量入库失败（已入重试队列，重启后仍未入库的即为永久缺失）",
-                            entry.getKey(), failed));
+                            entry.getKey(), ctx.failed));
                 }
+                total += ctx.inserted;
             } catch (Throwable e) {
  // 用 抛出 而非 异常：单个 Parser 的 错误（如缺依赖 no类deffound错误）
                 // 也会捕获，避免中断后续 parser 的同步
@@ -667,6 +664,158 @@ public class UsageAggregationTask implements SchedulingConfigurer {
              * @param "本次外部同步无新增数据（本地工具无可用记录）" "本次外部同步无新增数据（本地工具无可用记录）"
              */
             recordLog(LOG_LEVEL_INFO, "本次外部同步无新增数据（本地工具无可用记录）");
+        }
+    }
+
+    /**
+     * 落库一页用量：去重 → 映射 → 分批插入。
+     *
+     * <p>去重是<b>页内集合 + 库内回查</b>两段，不跨页累积：每页落库后，
+     * 后续页的回查天然能看到前面页刚插入的行，因此无需把整轮（百万级）的 requestId
+     * 全留在内存里；页内集合只用来挡住同一页里的重复行。</p>
+     *
+     * @param ctx  本轮数据源状态（时间水位、重试集合与计数）
+     * @param page 本页记录（解析器交付的一页，或上轮失败的重试批）
+     */
+    private void flushBatch(GroupSyncContext ctx, List<AiUsage> page) {
+        if (page == null || page.isEmpty()) {
+            return;
+        }
+        // 按 requestId 去重：库内已存在的跳过，新记录（含历史缺口/在途完成）照插
+        Set<String> existingIds = existingRequestIds(ctx.groupName, page);
+        Set<String> seenIds = new HashSet<>(page.size());
+        List<AiUsage> accepted = new ArrayList<>(page.size());
+        List<SysAiUsage> records = new ArrayList<>(page.size());
+        for (AiUsage usage : page) {
+            String requestId = usage.getRequestId();
+            if (requestId != null && !requestId.isBlank()) {
+                // 有稳定请求号：按 requestId 去重，历史缺口（在途/漏采）可在任一次同步补齐
+                if (existingIds.contains(requestId) || !seenIds.add(requestId)) {
+                    ctx.skipped++;
+                    continue;
+                }
+            } else if (!ctx.retrySet.contains(usage)) {
+                // 无请求号：退回时间水位，避免全量重复插入。
+                // 重试记录豁免此判断 —— 它们上一轮就是被水位挡下来的，
+                // 再走同一道判断等于原地踏步。
+                LocalDateTime callTime = usage.getStartTime() != null
+                        ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
+                        : null;
+                if (ctx.since != null && (callTime == null || !callTime.isAfter(ctx.since))) {
+                    ctx.skipped++;
+                    continue;
+                }
+            }
+            SysAiUsage record;
+            try {
+                record = toSysAiUsage(ctx.groupName, usage);
+            } catch (Throwable ex) {
+                // 单条失败（缺价/字段异常等）不应拖垮整页
+                ctx.failed++;
+                offerRetry(ctx.groupName, usage);
+                log.warn("[UsageAggregation] [{}] 单条用量转换失败: {} -> {}",
+                        ctx.groupName, requestId, ex.getMessage());
+                continue;
+            }
+            if (record == null) {
+                // 构造不出记录。这条**必须留痕**：无 requestId 的记录没有第二次机会
+                ctx.failed++;
+                offerRetry(ctx.groupName, usage);
+                continue;
+            }
+            accepted.add(usage);
+            records.add(record);
+        }
+        insertChunks(ctx, accepted, records);
+    }
+
+    /**
+     * 分批写入（单批 {@value #SYNC_INSERT_CHUNK} 行）；整批失败时回退逐条插入。
+     *
+     * <p>回退的意义是保留「单条失败不拖垮整批」的语义：整批失败往往是某一行字段超长，
+     * 逐条才能把失败行挑出来进重试队列，其余行照常入库。</p>
+     *
+     * @param ctx      本轮数据源状态
+     * @param accepted 通过去重的原始记录（与 {@code records} 同下标）
+     * @param records  待插入的实体（与 {@code accepted} 同下标）
+     */
+    private void insertChunks(GroupSyncContext ctx, List<AiUsage> accepted, List<SysAiUsage> records) {
+        for (int from = 0; from < records.size(); from += SYNC_INSERT_CHUNK) {
+            int to = Math.min(from + SYNC_INSERT_CHUNK, records.size());
+            List<SysAiUsage> chunk = records.subList(from, to);
+            try {
+                usageMapper.insertBatch(chunk);
+                ctx.inserted += chunk.size();
+            } catch (Throwable ex) {
+                log.warn("[UsageAggregation] [{}] 批量入库失败（{} 条），回退逐条插入: {}",
+                        ctx.groupName, chunk.size(), ex.getMessage());
+                for (int i = from; i < to; i++) {
+                    AiUsage usage = accepted.get(i);
+                    try {
+                        usageMapper.insert(records.get(i));
+                        ctx.inserted++;
+                    } catch (Throwable one) {
+                        ctx.failed++;
+                        offerRetry(ctx.groupName, usage);
+                        log.warn("[UsageAggregation] [{}] 单条用量入库失败: {} -> {}",
+                                ctx.groupName, usage.getRequestId(), one.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 单个数据源在一轮同步内的去重集合与计数。
+     *
+     * <p>为什么需要它：解析器按页惰性交付，而 lambda 里改不了局部变量；
+     * 这里只保留<b>与页数无关</b>的状态（时间水位、这一轮的重试记录），
+     * 逐行的去重集合留在 {@link #flushBatch} 的页作用域内，避免百万行全量扫描时把内存打满。</p>
+     *
+     * <p>重试集合用**恒等**比较（{@code IdentityHashMap}）而非 equals：不同调用可能产出
+     * 内容相同但时间不同的记录，用 equals 会把「本次真正的新记录」误当成重试项放过水位。</p>
+     */
+    private static final class GroupSyncContext {
+
+        /**
+         * 数据源名称（写入用量分组名）。
+         */
+        private final String groupName;
+
+        /**
+         * 上轮失败待重试的记录。
+         */
+        private final Set<AiUsage> retrySet =
+                java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+        /**
+         * 该分组已入库的最大调用时间，用于无 requestId 记录的水位兜底。
+         */
+        private final LocalDateTime since;
+
+        /**
+         * 本轮交付的行数（重试批由调用方补加）。
+         */
+        private int delivered;
+
+        /**
+         * 成功入库行数。
+         */
+        private int inserted;
+
+        /**
+         * 去重跳过行数。
+         */
+        private int skipped;
+
+        /**
+         * 入库失败行数。
+         */
+        private int failed;
+
+        GroupSyncContext(String groupName, LocalDateTime since) {
+            this.groupName = groupName;
+            this.since = since;
         }
     }
 
