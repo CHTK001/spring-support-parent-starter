@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @值注解Bean后置处理器
@@ -48,11 +46,6 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, EnvironmentAware, BeanFactoryAware {
-
-    /**
-     * 占位符正则表达式
-     */
-    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}:]+)(?::([^}]*))?}");
 
     /**
      * 默认配置刷新延迟时间（毫秒）
@@ -227,7 +220,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             }
 
             String expression = annotation.value();
-            ParsedExpression parsed = parseExpression(expression);
+            PlaceholderExpressions.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
 
  // 从缓存或环境中获取值
             String value = getCachedOrResolveValue(parsed.key(), parsed.defaultValue());
@@ -279,7 +272,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             }
 
             String expression = annotation.value();
-            ParsedExpression parsed = parseExpression(expression);
+            PlaceholderExpressions.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
 
  // 从缓存或环境中获取值
             String value = getCachedOrResolveValue(parsed.key(), parsed.defaultValue());
@@ -420,34 +413,6 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             return null;
         }
         return Converter.convertIfNecessary(value, targetType);
-    }
-
-    /**
-     * 解析占位符表达式
-     *
-     * @param expression 表达式
-     * @return 解析结果
-     */
-    private ParsedExpression parseExpression(String expression) {
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(expression);
-        if (matcher.find()) {
-            String key = matcher.group(1);
-            String defaultValue = matcher.group(2);
-            /**
-             * 解析expression。
-             * @param key Key
-             * @param defaultValue 默认值
-             * @return 解析expression的结果
-             */
-            return new ParsedExpression(key, defaultValue);
-        }
-        /**
-         * 解析expression。
-         * @param expression expression
-         * @param null 空
-         * @return 解析expression的结果
-         */
-        return new ParsedExpression(expression, null);
     }
 
     /**
@@ -682,12 +647,4 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         }
     }
 
-    /**
-     * 解析后的表达式
-     * @param key Key
-     * @param defaultValue 默认值
-     * @return 解析expression的结果
-     */
-    private record ParsedExpression(String key, String defaultValue) {
-    }
 }
