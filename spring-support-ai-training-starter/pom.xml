@@ -29,6 +29,13 @@
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- 底层工具：Extractor 解压 SPI、Json 门面等 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
