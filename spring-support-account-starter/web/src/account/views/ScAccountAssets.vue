@@ -57,6 +57,13 @@
     <div class="ws" :style="{ '--idx-width': railWidth + 'px' }">
       <!-- ==================== 左侧：分组索引 ==================== -->
       <aside class="idx" aria-label="资产索引">
+        <!-- 栏头：主色圆点 + 栏名 + 数量，填补列表上方空白（与侧栏分组标题同一套装饰语言） -->
+        <div class="rail-head">
+          <span class="rail-head__dot" aria-hidden="true"></span>
+          <span class="rail-head__title">资产索引</span>
+          <span class="rail-head__count">{{ tableCount }}</span>
+        </div>
+
         <!-- 批量操作条：进入批量选择后出现，贴在索引顶部，图标按钮 + 提示压成一行 -->
         <div v-if="isAccountSegment && batchMode" class="batch-bar">
           <span class="batch-count" :class="{ 'is-empty': !selectedAccountIds.length }">
@@ -2679,6 +2686,35 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown));
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
+/* 左栏栏头：主色圆点 + 栏名 + 数量，填补列表上方空白（与侧栏分组标题同一套装饰语言） */
+.rail-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid var(--border-subtle, var(--border-default));
+}
+.rail-head__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+}
+.rail-head__title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary, var(--el-text-color-secondary));
+}
+.rail-head__count {
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
 .icon-btn {
   flex: none;
   width: 26px;

@@ -66,6 +66,12 @@
     <div class="body" :style="{ '--rail-width': railWidth + 'px' }">
       <!-- 左栏：密钥列表 -->
       <aside class="rail">
+        <!-- 栏头：主色圆点 + 栏名 + 数量，填补列表上方空白（与侧栏分组标题同一套装饰语言） -->
+        <div class="rail-head">
+          <span class="rail-head__dot" aria-hidden="true"></span>
+          <span class="rail-head__title">密钥列表</span>
+          <span class="rail-head__count">{{ filtered.length }}</span>
+        </div>
         <div class="rail__list" @scroll.passive="onRailScroll">
           <div v-if="loading && !secrets.length" class="rail__state">加载中…</div>
           <div v-else-if="!filtered.length" class="rail__state">
@@ -688,6 +694,35 @@ onMounted(load)
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+/* 左栏栏头：主色圆点 + 栏名 + 数量，填补列表上方空白（与侧栏分组标题同一套装饰语言） */
+.rail-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid var(--border-subtle, var(--border-default));
+}
+.rail-head__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+}
+.rail-head__title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary, var(--el-text-color-secondary));
+}
+.rail-head__count {
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
 }
 
 .rail__list {
