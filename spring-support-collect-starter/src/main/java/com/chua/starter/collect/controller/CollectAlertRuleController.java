@@ -34,6 +34,13 @@ public class CollectAlertRuleController {
 
     private final CollectAlertRuleService ruleService;
 
+    /**
+     * 规则分页列表。
+     *
+     * @param query     分页查询参数
+     * @param condition 过滤条件
+     * @return 分页结果
+     */
     @Operation(summary = "规则分页列表")
     @GetMapping("/page")
     public ReturnPageResult<CollectAlertRule> page(@ParameterObject Query<CollectAlertRule> query,
@@ -41,6 +48,11 @@ public class CollectAlertRuleController {
         return PageResultUtils.ok(ruleService.pageRules(query.createPage(), condition));
     }
 
+    /**
+     * 查询全部启用的规则。
+     *
+     * @return 启用状态的规则列表
+     */
     @Operation(summary = "查询全部启用的规则")
     @GetMapping("/list")
     public ReturnResult<java.util.List<CollectAlertRule>> listEnabled() {
@@ -49,18 +61,37 @@ public class CollectAlertRuleController {
                 .list());
     }
 
+    /**
+     * 保存或更新规则。
+     *
+     * @param rule 规则
+     * @return 是否成功
+     */
     @Operation(summary = "保存或更新规则")
     @PostMapping("/save")
     public ReturnResult<Boolean> save(@RequestBody CollectAlertRule rule) {
         return ReturnResult.ok(ruleService.saveOrUpdateRule(rule));
     }
 
+    /**
+     * 删除规则。
+     *
+     * @param ruleId 规则 ID
+     * @return 是否成功
+     */
     @Operation(summary = "删除规则")
     @DeleteMapping("/delete")
     public ReturnResult<Boolean> delete(@RequestParam Integer ruleId) {
         return ReturnResult.ok(ruleService.removeById(ruleId));
     }
 
+    /**
+     * 切换启用状态。
+     *
+     * @param ruleId  规则 ID
+     * @param enabled 是否启用
+     * @return 是否成功
+     */
     @Operation(summary = "切换启用状态")
     @PostMapping("/toggle")
     public ReturnResult<Boolean> toggle(@RequestParam Integer ruleId,
