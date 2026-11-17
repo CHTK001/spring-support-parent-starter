@@ -13,6 +13,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 
 /**
  * 「APM 设置」的落盘存储（{@code .properties} 文件）。
@@ -108,7 +109,9 @@ public class ApmSettingsStore {
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-            Path temp = file.resolveSibling(file.getFileName() + ".tmp");
+            // 临时文件名带唯一后缀：多个实例/进程并发 save 时各自写独立临时文件，
+            // 避免固定 ".tmp" 名互相截断覆盖；Files.move 同卷原子替换保证读者永远看到完整旧值或完整新值。
+            Path temp = file.resolveSibling(file.getFileName() + "." + UUID.randomUUID() + ".tmp");
             try (OutputStream out = Files.newOutputStream(temp, StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
                 properties.store(new java.io.OutputStreamWriter(out, StandardCharsets.UTF_8),
