@@ -3,12 +3,12 @@ package com.chua.starter.apm.skywalking;
 import com.chua.common.support.apm.OtnlEngine;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.Spi;
+import com.chua.common.support.utils.UrlUtils;
 import com.chua.skywalking.support.client.SkywalkingSettings;
 import com.chua.starter.apm.support.spi.ApmProvider;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -123,7 +123,7 @@ public class SkywalkingApmProvider implements ApmProvider {
                 throw new IllegalArgumentException("「" + KEY_OAP_TIMEOUT + "」必须大于 0 毫秒，收到: " + timeoutRaw);
             }
         }
-        if (url != null && !url.isBlank() && !isHttpUrl(url)) {
+        if (url != null && !url.isBlank() && !UrlUtils.isHttpUrl(url)) {
             throw new IllegalArgumentException("「" + KEY_OAP_URL + "」必须形如 http://127.0.0.1:12800，收到: " + url);
         }
         SkywalkingSettings.apply(url, null, null, timeout, SkywalkingSettings.enabled());
@@ -151,14 +151,4 @@ public class SkywalkingApmProvider implements ApmProvider {
         }
     }
 
-    /**
-     * 是否是 http/https 地址
-     *
-     * @param url 地址
-     * @return 是否合法
-     */
-    private boolean isHttpUrl(String url) {
-        String value = url.trim().toLowerCase(Locale.ROOT);
-        return value.startsWith("http://") || value.startsWith("https://");
-    }
 }
