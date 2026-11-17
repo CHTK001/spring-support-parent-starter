@@ -831,6 +831,7 @@ public class ApmController {
      *
      * @param metric  指标键
      * @param enabled 是否启用
+     * @return 操作结果
      */
     @PostMapping("/alerts/rules/toggle")
     public ReturnResult<Void> toggleAlertRule(
@@ -843,6 +844,7 @@ public class ApmController {
      * 删除告警规则。
      *
      * @param metric 指标键
+     * @return 操作结果
      */
     @DeleteMapping("/alerts/rules/{metric}")
     public ReturnResult<Void> deleteAlertRule(
@@ -866,7 +868,8 @@ public class ApmController {
     /**
      * 静默告警事件（OPEN → MUTED）。
      *
-     * @param id 事件 ID
+     * @param id         事件 ID
+     * @param durationMs 静默时长（毫秒），默认 300000
      * @return 是否处置成功
      */
     @PostMapping("/alerts/{id}/mute")
@@ -1137,6 +1140,11 @@ public class ApmController {
 
     /**
      * 直接写 CSV 下载响应（绕过消息转换器；UTF-8 BOM 保证 Excel 中文不乱码）。
+     *
+     * @param response HTTP 响应
+     * @param filename 下载文件名
+     * @param csv      CSV 内容
+     * @throws IOException 响应流写出失败时
      */
     private static void writeCsvAttachment(HttpServletResponse response,
                                            String filename, String csv) throws IOException {

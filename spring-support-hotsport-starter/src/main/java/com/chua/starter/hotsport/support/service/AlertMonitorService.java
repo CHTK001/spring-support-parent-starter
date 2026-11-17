@@ -66,9 +66,22 @@ public class AlertMonitorService {
         public String secret;     // 可选签名密钥（dingtalk 签名等）
         public boolean enabled;   // 是否启用
 
+        /**
+         * 构造空渠道（默认值）。
+         */
         public AlertChannel() {
         }
 
+        /**
+         * 构造渠道。
+         *
+         * @param id      渠道标识
+         * @param name    渠道名称，如：值班群
+         * @param type    渠道类型：webhook / dingtalk / feishu / email
+         * @param url     Webhook URL（webhook/dingtalk/feishu 用）
+         * @param secret  可选签名密钥（dingtalk 签名等）
+         * @param enabled 是否启用
+         */
         public AlertChannel(long id, String name, String type, String url, String secret, boolean enabled) {
             this.id = id;
             this.name = name;
@@ -91,9 +104,22 @@ public class AlertMonitorService {
         public long debounceMs;
         public boolean enabled;
 
+        /**
+         * 构造空规则（默认值）。
+         */
         public AlertRule() {
         }
 
+        /**
+         * 构造告警规则。
+         *
+         * @param id        规则标识
+         * @param metric    指标：heap_percent / error_rate / active_leaks
+         * @param threshold 告警阈值
+         * @param severity  严重级别：CRITICAL / WARNING
+         * @param debounceMs 去抖时长（毫秒）
+         * @param enabled   是否启用
+         */
         public AlertRule(long id, String metric, double threshold, String severity,
                          long debounceMs, boolean enabled) {
             this.id = id;
