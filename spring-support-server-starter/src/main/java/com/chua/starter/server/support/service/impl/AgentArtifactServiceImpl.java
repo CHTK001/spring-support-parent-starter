@@ -1,6 +1,8 @@
 package com.chua.starter.server.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.download.extractor.Extractor;
+import com.chua.common.support.network.download.extractor.ExtractorFactory;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsServerProject;
 import com.chua.starter.server.support.entity.MsServerRelease;
@@ -35,8 +37,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 /**
  * Agent 构件投放服务实现。
@@ -422,26 +422,22 @@ public class AgentArtifactServiceImpl implements AgentArtifactService {
     // ==================== 归档解压 ====================
 
     /**
-     * 解压 zip（带路径穿越防护）。
+     * 解压 zip 到目标目录。
+     *
+     * <p>统一走底层 {@link Extractor} SPI（utils-support-common-starter 的 zip4j 实现，
+     * 含 Zip Slip 前置校验与条目数上限），本模块不再自实现解压细节。</p>
      *
      * @param archive 归档
      * @param dest    目标目录
      * @throws IOException 解压失败
      */
     private void unzip(Path archive, Path dest) throws IOException {
-        try (InputStream in = Files.newInputStream(archive);
-             ZipInputStream zip = new ZipInputStream(in, StandardCharsets.UTF_8)) {
-            ZipEntry entry;
-            while ((entry = zip.getNextEntry()) != null) {
-                Path target = safeResolve(dest, entry.getName());
-                if (entry.isDirectory()) {
-                    Files.createDirectories(target);
-                } else {
-                    Files.createDirectories(target.getParent());
-                    Files.copy(zip, target, StandardCopyOption.REPLACE_EXISTING);
-                }
-                zip.closeEntry();
-            }
+        Extractor extractor = ExtractorFactory.getExtractor(archive.getFileName().toString());
+        if (extractor == null) {
+            throw new IOException("不支持的压缩格式: " + archive.getFileName());
+        }
+        if (!extractor.extract(archive.toFile(), dest.toFile())) {
+            throw new IOException("ZIP 解压失败: " + archive.getFileName());
         }
     }
 
