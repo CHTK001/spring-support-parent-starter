@@ -66,7 +66,11 @@ public class HttpmanProxyExecutor {
         this.webClient = buildWebClient();
     }
 
-    /** 构建 WebClient。连接池由独立建立的 {@link ReactorResourceFactory} 管理 */
+    /**
+     * 构建 WebClient。连接池由独立建立的 {@link ReactorResourceFactory} 管理。
+     *
+     * @return 构建完成的 WebClient
+     */
     private WebClient buildWebClient() {
         ReactorResourceFactory resourceFactory = new ReactorResourceFactory();
         resourceFactory.setConnectionProviderSupplier(() -> ConnectionProvider.builder("httpman")
@@ -164,7 +168,14 @@ public class HttpmanProxyExecutor {
         }
     }
 
-    /** 组装查询参数：挂在第一个进入的 query 上，其余依次追加（不用重新拼接） */
+    /**
+     * 组装查询参数：挂在第一个进入的 query 上，其余依次追加（不用重新拼接）。
+     *
+     * @param url    基础地址
+     * @param params 查询参数（name -> values，可能为空）
+     * @return 组装后的 URI
+     * @throws Exception URI 解析失败
+     */
     private URI buildUri(String url, Map<String, List<String>> params) throws Exception {
         URI uri = new URI(url);
         if (params == null || params.isEmpty()) {
@@ -188,7 +199,10 @@ public class HttpmanProxyExecutor {
     }
 
     /**
-     * ContentType 写入
+     * ContentType 写入。
+     *
+     * @param httpHeaders 请求头
+     * @param bodyType    正文类型（text/json/form-data/x-www-form-urlencoded/binary）
      */
     private void applyContentType(HttpHeaders httpHeaders, String bodyType) {
         if (bodyType == null || bodyType.trim().isEmpty()) {
@@ -209,7 +223,12 @@ public class HttpmanProxyExecutor {
     }
 
     /**
-     * 从 {@link org.springframework.http.client.ClientHttpResponse} 回写执行结果
+     * 从 {@link org.springframework.http.client.ClientHttpResponse} 回写执行结果。
+     *
+     * @param method         方法（GET/POST/...）
+     * @param url            完整地址
+     * @param responseEntity 响应实体
+     * @return 执行结果
      */
     private HttpmanResponse toResponse(String method, String url, org.springframework.http.ResponseEntity<byte[]> responseEntity) {
         HttpmanResponse response = new HttpmanResponse();
@@ -223,7 +242,10 @@ public class HttpmanProxyExecutor {
     }
 
     /**
-     * 头部脱敏，返回脱敏后的映射（body / responseRecord 等只读脱敏数据）
+     * 头部脱敏，返回脱敏后的映射（body / responseRecord 等只读脱敏数据）。
+     *
+     * @param headers 原始请求头
+     * @return 脱敏后的请求头映射
      */
     static Map<String, String> maskHeaders(Map<String, String> headers) {
         if (headers == null || headers.isEmpty()) {
