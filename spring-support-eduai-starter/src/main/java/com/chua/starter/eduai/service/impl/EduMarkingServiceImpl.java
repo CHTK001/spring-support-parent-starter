@@ -2541,6 +2541,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
      * 为只读拆分的虚拟题目重新定位锚点。
+     *
+     * @param rows  虚拟题目行
+     * @param pages 页面列表
+     * @return 定位到的锚点列表
      */
     private List<Map<String, Object>> locateSplitAnchors(List<Map<String, Object>> rows,
                                                          List<Map<String, Object>> pages) {
@@ -2668,6 +2672,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
      * 题号归一：`1.` / `第1题` / `10.5` → `1` / `10`，摘要里只展示纯数字题号。
+     *
+     * @param q 题目行
+     * @return 归一后的题号（无数字时原样返回）
      */
     private static String summaryNo(Map<String, Object> q) {
         Object no = q.get("no");
@@ -2683,7 +2690,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 获取一条归一无效的题号（去重 + 控制数量，避免摘要尾行太长）。
+     * 记录一条归一无效的题号（去重 + 控制数量，避免摘要尾行太长）。
+     *
+     * @param wrongNos 偏差题号集合（接收方）
+     * @param q        题目行
      */
     private static void addWrongNo(List<String> wrongNos, Map<String, Object> q) {
         if (wrongNos.size() >= MAX_WRONG_EXHIBIT) {
@@ -2704,6 +2714,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             "未作答", "未填写", "识别失败", "未给出判定", "人工复核", "暂不可用", "不给分",
     };
 
+    /**
+     * 是否占位/未判分的评语（"未作答"、"识别失败" 等提示文案）。
+     *
+     * @param text 评语文本（可为 null）
+     * @return 命中任一占位提示返回 true
+     */
     private static boolean isUngradedComment(String text) {
         if (text == null) {
             return false;
@@ -2718,6 +2734,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
      * 安全的数字采集（null / 字符串 / MAC 数字串都能采，采不到就 0，不抛异常）。
+     *
+     * @param value 原始值（可为 null）
+     * @return 解析出的 int（失败为 0）
      */
     private static int safeInt(Object value) {
         if (value == null) {

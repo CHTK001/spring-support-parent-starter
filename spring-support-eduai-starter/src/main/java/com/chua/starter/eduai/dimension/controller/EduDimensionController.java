@@ -161,22 +161,11 @@ public class EduDimensionController {
     @Operation(summary = "班级列表")
     @GetMapping("/classes")
     /**
-     * 列表类
-     * @param gradeLevel grade水平仪
-     * @param teacherId teacherid
-     * @param teacherId teacherid
-     * @param entity 实体
-     * @param id 标识
-     * @param classId 类标识
-     * @param gradeLevel grade水平仪
-     * @param grade grade
-     * @param gradeLevel grade水平仪
-     * @param grade grade
-     * @param entity 实体
-     * @param id 标识
-     * @param subjectCode 主题编码
-     * @param entity 实体
-     * @param id 标识
+     * 班级列表。
+     *
+     * @param gradeLevel 年级（可空）
+     * @param teacherId  教师 ID（可空）
+     * @return 班级列表
      */
     public ReturnResult<List<EduClass>> listClasses(
             @RequestParam(required = false) String gradeLevel,
@@ -184,6 +173,15 @@ public class EduDimensionController {
         return ReturnResult.ok(dimensionService.listClasses(gradeLevel, teacherId));
     }
 
+    /**
+     * 班级分页。
+     *
+     * @param gradeLevel 年级（可空）
+     * @param keyword    关键字（可空）
+     * @param pageNum    页码（可空）
+     * @param pageSize   每页条数（可空）
+     * @return 班级分页结果
+     */
     @Operation(summary = "班级分页")
     @GetMapping("/classes/page")
     public ReturnResult<PageResult<EduClass>> pageClasses(
@@ -223,17 +221,12 @@ public class EduDimensionController {
     @Operation(summary = "学生列表")
     @GetMapping("/students")
     /**
-     * 列表students
-     * @param classId 类标识
-     * @param gradeLevel grade水平仪
-     * @param grade grade
-     * @param gradeLevel grade水平仪
-     * @param grade grade
-     * @param entity 实体
-     * @param id 标识
-     * @param subjectCode 主题编码
-     * @param entity 实体
-     * @param id 标识
+     * 学生列表。
+     *
+     * @param classId    班级 ID（可空）
+     * @param gradeLevel 年级（可空）
+     * @param grade      班级名（可空）
+     * @return 学生列表
      */
     public ReturnResult<List<EduStudent>> listStudents(
             @RequestParam(required = false) Long classId,
@@ -242,6 +235,17 @@ public class EduDimensionController {
         return ReturnResult.ok(dimensionService.listStudents(classId, gradeLevel, grade));
     }
 
+    /**
+     * 学生分页。
+     *
+     * @param classId    班级 ID（可空）
+     * @param gradeLevel 年级（可空）
+     * @param grade      班级名（可空）
+     * @param keyword    关键字（可空）
+     * @param pageNum    页码（可空）
+     * @param pageSize   每页条数（可空）
+     * @return 学生分页结果
+     */
     @Operation(summary = "学生分页")
     @GetMapping("/students/page")
     public ReturnResult<PageResult<EduStudent>> pageStudents(
@@ -339,6 +343,15 @@ public class EduDimensionController {
         return ReturnResult.ok(dimensionService.listTeachers(subjectCode));
     }
 
+    /**
+     * 教师分页。
+     *
+     * @param subjectCode 学科编码（可空）
+     * @param keyword     关键字（可空）
+     * @param pageNum     页码（可空）
+     * @param pageSize    每页条数（可空）
+     * @return 教师分页结果
+     */
     @Operation(summary = "教师分页")
     @GetMapping("/teachers/page")
     public ReturnResult<PageResult<EduTeacher>> pageTeachers(
