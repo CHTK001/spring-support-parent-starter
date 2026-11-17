@@ -1,1 +1,2 @@
 com.chua.starter.osgi.configuration.OsgiAutoConfiguration
+com.chua.starter.osgi.support.realtime.OsgiRealtimeConfiguration

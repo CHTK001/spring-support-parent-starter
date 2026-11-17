@@ -6,6 +6,8 @@ import com.chua.common.support.osgi.OsgiServiceDescriptor;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.osgi.properties.OsgiProperties;
+import com.chua.starter.osgi.support.realtime.OsgiLogEvent;
+import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -28,12 +30,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 
 /**
  * OSGi 运行时只读观测端点。
@@ -81,17 +85,24 @@ public class OsgiMonitorController {
     private final OsgiProperties properties;
 
     /**
+     * 插件操作日志发布器（实时日志抽屉的数据源）。
+     */
+    private final OsgiLogPublisher logPublisher;
+
+    /**
      * 构造 osgi 观测端点。
      *
-     * @param launcher   osgi 启动器
-     * @param register   Bean 桥接注册器，可为 {@code null}
-     * @param properties osgi 配置
+     * @param launcher     osgi 启动器
+     * @param register     Bean 桥接注册器，可为 {@code null}
+     * @param properties   osgi 配置
+     * @param logPublisher 操作日志发布器
      */
     public OsgiMonitorController(OsgiLauncher launcher, OsgiBeanDefinitionRegister register,
-                                 OsgiProperties properties) {
+                                 OsgiProperties properties, OsgiLogPublisher logPublisher) {
         this.launcher = launcher;
         this.register = register;
         this.properties = properties;
+        this.logPublisher = logPublisher;
     }
 
     /**
@@ -109,11 +120,47 @@ public class OsgiMonitorController {
     /**
      * 获取全部已安装 bundle 清单。
      *
+     * <p>读操作默认静默；只在失败时推一条实时日志——清单都取不到时，
+     * 「为什么页面是空的」必须能在日志里直接看到原因。</p>
+     *
      * @return bundle 清单
      */
     @GetMapping("/bundles")
     public List<Map<String, Object>> bundles() {
-        return launcher.getBundles().stream().map(this::describe).toList();
+        try {
+            return launcher.getBundles().stream().map(this::describe).toList();
+        } catch (RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.warn("list", "", "读取 bundle 清单失败: " + rootMessage(ex)));
+            throw ex;
+        }
+    }
+
+    /**
+     * 部署目录 jar 清单。
+     *
+     * <p>「卸载」只把 bundle 从框架里摘掉，jar 仍留在部署目录；要真正删掉文件，
+     * 必须先卸载（见 {@link #deleteJar(String)}）。本端点把「文件是否还在、是否仍在框架中」
+     * 一次讲清，页面据此决定「删除」按钮是否可用，避免用户点了才看到报错。</p>
+     *
+     * @return 部署目录 jar 清单，按文件名排序
+     */
+    @GetMapping("/jars")
+    public List<Map<String, Object>> jars() {
+        Path dir = deployDirectory();
+        if (!Files.isDirectory(dir)) {
+            return new ArrayList<>();
+        }
+        try (Stream<Path> stream = Files.list(dir)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                    .map(this::describeJar)
+                    .toList();
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.warn("jars", "", "读取部署目录失败: " + rootMessage(ex)));
+            throw new IllegalStateException("读取部署目录失败: " + rootMessage(ex), ex);
+        }
     }
 
     /**
@@ -215,37 +262,49 @@ public class OsgiMonitorController {
     public Map<String, Object> install(@RequestParam("file") MultipartFile file,
                                        @RequestParam(defaultValue = "true") boolean start) throws IOException {
         requireManageEnabled();
-        BundleHeaders headers = readBundleHeaders(file);
-        Path target = targetPath(file);
-        String url = target.toUri().toString();
-        OsgiBundle sameLocation = findBundleByLocation(url);
-        if (sameLocation == null) {
-            OsgiBundle sameName = findBundleBySymbolicName(headers.symbolicName());
-            if (sameName != null) {
-                throw new IllegalStateException("插件已存在: " + headers.symbolicName() + ":"
-                        + sameName.getVersion() + "，请使用升级操作");
+        long startedAt = System.currentTimeMillis();
+        String fileName = file == null ? "" : String.valueOf(file.getOriginalFilename());
+        logPublisher.publish(OsgiLogEvent.start("install", fileName));
+        try {
+            BundleHeaders headers = readBundleHeaders(file);
+            Path target = targetPath(file);
+            String url = target.toUri().toString();
+            OsgiBundle sameLocation = findBundleByLocation(url);
+            if (sameLocation == null) {
+                OsgiBundle sameName = findBundleBySymbolicName(headers.symbolicName());
+                if (sameName != null) {
+                    throw new IllegalStateException("插件已存在: " + headers.symbolicName() + ":"
+                            + sameName.getVersion() + "，请使用升级操作");
+                }
             }
-        }
-        OsgiBundle installed;
-        if (sameLocation != null) {
-            installed = replaceBundle(sameLocation, file, target);
-        } else {
-            save(file, target);
-            try {
-                installed = launcher.installBundle(url);
-            } catch (RuntimeException ex) {
-                Files.deleteIfExists(target);
-                throw new IllegalArgumentException("插件安装失败: " + rootMessage(ex), ex);
+            OsgiBundle installed;
+            if (sameLocation != null) {
+                installed = replaceBundle(sameLocation, file, target);
+            } else {
+                save(file, target);
+                try {
+                    installed = launcher.installBundle(url);
+                } catch (RuntimeException ex) {
+                    Files.deleteIfExists(target);
+                    throw new IllegalArgumentException("插件安装失败: " + rootMessage(ex), ex);
+                }
             }
+            if (installed == null) {
+                throw new IllegalArgumentException("插件安装失败: 框架未返回 bundle");
+            }
+            if (start && !installed.isActive()) {
+                installed.start();
+            }
+            OsgiBundle fresh = launcher.getBundle(installed.getSymbolicName());
+            Map<String, Object> result = describe(fresh == null ? installed : fresh);
+            logPublisher.publish(OsgiLogEvent.success("install", String.valueOf(result.get("symbolicName")),
+                    startedAt, "已安装 " + result.get("symbolicName") + ":" + result.get("version")));
+            return result;
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("install", fileName, startedAt,
+                    "安装失败: " + rootMessage(ex)));
+            throw ex;
         }
-        if (installed == null) {
-            throw new IllegalArgumentException("插件安装失败: 框架未返回 bundle");
-        }
-        if (start && !installed.isActive()) {
-            installed.start();
-        }
-        OsgiBundle fresh = launcher.getBundle(installed.getSymbolicName());
-        return describe(fresh == null ? installed : fresh);
     }
 
     /**
@@ -260,23 +319,34 @@ public class OsgiMonitorController {
     public Map<String, Object> update(@PathVariable String symbolicName,
                                       @RequestParam("file") MultipartFile file) throws IOException {
         requireManageEnabled();
-        OsgiBundle existing = requireBundle(symbolicName);
-        BundleHeaders headers = readBundleHeaders(file);
-        if (!symbolicName.equals(headers.symbolicName())) {
-            throw new IllegalArgumentException("jar 的 Bundle-SymbolicName 与目标不一致: "
-                    + headers.symbolicName() + " -> " + symbolicName);
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("update", symbolicName));
+        try {
+            OsgiBundle existing = requireBundle(symbolicName);
+            BundleHeaders headers = readBundleHeaders(file);
+            if (!symbolicName.equals(headers.symbolicName())) {
+                throw new IllegalArgumentException("jar 的 Bundle-SymbolicName 与目标不一致: "
+                        + headers.symbolicName() + " -> " + symbolicName);
+            }
+            Path target = resolveLocalJar(existing.getLocation());
+            if (target == null) {
+                throw new IllegalArgumentException("该 bundle 不是部署目录内的本地 jar，无法升级: "
+                        + existing.getLocation());
+            }
+            OsgiBundle updated = replaceBundle(existing, file, target);
+            if (updated == null) {
+                throw new IllegalArgumentException("插件升级失败: 框架未返回 bundle");
+            }
+            OsgiBundle fresh = launcher.getBundle(symbolicName);
+            Map<String, Object> result = describe(fresh == null ? updated : fresh);
+            logPublisher.publish(OsgiLogEvent.success("update", symbolicName, startedAt,
+                    "已升级到 " + result.get("version")));
+            return result;
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("update", symbolicName, startedAt,
+                    "升级失败: " + rootMessage(ex)));
+            throw ex;
         }
-        Path target = resolveLocalJar(existing.getLocation());
-        if (target == null) {
-            throw new IllegalArgumentException("该 bundle 不是部署目录内的本地 jar，无法升级: "
-                    + existing.getLocation());
-        }
-        OsgiBundle updated = replaceBundle(existing, file, target);
-        if (updated == null) {
-            throw new IllegalArgumentException("插件升级失败: 框架未返回 bundle");
-        }
-        OsgiBundle fresh = launcher.getBundle(symbolicName);
-        return describe(fresh == null ? updated : fresh);
     }
 
     /**
@@ -288,11 +358,21 @@ public class OsgiMonitorController {
     @PostMapping("/bundles/{symbolicName}/start")
     public Map<String, Object> start(@PathVariable String symbolicName) {
         requireManageEnabled();
-        OsgiBundle bundle = requireBundle(symbolicName);
-        if (!bundle.isActive()) {
-            bundle.start();
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("start", symbolicName));
+        try {
+            OsgiBundle bundle = requireBundle(symbolicName);
+            if (!bundle.isActive()) {
+                bundle.start();
+            }
+            Map<String, Object> result = describe(bundle);
+            logPublisher.publish(OsgiLogEvent.success("start", symbolicName, startedAt, "已启动"));
+            return result;
+        } catch (RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("start", symbolicName, startedAt,
+                    "启动失败: " + rootMessage(ex)));
+            throw ex;
         }
-        return describe(bundle);
     }
 
     /**
@@ -304,13 +384,26 @@ public class OsgiMonitorController {
     @PostMapping("/bundles/{symbolicName}/stop")
     public Map<String, Object> stop(@PathVariable String symbolicName) {
         requireManageEnabled();
-        OsgiBundle bundle = requireBundle(symbolicName);
-        bundle.stop();
-        return describe(bundle);
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("stop", symbolicName));
+        try {
+            OsgiBundle bundle = requireBundle(symbolicName);
+            bundle.stop();
+            Map<String, Object> result = describe(bundle);
+            logPublisher.publish(OsgiLogEvent.success("stop", symbolicName, startedAt, "已停止"));
+            return result;
+        } catch (RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("stop", symbolicName, startedAt,
+                    "停止失败: " + rootMessage(ex)));
+            throw ex;
+        }
     }
 
     /**
      * 卸载 bundle。
+     *
+     * <p>只把 bundle 从框架里摘掉，<b>不删部署目录里的 jar</b>：卸载后仍可重新安装同一份文件。
+     * 要清理文件请再调 {@link #deleteJar(String)}。</p>
      *
      * @param symbolicName bundle 符号名
      * @return 卸载结果
@@ -318,15 +411,72 @@ public class OsgiMonitorController {
     @PostMapping("/bundles/{symbolicName}/uninstall")
     public Map<String, Object> uninstall(@PathVariable String symbolicName) {
         requireManageEnabled();
-        requireBundle(symbolicName);
-        boolean success = launcher.uninstallBundle(symbolicName);
-        if (!success) {
-            throw new IllegalStateException("bundle 卸载失败: " + symbolicName);
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("uninstall", symbolicName));
+        try {
+            requireBundle(symbolicName);
+            boolean success = launcher.uninstallBundle(symbolicName);
+            if (!success) {
+                throw new IllegalStateException("bundle 卸载失败: " + symbolicName);
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("symbolicName", symbolicName);
+            result.put("success", true);
+            logPublisher.publish(OsgiLogEvent.success("uninstall", symbolicName, startedAt,
+                    "已卸载，jar 仍保留在部署目录"));
+            return result;
+        } catch (RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("uninstall", symbolicName, startedAt,
+                    "卸载失败: " + rootMessage(ex)));
+            throw ex;
         }
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("symbolicName", symbolicName);
-        result.put("success", true);
-        return result;
+    }
+
+    /**
+     * 删除部署目录中的 jar 文件。
+     *
+     * <p><b>为什么要「先卸载再删除」</b>：bundle 还在框架里时删文件，框架下次启动会因为
+     * 指向的 jar 不存在而解析失败，而当前进程却仍持有旧内容——同一份配置在「重启前/重启后」
+     * 表现不一致。所以这里强制要求先卸载，把「运行时状态」和「磁盘状态」一起推进到可解释的位置。</p>
+     *
+     * @param fileName 部署目录中的文件名（只取 basename）
+     * @return 删除结果
+     */
+    @PostMapping("/jars/{fileName}/delete")
+    public Map<String, Object> deleteJar(@PathVariable String fileName) {
+        requireManageEnabled();
+        String name = Paths.get(fileName).getFileName().toString();
+        if (!name.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            throw new IllegalArgumentException("只支持删除 .jar 文件: " + name);
+        }
+        Path dir = deployDirectory();
+        Path target = dir.resolve(name).normalize();
+        if (!target.startsWith(dir)) {
+            throw new IllegalArgumentException("非法文件名: " + name);
+        }
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("delete-jar", name));
+        try {
+            OsgiBundle installed = findBundleByLocation(target.toUri().toString());
+            if (installed != null) {
+                throw new IllegalStateException("插件仍在框架中（" + installed.getSymbolicName()
+                        + "），请先卸载再删除 jar");
+            }
+            boolean deleted = Files.deleteIfExists(target);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("fileName", name);
+            result.put("deleted", deleted);
+            if (deleted) {
+                logPublisher.publish(OsgiLogEvent.success("delete-jar", name, startedAt, "已删除 jar 文件"));
+            } else {
+                logPublisher.publish(OsgiLogEvent.warn("delete-jar", name, "jar 文件已不存在: " + name));
+            }
+            return result;
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("delete-jar", name, startedAt,
+                    "删除失败: " + rootMessage(ex)));
+            throw new IllegalStateException("删除 jar 失败: " + rootMessage(ex), ex);
+        }
     }
 
     /**
@@ -609,5 +759,55 @@ public class OsgiMonitorController {
         item.put("state", bundle.getState());
         item.put("location", bundle.getLocation());
         return item;
+    }
+
+    /**
+     * 组装部署目录 jar 描述信息。
+     *
+     * <p>这里直接带上「是否仍在框架中」：页面据此把「删除」按钮置灰并给出原因，
+     * 用户不必点了才收到「请先卸载」的报错。</p>
+     *
+     * @param path jar 文件路径
+     * @return 描述信息
+     */
+    private Map<String, Object> describeJar(Path path) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        String fileName = path.getFileName().toString();
+        item.put("fileName", fileName);
+        item.put("size", sizeQuietly(path));
+        item.put("lastModified", lastModifiedQuietly(path));
+        OsgiBundle installed = findBundleByLocation(path.toUri().toString());
+        item.put("installed", installed != null);
+        item.put("symbolicName", installed == null ? null : installed.getSymbolicName());
+        item.put("state", installed == null ? null : installed.getState());
+        return item;
+    }
+
+    /**
+     * 读取文件大小，失败时返回 -1（只用于展示，不影响业务判断）。
+     *
+     * @param path 文件路径
+     * @return 字节数，读取失败返回 -1
+     */
+    private long sizeQuietly(Path path) {
+        try {
+            return Files.size(path);
+        } catch (IOException ex) {
+            return -1L;
+        }
+    }
+
+    /**
+     * 读取最后修改时间，失败时返回 0。
+     *
+     * @param path 文件路径
+     * @return 毫秒时间戳，读取失败返回 0
+     */
+    private long lastModifiedQuietly(Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toMillis();
+        } catch (IOException ex) {
+            return 0L;
+        }
     }
 }

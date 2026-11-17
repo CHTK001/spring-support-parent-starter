@@ -14,6 +14,7 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.osgi.controller.OsgiMonitorController;
 import com.chua.starter.osgi.properties.OsgiProperties;
 import com.chua.starter.osgi.shell.GogoSshShellServer;
+import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -302,9 +303,10 @@ public class OsgiAutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.osgi.endpoint", name = "enabled", havingValue = "true")
     public OsgiMonitorController osgiMonitorController(FelixOsgiLauncher osgiLauncher,
                                                        ObjectProvider<OsgiBeanDefinitionRegister> registerProvider,
-                                                       OsgiProperties properties) {
+                                                       OsgiProperties properties,
+                                                       OsgiLogPublisher logPublisher) {
         log.info("[OSGi] 运行时观测端点已启用: /osgi/stats, /osgi/bundles, /osgi/services, /osgi/snapshot");
-        return new OsgiMonitorController(osgiLauncher, registerProvider.getIfAvailable(), properties);
+        return new OsgiMonitorController(osgiLauncher, registerProvider.getIfAvailable(), properties, logPublisher);
     }
 
     /**
