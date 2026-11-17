@@ -40,6 +40,9 @@ public final class TsharkDisplayFilter {
             "imap", "pop", "telnet", "mqtt", "smb", "quic", "dhcp", "ntp",
             "icmp", "icmpv6", "arp", "tcp", "udp", "ip", "ipv6");
 
+    /**
+     * 禁止实例化（纯静态工具类）。
+     */
     private TsharkDisplayFilter() {
     }
 
@@ -51,9 +54,10 @@ public final class TsharkDisplayFilter {
      */
     public record SqlFilter(String sql, List<Object> args) {
         /**
-         * empty
-         * @return 返回值
-        */
+         * 空过滤条件（SQL 为空串、无参数）。
+         *
+         * @return 空过滤条件
+         */
         public static SqlFilter empty() {
             return new SqlFilter("", List.of());
         }
@@ -89,6 +93,11 @@ public final class TsharkDisplayFilter {
     // ==================== 解析 ====================
 
     private interface Node {
+        /**
+         * 把节点渲染成 SQL 片段（写入 out）。
+         *
+         * @param out SQL 构建器
+         */
         void render(SqlBuilder out);
     }
 
@@ -157,18 +166,28 @@ public final class TsharkDisplayFilter {
         private int pos;
 
         /**
-         * Parser
-         * @param source 字符串
-         * @return 返回值
-        */
+         * 构造解析器。
+         *
+         * @param source 过滤表达式原文
+         */
         Parser(String source) {
             this.tokens = new Lexer(source).lex();
         }
 
+        /**
+         * 解析表达式（入口）。
+         *
+         * @return 表达式根节点
+         */
         Node parseExpression() {
             return parseOr();
         }
 
+        /**
+         * 校验已到表达式末尾（否则抛错）。
+         *
+         * @throws IllegalArgumentException 存在无法识别的剩余片段
+         */
         void expectEnd() {
             if (peek().type != TokenType.EOF) {
                 throw error("无法识别的表达式片段「" + peek().text + "」");
@@ -703,6 +722,11 @@ public final class TsharkDisplayFilter {
             this.source = source;
         }
 
+        /**
+         * 词法分析：把表达式原文切成 Token 列表。
+         *
+         * @return Token 列表（末尾含 EOF）
+         */
         List<Token> lex() {
             List<Token> out = new ArrayList<>();
             while (pos < source.length()) {

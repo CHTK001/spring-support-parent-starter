@@ -173,21 +173,27 @@ public class CdpWsClient implements AutoCloseable {
     }
 
     /**
-     * 注册所有事件的监听器
+     * 注册所有事件的监听器。
+     *
+     * @param handler 事件处理器
      */
     public void onAll(Consumer<Map<String, Object>> handler) {
         handlers.computeIfAbsent("all", key -> Collections.synchronizedList(new ArrayList<>())).add(handler);
     }
 
     /**
-     * 协接 no selector; 返回是否有打开的 session
+     * 是否正在关闭（无 selector；返回是否有打开的 session 的另一半）。
+     *
+     * @return 是否正在关闭
      */
     public boolean isClosing() {
         return closing;
     }
 
     /**
-     * 连接是否已经断开（不可再发送）
+     * 连接是否已经断开（不可再发送）。
+     *
+     * @return 是否已断开
      */
     public boolean isClosed() {
         return closed || closing;
@@ -244,7 +250,10 @@ public class CdpWsClient implements AutoCloseable {
     }
 
     /**
-     * 投递事件到监听器
+     * 投递事件到监听器。
+     *
+     * @param name    事件名
+     * @param message 事件消息
      */
     private void dispatchEvent(String name, Map<String, Object> message) {
         List<Consumer<Map<String, Object>>> snapshot = new ArrayList<>();
@@ -313,6 +322,11 @@ public class CdpWsClient implements AutoCloseable {
          */
         private final StringBuilder buffer;
 
+        /**
+         * 构造监听器。
+         *
+         * @param reference 客户端引用（广播时注销）
+         */
         private Listener(AtomicReference<CdpWsClient> reference) {
             this.buffer = new StringBuilder();
             this.reference = reference;
