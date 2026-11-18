@@ -8,11 +8,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.util.AiMemoryOwnership;
 import lombok.RequiredArgsConstructor;
@@ -76,14 +75,14 @@ public class ApiAgentController {
     private final ApiWebSocketPushService pushService;
 
     /**
-     * 供应商 映射器（健康检测读取凭证与地址）
+     * 渠道业务（账号模块）：健康检测读取凭证与地址
      */
-    private final SysAiProviderMapper providerMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelService channelService;
 
     /**
      * 供应商模型 映射器（健康检测读取能力并回写结果）
      */
-    private final SysAiProviderModelMapper modelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 健康探测超时时间
@@ -238,13 +237,11 @@ public class ApiAgentController {
         }
 
         // 1. 加载供应商与模型行
-        SysAiProvider provider = providerMapper.selectById(providerId);
+        SysAccountChannel provider = channelService.find(providerId);
         if (provider == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
         }
-        SysAiProviderModel modelRow = modelMapper.selectOne(new LambdaQueryWrapper<SysAiProviderModel>()
-                .eq(SysAiProviderModel::getProviderId, providerId)
-                .eq(SysAiProviderModel::getModel, modelName));
+        SysAccountChannelModel modelRow = channelModelService.find(providerId, modelName);
         if (modelRow == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在: " + modelName);
         }
@@ -279,10 +276,8 @@ public class ApiAgentController {
         capability.put("health", health);
         capability.put("health_checked_at", System.currentTimeMillis());
         modelRow.setUpdatedAt(now);
- // 复合主键 (提供者_id, 模型)：显式按双键更新，避免同名模型跨供应商误伤
-        modelMapper.update(modelRow, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SysAiProviderModel>()
-                .eq(SysAiProviderModel::getProviderId, providerId)
-                .eq(SysAiProviderModel::getModel, modelName));
+ // 复合主键 (提供者_id, 模型)：由账号模块按双键更新，不会波及其他渠道的同名模型
+        channelModelService.updateByKey(modelRow);
 
         // 5. 组装契约响应
         Map<String, Object> result = new LinkedHashMap<>();
@@ -314,7 +309,7 @@ public class ApiAgentController {
      * @param modelName 模型名称
      * @return 探针的结果
      */
-    private ProbeOutcome probe(SysAiProvider provider, Map<String, Object> capability, String modelName) {
+    private ProbeOutcome probe(SysAccountChannel provider, Map<String, Object> capability, String modelName) {
  // ONNX 本地离线模型：基础_url 即模型文件路径，只校验文件存在与可读
         if ("onnx".equalsIgnoreCase(str(provider.getPlatform()))) {
             String modelPath = str(capability.get("base_url_override"));

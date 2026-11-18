@@ -1,0 +1,16 @@
+# 渠道余额实现：kind = 渠道标识（与旧 ChannelCreditProvider 的 channel() 一致），account 侧统一出口
+com.chua.starter.account.channel.credit.ClineCreditQueryProvider
+com.chua.starter.account.channel.credit.EacCreditQueryProvider
+com.chua.starter.account.channel.credit.GeminiCreditQueryProvider
+com.chua.starter.account.channel.credit.LobsteraiCreditQueryProvider
+com.chua.starter.account.channel.credit.LoomyCreditQueryProvider
+com.chua.starter.account.channel.credit.MinimaxCreditQueryProvider
+com.chua.starter.account.channel.credit.OpencodeCreditQueryProvider
+com.chua.starter.account.channel.credit.QoderCreditQueryProvider
+com.chua.starter.account.channel.credit.QoderCnCreditQueryProvider
+com.chua.starter.account.channel.credit.RaccoonCreditQueryProvider
+com.chua.starter.account.channel.credit.TraeCreditQueryProvider
+com.chua.starter.account.channel.credit.WorkBuddyCreditQueryProvider
+com.chua.starter.account.channel.credit.ZcodeCreditQueryProvider
+# Magpie 网关托管渠道（网关聚合口径，含 creditFor 按上游/账号收窄）
+com.chua.starter.account.channel.magpie.MagpieCreditQueryProvider

@@ -1,7 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.generate;
 
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -15,7 +15,7 @@ import java.util.Set;
  *
  * <p>生成能力（文生图 / 文生视频）除提示词外还需要一批模型特有约束：是否支持参考图、
  * 单次生成张数上限、可用分辨率列表、视频时长列表、推理步数区间等。这些随模型变化，
- * 因此不写死在前端，而是随模型行走 {@code sys_ai_provider_model_capabilities} 的
+ * 因此不写死在前端，而是随模型行走 {@code sys_account_channel_model_capabilities} 的
  * {@code generate} 节点（复用已有 JSON 列，不新增数据库字段）。</p>
  *
  * <p>存储形态：</p>
@@ -133,7 +133,7 @@ public final class GenerateConfigSupport {
      * @param type     任务类型（image / video）
      * @return 生成参数视图，永不为 null
      */
-    public static View read(SysAiProviderModel modelCfg, String type) {
+    public static View read(SysAccountChannelModel modelCfg, String type) {
         Map<String, Object> gen = findGenerateNode(modelCfg);
         boolean video = TYPE_VIDEO.equalsIgnoreCase(type);
         int maxCount = intOrDefault(gen, "maxCount", video ? 1 : DEFAULT_MAX_COUNT);
@@ -168,7 +168,7 @@ public final class GenerateConfigSupport {
      * @param view     待写入的生成参数
      */
     @SuppressWarnings("unchecked")
-    public static void write(SysAiProviderModel modelCfg, View view) {
+    public static void write(SysAccountChannelModel modelCfg, View view) {
         if (modelCfg == null || view == null) {
             return;
         }
@@ -219,7 +219,7 @@ public final class GenerateConfigSupport {
      * @return generate 节点；未配置返回空 Map
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> findGenerateNode(SysAiProviderModel modelCfg) {
+    private static Map<String, Object> findGenerateNode(SysAccountChannelModel modelCfg) {
         List<Map<String, Object>> caps = modelCfg == null ? null : modelCfg.getCapabilities();
         if (caps == null || caps.isEmpty()) {
             return Map.of();

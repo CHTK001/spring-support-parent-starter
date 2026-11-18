@@ -3,23 +3,33 @@ package com.chua.starter.datasearch.provider.support;
 import com.chua.starter.datasearch.provider.model.ProviderCapability;
 import com.chua.starter.datasearch.provider.spi.ProviderCapabilityProvider;
 import com.chua.starter.datasearch.support.SpiProviders;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 能力位出口：按顺序问各个 {@link ProviderCapabilityProvider}，第一个给出结论的算数。
+ * 能力位出口：按顺序问各个 {@link ProviderCapabilityProvider}，命中结果<b>按字段合并</b>。
  *
- * <p>「给出结论」指能力位不为 null 且至少有一个字段有值；都拿不到时返回
- * {@code null}，调用方据此区分「未收录」与「不支持」。</p>
+ * <p>合并口径的必要性：能力位只有「流式 / 异步」两项，但两项来源不同——流式看接入协议
+ * （{@link ProviderProtocolCapabilities}），异步只认实测端点。若某个实现只给得出流式，
+ * 「第一个给出结论的算数」会把异步也一并判成未知；这里改为逐字段合并，
+ * 一项有值就取一项。</p>
+ *
+ * <p>都拿不到时返回 {@code null}，调用方据此区分「未收录」与「不支持」：
+ * {@code Boolean.FALSE} 是明确不支持，{@code null} 是未知，不能混用。</p>
  *
  * @author CH
  * @since 4.0.0.57
  */
+@Slf4j
 public final class ProviderCapabilities {
 
     private static volatile List<ProviderCapabilityProvider> cached;
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ProviderCapabilities() {
     }
 
@@ -38,21 +48,38 @@ public final class ProviderCapabilities {
     }
 
     /**
-     * 按平台 / 地址查能力位。
+     * 按平台查能力位（不要求上游地址）。
      *
      * @param platform 平台类型（provider id）
-     * @param baseUrl  上游基础地址
+     * @return 能力位；无口径返回 null
+     */
+    public static ProviderCapability of(String platform) {
+        return of(platform, null);
+    }
+
+    /**
+     * 按平台 / 地址查能力位（各实现按字段合并）。
+     *
+     * @param platform 平台类型（provider id）
+     * @param baseUrl  上游基础地址，可为 null（只按厂商标识匹配）
      * @return 能力位；无口径返回 null
      */
     public static ProviderCapability of(String platform, String baseUrl) {
+        ProviderCapability merged = null;
         for (ProviderCapabilityProvider provider : providers()) {
-            ProviderCapability capability = provider.capabilities(platform, baseUrl);
-            if (capability != null
-                    && (capability.getStreaming() != null || capability.getAsyncSupported() != null)) {
-                return capability;
+            ProviderCapability capability;
+            try {
+                capability = provider.capabilities(platform, baseUrl);
+            } catch (Exception e) {
+                log.debug("[provider-capability] 实现[{}]查询失败 platform={} cause={}",
+                        provider.name(), platform, e.getMessage());
+                continue;
+            }
+            if (capability != null && hasValue(capability)) {
+                merged = merge(merged, capability);
             }
         }
-        return null;
+        return merged;
     }
 
     /**
@@ -87,7 +114,11 @@ public final class ProviderCapabilities {
     public static List<ProviderCapability> entries() {
         List<ProviderCapability> all = new ArrayList<>(256);
         for (ProviderCapabilityProvider provider : providers()) {
-            all.addAll(provider.entries());
+            try {
+                all.addAll(provider.entries());
+            } catch (Exception e) {
+                log.debug("[provider-capability] 实现[{}]登记项读取失败: {}", provider.name(), e.getMessage());
+            }
         }
         return all;
     }
@@ -103,5 +134,68 @@ public final class ProviderCapabilities {
             kinds.add(provider.name());
         }
         return kinds;
+    }
+
+    /**
+     * 是否给出了任何一项结论。
+     *
+     * @param capability 能力位
+     * @return 至少一项有值返回 true
+     */
+    private static boolean hasValue(ProviderCapability capability) {
+        return capability.getStreaming() != null || capability.getAsyncSupported() != null;
+    }
+
+    /**
+     * 按字段合并：先命中且非空的占位，后续实现只补空。
+     *
+     * @param target 已合并结果，可为 null
+     * @param src    当前实现的命中结果
+     * @return 合并后的能力位（新对象，不共享实现的内部实例）
+     */
+    private static ProviderCapability merge(ProviderCapability target, ProviderCapability src) {
+        if (target == null) {
+            ProviderCapability copy = new ProviderCapability();
+            copy.setStreaming(src.getStreaming());
+            copy.setStreamingSource(src.getStreamingSource());
+            copy.setAsyncSupported(src.getAsyncSupported());
+            copy.setAsyncSource(src.getAsyncSource());
+            copy.setProtocol(src.getProtocol());
+            copy.setSource(src.getSource());
+            copy.setNotes(src.getNotes());
+            return copy;
+        }
+        if (target.getStreaming() == null) {
+            target.setStreaming(src.getStreaming());
+            if (isEmpty(target.getStreamingSource())) {
+                target.setStreamingSource(src.getStreamingSource());
+            }
+        }
+        if (target.getAsyncSupported() == null) {
+            target.setAsyncSupported(src.getAsyncSupported());
+            if (isEmpty(target.getAsyncSource())) {
+                target.setAsyncSource(src.getAsyncSource());
+            }
+        }
+        if (isEmpty(target.getProtocol())) {
+            target.setProtocol(src.getProtocol());
+        }
+        if (isEmpty(target.getSource())) {
+            target.setSource(src.getSource());
+        }
+        if (isEmpty(target.getNotes())) {
+            target.setNotes(src.getNotes());
+        }
+        return target;
+    }
+
+    /**
+     * 空串 / null 判定。
+     *
+     * @param value 文本
+     * @return 空返回 true
+     */
+    private static boolean isEmpty(String value) {
+        return value == null || value.isBlank();
     }
 }

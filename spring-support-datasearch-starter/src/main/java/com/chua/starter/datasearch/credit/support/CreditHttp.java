@@ -43,6 +43,16 @@ public final class CreditHttp {
 
     private static final int SNIPPET_LIMIT = 200;
 
+    /**
+     * 默认 User-Agent
+     */
+    private static final String USER_AGENT = "spring-support-datasearch/1.0";
+
+    /**
+     * User-Agent 请求头名
+     */
+    private static final String USER_AGENT_HEADER = "User-Agent";
+
     private CreditHttp() {
     }
 
@@ -63,9 +73,78 @@ public final class CreditHttp {
         if (query.getSignType() != null && !query.getSignType().isBlank()) {
             return fetchSigned(CreditSigner.sign(query, url.trim()));
         }
-        HttpClientBuilder builder = HttpClientFactory.of(url.trim());
+        try {
+            ClientResponse response = execute(build(query, url.trim()), methodOf(query));
+            String text = response.getBodyString();
+            if (!response.isSuccess()) {
+                throw new IllegalStateException("HTTP " + response.getStatusCode() + " " + snippet(text));
+            }
+            return text;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("请求失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 发起请求并返回完整响应（状态码 + 响应头 + 响应体）。
+     *
+     * <p>与 {@link #fetch} 的差别：不做「非 2xx 即异常」的裁剪。个别厂商（如 ModelScope）
+     * 把额度信息放在响应头里，即使请求超限（429）这些头也在：调用方需要自己读头、自己
+     * 判定成败，这里原样交回完整响应。</p>
+     *
+     * @param query 请求
+     * @param url   完整地址
+     * @return 完整响应
+     * @throws IllegalStateException 地址缺失或网络异常（非 2xx 不算失败）
+     */
+    public static ClientResponse exchange(CreditQuery query, String url) {
+        if (url == null || url.isBlank()) {
+            throw new IllegalStateException("未配置余额地址");
+        }
+        if (query.getSignType() != null && !query.getSignType().isBlank()) {
+            // 签名类接口目前没有「读响应头」的诉求；仍按签名出口发一次，头从签名请求的响应里取
+            CreditSigner.Signed signed = CreditSigner.sign(query, url.trim());
+            HttpClientBuilder builder = HttpClientFactory.of(signed.getUrl());
+            builder.accept("application/json");
+            builder.header(USER_AGENT_HEADER, USER_AGENT);
+            for (Map.Entry<String, String> entry : signed.getHeaders().entrySet()) {
+                builder.header(entry.getKey(), entry.getValue());
+            }
+            String body = signed.getBody();
+            if (body != null && !body.isEmpty()) {
+                builder.body(body);
+            }
+            String method = signed.getMethod() == null ? "GET" : signed.getMethod().toUpperCase();
+            try {
+                return execute(builder, method);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalStateException("请求失败: " + e.getMessage(), e);
+            }
+        }
+        try {
+            return execute(build(query, url.trim()), methodOf(query));
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("请求失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 组装请求：头、令牌、体 / 表单参数，与 {@link #fetch} 的出站口径完全一致。
+     *
+     * @param query 请求
+     * @param url   完整地址（非空）
+     * @return 构建器
+     */
+    private static HttpClientBuilder build(CreditQuery query, String url) {
+        HttpClientBuilder builder = HttpClientFactory.of(url);
         builder.accept("application/json");
-        builder.header("User-Agent", "spring-support-datasearch/1.0");
+        builder.header(USER_AGENT_HEADER, USER_AGENT);
         if (query.getHeaders() != null) {
             for (Map.Entry<String, String> entry : query.getHeaders().entrySet()) {
                 if (entry.getKey() != null && entry.getValue() != null) {
@@ -82,12 +161,10 @@ public final class CreditHttp {
         String body = query.getBody();
         boolean hasBody = body != null && !body.isBlank();
         Map<String, String> params = query.getParams();
-        String method = query.getMethod() == null || query.getMethod().isBlank()
-                ? "GET" : query.getMethod().trim().toUpperCase();
         if (hasBody) {
             builder.json().body(body);
         } else if (params != null && !params.isEmpty()) {
-            if ("GET".equals(method)) {
+            if ("GET".equals(methodOf(query))) {
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     builder.query(entry.getKey(), entry.getValue());
                 }
@@ -98,18 +175,18 @@ public final class CreditHttp {
                 }
             }
         }
-        try {
-            ClientResponse response = execute(builder, method);
-            String text = response.getBodyString();
-            if (!response.isSuccess()) {
-                throw new IllegalStateException("HTTP " + response.getStatusCode() + " " + snippet(text));
-            }
-            return text;
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalStateException("请求失败: " + e.getMessage(), e);
-        }
+        return builder;
+    }
+
+    /**
+     * 请求方法（大写），缺省 GET。
+     *
+     * @param query 请求
+     * @return 方法名
+     */
+    private static String methodOf(CreditQuery query) {
+        return query.getMethod() == null || query.getMethod().isBlank()
+                ? "GET" : query.getMethod().trim().toUpperCase();
     }
 
     /**

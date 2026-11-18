@@ -26,8 +26,10 @@ import java.util.Set;
  * 「按渠道 + 连接主键取出凭据」，具体的请求体形态、动作白名单、脱敏规则都属于
  * magpie 自己的知识，因此全部留在本模块。</p>
  *
- * <p>管理面默认不开（桌面版需在「设置 › 网络与共享 › 浏览器访问」打开），
- * 不可用时异常信息会给出可操作原因，不影响数据面（对话 / 模型 / 配额）。</p>
+ * <p>管理面（{@code :3430/api/*}）只有 {@code magpie web} 形态才提供；桌面版默认只监听
+ * 数据面 {@code :3425}，此时读操作（provider / 额度 / 插件清单）会回落到同机的
+ * {@link MagpieLocalState}，写操作仍需管理面，未开时异常信息会给出可操作原因，
+ * 不影响数据面（对话 / 模型 / 配额）。</p>
  *
  * @since 4.0.0.53
  * @author CH
@@ -50,6 +52,16 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
      */
     private static final Set<String> PLUGIN_ACTIONS = Set.of("add", "remove", "update", "upgrade",
             "off", "options", "prefer", "registry", "mirror", "check");
+
+    /**
+     * {@code describe} 里的部署形态：同机（读本地状态文件）。
+     */
+    private static final String MODE_LOCAL = "local";
+
+    /**
+     * {@code describe} 里的部署形态：远程网关（本地文件与它无关）。
+     */
+    private static final String MODE_REMOTE = "remote";
 
     /**
      * 线上形态适配（SPI）。
@@ -134,13 +146,23 @@ public class MagpieUpstreamAdmin implements ChannelUpstreamAdmin {
     /**
      * {@inheritDoc}
      *
-     * <p>只做地址归一化，不探活。</p>
+     * <p>只做地址归一化，不探活。附带的 {@code mode} / {@code configDir} /
+     * {@code lanUrls} / {@code gatewayKeySource} / {@code pageKeySource} 只是把
+     * 「这个连接是哪种形态、key 从哪儿来、给别的设备该填哪个地址」讲清楚，供前端提示用，
+     * 不触发任何网络请求。</p>
      */
     @Override
     public Map<String, Object> describe(Map<String, Object> credentials) {
-        Map<String, Object> out = new LinkedHashMap<>(4);
-        out.put("baseUrl", MagpieSupport.baseUrl(credentials));
+        String baseUrl = MagpieSupport.baseUrl(credentials);
+        boolean local = MagpieSupport.isLocalEndpoint(baseUrl);
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("baseUrl", baseUrl);
         out.put("pageUrl", MagpieSupport.pageUrl(credentials));
+        out.put("mode", local ? MODE_LOCAL : MODE_REMOTE);
+        out.put("configDir", MagpieSupport.configDir(credentials));
+        out.put("lanUrls", MagpieSupport.lanUrls(baseUrl));
+        out.put("gatewayKeySource", MagpieSupport.keySource(credentials, false));
+        out.put("pageKeySource", MagpieSupport.keySource(credentials, true));
         return out;
     }
 

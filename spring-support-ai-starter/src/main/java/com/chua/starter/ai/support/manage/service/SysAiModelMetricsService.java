@@ -11,15 +11,16 @@ import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
 import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiModelMetricsMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
-import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
-import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService.MetricsRecord;
+import com.chua.starter.ai.support.util.AiModelMetricKeys;
 import com.chua.starter.ai.support.util.ModelMetricKeyMatcher;
+import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
+import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -39,7 +40,7 @@ import java.util.Set;
 /**
  * 全量模型指标库服务：全量同步、缓存读取、手动修改/锁定、计费取价回退、分页检索。
  *
- * <p>指标源（Artificial Analysis）的全量数据通过 {@link #syncAll()} 落库；
+ * <p>指标源（datasearch 模型目录，models.dev 快照）的全量数据通过 {@link #syncAll()} 落库；
  * 行内被 {@code manual_locked} 标记的字段在同步时跳过，不被覆盖。计费在官方定价
  * 缺失时，通过 {@link #findForEstimate(String)} 关联本表价格做预估。</p>
  *
@@ -59,7 +60,7 @@ public class SysAiModelMetricsService {
     /**
      * 数据源标识
      */
-    public static final String SOURCE = "artificialanalysis";
+    public static final String SOURCE = "datasearch";
 
     /**
      * manualLocked 序列化：wrapper.set 不自动应用字段 TypeHandler，需手动转 JSON
@@ -73,6 +74,13 @@ public class SysAiModelMetricsService {
     private static final Map<String, SFunction<SysAiModelMetrics, ?>> FIELD_COL = fieldCol();
 
     /**
+     * 指标源快照里以 DECIMAL 落库的字段（目录给 Double，需转 BigDecimal）
+     */
+    private static final Set<String> DECIMAL_SOURCE_FIELDS = Set.of(
+            "price_input_per_musd", "price_output_per_musd",
+            "price_cache_hit_per_musd", "price_cache_write_per_musd");
+
+    /**
      * 指标库 映射器
      */
     private final SysAiModelMetricsMapper metricsMapper;
@@ -80,17 +88,12 @@ public class SysAiModelMetricsService {
     /**
      * 提供者模型 映射器（同步价格后回写模型卡片的指标 JSON）
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
-     * 服务商 映射器（按已配置服务商枚举 indicator 消费）
+     * 渠道业务（账号模块）：按已配置渠道枚举 indicator 消费
      */
-    private final SysAiProviderMapper providerMapper;
-
-    /**
-     * 指标富集服务（全量数据源）
-     */
-    private final AiModelMetricsEnrichmentService enrichment;
+    private final AccountChannelService channelService;
 
     /**
      * 用量 映射器（按 provider+model 取本地平均输出速度）
@@ -104,7 +107,7 @@ public class SysAiModelMetricsService {
      */
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public int syncAll() {
-        List<MetricsRecord> records = enrichment.all();
+        List<ProviderModelInfo> records = ProviderModelMetrics.all();
         if (records == null || records.isEmpty()) {
             log.warn("[ModelMetrics] 指标源无数据，跳过全量同步");
             return 0;
@@ -115,11 +118,14 @@ public class SysAiModelMetricsService {
         }
         long now = System.currentTimeMillis();
         int changed = 0;
-        for (MetricsRecord r : records) {
-            String key = r.normalizedKey();
+        for (ProviderModelInfo r : records) {
+            String key = truncate(AiModelMetricKeys.normalizeKey(r.getId()), 160);
+            if (key.isEmpty()) {
+                continue;
+            }
             SysAiModelMetrics cur = existing.get(key);
             if (cur == null) {
-                metricsMapper.insert(toEntity(r, now));
+                metricsMapper.insert(toEntity(r, key, now));
                 changed++;
             } else {
                 Set<String> locked = cur.getManualLocked() == null
@@ -188,7 +194,7 @@ public class SysAiModelMetricsService {
                 continue;
             }
             // 归一化键：provider/model → 取最后一段 / 并合并非字母数字字符（与指标源同口径）
-            String key = truncate(enrichment.normalizeKey(provider + "/" + model), 160);
+            String key = truncate(AiModelMetricKeys.normalizeKey(provider + "/" + model), 160);
             if (key.isEmpty()) {
                 continue;
             }
@@ -244,7 +250,7 @@ public class SysAiModelMetricsService {
             return;
         }
         try {
-            String key = truncate(enrichment.normalizeKey(provider + "/" + model), 160);
+            String key = truncate(AiModelMetricKeys.normalizeKey(provider + "/" + model), 160);
             if (!StringUtils.hasText(key)) {
                 return;
             }
@@ -292,7 +298,7 @@ public class SysAiModelMetricsService {
         if (!StringUtils.hasText(modelId)) {
             return null;
         }
-        String key = enrichment.normalizeKey(modelId);
+        String key = AiModelMetricKeys.normalizeKey(modelId);
         if (!StringUtils.hasText(key)) {
             return null;
         }
@@ -368,13 +374,14 @@ public class SysAiModelMetricsService {
                 unlocked.add(f);
             }
         }
-        MetricsRecord aaRec = unlocked.isEmpty() ? null : enrichment.getPricingRecord(key);
-        applyManualUpdate(cur, values, normLocked, unlocked, aaRec, operator, now);
+        Map<String, Object> sourceMetrics = unlocked.isEmpty()
+                ? Map.of() : ProviderModelMetrics.metricsOf(ProviderModelMetrics.of(key));
+        applyManualUpdate(cur, values, normLocked, unlocked, sourceMetrics, operator, now);
         return metricsMapper.selectById(cur.getId());
     }
 
     /**
-     * 同步时需要回写到 {@code sys_ai_provider_model.sys_ai_provider_model_metrics}
+     * 同步时需要回写到 {@code sys_account_channel_model.sys_account_channel_model_metrics}
      * 的指标键（前端模型卡片与模型选择器读取的就是这些键）。
      */
     private static final String[] PROVIDER_MODEL_METRIC_KEYS = {
@@ -382,7 +389,8 @@ public class SysAiModelMetricsService {
             "price_cache_hit_per_musd", "price_cache_write_per_musd",
             "context_window_tokens", "max_output_tokens",
             "reasoning", "web_search", "image_input", "audio_input", "video_input",
-            "pdf_input", "attachment", "temperature", "function_calling",
+            "pdf_input", "input_modalities", "output_modalities", "attachment",
+            "temperature", "function_calling",
             "streaming", "async",
             "json_mode", "structured_output", "open_weights", "intelligence_index",
             "model_name", "model_family", "knowledge_cutoff", "release_date", "last_updated",
@@ -391,7 +399,7 @@ public class SysAiModelMetricsService {
 
     /**
      * 从 {@link ChatClientIndicator} 同步价格与指标，入库 {@code sys_ai_model_metrics}，
-     * 并把同一份指标回写到该服务商已配置的模型行（{@code sys_ai_provider_model}），
+     * 并把同一份指标回写到该服务商已配置的模型行（{@code sys_account_channel_model}），
      * 让前端模型卡片在同步后立即显示新价格 / 上下文 / 能力。
      *
      * <p>遍历 {@code indicator.modelMetrics()}（模型键 → 指标键/值 Map），按归一化键
@@ -440,7 +448,7 @@ public class SysAiModelMetricsService {
             if (modelId == null || metrics == null) {
                 continue;
             }
-            String key = truncate(enrichment.normalizeKey(modelId), 160);
+            String key = truncate(AiModelMetricKeys.normalizeKey(modelId), 160);
             if (key.isEmpty() || !processed.add(key)) {
                 continue;
             }
@@ -487,13 +495,13 @@ public class SysAiModelMetricsService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public int syncFromConfiguredProviders() {
-        List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
+        List<SysAccountChannel> providers = channelService.listAll();
         if (providers.isEmpty()) {
             return 0;
         }
         int ok = 0;
         int skipped = 0;
-        for (SysAiProvider provider : providers) {
+        for (SysAccountChannel provider : providers) {
             ChatClientIndicator indicator;
             try {
                 indicator = resolveIndicator(provider);
@@ -571,51 +579,9 @@ public class SysAiModelMetricsService {
         }
         String dataSource = source == null || source.isBlank() ? "upstream:/models" : source;
         long now = System.currentTimeMillis();
-        Map<String, Map<String, Object>> pricing = new LinkedHashMap<>(16);
-        Map<String, Map<String, Object>> enriched = new LinkedHashMap<>(16);
-        for (Map<String, Object> row : rows) {
-            if (row == null || !(row.get("metrics") instanceof Map<?, ?> raw)) {
-                continue;
-            }
-            String name = row.get("id") instanceof String id ? id : null;
-            if (name == null && row.get("name") instanceof String display) {
-                name = display;
-            }
-            if (name == null || name.isBlank()) {
-                continue;
-            }
-            Map<String, Object> snapshot = new LinkedHashMap<>(4);
-            for (String key : UPSTREAM_PRICE_KEYS) {
-                Object value = raw.get(key);
-                if (value != null) {
-                    snapshot.put(key, value);
-                }
-            }
-            // 能力位与价格一起落：新建行需要它，已有行只在列为空时补
-            for (String key : UPSTREAM_CAPABILITY_KEYS) {
-                Object value = raw.get(key);
-                if (value != null) {
-                    snapshot.put(key, value);
-                }
-            }
-            // 定价规则不是「价格列」，不能混进 UPSTREAM_PRICE_KEYS，但要跟价格一起落
-            // sys_ai_model_metrics 的 TEXT 列；否则只会写进服务商模型行，指标库仍为空。
-            if (raw.get("pricing_rules") instanceof List<?> rules && !rules.isEmpty()) {
-                snapshot.put("pricing_rules", rules);
-            }
-            if (!snapshot.isEmpty()) {
-                pricing.putIfAbsent(name, snapshot);
-            }
-            Map<String, Object> full = new LinkedHashMap<>(raw.size());
-            raw.forEach((k, v) -> {
-                if (k != null && v != null) {
-                    full.put(String.valueOf(k), v);
-                }
-            });
-            if (!full.isEmpty()) {
-                enriched.putIfAbsent(name, full);
-            }
-        }
+        UpstreamSnapshots snapshots = extractUpstreamSnapshots(rows);
+        Map<String, Map<String, Object>> pricing = snapshots.pricing();
+        Map<String, Map<String, Object>> enriched = snapshots.enriched();
         if (pricing.isEmpty() && enriched.isEmpty()) {
             return new UpstreamPricingResult(0, 0, 0);
         }
@@ -631,7 +597,7 @@ public class SysAiModelMetricsService {
         for (Map.Entry<String, Map<String, Object>> entry : pricing.entrySet()) {
             String modelId = entry.getKey();
             Map<String, Object> snapshot = entry.getValue();
-            String key = truncate(enrichment.normalizeKey(modelId), 160);
+            String key = truncate(AiModelMetricKeys.normalizeKey(modelId), 160);
             if (key.isEmpty()) {
                 continue;
             }
@@ -710,6 +676,147 @@ public class SysAiModelMetricsService {
         log.info("[ModelMetrics] 上游计费同步 provider={}：更新 {}，新增 {}，回写模型行 {}",
                 providerId, updated, inserted, providerModels);
         return new UpstreamPricingResult(updated, inserted, providerModels);
+    }
+
+    /**
+     * 目录计费 / 能力快照 → 指标库（<b>先删后增</b>，按数据源整体替换）。
+     *
+     * <p>与 {@link #syncUpstreamPricing(String, List, String)} 的 upsert 不同：本方法
+     * 对「来源就是本次 {@code source} 且未被手动锁定」的指标行先删后增，行内不保留
+     * 上一轮同步的陈旧字段（上游已下架的价格不会残留）。两条安全边界：</p>
+     * <ul>
+     *   <li>其它来源（官方指标源等）收录的行一律不动——模型键全局唯一，不能被抢；</li>
+     *   <li>手动锁定（{@code manual_locked} 非空）的行不删不插，人工数据优先。</li>
+     * </ul>
+     *
+     * @param providerId 服务商标识
+     * @param rows       上游 / 目录行（含 {@code metrics} 与模型名）
+     * @param sourceUrl  数据源地址
+     * @param source     数据源标识（空回落 {@code upstream:/models}）
+     * @return 同步统计（updated=替换行数，inserted=新增行数）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public UpstreamPricingResult replaceUpstreamPricing(String providerId,
+                                                        List<Map<String, Object>> rows,
+                                                        String sourceUrl,
+                                                        String source) {
+        if (providerId == null || providerId.isBlank() || rows == null || rows.isEmpty()) {
+            return new UpstreamPricingResult(0, 0, 0);
+        }
+        String dataSource = source == null || source.isBlank() ? "upstream:/models" : source;
+        long now = System.currentTimeMillis();
+        UpstreamSnapshots snapshots = extractUpstreamSnapshots(rows);
+        if (snapshots.pricing().isEmpty()) {
+            return new UpstreamPricingResult(0, 0, 0);
+        }
+        Map<String, SysAiModelMetrics> existing = new HashMap<>();
+        for (SysAiModelMetrics m : metricsMapper.selectList(null)) {
+            if (m.getModelKey() != null) {
+                existing.put(m.getModelKey(), m);
+            }
+        }
+        int replaced = 0;
+        int inserted = 0;
+        for (Map.Entry<String, Map<String, Object>> entry : snapshots.pricing().entrySet()) {
+            String modelId = entry.getKey();
+            Map<String, Object> snapshot = entry.getValue();
+            String key = truncate(AiModelMetricKeys.normalizeKey(modelId), 160);
+            if (key.isEmpty()) {
+                continue;
+            }
+            SysAiModelMetrics cur = existing.get(key);
+            if (cur != null && !dataSource.equals(cur.getSource())) {
+                // 其它来源收录的行不动：模型键全局唯一，不能被本次同步抢走
+                continue;
+            }
+            if (cur != null && cur.getManualLocked() != null && !cur.getManualLocked().isEmpty()) {
+                // 手动锁定行不删：人工维护的价格 / 上下文优先于同步
+                continue;
+            }
+            if (cur != null) {
+                metricsMapper.deleteById(cur.getId());
+                replaced++;
+            }
+            SysAiModelMetrics entity = toIndicatorEntity(key, modelId, providerId, snapshot, dataSource, now);
+            metricsMapper.insert(entity);
+            existing.put(key, entity);
+            inserted++;
+        }
+        int providerModels = applyToProviderModels(providerId,
+                snapshots.enriched().isEmpty() ? snapshots.pricing() : snapshots.enriched(),
+                dataSource, sourceUrl, now);
+        log.info("[ModelMetrics] 上游计费先删后增 provider={} source={}：替换 {}，新增 {}，回写模型行 {}",
+                providerId, dataSource, replaced, inserted, providerModels);
+        return new UpstreamPricingResult(replaced, inserted, providerModels);
+    }
+
+    /**
+     * 上游行价格 / 能力快照提取结果。
+     *
+     * @param pricing  模型名 → 价格 / 能力快照（只含出现的键）
+     * @param enriched 模型名 → 完整指标行（回写服务商模型卡片用）
+     */
+    private record UpstreamSnapshots(Map<String, Map<String, Object>> pricing,
+                                     Map<String, Map<String, Object>> enriched) {
+    }
+
+    /**
+     * 从上游 / 目录行提取价格与能力快照（按模型名分组，同名保留首条）。
+     *
+     * <p>价格键来自 {@link #UPSTREAM_PRICE_KEYS}，能力键来自
+     * {@link #UPSTREAM_CAPABILITY_KEYS}，定价规则单独随行携带。</p>
+     *
+     * @param rows 上游行（含 {@code metrics} 与模型名）
+     * @return 提取结果（不返回 null）
+     */
+    private static UpstreamSnapshots extractUpstreamSnapshots(List<Map<String, Object>> rows) {
+        Map<String, Map<String, Object>> pricing = new LinkedHashMap<>(16);
+        Map<String, Map<String, Object>> enriched = new LinkedHashMap<>(16);
+        for (Map<String, Object> row : rows) {
+            if (row == null || !(row.get("metrics") instanceof Map<?, ?> raw)) {
+                continue;
+            }
+            String name = row.get("id") instanceof String id ? id : null;
+            if (name == null && row.get("name") instanceof String display) {
+                name = display;
+            }
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            Map<String, Object> snapshot = new LinkedHashMap<>(4);
+            for (String key : UPSTREAM_PRICE_KEYS) {
+                Object value = raw.get(key);
+                if (value != null) {
+                    snapshot.put(key, value);
+                }
+            }
+            // 能力位与价格一起落：新建行需要它，已有行只在列为空时补
+            for (String key : UPSTREAM_CAPABILITY_KEYS) {
+                Object value = raw.get(key);
+                if (value != null) {
+                    snapshot.put(key, value);
+                }
+            }
+            // 定价规则不是「价格列」，不能混进 UPSTREAM_PRICE_KEYS，但要跟价格一起落
+            // sys_ai_model_metrics 的 TEXT 列；否则只会写进服务商模型行，指标库仍为空。
+            if (raw.get("pricing_rules") instanceof List<?> rules && !rules.isEmpty()) {
+                snapshot.put("pricing_rules", rules);
+            }
+            if (!snapshot.isEmpty()) {
+                pricing.putIfAbsent(name, snapshot);
+            }
+            Map<String, Object> full = new LinkedHashMap<>(raw.size());
+            raw.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    full.put(String.valueOf(k), v);
+                }
+            });
+            if (!full.isEmpty()) {
+                enriched.putIfAbsent(name, full);
+            }
+        }
+        return new UpstreamSnapshots(pricing, enriched);
     }
 
     /**
@@ -818,7 +925,7 @@ public class SysAiModelMetricsService {
      * @param entity 服务商行
      * @return indicator 实现或空（无可用指标端点）
      */
-    private ChatClientIndicator resolveIndicator(SysAiProvider entity) {
+    private ChatClientIndicator resolveIndicator(SysAccountChannel entity) {
         ChatClientSetting setting = buildSettingForIndicator(entity);
         ChatClientIndicator indicator = ChatClientIndicators.of(setting);
         if (indicator != null) {
@@ -836,7 +943,7 @@ public class SysAiModelMetricsService {
      * @param entity 参数
      * @return 返回值
     */
-    private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
+    private ChatClientSetting buildSettingForIndicator(SysAccountChannel entity) {
         return ChatClientSetting.builder()
                 .provider(entity.getPlatform() == null || entity.getPlatform().isBlank()
                         ? entity.getProviderId() : entity.getPlatform())
@@ -852,7 +959,7 @@ public class SysAiModelMetricsService {
      * @param entity 参数
      * @return 返回值
     */
-    private String firstApiKey(SysAiProvider entity) {
+    private String firstApiKey(SysAccountChannel entity) {
         if (entity.getCredentials() == null || entity.getCredentials().isEmpty()) {
             return null;
         }
@@ -904,9 +1011,7 @@ public class SysAiModelMetricsService {
         if (providerId == null || providerId.isBlank() || modelMetrics.isEmpty()) {
             return 0;
         }
-        List<SysAiProviderModel> rows = providerModelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
+        List<SysAccountChannelModel> rows = channelModelService.listAll(providerId);
         if (rows.isEmpty()) {
             return 0;
         }
@@ -918,7 +1023,7 @@ public class SysAiModelMetricsService {
                 continue;
             }
             byExact.putIfAbsent(id, entry.getValue());
-            String key = truncate(enrichment.normalizeKey(id), 160);
+            String key = truncate(AiModelMetricKeys.normalizeKey(id), 160);
             if (!key.isEmpty()) {
                 byNormalized.putIfAbsent(key, entry.getValue());
             }
@@ -926,13 +1031,13 @@ public class SysAiModelMetricsService {
 
         int changed = 0;
         long now = System.currentTimeMillis();
-        for (SysAiProviderModel row : rows) {
+        for (SysAccountChannelModel row : rows) {
             if (row.getModel() == null) {
                 continue;
             }
             Map<String, Object> metrics = byExact.get(row.getModel());
             if (metrics == null) {
-                metrics = byNormalized.get(truncate(enrichment.normalizeKey(row.getModel()), 160));
+                metrics = byNormalized.get(truncate(AiModelMetricKeys.normalizeKey(row.getModel()), 160));
             }
             if (metrics == null) {
                 continue;
@@ -942,10 +1047,8 @@ public class SysAiModelMetricsService {
                     : new LinkedHashMap<>(row.getMetrics());
             enrichRowFromMetrics(row, current, metrics, source, sourceUrl, capturedAt);
             row.setUpdatedAt(now);
-            // 复合主键：必须同时按 providerId + model 限定，避免跨服务商误更新
-            providerModelMapper.update(row, new LambdaUpdateWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getProviderId, providerId)
-                    .eq(SysAiProviderModel::getModel, row.getModel()));
+            // 复合主键：账号模块按 providerId + model 限定更新，不会跨服务商误伤
+            channelModelService.updateByKey(row);
             changed++;
         }
         return changed;
@@ -965,17 +1068,34 @@ public class SysAiModelMetricsService {
      * @param sourceUrl  数据源地址（可空）
      * @param capturedAt 采集时间戳
      */
-    public void enrichRowFromMetrics(SysAiProviderModel row, Map<String, Object> current,
+    public void enrichRowFromMetrics(SysAccountChannelModel row, Map<String, Object> current,
                                      Map<String, Object> metrics, String source, String sourceUrl,
                                      long capturedAt) {
-        for (String key : PROVIDER_MODEL_METRIC_KEYS) {
-            Object value = metrics.get(key);
-            if (value != null) {
-                current.put(key, value);
+        // 指标源（上游 /models、指标网页）大多不返回输入/输出模态与输出上限：
+        // 按模型 id 从公开目录补一份合并视图，目录来源的键只用于「补缺」，不覆盖
+        // 已同步或手填的值（见 fromCatalog 判定）。
+        Map<String, Object> snapshot = new LinkedHashMap<>(metrics);
+        Set<String> fromCatalog = new HashSet<>(8);
+        Map<String, Object> catalog = ProviderModelMetrics.metricsOf(
+                ProviderModelMetrics.of(row.getProviderId(), row.getModel()));
+        for (Map.Entry<String, Object> entry : catalog.entrySet()) {
+            if (snapshot.get(entry.getKey()) == null) {
+                snapshot.put(entry.getKey(), entry.getValue());
+                fromCatalog.add(entry.getKey());
             }
         }
+        for (String key : PROVIDER_MODEL_METRIC_KEYS) {
+            Object value = snapshot.get(key);
+            if (value == null) {
+                continue;
+            }
+            if (fromCatalog.contains(key) && current.get(key) != null) {
+                continue;
+            }
+            current.put(key, value);
+        }
         // 能力键兼容：指标侧叫 reasoning，模型行历史口径叫 reasoning_model
-        if (metrics.get("reasoning") instanceof Boolean reasoning) {
+        if (snapshot.get("reasoning") instanceof Boolean reasoning) {
             current.put("reasoning_model", reasoning);
         }
         if (source != null && !source.isBlank()) {
@@ -986,48 +1106,48 @@ public class SysAiModelMetricsService {
         }
         current.put("metrics_captured_at", capturedAt);
 
-        Object context = metrics.get("context_window_tokens");
+        Object context = snapshot.get("context_window_tokens");
         if (row.getContextWindow() == null && context instanceof Number number && number.longValue() > 0) {
             row.setContextWindow((int) Math.min(number.longValue(), Integer.MAX_VALUE));
         }
-        Object maxOutput = metrics.get("max_output_tokens");
+        Object maxOutput = snapshot.get("max_output_tokens");
         if (row.getMaxTokens() == null && maxOutput instanceof Number number && number.longValue() > 0) {
             row.setMaxTokens((int) Math.min(number.longValue(), Integer.MAX_VALUE));
         }
         // 指标回填实体列：family / knowledge / release_date / last_updated / modalities /
         // open_weights / attachment / reasoning / tool_call / temperature ——
         // 仅在实体列当前为空时回填，不覆盖管理员已填的值
-        fillIfBlank(row::getFamily, value -> row.setFamily(value), str(metrics, "model_family"));
-        fillIfBlank(row::getKnowledge, row::setKnowledge, str(metrics, "knowledge_cutoff"));
-        fillIfBlank(row::getReleaseDate, row::setReleaseDate, str(metrics, "release_date"));
+        fillIfBlank(row::getFamily, value -> row.setFamily(value), str(snapshot, "model_family"));
+        fillIfBlank(row::getKnowledge, row::setKnowledge, str(snapshot, "knowledge_cutoff"));
+        fillIfBlank(row::getReleaseDate, row::setReleaseDate, str(snapshot, "release_date"));
         // last_updated：优先接口数据的 last_updated，缺失则用采集时间（capturedAt）
         fillIfBlank(row::getLastUpdated, row::setLastUpdated,
-                firstNonBlank(str(metrics, "last_updated"), isoOf(capturedAt)));
-        if (row.getOpenWeights() == null && bool(metrics, "open_weights") != null) {
-            row.setOpenWeights(bool(metrics, "open_weights"));
+                firstNonBlank(str(snapshot, "last_updated"), isoOf(capturedAt)));
+        if (row.getOpenWeights() == null && bool(snapshot, "open_weights") != null) {
+            row.setOpenWeights(bool(snapshot, "open_weights"));
         }
-        if (row.getAttachment() == null && bool(metrics, "attachment") != null) {
-            row.setAttachment(bool(metrics, "attachment"));
+        if (row.getAttachment() == null && bool(snapshot, "attachment") != null) {
+            row.setAttachment(bool(snapshot, "attachment"));
         }
-        if (row.getReasoning() == null && bool(metrics, "reasoning") != null) {
-            row.setReasoning(bool(metrics, "reasoning"));
+        if (row.getReasoning() == null && bool(snapshot, "reasoning") != null) {
+            row.setReasoning(bool(snapshot, "reasoning"));
         }
-        if (row.getToolCall() == null && bool(metrics, "function_calling") != null) {
-            row.setToolCall(bool(metrics, "function_calling"));
+        if (row.getToolCall() == null && bool(snapshot, "function_calling") != null) {
+            row.setToolCall(bool(snapshot, "function_calling"));
         }
-        if (row.getTemperatureSupported() == null && bool(metrics, "temperature") != null) {
-            row.setTemperatureSupported(bool(metrics, "temperature"));
+        if (row.getTemperatureSupported() == null && bool(snapshot, "temperature") != null) {
+            row.setTemperatureSupported(bool(snapshot, "temperature"));
         }
-        // modalities：由 input 模态（image/audio/video/pdf）与 output_modalities 组装
+        // modalities：优先显式 input_modalities，其次由 image/audio/video/pdf 布尔位组装
         if (row.getModalities() == null) {
-            Map<String, Object> modalities = modalitiesOf(metrics);
+            Map<String, Object> modalities = modalitiesOf(snapshot);
             if (!modalities.isEmpty()) {
                 row.setModalities(modalities);
             }
         }
         // 思考档位：指标 reasoning_efforts（Models.dev reasoning_options 解析）→
         // capabilities[].thinking_efforts，仅在未配置时回填（与 applyThinkingEfforts 同存储口径）
-        List<?> efforts = listOf(metrics.get("reasoning_efforts"));
+        List<?> efforts = listOf(snapshot.get("reasoning_efforts"));
         if (!efforts.isEmpty() && !hasThinkingEfforts(row)) {
             applyThinkingEfforts(row, new ArrayList<>(efforts.stream()
                     .map(String::valueOf).collect(java.util.stream.Collectors.toList())));
@@ -1040,7 +1160,7 @@ public class SysAiModelMetricsService {
      * @param row 参数
      * @return 返回值
     */
-    private static boolean hasThinkingEfforts(SysAiProviderModel row) {
+    private static boolean hasThinkingEfforts(SysAccountChannelModel row) {
         List<Map<String, Object>> caps = row.getCapabilities();
         if (caps == null) {
             return false;
@@ -1061,7 +1181,7 @@ public class SysAiModelMetricsService {
      * @param entity 参数
      * @return 返回值
     */
-    private static void applyThinkingEfforts(SysAiProviderModel entity, List<String> efforts) {
+    private static void applyThinkingEfforts(SysAccountChannelModel entity, List<String> efforts) {
         if (efforts == null) {
             return;
         }
@@ -1176,23 +1296,33 @@ public class SysAiModelMetricsService {
      */
     private static Map<String, Object> modalitiesOf(Map<String, Object> metrics) {
         Map<String, Object> modalities = new LinkedHashMap<>(4);
+        // 目录若明确给了输入模态（models.dev / 厂商控制台），以它为准：
+        // 布尔位只能表达 image/audio/video/pdf 四类，补不出 vector / file。
         List<String> inputs = new ArrayList<>(4);
-        inputs.add("text");
-        Boolean image = bool(metrics, "image_input");
-        if (Boolean.TRUE.equals(image)) {
-            inputs.add("image");
+        for (Object item : listOf(metrics.get("input_modalities"))) {
+            String text = item == null ? null : String.valueOf(item).trim().toLowerCase(java.util.Locale.ROOT);
+            if (text != null && !text.isEmpty() && !inputs.contains(text)) {
+                inputs.add(text);
+            }
         }
-        Boolean audio = bool(metrics, "audio_input");
-        if (Boolean.TRUE.equals(audio)) {
-            inputs.add("audio");
-        }
-        Boolean video = bool(metrics, "video_input");
-        if (Boolean.TRUE.equals(video)) {
-            inputs.add("video");
-        }
-        Boolean pdf = bool(metrics, "pdf_input");
-        if (Boolean.TRUE.equals(pdf)) {
-            inputs.add("pdf");
+        if (inputs.isEmpty()) {
+            inputs.add("text");
+            Boolean image = bool(metrics, "image_input");
+            if (Boolean.TRUE.equals(image)) {
+                inputs.add("image");
+            }
+            Boolean audio = bool(metrics, "audio_input");
+            if (Boolean.TRUE.equals(audio)) {
+                inputs.add("audio");
+            }
+            Boolean video = bool(metrics, "video_input");
+            if (Boolean.TRUE.equals(video)) {
+                inputs.add("video");
+            }
+            Boolean pdf = bool(metrics, "pdf_input");
+            if (Boolean.TRUE.equals(pdf)) {
+                inputs.add("pdf");
+            }
         }
         modalities.put("input", inputs);
         Object outputs = metrics.get("output_modalities");
@@ -1528,146 +1658,61 @@ public class SysAiModelMetricsService {
     }
 
     /**
-     * 构建同步更新语句（锁定字段跳过，其余含图标/能力标志全部更新）。
+     * 构建同步更新语句（锁定字段跳过；目录未给出的字段不写，不覆盖已有值）。
      *
-     * @param r      同步指标记录
+     * <p>目录（datasearch / models.dev）只提供价格、上下文与能力位；
+     * AA 时代的 benchmark 分数、速度、首字延迟、图标等列不再由全量同步维护，
+     * 已有行的历史值保持原样。</p>
+     *
+     * @param r      目录模型信息
      * @param locked 锁定字段名集合（不覆盖）
      * @param now    更新时间戳
      * @param uw     待填充的更新包装器
      */
-    private void buildSyncUpdate(MetricsRecord r, Set<String> locked, long now,
+    private void buildSyncUpdate(ProviderModelInfo r, Set<String> locked, long now,
                                  LambdaUpdateWrapper<SysAiModelMetrics> uw) {
-        if (!locked.contains("price_input_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceInputPerMusd, r.inputPerMillion());
+        if (!locked.contains("price_input_per_musd") && r.getPriceInputPerMusd() != null) {
+            uw.set(SysAiModelMetrics::getPriceInputPerMusd, BigDecimal.valueOf(r.getPriceInputPerMusd()));
         }
-        if (!locked.contains("price_output_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceOutputPerMusd, r.outputPerMillion());
+        if (!locked.contains("price_output_per_musd") && r.getPriceOutputPerMusd() != null) {
+            uw.set(SysAiModelMetrics::getPriceOutputPerMusd, BigDecimal.valueOf(r.getPriceOutputPerMusd()));
         }
-        if (!locked.contains("price_cache_hit_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceCacheHitPerMusd, r.cacheHitPrice());
+        if (!locked.contains("price_cache_hit_per_musd") && r.getPriceCacheHitPerMusd() != null) {
+            uw.set(SysAiModelMetrics::getPriceCacheHitPerMusd, BigDecimal.valueOf(r.getPriceCacheHitPerMusd()));
         }
-        if (!locked.contains("price_cache_write_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceCacheWritePerMusd, r.cacheWritePrice());
+        if (!locked.contains("price_cache_write_per_musd") && r.getPriceCacheWritePerMusd() != null) {
+            uw.set(SysAiModelMetrics::getPriceCacheWritePerMusd, BigDecimal.valueOf(r.getPriceCacheWritePerMusd()));
         }
-        if (!locked.contains("intelligence_index")) {
-            uw.set(SysAiModelMetrics::getIntelligenceIndex, r.intelligenceIndex());
+        if (!locked.contains("context_window_tokens") && r.getContextWindow() != null) {
+            uw.set(SysAiModelMetrics::getContextWindowTokens, r.getContextWindow());
         }
-        if (!locked.contains("hle_score")) {
-            uw.set(SysAiModelMetrics::getHleScore, r.hleScore());
+        if (!locked.contains("reasoning") && r.getReasoning() != null) {
+            uw.set(SysAiModelMetrics::getReasoning, r.getReasoning());
         }
-        if (!locked.contains("omniscience_index")) {
-            uw.set(SysAiModelMetrics::getOmniscienceIndex, r.omniscienceIndex());
+        Boolean imageInput = hasModality(r, "image");
+        if (!locked.contains("image_input") && imageInput != null) {
+            uw.set(SysAiModelMetrics::getImageInput, imageInput);
         }
-        if (!locked.contains("gpqa_score")) {
-            uw.set(SysAiModelMetrics::getGpqaScore, r.gpqaScore());
+        if (!locked.contains("function_calling") && r.getToolCall() != null) {
+            uw.set(SysAiModelMetrics::getFunctionCalling, r.getToolCall());
         }
-        if (!locked.contains("aime25_score")) {
-            uw.set(SysAiModelMetrics::getAime25Score, r.aime25Score());
-        }
-        if (!locked.contains("livecodebench_score")) {
-            uw.set(SysAiModelMetrics::getLivecodebenchScore, r.livecodebenchScore());
-        }
-        if (!locked.contains("scicode_score")) {
-            uw.set(SysAiModelMetrics::getScicodeScore, r.scicodeScore());
-        }
-        if (!locked.contains("ifbench_score")) {
-            uw.set(SysAiModelMetrics::getIfbenchScore, r.ifbenchScore());
-        }
-        if (!locked.contains("critpt_score")) {
-            uw.set(SysAiModelMetrics::getCritptScore, r.critptScore());
-        }
-        if (!locked.contains("mmmu_pro_score")) {
-            uw.set(SysAiModelMetrics::getMmmuProScore, r.mmmuProScore());
-        }
-        if (!locked.contains("tau2_score")) {
-            uw.set(SysAiModelMetrics::getTau2Score, r.tau2Score());
-        }
-        if (!locked.contains("tau_banking_score")) {
-            uw.set(SysAiModelMetrics::getTauBankingScore, r.tauBankingScore());
-        }
-        if (!locked.contains("lcr_score")) {
-            uw.set(SysAiModelMetrics::getLcrScore, r.lcrScore());
-        }
-        if (!locked.contains("terminalbench_hard_score")) {
-            uw.set(SysAiModelMetrics::getTerminalbenchHardScore, r.terminalbenchHardScore());
-        }
-        if (!locked.contains("terminal_bench21_score")) {
-            uw.set(SysAiModelMetrics::getTerminalBench21Score, r.terminalBench21Score());
-        }
-        if (!locked.contains("terminal_bench40_score")) {
-            uw.set(SysAiModelMetrics::getTerminalBench40Score, r.terminalBench40Score());
-        }
-        if (!locked.contains("automation_bench_score")) {
-            uw.set(SysAiModelMetrics::getAutomationBenchScore, r.automationBenchScore());
-        }
-        if (!locked.contains("gdpval_normalized_score")) {
-            uw.set(SysAiModelMetrics::getGdpvalNormalizedScore, r.gdpvalNormalizedScore());
-        }
-        if (!locked.contains("briefcase_score")) {
-            uw.set(SysAiModelMetrics::getBriefcaseScore, r.briefcaseScore());
-        }
-        if (!locked.contains("harvey_lab_score")) {
-            uw.set(SysAiModelMetrics::getHarveyLabScore, r.harveyLabScore());
-        }
-        if (!locked.contains("apex_agents_score")) {
-            uw.set(SysAiModelMetrics::getApexAgentsScore, r.apexAgentsScore());
-        }
-        if (!locked.contains("itbench_sre_score")) {
-            uw.set(SysAiModelMetrics::getItbenchSreScore, r.itbenchSreScore());
-        }
-        if (!locked.contains("omniscience_accuracy")) {
-            uw.set(SysAiModelMetrics::getOmniscienceAccuracy, r.omniscienceAccuracy());
-        }
-        if (!locked.contains("omniscience_non_hallucination")) {
-            uw.set(SysAiModelMetrics::getOmniscienceNonHallucination, r.omniscienceNonHallucination());
-        }
-        if (!locked.contains("elo")) {
-            uw.set(SysAiModelMetrics::getElo, r.elo());
-        }
-        if (!locked.contains("cost_per_task")) {
-            uw.set(SysAiModelMetrics::getCostPerTask, r.costPerTask());
-        }
-        if (!locked.contains("json_mode")) {
-            uw.set(SysAiModelMetrics::getJsonMode, r.jsonMode());
-        }
-        if (!locked.contains("openai_compatible")) {
-            uw.set(SysAiModelMetrics::getOpenaiCompatible, r.openaiCompatible());
-        }
-        if (!locked.contains("intelligence_index_estimated")) {
-            uw.set(SysAiModelMetrics::getIntelligenceIndexEstimated, r.intelligenceIndexEstimated());
-        }
-        if (!locked.contains("output_speed_tps")) {
-            uw.set(SysAiModelMetrics::getOutputSpeedTps, r.outputSpeedTps());
-        }
-        if (!locked.contains("latency_first_token_seconds")) {
-            uw.set(SysAiModelMetrics::getLatencyFirstTokenSeconds, r.latencyFirstTokenSeconds());
-        }
-        if (!locked.contains("context_window_tokens")) {
-            uw.set(SysAiModelMetrics::getContextWindowTokens, r.contextWindowTokens());
-        }
-        uw.set(SysAiModelMetrics::getProvider, r.provider());
-        uw.set(SysAiModelMetrics::getIconUrl, r.iconUrl());
-        uw.set(SysAiModelMetrics::getReasoning, r.reasoning());
-        uw.set(SysAiModelMetrics::getWebSearch, r.webSearch());
-        uw.set(SysAiModelMetrics::getImageInput, r.imageInput());
-        uw.set(SysAiModelMetrics::getFunctionCalling, r.functionCalling());
         uw.set(SysAiModelMetrics::getUpdateTime, now);
     }
 
     /**
      * 手动更新落库（统一构造 UpdateWrapper）。
      *
-     * @param cur         当前指标行
-     * @param values      待更新的字段值映射（字段名 → 值）
-     * @param normLocked  规范化后仍锁定的字段名列表
-     * @param unlocked    解锁字段名列表（回填指标源当前值）
-     * @param aaRec       指标源记录（解锁字段取值）
-     * @param operator    操作人
-     * @param now         更新时间戳
+     * @param cur           当前指标行
+     * @param values        待更新的字段值映射（字段名 → 值）
+     * @param normLocked    规范化后仍锁定的字段名列表
+     * @param unlocked      解锁字段名列表（回填指标源当前值）
+     * @param sourceMetrics 指标源快照（datasearch 目录键值，解锁字段取值）
+     * @param operator      操作人
+     * @param now           更新时间戳
      */
     private void applyManualUpdate(SysAiModelMetrics cur, Map<String, BigDecimal> values,
                                    List<String> normLocked, List<String> unlocked,
-                                   MetricsRecord aaRec, String operator, long now) {
+                                   Map<String, Object> sourceMetrics, String operator, long now) {
         LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
         uw.eq(SysAiModelMetrics::getId, cur.getId());
         if (values != null) {
@@ -1689,7 +1734,7 @@ public class SysAiModelMetricsService {
         for (String field : unlocked) {
             SFunction<SysAiModelMetrics, ?> col = FIELD_COL.get(field);
             if (col != null) {
-                uw.set(col, aaValue(aaRec, field));
+                uw.set(col, sourceValue(sourceMetrics, field));
             }
         }
         String lockedJson = normLocked.isEmpty() ? null : writeLocked(normLocked);
@@ -1706,51 +1751,28 @@ public class SysAiModelMetricsService {
     }
 
     /**
-     * 取指标源记录中指定字段的值。
-     * @param aaRec 参数
-     * @param field 字符串
-     * @return 返回值
-    */
-    private Object aaValue(MetricsRecord aaRec, String field) {
-        if (aaRec == null) {
+     * 取指标源快照中指定字段的值（类型按列对齐）。
+     *
+     * <p>目录没有的字段（AA 时代的 benchmark 分数等）返回 {@code null}：
+     * 解锁该类字段后回填空值，与「AA 特有字段随数据源切换不再维护」的口径一致。</p>
+     *
+     * @param metrics 指标源快照（{@code ProviderModelMetrics.metricsOf} 的结果）
+     * @param field   字段名
+     * @return 字段值；源未给出返回 {@code null}
+     */
+    private Object sourceValue(Map<String, Object> metrics, String field) {
+        if (metrics == null) {
             return null;
         }
-        switch (field) {
-            case "price_input_per_musd": return aaRec.inputPerMillion();
-            case "price_output_per_musd": return aaRec.outputPerMillion();
-            case "price_cache_hit_per_musd": return aaRec.cacheHitPrice();
-            case "price_cache_write_per_musd": return aaRec.cacheWritePrice();
-            case "intelligence_index": return aaRec.intelligenceIndex();
-            case "hle_score": return aaRec.hleScore();
-            case "omniscience_index": return aaRec.omniscienceIndex();
-            case "gpqa_score": return aaRec.gpqaScore();
-            case "aime25_score": return aaRec.aime25Score();
-            case "livecodebench_score": return aaRec.livecodebenchScore();
-            case "scicode_score": return aaRec.scicodeScore();
-            case "ifbench_score": return aaRec.ifbenchScore();
-            case "critpt_score": return aaRec.critptScore();
-            case "mmmu_pro_score": return aaRec.mmmuProScore();
-            case "tau2_score": return aaRec.tau2Score();
-            case "tau_banking_score": return aaRec.tauBankingScore();
-            case "lcr_score": return aaRec.lcrScore();
-            case "terminalbench_hard_score": return aaRec.terminalbenchHardScore();
-            case "terminal_bench21_score": return aaRec.terminalBench21Score();
-            case "terminal_bench40_score": return aaRec.terminalBench40Score();
-            case "automation_bench_score": return aaRec.automationBenchScore();
-            case "gdpval_normalized_score": return aaRec.gdpvalNormalizedScore();
-            case "briefcase_score": return aaRec.briefcaseScore();
-            case "harvey_lab_score": return aaRec.harveyLabScore();
-            case "apex_agents_score": return aaRec.apexAgentsScore();
-            case "itbench_sre_score": return aaRec.itbenchSreScore();
-            case "omniscience_accuracy": return aaRec.omniscienceAccuracy();
-            case "omniscience_non_hallucination": return aaRec.omniscienceNonHallucination();
-            case "elo": return aaRec.elo();
-            case "cost_per_task": return aaRec.costPerTask();
-            case "output_speed_tps": return aaRec.outputSpeedTps();
-            case "latency_first_token_seconds": return aaRec.latencyFirstTokenSeconds();
-            case "context_window_tokens": return aaRec.contextWindowTokens();
-            default: return null;
+        Object v = metrics.get(field);
+        if (v == null) {
+            return null;
         }
+        // 价格 / 成本列是 DECIMAL：目录给的是 Double，转 BigDecimal 落库
+        if (v instanceof Number n && DECIMAL_SOURCE_FIELDS.contains(field)) {
+            return BigDecimal.valueOf(n.doubleValue());
+        }
+        return v;
     }
 
     /**
@@ -1768,61 +1790,51 @@ public class SysAiModelMetricsService {
     }
 
     /**
-     * 记录转实体（新增）。
-     * @param now 长整数
-     * @param r 参数
-     * @return 返回值
-    */
-    private SysAiModelMetrics toEntity(MetricsRecord r, long now) {
+     * 目录模型信息转实体（新增）。
+     *
+     * @param r   目录模型信息
+     * @param key 归一化模型键
+     * @param now 当前时间戳
+     * @return 实体
+     */
+    private SysAiModelMetrics toEntity(ProviderModelInfo r, String key, long now) {
         SysAiModelMetrics e = new SysAiModelMetrics();
-        e.setModelKey(r.normalizedKey());
-        e.setModelName(r.normalizedKey());
-        e.setProvider(r.provider());
-        e.setPriceInputPerMusd(r.inputPerMillion());
-        e.setPriceOutputPerMusd(r.outputPerMillion());
-        e.setPriceCacheHitPerMusd(r.cacheHitPrice());
-        e.setPriceCacheWritePerMusd(r.cacheWritePrice());
-        e.setIntelligenceIndex(r.intelligenceIndex());
-        e.setHleScore(r.hleScore());
-        e.setOmniscienceIndex(r.omniscienceIndex());
-        e.setGpqaScore(r.gpqaScore());
-        e.setAime25Score(r.aime25Score());
-        e.setLivecodebenchScore(r.livecodebenchScore());
-        e.setScicodeScore(r.scicodeScore());
-        e.setIfbenchScore(r.ifbenchScore());
-        e.setCritptScore(r.critptScore());
-        e.setMmmuProScore(r.mmmuProScore());
-        e.setTau2Score(r.tau2Score());
-        e.setTauBankingScore(r.tauBankingScore());
-        e.setLcrScore(r.lcrScore());
-        e.setTerminalbenchHardScore(r.terminalbenchHardScore());
-        e.setTerminalBench21Score(r.terminalBench21Score());
-        e.setTerminalBench40Score(r.terminalBench40Score());
-        e.setAutomationBenchScore(r.automationBenchScore());
-        e.setGdpvalNormalizedScore(r.gdpvalNormalizedScore());
-        e.setBriefcaseScore(r.briefcaseScore());
-        e.setHarveyLabScore(r.harveyLabScore());
-        e.setApexAgentsScore(r.apexAgentsScore());
-        e.setItbenchSreScore(r.itbenchSreScore());
-        e.setOmniscienceAccuracy(r.omniscienceAccuracy());
-        e.setOmniscienceNonHallucination(r.omniscienceNonHallucination());
-        e.setElo(r.elo());
-        e.setCostPerTask(r.costPerTask());
-        e.setJsonMode(r.jsonMode());
-        e.setOpenaiCompatible(r.openaiCompatible());
-        e.setIntelligenceIndexEstimated(r.intelligenceIndexEstimated());
-        e.setOutputSpeedTps(r.outputSpeedTps());
-        e.setLatencyFirstTokenSeconds(r.latencyFirstTokenSeconds());
-        e.setContextWindowTokens(r.contextWindowTokens());
-        e.setIconUrl(r.iconUrl());
-        e.setReasoning(r.reasoning());
-        e.setWebSearch(r.webSearch());
-        e.setImageInput(r.imageInput());
-        e.setFunctionCalling(r.functionCalling());
+        e.setModelKey(key);
+        e.setModelName(key);
+        e.setPriceInputPerMusd(bd(r.getPriceInputPerMusd()));
+        e.setPriceOutputPerMusd(bd(r.getPriceOutputPerMusd()));
+        e.setPriceCacheHitPerMusd(bd(r.getPriceCacheHitPerMusd()));
+        e.setPriceCacheWritePerMusd(bd(r.getPriceCacheWritePerMusd()));
+        e.setContextWindowTokens(r.getContextWindow());
+        e.setReasoning(r.getReasoning());
+        e.setImageInput(hasModality(r, "image"));
+        e.setFunctionCalling(r.getToolCall());
         e.setSource(SOURCE);
         e.setCreateTime(now);
         e.setUpdateTime(now);
         return e;
+    }
+
+    /**
+     * Double → BigDecimal（目录价格是 Double，实体价格列是 DECIMAL）。
+     *
+     * @param v 目录值
+     * @return 实体值；入参为 {@code null} 返回 {@code null}
+     */
+    private static BigDecimal bd(Double v) {
+        return v == null ? null : BigDecimal.valueOf(v);
+    }
+
+    /**
+     * 判断目录模型的输入模态是否包含指定模态。
+     *
+     * @param r        目录模型信息
+     * @param modality 模态名（image / audio / video / pdf）
+     * @return 包含返回 true；目录未给模态列表返回 {@code null}（不写）
+     */
+    private static Boolean hasModality(ProviderModelInfo r, String modality) {
+        List<String> inputs = r.getInputModalities();
+        return inputs == null || inputs.isEmpty() ? null : inputs.contains(modality);
     }
 
     /**

@@ -19,9 +19,9 @@ import java.util.Set;
 /**
  * 官方余额接口登记表：读 {@code provider-catalog/provider-credit-endpoints.json}。
  *
- * <p>数据由原 {@code HostCreditQueryProvider} 的 15 条预设迁移而来（11 家 Bearer 口径 +
- * 4 家账户级 AK/SK 签名），新增一家只改 JSON。这里只负责装载、按厂商标识 / 主机名
- * 查找与同源判断，不发请求。</p>
+ * <p>数据由原 {@code HostCreditQueryProvider} 的 15 条预设迁移而来，现含 18 家 Bearer 口径
+ * + 6 家账户级 AK/SK 签名（阿里云 / 火山 / 百度 / 七牛 / 腾讯云 / 华为云），新增一家只改 JSON。
+ * 这里只负责装载、按厂商标识 / 主机名查找与同源判断，不发请求。</p>
  *
  * <p>同源判断的必要性：余额接口必须与 Key 同源。中转站的 Key 拿去问厂商官方接口只会
  * 拿到 401，还会把「Key 无效」写进页面，所以先按域名比对，不一致就跳过官方候选。</p>
@@ -270,13 +270,13 @@ public final class ProviderCreditEndpoints {
      * 解析单条登记项。
      *
      * @param node JSON 节点
-     * @return 登记项；缺 id / url / 表达式返回 null
+     * @return 登记项；缺 id / url 返回 null（表达式可缺省：字段换算由专属实现负责时，
+     *         如 opencode-console 的 microCents ÷ 1e8，登记表表达式装不下）
      */
     private static ProviderCreditEndpoint parse(JsonNode node) {
         String id = normalize(node.path("id").asText(""));
         String url = node.path("url").asText("").trim();
-        String expression = node.path("expression").asText("").trim();
-        if (id.isEmpty() || url.isEmpty() || expression.isEmpty()) {
+        if (id.isEmpty() || url.isEmpty()) {
             return null;
         }
         ProviderCreditEndpoint endpoint = new ProviderCreditEndpoint();
@@ -285,9 +285,12 @@ public final class ProviderCreditEndpoints {
         endpoint.setAliases(strings(node.path("aliases"), id));
         endpoint.setHosts(strings(node.path("hosts"), null));
         endpoint.setUrl(url);
-        endpoint.setExpression(expression);
+        // 表达式缺省时走登记表解析会得到「缺少表达式」的明确失败，不会静默出错
+        endpoint.setExpression(node.path("expression").asText("").trim());
         endpoint.setCurrency(text(node, "currency"));
         endpoint.setSignType(text(node, "signType"));
+        endpoint.setMethod(text(node, "method"));
+        endpoint.setAuthHeader(text(node, "authHeader"));
         endpoint.setVerified(node.path("verified").asBoolean(false));
         endpoint.setNotes(text(node, "notes"));
         return endpoint;

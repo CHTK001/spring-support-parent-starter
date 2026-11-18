@@ -1,19 +1,16 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.chat;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.service.ChannelHealthService;
-import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,19 +40,19 @@ import java.util.Map;
 public class AccountChannelRouteSource implements ChannelRouteSource {
 
     /**
-     * 供应商 Mapper.
+     * 渠道业务（账号模块）：渠道行与认证方式检索.
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
-     * 供应商模型 Mapper.
+     * 渠道模型清单业务（账号模块的查询接口，含缓存）
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
-     * 供应商连接 Mapper.
+     * 渠道连接业务（账号模块）：按归属作用域取可用凭据.
      */
-    private final SysAiProviderConnectionMapper connectionMapper;
+    private final AccountChannelConnectionService connectionService;
 
     /**
      * 渠道健康探针：剔除已下线的连接.
@@ -75,23 +72,17 @@ public class AccountChannelRouteSource implements ChannelRouteSource {
     @Override
     public Map<String, RouteTarget> routes(String ownerScope) {
         Map<String, RouteTarget> routes = new LinkedHashMap<>();
-        List<SysAiProvider> oauthProviders = providerMapper.selectList(
-                Wrappers.<SysAiProvider>lambdaQuery()
-                        .eq(SysAiProvider::getAuthScheme, "oauth")
-                        .eq(SysAiProvider::getEnabled, true));
-        for (SysAiProvider provider : oauthProviders) {
+        List<SysAccountChannel> oauthProviders = channelService.listEnabledByAuthScheme("oauth");
+        for (SysAccountChannel provider : oauthProviders) {
             RouteTarget merged = mergedTarget(provider, ownerScope);
             if (merged == null) {
                 continue;
             }
-            List<SysAiProviderModel> models = providerModelMapper.selectList(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getProviderId, provider.getProviderId())
-                            .eq(SysAiProviderModel::getEnabled, true));
+            List<SysAccountChannelModel> models = channelModelService.listEnabled(provider.getProviderId());
             // 按渠道名注册（供 prefix match / 排障用）
             routes.put(provider.getPlatform(), merged);
             // 按模型名注册（exact match）
-            for (SysAiProviderModel m : models) {
+            for (SysAccountChannelModel m : models) {
                 routes.put(m.getModel(), merged);
             }
             log.info("[AccountRoute] 渠道 {} 注册 {} 个模型 {} 个账号",
@@ -107,19 +98,19 @@ public class AccountChannelRouteSource implements ChannelRouteSource {
      * @param ownerScope 归属作用域
      * @return 聚合目标；渠道无实现 / 无可用连接时返回 {@code null}
      */
-    private RouteTarget mergedTarget(SysAiProvider provider, String ownerScope) {
+    private RouteTarget mergedTarget(SysAccountChannel provider, String ownerScope) {
         AccountChannelAuthManager spi = findSpi(provider.getPlatform());
         if (spi == null) {
             return null;
         }
-        List<SysAiProviderConnection> connections = connectionMapper.selectList(
-                connectionWrapper(provider.getProviderId(), ownerScope));
+        List<SysAccountChannelConnection> connections =
+                connectionService.listForScope(provider.getProviderId(), ownerScope);
         if (connections.isEmpty()) {
             return null;
         }
         List<String> apiKeys = new ArrayList<>(connections.size());
         RouteTarget template = null;
-        for (SysAiProviderConnection conn : connections) {
+        for (SysAccountChannelConnection conn : connections) {
             if (channelHealthService.isDown(conn.getConnectionId())) {
                 continue;
             }
@@ -152,37 +143,6 @@ public class AccountChannelRouteSource implements ChannelRouteSource {
                 .build();
     }
 
-    /**
-     * 连接查询条件：按归属作用域过滤。
-     *
-     * <p>免费渠道是<b>共享池</b>：渠道本身是通用资源，不按绑定者隔离——谁绑的账号都汇进
-     * 同一条路由（用户口径：「整个渠道都是通用的」）。这里刻意不再限
-     * {@code user_id IS NULL}，否则管理员绑的账号进不了免费池。</p>
-     *
-     * @param providerId 渠道供应商行 ID
-     * @param ownerScope 归属作用域
-     * @return 查询条件
-     */
-    private LambdaQueryWrapper<SysAiProviderConnection> connectionWrapper(
-            String providerId, String ownerScope) {
-        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId);
-        if ("_free".equals(ownerScope)) {
-            return wrapper;
-        }
-        if ("_sys".equals(ownerScope)) {
-            return wrapper.isNull(SysAiProviderConnection::getUserId);
-        }
-        boolean admin = AiUserContext.isAdmin();
-        String userId = ownerScope;
-        return wrapper.and(w -> {
-            w.eq(SysAiProviderConnection::getUserId, userId);
-            if (admin) {
-                w.or().isNull(SysAiProviderConnection::getUserId);
-            }
-        });
-    }
 
     /**
      * 根据平台名查找对应的渠道 SPI 实现。

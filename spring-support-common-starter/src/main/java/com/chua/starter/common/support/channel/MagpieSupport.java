@@ -1,14 +1,26 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.common.support.channel;
 
+import com.chua.starter.common.support.text.json.Json;
+
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Magpie 统一网关的地址 / 凭据归一化辅助。
@@ -239,6 +251,108 @@ public final class MagpieSupport {
             "/v1/chat/completions", "/chat/completions", "/v1/models", "/v1", "/api");
 
     /**
+     * 本机回环地址的 host 白名单（按 {@link URI#getHost()} 的小写形态比较）。
+     */
+    private static final Set<String> LOOPBACK_HOSTS = Set.of(
+            "127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0");
+
+    /**
+     * 本机地址缓存的存活时长（毫秒）：网卡地址变化后最多滞后这么久。
+     */
+    private static final long LOCAL_HOSTS_TTL_MILLIS = 60000L;
+
+    /**
+     * 局域网建议地址最多给几个（多网卡时按枚举顺序取前几个）。
+     */
+    private static final int LAN_URL_LIMIT = 3;
+
+    /**
+     * 本机地址缓存（回环 + 全部网卡地址），{@code null} 表示还没算过。
+     */
+    private static volatile Set<String> cachedLocalHosts;
+
+    /**
+     * 本机地址缓存的写入时刻（{@link System#currentTimeMillis()}）。
+     */
+    private static volatile long cachedLocalHostsAt;
+
+    /**
+     * 指定 magpie 本地配置目录的环境变量（优先于用户目录推导）。
+     */
+    public static final String ENV_CONFIG_DIR = "MAGPIE_CONFIG_DIR";
+
+    /**
+     * Windows 用户目录环境变量。
+     */
+    public static final String ENV_USER_PROFILE = "USERPROFILE";
+
+    /**
+     * XDG 配置根环境变量（非 Windows 平台）。
+     */
+    public static final String ENV_XDG_CONFIG_HOME = "XDG_CONFIG_HOME";
+
+    /**
+     * 用户目录系统属性（没有 USERPROFILE / XDG_CONFIG_HOME 时的最后兜底）。
+     */
+    public static final String PROP_USER_HOME = "user.home";
+
+    /**
+     * 用户目录下的配置根目录名。
+     */
+    private static final String DOT_CONFIG = ".config";
+
+    /**
+     * magpie 在配置根下的目录名。
+     */
+    private static final String MAGPIE_DIR = "magpie";
+
+    /**
+     * {@code magpie web} 的页面 Key 文件（{@code key} 字段，每次启动可能变化）。
+     */
+    private static final String WEB_PAGE_FILE = "web-page.json";
+
+    /**
+     * magpie 本地设置文件（网关 key 在其中以 {@code lanKey} 保存）。
+     */
+    private static final String SETTINGS_FILE = "settings.json";
+
+    /**
+     * 页面 Key 在 {@code web-page.json} 里的字段名。
+     */
+    private static final String FIELD_PAGE_KEY = "key";
+
+    /**
+     * 网关 key 在 {@code settings.json} 里的字段名。
+     */
+    private static final String FIELD_LAN_KEY = "lanKey";
+
+    /**
+     * 本地配置文件的读取次数（含首次）：magpie 运行期会反复改写这些文件，
+     * 首次解析失败隔一会儿再读一次。
+     */
+    private static final int FILE_READ_ATTEMPTS = 2;
+
+    /**
+     * 本地配置文件重读前的等待（毫秒）。
+     */
+    private static final long FILE_RETRY_MILLIS = 50L;
+
+    /**
+     * key 来源：读自 magpie 本地配置文件。
+     */
+    public static final String KEY_SOURCE_FILE = "file";
+
+    /**
+     * key 来源：连接凭据里配置的。
+     */
+    public static final String KEY_SOURCE_CREDENTIAL = "credential";
+
+    /**
+     * key 来源：两处都没有。
+     */
+    public static final String KEY_SOURCE_NONE = "none";
+
+    /**
      * 工具类，禁止实例化。
      */
     private MagpieSupport() {
@@ -257,13 +371,23 @@ public final class MagpieSupport {
     /**
      * 从凭据里取网关 key（可能为空串）。
      *
+     * <p>凭据里没有配置、且网关地址落在<b>本机</b>（回环或本机任一网卡 IP）时，
+     * 退回到 magpie 自己写在 {@code <配置目录>/settings.json} 里的 {@code lanKey}
+     * （桌面版落地在磁盘上的真实网关 key）；读不到仍返回空串，由调用方决定用
+     * {@link #LOCAL_KEY} 占位。</p>
+     *
      * @param credentials 连接凭据，可为空
-     * @return 网关 key；未配置时返回空串
+     * @return 网关 key；未配置且本地读不到时返回空串
      */
     public static String gatewayKey(Map<String, Object> credentials) {
-        String key = readString(credentials,
-                "gateway_key", "gatewayKey", "api_key", "apiKey", "access_token", "key");
-        return key == null ? "" : key.trim();
+        String key = credentialGatewayKey(credentials);
+        if (!key.isEmpty()) {
+            return key;
+        }
+        if (!isLocalEndpoint(baseUrl(credentials))) {
+            return "";
+        }
+        return readConfigString(credentials, SETTINGS_FILE, FIELD_LAN_KEY);
     }
 
     /**
@@ -287,13 +411,250 @@ public final class MagpieSupport {
     /**
      * 从凭据里取页面 Key（可能为空串）。
      *
+     * <p>{@code magpie web} 默认每次启动都换页面 Key，凭据里存下的是旧值；因此网关地址落在
+     * <b>本机</b>（回环或本机任一网卡 IP）时<b>优先</b>现读
+     * {@code <配置目录>/web-page.json} 的 {@code key}（那才是当前进程认的 key），
+     * 文件不存在或解析失败才回落到凭据里的 {@code page_key}。</p>
+     *
      * @param credentials 连接凭据，可为空
-     * @return 页面 Key；未配置时返回空串
+     * @return 页面 Key；未配置且本地读不到时返回空串
      */
     public static String pageKey(Map<String, Object> credentials) {
-        String key = readString(credentials,
-                "page_key", "pageKey", "web_key", "webKey", "admin_key", "adminKey");
-        return key == null ? "" : key.trim();
+        String key = credentialPageKey(credentials);
+        if (!isLocalEndpoint(baseUrl(credentials))) {
+            return key;
+        }
+        String fileKey = readConfigString(credentials, WEB_PAGE_FILE, FIELD_PAGE_KEY);
+        return fileKey.isEmpty() ? key : fileKey;
+    }
+
+    /**
+     * 取网关 key / 页面 Key 的来源，供上层展示「这个 key 是从哪儿来的」。
+     *
+     * <p>判定顺序与 {@link #gatewayKey(Map)} / {@link #pageKey(Map)} 完全一致：
+     * 页面 Key 在本机时文件优先，网关 key 则是凭据优先、凭据为空才读本地文件。</p>
+     *
+     * @param credentials 连接凭据，可为空
+     * @param page        true 取页面 Key 的来源，false 取网关 key 的来源
+     * @return {@link #KEY_SOURCE_FILE} / {@link #KEY_SOURCE_CREDENTIAL} / {@link #KEY_SOURCE_NONE}
+     */
+    public static String keySource(Map<String, Object> credentials, boolean page) {
+        boolean local = isLocalEndpoint(baseUrl(credentials));
+        if (page) {
+            if (local && !readConfigString(credentials, WEB_PAGE_FILE, FIELD_PAGE_KEY).isEmpty()) {
+                return KEY_SOURCE_FILE;
+            }
+            return credentialPageKey(credentials).isEmpty() ? KEY_SOURCE_NONE : KEY_SOURCE_CREDENTIAL;
+        }
+        if (!credentialGatewayKey(credentials).isEmpty()) {
+            return KEY_SOURCE_CREDENTIAL;
+        }
+        if (local && !readConfigString(credentials, SETTINGS_FILE, FIELD_LAN_KEY).isEmpty()) {
+            return KEY_SOURCE_FILE;
+        }
+        return KEY_SOURCE_NONE;
+    }
+
+    /**
+     * 取 magpie 的本地配置目录（只用于读磁盘，不做 URL 归一）。
+     *
+     * <p>优先级：凭据里的 {@code config_dir / configDir / configPath}（去空白、去首尾引号）
+     * → 环境变量 {@value #ENV_CONFIG_DIR} → {@code %USERPROFILE%\.config\magpie}
+     * → {@code $XDG_CONFIG_HOME/magpie} → {@code user.home/.config/magpie}。</p>
+     *
+     * <p>桌面版 magpie 只监听数据面 {@code :3425}，不提供 {@code :3430} 管理面，
+     * 状态只落在这些文件里；本方法给同机回落用，远程网关不适用。</p>
+     *
+     * @param credentials 连接凭据，可为空
+     * @return 配置目录；都取不到时返回空串
+     */
+    public static String configDir(Map<String, Object> credentials) {
+        String explicit = unquote(readString(credentials, "config_dir", "configDir", "configPath"));
+        if (!isBlank(explicit)) {
+            return explicit;
+        }
+        String env = unquote(System.getenv(ENV_CONFIG_DIR));
+        if (!isBlank(env)) {
+            return env;
+        }
+        String profile = System.getenv(ENV_USER_PROFILE);
+        if (!isBlank(profile)) {
+            return Paths.get(profile.trim(), DOT_CONFIG, MAGPIE_DIR).toString();
+        }
+        String xdg = System.getenv(ENV_XDG_CONFIG_HOME);
+        if (!isBlank(xdg)) {
+            return cutTrailingSeparator(xdg.trim()) + "/" + MAGPIE_DIR;
+        }
+        String home = System.getProperty(PROP_USER_HOME);
+        if (isBlank(home)) {
+            return "";
+        }
+        return cutTrailingSeparator(home.trim()) + "/" + DOT_CONFIG + "/" + MAGPIE_DIR;
+    }
+
+    /**
+     * 网关地址是否落在本机回环上（只看 {@code 127.0.0.1 / localhost / ::1 / 0.0.0.0}）。
+     *
+     * <p>只回答「地址形态」；判断「能不能读本机配置目录」请用
+     * {@link #isLocalEndpoint(String)} —— 用本机网卡 IP（{@code 192.168.x.x}）访问
+     * 同一台 magpie 时，配置文件同样可读。</p>
+     *
+     * @param baseUrl 网关根地址（可缺 scheme）
+     * @return true 表示本机回环
+     */
+    public static boolean isLoopback(String baseUrl) {
+        String host = hostOf(baseUrl);
+        return !host.isEmpty() && LOOPBACK_HOSTS.contains(host);
+    }
+
+    /**
+     * 网关地址是否指向<b>本机</b>（回环，或本机任一网卡上的地址）。
+     *
+     * <p>这是「能不能读本机 magpie 配置文件」的唯一判据：后端与 magpie 同机时，
+     * {@code http://127.0.0.1:3425} 与 {@code http://192.168.50.101:3425} 没有区别，
+     * 都能读 {@code web-page.json} / {@code settings.json} / {@code providers.json}。
+     * 远程网关返回 false，仍只能走 HTTP + 两把 Key。</p>
+     *
+     * @param baseUrl 网关根地址（可缺 scheme）
+     * @return true 表示本机地址
+     */
+    public static boolean isLocalEndpoint(String baseUrl) {
+        String host = hostOf(baseUrl);
+        if (host.isEmpty()) {
+            return false;
+        }
+        return LOOPBACK_HOSTS.contains(host) || localHosts().contains(host);
+    }
+
+    /**
+     * 给本机网关推荐的局域网地址，形如 {@code http://192.168.50.101:3425}。
+     *
+     * <p>只在本机地址时给；多网卡时全部列出（最多 {@value #LAN_URL_LIMIT} 个），
+     * 由用户挑手机那侧能到的那张网卡。取不到就得空列表，不编一个地址出来。</p>
+     *
+     * @param baseUrl 网关根地址（用于取 scheme 与端口）
+     * @return 局域网地址列表，可能为空
+     */
+    public static List<String> lanUrls(String baseUrl) {
+        if (!isLocalEndpoint(baseUrl)) {
+            return List.of();
+        }
+        URI uri = parse(baseUrl);
+        String scheme = uri == null || uri.getScheme() == null ? "http" : uri.getScheme();
+        int port = uri == null ? -1 : uri.getPort();
+        List<String> out = new ArrayList<>(LAN_URL_LIMIT);
+        for (String ip : localIpv4()) {
+            if (out.size() >= LAN_URL_LIMIT) {
+                break;
+            }
+            out.add(port > 0 ? scheme + "://" + ip + ":" + port : scheme + "://" + ip);
+        }
+        return out;
+    }
+
+    /**
+     * 取地址里的 host（小写、去 IPv6 方括号与作用域），解析不了返回空串。
+     *
+     * @param baseUrl 网关根地址
+     * @return 规范化 host
+     */
+    private static String hostOf(String baseUrl) {
+        URI uri = parse(baseUrl);
+        if (uri == null || uri.getHost() == null) {
+            return "";
+        }
+        return normalizeHost(uri.getHost());
+    }
+
+    /**
+     * 规范化 host 形态：去方括号、去 IPv6 作用域（{@code %12}）、转小写。
+     *
+     * @param host 原始 host
+     * @return 规范化 host（输入为空时返回空串）
+     */
+    private static String normalizeHost(String host) {
+        if (host == null) {
+            return "";
+        }
+        String text = host.trim();
+        if (text.startsWith("[") && text.endsWith("]")) {
+            text = text.substring(1, text.length() - 1);
+        }
+        int zone = text.indexOf('%');
+        if (zone >= 0) {
+            text = text.substring(0, zone);
+        }
+        return text.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 本机全部地址（回环 + 各网卡地址），带 {@value #LOCAL_HOSTS_TTL_MILLIS} 毫秒缓存。
+     *
+     * <p>网卡枚举失败（权限 / 平台差异）时只返回回环集合，异常不冒到请求链路。</p>
+     *
+     * @return 规范化 host 集合
+     */
+    private static Set<String> localHosts() {
+        long now = System.currentTimeMillis();
+        Set<String> cached = cachedLocalHosts;
+        if (cached != null && now - cachedLocalHostsAt < LOCAL_HOSTS_TTL_MILLIS) {
+            return cached;
+        }
+        Set<String> hosts = new LinkedHashSet<>(LOOPBACK_HOSTS);
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (!networkInterface.isUp() || networkInterface.isLoopback()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    String host = normalizeHost(addresses.nextElement().getHostAddress());
+                    if (!host.isEmpty()) {
+                        hosts.add(host);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 取不到网卡列表：只按回环判断，不影响其它链路
+        }
+        cachedLocalHosts = hosts;
+        cachedLocalHostsAt = now;
+        return hosts;
+    }
+
+    /**
+     * 本机可对外使用的 IPv4 列表（排除回环与 {@code 169.254} 链路本地地址）。
+     *
+     * @return IPv4 列表，可能为空
+     */
+    private static List<String> localIpv4() {
+        List<String> out = new ArrayList<>(LAN_URL_LIMIT);
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (!networkInterface.isUp() || networkInterface.isLoopback()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (!(address instanceof Inet4Address) || address.isLoopbackAddress()
+                            || address.isLinkLocalAddress()) {
+                        continue;
+                    }
+                    String ip = address.getHostAddress();
+                    if (!ip.isEmpty() && !out.contains(ip)) {
+                        out.add(ip);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 同 localHosts：取不到就返回已收集的部分
+        }
+        return out;
     }
 
     /**
@@ -514,6 +875,157 @@ public final class MagpieSupport {
      */
     public static boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    /**
+     * 凭据里配置的网关 key（已去空白，缺省空串）。
+     *
+     * @param credentials 连接凭据，可为空
+     * @return 网关 key；未配置时返回空串
+     */
+    private static String credentialGatewayKey(Map<String, Object> credentials) {
+        String key = readString(credentials,
+                "gateway_key", "gatewayKey", "api_key", "apiKey", "access_token", "key");
+        return key == null ? "" : key.trim();
+    }
+
+    /**
+     * 凭据里配置的页面 Key（已去空白，缺省空串）。
+     *
+     * @param credentials 连接凭据，可为空
+     * @return 页面 Key；未配置时返回空串
+     */
+    private static String credentialPageKey(Map<String, Object> credentials) {
+        String key = readString(credentials,
+                "page_key", "pageKey", "web_key", "webKey", "admin_key", "adminKey");
+        return key == null ? "" : key.trim();
+    }
+
+    /**
+     * 去掉首尾空白与外层成对的单 / 双引号（用户从界面复制路径时常带引号）。
+     *
+     * @param value 原始值
+     * @return 去引号后的值；入参为 null 时返回空串
+     */
+    private static String unquote(String value) {
+        if (value == null) {
+            return "";
+        }
+        String result = value.trim();
+        while (result.length() >= 2) {
+            char head = result.charAt(0);
+            char tail = result.charAt(result.length() - 1);
+            if ((head == '"' && tail == '"') || (head == '\'' && tail == '\'')) {
+                result = result.substring(1, result.length() - 1).trim();
+            } else {
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 去掉尾部路径分隔符（{@code /} 与 {@code \} 都算）。
+     *
+     * @param value 路径
+     * @return 去尾分隔符后的路径
+     */
+    private static String cutTrailingSeparator(String value) {
+        String result = value;
+        while (!result.isEmpty()) {
+            char last = result.charAt(result.length() - 1);
+            if (last != '/' && last != '\\') {
+                break;
+            }
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
+    }
+
+    /**
+     * 读 magpie 本地配置文件里的一个字符串字段。
+     *
+     * <p>只读，不写回；magpie 运行期间会反复改写这些文件，读不到就当没有，绝不抛异常。</p>
+     *
+     * @param credentials 连接凭据（其中可指定配置目录）
+     * @param fileName    配置目录下的固定文件名
+     * @param field       要读的字段名
+     * @return 字段值；文件不存在 / 解析失败 / 字段为空时返回空串
+     */
+    private static String readConfigString(Map<String, Object> credentials, String fileName, String field) {
+        Map<String, Object> payload = readConfigObject(credentials, fileName);
+        if (payload == null) {
+            return "";
+        }
+        Object value = payload.get(field);
+        return value instanceof String text ? text.trim() : "";
+    }
+
+    /**
+     * 读 magpie 本地配置文件并解析成字符串键 Map。
+     *
+     * <p>解析失败（多半是 magpie 正在写盘）隔 {@link #FILE_RETRY_MILLIS} 毫秒重读一次，
+     * 仍失败返回 {@code null}；文件不存在直接返回 {@code null}，不重试。</p>
+     *
+     * @param credentials 连接凭据（其中可指定配置目录）
+     * @param fileName    配置目录下的固定文件名
+     * @return 解析结果；不可用时返回 {@code null}
+     */
+    private static Map<String, Object> readConfigObject(Map<String, Object> credentials, String fileName) {
+        String dir = configDir(credentials);
+        if (isBlank(dir)) {
+            return null;
+        }
+        Path file = Paths.get(dir, fileName);
+        for (int attempt = 0; attempt < FILE_READ_ATTEMPTS; attempt++) {
+            if (attempt > 0) {
+                sleepQuietly();
+            }
+            if (!Files.isRegularFile(file)) {
+                return null;
+            }
+            Map<String, Object> payload = parseConfigObject(file);
+            if (payload != null) {
+                return payload;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 解析一个本地 JSON 文件（对象形态）。
+     *
+     * @param file 文件
+     * @return 字符串键 Map；读取或解析失败返回 {@code null}
+     */
+    private static Map<String, Object> parseConfigObject(Path file) {
+        try {
+            String text = new String(Files.readAllBytes(file), StandardCharsets.UTF_8).trim();
+            Object parsed = Json.fromJson(text, Object.class);
+            if (parsed instanceof Map<?, ?> map) {
+                Map<String, Object> out = new LinkedHashMap<>(map.size());
+                map.forEach((key, value) -> {
+                    if (key != null) {
+                        out.put(String.valueOf(key), value);
+                    }
+                });
+                return out;
+            }
+        } catch (Exception e) {
+            // 文件正被改写：交给调用方重试一次，两次都失败就当作没有
+        }
+        return null;
+    }
+
+    /**
+     * 静默等待一小段时间（解析重试用），被中断时恢复中断标记。
+     */
+    private static void sleepQuietly() {
+        try {
+            Thread.sleep(FILE_RETRY_MILLIS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

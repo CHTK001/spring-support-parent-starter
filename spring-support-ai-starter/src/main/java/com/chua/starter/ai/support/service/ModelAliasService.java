@@ -1,8 +1,8 @@
 package com.chua.starter.ai.support.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ModelAliasService {
 
-    private final SysAiProviderModelMapper sysAiProviderModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /** 模型别名到真实模型标识的映射。 */
     private final Map<String, String> aliasToReal = new ConcurrentHashMap<>();
@@ -48,11 +48,8 @@ public class ModelAliasService {
         aliasToReal.clear();
         realToAlias.clear();
         try {
-            LambdaQueryWrapper<SysAiProviderModel> wrapper = new LambdaQueryWrapper<>();
-            wrapper.isNotNull(SysAiProviderModel::getAlias)
-                   .ne(SysAiProviderModel::getAlias, "");
-            List<SysAiProviderModel> list = sysAiProviderModelMapper.selectList(wrapper);
-            for (SysAiProviderModel m : list) {
+            List<SysAccountChannelModel> list = channelModelService.listAll();
+            for (SysAccountChannelModel m : list) {
                 if (m.getModel() != null && m.getAlias() != null && !m.getAlias().isBlank()) {
                     aliasToReal.put(m.getAlias(), m.getModel());
                     realToAlias.put(m.getModel(), m.getAlias());

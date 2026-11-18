@@ -22,12 +22,11 @@ import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper;
@@ -45,6 +44,7 @@ import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
+import com.chua.starter.ai.support.workspace.WorkspacePathResolver;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.starter.ai.support.chat.ModelClientResolver;
@@ -63,9 +63,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -102,15 +99,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiGroupMapper sysAiGroupMapper; // sysAI群体映射器
     private final SysAiGroupModelMapper sysAiGroupModelMapper; // sysAI群体模型映射器
     private final SysAiPricingService sysAiPricingService; // sysaipricing服务
-    private final SysAiProviderMapper sysAiProviderMapper; // sysAI提供者映射器
-    private final SysAiProviderModelMapper sysAiProviderModelMapper; // sysAI提供者模型映射器
-    private final SysAiProviderConnectionMapper sysAiProviderConnectionMapper; // sysAI提供者connection映射器
+    private final AccountChannelService channelService; // 渠道业务（账号模块）
+    private final AccountChannelModelService channelModelService;
     private final UsageRecorderInterceptor usageRecorderInterceptor; // usagerecorder拦截器
     private final AiModelMapper aiModelMapper; // 模型定义映射器（加载别名→主模型映射）
     private final ChatSkillSupport chatSkillSupport; // 已安装技能注入
     private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
     private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
     private final SessionWorkspaceResolver sessionWorkspaceResolver; // 会话绑定的项目目录（settings.workspacePath）
+    private final WorkspacePathResolver workspacePathResolver; // 账号工作目录唯一口径（空配置兜底 ~/ai-workspace）
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentProviderFactory agentProviderFactory;
     private final ChatStreamRegistry chatStreamRegistry; // 活跃流注册表：停止会话时中断在执行的那一轮
@@ -199,13 +196,46 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
             recordAccessLog(request, appKeyOf(request), AiUserContext.currentUserId(), 502, null,
                     System.currentTimeMillis() - start);
-            return AiChatResult.failed(request.getModel(), e.getMessage());
+            // 只取最外层 message 会把真实原因吞掉：多渠道/多账号客户端包出来的
+            // 外层是「[MultiKey] 全部成员调用失败」，429 限流、鉴权失败、超时
+            // 全都被报成同一句话，调用方无法判断该重试还是该换配置。
+            // 这里把最底层原因一并带出，外层语义保留在最前面。
+            return AiChatResult.failed(request.getModel(), rootCauseMessage(e));
         } finally {
             // 释放 Agent 运行时私有的 MCP 连接；直连客户端不在此关闭（可能为缓存共享实例）
             if (configured instanceof AgentChatClient agentClient) {
                 agentClient.close();
             }
         }
+    }
+
+    /**
+     * 取异常链最底层的可读原因。
+     *
+     * <p>外层包装（{@code [MultiKey] 全部成员调用失败}、{@code 对话请求失败} 等）
+     * 只说明「失败了」，真正的 429 限流 / 鉴权 / 超时原因在 cause 链末端。
+     * 调用方要据此决定重试还是改配置，因此必须把末端原因带出来。</p>
+     *
+     * @param e 原始异常
+     * @return 最底层 message，缺失时回落到最外层 message
+     */
+    private static String rootCauseMessage(Throwable e) {
+        if (e == null) {
+            return "unknown";
+        }
+        Throwable current = e;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        String root = current.getMessage();
+        if (root == null || root.isBlank()) {
+            root = current.getClass().getSimpleName();
+        }
+        String outer = e.getMessage();
+        if (outer == null || outer.isBlank() || root.equals(outer)) {
+            return root;
+        }
+        return outer + "（原因：" + root + "）";
     }
 
     /**
@@ -876,7 +906,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 免费渠道供应商：使用 FreeChannelChatClient 路由 + 429 failover
             // 跳过按模型名反查 DB provider（否则会命中 KILO/EAC 的直连客户端，绕过路由）
             if (provider != null && ProviderRouteTargets.isFreeChannel(provider)) {
-                SysAiProvider freeProvider = findFreeChannelProvider();
+                SysAccountChannel freeProvider = findFreeChannelProvider();
                 if (freeProvider != null) {
                     ChatClient freeClient = getCachedDbClient(freeProvider, model);
                     if (freeClient != null) {
@@ -884,7 +914,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     }
                 }
             }
-            SysAiProvider dbProvider = resolveDbProviderByModel(model, modelProviderId);
+            SysAccountChannel dbProvider = resolveDbProviderByModel(model, modelProviderId);
             if (dbProvider != null) {
                 ChatClient dbClient = getCachedDbClient(dbProvider, model);
                 if (dbClient != null) {
@@ -925,9 +955,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      *
      * @return 免费渠道 供应商；未找到返回 {@code null}
      */
-    private SysAiProvider findFreeChannelProvider() {
+    private SysAccountChannel findFreeChannelProvider() {
         try {
-            return sysAiProviderMapper.selectById("FREE-CHANNEL");
+            return channelService.find("FREE-CHANNEL");
         } catch (Exception e) {
             log.debug("[AiChat] 未找到免费渠道供应商: {}", e.getMessage());
             return null;
@@ -1073,23 +1103,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param providerIdHint 供应商标识（可空）
      * @return SysAi提供者 对象
      */
-    private SysAiProvider resolveDbProviderByModel(String model, String providerIdHint) {
+    private SysAccountChannel resolveDbProviderByModel(String model, String providerIdHint) {
         if (model == null || model.isBlank()) {
             return null;
         }
         try {
-            List<SysAiProviderModel> candidates;
+            List<SysAccountChannelModel> candidates;
             if (providerIdHint != null && !providerIdHint.isBlank()) {
-                candidates = sysAiProviderModelMapper.selectList(
-                        new LambdaQueryWrapper<SysAiProviderModel>()
-                                .eq(SysAiProviderModel::getProviderId, providerIdHint)
-                                .eq(SysAiProviderModel::getModel, model)
-                                .eq(SysAiProviderModel::getEnabled, true)
-                                .last("LIMIT 1"));
+                SysAccountChannelModel matched = channelModelService.findEnabled(providerIdHint, model);
+                candidates = matched == null ? List.of() : List.of(matched);
                 if (candidates.isEmpty()) {
                     // 路由组没有自己的模型行（成员全在模型库里），按 providerId 精确命中即返回；
                     // 否则会掉进下面的「按模型名反查」，反查不到任何行 → 会话报找不到模型。
-                    SysAiProvider grouped = sysAiProviderMapper.selectById(providerIdHint);
+                    SysAccountChannel grouped = channelService.find(providerIdHint);
                     if (grouped != null && Boolean.TRUE.equals(grouped.getEnabled())
                             && ProviderRouteTargets.isRouterGroup(grouped.getPlatform())) {
                         log.info("[AiChat] 路由 model={} -> 路由组供应商={}({})",
@@ -1099,18 +1125,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     log.warn("[AiChat] 供应商 {} 下未找到启用的模型 {}，回退按模型名反查", providerIdHint, model);
                 }
             } else {
-                candidates = sysAiProviderModelMapper.selectList(
-                        new LambdaQueryWrapper<SysAiProviderModel>()
-                                .eq(SysAiProviderModel::getModel, model)
-                                .eq(SysAiProviderModel::getEnabled, true)
-                                .orderByAsc(SysAiProviderModel::getProviderId));
+                candidates = channelModelService.listEnabledByModel(model);
                 if (candidates.isEmpty()) {
                     // 路由组在模型面板里只暴露一条「组名即模型」的虚拟模型
                     // （见 ApiProviderController#routerGroupVirtualModel），它没有 provider_model 行。
                     // 这里按组名/组 ID 命中路由组供应商；否则调用方会继续回落到注册中心的默认客户端，
                     // 把「路由组」当成模型名发给上游，上游回一句 "Model 路由组 is not available ..."，
                     // 用户看到的就是这个 404（与所选模型毫无关系）。
-                    SysAiProvider grouped = findEnabledRouterGroup(model);
+                    SysAccountChannel grouped = findEnabledRouterGroup(model);
                     if (grouped != null) {
                         log.info("[AiChat] 路由 model={} -> 路由组供应商={}({})（按组名命中）",
                                 model, grouped.getProviderId(), grouped.getPlatform());
@@ -1121,11 +1143,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     log.warn("[AiChat] 模型 {} 在 {} 个供应商下同名（{}），请求未指定供应商，取第一家；"
                                     + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
                             model, candidates.size(),
-                            candidates.stream().map(SysAiProviderModel::getProviderId).toList());
+                            candidates.stream().map(SysAccountChannelModel::getProviderId).toList());
                 }
             }
-            for (SysAiProviderModel pm : candidates) {
-                SysAiProvider provider = sysAiProviderMapper.selectById(pm.getProviderId());
+            for (SysAccountChannelModel pm : candidates) {
+                SysAccountChannel provider = channelService.find(pm.getProviderId());
                 if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
                     log.info("[AiChat] 路由 model={} -> 供应商={}({}) baseUrl={}",
                             model, provider.getProviderId(), provider.getPlatform(), provider.getBaseUrl());
@@ -1143,27 +1165,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * 按「组名或组 ID」查找启用的路由组供应商。
      *
      * <p>前端对路由组只暴露一条虚拟模型（模型名 = 组名），它不对应任何
-     * {@code sys_ai_provider_model} 行。这里负责把它还原成路由组供应商，
+     * {@code sys_account_channel_model} 行。这里负责把它还原成路由组供应商，
      * 避免落到默认客户端后把组名当模型名发上游。</p>
      *
      * @param model 模型名（也可能是路由组 ID）
      * @return 启用的路由组供应商；未命中返回 {@code null}
      */
-    private SysAiProvider findEnabledRouterGroup(String model) {
+    private SysAccountChannel findEnabledRouterGroup(String model) {
         if (model == null || model.isBlank()) {
             return null;
         }
         try {
-            SysAiProvider byId = sysAiProviderMapper.selectById(model);
+            SysAccountChannel byId = channelService.find(model);
             if (byId != null && Boolean.TRUE.equals(byId.getEnabled())
                     && ProviderRouteTargets.isRouterGroup(byId.getPlatform())) {
                 return byId;
             }
-            List<SysAiProvider> groups = sysAiProviderMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProvider>()
-                            .eq(SysAiProvider::getName, model)
-                            .eq(SysAiProvider::getEnabled, true));
-            for (SysAiProvider group : groups) {
+            List<SysAccountChannel> groups = channelService.listEnabledByName(model);
+            for (SysAccountChannel group : groups) {
                 if (ProviderRouteTargets.isRouterGroup(group.getPlatform())) {
                     return group;
                 }
@@ -1187,7 +1206,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param model    模型名称
      * @return 底层 对话客户端，构建失败返回 空
      */
-    private ChatClient buildProviderChatClient(SysAiProvider provider, String model) {
+    private ChatClient buildProviderChatClient(SysAccountChannel provider, String model) {
         try {
             // 统一入口：路由组、单 Key、多 Key 全部交给 ModelClientResolver。
             // Key 的轮换、失败与冷却都在 MultiKeyChatClient 内部处理，
@@ -1320,7 +1339,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * 会话统一包装为 Agent 运行时客户端。
      *
      * <p>管理员与普通账号都走 Agent —— 统一之后大家才有各自的工作间
-     * （{@code <基路径>/<账号>/agent}）。差别只在工具：</p>
+     * （{@code <基路径>/<账号>}）。差别只在工具：</p>
      * <ul>
      *   <li><b>管理员</b>：按角色 settings.plugins 启用 MCP / 子代理 / 本地工具，
      *       且<b>不受</b>「普通账号工具权限」开关影响；</li>
@@ -1482,63 +1501,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (project != null) {
             return project.toString();
         }
-        String base;
+        /*
+         * 账号工作目录统一委托 WorkspacePathResolver：<配置中心 workspaceBaseDir>/<账号>，
+         * 空配置兜底 ~/ai-workspace。此前这里自己读配置、空配置直接返回 null，
+         * harness 于是落到自己的默认目录，用户在工作区里看不到 AI 写的文件（报障②）。
+         * 这里**不要**拼会话段：harness 的 WorkspaceManager 会在 workspace 下再建 <sessionId>。
+         */
         try {
-            base = globalSettingService.getValue("system", "workspaceBaseDir").orElse(null);
+            return workspacePathResolver.agentWorkspace().toString();
         } catch (Exception e) {
-            log.warn("[AiChat] 读取工作目录基路径失败: {}", e.getMessage());
+            log.warn("[AiChat] 解析账号工作目录失败 userId={}: {}",
+                    AiUserContext.currentUserId(), e.getMessage());
             return null;
         }
-        if (base == null || base.isBlank()) {
-            return null;
-        }
-        try {
-            Path basePath = Paths.get(base.trim()).toAbsolutePath().normalize();
-            // 账号段用于数据隔离：同一基路径下每个账号各自一棵子树，互不可见。
-            // 账号标识必须净化成单个目录名，否则一个形如 ../../etc 的账号标识就能把
-            // 工作间指到基路径之外——隔离在这里就要挡住，不能指望下游的路径拼接。
-            Path accountRoot = basePath.resolve(safeSegment(AiUserContext.currentUserId()));
-            /*
-             * 这里**不要**拼会话段：会话隔离由 harness 自己负责。
-             * harness 的 WorkspaceManager#getSessionDir(ctx, sessionId) 实际执行的是
-             * `workspace.resolve("<sessionId>/")`，也就是说会话目录 = workspace/<会话id>。
-             * 若这里再补一层会话段，workspace 变成 `<root>/agent/147` 后 harness 又会
-             * 在其下建 `147/`，实测得到 `<root>/agent/147/147/acc-check.txt`（双嵌套）。
-             *
-             * 正确分工：
-             *  - workspace（本方法返回值）= 账号级根 `<root>/<账号>/agent`，交给 agent.workspace()；
-             *  - shell 的执行目录由 AgentScopeAgent 用 `workspace + 会话id` 单独设定
-             *    （LocalFilesystemSpec.project），与 harness 的会话目录**重合**，因此不会双嵌套。
-             */
-            Path workspace = accountRoot.resolve("agent").normalize();
-            // 二次确认：即便净化逻辑今后被改动，也不允许解析结果越出基路径
-            if (!workspace.startsWith(basePath)) {
-                log.warn("[AiChat] 工作间解析越界，已拒绝 userId={} 解析结果={}", AiUserContext.currentUserId(), workspace);
-                return null;
-            }
-            Files.createDirectories(workspace);
-            return workspace.toString();
-        } catch (Exception e) {
-            log.warn("[AiChat] 解析/创建工作目录基路径失败 base={}: {}", base, e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * 把账号标识净化为可安全用作单个目录名的片段。
-     *
-     * <p>与知识库上传目录同一套口径：只留字母数字与 {@code . _ -}，其余替换为下划线；
-     * 空值回落 {@code anonymous}。这样账号标识不可能携带路径分隔符或 {@code ..}。</p>
-     *
-     * @param raw 原始账号标识
-     * @return 安全的目录名片段
-     */
-    private static String safeSegment(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "anonymous";
-        }
-        String cleaned = raw.replaceAll("[^A-Za-z0-9._-]", "_");
-        return cleaned.isEmpty() ? "anonymous" : cleaned;
     }
 
     /**
@@ -1588,6 +1563,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param exclude 黑名单服务器ID；null 表示不排除
      */
     private record McpSelection(java.util.Collection<String> only, java.util.Collection<String> exclude) {
+        /**
+         * 返回「不限定」选择（白名单黑名单均为 null）。
+         *
+         * @return 不限定选择
+         */
         static McpSelection none() {
             return new McpSelection(null, null);
         }
@@ -1708,23 +1688,26 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * recordusage。
-     * @param callType call类型
-     * @param client 客户端
-     * @param response 响应
-     * @param userId 字符串
-     * @return 返回值
-    */
+     * 记录同步对话用量（从响应提取用量）。
+     *
+     * @param client   客户端
+     * @param callType 调用类型
+     * @param response 同步响应
+     * @param userId   归属用户标识
+     * @param appKey   appKey（可为空）
+     */
     private void recordUsage(ChatClient client, String callType, ChatSyncResponse response, String userId, String appKey) {
         recordUsage(client, callType, response != null ? response.getUsage() : null, userId, appKey);
     }
 
     /**
-     * recordusage。
-     * @param client 客户端
-     * @param callType call类型
-     * @param usage usage
-     * @param userId 归属用户标识
+     * 记录同步对话用量。
+     *
+     * @param client   客户端
+     * @param callType 调用类型
+     * @param usage    用量
+     * @param userId   归属用户标识
+     * @param appKey   appKey（可为空）
      */
     private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage, String userId, String appKey) {
         if (usage == null) {
@@ -1748,11 +1731,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * 记录流式对话用量。
-     * @param source 字符串
-     * @param usage 用量
-     * @param userId 请求线程捕获的归属用户标识
-     * @return 返回值
-    */
+     *
+     * @param usage    用量
+     * @param userId   请求线程捕获的归属用户标识
+     * @param source   用量来源（可为空）
+     * @param appKey   appKey（可为空）
+     */
     private void recordStreamUsage(com.chua.common.support.ai.AiUsage usage, String userId, String source, String appKey) {
         recordUsage(usage, "chat_stream", userId, source, appKey);
     }
@@ -1771,13 +1755,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * recordusage，并显式标注用量来源。
-     * @param callType 字符串
-     * @param source 用量来源 service/third_party/self，为空按默认口径
-     * @param usage 参数
-     * @param userId 字符串
-     * @return 返回值
-    */
+     * 记录用量，并显式标注用量来源。
+     *
+     * @param usage    用量
+     * @param callType 调用类型
+     * @param userId   归属用户标识
+     * @param source   用量来源 service/third_party/self，为空按默认口径
+     * @param appKey   appKey（可为空）
+     */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType, String userId, String source, String appKey) {
         if (usage == null) {
             return;
@@ -2064,7 +2049,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @param model    模型名称
      * @return 底层 对话客户端，构建失败返回 空
      */
-    private ChatClient getCachedDbClient(SysAiProvider provider, String model) {
+    private ChatClient getCachedDbClient(SysAccountChannel provider, String model) {
         String cacheKey = provider.getProviderId() + "::" + model;
         long now = System.currentTimeMillis();
         CachedDbClient cached = dbClientCache.get(cacheKey);

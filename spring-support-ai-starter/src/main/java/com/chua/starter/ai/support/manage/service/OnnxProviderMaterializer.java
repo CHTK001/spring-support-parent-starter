@@ -4,10 +4,10 @@ package com.chua.starter.ai.support.manage.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.deeplearning.support.engine.ModelParams;
 import com.chua.deeplearning.support.engine.ModelRegistry;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.service.AiModelCatalogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,13 +33,13 @@ import java.util.Set;
  * <p><b>不创建供应商行</b>：ONNX 与其它供应商一样，要用户在「添加供应商」里
  * 自己添加（{@code platform = 'onnx'}）。本服务只在<strong>该行已存在</strong>时
  * 把 {@link ModelRegistry} 里已就绪的本地 ONNX 模型镜像进
- * {@code sys_ai_provider_model}，让「编辑供应商」「删除供应商」「修改模型 ID」
+ * {@code sys_account_channel_model}，让「编辑供应商」「删除供应商」「修改模型 ID」
  * 这些以 {@code requireProvider()} 查库为前提的接口有数据可操作。</p>
  *
  * <p>之所以不再自动建行：用户没添加过的供应商凭空出现在列表里是错的（用户口径
  * 2026-11-14）。行不存在时本服务直接跳过，不做任何持久化。</p>
  *
- * <p>镜像口径：{@code sys_ai_provider_model} 为每个已注册 ONNX 模型写一行，
+ * <p>镜像口径：{@code sys_account_channel_model} 为每个已注册 ONNX 模型写一行，
  * {@code model} 即 modelId（外部目录模型为其目录路径），并以
  * {@code capabilities[0].protocol = 'onnx'} 标记，供运行时区分。</p>
  *
@@ -103,14 +103,14 @@ public class OnnxProviderMaterializer {
     private String onnxApiKey;
 
     /**
-     * 供应商表操作。
+     * 渠道业务（账号模块）。
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 供应商模型表操作。
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * ONNX 外部目录服务：提供 ReFileSystem 选中的模型根，并负责把根推回模型注册表
@@ -143,7 +143,7 @@ public class OnnxProviderMaterializer {
             return;
         }
         try {
-            SysAiProvider provider = findExistingProvider();
+            SysAccountChannel provider = findExistingProvider();
             if (provider == null) {
                 log.info("[OnnxProvider] 未添加 ONNX 供应商，跳过模型镜像同步（恢复目录={}）", restored);
                 return;
@@ -169,12 +169,10 @@ public class OnnxProviderMaterializer {
      *
      * @return 供应商行；用户未添加时返回 {@code null}
      */
-    private SysAiProvider findExistingProvider() {
-        SysAiProvider existing = providerMapper.selectById(ONNX_PROVIDER_ID);
+    private SysAccountChannel findExistingProvider() {
+        SysAccountChannel existing = channelService.find(ONNX_PROVIDER_ID);
         if (existing == null) {
-            existing = providerMapper.selectList(
-                            new LambdaQueryWrapper<SysAiProvider>()
-                                    .like(SysAiProvider::getPlatform, PLATFORM))
+            existing = channelService.listByPlatformLike(PLATFORM)
                     .stream()
                     .findFirst()
                     .orElse(null);
@@ -196,7 +194,7 @@ public class OnnxProviderMaterializer {
      * @param now      当前毫秒时间戳
      * @return 供应商行（已回填则返回回填后的同一实例）
      */
-    private SysAiProvider backfillLocalEndpoint(SysAiProvider existing, long now) {
+    private SysAccountChannel backfillLocalEndpoint(SysAccountChannel existing, long now) {
         String expectedDir = currentModelDir();
         boolean baseUrlBlank = existing.getBaseUrl() == null || existing.getBaseUrl().isBlank();
         boolean authSchemeBlank = isLegacyAuthScheme(existing.getAuthScheme());
@@ -214,7 +212,7 @@ public class OnnxProviderMaterializer {
             existing.setCredentials(localCredentials());
         }
         existing.setUpdatedAt(now);
-        providerMapper.updateById(existing);
+        channelService.save(existing, false, null);
         log.info("[OnnxProvider] 已回填 ONNX 供应商 base_url={} auth_scheme={} api_key={}",
                 existing.getBaseUrl(), existing.getAuthScheme(), expectedDir);
         return existing;
@@ -338,7 +336,7 @@ public class OnnxProviderMaterializer {
     @Transactional(rollbackFor = Exception.class)
     public int syncModels(String providerId) {
         if (providerId == null || providerId.isBlank()
-                || providerMapper.selectById(providerId) == null) {
+                || channelService.find(providerId) == null) {
             log.info("[OnnxProvider] 供应商 {} 不存在，跳过模型镜像同步", providerId);
             return 0;
         }
@@ -354,18 +352,14 @@ public class OnnxProviderMaterializer {
         // 改主键字段靠 updateById 不会生效，只能删除后按新模型名重新插入
         int purged = 0;
         try {
-            purged = providerModelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getProviderId, providerId)
-                    .likeRight(SysAiProviderModel::getModel, "/"));
+            purged = channelModelService.purgeLegacyPathModels(providerId);
         } catch (Exception e) {
             log.warn("[OnnxProvider] 清理历史路径型模型行失败: {}", e.getMessage());
         }
         if (purged > 0) {
             log.info("[OnnxProvider] 已清理路径型模型行 {} 条，将按模型名重建", purged);
         }
-        List<SysAiProviderModel> existing = providerModelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
+        List<SysAccountChannelModel> existing = channelModelService.listAll(providerId);
         int created = 0;
         int skipped = 0;
         long now = System.currentTimeMillis();
@@ -388,8 +382,8 @@ public class OnnxProviderMaterializer {
                     : template.trim();
             List<java.util.Map<String, Object>> capabilities = List.of(OnnxModelTaxonomy.capability(modelName));
             String description = "外部目录 · " + dir;
-            SysAiProviderModel hit = null;
-            for (SysAiProviderModel row : existing) {
+            SysAccountChannelModel hit = null;
+            for (SysAccountChannelModel row : existing) {
                 if (modelName.equals(row.getModel())) {
                     hit = row;
                     break;
@@ -400,9 +394,9 @@ public class OnnxProviderMaterializer {
                 hit.setCapabilities(capabilities);
                 hit.setDescription(description);
                 hit.setUpdatedAt(now);
-                providerModelMapper.updateByKey(hit);
+                channelModelService.updateByKey(hit);
             } else {
-                SysAiProviderModel row = new SysAiProviderModel();
+                SysAccountChannelModel row = new SysAccountChannelModel();
                 row.setProviderId(providerId);
                 row.setModel(modelName);
                 row.setEnabled(Boolean.TRUE);
@@ -411,7 +405,7 @@ public class OnnxProviderMaterializer {
                 row.setCapabilities(capabilities);
                 row.setCreatedAt(now);
                 row.setUpdatedAt(now);
-                providerModelMapper.insert(row);
+                channelModelService.create(row);
                 created++;
             }
         }
@@ -419,9 +413,7 @@ public class OnnxProviderMaterializer {
         // 之前只镜像外部目录，导致「模型管理 → ONNX」看不到 cn-clip-rn50-image 等
         // 正在被系统设置引用、运行时也能跑的模型，默认模型选择器只能靠前端旁路注入。
         Set<String> existingNames = new HashSet<>();
-        for (SysAiProviderModel row : providerModelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId))) {
+        for (SysAccountChannelModel row : channelModelService.listAll(providerId)) {
             existingNames.add(row.getModel());
         }
         List<Map<String, Object>> details;
@@ -440,7 +432,7 @@ public class OnnxProviderMaterializer {
             if (isExternal(modelId) || !existingNames.add(modelId)) {
                 continue;
             }
-            SysAiProviderModel row = new SysAiProviderModel();
+            SysAccountChannelModel row = new SysAccountChannelModel();
             row.setProviderId(providerId);
             row.setModel(modelId);
             row.setEnabled(Boolean.TRUE);
@@ -449,7 +441,7 @@ public class OnnxProviderMaterializer {
             row.setCapabilities(List.of(OnnxModelTaxonomy.capability(modelId)));
             row.setCreatedAt(now);
             row.setUpdatedAt(now);
-            providerModelMapper.insert(row);
+            channelModelService.create(row);
             created++;
         }
         log.info("[OnnxProvider] 模型同步完成 清单={} 新增={} 跳过={} 清理={} 模型根={}",
@@ -484,7 +476,7 @@ public class OnnxProviderMaterializer {
         if (providerId == null || providerId.isBlank()) {
             return;
         }
-        SysAiProvider provider = providerMapper.selectById(providerId);
+        SysAccountChannel provider = channelService.find(providerId);
         if (provider == null) {
             // 行已删除：运行时也不能继续沿用已下线供应商的设备覆盖
             ModelParams.clearDeviceOverrides();
@@ -492,12 +484,10 @@ public class OnnxProviderMaterializer {
             return;
         }
         String device = providerDevice(provider.getExtra());
-        List<SysAiProviderModel> models = providerModelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
+        List<SysAccountChannelModel> models = channelModelService.listAll(providerId);
         // 每次重建覆盖集：模型删除 / 改名后，旧 modelId 的覆盖不能残留在运行时。
         ModelParams.clearDeviceOverrides();
-        for (SysAiProviderModel model : models) {
+        for (SysAccountChannelModel model : models) {
             if (device != null) {
                 ModelParams.setDeviceOverride(model.getModel(), device);
             }

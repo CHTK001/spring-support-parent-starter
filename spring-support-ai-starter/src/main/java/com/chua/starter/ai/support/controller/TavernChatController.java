@@ -90,8 +90,8 @@ public class TavernChatController {
     private final SysAiGlobalSettingService globalSettingService;
     private final ObjectMapper objectMapper;
 
-    /** 供应商查询：把成员模型覆盖里的 providerId 补成可读的供应商名/平台/baseUrl */
-    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper providerMapper;
+    /** 渠道查询（账号模块）：把成员模型覆盖里的 providerId 补成可读的渠道名/平台/baseUrl */
+    private final com.chua.starter.account.channel.service.AccountChannelService channelService;
 
     /**
      * 群聊 SSE。
@@ -237,7 +237,14 @@ public class TavernChatController {
     private record Streamed(String model, String providerId, String text) {}
 
     /**
-     * 流式回复一位成员。
+     * 流式回复一位成员（SSE 逐块下发，并把整轮正文组装为结果）。
+     *
+     * @param out     SSE 响应输出流
+     * @param groupId 群组标识
+     * @param group   群组实体（用于默认成员等规则）
+     * @param member  被回复的群成员
+     * @param prompt  本次生成用的提示语
+     * @return 本轮使用的模型、供应商与完整正文
      */
     private Streamed streamOne(OutputStream out, Long groupId, SysAiTavernGroup group,
                              SysAiTavernMember member, String prompt) {
@@ -325,7 +332,15 @@ public class TavernChatController {
         return new Streamed(model, providerId, full.toString());
     }
 
-    /** 解析回复成员：@ > 默认 > 首位；自动路由开启时由路由模型挑选 */
+    /**
+     * 解析本次回复成员：@ 指定 > 群默认成员 > 自动路由 > 首位成员。
+     *
+     * @param group    群组实体
+     * @param members  群成员列表
+     * @param atRoleId 用户 @ 的角色标识（可为空）
+     * @param content  用户消息正文（自动路由时用于挑选）
+     * @return 选中的回复成员
+     */
     private SysAiTavernMember resolveSpeaker(SysAiTavernGroup group, List<SysAiTavernMember> members,
                                              Integer atRoleId, String content) {
         if (atRoleId != null) {
@@ -353,11 +368,12 @@ public class TavernChatController {
     }
 
     /**
-     * auto Route
-     * @param content 字符串
-     * @param members 参数
-     * @return 返回值
-    */
+     * 调用路由模型，挑选最应该接话的群成员。
+     *
+     * @param members 群成员列表
+     * @param content 用户消息正文
+     * @return 选中成员；路由失败时返回 {@code null}
+     */
     private SysAiTavernMember autoRoute(List<SysAiTavernMember> members, String content) {
         try {
             StringBuilder roster = new StringBuilder();
@@ -398,11 +414,12 @@ public class TavernChatController {
     }
 
     /**
-     * build History
-     * @param groupId 长整数
-     * @param limit 整数
-     * @return 返回值
-    */
+     * 组装群聊历史消息（按 id 倒序取最近 limit 条）。
+     *
+     * @param groupId 群组标识
+     * @param limit   最多取回的消息条数
+     * @return 按时间正序排列的历史消息列表
+     */
     private List<Map<String, Object>> buildHistory(Long groupId, int limit) {
         LambdaQueryWrapper<SysAiTavernMessage> w = new LambdaQueryWrapper<>();
         w.eq(SysAiTavernMessage::getGroupId, groupId).orderByDesc(SysAiTavernMessage::getId).last("LIMIT " + limit);
@@ -550,8 +567,8 @@ public class TavernChatController {
                 return prefix;
             }
             // onnx 等平台标识：能查到启用的供应商才认
-            com.chua.starter.ai.support.manage.store.SysAiProvider p =
-                    providerMapper.selectById(prefix);
+            com.chua.starter.account.channel.store.SysAccountChannel p =
+                    channelService.find(prefix);
             if (p != null && Boolean.TRUE.equals(p.getEnabled())) {
                 return prefix;
             }
@@ -560,8 +577,8 @@ public class TavernChatController {
             // 这样角色模型配的是供应商名也能精确路由。
             // 名称匹配忽略大小写（库里是「Agnes」，配置常写「agnes」）；
             // 供应商表只有几家，全量加载在应用层匹配即可
-            for (com.chua.starter.ai.support.manage.store.SysAiProvider cand
-                    : providerMapper.selectList(null)) {
+            for (com.chua.starter.account.channel.store.SysAccountChannel cand
+                    : channelService.listAll()) {
                 if (cand.getName() != null && cand.getName().equalsIgnoreCase(prefix)
                         && Boolean.TRUE.equals(cand.getEnabled())
                         && cand.getProviderId() != null && !cand.getProviderId().isBlank()) {
@@ -588,8 +605,8 @@ public class TavernChatController {
         route.put("providerResolved", providerId != null && !providerId.isBlank());
         if (providerId != null && !providerId.isBlank()) {
             try {
-                com.chua.starter.ai.support.manage.store.SysAiProvider p =
-                        providerMapper.selectById(providerId);
+                com.chua.starter.account.channel.store.SysAccountChannel p =
+                        channelService.find(providerId);
                 if (p != null) {
                     route.put("providerName", p.getName());
                     route.put("platform", p.getPlatform());

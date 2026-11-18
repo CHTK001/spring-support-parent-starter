@@ -1,3 +1,2 @@
 com.chua.starter.account.spi.impl.DuckDuckGoImageChannel
 com.chua.starter.account.spi.impl.PollinationsImageChannel
-com.chua.starter.account.spi.impl.TraeImageChannel

@@ -113,11 +113,14 @@ public class SysAiProviderMetricService {
             case "anthropic", "claude" -> "anthropic";
             case "google", "gemini", "google-ai-studio" -> "google";
             case "deepseek" -> "deepseek";
-            case "qwen", "dashscope", "tongyi", "bailian" -> "alibaba";
+            case "qwen", "dashscope", "tongyi", "bailian", "aliyun", "alibaba",
+                    "alibaba-coding-plan-cn", "alibaba-coding-plan",
+                    "alibaba-token-plan-cn", "alibaba-token-plan" -> "alibaba";
             case "zhipu", "glm", "zhipuai", "chatglm" -> "zhipuai";
             case "moonshot", "kimi", "moonshotai" -> "moonshotai";
             case "minimax", "minimaxi" -> "minimax";
-            case "stepfun", "step" -> "stepfun";
+            case "tencent", "hunyuan", "tencent-coding-plan", "tencent-token-plan", "tencent-tokenhub" -> "tencent";
+            case "stepfun", "step", "stepfun-ai", "stepfun-ai-step-plan" -> "stepfun";
             case "groq" -> "groq";
             case "xai", "grok" -> "xai";
             case "mistral" -> "mistral";
@@ -143,7 +146,7 @@ public class SysAiProviderMetricService {
             case "amazon", "aws-bedrock", "bedrock" -> "amazon-bedrock";
             case "vercel" -> "vercel";
             case "ai302", "302" -> "302ai";
-            case "qiniu" -> "qiniu-ai";
+            case "qiniu", "qiniu-ai" -> "qiniu-ai";
             case "ollama", "onnx" -> null;
             default -> id;
         };

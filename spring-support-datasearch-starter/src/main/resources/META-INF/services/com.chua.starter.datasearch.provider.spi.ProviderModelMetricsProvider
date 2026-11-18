@@ -1,0 +1,2 @@
+# 按模型 id 查指标的来源：新增一种（公开目录 / 厂商控制台 / 本地缓存）加一行
+com.chua.starter.datasearch.provider.spi.impl.ModelsDevModelMetricsProvider

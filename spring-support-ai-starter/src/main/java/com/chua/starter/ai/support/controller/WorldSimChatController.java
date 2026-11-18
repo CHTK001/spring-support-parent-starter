@@ -113,8 +113,8 @@ public class WorldSimChatController {
     private final ObjectMapper objectMapper;
     private final com.chua.starter.ai.support.service.WorldSimService worldSimService;
 
-    /** 供应商查询：把模型限定名里的 providerId 补成可读供应商信息 */
-    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper providerMapper;
+    /** 渠道查询（账号模块）：把模型限定名里的 providerId 补成可读渠道信息 */
+    private final com.chua.starter.account.channel.service.AccountChannelService channelService;
 
     {
     }
@@ -1252,19 +1252,19 @@ public class WorldSimChatController {
                 // 数字前缀也必须在供应商表里真实存在且启用，才认作「已解析」。
                 // 此前直接 return prefix，于是一个早已被删掉的供应商 ID 也能让
                 // route.providerResolved=true，把「配置过期」伪装成「路由成功」。
-                com.chua.starter.ai.support.manage.store.SysAiProvider numericProvider =
-                        providerMapper.selectById(prefix);
+                com.chua.starter.account.channel.store.SysAccountChannel numericProvider =
+                        channelService.find(prefix);
                 if (numericProvider != null && Boolean.TRUE.equals(numericProvider.getEnabled())) {
                     return prefix;
                 }
                 log.warn("[WorldSim] 模型限定名前缀 {} 不是已启用的供应商，改为按模型名重新解析", prefix);
             } else {
-                com.chua.starter.ai.support.manage.store.SysAiProvider p = providerMapper.selectById(prefix);
+                com.chua.starter.account.channel.store.SysAccountChannel p = channelService.find(prefix);
                 if (p != null && Boolean.TRUE.equals(p.getEnabled())) {
                     return prefix;
                 }
             }
-            for (com.chua.starter.ai.support.manage.store.SysAiProvider cand : providerMapper.selectList(null)) {
+            for (com.chua.starter.account.channel.store.SysAccountChannel cand : channelService.listAll()) {
                 if (cand.getName() != null && cand.getName().equalsIgnoreCase(prefix)
                         && Boolean.TRUE.equals(cand.getEnabled())
                         && cand.getProviderId() != null && !cand.getProviderId().isBlank()) {
@@ -1290,7 +1290,7 @@ public class WorldSimChatController {
         route.put("providerResolved", providerId != null && !providerId.isBlank());
         if (providerId != null && !providerId.isBlank()) {
             try {
-                com.chua.starter.ai.support.manage.store.SysAiProvider p = providerMapper.selectById(providerId);
+                com.chua.starter.account.channel.store.SysAccountChannel p = channelService.find(providerId);
                 if (p != null) {
                     route.put("providerName", p.getName());
                     route.put("platform", p.getPlatform());

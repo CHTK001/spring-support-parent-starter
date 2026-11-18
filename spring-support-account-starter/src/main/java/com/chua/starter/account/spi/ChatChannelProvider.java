@@ -5,6 +5,7 @@ import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.ai.generation.ImageGenerationResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.account.channel.free.FreeChannelChatClient;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -163,7 +164,7 @@ public interface ChatChannelProvider extends ChannelProvider {
      * @throws Exception 上游调用失败
      */
     default String chat(String prompt, String model, String system) throws Exception {
-        ChatClient client = chatClient();
+        ChatClient client = FreeChannelChatClient.forChannel(extension(), null);
         try {
             if (model != null && !model.isBlank()) {
                 client.model(model);

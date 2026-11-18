@@ -2,6 +2,7 @@
 package com.chua.starter.ai.support.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.account.channel.credit.TraeCreditQueryProvider;
 import com.chua.starter.common.support.channel.ChannelTaskProvider;
 import com.chua.starter.common.support.text.json.Json;
 
@@ -55,9 +56,9 @@ public class TraeChannelTaskProvider implements ChannelTaskProvider {
     private final TraeAccountChannelAuthManager delegate = new TraeAccountChannelAuthManager();
 
     /**
-     * 积分实现（{@code usage_refresh} 领奖即刷新权益）
+     * 积分实现（{@code usage_refresh} 领奖即刷新权益；account 侧余额引擎实现）
      */
-    private final TraeChannelCreditProvider creditProvider = new TraeChannelCreditProvider();
+    private final TraeCreditQueryProvider creditProvider = new TraeCreditQueryProvider();
 
     @Override
     public String channel() {
@@ -75,7 +76,7 @@ public class TraeChannelTaskProvider implements ChannelTaskProvider {
         if (credentials == null || credentials.isEmpty()) {
             return List.of();
         }
-        boolean intl = TraeChannelCreditProvider.isIntl(credentials);
+        boolean intl = TraeCreditQueryProvider.isIntl(credentials);
         List<Map<String, Object>> rows = new ArrayList<>(2);
         if (!intl) {
             rows.add(checkinRow(credentials));

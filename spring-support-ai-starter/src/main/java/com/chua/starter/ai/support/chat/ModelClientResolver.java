@@ -11,19 +11,17 @@ import com.chua.common.support.task.cooldown.Backoff;
 import com.chua.common.support.task.cooldown.CooldownPolicies;
 import com.chua.common.support.task.cooldown.CooldownPolicy;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
 import com.chua.starter.ai.support.service.ChannelHealthService;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiUserContext;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -71,19 +69,19 @@ public class ModelClientResolver {
     private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000L;
 
     /**
-     * 供应商 Mapper
+     * 渠道业务（账号模块）
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
-     * 供应商模型 Mapper
+     * 渠道模型清单业务（账号模块的查询接口，含缓存）
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
-     * 供应商连接 Mapper
+     * 渠道连接业务（账号模块）：按归属作用域聚合密钥
      */
-    private final SysAiProviderConnectionMapper connectionMapper;
+    private final AccountChannelConnectionService connectionService;
 
     /**
      * 客户端缓存：key = providerId::model
@@ -151,7 +149,7 @@ public class ModelClientResolver {
         if (parsed == null) {
             return null;
         }
-        SysAiProvider provider = resolveProvider(parsed);
+        SysAccountChannel provider = resolveProvider(parsed);
         if (provider == null) {
             return null;
         }
@@ -244,7 +242,7 @@ public class ModelClientResolver {
         }
         // 同名模型的跨供应商自动切换已移除：外层聚合与路由组策略会互相覆盖，
         // 且没有 per-key 冷却；需要自动切换时请建一个路由组供应商。
-        SysAiProvider provider = resolveProvider(parsed);
+        SysAccountChannel provider = resolveProvider(parsed);
         if (provider == null) {
             log.debug("[ModelClientResolver] 未找到启用的供应商: {}", qualifiedModel);
             return null;
@@ -276,7 +274,7 @@ public class ModelClientResolver {
      * @param provider 供应商
      * @return 归属作用域
      */
-    public static String ownerScopeOf(SysAiProvider provider) {
+    public static String ownerScopeOf(SysAccountChannel provider) {
         if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
             return "_free";
         }
@@ -305,22 +303,18 @@ public class ModelClientResolver {
      * @param parsed 归一化后的模型
      * @return 启用的供应商；未找到返回 {@code null}
      */
-    private SysAiProvider resolveProvider(ParsedModel parsed) {
+    private SysAccountChannel resolveProvider(ParsedModel parsed) {
         try {
             if (parsed.providerId() != null) {
-                SysAiProvider provider = providerMapper.selectById(parsed.providerId());
+                SysAccountChannel provider = channelService.find(parsed.providerId());
                 if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
                     return provider;
                 }
                 log.warn("[ModelClientResolver] 指定的供应商 {} 不可用（不存在或已停用），回退按模型名反查: {}",
                         parsed.providerId(), parsed.model());
             }
-            // 反查：不带 providerId 时按模型名找启用行
-            List<SysAiProviderModel> candidates = providerModelMapper.selectList(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, parsed.model())
-                            .eq(SysAiProviderModel::getEnabled, true)
-                            .orderByAsc(SysAiProviderModel::getProviderId));
+            // 反查：不带 providerId 时按模型名找启用行（「只认 enabled=1」的判定与缓存都在账号模块）
+            List<SysAccountChannelModel> candidates = channelModelService.listEnabledByModel(parsed.model());
             if (candidates.isEmpty()) {
                 return null;
             }
@@ -328,10 +322,10 @@ public class ModelClientResolver {
                 log.warn("[ModelClientResolver] 模型 {} 在 {} 个供应商下同名（{}），未指定供应商时取第一家；"
                             + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
                         parsed.model(), candidates.size(),
-                        candidates.stream().map(SysAiProviderModel::getProviderId).toList());
+                        candidates.stream().map(SysAccountChannelModel::getProviderId).toList());
             }
-            for (SysAiProviderModel pm : candidates) {
-                SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+            for (SysAccountChannelModel pm : candidates) {
+                SysAccountChannel provider = channelService.find(pm.getProviderId());
                 if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
                     return provider;
                 }
@@ -348,10 +342,10 @@ public class ModelClientResolver {
      *
      * @param provider   供应商
      * @param model      裸模型名
-     * @param ownerScope 归属作用域（缓存键/连接过滤，见 {@link #ownerScopeOf(SysAiProvider)}）
+     * @param ownerScope 归属作用域（缓存键/连接过滤，见 {@link #ownerScopeOf(SysAccountChannel)}）
      * @return 已绑定模型的客户端；无可用密钥或构建失败返回 {@code null}
      */
-    private ChatClient build(SysAiProvider provider, String model, String ownerScope) {
+    private ChatClient build(SysAccountChannel provider, String model, String ownerScope) {
         // 路由组供应商：模型来自模型库，选中成员 = 交给路由组容器按策略选真实上游
         if (ProviderRouteTargets.isRouterGroup(provider.getPlatform())) {
             return buildRouterGroup(provider, ownerScope);
@@ -378,7 +372,7 @@ public class ModelClientResolver {
      * @param ownerScope 归属作用域
      * @return 客户端；没有任何可用 Key 时返回 {@code null}
      */
-    private ChatClient buildKeyed(SysAiProvider provider, String model, String ownerScope) {
+    private ChatClient buildKeyed(SysAccountChannel provider, String model, String ownerScope) {
         registerCooldownPolicy(provider);
         Map<String, ChatClient> keyed = keyedClients(provider, model, ownerScope);
         if (keyed.isEmpty()) {
@@ -401,7 +395,7 @@ public class ModelClientResolver {
      * @param ownerScope 归属作用域
      * @return Key（可空，代表免鉴权）→ 客户端；无可用 Key 时为空表
      */
-    private Map<String, ChatClient> keyedClients(SysAiProvider provider, String model, String ownerScope) {
+    private Map<String, ChatClient> keyedClients(SysAccountChannel provider, String model, String ownerScope) {
         Map<String, Object> providerExtra = provider.getExtra() == null ? Map.of() : provider.getExtra();
         List<String> keys = collectAllKeys(provider, ownerScope);
         // 同时使用的账号数：只用前 N 个 Key 轮换（0/缺失 = 全部启用）
@@ -468,7 +462,7 @@ public class ModelClientResolver {
      * @param provider 供应商
      * @return 允许无 Key 时返回 {@code true}
      */
-    private static boolean allowsKeyless(SysAiProvider provider) {
+    private static boolean allowsKeyless(SysAccountChannel provider) {
         if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
             return true;
         }
@@ -516,7 +510,7 @@ public class ModelClientResolver {
      * @param ownerScope 归属作用域
      * @return 路由组客户端；没有任何可用成员时返回 {@code null}
      */
-    private ChatClient buildRouterGroup(SysAiProvider provider, String ownerScope) {
+    private ChatClient buildRouterGroup(SysAccountChannel provider, String ownerScope) {
         try {
             RouterGroupSetting setting = routerGroupService.readSetting(provider);
             if (setting.getMembers().isEmpty()) {
@@ -526,10 +520,7 @@ public class ModelClientResolver {
             RouterGroupChatClient group = RouterGroupChatClient.create(provider.getProviderId(), setting,
                     member -> buildRouterGroupMember(member));
             for (RouterGroupSetting.Member member : setting.getMembers()) {
-                SysAiProviderModel row = providerModelMapper.selectOne(
-                        Wrappers.<SysAiProviderModel>lambdaQuery()
-                                .eq(SysAiProviderModel::getProviderId, member.providerId())
-                                .eq(SysAiProviderModel::getModel, member.model()));
+                SysAccountChannelModel row = channelModelService.find(member.providerId(), member.model());
                 if (row == null) {
                     continue;
                 }
@@ -555,7 +546,7 @@ public class ModelClientResolver {
      * @return 客户端；成员供应商不可用或模型已删除时返回 {@code null}
      */
     private ChatClient buildRouterGroupMember(RouterGroupSetting.Member member) {
-        SysAiProvider memberProvider = providerMapper.selectById(member.providerId());
+        SysAccountChannel memberProvider = channelService.find(member.providerId());
         if (memberProvider == null || !Boolean.TRUE.equals(memberProvider.getEnabled())) {
             log.warn("[ModelClientResolver] 路由组成员供应商不可用: {}", member.label());
             return null;
@@ -575,7 +566,7 @@ public class ModelClientResolver {
      * @param row 模型行
      * @return 价格
      */
-    private static double priceInputOf(SysAiProviderModel row) {
+    private static double priceInputOf(SysAccountChannelModel row) {
         Object price = metricValue(row, "price_input_per_musd");
         return price == null ? 0D : parseDouble(price);
     }
@@ -586,7 +577,7 @@ public class ModelClientResolver {
      * @param row 模型行
      * @return 智能分；未知为 0
      */
-    private static double intelligenceOf(SysAiProviderModel row) {
+    private static double intelligenceOf(SysAccountChannelModel row) {
         Object value = metricValue(row, "intelligence");
         return value == null ? 0D : parseDouble(value);
     }
@@ -597,7 +588,7 @@ public class ModelClientResolver {
      * @param row 模型行
      * @return 首字延迟；未知为 0
      */
-    private static long ttftOf(SysAiProviderModel row) {
+    private static long ttftOf(SysAccountChannelModel row) {
         Object value = metricValue(row, "ttft_ms");
         if (value == null) {
             value = metricValue(row, "latency_ms");
@@ -612,7 +603,7 @@ public class ModelClientResolver {
      * @param key 指标键
      * @return 值；缺失返回 null
      */
-    private static Object metricValue(SysAiProviderModel row, String key) {
+    private static Object metricValue(SysAccountChannelModel row, String key) {
         if (row == null || row.getMetrics() == null) {
             return null;
         }
@@ -648,9 +639,10 @@ public class ModelClientResolver {
      * @param apiKey        API Key
      * @param extraHeaders  自定义请求头
      * @param channelRoutes 渠道路由（免费渠道专用，可为 null）
+     * @param model         模型标识（用于解析 BaseUrl）
      * @return 客户端配置
      */
-    private ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+    private ChatClientSetting buildSetting(SysAccountChannel provider, String apiKey,
                                             Map<String, String> extraHeaders,
                                             Map<String, RouteTarget> channelRoutes, String model) {
         return ChatClientSetting.builder()
@@ -684,7 +676,7 @@ public class ModelClientResolver {
      *
      * @param provider 供应商
      */
-    private void registerCooldownPolicy(SysAiProvider provider) {
+    private void registerCooldownPolicy(SysAccountChannel provider) {
         long base = extraLong(provider.getExtra(), "rate_limit_base_ms");
         long max = extraLong(provider.getExtra(), "rate_limit_max_ms");
         String backoffName = extraString(provider.getExtra(), "rate_limit_backoff");
@@ -706,7 +698,7 @@ public class ModelClientResolver {
      * @param model    裸模型名
      * @return 实际基础地址
      */
-    private String resolveBaseUrl(SysAiProvider provider, String model) {
+    private String resolveBaseUrl(SysAccountChannel provider, String model) {
         Map<String, Object> extra = provider.getExtra();
         Map<String, Object> endpoints = extraMap(extra, "endpoints");
         if (endpoints.isEmpty()) {
@@ -731,10 +723,7 @@ public class ModelClientResolver {
      */
     private String protocolOf(String providerId, String model) {
         try {
-            SysAiProviderModel row = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getProviderId, providerId)
-                            .eq(SysAiProviderModel::getModel, model));
+            SysAccountChannelModel row = channelModelService.find(providerId, model);
             if (row == null || row.getCapabilities() == null) {
                 return null;
             }
@@ -899,7 +888,7 @@ public class ModelClientResolver {
      * @param conn 连接
      * @return true 表示已下线（路由层应剔除）
      */
-    private boolean isDown(SysAiProviderConnection conn) {
+    private boolean isDown(SysAccountChannelConnection conn) {
         return channelHealthService.isDown(conn.getConnectionId());
     }
 
@@ -918,26 +907,12 @@ public class ModelClientResolver {
      * @param ownerScope 归属作用域
      * @return 密钥列表
      */
-    private List<String> collectAllKeys(SysAiProvider provider, String ownerScope) {
+    private List<String> collectAllKeys(SysAccountChannel provider, String ownerScope) {
         LinkedHashSet<String> keys = new LinkedHashSet<>(ProviderCredentials.apiKeys(provider.getCredentials()));
         try {
-            LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                    new LambdaQueryWrapper<SysAiProviderConnection>()
-                            .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
-            if ("_free".equals(ownerScope) || "_sys".equals(ownerScope)) {
-                wrapper.isNull(SysAiProviderConnection::getUserId);
-            } else {
-                boolean admin = AiUserContext.isAdmin();
-                String userId = ownerScope;
-                wrapper.and(w -> {
-                    w.eq(SysAiProviderConnection::getUserId, userId);
-                    if (admin) {
-                        w.or().isNull(SysAiProviderConnection::getUserId);
-                    }
-                });
-            }
-            List<SysAiProviderConnection> connections = connectionMapper.selectList(wrapper);
-            for (SysAiProviderConnection conn : connections) {
+            List<SysAccountChannelConnection> connections =
+                    connectionService.listPoolForScope(provider.getProviderId(), ownerScope);
+            for (SysAccountChannelConnection conn : connections) {
                 if (isDown(conn)) {
                     continue;
                 }
@@ -1054,7 +1029,7 @@ public class ModelClientResolver {
      * @param ownerScope 归属作用域
      * @return 合并后的路由表
      */
-    public Map<String, RouteTarget> mergedRoutes(SysAiProvider provider, String ownerScope) {
+    public Map<String, RouteTarget> mergedRoutes(SysAccountChannel provider, String ownerScope) {
         Map<String, RouteTarget> merged = new LinkedHashMap<>();
         Map<String, RouteTarget> staticRoutes = ProviderRouteTargets.fromExtra(provider.getExtra());
         if (staticRoutes != null) {
@@ -1131,7 +1106,7 @@ public class ModelClientResolver {
      * 解析 {@code <providerId>:<model>} 形态：冒号前的非空片段一律当作供应商标识。
      *
      * <p>刻意不要求前缀是纯数字：供应商 id 除了雪花 id 还可能是 {@code onnx} 这类平台标识
-     * （见 {@code sys_ai_provider.sys_ai_provider_provider_id}）。前缀不存在时
+     * （见 {@code sys_account_channel.sys_account_channel_provider_id}）。前缀不存在时
      * {@link #resolveProvider(ParsedModel)} 会打 WARN 并回退按模型名反查，不会静默错配。</p>
      *
      * @param raw 原始模型名

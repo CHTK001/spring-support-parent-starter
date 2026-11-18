@@ -22,8 +22,9 @@ import java.util.Map;
  *   <li>用户在渠道页填「网关地址 + 网关 key」（也可直接粘 {@code magpie web} 打印的链接，
  *       其 {@code ?k=} 会被拆成页面 Key）；</li>
  *   <li>{@link #pollLogin} 探活 {@code GET /v1/models}（数据面，证明网关真的在跑）；</li>
- *   <li>凭据落库 {@code {base_url, gateway_key, page_url, page_key}}，
- *       模型清单 / 配额走数据面，上游管理与签到走管理面；</li>
+ *   <li>凭据落库 {@code {base_url, gateway_key, page_key, config_dir?}}，
+ *       模型清单 / 配额走数据面，上游管理与签到走管理面；管理页地址不再落库，
+ *       一律由 {@link MagpieSupport#pageUrl(Map)} 从 {@code base_url} 推导；</li>
  *   <li>{@link #toRouteTarget} 把网关转成一条 OpenAI 兼容路由，
  *       交给 {@code FreeChannelChatClient} 按模型名路由。</li>
  * </ol>
@@ -61,6 +62,14 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
      * 绑定句柄里的页面 Key 键（管理面必需）。
      */
     static final String HANDLE_PAGE_KEY = "pageKey";
+
+    /**
+     * 绑定句柄里的 magpie 配置目录键（本地回落用，可空）。
+     *
+     * <p>落库键就叫 {@code config_dir}，与后端 {@code MagpieSupport#configDir(Map)} 同口径；
+     * 兼容前端驼峰写法 {@code configDir}。</p>
+     */
+    static final String HANDLE_CONFIG_DIR = "config_dir";
 
     @Override
     public String channel() {
@@ -103,7 +112,10 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
      *       数据面按端口规则还原成 3425；</li>
      *   <li>{@code apiKey} 网关 key（可空：本机 magpie 数据面不校验）；</li>
      *   <li>{@code pageKey} 页面 Key（管理面用，可空——只影响上游管理与签到）；</li>
-     *   <li>{@code pageUrl} 页面地址（可空，缺省按 baseUrl 推导）。</li>
+     *   <li>{@code config_dir}（兼容 {@code configDir}）magpie 配置目录，可空：
+     *       网关在本机回环时后端从它现读当前页面 Key / 网关 Key；</li>
+     *   <li>{@code pageUrl} 已废弃：管理页地址一律由 {@code base_url} 推导，
+     *       传了也不落库（旧连接里的 {@code page_url} 仍可读）。</li>
      * </ul>
      *
      * <p>只探活数据面 {@code /v1/models}：它才是「网关真的在跑」的证据。
@@ -117,7 +129,7 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
         String entered = MagpieSupport.readString(handle, HANDLE_BASE_URL, "base_url", "url");
         String apiKey = MagpieSupport.readString(handle, HANDLE_API_KEY, "gatewayKey", "gateway_key");
         String pageKey = MagpieSupport.readString(handle, HANDLE_PAGE_KEY, "page_key", "webKey", "web_key");
-        String pageUrl = MagpieSupport.readString(handle, HANDLE_PAGE_URL, "page_url", "adminUrl", "admin_url");
+        String configDir = MagpieSupport.readString(handle, HANDLE_CONFIG_DIR, "configDir");
 
         // 整条启动链接：?k= 就是页面 Key
         String linkKey = MagpieSupport.linkKey(entered);
@@ -127,24 +139,23 @@ public class MagpieAccountChannelAuthManager implements AccountChannelAuthManage
         String entry = MagpieSupport.normalize(MagpieSupport.stripQuery(entered));
         // 粘成 3430 时按「页面地址」理解，数据面还原到 3425，避免把 /v1 打到页面端口
         if (MagpieSupport.isPageUrl(entry)) {
-            pageUrl = MagpieSupport.isBlank(pageUrl) ? entry : pageUrl;
             entry = MagpieSupport.gatewayForPage(entry);
-        } else if (MagpieSupport.isBlank(pageUrl)) {
-            pageUrl = MagpieSupport.gatewayToPage(entry);
         }
         String baseUrl = MagpieSupport.normalize(entry);
-        String normalizedPageUrl = MagpieSupport.normalizePage(pageUrl);
 
         ProbeResult probe = probe(baseUrl, apiKey);
         if (!probe.ok()) {
             throw new ChannelException(ChannelException.CODE_UPSTREAM_ERROR,
                     "Magpie 网关探活失败（" + baseUrl + "）: " + ChannelHttp.truncate(probe.detail()));
         }
-        Map<String, Object> credential = new LinkedHashMap<>(6);
+        Map<String, Object> credential = new LinkedHashMap<>(8);
         credential.put("base_url", baseUrl);
         credential.put("gateway_key", apiKey == null ? "" : apiKey.trim());
-        credential.put("page_url", normalizedPageUrl);
         credential.put("page_key", pageKey == null ? "" : pageKey.trim());
+        // 本地回落的配置目录：只在用户显式填了才写，空串不覆盖回退链
+        if (!MagpieSupport.isBlank(configDir)) {
+            credential.put(HANDLE_CONFIG_DIR, configDir.trim());
+        }
         credential.put("nickname", nickname(apiKey, pageKey));
         return credential;
     }

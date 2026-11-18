@@ -8,8 +8,9 @@ import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.manage.store.SysAiProviderMetric;
-import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
+import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
+import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -24,7 +25,7 @@ import java.util.List;
 
 /**
  * AI 定价服务实现类。
- * <p>优先从 AA（Artificial Analysis）缓存查询官方定价，未命中时回退到数据库。</p>
+ * <p>优先从 datasearch 模型目录（models.dev 快照）查询官方定价，未命中时回退到数据库。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -43,11 +44,6 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
      * 定价 映射器
      */
     private final SysAiPricingMapper pricingMapper;
-
-    /**
-     * AA 模型指标服务（含定价缓存）
-     */
-    private final AiModelMetricsEnrichmentService metricsEnrichment;
 
     /**
      * 全量指标库服务（计费取价回退，预估值）
@@ -70,21 +66,21 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     @Override
     @Cacheable(cacheNames = CACHE_NAME, key = "#provider + ':' + #model", unless = "#result == null")
     public SysAiPricing getLatestPricing(String provider, String model) {
-        // 1. 优先从 AA 缓存查找（USD/百万令牌 → USD/千令牌）
-        var rec = metricsEnrichment.getPricingRecord(model);
-        if (rec != null && rec.inputPerMillion() != null && rec.outputPerMillion() != null) {
+        // 1. 优先从 datasearch 模型目录查找（USD/百万令牌 → USD/千令牌）
+        ProviderModelInfo info = ProviderModelMetrics.of(model);
+        if (info != null && info.getPriceInputPerMusd() != null && info.getPriceOutputPerMusd() != null) {
             SysAiPricing pricing = new SysAiPricing();
             pricing.setProvider(provider);
             pricing.setModel(model);
-            BigDecimal inputPer1k = rec.inputPerMillion()
+            BigDecimal inputPer1k = BigDecimal.valueOf(info.getPriceInputPerMusd())
                     .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
-            BigDecimal outputPer1k = rec.outputPerMillion()
+            BigDecimal outputPer1k = BigDecimal.valueOf(info.getPriceOutputPerMusd())
                     .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
             pricing.setInputPricePer1k(inputPer1k.doubleValue());
             pricing.setOutputPricePer1k(outputPer1k.doubleValue());
             pricing.setCurrency("USD");
             pricing.setEffectiveDate(LocalDateTime.now());
-            pricing.setSource("aa");
+            pricing.setSource("datasearch");
             return pricing;
         }
 

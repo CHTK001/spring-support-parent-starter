@@ -7,8 +7,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageSyncLog;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.model.AiUsageDTO;
 import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
@@ -80,11 +80,11 @@ public class UsageController {
     private final UsagePricingReconService reconService;
 
       /**
-       * 服务商 Mapper：/usage/providers 返回 id→name 映射，
+       * 服务商查询（账号模块渠道业务）：/usage/providers 返回 id→name 映射，
        * 供用量明细「服务商」列把雪花 id（如 1791352877398）翻译成中文名。
-       * 直接注入 Mapper（与 AiChatFacadeServiceImpl 同一用法），不另起 Service。
+       * 读写一律走契约，不穿透对方持久层。
        */
-    private final SysAiProviderMapper sysAiProviderMapper;
+    private final AccountChannelService channelService;
 
       /**
        * 用量实时推送中枢（合并推送，不在业务线程上直接发网络包）。
@@ -330,7 +330,7 @@ public class UsageController {
        *
        * <p>背景：用量明细的 provider 字段混装两种值 —— 模型服务商名（agnes/openai…）
        * 与服务商实例雪花 id（如 1791352877398）。后者前端无法翻译，只能裸显数字。
-       * 本接口返回 sys_ai_provider 全表 id/name/platform，供前端回填映射，未命中
+       * 本接口返回 sys_account_channel 全表 id/name/platform，供前端回填映射，未命中
        * 或查询失败时前端兜底显示原始值，不弹错。</p>
        *
        * @return 服务商映射列表，每项含 id / name / platform
@@ -340,9 +340,9 @@ public class UsageController {
     public ReturnResult<List<Map<String, Object>>> usageProviders() {
         List<Map<String, Object>> result = new ArrayList<>();
         try {
-            List<SysAiProvider> providers = sysAiProviderMapper.selectList(null);
+            List<SysAccountChannel> providers = channelService.listAll();
             if (providers != null) {
-                for (SysAiProvider p : providers) {
+                for (SysAccountChannel p : providers) {
                     if (p == null || p.getProviderId() == null) {
                         continue;
                     }
@@ -580,6 +580,13 @@ public class UsageController {
         return ReturnResult.ok(AiUsagePageVO.of(result));
     }
 
+    /**
+     * 用量/定价对账。
+     *
+     * @param startTime 对账开始时间（可选）
+     * @param endTime   对账结束时间（可选）
+     * @return 对账结果（缺价模型、零费用来源、闲置定价与重复定价）
+     */
     @Permission("admin")
     @Operation(summary = "用量/定价对账", description = "比对实际用量与各数据源模型指标，输出缺价模型、零费用来源、闲置定价与重复定价")
     @GetMapping("/recon")

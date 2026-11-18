@@ -9,8 +9,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.vector.VectorStorageDescriptor;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.deeplearning.support.engine.ModelRegistry;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,14 +57,14 @@ public class AiRagSettingController {
     private static final String CAPABILITY_TASK_KEY = "task";
 
     /**
-     * 对话任务标识：{@code sys_ai_provider_model_capabilities} 中区分对话/思考/图像的判据
+     * 对话任务标识：{@code sys_account_channel_model_capabilities} 中区分对话/思考/图像的判据
      */
     private static final String CAPABILITY_CHAT_TASK = "chat";
 
     /**
      * 供应商模型映射器：LLM 下拉数据源，与前端模型选择器同表同标识
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 获取 RAG 配置选项。
@@ -158,7 +158,7 @@ public class AiRagSettingController {
     }
 
     /**
-     * LLM 模型列表：{@code sys_ai_provider_model} 中已启用且能力含 {@code chat} 的模型。
+     * LLM 模型列表：{@code sys_account_channel_model} 中已启用且能力含 {@code chat} 的模型。
      *
      * <p>与前端模型选择器同源（同一张表、同一个 {@code model} 标识），因此下拉里选中的值
      * 可以直接用于对话请求，不需要再做一次名称映射。</p>
@@ -171,11 +171,10 @@ public class AiRagSettingController {
      */
     private List<String> listLlmModels() {
         try {
-            return providerModelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getEnabled, true))
+            return channelModelService.listAllEnabled()
                     .stream()
                     .filter(AiRagSettingController::isChatCapable)
-                    .map(SysAiProviderModel::getModel)
+                    .map(SysAccountChannelModel::getModel)
                     .filter(model -> model != null && !model.isBlank())
                     .distinct()
                     .sorted()
@@ -196,7 +195,7 @@ public class AiRagSettingController {
      * @param row 供应商模型行
      * @return 任一能力项的 {@code task} 为 chat 时返回 true
      */
-    private static boolean isChatCapable(SysAiProviderModel row) {
+    private static boolean isChatCapable(SysAccountChannelModel row) {
         List<Map<String, Object>> capabilities = row.getCapabilities();
         if (capabilities == null || capabilities.isEmpty()) {
             return false;

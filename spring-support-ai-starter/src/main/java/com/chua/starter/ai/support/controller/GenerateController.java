@@ -9,11 +9,11 @@ import com.chua.starter.ai.support.generate.GenerateSpiRouter;
 import com.chua.starter.ai.support.generate.GenerateService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.AiUserContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,14 +60,14 @@ public class GenerateController {
     private final GenerateService generateService;
 
     /**
-     * 提供者映射器
+     * 渠道业务（账号模块）：渠道行与启用口径
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 提供者模型映射器
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 创建生成任务的请求体
@@ -168,15 +168,12 @@ public class GenerateController {
         String kind = type == null || type.isBlank() ? GenerateConfigSupport.TYPE_IMAGE : type;
         boolean video = GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(kind);
         List<Map<String, Object>> result = new ArrayList<>();
-        List<SysAiProviderModel> rows = providerModelMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getEnabled, true)
-                        .orderByAsc(SysAiProviderModel::getSortOrder));
-        for (SysAiProviderModel row : rows) {
+        List<SysAccountChannelModel> rows = channelModelService.listAllEnabled();
+        for (SysAccountChannelModel row : rows) {
             if (!matchesTask(row, kind)) {
                 continue;
             }
-            SysAiProvider provider = providerMapper.selectById(row.getProviderId());
+            SysAccountChannel provider = channelService.find(row.getProviderId());
             if (provider == null || !Boolean.TRUE.equals(provider.getEnabled())) {
                 continue;
             }
@@ -363,7 +360,7 @@ public class GenerateController {
      * @param kind 任务类型
      * @return true 表示匹配
      */
-    private static boolean matchesTask(SysAiProviderModel row, String kind) {
+    private static boolean matchesTask(SysAccountChannelModel row, String kind) {
         List<Map<String, Object>> caps = row.getCapabilities();
         if (caps == null || caps.isEmpty()) {
             return false;

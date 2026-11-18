@@ -20,6 +20,12 @@ import com.chua.starter.account.manage.service.impl.SysAccountCreditConfigServic
 import com.chua.starter.account.manage.service.impl.SysAccountSecretServiceImpl;
 import com.chua.starter.account.manage.service.impl.ManageAccountServiceImpl;
 import com.chua.starter.account.manage.support.AccountApiExceptionAdvice;
+import com.chua.starter.account.channel.migrator.ChannelConnectionSchemaMigrator;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelHealthService;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.web.ApiChannelAuthController;
 import com.chua.starter.account.web.ChatChannelController;
 import com.chua.starter.account.web.ImageChannelController;
 import com.chua.starter.account.web.Model3DChannelController;
@@ -35,12 +41,20 @@ import org.springframework.context.annotation.FilterType;
  *
  * <p>宿主引入 {@code spring-support-account-starter} 即获得：</p>
  * <ul>
- *   <li>渠道管理：免登录 ChatClient（{@code /api/channels/{channel}/chat}）、文生图、文生视频、图生 3D</li>
+ *   <li>渠道管理：渠道 / 渠道模型 / 渠道连接 / 渠道健康四张表的读写与
+ *       {@code /api/channels} 管理接口（绑定、轮询、刷新、签到、模型开关）</li>
+ *   <li>免登录 ChatClient：{@code /api/channels/{channel}/chat}、文生图、文生视频、图生 3D</li>
  *   <li>账号管理：统一账号的增删改查、密钥加密、归属隔离与引用校验</li>
  * </ul>
  *
- * <p>本模块不持有任何 {@code sys_ai_*} 表，也不依赖 AI 模块；AI 若要用渠道能力，
- * 只按 SPI 解析 {@code ChatChannelProvider}，与账号数据完全解耦。</p>
+ * <p><b>表口径</b>：渠道四表统一按账号模块命名（{@code sys_account_channel*}），
+ * 不再持有任何 {@code sys_ai_provider*} / {@code sys_ai_channel_health}。
+ * 仅消息模板沿用历史表名 {@code sys_ai_channel_message_template}（与本模块一同归于账号侧，
+ * 改名会牵动独立迁移，不在本次范围内）。</p>
+ *
+ * <p><b>依赖方向</b>：本模块不依赖 AI 模块。渠道数据的变更通过
+ * {@code ChannelCatalogChangedEvent} 广播，AI 侧监听后失效路由缓存、复位探针状态；
+ * 反向 AI 拿渠道能力只能经 SPI（{@code ChatChannelProvider}、{@code AccountChannelAuthManager}）。</p>
  *
  * <p>扫描口径按类白名单固定，避免宿主 classpath 上还有兄弟模块时装配结果漂移。</p>
  *
@@ -57,6 +71,9 @@ import org.springframework.context.annotation.FilterType;
                 "com.chua.starter.account.template",
                 // 统一账号管理：/api/accounts
                 "com.chua.starter.account.manage",
+                // 渠道业务：service / migrator 不在 web / manage 包下，
+                // 不加这条 includeFilters 里的类根本扫不到（宿主会缺 AccountChannelService 这个 bean）
+                "com.chua.starter.account.channel",
                 // 收 / 发信箱：/api/accounts/{accountId}/mailbox
                 "com.chua.starter.account.mail"
         },
@@ -64,6 +81,14 @@ import org.springframework.context.annotation.FilterType;
         includeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
                 classes = {
+                        ApiChannelAuthController.class,
+                        ChannelConnectionSchemaMigrator.class,
+                        AccountChannelService.class,
+                        AccountChannelModelService.class,
+                        AccountChannelConnectionService.class,
+                        // 渠道健康记录：ai 侧 ChannelHealthServiceImpl 以构造注入依赖它，
+                        // 白名单漏登记会让宿主启动直接失败（Parameter 0 ... could not be found）
+                        AccountChannelHealthService.class,
                         ChatChannelController.class,
                         ImageChannelController.class,
                         VideoChannelController.class,
@@ -94,7 +119,9 @@ import org.springframework.context.annotation.FilterType;
         // 短信 / 邮件消息模板持久化
         "com.chua.starter.account.template.mapper",
         // 统一账号持久化
-        "com.chua.starter.account.manage.mapper"
+        "com.chua.starter.account.manage.mapper",
+        // 渠道管理：渠道开关与渠道模型开关
+        "com.chua.starter.account.channel.mapper"
 })
 public class AccountAutoConfiguration {
 
@@ -104,7 +131,8 @@ public class AccountAutoConfiguration {
      * <p>启动日志留下可检索锚点，便于排查「账号/渠道能力是否被装配」。</p>
      */
     public AccountAutoConfiguration() {
-        log.info("[account] 账号与渠道模块已装配：账号管理 /api/accounts、免登录对话 /api/channels/{channel}/chat、"
+        log.info("[account] 账号与渠道模块已装配：渠道管理 /api/channels（渠道/模型/连接/健康）、"
+                + "账号管理 /api/accounts、免登录对话 /api/channels/{channel}/chat、"
                 + "文生图 /api/channels/{channel}/images、文生视频 /api/channels/{channel}/videos、"
                 + "图生 3D /api/channels/{channel}/3d-models、消息模板 /api/channels/templates");
     }

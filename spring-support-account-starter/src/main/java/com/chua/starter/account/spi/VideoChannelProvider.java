@@ -4,6 +4,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.generation.VideoGenerationResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.common.support.channel.KeylessMediaChannel;
 
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ import java.util.Set;
  * @author CH
  * @since 4.0.0.52
  */
-public interface VideoChannelProvider extends ChannelProvider {
+public interface VideoChannelProvider extends ChannelProvider, KeylessMediaChannel {
 
     /**
      * 单次请求的最大视频条数。
@@ -101,6 +102,16 @@ public interface VideoChannelProvider extends ChannelProvider {
      */
     default List<Map<String, Object>> listModels() {
         return List.of();
+    }
+
+    /**
+     * 本渠道产出的任务类型：文生视频渠道固定为 {@code video_generation}。
+     *
+     * @return 任务类型列表
+     */
+    @Override
+    default List<String> tasks() {
+        return List.of("video_generation");
     }
 
     /**

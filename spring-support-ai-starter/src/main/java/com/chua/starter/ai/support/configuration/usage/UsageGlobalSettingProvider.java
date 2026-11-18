@@ -19,6 +19,9 @@ import java.util.List;
  *   <li>{@code usage_report_interval} —— 定时同步时间（秒），驱动 Trigger / 时间轮节奏</li>
  *   <li>{@code usage_sync_providers} —— Provider SPI 配置开关（逗号分隔白名单，留空 = 全部启用）</li>
  *   <li>{@code usage_timewheel_enabled} —— 后台时间轮开关，开启后改用时间轮调度</li>
+ *   <li>{@code credit_refresh_enabled} —— 余额定时刷新开关，驱动
+ *       {@link com.chua.starter.ai.support.schedule.CreditRefreshScheduler} 每 5 分钟
+ *       刷新已启用供应商的余额快照</li>
  * </ul></p>
  *
  * @author CH
@@ -69,6 +72,9 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("usage_report_interval", "3600", "NUMBER", "定时聚合时间（秒），最小 60 秒，未配置默认 3600（1小时）", 4),
                 new SettingItem("usage_timewheel_enabled", "false", "BOOLEAN", "后台时间轮：开启后用量同步改用时间轮调度", 5),
                 new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 6),
+                // 余额定时刷新（CreditRefreshScheduler）：每 5 分钟把有 Key 的已启用供应商
+                // 余额真查一遍并按 Key 落库。默认开启；关闭后只在打开余额面板或手动「同步」时查询。
+                new SettingItem("credit_refresh_enabled", "true", "BOOLEAN", "余额定时刷新：开启后每 5 分钟自动刷新已启用供应商的余额快照", 12),
                 // 下面 5 项是**前端消费**配置：后端不读，由用量看板直接调设置接口取值
                 // （UsageConfigSettings.vue / useUsageBoard.ts / usage/format.ts）。
                 // 它们是真实生效的，只是生效点在浏览器侧，后端 grep 不到读取点。

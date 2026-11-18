@@ -1,10 +1,9 @@
 package com.chua.starter.ai.support.chat;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.ai.chat.DecisionsClient;
 import com.chua.common.support.ai.chat.DecisionsSetting;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,9 +40,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DecisionClientRegistry {
 
     /**
-     * 供应商表：平台、地址、凭证、代理都在这一行上
+     * 渠道业务（账号模块）：渠道行、启用口径、平台检索都从这里取
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * providerId → 决策客户端（懒创建，失败不缓存）
@@ -71,11 +70,8 @@ public class DecisionClientRegistry {
      */
     public List<Map<String, Object>> candidates() {
         List<Map<String, Object>> out = new ArrayList<>(4);
-        List<SysAiProvider> rows = providerMapper.selectList(
-                Wrappers.<SysAiProvider>lambdaQuery()
-                        .eq(SysAiProvider::getEnabled, true)
-                        .orderByAsc(SysAiProvider::getSortOrder));
-        for (SysAiProvider p : rows) {
+        List<SysAccountChannel> rows = channelService.listEnabled();
+        for (SysAccountChannel p : rows) {
             if (!isDecisionPlatform(p.getPlatform())) {
                 continue;
             }
@@ -103,7 +99,7 @@ public class DecisionClientRegistry {
         if (cached != null) {
             return cached;
         }
-        SysAiProvider p = providerMapper.selectById(providerId);
+        SysAccountChannel p = channelService.find(providerId);
         if (p == null || Boolean.FALSE.equals(p.getEnabled())) {
             return null;
         }
@@ -150,7 +146,7 @@ public class DecisionClientRegistry {
      * @param key 键名
      * @return 值；缺失返回 null
      */
-    private static String extraString(SysAiProvider p, String key) {
+    private static String extraString(SysAccountChannel p, String key) {
         Map<String, Object> extra = p.getExtra();
         Object v = extra == null ? null : extra.get(key);
         return v == null ? null : String.valueOf(v);

@@ -3,6 +3,7 @@ package com.chua.starter.datasearch.provider.support;
 import com.chua.starter.datasearch.provider.model.ProviderDescriptor;
 import com.chua.starter.datasearch.provider.spi.ProviderRegistryProvider;
 import com.chua.starter.datasearch.support.SpiProviders;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -13,15 +14,21 @@ import java.util.Locale;
  * 供应商登记表出口：按顺序问各个 {@link ProviderRegistryProvider}，第一个命中的算数。
  *
  * <p>与限制 / 目录 / 定价 / 余额出口同构：实现全部走 {@code META-INF/services}
- * 登记，这里只做装载缓存与选择，不承载厂商口径。</p>
+ * 登记，这里只做装载缓存与选择，不承载厂商口径。查不到、或某个实现抛异常时继续问
+ * 下一个——登记表是很多判定（官方站点、协议、限制、目录键）的共用底座，不能因为
+ * 一个实现出问题就整体失效。</p>
  *
  * @author CH
  * @since 4.0.0.57
  */
+@Slf4j
 public final class ProviderRegistries {
 
     private static volatile List<ProviderRegistryProvider> cached;
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ProviderRegistries() {
     }
 
@@ -40,17 +47,35 @@ public final class ProviderRegistries {
     }
 
     /**
+     * 按平台查登记项（不要求上游地址）。
+     *
+     * <p>免登录渠道 / 未绑定账号的登录渠道都没有 {@code baseUrl}，只能按厂商标识或别名
+     * 查；本重载就是给这类调用方用的。</p>
+     *
+     * @param platform 平台类型（provider id）
+     * @return 登记项；未命中返回 null
+     */
+    public static ProviderDescriptor find(String platform) {
+        return find(platform, null);
+    }
+
+    /**
      * 按平台 / 地址查登记项。
      *
      * @param platform 平台类型（provider id）
-     * @param baseUrl  上游基础地址
+     * @param baseUrl  上游基础地址，可为 null（只按厂商标识匹配）
      * @return 登记项；未命中返回 null
      */
     public static ProviderDescriptor find(String platform, String baseUrl) {
         for (ProviderRegistryProvider provider : providers()) {
-            ProviderDescriptor descriptor = provider.find(platform, baseUrl);
-            if (descriptor != null) {
-                return descriptor;
+            try {
+                ProviderDescriptor descriptor = provider.find(platform, baseUrl);
+                if (descriptor != null) {
+                    return descriptor;
+                }
+            } catch (Exception e) {
+                log.debug("[provider-registry] 实现[{}]查询失败 platform={} cause={}",
+                        provider.name(), platform, e.getMessage());
             }
         }
         return null;
@@ -67,9 +92,14 @@ public final class ProviderRegistries {
             return null;
         }
         for (ProviderRegistryProvider provider : providers()) {
-            ProviderDescriptor descriptor = provider.byId(providerId);
-            if (descriptor != null) {
-                return descriptor;
+            try {
+                ProviderDescriptor descriptor = provider.byId(providerId);
+                if (descriptor != null) {
+                    return descriptor;
+                }
+            } catch (Exception e) {
+                log.debug("[provider-registry] 实现[{}]byId 失败 id={} cause={}",
+                        provider.name(), providerId, e.getMessage());
             }
         }
         return null;
@@ -83,7 +113,11 @@ public final class ProviderRegistries {
     public static List<ProviderDescriptor> entries() {
         List<ProviderDescriptor> all = new ArrayList<>(256);
         for (ProviderRegistryProvider provider : providers()) {
-            all.addAll(provider.entries());
+            try {
+                all.addAll(provider.entries());
+            } catch (Exception e) {
+                log.debug("[provider-registry] 实现[{}]登记项读取失败: {}", provider.name(), e.getMessage());
+            }
         }
         return all;
     }

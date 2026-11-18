@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -102,6 +103,18 @@ public class CreditQuery implements Serializable {
      * 额外请求头
      */
     private Map<String, String> headers;
+
+    /**
+     * 自定义字段映射（custom 实现用）：后端字段 → JSONPath / XPath 表达式。
+     * 有值时按映射逐字段取数；为空时回落到 {@link #expression}。
+     */
+    private List<CreditMapping> mapping;
+
+    /**
+     * 渠道账号凭据（渠道余额实现用）：结构与连接表 credentials 字段一致，
+     * 由调用方解密后传入；表达式类通用实现不读它。
+     */
+    private Map<String, Object> credentials;
 
     /**
      * 追加一个请求参数。

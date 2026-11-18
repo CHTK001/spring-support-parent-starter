@@ -33,10 +33,10 @@ import com.chua.common.support.vector.VectorStorageDescriptor;
 import com.chua.common.support.vector.VectorStorageField;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.jvector.support.spi.JVectorVectorStorageProvider;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.common.support.ai.chat.route.RouteTarget;
@@ -367,11 +367,11 @@ public class RagClientManager implements RagClientProvider {
      * LLM 供应商表 Mapper：按供应商ID解析 base_url 与 API Key。
      *
      * <p>模型引用形如 {@code 供应商ID:模型名}（如 {@code 1789547286889:agnes-3.0-flash}），
-     * 其凭据权威来源是 {@code sys_ai_provider}，而非 {@code runtime} 分组的
+     * 其凭据权威来源是 {@code sys_account_channel}，而非 {@code runtime} 分组的
      * provider/provider_api_key —— 后者由 {@code RuntimeGlobalSettingProvider} 以
      * {@code openai}/{@code gpt-4o} 作为首次种子默认值，供应商接入信息并不落在那里。</p>
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 生效对话模型解析器：为 RAG 提供「当前用户默认模型 → Bot → 全局默认」的兜底链。
@@ -381,7 +381,7 @@ public class RagClientManager implements RagClientProvider {
     /**
      * 供应商模型表 Mapper：把「裸模型名」定位到其供应商，再按供应商凭据构建 ChatClient。
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
 
 
@@ -745,7 +745,7 @@ public class RagClientManager implements RagClientProvider {
     /**
      * 解析 RAG 使用的 LLM：
      * 1. 按 rag_llm_model 从 ChatClientRegistry 查找已注册客户端
-     * 2. 模型引用形如 供应商ID:模型名 时，直接用 sys_ai_provider 的 base_url + API Key 构建
+     * 2. 模型引用形如 供应商ID:模型名 时，直接用 sys_account_channel 的 base_url + API Key 构建
      * 3. 查不到则用 registry 默认客户端
      * 4. 都没有时，从 runtime 全局设置（provider/apiKey/baseUrl/model）直接构造真实客户端
      * @param ragLlmModel ragLlm模型，不允许为 null
@@ -801,7 +801,7 @@ public class RagClientManager implements RagClientProvider {
      *
      * <p>模型引用形如 {@code 供应商ID:模型名} 时由 {@link #buildProviderChatClient} 直接构建；
      * 而默认模型链（{@link EffectiveChatModelResolver}）返回的是<b>裸模型名</b>，
-     * 需要先查 {@code sys_ai_provider_model} 找到 providerId 再构建。</p>
+     * 需要先查 {@code sys_account_channel_model} 找到 providerId 再构建。</p>
      *
      * @param modelName 裸模型名
      * @return 对话客户端；查不到或构建失败时返回 空
@@ -811,11 +811,7 @@ public class RagClientManager implements RagClientProvider {
             return null;
         }
         try {
-            SysAiProviderModel model = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, modelName)
-                            .eq(SysAiProviderModel::getEnabled, true)
-                            .last("limit 1"));
+            SysAccountChannelModel model = channelModelService.findEnabledByModel(modelName);
             if (model == null || StringUtils.isBlank(model.getProviderId())) {
                 return null;
             }
@@ -930,7 +926,7 @@ public class RagClientManager implements RagClientProvider {
     }
 
     /**
-     * 按「供应商ID:模型名」引用从 {@code sys_ai_provider} 构建 ChatClient。
+     * 按「供应商ID:模型名」引用从 {@code sys_account_channel} 构建 ChatClient。
      *
      * <p>模型引用支持两种形态：{@code 供应商ID:模型名} 与裸模型名。凭据取自供应商表的
      * {@code credentials} JSON，同时兼容两种键形态：{@code api_keys}（列表，取第一个非空）
@@ -955,8 +951,8 @@ public class RagClientManager implements RagClientProvider {
             return null;
         }
         try {
-            SysAiProvider provider = providerId != null
-                    ? providerMapper.selectById(providerId)
+            SysAccountChannel provider = providerId != null
+                    ? channelService.find(providerId)
                     : null;
             if (provider == null) {
                 log.warn("[RagClientManager] 模型引用 {} 未定位到供应商", modelRef);
@@ -1130,7 +1126,7 @@ public class RagClientManager implements RagClientProvider {
      * 引擎是实现细节，由模型本身决定：</p>
      * <ol>
      *   <li>模型 id 命中本地 {@code ModelRegistry} → 引擎是 {@code onnx}（本地推理，免凭证）；</li>
-     *   <li>否则按模型名查 {@code sys_ai_provider_model} → 取其供应商的 platform，
+     *   <li>否则按模型名查 {@code sys_account_channel_model} → 取其供应商的 platform，
      *       仅当该 platform 在 EmbeddingClient SPI 里注册过才采用；</li>
      *   <li>两者都不命中 → 返回 {@code null}，<b>不回落任何默认引擎</b>。</li>
      * </ol>
@@ -1146,7 +1142,7 @@ public class RagClientManager implements RagClientProvider {
      * 把「界面保存的模型引用」收敛成裸模型名。
      *
      * <p>设置页保存的值形如 {@code onnx:bge-large-zh-embedding}、{@code agnes:xxx}，
-     * 而 {@code ModelRegistry} 与 {@code sys_ai_provider_model} 存的都是裸名；
+     * 而 {@code ModelRegistry} 与 {@code sys_account_channel_model} 存的都是裸名；
      * 底层 embedding 实现同样只认裸名——实测带前缀直接传下去会抛
      * 「模型未注册 onnx:bge-large-zh-embedding」。</p>
      *
@@ -1191,15 +1187,11 @@ public class RagClientManager implements RagClientProvider {
         }
         // ② 云端模型：按模型名定位供应商，取其 platform 作为引擎
         try {
-            SysAiProviderModel row = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, bareModel)
-                            .eq(SysAiProviderModel::getEnabled, true)
-                            .last("limit 1"));
+            SysAccountChannelModel row = channelModelService.findEnabledByModel(bareModel);
             if (row == null || StringUtils.isBlank(row.getProviderId())) {
                 return null;
             }
-            SysAiProvider provider = providerMapper.selectById(row.getProviderId());
+            SysAccountChannel provider = channelService.find(row.getProviderId());
             if (provider == null || !Boolean.TRUE.equals(provider.getEnabled())) {
                 return null;
             }
@@ -1334,6 +1326,7 @@ public class RagClientManager implements RagClientProvider {
      * @param storageName        存储名，取自已注册的 VectorStorageProvider SPI
      * @param uploadDir          RAG 上传目录，jvector 默认索引目录的父目录
      * @param embeddingDimensions 向量维度
+     * @param userId             用户标识（用于按用户隔离索引目录）
      * @return VectorStorage 实例；创建失败返回 null
      */
     private VectorStorage createVectorStorage(String storageName, String uploadDir, int embeddingDimensions,

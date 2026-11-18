@@ -135,25 +135,7 @@
     "allPublicFields": true
   },
   {
-    "name": "com.chua.starter.account.spi.impl.TraeChatChannel",
-    "allDeclaredConstructors": true,
-    "allPublicConstructors": true,
-    "allDeclaredMethods": true,
-    "allPublicMethods": true,
-    "allDeclaredFields": true,
-    "allPublicFields": true
-  },
-  {
     "name": "com.chua.starter.account.spi.impl.PollinationsImageChannel",
-    "allDeclaredConstructors": true,
-    "allPublicConstructors": true,
-    "allDeclaredMethods": true,
-    "allPublicMethods": true,
-    "allDeclaredFields": true,
-    "allPublicFields": true
-  },
-  {
-    "name": "com.chua.starter.account.spi.impl.TraeImageChannel",
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
     "allDeclaredMethods": true,

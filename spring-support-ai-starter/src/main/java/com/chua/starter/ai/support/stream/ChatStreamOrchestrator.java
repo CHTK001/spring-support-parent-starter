@@ -16,10 +16,9 @@ import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiRolePromptResolver;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -60,10 +59,10 @@ public class ChatStreamOrchestrator {
     private final AIDialogRecordService aiDialogRecordService;
     private final ObjectMapper objectMapper;
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
-    private final SysAiProviderModelMapper sysAiProviderModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /** 供应商查询：用于把供应商标识补成可读的供应商名/平台/baseUrl，供路由日志与前端提示使用 */
-    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper sysAiProviderMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelService channelService;
 
     /**
      * 会话压缩记录服务：把摘要覆盖的历史替换成一条摘要
@@ -76,6 +75,11 @@ public class ChatStreamOrchestrator {
     private final ModelAliasService modelAliasService;
     private final ChatMemorySupport chatMemorySupport;
     private final ChatStreamRegistry registry;
+
+    /**
+     * 全局设置读取器：读取会话分组里的重试/超时策略（按用户覆盖生效）
+     */
+    private final com.chua.starter.ai.support.configuration.client.GlobalSettingReader settingReader;
 
     /**
      * 会话执行轨迹服务：把 Agent 执行轨迹异步落库，供会话顶部「轨迹」页签回放
@@ -198,13 +202,7 @@ public class ChatStreamOrchestrator {
                         selectedProviderId = rawProviderId;
                     }
                 } else if (selectedModel.matches("\\d+")) {
-                    com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel> wrapper =
-                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-                    wrapper.eq(SysAiProviderModel::getProviderId, selectedModel)
-                            .eq(SysAiProviderModel::getEnabled, true)
-                            .orderByAsc(SysAiProviderModel::getSortOrder)
-                            .last("LIMIT 1");
-                    SysAiProviderModel pm = sysAiProviderModelMapper.selectOne(wrapper);
+                    SysAccountChannelModel pm = channelModelService.findFirstEnabled(selectedModel);
                     if (pm != null && pm.getModel() != null) {
                         log.info("[ChatStream] providerId {} 映射到模型名称: {}", selectedModel, pm.getModel());
                         selectedProviderId = selectedModel;
@@ -361,16 +359,12 @@ public class ChatStreamOrchestrator {
         // 模型没登记（或没填 contextWindow）时保持 null，前端据此显示「—」而不是 0%。
         Integer modelContextWindow = null;
         try {
-            // 按 (供应商, 模型) 精确取参数。SysAiProviderModel 的 @TableId 是 model，
+            // 按 (供应商, 模型) 精确取参数。SysAccountChannelModel 的 @TableId 是 model，
             // 单用 selectById(modelToUse) 等于 WHERE model=? 无供应商约束，同名模型时
             // 会捞到别家的 temperature/maxTokens/top_p 覆盖本次请求。
-            SysAiProviderModel modelInfo = selectedProviderId == null || selectedProviderId.isBlank()
-                    ? sysAiProviderModelMapper.selectById(modelToUse)
-                    : sysAiProviderModelMapper.selectOne(
-                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel>()
-                                    .eq(SysAiProviderModel::getProviderId, selectedProviderId)
-                                    .eq(SysAiProviderModel::getModel, modelToUse)
-                                    .last("LIMIT 1"));
+            SysAccountChannelModel modelInfo = selectedProviderId == null || selectedProviderId.isBlank()
+                    ? channelModelService.findAnyByModel(modelToUse)
+                    : channelModelService.find(selectedProviderId, modelToUse);
             if (modelInfo != null) {
                 modelContextWindow = modelInfo.getContextWindow();
                 if (modelInfo.getTemperature() != null) {
@@ -1620,13 +1614,9 @@ public class ChatStreamOrchestrator {
             return null;
         }
         try {
-            SysAiProviderModel modelInfo = providerId == null || providerId.isBlank()
-                    ? sysAiProviderModelMapper.selectById(model)
-                    : sysAiProviderModelMapper.selectOne(
-                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiProviderModel>()
-                                    .eq(SysAiProviderModel::getProviderId, providerId)
-                                    .eq(SysAiProviderModel::getModel, model)
-                                    .last("LIMIT 1"));
+            SysAccountChannelModel modelInfo = providerId == null || providerId.isBlank()
+                    ? channelModelService.findAnyByModel(model)
+                    : channelModelService.find(providerId, model);
             return modelInfo == null ? null : modelInfo.getContextWindow();
         } catch (Exception e) {
             log.warn("[ChatStream] 读取模型上下文窗口失败 model={}: {}", model, e.getMessage());
@@ -1823,10 +1813,10 @@ public class ChatStreamOrchestrator {
         Map<String, Object> route = new LinkedHashMap<>(8);
         route.put("model", model);
         route.put("providerId", providerId);
-        SysAiProvider provider = null;
+        SysAccountChannel provider = null;
         if (providerId != null && !providerId.isBlank()) {
             try {
-                provider = sysAiProviderMapper.selectById(providerId);
+                provider = channelService.find(providerId);
             } catch (Exception e) {
                 log.debug("[ChatStream] 查询供应商 {} 失败: {}", providerId, e.getMessage());
             }

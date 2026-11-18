@@ -6,10 +6,10 @@ import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.datasearch.usage.spi.UsageParser;
 import com.chua.common.support.lang.json.JsonArray;
 import com.chua.common.support.lang.json.JsonObject;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.common.support.channel.MagpieSupport;
 import com.chua.starter.common.support.http.ChannelHttp;
 import com.chua.starter.common.support.http.ChannelHttpException;
@@ -39,7 +39,7 @@ import java.util.Map;
  *   <li>{@code totalTokens} = inputTokens + outputTokens。</li>
  * </ul>
  *
- * <p>鉴权：清单从 {@code sys_ai_provider_connection} 读（{@code base_url} 为数据面地址，
+ * <p>鉴权：清单从 {@code sys_account_channel_connection} 读（{@code base_url} 为数据面地址，
  * {@code gateway_key} 为数据面网关 key），通过 {@code MagpieSupport} 发数据面请求。
  * 管理面（{@code :3430/api/*}，页面 Key 鉴权）不参与本解析器。</p>
  *
@@ -70,14 +70,14 @@ public class MagpieUsageParser implements UsageParser {
     private static final String MAGPIE_PROVIDER_ID = "MAGPIE";
 
     /**
-     * 供应商映射器
+     * 渠道业务（账号模块）
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
-     * 供应商连接映射器
+     * 渠道连接业务（账号模块）
      */
-    private final SysAiProviderConnectionMapper connectionMapper;
+    private final AccountChannelConnectionService connectionService;
 
     @Override
     public String name() {
@@ -97,7 +97,7 @@ public class MagpieUsageParser implements UsageParser {
      */
     private List<AiUsage> lookupAllRows() {
         try {
-            SysAiProviderConnection connection = resolveConnection();
+            SysAccountChannelConnection connection = resolveConnection();
             if (connection == null || connection.getCredentials() == null || connection.getCredentials().isEmpty()) {
                 log.debug("[MagpieUsageParser] 未找到 magpie 连接凭据，跳过外部同步");
                 return List.of();
@@ -180,22 +180,16 @@ public class MagpieUsageParser implements UsageParser {
      *
      * @return 连接；未绑定返回 null
      */
-    private SysAiProviderConnection resolveConnection() {
+    private SysAccountChannelConnection resolveConnection() {
         try {
-            SysAiProvider provider = providerMapper.selectById(MAGPIE_PROVIDER_ID);
+            SysAccountChannel provider = channelService.find(MAGPIE_PROVIDER_ID);
             if (provider == null) {
-                provider = providerMapper.selectOne(new LambdaQueryWrapper<SysAiProvider>()
-                        .eq(SysAiProvider::getPlatform, MAGPIE_PROVIDER_ID)
-                        .last("LIMIT 1"));
+                provider = channelService.findByPlatform(MAGPIE_PROVIDER_ID);
             }
             if (provider == null || !Boolean.TRUE.equals(provider.getEnabled())) {
                 return null;
             }
-            return connectionMapper.selectOne(new LambdaQueryWrapper<SysAiProviderConnection>()
-                    .eq(SysAiProviderConnection::getProviderId, provider.getProviderId())
-                    .orderByDesc(SysAiProviderConnection::getRole)
-                    .orderByDesc(SysAiProviderConnection::getUpdatedAt)
-                    .last("LIMIT 1"));
+            return connectionService.findLatest(provider.getProviderId());
         } catch (Throwable e) {
             log.warn("[MagpieUsageParser] 解析 magpie 连接失败: {}", e.getMessage(), e);
             return null;

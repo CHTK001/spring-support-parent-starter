@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import lombok.RequiredArgsConstructor;
@@ -45,8 +45,8 @@ import java.util.concurrent.TimeUnit;
  *   <li>遍历 {@code ServiceProvider.of(AccountChannelAuthManager.class).list()}，
  *       仅保留 {@code supportsCheckin()==true} 且 {@code supportsAutoCheckin()==true} 的渠道实现
  *       （后者让自带签到定时器的网关，如 magpie，不被重复签到）；</li>
- *   <li>每个渠道取 {@code sys_ai_provider} 下所有 {@code enabled=true} 的
- *       {@code sys_ai_provider_connection} 行；</li>
+ *   <li>每个渠道取 {@code sys_account_channel} 下所有 {@code enabled=true} 的
+ *       {@code sys_account_channel_connection} 行；</li>
  *   <li>逐账号串行调用 {@link AccountChannelAuthManager#checkin(Map)}（单条失败不中断批次）；</li>
  *   <li>把更新后的凭据（含 credits/message 等）回写 connection 行。</li>
  * </ol>
@@ -115,14 +115,14 @@ public class ChannelCheckinTask implements SchedulingConfigurer {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
-     * 渠道 provider 映射器
+     * 渠道业务（账号模块）：渠道启用口径
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
-     * 渠道 connection 映射器
+     * 渠道连接业务（账号模块）：后台签到需要全量凭据
      */
-    private final SysAiProviderConnectionMapper connectionMapper;
+    private final AccountChannelConnectionService connectionService;
 
     /**
      * 渠道鉴权 SPI 实现映射（懒加载，首次调用时从 SPI 注册表拉取）
@@ -168,11 +168,11 @@ public class ChannelCheckinTask implements SchedulingConfigurer {
                 continue;
             }
             totalChannels++;
-            List<SysAiProviderConnection> connections = connectionsOf(channel);
+            List<SysAccountChannelConnection> connections = connectionsOf(channel);
             if (connections.isEmpty()) {
                 continue;
             }
-            for (SysAiProviderConnection conn : connections) {
+            for (SysAccountChannelConnection conn : connections) {
                 totalAccounts++;
                 if (!hasCredentials(conn)) {
                     continue;
@@ -185,7 +185,7 @@ public class ChannelCheckinTask implements SchedulingConfigurer {
                         merged.put("channel", channel);
                         conn.setCredentials(merged);
                         conn.setUpdatedAt(System.currentTimeMillis());
-                        connectionMapper.updateById(conn);
+                        connectionService.update(conn);
                         okAccounts++;
                         log.info("[ChannelCheckin] 签到成功 channel={} label={}",
                                 channel, conn.getLabel());
@@ -225,14 +225,12 @@ public class ChannelCheckinTask implements SchedulingConfigurer {
      * @param channel 渠道标识
      * @return 连接列表（可能为空）
      */
-    private List<SysAiProviderConnection> connectionsOf(String channel) {
-        SysAiProvider provider = providerMapper.selectById(channel);
+    private List<SysAccountChannelConnection> connectionsOf(String channel) {
+        SysAccountChannel provider = channelService.find(channel);
         if (provider == null || !Boolean.TRUE.equals(provider.getEnabled())) {
             return List.of();
         }
-        List<SysAiProviderConnection> connections = connectionMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, channel));
+        List<SysAccountChannelConnection> connections = connectionService.listAll(channel);
         return connections == null ? List.of() : connections;
     }
 
@@ -242,7 +240,7 @@ public class ChannelCheckinTask implements SchedulingConfigurer {
      * @param conn 连接行
      * @return 是否可签到
      */
-    private static boolean hasCredentials(SysAiProviderConnection conn) {
+    private static boolean hasCredentials(SysAccountChannelConnection conn) {
         return conn.getCredentials() != null && !conn.getCredentials().isEmpty();
     }
 

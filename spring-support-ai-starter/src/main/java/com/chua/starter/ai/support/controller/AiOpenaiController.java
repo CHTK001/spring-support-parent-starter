@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.AiModelCatalogService;
 import com.chua.starter.ai.support.service.AppKeyModelScope;
+import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -65,11 +66,6 @@ public class AiOpenaiController extends BaseAiController {
      * AI 对话/补全服务（绑定所有聊天模型）
      */
     private final AiChatFacadeService aiChatFacadeService;
-
-    /**
-     * AI 模型指标富化服务
-    */
-    private final com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService modelMetricsEnrichmentService;
 
     /**
      * AI 模型能力目录（按能力类目返回模型 标识 列表）
@@ -224,7 +220,7 @@ public class AiOpenaiController extends BaseAiController {
                 row.put("name", def.getName() != null ? def.getName() : def.getId());
                 row.put("description", def.getDescription() != null ? def.getDescription() : "");
                 row.put("capabilities", def.getCapabilities() != null ? def.getCapabilities() : List.of());
-                modelMetricsEnrichmentService.enrich(def.getId(), row);
+                ProviderModelMetrics.mergeInto(def.getId(), row);
                 data.add(row);
             }
         } else {

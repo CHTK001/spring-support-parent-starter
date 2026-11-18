@@ -10,7 +10,6 @@ import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
-import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
@@ -81,24 +80,21 @@ public class UsageAutoConfiguration {
      * 注册计费服务 Bean。
      *
      * @param pricingMapper         定价映射器
-     * @param metricsEnrichment     AA 模型指标服务（含定价缓存）
      * @param modelMetricsService   全量指标库服务
      * @param providerMetricService 供应商指标系数服务
      * @return 计费服务实现
      */
     public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper,
-                                                   AiModelMetricsEnrichmentService metricsEnrichment,
                                                    SysAiModelMetricsService modelMetricsService,
                                                    SysAiProviderMetricService providerMetricService) {
         /**
          * sysaipricing服务impl。
          * @param pricingMapper pricing映射器
-         * @param metricsEnrichment 指标enrichment
          * @param modelMetricsService 全量指标库服务
          * @param providerMetricService 供应商指标系数服务
          * @return sysAIpricing服务impl的结果
          */
-        return new SysAiPricingServiceImpl(pricingMapper, metricsEnrichment, modelMetricsService, providerMetricService);
+        return new SysAiPricingServiceImpl(pricingMapper, modelMetricsService, providerMetricService);
     }
 
     @Bean

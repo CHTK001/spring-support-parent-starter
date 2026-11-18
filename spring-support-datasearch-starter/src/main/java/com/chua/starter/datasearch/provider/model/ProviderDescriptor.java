@@ -55,6 +55,16 @@ public class ProviderDescriptor implements Serializable {
     private String doc;
 
     /**
+     * 官网（可空；免登录 / 本地 / 自建等没有对外站点的供应商为空）
+     *
+     * <p>来源优先级：登记表显式 {@code website} → 上游地址的可注册主域
+     * （{@code api.openai.com → openai.com}、{@code llm.chutes.ai → chutes.ai}）
+     * → 官方文档站的可注册主域。取不到就保持 {@code null}，不拿上游 API 地址冒充官网
+     * —— 那种地址打开是 404。</p>
+     */
+    private String website;
+
+    /**
      * models.dev 目录键（可空；目录未收录时为空）
      */
     private String modelsDevId;

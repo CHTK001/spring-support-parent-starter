@@ -20,8 +20,8 @@ import com.chua.starter.ai.support.generate.GenerateService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
 import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
 import com.chua.starter.ai.support.mapper.SysAiWorldActMapper;
 import com.chua.starter.ai.support.mapper.SysAiWorldEventMapper;
@@ -128,7 +128,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     private final GenerateMediaStore generateMediaStore;
 
     /** 模型行查询：设置里没点名模型时，按「有对应 SPI 实现」挑一个可用模型 */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /** 全局设置读取器（sim 分组） */
     private final GlobalSettingReader globalSettingReader;
@@ -157,7 +157,7 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @param generateService      媒体生成服务（文生图 / 文生视频）
      * @param generateClientResolver 生成实现解析器
      * @param generateMediaStore   生成结果落盘存储
-     * @param providerModelMapper  生成模型行查询
+     * @param channelModelService  生成模型行查询
      * @param globalSettingReader  全局设置读取器
      * @param effectiveChatModelResolver  生效对话模型解析器
      */
@@ -175,7 +175,7 @@ public class WorldSimServiceImpl implements WorldSimService {
                                GenerateService generateService,
                                GenerateClientResolver generateClientResolver,
                                GenerateMediaStore generateMediaStore,
-                               SysAiProviderModelMapper providerModelMapper,
+                               AccountChannelModelService channelModelService,
                                GlobalSettingReader globalSettingReader,
                                EffectiveChatModelResolver effectiveChatModelResolver) {
         this.worldMapper = worldMapper;
@@ -192,7 +192,7 @@ public class WorldSimServiceImpl implements WorldSimService {
         this.generateService = generateService;
         this.generateClientResolver = generateClientResolver;
         this.generateMediaStore = generateMediaStore;
-        this.providerModelMapper = providerModelMapper;
+        this.channelModelService = channelModelService;
         this.globalSettingReader = globalSettingReader;
         this.effectiveChatModelResolver = effectiveChatModelResolver;
     }
@@ -2739,10 +2739,8 @@ public class WorldSimServiceImpl implements WorldSimService {
     private String defaultGenerateModel(String type) {
         boolean video = MEDIA_VIDEO_TYPE.equals(type);
         try {
-            var rows = providerModelMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getEnabled, true));
-            for (SysAiProviderModel row : rows) {
+            var rows = channelModelService.listAllEnabled();
+            for (SysAccountChannelModel row : rows) {
                 if (row.getModel() == null || row.getModel().isBlank()) {
                     continue;
                 }

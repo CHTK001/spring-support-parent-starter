@@ -48,6 +48,11 @@ public enum ApiErrorCode {
     UPSTREAM_ERROR("UPSTREAM_ERROR", 502),
 
     /**
+     * 渠道尚未提供该能力（SPI 未实现 / 该渠道不支持此动作）。
+     */
+    NOT_IMPLEMENTED("NOT_IMPLEMENTED", 501),
+
+    /**
      * 模块内部错误。
      */
     INTERNAL_ERROR("INTERNAL_ERROR", 500);

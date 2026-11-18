@@ -4,6 +4,7 @@ import com.chua.starter.datasearch.provider.model.PricingSourceConfig;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRule;
 import com.chua.starter.datasearch.provider.spi.ProviderPricingProvider;
+import com.chua.starter.datasearch.provider.support.AgnesPricingSource;
 import com.chua.starter.datasearch.provider.support.DeepSeekPricingSource;
 import com.chua.starter.datasearch.provider.support.MoonshotPricingSource;
 import com.chua.starter.datasearch.provider.support.PricingPageSource;
@@ -62,7 +63,7 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
     /**
      * 点击同步时的实时刷新。
      *
-     * <p>DeepSeek / Moonshot 有专用解析器；其余厂商只要登记项里带 {@code source}
+     * <p>DeepSeek / Moonshot / Agnes 有专用解析器；其余厂商只要登记项里带 {@code source}
      * （官方 URL + 通用读取方式）就走 {@link PricingPageSource}，不再为每家新增 Java 分支。</p>
      *
      * @param platform 平台类型
@@ -92,6 +93,9 @@ public class RegistryProviderPricingProvider implements ProviderPricingProvider 
         }
         if ("moonshot".equalsIgnoreCase(entry.id)) {
             return MoonshotPricingSource.fetch(entry.doc);
+        }
+        if ("agnes".equalsIgnoreCase(entry.id)) {
+            return AgnesPricingSource.fetch(entry.doc);
         }
         return ProviderPricingRefresh.unsupported();
     }

@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-11-16",
-  "source": "pages/ai/src/components/models/model.constants.ts（PROVIDER_TEMPLATES 213 家）+ https://models.dev/api.json + provider-limit-docs.json",
+  "generated_at": "2026-11-18",
+  "source": "pages/ai/src/components/models/model.constants.ts（PROVIDER_TEMPLATES 144 家唯一 id）+ https://models.dev/api.json + provider-limit-docs.json",
   "note": "统一供应商登记表：一家一条，供限制 / 目录 / 定价 / 余额 / 能力（流式、异步）各 SPI 共用，避免每个 SPI 各维护一份匹配逻辑。credit.mode：official=官方余额接口已登记；probe=OpenAI 兼容探测；none=无远端账户。capabilities 口径 A′（2026-11-16 定版）：streaming 按协议判定（openai / anthropic / gemini 的 SSE 是协议必备行为，来源 protocol）；async 只认官方批量端点实测过的厂商（openai / anthropic / google，来源 probe），其余 null=未收录（不把未知写成不支持）。",
-  "count": 213,
+  "count": 232,
   "providers": [
     {
       "id": "openai",
@@ -71,6 +71,7 @@
     },
     {
       "id": "google",
+      "website": "https://ai.google.dev",
       "name": "Google Gemini",
       "description": "Google Gemini 模型，需代理",
       "protocol": "gemini",
@@ -264,6 +265,7 @@
     },
     {
       "id": "cohere",
+      "website": "https://cohere.com",
       "name": "Cohere",
       "description": "企业级模型与 RAG 平台",
       "protocol": "openai",
@@ -518,6 +520,7 @@
     },
     {
       "id": "duckduckgo",
+      "website": "https://duckduckgo.com",
       "name": "DuckDuckGo",
       "description": "免登录对话渠道，无需 API 地址与 Key（模型由内置客户端提供）",
       "protocol": "openai",
@@ -739,6 +742,7 @@
     },
     {
       "id": "qwen",
+      "website": "https://tongyi.aliyun.com",
       "name": "通义千问",
       "description": "阿里通义千问大模型（百炼平台）",
       "protocol": "openai",
@@ -838,6 +842,7 @@
     },
     {
       "id": "minimax",
+      "website": "https://www.minimaxi.com",
       "name": "MiniMax",
       "description": "MiniMax 海螺 AI 模型",
       "protocol": "openai",
@@ -934,6 +939,7 @@
     },
     {
       "id": "qianfan",
+      "website": "https://qianfan.cloud.baidu.com",
       "name": "百度千帆",
       "description": "百度智能云大模型平台",
       "protocol": "openai",
@@ -968,6 +974,7 @@
     },
     {
       "id": "baidu",
+      "website": "https://qianfan.cloud.baidu.com",
       "name": "百度智能云",
       "description": "百度智能云文心/千帆模型",
       "protocol": "openai",
@@ -1002,14 +1009,15 @@
     },
     {
       "id": "sensenova",
-      "name": "SenseNova 商汤",
-      "description": "商汤科技大模型平台",
+      "name": "商汤日日新 SenseNova",
+      "description": "商汤科技日日新（SenseNova）大模型平台，OpenAI 兼容接口",
       "protocol": "openai",
       "baseUrl": "https://token.sensenova.cn/v1",
       "hosts": [
         "token.sensenova.cn"
       ],
       "doc": "https://platform.sensenova.cn/docs",
+      "website": "https://www.sensenova.cn",
       "modelsDevId": "sensenova",
       "aliases": [
         "sensenova"
@@ -1066,6 +1074,7 @@
     },
     {
       "id": "volcengine",
+      "website": "https://www.volcengine.com",
       "name": "火山引擎",
       "description": "字节跳动豆包 Doubao 模型",
       "protocol": "openai",
@@ -1076,7 +1085,21 @@
       "doc": "https://www.volcengine.com/docs/82379/1330310",
       "modelsDevId": "volcengine",
       "aliases": [
-        "volcengine"
+        "volcengine",
+        "doubao"
+      ],
+      "variants": [
+        {
+          "id": "volcengine-coding-plan",
+          "name": "火山引擎 Coding Plan",
+          "description": "火山方舟编程套餐端点（豆包），OpenAI 兼容",
+          "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
+          "doc": "https://www.volcengine.com/docs/82379/1928261",
+          "modelsDevId": "volcengine-coding-plan",
+          "aliases": [
+            "volcengine-coding-plan"
+          ]
+        }
       ],
       "capabilities": {
         "streaming": true,
@@ -1098,6 +1121,7 @@
     },
     {
       "id": "spark",
+      "website": "https://www.xfyun.cn",
       "name": "讯飞星火",
       "description": "科大讯飞星火大模型",
       "protocol": "openai",
@@ -1130,6 +1154,7 @@
     },
     {
       "id": "flytek",
+      "website": "https://www.xfyun.cn",
       "name": "科大讯飞",
       "description": "讯飞开放平台星火系列",
       "protocol": "openai",
@@ -1162,6 +1187,7 @@
     },
     {
       "id": "baidu-wenxin",
+      "website": "https://qianfan.cloud.baidu.com",
       "name": "文心一言",
       "description": "百度文心一言大模型",
       "protocol": "openai",
@@ -1323,47 +1349,16 @@
       }
     },
     {
-      "id": "doubao",
-      "name": "豆包",
-      "description": "字节跳动豆包大模型（火山引擎）",
-      "protocol": "openai",
-      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
-      "hosts": [
-        "ark.cn-beijing.volces.com"
-      ],
-      "doc": "https://www.volcengine.com/docs/82379/1330310",
-      "modelsDevId": "volcengine",
-      "aliases": [
-        "doubao"
-      ],
-      "capabilities": {
-        "streaming": true,
-        "streamingSource": "protocol",
-        "async": null,
-        "asyncSource": null,
-        "source": "registry"
-      },
-      "credit": {
-        "mode": "probe",
-        "kind": "auto",
-        "providerId": null,
-        "currency": null
-      },
-      "limits": {
-        "verified": false,
-        "source": "registry"
-      }
-    },
-    {
       "id": "shusheng",
-      "name": "书生",
-      "description": "书生大模型平台（好未来 InternAgent）",
+      "name": "书生·端砚",
+      "description": "上海人工智能实验室书生（InternLM）大模型平台",
       "protocol": "openai",
       "baseUrl": "https://discovery-api.intern-ai.org.cn/v1",
       "hosts": [
         "discovery-api.intern-ai.org.cn"
       ],
       "doc": null,
+      "website": "https://internlm.intern-ai.org.cn",
       "modelsDevId": null,
       "aliases": [
         "shusheng"
@@ -1388,6 +1383,7 @@
     },
     {
       "id": "azure",
+      "website": "https://azure.microsoft.com",
       "name": "Azure OpenAI",
       "description": "微软 Azure OpenAI 服务",
       "protocol": "openai",
@@ -1420,6 +1416,7 @@
     },
     {
       "id": "aws-bedrock",
+      "website": "https://aws.amazon.com/bedrock/",
       "name": "AWS Bedrock",
       "description": "亚马逊 Bedrock 模型平台",
       "protocol": "openai",
@@ -1453,6 +1450,7 @@
     },
     {
       "id": "ollama",
+      "website": "https://ollama.com",
       "name": "Ollama",
       "description": "本地 Ollama 模型",
       "protocol": "openai",
@@ -1485,6 +1483,7 @@
     },
     {
       "id": "onnx",
+      "website": "https://onnx.ai",
       "name": "ONNX 本地推理",
       "description": "本地 ONNX 模型（OCR / 人脸 / 向量 / 版面分析），模型文件放在服务器上",
       "protocol": "openai",
@@ -1515,17 +1514,50 @@
     },
     {
       "id": "newapi",
-      "name": "NewAPI",
-      "description": "国产 API 聚合平台，支持 GPT、Claude、DeepSeek 等数十个模型",
+      "website": "https://www.newapi.ai",
+      "name": "New API",
+      "description": "开源自建 AI 网关（One API 增强版），统一接入多家上游模型",
       "protocol": "openai",
-      "baseUrl": "https://newapi.io",
-      "hosts": [
-        "newapi.io"
-      ],
-      "doc": null,
+      "baseUrl": null,
+      "hosts": [],
+      "doc": "https://docs.newapi.ai",
       "modelsDevId": null,
       "aliases": [
-        "newapi"
+        "newapi",
+        "new-api",
+        "one-api"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "sub2api",
+      "website": "https://github.com/Wei-Shaw/sub2api",
+      "name": "Sub2API",
+      "description": "开源自建订阅转 API 中转，Claude/OpenAI/Gemini/Grok 订阅统一接入",
+      "protocol": "openai",
+      "baseUrl": null,
+      "hosts": [],
+      "doc": "https://github.com/Wei-Shaw/sub2api",
+      "modelsDevId": null,
+      "aliases": [
+        "sub2api",
+        "sub-api"
       ],
       "capabilities": {
         "streaming": true,
@@ -1612,6 +1644,7 @@
     },
     {
       "id": "abacus",
+      "website": "https://abacus.ai",
       "name": "Abacus",
       "description": null,
       "protocol": "openai",
@@ -1836,6 +1869,7 @@
     },
     {
       "id": "aimlapi",
+      "website": "https://aimlapi.com",
       "name": "AI/ML API",
       "description": null,
       "protocol": "openai",
@@ -1868,6 +1902,7 @@
     },
     {
       "id": "ainetcafe",
+      "website": "https://ainetcafe.com",
       "name": "ainetcafe",
       "description": null,
       "protocol": "openai",
@@ -2445,6 +2480,7 @@
     },
     {
       "id": "cloudferro-sherlock",
+      "website": "https://sherlock.cloudferro.com",
       "name": "CloudFerro Sherlock",
       "description": null,
       "protocol": "openai",
@@ -2509,6 +2545,7 @@
     },
     {
       "id": "cortecs",
+      "website": "https://cortecs.ai",
       "name": "Cortecs",
       "description": null,
       "protocol": "openai",
@@ -2637,6 +2674,7 @@
     },
     {
       "id": "digitalocean",
+      "website": "https://www.digitalocean.com",
       "name": "DigitalOcean",
       "description": null,
       "protocol": "openai",
@@ -2648,6 +2686,39 @@
       "modelsDevId": "digitalocean",
       "aliases": [
         "digitalocean"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "deepinfra",
+      "website": "https://deepinfra.com",
+      "name": "DeepInfra",
+      "description": "托管开源模型的推理平台，OpenAI 兼容入口",
+      "protocol": "openai",
+      "baseUrl": "https://api.deepinfra.com/v1/openai",
+      "hosts": [
+        "api.deepinfra.com"
+      ],
+      "doc": "https://deepinfra.com/models",
+      "modelsDevId": "deepinfra",
+      "aliases": [
+        "deepinfra"
       ],
       "capabilities": {
         "streaming": true,
@@ -3117,6 +3188,7 @@
     },
     {
       "id": "gmicloud",
+      "website": "https://gmicloud.ai",
       "name": "GMI Cloud",
       "description": null,
       "protocol": "openai",
@@ -3224,6 +3296,39 @@
       "modelsDevId": "hetzner",
       "aliases": [
         "hetzner"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "hyperbolic",
+      "website": "https://www.hyperbolic.ai",
+      "name": "Hyperbolic",
+      "description": "去中心化 GPU 云推理平台，OpenAI 兼容",
+      "protocol": "openai",
+      "baseUrl": "https://api.hyperbolic.xyz/v1",
+      "hosts": [
+        "api.hyperbolic.xyz"
+      ],
+      "doc": "https://www.hyperbolic.ai/docs/overview/overview",
+      "modelsDevId": null,
+      "aliases": [
+        "hyperbolic"
       ],
       "capabilities": {
         "streaming": true,
@@ -3565,6 +3670,7 @@
     },
     {
       "id": "io-net",
+      "website": "https://io.net",
       "name": "IO.NET",
       "description": null,
       "protocol": "openai",
@@ -3757,6 +3863,7 @@
     },
     {
       "id": "klokintegration",
+      "website": "https://klokintegration.se",
       "name": "klokintegration.se",
       "description": null,
       "protocol": "openai",
@@ -4365,6 +4472,7 @@
     },
     {
       "id": "modal",
+      "website": "https://modal.com",
       "name": "Modal",
       "description": null,
       "protocol": "openai",
@@ -4525,6 +4633,7 @@
     },
     {
       "id": "nano-gpt",
+      "website": "https://nano-gpt.com",
       "name": "NanoGPT",
       "description": null,
       "protocol": "openai",
@@ -4717,6 +4826,7 @@
     },
     {
       "id": "oci",
+      "website": "https://www.oracle.com/cloud/",
       "name": "OCI Generative AI",
       "description": null,
       "protocol": "openai",
@@ -4941,6 +5051,7 @@
     },
     {
       "id": "ovhcloud",
+      "website": "https://www.ovhcloud.com",
       "name": "OVHcloud AI Endpoints",
       "description": null,
       "protocol": "openai",
@@ -5325,6 +5436,7 @@
     },
     {
       "id": "requesty",
+      "website": "https://requesty.ai",
       "name": "Requesty",
       "description": null,
       "protocol": "openai",
@@ -5613,6 +5725,7 @@
     },
     {
       "id": "stackit",
+      "website": "https://www.stackit.cloud",
       "name": "STACKIT",
       "description": null,
       "protocol": "openai",
@@ -6817,6 +6930,564 @@
       "credit": {
         "mode": "none",
         "kind": "none",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "alibaba-coding-plan-cn",
+      "name": "Alibaba Coding Plan (China)",
+      "description": "阿里云百炼编程套餐端点（国内站），OpenAI 兼容",
+      "protocol": "openai",
+      "baseUrl": "https://coding.dashscope.aliyuncs.com/v1",
+      "hosts": [
+        "coding.dashscope.aliyuncs.com"
+      ],
+      "doc": "https://help.aliyun.com/zh/model-studio/coding-plan",
+      "modelsDevId": "alibaba-coding-plan-cn",
+      "aliases": [
+        "alibaba-coding-plan-cn"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "alibaba-coding-plan",
+      "name": "Alibaba Coding Plan",
+      "description": "阿里云百炼编程套餐端点（国际站），OpenAI 兼容",
+      "protocol": "openai",
+      "baseUrl": "https://coding-intl.dashscope.aliyuncs.com/v1",
+      "hosts": [
+        "coding-intl.dashscope.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
+      "modelsDevId": "alibaba-coding-plan",
+      "aliases": [
+        "alibaba-coding-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "alibaba-token-plan-cn",
+      "name": "Alibaba Token Plan (China)",
+      "description": "阿里云百炼 Token 套餐端点（国内站），OpenAI 兼容",
+      "protocol": "openai",
+      "baseUrl": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      "hosts": [
+        "token-plan.cn-beijing.maas.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/zh/model-studio/token-plan-overview",
+      "modelsDevId": "alibaba-token-plan-cn",
+      "aliases": [
+        "alibaba-token-plan-cn"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "alibaba-token-plan",
+      "name": "Alibaba Token Plan",
+      "description": "阿里云百炼 Token 套餐端点（国际站），OpenAI 兼容",
+      "protocol": "openai",
+      "baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+      "hosts": [
+        "token-plan.ap-southeast-1.maas.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/token-plan-overview",
+      "modelsDevId": "alibaba-token-plan",
+      "aliases": [
+        "alibaba-token-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "zhipuai-coding-plan",
+      "name": "Zhipu AI Coding Plan",
+      "description": "智谱 GLM 编程套餐端点（bigmodel.cn）",
+      "protocol": "openai",
+      "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+      "hosts": [
+        "open.bigmodel.cn"
+      ],
+      "doc": "https://docs.bigmodel.cn/cn/coding-plan/overview",
+      "modelsDevId": "zhipuai-coding-plan",
+      "aliases": [
+        "zhipuai-coding-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "moonshotai",
+      "name": "Moonshot AI",
+      "description": "Moonshot AI 国际站 Kimi 模型 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.moonshot.ai/v1",
+      "hosts": [
+        "api.moonshot.ai"
+      ],
+      "doc": "https://platform.moonshot.ai/docs/api/chat",
+      "modelsDevId": "moonshotai",
+      "aliases": [
+        "moonshotai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "kimi-code-plan-cn",
+      "name": "Kimi For Coding (kimi.com)",
+      "description": "Kimi 编程套餐端点（kimi.com 国内站）",
+      "protocol": "openai",
+      "baseUrl": "https://api.kimi.com/coding/v1",
+      "hosts": [
+        "api.kimi.com"
+      ],
+      "doc": "https://www.kimi.com/code/docs/en/kimi-code/models.html",
+      "modelsDevId": "kimi-code-plan-cn",
+      "aliases": [
+        "kimi-code-plan-cn"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "kimi-code-plan-global",
+      "name": "Kimi For Coding (kimi.ai)",
+      "description": "Kimi 编程套餐端点（kimi.ai 国际站）",
+      "protocol": "openai",
+      "baseUrl": "https://api.kimi.ai/coding/v1",
+      "hosts": [
+        "api.kimi.ai"
+      ],
+      "doc": "https://www.kimi.ai/code/docs/en/kimi-code/models.html",
+      "modelsDevId": "kimi-code-plan-global",
+      "aliases": [
+        "kimi-code-plan-global"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "stepfun-step-plan",
+      "name": "StepFun Step Plan (China)",
+      "description": "阶跃星辰 Step 编程套餐端点（国内站）",
+      "protocol": "openai",
+      "baseUrl": "https://api.stepfun.com/step_plan/v1",
+      "hosts": [
+        "api.stepfun.com"
+      ],
+      "doc": "https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api",
+      "modelsDevId": "stepfun-step-plan",
+      "aliases": [
+        "stepfun-step-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "stepfun-ai",
+      "name": "StepFun (Global)",
+      "description": "阶跃星辰 Step 系列模型国际站 API",
+      "protocol": "openai",
+      "baseUrl": "https://api.stepfun.ai/v1",
+      "hosts": [
+        "api.stepfun.ai"
+      ],
+      "doc": "https://platform.stepfun.ai/docs/en/overview/concept",
+      "modelsDevId": "stepfun-ai",
+      "aliases": [
+        "stepfun-ai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "stepfun-ai-step-plan",
+      "name": "StepFun Step Plan (Global)",
+      "description": "阶跃星辰 Step 编程套餐端点（国际站）",
+      "protocol": "openai",
+      "baseUrl": "https://api.stepfun.ai/step_plan/v1",
+      "hosts": [
+        "api.stepfun.ai"
+      ],
+      "doc": "https://platform.stepfun.ai/docs/en/step-plan/integrations/reasoning-api",
+      "modelsDevId": "stepfun-ai-step-plan",
+      "aliases": [
+        "stepfun-ai-step-plan"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "alibaba",
+      "name": "Qwen Cloud",
+      "description": "阿里云百炼国际站（DashScope International），Qwen 系列模型，OpenAI 兼容",
+      "website": "https://www.alibabacloud.com/en/product/modelstudio",
+      "protocol": "openai",
+      "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "hosts": [
+        "dashscope-intl.aliyuncs.com"
+      ],
+      "doc": "https://www.alibabacloud.com/help/en/model-studio/models",
+      "modelsDevId": "alibaba",
+      "aliases": [
+        "alibaba",
+        "qwen-cloud"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "huawei-maas",
+      "name": "华为云 MAAS",
+      "description": "华为云 ModelArts Studio 模型即服务，OpenAI 兼容",
+      "website": "https://www.huaweicloud.com/product/modelarts.html",
+      "protocol": "openai",
+      "baseUrl": "https://api.modelarts-maas.com/openai/v1",
+      "hosts": [
+        "api.modelarts-maas.com"
+      ],
+      "doc": "https://support.huaweicloud.com/model-call-maas/model-call-021.html",
+      "modelsDevId": "huawei-maas",
+      "aliases": [
+        "huawei-maas",
+        "huawei",
+        "modelarts"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel AI Gateway",
+      "description": "Vercel AI 网关，OpenAI 兼容入口",
+      "website": "https://vercel.com/ai-gateway",
+      "protocol": "openai",
+      "baseUrl": "https://ai-gateway.vercel.sh/v1",
+      "hosts": [
+        "ai-gateway.vercel.sh"
+      ],
+      "doc": "https://vercel.com/docs/ai-gateway",
+      "modelsDevId": "vercel",
+      "aliases": [
+        "vercel",
+        "vercel-ai-gateway"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "nous-portal",
+      "name": "Nous Portal",
+      "description": "Nous Research 官方推理端点（Hermes 系列模型）",
+      "website": "https://portal.nousresearch.com",
+      "protocol": "openai",
+      "baseUrl": "https://inference-api.nousresearch.com/v1",
+      "hosts": [
+        "inference-api.nousresearch.com"
+      ],
+      "doc": "https://nousresearch.com",
+      "modelsDevId": null,
+      "aliases": [
+        "nous-portal",
+        "nous",
+        "nousresearch"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "voyage",
+      "name": "Voyage AI",
+      "description": "Voyage AI 向量化与重排模型 API（嵌入专用，无对话模型）",
+      "website": "https://www.voyageai.com",
+      "protocol": "openai",
+      "baseUrl": "https://api.voyageai.com/v1",
+      "hosts": [
+        "api.voyageai.com"
+      ],
+      "doc": "https://docs.voyageai.com/docs/api-key-and-installation",
+      "modelsDevId": null,
+      "aliases": [
+        "voyage",
+        "voyageai"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
+      "id": "cloudflare-workers-ai",
+      "name": "Cloudflare Workers AI",
+      "description": "Cloudflare Workers AI 推理，OpenAI 兼容（地址需带自己的 Account ID）",
+      "website": "https://developers.cloudflare.com/workers-ai/",
+      "protocol": "openai",
+      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
+      "hosts": [
+        "api.cloudflare.com"
+      ],
+      "doc": "https://developers.cloudflare.com/workers-ai/models/",
+      "modelsDevId": "cloudflare-workers-ai",
+      "aliases": [
+        "cloudflare-workers-ai",
+        "cloudflare"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
         "providerId": null,
         "currency": null
       },

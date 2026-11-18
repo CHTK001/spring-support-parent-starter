@@ -11,8 +11,8 @@ import com.chua.starter.ai.support.manage.common.ApiException;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 import org.springframework.cache.annotation.CacheEvict;
 import com.chua.starter.ai.support.entity.settings.SysAiGroup;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyTopupLogMapper;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
@@ -58,9 +58,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      */
     private final SysAiAppKeyMapper appKeyMapper;
     /**
-     * 提供者映射器
+     * 渠道业务（账号模块）
     */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
     /**
      * 分组映射器
     */
@@ -86,8 +86,8 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
 
         // providerId 是**供应商编码**（String，如 openai / agnes / onnx），
         // 字段名在正确实体上是 getName() 而不是 getProviderName()。
-        Map<String, String> providerNames = providerMapper.selectList(null).stream()
-                .collect(Collectors.toMap(SysAiProvider::getProviderId, SysAiProvider::getName, (a, b) -> a));
+        Map<String, String> providerNames = channelService.listAll().stream()
+                .collect(Collectors.toMap(SysAccountChannel::getProviderId, SysAccountChannel::getName, (a, b) -> a));
         Map<Integer, String> groupNames = resolveGroupNames();
 
         return ReturnResult.ok(keys.stream()
@@ -549,8 +549,8 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (providerId == null || providerId.isBlank()) {
             return null;
         }
-        return Optional.ofNullable(providerMapper.selectById(providerId))
-                .map(SysAiProvider::getName)
+        return Optional.ofNullable(channelService.find(providerId))
+                .map(SysAccountChannel::getName)
                 .orElse(null);
     }
 

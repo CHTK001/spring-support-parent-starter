@@ -10,7 +10,7 @@ import java.util.List;
  *
  * <p>把「地址 + 字段表达式 + 币种 + 签名方案」从代码里搬到数据登记表：新增一家只需
  * 加一条 JSON，不用改实现类。{@link #signType} 非空表示需要 AK/SK 签名（阿里云 BSS /
- * 火山 billing / 百度 BCE / 七牛），为空表示走 Bearer 或自定义请求头。</p>
+ * 火山 billing / 百度 BCE / 七牛 / 腾讯云 TC3 / 华为云 SDK），为空表示走 Bearer 或自定义请求头。</p>
  *
  * @author CH
  * @since 4.0.0.57
@@ -56,9 +56,19 @@ public class ProviderCreditEndpoint implements Serializable {
     private String currency;
 
     /**
-     * 签名方案（aliyun-bss / volc / bce / qiniu）；为空表示 Bearer
+     * 签名方案（aliyun-bss / volc / bce / qiniu / tencent / huawei）；为空表示 Bearer
      */
     private String signType;
+
+    /**
+     * 请求方法（GET / POST）；为空按 GET
+     */
+    private String method;
+
+    /**
+     * 自定义鉴权请求头（如 nano-gpt 的 x-api-key）；为空按 Authorization + Bearer
+     */
+    private String authHeader;
 
     /**
      * 地址与字段是否按官方原文核对过

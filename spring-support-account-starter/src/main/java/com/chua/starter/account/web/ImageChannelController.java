@@ -8,6 +8,7 @@ import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.common.ApiResult;
 import com.chua.starter.account.ChannelRegistry;
 import com.chua.starter.account.spi.ImageChannelProvider;
+import com.chua.starter.account.support.ChannelSiteLinks;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -146,6 +147,8 @@ public class ImageChannelController {
             item.put("displayName", impl.displayName());
             item.put("extension", impl.extension());
             item.put("priority", impl.priority());
+            // 官网 / 官方文档：页头「官网」入口点它，与 AI 账号渠道共用同一份解析（ChannelSiteLinks）。
+            ChannelSiteLinks.put(item, impl.channel());
             // 单个渠道的模型清单异常（如底层 ChatClient 未引入）不应拖垮整个列表接口
             try {
                 List<Map<String, Object>> models = impl.listModels();

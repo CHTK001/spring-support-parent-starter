@@ -1,8 +1,8 @@
 package com.chua.starter.ai.support.configuration.client;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.service.SysAiUserSettingService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +58,7 @@ public class DefaultEffectiveChatModelResolver implements EffectiveChatModelReso
     /**
      * 模型管理仓储（用于判断模型是否已启用）
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * {@inheritDoc}
@@ -214,10 +214,7 @@ public class DefaultEffectiveChatModelResolver implements EffectiveChatModelReso
      */
     private boolean registryContains(String modelName) {
         try {
-            return providerModelMapper.selectCount(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, modelName)
-                            .eq(SysAiProviderModel::getEnabled, true)) > 0;
+            return channelModelService.isEnabledByModel(modelName);
         } catch (Exception e) {
             log.warn("[ModelResolver] 查询模型是否可用失败 model={}: {}", modelName, e.getMessage());
             return true;

@@ -7,7 +7,7 @@ import java.util.Set;
 /**
  * 生成能力（图像 / 视频）的 SPI 路由表。
  *
- * <p>问题背景：{@code sys_ai_provider.platform} 存的是「业务侧供应商标识」
+ * <p>问题背景：{@code sys_account_channel.platform} 存的是「业务侧供应商标识」
  * （如 {@code qwen}、{@code tencent}、{@code baidu-wenxin}），而
  * {@code ImageClient} / {@code VideoClient} 的 SPI 注册名是「实现侧厂商名」
  * （如 {@code alibaba}、{@code tencent-hunyuan}、{@code baidu}）。两者命名体系不一致，
@@ -76,6 +76,9 @@ public final class GenerateSpiRouter {
             Map.entry("minimax", "openai"),
             Map.entry("baichuan", "openai"),
             Map.entry("stepfun", "openai"),
+            Map.entry("stepfun-ai", "openai"),
+            Map.entry("qiniu", "openai"),
+            Map.entry("qiniu-ai", "openai"),
             Map.entry("xai", "openai"),
             Map.entry("mistral", "openai"),
             Map.entry("groq", "openai"),
@@ -131,7 +134,10 @@ public final class GenerateSpiRouter {
             "zhipu", "baidu", "tencent-hunyuan", "modelscope", "zai", "amazon",
             "onnx", "pytorch", "safetensors", "mage", "ollama",
             // Moss 自有实现（MossImageClient，utils-support-mosi-starter）
-            "mosi"
+            "mosi",
+            // 免费渠道聚合：FreeChannelImageClient（account）按模型转交内置免登录出图渠道，
+            // 目录里的 flux / turbo 等图片模型必须在这里登记才会进入「可选生成模型」
+            "free-channel"
     );
 
     /**

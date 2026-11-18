@@ -1,12 +1,13 @@
 package com.chua.starter.account.web;
 
 import com.chua.common.support.ai.chat.ChatClient;
-import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.common.ApiResult;
 import com.chua.starter.account.ChannelRegistry;
+import com.chua.starter.account.channel.free.FreeChannelChatClient;
 import com.chua.starter.account.spi.ChatChannelProvider;
+import com.chua.starter.account.support.ChannelSiteLinks;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -118,6 +119,8 @@ public class ChatChannelController {
     /**
      * 使用请求体临时携带的 token 发起对话。
      *
+     * <p>与无 token 的路径一致，仍经免费渠道客户端执行，只是把 token 作为本次路由的凭据。</p>
+     *
      * @param impl    渠道实现
      * @param token   临时令牌（如 Trae 的 JWT）
      * @param prompt  用户输入
@@ -127,10 +130,7 @@ public class ChatChannelController {
      */
     private String chatWithToken(ChatChannelProvider impl, String token,
             String prompt, String model, String system) {
-        ChatClient client = impl.chatClient(ChatClientSetting.builder()
-                .provider(impl.extension())
-                .appKey(token)
-                .build());
+        ChatClient client = FreeChannelChatClient.forChannel(impl.extension(), token);
         try {
             if (model != null && !model.isBlank()) {
                 client.model(model);
@@ -168,6 +168,8 @@ public class ChatChannelController {
             item.put("extension", impl.extension());
             item.put("priority", impl.priority());
             item.put("supportsImage", impl.supportsImage());
+            // 官网 / 官方文档：页头「官网」入口点它，口径与 AI 账号渠道同一份（ChannelSiteLinks）。
+            ChannelSiteLinks.put(item, impl.channel());
             // 内置模型清单：渠道管理页要能在「免登录对话渠道」下直接看到模型，
             // 免费渠道的模型目录也用同一份（经 KeylessChatChannel 契约汇总）。
             try {

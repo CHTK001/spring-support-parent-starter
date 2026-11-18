@@ -8,6 +8,7 @@ import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.common.ApiResult;
 import com.chua.starter.account.spi.VideoChannelProvider;
+import com.chua.starter.account.support.ChannelSiteLinks;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -130,6 +131,8 @@ public class VideoChannelController {
             item.put("displayName", impl.displayName());
             item.put("extension", impl.extension());
             item.put("priority", impl.priority());
+            // 官网 / 官方文档：页头「官网」入口点它，与 AI 账号渠道共用同一份解析（ChannelSiteLinks）。
+            ChannelSiteLinks.put(item, impl.channel());
             try {
                 List<Map<String, Object>> models = impl.listModels();
                 item.put("models", models == null ? List.of() : models);

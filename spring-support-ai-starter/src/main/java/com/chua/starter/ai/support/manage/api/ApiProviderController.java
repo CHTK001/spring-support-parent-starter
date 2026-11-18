@@ -10,6 +10,9 @@ import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.ai.chat.indicator.ChatClientIndicators;
 import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
 import com.chua.common.support.ai.chat.route.RouteTarget;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.channel.KeylessMediaChannel;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -18,30 +21,40 @@ import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.ai.support.manage.store.SysAiProviderCredit;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.chat.MagpieRouteSource;
+import com.chua.starter.ai.support.util.AiModelMetricKeys;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitCollector;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitContext;
+import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import com.chua.starter.datasearch.provider.support.ProviderRegistries;
 import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.ai.support.manage.service.CreditLoginSessionManager;
 import com.chua.starter.datasearch.credit.model.BalancePart;
+import com.chua.starter.datasearch.credit.model.CreditMapping;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
 import com.chua.starter.datasearch.credit.model.CreditResult;
+import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
 import com.chua.starter.datasearch.credit.spi.impl.HostCreditQueryProvider;
 import com.chua.starter.datasearch.credit.support.CreditQueries;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -69,10 +82,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -96,19 +111,19 @@ import java.util.stream.Collectors;
 public class ApiProviderController {
 
     /**
-     * 提供商 映射器
+     * 渠道生命周期业务（账号模块）：渠道列表、判重、extra 落库
      */
-    private final SysAiProviderMapper providerMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelService accountChannelService;
 
     /**
-     * 提供商模型 映射器
+     * 渠道模型业务（账号模块）：模型清单与元数据写入
      */
-    private final SysAiProviderModelMapper modelMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelModelService accountChannelModelService;
 
     /**
-     * 提供商连接 映射器
+     * 渠道连接业务（账号模块）：归属隔离的连接查询
      */
-    private final SysAiProviderConnectionMapper connectionMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelConnectionService accountChannelConnectionService;
 
     /**
      * Magpie 网关路由源：免费渠道的模型清单要并入网关当前动态模型
@@ -119,6 +134,18 @@ public class ApiProviderController {
      * 模型价格/指标快照服务（读取 Redis 缓存，含价格/延迟/速度/智能等指标）
      */
     private final ModelMetricsSnapshotService metricsSnapshotService;
+
+    /**
+     * 余额密钥「账号登录」会话管理器：内嵌浏览器打开登录页，截获余额令牌
+     */
+    private final CreditLoginSessionManager creditLoginSessions;
+
+    /**
+     * 「账号登录」实时页面对外地址前缀（网关 / 反代场景配置）；
+     * 空则按当前请求的来源主机拼接
+     */
+    @Value("${chua.ai.credit-login.live-base-url:}")
+    private String liveBaseUrl;
 
     /**
      * Agent 模型注册中心（动态注入 Agent 虚拟 提供者）
@@ -141,15 +168,14 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.service.AiModelCatalogService aiModelCatalogService;
 
     /**
-     * 模型指标扩展服务：保存 / 改名模型后，用采集到的指标补全上下文长度等参数
-     * （仅在对应字段尚未配置时回填，不覆盖用户已填的值）
-     */
-    private final com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService modelMetricsEnrichmentService;
-
-    /**
      * 模型指标库服务（sync-pricing 同步入库）
      */
     private final com.chua.starter.ai.support.manage.service.SysAiModelMetricsService sysAiModelMetricsService;
+
+    /**
+     * 余额快照持久化服务：按 Key 落库 sys_ai_provider_credit，重启不丢
+     */
+    private final com.chua.starter.ai.support.manage.service.ProviderCreditSnapshotService providerCreditSnapshotService;
 
     /**
      * 模型目录同步（models.dev 说明 / 能力位 / 计费）
@@ -187,7 +213,7 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.mapper.SysAiAppKeyMapper appKeyMapper;
 
     /**
-     * ONNX 供应商标识：与其余提供商一样是 {@code sys_ai_provider} 表里的真实一行，
+     * ONNX 供应商标识：与其余提供商一样是 {@code sys_account_channel} 表里的真实一行，
      * 由<strong>用户自己添加</strong>（落库时统一用该标识），
      * {@link com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer}
      * 只在该行存在时同步模型镜像，不再自动建行。
@@ -203,6 +229,36 @@ public class ApiProviderController {
      * {@code duckduckgo}。模型拉取与运行时解析都按同一口径还原。</p>
      */
     private static final String CHAT_CHANNEL_PREFIX = "chat-";
+
+    /**
+     * 渠道管理为各类「免登录内置渠道」物化的 provider 行的平台前缀。
+     *
+     * <p>渠道 SPI 按能力分四类，渠道标识统一为 {@code <种类>-<名称>}：
+     * 对话 {@code chat-}、文生图 {@code image-}、文生视频 {@code video-}、图生 3D {@code model3d-}。
+     * 它们经「渠道标识大写」惰性物化出的 provider 行（如 {@code CHAT-DUCKDUCKGO} /
+     * {@code IMAGE-POLLINATIONS}）都承载模型行，模型管理列表必须同样保留。</p>
+     */
+    private static final List<String> KEYLESS_CHANNEL_PREFIXES =
+            List.of("chat-", "image-", "video-", "model3d-");
+
+    /**
+     * 判断平台标识是否为渠道管理物化的「免登录内置渠道」行。
+     *
+     * @param platform 平台标识
+     * @return true=免登录内置渠道行
+     */
+    private static boolean isKeylessChannelPlatform(String platform) {
+        if (platform == null) {
+            return false;
+        }
+        String value = platform.trim().toLowerCase(Locale.ROOT);
+        for (String prefix : KEYLESS_CHANNEL_PREFIXES) {
+            if (value.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * 判断供应商标识是否为 ONNX 本地推理供应商。
@@ -233,7 +289,7 @@ public class ApiProviderController {
      * @param provider 供应商行
      * @return true=ONNX 供应商
      */
-    private static boolean isOnnxRow(SysAiProvider provider) {
+    private static boolean isOnnxRow(SysAccountChannel provider) {
         if (provider == null) {
             return false;
         }
@@ -247,7 +303,7 @@ public class ApiProviderController {
      * @param provider 供应商
      * @return true=渠道 OAuth provider
      */
-    private static boolean isOAuthChannelRow(SysAiProvider provider) {
+    private static boolean isOAuthChannelRow(SysAccountChannel provider) {
         if (provider == null) {
             return false;
         }
@@ -255,16 +311,27 @@ public class ApiProviderController {
     }
 
     /**
-     * 免费渠道行（platform='free-channel'/'free'）：渠道管理在模型层的供应层，保留在模型管理列表。
+     * 模型管理列表可见的「免登录渠道行」：免费渠道（platform='free-channel'/'free'），
+     * 以及渠道管理为免登录内置渠道物化的 {@code chat-<渠道>} / {@code image-<渠道>} 等
+     * 内置渠道行（如 {@code CHAT-DUCKDUCKGO} / {@code IMAGE-POLLINATIONS}）。
+     *
+     * <p>{@code chat-*} / {@code image-*} 等内置渠道行由账号模块惰性物化，
+     * {@code auth_scheme=oauth}，会被 {@link #isOAuthChannelRow(SysAccountChannel)} 命中；
+     * 但它们是承载模型行的行，会话 / 生成经免登录客户端直连上游，必须与免费渠道同样
+     * 保留在模型管理列表，否则整行（含其模型）被镀铬过滤剔除，表现为非网关渠道
+     * （如 duckduckgo / pollinations）在模型页选不到。</p>
      *
      * @param provider 供应商
-     * @return true=免费渠道 provider
+     * @return true=免登录渠道 provider
      */
-    private static boolean isFreeChannelRow(SysAiProvider provider) {
+    private static boolean isFreeChannelRow(SysAccountChannel provider) {
         if (provider == null) {
             return false;
         }
-        return ProviderRouteTargets.isFreeChannel(provider.getPlatform());
+        if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
+            return true;
+        }
+        return isKeylessChannelPlatform(provider.getPlatform());
     }
 
     /**
@@ -293,13 +360,15 @@ public class ApiProviderController {
         }
         if (wantsOnnx) {
             // 排除自身：编辑已有 ONNX 行（改名称、改凭证）是合法操作，
-            // 只有「库里已有一行 ONNX 时再落一行」才需要拦。
-            List<SysAiProvider> onnxRows = providerMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProvider>()
-                            .and(w -> w.eq(SysAiProvider::getProviderId, ONNX_PROVIDER_ID)
-                                    .or()
-                                    .like(SysAiProvider::getPlatform, ONNX_PROVIDER_ID)));
-            for (SysAiProvider candidate : onnxRows) {
+            // 只有「库里已有一行 ONNX 时再落一行」才需要拦。ONNX 是 AI 侧的本地推理概念，
+            // 因此这条单行规则留在 AI；渠道重名规则由账号模块统一维护。
+            for (SysAccountChannel candidate : accountChannelService.listAll()) {
+                boolean onnxRow = ONNX_PROVIDER_ID.equals(candidate.getProviderId())
+                        || (candidate.getPlatform() != null
+                        && candidate.getPlatform().contains(ONNX_PROVIDER_ID));
+                if (!onnxRow) {
+                    continue;
+                }
                 if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
                     continue;
                 }
@@ -307,22 +376,7 @@ public class ApiProviderController {
                         "已有 ONNX 供应商，只允许一行；如需调整请直接编辑该供应商");
             }
         }
-        String nameKey = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
-        if (nameKey.isEmpty()) {
-            return;
-        }
-        List<SysAiProvider> samePlatform = providerMapper.selectList(
-                new LambdaQueryWrapper<SysAiProvider>()
-                        .eq(SysAiProvider::getPlatform, platform));
-        for (SysAiProvider candidate : samePlatform) {
-            if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
-                continue;
-            }
-            String candidateName = candidate.getName() == null ? "" : candidate.getName().trim().toLowerCase(Locale.ROOT);
-            if (nameKey.equals(candidateName)) {
-                throw new ApiException(ApiErrorCode.CONFLICT, "供应商已存在，不允许重复新增: " + name);
-            }
-        }
+        accountChannelService.requireNotDuplicate(platform, name, excludeProviderId);
     }
 
     /**
@@ -489,7 +543,7 @@ public class ApiProviderController {
      * 已按产品决定移除，不再自动探测。</p>
      *
      * <p>只在「上游不是厂商官方站点」时才进候选：官方站点上没有这个接口，
-     * 拿官方 Key 去打只会 404。判定见 {@link #isOfficialSite(SysAiProvider)}。</p>
+     * 拿官方 Key 去打只会 404。判定见 {@link #isOfficialSite(SysAccountChannel)}。</p>
      */
     private static final List<String> AUTO_CREDIT_KINDS = List.of("billing");
 
@@ -515,7 +569,7 @@ public class ApiProviderController {
     @Permission("admin")
     @GetMapping("/providers/{provider_id}/credentials")
     public ApiResult<Map<String, Object>> getProviderCredentials(@PathVariable("provider_id") String providerId) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         Map<String, Object> credentials = entity.getCredentials();
         if (credentials == null) {
             credentials = new java.util.LinkedHashMap<>();
@@ -526,42 +580,46 @@ public class ApiProviderController {
     /**
      * 列举全部 提供者（按 排序_订单 升序）。
      *
-     * <p>ONNX 供应商与其余供应商同构（同样是 {@code sys_ai_provider} 表里的一行），
+     * <p>ONNX 供应商与其余供应商同构（同样是 {@code sys_account_channel} 表里的一行），
      * 差别只有一条：仅管理员可见，非管理员的返回列表里不出现该条目。</p>
      *
+     * <p>模型清单的口径由账号模块决定：缺省只带已开启的模型行 —— 会话选择、路由解析
+     * 等消费方不用带参数，拿到的就是「对外供给的模型」；模型管理页要看到停用行才能
+     * 重新开启，须显式传 {@code enabled_only=0} 取全量。
+     * 本接口不做 enabled 判定，避免同一条规则在两处实现。</p>
+     *
+     * @param enabledOnly 是否只返回已开启的模型行（缺省 true）
      * @return 提供者响应列表
      */
     @GetMapping("/providers")
-    public ApiResult<List<Map<String, Object>>> listProviders() {
+    public ApiResult<List<Map<String, Object>>> listProviders(
+            @RequestParam(value = "enabled_only", required = false, defaultValue = "true") boolean enabledOnly) {
         boolean onnxVisible = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
-        List<SysAiProvider> providers = providerMapper.selectList(
-                new LambdaQueryWrapper<SysAiProvider>()
-                        .orderByAsc(SysAiProvider::getSortOrder)
-                        .orderByAsc(SysAiProvider::getCreatedAt));
+        List<SysAccountChannel> providers = accountChannelService.listAll();
 
         List<Map<String, Object>> items = new ArrayList<>(8); // 提供者数量不可预估
-        for (SysAiProvider p : providers) {
+        for (SysAccountChannel p : providers) {
             if (isOnnxRow(p) && !onnxVisible) {
                 continue;
             }
             // 渠道管理页为每个已注册渠道镀铬的 OAuth provider 行（auth_scheme='oauth'，无模型 / 无凭证），
             // 模型管理（供应商列表 / 模型面板）与渠道解耦，不暴露这些行。
-            // 免费渠道行（platform='free-channel'/'free'）由渠道管理提供模型供应，保留在列表。
+            // 免登录渠道行（platform='free-channel'/'free'，或渠道管理物化的 chat-<渠道> 行）
+            // 承载模型、由 FreeChatClient 免登录直连，保留在列表。
             if (isOAuthChannelRow(p) && !isFreeChannelRow(p)) {
                 continue;
             }
-            List<SysAiProviderModel> models = modelMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getProviderId, p.getProviderId()));
+            // 模型清单口径由账号模块决定：消费方（会话选择 / 路由）只要已开启的行，
+            // 管理页保留全量，否则停用的模型在界面上消失后就再也打不开了。
+            List<SysAccountChannelModel> models = enabledOnly
+                    ? accountChannelModelService.listEnabled(p.getProviderId())
+                    : accountChannelModelService.listAll(p.getProviderId());
             // 连接按账号隔离：provider 行是全局的，挂在下面的账号凭证不是。
             // 注：toProviderResponse 目前并未把 connections 回显到响应里（页面上的
             // 账号列表走 /api/channels），这里的过滤是防御性的 —— 一旦有人把连接
             // 加进响应，隔离条件已经在这里，不会裸奔。
-            LambdaQueryWrapper<SysAiProviderConnection> connectionWrapper =
-                    new LambdaQueryWrapper<SysAiProviderConnection>()
-                            .eq(SysAiProviderConnection::getProviderId, p.getProviderId());
-            applyConnectionOwnerFilter(connectionWrapper);
-            List<SysAiProviderConnection> connections = connectionMapper.selectList(connectionWrapper);
+            List<SysAccountChannelConnection> connections =
+                    accountChannelConnectionService.list(p.getProviderId());
             Map<String, Object> item = toProviderResponse(p, models, connections);
             if (routerGroupService.isRouterGroup(p)) {
                 // 路由组没有自己的模型行：成员全在模型库里。但会话的模型面板读的就是
@@ -592,16 +650,10 @@ public class ApiProviderController {
      */
     @GetMapping("/providers/{provider_id}")
     public ApiResult<Map<String, Object>> getProvider(@PathVariable("provider_id") String providerId) {
-        SysAiProvider entity = requireVisibleProvider(providerId);
-        List<SysAiProviderModel> models = modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
+        SysAccountChannel entity = requireVisibleProvider(providerId);
+        List<SysAccountChannelModel> models = accountChannelModelService.listAll(providerId);
         // 连接按账号隔离：详情页同样只能看到自己的账号（管理员另见 NULL 系统池）
-        LambdaQueryWrapper<SysAiProviderConnection> connectionWrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId);
-        applyConnectionOwnerFilter(connectionWrapper);
-        List<SysAiProviderConnection> connections = connectionMapper.selectList(connectionWrapper);
+        List<SysAccountChannelConnection> connections = accountChannelConnectionService.list(providerId);
         return ApiResult.ok(toProviderResponse(entity, models, connections));
     }
 
@@ -626,19 +678,20 @@ public class ApiProviderController {
         if (providerId == null || providerId.isBlank()) {
             providerId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
         }
-        if (providerMapper.selectById(providerId) != null) {
+        if (accountChannelService.exists(providerId)) {
             throw new ApiException(ApiErrorCode.CONFLICT, "provider_id 已存在: " + providerId);
         }
         // 路由组供应商：模型来自「已添加的模型库」，没有上游地址可填，
         // 因此不校验同平台重名（同一平台可以建多个不同策略的路由组）。
-        if (!ProviderRouteTargets.isRouterGroup(platform)) {
+        boolean allowDuplicateName = ProviderRouteTargets.isRouterGroup(platform);
+        if (!allowDuplicateName) {
             // ONNX 只允许一行本地推理；其余供应商按「平台+名称」判重
             requireNotDuplicateProvider(platform, name, null);
         }
         long now = System.currentTimeMillis();
 
         // 创建提供者实体
-        SysAiProvider entity = new SysAiProvider();
+        SysAccountChannel entity = new SysAccountChannel();
         entity.setProviderId(providerId);
         entity.setPlatform(platform);
         entity.setName(name);
@@ -679,24 +732,20 @@ public class ApiProviderController {
         entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
         entity.setProxy(str(body, "proxy"));
         entity.setExtra(uncheckedCast(body.get("extra")));
-        entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-        providerMapper.insert(entity);
+        entity.setSortOrder(intv(body, "sort_order", accountChannelService.nextSortOrder()));
 
         // 初始模型（可选，用户可以后续手动添加）
         Map<String, Object> initialModel = uncheckedCast(body.get("initial_model"));
-        if (initialModel != null) {
-            SysAiProviderModel modelEntity = toModelEntity(providerId, initialModel, now);
-            modelMapper.insert(modelEntity);
-        }
+        SysAccountChannelModel initialModelEntity = initialModel == null
+                ? null : toModelEntity(providerId, initialModel, now);
 
         // 初始连接按连接角色保存
-        List<Map<String, Object>> connections = listOfMap(body, "connections");
-        for (Map<String, Object> conn : connections) {
-            SysAiProviderConnection connEntity = toConnectionEntity(providerId, conn, now);
-            connectionMapper.insert(connEntity);
+        List<SysAccountChannelConnection> connEntities = new ArrayList<>(4);
+        for (Map<String, Object> conn : listOfMap(body, "connections")) {
+            connEntities.add(toConnectionEntity(providerId, conn, now));
         }
+        // 渠道、初始模型、初始连接的落库与判重统一由账号模块的渠道业务负责
+        accountChannelService.create(entity, initialModelEntity, connEntities, allowDuplicateName);
 
         // ONNX 刚由用户添加：立刻把本地模型镜像与推理设备同步过来，
         // 否则页面上要等到下次启动才看得到模型（用户加完却是空列表）。
@@ -710,14 +759,8 @@ public class ApiProviderController {
         }
 
         // 查询完整数据返回
-        List<SysAiProviderModel> models = modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
-        LambdaQueryWrapper<SysAiProviderConnection> connWrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId);
-        applyConnectionOwnerFilter(connWrapper);
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(connWrapper);
+        List<SysAccountChannelModel> models = accountChannelService.modelsOf(providerId);
+        List<SysAccountChannelConnection> conns = accountChannelService.connectionsOf(providerId);
         return ApiResult.ok(toProviderResponse(entity, models, conns));
     }
 
@@ -733,7 +776,7 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> updateProvider(@PathVariable("provider_id") String providerId,
                                                          @RequestBody Map<String, Object> body) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         if (body.containsKey("name")) {
             entity.setName(str(body, "name"));
         }
@@ -744,7 +787,17 @@ public class ApiProviderController {
             entity.setAuthScheme(str(body, "auth_scheme"));
         }
         if (body.containsKey("credentials")) {
-            entity.setCredentials(uncheckedCast(body.get("credentials")));
+            Map<String, Object> credentials = uncheckedCast(body.get("credentials"));
+            // 「删光 Key」时前端会显式提交 {api_key: ""}：把空白 api_key 摘掉再落库，
+            // has_credentials / api_key_count 才不会误报「已配置」。注意不能把 credentials
+            // 置 null —— updateById 默认跳过 null 字段，置 null 等于旧 Key 清不掉。
+            if (credentials != null) {
+                Object apiKey = credentials.get("api_key");
+                if (apiKey != null && apiKey.toString().trim().isEmpty()) {
+                    credentials.remove("api_key");
+                }
+            }
+            entity.setCredentials(credentials == null ? new LinkedHashMap<>() : credentials);
         }
         if (body.containsKey("enabled")) {
             entity.setEnabled(bool(body, "enabled", true));
@@ -766,44 +819,22 @@ public class ApiProviderController {
             entity.setPlatform(str(body, "platform"));
         }
         // 管理员可改接入协议：协议落在每个模型 capability 上，需同步到该供应商全部模型
-        if (body.containsKey("protocol")) {
-            String protocol = str(body, "protocol");
-            List<SysAiProviderModel> protocolModels = modelMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getProviderId, providerId));
-            for (SysAiProviderModel pm : protocolModels) {
-                List<Map<String, Object>> caps = pm.getCapabilities();
-                if (caps != null) {
-                    for (Map<String, Object> cap : caps) {
-                        cap.put("protocol", protocol);
-                    }
-                    modelMapper.updateByKey(pm);
-                }
-            }
-        }
+        String protocol = body.containsKey("protocol") ? str(body, "protocol") : null;
         if (body.containsKey("sort_order")) {
             entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
         // 编辑同样要守唯一性：否则可以把 A 改名为 B 的名字，绕过新增/克隆的判重造出重复项。
         // 排除自身（excludeProviderId = 当前被编辑的供应商），只拦与「别人」撞名的情况。
-        if (body.containsKey("name") || body.containsKey("platform")) {
-            requireNotDuplicateProvider(entity.getPlatform(), entity.getName(), providerId);
-        }
-        entity.setUpdatedAt(System.currentTimeMillis());
-        providerMapper.updateById(entity);
+        boolean checkDuplicate = body.containsKey("name") || body.containsKey("platform");
+        // 判重、协议整渠道同步、落库与事件广播统一由账号模块的渠道业务负责
+        accountChannelService.save(entity, checkDuplicate, protocol);
 
         // ONNX 供应商的推理设备取自 provider.extra.device，更新后立即桥接到运行时，
         // 覆盖原模型参数接口的 device 读取，避免需重启才生效。
         refreshOnnxDevice(entity);
 
-        List<SysAiProviderModel> models = modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
-        LambdaQueryWrapper<SysAiProviderConnection> connWrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId);
-        applyConnectionOwnerFilter(connWrapper);
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(connWrapper);
+        List<SysAccountChannelModel> models = accountChannelService.modelsOf(providerId);
+        List<SysAccountChannelConnection> conns = accountChannelService.connectionsOf(providerId);
         return ApiResult.ok(toProviderResponse(entity, models, conns));
     }
 
@@ -819,7 +850,7 @@ public class ApiProviderController {
     @DeleteMapping("/providers/{provider_id}")
     @Transactional
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
-        doBatchDeleteProviders(List.of(providerId));
+        deleteProviderRows(providerId);
         return ApiResult.ok();
     }
 
@@ -839,16 +870,14 @@ public class ApiProviderController {
         if (ids == null || ids.isEmpty()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
-        // 先整批定位，再逐批删除：任何定位失败都直接拦截整批，不出现部分删除
-        List<String> targets = new ArrayList<>(ids.size());
+        // 空 id 在进入渠道业务前就拦掉；「是否存在」由账号模块的整批定位负责，
+        // 任何一条不存在都会拦截整批，不出现部分删除。
         for (String id : ids) {
             if (id == null || id.isBlank()) {
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "id 不能为空");
             }
-            requireProvider(id);
-            targets.add(id);
         }
-        return targets;
+        return ids;
     }
 
     /**
@@ -873,46 +902,34 @@ public class ApiProviderController {
     }
 
     /**
-     * 执行供应商行（及级联）的删除。
+     * 删除渠道及其 AI 侧连带数据。
      *
-     * @param providerId 已定位的供应商 id
+     * <p>渠道行、模型行、连接行由账号模块的渠道业务删除；本方法只处理 AI 自己的账：
+     * 全局默认模型里指向已删渠道/模型的悬空取值、ONNX 推理设备覆盖。</p>
+     *
+     * @param providerId 渠道标识
      */
     private void deleteProviderRows(String providerId) {
-        // 先取出该提供商的模型标识：全局设置里的「默认模型」按 "providerId:model" 存值，
-        // 必须在删除前收集，否则模型行删掉后就无法判断哪些配置项指向了本提供商
-        List<String> ownedModels = modelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
-                        .select(SysAiProviderModel::getModel)
-                        .eq(SysAiProviderModel::getProviderId, providerId))
-                .stream()
-                .map(SysAiProviderModel::getModel)
+        // 全局设置里的「默认模型」按 "providerId:model" 存值，
+        // 必须在删模型行之前收集，否则无法判断哪些配置项指向了本渠道
+        List<String> ownedModels = accountChannelService.modelsOf(providerId).stream()
+                .map(SysAccountChannelModel::getModel)
                 .filter(s -> s != null && !s.trim().isEmpty())
                 .map(String::trim)
                 .toList();
-        // ONNX 行删除后要清掉运行时的推理设备覆盖（行在时由同步服务维护）
-        SysAiProvider target = providerMapper.selectById(providerId);
-
-        providerMapper.deleteById(providerId);
-        modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
-                .eq(SysAiProviderModel::getProviderId, providerId));
-        // 供应商行是全局的，删除它等于全局下线这家供应商，其下连接（无论归属谁）
-        // 都已不可用 —— 一并清理，避免留下 providerId 已不存在的孤儿凭证行
-        // （日后按同一 id 重建供应商会把这些账号“复活”，那才是真正的越权）。
-        // 账号隔离体现在「读」：各用户只能看到自己的连接，删除别人的账号
-        // 只能由删掉这家供应商这件事本身连带发生，且是管理员动作。
-        connectionMapper.delete(new LambdaQueryWrapper<SysAiProviderConnection>()
-                .eq(SysAiProviderConnection::getProviderId, providerId));
+        SysAccountChannel target = requireProvider(providerId);
+        accountChannelService.delete(List.of(providerId));
         clearGlobalSettingsReferencing(providerId, ownedModels);
         if (isOnnxRow(target)) {
             onnxProviderMaterializer.syncProviderDevice(providerId);
         }
-        log.info("删除供应商 {}，级联删除其模型与全部连接", providerId);
     }
 
     /**
-     * 执行已定位供应商行的整批删除。
+     * 整批删除渠道。
      *
-     * @param ids 已定位的供应商 id 列表
-     * @return 删除的供应商数
+     * @param ids 已定位的渠道标识列表
+     * @return 删除的渠道数
      */
     private int doBatchDeleteProviders(List<String> ids) {
         if (ids == null || ids.isEmpty()) {
@@ -920,8 +937,7 @@ public class ApiProviderController {
         }
         int deleted = 0;
         for (String providerId : ids) {
-            SysAiProvider entity = providerMapper.selectById(providerId);
-            if (entity == null) {
+            if (!accountChannelService.exists(providerId)) {
                 continue;
             }
             deleteProviderRows(providerId);
@@ -931,44 +947,36 @@ public class ApiProviderController {
     }
 
     /**
-     * 清理全局设置中指向指定提供商的模型取值。
+     * 清理全局设置中指向指定渠道的模型取值（{@code sys_ai_global_setting} 属于 AI 侧）。
      *
-     * <p>「默认模型」类字段的取值形如 {@code providerId:model}（前端模型选择器写入）。
-     * 提供商被删除后若不同步清理，配置项会残留悬空引用：界面仍显示已不存在的模型，
-     * 运行期解析失败且无提示。这里按前缀精确匹配该提供商的两个来源：</p>
-     * <ul>
-     *   <li>{@code providerId:model} —— 前端写入的规范形式</li>
-     *   <li>裸 {@code model} —— 历史数据 / ONNX 等虚拟提供商曾直接写模型名</li>
-     * </ul>
+     * <p>「默认模型」类字段的取值形如 {@code providerId:model}。渠道被删除后若不同步清理，
+     * 配置项会残留悬空引用：界面仍显示已不存在的模型，运行期解析失败且无提示。</p>
      *
-     * @param providerId  被删除的提供商标识
-     * @param ownedModels 该提供商下的模型标识
+     * @param providerId  被删除的渠道标识
+     * @param ownedModels 该渠道下的模型标识
      * @return 清理条数
      */
     private int clearGlobalSettingsReferencing(String providerId, List<String> ownedModels) {
         if (providerId == null || providerId.trim().isEmpty()) {
             return 0;
         }
-        List<SysAiGlobalSetting> candidates = globalSettingMapper.selectList(
-                new LambdaQueryWrapper<SysAiGlobalSetting>()
-                        .likeRight(SysAiGlobalSetting::getValue, providerId + ":"));
         int cleared = 0;
         String prefix = providerId + ":";
-        for (SysAiGlobalSetting setting : candidates) {
+        for (SysAiGlobalSetting setting : globalSettingMapper.selectList(
+                new LambdaQueryWrapper<SysAiGlobalSetting>()
+                        .likeRight(SysAiGlobalSetting::getValue, prefix))) {
             if (setting.getValue() != null && setting.getValue().startsWith(prefix)) {
                 cleared += globalSettingMapper.update(null, new LambdaUpdateWrapper<SysAiGlobalSetting>()
                         .eq(SysAiGlobalSetting::getId, setting.getId())
                         .set(SysAiGlobalSetting::getValue, ""));
             }
         }
-        // 裸模型名：仅当该模型名未被其它提供商占用时才可安全清空，避免误伤同名模型
+        // 裸模型名：仅当该模型名未被其它渠道占用时才可安全清空，避免误伤同名模型
         for (String model : ownedModels) {
             if (model == null || model.trim().isEmpty() || model.contains(":")) {
                 continue;
             }
-            long stillUsed = modelMapper.selectCount(new LambdaQueryWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getModel, model));
-            if (stillUsed > 0) {
+            if (accountChannelModelService.countByModel(model) > 0) {
                 continue;
             }
             cleared += globalSettingMapper.update(null, new LambdaUpdateWrapper<SysAiGlobalSetting>()
@@ -976,6 +984,34 @@ public class ApiProviderController {
                     .set(SysAiGlobalSetting::getValue, ""));
         }
         return cleared;
+    }
+
+    /**
+     * 模型行删除后，把它从所有路由组成员表里摘掉。
+     *
+     * <p>路由组的成员就是模型库里的行；成员行被删后如果仍留在组里，那个成员会在
+     * 每次路由时尝试构造客户端并失败。这里在同一个事务里一并清理，让「删模型」与
+     * 「清成员」同进同退。</p>
+     *
+     * @param providerId 被删模型所属渠道
+     * @param model      被删模型
+     */
+    private void pruneRouterGroupMembers(String providerId, String model) {
+        try {
+            List<SysAccountChannel> all = accountChannelService.listAll().stream()
+                    .filter(routerGroupService::isRouterGroup)
+                    .toList();
+            for (com.chua.starter.ai.support.chat.RouterGroupService.PrunedGroup pruned
+                    : routerGroupService.pruneMemberDeletions(all, providerId, model)) {
+                // 渠道行的写入仍走账号模块业务，AI 只提供「新的路由组配置」这份内容
+                SysAccountChannel update = accountChannelService.require(pruned.providerId());
+                update.setExtra(pruned.extra());
+                accountChannelService.save(update, false, null);
+                modelClientResolver.invalidateRouterGroup(pruned.providerId());
+            }
+        } catch (Exception e) {
+            log.warn("清理路由组成员失败 {}:{}: {}", providerId, model, e.getMessage());
+        }
     }
 
     /**
@@ -990,84 +1026,15 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> cloneProvider(@PathVariable("provider_id") String providerId,
                                                         @RequestBody(required = false) Map<String, Object> body) {
-        SysAiProvider source = requireProvider(providerId);
+        SysAccountChannel source = requireProvider(providerId);
         String cloneName = body != null && body.get("name") != null
                 ? str(body, "name") : source.getName() + " 副本";
         // 克隆同样受唯一性约束：ONNX 不可克隆出第二份，其余供应商不能与既有条目重名
         requireNotDuplicateProvider(source.getPlatform(), cloneName, source.getProviderId());
-        long now = System.currentTimeMillis();
-        String newId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
-
-        // 克隆提供者
-        SysAiProvider clone = new SysAiProvider();
-        clone.setProviderId(newId);
-        clone.setPlatform(source.getPlatform());
-        clone.setName(cloneName);
-        clone.setBaseUrl(source.getBaseUrl());
-        clone.setAuthScheme(source.getAuthScheme());
-        clone.setCredentials(source.getCredentials() != null
-                ? new LinkedHashMap<>(source.getCredentials()) : null);
-        clone.setEnabled(source.getEnabled());
-        clone.setBedrockConfig(source.getBedrockConfig() != null
-                ? new LinkedHashMap<>(source.getBedrockConfig()) : null);
-        clone.setProxy(source.getProxy());
-        clone.setSortOrder(providerMapper.selectCount(null).intValue());
-        clone.setCreatedAt(now);
-        clone.setUpdatedAt(now);
-        providerMapper.insert(clone);
-
-        // 深拷贝模型能力
-        List<SysAiProviderModel> sourceModels = modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
-        for (SysAiProviderModel srcModel : sourceModels) {
-            SysAiProviderModel m = new SysAiProviderModel();
-            m.setProviderId(newId);
-            m.setModel(srcModel.getModel());
-            m.setEnabled(srcModel.getEnabled());
-            m.setSortOrder(srcModel.getSortOrder());
-            m.setDescription(srcModel.getDescription());
-            m.setCapabilities(srcModel.getCapabilities() != null
-                    ? new ArrayList<>(srcModel.getCapabilities()) : null);
-            m.setCreatedAt(now);
-            m.setUpdatedAt(now);
-            modelMapper.insert(m);
-        }
-
-        // 深拷贝连接（只拷贝当前账号可见的那些，见 applyConnectionOwnerFilter）
-        LambdaQueryWrapper<SysAiProviderConnection> sourceWrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId);
-        applyConnectionOwnerFilter(sourceWrapper);
-        List<SysAiProviderConnection> sourceConns = connectionMapper.selectList(sourceWrapper);
-        for (SysAiProviderConnection srcConn : sourceConns) {
-            SysAiProviderConnection c = new SysAiProviderConnection();
-            c.setConnectionId(String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000)));
-            c.setProviderId(newId);
-            c.setRole(srcConn.getRole());
-            c.setLabel(srcConn.getLabel());
-            // 归属沿用源行（不改成当前操作者）：克隆是「复制一份同配置」，
-            // 若原行是 user_id IS NULL 的系统池，副本仍应留在系统池里 ——
-            // 免费渠道（_free 作用域）只认 NULL 行，改成当前用户会让副本失效。
-            c.setUserId(srcConn.getUserId());
-            c.setBaseUrl(srcConn.getBaseUrl());
-            c.setAuthScheme(srcConn.getAuthScheme());
-            c.setCredentials(srcConn.getCredentials() != null
-                    ? new LinkedHashMap<>(srcConn.getCredentials()) : null);
-            c.setExtra(srcConn.getExtra());
-            c.setCreatedAt(now);
-            c.setUpdatedAt(now);
-            connectionMapper.insert(c);
-        }
-
-        List<SysAiProviderModel> models = modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, newId));
-        LambdaQueryWrapper<SysAiProviderConnection> connWrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, newId);
-        applyConnectionOwnerFilter(connWrapper);
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(connWrapper);
+        // 深拷贝渠道行、模型清单与当前账号可见的连接，统一由账号模块的渠道业务完成
+        SysAccountChannel clone = accountChannelService.clone(providerId, cloneName);
+        List<SysAccountChannelModel> models = accountChannelService.modelsOf(clone.getProviderId());
+        List<SysAccountChannelConnection> conns = accountChannelService.connectionsOf(clone.getProviderId());
         return ApiResult.ok(toProviderResponse(clone, models, conns));
     }
 
@@ -1085,7 +1052,7 @@ public class ApiProviderController {
     @PostMapping("/providers/{provider_id}/models")
     public ApiResult<Map<String, Object>> fetchProviderModels(@PathVariable("provider_id") String providerId,
                                                               @RequestBody(required = false) Map<String, Object> body) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
@@ -1097,7 +1064,7 @@ public class ApiProviderController {
      *
      * <p>「添加模型」要的是一次到位：用 提供者 已保存的地址与凭证真实调用上游
      * {@code GET {base_url}/models}，把返回的模型目录整批写进
-     * {@code sys_ai_provider_model}，用户不必再在弹窗里逐条点「选择」。</p>
+     * {@code sys_account_channel_model}，用户不必再在弹窗里逐条点「选择」。</p>
      *
      * <p><b>幂等</b>：模型名已存在的直接跳过，**不覆盖**用户改过的别名/参数，
      * 所以重复点击只会补录新出现的模型。缺模型名的上游条目计入 skipped 而非报错
@@ -1118,7 +1085,7 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> importAllProviderModels(@PathVariable("provider_id") String providerId,
                                                                   @RequestBody(required = false) Map<String, Object> body) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
@@ -1149,11 +1116,9 @@ public class ApiProviderController {
         // 已存在的模型名一次取齐：既是幂等判据，也省掉每条一次 select；
         // 顺带算出最大排序号，新模型排在既有行之后
         Set<String> seen = new HashSet<>(16);
-        Map<String, SysAiProviderModel> existing = new HashMap<>(16);
+        Map<String, SysAccountChannelModel> existing = new HashMap<>(16);
         int maxSort = -1;
-        for (SysAiProviderModel row : modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId))) {
+        for (SysAccountChannelModel row : accountChannelModelService.listAll(providerId)) {
             if (row.getModel() != null) {
                 existing.put(row.getModel(), row);
             }
@@ -1166,10 +1131,11 @@ public class ApiProviderController {
         int sortBase = maxSort + 1;
 
         long now = System.currentTimeMillis();
-        int imported = 0;
+        int imported;
         int skipped = 0;
         int enriched = 0;
         List<Map<String, Object>> importedRows = new ArrayList<>(8);
+        List<SysAccountChannelModel> candidates = new ArrayList<>(8);
         for (int i = 0; i < upstreamModels.size(); i++) {
             Map<String, Object> m = upstreamModels.get(i);
             String name = batchModelName(m);
@@ -1178,7 +1144,7 @@ public class ApiProviderController {
                 skipped++;
                 continue;
             }
-            SysAiProviderModel exist = existing.get(name);
+            SysAccountChannelModel exist = existing.get(name);
             if (exist != null) {
                 // 已存在：不覆盖用户配置，只补上游真实元数据（仅空列 + metrics 合并）
                 if (mergeUpstreamMetadata(entity, exist, m, now)) {
@@ -1192,10 +1158,13 @@ public class ApiProviderController {
                 skipped++;
                 continue;
             }
-            SysAiProviderModel row = toModelEntity(providerId, batchModelInput(m, name, sortBase + i), now);
+            SysAccountChannelModel row = toModelEntity(providerId, batchModelInput(m, name, sortBase + i), now);
             enrichFromMetrics(entity, row);
-            modelMapper.insert(row);
-            imported++;
+            // 落库交给账号模块的模型业务：幂等补录 + 统一追排序号
+            candidates.add(row);
+        }
+        imported = accountChannelModelService.createMissing(providerId, candidates);
+        for (SysAccountChannelModel row : candidates) {
             importedRows.add(toProviderModelResponse(entity, row));
         }
 
@@ -1205,6 +1174,9 @@ public class ApiProviderController {
         out.put("skipped", skipped);
         out.put("enriched", enriched);
         out.put("models", importedRows);
+        // 批量录入改变的是「可路由模型集合」：索引里 5 分钟路由缓存必须立刻失效，
+        // 否则刚拉进来的模型在免费渠道里要等一个 TTL 才出现。
+        invalidateRouteCache("provider-models-imported");
         return ApiResult.ok(out);
     }
 
@@ -1222,7 +1194,7 @@ public class ApiProviderController {
      * @return 是否写入了新元数据
      */
     @SuppressWarnings("unchecked")
-    private boolean mergeUpstreamMetadata(SysAiProvider provider, SysAiProviderModel row,
+    private boolean mergeUpstreamMetadata(SysAccountChannel provider, SysAccountChannelModel row,
                                           Map<String, Object> upstream, long now) {
         Object rawMetrics = upstream.get("metrics");
         if (!(rawMetrics instanceof Map<?, ?>)) {
@@ -1258,9 +1230,8 @@ public class ApiProviderController {
             return false;
         }
         row.setUpdatedAt(now);
-        modelMapper.update(row, new LambdaUpdateWrapper<SysAiProviderModel>()
-                .eq(SysAiProviderModel::getProviderId, row.getProviderId())
-                .eq(SysAiProviderModel::getModel, row.getModel()));
+        // 模型行的写入统一走账号模块的模型业务（复合主键局部更新）
+        accountChannelModelService.updateByKey(row);
         return true;
     }
 
@@ -1272,7 +1243,7 @@ public class ApiProviderController {
      * @param row 模型行
      * @return 列名 → 值
      */
-    private static Map<String, Object> entityColumns(SysAiProviderModel row) {
+    private static Map<String, Object> entityColumns(SysAccountChannelModel row) {
         Map<String, Object> columns = new LinkedHashMap<>(16);
         columns.put("context_window", row.getContextWindow());
         columns.put("max_tokens", row.getMaxTokens());
@@ -1312,7 +1283,7 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> recommendModelMetrics(
             @PathVariable("provider_id") String providerId,
             @RequestParam(value = "model", required = false) String model) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         Map<String, Object> out = new LinkedHashMap<>(8);
         if (model == null || model.isBlank()) {
             out.put("found", false);
@@ -1362,7 +1333,7 @@ public class ApiProviderController {
      * OpenRouter / Pollinations / Vercel AI Gateway 官方目录或 Models.dev 聚合
      * （见各厂商的 {@code ChatClientIndicator} 实现）。同步结果同时写入
      * {@code sys_ai_model_metrics}（计费取价）与该服务商的
-     * {@code sys_ai_provider_model.metrics}（前端模型卡片立即刷新）。</p>
+     * {@code sys_account_channel_model.metrics}（前端模型卡片立即刷新）。</p>
      *
      * @param providerId 提供者标识
      * @return 同步统计；无可用来源时 {@code supported=false}
@@ -1371,7 +1342,7 @@ public class ApiProviderController {
     @PostMapping("/providers/{provider_id}/models/sync-pricing")
     @Transactional
     public ApiResult<Map<String, Object>> syncPricing(@PathVariable("provider_id") String providerId) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         ChatClientIndicator indicator = resolveIndicator(entity);
         if (indicator == null) {
             log.info("[SyncPricing] provider={} 无可用指标端点，跳过", providerId);
@@ -1412,7 +1383,7 @@ public class ApiProviderController {
      * @param entity 供应商行
      * @return indicator 实现或 空
      */
-    private ChatClientIndicator resolveIndicator(SysAiProvider entity) {
+    private ChatClientIndicator resolveIndicator(SysAccountChannel entity) {
         ChatClientSetting setting = buildSettingForIndicator(entity);
         ChatClientIndicator indicator = ChatClientIndicators.of(setting);
         if (indicator != null) {
@@ -1430,7 +1401,7 @@ public class ApiProviderController {
      * @param entity 参数
      * @return 返回值
     */
-    private ChatClientSetting buildSettingForIndicator(SysAiProvider entity) {
+    private ChatClientSetting buildSettingForIndicator(SysAccountChannel entity) {
         Map<String, String> extraHeaders = extractExtraHeaders(entity.getExtra());
         String platform = entity.getPlatform();
         if (platform == null || platform.isBlank()) {
@@ -1454,7 +1425,7 @@ public class ApiProviderController {
      * @param entity 参数
      * @return 返回值
     */
-    private String firstApiKey(SysAiProvider entity) {
+    private String firstApiKey(SysAccountChannel entity) {
         return extractApiKey(entity.getCredentials());
     }
 
@@ -1531,7 +1502,9 @@ public class ApiProviderController {
     private Map<String, Object> batchModelInput(Map<String, Object> m, String name, int sortOrder) {
         Map<String, Object> input = new LinkedHashMap<>(24);
         input.put("model", name);
-        input.put("enabled", true);
+        // 开关取自上游行，不预设常量：上游没声明就按「关闭」入库，由管理员在模型管理里开启。
+        // 之前写死 true 会把「导入」变成「整批启用」，模型数直接虚高。
+        input.put("enabled", bool(m, "enabled", false));
         input.put("sort_order", sortOrder);
         if (m.get("description") instanceof String s && !s.isBlank()) {
             input.put("description", s);
@@ -1619,7 +1592,7 @@ public class ApiProviderController {
                 local.put("items", items);
                 return ApiResult.ok(local);
             }
-            SysAiProvider entity = requireProvider(providerId);
+            SysAccountChannel entity = requireProvider(providerId);
             Map<String, Object> upstreamResult = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                     entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
                     entity.getProxy(), false, entity.getExtra(), entity.getProviderId());
@@ -1702,7 +1675,7 @@ public class ApiProviderController {
     @Permission("admin")
     @PostMapping("/providers/{provider_id}/test-keys")
     public ApiResult<Map<String, Object>> testProviderKeys(@PathVariable("provider_id") String providerId) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         Map<String, Object> credentials = entity.getCredentials();
         List<String> keys = extractAllKeys(credentials);
         List<Map<String, Object>> results = new ArrayList<>(8); // 密钥数量不可预估
@@ -1724,11 +1697,389 @@ public class ApiProviderController {
     }
 
     /**
+     * 余额读数缓存时长：面板每次打开都会拉一次，逐 Key 出网不便宜，5 分钟内的重复打开直接回缓存
+     */
+    private static final long CREDIT_CACHE_TTL_MS = 5L * 60L * 1000L;
+
+    /**
+     * 缓存条数上限：超过先清过期，仍超就整体清空（供应商数量有限，正常到不了）
+     */
+    private static final int CREDIT_CACHE_LIMIT = 256;
+
+    /**
+     * 余额读数缓存：指纹 → 快照
+     */
+    private static final Map<String, CreditSnapshot> CREDIT_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 余额读数的一段明细：多账户 / 多币种子项（label + 金额 + 币种）。
+     *
+     * @param label    明细名（如「赠送余额」「充值余额」）
+     * @param amount   金额
+     * @param currency 币种
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditPart(String label, BigDecimal amount, String currency) {
+    }
+
+    /**
+     * 单个 Key 的余额读数（{@code /credit} 的 {@code keys} 行）。
+     *
+     * <p>失败的行只有 index / mask / ok / error，其余字段为 null 且不输出
+     * （{@code NON_NULL} 复刻旧 Map 版「失败行不含 null 键」的 JSON 形态）。</p>
+     *
+     * @param index    Key 序号
+     * @param mask     脱敏 Key
+     * @param ok       是否查到读数
+     * @param source   命中的实现标识（如 host / openai / moss / sensenova）
+     * @param remain   剩余
+     * @param used     已用
+     * @param total    总量（remain + used）
+     * @param currency 币种
+     * @param parts    多段明细
+     * @param error    失败原因（成功行为 null）
+     * @param extra    供应商专属结构化数据（按 source 区分形态，如 sensenova 的
+     *                 plan / pools 令牌窗口明细），前端据此按供应商渲染不同余额视图；
+     *                 未提供的实现不输出该键
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditReading(int index, String mask, boolean ok, String source,
+                         BigDecimal remain, BigDecimal used, BigDecimal total,
+                         String currency, List<CreditPart> parts, String error,
+                         Map<String, Object> extra) {
+    }
+
+    /**
+     * 汇总余额：同币种各 Key 之和。
+     *
+     * @param remain 剩余之和
+     * @param used   已用之和
+     * @param total  总量（remain + used）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditTotal(BigDecimal remain, BigDecimal used, BigDecimal total) {
+    }
+
+    /**
+     * {@code /credit} 完整载荷（前端契约字段名保持 snake_case）。
+     *
+     * @param providerId 供应商标识
+     * @param url        上游地址
+     * @param kind       余额口径（显式配置或 auto）
+     * @param candidates 候选实现清单
+     * @param level      口径分级（official / openai / relay / manual / none / uncovered）
+     * @param loginUrl   「账号登录」入口（无可登录实现时为 null）
+     * @param ok         是否至少一个 Key 查到读数
+     * @param currency   汇总币种（取第一条成功读数）
+     * @param total      汇总余额
+     * @param keys       逐 Key 读数
+     * @param cached     是否命中缓存（缓存命中 / 快照回放为 true，实时查询为 false）
+     * @param cachedAt   缓存时间（epoch 毫秒）
+     * @param ageSeconds 缓存年龄（秒）
+     * @param message    不可查询时的原因说明
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditPanelPayload(@JsonProperty("provider_id") String providerId, String url, String kind,
+                              List<String> candidates, String level,
+                              @JsonProperty("login_url") String loginUrl, boolean ok, String currency,
+                              CreditTotal total, List<CreditReading> keys, Boolean cached,
+                              @JsonProperty("cached_at") Long cachedAt,
+                              @JsonProperty("age_seconds") Long ageSeconds, String message) {
+
+        /**
+         * 缓存命中副本：保留原读数，改写缓存三件套（cached / cached_at / age_seconds）。
+         *
+         * @param at 命中的快照时间（epoch 毫秒）
+         * @return 带缓存标记的新载荷
+         */
+        CreditPanelPayload cachedCopy(long at) {
+            long now = System.currentTimeMillis();
+            return new CreditPanelPayload(providerId, url, kind, candidates, level, loginUrl, ok,
+                    currency, total, keys, true, at, (now - at) / 1000L, message);
+        }
+    }
+
+    /**
+     * 余额同步报告（「同步」响应的 {@code credit} 分节）。
+     *
+     * @param keys     参与查询的 Key 数
+     * @param ok       是否至少一个 Key 查到读数
+     * @param success  查到读数的 Key 数
+     * @param failed   失败的 Key 数
+     * @param syncedAt 本次同步时间（epoch 毫秒；跳过时为 null）
+     * @param message  跳过原因（正常同步时为 null）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record CreditSyncReport(int keys, boolean ok, long success, long failed,
+                                   @JsonProperty("synced_at") Long syncedAt, String message) {
+
+        /**
+         * 跳过报告：无 Key / 无余额口径，未出网。
+         *
+         * @param reason 跳过原因
+         * @return 报告
+         */
+        static CreditSyncReport skipped(String reason) {
+            return new CreditSyncReport(0, false, 0, 0, null, reason);
+        }
+    }
+
+    /**
+     * 余额读数快照：缓存时间 + 完整响应载荷
+     *
+     * @param at      缓存时间（epoch 毫秒）
+     * @param payload 完整响应
+     */
+    private record CreditSnapshot(long at, CreditPanelPayload payload) {
+    }
+
+    /**
+     * 余额读数的缓存指纹：供应商 + 上游地址 + Key 列表 + 余额口径，任一变化即视为新键。
+     *
+     * @param providerId     供应商标识
+     * @param baseUrl        上游地址
+     * @param keys           参与查询的 Key
+     * @param configuredKind 显式余额实现（可为 null）
+     * @param extra          供应商扩展配置
+     * @return 指纹串
+     */
+    private static String creditFingerprint(String providerId, String baseUrl, List<String> keys,
+                                            String configuredKind, Map<String, Object> extra) {
+        return providerId + "|" + baseUrl + "|" + keys + "|" + configuredKind
+                + "|" + strOf(extra, "credit_url") + "|" + strOf(extra, "credit_expression")
+                + "|" + strOf(extra, "credit_mapping");
+    }
+
+    /**
+     * 写入余额读数缓存：超限时先清过期条目，仍超则整体清空。
+     *
+     * @param fingerprint 缓存指纹
+     * @param payload     完整响应
+     */
+    private static void cacheCredit(String fingerprint, CreditPanelPayload payload) {
+        if (CREDIT_CACHE.size() >= CREDIT_CACHE_LIMIT) {
+            long now = System.currentTimeMillis();
+            CREDIT_CACHE.values().removeIf(snapshot -> now - snapshot.at() > CREDIT_CACHE_TTL_MS);
+            if (CREDIT_CACHE.size() >= CREDIT_CACHE_LIMIT) {
+                CREDIT_CACHE.clear();
+            }
+        }
+        CREDIT_CACHE.put(fingerprint, new CreditSnapshot(System.currentTimeMillis(), payload));
+    }
+
+    /**
+     * 余额密钥哈希：SHA-256 十六进制（落库不存明文）。
+     *
+     * @param key 余额密钥明文
+     * @return 64 位十六进制串
+     */
+    private static String creditKeyHash(String key) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) {
+                hex.append(Character.forDigit((b >> 4) & 0xF, 16))
+                        .append(Character.forDigit(b & 0xF, 16));
+            }
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            // JVM 必有 SHA-256；异常环境退化为哈希码，至少不落明文
+            return String.format("%064x", key.hashCode());
+        }
+    }
+
+    /**
+     * 把本轮逐 Key 读数落库（先删后增，整批同一 synced_at）。
+     *
+     * <p>落库失败只记日志：余额面板的主链路（进程内缓存 + 实时查询）不受影响。</p>
+     *
+     * @param providerId 供应商标识
+     * @param keys       参与查询的 Key（与 rows 同序）
+     * @param rows       creditOfKey 产出的逐 Key 读数
+     */
+    private void persistCreditSnapshots(String providerId, List<String> keys, List<CreditReading> rows) {
+        try {
+            long now = System.currentTimeMillis();
+            List<SysAiProviderCredit> snapshots = new ArrayList<>(rows.size());
+            for (int i = 0; i < rows.size(); i++) {
+                CreditReading row = rows.get(i);
+                SysAiProviderCredit snapshot = new SysAiProviderCredit();
+                snapshot.setProviderId(providerId);
+                snapshot.setKeyHash(creditKeyHash(keys.get(i)));
+                snapshot.setKeyMask(maskKey(keys.get(i)));
+                snapshot.setOk(row.ok());
+                snapshot.setRemain(row.remain() == null ? null : row.remain().doubleValue());
+                snapshot.setUsed(row.used() == null ? null : row.used().doubleValue());
+                snapshot.setTotal(row.total() == null ? null : row.total().doubleValue());
+                snapshot.setCurrency(row.currency());
+                snapshot.setSource(row.source());
+                snapshot.setParts(objectMapper.writeValueAsString(row.parts()));
+                snapshot.setExtra(row.extra() == null ? null : objectMapper.writeValueAsString(row.extra()));
+                snapshot.setError(row.error());
+                snapshot.setSyncedAt(now);
+                snapshot.setCreateTime(now);
+                snapshot.setUpdateTime(now);
+                snapshots.add(snapshot);
+            }
+            providerCreditSnapshotService.replaceAll(snapshots);
+        } catch (Exception e) {
+            log.warn("[ProviderCredit] 余额快照落库失败 provider={}: {}", providerId, e.getMessage());
+        }
+    }
+
+    /**
+     * 读最近一次落库的按 Key 快照，拼成 /credit 页面载荷。
+     *
+     * <p>只在「快照未过期（TTL 内）且 Key 清单与当前完全一致」时可用；
+     * 否则返回 null 走实时回源。汇总口径与实时查询一致：只累加与第一条
+     * 成功读数同币种的行。</p>
+     *
+     * @param entity         供应商
+     * @param extra          供应商扩展配置
+     * @param keys           当前参与查询的 Key
+     * @param configuredKind 显式余额实现（可为 null）
+     * @return 页面载荷；快照不可用时为 null
+     */
+    private CreditPanelPayload persistedCreditPayload(SysAccountChannel entity, Map<String, Object> extra,
+                                                      List<String> keys, String configuredKind) {
+        List<SysAiProviderCredit> snapshots = providerCreditSnapshotService.listByProvider(entity.getProviderId());
+        if (snapshots.isEmpty()) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+        Long syncedAt = snapshots.get(0).getSyncedAt();
+        if (syncedAt == null || now - syncedAt > CREDIT_CACHE_TTL_MS) {
+            return null;
+        }
+        Map<String, SysAiProviderCredit> byHash = new HashMap<>(snapshots.size() * 2);
+        for (SysAiProviderCredit snapshot : snapshots) {
+            byHash.put(snapshot.getKeyHash(), snapshot);
+        }
+        List<CreditReading> rows = new ArrayList<>(keys.size());
+        for (int i = 0; i < keys.size(); i++) {
+            SysAiProviderCredit snapshot = byHash.get(creditKeyHash(keys.get(i)));
+            if (snapshot == null) {
+                // Key 清单已变（增删改密钥）：落库快照与当前口径不一致，回源
+                return null;
+            }
+            rows.add(creditRowOfSnapshot(snapshot, i));
+        }
+        BigDecimal sumRemain = BigDecimal.ZERO;
+        BigDecimal sumUsed = BigDecimal.ZERO;
+        boolean anyRemain = false;
+        String currency = null;
+        for (CreditReading row : rows) {
+            if (row.remain() == null) {
+                continue;
+            }
+            anyRemain = true;
+            if (currency == null) {
+                currency = row.currency();
+            }
+            if (currency == null || currency.equals(row.currency())) {
+                sumRemain = sumRemain.add(row.remain());
+                if (row.used() != null) {
+                    sumUsed = sumUsed.add(row.used());
+                }
+            }
+        }
+        boolean anyOk = rows.stream().anyMatch(CreditReading::ok);
+        return new CreditPanelPayload(entity.getProviderId(),
+                entity.getBaseUrl() == null ? "" : entity.getBaseUrl().trim(),
+                configuredKind == null ? "auto" : configuredKind,
+                candidateKinds(entity, extra), creditLevel(entity, extra), findLoginUrl(entity, extra),
+                anyOk, currency, creditTotal(anyRemain ? sumRemain : null, sumUsed), rows, true, syncedAt,
+                (now - syncedAt) / 1000L, null);
+    }
+
+    /**
+     * 落库快照 → /credit 逐 Key 行（结构与实时查询的 creditRow 一致）。
+     *
+     * @param snapshot 快照行
+     * @param index    Key 序号
+     * @return 页面行
+     */
+    private CreditReading creditRowOfSnapshot(SysAiProviderCredit snapshot, int index) {
+        boolean ok = Boolean.TRUE.equals(snapshot.getOk());
+        String error = !ok && snapshot.getError() != null && !snapshot.getError().isBlank()
+                ? snapshot.getError() : null;
+        return new CreditReading(index, snapshot.getKeyMask(), ok, snapshot.getSource(),
+                snapshot.getRemain() == null ? null : BigDecimal.valueOf(snapshot.getRemain()),
+                snapshot.getUsed() == null ? null : BigDecimal.valueOf(snapshot.getUsed()),
+                snapshot.getTotal() == null ? null : BigDecimal.valueOf(snapshot.getTotal()),
+                snapshot.getCurrency(), creditPartsOfSnapshot(snapshot.getParts()), error,
+                creditExtraOfSnapshot(snapshot.getExtra()));
+    }
+
+    /**
+     * 反序列化快照里的多段读数 JSON；损坏时返回空列表（不抛异常）。
+     *
+     * @param partsJson 快照 JSON
+     * @return 多段读数
+     */
+    private List<CreditPart> creditPartsOfSnapshot(String partsJson) {
+        if (partsJson == null || partsJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<CreditPart> parts = objectMapper.readValue(partsJson, new TypeReference<List<CreditPart>>() {
+            });
+            return parts == null ? List.of() : parts;
+        } catch (Exception ignored) {
+            // 快照 JSON 损坏：按无多段读数处理
+        }
+        return List.of();
+    }
+
+    /**
+     * 反序列化快照里的供应商专属结构化数据 JSON（sub2api 订阅明细等）；
+     * 损坏时返回 null（不抛异常，前端按无 extra 渲染）。
+     *
+     * @param extraJson 快照 JSON
+     * @return 供应商专属结构化数据；无 / 损坏时为 null
+     */
+    private Map<String, Object> creditExtraOfSnapshot(String extraJson) {
+        if (extraJson == null || extraJson.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> extra = objectMapper.readValue(extraJson, new TypeReference<Map<String, Object>>() {
+            });
+            return extra == null || extra.isEmpty() ? null : extra;
+        } catch (Exception ignored) {
+            // 快照 JSON 损坏：按无 extra 处理
+        }
+        return null;
+    }
+
+    /**
+     * 拆分余额密钥：支持多账号，换行 / 逗号 / 分号（含全角）分隔，保序去重去空。
+     *
+     * @param raw 页面保存的余额密钥原文
+     * @return Key 列表
+     */
+    private static List<String> splitCreditKeys(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        LinkedHashSet<String> keys = new LinkedHashSet<>();
+        for (String piece : raw.split("[\\r\\n,;，；]+")) {
+            String key = piece.trim();
+            if (!key.isBlank()) {
+                keys.add(key);
+            }
+        }
+        return new ArrayList<>(keys);
+    }
+
+    /**
      * 供应商余额与用量（只读）。
      *
-     * <p>把一个供应商的每个 Key 当成一次独立的余额读数：Key 即令牌，地址取供应商的
-     * 上游地址（或 {@code extra.credit_url}），查询实现由 {@code extra.credit_kind}
-     * 指定；没指定时按「厂商官方 → OpenAI 官方 → OpenAI 兼容计费」
+     * <p>把一个供应商的每个 Key 当成一次独立的余额读数：Key 即令牌（或
+     * {@code extra.credit_key} 余额专用密钥），地址取供应商的上游地址（或
+     * {@code extra.credit_url}），查询实现由 {@code extra.credit_kind} 指定；
+     * 没指定时按「厂商官方 → OpenAI 官方 → OpenAI 兼容计费 → Moss 非官方」
      * 依次回落，第一条查到数的实现胜出。余额口径完全复用 {@link CreditQueries}
      * （与渠道管理页同一套 SPI），本接口只负责把 N 个 Key 的读数收成一份可直接渲染的
      * 结构，不承载任何厂商特有的字段解析。</p>
@@ -1736,77 +2087,332 @@ public class ApiProviderController {
      * <p>失败不抛异常：单个 Key 查不到只在该行写 {@code error}，页面照常有数据可看。
      * 汇总余额只累加与第一条成功读数同币种的行，避免 USD 与 CNY 直接相加。</p>
      *
+     * <p>余额密钥支持多账号（换行 / 逗号 / 分号分隔），逐 Key 查询后分别展示并汇总；
+     * 读数带 5 分钟缓存（{@code refresh=true} 强制回源），命中时响应多出
+     * {@code cached / cached_at / age_seconds} 三个字段。</p>
+     *
      * @param providerId 供应商标识
+     * @param refresh    跳过缓存强制回源
      * @return { provider_id, url, kind, ok, currency, total:{remain,used,total}, keys:[...] }
      */
     @Permission("admin")
     @GetMapping("/providers/{provider_id}/credit")
-    public ApiResult<Map<String, Object>> providerCredit(@PathVariable("provider_id") String providerId) {
-        SysAiProvider entity = requireProvider(providerId);
+    public ApiResult<CreditPanelPayload> providerCredit(@PathVariable("provider_id") String providerId,
+            @RequestParam(value = "refresh", required = false, defaultValue = "false") boolean refresh) {
+        SysAccountChannel entity = requireProvider(providerId);
         Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
         String baseUrl = entity.getBaseUrl() == null ? "" : entity.getBaseUrl().trim();
         String configuredKind = str(extra, "credit_kind");
-        List<String> keys = extractAllKeys(entity.getCredentials());
-        List<Map<String, Object>> rows = new ArrayList<>(keys.size());
-        Map<String, Object> out = new LinkedHashMap<>(8);
-        out.put("provider_id", providerId);
-        out.put("url", baseUrl);
-        out.put("kind", configuredKind == null ? "auto" : configuredKind);
-        // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → 表达式」
-        out.put("candidates", candidateKinds(entity, extra));
+        String kind = configuredKind == null ? "auto" : configuredKind;
+        // 余额专用密钥（extra.credit_key）：Moss 这类「查询令牌 ≠ 渠道 Key」的上游用它查余额；
+        // 支持多账号：换行 / 逗号 / 分号分隔逐个查，没配沿用渠道 Key 逐个查
+        String creditKey = str(extra, "credit_key");
+        List<String> keys = creditKey != null ? splitCreditKeys(creditKey) : extractAllKeys(entity.getCredentials());
+        // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → Moss 非官方 → 表达式」
+        List<String> candidates = candidateKinds(entity, extra);
         // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ uncovered（官方站点但未收录余额接口）/
         // relay（中转站按协议探测）/ manual（页面上指定了唯一实现）/ none（没有上游地址，查不了）
         String level = creditLevel(entity, extra);
-        out.put("level", level);
+        // 「账号登录」入口：候选实现里能给出登录页的（如 Agnes），前端据此展示按钮
+        String loginUrl = findLoginUrl(entity, extra);
+        CreditPanelPayload blocked = null;
         if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
-            out.put("ok", false);
-            out.put("message", "未配置上游地址，无法查询余额");
-            out.put("keys", rows);
-            return ApiResult.ok(out);
-        }
-        if ("uncovered".equals(level)) {
+            blocked = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level, loginUrl,
+                    false, null, null, List.of(), null, null, null, "未配置上游地址，无法查询余额");
+        } else if ("uncovered".equals(level)) {
             String host = hostOf(baseUrl);
             String vendor = entity.getPlatform() == null || entity.getPlatform().isBlank()
                     ? "该厂商" : entity.getPlatform();
-            out.put("ok", false);
-            out.put("message", "上游是 " + vendor + " 官方站点（" + (host == null ? baseUrl : host) + "），"
-                    + "本系统未收录它的余额接口；官方站点上没有中转计费协议，不做探测。"
-                    + "可在「余额」里配自定义地址与字段表达式。");
-            out.put("keys", rows);
-            return ApiResult.ok(out);
+            blocked = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level, loginUrl,
+                    false, null, null, List.of(), null, null, null,
+                    "上游是 " + vendor + " 官方站点（" + (host == null ? baseUrl : host) + "），"
+                            + "本系统未收录它的余额接口；官方站点上没有中转计费协议，不做探测。"
+                            + "可在「余额」里配自定义地址与字段表达式。");
+        } else if (keys.isEmpty()) {
+            blocked = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level, loginUrl,
+                    false, null, null, List.of(), null, null, null, "没有可用的 Key，无法查询余额");
         }
-        if (keys.isEmpty()) {
-            out.put("ok", false);
-            out.put("message", "没有可用的 Key，无法查询余额");
-            out.put("keys", rows);
-            return ApiResult.ok(out);
+        if (blocked != null) {
+            return ApiResult.ok(blocked);
         }
+        // 读数缓存：余额接口逐 Key 出网，面板每次打开都真查一遍太重；同一口径 5 分钟内直接回缓存，
+        // 改了地址 / Key / 口径指纹即变，refresh=true 强制回源
+        String fingerprint = creditFingerprint(providerId, baseUrl, keys, configuredKind, extra);
+        if (!refresh) {
+            CreditSnapshot hit = CREDIT_CACHE.get(fingerprint);
+            if (hit != null && System.currentTimeMillis() - hit.at() <= CREDIT_CACHE_TTL_MS) {
+                return ApiResult.ok(hit.payload().cachedCopy(hit.at()));
+            }
+            // 进程内缓存未命中（重启 / 过期）：读最近一次落库的按 Key 快照，TTL 内仍当缓存用，
+            // 面板不再因为重启就显示「暂无数据」
+            CreditPanelPayload persisted = persistedCreditPayload(entity, extra, keys, configuredKind);
+            if (persisted != null) {
+                CREDIT_CACHE.put(fingerprint, new CreditSnapshot(persisted.cachedAt(), persisted));
+                return ApiResult.ok(persisted);
+            }
+        }
+        List<CreditReading> rows = new ArrayList<>(keys.size());
         BigDecimal sumRemain = BigDecimal.ZERO;
         BigDecimal sumUsed = BigDecimal.ZERO;
+        boolean anyRemain = false;
         String currency = null;
         for (int i = 0; i < keys.size(); i++) {
-            Map<String, Object> row = creditOfKey(entity, extra, keys.get(i), i);
+            CreditReading row = creditOfKey(entity, extra, keys.get(i), i);
             rows.add(row);
-            if (!(row.get("remain") instanceof BigDecimal remain)) {
+            if (row.remain() == null) {
                 continue;
             }
-            String rowCurrency = (String) row.get("currency");
+            anyRemain = true;
             if (currency == null) {
-                currency = rowCurrency;
+                currency = row.currency();
             }
-            if (currency == null || currency.equals(rowCurrency)) {
-                sumRemain = sumRemain.add(remain);
-                if (row.get("used") instanceof BigDecimal used) {
-                    sumUsed = sumUsed.add(used);
+            if (currency == null || currency.equals(row.currency())) {
+                sumRemain = sumRemain.add(row.remain());
+                if (row.used() != null) {
+                    sumUsed = sumUsed.add(row.used());
                 }
             }
         }
-        boolean anyOk = rows.stream().anyMatch(row -> Boolean.TRUE.equals(row.get("ok")));
-        out.put("ok", anyOk);
-        out.put("currency", currency);
-        out.put("total", creditTotal(sumRemain, sumUsed));
-        out.put("keys", rows);
+        boolean anyOk = rows.stream().anyMatch(CreditReading::ok);
+        CreditPanelPayload payload = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level,
+                loginUrl, anyOk, currency, creditTotal(anyRemain ? sumRemain : null, sumUsed), rows, false, null, null, null);
+        cacheCredit(fingerprint, payload);
+        // 按 Key 持久化：重启 / 过期后面板仍能读到最近一次读数，时间轮也复用这张表
+        persistCreditSnapshots(providerId, keys, rows);
+        return ApiResult.ok(payload);
+    }
+
+    /**
+     * 发起「账号登录」：后端无头浏览器打开供应商官方登录页，返回可嵌入的实时页面地址。
+     *
+     * <p>前端用 iframe 加载该地址：用户在弹窗里看到并直接操作的就是后端无头浏览器
+     * 里的真实登录页（跨机器可用，纯 HTTP 传输画面与交互）。本系统不保存、不读取
+     * 账号密码；登录成功后由后端按供应商声明的截获口径（Cookie / 响应体 /
+     * localStorage，见 {@link CreditQueryProvider#loginCaptureUrlPattern()}）取回
+     * 余额令牌，前端轮询到 {@code captured} 即自动回填「余额密钥」。</p>
+     *
+     * @param providerId 供应商标识
+     * @param request    当前请求（用于拼实时页面对外地址）
+     * @return { session_id, status, embed_url, expire_at }
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/credit-login/start")
+    public ApiResult<Map<String, Object>> creditLoginStart(@PathVariable("provider_id") String providerId,
+            HttpServletRequest request) {
+        SysAccountChannel entity = requireProvider(providerId);
+        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        String loginUrl = resolveLoginUrl(entity);
+        CreditQueryProvider loginProvider = findLoginProvider(entity, extra);
+        CreditLoginSessionManager.LoginView view;
+        try {
+            view = creditLoginSessions.start(loginUrl, findLoginCookieName(entity, extra),
+                    loginProvider == null ? null : loginProvider.loginCaptureUrlPattern(),
+                    loginProvider == null ? null : loginProvider.loginTokenJsonPath(),
+                    findLoginStorageKey(entity, extra));
+        } catch (ApiException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            log.warn("[credit-login] 启动登录浏览器失败: {}", e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "启动内嵌浏览器失败：" + e.getMessage());
+        }
+        return ApiResult.ok(loginView(view, embedUrl(request, view)));
+    }
+
+    /**
+     * 拼实时登录页（可嵌入 iframe）的完整地址。
+     *
+     * <p>CdpLiveServer 是独立端口的内嵌 HTTP 服务，用户浏览器必须能直连它。
+     * 优先用配置 {@code chua.ai.credit-login.live-base-url}（网关 / 反代场景）；
+     * 缺省按当前请求的来源主机（Origin / Referer / Host 里的主机名）拼接，
+     * 端口用实时服务的实际监听端口。</p>
+     *
+     * @param request 当前请求
+     * @param view    会话视图（含嵌入路径）
+     * @return 完整地址；会话无嵌入路径或来源不可解析为 null
+     */
+    private String embedUrl(HttpServletRequest request, CreditLoginSessionManager.LoginView view) {
+        String path = view.embedPath();
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        if (liveBaseUrl != null && !liveBaseUrl.isBlank()) {
+            return liveBaseUrl.endsWith("/") ? liveBaseUrl.substring(0, liveBaseUrl.length() - 1) + path
+                    : liveBaseUrl + path;
+        }
+        String host = originHost(request);
+        return host.isBlank() ? null : "http://" + host + ":" + creditLoginSessions.livePort() + path;
+    }
+
+    /**
+     * 取当前请求的来源主机名：依次看 Origin / Referer / Host，
+     * 兼容「前端经代理调后端、实时页要直连后端主机」的部署。
+     *
+     * @param request 当前请求
+     * @return 主机名；解析不出为空串
+     */
+    private static String originHost(HttpServletRequest request) {
+        for (String header : new String[]{"Origin", "Referer", "Host"}) {
+            String value = request.getHeader(header);
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            String authority = value.trim();
+            try {
+                URI uri = URI.create(authority.contains("://") ? authority : "http://" + authority);
+                if (uri.getHost() != null && !uri.getHost().isBlank()) {
+                    return uri.getHost();
+                }
+            } catch (Exception ignored) {
+                // 非法头按缺失处理，继续看下一个
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 轮询账号登录会话：检测令牌截获状态。
+     *
+     * @param providerId 供应商标识
+     * @param sessionId  会话标识
+     * @return { session_id, status, token, expire_at }
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/credit-login/{session_id}/poll")
+    public ApiResult<Map<String, Object>> creditLoginPoll(@PathVariable("provider_id") String providerId,
+            @PathVariable("session_id") String sessionId) {
+        requireProvider(providerId);
+        return ApiResult.ok(loginView(creditLoginSessions.poll(sessionId), null));
+    }
+
+    /**
+     * 结束账号登录会话并回收浏览器进程。
+     *
+     * @param providerId 供应商标识
+     * @param sessionId  会话标识
+     * @return { ok: true }
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/credit-login/{session_id}/close")
+    public ApiResult<Map<String, Object>> creditLoginClose(@PathVariable("provider_id") String providerId,
+            @PathVariable("session_id") String sessionId) {
+        requireProvider(providerId);
+        creditLoginSessions.close(sessionId);
+        Map<String, Object> out = new LinkedHashMap<>(2);
+        out.put("ok", true);
         return ApiResult.ok(out);
+    }
+
+    /**
+     * 解析供应商的「账号登录」入口页；不支持时报参数错误。
+     *
+     * @param entity 供应商
+     * @return 登录页地址
+     */
+    private String resolveLoginUrl(SysAccountChannel entity) {
+        String loginUrl = findLoginUrl(entity, entity.getExtra() == null
+                ? new HashMap<>(4) : entity.getExtra());
+        if (loginUrl == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不支持「账号登录」获取余额密钥");
+        }
+        return loginUrl;
+    }
+
+    /**
+     * 找供应商的「账号登录」入口页。
+     *
+     * <p>优先级：页面显式配置（extra.credit_login_url）→ 候选余额实现里第一个
+     * 给出登录页的（如 Agnes / DeepSeek / sub2api，其中 sub2api 按站点地址推出登录页）。</p>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 登录页地址；没有支持账号登录的实现为 null
+     */
+    private String findLoginUrl(SysAccountChannel entity, Map<String, Object> extra) {
+        String explicit = str(extra, "credit_login_url");
+        if (explicit != null) {
+            return explicit;
+        }
+        for (String kind : candidateKinds(entity, extra)) {
+            CreditQueryProvider provider = CreditQueries.find(kind);
+            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
+                return provider.loginPageUrl(entity.getBaseUrl());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 找供应商「账号登录」的 Cookie 截获名：候选余额实现里第一个声明 Cookie 名的。
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return Cookie 名；走响应体截获（无 Cookie 模式）为 null
+     */
+    private String findLoginCookieName(SysAccountChannel entity, Map<String, Object> extra) {
+        for (String kind : candidateKinds(entity, extra)) {
+            CreditQueryProvider provider = CreditQueries.find(kind);
+            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null && provider.loginCookieName() != null) {
+                return provider.loginCookieName();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 找供应商「账号登录」的 localStorage 键名：候选余额实现里第一个声明
+     * localStorage 截获的（如 SenseNova 的 access_token）。
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return localStorage 键名；不走 localStorage 截获为 null
+     */
+    private String findLoginStorageKey(SysAccountChannel entity, Map<String, Object> extra) {
+        for (String kind : candidateKinds(entity, extra)) {
+            CreditQueryProvider provider = CreditQueries.find(kind);
+            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null && provider.loginStorageKey() != null) {
+                return provider.loginStorageKey();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 找供应商「账号登录」的候选余额实现：第一个给出登录页的。
+     *
+     * <p>登录响应的截获口径（响应地址特征、令牌 JSON 路径）由该实现声明，
+     * 见 {@link CreditQueryProvider#loginCaptureUrlPattern()} 与
+     * {@link CreditQueryProvider#loginTokenJsonPath()}。</p>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 候选实现；没有支持账号登录的实现为 null
+     */
+    private CreditQueryProvider findLoginProvider(SysAccountChannel entity, Map<String, Object> extra) {
+        for (String kind : candidateKinds(entity, extra)) {
+            CreditQueryProvider provider = CreditQueries.find(kind);
+            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
+                return provider;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 登录会话视图 → 页面载荷。
+     *
+     * @param view     会话视图
+     * @param embedUrl 实时页面完整地址；轮询接口不重复返回，传 null
+     * @return 页面载荷
+     */
+    private static Map<String, Object> loginView(CreditLoginSessionManager.LoginView view, String embedUrl) {
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("session_id", view.sessionId());
+        out.put("status", view.status());
+        out.put("token", view.token());
+        out.put("message", view.message());
+        out.put("embed_url", embedUrl);
+        out.put("expire_at", view.expireAt());
+        return out;
     }
 
     /**
@@ -1821,8 +2427,8 @@ public class ApiProviderController {
      * @param index  Key 序号（从 0 开始，页面按它排序）
      * @return 单个 Key 的读数行
      */
-    private Map<String, Object> creditOfKey(SysAiProvider entity, Map<String, Object> extra,
-                                            String key, int index) {
+    private CreditReading creditOfKey(SysAccountChannel entity, Map<String, Object> extra,
+                                      String key, int index) {
         List<CreditQuery> queries = creditCandidates(entity, extra, key);
         List<String> failures = new ArrayList<>(queries.size());
         for (CreditQuery query : queries) {
@@ -1833,12 +2439,8 @@ public class ApiProviderController {
             String reason = result.getError() == null ? "未返回余额" : result.getError();
             failures.add(query.getKind() + ": " + reason);
         }
-        Map<String, Object> row = new LinkedHashMap<>(4);
-        row.put("index", index);
-        row.put("mask", maskKey(key));
-        row.put("ok", false);
-        row.put("error", creditErrorText(failures));
-        return row;
+        return new CreditReading(index, maskKey(key), false, null, null, null, null, null, null,
+                creditErrorText(failures), null);
     }
 
     /**
@@ -1849,12 +2451,9 @@ public class ApiProviderController {
      * @param key    查询令牌
      * @return 候选查询（按尝试顺序）
      */
-    private List<CreditQuery> creditCandidates(SysAiProvider entity, Map<String, Object> extra, String key) {
+    private List<CreditQuery> creditCandidates(SysAccountChannel entity, Map<String, Object> extra, String key) {
         List<String> kinds = candidateKinds(entity, extra);
-        String kind = str(extra, "credit_kind");
-        if (kind != null && "auto".equalsIgnoreCase(kind.trim())) {
-            kind = null;
-        }
+        String kind = explicitCreditKind(extra);
         String explicitUrl = str(extra, "credit_url");
         String expression = str(extra, "credit_expression");
         String brand = creditBrand(entity, extra);
@@ -1868,15 +2467,99 @@ public class ApiProviderController {
             query.setExpression(expression);
             // Key 所属站点：host / openai 用它自证「这把 Key 是不是这家的」
             query.setOriginUrl(entity.getBaseUrl());
-            // 厂商官方 / OpenAI 官方实现自带地址，只有显式配了地址才覆盖；
-            // billing 需要站点根地址，没配就用供应商的上游地址
-            boolean builtinUrl = "host".equals(candidate) || "openai".equals(candidate);
+            // 厂商官方 / OpenAI 官方 / 登记表 / Moss 实现自带地址，只有显式配了地址才覆盖；
+            // billing / custom 需要站点根地址，没配就用供应商的上游地址
+            boolean builtinUrl = "host".equals(candidate) || "openai".equals(candidate)
+                    || "registry".equals(candidate) || "moss".equals(candidate)
+                    || "agnes".equals(candidate) || "deepseek".equals(candidate)
+                    || "opencode".equals(candidate) || "opencode-console".equals(candidate)
+                    || "shusheng".equals(candidate) || "zai".equals(candidate)
+                    || "volc-plan".equals(candidate)
+                    || "ppio".equals(candidate) || "anthropic".equals(candidate)
+                    || "xai".equals(candidate) || "sensenova".equals(candidate);
             String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
             query.setUrl(url);
-            applyCreditAuth(query, entity, extra, key);
+            if ("custom".equals(candidate)) {
+                // 自定义映射：后端字段 → JSONPath / XPath 表达式
+                query.setMapping(creditMappings(extra));
+            }
+            applyCreditAuth(query, entity, extra, key, candidate);
+            applyCreditClientHeaders(query, extra);
+            // AK/SK 签名类余额接口（如阿里云百炼走 BSS 账户余额）从扩展配置取密钥；
+            // Bearer 类实现不读这两个字段，配了也无副作用
+            String accessKey = str(extra, "credit_access_key");
+            String secretKey = str(extra, "credit_secret_key");
+            if (accessKey != null && !accessKey.isBlank()) {
+                query.setAccessKey(accessKey.trim());
+            }
+            if (secretKey != null && !secretKey.isBlank()) {
+                query.setSecretKey(secretKey.trim());
+            }
             queries.add(query);
         }
         return queries;
+    }
+
+    /**
+     * 透传页面配置的 UA / 自定义请求头到余额查询。
+     *
+     * <p>{@code extra.credit_ua} 覆盖默认 User-Agent；{@code extra.credit_headers}
+     * 支持 {@code {name:value}} 对象与 {@code [{name,value}]} 数组两种页面形态。
+     * 不配置时不设头，由 {@code CreditHttp} 落到后端默认值。</p>
+     *
+     * @param query 余额查询请求
+     * @param extra 供应商扩展配置
+     */
+    private static void applyCreditClientHeaders(CreditQuery query, Map<String, Object> extra) {
+        String ua = strOf(extra, "credit_ua");
+        if (ua != null && !ua.isBlank()) {
+            query.header("User-Agent", ua.trim());
+        }
+        Object raw = extra.get("credit_headers");
+        if (raw instanceof Map<?, ?> headers) {
+            for (Map.Entry<?, ?> entry : headers.entrySet()) {
+                if (entry.getKey() == null || entry.getValue() == null) {
+                    continue;
+                }
+                String name = entry.getKey().toString().trim();
+                String value = entry.getValue().toString().trim();
+                if (!name.isBlank() && !value.isBlank()) {
+                    query.header(name, value);
+                }
+            }
+        } else if (raw instanceof List<?> rows) {
+            for (Object item : rows) {
+                if (!(item instanceof Map<?, ?> map)) {
+                    continue;
+                }
+                Object name = map.get("name");
+                Object value = map.get("value");
+                if (name == null || value == null) {
+                    continue;
+                }
+                String nameText = name.toString().trim();
+                String valueText = value.toString().trim();
+                if (!nameText.isBlank() && !valueText.isBlank()) {
+                    query.header(nameText, valueText);
+                }
+            }
+        }
+    }
+
+    /**
+     * 读取显式配置的余额实现（extra.credit_kind）。
+     *
+     * <p>「自动」在表单里是删除键；历史上若已存成字面量 auto，按未配置处理。</p>
+     *
+     * @param extra 供应商扩展配置
+     * @return 实现标识；未配置或「自动」时为 null
+     */
+    private String explicitCreditKind(Map<String, Object> extra) {
+        String kind = str(extra, "credit_kind");
+        if (kind == null || "auto".equalsIgnoreCase(kind.trim())) {
+            return null;
+        }
+        return kind.trim();
     }
 
     /**
@@ -1889,30 +2572,126 @@ public class ApiProviderController {
      * @param extra  供应商扩展配置
      * @return 实现标识（按尝试顺序）
      */
-    private List<String> candidateKinds(SysAiProvider entity, Map<String, Object> extra) {
-        String kind = str(extra, "credit_kind");
-        // 「自动」在表单里是删除键；历史上若已存成字面量 auto，按未配置处理
-        if (kind != null && "auto".equalsIgnoreCase(kind.trim())) {
-            kind = null;
-        }
+    private List<String> candidateKinds(SysAccountChannel entity, Map<String, Object> extra) {
+        String kind = explicitCreditKind(extra);
         if (kind != null) {
             return List.of(kind);
         }
         List<String> kinds = new ArrayList<>(5);
         String brand = creditBrand(entity, extra);
+        // DeepSeek 平台门户余额接口：用「账号登录」截获的门户会话令牌查
+        // platform.deepseek.com，排最前（会话令牌在官方 API 余额接口上必失败，
+        // 先试它省一次白发请求）；登记表里的 API Key 口径（host）保留在后面兜底
+        if (isDeepSeekProvider(entity)) {
+            kinds.add("deepseek");
+        }
+        // OpenCode（Go / Zen）官方用量 + 预算聚合接口：API Key Bearer 鉴权，多端点聚合
+        // （登记表单表达式装不下），只对 OpenCode 官方站点有意义，放 host 之前
+        if (isOpencodeProvider(entity)) {
+            kinds.add("opencode");
+        }
+        // OpenCode 控制台现金余额：控制台同源接口（非公开文档 API），需 __Host-console_session
+        // 会话 Cookie（API Key 会 403），放在官方 API 聚合之后作为 Zen 现金余额口径的回落
+        if (isOpencodeProvider(entity)) {
+            kinds.add("opencode-console");
+        }
         // 官方预设只在这家 Key 确实属于该厂商站点时才试：中转站的 Key 问厂商官方接口只会 401
         if (brand != null && HostCreditQueryProvider.supportsHost(brand)
                 && HostCreditQueryProvider.sameOrigin(brand, entity.getBaseUrl())) {
             kinds.add("host");
         }
+        // 阿里云百炼（DashScope）的 sk- API Key 没有厂商余额接口（/v1/credits 等路径均 404），
+        // 账户余额走登记表的阿里云 BSS 预设（AK/SK 签名，品牌别名挂在 aliyun-bss 上）；
+        // 缺 AK/SK 时签名器提前拦下并提示配置，不发必然失败的请求
+        if (isAliyunBailianProvider(entity)) {
+            kinds.add("host");
+        }
+        // 腾讯云 / 华为云 / 七牛云 / 百度千帆：模型域名（hunyuan.cloud.tencent.com /
+        // modelarts-maas.com / api.qnaigc.com / qianfan.baidubce.com）与计费域名不同根，
+        // 同样走登记表的账户余额预设（AK/SK 签名，品牌别名挂在 tencent-billing / huawei-bss /
+        // qiniu / baidu-bce 上）；缺 AK/SK 时签名器提前拦下并提示配置，不发必然失败的请求
+        if (isTencentCloudProvider(entity) || isHuaweiCloudProvider(entity) || isQiniuProvider(entity)
+                || isQianfanProvider(entity)) {
+            kinds.add("host");
+        }
+        // 豆包（火山方舟）：模型域名（ark.cn-beijing.volces.com）与计费域名
+        // （billing.volcengineapi.com）不同根。订阅聚合（余额 + 个人套餐 + 用量窗口，
+        // kind=volc-plan）放最前——首个成功者胜出，聚合成功时把纯余额的 host 口径
+        // 顶掉，页面才能看到订阅窗口；聚合失败（如方舟接口抖动）仍有 host 纯余额兜底。
+        // 均为 AK/SK 签名，缺 AK/SK 时各自提前拦下并提示配置，不发必然失败的请求
+        if (isDoubaoProvider(entity)) {
+            kinds.add("volc-plan");
+            kinds.add("host");
+        }
         if (isOfficialOpenAi(entity.getBaseUrl())) {
             kinds.add("openai");
+        }
+        // Agnes 平台余额接口：只对 Agnes 站点有意义，别的站点上纯属白发请求；
+        // 放在通用探测之前，Agnes 站点不必先白发 billing / new-api / sub2api 三个请求
+        if (isAgnesProvider(entity)) {
+            kinds.add("agnes");
+        }
+        // SenseNova（商汤）平台余额接口：只对商汤官方站点有意义，同上放探测之前
+        if (isSenseNovaProvider(entity)) {
+            kinds.add("sensenova");
+        }
+        // 书生（InternAI）平台余额接口：用「账号登录」截获的门户会话 Cookie（uaa-token）
+        // 查 discovery.intern-ai.org.cn，只对书生官方站点有意义，同上放探测之前
+        if (isShushengProvider(entity)) {
+            kinds.add("shusheng");
+        }
+        // sub2api 订阅余额接口：用「账号登录」截获的会话 JWT 查 /api/v1/subscriptions，
+        // 只对 platform=sub2api 的行有意义，放通用探测之前
+        if (isSub2ApiProvider(entity)) {
+            kinds.add("sub2api");
+        }
+        // MiniMax 平台余额接口：用「账号登录」截获的会话令牌查 Coding Plan 配额，
+        // 只对 MiniMax 官方站点有意义，放通用探测之前（kind 用 minimax-platform，避开 account 旧渠道体系已占用的 minimax）
+        if (isMinimaxProvider(entity)) {
+            kinds.add("minimax-platform");
+        }
+        // ModelScope（魔搭）没有独立余额端点：发一次 max_tokens=1 的最小对话请求，
+        // 从响应头读当日限流配额；只对魔搭官方站点有意义，放通用探测之前
+        if (isModelScopeProvider(entity)) {
+            kinds.add("modelscope");
+        }
+        // z.ai（智谱 GLM）余额与 Coding Plan 配额：标准 API Key Bearer 鉴权，按 Key 所属
+        // 站点取国际站 api.z.ai / 国内站 open.bigmodel.cn 口径，放通用探测之前
+        if (isZaiProvider(entity)) {
+            kinds.add("zai");
+        }
+        // OpenRouter 余额：官方 /api/v1/credits 返回累计充值/消费、需管理 Key，普通推理 Key
+        // 会 403，实现里自动回落 /api/v1/key 读本 Key 用量；只对 OpenRouter 官方站点有意义，
+        // 放通用探测之前
+        if (isOpenRouterProvider(entity)) {
+            kinds.add("openrouter");
+        }
+        // PPIO 派欧云余额：计费域 api.ppio.com 与模型网关 api.ppinfra.com 不同主域，
+        // 登记表 sameOrigin 兜底不可用，走专用实现；只对 PPIO 官方站点有意义，
+        // 放通用探测之前
+        if (isPpioProvider(entity)) {
+            kinds.add("ppio");
+        }
+        // Anthropic 官方预付余额：官方没有 API-Key 余额接口，走控制台非公开接口
+        // （sessionKey 会话 Cookie 鉴权，org_id 可自动发现）；只对 Anthropic 官方站点
+        // 有意义，放通用探测之前
+        if (isAnthropicProvider(entity)) {
+            kinds.add("anthropic");
+        }
+        // xAI 官方预付余额：余额在 Management API，需管理密钥（推理 API Key 查不了），
+        // team_id 可经管理密钥校验接口自动发现；只对 xAI 官方站点有意义，放通用探测之前
+        if (isXaiProvider(entity)) {
+            kinds.add("xai");
         }
         // 探测只对「上游不是厂商官方站点」有意义：官方站点没有 OpenAI 兼容计费接口，
         // 拿官方 Key 去问 /v1/dashboard/billing/* 只会 404，纯属白发一次请求。
         // 显式配了 credit_url 时以用户配置为准，照旧探测。
         if (str(extra, "credit_url") != null || !isOfficialSite(entity)) {
             kinds.addAll(AUTO_CREDIT_KINDS);
+        }
+        // Moss 非官方余额接口：只对 Moss 站点有意义，别的站点上纯属白发请求
+        if (isMossProvider(entity)) {
+            kinds.add("moss");
         }
         if (str(extra, "credit_expression") != null) {
             kinds.add(CreditQueries.KIND_EXPRESSION);
@@ -1938,9 +2717,8 @@ public class ApiProviderController {
      * @param extra  供应商扩展配置
      * @return 分级标识
      */
-    private String creditLevel(SysAiProvider entity, Map<String, Object> extra) {
-        String kind = str(extra, "credit_kind");
-        if (kind != null && !"auto".equalsIgnoreCase(kind.trim())) {
+    private String creditLevel(SysAccountChannel entity, Map<String, Object> extra) {
+        if (explicitCreditKind(extra) != null) {
             return "manual";
         }
         String brand = creditBrand(entity, extra);
@@ -1959,6 +2737,23 @@ public class ApiProviderController {
                 || str(extra, "credit_url") != null;
         if (!remote) {
             return "none";
+        }
+        // Agnes / DeepSeek / SenseNova / 书生 / sub2api / MiniMax 有专属平台实现（官方平台接口 + 账号登录取令牌）：
+        // 即使登记表把它们当官方站点，也不算「未收录」，照常查询；
+        // 阿里云百炼 / 腾讯云 / 华为云 / 七牛云 / 百度千帆 / 豆包（火山方舟）走登记表的账户余额预设（AK/SK 签名），同样算已收录；
+        // ModelScope（魔搭）走「对话请求读响应头限流配额」的专用实现，也算已收录；
+        // OpenRouter 走专用实现（/credits 需管理 Key，普通推理 Key 回落 /api/v1/key），也算已收录；
+        // OpenCode 走官方用量 + 预算聚合的专属实现（kind=opencode），也算已收录；
+        // PPIO / Anthropic / xAI 走各自官方余额口径的专属实现（跨主域 / 控制台 Cookie / Management API），也算已收录
+        if (isAgnesProvider(entity) || isDeepSeekProvider(entity) || isSenseNovaProvider(entity)
+                || isShushengProvider(entity) || isSub2ApiProvider(entity) || isMinimaxProvider(entity)
+                || isAliyunBailianProvider(entity) || isTencentCloudProvider(entity)
+                || isHuaweiCloudProvider(entity) || isQiniuProvider(entity)
+                || isQianfanProvider(entity) || isDoubaoProvider(entity)
+                || isModelScopeProvider(entity) || isZaiProvider(entity)
+                || isOpenRouterProvider(entity) || isOpencodeProvider(entity)
+                || isPpioProvider(entity) || isAnthropicProvider(entity) || isXaiProvider(entity)) {
+            return "official";
         }
         // 官方站点但没有可用的官方余额接口：不当中转站，一个请求都不发。
         // 官方站点上没有 OpenAI 兼容计费接口，探测只会 404，还会把「查不到」写成假结论。
@@ -1979,7 +2774,7 @@ public class ApiProviderController {
      * @param entity 供应商
      * @return 官方站点为 true
      */
-    private static boolean isOfficialSite(SysAiProvider entity) {
+    private static boolean isOfficialSite(SysAccountChannel entity) {
         return ProviderRegistries.isOfficialSite(entity.getPlatform(), entity.getBaseUrl());
     }
 
@@ -2005,12 +2800,30 @@ public class ApiProviderController {
      * {@code Authorization}），前缀取 {@code extra.auth_prefix}（自定义头缺省无前缀）。
      * 自定义头走 {@link CreditQuery#header}，标准头走令牌字段，交给请求出口统一补前缀。</p>
      *
+     * <p>例外：Moss 门户与 MiniMax 控制台认 Cookie 会话令牌（Moss 为
+     * {@code moss_studio_prod_access_token}，MiniMax 确切 Cookie 名以真实登录观测为准），
+     * 令牌原值交给各自实现包装成 Cookie；Agnes / DeepSeek / sub2api / z.ai 余额接口
+     * 固定 Bearer，令牌原值交给请求出口补前缀。这些实现都不走渠道鉴权前缀。</p>
+     *
      * @param query  余额查询
      * @param entity 供应商
      * @param extra  供应商扩展配置
      * @param key    API Key
+     * @param kind   余额实现标识
      */
-    private static void applyCreditAuth(CreditQuery query, SysAiProvider entity, Map<String, Object> extra, String key) {
+    private static void applyCreditAuth(CreditQuery query, SysAccountChannel entity,
+                                        Map<String, Object> extra, String key, String kind) {
+        if ("moss".equals(kind) || "agnes".equals(kind) || "deepseek".equals(kind) || "sub2api".equals(kind)
+                || "minimax-platform".equals(kind) || "zai".equals(kind) || "opencode".equals(kind)
+                || "opencode-console".equals(kind) || "ppio".equals(kind)
+                || "anthropic".equals(kind) || "xai".equals(kind)) {
+            // Moss / MiniMax / OpenCode / Anthropic 控制台认 Cookie 会话（opencode-console 为
+            // __Host-console_session、anthropic 为 sessionKey，由各自实现包装成 Cookie 头）、
+            // Agnes / DeepSeek / sub2api / z.ai / OpenCode / PPIO / xAI 官方 API 认 Bearer：
+            // 令牌原值交给各自实现 / 请求出口包装，不走渠道鉴权前缀，避免与余额接口的实际口径错位
+            query.setToken(key);
+            return;
+        }
         if (AuthHeaders.isNone(entity.getAuthScheme())) {
             return;
         }
@@ -2028,24 +2841,35 @@ public class ApiProviderController {
     /**
      * 供应商对应的厂商标识（用于 host 余额实现）。
      *
-     * <p>优先取 {@code extra.credit_host}，其次平台名，最后从上游地址的域名推断；
-     * 推断不出时回落平台名，非收录厂商会由实现返回「未收录」。</p>
+     * <p>优先取 {@code extra.credit_host}，其次按上游地址主机名查登记表，再次平台名，
+     * 最后从上游地址的域名模糊推断；推断不出时回落平台名，非收录厂商会由实现返回
+     * 「未收录」。</p>
+     *
+     * <p>上游地址命中登记表主机时以地址为准：同一厂商的多个站点是不同登记条目
+     * （如 SiliconFlow 国内站 api.siliconflow.cn 与国际站 api.siliconflow.com），
+     * 平台名只能命中其中一个，拿错站预设会被同源校验拦下，官方余额候选被误杀。</p>
      *
      * @param entity 供应商
      * @param extra  供应商扩展配置
      * @return 厂商标识；都取不到时为 null
      */
-    private static String creditBrand(SysAiProvider entity, Map<String, Object> extra) {
+    private static String creditBrand(SysAccountChannel entity, Map<String, Object> extra) {
         String explicit = strOf(extra, "credit_host");
         if (explicit != null) {
             return explicit.trim().toLowerCase(Locale.ROOT);
         }
         String platform = entity.getPlatform() == null
                 ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        String host = hostOf(entity.getBaseUrl());
+        if (host != null) {
+            String byHost = HostCreditQueryProvider.brandByHost(host);
+            if (byHost != null && !byHost.isBlank()) {
+                return byHost;
+            }
+        }
         if (CREDIT_HOST_BRANDS.contains(platform)) {
             return platform;
         }
-        String host = hostOf(entity.getBaseUrl());
         if (host != null) {
             for (String brand : CREDIT_HOST_BRANDS) {
                 if (host.contains(brand)) {
@@ -2068,6 +2892,445 @@ public class ApiProviderController {
     private static boolean isOfficialOpenAi(String url) {
         String host = hostOf(url);
         return host != null && ("api.openai.com".equals(host) || host.endsWith(".openai.com"));
+    }
+
+    /**
+     * 是否是 Moss 站点：只有它才值得试 Moss 门户的非官方余额接口。
+     *
+     * <p>Moss 的对话 API 在 {@code api.mosi.cn}，余额接口在 {@code platform.moss.cn}，
+     * 域名不同源，所以平台名与两个域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return Moss 站点为 true
+     */
+    private static boolean isMossProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("moss".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && (host.endsWith("moss.cn") || host.endsWith("mosi.cn"));
+    }
+
+    /**
+     * 是否是 Agnes 站点：只有它才值得试 Agnes 平台余额接口与「账号登录」。
+     *
+     * <p>Agnes 的对话与余额接口都在 {@code *.agnes-ai.com}，平台名与域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return Agnes 站点为 true
+     */
+    private static boolean isAgnesProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("agnes".equals(platform) || "agnes-ai".equals(platform) || "agnes ai".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("agnes-ai.com");
+    }
+
+    /**
+     * 是否是 DeepSeek 站点：只有它才值得试 DeepSeek 平台门户余额接口与「账号登录」。
+     *
+     * <p>DeepSeek 的对话 API 在 {@code api.deepseek.com}（登记表里的 API Key 余额
+     * 口径），门户与余额接口在 {@code platform.deepseek.com}（会话令牌口径），
+     * 平台名与两个域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return DeepSeek 站点为 true
+     */
+    private static boolean isDeepSeekProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("deepseek".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("deepseek.com");
+    }
+
+    /**
+     * 是否是 SenseNova（商汤）站点：只有它才值得试 SenseNova 平台余额接口与「账号登录」。
+     *
+     * <p>SenseNova 的对话 API 在 {@code token.sensenova.cn}，登录与余额接口在
+     * {@code platform.sensenova.cn}，平台名（含别名 sensetime）与域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return SenseNova 站点为 true
+     */
+    private static boolean isSenseNovaProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("sensenova".equals(platform) || "sensetime".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("sensenova.cn");
+    }
+
+    /**
+     * 是否是书生（InternAI）站点：只有它才值得试书生平台余额接口与「账号登录」。
+     *
+     * <p>书生的对话 API 在 {@code discovery-api.intern-ai.org.cn}，门户与墨点余额接口在
+     * {@code discovery.intern-ai.org.cn}（SSO 登录在 sso.openxlab.org.cn），平台名
+     * （含别名 intern-ai / internai）与域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 书生站点为 true
+     */
+    private static boolean isShushengProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("shusheng".equals(platform) || "intern-ai".equals(platform) || "internai".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("intern-ai.org.cn");
+    }
+
+    /**
+     * 是否是阿里云百炼（DashScope / 通义千问）站点。
+     *
+     * <p>百炼的 sk- API Key 没有厂商余额接口，账户余额走登记表里的阿里云 BSS 预设
+     * （AK/SK 签名，品牌别名挂在 aliyun-bss 上），所以平台名（含 dashscope / qwen /
+     * bailian / tongyi / aliyun / alibaba 及编程、Token 套餐端点别名）与
+     * aliyuncs.com 域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 阿里云百炼站点为 true
+     */
+    private static boolean isAliyunBailianProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("aliyun-bailian".equals(platform) || "dashscope".equals(platform) || "bailian".equals(platform)
+                || "qwen".equals(platform) || "tongyi".equals(platform) || "aliyun".equals(platform)
+                || "alibaba".equals(platform) || "alibaba-coding-plan-cn".equals(platform)
+                || "alibaba-coding-plan".equals(platform) || "alibaba-token-plan-cn".equals(platform)
+                || "alibaba-token-plan".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("aliyuncs.com");
+    }
+
+    /**
+     * 是否是腾讯云（混元）站点。
+     *
+     * <p>腾讯云的对话 API 在 {@code api.hunyuan.cloud.tencent.com}，账户余额走登记表里的
+     * 腾讯云 Billing 预设（AK/SK 签名，品牌别名挂在 tencent-billing 上），所以平台名
+     * （含 tencent / tencentcloud / hunyuan 等写法）与 tencent 系域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 腾讯云站点为 true
+     */
+    private static boolean isTencentCloudProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.startsWith("tencent") || "hunyuan".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && (host.endsWith("tencentcloudapi.com") || host.endsWith("tencent.com"));
+    }
+
+    /**
+     * 是否是华为云（MaaS）站点。
+     *
+     * <p>华为云 MaaS 的对话 API 在 {@code api.modelarts-maas.com}，账户余额走登记表里的
+     * 华为云 BSS 预设（AK/SK 签名，品牌别名挂在 huawei-bss 上），所以平台名
+     * （含 huawei / huaweicloud / huawei-maas 等写法）与相关域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 华为云站点为 true
+     */
+    private static boolean isHuaweiCloudProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.startsWith("huawei")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && (host.endsWith("myhuaweicloud.com") || host.endsWith("modelarts-maas.com")
+                || host.endsWith("huaweicloud.com"));
+    }
+
+    /**
+     * 是否是七牛云站点。
+     *
+     * <p>七牛云 AI 推理的对话 API 在 {@code api.qnaigc.com}，账户余额走登记表里的
+     * 七牛财务预设（AK/SK 签名，品牌别名挂在 qiniu 上），所以平台名
+     * （qiniu / qiniu-ai）与两个域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 七牛云站点为 true
+     */
+    private static boolean isQiniuProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("qiniu".equals(platform) || "qiniu-ai".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && (host.endsWith("qiniu.com") || host.endsWith("qnaigc.com"));
+    }
+
+    /**
+     * 是否是百度千帆（百度智能云）站点。
+     *
+     * <p>千帆的对话 API 在 {@code qianfan.baidubce.com}，账户余额走登记表里的
+     * 百度智能云财务预设（AK/SK 签名，品牌别名挂在 baidu-bce 上），所以平台名
+     * （qianfan / qianfan-coding-plan）与 baidubce.com 域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 百度千帆站点为 true
+     */
+    private static boolean isQianfanProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("qianfan".equals(platform) || "qianfan-coding-plan".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("baidubce.com");
+    }
+
+    /**
+     * 是否是豆包（火山方舟 / Volcengine Ark）站点。
+     *
+     * <p>方舟的对话 API 在 {@code ark.cn-beijing.volces.com}（OpenAI 兼容），没有独立的
+     * 厂商余额接口，账户余额走登记表里的火山 BSS 预设（AK/SK 签名，品牌别名挂在
+     * volc-billing 上），所以平台名（doubao / volcengine / volcengine-coding-plan /
+     * ark 等写法）与 volcengine 系域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 豆包（火山方舟）站点为 true
+     */
+    private static boolean isDoubaoProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("doubao") || platform.startsWith("volcengine")
+                || "ark".equals(platform) || platform.startsWith("ark-")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && (host.endsWith("volces.com") || host.endsWith("volcengine.com"));
+    }
+
+    /**
+     * 是否是 sub2api 站点：只有它才值得试 sub2api 订阅余额接口与「账号登录」。
+     *
+     * <p>sub2api 是开源自建中转，没有统一官方域名，只能按供应商行登记的平台名识别
+     * （目录别名 sub2api / sub-api 都认）。</p>
+     *
+     * @param entity 供应商
+     * @return sub2api 站点为 true
+     */
+    private static boolean isSub2ApiProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        return "sub2api".equals(platform) || "sub-api".equals(platform);
+    }
+
+    /**
+     * 是否是 MiniMax 站点：只有它才值得试 MiniMax 平台余额接口与「账号登录」。
+     *
+     * <p>MiniMax 的对话 API 在 {@code api.minimaxi.chat} / {@code api.minimaxi.com}，
+     * 控制台与 Coding Plan 配额接口在 {@code platform.minimax.cn} / {@code www.minimaxi.com}
+     * （国际站 {@code *.minimax.io}），平台名与相关域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return MiniMax 站点为 true
+     */
+    private static boolean isMinimaxProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("minimax")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.contains("minimax");
+    }
+
+    /**
+     * 是否是 z.ai（智谱 GLM）站点：只有它才值得试 z.ai 余额与 Coding Plan 配额接口。
+     *
+     * <p>z.ai 的对话 API 在 {@code api.z.ai}（国际站）与 {@code open.bigmodel.cn}
+     * （国内站），余额与 Coding Plan 配额也在同域；平台名（z.ai / zai / zhipu / glm
+     * 等别名）与两个官方域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return z.ai 站点为 true
+     */
+    private static boolean isZaiProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("zai") || platform.contains("zhipu") || platform.contains("glm")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        if (host == null) {
+            return false;
+        }
+        return "z.ai".equals(host) || host.endsWith(".z.ai")
+                || "bigmodel.cn".equals(host) || host.endsWith(".bigmodel.cn");
+    }
+
+    /**
+     * 是否是 OpenCode 站点：只有它才值得试 OpenCode 官方用量 + 预算聚合接口。
+     *
+     * <p>OpenCode 的对话上游在 {@code opencode.ai}（Zen / Go），官方用量端点
+     * {@code /zen/go/v1/usage} 与预算端点 {@code /console/api/policies/current-budgets}
+     * 同域；平台名（opencode / opencode-go / opencode-zen 等含 opencode 的写法）
+     * 与域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return OpenCode 站点为 true
+     */
+    private static boolean isOpencodeProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("opencode")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("opencode.ai");
+    }
+
+    /**
+     * 是否是 ModelScope（魔搭）站点：只有它才值得试「对话请求读限流头」的余额口径。
+     *
+     * <p>魔搭的对话 API 在 {@code api-inference.modelscope.cn}（OpenAI 兼容），没有
+     * 独立余额端点；平台名（含别名 model-scope）与 modelscope.cn 域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return 魔搭站点为 true
+     */
+    private static boolean isModelScopeProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("modelscope".equals(platform) || "model-scope".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("modelscope.cn");
+    }
+
+    /**
+     * 是否是 OpenRouter 站点：只有它才值得试官方余额接口（/api/v1/credits 需管理 Key，
+     * 普通推理 Key 403 时回落 /api/v1/key）。平台名与 openrouter.ai 域名都认。
+     *
+     * @param entity 供应商
+     * @return OpenRouter 站点为 true
+     */
+    private static boolean isOpenRouterProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("openrouter")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && ("openrouter.ai".equals(host) || host.endsWith(".openrouter.ai"));
+    }
+
+    /**
+     * 是否是 PPIO 派欧云站点：只有它才值得试 PPIO 计费域余额接口。
+     *
+     * <p>PPIO 的模型网关在 {@code api.ppinfra.com}，余额在计费域 {@code api.ppio.com}
+     * （两个主域不同）；注意 {@code ppinfra} 里不含连续的 {@code ppio} 子串，
+     * contains 判定会漏，域名按后缀判定。平台名（含 ppio / ppinfra / 派欧写法）
+     * 与两个官方域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return PPIO 站点为 true
+     */
+    private static boolean isPpioProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("ppio") || platform.contains("ppinfra") || platform.contains("派欧")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && (host.endsWith("ppinfra.com") || host.endsWith("ppio.com"));
+    }
+
+    /**
+     * 是否是 Anthropic 官方站点：只有它才值得试控制台预付余额接口。
+     *
+     * <p>Anthropic 的对话 API 在 {@code api.anthropic.com}，控制台与预付余额接口在
+     * {@code platform.claude.com}；平台名（含 anthropic / claude 写法）与
+     * anthropic.com / claude.com 官方域名（含子域）都认。</p>
+     *
+     * @param entity 供应商
+     * @return Anthropic 站点为 true
+     */
+    private static boolean isAnthropicProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("anthropic") || platform.contains("claude")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        if (host == null) {
+            return false;
+        }
+        return "anthropic.com".equals(host) || host.endsWith(".anthropic.com")
+                || "claude.com".equals(host) || host.endsWith(".claude.com");
+    }
+
+    /**
+     * 是否是 xAI 官方站点：只有它才值得试 Management API 余额接口。
+     *
+     * <p>xAI 的对话 API 在 {@code api.x.ai}，管理 API 在 {@code management-api.x.ai}；
+     * 平台名（含 xai / grok 写法）与 x.ai 域名都认——域名只按「等于 x.ai 或以
+     * {@code .x.ai} 结尾」判定，不能用 {@code endsWith("x.ai")}，否则会把
+     * apex.ai 之类的其它域名误配进来。</p>
+     *
+     * @param entity 供应商
+     * @return xAI 站点为 true
+     */
+    private static boolean isXaiProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if (platform.contains("xai") || platform.contains("grok")) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && ("x.ai".equals(host) || host.endsWith(".x.ai"));
+    }
+
+    /**
+     * 读取自定义字段映射（extra.credit_mapping）。
+     *
+     * <p>结构：{@code [{field: remain|used|currency, expression: JSONPath/XPath}]}。
+     * 空缺行跳过；一条有效映射都没有时返回 null，custom 实现会回落到整条表达式口径。</p>
+     *
+     * @param extra 供应商扩展配置
+     * @return 映射列表；没有有效映射为 null
+     */
+    private static List<CreditMapping> creditMappings(Map<String, Object> extra) {
+        Object raw = extra.get("credit_mapping");
+        if (!(raw instanceof List<?> rows)) {
+            return null;
+        }
+        List<CreditMapping> mappings = new ArrayList<>(rows.size());
+        for (Object row : rows) {
+            if (!(row instanceof Map<?, ?> map)) {
+                continue;
+            }
+            Object field = map.get("field");
+            Object expression = map.get("expression");
+            if (!(field instanceof String fieldName) || fieldName.isBlank()
+                    || !(expression instanceof String expr) || expr.isBlank()) {
+                continue;
+            }
+            CreditMapping mapping = new CreditMapping();
+            mapping.setField(fieldName.trim().toLowerCase(Locale.ROOT));
+            mapping.setExpression(expr.trim());
+            mappings.add(mapping);
+        }
+        return mappings.isEmpty() ? null : mappings;
     }
 
     /**
@@ -2115,44 +3378,34 @@ public class ApiProviderController {
      * @param key    API Key（生成脱敏展示）
      * @return 读数行
      */
-    private static Map<String, Object> creditRow(CreditResult result, int index, String key) {
+    private static CreditReading creditRow(CreditResult result, int index, String key) {
         List<BalancePart> rawParts = result.getParts() == null ? List.of() : result.getParts();
-        List<Map<String, Object>> parts = new ArrayList<>(rawParts.size());
+        List<CreditPart> parts = new ArrayList<>(rawParts.size());
         for (BalancePart part : rawParts) {
-            Map<String, Object> item = new LinkedHashMap<>(4);
-            item.put("label", part.getLabel());
-            item.put("amount", part.getAmount());
-            item.put("currency", part.getCurrency());
-            parts.add(item);
+            parts.add(new CreditPart(part.getLabel(), part.getAmount(), part.getCurrency()));
         }
         BigDecimal remain = rawParts.isEmpty() ? null : rawParts.get(0).getAmount();
         BigDecimal used = rawParts.size() > 1 ? rawParts.get(1).getAmount() : null;
-        Map<String, Object> row = new LinkedHashMap<>(12);
-        row.put("index", index);
-        row.put("mask", maskKey(key));
-        row.put("ok", true);
-        row.put("source", result.getSource());
-        row.put("remain", remain);
-        row.put("used", used);
-        row.put("total", remain == null ? null : (used == null ? remain : remain.add(used)));
-        row.put("currency", result.getCurrency());
-        row.put("parts", parts);
-        return row;
+        return new CreditReading(index, maskKey(key), true, result.getSource(), remain, used,
+                remain == null ? null : (used == null ? remain : remain.add(used)),
+                result.getCurrency(), parts, null, result.getExtra());
     }
 
     /**
      * 汇总余额。
      *
-     * @param remain 各 Key 剩余之和
+     * <p>没有任何带余额的行（如 ModelScope 只有当日用量、无主余额）时返回 null，
+     * 载荷里省略 total，避免下游把占位的 0 当「余额 0.00」展示。</p>
+     *
+     * @param remain 各 Key 剩余之和；无余额行时为 null
      * @param used   各 Key 已用之和
-     * @return { remain, used, total }
+     * @return 汇总余额（remain / used / total）；无余额行时为 null
      */
-    private static Map<String, Object> creditTotal(BigDecimal remain, BigDecimal used) {
-        Map<String, Object> total = new LinkedHashMap<>(4);
-        total.put("remain", remain);
-        total.put("used", used);
-        total.put("total", remain.add(used));
-        return total;
+    private static CreditTotal creditTotal(BigDecimal remain, BigDecimal used) {
+        if (remain == null) {
+            return null;
+        }
+        return new CreditTotal(remain, used, remain.add(used == null ? BigDecimal.ZERO : used));
     }
 
     /**
@@ -2500,11 +3753,8 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> testProviderModelLatency(
             @PathVariable("provider_id") String providerId,
             @PathVariable("model_name") String modelName) {
-        SysAiProvider provider = requireProvider(providerId);
-        SysAiProviderModel model = modelMapper.selectOne(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId)
-                        .eq(SysAiProviderModel::getModel, modelName));
+        SysAccountChannel provider = requireProvider(providerId);
+        SysAccountChannelModel model = accountChannelModelService.find(providerId, modelName);
         if (model == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在: " + modelName);
         }
@@ -2528,7 +3778,7 @@ public class ApiProviderController {
             metrics.put("latency_ms", latency);
             model.setMetrics(metrics);
             model.setUpdatedAt(System.currentTimeMillis());
-            modelMapper.updateByKey(model);
+            accountChannelModelService.updateByKey(model);
         }
         Map<String, Object> out = new LinkedHashMap<>(5);
         out.put("provider_id", providerId);
@@ -2641,13 +3891,7 @@ public class ApiProviderController {
     @GetMapping("/providers/{provider_id}/connections")
     public ApiResult<List<Map<String, Object>>> listConnections(@PathVariable("provider_id") String providerId) {
         requireVisibleProvider(providerId);
-        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .orderByAsc(SysAiProviderConnection::getCreatedAt);
-        // 账号隔离：连接属于绑定它的用户，不是供应商的公共子项
-        applyConnectionOwnerFilter(wrapper);
-        List<SysAiProviderConnection> conns = connectionMapper.selectList(wrapper);
+        List<SysAccountChannelConnection> conns = accountChannelService.connectionsOf(providerId);
         List<Map<String, Object>> items = conns.stream()
                 .map(this::toConnectionResponse)
                 .collect(Collectors.toList());
@@ -2665,21 +3909,8 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> getConnection(@PathVariable("provider_id") String providerId,
                                                         @PathVariable("role") String role) {
         requireVisibleProvider(providerId);
-        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .eq(SysAiProviderConnection::getRole, role);
-        // 账号隔离：别人的连接按「不存在」处理，不区分「有但没权限」与「没有」
-        applyConnectionOwnerFilter(wrapper);
-        // 同 role 可能同时存在「自己名下」与「NULL 系统池」两行（管理员两者都可见），
-        // selectOne 会抛 TooManyResultsException；取自己名下优先。
-        List<SysAiProviderConnection> matches = connectionMapper.selectList(
-                wrapper.orderByDesc(SysAiProviderConnection::getUserId));
-        SysAiProviderConnection conn = matches.isEmpty() ? null : matches.get(0);
-        if (conn == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
-        }
-        return ApiResult.ok(toConnectionResponse(conn));
+        // 账号隔离与「自己名下优先」的取值规则由账号模块的连接业务负责
+        return ApiResult.ok(toConnectionResponse(accountChannelConnectionService.require(providerId, role)));
     }
 
     /**
@@ -2694,51 +3925,10 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> saveConnection(@PathVariable("provider_id") String providerId,
                                                          @RequestBody Map<String, Object> body) {
-        SysAiProvider entity = requireProvider(providerId);
-        String role = requireStr(body, "role");
-
-        LambdaQueryWrapper<SysAiProviderConnection> lookup =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .eq(SysAiProviderConnection::getRole, role);
-        // 只认自己的连接（管理员另见 NULL 系统池）：别人 role=default 的账号不能被
-        // 「保存」顺手改掉凭证 —— 同一个 provider 下同 role 可能有多行，按账号归属分家。
-        applyConnectionOwnerFilter(lookup);
-        // 管理员同时看得到「自己名下」与「NULL 系统池」两组行，同 role 可能各有一条；
-        // selectOne 遇到两行会抛 TooManyResultsException。取自己名下优先，其次系统池。
-        List<SysAiProviderConnection> matches = connectionMapper.selectList(
-                lookup.orderByDesc(SysAiProviderConnection::getUserId));
-        SysAiProviderConnection existing = matches.isEmpty() ? null : matches.get(0);
-
-        if (existing == null) {
-            // 新建：凭证为必填
-            if (body.get("credentials") == null) {
-                throw new ApiException(ApiErrorCode.INVALID_PARAM, "新建连接时 credentials 必填");
-            }
-            SysAiProviderConnection conn = toConnectionEntity(providerId, body, System.currentTimeMillis());
-            connectionMapper.insert(conn);
-            return ApiResult.ok(toConnectionResponse(conn));
-        } else {
-        // 更新时仅覆盖显式传入的字段，未传凭证时保留原值
-            if (body.containsKey("label")) {
-                existing.setLabel(str(body, "label"));
-            }
-            if (body.containsKey("base_url")) {
-                existing.setBaseUrl(str(body, "base_url"));
-            }
-            if (body.containsKey("auth_scheme")) {
-                existing.setAuthScheme(str(body, "auth_scheme"));
-            }
-            if (body.containsKey("extra")) {
-                existing.setExtra(uncheckedCast(body.get("extra")));
-            }
-            if (body.containsKey("credentials")) {
-                existing.setCredentials(uncheckedCast(body.get("credentials")));
-            }
-            existing.setUpdatedAt(System.currentTimeMillis());
-            connectionMapper.updateById(existing);
-            return ApiResult.ok(toConnectionResponse(existing));
-        }
+        SysAccountChannel entity = requireProvider(providerId);
+        requireStr(body, "role");
+        // 新建必填凭证、更新只覆盖显式字段、归属隔离与事件广播都在账号模块的连接业务里
+        return ApiResult.ok(toConnectionResponse(accountChannelConnectionService.save(providerId, body)));
     }
 
     /**
@@ -2754,16 +3944,8 @@ public class ApiProviderController {
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
                                             @PathVariable("role") String role) {
         requireProvider(providerId);
-        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, providerId)
-                        .eq(SysAiProviderConnection::getRole, role);
-        // 账号隔离：只删自己名下的连接。别人的同 role 行不会被这条请求带走。
-        applyConnectionOwnerFilter(wrapper);
-        int deleted = connectionMapper.delete(wrapper);
-        if (deleted == 0) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
-        }
+        // 只删自己名下的连接，别人的同 role 行不会被这条请求带走
+        accountChannelConnectionService.delete(providerId, role);
         return ApiResult.ok();
     }
 
@@ -2778,18 +3960,12 @@ public class ApiProviderController {
     @GetMapping("/provider-models")
     public ApiResult<List<Map<String, Object>>> listProviderModels(
             @RequestParam(required = false) String provider_id) {
-        LambdaQueryWrapper<SysAiProviderModel> qw = new LambdaQueryWrapper<>();
-        if (provider_id != null) {
-            qw.eq(SysAiProviderModel::getProviderId, provider_id);
-        }
-        qw.orderByAsc(SysAiProviderModel::getCreatedAt);
-
-        List<SysAiProviderModel> models = modelMapper.selectList(qw);
+        List<SysAccountChannelModel> models = accountChannelModelService.listAll(provider_id);
         // ONNX 供应商（用户自己添加、仅管理员可见）的模型同样不外泄
         boolean admin = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
         List<Map<String, Object>> items = new ArrayList<>(8); // 模型数量不可预估
-        for (SysAiProviderModel model : models) {
-            SysAiProvider provider = providerMapper.selectById(model.getProviderId());
+        for (SysAccountChannelModel model : models) {
+            SysAccountChannel provider = accountChannelService.find(model.getProviderId());
             if (provider != null) {
                 if (!admin && isOnnxRow(provider)) {
                     continue;
@@ -2811,40 +3987,30 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> saveProviderModel(@RequestBody Map<String, Object> body) {
         String providerId = requireStr(body, "provider_id");
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         Map<String, Object> modelInput = uncheckedCast(body.get("model"));
         if (modelInput == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "model 不能为空");
         }
         String modelName = requireStr(modelInput, "model");
 
-        SysAiProviderModel existing = modelMapper.selectOne(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId)
-                        .eq(SysAiProviderModel::getModel, modelName));
+        SysAccountChannelModel existing = accountChannelModelService.find(providerId, modelName);
 
         if (existing == null) {
-            SysAiProviderModel newModel = toModelEntity(providerId, modelInput, System.currentTimeMillis());
+            SysAccountChannelModel newModel = toModelEntity(providerId, modelInput, System.currentTimeMillis());
             // 新增：模型 ID 确定后，用已采集的指标补全上下文长度等参数（仅未配置时）
             enrichFromMetrics(provider, newModel);
-            modelMapper.insert(newModel);
+            // 唯一性与排序由账号模块的模型业务负责
+            accountChannelModelService.create(newModel);
             refreshOnnxDevice(provider);
+            invalidateRouteCache("provider-model-created");
             return ApiResult.ok(toProviderModelResponse(provider, newModel));
         } else {
             applyModelInput(existing, modelInput);
-            existing.setUpdatedAt(System.currentTimeMillis());
-            // 复合主键由提供者和模型共同确定，避免同名模型跨提供者误更新。
-            // 可空字段显式更新，确保传入 null 时能够清空已有配置。
-            modelMapper.update(existing, new LambdaUpdateWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getProviderId, providerId)
-                    .eq(SysAiProviderModel::getModel, modelName)
-                    .set(SysAiProviderModel::getAlias, existing.getAlias())
-                    .set(SysAiProviderModel::getContextWindow, existing.getContextWindow())
-                    .set(SysAiProviderModel::getMaxTokens, existing.getMaxTokens())
-                    .set(SysAiProviderModel::getTemperature, existing.getTemperature())
-                    .set(SysAiProviderModel::getTopP, existing.getTopP())
-                    .set(SysAiProviderModel::getFrequencyPenalty, existing.getFrequencyPenalty()));
+            // 可空字段显式更新（允许清空）由账号模块的模型业务负责
+            accountChannelModelService.saveEdited(existing);
             refreshOnnxDevice(provider);
+            invalidateRouteCache("provider-model-updated");
             return ApiResult.ok(toProviderModelResponse(provider, existing));
         }
     }
@@ -2860,39 +4026,21 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> renameProviderModel(@RequestBody Map<String, Object> body) {
         String providerId = requireStr(body, "provider_id");
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         String oldName = requireStr(body, "model");
         String newName = requireStr(body, "new_model");
-        // 新模型标识与旧标识相同时直接拒绝
-        if (newName.equals(oldName)) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "新模型 ID 不能与原 ID 相同");
-        }
-        SysAiProviderModel existing = modelMapper.selectOne(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId)
-                        .eq(SysAiProviderModel::getModel, oldName));
+        SysAccountChannelModel existing = accountChannelModelService.find(providerId, oldName);
         if (existing == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + oldName);
         }
-        // 目标标识已被占用时返回冲突
-        SysAiProviderModel dup = modelMapper.selectOne(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId)
-                        .eq(SysAiProviderModel::getModel, newName));
-        if (dup != null) {
-            throw new ApiException(ApiErrorCode.CONFLICT, "模型 ID 已存在: " + newName);
-        }
-        // 在同一事务中复制到新标识并删除旧记录
-        existing.setModel(newName);
-        existing.setUpdatedAt(System.currentTimeMillis());
+        // 同名校验、复制到新标识并删除旧行，统一由账号模块的模型业务负责
+        SysAccountChannelModel renamed = accountChannelModelService.rename(providerId, oldName, newName);
         // 改名后：新 ID 可能对应另一份已采集指标，用它补全上下文长度等（仅未配置时）
-        enrichFromMetrics(provider, existing);
-        modelMapper.insert(existing);
-        modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
-                .eq(SysAiProviderModel::getProviderId, providerId)
-                .eq(SysAiProviderModel::getModel, oldName));
+        if (enrichFromMetrics(provider, renamed)) {
+            accountChannelModelService.updateByKey(renamed);
+        }
         refreshOnnxDevice(provider);
-        return ApiResult.ok(toProviderModelResponse(provider, existing));
+        return ApiResult.ok(toProviderModelResponse(provider, renamed));
     }
 
     /**
@@ -2907,46 +4055,12 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
                                                @RequestParam("model") String model) {
-        SysAiProvider provider = requireProvider(providerId);
-        int deleted = modelMapper.delete(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId)
-                        .eq(SysAiProviderModel::getModel, model));
-        if (deleted == 0) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + model);
-        }
+        SysAccountChannel provider = requireProvider(providerId);
+        // 模型行由账号模块删除；路由组成员与 ONNX 设备覆盖属于 AI 侧，紧随其后清理
+        accountChannelModelService.delete(providerId, model);
         pruneRouterGroupMembers(providerId, model);
         refreshOnnxDevice(provider);
         return ApiResult.ok();
-    }
-
-    /**
-     * 模型行删除后，把它从所有路由组成员表里摘掉。
-     *
-     * <p>路由组的成员就是模型库里的行；成员行被删后如果仍留在组里，那个成员会在
-     * 每次路由时尝试构造客户端并失败。这里在同一个事务里一并清理，让「删模型」与
-     * 「清成员」同进同退。</p>
-     *
-     * @param providerId 被删模型所属供应商
-     * @param model      被删模型
-     */
-    private void pruneRouterGroupMembers(String providerId, String model) {
-        try {
-            List<SysAiProvider> all = providerMapper.selectList(new LambdaQueryWrapper<SysAiProvider>()
-                    .eq(SysAiProvider::getPlatform, ProviderRouteTargets.ROUTER_GROUP_PLATFORM));
-            for (com.chua.starter.ai.support.chat.RouterGroupService.PrunedGroup pruned
-                    : routerGroupService.pruneMemberDeletions(all, providerId, model)) {
-                SysAiProvider update = new SysAiProvider();
-                update.setProviderId(pruned.providerId());
-                update.setExtra(pruned.extra());
-                update.setUpdatedAt(System.currentTimeMillis());
-                // updateById 才会带上 JacksonTypeHandler（见 saveRouterGroup 的说明）
-                providerMapper.updateById(update);
-                modelClientResolver.invalidateRouterGroup(pruned.providerId());
-            }
-        } catch (Exception e) {
-            log.warn("清理路由组成员失败 {}:{}: {}", providerId, model, e.getMessage());
-        }
     }
 
     /**
@@ -2969,45 +4083,21 @@ public class ApiProviderController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
 
-        // 先整批定位标识，再批量删除：定位失败直接拦截整批
-        List<String[]> pairs = new ArrayList<>(ids.size());
+        // 格式校验、整批定位与逐条删除都在账号模块的模型业务里
+        int deleted = accountChannelModelService.deleteBatch(ids);
+        // 路由组成员与 ONNX 设备覆盖属于 AI 侧，删完模型行后一并清理
+        String lastProviderId = null;
         for (String id : ids) {
-            if (id == null || id.isBlank()) {
+            com.chua.starter.account.channel.service.AccountChannelModelService.ModelKey key =
+                    com.chua.starter.account.channel.service.AccountChannelModelService.ModelKey.parse(id);
+            if (key == null) {
                 continue;
             }
-            int separator = id.indexOf(':');
-            String providerId = separator > 0 ? id.substring(0, separator) : null;
-            String model = separator > 0 ? id.substring(separator + 1) : null;
-            if (providerId == null || providerId.isBlank() || model == null || model.isBlank()) {
-                throw new ApiException(ApiErrorCode.INVALID_PARAM,
-                        "模型ID格式非法，应为 providerId:modelName");
-            }
-            requireProvider(providerId);
-            pairs.add(new String[] { providerId, model });
-        }
-        if (pairs.isEmpty()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "无有效的模型ID");
-        }
-
-        int deleted = 0;
-        String lastProviderId = null;
-        for (String[] pair : pairs) {
-            String providerId = pair[0];
-            SysAiProvider provider = requireProvider(providerId);
-            int removed = modelMapper.delete(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getProviderId, providerId)
-                            .eq(SysAiProviderModel::getModel, pair[1]));
-            if (removed > 0) {
-                deleted++;
-            }
-            // 同一 provider 连续删除时只刷新一次
-            if (!providerId.equals(lastProviderId)) {
-                refreshOnnxDevice(provider);
-                lastProviderId = providerId;
-            }
-            if (removed > 0) {
-                pruneRouterGroupMembers(providerId, pair[1]);
+            pruneRouterGroupMembers(key.providerId(), key.model());
+            // 同一渠道连续删除时只刷新一次设备覆盖
+            if (!key.providerId().equals(lastProviderId)) {
+                refreshOnnxDevice(requireProvider(key.providerId()));
+                lastProviderId = key.providerId();
             }
         }
 
@@ -3036,8 +4126,8 @@ public class ApiProviderController {
         boolean onnxVisible = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
         List<Map<String, Object>> items = new ArrayList<>();
         Set<String> seen = new HashSet<>();
-        for (SysAiProviderModel row : routerGroupService.searchMemberCandidates(keyword)) {
-            SysAiProvider owner = providerMapper.selectById(row.getProviderId());
+        for (SysAccountChannelModel row : routerGroupService.searchMemberCandidates(keyword)) {
+            SysAccountChannel owner = accountChannelService.find(row.getProviderId());
             if (owner == null || ProviderRouteTargets.isRouterGroup(owner.getPlatform())) {
                 continue;
             }
@@ -3045,7 +4135,8 @@ public class ApiProviderController {
             if (Boolean.FALSE.equals(owner.getEnabled())) {
                 continue;
             }
-            // 与模型页同一口径：渠道 OAuth 行（非免费渠道）在模型页不展示
+            // 与模型页同一口径：渠道 OAuth 镀铬行（非免登录渠道）在模型页不展示；
+            // chat-<渠道> 免登录行与免费渠道行一样保留
             if (isOAuthChannelRow(owner) && !isFreeChannelRow(owner)) {
                 continue;
             }
@@ -3086,7 +4177,7 @@ public class ApiProviderController {
      */
     @GetMapping("/providers/{provider_id}/router-group/live")
     public ApiResult<Map<String, Object>> getRouterGroupLive(@PathVariable("provider_id") String providerId) {
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         if (!routerGroupService.isRouterGroup(provider)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
         }
@@ -3115,7 +4206,7 @@ public class ApiProviderController {
      */
     @GetMapping("/providers/{provider_id}/router-group")
     public ApiResult<Map<String, Object>> getRouterGroup(@PathVariable("provider_id") String providerId) {
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         if (!routerGroupService.isRouterGroup(provider)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
         }
@@ -3150,7 +4241,7 @@ public class ApiProviderController {
             @PathVariable("provider_id") String providerId,
             @RequestParam(value = "window_hours", required = false, defaultValue = "1") int windowHours,
             @RequestParam(value = "key_limit", required = false, defaultValue = "8") int keyLimit) {
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         if (!routerGroupService.isRouterGroup(provider)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
         }
@@ -3382,7 +4473,7 @@ public class ApiProviderController {
      * 保存路由组配置：成员（新增 / 移除 / 顺序）、策略与每模型 effort。
      *
      * <p>成员一律来自「已添加的模型库」：{@code members} 里出现的每一行都必须能在
-     * {@code sys_ai_provider_model} 里查到，否则整批拒绝 —— 避免配置上引用一个不存在的模型，
+     * {@code sys_account_channel_model} 里查到，否则整批拒绝 —— 避免配置上引用一个不存在的模型，
      * 直到真正调用时才失败。写入后让该路由组的客户端缓存立即失效。</p>
      *
      * @param providerId 路由组供应商 ID
@@ -3394,7 +4485,7 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> saveRouterGroup(@PathVariable("provider_id") String providerId,
                                                           @RequestBody Map<String, Object> body) {
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         if (!routerGroupService.isRouterGroup(provider)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
         }
@@ -3402,14 +4493,8 @@ public class ApiProviderController {
                 parseRouterGroupMembers(providerId, body);
         com.chua.common.support.ai.chat.aggregate.RouterGroupSetting setting =
                 routerGroupService.applyRequest(provider, body, members);
-        SysAiProvider update = new SysAiProvider();
-        update.setProviderId(providerId);
-        update.setExtra(routerGroupService.writeSetting(provider, setting));
-        update.setUpdatedAt(System.currentTimeMillis());
-        // 必须用 updateById：LambdaUpdateWrapper.set(...) 不会带上实体的 TypeHandler，
-        // MyBatis-Plus 会退化成默认的 Java 序列化写 BLOB 字节，MySQL 直接报
-        // 「Incorrect string value '\xAC\xED\x00\x05sr...'」。
-        providerMapper.updateById(update);
+        // extra 列由账号模块统一写入（带 JacksonTypeHandler，不会退化成 BLOB 字节）
+        accountChannelService.updateExtra(providerId, routerGroupService.writeSetting(provider, setting));
         modelClientResolver.invalidateRouterGroup(providerId);
         Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("setting", routerGroupService.toResponse(setting));
@@ -3431,7 +4516,7 @@ public class ApiProviderController {
     @Transactional
     public ApiResult<Map<String, Object>> reorderRouterGroup(@PathVariable("provider_id") String providerId,
                                                              @RequestBody Map<String, Object> body) {
-        SysAiProvider provider = requireProvider(providerId);
+        SysAccountChannel provider = requireProvider(providerId);
         if (!routerGroupService.isRouterGroup(provider)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不是路由组: " + providerId);
         }
@@ -3457,12 +4542,8 @@ public class ApiProviderController {
         // 未出现在新顺序里的成员按原相对顺序补齐，不允许因排序丢成员
         ordered.addAll(byLabel.values());
         setting.setMembers(ordered);
-        SysAiProvider update = new SysAiProvider();
-        update.setProviderId(providerId);
-        update.setExtra(routerGroupService.writeSetting(provider, setting));
-        update.setUpdatedAt(System.currentTimeMillis());
-        // updateById 才会带上 JacksonTypeHandler（见 saveRouterGroup 的说明）
-        providerMapper.updateById(update);
+        // extra 列由账号模块统一写入（带 JacksonTypeHandler）
+        accountChannelService.updateExtra(providerId, routerGroupService.writeSetting(provider, setting));
         modelClientResolver.invalidateRouterGroup(providerId);
         Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("setting", routerGroupService.toResponse(setting));
@@ -3497,7 +4578,7 @@ public class ApiProviderController {
             if (groupId.equals(memberProviderId)) {
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "路由组不能把自己加入成员: " + model);
             }
-            SysAiProvider owner = providerMapper.selectById(memberProviderId);
+            SysAccountChannel owner = accountChannelService.find(memberProviderId);
             if (owner == null || ProviderRouteTargets.isRouterGroup(owner.getPlatform())) {
                 throw new ApiException(ApiErrorCode.INVALID_PARAM,
                         "成员必须是已添加的模型: " + memberProviderId + ":" + model);
@@ -3575,14 +4656,14 @@ public class ApiProviderController {
     /**
      * 路由组在「供应商 → 模型」视图里对外暴露的唯一虚拟模型。
      *
-     * <p>路由组没有自己的 {@code sys_ai_provider_model} 行（成员是模型库里已有的行），
+     * <p>路由组没有自己的 {@code sys_account_channel_model} 行（成员是模型库里已有的行），
      * 但会话的模型面板只认 {@code provider.models}，因此这里合成一条模型项，
      * 让「选中这个路由组」在会话里可选。它不落库，也不出现在模型管理页的模型列表里。</p>
      *
      * @param provider 路由组供应商
      * @return 虚拟模型项
      */
-    private Map<String, Object> routerGroupVirtualModel(SysAiProvider provider) {
+    private Map<String, Object> routerGroupVirtualModel(SysAccountChannel provider) {
         String providerId = provider.getProviderId();
         String modelName = provider.getName() == null || provider.getName().isBlank()
                 ? providerId : provider.getName();
@@ -3605,13 +4686,22 @@ public class ApiProviderController {
     /**
      * 构造 提供者响应（含模型行与连接档案）。
      */
-    private Map<String, Object> toProviderResponse(SysAiProvider provider,
-                                                   List<SysAiProviderModel> models,
-                                                   List<SysAiProviderConnection> connections) {        Map<String, Object> map = new LinkedHashMap<>(12);
+    private Map<String, Object> toProviderResponse(SysAccountChannel provider,
+                                                   List<SysAccountChannelModel> models,
+                                                   List<SysAccountChannelConnection> connections) {        Map<String, Object> map = new LinkedHashMap<>(12);
         map.put("provider_id", provider.getProviderId());
         map.put("platform", provider.getPlatform());
         map.put("name", provider.getName());
         map.put("base_url", provider.getBaseUrl());
+        // 官网 / 官方文档（只读展示）：模型管理右栏页头「官网」入口点它。
+        // 官网是「213 家模板」这一层的公共数据，由 datasearch 的供应商登记表统一维护，
+        // 渠道行（sys_account_channel）没有这一列、也不该为它加列；查不到就回 null，
+        // 前端隐藏入口 —— 本机 ONNX / 路由组 / 自建供应商没有对外站点。
+        com.chua.starter.datasearch.provider.model.ProviderDescriptor siteDescriptor =
+                ProviderRegistries.find(provider.getPlatform() == null
+                        ? provider.getProviderId() : provider.getPlatform());
+        map.put("website", siteDescriptor == null ? null : siteDescriptor.getWebsite());
+        map.put("doc", siteDescriptor == null ? null : siteDescriptor.getDoc());
         // ONNX 供应商补 model_root：本地模型的真实落盘位置（绝对路径），供管理面显示与核对。
         // 用 displayModelRoot() 而非 readModelRoot()：后者未绑定过目录时返回空串，
         // 页面就不知道「模型该放到哪」；前者回落注册表默认根（models/onnx）并按
@@ -3680,7 +4770,7 @@ public class ApiProviderController {
             }
         }
         List<Map<String, Object>> modelItems = new ArrayList<>(8); // 模型数量不可预估
-        for (SysAiProviderModel model : models) {
+        for (SysAccountChannelModel model : models) {
             modelItems.add(toProviderModelResponse(provider, model));
         }
         map.put("models", modelItems);
@@ -3702,7 +4792,7 @@ public class ApiProviderController {
      * @param model 模型
      * @return 转为提供者模型响应的结果
      */
-    private Map<String, Object> toProviderModelResponse(SysAiProvider provider, SysAiProviderModel model) {
+    private Map<String, Object> toProviderModelResponse(SysAccountChannel provider, SysAccountChannelModel model) {
         Map<String, Object> map = new LinkedHashMap<>(20);
         map.put("provider_id", provider.getProviderId());
         map.put("model", model.getModel());
@@ -3808,6 +4898,14 @@ public class ApiProviderController {
         } catch (Throwable e) {
             log.warn("[ApiProvider] 读取本地指标库失败: {}", e.getMessage());
         }
+        // 公共目录兜底：免登录 / 未绑定账号的渠道没有 baseUrl，渠道目录取不到，
+        // 历史模型行也从未写过模态，卡片上的「输入/输出」与输出上限就一直是空白。
+        // 按模型 id 从 models.dev 快照补齐（只补缺，不覆盖已配置的值）。
+        try {
+            fillFromPublicCatalog(provider, model, metrics);
+        } catch (Throwable e) {
+            log.warn("[ApiProvider] 读取公共模型目录失败: {}", e.getMessage());
+        }
         if (!metrics.isEmpty()) {
             map.put("metrics", metrics);
         }
@@ -3856,9 +4954,9 @@ public class ApiProviderController {
      * @param model    模型行
      * @param metrics  待补充的指标映射（就地写入）
      */
-    private void fillFromMetricsLibrary(SysAiProvider provider, SysAiProviderModel model, Map<String, Object> metrics) {
+    private void fillFromMetricsLibrary(SysAccountChannel provider, SysAccountChannelModel model, Map<String, Object> metrics) {
         String key = truncate(
-                modelMetricsEnrichmentService.normalizeKey(provider.getProviderId() + "/" + model.getModel()), 160);
+                AiModelMetricKeys.normalizeKey(provider.getProviderId() + "/" + model.getModel()), 160);
         if (key.isEmpty()) {
             return;
         }
@@ -3871,6 +4969,30 @@ public class ApiProviderController {
             if (!upstreamKey.isEmpty()) {
                 applyMetricsRow(metrics, index.get(upstreamKey));
             }
+        }
+    }
+
+    /**
+     * 用公开目录（models.dev 快照）按模型 id 补齐模态、上下限与能力位。
+     *
+     * <p><b>为什么走模型 id</b>：免登录渠道（DuckDuckGo / Pollinations / OpenCode）没有
+     * {@code baseUrl}，登录型渠道在未绑定账号时也没有，「平台 + 上游地址」的渠道目录
+     * 对它们一律落空；而 {@code sys_account_channel_model} 的历史行只存过 {@code tasks}，
+     * 于是模型卡片的输入/输出一直是空白。这里按模型 id 查（{@link ProviderModelMetrics}），
+     * 与渠道挂在哪家公司无关。</p>
+     *
+     * <p><b>写入规则</b>：只补缺，模型自身配置优先；目录没收录的模型什么都不写。</p>
+     *
+     * @param provider 供应商行
+     * @param model    模型行
+     * @param metrics  待补充的指标映射（就地写入）
+     */
+    private void fillFromPublicCatalog(SysAccountChannel provider, SysAccountChannelModel model,
+                                       Map<String, Object> metrics) {
+        Map<String, Object> catalog = ProviderModelMetrics.metricsOf(
+                ProviderModelMetrics.of(provider.getProviderId(), model.getModel()));
+        for (Map.Entry<String, Object> entry : catalog.entrySet()) {
+            putIfAbsentMetric(metrics, entry.getKey(), entry.getValue());
         }
     }
 
@@ -4075,7 +5197,7 @@ public class ApiProviderController {
      * @param conn 提供者连接配置
      * @return 转为connection响应的结果
      */
-    private Map<String, Object> toConnectionResponse(SysAiProviderConnection conn) {
+    private Map<String, Object> toConnectionResponse(SysAccountChannelConnection conn) {
         Map<String, Object> map = new LinkedHashMap<>(10);
         map.put("connection_id", conn.getConnectionId());
         map.put("provider_id", conn.getProviderId());
@@ -4102,8 +5224,8 @@ public class ApiProviderController {
      * @return 转为模型实体的结果
      */
     @SuppressWarnings("unchecked")
-    private SysAiProviderModel toModelEntity(String providerId, Map<String, Object> input, long now) {
-        SysAiProviderModel e = new SysAiProviderModel();
+    private SysAccountChannelModel toModelEntity(String providerId, Map<String, Object> input, long now) {
+        SysAccountChannelModel e = new SysAccountChannelModel();
         e.setProviderId(providerId);
         e.setModel(requireStr(input, "model"));
         e.setAlias(str(input, "alias"));
@@ -4176,13 +5298,13 @@ public class ApiProviderController {
      * @param model    模型实体（就地修改）
      * @return 是否有字段被回填
      */
-    private boolean enrichFromMetrics(SysAiProvider provider, SysAiProviderModel model) {
+    private boolean enrichFromMetrics(SysAccountChannel provider, SysAccountChannelModel model) {
         if (model == null || model.getModel() == null || model.getModel().isBlank()) {
             return false;
         }
         Map<String, Object> row = new LinkedHashMap<>(32);
         try {
-            modelMetricsEnrichmentService.enrich(model.getModel(), row);
+            ProviderModelMetrics.mergeInto(model.getModel(), row);
         } catch (Exception e) {
             log.debug("[provider-model] 指标补全跳过 model={} 原因={}", model.getModel(), e.getMessage());
             row.clear();
@@ -4244,7 +5366,7 @@ public class ApiProviderController {
      * @param modelName 模型名
      * @return 指标快照（Models.dev 等 indicator 的标准键），未找到返回 null
      */
-    private Map<String, Object> findIndicatorMetrics(SysAiProvider provider, String modelName) {
+    private Map<String, Object> findIndicatorMetrics(SysAccountChannel provider, String modelName) {
         try {
             ChatClientIndicator indicator = resolveIndicator(provider);
             if (indicator == null) {
@@ -4259,12 +5381,12 @@ public class ApiProviderController {
             }
             Map<String, Object> hit = all.get(modelName);
             if (hit == null) {
-                String key = modelMetricsEnrichmentService.normalizeKey(modelName);
+                String key = AiModelMetricKeys.normalizeKey(modelName);
                 if (key != null && !key.isBlank()) {
                     hit = all.get(key);
                     if (hit == null) {
                         for (Map.Entry<String, Map<String, Object>> e : all.entrySet()) {
-                            if (key.equals(modelMetricsEnrichmentService.normalizeKey(e.getKey()))) {
+                            if (key.equals(AiModelMetricKeys.normalizeKey(e.getKey()))) {
                                 hit = e.getValue();
                                 break;
                             }
@@ -4291,7 +5413,7 @@ public class ApiProviderController {
      * @param model    模型实体（就地修改）
      * @return 是否回填了指标实体列
      */
-    private boolean enrichFromIndicator(SysAiProvider provider, SysAiProviderModel model) {
+    private boolean enrichFromIndicator(SysAccountChannel provider, SysAccountChannelModel model) {
         try {
             Map<String, Object> hit = findIndicatorMetrics(provider, model.getModel());
             if (hit == null || hit.isEmpty()) {
@@ -4319,7 +5441,7 @@ public class ApiProviderController {
      * @param input 输入
      */
     @SuppressWarnings("unchecked")
-    private void applyModelInput(SysAiProviderModel e, Map<String, Object> input) {
+    private void applyModelInput(SysAccountChannelModel e, Map<String, Object> input) {
         if (input.containsKey("alias")) {
             e.setAlias(str(input, "alias"));
         }
@@ -4388,7 +5510,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param raw    请求体中的 generate 对象，可为 null（表示不处理）
      */
     @SuppressWarnings("unchecked")
-    private void applyGenerateConfig(SysAiProviderModel entity, Object raw) {
+    private void applyGenerateConfig(SysAccountChannelModel entity, Object raw) {
         if (raw == null) {
             return;
         }
@@ -4422,7 +5544,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param raw    档位清单（List&lt;String&gt;；null 表示本次不改动）
      */
     @SuppressWarnings("unchecked")
-    private void applyThinkingEfforts(SysAiProviderModel entity, Object raw) {
+    private void applyThinkingEfforts(SysAccountChannelModel entity, Object raw) {
         if (!(raw instanceof List<?> list)) {
             return;
         }
@@ -4453,15 +5575,15 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param now now
      * @return 转为connection实体的结果
      */
-    private SysAiProviderConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
-        SysAiProviderConnection e = new SysAiProviderConnection();
+    private SysAccountChannelConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
+        SysAccountChannelConnection e = new SysAccountChannelConnection();
         e.setConnectionId(String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000)));
         e.setProviderId(providerId);
         e.setRole(requireStr(input, "role"));
         e.setLabel(str(input, "label"));
         // 归属**故意留空**：本链路的写入入口全部是 admin-only（createProvider / saveConnection /
-        // cloneProvider），落成 user_id IS NULL 即 SysAiProviderConnection 里定义的
-        // 「管理员/系统账号池」—— 管理员读得到（applyConnectionOwnerFilter 额外放行 NULL），
+        // cloneProvider），落成 user_id IS NULL 即 SysAccountChannelConnection 里定义的
+        // 「管理员/系统账号池」—— 管理员读得到（账号模块的归属过滤额外放行 NULL），
         // 普通用户读不到，免费渠道（_free 作用域）也靠这批行取账号。
         // 不要在这里写 currentUserId()：那样免费渠道路由会一条都取不到。
         e.setBaseUrl(requireStr(input, "base_url"));
@@ -4619,6 +5741,13 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         m.put("qwen", new ProtocolPreset("qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1"));
         m.put("dashscope", new ProtocolPreset("dashscope", "https://dashscope.aliyuncs.com/compatible-mode/v1"));
         m.put("dashscope-coding", new ProtocolPreset("dashscope-coding", "https://dashscope.aliyuncs.com/compatible-mode/v1"));
+        // 阿里云百炼国际站与编程 / Token 套餐端点（前端模板 id，OpenAI 兼容）；
+        // 余额走登记表 aliyun-bss 预设（AK/SK 签名），品牌别名已覆盖这些 platform id
+        m.put("alibaba", new ProtocolPreset("alibaba", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"));
+        m.put("alibaba-coding-plan-cn", new ProtocolPreset("alibaba-coding-plan-cn", "https://coding.dashscope.aliyuncs.com/v1"));
+        m.put("alibaba-coding-plan", new ProtocolPreset("alibaba-coding-plan", "https://coding-intl.dashscope.aliyuncs.com/v1"));
+        m.put("alibaba-token-plan-cn", new ProtocolPreset("alibaba-token-plan-cn", "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"));
+        m.put("alibaba-token-plan", new ProtocolPreset("alibaba-token-plan", "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"));
         m.put("moonshot", new ProtocolPreset("moonshot", "https://api.moonshot.cn/v1"));
         m.put("moonshot-cn", new ProtocolPreset("moonshot-cn", "https://api.moonshot.cn/v1"));
         m.put("moonshot-global", new ProtocolPreset("moonshot-global", "https://api.moonshot.ai/v1"));
@@ -4636,9 +5765,22 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         m.put("qianfan-coding-plan", new ProtocolPreset("qianfan-coding-plan", "https://qianfan.baidubce.com/v2"));
         m.put("hunyuan", new ProtocolPreset("hunyuan", "https://api.hunyuan.cloud.tencent.com/v1"));
         m.put("hunyuan-global", new ProtocolPreset("hunyuan-global", "https://api.hunyuan.cloud.tencent.com/v1"));
+        // 腾讯云混元平台名与编程 / Token 套餐、TokenHub 端点（前端模板 id，OpenAI 兼容）；
+        // 余额走登记表 tencent-billing 预设（AK/SK 签名），品牌别名已覆盖这些 platform id
+        m.put("tencent", new ProtocolPreset("tencent", "https://api.hunyuan.cloud.tencent.com/v1"));
+        m.put("tencent-coding-plan", new ProtocolPreset("tencent-coding-plan", "https://api.lkeap.cloud.tencent.com/coding/v3"));
+        m.put("tencent-token-plan", new ProtocolPreset("tencent-token-plan", "https://api.lkeap.cloud.tencent.com/plan/v3"));
+        m.put("tencent-tokenhub", new ProtocolPreset("tencent-tokenhub", "https://tokenhub.tencentmaas.com/v1"));
         m.put("lingyi", new ProtocolPreset("lingyi", "https://api.lingyiwanwu.com/v1"));
         m.put("stepfun", new ProtocolPreset("stepfun", "https://api.stepfun.com/v1"));
         m.put("stepfun-plan", new ProtocolPreset("stepfun-plan", "https://api.stepfun.com/v1"));
+        // 阶跃星辰国际站（前端模板 id stepfun-ai / stepfun-ai-step-plan，OpenAI 兼容），
+        // 与国内站同形状，仅域名不同；余额走登记表 stepfun-ai 预设（美元计费）
+        m.put("stepfun-ai", new ProtocolPreset("stepfun-ai", "https://api.stepfun.ai/v1"));
+        m.put("stepfun-ai-step-plan", new ProtocolPreset("stepfun-ai-step-plan", "https://api.stepfun.ai/v1"));
+        // 七牛云 AI 大模型推理（前端模板 id qiniu-ai，OpenAI 兼容）；余额走登记表 qiniu 预设（AK/SK 签名）
+        m.put("qiniu-ai", new ProtocolPreset("qiniu-ai", "https://api.qnaigc.com/v1"));
+        m.put("qiniu", new ProtocolPreset("qiniu", "https://api.qnaigc.com/v1"));
         m.put("minimax", new ProtocolPreset("minimax", "https://api.minimaxi.com/v1"));
         m.put("minimax-code", new ProtocolPreset("minimax-code", "https://api.minimaxi.com/v1"));
         m.put("minimax-coding-plan", new ProtocolPreset("minimax-coding-plan", "https://api.minimaxi.com/v1"));
@@ -4707,16 +5849,25 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         /**
          * 读取扩展配置中的字符串值。
          *
+         * <p>空白串按「未配置」处理（返回 null）：前端测试连接会把空串原样发上来，
+         * 落库时空串键又会被删除；若把空串直接交给 {@code AuthHeaders}，会被当成
+         * 「显式不要前缀」，标准 {@code Authorization} 头不再补 {@code Bearer }，
+         * 有效 Key 会被上游判成 401（表现为「测试连接报 Key 无效，实际调用却正常」）。</p>
+         *
          * @param extra 扩展配置
          * @param key   键名
-         * @return 字符串值；缺失返回 null
+         * @return 字符串值；缺失或空白返回 null
          */
         private static String extraStr(Map<String, Object> extra, String key) {
             if (extra == null) {
                 return null;
             }
             Object value = extra.get(key);
-            return value == null ? null : value.toString();
+            if (value == null) {
+                return null;
+            }
+            String text = value.toString();
+            return text.isBlank() ? null : text;
         }
     }
 
@@ -4891,7 +6042,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         // 拉取列表若只读 extra.routes，就会出现「渠道管理里 82 个模型、这里只看到 2 个」。
         if (providerId != null && !providerId.isBlank()) {
             try {
-                SysAiProvider channelProvider = requireProvider(providerId);
+                SysAccountChannel channelProvider = requireProvider(providerId);
                 routes = modelClientResolver.mergedRoutes(
                         channelProvider, com.chua.starter.ai.support.chat.ModelClientResolver.ownerScopeOf(channelProvider));
             } catch (Exception e) {
@@ -4909,8 +6060,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             // 的前缀兜底，不是可选模型；混在模型列表里会让人以为有个叫 OPENCODE 的模型。
             java.util.Set<String> channelPlatformKeys = new java.util.HashSet<>();
             try {
-                for (SysAiProvider p : providerMapper.selectList(
-                        new LambdaQueryWrapper<SysAiProvider>().eq(SysAiProvider::getAuthScheme, "oauth"))) {
+                for (SysAccountChannel p : accountChannelService.listByAuthScheme("oauth")) {
                     if (p.getPlatform() != null && !p.getPlatform().isBlank()) {
                         channelPlatformKeys.add(p.getPlatform().trim().toLowerCase(java.util.Locale.ROOT));
                     }
@@ -4977,13 +6127,92 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         } catch (Exception e) {
             log.debug("[Provider] 并入 Magpie 网关模型失败: {}", e.getMessage());
         }
+        // 免登录生成类渠道（文生图 / 文生视频）：duckduckgo / pollinations 等渠道的产出模型
+        // 不在聊天路由表里（FreeChannelChatClient 只跑对话），但用户要的是「免费渠道下能看到
+        // 所有渠道的全部 chat 与 image 模型」。这里按渠道实现各自声明的 tasks 补进行目录，
+        // 出图模型才不会被当成对话模型或直接缺席。
+        appendKeylessMediaModels(models, seenIds);
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("models", models);
         out.put("route_keys", true);
         if (models.isEmpty()) {
-            out.put("hint", "未配置模型路由（extra.routes），请在供应商配置中补充后重试");
+            out.put("hint", "暂无可用模型：请先在渠道管理启用模型，或检查上游渠道连接后重试");
         }
         return out;
+    }
+
+    /**
+     * 把免登录生成类渠道（文生图 / 文生视频）的内置模型并入免费渠道目录。
+     *
+     * <p>这些渠道不出现在聊天路由表里：免费渠道客户端只负责对话路由，出图 / 出视频
+     * 由账号模块的 {@code ImageChannelProvider} / {@code VideoChannelProvider} 直接执行。
+     * 但「从供应商获取模型」是模型目录，用户要在免费渠道下看到渠道管理里的<b>全部</b>
+     * chat 与 image 模型，因此这里按渠道声明的 {@code tasks} 补挂目录行：
+     * 例如 {@code image-pollinations} 的 {@code flux} / {@code turbo} 会以
+     * {@code image_generation} 能力出现，而不是缺席或被误标成对话模型。</p>
+     *
+     * <p>去重沿用调用方传入的 {@code seenIds}：聊天路由或 Magpie 已经给出的同名模型
+     * 不再重复追加（同一模型有两份目录行会让批量录入产生重复行）。</p>
+     *
+     * @param models  已收集的模型行（原地追加）
+     * @param seenIds 已出现的模型标识（原地更新）
+     */
+    private void appendKeylessMediaModels(List<Map<String, Object>> models, Set<String> seenIds) {
+        Map<String, KeylessMediaChannel> channels;
+        try {
+            channels = ServiceProvider.of(KeylessMediaChannel.class).list();
+        } catch (Exception e) {
+            log.debug("[Provider] 免登录生成类渠道未接入: {}", e.getMessage());
+            return;
+        }
+        if (channels == null || channels.isEmpty()) {
+            return;
+        }
+        for (KeylessMediaChannel channel : channels.values()) {
+            if (channel == null || StringUtils.isBlank(channel.channel())) {
+                continue;
+            }
+            List<Map<String, Object>> rows;
+            try {
+                rows = channel.listModels();
+            } catch (Exception e) {
+                // 单个渠道取模型失败不影响其它渠道的目录
+                log.debug("[Provider] 生成类渠道 {} 模型清单读取失败: {}", channel.channel(), e.getMessage());
+                continue;
+            }
+            if (rows == null || rows.isEmpty()) {
+                continue;
+            }
+            String source = StringUtils.isBlank(channel.extension()) ? channel.channel() : channel.extension();
+            List<String> tasks = channel.tasks();
+            for (Map<String, Object> row : rows) {
+                Object rawId = row == null ? null : row.get("id");
+                if (rawId == null || StringUtils.isBlank(String.valueOf(rawId))) {
+                    continue;
+                }
+                String id = String.valueOf(rawId).trim();
+                if (!seenIds.add(id)) {
+                    continue;
+                }
+                // modelName 必须落到模型标识（id）：批量录入按 modelName 建行，
+                // 用展示名（如「Flux（默认）」）入库会得到一条永远路由不到的模型。
+                // 展示名改放描述，列表里仍能看到人可读的名称。
+                Object rawName = row.get("name");
+                String modelLabel = rawName == null ? "" : String.valueOf(rawName).trim();
+                Map<String, Object> m = new LinkedHashMap<>(8);
+                m.put("id", id);
+                m.put("name", id);
+                m.put("provider", source);
+                m.put("baseUrl", "");
+                m.put("authScheme", "none");
+                m.put("tasks", tasks == null || tasks.isEmpty() ? List.of("chat") : tasks);
+                // 生成类模型不是流式对话能力，只有上游行显式给出 traits 才带
+                m.put("traits", row.get("traits") instanceof List<?> traits ? traits : List.of());
+                m.put("description", modelLabel.isEmpty() || modelLabel.equals(id)
+                        ? channel.displayName() : channel.displayName() + " · " + modelLabel);
+                models.add(m);
+            }
+        }
     }
 
     /**
@@ -5547,12 +6776,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param providerId 提供者标识
      * @return require提供者的结果
      */
-    private SysAiProvider requireProvider(String providerId) {
-        SysAiProvider e = providerMapper.selectById(providerId);
-        if (e == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
-        }
-        return e;
+    private SysAccountChannel requireProvider(String providerId) {
+        return accountChannelService.require(providerId);
     }
 
     /**
@@ -5560,7 +6785,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      *
      * @param provider 供应商行
      */
-    private void refreshOnnxDevice(SysAiProvider provider) {
+    private void refreshOnnxDevice(SysAccountChannel provider) {
         if (isOnnxRow(provider)) {
             onnxProviderMaterializer.syncProviderDevice(provider.getProviderId());
         }
@@ -5575,50 +6800,14 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param providerId 提供者 标识
      * @return 提供者实体
      */
-    private SysAiProvider requireVisibleProvider(String providerId) {
-        SysAiProvider e = requireProvider(providerId);
+    private SysAccountChannel requireVisibleProvider(String providerId) {
+        SysAccountChannel e = requireProvider(providerId);
         if (isOnnxRow(e) && !com.chua.starter.ai.support.util.AiUserContext.isAdmin()) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
         }
         return e;
     }
 
-    /**
-     * 给 connection 查询施加账号隔离条件。
-     *
-     * <p><b>为什么必须有这一层：</b>{@code sys_ai_provider} 是全局表（没有 user_id 列，
-     * 供应商模板与模型目录对所有账号同构），但挂在它下面的 {@code sys_ai_provider_connection}
-     * <b>有</b> {@code sys_ai_provider_connection_user_id} —— 账号凭证属于绑定它的那个人。
-     * 本控制器此前所有 connection 查询都只按 provider_id 过滤，等于把「别人绑的账号」
-     * 一并回显（connection_id / label / status / has_credentials）。渠道管理侧
-     * {@code ApiChannelAuthController.applyOwnerFilter} 早已这么做，这里漏了。</p>
-     *
-     * <p>口径与渠道管理保持一致（{@code ApiChannelAuthController.applyOwnerFilter}）：</p>
-     * <ul>
-     *   <li>普通用户：只看得到 {@code user_id = 自己} 的连接；</li>
-     *   <li>管理员：额外可见 {@code user_id IS NULL} 的系统池行（渠道管理改造前的绑定，
-     *       免费渠道路由 {@code _free} 也取这一批）；</li>
-     *   <li>无身份（AppKey 机器流量 / 后台线程）：只放系统池。这里不能直接抛 401 ——
-     *       {@code GET /api/providers} 同时服务机器调用，改造前对它们可用；且「无主」
-     *       只能被当作最窄的作用域，绝不能当成「全见」。</li>
-     * </ul>
-     *
-     * @param wrapper 连接查询包装器
-     */
-    private void applyConnectionOwnerFilter(LambdaQueryWrapper<SysAiProviderConnection> wrapper) {
-        String owner = com.chua.starter.ai.support.util.AiUserContext.currentUserId();
-        if (owner == null) {
-            wrapper.isNull(SysAiProviderConnection::getUserId);
-            return;
-        }
-        boolean admin = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
-        wrapper.and(w -> {
-            w.eq(SysAiProviderConnection::getUserId, owner);
-            if (admin) {
-                w.or().isNull(SysAiProviderConnection::getUserId);
-            }
-        });
-    }
 
     /**
      * str。
@@ -6141,7 +7330,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     /**
      * 判断是否为本地推理供应商（ONNX）。
      *
-     * <p>ONNX 与其它供应商同构，供应商行就落在 {@code sys_ai_provider} 表里；
+     * <p>ONNX 与其它供应商同构，供应商行就落在 {@code sys_account_channel} 表里；
      * 但「从提供商获取」这一步不同：其它供应商是向远端地址发 HTTP 拉取模型目录，
      * ONNX 没有远端目录，只能由本地模型门面（{@code ModelRegistry}）列出已注册的模型。
      * 因此模型拉取分支要绕开上游 HTTP，直接走门面 —— 返回的仍然是模型 id，与其它供应商一致。</p>
@@ -6347,7 +7536,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * <p>与原「同步价格」的差别：</p>
      * <ul>
      *   <li><b>限制</b>：走 {@link ProviderLimitCollector} 的三段链路（手动配置 → 官方文档预设
-     *       → 上游响应头），结果落到 {@code sys_ai_provider.extra.provider_limits}；</li>
+     *       → 上游响应头），结果落到 {@code sys_account_channel.extra.provider_limits}；</li>
      *   <li><b>计费标准</b>：官方指标源（{@link ChatClientIndicator}）与上游
      *       {@code /models} 自带 pricing 两条都写进 {@code sys_ai_model_metrics}；</li>
      *   <li><b>模型描述</b>：把上游目录里的 description / summary 补到已配置模型行，
@@ -6370,7 +7559,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     @Transactional
     public ApiResult<Map<String, Object>> syncProvider(@PathVariable("provider_id") String providerId,
                                                        @RequestBody(required = false) Map<String, Object> body) {
-        SysAiProvider entity = requireProvider(providerId);
+        SysAccountChannel entity = requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         boolean overwriteDescriptions = body != null
                 && Boolean.TRUE.equals(body.get("overwrite_descriptions"));
@@ -6406,6 +7595,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 overwriteDescriptions, fetchError, now));
         out.put("pricing", syncProviderPricing(entity, upstreamModels, fetchError, limits));
         out.put("catalog", providerCatalogSyncService.sync(entity));
+        // 余额分节：逐 Key 真查并按 Key 落库（sys_ai_provider_credit，先删后增）
+        out.put("credit", syncProviderCredit(entity));
         if (fetchError != null) {
             out.put("fetch_error", fetchError);
         }
@@ -6419,7 +7610,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param headers 本次上游 {@code /models} 响应头（可为空）
      * @return 限制报告（declared / observed / attempted / supported / pricing_url）
      */
-    private Map<String, Object> syncProviderLimits(SysAiProvider entity, Map<String, List<String>> headers) {
+    private Map<String, Object> syncProviderLimits(SysAccountChannel entity, Map<String, List<String>> headers) {
         ProviderLimitContext context = ProviderLimitContext.builder()
                 .platform(entity.getPlatform())
                 .baseUrl(entity.getBaseUrl())
@@ -6439,12 +7630,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         Map<String, Object> extra = entity.getExtra() == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(entity.getExtra());
         extra.put("provider_limits", report);
-        SysAiProvider update = new SysAiProvider();
-        update.setProviderId(entity.getProviderId());
-        update.setExtra(extra);
-        update.setUpdatedAt(System.currentTimeMillis());
-        // 必须走 updateById：Wrapper.set(extra) 不走 TypeHandler，会写成序列化字节
-        providerMapper.updateById(update);
+        // extra 列由账号模块统一写入（带 JacksonTypeHandler）
+        accountChannelService.updateExtra(entity.getProviderId(), extra);
         log.info("[ProviderSync] provider={} 限制来源={} declared={} observed={}",
                 entity.getProviderId(), report.get("source"),
                 report.get("declared") != null, report.get("observed") != null);
@@ -6465,7 +7652,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param now         本次同步时间
      * @return 统计与失败原因
      */
-    private Map<String, Object> syncProviderDescriptions(SysAiProvider entity,
+    private Map<String, Object> syncProviderDescriptions(SysAccountChannel entity,
                                                          List<Map<String, Object>> upstream,
                                                          boolean overwrite, String fetchError, long now) {
         Map<String, Object> out = new LinkedHashMap<>(8);
@@ -6483,10 +7670,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             out.put("message", "上游未返回模型目录");
             return out;
         }
-        Map<String, SysAiProviderModel> existing = new HashMap<>(16);
-        for (SysAiProviderModel row : modelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, entity.getProviderId()))) {
+        Map<String, SysAccountChannelModel> existing = new HashMap<>(16);
+        for (SysAccountChannelModel row : accountChannelModelService.listAll(entity.getProviderId())) {
             if (row.getModel() != null) {
                 existing.put(row.getModel(), row);
             }
@@ -6497,7 +7682,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         for (Map<String, Object> m : upstream) {
             String id = m.get("id") instanceof String s ? s : null;
             String name = m.get("name") instanceof String s ? s : null;
-            SysAiProviderModel row = id == null ? null : existing.get(id);
+            SysAccountChannelModel row = id == null ? null : existing.get(id);
             if (row == null && name != null) {
                 row = existing.get(name);
             }
@@ -6522,9 +7707,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             }
             row.setDescription(description);
             row.setUpdatedAt(now);
-            modelMapper.update(row, new LambdaUpdateWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getProviderId, row.getProviderId())
-                    .eq(SysAiProviderModel::getModel, row.getModel()));
+            accountChannelModelService.updateByKey(row);
             updated++;
         }
         out.put("updated", updated);
@@ -6545,7 +7728,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param limits   限制报告（取 {@code billing_basis}）
      * @return 计费同步分节
      */
-    private Map<String, Object> syncProviderPricing(SysAiProvider entity,
+    private Map<String, Object> syncProviderPricing(SysAccountChannel entity,
                                                     List<Map<String, Object>> upstream,
                                                     String fetchError,
                                                     Map<String, Object> limits) {
@@ -6575,9 +7758,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             out.put("billing_basis", billingBasis);
         }
         if (fetchError == null) {
+            // 先删后增：本来源（upstream:/models）的指标行整体替换，陈旧价格不残留；
+            // 其它来源与手动锁定的行不动
             SysAiModelMetricsService.UpstreamPricingResult upstreamPricing =
-                    sysAiModelMetricsService.syncUpstreamPricing(entity.getProviderId(), upstream,
-                            entity.getBaseUrl());
+                    sysAiModelMetricsService.replaceUpstreamPricing(entity.getProviderId(), upstream,
+                            entity.getBaseUrl(), "upstream:/models");
             Map<String, Object> upstreamRow = new LinkedHashMap<>(4);
             upstreamRow.put("updated", upstreamPricing.getUpdated());
             upstreamRow.put("inserted", upstreamPricing.getInserted());
@@ -6587,6 +7772,59 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             out.put("upstream_error", fetchError);
         }
         return out;
+    }
+
+    /**
+     * 余额刷新：逐 Key 真查一次上游余额并按 Key 落库（sys_ai_provider_credit，先删后增）。
+     *
+     * <p>三个调用方共用本方法：「同步」的余额分节、面板的 {@code refresh=true} 强制回源
+     * （经 {@code /credit}）、时间轮定时刷新（{@code CreditRefreshScheduler}）。候选实现与
+     * 鉴权口径与面板查询完全一致，但不带面板的 5 分钟读缓存——每次调用都强制回源，
+     * 并把读数写成新的按 Key 快照供重启后回放。</p>
+     *
+     * @param entity 提供商行
+     * @return 余额报告（keys / ok / success / failed / synced_at）；无 Key 或无余额口径时返回 null
+     */
+    public CreditSyncReport refreshProviderCredit(SysAccountChannel entity) {
+        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        String creditKey = str(extra, "credit_key");
+        List<String> keys = creditKey != null ? splitCreditKeys(creditKey) : extractAllKeys(entity.getCredentials());
+        if (keys.isEmpty()) {
+            return null;
+        }
+        // 无上游地址（none）或官方站点未收录余额接口（uncovered）：没有可查的口径，不浪费出网
+        String level = creditLevel(entity, extra);
+        if ("none".equals(level) || "uncovered".equals(level)) {
+            return null;
+        }
+        List<CreditReading> rows = new ArrayList<>(keys.size());
+        for (int i = 0; i < keys.size(); i++) {
+            rows.add(creditOfKey(entity, extra, keys.get(i), i));
+        }
+        long success = rows.stream().filter(CreditReading::ok).count();
+        persistCreditSnapshots(entity.getProviderId(), keys, rows);
+        // 刷新后失效面板的进程内读缓存：下次打开 /credit 会读到刚落库的新快照
+        CREDIT_CACHE.remove(creditFingerprint(entity.getProviderId(),
+                entity.getBaseUrl() == null ? "" : entity.getBaseUrl().trim(),
+                keys, str(extra, "credit_kind"), extra));
+        return new CreditSyncReport(keys.size(), success > 0, success, keys.size() - success,
+                System.currentTimeMillis(), null);
+    }
+
+    /**
+     * 「同步」里的余额分节报告：无 Key / 无口径时给出可读的跳过原因。
+     *
+     * @param entity 提供商行
+     * @return 余额同步报告
+     */
+    private CreditSyncReport syncProviderCredit(SysAccountChannel entity) {
+        CreditSyncReport report = refreshProviderCredit(entity);
+        if (report != null) {
+            log.info("[ProviderSync] provider={} 余额同步完成：{}/{} 个 Key 查到读数",
+                    entity.getProviderId(), report.success(), report.keys());
+            return report;
+        }
+        return CreditSyncReport.skipped("没有可用的 Key 或未收录余额口径，跳过余额同步");
     }
 
     /**
@@ -6605,5 +7843,43 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             }
         }
         return null;
+    }
+
+    /**
+     * 失效免费渠道路由缓存（提交后执行）。
+     *
+     * <p>供应商 / 渠道模型的写入会改变「可路由的模型集合」，而
+     * {@code ModelClientResolver} 的 {@code routeCache} 默认缓存 5 分钟；
+     * 不主动失效时，页面刚保存完开关、免费渠道里却仍是旧清单。</p>
+     *
+     * <p>调用点都在 {@code @Transactional} 写方法内，这里挂到事务提交之后：
+     * 提交前清缓存会被并发请求用旧数据重新填充，等于把陈旧窗口再延长一个 TTL。</p>
+     *
+     * @param reason 变更原因（日志用）
+     */
+    private void invalidateRouteCache(String reason) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    doInvalidateRouteCache(reason);
+                }
+            });
+            return;
+        }
+        doInvalidateRouteCache(reason);
+    }
+
+    /**
+     * 实际清理两处缓存。
+     *
+     * @param reason 变更原因（日志用）
+     */
+    private void doInvalidateRouteCache(String reason) {
+        try {
+            modelClientResolver.invalidateRouteCache();
+        } catch (Exception e) {
+            log.debug("[Provider] 清理模型路由缓存失败 reason={} : {}", reason, e.getMessage());
+        }
     }
 }

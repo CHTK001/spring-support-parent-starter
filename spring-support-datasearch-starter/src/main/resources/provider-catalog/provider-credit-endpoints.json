@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-11-16",
-  "source": "HostCreditQueryProvider 的 15 条官方预设迁移为数据 + 账户级 4 家",
-  "note": "只登记官方文档明确写了余额 / 额度接口的厂商；未收录的厂商走 OpenAI 兼容探测（billing / new-api / sub2api / 表达式），不在这里猜地址。",
-  "count": 15,
+  "generated_at": "2026-11-18",
+  "source": "HostCreditQueryProvider 的 15 条官方预设迁移为数据；现含 Bearer 官方预设 20 家 + 账户级 AK/SK 签名 6 家（阿里云 / 火山 / 百度 / 七牛 / 腾讯云 / 华为云）",
+  "note": "只登记官方文档明确写了余额 / 额度接口的厂商；未收录的厂商走 OpenAI 兼容探测（billing / new-api / sub2api / 表达式），不在这里猜地址。openrouter 不在登记表：/api/v1/credits 需管理 Key、普通推理 Key 会 403，且剩余=充值−消费不能按两个独立读数展示，已改为专用实现 OpenRouterCreditQueryProvider（403 时回落 /api/v1/key）。opencode-console 为登记口径的例外：Zen 现金余额官方无 API（upstream #10448），登记的是控制台同源接口（非公开文档 API），已在 notes 注明。",
+  "count": 27,
   "entries": [
     {
       "id": "deepseek",
@@ -50,23 +50,24 @@
       "currency": "cny",
       "signType": null,
       "verified": true,
-      "notes": "官方文档口径，已用假令牌探活过路由"
+      "notes": "国内站 /v1/user/info 已于 2026-08-14 下线（HTTP 410，code 20092，官方无替代），国内站余额不可查；国际站请改用 siliconflow-intl 条目（api.siliconflow.com）"
     },
     {
-      "id": "openrouter",
-      "name": "OpenRouter",
+      "id": "siliconflow-intl",
+      "name": "SiliconFlow 国际站",
       "aliases": [
-        "openrouter"
+        "siliconflow-intl",
+        "siliconflow-global"
       ],
       "hosts": [
-        "openrouter.ai"
+        "api.siliconflow.com"
       ],
-      "url": "https://openrouter.ai/api/v1/credits",
-      "expression": "$data.total_credits; $data.total_usage",
+      "url": "https://api.siliconflow.com/v1/user/info",
+      "expression": "$data.totalBalance; $data.balance",
       "currency": "usd",
       "signType": null,
       "verified": true,
-      "notes": "官方文档口径，已用假令牌探活过路由"
+      "notes": "国际站口径：/v1/user/info 与国内站字段一致（data.totalBalance/balance），以美元计费；国内站同端点已 410 下线，勿再指向 .cn"
     },
     {
       "id": "novita-ai",
@@ -175,14 +176,59 @@
       "expression": "!usage.rolling.percent; !usage.weekly.percent; !usage.monthly.percent",
       "currency": "%",
       "signType": null,
-      "verified": false,
-      "notes": "社区口径，非官方文档；仅返回已用百分比"
+      "verified": true,
+      "notes": "官方已上线（anomalyco/opencode PR #16513，2026-08 合并），文档页未单列；仅返回 Go 套餐 rolling/weekly/monthly 已用百分比，无金额与余额。Zen（按量计费）余额接口官方尚未提供（upstream #10448 仍 open），Zen 渠道经 opencode 条目复用本端点"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode Zen",
+      "aliases": [
+        "opencode",
+        "opencode-zen"
+      ],
+      "hosts": [
+        "opencode.ai"
+      ],
+      "url": "https://opencode.ai/zen/go/v1/usage",
+      "expression": "!usage.rolling.percent; !usage.weekly.percent; !usage.monthly.percent",
+      "currency": "%",
+      "signType": null,
+      "verified": true,
+      "notes": "与 OpenCode Go 共用同一 API Key，复用官方用量端点（PR #16513）；返回 Go 套餐 rolling/weekly/monthly 已用百分比。Zen 按量余额官方暂无 API（upstream #10448 仍 open，/zen/v1/balance 探测 404），无 Go 订阅的工作区会返回错误；已由专属实现 OpenCodeCreditQueryProvider（kind=opencode）聚合本端点与预算端点 GET /console/api/policies/current-budgets（403=无 Budgets:Read 权限或服务账号 Key）；字段不符时在供应商编辑页用 credit_expression 覆盖"
+    },
+    {
+      "id": "opencode-console",
+      "name": "OpenCode 控制台余额",
+      "aliases": [
+        "opencode-console"
+      ],
+      "hosts": [
+        "opencode.ai"
+      ],
+      "url": "https://opencode.ai/console/api/billing/status",
+      "authHeader": "Cookie",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "控制台同源接口，非公开文档 API（Zen 现金余额官方无 API，upstream #10448 仍 open）：GET /console/api/billing/status，鉴权用浏览器登录控制台后的 __Host-console_session 会话 Cookie（authHeader=Cookie；API Key 会被 403）；balanceMicroCents 口径 1 USD=1e8 microCents（#44189 formatBalance 互证）；401=Cookie 失效、403=无 Billing 权限；字段换算由专属实现 OpenCodeConsoleCreditQueryProvider（kind=opencode-console）完成，登记表表达式装不下 /1e8 故留空"
     },
     {
       "id": "aliyun-bss",
       "name": "阿里云 BSS（账户余额）",
       "aliases": [
-        "aliyun-bss"
+        "aliyun-bss",
+        "aliyun-bailian",
+        "dashscope",
+        "bailian",
+        "qwen",
+        "tongyi",
+        "aliyun",
+        "alibaba",
+        "dashscope-intl",
+        "alibaba-coding-plan-cn",
+        "alibaba-coding-plan",
+        "alibaba-token-plan-cn",
+        "alibaba-token-plan"
       ],
       "hosts": [
         "business.aliyuncs.com"
@@ -192,13 +238,17 @@
       "currency": "cny",
       "signType": "aliyun-bss",
       "verified": true,
-      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）；百炼/DashScope 的 sk- Key 没有厂商余额接口，阿里云百炼（通义千问）等渠道经别名复用本条查阿里云账户余额"
     },
     {
       "id": "volc-billing",
       "name": "火山引擎 Billing（账户余额）",
       "aliases": [
-        "volc-billing"
+        "volc-billing",
+        "doubao",
+        "ark",
+        "volcengine",
+        "volcengine-coding-plan"
       ],
       "hosts": [
         "billing.volcengineapi.com"
@@ -208,13 +258,15 @@
       "currency": "cny",
       "signType": "volc",
       "verified": true,
-      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）；豆包 / 火山方舟（模型域名 ark.cn-beijing.volces.com）渠道经 doubao / ark / volcengine / volcengine-coding-plan 别名复用本预设——模型域名与计费域名不同根，由控制器显式接线（同阿里云百炼 / 腾讯云 / 华为云口径）"
     },
     {
       "id": "baidu-bce",
       "name": "百度智能云财务（现金余额）",
       "aliases": [
-        "baidu-bce"
+        "baidu-bce",
+        "qianfan",
+        "qianfan-coding-plan"
       ],
       "hosts": [
         "billing.baidubce.com"
@@ -224,13 +276,14 @@
       "currency": "cny",
       "signType": "bce",
       "verified": true,
-      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+      "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）；百度千帆（模型域名 qianfan.baidubce.com）渠道经 qianfan / qianfan-coding-plan 别名复用本预设——模型域名与财务域名不同根，由控制器显式接线（同阿里云百炼 / 腾讯云口径）；千帆模型 API Key（bce-v3）不是 IAM AK/SK，查不了余额"
     },
     {
       "id": "qiniu",
       "name": "七牛云财务（账户余额）",
       "aliases": [
-        "qiniu"
+        "qiniu",
+        "qiniu-ai"
       ],
       "hosts": [
         "api.qiniu.com"
@@ -241,6 +294,186 @@
       "signType": "qiniu",
       "verified": true,
       "notes": "账户级余额，需 AK/SK 签名（缺 AK/SK 时返回明确提示，不发必然 401 的请求）"
+    },
+    {
+      "id": "moonshotai",
+      "name": "Moonshot 国际站",
+      "aliases": [
+        "moonshotai",
+        "moonshot-ai"
+      ],
+      "hosts": [
+        "api.moonshot.ai"
+      ],
+      "url": "https://api.moonshot.ai/v1/users/me/balance",
+      "expression": "$data.available_balance; $data.voucher_balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "国际站口径：官方文档核对 + 假令牌探活 401；字段与国内站一致，国际站以美元计费（币种 USD）。渠道 platform 用前端模板 id moonshotai 才能命中本条"
+    },
+    {
+      "id": "stepfun-ai",
+      "name": "阶跃星辰国际站",
+      "aliases": [
+        "stepfun-ai"
+      ],
+      "hosts": [
+        "api.stepfun.ai"
+      ],
+      "url": "https://api.stepfun.ai/v1/accounts",
+      "expression": "$balance; $total_cash_balance; $total_voucher_balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "国际站口径：假令牌探活 401，官方定价页明确以美元计费（币种 USD）；/v1/billing/usage 探测 404 不登记"
+    },
+    {
+      "id": "tencent-billing",
+      "name": "腾讯云 Billing（账户余额）",
+      "aliases": [
+        "tencent-billing",
+        "tencent",
+        "tencent-cloud",
+        "tencentcloud",
+        "hunyuan",
+        "tencent-coding-plan",
+        "tencent-token-plan",
+        "tencent-tokenhub"
+      ],
+      "hosts": [
+        "billing.tencentcloudapi.com"
+      ],
+      "url": "https://billing.tencentcloudapi.com/",
+      "expression": "$Response.TotalBalance / 100; $Response.CashAccountBalance / 100",
+      "currency": "cny",
+      "signType": "tencent",
+      "verified": true,
+      "notes": "账户级余额，需 AK/SK 签名（TC3-HMAC-SHA256，DescribeAccountBalance Version=2018-07-09；缺 AK/SK 时返回明确提示，不发必然 401 的请求）；余额单位为分，表达式已除以 100 换算成元；假签名探活返回业务错误码，路由确认存在"
+    },
+    {
+      "id": "huawei-bss",
+      "name": "华为云 BSS（账户余额）",
+      "aliases": [
+        "huawei-bss",
+        "huawei",
+        "huawei-cloud",
+        "huaweicloud",
+        "huawei-maas"
+      ],
+      "hosts": [
+        "bss.myhuaweicloud.com"
+      ],
+      "url": "https://bss.myhuaweicloud.com/v2/accounts/customer-accounts/balances",
+      "expression": "$account_balances.0.amount",
+      "currency": "cny",
+      "signType": "huawei",
+      "verified": true,
+      "notes": "账户级余额，需 AK/SK 签名（SDK-HMAC-SHA256；缺 AK/SK 时返回明确提示，不发必然 401 的请求）；account_type=1 为现金余额，amount 单位为元无需换算；假令牌探活 401；MaaS 模型域名 modelarts-maas.com 与计费域名不同根，同源兜底对签名类放行"
+    },
+    {
+      "id": "302ai",
+      "name": "302.AI",
+      "aliases": [
+        "302ai",
+        "302"
+      ],
+      "hosts": [
+        "api.302.ai",
+        "api.302ai.com"
+      ],
+      "url": "https://api.302.ai/dashboard/balance",
+      "expression": "$data.balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档核对（主域名 api.302.ai 本机不可达，国内镜像 api.302ai.com 假令牌探活 401）；余额单位 PTC，1 PTC=1 USD，响应无币种字段；Key 需在控制台开启余额查询权限（403=未开权限，注意防空余额误报）；国内镜像与主站不同主域，渠道用国内域名时需 credit_url 覆盖余额地址"
+    },
+    {
+      "id": "nano-gpt",
+      "name": "NanoGPT",
+      "aliases": [
+        "nano-gpt",
+        "nanogpt"
+      ],
+      "hosts": [
+        "api.nano-gpt.com"
+      ],
+      "url": "https://api.nano-gpt.com/api/check-balance",
+      "method": "POST",
+      "authHeader": "x-api-key",
+      "expression": "$usd_balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，假令牌探活 401；鉴权用 x-api-key 头（非 Bearer，登记表 authHeader 注入，页面 extra.auth_header 亦可覆盖）；usd_balance 为字符串数字，表达式可直接解析"
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel AI Gateway",
+      "aliases": [
+        "vercel",
+        "vercel-ai-gateway"
+      ],
+      "hosts": [
+        "ai-gateway.vercel.sh"
+      ],
+      "url": "https://ai-gateway.vercel.sh/v1/credits",
+      "expression": "$balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，假令牌探活 401；响应另含 total_used（累计消费），如需展示已用可在页面用 credit_expression 覆盖"
+    },
+    {
+      "id": "aimlapi",
+      "name": "AI/ML API",
+      "aliases": [
+        "aimlapi",
+        "ai-ml-api"
+      ],
+      "hosts": [
+        "api.aimlapi.com"
+      ],
+      "url": "https://api.aimlapi.com/v2/billing",
+      "expression": "$current_balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档核对，假令牌探活 401；余额单位 USD"
+    },
+    {
+      "id": "chutes",
+      "name": "Chutes",
+      "aliases": [
+        "chutes"
+      ],
+      "hosts": [
+        "api.chutes.ai"
+      ],
+      "url": "https://api.chutes.ai/users/me",
+      "expression": "$balance",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档口径，假令牌探活 401；余额单位 USD；模型域名 llm.chutes.ai 与 api.chutes.ai 同主域，同源判断放行"
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral AI",
+      "aliases": [
+        "mistral",
+        "mistral-ai"
+      ],
+      "hosts": [
+        "api.mistral.ai"
+      ],
+      "url": "https://api.mistral.ai/v1/billing/subscription",
+      "expression": "€credit_balance",
+      "currency": "eur",
+      "signType": null,
+      "verified": true,
+      "notes": "账单接口为非公开文档路由（控制台同源使用），返回 credit_balance 等订阅字段，币种 EUR；Key 需 see_org_inference_usage 权限（403=缺权限）"
     }
   ]
 }

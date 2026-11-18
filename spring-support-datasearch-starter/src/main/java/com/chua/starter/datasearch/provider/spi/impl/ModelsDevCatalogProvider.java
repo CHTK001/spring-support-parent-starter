@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -158,6 +159,96 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
     }
 
     /**
+     * 按模型 id 在全部厂商里查同名模型。
+     *
+     * <p>同一模型常被多家厂商 / 网关同时收录（{@code deepseek-v4-pro} 在 deepseek、
+     * opencode、sensenova 下都有），所以这里返回<b>候选列表</b>，由调用方按自己的渠道
+     * 挑一个；精确 id 未命中时按折叠键回退（忽略大小写、分隔符与厂商前缀），与定价侧
+     * {@code DataSearchModelPricingProvider} 的口径一致。</p>
+     *
+     * @param modelId 模型 id（可带厂商前缀）
+     * @return 候选（厂商 id + 模型信息）；未收录返回空列表
+     */
+    static List<ModelEntry> findByModelId(String modelId) {
+        if (modelId == null || modelId.isBlank()) {
+            return List.of();
+        }
+        Snapshot current = snapshot();
+        List<ModelNode> nodes = current.byModelId.get(modelId);
+        if (nodes == null) {
+            nodes = current.byFoldedModelId.get(foldModelId(modelId));
+        }
+        if (nodes == null || nodes.isEmpty()) {
+            return List.of();
+        }
+        List<ModelEntry> out = new ArrayList<>(nodes.size());
+        for (ModelNode node : nodes) {
+            ProviderModelInfo model = parseModel(node.modelId(), node.node());
+            if (model != null) {
+                out.add(new ModelEntry(node.providerId(), model));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 判断目录里是否收录了该模型（不做解析，只查索引）。
+     *
+     * @param modelId 模型 id
+     * @return 收录返回 true
+     */
+    static boolean hasModel(String modelId) {
+        if (modelId == null || modelId.isBlank()) {
+            return false;
+        }
+        Snapshot current = snapshot();
+        return current.byModelId.containsKey(modelId)
+                || current.byFoldedModelId.containsKey(foldModelId(modelId));
+    }
+
+    /**
+     * 目录收录的模型总数（跨厂商去重前的条目数）。
+     *
+     * @return 模型数
+     */
+    static int totalModels() {
+        return snapshot().modelCount;
+    }
+
+    /**
+     * 目录收录的全部模型 id（跨厂商去重，与 {@link #findByModelId(String)} 同一索引）。
+     *
+     * @return 模型 id 集合（只读视图）；快照未加载时为空集合
+     */
+    static java.util.Set<String> modelIds() {
+        return java.util.Collections.unmodifiableSet(snapshot().byModelId.keySet());
+    }
+
+    /**
+     * 折叠模型 id：剥掉厂商前缀与所有分隔符，只留小写字母数字。
+     *
+     * @param modelId 模型 id
+     * @return 折叠值；只剩分隔符时返回空串
+     */
+    private static String foldModelId(String modelId) {
+        String name = modelId;
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0 && slash + 1 < name.length()) {
+            name = name.substring(slash + 1);
+        }
+        StringBuilder builder = new StringBuilder(name.length());
+        for (int i = 0; i < name.length(); i++) {
+            char ch = name.charAt(i);
+            if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9')) {
+                builder.append(ch);
+            } else if (ch >= 'A' && ch <= 'Z') {
+                builder.append((char) (ch + ('a' - 'A')));
+            }
+        }
+        return builder.toString();
+    }
+
+    /**
      * 解析单个模型节点。
      *
      * @param id   模型键
@@ -228,14 +319,26 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
             try (InputStream in = new GZIPInputStream(raw)) {
                 JsonNode root = MAPPER.readTree(in);
                 JsonNode providers = root.path("providers");
-                providers.fields().forEachRemaining(entry -> {
-                    JsonNode node = entry.getValue();
-                    loaded.providers.put(entry.getKey(), node);
-                    loaded.modelCount += node.path("models").size();
+                providers.fields().forEachRemaining(providerEntry -> {
+                    String providerId = providerEntry.getKey();
+                    JsonNode node = providerEntry.getValue();
+                    loaded.providers.put(providerId, node);
+                    JsonNode models = node.path("models");
+                    loaded.modelCount += models.size();
+                    // 模型 id → 厂商节点：同一模型被多家收录时全部保留，供「按模型查指标」挑渠道
+                    models.fields().forEachRemaining(modelEntry -> {
+                        String modelId = modelEntry.getKey();
+                        ModelNode hit = new ModelNode(providerId, modelId, modelEntry.getValue());
+                        loaded.byModelId.computeIfAbsent(modelId, key -> new ArrayList<>(4)).add(hit);
+                        String folded = foldModelId(modelId);
+                        if (!folded.isEmpty()) {
+                            loaded.byFoldedModelId.computeIfAbsent(folded, key -> new ArrayList<>(4)).add(hit);
+                        }
+                    });
                     for (JsonNode alias : node.path("aliases")) {
                         loaded.byAlias.putIfAbsent(normalize(alias.asText("")), node);
                     }
-                    loaded.byAlias.putIfAbsent(normalize(entry.getKey()), node);
+                    loaded.byAlias.putIfAbsent(normalize(providerId), node);
                     for (JsonNode host : node.path("hosts")) {
                         String value = normalize(host.asText(""));
                         if (!value.isEmpty()) {
@@ -369,8 +472,37 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
         private final Map<String, JsonNode> byHost = new LinkedHashMap<>(512);
 
         /**
+         * 模型 id → 收录该模型的厂商节点
+         */
+        private final Map<String, List<ModelNode>> byModelId = new HashMap<>(8192);
+
+        /**
+         * 折叠后的模型 id → 收录该模型的厂商节点
+         */
+        private final Map<String, List<ModelNode>> byFoldedModelId = new HashMap<>(8192);
+
+        /**
          * 模型总数
          */
         private int modelCount;
+    }
+
+    /**
+     * 索引里的一个「厂商 → 模型」条目（只存节点，解析留给查询时，避免共享可变对象）。
+     *
+     * @param providerId 厂商标识
+     * @param modelId    模型键（models 对象里的一级键）
+     * @param node       模型节点
+     */
+    record ModelNode(String providerId, String modelId, JsonNode node) {
+    }
+
+    /**
+     * 按模型查指标的结果条目。
+     *
+     * @param providerId 收录该模型的厂商标识
+     * @param model      模型信息（每次查询新解析，调用方可安全修改）
+     */
+    record ModelEntry(String providerId, ProviderModelInfo model) {
     }
 }

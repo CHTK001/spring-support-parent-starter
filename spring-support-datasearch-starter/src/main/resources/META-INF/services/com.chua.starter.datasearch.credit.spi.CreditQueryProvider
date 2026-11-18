@@ -7,3 +7,35 @@ com.chua.starter.datasearch.credit.spi.impl.OpenAiCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.HostCreditQueryProvider
 # 新口径:官方余额口径读 provider-credit-endpoints.json(与 host 同一份数据,不会漂移)
 com.chua.starter.datasearch.credit.spi.impl.RegistryCreditQueryProvider
+# 自定义映射:JSONPath / XPath 逐字段映射到 remain / used / currency
+com.chua.starter.datasearch.credit.spi.impl.CustomCreditQueryProvider
+# Moss 非官方门户余额接口(Cookie 鉴权)
+com.chua.starter.datasearch.credit.spi.impl.MossCreditQueryProvider
+# Agnes 平台余额接口(Bearer 鉴权,支持账号登录取令牌)
+com.chua.starter.datasearch.credit.spi.impl.AgnesCreditQueryProvider
+# DeepSeek 平台门户余额接口(Bearer 会话令牌,支持账号登录截获 data.biz_data.user.token)
+com.chua.starter.datasearch.credit.spi.impl.DeepSeekCreditQueryProvider
+# SenseNova(商汤)平台余额接口(Bearer 登录 JWT,支持账号登录取 localStorage 令牌)
+com.chua.starter.datasearch.credit.spi.impl.SenseNovaCreditQueryProvider
+# 书生(InternAI)平台余额接口(Bearer 门户会话 Cookie uaa-token,支持账号登录截获 Cookie)
+com.chua.starter.datasearch.credit.spi.impl.ShushengCreditQueryProvider
+# MiniMax 平台余额接口(Coding Plan 配额,Bearer 会话令牌,支持账号登录截获;kind 用 minimax-platform,避开 account 旧渠道体系已占用的 minimax)
+com.chua.starter.datasearch.credit.spi.impl.MinimaxPlatformCreditQueryProvider
+# ModelScope(魔搭)余额口径(无独立余额端点,发一次 max_tokens=1 的最小对话请求,从响应头读当日限流配额,Bearer 鉴权)
+com.chua.starter.datasearch.credit.spi.impl.ModelScopeCreditQueryProvider
+# z.ai(智谱 GLM)余额与 Coding Plan 订阅配额(标准 API Key Bearer 鉴权,国际站 api.z.ai / 国内站 open.bigmodel.cn,国内站补查账户余额)
+com.chua.starter.datasearch.credit.spi.impl.ZaiCreditQueryProvider
+# OpenRouter 余额口径(官方 /api/v1/credits 返回累计充值/消费、需管理 Key;普通推理 Key 403 时回落 /api/v1/key 读本 Key 用量,Bearer 鉴权)
+com.chua.starter.datasearch.credit.spi.impl.OpenRouterCreditQueryProvider
+# OpenCode(Go/Zen)官方用量+预算聚合(API Key Bearer 鉴权,多端点聚合;Go 403=无订阅、预算 403=无 Budgets:Read 权限;Zen 按量余额官方无 API)
+com.chua.starter.datasearch.credit.spi.impl.OpenCodeCreditQueryProvider
+# OpenCode 控制台现金余额(控制台同源接口,非公开文档 API;__Host-console_session 会话 Cookie 鉴权;1 USD=1e8 microCents)
+com.chua.starter.datasearch.credit.spi.impl.OpenCodeConsoleCreditQueryProvider
+# 火山引擎(豆包/方舟)余额+个人套餐订阅聚合(IAM AK/SK 签名;余额委托 volc-billing 预设,套餐/用量走方舟 OpenAPI 统一入口 GetPersonalPlan/GetCodingPlanUsage/GetAFPUsage)
+com.chua.starter.datasearch.credit.spi.impl.VolcenginePlanCreditQueryProvider
+# PPIO 派欧云余额(计费域 api.ppio.com 与模型网关 api.ppinfra.com 不同主域,登记表 sameOrigin 兜底不可用;Bearer 渠道 Key 鉴权,金额单位 1/10000 元)
+com.chua.starter.datasearch.credit.spi.impl.PpioCreditQueryProvider
+# Anthropic 官方预付余额(官方无 API-Key 余额接口,走控制台非公开接口;sessionKey 会话 Cookie 鉴权,org_id 可自动发现;amount 为最小货币单位按 exponent 折算)
+com.chua.starter.datasearch.credit.spi.impl.AnthropicCreditQueryProvider
+# xAI 官方预付余额(余额在 Management API,需管理密钥 Bearer 鉴权,推理 Key 查不了;team_id 可经管理密钥校验接口自动发现;total.val 为美分且符号取反)
+com.chua.starter.datasearch.credit.spi.impl.XaiCreditQueryProvider

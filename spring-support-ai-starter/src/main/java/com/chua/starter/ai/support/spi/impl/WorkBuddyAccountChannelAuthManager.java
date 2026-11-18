@@ -1016,42 +1016,6 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
     }
 
     /**
-     * 查询账号积分 / 余额快照（供 {@code ChannelCreditProvider} 复用）。
-     *
-     * <p>与 {@link #checkin(Map)} 分开：签到是「动作」，本方法是「读数」，
-     * 渠道页要能在不签到的情况下展示余额。</p>
-     *
-     * @param credentials 凭据
-     * @return 积分快照（{@code remain/total/unit/packages/updatedAt}）；失败带 {@code error}
-     */
-    public Map<String, Object> credit(Map<String, Object> credentials) {
-        Map<String, Object> result = new LinkedHashMap<>(8);
-        String accessToken = readString(credentials, "access_token");
-        if (isBlank(accessToken)) {
-            result.put("error", "凭据缺少 access_token");
-            return result;
-        }
-        String realm = credentialRealm(credentials);
-        long[] snapshot = balanceDetailed(credentials, realm);
-        if (snapshot == null) {
-            result.put("error", "上游未返回可用余额（个人资源包与企业配额均未命中）");
-            return result;
-        }
-        result.put("remain", snapshot[0]);
-        result.put("total", snapshot[1]);
-        result.put("unit", "credit");
-        result.put("realm", realm);
-        result.put("plan", "global".equals(realm) ? "WorkBuddy AI" : "WorkBuddy");
-        result.put("exceeded", snapshot[1] >= 0 && snapshot[0] <= 0);
-        result.put("updatedAt", System.currentTimeMillis());
-        List<Map<String, Object>> packages = balancePackages(credentials, realm);
-        if (!packages.isEmpty()) {
-            result.put("packages", packages);
-        }
-        return result;
-    }
-
-    /**
      * 查询账号余额（个人：{@code get-user-resource}；企业：{@code get-enterprise-user-usage}）。
      *
      * @param credentials 凭据
@@ -1086,52 +1050,6 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
         } catch (ApiException e) {
             log.debug("[workbuddy] 余额查询失败: {}", ChannelHttp.truncate(e.getMessage()));
             return null;
-        }
-    }
-
-    /**
-     * 个人资源包明细（{@code Response.Data.Accounts[]} 逐条归一化）。
-     *
-     * @param credentials 凭据
-     * @param realm       账号域
-     * @return 明细列表；查询失败返回空
-     */
-    private List<Map<String, Object>> balancePackages(Map<String, Object> credentials, String realm) {
-        if (!isBlank(readString(credentials, "enterprise_id"))) {
-            return List.of();
-        }
-        try {
-            String body = ChannelHttp.postJson(
-                    billingOrigin(realm) + "/v2/billing/meter/get-user-resource",
-                    Json.toJson(userResourceRequest()), billingHeaders(credentials, realm));
-            Map<String, Object> envelope = parseJson(body);
-            if (!(envelope.get("Response") instanceof Map<?, ?> response)
-                    || !(response.get("Data") instanceof Map<?, ?> data)
-                    || !(data.get("Accounts") instanceof List<?> accounts)) {
-                return List.of();
-            }
-            List<Map<String, Object>> packages = new ArrayList<>(accounts.size());
-            for (Object item : accounts) {
-                if (!(item instanceof Map<?, ?> raw)) {
-                    continue;
-                }
-                Map<String, Object> account = asMap(raw);
-                long[] remainUsed = packageRemainUsed(account);
-                Map<String, Object> row = new LinkedHashMap<>(4);
-                String name = readString(account, "PackageName");
-                row.put("name", isBlank(name) ? "资源包" : name);
-                row.put("remain", remainUsed[0]);
-                row.put("size", remainUsed[1]);
-                String cycleEnd = readString(account, "CycleEndTime");
-                if (!isBlank(cycleEnd)) {
-                    row.put("expiresAt", cycleEnd);
-                }
-                packages.add(row);
-            }
-            return packages;
-        } catch (ApiException e) {
-            log.debug("[workbuddy] 资源包明细查询失败: {}", ChannelHttp.truncate(e.getMessage()));
-            return List.of();
         }
     }
 

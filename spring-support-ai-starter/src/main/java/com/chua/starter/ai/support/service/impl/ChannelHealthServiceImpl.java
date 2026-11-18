@@ -1,7 +1,6 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientBuilder;
 import com.chua.common.support.network.client.HttpClientFactory;
@@ -9,12 +8,12 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
-import com.chua.starter.ai.support.manage.mapper.ChannelHealthMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.ChannelHealth;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelHealthService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.ChannelHealth;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.ai.support.service.ChannelHealthService;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.starter.ai.support.util.ProviderCredentials;
@@ -32,7 +31,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 渠道健康探针服务实现。
@@ -50,9 +48,18 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChannelHealthServiceImpl implements ChannelHealthService {
 
-    private final ChannelHealthMapper channelHealthMapper;
-    private final SysAiProviderMapper providerMapper;
-    private final SysAiProviderConnectionMapper connectionMapper;
+    /**
+     * 渠道健康记录（账号模块）：记录怎么读、怎么落库
+     */
+    private final AccountChannelHealthService healthService;
+    /**
+     * 渠道业务（账号模块）：渠道行与启用口径
+     */
+    private final AccountChannelService channelService;
+    /**
+     * 渠道连接业务（账号模块）：探针要覆盖全量连接
+     */
+    private final AccountChannelConnectionService connectionService;
     private final GlobalSettingReader settingReader;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -253,10 +260,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public List<ChannelHealth> listStates() {
-        return channelHealthMapper.selectList(
-                new LambdaQueryWrapper<ChannelHealth>()
-                        .orderByAsc(ChannelHealth::getProviderId)
-                        .orderByAsc(ChannelHealth::getConnectionId));
+        return healthService.listAll();
     }
 
     /**
@@ -267,8 +271,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public List<ChannelHealth> listByProvider(String providerId) {
-        return channelHealthMapper.selectList(
-                new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getProviderId, providerId));
+        return healthService.listByProvider(providerId);
     }
 
     /**
@@ -279,7 +282,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public ChannelHealth getState(String connectionId) {
-        return channelHealthMapper.selectById(connectionId);
+        return healthService.find(connectionId);
     }
 
     /**
@@ -289,7 +292,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @return 健康状态
      */
     public ChannelHealth state(String connectionId) {
-        return Optional.ofNullable(channelHealthMapper.selectById(connectionId))
+        return Optional.ofNullable(healthService.find(connectionId))
                 .orElseGet(() -> channelState(connectionId));
     }
 
@@ -387,7 +390,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public ChannelHealth updateCircuitState(String connectionId, String state, String reason) {
-        SysAiProviderConnection conn = connection(connectionId);
+        SysAccountChannelConnection conn = connection(connectionId);
         String normalized = normalizeCircuitState(state);
         ChannelHealth h = initOrCreate(connectionId, null, conn);
         long now = System.currentTimeMillis();
@@ -432,11 +435,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public Set<String> downConnections() {
-        return channelHealthMapper.selectList(
-                        new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getState, STATE_DOWN))
-                .stream()
-                .map(ChannelHealth::getConnectionId)
-                .collect(Collectors.toSet());
+        return healthService.connectionIdsByState(STATE_DOWN);
     }
 
     /**
@@ -470,8 +469,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public ChannelHealth probe(String connectionId) {
-        SysAiProviderConnection conn = connection(connectionId);
-        SysAiProvider provider = provider(conn.getProviderId());
+        SysAccountChannelConnection conn = connection(connectionId);
+        SysAccountChannel provider = provider(conn.getProviderId());
         try {
             probeConnection(provider, conn);
         } catch (Exception e) {
@@ -488,8 +487,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
     @Override
     public int probeAll() {
         int probed = 0;
-        for (SysAiProvider provider : providers()) {
-            for (SysAiProviderConnection conn : connections(provider)) {
+        for (SysAccountChannel provider : providers()) {
+            for (SysAccountChannelConnection conn : connections(provider)) {
                 try {
                     probeConnection(provider, conn);
                     probed++;
@@ -513,9 +512,9 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @return 探针完成的连接数
      */
     public int probeByProvider(String providerId) {
-        SysAiProvider provider = provider(providerId);
+        SysAccountChannel provider = provider(providerId);
         int probed = 0;
-        for (SysAiProviderConnection conn : connections(provider)) {
+        for (SysAccountChannelConnection conn : connections(provider)) {
             try {
                 probeConnection(provider, conn);
                 probed++;
@@ -542,11 +541,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             return 0;
         }
         int probed = 0;
-        for (SysAiProvider provider : providers()) {
+        for (SysAccountChannel provider : providers()) {
             if (!channel.equalsIgnoreCase(provider.getPlatform())) {
                 continue;
             }
-            for (SysAiProviderConnection conn : connections(provider)) {
+            for (SysAccountChannelConnection conn : connections(provider)) {
                 try {
                     probeConnection(provider, conn);
                     probed++;
@@ -567,8 +566,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      *
      * @return 供应商列表
      */
-    private List<SysAiProvider> providers() {
-        return providerMapper.selectList(new LambdaQueryWrapper<SysAiProvider>().eq(SysAiProvider::getEnabled, true));
+    private List<SysAccountChannel> providers() {
+        return channelService.listEnabled();
     }
 
     /**
@@ -577,10 +576,9 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param provider 供应商
      * @return 连接列表
      */
-    private List<SysAiProviderConnection> connections(SysAiProvider provider) {
-        return connectionMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, provider.getProviderId()));
+    private List<SysAccountChannelConnection> connections(SysAccountChannel provider) {
+        // 探针要覆盖全量连接（含其它账号绑定的），不能用带归属过滤的 list
+        return connectionService.listAll(provider.getProviderId());
     }
 
     /**
@@ -589,8 +587,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param connectionId 连接标识
      * @return 连接
      */
-    private SysAiProviderConnection connection(String connectionId) {
-        SysAiProviderConnection conn = connectionMapper.selectById(connectionId);
+    private SysAccountChannelConnection connection(String connectionId) {
+        SysAccountChannelConnection conn = connectionService.find(connectionId);
         if (conn == null || conn.getProviderId() == null) {
             throw new IllegalArgumentException("找不到此连接: " + connectionId);
         }
@@ -603,8 +601,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param providerId 供应商 ID
      * @return 已启用的供应商
      */
-    private SysAiProvider provider(String providerId) {
-        SysAiProvider provider = providerMapper.selectById(providerId);
+    private SysAccountChannel provider(String providerId) {
+        SysAccountChannel provider = channelService.find(providerId);
         if (provider == null || provider.getEnabled() == null || !provider.getEnabled()) {
             throw new IllegalArgumentException("找不到已启用的供应商: " + providerId);
         }
@@ -617,7 +615,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param provider 供应商
      * @param conn 连接
      */
-    private void probeConnection(SysAiProvider provider, SysAiProviderConnection conn) {
+    private void probeConnection(SysAccountChannel provider, SysAccountChannelConnection conn) {
         String connectionId = conn.getConnectionId();
         String scheme = authScheme(provider, conn);
         try {
@@ -638,7 +636,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @param h 健康记录行
      */
-    private void probeOauth(SysAiProvider provider, SysAiProviderConnection conn, ChannelHealth h) {
+    private void probeOauth(SysAccountChannel provider, SysAccountChannelConnection conn, ChannelHealth h) {
         String connectionId = conn.getConnectionId();
         if (conn.getCredentials() == null || conn.getCredentials().isEmpty()) {
             markUnknown(connectionId, provider, conn);
@@ -691,7 +689,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param impl 渠道实现
      * @return 新凭据；续期失败或处于冷却期返回 {@code null}
      */
-    private Map<String, Object> renewCredentials(SysAiProviderConnection conn,
+    private Map<String, Object> renewCredentials(SysAccountChannelConnection conn,
                                                  AccountChannelAuthManager impl) {
         String connectionId = conn.getConnectionId();
         long now = System.currentTimeMillis();
@@ -709,7 +707,8 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             }
             conn.setCredentials(renewed);
             conn.setUpdatedAt(now);
-            connectionMapper.updateById(conn);
+            // 续期只写凭证列，整行 update 会连归属/状态一起覆盖
+            connectionService.updateCredentials(connectionId, renewed);
             // 立即让路由与客户端缓存失效，新模型不用等 5 分钟 TTL
             eventPublisher.publishEvent(
                     new ChannelHealthProbeEvent(this, downConnections(), 0, false));
@@ -744,7 +743,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @param h 健康记录行
      */
-    private void probeHttp(SysAiProvider provider, SysAiProviderConnection conn, ChannelHealth h) {
+    private void probeHttp(SysAccountChannel provider, SysAccountChannelConnection conn, ChannelHealth h) {
         String connectionId = conn.getConnectionId();
         String baseUrl = baseUrl(conn, provider);
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -788,7 +787,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param provider 供应商
      * @param conn 连接
      */
-    private void markUnknown(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
+    private void markUnknown(String connectionId, SysAccountChannel provider, SysAccountChannelConnection conn) {
         ChannelHealth h = initOrCreate(connectionId, provider, conn);
         h.setState(STATE_UNKNOWN);
         h.setUpdatedAt(System.currentTimeMillis());
@@ -827,7 +826,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public void updateInterval(String connectionId, int interval) {
-        SysAiProviderConnection conn = connection(connectionId);
+        SysAccountChannelConnection conn = connection(connectionId);
         ChannelHealth h = initOrCreate(connectionId, null, conn);
         h.setIntervalSeconds(Math.max(0, interval));
         h.setUpdatedAt(System.currentTimeMillis());
@@ -841,7 +840,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     @Override
     public void resetState(String connectionId) {
-        SysAiProviderConnection conn = connection(connectionId);
+        SysAccountChannelConnection conn = connection(connectionId);
         ChannelHealth h = initOrCreate(connectionId, null, conn);
         h.setState(STATE_UNKNOWN);
         h.setFailures(0L);
@@ -869,7 +868,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn         连接（可空）
      */
     private void markSuccess(String connectionId, int status, int latency,
-                             SysAiProvider provider, SysAiProviderConnection conn) {
+                             SysAccountChannel provider, SysAccountChannelConnection conn) {
         mark(connectionId, true, status, latency, null, provider, conn);
     }
 
@@ -883,7 +882,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn         连接（可空）
      */
     private void markFailure(String connectionId, int status, String error,
-                             SysAiProvider provider, SysAiProviderConnection conn) {
+                             SysAccountChannel provider, SysAccountChannelConnection conn) {
         mark(connectionId, false, status, 0, error, provider, conn);
     }
 
@@ -899,7 +898,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      */
     private void mark(String connectionId, boolean ok, int status, int latency, String error,
-                      SysAiProvider provider, SysAiProviderConnection conn) {
+                      SysAccountChannel provider, SysAccountChannelConnection conn) {
         ChannelHealth h = initOrCreate(connectionId, provider, conn);
 
         boolean rateLimited = isRateLimited(status);
@@ -994,7 +993,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param provider 供应商
      * @return 地址
      */
-    private String baseUrl(SysAiProviderConnection conn, SysAiProvider provider) {
+    private String baseUrl(SysAccountChannelConnection conn, SysAccountChannel provider) {
         String baseUrl = Optional.ofNullable(conn.getBaseUrl())
                 .filter(StringUtils::isNotBlank)
                 .orElseGet(() -> provider.getBaseUrl());
@@ -1008,7 +1007,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param provider 供应商
      * @return 认证头值（无凭据时返回 null）
      */
-    private String authHeader(SysAiProviderConnection conn, SysAiProvider provider) {
+    private String authHeader(SysAccountChannelConnection conn, SysAccountChannel provider) {
         String apiKey = ProviderCredentials.firstApiKey(
                 Optional.ofNullable(conn.getCredentials()).orElseGet(provider::getCredentials));
         return StringUtils.isBlank(apiKey) ? null : "Bearer " + apiKey;
@@ -1035,7 +1034,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @return 认证方案
      */
-    private static String authScheme(SysAiProvider provider, SysAiProviderConnection conn) {
+    private static String authScheme(SysAccountChannel provider, SysAccountChannelConnection conn) {
         String scheme = conn.getAuthScheme();
         if (StringUtils.isNotBlank(scheme)) return scheme;
         return provider.getAuthScheme();
@@ -1097,15 +1096,19 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param conn 连接
      * @return 健康记录行
      */
-    private ChannelHealth initOrCreate(String connectionId, SysAiProvider provider, SysAiProviderConnection conn) {
-        ChannelHealth h = channelHealthMapper.selectById(connectionId);
-        if (h != null) return h;
+    private ChannelHealth initOrCreate(String connectionId, SysAccountChannel provider, SysAccountChannelConnection conn) {
+        ChannelHealth h = healthService.find(connectionId);
+        if (h != null) {
+            return h;
+        }
         if (provider == null || conn == null) {
             if (conn == null) {
-                conn = connectionMapper.selectById(connectionId);
-                provider = conn == null ? null : providerMapper.selectById(conn.getProviderId());
+                conn = connectionService.find(connectionId);
+                provider = conn == null ? null : channelService.find(conn.getProviderId());
             } else {
-                provider = providerMapper.selectById(connectionId);
+                // 之前这里错把 connectionId 当 providerId 查（永远查不到），
+                // 导致人工熔断/手工探针新建的健康行缺 provider_id 与 channel，按渠道聚合时丢行。
+                provider = channelService.find(conn.getProviderId());
             }
         }
         h = new ChannelHealth();
@@ -1113,10 +1116,14 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         h.setCreatedAt(System.currentTimeMillis());
         h.setUpdatedAt(h.getCreatedAt());
         h.setState(STATE_UNKNOWN);
-        if (provider != null) h.setProviderId(provider.getProviderId());
+        if (provider != null) {
+            h.setProviderId(provider.getProviderId());
+        }
         if (conn != null) {
             h.setConnectionId(conn.getConnectionId());
-            if (provider != null) h.setChannel(provider.getPlatform());
+            if (provider != null) {
+                h.setChannel(provider.getPlatform());
+            }
             h.setLabel(conn.getLabel());
         }
         return h;
@@ -1128,11 +1135,6 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      * @param h 健康记录行
      */
     private void saveHealth(ChannelHealth h) {
-        if (channelHealthMapper.selectCount(
-                new LambdaQueryWrapper<ChannelHealth>().eq(ChannelHealth::getId, h.getId())) == 0) {
-            channelHealthMapper.insert(h);
-        } else {
-            channelHealthMapper.updateById(h);
-        }
+        healthService.save(h);
     }
 }

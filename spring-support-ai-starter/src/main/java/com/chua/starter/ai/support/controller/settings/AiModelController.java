@@ -1,12 +1,10 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.settings.AiModelService;
 import com.chua.starter.common.support.annotations.Permission;
@@ -51,7 +49,10 @@ import java.util.Map;
 public class AiModelController {
 
     private final AiModelService modelService;
-    private final SysAiProviderModelMapper providerModelMapper;
+    /**
+     * 渠道模型清单业务（账号模块：模型开关的唯一写入口）
+     */
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 列出。
@@ -76,6 +77,13 @@ public class AiModelController {
         return modelService.create(model);
     }
 
+    /**
+     * 更新模型。
+     *
+     * @param modelId 模型主键
+     * @param model   模型信息，不允许为 null
+     * @return 更新后的模型
+     */
     @Operation(summary = "更新模型")
     @PutMapping("/{modelId}")
     public AiModelDTO update(@Parameter(description = "模型主键") @PathVariable Long modelId,
@@ -135,7 +143,7 @@ public class AiModelController {
      *
      * <p>guada 模型管理页使用复合 id {@code providerId:modelName}（如
      * {@code 1789547286889:agnes-2.5-flash}），启停结果持久化到
-     * {@code sys_ai_provider_model} 表。</p>
+     * {@code sys_account_channel_model} 表。</p>
      *
      * @param compositeId 复合模型标识 providerId:modelName
      * @return 包含最新启用状态的对象 {@code {isActive:boolean}}
@@ -145,12 +153,14 @@ public class AiModelController {
     @PutMapping("/{compositeId}/toggle-active")
     public Map<String, Object> toggleActive(@Parameter(description = "复合模型ID providerId:modelName")
                                             @PathVariable("compositeId") String compositeId) {
-        // ★ 本端点与其余五个**不同**：它不经过 AiModelService，而是直接改
-        //   sys_ai_provider_model.enabled —— 那是**全局共享**的模型可用性表，
+        // ★ 本端点与其余五个**不同**：它不经过 AiModelService，改的是
+        //   sys_account_channel_model.enabled 这条**全局共享**的模型可用性状态，
         //   EffectiveChatModelResolver / ModelClientResolver / RagClientManager
         //   都按 enabled=true 读它来决定「谁能用哪些模型」。
         //   放开它等于让任意账号一键停掉所有人的模型，故仍限 admin。
         //   待该表也按账号隔离后，本端点才能跟着放开。
+        //   ★ 写入走账号模块的命令接口：判定 + 落库 + 变更事件 + 模型清单缓存失效一次到位，
+        //     这里不碰 Mapper，否则停用要等 TTL 才生效。
         int separator = compositeId.indexOf(':');
         if (separator <= 0 || separator >= compositeId.length() - 1) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "模型ID格式非法，应为 providerId:modelName");
@@ -158,20 +168,15 @@ public class AiModelController {
         String providerId = compositeId.substring(0, separator);
         String modelName = compositeId.substring(separator + 1);
 
-        SysAiProviderModel entity = providerModelMapper.selectOne(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId)
-                        .eq(SysAiProviderModel::getModel, modelName));
+        SysAccountChannelModel entity = channelModelService.find(providerId, modelName);
         if (entity == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在: " + modelName);
         }
 
         boolean active = !Boolean.TRUE.equals(entity.getEnabled());
-        entity.setEnabled(active);
-        entity.setUpdatedAt(System.currentTimeMillis());
-        providerModelMapper.update(entity, new LambdaUpdateWrapper<SysAiProviderModel>()
-                .eq(SysAiProviderModel::getProviderId, providerId)
-                .eq(SysAiProviderModel::getModel, modelName));
+        // 启停是账号模块的业务（判定 + 落库 + 变更事件 + 模型清单缓存失效都在那边），
+        // 这里只调命令接口，不再自己写表 —— 直写会绕过缓存失效，停用最长 5 分钟才生效。
+        channelModelService.setEnabled(providerId, modelName, active);
 
         Map<String, Object> result = new LinkedHashMap<>(2);
         result.put("isActive", active);

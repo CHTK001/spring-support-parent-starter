@@ -93,7 +93,7 @@ public class AiSessionController {
       /**
        * 模型注册表（查上下文窗口；窗口只认注册表，不认会话快照，见 {@link #registryContextWindow}）
        */
-    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper providerModelMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelModelService channelModelService;
 
       /**
        * 将前端 settings 对象序列化为 JSON 字符串；入参为 null 或序列化失败时返回 null。
@@ -1206,13 +1206,9 @@ public class AiSessionController {
             return 0L;
         }
         try {
-            com.chua.starter.ai.support.manage.store.SysAiProviderModel row = providerId == null
-                    ? providerModelMapper.selectById(model)
-                    : providerModelMapper.selectOne(
-                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.chua.starter.ai.support.manage.store.SysAiProviderModel>()
-                                    .eq(com.chua.starter.ai.support.manage.store.SysAiProviderModel::getProviderId, providerId)
-                                    .eq(com.chua.starter.ai.support.manage.store.SysAiProviderModel::getModel, model)
-                                    .last("LIMIT 1"));
+            com.chua.starter.account.channel.store.SysAccountChannelModel row = providerId == null
+                    ? channelModelService.findAnyByModel(model)
+                    : channelModelService.find(providerId, model);
             Integer window = row == null ? null : row.getContextWindow();
             return window == null || window <= 0 ? 0L : window;
         } catch (Exception e) {

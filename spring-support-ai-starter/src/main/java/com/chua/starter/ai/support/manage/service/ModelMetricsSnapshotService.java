@@ -3,11 +3,11 @@ package com.chua.starter.ai.support.manage.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.manage.SysAiWsTopics;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
-import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
+import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +25,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * 模型价格/指标快照服务。
  *
- * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
- * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/HLE/全知指数/输出速度/首块延迟/
- * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>指标</code> 实时字段
+ * <p>定时枚举全部已配置供应商与模型，用 datasearch 模型目录（{@link ProviderModelMetrics}）
+ * 匹配「输入价格/输出价格/缓存价格/上下文/深度思考/图片识别/函数调用」，合并模型自身的 <code>指标</code> 实时字段
  * 与能力健康探测延迟，构建一份快照写入 Redis（Key {@code nomifun:model-metrics:latest}，
  * TTL 12h），供查询接口按需读取。不再经 webSocket 定时推送，前端通过
  * {@code GET /api/model-metrics} 从缓存获取。</p>
@@ -85,6 +84,12 @@ public class ModelMetricsSnapshotService {
         m.put("qwen", "qwen");
         m.put("dashscope", "qwen");
         m.put("dashscope-coding", "qwen");
+        m.put("aliyun", "qwen");
+        m.put("alibaba", "qwen");
+        m.put("alibaba-coding-plan-cn", "qwen");
+        m.put("alibaba-coding-plan", "qwen");
+        m.put("alibaba-token-plan-cn", "qwen");
+        m.put("alibaba-token-plan", "qwen");
         m.put("moonshot-cn", "kimi");
         m.put("moonshot-global", "kimi");
         m.put("moonshot", "kimi");
@@ -99,9 +104,17 @@ public class ModelMetricsSnapshotService {
         m.put("qianfan-coding-plan", "baidu");
         m.put("hunyuan", "tencent");
         m.put("hunyuan-global", "tencent");
+        m.put("tencent", "tencent");
+        m.put("tencent-coding-plan", "tencent");
+        m.put("tencent-token-plan", "tencent");
+        m.put("tencent-tokenhub", "tencent");
         m.put("lingyi", "lingyiwanwu");
         m.put("stepfun", "stepfun");
         m.put("stepfun-plan", "stepfun");
+        m.put("stepfun-ai", "stepfun");
+        m.put("stepfun-ai-step-plan", "stepfun");
+        m.put("qiniu", "qiniu-ai");
+        m.put("qiniu-ai", "qiniu-ai");
         m.put("minimax", "minimax");
         m.put("minimax-code", "minimax");
         m.put("minimax-coding-plan", "minimax");
@@ -225,19 +238,14 @@ public class ModelMetricsSnapshotService {
             "latency_ms");
 
     /**
-     * 提供商 映射器
+     * 渠道业务（账号模块）
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 提供商模型 映射器
      */
-    private final SysAiProviderModelMapper modelMapper;
-
-    /**
-     * 指标富集服务（Artificial Analysis 价格/速度/延迟匹配）
-     */
-    private final AiModelMetricsEnrichmentService metricsEnrichmentService;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * Redis 模板
@@ -386,21 +394,20 @@ public class ModelMetricsSnapshotService {
      */
     private Map<String, Object> buildSnapshotInternal() {
         List<Map<String, Object>> models = new ArrayList<>();
-        List<SysAiProvider> providers = providerMapper.selectList(new LambdaQueryWrapper<>());
+        List<SysAccountChannel> providers = channelService.listAll();
         // 一次取全部模型行再按供应商分组。原来逐供应商查询是 N+1 次往返，
         // 数据库跨网络（远端隧道）时每次往返秒级，一次列表请求就被拖到分钟级。
         // [P3C A20 豁免]
-        Map<String, List<SysAiProviderModel>> rowsByProvider = new HashMap<>(16);
-        for (SysAiProviderModel row : modelMapper.selectList(new LambdaQueryWrapper<SysAiProviderModel>()
-                .orderByAsc(SysAiProviderModel::getSortOrder))) {
+        Map<String, List<SysAccountChannelModel>> rowsByProvider = new HashMap<>(16);
+        for (SysAccountChannelModel row : channelModelService.listAll()) {
             rowsByProvider.computeIfAbsent(row.getProviderId(), k -> new ArrayList<>()).add(row);
         }
-        for (SysAiProvider provider : providers) {
-            List<SysAiProviderModel> rows = rowsByProvider.get(provider.getProviderId());
+        for (SysAccountChannel provider : providers) {
+            List<SysAccountChannelModel> rows = rowsByProvider.get(provider.getProviderId());
             if (rows == null) {
                 continue;
             }
-            for (SysAiProviderModel row : rows) {
+            for (SysAccountChannelModel row : rows) {
                 models.add(toRow(provider, row));
             }
         }
@@ -418,7 +425,7 @@ public class ModelMetricsSnapshotService {
      * @param row      模型实体
      * @return 聚合行
      */
-    private Map<String, Object> toRow(SysAiProvider provider, SysAiProviderModel row) {
+    private Map<String, Object> toRow(SysAccountChannel provider, SysAccountChannelModel row) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("provider_id", provider.getProviderId());
         out.put("provider_name", provider.getName());
@@ -433,8 +440,8 @@ public class ModelMetricsSnapshotService {
             out.put("provider_logo", providerLogo);
         }
 
-        // Artificial Analysis 静态指标（输入/输出价、智能、速度、首块延迟）
-        metricsEnrichmentService.enrich(row.getModel(), out);
+        // datasearch 模型目录静态指标（输入/输出价、缓存价、上下文、能力位）
+        ProviderModelMetrics.mergeInto(row.getModel(), out);
 
         // 模型 Logo：AA 命中则用其图标，否则回退厂商 Logo
         Object iconUrl = out.get("icon_url");
@@ -533,7 +540,7 @@ public class ModelMetricsSnapshotService {
      * @param row 模型实体
      * @return 延迟毫秒或 空
      */
-    private Long firstCapabilityLatency(SysAiProviderModel row) {
+    private Long firstCapabilityLatency(SysAccountChannelModel row) {
         List<Map<String, Object>> capabilities = row.getCapabilities();
         if (capabilities == null) {
             return null;

@@ -30,10 +30,10 @@ import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolv
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
 import com.chua.starter.ai.support.mapper.SysAiBotMessageMapper;
@@ -94,12 +94,12 @@ public class AiBotChatService {
     /**
      * 模型表 映射器（按模型名查所属 提供者）
     */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
-     * 提供者 表 映射器（获取 platform/baseurl/凭证）
+     * 渠道业务（账号模块）：渠道行（platform/baseurl/凭证）
     */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 机器人 聊天消息 映射器（进度聊天历史落库）
@@ -980,6 +980,13 @@ public class AiBotChatService {
      *
      * <p>wechat：私聊 sendText(用户)，群 sendText(最近作者)（沿用被动回复语义）；
      * qq/feishu：群 sendToGroup(chatId)，私聊 sendText(chatId)。</p>
+     *
+     * @param client    机器人 客户端
+     * @param binding   机器人 绑定信息
+     * @param chatId    会话标识
+     * @param fromGroup 是否群聊
+     * @param text      消息内容
+     * @return 发送结果
      */
     private BotSendResult dispatch(BotClient client, SysAiBotBinding binding,
                                    String chatId, boolean fromGroup, String text) {
@@ -1262,14 +1269,11 @@ public class AiBotChatService {
             return null;
         }
         try {
-            SysAiProviderModel pm = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getModel, modelName)
-                            .eq(SysAiProviderModel::getEnabled, true));
+            SysAccountChannelModel pm = channelModelService.findEnabledByModel(modelName);
             if (pm == null) {
                 return null;
             }
-            SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+            SysAccountChannel provider = channelService.find(pm.getProviderId());
             if (provider == null || provider.getBaseUrl() == null) {
                 return null;
             }
@@ -1498,6 +1502,7 @@ public class AiBotChatService {
      * @param content   消息内容
      * @param ownerKey  所属 机器人 绑定的归属标识（{@code u:<userId>} / {@code fp:<指纹>}，可为空）
      * @param dedupKey  幂等去重键（仅入站 IN 消息传入，OUT 传 {@code null}）
+     * @param contextToken 上下文令牌（随消息持久化，供重启后回填，可为空）
      * @return {@code true}=落库成功（或非重复类异常，按尽力而为不阻断）；
      *         {@code false}=命中唯一键冲突，说明同一条消息已被本实例或其他实例处理，调用方应跳过
      */
@@ -1734,20 +1739,16 @@ public class AiBotChatService {
                 plainModel = after;
             }
         }
-        LambdaQueryWrapper<SysAiProviderModel> modelQuery = Wrappers.<SysAiProviderModel>lambdaQuery()
-                .eq(SysAiProviderModel::getModel, plainModel)
-                .eq(SysAiProviderModel::getEnabled, true);
-        if (providerId != null) {
-            modelQuery.eq(SysAiProviderModel::getProviderId, providerId);
-        }
-        SysAiProviderModel pm = providerModelMapper.selectOne(modelQuery);
+        SysAccountChannelModel pm = providerId == null
+                ? channelModelService.findEnabledByModel(plainModel)
+                : channelModelService.findEnabled(providerId, plainModel);
         if (pm == null) {
             throw new IllegalStateException("模型 " + modelName + " 未在模型管理中配置");
         }
         log.info("[BotChat] Bot {} 命中模型 providerId={} model={} plainModel={} 原始模型名={}",
                 bot.getBotId(), pm.getProviderId(), pm.getModel(), plainModel, modelName);
         // 2. 查 提供者，取 platform / baseurl / 凭证
-        SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+        SysAccountChannel provider = channelService.find(pm.getProviderId());
         if (provider == null || provider.getBaseUrl() == null) {
             throw new IllegalStateException("模型 " + modelName + " 的供应商不存在");
         }
@@ -1949,9 +1950,10 @@ public class AiBotChatService {
      * @param provider     DB 提供者
      * @param apiKey       API Key，可为 null
      * @param extraHeaders 自定义请求头
+     * @param channelRoutes 渠道路由表（可为空，为空时从 extra 解析）
      * @return 客户端配置
      */
-    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+    private static ChatClientSetting buildSetting(SysAccountChannel provider, String apiKey,
                                                    Map<String, String> extraHeaders,
                                                    Map<String, RouteTarget> channelRoutes) {
         return buildSetting(provider, apiKey, extraHeaders, null, channelRoutes);
@@ -1964,9 +1966,10 @@ public class AiBotChatService {
      * @param apiKey        API Key，可为 null
      * @param extraHeaders  自定义请求头
      * @param timeoutMillis 请求超时（毫秒），可为 null
+     * @param channelRoutes 渠道路由表（可为空，为空时从 extra 解析）
      * @return 客户端配置
      */
-    private static ChatClientSetting buildSetting(SysAiProvider provider, String apiKey,
+    private static ChatClientSetting buildSetting(SysAccountChannel provider, String apiKey,
                                                   Map<String, String> extraHeaders, Long timeoutMillis,
                                                    Map<String, RouteTarget> channelRoutes) {
         Map<String, Object> extra = provider.getExtra();

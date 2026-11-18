@@ -1,9 +1,9 @@
 package com.chua.starter.ai.support.manage.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.datasearch.provider.model.ProviderModelCatalog;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
 import com.chua.starter.datasearch.provider.model.ProviderPricingRefresh;
@@ -57,7 +57,7 @@ public class ProviderCatalogSyncService {
      */
     private static final String SOURCE = "models.dev";
 
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     private final SysAiModelMetricsService metricsService;
 
@@ -71,7 +71,7 @@ public class ProviderCatalogSyncService {
      * @return 各分节统计
      */
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> sync(SysAiProvider provider) {
+    public Map<String, Object> sync(SysAccountChannel provider) {
         Map<String, Object> out = new LinkedHashMap<>(12);
         out.put("supported", false);
         if (provider == null) {
@@ -169,15 +169,13 @@ public class ProviderCatalogSyncService {
      * @param provider 服务商行
      * @return 协议标识（小写）；无法确定返回 null
      */
-    private String providerProtocol(SysAiProvider provider) {
+    private String providerProtocol(SysAccountChannel provider) {
         if (provider.getProviderId() == null) {
             return null;
         }
-        List<SysAiProviderModel> rows = providerModelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, provider.getProviderId()));
+        List<SysAccountChannelModel> rows = channelModelService.listAll(provider.getProviderId());
         Set<String> protocols = new LinkedHashSet<>(4);
-        for (SysAiProviderModel row : rows) {
+        for (SysAccountChannelModel row : rows) {
             List<Map<String, Object>> caps = row.getCapabilities();
             if (caps == null) {
                 continue;
@@ -201,11 +199,9 @@ public class ProviderCatalogSyncService {
      */
     private Map<String, Object> syncDescriptions(String providerId, ProviderModelCatalog catalog) {
         Map<String, Object> out = new LinkedHashMap<>(6);
-        List<SysAiProviderModel> rows = providerModelMapper.selectList(
-                new LambdaQueryWrapper<SysAiProviderModel>()
-                        .eq(SysAiProviderModel::getProviderId, providerId));
-        Map<String, SysAiProviderModel> byModel = new HashMap<>(rows.size());
-        for (SysAiProviderModel row : rows) {
+        List<SysAccountChannelModel> rows = channelModelService.listAll(providerId);
+        Map<String, SysAccountChannelModel> byModel = new HashMap<>(rows.size());
+        for (SysAccountChannelModel row : rows) {
             if (row.getModel() != null) {
                 byModel.putIfAbsent(row.getModel().toLowerCase(Locale.ROOT), row);
             }
@@ -218,7 +214,7 @@ public class ProviderCatalogSyncService {
         int missing = 0;
         long now = System.currentTimeMillis();
         for (ProviderModelInfo model : catalog.getModels()) {
-            SysAiProviderModel row = byModel.get(model.getId().toLowerCase(Locale.ROOT));
+            SysAccountChannelModel row = byModel.get(model.getId().toLowerCase(Locale.ROOT));
             if (row == null && model.getName() != null) {
                 row = byModel.get(model.getName().toLowerCase(Locale.ROOT));
             }
@@ -240,12 +236,12 @@ public class ProviderCatalogSyncService {
                 unchanged++;
                 continue;
             }
-            SysAiProviderModel update = new SysAiProviderModel();
+            SysAccountChannelModel update = new SysAccountChannelModel();
             update.setProviderId(providerId);
             update.setModel(row.getModel());
             update.setDescription(description.trim());
             update.setUpdatedAt(now);
-            updated += providerModelMapper.updateByKey(update);
+            updated += channelModelService.updateByKey(update);
         }
         out.put("updated", updated);
         out.put("unchanged", unchanged);
@@ -332,7 +328,9 @@ public class ProviderCatalogSyncService {
         put(metrics, "last_updated", model.getLastUpdated());
         put(metrics, "description", model.getDescription());
         List<String> inputs = model.getInputModalities();
-        if (inputs != null) {
+        if (inputs != null && !inputs.isEmpty()) {
+            // 模态列表原样保留：布尔位表达不了 vector / file，前端「输入」列需要原始列表
+            metrics.put("input_modalities", new ArrayList<>(inputs));
             put(metrics, "image_input", inputs.contains("image"));
             put(metrics, "audio_input", inputs.contains("audio"));
             put(metrics, "video_input", inputs.contains("video"));

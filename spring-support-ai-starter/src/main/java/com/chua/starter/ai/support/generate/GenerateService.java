@@ -11,8 +11,8 @@ import com.chua.common.support.ai.video.VideoResponse;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.mapper.SysAiGenerateTaskMapper;
 import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -743,7 +743,7 @@ public class GenerateService {
         if (!resolved.ok()) {
             throw new IllegalStateException("该模型未配置可用的图像生成实现，请在模型管理中检查供应商与密钥");
         }
-        SysAiProviderModel modelCfg = resolved.modelCfg();
+        SysAccountChannelModel modelCfg = resolved.modelCfg();
         GenerateConfigSupport.View view = GenerateConfigSupport.read(modelCfg, GenerateConfigSupport.TYPE_IMAGE);
         int count = clamp(request.count(), 1, view.maxCount());
         ImageClient client = resolved.client()

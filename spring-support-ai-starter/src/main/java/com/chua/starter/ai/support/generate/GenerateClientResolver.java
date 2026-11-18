@@ -5,10 +5,10 @@ import com.chua.common.support.ai.image.ImageClient;
 import com.chua.common.support.ai.image.ImageClientSetting;
 import com.chua.common.support.ai.video.VideoClient;
 import com.chua.common.support.ai.video.VideoClientSetting;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 生成客户端解析器：按模型名路由到对应供应商的 {@link ImageClient} / {@link VideoClient} 实现。
  *
  * <p>与对话侧 {@code AiChatFacadeServiceImpl#resolveChatClient} 同构：先按模型名查
- * {@code sys_ai_provider_model} → {@code sys_ai_provider}，命中则用该供应商的凭证动态构建；
+ * {@code sys_account_channel_model} → {@code sys_account_channel}，命中则用该供应商的凭证动态构建；
  * 未命中再回退到 {@code generate} 分组全局配置。差别在于对话侧有 {@code ChatClientRegistry}
  * 常驻注册表，而生成侧是按需构建，故本类自带 TTL 缓存。</p>
  *
@@ -37,14 +37,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GenerateClientResolver {
 
     /**
-     * 提供者映射器
+     * 渠道业务（账号模块）：渠道行与启用口径
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 提供者模型映射器
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 构建结果缓存（key = 类型::供应商::模型，value = 构建时间戳）
@@ -71,7 +71,7 @@ public class GenerateClientResolver {
      * @param provider 命中的供应商，未命中为 null
      * @param modelCfg 命中的模型行，未命中为 null
      */
-    public record Resolved<T>(T client, SysAiProvider provider, SysAiProviderModel modelCfg) {
+    public record Resolved<T>(T client, SysAccountChannel provider, SysAccountChannelModel modelCfg) {
 
         /**
          * 是否解析成功
@@ -101,11 +101,11 @@ public class GenerateClientResolver {
      * @return 解析结果
      */
     public Resolved<ImageClient> resolveImage(String model, int keyIndex) {
-        SysAiProvider provider = resolveProviderByModel(model);
+        SysAccountChannel provider = resolveProviderByModel(model);
         if (provider == null) {
             return new Resolved<>(null, null, null);
         }
-        SysAiProviderModel modelCfg = resolveModelRow(model);
+        SysAccountChannelModel modelCfg = resolveModelRow(model);
         String spi = GenerateSpiRouter.imageSpi(provider.getPlatform());
         if (spi.isEmpty() || !GenerateSpiRouter.supportsImage(provider.getPlatform())) {
             log.warn("[Generate] 供应商无图像生成实现 platform={} spi={}", provider.getPlatform(), spi);
@@ -143,7 +143,7 @@ public class GenerateClientResolver {
      * @param provider 供应商
      * @return Key 数量，至少为 1
      */
-    public int keyCount(SysAiProvider provider) {
+    public int keyCount(SysAccountChannel provider) {
         return provider == null ? 1
                 : Math.max(1, ProviderCredentials.apiKeys(provider.getCredentials()).size());
     }
@@ -155,7 +155,7 @@ public class GenerateClientResolver {
      * @param index    下标
      * @return Key 文本；下标越界时回退到第一个
      */
-    private static String keyAt(SysAiProvider provider, int index) {
+    private static String keyAt(SysAccountChannel provider, int index) {
         List<String> keys = ProviderCredentials.apiKeys(provider.getCredentials());
         if (keys.isEmpty()) {
             return null;
@@ -181,11 +181,11 @@ public class GenerateClientResolver {
      * @return 解析结果
      */
     public Resolved<VideoClient> resolveVideo(String model, int keyIndex) {
-        SysAiProvider provider = resolveProviderByModel(model);
+        SysAccountChannel provider = resolveProviderByModel(model);
         if (provider == null) {
             return new Resolved<>(null, null, null);
         }
-        SysAiProviderModel modelCfg = resolveModelRow(model);
+        SysAccountChannelModel modelCfg = resolveModelRow(model);
         String spi = GenerateSpiRouter.videoSpi(provider.getPlatform());
         if (spi.isEmpty() || !GenerateSpiRouter.supportsVideo(provider.getPlatform())) {
             log.warn("[Generate] 供应商无视频生成实现 platform={} spi={}", provider.getPlatform(), spi);
@@ -268,13 +268,13 @@ public class GenerateClientResolver {
      * @param model 模型名
      * @return 供应商，未命中返回 null
      */
-    private SysAiProvider resolveProviderByModel(String model) {
-        SysAiProviderModel row = resolveModelRow(model);
+    private SysAccountChannel resolveProviderByModel(String model) {
+        SysAccountChannelModel row = resolveModelRow(model);
         if (row == null) {
             return null;
         }
         try {
-            SysAiProvider provider = providerMapper.selectById(row.getProviderId());
+            SysAccountChannel provider = channelService.find(row.getProviderId());
             return provider != null && Boolean.TRUE.equals(provider.getEnabled()) ? provider : null;
         } catch (Exception e) {
             log.warn("[Generate] 解析供应商失败 model={}: {}", model, e.getMessage());
@@ -290,12 +290,9 @@ public class GenerateClientResolver {
      *
      * @return 已启用的模型行；查询异常时返回空列表
      */
-    public List<SysAiProviderModel> listEnabledModels() {
+    public List<SysAccountChannelModel> listEnabledModels() {
         try {
-            List<SysAiProviderModel> rows = providerModelMapper.selectList(
-                    new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getEnabled, true));
-            return rows == null ? List.of() : rows;
+            return channelModelService.listAllEnabled();
         } catch (Exception e) {
             log.warn("[Generate] 查询已启用模型失败: {}", e.getMessage());
             return List.of();
@@ -308,15 +305,12 @@ public class GenerateClientResolver {
      * @param model 模型名
      * @return 模型行，未命中返回 null
      */
-    private SysAiProviderModel resolveModelRow(String model) {
+    private SysAccountChannelModel resolveModelRow(String model) {
         if (model == null || model.isBlank()) {
             return null;
         }
         try {
-            return providerModelMapper.selectOne(new LambdaQueryWrapper<SysAiProviderModel>()
-                    .eq(SysAiProviderModel::getModel, model)
-                    .eq(SysAiProviderModel::getEnabled, true)
-                    .last("LIMIT 1"));
+            return channelModelService.findEnabledByModel(model);
         } catch (Exception e) {
             log.warn("[Generate] 解析模型行失败 model={}: {}", model, e.getMessage());
             return null;

@@ -1,6 +1,7 @@
 package com.chua.starter.datasearch.credit.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.datasearch.credit.model.ProviderCreditEndpoint;
 import com.chua.starter.datasearch.credit.support.ProviderCreditEndpoints;
 
 import java.util.Set;
@@ -13,10 +14,11 @@ import java.util.Set;
  * 静态判定方法，历史配置（{@code extra.credit_kind=host}）与 AI 供应商余额面板
  * 无需改动即可继续工作。</p>
  *
- * <p>登记表只收录「官方文档明确写了余额 / 额度接口」的厂商：11 家 Bearer 口径
- * （地址与字段逐条用假令牌探活过路由）与 4 家账户级 AK/SK 签名类（阿里云 BSS /
- * 火山 billing / 百度财务 / 七牛）。官方文档没写余额端点的厂商一律不收录、不猜地址，
- * 走通用「地址 + 表达式」配置。</p>
+ * <p>登记表只收录「官方文档明确写了余额 / 额度接口」的厂商：18 家 Bearer 口径
+ * （地址与字段逐条用假令牌探活过路由或经官方文档核对；opencode/Zen 复用 opencode-go
+ * 的官方用量端点，同一 API Key）与 6 家账户级 AK/SK 签名类（阿里云 BSS / 火山 billing /
+ * 百度财务 / 七牛 / 腾讯云 Billing / 华为云 BSS）。
+ * 官方文档没写余额端点的厂商一律不收录、不猜地址，走通用「地址 + 表达式」配置。</p>
  *
  * @author CH
  * @since 4.0.0.54
@@ -32,8 +34,11 @@ public class HostCreditQueryProvider extends RegistryCreditQueryProvider {
     /**
      * 是否收录了「Bearer 类」厂商的余额端点。
      *
-     * <p>供 AI 供应商余额面板判断「要不要自动加一条 host 候选」：那侧按 API Key 逐个查，
-     * 拿不到 AK/SK，所以 4 家签名类预设不参与自动候选（命中只会多一条必然 401 的失败行）。</p>
+     * <p>供 AI 供应商余额面板判断「要不要自动加一条 host 候选」：那侧默认按 API Key 逐个查，
+     * 拿不到 AK/SK，所以 6 家签名类预设不参与按品牌自动候选（命中只会多一条必然 401 的失败行）。
+     * 例外是阿里云百炼与腾讯云 / 华为云：这类渠道没有可用的 API Key 余额接口，面板从扩展
+     * 配置带上云账号 AK/SK（extra.credit_access_key / credit_secret_key），控制器对
+     * 阿里云百炼 / 腾讯云 / 华为云站点显式加 host 候选，经别名走对应账户余额预设。</p>
      *
      * @param providerId 厂商标识
      * @return 是 Bearer 类预设为 true
@@ -69,5 +74,20 @@ public class HostCreditQueryProvider extends RegistryCreditQueryProvider {
      */
     public static boolean sameOrigin(String providerId, String baseUrl) {
         return ProviderCreditEndpoints.sameOrigin(providerId, baseUrl);
+    }
+
+    /**
+     * 按主机名查已收录的厂商标识（相等或子域）。
+     *
+     * <p>同一厂商的多个站点在登记表里是不同条目（如 SiliconFlow 的国内站
+     * {@code api.siliconflow.cn} 与国际站 {@code api.siliconflow.com}），上游地址是
+     * 区分它们的唯一依据；供品牌推断在平台名有歧义时以地址为准。</p>
+     *
+     * @param host 主机名或地址
+     * @return 厂商标识；未命中返回 null
+     */
+    public static String brandByHost(String host) {
+        ProviderCreditEndpoint endpoint = ProviderCreditEndpoints.byHost(host);
+        return endpoint == null ? null : endpoint.getId();
     }
 }

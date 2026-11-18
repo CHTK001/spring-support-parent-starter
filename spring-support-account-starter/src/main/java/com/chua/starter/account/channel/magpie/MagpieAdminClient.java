@@ -37,6 +37,11 @@ import java.util.regex.Pattern;
  * 不是官方稳定 API。所有管理面调用失败都由调用方降级（前端显示「管理面不可用」+ 原因），
  * 不影响渠道本身的对话能力。</p>
  *
+ * <p><b>桌面版没有管理面</b>：桌面版只监听数据面 {@code :3425}，状态写在
+ * {@code %USERPROFILE%/.config/magpie} 下。因此 {@link #providers(Map)} /
+ * {@link #adminQuotas(Map, String, String)} / {@link #plugins(Map, boolean)} 在管理面
+ * 失败时会回落到 {@link MagpieLocalState}（只读）；保存 / 删除 / 签到等写操作没有回落。</p>
+ *
  * <p>端点对照（magpie main 分支源码）：</p>
  * <ul>
  *   <li>{@code GET  /api/providers}：{@code {vendors:[], providers:[ProviderJSON]}}；</li>
@@ -117,8 +122,13 @@ public final class MagpieAdminClient {
      * <p>不再用 {@code /api/hello} 做探活：那是 3425 上 Claude Desktop 兼容命名空间的端点，
      * 页面没开也能 200，用它判断会得出「可管理」的假象。</p>
      *
+     * <p><b>注意</b>：{@link #providers(Map)} 在管理面不可达时会回落到同机的
+     * {@link MagpieLocalState}（直接读 {@code providers.json}），因此桌面版即使不提供
+     * {@code :3430} 管理面，这里也会返回 {@code true}。它只表示「至少能列出上游」，
+     * 不等于管理面在线：保存 / 删除 / 签到 / 插件等写操作仍要管理面，没有本地回落。</p>
+     *
      * @param credentials 连接凭据
-     * @return true 表示页面接口可用且 Key 有效
+     * @return true 表示至少能读到 provider 列表（管理面或本地状态文件）
      */
     public static boolean manageable(Map<String, Object> credentials) {
         try {
@@ -130,19 +140,49 @@ public final class MagpieAdminClient {
     }
 
     /**
-     * 管理面 provider 列表。
+     * 管理面 provider 列表（管理面不可达时回落到同机的 {@code providers.json}）。
+     *
+     * <p>HTTP 调用失败或响应体 {@code ok:false} 才走回落；回落也读不到就保持原行为：
+     * 调用异常照样抛出（上层按 502 处理），{@code ok:false} 则返回响应里的空列表。</p>
      *
      * @param credentials 连接凭据
      * @return provider 列表；无数据返回空列表
      */
     public static List<Map<String, Object>> providers(Map<String, Object> credentials) {
-        String body = adminGet(credentials, MagpieSupport.PROVIDERS_PATH);
+        String body;
+        try {
+            body = adminGet(credentials, MagpieSupport.PROVIDERS_PATH);
+        } catch (RuntimeException e) {
+            return localProviders(credentials, e);
+        }
         Map<String, Object> payload = parseObject(body);
+        if (Boolean.FALSE.equals(payload.get("ok"))) {
+            List<Map<String, Object>> local = MagpieLocalState.providers(credentials);
+            if (local != null) {
+                return local;
+            }
+        }
         Object raw = payload.get("providers");
         if (raw == null) {
             raw = payload.get("data");
         }
         return asMapList(raw);
+    }
+
+    /**
+     * provider 列表的同机回落：本地读不到就把原异常继续抛给调用方。
+     *
+     * @param credentials 连接凭据
+     * @param failure     管理面原始异常
+     * @return 本地 provider 列表
+     */
+    private static List<Map<String, Object>> localProviders(Map<String, Object> credentials,
+                                                            RuntimeException failure) {
+        List<Map<String, Object>> local = MagpieLocalState.providers(credentials);
+        if (local != null) {
+            return local;
+        }
+        throw failure;
     }
 
     /**
@@ -222,17 +262,45 @@ public final class MagpieAdminClient {
     /**
      * 插件清单（{@code GET /api/plugins}），可选同时读市场。
      *
+     * <p>读 {@code state} 失败（HTTP 异常或响应体 {@code ok:false}）时回落到同机的
+     * {@code plugins.json}（只有 {@code state}，本地没有市场数据，{@code state} 上会标
+     * {@code localOnly=true}）；回落也读不到就保持原行为：异常继续抛，{@code ok:false}
+     * 则回响应里的空清单。市场的失败不回落（本地没有市场数据），沿用原来的异常。</p>
+     *
      * @param credentials 连接凭据
      * @param market      true 时追加 {@code GET /api/plugins/market}（可能较慢）
      * @return {@code {state:{...}, market:{...}}}
      */
     public static Map<String, Object> plugins(Map<String, Object> credentials, boolean market) {
+        Map<String, Object> state;
+        try {
+            state = parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH));
+        } catch (RuntimeException e) {
+            Map<String, Object> local = MagpieLocalState.plugins(credentials, market);
+            if (local != null) {
+                return local;
+            }
+            throw e;
+        }
+        if (Boolean.FALSE.equals(state.get("ok"))) {
+            Map<String, Object> local = MagpieLocalState.plugins(credentials, market);
+            if (local != null) {
+                return local;
+            }
+        }
         Map<String, Object> out = new LinkedHashMap<>(4);
-        out.put("state", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH)));
+        out.put("state", state);
         if (market) {
             // 市场要现场拉 npm 索引，国内网络实测 30s+，用默认 60s 容易踩线。
-            out.put("market", parseObject(adminGet(credentials, MagpieSupport.PLUGINS_PATH + "/market",
-                    ChannelHttp.LONG_TIMEOUT)));
+            Map<String, Object> marketState = parseObject(adminGet(credentials,
+                    MagpieSupport.PLUGINS_PATH + "/market", ChannelHttp.LONG_TIMEOUT));
+            if (Boolean.FALSE.equals(marketState.get("ok"))) {
+                Map<String, Object> local = MagpieLocalState.plugins(credentials, market);
+                if (local != null) {
+                    return local;
+                }
+            }
+            out.put("market", marketState);
         }
         return out;
     }
@@ -321,7 +389,9 @@ public final class MagpieAdminClient {
      * 管理面额度卡（{@code GET /api/usage/quotas}）。
      *
      * <p>比数据面 {@code /v1/magpie/quotas} 多出签到状态与插件账号，按 provider / 账号
-     * 过滤在本方法里做（magpie 的 GET 不收过滤参数）。</p>
+     * 过滤在本方法里做（magpie 的 GET 不收过滤参数）。管理面不可达或响应体
+     * {@code ok:false} 时回落到同机的 {@code quotas.json}（取每张卡的 {@code quota}
+     * 子对象），过滤规则不变；回落也读不到就保持原行为（异常继续抛 / 空列表）。</p>
      *
      * @param credentials 连接凭据
      * @param provider    只取该 provider（可空）
@@ -330,9 +400,39 @@ public final class MagpieAdminClient {
      */
     public static List<Map<String, Object>> adminQuotas(Map<String, Object> credentials,
                                                         String provider, String user) {
-        List<Map<String, Object>> rows = asMapList(parseAny(
-                adminGet(credentials, MagpieSupport.ADMIN_QUOTAS_PATH)));
+        String body;
+        try {
+            body = adminGet(credentials, MagpieSupport.ADMIN_QUOTAS_PATH);
+        } catch (RuntimeException e) {
+            List<Map<String, Object>> local = MagpieLocalState.quotas(credentials, provider, user);
+            if (local != null) {
+                return local;
+            }
+            throw e;
+        }
+        List<Map<String, Object>> rows = quotaRows(body);
+        if (rows == null) {
+            List<Map<String, Object>> local = MagpieLocalState.quotas(credentials, provider, user);
+            if (local != null) {
+                return local;
+            }
+            rows = new ArrayList<>();
+        }
         return filterQuotas(rows, provider, user);
+    }
+
+    /**
+     * 解析额度响应：数组直接归一成行；{@code ok:false} 的对象返回 {@code null} 表示失败。
+     *
+     * @param body 响应体
+     * @return 配额行；失败时返回 {@code null}
+     */
+    private static List<Map<String, Object>> quotaRows(String body) {
+        Object parsed = parseAny(body);
+        if (parsed instanceof Map<?, ?> map && Boolean.FALSE.equals(map.get("ok"))) {
+            return null;
+        }
+        return asMapList(parsed);
     }
 
     /**

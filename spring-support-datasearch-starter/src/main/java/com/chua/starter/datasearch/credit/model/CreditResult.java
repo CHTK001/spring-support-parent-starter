@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 余额查询结果。
@@ -57,12 +58,22 @@ public class CreditResult implements Serializable {
     private String error;
 
     /**
+     * 实现附加数据：渠道余额实现把旧契约快照（remain / total / unit / currency /
+     * packages / error 等）原样放在这里，调用方可直接透出给前端。
+     */
+    private Map<String, Object> extra;
+
+    /**
      * 是否查到了数。
      *
-     * @return 有主余额且无错误时为 true
+     * <p>没有错误即视为查到：主余额（{@link #amount}）可能为空——订阅制平台的
+     * 按量计费分组只有用量、没有额度上限，算不出「剩余」；这类结果的数据在
+     * {@link #extra} 里，由前端按供应商形态渲染，不能把用量当余额。</p>
+     *
+     * @return 无错误时为 true
      */
     public boolean isOk() {
-        return error == null && amount != null;
+        return error == null;
     }
 
     /**
@@ -83,6 +94,24 @@ public class CreditResult implements Serializable {
             result.amount = first.getAmount();
             result.currency = first.getCurrency();
         }
+        return result;
+    }
+
+    /**
+     * 构造「查到数据但没有主余额」的成功结果。
+     *
+     * <p>用于订阅制平台的按量计费分组：上游只给用量、没有额度上限，没有可算的
+     * 「剩余」，不能把用量当余额返回；逐订阅明细等结构化数据放 {@code extra}，
+     * 由前端按供应商形态渲染。</p>
+     *
+     * @param source 实现标识
+     * @param raw    原始响应
+     * @return 结果；parts 为空、amount 为 null、error 为 null
+     */
+    public static CreditResult okData(String source, String raw) {
+        CreditResult result = new CreditResult();
+        result.source = source;
+        result.raw = truncate(raw);
         return result;
     }
 

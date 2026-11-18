@@ -11,9 +11,9 @@ import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.RateLimitPolicy;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.SlowPolicy;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Strategy;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ import java.util.Map;
  *
  * <p><b>成员表存哪</b>：存放在路由组供应商行的 {@code extra.router_group} 里。路由组不是
  * 真实上游，它没有自己的模型行 —— 它的「模型」就是模型库里已有的行，把成员再抄一份进
- * {@code sys_ai_provider_model} 会造成「同名两份、删一处留一处」的脏数据。成员引用一律用
+ * {@code sys_account_channel_model} 会造成「同名两份、删一处留一处」的脏数据。成员引用一律用
  * {@code providerId:model} 复合主键指向模型库里的真实行。</p>
  *
  * <p><b>成员被删了怎么办</b>：模型库里删掉某一行后，本类会把它从所有路由组成员表里摘掉
@@ -62,12 +62,12 @@ public class RouterGroupService {
     /**
      * 供应商模型 Mapper
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
-     * 供应商 Mapper（成员展示需要供应商名称与平台）
+     * 渠道业务（账号模块）：成员展示需要渠道名称与平台
      */
-    private final com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper providerMapper;
+    private final com.chua.starter.account.channel.service.AccountChannelService channelService;
 
     /**
      * 是否为路由组供应商
@@ -75,7 +75,7 @@ public class RouterGroupService {
      * @param provider 供应商
      * @return true 表示路由组
      */
-    public boolean isRouterGroup(SysAiProvider provider) {
+    public boolean isRouterGroup(SysAccountChannel provider) {
         return provider != null && ProviderRouteTargets.isRouterGroup(provider.getPlatform());
     }
 
@@ -85,7 +85,7 @@ public class RouterGroupService {
      * @param provider 路由组供应商
      * @return 配置；未配置时返回默认配置
      */
-    public RouterGroupSetting readSetting(SysAiProvider provider) {
+    public RouterGroupSetting readSetting(SysAccountChannel provider) {
         RouterGroupSetting setting = new RouterGroupSetting();
         if (provider == null || provider.getExtra() == null) {
             return setting;
@@ -162,11 +162,7 @@ public class RouterGroupService {
      */
     public boolean memberExists(String providerId, String model) {
         try {
-            SysAiProviderModel row = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getProviderId, providerId)
-                            .eq(SysAiProviderModel::getModel, model));
-            return row != null && Boolean.TRUE.equals(row.getEnabled());
+            return channelModelService.isEnabled(providerId, model);
         } catch (Exception e) {
             log.debug("[RouterGroup] 校验成员失败 {}:{} {}", providerId, model, e.getMessage());
             return false;
@@ -179,7 +175,7 @@ public class RouterGroupService {
      * @param row 模型行
      * @return 成员
      */
-    public Member toMember(SysAiProviderModel row) {
+    public Member toMember(SysAccountChannelModel row) {
         return new Member(row.getProviderId(), row.getModel(), Boolean.TRUE.equals(row.getEnabled()), 1,
                 readEffort(row), null, null);
     }
@@ -190,7 +186,7 @@ public class RouterGroupService {
      * @param row 模型行
      * @return effort；未配置返回 null
      */
-    public String readEffort(SysAiProviderModel row) {
+    public String readEffort(SysAccountChannelModel row) {
         if (row == null || row.getMetrics() == null) {
             return null;
         }
@@ -205,7 +201,7 @@ public class RouterGroupService {
      * @param setting  配置
      * @return 新的 extra
      */
-    public Map<String, Object> writeSetting(SysAiProvider provider, RouterGroupSetting setting) {
+    public Map<String, Object> writeSetting(SysAccountChannel provider, RouterGroupSetting setting) {
         Map<String, Object> extra = provider.getExtra() == null
                 ? new LinkedHashMap<>() : new LinkedHashMap<>(provider.getExtra());
         Map<String, Object> group = new LinkedHashMap<>();
@@ -248,12 +244,12 @@ public class RouterGroupService {
      * @param model      被删模型
      * @return 被裁剪的路由组；无影响时为空列表
      */
-    public List<PrunedGroup> pruneMemberDeletions(List<SysAiProvider> providers, String providerId, String model) {
+    public List<PrunedGroup> pruneMemberDeletions(List<SysAccountChannel> providers, String providerId, String model) {
         List<PrunedGroup> result = new ArrayList<>();
         if (providerId == null || model == null || providers == null) {
             return result;
         }
-        for (SysAiProvider provider : providers) {
+        for (SysAccountChannel provider : providers) {
             if (!isRouterGroup(provider) || !references(provider.getExtra(), providerId, model)) {
                 continue;
             }
@@ -363,13 +359,10 @@ public class RouterGroupService {
             item.put("effort", m.effort());
             item.put("free", m.free());
             item.put("expire_at", m.expireAt());
-            SysAiProvider owner = providerMapper.selectById(m.providerId());
+            SysAccountChannel owner = channelService.find(m.providerId());
             item.put("provider_name", owner == null ? m.providerId() : owner.getName());
             item.put("platform", owner == null ? null : owner.getPlatform());
-            SysAiProviderModel row = providerModelMapper.selectOne(
-                    Wrappers.<SysAiProviderModel>lambdaQuery()
-                            .eq(SysAiProviderModel::getProviderId, m.providerId())
-                            .eq(SysAiProviderModel::getModel, m.model()));
+            SysAccountChannelModel row = channelModelService.find(m.providerId(), m.model());
             item.put("exists", row != null);
             if (row != null) {
                 item.put("alias", row.getAlias());
@@ -390,7 +383,7 @@ public class RouterGroupService {
      * @param members  已校验的成员表（null 表示不改成员）
      * @return 合并后的配置
      */
-    public RouterGroupSetting applyRequest(SysAiProvider provider, Map<String, Object> body, List<Member> members) {
+    public RouterGroupSetting applyRequest(SysAccountChannel provider, Map<String, Object> body, List<Member> members) {
         RouterGroupSetting setting = readSetting(provider);
         if (body != null) {
             if (body.containsKey("strategy")) {
@@ -434,16 +427,9 @@ public class RouterGroupService {
      * @param keyword 关键字（为空返回前 {@value #MEMBER_SEARCH_LIMIT} 条）
      * @return 模型行
      */
-    public List<SysAiProviderModel> searchMemberCandidates(String keyword) {
+    public List<SysAccountChannelModel> searchMemberCandidates(String keyword) {
         try {
-            LambdaQueryWrapper<SysAiProviderModel> qw = Wrappers.<SysAiProviderModel>lambdaQuery()
-                    .eq(SysAiProviderModel::getEnabled, true)
-                    .orderByAsc(SysAiProviderModel::getModel)
-                    .last("LIMIT " + MEMBER_SEARCH_LIMIT);
-            if (keyword != null && !keyword.isBlank()) {
-                qw.like(SysAiProviderModel::getModel, keyword.trim());
-            }
-            return providerModelMapper.selectList(qw);
+            return channelModelService.searchEnabled(keyword, MEMBER_SEARCH_LIMIT);
         } catch (Exception e) {
             log.warn("[RouterGroup] 检索候选成员失败 {}: {}", keyword, e.getMessage());
             return List.of();

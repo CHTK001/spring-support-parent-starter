@@ -10,9 +10,9 @@ import com.chua.starter.ai.support.model.BotConversation;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
 import com.chua.starter.ai.support.manage.store.BotUserSummary;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.service.AiBotBindingService;
 import com.chua.starter.ai.support.service.AiBotChatService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -82,7 +82,7 @@ public class AiBotBindingController {
     /**
      * 模型表 映射器（机器人 可选的对话模型来自模型管理配置的 提供者_模型）
      */
-    private final SysAiProviderModelMapper providerModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 获取可用于 机器人 的对话模型列表（供前端设置 机器人 的聊天模型）。
@@ -94,11 +94,9 @@ public class AiBotBindingController {
      */
     @GetMapping("/models")
     public ReturnResult<List<String>> models() {
-        List<SysAiProviderModel> all = providerModelMapper.selectList(
-                Wrappers.<SysAiProviderModel>lambdaQuery()
-                        .eq(SysAiProviderModel::getEnabled, true));
+        List<SysAccountChannelModel> all = channelModelService.listAllEnabled();
         List<String> chatModels = new ArrayList<>();
-        for (SysAiProviderModel m : all) {
+        for (SysAccountChannelModel m : all) {
             if (hasCapability(m, "chat")) {
                 chatModels.add(m.getModel());
             }
@@ -112,7 +110,7 @@ public class AiBotBindingController {
      * @param task 任务
      * @return 是否包含capability的结果
      */
-    private static boolean hasCapability(SysAiProviderModel m, String task) {
+    private static boolean hasCapability(SysAccountChannelModel m, String task) {
         if (m.getCapabilities() == null) {
             return false;
         }
@@ -175,6 +173,7 @@ public class AiBotBindingController {
      * 主动向指定微信用户发送一条消息（聊天框输入发送 / 主动触达）。
      *
      * @param body 请求体：机器人标识 / 从用户 / 内容
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 发送结果（含 消息_标识）
      */
     @PostMapping("/send")
@@ -836,6 +835,7 @@ public class AiBotBindingController {
      *
      * @param platform 平台类型，默认 wechat
      * @param botId    重新扫码场景下需合并的旧 机器人 唯一标识（可选）
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return key + qrcodeurl；qrcodeurl 即时为空，前端轮询 状态=就绪 后从 qr状态 取
      */
     @PostMapping("/qrcode")
@@ -875,6 +875,7 @@ public class AiBotBindingController {
      *
      * @param appId     飞书应用 标识
      * @param appSecret 飞书应用密钥
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 数据库 标识
      */
     @PostMapping("/feishu")

@@ -5,6 +5,7 @@ import com.chua.starter.datasearch.credit.model.CreditQuery;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -21,13 +22,13 @@ import java.util.function.Function;
 /**
  * 云厂商余额接口的 AK/SK 签名（只读出口）。
  *
- * <p>有四类厂商的余额接口要按 AK/SK 对请求做 HMAC 签名，只发 Bearer 是查不到的。
+ * <p>有六类厂商的余额接口要按 AK/SK 对请求做 HMAC 签名，只发 Bearer 是查不到的。
  * 这里按各家官方文档原文实现签名，且<b>签名用的编码与真正发出去的请求共用同一份
  * 字符串</b>：{@link #sign(CreditQuery, String)} 直接产出「完整 URL + 最终请求头 + body」，
  * {@link CreditHttp} 拿去发请求时不再做任何二次编码或补头，避免签名字节与实际请求
  * 不一致（这类错位只会得到上层 401，很难排查）。</p>
  *
- * <p>收录的四种方案（{@link CreditQuery#getSignType()}，由 host 预设按厂商注入，
+ * <p>收录的七种方案（{@link CreditQuery#getSignType()}，由 host 预设按厂商注入，
  * 页面不必手填）：</p>
  * <ul>
  *   <li>{@code qiniu} — 七牛管理凭证，{@code HMAC-SHA1} + URL-safe Base64（带 {@code =} padding），
@@ -37,15 +38,29 @@ import java.util.function.Function;
  *   <li>{@code volc} — 火山引擎 {@code HMAC-SHA256}，逐级派生签名密钥，
  *       {@code Authorization: HMAC-SHA256 Credential=..., SignedHeaders=host;x-date, Signature=...}；
  *       文档：{@code https://docs.volcengine.com/docs/api-signature-call-guide/signature-method}。</li>
+ *   <li>{@code volc-ark} — 火山方舟 OpenAPI 统一入口（{@code POST /?Action=...&Version=...}），
+ *       与 {@code volc} 同一套 {@code HMAC-SHA256} 派生链（service=ark、region=cn-beijing），
+ *       但为 POST + JSON body：签名头域 {@code content-type;host;x-content-sha256;x-date}，
+ *       body 摘要参与签名；签名规范同 {@code volc} 的官方签名指南。</li>
  *   <li>{@code bce} — 百度智能云 {@code bce-auth-v1}，两级 {@code HMAC-SHA256-HEX}，
- *       只签 {@code host} 头（调用方可自行决定签名头域，host 必须参与，只签 host 最不易与
- *       底层自动追加的 content-length 等头错位）；
+ *       签名头域 {@code host;x-bce-date}（财务等接口必须携带 {@code x-bce-date} 头，
+ *       缺失时 IAM 网关直接报 {@code SignatureDateEmpty}，只签 host 已实测不够）；
  *       文档：{@code https://cloud.baidu.com/doc/Reference/s/njwvz1yfu}。</li>
  *   <li>{@code aliyun-bss} — 阿里云 BSS OpenAPI（RPC 风格）老签名，
  *       {@code HMAC-SHA1(SecretKey + "&", StringToSign)} + Base64，签名放 query 的
  *       {@code Signature} 参数；文档：{@code https://help.aliyun.com/zh/user-center/developer-reference/signature}。
  *       注意 BSS 老 API 用的是 {@code SignatureVersion=1.0} 这套，不是百炼那套
  *       {@code ACS3-HMAC-SHA256} V3 签名。</li>
+ *   <li>{@code tencent} — 腾讯云 {@code TC3-HMAC-SHA256}，用 {@code "TC3" + SecretKey}
+ *       逐级派生签名密钥；Credential 固定四段 {@code <SecretId>/<日期>/<服务>/tc3_request}
+ *       （billing 无地域，不写 region 段），签名头域 {@code content-type;host;x-tc-action}，
+ *       X-TC-Action 实际头发原样大小写、规范头里用小写；
+ *       文档：{@code https://cloud.tencent.com/document/api/213/30654}。</li>
+ *   <li>{@code huawei} — 华为云 {@code SDK-HMAC-SHA256}，单层
+ *       {@code HMAC-SHA256(SecretKey, StringToSign)}（无密钥派生链），
+ *       {@code StringToSign = SDK-HMAC-SHA256 + "\n" + X-Sdk-Date + "\n" + HexEncode(Hash(CanonicalRequest))}，
+ *       签名头域 {@code host;x-sdk-date}；
+ *       文档：{@code https://support.huaweicloud.com/devg-apisign/api-sign-algorithm-001.html}。</li>
  * </ul>
  *
  * <p>只做签名计算，不发请求、不落库；缺 AK/SK 时由调用方（host 预设）提前拦下并返回
@@ -104,10 +119,16 @@ public final class CreditSigner {
                 return qiniu(ak, sk, url);
             case "volc":
                 return volc(ak, sk, url);
+            case "volc-ark":
+                return volcArk(ak, sk, url, query.getBody());
             case "bce":
                 return bce(ak, sk, url);
             case "aliyun-bss":
                 return aliyunBss(ak, sk, url);
+            case "tencent":
+                return tencent(ak, sk, url);
+            case "huawei":
+                return huawei(ak, sk, url);
             default:
                 throw new IllegalStateException("未知签名方案: " + type);
         }
@@ -201,6 +222,82 @@ public final class CreditSigner {
         return new Signed(finalUrl, method, headers, null);
     }
 
+    /**
+     * 火山方舟 OpenAPI 统一入口签名（{@code POST /?Action=...&Version=...}）。
+     *
+     * <p>与 {@link #volc(String, String, String)} 同一套 {@code HMAC-SHA256} 逐级派生链，
+     * 差异在：{@code service=ark}、{@code region=cn-beijing}、POST + JSON body，
+     * 签名头域 {@code content-type;host;x-content-sha256;x-date}（body 摘要参与签名）。
+     * {@code Action}/{@code Version} 从统一入口地址的 query 解析后按规范重排，
+     * 保证「参与签名的字节」与「实际发出的字节」完全一致。</p>
+     *
+     * @param ak   AccessKeyId
+     * @param sk   SecretAccessKey
+     * @param url  统一入口地址（含 Action/Version query）
+     * @param body JSON 请求体（空则按 {@code {}} 发送）
+     * @return 签名后的请求
+     */
+    private static Signed volcArk(String ak, String sk, String url, String body) {
+        URI uri = URI.create(url);
+        String host = uri.getHost();
+        String path = pathOf(uri);
+        String method = "POST";
+        String contentType = "application/json";
+        String region = "cn-beijing";
+        String service = "ark";
+
+        // Action/Version 已在统一入口地址的 query 里，解析出来按规范重排
+        TreeMap<String, String> params = new TreeMap<>();
+        String rawQuery = uri.getRawQuery();
+        if (rawQuery != null && !rawQuery.isEmpty()) {
+            for (String pair : rawQuery.split("&")) {
+                int eq = pair.indexOf('=');
+                String key = eq < 0 ? pair : pair.substring(0, eq);
+                String value = eq < 0 ? "" : pair.substring(eq + 1);
+                params.put(URLDecoder.decode(key, StandardCharsets.UTF_8),
+                        URLDecoder.decode(value, StandardCharsets.UTF_8));
+            }
+        }
+        String canonicalQuery = canonicalQuery(params, CreditSigner::normalize);
+
+        String payload = body == null || body.isBlank() ? "{}" : body;
+        String payloadHash = sha256Hex(payload);
+        String xDate = UTC_BASIC.format(Instant.now());
+        String shortDate = xDate.substring(0, 8);
+
+        TreeMap<String, String> canonicalHeaders = new TreeMap<>();
+        canonicalHeaders.put("content-type", contentType);
+        canonicalHeaders.put("host", host);
+        canonicalHeaders.put("x-content-sha256", payloadHash);
+        canonicalHeaders.put("x-date", xDate);
+        StringBuilder headerLines = new StringBuilder();
+        for (Map.Entry<String, String> entry : canonicalHeaders.entrySet()) {
+            headerLines.append(entry.getKey()).append(':').append(entry.getValue()).append('\n');
+        }
+        String signedHeaders = "content-type;host;x-content-sha256;x-date";
+        String canonicalRequest = method + "\n" + path + "\n" + canonicalQuery + "\n"
+                + headerLines + "\n" + signedHeaders + "\n" + payloadHash;
+        String credentialScope = shortDate + "/" + region + "/" + service + "/request";
+        String stringToSign = "HMAC-SHA256\n" + xDate + "\n" + credentialScope + "\n"
+                + sha256Hex(canonicalRequest);
+
+        byte[] kDate = hmac("HmacSHA256", sk, shortDate);
+        byte[] kRegion = hmac("HmacSHA256", kDate, region);
+        byte[] kService = hmac("HmacSHA256", kRegion, service);
+        byte[] kSigning = hmac("HmacSHA256", kService, "request");
+        String signature = hex(hmac("HmacSHA256", kSigning, stringToSign));
+        String authorization = "HMAC-SHA256 Credential=" + ak + "/" + credentialScope
+                + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
+
+        Map<String, String> headers = new LinkedHashMap<>(8);
+        headers.put("Content-Type", contentType);
+        headers.put("X-Date", xDate);
+        headers.put("X-Content-Sha256", payloadHash);
+        headers.put("Authorization", authorization);
+        String finalUrl = schemeHost(uri) + path + "?" + canonicalQuery;
+        return new Signed(finalUrl, method, headers, payload);
+    }
+
     // ==================== 百度智能云 ====================
 
     /**
@@ -209,7 +306,10 @@ public final class CreditSigner {
      * <p>{@code signingKey = HMAC-SHA256-HEX(sk, authStringPrefix)}，
      * {@code signature = HMAC-SHA256-HEX(signingKey, canonicalRequest)}。
      * 认证字符串 {@code bce-auth-v1/<ak>/<timestamp>/<expiration>/<signedHeaders>/<signature>}。
-     * 只签 {@code host}，显式写进 {@code signedHeaders}，不让底层自动追加的头参与运算。</p>
+     * 签名头域固定 {@code host;x-bce-date}：财务接口必须携带 {@code x-bce-date} 头
+     * （缺失时 IAM 网关报 {@code SignatureDateEmpty}），官方文档明确本接口签名只涉及
+     * {@code host} 与 {@code x-bce-date} 两个头域；显式写进 {@code signedHeaders}，
+     * 不让底层自动追加的 content-length 等头参与运算。</p>
      *
      * @param ak  AccessKeyId
      * @param sk  SecretAccessKey
@@ -228,15 +328,18 @@ public final class CreditSigner {
 
         String canonicalUri = normalizePath(path);
         String canonicalQuery = "";
-        String canonicalHeaders = "host:" + normalize(host);
+        // 头域按字典序排列：host 在前，x-bce-date 在后；值按 RFC 3986 归一化（: → %3A）
+        String canonicalHeaders = "host:" + normalize(host) + "\n"
+                + "x-bce-date:" + normalize(timestamp);
         String canonicalRequest = method + "\n" + canonicalUri + "\n" + canonicalQuery + "\n"
                 + canonicalHeaders;
         String signature = hmacHex("HmacSHA256", signingKey, canonicalRequest);
-        String signedHeaders = "host";
+        String signedHeaders = "host;x-bce-date";
         String authorization = authStringPrefix + "/" + signedHeaders + "/" + signature;
 
-        Map<String, String> headers = new LinkedHashMap<>(6);
+        Map<String, String> headers = new LinkedHashMap<>(8);
         headers.put("Content-Type", contentType);
+        headers.put("x-bce-date", timestamp);
         headers.put("Authorization", authorization);
         // POST 带一个空 JSON body：Content-Type 已写进 headers，BCE v1 的规范请求不含 body 摘要，
         // 所以 body 内容不参与签名；给 {} 只是让上游按 JSON POST 正常解析，不影响签名正确性。
@@ -279,6 +382,106 @@ public final class CreditSigner {
         // Host 由底层执行器按 URL 自动设置；签名里只用了 canonicalQuery，不额外签头
         Map<String, String> headers = new LinkedHashMap<>(1);
         return new Signed(finalUrl, method, headers, null);
+    }
+
+    // ==================== 腾讯云 ====================
+
+    /**
+     * 腾讯云 {@code TC3-HMAC-SHA256} 签名（billing DescribeAccountBalance）。
+     *
+     * <p>规范请求 → 待签字符串 → 由 {@code "TC3" + SecretKey} 逐级派生签名密钥
+     * {@code kTc3/kService/kSigning} 后算出签名。Credential 固定四段
+     * {@code <SecretId>/<日期>/<服务>/tc3_request}：billing 是无地域服务，不写 region 段
+     * （多写一段会被网关以 {@code Credential scope size not valid} 拒掉）。签名头域固定
+     * {@code content-type;host;x-tc-action}；{@code X-TC-Action} 实际头发原样大小写，
+     * 规范头里用小写。文档：{@code https://cloud.tencent.com/document/api/213/30654}。</p>
+     *
+     * @param ak  SecretId
+     * @param sk  SecretKey
+     * @param url 请求地址
+     * @return 签名后的请求
+     */
+    private static Signed tencent(String ak, String sk, String url) {
+        URI uri = URI.create(url);
+        String host = uri.getHost();
+        String path = pathOf(uri);
+        String method = "POST";
+        String contentType = "application/json; charset=utf-8";
+        String service = "billing";
+        String action = "DescribeAccountBalance";
+        String version = "2018-07-09";
+        String body = "{}";
+        Instant now = Instant.now();
+        long timestamp = now.getEpochSecond();
+        String shortDate = UTC_ISO.format(now).substring(0, 10);
+
+        TreeMap<String, String> canonical = new TreeMap<>();
+        canonical.put("content-type", contentType);
+        canonical.put("host", host);
+        canonical.put("x-tc-action", action.toLowerCase(java.util.Locale.ROOT));
+        StringBuilder canonicalHeaders = new StringBuilder();
+        for (Map.Entry<String, String> entry : canonical.entrySet()) {
+            canonicalHeaders.append(entry.getKey()).append(':').append(entry.getValue()).append('\n');
+        }
+        String signedHeaders = "content-type;host;x-tc-action";
+        String payloadHash = sha256Hex(body);
+        String canonicalRequest = method + "\n" + path + "\n\n" + canonicalHeaders + "\n"
+                + signedHeaders + "\n" + payloadHash;
+        String credentialScope = shortDate + "/" + service + "/tc3_request";
+        String stringToSign = "TC3-HMAC-SHA256\n" + timestamp + "\n" + credentialScope + "\n"
+                + sha256Hex(canonicalRequest);
+        byte[] kTc3 = hmac("HmacSHA256", "TC3" + sk, shortDate);
+        byte[] kService = hmac("HmacSHA256", kTc3, service);
+        byte[] kSigning = hmac("HmacSHA256", kService, "tc3_request");
+        String signature = hex(hmac("HmacSHA256", kSigning, stringToSign));
+        String authorization = "TC3-HMAC-SHA256 Credential=" + ak + "/" + credentialScope
+                + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
+
+        Map<String, String> headers = new LinkedHashMap<>(8);
+        headers.put("Content-Type", contentType);
+        headers.put("X-TC-Action", action);
+        headers.put("X-TC-Version", version);
+        headers.put("X-TC-Timestamp", String.valueOf(timestamp));
+        headers.put("Authorization", authorization);
+        return new Signed(url, method, headers, body);
+    }
+
+    // ==================== 华为云 ====================
+
+    /**
+     * 华为云 {@code SDK-HMAC-SHA256} 签名（BSS 客户账户余额）。
+     *
+     * <p>与 AWS 式派生链不同：签名密钥就是 SecretKey 本身（单层
+     * {@code HMAC-SHA256(SecretKey, StringToSign)}，无 kDate 派生），
+     * {@code StringToSign = SDK-HMAC-SHA256 + "\n" + X-Sdk-Date + "\n" + HexEncode(Hash(CanonicalRequest))}，
+     * 签名头域固定 {@code host;x-sdk-date}。
+     * 文档：{@code https://support.huaweicloud.com/devg-apisign/api-sign-algorithm-001.html}。</p>
+     *
+     * @param ak  AccessKeyId
+     * @param sk  SecretAccessKey
+     * @param url 请求地址
+     * @return 签名后的请求
+     */
+    private static Signed huawei(String ak, String sk, String url) {
+        URI uri = URI.create(url);
+        String host = uri.getHost();
+        String path = normalizePath(pathOf(uri));
+        String method = "GET";
+        String sdkDate = UTC_BASIC.format(Instant.now());
+        String canonicalHeaders = "host:" + host + "\n" + "x-sdk-date:" + sdkDate + "\n";
+        String signedHeaders = "host;x-sdk-date";
+        String payloadHash = sha256Hex("");
+        String canonicalRequest = method + "\n" + path + "\n\n" + canonicalHeaders + "\n"
+                + signedHeaders + "\n" + payloadHash;
+        String stringToSign = "SDK-HMAC-SHA256\n" + sdkDate + "\n" + sha256Hex(canonicalRequest);
+        String signature = hmacHex("HmacSHA256", sk, stringToSign);
+        String authorization = "SDK-HMAC-SHA256 Access=" + ak
+                + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
+
+        Map<String, String> headers = new LinkedHashMap<>(4);
+        headers.put("X-Sdk-Date", sdkDate);
+        headers.put("Authorization", authorization);
+        return new Signed(url, method, headers, null);
     }
 
     // ==================== 公共工具 ====================

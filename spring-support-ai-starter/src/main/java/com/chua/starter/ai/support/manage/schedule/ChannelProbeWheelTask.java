@@ -7,8 +7,8 @@ import com.chua.common.support.task.timer.TimerTask;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.configuration.health.ChannelProbeGlobalSettingProvider;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.service.ChannelHealthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -80,9 +80,9 @@ public class ChannelProbeWheelTask implements ApplicationRunner, DisposableBean 
     private final ChannelHealthService channelHealthService;
 
     /**
-     * 供应商映射器（发现需要探的渠道）
+     * 渠道业务（账号模块）：发现需要探的渠道
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 时间轮（懒建，关闭开关时不创建线程）
@@ -189,13 +189,12 @@ public class ChannelProbeWheelTask implements ApplicationRunner, DisposableBean 
      * @return 渠道平台标识
      */
     private Set<String> channels() {
-        List<SysAiProvider> providers = providerMapper.selectList(
-                new LambdaQueryWrapper<SysAiProvider>().eq(SysAiProvider::getEnabled, true));
+        List<SysAccountChannel> providers = channelService.listEnabled();
         Set<String> channels = new LinkedHashSet<>();
         if (providers == null) {
             return channels;
         }
-        for (SysAiProvider provider : providers) {
+        for (SysAccountChannel provider : providers) {
             String platform = provider.getPlatform();
             if (StringUtils.isNotBlank(platform)) {
                 channels.add(platform.trim());

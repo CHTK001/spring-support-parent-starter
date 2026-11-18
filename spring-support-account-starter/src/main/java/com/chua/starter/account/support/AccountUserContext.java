@@ -42,6 +42,19 @@ public final class AccountUserContext {
             "com.chua.starter.oauth.client.support.user.UserResume";
 
     /**
+     * 管理员角色编码（与 oauth 侧 {@code AuthConstant.ADMIN} 口径一致）。
+     *
+     * <p>这里不直接引用 {@code AuthConstant}，是因为账号模块刻意不编译期依赖 oauth；
+     * 角色编码是对外稳定的接口值，改口径时两处必须同步。</p>
+     */
+    private static final String ROLE_ADMIN = "ADMIN";
+
+    /**
+     * 超级管理员角色编码（与 oauth 侧 {@code AuthConstant.SUPER_ADMIN} 口径一致）。
+     */
+    private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
+
+    /**
      * 工具类，禁止实例化
      */
     private AccountUserContext() {
@@ -76,6 +89,48 @@ public final class AccountUserContext {
             throw new ApiException(ApiErrorCode.UNAUTHORIZED, "请先登录");
         }
         return userId;
+    }
+
+    /**
+     * 是否管理员（超级管理员或管理员）。
+     *
+     * <p>渠道管理页是 adminOnly：管理员能看到并管理所有账号的渠道连接，
+     * 普通账号只看自己的。角色同样通过反射从 oauth 会话读取。</p>
+     *
+     * @return true 表示当前用户是管理员
+     */
+    public static boolean isAdmin() {
+        Object roles = sessionRoles();
+        if (!(roles instanceof java.util.Set<?> roleSet)) {
+            return false;
+        }
+        for (Object role : roleSet) {
+            if (role == null) {
+                continue;
+            }
+            String code = role.toString();
+            if (ROLE_SUPER_ADMIN.equalsIgnoreCase(code) || ROLE_ADMIN.equalsIgnoreCase(code)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 从 oauth 会话读取角色集合（可选依赖）。
+     *
+     * @return 角色集合；无 oauth 或未登录返回 {@code null}
+     */
+    private static Object sessionRoles() {
+        try {
+            Class<?> resumeType = Class.forName(USER_RESUME);
+            Class<?> utilsType = Class.forName(AUTH_SESSION_UTILS);
+            Method getUserInfo = utilsType.getMethod("getUserInfo", Class.class);
+            Object resume = getUserInfo.invoke(null, resumeType);
+            return resume == null ? null : resumeType.getMethod("getRoles").invoke(resume);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     /**

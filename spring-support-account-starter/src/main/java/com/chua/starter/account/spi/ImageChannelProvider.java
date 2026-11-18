@@ -4,6 +4,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.generation.ImageGenerationResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.common.support.channel.KeylessMediaChannel;
 
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,7 @@ import java.util.Set;
  * @author CH
  * @since 4.0.0.51
  */
-public interface ImageChannelProvider extends ChannelProvider {
+public interface ImageChannelProvider extends ChannelProvider, KeylessMediaChannel {
 
     /**
      * 单次生成允许的最大张数。
@@ -94,6 +95,18 @@ public interface ImageChannelProvider extends ChannelProvider {
      */
     default List<Map<String, Object>> listModels() {
         return List.of();
+    }
+
+    /**
+     * 本渠道产出的任务类型：文生图渠道固定为 {@code image_generation}。
+     *
+     * <p>免费渠道聚合目录按此字段給模型行打能力标签，前端才能把出图模型与对话模型分开。</p>
+     *
+     * @return 任务类型列表
+     */
+    @Override
+    default List<String> tasks() {
+        return List.of("image_generation");
     }
 
     /**

@@ -4,11 +4,10 @@ package com.chua.starter.ai.support.chat;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.ServiceProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
-import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
-import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.account.channel.service.AccountChannelConnectionService;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
+import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.common.support.channel.AccountChannelAuthManager;
 import com.chua.common.support.utils.StringUtils;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Magpie 网关路由源：把网关里的动态模型清单并进免费渠道路由表。
  *
  * <p><b>为什么单独一个源</b>：OAuth 渠道的动态路由只覆盖
- * {@code sys_ai_provider_model} 里登记过的模型；而 magpie 的模型目录由网关自己维护
+ * {@code sys_account_channel_model} 里登记过的模型；而 magpie 的模型目录由网关自己维护
  * （用户随时在 magpie 里增删 provider），落库会立刻过期。这里直接读
  * {@code GET /v1/models}，把当前可用的模型 id 全部注册成路由。</p>
  *
@@ -70,14 +69,14 @@ public class MagpieRouteSource implements ChannelRouteSource {
     private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000L;
 
     /**
-     * 供应商 Mapper。
+     * 渠道业务（账号模块）。
      */
-    private final SysAiProviderMapper providerMapper;
+    private final AccountChannelService channelService;
 
     /**
-     * 供应商连接 Mapper。
+     * 渠道连接业务（账号模块）。
      */
-    private final SysAiProviderConnectionMapper connectionMapper;
+    private final AccountChannelConnectionService connectionService;
 
     /**
      * 路由缓存：ownerScope → 快照。
@@ -181,7 +180,7 @@ public class MagpieRouteSource implements ChannelRouteSource {
      */
     private Snapshot load(String ownerScope) {
         try {
-            SysAiProviderConnection conn = primaryConnection(ownerScope);
+            SysAccountChannelConnection conn = primaryConnection(ownerScope);
             if (conn == null || conn.getCredentials() == null || conn.getCredentials().isEmpty()) {
                 return null;
             }
@@ -230,45 +229,15 @@ public class MagpieRouteSource implements ChannelRouteSource {
      * @param ownerScope 归属作用域
      * @return 连接；未绑定返回 {@code null}
      */
-    private SysAiProviderConnection primaryConnection(String ownerScope) {
-        SysAiProvider provider = providerMapper.selectById(PROVIDER_ID);
+    private SysAccountChannelConnection primaryConnection(String ownerScope) {
+        SysAccountChannel provider = channelService.find(PROVIDER_ID);
         if (provider == null) {
-            provider = providerMapper.selectOne(new LambdaQueryWrapper<SysAiProvider>()
-                    .eq(SysAiProvider::getPlatform, PROVIDER_ID)
-                    .last("LIMIT 1"));
+            provider = channelService.findByPlatform(PROVIDER_ID);
         }
         if (provider == null || !Boolean.TRUE.equals(provider.getEnabled())) {
             return null;
         }
-        LambdaQueryWrapper<SysAiProviderConnection> wrapper =
-                new LambdaQueryWrapper<SysAiProviderConnection>()
-                        .eq(SysAiProviderConnection::getProviderId, provider.getProviderId());
-        if ("_free".equals(ownerScope) || "_sys".equals(ownerScope)) {
-            wrapper.isNull(SysAiProviderConnection::getUserId);
-        } else {
-            boolean admin = AiUserContext.isAdmin();
-            String userId = ownerScope;
-            wrapper.and(w -> {
-                w.eq(SysAiProviderConnection::getUserId, userId);
-                if (admin) {
-                    w.or().isNull(SysAiProviderConnection::getUserId);
-                }
-            });
-        }
-        wrapper.orderByDesc(SysAiProviderConnection::getRole)
-                .orderByDesc(SysAiProviderConnection::getUpdatedAt)
-                .last("LIMIT 1");
-        SysAiProviderConnection conn = connectionMapper.selectOne(wrapper);
-        if (conn != null || !("_free".equals(ownerScope) || "_sys".equals(ownerScope))) {
-            return conn;
-        }
-        // 系统级作用域先按「历史 NULL 系统池」找；渠道管理改造后管理员绑定的连接带 userId，
-        // magpie 作为共享网关不能被漏掉，故再退一步取该 provider 下任意一条连接。
-        return connectionMapper.selectOne(new LambdaQueryWrapper<SysAiProviderConnection>()
-                .eq(SysAiProviderConnection::getProviderId, provider.getProviderId())
-                .orderByDesc(SysAiProviderConnection::getRole)
-                .orderByDesc(SysAiProviderConnection::getUpdatedAt)
-                .last("LIMIT 1"));
+        return connectionService.findLatestForScope(provider.getProviderId(), ownerScope);
     }
 
     /**

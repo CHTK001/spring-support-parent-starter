@@ -2,6 +2,7 @@
 package com.chua.starter.ai.support.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.account.channel.credit.QoderCreditQueryProvider;
 import com.chua.starter.common.support.channel.ChannelTaskProvider;
 
 import java.util.ArrayList;
@@ -99,7 +100,7 @@ public class QoderChannelTaskProvider implements ChannelTaskProvider {
         }
         try {
             String body = ChannelHttp.getJson(openApiBase + CAMPAIGNS_PATH,
-                    QoderChannelCreditProvider.sashHeaders(accessToken));
+                    QoderCreditQueryProvider.sashHeaders(accessToken));
             Map<String, Object> payload = parseJson(body);
             Object raw = payload.get("campaigns");
             if (!(raw instanceof List<?>)) {
@@ -183,7 +184,7 @@ public class QoderChannelTaskProvider implements ChannelTaskProvider {
         try {
             String body = ChannelHttp.postJson(
                     openApiBase + CAMPAIGNS_PATH + "/" + urlEncode(taskCode) + "/claim",
-                    "{}", QoderChannelCreditProvider.sashHeaders(accessToken));
+                    "{}", QoderCreditQueryProvider.sashHeaders(accessToken));
             Map<String, Object> payload = parseJson(body);
             if (Boolean.TRUE.equals(payload.get("replayed"))) {
                 result.put("ok", true);

@@ -1,8 +1,8 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.account.channel.service.AccountChannelService;
+import com.chua.starter.account.channel.store.SysAccountChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AiProviderController {
 
-    private final SysAiProviderMapper sysAiProviderMapper;
+    private final AccountChannelService channelService;
 
     /**
      * 获取可添加的供应商模板
@@ -202,8 +202,8 @@ public class AiProviderController {
     @GetMapping
     public List<Map<String, Object>> list() {
         List<Map<String, Object>> result = new ArrayList<>();
-        List<SysAiProvider> providers = sysAiProviderMapper.selectList(null);
-        for (SysAiProvider provider : providers) {
+        List<SysAccountChannel> providers = channelService.listAll();
+        for (SysAccountChannel provider : providers) {
             Map<String, Object> item = new HashMap<>();
             item.put("id", provider.getProviderId());
             item.put("name", provider.getName());

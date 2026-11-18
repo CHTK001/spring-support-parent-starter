@@ -44,8 +44,11 @@ public class RegistryCreditQueryProvider implements CreditQueryProvider {
         if (endpoint == null) {
             return CreditResult.fail(name(), "未收录该厂商的余额接口: " + query.getProviderId());
         }
-        // 兜底：即使调用方没先筛候选，也不拿别家的 Key 去问这家的官方接口
-        if (!ProviderCreditEndpoints.sameOrigin(providerId, query.getOriginUrl())) {
+        // 兜底：即使调用方没先筛候选，也不拿别家的 Key 去问这家的官方接口。
+        // 账户级 AK/SK 签名类（腾讯 / 华为等）例外：凭据是云账号级的，不属于某个 API 域名，
+        // 厂商身份由登记表品牌判定；计费域名与模型域名不同根属正常，不适用同源兜底
+        if (endpoint.getSignType() == null
+                && !ProviderCreditEndpoints.sameOrigin(providerId, query.getOriginUrl())) {
             return CreditResult.fail(name(),
                     "Key 属于 " + ProviderCreditEndpoints.hostOf(query.getOriginUrl()) + "，不是 "
                             + providerId + " 的站点，已跳过官方余额接口");
@@ -58,6 +61,15 @@ public class RegistryCreditQueryProvider implements CreditQueryProvider {
             if (endpoint.getSignType() != null
                     && (query.getSignType() == null || query.getSignType().isBlank())) {
                 query.setSignType(endpoint.getSignType());
+            }
+            // 登记表补充请求方法与自定义鉴权头（如 NanoGPT 的 POST + x-api-key）；页面显式配置优先
+            if (endpoint.getMethod() != null
+                    && (query.getMethod() == null || query.getMethod().isBlank())) {
+                query.setMethod(endpoint.getMethod());
+            }
+            if (endpoint.getAuthHeader() != null
+                    && (query.getTokenHeader() == null || query.getTokenHeader().isBlank())) {
+                query.setTokenHeader(endpoint.getAuthHeader());
             }
             String raw = CreditHttp.fetch(query, url);
             String expression = query.getExpression() == null || query.getExpression().isBlank()

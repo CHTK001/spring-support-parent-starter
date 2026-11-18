@@ -12,9 +12,9 @@ import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.lang.json.Json;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.mapper.SysAiAgentMapper;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.ai.support.manage.store.SysAiAgent;
-import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
@@ -53,7 +53,7 @@ import java.util.Optional;
 public class SysAiAgentServiceImpl implements SysAiAgentService {
 
     private final SysAiAgentMapper agentMapper; // Agent映射器
-    private final SysAiProviderMapper providerMapper; // 提供者映射器
+    private final AccountChannelService channelService; // 渠道业务（账号模块）
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentRegistry agentRegistry; // Agentregistry
     private final AgentManager agentManager; // 运行时 Agent 管理器（按 id 运维）
@@ -450,6 +450,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
 
     /**
      * Kahn 拓扑排序：按 edges(source→target) 对节点排序，跳过主节点与未注册子 Agent。
+     *
+     * @param nodes        子 Agent 节点列表
+     * @param edges        依赖边列表（source→target）
+     * @param validSubIds 有效的子 Agent 标识集合
+     * @param masterId    主 Agent 标识（不参与排序）
+     * @return 拓扑序的子 Agent 标识列表
      */
     private static List<String> topologicalOrder(List<Map<String, Object>> nodes, List<Map<String, Object>> edges,
                                                  Set<String> validSubIds, String masterId) {
@@ -693,7 +699,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 || agent.getModel() == null || agent.getModel().isBlank()) {
             return null;
         }
-        SysAiProvider provider = providerMapper.selectById(agent.getProviderId());
+        SysAccountChannel provider = channelService.find(agent.getProviderId());
         if (provider == null || provider.getBaseUrl() == null) {
             return null;
         }

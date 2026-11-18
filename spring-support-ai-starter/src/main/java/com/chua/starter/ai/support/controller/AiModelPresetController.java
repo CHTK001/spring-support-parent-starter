@@ -1,8 +1,8 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
-import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
+import com.chua.starter.account.channel.service.AccountChannelModelService;
+import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AiModelPresetController {
 
-    private final SysAiProviderModelMapper sysAiProviderModelMapper;
+    private final AccountChannelModelService channelModelService;
 
     /**
      * 获取模型预设列表
@@ -36,8 +36,8 @@ public class AiModelPresetController {
     @GetMapping("/presets")
     public ReturnResult<List<Object>> presets() {
         List<Object> items = new ArrayList<>();
-        List<SysAiProviderModel> models = sysAiProviderModelMapper.selectList(null);
-        for (SysAiProviderModel model : models) {
+        List<SysAccountChannelModel> models = channelModelService.listAllEnabled();
+        for (SysAccountChannelModel model : models) {
             if (Boolean.FALSE.equals(model.getEnabled())) {
                 continue;
             }
