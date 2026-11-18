@@ -3687,15 +3687,25 @@ public class ReleaseServiceImpl implements ReleaseService {
          * 项目跑在远端主机（如 192.168.50.101），后端所在机器访问 127.0.0.1 只会打到后端自己。
          * POSIX 用 curl，Windows 用 Invoke-WebRequest，两者都把结果压成单行 KEY=值，
          * 响应体先 base64 再输出，避免 JSON 里的换行把行号切乱。
+         *
+         * 本机自采集主机例外：平台与项目同机，JVM 直连（几十毫秒），绕开 LOCAL 执行器
+         * 按「平台 JVM 的 OS」选解释器的问题 —— 平台部署在 Linux 时，Windows 项目的
+         * PowerShell 探测命令会被 /bin/sh 执行、直接语法错误，探测结果于是全部判不可用
+         * （与 actuatorFetch 的 LOCAL 分支同一口径）。
          */
-        String command = ctx.windows ? windowsProbeCommand(base) : posixProbeCommand(base);
-        ReturnResult<List<MsExecLog>> result = execService.runCommand(
-                Collections.singletonList(ctx.hostId), command, 30, null);
-        if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
-            out.put("message", "端点探测失败: " + result.getMsg());
-            return ReturnResult.ok(out);
+        String output;
+        if (ctx.host != null && "LOCAL".equalsIgnoreCase(ctx.host.getServerHostCollectMode())) {
+            output = localProbeOutput(base, ctx.windows);
+        } else {
+            String command = ctx.windows ? windowsProbeCommand(base) : posixProbeCommand(base);
+            ReturnResult<List<MsExecLog>> result = execService.runCommand(
+                    Collections.singletonList(ctx.hostId), command, 30, null);
+            if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
+                out.put("message", "端点探测失败: " + result.getMsg());
+                return ReturnResult.ok(out);
+            }
+            output = result.getData().get(0).getMsExecLogOutput();
         }
-        String output = result.getData().get(0).getMsExecLogOutput();
         String docsCode;
         String uiCode;
         String healthJson;
@@ -4557,6 +4567,97 @@ public class ReleaseServiceImpl implements ReleaseService {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /**
+     * 本机自采集主机（collect_mode=LOCAL）的端点探测输出。
+     *
+     * <p>平台与项目同机，直接由 JVM 发 HTTP 直连（几十毫秒），不走 shell——
+     * LOCAL 执行器按「平台进程所在 OS」选解释器，平台部署在 Linux 时，Windows
+     * 项目的 PowerShell 探测命令会被 {@code /bin/sh} 执行而整体语法错误，
+     * 全部端点会被误判为不可用（与 {@link #actuatorFetch} 的 LOCAL 分支同一口径）。</p>
+     *
+     * <p>输出格式与 {@link #posixProbeCommand} / {@link #windowsProbeCommand} 对齐，
+     * 解析端无需改动：POSIX 风格为 5 行（状态码/状态码/JSON/JSON/JSON），
+     * Windows 风格为 KEY=值 + base64。</p>
+     *
+     * @param base    目标服务根地址（如 http://127.0.0.1:8080）
+     * @param windows 目标主机是否为 Windows（决定输出格式）
+     * @return 与 shell 探测同构的输出文本
+     */
+    private String localProbeOutput(String base, boolean windows) {
+        int docs = localStatus(localGet(base + "/v3/api-docs"));
+        int ui = localStatus(localGet(base + "/swagger-ui/index.html"));
+        String health = localBody(localGet(base + "/actuator/health"));
+        String metrics = localBody(localGet(base + "/actuator/metrics"));
+        String heap = localBody(localGet(base + "/actuator/metrics/jvm.memory.used?tag=area:heap"));
+        if (windows) {
+            return "DOCS=" + docs + "\nUI=" + ui
+                    + "\nHEALTH=" + encodeBase64(health)
+                    + "\nMETRICS=" + encodeBase64(metrics)
+                    + "\nHEAP=" + encodeBase64(heap) + "\n";
+        }
+        return docs + "\n" + ui + "\n" + health + "\n" + metrics + "\n" + heap + "\n";
+    }
+
+    /**
+     * LOCAL 直连：GET 指定 URL。
+     *
+     * @param url 目标地址（本机自采集主机上的 127.0.0.1）
+     * @return 响应；连接失败或超时返回 null（按端点不可用处理）
+     */
+    private HttpResponse<String> localGet(String url) {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(2))
+                    .build();
+            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+                    .timeout(java.time.Duration.ofSeconds(8))
+                    .GET()
+                    .build();
+            return client.send(request,
+                    HttpResponse.BodyHandlers.ofString(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 取 LOCAL 直连响应的状态码。
+     *
+     * @param response 直连响应（可为 null）
+     * @return 状态码；请求失败时为 0
+     */
+    private static int localStatus(HttpResponse<String> response) {
+        return response == null ? 0 : response.statusCode();
+    }
+
+    /**
+     * 取 LOCAL 直连响应的响应体（超长截断）。
+     *
+     * @param response 直连响应（可为 null）
+     * @return 响应体文本；请求失败时为空串
+     */
+    private static String localBody(HttpResponse<String> response) {
+        if (response == null) {
+            return "";
+        }
+        String text = response.body() == null ? "" : response.body();
+        return text.length() > ACT_BODY_MAX ? text.substring(0, ACT_BODY_MAX) : text;
+    }
+
+    /**
+     * 对文本做标准 Base64 编码（供 Windows 风格探测输出的 KEY=VALUE 行使用）。
+     *
+     * @param text 原文
+     * @return base64 文本；空值或空串返回空串
+     */
+    private static String encodeBase64(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        return java.util.Base64.getEncoder()
+                .encodeToString(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     /**
