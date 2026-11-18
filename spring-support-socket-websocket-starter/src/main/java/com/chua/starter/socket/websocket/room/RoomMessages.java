@@ -28,10 +28,20 @@ public record RoomMessages(
         /** 对已有对端的 negotiate 信封 */
         RoomMessage negotiateToOther) {
 
+    /**
+     * 空信封：四个分量均为空，用于「尚未就绪」的初始状态。
+     *
+     * @return 空房间消息信封
+     */
     public static RoomMessages empty() {
         return new RoomMessages(null, null, null, null);
     }
 
+    /**
+     * 是否已就绪：欢迎信封已设置。
+     *
+     * @return 已就绪返回 true
+     */
     public boolean isReady() {
         return welcome != null;
     }

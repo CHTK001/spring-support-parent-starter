@@ -260,6 +260,12 @@ public class SseStandaloneSessionTemplate implements SocketSessionTemplate {
         /** 是否已关闭 */
         private volatile boolean closed;
 
+        /**
+         * 构造单条 SSE 连接。
+         *
+         * @param id       clientId
+         * @param response SSE 响应
+         */
         Session(String id, NioServerResponse response) {
             this.id = id;
             this.response = response;
@@ -331,6 +337,9 @@ public class SseStandaloneSessionTemplate implements SocketSessionTemplate {
             }
         }
 
+        /**
+         * 关闭连接：发送 SSE 关闭帧并标记已关闭（幂等）。
+         */
         void close() {
             if (!closed) {
                 closed = true;

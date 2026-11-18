@@ -100,7 +100,15 @@ public class Version implements Comparable<Version> {
     private final String original;
 
     /**
-     * 私有构造函数
+     * 私有构造函数。
+     *
+     * @param major         主版本号
+     * @param minor         次版本号
+     * @param patch         修订号
+     * @param prerelease    预发布标识
+     * @param buildMetadata 构建元数据
+     * @param latest        是否为 latest 特殊版本
+     * @param original      原始版本字符串
      */
     private Version(int major, int minor, int patch, String prerelease, String buildMetadata, 
                     boolean latest, String original) {

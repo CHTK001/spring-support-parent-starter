@@ -66,6 +66,11 @@ public class CollectAiExecutor implements CollectShapeExecutor {
 
     private final ObjectProvider<Object> aiServiceProvider;
 
+    /**
+     * 构造 AI 执行器。
+     *
+     * @param aiServiceProvider AI 服务提供者（懒加载，未集成 ai-starter 时为 null）
+     */
     public CollectAiExecutor(ObjectProvider<Object> aiServiceProvider) {
         this.aiServiceProvider = aiServiceProvider;
     }
@@ -143,6 +148,14 @@ public class CollectAiExecutor implements CollectShapeExecutor {
         return node.param(OUTPUT).isBlank() ? DEFAULT_OUTPUT : node.param(OUTPUT).trim();
     }
 
+    /**
+     * 反射调用 setter 设值（空白值跳过）。
+     *
+     * @param target     目标对象
+     * @param methodName setter 方法名
+     * @param value      要设置的值
+     * @throws Exception 反射调用失败时抛出
+     */
     private void setString(Object target, String methodName, String value) throws Exception {
         if (value == null || value.isBlank()) {
             return;

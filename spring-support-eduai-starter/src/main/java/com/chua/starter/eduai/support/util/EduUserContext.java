@@ -66,6 +66,9 @@ public final class EduUserContext {
         return new OwnerScope(userId, userId);
     }
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private EduUserContext() {
     }
 

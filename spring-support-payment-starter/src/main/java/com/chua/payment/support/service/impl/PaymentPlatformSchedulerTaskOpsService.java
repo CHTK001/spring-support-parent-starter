@@ -190,6 +190,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
      * @param body 请求主体
      * @param accessMode 访问模式
      * @param allowConsoleRelogin 是否允许控制台重新登录
+     * @return 调度平台响应
      */
     private ResponseEntity<String> exchange(HttpMethod method,
                                             URI uri,

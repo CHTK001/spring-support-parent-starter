@@ -119,7 +119,11 @@ public class CdpEventSseBroker {
         }
     }
 
-    /** 把一条 CDP 事件组装成 Push 帧，逐个 emitter 发送 */
+    /**
+     * 把一条 CDP 事件组装成 Push 帧，逐个 emitter 发送。
+     *
+     * @param msg CDP 原始事件（method / params / targetId）
+     */
     private void broadcast(Map<String, Object> msg) {
         if (emitters.isEmpty()) {
             return;
@@ -153,7 +157,11 @@ public class CdpEventSseBroker {
         }
     }
 
-    /** 幂等取消心跳任务 */
+    /**
+     * 幂等取消心跳任务。
+     *
+     * @param future 心跳调度任务（可为空）
+     */
     private static void cancelQuietly(ScheduledFuture<?> future) {
         if (future == null || future.isCancelled()) {
             return;

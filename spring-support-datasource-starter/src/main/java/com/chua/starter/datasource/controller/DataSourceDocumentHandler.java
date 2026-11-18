@@ -142,6 +142,15 @@ public class DataSourceDocumentHandler {
         log.info("[spring-support-datasource] 数据库文档预览与图谱已注册: basePath={}", basePath);
     }
 
+    /**
+     * 向 Spring MVC 注册一条文档/图谱访问路径。
+     *
+     * @param mapping       请求映射处理器
+     * @param method        HTTP 方法（GET / POST）
+     * @param path          相对 basePath 的路径
+     * @param handlerMethod 控制器处理方法名
+     * @param paramTypes    处理方法参数类型（用于反射查找）
+     */
     private void registerPath(RequestMappingHandlerMapping mapping,
                               String method, String path, String handlerMethod,
                               Class<?>... paramTypes) {

@@ -185,7 +185,11 @@ public class MybatisJobRepository implements JobRepository {
        * 直到 TTL 重建。把到期的行捏出来，只用一次 {@code WHERE id IN (...)} 批读回新鲜行，
        * 没到期的行继续用缓存行（不做无意义的逐读）。</p>
        *
-       * @param entry 扫描结果
+       * @param entry        扫描结果
+       * @param now          当前数据库时钟（毫秒）；缓存命中时仅作参考
+       * @param preReadMs    预读窗口（毫秒）
+       * @param preReadCount 预读条数上限
+       * @param group        任务分组
        * @return 到期任务
        */
     private List<JobDefinition> scanDueFromCache(ScanCache.ScanEntry entry, long now, long preReadMs, int preReadCount, String group) {

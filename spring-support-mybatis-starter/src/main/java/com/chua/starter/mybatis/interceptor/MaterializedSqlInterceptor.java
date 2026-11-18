@@ -80,6 +80,12 @@ public class MaterializedSqlInterceptor implements Interceptor {
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>(); // definition缓存
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>(); // refreshdefinition缓存
 
+    /**
+     * 构造拦截器。
+     *
+     * @param materializedSqlRouter 物化 SQL 数据源路由器
+     * @param properties            物化路由配置
+     */
     public MaterializedSqlInterceptor(MaterializedSqlDataSourceRouter materializedSqlRouter,
                                       MaterializedRouteProperties properties) {
         this.materializedSqlRouter = materializedSqlRouter;
@@ -175,6 +181,15 @@ public class MaterializedSqlInterceptor implements Interceptor {
         DataSourceContextSupport.clearDbType();
     }
 
+    /**
+     * 构建物化 SQL 请求（提取 SQL、类型、表与参数）。
+     *
+     * @param mappedStatement MyBatis 映射语句
+     * @param boundSql        绑定 SQL
+     * @param parameter       执行参数
+     * @param definition      命中的路由定义
+     * @return 物化 SQL 请求；SQL 为空或未解析到表时返回 null
+     */
     private MaterializedSqlRequest buildRequest(MappedStatement mappedStatement,
                                                 BoundSql boundSql,
                                                 Object parameter,
@@ -227,6 +242,14 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return mappedStatement.getBoundSql(parameter);
     }
 
+    /**
+     * 以新定义与命令类型重建物化 SQL 请求。
+     *
+     * @param request     原物化 SQL 请求
+     * @param definition  新路由定义
+     * @param commandType 新的命令类型
+     * @return 重建后的物化 SQL 请求
+     */
     private MaterializedSqlRequest rebuildRequest(MaterializedSqlRequest request,
                                                   MaterializedRouteDefinition definition,
                                                   MaterializedSqlCommandType commandType) {

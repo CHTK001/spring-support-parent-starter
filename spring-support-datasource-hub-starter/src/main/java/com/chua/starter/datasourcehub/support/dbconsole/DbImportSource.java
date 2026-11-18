@@ -46,6 +46,9 @@ public final class DbImportSource {
         }
     }
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private DbImportSource() {
     }
 

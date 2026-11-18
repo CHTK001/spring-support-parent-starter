@@ -51,8 +51,13 @@ public class SoftSoftwareController {
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * Page
-    */
+     * 分页查询软件。
+     *
+     * @param query   分页查询条件
+     * @param request 查询请求
+     * @param roles   当前用户角色（请求头透传）
+     * @return 软件分页结果
+     */
     public ReturnPageResult<SoftSoftware> page(
             @ParameterObject Query<SoftSoftware> query,
             @ParameterObject SoftwarePageRequest request,

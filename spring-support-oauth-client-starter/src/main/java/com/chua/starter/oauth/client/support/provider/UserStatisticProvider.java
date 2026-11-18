@@ -72,6 +72,7 @@ public class UserStatisticProvider {
        * @param loginData     登录信息
        * @param request       请求
        * @param response      响应
+       * @param bindingResult 参数校验结果
        * @return 结果
        */
     @PostMapping("/login")    public ReturnResult<LoginResult> login(@Valid @RequestBody LoginData loginData,
@@ -304,8 +305,12 @@ public class UserStatisticProvider {
       /**
        * 保存用户首页布局
        *
-       * @param sysUserSetting 保存用户首页布局
-       * @return 保存用户首页布局
+       * @param sysUserSetting    用户首页布局
+       * @param userDashboardGrid 用户面板网格布局
+       * @param userId            用户标识
+       * @param username          用户名
+       * @param roles             用户角色
+       * @return 保存结果
        */
     @PostMapping("/grid")
     public ReturnResult<Boolean> grid(@RequestBody JsonObject sysUserSetting,

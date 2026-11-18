@@ -25,6 +25,11 @@ public class CollectFlowVersionServiceImpl extends ServiceImpl<CollectFlowVersio
 
     private final CollectFlowMapper flowMapper;
 
+    /**
+     * 构造流程版本服务实现。
+     *
+     * @param flowMapper 流程 Mapper
+     */
     public CollectFlowVersionServiceImpl(CollectFlowMapper flowMapper) {
         this.flowMapper = flowMapper;
     }

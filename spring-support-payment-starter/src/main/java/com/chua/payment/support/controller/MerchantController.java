@@ -93,10 +93,12 @@ public class MerchantController {
     @GetMapping("/list")
     /**
      * 商户列表
-     * @param page page
+     *
+     * @param page 页码
      * @param size 大小
      * @param merchantName 商户名称
      * @param status 状态
+     * @return 商户分页结果
      */
     public Result<PageResult<MerchantVO>> listMerchants(
             @RequestParam(defaultValue = "1") int page,

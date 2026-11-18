@@ -50,29 +50,21 @@ public class QueueAutoConfiguration {
     @ConditionalOnProperty(prefix = QueueProperties.PREFIX, name = "type", havingValue = "local")
     public MessageTemplate localMessageTemplate() {
         log.info("[Queue] 创建本地消息队列模板 (基于Guava EventBus)");
-        /**
-         * 本地消息template。
-         * @param queueProperties.getLocal( 队列属性.getlocal(
-         * @return 本地消息template的结果
-         */
         return new LocalMessageTemplate(queueProperties.getLocal());
     }
 
     /**
      * 消息监听注解处理器
+     *
+     * @param messageTemplates 消息模板列表（可空）
+     * @param eventPublisher   事件发布器
+     * @return 消息监听器 Bean 后置处理器
      */
     @Bean
     @ConditionalOnMissingBean
     public MessageListenerBeanPostProcessor messageListenerBeanPostProcessor(
             @Autowired(required = false) List<MessageTemplate> messageTemplates,
             ApplicationEventPublisher eventPublisher) {
-        /**
-         * 消息监听器Beanpost处理器。
-         * @param messageTemplates 消息templates
-         * @param queueProperties 队列属性
-         * @param eventPublisher 事件发布
-         * @return 消息监听器Beanpost处理器的结果
-         */
         return new MessageListenerBeanPostProcessor(messageTemplates, queueProperties, eventPublisher);
     }
 

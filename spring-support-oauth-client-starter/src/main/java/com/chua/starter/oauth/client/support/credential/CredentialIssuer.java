@@ -22,6 +22,9 @@ import java.util.Map;
  */
 public final class CredentialIssuer {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private CredentialIssuer() {
     }
 

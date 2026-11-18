@@ -1786,7 +1786,13 @@ public class ApmQueryService {
 
     /**
      * 计算 span 深度（父链长度，上限 32 防环）。
-    */
+     *
+     * @param spanId    span 标识
+     * @param parentOf  父 span 映射
+     * @param cache     深度缓存
+     * @param guard     递归深度防护计数
+     * @return span 深度
+     */
     private int computeDepth(String spanId, Map<String, String> parentOf,
                              Map<String, Integer> cache, int guard) {
         if (guard > 32 || spanId == null || "null".equals(spanId) || spanId.isBlank()) {
@@ -3075,6 +3081,14 @@ public class ApmQueryService {
         return "HTTP";
     }
 
+    /**
+     * 追加一条端口监听记录。
+     *
+     * @param ports    端口列表
+     * @param protocol 协议
+     * @param software 软件名
+     * @param port     端口号（不大于 0 时忽略）
+     */
     private static void addPort(List<Map<String, Object>> ports, String protocol,
                                 String software, int port) {
         if (port <= 0) {
@@ -3249,6 +3263,16 @@ public class ApmQueryService {
         return t != null ? t.displayLabel() : "?";
     }
 
+    /**
+     * 拼接端点标签（协议[软件]@主机:端口 路径）。
+     *
+     * @param protocol 协议
+     * @param software 软件名
+     * @param host     主机
+     * @param port     端口号
+     * @param path     路径
+     * @return 端点标签，全部为空时返回 "?"
+     */
     private static String endpointLabel(String protocol, String software, String host,
                                         int port, String path) {
         StringBuilder sb = new StringBuilder();

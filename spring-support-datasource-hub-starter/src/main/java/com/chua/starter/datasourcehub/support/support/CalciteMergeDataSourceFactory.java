@@ -285,6 +285,12 @@ public class CalciteMergeDataSourceFactory {
     public record FreshConnectionDataSource(
             ObjectProvider<DatasourceService> serviceProvider, Long datasourceId) implements DataSource {
 
+        /**
+         * 建立到成员数据源的新物理连接。
+         *
+         * @return 新建的 JDBC 连接
+         * @throws java.sql.SQLException 建连失败
+         */
         private java.sql.Connection open() throws SQLException {
             try {
                 return serviceProvider.getObject().newConnection(datasourceId);

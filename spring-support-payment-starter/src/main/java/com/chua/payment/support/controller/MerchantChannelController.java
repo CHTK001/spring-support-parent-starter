@@ -77,9 +77,11 @@ public class MerchantChannelController {
     @GetMapping("/merchant/{merchantId}")
     /**
      * 渠道列表
-     * @param merchantId merchantid
+     *
+     * @param merchantId 商户 id
      * @param channelType 渠道类型
      * @param status 状态
+     * @return 渠道列表
      */
     public Result<List<MerchantChannelVO>> listChannels(@PathVariable Long merchantId,
                                                         @RequestParam(required = false) String channelType,

@@ -220,6 +220,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
      * @param profileDir    目录名
      * @param mergedConfigs 合并后的配置 映射
      * @param loadedConfigs 已加载的配置列表（用于日志）
+     * @param includeProfiles 需要加载的 profile 集合；为空时跳过该目录
      */
     private void loadConfigsToMap(PathMatchingResourcePatternResolver resolver,
                                   String profileDir,

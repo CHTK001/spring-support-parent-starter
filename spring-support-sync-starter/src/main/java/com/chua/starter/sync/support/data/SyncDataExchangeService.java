@@ -177,6 +177,7 @@ public class SyncDataExchangeService {
      * @param eventType 事件类型
      * @param payload payload
      * @param metadata metadata
+     * @return 发送到的客户端数量
      */
     public int sendToMetadata(String metadataKey,
                               Object metadataValue,
@@ -208,6 +209,7 @@ public class SyncDataExchangeService {
      * @param eventType 事件类型
      * @param payload payload
      * @param metadata metadata
+     * @return 发送到的客户端数量
      */
     public int sendToClients(Predicate<ClientInfo> filter,
                              String channel,

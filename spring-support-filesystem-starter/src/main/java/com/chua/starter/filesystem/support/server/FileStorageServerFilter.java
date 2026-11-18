@@ -4109,6 +4109,7 @@ var search=document.getElementById('search');
        *                   "third"=三方 URL 预览会话；
        *                   "remote" / "ssh"=远程（http(s) / SSH）文件会话（内容不在本存储，
        *                   无法令牌化，字节直链按当前请求重放）
+       * @param metadata   对象元数据（取内容类型与文件名）
        * @return 异步阶段
        */
     private CompletionStage<Void> serveObjectContent(ServerRequest request, ServerResponse response, byte[] data,

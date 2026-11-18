@@ -111,6 +111,13 @@ public final class DatasourceProbeSupport {
 
         /**
          * 无版本号但带服务器指标：复用于表达「指标有、版本未知」。
+         *
+         * @param success            是否连通
+         * @param connectLatencyMs   连接延迟（毫秒）
+         * @param sessionLatencyMs   会话延迟（毫秒）
+         * @param message            结果说明
+         * @param connectionCount    采样时刻目标服务上的客户端连接数
+         * @param serverStats        采样时刻服务器运行指标
          */
         public ProbeOutcome(boolean success, Long connectLatencyMs, Long sessionLatencyMs,
                             String message, Long connectionCount, ServerStats serverStats) {

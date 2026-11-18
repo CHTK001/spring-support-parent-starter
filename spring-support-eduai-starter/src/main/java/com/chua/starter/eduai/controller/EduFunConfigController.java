@@ -103,6 +103,14 @@ public class EduFunConfigController {
         return ReturnResult.ok(funConfigService.getByModuleCode(moduleCode, gradeLevel));
     }
 
+    /**
+     * 更新模块启用状态。
+     *
+     * @param moduleCode module编码，不允许为 null
+     * @param gradeLevel 学段（可选）；同编码在多个学段各有一行时用它精确定位
+     * @param enabled    是否启用（1 启用 / 0 停用）
+     * @return 是否更新成功
+     */
     @Operation(summary = "更新模块启用状态")
     @Permission(role = {"ADMIN", "SUPER_ADMIN"})
     @PutMapping("/toggle/{moduleCode}")

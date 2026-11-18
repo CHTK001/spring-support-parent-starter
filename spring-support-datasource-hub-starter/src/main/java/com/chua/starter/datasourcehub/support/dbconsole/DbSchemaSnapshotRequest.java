@@ -42,6 +42,13 @@ public record DbSchemaSnapshotRequest(
         );
     }
 
+    /**
+     * 取 body 中的可空字符串值（缺失或空白转为 null）。
+     *
+     * @param body 请求体（可空）
+     * @param key  键名
+     * @return 字符串值；缺失、null 或空白时为 null
+     */
     private static String optionalString(Map<String, Object> body, String key) {
         if (body == null || !body.containsKey(key)) {
             return null;
@@ -68,6 +75,17 @@ public record DbSchemaSnapshotRequest(
             Integer page,
             Integer size
     ) {
+        /**
+         * 组装列表查询参数。
+         *
+         * @param datasourceId 数据源 ID
+         * @param database     库名（多库数据源的目标库，可空=只读当前库的快照）
+         * @param tableName    表名（模糊搜索可空）
+         * @param name         快照名称（模糊搜索可空）
+         * @param page         页码（从 1 开始）
+         * @param size         每页条数
+         * @return 列表查询参数
+         */
         public static ListRequest of(Long datasourceId, String database, String tableName, String name, Integer page, Integer size) {
             return new ListRequest(datasourceId, database, tableName, name, page, size);
         }

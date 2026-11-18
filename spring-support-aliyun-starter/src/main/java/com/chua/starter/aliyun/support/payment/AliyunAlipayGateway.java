@@ -66,14 +66,21 @@ public interface AliyunAlipayGateway {
      */
     AliyunAlipayRefundResponse queryRefund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request);
 
+    /**
+     * 验签并解析支付回调通知。
+     *
+     * @param properties 支付宝配置
+     * @param request    回调通知请求
+     * @return 解析后的回调载荷；验签失败返回 {@code null}
+     */
     AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
                                                          AliyunAlipayNotifyRequest request);
 
     /**
-     * app薪酬。
-     * @param properties 属性
-     * @param request 请求
-     * @return app薪酬的结果
+     * App 支付。
+     * @param properties 支付宝配置
+     * @param request    支付请求
+     * @return App 支付结果
      */
     AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request);
 

@@ -108,6 +108,8 @@ public class MapperXmlEndpoint {
      * <p>仅对可写本地文件生效；JAR 内资源无法保存。</p>
      *
      * @param name 文件名
+     * @param body 请求体（含 content 字段）
+     * @return 保存结果
      */
     @WriteOperation
     public ResponseEntity<Map<String, Object>> save(@Selector String name,

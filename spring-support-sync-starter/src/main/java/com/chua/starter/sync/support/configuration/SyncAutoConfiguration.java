@@ -66,7 +66,8 @@ public class SyncAutoConfiguration {
      * 条件：类型 为 服务端 或 both，且 服务端.enable = true
      * </p>
      *
-     * @param syncProperties 同步配置属性
+     * @param syncProperties    同步配置属性
+     * @param discoveryProvider 服务发现提供器
      * @return 同步服务端实例，如果未启用则返回 空
      * @since 1.0.0
      */
@@ -76,11 +77,6 @@ public class SyncAutoConfiguration {
     public SyncServer syncServer(SyncProperties syncProperties,
                                  ObjectProvider<com.chua.common.support.network.discovery.ServiceDiscovery> discoveryProvider) {
         log.info("[Sync] 创建服务端");
-        /**
-         * 同步服务端。
-         * @param syncProperties 同步属性
-         * @return 同步服务端的结果
-         */
         return new SyncServer(syncProperties, resolveServiceDiscovery(syncProperties, discoveryProvider));
     }
 
@@ -90,7 +86,10 @@ public class SyncAutoConfiguration {
      * 条件：类型 为 客户端 或 both，且 客户端.enable = true
      * </p>
      *
-     * @param syncProperties 同步配置属性
+     * @param syncProperties                  同步配置属性
+     * @param syncClientInfoCustomizerProvider 客户端信息定制器提供器
+     * @param syncClientCustomizerProvider     客户端定制器提供器
+     * @param discoveryProvider               服务发现提供器
      * @return 同步客户端实例，如果未启用则返回 空
      * @since 1.0.0
      */

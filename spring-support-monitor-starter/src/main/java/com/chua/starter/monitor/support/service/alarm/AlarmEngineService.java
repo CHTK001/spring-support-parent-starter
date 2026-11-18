@@ -39,10 +39,10 @@ public interface AlarmEngineService {
      * 其他主机的策略规则不参与 —— 这样「告警策略属于每台主机」在主机链路上才真正生效，
      * 不会出现 A 主机配的策略去管 B 主机。</p>
      *
-     * at param hostId     服务器主机 标识（ms_server_host.id）
-     * at param hostName   主机名（冗余入事件）
-     * at param metricName 指标名（host.delay.ms 等）
-     * at param value      指标值
+     * @param hostId     服务器主机 标识（ms_server_host.id）
+     * @param hostName   主机名（冗余入事件）
+     * @param metricName 指标名（host.delay.ms 等）
+     * @param value      指标值
      */
     void evaluateHost(Long hostId, String hostName, String metricName, double value);
 
@@ -129,6 +129,7 @@ public interface AlarmEngineService {
     /**
      * 策略列表
      *
+     * @param hostId 主机 标识 过滤（可选，为空查全部）
      * @return 列表
      */
     ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies(Long hostId);

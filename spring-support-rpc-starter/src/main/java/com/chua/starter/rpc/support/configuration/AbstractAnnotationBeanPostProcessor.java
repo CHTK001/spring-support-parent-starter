@@ -421,13 +421,15 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
           */
         private final Collection<AnnotatedMethodElement> methodElements;
 
+        /**
+         * 构造注解注入元数据。
+         *
+         * @param targetClass    目标类
+         * @param fieldElements  字段元素集合
+         * @param methodElements 方法元素集合
+         */
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements,
                                           Collection<AnnotatedMethodElement> methodElements) {
-              /**
-               * 父。
-               * @param targetClass 目标类
-               * @param methodElements 方法elements
-               */
             super(targetClass, combine(fieldElements, methodElements));
             this.targetClass = targetClass;
             this.fieldElements = fieldElements;

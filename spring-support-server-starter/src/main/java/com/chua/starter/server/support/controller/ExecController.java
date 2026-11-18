@@ -120,7 +120,8 @@ public class ExecController {
     /**
      * 立即触发任务
      *
-     * @param id 主键
+     * @param id   主键
+     * @param body 运行参数（目标主机与超时秒数，可为空）
      * @return 执行日志
      */
     @Operation(summary = "立即触发任务（可指定目标主机）")
@@ -137,6 +138,7 @@ public class ExecController {
      *
      * @param type   类型过滤，可为空
      * @param hostId 主机过滤，可为空
+     * @param jobId  任务过滤，可为空
      * @return 日志列表
      */
     @Operation(summary = "执行日志查询")

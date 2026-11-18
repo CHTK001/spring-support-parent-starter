@@ -227,8 +227,8 @@ public class DeviceWebhookController {
      * @param request HTTP 请求
      * @return 原始包体
      */
-    // [P3C A20 豁免]
     private static String readRawBody(HttpServletRequest request) {
+        // [P3C A20 豁免]
         try {
             return new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException ex) {

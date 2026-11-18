@@ -265,7 +265,12 @@ public class CollectTaskServiceImpl extends ServiceImpl<CollectTaskMapper, Colle
         return vo;
     }
 
-    /** 质量评分：节点成功率 50% + 入库率 30% + 无错误 20% */
+    /**
+     * 质量评分：节点成功率 50% + 入库率 30% + 无错误 20%。
+     *
+     * @param vo 任务质量统计
+     * @return 质量得分（0-100）
+     */
     private int calcQualityScore(CollectQualityVO vo) {
         int nodeScore = vo.getNodeSuccessRate().intValue() / 2;           // 0-50
         int insertScore = 30;  // 保守给满分，若有入库率数据可进一步计算

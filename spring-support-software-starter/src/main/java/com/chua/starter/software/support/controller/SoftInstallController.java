@@ -66,22 +66,12 @@ public class SoftInstallController {
     @DeleteMapping("/uninstall")
     @Permission(value = "sys:soft:uninstall", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
       /**
-       * Uninstall
-       * @param softwareId softwareid
-       * @param userId 用户标识
-       * @param deviceId deviceid
-       * @param userId 用户标识
-       * @param deviceId deviceid
-       * @param softwareId softwareid
-       * @param userId 用户标识
-       * @param deviceId deviceid
-       * @param targetVersion Target版本
-       * @param userId 用户标识
-       * @param deviceId deviceid
-       * @param targetVersion Target版本
-       * @param recordId recordid
-       * @param softwareId softwareid
-       * @param userId 用户标识
+       * 卸载软件
+       *
+       * @param softwareId 软件标识
+       * @param userId     用户标识
+       * @param deviceId   设备标识
+       * @return 卸载结果
        */
     public ReturnResult<InstallDetailResponse> uninstall(
             @Parameter(description = "软件ID") String softwareId,
@@ -95,16 +85,12 @@ public class SoftInstallController {
     @Permission(value = "sys:soft:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
       /**
        * 更新版本
-       * @param softwareId softwareid
-       * @param userId 用户标识
-       * @param deviceId deviceid
-       * @param targetVersion Target版本
-       * @param userId 用户标识
-       * @param deviceId deviceid
-       * @param targetVersion Target版本
-       * @param recordId recordid
-       * @param softwareId softwareid
-       * @param userId 用户标识
+       *
+       * @param softwareId    软件标识
+       * @param userId        用户标识
+       * @param deviceId      设备标识
+       * @param targetVersion 目标版本
+       * @return 更新结果
        */
     public ReturnResult<InstallDetailResponse> updateVersion(
             @Parameter(description = "软件ID") String softwareId,

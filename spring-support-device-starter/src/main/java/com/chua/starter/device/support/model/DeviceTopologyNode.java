@@ -20,6 +20,15 @@ public record DeviceTopologyNode(
         /** 是否在线（仅设备级） */
         Boolean online) {
 
+    /**
+     * 便捷构造：不指定在线状态。
+     *
+     * @param id    节点 id
+     * @param label 节点名称
+     * @param group 分组
+     * @param type  节点类型
+     * @param size  节点尺寸
+     */
     public DeviceTopologyNode(String id, String label, String group, String type, Integer size) {
         this(id, label, group, type, size, null);
     }

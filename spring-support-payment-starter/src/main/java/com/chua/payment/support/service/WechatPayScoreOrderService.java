@@ -32,7 +32,9 @@ public interface WechatPayScoreOrderService {
 
     /**
      * 分页查询支付分订单。
+     *
      * @param request 请求参数
+     * @return 支付分订单分页结果
      */
     Page<WechatPayScoreOrder> page(WechatPayScoreOrderQueryRequest request);
 

@@ -59,10 +59,11 @@ public class OrderConfigController {
     @Operation(summary = "更新分表配置")
     @PutMapping("/partitions/{businessType}")
     /**
-    * 更新
+    * 更新分表配置
     * @param businessType 业务类型
-    * @param dto dto
+    * @param dto 分表配置
     * @param request 请求
+    * @return 更新后的分表配置
      */
     public Result<OrderPartitionConfigVO> update(@PathVariable String businessType,
                                                  @RequestBody OrderPartitionConfigDTO dto,
@@ -120,9 +121,10 @@ public class OrderConfigController {
     }
 
     /**
-     * 权限校验
+     * 权限校验（非管理员请求直接拒绝）
      *
      * @param request 请求
+     * @return 拒绝响应；校验通过返回 {@code null}
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);

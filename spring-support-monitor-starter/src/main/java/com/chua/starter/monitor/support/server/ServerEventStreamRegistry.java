@@ -63,6 +63,11 @@ public class ServerEventStreamRegistry {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造服务事件流注册中心。
+     *
+     * @param objectMapper JSON 序列化器
+     */
     public ServerEventStreamRegistry(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }

@@ -143,6 +143,7 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
     /**
      * 组装查询条件。
      *
+     * @param deviceId  设备标识（可空；传时按设备下所有车闸过滤）
      * @param gateId    车闸标识
      * @param direction 方向
      * @param start     起始时间

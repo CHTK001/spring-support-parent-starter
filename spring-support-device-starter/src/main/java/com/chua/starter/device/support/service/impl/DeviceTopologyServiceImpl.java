@@ -124,6 +124,9 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
      *
      * <p>IP 带掩码（1.2.3.4/24）或只写 IP（按 /24 归网段）都折回网段地址，
      * 同网段设备共享网段节点，避免 1 设备 1 段（100 台设备 100 个网段）。</p>
+     *
+     * @param ip 设备 IP（可带掩码或范围写法）
+     * @return /24 网段地址；无法解析时返回 null
      */
     private static String cidrOf(String ip) {
         if (ip == null || ip.contains("-")) return null;
@@ -144,12 +147,26 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
         return octets[0] + "." + octets[1] + "." + octets[2] + ".0/24";
     }
 
-    /** 网段节点 id（按区 + 网段二段隔离，避免不同区的同网段撞 id） */
+    /**
+     * 网段节点 id（按区 + 网段二段隔离，避免不同区的同网段撞 id）。
+     *
+     * @param areaGroup 区域分组
+     * @param cidr      网段地址
+     * @return 网段节点 id；cidr 为空时返回 null
+     */
     private static String subnetIdOf(String areaGroup, String cidr) {
         if (cidr == null) return null;
         return "subnet:" + areaGroup.replace(":", "_") + ":" + cidr;
     }
 
+    /**
+     * 构造网段节点。
+     *
+     * @param subnetId  网段节点 id
+     * @param cidr      网段地址
+     * @param areaGroup 区域分组
+     * @return 网段拓扑节点
+     */
     private static DeviceTopologyNode subnetNode(String subnetId, String cidr, String areaGroup) {
         return new DeviceTopologyNode(
                 subnetId,

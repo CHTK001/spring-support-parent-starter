@@ -699,6 +699,14 @@ public final class DbDialectSupport {
         }
     }
 
+    /**
+     * 依次尝试候选 DDL，第一条执行成功即返回；全部失败时抛出首个异常。
+     *
+     * @param conn       数据库连接
+     * @param candidates 候选 DDL 语句
+     * @param params     绑定参数
+     * @throws java.sql.SQLException 全部候选执行失败
+     */
     private static void executePreparedFirst(Connection conn, List<String> candidates, List<Object> params)
             throws SQLException {
         SQLException first = null;

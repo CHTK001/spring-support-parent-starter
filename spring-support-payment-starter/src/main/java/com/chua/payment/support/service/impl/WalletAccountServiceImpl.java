@@ -627,6 +627,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
       * @param createIfAbsent 账户不存在时是否创建
       * @param operator 操作人
       * @param remark 备注
+      * @return 变更后的钱包账户
       */
     private WalletAccount applyChange(String bizType,
                                       String bizNo,

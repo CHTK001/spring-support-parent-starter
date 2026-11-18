@@ -52,6 +52,7 @@ public class DeviceTaskStateController {
      *
      * @param taskName 任务名称
      * @param interval 间隔（秒），必须大于 0
+     * @return 操作结果
      */
     @PutMapping("/{taskName}/interval")
     public ReturnResult<Void> updateInterval(@PathVariable String taskName,

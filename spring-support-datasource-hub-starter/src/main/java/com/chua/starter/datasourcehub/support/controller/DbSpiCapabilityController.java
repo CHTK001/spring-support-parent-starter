@@ -582,6 +582,12 @@ public class DbSpiCapabilityController {
      *
      * <p>授权失败不吞掉用户创建结果，但会记日志——前端拿到 true 后仍会刷新列表，
      * 权限是否真加上由矩阵列体现。</p>
+     *
+     * @param protocol      协议标识
+     * @param datasourceId  数据源 ID
+     * @param username      账号名
+     * @param host          主机
+     * @param body          请求体（含 grants 与 superUser）
      */
     private void applyGrants(String protocol, Long datasourceId, String username,
                              String host, Map<String, Object> body) {

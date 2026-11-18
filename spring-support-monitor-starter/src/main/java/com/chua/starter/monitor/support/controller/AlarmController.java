@@ -90,8 +90,8 @@ public class AlarmController {
     /**
      * 策略列表（可按归属主机过滤）
      *
-     * at param hostId 归属主机 过滤，可为空（空=全部策略）
-     * at return 列表
+     * @param hostId 归属主机过滤，可为空（空=全部策略）
+     * @return 策略列表
      */
     @Operation(summary = "策略列表")
     @GetMapping("/policy")

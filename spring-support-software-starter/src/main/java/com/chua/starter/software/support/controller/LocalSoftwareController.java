@@ -124,7 +124,8 @@ public class LocalSoftwareController {
      *
      * <p>从本地软件列表中安装软件到指定路径。</p>
      *
-     * @param request 安装请求
+     * @param request       安装请求
+     * @param bindingResult 参数校验结果
      * @return 安装结果
      */
     @Operation(summary = "安装本地软件")
@@ -178,6 +179,7 @@ public class LocalSoftwareController {
     /**
      * 批量获取本地软件（用于下拉选择等）
      *
+     * @param keyword 软件名称关键词（可选）
      * @return 软件列表
      */
     @Operation(summary = "本地软件列表（不分页）")

@@ -1413,9 +1413,10 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        * （{@code -Xmx1500m} 下 RSS 1452MB），百万行必然 OOM。改流式后常驻内存只与批量大小有关。</p>
        *
        * @param task          任务
-       * @param mapping       字段映射
+       * @param plan          目标侧执行计划（含增量字段与目标表）
        * @param sourceColumns 源结果集列（引擎按列名取值，必须与读取 SQL 的结果集一致）
        * @param readCounter   出参：累计读取行数（流式管线里没法用返回值一起带回来）
+       * @param file          目标 sqlite/导出文件路径
        * @return 实际写入行数
        * @throws Exception 建连、读取或写入失败
        */

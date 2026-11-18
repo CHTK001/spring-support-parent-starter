@@ -127,12 +127,14 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     /**
      * 解析参数
      *
+     * @param methodParameter 方法参数
      * @param mavContainer    容器
      * @param webRequest      请求
      * @param binderFactory   工厂
+     * @param defaultFunction 默认值函数
+     * @param nameFunction    参数名解析函数
      * @return 结果
      */
-
     public Object resolveEmbeddedValuesAndExpressions(MethodParameter methodParameter,
                                                       ModelAndViewContainer mavContainer,
                                                       NativeWebRequest webRequest,
@@ -147,11 +149,6 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Class<?> parameterType = parameter.getType();
 
         if (RoleJudge.class.isAssignableFrom(parameterType)) {
-            /**
-             * 角色judge。
-             * @param userResume.getRoles( 用户resume.getroles(
-             * @return 角色judge的结果
-             */
             return new RoleJudge(null == userResume ? java.util.Collections.emptySet() : userResume.getRoles());
         }
 

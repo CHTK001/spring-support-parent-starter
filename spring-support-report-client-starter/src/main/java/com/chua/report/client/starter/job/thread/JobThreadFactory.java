@@ -1,6 +1,6 @@
 package com.chua.report.client.starter.job.thread;
 
-import com.chua.report.client.starter.job.handler.JobHandler;
+import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import lombok.extern.slf4j.Slf4j;
 

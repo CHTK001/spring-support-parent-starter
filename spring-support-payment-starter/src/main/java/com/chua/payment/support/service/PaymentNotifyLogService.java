@@ -11,6 +11,15 @@ import com.chua.payment.support.entity.PaymentNotifyLog;
  */
 public interface PaymentNotifyLogService {
 
+    /**
+     * 开始记录一条支付回调通知日志。
+     *
+     * @param notifyType     通知类型
+     * @param channelId      支付渠道 ID
+     * @param requestHeaders 回调请求头
+     * @param requestBody    回调请求体
+     * @return 新建的通知日志记录
+     */
     PaymentNotifyLog start(String notifyType,
                            Long channelId,
                            String requestHeaders,

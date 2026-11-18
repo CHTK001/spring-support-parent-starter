@@ -346,6 +346,8 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
 
     /**
      * 初始化结果对象。
+     *
+     * @param topic 推送主题
      * @param items 条目
      * @return 结果
      */

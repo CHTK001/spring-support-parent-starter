@@ -35,6 +35,9 @@ public final class ProjectOperationLabels {
             Map.entry("copy", "复制到其他服务器")
     );
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ProjectOperationLabels() {
     }
 

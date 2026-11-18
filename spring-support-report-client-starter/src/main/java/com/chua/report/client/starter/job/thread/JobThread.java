@@ -4,7 +4,7 @@ package com.chua.report.client.starter.job.thread;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.report.client.starter.job.JobReporter;
 import com.chua.report.client.starter.job.TriggerParam;
-import com.chua.report.client.starter.job.handler.JobHandler;
+import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.report.client.starter.job.log.DefaultJobLog;
 import com.chua.report.client.starter.job.log.JobFileAppender;
 import lombok.extern.slf4j.Slf4j;

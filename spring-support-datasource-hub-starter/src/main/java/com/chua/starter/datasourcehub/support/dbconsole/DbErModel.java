@@ -28,6 +28,9 @@ import java.util.Set;
  */
 public final class DbErModel {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private DbErModel() {
     }
 

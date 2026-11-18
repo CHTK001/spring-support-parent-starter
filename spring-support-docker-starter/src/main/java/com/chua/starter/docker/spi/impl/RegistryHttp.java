@@ -43,6 +43,9 @@ final class RegistryHttp {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private RegistryHttp() {
     }
 

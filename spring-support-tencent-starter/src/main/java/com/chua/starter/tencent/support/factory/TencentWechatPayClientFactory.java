@@ -38,9 +38,10 @@ public class TencentWechatPayClientFactory {
     /**
      * 创建auto证书配置
      * @param merchantId merchantid
-     * @param privateKey 私募Key
+     * @param privateKey 私钥
      * @param merchantSerialNumber merchant串行数字
      * @param apiV3Key apiv3Key
+     * @return 自动证书配置
      */
     public Config createAutoCertificateConfig(String merchantId,
                                               String privateKey,

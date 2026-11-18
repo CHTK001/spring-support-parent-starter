@@ -63,6 +63,11 @@ public class AlarmEventStreamRegistry {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造告警事件流注册中心。
+     *
+     * @param objectMapper JSON 序列化器
+     */
     @Autowired
     public AlarmEventStreamRegistry(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;

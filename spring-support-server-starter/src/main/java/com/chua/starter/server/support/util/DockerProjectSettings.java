@@ -53,6 +53,11 @@ public final class DockerProjectSettings {
     /** 原始配置（键名与 appConfig 中一致，缺失时不做补全） */
     private final Map<String, String> values;
 
+    /**
+     * 构造 Docker 项目配置。
+     *
+     * @param values 原始配置键值对
+     */
     private DockerProjectSettings(Map<String, String> values) {
         this.values = values;
     }

@@ -145,8 +145,14 @@ public class ConsolePageController {
     // ==================== 调整接口 ====================
 
     /**
-     * 调整 @api特征 覆盖
-    */
+     * 调整 @api 特征覆盖（保存或更新）。
+     *
+     * @param featureId       特征标识
+     * @param enabled         是否启用
+     * @param disabledMessage 停用时向前端展示的消息（可选）
+     * @param disabledStatus  停用时返回的 HTTP 状态码（默认 -1）
+     * @return 重定向到特征管理页
+     */
     @PostMapping("/api/features")
     @Permission(CONSOLE_PERMISSION)
     public String upsertFeature(@RequestParam String featureId,
@@ -171,8 +177,16 @@ public class ConsolePageController {
     }
 
     /**
-     * 调整 @apigray 覆盖（percentage/角色/用户/头部/rule 均可选，缺省沿用注解）
-    */
+     * 调整 @apigray 覆盖（percentage/角色/用户/头部/rule 均可选，缺省沿用注解）。
+     *
+     * @param pattern    灰度匹配模式
+     * @param percentage 灰度百分比（可选）
+     * @param roles      灰度角色列表（可选，逗号分隔）
+     * @param users      灰度用户列表（可选，逗号分隔）
+     * @param headers    灰度请求头列表（可选，逗号分隔）
+     * @param rule       SpEL 灰度规则（可选）
+     * @return 重定向到灰度管理页
+     */
     @PostMapping("/api/grays")
     @Permission(CONSOLE_PERMISSION)
     public String upsertGray(@RequestParam String pattern,

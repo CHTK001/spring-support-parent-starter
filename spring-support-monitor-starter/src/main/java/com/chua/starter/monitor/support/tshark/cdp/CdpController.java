@@ -316,7 +316,10 @@ public class CdpController {
     }
 
     /**
-     * 解析 CDP Runtime.evaluate 返回的 value
+     * 解析 CDP Runtime.evaluate 返回的 value。
+     *
+     * @param result CDP 响应
+     * @return 求值结果的字符串形式；无值返回 {@code null}
      */
     private String readEval(Map<String, Object> result) {
         Object raw = result.get("result");

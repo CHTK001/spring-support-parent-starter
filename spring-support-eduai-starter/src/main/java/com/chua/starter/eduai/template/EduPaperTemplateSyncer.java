@@ -3,11 +3,11 @@ package com.chua.starter.eduai.template;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.eduai.model.EduPaperTemplate;
 import com.chua.starter.eduai.mapper.EduPaperTemplateMapper;
-import com.chua.starter.template.support.entity.TemplateInfo;
-import com.chua.starter.template.support.model.TemplatePageQuery;
-import com.chua.starter.template.support.model.TemplateSourceRequest;
-import com.chua.starter.template.support.service.SourceSyncer;
-import com.chua.starter.template.support.service.TemplateService;
+import com.chua.starter.account.template.support.entity.TemplateInfo;
+import com.chua.starter.account.template.support.model.TemplatePageQuery;
+import com.chua.starter.account.template.support.model.TemplateSourceRequest;
+import com.chua.starter.account.template.support.service.SourceSyncer;
+import com.chua.starter.account.template.support.service.TemplateService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +40,12 @@ public class EduPaperTemplateSyncer implements SourceSyncer {
     private final EduPaperTemplateMapper paperTemplateMapper;
     private final TemplateService templateService;
 
+    /**
+     * 构造试卷模板同步器。
+     *
+     * @param paperTemplateMapper 试卷模板 Mapper
+     * @param templateService     模板服务
+     */
     public EduPaperTemplateSyncer(EduPaperTemplateMapper paperTemplateMapper,
                                   TemplateService templateService) {
         this.paperTemplateMapper = paperTemplateMapper;

@@ -136,6 +136,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
      * @param value2 值2
      * @param field3 字段3
      * @param value3 值3
+     * @return 选择one的结果
      */
     default T selectOne(SFunction<T, ?> field1, Object value1, SFunction<T, ?> field2, Object value2,
                         SFunction<T, ?> field3, Object value3) {

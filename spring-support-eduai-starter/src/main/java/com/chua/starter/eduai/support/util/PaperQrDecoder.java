@@ -31,6 +31,9 @@ public final class PaperQrDecoder {
             "^(PAPER|STUDENT|EXAM)\\s*[:：]\\s*(.*)$",
             Pattern.CASE_INSENSITIVE);
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private PaperQrDecoder() {
     }
 

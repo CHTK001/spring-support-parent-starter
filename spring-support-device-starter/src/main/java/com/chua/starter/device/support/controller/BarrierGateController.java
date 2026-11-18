@@ -181,6 +181,7 @@ public class BarrierGateController {
     /**
      * 过车记录列表。
      *
+     * @param deviceId  设备标识，可选
      * @param gateId    车闸标识，可选
      * @param direction 方向，可选
      * @param start     起始时间，可选
@@ -202,6 +203,7 @@ public class BarrierGateController {
      *
      * @param page      页码
      * @param size      每页条数
+     * @param deviceId  设备标识，可选
      * @param gateId    车闸标识，可选
      * @param direction 方向，可选
      * @param start     起始时间，可选

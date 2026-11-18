@@ -31,14 +31,15 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @Import(ConsolePageController.class)
 public class ConsoleAutoConfiguration {
 
+    /**
+     * 注解开关扫描器。
+     *
+     * @param requestMappingHandlerMapping 请求 mapping 处理器
+     * @return 注解开关扫描器
+     */
     @Bean
     public AnnotationSwitchScanner annotationSwitchScanner(
             @org.springframework.context.annotation.Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
-        /**
-         * 注解switchscanner。
-         * @param requestMappingHandlerMapping 请求mapping处理器mapping
-         * @return 注解switchscanner的结果
-         */
         return new AnnotationSwitchScanner(requestMappingHandlerMapping);
     }
 
@@ -72,15 +73,16 @@ public class ConsoleAutoConfiguration {
         return new ConsoleOverrideProvider(consoleSqliteStore);
     }
 
+    /**
+     * 控制台启动重置器：启动时按注解开关与灰度覆盖重置运行状态。
+     *
+     * @param annotationSwitchScanner 注解开关扫描器
+     * @param consoleSqliteStore      控制台 sqlite 存储
+     * @return 控制台启动重置器
+     */
     @Bean
     public ConsoleStartupResetter consoleStartupResetter(AnnotationSwitchScanner annotationSwitchScanner,
                                                          ConsoleSqliteStore consoleSqliteStore) {
-        /**
-         * 控制台startupresetter。
-         * @param annotationSwitchScanner 注解switchscanner
-         * @param consoleSqliteStore 控制台sqlite存储
-         * @return 控制台startupresetter的结果
-         */
         return new ConsoleStartupResetter(annotationSwitchScanner, consoleSqliteStore);
     }
 

@@ -514,6 +514,11 @@ public class SyncTaskRunLogBuffer {
          */
         private boolean truncated;
 
+        /**
+         * 构造一次执行记录。
+         *
+         * @param trigger 触发方式
+         */
         private ActiveRun(String trigger) {
             this.trigger = trigger;
             this.runTime = LocalDateTime.now().format(RUN_TIME);

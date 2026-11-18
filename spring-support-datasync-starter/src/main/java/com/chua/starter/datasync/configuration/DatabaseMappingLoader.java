@@ -129,22 +129,12 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     /**
-     * 加载字段mappings
-     * @param jdbcTemplate jdbctemplate
-     * @param prefix 前缀
-     * @param mappingId mappingid
-     * @param fieldTable 字段table
-     * @param mappingId mappingid
-     * @param e e
-     * @param mappingId mappingid
-     * @param e e
-     * @param paramsJson 参数json
-     * @param e e
-     * @param paramsJson 参数json
-     * @param e e
-     * @param sourceField 源字段
-     * @param targetField Target字段
-     * @param converter 转换器
+     * 加载字段映射配置。
+     *
+     * @param jdbcTemplate JDBC 模板
+     * @param prefix       表名前缀
+     * @param mappingId    映射主键 ID
+     * @return 字段映射列表；加载失败返回空列表
      */
     private List<DataSyncFieldMapping> loadFieldMappings(
             org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,

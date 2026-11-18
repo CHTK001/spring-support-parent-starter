@@ -64,6 +64,9 @@ public final class PoemGameGenerator {
     private static final List<String> FALLBACK_DYNASTIES =
             List.of("唐代", "宋代", "明代", "清代", "汉代", "魏晋");
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private PoemGameGenerator() {
     }
 

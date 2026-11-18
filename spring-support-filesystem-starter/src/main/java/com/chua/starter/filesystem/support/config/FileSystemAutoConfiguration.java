@@ -158,6 +158,8 @@ public class FileSystemAutoConfiguration {
        * 创建上传任务控制器（任务化分片上传）。
        *
        * @param uploadTaskManager 上传任务管理器
+       * @param template          文件存储模板
+       * @param properties        文件存储配置
        * @return 上传任务控制器
        */
     @Bean

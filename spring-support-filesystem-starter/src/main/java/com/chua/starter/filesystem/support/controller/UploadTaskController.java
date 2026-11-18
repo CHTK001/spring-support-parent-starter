@@ -65,6 +65,13 @@ public class UploadTaskController {
      */
     private final long syncMaxBytes;
 
+    /**
+     * 构造上传任务控制器。
+     *
+     * @param uploadTaskManager   上传任务管理器
+     * @param fileStorageTemplate 文件存储模板
+     * @param properties          文件存储配置
+     */
     public UploadTaskController(UploadTaskManager uploadTaskManager,
                                 com.chua.starter.filesystem.support.template.FileStorageTemplate fileStorageTemplate,
                                 com.chua.starter.filesystem.support.properties.FileStorageProperties properties) {
@@ -174,6 +181,12 @@ public class UploadTaskController {
 
     /**
      * 小文件同步直传：立即写入存储并返回完成任务快照。
+     *
+     * @param file     上传文件
+     * @param provider 存储提供者（可空，使用默认存储）
+     * @param bucket   存储桶（可空，使用默认桶）
+     * @return 完成任务快照
+     * @throws IOException 读取或写入存储失败时抛出
      */
     private Map<String, Object> syncUpload(org.springframework.web.multipart.MultipartFile file,
                                            String provider, String bucket) throws IOException {
@@ -216,6 +229,7 @@ public class UploadTaskController {
      *
      * @param taskId 任务号
      * @param index  分片序号（0 起）
+     * @param md5    该分片 MD5（小写 hex，可选；不一致立即拒绝）
      * @param bytes  分片内容
      * @return 任务快照（含已收分片数/总片数，供断点续传判断）
      */

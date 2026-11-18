@@ -24,6 +24,11 @@ public class DeviceTopologyController {
     /** 拓扑服务 */
     private final DeviceTopologyService topologyService;
 
+    /**
+     * 查询设备拓扑。
+     *
+     * @return 拓扑结果
+     */
     @GetMapping
     public ReturnResult<DeviceTopologyResult> topology() {
         return ReturnResult.ok(topologyService.topology());

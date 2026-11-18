@@ -41,6 +41,9 @@ public final class Pinyins {
             {'ń', 'n'}, {'ň', 'n'}, {'ǹ', 'n'},
     };
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private Pinyins() {
     }
 

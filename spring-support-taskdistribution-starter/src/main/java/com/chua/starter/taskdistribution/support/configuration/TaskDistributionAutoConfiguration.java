@@ -170,6 +170,7 @@ public class TaskDistributionAutoConfiguration {
      * @param registry   执行器注册中心
      * @param nodeTable  节点注册表
      * @param executors  用户自定义 任务执行器 列表
+     * @return 应用启动初始化器
      */
     @Bean
     public ApplicationRunner taskDistributionInitializer(

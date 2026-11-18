@@ -13,7 +13,7 @@ import java.util.Map;
  * 会随着上游数量增长变成一坨；这里按 provider 再分一层，每个上游一个实现。</p>
  *
  * <p><b>和上层 SPI 的关系</b>：渠道级 SPI（{@code AccountChannelAuthManager} /
- * {@code ChannelCreditProvider} / {@code ChannelUpstreamAdmin}）按渠道别名取；
+ * {@code ChannelUpstreamAdmin}）按渠道别名取；
  * 本接口由渠道实现按 provider id 取，取不到时回落通用逻辑。
  * 这是两层，不再往下套第三层。</p>
  *
@@ -69,7 +69,7 @@ public interface ChannelUpstreamProvider {
      * <p><b>返回 {@code null} 表示「不接管」</b>，调用方继续问下一个实现、最后回落到
      * 网关的原始结果。确实查到、或者确实查到失败原因，才返回 Map，不要用空 Map 占位。</p>
      *
-     * <p>返回键与 {@code ChannelCreditProvider#credit(Map)} 一致：{@code remain} /
+     * <p>返回键与渠道余额快照一致：{@code remain} /
      * {@code total} / {@code unit}（{@code credit|token|currency}）/ {@code currency} /
      * {@code packages}（每项 {@code {name,remain,size,display,expiresAt}}）/
      * {@code updatedAt} / {@code error}；另可给 {@code seeAt}（查看余额的网页）。</p>

@@ -44,6 +44,12 @@ public class MessageProviderSource implements ProviderSource {
     /** 消息模板表：按来源行 ID 取回模板详情（三方模板 ID / 内容 / 类型） */
     private final SysMessageTemplateMapper templateMapper;
 
+    /**
+     * 构造消息提供商同步来源。
+     *
+     * @param providerMapper 消息提供商 Mapper
+     * @param templateMapper 消息模板 Mapper
+     */
     public MessageProviderSource(SysMessageProviderMapper providerMapper,
                                  SysMessageTemplateMapper templateMapper) {
         this.providerMapper = providerMapper;

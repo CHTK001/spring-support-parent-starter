@@ -494,6 +494,12 @@ public class DbCopyTaskRegistry {
 
         private String detail;
 
+        /**
+         * 构造单步骤。
+         *
+         * @param key   步骤键
+         * @param title 步骤标题
+         */
         private Step(String key, String title) {
             this.key = key;
             this.title = title;
@@ -533,6 +539,13 @@ public class DbCopyTaskRegistry {
 
         private long finishedAt;
 
+        /**
+         * 构造任务快照。
+         *
+         * @param taskId   任务标识
+         * @param title    任务标题
+         * @param subtitle 任务副标题
+         */
         private CopyTask(String taskId, String title, String subtitle) {
             this.taskId = taskId;
             this.title = title;

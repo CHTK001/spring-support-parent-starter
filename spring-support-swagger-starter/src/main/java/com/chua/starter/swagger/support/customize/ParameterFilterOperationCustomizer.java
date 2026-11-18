@@ -159,7 +159,8 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
     /**
      * 注册参数
      *
-     * @param resultList 结果列表
+     * @param resultList      结果列表
+     * @param parameters      全部参数
      * @param methodParameter 方法参数
      */
     private void registerParameter(List<Parameter> resultList, List<Parameter> parameters, 
@@ -172,12 +173,6 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
             return;
         }
         java.lang.reflect.Parameter parameter = methodParameter.getParameter();
-        /**
-         * 注册。
-         * @param resultList 结果列表
-         * @param parameters 参数
-         * @param parameter.getType( 参数.获取类型(
-         */
         register(resultList, parameters, parameter.getType());
     }
 

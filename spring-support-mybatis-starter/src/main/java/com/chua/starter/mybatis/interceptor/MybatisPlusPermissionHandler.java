@@ -124,10 +124,11 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
       /**
        * 构建过滤条件
        *
-       * @param plainSelect       查询对象
-       * @param user              当前登录用户
-       * @param where             当前查询条件
-       * @param dataPermission    数据权限
+       * @param plainSelect         查询对象
+       * @param user                当前登录用户
+       * @param dataScopeProperties 数据权限配置属性
+       * @param where               当前查询条件
+       * @param dataPermission      数据权限
        */
     public void dataScopeFilter(PlainSelect plainSelect,
                                 CurrentUser user,

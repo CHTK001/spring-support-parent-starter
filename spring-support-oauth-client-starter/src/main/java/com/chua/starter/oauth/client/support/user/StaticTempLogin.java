@@ -27,6 +27,9 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
  */
 public final class StaticTempLogin {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private StaticTempLogin() {
     }
 

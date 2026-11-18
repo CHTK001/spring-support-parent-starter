@@ -45,6 +45,13 @@ public class MessageTemplateSyncer implements SourceSyncer {
     private final SysMessageProviderMapper providerMapper;
     private final TemplateService templateService;
 
+    /**
+     * 构造消息模板同步器。
+     *
+     * @param templateMapper  消息模板 Mapper
+     * @param providerMapper  消息提供商 Mapper
+     * @param templateService 模板服务
+     */
     public MessageTemplateSyncer(SysMessageTemplateMapper templateMapper,
                                  SysMessageProviderMapper providerMapper,
                                  TemplateService templateService) {

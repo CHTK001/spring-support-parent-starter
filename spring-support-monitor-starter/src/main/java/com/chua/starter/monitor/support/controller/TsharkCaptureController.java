@@ -249,10 +249,12 @@ public class TsharkCaptureController {
     /**
      * 数据包分页列表
      *
-     * @param id 会话 ID
-     * @param page 页码
-     * @param size 每页大小
-     * @param keyword 关键字（可空），在协议/IP/端口/摘要里模糊匹配
+     * @param id        会话 ID
+     * @param page      页码
+     * @param size      每页大小
+     * @param keyword   关键字（可空），在协议/IP/端口/摘要里模糊匹配
+     * @param startTime 开始时间（可空）
+     * @param endTime   结束时间（可空）
      * @return 分页结果
      */
     @Operation(summary = "数据包分页列表")

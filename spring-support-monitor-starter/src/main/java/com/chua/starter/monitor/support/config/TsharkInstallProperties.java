@@ -140,6 +140,8 @@ public class TsharkInstallProperties {
      *
      * <p>由配置 {@code plugin.monitor.tshark.json-restore} 驱动：
      * 关闭时只做骨架落库（{-T fields}），开启时按帧号回填 {@code rawData} / {@code restoredText}。</p>
+     *
+     * @return 是否启用 json 通道回填
      */
     public boolean restoreJsonEnabled() {
         return this.jsonRestore;

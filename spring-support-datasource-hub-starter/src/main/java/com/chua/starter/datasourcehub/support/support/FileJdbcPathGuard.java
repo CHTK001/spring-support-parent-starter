@@ -29,6 +29,9 @@ import java.util.Locale;
  */
 public final class FileJdbcPathGuard {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private FileJdbcPathGuard() {
     }
 

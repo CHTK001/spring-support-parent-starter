@@ -236,8 +236,10 @@ public class EduTeacherCenterController {
     /**
      * 我发起的阅卷任务（分页）
      *
-     * @param pageNum  页码，从 1 开始
-     * @param pageSize 每页条数
+     * @param pageNum         页码，从 1 开始
+     * @param pageSize        每页条数
+     * @param teacherFinished 审核状态过滤（可空）
+     * @param keyword         关键字过滤（可空）
      * @return 阅卷任务分页结果
      */
     @Operation(summary = "我的阅卷任务（分页）")

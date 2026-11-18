@@ -102,7 +102,13 @@ public record DbTableSpec(
     }
 
     /**
-     * JDBC 元数据拼装建表 DDL（PostgreSQL/H2/ClickHouse 用）
+     * JDBC 元数据拼装建表 DDL（PostgreSQL/H2/ClickHouse 用）。
+     *
+     * @param conn     数据库连接
+     * @param database 数据库名
+     * @param table    表名
+     * @return 按元数据拼装出的表规格
+     * @throws Exception 元数据读取失败时抛出
      */
     private static DbTableSpec metadataTableSpec(Connection conn, String database, String table) throws Exception {
         String catalog = conn.getCatalog();
@@ -177,7 +183,11 @@ public record DbTableSpec(
     }
 
     /**
-     * 拍快照用的列列表：给列表页尝试显示列数（SHOW_CREATE / METADATA 来源通用）
+     * 拍快照用的列列表：给列表页尝试显示列数（SHOW_CREATE / METADATA 来源通用）。
+     *
+     * @param conn  数据库连接
+     * @param table 表名
+     * @return 列信息列表（读取失败时返回空列表）
      */
     private static List<Map<String, Object>> columns(Connection conn, String table) {
         List<Map<String, Object>> list = new ArrayList<>();
@@ -207,7 +217,11 @@ public record DbTableSpec(
     }
 
     /**
-     * 表选项（字符集/排序规则/注释等）；只读元数据，不因为它崩溃
+     * 表选项（字符集/排序规则/注释等）；只读元数据，不因为它崩溃。
+     *
+     * @param conn  数据库连接
+     * @param table 表名
+     * @return 表选项映射（读取失败时为 null）
      */
     private static Map<String, Object> options(Connection conn, String table) {
         Map<String, Object> options = null;

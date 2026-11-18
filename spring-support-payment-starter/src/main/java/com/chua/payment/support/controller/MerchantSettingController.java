@@ -62,8 +62,9 @@ public class MerchantSettingController {
     @PutMapping("/{merchantId}/payment-config")
     /**
      * 保存商户支付配置
-     * @param merchantId merchantid
-     * @param dto dto
+     * @param merchantId 商户标识
+     * @param dto 支付配置
+     * @return 保存后的商户支付配置
      */
     public Result<MerchantPaymentConfigVO> savePaymentConfig(@PathVariable Long merchantId,
                                                              @RequestBody MerchantPaymentConfigDTO dto) {
@@ -92,8 +93,9 @@ public class MerchantSettingController {
     @PutMapping("/{merchantId}/wallet-limit")
     /**
      * 保存钱包限额
-     * @param merchantId merchantid
-     * @param dto dto
+     * @param merchantId 商户标识
+     * @param dto 钱包限额配置
+     * @return 保存后的商户钱包限额
      */
     public Result<MerchantWalletLimitVO> saveWalletLimit(@PathVariable Long merchantId,
                                                          @RequestBody MerchantWalletLimitDTO dto) {

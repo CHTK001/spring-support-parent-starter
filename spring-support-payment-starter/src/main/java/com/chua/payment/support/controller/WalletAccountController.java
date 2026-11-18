@@ -34,8 +34,9 @@ public class WalletAccountController {
     @GetMapping("/account")
     /**
      * 获取账户
-     * @param merchantId merchantid
+     * @param merchantId 商户标识
      * @param userId 用户标识
+     * @return 钱包账户信息
      */
     public Result<WalletAccountVO> getAccount(@RequestParam Long merchantId,
                                               @RequestParam Long userId) {
@@ -55,6 +56,12 @@ public class WalletAccountController {
     @GetMapping("/account/log/page")
     /**
      * 分页查询账户流水
+     * @param pageNum    页码
+     * @param pageSize   每页条数
+     * @param merchantId 商户标识（可选）
+     * @param userId     用户标识（可选）
+     * @param bizType    业务类型（可选）
+     * @param bizNo      业务单号（可选）
      * @return 分页查询账户流水的结果
      */
     public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,

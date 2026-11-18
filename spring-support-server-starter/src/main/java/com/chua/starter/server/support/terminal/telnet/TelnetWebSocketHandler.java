@@ -69,6 +69,13 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
     /** sessionId -> 对应桥接体 */
     private final Map<String, Bridge> bridges = new ConcurrentHashMap<>();
 
+    /**
+     * 构造 Telnet WebSocket 处理器。
+     *
+     * @param serverHostService      主机台账服务
+     * @param serverProperties       服务器配置属性
+     * @param terminalSessionService 终端会话服务
+     */
     public TelnetWebSocketHandler(ServerHostService serverHostService,
             ServerProperties serverProperties, TerminalSessionService terminalSessionService) {
         this.serverHostService = serverHostService;
@@ -441,6 +448,9 @@ public class TelnetWebSocketHandler extends AbstractWebSocketHandler {
 
         /**
          * 获取连接关闭原因的简洁描述
+         *
+         * @param failure 导致关闭的异常（可为空）
+         * @return 关闭原因描述
          */
         private String finalReason(Throwable failure) {
             return failure == null

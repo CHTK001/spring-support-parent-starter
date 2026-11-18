@@ -288,6 +288,13 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
     /**
      * 创建事件处理器
+     *
+     * @param bean      监听器 Bean 实例
+     * @param method    监听方法
+     * @param eventType 事件类型
+     * @param autoAck   是否自动确认
+     * @param republish 处理前是否重新发布到 Spring 事件总线
+     * @return 消息处理器
      */
     private MessageHandler createEventHandler(Object bean, Method method,
                                              Class<? extends ApplicationEvent> eventType,
@@ -332,6 +339,12 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
     /**
      * 解析事件方法参数
+     *
+     * @param method  监听方法
+     * @param message 队列消息
+     * @param event   反序列化后的应用事件
+     * @param ack     消息确认句柄
+     * @return 按监听方法参数顺序装配的实参数组
      */
     private Object[] resolveEventArguments(Method method, Message message,
                                           ApplicationEvent event, Acknowledgment ack) {

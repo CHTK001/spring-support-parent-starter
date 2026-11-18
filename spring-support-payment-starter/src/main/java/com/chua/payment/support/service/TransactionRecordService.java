@@ -46,7 +46,9 @@ public interface TransactionRecordService {
 
     /**
      * 分页查询流水记录。
+     *
      * @param request 请求参数
+     * @return 流水分页结果
      */
     Page<TransactionRecord> page(TransactionRecordQueryRequest request);
 }

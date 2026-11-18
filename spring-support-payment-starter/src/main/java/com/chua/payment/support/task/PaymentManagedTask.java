@@ -27,6 +27,8 @@ public interface PaymentManagedTask {
 
     /**
      * 任务说明
+     *
+     * @return 任务说明
      */
     String description();
 

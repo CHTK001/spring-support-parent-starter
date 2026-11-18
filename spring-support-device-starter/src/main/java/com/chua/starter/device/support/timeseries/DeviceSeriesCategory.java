@@ -41,6 +41,13 @@ public enum DeviceSeriesCategory {
      */
     private final String description;
 
+    /**
+     * 构造分类枚举。
+     *
+     * @param code        分类编码
+     * @param label       中文名
+     * @param description key / value 口径说明
+     */
     DeviceSeriesCategory(String code, String label, String description) {
         this.code = code;
         this.label = label;

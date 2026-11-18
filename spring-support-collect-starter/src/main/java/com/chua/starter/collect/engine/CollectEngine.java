@@ -608,6 +608,7 @@ public class CollectEngine {
      * </ul>
      *
      * @param context 执行上下文
+     * @param executor 节点执行器（用于取默认输出名）
      * @param node    节点
      * @param scope   本次迭代作用域
      */
@@ -792,6 +793,7 @@ public class CollectEngine {
      * 单独拼一段结构化出参，列名与行数都进预览 —— 采集日志"写了哪张表、写了多少行"才有处可查。
      * 其他形状一行不动。</p>
      *
+     * @param node     节点
      * @param context  执行上下文
      * @param incoming 令牌入参作用域
      * @param scope    本次迭代作用域

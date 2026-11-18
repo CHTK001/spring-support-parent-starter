@@ -56,6 +56,9 @@ public final class MiddlewareDriverSupport {
     private static final Map<String, MiddlewareClientProvider> BY_NAME =
             Collections.synchronizedMap(new LinkedHashMap<>());
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private MiddlewareDriverSupport() {
     }
 

@@ -26,6 +26,9 @@ import java.util.Map;
  */
 public final class DbTableDialect {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private DbTableDialect() {
     }
 

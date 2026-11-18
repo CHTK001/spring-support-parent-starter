@@ -99,6 +99,13 @@ public class ProviderCredentialController {
         scheduleManager.refresh(created.getDeviceCredentialId());
         return ReturnResult.ok(created);
     }
+    /**
+     * 更新凭据。
+     *
+     * @param id         凭据 ID
+     * @param credential 凭据信息
+     * @return 更新后的凭据
+     */
     @PutMapping("/{id}")
     public ReturnResult<DeviceProviderCredential> update(@PathVariable String id,
                                                          @RequestBody DeviceProviderCredential credential) {

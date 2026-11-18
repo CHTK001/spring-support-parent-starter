@@ -536,6 +536,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
       * @param signature 签名值
       * @param signType 签名类型
       * @param body 请求主体
+      * @return 微信通知请求对象
       */
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,
                                                                 String timestamp,

@@ -74,12 +74,9 @@ public interface PaymentChannel {
      * 通道充值
      * @param channel 通道配置
      * @param request 请求参数
+     * @return 充值结果
      */
     default RechargeResult recharge(MerchantChannel channel, RechargeRequest request) {
-        /**
-         * 默认抛出不支持操作异常。
-         * @return 不支持操作异常的结果
-         */
         throw new UnsupportedOperationException("该通道不支持充值操作");
     }
 
@@ -90,10 +87,6 @@ public interface PaymentChannel {
      * @return 转账结果
      */
     default TransferResult transfer(MerchantChannel channel, TransferRequest request) {
-        /**
-         * 默认抛出不支持操作异常。
-         * @return 不支持操作异常的结果
-         */
         throw new UnsupportedOperationException("该通道不支持转账操作");
     }
 
@@ -101,12 +94,9 @@ public interface PaymentChannel {
      * 通道提现
      * @param channel 通道配置
      * @param request 请求参数
+     * @return 提现结果
      */
     default WithdrawResult withdraw(MerchantChannel channel, WithdrawRequest request) {
-        /**
-         * 默认抛出不支持操作异常。
-         * @return 不支持操作异常的结果
-         */
         throw new UnsupportedOperationException("该通道不支持提现操作");
     }
 }

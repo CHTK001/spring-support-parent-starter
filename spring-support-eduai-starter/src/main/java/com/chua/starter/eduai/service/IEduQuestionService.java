@@ -119,7 +119,11 @@ public interface IEduQuestionService extends IService<EduQuestion> {
      * @param limit 最大导出条数（防止大结果集），默认 5000、上限 10000
      * @return CSV 文本（Content-Type: text/csv）
      */
-    /** 题目管理统计（总数 / 待审 / 今日新增 / 学科数），供题库页统计卡使用 */
+    /**
+     * 题目管理统计（总数 / 待审 / 今日新增 / 学科数），供题库页统计卡使用。
+     *
+     * @return 统计结果映射
+     */
     Map<String, Object> questionStats();
 
     /**

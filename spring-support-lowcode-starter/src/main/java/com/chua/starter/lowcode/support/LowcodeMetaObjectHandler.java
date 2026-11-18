@@ -29,6 +29,11 @@ public class LowcodeMetaObjectHandler implements MetaObjectHandler {
      */
     private final org.springframework.beans.factory.ObjectProvider<AuthService> authServiceProvider;
 
+    /**
+     * 构造低代码字段自动填充处理器。
+     *
+     * @param authServiceProvider 认证服务懒加载提供者
+     */
     public LowcodeMetaObjectHandler(org.springframework.beans.factory.ObjectProvider<AuthService> authServiceProvider) {
         this.authServiceProvider = authServiceProvider;
     }

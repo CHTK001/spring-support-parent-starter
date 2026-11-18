@@ -75,13 +75,15 @@ public interface MerchantChannelService {
 
     /**
      * 加密 apiKey。
-     * @param apiKey apiKey
+     * @param apiKey 明文 apiKey
+     * @return 加密后的 apiKey
      */
     String encryptApiKey(String apiKey);
 
     /**
      * 解密 apiKey。
-     * @param encryptedKey encryptedKey
+     * @param encryptedKey 加密后的 apiKey
+     * @return 明文 apiKey
      */
     String decryptApiKey(String encryptedKey);
 

@@ -16,6 +16,9 @@ import java.util.List;
  */
 public final class SoftwareCatalog {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private SoftwareCatalog() {
     }
 

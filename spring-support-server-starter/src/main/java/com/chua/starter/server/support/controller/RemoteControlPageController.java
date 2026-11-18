@@ -52,6 +52,7 @@ public class RemoteControlPageController {
      * @param protocol   ssh/vnc/rdp
      * @param identityId 登录身份 标识（可选）
      * @param targetPort 目标端口（可选——空 按协议默认）
+     * @param response   响应对象（页面 HTML 直接写入）
      * @return 远程控制页面 HTML
      */
     @GetMapping("/connect")

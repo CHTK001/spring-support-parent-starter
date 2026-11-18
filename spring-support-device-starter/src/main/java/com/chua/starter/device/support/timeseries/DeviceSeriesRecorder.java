@@ -180,9 +180,9 @@ public class DeviceSeriesRecorder {
      *
      * <p>{@code retention-days<=0} 表示不清理；引擎不可用时直接跳过。</p>
      */
-    // [P3C A20 豁免] A20: cron 表达式属于调度配置字面量
     @Scheduled(cron = "0 30 3 * * ?")
     public void purgeExpired() {
+        // [P3C A20 豁免] A20: cron 表达式属于调度配置字面量
         if (!enabled() || retentionDays <= 0) {
             return;
         }

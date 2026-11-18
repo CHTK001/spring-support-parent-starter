@@ -121,6 +121,8 @@ public class FileCollabController {
      * @param fileName    展示文件名（含扩展名，决定表格类型）
      * @param visibility  可见性：public / private
      * @param userIds     私有时的授权用户（逗号分隔；公开时忽略）
+     * @param path        文档目录（可空）
+     * @param type        文档类型（可空，缺省按扩展名推导）
      * @return 新创建的协同文档快照
      */
     @Operation(summary = "创建协同文档")

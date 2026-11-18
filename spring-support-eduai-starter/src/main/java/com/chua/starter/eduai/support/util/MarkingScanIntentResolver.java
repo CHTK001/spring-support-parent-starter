@@ -14,6 +14,9 @@ package com.chua.starter.eduai.support.util;
  */
 public final class MarkingScanIntentResolver {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private MarkingScanIntentResolver() {
     }
 

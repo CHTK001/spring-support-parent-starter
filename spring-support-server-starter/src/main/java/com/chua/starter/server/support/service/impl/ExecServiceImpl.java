@@ -558,6 +558,16 @@ public class ExecServiceImpl implements ExecService {
         return reason;
     }
 
+    /**
+     * 通过 SSH 通道在主机上执行命令。
+     *
+     * @param host       目标主机
+     * @param credential SSH 凭据
+     * @param command    待执行命令
+     * @param timeout    超时秒数
+     * @param item       执行日志项（回填输出与退出码）
+     * @throws Exception 连接失败、命令执行失败或退出码非 0
+     */
     private void execViaSsh(MsServerHost host, SshCredential credential, String command,
                             int timeout, MsExecLog item) throws Exception {
         SshClients.Handle handle = null;
@@ -568,19 +578,9 @@ public class ExecServiceImpl implements ExecService {
             item.setMsExecLogOutput(truncate(result.stdout()));
             item.setMsExecLogExitCode(result.exitCode());
             if (result.exitCode() != 0 && isBlank(result.stderr())) {
-                /**
-                 * illegal状态异常。
-                 * @param result.exitCode( 结果.exit编码(
-                 * @return illegal状态异常的结果
-                 */
                 throw new IllegalStateException("退出码非 0: " + result.exitCode());
             }
             if (result.exitCode() != 0) {
-                /**
-                 * illegal状态异常。
-                 * @param result.stderr( 结果.stderr(
-                 * @return illegal状态异常的结果
-                 */
                 throw new IllegalStateException(withPowerShellLaunchHint(result.stderr()));
             }
         } catch (Exception e) {

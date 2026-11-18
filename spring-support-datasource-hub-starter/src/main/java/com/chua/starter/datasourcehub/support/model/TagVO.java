@@ -13,7 +13,8 @@ public record TagVO(String key, String value) {
     /**
      * 由原始标签创建（空字符串规范化）
      *
-     * @param raw 原始标签
+     * @param key   键
+     * @param value 值
      * @return 标签
      */
     public static TagVO of(String key, String value) {

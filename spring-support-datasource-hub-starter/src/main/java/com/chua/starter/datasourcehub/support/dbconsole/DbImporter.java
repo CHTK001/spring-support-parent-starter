@@ -355,6 +355,18 @@ public final class DbImporter {
      * 所以「一行坏数据不毁掉整批」只能靠这个降级。若首行也失败，说明是表级问题
      * （列不存在、表不可写），此时直接抛出，不做无意义的逐行重试
      * （除非用户勾了「遇到错误时继续」）。</p>
+     *
+     * @param conn        数据库连接
+     * @param sql         待执行的 SQL
+     * @param pairs       列配对
+     * @param keyColumns  匹配键列
+     * @param columnTypes 列类型映射
+     * @param plan        导入计划
+     * @param buffer      本批数据
+     * @param done        已处理行数（用于进度回调的全局行号）
+     * @param sink        进度回调
+     * @return 本批计分结果
+     * @throws SQLException 表级问题且未勾选遇错继续时抛出
      */
     private static BatchOutcome flush(Connection conn, String sql, List<ColumnPair> pairs,
                                       List<String> keyColumns, Map<String, Integer> columnTypes,
@@ -394,6 +406,19 @@ public final class DbImporter {
      * <p><b>每行自成事务</b>：逐行 {@code commit}，某行失败只回滚该行，
      * 不会连带回滚已成功的前序行。早期版本在这里调 {@code conn.rollback()}，
      * 实测出现「报 inserted=2 但库里只有后一行」的错账——前一行已被回滚却仍计数。</p>
+     *
+     * @param conn          数据库连接
+     * @param sql           待执行的 SQL
+     * @param pairs         列配对
+     * @param keyColumns    匹配键列
+     * @param columnTypes   列类型映射
+     * @param plan          导入计划
+     * @param buffer        本批数据
+     * @param done          已处理行数（用于进度回调的全局行号）
+     * @param batchFailure  整批失败原因（用于最终兜底抛出）
+     * @param sink          进度回调
+     * @return 逐行执行后的计分结果
+     * @throws SQLException 首行失败且未勾选遇错继续时抛出
      */
     private static BatchOutcome flushRowByRow(Connection conn, String sql, List<ColumnPair> pairs,
                                               List<String> keyColumns, Map<String, Integer> columnTypes,
@@ -934,6 +959,11 @@ public final class DbImporter {
         private int skipped;
         private int deleted;
 
+        /**
+         * 构造计数器。
+         *
+         * @param mode 导入模式
+         */
         private Counters(ImportMode mode) {
             this.mode = mode;
         }

@@ -248,6 +248,7 @@ public class OsgiAutoConfiguration {
      * </p>
      *
      * @param launcher              Felix osgi 启动器
+     * @param properties           osgi 配置属性
      * @param objectContextProvider 对象上下文注入
      * @return OsgiBeanDefinitionRegister 实例
      */
@@ -295,7 +296,10 @@ public class OsgiAutoConfiguration {
      * <p>仅在显式开启 {@code plugin.osgi.endpoint.enabled} 且 classpath 中存在
      * spring-web 的 Web 应用环境下装配，避免在非 Web 场景引入 web 依赖。</p>
      *
-     * @param osgiLauncher Felix osgi 启动器
+     * @param osgiLauncher     Felix osgi 启动器
+     * @param registerProvider OsgiBeanDefinitionRegister 提供者（可为空）
+     * @param properties       osgi 配置属性
+     * @param logPublisher     OSGi 日志发布器
      * @return 观测端点
      */
     @Bean

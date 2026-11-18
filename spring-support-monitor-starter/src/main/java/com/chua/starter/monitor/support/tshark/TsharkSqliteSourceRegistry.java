@@ -242,7 +242,13 @@ public class TsharkSqliteSourceRegistry {
         }
     }
 
-    /** buildConfig 方法 */
+    /**
+     * 构建会话报文库连接池配置。
+     *
+     * @param sessionId 会话标识
+     * @param dbPath    sqlite 库文件路径
+     * @return Hikari 连接池配置
+     */
     private static HikariConfig buildConfig(Long sessionId, Path dbPath) {
         HikariConfig config = new HikariConfig();
         config.setPoolName(DS_PREFIX + sessionId);

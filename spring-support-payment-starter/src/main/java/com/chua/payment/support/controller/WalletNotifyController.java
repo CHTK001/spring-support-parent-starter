@@ -59,11 +59,13 @@ public class WalletNotifyController {
     @PostMapping(value = "/{orderType}/{orderNo}", produces = MediaType.TEXT_PLAIN_VALUE)
     /**
      * 处理钱包通知
+     *
      * @param orderType 订单类型
      * @param orderNo 订单号
      * @param params 参数
      * @param body 主体
      * @param request 请求
+     * @return 通知处理结果文本
      */
     public String handleWalletNotify(@PathVariable String orderType,
                                      @PathVariable String orderNo,

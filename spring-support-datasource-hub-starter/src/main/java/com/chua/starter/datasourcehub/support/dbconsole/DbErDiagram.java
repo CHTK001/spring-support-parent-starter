@@ -30,6 +30,9 @@ import java.util.Set;
  */
 public final class DbErDiagram {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private DbErDiagram() {
     }
 

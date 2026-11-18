@@ -76,7 +76,9 @@ public interface WalletOrderService {
 
     /**
      * 分页查询钱包订单。
+     *
      * @param request 请求参数
+     * @return 钱包订单分页结果
      */
     Page<WalletOrder> page(WalletOrderQueryRequest request);
 }

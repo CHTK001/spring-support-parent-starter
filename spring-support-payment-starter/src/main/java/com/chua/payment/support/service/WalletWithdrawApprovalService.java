@@ -21,9 +21,11 @@ public interface WalletWithdrawApprovalService {
 
     /**
      * 分页查询审批单。
+     *
      * @param pageNum 页码
      * @param pageSize 每页大小
      * @param status 状态
+     * @return 审批单分页结果
      */
     Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status);
 

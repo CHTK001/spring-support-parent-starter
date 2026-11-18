@@ -604,6 +604,12 @@ public class ProjectTaskService {
         private final int exitCode;
         private final String stderr;
 
+        /**
+         * 构造执行结果。
+         *
+         * @param exitCode 退出码
+         * @param stderr   合并输出
+         */
         private LocalExecResult(int exitCode, String stderr) {
             this.exitCode = exitCode;
             this.stderr = stderr;

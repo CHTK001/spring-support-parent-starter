@@ -56,7 +56,11 @@ public class CalciteAutoConfiguration {
     }
 
     /**
-     * 创建 Calcite 聚合数据源 Bean
+     * 创建 Calcite 聚合数据源 Bean。
+     *
+     * @param calciteDataSourceConversion Calcite 数据源转换器
+     * @param properties                  Calcite 数据源配置
+     * @return 聚合数据源；未注册数据源或创建失败返回 {@code null}
      */
     @Bean
     @ConditionalOnMissingBean(name = "calciteDataSource")

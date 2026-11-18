@@ -68,6 +68,7 @@ public class PaymentGlobalConfigController {
      * 权限校验
      *
      * @param request 请求
+     * @return 校验不通过时的错误结果；通过时返回 {@code null}
      */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);

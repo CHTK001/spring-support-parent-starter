@@ -50,6 +50,13 @@ public final class ServerOperLogNodeSnapshot {
     @Getter
     private final String target;
 
+    /**
+     * 构造节点快照。
+     *
+     * @param nodeId   节点 id
+     * @param nodeName 节点名称
+     * @param target   访问摘要
+     */
     private ServerOperLogNodeSnapshot(Long nodeId, String nodeName, String target) {
         this.nodeId = nodeId;
         this.nodeName = nodeName;

@@ -63,6 +63,11 @@ public class TsharkPacketStreamRegistry {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造抓包数据包事件流注册中心。
+     *
+     * @param objectMapper JSON 序列化器
+     */
     @Autowired
     public TsharkPacketStreamRegistry(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;

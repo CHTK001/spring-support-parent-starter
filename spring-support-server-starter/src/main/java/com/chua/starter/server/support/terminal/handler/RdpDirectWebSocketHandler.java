@@ -624,7 +624,16 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
         /** 帧缓存大小 */
         private volatile int bufferLen;
 
-        /** 构造桥接上下文 */
+        /**
+         * 构造桥接上下文。
+         *
+         * @param handle   RDP 原生句柄
+         * @param wsSession WebSocket 会话
+         * @param hostId   主机标识
+         * @param width    屏幕宽
+         * @param height   屏幕高
+         * @param userName 用户名
+         */
         private RdpBridge(long handle, WebSocketSession wsSession, Long hostId, int width, int height, String userName) {
             this.handle = handle;
             this.wsSession = wsSession;
@@ -671,6 +680,9 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     private static final class Native {
 
+        /**
+         * 私有构造器：纯静态工具容器，不实例化。
+         */
         private Native() {
         }
 

@@ -413,6 +413,10 @@ public class UploadTaskManager {
      * @param provider   存储提供者名（可空）
      * @param bucketDir  存储桶/目录路径（可空）
      * @param objectKey  已写入存储的对象键
+     * @param ext        文件扩展名（可空）
+     * @param mime       MIME 类型（可空）
+     * @param width      图片宽度，非图片可为空
+     * @param height     图片高度，非图片可为空
      * @return 登记后的任务（状态 = COMPLETED）
      */
     public UploadTask registerSyncCompleted(String fileName, long totalSize,
@@ -1167,7 +1171,10 @@ public class UploadTaskManager {
         }
 
         /**
-         * 记录一个分片到达。
+         * 记录一个分片到达（更新已收分片数与字节数，并刷新活跃时间）。
+         *
+         * @param index 分片序号（幂等，重复传同片不放大计数以外的副作用）
+         * @param bytes 本次分片的字节数
          */
         void markChunkReceived(int index, int bytes) {
             receivedChunks.incrementAndGet();

@@ -280,6 +280,12 @@ public class WindowsSshShell {
      * <p>按<b>字节</b>追加而不是先解码成字符串：分块边界可能切在多字节 UTF-8 字符中间，
      * 解码再编码会把该字符变成替换符，既破坏脚本文本也改变字节数。</p>
      *
+     * @param host          主机
+     * @param cred          SSH 凭据
+     * @param shell         远端 shell 类型
+     * @param path          远端脚本路径
+     * @param b64           脚本内容的 Base64 编码
+     * @param expectedBytes 期望写入的字节数
      * @return {@code null} 表示写入完整；否则返回失败原因，交由调用方整份重写
      */
     private String writeRemoteScriptOnce(MsServerHost host, SshCredential cred, String shell,

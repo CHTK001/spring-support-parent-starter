@@ -98,9 +98,13 @@ public final class SshClients {
     /**
      * 打开已配置（未连接）的 SSH 客户端句柄，并显式指定各级超时。
      *
+     * @param address           服务器地址
+     * @param port              端口（空或非法时用默认端口）
+     * @param credential        解密后的凭据
      * @param connectTimeoutSec TCP 连接/握手超时（秒）
      * @param sessionTimeoutSec 认证/会话建立超时（秒）
      * @param execTimeoutSec    单条命令执行/读取超时（秒）
+     * @return 已配置未连接的客户端句柄
      */
     public static Handle open(String address, Integer port, SshCredential credential,
                               int connectTimeoutSec, int sessionTimeoutSec, long execTimeoutSec) throws IOException {

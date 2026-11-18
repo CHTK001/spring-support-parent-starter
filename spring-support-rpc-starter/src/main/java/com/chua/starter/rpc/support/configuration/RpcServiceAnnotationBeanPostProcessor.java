@@ -498,13 +498,13 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
       /**
        * 查找类型上注解了指定注解的{@link BeanDefinitionHolder BeanDefinitionHolders}集合。
        *
-       * @param scanner       用于扫描类路径中Bean定义的{@link ClassPathBeanDefinitionScanner}
-       * @param packageToScan 需要扫描的包
-       * @param registry      Bean定义注册表{@link BeanDefinitionRegistry}
+       * @param scanner           用于扫描类路径中Bean定义的{@link ClassPathBeanDefinitionScanner}
+       * @param packageToScan     需要扫描的包
+       * @param registry          Bean定义注册表{@link BeanDefinitionRegistry}
+       * @param beanNameGenerator Bean名称生成器
        * @return 非空的BeanDefinitionHolder集合，包含所有匹配的Bean定义
        * @since 2.5.8
        */
-
     private Set<BeanDefinitionHolder> findServiceBeanDefinitionHolders(
             ClassPathBeanDefinitionScanner scanner, String packageToScan, BeanDefinitionRegistry registry,
             BeanNameGenerator beanNameGenerator) {

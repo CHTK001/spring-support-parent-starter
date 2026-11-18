@@ -965,6 +965,9 @@ public class DbTableCopyService {
 
         private static final long serialVersionUID = 1L;
 
+        /**
+         * 构造取消异常。
+         */
         private CopyCancelledException() {
             super("已取消");
         }

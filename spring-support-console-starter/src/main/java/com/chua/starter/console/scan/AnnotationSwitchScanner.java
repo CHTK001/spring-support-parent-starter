@@ -28,6 +28,11 @@ public class AnnotationSwitchScanner {
 
     private final RequestMappingHandlerMapping requestMappingHandlerMapping; // 请求mapping处理器mapping
 
+    /**
+     * 构造注解开关扫描器。
+     *
+     * @param requestMappingHandlerMapping 请求映射处理器（延迟注入，避免启动期循环依赖）
+     */
     public AnnotationSwitchScanner(
             @Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;

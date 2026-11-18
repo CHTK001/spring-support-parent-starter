@@ -73,6 +73,9 @@ public final class DbFilter {
             new String[] {"IS NULL", "`{0}` IS NULL"},
             new String[] {"IS NOT NULL", "`{0}` IS NOT NULL"});
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private DbFilter() {
     }
 

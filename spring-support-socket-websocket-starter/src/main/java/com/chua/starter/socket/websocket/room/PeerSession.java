@@ -20,6 +20,12 @@ public record PeerSession(
         /** 关联的 WebSocket 连接 ID */
         String connectionId) {
 
+    /**
+     * 便捷构造：连接 ID 取自端点状态。
+     *
+     * @param room 房间
+     * @param slot 端点状态
+     */
     public PeerSession(RoomState room, SlotState slot) {
         this(room, slot, slot.getConnectionId());
     }

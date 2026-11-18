@@ -47,8 +47,12 @@ public class SoftSourceController {
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * Page
-    */
+     * 分页查询软件源。
+     *
+     * @param query   分页查询条件
+     * @param request 查询请求
+     * @return 软件源分页结果
+     */
     public ReturnPageResult<SoftSource> page(
             @ParameterObject Query<SoftSource> query,
             @ParameterObject SoftSource request) {

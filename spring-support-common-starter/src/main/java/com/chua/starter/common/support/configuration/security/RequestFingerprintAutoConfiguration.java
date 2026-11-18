@@ -561,6 +561,11 @@ public class RequestFingerprintAutoConfiguration {
             }
             this.cachedBody = baos.toByteArray();
         }
+        /**
+         * 取缓存的请求体。
+         *
+         * @return 请求体字节
+         */
         byte[] getCachedBody() { return cachedBody; }
         @Override
         /**

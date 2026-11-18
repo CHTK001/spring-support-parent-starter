@@ -39,6 +39,9 @@ public final class CollectBuiltinInvoker {
         }
     }
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private CollectBuiltinInvoker() {
     }
 

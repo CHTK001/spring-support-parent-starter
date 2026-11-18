@@ -49,7 +49,9 @@ public class HttpmanResponse implements Serializable {
     private String error;
 
     /**
-     * 是否执行成功
+     * 是否执行成功。
+     *
+     * @return 状态码在 200~299 且无错误信息时返回 {@code true}
      */
     public boolean isOk() {
         // [P3C A20 豁免]

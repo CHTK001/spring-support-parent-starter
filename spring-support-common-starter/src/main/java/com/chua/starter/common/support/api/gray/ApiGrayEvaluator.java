@@ -210,7 +210,15 @@ public class ApiGrayEvaluator {
     }
 
     /**
-     * 评估spel表达式
+     * 评估 SpEL 灰度规则表达式。
+     *
+     * @param rule     SpEL 表达式文本
+     * @param request  当前 HTTP 请求
+     * @param userId   用户标识
+     * @param username 用户名
+     * @param clientIp 客户端 IP
+     * @param roles    用户角色集合
+     * @return 表达式评估结果；评估异常时返回 {@code false}
      */
     private boolean evaluateSpelRule(String rule, HttpServletRequest request,
                                      Object userId, String username, String clientIp,
@@ -227,7 +235,14 @@ public class ApiGrayEvaluator {
     }
 
     /**
-     * 创建spel评估上下文
+     * 创建 SpEL 评估上下文（变量、函数与根对象）。
+     *
+     * @param request  当前 HTTP 请求
+     * @param userId   用户标识
+     * @param username 用户名
+     * @param clientIp 客户端 IP
+     * @param roles    用户角色集合
+     * @return 装配好的 SpEL 评估上下文
      */
     private EvaluationContext createEvaluationContext(HttpServletRequest request,
                                                        Object userId, String username, String clientIp,

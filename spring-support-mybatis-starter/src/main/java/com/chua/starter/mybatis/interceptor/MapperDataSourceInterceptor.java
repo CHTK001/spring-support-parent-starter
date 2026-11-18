@@ -49,6 +49,12 @@ public class MapperDataSourceInterceptor implements Interceptor {
     private final MultiDataSourceSettingProperties properties;
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>(); // 映射器数据源缓存
 
+    /**
+     * 构造 Mapper 数据源拦截器。
+     *
+     * @param applicationContext Spring 上下文
+     * @param properties         多数据源配置属性
+     */
     public MapperDataSourceInterceptor(ApplicationContext applicationContext,
                                        MultiDataSourceSettingProperties properties) {
         this.applicationContext = applicationContext;

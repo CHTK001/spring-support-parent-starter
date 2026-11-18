@@ -31,7 +31,9 @@ public interface OrderPartitionConfigService {
 
     /**
      * 预览分表执行结果。
+     *
      * @param businessType 业务类型
+     * @return 分表执行预览结果
      */
     OrderPartitionPreviewVO preview(String businessType);
 

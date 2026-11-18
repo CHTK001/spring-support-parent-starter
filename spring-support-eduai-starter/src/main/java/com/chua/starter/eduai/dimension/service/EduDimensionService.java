@@ -620,7 +620,13 @@ public class EduDimensionService {
         return buildPageResult(result);
     }
 
-      /** 统一 PageResult 构建：维度分页只消费 data/total/pageNo/pageSize */
+    /**
+     * 统一 PageResult 构建：维度分页只消费 data/total/pageNo/pageSize。
+     *
+     * @param result MyBatis-Plus 分页结果
+     * @param <T>    记录类型
+     * @return 统一分页结果
+     */
     private <T> PageResult<T> buildPageResult(IPage<T> result) {
         return PageResult.<T>builder()
                 .pageNo((int) result.getCurrent())

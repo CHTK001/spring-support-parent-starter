@@ -1453,6 +1453,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
        * @param refundAmount 退款金额
        * @param operator 操作人
        * @param reason 失败或退款原因
+       * @return 处理中的退款单；订单已全额退款时返回 {@code null}
        */
     private PaymentRefundOrder resolveManualRefundOrder(PaymentOrder order,
                                                         BigDecimal refundAmount,
@@ -1647,6 +1648,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
        * @param order 订单
        * @param refundedAmount 累计已退金额
        * @param refundOrder 退款单
+       * @return 退款失败后的订单状态
        */
     private String resolveOrderStatusAfterRefundFailure(PaymentOrder order,
                                                         BigDecimal refundedAmount,

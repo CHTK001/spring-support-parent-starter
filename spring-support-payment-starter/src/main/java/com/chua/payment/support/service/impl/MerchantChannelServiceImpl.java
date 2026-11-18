@@ -574,6 +574,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
      * @param requiredMaterials 所需材料
      * @param steps 开通步骤
      * @param tips 注意事项
+     * @return 支付方式引导对象
      */
     private PaymentMethodGuideVO guide(String channelType,
                                        String channelSubType,

@@ -47,8 +47,12 @@ public class SoftConfigController {
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /**
-     * Page
-    */
+     * 分页查询配置。
+     *
+     * @param query   分页查询条件
+     * @param request 查询请求
+     * @return 配置分页结果
+     */
     public ReturnPageResult<SoftConfig> page(
             @ParameterObject Query<SoftConfig> query,
             @ParameterObject SoftwareConfigPageRequest request) {

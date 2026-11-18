@@ -18,6 +18,9 @@ import com.chua.starter.oauth.client.support.user.StaticUserStore;
  */
 public final class StaticCredentialConfig {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private StaticCredentialConfig() {
     }
 

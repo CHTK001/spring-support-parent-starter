@@ -225,6 +225,7 @@ public class SpringBeanRpcClient implements RpcClient, ApplicationContextAware {
      * </ul>
      *
      * @param targetType 目标类型
+     * @return 目标接口的本地代理
      */
     @SuppressWarnings("unchecked")
     private <T> T doGet(Class<T> targetType) {

@@ -186,6 +186,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
           */
         private final List<String> parameters;
 
+        /**
+         * 构造 SQL 解析结果。
+         *
+         * @param sql        解析出的 SQL
+         * @param parameters 参数列表
+         */
         private SqlResolveResult(String sql, List<String> parameters) {
             this.sql = sql;
             this.parameters = parameters;

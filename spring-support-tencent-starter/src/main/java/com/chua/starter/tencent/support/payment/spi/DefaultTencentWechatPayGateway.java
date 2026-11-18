@@ -787,12 +787,13 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-     * 调用薪酬scoreapi
+     * 调用微信支付分 API
      * @param properties 属性
      * @param path 路径
-     * @param body 主体
-     * @param outOrderNo 出订单no
+     * @param body 请求体
+     * @param outOrderNo 商户订单号
      * @param successMessage 成功消息
+     * @return 支付分接口响应
      */
     private TencentWechatPayScoreResponse callPayScoreApi(TencentWechatPayProperties properties,
                                                           String path,
@@ -812,10 +813,11 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     /**
-     * 转为薪酬score响应
-     * @param body 主体
-     * @param fallbackOutOrderNo 降级出订单no
+     * 转为微信支付分响应
+     * @param body 响应体
+     * @param fallbackOutOrderNo 兜底商户订单号
      * @param successMessage 成功消息
+     * @return 支付分响应
      */
     private TencentWechatPayScoreResponse toPayScoreResponse(Map<String, Object> body,
                                                              String fallbackOutOrderNo,

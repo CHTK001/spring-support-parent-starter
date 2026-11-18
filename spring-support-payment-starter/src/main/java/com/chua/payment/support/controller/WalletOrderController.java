@@ -119,6 +119,13 @@ public class WalletOrderController {
     /**
      * 分页查询
      *
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @param merchantId 商户 id（可空）
+     * @param userId 用户 id（可空）
+     * @param orderType 订单类型（可空）
+     * @param status 状态（可空）
+     * @return 钱包订单分页结果
      */
     public Result<PageResult<WalletOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,

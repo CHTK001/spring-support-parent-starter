@@ -57,7 +57,11 @@ public class ShardingAutoConfiguration {
     }
 
     /**
-     * 创建 分库分表sphere 分片数据源 Bean
+     * 创建 分库分表sphere 分片数据源 Bean。
+     *
+     * @param shardingV5Conversion 分库分表转换器
+     * @param properties           分片数据源配置
+     * @return 分片数据源；未注册数据源或创建失败返回 {@code null}
      */
     @Bean
     @ConditionalOnMissingBean(name = "shardingDataSource")

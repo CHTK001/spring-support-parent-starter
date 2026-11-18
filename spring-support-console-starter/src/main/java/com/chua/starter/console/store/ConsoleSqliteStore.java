@@ -154,12 +154,16 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
  // ==================== @api特征 覆盖 ====================
 
+    /**
+     * 新增或更新特征开关覆盖。
+     *
+     * @param featureId        特征标识
+     * @param enabled          是否启用
+     * @param disabledMessage  禁用提示消息
+     * @param disabledStatus   禁用时的 HTTP 状态码
+     */
     public synchronized void upsertFeatureOverride(String featureId, boolean enabled,
                                                    String disabledMessage, int disabledStatus) {
-        /**
-         * 执行。
-         * @param disabled_status 已禁用状态
-         */
         execute("INSERT INTO console_feature_override(feature_id, enabled, disabled_message, disabled_status) VALUES(?,?,?,?) "
                         + "ON CONFLICT(feature_id) DO UPDATE SET enabled=excluded.enabled, "
                         + "disabled_message=excluded.disabled_message, disabled_status=excluded.disabled_status",
@@ -228,12 +232,18 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
  // ==================== @apigray 覆盖 ====================
 
+    /**
+     * 新增或更新灰度覆盖。
+     *
+     * @param pattern    匹配模式
+     * @param percentage 灰度百分比
+     * @param roles      命中角色
+     * @param users      命中用户
+     * @param headers    命中请求头
+     * @param rule       灰度规则
+     */
     public synchronized void upsertGrayOverride(String pattern, Integer percentage, String[] roles,
                                                String[] users, String[] headers, String rule) {
-        /**
-         * 执行。
-         * @param rule rule
-         */
         execute("INSERT INTO console_gray_override(pattern, percentage, roles, users, headers, rule) VALUES(?,?,?,?,?,?) "
                         + "ON CONFLICT(pattern) DO UPDATE SET percentage=excluded.percentage, roles=excluded.roles, "
                         + "users=excluded.users, headers=excluded.headers, rule=excluded.rule",
