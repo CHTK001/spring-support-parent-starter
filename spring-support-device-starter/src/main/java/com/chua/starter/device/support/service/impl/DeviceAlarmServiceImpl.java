@@ -8,6 +8,7 @@ import com.chua.starter.device.support.model.AlarmQuery;
 import com.chua.starter.device.support.service.DeviceAlarmService;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,6 +28,7 @@ import java.util.Set;
  * @author CH
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DeviceAlarmServiceImpl implements DeviceAlarmService {
 
@@ -78,6 +81,69 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
         stats.put("today", alarmMapper.selectCount(new LambdaQueryWrapper<DeviceAlarm>()
                 .ge(DeviceAlarm::getDeviceAlarmCreatedAt, today)));
         return stats;
+    }
+
+    /**
+     * 平台自检告警防抖窗口（秒）：同设备同类型已有未处理告警时不重复插入
+     */
+    private static final long DEDUPE_WINDOW_SECONDS = 600L;
+
+    /** 自动消警处理人标识（平台自检恢复，非人工操作） */
+    private static final String HANDLER_SYSTEM = "system";
+
+    @Override
+    public void record(String deviceId, String type, String title, String detail, String level) {
+        if (!StringUtils.hasText(deviceId)) {
+            return;
+        }
+        String alarmType = StringUtils.hasText(type) ? type.trim() : "OTHER";
+        LocalDateTime now = LocalDateTime.now();
+        LambdaQueryWrapper<DeviceAlarm> open = new LambdaQueryWrapper<>();
+        open.eq(DeviceAlarm::getDeviceAlarmDeviceId, deviceId)
+                .eq(DeviceAlarm::getDeviceAlarmType, alarmType)
+                .in(DeviceAlarm::getDeviceAlarmStatus, Arrays.asList("unhandled", "handling"))
+                .ge(DeviceAlarm::getDeviceAlarmCreatedAt, now.minusSeconds(DEDUPE_WINDOW_SECONDS));
+        if (alarmMapper.selectCount(open) > 0) {
+            return;
+        }
+        DeviceAlarm entity = new DeviceAlarm();
+        entity.setDeviceAlarmSource("platform");
+        entity.setDeviceAlarmExternalId("platform:" + deviceId + ":" + alarmType + ":" + System.currentTimeMillis());
+        entity.setDeviceAlarmDeviceId(deviceId);
+        entity.setDeviceAlarmType(alarmType);
+        entity.setDeviceAlarmLevel(StringUtils.hasText(level) ? level.trim() : "info");
+        entity.setDeviceAlarmTitle(title);
+        entity.setDeviceAlarmDetail(detail);
+        entity.setDeviceAlarmStatus("unhandled");
+        entity.setDeviceAlarmOccurredAt(now);
+        entity.setDeviceAlarmCreatedAt(now);
+        alarmMapper.insert(entity);
+        log.info("平台自检告警入库: deviceId={}, type={}, level={}", deviceId, alarmType, entity.getDeviceAlarmLevel());
+    }
+
+    @Override
+    public int resolveOpen(String deviceId, String type) {
+        if (!StringUtils.hasText(deviceId)) {
+            return 0;
+        }
+        LambdaQueryWrapper<DeviceAlarm> open = new LambdaQueryWrapper<>();
+        open.eq(DeviceAlarm::getDeviceAlarmDeviceId, deviceId);
+        if (StringUtils.hasText(type)) {
+            open.eq(DeviceAlarm::getDeviceAlarmType, type.trim());
+        }
+        open.in(DeviceAlarm::getDeviceAlarmStatus, Arrays.asList("unhandled", "handling"));
+        List<DeviceAlarm> openAlarms = alarmMapper.selectList(open);
+        if (openAlarms.isEmpty()) {
+            return 0;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (DeviceAlarm alarm : openAlarms) {
+            alarm.setDeviceAlarmStatus("resolved");
+            alarm.setDeviceAlarmHandler(HANDLER_SYSTEM);
+            alarm.setDeviceAlarmHandledAt(now);
+            alarmMapper.updateById(alarm);
+        }
+        return openAlarms.size();
     }
 
     /**

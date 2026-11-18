@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.device.support.entity.DeviceEventRecord;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.mapper.DeviceEventRecordMapper;
+import com.chua.starter.device.support.service.DeviceAlarmService;
 import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.support.service.DeviceService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
@@ -15,6 +16,7 @@ import com.chua.starter.device.spi.model.TimeRange;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,6 +37,11 @@ public class DeviceEventServiceImpl implements DeviceEventService {
      * 事件记录 映射器
      */
     private final DeviceEventRecordMapper eventRecordMapper;
+
+    /**
+     * 设备告警服务（报警类事件联动落告警）
+     */
+    private final DeviceAlarmService alarmService;
 
     /**
      * 设备会话管理器
@@ -61,6 +68,21 @@ public class DeviceEventServiceImpl implements DeviceEventService {
         record.setDeviceEventRecordDetail(event.detail());
         record.setDeviceEventRecordOccurredAt(event.occurredAt());
         eventRecordMapper.insert(record);
+        // 报警类事件联动落告警：门禁日常进出（ACCESS）不进告警，避免刷屏
+        EventType type = event.type();
+        if (type != null && type != EventType.ACCESS) {
+            try {
+                alarmService.record(event.deviceId(), type.name(),
+                        typeLabel(type),
+                        StringUtils.hasText(event.detail()) ? event.detail()
+                                : "事件轮询采集（" + type.name() + "）",
+                        levelOf(type));
+            } catch (Exception ex) {
+                // 告警落库失败不影响事件记录本身
+                log.warn("事件联动告警落库失败: deviceId={}, type={}, message={}",
+                        event.deviceId(), type, ex.getMessage());
+            }
+        }
     }
 
     @Override
@@ -142,5 +164,37 @@ public class DeviceEventServiceImpl implements DeviceEventService {
         } catch (Exception e) {
             log.error("轮询设备事件失败: deviceId={}", deviceId, e);
         }
+    }
+
+    /**
+     * 事件类型 → 告警标题（中文可读文案，与前端类型口径一致）。
+     *
+     * @param type 事件类型
+     * @return 告警标题
+     */
+    private static String typeLabel(EventType type) {
+        return switch (type) {
+            case MOTION -> "移动侦测";
+            case IO_ALARM -> "IO 报警";
+            case TEMP -> "温度报警";
+            case NETWORK -> "网络异常";
+            case OTHER -> "其他事件";
+            case ACCESS -> "门禁事件";
+        };
+    }
+
+    /**
+     * 事件类型 → 告警级别：明确报警类按危险度分级，其余按信息处理。
+     *
+     * @param type 事件类型
+     * @return 级别：critical / major / minor / info
+     */
+    private static String levelOf(EventType type) {
+        return switch (type) {
+            case TEMP -> "critical";
+            case IO_ALARM -> "major";
+            case MOTION, NETWORK -> "minor";
+            case OTHER, ACCESS -> "info";
+        };
     }
 }

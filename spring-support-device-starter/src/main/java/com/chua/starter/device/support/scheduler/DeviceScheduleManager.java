@@ -7,6 +7,7 @@ import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.entity.DeviceTaskState;
 import com.chua.starter.device.support.service.DeviceAccessRecordService;
+import com.chua.starter.device.support.service.DeviceAlarmService;
 import com.chua.starter.device.support.service.DeviceAttendanceService;
 import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.support.service.DeviceMetricService;
@@ -103,6 +104,8 @@ public class DeviceScheduleManager {
     private final DeviceEventService eventService;
     private final DeviceSyncService syncService;
     private final DeviceAccessRecordService accessRecordService;
+    /** 设备告警服务（离线检测把离线/恢复落成告警） */
+    private final DeviceAlarmService alarmService;
 
     /**
      * 过车记录服务
@@ -459,6 +462,11 @@ public class DeviceScheduleManager {
             if (!online) {
                 sessionManager.unregister(device.getDeviceInfoId());
                 log.warn("设备离线: id={}, ip={}", device.getDeviceInfoId(), device.getDeviceInfoIp());
+                // 离线落告警：平台自检链路，同设备未处理离线告警存在时不重复插入
+                alarmService.record(device.getDeviceInfoId(), "NETWORK",
+                        "设备离线",
+                        "该设备离线检测未通过（无会话 / 连接测试失败）",
+                        "major");
             }
         }
     }
@@ -555,6 +563,11 @@ public class DeviceScheduleManager {
         try {
             deviceService.reconnect(device.getDeviceInfoId());
             log.info("设备恢复在线: id={}, ip={}", device.getDeviceInfoId(), device.getDeviceInfoIp());
+            // 恢复在线自动消警：把该设备未处理的离线告警标记为已解决（system）
+            int resolved = alarmService.resolveOpen(device.getDeviceInfoId(), "NETWORK");
+            if (resolved > 0) {
+                log.info("设备恢复自动消警: id={}, resolved={}", device.getDeviceInfoId(), resolved);
+            }
         } catch (Exception e) {
             statusService.updateOnline(device, false, true);
             log.debug("设备恢复失败: id={}, message={}", device.getDeviceInfoId(), e.getMessage());

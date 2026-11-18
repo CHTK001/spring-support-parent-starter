@@ -38,4 +38,30 @@ public interface DeviceAlarmService {
      * @return 指标键值对
      */
     Map<String, Object> stats();
+
+    /**
+     * 平台自检落告警（离线检测 / 事件轮询等内部链路调用，非 webhook 入站）。
+     *
+     * <p>同一设备同一类型在 {@code DEDUPE_WINDOW} 内已存在未处理 / 处理中告警时
+     * 不重复插入，避免离线检测每轮都新增一条刷屏。</p>
+     *
+     * @param deviceId 设备 ID
+     * @param type     告警类型（MOTION / IO_ALARM / TEMP / NETWORK / OTHER）
+     * @param title    告警标题
+     * @param detail   告警详情，可空
+     * @param level    级别：critical / major / minor / info
+     */
+    void record(String deviceId, String type, String title, String detail, String level);
+
+    /**
+     * 设备恢复时自动消警：把该设备该类型仍未处理 / 处理中的告警标记为已解决。
+     *
+     * <p>处理人记为 {@code system}（平台自动消警，非人工操作）；没有未解决告警时
+     * 不产生任何副作用。</p>
+     *
+     * @param deviceId 设备 ID
+     * @param type     告警类型
+     * @return 被自动解决的告警条数
+     */
+    int resolveOpen(String deviceId, String type);
 }
