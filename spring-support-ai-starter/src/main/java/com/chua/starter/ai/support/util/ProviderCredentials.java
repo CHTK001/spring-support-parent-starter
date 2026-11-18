@@ -35,6 +35,15 @@ public final class ProviderCredentials {
     private static final String KEY_API_KEY_CAMEL = "apiKey";
 
     /**
+     * OAuth 渠道的令牌键。
+     *
+     * <p>OpenCode / Gemini / Trae 这类渠道把粘贴的 key 或登录令牌统一存成
+     * {@code access_token}（见账号模块各 {@code *AccountChannelAuthManager}），
+     * 只认 {@code api_key} 会让「账号已绑定、模型已启用」的渠道在对话时被判成无密钥。</p>
+     */
+    private static final String KEY_ACCESS_TOKEN = "access_token";
+
+    /**
      * 工具类不允许实例化
      */
     private ProviderCredentials() {
@@ -54,6 +63,7 @@ public final class ProviderCredentials {
         addAll(keys, credentials.get(KEY_API_KEYS));
         addAll(keys, credentials.get(KEY_API_KEY));
         addAll(keys, credentials.get(KEY_API_KEY_CAMEL));
+        addAll(keys, credentials.get(KEY_ACCESS_TOKEN));
         return new ArrayList<>(keys);
     }
 
