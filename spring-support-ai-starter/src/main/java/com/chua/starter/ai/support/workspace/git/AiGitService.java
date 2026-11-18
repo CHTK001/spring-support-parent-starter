@@ -462,7 +462,7 @@ public class AiGitService {
             Repository repository = builder.build();
             Path workTree = repository.getWorkTree().toPath().toAbsolutePath().normalize();
             if (!workTree.startsWith(paths.workspaceRoot())) {
-                repository.close();
+                closeRepository(repository);
                 throw new ApiException(ApiErrorCode.FORBIDDEN, "Git 仓库不在当前账号工作目录内");
             }
             return new RepositoryHandle(new Git(repository), workTree);
@@ -874,7 +874,25 @@ public class AiGitService {
 
         @Override
         public void close() {
-            git.close();
+            closeRepository(git.getRepository());
         }
+    }
+
+    /**
+     * 关闭仓库并释放本地文件句柄。
+     *
+     * <p>JGit 7.8 上只调用 {@link Git#close()} 并不会释放对象库里已打开的
+     * pack / idx 文件句柄，Windows 下表现为删除或改名仓库目录时报
+     * 「文件正由另一进程使用」；显式关闭对象库后句柄立即释放。</p>
+     *
+     * @param repository 仓库
+     */
+    private static void closeRepository(Repository repository) {
+        try {
+            repository.getObjectDatabase().close();
+        } catch (Exception e) {
+            log.debug("[Git] 关闭对象库失败: {}", e.getMessage());
+        }
+        repository.close();
     }
 }
