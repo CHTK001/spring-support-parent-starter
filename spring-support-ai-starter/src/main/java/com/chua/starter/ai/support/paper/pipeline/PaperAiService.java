@@ -322,6 +322,13 @@ public class PaperAiService {
 
     /**
      * AI 阅卷 — 实际调用大模型，结果不可用时回退到 {@link #markQuestion} 的相似度比对结果。
+     *
+     * @param questionType   题目类型
+     * @param questionStem   题干
+     * @param standardAnswer 标准答案
+     * @param studentAnswer  学生作答
+     * @param maxScore       最高得分
+     * @return 阅卷结果（得分与评语）；AI 不可用时为相似度比对结果
      */
     public MarkingOutcome markQuestionWithAi(
             String questionType,

@@ -34,6 +34,9 @@ public final class ProviderLimitPresets {
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ProviderLimitPresets() {
     }
 

@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * AI 对话客户端的 YAML 配置。
  *
- * <p>此前对话客户端只能由数据库（{@code sys_ai_provider}）驱动装配，
+ * <p>此前对话客户端只能由数据库（{@code sys_account_channel}）驱动装配，
  * 部署时无法用配置文件声明「用哪个厂商、走哪个网关、用哪个模型」。
  * 本类把这件事搬到 {@code application.yml}，便于按环境（开发 / 测试 / 生产）替换，
  * 也便于在容器里用环境变量覆盖：</p>

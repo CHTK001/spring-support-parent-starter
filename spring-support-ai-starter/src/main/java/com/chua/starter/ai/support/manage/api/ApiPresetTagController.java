@@ -70,6 +70,13 @@ public class ApiPresetTagController {
         return ApiResult.ok(body);
     }
 
+    /**
+     * 更新预设标签。
+     *
+     * @param tagId 标签标识
+     * @param body  要更新的字段（preset_tag_id 与归属人不可改）
+     * @return 更新后的标签
+     */
     @PutMapping("/{tagId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String tagId,
                                                   @RequestBody Map<String, Object> body) {

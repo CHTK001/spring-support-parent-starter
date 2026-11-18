@@ -80,6 +80,13 @@ public class ApiPresetController {
         return ApiResult.ok(body);
     }
 
+    /**
+     * 更新预设（仅归属者可写；preset_id 与 user_id 不可覆盖）。
+     *
+     * @param presetId 预设 ID
+     * @param body     待更新的预设字段
+     * @return 更新后的预设
+     */
     @PutMapping("/{presetId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String presetId,
                                                   @RequestBody Map<String, Object> body) {
@@ -105,6 +112,13 @@ public class ApiPresetController {
         return ApiResult.ok();
     }
 
+    /**
+     * 启停预设（仅归属者可写）。
+     *
+     * @param presetId 预设 ID
+     * @param body     enabled 开关字段
+     * @return 更新后的预设
+     */
     @PatchMapping("/{presetId}/state")
     public ApiResult<Map<String, Object>> setState(@PathVariable String presetId,
                                                     @RequestBody Map<String, Object> body) {
@@ -116,6 +130,13 @@ public class ApiPresetController {
         return ApiResult.ok(preset);
     }
 
+    /**
+     * 解析预设为可用的快照（仅归属者可读）。
+     *
+     * @param presetId 预设 ID
+     * @param body     可选解析参数（当前预留）
+     * @return 预设快照（含 resolved_at）
+     */
     @PostMapping("/{presetId}/resolve")
     public ApiResult<Map<String, Object>> resolve(@PathVariable String presetId,
                                                    @RequestBody(required = false) Map<String, Object> body) {

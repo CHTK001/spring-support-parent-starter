@@ -50,6 +50,11 @@ public final class ProviderThrottle {
 
         private volatile boolean released;
 
+        /**
+         * 构造许可。
+         *
+         * @param semaphore 并发信号量；未启用并发上限时为 {@code null}
+         */
         private Lease(Semaphore semaphore) {
             this.semaphore = semaphore;
         }

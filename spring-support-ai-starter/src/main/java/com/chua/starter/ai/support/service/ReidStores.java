@@ -761,6 +761,11 @@ public class ReidStores {
             this.face = face;
         }
 
+        /**
+         * 取当前向量存储。
+         *
+         * @return 向量存储，未构建完成时可能为 {@code null}
+         */
         VectorStorage storage() {
             return storage;
         }

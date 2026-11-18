@@ -251,7 +251,12 @@ public class AgentChatClient implements ChatClient {
     /**
      * 恢复执行（携带用户修改意见）。
      *
-     * @param feedback 用户修改意见（规划模式「需要修改」），可空
+     * @param replyId    待确认请求回复 ID
+     * @param decisions  各待确认工具的决策
+     * @param feedback   用户修改意见（规划模式「需要修改」），可空
+     * @param consumer   流式响应回调
+     * @param onComplete 完成回调
+     * @param onError    异常回调
      */
     public void resume(String replyId,
                        List<com.chua.common.support.ai.agent.ConfirmationDecision> decisions,

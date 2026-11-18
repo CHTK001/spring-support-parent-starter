@@ -413,6 +413,13 @@ public class AiWorkspaceEventStreamService {
          */
         private volatile long lastSentAt;
 
+        /**
+         * 构造订阅。
+         *
+         * @param id         订阅标识
+         * @param sessionKey 会话标识
+         * @param root       工作目录
+         */
         private Subscription(String id, String sessionKey, Path root) {
             this.id = id;
             this.sessionKey = sessionKey;

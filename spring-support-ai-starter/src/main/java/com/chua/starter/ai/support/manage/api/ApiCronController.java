@@ -174,6 +174,13 @@ public class ApiCronController {
         return ApiResult.ok(requireJob(cronJobId));
     }
 
+    /**
+     * 更新定时任务（仅归属者可写，逐字段覆盖）。
+     *
+     * @param cronJobId 任务标识
+     * @param body      更新字段（支持 name/description/enabled/schedule/message/agent_config/conversation_title/max_retries）
+     * @return 更新后的任务
+     */
     @PutMapping("/{cronJobId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String cronJobId,
                                                  @RequestBody Map<String, Object> body) {
@@ -220,6 +227,13 @@ public class ApiCronController {
         return ApiResult.ok();
     }
 
+    /**
+     * 立即执行定时任务：写入执行记录、推送执行事件并创建一次会话。
+     *
+     * @param cronJobId 任务标识
+     * @param body      可选执行参数（当前预留）
+     * @return 新会话信息（含 conversation_id）
+     */
     @PostMapping("/{cronJobId}/run")
     public ApiResult<Map<String, Object>> run(@PathVariable String cronJobId,
                                               @RequestBody(required = false) Map<String, Object> body) {
@@ -276,6 +290,13 @@ public class ApiCronController {
         return ApiResult.ok(new ArrayList<>());
     }
 
+    /**
+     * 保存定时任务的技能脚本（当前仅校验写归属，占位实现）。
+     *
+     * @param cronJobId 任务标识
+     * @param body      技能脚本内容
+     * @return 操作结果
+     */
     @PostMapping("/{cronJobId}/skill")
     public ApiResult<Void> saveSkill(@PathVariable String cronJobId,
                                      @RequestBody Map<String, Object> body) {

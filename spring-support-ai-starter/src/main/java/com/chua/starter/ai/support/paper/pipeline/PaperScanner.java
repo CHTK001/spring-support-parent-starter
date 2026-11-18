@@ -1042,6 +1042,13 @@ public class PaperScanner {
         private final List<LayoutBox> layoutBoxes;
         private final String text;
 
+        /**
+         * 构造识别上下文。
+         *
+         * @param blocks      扫描块列表
+         * @param layoutBoxes 版面框列表
+         * @param text        全文文本
+         */
         private ExtractContext(List<ScanBlock> blocks, List<LayoutBox> layoutBoxes, String text) {
             this.blocks = blocks;
             this.layoutBoxes = layoutBoxes;

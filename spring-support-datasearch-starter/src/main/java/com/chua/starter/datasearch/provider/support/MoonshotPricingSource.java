@@ -43,6 +43,9 @@ public final class MoonshotPricingSource {
     private static final Pattern PRICE = Pattern.compile(
             "¥\\s*([0-9]+(?:\\.[0-9]+)?)\\s*/\\s*MTok", Pattern.CASE_INSENSITIVE);
 
+    /**
+     * 工具类私有构造器，禁止实例化。
+     */
     private MoonshotPricingSource() {
     }
 
@@ -107,6 +110,11 @@ public final class MoonshotPricingSource {
 
     /**
      * 解析表格的一行。
+     *
+     * @param rules     规则收集列表
+     * @param row       表格行原始文本
+     * @param sourceUrl 来源地址
+     * @param fetchedAt 抓取时间
      */
     private static void addRow(List<ProviderPricingRule> rules, String row, String sourceUrl,
                                String fetchedAt) {
@@ -145,6 +153,9 @@ public final class MoonshotPricingSource {
 
     /**
      * 从单元格里取模型名：K3 行是 {@code children:`name`}，K2 行是首个反引号字符串。
+     *
+     * @param row 表格行原始文本
+     * @return kimi 模型名；未匹配到时返回 null
      */
     private static String model(String row) {
         Matcher matcher = MODEL.matcher(row);

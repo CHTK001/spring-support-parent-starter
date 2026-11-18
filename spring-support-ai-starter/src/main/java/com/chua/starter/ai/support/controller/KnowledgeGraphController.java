@@ -205,6 +205,7 @@ public class KnowledgeGraphController {
      * 手工新增实体。
      *
      * @param knowledgeBaseId 知识库ID
+     * @param knowledgeBaseName 知识库名称
      * @param name            实体名称
      * @param type            实体类型（person/location/event/organization/other）
      * @param description     实体说明，可为空
@@ -234,6 +235,7 @@ public class KnowledgeGraphController {
      * 手工新增关系。端点实体不存在时会按名称自动建 other 类型的占位实体。
      *
      * @param knowledgeBaseId 知识库ID
+     * @param knowledgeBaseName 知识库名称
      * @param source          源实体名称
      * @param target          目标实体名称
      * @param type            关系类型
@@ -265,6 +267,10 @@ public class KnowledgeGraphController {
      *
      * @param knowledgeBaseId 知识库ID
      * @param uid             实体 uid
+     * @param name            实体名称（可空，null 表示不改）
+     * @param type            实体类型（可空，null 表示不改）
+     * @param description     实体说明（可空，null 表示不改）
+     * @param logo            实体图片地址（可空，null 表示不改；空串清除图片）
      * @return 是否更新成功
      */
     @Operation(summary = "修改实体", description = "只传要改的字段；logo 空串表示清除图片")

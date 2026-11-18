@@ -114,6 +114,12 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
          */
         private final byte[] body;
 
+        /**
+         * 构造回放请求包装器。
+         *
+         * @param request 原始请求
+         * @param body    已读入内存的请求体
+         */
         ReplayingRequestWrapper(HttpServletRequest request, byte[] body) {
             super(request);
             this.body = body;
@@ -137,6 +143,11 @@ public class GatewayBodySizeFilter extends AbstractGatewaySecurityFilter {
 
         private final ByteArrayInputStream stream;
 
+        /**
+         * 构造回放输入流。
+         *
+         * @param body 待回放的请求体字节
+         */
         ReplayingServletInputStream(byte[] body) {
             this.stream = new ByteArrayInputStream(body);
         }

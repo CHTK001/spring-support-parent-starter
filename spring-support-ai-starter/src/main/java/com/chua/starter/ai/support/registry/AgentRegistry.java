@@ -94,6 +94,11 @@ public class AgentRegistry {
      */
     private final AgentProviderFactory agentProviderFactory;
 
+    /**
+     * 构造 Agent 注册中心。
+     *
+     * @param agentProviderFactory Agent 引擎工厂
+     */
     public AgentRegistry(AgentProviderFactory agentProviderFactory) {
         this.agentProviderFactory = agentProviderFactory;
     }

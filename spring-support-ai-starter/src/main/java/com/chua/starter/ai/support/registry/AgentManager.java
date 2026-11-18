@@ -50,6 +50,11 @@ public class AgentManager {
      */
     private final Map<String, ManagedAgent> agents = new ConcurrentHashMap<>();
 
+    /**
+     * 构造 AgentManager。
+     *
+     * @param agentProviderFactory Agent 引擎工厂
+     */
     public AgentManager(AgentProviderFactory agentProviderFactory) {
         this.agentProviderFactory = agentProviderFactory;
     }
@@ -428,6 +433,12 @@ public class AgentManager {
          */
         private volatile String lastError;
 
+        /**
+         * 构造托管记录。
+         *
+         * @param id    Agent 标识
+         * @param agent 运行时实例
+         */
         ManagedAgent(String id, Agent agent) {
             this.id = id;
             this.agent = agent;

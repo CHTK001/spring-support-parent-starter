@@ -182,7 +182,10 @@ public class ApiAsrController {
     /**
      * 组装转写响应。
      *
-     * @param text   全文
+     * @param text     全文
+     * @param language 语言
+     * @param provider 供应商
+     * @param model    模型标识
      * @return 响应体
      */
     private Map<String, Object> buildResult(String text, String language,

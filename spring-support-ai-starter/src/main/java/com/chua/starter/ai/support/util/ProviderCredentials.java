@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * 提供者 凭证读取工具。
  *
- * <p>凭证以 JSON 对象存于 {@code sys_ai_provider.sys_ai_provider_credentials}，历史上写入侧
+ * <p>凭证以 JSON 对象存于 {@code sys_account_channel.sys_account_channel_credentials}，历史上写入侧
  * 出现过 {@code api_key}（单键字符串）、{@code api_keys}（数组）、{@code apiKey}（驼峰标量）
  * 三种形态，管理接口按三种形态都能读出密钥，而对话/机器人/智能体链路各自实现时只认其中一部分，
  * 导致仅写了 {@code api_key} 的 提供者 在对话时被判为「无密钥」（openai-java 直接抛

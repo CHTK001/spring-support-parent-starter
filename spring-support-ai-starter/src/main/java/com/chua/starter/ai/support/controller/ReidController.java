@@ -94,6 +94,8 @@ public class ReidController {
      * @param cameraId 摄像头标识（可空，用配置的默认值）
      * @param sourceId 来源帧标识（可空，自动生成）
      * @param group    分组名（可空，只查默认组）
+     * @param lat      纬度（可空，用于轨迹地理定位）
+     * @param lng      经度（可空，用于轨迹地理定位）
      * @return 观测结果
      */
     @Operation(summary = "观测一帧", description = "检测图片中的人脸并归并进跨帧轨迹；同一个人自动并入同一轨迹，观测落底库")

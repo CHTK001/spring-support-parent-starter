@@ -21,6 +21,9 @@ import java.util.List;
 @Slf4j
 public final class SpiProviders {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private SpiProviders() {
     }
 

@@ -239,6 +239,11 @@ public class AiRoleController {
 
     /**
      * 把三种 JSON 形状归一成角色条目列表。
+     *
+     * @param mapper  JSON 解析器
+     * @param content 导入内容（JSON 字符串）
+     * @return 角色条目列表
+     * @throws Exception JSON 解析失败时抛出
      */
     private static List<Map<String, Object>> parseImportItems(
             com.fasterxml.jackson.databind.ObjectMapper mapper, String content) throws Exception {
@@ -271,6 +276,13 @@ public class AiRoleController {
         return items;
     }
 
+    /**
+     * JSON 节点转有序 Map：叶子值取文本，复合值取 JSON 字符串。
+     *
+     * @param mapper JSON 解析器
+     * @param node   JSON 节点
+     * @return 有序 Map
+     */
     private static Map<String, Object> toStringMap(
             com.fasterxml.jackson.databind.ObjectMapper mapper,
             com.fasterxml.jackson.databind.JsonNode node) {
@@ -284,9 +296,9 @@ public class AiRoleController {
 
     /**
      * 导入条目转实体：两套键名兼容，code 不提供时由 save 侧生成唯一值。
-     * @param Map<String 参数
-     * @param item 参数
-     * @return 返回值
+     *
+     * @param item 导入条目
+     * @return 角色实体
     */
     private static SysAiRole toRole(Map<String, Object> item) {
         SysAiRole role = new SysAiRole();

@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  *
  * <p>前端「添加项目」的落盘出口。目录口径与
  * {@code AiSessionController#workspaceTree} 完全一致：
- * 只允许建在 {@code <system.workspaceBaseDir>/<当前账号>/agent} 之内，
+ * 只允许建在 {@code <system.workspaceBaseDir>/<当前账号>} 之内，
  * 名称只接受单级目录名，解析后必须仍落在该目录下。</p>
  *
  * <p>不复用 {@code /api/fs/directory}：那个控制器是管理员级、按调用方给的绝对路径

@@ -83,6 +83,11 @@ public class AgentProviderFactory {
      */
     private final AtomicBoolean preparingAsync = new AtomicBoolean(false);
 
+    /**
+     * 构造 Agent 提供商工厂。
+     *
+     * @param globalSettingService 全局设置服务
+     */
     public AgentProviderFactory(SysAiGlobalSettingService globalSettingService) {
         this.globalSettingService = globalSettingService;
     }

@@ -9,7 +9,7 @@ import java.util.Map;
  * 免费渠道路由源：往「模型名 → 上游目标」这张表里贡献自己那份。
  *
  * <p>免费渠道（{@code free-channel}）是渠道管理的统一入口，它的路由来自多个互不相干的
- * 东西：OAuth 账号渠道（{@code sys_ai_provider_model} 登记的模型）、免登录对话渠道
+ * 东西：OAuth 账号渠道（{@code sys_account_channel_model} 登记的模型）、免登录对话渠道
  * （DuckDuckGo / Trae 的内置模型）、magpie 网关（网关自己维护的动态模型目录），
  * 将来还会有新的来源。把它们写成一个接口，{@link ModelClientResolver} 只负责
  * 「按优先级叠加」，新增来源不必再改路由收集逻辑。</p>

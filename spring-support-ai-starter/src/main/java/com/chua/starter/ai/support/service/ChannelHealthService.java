@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.service;
 
-import com.chua.starter.ai.support.manage.store.ChannelHealth;
+import com.chua.starter.account.channel.store.ChannelHealth;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +44,7 @@ public interface ChannelHealthService {
     String STATE_RATE_LIMITED = "RATE_LIMITED";
 
     /**
-     * 人工熔断状态常量（{@code sys_ai_channel_health.circuit_state}）
+     * 人工熔断状态常量（{@code sys_account_channel_health.circuit_state}）
      */
     String CIRCUIT_AUTO = "AUTO";
     /**

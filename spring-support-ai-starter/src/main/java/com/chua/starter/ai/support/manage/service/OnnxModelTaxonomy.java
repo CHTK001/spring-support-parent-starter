@@ -26,6 +26,9 @@ import java.util.Map;
  */
 public final class OnnxModelTaxonomy {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private OnnxModelTaxonomy() {
     }
 

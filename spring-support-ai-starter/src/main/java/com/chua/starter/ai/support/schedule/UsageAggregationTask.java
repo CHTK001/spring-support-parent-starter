@@ -813,6 +813,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
          */
         private int failed;
 
+        /**
+         * 构造分组同步上下文。
+         *
+         * @param groupName 分组名称
+         * @param since     增量起始时间
+         */
         GroupSyncContext(String groupName, LocalDateTime since) {
             this.groupName = groupName;
             this.since = since;

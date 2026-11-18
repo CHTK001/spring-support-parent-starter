@@ -308,6 +308,12 @@ public class ChannelCircuitServiceImpl implements ChannelCircuitService {
          */
         private volatile long lastUpdatedAt = System.currentTimeMillis();
 
+        /**
+         * 构造熔断记录。
+         *
+         * @param providerId 供应商标识
+         * @param model      模型标识
+         */
         private Entry(String providerId, String model) {
             this.providerId = providerId;
             this.model = model;

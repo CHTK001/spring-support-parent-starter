@@ -48,6 +48,9 @@ final class OauthCallbackServer {
             + "<title>授权完成</title></head><body style=\"font-family:system-ui;text-align:center;padding-top:15vh\">"
             + "<h2>授权已完成</h2><p>可以关闭此页面，回到控制台继续操作。</p></body></html>";
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private OauthCallbackServer() {
     }
 

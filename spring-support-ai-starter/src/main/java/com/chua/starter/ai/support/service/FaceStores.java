@@ -1306,10 +1306,20 @@ public class FaceStores {
             this.dir = dir;
         }
 
+        /**
+         * 获取人脸管线（按当前设置构建）。
+         *
+         * @return 人脸管线
+         */
         FacePipeline pipeline() {
             return pipeline;
         }
 
+        /**
+         * 获取向量存储。
+         *
+         * @return 向量存储
+         */
         VectorStorage storage() {
             return storage;
         }

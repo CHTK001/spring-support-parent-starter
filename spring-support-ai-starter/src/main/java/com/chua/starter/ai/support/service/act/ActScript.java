@@ -38,6 +38,9 @@ package com.chua.starter.ai.support.service.act;
  */
 public final class ActScript {
 
+    /**
+     * 常量类，禁止实例化。
+     */
     private ActScript() {
     }
 

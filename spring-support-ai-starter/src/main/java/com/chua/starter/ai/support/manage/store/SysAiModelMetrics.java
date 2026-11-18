@@ -16,7 +16,7 @@ import java.util.Map;
  * 全量模型指标库（数据源：Artificial Analysis）。
  *
  * <p>承载指标源能采集到的全部模型指标，与本地「配置了哪些模型」无关；
- * 配置模型（sys_ai_provider_model）不持有指标，计费/展示按模型名（{@link #modelKey}）
+ * 配置模型（sys_account_channel_model）不持有指标，计费/展示按模型名（{@link #modelKey}）
  * 关联本表取价。被 {@link #manualLocked} 标记的字段在全量同步时不覆盖。</p>
  *
  * @since 4.0.0.42

@@ -11,7 +11,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>渠道鉴权的 SSE 登录流程跑在独立守护线程池里（{@code ApiChannelAuthController}
  * 的 {@code SSE_EXECUTOR}），那里没有请求线程的事务上下文，
  * {@code @Transactional} 完全不起作用；而落库要连写
- * {@code sys_ai_provider_connection} 与 {@code sys_ai_provider} 两行，
+ * {@code sys_account_channel_connection} 与 {@code sys_account_channel} 两行，
  * 中途失败会留下「连接已写入但渠道未启用」的半成品记录。</p>
  *
  * <p>因此提供一个共享的 {@link TransactionTemplate}，让跨线程的写入走编程式事务。</p>

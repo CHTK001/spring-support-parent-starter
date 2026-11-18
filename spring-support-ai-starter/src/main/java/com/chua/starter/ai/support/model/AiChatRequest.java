@@ -97,7 +97,7 @@ public class AiChatRequest {
     private String provider;
 
     /**
-     * 供应商标识（{@code sys_ai_provider_model.sys_ai_provider_model_provider_id}）。
+     * 供应商标识（{@code sys_account_channel_model.sys_account_channel_model_provider_id}）。
      *
      * <p>与 {@link #model} 配套使用：前端模型下拉的 {@code model.id} 形态是
      * {@code <providerId>:<model>}，进入流式编排后会被拆开，此处保留 providerId 一侧。

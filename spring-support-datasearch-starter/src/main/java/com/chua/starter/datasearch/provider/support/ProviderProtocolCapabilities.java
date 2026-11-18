@@ -57,6 +57,9 @@ public final class ProviderProtocolCapabilities {
             "google", "gemini"
     );
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ProviderProtocolCapabilities() {
     }
 

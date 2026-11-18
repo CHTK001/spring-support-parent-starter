@@ -63,7 +63,14 @@ public class UsageRecorderInterceptor {
     /**
      * 异步记录用量，并显式标注来源（service/third_party/self）。
      *
-     * @param source 用量来源；为空时退回默认口径
+     * @param groupName 模型分组
+     * @param provider  供应商
+     * @param model     模型标识
+     * @param callType  调用类型
+     * @param usage     用量数据
+     * @param requestId 请求标识
+     * @param userId    用户标识
+     * @param source    用量来源；为空时退回默认口径
      */
     @Async
     public void record(String groupName, String provider, String model, String callType,

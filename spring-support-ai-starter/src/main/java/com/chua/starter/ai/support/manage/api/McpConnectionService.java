@@ -167,29 +167,33 @@ public class McpConnectionService {
         }
     }
 
+    /**
+     * 构建 streamable HTTP transport。
+     *
+     * @param url     MCP 服务地址
+     * @param headers 自定义头部（可空）
+     * @return 构建好的 transport
+     */
     private io.modelcontextprotocol.spec.McpClientTransport buildStreamableHttpTransport(
             String url, Map<String, Object> headers) {
         HttpClientStreamableHttpTransport.Builder builder =
                 HttpClientStreamableHttpTransport.builder(url);
         builder.jsonMapper(explicitMapper());
-        /**
-         * apply头部。
-         * @param builder 构建器
-         * @param headers 头部
-         */
         applyHeaders(builder, headers);
         return builder.build();
     }
 
+    /**
+     * 构建 SSE transport。
+     *
+     * @param url     MCP 服务地址
+     * @param headers 自定义头部（可空）
+     * @return 构建好的 transport
+     */
     private io.modelcontextprotocol.spec.McpClientTransport buildSseTransport(
             String url, Map<String, Object> headers) {
         HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(url);
         builder.jsonMapper(explicitMapper());
-        /**
-         * apply头部。
-         * @param builder 构建器
-         * @param headers 头部
-         */
         applyHeaders(builder, headers);
         return builder.build();
     }
@@ -237,8 +241,11 @@ public class McpConnectionService {
     }
 
     /**
-     * 把自定义 头部 应用到请求构造器（默认每次请求都带上）
-    */
+     * 把自定义头部应用到请求构造器（默认每次请求都带上）。
+     *
+     * @param builder streamable HTTP transport 构造器
+     * @param headers 自定义头部（可空）
+     */
     private void applyHeaders(
             HttpClientStreamableHttpTransport.Builder builder,
             Map<String, Object> headers) {
@@ -258,8 +265,11 @@ public class McpConnectionService {
     }
 
     /**
-     * 把自定义 头部 应用到 SSE transport 请求构造器
-    */
+     * 把自定义头部应用到 SSE transport 请求构造器。
+     *
+     * @param builder SSE transport 构造器
+     * @param headers 自定义头部（可空）
+     */
     private void applyHeaders(
             HttpClientSseClientTransport.Builder builder,
             Map<String, Object> headers) {

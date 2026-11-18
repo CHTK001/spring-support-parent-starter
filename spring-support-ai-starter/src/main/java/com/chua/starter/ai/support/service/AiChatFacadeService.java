@@ -167,6 +167,11 @@ public interface AiChatFacadeService {
      * token 用量 / 等待确认等边缘事件），供调用方把「为什么卡住」的完整过程转发到前端；不传时轨迹仅写入
      * 服务端日志，不影响正文与思考回调。</p>
      *
+     * @param request             对话请求
+     * @param onChunk             每段增量正文回调，可为 空
+     * @param onCompleteWithUsage 完成后回调（完整回复文本, 模型回传用量；客户端未回传时用量为 空），可为 空
+     * @param onError             失败回调，可为 空
+     * @param onThinkingChunk     每段思考内容增量回调，可为 空
      * @param onTrace 每条执行轨迹回调，可为 空
      * @return SSE 发射器
      */
@@ -188,6 +193,12 @@ public interface AiChatFacadeService {
      * 供对外协议适配层把 OpenAI 的 tool_calls 翻译为 Anthropic 的 tool_use 块；不传时工具调用
      * 仅在底层处理、不下发给调用方。</p>
      *
+     * @param request             对话请求
+     * @param onChunk             每段增量正文回调，可为 空
+     * @param onCompleteWithUsage 完成后回调（完整回复文本, 模型回传用量；客户端未回传时用量为 空），可为 空
+     * @param onError             失败回调，可为 空
+     * @param onThinkingChunk     每段思考内容增量回调，可为 空
+     * @param onTrace             执行轨迹回调，可为 空
      * @param onToolCall 工具调用增量回调（每帧一批），可为 空
      * @return Sse 发射器
      */
@@ -208,6 +219,13 @@ public interface AiChatFacadeService {
      * <p>{@code onConfirmation} 在 Agent 请求人工确认（如规划模式 plan_exit）时触发，
      * 携带 replyId 与待确认项，供编排层下发确认卡片；不传时确认请求不下发给调用方。</p>
      *
+     * @param request             对话请求
+     * @param onChunk             每段增量正文回调，可为 空
+     * @param onCompleteWithUsage 完成后回调（完整回复文本, 模型回传用量；客户端未回传时用量为 空），可为 空
+     * @param onError             失败回调，可为 空
+     * @param onThinkingChunk     每段思考内容增量回调，可为 空
+     * @param onTrace             执行轨迹回调，可为 空
+     * @param onToolCall          工具调用增量回调（每帧一批），可为 空
      * @param onConfirmation 人工确认请求回调，可为 空
      * @return SSE 发射器
      */

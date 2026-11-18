@@ -103,7 +103,7 @@ public class ChatClientHotUpdater {
 
             // 3. 从数据库读取厂商配置。
             //
-            //    供应商 ID 不一定都是数字：新式供应商走 sys_ai_provider，ID 可以是
+            //    供应商 ID 不一定都是数字：新式供应商走 sys_account_channel，ID 可以是
             //    pollinations-local 这类字符串。此前这里无条件 Long.parseLong，遇到
             //    非数字 ID 直接抛 NumberFormatException，整个「刷新默认 chat ChatClient」
             //    在启动期就失败（日志里只有 For input string: "xxx"），默认客户端始终
@@ -200,7 +200,7 @@ public class ChatClientHotUpdater {
     }
 
     /**
-     * 从新式供应商表（{@code sys_ai_provider}）注册默认客户端。
+     * 从新式供应商表（{@code sys_account_channel}）注册默认客户端。
      *
      * <p>默认模型配成 {@code <providerId>:<model>} 且 providerId 不是数字时走这里：
      * 由 {@link ModelClientResolver} 统一完成供应商解析、密钥收集与客户端构建，

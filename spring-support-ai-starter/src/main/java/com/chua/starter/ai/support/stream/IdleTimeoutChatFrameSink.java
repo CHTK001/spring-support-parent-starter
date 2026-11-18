@@ -106,6 +106,13 @@ public final class IdleTimeoutChatFrameSink implements ChatFrameSink {
         return new IdleTimeoutChatFrameSink(delegate, sessionId, timeoutMinutes * 60_000L);
     }
 
+    /**
+     * 构造带超时看门狗的帧槽。
+     *
+     * @param delegate      被包装的真实帧槽
+     * @param sessionId     会话标识，可为空
+     * @param timeoutMillis 超时毫秒数
+     */
     private IdleTimeoutChatFrameSink(ChatFrameSink delegate, String sessionId, long timeoutMillis) {
         this.delegate = delegate;
         this.sessionId = sessionId;

@@ -144,6 +144,7 @@ public class OnnxModelParamController {
     /**
      * 查询本机 GPU 可用情况（供前端提示 device 该怎么选）。
      *
+     * @param modelId 模型标识（可选；传入时附带该模型的推荐 device）
      * @return GPU 探测结果
      */
     @GetMapping("/device-status")

@@ -80,6 +80,13 @@ public class LocalSlidingWindowLimiter implements GatewayRateLimiter {
         return allow(bucket, limit);
     }
 
+    /**
+     * 滑动窗口限流判定（本地实现）。
+     *
+     * @param bucket 目标分组窗口
+     * @param limit  窗口内最大请求数
+     * @return 允许通过返回 {@code true}，超限返回 {@code false}
+     */
     private boolean allow(Bucket bucket, int limit) {
         long now = System.currentTimeMillis();
         if (now - bucket.windowStart >= WINDOW_MILLIS) {

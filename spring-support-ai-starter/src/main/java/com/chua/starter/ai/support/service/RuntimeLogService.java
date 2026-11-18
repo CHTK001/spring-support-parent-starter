@@ -47,10 +47,18 @@ public class RuntimeLogService {
     @Value("${ai.runtime-log.err-path:}")
     private String configuredErrPath;
 
+    /**
+     * 构造运行日志服务。
+     *
+     * @param environment Spring 环境（用于解析日志输出路径配置）
+     */
     public RuntimeLogService(Environment environment) {
         this.environment = environment;
     }
 
+    /**
+     * 启动初始化：解析运行日志输出路径并记录。
+     */
     @PostConstruct
     void init() {
         File out = resolveFile("out");

@@ -30,7 +30,13 @@ public class SysAiSessionController {
     private final SysAiSessionMapper sessionMapper;
 
     /**
-     * 查询归档会话列表
+     * 查询归档会话列表。
+     *
+     * @param keyword 标题关键字过滤（可选）
+     * @param groupId 分组标识（可选，按模块编码过滤）
+     * @param skip    跳过的条数（可选）
+     * @param limit   每页条数（可选）
+     * @return 归档会话列表与总数
      */
     @GetMapping("/archived")
     public ReturnResult<Map<String, Object>> listArchived(
@@ -72,7 +78,11 @@ public class SysAiSessionController {
     }
 
     /**
-     * 归档/取消归档会话
+     * 归档/取消归档会话。
+     *
+     * @param sessionId 会话标识（数字 id 或 UUID）
+     * @param body      请求体，其中 archived 为要设置的归档状态
+     * @return 操作结果（success 与变更后的会话）
      */
     @PutMapping("/{sessionId}/archive")
     public Map<String, Object> archive(

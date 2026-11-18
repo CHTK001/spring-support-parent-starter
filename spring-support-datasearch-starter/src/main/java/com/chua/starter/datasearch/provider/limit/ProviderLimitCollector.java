@@ -30,6 +30,9 @@ import java.util.Map;
  */
 public final class ProviderLimitCollector {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ProviderLimitCollector() {
     }
 

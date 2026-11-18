@@ -31,6 +31,9 @@ import java.io.ByteArrayOutputStream;
 @Slf4j
 public final class PaperImagePreprocessor {
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private PaperImagePreprocessor() {
     }
 

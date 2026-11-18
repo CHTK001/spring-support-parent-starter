@@ -255,6 +255,17 @@ public class AiPipelineController {
 
     /**
      * 构造管线定义。
+     *
+     * @param code        管线编码
+     * @param name        显示名称
+     * @param group       分组
+     * @param tag         标签
+     * @param required    必填模型槽
+     * @param optional    可选模型槽
+     * @param description 功能说明
+     * @param route       前端路由
+     * @param configGroup 配置分组
+     * @return 管线定义
      */
     private static Map<String, Object> pipeline(String code, String name, String group, String tag,
                                                List<String> required, List<String> optional,
@@ -275,6 +286,14 @@ public class AiPipelineController {
 
     /**
      * 构造全局 Bean 设置分组定义。
+     *
+     * @param code        分组编码
+     * @param name        显示名称
+     * @param group       分组
+     * @param description 功能说明
+     * @param route       前端路由
+     * @param configGroup 配置分组
+     * @return 全局 Bean 设置分组定义
      */
     private static Map<String, Object> globalBean(String code, String name, String group,
                                                   String description, String route, String configGroup) {

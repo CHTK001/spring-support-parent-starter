@@ -175,11 +175,24 @@ public class StoryStoreServiceImpl implements StoryStoreService {
 
     /* ---------------- 私有辅助 ---------------- */
 
+    /**
+     * 计算幕次文件路径。
+     *
+     * @param actNo 幕次编号
+     * @param dir   故事目录
+     * @return 幕次文件路径
+     */
     private Path filePath(Integer actNo, Path dir) {
         return dir.resolve(ACT_NAME_PREFIX + actNo + ACT_NAME_SUFFIX);
     }
 
-    /** writeFile 方法 */
+    /**
+     * 写故事文件（UTF-8）。
+     *
+     * @param path 目标文件路径
+     * @param json 故事 JSON 内容
+     * @return 是否写入成功
+     */
     private boolean writeFile(Path path, String json) {
         try {
             tryEnsure(path.getParent());
@@ -191,7 +204,12 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         }
     }
 
-    /** readFile 方法 */
+    /**
+     * 读故事文件（UTF-8）。
+     *
+     * @param path 目标文件路径
+     * @return 文件内容，不存在或读取失败时返回 null
+     */
     private String readFile(Path path) {
         try {
             if (!Files.exists(path)) {
@@ -204,7 +222,11 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         }
     }
 
-    /** tryEnsure 方法 */
+    /**
+     * 确保目录存在，不存在则递归创建（失败仅告警）。
+     *
+     * @param dir 目标目录
+     */
     private void tryEnsure(Path dir) {
         if (dir == null || Files.isDirectory(dir)) {
             return;

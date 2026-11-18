@@ -580,7 +580,11 @@ public class LobsteraiAccountChannelAuthManager implements AccountChannelAuthMan
         return body;
     }
 
-    /** 拉客户端版本号（更新接口 {@code data.value.version}，日期式），失败用兜底值。 */
+    /**
+     * 拉客户端版本号（更新接口 {@code data.value.version}，日期式），失败用兜底值。
+     *
+     * @return 客户端版本号；接口失败或格式异常时返回兜底值
+     */
     static String fetchClientVersion() {
         try {
             String response = ChannelHttp.getJson(CLIENT_VERSION_API, anonymousHeaders());

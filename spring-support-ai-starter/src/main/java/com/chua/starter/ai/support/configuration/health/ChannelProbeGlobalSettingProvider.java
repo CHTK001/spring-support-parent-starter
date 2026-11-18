@@ -17,7 +17,7 @@ import java.util.List;
  *
  * <p>字段命名约定：{@code channel_probe_interval_sec.<channel>}，值为秒；缺失或 0 表示
  * 该渠道沿用全局间隔。已启用的渠道一栏由 {@code ChannelProbeWheelTask} 在启动时按
- * {@code sys_ai_provider.platform} 的实际取值补写（本 provider 只声明默认集，
+ * {@code sys_account_channel.platform} 的实际取值补写（本 provider 只声明默认集，
  * 避免把尚未接入的渠道写进设置页）。</p>
  *
  * @author CH

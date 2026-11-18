@@ -85,6 +85,13 @@ public class ApiTtsController {
     @Value("${ai.tts.format:mp3}")
     private String defaultFormat;
 
+    /**
+     * 文本转语音。
+     *
+     * @param body  请求体（text、model、voice、format、language 等）
+     * @param voice 音色（可选，覆盖请求体与全局配置）
+     * @return 音频字节流响应
+     */
     @PostMapping
     public ResponseEntity<byte[]> tts(@RequestBody Map<String, Object> body,
                                        @RequestParam(required = false) String voice) {

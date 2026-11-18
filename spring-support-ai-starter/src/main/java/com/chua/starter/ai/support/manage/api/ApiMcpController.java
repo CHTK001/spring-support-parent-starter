@@ -135,6 +135,13 @@ public class ApiMcpController {
         return ApiResult.ok(created);
     }
 
+    /**
+     * 更新服务端。
+     *
+     * @param serverId 服务端标识
+     * @param body     要更新的字段（mcp_server_id 与 created_at 不可改）
+     * @return 更新后的服务端
+     */
     @Permission("admin")
     @PutMapping("/servers/{serverId}")
     public ApiResult<Map<String, Object>> updateServer(@PathVariable String serverId,

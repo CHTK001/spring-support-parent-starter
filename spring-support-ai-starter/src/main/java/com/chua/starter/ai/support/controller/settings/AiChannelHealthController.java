@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.controller.settings;
 
 import com.chua.starter.ai.support.manage.common.ApiResult;
-import com.chua.starter.ai.support.manage.store.ChannelHealth;
+import com.chua.starter.account.channel.store.ChannelHealth;
 import com.chua.starter.ai.support.model.ChannelCircuitSnapshot;
 import com.chua.starter.ai.support.service.ChannelCircuitService;
 import com.chua.starter.ai.support.service.ChannelHealthService;
@@ -70,6 +70,7 @@ public class AiChannelHealthController {
     /**
      * 连接健康状态（探活结果）
      *
+     * @param providerId   供应商标识
      * @param connectionId 连接标识
      * @return 健康状态
      */
@@ -111,6 +112,7 @@ public class AiChannelHealthController {
      * 设定探针间隔秒数（0 ＝ 走全局设置）
      *
      * @param connectionId 连接标识
+     * @param body         请求体，interval 为间隔秒数（负数按 0 处理）
      * @return 是否成功
      */
     @Operation(summary = "设定探针间隔")

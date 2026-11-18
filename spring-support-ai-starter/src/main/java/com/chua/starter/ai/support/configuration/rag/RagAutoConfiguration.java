@@ -26,17 +26,13 @@ public class RagAutoConfiguration {
     /**
      * 全局设置初始化器（applicationrunner）。
      * @param globalSettingService 全局setting服务
+     * @param globalSettingDefinitions 全局设置定义
      * @return 全局settinginitializer的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public GlobalSettingInitializer globalSettingInitializer(SysAiGlobalSettingService globalSettingService,
                                                              GlobalSettingDefinitions globalSettingDefinitions) {
-        /**
-         * 全局settinginitializer。
-         * @param globalSettingService 全局setting服务
-         * @return 全局settinginitializer的结果
-         */
         return new GlobalSettingInitializer(globalSettingService, globalSettingDefinitions);
     }
 }
