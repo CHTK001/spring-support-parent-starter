@@ -18,7 +18,7 @@ import java.util.Objects;
  * 会话工作目录解析器。
  *
  * <p>统一 Git 与 Terminal 的目录口径：账号级工作目录为
- * {@code <system.workspaceBaseDir>/<当前账号>/agent}，会话实际执行目录为
+ * {@code <system.workspaceBaseDir>/<当前账号>}，会话实际执行目录为
  * {@code <账号工作目录>/<会话标识>}（不存在时回退到账号工作目录）。</p>
  *
  * <p>所有对外暴露的路径都必须落在账号工作目录内，防止 {@code ../} 越界。</p>
@@ -52,14 +52,9 @@ public class WorkspacePathResolver {
     private static final String SAFE_SEGMENT_REPLACEMENT = "_";
 
     /**
-     * 账号工作目录末级目录名
+     * 账号终端会话存储目录名（放在基路径下的独立子目录，避免终端日志混进被 Git 管理的工作区）
      */
-    private static final String AGENT_DIRECTORY = "agent";
-
-    /**
-     * 账号终端会话存储目录名（与 agent 同级，避免终端日志混进被 Git 管理的工作区）
-     */
-    private static final String TERMINAL_DIRECTORY = "terminal";
+    private static final String TERMINAL_DIRECTORY = ".terminal";
 
     /**
      * Git 元数据目录名
@@ -81,7 +76,7 @@ public class WorkspacePathResolver {
     }
 
     /**
-     * 解析指定账号的工作目录。
+     * 解析指定账号的工作目录（{@code <配置中心基路径>/<账号>}）。
      *
      * @param userId 账号标识
      * @return 账号工作目录绝对路径
@@ -89,7 +84,7 @@ public class WorkspacePathResolver {
     public Path agentWorkspace(String userId) {
         Path basePath = workspaceBase();
         String account = safeSegment(Objects.toString(userId, DEFAULT_ACCOUNT));
-        Path workspace = basePath.resolve(account).resolve(AGENT_DIRECTORY).normalize();
+        Path workspace = basePath.resolve(account).normalize();
         if (!workspace.startsWith(basePath)) {
             log.warn("[Workspace] 工作目录越界，已拒绝: {}", workspace);
             throw new ApiException(ApiErrorCode.FORBIDDEN, "工作目录越界");
@@ -117,7 +112,7 @@ public class WorkspacePathResolver {
     /**
      * 解析指定账号的终端会话存储目录。
      *
-     * <p>目录与 {@code agent} 同级（{@code <基路径>/<账号>/terminal}），不放进用户工作区：
+     * <p>目录放在基路径下的独立子树（{@code <基路径>/.terminal/<账号>}），不进用户工作区：
      * 工作区可能被 Git 管理或被整体打包下载，终端输出日志不应成为业务文件。</p>
      *
      * @param userId 账号标识
@@ -126,7 +121,7 @@ public class WorkspacePathResolver {
     public Path terminalStorage(String userId) {
         Path basePath = workspaceBase();
         String account = safeSegment(Objects.toString(userId, DEFAULT_ACCOUNT));
-        Path directory = basePath.resolve(account).resolve(TERMINAL_DIRECTORY).normalize();
+        Path directory = basePath.resolve(TERMINAL_DIRECTORY).resolve(account).normalize();
         if (!directory.startsWith(basePath)) {
             log.warn("[Workspace] 终端存储目录越界，已拒绝: {}", directory);
             throw new ApiException(ApiErrorCode.FORBIDDEN, "终端存储目录越界");
@@ -156,7 +151,7 @@ public class WorkspacePathResolver {
         if (base == null || base.isBlank()) {
             // 未配置时的兜底（用户口径 2026-11-13）：不把「去改 workspaceBaseDir」暴露给客户。
             // 落在进程用户家目录下（普通容器/登录节点都可写），目录结构仍是
-            // <base>/<account>/agent，越界校验、并发创建等逻辑保持不变。
+            // <base>/<account>，越界校验、并发创建等逻辑保持不变。
             Path fallback = Paths.get(System.getProperty("user.home", "."), "ai-workspace")
                     .toAbsolutePath().normalize();
             log.info("[Workspace] 未配置 workspaceBaseDir，使用默认工作区: {}", fallback);

@@ -21,7 +21,7 @@ import java.util.Objects;
  * 唯一来源。聊天工作间、终端 cwd、Git 仓库根都从这里取，避免三处各拼一套路径。</p>
  *
  * <p><b>可写范围</b>只允许两个位置：当前账号自己的
- * {@code <基路径>/<账号>/agent} 子树，以及共享的 {@code <基路径>/public} 子树。
+ * {@code <基路径>/<账号>} 子树，以及共享的 {@code <基路径>/public} 子树。
  * 其它路径（含 Electron 里选的任意外部目录）一律视为未设置，会话回落到账号工作目录——
  * 接口是网络入口，不能因为客户端传了绝对路径就把智能体的工作间放到主机任意位置。</p>
  *
@@ -117,6 +117,21 @@ public class SessionWorkspaceResolver {
     }
 
     /**
+     * 取会话归属账号标识。
+     *
+     * <p>HTML 预览里的相对资源（css/js/图片）由浏览器直接发起，带不上鉴权头，
+     * 服务端取不到当前账号——这时必须按**会话归属人**还原工作区，
+     * 否则会落到 {@code <基路径>/public} 这个匿名目录，资源一律 404。</p>
+     *
+     * @param sessionId 会话标识（数字主键）
+     * @return 归属账号；会话不存在或不可解析时返回 {@code null}
+     */
+    public String ownerUserId(String sessionId) {
+        SysAiSession session = loadSession(sessionId);
+        return session == null ? null : session.getSysUserId();
+    }
+
+    /**
      * 取会话的实际执行目录。
      *
      * <p>与 {@link WorkspacePathResolver#sessionWorkspace(String)} 同语义，
@@ -148,11 +163,11 @@ public class SessionWorkspaceResolver {
      * @return 是否允许
      */
     private boolean isAllowed(Path candidate, Path agent) {
-        // 账号自己的 agent 子树（不含 agent 根本身：根就是「未指定项目」）
+        // 账号自己的子树（不含账号根本身：根就是「未指定项目」）
         if (candidate.startsWith(agent) && !candidate.equals(agent)) {
             return true;
         }
-        Path base = agent.getParent() == null ? null : agent.getParent().getParent();
+        Path base = agent.getParent();
         if (base == null) {
             return false;
         }

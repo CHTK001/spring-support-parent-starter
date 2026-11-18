@@ -594,6 +594,9 @@ public class ChatStreamOrchestrator {
             final java.util.List<Object> collectedToolCalls = new java.util.ArrayList<>();
             // 智能体（AgentScope）路径的工具信息走 trace（kind/toolName/text），单独收一份
             final java.util.List<Map<String, Object>> collectedToolTraces = new java.util.ArrayList<>();
+            // 思考正文累积：THINKING_DELTA 逐段增量只在 thinking 回调出现，随助手消息持久化，
+            // 否则刷新后 think 项丢失（用户报障：思考没有保存）。
+            final StringBuilder reasoningBuffer = new StringBuilder();
 
             aiChatFacadeService.streamWithUsage(request,
                     chunk -> {
@@ -669,6 +672,9 @@ public class ChatStreamOrchestrator {
                             // 合并顺序无关（attachUsageExtra 只补键、不覆盖）。
                             assistantMsg.setConfirmation(attachUsageExtra(
                                     assistantMsg.getConfirmation(), usageStatsOf(usage, localTtft)));
+                            // 思考正文随助手消息持久化：刷新后前端靠 content.reasoningContent 还原 think 项。
+                            assistantMsg.setConfirmation(attachReasoning(
+                                    assistantMsg.getConfirmation(), reasoningBuffer.toString()));
                             aiDialogRecordService.addMessage(dialogId, assistantMsg);
                             log.info("[ChatStream] 助手消息已保存 parentId={}, tokens={}", userMessageId, totalTokens);
                             chatMemorySupport.remember(memoryUser, sid, finalContent, finalText, modelToUse);
@@ -711,7 +717,7 @@ public class ChatStreamOrchestrator {
                         // 为空才退回错误文案，保证「每条用户消息都有一条对应的助手消息」。
                         persistErroredAssistantMessage(sid, dialogId, userMessageId, modelToUse,
                                 fullReply.toString(), msg, collectedToolCalls, collectedToolTraces,
-                                effectiveRoute(p));
+                                effectiveRoute(p), reasoningBuffer.toString());
                         Map<String, Object> finishEvent = new LinkedHashMap<>();
                         finishEvent.put("type", "finish");
                         finishEvent.put("finishReason", "error");
@@ -730,6 +736,8 @@ public class ChatStreamOrchestrator {
                     },
                     thinking -> {
                         if (thinking != null && !thinking.isEmpty()) {
+                            // 累积思考增量：流式期间只发 SSE，刷新后要能还原，必须随消息落库。
+                            reasoningBuffer.append(thinking);
                             Map<String, Object> thinkEvent = new LinkedHashMap<>();
                             thinkEvent.put("type", "think");
                             thinkEvent.put("reasoningContent", thinking);
@@ -949,6 +957,8 @@ public class ChatStreamOrchestrator {
                 // 与主流程同一套首字耗时兜底：恢复轮同样可能拿不到 provider 用量
                 final long resumeStartAt = System.currentTimeMillis();
                 final long[] resumeFirstChunkAt = {0L};
+                // 思考正文累积（恢复轮）：随恢复助手消息持久化，刷新后还原 think 项。
+                final StringBuilder resumeReasoning = new StringBuilder();
 
                 // 把旧助手消息上的 pending 确认标记为终态（approved/rejected）
                 String confirmDecision = p.decisions() != null
@@ -980,6 +990,8 @@ public class ChatStreamOrchestrator {
                             }
                             String reasoning = response.getReasoningContent();
                             if (reasoning != null && !reasoning.isEmpty()) {
+                                // 累积思考增量：恢复轮同样只发 SSE，刷新后靠 confirmation 还原。
+                                resumeReasoning.append(reasoning);
                                 Map<String, Object> thinkEvent = new LinkedHashMap<>();
                                 thinkEvent.put("type", "think");
                                 thinkEvent.put("reasoningContent", reasoning);
@@ -1030,6 +1042,9 @@ public class ChatStreamOrchestrator {
                                 // 缓存命中 / 首字耗时随消息落库（同主流程口径）
                                 assistantMsg.setConfirmation(attachUsageExtra(
                                         assistantMsg.getConfirmation(), usageStatsOf(usageHolder[0], resumeTtft)));
+                                // 思考正文随恢复助手消息持久化（同主流程口径）。
+                                assistantMsg.setConfirmation(attachReasoning(
+                                        assistantMsg.getConfirmation(), resumeReasoning.toString()));
                                 aiDialogRecordService.addMessage(dialogId, assistantMsg);
                                 log.info("[ChatStream] 恢复助手消息已保存 sessionId={}, parentId={}, len={}",
                                         sid, p.userMessageId(), finalText.length());
@@ -1376,6 +1391,37 @@ public class ChatStreamOrchestrator {
     }
 
     /**
+     * 把思考正文并入已有的 confirmation JSON。
+     *
+     * <p>与 {@link #attachUsageExtra} 同样的理由：{@code confirmation} 是助手消息唯一的结构化
+     * 长文本列，思考正文走同一个键（{@code reasoning}）而不是新开一列，避免动存量表。
+     * 合并而非覆盖，保住同一条消息里的工具轨迹 / 路由 / 错误态；解析失败时原样返回。</p>
+     *
+     * @param json      原有 confirmation JSON（可为空）
+     * @param reasoning 思考正文（可为空）
+     * @return 合并后的 JSON；思考正文为空时原样返回
+     */
+    private String attachReasoning(String json, String reasoning) {
+        if (reasoning == null || reasoning.isBlank()) {
+            return json;
+        }
+        try {
+            Map<String, Object> merged = new LinkedHashMap<>();
+            if (json != null && !json.isBlank()) {
+                Object parsed = objectMapper.readValue(json, Map.class);
+                if (parsed instanceof Map<?, ?> src) {
+                    src.forEach((k, v) -> merged.put(String.valueOf(k), v));
+                }
+            }
+            merged.put("reasoning", reasoning);
+            return objectMapper.writeValueAsString(merged);
+        } catch (Exception e) {
+            log.warn("[ChatStream] 附加思考正文失败，保留原 confirmation: {}", e.getMessage());
+            return json;
+        }
+    }
+
+    /**
      * 落库一条「失败」的助手消息。
      *
      * <p>为什么必须有：成功分支会 {@code addMessage}，失败分支原先只发 SSE 事件，
@@ -1399,12 +1445,14 @@ public class ChatStreamOrchestrator {
      * @param toolCalls      已收集的工具调用（可为空）
      * @param toolTraces     已收集的工具轨迹（可为空）
      * @param routeInfo      本轮路由信息（供应商/模型/基址，可为空）
+     * @param reasoning      已流出的思考正文（可为空）
      */
     private void persistErroredAssistantMessage(String sid, Long dialogId, Long userMessageId,
                                                 String modelToUse, String streamedText, String errorMessage,
                                                 List<Object> toolCalls,
                                                 List<Map<String, Object>> toolTraces,
-                                                Map<String, Object> routeInfo) {
+                                                Map<String, Object> routeInfo,
+                                                String reasoning) {
         try {
             String partial = streamedText == null ? "" : streamedText.trim();
             String content = !partial.isEmpty() ? partial : ("[error] " + errorMessage);
@@ -1431,6 +1479,11 @@ public class ChatStreamOrchestrator {
             // 刷新后仍能对照「当时到底是哪家供应商应答的」来定位
             if (routeInfo != null && !routeInfo.isEmpty()) {
                 errorMeta.put("route", routeInfo);
+            }
+            // 失败轮同样要保住已流出的思考正文：confirmation.reasoning 是刷新后
+            // 还原 think 项的唯一载体，走 keepTrace 之外的老路子会整段丢失。
+            if (reasoning != null && !reasoning.isBlank()) {
+                errorMeta.put("reasoning", reasoning);
             }
             assistantMsg.setConfirmation(objectMapper.writeValueAsString(errorMeta));
 
