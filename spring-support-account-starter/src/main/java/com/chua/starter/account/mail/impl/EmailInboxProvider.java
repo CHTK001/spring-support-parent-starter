@@ -8,6 +8,8 @@ import com.chua.starter.account.mail.MailboxQuery;
 import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.spi.AccountInboxProvider;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.angus.mail.imap.IMAPStore;
 import jakarta.mail.Address;
 import jakarta.mail.BodyPart;
 import jakarta.mail.Flags;
@@ -26,6 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +53,7 @@ import java.util.regex.Pattern;
  * @since 4.0.0.53
  */
 @Spi("email-imap")
+@Slf4j
 public class EmailInboxProvider implements AccountInboxProvider {
 
     /**
@@ -664,7 +668,29 @@ public class EmailInboxProvider implements AccountInboxProvider {
         Session session = Session.getInstance(props);
         Store store = session.getStore(protocol);
         store.connect(host, port, account.getUsername(), secret == null ? "" : secret);
+        sendImapId(store);
         return store;
+    }
+
+    /**
+     * 部分邮件服务商（如 163 Coremail）要求登录后先发 IMAP {@code ID} 命令
+     * （RFC 2971），否则后续 SELECT 会报 {@code Unsafe Login} 被拒。
+     * 登录成功后补发一次，失败仅记 debug，不影响已建立的连接。
+     *
+     * @param store 已连接的 IMAP / IMAPS Store
+     */
+    private static void sendImapId(Store store) {
+        if (!(store instanceof IMAPStore)) {
+            return;
+        }
+        Map<String, String> client = new HashMap<>();
+        client.put(IMAPStore.ID_NAME, "chua-mail");
+        client.put(IMAPStore.ID_VERSION, "4.0");
+        try {
+            ((IMAPStore) store).id(client);
+        } catch (MessagingException e) {
+            log.debug("IMAP ID 命令未发送（服务器可能不支持 ID 扩展）: {}", e.getMessage());
+        }
     }
 
     /**
