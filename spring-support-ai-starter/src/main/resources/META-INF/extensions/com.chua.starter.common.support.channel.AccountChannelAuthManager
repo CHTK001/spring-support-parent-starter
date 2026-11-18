@@ -12,3 +12,4 @@ com.chua.starter.ai.support.spi.impl.OpencodeAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.KiloAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.EacAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.WorkBuddyAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.ScnetAccountChannelAuthManager
