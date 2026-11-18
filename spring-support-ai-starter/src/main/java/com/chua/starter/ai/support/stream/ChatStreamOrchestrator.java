@@ -482,6 +482,22 @@ public class ChatStreamOrchestrator {
      * @param sink 帧槽
      */
     public void execute(PreparedChat p, ChatFrameSink sink) {
+        final StreamRetryPolicy policy = StreamRetryPolicy.from(settingReader, AiUserContext.currentUserId());
+        CompletableFuture.runAsync(AiUserContext.capturing(() -> runTurn(p, sink, policy)));
+    }
+
+    /**
+     * 执行一轮：先下发用户消息/create/检索等首帧，再交给 {@link #attemptStream}
+     * 发起可重试的流，并挂上「单轮超时」看门狗。
+     *
+     * <p>首帧只在首轮发一次：重试时若再发一遍 create，前端会多出一条空气泡；
+     * 重试轮只补正文，不重放首帧。</p>
+     *
+     * @param p      准备结果
+     * @param sink   帧槽
+     * @param policy 本轮的重试/超时策略（来自会话配置）
+     */
+    private void runTurn(PreparedChat p, ChatFrameSink sink, StreamRetryPolicy policy) {
         final String sid = p.sessionId();
         final String finalContent = p.content();
         final AiChatRequest request = p.request();
@@ -491,9 +507,8 @@ public class ChatStreamOrchestrator {
         final String messageId = p.messageId();
         final String contentId = p.contentId();
         final Long userMessageId = p.userMessageId();
-
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
-            try {
+        final TurnContext ctx = new TurnContext();
+        try {
                 Map<String, Object> userContent = new LinkedHashMap<>();
                 userContent.put("id", contentId);
                 userContent.put("content", finalContent != null ? finalContent : "");
@@ -576,29 +591,48 @@ public class ChatStreamOrchestrator {
                 }
             }
 
-            StringBuilder fullReply = new StringBuilder();
-            final boolean[] firstChunkLogged = {false};
-            // 首字耗时兜底。
-            //
-            // 为什么要自己记：TTFT 目前只在 lastUsage 非空时才有值，而 lastUsage 仅在
-            // provider 发来带用量的 STOP 帧、且 response.getUsage() 非空时才会被赋值。
-            // 供应商不回传用量时（OpenAI 兼容网关常见），整项 TTFT 缺失，界面上
-            // 「首 token 平均（TTFT）」永远显示「—」——但首个 chunk 的到达时刻我们
-            // 自己就能观测到，没有任何理由让它缺。
-            final long streamStartAt = System.currentTimeMillis();
-            final long[] firstChunkAt = {0L};
-            // 人工确认请求（plan_exit）：agent 暂停时持有，随助手消息一并落库
-            final com.chua.common.support.ai.agent.ConfirmationRequest[] pendingConfirmation = {null};
-            // 工具调用轨迹：随助手消息落库 —— 否则「工具行」只在流式过程中有数据，
-            // 刷新/重载后整段消失（用户口径：每个工具调用要单独一行、默认折叠）。
-            final java.util.List<Object> collectedToolCalls = new java.util.ArrayList<>();
-            // 智能体（AgentScope）路径的工具信息走 trace（kind/toolName/text），单独收一份
-            final java.util.List<Map<String, Object>> collectedToolTraces = new java.util.ArrayList<>();
-            // 思考正文累积：THINKING_DELTA 逐段增量只在 thinking 回调出现，随助手消息持久化，
-            // 否则刷新后 think 项丢失（用户报障：思考没有保存）。
-            final StringBuilder reasoningBuffer = new StringBuilder();
+            scheduleTurnTimeout(p, sink, ctx, policy);
+            attemptStream(p, sink, policy, ctx, 0);
+    }
 
-            aiChatFacadeService.streamWithUsage(request,
+    /**
+     * 发起一次流式请求。
+     *
+     * <p>重试只在「本轮还没有任何正文/思考/工具输出」时进行：一旦已经推过内容，
+     * 再发起一次就会把两段回复拼在一起（用户看到重复），并且工具可能已产生副作用。
+     * 因此重试判据看的是 {@link TurnContext#hasOutput()}，而不是错误类型。</p>
+     *
+     * @param p       准备结果
+     * @param sink    帧槽
+     * @param policy  重试/超时策略
+     * @param ctx     本轮共享上下文（跨重试累积）
+     * @param attempt 当前尝试序号（0 为首轮）
+     */
+    private void attemptStream(PreparedChat p, ChatFrameSink sink, StreamRetryPolicy policy,
+                               TurnContext ctx, int attempt) {
+        if (ctx.finished.get() || sink.isCancelled()) {
+            return;
+        }
+        final String sid = p.sessionId();
+        final String finalContent = p.content();
+        final AiChatRequest request = p.request();
+        final Long dialogId = p.dialogId();
+        final String modelToUse = p.modelToUse();
+        final String memoryUser = p.memoryUser();
+        final Long userMessageId = p.userMessageId();
+        final String messageId = p.messageId();
+        final String contentId = p.contentId();
+        final StringBuilder fullReply = ctx.fullReply;
+        final boolean[] firstChunkLogged = ctx.firstChunkLogged;
+        final long streamStartAt = ctx.startAt;
+        final long[] firstChunkAt = ctx.firstChunkAt;
+        final com.chua.common.support.ai.agent.ConfirmationRequest[] pendingConfirmation =
+                ctx.pendingConfirmation;
+        final java.util.List<Object> collectedToolCalls = ctx.toolCalls;
+        final java.util.List<Map<String, Object>> collectedToolTraces = ctx.toolTraces;
+        final StringBuilder reasoningBuffer = ctx.reasoning;
+
+        aiChatFacadeService.streamWithUsage(request,
                     chunk -> {
                         if (sink.isCancelled()) {
                             return;
@@ -622,6 +656,10 @@ public class ChatStreamOrchestrator {
                         }
                     },
                     (reply, usage) -> {
+                        // 超时看门狗可能已经收口，正常完成不能再补一遍 finish
+                        if (!ctx.finished.compareAndSet(false, true)) {
+                            return;
+                        }
                         String finalText = reply != null ? reply : fullReply.toString();
                         log.info("[ChatStream] 流式完成 sessionId={}, 回复长度={}", sid, finalText.length());
                         // 首字耗时兜底值：provider 没回传用量时也能给出 TTFT
@@ -710,29 +748,32 @@ public class ChatStreamOrchestrator {
                     },
                     error -> {
                         String msg = error != null && error.getMessage() != null ? error.getMessage() : "未知错误";
-                        log.error("[ChatStream] 流式失败 sessionId={}", sid, error);
-                        // 失败的助手回合同样要落库。此前只发 SSE 事件、不写消息，
-                        // 导致刷新后这一轮整个消失，只剩下孤零零的用户消息（数据不成对）。
-                        // 内容优先用已经流出来的片段（有内容才能看出失败在第几步），
-                        // 为空才退回错误文案，保证「每条用户消息都有一条对应的助手消息」。
-                        persistErroredAssistantMessage(sid, dialogId, userMessageId, modelToUse,
-                                fullReply.toString(), msg, collectedToolCalls, collectedToolTraces,
-                                effectiveRoute(p), reasoningBuffer.toString());
-                        Map<String, Object> finishEvent = new LinkedHashMap<>();
-                        finishEvent.put("type", "finish");
-                        finishEvent.put("finishReason", "error");
-                        finishEvent.put("error", msg);
-                        sink.sendEvent(finishEvent);
-                        Map<String, Object> turnEndEvent = new LinkedHashMap<>();
-                        turnEndEvent.put("type", "turn_end");
-                        turnEndEvent.put("finishReason", "error");
-                        turnEndEvent.put("error", msg);
-                        turnEndEvent.put("messageId", messageId);
-                        turnEndEvent.put("contentId", contentId);
-                        sink.sendEvent(turnEndEvent);
-                        sink.sendDone();
-                        registry.remove(sid);
-                        sink.close();
+                        log.error("[ChatStream] 流式失败 sessionId={} attempt={}", sid, attempt, error);
+                        // 重试口径：只在本轮尚无任何输出、未超时、未取消、且还有次数时重试。
+                        // 已经流出过正文/思考/工具结果时重试会把两段回复拼在一起，
+                        // 工具还可能已产生副作用，因此宁可把失败如实交给用户。
+                        if (policy.canRetry(attempt, ctx, sink)) {
+                            int next = attempt + 1;
+                            long delay = policy.delayMillis(next);
+                            log.warn("[ChatStream] 第 {} 次尝试失败，{}ms 后重试（最多 {} 次）sessionId={}: {}",
+                                    next, delay, policy.maxRetries(), sid, msg);
+                            try {
+                                Map<String, Object> retryEvent = new LinkedHashMap<>();
+                                retryEvent.put("type", "retry");
+                                retryEvent.put("attempt", next);
+                                retryEvent.put("maxAttempts", policy.maxRetries());
+                                retryEvent.put("delayMs", delay);
+                                retryEvent.put("error", msg);
+                                sink.sendEvent(retryEvent);
+                            } catch (Exception sendEx) {
+                                log.debug("[ai-stream] 下发重试帧失败，已忽略: {}", sendEx.getMessage());
+                            }
+                            CompletableFuture.delayedExecutor(delay, java.util.concurrent.TimeUnit.MILLISECONDS)
+                                    .execute(AiUserContext.capturing(
+                                            () -> attemptStream(p, sink, policy, ctx, next)));
+                            return;
+                        }
+                        finishWithError(p, sink, ctx, msg);
                     },
                     thinking -> {
                         if (thinking != null && !thinking.isEmpty()) {
@@ -799,7 +840,280 @@ public class ChatStreamOrchestrator {
                         sink.sendEvent(cEvent);
                     }
             );
-        }));
+    }
+
+    // ==================== 重试 / 单轮超时 ====================
+
+    /**
+     * 本轮对话的执行上下文。
+     *
+     * <p>跨「首轮 + 重试轮」共享同一份累积缓冲：重试时不再重发 user_message/create，
+     * 已经收到的正文/思考/工具结果也不会被清空（只在本轮尚无任何输出时才允许重试，
+     * 因此实际上重试轮从头累积，不会出现两段拼接）。</p>
+     */
+    private static final class TurnContext {
+
+        /**
+         * 已流出的正文
+         */
+        private final StringBuilder fullReply = new StringBuilder();
+
+        /**
+         * 已流出的思考正文
+         */
+        private final StringBuilder reasoning = new StringBuilder();
+
+        /**
+         * 已收集的工具调用（落库用）
+         */
+        private final List<Object> toolCalls = new ArrayList<>();
+
+        /**
+         * 已收集的工具/思考 trace（落库用）
+         */
+        private final List<Map<String, Object>> toolTraces = new ArrayList<>();
+
+        /**
+         * 本轮是否已收口：正常完成、失败收口、超时收口都只会发生一次
+         */
+        private final java.util.concurrent.atomic.AtomicBoolean finished =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        /**
+         * 本轮开始时刻（首字耗时基线）
+         */
+        private final long startAt = System.currentTimeMillis();
+
+        /**
+         * 首个正文 chunk 到达时刻（0 表示尚未到达）
+         */
+        private final long[] firstChunkAt = {0L};
+
+        /**
+         * 首 chunk 日志只打一次
+         */
+        private final boolean[] firstChunkLogged = {false};
+
+        /**
+         * 待人工确认请求（plan_exit）：随助手消息落库
+         */
+        private final com.chua.common.support.ai.agent.ConfirmationRequest[] pendingConfirmation = {null};
+
+        /**
+         * 本轮是否已经产生会被用户看到的输出。
+         *
+         * <p>有输出就不允许重试：重试会重复推送正文，工具还可能已经产生副作用。</p>
+         *
+         * @return 有输出返回 true
+         */
+        private boolean hasOutput() {
+            return fullReply.length() > 0 || reasoning.length() > 0
+                    || !toolCalls.isEmpty() || !toolTraces.isEmpty()
+                    || pendingConfirmation[0] != null;
+        }
+    }
+
+    /**
+     * 会话级重试/超时策略。
+     *
+     * @param maxRetries         失败后的最大重试次数（0 = 不重试）
+     * @param intervalMillis     首次重试间隔（毫秒）
+     * @param backoff            是否按指数退避（第 n 次间隔 = 基础间隔 × 2^(n-1)）
+     * @param turnTimeoutSeconds 单轮最长执行时间（秒，0 = 不限制）
+     */
+    private record StreamRetryPolicy(int maxRetries, long intervalMillis, boolean backoff,
+                                     long turnTimeoutSeconds) {
+
+        /**
+         * 从会话配置读取生效值。
+         *
+         * <p>取值链与设置页一致：YAML 覆盖 &gt; 用户覆盖 &gt; 全局默认 &gt; 这里的兜底值。
+         * 默认 2 次 / 5 秒 / 不启用指数退避 / 单轮 600 秒。</p>
+         *
+         * @param reader 设置读取器
+         * @param userId 归属用户（可为空，空时只读全局层）
+         * @return 策略
+         */
+        private static StreamRetryPolicy from(
+                com.chua.starter.ai.support.configuration.client.GlobalSettingReader reader,
+                String userId) {
+            int maxRetries = readSessionInt(reader, userId, "stream_retry_max", 2, 0, 10);
+            int intervalSeconds = readSessionInt(reader, userId,
+                    "stream_retry_interval_seconds", 5, 1, 300);
+            long timeoutSeconds = readSessionInt(reader, userId, "stream_turn_timeout_seconds", 600, 0, 86400);
+            boolean backoff = readSessionBool(reader, userId, "stream_retry_backoff", false);
+            return new StreamRetryPolicy(maxRetries, intervalSeconds * 1000L, backoff, timeoutSeconds);
+        }
+
+        /**
+         * 本次失败是否允许重试。
+         *
+         * @param attempt 当前尝试序号（0 为首轮）
+         * @param ctx     本轮上下文
+         * @param sink    帧槽
+         * @return 允许重试返回 true
+         */
+        private boolean canRetry(int attempt, TurnContext ctx, ChatFrameSink sink) {
+            return attempt < maxRetries && !sink.isCancelled()
+                    && !ctx.finished.get() && !ctx.hasOutput();
+        }
+
+        /**
+         * 第 n 次重试前的等待毫秒数。
+         *
+         * @param attempt 即将执行的尝试序号（1 表示第一次重试）
+         * @return 等待毫秒数
+         */
+        private long delayMillis(int attempt) {
+            if (!backoff) {
+                return intervalMillis;
+            }
+            int exponent = Math.min(Math.max(attempt - 1, 0), 5);
+            return intervalMillis * (1L << exponent);
+        }
+    }
+
+    /**
+     * 读会话分组的整型配置并夹到合法区间。
+     *
+     * @param reader 设置读取器
+     * @param userId 归属用户
+     * @param field  字段名
+     * @param def    兜底值
+     * @param min    下限
+     * @param max    上限
+     * @return 生效值
+     */
+    private static int readSessionInt(
+            com.chua.starter.ai.support.configuration.client.GlobalSettingReader reader,
+            String userId, String field, int def, int min, int max) {
+        String raw = reader.getStrAs(userId, "session", field);
+        if (raw == null || raw.isBlank()) {
+            return def;
+        }
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return Math.min(Math.max(value, min), max);
+        } catch (NumberFormatException e) {
+            log.warn("[ChatStream] 会话配置 {}={} 非整数，回落 {}", field, raw, def);
+            return def;
+        }
+    }
+
+    /**
+     * 读会话分组的布尔配置。
+     *
+     * @param reader 设置读取器
+     * @param userId 归属用户
+     * @param field  字段名
+     * @param def    兜底值
+     * @return 生效值
+     */
+    private static boolean readSessionBool(
+            com.chua.starter.ai.support.configuration.client.GlobalSettingReader reader,
+            String userId, String field, boolean def) {
+        String raw = reader.getStrAs(userId, "session", field);
+        if (raw == null || raw.isBlank()) {
+            return def;
+        }
+        return "true".equalsIgnoreCase(raw.trim()) || "1".equals(raw.trim());
+    }
+
+    /**
+     * 挂上「单轮超时」看门狗。
+     *
+     * <p>与会话空闲超时（{@code stream_idle_timeout_minutes}，看的是「多久没有输出」）
+     * 互补：本看门狗看的是「这一轮总共跑了多久」，即使一直在输出、但明显跑飞，
+     * 到点也会收口。两者都是 0 时不限制。</p>
+     *
+     * @param p      准备结果
+     * @param sink   帧槽
+     * @param ctx    本轮上下文
+     * @param policy 策略
+     */
+    private void scheduleTurnTimeout(PreparedChat p, ChatFrameSink sink,
+                                     TurnContext ctx, StreamRetryPolicy policy) {
+        long seconds = policy.turnTimeoutSeconds();
+        if (seconds <= 0L) {
+            return;
+        }
+        CompletableFuture.delayedExecutor(seconds, java.util.concurrent.TimeUnit.SECONDS)
+                .execute(AiUserContext.capturing(() -> {
+                    if (!ctx.finished.compareAndSet(false, true)) {
+                        return;
+                    }
+                    String msg = "本轮对话超过 " + seconds
+                            + " 秒仍未完成，已结束（可在会话配置里调整单轮超时）";
+                    log.warn("[ChatStream] 单轮超时 sessionId={}, {}s", p.sessionId(), seconds);
+                    // 收口时同时中断在跑的 Agent，否则子进程/循环还在后台空转
+                    registry.interruptAgent(p.sessionId());
+                    try {
+                        persistErroredAssistantMessage(p.sessionId(), p.dialogId(), p.userMessageId(),
+                                p.modelToUse(), ctx.fullReply.toString(), msg,
+                                ctx.toolCalls, ctx.toolTraces, effectiveRoute(p),
+                                ctx.reasoning.toString());
+                        Map<String, Object> finishEvent = new LinkedHashMap<>();
+                        finishEvent.put("type", "finish");
+                        finishEvent.put("finishReason", "timeout");
+                        finishEvent.put("error", msg);
+                        sink.sendEvent(finishEvent);
+                        Map<String, Object> turnEndEvent = new LinkedHashMap<>();
+                        turnEndEvent.put("type", "turn_end");
+                        turnEndEvent.put("finishReason", "timeout");
+                        turnEndEvent.put("error", msg);
+                        turnEndEvent.put("messageId", p.messageId());
+                        turnEndEvent.put("contentId", p.contentId());
+                        sink.sendEvent(turnEndEvent);
+                        sink.sendDone();
+                    } catch (Exception e) {
+                        log.debug("[ai-stream] 下发超时结束帧失败，已忽略: {}", e.getMessage());
+                    } finally {
+                        registry.remove(p.sessionId());
+                        sink.close();
+                    }
+                }));
+    }
+
+    /**
+     * 收口一次失败轮：落库（保证与用户消息成对）+ 下发 finish/turn_end/done。
+     *
+     * @param p       准备结果
+     * @param sink    帧槽
+     * @param ctx     本轮上下文
+     * @param message 错误文案
+     */
+    private void finishWithError(PreparedChat p, ChatFrameSink sink, TurnContext ctx, String message) {
+        if (!ctx.finished.compareAndSet(false, true)) {
+            return;
+        }
+        final String sid = p.sessionId();
+        // 失败的助手回合同样要落库。此前只发 SSE 事件、不写消息，
+        // 导致刷新后这一轮整个消失，只剩下孤零零的用户消息（数据不成对）。
+        // 内容优先用已经流出来的片段（有内容才能看出失败在第几步），
+        // 为空才退回错误文案，保证「每条用户消息都有一条对应的助手消息」。
+        persistErroredAssistantMessage(sid, p.dialogId(), p.userMessageId(), p.modelToUse(),
+                ctx.fullReply.toString(), message, ctx.toolCalls, ctx.toolTraces,
+                effectiveRoute(p), ctx.reasoning.toString());
+        try {
+            Map<String, Object> finishEvent = new LinkedHashMap<>();
+            finishEvent.put("type", "finish");
+            finishEvent.put("finishReason", "error");
+            finishEvent.put("error", message);
+            sink.sendEvent(finishEvent);
+            Map<String, Object> turnEndEvent = new LinkedHashMap<>();
+            turnEndEvent.put("type", "turn_end");
+            turnEndEvent.put("finishReason", "error");
+            turnEndEvent.put("error", message);
+            turnEndEvent.put("messageId", p.messageId());
+            turnEndEvent.put("contentId", p.contentId());
+            sink.sendEvent(turnEndEvent);
+            sink.sendDone();
+        } catch (Exception e) {
+            log.debug("[ai-stream] 下发失败结束帧失败，已忽略: {}", e.getMessage());
+        } finally {
+            registry.remove(sid);
+            sink.close();
+        }
     }
 
     // ==================== 人工确认恢复 ====================
@@ -1919,6 +2233,12 @@ public class ChatStreamOrchestrator {
         return s == null ? "" : s;
     }
 
+    /**
+     * 把对象安全转换为 Map；非 Map 时返回 {@code null}。
+     *
+     * @param o 待转换对象
+     * @return Map 视图，无法转换时为 {@code null}
+     */
     private static Map<?, ?> asMap(Object o) {
         return o instanceof Map ? (Map<?, ?>) o : null;
     }

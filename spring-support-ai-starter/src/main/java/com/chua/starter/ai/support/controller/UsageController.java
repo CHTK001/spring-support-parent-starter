@@ -221,6 +221,32 @@ public class UsageController {
         return ReturnResult.ok(usageService.getDailyModelTrend(startTime, endTime, currentScopeUserId()));
     }
 
+    /**
+     * 按调用类型拆分用量（对话 / 外部工具 / 本地工具 / 记忆抽取）。
+     *
+     * <p>用量页的「用量构成」卡片与图表用它：只看总量看不出成本涨在对话还是工具上，
+     * 而这两类的优化手段完全不同（前者换模型/压上下文，后者减少工具调用）。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @return 按令牌合计降序的拆分点
+     */
+    @Operation(summary = "用量按调用类型拆分",
+            description = "把同一时间段的明细按调用类型分组：对话/外部工具/本地工具/记忆抽取各多少 token、多少次、多少钱")
+    @GetMapping("/call-type")
+    public ReturnResult<List<com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO>> callTypeBreakdown(
+            @RequestParam(required = false) String groupName,
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        return ReturnResult.ok(usageService.getCallTypeBreakdown(
+                groupName, provider, model, startTime, endTime, currentScopeUserId()));
+    }
+
       /**
        * 订阅**实时**用量（Token 计算量）。
        *

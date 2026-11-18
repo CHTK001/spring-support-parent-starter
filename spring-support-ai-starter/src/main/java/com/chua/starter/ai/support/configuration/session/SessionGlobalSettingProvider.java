@@ -114,7 +114,32 @@ public class SessionGlobalSettingProvider implements GlobalSettingProvider {
                  */
                 new SettingItem("collapse_last_reply", "false", "BOOLEAN",
                         "是否折叠最后一条回复的正文（开启后，最新一轮 AI 回复的正文默认只显示一行预览，"
-                                + "点击左侧图标位的箭头或预览行即可展开全文；关闭则每条回复都一直展开全文）", 8)
+                                + "点击左侧图标位的箭头或预览行即可展开全文；关闭则每条回复都一直展开全文）", 8),
+                /*
+                 * 重试与单轮超时。
+                 *
+                 * 与「会话超时时间」互补：那个看的是「连续多久没有输出」，是沉默流的兜底；
+                 * 这里的「单轮超时」看的是「这一轮总共跑了多久」，即使一直在输出也会到点收口，
+                 * 防止跑飞的长任务一直占着会话与子进程。
+                 */
+                new SettingItem("stream_retry_max", "2", "NUMBER",
+                        "失败后自动重试次数（0-10，默认 2）：只在本轮还没有任何正文/思考/工具输出时重试，"
+                                + "已经开始输出后失败会如实交给用户，避免把两段回复拼在一起", 9),
+                new SettingItem("stream_retry_interval_seconds", "5", "NUMBER",
+                        "重试间隔（秒，1-300，默认 5）：开启指数退避时，第 n 次重试等待 间隔×2^(n-1)", 10),
+                new SettingItem("stream_retry_backoff", "false", "BOOLEAN",
+                        "是否启用指数退避（关闭时每次重试都按固定间隔等待）", 11),
+                new SettingItem("stream_turn_timeout_seconds", "600", "NUMBER",
+                        "单轮执行超时（秒，0=不限制，默认 600）：这一轮总共跑这么久仍未完成就结束并中断执行，"
+                                + "即使一直在输出也会收口；与会话超时时间（看连续沉默时长）互补", 12),
+                /*
+                 * 重启后自动继续：后端/opencode 重启时，会话里「用户已发问、助手还没回完」的那一轮
+                 * 会停在半截。开启后由服务端在重启完成时补发「继续」，把它跑完；
+                 * 终端（PTY）恢复时也同样自动输入「继续」。
+                 */
+                new SettingItem("auto_continue_on_restart", "true", "BOOLEAN",
+                        "重启后自动继续（默认开启）：服务重启时若有未完成的回合并未收到结果，"
+                                + "自动补发「继续」把它跑完；关闭时保持原样，由用户手动继续", 13)
         );
     }
 }

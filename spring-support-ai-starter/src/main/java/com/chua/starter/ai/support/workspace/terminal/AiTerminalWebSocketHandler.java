@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.workspace.terminal;
 
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.chua.starter.ai.support.workspace.WorkspacePathResolver;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -28,9 +29,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 工作区终端 WebSocket 处理器（端点 {@code /ws/terminal}）。
@@ -187,6 +191,47 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
 
     /**
+     * 设置读取器：判断「重启自动继续」开关
+     */
+    private final GlobalSettingReader settingReader;
+
+    /**
+     * 会话分组（与 SessionGlobalSettingProvider 一致）
+     */
+    private static final String SETTING_GROUP = "session";
+
+    /**
+     * 重启自动继续开关字段
+     */
+    private static final String FIELD_AUTO_CONTINUE = "auto_continue_on_restart";
+
+    /**
+     * 补发内容（与聊天侧口径一致）
+     */
+    private static final String CONTINUE_PROMPT = "继续";
+
+    /**
+     * 终端启动后等待多久再自动输入「继续」（毫秒）：给 shell/CLI 留出重绘时间
+     */
+    private static final long AUTO_CONTINUE_DELAY_MILLIS = 1200L;
+
+    /**
+     * 「终端仍在运行」的标记文件：进程被重启/崩溃杀死后仍留在磁盘上，
+     * 下次同一会话启动终端时据此自动补发「继续」。
+     */
+    private static final String PENDING_FILE = "chua-ai-terminal-pending.json";
+
+    /**
+     * 是否正在应用停止：停止时不能清理标记，否则重启后就没有「继续」可补
+     */
+    private volatile boolean shuttingDown;
+
+    /**
+     * 标记文件读写的互斥锁（多连接可能同时启动终端）
+     */
+    private final Object pendingLock = new Object();
+
+    /**
      * WS 会话 id -> PTY 会话
      */
     private final Map<String, PtySession> sessions = new ConcurrentHashMap<>();
@@ -290,6 +335,127 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
         send(session, "terminal.ready", ready);
         log.info("[terminal-ws] 终端就绪 id={} session={} cwd={} shell={}",
                 session.getId(), sessionId, ptySession.cwd(), ptySession.shellName());
+
+        // 重启自动继续：上一次终端还开着（进程随重启被杀）时，这里补输入一次「继续」。
+        // 先消费标记再登记：本次启动把标记重新写回去，供下一次重启使用。
+        boolean pending = consumePending(sessionId);
+        markPending(sessionId);
+        if (pending && settingReader.getBool(SETTING_GROUP, FIELD_AUTO_CONTINUE, true)) {
+            CompletableFuture.delayedExecutor(AUTO_CONTINUE_DELAY_MILLIS, TimeUnit.MILLISECONDS)
+                    .execute(() -> {
+                        if (!ptySession.isAlive()) {
+                            return;
+                        }
+                        log.info("[terminal-ws] 重启后自动输入「继续」session={}", sessionId);
+                        ptySession.write(CONTINUE_PROMPT + "\r");
+                    });
+        }
+    }
+
+    /**
+     * 标记文件路径。
+     *
+     * @return 路径
+     */
+    private static Path pendingFile() {
+        return Paths.get(System.getProperty("java.io.tmpdir"), PENDING_FILE);
+    }
+
+    /**
+     * 登记「该会话的终端仍在运行」。
+     *
+     * <p>只记录聊天会话标识，不记录输出内容；文件在进程被杀后仍保留，
+     * 正因如此才能作为「上次没正常收尾」的证据。</p>
+     *
+     * @param sessionId 聊天会话标识
+     */
+    private void markPending(String sessionId) {
+        updatePending(sessionId, true);
+    }
+
+    /**
+     * 清除「该会话的终端仍在运行」标记。
+     *
+     * @param sessionId 聊天会话标识
+     */
+    private void clearPending(String sessionId) {
+        if (shuttingDown) {
+            // 应用停止时终端也会被杀，但这正是要补「继续」的场景，不能清标记
+            return;
+        }
+        updatePending(sessionId, false);
+    }
+
+    /**
+     * 消费并移除标记。
+     *
+     * @param sessionId 聊天会话标识
+     * @return 之前是否登记过
+     */
+    private boolean consumePending(String sessionId) {
+        synchronized (pendingLock) {
+            List<String> ids = readPending();
+            if (!ids.remove(sessionId)) {
+                return false;
+            }
+            writePending(ids);
+            return true;
+        }
+    }
+
+    /**
+     * 增删标记并落盘。
+     *
+     * @param sessionId 聊天会话标识
+     * @param add       true 添加，false 删除
+     */
+    private void updatePending(String sessionId, boolean add) {
+        synchronized (pendingLock) {
+            List<String> ids = readPending();
+            boolean changed = add ? (!ids.contains(sessionId) && ids.add(sessionId)) : ids.remove(sessionId);
+            if (changed) {
+                writePending(ids);
+            }
+        }
+    }
+
+    /**
+     * 读取标记文件。
+     *
+     * @return 会话标识列表；文件缺失或损坏时返回空列表
+     */
+    private List<String> readPending() {
+        Path file = pendingFile();
+        if (!Files.isRegularFile(file)) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            List<String> ids = objectMapper.readValue(Files.readString(file, StandardCharsets.UTF_8),
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {
+                    });
+            return ids == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(ids);
+        } catch (Exception e) {
+            log.debug("[terminal-ws] 读取待继续标记失败: {}", messageOf(e));
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    /**
+     * 写入标记文件；空列表时删除文件。
+     *
+     * @param ids 会话标识列表
+     */
+    private void writePending(List<String> ids) {
+        Path file = pendingFile();
+        try {
+            if (ids.isEmpty()) {
+                Files.deleteIfExists(file);
+                return;
+            }
+            Files.writeString(file, objectMapper.writeValueAsString(ids), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.warn("[terminal-ws] 写入待继续标记失败: {}", messageOf(e));
+        }
     }
 
     /**
@@ -350,9 +516,18 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
      */
     @PreDestroy
     public void shutdown() {
+        // 先置位：随后的 sessions.close() 会触发 finish()，那里据此保留「待继续」标记
+        shuttingDown = true;
+        List<String> running = sessions.values().stream()
+                .map(ptySession -> ptySession.chatSessionId)
+                .distinct()
+                .toList();
         sessions.values().forEach(ptySession -> ptySession.close());
         sessions.clear();
-        log.info("[terminal-ws] 全部终端已关闭");
+        // 再补写一次：即便连接关闭早于本方法、标记被 finish() 清掉，这里也会恢复，
+        // 保证「重启后自动继续」不依赖 Spring 与容器关闭的先后顺序。
+        running.forEach(this::markPending);
+        log.info("[terminal-ws] 全部终端已关闭，待继续会话 {} 个", running.size());
     }
 
     /**
@@ -706,6 +881,11 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
             }
             if (silent) {
                 closeStdin();
+                // 静默关闭（用户关面板 / 刷新 / 传输异常）同样要清标记：标记的语义是
+                // 「上次进程是被重启杀掉的」，而这里终端已经正常收尾。漏清会导致下次
+                // 打开终端时在没有重启的情况下又补一次「继续」，把文本打进用户 shell。
+                // 应用停止时 clearPending 内部会跳过（shuttingDown=true），标记保留给下次启动。
+                clearPendingIfLast(chatSessionId);
                 return;
             }
             if (stopping) {
@@ -716,6 +896,37 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
                 send(webSocketSession, "terminal.exit", data);
             }
             closeStdin();
+            // 终端真正结束（用户 exit / 主动停止 / 连接断开）后不再补「继续」；
+            // 应用停止时 clearPending 内部会跳过，标记保留给下次启动。
+            clearPendingIfLast(chatSessionId);
+        }
+
+        /**
+         * 同一聊天会话没有其它存活终端时才清标记。
+         *
+         * <p>旧连接的收尾可能晚于新终端的启动（关面板后立刻重开、重连重发 terminal.start），
+         * 无条件清理会把新终端刚写下的标记删掉，导致「重启后自动继续」时有时无。</p>
+         *
+         * @param chatSessionId 聊天会话标识
+         */
+        private void clearPendingIfLast(String chatSessionId) {
+            boolean otherAlive = sessions.values().stream()
+                    .anyMatch(other -> other != this
+                            && chatSessionId.equals(other.chatSessionId)
+                            && other.isAlive());
+            if (!otherAlive) {
+                clearPending(chatSessionId);
+            }
+        }
+
+        /**
+         * 进程是否仍在运行。
+         *
+         * @return true 表示可以写入
+         */
+        private boolean isAlive() {
+            PtyProcess current = process;
+            return !finished && current != null && current.isAlive();
         }
 
         /**

@@ -63,6 +63,14 @@ public interface SysAiUsageService {
 
     /**
      * 记录一次调用用量（带来源标记）
+     *
+     * @param groupName 分组
+     * @param provider 服务商
+     * @param model 模型
+     * @param callType 调用类型
+     * @param usage 用量信息
+     * @param requestId 请求标识
+     * @param userId 用户标识
      * @param source 用量来源: service/third_party/self
      */
     void record(String groupName, String provider, String model, String callType,
@@ -139,6 +147,24 @@ public interface SysAiUsageService {
      * @return 按天升序、同天内按令牌降序的聚合点列表
      */
     List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> getDailyModelTrend(
+            LocalDateTime startTime, LocalDateTime endTime, String userId);
+
+    /**
+     * 按「调用类型」拆分用量（对话 / 外部工具 / 本地工具 / 记忆抽取 等）。
+     *
+     * <p>数据源是明细表的调用类型列：每种调用本来就各落一行，因此按它分组即可，
+     * 不需要额外的汇总表或新列。普通账号只统计本人明细，管理员统计全部账号。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（含，可为空）
+     * @param endTime   结束时间（含，可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @return 按令牌合计降序的拆分点
+     */
+    List<com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO> getCallTypeBreakdown(
+            String groupName, String provider, String model,
             LocalDateTime startTime, LocalDateTime endTime, String userId);
 
     /**

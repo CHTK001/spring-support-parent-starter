@@ -2,6 +2,7 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.starter.ai.support.entity.SysAiPricing;
@@ -228,13 +229,17 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         }
     }
       /**
-       * @param provider 提供者
-       * @param model 模型
-       * @param startTime 启动时间
-       * @param endTime 结束时间
+       * 分页查询用量明细。
+       *
+       * @param groupName 分组（可为空）
+       * @param provider 提供者（可为空）
+       * @param model 模型（可为空）
+       * @param startTime 开始时间（可为空）
+       * @param endTime 结束时间（可为空）
        * @param userId 归属用户，为空时列出全部用户明细
-       * @param page page
-       * @param size 大小
+       * @param page 页码
+       * @param size 每页条数
+       * @return 用量明细分页
        */
     public Page<SysAiUsage> list(String groupName, String provider, String model,
                                  LocalDateTime startTime, LocalDateTime endTime, String userId, int page, int size) {
@@ -448,6 +453,141 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         }
         result.sort(TREND_ORDER);
         return result;
+    }
+
+    /**
+     * 按调用类型拆分用量。
+     *
+     * <p>口径与明细列表一致：普通账号只统计本人；管理员在「指定账号」时把无主明细
+     * 一并并入（与 {@link #includeOrphanEffective()} 同一套判断）。调用类型为空的历史行
+     * 归到 {@code chat}：它们都是加列之前写入的对话调用。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（含，可为空）
+     * @param endTime   结束时间（含，可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @return 按令牌合计降序的拆分点
+     */
+    @Override
+    public List<com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO> getCallTypeBreakdown(
+            String groupName, String provider, String model,
+            LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        String callTypeExpr = "COALESCE(NULLIF(sys_ai_usage_call_type, ''), 'chat')";
+        QueryWrapper<SysAiUsage> wrapper = new QueryWrapper<>();
+        wrapper.select(callTypeExpr + " AS call_type",
+                "COUNT(*) AS calls",
+                "COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS prompt_tokens",
+                "COALESCE(SUM(sys_ai_usage_completion_tokens), 0) AS completion_tokens",
+                "COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS total_tokens",
+                "COALESCE(SUM(sys_ai_usage_total_cost), 0) AS total_cost");
+        if (groupName != null && !groupName.isBlank()) {
+            wrapper.eq("sys_ai_usage_group_name", groupName);
+        }
+        if (provider != null && !provider.isBlank()) {
+            wrapper.eq("sys_ai_usage_provider", provider);
+        }
+        if (model != null && !model.isBlank()) {
+            wrapper.eq("sys_ai_usage_model", model);
+        }
+        if (userId != null && !userId.isBlank()) {
+            if (includeOrphanEffective()) {
+                wrapper.and(w -> w.eq("sys_ai_usage_user_id", userId)
+                        .or().isNull("sys_ai_usage_user_id"));
+            } else {
+                wrapper.eq("sys_ai_usage_user_id", userId);
+            }
+        }
+        if (startTime != null) {
+            wrapper.ge("sys_ai_usage_call_time", startTime);
+        }
+        if (endTime != null) {
+            wrapper.le("sys_ai_usage_call_time", endTime);
+        }
+        wrapper.groupBy(callTypeExpr);
+        List<Map<String, Object>> rows = usageMapper.selectMaps(wrapper);
+        List<com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO> result =
+                new ArrayList<>(rows == null ? 0 : rows.size());
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                Object type = valueOf(row, "call_type");
+                result.add(new com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO(
+                        type == null || String.valueOf(type).isBlank() ? "chat" : String.valueOf(type),
+                        longOf(row, "calls"),
+                        longOf(row, "prompt_tokens"),
+                        longOf(row, "completion_tokens"),
+                        longOf(row, "total_tokens"),
+                        doubleOf(row, "total_cost")));
+            }
+        }
+        result.sort(Comparator.comparingLong(
+                (com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO p) ->
+                        p.totalTokens() == null ? 0L : p.totalTokens()).reversed());
+        return result;
+    }
+
+    /**
+     * 从 {@code selectMaps} 结果里按列名取值（忽略大小写）。
+     *
+     * @param row   一行结果
+     * @param key   列名
+     * @return 值；不存在时返回 {@code null}
+     */
+    private static Object valueOf(Map<String, Object> row, String key) {
+        if (row.containsKey(key)) {
+            return row.get(key);
+        }
+        for (Map.Entry<String, Object> entry : row.entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从 {@code selectMaps} 结果里取长整数（忽略列名大小写）。
+     *
+     * @param row 一行结果
+     * @param key 列名
+     * @return 值；缺失或非法时为 0
+     */
+    private static long longOf(Map<String, Object> row, String key) {
+        Object value = valueOf(row, key);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    /**
+     * 从 {@code selectMaps} 结果里取小数（忽略列名大小写）。
+     *
+     * @param row 一行结果
+     * @param key 列名
+     * @return 值；缺失或非法时为 0
+     */
+    private static double doubleOf(Map<String, Object> row, String key) {
+        Object value = valueOf(row, key);
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value == null) {
+            return 0D;
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return 0D;
+        }
     }
 
     /**
@@ -738,6 +878,14 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     /**
      * 汇总段：读日汇总表（几百行，毫秒级）。
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  提供者（可为空）
+     * @param model     模型（可为空）
+     * @param startDate 开始日期（可为空）
+     * @param endDate   结束日期（可为空）
+     * @param userId    归属用户（可为空）
+     * @return 汇总段用量统计
      */
     private UsageStatistics statisticsFromDaily(String groupName, String provider, String model,
                                                 LocalDate startDate, LocalDate endDate, String userId) {
@@ -802,6 +950,14 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     /**
      * 增量段：明细表聚合（原路径，只用于汇总表未覆盖的那几天）。
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  提供者（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @param userId    归属用户（可为空）
+     * @return 增量段用量统计
      */
     private UsageStatistics statisticsFromRaw(String groupName, String provider, String model,
                                               LocalDateTime startTime, LocalDateTime endTime, String userId) {
@@ -828,6 +984,9 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     /**
      * 两段统计相加：计数直接加；均值先还原成总和（均值 × 调用数）再加，最后除以新的调用数。
+     *
+     * @param target 累加目标
+     * @param extra  待累加的统计
      */
     private void mergeStatistics(UsageStatistics target, UsageStatistics extra) {
         if (extra.totalCalls <= 0 && extra.totalTokens <= 0) {
