@@ -85,6 +85,9 @@ public final class DbObjectDialect {
         }
     }
 
+    /**
+     * 私有构造器：工具类不实例化。
+     */
     private DbObjectDialect() {
     }
 
@@ -295,7 +298,16 @@ public final class DbObjectDialect {
         return null;
     }
 
-    /** definitionFromMeta 方法 */
+    /**
+     * 从 information_schema 元数据拼装对象定义文本（SHOW CREATE 不可用时回落）。
+     *
+     * @param conn   数据库连接
+     * @param schema 所属库
+     * @param name   对象名
+     * @param type   对象类别
+     * @return 对象定义文本；对象不存在时为 null
+     * @throws SQLException 读取元数据失败
+     */
     private static String definitionFromMeta(Connection conn, String schema, String name, Category type)
             throws SQLException {
         String sql = switch (type) {

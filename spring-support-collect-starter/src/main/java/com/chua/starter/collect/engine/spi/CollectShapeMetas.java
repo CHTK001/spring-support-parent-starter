@@ -16,6 +16,9 @@ import java.util.List;
  */
 public final class CollectShapeMetas {
 
+    /**
+     * 私有构造器：工具类不实例化。
+     */
     private CollectShapeMetas() {
     }
 
@@ -46,6 +49,8 @@ public final class CollectShapeMetas {
      *
      * <p>执行器已有同名 {@code timeout} 时不重复添加，由 CollectEngine 统一读取该参数做超时控制；
      * 策略只影响超时后的行为：自动延长一次等待时间，或直接结束该分支。</p>
+     *
+     * @param meta 节点元数据
      */
     private static void addTimeoutParams(CollectShapeMeta meta) {
         if (meta.getParams().stream().anyMatch(param -> "timeout".equals(param.getName()))) {

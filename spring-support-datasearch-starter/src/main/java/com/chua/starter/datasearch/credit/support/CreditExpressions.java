@@ -87,6 +87,9 @@ public final class CreditExpressions {
         BILLING_ALIAS.put("cny/rmb", "CNY");
     }
 
+    /**
+     * 私有构造器：工具类不实例化。
+     */
     private CreditExpressions() {
     }
 
@@ -297,6 +300,12 @@ public final class CreditExpressions {
 
         private final JsonNode node;
 
+        /**
+         * 构造路径命中。
+         *
+         * @param label 段名
+         * @param node  节点
+         */
         private Hit(String label, JsonNode node) {
             this.label = label;
             this.node = node;

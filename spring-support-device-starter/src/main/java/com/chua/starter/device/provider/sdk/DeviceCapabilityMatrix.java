@@ -235,6 +235,12 @@ public record DeviceCapabilityMatrix(
 
         private final Map<DeviceCapability, Cell> cells = new LinkedHashMap<>();
 
+        /**
+         * 构造能力矩阵构造器。
+         *
+         * @param platform 平台标识
+         * @param title    平台名称
+         */
         private Builder(String platform, String title) {
             this.platform = platform;
             this.title = title;
@@ -337,6 +343,9 @@ public record DeviceCapabilityMatrix(
             register(sennor());
         }
 
+        /**
+         * 私有构造器：注册表为纯静态容器，不实例化。
+         */
         private Registry() {
         }
 

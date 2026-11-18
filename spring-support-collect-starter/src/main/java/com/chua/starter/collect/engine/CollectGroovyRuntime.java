@@ -218,6 +218,11 @@ public final class CollectGroovyRuntime {
          */
         private final FunctionDispatcher dispatcher;
 
+        /**
+         * 构造函数对象。
+         *
+         * @param dispatcher 转发目标分发器
+         */
         private FunctionObject(FunctionDispatcher dispatcher) {
             this.dispatcher = dispatcher;
         }
@@ -246,6 +251,9 @@ public final class CollectGroovyRuntime {
      */
     private static final class Holder {
 
+        /**
+         * 私有构造器：Holder 为纯静态工具容器，不实例化。
+         */
         private Holder() {
         }
 

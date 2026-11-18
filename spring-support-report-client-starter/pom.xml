@@ -9,6 +9,12 @@
   <artifactId>spring-support-report-client-starter</artifactId>
   <description>上报信息客户端模块</description>
   <properties>
+    <!--
+      MyBatis 核心包版本：report-client 只需要 org.apache.ibatis.*（Configuration /
+      MappedStatement / XMLConfigBuilder 等），用于 MyBatis 端点与配置同步，
+      不引入 mybatis-plus starter，避免给客户端宿主带入 MP 自动装配（R5）。
+    -->
+    <mybatis.version>3.5.19</mybatis.version>
   </properties>
   <dependencies>
     <!--
@@ -59,6 +65,23 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-spring-starter</artifactId>
+    </dependency>
+    <!--
+      Actuator 端点：ActuatorConfiguration / MyBatisEndpoint 直接使用
+      org.springframework.boot.actuate.endpoint.*，缺该模块时编译失败。
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <!--
+      MyBatis 端点：MyBatisEndpoint / MyBatisConfigHandler 使用 org.apache.ibatis.*，
+      仅取核心包（MP 自动装配由宿主自行决定）。
+    -->
+    <dependency>
+      <groupId>org.mybatis</groupId>
+      <artifactId>mybatis</artifactId>
+      <version>${mybatis.version}</version>
     </dependency>
   </dependencies>
   <build>
