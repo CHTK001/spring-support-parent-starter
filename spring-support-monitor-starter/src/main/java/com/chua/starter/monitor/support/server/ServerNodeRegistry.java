@@ -663,6 +663,7 @@ public class ServerNodeRegistry {
      * 按描述构建过滤器并挂载到服务器，同时记录到托管集合。
      *
      * @param server      目标服务器
+     * @param node        过滤器所属的服务节点
      * @param descriptors 插件描述
      * @param setting     服务器配置
      * @param managed     托管过滤器收集器
