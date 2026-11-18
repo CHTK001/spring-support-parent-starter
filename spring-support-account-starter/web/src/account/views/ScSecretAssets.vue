@@ -72,7 +72,14 @@
           <span class="rail-head__title">密钥列表</span>
           <span class="rail-head__count">{{ filtered.length }}</span>
         </div>
-        <div class="rail__list" @scroll.passive="onRailScroll">
+        <RailScrollList
+          :loading="loading"
+          :has-more="railLimit < filtered.length"
+          :item-count="visibleItems.length"
+          :total="filtered.length"
+          @load-more="loadMoreRail"
+        >
+          <div class="rail__list">
           <div v-if="loading && !secrets.length" class="rail__state">加载中…</div>
           <div v-else-if="!filtered.length" class="rail__state">
             {{ keyword || typeFilter !== 'all' ? '没有匹配的密钥' : '暂无密钥，点右上角「新建密钥」创建' }}
@@ -110,11 +117,8 @@
               </span>
             </span>
           </button>
-        </div>
-
-        <footer class="rail__foot">
-          <span>已加载 {{ visibleItems.length }} / {{ filtered.length }} 条，滚动加载更多</span>
-        </footer>
+          </div>
+        </RailScrollList>
       </aside>
 
       <!-- 分栏手柄：拖拽改左栏宽度，双击复位，偏好存本地 -->
@@ -299,6 +303,7 @@ import { copyText } from '../../shared/clipboard'
 import { providerLabel } from '../secretProviders'
 import ProviderLogo from './components/ProviderLogo.vue'
 import SecretDialog from './components/SecretDialog.vue'
+import RailScrollList from '../components/RailScrollList.vue'
 import ReRailSplit, { readRailWidth } from '@repo/ui/re-rail-split'
 
 /** 左栏宽度偏好键（与账号资产页同一套分栏） */
@@ -457,12 +462,9 @@ const railLimit = ref(RAIL_PAGE)
 /** 当前可见的密钥（滚动分页切片） */
 const visibleItems = computed(() => filtered.value.slice(0, railLimit.value))
 
-/** 左栏滚动到底部时加载更多 */
-function onRailScroll(e: Event): void {
-  const el = e.target as HTMLElement
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24 && railLimit.value < filtered.value.length) {
-    railLimit.value += RAIL_PAGE
-  }
+/** 左栏触底：前端切片再放出一批 */
+function loadMoreRail(): void {
+  if (railLimit.value < filtered.value.length) railLimit.value += RAIL_PAGE
 }
 
 /** 搜索 / 类型筛选变化时回到第一屏 */
@@ -738,14 +740,6 @@ onMounted(load)
   font-size: 12px;
   text-align: center;
   color: var(--el-text-color-secondary);
-}
-
-.rail__foot {
-  flex: none;
-  padding: 4px 10px;
-  font-size: 11px;
-  color: var(--text-tertiary);
-  border-top: 1px solid var(--border-subtle, var(--border-default));
 }
 
 /* ---------- 条目 ---------- */

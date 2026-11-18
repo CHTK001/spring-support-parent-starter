@@ -106,7 +106,15 @@
           <span class="rail-head__count">{{ logs.length }} / {{ total }}</span>
         </div>
 
-        <div class="rail__list" @scroll.passive="onRailScroll">
+        <RailScrollList
+          :loading="loading"
+          :has-more="hasMore"
+          :item-count="logs.length"
+          :total="total"
+          :threshold="48"
+          @load-more="loadMore"
+        >
+          <div class="rail__list">
           <div v-if="loading && !logs.length" class="rail__state">加载中…</div>
           <div v-else-if="!logs.length" class="rail__state">{{ emptyText }}</div>
           <template v-else>
@@ -145,11 +153,8 @@
               </span>
             </button>
           </template>
-        </div>
-
-        <footer class="rail__foot">
-          <span>{{ footText }}</span>
-        </footer>
+          </div>
+        </RailScrollList>
       </aside>
 
       <!-- 分栏手柄：拖拽改左栏宽度，双击复位，偏好存本地 -->
@@ -299,6 +304,7 @@ import ReRailSplit, { readRailWidth } from '@repo/ui/re-rail-split'
 
 import { clearSendLogs, listSendLogs, type SysAccountSendLog } from '../api/sendlog'
 import { errorText } from '../../shared/errorText'
+import RailScrollList from '../components/RailScrollList.vue'
 
 /** 左栏宽度偏好键（与账号 / 密钥页同一套分栏） */
 const RAIL_WIDTH_KEY = 'sendlog.rail.width.v1'
@@ -363,15 +369,6 @@ const emptyText = computed(() =>
     ? '没有匹配的发送记录'
     : '暂无发送记录：发信后会在这里留下通道级日志',
 )
-
-/** 左栏底部提示 */
-const footText = computed(() => {
-  if (loading.value) return '加载中…'
-  if (!logs.value.length) return '—'
-  return hasMore.value
-    ? `已加载 ${logs.value.length} / ${total.value} 条，滚动加载更多`
-    : `已全部加载（${logs.value.length} 条）`
-})
 
 /** 两位补零 */
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -506,12 +503,6 @@ function loadMore(): void {
   if (loading.value || !hasMore.value) return
   nextPage.value += 1
   void load(false)
-}
-
-/** 列表滚动到接近底部时追加下一页 */
-function onRailScroll(event: Event): void {
-  const el = event.target as HTMLElement
-  if (el.scrollHeight - el.scrollTop - el.clientHeight < 48) loadMore()
 }
 
 /** 选中一条日志（右栏展示详情） */
@@ -761,14 +752,6 @@ onMounted(() => void load(true))
   font-size: 12px;
   text-align: center;
   color: var(--el-text-color-secondary);
-}
-
-.rail__foot {
-  flex: none;
-  padding: 4px 10px;
-  font-size: 11px;
-  color: var(--text-tertiary);
-  border-top: 1px solid var(--border-subtle, var(--border-default));
 }
 
 /* ---------- 条目 ---------- */
