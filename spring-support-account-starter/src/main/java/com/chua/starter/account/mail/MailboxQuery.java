@@ -48,4 +48,12 @@ public class MailboxQuery implements Serializable {
      * 主题 / 发件人模糊词
      */
     private String keyword;
+
+    /**
+     * 只取该时间（毫秒）之后的新邮件，用于「收取范围」过滤。
+     *
+     * <p>IMAP 可在服务端按内部日期过滤；POP3 无服务端日期搜索，由实现侧在
+     * 取回后按 {@link Message#getSentDate()} 在内存过滤。不填表示不限时间。</p>
+     */
+    private Long since;
 }

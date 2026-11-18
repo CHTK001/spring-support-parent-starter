@@ -10,6 +10,7 @@ import com.chua.email.support.EmailPush;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import com.chua.starter.account.mail.impl.EmailInboxProvider;
+import com.chua.starter.account.mail.impl.EmailPop3InboxProvider;
 import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.manage.service.ManageAccountService;
 import com.chua.starter.account.manage.service.SysAccountSecretService;
@@ -73,6 +74,11 @@ public class MailboxService {
      * 端口取值下界（不含，即最小合法端口）
      */
     private static final int PORT_MIN = 1;
+
+    /**
+     * 收取最近 30 天邮件的毫秒数（config.receiveRange=30d 时的 since 兜底值）
+     */
+    private static final long RECENT_30_DAYS_MS = 30L * 24 * 60 * 60 * 1000;
 
     /**
      * 端口取值上界（含）
@@ -139,12 +145,34 @@ public class MailboxService {
      */
     public List<MailboxMessage> messages(String accountId, MailboxQuery query) {
         SysAccount account = requireInboxAccount(accountId);
+        MailboxQuery effective = applyReceiveRange(account, query);
         AccountInboxProvider provider = requireProvider(account);
         try {
-            return provider.messages(account, accountService.resolveSecret(accountId), query);
+            return provider.messages(account, accountService.resolveSecret(accountId), effective);
         } catch (Exception e) {
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "收取邮件失败：" + rootMessage(e), e);
         }
+    }
+
+    /**
+     * 落实「收取范围」：账号配置了 {@code config.receiveRange} 且调用方未显式指定
+     * {@code since} 时，按配置补上起始时间；显式 since（如轮询器）优先，不覆盖。</p>
+     *
+     * @param account 账号
+     * @param query   调用方传入的取信条件（可为 {@code null}）
+     * @return 已落实收取范围的取信条件
+     */
+    private MailboxQuery applyReceiveRange(SysAccount account, MailboxQuery query) {
+        MailboxQuery effective = query == null ? new MailboxQuery() : query;
+        if (effective.getSince() != null) {
+            return effective;
+        }
+        Map<String, Object> config = account.getConfig();
+        if (config == null || !"30d".equals(String.valueOf(config.get("receiveRange")))) {
+            return effective;
+        }
+        effective.setSince(System.currentTimeMillis() - RECENT_30_DAYS_MS);
+        return effective;
     }
 
     /**
@@ -331,6 +359,8 @@ public class MailboxService {
         target.setStarttls(!ssl(account));
         target.setImapHost(EmailInboxProvider.imapHost(account));
         target.setImapPort(EmailInboxProvider.imapPort(account));
+        target.setPop3Host(EmailPop3InboxProvider.pop3Host(account));
+        target.setPop3Port(EmailPop3InboxProvider.pop3Port(account));
         return target;
     }
 
@@ -586,13 +616,30 @@ public class MailboxService {
     private AccountInboxProvider resolveProvider(SysAccount account) {
         Map<String, AccountInboxProvider> providers =
                 ServiceProvider.of(AccountInboxProvider.class).list();
+        String kind = String.valueOf(account.getKind()).toUpperCase();
+        String preferred = preferredProvider(account);
         Set<String> seen = new LinkedHashSet<>();
+        // 第一轮：按接入方式优先选匹配的收信实现，避免 IMAP / POP3 对同一账号抢占。
+        // SPI 注册 key 统一大写（@Spi 别名经 buildDefinitionAlias 转大写），
+        // 这里必须大小写不敏感匹配，否则第一轮永远落空、POP3 账号可能被 IMAP 注册抢占。
+        if (preferred != null) {
+            for (Map.Entry<String, AccountInboxProvider> entry : providers.entrySet()) {
+                if (!preferred.equalsIgnoreCase(entry.getKey())) {
+                    continue;
+                }
+                AccountInboxProvider candidate = entry.getValue();
+                if (candidate != null && seen.add(candidate.provider())
+                        && candidate.accountKinds().contains(kind) && candidate.supports(account)) {
+                    return candidate;
+                }
+            }
+        }
+        // 第二轮：任意匹配的实现（向后兼容，如仅安装其中一种协议实现）
         for (AccountInboxProvider provider : providers.values()) {
             if (provider == null || !seen.add(provider.provider())) {
                 continue;
             }
-            if (provider.accountKinds().contains(String.valueOf(account.getKind()).toUpperCase())
-                    && provider.supports(account)) {
+            if (provider.accountKinds().contains(kind) && provider.supports(account)) {
                 return provider;
             }
         }
@@ -677,6 +724,20 @@ public class MailboxService {
         String shown = StringUtils.isBlank(vendor) ? "（未填写）" : vendor.trim();
         return new ApiException(ApiErrorCode.INVALID_PARAM,
                 "短信账号的服务商「" + shown + "」不受支持；请填写阿里云 / 腾讯云 / 百度云（aliyun / tencent / baidu）");
+    }
+
+    /**
+     * 按账号接入方式选优先的收信实现标识。
+     *
+     * <p>{@code config.inboxMode} 为 {@code pop3} 时选 {@code email-pop3}，其余均选
+     * {@code email-imap}，保证 IMAP 与 POP3 对同一 EMAIL 账号互斥。</p>
+     *
+     * @param account 账号
+     * @return 收信实现标识
+     */
+    private String preferredProvider(SysAccount account) {
+        Object mode = account.getConfig() == null ? null : account.getConfig().get("inboxMode");
+        return "pop3".equals(String.valueOf(mode)) ? "email-pop3" : "email-imap";
     }
 
     /**

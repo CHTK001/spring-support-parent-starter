@@ -56,15 +56,17 @@ public class EmailAccountVerifier implements AccountVerifier {
             result.put("message", "缺少邮箱地址（登录名），无法登录收信服务");
             return result;
         }
-        String host = EmailInboxProvider.imapHost(account);
+        boolean pop3 = "pop3".equals(EmailInboxProvider.configString(account, "inboxMode"));
+        String host = pop3 ? EmailPop3InboxProvider.pop3Host(account) : EmailInboxProvider.imapHost(account);
         if (StringUtils.isBlank(host)) {
             result.put("valid", false);
-            result.put("message", "缺少服务地址（SMTP / IMAP 主机），无法定位收信服务");
+            result.put("message", "缺少服务地址（SMTP / POP3 / IMAP 主机），无法定位收信服务");
             return result;
         }
         Store store = null;
         try {
-            store = EmailInboxProvider.openStore(account, plainSecret);
+            store = pop3 ? EmailPop3InboxProvider.openStore(account, plainSecret)
+                    : EmailInboxProvider.openStore(account, plainSecret);
             int folders = 0;
             try {
                 var root = store.getDefaultFolder();
@@ -73,9 +75,12 @@ public class EmailAccountVerifier implements AccountVerifier {
                 // 登录已成功，列文件夹失败不影响「凭据有效」这个结论
                 folders = 1;
             }
+            int port = pop3 ? EmailPop3InboxProvider.pop3Port(account) : EmailInboxProvider.imapPort(account);
+            String protoLabel = pop3
+                    ? (EmailInboxProvider.ssl(account) ? "POP3S" : "POP3")
+                    : (EmailInboxProvider.ssl(account) ? "IMAPS" : "IMAP");
             result.put("valid", true);
-            result.put("message", "登录成功：" + host + ":" + EmailInboxProvider.imapPort(account)
-                    + "（" + (EmailInboxProvider.ssl(account) ? "IMAPS" : "IMAP") + "，"
+            result.put("message", "登录成功：" + host + ":" + port + "（" + protoLabel + "，"
                     + Math.max(folders, 1) + " 个文件夹）");
             return result;
         } catch (Exception e) {

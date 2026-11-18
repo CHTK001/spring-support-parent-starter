@@ -1,2 +1,3 @@
 com.chua.starter.account.mail.impl.EmailInboxProvider
+com.chua.starter.account.mail.impl.EmailPop3InboxProvider
 com.chua.starter.account.mail.impl.TempMailInboxProvider

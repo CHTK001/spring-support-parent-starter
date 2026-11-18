@@ -147,6 +147,52 @@
               收信（IMAP）与发信（SMTP）不同主机时才需填；留空按服务地址推导，端口留空按 SSL 开 993、关 143。
             </div>
           </el-col>
+
+          <!-- 高级配置：接入方式 / 收取范围 / 新邮件通知 / POP3 主机端口 / 163 预置 -->
+          <el-col :span="24">
+            <div class="form-section" data-section="advanced">高级配置</div>
+          </el-col>
+          <el-row :gutter="16">
+            <el-col :span="8">
+              <el-form-item label="接入方式">
+                <el-segmented v-model="form.inboxMode" :options="INBOX_MODE_OPTIONS" size="small" />
+                <div class="field-hint">IMAP：可看文件夹、标已读、删除邮件；POP3：仅收取，不回写标记。</div>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="收取范围">
+                <el-select v-model="form.receiveRange" style="width: 100%">
+                  <el-option label="最近 30 天" value="30d" />
+                  <el-option label="全部邮件" value="ALL" />
+                </el-select>
+                <div class="field-hint">POP3 不分页，全部收取可能较慢。</div>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="新邮件通知">
+                <el-switch v-model="form.notifyNew" active-text="开" inactive-text="关" />
+                <div class="field-hint">轮询收信服务，有新邮件时弹出浏览器通知。</div>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row v-if="form.inboxMode === 'pop3'" :gutter="16">
+            <el-col :span="8">
+              <el-form-item label="POP3 主机">
+                <el-input v-model="form.pop3Host" placeholder="如 pop.163.com" maxlength="255" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="POP3 端口">
+                <el-input-number v-model="form.pop3Port" :min="1" :max="65535" controls-position="right" class="w-full" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="预置配置">
+                <ReButton type="primary" size="small" @click="apply163Preset">应用 163 预置</ReButton>
+                <div class="field-hint">POP3 pop.163.com:995 · SMTP smtp.163.com:465 · IMAP imap.163.com:993</div>
+              </el-form-item>
+            </el-col>
+          </el-row>
         </template>
         <el-col v-else :span="24">
           <el-form-item label="临时邮箱">
@@ -325,6 +371,12 @@ const SOURCE_OPTIONS = [
   { label: '临时', value: 'temp' },
 ];
 
+/** 收信接入方式：IMAP / POP3，二者互斥，由 config.inboxMode 决策 */
+const INBOX_MODE_OPTIONS = [
+  { label: 'IMAP/SMTP 服务', value: 'imap' },
+  { label: 'POP3/SMTP 服务', value: 'pop3' },
+];
+
 /** 厂商字段标签 */
 const VENDOR_LABELS: Record<AccountKind, string> = {
   API_KEY: '厂商 / 平台',
@@ -396,6 +448,16 @@ interface AccountForm {
   sourceMode: 'custom' | 'temp';
   /** 用途能力标记（{@code config.capabilities}，空数组表示按种类兜底） */
   capabilities: string[];
+  /** 收信接入方式：imap / pop3，二者互斥，对应 config.inboxMode */
+  inboxMode: 'imap' | 'pop3';
+  /** 收取范围：30d 最近 30 天 / ALL 全部邮件，对应 config.receiveRange */
+  receiveRange: '30d' | 'ALL';
+  /** 新邮件实时通知，对应 config.notifyNew */
+  notifyNew: boolean;
+  /** POP3 主机（仅 inboxMode=pop3 时使用），对应 config.pop3Host */
+  pop3Host: string;
+  /** POP3 端口（仅 inboxMode=pop3 时使用），对应 config.pop3Port */
+  pop3Port: number | undefined;
 }
 
 /** 空表单 */
@@ -424,6 +486,11 @@ function emptyForm(): AccountForm {
     secretId: '',
     sourceMode: 'custom',
     capabilities: [],
+    inboxMode: 'imap',
+    receiveRange: '30d',
+    notifyNew: false,
+    pop3Host: '',
+    pop3Port: undefined,
   };
 }
 
@@ -538,6 +605,18 @@ function readString(config: Record<string, unknown> | null | undefined, key: str
   return value == null ? '' : String(value);
 }
 
+/** 读取接入方式：缺失或非 pop3 时统一视为 imap */
+function readInboxMode(config: Record<string, unknown> | null | undefined): 'imap' | 'pop3' {
+  const value = config?.inboxMode;
+  return value == null || String(value) !== 'pop3' ? 'imap' : 'pop3';
+}
+
+/** 读取收取范围：缺失或非 ALL 时统一视为 30d */
+function readReceiveRange(config: Record<string, unknown> | null | undefined): '30d' | 'ALL' {
+  const value = config?.receiveRange;
+  return value != null && String(value) === 'ALL' ? 'ALL' : '30d';
+}
+
 /** 用账号数据回填表单（新增时重置为空表单；有复制来源时按来源预填） */
 function fillForm(): void {
   const source = props.account ?? props.draft ?? null;
@@ -573,6 +652,12 @@ function fillForm(): void {
   form.imapHost = readString(config, 'imapHost');
   const imapPort = Number(config.imapPort);
   form.imapPort = Number.isFinite(imapPort) && imapPort > 0 ? imapPort : undefined;
+  form.inboxMode = readInboxMode(config);
+  form.receiveRange = readReceiveRange(config);
+  form.notifyNew = config.notifyNew == null ? false : Boolean(config.notifyNew);
+  form.pop3Host = readString(config, 'pop3Host');
+  const pop3Port = Number(config.pop3Port);
+  form.pop3Port = Number.isFinite(pop3Port) && pop3Port > 0 ? pop3Port : undefined;
 }
 
 /**
@@ -611,6 +696,33 @@ function onKindChange(): void {
   if (form.kind !== 'API_KEY') {
     form.region = '';
   }
+  if (form.kind !== 'EMAIL') {
+    form.inboxMode = 'imap';
+    form.receiveRange = '30d';
+    form.notifyNew = false;
+    form.pop3Host = '';
+    form.pop3Port = undefined;
+  }
+}
+
+/**
+ * 应用 163 邮箱预置配置：POP3 pop.163.com:995、SMTP smtp.163.com:465、IMAP imap.163.com:993。
+ *
+ * <p>按当前接入方式只写对应的收信主机端口；发信主机/端口/SSL 始终统一写入，
+ * 避免用户还要再手填一次 SMTP。</p>
+ */
+function apply163Preset(): void {
+  if (form.inboxMode === 'pop3') {
+    form.pop3Host = 'pop.163.com';
+    form.pop3Port = 995;
+  } else {
+    form.imapHost = 'imap.163.com';
+    form.imapPort = 993;
+  }
+  form.endpoint = 'smtp.163.com';
+  form.port = 465;
+  form.ssl = true;
+  message.success('已应用 163 预置：POP3 pop.163.com:995 / SMTP smtp.163.com:465（IMAP imap.163.com:993）');
 }
 
 /**
@@ -644,10 +756,36 @@ function buildPayload(): SysAccount {
     } else {
       delete config.imapPort;
     }
+    // 接入方式 / 收取范围 / 通知：对全部 EMAIL 账号写入 config
+    config.inboxMode = form.inboxMode;
+    config.receiveRange = form.receiveRange;
+    config.notifyNew = form.notifyNew;
+    // POP3 主机端口：仅 POP3 模式下保留，IMAP 模式下清理
+    if (form.inboxMode === 'pop3') {
+      const pop3Host = form.pop3Host.trim();
+      if (pop3Host) {
+        config.pop3Host = pop3Host;
+      } else {
+        delete config.pop3Host;
+      }
+      if (form.pop3Port) {
+        config.pop3Port = form.pop3Port;
+      } else {
+        delete config.pop3Port;
+      }
+    } else {
+      delete config.pop3Host;
+      delete config.pop3Port;
+    }
   } else {
     delete config.ssl;
     delete config.imapHost;
     delete config.imapPort;
+    delete config.inboxMode;
+    delete config.receiveRange;
+    delete config.notifyNew;
+    delete config.pop3Host;
+    delete config.pop3Port;
   }
   setOrDelete('region', form.kind === 'API_KEY' ? form.region.trim() : '');
   setOrDelete('signName', form.kind === 'SMS' ? form.signName.trim() : '');

@@ -70,4 +70,14 @@ public class MailProbeTarget implements Serializable {
      * IMAP 端口
      */
     private int imapPort;
+
+    /**
+     * POP3 主机
+     */
+    private String pop3Host;
+
+    /**
+     * POP3 端口
+     */
+    private int pop3Port;
 }

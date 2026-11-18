@@ -98,6 +98,11 @@ public class EmailInboxProvider implements AccountInboxProvider {
     private static final int DEFAULT_LIMIT = 20;
 
     /**
+     * 按时间过滤时单次回扫的邮件数（分块避免一次拉全量信封）
+     */
+    private static final int SINCE_SCAN_CHUNK = 100;
+
+    /**
      * 端口取值下界（不含，即最小合法端口）
      */
     private static final int PORT_MIN = 1;
@@ -156,6 +161,7 @@ public class EmailInboxProvider implements AccountInboxProvider {
         return account != null
                 && !TempMailService.isTempMail(account)
                 && KIND_EMAIL.equalsIgnoreCase(account.getKind())
+                && !"pop3".equals(configString(account, "inboxMode"))
                 && StringUtils.isNotBlank(account.getUsername())
                 && StringUtils.isNotBlank(imapHost(account));
     }
@@ -213,6 +219,7 @@ public class EmailInboxProvider implements AccountInboxProvider {
         String keyword = StringUtils.trimToNull(effective.getKeyword());
         boolean unreadOnly = Boolean.TRUE.equals(effective.getUnreadOnly());
         boolean preferUnread = Boolean.TRUE.equals(effective.getPreferUnread());
+        Long since = effective.getSince();
 
         Store store = open(account, secret);
         Folder folder = null;
@@ -224,7 +231,10 @@ public class EmailInboxProvider implements AccountInboxProvider {
             folder.open(Folder.READ_ONLY);
             // 未读优先只在首屏启用：翻页必须保持稳定顺序，否则「加载更多」会重复或漏信
             List<Message> picked;
-            if (unreadOnly) {
+            if (since != null) {
+                // 轮询新邮件 / 收取范围：必须先按时间过滤再分页，否则最新一页全是旧邮件时会漏信
+                picked = sincePage(folder, since, offset, limit, unreadOnly);
+            } else if (unreadOnly) {
                 picked = unreadPage(folder, offset, limit);
             } else if (preferUnread && offset == 0) {
                 picked = unreadFirstPage(folder, limit);
@@ -263,6 +273,51 @@ public class EmailInboxProvider implements AccountInboxProvider {
         }
         int start = Math.max(1, end - limit + 1);
         return descending(Arrays.asList(folder.getMessages(start, end)));
+    }
+
+    /**
+     * 按发送时间取信：从最新一封往前扫，只保留 {@code sentAt >= since} 的邮件。
+     *
+     * <p>不能「先取最新一页再过滤」：若最新一页全是旧邮件，过滤后会是空列表，
+     * 轮询会不断把空结果当正常；分页后再过滤还会让「加载更多」漏信。因此先按时间
+     * 过滤、再套用 offset / limit，并按块回扫，避免一次拉取整个信箱。</p>
+     *
+     * @param folder     已打开的文件夹
+     * @param since      起始时间（毫秒，含；发送时间为空的邮件视为不匹配）
+     * @param offset     跳过多少封匹配邮件
+     * @param limit      取多少封匹配邮件
+     * @param unreadOnly 只看未读
+     * @return 匹配邮件（最新在前）
+     * @throws MessagingException 协议异常
+     */
+    private List<Message> sincePage(Folder folder, long since, int offset, int limit,
+                                    boolean unreadOnly) throws MessagingException {
+        int total = folder.getMessageCount();
+        int need = offset + limit;
+        List<Message> matched = new ArrayList<>(Math.min(need, 64));
+        int end = total;
+        while (end >= 1 && matched.size() < need) {
+            int start = Math.max(1, end - SINCE_SCAN_CHUNK + 1);
+            Message[] chunk = folder.getMessages(start, end);
+            for (int i = chunk.length - 1; i >= 0; i--) {
+                Message message = chunk[i];
+                Date sent = message.getSentDate();
+                if (sent == null || sent.getTime() < since) {
+                    continue;
+                }
+                if (unreadOnly && message.isSet(Flags.Flag.SEEN)) {
+                    continue;
+                }
+                matched.add(message);
+                if (matched.size() >= need) {
+                    break;
+                }
+            }
+            end = start - 1;
+        }
+        int from = Math.min(offset, matched.size());
+        int to = Math.min(from + limit, matched.size());
+        return matched.subList(from, to);
     }
 
     /**
