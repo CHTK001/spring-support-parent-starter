@@ -2705,7 +2705,7 @@ public class ApiProviderController {
                 + ") 当前余额 " + remain.toPlainString() + "，已达到" + label + "档告警阈值 "
                 + level.threshold().toPlainString() + "，请及时充值或调整阈值。";
         return dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_WARN,
-                remain, level.threshold(), receivers, creditDispatchChannels(extra, level), title, content);
+                remain, level.threshold(), receivers, creditDispatchChannels(extra, level), extra, title, content);
     }
 
     /**
@@ -2721,7 +2721,7 @@ public class ApiProviderController {
                 + ") 当前余额 " + remain.toPlainString() + "，已回升至告警阈值 " + threshold.toPlainString()
                 + " 之上。";
         return dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_RECOVERY,
-                remain, threshold, receivers, creditDispatchChannels(extra, lastLevel), title, content);
+                remain, threshold, receivers, creditDispatchChannels(extra, lastLevel), extra, title, content);
     }
 
     /**
@@ -2763,7 +2763,7 @@ public class ApiProviderController {
      * @return 是否至少一个渠道投递成功
      */
     private boolean dispatchCreditAlert(SysAccountChannel entity, String type, BigDecimal remain, BigDecimal threshold,
-                                        List<Integer> receivers, List<String> channels,
+                                        List<Integer> receivers, List<String> channels, Map<String, Object> extra,
                                         String title, String content) {
         List<String> emails = creditWarnEmails(extra.get("credit_warn_emails"));
         String webhook = creditWarnWebhook(extra.get("credit_warn_webhook"));
@@ -2937,11 +2937,12 @@ public class ApiProviderController {
     }
 
     /**
-     * 是否配置了至少一个可投递的告警目标：未显式配渠道时维持旧口径（只看站内信接收人）；
+     * 是否配置了至少一个可投递的告警目标：档位未显式配渠道时维持旧口径
+     * （回落全局 credit_warn_channels；连全局也未配则只看站内信接收人）；
      * 配了渠道则按渠道检查各自的收件配置（接收人 / 邮箱 / Webhook 地址）。
      */
-    private boolean creditWarnHasTarget(Map<String, Object> extra, List<Integer> receivers) {
-        List<String> channels = creditWarnChannels(extra.get("credit_warn_channels"));
+    private boolean creditWarnHasTarget(Map<String, Object> extra, CreditWarnLevel level, List<Integer> receivers) {
+        List<String> channels = creditDispatchChannels(extra, level);
         if (channels.isEmpty()) {
             return !receivers.isEmpty();
         }
@@ -2952,6 +2953,91 @@ public class ApiProviderController {
             return true;
         }
         return channels.contains("webhook") && creditWarnWebhook(extra.get("credit_warn_webhook")) != null;
+    }
+
+    /**
+     * 解析分级告警档位：extra.credit_warn_levels 为 JSON 数组，元素
+     * {@code {level, threshold, channels, cooldown_hours}}；level 只认
+     * warn / critical / urgent，threshold 非负数字，channels 复用全局渠道解析，
+     * cooldown_hours 为正整数小时。不合法项跳过并记日志。
+     *
+     * <p>返回按阈值降序（最轻档在前）的清单；原样为空 / 解析全失败时返回空清单，
+     * 调用方据此回落旧的单阈值口径。</p>
+     */
+    private List<CreditWarnLevel> creditWarnLevels(Object raw) {
+        if (!(raw instanceof List<?> list) || list.isEmpty()) {
+            return List.of();
+        }
+        List<CreditWarnLevel> levels = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)) {
+                continue;
+            }
+            Object levelRaw = map.get("level");
+            String level = levelRaw == null ? "" : String.valueOf(levelRaw).trim().toLowerCase();
+            if (!CREDIT_LEVEL_WARN.equals(level) && !CREDIT_LEVEL_CRITICAL.equals(level)
+                    && !CREDIT_LEVEL_URGENT.equals(level)) {
+                log.debug("[credit] 分级告警档位不识别，跳过：{}", levelRaw);
+                continue;
+            }
+            BigDecimal threshold = decimalOf(map.get("threshold"));
+            if (threshold == null || threshold.signum() < 0) {
+                log.debug("[credit] 分级告警档位 {} 阈值无效，跳过", level);
+                continue;
+            }
+            List<String> channels = creditWarnChannels(map.get("channels"));
+            Long cooldownHours = creditCooldownHours(map.get("cooldown_hours"));
+            levels.add(new CreditWarnLevel(level, threshold, channels, cooldownHours));
+        }
+        levels.sort(Comparator.comparing(CreditWarnLevel::threshold).reversed());
+        return levels;
+    }
+
+    /**
+     * 档位冷却时长（小时）：正数字 / 数字字符串均可，非法或缺省返回 null（用默认冷却）。
+     */
+    private static Long creditCooldownHours(Object raw) {
+        if (raw instanceof Number number) {
+            return number.doubleValue() > 0 ? number.longValue() : null;
+        }
+        String text = raw == null ? "" : String.valueOf(raw).trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        try {
+            long value = Long.parseLong(text);
+            return value > 0 ? value : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 档位实际投递渠道：档位配了渠道用档位的；未配回落全局 credit_warn_channels；
+     * 连全局也没有时默认站内信（兼容既有行为）。
+     */
+    private List<String> creditDispatchChannels(Map<String, Object> extra, CreditWarnLevel level) {
+        if (level != null && level.channels() != null && !level.channels().isEmpty()) {
+            return level.channels();
+        }
+        List<String> channels = creditWarnChannels(extra.get("credit_warn_channels"));
+        return channels.isEmpty() ? List.of("inbox") : channels;
+    }
+
+    /** 档位严重度排序：warn=0 < critical=1 < urgent=2（升级判定用） */
+    private static int creditLevelRank(String level) {
+        if (CREDIT_LEVEL_URGENT.equals(level)) {
+            return 2;
+        }
+        return CREDIT_LEVEL_CRITICAL.equals(level) ? 1 : 0;
+    }
+
+    /** 档位中文名（标题 / 文案 / 日志用） */
+    private static String creditLevelLabel(String level) {
+        if (CREDIT_LEVEL_URGENT.equals(level)) {
+            return "危急";
+        }
+        return CREDIT_LEVEL_CRITICAL.equals(level) ? "严重" : "警告";
     }
 
     /**
