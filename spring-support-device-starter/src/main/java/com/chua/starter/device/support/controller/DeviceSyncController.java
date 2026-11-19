@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -95,5 +96,22 @@ public class DeviceSyncController {
             throw new IllegalArgumentException("设备信息不能为空");
         }
         return ReturnResult.ok(syncService.pushDevice(device));
+    }
+
+    /**
+     * 批量把本地设备写回厂商侧（推送方向）。
+     *
+     * <p>按 ID 逐台推送，单台失败不中断其余设备；失败设备进入推送队列（outbox），
+     * 可在「同步记录」视图重试。</p>
+     *
+     * @param ids 设备 ID 列表
+     * @return total / success / failed 汇总与逐台结果 items
+     */
+    @PostMapping("/push/batch")
+    public ReturnResult<Map<String, Object>> pushDevices(@RequestBody List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("未选择要写回的设备");
+        }
+        return ReturnResult.ok(syncService.pushDevices(ids));
     }
 }

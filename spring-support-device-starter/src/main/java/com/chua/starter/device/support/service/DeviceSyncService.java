@@ -2,6 +2,7 @@ package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,6 +73,17 @@ public interface DeviceSyncService {
      * @return 是否写回成功；厂商不支持或凭据不可用时为 {@code false}
      */
     boolean pushDevice(DeviceInfo device);
+
+    /**
+     * 批量把本地设备写回到厂商侧（推送方向）。
+     *
+     * <p>按 ID 逐台调用 {@link #pushDevice(DeviceInfo)}，单台失败不中断其余设备；
+     * 失败设备进入推送队列（outbox），可在「同步记录」视图重试。</p>
+     *
+     * @param ids 设备 ID 列表
+     * @return total / success / failed 汇总与逐台结果 items
+     */
+    Map<String, Object> pushDevices(List<String> ids);
 
     /**
      * 从厂商侧删除设备（推送方向）。
