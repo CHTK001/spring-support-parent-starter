@@ -591,11 +591,12 @@ public class ApiProviderController {
     private static final long TRUSTED_FIRST_TOKEN_MAX_SECONDS = 30L;
 
     /**
-     * 余额自动回落时依次尝试的中转站实现（厂商官方与 OpenAI 官方由品牌/地址单独前置）。
+     * 余额自动回落时依次尝试的通用中转站实现（厂商官方与 OpenAI 官方由品牌/地址单独前置）。
      *
-     * <p>只保留各站点普遍沿用的 OpenAI dashboard 计费接口（one-api / new-api / voapi 系通用）；
-     * new-api 的 {@code /api/usage/token} 与 sub2api 的 {@code /v1/usage} 两个中转专用协议
-     * 已按产品决定移除，不再自动探测。</p>
+     * <p>只保留各站点普遍沿用的 OpenAI dashboard 计费接口（one-api / new-api / voapi 系通用）。
+     * new-api 的 {@code /api/usage/token} 与 sub2api 的订阅接口不再无差别自动探测：
+     * 自定义供应商先按站点指纹自动适配网关（见 {@link #relayCreditKinds}），认出后才把
+     * 专属实现排到它前面；登记了平台名（platform=sub2api）或显式配置 credit_kind 的行不受此限。</p>
      *
      * <p>只在「上游不是厂商官方站点」时才进候选：官方站点上没有这个接口，
      * 拿官方 Key 去打只会 404。判定见 {@link #isOfficialSite(SysAccountChannel)}。</p>
@@ -612,6 +613,29 @@ public class ApiProviderController {
      * 余额查询失败原因的回传长度上限（字符），避免多家错误拼成一大段。
      */
     private static final int CREDIT_ERROR_LIMIT = 400;
+
+    /**
+     * 自定义供应商的网关指纹缓存：站点根地址 → 认出的中转网关（空列表 = 未认出）。
+     *
+     * <p>指纹探测要发真实请求，结论按站点缓存一段时间，避免每次查余额都白探一轮；
+     * 站点换软件（罕见）最迟一个有效期后自动纠正。</p>
+     */
+    private final ConcurrentHashMap<String, RelayFingerprint> relayFingerprints = new ConcurrentHashMap<>();
+
+    /**
+     * 网关指纹缓存有效期（毫秒）：认出与未认出都缓存，到期重探
+     */
+    private static final long RELAY_FINGERPRINT_TTL_MILLIS = 10L * 60 * 1000;
+
+    /**
+     * 网关指纹探测超时：比余额查询短，站点无响应时尽快放弃、回落通用探测
+     */
+    private static final Duration RELAY_PROBE_TIMEOUT = Duration.ofSeconds(6);
+
+    /**
+     * 站点根地址可能带的接口前缀（长前缀优先）
+     */
+    private static final String[] RELAY_API_PREFIXES = {"/api/usage", "/api/v1", "/v1", "/api"};
 
     // ==================== 提供者 ====================
 
@@ -3214,6 +3238,189 @@ public class ApiProviderController {
     }
 
     /**
+     * 自定义供应商的「自动适配」：按站点指纹认出中转网关软件，返回它的专属余额实现。
+     *
+     * <p>自定义供应商不登记平台名，余额口径原本只能靠通用探测（OpenAI dashboard 计费
+     * 接口）碰运气。这里先认网关：sub2api 站点的公开模型广场（{@code /api/v1/model-plaza}）
+     * 与 new-api / one-api 系站点的 {@code /api/status} 都是各自软件的标志性端点。认出后把
+     * 专属实现排到通用探测之前——new-api 按 {@code /api/usage/token} 的站点额度口径读数
+     * （500000 额度 = 1 美元）；sub2api 按订阅口径读数（要「账号登录」截获的会话 JWT，
+     * API Key 查不了，面板会给出登录入口，见 {@code Sub2ApiCreditQueryProvider}）。</p>
+     *
+     * <p>指纹按站点缓存（{@link #relayFingerprints}），不逐请求探测。认不出（或站点无
+     * 响应）返回空列表，候选链保持原有通用探测；认错了也无害——专属实现对不上的站点
+     * 会自然失败，链路继续落回通用探测，不会产出错误读数。</p>
+     *
+     * @param entity 供应商
+     * @return 认出的余额实现标识（按尝试顺序）；未认出为空列表
+     */
+    private List<String> relayCreditKinds(SysAccountChannel entity) {
+        String base = relayProbeBase(entity.getBaseUrl());
+        if (base == null) {
+            return List.of();
+        }
+        long now = System.currentTimeMillis();
+        RelayFingerprint cached = relayFingerprints.get(base);
+        if (cached != null && now - cached.at() < RELAY_FINGERPRINT_TTL_MILLIS) {
+            return cached.kinds();
+        }
+        List<String> kinds = probeRelayKinds(entity.getProxy(), base);
+        relayFingerprints.put(base, new RelayFingerprint(List.copyOf(kinds), now));
+        return kinds;
+    }
+
+    /**
+     * 逐个探测站点指纹，认出中转网关软件。
+     *
+     * @param proxy 代理地址（可为空）
+     * @param base  站点根地址
+     * @return 认出的余额实现标识（按尝试顺序）；未认出为空列表
+     */
+    private List<String> probeRelayKinds(String proxy, String base) {
+        List<String> kinds = new ArrayList<>(2);
+        // sub2api：模型广场是它的公开标志性端点（code/data.groups 信封），无需密钥。
+        // 排在 new-api 之前：sub2api 的订阅接口认「账号登录」的会话 JWT，命中后即使
+        // 还没绑定账号，失败原因也会明确出现在「已尝试」链路里提示用户去绑定
+        if (isSub2ApiGateway(proxy, base)) {
+            kinds.add("sub2api");
+        }
+        // new-api / one-api 系：/api/status 是这一族网关共同的标志性端点
+        // （success=true + data.version）。纯 one-api 没有 /api/usage/token，
+        // 误认成 new-api 时该候选自然失败，链路落回通用探测，不会出错数
+        if (isNewApiGateway(proxy, base)) {
+            kinds.add("new-api");
+        }
+        return kinds;
+    }
+
+    /**
+     * 是否是 sub2api 站点：公开的模型广场端点返回它的 {@code code} / {@code data.groups} 信封。
+     *
+     * @param proxy 代理地址（可为空）
+     * @param base  站点根地址
+     * @return 命中 sub2api 指纹为 true
+     */
+    private boolean isSub2ApiGateway(String proxy, String base) {
+        String raw = relayProbeGet(proxy, CreditHttp.join(base, "/api/v1/model-plaza"));
+        if (raw == null) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(raw);
+            return root.path("code").isNumber() && root.path("data").has("groups");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 是否是 new-api / one-api 系站点：{@code /api/status} 返回成功信封与版本号。
+     *
+     * @param proxy 代理地址（可为空）
+     * @param base  站点根地址
+     * @return 命中 new-api / one-api 系指纹为 true
+     */
+    private boolean isNewApiGateway(String proxy, String base) {
+        String raw = relayProbeGet(proxy, CreditHttp.join(base, "/api/status"));
+        if (raw == null) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(raw);
+            return root.path("success").asBoolean(false) && root.path("data").has("version");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 发一次只读 GET 指纹探测。
+     *
+     * @param proxy 代理地址（可为空）
+     * @param url   探测地址
+     * @return 2xx 响应体；非 2xx 或网络异常为 null
+     */
+    private String relayProbeGet(String proxy, String url) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+                    .timeout(RELAY_PROBE_TIMEOUT)
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "spring-support-ai/1.0")
+                    .GET()
+                    .build();
+            HttpResponse<String> resp = httpClient(proxy).send(request, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() / 100 != 2) {
+                return null;
+            }
+            return resp.body();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 站点根地址：剥掉尾部接口前缀（长前缀优先），得到协议 + 主机 + 部署子路径。
+     *
+     * @param url 供应商上游地址
+     * @return 站点根地址；缺失、非 http(s) 时为 null
+     */
+    private static String relayProbeBase(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        String text = url.trim();
+        while (text.endsWith("/")) {
+            text = text.substring(0, text.length() - 1);
+        }
+        for (String suffix : RELAY_API_PREFIXES) {
+            if (text.endsWith(suffix)) {
+                text = text.substring(0, text.length() - suffix.length());
+                break;
+            }
+        }
+        while (text.endsWith("/")) {
+            text = text.substring(0, text.length() - 1);
+        }
+        return text.startsWith("http://") || text.startsWith("https://") ? text : null;
+    }
+
+    /**
+     * 「检测协议」时顺带识别地址背后的中转网关软件，创建自定义供应商当场告知
+     * 余额会按哪套口径自动查询。
+     *
+     * @param apiUrl 上游地址
+     * @param proxy  代理地址（可为空）
+     * @return 网关名称与说明；未认出为 null
+     */
+    private Map<String, Object> detectRelayGateway(String apiUrl, String proxy) {
+        String base = relayProbeBase(apiUrl);
+        if (base == null) {
+            return null;
+        }
+        if (isSub2ApiGateway(proxy, base)) {
+            return Map.of("name", "sub2api", "label", "sub2api 网关",
+                    "detail", "余额将按订阅口径自动查询；请在该供应商的余额面板绑定「账号登录」获取会话令牌");
+        }
+        if (isNewApiGateway(proxy, base)) {
+            return Map.of("name", "new-api", "label", "new-api 网关",
+                    "detail", "余额将按站点额度口径自动查询（500000 额度 = 1 美元）");
+        }
+        return null;
+    }
+
+    /**
+     * 一次网关指纹识别的结论：认出的余额实现（按尝试顺序）与识别时间。
+     *
+     * @param kinds 余额实现标识
+     * @param at    识别时间（epoch 毫秒）
+     */
+    private record RelayFingerprint(List<String> kinds, long at) {
+    }
+
+    /**
      * 余额口径分级（只读判定，不出网）。
      *
      * <p>200+ 家供应商不可能逐家写死余额实现，页面按这几级告诉用户「这家凭什么能查 /
@@ -4087,9 +4294,15 @@ public class ApiProviderController {
         } else {
             foot = "已标「可用」的协议行即为该地址支持的协议。";
         }
-        Map<String, Object> out = new LinkedHashMap<>(2);
+        Map<String, Object> out = new LinkedHashMap<>(4);
         out.put("results", results);
         out.put("foot", foot);
+        // 自动适配：顺带识别地址背后的中转网关软件（new-api / sub2api），
+        // 创建自定义供应商时当场告知余额将按哪套口径自动查询
+        Map<String, Object> gateway = detectRelayGateway(apiUrl, proxy);
+        if (gateway != null) {
+            out.put("gateway", gateway);
+        }
         return ApiResult.ok(out);
     }
 
