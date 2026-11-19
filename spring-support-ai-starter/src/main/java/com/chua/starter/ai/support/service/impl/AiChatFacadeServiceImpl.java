@@ -20,6 +20,7 @@ import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
+import com.chua.starter.ai.support.entity.SysAiRole;
 import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
 import com.chua.starter.account.channel.service.AccountChannelModelService;
@@ -33,6 +34,7 @@ import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
+import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
@@ -115,6 +117,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiAppKeyService sysAiAppKeyService; // appKey 台账：Token 总量配额的唯一累计写入口
     private final SysAiServiceAccessLogMapper accessLogMapper; // 访问日志：路由拓扑页「入站流量」的唯一写入口
     private final SysAiGroupRoleResolver sysAiGroupRoleResolver; // 分组默认角色（分组 → 角色 → 分形态提示词）
+    private final SysAiRoleMapper sysAiRoleMapper; // 角色表：把子代理白名单（settings.agents）解析成可路由子 Agent
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -1426,12 +1429,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         String instruction = request.getSystemPrompt() != null && !request.getSystemPrompt().isBlank()
                 ? request.getSystemPrompt()
                 : "You are a helpful assistant.";
-        AgentDefinition definition = AgentDefinition.builder()
+        AgentDefinition.Builder definitionBuilder = AgentDefinition.builder()
                 .id(agentId)
                 .name("Assistant")
                 .instruction(instruction)
-                .leader(subAgentOn)
-                .build();
+                .leader(subAgentOn);
+        // 子代理白名单（settings.agents）：仅总开关开启时消费，选中的角色解析为可路由的子 Agent；
+        // 开关关闭时不消费残留白名单（与前端「总开关关闭不写残留」口径对齐）。
+        int routedSubAgents = subAgentOn ? attachRoleSubAgents(definitionBuilder, roleSettings) : 0;
+        AgentDefinition definition = definitionBuilder.build();
         Agent agent = agentProviderFactory.createAgent()
                 .chatClient(configured)
                 .definition(definition)
@@ -1479,10 +1485,81 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         // 日志文案不能写死「管理员会话」：统一之后普通账号也走这条路径，
         // 写死会在排查时把人引到「这一定是管理员在操作」的错误结论上。
-        log.info("[AiChat] 会话切换到 Agent 运行时 userId={}, admin={}, agentId={}, mode={}, mcp={}, subAgent={}, plan={}",
+        log.info("[AiChat] 会话切换到 Agent 运行时 userId={}, admin={}, agentId={}, mode={}, mcp={}, subAgent={}, subAgents={}, plan={}",
                 AiUserContext.currentUserId(), admin, agentId, subAgentOn ? "AUTO" : "SINGLE",
-                mcpOn, subAgentOn, planOn);
+                mcpOn, subAgentOn, routedSubAgents, planOn);
         return wrapper;
+    }
+
+    /**
+     * 将角色子代理白名单（settings.agents）解析为子 Agent 定义并挂载到主 Agent。
+     *
+     * <p>白名单形如 {@code {"<roleId>": true, ..., "__default": false}}，键为可被委派的
+     * 角色 id；{@code generic} 是前端虚拟的「通用子代理」。仅消费显式 {@code true} 的条目；
+     * 总开关（plugins.sub_agent.enabled）未开启时本方法不会被调用，残留白名单不生效。
+     * 子 Agent 未单独配置模型时，运行时回落到会话主模型；角色可见性以角色列表接口为准，
+     * 这里仅要求角色处于启用状态。</p>
+     *
+     * @param builder      主 Agent 定义构建器
+     * @param roleSettings 角色完整设置（角色 settings JSON 的解析结果）
+     * @return 实际挂载的子 Agent 数量
+     */
+    private int attachRoleSubAgents(AgentDefinition.Builder builder, Map<String, Object> roleSettings) {
+        Object agentsCfg = roleSettings == null ? null : roleSettings.get("agents");
+        if (!(agentsCfg instanceof Map<?, ?> agentsMap) || agentsMap.isEmpty()) {
+            return 0;
+        }
+        List<Integer> roleIds = new ArrayList<>();
+        boolean generic = false;
+        for (Map.Entry<?, ?> entry : agentsMap.entrySet()) {
+            if (!isEnabledNode(entry.getValue())) {
+                continue;
+            }
+            String key = String.valueOf(entry.getKey());
+            if (key.startsWith("__")) {
+                continue;
+            }
+            if ("generic".equalsIgnoreCase(key)) {
+                generic = true;
+                continue;
+            }
+            try {
+                roleIds.add(Integer.valueOf(key));
+            } catch (NumberFormatException ignore) {
+                log.debug("[AiChat] 子代理白名单含非角色 id，忽略 key={}", key);
+            }
+        }
+        int attached = 0;
+        if (!roleIds.isEmpty()) {
+            List<SysAiRole> roles = sysAiRoleMapper.selectList(
+                    new LambdaQueryWrapper<SysAiRole>().in(SysAiRole::getId, roleIds));
+            for (SysAiRole role : roles) {
+                if (role == null || !Integer.valueOf(1).equals(role.getStatus())) {
+                    continue;
+                }
+                builder.subAgent(AgentDefinition.builder()
+                        .id("role-sub-" + role.getId())
+                        .name(role.getName())
+                        .description(role.getDescription())
+                        .instruction(role.getSystemPrompt() != null && !role.getSystemPrompt().isBlank()
+                                ? role.getSystemPrompt() : "You are a helpful assistant.")
+                        .leader(false)
+                        .build());
+                attached++;
+            }
+        }
+        if (generic) {
+            builder.subAgent(AgentDefinition.builder()
+                    .id("generic")
+                    .name("通用子代理")
+                    .description("适用于通用任务的子代理，无需特定角色设定，权限继承父角色设置")
+                    .instruction("你是通用子代理，负责承接无需特定角色设定的通用任务；"
+                            + "严格遵循父角色的工作规范、语言与输出要求，完成后如实汇报结果。")
+                    .leader(false)
+                    .build());
+            attached++;
+        }
+        return attached;
     }
 
     /**
