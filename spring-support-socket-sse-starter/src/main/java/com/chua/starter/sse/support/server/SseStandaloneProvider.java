@@ -55,6 +55,13 @@ public class SseStandaloneProvider implements SocketProvider {
         setting.setPort(resolvePort(properties));
         // SSE 连接是长连接：并发名额必须放开，否则几条连接就把服务打成 503
         setting.setMaxConcurrency(0);
+        // 独立端口直连浏览器是跨源场景：POST + Authorization/x-oauth-token 自定义头
+        // 会先触发 OPTIONS 预检；默认 cors 关闭时预检拿不到 Allow-* 头，浏览器直接
+        // 拦截（与 socket.io 直连推送端口同样的坑）。显式开启并放行 token 头；
+        // allowedOrigins 默认 * 且 allowCredentials=false，回显 *，无需按源配置。
+        ServerSetting.CorsConfig cors = setting.getCors();
+        cors.setAllowOrigin(true);
+        cors.setAllowedHeaders("Content-Type,Authorization,x-oauth-token");
         // 停机不等待活跃请求：SSE 连接在 stop 前会统一 close，不值得再等 30s
         setting.setShutdownQuietPeriod(0);
         log.info("[SSE-Standalone] 创建独立 SSE 模板: {}:{}",
