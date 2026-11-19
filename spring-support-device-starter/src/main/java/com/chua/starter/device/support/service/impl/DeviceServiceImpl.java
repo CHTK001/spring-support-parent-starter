@@ -388,7 +388,7 @@ public class DeviceServiceImpl implements DeviceService {
         // 这两类设备不再参与后台采集，排在末尾可以避免它们夹在正常设备之间干扰巡检。
         String sortColumn = switch (q.getSortBy() == null ? "" : q.getSortBy()) {
             case "name" -> "device_info_name";
-            case "createdAt" -> "create_time";
+            case "createTime" -> "create_time";
             case "lastOnlineAt" -> "device_info_last_online_at";
             default -> "update_time";
         };

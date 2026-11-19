@@ -68,8 +68,8 @@ public class DevicePageQuery {
     /** 标签 */
     private String tag;
 
-    /** 排序字段：updatedAt/createdAt/lastOnlineAt/name */
-    private String sortBy = "updatedAt";
+    /** 排序字段：updateTime/createTime/lastOnlineAt/name */
+    private String sortBy = "updateTime";
 
     /** 排序方向：asc/desc */
     private String sortOrder = "desc";
