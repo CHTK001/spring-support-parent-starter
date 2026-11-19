@@ -28,11 +28,11 @@ import java.util.Map;
  * <p>三层数据的关联键刻意都不用自增 ID：</p>
  * <ul>
  *   <li>主机 → {@code address + port}（同一地址不同端口是两台主机，这是台账的既有语义）；</li>
- *   <li>身份 → {@code name}（{@code ms_server_identity_name} 是用户可读的唯一标识）；</li>
+ *   <li>身份 → {@code name}（{@code server_identity_name} 是用户可读的唯一标识）；</li>
  *   <li>绑定 → 上述两者组合。</li>
  * </ul>
  *
- * <p><b>口令只搬密文，不重新加密</b>：导出时 {@code ms_server_identity_password} 已经是
+ * <p><b>口令只搬密文，不重新加密</b>：导出时 {@code server_identity_password} 已经是
  * {@code CredentialCipher} 的 AES hex；导入端若再走一遍 {@code encrypt}，库里的值就变成
  * 「密文的密文」，连接时必然解密失败。所以这里 {@code identityMapper.insert} 直接写原值。</p>
  *
@@ -134,15 +134,15 @@ public class HostArchiveServiceImpl implements HostArchiveService {
 
         List<HostArchiveVO.BindingItem> bindings = new ArrayList<>(relations.size());
         for (MsServerHostIdentity rel : relations) {
-            MsServerHost host = hostById.get(rel.getMsServerHostIdentityHostId());
-            MsServerIdentity identity = identityById.get(rel.getMsServerHostIdentityIdentityId());
+            MsServerHost host = hostById.get(rel.getServerHostIdentityHostId());
+            MsServerIdentity identity = identityById.get(rel.getServerHostIdentityIdentityId());
             if (host == null || identity == null) {
                 // 台账里可能残留已删身份的关系行，导出时直接略过
                 continue;
             }
             bindings.add(new HostArchiveVO.BindingItem(
                     host.getServerHostAddress(), host.getServerHostPort(),
-                    identity.getMsServerIdentityName(), rel.getMsServerHostIdentitySort()));
+                    identity.getServerIdentityName(), rel.getServerHostIdentitySort()));
         }
 
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
@@ -239,7 +239,7 @@ public class HostArchiveServiceImpl implements HostArchiveService {
                 continue;
             }
             MsServerIdentity exists = identityMapper.selectOne(new LambdaQueryWrapper<MsServerIdentity>()
-                    .eq(MsServerIdentity::getMsServerIdentityName, name)
+                    .eq(MsServerIdentity::getServerIdentityName, name)
                     .last("LIMIT 1"));
             if (exists != null) {
                 identitiesMatched++;
@@ -247,17 +247,17 @@ public class HostArchiveServiceImpl implements HostArchiveService {
                 continue;
             }
             MsServerIdentity identity = new MsServerIdentity();
-            identity.setMsServerIdentityName(name);
-            identity.setMsServerIdentityUsername(item.username().trim());
-            identity.setMsServerIdentityAuthType(isBlank(item.authType()) ? DEFAULT_AUTH_TYPE : item.authType());
+            identity.setServerIdentityName(name);
+            identity.setServerIdentityUsername(item.username().trim());
+            identity.setServerIdentityAuthType(isBlank(item.authType()) ? DEFAULT_AUTH_TYPE : item.authType());
             // 关键：这里是密文，直接落库，不要再 encrypt 一次
-            identity.setMsServerIdentityPassword(item.password());
-            identity.setMsServerIdentityKeyId(item.keyId());
-            identity.setMsServerIdentityRemark(item.remark());
-            identity.setMsServerIdentityEmailSource(item.emailSource());
-            identity.setMsServerIdentityProvider(item.provider());
-            identity.setMsServerIdentityImapHost(item.imapHost());
-            identity.setMsServerIdentityImapPort(item.imapPort());
+            identity.setServerIdentityPassword(item.password());
+            identity.setServerIdentityKeyId(item.keyId());
+            identity.setServerIdentityRemark(item.remark());
+            identity.setServerIdentityEmailSource(item.emailSource());
+            identity.setServerIdentityProvider(item.provider());
+            identity.setServerIdentityImapHost(item.imapHost());
+            identity.setServerIdentityImapPort(item.imapPort());
             identityMapper.insert(identity);
             identitiesCreated++;
             identityIdByName.put(name, identity.getId());
@@ -286,16 +286,16 @@ public class HostArchiveServiceImpl implements HostArchiveService {
                 continue;
             }
             Long bound = hostIdentityMapper.selectCount(new LambdaQueryWrapper<MsServerHostIdentity>()
-                    .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
-                    .eq(MsServerHostIdentity::getMsServerHostIdentityIdentityId, identityId));
+                    .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId)
+                    .eq(MsServerHostIdentity::getServerHostIdentityIdentityId, identityId));
             if (bound != null && bound > 0) {
                 bindingsSkipped++;
                 continue;
             }
             MsServerHostIdentity relation = new MsServerHostIdentity();
-            relation.setMsServerHostIdentityHostId(hostId);
-            relation.setMsServerHostIdentityIdentityId(identityId);
-            relation.setMsServerHostIdentitySort(item.sort() == null ? 1 : item.sort());
+            relation.setServerHostIdentityHostId(hostId);
+            relation.setServerHostIdentityIdentityId(identityId);
+            relation.setServerHostIdentitySort(item.sort() == null ? 1 : item.sort());
             hostIdentityMapper.insert(relation);
             bindingsCreated++;
         }
@@ -333,11 +333,11 @@ public class HostArchiveServiceImpl implements HostArchiveService {
      */
     private HostArchiveVO.IdentityItem toIdentityItem(MsServerIdentity i) {
         return new HostArchiveVO.IdentityItem(
-                i.getMsServerIdentityName(), i.getMsServerIdentityAuthType(),
-                i.getMsServerIdentityUsername(), i.getMsServerIdentityPassword(),
-                i.getMsServerIdentityKeyId(), i.getMsServerIdentityRemark(),
-                i.getMsServerIdentityEmailSource(), i.getMsServerIdentityProvider(),
-                i.getMsServerIdentityImapHost(), i.getMsServerIdentityImapPort());
+                i.getServerIdentityName(), i.getServerIdentityAuthType(),
+                i.getServerIdentityUsername(), i.getServerIdentityPassword(),
+                i.getServerIdentityKeyId(), i.getServerIdentityRemark(),
+                i.getServerIdentityEmailSource(), i.getServerIdentityProvider(),
+                i.getServerIdentityImapHost(), i.getServerIdentityImapPort());
     }
 
     /**

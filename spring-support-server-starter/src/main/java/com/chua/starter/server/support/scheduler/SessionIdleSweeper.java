@@ -83,7 +83,7 @@ public class SessionIdleSweeper {
                 if (isOrphan(record, liveRecordIds, snapshotAt)) {
                     sessionService.closeRecord(record.getId(), "会话隧道已中断");
                     log.info("[terminal] 对账闭环孤儿会话记录 id={} protocol={} user={}",
-                            record.getId(), record.getMsTerminalSessionProtocol(), record.getMsTerminalSessionUser());
+                            record.getId(), record.getServerTerminalSessionProtocol(), record.getServerTerminalSessionUser());
                 }
             }
         } catch (Exception e) {
@@ -103,7 +103,7 @@ public class SessionIdleSweeper {
         if (record.getId() == null || liveRecordIds.contains(record.getId())) {
             return false;
         }
-        LocalDateTime connectTime = record.getMsTerminalSessionConnectTime();
+        LocalDateTime connectTime = record.getServerTerminalSessionConnectTime();
         if (connectTime == null) {
             return false;
         }

@@ -20,7 +20,7 @@ import java.util.Set;
  * 所以越界/不在枚举里的值一律回落到默认值，并打一条 warn 说明回落原因，
  * 否则用户会以为自己的配置生效了。</p>
  *
- * <p>配置来源是 {@code ms_server_config}（系统配置页可改），键全部以 {@code rdp.} 开头。</p>
+ * <p>配置来源是 {@code server_config}（系统配置页可改），键全部以 {@code rdp.} 开头。</p>
  *
  * @author CH
  * @since 4.0.0.57

@@ -4,28 +4,27 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.io.Serializable;
-
 /**
  * 终端路径书签实体
  * <p>
- * 对应表 {@code ms_terminal_bookmark}，为指定主机收藏常用 SFTP 路径。
+ * 对应表 {@code server_terminal_bookmark}，为指定主机收藏常用 SFTP 路径。
  * </p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Data
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "路径书签")
-@TableName("ms_terminal_bookmark")
+@TableName("server_terminal_bookmark")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class MsTerminalBookmark implements Serializable {
+public class MsTerminalBookmark extends SysBase {
 
     /**
      * 串行版本UID
@@ -42,28 +41,28 @@ public class MsTerminalBookmark implements Serializable {
     /**
      * 主机 标识
      */
-    @TableField("ms_terminal_bookmark_host_id")
+    @TableField("server_terminal_bookmark_host_id")
     @Schema(description = "主机ID", example = "1")
-    private Long msTerminalBookmarkHostId; // msterminalbookmark主机标识
+    private Long serverTerminalBookmarkHostId; // 终端书签主机标识
 
     /**
      * 书签名称
      */
-    @TableField("ms_terminal_bookmark_name")
+    @TableField("server_terminal_bookmark_name")
     @Schema(description = "书签名称", example = "应用日志目录")
-    private String msTerminalBookmarkName; // msterminalbookmark名称
+    private String serverTerminalBookmarkName; // 终端书签名称
 
     /**
      * 书签路径
      */
-    @TableField("ms_terminal_bookmark_path")
+    @TableField("server_terminal_bookmark_path")
     @Schema(description = "书签路径", example = "/var/log/app")
-    private String msTerminalBookmarkPath; // msterminalbookmark路径
+    private String serverTerminalBookmarkPath; // 终端书签路径
 
     /**
      * 排序号
      */
-    @TableField("ms_terminal_bookmark_sort")
+    @TableField("server_terminal_bookmark_sort")
     @Schema(description = "排序号", example = "1")
-    private Integer msTerminalBookmarkSort; // msterminalbookmark排序
+    private Integer serverTerminalBookmarkSort; // 终端书签排序
 }

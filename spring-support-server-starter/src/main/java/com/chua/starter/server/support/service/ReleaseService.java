@@ -571,7 +571,7 @@ public interface ReleaseService {
     ReturnResult<Map<String, Object>> gitPull(Long id, String branch);
 
     /**
-     * 读取页面布局配置（保存在 ms_server_config，key = ui.layout.{pageKey}）
+     * 读取页面布局配置（保存在 server_config，key = ui.layout.{pageKey}）
      *
      * @param pageKey 页面标识
      * @return 布局 JSON（无配置时返回空对象）

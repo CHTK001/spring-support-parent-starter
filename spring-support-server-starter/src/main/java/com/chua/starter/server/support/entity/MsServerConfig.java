@@ -17,7 +17,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "服务器系统配置")
-@TableName("ms_server_config")
+@TableName("server_config")
 public class MsServerConfig extends SysBase {
 
     private static final long serialVersionUID = 1L; // 串行版本uid
@@ -26,15 +26,15 @@ public class MsServerConfig extends SysBase {
     @Schema(description = "主键", example = "1")
     private Long id; // 标识
 
-    @TableField("ms_server_config_key")
+    @TableField("server_config_key")
     @Schema(description = "配置键", example = "guacd.host")
     private String configKey; // 配置键
 
-    @TableField("ms_server_config_value")
+    @TableField("server_config_value")
     @Schema(description = "配置值(JSON 字符串)", example = "\"true\"")
     private String configValue; // 配置值
 
-    @TableField("ms_server_config_desc")
+    @TableField("server_config_desc")
     @Schema(description = "配置说明")
     private String configDesc; // 配置desc
 }

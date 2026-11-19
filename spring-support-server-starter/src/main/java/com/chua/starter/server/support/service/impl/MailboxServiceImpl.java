@@ -20,8 +20,8 @@ import java.util.Map;
 /**
  * 邮箱账号(MAILBOX 身份)读取服务实现
  * <p>
- * 邮箱身份约定：{@code msServerIdentityUsername}=邮箱地址、{@code msServerIdentityPassword}=IMAP 授权码(加密存储)、
- * {@code msServerIdentityImapHost/Port}=IMAP 服务器(可空，空则按邮箱域名推断 imap.<域名>，端口默认 993)。
+ * 邮箱身份约定：{@code serverIdentityUsername}=邮箱地址、{@code serverIdentityPassword}=IMAP 授权码(加密存储)、
+ * {@code serverIdentityImapHost/Port}=IMAP 服务器(可空，空则按邮箱域名推断 imap.<域名>，端口默认 993)。
  * 通过 {@code utils-support-email-starter} 的 email客户端 建立 IMAP 连接拉取收件箱。
  * </p>
  *
@@ -138,20 +138,20 @@ public class MailboxServiceImpl implements MailboxService {
             return null;
         }
         MsServerIdentity identity = identityMapper.selectById(identityId);
-        if (identity == null || !"MAILBOX".equals(identity.getMsServerIdentityAuthType())) {
+        if (identity == null || !"MAILBOX".equals(identity.getServerIdentityAuthType())) {
             return null;
         }
-        String email = identity.getMsServerIdentityUsername();
+        String email = identity.getServerIdentityUsername();
         if (email == null || !email.contains("@")) {
             return null;
         }
-        String authCode = cipher.decrypt(identity.getMsServerIdentityPassword());
-        String imapHost = identity.getMsServerIdentityImapHost();
+        String authCode = cipher.decrypt(identity.getServerIdentityPassword());
+        String imapHost = identity.getServerIdentityImapHost();
         if (imapHost == null || imapHost.isBlank()) {
             imapHost = "imap." + email.substring(email.indexOf('@') + 1);
         }
-        int port = identity.getMsServerIdentityImapPort() == null
-                ? DEFAULT_IMAP_PORT : identity.getMsServerIdentityImapPort();
+        int port = identity.getServerIdentityImapPort() == null
+                ? DEFAULT_IMAP_PORT : identity.getServerIdentityImapPort();
         return new ResolvedMail(email, authCode, imapHost, port);
     }
 

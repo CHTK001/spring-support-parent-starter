@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
-* 免费代理（业务——代理表 ms_proxy）：
+* 免费代理（业务——代理表 server_proxy）：
 * 获取（抓取→清空→录入——较慢）· 列表（读表——快）· 当前代理（自动——无需业务指定）·
 * 台账维护（新增/编辑/删除/清空）· 检测（单条与批量）
 * @author CH

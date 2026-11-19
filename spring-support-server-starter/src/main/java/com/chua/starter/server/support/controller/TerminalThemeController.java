@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
  *
  * <p>终端在 iframe 里跑（{@code /ssh-direct.html}、{@code /telnet-direct.html}），
  * 配色写死在页面里就无法统一调整。这里把「一套配色」当成平台级配置存起来：
- * 后端持久化到 {@code ms_server_config}（键 {@value #CONFIG_KEY}，值为 JSON 对象），
+ * 后端持久化到 {@code server_config}（键 {@value #CONFIG_KEY}，值为 JSON 对象），
  * 外层页面取到后通过 iframe 参数与 postMessage 下发给终端。</p>
  *
  * <p><b>为什么是平台级而不是按人</b>：server 模块当前没有「当前登录人」的取值入口
@@ -84,7 +84,7 @@ public class TerminalThemeController {
     /**
      * 自定义预设的配置键前缀：一套预设一行（{@code terminal.theme.preset.<id>}）。
      *
-     * <p>不把预设塞进一条 JSON 数组：{@code ms_server_config_value} 只有
+     * <p>不把预设塞进一条 JSON 数组：{@code server_config_value} 只有
      * {@code VARCHAR(2048)}，而一套配色就占约 600 字符，两三套就会溢出（写库报
      * data too long 或静默截断）。一行一套既不会撑爆，删除也只是一次按 key 的 delete。</p>
      */
@@ -347,7 +347,7 @@ public class TerminalThemeController {
      * <p>库里只存了部分键（历史版本/手工改库）时，缺失项由默认值补齐；
      * 存了非法值则丢弃该键，避免把一段坏色值下发给终端。</p>
      *
-     * <p>直接读 {@code ms_server_config} 的原始值再自己解析，而不是走
+     * <p>直接读 {@code server_config} 的原始值再自己解析，而不是走
      * {@code getConfigMap()}：后者会把整库配置解析成一个扁平 Map（还会并上
      * guacd/ssh 等标量默认值），这里只关心一个键、值是 JSON 对象。</p>
      *

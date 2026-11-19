@@ -85,7 +85,7 @@ public class ServerGroupController {
     }
 
     /**
-     * 分组树（按 msServerGroupParentId 组装，根节点 parentId 为 null 或 0）
+     * 分组树（按 serverGroupParentId 组装，根节点 parentId 为 null 或 0）
      *
      * @return 树结构列表
      */

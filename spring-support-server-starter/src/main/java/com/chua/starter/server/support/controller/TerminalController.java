@@ -130,7 +130,7 @@ public class TerminalController {
     @Operation(summary = "新增命令片段")
     @PostMapping("/snippet")
     public ReturnResult<MsTerminalSnippet> createSnippet(@RequestBody MsTerminalSnippet snippet) {
-        if (snippet == null || isBlank(snippet.getMsTerminalSnippetName())) {
+        if (snippet == null || isBlank(snippet.getServerTerminalSnippetName())) {
             return ReturnResult.error("片段名称不能为空");
         }
         snippetMapper.insert(snippet);
@@ -152,12 +152,12 @@ public class TerminalController {
         if (exists == null) {
             return ReturnResult.error("片段不存在: " + id);
         }
-        exists.setMsTerminalSnippetName(isBlank(snippet.getMsTerminalSnippetName())
-                ? exists.getMsTerminalSnippetName() : snippet.getMsTerminalSnippetName());
-        exists.setMsTerminalSnippetContent(snippet.getMsTerminalSnippetContent() == null
-                ? exists.getMsTerminalSnippetContent() : snippet.getMsTerminalSnippetContent());
-        exists.setMsTerminalSnippetRemark(snippet.getMsTerminalSnippetRemark() == null
-                ? exists.getMsTerminalSnippetRemark() : snippet.getMsTerminalSnippetRemark());
+        exists.setServerTerminalSnippetName(isBlank(snippet.getServerTerminalSnippetName())
+                ? exists.getServerTerminalSnippetName() : snippet.getServerTerminalSnippetName());
+        exists.setServerTerminalSnippetContent(snippet.getServerTerminalSnippetContent() == null
+                ? exists.getServerTerminalSnippetContent() : snippet.getServerTerminalSnippetContent());
+        exists.setServerTerminalSnippetRemark(snippet.getServerTerminalSnippetRemark() == null
+                ? exists.getServerTerminalSnippetRemark() : snippet.getServerTerminalSnippetRemark());
         snippetMapper.updateById(exists);
         return ReturnResult.ok(exists);
     }
@@ -195,12 +195,12 @@ public class TerminalController {
     @Operation(summary = "新增路径书签")
     @PostMapping("/bookmark")
     public ReturnResult<MsTerminalBookmark> createBookmark(@RequestBody MsTerminalBookmark bookmark) {
-        if (bookmark == null || bookmark.getMsTerminalBookmarkHostId() == null
-                || isBlank(bookmark.getMsTerminalBookmarkPath())) {
+        if (bookmark == null || bookmark.getServerTerminalBookmarkHostId() == null
+                || isBlank(bookmark.getServerTerminalBookmarkPath())) {
             return ReturnResult.error("主机与路径不能为空");
         }
-        if (bookmark.getMsTerminalBookmarkSort() == null) {
-            bookmark.setMsTerminalBookmarkSort(0);
+        if (bookmark.getServerTerminalBookmarkSort() == null) {
+            bookmark.setServerTerminalBookmarkSort(0);
         }
         bookmarkMapper.insert(bookmark);
         return ReturnResult.ok(bookmark);
@@ -229,8 +229,8 @@ public class TerminalController {
     @GetMapping("/bookmark")
     public ReturnResult<List<MsTerminalBookmark>> listBookmarks(@RequestParam Long hostId) {
         var wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MsTerminalBookmark>()
-                .eq(MsTerminalBookmark::getMsTerminalBookmarkHostId, hostId)
-                .orderByAsc(MsTerminalBookmark::getMsTerminalBookmarkSort);
+                .eq(MsTerminalBookmark::getServerTerminalBookmarkHostId, hostId)
+                .orderByAsc(MsTerminalBookmark::getServerTerminalBookmarkSort);
         return ReturnResult.list(bookmarkMapper.selectList(wrapper));
     }
 

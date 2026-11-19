@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * 统一使用 common-starter 的哈希时间轮（{@link Timer}）调度全部周期任务：
  * <ul>
- *   <li>在离线检测 / 硬件定时采集——主机级配置（各主机开关/间隔存于 ms_server_host 字段）</li>
- *   <li>计划任务扫描（ms_exec_job）</li>
+ *   <li>在离线检测 / 硬件定时采集——主机级配置（各主机开关/间隔存于 server_host 字段）</li>
+ *   <li>计划任务扫描（server_exec_job）</li>
  *   <li>终端会话空闲清理</li>
  *   <li>连接缓存健康检查（connection.*）</li>
  * </ul>

@@ -1024,7 +1024,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 execService.runCommand(Collections.singletonList(ctx.hostId), command, 30, null);
         List<ProjectBackupVO> rows = new ArrayList<>();
         if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
-            String output = result.getData().get(0).getMsExecLogOutput();
+            String output = result.getData().get(0).getServerExecLogOutput();
             if (output != null) {
                 for (String raw : output.split("\n")) {
                     String line = raw.trim();
@@ -1136,7 +1136,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 execService.runCommand(Collections.singletonList(prepared.getData().hostId), command, 30, null);
 
         if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
-            return ReturnResult.ok(result.getData().get(0).getMsExecLogOutput());
+            return ReturnResult.ok(result.getData().get(0).getServerExecLogOutput());
         }
         return ReturnResult.ok("暂无日志内容");
     }
@@ -1170,7 +1170,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
             return ReturnResult.error("日志检索失败: " + (result.getMsg() == null ? "无返回" : result.getMsg()));
         }
-        String output = result.getData().get(0).getMsExecLogOutput();
+        String output = result.getData().get(0).getServerExecLogOutput();
         List<String> lines = new ArrayList<>();
         if (output != null) {
             for (String raw : output.split("\n")) {
@@ -1317,14 +1317,14 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (result.getData() != null && !result.getData().isEmpty()) {
             com.chua.starter.server.support.entity.MsExecLog log = result.getData().get(0);
               // 同样检查单条日志状态：SSH 凭据缺失时命令执行失败，输出为空
-            if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
-                String reason = log.getMsExecLogError();
+            if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getServerExecLogStatus())) {
+                String reason = log.getServerExecLogError();
                 if (isBlank(reason)) {
-                    reason = "命令执行失败（退出码 " + log.getMsExecLogExitCode() + "）";
+                    reason = "命令执行失败（退出码 " + log.getServerExecLogExitCode() + "）";
                 }
                 return ReturnResult.error("搜索软件失败: " + reason);
             }
-            String output = log.getMsExecLogOutput();
+            String output = log.getServerExecLogOutput();
             if (isBlank(output)) {
                 return ReturnResult.ok(packages);
             }
@@ -1391,14 +1391,14 @@ public class ReleaseServiceImpl implements ReleaseService {
               // 只表示 HTTP 层成功，不代表命令执行成功。SSH 凭据缺失、命令退出码非 0
               // 等情况日志状态为 FAIL，输出为空——若不检查直接 parseInstalled("")
               // 会返回空列表，前端显示「尚未安装任何软件」而非真实错误。
-            if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
-                String reason = log.getMsExecLogError();
+            if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getServerExecLogStatus())) {
+                String reason = log.getServerExecLogError();
                 if (isBlank(reason)) {
-                    reason = "命令执行失败（退出码 " + log.getMsExecLogExitCode() + "）";
+                    reason = "命令执行失败（退出码 " + log.getServerExecLogExitCode() + "）";
                 }
                 return ReturnResult.error("读取已安装软件失败: " + reason);
             }
-            String output = log.getMsExecLogOutput();
+            String output = log.getServerExecLogOutput();
             if (isBlank(output)) {
                 return ReturnResult.ok(packages);
             }
@@ -1489,13 +1489,13 @@ public class ReleaseServiceImpl implements ReleaseService {
         List<SoftwarePackage> candidates = new ArrayList<>();
         if (result.getData() != null && !result.getData().isEmpty()) {
             MsExecLog log = result.getData().get(0);
-            String output = log.getMsExecLogOutput();
+            String output = log.getServerExecLogOutput();
             if (isBlank(output)) {
                   // 输出为空且执行失败：不能当成「没有更新」，否则用户永远看不到升级按钮
-                if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getMsExecLogStatus())) {
-                    String reason = log.getMsExecLogError();
+                if (!ServerConstants.EXEC_STATUS_SUCCESS.equals(log.getServerExecLogStatus())) {
+                    String reason = log.getServerExecLogError();
                     if (isBlank(reason)) {
-                        reason = "命令执行失败（退出码 " + log.getMsExecLogExitCode() + "）";
+                        reason = "命令执行失败（退出码 " + log.getServerExecLogExitCode() + "）";
                     }
                     return ReturnResult.error("检查可升级软件失败: " + reason);
                 }
@@ -1569,7 +1569,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         if (result.getData() == null || result.getData().isEmpty()) {
             return ReturnResult.ok(new ArrayList<>());
         }
-        String output = result.getData().get(0).getMsExecLogOutput();
+        String output = result.getData().get(0).getServerExecLogOutput();
         if (isBlank(output)) {
             return ReturnResult.ok(new ArrayList<>());
         }
@@ -1593,7 +1593,7 @@ public class ReleaseServiceImpl implements ReleaseService {
         ReturnResult<List<com.chua.starter.server.support.entity.MsExecLog>> result =
                 execService.runCommand(Collections.singletonList(ctx.hostId), command, 20, null);
         if (result.isSuccess() && result.getData() != null && !result.getData().isEmpty()) {
-            return ReturnResult.ok(result.getData().get(0).getMsExecLogOutput());
+            return ReturnResult.ok(result.getData().get(0).getServerExecLogOutput());
         }
         return ReturnResult.ok("unknown");
     }
@@ -2156,7 +2156,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             if (!result.isOk() || anyExecFailed(result.getData())) {
                 throw new IllegalStateException("状态脚本执行失败: " + result.getMsg());
             }
-            String output = result.getData().get(0).getMsExecLogOutput();
+            String output = result.getData().get(0).getServerExecLogOutput();
             String text = output == null ? "" : output.trim();
             if (!text.toLowerCase().contains("running")) {
                 throw new IllegalStateException("启动后状态校验未通过（状态脚本输出: "
@@ -2311,15 +2311,15 @@ public class ReleaseServiceImpl implements ReleaseService {
             return "退出码非 0（无执行日志）";
         }
         MsExecLog first = logs.get(0);
-        String why = first.getMsExecLogError();
+        String why = first.getServerExecLogError();
         if (why == null || why.isBlank()) {
-            why = first.getMsExecLogOutput();
+            why = first.getServerExecLogOutput();
         }
         String line = why == null ? "" : why.replace("\r", "").split("\n", 2)[0].trim();
         if (line.length() > 200) {
             line = line.substring(0, 200);
         }
-        return "退出码 " + first.getMsExecLogExitCode() + (line.isEmpty() ? "" : "：" + line);
+        return "退出码 " + first.getServerExecLogExitCode() + (line.isEmpty() ? "" : "：" + line);
     }
 
       /**
@@ -2546,7 +2546,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             if (!result.isOk() || result.getData() == null || result.getData().isEmpty()) {
                 return ReturnResult.error("执行依赖计数失败");
             }
-            String output = result.getData().get(0).getMsExecLogOutput();
+            String output = result.getData().get(0).getServerExecLogOutput();
             if (output == null) {
                 return ReturnResult.error("依赖计数无输出");
             }
@@ -3311,7 +3311,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             return true;
         }
         for (MsExecLog log : logs) {
-            if (log == null || log.getMsExecLogExitCode() == null || log.getMsExecLogExitCode() != 0) {
+            if (log == null || log.getServerExecLogExitCode() == null || log.getServerExecLogExitCode() != 0) {
                 return true;
             }
         }
@@ -3382,7 +3382,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             if (!result.isOk() || anyExecFailed(result.getData())) {
                 return null;
             }
-            String output = result.getData().get(0).getMsExecLogOutput();
+            String output = result.getData().get(0).getServerExecLogOutput();
             if (output == null) {
                 return null;
             }
@@ -3704,7 +3704,7 @@ public class ReleaseServiceImpl implements ReleaseService {
                 out.put("message", "端点探测失败: " + result.getMsg());
                 return ReturnResult.ok(out);
             }
-            output = result.getData().get(0).getMsExecLogOutput();
+            output = result.getData().get(0).getServerExecLogOutput();
         }
         String docsCode;
         String uiCode;
@@ -3865,7 +3865,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("message", "健康检测执行失败: " + result.getMsg());
             return ReturnResult.ok(out);
         }
-        String output = result.getData().get(0).getMsExecLogOutput();
+        String output = result.getData().get(0).getServerExecLogOutput();
         int code = parseHealthCode(output, ctx.windows);
         String body = parseHealthBody(output, ctx.windows);
         boolean warmup = isWarmupState(code, body);
@@ -4214,7 +4214,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("message", "Actuator 读取失败: " + result.getMsg());
             return ReturnResult.ok(out);
         }
-        String output = result.getData().get(0).getMsExecLogOutput();
+        String output = result.getData().get(0).getServerExecLogOutput();
         int statusCode;
         String body;
         if (ctx.windows) {
@@ -4348,7 +4348,7 @@ public class ReleaseServiceImpl implements ReleaseService {
             out.put("message", "修改日志级别失败: " + result.getMsg());
             return ReturnResult.ok(out);
         }
-        int code = parseActuatorCode(result.getData().get(0).getMsExecLogOutput(), ctx.windows);
+        int code = parseActuatorCode(result.getData().get(0).getServerExecLogOutput(), ctx.windows);
         out.put("status", code);
         // Actuator 改级别成功返回 204，部分网关包一层会回 200
         out.put("ok", code == 204 || code == 200);

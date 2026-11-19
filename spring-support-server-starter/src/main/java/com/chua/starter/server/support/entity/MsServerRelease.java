@@ -3,9 +3,8 @@ package com.chua.starter.server.support.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 发布管理实体
@@ -14,8 +13,8 @@ import java.time.LocalDateTime;
  * @since 4.0.0.51
  */
 @Data
-@TableName("ms_server_release")
-public class MsServerRelease {
+@TableName("server_release")
+public class MsServerRelease extends SysBase {
 
     /**
      * 主键
@@ -69,14 +68,4 @@ public class MsServerRelease {
      * OAP 集群地址（collector.backend_service，如 oap:11800）
      */
     private String swBackendService;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 }

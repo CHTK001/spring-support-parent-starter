@@ -47,14 +47,14 @@ public class ServerKeyServiceImpl implements ServerKeyService {
      * @return 创建的结果
      */
     public ReturnResult<MsServerKey> create(MsServerKey key) {
-        if (key.getMsServerKeyName() == null || key.getMsServerKeyName().isEmpty()) {
+        if (key.getServerKeyName() == null || key.getServerKeyName().isEmpty()) {
             return ReturnResult.error("密钥名称不能为空");
         }
-        if (key.getMsServerKeyPrivateKey() != null && !key.getMsServerKeyPrivateKey().isEmpty()) {
-            key.setMsServerKeyPrivateKey(cipher.encrypt(key.getMsServerKeyPrivateKey()));
+        if (key.getServerKeyPrivateKey() != null && !key.getServerKeyPrivateKey().isEmpty()) {
+            key.setServerKeyPrivateKey(cipher.encrypt(key.getServerKeyPrivateKey()));
         }
-        if (key.getMsServerKeyPassword() != null && !key.getMsServerKeyPassword().isEmpty()) {
-            key.setMsServerKeyPassword(cipher.encrypt(key.getMsServerKeyPassword()));
+        if (key.getServerKeyPassword() != null && !key.getServerKeyPassword().isEmpty()) {
+            key.setServerKeyPassword(cipher.encrypt(key.getServerKeyPassword()));
         }
         keyMapper.insert(key);
         return ReturnResult.ok(mask(keyMapper.selectById(key.getId())));
@@ -74,18 +74,18 @@ public class ServerKeyServiceImpl implements ServerKeyService {
             return ReturnResult.error("密钥不存在: " + id);
         }
  // 空串表示清空；空 表示保持不变；非空则加密覆盖
-        if (key.getMsServerKeyPrivateKey() != null) {
-            exists.setMsServerKeyPrivateKey(key.getMsServerKeyPrivateKey().isEmpty()
-                    ? "" : cipher.encrypt(key.getMsServerKeyPrivateKey()));
+        if (key.getServerKeyPrivateKey() != null) {
+            exists.setServerKeyPrivateKey(key.getServerKeyPrivateKey().isEmpty()
+                    ? "" : cipher.encrypt(key.getServerKeyPrivateKey()));
         }
-        if (key.getMsServerKeyPassword() != null) {
-            exists.setMsServerKeyPassword(key.getMsServerKeyPassword().isEmpty()
-                    ? "" : cipher.encrypt(key.getMsServerKeyPassword()));
+        if (key.getServerKeyPassword() != null) {
+            exists.setServerKeyPassword(key.getServerKeyPassword().isEmpty()
+                    ? "" : cipher.encrypt(key.getServerKeyPassword()));
         }
-        exists.setMsServerKeyName(key.getMsServerKeyName() == null ? exists.getMsServerKeyName() : key.getMsServerKeyName());
-        exists.setMsServerKeyType(key.getMsServerKeyType() == null ? exists.getMsServerKeyType() : key.getMsServerKeyType());
-        exists.setMsServerKeyPublicKey(key.getMsServerKeyPublicKey() == null ? exists.getMsServerKeyPublicKey() : key.getMsServerKeyPublicKey());
-        exists.setMsServerKeyRemark(key.getMsServerKeyRemark() == null ? exists.getMsServerKeyRemark() : key.getMsServerKeyRemark());
+        exists.setServerKeyName(key.getServerKeyName() == null ? exists.getServerKeyName() : key.getServerKeyName());
+        exists.setServerKeyType(key.getServerKeyType() == null ? exists.getServerKeyType() : key.getServerKeyType());
+        exists.setServerKeyPublicKey(key.getServerKeyPublicKey() == null ? exists.getServerKeyPublicKey() : key.getServerKeyPublicKey());
+        exists.setServerKeyRemark(key.getServerKeyRemark() == null ? exists.getServerKeyRemark() : key.getServerKeyRemark());
         keyMapper.updateById(exists);
         return ReturnResult.ok(mask(keyMapper.selectById(id)));
     }
@@ -99,7 +99,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
      */
     public ReturnResult<Void> delete(Long id) {
         Long refCount = identityMapper.selectCount(
-                new LambdaQueryWrapper<MsServerIdentity>().eq(MsServerIdentity::getMsServerIdentityKeyId, id));
+                new LambdaQueryWrapper<MsServerIdentity>().eq(MsServerIdentity::getServerIdentityKeyId, id));
         if (refCount != null && refCount > 0) {
             return ReturnResult.error("密钥被登录身份引用，禁止删除");
         }
@@ -146,14 +146,14 @@ public class ServerKeyServiceImpl implements ServerKeyService {
             String privateKey = Base64.getEncoder().encodeToString(pair.getPrivate().getEncoded());
 
             MsServerKey key = new MsServerKey();
-            key.setMsServerKeyName(name.trim());
-            key.setMsServerKeyType(keyType);
-            key.setMsServerKeyPublicKey(publicKey);
-            key.setMsServerKeyPrivateKey(cipher.encrypt(privateKey));
+            key.setServerKeyName(name.trim());
+            key.setServerKeyType(keyType);
+            key.setServerKeyPublicKey(publicKey);
+            key.setServerKeyPrivateKey(cipher.encrypt(privateKey));
             if (password != null && !password.isBlank()) {
-                key.setMsServerKeyPassword(cipher.encrypt(password));
+                key.setServerKeyPassword(cipher.encrypt(password));
             }
-            key.setMsServerKeyRemark(remark);
+            key.setServerKeyRemark(remark);
             keyMapper.insert(key);
             return ReturnResult.ok(mask(keyMapper.selectById(key.getId())));
         } catch (Exception e) {
@@ -168,8 +168,8 @@ public class ServerKeyServiceImpl implements ServerKeyService {
      * @return 同一对象（已脱敏）
      */
     private MsServerKey mask(MsServerKey key) {
-        key.setMsServerKeyPrivateKey(null);
-        key.setMsServerKeyPassword(null);
+        key.setServerKeyPrivateKey(null);
+        key.setServerKeyPassword(null);
         return key;
     }
 }

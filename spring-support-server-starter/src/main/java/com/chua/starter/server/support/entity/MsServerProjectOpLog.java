@@ -3,6 +3,7 @@ package com.chua.starter.server.support.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -18,8 +19,8 @@ import java.time.LocalDateTime;
  * @since 4.0.0.52
  */
 @Data
-@TableName("ms_server_project_op_log")
-public class MsServerProjectOpLog {
+@TableName("server_project_op_log")
+public class MsServerProjectOpLog extends SysBase {
 
     /**
      * 主键

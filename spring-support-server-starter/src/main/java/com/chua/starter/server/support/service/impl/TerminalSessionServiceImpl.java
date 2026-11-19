@@ -42,13 +42,13 @@ public class TerminalSessionServiceImpl implements TerminalSessionService {
                                         String userName, String clientIp) {
         try {
             var record = new MsTerminalSession();
-            record.setMsTerminalSessionHostId(hostId);
-            record.setMsTerminalSessionHostName(hostName);
-            record.setMsTerminalSessionProtocol(protocol);
-            record.setMsTerminalSessionUser(userName);
-            record.setMsTerminalSessionClientIp(clientIp);
-            record.setMsTerminalSessionConnectTime(LocalDateTime.now());
-            record.setMsTerminalSessionStatus(ServerConstants.SESSION_OPEN);
+            record.setServerTerminalSessionHostId(hostId);
+            record.setServerTerminalSessionHostName(hostName);
+            record.setServerTerminalSessionProtocol(protocol);
+            record.setServerTerminalSessionUser(userName);
+            record.setServerTerminalSessionClientIp(clientIp);
+            record.setServerTerminalSessionConnectTime(LocalDateTime.now());
+            record.setServerTerminalSessionStatus(ServerConstants.SESSION_OPEN);
             sessionMapper.insert(record);
             return record;
         } catch (Exception e) {
@@ -64,12 +64,12 @@ public class TerminalSessionServiceImpl implements TerminalSessionService {
         }
         try {
             MsTerminalSession record = sessionMapper.selectById(recordId);
-            if (record == null || ServerConstants.SESSION_CLOSED.equals(record.getMsTerminalSessionStatus())) {
+            if (record == null || ServerConstants.SESSION_CLOSED.equals(record.getServerTerminalSessionStatus())) {
                 return;
             }
-            record.setMsTerminalSessionStatus(ServerConstants.SESSION_CLOSED);
-            record.setMsTerminalSessionCloseTime(LocalDateTime.now());
-            record.setMsTerminalSessionCloseReason(reason == null ? "未知" : reason);
+            record.setServerTerminalSessionStatus(ServerConstants.SESSION_CLOSED);
+            record.setServerTerminalSessionCloseTime(LocalDateTime.now());
+            record.setServerTerminalSessionCloseReason(reason == null ? "未知" : reason);
             sessionMapper.updateById(record);
         } catch (Exception e) {
             log.warn("[terminal] 会话审计闭环失败 recordId={}: {}", recordId, e.getMessage());
@@ -92,7 +92,7 @@ public class TerminalSessionServiceImpl implements TerminalSessionService {
         }
         List<MsTerminalSession> records = sessionMapper.selectList(
                 new LambdaQueryWrapper<MsTerminalSession>()
-                        .eq(MsTerminalSession::getMsTerminalSessionStatus, status)
+                        .eq(MsTerminalSession::getServerTerminalSessionStatus, status)
                         .orderByDesc(MsTerminalSession::getId)
                         .last("LIMIT " + RECENT_LIMIT));
         return ReturnResult.list(records);

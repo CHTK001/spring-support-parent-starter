@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.server.support.entity.MsTerminalBookmark;
 
 /**
- * msterminalbookmark 映射器
+ * 终端书签 映射器
  *
  * @author CH
  * @since 4.0.0.42

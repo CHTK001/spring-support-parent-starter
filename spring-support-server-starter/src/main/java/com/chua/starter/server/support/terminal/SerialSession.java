@@ -55,7 +55,7 @@ public class SerialSession {
     private final Long hostId;
 
     /**
-     * 审计会话记录 标识（ms_terminal_会话.标识）
+     * 审计会话记录 标识（server_terminal_session.标识）
      */
     @Setter
     private Long sessionId;

@@ -32,7 +32,7 @@ import java.util.Locale;
 public interface HostRemoteProvider {
 
       /**
-       * 主系统类型（与 {@code ms_server_host.server_host_os_type} 对齐，全大写）
+       * 主系统类型（与 {@code server_host.server_host_os_type} 对齐，全大写）
        *
        * @return 系统类型标识
        */

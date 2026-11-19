@@ -143,10 +143,10 @@ public class MailboxSseService {
      */
     private void pushNewEmails(String clientId, Long identityId) {
         MsServerIdentity identity = identityMapper.selectById(identityId);
-        if (identity == null || !"MAILBOX".equals(identity.getMsServerIdentityAuthType())) {
+        if (identity == null || !"MAILBOX".equals(identity.getServerIdentityAuthType())) {
             return;
         }
-        String email = identity.getMsServerIdentityUsername();
+        String email = identity.getServerIdentityUsername();
         if (email == null || !email.contains("@")) {
             return;
         }
@@ -171,10 +171,10 @@ public class MailboxSseService {
      * @return 获取新emails的结果
      */
     private List<Map<String, Object>> fetchNewEmails(MsServerIdentity identity, String email) {
-        String source = identity.getMsServerIdentityEmailSource();
+        String source = identity.getServerIdentityEmailSource();
         List<Map<String, Object>> emails;
         if ("TEMP".equals(source)) {
-            emails = fetchTempEmails(identity.getMsServerIdentityProvider(), email);
+            emails = fetchTempEmails(identity.getServerIdentityProvider(), email);
         } else {
             emails = fetchImapEmails(identity, email);
         }
@@ -238,12 +238,12 @@ public class MailboxSseService {
      */
     private List<Map<String, Object>> fetchImapEmails(MsServerIdentity identity, String email) {
         try {
-            String authCode = cipher.decrypt(identity.getMsServerIdentityPassword());
-            String imapHost = identity.getMsServerIdentityImapHost();
+            String authCode = cipher.decrypt(identity.getServerIdentityPassword());
+            String imapHost = identity.getServerIdentityImapHost();
             if (imapHost == null || imapHost.isBlank()) {
                 imapHost = "imap." + email.substring(email.indexOf('@') + 1);
             }
-            int port = identity.getMsServerIdentityImapPort() == null ? 993 : identity.getMsServerIdentityImapPort();
+            int port = identity.getServerIdentityImapPort() == null ? 993 : identity.getServerIdentityImapPort();
             com.chua.email.support.client.EmailClient client = com.chua.email.support.client.EmailClient.builder()
                     .imapHost(imapHost).imapPort(port).username(email).password(authCode).build();
             return client.fetch().folder("INBOX").limit(50).exec();

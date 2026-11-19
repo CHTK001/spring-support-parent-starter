@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -15,8 +16,8 @@ import java.time.LocalDateTime;
  * @since 4.0.0.51
  */
 @Data
-@TableName("ms_server_project")
-public class MsServerProject {
+@TableName("server_project")
+public class MsServerProject extends SysBase {
 
     /**
      * 主键
@@ -254,16 +255,6 @@ public class MsServerProject {
      * 本次启动时间（运行时长基准，启动时写入、停止时清空）
      */
     private LocalDateTime runningSince;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 
     /**
      * 该类型是否有常驻进程（只读展示字段，不落库）。

@@ -13,6 +13,7 @@ import com.chua.common.support.network.net.NetUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WinrmShell;
 import com.chua.starter.server.support.connection.WindowsSshShell;
@@ -346,8 +347,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostOsArch() != null) {
             exists.setServerHostOsArch(host.getServerHostOsArch());
         }
-        if (host.getMsServerGroupId() != null) {
-            exists.setMsServerGroupId(host.getMsServerGroupId());
+        if (host.getServerGroupId() != null) {
+            exists.setServerGroupId(host.getServerGroupId());
         }
         if (host.getServerHostTags() != null) {
             exists.setServerHostTags(host.getServerHostTags());
@@ -455,7 +456,7 @@ public class ServerHostServiceImpl implements ServerHostService {
     public ReturnResult<Void> delete(Long id) {
           // 先解除身份绑定再删除主机，避免遗留孤儿关联
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
-                .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, id));
+                .eq(MsServerHostIdentity::getServerHostIdentityHostId, id));
         hostMapper.deleteById(id);
         return ReturnResult.success();
     }
@@ -480,7 +481,7 @@ public class ServerHostServiceImpl implements ServerHostService {
                     .or().like(MsServerHost::getServerHostAddress, like));
         }
         if (groupId != null) {
-            wrapper.eq(MsServerHost::getMsServerGroupId, groupId);
+            wrapper.eq(MsServerHost::getServerGroupId, groupId);
         }
         if (status != null) {
             wrapper.eq(MsServerHost::getServerHostStatus, status);
@@ -655,15 +656,15 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("身份不存在: " + identityId);
         }
         Long bound = hostIdentityMapper.selectCount(new LambdaQueryWrapper<MsServerHostIdentity>()
-                .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
-                .eq(MsServerHostIdentity::getMsServerHostIdentityIdentityId, identityId));
+                .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId)
+                .eq(MsServerHostIdentity::getServerHostIdentityIdentityId, identityId));
         if (bound != null && bound > 0) {
             return ReturnResult.error("该身份已绑定此主机");
         }
         var relation = new MsServerHostIdentity();
-        relation.setMsServerHostIdentityHostId(hostId);
-        relation.setMsServerHostIdentityIdentityId(identityId);
-        relation.setMsServerHostIdentitySort(sort == null ? nextSort(hostId) : sort);
+        relation.setServerHostIdentityHostId(hostId);
+        relation.setServerHostIdentityIdentityId(identityId);
+        relation.setServerHostIdentitySort(sort == null ? nextSort(hostId) : sort);
         hostIdentityMapper.insert(relation);
         return ReturnResult.success();
     }
@@ -681,8 +682,8 @@ public class ServerHostServiceImpl implements ServerHostService {
             return ReturnResult.error("主机ID与身份ID不能为空");
         }
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
-                .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
-                .eq(MsServerHostIdentity::getMsServerHostIdentityIdentityId, identityId));
+                .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId)
+                .eq(MsServerHostIdentity::getServerHostIdentityIdentityId, identityId));
         return ReturnResult.success();
     }
 
@@ -690,11 +691,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     public ReturnResult<List<Long>> listBoundIdentityIds(Long hostId) {
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
-                        .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
-                        .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
+                        .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId)
+                        .orderByAsc(MsServerHostIdentity::getServerHostIdentitySort));
         List<Long> ids = new ArrayList<>(relations.size());
         for (MsServerHostIdentity relation : relations) {
-            ids.add(relation.getMsServerHostIdentityIdentityId());
+            ids.add(relation.getServerHostIdentityIdentityId());
         }
         return ReturnResult.ok(ids);
     }
@@ -715,8 +716,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         boolean isVnc = ProtocolType.VNC.name().equalsIgnoreCase(effectiveProtocol);
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
-                        .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
-                        .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
+                        .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId)
+                        .orderByAsc(MsServerHostIdentity::getServerHostIdentitySort));
         if (relations.isEmpty()) {
               // 纯 VNC 主机（如 Windows 桌面共享）可只配 VNC 口令而不绑定登录身份，
               // 此时回落主机级 VNC 凭据；仅当请求方不是明确的 SSH/RDP 时才允许（blank 与 VNC 都放行）
@@ -732,7 +733,7 @@ public class ServerHostServiceImpl implements ServerHostService {
           // 指定身份时精确匹配绑定关系；未指定时按优先级取第一个
         MsServerHostIdentity chosen = null;
         for (MsServerHostIdentity relation : relations) {
-            if (relation.getMsServerHostIdentityIdentityId().equals(identityId)) {
+            if (relation.getServerHostIdentityIdentityId().equals(identityId)) {
                 chosen = relation;
                 break;
             }
@@ -743,11 +744,11 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (chosen == null) {
             return ReturnResult.error("身份未绑定到该主机: " + identityId);
         }
-        MsServerIdentity identity = identityMapper.selectById(chosen.getMsServerHostIdentityIdentityId());
+        MsServerIdentity identity = identityMapper.selectById(chosen.getServerHostIdentityIdentityId());
         if (identity == null) {
             return ReturnResult.error("绑定的身份已被删除");
         }
-        String username = identity.getMsServerIdentityUsername();
+        String username = identity.getServerIdentityUsername();
           // 地址写成 user@host 时，前缀是网关/跳板分配的真实登录名（如 ibssh_xxx@ssh.instabox.sh），
           // 优先级高于身份里可能遗留的历史默认账号；口令/私钥仍沿用同一身份。
           // 只影响「用哪个账号登录」，不改保存的地址原文（台账仍展示用户输入的 user@host）——
@@ -770,27 +771,27 @@ public class ServerHostServiceImpl implements ServerHostService {
                     decryptQuietly(host.getServerHostVncPassword(), hostId), null));
         }
           // 公钥认证：解密引用密钥的私钥内容与口令
-        if (AuthType.PUBLIC_KEY.name().equals(identity.getMsServerIdentityAuthType())) {
-            MsServerKey key = identity.getMsServerIdentityKeyId() == null
-                    ? null : keyMapper.selectById(identity.getMsServerIdentityKeyId());
-            if (key == null || isBlank(key.getMsServerKeyPrivateKey())) {
-                return ReturnResult.error("公钥身份引用的密钥缺失或私钥为空: " + identity.getMsServerIdentityName());
+        if (AuthType.PUBLIC_KEY.name().equals(identity.getServerIdentityAuthType())) {
+            MsServerKey key = identity.getServerIdentityKeyId() == null
+                    ? null : keyMapper.selectById(identity.getServerIdentityKeyId());
+            if (key == null || isBlank(key.getServerKeyPrivateKey())) {
+                return ReturnResult.error("公钥身份引用的密钥缺失或私钥为空: " + identity.getServerIdentityName());
             }
             return ReturnResult.ok(new SshCredential(username,
-                    cipher.decrypt(key.getMsServerKeyPassword()),
-                    cipher.decrypt(key.getMsServerKeyPrivateKey())));
+                    cipher.decrypt(key.getServerKeyPassword()),
+                    cipher.decrypt(key.getServerKeyPrivateKey())));
         }
           // 免密认证：目标主机已放行（authorized_keys 或允许空口令），凭据只承载用户名，
           // 后端不存密码/私钥；连接层以空口令身份尝试（空串密码触发密码认证，服务器放行则通过）
-        if (AuthType.NONE.name().equals(identity.getMsServerIdentityAuthType())) {
+        if (AuthType.NONE.name().equals(identity.getServerIdentityAuthType())) {
             return ReturnResult.ok(new SshCredential(username,
-                    identity.getMsServerIdentityPassword() == null
-                            ? null : cipher.decrypt(identity.getMsServerIdentityPassword()),
+                    identity.getServerIdentityPassword() == null
+                            ? null : cipher.decrypt(identity.getServerIdentityPassword()),
                     null));
         }
           // 密码认证：直接解密口令
         return ReturnResult.ok(new SshCredential(username,
-                cipher.decrypt(identity.getMsServerIdentityPassword()), null));
+                cipher.decrypt(identity.getServerIdentityPassword()), null));
     }
 
     @Override
@@ -801,35 +802,35 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
-                        .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId)
-                        .orderByAsc(MsServerHostIdentity::getMsServerHostIdentitySort));
+                        .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId)
+                        .orderByAsc(MsServerHostIdentity::getServerHostIdentitySort));
         List<SshCredential> result = new ArrayList<>(relations.size());
         List<SshCredential> roots = new ArrayList<>();
         for (MsServerHostIdentity relation : relations) {
-            MsServerIdentity identity = identityMapper.selectById(relation.getMsServerHostIdentityIdentityId());
+            MsServerIdentity identity = identityMapper.selectById(relation.getServerHostIdentityIdentityId());
             if (identity == null) {
                 continue;
             }
-            String username = identity.getMsServerIdentityUsername();
+            String username = identity.getServerIdentityUsername();
             if (isBlank(username)) {
                 continue;
             }
             SshCredential credential = null;
-            if (AuthType.PUBLIC_KEY.name().equalsIgnoreCase(identity.getMsServerIdentityAuthType())) {
-                if (identity.getMsServerIdentityKeyId() != null) {
-                    MsServerKey key = keyMapper.selectById(identity.getMsServerIdentityKeyId());
-                    if (key != null && !isBlank(key.getMsServerKeyPrivateKey())) {
+            if (AuthType.PUBLIC_KEY.name().equalsIgnoreCase(identity.getServerIdentityAuthType())) {
+                if (identity.getServerIdentityKeyId() != null) {
+                    MsServerKey key = keyMapper.selectById(identity.getServerIdentityKeyId());
+                    if (key != null && !isBlank(key.getServerKeyPrivateKey())) {
                         credential = new SshCredential(username,
-                                decryptQuietly(key.getMsServerKeyPassword(), hostId),
-                                decryptQuietly(key.getMsServerKeyPrivateKey(), hostId));
+                                decryptQuietly(key.getServerKeyPassword(), hostId),
+                                decryptQuietly(key.getServerKeyPrivateKey(), hostId));
                     }
                 }
-            } else if (AuthType.NONE.name().equalsIgnoreCase(identity.getMsServerIdentityAuthType())) {
+            } else if (AuthType.NONE.name().equalsIgnoreCase(identity.getServerIdentityAuthType())) {
                   // 免密认证：凭据只承载用户名，连接层回落到默认身份文件走公钥认证
                 credential = new SshCredential(username, null, null);
-            } else if (!isBlank(identity.getMsServerIdentityPassword())) {
+            } else if (!isBlank(identity.getServerIdentityPassword())) {
                 credential = new SshCredential(username,
-                        decryptQuietly(identity.getMsServerIdentityPassword(), hostId), null);
+                        decryptQuietly(identity.getServerIdentityPassword(), hostId), null);
             }
             if (credential == null) {
                 continue;
@@ -1391,8 +1392,8 @@ public class ServerHostServiceImpl implements ServerHostService {
        */
     private static final java.util.concurrent.ExecutorService SYNC_EXECUTOR =
 // [P3C C1 豁免] 场景化创建线程，需文档化
-            java.util.concurrent.Executors.newThreadPerTaskExecutor(
-                    Thread.ofVirtual().name("host-sync-").factory());
+            MdcWrap.decorate(java.util.concurrent.Executors.newThreadPerTaskExecutor(
+                    Thread.ofVirtual().name("host-sync-").factory()));
 
     @Override
     public ReturnResult<HostSyncSummaryVO> syncHosts(java.util.List<Long> hostIds) {
@@ -1625,38 +1626,38 @@ public class ServerHostServiceImpl implements ServerHostService {
               // 避免同名身份堆积：名称使用 主机名@账号 模板
             String base = (host.getServerHostName() == null ? "host" : host.getServerHostName()) + "@" + account;
             MsServerIdentity identity = new MsServerIdentity();
-            identity.setMsServerIdentityName(base);
-            identity.setMsServerIdentityUsername(account.trim());
-            identity.setMsServerIdentityRemark("新增主机自动创建");
+            identity.setServerIdentityName(base);
+            identity.setServerIdentityUsername(account.trim());
+            identity.setServerIdentityRemark("新增主机自动创建");
             if (noneAuth) {
                   // 免密登录：目标主机不校验密码（空口令登录或已配密钥放行），
                   // 凭据只承载用户名，不存密码/私钥；连接层以空口令身份尝试
-                identity.setMsServerIdentityAuthType(AuthType.NONE.name());
+                identity.setServerIdentityAuthType(AuthType.NONE.name());
             } else if (hasKey) {
                   // 密钥方式：入库私钥并引用
                 MsServerKey key = new MsServerKey();
-                key.setMsServerKeyName(base + "-key");
-                key.setMsServerKeyType(detectKeyType(privateKey));
-                key.setMsServerKeyPrivateKey(cipher.encrypt(privateKey.trim()));
-                key.setMsServerKeyRemark("新增主机自动创建");
+                key.setServerKeyName(base + "-key");
+                key.setServerKeyType(detectKeyType(privateKey));
+                key.setServerKeyPrivateKey(cipher.encrypt(privateKey.trim()));
+                key.setServerKeyRemark("新增主机自动创建");
                 keyMapper.insert(key);
-                identity.setMsServerIdentityAuthType(AuthType.PUBLIC_KEY.name());
-                identity.setMsServerIdentityKeyId(key.getId());
+                identity.setServerIdentityAuthType(AuthType.PUBLIC_KEY.name());
+                identity.setServerIdentityKeyId(key.getId());
             } else {
-                identity.setMsServerIdentityAuthType(AuthType.PASSWORD.name());
-                identity.setMsServerIdentityPassword(cipher.encrypt(password));
+                identity.setServerIdentityAuthType(AuthType.PASSWORD.name());
+                identity.setServerIdentityPassword(cipher.encrypt(password));
             }
             identityMapper.insert(identity);
               // 绑定到主机（最高优先级：排最前）
             var relation = new MsServerHostIdentity();
-            relation.setMsServerHostIdentityHostId(host.getId());
-            relation.setMsServerHostIdentityIdentityId(identity.getId());
-            relation.setMsServerHostIdentitySort(1);
+            relation.setServerHostIdentityHostId(host.getId());
+            relation.setServerHostIdentityIdentityId(identity.getId());
+            relation.setServerHostIdentitySort(1);
             hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
-                    .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, host.getId()));
+                    .eq(MsServerHostIdentity::getServerHostIdentityHostId, host.getId()));
             hostIdentityMapper.insert(relation);
             log.info("[server] 新增主机自动创建身份 hostId={} identityId={} type={}",
-                    host.getId(), identity.getId(), identity.getMsServerIdentityAuthType());
+                    host.getId(), identity.getId(), identity.getServerIdentityAuthType());
         } catch (Exception e) {
             log.warn("[server] 自动创建身份失败 hostId={} account={}: {}", host.getId(), account, e.getMessage());
         }
@@ -1792,11 +1793,11 @@ public class ServerHostServiceImpl implements ServerHostService {
     private int nextSort(Long hostId) {
         List<MsServerHostIdentity> relations = hostIdentityMapper.selectList(
                 new LambdaQueryWrapper<MsServerHostIdentity>()
-                        .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, hostId));
+                        .eq(MsServerHostIdentity::getServerHostIdentityHostId, hostId));
         int max = 0;
         for (MsServerHostIdentity relation : relations) {
-            if (relation.getMsServerHostIdentitySort() != null && relation.getMsServerHostIdentitySort() > max) {
-                max = relation.getMsServerHostIdentitySort();
+            if (relation.getServerHostIdentitySort() != null && relation.getServerHostIdentitySort() > max) {
+                max = relation.getServerHostIdentitySort();
             }
         }
         return max + 1;

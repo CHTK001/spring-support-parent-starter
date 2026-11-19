@@ -15,7 +15,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("ms_proxy")
+@TableName("server_proxy")
 public class MsProxy extends SysBase {
 
     /**

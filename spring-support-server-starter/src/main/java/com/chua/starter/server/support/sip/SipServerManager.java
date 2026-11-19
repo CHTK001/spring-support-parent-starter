@@ -39,6 +39,13 @@ public class SipServerManager {
     private int port = 17822;
 
     /**
+     * SIP 中继口令：必须通过 {@code plugin.sip.secret} 显式配置。
+     * 安全规约：源码不落真实口令，未配置时拒绝启动中继。
+     */
+    @Value("${plugin.sip.secret:}")
+    private String secret;
+
+    /**
      * 应用启动后延迟 10s 尝试自动拉起 SIP 中继服务
      * 延迟用于等待配置加载完成，避免读到默认值
      */
@@ -68,7 +75,10 @@ public class SipServerManager {
             return;
         }
         try {
-            String secret = "lvzhou2011";
+            if (secret == null || secret.isBlank()) {
+                log.warn("[SIP] 未配置 plugin.sip.secret，拒绝使用默认口令，跳过自动启动");
+                return;
+            }
             // 尝试读取配置
             try {
                 // 直接用 SipTunnel.startServer 会阻塞，用线程启动

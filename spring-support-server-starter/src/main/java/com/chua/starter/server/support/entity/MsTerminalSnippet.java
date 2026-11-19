@@ -19,7 +19,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "命令片段")
-@TableName("ms_terminal_snippet")
+@TableName("server_terminal_snippet")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsTerminalSnippet extends SysBase {
 
@@ -38,21 +38,21 @@ public class MsTerminalSnippet extends SysBase {
     /**
      * 片段名称
      */
-    @TableField("ms_terminal_snippet_name")
+    @TableField("server_terminal_snippet_name")
     @Schema(description = "片段名称", example = "查看磁盘占用")
-    private String msTerminalSnippetName; // msterminalsnippet名称
+    private String serverTerminalSnippetName; // 终端片段名称
 
     /**
      * 片段内容
      */
-    @TableField("ms_terminal_snippet_content")
+    @TableField("server_terminal_snippet_content")
     @Schema(description = "片段内容", example = "df -h")
-    private String msTerminalSnippetContent; // msterminalsnippet内容
+    private String serverTerminalSnippetContent; // 终端片段内容
 
     /**
      * 备注
      */
-    @TableField("ms_terminal_snippet_remark")
+    @TableField("server_terminal_snippet_remark")
     @Schema(description = "备注")
-    private String msTerminalSnippetRemark; // msterminalsnippet评论
+    private String serverTerminalSnippetRemark; // 终端片段评论
 }

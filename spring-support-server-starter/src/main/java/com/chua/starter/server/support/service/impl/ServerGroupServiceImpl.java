@@ -46,18 +46,18 @@ public class ServerGroupServiceImpl implements ServerGroupService {
      * @return 创建的结果
      */
     public ReturnResult<MsServerGroup> create(MsServerGroup group) {
-        if (group.getMsServerGroupName() == null || group.getMsServerGroupName().isEmpty()) {
+        if (group.getServerGroupName() == null || group.getServerGroupName().isEmpty()) {
             return ReturnResult.error("分组名称不能为空");
         }
-        if (group.getMsServerGroupParentId() == null) {
-            group.setMsServerGroupParentId(0L);
+        if (group.getServerGroupParentId() == null) {
+            group.setServerGroupParentId(0L);
         }
-        if (group.getMsServerGroupParentId() != 0L
-                && groupMapper.selectById(group.getMsServerGroupParentId()) == null) {
-            return ReturnResult.error("父分组不存在: " + group.getMsServerGroupParentId());
+        if (group.getServerGroupParentId() != 0L
+                && groupMapper.selectById(group.getServerGroupParentId()) == null) {
+            return ReturnResult.error("父分组不存在: " + group.getServerGroupParentId());
         }
-        if (group.getMsServerGroupSort() == null) {
-            group.setMsServerGroupSort(0);
+        if (group.getServerGroupSort() == null) {
+            group.setServerGroupSort(0);
         }
         groupMapper.insert(group);
         return ReturnResult.ok(group);
@@ -76,7 +76,7 @@ public class ServerGroupServiceImpl implements ServerGroupService {
         if (exists == null) {
             return ReturnResult.error("分组不存在: " + id);
         }
-        Long parentId = group.getMsServerGroupParentId();
+        Long parentId = group.getServerGroupParentId();
         if (id.equals(parentId)) {
             return ReturnResult.error("父分组不能为自身");
         }
@@ -103,7 +103,7 @@ public class ServerGroupServiceImpl implements ServerGroupService {
     private boolean isDescendant(Long id, Long parentId) {
         Map<Long, Long> parentOf = new HashMap<>();
         for (MsServerGroup g : groupMapper.selectList(null)) {
-            parentOf.put(g.getId(), g.getMsServerGroupParentId());
+            parentOf.put(g.getId(), g.getServerGroupParentId());
         }
         Set<Long> walked = new HashSet<>();
         Long cursor = parentId;
@@ -125,12 +125,12 @@ public class ServerGroupServiceImpl implements ServerGroupService {
      */
     public ReturnResult<Void> delete(Long id) {
         Long childCount = groupMapper.selectCount(
-                new LambdaQueryWrapper<MsServerGroup>().eq(MsServerGroup::getMsServerGroupParentId, id));
+                new LambdaQueryWrapper<MsServerGroup>().eq(MsServerGroup::getServerGroupParentId, id));
         if (childCount != null && childCount > 0) {
             return ReturnResult.error("存在子分组，禁止删除");
         }
         Long hostCount = hostMapper.selectCount(
-                new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getMsServerGroupId, id));
+                new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerGroupId, id));
         if (hostCount != null && hostCount > 0) {
             return ReturnResult.error("分组下存在主机，禁止删除");
         }
@@ -141,17 +141,17 @@ public class ServerGroupServiceImpl implements ServerGroupService {
     @Override
     public ReturnResult<List<MsServerGroup>> list() {
         List<MsServerGroup> groups = groupMapper.selectList(
-                new LambdaQueryWrapper<MsServerGroup>().orderByAsc(MsServerGroup::getMsServerGroupSort));
+                new LambdaQueryWrapper<MsServerGroup>().orderByAsc(MsServerGroup::getServerGroupSort));
         return ReturnResult.list(groups);
     }
 
     @Override
     public ReturnResult<List<ServerGroupNodeVO>> tree() {
         List<MsServerGroup> all = groupMapper.selectList(
-                new LambdaQueryWrapper<MsServerGroup>().orderByAsc(MsServerGroup::getMsServerGroupSort));
+                new LambdaQueryWrapper<MsServerGroup>().orderByAsc(MsServerGroup::getServerGroupSort));
         Map<Long, List<MsServerGroup>> childrenMap = new HashMap<>();
         for (MsServerGroup g : all) {
-            Long pid = g.getMsServerGroupParentId();
+            Long pid = g.getServerGroupParentId();
             if (pid != null && pid != 0L) {
                 childrenMap.computeIfAbsent(pid, k -> new ArrayList<>()).add(g);
             }
@@ -159,7 +159,7 @@ public class ServerGroupServiceImpl implements ServerGroupService {
         List<ServerGroupNodeVO> roots = new ArrayList<>();
         Set<Long> visited = new HashSet<>();
         for (MsServerGroup g : all) {
-            Long pid = g.getMsServerGroupParentId();
+            Long pid = g.getServerGroupParentId();
             if (pid == null || pid == 0L) {
                 roots.add(toNode(g, childrenMap, visited));
             }
@@ -182,8 +182,8 @@ public class ServerGroupServiceImpl implements ServerGroupService {
                 children.add(toNode(sub, childrenMap, visited));
             }
         }
-        return new ServerGroupNodeVO(group.getId(), group.getMsServerGroupName(),
-                group.getMsServerGroupParentId(), group.getMsServerGroupSort(),
-                group.getMsServerGroupRemark(), group.getMsServerGroupColor(), children);
+        return new ServerGroupNodeVO(group.getId(), group.getServerGroupName(),
+                group.getServerGroupParentId(), group.getServerGroupSort(),
+                group.getServerGroupRemark(), group.getServerGroupColor(), children);
     }
 }

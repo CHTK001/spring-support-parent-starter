@@ -5,6 +5,7 @@ package com.chua.starter.server.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.ssh.support.client.SshClient;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -187,7 +188,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
         String sessionId = UUID.randomUUID().toString().replace("-", "");
 
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
                 ensurePosix(hostId);
@@ -241,7 +242,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                     connectionManager.release(hostId);
                 }
             }
-        });
+        }));
 
         return emitter;
     }
@@ -251,7 +252,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
         String sessionId = UUID.randomUUID().toString().replace("-", "");
 
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             SshClient.TerminalOperation[] terminalRef = new SshClient.TerminalOperation[1];
             try {
@@ -320,7 +321,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                     connectionManager.release(hostId);
                 }
             }
-        });
+        }));
 
         return emitter;
     }

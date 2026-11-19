@@ -5,10 +5,10 @@ import java.util.Locale;
 /**
  * 主机操作系统平台归一。
  *
- * <p>台账列 {@code ms_server_host.ms_server_host_os_type} 只允许承载真实平台，
+ * <p>台账列 {@code server_host.server_host_os_type} 只允许承载真实平台，
  * 取值域与 {@code HostDetectProvider.os()} / {@code HostRemoteProvider.supportedOsTypes()}
  * 对齐：{@link #LINUX}、{@link #WINDOWS}、{@link #MACOS}、{@link #FREEBSD}、{@link #AIX}、{@link #SOLARIS}。
- * 接入方式（AGENT / LOCAL / SCHEDULED）由 {@code ms_server_host_collect_mode} 表达，不得写入本列。</p>
+ * 接入方式（AGENT / LOCAL / SCHEDULED）由 {@code server_host_collect_mode} 表达，不得写入本列。</p>
  *
  * @author CH
  * @since 4.0.0.42

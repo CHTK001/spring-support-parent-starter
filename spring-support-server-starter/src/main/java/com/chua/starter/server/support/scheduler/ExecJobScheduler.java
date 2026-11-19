@@ -124,24 +124,24 @@ public class ExecJobScheduler {
             return;
         }
         cancel(job.getId());
-        if (job.getMsExecJobEnabled() == null || job.getMsExecJobEnabled() != 1) {
+        if (job.getServerExecJobEnabled() == null || job.getServerExecJobEnabled() != 1) {
             return;
         }
-        String type = job.getMsExecJobType();
+        String type = job.getServerExecJobType();
         boolean cron = type == null || type.isBlank() || ServerConstants.EXEC_JOB_TYPE_CRON.equalsIgnoreCase(type.trim());
-        if (!cron || job.getMsExecJobCron() == null || job.getMsExecJobCron().isBlank()) {
+        if (!cron || job.getServerExecJobCron() == null || job.getServerExecJobCron().isBlank()) {
             return;
         }
         try {
             ScheduledFuture<?> future = taskScheduler.schedule(
                     () -> execService.runScheduledJob(job.getId()),
-                    new CronTrigger(job.getMsExecJobCron()));
+                    new CronTrigger(job.getServerExecJobCron()));
             if (future != null) {
                 futures.put(job.getId(), future);
             }
         } catch (IllegalArgumentException e) {
             log.warn("[exec-cron] cron 非法，跳过任务 jobId={} cron={}: {}",
-                    job.getId(), job.getMsExecJobCron(), e.getMessage());
+                    job.getId(), job.getServerExecJobCron(), e.getMessage());
         }
     }
 

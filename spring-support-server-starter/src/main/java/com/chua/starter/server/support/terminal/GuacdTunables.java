@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  * 「类型/范围/白名单校验，不合格回落默认」，并打一条 warn 说明回落原因 ——
  * 否则用户会以为自己的配置生效了。</p>
  *
- * <p>键名统一前缀：{@code rdp.} / {@code vnc.} / {@code ssh.}，存在 {@code ms_server_config}，
+ * <p>键名统一前缀：{@code rdp.} / {@code vnc.} / {@code ssh.}，存在 {@code server_config}，
  * 系统配置页可改，连接建立时读取（改完下次连接生效，不用重启）。</p>
  *
  * @author CH

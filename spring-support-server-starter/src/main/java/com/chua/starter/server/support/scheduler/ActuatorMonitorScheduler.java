@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 /**
  * Actuator 定时采集调度器（全局时间轮驱动）。
  *
- * <p>项目的「Actuator 定时采集」开关存在 {@code ms_server_config}，由
+ * <p>项目的「Actuator 定时采集」开关存在 {@code server_config}，由
  * {@link ServerTaskScheduler} 的全局时间轮以固定粒度扫描：所有项目共用同一个时间轮
  * 与同一条发布管理 SSE 长连接，不给每个项目单独起线程。</p>
  *

@@ -108,7 +108,7 @@ public class ArthasServiceImpl implements ArthasService {
             ReturnResult<List<MsExecLog>> logs = execService.runCommand(
                     Collections.singletonList(ctx.hostId), checkCmd, 10, null);
             if (logs.isOk() && logs.getData() != null && !logs.getData().isEmpty()) {
-                String output = logs.getData().get(0).getMsExecLogOutput();
+                String output = logs.getData().get(0).getServerExecLogOutput();
                   // ss -tlnp | grep :3658 输出类似 "LISTEN 0 100 *:3658 *:* users:(("java",...))"，
                   // 只要非空即表示端口在监听（grep 命中），退出码为 0
                 boolean portOpen = output != null && !output.isBlank();
@@ -129,7 +129,7 @@ public class ArthasServiceImpl implements ArthasService {
             ReturnResult<List<MsExecLog>> pidLogs = execService.runCommand(
                     Collections.singletonList(ctx.hostId), pidCmd, 10, null);
             if (pidLogs.isOk() && pidLogs.getData() != null && !pidLogs.getData().isEmpty()) {
-                String output = pidLogs.getData().get(0).getMsExecLogOutput();
+                String output = pidLogs.getData().get(0).getServerExecLogOutput();
                 status.put("jvmPid", extractPid(output));
             }
         } catch (Exception e) {
@@ -166,7 +166,7 @@ public class ArthasServiceImpl implements ArthasService {
         if (!pidLogs.isOk() || pidLogs.getData() == null || pidLogs.getData().isEmpty()) {
             return ReturnResult.error("无法获取项目 JVM PID，请确认项目已启动");
         }
-        String pid = extractPid(pidLogs.getData().get(0).getMsExecLogOutput());
+        String pid = extractPid(pidLogs.getData().get(0).getServerExecLogOutput());
         if (pid == null || pid.isEmpty()) {
             return ReturnResult.error("未找到运行中的 JVM PID，请确认项目已启动");
         }
@@ -178,7 +178,7 @@ public class ArthasServiceImpl implements ArthasService {
         ReturnResult<List<MsExecLog>> jarLogs = execService.runCommand(
                 Collections.singletonList(ctx.hostId), jarCheck, 10, null);
         if (jarLogs.isOk() && jarLogs.getData() != null && !jarLogs.getData().isEmpty()) {
-            String output = jarLogs.getData().get(0).getMsExecLogOutput();
+            String output = jarLogs.getData().get(0).getServerExecLogOutput();
             if (output != null && output.contains("MISSING")) {
                 return ReturnResult.error("arthas-boot.jar 不存在: " + jarPath
                         + "，可点「获取 arthas 构件」由平台下载/选取后自动投放，或手动上传");
@@ -195,7 +195,7 @@ public class ArthasServiceImpl implements ArthasService {
         ReturnResult<List<MsExecLog>> waitLogs = execService.runCommand(
                 Collections.singletonList(ctx.hostId), waitCmd, 20, null);
         if (waitLogs.isOk() && waitLogs.getData() != null && !waitLogs.getData().isEmpty()) {
-            String output = waitLogs.getData().get(0).getMsExecLogOutput();
+            String output = waitLogs.getData().get(0).getServerExecLogOutput();
             if (output != null && output.contains("PORT_OPEN")) {
                 return ReturnResult.ok("Arthas attach 成功, PID=" + pid + ", telnet=" + port);
             }
@@ -208,7 +208,7 @@ public class ArthasServiceImpl implements ArthasService {
         ReturnResult<List<MsExecLog>> logResult = execService.runCommand(
                 Collections.singletonList(ctx.hostId), logCmd, 10, null);
         String logOutput = logResult.getData() != null && !logResult.getData().isEmpty()
-                ? logResult.getData().get(0).getMsExecLogOutput() : "无日志";
+                ? logResult.getData().get(0).getServerExecLogOutput() : "无日志";
         return ReturnResult.error("Arthas attach 失败，telnet 端口未监听。日志: " + logOutput);
     }
 
@@ -249,7 +249,7 @@ public class ArthasServiceImpl implements ArthasService {
         ReturnResult<List<MsExecLog>> logs = execService.runCommand(
                 Collections.singletonList(ctx.hostId), execCmd, 30, null);
         if (logs.isOk() && logs.getData() != null && !logs.getData().isEmpty()) {
-            return ReturnResult.ok(logs.getData().get(0).getMsExecLogOutput());
+            return ReturnResult.ok(logs.getData().get(0).getServerExecLogOutput());
         }
         return ReturnResult.error("命令执行失败");
     }
@@ -269,7 +269,7 @@ public class ArthasServiceImpl implements ArthasService {
         ReturnResult<List<MsExecLog>> logs = execService.runCommand(
                 Collections.singletonList(ctx.hostId), consoleCmd, 10, null);
         if (logs.isOk() && logs.getData() != null && !logs.getData().isEmpty()) {
-            return ReturnResult.ok(logs.getData().get(0).getMsExecLogOutput());
+            return ReturnResult.ok(logs.getData().get(0).getServerExecLogOutput());
         }
         return ReturnResult.error("获取终端输出失败");
     }
