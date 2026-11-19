@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -24,145 +26,138 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_provider_credential")
-public class DeviceProviderCredential {
+public class DeviceProviderCredential extends SysBase {
 
     /** 主键 标识 */
-    @TableId(value = "device_credential_id", type = IdType.ASSIGN_UUID)
+    @TableId(value = "device_provider_credential_id", type = IdType.ASSIGN_UUID)
     private String deviceCredentialId;
 
     /** 厂商 标识：hikvision / dahua */
-    @TableField("device_credential_vendor")
+    @TableField("device_provider_credential_vendor")
     private String deviceCredentialVendor;
 
     /** 平台 类型：cloud-yao / cloud-eye / secure-platform / dahua-cloud / lechange；SDK 直连为空 */
-    @TableField("device_credential_platform_type")
+    @TableField("device_provider_credential_platform_type")
     private String deviceCredentialPlatformType;
 
     /** 凭据 名称，如「华东区账号」；同厂商同平台下唯一 */
-    @TableField("device_credential_name")
+    @TableField("device_provider_credential_name")
     private String deviceCredentialName;
 
     /** AppKey（AK）；SDK 直连模式可空 */
-    @TableField("device_credential_app_key")
+    @TableField("device_provider_credential_app_key")
     private String deviceCredentialAppKey;
 
     /** AppSecret（SK）；SDK 直连模式可空 */
-    @TableField("device_credential_app_secret")
+    @TableField("device_provider_credential_app_secret")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String deviceCredentialAppSecret;
 
     /** 云曜产品编码（ProductCode），云曜平台必填 */
-    @TableField("device_credential_product_code")
+    @TableField("device_provider_credential_product_code")
     private String deviceCredentialProductCode;
 
     /** 云曜项目 ID（ProjectID），云曜平台必填 */
-    @TableField("device_credential_project_id")
+    @TableField("device_provider_credential_project_id")
     private String deviceCredentialProjectId;
 
     /** 云眸组编号（groupNo），云眸平台注册设备必填 */
-    @TableField("device_credential_group_no")
+    @TableField("device_provider_credential_group_no")
     private String deviceCredentialGroupNo;
 
     /** 平台 endpoint 覆盖（留空用各 Session 内置默认） */
-    @TableField("device_credential_base_url")
+    @TableField("device_provider_credential_base_url")
     private String deviceCredentialBaseUrl;
 
     /** 离线 检测阈值（秒） */
-    @TableField("device_credential_offline_threshold")
+    @TableField("device_provider_credential_offline_threshold")
     private Integer deviceCredentialOfflineThreshold;
 
     /** 是否 为该厂商默认套：0 否、1 是 */
-    @TableField("device_credential_is_default")
+    @TableField("device_provider_credential_is_default")
     private Boolean deviceCredentialIsDefault;
 
     /** 是否 启用：0 否、1 是 */
-    @TableField("device_credential_enabled")
+    @TableField("device_provider_credential_enabled")
     private Boolean deviceCredentialEnabled;
 
     /** 备注 */
-    @TableField("device_credential_remark")
+    @TableField("device_provider_credential_remark")
     private String deviceCredentialRemark;
 
     /**
      * 在离线检测开关：该凭据维度的设备是否由时间轮自动探测（能力位 DEVICE）
      */
-    @TableField("device_credential_offline_detect_enabled")
+    @TableField("device_provider_credential_offline_detect_enabled")
     private Boolean deviceCredentialOfflineDetectEnabled;
 
     /**
      * 在离线检测间隔（秒）
      */
-    @TableField("device_credential_offline_detect_interval")
+    @TableField("device_provider_credential_offline_detect_interval")
     private Integer deviceCredentialOfflineDetectInterval;
 
     /**
      * 事件轮询开关：该凭据实例是否独立拉取厂商事件（能力位 EVENT）
      */
-    @TableField("device_credential_event_poll_enabled")
+    @TableField("device_provider_credential_event_poll_enabled")
     private Boolean deviceCredentialEventPollEnabled;
 
     /**
      * 事件轮询间隔（秒）
      */
-    @TableField("device_credential_event_poll_interval")
+    @TableField("device_provider_credential_event_poll_interval")
     private Integer deviceCredentialEventPollInterval;
 
     /**
      * 设备自动同步开关：该凭据维度是否由时间轮自动拉取设备目录
      */
-    @TableField("device_credential_device_sync_enabled")
+    @TableField("device_provider_credential_device_sync_enabled")
     private Boolean deviceCredentialDeviceSyncEnabled;
 
     /**
      * 设备自动同步间隔（秒）
      */
-    @TableField("device_credential_device_sync_interval")
+    @TableField("device_provider_credential_device_sync_interval")
     private Integer deviceCredentialDeviceSyncInterval;
 
     /**
      * 组织自动同步开关：该凭据维度是否由时间轮自动拉取厂商侧组织树
      */
-    @TableField("device_credential_org_sync_enabled")
+    @TableField("device_provider_credential_org_sync_enabled")
     private Boolean deviceCredentialOrgSyncEnabled;
 
     /**
      * 组织自动同步间隔（秒）
      */
-    @TableField("device_credential_org_sync_interval")
+    @TableField("device_provider_credential_org_sync_interval")
     private Integer deviceCredentialOrgSyncInterval;
 
     /**
      * 环境指标采集开关：该凭据维度的气象/传感器设备是否由时间轮自动拉取（能力位 METRIC）
      */
-    @TableField("device_credential_metric_collect_enabled")
+    @TableField("device_provider_credential_metric_collect_enabled")
     private Boolean deviceCredentialMetricCollectEnabled;
 
     /**
      * 环境指标采集间隔（秒）
      */
-    @TableField("device_credential_metric_collect_interval")
+    @TableField("device_provider_credential_metric_collect_interval")
     private Integer deviceCredentialMetricCollectInterval;
 
     /**
      * 最近一次连通性探测时间（单条「测试连接」或顶部「全部检测」写入）
      */
-    @TableField("device_credential_last_test_at")
+    @TableField("device_provider_credential_last_test_at")
     private LocalDateTime deviceCredentialLastTestAt;
 
     /**
      * 最近一次连通性探测结果：true 成功、false 失败、null 未检测
      */
-    @TableField("device_credential_last_test_ok")
+    @TableField("device_provider_credential_last_test_ok")
     private Boolean deviceCredentialLastTestOk;
-
-    /** 创建 时间 */
-    @TableField("device_credential_created_at")
-    private LocalDateTime deviceCredentialCreatedAt;
-
-    /** 更新 时间 */
-    @TableField("device_credential_updated_at")
-    private LocalDateTime deviceCredentialUpdatedAt;
 
     /**
      * 脱敏后的 AppSecret，仅用于响应展示。

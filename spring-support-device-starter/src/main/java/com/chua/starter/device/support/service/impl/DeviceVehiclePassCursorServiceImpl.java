@@ -44,7 +44,7 @@ public class DeviceVehiclePassCursorServiceImpl implements DeviceVehiclePassCurs
             cursor = new DeviceVehiclePassCursor();
             cursor.setDeviceVehiclePassCursorDeviceId(deviceId);
             cursor.setDeviceVehiclePassCursorLastMsgId(msgId);
-            cursor.setDeviceVehiclePassCursorUpdatedAt(LocalDateTime.now());
+            cursor.setUpdateTime(LocalDateTime.now());
             cursorMapper.insert(cursor);
             return;
         }
@@ -55,7 +55,7 @@ public class DeviceVehiclePassCursorServiceImpl implements DeviceVehiclePassCurs
             return;
         }
         cursor.setDeviceVehiclePassCursorLastMsgId(msgId);
-        cursor.setDeviceVehiclePassCursorUpdatedAt(LocalDateTime.now());
+        cursor.setUpdateTime(LocalDateTime.now());
         cursorMapper.updateById(cursor);
     }
 }

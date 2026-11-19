@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -16,8 +18,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_task_state")
-public class DeviceTaskState {
+public class DeviceTaskState extends SysBase {
 
     /**
      * 主键 标识

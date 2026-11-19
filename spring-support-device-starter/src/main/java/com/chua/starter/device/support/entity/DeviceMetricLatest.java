@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -18,38 +20,39 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_metric_latest")
-public class DeviceMetricLatest {
+public class DeviceMetricLatest extends SysBase {
 
     /** 主键 */
-    @TableId(value = "device_metric_id", type = IdType.ASSIGN_UUID)
+    @TableId(value = "device_metric_latest_id", type = IdType.ASSIGN_UUID)
     private String deviceMetricId;
 
     /** 设备 ID */
-    @TableField("device_info_id")
+    @TableField("device_metric_latest_device_id")
     private String deviceInfoId;
 
     /** 节点稳定标识（厂商节点 ID，或名称 + 单位） */
-    @TableField("device_metric_key")
+    @TableField("device_metric_latest_key")
     private String deviceMetricKey;
 
     /** 节点名称，例如温度 */
-    @TableField("device_metric_name")
+    @TableField("device_metric_latest_name")
     private String deviceMetricName;
 
     /** 读数；字符串兼容风向、天气现象等非数值指标 */
-    @TableField("device_metric_value")
+    @TableField("device_metric_latest_value")
     private String deviceMetricValue;
 
     /** 单位 */
-    @TableField("device_metric_unit")
+    @TableField("device_metric_latest_unit")
     private String deviceMetricUnit;
 
     /** 厂商侧数据时间 */
-    @TableField("device_metric_data_time")
+    @TableField("device_metric_latest_data_time")
     private LocalDateTime deviceMetricDataTime;
 
     /** 本地采集时间 */
-    @TableField("device_metric_collected_at")
+    @TableField("device_metric_latest_collected_at")
     private LocalDateTime deviceMetricCollectedAt;
 }

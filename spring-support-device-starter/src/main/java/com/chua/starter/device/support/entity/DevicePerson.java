@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 厂商人员实体
@@ -20,8 +20,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_person")
-public class DevicePerson {
+public class DevicePerson extends SysBase {
 
     /**
      * 主键 标识
@@ -103,22 +104,4 @@ public class DevicePerson {
      * Devicepersondeleted
      */
     private Boolean devicePersonDeleted;
-
-    /**
-     * 创建时间
-     */
-    @TableField("device_person_created_at")
-    /**
-     * Deviceperscreatedat
-     */
-    private LocalDateTime devicePersonCreatedAt;
-
-    /**
-     * 更新时间
-     */
-    @TableField("device_person_updated_at")
-    /**
-     * Devicepersonupdatedat
-     */
-    private LocalDateTime devicePersonUpdatedAt;
 }

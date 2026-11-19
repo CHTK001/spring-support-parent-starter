@@ -1,9 +1,9 @@
 package com.chua.starter.device.support.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 设备分组
@@ -12,8 +12,9 @@ import java.time.LocalDateTime;
  * @since 4.0.0.51
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_group")
-public class DeviceGroup {
+public class DeviceGroup extends SysBase {
 
     @TableId(type = IdType.ASSIGN_UUID)
     private String groupId;
@@ -29,10 +30,4 @@ public class DeviceGroup {
 
     /** 备注 */
     private String groupRemark;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
 }

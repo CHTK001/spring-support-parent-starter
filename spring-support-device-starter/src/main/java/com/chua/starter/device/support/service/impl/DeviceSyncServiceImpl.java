@@ -287,7 +287,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                 // 远端幂等键回写台账，推送/解绑方向才能定位到同一台设备
                 existing.setDeviceInfoExternalId(remote.externalId());
             }
-            existing.setDeviceInfoUpdatedAt(LocalDateTime.now());
+            existing.setUpdateTime(LocalDateTime.now());
             // 回写：该台账行由哪套凭据维系
             existing.setDeviceInfoCredentialId(credentialId);
             deviceInfoMapper.updateById(existing);
@@ -346,7 +346,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         if (existing != null) {
             existing.setDeviceOrganizationName(node.orgName());
             existing.setDeviceOrganizationParentId(parentId);
-            existing.setDeviceOrganizationUpdatedAt(LocalDateTime.now());
+            existing.setUpdateTime(LocalDateTime.now());
             deviceOrganizationMapper.updateById(existing);
             return false;
         }
@@ -356,7 +356,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         org.setDeviceOrganizationVendor(provider.getVendor());
         org.setDeviceOrganizationExternalId(node.orgId());
         org.setDeviceOrganizationParentId(parentId);
-        org.setDeviceOrganizationUpdatedAt(LocalDateTime.now());
+        org.setUpdateTime(LocalDateTime.now());
         deviceOrganizationMapper.insert(org);
         return true;
     }
@@ -394,7 +394,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             existing.setDevicePersonPhone(remote.phone());
             existing.setDevicePersonEmail(remote.email());
             existing.setDevicePersonOrgId(remote.orgId());
-            existing.setDevicePersonUpdatedAt(LocalDateTime.now());
+            existing.setUpdateTime(LocalDateTime.now());
             devicePersonMapper.updateById(existing);
             return false;
         }
@@ -407,7 +407,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
         person.setDevicePersonVendor(provider.getVendor());
         person.setDevicePersonExternalId(remote.externalId());
         person.setDevicePersonOrgId(remote.orgId());
-        person.setDevicePersonUpdatedAt(LocalDateTime.now());
+        person.setUpdateTime(LocalDateTime.now());
         devicePersonMapper.insert(person);
         return true;
     }
@@ -507,7 +507,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             if (StringUtils.hasText(remote.externalId())) {
                 existing.setDeviceInfoExternalId(remote.externalId());
             }
-            existing.setDeviceInfoUpdatedAt(LocalDateTime.now());
+            existing.setUpdateTime(LocalDateTime.now());
             deviceInfoMapper.updateById(existing);
             return false;
         }
@@ -767,7 +767,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             DeviceInfo patch = new DeviceInfo();
             patch.setDeviceInfoId(device.getDeviceInfoId());
             patch.setDeviceInfoExternalId(externalId);
-            patch.setDeviceInfoUpdatedAt(LocalDateTime.now());
+            patch.setUpdateTime(LocalDateTime.now());
             deviceInfoMapper.updateById(patch);
             device.setDeviceInfoExternalId(externalId);
         } catch (RuntimeException e) {

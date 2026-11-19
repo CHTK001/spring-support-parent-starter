@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 过车拉取游标实体。
@@ -17,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_vehicle_pass_cursor")
-public class DeviceVehiclePassCursor {
+public class DeviceVehiclePassCursor extends SysBase {
 
     /**
      * 设备标识
@@ -31,10 +32,4 @@ public class DeviceVehiclePassCursor {
      */
     @TableField("device_vehicle_pass_cursor_last_msg_id")
     private Long deviceVehiclePassCursorLastMsgId;
-
-    /**
-     * 更新时间
-     */
-    @TableField("device_vehicle_pass_cursor_updated_at")
-    private LocalDateTime deviceVehiclePassCursorUpdatedAt;
 }

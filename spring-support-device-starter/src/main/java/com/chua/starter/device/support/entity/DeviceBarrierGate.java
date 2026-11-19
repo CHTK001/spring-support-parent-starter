@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 车闸（道闸）点位实体。
@@ -17,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_barrier_gate")
-public class DeviceBarrierGate {
+public class DeviceBarrierGate extends SysBase {
 
     /**
      * 主键
@@ -73,16 +74,4 @@ public class DeviceBarrierGate {
      */
     @TableField("device_barrier_gate_deleted")
     private Boolean deviceBarrierGateDeleted;
-
-    /**
-     * 创建时间
-     */
-    @TableField("device_barrier_gate_created_at")
-    private LocalDateTime deviceBarrierGateCreatedAt;
-
-    /**
-     * 更新时间
-     */
-    @TableField("device_barrier_gate_updated_at")
-    private LocalDateTime deviceBarrierGateUpdatedAt;
 }

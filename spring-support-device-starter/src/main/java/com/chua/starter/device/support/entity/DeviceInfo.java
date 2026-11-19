@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,8 +29,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_info")
-public class DeviceInfo {
+public class DeviceInfo extends SysBase {
 
     /**
      * 主键 标识
@@ -316,21 +319,4 @@ public class DeviceInfo {
     @TableField("device_info_version")
     private Integer deviceInfoVersion;
 
-    /**
-     * 创建时间
-     */
-    @TableField("device_info_created_at")
-    /**
-     * Device信息创建时间AT
-    */
-    private LocalDateTime deviceInfoCreatedAt;
-
-    /**
-     * 更新时间
-     */
-    @TableField("device_info_updated_at")
-    /**
-     * Device信息更新时间AT
-    */
-    private LocalDateTime deviceInfoUpdatedAt;
 }

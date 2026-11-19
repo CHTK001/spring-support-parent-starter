@@ -54,8 +54,8 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
         if (pass.getDeviceVehiclePassTime() == null) {
             pass.setDeviceVehiclePassTime(LocalDateTime.now());
         }
-        if (pass.getDeviceVehiclePassCreatedAt() == null) {
-            pass.setDeviceVehiclePassCreatedAt(LocalDateTime.now());
+        if (pass.getCreateTime() == null) {
+            pass.setCreateTime(LocalDateTime.now());
         }
         passMapper.insert(pass);
         seriesRecorder.recordVehiclePass(pass.getDeviceVehiclePassDeviceId(), pass.getDeviceVehiclePassGateId(),

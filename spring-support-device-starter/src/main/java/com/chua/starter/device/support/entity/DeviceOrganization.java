@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 设备组织实体（树形结构）
@@ -16,8 +16,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_organization")
-public class DeviceOrganization {
+public class DeviceOrganization extends SysBase {
 
     /**
      * 主键 标识
@@ -81,10 +82,4 @@ public class DeviceOrganization {
      */
     @TableField("device_organization_deleted")
     private Boolean deviceOrganizationDeleted;
-
-    /**
-     * 更新时间
-     */
-    @TableField("device_organization_updated_at")
-    private LocalDateTime deviceOrganizationUpdatedAt;
 }

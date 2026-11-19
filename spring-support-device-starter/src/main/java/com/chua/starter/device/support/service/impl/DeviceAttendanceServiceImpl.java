@@ -69,7 +69,7 @@ public class DeviceAttendanceServiceImpl implements DeviceAttendanceService {
             entity.setDeviceAttendanceRecordOccurredAt(record.getDeviceAccessRecordOccurredAt());
             entity.setDeviceAttendanceRecordSource("access-sync");
             entity.setDeviceAttendanceRecordSourceId(sourceId);
-            entity.setDeviceAttendanceRecordCreatedAt(LocalDateTime.now());
+            entity.setCreateTime(LocalDateTime.now());
             attendanceMapper.insert(entity);
             saved++;
         }

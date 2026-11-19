@@ -75,7 +75,7 @@ public class ExcelExportUtil {
                 row.createCell(12).setCellValue(device.getDeviceInfoLatitude() != null ? device.getDeviceInfoLatitude().toString() : "");
                 row.createCell(13).setCellValue(device.getDeviceInfoLongitude() != null ? device.getDeviceInfoLongitude().toString() : "");
                 row.createCell(14).setCellValue(safeString(device.getDeviceInfoAddress()));
-                row.createCell(15).setCellValue(device.getDeviceInfoCreatedAt() != null ? device.getDeviceInfoCreatedAt().toString() : "");
+                row.createCell(15).setCellValue(device.getCreateTime() != null ? device.getCreateTime().toString() : "");
             }
 
             // 设置响应头

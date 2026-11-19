@@ -36,8 +36,8 @@ public class DevicePersonServiceImpl implements DevicePersonService {
         }
         LocalDateTime now = LocalDateTime.now();
         person.setDevicePersonDeleted(false);
-        person.setDevicePersonCreatedAt(now);
-        person.setDevicePersonUpdatedAt(now);
+        person.setCreateTime(now);
+        person.setUpdateTime(now);
         personMapper.insert(person);
         log.info("新增人员: vendor={}, externalId={}", person.getDevicePersonVendor(),
                 person.getDevicePersonExternalId());
@@ -50,7 +50,7 @@ public class DevicePersonServiceImpl implements DevicePersonService {
             throw new IllegalArgumentException("人员不能为空");
         }
         person.setDevicePersonId(id);
-        person.setDevicePersonUpdatedAt(LocalDateTime.now());
+        person.setUpdateTime(LocalDateTime.now());
         personMapper.updateById(person);
     }
 
@@ -59,7 +59,7 @@ public class DevicePersonServiceImpl implements DevicePersonService {
         DevicePerson person = new DevicePerson();
         person.setDevicePersonId(id);
         person.setDevicePersonDeleted(true);
-        person.setDevicePersonUpdatedAt(LocalDateTime.now());
+        person.setUpdateTime(LocalDateTime.now());
         personMapper.updateById(person);
         log.info("删除人员: id={}", id);
     }
@@ -100,7 +100,7 @@ public class DevicePersonServiceImpl implements DevicePersonService {
                     .or().like(DevicePerson::getDevicePersonPhone, value)
                     .or().like(DevicePerson::getDevicePersonExternalId, value));
         }
-        wrapper.orderByDesc(DevicePerson::getDevicePersonUpdatedAt);
+        wrapper.orderByDesc(DevicePerson::getUpdateTime);
         return wrapper;
     }
 }

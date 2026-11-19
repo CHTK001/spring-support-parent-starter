@@ -36,8 +36,8 @@ public class DeviceBarrierGateServiceImpl implements DeviceBarrierGateService {
         }
         LocalDateTime now = LocalDateTime.now();
         gate.setDeviceBarrierGateDeleted(false);
-        gate.setDeviceBarrierGateCreatedAt(now);
-        gate.setDeviceBarrierGateUpdatedAt(now);
+        gate.setCreateTime(now);
+        gate.setUpdateTime(now);
         gateMapper.insert(gate);
         log.info("新增车闸: name={}, direction={}", gate.getDeviceBarrierGateName(),
                 gate.getDeviceBarrierGateDirection());
@@ -50,7 +50,7 @@ public class DeviceBarrierGateServiceImpl implements DeviceBarrierGateService {
             throw new IllegalArgumentException("车闸不能为空");
         }
         gate.setDeviceBarrierGateId(id);
-        gate.setDeviceBarrierGateUpdatedAt(LocalDateTime.now());
+        gate.setUpdateTime(LocalDateTime.now());
         gateMapper.updateById(gate);
     }
 
@@ -59,7 +59,7 @@ public class DeviceBarrierGateServiceImpl implements DeviceBarrierGateService {
         DeviceBarrierGate gate = new DeviceBarrierGate();
         gate.setDeviceBarrierGateId(id);
         gate.setDeviceBarrierGateDeleted(true);
-        gate.setDeviceBarrierGateUpdatedAt(LocalDateTime.now());
+        gate.setUpdateTime(LocalDateTime.now());
         gateMapper.updateById(gate);
         log.info("删除车闸: id={}", id);
     }

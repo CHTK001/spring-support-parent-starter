@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -18,8 +20,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_webhook_appkey")
-public class DeviceWebhookAppKey {
+public class DeviceWebhookAppKey extends SysBase {
 
     /** 主键 */
     @TableId(value = "device_webhook_appkey_id", type = IdType.ASSIGN_UUID)
@@ -52,8 +55,4 @@ public class DeviceWebhookAppKey {
     /** 最近一次成功调用时间 */
     @TableField("device_webhook_appkey_last_used_at")
     private LocalDateTime deviceWebhookAppkeyLastUsedAt;
-
-    /** 创建时间 */
-    @TableField("device_webhook_appkey_created_at")
-    private LocalDateTime deviceWebhookAppkeyCreatedAt;
 }

@@ -84,7 +84,7 @@ public class DeviceStatusService {
         DeviceInfo update = new DeviceInfo();
         update.setDeviceInfoId(device.getDeviceInfoId());
         update.setDeviceInfoOnline(online);
-        update.setDeviceInfoUpdatedAt(now);
+        update.setUpdateTime(now);
         if (online) {
             update.setDeviceInfoLastOnlineAt(now);
             device.setDeviceInfoLastOnlineAt(now);
@@ -95,7 +95,7 @@ public class DeviceStatusService {
         deviceInfoMapper.updateById(update);
 
         device.setDeviceInfoOnline(online);
-        device.setDeviceInfoUpdatedAt(now);
+        device.setUpdateTime(now);
         if (changed) {
             publishStatus(device, now);
             log.info("设备状态变更: id={}, name={}, online={}", device.getDeviceInfoId(),

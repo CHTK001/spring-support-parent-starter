@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * webhook 入站幂等回执。
@@ -18,8 +18,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_webhook_receipt")
-public class DeviceWebhookReceipt {
+public class DeviceWebhookReceipt extends SysBase {
 
     /** 主键 */
     @TableId(value = "device_webhook_receipt_id", type = IdType.ASSIGN_UUID)
@@ -36,8 +37,4 @@ public class DeviceWebhookReceipt {
     /** 主题：access / alarm */
     @TableField("device_webhook_receipt_topic")
     private String deviceWebhookReceiptTopic;
-
-    /** 入库时间 */
-    @TableField("device_webhook_receipt_created_at")
-    private LocalDateTime deviceWebhookReceiptCreatedAt;
 }

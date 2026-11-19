@@ -114,8 +114,8 @@ public class DeviceServiceImpl implements DeviceService {
             device.setDeviceInfoAddress(str(extra.get("deviceInfoAddress")));
             device.setDeviceInfoChannelCount(0);
             device.setDeviceInfoOnline(Boolean.TRUE);
-            device.setDeviceInfoCreatedAt(now);
-            device.setDeviceInfoUpdatedAt(now);
+            device.setCreateTime(now);
+            device.setUpdateTime(now);
             deviceInfoMapper.insert(device);
 
             sessionManager.register(device.getDeviceInfoId(), session);
@@ -203,7 +203,7 @@ public class DeviceServiceImpl implements DeviceService {
         if (StringUtils.hasText(request.getDeviceInfoOwnerId())) {
             device.setDeviceInfoOwnerId(request.getDeviceInfoOwnerId());
         }
-        device.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        device.setUpdateTime(LocalDateTime.now());
     }
 
     @Override
@@ -302,7 +302,7 @@ public class DeviceServiceImpl implements DeviceService {
         if (StringUtils.hasText(orgId)) {
             wrapper.eq(DeviceInfo::getDeviceInfoOrgId, orgId);
         }
-        wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
+        wrapper.orderByDesc(DeviceInfo::getCreateTime);
         return deviceInfoMapper.selectList(wrapper);
     }
 
@@ -388,9 +388,9 @@ public class DeviceServiceImpl implements DeviceService {
         // 这两类设备不再参与后台采集，排在末尾可以避免它们夹在正常设备之间干扰巡检。
         String sortColumn = switch (q.getSortBy() == null ? "" : q.getSortBy()) {
             case "name" -> "device_info_name";
-            case "createdAt" -> "device_info_created_at";
+            case "createdAt" -> "create_time";
             case "lastOnlineAt" -> "device_info_last_online_at";
-            default -> "device_info_updated_at";
+            default -> "update_time";
         };
         String direction = "asc".equalsIgnoreCase(q.getSortOrder()) ? "ASC" : "DESC";
         // 列名来自上面的固定 switch、方向只有 ASC/DESC，可以安全拼接
@@ -446,7 +446,7 @@ public class DeviceServiceImpl implements DeviceService {
                     .or().like(DeviceInfo::getDeviceInfoIp, kw)
                     .or().like(DeviceInfo::getDeviceInfoSerial, kw));
         }
-        wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
+        wrapper.orderByDesc(DeviceInfo::getCreateTime);
         deviceInfoMapper.selectPage(page, wrapper);
         PageResult<DeviceInfo> result = PageResult.copy(page);
         result.setPageSize(page.getSize());
@@ -474,7 +474,7 @@ public class DeviceServiceImpl implements DeviceService {
     public List<DeviceInfo> listByCredentialId(String credentialId) {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceInfo::getDeviceInfoCredentialId, credentialId);
-        wrapper.orderByDesc(DeviceInfo::getDeviceInfoCreatedAt);
+        wrapper.orderByDesc(DeviceInfo::getCreateTime);
         return deviceInfoMapper.selectList(wrapper);
     }
 
@@ -550,7 +550,7 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo update = new DeviceInfo();
         update.setDeviceInfoId(id);
         update.setDeviceInfoOfflineThreshold(threshold);
-        update.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        update.setUpdateTime(LocalDateTime.now());
         deviceInfoMapper.updateById(update);
         log.info("设备离线检测阈值更新: id={}, threshold={}秒", id, threshold);
     }
@@ -575,7 +575,7 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo update = new DeviceInfo();
         update.setDeviceInfoId(id);
         update.setDeviceInfoStatus(status);
-        update.setDeviceInfoUpdatedAt(now);
+        update.setUpdateTime(now);
         boolean stopped = DeviceStatusUtil.collectionStopped(status);
         if (stopped) {
             // 停用后不再巡检，在线标志停在最后一次心跳值会误导界面，这里一并归零
@@ -591,7 +591,7 @@ public class DeviceServiceImpl implements DeviceService {
             log.info("设备已启用，等待在线检测恢复会话: id={}", id);
         }
         existing.setDeviceInfoStatus(status);
-        existing.setDeviceInfoUpdatedAt(now);
+        existing.setUpdateTime(now);
         if (stopped) {
             existing.setDeviceInfoOnline(Boolean.FALSE);
         }
@@ -656,7 +656,7 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo update = new DeviceInfo();
         update.setDeviceInfoId(id);
         update.setDeviceInfoOnline(Boolean.TRUE);
-        update.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        update.setUpdateTime(LocalDateTime.now());
         deviceInfoMapper.updateById(update);
         log.info("设备重连成功: id={}, ip={}", id, device.getDeviceInfoIp());
     }
@@ -686,7 +686,7 @@ public class DeviceServiceImpl implements DeviceService {
         DeviceInfo update = new DeviceInfo();
         update.setDeviceInfoId(id);
         update.setDeviceInfoOnline(online);
-        update.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        update.setUpdateTime(LocalDateTime.now());
         deviceInfoMapper.updateById(update);
         log.debug("设备状态刷新: id={}, online={}", id, online);
     }

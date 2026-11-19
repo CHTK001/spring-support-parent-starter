@@ -255,7 +255,7 @@ public class DeviceImportServiceImpl implements DeviceImportService {
             device.setDeviceInfoLongitude(longitude);
         }
 
-        device.setDeviceInfoUpdatedAt(now);
+        device.setUpdateTime(now);
         if (create) {
             String requestedId = value(row, "deviceId");
             // 台账里给了 ID 就沿用（干模拟预览也能看到最终 ID）；留空交给 MP 生成
@@ -264,7 +264,7 @@ public class DeviceImportServiceImpl implements DeviceImportService {
             device.setDeviceInfoSource("local");
             device.setDeviceInfoStatus("normal");
             device.setDeviceInfoOfflineThreshold(DEFAULT_OFFLINE_THRESHOLD);
-            device.setDeviceInfoCreatedAt(now);
+            device.setCreateTime(now);
             if (device.getDeviceInfoChannelCount() == null) {
                 device.setDeviceInfoChannelCount(0);
             }

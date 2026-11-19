@@ -85,8 +85,8 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         } else if (countVendor(credential.getDeviceCredentialVendor()) == 0) {
             credential.setDeviceCredentialIsDefault(true);
         }
-        credential.setDeviceCredentialCreatedAt(LocalDateTime.now());
-        credential.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+        credential.setCreateTime(LocalDateTime.now());
+        credential.setUpdateTime(LocalDateTime.now());
         credentialMapper.insert(credential);
         log.info("新增提供商凭据: vendor={}, platform={}, name={}",
                 credential.getDeviceCredentialVendor(),
@@ -188,7 +188,7 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         if (Boolean.TRUE.equals(update.getDeviceCredentialIsDefault())) {
             clearVendorDefault(update.getDeviceCredentialVendor(), id);
         }
-        update.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+        update.setUpdateTime(LocalDateTime.now());
         credentialMapper.updateById(update);
         log.info("更新提供商凭据: id={}, vendor={}, name={}, enabled={}",
                 id, update.getDeviceCredentialVendor(), update.getDeviceCredentialName(),
@@ -212,7 +212,7 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         DeviceProviderCredential update = new DeviceProviderCredential();
         update.setDeviceCredentialId(id);
         update.setDeviceCredentialEnabled(enabled);
-        update.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+        update.setUpdateTime(LocalDateTime.now());
         credentialMapper.updateById(update);
         log.info("切换提供商凭据启停: id={}, enabled={}", id, enabled);
         return credentialMapper.selectById(id);
@@ -255,7 +255,7 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
         // 默认套优先；否则取排序最靠前的一套，保证建连确定性
         wrapper.orderByDesc(DeviceProviderCredential::getDeviceCredentialIsDefault)
-                .orderByAsc(DeviceProviderCredential::getDeviceCredentialCreatedAt);
+                .orderByAsc(DeviceProviderCredential::getCreateTime);
         return credentialMapper.selectList(wrapper).stream().findFirst().orElse(null);
     }
 
@@ -392,7 +392,7 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
         }
         for (DeviceProviderCredential c : credentialMapper.selectList(wrapper)) {
             c.setDeviceCredentialIsDefault(false);
-            c.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+            c.setUpdateTime(LocalDateTime.now());
             credentialMapper.updateById(c);
         }
     }
@@ -410,7 +410,7 @@ public class DeviceProviderCredentialServiceImpl implements DeviceProviderCreden
                 .orElse(null);
         if (next != null) {
             next.setDeviceCredentialIsDefault(true);
-            next.setDeviceCredentialUpdatedAt(LocalDateTime.now());
+            next.setUpdateTime(LocalDateTime.now());
             credentialMapper.updateById(next);
         }
     }}

@@ -110,7 +110,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
         entity.setDeviceWebhookAppkeyScopes(scopes);
         entity.setDeviceWebhookAppkeyExpiresAt(request == null ? null : parseExpiry(request.getExpiresAt()));
         entity.setDeviceWebhookAppkeyEnabled(1);
-        entity.setDeviceWebhookAppkeyCreatedAt(LocalDateTime.now());
+        entity.setCreateTime(LocalDateTime.now());
         appKeyMapper.insert(entity);
         AppKeyView view = toView(entity);
         // 明文 secret 只在创建响应里出现一次，列表接口不再回显
@@ -123,7 +123,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     @Override
     public List<AppKeyView> listAppKeys() {
         LambdaQueryWrapper<DeviceWebhookAppKey> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(DeviceWebhookAppKey::getDeviceWebhookAppkeyCreatedAt);
+        wrapper.orderByDesc(DeviceWebhookAppKey::getCreateTime);
         return appKeyMapper.selectList(wrapper).stream().map(this::toView).toList();
     }
 
@@ -245,7 +245,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 entity.setDeviceAlarmDetail(item.getDetail());
                 entity.setDeviceAlarmStatus("unhandled");
                 entity.setDeviceAlarmOccurredAt(parseTime(item.getOccurredAt()));
-                entity.setDeviceAlarmCreatedAt(LocalDateTime.now());
+                entity.setCreateTime(LocalDateTime.now());
                 alarmMapper.insert(entity);
                 saveReceipt(source, externalId, TOPIC_ALARM);
                 result.setCreated(result.getCreated() + 1);
@@ -290,7 +290,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 entity.setDeviceVehiclePassTime(parseTime(item.getPassTime()));
                 entity.setDeviceVehiclePassPhotoUrl(item.getPhotoUrl());
                 entity.setDeviceVehiclePassVehicleType(item.getVehicleType());
-                entity.setDeviceVehiclePassCreatedAt(LocalDateTime.now());
+                entity.setCreateTime(LocalDateTime.now());
                 vehiclePassMapper.insert(entity);
                 seriesRecorder.recordVehiclePass(item.getDeviceId(), item.getGateId(), item.getPlateNo(),
                         item.getDirection(), item.getVehicleType(), item.getPhotoUrl(),
@@ -331,7 +331,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 entity.setDeviceAttendanceRecordOccurredAt(parseTime(item.getOccurredAt()));
                 entity.setDeviceAttendanceRecordSource("webhook");
                 entity.setDeviceAttendanceRecordSourceId(externalId);
-                entity.setDeviceAttendanceRecordCreatedAt(LocalDateTime.now());
+                entity.setCreateTime(LocalDateTime.now());
                 attendanceMapper.insert(entity);
                 saveReceipt(source, externalId, TOPIC_ATTENDANCE);
                 result.setCreated(result.getCreated() + 1);
@@ -438,7 +438,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
         receipt.setDeviceWebhookReceiptSource(source);
         receipt.setDeviceWebhookReceiptExternalId(externalId);
         receipt.setDeviceWebhookReceiptTopic(topic);
-        receipt.setDeviceWebhookReceiptCreatedAt(LocalDateTime.now());
+        receipt.setCreateTime(LocalDateTime.now());
         receiptMapper.insert(receipt);
     }
 
@@ -519,7 +519,7 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
         view.setExpiresAt(entity.getDeviceWebhookAppkeyExpiresAt());
         view.setEnabled(Integer.valueOf(1).equals(entity.getDeviceWebhookAppkeyEnabled()));
         view.setLastUsedAt(entity.getDeviceWebhookAppkeyLastUsedAt());
-        view.setCreatedAt(entity.getDeviceWebhookAppkeyCreatedAt());
+        view.setCreatedAt(entity.getCreateTime());
         return view;
     }
 }

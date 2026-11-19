@@ -79,7 +79,7 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
                 .in(DeviceAlarm::getDeviceAlarmLevel, Arrays.asList("critical", "major"))));
         LocalDateTime today = LocalDate.now().atStartOfDay();
         stats.put("today", alarmMapper.selectCount(new LambdaQueryWrapper<DeviceAlarm>()
-                .ge(DeviceAlarm::getDeviceAlarmCreatedAt, today)));
+                .ge(DeviceAlarm::getCreateTime, today)));
         return stats;
     }
 
@@ -102,7 +102,7 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
         open.eq(DeviceAlarm::getDeviceAlarmDeviceId, deviceId)
                 .eq(DeviceAlarm::getDeviceAlarmType, alarmType)
                 .in(DeviceAlarm::getDeviceAlarmStatus, Arrays.asList("unhandled", "handling"))
-                .ge(DeviceAlarm::getDeviceAlarmCreatedAt, now.minusSeconds(DEDUPE_WINDOW_SECONDS));
+                .ge(DeviceAlarm::getCreateTime, now.minusSeconds(DEDUPE_WINDOW_SECONDS));
         if (alarmMapper.selectCount(open) > 0) {
             return;
         }
@@ -116,7 +116,7 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
         entity.setDeviceAlarmDetail(detail);
         entity.setDeviceAlarmStatus("unhandled");
         entity.setDeviceAlarmOccurredAt(now);
-        entity.setDeviceAlarmCreatedAt(now);
+        entity.setCreateTime(now);
         alarmMapper.insert(entity);
         log.info("平台自检告警入库: deviceId={}, type={}, level={}", deviceId, alarmType, entity.getDeviceAlarmLevel());
     }

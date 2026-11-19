@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -15,8 +17,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_alarm")
-public class DeviceAlarm {
+public class DeviceAlarm extends SysBase {
 
     /** 主键 */
     @TableId(value = "device_alarm_id", type = IdType.ASSIGN_UUID)
@@ -69,8 +72,4 @@ public class DeviceAlarm {
     /** 发生时间 */
     @TableField("device_alarm_occurred_at")
     private LocalDateTime deviceAlarmOccurredAt;
-
-    /** 入库时间 */
-    @TableField("device_alarm_created_at")
-    private LocalDateTime deviceAlarmCreatedAt;
 }

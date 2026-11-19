@@ -56,9 +56,9 @@
         ORDER BY
         <choose>
             <when test="q.sortBy == 'name'">device_info_name</when>
-            <when test="q.sortBy == 'createdAt'">device_info_created_at</when>
+            <when test="q.sortBy == 'createdAt'">create_time</when>
             <when test="q.sortBy == 'lastOnlineAt'">device_info_last_online_at</when>
-            <otherwise>device_info_updated_at</otherwise>
+            <otherwise>update_time</otherwise>
         </choose>
         <choose>
             <when test="q.sortOrder == 'asc'">ASC</when>

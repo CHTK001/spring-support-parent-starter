@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -17,8 +19,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_vehicle_pass")
-public class DeviceVehiclePass {
+public class DeviceVehiclePass extends SysBase {
 
     /**
      * 主键
@@ -67,10 +70,4 @@ public class DeviceVehiclePass {
      */
     @TableField("device_vehicle_pass_vehicle_type")
     private String deviceVehiclePassVehicleType;
-
-    /**
-     * 创建时间
-     */
-    @TableField("device_vehicle_pass_created_at")
-    private LocalDateTime deviceVehiclePassCreatedAt;
 }

@@ -36,8 +36,8 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
         }
         LocalDateTime now = LocalDateTime.now();
         vehicle.setDeviceVehicleDeleted(false);
-        vehicle.setDeviceVehicleCreatedAt(now);
-        vehicle.setDeviceVehicleUpdatedAt(now);
+        vehicle.setCreateTime(now);
+        vehicle.setUpdateTime(now);
         vehicleMapper.insert(vehicle);
         log.info("新增车辆: plateNo={}, vendor={}", vehicle.getDeviceVehiclePlateNo(),
                 vehicle.getDeviceVehicleVendor());
@@ -50,7 +50,7 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
             throw new IllegalArgumentException("车辆不能为空");
         }
         vehicle.setDeviceVehicleId(id);
-        vehicle.setDeviceVehicleUpdatedAt(LocalDateTime.now());
+        vehicle.setUpdateTime(LocalDateTime.now());
         vehicleMapper.updateById(vehicle);
     }
 
@@ -59,7 +59,7 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
         DeviceVehicle vehicle = new DeviceVehicle();
         vehicle.setDeviceVehicleId(id);
         vehicle.setDeviceVehicleDeleted(true);
-        vehicle.setDeviceVehicleUpdatedAt(LocalDateTime.now());
+        vehicle.setUpdateTime(LocalDateTime.now());
         vehicleMapper.updateById(vehicle);
         log.info("删除车辆: id={}", id);
     }
@@ -117,7 +117,7 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
                     .or().like(DeviceVehicle::getDeviceVehicleOwnerName, value)
                     .or().like(DeviceVehicle::getDeviceVehicleOwnerPhone, value));
         }
-        wrapper.orderByDesc(DeviceVehicle::getDeviceVehicleUpdatedAt);
+        wrapper.orderByDesc(DeviceVehicle::getUpdateTime);
         return wrapper;
     }
 
@@ -151,7 +151,7 @@ public class DeviceVehicleServiceImpl implements DeviceVehicleService {
         update.setDeviceVehicleValidFrom(existing.getDeviceVehicleValidFrom() == null
                 ? now : existing.getDeviceVehicleValidFrom());
         update.setDeviceVehicleValidTo(newValidTo);
-        update.setDeviceVehicleUpdatedAt(now);
+        update.setUpdateTime(now);
         vehicleMapper.updateById(update);
         log.info("车辆续期: id={}, validTo={}", id, newValidTo);
         return vehicleMapper.selectById(id);

@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -18,8 +20,9 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("device_attendance_record")
-public class DeviceAttendanceRecord {
+public class DeviceAttendanceRecord extends SysBase {
 
     /**
      * 主键
@@ -74,10 +77,4 @@ public class DeviceAttendanceRecord {
      */
     @TableField("device_attendance_record_source_id")
     private String deviceAttendanceRecordSourceId;
-
-    /**
-     * 创建时间
-     */
-    @TableField("device_attendance_record_created_at")
-    private LocalDateTime deviceAttendanceRecordCreatedAt;
 }
