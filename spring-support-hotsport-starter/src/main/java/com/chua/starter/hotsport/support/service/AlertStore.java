@@ -154,6 +154,7 @@ public class AlertStore {
     /**
      * 最旧事件裁剪：只保留最近 MAX_EVENT_ROWS 行。
      */
+    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：MAX_EVENT_ROWS 为本类私有常量
     private static final String TRIM_EVENTS = "DELETE FROM alert_events WHERE id < "
             + "(SELECT m FROM (SELECT MAX(id) - " + MAX_EVENT_ROWS + " AS m FROM alert_events) t)";
 

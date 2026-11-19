@@ -50,6 +50,7 @@ public class PartitionRoutingService {
          * @param "源表" "源表"
          */
         validateTableName(sourceTable, "源表");
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：SQL 为固定字面量，partitionPrefix/sourceTable 经 validateTableName 校验且用 ? 绑定
         String sql = "SELECT TABLE_NAME FROM information_schema.tables " +
                 "WHERE TABLE_SCHEMA = (SELECT DATABASE()) " +
                 "AND TABLE_NAME LIKE ? " +

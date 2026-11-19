@@ -52,6 +52,10 @@ public final class DeepSeekPricingSource {
             "Speech to Text\\s*\\(ASR\\)\\s+Per\\s+hour of audio\\s+\\$\\s*([0-9]+(?:\\.[0-9]+)?)"
                     + "\\s+\\$\\s*([0-9]+(?:\\.[0-9]+)?)",
             Pattern.CASE_INSENSITIVE);
+    // [P3C 修复] 以下正则原在方法体内编译，提升为类级常量复用
+    private static final Pattern PEAK_WORD = Pattern.compile("(?<!-)\\bPEAK\\b");
+    private static final Pattern TIME_RANGE = Pattern.compile("([0-2]\\d:[0-5]\\d)\\s*-\\s*([0-2]\\d:[0-5]\\d)");
+    private static final Pattern OFF_PEAK_POLICY = Pattern.compile("Off-peak rates[^.]*\\.(?:[^.]*\\.)?");
 
     /**
      * 工具类私有构造器，禁止实例化。
@@ -173,7 +177,7 @@ public final class DeepSeekPricingSource {
             return;
         }
         int peakAt = -1;
-        Matcher peakMatcher = Pattern.compile("(?<!-)\\bPEAK\\b").matcher(segment);
+        Matcher peakMatcher = PEAK_WORD.matcher(segment);
         if (peakMatcher.find()) {
             peakAt = peakMatcher.start();
         }
@@ -272,7 +276,7 @@ public final class DeepSeekPricingSource {
         if (segment == null) {
             return windows;
         }
-        Matcher time = Pattern.compile("([0-2]\\d:[0-5]\\d)\\s*-\\s*([0-2]\\d:[0-5]\\d)").matcher(segment);
+        Matcher time = TIME_RANGE.matcher(segment);
         boolean mondayToFriday = segment.toLowerCase(Locale.ROOT).contains("monday through friday");
         while (time.find()) {
             PriceWindow window = new PriceWindow();
@@ -292,7 +296,7 @@ public final class DeepSeekPricingSource {
      * @return 闲时说明文本，未匹配到时返回 null
      */
     private static String policy(String text) {
-        Matcher matcher = Pattern.compile("Off-peak rates[^.]*\\.(?:[^.]*\\.)?").matcher(text);
+        Matcher matcher = OFF_PEAK_POLICY.matcher(text);
         return matcher.find() ? matcher.group().trim() : null;
     }
 

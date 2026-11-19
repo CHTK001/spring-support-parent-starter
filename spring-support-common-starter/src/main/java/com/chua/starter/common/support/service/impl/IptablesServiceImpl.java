@@ -30,7 +30,7 @@ public class IptablesServiceImpl implements IptablesService  {
     */
     private final IpProperties ipProperties;
     private volatile IpPosition ipPosition; // ip立场
-    private volatile boolean isLoaded = false; // 是否加载
+    private volatile boolean loaded = false; // 是否加载
 
     /**
      * 构造方法，注入IP配置属性
@@ -62,15 +62,15 @@ public class IptablesServiceImpl implements IptablesService  {
         }
 
         // 延迟初始化IP位置解析器
-        if (!isLoaded) {
+        if (!loaded) {
             synchronized (this) {
-                if (!isLoaded) {
+                if (!loaded) {
                     GeoSetting geoSetting = GeoSetting.builder()
                             .databaseFile(ipProperties.getDatabaseFile())
                             .build();
                     IpPosition loaded = ServiceProvider.of(IpPosition.class).getNewExtension(ipProperties.getIpType(), geoSetting);
                     this.ipPosition = loaded;
-                    this.isLoaded = true;
+                    this.loaded = true;
                 }
             }
         }

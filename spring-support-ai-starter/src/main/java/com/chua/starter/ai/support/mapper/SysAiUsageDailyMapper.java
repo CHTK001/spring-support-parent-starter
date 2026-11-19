@@ -24,6 +24,7 @@ public interface SysAiUsageDailyMapper extends BaseMapper<SysAiUsageDaily> {
      *
      * @return 最大统计日期
      */
+    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入
     @Select("SELECT MAX(sys_ai_usage_daily_stat_date) FROM sys_ai_usage_daily")
     LocalDate selectMaxStatDate();
 }

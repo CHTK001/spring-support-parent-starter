@@ -20,7 +20,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 主机资源摘要 SSE 推送（句柄数 / inode 使用率）
@@ -86,7 +88,8 @@ public class HostSummarySseService {
     /**
      * 首推线程：单线程串行采集，避免同时订阅多台主机时把采集通道打满
      */
-    private final ExecutorService pushExecutor = Executors.newSingleThreadExecutor(runnable -> {
+    private final ExecutorService pushExecutor = new ThreadPoolExecutor(1, 1, 0L, // [P3C C1 修复] 显式线程池替代 Executors 包装
+            TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(1024), runnable -> {
         Thread thread = new Thread(runnable, "host-summary-sse-push");
         thread.setDaemon(true);
         return thread;

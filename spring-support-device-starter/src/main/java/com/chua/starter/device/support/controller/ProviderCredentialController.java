@@ -30,9 +30,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 提供商接入凭据控制器
@@ -196,7 +198,14 @@ public class ProviderCredentialController {
         }
 
         int threads = Math.max(1, Math.min(MAX_TEST_CONCURRENCY, targets.size()));
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        AtomicInteger poolIndex = new AtomicInteger();
+        // [P3C C1 修复] 显式线程池替代 Executors.newFixedThreadPool（有界队列 + 命名工厂）
+        ExecutorService executor = new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(1024), r -> {
+                    Thread thread = new Thread(r, "device-credential-test-" + poolIndex.incrementAndGet());
+                    thread.setDaemon(false);
+                    return thread;
+                });
         List<CredentialHealthResult> results = new ArrayList<>(targets.size());
         try {
             List<Callable<CredentialHealthResult>> tasks = new ArrayList<>(targets.size());

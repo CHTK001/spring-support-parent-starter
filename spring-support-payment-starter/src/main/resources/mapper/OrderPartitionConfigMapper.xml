@@ -4,6 +4,7 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.payment.support.mapper.OrderPartitionConfigMapper">
 
+    <!-- [P3C 1.4 豁免] ${} 均为表名/列名，无法参数化；上游入口（OrderPartitionConfigServiceImpl）已通过 validateTableName 正则白名单 + 数据库元数据校验 -->
     <insert id="migrateToPartition">
         INSERT INTO ${targetTable}
         SELECT * FROM ${sourceTable}

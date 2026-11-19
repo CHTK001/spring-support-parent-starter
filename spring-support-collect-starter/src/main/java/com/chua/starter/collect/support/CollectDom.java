@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -92,6 +93,11 @@ public final class CollectDom {
      */
     private static final Pattern HEAD_NUMBER_SUFFIX =
             Pattern.compile("[（(]?[一二三四五六七八九十百0-9]+[）)]?$");
+
+    /**
+     * [P3C 修复] 正则编译缓存：运行期正则按文本缓存，避免每次调用重复编译。
+     */
+    private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 工具类禁止实例化。
@@ -996,7 +1002,8 @@ public final class CollectDom {
      */
     private static Pattern compile(String pattern) {
         try {
-            return Pattern.compile(pattern);
+            // [P3C 修复] 相同正则文本复用缓存中的预编译 Pattern
+            return PATTERN_CACHE.computeIfAbsent(pattern, Pattern::compile);
         } catch (PatternSyntaxException ex) {
             throw new IllegalArgumentException("正则写法错误: " + ex.getMessage(), ex);
         }

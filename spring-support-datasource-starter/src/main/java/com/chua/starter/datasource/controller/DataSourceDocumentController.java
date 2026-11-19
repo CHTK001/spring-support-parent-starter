@@ -452,7 +452,7 @@ public class DataSourceDocumentController {
                 .append("      const data = node.data || {};")
                 .append("      console.log('node click', node.id, data);")
                 .append("    };")
-                .append("    setTimeout(() => { try { rgRef.value && rgRef.value.zoomToFit(); } catch(_){} }, 800);")
+                .append("    setTimeout(() => { try { rgRef.value && rgRef.value.zoomToFit(); } catch(_){ /* 忽略：视图未就绪时跳过自适应缩放 */ } }, 800);")
                 .append("    return { rgRef, options, graphData, onNodeClick };")
                 .append("  }")
                 .append("});")

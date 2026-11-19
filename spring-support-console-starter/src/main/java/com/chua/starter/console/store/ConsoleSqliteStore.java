@@ -432,6 +432,7 @@ public class ConsoleSqliteStore implements AutoCloseable {
      */
     public synchronized Map<String, String> listKv(String prefix) {
         Map<String, String> result = new LinkedHashMap<>();
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：仅按条件拼入固定字面量片段，prefix 经 ? 参数绑定
         String sql = "SELECT k, v FROM console_kv" + (prefix != null && !prefix.isEmpty() ? " WHERE k LIKE ?" : "");
         /**
          * 尝试。

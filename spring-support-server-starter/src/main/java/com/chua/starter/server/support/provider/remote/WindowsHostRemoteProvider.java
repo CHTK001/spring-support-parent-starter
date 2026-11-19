@@ -274,6 +274,8 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
                       + " | Out-Null; exit 0 } catch { exit 1 }";
             case PROCESS -> "if (Get-Process -Name '" + psEscape(target)
                       + "' -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }";
+            // [P3C] 兜底：未预期的健康检查类型直接失败，不拼接未知命令
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         return exec(host, credential, probe, timeout);
     }
@@ -310,6 +312,8 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
             case HTTP_CODE -> "try { (Invoke-WebRequest -Uri 'http://" + psEscape(key)
                       + "' -UseBasicParsing -TimeoutSec " + Math.min(timeout, HTTP_PROBE_MAX_SECONDS)
                       + ").StatusCode } catch { 0 }";
+            // [P3C] 兜底：未预期的指标类型直接失败，不拼接未知命令
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         RemoteExecResult result = exec(host, credential, script, timeout);
         if (!result.success()) {

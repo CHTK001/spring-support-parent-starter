@@ -49,7 +49,41 @@
         用于 Bearer Token 验证和 AppKey 校验。
     -->
     <select id="selectByAppKey" resultMap="appKeyResultMap">
-        SELECT *
+        SELECT
+            sys_ai_app_key_id,
+            sys_ai_app_key_app_id,
+            sys_ai_app_key_app_key,
+            sys_ai_app_key_secret,
+            sys_ai_app_key_name,
+            sys_ai_app_key_status,
+            sys_ai_app_key_delete,
+            sys_ai_app_key_user_id,
+            sys_ai_app_key_group_id,
+            sys_ai_app_key_provider_id,
+            sys_ai_app_key_model,
+            sys_ai_app_key_enabled,
+            sys_ai_app_key_expire_datetime,
+            sys_ai_app_key_expire_time,
+            sys_ai_app_key_valid_days,
+            sys_ai_app_key_ip_whitelist,
+            sys_ai_app_key_last_used_time,
+            sys_ai_app_key_use_count,
+            sys_ai_app_key_max_use,
+            sys_ai_app_key_max_tokens,
+            sys_ai_app_key_total_tokens,
+            sys_ai_app_key_balance,
+            sys_ai_app_key_plan_id,
+            sys_ai_app_key_overdraft_enabled,
+            sys_ai_app_key_minute_rate,
+            sys_ai_app_key_total_cost,
+            sys_ai_app_key_scope,
+            sys_ai_app_key_remark,
+            create_name,
+            create_by,
+            create_time,
+            update_time,
+            update_name,
+            update_by
         FROM sys_ai_app_key
         WHERE sys_ai_app_key_app_key = #{appKey}
           AND sys_ai_app_key_delete = 0
@@ -60,7 +94,41 @@
         按分组 ID 查询该分组下所有应用密钥。
     -->
     <select id="selectByGroupId" resultMap="appKeyResultMap">
-        SELECT *
+        SELECT
+            sys_ai_app_key_id,
+            sys_ai_app_key_app_id,
+            sys_ai_app_key_app_key,
+            sys_ai_app_key_secret,
+            sys_ai_app_key_name,
+            sys_ai_app_key_status,
+            sys_ai_app_key_delete,
+            sys_ai_app_key_user_id,
+            sys_ai_app_key_group_id,
+            sys_ai_app_key_provider_id,
+            sys_ai_app_key_model,
+            sys_ai_app_key_enabled,
+            sys_ai_app_key_expire_datetime,
+            sys_ai_app_key_expire_time,
+            sys_ai_app_key_valid_days,
+            sys_ai_app_key_ip_whitelist,
+            sys_ai_app_key_last_used_time,
+            sys_ai_app_key_use_count,
+            sys_ai_app_key_max_use,
+            sys_ai_app_key_max_tokens,
+            sys_ai_app_key_total_tokens,
+            sys_ai_app_key_balance,
+            sys_ai_app_key_plan_id,
+            sys_ai_app_key_overdraft_enabled,
+            sys_ai_app_key_minute_rate,
+            sys_ai_app_key_total_cost,
+            sys_ai_app_key_scope,
+            sys_ai_app_key_remark,
+            create_name,
+            create_by,
+            create_time,
+            update_time,
+            update_name,
+            update_by
         FROM sys_ai_app_key
         WHERE sys_ai_app_key_group_id = #{groupId}
           AND sys_ai_app_key_delete = 0

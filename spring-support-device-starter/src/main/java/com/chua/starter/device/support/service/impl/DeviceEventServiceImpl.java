@@ -180,6 +180,8 @@ public class DeviceEventServiceImpl implements DeviceEventService {
             case NETWORK -> "网络异常";
             case OTHER -> "其他事件";
             case ACCESS -> "门禁事件";
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
     }
 
@@ -195,6 +197,8 @@ public class DeviceEventServiceImpl implements DeviceEventService {
             case IO_ALARM -> "major";
             case MOTION, NETWORK -> "minor";
             case OTHER, ACCESS -> "info";
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
     }
 }

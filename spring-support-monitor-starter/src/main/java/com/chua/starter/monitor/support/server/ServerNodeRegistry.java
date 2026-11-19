@@ -440,6 +440,8 @@ public class ServerNodeRegistry {
             case SIP -> buildSipServer(node, config, descriptors, managed);
             case ROOM -> buildRoomServer(node, config, setting, descriptors, managed);
             case FRP -> buildFrpServer(node, config, descriptors, managed);
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + protocol);
         };
     }
 
@@ -1143,6 +1145,8 @@ public class ServerNodeRegistry {
             case SIP -> "sip";
             case ROOM -> "ws";
             case FRP -> "frp";
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + protocol);
         };
         return scheme + "://" + (node.getHost() == null || node.getHost().isBlank() ? "0.0.0.0" : node.getHost())
                 + ":" + (node.getPort() != null ? node.getPort() : protocol.getDefaultPort()) + "/";

@@ -1827,6 +1827,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         if (mode == SyncWriteMode.REPLACE) {
             return "REPLACE INTO " + quotedTable + " (" + columns + ") VALUES (" + holders + ")";
         }
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：quotedTable/列名均经 SyncJdbcSupport.quoteTable/quoteColumn 白名单校验，值用 ? 绑定
         String insert = "INSERT INTO " + quotedTable + " (" + columns + ") VALUES (" + holders + ")";
         if (mode != SyncWriteMode.UPSERT) {
             return insert;

@@ -298,8 +298,12 @@ public class RoomSignal {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         RoomSignal that = (RoomSignal) o;
         return Objects.equals(type, that.type) && Objects.equals(roomId, that.roomId);
     }

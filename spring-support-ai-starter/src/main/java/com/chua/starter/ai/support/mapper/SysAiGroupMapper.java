@@ -36,6 +36,7 @@ public interface SysAiGroupMapper extends BaseMapper<SysAiGroup> {
      * @param groupId 分组标识
      * @return JSON 数组字符串；分组不存在或未配置时返回 空
      */
+    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入
     @Select("SELECT sys_ai_group_models FROM sys_ai_group WHERE sys_ai_group_id = #{groupId}")
     String selectGroupModels(@Param("groupId") Integer groupId);
 }

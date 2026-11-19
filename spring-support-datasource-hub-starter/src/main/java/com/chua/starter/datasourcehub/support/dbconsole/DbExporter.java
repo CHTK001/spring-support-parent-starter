@@ -235,6 +235,8 @@ public final class DbExporter {
             case JSON -> DbTransferCodec.writeJson(columns, rows);
             case XML -> DbTransferCodec.writeXml(columns, rows);
             case SQL -> renderSql(table, columns, rows, option, conn);
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+            default -> throw new IllegalStateException("未预期的取值: " + option.format());
         };
     }
 

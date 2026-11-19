@@ -129,20 +129,28 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
      * @return /24 网段地址；无法解析时返回 null
      */
     private static String cidrOf(String ip) {
-        if (ip == null || ip.contains("-")) return null;
+        if (ip == null || ip.contains("-")) {
+            return null;
+        }
         // 截断 "1.2.3.4/24" 里 IP 部分
         String addr = ip.split("/")[0].trim();
         String[] octets = addr.split("\\.");
-        if (octets.length != 4) return null;
+        if (octets.length != 4) {
+            return null;
+        }
         for (String octet : octets) {
-            if (octet.isEmpty()) return null;
+            if (octet.isEmpty()) {
+                return null;
+            }
             int value;
             try {
                 value = Integer.parseInt(octet);
             } catch (NumberFormatException e) {
                 return null;
             }
-            if (value < 0 || value > 255) return null;
+            if (value < 0 || value > 255) {
+                return null;
+            }
         }
         return octets[0] + "." + octets[1] + "." + octets[2] + ".0/24";
     }
@@ -155,7 +163,9 @@ public class DeviceTopologyServiceImpl implements DeviceTopologyService {
      * @return 网段节点 id；cidr 为空时返回 null
      */
     private static String subnetIdOf(String areaGroup, String cidr) {
-        if (cidr == null) return null;
+        if (cidr == null) {
+            return null;
+        }
         return "subnet:" + areaGroup.replace(":", "_") + ":" + cidr;
     }
 

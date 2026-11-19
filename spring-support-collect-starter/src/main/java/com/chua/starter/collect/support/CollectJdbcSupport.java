@@ -178,6 +178,7 @@ public class CollectJdbcSupport {
             placeholders.append('?');
         }
         try (Connection connection = resolve(reference).getConnection()) {
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名/列名经 identifier()→SqlName.checkSimple 白名单校验，值用 ? 绑定
             String sql = "SELECT " + quoted(connection, column)
                     + " FROM " + quoted(connection, table)
                     + " WHERE " + quoted(connection, column)
@@ -584,10 +585,12 @@ public class CollectJdbcSupport {
                         writable.add(column);
                     }
                 }
+                // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名/列名经 quoted()→SqlName.checkSimple 白名单校验，值用 ? 绑定
                 String selectSql = fillBlank
                         ? "SELECT " + String.join(", ", quotedAll(connection, writable))
                         + " FROM " + name + " WHERE " + where
                         : "SELECT 1 FROM " + name + " WHERE " + where;
+                // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名/列名经 quoted()→SqlName.checkSimple 白名单校验，值用 ? 绑定
                 String insertSql = "INSERT INTO " + name + " ("
                         + String.join(", ", quotedAll(connection, columns)) + ") VALUES ("
                         + String.join(", ", columns.stream().map(column -> "?").toList()) + ")";
@@ -701,6 +704,7 @@ public class CollectJdbcSupport {
      * @return 受影响行数
      */
     public int deleteAll(String reference, String table) {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：table 先经 identifier() 白名单校验再加引用符
         identifier(table);
         try (Connection connection = resolve(reference).getConnection();
              PreparedStatement ps = connection.prepareStatement("DELETE FROM " + quoted(connection, table))) {
@@ -727,6 +731,7 @@ public class CollectJdbcSupport {
         try (Connection connection = resolve(reference).getConnection()) {
             String name = quoted(connection, table);
             int cleared;
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：table 先经 identifier() 白名单校验再加引用符
             try (PreparedStatement count = connection.prepareStatement("SELECT COUNT(*) FROM " + name);
                  ResultSet rs = count.executeQuery()) {
                 cleared = rs.next() ? rs.getInt(1) : 0;

@@ -1661,15 +1661,23 @@ public class WorldSimServiceImpl implements WorldSimService {
      */
     private static List<Map<String, Object>> sceneLines(Object raw) {
         List<Map<String, Object>> out = new ArrayList<>();
-        if (!(raw instanceof List<?> list)) return out;
+        if (!(raw instanceof List<?> list)) {
+            return out;
+        }
         for (Object o : list) {
-            if (o == null) continue;
+            if (o == null) {
+                continue;
+            }
             Map<String, Object> line = new LinkedHashMap<>();
             if (o instanceof Map<?, ?> m) {
                 Object speaker = m.get("speaker");
-                if (speaker == null) speaker = m.get("role");
+                if (speaker == null) {
+                    speaker = m.get("role");
+                }
                 Object text = m.get("text");
-                if (text == null) text = m.get("content");
+                if (text == null) {
+                    text = m.get("content");
+                }
                 line.put("speaker", speaker == null ? "" : String.valueOf(speaker));
                 line.put("text", text == null ? "" : String.valueOf(text));
             } else {
@@ -1798,7 +1806,9 @@ public class WorldSimServiceImpl implements WorldSimService {
                 new LambdaQueryWrapper<SysAiWorldRelationship>()
                         .eq(SysAiWorldRelationship::getWorldId, worldId));
         for (SysAiWorldRelationship r : rels) {
-            if (r.getAffinity() == null || r.getAffinity() == 0) continue;
+            if (r.getAffinity() == null || r.getAffinity() == 0) {
+                continue;
+            }
             sb.append("\n").append(r.getFromNpcId()).append(" → ").append(r.getToNpcId())
                 .append("（").append(r.getAffinity()).append("）");
         }
@@ -1940,14 +1950,18 @@ public class WorldSimServiceImpl implements WorldSimService {
         Object ft = json.get(FAILED_TYPES_KEY);
         if (ft instanceof List<?> ftList) {
             for (Object o : ftList) {
-                if (o != null) failedTypes.add(String.valueOf(o));
+                if (o != null) {
+                    failedTypes.add(String.valueOf(o));
+                }
             }
         }
 
         // 第一阶段：查封已有任务的 RETURN 状态（成功/失败/悬而未决）
         for (Material mat : materials) {
             String taskId = mat.taskId();
-            if (taskId == null || taskId.isBlank()) continue;
+            if (taskId == null || taskId.isBlank()) {
+                continue;
+            }
             SysAiGenerateTask task = generateService.query(taskId);
             if (task == null) {
                 // 任务记录已不存在（历史数据被清理 / 库里从未写入）：
@@ -2026,8 +2040,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
-            if (!enabledForMode(mat)) continue;
-            if (MEDIA_OK.equals(head.get("status"))) continue;
+            if (!enabledForMode(mat)) {
+                continue;
+            }
+            if (MEDIA_OK.equals(head.get("status"))) {
+                continue;
+            }
             String taskId = mat.taskId();
             if (taskId != null) {
                 // 有任务号：由上方的 query 回填，status 为终态则一定会被标记为 OK
@@ -2058,7 +2076,9 @@ public class WorldSimServiceImpl implements WorldSimService {
         out.put("total", materials.size());
         int done = 0;
         for (Material mat : materials) {
-            if (MEDIA_OK.equals(mat.head().get("status"))) done++;
+            if (MEDIA_OK.equals(mat.head().get("status"))) {
+                done++;
+            }
         }
         out.put("done", done);
         out.put("pending", materials.size() - done);
@@ -2077,7 +2097,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             // 还有任务在生成中（或还有素材没轮到）：本幕没收敛，先只回进度、不放行。
             // 素材阶段每轮只提交一个任务，MAX_ASSETS_PER_TICK 只在这一轮内生效，
             // 所以 target != null 时同样要返回进度让调用方发起下一轮。
-            for (Material m : materials) m.persist();
+            for (Material m : materials) {
+                m.persist();
+            }
             persistFailedTypes(json, failedTypes);
             storyStore.writeAct(worldId, actNo, Json.toJson(json));
             return out;
@@ -2159,7 +2181,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             }
             target = inProgress ? null : nextTarget(materials);
         }
-        for (Material m : materials) m.persist();
+        for (Material m : materials) {
+            m.persist();
+        }
         persistFailedTypes(json, failedTypes);
         storyStore.writeAct(worldId, actNo, Json.toJson(json));
         // 形态关闭（text）时本轮不该跑素材循环；真正「全部收敛」的判定只放在上面
@@ -2204,13 +2228,20 @@ public class WorldSimServiceImpl implements WorldSimService {
             int ok = 0;
             int none = 0;
             for (Material m : materials) {
-                if (!enabledForMode(m)) continue;
-                if (MEDIA_OK.equals(m.head().get("status"))) ok++;
-                else none++;
+                if (!enabledForMode(m)) {
+                    continue;
+                }
+                if (MEDIA_OK.equals(m.head().get("status"))) {
+                    ok++;
+                } else {
+                    none++;
+                }
             }
             log.info("[WorldSim] 素材收敛 world={} act={} mode={} 有素材={} 无需求={} failedTypes={}",
                     worldId, actNo, mediaMode(), ok, none, failedTypes);
-            for (Material m : materials) m.persist();
+            for (Material m : materials) {
+                m.persist();
+            }
             persistFailedTypes(json, failedTypes);
             storyStore.writeAct(worldId, actNo, Json.toJson(json));
             return null;
@@ -2219,7 +2250,9 @@ public class WorldSimServiceImpl implements WorldSimService {
         // 免得同一幕里图片状态自相矛盾（舞台上最刺眼的就是「有几场有图」）。
         StringBuilder why = new StringBuilder();
         for (Material m : materials) {
-            if (!enabledForMode(m)) continue;
+            if (!enabledForMode(m)) {
+                continue;
+            }
             Map<String, Object> h = m.head();
             if (MEDIA_NO_PROMPT.equals(h.get("status")) && Boolean.TRUE.equals(h.get("failed"))) {
                 why.append(h.get("role")).append(' ');
@@ -2233,7 +2266,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             m.head().remove("taskId");
             m.head().put("status", MEDIA_NO_PROMPT);
         }
-        for (Material m : materials) m.persist();
+        for (Material m : materials) {
+            m.persist();
+        }
         persistFailedTypes(json, failedTypes);
         storyStore.writeAct(worldId, actNo, Json.toJson(json));
         return null;
@@ -2307,13 +2342,17 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @return true 表示应当判死
      */
     private static boolean isStaleTask(SysAiGenerateTask task) {
-        if (task == null) return true;
+        if (task == null) {
+            return true;
+        }
         long now = System.currentTimeMillis();
         Long updatedAt = task.getUpdatedAt();
         if (updatedAt == null || updatedAt <= 0) {
             updatedAt = task.getCreatedAt();
         }
-        if (updatedAt == null || updatedAt <= 0) return false;
+        if (updatedAt == null || updatedAt <= 0) {
+            return false;
+        }
         long idle = now - updatedAt;
         // 数据库与进程存在钟差时 idle 可能为负（任务比现在还「新」），那是活跃而不是僵死
         return idle > STALE_TASK_MS;
@@ -2380,8 +2419,12 @@ public class WorldSimServiceImpl implements WorldSimService {
         for (Material mat : materials) {
             Map<String, Object> head = mat.head();
             String st = String.valueOf(head.get("status"));
-            if (MEDIA_OK.equals(st) || MEDIA_NO_PROMPT.equals(st)) continue;
-            if (mat.taskId() != null) continue;
+            if (MEDIA_OK.equals(st) || MEDIA_NO_PROMPT.equals(st)) {
+                continue;
+            }
+            if (mat.taskId() != null) {
+                continue;
+            }
             if (String.valueOf(head.get("prompt")).isBlank()) {
                 head.put("status", MEDIA_NO_PROMPT);
                 continue;
@@ -2421,13 +2464,19 @@ public class WorldSimServiceImpl implements WorldSimService {
     private void collect(String key, Map<String, Object> scriptJson, List<Material> items,
                           String role, String nameField) {
         Object v = scriptJson.get(key);
-        if (!(v instanceof List<?> list)) return;
+        if (!(v instanceof List<?> list)) {
+            return;
+        }
         for (Object o : list) {
-            if (!(o instanceof Map<?, ?> m)) continue;
+            if (!(o instanceof Map<?, ?> m)) {
+                continue;
+            }
             @SuppressWarnings("unchecked")
             Map<String, Object> node = (Map<String, Object>) m;
             Object rn = node.get("name");
-            if (rn == null) rn = node.get("order");
+            if (rn == null) {
+                rn = node.get("order");
+            }
             String roleName = String.valueOf(rn);
             for (String mk : new String[]{ActScript.MEDIA_IMAGE_KEY, ActScript.MEDIA_VIDEO_KEY}) {
                 Map<String, Object> head;
@@ -2526,7 +2575,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             String speech = "";
             if (first instanceof Map<?, ?> lineMap) {
                 Object t = lineMap.get("text");
-                if (t == null) t = lineMap.get("content");
+                if (t == null) {
+                    t = lineMap.get("content");
+                }
                 speech = t == null ? "" : String.valueOf(t).trim();
             }
             if (!speech.isEmpty() && !"null".equals(speech)) {
@@ -2826,7 +2877,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             int total = items.size();
             int done = 0;
             for (Material mat : items) {
-                if (MEDIA_OK.equals(mat.head().get("status"))) done++;
+                if (MEDIA_OK.equals(mat.head().get("status"))) {
+                    done++;
+                }
             }
             return java.util.Map.of("total", total, "done", done);
         } catch (Exception e) {
@@ -2995,9 +3048,13 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @param worldId 世界ID
      */
     public void evictActCaches(Long worldId) {
-        if (worldId == null) return;
+        if (worldId == null) {
+            return;
+        }
         String userId = AiUserContext.currentUserId();
-        if (userId == null) return;
+        if (userId == null) {
+            return;
+        }
         Cache view = cache();
         if (view != null) {
             view.evict(worldId + ":" + userId);
@@ -3016,16 +3073,26 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @return 角色名拼接标签
      */
     private String npcsLabel(Long worldId, Object npcsObj) {
-        if (npcsObj == null || !(npcsObj instanceof List<?> l)) return "-";
+        if (npcsObj == null || !(npcsObj instanceof List<?> l)) {
+            return "-";
+        }
         StringBuilder sb = new StringBuilder();
         for (Object id : l) {
             Long idNum = parseLong(id);
-            if (idNum == null || idNum == 0L) continue;
+            if (idNum == null || idNum == 0L) {
+                continue;
+            }
             SysAiWorldNpc n = npcMapper.selectById(idNum);
-            if (n == null) continue;
+            if (n == null) {
+                continue;
+            }
             SysAiRole r = roleMapper.selectById(n.getRoleId());
-            if (r != null && sb.length() > 0) sb.append(", ");
-            if (r != null) sb.append(r.getName());
+            if (r != null && sb.length() > 0) {
+                sb.append(", ");
+            }
+            if (r != null) {
+                sb.append(r.getName());
+            }
         }
         return sb.length() == 0 ? "-" : sb.toString();
     }
@@ -3073,8 +3140,12 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @return 字符串值
      */
     private static String str(Object o, String fallback) {
-        if (o == null) return fallback;
-        if (o instanceof String s) return s.trim().isEmpty() ? fallback : s.trim();
+        if (o == null) {
+            return fallback;
+        }
+        if (o instanceof String s) {
+            return s.trim().isEmpty() ? fallback : s.trim();
+        }
         return String.valueOf(o);
     }
 
@@ -3085,10 +3156,14 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @return 场景列表
      */
     private List<Map<String, Object>> sceneList(Object o) {
-        if (o == null || !(o instanceof List<?> l)) return new ArrayList<>();
+        if (o == null || !(o instanceof List<?> l)) {
+            return new ArrayList<>();
+        }
         List<Map<String, Object>> out = new ArrayList<>();
         for (Object item : l) {
-            if (!(item instanceof Map<?, ?> m)) continue;
+            if (!(item instanceof Map<?, ?> m)) {
+                continue;
+            }
             boolean stringKeys = true;
             for (Object k : m.keySet()) {
                 if (!(k instanceof String)) {
@@ -3123,7 +3198,9 @@ public class WorldSimServiceImpl implements WorldSimService {
             List<Map<String, Object>> scenes = sceneList(json.get(ActScript.SCENES));
             int done = 0;
             for (Map<String, Object> s : scenes) {
-                if (str(s.get(ActScript.SCENE_PLAY), null) != null) done++;
+                if (str(s.get(ActScript.SCENE_PLAY), null) != null) {
+                    done++;
+                }
             }
             return done;
         } catch (Exception e) {

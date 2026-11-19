@@ -26,6 +26,7 @@ public interface SysAiGroupModelMapper extends BaseMapper<SysAiGroupModel> {
      * @param groupId 分组标识
      * @return 模型编码列表（可能含空行），无关联时为空列表
      */
+    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入
     @Select("SELECT m.`sys_ai_module_model_id` FROM `sys_ai_group_model` gm "
             + "JOIN `sys_ai_module` m ON m.`sys_ai_module_id` = gm.`sys_ai_module_id` "
             + "WHERE gm.`sys_ai_group_id` = #{groupId} AND m.`sys_ai_module_model_id` IS NOT NULL")

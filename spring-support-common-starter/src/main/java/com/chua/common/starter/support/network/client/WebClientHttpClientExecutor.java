@@ -166,6 +166,8 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
             case PATCH -> HttpMethod.PATCH;
             case HEAD -> HttpMethod.HEAD;
             case OPTIONS -> HttpMethod.OPTIONS;
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，保持既有 case 行为不变
+            default -> throw new IllegalStateException("未预期的取值: " + method);
         };
     }
 

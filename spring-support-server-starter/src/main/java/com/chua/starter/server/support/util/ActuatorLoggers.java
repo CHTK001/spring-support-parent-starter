@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,6 +43,11 @@ public final class ActuatorLoggers {
      */
     private static final Pattern BLOCK =
             Pattern.compile("\"((?:[^\"\\\\]|\\\\.)+)\"\\s*:\\s*\\{([^{}]*)\\}");
+
+    /**
+     * 级别字段匹配模式缓存：按字段名缓存编译结果，避免重复 Pattern.compile [P3C]
+     */
+    private static final Map<String, Pattern> LEVEL_PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * JSON 解析器：只用于本类的两段解析，不共享全局配置
@@ -145,7 +151,9 @@ public final class ActuatorLoggers {
      * @return 级别；null 或缺失时为空串
      */
     private static String level(String inner, String key) {
-        Matcher m = Pattern.compile("\"" + key + "\"\\s*:\\s*(?:null|\"([^\"]*)\")").matcher(inner);
+        Pattern p = LEVEL_PATTERN_CACHE.computeIfAbsent(
+                "\"" + key + "\"\\s*:\\s*(?:null|\"([^\"]*)\")", Pattern::compile);
+        Matcher m = p.matcher(inner);
         return m.find() && m.group(1) != null ? m.group(1) : "";
     }
 }

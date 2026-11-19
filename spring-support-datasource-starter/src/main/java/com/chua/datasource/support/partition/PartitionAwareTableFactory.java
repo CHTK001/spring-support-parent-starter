@@ -123,6 +123,7 @@ public class PartitionAwareTableFactory {
     private List<Map<String, Object>> queryFromSystemTables() {
         try {
  // 扫描 信息_模式 中匹配分区模式的所有表
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：整句为固定字面量，无任何变量拼接
             String sql = "SELECT DISTINCT SUBSTRING_INDEX(TABLE_NAME, '_part', 1) AS source_table_pattern " +
                     "FROM information_schema.tables " +
                     "WHERE TABLE_SCHEMA = (SELECT DATABASE()) " +

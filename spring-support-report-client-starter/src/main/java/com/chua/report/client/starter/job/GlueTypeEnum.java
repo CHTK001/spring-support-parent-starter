@@ -58,9 +58,9 @@ public enum GlueTypeEnum {
     */
     private final String desc;
     /**
-     * isscript
+     * 是否脚本
     */
-    private final boolean isScript;
+    private final boolean script;
     /**
      * CMD
     */
@@ -74,13 +74,13 @@ public enum GlueTypeEnum {
      * 胶水类型enum。
      * @param cmd CMD
      * @param desc desc
-     * @param isScript 是否script
+     * @param script 是否script
      * @param suffix 后缀
      * @return 返回值
     */
-    GlueTypeEnum(String desc, boolean isScript, String cmd, String suffix) {
+    GlueTypeEnum(String desc, boolean script, String cmd, String suffix) {
         this.desc = desc;
-        this.isScript = isScript;
+        this.script = script;
         this.cmd = cmd;
         this.suffix = suffix;
     }
@@ -106,7 +106,7 @@ public enum GlueTypeEnum {
      * @return 是否为脚本类型
      */
     public boolean isScript() {
-        return isScript;
+        return script;
     }
 
     /**

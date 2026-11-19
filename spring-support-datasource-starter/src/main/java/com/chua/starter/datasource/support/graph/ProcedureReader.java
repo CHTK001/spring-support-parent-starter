@@ -128,6 +128,7 @@ public class ProcedureReader {
      * @throws SQLException 异常
     */
     private List<ProcedureInfo> readMysqlLike(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：information_schema 固定系统视图查询
         String sql = "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_SCHEMA, ROUTINE_COMMENT " +
                 "FROM information_schema.ROUTINES";
         List<ProcedureInfo> list = new ArrayList<>();
@@ -158,6 +159,7 @@ public class ProcedureReader {
      * @throws SQLException 异常
     */
     private List<ProcedureInfo> readPostgresql(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：information_schema 固定系统视图查询
         String sql = "SELECT routine_name, routine_type, specific_schema " +
                 "FROM information_schema.routines";
         List<ProcedureInfo> list = new ArrayList<>();
@@ -188,6 +190,7 @@ public class ProcedureReader {
      * @throws SQLException 异常
     */
     private List<ProcedureInfo> readOracle(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：ALL_OBJECTS 固定系统视图查询
         String sql = "SELECT OBJECT_NAME, OBJECT_TYPE FROM ALL_OBJECTS " +
                 "WHERE OBJECT_TYPE IN ('PROCEDURE','FUNCTION') AND OWNER = USER";
         List<ProcedureInfo> list = new ArrayList<>();
@@ -218,6 +221,7 @@ public class ProcedureReader {
      * @throws SQLException 异常
     */
     private List<ProcedureInfo> readSqlServer(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：sys.objects 固定系统视图查询
         String sql = "SELECT o.name, o.type_desc FROM sys.objects o " +
                 "WHERE o.type IN ('P','FN','IF','TF')";
         List<ProcedureInfo> list = new ArrayList<>();

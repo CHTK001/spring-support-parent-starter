@@ -8,8 +8,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -96,7 +96,7 @@ public final class TraceLogPortal {
         sink = (output == null) ? (block -> {
         }) : output;
         enabled = true;
-        sweeper = Executors.newSingleThreadScheduledExecutor(daemonFactory());
+        sweeper = new ScheduledThreadPoolExecutor(1, daemonFactory()); // [P3C C1 修复] 显式线程池替代 Executors 包装
         long interval = Math.max(100L, config.sweepIntervalMillis);
         // 注意：scheduleWithFixedDelay 的任务一旦抛异常就不会再被调度，sweep() 内部必须自吞异常
         sweeper.scheduleWithFixedDelay(TraceLogPortal::sweep, interval, interval, TimeUnit.MILLISECONDS);

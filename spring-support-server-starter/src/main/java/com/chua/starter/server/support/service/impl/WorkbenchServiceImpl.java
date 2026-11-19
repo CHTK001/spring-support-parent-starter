@@ -210,16 +210,22 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                         emitter.send(SseEmitter.event().name("log").data(line, MediaType.TEXT_PLAIN));
                     } catch (IOException e) {
                         // 客户端断开，停止跟随
-                        // [P3C F1 豁免]
-                        try { streamHandleRef[0].close(); } catch (Exception ignored) {}
+                        try {
+                            streamHandleRef[0].close();
+                        } catch (Exception ignored) {
+                            // 忽略：关闭失败（客户端已断开，连接由 cleanup 统一释放）[P3C F1 修复]
+                        }
                     }
                 });
                 streamHandleRef[0] = streamHandle;
 
                 // 客户端断开时清理
                 Runnable cleanup = () -> {
-                    // [P3C F1 豁免]
-                    try { streamHandle.close(); } catch (Exception ignored) {}
+                    try {
+                        streamHandle.close();
+                    } catch (Exception ignored) {
+                        // 忽略：关闭失败（流已关闭或客户端已断开，不影响清理流程）[P3C F1 修复]
+                    }
                     if (handleRef[0] != null) {
                         connectionManager.release(hostId);
                     }
@@ -235,8 +241,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                 log.warn("[workbench] 容器日志流失败 hostId={} {}: {}", hostId, containerId, e.getMessage());
                 try {
                     emitter.send(SseEmitter.event().name("error").data("日志流启动失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
-                // [P3C F1 豁免]
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    // 忽略：发送失败（客户端已断开，无法推送错误事件）[P3C F1 修复]
+                }
                 emitter.complete();
                 if (handleRef[0] != null) {
                     connectionManager.release(hostId);
@@ -284,8 +291,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                         .onClose(() -> {
                             try {
                                 emitter.send(SseEmitter.event().name("closed").data("Session closed", MediaType.TEXT_PLAIN));
-                            // [P3C F1 豁免]
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) {
+                                // 忽略：发送失败（客户端已断开，无法推送关闭事件）[P3C F1 修复]
+                            }
                             emitter.complete();
                             if (handleRef[0] != null) {
                                 connectionManager.release(hostId);
@@ -314,8 +322,9 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                 log.warn("[workbench] 容器exec失败 hostId={} {}: {}", hostId, containerId, e.getMessage());
                 try {
                     emitter.send(SseEmitter.event().name("error").data("进入容器失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
-                // [P3C F1 豁免]
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    // 忽略：发送失败（客户端已断开，无法推送错误事件）[P3C F1 修复]
+                }
                 emitter.complete();
                 if (handleRef[0] != null) {
                     connectionManager.release(hostId);

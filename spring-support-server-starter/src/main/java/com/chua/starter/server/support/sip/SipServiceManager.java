@@ -111,8 +111,9 @@ public class SipServiceManager {
             if (controlSocket != null && !controlSocket.isClosed()) {
                 controlSocket.close();
             }
-        // [P3C F1 豁免]
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+            // 忽略：停止时关闭控制端口失败（服务正在退出，无需处理）[P3C F1 修复]
+        }
         providers.clear();
         pendingTunnels.clear();
         log.info("[SIP] 中继服务已停止");

@@ -159,6 +159,7 @@ public class MonitorJdbcSyncSink implements DataSyncAgentSink, Directional {
             conn.setAutoCommit(false);
             if (overwriteFirst && cleared.compareAndSet(false, true)) {
                 try (Statement statement = conn.createStatement()) {
+                    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：quotedTable 由调用方经 SyncJdbcSupport.quoteTable→SqlName.quoteMysql 白名单校验
                     statement.executeUpdate("DELETE FROM " + quotedTable);
                 }
                 conn.commit();

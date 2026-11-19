@@ -734,6 +734,8 @@ public class DeviceScheduleManager {
             case DEVICE_SYNC -> () -> syncService.syncDevicesByCredential(credId);
             case ORG_SYNC -> () -> syncService.syncOrganizationsByCredential(credId);
             case METRIC_COLLECT -> () -> metricService.collectByCredential(credId);
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + source);
         };
     }
 }

@@ -187,6 +187,7 @@ public class InfluxdbTimeSeriesEngine implements DeviceTimeSeriesEngine {
         if (!configured) {
             return List.of();
         }
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：measurement 经 identifier() 转义，查询值经 literal() 转义，limit 为归一化整数
         String ql = "SELECT * FROM " + identifier(measurement) + where(condition)
                 + " ORDER BY time DESC LIMIT " + condition.normalizedLimit();
         List<DeviceSeriesPoint> points = new ArrayList<>();
@@ -219,6 +220,7 @@ public class InfluxdbTimeSeriesEngine implements DeviceTimeSeriesEngine {
         if (!configured) {
             return 0L;
         }
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：measurement 经 identifier() 转义，查询值经 literal() 转义
         String ql = "SELECT COUNT(\"value\") FROM " + identifier(measurement) + where(condition);
         for (JsonNode series : querySeries(ql)) {
             JsonNode values = series.path("values");

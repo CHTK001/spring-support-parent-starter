@@ -435,6 +435,8 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             RollbackSnapshot snapshot = switch (packageType) {
                 case JAR -> executeJarUpgrade(upgradeFile, currentArtifact, applicationHome, packageType);
                 case ZIP, TAR_GZ, TGZ -> executeArchiveUpgrade(upgradeFile, applicationHome, currentArtifact, packageType);
+                // [P3C] 兜底：未预期的升级包类型直接失败，由外层异常处理统一返回错误
+                default -> throw new IllegalStateException("未预期的取值: " + packageType);
             };
             rollbackSnapshots.put(snapshot.rollbackId(), snapshot);
 

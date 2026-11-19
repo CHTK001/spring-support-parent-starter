@@ -154,6 +154,12 @@ public class AiBotChatService {
     private static final String GENERAL_ASSISTANT_CODE = "general-assistant";
 
     /**
+     * 温度限制错误里「only N」取值的解析正则。
+     * <p>[P3C 修复] 原在 {@code requiredTemperature} 方法体内每次调用重复编译，提升为类级常量。</p>
+     */
+    private static final Pattern ONLY_TEMPERATURE_PATTERN = Pattern.compile("only\\s+([0-9]+(?:\\.[0-9]+)?)");
+
+    /**
      * 应用上下文刷新后加载所有已绑定的微信 机器人 并启动消息轮询。
      *
      * <p>使用 {@link ContextRefreshedEvent} 而非 {@code @PostConstruct}，
@@ -1874,7 +1880,7 @@ public class AiBotChatService {
                 || lower.contains("not support") || lower.contains("unsupported"))) {
             return null;
         }
-        Matcher matcher = Pattern.compile("only\\s+([0-9]+(?:\\.[0-9]+)?)").matcher(lower);
+        Matcher matcher = ONLY_TEMPERATURE_PATTERN.matcher(lower);
         if (matcher.find()) {
             try {
                 return Double.parseDouble(matcher.group(1));

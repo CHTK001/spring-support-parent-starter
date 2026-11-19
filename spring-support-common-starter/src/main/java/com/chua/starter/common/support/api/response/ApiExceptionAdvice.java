@@ -86,7 +86,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     /**
      * 是否为生产环境（生产环境隐藏技术细节）
     */
-    private boolean isProduction = false;
+    private boolean production = false;
 
     /**
      * 是否在响应中返回详细错误信息（字段级别错误）
@@ -100,7 +100,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @Override
     public void setEnvironment(org.springframework.core.env.Environment environment) {
-        this.isProduction = environment.getProperty("spring.profiles.active", "").contains("prod");
+        this.production = environment.getProperty("spring.profiles.active", "").contains("prod");
         this.returnDetailedErrors = environment.getProperty("plugin.api.exception.detailed-errors", Boolean.class, true);
     }
 
@@ -410,7 +410,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         logError("SQL执行异常", e);
         
         // 生产环境隐藏SQL技术细节
-        if (isProduction) {
+        if (production) {
             return ReturnResult.error(DATABASE_ERROR.getCode(), "数据操作失败，请稍后重试");
         }
         

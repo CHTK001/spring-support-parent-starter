@@ -425,6 +425,8 @@ public class UniviewSession extends AbstractOpenApiSession {
             case STOP -> -1;
             case IRIS_IN, IRIS_OUT -> throw new UnsupportedOperationException(
                     "宇视云台没有光圈指令（command 仅 0-11）: " + cmd);
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + cmd);
         };
     }
 

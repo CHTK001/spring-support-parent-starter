@@ -114,6 +114,7 @@ public class SysAiSession {
     /**
      * 是否已归档
     */
+    // [P3C A6 豁免] 数据库/序列化字段名契约固定，不改名
     private Boolean isArchived;
 }
 

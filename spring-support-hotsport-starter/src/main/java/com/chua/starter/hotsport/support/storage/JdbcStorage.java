@@ -31,9 +31,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -494,7 +494,7 @@ public class JdbcStorage implements ApmStorage {
             this.writer = t;
             t.start();
         }
-        ScheduledExecutorService m = Executors.newSingleThreadScheduledExecutor(r -> {
+        ScheduledExecutorService m = new ScheduledThreadPoolExecutor(1, r -> { // [P3C C1 修复] 显式线程池替代 Executors 包装
             Thread t = new Thread(r, "apm-jdbc-maintenance");
             t.setDaemon(true);
             return t;
@@ -1367,6 +1367,7 @@ public class JdbcStorage implements ApmStorage {
      * @return 行数；失败返回 0
      */
     private long count(String table) {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：table 仅由本类以硬编码表名调用
         Long value = queryLong("SELECT COUNT(*) FROM " + table);
         return value == null ? 0L : value;
     }
@@ -1439,6 +1440,7 @@ public class JdbcStorage implements ApmStorage {
         if (now - dbBytesAt < 5000L) {
             return dbBytesCache;
         }
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：整句为固定字面量，无任何变量拼接
         Long value = queryLong("SELECT COALESCE(SUM(data_length + index_length), 0) "
                 + "FROM information_schema.tables WHERE table_schema = DATABASE()");
         dbBytesCache = value == null ? 0L : value;

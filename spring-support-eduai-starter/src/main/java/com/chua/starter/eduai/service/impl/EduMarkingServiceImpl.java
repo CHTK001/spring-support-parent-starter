@@ -2647,12 +2647,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             head = true;
         }
         if (partial > 0) {
-            if (head) sb.append("，");
+            if (head) {
+                sb.append("，");
+            }
             sb.append(partial).append(" 题与标准答案接近");
             head = true;
         }
         if (wrong > 0) {
-            if (head) sb.append("，");
+            if (head) {
+                sb.append("，");
+            }
             sb.append(wrong).append(" 题与标准答案不一致");
             head = true;
         }

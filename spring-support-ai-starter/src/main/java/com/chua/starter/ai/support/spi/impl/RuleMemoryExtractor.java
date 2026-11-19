@@ -46,24 +46,76 @@ public class RuleMemoryExtractor implements MemoryExtractor {
                     + "|what|who|which|where|when|why|how|many|much)\\s*$",
             Pattern.CASE_INSENSITIVE);
 
+    /** [P3C 修复] 预编译正则：显式记住类指令 */
+    private static final Pattern PATTERN_REMEMBER_INSTRUCTION = Pattern.compile(
+            "(?:请?记住|记下|牢记|别忘了)[:：]?\\s*([^。！？!?\n]{2,120})");
+
+    /** [P3C 修复] 预编译正则：以“以后”开头的指令 */
+    private static final Pattern PATTERN_FUTURE_INSTRUCTION = Pattern.compile(
+            "以后(?:都|要|请|别|不要|不许|不准)([^。！？!?\n]{2,80})");
+
+    /** [P3C 修复] 预编译正则：以“每次/每当”开头的指令 */
+    private static final Pattern PATTERN_PERIODIC_INSTRUCTION = Pattern.compile(
+            "(?:每次|每当)[^。！？!?\n]{0,20}(?:都|要|请)([^。！？!?\n]{2,80})");
+
+    /** [P3C 修复] 预编译正则：回答输出语言偏好 */
+    private static final Pattern PATTERN_OUTPUT_LANGUAGE_PREFERENCE = Pattern.compile(
+            "(?:回答|回复|输出|解释)[^。！？!?\n]{0,6}(?:用|使用|采用)\\s*"
+                    + "(中文|英文|English|日本語|markdown|JSON|表格|列表)[^。！？!?\n]{0,10}");
+
+    /** [P3C 修复] 预编译正则：中文不喜欢类偏好 */
+    private static final Pattern PATTERN_DISLIKE_PREFERENCE = Pattern.compile(
+            "我(?:不喜欢|讨厌|反感|不想看到)([^。！？!?\n]{2,80})");
+
+    /** [P3C 修复] 预编译正则：中文喜欢类偏好 */
+    private static final Pattern PATTERN_LIKE_PREFERENCE = Pattern.compile(
+            "我(?:喜欢|偏好|习惯|更倾向|钟爱)([^。！？!?\n]{2,80})");
+
+    /** [P3C 修复] 预编译正则：中文姓名自述 */
+    private static final Pattern PATTERN_NAME_FACT = Pattern.compile(
+            "我(?:的名字)?叫\\s*([\\u4e00-\\u9fa5A-Za-z·]{1,20})");
+
+    /** [P3C 修复] 预编译正则：中文职业自述 */
+    private static final Pattern PATTERN_WORK_FACT = Pattern.compile(
+            "我(?:是|在)[^。！？!?\n]{1,40}(?:工作|上班|就读|读书|负责|任职)");
+
+    /** [P3C 修复] 预编译正则：中文居住地自述 */
+    private static final Pattern PATTERN_LIVE_FACT = Pattern.compile(
+            "我(?:住在|来自|生活在)([^。！？!?\n]{2,40})");
+
+    /** [P3C 修复] 预编译正则：中文所属团队/项目自述 */
+    private static final Pattern PATTERN_OWNERSHIP_FACT = Pattern.compile(
+            "我(?:的)(?:项目|产品|系统|团队|公司|岗位)[^。！？!?\n]{1,60}");
+
+    /** [P3C 修复] 预编译正则：英文 always/never/remember to 指令 */
+    private static final Pattern PATTERN_EN_ALWAYS_INSTRUCTION = Pattern.compile(
+            "(?i)(always|never|remember to)\\s+([^.!?\n]{3,120})");
+
+    /** [P3C 修复] 预编译正则：英文偏好表述 */
+    private static final Pattern PATTERN_EN_PREFERENCE = Pattern.compile(
+            "(?i)i (?:prefer|like|love|hate|dislike)\\s+([^.!?\n]{3,100})");
+
+    /** [P3C 修复] 预编译正则：英文姓名自述 */
+    private static final Pattern PATTERN_EN_NAME_FACT = Pattern.compile(
+            "(?i)my name is\\s+([A-Za-z·]{1,30})");
+
     /**
      * 抽取规则表：种类、默认重要度与匹配式
      */
     private static final List<Rule> RULES = List.of(
-            new Rule("instruction", 0.9D, "(?:请?记住|记下|牢记|别忘了)[:：]?\\s*([^。！？!?\n]{2,120})"),
-            new Rule("instruction", 0.85D, "以后(?:都|要|请|别|不要|不许|不准)([^。！？!?\n]{2,80})"),
-            new Rule("instruction", 0.8D, "(?:每次|每当)[^。！？!?\n]{0,20}(?:都|要|请)([^。！？!?\n]{2,80})"),
-            new Rule("preference", 0.8D, "(?:回答|回复|输出|解释)[^。！？!?\n]{0,6}(?:用|使用|采用)\\s*"
-                    + "(中文|英文|English|日本語|markdown|JSON|表格|列表)[^。！？!?\n]{0,10}"),
-            new Rule("preference", 0.75D, "我(?:不喜欢|讨厌|反感|不想看到)([^。！？!?\n]{2,80})"),
-            new Rule("preference", 0.75D, "我(?:喜欢|偏好|习惯|更倾向|钟爱)([^。！？!?\n]{2,80})"),
-            new Rule("fact", 0.8D, "我(?:的名字)?叫\\s*([\\u4e00-\\u9fa5A-Za-z·]{1,20})"),
-            new Rule("fact", 0.75D, "我(?:是|在)[^。！？!?\n]{1,40}(?:工作|上班|就读|读书|负责|任职)"),
-            new Rule("fact", 0.7D, "我(?:住在|来自|生活在)([^。！？!?\n]{2,40})"),
-            new Rule("fact", 0.7D, "我(?:的)(?:项目|产品|系统|团队|公司|岗位)[^。！？!?\n]{1,60}"),
-            new Rule("instruction", 0.85D, "(?i)(always|never|remember to)\\s+([^.!?\n]{3,120})"),
-            new Rule("preference", 0.75D, "(?i)i (?:prefer|like|love|hate|dislike)\\s+([^.!?\n]{3,100})"),
-            new Rule("fact", 0.75D, "(?i)my name is\\s+([A-Za-z·]{1,30})")
+            new Rule("instruction", 0.9D, PATTERN_REMEMBER_INSTRUCTION),
+            new Rule("instruction", 0.85D, PATTERN_FUTURE_INSTRUCTION),
+            new Rule("instruction", 0.8D, PATTERN_PERIODIC_INSTRUCTION),
+            new Rule("preference", 0.8D, PATTERN_OUTPUT_LANGUAGE_PREFERENCE),
+            new Rule("preference", 0.75D, PATTERN_DISLIKE_PREFERENCE),
+            new Rule("preference", 0.75D, PATTERN_LIKE_PREFERENCE),
+            new Rule("fact", 0.8D, PATTERN_NAME_FACT),
+            new Rule("fact", 0.75D, PATTERN_WORK_FACT),
+            new Rule("fact", 0.7D, PATTERN_LIVE_FACT),
+            new Rule("fact", 0.7D, PATTERN_OWNERSHIP_FACT),
+            new Rule("instruction", 0.85D, PATTERN_EN_ALWAYS_INSTRUCTION),
+            new Rule("preference", 0.75D, PATTERN_EN_PREFERENCE),
+            new Rule("fact", 0.75D, PATTERN_EN_NAME_FACT)
     );
 
     @Override
@@ -162,16 +214,5 @@ public class RuleMemoryExtractor implements MemoryExtractor {
      * @param pattern     匹配式
      */
     private record Rule(String kind, double importance, Pattern pattern) {
-
-        /**
-         * 构造规则并预编译匹配式。
-         * @param importance 默认重要度
-         * @param kind 记忆种类
-         * @param regex 匹配式文本
-         * @return 返回值
-        */
-        Rule(String kind, double importance, String regex) {
-            this(kind, importance, Pattern.compile(regex));
-        }
     }
 }

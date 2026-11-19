@@ -26,6 +26,7 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,7 +47,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -82,10 +84,11 @@ public class WorldSimChatController {
     /**
      * 世界模拟回复线程池（守护线程，不阻止 JVM 退出）
      */
-    private static final ExecutorService WORLD_CHAT_POOL = Executors.newCachedThreadPool(r -> {
+    private static final ExecutorService WORLD_CHAT_POOL = MdcWrap.decorate(new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60L, // [P3C C1 修复] 显式线程池替代 Executors 缓存池
+            TimeUnit.SECONDS, new SynchronousQueue<>(), r -> {
         Thread t = new Thread(r, "world-sim-chat-reply");        t.setDaemon(true);
         return t;
-    });
+    }));
 
     /** 每轮对话注入的上下文消息条数 */
     private static final int CONTEXT_LIMIT = 20;

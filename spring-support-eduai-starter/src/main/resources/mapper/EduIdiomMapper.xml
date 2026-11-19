@@ -19,7 +19,25 @@
 
     <!-- 随机获取指定数量的成语 -->
     <select id="selectRandom" resultType="com.chua.starter.eduai.model.EduIdiom">
-        SELECT * FROM edu_idiom
+        SELECT
+            idiom_id,
+            idiom_content,
+            idiom_pinyin,
+            idiom_meaning,
+            idiom_source,
+            idiom_example,
+            idiom_synonyms,
+            idiom_antonyms,
+            idiom_difficulty,
+            idiom_tags,
+            idiom_owner_user_id,
+            create_name,
+            create_by,
+            create_time,
+            update_time,
+            update_name,
+            update_by
+        FROM edu_idiom
         <where>
             <if test="userId != null and userId != ''">
                 (idiom_owner_user_id IS NULL OR idiom_owner_user_id = #{userId})

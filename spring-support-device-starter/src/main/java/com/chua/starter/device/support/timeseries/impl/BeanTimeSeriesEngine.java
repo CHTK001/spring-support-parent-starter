@@ -87,6 +87,7 @@ public class BeanTimeSeriesEngine implements DeviceTimeSeriesEngine {
     public BeanTimeSeriesEngine(JdbcTemplate jdbcTemplate, String table) {
         this.jdbcTemplate = jdbcTemplate;
         this.table = normalizeTable(table);
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：table 经 normalizeTable 正则白名单校验，值用 ? 绑定
         this.insertSql = "INSERT INTO " + this.table + " (device_series_point_id, " + COLUMNS
                 + ", device_series_created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
@@ -170,9 +171,11 @@ public class BeanTimeSeriesEngine implements DeviceTimeSeriesEngine {
             throw new IllegalArgumentException("时序清理缺少必填参数: before");
         }
         if (category == null || category.isBlank()) {
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：table 构造时经 normalizeTable 正则白名单校验，条件值用 ? 绑定
             return jdbcTemplate.update("DELETE FROM " + table + " WHERE device_series_time < ?",
                     Timestamp.valueOf(before));
         }
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：table 构造时经 normalizeTable 正则白名单校验，条件值用 ? 绑定
         return jdbcTemplate.update("DELETE FROM " + table
                         + " WHERE device_series_category = ? AND device_series_time < ?",
                 category.trim(), Timestamp.valueOf(before));

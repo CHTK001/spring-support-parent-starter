@@ -124,6 +124,8 @@ public final class ShellSupport {
             case CMD -> cmdDialect(dir, cmd, doneProbe);
             case SH -> shDialect(dir, cmd, doneProbe);
             case POWERSHELL -> powershell(dir, cmd, doneProbe);
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + dialect);
         };
     }
 

@@ -404,6 +404,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
        */
     private static final byte[] EMPTY_BYTES = new byte[0];
 
+    /**
+     * [P3C C1 修复] JSON 字段提取正则缓存：正则含入参 key（Pattern.quote 生成），无法静态写死，
+     * 按正则串缓存避免同一表达式反复 Pattern.compile
+     */
+    private static final ConcurrentHashMap<String, Pattern> JSON_PATTERN_CACHE = new ConcurrentHashMap<>();
+
       /**
        * 系统配置访问令牌（每次服务启动随机生成，访问 /配置 时校验）
        */
@@ -3608,7 +3614,7 @@ function closePv() {
     document.getElementById('pvBody').innerHTML='';
 }
 function closeOt(){document.getElementById('otMask').classList.remove('show');}
-function copyOt(){var i=document.getElementById('otUrl');i.select();try{document.execCommand('copy');}catch(e){}
+function copyOt(){var i=document.getElementById('otUrl');i.select();try{document.execCommand('copy');}catch(e){/* 忽略：复制失败不阻断主流程 */}
 var b=document.getElementById('otCopyBtn');if(b){b.textContent='已复制';setTimeout(function(){b.textContent='复制';},1500);}}
 function openOnetime(r){
 var bucket=document.querySelector('.content').dataset.bucket,key=rowKey(r);
@@ -3631,7 +3637,7 @@ if(act==='open'){window.location.href=href;}
 else if(act==='preview'){openPreview(href,name);}
 else if(act==='download'){var ds=href.indexOf('?')<0?'?':'&';window.open(href+ds+'download=true','_blank');}
 else if(act==='onetime'){openOnetime(r);}
-else if(act==='copy'){try{navigator.clipboard.writeText(location.origin+href).then(function(){},function(){});}catch(err){}}
+else if(act==='copy'){try{navigator.clipboard.writeText(location.origin+href).then(function(){},function(){});}catch(err){/* 忽略：复制失败不阻断主流程 */}}
                 else if(act==='delete'){if(!confirm('确认删除 '+name+' ?'))return;fetch(href,{method:'DELETE'}).then(function(res){if(res.ok
                     ){location.reload();}else{alert('删除失败 HTTP '+res.status);}});}});
 var viewMode=localStorage.getItem('filestorage.view')||'list';
@@ -6191,8 +6197,18 @@ var search=document.getElementById('search');
        * @return 字段值；字段不存在返回 null
        */
     private static Boolean extractBoolean(String json, String key) {
-        Matcher matcher = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(true|false)").matcher(json);
+        Matcher matcher = cachedJsonPattern("\"" + Pattern.quote(key) + "\"\\s*:\\s*(true|false)").matcher(json);
         return matcher.find() ? Boolean.parseBoolean(matcher.group(1)) : null;
+    }
+
+    /**
+     * [P3C C1 修复] 取缓存的 JSON 提取正则，未命中时编译一次
+     *
+     * @param regex 正则表达式
+     * @return 已编译 Pattern
+     */
+    private static Pattern cachedJsonPattern(String regex) {
+        return JSON_PATTERN_CACHE.computeIfAbsent(regex, Pattern::compile);
     }
 
       /**
@@ -6203,7 +6219,7 @@ var search=document.getElementById('search');
        * @return 字段值（已反转义）；字段不存在返回 null
        */
     private static String extractString(String json, String key) {
-        Matcher matcher = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
+        Matcher matcher = cachedJsonPattern("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
         return matcher.find() ? unescapeJson(matcher.group(1)) : null;
     }
 
@@ -6219,11 +6235,11 @@ var search=document.getElementById('search');
        * @return 字段值的字面文本；字段不存在返回 null
        */
     private static String extractScalar(String json, String key) {
-        Matcher quoted = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
+        Matcher quoted = cachedJsonPattern("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").matcher(json);
         if (quoted.find()) {
             return unescapeJson(quoted.group(1));
         }
-        Matcher bare = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)").matcher(json);
+        Matcher bare = cachedJsonPattern("\"" + Pattern.quote(key) + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)").matcher(json);
         return bare.find() ? bare.group(1) : null;
     }
 

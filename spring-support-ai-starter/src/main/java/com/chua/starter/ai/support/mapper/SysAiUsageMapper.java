@@ -283,6 +283,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      *
      * @return 有明细数据的日期列表，无数据时为空列表
      */
+    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入
     @Select("SELECT DISTINCT DATE(sys_ai_usage_call_time) FROM sys_ai_usage")
     List<LocalDate> selectDistinctUsageDays();
 

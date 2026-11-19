@@ -49,7 +49,7 @@ public class GlobalModelServiceImpl implements GlobalModelService {
     @Override
     public ChatClient getChatClient() {
         // 从 runtime 分组读取配置，创建全局 ChatClient
-        // TODO: 完整实现，目前返回 null，由 Spring 容器中的 ChatClient 提供
+        // TODO(CH): 完整实现，目前返回 null，由 Spring 容器中的 ChatClient 提供
         return chatClient;
     }
 
@@ -65,7 +65,7 @@ public class GlobalModelServiceImpl implements GlobalModelService {
 
     @Override
     public ImageClassifier getImageClassifier() {
-        // TODO: 从 image 分组读取配置，创建图片分类器
+        // TODO(CH): 从 image 分组读取配置，创建图片分类器
         return null;
     }
 

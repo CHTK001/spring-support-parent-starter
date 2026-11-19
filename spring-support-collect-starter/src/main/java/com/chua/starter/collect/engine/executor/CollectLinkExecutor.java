@@ -20,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -85,6 +86,11 @@ public class CollectLinkExecutor implements CollectShapeExecutor {
      * 默认出参变量名。
      */
     public static final String DEFAULT_OUTPUT = "linkList";
+
+    /**
+     * [P3C 修复] 过滤正则编译缓存：运行期正则按文本缓存，避免重复编译。
+     */
+    private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
 
     @Override
     public String supportShape() {
@@ -217,7 +223,8 @@ public class CollectLinkExecutor implements CollectShapeExecutor {
             return null;
         }
         try {
-            return Pattern.compile(pattern.trim());
+            // [P3C 修复] 相同正则文本复用缓存中的预编译 Pattern
+            return PATTERN_CACHE.computeIfAbsent(pattern.trim(), Pattern::compile);
         } catch (PatternSyntaxException ex) {
             throw new IllegalArgumentException("链接过滤正则写法错误: " + ex.getMessage(), ex);
         }

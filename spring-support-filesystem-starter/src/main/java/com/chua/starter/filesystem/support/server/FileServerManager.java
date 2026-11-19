@@ -346,6 +346,8 @@ public class FileServerManager implements AutoCloseable {
             case VIEW -> false;         // 仅预览：即使前端请求下载，也降级为内联预览
             case DOWNLOAD -> true;      // 仅下载：即使前端请求预览，也降级为附件下载
             case BOTH -> forceDownload; // 两者皆可：按前端前缀决定
+            // [P3C C1 修复] 补充 default 兜底：枚举扩展时不再静默漏处理
+            default -> throw new IllegalStateException("未预期的取值: " + mode);
         };
         log.info("[FileServer] bucket={}, key={}, forceDownload={}, mode={}, download={}",
                 bucket, key, forceDownload, mode, download);

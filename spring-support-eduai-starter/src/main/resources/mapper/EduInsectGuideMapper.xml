@@ -5,7 +5,18 @@
     <!-- 按 slug 取讲解。用 SELECT * 而非 BaseMapper.selectOne：本库表未落
          SysBase 的 create_name/create_by 等列，selectOne 会拼出这些不存在的列而报错 -->
     <select id="selectByCode" resultType="com.chua.starter.eduai.model.EduInsectGuide">
-        SELECT * FROM edu_insect_guide WHERE insect_code = #{insectCode} LIMIT 1
+        SELECT
+            guide_id,
+            insect_code,
+            guide_lesson,
+            guide_motion_title,
+            guide_motion_body,
+            guide_quiz,
+            guide_habitat_title,
+            guide_habitat_body,
+            guide_owner_user_id,
+            update_time
+        FROM edu_insect_guide WHERE insect_code = #{insectCode} LIMIT 1
     </select>
 
     <!-- 已有讲解的物种 slug：维护页据此标出漏配讲解的物种 -->

@@ -216,6 +216,8 @@ public final class DbObjectDialect {
             case PROCEDURE, FUNCTION -> listRoutines(conn, schema, type);
             case TRIGGER -> listTriggers(conn, schema);
             case EVENT -> listEvents(conn, schema);
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
     }
 
@@ -244,6 +246,8 @@ public final class DbObjectDialect {
             case FUNCTION -> "SHOW CREATE FUNCTION " + SqlName.quoteMysql(safeSchema, "库名") + "." + quoted;
             case TRIGGER -> "SHOW CREATE TRIGGER " + SqlName.quoteMysql(safeSchema, "库名") + "." + quoted;
             case EVENT -> "SHOW CREATE EVENT " + SqlName.quoteMysql(safeSchema, "库名") + "." + quoted;
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         String viaShow = tryShowCreate(conn, show);
         if (viaShow != null) {
@@ -317,6 +321,8 @@ public final class DbObjectDialect {
                     + " WHERE TRIGGER_SCHEMA = ? AND TRIGGER_NAME = ?";
             case EVENT -> "SELECT EVENT_DEFINITION FROM information_schema.EVENTS"
                     + " WHERE EVENT_SCHEMA = ? AND EVENT_NAME = ?";
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, schema);
@@ -368,6 +374,8 @@ public final class DbObjectDialect {
             case FUNCTION -> "DROP FUNCTION " + (ifExists ? "IF EXISTS " : "") + qualified;
             case TRIGGER -> "DROP TRIGGER " + (ifExists ? "IF EXISTS " : "") + qualified;
             case EVENT -> "DROP EVENT " + (ifExists ? "IF EXISTS " : "") + qualified;
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
@@ -393,6 +401,8 @@ public final class DbObjectDialect {
                     + " WHERE TRIGGER_SCHEMA = ? AND TRIGGER_NAME = ?";
             case EVENT -> "SELECT COUNT(*) FROM information_schema.EVENTS"
                     + " WHERE EVENT_SCHEMA = ? AND EVENT_NAME = ?";
+            // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, schema);

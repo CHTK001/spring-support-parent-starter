@@ -53,6 +53,8 @@ public class CharacterCatalogController {
 
     private static final Pattern FRONTMATTER_PATTERN = Pattern.compile("(?s)^---\\s*\\n(.*?)\\n---\\s*\\n(.*)");
     private static final Pattern KEY_VALUE_PATTERN = Pattern.compile("^(\\w+):\\s*(.+)$");
+    // [P3C 修复] 内联列表项拆分正则：原在方法体内每次调用重复编译，提升为类级常量
+    private static final Pattern INLINE_LIST_ITEM_PATTERN = Pattern.compile("\"([^\"]*)\"|'([^']*)'|([^,\"'\\[\\]]+)");
 
     /**
      * classpath 内置角色模板目录
@@ -284,7 +286,7 @@ public class CharacterCatalogController {
             value = value.substring(0, value.length() - 1);
         }
         // 引号项优先整体匹配；非引号项不得吞入引号/方括号，避免引号残留
-        Matcher itemMatcher = Pattern.compile("\"([^\"]*)\"|'([^']*)'|([^,\"'\\[\\]]+)").matcher(value);
+        Matcher itemMatcher = INLINE_LIST_ITEM_PATTERN.matcher(value);
         while (itemMatcher.find()) {
             String part = itemMatcher.group(1) != null ? itemMatcher.group(1)
                     : itemMatcher.group(2) != null ? itemMatcher.group(2) : itemMatcher.group(3);

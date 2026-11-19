@@ -118,7 +118,9 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         try (Stream<Path> s = Files.list(dir)) {
             for (Path p : s.toList()) {
                 int no = actNumberOf(p.getFileName().toString());
-                if (no > 0) out.add(no);
+                if (no > 0) {
+                    out.add(no);
+                }
             }
         } catch (Exception e) {
             log.debug("[StoryStore] 列举幕次失败 worldId={}: {}", worldId, e.getMessage());
@@ -163,7 +165,9 @@ public class StoryStoreServiceImpl implements StoryStoreService {
         try (Stream<Path> s = Files.list(dir)) {
             for (Path p : s.toList()) {
                 int no = actNumberOf(p.getFileName().toString());
-                if (no > 0) out.add(no);
+                if (no > 0) {
+                    out.add(no);
+                }
             }
         } catch (Exception e) {
             log.debug("[StoryStore] 列举用户故事失败 worldId={}: {}", worldId, e.getMessage());

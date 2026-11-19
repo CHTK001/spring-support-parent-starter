@@ -232,6 +232,8 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
             case PORT -> "ss -tlnp 2>/dev/null | grep -q ':" + target + "'";
             case HTTP -> "curl -sI --max-time " + Math.min(timeout, HTTP_PROBE_MAX_SECONDS) + " http://" + target + " >/dev/null 2>&1";
             case PROCESS -> "pgrep -f '" + target + "'";
+            // [P3C] 兜底：未预期的健康检查类型直接失败，不拼接未知命令
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         return exec(host, credential, command, timeout);
     }
@@ -261,6 +263,8 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
             case PORT_ALIVE -> "(ss -tln 2>/dev/null || netstat -tln 2>/dev/null) | grep -q ':" + key + "' && echo 1 || echo 0";
             case HTTP_CODE -> "curl -s -o /dev/null -w '%{http_code}' --max-time "
                       + Math.min(timeout, HTTP_PROBE_MAX_SECONDS) + " http://" + key + " 2>/dev/null || echo 0";
+            // [P3C] 兜底：未预期的指标类型直接失败，不拼接未知命令
+            default -> throw new IllegalStateException("未预期的取值: " + type);
         };
         return parseMetric(exec(host, credential, command, timeout).stdout());
     }

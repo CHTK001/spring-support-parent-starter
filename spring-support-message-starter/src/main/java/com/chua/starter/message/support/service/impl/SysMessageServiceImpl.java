@@ -66,6 +66,19 @@ import java.util.regex.Pattern;
 public class SysMessageServiceImpl implements SysMessageService {
 
     /**
+     * [P3C C1 修复] 模板占位符正则（${var} 与 {{var}}），类级预编译避免重复编译
+     */
+    private static final Pattern TEMPLATE_PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{(.+?)\\}|\\{\\{(.+?)\\}\\}");
+    /**
+     * [P3C C1 修复] 合法占位符正则：${var} 或 {{var}}
+     */
+    private static final Pattern LEGAL_PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{[^}]+}|\\{\\{[^}]+}}");
+    /**
+     * [P3C C1 修复] 任意花括号片段正则：用于扫出不符合规则的占位符
+     */
+    private static final Pattern ANY_PLACEHOLDER_PATTERN = Pattern.compile("\\$?\\{[^}]+}");
+
+    /**
      * SYS消息提供者映射器
     */
     private final SysMessageProviderMapper sysMessageProviderMapper;
@@ -680,7 +693,7 @@ public class SysMessageServiceImpl implements SysMessageService {
         Map<String, String> params = toParamMap(request.params());
         List<String> unresolved = new ArrayList<>();
         // 支持 ${var} 与 {{var}} 两种占位符
-        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}|\\{\\{(.+?)\\}\\}");
+        Pattern pattern = TEMPLATE_PLACEHOLDER_PATTERN;
         Matcher matcher = pattern.matcher(content);
         StringBuilder sb = new StringBuilder();
         while (matcher.find()) {
@@ -981,8 +994,8 @@ public class SysMessageServiceImpl implements SysMessageService {
             return null;
         }
         // 非法占位符：以 { 或 $ 开头但不符合 ${var} / {{var}} 规则
-        Pattern legal = Pattern.compile("\\$\\{[^}]+}|\\{\\{[^}]+}}");
-        Pattern any = Pattern.compile("\\$?\\{[^}]+}");
+        Pattern legal = LEGAL_PLACEHOLDER_PATTERN;
+        Pattern any = ANY_PLACEHOLDER_PATTERN;
         Matcher anyMatcher = any.matcher(content);
         while (anyMatcher.find()) {
             String segment = anyMatcher.group();

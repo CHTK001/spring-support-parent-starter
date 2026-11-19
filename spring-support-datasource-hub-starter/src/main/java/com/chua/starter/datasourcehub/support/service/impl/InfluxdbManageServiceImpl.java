@@ -404,6 +404,7 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
         Map<String, String> times = new LinkedHashMap<>();
         try {
             for (String measurement : names) {
+                // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：measurement 经 sqlIdentifier() 双引号转义
                 String sql = "SELECT time FROM " + sqlIdentifier(measurement)
                         + " ORDER BY time DESC LIMIT 1";
                 List<JsonObject> rows = client.v3QuerySql(target, database, sql);
@@ -516,6 +517,7 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      */
     private String sqlLastWrite(InfluxdbClient.Target target, String bucket, String measurement) {
         try {
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：measurement 经 sqlIdentifier() 双引号转义
             String sql = "SELECT * FROM " + sqlIdentifier(measurement)
                     + " ORDER BY time DESC LIMIT 1";
             List<JsonObject> rows = influxql(target, bucket, sql);

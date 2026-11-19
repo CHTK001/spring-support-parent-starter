@@ -294,6 +294,7 @@ public class DbTableCopyService {
         taskRegistry.detail(taskId, "源表 " + sourceTable + " 共 " + total + " 行、" + columns.size() + " 列");
         taskRegistry.progress(taskId, CREATE_DONE, "开始写入 " + total + " 行");
 
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名经 qualified()→SqlName.quoteMysql 白名单校验，列名经 SqlName.escape 转义，值用 ? 绑定
         String quotedColumns = joinQuoted(columns);
         String selectSql = "SELECT " + quotedColumns + " FROM " + qualified(sourceDatabase, sourceTable);
         String insertSql = "INSERT INTO " + qualified(targetDatabase, targetTable)
@@ -497,6 +498,7 @@ public class DbTableCopyService {
      * @throws SQLException 查询失败
      */
     private long countRows(String taskId, Connection conn, String database, String table) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：库表名经 qualified()→SqlName.quoteMysql 白名单校验
         String sql = "SELECT COUNT(*) FROM " + qualified(database, table);
         try (Statement st = conn.createStatement()) {
             CancelWatcher watcher = new CancelWatcher(taskId, st);

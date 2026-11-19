@@ -126,7 +126,7 @@ public class FileCollabHub {
      * 的 N 批只写一次；快照、空闲、关停仍走同步写，保证不丢关键状态。</p>
      */
     private final java.util.concurrent.ScheduledExecutorService flusher =
-            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(runnable -> {
+            new java.util.concurrent.ScheduledThreadPoolExecutor(1, runnable -> { // [P3C C1 修复] 显式线程池替代 Executors 包装
                 Thread thread = new Thread(runnable, "file-collab-hub-flush");
                 thread.setDaemon(true);
                 return thread;

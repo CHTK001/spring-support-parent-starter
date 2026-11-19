@@ -155,6 +155,8 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
             case REFUND_SUCCESS -> OrderState.REFUNDED.name().equals(status);
             case REFUND_FAIL -> OrderState.PAID.name().equals(status) || OrderState.COMPLETED.name().equals(status);
             case TIMEOUT -> OrderState.TIMEOUT.name().equals(status);
+            // [P3C] 兜底：未知事件按未达到目标状态处理，返回 false，不引入新异常
+            default -> false;
         };
     }
 }

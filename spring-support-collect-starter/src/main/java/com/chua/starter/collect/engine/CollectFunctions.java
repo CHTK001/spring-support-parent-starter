@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,9 +45,24 @@ public final class CollectFunctions {
     private static final String RANDOM_CHARS = "abcdefghijkmnopqrstuvwxyz23456789";
 
     /**
+     * [P3C 修复] 正则编译缓存：运行期正则按文本缓存，避免每次调用重复编译。
+     */
+    private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
+
+    /**
      * 工具类禁止实例化。
      */
     private CollectFunctions() {
+    }
+
+    /**
+     * [P3C 修复] 取预编译正则：相同正则文本全局复用同一 Pattern。
+     *
+     * @param regex 正则文本
+     * @return 预编译 Pattern
+     */
+    private static Pattern patternOf(String regex) {
+        return PATTERN_CACHE.computeIfAbsent(regex, Pattern::compile);
     }
 
     /**
@@ -183,7 +199,7 @@ public final class CollectFunctions {
         if (text == null || regex == null) {
             return "";
         }
-        Matcher matcher = Pattern.compile(regex).matcher(text);
+        Matcher matcher = patternOf(regex).matcher(text);
         if (!matcher.find()) {
             return "";
         }
@@ -202,7 +218,7 @@ public final class CollectFunctions {
     public static String regexAll(String text, String regex, int group, String separator) {
         List<String> hits = new ArrayList<>();
         if (text != null && regex != null) {
-            Matcher matcher = Pattern.compile(regex).matcher(text);
+            Matcher matcher = patternOf(regex).matcher(text);
             while (matcher.find()) {
                 hits.add(matcher.group(Math.max(group, 0)));
             }

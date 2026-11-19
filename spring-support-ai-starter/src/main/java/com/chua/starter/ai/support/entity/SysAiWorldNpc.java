@@ -59,6 +59,7 @@ public class SysAiWorldNpc {
 
     /** 是否参与推进与自动互动 1是0否 */
     @TableField("is_active")
+    // [P3C A6 豁免] 数据库/序列化字段名契约固定，不改名
     private Boolean isActive;
 
     /** 年龄（虚岁；由编剧驱动随时间增长，开关可控制） */

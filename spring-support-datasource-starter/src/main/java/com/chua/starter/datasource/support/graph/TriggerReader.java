@@ -84,6 +84,7 @@ public class TriggerReader {
      * @throws SQLException 异常
     */
     private List<TriggerInfo> readMysqlLike(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：information_schema 固定系统视图查询
         String sql = "SELECT TRIGGER_NAME, EVENT_MANIPULATION, EVENT_OBJECT_TABLE, " +
                 "ACTION_TIMING, STATUS, ACTION_ORIENTATION " +
                 "FROM information_schema.TRIGGERS";
@@ -115,6 +116,7 @@ public class TriggerReader {
      * @throws SQLException 异常
     */
     private List<TriggerInfo> readPostgresql(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：information_schema 固定系统视图查询
         String sql = "SELECT trigger_name, event_manipulation, event_object_table, " +
                 "action_timing, action_orientation " +
                 "FROM information_schema.triggers";
@@ -146,6 +148,7 @@ public class TriggerReader {
      * @throws SQLException 异常
     */
     private List<TriggerInfo> readOracle(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：ALL_TRIGGERS 固定系统视图查询
         String sql = "SELECT TRIGGER_NAME, TABLE_NAME, STATUS, TRIGGER_TYPE, TRIGGERING_EVENT " +
                 "FROM ALL_TRIGGERS WHERE OWNER = USER OR OWNER = SYS_CONTEXT('USERENV','CURRENT_SCHEMA')";
         List<TriggerInfo> list = new ArrayList<>();
@@ -176,6 +179,7 @@ public class TriggerReader {
      * @throws SQLException 异常
     */
     private List<TriggerInfo> readSqlServer(Connection conn) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：sys.triggers 固定系统视图查询
         String sql = "SELECT t.name AS trigger_name, " +
                 "       OBJECT_NAME(t.parent_id) AS table_name, " +
                 "       t.is_disabled " +
@@ -204,6 +208,7 @@ public class TriggerReader {
          * 尝试。
          * @param conn.createStatement( conn.创建对账单(
          */
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：sys.trigger_events 固定系统视图查询
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(
                 "SELECT OBJECT_NAME(object_id) AS name, " +
                         "STRING_AGG(type_desc, ',') AS events " +

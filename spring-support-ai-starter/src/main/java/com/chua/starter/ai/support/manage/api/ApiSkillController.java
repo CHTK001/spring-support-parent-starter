@@ -167,6 +167,13 @@ public class ApiSkillController {
     private static final Pattern GITHUB_SEGMENT = Pattern.compile("[A-Za-z0-9._-]{1,100}");
 
     /**
+     * GitHub 树/blob 地址解析正则。
+     * <p>[P3C 修复] 原在 {@code parseGithubUrl} 方法体内每次调用重复编译，提升为类级常量。</p>
+     */
+    private static final Pattern GITHUB_URL_PATTERN = Pattern.compile(
+            "github\\.com/([^/]+)/([^/]+)(?:/(tree|blob)/([^/]+)(?:/(.*))?)?");
+
+    /**
      * 单个技能从归档解包的文件数上限。
      */
     private static final int MAX_SKILL_FILES = 500;
@@ -2286,9 +2293,7 @@ public class ApiSkillController {
         if (url == null || url.isBlank()) {
             return null;
         }
-        Pattern pattern = Pattern.compile(
-                "github\\.com/([^/]+)/([^/]+)(?:/(tree|blob)/([^/]+)(?:/(.*))?)?");
-        Matcher matcher = pattern.matcher(url);
+        Matcher matcher = GITHUB_URL_PATTERN.matcher(url);
         if (!matcher.find()) {
             return null;
         }

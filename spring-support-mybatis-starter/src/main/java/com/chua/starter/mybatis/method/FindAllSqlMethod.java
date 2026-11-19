@@ -35,6 +35,7 @@ public class FindAllSqlMethod extends AbstractMethod {
     */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String tableName = SqlName.check(tableInfo.getTableName(), "MyBatis 实体表名");
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名来自实体元数据并经 SqlName.check 白名单校验
         String sql = "select * from " + tableName;
 
         SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);

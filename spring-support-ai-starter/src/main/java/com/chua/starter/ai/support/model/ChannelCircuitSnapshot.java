@@ -29,6 +29,9 @@ public record ChannelCircuitSnapshot(
         String lastError,
         long lastUpdatedAt) implements Serializable {
 
+    /** 序列化版本号 */
+    private static final long serialVersionUID = 1L;
+
     /**
      * 熔断条目键（{@code providerId::model}）。
      *

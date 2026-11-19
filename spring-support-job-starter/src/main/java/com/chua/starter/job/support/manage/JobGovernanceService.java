@@ -531,7 +531,7 @@ public class JobGovernanceService {
         //   3) 它是 SKIPPED, 不进任何按 FAILURE 统计的告警口径；
         //   4) 60s 节流意味着丢 1 次与丢 100 次在日志里长得一样。
         // 本计数是对台账直接求和的实时量, 不依赖日志是否写成功、是否有人翻日志、是否配了告警。
-        // TODO 待验证: SKIPPED 丢单记录是否真的落库, 需在隔离节点上按 executeCode=SKIPPED 复查。
+        // TODO(CH): 待验证: SKIPPED 丢单记录是否真的落库, 需在隔离节点上按 executeCode=SKIPPED 复查。
         long unclaimedRemoteJobs = jobProperties.isScheduler() && leader && onlineExecutors.isEmpty()
                 ? remoteEnabledCount : 0L;
         JobLogQuery failure = new JobLogQuery();

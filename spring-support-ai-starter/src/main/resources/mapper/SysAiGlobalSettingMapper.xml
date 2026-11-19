@@ -5,7 +5,19 @@
     <!-- 按配置分组查询全部全局设置项。 -->
     <select id="selectByGroup" parameterType="java.util.Map"
             resultType="com.chua.starter.ai.support.entity.SysAiGlobalSetting">
-        SELECT *
+        SELECT
+            sys_ai_global_setting_id,
+            sys_ai_global_setting_group,
+            sys_ai_global_setting_field,
+            sys_ai_global_setting_value,
+            sys_ai_global_setting_value_type,
+            sys_ai_global_setting_description,
+            sys_ai_global_setting_sort,
+            sys_ai_global_setting_status,
+            create_time,
+            update_time,
+            create_name,
+            update_name
         FROM sys_ai_global_setting
         WHERE sys_ai_global_setting_group = #{group}
     </select>
@@ -13,7 +25,19 @@
     <!-- 按配置分组和字段名查询单个全局设置项。 -->
     <select id="selectByGroupAndField" parameterType="java.util.Map"
             resultType="com.chua.starter.ai.support.entity.SysAiGlobalSetting">
-        SELECT *
+        SELECT
+            sys_ai_global_setting_id,
+            sys_ai_global_setting_group,
+            sys_ai_global_setting_field,
+            sys_ai_global_setting_value,
+            sys_ai_global_setting_value_type,
+            sys_ai_global_setting_description,
+            sys_ai_global_setting_sort,
+            sys_ai_global_setting_status,
+            create_time,
+            update_time,
+            create_name,
+            update_name
         FROM sys_ai_global_setting
         WHERE sys_ai_global_setting_group = #{group}
           AND sys_ai_global_setting_field = #{field}

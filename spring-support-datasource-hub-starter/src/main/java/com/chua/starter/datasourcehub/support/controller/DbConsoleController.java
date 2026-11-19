@@ -7,7 +7,7 @@ import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolv
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
-// 控制台的写操作留痕：@SysLog 事件由 DatasourceOperLogListener 消费落 ms_datasource_oper_log
+// 控制台的写操作留痕：@SysLog 事件由 DatasourceOperLogListener 消费落 datasource_oper_log
 import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.datasourcehub.support.dbconsole.DbAiStatusVO;
 import com.chua.starter.datasourcehub.support.dbconsole.DbColumnDef;
@@ -98,6 +98,28 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 @Slf4j
 public class DbConsoleController {
+
+    // [P3C 修复] 以下正则原在方法体内重复编译，统一提升为类级预编译常量
+    /** SQL 错误识别：列缺少默认值 */
+    private static final Pattern MYSQL_NO_DEFAULT_FIELD =
+            Pattern.compile("Field '([^']+)' doesn't have a default value", Pattern.CASE_INSENSITIVE);
+    /** SQL 错误识别：列不能为空 */
+    private static final Pattern MYSQL_NULL_COLUMN =
+            Pattern.compile("Column '([^']+)' cannot be null", Pattern.CASE_INSENSITIVE);
+    /** SQL 错误识别：数据超长 */
+    private static final Pattern MYSQL_DATA_TOO_LONG =
+            Pattern.compile("Data too long for column '([^']+)'", Pattern.CASE_INSENSITIVE);
+    /** SQL 错误识别：未知列 */
+    private static final Pattern MYSQL_UNKNOWN_COLUMN =
+            Pattern.compile("Unknown column '([^']+)' in 'field list'", Pattern.CASE_INSENSITIVE);
+    /** SQL 错误识别：唯一键冲突 */
+    private static final Pattern MYSQL_DUPLICATE_ENTRY =
+            Pattern.compile("Duplicate entry '([^']+)' for key '([^']+)'", Pattern.CASE_INSENSITIVE);
+    /** SQL 错误识别：表不存在 */
+    private static final Pattern MYSQL_TABLE_NOT_EXIST =
+            Pattern.compile("Table '([^']+)' doesn't exist", Pattern.CASE_INSENSITIVE);
+    /** 标识符（字母/数字/下划线）匹配 */
+    private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z0-9_]+");
 
     /**
      * 数据源服务（数据源配置落库与 JDBC 连接构建）。
@@ -571,7 +593,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
             if (at < 0) {
                 continue;
             }
-            var matcher = java.util.regex.Pattern.compile("[A-Za-z0-9_]+").matcher(text);
+            var matcher = IDENTIFIER.matcher(text);
             // +keyword.length() 跳过关键字本身，避免匹配到关键字的残片
             if (matcher.find(at + keyword.length())) {
                 return matcher.group();
@@ -1437,7 +1459,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * 给表拍结构快照。
      *
      * <p>拍快照 = 把表在拍摄时刻的「建表 DDL + 列 + 索引 + 外键 + 表选项」存到
-     * ms_schema_snapshot。name 不传时后端生成「保存于 2026-10-30 15:30」，
+     * datasource_schema_snapshot。name 不传时后端生成「保存于 2026-10-30 15:30」，
      * creator 不传时从请求头取当前登录人；没有登录人则记 SYSTEM。</p>
      *
      * @param tableName    表名
@@ -2721,32 +2743,32 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         }
         String msg = raw.trim();
         // Field 'xxx' doesn't have a default value
-        Matcher m = Pattern.compile("Field '([^']+)' doesn't have a default value", Pattern.CASE_INSENSITIVE).matcher(msg);
+        Matcher m = MYSQL_NO_DEFAULT_FIELD.matcher(msg);
         if (m.find()) {
             return "列「" + m.group(1) + "」没有默认值，请填写该列的值或确认该列支持自增";
         }
         // Column 'xxx' cannot be null
-        m = Pattern.compile("Column '([^']+)' cannot be null", Pattern.CASE_INSENSITIVE).matcher(msg);
+        m = MYSQL_NULL_COLUMN.matcher(msg);
         if (m.find()) {
             return "列「" + m.group(1) + "」不能为空，请填写后再保存";
         }
         // Data too long for column 'xxx'
-        m = Pattern.compile("Data too long for column '([^']+)'", Pattern.CASE_INSENSITIVE).matcher(msg);
+        m = MYSQL_DATA_TOO_LONG.matcher(msg);
         if (m.find()) {
             return "列「" + m.group(1) + "」的值超出长度限制，请缩短后重试";
         }
         // Unknown column 'xxx' in 'field list'
-        m = Pattern.compile("Unknown column '([^']+)' in 'field list'", Pattern.CASE_INSENSITIVE).matcher(msg);
+        m = MYSQL_UNKNOWN_COLUMN.matcher(msg);
         if (m.find()) {
             return "表中不存在列「" + m.group(1) + "」，可能已被删除或表结构已变更";
         }
         // Duplicate entry 'xxx' for key 'xxx'
-        m = Pattern.compile("Duplicate entry '([^']+)' for key '([^']+)'", Pattern.CASE_INSENSITIVE).matcher(msg);
+        m = MYSQL_DUPLICATE_ENTRY.matcher(msg);
         if (m.find()) {
             return "「" + m.group(2) + "」已存在值为「" + m.group(1) + "」的记录，不能重复";
         }
         // Table 'xxx' doesn't exist
-        m = Pattern.compile("Table '([^']+)' doesn't exist", Pattern.CASE_INSENSITIVE).matcher(msg);
+        m = MYSQL_TABLE_NOT_EXIST.matcher(msg);
         if (m.find()) {
             return "表「" + m.group(1) + "」不存在，可能已被删除或库名有误";
         }
@@ -3826,6 +3848,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     case JSON -> "JSON";
                     case XML -> "XML";
                     case SQL -> "SQL 脚本";
+                    // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+                    default -> throw new IllegalStateException("未预期的取值: " + f);
                 }))
                 .toList();
         List<Map<String, String>> scopes = Arrays.stream(
@@ -3834,6 +3858,8 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
                     case STRUCTURE -> "仅结构";
                     case DATA -> "仅数据";
                     case ALL -> "结构 + 数据";
+                    // [P3C 修复] 兜底：出现未覆盖的枚举取值时快速失败，不改变既有 case 行为
+                    default -> throw new IllegalStateException("未预期的取值: " + s);
                 }))
                 .toList();
         return ReturnResult.ok(Map.of("formats", formats, "scopes", scopes));

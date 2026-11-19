@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.search;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.common.support.log.MdcWrap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,19 @@ public class WebSearchService {
     private static final Pattern API_KEY = Pattern.compile(
             "apiKey[\"'\\s:=]+([^}\\s'\"]+)");
 
+    // [P3C 修复] 以下 4 个正则原以字符串参数传入 firstGroup，在方法体内每次重新编译，现提升为类级常量
+    private static final Pattern MDURL = Pattern.compile(
+            "data-mdurl=\"(https?[^\"]+)\"", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    private static final Pattern H3_TITLE = Pattern.compile(
+            "<h3[^>]*>\\s*<a[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    private static final Pattern MDURL_TITLE = Pattern.compile(
+            "<a[^>]*data-mdurl=\"[^\"]+\"[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
+    private static final Pattern RES_DESC = Pattern.compile(
+            "<p class=\"res-desc\">(.*?)</p>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
     private final ObjectMapper objectMapper;
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
@@ -84,12 +98,12 @@ public class WebSearchService {
     private static final long PAID_PREFERRED_MS = 2500L;
 
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private static final ExecutorService SEARCH_POOL = Executors.newFixedThreadPool(4, r -> {
+    private static final ExecutorService SEARCH_POOL = MdcWrap.decorate(Executors.newFixedThreadPool(4, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "web-search");
         t.setDaemon(true);
         return t;
-    });
+    }));
 
     /**
      * 联网检索。
@@ -596,7 +610,7 @@ public class WebSearchService {
         String[] blocks = html.split("<li[^>]*class=\"[^\"]*res-list");
         for (int i = 1; i < blocks.length && out.size() < count; i++) {
             String b = blocks[i];
-            String u = firstGroup(b, "data-mdurl=\"(https?[^\"]+)\"");
+            String u = firstGroup(b, MDURL);
             if (u == null || u.isBlank()) {
                 continue;
             }
@@ -606,12 +620,12 @@ public class WebSearchService {
             if (!seen.add(u)) {
                 continue;
             }
-            String title = firstGroup(b, "<h3[^>]*>\\s*<a[^>]*>(.*?)</a>");
+            String title = firstGroup(b, H3_TITLE);
             if (title == null) {
-                title = firstGroup(b, "<a[^>]*data-mdurl=\"[^\"]+\"[^>]*>(.*?)</a>");
+                title = firstGroup(b, MDURL_TITLE);
             }
             title = clean(title == null ? "" : title);
-            String desc = clean(firstGroup(b, "<p class=\"res-desc\">(.*?)</p>"));
+            String desc = clean(firstGroup(b, RES_DESC));
             if (!title.isBlank()) {
                 out.add(new WebResult(title, u, desc));
             }
@@ -620,12 +634,13 @@ public class WebSearchService {
 
     /**
      * 返回正则首次匹配的第一个分组，无匹配时返回 {@code null}。
+     * <p>[P3C 修复] 参数改为已编译的 {@link Pattern} 常量，避免方法体内重复 compile。</p>
      * @param input 字符串
-     * @param regex 字符串
+     * @param pattern 已编译正则
      * @return 返回值
     */
-    private static String firstGroup(String input, String regex) {
-        Matcher m = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL).matcher(input);
+    private static String firstGroup(String input, Pattern pattern) {
+        Matcher m = pattern.matcher(input);
         return m.find() ? m.group(1) : null;
     }
 

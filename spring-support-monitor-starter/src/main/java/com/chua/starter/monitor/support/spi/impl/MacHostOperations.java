@@ -100,6 +100,11 @@ public class MacHostOperations extends PosixHostOperations {
                     + "\\s+(\\S+)\\s+\\(([^)]*)\\)(.*)$");
 
     /**
+     * [P3C C1 修复] kextstat 依赖段：尖括号包裹的依赖列表，类级预编译避免重复编译
+     */
+    private static final Pattern KEXT_DEPENDS_PATTERN = Pattern.compile("<([^>]*)>");
+
+    /**
      * IPv4 点分地址
      */
     private static final String IPV4 = "^\\d{1,3}(\\.\\d{1,3}){3}$";
@@ -1118,7 +1123,7 @@ public class MacHostOperations extends PosixHostOperations {
         if (tail == null || tail.isBlank()) {
             return "";
         }
-        Matcher matcher = Pattern.compile("<([^>]*)>").matcher(tail);
+        Matcher matcher = KEXT_DEPENDS_PATTERN.matcher(tail);
         if (!matcher.find()) {
             return "";
         }

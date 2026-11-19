@@ -17,11 +17,12 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * {@code @SysLog} 事件 → {@code ms_datasource_oper_log} 的落库监听器。
+ * {@code @SysLog} 事件 → {@code datasource_oper_log} 的落库监听器。
  *
  * <p><strong>它是这条链路唯一的消费者。</strong>切面（{@code SysLoggerPointcutAdvisor}）
  * 把 {@link SysLoggerInfo} 用 {@code ApplicationContext} 发出去，但全仓没有任何
@@ -61,6 +62,11 @@ public class DatasourceOperLogListener {
      * 把 {@code datasourceId} 放在查询参数里而不是路径里。
      */
     private static final Pattern QUERY_ID = Pattern.compile("[?&]datasourceId=(\\d+)");
+
+    /**
+     * [P3C 修复] 查询参数正则编译缓存：参数名运行期才确定，按拼好的正则文本缓存复用。
+     */
+    private static final Map<String, Pattern> QUERY_PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 数据源台账端点的方法名 → 操作码（{@code /ms/datasource/{id}}）。
@@ -324,7 +330,10 @@ public class DatasourceOperLogListener {
         if (url == null) {
             return null;
         }
-        Matcher m = Pattern.compile("[?&]" + Pattern.quote(key) + "=([^&#]*)").matcher(url);
+        // [P3C 修复] 相同参数名的正则复用缓存中的预编译 Pattern
+        Matcher m = QUERY_PATTERN_CACHE
+                .computeIfAbsent("[?&]" + Pattern.quote(key) + "=([^&#]*)", Pattern::compile)
+                .matcher(url);
         return m.find() ? decode(m.group(1)) : null;
     }
 

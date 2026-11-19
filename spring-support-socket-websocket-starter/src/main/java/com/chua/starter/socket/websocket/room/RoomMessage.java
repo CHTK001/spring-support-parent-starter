@@ -296,8 +296,12 @@ public class RoomMessage {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         RoomMessage that = (RoomMessage) o;
         return Objects.equals(type, that.type) && Objects.equals(id, that.id);
     }

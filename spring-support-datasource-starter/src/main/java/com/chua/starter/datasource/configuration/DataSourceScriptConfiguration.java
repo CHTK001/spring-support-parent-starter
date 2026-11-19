@@ -220,7 +220,8 @@ public class DataSourceScriptConfiguration {
             Method method = flyway.getClass().getMethod("getFailureReasons");
             Object value = method.invoke(flyway);
             return value instanceof Map<?, ?> map ? (Map<String, String>) map : Map.of();
-        } catch (ReflectiveOperationException | ClassCastException e) {
+        } catch (ReflectiveOperationException e) {
+            // instanceof 已确保 value 为 Map，此处的强转在运行期不会抛出 ClassCastException
             return Map.of();
         }
     }
@@ -1256,6 +1257,7 @@ public class DataSourceScriptConfiguration {
                 return;
             }
 
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：safeTableName 经 SqlName.check、columnPrefix 经 SqlName.checkSimple 白名单校验，值用 ? 绑定
             int updated = jdbc.update(
                     String.format("UPDATE %s SET %sscript_type = ?, %sdescription = ?, %schecksum = ?, %ssuccess = ?, %sexecuted_on = CURREN" +
                         "T_TIMESTAMP WHERE %sscript_name = ? AND %sversion = ?",
@@ -1525,6 +1527,7 @@ public class DataSourceScriptConfiguration {
                         log.warn("跳过不符合 SQL 标识符白名单的业务表: {}", tableName);
                         continue;
                     }
+                    // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：safeTableName 经 SqlName.checkSimple 白名单校验
                     try (var statement = connection.createStatement();
                          var rows = statement.executeQuery("SELECT 1 FROM " + safeTableName + " LIMIT 1")) {
                         if (rows.next()) {

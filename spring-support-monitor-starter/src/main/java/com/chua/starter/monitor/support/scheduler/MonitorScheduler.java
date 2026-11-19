@@ -33,6 +33,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -65,6 +67,12 @@ public class MonitorScheduler {
      * 调度间隔配置键
     */
     private static final String CONFIG_KEY_INTERVAL = "monitor.collect.interval.ms";
+
+    /**
+     * [P3C C1 修复] 按表达式缓存已编译正则：表达式来自规则配置无法静态写死，
+     * 用缓存避免同一表达式反复 Pattern.compile
+     */
+    private static final ConcurrentMap<String, Pattern> REGEX_PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 任务 服务
@@ -371,6 +379,16 @@ public class MonitorScheduler {
     }
 
     /**
+     * [P3C C1 修复] 取缓存的正则，未命中时按 MULTILINE 编译一次
+     *
+     * @param expression 正则表达式
+     * @return 已编译 Pattern
+     */
+    private static Pattern cachedRegexPattern(String expression) {
+        return REGEX_PATTERN_CACHE.computeIfAbsent(expression, expr -> Pattern.compile(expr, Pattern.MULTILINE));
+    }
+
+    /**
      * 按正则表达式解析, 从原始输出中提取匹配的数值
      * <p>规则格式: {"type":"regex","expression":"Cpu\\(s\\):\\s+(\\d+\\.\\d+)","group":1}</p>
      *
@@ -381,7 +399,7 @@ public class MonitorScheduler {
      */
     private List<MetricPoint> parseRegex(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
-            Pattern pattern = Pattern.compile(expression, Pattern.MULTILINE);
+            Pattern pattern = cachedRegexPattern(expression);
             Matcher matcher = pattern.matcher(rawOutput);
             List<MetricPoint> points = new ArrayList<>();
             int index = 0;

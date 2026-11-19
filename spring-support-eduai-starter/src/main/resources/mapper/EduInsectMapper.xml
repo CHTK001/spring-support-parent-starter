@@ -4,7 +4,28 @@
 
     <!-- 按目 / 变态类型 / 难度上限过滤后随机取 count 条：消消乐配对玩法每次开局都要重新洗牌 -->
     <select id="selectByFilter" resultType="com.chua.starter.eduai.model.EduInsect">
-        SELECT * FROM edu_insect
+        SELECT
+            insect_id,
+            insect_code,
+            insect_name,
+            insect_latin,
+            insect_epithet,
+            insect_order,
+            insect_summary,
+            insect_facts,
+            insect_hotspots,
+            insect_ecology,
+            insect_trivia,
+            insect_metamorphosis,
+            insect_lifecycle,
+            insect_range,
+            insect_status,
+            insect_relatives,
+            insect_accent,
+            insect_model_code,
+            insect_difficulty,
+            insect_owner_user_id
+        FROM edu_insect
         <where>
             <if test="order != null and order != ''">
                 AND insect_order = #{order}
@@ -38,7 +59,28 @@
     <!-- 全量物种（名录用）。用 SELECT * 而非 BaseMapper.selectList：本库表未落
          SysBase 的 create_name/create_by 等列，selectList 会拼出这些不存在的列而报错 -->
     <select id="selectAll" resultType="com.chua.starter.eduai.model.EduInsect">
-        SELECT * FROM edu_insect
+        SELECT
+            insect_id,
+            insect_code,
+            insect_name,
+            insect_latin,
+            insect_epithet,
+            insect_order,
+            insect_summary,
+            insect_facts,
+            insect_hotspots,
+            insect_ecology,
+            insect_trivia,
+            insect_metamorphosis,
+            insect_lifecycle,
+            insect_range,
+            insect_status,
+            insect_relatives,
+            insect_accent,
+            insect_model_code,
+            insect_difficulty,
+            insect_owner_user_id
+        FROM edu_insect
         <where>
             <if test="userId != null and userId != ''">
                 (insect_owner_user_id IS NULL OR insect_owner_user_id = #{userId})
@@ -49,7 +91,28 @@
 
     <!-- 按 slug 取单条；LIMIT 1 兜底重复数据 -->
     <select id="selectByCode" resultType="com.chua.starter.eduai.model.EduInsect">
-        SELECT * FROM edu_insect WHERE insect_code = #{insectCode} LIMIT 1
+        SELECT
+            insect_id,
+            insect_code,
+            insect_name,
+            insect_latin,
+            insect_epithet,
+            insect_order,
+            insect_summary,
+            insect_facts,
+            insect_hotspots,
+            insect_ecology,
+            insect_trivia,
+            insect_metamorphosis,
+            insect_lifecycle,
+            insect_range,
+            insect_status,
+            insect_relatives,
+            insect_accent,
+            insect_model_code,
+            insect_difficulty,
+            insect_owner_user_id
+        FROM edu_insect WHERE insect_code = #{insectCode} LIMIT 1
     </select>
 
 </mapper>

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,6 +41,11 @@ public final class PricingPageSource {
 
     private static final Pattern PRICE = Pattern.compile("[-+]?[0-9]+(?:\\.[0-9]+)?");
     private static final Pattern NAMED_GROUP = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
+
+    /**
+     * [P3C 修复] 正则编译缓存：配置正则按文本缓存（以 (?s) 内嵌开关等价 DOTALL），避免重复编译。
+     */
+    private static final Map<String, Pattern> PATTERN_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 工具类私有构造器，禁止实例化。
@@ -292,7 +298,8 @@ public final class PricingPageSource {
         if (blank(config.getPattern())) {
             throw new IllegalArgumentException("named-regex 未配置 pattern");
         }
-        Pattern pattern = Pattern.compile(config.getPattern(), Pattern.DOTALL);
+        // [P3C 修复] 走缓存复用预编译 Pattern；前缀 (?s) 与原 Pattern.DOTALL 行为一致
+        Pattern pattern = PATTERN_CACHE.computeIfAbsent("(?s)" + config.getPattern(), Pattern::compile);
         Set<String> groups = new LinkedHashSet<>();
         Matcher names = NAMED_GROUP.matcher(config.getPattern());
         while (names.find()) {

@@ -485,6 +485,7 @@ public final class DbImporter {
         String quotedTable = SqlName.quoteMysql(table, "表名");
         ImportMode mode = plan.mode();
         if (mode.deleteOnly()) {
+            // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名/列名经 SqlName.quoteMysql 白名单校验后加引用符，值用 ? 绑定
             return "DELETE FROM " + quotedTable + " WHERE " + whereClause(keyColumns);
         }
         if (mode == ImportMode.UPDATE) {
@@ -500,6 +501,7 @@ public final class DbImporter {
             String set = String.join(", ", settable.stream().map(c -> c + " = ?").toList());
             return "UPDATE " + quotedTable + " SET " + set + " WHERE " + whereClause(keyColumns);
         }
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名/列名经 SqlName.quoteMysql 白名单校验后加引用符，值用 ? 绑定
         String insert = "INSERT INTO " + quotedTable + " (" + String.join(", ", quotedColumns)
                 + ") VALUES (" + "?, ".repeat(quotedColumns.size() - 1) + "?)";
         if (mode == ImportMode.UPSERT) {
@@ -794,6 +796,7 @@ public final class DbImporter {
      * @throws SQLException 清空失败（TRUNCATE 与 DELETE 都失败时抛）
      */
     static void truncate(Connection conn, String table) throws SQLException {
+        // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：表名经 SqlName.quoteMysql 白名单校验后加引用符
         try (Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("TRUNCATE TABLE " + SqlName.quoteMysql(table, "表名"));
         } catch (SQLException fallback) {

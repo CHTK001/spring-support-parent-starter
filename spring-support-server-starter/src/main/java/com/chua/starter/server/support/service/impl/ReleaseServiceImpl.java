@@ -77,6 +77,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -122,6 +123,12 @@ public class ReleaseServiceImpl implements ReleaseService {
        * 外部配置里的业务端口：{@code server.port=8112}
        */
     private static final Pattern SERVER_PORT_PROP = Pattern.compile("server\\.port\\s*=\\s*(\\d{1,5})");
+
+    /**
+     * 平台环境变量行匹配模式缓存：各平台 envPattern() 返回固定正则串，
+     * 按正则串缓存编译结果，避免每次解析脚本都重复 Pattern.compile [P3C]
+     */
+    private static final Map<String, Pattern> ENV_PATTERN_CACHE = new ConcurrentHashMap<>();
       /**
        * SFTP 服务（Git 构建产物上传等，Linux）
        */
@@ -3016,7 +3023,7 @@ public class ReleaseServiceImpl implements ReleaseService {
 
           // 收集块内已定义的环境变量作为占位符上下文（KEY -> 原始值）
         Map<String, Object> ctx = new LinkedHashMap<>();
-        Pattern pat = Pattern.compile(pf.envPattern());
+        Pattern pat = ENV_PATTERN_CACHE.computeIfAbsent(pf.envPattern(), Pattern::compile);
         for (String line : block.split("\n")) {
             Matcher m = pat.matcher(line.trim());
             if (m.find()) {
