@@ -240,7 +240,7 @@ flowchart TB
 | `max-size-mb` | `long` | `10` | 单文件大小上限（MB） | 模块开启 |
 | `allowed-extensions` | `List<String>` | `jpg,jpeg,png,gif,bmp,webp` | 扩展名白名单（小写不含点）；null 表示不限制。默认只放行图片，避免存储可执行内容 | 模块开启 |
 | `chunk-size` | `long` | `5242880`（5MB） | 分片大小（字节） | 模块开启 |
-| `temp-dir` | `String` | `${java.io.tmpdir}/filesystem-upload` | 上传临时目录 | 模块开启 |
+| `temp-dir` | `String` | `${java.io.tmpdir}/filesystem-upload` | **仅声明、当前未生效**：代码未读取该配置（全模块无 `getTempDir()` 调用）。实际上传暂存目录由 `UploadTaskManager` 构造时 `Files.createTempDirectory("upload-task-chunks")` / `("upload-task-merge")` 在系统临时目录下随机生成，不能通过该配置指定 | —（未生效） |
 | `view-prefix` | `String` | `/v2/file/view/` | 回显地址前缀；宿主有 context-path 时需一并写入（如 `/system/api/v2/file/view/`） | 模块开启 |
 | `retention-days` | `int` | `30` | 终态任务保留天数，超时清理（含分片/记录级联删除） | 模块开启 |
 | `merge-interval-ms` | `long` | `10000` | 合并调度间隔（毫秒） | 模块开启 |

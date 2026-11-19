@@ -88,6 +88,10 @@ public class CdpEngineService {
             "Network.dataReceived",
             "Network.loadingFinished",
             "Network.loadingFailed",
+            "Network.webSocketCreated",
+            "Network.webSocketFrameSent",
+            "Network.webSocketFrameReceived",
+            "Network.webSocketFrameError",
             "Page.frameStartedLoading",
             "Page.frameNavigated",
             "Page.frameDetached",
@@ -129,6 +133,10 @@ public class CdpEngineService {
             "Network.dataReceived",
             "Network.loadingFinished",
             "Network.loadingFailed",
+            "Network.webSocketCreated",
+            "Network.webSocketFrameSent",
+            "Network.webSocketFrameReceived",
+            "Network.webSocketFrameError",
             "Page.frameStartedLoading",
             "Page.frameNavigated",
             "Page.frameDetached",
@@ -846,20 +854,32 @@ public class CdpEngineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> targets() {
-        try {
-            URL url = new URL("http://127.0.0.1:" + properties.getPort() + "/json");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setConnectTimeout(1000);
-            con.setRequestMethod("GET");
+        // Chrome 忙时 /json 响应会到秒级：连接超时 1s 太紧，一抖就把目标列表打成空，
+        // 前端面板会跟着清空。放宽到连接 3s / 读 5s，失败后再重试一次。
+        for (int attempt = 0; attempt < 2; attempt++) {
             try {
-                return (List<Map<String, Object>>) Json.fromJson(
-                        con.getInputStream(), new TargetListTypeReference());
-            } finally {
-                con.disconnect();
+                URL url = new URL("http://127.0.0.1:" + properties.getPort() + "/json");
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setConnectTimeout(3000);
+                con.setReadTimeout(5000);
+                con.setRequestMethod("GET");
+                try {
+                    return (List<Map<String, Object>>) Json.fromJson(
+                            con.getInputStream(), new TargetListTypeReference());
+                } finally {
+                    con.disconnect();
+                }
+            } catch (Exception ignored) {
+                // 重试一次；仍失败则回空列表
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
-        } catch (Exception ignored) {
-            return new ArrayList<>();
         }
+        return new ArrayList<>();
     }
 
     /**

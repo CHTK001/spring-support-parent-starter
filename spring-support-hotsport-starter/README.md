@@ -107,8 +107,8 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 | JVM 观测 | `GET /jvm/snapshot`、`GET /jvm/metrics`、`GET /jvm/thread-dump` | `JvmMetricsService`（`@Scheduled` 周期采集） |
 | JVM 内存诊断 | `GET /jvm/memory/pools`、`POST /jvm/gc`、`GET /jvm/class-loading` | `JvmMemoryService`（对象占用 / 手动 GC / 类加载统计） |
 | 线程池 / 连接池 / 资源 | `GET /thread-pools`、`GET /connection-pools`、`GET /resources` | `ApmQueryService` |
-| 告警 | `GET /alerts`、`GET /alerts/history`、`GET /alerts/persistence`、`GET|POST /alerts/rules`、`POST /alerts/rules/toggle`、`DELETE /alerts/rules/{metric}`、`GET|POST /alerts/channels`、`DELETE /alerts/channels/{id}`、`POST /alerts/channels/toggle`、`POST /alerts/{id}/acknowledge|mute|ignore` | `AlertMonitorService`、`AlertStore` |
-| Agent 管理 | `GET /agent/status`、`GET|POST /agent/config`、`POST /agent/enabled`、`GET /agent/self`、`GET /agent/trace-hotspots`、`GET /agent/trace-phases`、`GET /agent/skywalking/export` | `AgentAttachService` |
+| 告警 | `GET /alerts`、`GET /alerts/history`、`GET /alerts/persistence`、`GET\|POST /alerts/rules`、`POST /alerts/rules/toggle`、`DELETE /alerts/rules/{metric}`、`GET\|POST /alerts/channels`、`DELETE /alerts/channels/{id}`、`POST /alerts/channels/toggle`、`POST /alerts/{id}/acknowledge\|mute\|ignore` | `AlertMonitorService`、`AlertStore` |
+| Agent 管理 | `GET /agent/status`、`GET\|POST /agent/config`、`POST /agent/enabled`、`GET /agent/self`、`GET /agent/trace-hotspots`、`GET /agent/trace-phases`、`GET /agent/skywalking/export` | `AgentAttachService` |
 | 存储管理 | `GET /storage/status`、`POST /storage/config`、`POST /storage/reload` | `StorageManager`、`HotsportProperties` |
 | 运维 | `POST /cleanup`、`GET /diagnostics/bundle` | `ApmQueryService` |
 
@@ -252,7 +252,7 @@ plugin:
 | Agent 参数 | `plugin.agent.options` / `plugin.agent.shell-port` | 透传给 `RuntimeBoot.create()....attachSelf()` |
 | 采集开关 | `plugin.hotsport.request-record.enabled`、`plugin.hotsport.log-capture.enabled`、`plugin.agent.enabled` | 按条件装配/关闭对应 Bean |
 | 告警规则与通知 | `AlertMonitorService` + `AlertStore` | 规则/渠道内存态 + mysql 写穿；webhook 通知 |
-| 前端替换 | `src/main/resources/static/` | pom 从 `apps/vue-support-hotspot-starter` 拷贝构建产物；替换该目录即可换前端实现 |
+| 前端替换 | `src/main/resources/static/` | 前端工程（`apps/vue-support-hotspot-starter`）构建后把产物以静态文件置于该目录（本模块 pom 仅有 repackage，无前端资源拷贝插件）；替换该目录即可换前端实现 |
 | 采集数据面 | `ApmBootstrap` 内置 8 个 Handler（Log/Net/Transmission/DependencyGraph/HandleLeak/Trace/HttpClient/JdkHttpServer） | 由 `ApmQueryService` 固定装配；新增数据面需扩展 utils-support-runtime-apm 层 |
 
 ## 九、常见问题

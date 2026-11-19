@@ -95,7 +95,7 @@ sequenceDiagram
     Ai->>Reg: 创建 chatClientRegistry、defaultChatClient（@ConditionalOnMissingBean）
     Boot->>Evt: 启动完成
     Evt->>Reg: 收集 SPI + 容器内全部 ChatClient，登记 provider / model / capability 索引
-    Evt->>Evt: GlobalSettingDefinitions 预热 24 个设置分组
+    Evt->>Evt: GlobalSettingDefinitions 预热设置分组（@Spi 声明 24、登记生效 21）
     Evt->>Evt: ChatClientHotUpdater 就绪，监听 SettingChangedEvent 刷新客户端
 ```
 
@@ -152,10 +152,10 @@ flowchart LR
 | 协议网关 | OpenAI / Claude / Gemini 三协议兼容入口，前置 6 道安全过滤器 | `AiProtocolController`、网关过滤器链 |
 | 技能 / 插件 / Agent 市场 | 7 个技能市场来源、5 个插件市场来源、内置 Agent 市场；离线技能来源 | `V2SkillController`、`PluginsController` 等 |
 | 渠道接入 | 16 个渠道登录鉴权实现、5 个渠道任务实现；渠道数据经 account-starter 契约读取 | `AccountChannelAuthManager` SPI、`ModelClientResolver` |
-| 设置中心 | 24 个设置分组、YAML 覆盖层、用户覆盖、全局默认四级取值 | `GlobalSettingReader`、`GlobalSettingDefinitionController` |
+| 设置中心 | 设置分组（源码 `@Spi` 声明 24 组、登记生效 21 组）、YAML 覆盖层、用户覆盖、全局默认四级取值 | `GlobalSettingReader`、`GlobalSettingDefinitionController` |
 | 运维观测 | 4 个 Actuator 只读端点、缓存容错、服务信息贡献 | `ai-config` / `ai-models` / `ai-beans` / `ai-cache` |
 
-规模参考：**8** 个自动配置、**85** 个 `@RestController`、**51** 个业务 Mapper（另含 `manage.mapper` 前端持久化）、**24** 个设置分组、**8** 个能力客户端管理器、**11** 个 SPI 扩展点文件 + **4** 个 JVM SPI 文件。
+规模参考：**8** 个自动配置、**85** 个 `@RestController`、**51** 个业务 Mapper（另含 `manage.mapper` 前端持久化）、**24** 个设置分组（登记生效 21 组）、**8** 个能力客户端管理器、**11** 个 SPI 扩展点文件 + **4** 个 JVM SPI 文件。
 
 ---
 
@@ -199,7 +199,7 @@ flowchart LR
 | `SysAiUserSettingService` | 组件扫描 | `sys_ai_user_setting` 用户覆盖层；读合并视图、写覆盖、清覆盖，带缓存失效 |
 | `DefaultModelResolver` | 组件扫描 | 默认模型解析（`chat()` / `resolve(key)` / `resolveAll()`）；页面 DB 值优先于 `plugin.ai.default-model.*`，本地缓存 + 事件失效 |
 | `AiSettingsYamlProperties` | 组件扫描 | 构造期扫描 Environment 中 `plugin.ai.settings.*` 原始属性名（不走 `@ConfigurationProperties`，避免嵌套 Map 静默绑空） |
-| `GlobalSettingDefinitions` / `GlobalSettingInitializer` | 组件扫描 | 启动期预热 24 个设置分组定义，供 `/v2/global-setting-definitions` 与设置页下发 |
+| `GlobalSettingDefinitions` / `GlobalSettingInitializer` | 组件扫描 | 启动期预热设置分组定义（源码 `@Spi` 声明 24 个、登记生效 21 个），供 `/v2/global-setting-definitions` 与设置页下发 |
 
 ### 4.4 能力客户端管理器（均组件扫描，懒构建 + 事件重建）
 
@@ -385,7 +385,7 @@ String ocrModel  = modelResolver.resolve("ocr");
 
 | 端点 | 路径 | 内容 |
 |---|---|---|
-| `ai-config` | `/actuator/ai-config` | 24 个分组的生效值：`value / defaultValue / source(YAML\|DB\|DEFAULT) / masked / adminOnly`；凭据字段统一 `***` |
+| `ai-config` | `/actuator/ai-config` | 登记生效分组（当前 21 个，`@Spi` 声明 24 个）的生效值：`value / defaultValue / source(YAML\|DB\|DEFAULT) / masked / adminOnly`；凭据字段统一 `***` |
 | `ai-models` | `/actuator/ai-models` | 各能力最终生效模型（页面 > `plugin.ai.default-model.*`），只列已配置项 |
 | `ai-beans` | `/actuator/ai-beans` | 对话客户端 / 聚合 / provider、Agent 引擎解析与降级、人脸 / 重识别 / RAG 摘要、OCR 模型选择 |
 | `ai-cache` | `/actuator/ai-cache` | `aiCacheManager` 各缓存条目数 / 命中率 / 淘汰数；Redis 管理器只列 Bean 名 |
@@ -395,7 +395,7 @@ curl -s localhost:8787/actuator/ai-models
 # {"chat":"gpt-4.1-mini","configuredCount":4,"models":[...]}
 
 curl -s localhost:8787/actuator/ai-config
-# {"groupCount":24,"groups":{...}}
+# {"groupCount":21,"groups":{...}}
 ```
 
 ```yaml

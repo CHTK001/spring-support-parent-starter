@@ -4,12 +4,15 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiRole;
+import com.chua.starter.ai.support.entity.SysAiRolePrompt;
 import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
+import com.chua.starter.ai.support.mapper.SysAiRolePromptMapper;
 import com.chua.starter.ai.support.service.SysAiRoleService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
@@ -51,6 +54,11 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      * 角色 映射器
      */
     private final SysAiRoleMapper sysAiRoleMapper;
+
+    /**
+     * 角色分形态提示词映射器（删除角色时级联清理）
+     */
+    private final SysAiRolePromptMapper sysAiRolePromptMapper;
 
     /**
      * 查询当前用户所有未删除的角色列表，按排序值升序。
@@ -212,10 +220,16 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      * <p>2026-11-14 改为只按 code 判定：此前按固定主键 1 判定，一旦种子角色
      * 占用了 id=1（三国角色库「刘备」），该角色会被误当通用助手、永远删不掉。</p>
      *
+     * <p>2026-11-19 补级联：角色的分形态提示词存在 {@code sys_ai_role_prompt}
+     * （唯一键 role_id + prompt_mode + user_id 不含删除标记），角色删掉而提示词行
+     * 留在库里就是可见的数据残留——同一角色再次出现在同类唯一键上会被误判为
+     * 「已配置」。角色删除是编排，级联清理必须与主记录同事务。</p>
+     *
      * @param id 角色主键
      * @return 是否成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -229,7 +243,18 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
             return false;
         }
         // 使用 mybatis-Plus 内置 deleteById：@TableLogic 逻辑删除（设置 删除=1）
-        return sysAiRoleMapper.deleteById(id) > 0;
+        boolean deleted = sysAiRoleMapper.deleteById(id) > 0;
+        if (!deleted) {
+            return false;
+        }
+        // 级联逻辑删除该角色的分形态提示词，避免残留行在唯一键上造成误判
+        int prompts = sysAiRolePromptMapper.delete(
+                Wrappers.lambdaQuery(SysAiRolePrompt.class)
+                        .eq(SysAiRolePrompt::getRoleId, id)
+                        .eq(SysAiRolePrompt::getUserId, existing.getUserId()));
+        log.info("[SysAiRole] 删除角色 id={}, userId={}, 级联提示词={} 条",
+                id, existing.getUserId(), prompts);
+        return true;
     }
 
     /**

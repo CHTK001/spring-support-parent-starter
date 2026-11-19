@@ -190,7 +190,7 @@
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
         <utils.version>4.0.0.51</utils.version>
         <spring.boot.version>4.1.2</spring.boot.version>
-        <reactor.core.version>3.8.7</reactor.core.version>
+        <reactor.core.version>3.8.8</reactor.core.version>
         <!-- javax 命名空间的 JAXB 实现版本：winrm4j/CXF 走 javax.xml.bind，
              Boot BOM 默认把 com.sun.xml.bind:jaxb-impl 管到 jakarta 系 4.x，故显式钉版 -->
         <javax.jaxb.version>2.3.1</javax.jaxb.version>
@@ -206,10 +206,10 @@
         <!-- 框架和库版本管理 -->
         <lombok.version>1.18.48</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
         <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 下显式启用注解处理 -->
-        <mybatis-plus.version>3.5.17</mybatis-plus.version>  <!-- MyBatis Plus版本：3.5.17 上游把 mybatis-plus-spring 的 9 个类由 extension.* 迁到 spring.*（IService/ServiceImpl/Model/CrudRepository/SqlRunner/SimpleDdl 等），相关引用已用 tools/voaudit/MigrateMybatisPlusSpring 同步 -->
+        <mybatis-plus.version>3.5.18</mybatis-plus.version>  <!-- MyBatis Plus版本：3.5.17 上游把 mybatis-plus-spring 的 9 个类由 extension.* 迁到 spring.*（IService/ServiceImpl/Model/CrudRepository/SqlRunner/SimpleDdl 等），相关引用已用 tools/voaudit/MigrateMybatisPlusSpring 同步 -->
         <mybatis-plus-join.version>1.5.9</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
-        <dubbo.version>3.3.6</dubbo.version>                <!-- Dubbo RPC框架版本 -->
-        <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
+        <dubbo.version>3.3.7</dubbo.version>                <!-- Dubbo RPC框架版本 -->
+        <resilience4j.version>2.4.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本（与 api 仓对齐） -->
         <p6spy.version>3.9.1</p6spy.version>                <!-- P6Spy SQL监控版本 -->
         <easy-captcha.version>1.6.2</easy-captcha.version>  <!-- 验证码生成器版本 -->
         <!--
@@ -225,7 +225,7 @@
         <calcite.version>1.42.0</calcite.version>
         <druid.version>1.2.28</druid.version>
         <loki4j.version>2.1.0</loki4j.version>
-        <c3p0.version>0.14.2</c3p0.version>
+        <c3p0.version>0.15.1</c3p0.version>
         <swagger.annotations.v3.version>2.2.55</swagger.annotations.v3.version>
         <swagger.annotations.v2.version>1.6.16</swagger.annotations.v2.version>
         <ngrok.version>1.1.1</ngrok.version>
@@ -234,41 +234,40 @@
         <rocketmq.spring.version>2.3.6</rocketmq.spring.version>
         <netty.socketio.version>2.0.14</netty.socketio.version>
         <commons-io.version>2.22.0</commons-io.version>     <!-- Commons IO版本 -->
-        <commons-codec.version>1.21.0</commons-codec.version>     <!-- Commons Codec版本 -->
+        <commons-codec.version>1.23.0</commons-codec.version>     <!-- Commons Codec版本（depMgmt 引用本属性，勿再硬编码） -->
         <commons-dbutils.version>1.8.1</commons-dbutils.version> <!-- Commons DBUtils版本 -->
         <commons-compress.version>1.28.0</commons-compress.version>
         <commons-exec.version>1.6.0</commons-exec.version>
         <validation-api.version>2.0.1.Final</validation-api.version> <!-- Validation API版本 -->
         <javax.annotation.version>1.3.2</javax.annotation.version>
         <spel-extension.version>1.0.0</spel-extension.version>     <!-- SpEL扩展版本 -->
-        <mybatis-plus-generator.version>3.5.17</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
-        <guava.version>33.7.2-jre</guava.version>                              <!-- Google Guava工具库版本 -->
-        <slf4j.version>2.1.0-alpha1</slf4j.version>                           <!-- SLF4J版本 -->
+        <mybatis-plus-generator.version>3.5.18</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
+        <guava.version>33.8.0-jre</guava.version>                              <!-- Google Guava工具库版本 -->
+        <slf4j.version>2.0.20</slf4j.version>                           <!-- SLF4J版本（对齐 Boot 4.1 BOM 托管值 2.0.20，勿用 2.1.0-alpha 预发布） -->
         <unirest.version>3.14.5</unirest.version>
         <justauth.version>1.16.7</justauth.version>
         <lock4j.version>2.2.7</lock4j.version>
-        <fastjson2.version>2.0.65</fastjson2.version>
+        <fastjson2.version>2.0.66</fastjson2.version>
         <arthas.version>4.3.5</arthas.version>
-        <ssh-shell-spring-boot.version>2.7.0</ssh-shell-spring-boot.version>
-        <sshd.version>2.20.0</sshd.version>
-        <hutool.version>5.8.47</hutool.version>
+        <sshd.version>2.20.1</sshd.version>
+        <hutool.version>5.8.48</hutool.version>
         <freemarker.version>2.3.34</freemarker.version>     <!-- FreeMarker模板引擎版本（对齐 Boot 4.1 BOM：2.3.34 起含 freemarker.ext.jakarta 包，Boot starter 需要） -->
         <jsch.version>0.1.55</jsch.version>                 <!-- JSch SSH 客户端版本 -->
         <influxdb-client.version>3.4.0</influxdb-client.version> <!-- InfluxDB 2.x 客户端版本 -->
         <ip2proxy.version>3.6.0</ip2proxy.version>                 <!-- IP2Proxy Java库版本 -->
-        <caffeine.version>3.3.0</caffeine.version>                  <!-- Caffeine缓存库版本 -->
-        <byte-buddy.version>1.18.14-jdk5</byte-buddy.version>            <!-- ByteBuddy动态代理库版本 -->
+        <caffeine.version>3.3.1</caffeine.version>                  <!-- Caffeine缓存库版本 -->
+        <byte-buddy.version>1.18.17-jdk5</byte-buddy.version>            <!-- ByteBuddy动态代理库版本 -->
         <okhttp.version>4.12.0</okhttp.version>                     <!-- OkHttp HTTP客户端版本 -->
         <wechatpay.version>0.2.17</wechatpay.version>               <!-- 微信支付 Java SDK 版本 -->
-        <alipay.sdk.version>4.40.1026.ALL</alipay.sdk.version>       <!-- 支付宝 SDK 版本 -->
+        <alipay.sdk.version>4.40.1067.ALL</alipay.sdk.version>       <!-- 支付宝 SDK 版本 -->
         <statemachine.version>4.0.2</statemachine.version>           <!-- Spring State Machine 版本 -->
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>    <!-- OS Maven Plugin 版本 -->
         <seata.version>2.6.0</seata.version>                        <!-- Seata 分布式事务版本 -->
         
         <!-- Maven插件版本管理 -->
-        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
-        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.6.1</maven-surefire-plugin.version>
   <!-- JUnit Jupiter 版本：仅供各 starter 模块 src/test/java 的真实单元测试使用，限 test 作用域。
        属性名刻意不叫 junit.version：spring-boot-starter-parent 已用 junit.version 托管
        JUnit 4 的 junit:junit（4.13.2），同名属性会把该坐标改写成不存在的 6.0.3，
@@ -276,11 +275,11 @@
        （实测 spring-support-report-client-starter 报 junit:junit:jar:6.0.3 缺失）。 -->
   <junit.jupiter.version>6.1.3</junit.jupiter.version>
         <surefire.jvm.args></surefire.jvm.args>
-        <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
+        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
-        <versions-maven-plugin.version>2.22.0</versions-maven-plugin.version>
-        <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
-        <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
+        <versions-maven-plugin.version>2.25.2</versions-maven-plugin.version>
+        <flatten-maven-plugin.version>1.9.0</flatten-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.7.0</maven-enforcer-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
         
         <!-- 构建控制属性 -->
@@ -302,12 +301,13 @@
           2026-10-06 依赖升级保留项说明（同 major 已全量升级，仅低风险跨 major 升级，
           已升项在对应条目附注释）。以下高风险跨 major 项保留原版本不升：
             - com.squareup.okhttp3:okhttp → 5：Kotlin 重写、API 不兼容（现 4.12.0）
-            - ssh-shell-spring-boot-starter → 3：主版本 API 变更（现 2.7.0）
             - com.sun.xml.messaging.saaj:saaj-impl → jakarta 坐标迁移：javax→jakarta 高风险
               坐标迁移，影响下游依赖方（现 javax.saaj 1.5.1）
             - undertow → 2.4.x：2.4.x 起不再发布 undertow-servlet，见下方 undertow.version 注释
             - Tomcat：由 spring-boot-dependencies BOM 统一托管，不单独升级
             - Groovy → 6：groovy-all 组成与 JUnit 传递依赖规则变化（见下方 junit 注释）
+          2026-11-19：ssh-shell-spring-boot-starter 条目已移除——原钉 2.7.0 在 Central
+          上不存在（2.0.3 直接跳 3.0.0），且全仓无模块引用；将来需要时直接评估 3.x。
         -->
         <!--
           Undertow 嵌入式服务器版本。
@@ -477,7 +477,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.22.1</version>
+                <version>${commons-codec.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -1245,11 +1245,6 @@
                 <version>${arthas.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.github.fonimus</groupId>
-                <artifactId>ssh-shell-spring-boot-starter</artifactId>
-                <version>${ssh-shell-spring-boot.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.sshd</groupId>
                 <artifactId>sshd-core</artifactId>
                 <version>${sshd.version}</version>
@@ -1370,7 +1365,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.15</version>
+                <version>0.8.16</version>
                 <configuration>
                     <skip>${jacoco.skip}</skip>
                     <!-- 排除超大生成解析器类：JaCoCo 0.8.13 的 ASM 无法插桩 jsqlparser 的
