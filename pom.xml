@@ -226,10 +226,10 @@
         <druid.version>1.2.28</druid.version>
         <loki4j.version>2.1.0</loki4j.version>
         <c3p0.version>0.15.1</c3p0.version>
-        <swagger.annotations.v3.version>2.2.55</swagger.annotations.v3.version>
+        <swagger.annotations.v3.version>2.2.56</swagger.annotations.v3.version>
         <swagger.annotations.v2.version>1.6.16</swagger.annotations.v2.version>
         <ngrok.version>1.1.1</ngrok.version>
-        <redisson.version>3.32.0</redisson.version>
+        <redisson.version>4.8.0</redisson.version>
         <paho.mqtt.version>1.2.5</paho.mqtt.version>
         <rocketmq.spring.version>2.3.6</rocketmq.spring.version>
         <netty.socketio.version>2.0.14</netty.socketio.version>
@@ -253,7 +253,7 @@
         <hutool.version>5.8.48</hutool.version>
         <freemarker.version>2.3.34</freemarker.version>     <!-- FreeMarker模板引擎版本（对齐 Boot 4.1 BOM：2.3.34 起含 freemarker.ext.jakarta 包，Boot starter 需要） -->
         <jsch.version>0.1.55</jsch.version>                 <!-- JSch SSH 客户端版本 -->
-        <influxdb-client.version>3.4.0</influxdb-client.version> <!-- InfluxDB 2.x 客户端版本 -->
+        <influxdb-client.version>8.0.0</influxdb-client.version> <!-- InfluxDB 2.x 客户端版本 -->
         <ip2proxy.version>3.6.0</ip2proxy.version>                 <!-- IP2Proxy Java库版本 -->
         <caffeine.version>3.3.1</caffeine.version>                  <!-- Caffeine缓存库版本 -->
         <byte-buddy.version>1.18.17-jdk5</byte-buddy.version>            <!-- ByteBuddy动态代理库版本 -->
