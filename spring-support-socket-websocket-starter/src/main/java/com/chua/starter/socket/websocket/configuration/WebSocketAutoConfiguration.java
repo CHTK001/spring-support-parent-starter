@@ -1,5 +1,6 @@
 package com.chua.starter.socket.websocket.configuration;
 
+import com.chua.starter.common.support.log.MdcWebSocketHandlerDecorator;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.socket.websocket.handler.DelegatingWebSocketHandler;
@@ -166,7 +167,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
         for (String endpoint : properties.getEndpoints()) {
             log.info("[WebSocket] 注册端点: {}", highlight(endpoint));
             
-            WebSocketHandlerRegistration registration = registry.addHandler(handler, endpoint);
+            WebSocketHandlerRegistration registration = registry.addHandler(MdcWebSocketHandlerDecorator.wrap(handler), endpoint);
             
             // 设置允许的源
             if (!properties.getAllowedOrigins().isEmpty()) {

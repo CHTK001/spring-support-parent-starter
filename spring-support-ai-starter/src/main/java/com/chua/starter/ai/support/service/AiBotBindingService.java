@@ -10,6 +10,7 @@ import com.chua.whatsapp.support.bot.WhatsAppBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.manage.store.BotUserSummary;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -423,7 +424,7 @@ public class AiBotBindingService {
             });
 
             // 后台线程执行扫码登录（内部长轮询，直到 confirmed/expired）
-            CompletableFuture.runAsync(() -> {
+            CompletableFuture.runAsync(MdcWrap.wrap(() -> {
                 try {
                     ilink.start();
                 } catch (Exception e) {
@@ -431,7 +432,7 @@ public class AiBotBindingService {
                     session.errorMsg = e.getMessage();
                     log.error("[Bot] 扫码登录异常 key={}", key, e);
                 }
-            });
+            }));
 
  // 同步等待二维码 URL 生成（i链接 异步返回，最长等 8s），确保 POST /qrcode 直接返回二维码
             long waitStart = System.currentTimeMillis();

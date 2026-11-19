@@ -11,6 +11,7 @@ import com.chua.starter.common.support.api.response.ApiExceptionAdvice;
 import com.chua.starter.common.support.api.response.ApiUniformResponseBodyAdvice;
 import com.chua.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import jakarta.annotation.Priority;
@@ -259,8 +260,8 @@ public class ApiConfiguration implements EnvironmentAware  {
      */
     @Bean("uniform")
     public ExecutorService executor() {
-// [P3C C1 豁免] 场景化创建线程，需文档化
-        return Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("uniform-pool").factory());
+// [P3C C1 豁免] 场景化创建线程，需文档化（MdcWrap.decorate 串联提交方 MDC，无需 javaagent）
+        return MdcWrap.decorate(Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("uniform-pool").factory()));
     }
 
     // ==================== 异常处理配置 ====================

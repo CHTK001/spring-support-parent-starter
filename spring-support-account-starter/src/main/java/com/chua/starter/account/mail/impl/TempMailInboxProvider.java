@@ -91,9 +91,17 @@ public class TempMailInboxProvider implements AccountInboxProvider {
         int pageNo = query == null || query.getOffset() == null ? 1 : query.getOffset() / 20 + 1;
         TempMailClient.Page page = client.listMessages(token(account, secret), pageNo);
         List<MailboxMessage> result = new ArrayList<>();
+        Long since = query == null ? null : query.getSince();
         for (JsonNode node : page.getItems()) {
             if (query != null && Boolean.TRUE.equals(query.getUnreadOnly()) && node.path("seen").asBoolean(false)) {
                 continue;
+            }
+            if (since != null) {
+                // mail.tm 不支持服务端按时间过滤，这里在内存补齐 since 语义，避免轮询器反复取到同一批旧邮件
+                Long createdAt = parseTime(node.path("createdAt").asText(null));
+                if (createdAt == null || createdAt <= since) {
+                    continue;
+                }
             }
             String keyword = query == null ? null : StringUtils.trimToNull(query.getKeyword());
             if (keyword != null && !matches(node, keyword)) {

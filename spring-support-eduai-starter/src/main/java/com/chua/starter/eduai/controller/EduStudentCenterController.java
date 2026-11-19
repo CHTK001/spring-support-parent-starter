@@ -4,9 +4,11 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.eduai.dimension.service.EduDimensionService;
 import com.chua.starter.eduai.model.dto.EduChangePasswordDTO;
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
+import com.chua.starter.eduai.model.dto.StudentPaperSubmitDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.StudentWrongQuestionVO;
 import com.chua.starter.eduai.service.IEduStudentCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
@@ -135,6 +137,40 @@ public class EduStudentCenterController {
     @GetMapping("/marking/result/{taskId}")
     public ReturnResult<MarkingResultVO> markingResult(@PathVariable String taskId) {
         return ReturnResult.ok(studentCenterService.myMarkingResult(taskId));
+    }
+
+    // ==================== 我的在线作答 ====================
+
+    /**
+     * 开始作答某张布置给本班的试卷。
+     *
+     * <p>返回<b>脱敏</b>试卷详情：题目带题干与选项，标准答案/解析一律为空 ——
+     * 不能复用教师端的试卷详情接口，否则学生抓一下报文就看到答案。</p>
+     *
+     * @param paperId 试卷标识
+     * @return 试卷详情（不含答案/解析）
+     */
+    @Operation(summary = "开始作答：试卷脱敏详情")
+    @GetMapping("/papers/{paperId}/answer")
+    public ReturnResult<PaperVO> answerPaper(@PathVariable Long paperId) {
+        return ReturnResult.ok(studentCenterService.myAnswerPaper(paperId));
+    }
+
+    /**
+     * 提交在线作答，进入 AI 阅卷。
+     *
+     * <p>身份、班级与考试关联由服务端按登录态与布置关系推导；同一考试同一学生
+     * 只允许一份答题卡（数据库唯一键兜底），重复提交会被拒绝。</p>
+     *
+     * @param paperId 试卷标识
+     * @param dto     逐题作答内容
+     * @return 阅卷任务标识（用 {@code GET /marking/result/{taskId}} 轮询结果）
+     */
+    @Operation(summary = "提交在线作答")
+    @PostMapping("/papers/{paperId}/submit")
+    public ReturnResult<String> submitPaper(@PathVariable Long paperId,
+                                            @RequestBody StudentPaperSubmitDTO dto) {
+        return ReturnResult.ok(studentCenterService.submitMyPaperAnswer(paperId, dto));
     }
 
     // ==================== 我的错题本 ====================

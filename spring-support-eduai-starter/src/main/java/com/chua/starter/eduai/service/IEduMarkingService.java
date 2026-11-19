@@ -32,6 +32,19 @@ public interface IEduMarkingService {
     String submitAnswerSheet(MarkingSubmitDTO dto);
 
     /**
+     * 提交答题卡，启动阅卷（归属人由调用方指定）。
+     *
+     * <p>学生在线作答链路使用：答题卡与阅卷任务的归属人记为<b>布置该卷的老师</b>，
+     * 学生标识仍是作答学生本人 —— 老师端「阅卷任务」按归属人过滤，
+     * 这样学生自助提交的卷子才会出现在老师的任务列表里，与老师代交同一口径。</p>
+     *
+     * @param dto         答题卡数据
+     * @param ownerUserId 归属用户标识（一般为布置试卷的老师账号）
+     * @return 任务ID
+     */
+    String submitAnswerSheet(MarkingSubmitDTO dto, String ownerUserId);
+
+    /**
      * 扫描试卷图片并阅卷（支持两类试卷）。
      *
      * <p>流程：版面还原（pp-doc-layout）→ 文字提取（paddleocrv6 检测+识别）→ 结构化 → 判分。</p>

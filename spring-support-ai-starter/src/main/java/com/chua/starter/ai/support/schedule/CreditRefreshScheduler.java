@@ -87,6 +87,70 @@ public class CreditRefreshScheduler {
     private final AtomicBoolean refreshing = new AtomicBoolean(false);
 
     /**
+     * 最近一轮开关是否放行（实时开关状态以 {@link #status()} 现读为准）。
+     */
+    private volatile boolean lastEnabled = true;
+
+    /**
+     * 最近一轮开始时间（epoch 毫秒；0 = 尚未执行过）。
+     */
+    private volatile long lastRunAt;
+
+    /**
+     * 最近一轮耗时（毫秒）。
+     */
+    private volatile long lastDurationMs;
+
+    /**
+     * 最近一轮扫描的已启用供应商数。
+     */
+    private volatile int lastProviders;
+
+    /**
+     * 最近一轮有余额口径、真正出网查询的供应商数。
+     */
+    private volatile int lastTouched;
+
+    /**
+     * 最近一轮至少一个 Key 查到读数的供应商数。
+     */
+    private volatile int lastSucceeded;
+
+    /**
+     * 下一次计划执行时间（epoch 毫秒；0 = 未排定 / 已停止）。
+     */
+    private volatile long nextRunAt;
+
+    /**
+     * 定时刷新运行状态快照（供 {@code /credit/sample-status} 可观测端点回显）。
+     *
+     * @param enabled        开关当前是否打开（实时读设置，改配置立即反映）
+     * @param running        是否正在执行一轮刷新
+     * @param intervalSeconds 刷新周期（秒）
+     * @param lastRunAt      最近一轮开始时间（epoch 毫秒；0 = 尚未执行过）
+     * @param lastDurationMs 最近一轮耗时（毫秒）
+     * @param nextRunAt      下一次计划执行时间（epoch 毫秒；0 = 未排定 / 已停止）
+     * @param providers      最近一轮扫描的已启用供应商数
+     * @param touched        最近一轮有余额口径、真正出网查询的供应商数
+     * @param succeeded      最近一轮至少一个 Key 查到读数的供应商数
+     */
+    public record SampleStatus(boolean enabled, boolean running, int intervalSeconds,
+                               long lastRunAt, long lastDurationMs, long nextRunAt,
+                               int providers, int touched, int succeeded) {
+    }
+
+    /**
+     * 当前运行状态快照。
+     *
+     * @return 状态快照
+     */
+    public SampleStatus status() {
+        return new SampleStatus(settingReader.getBool(GROUP, FIELD_ENABLED, true), refreshing.get(),
+                (int) INTERVAL_SECONDS, lastRunAt, lastDurationMs, nextRunAt,
+                lastProviders, lastTouched, lastSucceeded);
+    }
+
+    /**
      * 启动时间轮并注册首个 tick。
      */
     @PostConstruct
@@ -118,13 +182,12 @@ public class CreditRefreshScheduler {
      */
     private void tick() {
         try {
-            if (settingReader.getBool(GROUP, FIELD_ENABLED, true)) {
-                if (refreshing.compareAndSet(false, true)) {
-                    try {
-                        refreshAll();
-                    } finally {
-                        refreshing.set(false);
-                    }
+            lastEnabled = settingReader.getBool(GROUP, FIELD_ENABLED, true);
+            if (lastEnabled && refreshing.compareAndSet(false, true)) {
+                try {
+                    refreshAll();
+                } finally {
+                    refreshing.set(false);
                 }
             }
         } catch (Throwable e) {
@@ -134,6 +197,7 @@ public class CreditRefreshScheduler {
             if (wheel != null && wheel.isRunning()) {
                 try {
                     wheel.schedule(this::tick, INTERVAL_SECONDS, TimeUnit.SECONDS);
+                    nextRunAt = System.currentTimeMillis() + INTERVAL_SECONDS * 1000L;
                 } catch (Exception e) {
                     log.debug("[CreditRefresh] 时间轮注册失败: {}", e.getMessage());
                 }
@@ -144,10 +208,13 @@ public class CreditRefreshScheduler {
     /**
      * 刷新全部已启用供应商的余额；无 Key / 无余额口径的供应商由
      * {@link ApiProviderController#refreshProviderCredit(SysAccountChannel)}
-     * 返回 null 跳过，不出网。
+     * 返回 null 跳过，不出网。本轮的扫描 / 触达 / 成功计数写入可观测字段。
      */
     private void refreshAll() {
+        long start = System.currentTimeMillis();
+        lastRunAt = start;
         List<SysAccountChannel> channels = channelService.listEnabled();
+        lastProviders = channels.size();
         int touched = 0;
         int succeeded = 0;
         for (SysAccountChannel channel : channels) {
@@ -164,9 +231,12 @@ public class CreditRefreshScheduler {
                         channel.getProviderId(), e.getMessage());
             }
         }
+        lastTouched = touched;
+        lastSucceeded = succeeded;
+        lastDurationMs = System.currentTimeMillis() - start;
         if (touched > 0) {
-            log.info("[CreditRefresh] 余额定时刷新完成：{} 个供应商有余额口径，其中 {} 个全部 Key 查到读数",
-                    touched, succeeded);
+            log.info("[CreditRefresh] 余额定时刷新完成：{} 个供应商有余额口径，其中 {} 个全部 Key 查到读数（耗时 {} ms）",
+                    touched, succeeded, lastDurationMs);
         }
     }
 }

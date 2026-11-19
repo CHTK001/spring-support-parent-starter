@@ -1,6 +1,6 @@
 package com.chua.payment.support.controller;
 
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.MerchantPaymentConfigDTO;
 import com.chua.payment.support.dto.MerchantWalletLimitDTO;
 import com.chua.payment.support.entity.MerchantPaymentConfig;
@@ -53,9 +53,9 @@ public class MerchantSettingController {
      * @param merchantId merchantid
      * @return 获取商户支付配置的结果
      */
-    public Result<MerchantPaymentConfigVO> getPaymentConfig(@PathVariable Long merchantId) {
+    public ReturnResult<MerchantPaymentConfigVO> getPaymentConfig(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
-        return Result.success(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
+        return ReturnResult.ok(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
     }
 
     @Operation(summary = "保存商户支付配置")
@@ -66,14 +66,14 @@ public class MerchantSettingController {
      * @param dto 支付配置
      * @return 保存后的商户支付配置
      */
-    public Result<MerchantPaymentConfigVO> savePaymentConfig(@PathVariable Long merchantId,
+    public ReturnResult<MerchantPaymentConfigVO> savePaymentConfig(@PathVariable Long merchantId,
                                                              @RequestBody MerchantPaymentConfigDTO dto) {
         merchantService.getMerchant(merchantId);
         MerchantPaymentConfig config = new MerchantPaymentConfig();
         BeanUtils.copyProperties(dto, config);
         config.setMerchantId(merchantId);
         merchantPaymentConfigService.saveOrUpdate(config);
-        return Result.success(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
+        return ReturnResult.ok(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
     }
 
     @Operation(summary = "查询商户钱包限额")
@@ -84,9 +84,9 @@ public class MerchantSettingController {
      * @param merchantId merchantid
      * @return 获取钱包限额的结果
      */
-    public Result<MerchantWalletLimitVO> getWalletLimit(@PathVariable Long merchantId) {
+    public ReturnResult<MerchantWalletLimitVO> getWalletLimit(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
-        return Result.success(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
+        return ReturnResult.ok(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
     }
 
     @Operation(summary = "保存商户钱包限额")
@@ -97,14 +97,14 @@ public class MerchantSettingController {
      * @param dto 钱包限额配置
      * @return 保存后的商户钱包限额
      */
-    public Result<MerchantWalletLimitVO> saveWalletLimit(@PathVariable Long merchantId,
+    public ReturnResult<MerchantWalletLimitVO> saveWalletLimit(@PathVariable Long merchantId,
                                                          @RequestBody MerchantWalletLimitDTO dto) {
         merchantService.getMerchant(merchantId);
         MerchantWalletLimit limit = new MerchantWalletLimit();
         BeanUtils.copyProperties(dto, limit);
         limit.setMerchantId(merchantId);
         walletLimitService.saveOrUpdate(limit);
-        return Result.success(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
+        return ReturnResult.ok(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
     }
 
     /**

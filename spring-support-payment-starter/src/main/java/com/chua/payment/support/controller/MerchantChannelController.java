@@ -1,6 +1,6 @@
 package com.chua.payment.support.controller;
 
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.ChannelConfigDTO;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.vo.MerchantChannelVO;
@@ -44,8 +44,8 @@ public class MerchantChannelController {
      * @param dto dto
      * @return 创建渠道的结果
      */
-    public Result<MerchantChannelVO> createChannel(@RequestBody ChannelConfigDTO dto) {
-        return Result.success(channelService.createChannel(dto));
+    public ReturnResult<MerchantChannelVO> createChannel(@RequestBody ChannelConfigDTO dto) {
+        return ReturnResult.ok(channelService.createChannel(dto));
     }
 
     @Operation(summary = "更新渠道配置")
@@ -57,8 +57,8 @@ public class MerchantChannelController {
      * @param dto dto
      * @return 更新渠道的结果
      */
-    public Result<MerchantChannelVO> updateChannel(@PathVariable Long id, @RequestBody ChannelConfigDTO dto) {
-        return Result.success(channelService.updateChannel(id, dto));
+    public ReturnResult<MerchantChannelVO> updateChannel(@PathVariable Long id, @RequestBody ChannelConfigDTO dto) {
+        return ReturnResult.ok(channelService.updateChannel(id, dto));
     }
 
     @Operation(summary = "查询渠道配置")
@@ -69,8 +69,8 @@ public class MerchantChannelController {
      * @param id 标识
      * @return 获取渠道的结果
      */
-    public Result<MerchantChannelVO> getChannel(@PathVariable Long id) {
-        return Result.success(channelService.getChannel(id));
+    public ReturnResult<MerchantChannelVO> getChannel(@PathVariable Long id) {
+        return ReturnResult.ok(channelService.getChannel(id));
     }
 
     @Operation(summary = "查询商户的所有渠道")
@@ -83,10 +83,10 @@ public class MerchantChannelController {
      * @param status 状态
      * @return 渠道列表
      */
-    public Result<List<MerchantChannelVO>> listChannels(@PathVariable Long merchantId,
+    public ReturnResult<List<MerchantChannelVO>> listChannels(@PathVariable Long merchantId,
                                                         @RequestParam(required = false) String channelType,
                                                         @RequestParam(required = false) Integer status) {
-        return Result.success(channelService.listChannels(merchantId, channelType, status));
+        return ReturnResult.ok(channelService.listChannels(merchantId, channelType, status));
     }
 
     @Operation(summary = "查询渠道配置列表")
@@ -99,10 +99,10 @@ public class MerchantChannelController {
      * @param status 状态
      * @return 列出全部渠道的结果
      */
-    public Result<List<MerchantChannelVO>> listAllChannels(@RequestParam(required = false) Long merchantId,
+    public ReturnResult<List<MerchantChannelVO>> listAllChannels(@RequestParam(required = false) Long merchantId,
                                                            @RequestParam(required = false) String channelType,
                                                            @RequestParam(required = false) Integer status) {
-        return Result.success(channelService.listChannels(merchantId, channelType, status));
+        return ReturnResult.ok(channelService.listChannels(merchantId, channelType, status));
     }
 
     @Operation(summary = "支付方式目录与开通指南")
@@ -112,8 +112,8 @@ public class MerchantChannelController {
      *
      * @return 支付方式目录的结果
      */
-    public Result<List<PaymentMethodGuideVO>> listCatalog() {
-        return Result.success(channelService.listCatalog());
+    public ReturnResult<List<PaymentMethodGuideVO>> listCatalog() {
+        return ReturnResult.ok(channelService.listCatalog());
     }
 
     @Operation(summary = "启用渠道")
@@ -124,8 +124,8 @@ public class MerchantChannelController {
      * @param id 标识
      * @return 启用渠道的结果
      */
-    public Result<Boolean> enableChannel(@PathVariable Long id) {
-        return Result.success(channelService.enableChannel(id));
+    public ReturnResult<Boolean> enableChannel(@PathVariable Long id) {
+        return ReturnResult.ok(channelService.enableChannel(id));
     }
 
     @Operation(summary = "禁用渠道")
@@ -136,8 +136,8 @@ public class MerchantChannelController {
      * @param id 标识
      * @return 禁用渠道的结果
      */
-    public Result<Boolean> disableChannel(@PathVariable Long id) {
-        return Result.success(channelService.disableChannel(id));
+    public ReturnResult<Boolean> disableChannel(@PathVariable Long id) {
+        return ReturnResult.ok(channelService.disableChannel(id));
     }
 
     @Operation(summary = "删除渠道")
@@ -148,7 +148,7 @@ public class MerchantChannelController {
      * @param id 标识
      * @return 删除渠道的结果
      */
-    public Result<Boolean> deleteChannel(@PathVariable Long id) {
-        return Result.success(channelService.deleteChannel(id));
+    public ReturnResult<Boolean> deleteChannel(@PathVariable Long id) {
+        return ReturnResult.ok(channelService.deleteChannel(id));
     }
 }

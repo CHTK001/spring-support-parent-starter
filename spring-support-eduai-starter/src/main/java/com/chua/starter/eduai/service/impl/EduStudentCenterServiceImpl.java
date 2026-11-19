@@ -9,26 +9,38 @@ import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.dimension.mapper.EduClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduStudentMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
+import com.chua.starter.eduai.mapper.EduExamMapper;
+import com.chua.starter.eduai.mapper.EduPaperAssignMapper;
+import com.chua.starter.eduai.mapper.EduPaperMapper;
 import com.chua.starter.eduai.mapper.EduStudentDailyMapper;
 import com.chua.starter.eduai.mapper.EduStudentProgressMapper;
 import com.chua.starter.eduai.mapper.EduWrongQuestionMapper;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
+import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.model.EduMarkingTask;
+import com.chua.starter.eduai.model.EduPaper;
 import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.EduStudentDaily;
 import com.chua.starter.eduai.model.EduStudentProgress;
 import com.chua.starter.eduai.model.EduWrongQuestion;
+import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
+import com.chua.starter.eduai.model.dto.StudentPaperSubmitDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.PaperAssignVO;
+import com.chua.starter.eduai.model.vo.PaperVO;
+import com.chua.starter.eduai.model.vo.QuestionVO;
 import com.chua.starter.eduai.model.vo.StudentWrongQuestionVO;
 import com.chua.starter.eduai.service.IEduMarkingService;
+import com.chua.starter.eduai.service.IEduPaperService;
 import com.chua.starter.eduai.service.IEduStudentCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -87,6 +99,26 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
     private final IEduMarkingService markingService;
 
     private final EduQuestionMapper questionMapper;
+
+    /**
+     * 试卷布置：学生按「布置给我班」授权作答与提交
+     */
+    private final EduPaperAssignMapper assignMapper;
+
+    /**
+     * 考试：在线作答按（试卷，班级）定位/补建考试，供阅卷与防重复提交挂靠
+     */
+    private final EduExamMapper examMapper;
+
+    /**
+     * 试卷：补建考试时取卷名等信息
+     */
+    private final EduPaperMapper paperMapper;
+
+    /**
+     * 试卷详情：学生端按布置关系授权后取题（不走归属校验）
+     */
+    private final IEduPaperService paperService;
 
     @Override
     public List<EduMarkingTask> myMarkingTasks(int limit) {
@@ -191,6 +223,119 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         wrong.setWrongQuestionCorrectTime(LocalDateTime.now());
         wrongQuestionMapper.updateById(wrong);
         return true;
+    }
+
+    // ==================== 我的在线作答 ====================
+
+    @Override
+    public PaperVO myAnswerPaper(Long paperId) {
+        EduStudent student = requireBoundStudent();
+        requireAssignedPaper(paperId, student);
+        PaperVO paper = paperService.getPaperDetailUnchecked(paperId);
+        if (paper == null) {
+            throw new BusinessException("试卷不存在或已删除");
+        }
+        // 脱敏：在线作答只发题干与选项，标准答案/解析必须抹掉，
+        // 否则学生打开接口就能拿到答案，作答就失去意义
+        List<QuestionVO> safeQuestions = paper.questions() == null ? Collections.emptyList()
+                : paper.questions().stream()
+                        .map(q -> new QuestionVO(q.id(), q.type(), q.stem(), q.options(),
+                                null, null, q.score(), q.questionNo(), q.order(), q.section()))
+                        .toList();
+        return paper.withQuestions(safeQuestions);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String submitMyPaperAnswer(Long paperId, StudentPaperSubmitDTO dto) {
+        if (paperId == null) {
+            throw new BusinessException("试卷标识不能为空");
+        }
+        if (dto == null || dto.answers() == null || dto.answers().isEmpty()) {
+            throw new BusinessException("作答内容不能为空");
+        }
+        EduStudent student = requireBoundStudent();
+        PaperAssignVO assign = requireAssignedPaper(paperId, student);
+        String me = EduUserContext.requireUserId();
+
+        // 老师布置即视为一场班级测验：考试按（试卷，班级）就位，首次有学生作答时补建。
+        // 考试与后续阅卷任务归属记为布置老师，学生交的卷子才会出现在老师的阅卷列表里。
+        Long examId = resolveOrCreateExam(paperId, student.getStudentClassId(), assign.getTeacherAccount());
+
+        // 学生标识用登录账号：与教师端阅卷台按学号录入同一口径（学生端任务按登录账号过滤）
+        MarkingSubmitDTO submit = new MarkingSubmitDTO(examId, me, dto.content(), dto.answers());
+        return markingService.submitAnswerSheet(submit, assign.getTeacherAccount());
+    }
+
+    /**
+     * 取当前登录账号绑定的学生档案（未绑定或未分班直接拒绝）
+     *
+     * @return 学生档案
+     */
+    private EduStudent requireBoundStudent() {
+        EduStudent student = findMyStudent();
+        if (student == null) {
+            throw new BusinessException("尚未绑定学生信息，请先完成绑定");
+        }
+        if (student.getStudentClassId() == null) {
+            throw new BusinessException("尚未加入班级，请联系老师完成分班");
+        }
+        return student;
+    }
+
+    /**
+     * 校验试卷确实布置给了该生所在班级（已布置 + 试卷已发布），并返回布置信息
+     *
+     * @param paperId 试卷标识
+     * @param student 学生档案
+     * @return 布置视图
+     */
+    private PaperAssignVO requireAssignedPaper(Long paperId, EduStudent student) {
+        if (paperId == null) {
+            throw new BusinessException("试卷标识不能为空");
+        }
+        List<PaperAssignVO> assigned = assignMapper.selectByClass(student.getStudentClassId());
+        return assigned.stream()
+                .filter(a -> paperId.equals(a.getPaperId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("该试卷未布置给你的班级"));
+    }
+
+    /**
+     * 按（试卷，班级）取考试，没有则补建一场「班级测验」。
+     *
+     * <p>并发窗口内可能重复建行：数据库没有 (paper_id, class_id) 唯一键，这里不加锁；
+     * 重复行的代价只是多一场同名考试，不影响判分正确性 —— 答题卡唯一键挂在
+     * (exam_id, student_id) 上，同一学生仍只有一份答卷。</p>
+     *
+     * @param paperId        试卷标识
+     * @param classId        班级标识
+     * @param teacherAccount 布置老师（考试归属人）
+     * @return 考试标识
+     */
+    private Long resolveOrCreateExam(Long paperId, Long classId, String teacherAccount) {
+        String classKey = String.valueOf(classId);
+        EduExam exam = examMapper.selectOne(new QueryWrapper<EduExam>()
+                .eq("exam_paper_id", paperId)
+                .eq("exam_class_id", classKey)
+                .last("LIMIT 1"));
+        if (exam != null) {
+            return exam.getExamId();
+        }
+        EduPaper paper = paperMapper.selectById(paperId);
+        EduExam created = new EduExam();
+        created.setExamPaperId(paperId);
+        created.setExamName((paper == null || paper.getPaperName() == null ? "试卷" : paper.getPaperName())
+                + "·班级测验");
+        created.setExamClassId(classKey);
+        created.setExamStartTime(LocalDateTime.now());
+        if (paper != null && paper.getPaperDuration() != null) {
+            created.setExamDuration(paper.getPaperDuration());
+        }
+        created.setExamStatus(1);
+        created.setOwnerUserId(teacherAccount);
+        examMapper.insert(created);
+        return created.getExamId();
     }
 
     @Override

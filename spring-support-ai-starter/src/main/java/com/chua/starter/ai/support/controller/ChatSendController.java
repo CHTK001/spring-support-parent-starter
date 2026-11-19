@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -102,7 +103,7 @@ public class ChatSendController {
         final String sid = sessionId;
         // 身份必须在请求线程内解析：异步回调线程取不到，记忆会落成无主数据
         final String memoryUser = AiUserContext.currentUserId();
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 List<Map<String, Object>> msgList = new ArrayList<>();
                 List<ChatMessage> history = aiDialogRecordService.getDialogMessages(did);
@@ -135,7 +136,7 @@ public class ChatSendController {
             } catch (Exception e) {
                 log.error("[ChatSend] 异步对话启动失败 sessionId={}", sid, e);
             }
-        }));
+        })));
 
         return Map.of(
             "success", true,

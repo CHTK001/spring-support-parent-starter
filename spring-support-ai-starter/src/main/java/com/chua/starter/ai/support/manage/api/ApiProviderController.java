@@ -2,6 +2,7 @@
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.ai.chat.AuthHeaders;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientIndicator;
@@ -13,6 +14,8 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.channel.KeylessMediaChannel;
+import com.chua.starter.entity.service.SysMessage;
+import com.chua.starter.system.service.SysMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -25,11 +28,15 @@ import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
+import com.chua.starter.ai.support.manage.service.ProviderCreditAlertLogService;
 import com.chua.starter.ai.support.manage.store.SysAiProviderCredit;
+import com.chua.starter.ai.support.manage.store.SysAiProviderCreditAlertLog;
+import com.chua.starter.ai.support.manage.store.SysAiProviderCreditHistory;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.chat.MagpieRouteSource;
+import com.chua.starter.ai.support.schedule.CreditRefreshScheduler;
 import com.chua.starter.ai.support.util.AiModelMetricKeys;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitCollector;
@@ -37,7 +44,6 @@ import com.chua.starter.datasearch.provider.limit.ProviderLimitContext;
 import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import com.chua.starter.datasearch.provider.support.ProviderRegistries;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.ai.support.manage.service.CreditLoginSessionManager;
 import com.chua.starter.datasearch.credit.model.BalancePart;
 import com.chua.starter.datasearch.credit.model.CreditMapping;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
@@ -48,10 +54,9 @@ import com.chua.starter.datasearch.credit.support.CreditQueries;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -79,6 +84,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -136,18 +142,6 @@ public class ApiProviderController {
     private final ModelMetricsSnapshotService metricsSnapshotService;
 
     /**
-     * 余额密钥「账号登录」会话管理器：内嵌浏览器打开登录页，截获余额令牌
-     */
-    private final CreditLoginSessionManager creditLoginSessions;
-
-    /**
-     * 「账号登录」实时页面对外地址前缀（网关 / 反代场景配置）；
-     * 空则按当前请求的来源主机拼接
-     */
-    @Value("${chua.ai.credit-login.live-base-url:}")
-    private String liveBaseUrl;
-
-    /**
      * Agent 模型注册中心（动态注入 Agent 虚拟 提供者）
      */
     private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
@@ -178,9 +172,70 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.manage.service.ProviderCreditSnapshotService providerCreditSnapshotService;
 
     /**
+     * 余额告警推送留痕服务：投递成功后写一行 sys_ai_provider_credit_alert_log，
+     * 供「上次推送时间」展示与事后核对
+     */
+    private final ProviderCreditAlertLogService providerCreditAlertLogService;
+
+    /**
      * 模型目录同步（models.dev 说明 / 能力位 / 计费）
      */
     private final com.chua.starter.ai.support.manage.service.ProviderCatalogSyncService providerCatalogSyncService;
+
+    /**
+     * 站内消息服务：余额低量告警的投递出口。
+     *
+     * <p>依赖在 pom 里声明为 optional，宿主没接 common-system-starter 时容器里
+     * 没有该 Bean，直接注入会启动失败，所以用 ObjectProvider 承接——
+     * 拿不到就跳过告警，不影响余额查询主链路。</p>
+     */
+    private final ObjectProvider<SysMessageService> messageServiceProvider;
+
+    /**
+     * 余额定时刷新任务（可观测状态出口）。
+     *
+     * <p>该任务构造器依赖本控制器，直接互注会成 Bean 创建环；
+     * 用 ObjectProvider 懒解析打破循环。</p>
+     */
+    private final ObjectProvider<CreditRefreshScheduler> creditRefreshScheduler;
+
+    /**
+     * AK/SK 签名型余额查询的占位 Key：供应商没有余额令牌（extra.credit_key 为空）
+     * 但配齐了 extra.credit_access_key / credit_secret_key 时，用这个占位串走
+     * AK/SK 签名链路（火山 Billing / 百度财务 / 七牛 / 阿里云 BSS 等）。
+     */
+    private static final String CREDIT_AKSK_KEY = "__aksk__";
+
+    /**
+     * AK/SK 占位 Key 在页面与快照里的展示掩码（不脱敏成 ****，让用户知道走的是签名链路）。
+     */
+    private static final String CREDIT_AKSK_MASK = "AK/SK";
+
+    /**
+     * 余额低量告警的进程内冷却窗口：同一供应商两次推送的最小间隔（6 小时）。
+     *
+     * <p>余额没充值就会一直低于阈值，而告警挂在实时回源路径上——不冷却的话，
+     * 管理员每次打开余额面板（5 分钟缓存过期后）都会收到一条重复消息。</p>
+     */
+    private static final long CREDIT_WARN_COOLDOWN_MS = 6L * 60L * 60L * 1000L;
+
+    /** 余额告警冷却登记：providerId -> 上次成功推送时间（epoch 毫秒） */
+    private final Map<String, Long> creditWarnLastSent = new ConcurrentHashMap<>();
+
+    /**
+     * 余额低量告警去抖轮数：连续多少轮实时回源都低于阈值才推送（单轮波动不告警）。
+     *
+     * <p>「轮」= 一次实时回源评估（面板强制刷新 / 5 分钟缓存过期后打开）；
+     * 缓存命中与快照回放不计轮。读数在阈值附近抖动时，连续达标才认定真低，
+     * 避免「刚好卡线的单次读数」触发一条告警。</p>
+     */
+    private static final int CREDIT_WARN_STREAK = 2;
+
+    /** 余额告警去抖登记：providerId -> 连续低于阈值的轮数 */
+    private final Map<String, Integer> creditWarnLowStreak = new ConcurrentHashMap<>();
+
+    /** 已推送低量告警且尚未推送恢复通知的供应商：回升过阈值后据此补一条恢复通知 */
+    private final Set<String> creditWarnAlertOpen = ConcurrentHashMap.newKeySet();
 
     /**
      * ONNX 供应商物化服务：ONNX 供应商与模型镜像同步
@@ -1761,6 +1816,24 @@ public class ApiProviderController {
     }
 
     /**
+     * 余额历史点（前端迷你走势图取数；契约字段名保持 snake_case）。
+     *
+     * @param syncedAt 回源时间（毫秒）
+     * @param keyMask  密钥掩码（不落明文）
+     * @param ok       本次是否查到余额
+     * @param remain   剩余余额
+     * @param used     已用余额
+     * @param currency 币种
+     * @param source   命中的余额实现
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditHistoryPoint(@JsonProperty("synced_at") Long syncedAt,
+                              @JsonProperty("key_mask") String keyMask,
+                              Boolean ok, BigDecimal remain, BigDecimal used,
+                              String currency, String source) {
+    }
+
+    /**
      * {@code /credit} 完整载荷（前端契约字段名保持 snake_case）。
      *
      * @param providerId 供应商标识
@@ -1777,6 +1850,7 @@ public class ApiProviderController {
      * @param cachedAt   缓存时间（epoch 毫秒）
      * @param ageSeconds 缓存年龄（秒）
      * @param message    不可查询时的原因说明
+     * @param warn       余额低量告警判定（未配置阈值为 null）
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record CreditPanelPayload(@JsonProperty("provider_id") String providerId, String url, String kind,
@@ -1784,7 +1858,18 @@ public class ApiProviderController {
                               @JsonProperty("login_url") String loginUrl, boolean ok, String currency,
                               CreditTotal total, List<CreditReading> keys, Boolean cached,
                               @JsonProperty("cached_at") Long cachedAt,
-                              @JsonProperty("age_seconds") Long ageSeconds, String message) {
+                              @JsonProperty("age_seconds") Long ageSeconds, String message,
+                              @JsonProperty("warn") CreditWarn warn) {
+
+        /**
+         * 14 参便捷构造：warn 缺省 null，兼容存量构造点（告警信息只有实时回源路径会带）。
+         */
+        CreditPanelPayload(String providerId, String url, String kind, List<String> candidates, String level,
+                           String loginUrl, boolean ok, String currency, CreditTotal total, List<CreditReading> keys,
+                           Boolean cached, Long cachedAt, Long ageSeconds, String message) {
+            this(providerId, url, kind, candidates, level, loginUrl, ok, currency, total, keys,
+                    cached, cachedAt, ageSeconds, message, null);
+        }
 
         /**
          * 缓存命中副本：保留原读数，改写缓存三件套（cached / cached_at / age_seconds）。
@@ -1795,8 +1880,50 @@ public class ApiProviderController {
         CreditPanelPayload cachedCopy(long at) {
             long now = System.currentTimeMillis();
             return new CreditPanelPayload(providerId, url, kind, candidates, level, loginUrl, ok,
-                    currency, total, keys, true, at, (now - at) / 1000L, message);
+                    currency, total, keys, true, at, (now - at) / 1000L, message, warn);
         }
+    }
+
+    /**
+     * 余额低量告警判定结果（随 {@code /credit} 载荷回给前端展示）。
+     *
+     * @param threshold 告警阈值（extra.credit_warn_threshold）
+     * @param remain    本次汇总剩余余额（无读数为 null）
+     * @param triggered 余额是否已低于等于阈值
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditWarn(BigDecimal threshold, BigDecimal remain, boolean triggered) {
+    }
+
+    /**
+     * 余额告警推送留痕行（{@code /credit/alerts} 的 alerts 元素）。
+     *
+     * @param type      推送类型（WARN=低量告警 / RECOVERY=恢复通知）
+     * @param remain    推送时的剩余余额
+     * @param threshold 推送时的告警阈值
+     * @param receivers 接收人用户 ID（逗号分隔）
+     * @param title     消息标题
+     * @param content   消息摘要
+     * @param pushedAt  推送时间（epoch 毫秒）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditAlertLogItem(String type, Double remain, Double threshold, String receivers,
+                              String title, String content,
+                              @JsonProperty("pushed_at") Long pushedAt) {
+    }
+
+    /**
+     * 余额告警推送留痕载荷（{@code /credit/alerts} 响应体）。
+     *
+     * @param providerId   供应商标识
+     * @param total        返回的留痕条数
+     * @param lastPushedAt 最近一次推送时间（epoch 毫秒；无记录为 null）
+     * @param alerts       留痕列表（按推送时间倒序）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditAlertLogPayload(@JsonProperty("provider_id") String providerId, int total,
+                                 @JsonProperty("last_pushed_at") Long lastPushedAt,
+                                 List<CreditAlertLogItem> alerts) {
     }
 
     /**
@@ -1907,7 +2034,8 @@ public class ApiProviderController {
                 SysAiProviderCredit snapshot = new SysAiProviderCredit();
                 snapshot.setProviderId(providerId);
                 snapshot.setKeyHash(creditKeyHash(keys.get(i)));
-                snapshot.setKeyMask(maskKey(keys.get(i)));
+                // 掩码取读数行自带值：正常 Key 是 maskKey(key)，AK/SK 占位链路是「AK/SK」
+                snapshot.setKeyMask(rows.get(i).mask());
                 snapshot.setOk(row.ok());
                 snapshot.setRemain(row.remain() == null ? null : row.remain().doubleValue());
                 snapshot.setUsed(row.used() == null ? null : row.used().doubleValue());
@@ -1923,6 +2051,25 @@ public class ApiProviderController {
                 snapshots.add(snapshot);
             }
             providerCreditSnapshotService.replaceAll(snapshots);
+            // 追加余额历史（趋势图取数）：与快照同批同参逐 Key 落一行；
+            // 历史是增值数据，追加 / 清理失败只记日志，不影响快照主链路
+            List<SysAiProviderCreditHistory> history = new ArrayList<>(snapshots.size());
+            for (SysAiProviderCredit snapshot : snapshots) {
+                SysAiProviderCreditHistory row = new SysAiProviderCreditHistory();
+                row.setProviderId(snapshot.getProviderId());
+                row.setKeyHash(snapshot.getKeyHash());
+                row.setKeyMask(snapshot.getKeyMask());
+                row.setOk(snapshot.getOk());
+                row.setRemain(snapshot.getRemain());
+                row.setUsed(snapshot.getUsed());
+                row.setCurrency(snapshot.getCurrency());
+                row.setSource(snapshot.getSource());
+                row.setSyncedAt(now);
+                row.setCreateTime(now);
+                history.add(row);
+            }
+            providerCreditSnapshotService.appendHistory(history);
+            providerCreditSnapshotService.pruneHistory(now);
         } catch (Exception e) {
             log.warn("[ProviderCredit] 余额快照落库失败 provider={}: {}", providerId, e.getMessage());
         }
@@ -2074,6 +2221,102 @@ public class ApiProviderController {
     }
 
     /**
+     * 解析参与余额查询的 Key。
+     *
+     * <p>只认显式配置的余额密钥（{@code extra.credit_key}），不再静默沿用渠道 API Key：
+     * 沿用会让编辑页看不见真正查余额的 Key、无法删除，且同 Key 的新供应商会显示同一份
+     * 余额。存量兼容：历史数据没配余额密钥（extra 里无该键）时，首次查询把渠道 API Key
+     * 回填为显式余额密钥；页面清空余额密钥保存的是空串，与「历史未配置」可区分，
+     * 删除后不会被再次回填。</p>
+     *
+     * @param entity 供应商行
+     * @param extra  供应商扩展配置（回填成功后同步写入该 Map）
+     * @return 参与查询的 Key；未配置时为空列表
+     */
+    private List<String> resolveCreditKeys(SysAccountChannel entity, Map<String, Object> extra) {
+        Object configured = extra.get("credit_key");
+        if (configured != null) {
+            // 显式配置（含清空成空串）：空串表示「不查询余额」，不再回落、不再回填
+            return splitCreditKeys(String.valueOf(configured));
+        }
+        List<String> inherited = extractAllKeys(entity.getCredentials());
+        if (inherited.isEmpty()) {
+            return List.of();
+        }
+        promoteCreditKey(entity, extra, inherited);
+        return inherited;
+    }
+
+    /**
+     * 参与余额查询的有效 Key：显式余额密钥优先；没有令牌但配齐了 AK/SK 时用占位 Key
+     * （{@link #CREDIT_AKSK_KEY}）走签名链路，让火山 Billing / 百度财务 / 七牛 /
+     * 阿里云 BSS 这类「账户级 AK/SK 签名」供应商不填余额密钥也能查余额。
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 参与查询的 Key；两者都没有时为空列表
+     */
+    private List<String> effectiveCreditKeys(SysAccountChannel entity, Map<String, Object> extra) {
+        List<String> keys = resolveCreditKeys(entity, extra);
+        if (!keys.isEmpty()) {
+            return keys;
+        }
+        return hasCreditAkSk(extra) ? List.of(CREDIT_AKSK_KEY) : keys;
+    }
+
+    /**
+     * 是否配齐了 AK/SK 签名密钥（extra.credit_access_key 与 credit_secret_key 均非空）。
+     *
+     * <p>两者必须同时存在：签名类实现校验 AK 与 SK 成对，只填一个必然签名失败，
+     * 不如视为未配置、维持「未配置余额密钥」的引导文案。</p>
+     *
+     * @param extra 供应商扩展配置
+     * @return 是否配齐
+     */
+    private boolean hasCreditAkSk(Map<String, Object> extra) {
+        String accessKey = str(extra, "credit_access_key");
+        String secretKey = str(extra, "credit_secret_key");
+        return accessKey != null && !accessKey.isBlank()
+                && secretKey != null && !secretKey.isBlank();
+    }
+
+    /**
+     * 替换读数行的展示掩码（AK/SK 占位链路把 **** 换成「AK/SK」标识）。
+     *
+     * @param row  原读数行
+     * @param mask 新掩码
+     * @return 仅掩码不同的新读数行
+     */
+    private static CreditReading withMask(CreditReading row, String mask) {
+        return new CreditReading(row.index(), mask, row.ok(), row.source(), row.remain(), row.used(),
+                row.total(), row.currency(), row.parts(), row.error(), row.extra());
+    }
+
+    /**
+     * 存量回填：把渠道 API Key 显式落为余额密钥（extra.credit_key），一次生效。
+     *
+     * <p>只经 {@code AccountChannelService#updateExtra} 走账号模块的命令接口落库，
+     * 失败只记日志：本次查询仍按继承到的 Key 执行，下次访问再试。</p>
+     *
+     * @param entity 供应商行
+     * @param extra  供应商扩展配置
+     * @param keys   渠道 API Key 列表
+     */
+    private void promoteCreditKey(SysAccountChannel entity, Map<String, Object> extra, List<String> keys) {
+        String joined = String.join("\n", keys);
+        try {
+            Map<String, Object> patch = new LinkedHashMap<>(extra);
+            patch.put("credit_key", joined);
+            accountChannelService.updateExtra(entity.getProviderId(), patch);
+            extra.put("credit_key", joined);
+            log.info("[credit] 供应商 {} 未配置余额密钥，已把渠道 API Key 回填为余额密钥", entity.getProviderId());
+        } catch (Exception e) {
+            log.warn("[credit] 供应商 {} 余额密钥回填失败（本次仍按渠道 Key 查询）: {}",
+                    entity.getProviderId(), e.getMessage());
+        }
+    }
+
+    /**
      * 供应商余额与用量（只读）。
      *
      * <p>把一个供应商的每个 Key 当成一次独立的余额读数：Key 即令牌（或
@@ -2105,9 +2348,14 @@ public class ApiProviderController {
         String configuredKind = str(extra, "credit_kind");
         String kind = configuredKind == null ? "auto" : configuredKind;
         // 余额专用密钥（extra.credit_key）：Moss 这类「查询令牌 ≠ 渠道 Key」的上游用它查余额；
-        // 支持多账号：换行 / 逗号 / 分号分隔逐个查，没配沿用渠道 Key 逐个查
-        String creditKey = str(extra, "credit_key");
-        List<String> keys = creditKey != null ? splitCreditKeys(creditKey) : extractAllKeys(entity.getCredentials());
+        // 支持多账号：换行 / 逗号 / 分号分隔逐个查。不再静默沿用渠道 API Key——沿用会让
+        // 编辑页看不见真正查余额的 Key、无法删除，且同 Key 的新供应商会显示同一份余额；
+        // 历史数据由 resolveCreditKeys 在首次查询时把渠道 Key 回填为显式余额密钥。
+        // 无余额令牌但配齐 AK/SK（火山 Billing / 百度财务 / 七牛 / 阿里云 BSS 等签名型）时，
+        // 用占位 Key 走签名链路，同样能查余额
+        List<String> keys = effectiveCreditKeys(entity, extra);
+        // 是否为 AK/SK 占位链路：读数行统一标「AK/SK」，让用户知道走的不是余额令牌
+        boolean akSkOnly = keys.size() == 1 && CREDIT_AKSK_KEY.equals(keys.get(0));
         // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → Moss 非官方 → 表达式」
         List<String> candidates = candidateKinds(entity, extra);
         // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ uncovered（官方站点但未收录余额接口）/
@@ -2130,7 +2378,8 @@ public class ApiProviderController {
                             + "可在「余额」里配自定义地址与字段表达式。");
         } else if (keys.isEmpty()) {
             blocked = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level, loginUrl,
-                    false, null, null, List.of(), null, null, null, "没有可用的 Key，无法查询余额");
+                    false, null, null, List.of(), null, null, null,
+                    "未配置余额密钥，不查询余额；可在「编辑供应商 → 更多设置 → 余额 → 密钥」中填写。");
         }
         if (blocked != null) {
             return ApiResult.ok(blocked);
@@ -2173,9 +2422,16 @@ public class ApiProviderController {
                 }
             }
         }
+        // AK/SK 占位链路：唯一读数行标「AK/SK」，页面与快照同口径
+        if (akSkOnly && !rows.isEmpty()) {
+            rows.set(0, withMask(rows.get(0), CREDIT_AKSK_MASK));
+        }
         boolean anyOk = rows.stream().anyMatch(CreditReading::ok);
+        CreditTotal total = creditTotal(anyRemain ? sumRemain : null, sumUsed);
+        // 低量告警只挂实时回源路径：缓存命中 / 快照回放不重复评估，也不重复推送
+        CreditWarn warn = evaluateCreditWarn(entity, extra, anyOk, total);
         CreditPanelPayload payload = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level,
-                loginUrl, anyOk, currency, creditTotal(anyRemain ? sumRemain : null, sumUsed), rows, false, null, null, null);
+                loginUrl, anyOk, currency, total, rows, false, null, null, null, warn);
         cacheCredit(fingerprint, payload);
         // 按 Key 持久化：重启 / 过期后面板仍能读到最近一次读数，时间轮也复用这张表
         persistCreditSnapshots(providerId, keys, rows);
@@ -2183,138 +2439,464 @@ public class ApiProviderController {
     }
 
     /**
-     * 发起「账号登录」：后端无头浏览器打开供应商官方登录页，返回可嵌入的实时页面地址。
+     * 余额低量告警：按 extra.credit_warn_threshold 判定，连续
+     * {@link #CREDIT_WARN_STREAK} 轮低于阈值且配置了 extra.credit_warn_receivers
+     * 时投递站内消息（进程内冷却防重复）；余额回升过阈值后补一条恢复通知。
      *
-     * <p>前端用 iframe 加载该地址：用户在弹窗里看到并直接操作的就是后端无头浏览器
-     * 里的真实登录页（跨机器可用，纯 HTTP 传输画面与交互）。本系统不保存、不读取
-     * 账号密码；登录成功后由后端按供应商声明的截获口径（Cookie / 响应体 /
-     * localStorage，见 {@link CreditQueryProvider#loginCaptureUrlPattern()}）取回
-     * 余额令牌，前端轮询到 {@code captured} 即自动回填「余额密钥」。</p>
+     * <p>只在实时回源路径调用；判定结果无论是否触发都随载荷返回，
+     * 前端据此在余额面板展示「已低于告警阈值」。全部 Key 都没查到读数时
+     * 不告警也不计轮——占位空值不代表真实余额，既不算低也不算恢复。</p>
      *
-     * @param providerId 供应商标识
-     * @param request    当前请求（用于拼实时页面对外地址）
-     * @return { session_id, status, embed_url, expire_at }
+     * @param entity 渠道（供应商标识与名称来源）
+     * @param extra  供应商扩展配置（credit_warn_threshold / credit_warn_receivers）
+     * @param anyOk  本次是否至少一个 Key 查到读数
+     * @param total  汇总余额
+     * @return 告警信息（未配置阈值返回 null）
      */
-    @Permission("admin")
-    @PostMapping("/providers/{provider_id}/credit-login/start")
-    public ApiResult<Map<String, Object>> creditLoginStart(@PathVariable("provider_id") String providerId,
-            HttpServletRequest request) {
-        SysAccountChannel entity = requireProvider(providerId);
-        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
-        String loginUrl = resolveLoginUrl(entity);
-        CreditQueryProvider loginProvider = findLoginProvider(entity, extra);
-        CreditLoginSessionManager.LoginView view;
-        try {
-            view = creditLoginSessions.start(loginUrl, findLoginCookieName(entity, extra),
-                    loginProvider == null ? null : loginProvider.loginCaptureUrlPattern(),
-                    loginProvider == null ? null : loginProvider.loginTokenJsonPath(),
-                    findLoginStorageKey(entity, extra));
-        } catch (ApiException e) {
-            throw e;
-        } catch (RuntimeException e) {
-            log.warn("[credit-login] 启动登录浏览器失败: {}", e.getMessage());
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "启动内嵌浏览器失败：" + e.getMessage());
-        }
-        return ApiResult.ok(loginView(view, embedUrl(request, view)));
-    }
-
-    /**
-     * 拼实时登录页（可嵌入 iframe）的完整地址。
-     *
-     * <p>CdpLiveServer 是独立端口的内嵌 HTTP 服务，用户浏览器必须能直连它。
-     * 优先用配置 {@code chua.ai.credit-login.live-base-url}（网关 / 反代场景）；
-     * 缺省按当前请求的来源主机（Origin / Referer / Host 里的主机名）拼接，
-     * 端口用实时服务的实际监听端口。</p>
-     *
-     * @param request 当前请求
-     * @param view    会话视图（含嵌入路径）
-     * @return 完整地址；会话无嵌入路径或来源不可解析为 null
-     */
-    private String embedUrl(HttpServletRequest request, CreditLoginSessionManager.LoginView view) {
-        String path = view.embedPath();
-        if (path == null || path.isBlank()) {
+    private CreditWarn evaluateCreditWarn(SysAccountChannel entity, Map<String, Object> extra,
+                                          boolean anyOk, CreditTotal total) {
+        BigDecimal threshold = decimalOf(extra.get("credit_warn_threshold"));
+        String providerId = entity.getProviderId();
+        if (threshold == null) {
+            // 阈值被移除：清掉去抖与恢复登记，避免残留旧判定
+            creditWarnLowStreak.remove(providerId);
+            creditWarnAlertOpen.remove(providerId);
             return null;
         }
-        if (liveBaseUrl != null && !liveBaseUrl.isBlank()) {
-            return liveBaseUrl.endsWith("/") ? liveBaseUrl.substring(0, liveBaseUrl.length() - 1) + path
-                    : liveBaseUrl + path;
+        BigDecimal remain = anyOk && total != null ? total.remain() : null;
+        CreditWarn warn = new CreditWarn(threshold, remain, remain != null && remain.compareTo(threshold) <= 0);
+        if (remain == null) {
+            // 本轮读数未知：不累计去抖轮数，也不当「已恢复」
+            return warn;
         }
-        String host = originHost(request);
-        return host.isBlank() ? null : "http://" + host + ":" + creditLoginSessions.livePort() + path;
+        if (remain.compareTo(threshold) <= 0) {
+            // 低于阈值：连续达到 CREDIT_WARN_STREAK 轮才推送（单轮波动不告警）
+            int streak = creditWarnLowStreak.merge(providerId, 1, Integer::sum);
+            if (streak < CREDIT_WARN_STREAK) {
+                log.debug("[credit] 供应商 {} 余额 {} 已低于阈值 {}（连续 {} 轮，未达 {} 轮，暂不推送）",
+                        providerId, remain.toPlainString(), threshold.toPlainString(), streak, CREDIT_WARN_STREAK);
+                return warn;
+            }
+            List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
+            if (receivers.isEmpty()) {
+                log.debug("[credit] 供应商 {} 余额 {} 已低于阈值 {}，未配置告警接收人，跳过推送",
+                        providerId, remain.toPlainString(), threshold.toPlainString());
+                return warn;
+            }
+            long now = System.currentTimeMillis();
+            Long last = creditWarnLastSent.get(providerId);
+            if (last != null && now - last < CREDIT_WARN_COOLDOWN_MS) {
+                return warn;
+            }
+            if (broadcastCreditWarn(entity, remain, threshold, receivers)) {
+                creditWarnLastSent.put(providerId, now);
+                // 已推送告警且尚未恢复：回升过阈值时补一条恢复通知
+                creditWarnAlertOpen.add(providerId);
+            }
+            return warn;
+        }
+        // 回升过阈值：若之前推送过低量告警且尚未发过恢复通知，补一条恢复通知收尾
+        creditWarnLowStreak.remove(providerId);
+        if (creditWarnAlertOpen.remove(providerId)) {
+            List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
+            if (receivers.isEmpty()) {
+                log.debug("[credit] 供应商 {} 余额 {} 已回升过阈值 {}，未配置告警接收人，跳过恢复通知",
+                        providerId, remain.toPlainString(), threshold.toPlainString());
+                return warn;
+            }
+            if (!broadcastCreditRecovery(entity, remain, threshold, receivers)) {
+                // 恢复通知投递失败：保留登记，下次实时回源重试
+                creditWarnAlertOpen.add(providerId);
+            }
+        }
+        return warn;
     }
 
     /**
-     * 取当前请求的来源主机名：依次看 Origin / Referer / Host，
-     * 兼容「前端经代理调后端、实时页要直连后端主机」的部署。
+     * 余额低量告警投递：写一条站内消息到消息中心（sys_message），登录后在消息中心可见。
      *
-     * @param request 当前请求
-     * @return 主机名；解析不出为空串
+     * <p>复用平台既有消息中心（{@code common-system-starter} 的
+     * {@link SysMessageService#broadcast}）而不是另写一套推送。消息中心服务拿不到
+     * （宿主未接该依赖）或写库失败都只记日志、不登记冷却——下次实时回源会重试。</p>
+     *
+     * @return 是否投递成功
      */
-    private static String originHost(HttpServletRequest request) {
-        for (String header : new String[]{"Origin", "Referer", "Host"}) {
-            String value = request.getHeader(header);
-            if (value == null || value.isBlank()) {
+    private boolean broadcastCreditWarn(SysAccountChannel entity, BigDecimal remain, BigDecimal threshold,
+                                        List<Integer> receivers) {
+        SysMessageService service = messageServiceProvider.getIfAvailable();
+        if (service == null) {
+            log.debug("[credit] 宿主未接入消息中心，余额低量告警跳过: {}", entity.getProviderId());
+            return false;
+        }
+        String title = "供应商余额低量告警";
+        String content = "供应商「" + entity.getName() + "」(" + entity.getProviderId()
+                + ") 当前余额 " + remain.toPlainString() + "，已低于告警阈值 " + threshold.toPlainString()
+                + "，请及时充值或调整阈值。";
+        SysMessage message = new SysMessage();
+        message.setSysMessageTitle(title);
+        message.setSysMessageContent(content);
+        message.setSysMessageType("warning");
+        message.setSysMessageLevel("high");
+        message.setSysMessageChannel("PLATFORM");
+        message.setSysMessageSenderId(0);
+        message.setSysMessageSenderName("模型管理");
+        try {
+            ReturnResult<Integer> result = service.broadcast(message, receivers);
+            boolean ok = result != null && result.isOk();
+            if (ok) {
+                log.info("[credit] 余额低量告警已推送 provider={} remain={} threshold={} receivers={}",
+                        entity.getProviderId(), remain.toPlainString(), threshold.toPlainString(), receivers.size());
+                // 投递成功才留痕：失败不写，留痕只记真实发出去的推送
+                recordCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_WARN,
+                        remain, threshold, receivers, title, content);
+            } else {
+                log.warn("[credit] 余额低量告警写入消息中心失败 provider={} msg={}",
+                        entity.getProviderId(), result == null ? "无返回" : result.getMsg());
+            }
+            return ok;
+        } catch (Exception ex) {
+            log.warn("[credit] 余额低量告警写入消息中心异常 provider={} err={}",
+                    entity.getProviderId(), ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 余额恢复通知投递：余额从「低于阈值」回升到阈值之上时，补一条站内消息收尾，
+     * 让接收人知道该供应商余额已恢复、上次告警可以不处理了。
+     *
+     * <p>与低量告警同走 {@code common-system-starter} 的
+     * {@link SysMessageService#broadcast}；类型 info / 级别 normal（好消息不打 high 级）。
+     * 消息中心拿不到或写库失败只记日志，由调用方保留登记、下次实时回源重试。</p>
+     *
+     * @return 是否投递成功
+     */
+    private boolean broadcastCreditRecovery(SysAccountChannel entity, BigDecimal remain, BigDecimal threshold,
+                                            List<Integer> receivers) {
+        SysMessageService service = messageServiceProvider.getIfAvailable();
+        if (service == null) {
+            log.debug("[credit] 宿主未接入消息中心，余额恢复通知跳过: {}", entity.getProviderId());
+            return false;
+        }
+        String title = "供应商余额恢复通知";
+        String content = "供应商「" + entity.getName() + "」(" + entity.getProviderId()
+                + ") 当前余额 " + remain.toPlainString() + "，已回升至告警阈值 " + threshold.toPlainString()
+                + " 之上。";
+        SysMessage message = new SysMessage();
+        message.setSysMessageTitle(title);
+        message.setSysMessageContent(content);
+        message.setSysMessageType("info");
+        message.setSysMessageLevel("normal");
+        message.setSysMessageChannel("PLATFORM");
+        message.setSysMessageSenderId(0);
+        message.setSysMessageSenderName("模型管理");
+        try {
+            ReturnResult<Integer> result = service.broadcast(message, receivers);
+            boolean ok = result != null && result.isOk();
+            if (ok) {
+                log.info("[credit] 余额恢复通知已推送 provider={} remain={} threshold={} receivers={}",
+                        entity.getProviderId(), remain.toPlainString(), threshold.toPlainString(), receivers.size());
+                // 投递成功才留痕：失败不写，留痕只记真实发出去的推送
+                recordCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_RECOVERY,
+                        remain, threshold, receivers, title, content);
+            } else {
+                log.warn("[credit] 余额恢复通知写入消息中心失败 provider={} msg={}",
+                        entity.getProviderId(), result == null ? "无返回" : result.getMsg());
+            }
+            return ok;
+        } catch (Exception ex) {
+            log.warn("[credit] 余额恢复通知写入消息中心异常 provider={} err={}",
+                    entity.getProviderId(), ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 余额告警推送留痕：投递成功后把「谁、什么时候、以什么余额/阈值、
+     * 推给了谁、推了什么」落一行到 {@code sys_ai_provider_credit_alert_log}。
+     * 留痕失败只记日志：不影响已完成的投递，也不打断告警主链路。
+     */
+    private void recordCreditAlert(SysAccountChannel entity, String type, BigDecimal remain, BigDecimal threshold,
+                                   List<Integer> receivers, String title, String content) {
+        try {
+            SysAiProviderCreditAlertLog row = new SysAiProviderCreditAlertLog();
+            row.setProviderId(entity.getProviderId());
+            row.setType(type);
+            row.setRemain(remain == null ? null : remain.doubleValue());
+            row.setThreshold(threshold == null ? null : threshold.doubleValue());
+            row.setReceivers(receivers.stream().map(String::valueOf).collect(Collectors.joining(",")));
+            row.setTitle(title);
+            row.setContent(content);
+            long now = System.currentTimeMillis();
+            row.setPushedAt(now);
+            row.setCreateTime(now);
+            if (providerCreditAlertLogService.record(row)) {
+                log.debug("[credit] 余额告警留痕完成 provider={} type={}", entity.getProviderId(), type);
+            }
+        } catch (Exception ex) {
+            log.warn("[credit] 余额告警留痕失败 provider={} type={} err={}",
+                    entity.getProviderId(), type, ex.getMessage());
+        }
+    }
+
+    /**
+     * 解析告警接收人为用户 ID 列表：extra.credit_warn_receivers 兼容 JSON 数组
+     * （数字 / 字符串）与逗号分隔文本；非正整数项跳过并记日志。
+     */
+    private static List<Integer> creditWarnReceivers(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        List<String> tokens = new ArrayList<>();
+        if (raw instanceof Collection<?> values) {
+            for (Object item : values) {
+                if (item != null) {
+                    tokens.add(String.valueOf(item).trim());
+                }
+            }
+        } else {
+            for (String part : String.valueOf(raw).split("[,，;；\\s]+")) {
+                tokens.add(part.trim());
+            }
+        }
+        List<Integer> ids = new ArrayList<>();
+        for (String token : tokens) {
+            if (token.isEmpty()) {
                 continue;
             }
-            String authority = value.trim();
             try {
-                URI uri = URI.create(authority.contains("://") ? authority : "http://" + authority);
-                if (uri.getHost() != null && !uri.getHost().isBlank()) {
-                    return uri.getHost();
+                int id = Integer.parseInt(token);
+                if (id > 0 && !ids.contains(id)) {
+                    ids.add(id);
                 }
-            } catch (Exception ignored) {
-                // 非法头按缺失处理，继续看下一个
+            } catch (NumberFormatException ex) {
+                log.warn("[credit] 余额告警接收人不是用户 ID，已跳过: {}", token);
             }
         }
-        return "";
+        return ids;
     }
 
     /**
-     * 轮询账号登录会话：检测令牌截获状态。
-     *
-     * @param providerId 供应商标识
-     * @param sessionId  会话标识
-     * @return { session_id, status, token, expire_at }
+     * 宽松转 BigDecimal：数字 / 数字字符串均可，失败返回 null（告警配置不参与严格校验）。
      */
-    @Permission("admin")
-    @PostMapping("/providers/{provider_id}/credit-login/{session_id}/poll")
-    public ApiResult<Map<String, Object>> creditLoginPoll(@PathVariable("provider_id") String providerId,
-            @PathVariable("session_id") String sessionId) {
-        requireProvider(providerId);
-        return ApiResult.ok(loginView(creditLoginSessions.poll(sessionId), null));
+    private static BigDecimal decimalOf(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof BigDecimal value) {
+            return value;
+        }
+        if (raw instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue());
+        }
+        String text = String.valueOf(raw).trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(text);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     /**
-     * 结束账号登录会话并回收浏览器进程。
+     * 余额历史（前端迷你走势图取数）。
+     *
+     * <p>每次余额回源（手动刷新 / 时间轮定时刷新）都会向
+     * {@code sys_ai_provider_credit_history} 追加逐 Key 读数；本端点按时间升序
+     * 返回最近 {@code days} 天的记录，前端按回源时间聚合后画走势。历史是
+     * 展示数据，查不到返回空列表，不报错。</p>
      *
      * @param providerId 供应商标识
-     * @param sessionId  会话标识
-     * @return { ok: true }
+     * @param days       拉取最近几天（夹取 1~90，默认 7）
+     * @param limit      最多返回行数（夹取 1~2000，默认 500）
+     * @return 历史点（时间升序；无记录为空列表）
      */
     @Permission("admin")
-    @PostMapping("/providers/{provider_id}/credit-login/{session_id}/close")
-    public ApiResult<Map<String, Object>> creditLoginClose(@PathVariable("provider_id") String providerId,
-            @PathVariable("session_id") String sessionId) {
+    @GetMapping("/providers/{provider_id}/credit/history")
+    public ApiResult<List<CreditHistoryPoint>> providerCreditHistory(
+            @PathVariable("provider_id") String providerId,
+            @RequestParam(value = "days", required = false, defaultValue = "7") int days,
+            @RequestParam(value = "limit", required = false, defaultValue = "500") int limit) {
+        int window = Math.max(1, Math.min(90, days));
+        int cap = Math.max(1, Math.min(2000, limit));
+        long since = System.currentTimeMillis() - window * 24L * 60L * 60L * 1000L;
+        List<SysAiProviderCreditHistory> rows =
+                providerCreditSnapshotService.listHistory(providerId, since, cap);
+        List<CreditHistoryPoint> points = new ArrayList<>(rows.size());
+        for (SysAiProviderCreditHistory row : rows) {
+            points.add(new CreditHistoryPoint(row.getSyncedAt(), row.getKeyMask(), row.getOk(),
+                    row.getRemain() == null ? null : BigDecimal.valueOf(row.getRemain()),
+                    row.getUsed() == null ? null : BigDecimal.valueOf(row.getUsed()),
+                    row.getCurrency(), row.getSource()));
+        }
+        return ApiResult.ok(points);
+    }
+
+    /**
+     * 余额告警推送留痕（最近几次推送记录 + 上次推送时间）。
+     *
+     * <p>低量告警 / 恢复通知经消息中心投递<b>成功</b>后各留一行；本端点按
+     * 推送时间倒序返回最近记录，余额面板的告警设置浮层据此展示
+     * 「上次推送时间」。没推送过返回空列表与 null 上次时间，不报错。</p>
+     *
+     * @param providerId 供应商标识
+     * @param limit      最多返回条数（夹取 1~100，默认 20）
+     * @return 留痕载荷（alerts 按推送时间倒序）
+     */
+    @Permission("admin")
+    @GetMapping("/providers/{provider_id}/credit/alerts")
+    public ApiResult<CreditAlertLogPayload> providerCreditAlerts(
+            @PathVariable("provider_id") String providerId,
+            @RequestParam(value = "limit", required = false, defaultValue = "20") int limit) {
         requireProvider(providerId);
-        creditLoginSessions.close(sessionId);
-        Map<String, Object> out = new LinkedHashMap<>(2);
-        out.put("ok", true);
+        int cap = Math.max(1, Math.min(100, limit));
+        List<SysAiProviderCreditAlertLog> rows = providerCreditAlertLogService.recent(providerId, cap);
+        List<CreditAlertLogItem> items = new ArrayList<>(rows.size());
+        Long lastPushedAt = null;
+        for (SysAiProviderCreditAlertLog row : rows) {
+            if (row.getPushedAt() != null && (lastPushedAt == null || row.getPushedAt() > lastPushedAt)) {
+                lastPushedAt = row.getPushedAt();
+            }
+            items.add(new CreditAlertLogItem(row.getType(), row.getRemain(), row.getThreshold(),
+                    row.getReceivers(), row.getTitle(), row.getContent(), row.getPushedAt()));
+        }
+        return ApiResult.ok(new CreditAlertLogPayload(providerId, items.size(), lastPushedAt, items));
+    }
+
+    /**
+     * 余额定时采样运行状态（可观测）。
+     *
+     * <p>暴露 {@link CreditRefreshScheduler} 的开关 / 周期 / 最近一轮执行情况 /
+     * 下次计划时间，让「余额走势由定时任务在后台喂」这件事在页面上可确认，
+     * 而不是只进日志。</p>
+     *
+     * @return 状态快照（任务未装配时 enabled=false、其余字段为 null）
+     */
+    @Permission("admin")
+    @GetMapping("/providers/credit/sample-status")
+    public ApiResult<Map<String, Object>> providerCreditSampleStatus() {
+        Map<String, Object> out = new LinkedHashMap<>(12);
+        CreditRefreshScheduler scheduler = creditRefreshScheduler.getIfAvailable();
+        if (scheduler == null) {
+            out.put("enabled", false);
+            out.put("running", false);
+            out.put("interval_seconds", null);
+            out.put("last_run_at", null);
+            out.put("last_duration_ms", null);
+            out.put("next_run_at", null);
+            out.put("providers", null);
+            out.put("touched", null);
+            out.put("succeeded", null);
+            return ApiResult.ok(out);
+        }
+        CreditRefreshScheduler.SampleStatus status = scheduler.status();
+        boolean ran = status.lastRunAt() > 0;
+        out.put("enabled", status.enabled());
+        out.put("running", status.running());
+        out.put("interval_seconds", status.intervalSeconds());
+        out.put("last_run_at", ran ? status.lastRunAt() : null);
+        out.put("last_duration_ms", ran ? status.lastDurationMs() : null);
+        out.put("next_run_at", status.nextRunAt() > 0 ? status.nextRunAt() : null);
+        out.put("providers", ran ? status.providers() : null);
+        out.put("touched", ran ? status.touched() : null);
+        out.put("succeeded", ran ? status.succeeded() : null);
         return ApiResult.ok(out);
     }
 
     /**
-     * 解析供应商的「账号登录」入口页；不支持时报参数错误。
+     * 余额密钥试查（编辑页「测试查询」按钮）。
      *
-     * @param entity 供应商
-     * @return 登录页地址
+     * <p>把表单里「即将保存」的余额配置（上游地址 / 查询口径 / 密钥 / AK·SK / UA /
+     * 自定义头 / 字段映射）当场跑一遍：每个密钥一行，回成功读数或失败原因，
+     * 用户不必先保存再进详情页碰运气。与 {@link #providerCredit} 同一套
+     * {@link CreditQueries} 口径，但供应商由请求体临时合成，不落库、不进缓存、
+     * 不写按 Key 快照，因此测试结果不影响详情页的缓存与历史读数。</p>
+     *
+     * <p>失败不抛异常：单个 Key 查不到只在该行写 {@code error}，页面照常渲染。</p>
+     *
+     * @param request { url, platform, auth_scheme, extra:{credit_* / auth_*}, keys:[...] }
+     * @return 与详情页余额面板同构的载荷（provider_id 固定为 test）
      */
-    private String resolveLoginUrl(SysAccountChannel entity) {
-        String loginUrl = findLoginUrl(entity, entity.getExtra() == null
-                ? new HashMap<>(4) : entity.getExtra());
-        if (loginUrl == null) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该供应商不支持「账号登录」获取余额密钥");
+    @Permission("admin")
+    @PostMapping("/providers/credit-test")
+    public ApiResult<CreditPanelPayload> providerCreditTest(@RequestBody CreditTestRequest request) {
+        SysAccountChannel entity = new SysAccountChannel();
+        entity.setBaseUrl(request.url() == null ? "" : request.url().trim());
+        entity.setPlatform(request.platform());
+        entity.setAuthScheme(request.authScheme());
+        Map<String, Object> extra = request.extra() == null
+                ? new HashMap<>(4) : new HashMap<>(request.extra());
+        List<String> keys = request.keys() == null ? List.of() : request.keys().stream()
+                .filter(k -> k != null).map(String::trim)
+                .filter(s -> !s.isEmpty()).distinct().toList();
+        // 无余额令牌但表单里配齐 AK/SK（火山 Billing / 百度财务 / 七牛 / 阿里云 BSS 等）：
+        // 用占位 Key 走签名链路试查，读数行标「AK/SK」
+        boolean akSkOnly = keys.isEmpty() && hasCreditAkSk(extra);
+        if (akSkOnly) {
+            keys = List.of(CREDIT_AKSK_KEY);
         }
-        return loginUrl;
+        String baseUrl = entity.getBaseUrl();
+        String configuredKind = str(extra, "credit_kind");
+        String kind = configuredKind == null ? "auto" : configuredKind;
+        List<String> candidates = candidateKinds(entity, extra);
+        String level = creditLevel(entity, extra);
+        CreditPanelPayload blocked = null;
+        if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
+            blocked = new CreditPanelPayload("test", baseUrl, kind, candidates, level, null,
+                    false, null, null, List.of(), null, null, null, "请先填写上游地址再测试");
+        } else if (keys.isEmpty()) {
+            blocked = new CreditPanelPayload("test", baseUrl, kind, candidates, level, null,
+                    false, null, null, List.of(), null, null, null, "请先填写余额密钥再测试");
+        }
+        if (blocked != null) {
+            return ApiResult.ok(blocked);
+        }
+        List<CreditReading> rows = new ArrayList<>(keys.size());
+        BigDecimal sumRemain = BigDecimal.ZERO;
+        BigDecimal sumUsed = BigDecimal.ZERO;
+        boolean anyRemain = false;
+        String currency = null;
+        for (int i = 0; i < keys.size(); i++) {
+            CreditReading row = creditOfKey(entity, extra, keys.get(i), i);
+            rows.add(row);
+            if (row.remain() == null) {
+                continue;
+            }
+            anyRemain = true;
+            if (currency == null) {
+                currency = row.currency();
+            }
+            if (currency == null || currency.equals(row.currency())) {
+                sumRemain = sumRemain.add(row.remain());
+                if (row.used() != null) {
+                    sumUsed = sumUsed.add(row.used());
+                }
+            }
+        }
+        if (akSkOnly && !rows.isEmpty()) {
+            rows.set(0, withMask(rows.get(0), CREDIT_AKSK_MASK));
+        }
+        boolean anyOk = rows.stream().anyMatch(CreditReading::ok);
+        CreditPanelPayload payload = new CreditPanelPayload("test", baseUrl, kind, candidates, level,
+                null, anyOk, currency, creditTotal(anyRemain ? sumRemain : null, sumUsed), rows, false, null, null, null);
+        return ApiResult.ok(payload);
+    }
+
+    /**
+     * 余额试查请求体（编辑页表单的即时快照）。
+     *
+     * @param url        上游地址（表单里的 apiUrl）
+     * @param platform   厂商标识（表单里的 providerType）
+     * @param authScheme 认证方式（决定余额令牌放 Authorization 还是自定义头）
+     * @param extra      表单即将保存的 extra 片段（credit_* 与 auth_header / auth_prefix）
+     * @param keys       余额密钥列表（每行一个，逐 Key 试查）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditTestRequest(String url, String platform,
+                             @JsonProperty("auth_scheme") String authScheme,
+                             Map<String, Object> extra, List<String> keys) {
     }
 
     /**
@@ -2339,80 +2921,6 @@ public class ApiProviderController {
             }
         }
         return null;
-    }
-
-    /**
-     * 找供应商「账号登录」的 Cookie 截获名：候选余额实现里第一个声明 Cookie 名的。
-     *
-     * @param entity 供应商
-     * @param extra  供应商扩展配置
-     * @return Cookie 名；走响应体截获（无 Cookie 模式）为 null
-     */
-    private String findLoginCookieName(SysAccountChannel entity, Map<String, Object> extra) {
-        for (String kind : candidateKinds(entity, extra)) {
-            CreditQueryProvider provider = CreditQueries.find(kind);
-            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null && provider.loginCookieName() != null) {
-                return provider.loginCookieName();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 找供应商「账号登录」的 localStorage 键名：候选余额实现里第一个声明
-     * localStorage 截获的（如 SenseNova 的 access_token）。
-     *
-     * @param entity 供应商
-     * @param extra  供应商扩展配置
-     * @return localStorage 键名；不走 localStorage 截获为 null
-     */
-    private String findLoginStorageKey(SysAccountChannel entity, Map<String, Object> extra) {
-        for (String kind : candidateKinds(entity, extra)) {
-            CreditQueryProvider provider = CreditQueries.find(kind);
-            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null && provider.loginStorageKey() != null) {
-                return provider.loginStorageKey();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 找供应商「账号登录」的候选余额实现：第一个给出登录页的。
-     *
-     * <p>登录响应的截获口径（响应地址特征、令牌 JSON 路径）由该实现声明，
-     * 见 {@link CreditQueryProvider#loginCaptureUrlPattern()} 与
-     * {@link CreditQueryProvider#loginTokenJsonPath()}。</p>
-     *
-     * @param entity 供应商
-     * @param extra  供应商扩展配置
-     * @return 候选实现；没有支持账号登录的实现为 null
-     */
-    private CreditQueryProvider findLoginProvider(SysAccountChannel entity, Map<String, Object> extra) {
-        for (String kind : candidateKinds(entity, extra)) {
-            CreditQueryProvider provider = CreditQueries.find(kind);
-            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
-                return provider;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 登录会话视图 → 页面载荷。
-     *
-     * @param view     会话视图
-     * @param embedUrl 实时页面完整地址；轮询接口不重复返回，传 null
-     * @return 页面载荷
-     */
-    private static Map<String, Object> loginView(CreditLoginSessionManager.LoginView view, String embedUrl) {
-        Map<String, Object> out = new LinkedHashMap<>(8);
-        out.put("session_id", view.sessionId());
-        out.put("status", view.status());
-        out.put("token", view.token());
-        out.put("message", view.message());
-        out.put("embed_url", embedUrl);
-        out.put("expire_at", view.expireAt());
-        return out;
     }
 
     /**
@@ -2744,7 +3252,9 @@ public class ApiProviderController {
         // ModelScope（魔搭）走「对话请求读响应头限流配额」的专用实现，也算已收录；
         // OpenRouter 走专用实现（/credits 需管理 Key，普通推理 Key 回落 /api/v1/key），也算已收录；
         // OpenCode 走官方用量 + 预算聚合的专属实现（kind=opencode），也算已收录；
-        // PPIO / Anthropic / xAI 走各自官方余额口径的专属实现（跨主域 / 控制台 Cookie / Management API），也算已收录
+        // PPIO / Anthropic / xAI 走各自官方余额口径的专属实现（跨主域 / 控制台 Cookie / Management API），也算已收录；
+        // Moss 走门户非官方余额接口（platform.moss.cn，Cookie 会话令牌，kind=moss），也算已收录：
+        // 不加这条会被上面的「官方站点未收录」分支拦下，余额面板永远只显示「未收录」而发不出查询
         if (isAgnesProvider(entity) || isDeepSeekProvider(entity) || isSenseNovaProvider(entity)
                 || isShushengProvider(entity) || isSub2ApiProvider(entity) || isMinimaxProvider(entity)
                 || isAliyunBailianProvider(entity) || isTencentCloudProvider(entity)
@@ -2752,7 +3262,8 @@ public class ApiProviderController {
                 || isQianfanProvider(entity) || isDoubaoProvider(entity)
                 || isModelScopeProvider(entity) || isZaiProvider(entity)
                 || isOpenRouterProvider(entity) || isOpencodeProvider(entity)
-                || isPpioProvider(entity) || isAnthropicProvider(entity) || isXaiProvider(entity)) {
+                || isPpioProvider(entity) || isAnthropicProvider(entity) || isXaiProvider(entity)
+                || isMossProvider(entity)) {
             return "official";
         }
         // 官方站点但没有可用的官方余额接口：不当中转站，一个请求都不发。
@@ -3378,7 +3889,7 @@ public class ApiProviderController {
      * @param key    API Key（生成脱敏展示）
      * @return 读数行
      */
-    private static CreditReading creditRow(CreditResult result, int index, String key) {
+    private CreditReading creditRow(CreditResult result, int index, String key) {
         List<BalancePart> rawParts = result.getParts() == null ? List.of() : result.getParts();
         List<CreditPart> parts = new ArrayList<>(rawParts.size());
         for (BalancePart part : rawParts) {
@@ -3386,9 +3897,52 @@ public class ApiProviderController {
         }
         BigDecimal remain = rawParts.isEmpty() ? null : rawParts.get(0).getAmount();
         BigDecimal used = rawParts.size() > 1 ? rawParts.get(1).getAmount() : null;
+        // JWT 形态的令牌把 exp 过期时间合入 extra：面板据此在临期时提醒续票
+        // （商汤等供应商的令牌只有几小时有效期）。extra 随快照 sys_ai_provider_credit_extra
+        // 列落库回放，前端无需二次解析 JWT。
+        Map<String, Object> extra = result.getExtra();
+        Long expiresAt = jwtExpiresAt(key);
+        if (expiresAt != null) {
+            Map<String, Object> merged = extra == null
+                    ? new LinkedHashMap<>(4) : new LinkedHashMap<>(extra);
+            merged.put("expires_at", expiresAt);
+            extra = merged;
+        }
         return new CreditReading(index, maskKey(key), true, result.getSource(), remain, used,
                 remain == null ? null : (used == null ? remain : remain.add(used)),
-                result.getCurrency(), parts, null, result.getExtra());
+                result.getCurrency(), parts, null, extra);
+    }
+
+    /**
+     * 从三段式 JWT 令牌解析 exp 过期时间。
+     *
+     * <p>非 JWT（分段数不对）、payload 非 JSON、没有 exp 声明、解码失败，
+     * 一律返回 null：过期提示是增值信息，任何解析问题都不影响余额主链路。
+     * exp 是秒级时间戳（10~11 位）时乘 1000 转毫秒，毫秒级（13 位）直接用。</p>
+     *
+     * @param key 余额密钥（可能是三段式 JWT）
+     * @return 过期时间（毫秒）；无法解析为 null
+     */
+    private Long jwtExpiresAt(String key) {
+        if (key == null) {
+            return null;
+        }
+        String[] segments = key.split("\\.");
+        if (segments.length != 3) {
+            return null;
+        }
+        try {
+            byte[] payload = java.util.Base64.getUrlDecoder().decode(segments[1]);
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(payload);
+            com.fasterxml.jackson.databind.JsonNode exp = node.get("exp");
+            if (exp == null || !exp.canConvertToLong()) {
+                return null;
+            }
+            long value = exp.asLong();
+            return value < 100_000_000_000L ? value * 1000L : value;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -7787,8 +8341,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     public CreditSyncReport refreshProviderCredit(SysAccountChannel entity) {
         Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
-        String creditKey = str(extra, "credit_key");
-        List<String> keys = creditKey != null ? splitCreditKeys(creditKey) : extractAllKeys(entity.getCredentials());
+        // 与 /credit 同口径：显式余额密钥优先，无令牌但配齐 AK/SK 时走签名链路（见 effectiveCreditKeys）
+        List<String> keys = effectiveCreditKeys(entity, extra);
         if (keys.isEmpty()) {
             return null;
         }
@@ -7800,6 +8354,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         List<CreditReading> rows = new ArrayList<>(keys.size());
         for (int i = 0; i < keys.size(); i++) {
             rows.add(creditOfKey(entity, extra, keys.get(i), i));
+        }
+        // AK/SK 占位链路：唯一读数行标「AK/SK」，快照与面板同口径
+        if (keys.size() == 1 && CREDIT_AKSK_KEY.equals(keys.get(0)) && !rows.isEmpty()) {
+            rows.set(0, withMask(rows.get(0), CREDIT_AKSK_MASK));
         }
         long success = rows.stream().filter(CreditReading::ok).count();
         persistCreditSnapshots(entity.getProviderId(), keys, rows);

@@ -28,7 +28,7 @@
 | 支付通道注册表 | `PaymentChannelRegistry` | 按 `channelType + channelSubType` 路由 `PaymentChannel` Bean |
 | 提供方网关 SPI | `PaymentProviderGatewayRegistry` | `ServiceProvider` 加载支付宝/微信网关扩展 |
 | 敏感字段加解密 | `PaymentCipherService`（AES + Base64） | 渠道 AppKey/私钥落库前加密 |
-| 内置调度任务 | `PaymentTaskSchedulerManager` + `PaymentManagedTask` 实现 | `plugin.payment.scheduler.enabled=true` 且 `engine=internal` |
+| 调度任务 | `PaymentManagedTask` 实现（7 个，`execute()` 标注 `@Job`） | `spring-support-job-starter` 派发；`plugin.payment.scheduler.enabled` 控制任务 Bean 创建 |
 | 事件与日志 | `PaymentEventListener` / `PaymentEvent` 系列 | `plugin.payment.event.log-enabled=true` |
 | OAuth 白名单 | `PaymentOauthWhitelistConfiguration` | 存在 `AuthClientProperties` 时反射合并 `/api/notify/**` |
 | 服务信息登记 | `paymentServiceInfoContributor` | 控制台模块能力 |
@@ -73,7 +73,7 @@
 | `spring-support-oauth-client-starter` | `@Permission` 鉴权与回调接口 OAuth 白名单 |
 | `spring-support-tencent-starter` | 微信支付网关 SPI（`TencentWechatPayGateway`） |
 | `spring-support-aliyun-starter` | 支付宝网关 SPI（`AliyunAlipayGateway`） |
-| `spring-support-job-starter` | `@Job` 注解（`engine=job` 时接入调度平台） |
+| `spring-support-job-starter` | `@Job` 注解与调度派发（内置任务统一接入任务平台） |
 | `spring-statemachine-core` / `spring-statemachine-starter` | 订单状态机 |
 | `jackson-dataformat-xml` | 微信/支付宝报文解析辅助 |
 | `utils-support-springboot-starter` | 策略/容错能力（`spring-support-strategy-starter` 已下线） |
@@ -108,17 +108,17 @@
 
 ### 3.3 调度（`plugin.payment.scheduler`）
 
+7 个内置任务统一接入 `spring-support-job-starter`：`execute()` 方法标注 `@Job`，由任务平台按注解 cron 派发；
+本模块不再维护内置线程池调度引擎（R4 归口），`/ops/scheduler/**` 运维端点同步下线，任务治理走 job-starter 控制台。
+`pay_scheduler_config` 表已废弃，保留 DDL 仅为兼容存量部署。
+
 | key | 默认值 | 说明 |
 |:----|:-------|:-----|
-| `plugin.payment.scheduler.enabled` | `true` | 启用内置调度任务与动态调度管理器（`matchIfMissing=true`） |
-| `plugin.payment.scheduler.engine` | `internal` | `internal` 使用模块内置线程池调度；`job` 接入 spring-support-job-starter 任务平台 |
-| `plugin.payment.scheduler.platform-base-url` | `http://127.0.0.1:18083/scheduler/api` | `engine=job` 时调度平台根地址（代码 `PaymentPlatformSchedulerTaskOpsService#baseUrl`） |
-| `plugin.payment.scheduler.platform-namespace` | `payment` | 调度平台命名空间 |
-| `plugin.payment.scheduler.platform-access-mode` | `auto` | `auto` 按请求是否携带认证头切换 `platform`/`console`；可强制配置 `platform` 或 `console` |
-| `plugin.payment.scheduler.platform-console-username` | `admin` | 轻量控制台登录账号 |
-| `plugin.payment.scheduler.platform-console-password` | 见说明 | 代码默认 `${payment.console.password:}`；`additional-spring-configuration-metadata.json` 声明默认 `admin123456`，两处不一致，需以实际运行环境配置为准 |
+| `plugin.payment.scheduler.enabled` | `true` | 是否创建 7 个内置调度任务 Bean（`matchIfMissing=true`） |
+| `plugin.payment.scheduler.engine` | 已废弃 | 旧 internal/job 双引擎开关已随内置引擎下线，配置不再生效 |
+| `plugin.payment.scheduler.platform-*` | 已废弃 | 旧调度平台转发配置已随平台 Ops 服务下线，配置不再生效 |
 
-内置任务默认 Cron（`PaymentManagedTask` 实现，engine=internal 时写入 `pay_scheduler_config`）：
+内置任务默认 Cron（`@Job` 注解声明）：
 
 | taskKey | 默认 Cron | 任务说明 |
 |:--------|:----------|:---------|
@@ -138,7 +138,7 @@
 
 ### 3.5 加密（`plugin.payment.security` / 兼容 `payment.encryption`）
 
-来源：`PaymentCipherService`（AES/ECB + Base64，密钥归一化为 16 字节 UTF-8）。
+来源：`PaymentCipherService`（AES 原语复用 utils `AesCipher` jdk 提供者：AES/CBC/PKCS5Padding，密文为「16 字节随机 IV + 密文」的 Base64；密钥归一化为 16 字节 UTF-8）。
 
 | key | 默认值 | 说明 |
 |:----|:-------|:-----|
@@ -309,6 +309,9 @@ plugin:
 
 ## 七、已知限制
 
+> 功能缺口类限制（分账/优惠/分表、对账、能力矩阵、Redis、支付分等）的整改路径已归口至
+> 「[八、重启路线图](#八重启路线图roadmap)」，按 A/B/C 档排列；本节保留现状事实描述。
+
 - **渠道实现 Bean 需宿主注册**：`channel.impl` 下 10 个实现类均未标注 `@Component`/`@Bean`，模块主代码未发现
   渠道 Bean 的自动装配入口；`PaymentChannelRegistry` 通过 `applicationContext.getBeansOfType(PaymentChannel.class)`
   收集，未注册的渠道在启用校验（`MerchantChannelServiceImpl#validateEnabledChannelSupport`）与下单/支付时都会报
@@ -335,5 +338,67 @@ plugin:
   充值/转账/提现，不依赖渠道配置。
 - **微信支付分仅覆盖支付链路**：`WechatPayScoreOrderService` 仅提供创建/查询/同步/完结/取消与回调，无分账/退款；
   支付分订单独立存储（`pay_wechat_pay_score_order`），不与标准订单表混用。
-- **`GlobalExceptionHandler` 接管全部异常**：`PaymentException` 统一转为 `ReturnResult.error`，参数校验异常、`BindException`、
-  `IllegalArgumentException` 与兜底 `Exception` 均会按统一协议返回，宿主自定义异常处理需注意优先级。
+- **异常与响应信封复用平台协议**：`PaymentException` 继承 common-starter 的 `BusinessException`，由平台统一异常
+  处理（`ApiExceptionAdvice`）接管：参数校验异常、`BindException`、`IllegalArgumentException` 与兜底 `Exception`
+  均按统一协议返回；Controller 统一返回 utils `ReturnResult` / `ReturnPageResult`（分页经 `PageResultUtils.ok`），
+  模块不再自带 `Result`/`PageResult`/`GlobalExceptionHandler`。
+
+## 八、重启路线图（Roadmap）
+
+> 本模块当前**已下线**（父 pom 未挂载、无宿主、前端 0 引用）。以下路线图按「投入产出」分档，
+> 供重启评估时直接取用；未重启前不建议投入任何开发资源。
+
+### 8.1 A 档：数据模型已就位，只差业务实现（性价比最高）
+
+| 增强点 | 现状 | 待补 |
+|:-------|:-----|:-----|
+| 分账（SCP/利润分配） | `pay_merchant.payment_profit_sharing_enabled` 字段已建（`V2.0__init_all_payment.sql:27`），代码未实现 | 分账创建/查询/回退链路，对接微信/支付宝分账 API；商户开关已有，缺执行引擎与分账账单表 |
+| 优惠券发放与核销 | `payment_coupon_enabled`、`coupon_deduct_withdrawable` 字段齐全；提现侧校验已实现（`CurrentAccountWalletController`「优惠券抵扣部分不可提现」） | 券模板、发放、下单核销、退券；提现校验已消费该语义，业务闭环只差发券/核销两环 |
+| 自动分表接线 | `payment_split_table_enabled` 字段在；分区创建/迁移任务已 `@Job` 化（`PaymentOrderPartitionCreateTask`/`MigrateTask`） | 「按商户开关触发」的编排：把 `payment_split_table_enabled` 与分区任务串起来 |
+
+### 8.2 B 档：能力缺口（完全缺失，需新设计）
+
+1. **渠道对账**：仅有入职引导文案（`MerchantChannelServiceImpl`「配置对账策略」），无任何实现；渠道账单下载、
+   本地流水比对、差异工单整套缺失，是最大的功能空洞。
+2. **渠道能力矩阵显式化**：`PaymentChannel` 目前以 `UnsupportedOperationException` 表达「不支持充值/转账/提现」，
+   调用方只能靠异常探测；可参照设备模块 `DeviceCapabilityMatrix` 口径做显式能力声明，路由与 UI 据此过滤。
+3. **Redis 参与业务**：`RedisConfig` 空挂（见「已知限制」），幂等/防重全靠数据库；值得补回调通知幂等锁、
+   同订单并发支付分布式锁、渠道限流。若确定不用，应删除死配置。
+4. **微信支付分补全**：仅覆盖创建/查询/同步/完结/取消与回调，无支付分退款/分账；与标准订单双表并存，
+   查询口径分裂。
+
+### 8.3 C 档：健壮性与运维体验
+
+- **回调二次验签开关**：目前完全信任 provider 网关验签（`signVerified` 初始为 null）；可加可选第二层验签，
+  内网直连部署时兜底。
+- **回调重试策略可配置 + 手工重放**：退避固定 1/5/15/30/60 分钟、5 次后 ABANDONED；任务治理已归 job-starter，
+  但回调重放是业务动作，宜留在 payment 的 ops 接口。
+- **密文迁移工具**：AES 原语已切至 utils `AesCipher`（CBC + 随机 IV 前缀），历史 ECB 密文不可读；模块已下线
+  无存量数据，若测试/演示环境有旧数据，可提供一次性迁移工具（按候选密钥解 ECB → 重加密为 CBC）。
+- **支付指标埋点**：可同构接入平台指标库（参考 ai 的 `sys_ai_provider_metric`），采集支付成功率、渠道耗时、
+  回调延迟，为渠道健康度与自动降级铺路。
+- **订单号强有序（可选）**：`IdUtils.createOrderNo` 为毫秒 + 6 位随机，跨节点无协调；若需按单号范围扫描/排序，
+  切 `IdUtils.createUuidv7()` 或雪花（`IdUtils` javadoc 已标注适用边界）。
+
+### 8.4 管理端 UI 规划（随重启配套）
+
+16 个 Controller 的 API 面已完整，管理端基本是「一 Controller 一页」的映射：
+
+| 页面 | 对应 API | 关键交互 |
+|:-----|:---------|:---------|
+| 支付订单管理 | `OrderController`、`PaymentOpsController` | 多条件查询/详情/超时关单/发起支付；金额分单位展示 |
+| 交易流水 | `TransactionController` | 按订单号/类型/状态筛选，第三方流水号对账用 |
+| 退款工作台 | `RefundOrderController` | 退款单列表 + 审核/驳回，退款状态机可视化 |
+| 提现审核台 | `WalletWithdrawApprovalController` | 管理员审批/驳回；现有 `denyIfNecessary` 手写鉴权应换平台统一 OAuth 权限点 |
+| 钱包账户 | `WalletAccountController`、`WalletOrderController` | 账户余额、流水、充值/转账/提现订单 |
+| 商户与渠道配置 | `MerchantController`、`MerchantChannelController`、`MerchantSettingController` | 商户开关（分账/优惠/分表）、渠道费率与凭据（落库走 `PaymentCipherService` 加密） |
+| 全局配置 | `PaymentGlobalConfigController`、`OrderConfigController` | 订单分区策略预览（`OrderConfigController` 已有 preview 端点，适合做成可视化向导） |
+
+组件口径复用平台前端既有约定：`ReTable`/`ReSearch` 列表、`RePageHead` 操作区、`ReDialog` 弹层、
+无顶部 header 版式；金额字段等宽数字右对齐；审批类页面（提现/退款）建议双栏常驻（左列表右详情）。
+
+### 8.5 优先级
+
+1. **若重启**：先做 A 档三项（字段已在，缺的只是编排），再做渠道对账（B1，最缺的能力），UI 随管理端一起排期。
+2. **若不重启**：不再投入；本节作为知识存档。
+3. **不建议做**：订单号换算法、Redis 锁等锦上添花项——模块无宿主状态下属过度设计。

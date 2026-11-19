@@ -1,11 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.chua.starter.template.support.mapper.TemplateInfoMapper">
+<mapper namespace="com.chua.starter.account.template.support.mapper.TemplateInfoMapper">
 
     <!-- 分页查询：条件较多，放 XML 便于审核；分页/计数由 MyBatis-Plus 拦截器处理 -->
-    <select id="selectTemplatePage" resultType="com.chua.starter.template.support.entity.TemplateInfo">
-        SELECT *
+    <select id="selectTemplatePage" resultType="com.chua.starter.account.template.support.entity.TemplateInfo">
+        SELECT
+            template_info_id,
+            template_info_name,
+            template_info_subtitle,
+            template_info_language,
+            template_info_type,
+            template_info_status,
+            template_info_content,
+            template_info_remark,
+            template_info_creator,
+            template_info_modifier,
+            template_info_source,
+            template_info_source_id,
+            template_info_source_code,
+            template_info_provider,
+            template_info_deleted,
+            template_info_created_at,
+            template_info_updated_at
         FROM template_info
         <where>
             <if test="q.keyword != null and q.keyword != ''">
@@ -39,8 +56,25 @@
     </select>
 
     <!-- 模板列表（不分页） -->
-    <select id="selectTemplateList" resultType="com.chua.starter.template.support.entity.TemplateInfo">
-        SELECT *
+    <select id="selectTemplateList" resultType="com.chua.starter.account.template.support.entity.TemplateInfo">
+        SELECT
+            template_info_id,
+            template_info_name,
+            template_info_subtitle,
+            template_info_language,
+            template_info_type,
+            template_info_status,
+            template_info_content,
+            template_info_remark,
+            template_info_creator,
+            template_info_modifier,
+            template_info_source,
+            template_info_source_id,
+            template_info_source_code,
+            template_info_provider,
+            template_info_deleted,
+            template_info_created_at,
+            template_info_updated_at
         FROM template_info
         <where>
             <if test="keyword != null and keyword != ''">

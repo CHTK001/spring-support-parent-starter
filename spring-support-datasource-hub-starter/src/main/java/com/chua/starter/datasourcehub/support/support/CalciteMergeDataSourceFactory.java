@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  * 装配成一个可联合查询的统一数据源。
  *
  * <p><b>为什么每次都要现装</b>：合并记录本身不落成员快照 —— 成员配置在各自的
- * {@code ms_datasource} 行上。打开控制台时按当前成员逐个建连、注册为 Calcite
+ * {@code datasource_info} 行上。打开控制台时按当前成员逐个建连、注册为 Calcite
  * schema，因此「改成员后重开」立即生效；连接池/口令/隧道的变化也随 {@code connection(memberId)}
  * 一并反映。这与「合并记录是一次性生成物」的定位一致。</p>
  *
@@ -67,7 +67,7 @@ public class CalciteMergeDataSourceFactory {
     /**
      * 读取合并记录的成员数据源 id 列表。
      *
-     * <p>{@code datasource_database} 存 {@code {"members":[3,7,9]}}。</p>
+     * <p>{@code datasource_info_database} 存 {@code {"members":[3,7,9]}}。</p>
      *
      * @param row 合并记录
      * @return 成员 id 列表（按声明顺序、去重）；无成员返回空列表

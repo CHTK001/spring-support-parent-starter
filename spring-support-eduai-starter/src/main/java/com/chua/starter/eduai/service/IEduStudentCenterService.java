@@ -1,9 +1,11 @@
 package com.chua.starter.eduai.service;
 
 import com.chua.starter.eduai.model.dto.StudentBindDTO;
+import com.chua.starter.eduai.model.dto.StudentPaperSubmitDTO;
 import com.chua.starter.eduai.model.dto.StudyReportDTO;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.model.vo.PaperVO;
 import com.chua.starter.eduai.model.vo.StudentWrongQuestionVO;
 
 import java.util.List;
@@ -95,4 +97,28 @@ public interface IEduStudentCenterService {
      * @return 是否成功
      */
     boolean markMyWrongCorrected(Long wrongId);
+
+    /**
+     * 学生：开始作答某张布置给本班的试卷（脱敏详情）。
+     *
+     * <p>按「布置给我班 + 试卷已发布」授权（与我的班级试卷同一口径）；
+     * 题目的标准答案与解析一律抹除 —— 在线作答若带答案，作答就失去意义。</p>
+     *
+     * @param paperId 试卷标识
+     * @return 试卷详情（含题目，不含答案/解析）
+     */
+    PaperVO myAnswerPaper(Long paperId);
+
+    /**
+     * 学生：提交在线作答，进入 AI 阅卷。
+     *
+     * <p>身份取登录态；考试按（试卷，班级）自动就位（老师布置即视为一场班级测验，
+     * 首次有学生作答时补建考试行，归属记为布置老师）。同一考试同一学生只允许一份
+     * 答题卡（数据库唯一键兜底），重复提交会被拒绝。</p>
+     *
+     * @param paperId 试卷标识
+     * @param dto     逐题作答内容
+     * @return 阅卷任务标识（用 {@code GET /v2/edu/student/marking/result/{taskId}} 轮询）
+     */
+    String submitMyPaperAnswer(Long paperId, StudentPaperSubmitDTO dto);
 }

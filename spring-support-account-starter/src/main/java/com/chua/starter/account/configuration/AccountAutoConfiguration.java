@@ -6,8 +6,17 @@ import com.chua.starter.account.mail.MailboxController;
 import com.chua.starter.account.mail.MailboxService;
 import com.chua.starter.account.mail.SmsTemplateSyncController;
 import com.chua.starter.account.mail.SmsTemplateSyncService;
+import com.chua.starter.account.sendlog.SendLogController;
+import com.chua.starter.account.sendlog.SendLogService;
 import com.chua.starter.account.mail.temp.TempMailController;
 import com.chua.starter.account.mail.temp.TempMailService;
+import com.chua.starter.account.schedule.MailNewMessagePoller;
+import com.chua.starter.account.mail.notify.SocketNewMailPublisher;
+import com.chua.starter.account.manage.event.AccountEventController;
+import com.chua.starter.account.manage.event.AccountEventSseService;
+import com.chua.starter.account.schedule.SmsDirectoryPoller;
+import com.chua.starter.account.phone.TempPhoneController;
+import com.chua.starter.account.phone.TempPhoneService;
 import com.chua.starter.account.manage.controller.AccountAppKeyController;
 import com.chua.starter.account.manage.controller.AccountController;
 import com.chua.starter.account.manage.controller.AccountCookieController;
@@ -75,7 +84,13 @@ import org.springframework.context.annotation.FilterType;
                 // 不加这条 includeFilters 里的类根本扫不到（宿主会缺 AccountChannelService 这个 bean）
                 "com.chua.starter.account.channel",
                 // 收 / 发信箱：/api/accounts/{accountId}/mailbox
-                "com.chua.starter.account.mail"
+                "com.chua.starter.account.mail",
+                // 统一发送日志：/api/accounts/send-logs
+                "com.chua.starter.account.sendlog",
+                // 临时手机号：领取 / 列表 / 销毁（/api/accounts/temp-phone）
+                "com.chua.starter.account.phone",
+                // 后台定时任务：短信目录轮询 / 新邮件轮询（见本包 README）
+                "com.chua.starter.account.schedule"
         },
         useDefaultFilters = false,
         includeFilters = @ComponentScan.Filter(
@@ -90,6 +105,7 @@ import org.springframework.context.annotation.FilterType;
                         // 白名单漏登记会让宿主启动直接失败（Parameter 0 ... could not be found）
                         AccountChannelHealthService.class,
                         ChatChannelController.class,
+                        ApiChannelAuthController.class,
                         ImageChannelController.class,
                         VideoChannelController.class,
                         Model3DChannelController.class,
@@ -111,8 +127,21 @@ import org.springframework.context.annotation.FilterType;
                         MailboxService.class,
                         SmsTemplateSyncController.class,
                         SmsTemplateSyncService.class,
+                        // 统一发送日志：/api/accounts/send-logs
+                        SendLogController.class,
+                        SendLogService.class,
                         TempMailController.class,
-                        TempMailService.class
+                        TempMailService.class,
+                        TempPhoneController.class,
+                        TempPhoneService.class,
+                        // 短信目录轮询：@ConditionalOnProperty 门控，默认不装配
+                        SmsDirectoryPoller.class,
+                        // 账号页统一 SSE 事件推送（manage.event 归 manage 包扫描覆盖）
+                        AccountEventController.class,
+                        AccountEventSseService.class,
+                        // 新邮件轮询 / Socket 推送：@ConditionalOnClass + @ConditionalOnProperty 门控
+                        MailNewMessagePoller.class,
+                        SocketNewMailPublisher.class
                 })
 )
 @MapperScan({
@@ -121,7 +150,9 @@ import org.springframework.context.annotation.FilterType;
         // 统一账号持久化
         "com.chua.starter.account.manage.mapper",
         // 渠道管理：渠道开关与渠道模型开关
-        "com.chua.starter.account.channel.mapper"
+        "com.chua.starter.account.channel.mapper",
+        // 统一发送日志持久化
+        "com.chua.starter.account.sendlog.mapper"
 })
 public class AccountAutoConfiguration {
 

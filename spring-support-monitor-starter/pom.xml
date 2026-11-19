@@ -90,12 +90,13 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-webrtc-starter</artifactId>
         </dependency>
-        <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket）。
-             原 spring-support-cdp-starter 已并入本模块的 tshark 域（com.chua.starter.monitor.support.tshark.cdp），
-             由 MonitorAutoConfiguration 的组件扫描装配；这里只补它用到的 WebSocket 运行库 -->
+        <!-- CDP 调试中心：headless Chromium + CDP 代理（/ms/cdp REST + /ws/cdp WebSocket + 实时页面反向代理）。
+             能力整体在 spring-support-cdp-starter（AutoConfiguration.imports 自动装配），
+             本模块只是它的宿主/聚合方；WebSocket 运行库随该 starter 传递引入 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cdp-starter</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->
         <dependency>
@@ -271,21 +272,6 @@
             <artifactId>spring-api-support-common-system-starter</artifactId>
         </dependency>
 
-        <!-- 证书管理（ACME）：证书页 /monitor/api/v1/cert/** 与主机资产共用本进程。
-             只取该模块的 acme 控制器/服务/mapper（见 AcmeEmbeddedConfiguration），
-             与主后端同名的其它 Bean 不会被扫描。 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-api-support-monitor-starter</artifactId>
-            <exclusions>
-                <!-- 证书模块不需要 SSO 服务端：该 starter 会注册 EnableAuthServerConfiguration，
-                     要求 OauthProtocolServersProperties，而主后端用的是另一套静态口令登录，注入即启动失败 -->
-                <exclusion>
-                    <groupId>com.chua</groupId>
-                    <artifactId>spring-api-support-oauth-starter</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
 
         <!-- 工具 -->
         <dependency>

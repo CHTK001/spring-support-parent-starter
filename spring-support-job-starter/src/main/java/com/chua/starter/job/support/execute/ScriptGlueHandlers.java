@@ -194,7 +194,7 @@ public final class ScriptGlueHandlers {
                 Files.createDirectories(SCRIPT_DIR);
                 Path file = SCRIPT_DIR.resolve(safeFileName(jobName) + "-" + version
                         + suffixOf(engine));
-                Files.writeString(file, synthesized, StandardCharsets.UTF_8);
+                writeScript(file, synthesized, engine);
                 if (cached != null) {
                     // 换版本了：先把旧文件的编译产物从引擎里卸载掉，再删文件。
                     // 不卸载的话 ScriptProvider 的缓存会一直持有旧版本的 Class 及其类加载器，
@@ -219,11 +219,17 @@ public final class ScriptGlueHandlers {
             discardQuietly(jobName, glueType, scriptFile);
             throw ex;
         }
-        // 编译完成后落盘文件即无用：两个引擎执行时都只读内存里的编译产物
+        // 编译完成后落盘文件即无用：Java/Groovy 引擎执行时只读内存里的编译产物
         // （JavaScriptProvider 的 Compiled / GroovyScriptProvider 的 classCache），
         // 不会回读文件。立刻删掉，落盘残留与「哪个节点负责回收」这个问题一并消失——
         // 集群下执行器节点曾因删除通知发不到而永久残留脚本文件。
-        discardScriptFile(jobName, scriptFile);
+        //
+        // 进程型引擎（shell/php/node/powershell/python）反过来：它们就是靠这个文件起子进程，
+        // 删掉后执行必然失败（实测：文件被删后 PowerShell 返回 exit=64）。这类引擎的文件
+        // 留到 release / 版本切换时再由统一入口删除。
+        if (!isFileBacked(engine)) {
+            discardScriptFile(jobName, scriptFile);
+        }
         return new Prepared(engine, glueType, scriptFile);
     }
 
@@ -413,6 +419,48 @@ public final class ScriptGlueHandlers {
     }
 
     /**
+     * 引擎是否依赖落盘文件执行。
+     *
+     * <p>进程型引擎（交给宿主解释器跑）必须保留文件，嵌入式引擎（编译产物在内存）不需要。</p>
+     *
+     * @param engine 引擎名
+     * @return 依赖文件返回 {@code true}
+     */
+    private static boolean isFileBacked(String engine) {
+        return switch (engine.toLowerCase()) {
+            case "shell", "sh", "bash", "php", "node", "nodejs",
+                    "powershell", "pwsh", "python", "py" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 落盘脚本正文。
+     *
+     * <p>PowerShell 单独处理：Windows PowerShell 5.1 读无 BOM 的脚本时按 ANSI 代码页解码，
+     * 中文正文会直接乱码（实测：BOM 有/无 × 代码页 936/65001 四组合里，只有带 BOM 的两组正确）；
+     * {@code pwsh} 7.x 虽默认 UTF-8，但带 BOM 同样能正确识别。因此 .ps1 一律写 UTF-8 BOM。</p>
+     *
+     * @param file       目标文件
+     * @param content    脚本正文
+     * @param engine     引擎名
+     * @throws IOException 写入失败
+     */
+    private static void writeScript(Path file, String content, String engine) throws IOException {
+        byte[] body = content.getBytes(StandardCharsets.UTF_8);
+        if (!"powershell".equalsIgnoreCase(engine) && !"pwsh".equalsIgnoreCase(engine)) {
+            Files.write(file, body);
+            return;
+        }
+        byte[] withBom = new byte[body.length + 3];
+        withBom[0] = (byte) 0xEF;
+        withBom[1] = (byte) 0xBB;
+        withBom[2] = (byte) 0xBF;
+        System.arraycopy(body, 0, withBom, 3, body.length);
+        Files.write(file, withBom);
+    }
+
+    /**
      * 按引擎名推断脚本文件后缀。
      *
      * @param engine 引擎名
@@ -422,9 +470,11 @@ public final class ScriptGlueHandlers {
         return switch (engine.toLowerCase()) {
             case "java" -> ".java";
             case "groovy" -> ".groovy";
-            case "js", "javascript" -> ".js";
+            case "js", "javascript", "node", "nodejs" -> ".js";
             case "python", "py" -> ".py";
-            case "shell", "sh" -> ".sh";
+            case "shell", "sh", "bash" -> ".sh";
+            case "php" -> ".php";
+            case "powershell", "pwsh" -> ".ps1";
             default -> ".script";
         };
     }

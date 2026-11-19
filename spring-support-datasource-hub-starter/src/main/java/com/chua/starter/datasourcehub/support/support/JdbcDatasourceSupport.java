@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class JdbcDatasourceSupport {
 
     /**
-     * 台账 {@code datasource_version} 列的宽度（VARCHAR(64)）。
+     * 台账 {@code datasource_info_version} 列的宽度（VARCHAR(64)）。
      */
     private static final int VERSION_MAX_LENGTH = 64;
 

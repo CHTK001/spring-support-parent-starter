@@ -8,6 +8,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.account.AccountKindCatalog;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
+import com.chua.starter.account.manage.event.AccountEventSseService;
 import com.chua.starter.account.manage.mapper.ManageAccountMapper;
 import com.chua.starter.account.manage.model.AccountBatchFailure;
 import com.chua.starter.account.manage.model.AccountBatchResult;
@@ -97,10 +98,38 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     private final SysAccountSecretService secretService;
 
     /**
+     * 账号页统一 SSE 事件服务（变更广播用）
+     */
+    private final AccountEventSseService accountEventSseService;
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public List<SysAccount> list(String kind, String keyword, String channelKey) {
+        LambdaQueryWrapper<SysAccount> wrapper = accountQuery(kind, keyword, channelKey);
+        applyOwnership(wrapper);
+        return listAccounts(wrapper);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<SysAccount> listInternal(String kind) {
+        // 系统级任务（新邮件轮询等）没有用户上下文，按归属过滤会把个人账号全部漏掉
+        return listAccounts(accountQuery(kind, null, null));
+    }
+
+    /**
+     * 构建账号列表查询条件（不含归属过滤与排序）。
+     *
+     * @param kind       账号种类（可空）
+     * @param keyword    名称 / 编码 / 用户名模糊词（可空）
+     * @param channelKey 所属渠道标识（可空）
+     * @return 查询条件
+     */
+    private LambdaQueryWrapper<SysAccount> accountQuery(String kind, String keyword, String channelKey) {
         LambdaQueryWrapper<SysAccount> wrapper = Wrappers.lambdaQuery();
         if (StringUtils.isNotBlank(kind)) {
             wrapper.eq(SysAccount::getKind, kind.trim());
@@ -114,7 +143,16 @@ public class ManageAccountServiceImpl implements ManageAccountService {
                     .or().like(SysAccount::getCode, like)
                     .or().like(SysAccount::getUsername, like));
         }
-        applyOwnership(wrapper);
+        return wrapper;
+    }
+
+    /**
+     * 执行账号列表查询并清空敏感字段。
+     *
+     * @param wrapper 查询条件
+     * @return 账号列表（敏感字段已清空）
+     */
+    private List<SysAccount> listAccounts(LambdaQueryWrapper<SysAccount> wrapper) {
         wrapper.orderByDesc(SysAccount::getUpdatedAt).orderByDesc(SysAccount::getCreatedAt);
         List<SysAccount> accounts = accountMapper.selectList(wrapper);
         accounts.forEach(this::mask);
@@ -188,6 +226,7 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         }
         log.info("[account] 新增账号: id={}, code={}, kind={}, owner={}",
                 account.getAccountId(), account.getCode(), account.getKind(), account.getOwner());
+        broadcastChanged("create", account);
         return mask(account);
     }
 
@@ -240,6 +279,7 @@ public class ManageAccountServiceImpl implements ManageAccountService {
             clearOtherDefaults(existing);
         }
         log.info("[account] 更新账号: id={}, code={}", existing.getAccountId(), existing.getCode());
+        broadcastChanged("update", existing);
         return mask(existing);
     }
 
@@ -253,6 +293,9 @@ public class ManageAccountServiceImpl implements ManageAccountService {
         assertWritable(existing);
         releaseCode(existing);
         int rows = accountMapper.deleteById(accountId);
+        if (rows > 0) {
+            broadcastChanged("delete", existing);
+        }
         log.info("[account] 删除账号: id={}, rows={}", accountId, rows);
         return rows > 0;
     }
@@ -272,13 +315,38 @@ public class ManageAccountServiceImpl implements ManageAccountService {
     @Override
     public AccountBatchResult batchStatus(List<String> accountIds, int status) {
         int target = status == 0 ? 0 : 1;
-        return runBatch(accountIds, accountId -> {
+        AccountBatchResult result = runBatch(accountIds, accountId -> {
             SysAccount existing = requireAccount(accountId);
             assertWritable(existing);
             existing.setStatus(target);
             existing.setUpdatedAt(System.currentTimeMillis());
             accountMapper.updateById(existing);
         });
+        broadcastChanged("batchStatus", null);
+        return result;
+    }
+
+    /**
+     * 广播账号变更事件（统一 SSE 通道，前端据此刷新列表与角标）。
+     *
+     * <p>推送失败不影响业务事务：broadcast 内部已按订阅逐个兜底。</p>
+     *
+     * @param action  动作（create / update / delete / batchStatus）
+     * @param account 账号；批量操作无单账号上下文时为 {@code null}
+     */
+    private void broadcastChanged(String action, SysAccount account) {
+        try {
+            Map<String, Object> data = new LinkedHashMap<>(6);
+            data.put("action", action);
+            if (account != null) {
+                data.put("accountId", account.getAccountId());
+                data.put("code", account.getCode());
+                data.put("kind", account.getKind());
+            }
+            accountEventSseService.broadcast("account-changed", data);
+        } catch (Exception e) {
+            log.debug("[account] 广播账号变更失败: action={}, msg={}", action, e.getMessage());
+        }
     }
 
     /**

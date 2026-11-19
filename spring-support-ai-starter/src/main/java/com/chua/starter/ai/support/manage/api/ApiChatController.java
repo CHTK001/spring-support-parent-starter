@@ -19,6 +19,7 @@ import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiMemoryService;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.common.support.log.MdcWrap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -1128,13 +1129,13 @@ public class ApiChatController {
             return;
         }
         String conversationId = conversation.getConversationId();
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 memoryService.extractAndRecord(owner, conversationId, input, fullReply, model);
             } catch (Exception e) {
                 log.warn("[Chat] 轮次记忆抽取失败 conversation={}: {}", conversationId, e.getMessage());
             }
-        }));
+        })));
     }
 
       /**

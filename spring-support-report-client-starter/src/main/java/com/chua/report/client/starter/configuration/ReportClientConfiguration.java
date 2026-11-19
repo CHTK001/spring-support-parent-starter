@@ -1,7 +1,6 @@
 package com.chua.report.client.starter.configuration;
 
 import com.chua.common.support.reflection.ReflectUtils;
-import com.chua.report.client.starter.job.JobAnnotationScanner;
 import com.chua.report.client.starter.job.JobReporter;
 import com.chua.report.client.starter.properties.ReportProperties;
 import com.chua.report.client.starter.report.AppRegisterReporter;
@@ -224,23 +223,6 @@ public class ReportClientConfiguration implements ApplicationContextAware {
         DeviceMetricsReporter.getInstance().stop();
     }
 
-    /**
-     * 注册 作业 注解扫描器
-     * <p>
-     * 自动扫描 @作业 注解并注册为任务处理器
-     * </p>
-     *
-     * @return JobAnnotationScanner
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public JobAnnotationScanner jobAnnotationScanner() {
-        /**
-         * 作业注解scanner。
-         * @return 作业注解scanner的结果
-         */
-        return new JobAnnotationScanner();
-    }
 
     @Bean
     /**

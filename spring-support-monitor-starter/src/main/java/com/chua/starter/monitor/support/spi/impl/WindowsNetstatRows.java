@@ -98,9 +98,12 @@ final class WindowsNetstatRows {
      * @return 数值
      */
     private static int toInt(String text) {
+        if (text == null) {
+            return 0;
+        }
         try {
             return Integer.parseInt(text.trim());
-        } catch (NumberFormatException | NullPointerException e) {
+        } catch (NumberFormatException e) {
             return 0;
         }
     }

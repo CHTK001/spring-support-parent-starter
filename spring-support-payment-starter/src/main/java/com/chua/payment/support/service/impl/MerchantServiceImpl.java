@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.UUID;
+import com.chua.common.support.utils.IdUtils;
 
 /**
    * 商户服务实现，负责商户的增删改查、激活与停用操作。
@@ -195,7 +195,7 @@ public class MerchantServiceImpl implements MerchantService {
        * @return 返回值
       */
     private String generateMerchantNo() {
-        return "M" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return IdUtils.createOrderNo("M");
     }
 
       /**

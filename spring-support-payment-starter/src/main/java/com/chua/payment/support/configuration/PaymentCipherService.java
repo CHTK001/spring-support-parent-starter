@@ -1,15 +1,14 @@
 package com.chua.payment.support.configuration;
 
+import com.chua.common.support.lang.algorithm.cipher.AesCipher;
 import com.chua.payment.support.exception.PaymentException;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -17,7 +16,8 @@ import java.util.Set;
 /**
  * 支付敏感字段加解密服务，支持多密钥兼容（新旧密钥均能解密历史数据）。
  *
- * <p>统一使用 AES 算法，密文以 Base64 编码存储。
+ * <p>AES 原语复用 utils 的 {@link AesCipher}（jdk 提供者：AES/CBC/PKCS5Padding，
+ * 密文为「16 字节随机 IV + 密文」的 Base64）；本模块只保留密钥编排：
  * 解密时按「当前配置密钥 → 历史密钥列表 → 内置兼容密钥」的顺序逐个尝试，
  * 保证密钥轮换后旧数据依然可读。</p>
  *
@@ -174,15 +174,12 @@ public class PaymentCipherService {
      */
     private String doCipher(String value, String keyText, int mode) {
         try {
-            SecretKeySpec key = new SecretKeySpec(normalizeKey(keyText), "AES");
-            Cipher cipher = Cipher.getInstance("AES");
-            cipher.init(mode, key);
+            AesCipher cipher = AesCipher.create("jdk");
+            byte[] key = normalizeKey(keyText);
             if (mode == Cipher.ENCRYPT_MODE) {
-                byte[] encrypted = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
-                return Base64.getEncoder().encodeToString(encrypted);
+                return cipher.encryptToString(key, value);
             }
-            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(value));
-            return new String(decrypted, StandardCharsets.UTF_8);
+            return cipher.decryptToString(key, value);
         } catch (Exception e) {
             throw new PaymentException(mode == Cipher.ENCRYPT_MODE ? "加密失败" : "解密失败", e);
         }

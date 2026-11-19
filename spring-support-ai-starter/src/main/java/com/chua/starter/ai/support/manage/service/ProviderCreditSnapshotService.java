@@ -2,8 +2,10 @@
 package com.chua.starter.ai.support.manage.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderCreditHistoryMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderCreditMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProviderCredit;
+import com.chua.starter.ai.support.manage.store.SysAiProviderCreditHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,10 @@ import java.util.List;
  * 只保留最新快照。手动刷新（{@code /credit?refresh=true}）与时间轮定时刷新
  * （{@code CreditRefreshScheduler}）都经由本服务落库。</p>
  *
+ * <p>同时把每轮回源追加进 {@code sys_ai_provider_credit_history}（余额历史，
+ * 供趋势图），并清理保留窗口之外的旧行：快照回答「现在剩多少」，历史回答
+ * 「这段时间怎么变化」。</p>
+ *
  * @since 4.0.0.59
  * @author CH
  */
@@ -28,9 +34,19 @@ import java.util.List;
 public class ProviderCreditSnapshotService {
 
     /**
+     * 历史保留窗口：30 天（之外的旧行在每次落库时顺带清理）
+     */
+    private static final long HISTORY_RETENTION_MS = 30L * 24L * 60L * 60L * 1000L;
+
+    /**
      * 余额快照 映射器
      */
     private final SysAiProviderCreditMapper mapper;
+
+    /**
+     * 余额历史 映射器
+     */
+    private final SysAiProviderCreditHistoryMapper historyMapper;
 
     /**
      * 用本轮读数整体替换一个供应商的快照（先删后增，事务内）。
@@ -60,6 +76,68 @@ public class ProviderCreditSnapshotService {
         }
         log.info("[ProviderCredit] 余额快照落库完成 provider={}：{} 行", providerId, saved);
         return saved;
+    }
+
+    /**
+     * 把本轮读数追加进历史表（每个 Key 一行，供趋势图取数）。
+     *
+     * <p>追加失败只记日志：历史是增值数据，不影响快照与面板主链路。</p>
+     *
+     * @param rows 本轮逐 Key 读数（providerId / keyHash / syncedAt 已由调用方填好）
+     * @return 落库行数
+     */
+    public int appendHistory(List<SysAiProviderCreditHistory> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return 0;
+        }
+        int saved = 0;
+        for (SysAiProviderCreditHistory row : rows) {
+            try {
+                if (historyMapper.insert(row) > 0) {
+                    saved++;
+                }
+            } catch (RuntimeException e) {
+                log.debug("[ProviderCredit] 历史落库失败 provider={} mask={}: {}",
+                        row.getProviderId(), row.getKeyMask(), e.getMessage());
+            }
+        }
+        return saved;
+    }
+
+    /**
+     * 清理保留窗口之外的历史行（每次落库顺带执行，表不会无限增长）。
+     *
+     * @param nowMs 当前时间（毫秒）
+     * @return 清理行数
+     */
+    public int pruneHistory(long nowMs) {
+        try {
+            return historyMapper.delete(new LambdaQueryWrapper<SysAiProviderCreditHistory>()
+                    .lt(SysAiProviderCreditHistory::getSyncedAt, nowMs - HISTORY_RETENTION_MS));
+        } catch (RuntimeException e) {
+            log.debug("[ProviderCredit] 历史清理失败: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * 读一个供应商最近一段时间的余额历史（按时间升序，供趋势图）。
+     *
+     * @param providerId 供应商 ID
+     * @param sinceMs    起始时间（毫秒，含）
+     * @param limit      最多返回行数
+     * @return 历史行（时间升序；无记录返回空列表）
+     */
+    public List<SysAiProviderCreditHistory> listHistory(String providerId, long sinceMs, int limit) {
+        if (providerId == null || providerId.isBlank()) {
+            return List.of();
+        }
+        return historyMapper.selectList(new LambdaQueryWrapper<SysAiProviderCreditHistory>()
+                .eq(SysAiProviderCreditHistory::getProviderId, providerId)
+                .ge(SysAiProviderCreditHistory::getSyncedAt, sinceMs)
+                .orderByAsc(SysAiProviderCreditHistory::getSyncedAt)
+                .orderByAsc(SysAiProviderCreditHistory::getId)
+                .last("LIMIT " + Math.max(1, limit)));
     }
 
     /**

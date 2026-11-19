@@ -1,7 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.payment.support.controller;
 
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.OrderPartitionConfigDTO;
 import com.chua.payment.support.service.OrderPartitionConfigService;
 import com.chua.payment.support.support.PaymentAccountPrincipalResolver;
@@ -51,9 +51,9 @@ public class OrderConfigController {
      * @param request 请求
      * @return 列表的结果
      */
-    public Result<List<OrderPartitionConfigVO>> list(HttpServletRequest request) {
-        Result<List<OrderPartitionConfigVO>> denied = denyIfNecessary(request);
-        return denied != null ? denied : Result.success(orderPartitionConfigService.listConfigs());
+    public ReturnResult<List<OrderPartitionConfigVO>> list(HttpServletRequest request) {
+        ReturnResult<List<OrderPartitionConfigVO>> denied = denyIfNecessary(request);
+        return denied != null ? denied : ReturnResult.ok(orderPartitionConfigService.listConfigs());
     }
 
     @Operation(summary = "更新分表配置")
@@ -65,11 +65,11 @@ public class OrderConfigController {
     * @param request 请求
     * @return 更新后的分表配置
      */
-    public Result<OrderPartitionConfigVO> update(@PathVariable String businessType,
+    public ReturnResult<OrderPartitionConfigVO> update(@PathVariable String businessType,
                                                  @RequestBody OrderPartitionConfigDTO dto,
                                                  HttpServletRequest request) {
-        Result<OrderPartitionConfigVO> denied = denyIfNecessary(request);
-        return denied != null ? denied : Result.success(orderPartitionConfigService.updateConfig(businessType, dto));
+        ReturnResult<OrderPartitionConfigVO> denied = denyIfNecessary(request);
+        return denied != null ? denied : ReturnResult.ok(orderPartitionConfigService.updateConfig(businessType, dto));
     }
 
     @Operation(summary = "预览分表策略")
@@ -80,9 +80,9 @@ public class OrderConfigController {
      * @param request 请求
      * @return 返回值
     */
-    public Result<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
-        Result<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
-        return denied != null ? denied : Result.success(orderPartitionConfigService.preview(businessType));
+    public ReturnResult<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
+        ReturnResult<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
+        return denied != null ? denied : ReturnResult.ok(orderPartitionConfigService.preview(businessType));
     }
 
     @Operation(summary = "手动触发建表")
@@ -94,13 +94,13 @@ public class OrderConfigController {
      * @param request 请求
      * @return trigger创建的结果
      */
-    public Result<Void> triggerCreate(@PathVariable String businessType, HttpServletRequest request) {
-        Result<Void> denied = denyIfNecessary(request);
+    public ReturnResult<Void> triggerCreate(@PathVariable String businessType, HttpServletRequest request) {
+        ReturnResult<Void> denied = denyIfNecessary(request);
         if (denied != null) {
             return denied;
         }
         orderPartitionConfigService.executeAutoCreate(businessType);
-        return Result.success();
+        return ReturnResult.ok();
     }
 
     @Operation(summary = "手动触发迁移")
@@ -111,13 +111,13 @@ public class OrderConfigController {
      * @param request 请求
      * @return 返回值
     */
-    public Result<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
-        Result<Void> denied = denyIfNecessary(request);
+    public ReturnResult<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
+        ReturnResult<Void> denied = denyIfNecessary(request);
         if (denied != null) {
             return denied;
         }
         orderPartitionConfigService.executeAutoMigrate(businessType);
-        return Result.success();
+        return ReturnResult.ok();
     }
 
     /**
@@ -126,13 +126,13 @@ public class OrderConfigController {
      * @param request 请求
      * @return 拒绝响应；校验通过返回 {@code null}
      */
-    private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
+    private <T> ReturnResult<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
         if (!principalResolver.isAdmin(userResume)) {
-            return Result.error(403, "仅超管和管理员可访问");
+            return ReturnResult.error("403", "仅超管和管理员可访问");
         }
         return null;
     }

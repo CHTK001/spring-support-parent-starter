@@ -30,8 +30,8 @@ spring:
   # CDP 调试中心（分析域 tshark 包内的 cdp 子包）
   # ===========================================
   # 刻意写在这里而不是靠命令行：CDP 是 monitor 能力的一部分，不是外挂进程。
-  # 原 spring-support-cdp-starter 已并入 com.chua.starter.monitor.support.tshark.cdp，
-  # 由 MonitorAutoConfiguration 的组件扫描装配，同一进程内同时提供：
+  # 能力实现在独立模块 spring-support-cdp-starter（monitor 依赖即带入），
+  # 由 CdpAutoConfiguration 自动装配，同一进程内同时提供：
   #   REST      /ms/cdp/**   （状态 / 目标 / DOM / 截屏 / 求值）
   #   WebSocket /ws/cdp      （前端 pages/debug 的实时通道）
   # 前端只需把 /ms/cdp 与 /ws/cdp 代理到本服务端口（dev 下 MS_API_TARGET 指向这里）。
@@ -45,6 +45,19 @@ spring:
     headless: true
     # 前端实时通道路径，须与 pages/debug 的 CDP_WS_PATH 一致
     ws-path: /ws/cdp
+    # 实时页面反向代理：无头浏览器与用户浏览器（iframe）都经由它访问目标站点，
+    # 共享服务端 Cookie 罐；9222 永远只绑 127.0.0.1，不对前端暴露
+    live-proxy:
+      enabled: true
+      port: 9223
+      host: 0.0.0.0
+      # 前端经开发代理访问后端、Host 被改写时必须显式配置，如 http://192.168.1.10:9223
+      # external-url:
+      session-ttl: 30m
+      max-sessions: 8
+      # 上游主机白名单；空 = 不限制（调试工具语义，建议仅内网放开）
+      allowed-hosts: []
+      inject-script: true
 
   ai:
     generate:

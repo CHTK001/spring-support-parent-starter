@@ -1,9 +1,8 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.channel.PaymentResult;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
 import com.chua.payment.support.dto.OrderCreateDTO;
 import com.chua.payment.support.dto.OrderOperateDTO;
 import com.chua.payment.support.dto.OrderPayDTO;
@@ -12,6 +11,8 @@ import com.chua.payment.support.dto.RefundApplyDTO;
 import com.chua.payment.support.service.PaymentOrderService;
 import com.chua.payment.support.vo.OrderStateLogVO;
 import com.chua.payment.support.vo.OrderVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -51,8 +52,8 @@ public class OrderController {
      * @param dto dto
      * @return 创建订单的结果
      */
-    public Result<OrderVO> createOrder(@RequestBody OrderCreateDTO dto) {
-        return Result.success(orderService.createOrder(dto));
+    public ReturnResult<OrderVO> createOrder(@RequestBody OrderCreateDTO dto) {
+        return ReturnResult.ok(orderService.createOrder(dto));
     }
 
     @Operation(summary = "查询订单")
@@ -63,8 +64,8 @@ public class OrderController {
      * @param id 标识
      * @return 获取订单的结果
      */
-    public Result<OrderVO> getOrder(@PathVariable Long id) {
-        return Result.success(orderService.getOrder(id));
+    public ReturnResult<OrderVO> getOrder(@PathVariable Long id) {
+        return ReturnResult.ok(orderService.getOrder(id));
     }
 
     @Operation(summary = "分页查询订单")
@@ -79,13 +80,13 @@ public class OrderController {
      * @param status     订单状态（可空）
      * @return 分页结果
      */
-    public Result<PageResult<OrderVO>> listOrders(@RequestParam(defaultValue = "1") int page,
+    public ReturnPageResult<OrderVO> listOrders(@RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "10") int size,
                                                   @RequestParam(required = false) Long merchantId,
                                                   @RequestParam(required = false) String orderNo,
                                                   @RequestParam(required = false) String status) {
         Page<OrderVO> pageResult = orderService.listOrders(new PaymentOrderPageRequest(page, size, merchantId, orderNo, status));
-        return Result.success(PageResult.of(pageResult));
+        return PageResultUtils.ok(pageResult);
     }
 
     @Operation(summary = "查询商户订单")
@@ -99,11 +100,11 @@ public class OrderController {
      * @param status     订单状态（可空）
      * @return 商户订单分页结果
      */
-    public Result<PageResult<OrderVO>> listMerchantOrders(@PathVariable Long merchantId,
+    public ReturnPageResult<OrderVO> listMerchantOrders(@PathVariable Long merchantId,
                                                           @RequestParam(defaultValue = "1") int page,
                                                           @RequestParam(defaultValue = "10") int size,
                                                           @RequestParam(required = false) String status) {
-        return Result.success(PageResult.of(orderService.listMerchantOrders(merchantId, page, size, status)));
+        return PageResultUtils.ok(orderService.listMerchantOrders(merchantId, page, size, status));
     }
 
     @Operation(summary = "查询订单状态流转日志")
@@ -114,8 +115,8 @@ public class OrderController {
      * @param id 标识
      * @return 列表订单日志的结果
      */
-    public Result<List<OrderStateLogVO>> listOrderLogs(@PathVariable Long id) {
-        return Result.success(orderService.listOrderLogs(id));
+    public ReturnResult<List<OrderStateLogVO>> listOrderLogs(@PathVariable Long id) {
+        return ReturnResult.ok(orderService.listOrderLogs(id));
     }
 
     @Operation(summary = "真实发起支付")
@@ -127,9 +128,9 @@ public class OrderController {
      * @param dto 支付参数（可空）
      * @return 支付结果
      */
-    public Result<PaymentResult> payOrder(@PathVariable Long id,
+    public ReturnResult<PaymentResult> payOrder(@PathVariable Long id,
                                           @RequestBody(required = false) OrderPayDTO dto) {
-        return Result.success(orderService.payOrder(id, dto));
+        return ReturnResult.ok(orderService.payOrder(id, dto));
     }
 
     @Operation(summary = "同步第三方支付状态")
@@ -139,8 +140,8 @@ public class OrderController {
      * @param id 标识
      * @return 同步订单的结果
      */
-    public Result<OrderVO> syncOrder(@PathVariable Long id) {
-        return Result.success(orderService.syncOrder(id));
+    public ReturnResult<OrderVO> syncOrder(@PathVariable Long id) {
+        return ReturnResult.ok(orderService.syncOrder(id));
     }
 
     @Operation(summary = "发起支付")
@@ -152,9 +153,9 @@ public class OrderController {
      * @param dto 操作参数（可空，取操作人）
      * @return 是否成功
      */
-    public Result<Boolean> startPay(@PathVariable Long id,
+    public ReturnResult<Boolean> startPay(@PathVariable Long id,
                                     @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.startPay(id, dto != null ? dto.operator() : null));
+        return ReturnResult.ok(orderService.startPay(id, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "标记支付成功")
@@ -166,9 +167,9 @@ public class OrderController {
      * @param dto 操作参数（可空，取已付金额 / 第三方订单号 / 操作人）
      * @return 是否成功
      */
-    public Result<Boolean> paySuccess(@PathVariable Long id,
+    public ReturnResult<Boolean> paySuccess(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.paySuccess(
+        return ReturnResult.ok(orderService.paySuccess(
                 id,
                 dto != null ? dto.paidAmount() : null,
                 dto != null ? dto.thirdPartyOrderNo() : null,
@@ -184,9 +185,9 @@ public class OrderController {
      * @param dto 操作参数（可空，取备注 / 操作人）
      * @return 是否成功
      */
-    public Result<Boolean> payFail(@PathVariable Long id,
+    public ReturnResult<Boolean> payFail(@PathVariable Long id,
                                    @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.payFail(id, dto != null ? dto.remark() : null, dto != null ? dto.operator() : null));
+        return ReturnResult.ok(orderService.payFail(id, dto != null ? dto.remark() : null, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "取消订单", description = "refund=true: 已支付订单发起退款并取消；refund=false: 不退款仅取消(PENDING/PAYING)")
@@ -199,10 +200,10 @@ public class OrderController {
      * @param dto    操作参数（可空，取操作人 / 备注）
      * @return 是否成功
      */
-    public Result<Boolean> cancelOrder(@PathVariable Long id,
+    public ReturnResult<Boolean> cancelOrder(@PathVariable Long id,
                                        @RequestParam(defaultValue = "false") boolean refund,
                                        @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.cancelOrder(id,
+        return ReturnResult.ok(orderService.cancelOrder(id,
                 dto != null ? dto.operator() : null,
                 dto != null ? dto.remark() : null,
                 refund));
@@ -217,9 +218,9 @@ public class OrderController {
      * @param dto 操作参数（可空，取操作人）
      * @return 是否成功
      */
-    public Result<Boolean> completeOrder(@PathVariable Long id,
+    public ReturnResult<Boolean> completeOrder(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.completeOrder(id, dto != null ? dto.operator() : null));
+        return ReturnResult.ok(orderService.completeOrder(id, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "申请退款")
@@ -231,9 +232,9 @@ public class OrderController {
      * @param dto 退款申请参数
      * @return 是否成功
      */
-    public Result<Boolean> refundOrder(@PathVariable Long id,
+    public ReturnResult<Boolean> refundOrder(@PathVariable Long id,
                                        @RequestBody RefundApplyDTO dto) {
-        return Result.success(orderService.refundOrder(id, dto));
+        return ReturnResult.ok(orderService.refundOrder(id, dto));
     }
 
     @Operation(summary = "标记退款成功")
@@ -245,9 +246,9 @@ public class OrderController {
      * @param dto 操作参数（可空，取退款金额 / 操作人）
      * @return 是否成功
      */
-    public Result<Boolean> refundSuccess(@PathVariable Long id,
+    public ReturnResult<Boolean> refundSuccess(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.refundSuccess(id, dto != null ? dto.refundAmount() : null, dto != null ? dto.operator() : null));
+        return ReturnResult.ok(orderService.refundSuccess(id, dto != null ? dto.refundAmount() : null, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "标记退款失败")
@@ -259,9 +260,9 @@ public class OrderController {
      * @param dto 操作参数（可空，取备注 / 操作人）
      * @return 是否成功
      */
-    public Result<Boolean> refundFail(@PathVariable Long id,
+    public ReturnResult<Boolean> refundFail(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
-        return Result.success(orderService.refundFail(id, dto != null ? dto.remark() : null, dto != null ? dto.operator() : null));
+        return ReturnResult.ok(orderService.refundFail(id, dto != null ? dto.remark() : null, dto != null ? dto.operator() : null));
     }
 
     @Operation(summary = "删除订单")
@@ -272,7 +273,7 @@ public class OrderController {
      * @param id 标识
      * @return 删除订单的结果
      */
-    public Result<Boolean> deleteOrder(@PathVariable Long id) {
-        return Result.success(orderService.deleteOrder(id));
+    public ReturnResult<Boolean> deleteOrder(@PathVariable Long id) {
+        return ReturnResult.ok(orderService.deleteOrder(id));
     }
 }

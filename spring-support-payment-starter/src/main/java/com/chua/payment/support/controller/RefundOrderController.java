@@ -1,8 +1,7 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.RefundOrderQueryRequest;
 import com.chua.payment.support.dto.RefundOperateDTO;
 import com.chua.payment.support.dto.RefundSuccessDTO;
@@ -11,6 +10,8 @@ import com.chua.payment.support.service.PaymentOrderService;
 import com.chua.payment.support.service.PaymentRefundOrderService;
 import com.chua.payment.support.vo.RefundOrderVO;
 import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,8 +55,8 @@ public class RefundOrderController {
        * @param id 标识
        * @return 按id获取的结果
        */
-    public Result<RefundOrderVO> getById(@PathVariable Long id) {
-        return Result.success(paymentRefundOrderService.getDetail(id));
+    public ReturnResult<RefundOrderVO> getById(@PathVariable Long id) {
+        return ReturnResult.ok(paymentRefundOrderService.getDetail(id));
     }
 
     @Operation(summary = "查询订单的退款单列表")
@@ -67,8 +68,8 @@ public class RefundOrderController {
        * @param orderId 订单标识
        * @return 按订单id查询列表的结果
        */
-    public Result<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
-        return Result.success(paymentRefundOrderService.listVoByOrderId(orderId));
+    public ReturnResult<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
+        return ReturnResult.ok(paymentRefundOrderService.listVoByOrderId(orderId));
     }
 
     @Operation(summary = "分页查询退款单")
@@ -85,7 +86,7 @@ public class RefundOrderController {
        * @param status     退款状态（可选）
        * @return 退款单分页结果
        */
-    public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<RefundOrderVO> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
                                                   @RequestParam(required = false) String orderNo,
@@ -93,7 +94,7 @@ public class RefundOrderController {
                                                   @RequestParam(required = false) String status) {
         Page<RefundOrderVO> page = paymentRefundOrderService.page(new RefundOrderQueryRequest(pageNum, pageSize, merchantId, orderNo
             , refundNo, status));
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 
     @Operation(summary = "标记退款成功")
@@ -105,10 +106,10 @@ public class RefundOrderController {
        * @param dto dto
        * @return 是否标记成功
        */
-    public Result<Boolean> markRefundSuccess(@PathVariable Long id,
+    public ReturnResult<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
-        return Result.success(paymentOrderService.refundSuccess(new RefundSuccessDTO(
+        return ReturnResult.ok(paymentOrderService.refundSuccess(new RefundSuccessDTO(
                 refundOrder.getRefundNo(),
                 dto != null ? dto.refundAmount() : null,
                 dto != null ? dto.thirdPartyRefundNo() : null,
@@ -126,10 +127,10 @@ public class RefundOrderController {
        * @param dto dto
        * @return 是否标记成功
        */
-    public Result<Boolean> markRefundFail(@PathVariable Long id,
+    public ReturnResult<Boolean> markRefundFail(@PathVariable Long id,
                                           @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
-        return Result.success(paymentOrderService.refundFail(
+        return ReturnResult.ok(paymentOrderService.refundFail(
                 refundOrder.getRefundNo(),
                 null,
                 dto != null ? dto.operator() : null,

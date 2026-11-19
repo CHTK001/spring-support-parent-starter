@@ -20,7 +20,7 @@ import java.util.Locale;
 /**
  * 采集侧数据源解析器：把「数据源引用」解析成可建池的连接参数。
  *
- * <p>台账统一读数据源中心 {@code ms_datasource}（{@link DatasourceService}）。
+ * <p>台账统一读数据源中心 {@code datasource_info}（{@link DatasourceService}）。
  * 迁移期仍允许回落到老的 {@code collect_datasource}：存量数据源没搬完时流程不至于直接报错，
  * 搬完并核对后把回落分支去掉即可。</p>
  *

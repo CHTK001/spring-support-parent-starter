@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 数据源中心服务：数据源配置落库、连通性探测与可复用 JDBC 连接构建。
  *
- * <p>独立于监控模块，供监控、采集等系统共享。数据源台账落 {@code ms_datasource}。</p>
+ * <p>独立于监控模块，供监控、采集等系统共享。数据源台账落 {@code datasource_info}。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -62,7 +62,7 @@ public interface DatasourceService {
      * 新建 Calcite 合并数据源（跨库联合查询）。
      *
      * <p>合并记录由本动作独占创建：{@code type=calcite}，成员 id 列表以
-     * {@code {"members":[id,...]}} 存入 {@code datasource_database}。
+     * {@code {"members":[id,...]}} 存入 {@code datasource_info_database}。
      * 普通 {@code create}/{@code update} 不接收该类型，避免旁路写入缺成员或
      * 非法嵌套的合并记录。</p>
      *

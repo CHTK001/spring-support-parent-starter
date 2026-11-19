@@ -120,8 +120,28 @@ public class SenseNovaCreditQueryProvider implements CreditQueryProvider {
             }
             return parsePools(raw);
         } catch (RuntimeException e) {
-            return CreditResult.fail(name(), e.getMessage());
+            return CreditResult.fail(name(), friendlyError(e.getMessage()));
         }
+    }
+
+    /**
+     * 把典型失败翻译成可操作的提示。
+     *
+     * <p>商汤的余额接口在控制台域，只认平台登录 JWT；用推理 API Key（sk-）访问时
+     * 平台明确返回 {@code auth_type_disabled}（Authentication type 'apikey' is not
+     * enabled）。这不是 Key 填错，而是接口口径：余额要配「余额密钥」（控制台 JWT），
+     * 或点「账号登录」由内嵌浏览器自动截获。</p>
+     *
+     * @param message 原始异常消息
+     * @return 可读的错误提示
+     */
+    private static String friendlyError(String message) {
+        if (message != null && (message.contains("auth_type_disabled")
+                || message.contains("Authentication type 'apikey' is not enabled"))) {
+            return "商汤余额接口不接受 API Key（sk-），请在「余额密钥」填控制台 JWT"
+                    + "（登录 platform.sensenova.cn 后获取，约 180 分钟有效），或点「账号登录」自动截获";
+        }
+        return message;
     }
 
     /**

@@ -557,9 +557,13 @@ public class AIChatController extends BaseAiController {
      * @return 第一个非空白值；全部为空时返回 null
      */
     private static String firstNonBlank(String... values) {
-        if (values == null) return null;
+        if (values == null) {
+            return null;
+        }
         for (String value : values) {
-            if (StringUtils.isNotBlank(value)) return value;
+            if (StringUtils.isNotBlank(value)) {
+                return value;
+            }
         }
         return null;
     }
@@ -596,7 +600,9 @@ public class AIChatController extends BaseAiController {
      */
     private boolean getBooleanSetting(String field, boolean defaultValue) {
         String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
-        if (value == null) return defaultValue;
+        if (value == null) {
+            return defaultValue;
+        }
         return !"false".equalsIgnoreCase(value) && !"0".equalsIgnoreCase(value);
     }
 
@@ -609,7 +615,9 @@ public class AIChatController extends BaseAiController {
      */
     private int getIntegerSetting(String field, int defaultValue) {
         String value = sysAiGlobalSettingService.getValue("runtime", field).orElse(null);
-        if (value == null || value.trim().isEmpty()) return defaultValue;
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException ignored) {

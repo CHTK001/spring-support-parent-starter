@@ -1,5 +1,6 @@
 package com.chua.starter.docker.service;
 
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.docker.spi.DockerRegistryProvider;
 import com.chua.starter.docker.spi.RegistryConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,7 +81,7 @@ public class RegistryService {
      * 跨库并发检索执行器
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private final ExecutorService searchPool = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService searchPool = MdcWrap.decorate(Executors.newVirtualThreadPerTaskExecutor());
 
     /**
      * 构造服务并注册 SPI 实现、补齐内置记录。

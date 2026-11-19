@@ -417,7 +417,7 @@ public class MetricServiceImpl implements MetricService {
                 "DELETE FROM ms_monitor_metric_statistics WHERE ms_monitor_metric_statistics_hour_bucket < ?", cutoff);
             int deletedRedisStats = jdbcTemplate.update(
                 "DELETE FROM ms_monitor_redis_metric_statistics WHERE ms_monitor_redis_metric_statistics_hour_bucket < ?", cutoff);
-            int deletedNginx = jdbcTemplate.update("DELETE FROM ms_monitor_nginx_metric WHERE ms_monitor_nginx_metric_collect_time < ?", cutoff);
+            int deletedNginx = jdbcTemplate.update("DELETE FROM datasource_nginx_metric WHERE datasource_nginx_metric_collect_time < ?", cutoff);
             log.info("数据清理完成, 删除 {} 条指标, {} 条统计, {} 条 nginx 指标",
                     deleted, deletedStats + deletedRedisStats, deletedNginx);
             return ReturnResult.ok();

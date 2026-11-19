@@ -165,4 +165,87 @@ public class SysAiSessionCompressionServiceImpl implements SysAiSessionCompressi
                 .eq(SysAiSessionCompression::getSysAiSessionId, sessionId);
         compressionMapper.delete(wrapper);
     }
+
+    /**
+     * 按主键查询压缩上下文（带归属校验）。
+     *
+     * @param compressionId 压缩上下文主键
+     * @return 压缩上下文实体；不存在或归属他人时返回 {@code null}
+     */
+    @Override
+    public SysAiSessionCompression getById(Integer compressionId) {
+        if (compressionId == null) {
+            return null;
+        }
+        SysAiSessionCompression compression = compressionMapper.selectById(compressionId);
+        if (compression == null) {
+            return null;
+        }
+        if (readableByCurrentUser(compression, compression.getSysAiSessionId())) {
+            return compression;
+        }
+        log.warn("[SysAiSessionCompression] 压缩上下文 {} 归属他人，已忽略", compressionId);
+        return null;
+    }
+
+    /**
+     * 改写某条压缩上下文的摘要正文（前端「编辑摘要」）。
+     *
+     * @param compressionId 压缩上下文主键
+     * @param context       新的摘要正文
+     * @return 写入结果：成功 / 不存在 / 无权
+     */
+    @Override
+    public WriteResult updateContext(Integer compressionId, String context) {
+        SysAiSessionCompression existing = compressionId == null ? null : compressionMapper.selectById(compressionId);
+        if (existing == null) {
+            return WriteResult.NOT_FOUND;
+        }
+        if (!writableByCurrentUser(existing.getSysAiSessionId())) {
+            return WriteResult.FORBIDDEN;
+        }
+        existing.setSysAiCompressionContext(context);
+        existing.setUpdateTime(LocalDateTime.now());
+        compressionMapper.updateById(existing);
+        return WriteResult.OK;
+    }
+
+    /**
+     * 按主键删除单条压缩上下文（前端「删除摘要」）。
+     *
+     * @param compressionId 压缩上下文主键
+     * @return 删除结果：成功 / 不存在 / 无权
+     */
+    @Override
+    public WriteResult deleteById(Integer compressionId) {
+        SysAiSessionCompression existing = compressionId == null ? null : compressionMapper.selectById(compressionId);
+        if (existing == null) {
+            return WriteResult.NOT_FOUND;
+        }
+        if (!writableByCurrentUser(existing.getSysAiSessionId())) {
+            return WriteResult.FORBIDDEN;
+        }
+        compressionMapper.deleteById(compressionId);
+        return WriteResult.OK;
+    }
+
+    /**
+     * 当前调用方可否写该会话的压缩上下文。
+     *
+     * <p>与 {@link #readableByCurrentUser} 的区别：读允许管理员放行，写只认归属人；
+     * 后台线程（无登录身份）按机器流量放行，否则压缩后的摘要无法落库。</p>
+     *
+     * @param sessionId 会话 标识，可为空
+     * @return 可写时为 {@code true}
+     */
+    private boolean writableByCurrentUser(Long sessionId) {
+        String userId = AiUserContext.currentUserId();
+        if (userId == null) {
+            return true;
+        }
+        if (AiUserContext.isReadonly()) {
+            return false;
+        }
+        return userId.equals(sessionOwner(sessionId));
+    }
 }

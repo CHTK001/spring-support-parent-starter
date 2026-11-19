@@ -10,6 +10,7 @@ import com.chua.common.support.network.ssl.TlsKeyLogDecoder;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.network.support.tshark.PacketParserService;
 import com.chua.network.support.tshark.PacketRecord;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.datasource.support.DataSourceContextSupport;
 import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
@@ -885,7 +886,7 @@ public class TsharkCaptureService {
             }
             this.pushService.pushTsharkSession(session, session.getId());
               // 自调用不会走 Spring 代理，@Async 在这里不生效，必须显式切线程（见 asyncFinalize 的注释）
-            CompletableFuture.runAsync(() -> this.asyncFinalize(session.getId(), proc, filePath));
+            CompletableFuture.runAsync(MdcWrap.wrap(() -> this.asyncFinalize(session.getId(), proc, filePath)));
             return ReturnResult.ok(session);
         } catch (Exception e) {
             log.error("start capture failed", e);
@@ -997,7 +998,7 @@ public class TsharkCaptureService {
             this.sessionMapper.insert(session);
             this.pushService.pushTsharkSession(session, session.getId());
               // 自调用不走代理，@Async 在这里不生效，必须显式切线程（同 startCapture 的注释）
-            CompletableFuture.runAsync(() -> this.asyncParseImported(session.getId(), filePath));
+            CompletableFuture.runAsync(MdcWrap.wrap(() -> this.asyncParseImported(session.getId(), filePath)));
             return ReturnResult.ok(session);
         } catch (Exception e) {
             log.error("import pcap failed", e);

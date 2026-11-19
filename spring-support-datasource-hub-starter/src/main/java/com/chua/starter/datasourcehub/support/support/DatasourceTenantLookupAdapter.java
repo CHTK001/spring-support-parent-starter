@@ -22,7 +22,7 @@ import java.util.Locale;
  * 互相依赖），装了数据源中心的实例在这里补上实现，租户填了
  * {@code sys_tenant_datasource_id} 才解析得到实例信息。</p>
  *
- * <p><b>只接受可用的 JDBC 实例</b>：停用（{@code datasource_status=0}）、非 jdbc 类型
+ * <p><b>只接受可用的 JDBC 实例</b>：停用（{@code datasource_info_status=0}）、非 jdbc 类型
  * （redis/nginx 等）、或库名本身是一段完整 JDBC URL（合并/桥接类记录）的台账行一律返回
  * {@code null}。租户库必须是可直接建连接池的普通 JDBC 数据源，拿错类型去建池只会在
  * 运行期报错，而在配置期就挡住才能给出可读的原因。</p>

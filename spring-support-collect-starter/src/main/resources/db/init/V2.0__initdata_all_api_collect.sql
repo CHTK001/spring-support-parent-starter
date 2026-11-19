@@ -12,36 +12,36 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- 存量数据源迁移：collect_datasource -> ms_datasource
+-- 存量数据源迁移：collect_datasource -> datasource_info
 --
--- 采集平台的 SQL/入库节点已改为统一读数据源中心（ms_datasource），
+-- 采集平台的 SQL/入库节点已改为统一读数据源中心（datasource_info），
 -- collect_datasource 不再作为台账，仅保留只读以便回溯与对账。
 --
 -- 字段映射：
 --   collect_datasource_id                -> id（ID 语义保持不变，流程参数无需改写）
---   collect_datasource_name              -> datasource_name
---   collect_datasource_type              -> datasource_type（统一归一为 jdbc）
---   collect_datasource_jdbc_url          -> datasource_database（jdbc: 开头的完整 URL）
---   collect_datasource_username          -> datasource_username
---   collect_datasource_password          -> datasource_password（b64: 前缀原样搬，两侧都能解）
---   collect_datasource_status            -> datasource_status
---   collect_datasource_remark            -> datasource_remark
---   collect_datasource_driver_class_name -> datasource_driver_class_name
+--   collect_datasource_name              -> datasource_info_name
+--   collect_datasource_type              -> datasource_info_type（统一归一为 jdbc）
+--   collect_datasource_jdbc_url          -> datasource_info_database（jdbc: 开头的完整 URL）
+--   collect_datasource_username          -> datasource_info_username
+--   collect_datasource_password          -> datasource_info_password（b64: 前缀原样搬，两侧都能解）
+--   collect_datasource_status            -> datasource_info_status
+--   collect_datasource_remark            -> datasource_info_remark
+--   collect_datasource_driver_class_name -> datasource_info_driver_class_name
 --
 -- 幂等：以 名称 + JDBC URL 判定已迁则跳过，重复执行不会产生重复行。
 -- 旧表保留不删：迁移期 CollectDatasourceRegistry 仍会回落到它，
 -- 核对完成、确认无流程仍指向旧 ID 之后再单独下线。
 --
 -- 排序规则：本条要在 collect_datasource(utf8mb4_unicode_ci) 与
--- ms_datasource(utf8mb4_general_ci) 之间做字符串等值比较。H2 的 MySQL 兼容模式
+-- datasource_info(utf8mb4_general_ci) 之间做字符串等值比较。H2 的 MySQL 兼容模式
 -- 会隐式转换放行，MariaDB/MySQL 直接报 1267
 -- (Illegal mix of collations ... for operation '=')，整份 initdata 因此被记为失败。
 -- 故显式把 collect 侧收敛到框架侧的 utf8mb4_general_ci 再比较，语义不变。
 -- ---------------------------------------------------------------------
-INSERT IGNORE INTO `ms_datasource` (`id`, `datasource_name`, `datasource_type`, `datasource_host`, `datasource_port`,
-                                   `datasource_database`, `datasource_username`, `datasource_password`,
-                                   `datasource_remark`, `datasource_status`, `datasource_driver_class_name`,
-                                   `datasource_create_time`, `datasource_update_time`)
+INSERT IGNORE INTO `datasource_info` (`id`, `datasource_info_name`, `datasource_info_type`, `datasource_host`, `datasource_port`,
+                                   `datasource_info_database`, `datasource_info_username`, `datasource_info_password`,
+                                   `datasource_info_remark`, `datasource_info_status`, `datasource_info_driver_class_name`,
+                                   `create_time`, `update_time`)
 SELECT c.`collect_datasource_id`,
        c.`collect_datasource_name`,
        'jdbc',
@@ -61,9 +61,9 @@ WHERE c.`collect_datasource_id` IS NOT NULL
   AND c.`collect_datasource_jdbc_url` LIKE 'jdbc:%'
   AND NOT EXISTS (
         SELECT 1
-        FROM `ms_datasource` m
-        WHERE m.`datasource_name` = c.`collect_datasource_name` COLLATE utf8mb4_general_ci
-          AND m.`datasource_database` = c.`collect_datasource_jdbc_url` COLLATE utf8mb4_general_ci
+        FROM `datasource_info` m
+        WHERE m.`datasource_info_name` = c.`collect_datasource_name` COLLATE utf8mb4_general_ci
+          AND m.`datasource_info_database` = c.`collect_datasource_jdbc_url` COLLATE utf8mb4_general_ci
   );
 
 -- =====================================================================

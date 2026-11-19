@@ -26,6 +26,16 @@ public final class AccountKind {
      */
     public static final String SMS = "SMS";
 
+    /**
+     * 临时手机号（本地目录轮询收短信，只收不发）
+     */
+    public static final String TEMP_PHONE = "TEMP_PHONE";
+
+    /**
+     * 手机号（手工录入号码，本地目录轮询收短信，只收不发；与临时号同链路、不过期）
+     */
+    public static final String PHONE = "PHONE";
+
     private AccountKind() {
     }
 
@@ -36,6 +46,7 @@ public final class AccountKind {
      * @return true 表示受支持
      */
     public static boolean supported(String kind) {
-        return API_KEY.equals(kind) || EMAIL.equals(kind) || SMS.equals(kind);
+        return API_KEY.equals(kind) || EMAIL.equals(kind) || SMS.equals(kind)
+                || TEMP_PHONE.equals(kind) || PHONE.equals(kind);
     }
 }

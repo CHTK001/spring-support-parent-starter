@@ -370,6 +370,36 @@ public class MessageTemplateService {
     }
 
     /**
+     * 按标识读取模板。
+     *
+     * @param templateId 模板标识
+     * @return 模板；不存在或标识为空返回 {@code null}
+     */
+    public SysAiChannelMessageTemplate getById(String templateId) {
+        if (templateId == null || templateId.isBlank()) {
+            return null;
+        }
+        return mapper.selectById(templateId);
+    }
+
+    /**
+     * 按编码读取启用中的模板（跨种类：编码仅保证同种类内唯一，命中多条时优先默认模板）。
+     *
+     * @param code 模板编码
+     * @return 模板；不存在返回 {@code null}
+     */
+    public SysAiChannelMessageTemplate findByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        return mapper.selectOne(Wrappers.<SysAiChannelMessageTemplate>lambdaQuery()
+                .eq(SysAiChannelMessageTemplate::getTemplateCode, code)
+                .eq(SysAiChannelMessageTemplate::getTemplateEnabled, true)
+                .orderByDesc(SysAiChannelMessageTemplate::getTemplateDefault)
+                .last("limit 1"));
+    }
+
+    /**
      * 失效默认模板缓存（模板写操作后调用）。
      */
     public void invalidateCache() {

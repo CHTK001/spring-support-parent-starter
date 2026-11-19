@@ -7,6 +7,7 @@ import com.chua.common.support.ai.mcp.McpToolCall;
 import com.chua.common.support.ai.mcp.McpToolDescriptor;
 import com.chua.common.support.ai.mcp.McpToolResult;
 import com.chua.starter.ai.support.manage.store.McpServerStore;
+import com.chua.starter.common.support.log.MdcWrap;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.RequiredArgsConstructor;
@@ -389,7 +390,7 @@ public class AgentMcpRuntimeService {
             // 硬性墙钟超时：部分远程（streamable HTTP）服务器在异常时不主动结束响应，
             // SDK 的 requestTimeout 可能不生效，这里在外层再兜底，保证 Agent 不会无限等待
             java.util.concurrent.CompletableFuture<McpToolResult> future =
-                    java.util.concurrent.CompletableFuture.supplyAsync(() -> doCallTool(toolCall));
+                    java.util.concurrent.CompletableFuture.supplyAsync(MdcWrap.wrapSupplier(() -> doCallTool(toolCall)));
             try {
                 return future.get(CALL_TIMEOUT.toSeconds(), java.util.concurrent.TimeUnit.SECONDS);
             } catch (java.util.concurrent.TimeoutException te) {

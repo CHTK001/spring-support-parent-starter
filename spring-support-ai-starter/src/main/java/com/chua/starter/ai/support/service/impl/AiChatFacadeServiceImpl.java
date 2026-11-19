@@ -27,6 +27,7 @@ import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper;
@@ -428,7 +429,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 未开启深度思考时必须在回调里丢弃，避免前端仍渲染思考块
         final boolean forwardThinking = Boolean.TRUE.equals(request.getThink());
 
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 configured.chat(promptOf(request),
                         response -> {
@@ -583,7 +584,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 }
                 emitter.completeWithError(e);
             }
-        }));
+        })));
 
         return emitter;
     }
@@ -653,7 +654,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         final String usageAppKey = appKeyOf(request);
         final boolean forwardThinking = Boolean.TRUE.equals(request.getThink());
 
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 wrapper.resume(replyId, decisions,
                         response -> {
@@ -733,7 +734,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 wrapper.close();
                 emitter.completeWithError(e);
             }
-        }));
+        })));
 
         return emitter;
     }

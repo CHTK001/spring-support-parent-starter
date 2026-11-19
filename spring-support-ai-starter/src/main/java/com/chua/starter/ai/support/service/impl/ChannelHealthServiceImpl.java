@@ -499,7 +499,9 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             }
         }
         Set<String> down = downConnections();
-        if (!down.isEmpty()) log.warn("[ChannelHealthProbe] 通道探针下线 channels={}", down);
+        if (!down.isEmpty()) {
+            log.warn("[ChannelHealthProbe] 通道探针下线 channels={}", down);
+        }
         eventPublisher.publishEvent(new ChannelHealthProbeEvent(this, down, probed, true));
         log.info("[ChannelHealthProbe] 渠道探针完成 connections={}", probed);
         return probed;
@@ -620,8 +622,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         String scheme = authScheme(provider, conn);
         try {
             ChannelHealth h = initOrCreate(connectionId, provider, conn);
-            if ("oauth".equals(scheme)) probeOauth(provider, conn, h);
-            else probeHttp(provider, conn, h);
+            if ("oauth".equals(scheme)) {
+                probeOauth(provider, conn, h);
+            } else {
+                probeHttp(provider, conn, h);
+            }
         } catch (Exception e) {
             markFailure(connectionId, 0, StringUtils.defaultString(e.getMessage(), ""), null, null);
         }
@@ -774,8 +779,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             markFailure(connectionId, 0, "probe (" + urlUsed + "): " + error, provider, conn);
             return;
         }
-        if (status < 300) markSuccess(connectionId, status, latency, provider, conn);
-        else markFailure(connectionId, status, "HTTP " + status, provider, conn);
+        if (status < 300) {
+            markSuccess(connectionId, status, latency, provider, conn);
+        } else {
+            markFailure(connectionId, status, "HTTP " + status, provider, conn);
+        }
     }
 
     // ==================== 标记 ====================
@@ -942,8 +950,11 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
             h.setTotalFailures(h.getTotalFailures() + 1);
             h.setConsecutiveFailures(h.getConsecutiveFailures() + 1);
             h.setConsecutiveSuccesses(0);
-            if (h.getConsecutiveFailures() >= failureToDown()) h.setState(STATE_DOWN);
-            else h.setState(STATE_WARNING);
+            if (h.getConsecutiveFailures() >= failureToDown()) {
+                h.setState(STATE_DOWN);
+            } else {
+                h.setState(STATE_WARNING);
+            }
         }
         saveHealth(h);
         routableCache.invalidate(connectionId);
@@ -1021,9 +1032,15 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     private static String modelsUrl(String baseUrl) {
         String url = baseUrl.trim();
-        if (url.endsWith("/v1beta/openai/")) return url + "models";
-        if (url.endsWith("/v1beta/openai")) return url + "/models";
-        if (url.matches(".*(/v1|/v1-beta|/v2|/v3|/v1beta)$")) return url + "/models";
+        if (url.endsWith("/v1beta/openai/")) {
+            return url + "models";
+        }
+        if (url.endsWith("/v1beta/openai")) {
+            return url + "/models";
+        }
+        if (url.matches(".*(/v1|/v1-beta|/v2|/v3|/v1beta)$")) {
+            return url + "/models";
+        }
         return url + PROBE_PATH;
     }
 
@@ -1036,7 +1053,9 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
      */
     private static String authScheme(SysAccountChannel provider, SysAccountChannelConnection conn) {
         String scheme = conn.getAuthScheme();
-        if (StringUtils.isNotBlank(scheme)) return scheme;
+        if (StringUtils.isNotBlank(scheme)) {
+            return scheme;
+        }
         return provider.getAuthScheme();
     }
 

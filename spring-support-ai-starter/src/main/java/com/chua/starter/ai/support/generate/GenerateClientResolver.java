@@ -10,6 +10,7 @@ import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.ProviderCredentials;
+import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -102,6 +103,9 @@ public class GenerateClientResolver {
      */
     public Resolved<ImageClient> resolveImage(String model, int keyIndex) {
         SysAccountChannel provider = resolveProviderByModel(model);
+        if (provider == null) {
+            provider = resolveKeylessImageProvider(model);
+        }
         if (provider == null) {
             return new Resolved<>(null, null, null);
         }
@@ -278,6 +282,34 @@ public class GenerateClientResolver {
             return provider != null && Boolean.TRUE.equals(provider.getEnabled()) ? provider : null;
         } catch (Exception e) {
             log.warn("[Generate] 解析供应商失败 model={}: {}", model, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 免登录出图模型的兜底供应商解析。
+     *
+     * <p>{@code image-pollinations} 的 {@code flux} / {@code turbo} 没有
+     * {@code sys_account_channel_model} 行，按模型名查不到供应商；但出图本身是通的：
+     * 账号模块的 {@code FreeChannelImageClient}（SPI {@code free-channel}）会按模型名
+     * 反查内置渠道再转交。因此当模型确实由某个免登录出图渠道声明时，把它解析到
+     * 「免费渠道」聚合行，SPI 归一后即为 {@code free-channel}。</p>
+     *
+     * <p>这里只在 {@link KeylessGenerateCatalog#ownsImageModel(String)} 成立时兜底，
+     * 保证任意未配置的模型名不会被误判成可执行。</p>
+     *
+     * @param model 模型名
+     * @return 免费渠道聚合行；不适用时返回 {@code null}
+     */
+    private SysAccountChannel resolveKeylessImageProvider(String model) {
+        if (!KeylessGenerateCatalog.ownsImageModel(model)) {
+            return null;
+        }
+        try {
+            SysAccountChannel free = channelService.findByPlatform(ProviderRouteTargets.FREE_CHANNEL_PLATFORM);
+            return free != null && Boolean.TRUE.equals(free.getEnabled()) ? free : null;
+        } catch (Exception e) {
+            log.warn("[Generate] 解析免费渠道失败 model={}: {}", model, e.getMessage());
             return null;
         }
     }

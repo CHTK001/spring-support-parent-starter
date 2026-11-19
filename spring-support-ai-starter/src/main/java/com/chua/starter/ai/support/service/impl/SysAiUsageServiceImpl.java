@@ -234,6 +234,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
        * @param groupName 分组（可为空）
        * @param provider 提供者（可为空）
        * @param model 模型（可为空）
+       * @param status 调用状态（success/failed，可为空）
        * @param startTime 开始时间（可为空）
        * @param endTime 结束时间（可为空）
        * @param userId 归属用户，为空时列出全部用户明细
@@ -241,11 +242,14 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
        * @param size 每页条数
        * @return 用量明细分页
        */
-    public Page<SysAiUsage> list(String groupName, String provider, String model,
+    public Page<SysAiUsage> list(String groupName, String provider, String model, String status,
                                  LocalDateTime startTime, LocalDateTime endTime, String userId, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
         if (groupName != null) {
             wrapper.eq(SysAiUsage::getSysAiUsageGroupName, groupName);
+        }
+        if (status != null && !status.isBlank()) {
+            wrapper.eq(SysAiUsage::getSysAiUsageStatus, status);
         }
         if (userId != null && !userId.isBlank()) {
               // 与聚合查询同口径：管理员额外可见无主数据（定时同步的外部工具用量），
@@ -409,7 +413,8 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                     r.totalPromptTokens() == null ? 0L : r.totalPromptTokens(),
                     r.totalCompletionTokens() == null ? 0L : r.totalCompletionTokens(),
                     r.totalTokens() == null ? 0L : r.totalTokens(),
-                    r.totalCachedTokens() == null ? 0L : r.totalCachedTokens()
+                    r.totalCachedTokens() == null ? 0L : r.totalCachedTokens(),
+                    0.0
             ));
         }
         return result;
@@ -524,6 +529,77 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         result.sort(Comparator.comparingLong(
                 (com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO p) ->
                         p.totalTokens() == null ? 0L : p.totalTokens()).reversed());
+        return result;
+    }
+
+    /**
+     * 按「天 × 调用状态」聚合用量（失败分析卡的数据源）。
+     *
+     * <p>与 {@link #getCallTypeBreakdown} 同一套样板：明细表数据库端 GROUP BY，
+     * 普通账号只统计本人，管理员在「指定账号」时把无主明细一并并入。状态列
+     * 历史空值归一为 {@code success}；按天升序返回，前端据此画失败率走势、
+     * 圈出失败集中时段。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（含，可为空）
+     * @param endTime   结束时间（含，可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @return 按天升序、同天内按状态升序的聚合点列表
+     */
+    @Override
+    public List<com.chua.starter.ai.support.model.vo.AiUsageFailurePointVO> getFailureBreakdown(
+            String groupName, String provider, String model,
+            LocalDateTime startTime, LocalDateTime endTime, String userId) {
+        String statusExpr = "COALESCE(NULLIF(sys_ai_usage_status, ''), 'success')";
+        String dateExpr = "DATE(sys_ai_usage_call_time)";
+        QueryWrapper<SysAiUsage> wrapper = new QueryWrapper<>();
+        wrapper.select(dateExpr + " AS stat_date",
+                statusExpr + " AS status",
+                "COUNT(*) AS calls",
+                "COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS total_tokens",
+                "COALESCE(SUM(sys_ai_usage_total_cost), 0) AS total_cost");
+        if (groupName != null && !groupName.isBlank()) {
+            wrapper.eq("sys_ai_usage_group_name", groupName);
+        }
+        if (provider != null && !provider.isBlank()) {
+            wrapper.eq("sys_ai_usage_provider", provider);
+        }
+        if (model != null && !model.isBlank()) {
+            wrapper.eq("sys_ai_usage_model", model);
+        }
+        if (userId != null && !userId.isBlank()) {
+            if (includeOrphanEffective()) {
+                wrapper.and(w -> w.eq("sys_ai_usage_user_id", userId)
+                        .or().isNull("sys_ai_usage_user_id"));
+            } else {
+                wrapper.eq("sys_ai_usage_user_id", userId);
+            }
+        }
+        if (startTime != null) {
+            wrapper.ge("sys_ai_usage_call_time", startTime);
+        }
+        if (endTime != null) {
+            wrapper.le("sys_ai_usage_call_time", endTime);
+        }
+        wrapper.groupBy(dateExpr, statusExpr);
+        wrapper.orderByAsc("stat_date", "status");
+        List<Map<String, Object>> rows = usageMapper.selectMaps(wrapper);
+        List<com.chua.starter.ai.support.model.vo.AiUsageFailurePointVO> result =
+                new ArrayList<>(rows == null ? 0 : rows.size());
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                Object date = valueOf(row, "stat_date");
+                Object status = valueOf(row, "status");
+                result.add(new com.chua.starter.ai.support.model.vo.AiUsageFailurePointVO(
+                        date == null ? null : String.valueOf(date),
+                        status == null || String.valueOf(status).isBlank() ? "success" : String.valueOf(status),
+                        longOf(row, "calls"),
+                        longOf(row, "total_tokens"),
+                        doubleOf(row, "total_cost")));
+            }
+        }
         return result;
     }
 

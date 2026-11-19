@@ -1,11 +1,10 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.channel.RechargeRequest;
 import com.chua.payment.support.channel.TransferRequest;
 import com.chua.payment.support.channel.WithdrawRequest;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
 import com.chua.payment.support.dto.WalletOrderQueryRequest;
 import com.chua.payment.support.dto.WalletRechargeDTO;
 import com.chua.payment.support.dto.WalletTransferDTO;
@@ -14,6 +13,8 @@ import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.service.PaymentCallbackUrlResolver;
 import com.chua.payment.support.service.WalletOrderService;
 import com.chua.payment.support.vo.WalletOrderVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,7 +50,7 @@ public class WalletOrderController {
      * @param dto dto
      * @return 创建充值的结果
      */
-    public Result<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
+    public ReturnResult<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
         RechargeRequest request = new RechargeRequest(
                 dto.rechargeNo(),
                 dto.notifyUrl(),
@@ -58,7 +59,7 @@ public class WalletOrderController {
                 dto.amount(),
                 dto.operator(),
                 dto.remark());
-        return Result.success(convert(walletOrderService.createRechargeOrder(request)));
+        return ReturnResult.ok(convert(walletOrderService.createRechargeOrder(request)));
     }
 
     @PostMapping("/transfer")
@@ -68,7 +69,7 @@ public class WalletOrderController {
      * @param dto dto
      * @return 创建转账的结果
      */
-    public Result<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
+    public ReturnResult<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
         TransferRequest request = new TransferRequest(
                 dto.transferNo(),
                 dto.notifyUrl(),
@@ -78,7 +79,7 @@ public class WalletOrderController {
                 dto.amount(),
                 dto.operator(),
                 dto.remark());
-        return Result.success(convert(walletOrderService.createTransferOrder(request)));
+        return ReturnResult.ok(convert(walletOrderService.createTransferOrder(request)));
     }
 
     @PostMapping("/withdraw")
@@ -88,7 +89,7 @@ public class WalletOrderController {
      * @param dto dto
      * @return 创建提现的结果
      */
-    public Result<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
+    public ReturnResult<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
         WithdrawRequest request = new WithdrawRequest(
                 dto.withdrawNo(),
                 dto.notifyUrl(),
@@ -100,7 +101,7 @@ public class WalletOrderController {
                 dto.accountName(),
                 dto.operator(),
                 dto.remark());
-        return Result.success(convert(walletOrderService.createWithdrawOrder(request)));
+        return ReturnResult.ok(convert(walletOrderService.createWithdrawOrder(request)));
     }
 
     @GetMapping("/{orderNo}")
@@ -110,9 +111,9 @@ public class WalletOrderController {
      * @param orderNo 订单号
      * @return 按订单号获取的结果
      */
-    public Result<WalletOrderVO> getByOrderNo(@PathVariable String orderNo) {
+    public ReturnResult<WalletOrderVO> getByOrderNo(@PathVariable String orderNo) {
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
-        return order == null ? Result.error("钱包订单不存在") : Result.success(convert(order));
+        return order == null ? ReturnResult.error("钱包订单不存在") : ReturnResult.ok(convert(order));
     }
 
     @GetMapping("/page")
@@ -127,7 +128,7 @@ public class WalletOrderController {
      * @param status 状态（可空）
      * @return 钱包订单分页结果
      */
-    public Result<PageResult<WalletOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<WalletOrderVO> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
                                                   @RequestParam(required = false) Long userId,
@@ -136,7 +137,7 @@ public class WalletOrderController {
         Page<WalletOrder> page = walletOrderService.page(new WalletOrderQueryRequest(pageNum, pageSize, merchantId, userId, orderType, status));
         Page<WalletOrderVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(this::convert).toList());
-        return Result.success(PageResult.of(voPage));
+        return PageResultUtils.ok(voPage);
     }
 
     /**

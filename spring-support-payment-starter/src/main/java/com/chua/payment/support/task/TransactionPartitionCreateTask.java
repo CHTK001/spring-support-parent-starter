@@ -1,7 +1,9 @@
 package com.chua.payment.support.task;
 
 import com.chua.payment.support.service.OrderPartitionConfigService;
+import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 /**
  * 交易流水分表预创建任务
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
  */
 
 @Component
+@ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class TransactionPartitionCreateTask implements PaymentManagedTask {
     /**
@@ -20,5 +23,11 @@ public class TransactionPartitionCreateTask implements PaymentManagedTask {
     @Override public String taskName() { return "交易流水分表预创建"; }
     @Override public String defaultCron() { return "0 0 3 * * ?"; }
     @Override public String description() { return "根据交易流水分表配置预创建未来分区表"; }
-    @Override public void execute() { orderPartitionConfigService.executeAutoCreate("TRANSACTION"); }
+    @Override
+    @Job(
+            value = "payment.transaction.partition.create",
+            cron = "0 0 3 * * ?",
+            desc = "根据交易流水分表配置预创建未来分区表"
+    )
+    public void execute() { orderPartitionConfigService.executeAutoCreate("TRANSACTION"); }
 }

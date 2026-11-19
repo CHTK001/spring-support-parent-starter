@@ -8,7 +8,7 @@ import java.util.List;
  * 动态接口保存 / 更新请求。
  *
  * <p>接口本体 = {@code sqlText}（「SQL 查询」页签上面的编辑器内容）；
- * 保存后形成一条 {@code ms_datasource_api} 记录，发布后成为可调用接口。
+ * 保存后形成一条 {@code datasource_api} 记录，发布后成为可调用接口。
  * 数据源既可以是普通 JDBC 源，也可以是 {@code type=calcite} 的合并数据源
  * （联合接口，支持跨库 JOIN）。</p>
  *

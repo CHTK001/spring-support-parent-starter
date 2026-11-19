@@ -35,13 +35,15 @@ public class AliyunConfiguration {
         return new AliyunAlipayClientFactory();
     }
 
+    /**
+     * 支付宝客户端。
+     *
+     * @param properties 支付宝配置属性
+     * @param factory    客户端工厂
+     * @return 支付宝客户端
+     */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.aliyun.alipay", name = "enabled", havingValue = "true")
-    /**
-     * alipay客户端
-     * @param properties 属性
-     * @param factory 工厂
-     */
     public AlipayClient alipayClient(AliyunAlipayProperties properties,
                                      AliyunAlipayClientFactory factory) {
         log.info("[阿里云配置][支付宝] 加载配置");

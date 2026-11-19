@@ -5,11 +5,10 @@ import com.chua.starter.common.support.protocol.request.ServletRequest;
 import com.chua.starter.common.support.protocol.request.ServletResponse;
 import com.chua.report.client.starter.job.GlueTypeEnum;
 import com.chua.report.client.starter.job.TriggerParam;
-import com.chua.report.client.starter.job.glue.GlueFactory;
 import com.chua.report.client.starter.job.handler.GlueJobHandler;
-import com.chua.report.client.starter.job.handler.JobHandler;
-import com.chua.report.client.starter.job.handler.JobHandlerFactory;
-import com.chua.report.client.starter.job.handler.ScriptJobHandler;
+import com.chua.starter.job.support.execute.ScriptGlueHandlers;
+import com.chua.starter.job.support.handler.JobHandler;
+import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.report.client.starter.job.thread.JobThread;
 import com.chua.report.client.starter.job.thread.JobThreadFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -98,55 +97,48 @@ public class DefaultJobExecute implements JobExecute {
         }
 
 
-        // 处理Groovy类型任务
-        if (GlueTypeEnum.GLUE_GROOVY == glueTypeEnum) {
+        // 处理片段（GLUE）与脚本类型任务：统一委托 job-starter 的片段执行器解析
+        if (glueTypeEnum == GlueTypeEnum.GLUE_GROOVY || (glueTypeEnum != null && glueTypeEnum.isScript())) {
             // 检查版本是否更新
             if (jobThread != null &&
                     !(jobThread.getHandler() instanceof GlueJobHandler
                             && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.glueUpdatetime())) {
-                removeOldReason = "GLUE代码已更新，终止旧线程";
+                removeOldReason = "GLUE/脚本代码已更新，终止旧线程";
                 jobThread = null;
                 jobHandler = null;
             }
 
             if (jobHandler == null) {
                 try {
-                    JobHandler originJobHandler = GlueFactory.getInstance().loadNewInstance(triggerParam.glueSource());
-                    GlueJobHandler glueJobHandler = new GlueJobHandler(originJobHandler, triggerParam.glueUpdatetime());
-                    result.setJobHandler(glueJobHandler);
-                    return result;
-                } catch (Exception e) {
-                    log.error("GLUE任务加载失败, 任务ID: {}", triggerParam.jobId(), e);
+                    JobHandler resolved = ScriptGlueHandlers.resolve(
+                            jobName(triggerParam),
+                            triggerParam.glueType(),
+                            triggerParam.glueSource(),
+                            triggerParam.glueUpdatetime(),
+                            triggerParam.executorParams(),
+                            null);
+                    result.setJobHandler(new GlueJobHandler(resolved, triggerParam.glueUpdatetime()));
+                } catch (RuntimeException e) {
+                    log.error("GLUE/脚本任务加载失败, 任务ID: {}", triggerParam.jobId(), e);
                     return null;
                 }
             }
         }
 
 
-        // 处理脚本类型任务
-        if (glueTypeEnum != null && glueTypeEnum.isScript()) {
-            // 检查版本是否更新
-            if (jobThread != null &&
-                    !(jobThread.getHandler() instanceof ScriptJobHandler
-                            && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.glueUpdatetime())) {
-                removeOldReason = "脚本代码已更新，终止旧线程";
-                jobThread = null;
-                jobHandler = null;
-            }
-
-            if (jobHandler == null) {
-                ScriptJobHandler scriptJobHandler = new ScriptJobHandler(
-                        triggerParam.jobId(),
-                        triggerParam.glueUpdatetime(),
-                        triggerParam.glueSource(),
-                        glueTypeEnum
-                );
-                result.setJobHandler(scriptJobHandler);
-            }
-        }
-
-
         return result;
+    }
+
+    /**
+     * 片段/脚本任务的任务键：优先用执行器标识，缺失时按任务ID兜底。
+     *
+     * @param triggerParam 触发参数
+     * @return 任务键
+     */
+    private static String jobName(TriggerParam triggerParam) {
+        String executorHandler = triggerParam.executorHandler();
+        return executorHandler == null || executorHandler.isBlank()
+                ? "job-" + triggerParam.jobId() : executorHandler;
     }
 }
 

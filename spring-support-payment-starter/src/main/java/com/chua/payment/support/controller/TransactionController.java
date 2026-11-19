@@ -1,11 +1,12 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.TransactionRecordQueryRequest;
 import com.chua.payment.support.entity.TransactionRecord;
 import com.chua.payment.support.service.TransactionRecordService;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,9 +36,9 @@ public class TransactionController {
        * @param id 标识
        * @return 按id获取的结果
        */
-    public Result<TransactionRecord> getById(@PathVariable Long id) {
+    public ReturnResult<TransactionRecord> getById(@PathVariable Long id) {
         TransactionRecord record = transactionRecordService.getById(id);
-        return record != null ? Result.success(record) : Result.error("流水记录不存在");
+        return record != null ? ReturnResult.ok(record) : ReturnResult.error("流水记录不存在");
     }
 
     @GetMapping("/order/{orderNo}")
@@ -48,10 +49,10 @@ public class TransactionController {
        * @param pageSize page大小
        * @return 交易流水分页结果
        */
-    public Result<PageResult<TransactionRecord>> listByOrderNo(@PathVariable String orderNo,
+    public ReturnPageResult<TransactionRecord> listByOrderNo(@PathVariable String orderNo,
                                                                @RequestParam(defaultValue = "1") int pageNum,
                                                                @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(PageResult.of(transactionRecordService.listByOrderNo(orderNo, pageNum, pageSize)));
+        return PageResultUtils.ok(transactionRecordService.listByOrderNo(orderNo, pageNum, pageSize));
     }
 
     @GetMapping("/merchant/{merchantId}")
@@ -62,10 +63,10 @@ public class TransactionController {
        * @param pageSize page大小
        * @return 交易流水分页结果
        */
-    public Result<PageResult<TransactionRecord>> listByMerchantId(@PathVariable Long merchantId,
+    public ReturnPageResult<TransactionRecord> listByMerchantId(@PathVariable Long merchantId,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
                                                                   @RequestParam(defaultValue = "10") int pageSize) {
-        return Result.success(PageResult.of(transactionRecordService.listByMerchantId(merchantId, pageNum, pageSize)));
+        return PageResultUtils.ok(transactionRecordService.listByMerchantId(merchantId, pageNum, pageSize));
     }
 
     @GetMapping("/page")
@@ -80,7 +81,7 @@ public class TransactionController {
        * @param status          流水状态（可选）
        * @return 交易流水分页结果
        */
-    public Result<PageResult<TransactionRecord>> page(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<TransactionRecord> page(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       @RequestParam(required = false) Long merchantId,
                                                       @RequestParam(required = false) String orderNo,
@@ -88,6 +89,6 @@ public class TransactionController {
                                                       @RequestParam(required = false) Integer status) {
         Page<TransactionRecord> page = transactionRecordService.page(new TransactionRecordQueryRequest(pageNum, pageSize, merchantId
             , orderNo, transactionType, status));
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 }

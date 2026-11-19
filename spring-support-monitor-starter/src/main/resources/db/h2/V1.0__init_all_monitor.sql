@@ -445,37 +445,11 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TShark 抓包数据包';
 
 -- ============================================================
--- Nginx 时序指标
--- ------------------------------------------------------------
--- 数据来源：SSH 读目标机 stub_status 的瞬时/累计值。
--- 粒度：按采集周期（默认 30s）一行，保留窗口由
---      monitor.data.retention.days 控制（默认 1，即滚动 24 小时）。
--- 说明：stub_status 的 accepts/handled/requests 是「worker 启动以来」的累计计数，
---      画趋势必须换算成速率（差值 / 间隔），直接画累计值只会得到单调上升的直线。
---      本表存原始计数，速率在查询侧按相邻两点差值计算。
--- 幂等建表：这里刻意不写 DROP TABLE，改为 CREATE TABLE IF NOT EXISTS。
--- 原先写成「DROP + CREATE」后，一旦 plugin.datasource.script.enable 打开
--- （或本脚本在 sys_database_version 里被记为 FAILED 而每次启动重跑），
--- nginx 指标历史会被整体清空——属于静默数据丢失，因此必须改成幂等形态。
+-- Nginx 时序指标：实体与建表已归位 spring-support-datasource-hub-starter
+-- 新表名 datasource_nginx_metric，DDL 见该模块
+--   db/h2/V1.0__init_all_datasource_hub.sql；
+-- 存量库表名/列名迁移见同目录 V3.0__rename_datasource_hub_tables.sql。
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `ms_monitor_nginx_metric`
-(
-    `id`                             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `ms_monitor_nginx_metric_datasource_id` BIGINT NOT NULL COMMENT 'ms_datasource.id',
-    `ms_monitor_nginx_metric_name`   VARCHAR(64)  NOT NULL COMMENT '指标名: active/accepts/handled/requests/reading/writing/waiting',
-    `ms_monitor_nginx_metric_value`  DOUBLE       NULL COMMENT '指标值（累计类为原始计数）',
-    `ms_monitor_nginx_metric_collect_time` DATETIME NOT NULL COMMENT '采集时刻',
-    PRIMARY KEY (`id`),
-    -- 幂等写入：同一数据源同一指标同一时刻只留一行
-    UNIQUE KEY `ms_monitor_nginx_metric_uk_point` (`ms_monitor_nginx_metric_datasource_id`,
-                                                 `ms_monitor_nginx_metric_name`,
-                                                 `ms_monitor_nginx_metric_collect_time`),
-    -- 趋势查询主路径：按数据源 + 时间范围扫
-    KEY `idx_ms_monitor_nginx_metric_ds_time` (`ms_monitor_nginx_metric_datasource_id`,
-                                              `ms_monitor_nginx_metric_collect_time`)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT 'Nginx 时序指标';
 
 -- ============================================================
 -- 20. 主机内置指标历史（宽表）
@@ -508,7 +482,7 @@ CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
 
 -- ============================================================
 -- 21. 数据同步任务
--- 由 SyncTaskServiceImpl 读写；源/目标均为 ms_datasource 里的 jdbc 类型数据源。
+-- 由 SyncTaskServiceImpl 读写；源/目标均为 datasource_info 里的 jdbc 类型数据源。
 -- 数据面复用本仓 datasync 引擎：JdbcDataSyncAgentSource 读、DefaultFieldMappingConverter 转、
 -- MonitorJdbcSyncSink 写；调度由 Spring ThreadPoolTaskScheduler 驱动（引擎自带调度器有
 -- 「同 topic 只订阅一次」语义，改任务后仍会写旧 Sink，故不采用）。
@@ -518,11 +492,11 @@ CREATE TABLE IF NOT EXISTS `ms_sync_task` (
     `id`                                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `ms_sync_task_name`                     VARCHAR(128) NOT NULL COMMENT '任务名称',
     `ms_sync_task_source_type`              VARCHAR(16)  NOT NULL DEFAULT 'JDBC' COMMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML',
-    `ms_sync_task_source_datasource_id`     BIGINT       DEFAULT NULL COMMENT '源数据源 ID(ms_datasource.id)，仅 JDBC 源使用',
+    `ms_sync_task_source_datasource_id`     BIGINT       DEFAULT NULL COMMENT '源数据源 ID(datasource_info.id)，仅 JDBC 源使用',
     `ms_sync_task_source_sql`               TEXT         DEFAULT NULL COMMENT '源读取 SQL，必须是 SELECT，仅 JDBC 源使用',
     `ms_sync_task_source_path`              VARCHAR(512) DEFAULT NULL COMMENT '源定位：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址',
     `ms_sync_task_source_options`           TEXT         DEFAULT NULL COMMENT '输入源扩展选项 JSON：文件族 {format,delimiter,sheetIndex,pattern,recursive,afterProcess}；HTTP 族 {method,headers,body,encoding,jsonPath,rowSelector,cellSelector,headerRow,timeoutSeconds}',
-    `ms_sync_task_target_datasource_id`     BIGINT       NOT NULL COMMENT '目标数据源 ID(ms_datasource.id)',
+    `ms_sync_task_target_datasource_id`     BIGINT       NOT NULL COMMENT '目标数据源 ID(datasource_info.id)',
     `ms_sync_task_target_table`             VARCHAR(128) NOT NULL COMMENT '目标表名',
     `ms_sync_task_column_mapping`           TEXT         DEFAULT NULL COMMENT '字段映射 JSON 数组 [{"source":"a","target":"b"}]，空表示按同名匹配',
     `ms_sync_task_write_mode`               VARCHAR(16)  NOT NULL DEFAULT 'INSERT' COMMENT '写入模式 INSERT/REPLACE/UPSERT/OVERWRITE',

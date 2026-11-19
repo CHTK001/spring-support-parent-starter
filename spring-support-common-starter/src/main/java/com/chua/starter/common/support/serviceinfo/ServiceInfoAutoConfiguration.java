@@ -64,11 +64,15 @@ public class ServiceInfoAutoConfiguration {
         return new ServiceInfoController();
     }
 
+    /**
+     * 服务信息端点探测器：扫描环境中的端点注册项。
+     *
+     * @param environment 应用环境
+     * @param properties  服务信息配置
+     * @return 服务信息端点探测器
+     */
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
-    /**
-     * 服务信息端点detector
-    */
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
             Environment environment, ServiceInfoProperties properties) {
         /**
@@ -80,12 +84,14 @@ public class ServiceInfoAutoConfiguration {
                 .infrastructureEnabled(properties.isInfrastructure());
     }
 
-    @Bean
     /**
-     * 服务信息banner监听器
-     * @param detector detector
-     * @param properties 属性
+     * 服务信息 banner 监听器：启动后打印服务信息横幅。
+     *
+     * @param detector   端点探测器
+     * @param properties 服务信息配置
+     * @return 服务信息 banner 监听器
      */
+    @Bean
     public ServiceInfoBannerListener serviceInfoBannerListener(
             ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         /**
@@ -101,6 +107,9 @@ public class ServiceInfoAutoConfiguration {
      * 注册 服务信息 认证过滤器 (可选)。
      *
      * <p>当 {@code plugin.service-info.auth.enable=true} 时注册, 否则不创建。</p>
+     *
+     * @param properties 服务信息配置
+     * @return 认证过滤器注册项
      */
     @Bean
     @ConditionalOnProperty(name = "plugin.service-info.auth.enable", havingValue = "true")

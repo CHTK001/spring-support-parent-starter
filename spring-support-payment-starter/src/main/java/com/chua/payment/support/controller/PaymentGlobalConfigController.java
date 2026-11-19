@@ -1,7 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.payment.support.controller;
 
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.PaymentGlobalConfigDTO;
 import com.chua.payment.support.service.PaymentGlobalConfigService;
 import com.chua.payment.support.support.PaymentAccountPrincipalResolver;
@@ -45,9 +45,9 @@ public class PaymentGlobalConfigController {
      * @param request 请求
      * @return 获取配置的结果
      */
-    public Result<PaymentGlobalConfigVO> getConfig(HttpServletRequest request) {
-        Result<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
-        return denied != null ? denied : Result.success(paymentGlobalConfigService.getConfig());
+    public ReturnResult<PaymentGlobalConfigVO> getConfig(HttpServletRequest request) {
+        ReturnResult<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
+        return denied != null ? denied : ReturnResult.ok(paymentGlobalConfigService.getConfig());
     }
 
     @Operation(summary = "保存支付全局配置")
@@ -59,9 +59,9 @@ public class PaymentGlobalConfigController {
      * @param request 请求
      * @return 保存配置的结果
      */
-    public Result<PaymentGlobalConfigVO> saveConfig(@RequestBody PaymentGlobalConfigDTO dto, HttpServletRequest request) {
-        Result<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
-        return denied != null ? denied : Result.success(paymentGlobalConfigService.saveOrUpdate(dto));
+    public ReturnResult<PaymentGlobalConfigVO> saveConfig(@RequestBody PaymentGlobalConfigDTO dto, HttpServletRequest request) {
+        ReturnResult<PaymentGlobalConfigVO> denied = denyIfNecessary(request);
+        return denied != null ? denied : ReturnResult.ok(paymentGlobalConfigService.saveOrUpdate(dto));
     }
 
     /**
@@ -70,13 +70,13 @@ public class PaymentGlobalConfigController {
      * @param request 请求
      * @return 校验不通过时的错误结果；通过时返回 {@code null}
      */
-    private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
+    private <T> ReturnResult<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
         if (!principalResolver.isAdmin(userResume)) {
-            return Result.error(403, "仅超管和管理员可访问");
+            return ReturnResult.error("403", "仅超管和管理员可访问");
         }
         return null;
     }

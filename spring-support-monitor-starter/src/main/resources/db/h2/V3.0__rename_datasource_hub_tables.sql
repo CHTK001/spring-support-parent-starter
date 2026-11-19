@@ -1,0 +1,388 @@
+-- =====================================================================
+-- V3.0__rename_datasource_hub_tables.sql - 数据源中心表名/列名规范化迁移（H2 通道）
+-- 通道: H2（宿主通过 plugin.h2.script-path 指到 db/h2 时执行）
+--
+-- 背景: 本模块 10 张表统一改为 datasource_ 开头，业务列以「完整表名」作前缀，
+--   审计列收敛为 SysBase 通用六列。新装库由重写后的 V1.0 直接建新表；
+--   本脚本负责存量库：把旧表（ms_datasource / ms_datasource_tunnel /
+--   ms_monitor_nginx_metric）改名列名并补齐欠账，再补建 H2 从未建过的 7 张表。
+--
+-- 幂等: 表级操作全部带 ALTER TABLE IF EXISTS（旧表不存在则整条跳过）；
+--   补列走 ADD COLUMN IF NOT EXISTS；CREATE TABLE IF NOT EXISTS 兜底。
+--   H2 不支持 RENAME COLUMN IF EXISTS，因此严格按「先在旧表名下补列、
+--   再逐列改名、最后改表名」的顺序执行：新装库旧表不存在，全部跳过；
+--   存量库执行一次后旧表名消失，重复执行同样全部跳过。
+-- 索引: H2 的 RENAME CONSTRAINT 改不动索引名，这里放弃改索引名
+--   （被改名表上的旧索引随列改名自动跟随，对应用无感知）；也不新建
+--   同列的新名索引，避免存量库出现重复索引。
+-- 已验证（H2 2.4.240 探针）: ALTER TABLE IF EXISTS ... RENAME TO、
+--   ADD COLUMN IF NOT EXISTS（单列单语句）、RENAME COLUMN（列须已存在）、
+--   CREATE [UNIQUE] INDEX IF NOT EXISTS。
+-- =====================================================================
+
+-- ------------------------------------------------------------
+-- 1. ms_datasource -> datasource_info
+-- ------------------------------------------------------------
+-- 1.1 补列：老库缺哪些列取决于当年「多列 ADD COLUMN 裸 ALTER」是否执行成功
+--     （H2 2.4.240 不支持一条 ALTER 逗号连写多个 ADD COLUMN，被 continueOnError
+--     吞掉后这些列可能整体缺失），故对全部可能缺的列一律 IF NOT EXISTS 兜底，
+--     已存在的自然跳过。审计 name/by 四列同步补齐。
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_version` VARCHAR(64) NULL DEFAULT '';
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_connect_latency_ms` BIGINT NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_session_latency_ms` BIGINT NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_last_test_time` DATETIME NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_last_test_ok` INT NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_control_mode` VARCHAR(16) NULL DEFAULT '';
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_control_target` VARCHAR(255) NULL DEFAULT '';
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_driver_jar_id` BIGINT NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `datasource_top_flag` INT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `create_name` VARCHAR(64) NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `create_by` INT NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `update_name` VARCHAR(64) NULL;
+ALTER TABLE IF EXISTS `ms_datasource` ADD COLUMN IF NOT EXISTS `update_by` INT NULL;
+
+-- 1.2 列改名（与实体 @TableField 逐字一致；审计时间列并入 create_time/update_time）
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_name` TO `datasource_info_name`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_type` TO `datasource_info_type`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_version` TO `datasource_info_version`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_host` TO `datasource_info_host`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_port` TO `datasource_info_port`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_database` TO `datasource_info_database`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_username` TO `datasource_info_username`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_password` TO `datasource_info_password`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_remark` TO `datasource_info_remark`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_status` TO `datasource_info_status`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_connect_latency_ms` TO `datasource_info_connect_latency_ms`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_session_latency_ms` TO `datasource_info_session_latency_ms`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_last_test_time` TO `datasource_info_last_test_time`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_last_test_ok` TO `datasource_info_last_test_ok`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_control_mode` TO `datasource_info_control_mode`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_control_target` TO `datasource_info_control_target`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_driver_jar_id` TO `datasource_info_driver_jar_id`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_top_flag` TO `datasource_info_top_flag`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_driver_class_name` TO `datasource_info_driver_class_name`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_create_time` TO `create_time`;
+ALTER TABLE IF EXISTS `ms_datasource` RENAME COLUMN `datasource_update_time` TO `update_time`;
+
+-- 1.3 表改名
+ALTER TABLE IF EXISTS `ms_datasource` RENAME TO `datasource_info`;
+
+-- 1.4 兜底建表（旧表缺失的异常库直接建新表；正常库表已存在则跳过）
+CREATE TABLE IF NOT EXISTS `datasource_info`
+(
+    `id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_info_name`   VARCHAR(128) NOT NULL COMMENT '数据源名称',
+    `datasource_info_type`   VARCHAR(32)  NOT NULL COMMENT '数据源类型(jdbc/redis/influxdb/neo4j/nacos/zookeeper/kafka/nginx/etcd/prometheus/mongodb)',
+    `datasource_info_version` VARCHAR(64) NULL DEFAULT '' COMMENT '版本：influxdb 存大版本 2/3；其余类型存探测到的服务端版本',
+    `datasource_info_host`   VARCHAR(255) NULL DEFAULT '' COMMENT '主机地址',
+    `datasource_info_port`   INT          NULL COMMENT '端口，空则按类型默认',
+    `datasource_info_database` VARCHAR(512) NULL DEFAULT '' COMMENT '库名/命名空间；jdbc 可存完整 JDBC URL',
+    `datasource_info_username` VARCHAR(128) NULL DEFAULT '' COMMENT '用户名',
+    `datasource_info_password` VARCHAR(512) NULL DEFAULT '' COMMENT '口令',
+    `datasource_info_remark` VARCHAR(512) NULL DEFAULT '' COMMENT '备注',
+    `datasource_info_status` INT          NULL DEFAULT 1 COMMENT '状态 - 0:停用, 1:启用；停用的数据源不允许被流程引用',
+    `datasource_info_connect_latency_ms` BIGINT NULL COMMENT '连接延迟(毫秒)，最近一次测试回写',
+    `datasource_info_session_latency_ms` BIGINT NULL COMMENT '会话延迟(毫秒)，最近一次测试回写',
+    `datasource_info_last_test_time` DATETIME NULL COMMENT '最近一次连通性测试时间',
+    `datasource_info_last_test_ok` INT NULL COMMENT '最近一次测试是否连通 - 0:失败, 1:成功',
+    `datasource_info_control_mode` VARCHAR(16) NULL DEFAULT '' COMMENT '进程控制方式 - systemd:systemctl托管, local:本地目录裸进程；空为自动探测',
+    `datasource_info_control_target` VARCHAR(255) NULL DEFAULT '' COMMENT '托管单元名(control_mode=systemd 时使用)，空则自动探测',
+    `datasource_info_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(datasource_jdbc_driver_jar.id)，空=用内置驱动',
+    `datasource_info_top_flag` INT NULL DEFAULT 0 COMMENT '置顶标记 - 1:置顶, 0:普通',
+    `datasource_info_driver_class_name` VARCHAR(255) NULL DEFAULT '' COMMENT 'JDBC 驱动类名，jdbc 类型非 MySQL 时可显式指定',
+    `create_name`            VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`              INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`            DATETIME     NULL DEFAULT NULL COMMENT '创建时间',
+    `update_name`            VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`              INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`            DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据源台账';
+
+-- ------------------------------------------------------------
+-- 2. ms_datasource_tunnel -> datasource_tunnel
+-- ------------------------------------------------------------
+-- 2.1 补审计列（原表只有裸名 create_time/update_time）
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` ADD COLUMN IF NOT EXISTS `create_name` VARCHAR(64) NULL;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` ADD COLUMN IF NOT EXISTS `create_by` INT NULL;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` ADD COLUMN IF NOT EXISTS `update_name` VARCHAR(64) NULL;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` ADD COLUMN IF NOT EXISTS `update_by` INT NULL;
+
+-- 2.2 列改名
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `datasource_id` TO `datasource_tunnel_datasource_id`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `tunnel_name` TO `datasource_tunnel_name`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `tunnel_type` TO `datasource_tunnel_type`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_host` TO `datasource_tunnel_ssh_host`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_port` TO `datasource_tunnel_ssh_port`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_username` TO `datasource_tunnel_ssh_username`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_auth_type` TO `datasource_tunnel_ssh_auth_type`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_password` TO `datasource_tunnel_ssh_password`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_private_key` TO `datasource_tunnel_ssh_private_key`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `ssh_passphrase` TO `datasource_tunnel_ssh_passphrase`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `local_port` TO `datasource_tunnel_local_port`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `remote_host` TO `datasource_tunnel_remote_host`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `remote_port` TO `datasource_tunnel_remote_port`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `bind_address` TO `datasource_tunnel_bind_address`;
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME COLUMN `tunnel_status` TO `datasource_tunnel_status`;
+
+-- 2.3 表改名
+ALTER TABLE IF EXISTS `ms_datasource_tunnel` RENAME TO `datasource_tunnel`;
+
+-- 2.4 兜底建表
+CREATE TABLE IF NOT EXISTS `datasource_tunnel`
+(
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_tunnel_datasource_id` BIGINT NOT NULL COMMENT '数据源 ID(datasource_info.id)',
+    `datasource_tunnel_name` VARCHAR(128) NULL DEFAULT '' COMMENT '隧道名称',
+    `datasource_tunnel_type` VARCHAR(16)  NOT NULL COMMENT '隧道类型 - LOCAL:本地转发(-L), REMOTE:反向转发(-R), DYNAMIC:动态SOCKS5',
+    `datasource_tunnel_ssh_host` VARCHAR(255) NOT NULL COMMENT 'SSH 服务器地址',
+    `datasource_tunnel_ssh_port` INT          NULL COMMENT 'SSH 端口，空则 22',
+    `datasource_tunnel_ssh_username` VARCHAR(128) NULL DEFAULT '' COMMENT 'SSH 用户名',
+    `datasource_tunnel_ssh_auth_type` VARCHAR(16) NULL DEFAULT 'PASSWORD' COMMENT '认证方式 - PASSWORD:口令, KEY:私钥',
+    `datasource_tunnel_ssh_password` VARCHAR(512) NULL DEFAULT '' COMMENT 'SSH 口令（ssh_auth_type=PASSWORD 时使用）',
+    `datasource_tunnel_ssh_private_key` TEXT     NULL COMMENT 'SSH 私钥内容（ssh_auth_type=KEY 时使用）',
+    `datasource_tunnel_ssh_passphrase` VARCHAR(512) NULL DEFAULT '' COMMENT '私钥口令',
+    `datasource_tunnel_local_port` INT          NULL COMMENT '本地端口，空则自动分配',
+    `datasource_tunnel_remote_host` VARCHAR(255) NULL DEFAULT '' COMMENT '远端目标主机（DYNAMIC 时为空）',
+    `datasource_tunnel_remote_port` INT          NULL COMMENT '远端目标端口（DYNAMIC 时为空）',
+    `datasource_tunnel_bind_address` VARCHAR(128) NULL DEFAULT '127.0.0.1' COMMENT '本地绑定地址',
+    `datasource_tunnel_status` INT          NULL DEFAULT 0 COMMENT '状态 - 0:停用, 1:启用',
+    `create_name`     VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`       INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`     DATETIME     NULL DEFAULT NULL COMMENT '创建时间',
+    `update_name`     VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`       INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`     DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_datasource_tunnel_ds` (`datasource_tunnel_datasource_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据源 SSH 隧道配置（高级配置）';
+
+-- ------------------------------------------------------------
+-- 3. ms_monitor_nginx_metric -> datasource_nginx_metric
+--    （原建表语句在 monitor 的 H2 V1.0 里，随实体归位到本模块）
+-- ------------------------------------------------------------
+-- 3.1 补审计列（原表没有任何审计列）
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` ADD COLUMN IF NOT EXISTS `create_name` VARCHAR(64) NULL;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` ADD COLUMN IF NOT EXISTS `create_by` INT NULL;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` ADD COLUMN IF NOT EXISTS `create_time` DATETIME NULL;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` ADD COLUMN IF NOT EXISTS `update_name` VARCHAR(64) NULL;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` ADD COLUMN IF NOT EXISTS `update_by` INT NULL;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` ADD COLUMN IF NOT EXISTS `update_time` DATETIME NULL;
+
+-- 3.2 列改名（指标值列仍不叫 value：value 是 H2 保留字，属性名 metricValue 规避之）
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` RENAME COLUMN `ms_monitor_nginx_metric_datasource_id` TO `datasource_nginx_metric_datasource_id`;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` RENAME COLUMN `ms_monitor_nginx_metric_name` TO `datasource_nginx_metric_name`;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` RENAME COLUMN `ms_monitor_nginx_metric_value` TO `datasource_nginx_metric_value`;
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` RENAME COLUMN `ms_monitor_nginx_metric_collect_time` TO `datasource_nginx_metric_collect_time`;
+
+-- 3.3 表改名
+ALTER TABLE IF EXISTS `ms_monitor_nginx_metric` RENAME TO `datasource_nginx_metric`;
+
+-- 3.4 兜底建表
+CREATE TABLE IF NOT EXISTS `datasource_nginx_metric`
+(
+    `id`                             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_nginx_metric_datasource_id` BIGINT NOT NULL COMMENT '数据源 id（datasource_info.id）',
+    `datasource_nginx_metric_name`   VARCHAR(64)  NOT NULL COMMENT '指标名: active/accepts/handled/requests/reading/writing/waiting',
+    `datasource_nginx_metric_value`  DOUBLE       NULL COMMENT '指标值（累计类为原始计数）',
+    `datasource_nginx_metric_collect_time` DATETIME NOT NULL COMMENT '采集时刻',
+    `create_name`                    VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`                      INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`                    DATETIME     NULL DEFAULT NULL COMMENT '创建时间',
+    `update_name`                    VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`                      INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`                    DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    -- 幂等写入：同一数据源同一指标同一时刻只留一行
+    UNIQUE KEY `datasource_nginx_metric_uk_point` (`datasource_nginx_metric_datasource_id`,
+                                                  `datasource_nginx_metric_name`,
+                                                  `datasource_nginx_metric_collect_time`),
+    -- 趋势查询主路径：按数据源 + 时间范围扫
+    KEY `idx_datasource_nginx_metric_ds_time` (`datasource_nginx_metric_datasource_id`,
+                                              `datasource_nginx_metric_collect_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'Nginx 时序指标';
+
+-- ------------------------------------------------------------
+-- 4. datasource_api：H2 从未建过此表（实体一直存在但没有 DDL），直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_api`
+(
+    `id`                      BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_api_name`     VARCHAR(128) NOT NULL COMMENT '接口名',
+    `datasource_api_path`     VARCHAR(255) NOT NULL COMMENT '对外地址段（同数据源下唯一），如 /order/summary',
+    `datasource_api_method`   VARCHAR(16)  NULL DEFAULT 'GET' COMMENT 'HTTP 方法 - GET/POST/PUT',
+    `datasource_api_datasource_id` BIGINT  NOT NULL DEFAULT 0 COMMENT '绑定的数据源 id(datasource_info.id)，0=应用默认主数据源',
+    `datasource_api_description` VARCHAR(512) NULL DEFAULT '' COMMENT '描述',
+    `datasource_api_sql_text` LONGTEXT     NULL COMMENT '保存的查询语句（接口本体）',
+    `datasource_api_param_defs` TEXT       NULL COMMENT '参数定义（JSON 数组文本）：[{name,type,required,example}]',
+    `datasource_api_auth_mode` VARCHAR(32) NULL DEFAULT 'none' COMMENT '鉴权方式 - oauth/appkey/none',
+    `datasource_api_cache_ttl_seconds` INT NULL DEFAULT 0 COMMENT '结果缓存秒数；0=不缓存，>0 开启',
+    `datasource_api_publish_mode` VARCHAR(16) NULL DEFAULT 'embedded' COMMENT '发布模式 - embedded:动态注册进当前应用, standalone:独立 Server',
+    `datasource_api_standalone_port` INT NULL DEFAULT 0 COMMENT '独立 Server 监听端口（standalone 模式使用；0=默认端口）',
+    `datasource_api_enabled`  INT          NULL DEFAULT 1 COMMENT '是否启用 - 0:停用, 1:启用',
+    `create_name`             VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`               INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`             DATETIME     NULL DEFAULT NULL COMMENT '创建时间',
+    `update_name`             VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`               INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`             DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据源动态接口定义';
+
+CREATE INDEX IF NOT EXISTS `idx_datasource_api_ds` ON `datasource_api` (`datasource_api_datasource_id`);
+
+-- ------------------------------------------------------------
+-- 5. datasource_jdbc_driver_jar：H2 从未建过此表，直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_jdbc_driver_jar`
+(
+    `id`                 BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_jdbc_driver_jar_jar_name` VARCHAR(255) NOT NULL COMMENT '上传时的原始文件名',
+    `datasource_jdbc_driver_jar_stored_name` VARCHAR(255) NOT NULL COMMENT '落盘文件名（含内容指纹，避免同名覆盖）',
+    `datasource_jdbc_driver_jar_driver_class_name` VARCHAR(255) NOT NULL COMMENT '驱动类全名，如 org.h2.Driver；中间件 jar 为 SPI 实现类全名',
+    `datasource_jdbc_driver_jar_kind` VARCHAR(32) NULL DEFAULT 'jdbc' COMMENT 'jar 类别：jdbc / middleware（单 jar 的中间件客户端）',
+    `datasource_jdbc_driver_jar_provider_name` VARCHAR(64) NULL DEFAULT '' COMMENT '中间件类型名，如 kafka；仅 kind=middleware 有值',
+    `datasource_jdbc_driver_jar_size` BIGINT       NULL COMMENT '字节数',
+    `datasource_jdbc_driver_jar_sha256` VARCHAR(64) NULL DEFAULT '' COMMENT '内容 sha256',
+    `datasource_jdbc_driver_jar_remark` VARCHAR(512) NULL DEFAULT '' COMMENT '备注',
+    `create_name`        VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`          INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`        DATETIME     NULL DEFAULT NULL COMMENT '上传时间',
+    `update_name`        VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`          INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`        DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_datasource_jdbc_driver_jar_stored` (`datasource_jdbc_driver_jar_stored_name`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'JDBC 驱动 jar 库';
+
+-- ------------------------------------------------------------
+-- 6. datasource_nginx_dashboard：H2 从未建过此表，直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_nginx_dashboard`
+(
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_nginx_dashboard_datasource_id` BIGINT NOT NULL COMMENT '数据源 id（datasource_info.id，nginx 类型）',
+    `datasource_nginx_dashboard_name` VARCHAR(128) NULL DEFAULT '' COMMENT '看板名称',
+    `datasource_nginx_dashboard_config` LONGTEXT   NULL COMMENT '看板布局配置（JSON 文本：widgets/grid/卡片配置）',
+    `datasource_nginx_dashboard_embed_token` VARCHAR(64) NULL DEFAULT '' COMMENT '嵌入令牌（公开只读链接用，随机十六进制）',
+    `create_name`      VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`        INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`      DATETIME     NULL DEFAULT NULL COMMENT '创建时间',
+    `update_name`      VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`        INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`      DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_datasource_nginx_dashboard_ds` (`datasource_nginx_dashboard_datasource_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'Nginx 自定义看板（布局 JSON + 嵌入令牌）';
+
+CREATE INDEX IF NOT EXISTS `idx_datasource_nginx_dashboard_token` ON `datasource_nginx_dashboard` (`datasource_nginx_dashboard_embed_token`);
+
+-- ------------------------------------------------------------
+-- 7. datasource_prometheus_dashboard：H2 从未建过此表，直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_prometheus_dashboard`
+(
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_prometheus_dashboard_datasource_id` BIGINT NOT NULL COMMENT '数据源 id（datasource_info.id，prometheus 类型）',
+    `datasource_prometheus_dashboard_name` VARCHAR(128) NULL DEFAULT '' COMMENT '看板名称',
+    `datasource_prometheus_dashboard_config` LONGTEXT NULL COMMENT '看板布局配置（JSON 文本：widgets/grid/卡片配置）',
+    `datasource_prometheus_dashboard_embed_token` VARCHAR(64) NULL DEFAULT '' COMMENT '嵌入令牌（公开只读链接用，随机十六进制）',
+    `create_name`      VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`        INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`      DATETIME     NULL DEFAULT NULL COMMENT '创建时间',
+    `update_name`      VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`        INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`      DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_datasource_prometheus_dashboard_ds` (`datasource_prometheus_dashboard_datasource_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'Prometheus 自定义看板（布局 JSON + 嵌入令牌）';
+
+CREATE INDEX IF NOT EXISTS `idx_datasource_prometheus_dashboard_token` ON `datasource_prometheus_dashboard` (`datasource_prometheus_dashboard_embed_token`);
+
+-- ------------------------------------------------------------
+-- 8. datasource_oper_log：H2 从未建过此表，直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_oper_log`
+(
+    `id`             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_oper_log_datasource_id` BIGINT NOT NULL COMMENT '数据源 id（datasource_info.id）',
+    `datasource_oper_log_datasource_name` VARCHAR(128) NULL DEFAULT '' COMMENT '数据源名称（冗余，数据源删除后仍可读）',
+    `datasource_oper_log_action` VARCHAR(64) NOT NULL COMMENT '操作码：CREATE/UPDATE/DELETE/TEST/TUNNEL_* /CONSOLE_* 等',
+    `datasource_oper_log_action_name` VARCHAR(128) NULL DEFAULT '' COMMENT '操作中文名',
+    `datasource_oper_log_target` VARCHAR(255) NULL DEFAULT '' COMMENT '操作对象（库名/表名/隧道名），可空',
+    `datasource_oper_log_detail` TEXT         NULL COMMENT '补充说明',
+    `datasource_oper_log_success` TINYINT      NULL COMMENT '1 成功 / 0 失败 / NULL 未判定',
+    `datasource_oper_log_cost_ms` BIGINT       NULL COMMENT '耗时（毫秒）',
+    `datasource_oper_log_operator` VARCHAR(64) NULL DEFAULT '' COMMENT '操作人',
+    `datasource_oper_log_client_ip` VARCHAR(64) NULL DEFAULT '' COMMENT '客户端 IP',
+    `datasource_oper_log_request_url` VARCHAR(512) NULL DEFAULT '' COMMENT '请求路径（用于回溯与排查）',
+    `create_name`    VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`      INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`    DATETIME     NOT NULL COMMENT '操作时间',
+    `update_name`    VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`      INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`    DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据源中心操作日志';
+
+CREATE INDEX IF NOT EXISTS `idx_datasource_oper_log_ds_time` ON `datasource_oper_log` (`datasource_oper_log_datasource_id`, `create_time`);
+CREATE INDEX IF NOT EXISTS `idx_datasource_oper_log_action` ON `datasource_oper_log` (`datasource_oper_log_datasource_id`, `datasource_oper_log_action`);
+
+-- ------------------------------------------------------------
+-- 9. datasource_metric：H2 从未建过此表，直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_metric`
+(
+    `id`               BIGINT      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_metric_datasource_id` BIGINT NOT NULL COMMENT '数据源 id（datasource_info.id）',
+    `datasource_metric_datasource_type` VARCHAR(32) NULL DEFAULT '' COMMENT '数据类型（冗余，便于按类型聚合）',
+    `datasource_metric_success` TINYINT     NULL COMMENT '1 连通 / 0 不通 / NULL 未判定',
+    `datasource_metric_connect_latency` BIGINT NULL COMMENT '建连耗时（毫秒）',
+    `datasource_metric_session_latency` BIGINT NULL COMMENT '取会话耗时（毫秒）',
+    `datasource_metric_connection_count` BIGINT NULL COMMENT '采样时刻客户端连接数（取不到为 NULL）',
+    `datasource_metric_slow_queries` BIGINT     NULL COMMENT '累计慢查询数（取不到为 NULL）',
+    `datasource_metric_threads_running` BIGINT NULL COMMENT '正在执行的线程数（取不到为 NULL）',
+    `datasource_metric_questions` BIGINT         NULL COMMENT '累计提问次数（取不到为 NULL）',
+    `datasource_metric_uptime` BIGINT             NULL COMMENT '服务器已运行秒数（取不到为 NULL）',
+    `datasource_metric_max_used_connections` BIGINT NULL COMMENT '历史峰值客户端连接数（取不到为 NULL）',
+    `datasource_metric_instance_memory` BIGINT    NULL COMMENT '实例内存占用字节数（取不到为 NULL）',
+    `datasource_metric_tunneled` TINYINT          NULL COMMENT '1 经 SSH 隧道 / 0 直连 / NULL 未判定',
+    `datasource_metric_error_message` VARCHAR(512) NULL DEFAULT '' COMMENT '失败原因（成功时为空）',
+    `create_name`      VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`        INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`      DATETIME     NOT NULL COMMENT '采样时刻',
+    `update_name`      VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`        INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`      DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据源连通性指标采样';
+
+CREATE INDEX IF NOT EXISTS `idx_datasource_metric_ds_time` ON `datasource_metric` (`datasource_metric_datasource_id`, `create_time`);
+CREATE INDEX IF NOT EXISTS `idx_datasource_metric_time` ON `datasource_metric` (`create_time`);
+
+-- ------------------------------------------------------------
+-- 10. datasource_schema_snapshot：H2 从未建过此表，直接补建
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `datasource_schema_snapshot`
+(
+    `id`                      BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `datasource_schema_snapshot_ds_id` BIGINT NOT NULL COMMENT '数据源 ID（datasource_info.id）',
+    `datasource_schema_snapshot_database` BIGINT NULL DEFAULT 0 COMMENT '数据库 ID（multi-database 数据源用，空=当前库）',
+    `datasource_schema_snapshot_table` VARCHAR(255) NOT NULL COMMENT '表名',
+    `datasource_schema_snapshot_name` VARCHAR(255) NOT NULL COMMENT '快照名称（手动拍时由用户填写，自动拍时后端生成）',
+    `datasource_schema_snapshot_creator` VARCHAR(64) NULL DEFAULT 'SYSTEM' COMMENT '创建人（手动拍；自动拍=SYSTEM）',
+    `datasource_schema_snapshot_snapshot` TEXT   NOT NULL COMMENT '表结构快照（JSON：ddl/indexes/foreignKeys/columns/options）',
+    `datasource_schema_snapshot_deleted` INT     NULL DEFAULT 0 COMMENT '逻辑删除 0/1',
+    `create_name`             VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
+    `create_by`               INT          NULL DEFAULT NULL COMMENT '创建人',
+    `create_time`             DATETIME     NOT NULL COMMENT '快照创建时间（拍快照时刻）',
+    `update_name`             VARCHAR(64)  NULL DEFAULT NULL COMMENT '更新人姓名',
+    `update_by`               INT          NULL DEFAULT NULL COMMENT '更新人',
+    `update_time`             DATETIME     NULL DEFAULT NULL COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '表结构版本快照（DDL 快照 + 回滚）';
+
+CREATE INDEX IF NOT EXISTS `idx_datasource_schema_snapshot_ds_table_time` ON `datasource_schema_snapshot` (`datasource_schema_snapshot_ds_id`, `datasource_schema_snapshot_table`, `create_time`);
+CREATE INDEX IF NOT EXISTS `idx_datasource_schema_snapshot_creator` ON `datasource_schema_snapshot` (`datasource_schema_snapshot_creator`);
+CREATE INDEX IF NOT EXISTS `idx_datasource_schema_snapshot_table_created` ON `datasource_schema_snapshot` (`datasource_schema_snapshot_table`, `create_time`);
+

@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import com.chua.common.support.utils.IdUtils;
 
 /**
  * 钱包订单服务实现，负责钱包充值、转账、提现等资金流水订单的管理。
@@ -280,7 +280,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
      * @return 生成的钱包订单号
      */
     private String generateOrderNo(String prefix) {
-        return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return IdUtils.createOrderNo(prefix);
     }
 
     /**

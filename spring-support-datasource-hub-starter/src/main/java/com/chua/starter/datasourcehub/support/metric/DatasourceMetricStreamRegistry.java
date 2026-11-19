@@ -105,7 +105,7 @@ public class DatasourceMetricStreamRegistry {
      * 当前正在被观看的数据源 id 集合。
      *
      * <p>调度器只探测这些 id —— 这是「有人看才采」的那一半；
-     * 「看过之后仍要能查历史」由 {@code ms_datasource_metric} 落库负责。</p>
+     * 「看过之后仍要能查历史」由 {@code datasource_metric} 落库负责。</p>
      *
      * @return 订阅中的数据源 id
      */

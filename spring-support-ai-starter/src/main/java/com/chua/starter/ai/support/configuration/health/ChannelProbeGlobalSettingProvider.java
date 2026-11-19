@@ -12,7 +12,7 @@ import java.util.List;
  * <p>渠道健康探针默认按 {@code health.channel_health_probe_interval_sec} 统一节奏跑，
  * 但各渠道的上游限流阈值、凭据寿命与免费额度刷新时间差别很大：免费额度渠道需要勤探
  * （额度用尽就该下线），付费渠道探得太勤只会撞限流。本分组把间隔下沉到「每个渠道一条」，
- * 由 {@link com.chua.starter.ai.support.manage.schedule.ChannelProbeWheelTask} 用时间轮
+ * 由 {@link com.chua.starter.ai.support.schedule.ChannelProbeWheelTask} 用时间轮
  * （{@code com.chua.common.support.task.timer.Timer}）按各自的周期独立调度。</p>
  *
  * <p>字段命名约定：{@code channel_probe_interval_sec.<channel>}，值为秒；缺失或 0 表示

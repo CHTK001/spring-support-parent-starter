@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.chat;
 import com.chua.starter.ai.support.model.AiMemoryRecallDTO;
 import com.chua.starter.ai.support.service.SysAiMemoryService;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.common.support.log.MdcWrap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -107,12 +108,12 @@ public class ChatMemorySupport {
         if (userId == null || userId.isBlank() || fullReply == null || fullReply.isBlank()) {
             return;
         }
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 memoryService.extractAndRecord(userId, conversationId, userInput, fullReply, model);
             } catch (Exception e) {
                 log.warn("[ChatMemory] 轮次记忆抽取失败 conversation={}: {}", conversationId, e.getMessage());
             }
-        }));
+        })));
     }
 }

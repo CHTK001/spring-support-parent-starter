@@ -2066,5 +2066,30 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_credit_history` (
     KEY `idx_credit_history_synced` (`sys_ai_provider_credit_history_synced_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='供应商余额历史（追加写，供余额趋势图）';
 
+-- =====================================================================
+-- 供应商余额告警推送留痕表
+--
+-- 为什么建表：告警经消息中心 broadcast 投递成功后，「发没发过、上次
+-- 什么时候发的、推给了谁」此前只进日志，重启即失。本表在投递成功后
+-- 追加一行留痕（低量告警 WARN / 恢复通知 RECOVERY），供余额面板的
+-- 告警设置浮层展示「上次推送时间」，也便于事后核对。投递失败不写——
+-- 留痕只记真实发出去的推送。
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS `sys_ai_provider_credit_alert_log` (
+    `sys_ai_provider_credit_alert_log_id`            BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    `sys_ai_provider_credit_alert_log_provider_id`   VARCHAR(128)  NOT NULL COMMENT '供应商 ID',
+    `sys_ai_provider_credit_alert_log_type`          VARCHAR(16)   NOT NULL COMMENT '推送类型（WARN=低量告警 / RECOVERY=恢复通知）',
+    `sys_ai_provider_credit_alert_log_remain`        DOUBLE        NULL COMMENT '推送时的剩余余额',
+    `sys_ai_provider_credit_alert_log_threshold`     DOUBLE        NULL COMMENT '推送时的告警阈值',
+    `sys_ai_provider_credit_alert_log_receivers`     VARCHAR(500)  NULL COMMENT '接收人用户 ID（逗号分隔）',
+    `sys_ai_provider_credit_alert_log_title`         VARCHAR(200)  NULL COMMENT '消息标题（与推送进消息中心的标题一致）',
+    `sys_ai_provider_credit_alert_log_content`       VARCHAR(1000) NULL COMMENT '消息摘要（与推送进消息中心的内容一致）',
+    `sys_ai_provider_credit_alert_log_pushed_at`     BIGINT        NOT NULL COMMENT '推送时间（毫秒）',
+    `create_time`                                    BIGINT        NULL COMMENT '创建时间（毫秒）',
+    PRIMARY KEY (`sys_ai_provider_credit_alert_log_id`),
+    KEY `idx_credit_alert_provider_pushed` (`sys_ai_provider_credit_alert_log_provider_id`, `sys_ai_provider_credit_alert_log_pushed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='供应商余额告警推送留痕（broadcast 成功后追加一行）';
+
 
 

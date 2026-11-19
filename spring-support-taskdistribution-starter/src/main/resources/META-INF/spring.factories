@@ -1,3 +1,4 @@
-# 任务分发自动配置
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.chua.starter.taskdistribution.support.configuration.TaskDistributionAutoConfiguration
+# 任务分发模块的自动装配已迁移到 Boot 3+ 标准文件：
+# META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+# Spring Boot 3.0 起不再读取本文件中的 EnableAutoConfiguration 键（原配置已失效），
+# 保留本文件仅用于承载未来可能需要的 EnvironmentPostProcessor 等非自动装配工厂键。

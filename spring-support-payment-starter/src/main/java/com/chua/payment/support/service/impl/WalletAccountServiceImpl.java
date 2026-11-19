@@ -34,7 +34,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import com.chua.common.support.utils.IdUtils;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -843,7 +843,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
       * @return 返回值
      */
     private String generateBizNo(String prefix) {
-        return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return IdUtils.createOrderNo(prefix);
     }
 
      /**

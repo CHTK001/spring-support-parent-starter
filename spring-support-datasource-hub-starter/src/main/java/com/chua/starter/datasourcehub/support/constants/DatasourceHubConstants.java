@@ -31,7 +31,7 @@ public final class DatasourceHubConstants {
     /**
      * duckdb 类型标识。
      *
-     * <p>单文件嵌入式库：没有主机、没有端口、没有服务端进程，{@code datasource_database}
+     * <p>单文件嵌入式库：没有主机、没有端口、没有服务端进程，{@code datasource_info_database}
      * 存的是**文件路径**（或 {@code :memory:}）。走 JDBC 复用同一套管理台，
      * 但探测与建连都必须按「文件库」处理 —— 不设 TCP 超时属性，也不做 TCP 探活。</p>
      */
@@ -41,7 +41,7 @@ public final class DatasourceHubConstants {
      * calcite 合并类型标识。
      *
      * <p>「合并数据源」产生的特殊记录：自身<b>不支持编辑</b>，内部在
-     * {@code datasource_database} 存 {@code {"members":[id,...]}} 成员 JSON，
+     * {@code datasource_info_database} 存 {@code {"members":[id,...]}} 成员 JSON，
      * host/port/username/password 均为空。建连时按成员逐个走
      * {@code DatasourceService.connection(memberId)} 再用 Calcite 装配成联邦连接：
      * 每次打开控制台都会重新装配（成员调整后重开即生效）。</p>
@@ -122,7 +122,7 @@ public final class DatasourceHubConstants {
     /**
      * influxdb 类型标识。
      *
-     * <p>服务端大版本（{@code datasource_version}）只对 InfluxDB 有意义：
+     * <p>服务端大版本（{@code datasource_info_version}）只对 InfluxDB 有意义：
      * {@code 2}=Flux/Bucket，{@code 3}=SQL/InfluxQL/Database。</p>
      */
     public static final String DS_TYPE_INFLUXDB = "influxdb";

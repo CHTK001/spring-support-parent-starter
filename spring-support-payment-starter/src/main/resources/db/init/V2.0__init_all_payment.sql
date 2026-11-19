@@ -386,6 +386,8 @@ CREATE TABLE IF NOT EXISTS `pay_wechat_pay_score_order` (
   INDEX `idx_pay_wechat_pay_score_state` (`pay_wechat_pay_score_order_state`, `pay_wechat_pay_score_order_update_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微信支付分订单表';
 
+-- [Deprecated] 内置调度引擎配置表：调度已收敛到 spring-support-job-starter 的 @Job 体系（R4 归口）。
+-- 本表不再有代码读写，保留 DDL 仅为兼容存量部署，新部署可忽略。
 CREATE TABLE IF NOT EXISTS `pay_scheduler_config` (
   `pay_scheduler_config_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
   `pay_scheduler_config_task_key` VARCHAR(64) NOT NULL COMMENT '任务编码',
@@ -401,7 +403,7 @@ CREATE TABLE IF NOT EXISTS `pay_scheduler_config` (
   `pay_scheduler_config_update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   UNIQUE KEY `uk_pay_scheduler_config_task_key` (`pay_scheduler_config_task_key`),
   INDEX `idx_pay_scheduler_config_enabled` (`pay_scheduler_config_enabled`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付调度任务配置表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='[Deprecated]支付调度任务配置表(内置引擎已下线,归口job-starter)';
 
 CREATE TABLE IF NOT EXISTS `pay_partition_config` (
   `pay_partition_config_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',

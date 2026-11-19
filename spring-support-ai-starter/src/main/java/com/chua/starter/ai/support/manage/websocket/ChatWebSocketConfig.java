@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.websocket;
 
+import com.chua.starter.common.support.log.MdcWebSocketHandlerDecorator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -27,7 +28,7 @@ public class ChatWebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(chatHandler, "/ws/chat")
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(chatHandler), "/ws/chat")
                 .addInterceptors(new AiWebSocketHandshakeInterceptor())
                 .setAllowedOriginPatterns("*");
     }

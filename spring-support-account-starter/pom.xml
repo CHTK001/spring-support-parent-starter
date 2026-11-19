@@ -83,11 +83,18 @@
       <artifactId>utils-support-duckduckgo-starter</artifactId>
       <version>${utils.version}</version>
     </dependency>
-    <!-- 邮件收发：收信走 jakarta.mail(IMAP)，发信复用 utils 的 MessagePush SPI（EmailPush）。
+    <!-- 邮件收发：收信走 jakarta.mail(IMAP/POP3)，发信复用 utils 的 MessagePush SPI（EmailPush）。
          账号模块只做编排，不自己实现 SMTP / IMAP 协议 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-email-starter</artifactId>
+    </dependency>
+    <!-- Socket 推送（可选）：宿主未安装 socket-starter 时本依赖不生效，
+         新邮件轮询器自降级，不向宿主塞任何 Controller / 定时任务（R5）。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-socket-starter</artifactId>
+      <optional>true</optional>
     </dependency>
     <!-- 单元测试：账号归属隔离 / 加密 / 掩码回归，走 H2 真库 + MyBatis-Plus 真实 Mapper。
          刻意不用 spring-boot-starter-test：它会传递引入 mockito-core，

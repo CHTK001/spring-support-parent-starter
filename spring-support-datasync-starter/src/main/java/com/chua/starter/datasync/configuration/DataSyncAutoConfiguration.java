@@ -53,13 +53,15 @@ public class DataSyncAutoConfiguration {
         return new DefaultDataSyncMappingManager();
     }
 
+    /**
+     * 数据同步服务端。
+     *
+     * @param agentServerManager Agent 服务端管理器
+     * @param mappingManager     mapping 管理器
+     * @return 数据同步服务端
+     */
     @Bean
     @ConditionalOnMissingBean
-    /**
-     * 数据同步服务端
-     * @param agentServerManager Agent服务端管理器
-     * @param mappingManager mapping管理器
-     */
     public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
                                                                    DataSyncMappingManager mappingManager) {
         com.chua.starter.datasync.DefaultDataSyncServer server = new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
@@ -85,14 +87,16 @@ public class DataSyncAutoConfiguration {
         return new DataSyncAgentServer(null, null, "default-server");
     }
 
+    /**
+     * 目录数据同步 mapping 扫描器（mapping-source=file 时注册）。
+     *
+     * @param properties     数据同步配置
+     * @param mappingManager mapping 管理器
+     * @return 目录数据同步 mapping 扫描器
+     */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.datasync", name = "mapping-source", havingValue = "file")
     @ConditionalOnMissingBean
-    /**
-     * 目录数据同步mappingscanner
-     * @param properties 属性
-     * @param mappingManager mapping管理器
-     */
     public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties,
                                                                           DataSyncMappingManager mappingManager) {
         return new DirectoryDataSyncMappingScanner(
@@ -106,15 +110,17 @@ public class DataSyncAutoConfiguration {
         );
     }
 
+    /**
+     * 数据库 mapping 加载器（database-mapping.enabled=true 时注册）。
+     *
+     * @param dataSource     数据源
+     * @param properties     数据同步配置
+     * @param mappingManager mapping 管理器
+     * @return 数据库 mapping 加载器
+     */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.datasync.database-mapping", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
-    /**
-     * databasemapping加载
-     * @param dataSource 数据源
-     * @param properties 属性
-     * @param mappingManager mapping管理器
-     */
     public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
                                                        DatasyncProperties properties,
                                                        DataSyncMappingManager mappingManager) {

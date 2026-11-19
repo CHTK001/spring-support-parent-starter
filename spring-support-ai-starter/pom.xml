@@ -138,6 +138,11 @@
       <artifactId>utils-support-deeplearning-agentscope-starter</artifactId>
       <version>4.0.0.51</version>
     </dependency>
+    <!-- 服务器信息（OSHI）：会话侧 server-info 端点读取 CPU/内存/系统信息 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-oshi-starter</artifactId>
+    </dependency>
     <!-- iLink 微信 Bot 扫码登录 SDK -->
     <dependency>
       <groupId>com.chua</groupId>
@@ -267,6 +272,14 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-account-starter</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <!-- 站内消息中心（余额低量告警经 SysMessageService#broadcast 落 sys_message）。
+         optional：不向宿主传递依赖；运行期用 ObjectProvider 存在性判断，
+         宿主没接 common-system-starter 时告警静默跳过，不影响余额查询主链路。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-api-support-common-system-starter</artifactId>
+      <optional>true</optional>
     </dependency>
     <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
     <dependency>

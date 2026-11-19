@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 /**
  * 操作日志保留窗口调度器。
  *
- * <p>{@code ms_datasource_oper_log} 是只增表：每个写操作一行，而数据源中心的
+ * <p>{@code datasource_oper_log} 是只增表：每个写操作一行，而数据源中心的
  * 写操作频率随使用量线性上升。没有保留窗口的话这张表会成为整个库里增长最快的表，
  * 而超过保留期的日志对排查既没有价值还要占着 {@code (datasource_id, create_time)}
  * 索引的空间。</p>

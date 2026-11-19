@@ -2,30 +2,26 @@ package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.dto.PageNotifyErrorsRequest;
 import com.chua.payment.support.dto.PageNotifyLogsRequest;
-import com.chua.payment.support.dto.PaymentSchedulerTaskUpdateDTO;
 import com.chua.payment.support.entity.PaymentNotifyError;
 import com.chua.payment.support.entity.PaymentNotifyLog;
 import com.chua.payment.support.mapper.PaymentNotifyErrorMapper;
 import com.chua.payment.support.mapper.PaymentNotifyLogMapper;
 import com.chua.payment.support.service.PaymentDashboardService;
 import com.chua.payment.support.service.PaymentNotifyProcessService;
-import com.chua.payment.support.service.PaymentSchedulerTaskOpsService;
 import com.chua.payment.support.vo.PaymentCallbackAuditVO;
 import com.chua.payment.support.vo.PaymentDashboardSummaryVO;
 import com.chua.payment.support.vo.PaymentOpsOverviewVO;
 import com.chua.payment.support.vo.PaymentOrderNumberStrategyVO;
-import com.chua.payment.support.vo.PaymentSchedulerTaskVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,8 +31,8 @@ import java.util.List;
 
 /**
    * 支付运营能力控制器。
-   * 直接返回原始业务对象，由通用响应包装层统一输出报表结果。
-   * 避免这里再返回支付模块自己的 Result，造成双协议并存。
+   * 直接返回原始业务对象，由通用响应包装层统一输出报表结果；
+   * 分页接口经 PageResultUtils 转换为统一的 ReturnPageResult，不再使用模块自有分页信封。
    *
    * @author CH
    * @since 4.0.0
@@ -46,10 +42,6 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.ops", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentOpsController {
 
-      /**
-       * 支付调度任务ops服务
-       */
-    private final PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService;
       /**
        * 支付概览服务
        */
@@ -69,18 +61,15 @@ public class PaymentOpsController {
 
       /**
        * 构造支付ops控制器实例
-       * @param paymentSchedulerTaskOpsService 支付调度任务ops服务
        * @param paymentDashboardService 支付概览服务
        * @param paymentNotifyLogMapper 支付通知日志映射
        * @param paymentNotifyErrorMapper 支付通知错误映射
        * @param paymentNotifyProcessService 支付通知处理服务
        */
-    public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
-                                PaymentDashboardService paymentDashboardService,
+    public PaymentOpsController(PaymentDashboardService paymentDashboardService,
                                 PaymentNotifyLogMapper paymentNotifyLogMapper,
                                 PaymentNotifyErrorMapper paymentNotifyErrorMapper,
                                 PaymentNotifyProcessService paymentNotifyProcessService) {
-        this.paymentSchedulerTaskOpsService = paymentSchedulerTaskOpsService;
         this.paymentDashboardService = paymentDashboardService;
         this.paymentNotifyLogMapper = paymentNotifyLogMapper;
         this.paymentNotifyErrorMapper = paymentNotifyErrorMapper;
@@ -110,39 +99,6 @@ public class PaymentOpsController {
         return new PaymentOpsOverviewVO(callbackAudits(), orderNumberStrategies());
     }
 
-    @GetMapping("/scheduler/tasks")
-      /**
-       * 列出任务
-       *
-       * @return 列出任务的结果
-       */
-    public List<PaymentSchedulerTaskVO> listTasks() {
-        return paymentSchedulerTaskOpsService.listTasks();
-    }
-
-    @PutMapping("/scheduler/tasks/{taskKey}")
-      /**
-       * 更新任务
-       * @param taskKey 任务Key
-       * @param dto dto
-       * @return 更新后的任务
-       */
-    public PaymentSchedulerTaskVO updateTask(@PathVariable String taskKey,
-                                             @RequestBody PaymentSchedulerTaskUpdateDTO dto) {
-        return paymentSchedulerTaskOpsService.updateTask(taskKey, dto);
-    }
-
-    @PostMapping("/scheduler/tasks/{taskKey}/trigger")
-      /**
-       * 触发任务
-       *
-       * @param taskKey 任务Key
-       * @return 触发任务的结果
-       */
-    public PaymentSchedulerTaskVO triggerTask(@PathVariable String taskKey) {
-        return paymentSchedulerTaskOpsService.triggerTask(taskKey);
-    }
-
     @GetMapping("/notify/log/page")
       /**
        * 分页查询通知日志
@@ -155,7 +111,7 @@ public class PaymentOpsController {
        * @param refundNo      退款单号（可空）
        * @return 通知日志分页结果
        */
-    public PageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                        @RequestParam(defaultValue = "10") int pageSize,
                                                        @RequestParam(required = false) String notifyType,
                                                        @RequestParam(required = false) String processStatus,
@@ -178,7 +134,7 @@ public class PaymentOpsController {
             wrapper.eq(PaymentNotifyLog::getRefundNo, request.refundNo());
         }
         Page<PaymentNotifyLog> page = paymentNotifyLogMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
-        return PageResult.of(page);
+        return PageResultUtils.ok(page);
     }
 
     @GetMapping("/notify/error/page")
@@ -193,7 +149,7 @@ public class PaymentOpsController {
        * @param refundNo   退款单号（可空）
        * @return 通知错误分页结果
        */
-    public PageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
                                                            @RequestParam(defaultValue = "10") int pageSize,
                                                            @RequestParam(required = false) String notifyType,
                                                            @RequestParam(required = false) String status,
@@ -216,7 +172,7 @@ public class PaymentOpsController {
             wrapper.eq(PaymentNotifyError::getRefundNo, request.refundNo());
         }
         Page<PaymentNotifyError> page = paymentNotifyErrorMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
-        return PageResult.of(page);
+        return PageResultUtils.ok(page);
     }
 
     @PostMapping("/notify/error/{id}/retry")

@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 数据源中心服务实现：配置落 {@code ms_datasource}，连接空闲 TTL 复用。
+ * 数据源中心服务实现：配置落 {@code datasource_info}，连接空闲 TTL 复用。
  *
  * @author CH
  * @since 4.0.0.42
@@ -45,7 +45,7 @@ import java.util.List;
 public class DatasourceServiceImpl implements DatasourceService {
 
     /**
-     * 台账 {@code datasource_version} 列的宽度（VARCHAR(64)）。
+     * 台账 {@code datasource_info_version} 列的宽度（VARCHAR(64)）。
      *
      * <p>该列存两类值：influxdb 的大版本 {@code 2}/{@code 3}，以及其余类型探测到的
      * 服务端版本串。版本串长度由驱动决定（不受我们控制），回写前按此宽度截断，
@@ -447,9 +447,9 @@ public class DatasourceServiceImpl implements DatasourceService {
      * <p>版本必须落台账，不能只留在前端会话里：原先版本是前端一个 ref，
      * 切换数据源不重置，于是「检测过 ClickHouse 之后，点任何别的数据源，
      * 版本行都显示 ClickHouse 24.8.14.39」—— 把别人的版本按到了当前这条上。
-     * 落到 {@code datasource_version} 后，每条记录各存各的，刷新页面也不会丢。</p>
+     * 落到 {@code datasource_info_version} 后，每条记录各存各的，刷新页面也不会丢。</p>
      *
-     * <p><b>influxdb 例外</b>：它的 {@code datasource_version} 存的是用户选的
+     * <p><b>influxdb 例外</b>：它的 {@code datasource_info_version} 存的是用户选的
      * 服务端大版本（{@code 2}/{@code 3}），是「用 Flux 还是 InfluxQL」的路由依据，
      * 被探测结果覆盖会直接把查询语法打错，所以这一类型一律不写。</p>
      *
@@ -473,7 +473,7 @@ public class DatasourceServiceImpl implements DatasourceService {
             update.set(MsDatasource::getDatasourceVersion, capVersion(outcome.version()));
         }
         // 台账回写失败不能把「连接成功」报成失败：这段是记账，不是探测本身。
-        // 实测过一次真实故障 —— datasource_version 还是 VARCHAR(16) 时，
+        // 实测过一次真实故障 —— datasource_info_version 还是 VARCHAR(16) 时，
         // ClickHouse 的 "ClickHouse 24.8.14.39"（21 字符）触发
         // Data too long for column，异常一路抛到 advice，
         // 用户看到的是「数据校验失败」，而其实连接是通的、版本也读到了。
@@ -486,7 +486,7 @@ public class DatasourceServiceImpl implements DatasourceService {
     }
 
     /**
-     * 版本串按台账列宽截断（{@code datasource_version} 为 VARCHAR(64)）。
+     * 版本串按台账列宽截断（{@code datasource_info_version} 为 VARCHAR(64)）。
      *
      * <p>驱动给出的版本串长度不受我们控制（有的会把 build hash、OS 一起拼进来），
      * 与其让一次「测试连接」因为记账超长而整体失败，不如截断后照常展示。</p>

@@ -82,7 +82,10 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("usage_token_scale", "auto", "STRING", "Token 显示量级：auto（自动 K/M/B 缩写）/ raw（完整数值）", 8),
                 new SettingItem("usage_currency_auto_convert", "true", "BOOLEAN", "货币自动换算：开启后切换货币按下方汇率换算金额，关闭则仅切换符号", 9),
                 new SettingItem("usage_rate_usd", "7.1", "NUMBER", "美元汇率：1 美元可兑换的人民币数量（CNY→USD 时金额除以该值）", 10),
-                new SettingItem("usage_rate_eur", "7.8", "NUMBER", "欧元汇率：1 欧元可兑换的人民币数量（CNY→EUR 时金额除以该值）", 11)
+                new SettingItem("usage_rate_eur", "7.8", "NUMBER", "欧元汇率：1 欧元可兑换的人民币数量（CNY→EUR 时金额除以该值）", 11),
+                // 今日预算阈值：当日费用（按当前区间口径折算到今天）达到该值时前端预警条变色。
+                // 0 = 不启用；只在浏览器侧消费，后端不读。
+                new SettingItem("usage_daily_budget", "0", "NUMBER", "今日预算阈值（元）：当日累计费用达到该值时用量页预警，0 表示不启用", 13)
         );
     }
 }

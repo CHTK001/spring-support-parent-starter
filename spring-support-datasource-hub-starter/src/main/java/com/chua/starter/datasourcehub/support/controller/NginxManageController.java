@@ -324,7 +324,7 @@ public class NginxManageController {
     /**
      * 查询指标趋势。
      *
-     * <p>数据来自后台定时采集的 {@code ms_monitor_nginx_metric}，保留窗口由
+     * <p>数据来自后台定时采集的 {@code datasource_nginx_metric}，保留窗口由
      * {@code monitor.data.retention.days} 控制（默认 1，即滚动 24 小时）。</p>
      *
      * @param datasourceId 数据源 ID

@@ -8,6 +8,7 @@ import com.chua.starter.ai.support.service.AiAccessGuardService;
 import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -267,7 +268,7 @@ public abstract class BaseAiController {
      */
     protected SseEmitter modelNotAllowedEmitter(String message) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             try {
                 emitter.send(SseEmitter.event()
                         .data(Map.of("error", Map.of("message", message, "type", "model_not_allowed")),
@@ -277,7 +278,7 @@ public abstract class BaseAiController {
             } catch (IOException ex) {
                 emitter.completeWithError(ex);
             }
-        });
+        }));
         return emitter;
     }
 
@@ -302,7 +303,7 @@ public abstract class BaseAiController {
      */
     protected SseEmitter disabledEmitter(String message) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             try {
                 emitter.send(SseEmitter.event().name("error").data(message, MediaType.TEXT_PLAIN));
                 emitter.send(SseEmitter.event().name("done").data("[DONE]", MediaType.TEXT_PLAIN));
@@ -310,7 +311,7 @@ public abstract class BaseAiController {
             } catch (IOException ex) {
                 emitter.completeWithError(ex);
             }
-        });
+        }));
         return emitter;
     }
 
@@ -323,7 +324,7 @@ public abstract class BaseAiController {
      */
     protected SseEmitter authErrorEmitter() {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             try {
                 emitter.send(SseEmitter.event().name("error").data("AI AppKey 校验失败", MediaType.TEXT_PLAIN));
                 emitter.send(SseEmitter.event().name("done").data("[DONE]", MediaType.TEXT_PLAIN));
@@ -331,7 +332,7 @@ public abstract class BaseAiController {
             } catch (IOException ex) {
                 emitter.completeWithError(ex);
             }
-        });
+        }));
         return emitter;
     }
 

@@ -253,9 +253,12 @@ public class OpenCodeConsoleCreditQueryProvider implements CreditQueryProvider {
      * @return 数值；不是合法数字为 null
      */
     private static BigDecimal decimalOf(JsonNode node) {
+        if (node == null) {
+            return null;
+        }
         try {
             return new BigDecimal(node.asText().trim());
-        } catch (NumberFormatException | NullPointerException e) {
+        } catch (NumberFormatException e) {
             return null;
         }
     }

@@ -1,13 +1,14 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.WalletLogQueryRequest;
 import com.chua.payment.support.dto.WalletRechargeDTO;
 import com.chua.payment.support.entity.WalletAccountLog;
 import com.chua.payment.support.service.WalletAccountService;
 import com.chua.payment.support.vo.WalletAccountVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,9 +39,9 @@ public class WalletAccountController {
      * @param userId 用户标识
      * @return 钱包账户信息
      */
-    public Result<WalletAccountVO> getAccount(@RequestParam Long merchantId,
+    public ReturnResult<WalletAccountVO> getAccount(@RequestParam Long merchantId,
                                               @RequestParam Long userId) {
-        return Result.success(walletAccountService.getAccount(merchantId, userId));
+        return ReturnResult.ok(walletAccountService.getAccount(merchantId, userId));
     }
 
     @PostMapping("/account/recharge")
@@ -49,8 +50,8 @@ public class WalletAccountController {
      * @param dto dto
      * @return 返回值
     */
-    public Result<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
-        return Result.success(walletAccountService.recharge(dto));
+    public ReturnResult<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
+        return ReturnResult.ok(walletAccountService.recharge(dto));
     }
 
     @GetMapping("/account/log/page")
@@ -64,7 +65,7 @@ public class WalletAccountController {
      * @param bizNo      业务单号（可选）
      * @return 分页查询账户流水的结果
      */
-    public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<WalletAccountLog> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
                                                           @RequestParam(required = false) Long merchantId,
                                                           @RequestParam(required = false) Long userId,
@@ -72,6 +73,6 @@ public class WalletAccountController {
                                                           @RequestParam(required = false) String bizNo) {
         WalletLogQueryRequest request = new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null);
         Page<WalletAccountLog> page = walletAccountService.pageLogs(request);
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 }

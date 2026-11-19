@@ -1,3 +1,3 @@
 com.chua.starter.account.configuration.AccountAutoConfiguration
 com.chua.starter.account.channel.cache.AccountChannelCacheConfiguration
-com.chua.starter.template.support.configuration.TemplateAutoConfiguration
+com.chua.starter.account.template.support.configuration.TemplateAutoConfiguration

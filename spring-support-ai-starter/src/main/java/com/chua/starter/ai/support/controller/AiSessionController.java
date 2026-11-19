@@ -72,6 +72,13 @@ public class AiSessionController {
     private final SessionWorkspaceResolver sessionWorkspaceResolver;
 
       /**
+       * 工作目录路径解析器（统一 {@code <基路径>/<账号>} 口径与空配置兜底
+       * {@code ~/ai-workspace}；此前本类与 {@code WorkspacePathResolver} 各算各的，
+       * 空配置一处返回 null 一处兜底，导致工作区路径不一致）
+       */
+    private final com.chua.starter.ai.support.workspace.WorkspacePathResolver workspacePathResolver;
+
+      /**
        * 会话「AI 联想下一个任务」服务
        *
        * <p>开关值钉在会话自身的 {@code settings.aiNextTask}（会话保留原始信息），
@@ -134,7 +141,7 @@ public class AiSessionController {
       /**
        * 合并会话 settings，并统一托管控件「会话工作目录」。
        *
-       * <p>工作目录虽是客户端提交的，但只有落在 {@code <基路径>/<账号>/agent} 或
+       * <p>工作目录虽是客户端提交的，但只有落在 {@code <基路径>/<账号>} 或
        * {@code <基路径>/public} 下、且真实存在的目录才会被接受（校验在
        * {@link SessionWorkspaceResolver#normalize(String)}）。因此先把客户端塞进 settings 的
        * 同名键剔掉，再按入参校验后写回，避免绕过范围校验。</p>
@@ -393,9 +400,77 @@ public class AiSessionController {
         }
     }
 
+    /**
+     * 解析思考正文。
+     *
+     * <p>写入侧 {@code ChatStreamOrchestrator#attachReasoning} 把它并入助手消息 confirmation 的
+     * {@code reasoning} 键；这里取出供 GET messages 透出为 {@code content.reasoningContent}。</p>
+     *
+     * @param json 助手消息的 confirmation JSON（可为空）
+     * @return 思考正文；无则返回 {@code null}
+     */
+    private String parseReasoning(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            Object reasoning = data.get("reasoning");
+            return reasoning instanceof String s && !s.isBlank() ? s : null;
+        } catch (Exception e) {
+            log.warn("[Session] 解析思考正文失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从工具轨迹里聚合思考正文（老数据兜底）。
+     *
+     * <p>AgentScope 路径曾把思考写成 {@code toolTraces} 里 {@code kind=thinking} 的条目，
+     * 这些条目没有 {@code toolName}：工具行聚合会跳过它们（不当作工具调用），
+     * 但思考内容本身不该丢——按出现顺序拼接后透出为 {@code reasoningContent}。</p>
+     *
+     * @param toolTrace {@link #parseToolTrace(String)} 的结果（可为空）
+     * @return 拼接后的思考正文；无 thinking 轨迹时返回 {@code null}
+     */
+    private String aggregateThinkingTrace(Map<String, Object> toolTrace) {
+        if (toolTrace == null) {
+            return null;
+        }
+        Object traces = toolTrace.get("toolTraces");
+        if (!(traces instanceof List<?> list)) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Object o : list) {
+            if (!(o instanceof Map<?, ?> mm)) {
+                continue;
+            }
+            String kind = mm.get("kind") == null ? "" : String.valueOf(mm.get("kind"));
+            if (!"thinking".equals(kind)) {
+                continue;
+            }
+            Object text = mm.get("text");
+            if (text == null) {
+                continue;
+            }
+            String s = String.valueOf(text);
+            if (!s.isBlank()) {
+                sb.append(s).append('\n');
+            }
+        }
+        return sb.length() == 0 ? null : sb.toString().trim();
+    }
+
       /**
-       * 获取会话列表
-       */
+     * 获取会话列表。
+     *
+     * @param skip            跳过的条数（可选）
+     * @param limit           每页条数（可选）
+     * @param groupId         分组标识（可选；当前后端无分组概念，非空返回空页）
+     * @param includeArchived 是否包含已归档会话（可选）
+     * @return 会话列表与 hasMore 标记
+     */
     @GetMapping
     public ReturnResult<Map<String, Object>> list(
             @RequestParam(required = false) Integer skip,
@@ -553,6 +628,15 @@ public class AiSessionController {
        */
     private static final int MAX_INITIAL_TURNS = 50;
 
+    /**
+     * 获取会话消息列表。
+     *
+     * @param id              会话标识（数字 id 或前端 UUID）
+     * @param limit           消息条数（可选）
+     * @param beforeMessageId 起始消息 id（向前翻页，可选）
+     * @param initialTurns    初始加载的最大用户轮次数（可选，上限 {@link #MAX_INITIAL_TURNS}）
+     * @return 会话消息列表
+     */
     @GetMapping("/{id}/messages")
     public ReturnResult<Map<String, Object>> messages(
             @PathVariable("id") String id,
@@ -815,6 +899,18 @@ public class AiSessionController {
                 if (route != null) {
                     contentMetadata.put("route", route);
                 }
+                  // 思考正文还原：写入侧把它并入 confirmation.reasoning，这里透出为
+                  // content.reasoningContent —— 前端 flattenSingleContent 靠它生成 think 项，
+                  // 否则刷新后思考行整段消失（用户报障：思考没有保存）。
+                String reasoning = parseReasoning(msg.getConfirmation());
+                if (reasoning == null) {
+                    // 老数据兜底：AgentScope 路径曾把思考落在 toolTraces（kind=thinking），
+                    // 这些条目没有 toolName，此前在工具行聚合时被跳过，刷新后同样看不到。
+                    reasoning = aggregateThinkingTrace(toolTrace);
+                }
+                if (reasoning != null) {
+                    content.put("reasoningContent", reasoning);
+                }
             }
             content.put("metadata", contentMetadata);
             contents.add(content);
@@ -885,6 +981,187 @@ public class AiSessionController {
         olderWrapper.lt(SysAiMessage::getId, Long.parseLong(String.valueOf(earliest)));
         Long older = messageMapper.selectCount(olderWrapper);
         return older != null && older > 0;
+    }
+
+      /**
+       * 搜索会话（标题 + 消息正文，游标分页）。
+       *
+       * <p>前端搜索框（{@code SessionSearchDialog}）调的是 {@code GET /sessions/search}，
+       * 而后端此前没有这个映射：请求落进 {@code GET /sessions/{id}} 的兜底，
+       * {@code Long.parseLong("search")} 抛 NumberFormatException → 400。
+       * 补上独立映射后，Spring 会优先精确路径，不再被 {@code {id}} 截走。</p>
+       *
+       * <p>返回结构对齐前端 {@code SearchSessionResponse}：{@code items / total / hasMore / nextCursor}；
+       * 每项带 {@code matchType}（title/content）与 {@code matchSnippet}（正文命中片段）。
+       * 游标是不透明字符串（此处为偏移量），前端只回传不解析。</p>
+       *
+       * @param keyword         搜索关键字（空白时返回空结果）
+       * @param cursor          游标（可选）
+       * @param limit           每页条数（可选，默认 20，上限 50）
+       * @param includeArchived 是否包含已归档会话（可选）
+       * @return 搜索结果
+       */
+    @GetMapping("/search")
+    public ReturnResult<Map<String, Object>> search(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "cursor", required = false) String cursor,
+            @RequestParam(value = "limit", required = false) Integer limit,
+            @RequestParam(value = "includeArchived", required = false) Boolean includeArchived) {
+        String kw = keyword == null ? "" : keyword.trim();
+        List<Map<String, Object>> items = new ArrayList<>();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("total", 0);
+        result.put("hasMore", false);
+        result.put("nextCursor", null);
+        if (kw.isEmpty()) {
+            return ReturnResult.ok(result);
+        }
+
+        int pageSize = limit != null && limit > 0 ? Math.min(limit, 50) : 20;
+        int offset = parseCursor(cursor);
+        boolean crossAccount = AiUserContext.canAccessOthersData();
+        String userId = AiUserContext.requireUserId();
+        boolean withArchived = Boolean.TRUE.equals(includeArchived);
+
+          // 命中会话按 id 去重：同一会话可能既命中标题又命中正文，保留标题命中优先
+        Map<Long, SysAiSession> matched = new LinkedHashMap<>();
+        Map<Long, String> matchType = new HashMap<>();
+        Map<Long, String> snippets = new HashMap<>();
+
+          // 1) 标题命中
+        LambdaQueryWrapper<SysAiSession> titleWrapper = new LambdaQueryWrapper<>();
+        titleWrapper.like(SysAiSession::getTitle, kw);
+        if (!crossAccount) {
+            titleWrapper.eq(SysAiSession::getSysUserId, userId);
+        }
+        applyArchiveFilter(titleWrapper, withArchived);
+        titleWrapper.orderByDesc(SysAiSession::getUpdateTime).last("LIMIT 200");
+        for (SysAiSession session : sessionMapper.selectList(titleWrapper)) {
+            matched.put(session.getId(), session);
+            matchType.put(session.getId(), "title");
+        }
+
+          // 2) 正文命中：先按内容捞最近的匹配消息，再反查会话（归属与归档在后一步过滤）
+        LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();
+        messageWrapper.select(SysAiMessage::getSysAiSessionId, SysAiMessage::getContent)
+                .like(SysAiMessage::getContent, kw)
+                .orderByDesc(SysAiMessage::getId)
+                .last("LIMIT 300");
+        java.util.Set<Long> contentSessionIds = new java.util.LinkedHashSet<>();
+        for (SysAiMessage message : messageMapper.selectList(messageWrapper)) {
+            Long sid = message.getSysAiSessionId();
+            if (sid == null) {
+                continue;
+            }
+              // 片段取最近一条命中消息：同一会话的多条命中只留一条，避免列表里重复
+            snippets.putIfAbsent(sid, snippet(message.getContent(), kw));
+            contentSessionIds.add(sid);
+        }
+        if (!contentSessionIds.isEmpty()) {
+            for (SysAiSession session : sessionMapper.selectBatchIds(contentSessionIds)) {
+                if (!crossAccount && !userId.equals(session.getSysUserId())) {
+                    continue;
+                }
+                if (!withArchived && Boolean.TRUE.equals(session.getIsArchived())) {
+                    continue;
+                }
+                if (matched.containsKey(session.getId())) {
+                    continue;
+                }
+                matched.put(session.getId(), session);
+                matchType.put(session.getId(), "content");
+            }
+        }
+
+          // 3) 统一按最近活跃倒序，再按偏移切片
+        List<SysAiSession> ordered = new ArrayList<>(matched.values());
+        ordered.sort(Comparator.comparing(SysAiSession::getUpdateTime,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+        int total = ordered.size();
+        int from = Math.min(offset, total);
+        int to = Math.min(from + pageSize, total);
+        for (SysAiSession session : ordered.subList(from, to)) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", String.valueOf(session.getId()));
+            item.put("title", session.getTitle());
+            item.put("groupId", null);
+            item.put("matchType", matchType.get(session.getId()));
+            String snippet = snippets.get(session.getId());
+            if (snippet != null) {
+                item.put("matchSnippet", snippet);
+            }
+            item.put("createdAt", epochMillis(session.getCreateTime()));
+            item.put("updatedAt", epochMillis(session.getUpdateTime()));
+            item.put("lastActiveAt", epochMillis(session.getUpdateTime()));
+            items.add(item);
+        }
+
+        boolean hasMore = to < total;
+        result.put("items", items);
+        result.put("total", total);
+        result.put("hasMore", hasMore);
+        result.put("nextCursor", hasMore ? String.valueOf(to) : null);
+        return ReturnResult.ok(result);
+    }
+
+      /**
+       * 归档过滤：默认只看未归档（历史行的 is_archived 可能为 NULL，一并视为未归档）。
+       *
+       * @param wrapper       会话查询条件
+       * @param withArchived  是否包含已归档
+       */
+    private static void applyArchiveFilter(LambdaQueryWrapper<SysAiSession> wrapper, boolean withArchived) {
+        if (withArchived) {
+            return;
+        }
+        wrapper.and(w -> w.eq(SysAiSession::getIsArchived, false).or().isNull(SysAiSession::getIsArchived));
+    }
+
+      /**
+       * 解析游标：只接受本接口下发的数字偏移，其它形态一律从头开始。
+       *
+       * @param cursor 游标
+       * @return 偏移量（>= 0）
+       */
+    private static int parseCursor(String cursor) {
+        if (cursor == null || !cursor.matches("\\d+")) {
+            return 0;
+        }
+        try {
+            return Math.max(Integer.parseInt(cursor), 0);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+      /**
+       * 把 LocalDateTime 转成前端统一用的毫秒时间戳。
+       *
+       * @param time 时间，可为 null
+       * @return 毫秒时间戳；null 时返回 0
+       */
+    private static long epochMillis(LocalDateTime time) {
+        return time == null ? 0L : time.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+      /**
+       * 截取正文命中片段（关键字前后各留一段），供搜索列表展示。
+       *
+       * @param content 消息正文
+       * @param keyword 关键字
+       * @return 单行片段；内容为空时返回 null
+       */
+    private static String snippet(String content, String keyword) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+        String text = content.replace('\n', ' ').replace('\r', ' ').trim();
+        int index = text.toLowerCase().indexOf(keyword.toLowerCase());
+        int start = index < 0 ? 0 : Math.max(index - 30, 0);
+        int end = Math.min(start + 120, text.length());
+        String piece = text.substring(start, end);
+        return (start > 0 ? "…" : "") + piece + (end < text.length() ? "…" : "");
     }
 
       /**
@@ -1094,6 +1371,10 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
         requireWritableSession(sessionId);
+        SysAiSession session = sessionMapper.selectById(sessionId);
+        if (session == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
 
         LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId);
@@ -1118,17 +1399,32 @@ public class AiSessionController {
                     .append('\n');
         }
 
+        String model = effectiveChatModelResolver.resolve(session.getModelId());
+        if (model == null || model.isBlank()) {
+            result.put("success", false);
+            result.put("message", "压缩失败：未解析到可用模型，请先在设置里指定默认对话模型");
+            result.put("removedMessages", 0);
+            return ReturnResult.ok(result);
+        }
+
         String summary;
+          // response 提到 try 外：调用未成功时 text 为空，真实原因落在 error.message 里，
+          // 收尾阶段必须把它带出来，否则 429/无路由都会被报成「模型未返回摘要」。
+        Map<String, Object> response = null;
         try {
             com.chua.starter.ai.support.model.AiChatRequest request =
                     new com.chua.starter.ai.support.model.AiChatRequest();
-            request.setModel(effectiveChatModelResolver.resolve(null));
+            request.setModel(model);
             request.setStream(false);
             request.setSystemPrompt("你是一名对话摘要助手。请把用户提供的对话压缩成简洁摘要，"
                       + "保留事实、结论、待办与关键约束，直接输出摘要，不要添加解释。");
-            request.setMessages(List.of(Map.of("role", "user", "content",
-                    "请把以下对话压缩成摘要：\n" + transcript)));
-            Map<String, Object> response = aiChatFacadeService.call(request);
+            // 关键：非流式 call() 下发给模型的是 promptOf(request)（即 getPrompt()），
+            // 只设 messages 会让模型收到空提示词，表现为「200 + 摘要为空」。
+            // 与 generateTitle 同一口径，两处都设，避免再踩同一个坑。
+            String instruction = "请把以下对话压缩成摘要：\n" + transcript;
+            request.setPrompt(instruction);
+            request.setMessages(List.of(Map.of("role", "user", "content", instruction)));
+            response = aiChatFacadeService.call(request);
             Object text = response == null ? null : response.get("text");
             summary = text == null ? "" : String.valueOf(text).trim();
         } catch (Exception e) {
@@ -1139,6 +1435,18 @@ public class AiSessionController {
             return ReturnResult.ok(result);
         }
         if (summary.isEmpty()) {
+              // 模型调用未成功时 text 为空：把 error.message 原样带出来，
+              // 不要把 429/限流/无路由一律报成「模型未返回摘要」。
+            Object failure = response == null ? null : response.get("error");
+            if (failure != null) {
+                String reason = failure instanceof Map<?, ?> map && map.get("message") != null
+                        ? String.valueOf(map.get("message")) : String.valueOf(failure);
+                log.warn("[Session] 压缩会话模型调用未成功: sessionId={}, model={}, error={}", sessionId, model, reason);
+                result.put("success", false);
+                result.put("message", "压缩失败：" + reason);
+                result.put("removedMessages", 0);
+                return ReturnResult.ok(result);
+            }
             result.put("success", false);
             result.put("message", "压缩失败：模型未返回摘要");
             result.put("removedMessages", 0);
@@ -1432,7 +1740,155 @@ public class AiSessionController {
         }
 
         result.put("title", title);
+          // 落库：此前只把标题回给前端、不写会话行，页面刷新或侧栏重排后仍是旧标题
+          // （表现为「接口返回新标题，但 before=after」）。写库与写出口校验统一走
+          // requireWritableSession，不在这里另开旁路。
+        session.setTitle(title);
+        session.setUpdateTime(LocalDateTime.now());
+        sessionMapper.updateById(session);
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 会话摘要列表（前端「备忘 / 上下文摘要」面板）。
+     *
+     * <p>前端 {@code MemoPanel} 一直调 {@code GET /sessions/{id}/summaries}，
+     * 但后端没有该映射；请求既不是 {@code /{id}}（段数不同），也不是静态资源，
+     * 最终以 404 收场，面板永远显示「没有摘要」。这里按
+     * {@code sys_ai_session_compression} 的单条会话摘要作答：语义上是
+     * 「当前生效的压缩上下文」，不是历史流水，因此 total 与 items 长度一致。</p>
+     *
+     * @param id    会话标识
+     * @param limit 条数上限（可选；当前实现每会话至多一条）
+     * @return items + total
+     */
+    @GetMapping("/{id}/summaries")
+    public ReturnResult<Map<String, Object>> summaries(@PathVariable("id") String id,
+                                                       @RequestParam(value = "limit", required = false) Integer limit) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        com.chua.starter.ai.support.entity.SysAiSessionCompression compression =
+                sessionCompressionService.getBySessionId(sessionId);
+        if (compression != null) {
+            items.add(summaryItem(compression));
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("total", items.size());
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 修改某条会话摘要的正文（前端「编辑摘要」）。
+     *
+     * @param summaryId 摘要标识（压缩上下文主键）
+     * @param body      请求体，含 summaryContent
+     * @return 是否成功
+     */
+    @PutMapping("/summaries/{summaryId}")
+    public ReturnResult<Map<String, Object>> updateSummary(@PathVariable("summaryId") String summaryId,
+                                                           @RequestBody Map<String, Object> body) {
+        Integer compressionId = parseCompressionId(summaryId);
+        if (compressionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "摘要不存在");
+        }
+        Object content = body == null ? null : body.get("summaryContent");
+        com.chua.starter.ai.support.service.SysAiSessionCompressionService.WriteResult write =
+                sessionCompressionService.updateContext(compressionId, content == null ? "" : String.valueOf(content));
+        requireSummaryWritable(write, "无权修改他人会话的摘要");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 删除某条会话摘要（前端「删除摘要」）。
+     *
+     * @param summaryId 摘要标识（压缩上下文主键）
+     * @return 是否成功
+     */
+    @DeleteMapping("/summaries/{summaryId}")
+    public ReturnResult<Map<String, Object>> deleteSummary(@PathVariable("summaryId") String summaryId) {
+        Integer compressionId = parseCompressionId(summaryId);
+        if (compressionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "摘要不存在");
+        }
+        com.chua.starter.ai.support.service.SysAiSessionCompressionService.WriteResult write =
+                sessionCompressionService.deleteById(compressionId);
+        requireSummaryWritable(write, "无权删除他人会话的摘要");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 把摘要写操作的三态结果翻译成接口响应。
+     *
+     * @param write       写操作结果
+     * @param forbiddenMsg 无权时的提示语
+     */
+    private static void requireSummaryWritable(
+            com.chua.starter.ai.support.service.SysAiSessionCompressionService.WriteResult write, String forbiddenMsg) {
+        if (write == com.chua.starter.ai.support.service.SysAiSessionCompressionService.WriteResult.NOT_FOUND) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "摘要不存在");
+        }
+        if (write == com.chua.starter.ai.support.service.SysAiSessionCompressionService.WriteResult.FORBIDDEN) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, forbiddenMsg);
+        }
+    }
+
+    /**
+     * 解析摘要标识：只接受数字主键。
+     *
+     * @param summaryId 路径参数
+     * @return 主键；非法形态返回 null
+     */
+    private static Integer parseCompressionId(String summaryId) {
+        if (summaryId == null || !summaryId.matches("\\d+")) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(summaryId);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 把压缩上下文实体映射成前端摘要项。
+     *
+     * <p>字段口径对齐 {@code MemoPanel}：{@code summaryContent} 是摘要正文，
+     * {@code createdAt} 用毫秒时间戳（dayjs 可直接解析），
+     * {@code cleaningStrategy/compressionStats} 只在有数据时给出，前端已做缺省兼容。</p>
+     *
+     * @param compression 压缩上下文实体
+     * @return 摘要项
+     */
+    private static Map<String, Object> summaryItem(
+            com.chua.starter.ai.support.entity.SysAiSessionCompression compression) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", String.valueOf(compression.getId()));
+        item.put("sessionId", compression.getSysAiSessionId() == null
+                ? null : String.valueOf(compression.getSysAiSessionId()));
+        item.put("summaryContent", compression.getSysAiCompressionContext());
+        item.put("cleaningStrategy", "summarized");
+        Map<String, Object> stats = new LinkedHashMap<>();
+        if (compression.getSysAiCompressionMessageCount() != null) {
+            stats.put("beforeMessageCount", compression.getSysAiCompressionMessageCount());
+        }
+        if (!stats.isEmpty()) {
+            item.put("compressionStats", stats);
+        }
+        item.put("createdAt", epochMillis(compression.getCreateTime()));
+        item.put("updatedAt", epochMillis(compression.getUpdateTime()));
+        return item;
     }
 
       /**
@@ -1595,7 +2051,7 @@ public class AiSessionController {
       /**
        * 取会话工作目录的文件树。
        *
-       * <p>目录口径与对话写入侧一致：{@code <system.workspaceBaseDir>/<当前账号>/agent}
+       * <p>目录口径与对话写入侧一致：{@code <system.workspaceBaseDir>/<当前账号>}
        * （按账号隔离，不按会话）；基路径未配置时返回空树。</p>
        *
        * @param id 会话标识
@@ -1671,37 +2127,16 @@ public class AiSessionController {
     }
 
       /**
-       * 解析当前账号的工作目录（{@code <基路径>/<账号标识>/agent}）。
+       * 解析当前账号的工作目录（{@code <基路径>/<账号标识>}）。
        *
        * <p>账号标识做安全清洗，并在解析后校验仍落在基路径内，防 {@code ../} 越界。</p>
        *
        * @return 工作目录；基路径未配置或越界时返回 {@code null}
        */
     private java.nio.file.Path resolveAgentWorkspace() {
-        String base;
-        try {
-            base = globalSettingService.getValue("system", "workspaceBaseDir").orElse(null);
-        } catch (Exception e) {
-            log.warn("[Session] 读取工作目录基路径失败: {}", e.getMessage());
-            return null;
-        }
-        if (base == null || base.isBlank()) {
-            return null;
-        }
-        try {
-            java.nio.file.Path basePath = java.nio.file.Paths.get(base.trim()).toAbsolutePath().normalize();
-            String account = java.util.Objects.toString(AiUserContext.currentUserId(), "public")
-                    .replaceAll("[^A-Za-z0-9_-]", "_");
-            java.nio.file.Path workspace = basePath.resolve(account).resolve("agent").normalize();
-            if (!workspace.startsWith(basePath)) {
-                log.warn("[Session] 工作目录越界，已拒绝: {}", workspace);
-                return null;
-            }
-            return workspace;
-        } catch (Exception e) {
-            log.warn("[Session] 解析工作目录失败 base={}: {}", base, e.getMessage());
-            return null;
-        }
+        // 统一口径：直接复用 WorkspacePathResolver（<基路径>/<账号>，
+        // 空配置兜底 ~/ai-workspace，越界/建目录失败抛 ApiException 而非静默返回 null）。
+        return workspacePathResolver.agentWorkspace();
     }
 
       /**
@@ -1946,6 +2381,76 @@ public class AiSessionController {
                 && !values.contains(id)) {
             values.add(id);
         }
+    }
+
+      /**
+       * 从某一轮起回退：删除该轮及其之后的所有消息。
+       *
+       * <p>前端「回退到此处」一直调用 {@code DELETE /v2/sessions/{id}/messages?fromMessageId=}，
+       * 但后端只有单条删除端点 —— 请求落到路径变量 {@code /{id}} 上再拼 {@code /messages}
+       * 没有映射，Spring 回 405「不支持DELETE请求」，前端只能逐条退化成 N 次删除。</p>
+       *
+       * <p>本端点按「轮」归并而不是按「条」：锚点是助手消息时，必须连同该轮的用户提问
+       * 一起删，否则会留下没有回复的孤儿提问。只回退对话，不回滚工作目录里已被工具
+       * 写入的文件 —— 文件是执行轨迹，删了会让用户丢失工作成果。</p>
+       *
+       * @param id            会话标识
+       * @param fromMessageId 回退锚点消息 ID（该条及其之后全部删除）
+       * @return success / removedTurns / removedMessages
+       */
+    @DeleteMapping("/{id}/messages")
+    public ReturnResult<Map<String, Object>> rewind(
+            @PathVariable("id") String id,
+            @RequestParam(value = "fromMessageId", required = false) String fromMessageId) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (fromMessageId == null || fromMessageId.isBlank()) {
+            result.put("success", false);
+            result.put("message", "fromMessageId 不能为空");
+            result.put("removedTurns", 0);
+            result.put("removedMessages", 0);
+            return ReturnResult.ok(result);
+        }
+
+        SysAiMessage anchor = null;
+        if (fromMessageId.matches("\\d+")) {
+            anchor = messageMapper.selectById(Long.parseLong(fromMessageId));
+        }
+        if (anchor == null || !sessionId.equals(anchor.getSysAiSessionId())) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "回退点消息不存在");
+        }
+
+          // 锚点若是助手回复，回退点应落到它对应的用户提问上（整轮一起删）
+        Long boundary = anchor.getId();
+        if ("assistant".equals(anchor.getRole()) && anchor.getParentId() != null) {
+            SysAiMessage question = messageMapper.selectById(anchor.getParentId());
+            if (question != null && sessionId.equals(question.getSysAiSessionId())) {
+                boundary = question.getId();
+            }
+        }
+
+          // 统计影响轮数：边界及之后的消息里有多少条用户提问
+        LambdaQueryWrapper<SysAiMessage> affected = new LambdaQueryWrapper<>();
+        affected.eq(SysAiMessage::getSysAiSessionId, sessionId)
+                .ge(SysAiMessage::getId, boundary);
+        List<SysAiMessage> toRemove = messageMapper.selectList(affected);
+        long turns = toRemove.stream().filter((m) -> "user".equals(m.getRole())).count();
+
+        LambdaQueryWrapper<SysAiMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiMessage::getSysAiSessionId, sessionId)
+                .ge(SysAiMessage::getId, boundary);
+        int removed = messageMapper.delete(wrapper);
+
+        result.put("success", true);
+        result.put("removedTurns", turns);
+        result.put("removedMessages", removed);
+        log.info("[Session] 回退会话: sessionId={}, 回退点={}, 删除 {} 条 ({} 轮)",
+                sessionId, boundary, removed, turns);
+        return ReturnResult.ok(result);
     }
 
       /**

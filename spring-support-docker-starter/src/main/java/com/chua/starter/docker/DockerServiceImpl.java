@@ -2,6 +2,7 @@
 package com.chua.starter.docker;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.docker.model.DockerNetworkRequest;
 import com.chua.starter.docker.model.DockerVolumeRequest;
@@ -239,7 +240,7 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public SseEmitter removeContainerStream(Long hostId, String id, Boolean force) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             if (isBlank(id)) {
                 sendEvent(emitter, "error", "容器标识不能为空");
                 emitter.complete();
@@ -248,14 +249,14 @@ public class DockerServiceImpl implements DockerService {
             String flag = Boolean.TRUE.equals(force) ? " -f" : "";
             execStream(hostId, emitter, "卸载容器 " + id,
                     "docker rm" + flag + " " + shellSafe(id) + " 2>&1", id);
-        });
+        }));
         return emitter;
     }
 
     @Override
     public SseEmitter runContainer(Long hostId, DockerCreateRequest request) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
                 ensurePosix(hostId);
@@ -331,7 +332,7 @@ public class DockerServiceImpl implements DockerService {
                     connectionManager.release(hostId);
                 }
             }
-        });
+        }));
         return emitter;
     }
 
@@ -359,7 +360,7 @@ public class DockerServiceImpl implements DockerService {
     public SseEmitter streamContainerLogs(Long hostId, String id, Integer tail) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         String sessionId = UUID.randomUUID().toString().replace("-", "");
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
                 ensurePosix(hostId);
@@ -409,7 +410,7 @@ public class DockerServiceImpl implements DockerService {
                     connectionManager.release(hostId);
                 }
             }
-        });
+        }));
         return emitter;
     }
 
@@ -419,7 +420,7 @@ public class DockerServiceImpl implements DockerService {
     public SseEmitter execContainer(Long hostId, String id, String command) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         String sessionId = UUID.randomUUID().toString().replace("-", "");
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             SshClient.TerminalOperation[] terminalRef = new SshClient.TerminalOperation[1];
             try {
@@ -472,7 +473,7 @@ public class DockerServiceImpl implements DockerService {
                     connectionManager.release(hostId);
                 }
             }
-        });
+        }));
         return emitter;
     }
 
@@ -551,7 +552,7 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public SseEmitter pullImage(Long hostId, String image, String registryId) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
                 ensurePosix(hostId);
@@ -598,7 +599,7 @@ public class DockerServiceImpl implements DockerService {
                     connectionManager.release(hostId);
                 }
             }
-        });
+        }));
         return emitter;
     }
 
@@ -626,7 +627,7 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public SseEmitter removeImageStream(Long hostId, String imageId, Boolean force) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             if (isBlank(imageId)) {
                 sendEvent(emitter, "error", "镜像标识不能为空");
                 emitter.complete();
@@ -635,7 +636,7 @@ public class DockerServiceImpl implements DockerService {
             String flag = Boolean.TRUE.equals(force) ? " -f" : "";
             execStream(hostId, emitter, "卸载镜像 " + imageId,
                     "docker rmi" + flag + " " + shQuote(imageId.trim()) + " 2>&1", imageId);
-        });
+        }));
         return emitter;
     }
 

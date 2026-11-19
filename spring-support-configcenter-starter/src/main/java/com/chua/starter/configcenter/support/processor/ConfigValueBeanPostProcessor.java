@@ -4,6 +4,7 @@ import com.chua.common.support.config.center.ConfigCenter;
 import com.chua.common.support.config.center.ConfigListener;
 import com.chua.common.support.objects.annotation.ConfigValue;
 import com.chua.common.support.converter.Converter;
+import com.chua.common.support.lang.placeholder.PlaceholderSupport;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -217,7 +218,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             }
 
             String expression = annotation.value();
-            PlaceholderExpressions.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
+            PlaceholderSupport.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
 
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
@@ -268,7 +269,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             }
 
             String expression = annotation.value();
-            PlaceholderExpressions.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
+            PlaceholderSupport.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
 
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());

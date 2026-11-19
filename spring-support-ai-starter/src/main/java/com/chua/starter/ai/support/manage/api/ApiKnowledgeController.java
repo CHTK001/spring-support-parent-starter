@@ -13,6 +13,8 @@ import com.chua.common.support.ai.splitter.TextSplitter;
 import com.chua.common.support.ai.splitter.TextSplitterProvider;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
+import com.chua.common.support.network.download.extractor.Extractor;
+import com.chua.common.support.network.download.extractor.ExtractorFactory;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.vector.VectorStorage;
@@ -70,7 +72,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 import java.util.stream.Stream;
 
@@ -3378,37 +3379,19 @@ public class ApiKnowledgeController {
     }
 
     /**
-     * 解压 压缩 到目标目录（防路径穿越）。
-     * @param destDir destdir
-     * @param zipFile 压缩文件
-     * @return 返回值
-     * @throws IOException 异常
-    */
+     * 解压压缩文件到目标目录（防路径穿越）。
+     *
+     * @param zipFile 压缩文件路径
+     * @param destDir 目标目录
+     * @throws IOException 解压失败或格式不支持
+     */
     private void unzip(Path zipFile, Path destDir) throws IOException {
-        /**
-         * 尝试。
-         * @param ZipInputStream(Files.newInputStream(zipFile 压缩输入流(文件.新输入流(压缩文件
-         */
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                Path resolved = destDir.resolve(entry.getName()).normalize();
-                if (!resolved.startsWith(destDir.normalize())) {
-                    /**
-                     * io异常。
-                     * @param entry.getName( entry.获取名称(
-                     * @return io异常的结果
-                     */
-                    throw new IOException("非法 zip 条目: " + entry.getName());
-                }
-                if (entry.isDirectory()) {
-                    Files.createDirectories(resolved);
-                } else {
-                    Files.createDirectories(resolved.getParent());
-                    Files.copy(zis, resolved);
-                }
-                zis.closeEntry();
-            }
+        Extractor extractor = ExtractorFactory.getExtractor(zipFile.getFileName().toString());
+        if (extractor == null) {
+            throw new IOException("不支持的压缩格式: " + zipFile.getFileName());
+        }
+        if (!extractor.extract(zipFile.toFile(), destDir.toFile())) {
+            throw new IOException("ZIP 解压失败: " + zipFile);
         }
     }
 

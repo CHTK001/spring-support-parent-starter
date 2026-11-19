@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.common.support.log.MdcWrap;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -422,7 +423,7 @@ public class AiProtocolController extends BaseAiController {
      */
     private SseEmitter claudeStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             try {
                 // 发送消息开始事件
                 emitter.send(SseEmitter.event().name("message_start")
@@ -460,7 +461,7 @@ public class AiProtocolController extends BaseAiController {
                 }
                 emitter.completeWithError(ex);
             }
-        });
+        }));
         return emitter;
     }
 
@@ -571,7 +572,7 @@ public class AiProtocolController extends BaseAiController {
      */
     private SseEmitter responsesStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             try {
                 String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
                 String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
@@ -637,7 +638,7 @@ public class AiProtocolController extends BaseAiController {
                 }
                 emitter.completeWithError(ex);
             }
-        });
+        }));
         return emitter;
     }
 
@@ -736,7 +737,7 @@ public class AiProtocolController extends BaseAiController {
         public Object stream(Object body, String model, HttpServletRequest servletRequest) {
             try {
                 SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
-                CompletableFuture.runAsync(() -> {
+                CompletableFuture.runAsync(MdcWrap.wrap(() -> {
                     try {
                         AiChatRequest chatRequest = buildGeminiChatRequest((Map<String, Object>) body, servletRequest);
                         Map<String, Object> result = aiChatFacadeService.call(chatRequest);
@@ -748,7 +749,7 @@ public class AiProtocolController extends BaseAiController {
                     } catch (IOException ex) {
                         emitter.completeWithError(ex);
                     }
-                });
+                }));
                 return emitter;
             } catch (Exception ex) {
                 log.error("[ai] Gemini 流式异常: {}", ex.getMessage(), ex);

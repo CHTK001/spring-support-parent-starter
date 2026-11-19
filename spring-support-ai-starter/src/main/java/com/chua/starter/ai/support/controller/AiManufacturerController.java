@@ -6,7 +6,9 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import com.chua.starter.ai.support.service.AiManufacturerFacadeService;
-import com.chua.starter.ai.support.service.AiModelPriceSyncService;
+import com.chua.starter.ai.support.service.AiDeepSeekPriceSyncService;
+import com.chua.starter.ai.support.service.AiMossPriceSyncService;
+import com.chua.starter.ai.support.service.AiSub2ApiPriceSyncService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,7 +64,17 @@ public class AiManufacturerController {
     /**
      * 模型价格同步服务
      */
-    private final AiModelPriceSyncService aiModelPriceSyncService;
+    private final AiMossPriceSyncService aiModelPriceSyncService;
+
+    /**
+     * DeepSeek 模型价格同步服务（官方文档定价页口径）
+     */
+    private final AiDeepSeekPriceSyncService aiDeepSeekPriceSyncService;
+
+    /**
+     * sub2api 模型价格同步服务（站点模型广场口径）
+     */
+    private final AiSub2ApiPriceSyncService aiSub2ApiPriceSyncService;
 
     /**
      * 运行目录（用于 Logo 文件存储）
@@ -100,24 +112,81 @@ public class AiManufacturerController {
         return ReturnResult.ok(names);
     }
 
+    /**
+     * 同步模型价格（从 ChatClient 获取并更新）。
+     *
+     * @param code    厂商编码
+     * @param baseUrl sub2api 站点根地址（可空，缺省取库内 sub2api 供应商行的上游地址）
+     * @return 操作结果
+     */
     @Permission("admin")
     @Operation(summary = "同步模型价格（从 ChatClient 获取并更新）")
     @PutMapping("update-model-prices")
     public ReturnResult<?> updateModelPrices(
-            @Parameter(description = "厂商编码") @RequestParam String code) {
-        aiModelPriceSyncService.syncPrices(code);
+            @Parameter(description = "厂商编码") @RequestParam String code,
+            @Parameter(description = "sub2api 站点根地址（可空）")
+            @RequestParam(value = "base_url", required = false) String baseUrl) {
+        if (isSub2ApiCode(code)) {
+            aiSub2ApiPriceSyncService.syncPrices(code, baseUrl);
+        } else if (isDeepSeekCode(code)) {
+            aiDeepSeekPriceSyncService.syncPrices(code);
+        } else {
+            aiModelPriceSyncService.syncPrices(code);
+        }
         return ReturnResult.success();
     }
 
+    /**
+     * 替换厂商模型（从 API 拉取最新模型列表，先删后插，保留本地模型）。
+     *
+     * @param code    厂商编码
+     * @param baseUrl sub2api 站点根地址（可空，缺省取库内 sub2api 供应商行的上游地址）
+     * @return 操作结果
+     */
     @Permission("admin")
     @Operation(summary = "替换厂商模型（从 API 拉取最新模型列表，先删后插，保留本地模型）")
     @PutMapping("replace-models")
     public ReturnResult<?> replaceModels(
-            @Parameter(description = "厂商编码") @RequestParam String code) {
-        aiModelPriceSyncService.replaceModels(code);
+            @Parameter(description = "厂商编码") @RequestParam String code,
+            @Parameter(description = "sub2api 站点根地址（可空）")
+            @RequestParam(value = "base_url", required = false) String baseUrl) {
+        if (isSub2ApiCode(code)) {
+            aiSub2ApiPriceSyncService.replaceModels(code, baseUrl);
+        } else if (isDeepSeekCode(code)) {
+            aiDeepSeekPriceSyncService.replaceModels(code);
+        } else {
+            aiModelPriceSyncService.replaceModels(code);
+        }
         return ReturnResult.success();
     }
 
+    /**
+     * 是否走 DeepSeek 专属价格同步：只有编码命中 deepseek 时才从官方文档定价页取数，
+     * 其余厂商仍走 Moss 同步服务的通用口径。
+     *
+     * @param code 厂商编码
+     * @return DeepSeek 专属同步为 true
+     */
+    private static boolean isDeepSeekCode(String code) {
+        return code != null && "deepseek".equalsIgnoreCase(code.trim());
+    }
+
+    /**
+     * 是否走 sub2api 专属价格同步：编码命中 sub2api 时从该站点的模型广场取数。
+     *
+     * @param code 厂商编码
+     * @return sub2api 专属同步为 true
+     */
+    private static boolean isSub2ApiCode(String code) {
+        return code != null && "sub2api".equalsIgnoreCase(code.trim());
+    }
+
+    /**
+     * 从厂商 API 直拉模型列表并同步到模型表。
+     *
+     * @param code 厂商编码
+     * @return 同步结果（含同步数量）
+     */
     @Permission("admin")
     @Operation(summary = "从厂商 API 直拉模型列表并同步到模型表")
     @PutMapping("sync-models")

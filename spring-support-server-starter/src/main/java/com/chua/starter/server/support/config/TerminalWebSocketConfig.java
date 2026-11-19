@@ -1,5 +1,6 @@
 package com.chua.starter.server.support.config;
 
+import com.chua.starter.common.support.log.MdcWebSocketHandlerDecorator;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.terminal.handler.RdpDirectWebSocketHandler;
 import com.chua.starter.server.support.terminal.handler.TerminalWebSocketHandler;
@@ -86,15 +87,15 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
      */
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(terminalWebSocketHandler, ServerConstants.WEBSOCKET_TERMINAL_PATH)
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(terminalWebSocketHandler), ServerConstants.WEBSOCKET_TERMINAL_PATH)
                 .setAllowedOriginPatterns("*");
-        registry.addHandler(sshDirectWebSocketHandler, ServerConstants.WEBSOCKET_SSH_DIRECT_PATH)
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(sshDirectWebSocketHandler), ServerConstants.WEBSOCKET_SSH_DIRECT_PATH)
                 .setAllowedOriginPatterns("*");
-        registry.addHandler(vncWebsockifyWebSocketHandler, ServerConstants.WEBSOCKET_VNC_DIRECT_PATH)
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(vncWebsockifyWebSocketHandler), ServerConstants.WEBSOCKET_VNC_DIRECT_PATH)
                 .setAllowedOriginPatterns("*");
-        registry.addHandler(telnetDirectWebSocketHandler, ServerConstants.WEBSOCKET_TELNET_DIRECT_PATH)
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(telnetDirectWebSocketHandler), ServerConstants.WEBSOCKET_TELNET_DIRECT_PATH)
                 .setAllowedOriginPatterns("*");
-        registry.addHandler(rdpDirectWebSocketHandler, ServerConstants.WEBSOCKET_RDP_DIRECT_PATH)
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(rdpDirectWebSocketHandler), ServerConstants.WEBSOCKET_RDP_DIRECT_PATH)
                 .setAllowedOriginPatterns("*");
     }
 }

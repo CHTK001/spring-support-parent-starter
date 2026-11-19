@@ -17,6 +17,9 @@ import com.chua.starter.account.channel.mapper.SysAccountChannelModelMapper;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
+import com.chua.starter.account.channel.service.AccountChannelHealthService;
+import com.chua.starter.account.channel.store.ChannelHealth;
+import com.chua.starter.account.channel.store.ChannelHealthLog;
 import com.chua.starter.account.support.AccountUserContext;
 import com.chua.starter.account.support.ChannelSiteLinks;
 import com.chua.starter.account.channel.magpie.MagpieCreditQueryProvider;
@@ -26,6 +29,7 @@ import com.chua.starter.common.support.channel.ChannelTaskProvider;
 import com.chua.starter.common.support.channel.ChannelUpstreamAdmin;
 import com.chua.starter.common.support.channel.ChannelUpstreamProvider;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.common.support.text.json.Json;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
 import com.chua.starter.datasearch.credit.model.CreditResult;
@@ -132,6 +136,15 @@ public class ApiChannelAuthController {
     private final SysAccountChannelMapper providerMapper;
     private final SysAccountChannelConnectionMapper connectionMapper;
     private final SysAccountChannelModelMapper modelMapper;
+
+    /**
+     * 渠道健康记录读服务（本模块自有服务）。
+     *
+     * <p>健康表 {@code sys_account_channel_health} 随渠道管理整体归属账号模块；
+     * 这里只把最近一次探针结论读出去给前端上屏，<b>状态机与调度仍在 AI 侧探针</b>，
+     * 本类不做任何健康判定，避免把探针业务搬进账号模块。</p>
+     */
+    private final AccountChannelHealthService healthService;
 
     /**
      * 渠道目录变更事件发布器。
@@ -255,7 +268,7 @@ public class ApiChannelAuthController {
      * 上游 HTTP 上（最长 15s 连接超时），放在公共池里会挤占其它异步任务。</p>
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private static final ExecutorService SSE_EXECUTOR = Executors.newCachedThreadPool(new java.util.concurrent.ThreadFactory() {
+    private static final ExecutorService SSE_EXECUTOR = MdcWrap.decorate(Executors.newCachedThreadPool(new java.util.concurrent.ThreadFactory() {
         private final AtomicInteger SEQ = new AtomicInteger();
 
         @Override
@@ -265,7 +278,7 @@ public class ApiChannelAuthController {
             t.setDaemon(true);
             return t;
         }
-    });
+    }));
 
     /**
      * 懒加载渠道实现映射（幂等）。
@@ -307,6 +320,15 @@ public class ApiChannelAuthController {
         // SPI 框架会给每个实现额外登记一条「类简名」definition
         // （QoderCnAccountChannelAuthManager → QODERCN），与 @Spi 别名（QODER-CN）
         // 指向同一个实例，用注册表键去重会让国内变体出现两张卡片。
+        // 健康探针结论（只读）：一次取全量、按 connectionId 分组后传下去，
+        // 避免每个连接各查一次的 N+1；探针没有覆盖到的连接取不到记录，
+        // 前端就不显示健康徽标。
+        Map<String, ChannelHealth> healthByConnection = new LinkedHashMap<>();
+        for (ChannelHealth h : healthService.listAll()) {
+            if (h != null && h.getConnectionId() != null) {
+                healthByConnection.put(h.getConnectionId(), h);
+            }
+        }
         for (Map.Entry<String, AccountChannelAuthManager> entry : managers.entrySet()) {
             AccountChannelAuthManager impl = entry.getValue();
             if (impl == null || impl.channel() == null || !seen.add(impl.channel())) {
@@ -319,7 +341,45 @@ public class ApiChannelAuthController {
             if (provider == null) {
                 provider = requireChannelProvider(channel);
             }
-            items.add(buildChannelSummary(channel, impl, provider, owner));
+            items.add(buildChannelSummary(channel, impl, provider, owner, healthByConnection));
+        }
+        return ApiResult.ok(items);
+    }
+
+    /**
+     * 连接的健康探针历史（只读）。
+     *
+     * <p>渠道页「健康」页签画延迟趋势与状态时间线用。连接必须对当前用户可见
+     * （普通用户看自己的；管理员额外可见历史 {@code user_id IS NULL} 系统池行），
+     * 不可见一律按空处理，避免越权读取他人探针错误详情。</p>
+     *
+     * @param connectionId 连接标识
+     * @param hours        时间窗（小时，默认 24，服务端收敛到 [1, 168]）
+     * @return 健康历史行（按时间升序，最多 3000 行）
+     */
+    @GetMapping("/health-history")
+    public ApiResult<List<Map<String, Object>>> healthHistory(
+            @RequestParam String connectionId,
+            @RequestParam(defaultValue = "24") int hours) {
+        String owner = ownerId();
+        SysAccountChannelConnection conn = connectionMapper.selectById(connectionId);
+        boolean visible = conn != null
+                && (owner != null && owner.equals(conn.getUserId())
+                    || (AccountUserContext.isAdmin() && conn.getUserId() == null));
+        if (!visible) {
+            // 不存在或不属于自己：返回空列表而不是 404，前端按「无数据」渲染空态
+            return ApiResult.ok(new ArrayList<>(0));
+        }
+        List<ChannelHealthLog> logs = healthService.listHistory(connectionId, hours);
+        List<Map<String, Object>> items = new ArrayList<>(logs.size());
+        for (ChannelHealthLog l : logs) {
+            Map<String, Object> m = new LinkedHashMap<>(8);
+            m.put("state", l.getState());
+            m.put("latencyMs", l.getLatencyMs());
+            m.put("httpStatus", l.getHttpStatus());
+            m.put("error", l.getError());
+            m.put("createdAt", l.getCreatedAt());
+            items.add(m);
         }
         return ApiResult.ok(items);
     }
@@ -331,10 +391,12 @@ public class ApiChannelAuthController {
      * @param impl 渠道实现
      * @param provider 该渠道对应的 provider 行
      * @param owner 归属用户标识（userId 隔离）
+     * @param healthByConnection 连接标识 → 最近一次健康探针记录（只读展示用）
      * @return 摘要
      */
     private Map<String, Object> buildChannelSummary(String channel,
-            AccountChannelAuthManager impl, SysAccountChannel provider, String owner) {
+            AccountChannelAuthManager impl, SysAccountChannel provider, String owner,
+            Map<String, ChannelHealth> healthByConnection) {
         Map<String, Object> summary = new LinkedHashMap<>(16);
         summary.put("channel", channel);
         summary.put("displayName", impl.displayName());
@@ -404,6 +466,8 @@ public class ApiChannelAuthController {
                 cm.put("expiresAt", expiresAtOf(c));
                 cm.put("channel", channelOf(c, channel));
                 putCheckinInfo(cm, c);
+                // 健康探针结论（只读）：没有记录就不附加字段，前端不显示徽标
+                putHealthInfo(cm, healthByConnection.get(c.getConnectionId()));
                 conns.add(cm);
             }
         }
@@ -429,6 +493,33 @@ public class ApiChannelAuthController {
         }
         summary.put("models", modelItems);
         return summary;
+    }
+
+    /**
+     * 附加连接的只读健康字段（最近一次探针结论）。
+     *
+     * <p>健康状态机（何时算失败、连续几次下线、限流如何记）属于 AI 侧探针业务；
+     * 这里只做「读出来、摆上去」，供前端渠道页显示健康徽标与原因提示。
+     * 记录不存在（探针关闭、免登录渠道、尚未轮到探测）时<b>不附加任何字段</b>，
+     * 让前端按「无数据」处理而不是误读为正常。</p>
+     *
+     * @param cm 连接摘要 map
+     * @param h 该连接最近的健康记录；可为 {@code null}
+     */
+    private void putHealthInfo(Map<String, Object> cm, ChannelHealth h) {
+        if (h == null) {
+            return;
+        }
+        cm.put("healthState", h.getState());
+        // 人工熔断位：AUTO 跟随探针 / OPEN 强制熔断 / CLOSED 强制放行
+        cm.put("healthCircuitState", h.getCircuitState());
+        cm.put("healthLastProbeAt", h.getLastProbeAt());
+        cm.put("healthLatency", h.getLastProbeLatency());
+        cm.put("healthConsecutiveFailures", h.getConsecutiveFailures());
+        String error = h.getLastProbeError();
+        // 错误摘要截断，防止上游堆栈把列表接口撑爆
+        cm.put("healthError", error == null ? null
+                : (error.length() > 200 ? error.substring(0, 200) + "…" : error));
     }
 
     /**

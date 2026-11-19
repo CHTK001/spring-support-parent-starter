@@ -29,7 +29,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Locale;
-import java.util.UUID;
+import com.chua.common.support.utils.IdUtils;
 
 /**
  * 微信支付分订单服务实现，管理微信支付分场景下的先享后付支付订单生命周期。
@@ -532,7 +532,7 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
      * @return 生成的出订单号
      */
     private String generateOutOrderNo() {
-        return "PS" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
+        return IdUtils.createOrderNo("PS");
     }
 
     /**

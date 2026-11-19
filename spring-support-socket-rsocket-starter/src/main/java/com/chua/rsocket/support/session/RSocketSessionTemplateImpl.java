@@ -188,6 +188,8 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
      * @return 返回值
     */
     public SocketSession save(String clientId, SocketSession session) {
+        // [体系 1.11 豁免] 本模板仅服务自有 RSocketSessionImpl 会话类型，非跨实现 SPI 分发；
+        // instanceof 为防御性类型收窄，异构会话静默忽略以保持原行为
         if (session instanceof RSocketSessionImpl impl) {
             sessionCache.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>()).add(impl);
             sessionClientMap.put(impl.getId(), clientId);
@@ -204,6 +206,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     */
     public void remove(String clientId, SocketSession session) {
         List<RSocketSessionImpl> sessions = sessionCache.get(clientId);
+        // [体系 1.11 豁免] 同 save()：防御性类型收窄，非跨实现 SPI 分发
         if (sessions != null && session instanceof RSocketSessionImpl impl) {
             sessions.remove(impl);
             sessionClientMap.remove(impl.getId());

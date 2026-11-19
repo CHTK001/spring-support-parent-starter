@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
  * <p>与 {@code GET /v2/log/page} 的关系：那个端点在当前部署上稳定返回
  * {@code S0503C0000 资源不存在}（表不存在，且 {@code @SysLog} 切面发的事件
  * 全仓无监听者，本来也不会有数据）。本端点读本模块自己落的
- * {@code ms_datasource_oper_log}，按数据源分页，是真正能返回数据的那条路。</p>
+ * {@code datasource_oper_log}，按数据源分页，是真正能返回数据的那条路。</p>
  *
  * <p>写入侧不在这里：本控制器只读。日志由 {@code @SysLog} 切面 → 监听器写入，
  * 这样新增受管端点时只要加上注解就会自动留痕，不必记得再改一处埋点。</p>

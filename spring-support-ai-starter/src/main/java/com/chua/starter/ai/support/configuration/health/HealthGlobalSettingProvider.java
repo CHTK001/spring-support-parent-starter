@@ -13,7 +13,7 @@ import java.util.List;
  * 限流状态码与回退探针策略。由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
  * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
  *
- * <p>{@link com.chua.starter.ai.support.manage.schedule.ChannelHealthProbeTask} 动态读取该分组，
+ * <p>{@link com.chua.starter.ai.support.schedule.ChannelHealthProbeTask} 动态读取该分组，
  * {@link com.chua.starter.ai.support.service.ChannelHealthService} 审计探针结果。</p>
  *
  * @author CH

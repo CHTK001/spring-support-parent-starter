@@ -276,6 +276,19 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return submitAnswerSheet的结果
      */
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
+        return submitAnswerSheet(dto, EduUserContext.requireUserId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    /**
+     * 提交answersheet（归属人由调用方指定，学生在线作答链路用）
+     *
+     * @param dto dto
+     * @param ownerUserId 归属用户标识
+     * @return submitAnswerSheet的结果
+     */
+    public String submitAnswerSheet(MarkingSubmitDTO dto, String ownerUserId) {
         // 0. 入参体检：答题内容列带 json_valid 检查约束、(考试, 学生) 上有唯一键，
         //    直接 insert 会以 500 + 数据库原文（含复合主键值）暴露给用户，这里先转成业务提示
         validateSubmitContent(dto.content());
@@ -285,7 +298,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
-        sheet.setOwnerUserId(EduUserContext.requireUserId());
+        sheet.setOwnerUserId(ownerUserId);
         sheet.setAnswerSheetExamId(dto.examId());
         sheet.setAnswerSheetStudentId(dto.studentId());
         sheet.setAnswerSheetContent(dto.content());

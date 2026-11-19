@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
     <!-- 项目基本信息 -->
@@ -149,8 +149,9 @@
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
         <module>spring-support-control-starter</module>          <!-- WebRTC 远程控制：信令/桌面采集/键鼠注入 -->
-        <!-- CDP 调试模块已并入 spring-support-monitor-starter 的 tshark 域
-             （com.chua.starter.monitor.support.tshark.cdp），模块目录与父 POM 条目同时移除 -->
+        <!-- CDP 调试模块：headless Chromium + /ms/cdp REST + /ws/cdp WebSocket + 实时页面反向代理，
+             独立成模块，宿主引入依赖即可使用；monitor-starter 作为聚合方依赖它 -->
+        <module>spring-support-cdp-starter</module>
 
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
@@ -188,7 +189,7 @@
         <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
         <utils.version>4.0.0.51</utils.version>
-        <spring.boot.version>4.1.1</spring.boot.version>
+        <spring.boot.version>4.1.2</spring.boot.version>
         <reactor.core.version>3.8.7</reactor.core.version>
         <!-- javax 命名空间的 JAXB 实现版本：winrm4j/CXF 走 javax.xml.bind，
              Boot BOM 默认把 com.sun.xml.bind:jaxb-impl 管到 jakarta 系 4.x，故显式钉版 -->

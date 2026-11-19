@@ -137,6 +137,20 @@ public interface ManageAccountService {
     SysAccount getInternal(String accountId);
 
     /**
+     * 按种类列出账号，<b>不按当前用户归属过滤</b>。
+     *
+     * <p>供系统级任务使用（如新邮件轮询）：定时任务线程没有登录态，
+     * {@link #list(String, String, String)} 在无用户上下文时只回部署级账号
+     * （{@code owner} 为空），个人邮箱账号会永远轮询不到。系统任务需要覆盖
+     * 所有开启了通知的账号，因此这里不做归属过滤；界面查询仍请用
+     * {@link #list(String, String, String)}。</p>
+     *
+     * @param kind 账号种类（可空）
+     * @return 账号列表（敏感字段已清空，仅保留 {@code hasSecret}）
+     */
+    List<SysAccount> listInternal(String kind);
+
+    /**
      * 解析指定种类的默认账号，<b>不校验当前用户归属</b>。
      *
      * <p>解析顺序：</p>

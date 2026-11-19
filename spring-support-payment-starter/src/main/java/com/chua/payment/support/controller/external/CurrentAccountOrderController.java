@@ -2,8 +2,7 @@
 package com.chua.payment.support.controller.external;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.UserOrderQueryRequest;
 import com.chua.payment.support.dto.UserTransactionQueryRequest;
 import com.chua.payment.support.entity.TransactionRecord;
@@ -12,6 +11,8 @@ import com.chua.payment.support.service.PaymentOrderService;
 import com.chua.payment.support.support.PaymentAccountPrincipalResolver;
 import com.chua.payment.support.vo.OrderStateLogVO;
 import com.chua.payment.support.vo.OrderVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,17 +60,17 @@ public class CurrentAccountOrderController {
        * @param status 状态
        * @return 当前账户订单分页结果
        */
-    public Result<PageResult<OrderVO>> listOrders(HttpServletRequest request,
+    public ReturnPageResult<OrderVO> listOrders(HttpServletRequest request,
                                                   @RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "10") int size,
                                                   @RequestParam(required = false) String orderNo,
                                                   @RequestParam(required = false) String status) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnPageResult.error("未获取到当前账户");
         }
-        return Result.success(PageResult.of(accountPaymentQueryService.listOrdersByUser(new UserOrderQueryRequest(userId, page, size
-            , orderNo, status))));
+        return PageResultUtils.ok(accountPaymentQueryService.listOrdersByUser(new UserOrderQueryRequest(userId, page, size
+            , orderNo, status)));
     }
 
     @GetMapping("/orders/{id}")
@@ -80,12 +81,12 @@ public class CurrentAccountOrderController {
        * @param id 标识
        * @return 获取订单的结果
        */
-    public Result<OrderVO> getOrder(HttpServletRequest request, @PathVariable Long id) {
+    public ReturnResult<OrderVO> getOrder(HttpServletRequest request, @PathVariable Long id) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
-        return Result.success(accountPaymentQueryService.getOrderByUser(userId, id));
+        return ReturnResult.ok(accountPaymentQueryService.getOrderByUser(userId, id));
     }
 
     @GetMapping("/orders/{id}/logs")
@@ -96,12 +97,12 @@ public class CurrentAccountOrderController {
        * @param id 标识
        * @return 订单状态流转日志的结果
        */
-    public Result<List<OrderStateLogVO>> listOrderLogs(HttpServletRequest request, @PathVariable Long id) {
+    public ReturnResult<List<OrderStateLogVO>> listOrderLogs(HttpServletRequest request, @PathVariable Long id) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
-        return Result.success(accountPaymentQueryService.listOrderLogsByUser(userId, id));
+        return ReturnResult.ok(accountPaymentQueryService.listOrderLogsByUser(userId, id));
     }
 
     @GetMapping("/transactions")
@@ -115,7 +116,7 @@ public class CurrentAccountOrderController {
        * @param status 状态
        * @return 交易流水分页结果
        */
-    public Result<PageResult<TransactionRecord>> listTransactions(HttpServletRequest request,
+    public ReturnPageResult<TransactionRecord> listTransactions(HttpServletRequest request,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
                                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                                   @RequestParam(required = false) String orderNo,
@@ -123,11 +124,11 @@ public class CurrentAccountOrderController {
                                                                   @RequestParam(required = false) Integer status) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnPageResult.error("未获取到当前账户");
         }
         Page<TransactionRecord> page = accountPaymentQueryService.listTransactionsByUser(new UserTransactionQueryRequest(userId, pageNum
             , pageSize, orderNo, transactionType, status));
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 
     @PutMapping("/orders/{id}/cancel")
@@ -138,14 +139,14 @@ public class CurrentAccountOrderController {
        * @param reason 取消原因
        * @return 是否取消成功
        */
-    public Result<Boolean> cancelOrder(HttpServletRequest request,
+    public ReturnResult<Boolean> cancelOrder(HttpServletRequest request,
                                        @PathVariable Long id,
                                        @RequestBody(required = false) String reason) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
           // 用户取消：已支付则走退款取消，未支付则直接取消
-        return Result.success(paymentOrderService.cancelOrder(id, "user", reason, true));
+        return ReturnResult.ok(paymentOrderService.cancelOrder(id, "user", reason, true));
     }
 }

@@ -3,6 +3,7 @@ package com.chua.starter.eduai.dimension.service;
 
 import com.chua.starter.common.support.constant.CacheConstant;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.oauth.client.support.contants.AuthConstant;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
@@ -1165,9 +1166,9 @@ public class EduDimensionService {
     public DimensionDropdown getDropdown() {
           // 学科 / 年级并行查询，缩短下拉首屏
         java.util.concurrent.CompletableFuture<List<EduSubject>> subjectsF =
-                java.util.concurrent.CompletableFuture.supplyAsync(() -> listSubjects(null));
+                java.util.concurrent.CompletableFuture.supplyAsync(MdcWrap.wrapSupplier(() -> listSubjects(null)));
         java.util.concurrent.CompletableFuture<List<EduGrade>> gradesF =
-                java.util.concurrent.CompletableFuture.supplyAsync(() -> listGrades(null));
+                java.util.concurrent.CompletableFuture.supplyAsync(MdcWrap.wrapSupplier(() -> listGrades(null)));
 
         DimensionDropdown dropdown = new DimensionDropdown();
         dropdown.setGradeLevels(List.of(

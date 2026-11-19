@@ -58,7 +58,7 @@ public interface DatasourceMetricService {
     /**
      * 清理超保留期的历史指标（保留窗口滚动清理）。
      *
-     * <p>没有这个的话 {@code ms_datasource_metric} 会无上限增长：只要有人盯着
+     * <p>没有这个的话 {@code datasource_metric} 会无上限增长：只要有人盯着
      * 监控指标页签，每分钟一行，7 天窗口查询却可能回溯到更早的点。</p>
      *
      * @param retentionDays 保留天数；小于等于 0 表示不清理

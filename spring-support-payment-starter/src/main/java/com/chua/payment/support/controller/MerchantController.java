@@ -1,11 +1,12 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.MerchantDTO;
 import com.chua.payment.support.service.MerchantService;
 import com.chua.payment.support.vo.MerchantVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +45,9 @@ public class MerchantController {
      * @param dto dto
      * @return 创建商户的结果
      */
-    public Result<MerchantVO> createMerchant(@RequestBody MerchantDTO dto) {
+    public ReturnResult<MerchantVO> createMerchant(@RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.createMerchant(dto);
-        return Result.success(vo);
+        return ReturnResult.ok(vo);
     }
 
     @Operation(summary = "更新商户")
@@ -58,9 +59,9 @@ public class MerchantController {
      * @param dto dto
      * @return 更新商户的结果
      */
-    public Result<MerchantVO> updateMerchant(@PathVariable Long id, @RequestBody MerchantDTO dto) {
+    public ReturnResult<MerchantVO> updateMerchant(@PathVariable Long id, @RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.updateMerchant(id, dto);
-        return Result.success(vo);
+        return ReturnResult.ok(vo);
     }
 
     @Operation(summary = "删除商户")
@@ -71,9 +72,9 @@ public class MerchantController {
      * @param id 标识
      * @return 删除商户的结果
      */
-    public Result<Boolean> deleteMerchant(@PathVariable Long id) {
+    public ReturnResult<Boolean> deleteMerchant(@PathVariable Long id) {
         boolean success = merchantService.deleteMerchant(id);
-        return Result.success(success);
+        return ReturnResult.ok(success);
     }
 
     @Operation(summary = "查询商户")
@@ -84,9 +85,9 @@ public class MerchantController {
      * @param id 标识
      * @return 获取商户的结果
      */
-    public Result<MerchantVO> getMerchant(@PathVariable Long id) {
+    public ReturnResult<MerchantVO> getMerchant(@PathVariable Long id) {
         MerchantVO vo = merchantService.getMerchant(id);
-        return Result.success(vo);
+        return ReturnResult.ok(vo);
     }
 
     @Operation(summary = "分页查询商户列表")
@@ -100,19 +101,13 @@ public class MerchantController {
      * @param status 状态
      * @return 商户分页结果
      */
-    public Result<PageResult<MerchantVO>> listMerchants(
+    public ReturnPageResult<MerchantVO> listMerchants(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String merchantName,
             @RequestParam(required = false) Integer status) {
         Page<MerchantVO> pageResult = merchantService.listMerchants(page, size, merchantName, status);
-        PageResult<MerchantVO> result = new PageResult<>(
-                pageResult.getRecords(),
-                pageResult.getTotal(),
-                pageResult.getCurrent(),
-                pageResult.getSize()
-        );
-        return Result.success(result);
+        return PageResultUtils.ok(pageResult);
     }
 
     @Operation(summary = "激活商户")
@@ -122,9 +117,9 @@ public class MerchantController {
      * @param id 标识
      * @return 返回值
     */
-    public Result<Boolean> activateMerchant(@PathVariable Long id) {
+    public ReturnResult<Boolean> activateMerchant(@PathVariable Long id) {
         boolean success = merchantService.activateMerchant(id);
-        return Result.success(success);
+        return ReturnResult.ok(success);
     }
 
     @Operation(summary = "停用商户")
@@ -134,8 +129,8 @@ public class MerchantController {
      * @param id 标识
      * @return 返回值
     */
-    public Result<Boolean> deactivateMerchant(@PathVariable Long id) {
+    public ReturnResult<Boolean> deactivateMerchant(@PathVariable Long id) {
         boolean success = merchantService.deactivateMerchant(id);
-        return Result.success(success);
+        return ReturnResult.ok(success);
     }
 }

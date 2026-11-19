@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.settings.AiModelService;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.ServletOutputStream;
@@ -113,7 +114,7 @@ public class CommandGeneratorController {
                          HttpServletResponse response) {
         final AsyncContext async = request.startAsync();
         async.setTimeout(0);
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 response.setContentType("text/event-stream;charset=UTF-8");
                 response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -224,7 +225,7 @@ public class CommandGeneratorController {
                 }
                 async.complete();
             }
-        }));
+        })));
     }
 
     /**

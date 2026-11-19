@@ -1,8 +1,7 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.dto.WechatPayScoreCancelDTO;
 import com.chua.payment.support.dto.WechatPayScoreCompleteDTO;
 import com.chua.payment.support.dto.WechatPayScoreCreateDTO;
@@ -10,6 +9,8 @@ import com.chua.payment.support.dto.WechatPayScoreOrderQueryRequest;
 import com.chua.payment.support.entity.WechatPayScoreOrder;
 import com.chua.payment.support.service.WechatPayScoreOrderService;
 import com.chua.payment.support.vo.WechatPayScoreOrderVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -46,8 +47,8 @@ public class WechatPayScoreOrderController {
        * @param dto dto
        * @return 创建的结果
        */
-    public Result<WechatPayScoreOrderVO> create(@RequestBody WechatPayScoreCreateDTO dto) {
-        return Result.success(convert(wechatPayScoreOrderService.createOrder(dto)));
+    public ReturnResult<WechatPayScoreOrderVO> create(@RequestBody WechatPayScoreCreateDTO dto) {
+        return ReturnResult.ok(convert(wechatPayScoreOrderService.createOrder(dto)));
     }
 
     @Operation(summary = "查询微信支付分订单")
@@ -58,9 +59,9 @@ public class WechatPayScoreOrderController {
        * @param outOrderNo 商户订单号
        * @return 获取的结果
        */
-    public Result<WechatPayScoreOrderVO> get(@PathVariable String outOrderNo) {
+    public ReturnResult<WechatPayScoreOrderVO> get(@PathVariable String outOrderNo) {
         WechatPayScoreOrder order = wechatPayScoreOrderService.getByOutOrderNo(outOrderNo);
-        return order == null ? Result.error("微信支付分订单不存在") : Result.success(convert(order));
+        return order == null ? ReturnResult.error("微信支付分订单不存在") : ReturnResult.ok(convert(order));
     }
 
     @Operation(summary = "分页查询微信支付分订单")
@@ -76,7 +77,7 @@ public class WechatPayScoreOrderController {
        * @param state      订单状态（可选）
        * @return 微信支付分订单分页结果
        */
-    public Result<PageResult<WechatPayScoreOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
+    public ReturnPageResult<WechatPayScoreOrderVO> page(@RequestParam(defaultValue = "1") int pageNum,
                                                           @RequestParam(defaultValue = "10") int pageSize,
                                                           @RequestParam(required = false) Long merchantId,
                                                           @RequestParam(required = false) Long channelId,
@@ -86,7 +87,7 @@ public class WechatPayScoreOrderController {
             , merchantId, channelId, openId, state));
         Page<WechatPayScoreOrderVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(this::convert).toList());
-        return Result.success(PageResult.of(voPage));
+        return PageResultUtils.ok(voPage);
     }
 
     @Operation(summary = "同步微信支付分订单状态")
@@ -97,8 +98,8 @@ public class WechatPayScoreOrderController {
        * @param outOrderNo 商户订单号
        * @return 同步的结果
        */
-    public Result<WechatPayScoreOrderVO> sync(@PathVariable String outOrderNo) {
-        return Result.success(convert(wechatPayScoreOrderService.syncOrder(outOrderNo)));
+    public ReturnResult<WechatPayScoreOrderVO> sync(@PathVariable String outOrderNo) {
+        return ReturnResult.ok(convert(wechatPayScoreOrderService.syncOrder(outOrderNo)));
     }
 
     @Operation(summary = "完结微信支付分订单")
@@ -109,9 +110,9 @@ public class WechatPayScoreOrderController {
        * @param dto dto
        * @return 完结后的订单结果
        */
-    public Result<WechatPayScoreOrderVO> complete(@PathVariable String outOrderNo,
+    public ReturnResult<WechatPayScoreOrderVO> complete(@PathVariable String outOrderNo,
                                                   @RequestBody(required = false) WechatPayScoreCompleteDTO dto) {
-        return Result.success(convert(wechatPayScoreOrderService.completeOrder(outOrderNo, dto)));
+        return ReturnResult.ok(convert(wechatPayScoreOrderService.completeOrder(outOrderNo, dto)));
     }
 
     @Operation(summary = "取消微信支付分订单")
@@ -122,9 +123,9 @@ public class WechatPayScoreOrderController {
        * @param dto dto
        * @return 取消后的订单结果
        */
-    public Result<WechatPayScoreOrderVO> cancel(@PathVariable String outOrderNo,
+    public ReturnResult<WechatPayScoreOrderVO> cancel(@PathVariable String outOrderNo,
                                                 @RequestBody(required = false) WechatPayScoreCancelDTO dto) {
-        return Result.success(convert(wechatPayScoreOrderService.cancelOrder(outOrderNo, dto)));
+        return ReturnResult.ok(convert(wechatPayScoreOrderService.cancelOrder(outOrderNo, dto)));
     }
 
       /**

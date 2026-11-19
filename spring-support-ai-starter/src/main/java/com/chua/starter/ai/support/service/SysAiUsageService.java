@@ -82,6 +82,7 @@ public interface SysAiUsageService {
      * @param groupName 分组
      * @param provider 服务商
      * @param model 模型
+     * @param status 调用状态（success/failed，为空时不限定）
      * @param startTime 开始时间
      * @param endTime 结束时间
      * @param userId 归属用户（可为空，为空时列出全部用户明细）
@@ -89,7 +90,7 @@ public interface SysAiUsageService {
      * @param size 每页大小
      * @return 用量列表
      */
-    Page<SysAiUsage> list(String groupName, String provider, String model,
+    Page<SysAiUsage> list(String groupName, String provider, String model, String status,
                           LocalDateTime startTime, LocalDateTime endTime, String userId, int page, int size);
 
     /**
@@ -164,6 +165,26 @@ public interface SysAiUsageService {
      * @return 按令牌合计降序的拆分点
      */
     List<com.chua.starter.ai.support.model.vo.AiUsageCallTypePointVO> getCallTypeBreakdown(
+            String groupName, String provider, String model,
+            LocalDateTime startTime, LocalDateTime endTime, String userId);
+
+    /**
+     * 按「天 × 调用状态」聚合用量（失败分析卡的数据源）。
+     *
+     * <p>口径与 {@link #getCallTypeBreakdown} 一致：明细表数据库端聚合，
+     * 普通账号只统计本人，管理员统计全部账号；状态空值归一为 {@code success}。
+     * 每天返回 success / failed 两行（当天没出现的状态不返回），前端据此
+     * 计算失败率走势与失败集中时段。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（含，可为空）
+     * @param endTime   结束时间（含，可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @return 按天升序、同天内按状态升序的聚合点列表
+     */
+    List<com.chua.starter.ai.support.model.vo.AiUsageFailurePointVO> getFailureBreakdown(
             String groupName, String provider, String model,
             LocalDateTime startTime, LocalDateTime endTime, String userId);
 

@@ -3,6 +3,7 @@ package com.chua.starter.configcenter.support.processor;
 import com.chua.common.support.config.center.ConfigCenter;
 import com.chua.common.support.config.center.ConfigListener;
 import com.chua.common.support.converter.Converter;
+import com.chua.common.support.lang.placeholder.PlaceholderSupport;
 import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -220,7 +221,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             }
 
             String expression = annotation.value();
-            PlaceholderExpressions.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
+            PlaceholderSupport.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
 
  // 从缓存或环境中获取值
             String value = getCachedOrResolveValue(parsed.key(), parsed.defaultValue());
@@ -272,7 +273,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             }
 
             String expression = annotation.value();
-            PlaceholderExpressions.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
+            PlaceholderSupport.ParsedExpression parsed = PlaceholderExpressions.parse(expression);
 
  // 从缓存或环境中获取值
             String value = getCachedOrResolveValue(parsed.key(), parsed.defaultValue());

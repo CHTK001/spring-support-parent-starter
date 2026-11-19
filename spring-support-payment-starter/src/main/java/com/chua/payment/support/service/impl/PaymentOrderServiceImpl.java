@@ -60,7 +60,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
+import com.chua.common.support.utils.IdUtils;
 
 /**
    * 支付订单服务实现，负责订单创建、支付、退款、状态流转等核心业务。
@@ -1134,7 +1134,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
        * @return 返回值
       */
     public String generateOrderNo() {
-        return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return IdUtils.createOrderNo("ORD");
     }
 
     @Override
@@ -1816,7 +1816,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
        * @return 生成的退款单号
        */
     private String generateRefundNo() {
-        return "REF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return IdUtils.createOrderNo("REF");
     }
 
       /**
@@ -1864,7 +1864,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                                    String responsePayload,
                                    String remark) {
         TransactionRecord record = new TransactionRecord();
-        record.setTransactionNo("TRX" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
+        record.setTransactionNo(IdUtils.createOrderNo("TRX"));
         record.setOrderId(order.getId());
         record.setOrderNo(order.getOrderNo());
         record.setMerchantId(order.getMerchantId());

@@ -62,7 +62,7 @@ flowchart TB
         DBC["DbConsoleController /ms/monitor/db<br/>库表 / SQL 控制台 / 快照 / 事务"]
         MC["*ManageController /ms/monitor/&lt;type&gt;<br/>中间件管理页"]
         TDC["*DatasourceController /ms/datasource/&lt;type&gt;<br/>类型专属能力"]
-        OC["DatasourceMetricController / TunneldController<br/>OperLogController / JdbcDriverJarController / FileDbUploadController"]
+        OC["DatasourceMetricController / DatasourceTunnelController<br/>OperLogController / JdbcDriverJarController / FileDbUploadController"]
     end
 
     subgraph svc["service（业务编排）"]
@@ -144,7 +144,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    FE["前端订阅<br/>GET /ms/datasource/metric/stream?datasourceId=1"] --> MCTL["DatasourceMetricController"]
+    FE["前端订阅<br/>GET /ms/datasource/metric/stream/1"] --> MCTL["DatasourceMetricController"]
     MCTL --> REG["DatasourceMetricStreamRegistry<br/>watchedIds() = 有人看的才是采集范围"]
     SCH["DatasourceMetricScheduler<br/>@Scheduled fixedRate=60s"] -->|"逐个探测"| REG
     SCH --> PROBE["JdbcDatasourceSupport / SocketDatasourceConnector 探活"]
@@ -175,7 +175,7 @@ flowchart LR
 | 驱动 jar / 文件库上传 | `JdbcDriverJarController` / `FileDbUploadController` | `/ms/datasource/jdbc-driver`（别名 `/ms/datasource/driver-jar`）、`/ms/datasource/file-db` |
 | 动态接口发布（契约） | `DynamicApiService`（接口 + DTO/VO/`MsDatasourceApi` 实体） | **仅声明契约，无实现与 REST 控制器**；embedded / standalone 两轨描述见接口 Javadoc，当前模块未装配 |
 | 中间件管理 | `*ManageController` + `*ManageServiceImpl` | `/ms/monitor/{mongodb,elasticsearch,zookeeper,nacos,etcd,influxdb,prometheus,nginx,neo4j,skywalking}` |
-| 中间件数据源控制器 | `*DatasourceController`（Redis / Mongo / ES / Nginx / Neo4j / InfluxDB / Nacos / ZK / JDBC） | `/ms/datasource/<type>` |
+| 中间件数据源控制器 | `*DatasourceController`（Redis / Mongo / Nginx / Neo4j / InfluxDB / Nacos / ZK / JDBC） | `/ms/datasource/<type>` |
 | 中间件 SPI 分发 | `MiddlewareClientRegistry` / `MiddlewareDriverSupport` | `MiddlewareClientProvider` SPI + 上传 jar 后装 |
 | 数据源指标（SSE + 调度） | `DatasourceMetricStreamRegistry` / `DatasourceMetricScheduler` | `/ms/datasource/metric`（订阅即采集，60s 一轮） |
 | Nginx 管理与指标 | `NginxManageService` / `NginxRuntimeRouter` / `NginxMetricScheduler` | `/ms/monitor/nginx` |
@@ -302,7 +302,7 @@ curl -X POST http://127.0.0.1:8080/ms/datasource/ddl/execute \
   -d '{"datasourceId": 1, "datasourceDatabase": "app", "sql": "CREATE TABLE t(id BIGINT)"}'
 
 # 数据源指标 SSE（订阅即开启该数据源的定时探测，每 60s 一轮，心跳注释帧每 20s）
-curl -N http://127.0.0.1:8080/ms/datasource/metric/stream?datasourceId=1
+curl -N http://127.0.0.1:8080/ms/datasource/metric/stream/1
 ```
 
 **可选依赖说明**：

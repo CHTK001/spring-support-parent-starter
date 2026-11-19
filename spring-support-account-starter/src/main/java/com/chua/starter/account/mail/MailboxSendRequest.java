@@ -55,4 +55,10 @@ public class MailboxSendRequest implements Serializable {
      * 模板参数
      */
     private Map<String, String> templateParams;
+
+    /**
+     * 调用来源标识（如 {@code system:sms-code} / {@code system:message-push}），
+     * 仅用于发送日志归因，不参与发送本身。
+     */
+    private String source;
 }

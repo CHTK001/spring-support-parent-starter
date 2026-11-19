@@ -1,31 +1,272 @@
 # spring-support-common-starter
 
-Spring Support 体系的通用底座：统一响应包装、接口版本/灰度/功能开关、验证码、SPI 选项、服务信息横幅与一批通用工具类。
+> 版本：`4.0.0.51` ｜ 基于 Spring Boot `4.1.2` ｜ 本模块是 `spring-support-*` 体系的公共底座。
 
-## 一、模块能力
+`spring-support-common-starter` 提供一套开箱即用的 Web 横切能力：统一响应体与请求/响应加解密、API 版本与灰度、功能开关、权限拦截、异步线程池、MDC 与链路日志、验证码、service-info 自描述端点、Actuator 加固、请求指纹防重、跨域与安全响应头等。宿主应用只需引入依赖，即可通过 `plugin.*` 配置项按需开关各项能力。
 
-| 能力域 | 关键类 | 入口 |
+---
+
+## 1. 模块定位
+
+### 1.1 在体系中的位置
+
+本模块位于整个 starter 体系的最底层公共支撑位置：上层的 `spring-support-api-starter`、业务 starter 与宿主应用都可以依赖它，从而获得统一的 Web 基础设施；它自身则基于 Spring Boot 4.1.2 并复用 `utils-support-*` 底层工具库。
+
+```mermaid
+graph TD
+    APP["宿主业务应用"] -->|"依赖"| COMMON["spring-support-common-starter 4.0.0.51"]
+    OTHER["spring-support-api-starter 等<br/>其它 spring-support-* starter"] -->|"依赖"| COMMON
+    COMMON -->|"基于"| SB["Spring Boot 4.1.2"]
+    COMMON -->|"复用"| UTILS["utils-support-* 工具库"]
+```
+
+### 1.2 内部分层
+
+模块内部由「自动配置注册 → 装配层 → 能力组件 → 配置属性」四层构成，全部通过 Spring Boot 自动配置机制装配，无 XML：
+
+```mermaid
+graph TD
+    IMPORTS["META-INF/spring/...AutoConfiguration.imports<br/>21 个自动配置类"] --> CFG["configuration 装配层<br/>CommonConfiguration / ApiConfiguration / CaptchaConfiguration /<br/>AsyncThreadPoolConfiguration / JacksonConfiguration / LogConfiguration /<br/>ActuatorConfiguration / ServiceInfoAutoConfiguration / RequestFingerprintAutoConfiguration"]
+    CFG --> API["api 能力层<br/>版本 / 灰度 / 功能开关 / 权限 / 加密 / 解密 / 跨域 / Nonce"]
+    CFG --> WEB["web 层<br/>过滤器 / 消息转换 / Jackson / 类型转换 / 资源映射"]
+    CFG --> EP["provider 端点层<br/>CaptchaProvider / OptionalProvider / ServiceInfoController"]
+    CFG --> LOG["log 层<br/>MDC / ParameterLogFilter / TracePortal 链路汇聚"]
+    CFG --> PROP["properties 配置层<br/>plugin.* 属性绑定"]
+```
+
+---
+
+## 2. 核心流程
+
+### 2.1 装配流程
+
+Spring Boot 启动时读取 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 中登记的 21 个自动配置类，逐个评估其 `@ConditionalOnProperty` 开关（绝大多数缺省开启），生成对应的 Bean、Servlet Filter、HandlerInterceptor 与 `ResponseBodyAdvice`。另有 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile）在环境准备阶段生效，4 个 SPI 扩展点通过 `META-INF/extensions/` 登记。
+
+### 2.2 请求处理链路
+
+一个 HTTP 请求进入后，依次经过过滤器链、拦截器、控制器与响应加工 advice。各过滤器的 `order` 值如下（同一 order 的实际先后由注册顺序决定）：
+
+```mermaid
+flowchart LR
+    REQ["HTTP 请求"] --> FILTERS["Servlet 过滤器链"]
+    subgraph FILTERS["过滤器（按 order 装配）"]
+        F1["ApiVersionFilter<br/>order=MIN_VALUE<br/>写 x-response-version"]
+        F2["NonceXhrFilter<br/>order=MIN_VALUE+1<br/>校验 x-nonce / x-sign / x-timestamp / x-req-fingerprint"]
+        F3["RequestFingerprintFilter<br/>order=MIN_VALUE+20<br/>指纹防重"]
+        F4["ParameterLogFilter<br/>order=MAX_VALUE-100<br/>参数日志"]
+    end
+    FILTERS --> DS["DispatcherServlet"]
+    DS --> INT["拦截器<br/>PermissionControlInterceptor / ApiControlInterceptor"]
+    INT --> CTRL["业务 Controller<br/>@ApiVersion / @ApiGray / @ApiFeature / @Permission"]
+    CTRL --> ADV["响应加工<br/>ApiRequestDecodeBodyAdvice /<br/>ApiResponseEncodeResponseBodyAdvice /<br/>UniformResponseBodyAdvice"]
+    ADV --> RESP["HTTP 响应<br/>+ 安全响应头 ApiSecurityHeaderFilter"]
+```
+
+关键行为：
+
+- `RequestFingerprintFilter` 运行时按 `plugin.security.fingerprint.enabled` 放行（默认关闭）；命中重复指纹且 `reject-duplicate=true` 时返回 `409` 与响应头 `X-Blocked-Reason: DUPLICATE_REQUEST`。
+- `NonceXhrFilter` 校验失败时直接返回 `400` 与 JSON 错误体。
+- `MdcHandlerFilter`（由 `MessageConverterWebMvcConfigurer` 注册）承担 MDC / traceId 注入，永久开启。
+
+---
+
+## 3. 能力清单
+
+| 能力 | 说明 | 关键类 |
 |---|---|---|
-| 统一响应包装 | `ApiUniformResponseBodyAdvice` | `plugin.api.uniform`（默认 `true`） |
-| 响应加密 / 请求解密 | `ApiProperties.ResponseEncodeProperties`、`RequestDecodeProperties` | `plugin.api.encode` / `plugin.api.decode` |
-| 接口版本路由 | `ApiVersion`、`ApiVersionRequestMappingHandlerMapping` | `@ApiVersion` |
-| 灰度发布 | `ApiGray`、`ApiGrayEvaluator` | `@ApiGray`、`plugin.api.gray` |
-| 功能开关 | `ApiFeature`、`ApiFeatureManager`、`ApiFeatureController` | `@ApiFeature`、`plugin.api.feature` |
-| 内部接口管控 | `ApiInternal` | `@ApiInternal`、`plugin.api.internal` |
-| 废弃接口提示 | `ApiDeprecated` | `@ApiDeprecated`、`plugin.api.deprecated` |
-| 接口 Mock | `ApiMock` | `@ApiMock`、`plugin.api.mock` |
-| 图形验证码 | `CaptchaProvider`、`CaptchaProperties` | `GET /v1/captcha/captcha` |
-| SPI 选项浏览 | `OptionalProvider` | `GET /v1/option/**`、`plugin.optional` |
-| 服务信息注册表 | `ServiceInfoRegistry`、`ServiceInfoContributor` | `GET /service-info`、`plugin.service-info` |
-| 方法追踪 | `Watch`、`TrackContext` | `@Watch` |
-| 模块日志格式化 | `ModuleLog` | 代码调用 |
-| 媒体类型处理 | `MediaTypeHandler`（JSON / XML / CSV 实现） | SPI，`META-INF/extensions` |
-| Actuator 保护 | `ActuatorProperties`、`ActuatorConfiguration` | `plugin.actuator` |
-| 异步线程池 | `AsyncThreadPoolConfiguration`、`AsyncThreadPoolProperties` | `plugin.thread` |
-| Jackson 定制 | `JacksonConfiguration`、`JacksonProperties` | `plugin.jackson` |
-| 请求指纹 | `RequestFingerprintAutoConfiguration` | `plugin.security.fingerprint` |
+| 统一响应体 | 按 `plugin.api.uniform`（缺省开启）统一包装返回体 | `UniformResponseBodyAdvice` |
+| 响应编码 | 对响应体加密并补 `X-Content-Type-Options` 等头 | `ApiResponseEncodeResponseBodyAdvice`、`ApiResponseEncodeRegister` |
+| 请求解密 | 对请求体按配置解密 | `ApiRequestDecodeBodyAdvice`、`ApiRequestDecodeRegister` |
+| API 版本管理 | 方法/类级版本路由，响应头 `x-response-version` | `@ApiVersion`、`ApiVersionRequestMappingHandlerMapping`、`ApiVersionFilter` |
+| 灰度发布 | 方法/类级灰度标注与横幅展示 | `@ApiGray` |
+| 功能开关 | 扫描 `@ApiFeature` 注册到管理器，未启用返回 503 | `@ApiFeature`、`ApiFeatureManager`、`ApiControlInterceptor` |
+| 权限控制 | `@Permission` 方法级权限拦截 | `PermissionControlInterceptor`、`AuthService` |
+| API 元信息标注 | 平台 / 环境 / 内部 / Mock 标注并进 service-info 横幅 | `@ApiPlatform`、`@ApiProfile`、`@ApiInternal`、`@ApiMock` |
+| 异步线程池 | 双执行器（共享池 + 插件池），MDC 装饰器传递上下文 | `AsyncThreadPoolConfiguration`、`MdcTaskDecorator` |
+| MDC / 链路日志 | MDC 注入 + 链路事件汇聚到独立文件 | `mdcHandlerFilter`、`TracePortalAppender` |
+| 参数日志 | 请求参数/响应日志过滤器 | `ParameterLogFilter` |
+| 图形验证码 | 图片流 + JSON 两种输出 | `CaptchaProvider` |
+| 外部打码 | 对接 yescaptcha / captcha-run | `ExternalCaptchaConfiguration` |
+| 服务自描述 | `/service-info` 端点 + 启动横幅 | `ServiceInfoController`、`ServiceInfoRegistry`、`ServiceInfoContributor` |
+| Actuator 加固 | Basic 认证 + IP 白名单保护 `/actuator/**` | `actuatorAuthenticationFilterRegistration` |
+| 请求指纹防重 | SHA-256 指纹 + 有效期去重 | `RequestFingerprintFilter` |
+| 跨域 | CORS 过滤器，路径可配 | `CorsFilter`（`apiCorsFilterRegistrationBean`） |
+| 安全响应头 | nosniff / X-Frame-Options / Referrer-Policy / Permissions-Policy 等 | `ApiSecurityHeaderFilter` |
+| Nonce 防重放 | XHR 请求 nonce + 时间戳 + 签名校验 | `NonceXhrFilter`、`NonceSignProperties` |
+| IP 归属地 | qqwry.dat / ip2region 解析 | `IpProperties` |
+| Jackson 定制 | 大小写不敏感、忽略未知字段、日期/JavaTime 序列化 | `JacksonConfiguration`、`defaultObjectMapper` |
+| 类型转换 | 统一注册自定义转换器 | `TypeConverterRegisterConfiguration` |
+| SPI 选项端点 | 暴露 SPI 实现清单供前端选择 | `OptionalProvider`（`/v1/option`） |
+| 通知 | 邮件通知配置 | `NoticeProperties` |
+| 环境后置处理 | Freemarker / Spring / Profile 三个 EnvironmentPostProcessor | `spring.factories` 登记 |
+| 方法监控 | `@Watch` 切面统计 | `watchPointcutAdvisor` |
 
-## 二、依赖与引入
+---
+
+## 4. Bean 矩阵
+
+> 「条件」列即 `@ConditionalOnXxx`；「默认」列为未做任何配置时的实际行为。所有 `@ConfigurationProperties` 均开启 `ignoreInvalidFields = true`。
+
+### 4.1 CommonConfiguration（公共支撑）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `authService` | `AuthService` | `@ConditionalOnMissingBean(AuthService)` | 默认实现 `IptablesServiceImpl` |
+| `nonceSignInitializer` | `Object` | 无条件 | Nonce 签名初始化 |
+| `restTemplate` | `RestTemplate` | `@ConditionalOnMissingBean` + `@Lazy` | connectTimeout 5000ms / readTimeout 30000ms |
+| `watchPointcutAdvisor` | 切面 Advisor | `@ConditionalOnMissingBean` + `@Lazy` | 支撑 `@Watch` 方法监控 |
+
+> 该类同时 `@EnableConfigurationProperties({ActuatorProperties, IpProperties, NonceSignProperties})`，并 `@ComponentScan` 扫描 service 包。
+
+### 4.2 ApiConfiguration（API 核心，`@Priority(0)` `@Order(HIGHEST_PRECEDENCE+1)`）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `apiResponseEncodeResponseBodyAdvice` / `apiResponseEncodeRegister` | ResponseBodyAdvice / 注册器 | `@ConditionalOnProperty(plugin.api.encode.enable, havingValue="true", matchIfMissing=true)` + `@ConditionalOnMissingBean`；register 为 `@Lazy` | 缺省装配 |
+| `apiRequestDecodeBodyAdvice` / `apiRequestDecodeRegister` | RequestBodyAdvice / 注册器 | `@ConditionalOnProperty(plugin.api.decode.enable, havingValue="true", matchIfMissing=true)` + `@ConditionalOnMissingBean`；register 为 `@Lazy` | 缺省装配 |
+| `webMvcRegistrations` | `WebMvcRegistrations` | `@ConditionalOnMissingBean(WebMvcRegistrations)` + `plugin.api.version.enable`（matchIfMissing=true） | 提供自定义 `ApiVersionRequestMappingHandlerMapping` |
+| `uniformResponseBodyAdvice` | ResponseBodyAdvice | `plugin.api.uniform`（matchIfMissing=true） + `@ConditionalOnMissingBean` | 缺省装配 |
+| `executor("uniform")` | `Executor` | 无条件 | 虚拟线程 + `MdcWrap.decorate` |
+| `apiExceptionAdvice` | 异常 advice | `@ConditionalOnMissingBean` | 缺省装配 |
+| `apiServiceInfoContributor` | `ServiceInfoContributor` | 无条件 | 注册 api-version / platform / profile / deprecated / feature / internal / mock / gray 横幅 |
+
+> 该类实现 `EnvironmentAware`：绑定 `ApiProperties.PRE`（`plugin.api`）并设置 `GlobalSettingFactory.PREFIX`。
+
+### 4.3 ApiFilterConfiguration（过滤器注册，无类级条件）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `apiVersionFilterRegistration` | `FilterRegistrationBean` | `@ConditionalOnMissingBean(name=...)` | order=`Integer.MIN_VALUE`，路径 `/*`，写 `x-response-version` 头 |
+| `nonceXhrFilterRegistration` | `FilterRegistrationBean` | `@ConditionalOnMissingBean(name=...)` | order=`MIN_VALUE+1`，校验 `x-nonce` / `x-sign` / `x-timestamp` / `x-req-fingerprint`，失败返回 400 JSON |
+
+### 4.4 AsyncThreadPoolConfiguration（异步线程池）
+
+类级条件：`@EnableAsync` + `@ConditionalOnProperty(prefix="plugin.async", name="enable", havingValue="true", matchIfMissing=true)`（缺省装配）。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `sharedThreadPoolTaskExecutor` | `ThreadPoolTaskExecutor` | 无附加条件 | 双名 `default-executor-2` / `default-task-executor`，线程前缀 `shared-thread-pool-`，拒绝策略 `CallerRunsPolicy` |
+| `asyncExecutor` | `ThreadPoolTaskExecutor` | 无附加条件 | 名 `default-executor`，线程前缀取 `plugin.thread.thread-name-prefix` |
+| `taskDecorator` | `TaskDecorator` | 无附加条件 | `MdcTaskDecorator`（异步传递 MDC） |
+| `asyncThreadPoolServiceInfoContributor` | `ServiceInfoContributor` | 无附加条件 | 线程池横幅展示 |
+
+> 实现了 `AsyncConfigurer`；`plugin.thread.enable` 字段默认 `false`，仅用于横幅展示，不是装配开关。
+
+### 4.5 JacksonConfiguration（无 `plugin.jackson.enable` 装配开关，恒装配）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `defaultObjectMapper` | `ObjectMapper` | `@ConditionalOnMissingBean` | 属性大小写不敏感；`FAIL_ON_UNKNOWN_PROPERTIES=false`；`FAIL_ON_INVALID_SUBTYPE=false`；`FAIL_ON_EMPTY_BEANS=false`；`FAIL_ON_READING_DUP_TREE_KEY=true`；`NullableFieldsDeserializationProblemHandler`（START_ARRAY→String、START_OBJECT→ArrayList）；日期 `yyyy-MM-dd HH:mm:ss`；`JavaTimeModule` 自定义 LocalDateTime/LocalDate/LocalTime/Year；`Jdk8Module`；`NullValueSerializer`；`include-null=true` 时 `ALWAYS` 否则 `NON_NULL` |
+| `objectMapperBuilder` | `Jackson2ObjectMapperBuilder` | `@ConditionalOnMissingBean` | 基于 defaultObjectMapper |
+
+### 4.6 LogConfiguration（日志）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `parameterLogFilterRegistration` | `FilterRegistrationBean` | `@ConditionalOnProperty(plugin.log.enable, havingValue="true", matchIfMissing=false)` + `@ConditionalOnMissingBean(name=...)` | order=`MAX_VALUE-100`；**不配置 `plugin.log.enable=true` 则不注册** |
+| `logServiceInfoContributor` | `ServiceInfoContributor` | 无条件 | mdc / mdc-async / param-log / interface-log / slow-request 横幅 |
+
+> MDC 注入由 `MessageConverterWebMvcConfigurer` 注册的 `mdcHandlerFilter` 承担（order=`MIN_VALUE`，永久开启），与 `plugin.log.enable` 无关。
+
+### 4.7 TracePortalConfiguration（链路汇聚）
+
+类级条件：`@ConditionalOnProperty(plugin.log.portal.enabled, havingValue="true", matchIfMissing=false)`（默认关闭）。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `tracePortalAppender` | `TracePortalAppender` | 无附加条件 | `destroyMethod="stop"`，挂载 logback root；`@PreDestroy flushRemaining()` 兜底收口 |
+
+### 4.8 ActuatorConfiguration（Actuator 加固）
+
+类级条件：`@ConditionalOnProperty(prefix="plugin.actuator", name="enable", havingValue="true", matchIfMissing=true)`（缺省装配）。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `actuatorAuthenticationFilterRegistration` | `FilterRegistrationBean` | 另需 `plugin.actuator.enable-auth=true` + `@ConditionalOnMissingBean(name=...)` | 路径 `/actuator/*`，order=`MIN_VALUE+10`；Basic 认证 + IP 白名单 + 排除路径 |
+
+### 4.9 RequestFingerprintAutoConfiguration（请求指纹防重，`@Configuration` 无条件）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `requestFingerprintFilter` | `RequestFingerprintFilter` | 无装配条件，`@Order(HIGHEST_PRECEDENCE+20)` | 运行时按 `plugin.security.fingerprint.enabled` 放行（默认 `false`，即不过滤） |
+
+### 4.10 ServiceInfoAutoConfiguration（服务自描述）
+
+类级条件：`@AutoConfiguration` + `@ConditionalOnWebApplication` + `@ConditionalOnProperty(plugin.service-info.enable, havingValue="true", matchIfMissing=true)`。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `serviceInfoController` | `ServiceInfoController` | `@ConditionalOnMissingBean` | `GET /service-info` → `ServiceInfoRegistry.getInstance().getInfo()` |
+| `serviceInfoEndpointDetector` | 端点探测器 | 无附加条件 | 探测端点信息 |
+| `serviceInfoBannerListener` | 启动横幅监听 | 无附加条件 | 启动时打印 service-info |
+| `serviceInfoAuthenticationFilterRegistration` | `FilterRegistrationBean` | `plugin.service-info.auth.enable=true` + `@ConditionalOnMissingBean(name=...)` | patterns `/service-info`、`/service-info/*`，order=`HIGHEST_PRECEDENCE` |
+
+> `ServiceInfoContributorAutoConfiguration` 监听 `ContextRefreshedEvent` 收集所有 `ServiceInfoContributor`。
+
+### 4.11 CaptchaConfiguration / ExternalCaptchaConfiguration（验证码）
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `captchaProvider` | `CaptchaProvider` | 类级 `@ConditionalOnProperty(plugin.captcha.enable, havingValue="true", matchIfMissing=true)` + `@ConditionalOnMissingBean` | `GET /v1/captcha/captcha.jpg` 图片流；`GET /v1/captcha/captcha` 返回 JSON `CaptchaResult{verifyCodeKey, verifyCodeBase64}`；向 `ServiceInfoRegistry` 注册 flag `captcha` |
+| 外部打码 Bean | `CaptchaSetting` 等 | `@ConditionalOnClass(CaptchaParser)` + `plugin.captcha.external.enable`（默认 false） | `provider=yescaptcha / captcha-run`；配置 `api-token` 后才创建 `CaptchaSetting`；超时 30000ms |
+
+### 4.12 PermissionControlConfiguration（权限拦截）
+
+类级条件：`@ConditionalOnProperty(plugin.api.permission.enable, havingValue="true", matchIfMissing=true)`，实现 `WebMvcConfigurer`。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `permissionControlInterceptor` | `PermissionControlInterceptor` | 无附加条件 | 拦截 `/**`，排除 `/error`、`/actuator/**`；依赖 `ObjectProvider<AuthService>` |
+
+### 4.13 ApiCorsConfiguration（跨域与安全响应头）
+
+类级条件：`@ConditionalOnProperty(plugin.api.cors.enable, havingValue="true", matchIfMissing=true)`；`@EnableConfigurationProperties({ApiCorsProperties, ApiSecurityHeaderFilter.ApiSecurityHeaderProperties})`。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| `apiCorsFilterRegistrationBean` | `FilterRegistrationBean<CorsFilter>` | 无附加条件 | 按 `plugin.api.cors.pattern` 注册 CORS |
+| `apiSecurityHeaderFilterRegistrationBean` | `FilterRegistrationBean<ApiSecurityHeaderFilter>` | 无附加条件 | 最前置兜底写入安全响应头（含静态资源与 404） |
+
+### 4.14 ApiFeatureConfiguration（功能开关）
+
+类级条件：`@ConditionalOnProperty(plugin.api.feature.enable, havingValue="true", matchIfMissing=true)`，实现 `WebMvcConfigurer` + `SmartInitializingSingleton`。
+
+| Bean | 类型 | 条件 | 默认 |
+|---|---|---|---|
+| 功能开关扫描与拦截 | `ApiFeatureManager`、`ApiControlInterceptor` | 无附加条件 | 单例初始化时扫描控制器上的 `@ApiFeature`；拦截 `/**`，排除 `/error`，未启用功能返回 503 |
+
+---
+
+## 5. 完整配置
+
+全部配置前缀（`@ConfigurationProperties`，均 `ignoreInvalidFields=true`）：
+
+| 前缀 | 属性类 | 关键属性与默认值 | 说明 |
+|---|---|---|---|
+| `plugin.api` | `ApiProperties` | `encode.enable=true`、`decode.enable=true`、`version.enable=true`、`uniform=true`、`feature.enable=true`、`permission.enable=true` | API 核心开关，缺省全开；其余字段见 `ApiProperties` |
+| `plugin.api.cors` | `ApiCorsProperties` | `enable=true`、`pattern`（跨域路径列表） | 跨域；条件 `matchIfMissing=true` |
+| `plugin.api.security.header` | `ApiSecurityHeaderFilter.ApiSecurityHeaderProperties` | `enable=true`、`frame-options=SAMEORIGIN`、`referrer-policy=strict-origin-when-cross-origin`、`permissions-policy=camera=(), microphone=(), geolocation=()`、`csp=""`（不启用）、`hsts-enabled=false`、`hsts-max-age-seconds=31536000` | 安全响应头；CSP/HSTS 默认关闭（内联样式与 http 部署兼容） |
+| `plugin.security.fingerprint` | `RequestFingerprintAutoConfiguration.FingerprintProps` | `enabled=false`、`header-name=X-Request-Fingerprint`、`algorithm=SHA-256`、`salt=`（空）、`include-method=true`、`include-path=true`、`include-params=true`、`include-headers=空集`、`include-body=false`、`include-body-max-bytes=1048576`、`body-methods=POST,PUT,PATCH`、`validity-ms=60000`、`reject-duplicate=false` | 请求指纹防重，默认关闭 |
+| `plugin.captcha` | `CaptchaProperties` | `enable=true`、`type`、`length`、`width=120`、`height=36`、`font-name=Verdana`、`font-style=PLAIN`、`font-size=20`、`context-path=/v1/` | 验证码 |
+| `plugin.captcha.external` | 外部打码属性 | `enable=false`、`provider=yescaptcha / captcha-run`、`api-token`、`timeout=30000` | 外部打码；需 classpath 存在 `CaptchaParser` |
+| `plugin.async` | —（装配条件前缀） | `enable=true`（matchIfMissing=true） | **异步装配总开关** |
+| `plugin.thread` | `AsyncThreadPoolProperties` | `enable=false`（仅横幅展示）、`core-pool-size=20`、`max-pool-size=200`、`queue-capacity=100000`、`keep-alive-seconds=10`、`await-termination-seconds=60`、`thread-name-prefix=async-thread-pool-%d` | 线程池参数；不是装配开关 |
+| `plugin.log` | `LogProperties` | `enable=false`（matchIfMissing=false） | 参数日志过滤器；**不配置即不注册** |
+| `plugin.log.portal` | `TracePortalProperties` | `enabled=false`、`file=./logs/trace-portal.log`、`max-events-per-trace=200`、`idle-millis=3000`、`max-pending-traces=512`、`sweep-interval-millis=1000` | 链路日志汇聚 |
+| `plugin.service-info` | `ServiceInfoProperties` | `enable=true`、`auth.enable=false` | `/service-info` 端点与横幅 |
+| `plugin.actuator` | `ActuatorProperties` | `enable=true`、`enable-auth=false` | Actuator 加固；`enable-auth=true` 才注册认证过滤器 |
+| `plugin.message` | `MessageConverterProperties` | `enable=false`、`data-format=yyyy-MM-dd HH:mm:ss`、`open-desensitize=true`、`open-crypto=true`、`media-types=application/json, text/xml` | 消息转换器 |
+| `plugin.ip` | `IpProperties` | `enable=false`、`database-file=classpath:qqwry.dat`、`ip-type=ip2region` | IP 归属地解析 |
+| `plugin.nonce.sign` | `NonceSignProperties` | `secret-key`=环境变量 `PLUGIN_NONCE_SIGN_SECRET_KEY`，否则内置开发兜底值 | Nonce 签名密钥；多路径回退（备用前缀 `nonce.sign`） |
+| `plugin.notice` | `NoticeProperties` | `enable=false`、`email.smtp-host=smtp.qq.com`、`email.ssl-smtp-port=465`、`email.smtp-port=25`、`email.from`、`email.password` | 邮件通知 |
+| `plugin.optional` | `OptionalProperties` | `enable=true`（属性默认值），但 `OptionalProvider` 装配条件 `matchIfMissing=false` | **未显式配置 `plugin.optional.enable=true` 时不注册 `/v1/option` 端点** |
+| `plugin.jackson` | `JacksonProperties` | `include-null` 等 | **不存在 `plugin.jackson.enable` 装配开关**，`JacksonConfiguration` 恒装配；`include-null` 只影响序列化行为 |
+
+---
+
+## 6. 使用方式
+
+### 6.1 引入依赖
 
 ```xml
 <dependency>
@@ -35,235 +276,206 @@ Spring Support 体系的通用底座：统一响应包装、接口版本/灰度/
 </dependency>
 ```
 
-版本与父 POM `spring-support-parent-starter` 保持一致（当前 `4.0.0.51`），实际引入时建议由父工程或 BOM 统一托管，无需手写 `<version>`。
+引入即自动装配。绝大多数能力缺省开启，通过 `plugin.*` 配置按需关闭或定制。
 
-关键依赖：
+### 6.2 API 版本控制 `@ApiVersion`
 
-| 依赖 | 作用 | 说明 |
-|---|---|---|
-| `utils-support-common-starter` | `ReturnResult`、`Action`、SPI 基础设施 | 编译期必需 |
-| `utils-support-spring-starter` | Spring 工具类 | 必需 |
-| `utils-support-httpclient-starter` | HTTP 调用与 TraceId 透传 | 必需 |
-| `spring-boot-starter-validation` | Bean Validation | 必需 |
-| `spring-boot-starter-cache` | 缓存抽象（不含具体实现） | 缓存实现由 `cache-starter` / `redis-starter` 提供 |
-| `easy-captcha` / `utils-support-captcha-starter` | 图形验证码、第三方打码 | 已在 pom 中引入 |
-| `spring-boot-webmvc` | `WebMvcRegistrations` 扩展点 | Boot 4.x 独立模块 |
+作用域：方法 / 类。属性：`value` —— 语义化版本号字符串（支持 `1`、`1.0`、`1.0.0`、`1.0.0-rc.1` 等）。需 `plugin.api.version.enable=true`（缺省开启）。
 
-`spring-boot-starter-webflux`、`tomcat-embed-core`、`undertow-core`、`okhttp`、`ip2proxy-java` 均为 `provided`，由宿主提供。
+```java
+@RestController
+@RequestMapping("/api/user")
+@ApiVersion(1)
+public class UserController {
 
-## 三、配置项
+    @GetMapping("/info")          // 继承类版本 v1
+    public User getInfo() { ... }
 
-`@ConfigurationProperties` 按前缀分组，均带 `ignoreInvalidFields = true`：
+    @GetMapping("/info")
+    @ApiVersion(2)                // 方法级覆盖为 v2
+    public UserV2 getInfoV2() { ... }
+}
+// GET /api/user/info?apiVersion=1      -> getInfo()
+// GET /api/user/info?apiVersion=latest -> getInfoV2()
+// 或请求头 X-Api-Version: 2
+```
 
-| 前缀 | 配置类 | 关键项（默认值） |
-|---|---|---|
-| `plugin.api` | `ApiProperties` | `uniform`=`true`；`version.enable`=`true`；`platform.enable`=`true`、`platform.name`=`system`；`encode.enable`=`false`、`encode.codecType`=`aes`；`decode.enable`=`false`、`decode.reject-on-decode-failure`=`false`；`spi.enable`=`true`；`mock.enable`=`false`、`mock.profiles`=`dev,test`；`feature.enable`=`false`、`feature.path`=`/api/features`；`gray.enable`=`true`、`gray.header-name`=`X-Gray-Hit`；`internal.enable`=`true`；`deprecated.enable`=`true`、`deprecated.add-warning-header`=`true`；`ignore-format-packages` |
-| `plugin.captcha` | `CaptchaProperties` | `enable`=`true`；`type`=`SPEC`；`ttl`=`120`（秒）；`length`=`4`；`width`=`120`；`height`=`36`；`font-name`=`Verdana`；`font-size`=`20`；`context-path`=`/v1/` |
-| `plugin.captcha.external` | `ExternalCaptchaConfiguration` | 第三方打码服务账号（YesCaptcha / CaptchaRun） |
-| `plugin.optional` | `OptionalProperties` | `enable`=`true`；关闭后 `/v1/option/**` 不注册 |
-| `plugin.log` | `LogProperties` | `enable`=`true`；`open-interface-log`=`false`；`slow-request-threshold-ms`=`3000` |
-| `plugin.thread` | `AsyncThreadPoolProperties` | `enable`=`false`；`core-pool-size`=`20`；`max-pool-size`=`200`；`queue-capacity`=`100000`；`keep-alive-seconds`=`10`；`await-termination-seconds`=`60`；`thread-name-prefix`=`async-thread-pool-%d` |
-| `plugin.actuator` | `ActuatorProperties` | `enable`=`false`；`enable-auth`=`false`；`username`/`password`；`ip-whitelist`；`exclude-paths` |
-| `plugin.jackson` | `JacksonProperties` | `enable`=`false`；`include-null`=`false` |
-| `plugin.service-info` | `ServiceInfoProperties` | 启动横幅与 `/service-info` 的开关控制 |
-| `plugin.security.fingerprint` | `RequestFingerprintAutoConfiguration` 内部类 | 请求指纹校验参数 |
-| `plugin.ip` / `plugin.notice` / `plugin.nonce.sign` / `plugin.message` | `IpProperties` 等 | IP 解析库、通知、防重放签名、消息转换器 |
+响应会携带 `x-response-version` 头（由 `ApiVersionFilter` 写入）。
 
-## 四、快速开始
+### 6.3 灰度发布 `@ApiGray`
 
-**第一步**：引入依赖（见上）。模块通过 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 自动装配，无需 `@EnableXxx`。
+作用域：方法（拦截器阶段处理）。属性：
 
-**第二步**：按需打开开关。默认开启的有统一响应（`plugin.api.uniform`）与灰度（`plugin.api.gray.enable`），其余默认关闭。
+| 属性 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `value` | String | `""` | 灰度版本标识 |
+| `description` | String | `""` | 灰度描述 |
+| `percentage` | int | — | 百分比灰度，按比例随机分配流量 |
+| `rule` | String | — | 规则灰度，SpEL 表达式 |
+| `users` | String[] | — | 白名单灰度（用户名） |
 
-**第三步**：在 Controller 上直接返回业务对象，由 `ApiUniformResponseBodyAdvice` 包装为 `ReturnResult`；返回文件流、`ResponseEntity`、`byte[]`、`StreamingResponseBody`、`DeferredResult` 等类型时不包装。
+SpEL 上下文变量：`#userId`、`#username`、`#ip`、`#header('name')`、`#param('name')`、`#cookie('name')`。
+
+```java
+@ApiGray(rule = "#userId % 10 == 0")     // 规则灰度
+@GetMapping("/recommend")
+public Result recommendV2() { ... }
+
+@ApiGray(users = {"vip"}, percentage = 20) // 白名单优先，再按比例
+@GetMapping("/new-feature")
+public Result newFeature() { ... }
+```
+
+### 6.4 功能开关 `@ApiFeature`
+
+作用域：方法 / 类（拦截器阶段处理，未启用返回 503）。属性：`value`（必填，功能标识）、`description`、`group`（默认 `default`）、`defaultEnabled`（默认 `true`）。支持运行时热切换与分组管理（`ApiFeatureManager`，可经 `ApiSwitchOverrideProvider` 远程覆盖）。
+
+```java
+@ApiFeature(value = "beta-feature", defaultEnabled = false)
+@GetMapping("/beta")
+public Result betaFeature() { ... }
+```
+
+### 6.5 权限控制 `@Permission`
+
+作用域：方法 / 类，由 `PermissionControlInterceptor` 拦截（需 `plugin.api.permission.enable=true`，缺省开启）。属性：`value` / `permission`（互为别名，权限标识数组，**任一命中即可**）、`role`（角色标识数组，任一命中即可）。
+
+```java
+@Permission({"login:create", "admin"})
+@DeleteMapping("/users/{id}")
+public Result delete(@PathVariable Long id) { ... }
+
+@Permission(role = {"ADMIN"})
+@GetMapping("/audit")
+public Result audit() { ... }
+```
+
+### 6.6 方法监控 `@Watch`
+
+作用域：方法 / 类，由 `watchPointcutAdvisor` 切面生效。属性：`value`（追踪描述）、`timeoutMs`（超时阈值毫秒，默认 0 不限制，超时打 WARN）、`logArgs`（记录入参，默认 false）、`logResult`（记录返回值，默认 false）。
+
+```java
+@Watch(value = "订单创建", timeoutMs = 500)
+public Order create(OrderRequest req) { ... }
+```
+
+### 6.7 验证码
 
 ```yaml
 plugin:
-  api:
-    uniform: true
-    encode:
-      enable: false
-      codec-type: aes
-      white-list:
-        - /actuator/**
-    gray:
-      enable: true
-      header-name: X-Gray-Hit
-      global-users: [gray-user]
   captcha:
-    enable: true
+    enable: true          # 缺省开启
+    context-path: /v1/    # 端点前缀
     width: 120
     height: 36
     length: 4
 ```
 
-## 五、运行示例
+- `GET /v1/captcha/captcha.jpg`：直接输出图片流（image/jpeg），验证码存入 session（`CAPTCHA_SESSION_KEY`），响应头带 `Access-Control-Captcha`；
+- `GET /v1/captcha/captcha`：返回 JSON `CaptchaResult{verifyCodeKey, verifyCodeBase64}`（Base64 图片）。
 
-### 5.1 调用示例
+外部打码（对接 yescaptcha / captcha-run）需 `plugin.captcha.external.enable=true` 且 classpath 存在 `CaptchaParser`。
 
-本模块无链式 API，以下为步骤式用法。
+### 6.8 service-info 服务自描述
 
-**统一响应的两种忽略方式**：
+`GET /service-info` 返回 `ServiceInfoRegistry` 汇总的服务信息（含 api-version / platform / profile / feature / mock / gray / captcha 等横幅，由各 `ServiceInfoContributor` 贡献）。宿主可实现 `ServiceInfoContributor` 接口注册自定义信息。保护：`plugin.service-info.auth.enable=true` 时启用认证过滤器。
 
-```java
-@RestController
-public class FileController {
+### 6.9 异步线程池
 
-    @GetMapping("/download")
-    @ApiReturnFormatIgnore          // 方法级：返回原始数据
-    public byte[] download() {
-        return fileBytes;
-    }
-}
+装配后提供两个执行器：
 
-@RestController
-@ApiReturnFormatIgnore              // 类级：整个 Controller 不包装
-public class RawController { ... }
-```
-
-`@IgnoreReturnType`（来自 `com.chua.common.support.annotation.IgnoreReturnType`）同样被 `ApiUniformResponseBodyAdvice` 识别，两种注解可混用。
-
-**接口版本**（需 `plugin.api.version.enable=true`，默认开启）：
+- `default-executor-2` / `default-task-executor`：共享线程池（前缀 `shared-thread-pool-`，`CallerRunsPolicy`）；
+- `default-executor`：插件线程池，线程名前缀取 `plugin.thread.thread-name-prefix`。
 
 ```java
-@RestController
-@RequestMapping("/api/greet")
-public class GreetController {
-
-    @GetMapping
-    @ApiVersion("1")
-    public String v1() { return "hello-v1"; }
-
-    @GetMapping
-    @ApiVersion("2")
-    public String v2() { return "hello-v2"; }
-}
+@Async("default-executor")
+public void refreshCache() { ... }
 ```
 
-匹配方式：`?apiVersion=2`、请求头 `X-Api-Version: 2`、或 `?apiVersion=latest`（取最大版本）；未指定版本时命中最新版本。
+池参数经 `plugin.thread.*` 调整（core=20、max=200、queue=100000、keep-alive=10s 等）；MDC 上下文经 `MdcTaskDecorator` 自动传递。
 
-**灰度与功能开关**：
+### 6.10 链路日志 TracePortal
 
-```java
-@GetMapping("/preview")
-@ApiGray(users = {"gray-user"}, forceGray = true, notInGrayStatus = 403)
-public String preview() { return "gray-preview-ok"; }
-
-@GetMapping("/beta")
-@ApiFeature(value = "beta-feature", defaultEnabled = false)
-public String beta() { return "beta-ok"; }
+```yaml
+plugin:
+  log:
+    portal:
+      enabled: true                     # 默认 false
+      file: ./logs/trace-portal.log
+      max-events-per-trace: 200
 ```
 
-**三个注解的属性速查**：
+开启后 `TracePortalAppender` 挂载到 logback root，将链路事件按 traceId 汇聚输出；配合 `@Watch` 标注业务节点。
 
-| `@ApiVersion` | 类型 | 默认值 | 说明 |
-|---|---|---|---|
-| `value` | `String` | `"1"` | 版本号，语义化字符串（`"1"`、`"1.2"`、`"v2"`） |
+### 6.11 SPI 扩展
 
-| `@ApiGray` | 类型 | 默认值 | 说明 |
-|---|---|---|---|
-| `value` | `String` | `""` | 灰度版本标识，命中写入 `X-Gray-Hit-Version` |
-| `description` | `String` | `""` | 功能描述 |
-| `percentage` | `int` | `0` | 灰度百分比（0-100） |
-| `rule` | `String` | `""` | SpEL 规则 |
-| `users` / `ips` / `roles` / `headers` | `String[]` | `{}` | 名单类命中条件 |
-| `fallback` | `String` | `""` | 强制灰度未命中时的降级转发路径 |
-| `notInGrayMessage` | `String` | `您暂未被邀请体验此功能` | 未命中文案 |
-| `notInGrayStatus` | `int` | `200` | 未命中状态码（强制灰度时生效，建议 403） |
-| `forceGray` | `boolean` | `false` | 未命中是否直接拒绝（默认软灰度放行） |
-| `group` | `String` | `"default"` | 灰度分组 |
+模块按「接口目录 + 实现」的 ServiceLoader 约定登记扩展：`META-INF/extensions/<接口全限定名>` 文件中每行写一个实现类全限定名。已登记 4 个扩展点：
 
-| `@ApiFeature` | 类型 | 默认值 | 说明 |
-|---|---|---|---|
-| `value` | `String` | 必填 | 功能标识 |
-| `description` | `String` | `""` | 功能描述 |
-| `group` | `String` | `"default"` | 功能分组 |
-| `defaultEnabled` | `boolean` | `true` | 默认是否开放（实验性功能建议 `false`） |
-| `disabledMessage` | `String` | `此功能暂未开放` | 未开放文案 |
-| `disabledStatus` | `int` | `503` | 未开放状态码 |
-
-灰度开关 `plugin.api.gray.enable` 默认 `true`，拦截器由 `ApiFeatureConfiguration` 注册（`/**`，排除 `/error` 与 `/actuator/**`）；功能开关需 `plugin.api.feature.enable=true`。
-
-**验证码**：
-
-```java
-// GET /v1/captcha/captcha  →  { "verifyCodeBase64": "data:image/png;base64,...", "verifyCodeKey": "ABCD" }
-Captcha captcha = captchaProvider.producer();          // 使用默认 type/length
-Captcha custom  = captchaProvider.producer(CaptchaTypeEnum.ARITHMETIC, 5);
-```
-
-**服务信息注册**（推荐 Lambda 形式的 `ServiceInfoContributor`）：
-
-```java
-@Configuration
-public class MyConfiguration {
-
-    @Bean
-    public ServiceInfoContributor myContributor() {
-        return registry -> {
-            registry.registerEndpoint("文件系统", "分片上传", "/chunk/create,upload,complete", "分片上传");
-            registry.registerFlag("oss", "存储", true, "阿里云 OSS 已启用");
-        };
-    }
-}
-```
-
-也可直接调用单例 `ServiceInfoRegistry.getInstance().registerEndpoint(...)`。注册结果在启动横幅中渲染，并通过 `GET /service-info` 聚合输出（`endpoints` / `flags` 两个 Map）。
-
-**方法追踪**：
-
-```java
-@Watch(value = "处理订单", timeoutMs = 2000, logArgs = true)
-public Order processOrder(OrderRequest request) { ... }
-```
-
-### 5.2 SPI 扩展示例
-
-模块通过 `META-INF/extensions/<接口全限定名>` 登记 SPI 实现，共三个扩展点：
-
-| 扩展接口 | 已登记实现 |
+| SPI 接口 | 默认实现 |
 |---|---|
-| `com.chua.starter.common.support.media.MediaTypeHandler` | `XmlMediaTypeHandler`（另有 `@Extension("json")` / `@Extension("csv")` 注解实现） |
+| `com.chua.starter.common.support.media.MediaTypeHandler` | `XmlMediaTypeHandler` |
 | `com.chua.starter.common.support.media.formatter.Formatter` | `DateFormatter`、`NoneFormatter` |
 | `com.chua.common.support.lang.expression.parser.ExpressionParser` | `SpelExpressionParser` |
+| `com.chua.starter.common.support.watchlog.console.Console` | `DefaultConsole` |
 
-以新增 YAML 媒体处理器为例，三步：
+自定义步骤：① 确定要扩展的 SPI 接口；② 编写实现类；③ 在 `META-INF/extensions/<接口全限定名>` 中登记实现类全限定名。
 
-```java
-// 1. 实现接口，用 @Extension 声明名称
-@Extension("yaml")
-public class YamlMediaTypeHandler implements MediaTypeHandler {
-    @Override
-    public byte[] asByteArray(Object o) {
-        return Yaml.toBytes(o);
-    }
-}
-```
+---
 
-```text
-# 2. 登记：在 src/main/resources/META-INF/extensions/ 下新建同名文件
-#    com.chua.starter.common.support.media.MediaTypeHandler
-com.example.YamlMediaTypeHandler
-```
+## 7. 使用场景
 
-3. 生效：`ServiceProvider` 在首次按名取用时加载，`ServiceProvider.of(MediaTypeHandler.class).getExtension("yaml")` 即可命中；无需重启额外配置。
+- **新服务快速起步**：引入即获得统一响应体、异常 advice、Jackson 定制、类型转换等 Web 基座，无需重复搭建。
+- **多版本 API 并行**：老客户端走 v1、新客户端走 v2，`@ApiVersion` + `?apiVersion=` / `X-Api-Version` 平滑迁移。
+- **新功能灰度放量**：`@ApiGray` 按白名单 / SpEL 规则 / 百分比控制流量，`@ApiFeature` 运行时热开关。
+- **接口安全加固**：`@Permission` 权限拦截、`NonceXhrFilter` 防重放、`RequestFingerprintFilter` 防重复提交、Actuator Basic + IP 白名单。
+- **可观测性**：`@Watch` 方法追踪、MDC traceId、参数日志、TracePortal 链路汇聚、`/service-info` 自描述端点。
+- **前后端分离部署**：CORS 统一配置 + `ApiSecurityHeaderFilter` 安全响应头兜底（含静态资源与 404 响应）。
 
-## 六、与其它 starter 的关系
+---
 
-- **上游**：依赖 `utils-support-common-starter`（`ReturnResult`、SPI、`@IgnoreReturnType`）、`utils-support-spring-starter`、`utils-support-httpclient-starter`。
-- **下游（不反向依赖）**：pom 中已注释掉对 `spring-support-cache-starter` 的依赖，避免循环。缓存管理器 `systemCacheManager` / `systemCacheManager600` / `systemCacheManagerAlways` 由 `spring-support-redis-starter` 的 `CacheConfiguration` 提供；`spring-support-cache-starter` 提供 Caffeine 与多级缓存。
-- **Swagger**：pom 不含 Swagger starter，`@Tag` / `@Operation` 只是 `provided` 依赖的注解，文档能力由 `spring-support-swagger-starter` 提供。
-- **用户操作日志**：`@UserLogger` 切面（`UserLoggerPointcutAdvisor`）位于 `spring-support-oauth-client-starter`，本模块只提供事件模型 `UserLoggerInfo` / `SysLoggerInfo` 与 `LoggerIgnore`。
-- **数据库/MyBatis**：本模块引入 `spring-boot-starter-jdbc` 仅用于 `DataAccessException` 等异常类型，数据源能力见 `spring-support-datasource-starter`。
+## 8. 扩展点
 
-## 七、已知限制
+| 扩展点 | 方式 | 说明 |
+|---|---|---|
+| SPI 实现 | `META-INF/extensions/` 登记 | 4 个扩展点见 6.11；新增实现只需登记全限定类名 |
+| 替换默认 Bean | `@ConditionalOnMissingBean` 让位 | `AuthService`、`RestTemplate`、`ObjectMapper` / `Jackson2ObjectMapperBuilder`、`WebMvcRegistrations`、`uniformResponseBodyAdvice`、`apiExceptionAdvice`、`serviceInfoController` 等均可被宿主同名 Bean 覆盖 |
+| 替换过滤器 | `@ConditionalOnMissingBean(name=...)` | `apiVersionFilterRegistration`、`nonceXhrFilterRegistration`、`parameterLogFilterRegistration`、`actuatorAuthenticationFilterRegistration`、`serviceInfoAuthenticationFilterRegistration` |
+| 服务信息贡献 | 实现 `ServiceInfoContributor` | 向 `/service-info` 与启动横幅注册自定义条目 |
+| 功能开关远程覆盖 | 实现 `ApiSwitchOverrideProvider` | 为 `@ApiFeature` 提供运行时开关状态 |
+| 环境后置处理 | `spring.factories` 登记 `EnvironmentPostProcessor` | 本模块内置 Freemarker / Spring / Profile 三个 |
 
-1. `ApiVersion` 依赖 `ApiConfiguration` 通过 `WebMvcRegistrations` 装配 `ApiVersionRequestMappingHandlerMapping`；若宿主自定义该扩展点并覆盖，版本路由会失效。
-2. `ApiFeatureController` 的注册路径由 `plugin.api.feature.path` 决定，但功能开关整体受 `plugin.api.feature.enable`（默认 `false`）控制，未开启时注解拦截与查询接口都不生效。
-3. 灰度依赖会话中的 `username` / `userId` 与 `roles` 属性；无会话（如纯 Token 无状态）时只能按 IP / 请求头规则命中。
-4. 验证码依赖 `HttpSession`。分布式部署需自行配置 Session 共享（Spring Session），否则校验会跨节点失败。
-5. `ServiceInfoRegistry` 是 JVM 级单例，`LinkedHashMap` 非线程安全，只应在容器初始化阶段注册；多 `ApplicationContext` 场景需调用 `reset()` 清理。
-6. `MediaTypeHandler` 的 XML / CSV 实现依赖宿主提供的序列化库，缺失时仅该类型不可用。
-7. 统一响应包装对所有 `@RestController` 生效，二进制流、SSE 等类型靠类型白名单放行；自定义返回类型若不在白名单内需加 `@ApiReturnFormatIgnore`。
-8. `plugin.thread.enable` 默认 `false`，未开启时 `@Async` 使用 Spring 默认执行器。
-9. 统一响应未生效时按序排查：Controller 是否为 `@RestController`、`plugin.api.uniform` 是否被显式关掉、返回类型是否命中忽略清单、方法/类上是否加了 `@ApiReturnFormatIgnore` 或 `@IgnoreReturnType`、所在包是否被 `plugin.api.ignore-format-packages` 排除。
+---
+
+## 9. 常见问题
+
+**Q1：`@Async` 线程名前缀为什么不生效 / 线程池没按我配的参数创建？**
+异步装配的总开关是 `plugin.async.enable`（缺省 `true`）；`plugin.thread.*` 只负责池参数与线程名前缀，其 `enable` 字段默认 `false`，仅用于横幅展示，**不是**装配开关。
+
+**Q2：配置了 `plugin.jackson.enable=false`，为什么 `ObjectMapper` 还是被装配了？**
+`JacksonConfiguration` 没有 `plugin.jackson.enable` 装配条件，恒装配；`plugin.jackson` 下只有 `include-null` 等行为参数。
+
+**Q3：为什么参数日志一条都没打印？**
+`ParameterLogFilter` 的条件是 `plugin.log.enable=true` 且 `matchIfMissing=false`——不显式配置就不会注册。
+
+**Q4：`/v1/option` 返回 404？**
+`OptionalProvider` 装配条件 `matchIfMissing=false`，必须显式配置 `plugin.optional.enable=true`（属性类字段的默认值 `true` 不参与该判定）。
+
+**Q5：接口返回 409，响应头 `X-Blocked-Reason: DUPLICATE_REQUEST`？**
+请求指纹防重命中：`validity-ms`（默认 60 秒）内相同指纹且 `reject-duplicate=true` 时拒绝。整套能力默认关闭，需 `plugin.security.fingerprint.enabled=true` 开启。
+
+**Q6：访问 `/actuator/**` 被拦截或返回 401？**
+`plugin.actuator.enable` 缺省开启模块，但只有 `plugin.actuator.enable-auth=true` 才注册 Basic 认证 + IP 白名单过滤器；按需开启并配置账号与白名单。
+
+**Q7：为什么响应里没有 `Content-Security-Policy` / `Strict-Transport-Security`？**
+二者默认关闭（`csp=""`、`hsts-enabled=false`）：CSP 会破坏内联样式与 dev ws，HSTS 在 http 部署下会导致浏览器强制升级 https。确认部署形态后再显式开启。
+
+**Q8：SPI 扩展点有几个？**
+4 个：`MediaTypeHandler`、`Formatter`、`ExpressionParser`、`Console`（见 6.11）。
+
+**Q9：想关掉响应加密 / 请求解密？**
+`plugin.api.encode.enable=false`、`plugin.api.decode.enable=false`（二者缺省均为 `true`）。
+
+**Q10：MDC / traceId 是哪个组件注入的？为什么和 `plugin.log.enable` 无关？**
+由 `MessageConverterWebMvcConfigurer` 注册的 `mdcHandlerFilter` 承担，永久开启；`plugin.log.enable` 只控制 `ParameterLogFilter`（参数日志）。
+
+

@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.workspace.terminal;
 
 import com.chua.starter.ai.support.manage.websocket.AiWebSocketHandshakeInterceptor;
+import com.chua.starter.common.support.log.MdcWebSocketHandlerDecorator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,7 +44,7 @@ public class AiTerminalWebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(terminalHandler, "/ws/terminal")
+        registry.addHandler(MdcWebSocketHandlerDecorator.wrap(terminalHandler), "/ws/terminal")
                 .addInterceptors(new AiWebSocketHandshakeInterceptor())
                 .setAllowedOriginPatterns("*");
     }

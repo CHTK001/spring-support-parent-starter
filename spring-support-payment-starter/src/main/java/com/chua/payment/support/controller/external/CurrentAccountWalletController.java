@@ -3,9 +3,8 @@ package com.chua.payment.support.controller.external;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.channel.WithdrawRequest;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
 import com.chua.payment.support.dto.CreateApprovalDTO;
 import com.chua.payment.support.dto.WalletCancelWithdrawRequest;
 import com.chua.payment.support.dto.WalletLogQueryRequest;
@@ -25,6 +24,8 @@ import com.chua.payment.support.service.WalletOrderService;
 import com.chua.payment.support.service.WalletWithdrawApprovalService;
 import com.chua.payment.support.support.PaymentAccountPrincipalResolver;
 import com.chua.payment.support.vo.WalletAccountVO;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -39,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.UUID;
+import com.chua.common.support.utils.IdUtils;
 
 /**
    * 当前用户钱包自助 API
@@ -85,13 +86,13 @@ public class CurrentAccountWalletController {
        * @param merchantId merchantid
        * @return 钱包账户信息
        */
-    public Result<WalletAccountVO> getWallet(HttpServletRequest request,
+    public ReturnResult<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
-        return Result.success(walletAccountService.getAccount(merchantId, userId));
+        return ReturnResult.ok(walletAccountService.getAccount(merchantId, userId));
     }
 
     @GetMapping("/log/page")
@@ -105,7 +106,7 @@ public class CurrentAccountWalletController {
        * @param bizNo 业务单号
        * @return 流水分页结果
        */
-    public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
+    public ReturnPageResult<WalletAccountLog> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
                                                          @RequestParam Long merchantId,
@@ -113,11 +114,11 @@ public class CurrentAccountWalletController {
                                                          @RequestParam(required = false) String bizNo) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnPageResult.error("未获取到当前账户");
         }
         Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId
             , bizType, bizNo, null, null));
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 
     @GetMapping("/order/page")
@@ -131,7 +132,7 @@ public class CurrentAccountWalletController {
        * @param status 状态
        * @return 订单分页结果
        */
-    public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
+    public ReturnPageResult<WalletOrder> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       @RequestParam Long merchantId,
@@ -139,10 +140,10 @@ public class CurrentAccountWalletController {
                                                       @RequestParam(required = false) String status) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnPageResult.error("未获取到当前账户");
         }
         Page<WalletOrder> page = walletOrderService.page(new WalletOrderQueryRequest(pageNum, pageSize, merchantId, userId, orderType, status));
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 
     @PostMapping("/withdraw")
@@ -152,20 +153,20 @@ public class CurrentAccountWalletController {
        * @param dto dto
        * @return 提现审批记录
        */
-    public Result<WalletWithdrawApproval> withdraw(HttpServletRequest request,
+    public ReturnResult<WalletWithdrawApproval> withdraw(HttpServletRequest request,
                                                     @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
         if (dto.merchantId() == null) {
-            return Result.error("商户ID不能为空");
+            return ReturnResult.error("商户ID不能为空");
         }
         if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            return Result.error("提现金额必须大于0");
+            return ReturnResult.error("提现金额必须大于0");
         }
         if (!StringUtils.hasText(dto.bankAccount())) {
-            return Result.error("银行账号不能为空");
+            return ReturnResult.error("银行账号不能为空");
         }
 
           // 强校验：用户标识与操作者强制等于当前用户（record 不可变，下方重建实例覆盖）
@@ -191,12 +192,12 @@ public class CurrentAccountWalletController {
                 maxWithdrawable = BigDecimal.ZERO;
             }
             if (dto.amount().compareTo(maxWithdrawable) > 0) {
-                return Result.error("优惠券抵扣部分不可提现，可提现金额为：" + maxWithdrawable.setScale(2, RoundingMode.HALF_UP));
+                return ReturnResult.error("优惠券抵扣部分不可提现，可提现金额为：" + maxWithdrawable.setScale(2, RoundingMode.HALF_UP));
             }
         }
 
           // 生成提现流水号
-        String withdrawNo = "WDW" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        String withdrawNo = IdUtils.createOrderNo("WDW");
         WalletWithdrawDTO effectiveDto = new WalletWithdrawDTO(
                 dto.merchantId(), userId, withdrawNo, dto.notifyUrl(), dto.amount(),
                 dto.bankAccount(), dto.bankName(), dto.accountName(), String.valueOf(userId), dto.remark());
@@ -211,7 +212,7 @@ public class CurrentAccountWalletController {
                         dto.bankAccount(), dto.bankName(), dto.accountName(),
                         withdrawNo, dto.remark()));
 
-        return Result.success(approval);
+        return ReturnResult.ok(approval);
     }
 
       /**
@@ -223,20 +224,20 @@ public class CurrentAccountWalletController {
        * @return 取消结果
        */
     @PostMapping("/withdraw/{approvalId}/cancel")
-    public Result<Void> cancelWithdraw(@PathVariable Long approvalId,
+    public ReturnResult<Void> cancelWithdraw(@PathVariable Long approvalId,
                                        @RequestParam(required = false) String reason,
                                        HttpServletRequest request) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
 
         WalletWithdrawApproval approval = walletWithdrawApprovalService.getById(approvalId);
         if (!userId.equals(approval.getUserId())) {
-            return Result.error(403, "只能取消自己的提现申请");
+            return ReturnResult.error("403", "只能取消自己的提现申请");
         }
         if (!"PENDING".equals(approval.getStatus())) {
-            return Result.error("仅待审批的提现可以取消");
+            return ReturnResult.error("仅待审批的提现可以取消");
         }
 
           // 解冻余额（frozen 可用）
@@ -248,7 +249,7 @@ public class CurrentAccountWalletController {
         walletWithdrawApprovalService.reject(approvalId, String.valueOf(userId),
                 "用户主动取消" + (StringUtils.hasText(reason) ? ": " + reason : ""));
 
-        return Result.success();
+        return ReturnResult.ok();
     }
 
     @PostMapping("/transfer")
@@ -258,31 +259,31 @@ public class CurrentAccountWalletController {
        * @param dto dto
        * @return 转账结果
        */
-    public Result<Void> transfer(HttpServletRequest request,
+    public ReturnResult<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
         if (dto.merchantId() == null) {
-            return Result.error("商户ID不能为空");
+            return ReturnResult.error("商户ID不能为空");
         }
         if (dto.toUserId() == null) {
-            return Result.error("转入用户不能为空");
+            return ReturnResult.error("转入用户不能为空");
         }
         if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            return Result.error("转账金额必须大于0");
+            return ReturnResult.error("转账金额必须大于0");
         }
         if (userId.equals(dto.toUserId())) {
-            return Result.error("不能转账给自己");
+            return ReturnResult.error("不能转账给自己");
         }
 
           // 强校验：从用户标识推导操作者，强制等于当前用户
-        String transferNo = "TRF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        String transferNo = IdUtils.createOrderNo("TRF");
 
         walletAccountService.transfer(new WalletTransferOpDTO(
                 dto.merchantId(), userId, dto.toUserId(),
                 dto.amount(), transferNo, String.valueOf(userId), dto.remark()));
-        return Result.success();
+        return ReturnResult.ok();
     }
 }

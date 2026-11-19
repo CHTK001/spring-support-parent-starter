@@ -60,8 +60,8 @@ public class ParameterLogFilter implements Filter {
         public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS"); // 日期时间formatter
     private final LogProperties logProperties; // 日志属性
     private final ApplicationContext applicationContext; // application上下文
-// [P3C C1 豁免] 场景化创建线程，需文档化
-    private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor(); // 接口服务日志
+// [P3C C1 豁免] 场景化创建线程，需文档化（MdcWrap.decorate 串联提交方 MDC，无需 javaagent）
+    private final ExecutorService interfaceServiceLog = MdcWrap.decorate(Executors.newVirtualThreadPerTaskExecutor()); // 接口服务日志
     
     /**
      * 请求开始时间的属性名

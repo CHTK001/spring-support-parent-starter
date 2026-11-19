@@ -12,7 +12,7 @@ import java.util.Map;
  * 动态接口服务：数据源「接口管理」的读写与发布生命周期。
  *
  * <p>一条记录 = 绑定到某个数据源（{@code datasourceId}，可为 calcite 合并源）的
- * SQL 查询（{@code sqlText}）对外暴露成一个接口：保存落 {@code ms_datasource_api}，
+ * SQL 查询（{@code sqlText}）对外暴露成一个接口：保存落 {@code datasource_api}，
  * 执行时经 {@code DbConsoleController} 同口径执行链查库返回。发布分两轨：</p>
  * <ul>
  *   <li>{@code embedded} — 动态注册进当前应用的 {@code RequestMappingHandlerMapping}，

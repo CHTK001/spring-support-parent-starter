@@ -103,6 +103,7 @@ public class UsageController {
        * @param groupName 用量分组名称，为空时不限定
        * @param provider 服务商名称，为空时不限定
        * @param model 模型名称，为空时不限定
+       * @param status 调用状态（success/failed），为空时不限定
        * @param startTime 统计开始时间，为空时不限定
        * @param endTime 统计结束时间，为空时不限定
        * @param page 页码，从 1 开始
@@ -118,11 +119,12 @@ public class UsageController {
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) String model,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<SysAiUsage> p = usageService.list(groupName, provider, model, startTime, endTime,
+        Page<SysAiUsage> p = usageService.list(groupName, provider, model, status, startTime, endTime,
                 currentScopeUserId(), page, size);
         return ReturnResult.ok(AiUsagePageVO.of(p));
     }
@@ -195,7 +197,8 @@ public class UsageController {
                     d.getTotalPromptTokens() != null ? d.getTotalPromptTokens() : 0L,
                     d.getTotalCompletionTokens() != null ? d.getTotalCompletionTokens() : 0L,
                     d.getTotalTokens() != null ? d.getTotalTokens() : 0L,
-                    d.getTotalCachedTokens() != null ? d.getTotalCachedTokens() : 0L
+                    d.getTotalCachedTokens() != null ? d.getTotalCachedTokens() : 0L,
+                    d.getTotalCost() != null ? d.getTotalCost() : 0.0
             ));
         }
         return ReturnResult.ok(result);
@@ -244,6 +247,32 @@ public class UsageController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
         return ReturnResult.ok(usageService.getCallTypeBreakdown(
+                groupName, provider, model, startTime, endTime, currentScopeUserId()));
+    }
+
+    /**
+     * 按「天 × 调用状态」聚合用量（失败分析卡的数据源）。
+     *
+     * <p>失败分析卡用它回答「失败集中在哪几天、占多少比例」：只看总调用量
+     * 看不出稳定性，把 success / failed 分开按天铺开后，异常日一眼可见。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @return 按天升序、同天内按状态升序的聚合点列表
+     */
+    @Operation(summary = "用量失败分析",
+            description = "把同一时间段的明细按 天×调用状态 聚合：success/failed 各多少次、多少 token、多少钱")
+    @GetMapping("/failures")
+    public ReturnResult<List<com.chua.starter.ai.support.model.vo.AiUsageFailurePointVO>> failureBreakdown(
+            @RequestParam(required = false) String groupName,
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        return ReturnResult.ok(usageService.getFailureBreakdown(
                 groupName, provider, model, startTime, endTime, currentScopeUserId()));
     }
 

@@ -1,25 +1,27 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.payment.support.configuration;
 
-import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.chua.payment.support.spi.UserOpenIdResolver;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
- * 支付模块自动配置类，注册 MyBatis Plus 拦截器、默认支付 OpenId 解析器与线程池调度器。
+ * 支付模块自动配置类，注册默认支付 OpenId 解析器与服务信息登记。
  *
  * <p>所有 Bean 均使用 {@code @ConditionalOnMissingBean} 或
  * {@code @ConditionalOnProperty} 声明，允许宿主应用覆盖默认实现。</p>
+ *
+ * <p>MyBatis Plus 拦截器链统一由 spring-support-mybatis-starter 的
+ * {@code MybatisPlusConfiguration} 装配（含分页/乐观锁/数据权限/加解密），
+ * 本模块不再重复定义（R4）。</p>
+ *
+ * <p>调度任务统一由 spring-support-job-starter 的 {@code @Job} 契约承接，
+ * 本模块不再维护内置线程池调度引擎（R4：调度能力归口 job-starter）。</p>
  *
  * @author CH
  * @since 4.0.0.50
@@ -28,19 +30,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @MapperScan("com.chua.payment.support.mapper")
 @ComponentScan("com.chua.payment.support")
 public class PaymentAutoConfiguration {
-
-    @Bean
-    @ConditionalOnMissingBean(MybatisPlusInterceptor.class)
-    /**
-     * 构建支付模块的 MyBatis Plus 拦截器。
-     *
-     * @return MyBatis Plus 拦截器
-     */
-    public MybatisPlusInterceptor paymentMybatisPlusInterceptor() {
-        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-        return interceptor;
-    }
 
     @Bean
     @ConditionalOnMissingBean(UserOpenIdResolver.class)
@@ -53,24 +42,6 @@ public class PaymentAutoConfiguration {
      */
     public UserOpenIdResolver defaultUserOpenIdResolver() {
         return (merchantId, userId, channelType) -> null;
-    }
-
-    @Bean(name = "paymentThreadPoolTaskScheduler")
-    @ConditionalOnMissingBean(name = "paymentThreadPoolTaskScheduler")
-    @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
-    @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
-    /**
-     * 构建支付模块的线程池任务调度器。
-     *
-     * @return 支付线程池任务调度器
-     */
-    public ThreadPoolTaskScheduler paymentThreadPoolTaskScheduler() {
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(4);
-        scheduler.setThreadNamePrefix("payment-task-");
-        scheduler.setWaitForTasksToCompleteOnShutdown(true);
-        scheduler.setAwaitTerminationSeconds(30);
-        return scheduler;
     }
 
     @Bean

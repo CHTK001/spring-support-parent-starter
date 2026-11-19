@@ -1,7 +1,9 @@
 package com.chua.payment.support.task;
 
 import com.chua.payment.support.service.OrderPartitionConfigService;
+import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 /**
  * 交易流水分表迁移任务
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
  */
 
 @Component
+@ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class TransactionPartitionMigrateTask implements PaymentManagedTask {
     /**
@@ -20,5 +23,11 @@ public class TransactionPartitionMigrateTask implements PaymentManagedTask {
     @Override public String taskName() { return "交易流水主表迁移"; }
     @Override public String defaultCron() { return "0 30 3 * * ?"; }
     @Override public String description() { return "把交易流水主表超过阈值的历史数据迁移到目标分表"; }
-    @Override public void execute() { orderPartitionConfigService.executeAutoMigrate("TRANSACTION"); }
+    @Override
+    @Job(
+            value = "payment.transaction.partition.migrate",
+            cron = "0 30 3 * * ?",
+            desc = "把交易流水主表超过阈值的历史数据迁移到目标分表"
+    )
+    public void execute() { orderPartitionConfigService.executeAutoMigrate("TRANSACTION"); }
 }

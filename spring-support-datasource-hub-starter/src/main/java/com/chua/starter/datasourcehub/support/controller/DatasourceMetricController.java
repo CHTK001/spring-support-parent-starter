@@ -72,7 +72,7 @@ public class DatasourceMetricController {
     /**
      * 查询指标趋势（首屏历史）。
      *
-     * <p>数据来自后台在被订阅期间落的 {@code ms_datasource_metric}。
+     * <p>数据来自后台在被订阅期间落的 {@code datasource_metric}。
      * 从未被观测过的数据源返回空点 + 说明文案，不返回一条平线 ——
      * 「没采过」和「一直是 0 延迟」在图上是两件完全不同的事。</p>
      *

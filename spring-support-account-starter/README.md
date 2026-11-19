@@ -134,7 +134,7 @@ flowchart LR
 | 渠道管理（登录态） | `ApiChannelAuthController`、`AccountChannelService`、`AccountChannelModelService`、`AccountChannelConnectionService`、`AccountChannelHealthService`、`ChannelConnectionSchemaMigrator` | `/api/channels`（绑定 / 轮询 / 刷新 / 签到 / 模型开关 / 上游管理） |
 | 免登录渠道（对话 / 图 / 视频 / 3D） | `ChatChannelController`、`ImageChannelController`、`VideoChannelController`、`Model3DChannelController`、`ChannelRegistry`、`FreeChannelChatClient`、`FreeChannelImageClient` | `/api/channels/{channel}/chat` `/images` `/videos` `/3d-models` |
 | 渠道模型缓存 | `AccountChannelCacheConfiguration`、`AccountChannelModelCache`、`ChannelModelCacheEvictor` | Spring 缓存（`@Cacheable`，读多写少） |
-| 上游余额查询 | `AccountCreditConfigController`、`SysAccountCreditConfigServiceImpl`、`MagpieCreditQueryProvider`、12 个 `*CreditQueryProvider` | `/api/accounts/credit-configs` |
+| 上游余额查询 | `AccountCreditConfigController`、`SysAccountCreditConfigServiceImpl`、`MagpieCreditQueryProvider`、13 个 `*CreditQueryProvider` | `/api/accounts/credit-configs` |
 | 收 / 发信箱 | `MailboxController`、`MailboxService`、`EmailInboxProvider` / `EmailPop3InboxProvider` / `EmailAccountVerifier` | `/api/accounts/{accountId}/mailbox` |
 | 临时邮箱 | `TempMailController`、`TempMailService`、`TempMailInboxProvider` | `/api/accounts/temp-mail` |
 | 临时手机号 / 接码 | `TempPhoneController`、`TempPhoneService`、`TempPhoneKindProvider`、`PhoneKindProvider`、`TempPhoneInboxProvider`、`PhoneInboxProvider` | `/api/accounts/temp-phone` |
@@ -501,7 +501,7 @@ curl -X POST http://localhost:8080/api/channels/chat-duckduckgo/chat \
 | `AccountChannelAuthManager` | `.../AccountChannelAuthManager` | `MagpieAccountChannelAuthManager`（magpie） |
 | `ChannelUpstreamProvider` | `.../ChannelUpstreamProvider` | `MagpieUpstreamProvider`（magpie）、`MagpieDbCreditProvider`（magpie-credit-db，读 `sys_account_credit_config` 的自建余额回落） |
 | `ChannelUpstreamCodec` / `ChannelUpstreamAdmin` | `.../ChannelUpstreamCodec`、`.../ChannelUpstreamAdmin` | `MagpieProviderCodec`、`MagpieUpstreamAdmin`（magpie） |
-| `CreditQueryProvider`（datasearch SPI） | `META-INF/services/com.chua.starter.datasearch.credit.spi.CreditQueryProvider` | 12 个厂商实现（cline / eac / gemini / lobsterai / loomy / minimax / opencode / qoder / qoder-cn / raccoon / trae / workbuddy / zcode）+ `MagpieCreditQueryProvider`（网关聚合口径） |
+| `CreditQueryProvider`（datasearch SPI） | `META-INF/services/com.chua.starter.datasearch.credit.spi.CreditQueryProvider` | 13 个厂商实现（cline / eac / gemini / lobsterai / loomy / minimax / opencode / qoder / qoder-cn / raccoon / trae / workbuddy / zcode）+ `MagpieCreditQueryProvider`（网关聚合口径） |
 | `ChatClient` / `ImageClient`（utils AI SPI） | `META-INF/extensions/com.chua.common.support.ai.chat.ChatClient`、`...image.ImageClient` | `FreeChannelChatClient`、`FreeChannelImageClient`（别名 `free-channel`，免费渠道聚合路由层） |
 
 调用方约定：**不要直接枚举 SPI**，走门面 `ChannelRegistry`（渠道）与 `AccountKindCatalog`（账号种类），去重键取实现自身的 `channel()` / `kind()`。

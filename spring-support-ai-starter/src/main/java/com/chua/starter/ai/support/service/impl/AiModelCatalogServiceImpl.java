@@ -219,7 +219,10 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
 
     /**
      * 计算本地模型详情：只读探测本地可用性，不调用 resolveModelPath（避免触发联网下载）。
-     */    private List<Map<String, Object>> computeLocalModelDetails() {
+     *
+     * @return 本地模型详情列表，每项含 modelId、capability、available、localPath 等
+     */
+    private List<Map<String, Object>> computeLocalModelDetails() {
         // 顺序敏感：必须先把持久化的模型根推回注册表，再触发发现。
         // 反过来 discoverAll 会在库默认根（通常不存在）下扫描，外部目录一个都发现不了，
         // 本地模型清单就会缺失这些目录，ONNX 提供商「刷新模型」返回空

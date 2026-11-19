@@ -2,9 +2,8 @@
 package com.chua.payment.support.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.payment.support.channel.WithdrawRequest;
-import com.chua.payment.support.common.PageResult;
-import com.chua.payment.support.common.Result;
 import com.chua.payment.support.dto.WalletCancelWithdrawRequest;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.entity.WalletWithdrawApproval;
@@ -12,6 +11,8 @@ import com.chua.payment.support.service.WalletAccountService;
 import com.chua.payment.support.service.WalletOrderService;
 import com.chua.payment.support.service.WalletWithdrawApprovalService;
 import com.chua.payment.support.support.PaymentAccountPrincipalResolver;
+import com.chua.starter.common.support.lang.ReturnPageResult;
+import com.chua.starter.mybatis.utils.PageResultUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -60,17 +61,17 @@ public class WalletWithdrawApprovalController {
      * @return 分页结果
      */
     @GetMapping("/page")
-    public Result<PageResult<WalletWithdrawApproval>> page(HttpServletRequest request,
+    public ReturnPageResult<WalletWithdrawApproval> page(HttpServletRequest request,
                                                             @RequestParam(defaultValue = "1") int pageNum,
                                                             @RequestParam(defaultValue = "10") int pageSize,
                                                             @RequestParam(required = false) String status) {
-        Result<PageResult<WalletWithdrawApproval>> denied = denyIfNecessary(request);
+        ReturnResult<Void> denied = denyIfNecessary(request);
         if (denied != null) {
-            return denied;
+            return ReturnPageResult.error(denied.getMsg());
         }
 
         Page<WalletWithdrawApproval> page = walletWithdrawApprovalService.pageApprovals(pageNum, pageSize, status);
-        return Result.success(PageResult.of(page));
+        return PageResultUtils.ok(page);
     }
 
     @PostMapping("/{id}/approve")
@@ -80,8 +81,8 @@ public class WalletWithdrawApprovalController {
      * @param request 请求
      * @return 返回值
     */
-    public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
-        Result<String> denied = denyIfNecessary(request);
+    public ReturnResult<String> approve(@PathVariable Long id, HttpServletRequest request) {
+        ReturnResult<String> denied = denyIfNecessary(request);
         if (denied != null) {
             return denied;
         }
@@ -112,7 +113,7 @@ public class WalletWithdrawApprovalController {
         // 更新审批状态为已通过
         walletWithdrawApprovalService.approve(id, operator);
 
-        return Result.success("审批通过，提现订单已创建");
+        return ReturnResult.ok("审批通过，提现订单已创建");
     }
 
     /**
@@ -124,10 +125,10 @@ public class WalletWithdrawApprovalController {
      * @return 拒绝结果
      */
     @PostMapping("/{id}/reject")
-    public Result<String> reject(@PathVariable Long id,
+    public ReturnResult<String> reject(@PathVariable Long id,
                                  @RequestParam(required = false) String reason,
                                  HttpServletRequest request) {
-        Result<String> denied = denyIfNecessary(request);
+        ReturnResult<String> denied = denyIfNecessary(request);
         if (denied != null) {
             return denied;
         }
@@ -143,7 +144,7 @@ public class WalletWithdrawApprovalController {
         // 更新审批状态为已拒绝
         walletWithdrawApprovalService.reject(id, operator, reason);
 
-        return Result.success("已拒绝提现申请");
+        return ReturnResult.ok("已拒绝提现申请");
     }
 
     /**
@@ -156,25 +157,25 @@ public class WalletWithdrawApprovalController {
      * @return 确认结果
      */
     @PostMapping("/{orderNo}/withdrawal/success")
-    public Result<String> withdrawalSuccess(@PathVariable String orderNo,
+    public ReturnResult<String> withdrawalSuccess(@PathVariable String orderNo,
                                              @RequestParam(required = false) String thirdPartyOrderNo,
                                              @RequestParam(required = false) String responsePayload,
                                              HttpServletRequest request) {
-        Result<String> denied = denyIfNecessary(request);
+        ReturnResult<String> denied = denyIfNecessary(request);
         if (denied != null) {
             return denied;
         }
 
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         if (order == null) {
-            return Result.error("钱包订单不存在");
+            return ReturnResult.error("钱包订单不存在");
         }
         if (!"PROCESSING".equals(order.getStatus())) {
-            return Result.error("仅处理中的订单可以确认到账");
+            return ReturnResult.error("仅处理中的订单可以确认到账");
         }
 
         walletOrderService.markSuccess(orderNo, thirdPartyOrderNo, responsePayload);
-        return Result.success("提现到账已确认");
+        return ReturnResult.ok("提现到账已确认");
     }
 
     /**
@@ -187,22 +188,22 @@ public class WalletWithdrawApprovalController {
      * @return 处理结果
      */
     @PostMapping("/{orderNo}/withdrawal/fail")
-    public Result<String> withdrawalFail(@PathVariable String orderNo,
+    public ReturnResult<String> withdrawalFail(@PathVariable String orderNo,
                                           @RequestParam(required = false) String responsePayload,
                                           @RequestParam(required = false) String reason,
                                           HttpServletRequest request) {
-        Result<String> denied = denyIfNecessary(request);
+        ReturnResult<String> denied = denyIfNecessary(request);
         if (denied != null) {
             return denied;
         }
 
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         if (order == null) {
-            return Result.error("钱包订单不存在");
+            return ReturnResult.error("钱包订单不存在");
         }
         final String failReason = StringUtils.hasText(reason) ? reason : "商户处理失败";
         walletOrderService.markFailed(orderNo, responsePayload, failReason);
-        return Result.success("提现失败已记录");
+        return ReturnResult.ok("提现失败已记录");
     }
 
     /**
@@ -211,13 +212,13 @@ public class WalletWithdrawApprovalController {
      * @param request 请求
      * @return 校验失败时的错误结果；通过时返回 null
      */
-    private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
+    private <T> ReturnResult<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
-            return Result.error(401, "未获取到当前账户");
+            return ReturnResult.error("401", "未获取到当前账户");
         }
         if (!principalResolver.isAdmin(userResume)) {
-            return Result.error(403, "仅超管和管理员可访问");
+            return ReturnResult.error("403", "仅超管和管理员可访问");
         }
         return null;
     }

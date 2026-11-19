@@ -11,7 +11,7 @@ import com.chua.starter.datasourcehub.support.dbconsole.DbSchemaRollbackResultVO
  * 表结构版本控制（DDL 快照 + 回滚）。
  *
  * <p>核心语义：拍快照 = 把表在拍摄时刻的「建表 DDL + 列 + 索引 + 外键 + 表选项
- * （JSON 文本）」落盘到 {@code ms_schema_snapshot}；回滚 = 删掉当前表
+ * （JSON 文本）」落盘到 {@code datasource_schema_snapshot}；回滚 = 删掉当前表
  * （多表倒序，MySQL 先关 FOREIGN_KEY_CHECKS），再把 DDL 原样执行一遍。
  * 回滚只影响被回滚的表，不会碰同库的其他表。</p>
  *

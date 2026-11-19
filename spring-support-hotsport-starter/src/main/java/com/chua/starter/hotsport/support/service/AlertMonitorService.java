@@ -1,6 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.hotsport.support.service;
 
+import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.hotsport.support.config.HotsportProperties;
 import com.chua.runtime.apm.storage.ApmStorage;
 import com.chua.runtime.apm.storage.Query;
@@ -542,7 +543,7 @@ public class AlertMonitorService {
         }
         for (AlertChannel c : enabledChannels) {
             final AlertChannel ch = c;
-            CompletableFuture.runAsync(() -> pushWebhook(ch, event));
+            CompletableFuture.runAsync(MdcWrap.wrap(() -> pushWebhook(ch, event)));
         }
     }
 

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.51</version>
+    </parent>
+    <artifactId>spring-support-cdp-starter</artifactId>
+    <description>
+        CDP 调试模块：内嵌 headless Chromium 引擎与 Chrome DevTools Protocol 能力，
+        提供 /ms/cdp REST（状态/目标/页面/求值/截屏/控制台/网络）、/ws/cdp WebSocket
+        透传通道与实时页面反向代理（默认 9223）。宿主引入本依赖即可使用；
+        spring.cdp.enabled=false 可整体关闭。
+    </description>
+
+    <dependencies>
+        <!-- 底层能力：Json/StringUtils/ReturnResult、browser-cdp 引擎、chua NIO Server（反向代理）与 swagger 注解 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+        <!-- 接口文档注解（@Tag / @Operation）；common-starter 里该依赖是 optional，
+             版本由父 POM dependencyManagement 统一管理 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+        <!-- REST / SSE（Controller、SseEmitter、Servlet Filter） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- /ws/cdp WebSocket 透传端点 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

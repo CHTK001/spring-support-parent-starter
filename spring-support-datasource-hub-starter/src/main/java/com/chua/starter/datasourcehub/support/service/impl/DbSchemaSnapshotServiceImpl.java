@@ -36,7 +36,7 @@ import java.util.Set;
  * 表结构版本控制（DDL 快照 + 回滚）实现。
  *
  * <p>拍快照：从库中取出表定义（SHOW CREATE TABLE / 失败 fallback 到 JDBC 元数据拼装）→
- * 落盘 <code>ms_schema_snapshot</code>；回滚：删当前表 → 原样执行 DDL → 重建索引/外键
+ * 落盘 <code>datasource_schema_snapshot</code>；回滚：删当前表 → 原样执行 DDL → 重建索引/外键
  * （SHOW_CREATE 来源的 DDL 已自包含约束，无需重建）。只影响被回滚的表，不碰同库的其他表。</p>
  *
  * @author CH

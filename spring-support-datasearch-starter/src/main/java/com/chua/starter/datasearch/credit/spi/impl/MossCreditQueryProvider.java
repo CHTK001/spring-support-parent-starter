@@ -110,7 +110,7 @@ public class MossCreditQueryProvider implements CreditQueryProvider {
             if (!blank(query.getExpression())) {
                 return translate(parse(query.getExpression(), raw, query.getBilling()));
             }
-            return translate(probeDefaults(raw, query.getBilling()));
+            return probeDefaults(raw, query.getBilling());
         } catch (RuntimeException e) {
             return CreditResult.fail(name(), e.getMessage());
         }
@@ -135,17 +135,20 @@ public class MossCreditQueryProvider implements CreditQueryProvider {
     /**
      * 响应结构未公开：按常见字段名逐个试探，第一条能解析的胜出。
      *
+     * <p>命中后即翻成页面展示名（{@link #translate}）。包内可见：测试直接喂
+     * 真实响应样例，不走网络。</p>
+     *
      * @param raw     原始响应
      * @param billing 计费币种
      * @return 结果
      */
-    private CreditResult probeDefaults(String raw, String billing) {
+    CreditResult probeDefaults(String raw, String billing) {
         String lastError = null;
         for (String candidate : DEFAULT_EXPRESSIONS) {
             CreditResult result = CreditExpressions.parse(candidate, raw, name(), billing);
             if (result.isOk()) {
                 result.setSource(name());
-                return result;
+                return translate(result);
             }
             lastError = result.getError();
         }

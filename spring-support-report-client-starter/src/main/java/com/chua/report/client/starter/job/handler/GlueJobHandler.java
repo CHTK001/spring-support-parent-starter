@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.job.handler;
 
+import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.report.client.starter.job.log.DefaultJobLog;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,26 @@ public class GlueJobHandler implements JobHandler {
     public GlueJobHandler(JobHandler jobHandler, long glueUpdatetime) {
         this.jobHandler = jobHandler;
         this.glueUpdatetime = glueUpdatetime;
+    }
+
+    /**
+     * 处理器唯一名称，沿用被包装处理器的名称。
+     *
+     * @return 名称
+     */
+    @Override
+    public String name() {
+        return jobHandler.name();
+    }
+
+    /**
+     * 处理器描述。
+     *
+     * @return 描述
+     */
+    @Override
+    public String desc() {
+        return "GLUE(" + glueUpdatetime + ")";
     }
 
     @Override

@@ -128,15 +128,23 @@ public class SysAiSessionController {
     }
 
     /**
-     * 批量归档/取消归档会话
-     * @param body 请求体，不允许为 null
-     * @return 结果映射，无数据时为空映射
+     * 批量归档/取消归档会话。
+     *
+     * <p><b>为什么同时收 POST。</b>前端 {@code batchArchiveSessions} 用的是 POST，
+     * 而后端此前只有 PUT，浏览器侧表现为 405/走静态资源兜底；两侧方法必须对齐。</p>
+     *
+     * <p><b>为什么不再强转 {@code List<Long>}。</b>JSON 反序列化后的数字是 Integer，
+     * 直接 {@code (List<Long>) body.get(...)} 在增强 for 拆箱时抛
+     * {@code ClassCastException: Integer cannot be cast to Long}，接口 500。
+     * 这里按 {@code Number}/{@code String} 两种真实形状逐个归一。</p>
+     *
+     * @param body 请求体，含 sessionIds 与 archived
+     * @return 结果映射：success 与 skipped（无权/不存在而跳过的 id）
      */
-    @PutMapping("/batch-archive")
+    @RequestMapping(value = "/batch-archive", method = {RequestMethod.PUT, RequestMethod.POST})
     public Map<String, Object> batchArchive(@RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Long> sessionIds = (List<Long>) body.get("sessionIds");
-        Boolean archived = (Boolean) body.get("archived");
+        List<Long> sessionIds = longIdsOf(body.get("sessionIds"));
+        Boolean archived = archiveFlagOf(body.get("archived"));
         List<Long> skipped = new ArrayList<>();
         for (Long id : sessionIds) {
             try {
@@ -148,7 +156,55 @@ public class SysAiSessionController {
                 skipped.add(id);
             }
         }
-        return Map.of("success", true, "skipped", skipped);
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("updated", sessionIds.size() - skipped.size());
+        result.put("skipped", skipped);
+        return result;
+    }
+
+    /**
+     * 把前端传来的 id 数组归一成 {@code List<Long>}。
+     *
+     * <p>JSON 数字可能是 Integer/Long，字符串形态也一并接受；非法项直接跳过，
+     * 不让一个坏 id 打断整批。</p>
+     *
+     * @param raw 请求体里的原始值，可为 null
+     * @return 归一后的 id 列表，永不为 null
+     */
+    private static List<Long> longIdsOf(Object raw) {
+        List<Long> ids = new ArrayList<>();
+        if (!(raw instanceof List<?> list)) {
+            return ids;
+        }
+        for (Object item : list) {
+            if (item instanceof Number number) {
+                ids.add(number.longValue());
+            } else if (item instanceof String text && !text.isBlank()) {
+                try {
+                    ids.add(Long.parseLong(text.trim()));
+                } catch (NumberFormatException ignored) {
+                    // 非数字 id（如前端 UUID）无法定位会话，直接忽略
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * 取归档标记：缺省视为归档，避免「少传字段 = 取消归档」把数据改坏。
+     *
+     * @param raw 请求体里的原始值，可为 null
+     * @return 归档标记
+     */
+    private static Boolean archiveFlagOf(Object raw) {
+        if (raw instanceof Boolean flag) {
+            return flag;
+        }
+        if (raw instanceof String text && !text.isBlank()) {
+            return Boolean.parseBoolean(text.trim());
+        }
+        return Boolean.TRUE;
     }
 
     /**

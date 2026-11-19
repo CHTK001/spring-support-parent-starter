@@ -1,6 +1,8 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.manage.agent;
 
+import com.chua.common.support.network.download.extractor.Extractor;
+import com.chua.common.support.network.download.extractor.ExtractorFactory;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.SysAiAgentService;
@@ -16,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -23,8 +26,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 /**
  * 智能体安装包服务。
@@ -595,26 +596,26 @@ public class AgentPackageService {
     /**
      * 解压 zip 到目标目录（防目录穿越）。
      *
+     * <p>输入为流，先落盘为临时 zip 文件再走统一解压 SPI（含 Zip Slip 前置校验与
+     * 条目数上限），解压完成后删除临时文件。</p>
+     *
      * @param in  输入流
      * @param dir 目标目录
      * @throws IOException 解压失败
      */
     private void unzip(InputStream in, Path dir) throws IOException {
-        try (ZipInputStream zis = new ZipInputStream(in, StandardCharsets.UTF_8)) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                Path target = dir.resolve(entry.getName()).normalize();
-                if (!target.startsWith(dir)) {
-                    throw new IOException("非法的压缩包条目: " + entry.getName());
-                }
-                if (entry.isDirectory()) {
-                    Files.createDirectories(target);
-                } else {
-                    Files.createDirectories(target.getParent());
-                    Files.copy(zis, target);
-                }
-                zis.closeEntry();
+        Path tmpZip = Files.createTempFile("agent-pkg-", ".zip");
+        try {
+            Files.copy(in, tmpZip, StandardCopyOption.REPLACE_EXISTING);
+            Extractor extractor = ExtractorFactory.getExtractor(tmpZip.getFileName().toString());
+            if (extractor == null) {
+                throw new IOException("不支持的压缩格式: " + tmpZip.getFileName());
             }
+            if (!extractor.extract(tmpZip.toFile(), dir.toFile())) {
+                throw new IOException("ZIP 解压失败");
+            }
+        } finally {
+            Files.deleteIfExists(tmpZip);
         }
     }
 

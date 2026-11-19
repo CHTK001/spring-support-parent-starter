@@ -75,7 +75,7 @@ public class InfluxdbClient {
      * 403 {@code Flux query service disabled}。也就是说「2.x + SQL」是一个真实存在的
      * 组合，把它硬塞进 Version 里就会出现「明明是 v2 却只能按 v3 处理」的矛盾。</p>
      *
-     * <p>方言取数据源登记的 {@code datasource_version}（用户显式选择）；
+     * <p>方言取数据源登记的 {@code datasource_info_version}（用户显式选择）；
      * 登记为空（存量记录）时才回落到按大版本推断，保持升级前的行为不变。</p>
      *
      * @author CH
@@ -212,7 +212,7 @@ public class InfluxdbClient {
     }
 
     /**
-     * 取查询方言：登记的 {@code datasource_version} 为准，登记为空才按大版本推断。
+     * 取查询方言：登记的 {@code datasource_info_version} 为准，登记为空才按大版本推断。
      *
      * <p>登记优先是刻意的：这个字段就是用户在数据源上做的选择，而「2.x」并不蕴含
      * 「有 Flux」。反之若一律按大版本推断，用户在界面上把版本改成 3 也不会有任何效果，

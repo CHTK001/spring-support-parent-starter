@@ -17,6 +17,8 @@ import com.chua.starter.account.manage.service.SysAccountSecretService;
 import com.chua.starter.account.manage.store.AccountKind;
 import com.chua.starter.account.manage.store.SysAccount;
 import com.chua.starter.account.manage.store.SysAccountSecret;
+import com.chua.starter.account.sendlog.SendLogService;
+import com.chua.starter.account.sendlog.store.SysAccountSendLog;
 import com.chua.starter.account.spi.AccountInboxProvider;
 import com.chua.starter.account.spi.AccountSelection;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Constructor;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -71,14 +74,14 @@ public class MailboxService {
     private static final int DEFAULT_SMTP_SSL_PORT = 465;
 
     /**
-     * 端口取值下界（不含，即最小合法端口）
-     */
-    private static final int PORT_MIN = 1;
-
-    /**
      * 收取最近 30 天邮件的毫秒数（config.receiveRange=30d 时的 since 兜底值）
      */
     private static final long RECENT_30_DAYS_MS = 30L * 24 * 60 * 60 * 1000;
+
+    /**
+     * 端口取值下界（不含，即最小合法端口）
+     */
+    private static final int PORT_MIN = 1;
 
     /**
      * 端口取值上界（含）
@@ -102,6 +105,11 @@ public class MailboxService {
      * {@link ManageAccountService#resolveDefault(String)}，不改变既有部署的行为。</p>
      */
     private final ObjectProvider<AccountSelection> accountSelection;
+
+    /**
+     * 统一发送日志：每次真实发送（成功或失败）异步落一条通道级日志
+     */
+    private final SendLogService sendLogService;
 
     /**
      * 信箱概览：能否收信 / 发信、可用文件夹。
@@ -145,6 +153,28 @@ public class MailboxService {
      */
     public List<MailboxMessage> messages(String accountId, MailboxQuery query) {
         SysAccount account = requireInboxAccount(accountId);
+        MailboxQuery effective = applyReceiveRange(account, query);
+        AccountInboxProvider provider = requireProvider(account);
+        try {
+            return provider.messages(account, accountService.resolveSecret(accountId), effective);
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "收取邮件失败：" + rootMessage(e), e);
+        }
+    }
+
+    /**
+     * 取信列表（系统级，不校验当前用户归属）。
+     *
+     * <p>给新邮件轮询这类系统任务用：任务线程没有登录态，
+     * {@link #messages(String, MailboxQuery)} 的可见性断言会把个人账号全部挡掉。
+     * 界面取信仍请用 {@link #messages(String, MailboxQuery)}。</p>
+     *
+     * @param accountId 账号标识
+     * @param query     取信条件
+     * @return 消息列表
+     */
+    public List<MailboxMessage> messagesInternal(String accountId, MailboxQuery query) {
+        SysAccount account = requireInboxAccountInternal(accountId);
         MailboxQuery effective = applyReceiveRange(account, query);
         AccountInboxProvider provider = requireProvider(account);
         try {
@@ -382,13 +412,102 @@ public class MailboxService {
         if (TempMailService.isTempMail(account)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "临时邮箱是只读收信来源，不支持发信");
         }
+        boolean email = KIND_EMAIL.equalsIgnoreCase(account.getKind());
+        boolean sms = KIND_SMS.equalsIgnoreCase(account.getKind());
+        if (!email && !sms) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号种类没有发信箱");
+        }
+        // 通道级完整日志：成功与失败都异步落一条（sys_account_send_log），不阻塞发送主流程
+        long start = System.currentTimeMillis();
+        try {
+            Map<String, Object> result = email
+                    ? sendMail(account, accountService.resolveSecret(accountId), request)
+                    : sendSms(account, accountService.resolveSecret(accountId), request);
+            sendLogService.record(sendLog(account, request, start, result, null));
+            return result;
+        } catch (RuntimeException e) {
+            sendLogService.record(sendLog(account, request, start, null, e));
+            throw e;
+        }
+    }
+
+    /**
+     * 组装一条通道级发送日志。
+     *
+     * @param account 发信账号
+     * @param request 发信内容
+     * @param start   发送起始毫秒（算耗时）
+     * @param result  发送结果；抛异常时为 {@code null}
+     * @param error   发送异常；正常返回时为 {@code null}
+     * @return 待异步写入的日志实体
+     */
+    private SysAccountSendLog sendLog(SysAccount account, MailboxSendRequest request, long start,
+                                      Map<String, Object> result, RuntimeException error) {
+        SysAccountSendLog entity = new SysAccountSendLog();
+        entity.setSendLogTime(LocalDateTime.now());
+        entity.setSendLogKind(String.valueOf(account.getKind()).toUpperCase());
+        entity.setSendLogAccountId(account.getAccountId());
+        entity.setSendLogAccountName(truncate(
+                StringUtils.defaultString(account.getName(), account.getUsername()), 128));
+        entity.setSendLogProvider(providerOf(account));
+        entity.setSendLogTarget(truncate(request.getTo(), 255));
+        entity.setSendLogCc(request.getCc() == null ? null : truncate(String.join(",", request.getCc()), 512));
+        entity.setSendLogSubject(truncate(request.getSubject(), 512));
+        entity.setSendLogContent(request.getContent());
+        entity.setSendLogTemplateCode(truncate(request.getTemplateCode(), 128));
+        entity.setSendLogCostMs(System.currentTimeMillis() - start);
+        entity.setSendLogSource(truncate(request.getSource(), 64));
+        if (error != null) {
+            entity.setSendLogSuccess(false);
+            entity.setSendLogError(truncate(rootMessage(error), 2000));
+            return entity;
+        }
+        boolean success = result != null && Boolean.TRUE.equals(result.get("success"));
+        entity.setSendLogSuccess(success);
+        entity.setSendLogMessageId(truncate(asString(result == null ? null : result.get("messageId")), 255));
+        if (!success) {
+            entity.setSendLogError(truncate(
+                    result == null ? "通道无返回" : asString(result.get("message")), 2000));
+        }
+        return entity;
+    }
+
+    /**
+     * 发送通道标识（日志用）。
+     *
+     * @param account 发信账号
+     * @return {@code email} / {@code alibaba-sms} 等通道别名
+     */
+    private String providerOf(SysAccount account) {
         if (KIND_EMAIL.equalsIgnoreCase(account.getKind())) {
-            return sendMail(account, accountService.resolveSecret(accountId), request);
+            return EMAIL_PROVIDER;
         }
-        if (KIND_SMS.equalsIgnoreCase(account.getKind())) {
-            return sendSms(account, accountService.resolveSecret(accountId), request);
+        String alias = smsAlias(account.getVendor());
+        return alias == null ? "sms" : alias;
+    }
+
+    /**
+     * 安全转字符串。
+     *
+     * @param value 值
+     * @return 字符串；{@code null} 透传
+     */
+    private String asString(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    /**
+     * 按长度截断文本（对齐日志列宽）。
+     *
+     * @param value 原文
+     * @param max   上限
+     * @return 原文或截断后的文本
+     */
+    private String truncate(String value, int max) {
+        if (value == null || value.length() <= max) {
+            return value;
         }
-        throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号种类没有发信箱");
+        return value.substring(0, max);
     }
 
     /**
@@ -593,6 +712,11 @@ public class MailboxService {
         if (TempMailService.isTempMail(account)) {
             return false;
         }
+        // 手机号两类（临时 / 常规）只收不发：即使 vendor 误配成短信厂商也不放开发送
+        if (AccountKind.PHONE.equalsIgnoreCase(account.getKind())
+                || AccountKind.TEMP_PHONE.equalsIgnoreCase(account.getKind())) {
+            return false;
+        }
         if (KIND_EMAIL.equalsIgnoreCase(account.getKind())) {
             return StringUtils.isNotBlank(smtpHost(account)) && StringUtils.isNotBlank(account.getUsername());
         }
@@ -644,6 +768,20 @@ public class MailboxService {
             }
         }
         return null;
+    }
+
+    /**
+     * 按账号接入方式选优先的收信实现标识。
+     *
+     * <p>{@code config.inboxMode} 为 {@code pop3} 时选 {@code email-pop3}，其余均选
+     * {@code email-imap}，保证 IMAP 与 POP3 对同一 EMAIL 账号互斥。</p>
+     *
+     * @param account 账号
+     * @return 收信实现标识
+     */
+    private String preferredProvider(SysAccount account) {
+        Object mode = account.getConfig() == null ? null : account.getConfig().get("inboxMode");
+        return "pop3".equals(String.valueOf(mode)) ? "email-pop3" : "email-imap";
     }
 
     /**
@@ -727,20 +865,6 @@ public class MailboxService {
     }
 
     /**
-     * 按账号接入方式选优先的收信实现标识。
-     *
-     * <p>{@code config.inboxMode} 为 {@code pop3} 时选 {@code email-pop3}，其余均选
-     * {@code email-imap}，保证 IMAP 与 POP3 对同一 EMAIL 账号互斥。</p>
-     *
-     * @param account 账号
-     * @return 收信实现标识
-     */
-    private String preferredProvider(SysAccount account) {
-        Object mode = account.getConfig() == null ? null : account.getConfig().get("inboxMode");
-        return "pop3".equals(String.valueOf(mode)) ? "email-pop3" : "email-imap";
-    }
-
-    /**
      * 创建短信通道，并按账号配置注入环境。
      *
      * <p>短信实现若提供 {@code (MessageEnvironment)} 构造器，则按账号的密钥 / 签名 /
@@ -791,6 +915,28 @@ public class MailboxService {
     }
 
     /**
+     * 要求账号存在（系统级：不校验当前用户归属）且种类支持收信箱。
+     *
+     * @param accountId 账号标识
+     * @return 账号（邮件 / 短信）
+     */
+    private SysAccount requireInboxAccountInternal(String accountId) {
+        if (StringUtils.isBlank(accountId)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "账号标识不能为空");
+        }
+        SysAccount account = accountService.getInternal(accountId);
+        if (account == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "账号不存在");
+        }
+        String kind = String.valueOf(account.getKind()).toUpperCase();
+        if (!KIND_EMAIL.equals(kind) && !KIND_SMS.equals(kind) && !AccountKind.TEMP_PHONE.equals(kind)
+                && !AccountKind.PHONE.equals(kind)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号种类没有收信箱");
+        }
+        return account;
+    }
+
+    /**
      * 要求账号支持收信箱。
      *
      * @param accountId 账号标识
@@ -799,7 +945,9 @@ public class MailboxService {
     private SysAccount requireInboxAccount(String accountId) {
         SysAccount account = requireAccount(accountId);
         String kind = String.valueOf(account.getKind()).toUpperCase();
-        if (!KIND_EMAIL.equals(kind) && !KIND_SMS.equals(kind)) {
+        // 临时手机号是只读收信来源（本地目录轮询），与邮件 / 短信共用信箱入口
+        if (!KIND_EMAIL.equals(kind) && !KIND_SMS.equals(kind) && !AccountKind.TEMP_PHONE.equals(kind)
+                && !AccountKind.PHONE.equals(kind)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号种类没有收信箱");
         }
         return account;

@@ -247,8 +247,19 @@ public class McpCatalogServiceImpl implements McpCatalogService {
 
     /**
      * 构造一条内置推荐卡片。
+     *
+     * @param id             内置服务标识
+     * @param name           名称
+     * @param category       分类
+     * @param description    描述
+     * @param transport      传输配置
+     * @param requiresKey    是否需要 API Key
+     * @param requiresConfig 是否需要额外配置
+     * @param icon           图标（可空）
+     * @param docs           文档地址（可空）
+     * @return 内置推荐卡片
      */
-        private static Map<String, Object> builtin(String id, String name, String category,
+    private static Map<String, Object> builtin(String id, String name, String category,
                                                String description, Map<String, Object> transport,
                                                boolean requiresKey, boolean requiresConfig,
                                                String icon, String docs) {

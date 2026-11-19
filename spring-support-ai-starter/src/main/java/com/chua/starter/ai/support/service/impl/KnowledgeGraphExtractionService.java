@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.KnowledgeGraphService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.starter.common.support.log.MdcWrap;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -108,11 +109,11 @@ public class KnowledgeGraphExtractionService {
      * 抽取线程池：有界队列 + 调用方执行，避免批量导入时无限堆积任务。
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private final ExecutorService executor = new ThreadPoolExecutor(
+    private final ExecutorService executor = MdcWrap.decorate(new ThreadPoolExecutor(
             1, 2, 60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(256),
             new NamedThreadFactory("kg-extract"),
-            new ThreadPoolExecutor.CallerRunsPolicy());
+            new ThreadPoolExecutor.CallerRunsPolicy()));
 
     /**
      * 关系提取开关是否开启。

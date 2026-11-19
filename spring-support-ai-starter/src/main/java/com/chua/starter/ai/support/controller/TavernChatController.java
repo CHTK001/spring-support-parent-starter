@@ -19,6 +19,7 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -70,12 +71,12 @@ public class TavernChatController {
      * 不能让线程池线程阻止 JVM 退出。</p>
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private static final ExecutorService TAVERN_CHAT_POOL = Executors.newCachedThreadPool(r -> {
+    private static final ExecutorService TAVERN_CHAT_POOL = MdcWrap.decorate(Executors.newCachedThreadPool(r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "tavern-chat-reply");
         t.setDaemon(true);
         return t;
-    });
+    }));
 
     /**
      * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）

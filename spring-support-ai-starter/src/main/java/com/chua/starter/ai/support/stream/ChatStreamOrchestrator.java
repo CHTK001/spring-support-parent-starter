@@ -20,6 +20,7 @@ import com.chua.starter.account.channel.service.AccountChannelModelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.starter.common.support.log.MdcWrap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -477,7 +478,7 @@ public class ChatStreamOrchestrator {
      */
     public void execute(PreparedChat p, ChatFrameSink sink) {
         final StreamRetryPolicy policy = StreamRetryPolicy.from(settingReader, AiUserContext.currentUserId());
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> runTurn(p, sink, policy)));
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> runTurn(p, sink, policy))));
     }
 
     /**
@@ -1238,7 +1239,7 @@ public class ChatStreamOrchestrator {
         final String messageId = p.messageId();
         final String contentId = p.contentId();
 
-        CompletableFuture.runAsync(AiUserContext.capturing(() -> {
+        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             com.chua.starter.ai.support.chat.AgentChatClient wrapper = null;
             try {
                 com.chua.common.support.ai.chat.ChatClient configured =
@@ -1423,7 +1424,7 @@ public class ChatStreamOrchestrator {
                     wrapper.close();
                 }
             }
-        }));
+        })));
     }
 
     // ==================== 内部方法 ====================

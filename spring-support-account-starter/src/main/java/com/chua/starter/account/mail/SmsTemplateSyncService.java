@@ -17,11 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 短信模板同步。
+ * 渠道模板同步（短信 / 邮件）。
  *
  * <p>不绑定厂商：按账号 {@code vendor} 解析 {@link MessagePush} SPI，调用通用的
  * {@link MessagePush#listTemplates()}，把取回的模板按 {@code templateCode} 落到
- * 消息模板表（kind=SMS）。阿里 / 腾讯 / 百度等实现由宿主按需引入。</p>
+ * 消息模板表（kind=SMS / EMAIL）。阿里 / 腾讯 / 百度等实现由宿主按需引入。</p>
  *
  * <p><b>能力边界</b>：各通道实现都查厂商云端。阿里云实现查
  * {@code QuerySmsTemplateList} 且只保留 {@code AUDIT_PASS} 审核通过的模板；
@@ -41,9 +41,14 @@ import java.util.Map;
 public class SmsTemplateSyncService {
 
     /**
-     * 消息模板种类
+     * 消息模板种类 - 短信
      */
     private static final String KIND_SMS = "SMS";
+
+    /**
+     * 消息模板种类 - 邮件
+     */
+    private static final String KIND_EMAIL = "EMAIL";
 
     /**
      * 信箱服务（按 vendor 解析短信通道）
@@ -56,13 +61,27 @@ public class SmsTemplateSyncService {
     private final MessageTemplateService messageTemplateService;
 
     /**
-     * 同步指定短信账号对应厂商的模板。
+     * 同步指定短信账号对应厂商的模板（默认同步短信种类）。
      *
      * @param accountId 账号标识
      * @return {@code {provider, fetched, created, updated, skipped}}
      */
     public Map<String, Object> sync(String accountId) {
-        MessagePush push = mailboxService.smsPush(accountId);
+        return sync(accountId, KIND_SMS);
+    }
+
+    /**
+     * 同步指定账号对应厂商的模板到消息模板库（短信 / 邮件通用）。
+     *
+     * @param accountId 账号标识
+     * @param kind      模板种类（{@code SMS} / {@code EMAIL}）
+     * @return {@code {provider, fetched, created, updated, skipped}}
+     */
+    public Map<String, Object> sync(String accountId, String kind) {
+        String normalizedKind = normalizeKind(kind);
+        MessagePush push = KIND_EMAIL.equals(normalizedKind)
+                ? mailboxService.mailPush(accountId)
+                : mailboxService.smsPush(accountId);
         List<TemplateInfo> remote;
         try {
             remote = push.listTemplates();
@@ -74,7 +93,7 @@ public class SmsTemplateSyncService {
             remote = new ArrayList<>();
         }
         Map<String, SysAiChannelMessageTemplate> existing = new LinkedHashMap<>();
-        for (SysAiChannelMessageTemplate template : messageTemplateService.list(KIND_SMS)) {
+        for (SysAiChannelMessageTemplate template : messageTemplateService.list(normalizedKind)) {
             existing.put(template.getTemplateCode(), template);
         }
 
@@ -90,7 +109,7 @@ public class SmsTemplateSyncService {
             boolean isNew = target == null;
             if (isNew) {
                 target = new SysAiChannelMessageTemplate();
-                target.setTemplateKind(KIND_SMS);
+                target.setTemplateKind(normalizedKind);
                 target.setTemplateCode(info.id());
                 target.setTemplateEnabled(true);
                 target.setTemplateDefault(false);
@@ -134,5 +153,19 @@ public class SmsTemplateSyncService {
             cause = cause.getCause();
         }
         return StringUtils.defaultString(cause.getMessage(), cause.getClass().getSimpleName());
+    }
+
+    /**
+     * 归一化模板种类。
+     *
+     * @param kind 原始种类
+     * @return {@code SMS} / {@code EMAIL}
+     */
+    private static String normalizeKind(String kind) {
+        String normalized = kind == null ? "" : kind.trim().toUpperCase();
+        if (KIND_SMS.equals(normalized) || "EMAIL".equals(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的模板种类: " + kind);
     }
 }

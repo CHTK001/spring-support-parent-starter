@@ -4,12 +4,10 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * Nginx 自定义看板。
@@ -21,14 +19,16 @@ import java.time.LocalDateTime;
  * <p>{@code embed_token} 支撑「生成链接给别的系统嵌入」：公开只读接口凭令牌取
  * 看板与查询数据，不需要登录态。</p>
  *
+ * <p>表 {@code datasource_nginx_dashboard}：业务列以完整表名作前缀；审计字段继承 {@link SysBase}。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
 @Data
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "Nginx 自定义看板")
-@TableName("ms_nginx_dashboard")
-public class MsNginxDashboard implements Serializable {
+@TableName("datasource_nginx_dashboard")
+public class MsNginxDashboard extends SysBase {
 
     /**
      * 串行版本 UID
@@ -43,44 +43,30 @@ public class MsNginxDashboard implements Serializable {
     private Long id;
 
     /**
-     * 数据源 id（ms_datasource.id，nginx 类型）
+     * 数据源 id（datasource_info.id，nginx 类型）
      */
-    @TableField("datasource_id")
+    @TableField("datasource_nginx_dashboard_datasource_id")
     @Schema(description = "数据源 id")
     private Long datasourceId;
 
     /**
      * 看板名称
      */
-    @TableField("dashboard_name")
+    @TableField("datasource_nginx_dashboard_name")
     @Schema(description = "看板名称")
     private String dashboardName;
 
     /**
      * 布局配置 JSON 文本
      */
-    @TableField("dashboard_config")
+    @TableField("datasource_nginx_dashboard_config")
     @Schema(description = "布局配置（JSON 文本）")
     private String dashboardConfig;
 
     /**
      * 嵌入令牌
      */
-    @TableField("embed_token")
+    @TableField("datasource_nginx_dashboard_embed_token")
     @Schema(description = "嵌入令牌")
     private String embedToken;
-
-    /**
-     * 创建时间
-     */
-    @TableField("create_time")
-    @Schema(description = "创建时间")
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField("update_time")
-    @Schema(description = "更新时间")
-    private LocalDateTime updateTime;
 }
