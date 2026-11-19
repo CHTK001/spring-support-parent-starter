@@ -239,7 +239,7 @@ plugin:
 
 - **防抖间隔**落在提供商行 `sys_message_provider_interval`（分钟）：**未配置时默认 1**，显式 `0` 表示不限制；只有 `sys_message_code='SUCCESS'` 的记录参与判定，失败记录允许重试。
 - **SMTP / AK/SK / Webhook** 等渠道凭据全部在 `sys_message_provider` 行内，由各渠道 `MessagePush` 实现自行读取，本模块不解析。
-- 日志写入方法声明了 `@Async(Constant.DEFAULT_EXECUTOR_TASK)`（`taskExecutor`，由 `spring-support-common-starter` 提供），但因同类自调用实际未走异步代理（见第 9 节第 7 条）。
+- 日志写入方法声明了 `@Async(Constant.DEFAULT_EXECUTOR_TASK)`（限定符即 `taskExecutor`）。**注意：该执行器不是本模块或 `spring-support-common-starter` 提供的**——common 的 `AsyncThreadPoolConfiguration` 只注册 `default-executor`、`default-executor-2`、`default-task-executor` 三个 Bean；全仓库名为 `taskExecutor` 的 Bean 只由 `spring-support-ai-starter` 的 `AiAsyncConfiguration` 与 system 模块（`spring-api-support-common-system-starter` 的 `AsyncConfiguration`）注册。本模块单独引入时容器内没有 `taskExecutor`，`@Async("taskExecutor")` 会找不到执行器；当前日志仍能落库，只是因为同类自调用未走异步代理、方法在调用线程同步执行（见第 9 节第 7 条）。宿主若要日志真正异步，需自行注册名为 `taskExecutor` 的执行器 Bean，或将日志写入改为跨 Bean 调用并指向已存在的执行器。
 
 ## 6. 使用方式
 
@@ -257,7 +257,7 @@ plugin:
 
 | 依赖 | 作用 | 是否可选 |
 |---|---|---|
-| `com.chua:spring-support-common-starter` | `ReturnResult`、`@Permission`、`AuthService`、`ServiceInfoContributor`、`taskExecutor`；并传递 `MessagePush` SPI 所在的 `utils-support-common-starter` | 否 |
+| `com.chua:spring-support-common-starter` | `ReturnResult`、`@Permission`、`AuthService`、`ServiceInfoContributor`；并传递 `MessagePush` SPI 所在的 `utils-support-common-starter`。注意：common **不提供 `taskExecutor`**，只注册 `default-executor` / `default-executor-2` / `default-task-executor` | 否 |
 | `com.chua:spring-support-mybatis-starter` | `SysBase`、`PageResultUtils`、MyBatis-Plus Mapper/分页 | 否 |
 | `com.chua:spring-support-account-starter:4.0.0.51` | 统一模板库 `TemplateService`、`SourceSyncer`/`ProviderSource` 契约 | 否 |
 | `com.chua:spring-support-socket-starter` | `SocketSessionTemplate`，站内消息推送执行器 | pom 直接依赖；`SocketSessionTemplate` Bean 缺失时站内渠道推送返回失败 |
@@ -265,6 +265,8 @@ plugin:
 | `io.swagger.core.v3:swagger-annotations` | `@Operation`、`@Schema`、`@ParameterObject` | 否 |
 | `com.chua:spring-support-datasource-starter` | 自动执行 `db/init/*.sql` 建表 | 建议；不引入则需手工执行建表脚本 |
 | `utils-support-*` 渠道包 | 见 6.4 渠道表 | **可选，按需引入** |
+
+> **`@Async("taskExecutor")` 归属与风险**：本模块日志写入标注 `@Async(Constant.DEFAULT_EXECUTOR_TASK)`，而限定符 `taskExecutor` 的 Bean 全仓库只在 `spring-support-ai-starter`（`AiAsyncConfiguration`）与 system 模块（`AsyncConfiguration`）注册，`spring-support-common-starter` 并不提供。本模块单独引入时容器无 `taskExecutor`，一旦异步代理真正生效（如改为跨 Bean 调用），`@Async("taskExecutor")` 会因找不到执行器而失败；当前仅因同类自调用未走代理，日志实际同步落库（见第 5 节与第 9 节第 7 条）。
 
 ### 6.3 最小可运行示例
 
@@ -298,11 +300,13 @@ POST /v2/message/provider/save   {"sysMessageProviderCode":"smtp-main","sysMessa
                                   "sysMessageProviderType":"EMAIL","sysMessageProviderVender":"email",
                                   "sysMessageProviderSmtpHost":"smtp.example.com","sysMessageProviderSmtpPort":465,
                                   "sysMessageProviderSmtpFrom":"noreply@example.com"}
-POST /v2/message/template/save   {"sysMessageProviderId":1,"sysMessageTemplateCode":"SMS_CODE",
-                                  "sysMessageTemplateName":"验证码","sysMessageTemplateType":"SMS",
+POST /v2/message/template/save   {"sysMessageProviderId":1,"sysMessageTemplateCode":"EMAIL_CODE",
+                                  "sysMessageTemplateName":"邮箱验证码","sysMessageTemplateType":"EMAIL",
                                   "sysMessageTemplateContent":"您的验证码是 ${code}，5 分钟内有效"}
-POST /v2/message/send            {"target":["13800138000"],"sysMessageTemplateId":1,"params":{"code":"123456"}}
+POST /v2/message/send            {"target":["user@example.com"],"sysMessageTemplateId":1,"params":{"code":"123456"}}
 ```
+
+> `sysMessageTemplateType` 不只是分类标签：发送时它原样作为 `MessageRequest` 的 `contentType` 传给渠道实现，并参与 `isTrackable` 判定——只有 `email`/`smtp` 渠道且类型为 `html`/`text/html`/`EMAIL` 时才可能注入阅读追踪图（还需 `plugin.message.track.enabled=true` 且 `base-url` 非空）。若把邮件模板的类型照抄成 `SMS`，邮件能发出，但永远不会进入可追踪分支。
 
 模板占位符**只允许 `${var}` 与 `{{var}}`**：保存时 `findIllegalPlaceholder` 会拒绝其它形态；混用可以，预览时未填充的键会进 `unresolvedParams`。
 

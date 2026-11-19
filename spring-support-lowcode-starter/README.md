@@ -56,7 +56,7 @@ graph TB
 | Controller | REST 接口（`/v2/lowcode/**`），参数校验入口 | `LowFormDirectoryController` / `LowFormController` / `LowPageController` |
 | Service | 业务规则：编码判重、发布/回滚/撤销、目录树与回环校验、事务边界 | `LowFormDirectoryServiceImpl` / `LowFormServiceImpl` / `LowPageServiceImpl` |
 | Mapper | MyBatis-Plus `BaseMapper`，无自定义 SQL | 5 个 Mapper |
-| 实体 / 出参 | `SysBase` 子类（含审计列）；VO 不回传 Schema 正文 | `LowFormDirectory` / `LowForm` / `LowFormVersion` / `LowFormPage` / `LowFormPageVersion` + 6 个 VO |
+| 实体 / 出参 | `SysBase` 子类（含审计列）；分页/详情 VO（`LowFormVO` / `LowFormPageVO`）不回传 Schema 正文，版本 VO（`LowFormVersionVO` / `LowFormPageVersionVO`）回传版本快照正文（`GET /versions` 会返回） | `LowFormDirectory` / `LowForm` / `LowFormVersion` / `LowFormPage` / `LowFormPageVersion` + 7 个 VO（其中 1 个暂无 Controller 引用） |
 | 支撑 | 审计字段自动填充（MyBatis-Plus `MetaObjectHandler`） | `LowcodeMetaObjectHandler` |
 
 ---
@@ -136,7 +136,7 @@ sequenceDiagram
 | 设计器回读 | `#detailByCode(String)` | `GET /v2/lowcode/form/code/{formCode}`、`GET /v2/lowcode/page/code/{pageCode}` |
 | 审计字段填充 | `com.chua.starter.lowcode.support.LowcodeMetaObjectHandler` | `LowcodeAutoConfiguration#lowcodeMetaObjectHandler`（`MetaObjectHandler` Bean） |
 | 数据模型 | `LowFormDirectory` / `LowForm` / `LowFormVersion` / `LowFormPage` / `LowFormPageVersion` | 表 `low_form_directory` / `low_form` / `low_form_version` / `low_page` / `low_page_version` |
-| 出参模型 | `LowFormVO` / `LowFormVersionVO` / `LowFormPageVO` / `LowFormPageVersionVO` / `LowFormDirectoryVO` / `LowFormOptionVO` | Controller 返回值 |
+| 出参模型 | `LowFormVO` / `LowFormVersionVO` / `LowFormPageVO` / `LowFormPageVersionVO` / `LowFormDirectoryVO` / `LowFormOptionVO` / `LowFormPageOptionVO`（共 7 个，其中 `LowFormPageOptionVO` 暂无 Controller 引用） | Controller 返回值 |
 | 建表与种子 | `db/init/V1.0__init_lowcode.sql`、`db/init/V1.0__initdata_lowcode.sql` | 由 `spring-support-datasource-starter` 的脚本通道执行（见第 5 节） |
 
 业务规则要点（全部来自 `service/impl` 实现）：
@@ -165,7 +165,7 @@ sequenceDiagram
 | `lowFormDirectoryServiceImpl` | `LowFormDirectoryService`（实现 `LowFormDirectoryServiceImpl`） | 组件扫描 `@Service` | 否（业务由本模块完整实现） | 构造注入接口 `LowFormDirectoryService` |
 | `lowFormServiceImpl` | `LowFormService`（实现 `LowFormServiceImpl`） | 组件扫描 `@Service` | 否 | 构造注入接口 `LowFormService` |
 | `lowPageServiceImpl` | `LowPageService`（实现 `LowPageServiceImpl`） | 组件扫描 `@Service` | 否 | 构造注入接口 `LowPageService` |
-| `lowFormDirectoryMapper` / `lowFormMapper` / `lowFormVersionMapper` / `lowFormPageMapper` / `lowPageVersionMapper` | MyBatis-Plus `BaseMapper`（`@MapperScan` 注册 MapperFactoryBean） | `@MapperScan("com.chua.starter.lowcode.mapper")` | 否 | 由 `ServiceImpl` 内部使用；消费方一般不直接注入 |
+| `lowFormDirectoryMapper` / `lowFormMapper` / `lowFormVersionMapper` / `lowFormPageMapper` / `lowFormPageVersionMapper` | MyBatis-Plus `BaseMapper`（`@MapperScan` 注册 MapperFactoryBean） | `@MapperScan("com.chua.starter.lowcode.mapper")` | 否 | 由 `ServiceImpl` 内部使用；消费方一般不直接注入 |
 
 说明：
 
@@ -318,7 +318,7 @@ String schema = formService.publishedSchema("order_form"); // 运行期取数，
 | POST | `/rollback` | `versionId` | 用指定版本快照恢复 Schema / 版本号 / 发布状态 |
 | POST | `/status` | `formId`、`status`（`0` 停用 / `1` 启用） | 停用后运行期接口不再返回 Schema |
 | POST | `/unpublish` | `formId` | 撤销发布；版本历史保留 |
-| GET | `/versions` | `formId` | 版本列表，按版本号倒序 |
+| GET | `/versions` | `formId` | 版本列表，按版本号倒序（出参含版本快照正文） |
 | GET | `/api/{formCode}` | 路径 `formCode` | 运行期取已发布 Schema（字符串），未发布/已停用返回 `null` |
 
 ### 6.6 接口清单：页面（`/v2/lowcode/page`）

@@ -3195,7 +3195,13 @@ public class ApiProviderController {
         // 拿官方 Key 去问 /v1/dashboard/billing/* 只会 404，纯属白发一次请求。
         // 显式配了 credit_url 时以用户配置为准，照旧探测。
         if (str(extra, "credit_url") != null || !isOfficialSite(entity)) {
-            kinds.addAll(AUTO_CREDIT_KINDS);
+            // 自动适配：先按站点指纹认出中转网关软件（new-api / sub2api），把专属实现
+            // 排到通用计费探测之前；认不出维持通用探测。指纹按站点缓存，不逐请求探测。
+            for (String relayKind : relayCreditKinds(entity)) {
+                if (!kinds.contains(relayKind)) {
+                    kinds.add(relayKind);
+                }
+            }
         }
         // Moss 非官方余额接口：只对 Moss 站点有意义，别的站点上纯属白发请求
         if (isMossProvider(entity)) {

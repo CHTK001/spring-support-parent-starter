@@ -136,7 +136,7 @@ flowchart TB
 说明：
 
 - 本模块**只有这两个 Bean**：没有 Controller、没有定时任务、没有表迁移。宿主引入的唯一副作用就是「单例就绪后自注入 agent」。
-- `plugin.agent.enabled=false` 时 `AgentAutoConfiguration` 整体不装配，两个 Bean 都不存在。依赖 `AgentAttachService` 的下游模块需自行兜底——hotsport 的 `AgentAttachFallbackConfiguration` 就是为此补一个「禁用态」实例，避免 `ApmQueryService` / `ApmController` 因缺 Bean 启动失败。
+- `plugin.agent.enabled=false` 时 `AgentAutoConfiguration` 整体不装配，两个 Bean 都不存在。依赖 `AgentAttachService` 的下游模块需自行兜底。注意：hotsport 的 `AgentAttachFallbackConfiguration` 虽已注册进 `AutoConfiguration.imports`，但类上只有 `@AutoConfiguration` + `@EnableConfigurationProperties`，其 `disabledAgentAttachService(AgentAttachProperties)` 方法**未标注 `@Bean`**，当前源码并不会注册「禁用态」兜底 Bean（其 Javadoc 描述的降级语义未落地，以代码为准）；需要兜底的宿主应自行定义同类型 `AgentAttachService` Bean。
 
 ## 5. 完整配置
 
@@ -315,10 +315,10 @@ public class AgentStatusController {
 ## 9. 常见问题
 
 1. **引了依赖却没注入？** 按序排查：a) 启动日志有无 `[AgentAttach]` 前缀；b) `plugin.agent.enabled` 是否被设为 `false`（整体不装配）；c) 是否有同类型 `AgentAttachService` Bean 触发 `@ConditionalOnMissingBean` 退避；d) agent jar 是否真的在 classpath / fat jar 的 `BOOT-INF/lib/` 里——定位不到时 `RuntimeBoot` 会打「无法定位 Agent JAR，跳过自注入」。
-2. **怎么彻底关闭？** `plugin.agent.enabled=false`。在 hotsport 宿主里关闭后由 `AgentAttachFallbackConfiguration` 补禁用态 Bean：状态查询仍可用，只是不注入。
+2. **怎么彻底关闭？** `plugin.agent.enabled=false`，`AgentAutoConfiguration` 整体不装配，不再注入。注意：hotsport 的 `AgentAttachFallbackConfiguration` 目前并不会补禁用态 Bean——其 `disabledAgentAttachService` 方法未标注 `@Bean`（类上仅有 `@AutoConfiguration` + `@EnableConfigurationProperties`），关闭后是否还有可用的 `AgentAttachService` 取决于下游自己注册的 Bean，以源码为准。
 3. **端口怎么改？冲突怎么办？** 默认 4567。改端口用 `plugin.agent.shell-port`（仅当 `options` 为空时生效）；`options` 非空时以 `options` 里的 `port=` 为准。Runtime Shell 无鉴权，`RuntimeBoot.BootConfig` 默认只绑 `127.0.0.1`（`shellHost`），跨机访问需自行做网络隔离。
 4. **日志里有「自注入失败」，应用却照常启动？** 刻意的 fail-open：`doAttach()` 捕获 `Throwable`，只 `log.warn` 并记录 `lastAttachError`，观测不可用不阻断业务。需要重试时调 `reattach()`。
-5. **与 Spring Boot 4 / JDK 25 的兼容性？** 本模块基于 `@AutoConfiguration` + `AutoConfiguration.imports`（Boot 3+ 机制），仓库当前基线 Spring Boot 4.1.2；没有也不需要 `spring.factories`（旧机制 Boot 3 起已移除）。JDK 25 下注意：agent 注入后对已加载类做 `retransformLoadedClasses`，在部分环境会使 JVM 直接退出（hotsport 独立部署正是因此用 `enabled=false` 关掉「观测自己」）。
+5. **与 Spring Boot 4 / JDK 25 的兼容性？** 本模块基于 `@AutoConfiguration` + `AutoConfiguration.imports`（Boot 3+ 机制），仓库当前基线 Spring Boot 4.1.2；没有也不需要 `spring.factories`（旧机制 Boot 3 起已移除）。JDK 25 下注意：agent 注入后对已加载类做 `retransformLoadedClasses`，在部分环境会使 JVM 直接退出。hotsport 的 `AgentAttachFallbackConfiguration` Javadoc 声明了「独立部署关掉观测自己」的降级意图，但当前源码未落地（方法无 `@Bean`），且 hotsport 的 `application.yml` 现为 `plugin.agent.enabled: true`、`async: true`（也没有其他 profile 文件将其设为 `false`）——即 hotsport 当前仍在「观测自己」；如遇 JVM 退出，需显式配置 `plugin.agent.enabled=false` 并自行兜底 `AgentAttachService` Bean。
 6. **`getStatus()` 能直接当监控用吗？** 不能全信：`version` 硬编码 `"4.0.0.42"`（与 POM 版本 4.0.0.51 不一致）；`lastHeartbeat` 取当前时间、`heartbeatLostMs` 恒为 `0`，都不是 agent 真实心跳。可信字段：`agentActive` / `agentEnabled` / `attachAttempts` / `lastAttachError` / `startedAt`。
 7. **`async=true` 时为什么刚启动 `isAgentActive()` 是 `false`？** 注入在虚拟线程里异步执行，出现「自注入完成」日志之前状态仍是 `false`；依赖 agent 的探活应处理「未就绪」，不要直接判故障。
 8. **`options` 能不能留空（不传任何参数）？** 不能：`options` 为空白时一定会被替换成 `port=<shell-port>`（默认 `port=4567`），没有「完全无参数」的 attach。

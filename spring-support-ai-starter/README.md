@@ -63,7 +63,7 @@ flowchart TB
         REG["ChatClientRegistry / AgentProviderFactory"]
         U["SysAiUsageService 用量与计价"]
     end
-    subgraph spi["SPI 实现层 spi/impl + META-INF/extensions（11 个文件）+ META-INF/services（3 个文件）"]
+    subgraph spi["SPI 实现层 spi/impl + META-INF/extensions（11 个文件）+ META-INF/services（4 个文件）"]
         S["ChatClient / AgentProvider / GlobalSettingProvider / 渠道鉴权 / 市场来源…"]
     end
     DB[("MySQL：sys_ai_* 表（db/init/V7.0__init_all_ai.sql）")]
@@ -155,7 +155,7 @@ flowchart LR
 | 设置中心 | 24 个设置分组、YAML 覆盖层、用户覆盖、全局默认四级取值 | `GlobalSettingReader`、`GlobalSettingDefinitionController` |
 | 运维观测 | 4 个 Actuator 只读端点、缓存容错、服务信息贡献 | `ai-config` / `ai-models` / `ai-beans` / `ai-cache` |
 
-规模参考：**8** 个自动配置、**85** 个 `@RestController`、**51** 个业务 Mapper（另含 `manage.mapper` 前端持久化）、**24** 个设置分组、**8** 个能力客户端管理器、**11** 个 SPI 扩展点文件 + **3** 个 JVM SPI 文件。
+规模参考：**8** 个自动配置、**85** 个 `@RestController`、**51** 个业务 Mapper（另含 `manage.mapper` 前端持久化）、**24** 个设置分组、**8** 个能力客户端管理器、**11** 个 SPI 扩展点文件 + **4** 个 JVM SPI 文件。
 
 ---
 
@@ -230,7 +230,7 @@ flowchart LR
 | 前缀 | 绑定类 | 字段与默认值 |
 |---|---|---|
 | `plugin.ai.chat` | `AiChatProperties`（record） | `enabled=false`；`provider` / `base-url` / `app-key` / `app-secret` / `model` / `temperature` / `max-tokens` / `timeout-millis` / `auth-scheme` / `auth-header` / `auth-prefix` / `proxy` 均默认空 |
-| `plugin.ai.generate` | `AiProperties` | `enabled`（装配开关默认 true）；`image`：`provider=openai`、`model=dall-e-3`、`width=1024`、`height=1024`、`api-key`、`base-url`；`video`：`provider=openai`、`model=sora`、`duration=5`、`api-key`、`base-url` |
+| `plugin.ai.generate` | `AiProperties` | `image`：`provider=openai`、`model=dall-e-3`、`width=1024`、`height=1024`、`api-key`、`base-url`；`video`：`provider=openai`、`model=sora`、`duration=5`、`api-key`、`base-url`。装配开关 `enabled` 不是 `AiProperties` 的绑定字段，由 `AiGenerateAutoConfiguration` 上的 `@ConditionalOnProperty(prefix="plugin.ai.generate", name="enabled", matchIfMissing=true)` 读取，未配置时默认生效 |
 | `plugin.ai.rag` | `RagProperties` | `enabled=true`、`embedding-engine=memory`、`vector-storage=jvector`、`embedding-dimensions=1536`、`chunk-size=1000`、`chunk-overlap=200`、`default-top-k=5`、`default-similarity-threshold=0.7`、`upload-dir=./rag-uploads` |
 | `plugin.ai.default-model` | `DefaultModelProperties` | 30+ 能力键：`chat`、`title-summary`、`visual-assistant`、`history-compression(-prompt)`、`translation(-prompt)`、`feature`、`rag-embedding`、`rerank`、`text-to-image`、`text-to-video`、`image-enhance/quality/classify/detect/segment/captioning`、`depth`、`ocr-detect/recognize/direction/super-resolution`、`layout`、`face-detect/recognize`、`liveness`、`face-quality`、`eye-detect`、`smile-detect`、`pedestrian`、`plate-detect/recognize` 等，默认空（页面值优先，yaml 兜底） |
 
@@ -434,7 +434,7 @@ management:
 |---|---|---|
 | `com.chua.common.support.ai.chat.ChatClient` | `custom=OpenAiChatClient`、`workbuddy`、`magpie` 共 3 个 | `ApplicationReadyEvent` 时登记进 `ChatClientRegistry`，`defaultChatClient` 自动聚合 failover |
 | `com.chua.common.support.ai.agent.AgentProvider` | `DefaultAgentProvider` | `AgentProviderFactory` 按 `runtime.agent_impl` 选择 |
-| `com.chua.common.support.ai.rag.GlobalSettingProvider` | 24 个 `@Spi` 分组实现 | `GlobalSettingDefinitions` 启动预热；`/v2/global-setting-definitions` 与设置页自动出现新分组 |
+| `com.chua.common.support.ai.rag.GlobalSettingProvider` | 源码 `@Spi` 分组实现 24 个；登记文件 23 行，其中 `ReidGlobalSettingProvider`、`ProtocolServerGlobalSettingProvider` 2 行为失效登记（源码已删除），`SecurityGlobalSettingProvider`、`HealthGlobalSettingProvider`、`SimGlobalSettingProvider` 已实现但未登记 | `GlobalSettingDefinitions` 启动预热；`/v2/global-setting-definitions` 与设置页自动出现新分组 |
 | `com.chua.starter.common.support.channel.AccountChannelAuthManager` | 16 个渠道实现（cline / qoder / qoder-cn / trae / gemini / minimax / zcode / raccoon / loomy / lobsterai / opencode / kilo / eac / workbuddy / scnet / qwen） | 渠道登录 / 凭据鉴权流程 |
 | `com.chua.starter.common.support.channel.ChannelTaskProvider` | 5 个（lobsterai / qoder / qoder-cn / trae / workbuddy） | 渠道日常任务执行 |
 | `com.chua.starter.common.support.channel.ChannelCreditProvider` | 本模块未登记（实现登记在渠道归属模块） | 渠道「积分 / 余额」读数；契约：`credit(credentials)` **只读、永不抛异常**，失败写 `error` 字段 |

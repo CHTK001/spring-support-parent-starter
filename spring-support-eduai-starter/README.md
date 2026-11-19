@@ -223,7 +223,7 @@ flowchart TD
 | Bean（方法/类） | 类型 | 装配条件 | 可否覆盖 | 典型注入姿势 |
 |:----------------|:-----|:---------|:---------|:-------------|
 | `EduAiAutoConfiguration` | 自动配置类 | 无条件（`AutoConfiguration.imports` 注册） | 否（入口类） | — |
-| `paperPipelineProperties` | `PaperPipelineProperties`（ai-starter） | 无条件 `@Bean`；ai-starter 侧 `@Autowired(required=false)` 按类型注入，缺省 `new PaperPipelineProperties()` | 可以：宿主再声明同类型 Bean 即按类型接管注入点 | ai-starter 的 `PaperAiService` / `PaperScanPipeline` / `MarkingSettingService` 字段注入 |
+| `paperPipelineProperties` | `PaperPipelineProperties`（ai-starter） | 无条件 `@Bean`（`EduAiAutoConfiguration` 61-62 行，仅 `@Bean` **无 `@Primary`**）；ai-starter 侧 `@Autowired(required=false)` 按类型注入，缺省 `new PaperPipelineProperties()` | 可以，但**不能**靠再声明同类型 Bean（见表下注）；正确做法：① 同名 Bean 覆盖（需 `spring.main.allow-bean-definition-overriding=true`）；② 排除 `EduAiAutoConfiguration` 自行装配 | ai-starter 的 `PaperAiService` / `PaperScanPipeline` / `MarkingSettingService` 字段注入 |
 | `eduAiServiceInfoContributor` | `ServiceInfoContributor` | 无条件 `@Bean` | 可以（同类型唯一时被引用） | 控制台端点/能力登记 |
 | `cacheManager`（`EduAiCachePrimaryConfiguration`，经 `@Import`） | `CacheManager`（Redis 源，TTL 3600s） | 无条件；`@Primary` | 可以（`@Primary` Bean 可被更高优先级候选覆盖） | `@Autowired CacheManager`（解决多候选「required a single bean, but 10 were found」） |
 | `studentCredentialProvider` / `teacherCredentialProvider` | `CredentialProvider`（oauth-client） | 无条件 `@Bean` + `ServiceProvider.register("student"/"teacher")` + `AccountTypeLoginHandler.bind` | 不建议覆盖：oauth 侧「自定义同名实现优先、内置 `builtin-*` 其次」 | oauth 登录链路按注册名解析 |
@@ -238,6 +238,11 @@ flowchart TD
 | `EduMarkingProgressHub` | `@Component` | **不在** AutoConfiguration 扫描列表；仅工作台模式（`EduAiApplication` 全包扫描）或宿主显式扫描时装配 | 可以 | `EduMarkingController` / `EduMarkingServiceImpl` 注入 |
 | `PaperComposeSettingService` / `EduAppConfigService` | `@Service` | **不在** AutoConfiguration 扫描列表（service 根包）；同上 | 可以 | 组卷设置读取 / 应用配置 |
 | `EduCredentialConfiguration` | `@Configuration` | **不在** AutoConfiguration 扫描列表（support.credential 包）；同上 | — | oauth SPI 注册入口 |
+
+> **为什么不能「再声明同类型 Bean」接管 `paperPipelineProperties`**：`EduAiAutoConfiguration#paperPipelineProperties`（61-62 行）只有 `@Bean`、没有 `@Primary`。宿主若另声明一个同类型（异名）Bean，容器内会出现两个 `PaperPipelineProperties` 候选且无主次，ai-starter 侧 `@Autowired(required=false)` 按类型注入会抛 `NoUniqueBeanDefinitionException`，启动即失败。要接管只有两种做法：
+>
+> 1. **同名 Bean 覆盖**：宿主声明**同名**的 `paperPipelineProperties` Bean，并开启 `spring.main.allow-bean-definition-overriding=true`（Spring Boot 默认禁止 Bean 同名覆盖，不开会报 `BeanDefinitionOverrideException`）；
+> 2. **排除该自动配置**：`@SpringBootApplication(exclude = EduAiAutoConfiguration.class)` 或 `spring.autoconfigure.exclude=com.chua.starter.eduai.configuration.EduAiAutoConfiguration`，再由宿主自行装配。注意该自动配置还承担 `@MapperScan`、`@ComponentScan` 七包与 `ServiceInfoContributor` 登记，排除后这些职责需宿主补齐。
 
 本模块的自动配置**没有使用任何 `@ConditionalOnXxx`**：引入即全量装配。运行期外部依赖（MySQL、Redis、队列）由宿主提供；`GlobalSettingReader`、`MessageTemplate` 等协作者是可选注入（缺失时回落默认行为，如 `PaperComposeSettingService` 缺 `GlobalSettingReader` 时直接用 YAML 默认值）。
 
@@ -307,17 +312,19 @@ flowchart TD
 
 ### 5.7 框架级前置配置（非本模块定义，宿主需自行提供）
 
-| key | 当前默认 | 说明 |
-|:----|:---------|:-----|
-| `plugin.oauth.enable` | `true` | oauth 鉴权开关 |
-| `plugin.oauth.protocol` | `static` | 鉴权协议必须为 `static`（本地签发 TokenCipher/SM4 校验，`tcp` 会登录成功后列表全空） |
-| `plugin.oauth.local-admin-fallback` | `false` | 必须保持 false（开启等价于「鉴权失败即内置 admin」越权漏洞） |
-| `plugin.oauth.temp.user` | 空串 | 登录账号口令，部署方显式传入（`--plugin.oauth.temp.user='用户名:口令'`） |
-| `plugin.datasource.script.enable` | `true` | 数据源脚本执行（`db/init` 下的 V3.x 脚本） |
-| `plugin.datasource.script.scan-mode` | `ALWAYS` | 建表脚本每次启动扫描（按脚本名+版本记录去重执行） |
-| `plugin.datasource.script.data-scan-mode` | `ONCE` | 种子数据只跑一次 |
-| `plugin.queue.enable` / `plugin.queue.type` | `true` / `local` | 阅卷队列开关与本地实现 |
-| `plugin.api.cors.enable` | — | 跨域白名单制（`allowed-origins` 为空不放行任何跨域来源） |
+| key | 框架默认 | 工作台取值 | 说明 |
+|:----|:---------|:-----------|:-----|
+| `plugin.oauth.enable` | `true` | `true` | oauth 鉴权开关 |
+| `plugin.oauth.protocol` | `tcp` | `static`（必须） | 框架默认 `tcp`（`AuthClientProperties` 296 行）；工作台必须显式改为 `static`——本地签发 TokenCipher/SM4 校验，保持 `tcp` 会登录成功后列表全空 |
+| `plugin.oauth.local-admin-fallback` | `false` | `false`（必须保持） | 开启等价于「鉴权失败即内置 admin」越权漏洞 |
+| `plugin.oauth.temp.user` | 空串 | 空串，部署方显式传入 | 登录账号口令（`--plugin.oauth.temp.user='用户名:口令'`），不配则静态登录无可用账号 |
+| `plugin.datasource.script.enable` | `true` | `true` | 数据源脚本执行（`db/init` 下的 V3.x 脚本） |
+| `plugin.datasource.script.scan-mode` | `ONCE` | `ALWAYS` | 框架默认 `ONCE`（`DataSourceScriptProperties` 85 行，仅空库扫一次）；工作台显式改为 `ALWAYS`，按「脚本名+版本」记录去重执行 |
+| `plugin.datasource.script.data-scan-mode` | `ONCE` | `ONCE` | 种子数据只跑一次 |
+| `plugin.queue.enable` / `plugin.queue.type` | `false` / `chronicle-queue` | `true` / `local` | 阅卷队列开关与实现；工作台显式改用本地队列 |
+| `plugin.api.cors.enable` | `false` | `true` | 跨域白名单制（`allowed-origins` 为空不放行任何跨域来源） |
+
+> 「框架默认」取自各框架 Properties 类的字段初始值（`AuthClientProperties`、`DataSourceScriptProperties`、`QueueProperties`、`ApiCorsProperties`）；「工作台取值」取自本模块 `application.yml` 的显式配置。二者不同的行（`protocol`、`scan-mode`、`queue.*`、`cors.enable`）是工作台刻意覆盖的结果，不是框架默认值，宿主接入时按「说明」列约束自行决定。
 
 ## 6. 使用方式
 
@@ -466,7 +473,7 @@ curl -N http://127.0.0.1:19095/v2/edu/marking/stream/<taskId> -H "x-oauth-token:
 | 扩展点 | 定义处 | 本模块行为 | 扩展方法 |
 |:-------|:-------|:-----------|:---------|
 | `AnyExtractStrategy` | ai-starter（`com.chua.starter.ai.support.paper.pipeline.strategy`） | 通过 `marking.extract-strategy` 选择内置实现：`whole`（`WholeTextAnyExtractStrategy`，默认）/ `region`（`RegionAnyExtractStrategy`） | 注册自定义 `AnyExtractStrategy` Bean，`PaperScanner` 按 SPI key 匹配；无匹配 key 时抛 `IllegalStateException` |
-| `PaperPipelineProperties` | ai-starter | `EduAiAutoConfiguration#paperPipelineProperties` 把 `plugin.eduai.*` 映射成该 Bean | 宿主可声明自己的同类型 Bean 接管 ai-starter 的按类型注入 |
+| `PaperPipelineProperties` | ai-starter | `EduAiAutoConfiguration#paperPipelineProperties` 把 `plugin.eduai.*` 映射成该 Bean | 宿主接管须二选一：① 声明**同名** `paperPipelineProperties` Bean 并开启 `spring.main.allow-bean-definition-overriding=true`；② 排除 `EduAiAutoConfiguration` 自行装配。直接声明同类型（异名）Bean 会因「两候选且均非 `@Primary`」抛 `NoUniqueBeanDefinitionException`，不可用（见第 4 节表下注） |
 | `MessageTemplate` / `QueueListener` | queue-starter | `MarkingMessageListener` 订阅 `edu.marking` | 更换队列实现（如本地换 MQ）由 queue-starter 配置决定，eduai 不感知 |
 
 ### 8.3 可复用的公开方法与工具

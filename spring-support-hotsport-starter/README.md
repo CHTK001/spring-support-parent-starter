@@ -129,7 +129,7 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 | `alertMonitorService` | `AlertMonitorService`（`@Service`） | 组件扫描 | 无条件 |
 | `alertStore` | `AlertStore`（`@Component`） | 组件扫描 | Bean 无条件注册；内部仅 `type=mysql` 且 url 非空时才落库 |
 | `slowCallFilter` | `SlowCallFilter` | `@Bean`（`SlowCallAutoConfiguration`），阈值 `@Value("${plugin.hotsport.request-record.threshold-ms:0}")` | `@ConditionalOnWebApplication(type=SERVLET)` + `@ConditionalOnProperty(prefix="plugin.hotsport.request-record", name="enabled", havingValue="true", matchIfMissing=true)` |
-| 控制器耗时拦截器 | `ApmHandlerTimingInterceptor` | `@Bean`（`ApmHandlerTimingConfiguration`），`@AutoConfigureAfter(SlowCallAutoConfiguration.class)`，order=`Integer.MAX_VALUE` | 同上（同一 `plugin.hotsport.request-record.enabled` 开关） |
+| 控制器耗时拦截器 | `ApmHandlerTimingInterceptor` | 非 `@Bean`：`ApmHandlerTimingConfiguration` 标注 `@AutoConfiguration(after = SlowCallAutoConfiguration.class)` 并实现 `WebMvcConfigurer`，在 `addInterceptors` 中 `new ApmHandlerTimingInterceptor()` 注册，`.order(Integer.MAX_VALUE)` | 同上（同一 `plugin.hotsport.request-record.enabled` 开关） |
 | `apmLogAppender` | `ApmLogAppender`（`destroyMethod="stop"`） | `@Bean`（`ApmLogCaptureAutoConfiguration`） | `@ConditionalOnClass(ch.qos.logback.classic.spi.ILoggingEvent)` + `plugin.hotsport.log-capture.enabled=true`（缺省 true） |
 | `agentAttachService` | `AgentAttachService`（来自 spring-support-agent-starter） | `@Bean @ConditionalOnMissingBean`（`AgentAutoConfiguration`） | `@ConditionalOnProperty(prefix="plugin.agent", name="enabled", havingValue="true", matchIfMissing=true)` |
 | `disabledAgentAttachService` | `AgentAttachFallbackConfiguration` 内方法 | — | **源码现状**：该类仅 `@EnableConfigurationProperties(AgentAttachProperties.class)`；`disabledAgentAttachService` 方法**未标注 `@Bean`**，其 Javadoc 描述了 `plugin.agent.enabled=false` 时的条件兜底语义，但按当前代码它不是注册的 Bean |
@@ -140,7 +140,7 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 
 ## 五、完整配置
 
-前缀 `plugin.hotsport.*`（`HotsportProperties`，单位如无说明为毫秒）：
+`HotsportProperties` 仅绑定以下两组子配置（前缀 `plugin.hotsport.*`，单位如无说明为毫秒）：
 
 | 配置项 | 默认值 | 说明 |
 |:-------|:-------|:-----|
@@ -159,12 +159,18 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 | `plugin.hotsport.apm.storage.async` | `null` | 是否异步写（未设置时由实现决定） |
 | `plugin.hotsport.apm.storage.maintenance-interval-ms` | `0` | 自维护线程间隔（0=实现默认） |
 | `plugin.hotsport.apm.storage.flush-timeout-ms` | `0` | 刷盘超时（0=实现默认） |
-| `plugin.hotsport.request-record.enabled` | `true` | 请求采集开关（SlowCallFilter + 耗时拦截器） |
-| `plugin.hotsport.request-record.threshold-ms` | `0` | 慢调用阈值，0=不过滤全部记录 |
-| `plugin.hotsport.log-capture.enabled` | `true` | 应用日志采集开关（需 Logback） |
-| `plugin.hotsport.log-capture.min-level` | `INFO` | 采集的最低日志级别 |
-| `plugin.hotsport.log-capture.caller-data` | `true` | 是否采集调用方信息 |
-| `plugin.hotsport.log-capture.max-message-length` | `4096` | 单条日志最大长度 |
+
+以下配置**不是** `HotsportProperties` 的字段，由各自动配置 / 服务通过 `@ConditionalOnProperty`、`@Value` 或 `@Scheduled` 占位符直接绑定：
+
+| 配置项 | 默认值 | 说明 | 绑定位置（源码） |
+|:-------|:-------|:-----|:-----------------|
+| `plugin.hotsport.request-record.enabled` | `true` | 请求采集开关（SlowCallFilter + 耗时拦截器） | `SlowCallAutoConfiguration` / `ApmHandlerTimingConfiguration` 的 `@ConditionalOnProperty` |
+| `plugin.hotsport.request-record.threshold-ms` | `0` | 慢调用阈值，0=不过滤全部记录 | `SlowCallAutoConfiguration#slowCallFilter` 的 `@Value` |
+| `plugin.hotsport.log-capture.enabled` | `true` | 应用日志采集开关（需 Logback） | `ApmLogCaptureAutoConfiguration` 的 `@ConditionalOnProperty` |
+| `plugin.hotsport.log-capture.min-level` | `INFO` | 采集的最低日志级别 | `ApmLogCaptureAutoConfiguration#apmLogAppender` 的 `@Value` |
+| `plugin.hotsport.log-capture.caller-data` | `true` | 是否采集调用方信息 | 同上 `@Value` |
+| `plugin.hotsport.log-capture.max-message-length` | `4096` | 单条日志最大长度 | 同上 `@Value` |
+| `plugin.hotsport.jvm.sample-interval-ms` | `5000` | JVM 指标采样间隔（毫秒） | `JvmMetricsService#recordSample` 的 `@Scheduled(fixedDelayString)` |
 
 `spring-support-agent-starter` 前缀 `plugin.agent.*`（`AgentAttachProperties`）：
 

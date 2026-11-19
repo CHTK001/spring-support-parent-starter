@@ -126,7 +126,7 @@ flowchart TB
 | 采集数据面 | `com.chua.runtime.apm.handler.TraceHandler`（utils 层） | agent `premain` 中由 `ApmBootstrap` 启动 |
 | agent 入口（间接） | `com.chua.runtime.agent.RuntimeAgent#premain` / `#agentmain` | `utils-support-runtime-agent` 的 `Premain-Class` / `Agent-Class` |
 
-`HotspotOtnlEngine#capabilities()` 只声明 4 项（`OtnlEngine` 默认共 10 项）：
+`HotspotOtnlEngine#capabilities()` 只声明 4 项（`OtnlEngine` 共声明 11 项能力常量）：
 
 | 能力常量 | 值 | 对应接口 | 说明 |
 | --- | --- | --- | --- |
