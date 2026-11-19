@@ -2083,6 +2083,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_credit_alert_log` (
     `sys_ai_provider_credit_alert_log_remain`        DOUBLE        NULL COMMENT '推送时的剩余余额',
     `sys_ai_provider_credit_alert_log_threshold`     DOUBLE        NULL COMMENT '推送时的告警阈值',
     `sys_ai_provider_credit_alert_log_receivers`     VARCHAR(500)  NULL COMMENT '接收人用户 ID（逗号分隔）',
+    `sys_ai_provider_credit_alert_log_channels`      VARCHAR(128)  NULL COMMENT '送达渠道（inbox=站内信 / email=邮件 / webhook=机器人 Webhook，逗号分隔）',
     `sys_ai_provider_credit_alert_log_title`         VARCHAR(200)  NULL COMMENT '消息标题（与推送进消息中心的标题一致）',
     `sys_ai_provider_credit_alert_log_content`       VARCHAR(1000) NULL COMMENT '消息摘要（与推送进消息中心的内容一致）',
     `sys_ai_provider_credit_alert_log_pushed_at`     BIGINT        NOT NULL COMMENT '推送时间（毫秒）',

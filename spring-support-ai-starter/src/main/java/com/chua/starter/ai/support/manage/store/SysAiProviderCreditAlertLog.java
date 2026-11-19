@@ -73,6 +73,12 @@ public class SysAiProviderCreditAlertLog implements Serializable {
     private String receivers;
 
     /**
+     * 送达渠道（逗号分隔：inbox=站内信 / email=邮件 / webhook=机器人 Webhook）
+     */
+    @TableField("sys_ai_provider_credit_alert_log_channels")
+    private String channels;
+
+    /**
      * 消息标题（与推送进消息中心的标题一致）
      */
     @TableField("sys_ai_provider_credit_alert_log_title")

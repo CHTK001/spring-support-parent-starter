@@ -14,6 +14,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.channel.KeylessMediaChannel;
+import com.chua.starter.common.support.service.MailService;
 import com.chua.starter.entity.service.SysMessage;
 import com.chua.starter.system.service.SysMessageService;
 
@@ -21,6 +22,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.util.UUID;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
+import com.chua.starter.ai.support.entity.SysAiUsageDaily;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
@@ -57,6 +59,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.env.Environment;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -72,6 +75,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.io.IOException;
@@ -83,8 +88,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -178,6 +185,12 @@ public class ApiProviderController {
     private final ProviderCreditAlertLogService providerCreditAlertLogService;
 
     /**
+     * 用量日汇总 Mapper：余额消耗归因「按模型」维度的取数口（ai 自有表 sys_ai_usage_daily，
+     * 定时任务已按天聚合好，直接查汇总行，不扫明细大表）。
+     */
+    private final com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper usageDailyMapper;
+
+    /**
      * 模型目录同步（models.dev 说明 / 能力位 / 计费）
      */
     private final com.chua.starter.ai.support.manage.service.ProviderCatalogSyncService providerCatalogSyncService;
@@ -190,6 +203,23 @@ public class ApiProviderController {
      * 拿不到就跳过告警，不影响余额查询主链路。</p>
      */
     private final ObjectProvider<SysMessageService> messageServiceProvider;
+
+    /**
+     * 邮件服务：余额告警的邮件渠道出口。
+     *
+     * <p>{@code MailService} 在 common-starter 里以 {@code @ConditionalOnBean(JavaMailSender.class)}
+     * 注册——宿主没接邮件能力时容器里没有该 Bean，直接注入会启动失败，
+     * 所以与消息中心一样用 ObjectProvider 承接，拿不到就跳过邮件渠道。</p>
+     */
+    private final ObjectProvider<MailService> mailServiceProvider;
+
+    /**
+     * Spring 环境配置：发信前判定宿主是否真的配置了 spring.mail.host。
+     *
+     * <p>本地 Mock 的 JavaMailSender（{@code LocalMailMockConfig}）会让 MailService
+     * Bean 存在但发不出真实邮件；用它拦掉这种「假成功」，避免污染告警留痕。</p>
+     */
+    private final Environment environment;
 
     /**
      * 余额定时刷新任务（可观测状态出口）。
@@ -1928,11 +1958,12 @@ public class ApiProviderController {
      * @param receivers 接收人用户 ID（逗号分隔）
      * @param title     消息标题
      * @param content   消息摘要
+     * @param channels  实际送达渠道（逗号分隔：inbox / email / webhook；多渠道送达记全部）
      * @param pushedAt  推送时间（epoch 毫秒）
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record CreditAlertLogItem(String type, Double remain, Double threshold, String receivers,
-                              String title, String content,
+                              String title, String content, String channels,
                               @JsonProperty("pushed_at") Long pushedAt) {
     }
 
@@ -1948,6 +1979,68 @@ public class ApiProviderController {
     record CreditAlertLogPayload(@JsonProperty("provider_id") String providerId, int total,
                                  @JsonProperty("last_pushed_at") Long lastPushedAt,
                                  List<CreditAlertLogItem> alerts) {
+    }
+
+    /**
+     * 余额消耗归因·密钥维度行（{@code /credit/attribution} 的 keys 元素）。
+     *
+     * @param keyMask       密钥掩码（不落明文）
+     * @param samples       窗口内成功读数条数
+     * @param firstSyncedAt 期初读数时间（epoch 毫秒）
+     * @param lastSyncedAt  期末读数时间（epoch 毫秒）
+     * @param startRemain   期初剩余余额
+     * @param endRemain     期末剩余余额
+     * @param consumed      余额变化（期末-期初；负数=消耗，正数=充值）
+     * @param usedDelta     已用余额变化（上游报了 used 才有）
+     * @param currency      币种（取期末读数）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditKeyAttribution(@JsonProperty("key_mask") String keyMask, int samples,
+                                @JsonProperty("first_synced_at") Long firstSyncedAt,
+                                @JsonProperty("last_synced_at") Long lastSyncedAt,
+                                @JsonProperty("start_remain") BigDecimal startRemain,
+                                @JsonProperty("end_remain") BigDecimal endRemain,
+                                BigDecimal consumed,
+                                @JsonProperty("used_delta") BigDecimal usedDelta,
+                                String currency) {
+    }
+
+    /**
+     * 余额消耗归因·模型维度行（{@code /credit/attribution} 的 models 元素）。
+     *
+     * @param model            模型名
+     * @param calls            调用次数
+     * @param promptTokens     输入 token 合计
+     * @param completionTokens 输出 token 合计
+     * @param totalTokens      总 token 合计
+     * @param cost             成本合计（元，4 位小数）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditModelAttribution(String model, long calls,
+                                  @JsonProperty("prompt_tokens") long promptTokens,
+                                  @JsonProperty("completion_tokens") long completionTokens,
+                                  @JsonProperty("total_tokens") long totalTokens,
+                                  double cost) {
+    }
+
+    /**
+     * 余额消耗归因载荷（{@code /credit/attribution} 响应体）。
+     *
+     * @param providerId  供应商标识
+     * @param days        统计窗口（天）
+     * @param windowStart 窗口起点（epoch 毫秒）
+     * @param keys        密钥维度归因（按消耗绝对值降序）
+     * @param models      模型维度归因（按成本降序；渠道无模型清单时为空列表）
+     * @param modelNote   模型维度口径说明（前端提示用）
+     * @param providers   命中的用量服务商取值（透明展示用）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditAttributionPayload(@JsonProperty("provider_id") String providerId, int days,
+                                    @JsonProperty("window_start") Long windowStart,
+                                    List<CreditKeyAttribution> keys,
+                                    List<CreditModelAttribution> models,
+                                    @JsonProperty("model_note") String modelNote,
+                                    List<String> providers) {
     }
 
     /**
@@ -2464,8 +2557,9 @@ public class ApiProviderController {
 
     /**
      * 余额低量告警：按 extra.credit_warn_threshold 判定，连续
-     * {@link #CREDIT_WARN_STREAK} 轮低于阈值且配置了 extra.credit_warn_receivers
-     * 时投递站内消息（进程内冷却防重复）；余额回升过阈值后补一条恢复通知。
+     * {@link #CREDIT_WARN_STREAK} 轮低于阈值且配置了告警接收目标时，
+     * 按 extra.credit_warn_channels 分发告警（站内信 / 邮件 / Webhook，
+     * 进程内冷却防重复）；余额回升过阈值后补一条恢复通知。
      *
      * <p>只在实时回源路径调用；判定结果无论是否触发都随载荷返回，
      * 前端据此在余额面板展示「已低于告警阈值」。全部 Key 都没查到读数时
@@ -2502,8 +2596,8 @@ public class ApiProviderController {
                 return warn;
             }
             List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
-            if (receivers.isEmpty()) {
-                log.debug("[credit] 供应商 {} 余额 {} 已低于阈值 {}，未配置告警接收人，跳过推送",
+            if (!creditWarnHasTarget(extra, receivers)) {
+                log.debug("[credit] 供应商 {} 余额 {} 已低于阈值 {}，未配置任何告警接收渠道，跳过推送",
                         providerId, remain.toPlainString(), threshold.toPlainString());
                 return warn;
             }
@@ -2512,7 +2606,7 @@ public class ApiProviderController {
             if (last != null && now - last < CREDIT_WARN_COOLDOWN_MS) {
                 return warn;
             }
-            if (broadcastCreditWarn(entity, remain, threshold, receivers)) {
+            if (broadcastCreditWarn(entity, remain, threshold, extra, receivers)) {
                 creditWarnLastSent.put(providerId, now);
                 // 已推送告警且尚未恢复：回升过阈值时补一条恢复通知
                 creditWarnAlertOpen.add(providerId);
@@ -2523,12 +2617,12 @@ public class ApiProviderController {
         creditWarnLowStreak.remove(providerId);
         if (creditWarnAlertOpen.remove(providerId)) {
             List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
-            if (receivers.isEmpty()) {
-                log.debug("[credit] 供应商 {} 余额 {} 已回升过阈值 {}，未配置告警接收人，跳过恢复通知",
+            if (!creditWarnHasTarget(extra, receivers)) {
+                log.debug("[credit] 供应商 {} 余额 {} 已回升过阈值 {}，未配置任何告警接收渠道，跳过恢复通知",
                         providerId, remain.toPlainString(), threshold.toPlainString());
                 return warn;
             }
-            if (!broadcastCreditRecovery(entity, remain, threshold, receivers)) {
+            if (!broadcastCreditRecovery(entity, remain, threshold, extra, receivers)) {
                 // 恢复通知投递失败：保留登记，下次实时回源重试
                 creditWarnAlertOpen.add(providerId);
             }
@@ -2537,111 +2631,47 @@ public class ApiProviderController {
     }
 
     /**
-     * 余额低量告警投递：写一条站内消息到消息中心（sys_message），登录后在消息中心可见。
+     * 余额低量告警投递：按 extra.credit_warn_channels 选定的渠道分发
+     * （站内信 / 邮件 / Webhook，未配置时默认站内信，兼容既有行为）。
      *
-     * <p>复用平台既有消息中心（{@code common-system-starter} 的
-     * {@link SysMessageService#broadcast}）而不是另写一套推送。消息中心服务拿不到
-     * （宿主未接该依赖）或写库失败都只记日志、不登记冷却——下次实时回源会重试。</p>
+     * <p>任一渠道投递成功即算成功并留痕（记录实际送达的渠道）；
+     * 全部失败才不登记冷却——下次实时回源会重试。</p>
      *
-     * @return 是否投递成功
+     * @return 是否至少一个渠道投递成功
      */
     private boolean broadcastCreditWarn(SysAccountChannel entity, BigDecimal remain, BigDecimal threshold,
-                                        List<Integer> receivers) {
-        SysMessageService service = messageServiceProvider.getIfAvailable();
-        if (service == null) {
-            log.debug("[credit] 宿主未接入消息中心，余额低量告警跳过: {}", entity.getProviderId());
-            return false;
-        }
+                                        Map<String, Object> extra, List<Integer> receivers) {
         String title = "供应商余额低量告警";
         String content = "供应商「" + entity.getName() + "」(" + entity.getProviderId()
                 + ") 当前余额 " + remain.toPlainString() + "，已低于告警阈值 " + threshold.toPlainString()
                 + "，请及时充值或调整阈值。";
-        SysMessage message = new SysMessage();
-        message.setSysMessageTitle(title);
-        message.setSysMessageContent(content);
-        message.setSysMessageType("warning");
-        message.setSysMessageLevel("high");
-        message.setSysMessageChannel("PLATFORM");
-        message.setSysMessageSenderId(0);
-        message.setSysMessageSenderName("模型管理");
-        try {
-            ReturnResult<Integer> result = service.broadcast(message, receivers);
-            boolean ok = result != null && result.isOk();
-            if (ok) {
-                log.info("[credit] 余额低量告警已推送 provider={} remain={} threshold={} receivers={}",
-                        entity.getProviderId(), remain.toPlainString(), threshold.toPlainString(), receivers.size());
-                // 投递成功才留痕：失败不写，留痕只记真实发出去的推送
-                recordCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_WARN,
-                        remain, threshold, receivers, title, content);
-            } else {
-                log.warn("[credit] 余额低量告警写入消息中心失败 provider={} msg={}",
-                        entity.getProviderId(), result == null ? "无返回" : result.getMsg());
-            }
-            return ok;
-        } catch (Exception ex) {
-            log.warn("[credit] 余额低量告警写入消息中心异常 provider={} err={}",
-                    entity.getProviderId(), ex.getMessage());
-            return false;
-        }
+        return dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_WARN,
+                remain, threshold, receivers, extra, title, content);
     }
 
     /**
-     * 余额恢复通知投递：余额从「低于阈值」回升到阈值之上时，补一条站内消息收尾，
-     * 让接收人知道该供应商余额已恢复、上次告警可以不处理了。
+     * 余额恢复通知投递：余额从「低于阈值」回升到阈值之上时，按告警同款渠道配置
+     * 补一条恢复通知收尾，让接收人知道该供应商余额已恢复、上次告警可以不处理了。
      *
-     * <p>与低量告警同走 {@code common-system-starter} 的
-     * {@link SysMessageService#broadcast}；类型 info / 级别 normal（好消息不打 high 级）。
-     * 消息中心拿不到或写库失败只记日志，由调用方保留登记、下次实时回源重试。</p>
-     *
-     * @return 是否投递成功
+     * @return 是否至少一个渠道投递成功
      */
     private boolean broadcastCreditRecovery(SysAccountChannel entity, BigDecimal remain, BigDecimal threshold,
-                                            List<Integer> receivers) {
-        SysMessageService service = messageServiceProvider.getIfAvailable();
-        if (service == null) {
-            log.debug("[credit] 宿主未接入消息中心，余额恢复通知跳过: {}", entity.getProviderId());
-            return false;
-        }
+                                            Map<String, Object> extra, List<Integer> receivers) {
         String title = "供应商余额恢复通知";
         String content = "供应商「" + entity.getName() + "」(" + entity.getProviderId()
                 + ") 当前余额 " + remain.toPlainString() + "，已回升至告警阈值 " + threshold.toPlainString()
                 + " 之上。";
-        SysMessage message = new SysMessage();
-        message.setSysMessageTitle(title);
-        message.setSysMessageContent(content);
-        message.setSysMessageType("info");
-        message.setSysMessageLevel("normal");
-        message.setSysMessageChannel("PLATFORM");
-        message.setSysMessageSenderId(0);
-        message.setSysMessageSenderName("模型管理");
-        try {
-            ReturnResult<Integer> result = service.broadcast(message, receivers);
-            boolean ok = result != null && result.isOk();
-            if (ok) {
-                log.info("[credit] 余额恢复通知已推送 provider={} remain={} threshold={} receivers={}",
-                        entity.getProviderId(), remain.toPlainString(), threshold.toPlainString(), receivers.size());
-                // 投递成功才留痕：失败不写，留痕只记真实发出去的推送
-                recordCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_RECOVERY,
-                        remain, threshold, receivers, title, content);
-            } else {
-                log.warn("[credit] 余额恢复通知写入消息中心失败 provider={} msg={}",
-                        entity.getProviderId(), result == null ? "无返回" : result.getMsg());
-            }
-            return ok;
-        } catch (Exception ex) {
-            log.warn("[credit] 余额恢复通知写入消息中心异常 provider={} err={}",
-                    entity.getProviderId(), ex.getMessage());
-            return false;
-        }
+        return dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_RECOVERY,
+                remain, threshold, receivers, extra, title, content);
     }
 
     /**
      * 余额告警推送留痕：投递成功后把「谁、什么时候、以什么余额/阈值、
-     * 推给了谁、推了什么」落一行到 {@code sys_ai_provider_credit_alert_log}。
+     * 推给了谁、走了哪些渠道、推了什么」落一行到 {@code sys_ai_provider_credit_alert_log}。
      * 留痕失败只记日志：不影响已完成的投递，也不打断告警主链路。
      */
     private void recordCreditAlert(SysAccountChannel entity, String type, BigDecimal remain, BigDecimal threshold,
-                                   List<Integer> receivers, String title, String content) {
+                                   List<Integer> receivers, String title, String content, String channels) {
         try {
             SysAiProviderCreditAlertLog row = new SysAiProviderCreditAlertLog();
             row.setProviderId(entity.getProviderId());
@@ -2649,6 +2679,7 @@ public class ApiProviderController {
             row.setRemain(remain == null ? null : remain.doubleValue());
             row.setThreshold(threshold == null ? null : threshold.doubleValue());
             row.setReceivers(receivers.stream().map(String::valueOf).collect(Collectors.joining(",")));
+            row.setChannels(channels);
             row.setTitle(title);
             row.setContent(content);
             long now = System.currentTimeMillis();
@@ -2661,6 +2692,303 @@ public class ApiProviderController {
             log.warn("[credit] 余额告警留痕失败 provider={} type={} err={}",
                     entity.getProviderId(), type, ex.getMessage());
         }
+    }
+
+    /**
+     * 按渠道配置分发一条余额告警 / 恢复通知。
+     *
+     * <p>渠道清单取 extra.credit_warn_channels（inbox / email / webhook，
+     * 未配置时默认 inbox，兼容既有行为）；逐个渠道投递，任一成功即算成功。
+     * 实际送达的渠道写入留痕的 channels 列；全部失败返回 false，
+     * 由调用方保留登记、下次实时回源重试。</p>
+     *
+     * @return 是否至少一个渠道投递成功
+     */
+    private boolean dispatchCreditAlert(SysAccountChannel entity, String type, BigDecimal remain, BigDecimal threshold,
+                                        List<Integer> receivers, Map<String, Object> extra,
+                                        String title, String content) {
+        List<String> channels = creditWarnChannels(extra.get("credit_warn_channels"));
+        if (channels.isEmpty()) {
+            channels = List.of("inbox");
+        }
+        List<String> emails = creditWarnEmails(extra.get("credit_warn_emails"));
+        String webhook = creditWarnWebhook(extra.get("credit_warn_webhook"));
+        List<String> delivered = new ArrayList<>(channels.size());
+        for (String channel : channels) {
+            boolean ok = switch (channel) {
+                case "inbox" -> deliverCreditInbox(type, title, content, receivers);
+                case "email" -> deliverCreditEmails(title, content, emails);
+                case "webhook" -> deliverCreditWebhook(title, content, webhook);
+                default -> false;
+            };
+            if (ok) {
+                delivered.add(channel);
+            }
+        }
+        if (delivered.isEmpty()) {
+            return false;
+        }
+        // 投递成功才留痕：失败不写，留痕只记真实发出去的推送（channels = 实际送达渠道）
+        recordCreditAlert(entity, type, remain, threshold, receivers, title, content,
+                String.join(",", delivered));
+        return true;
+    }
+
+    /**
+     * 站内信渠道：写一条消息到消息中心（sys_message），登录后在消息中心可见。
+     *
+     * <p>复用平台既有消息中心（{@code common-system-starter} 的
+     * {@link SysMessageService#broadcast}）。消息中心服务拿不到（宿主未接该依赖）、
+     * 未配置接收人或写库失败都只记日志并返回 false。</p>
+     */
+    private boolean deliverCreditInbox(String type, String title, String content, List<Integer> receivers) {
+        if (receivers == null || receivers.isEmpty()) {
+            log.debug("[credit] 站内信渠道未配置接收人，跳过");
+            return false;
+        }
+        SysMessageService service = messageServiceProvider.getIfAvailable();
+        if (service == null) {
+            log.debug("[credit] 宿主未接入消息中心，站内信渠道跳过");
+            return false;
+        }
+        boolean warn = SysAiProviderCreditAlertLog.TYPE_WARN.equals(type);
+        SysMessage message = new SysMessage();
+        message.setSysMessageTitle(title);
+        message.setSysMessageContent(content);
+        message.setSysMessageType(warn ? "warning" : "info");
+        message.setSysMessageLevel(warn ? "high" : "normal");
+        message.setSysMessageChannel("PLATFORM");
+        message.setSysMessageSenderId(0);
+        message.setSysMessageSenderName("模型管理");
+        try {
+            ReturnResult<Integer> result = service.broadcast(message, receivers);
+            boolean ok = result != null && result.isOk();
+            if (ok) {
+                log.info("[credit] 余额告警站内信已推送 receivers={}", receivers.size());
+            } else {
+                log.warn("[credit] 余额告警站内信写入消息中心失败 msg={}",
+                        result == null ? "无返回" : result.getMsg());
+            }
+            return ok;
+        } catch (Exception ex) {
+            log.warn("[credit] 余额告警站内信写入消息中心异常 err={}", ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 邮件渠道：给 extra.credit_warn_emails 里的地址发通知邮件。
+     *
+     * <p>复用 common-starter 的 {@link MailService}（宿主接了 spring.mail.* 才有真实能力）。
+     * 先用 Environment 判定 spring.mail.host 是否真的配置了——本地 Mock 的
+     * JavaMailSender 会让 MailService 存在但发不出信，这里拦掉避免「假成功」污染留痕。
+     * 任一地址发送成功即算成功；全部失败返回 false。</p>
+     */
+    private boolean deliverCreditEmails(String title, String content, List<String> emails) {
+        if (emails == null || emails.isEmpty()) {
+            log.debug("[credit] 邮件渠道未配置收件邮箱，跳过");
+            return false;
+        }
+        MailService service = mailServiceProvider.getIfAvailable();
+        if (service == null) {
+            log.debug("[credit] 宿主未接入邮件服务，邮件渠道跳过");
+            return false;
+        }
+        if (!environment.containsProperty("spring.mail.host")) {
+            log.debug("[credit] 宿主未配置 spring.mail.host，邮件渠道跳过");
+            return false;
+        }
+        boolean any = false;
+        for (String to : emails) {
+            try {
+                String html = "<p>" + content.replace("&", "&amp;")
+                        .replace("<", "&lt;").replace(">", "&gt;") + "</p>";
+                ReturnResult<Void> result = service.sendNoticeMail(to, title, html);
+                if (result != null && result.isOk()) {
+                    any = true;
+                } else {
+                    log.warn("[credit] 余额告警邮件发送失败 to={} msg={}",
+                            to, result == null ? "无返回" : result.getMsg());
+                }
+            } catch (Exception ex) {
+                log.warn("[credit] 余额告警邮件发送异常 to={} err={}", to, ex.getMessage());
+            }
+        }
+        return any;
+    }
+
+    /**
+     * Webhook 渠道：向 extra.credit_warn_webhook 的机器人地址 POST 一条卡片消息。
+     *
+     * <p>按地址主机自动适配卡片格式（见 {@link #creditWebhookBody}）。10 秒超时，
+     * 2xx 视为成功；失败只记日志，不打断其它渠道。</p>
+     */
+    private boolean deliverCreditWebhook(String title, String content, String webhook) {
+        if (webhook == null || webhook.isBlank()) {
+            log.debug("[credit] Webhook 渠道未配置地址，跳过");
+            return false;
+        }
+        try {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(webhook))
+                    .timeout(Duration.ofSeconds(10))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(creditWebhookBody(webhook, title, content),
+                            StandardCharsets.UTF_8))
+                    .build();
+            HttpResponse<String> response = upstreamHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            boolean ok = response.statusCode() >= 200 && response.statusCode() < 300;
+            if (ok) {
+                log.info("[credit] 余额告警 Webhook 已推送 status={}", response.statusCode());
+            } else {
+                log.warn("[credit] 余额告警 Webhook 投递失败 status={} body={}",
+                        response.statusCode(), response.body());
+            }
+            return ok;
+        } catch (Exception ex) {
+            log.warn("[credit] 余额告警 Webhook 投递异常 err={}", ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 组装机器人 Webhook 卡片报文，按地址主机适配三种常见格式：
+     * 飞书（open.feishu.cn）走 {@code msg_type/text}；企业微信（qyapi.weixin.qq.com）
+     * 走 {@code msgtype/markdown}；其余（含钉钉 oapi.dingtalk.com 与自建机器人）
+     * 走钉钉的 {@code msgtype/markdown}（带 title，@真人时需要）。
+     */
+    private String creditWebhookBody(String webhook, String title, String content) {
+        URI uri = URI.create(webhook);
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String text = "**" + title + "**\n\n" + content;
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (host.contains("feishu") || host.contains("larksuite")) {
+            body.put("msg_type", "text");
+            body.put("content", Map.of("text", title + "\n" + content));
+        } else if (host.contains("qyapi.weixin.qq.com") || host.contains("weixin") || host.contains("wecom")) {
+            body.put("msgtype", "markdown");
+            body.put("markdown", Map.of("content", text));
+        } else {
+            body.put("msgtype", "markdown");
+            Map<String, Object> markdown = new LinkedHashMap<>();
+            markdown.put("title", title);
+            markdown.put("text", text);
+            body.put("markdown", markdown);
+        }
+        try {
+            return objectMapper.writeValueAsString(body);
+        } catch (Exception ex) {
+            // 理论不可达（纯 Map 序列化）；兜底成最小文本报文
+            return "{\"msg_type\":\"text\",\"content\":{\"text\":\"" + title + "\"}}";
+        }
+    }
+
+    /**
+     * 是否配置了至少一个可投递的告警目标：未显式配渠道时维持旧口径（只看站内信接收人）；
+     * 配了渠道则按渠道检查各自的收件配置（接收人 / 邮箱 / Webhook 地址）。
+     */
+    private boolean creditWarnHasTarget(Map<String, Object> extra, List<Integer> receivers) {
+        List<String> channels = creditWarnChannels(extra.get("credit_warn_channels"));
+        if (channels.isEmpty()) {
+            return !receivers.isEmpty();
+        }
+        if (channels.contains("inbox") && !receivers.isEmpty()) {
+            return true;
+        }
+        if (channels.contains("email") && !creditWarnEmails(extra.get("credit_warn_emails")).isEmpty()) {
+            return true;
+        }
+        return channels.contains("webhook") && creditWarnWebhook(extra.get("credit_warn_webhook")) != null;
+    }
+
+    /**
+     * 解析告警渠道清单：extra.credit_warn_channels 兼容 JSON 数组与逗号分隔文本，
+     * 仅认 inbox / email / webhook；未识别项跳过并记日志。
+     */
+    private static List<String> creditWarnChannels(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        List<String> tokens = new ArrayList<>();
+        if (raw instanceof Collection<?> values) {
+            for (Object item : values) {
+                if (item != null) {
+                    tokens.add(String.valueOf(item).trim());
+                }
+            }
+        } else {
+            for (String part : String.valueOf(raw).split("[,，;；\\s]+")) {
+                tokens.add(part.trim());
+            }
+        }
+        List<String> channels = new ArrayList<>(tokens.size());
+        for (String token : tokens) {
+            String channel = token.toLowerCase(Locale.ROOT);
+            if (channel.isEmpty()) {
+                continue;
+            }
+            if (!channel.equals("inbox") && !channel.equals("email") && !channel.equals("webhook")) {
+                log.warn("[credit] 余额告警渠道未识别，已跳过: {}", token);
+                continue;
+            }
+            if (!channels.contains(channel)) {
+                channels.add(channel);
+            }
+        }
+        return channels;
+    }
+
+    /**
+     * 解析邮件收件人：extra.credit_warn_emails 兼容 JSON 数组与逗号分隔文本；
+     * 不含 @ 或 . 的项跳过并记日志。
+     */
+    private static List<String> creditWarnEmails(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        List<String> tokens = new ArrayList<>();
+        if (raw instanceof Collection<?> values) {
+            for (Object item : values) {
+                if (item != null) {
+                    tokens.add(String.valueOf(item).trim());
+                }
+            }
+        } else {
+            for (String part : String.valueOf(raw).split("[,，;；\\s]+")) {
+                tokens.add(part.trim());
+            }
+        }
+        List<String> emails = new ArrayList<>(tokens.size());
+        for (String token : tokens) {
+            if (token.isEmpty()) {
+                continue;
+            }
+            if (!token.contains("@") || !token.contains(".")) {
+                log.warn("[credit] 余额告警邮件收件人不是邮箱地址，已跳过: {}", token);
+                continue;
+            }
+            if (!emails.contains(token)) {
+                emails.add(token);
+            }
+        }
+        return emails;
+    }
+
+    /**
+     * 解析 Webhook 地址：extra.credit_warn_webhook 必须是 http(s) 地址，否则返回 null。
+     */
+    private static String creditWarnWebhook(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        String url = String.valueOf(raw).trim();
+        if (url.isEmpty()) {
+            return null;
+        }
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            log.warn("[credit] 余额告警 Webhook 地址必须是 http(s) URL，已忽略: {}", url);
+            return null;
+        }
+        return url;
     }
 
     /**
@@ -2784,9 +3112,121 @@ public class ApiProviderController {
                 lastPushedAt = row.getPushedAt();
             }
             items.add(new CreditAlertLogItem(row.getType(), row.getRemain(), row.getThreshold(),
-                    row.getReceivers(), row.getTitle(), row.getContent(), row.getPushedAt()));
+                    row.getReceivers(), row.getTitle(), row.getContent(), row.getChannels(), row.getPushedAt()));
         }
         return ApiResult.ok(new CreditAlertLogPayload(providerId, items.size(), lastPushedAt, items));
+    }
+
+    /**
+     * 余额消耗归因：这个渠道的钱花在哪。
+     *
+     * <p>两个维度回答「余额消耗归因」：</p>
+     * <ul>
+     *   <li><b>按密钥</b>：{@code sys_ai_provider_credit_history} 窗口内每个 Key 的
+     *       最早 / 最新两条成功读数做差——余额下降即消耗、上升即充值。读数本来就
+     *       是逐 Key 采的，这是密钥维度的精确归因。</li>
+     *   <li><b>按模型</b>：{@code sys_ai_usage_daily} 窗口内按模型聚合调用数 /
+     *       token / 成本，只统计落在本渠道模型清单（{@code AccountChannelModelService}
+     *       查询接口）内的模型。用量表没有渠道维度列，同名模型被多个渠道共用时
+     *       无法进一步拆分——这是模型维度的口径边界，随载荷带 {@code model_note} 说明。</li>
+     * </ul>
+     *
+     * <p>纯只读统计：不回源上游、不写任何表；查不到返回空列表，不报错。</p>
+     *
+     * @param providerId 供应商标识
+     * @param days       统计窗口（天，夹取 1~90，默认 7）
+     * @return 归因载荷（keys 按消耗绝对值降序、models 按成本降序）
+     */
+    @Permission("admin")
+    @GetMapping("/providers/{provider_id}/credit/attribution")
+    public ApiResult<CreditAttributionPayload> providerCreditAttribution(
+            @PathVariable("provider_id") String providerId,
+            @RequestParam(value = "days", required = false, defaultValue = "7") int days) {
+        requireProvider(providerId);
+        int window = Math.max(1, Math.min(90, days));
+        long since = System.currentTimeMillis() - window * 24L * 60L * 60L * 1000L;
+
+        // ---- 按密钥：余额快照历史逐 Key 期初 / 期末差分 ----
+        List<SysAiProviderCreditHistory> history =
+                providerCreditSnapshotService.listHistory(providerId, since, 2000);
+        Map<String, List<SysAiProviderCreditHistory>> byKey = new LinkedHashMap<>();
+        for (SysAiProviderCreditHistory row : history) {
+            if (!Boolean.TRUE.equals(row.getOk()) || row.getRemain() == null) {
+                continue;
+            }
+            String key = row.getKeyHash() == null || row.getKeyHash().isBlank()
+                    ? String.valueOf(row.getKeyMask()) : row.getKeyHash();
+            byKey.computeIfAbsent(key, k -> new ArrayList<>()).add(row);
+        }
+        List<CreditKeyAttribution> keys = new ArrayList<>(byKey.size());
+        for (List<SysAiProviderCreditHistory> readings : byKey.values()) {
+            if (readings.size() < 2) {
+                continue; // 窗口内只有一次成功读数，算不出变化
+            }
+            readings.sort(Comparator.comparingLong(SysAiProviderCreditHistory::getSyncedAt));
+            SysAiProviderCreditHistory first = readings.get(0);
+            SysAiProviderCreditHistory last = readings.get(readings.size() - 1);
+            BigDecimal startRemain = BigDecimal.valueOf(first.getRemain());
+            BigDecimal endRemain = BigDecimal.valueOf(last.getRemain());
+            BigDecimal usedDelta = first.getUsed() == null || last.getUsed() == null
+                    ? null : BigDecimal.valueOf(last.getUsed()).subtract(BigDecimal.valueOf(first.getUsed()));
+            keys.add(new CreditKeyAttribution(first.getKeyMask(), readings.size(),
+                    first.getSyncedAt(), last.getSyncedAt(), startRemain, endRemain,
+                    endRemain.subtract(startRemain), usedDelta, last.getCurrency()));
+        }
+        keys.sort(Comparator.comparing((CreditKeyAttribution k) -> k.consumed().abs()).reversed());
+
+        // ---- 按模型：日汇总聚合，范围限定在本渠道模型清单内 ----
+        Set<String> channelModels = new HashSet<>();
+        try {
+            for (SysAccountChannelModel m : accountChannelModelService.listEnabled(providerId)) {
+                if (m.getModel() != null && !m.getModel().isBlank()) {
+                    channelModels.add(m.getModel().trim().toLowerCase(Locale.ROOT));
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[credit] 用量归因读取渠道模型清单失败 provider={} err={}", providerId, ex.getMessage());
+        }
+        List<CreditModelAttribution> models = new ArrayList<>();
+        Set<String> seenProviders = new LinkedHashSet<>();
+        if (!channelModels.isEmpty()) {
+            LocalDate startDate = Instant.ofEpochMilli(since).atZone(ZoneId.systemDefault()).toLocalDate();
+            List<SysAiUsageDaily> daily = usageDailyMapper.selectList(new LambdaQueryWrapper<SysAiUsageDaily>()
+                    .select(SysAiUsageDaily::getModel, SysAiUsageDaily::getProvider,
+                            SysAiUsageDaily::getTotalCalls, SysAiUsageDaily::getTotalPromptTokens,
+                            SysAiUsageDaily::getTotalCompletionTokens, SysAiUsageDaily::getTotalTokens,
+                            SysAiUsageDaily::getTotalCost)
+                    .ge(SysAiUsageDaily::getStatDate, startDate));
+            Map<String, long[]> tokens = new LinkedHashMap<>();
+            Map<String, Double> costs = new LinkedHashMap<>();
+            for (SysAiUsageDaily row : daily) {
+                String model = row.getModel() == null ? "" : row.getModel().trim();
+                if (model.isEmpty() || !channelModels.contains(model.toLowerCase(Locale.ROOT))) {
+                    continue;
+                }
+                if (row.getProvider() != null && !row.getProvider().isBlank()) {
+                    seenProviders.add(row.getProvider());
+                }
+                long[] t = tokens.computeIfAbsent(model, k -> new long[4]);
+                t[0] += row.getTotalCalls() == null ? 0 : row.getTotalCalls();
+                t[1] += row.getTotalPromptTokens() == null ? 0 : row.getTotalPromptTokens();
+                t[2] += row.getTotalCompletionTokens() == null ? 0 : row.getTotalCompletionTokens();
+                t[3] += row.getTotalTokens() == null ? 0 : row.getTotalTokens();
+                costs.merge(model, row.getTotalCost() == null ? 0D : row.getTotalCost(), Double::sum);
+            }
+            for (Map.Entry<String, long[]> e : tokens.entrySet()) {
+                long[] t = e.getValue();
+                models.add(new CreditModelAttribution(e.getKey(), t[0], t[1], t[2], t[3],
+                        Math.round(costs.getOrDefault(e.getKey(), 0D) * 1e4) / 1e4));
+            }
+            models.sort(Comparator.comparingDouble(CreditModelAttribution::cost).reversed()
+                    .thenComparing(Comparator.comparingLong(CreditModelAttribution::calls).reversed()));
+        }
+        String modelNote = channelModels.isEmpty()
+                ? "渠道未配置模型清单，无法按模型归因"
+                : "按「本渠道模型清单内的同名模型」归因；同名模型被多个渠道共用时无法进一步拆分";
+        return ApiResult.ok(new CreditAttributionPayload(providerId, window, since,
+                keys, models, modelNote, List.copyOf(seenProviders)));
     }
 
     /**
@@ -3301,7 +3741,7 @@ public class ApiProviderController {
      * @return 命中 sub2api 指纹为 true
      */
     private boolean isSub2ApiGateway(String proxy, String base) {
-        String raw = relayProbeGet(proxy, CreditHttp.join(base, "/api/v1/model-plaza"));
+        String raw = relayProbeGet(proxy, relayJoin(base, "/api/v1/model-plaza"));
         if (raw == null) {
             return false;
         }
@@ -3321,7 +3761,7 @@ public class ApiProviderController {
      * @return 命中 new-api / one-api 系指纹为 true
      */
     private boolean isNewApiGateway(String proxy, String base) {
-        String raw = relayProbeGet(proxy, CreditHttp.join(base, "/api/status"));
+        String raw = relayProbeGet(proxy, relayJoin(base, "/api/status"));
         if (raw == null) {
             return false;
         }
@@ -3359,6 +3799,28 @@ public class ApiProviderController {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 拼站点根地址与接口路径（本地实现：探测地址的拼接是 ai 侧自己的逻辑，
+     * 不跨模块依赖余额模块的内部工具类）。
+     *
+     * @param base 站点根地址
+     * @param path 接口路径（以 / 开头）
+     * @return 拼接后的地址
+     */
+    private static String relayJoin(String base, String path) {
+        if (base == null || base.isBlank()) {
+            return path;
+        }
+        String text = base;
+        while (text.endsWith("/")) {
+            text = text.substring(0, text.length() - 1);
+        }
+        if (path == null || path.isEmpty()) {
+            return text;
+        }
+        return text + (path.startsWith("/") ? path : "/" + path);
     }
 
     /**
