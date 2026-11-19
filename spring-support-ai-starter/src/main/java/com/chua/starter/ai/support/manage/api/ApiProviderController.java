@@ -267,6 +267,14 @@ public class ApiProviderController {
     /** 已推送低量告警且尚未推送恢复通知的供应商：回升过阈值后据此补一条恢复通知 */
     private final Set<String> creditWarnAlertOpen = ConcurrentHashMap.newKeySet();
 
+    /** 最近一次实际推送的告警档位：providerId -> level（warn/critical/urgent），用于升级放行与恢复通知选渠道 */
+    private final Map<String, String> creditWarnLastLevel = new ConcurrentHashMap<>();
+
+    /** 分级告警档位代码：warn=警告（最轻）→ critical=严重 → urgent=危急（最重），按阈值从高到低命中最重档 */
+    private static final String CREDIT_LEVEL_WARN = "warn";
+    private static final String CREDIT_LEVEL_CRITICAL = "critical";
+    private static final String CREDIT_LEVEL_URGENT = "urgent";
+
     /**
      * ONNX 供应商物化服务：ONNX 供应商与模型镜像同步
      */
@@ -1941,12 +1949,24 @@ public class ApiProviderController {
     /**
      * 余额低量告警判定结果（随 {@code /credit} 载荷回给前端展示）。
      *
-     * @param threshold 告警阈值（extra.credit_warn_threshold）
+     * @param threshold 命中档位的告警阈值（未触发时为最低档阈值，即 extra.credit_warn_threshold）
      * @param remain    本次汇总剩余余额（无读数为 null）
-     * @param triggered 余额是否已低于等于阈值
+     * @param triggered 余额是否已低于等于某一档阈值
+     * @param level     命中的最高告警档位（warn/critical/urgent；未触发为 null）
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record CreditWarn(BigDecimal threshold, BigDecimal remain, boolean triggered) {
+    record CreditWarn(BigDecimal threshold, BigDecimal remain, boolean triggered, String level) {
+    }
+
+    /**
+     * 分级告警档位配置（extra.credit_warn_levels 数组元素）。
+     *
+     * @param level         档位代码（warn/critical/urgent）
+     * @param threshold     该档告警阈值（余额 ≤ 阈值触发）
+     * @param channels      该档推送渠道（inbox/email/webhook；空 = 回落全局 credit_warn_channels）
+     * @param cooldownHours 该档冷却时长（小时；null = 默认 {@link #CREDIT_WARN_COOLDOWN_MS}）
+     */
+    record CreditWarnLevel(String level, BigDecimal threshold, List<String> channels, Long cooldownHours) {
     }
 
     /**
@@ -2556,113 +2576,152 @@ public class ApiProviderController {
     }
 
     /**
-     * 余额低量告警：按 extra.credit_warn_threshold 判定，连续
-     * {@link #CREDIT_WARN_STREAK} 轮低于阈值且配置了告警接收目标时，
-     * 按 extra.credit_warn_channels 分发告警（站内信 / 邮件 / Webhook，
-     * 进程内冷却防重复）；余额回升过阈值后补一条恢复通知。
+     * 余额低量告警：支持分级阈值（extra.credit_warn_levels：警告/严重/危急三档，
+     * 每档可配阈值、推送渠道组合与冷却时长），未配分级时回落旧口径
+     * （extra.credit_warn_threshold 单档）。余额命中最重档、连续
+     * {@link #CREDIT_WARN_STREAK} 轮且配置了告警接收目标时，按该档渠道分发告警
+     * （站内信 / 邮件 / Webhook，进程内分档冷却防重复）；余额较上次推送升档
+     * （升级）时无视该档冷却立即推送；余额回升到最低档阈值之上后补一条恢复通知。
      *
      * <p>只在实时回源路径调用；判定结果无论是否触发都随载荷返回，
-     * 前端据此在余额面板展示「已低于告警阈值」。全部 Key 都没查到读数时
-     * 不告警也不计轮——占位空值不代表真实余额，既不算低也不算恢复。</p>
+     * 前端据此在余额面板展示「已低于告警阈值」及命中档位。全部 Key 都没查到
+     * 读数时不告警也不计轮——占位空值不代表真实余额，既不算低也不算恢复。</p>
      *
      * @param entity 渠道（供应商标识与名称来源）
-     * @param extra  供应商扩展配置（credit_warn_threshold / credit_warn_receivers）
+     * @param extra  供应商扩展配置（credit_warn_levels / credit_warn_threshold / credit_warn_receivers 等）
      * @param anyOk  本次是否至少一个 Key 查到读数
      * @param total  汇总余额
-     * @return 告警信息（未配置阈值返回 null）
+     * @return 告警信息（阈值配置全缺时返回 null）
      */
     private CreditWarn evaluateCreditWarn(SysAccountChannel entity, Map<String, Object> extra,
                                           boolean anyOk, CreditTotal total) {
-        BigDecimal threshold = decimalOf(extra.get("credit_warn_threshold"));
         String providerId = entity.getProviderId();
-        if (threshold == null) {
-            // 阈值被移除：清掉去抖与恢复登记，避免残留旧判定
-            creditWarnLowStreak.remove(providerId);
-            creditWarnAlertOpen.remove(providerId);
-            return null;
+        List<CreditWarnLevel> levels = creditWarnLevels(extra.get("credit_warn_levels"));
+        if (levels.isEmpty()) {
+            // 未配分级：回落旧口径——extra.credit_warn_threshold 单档（渠道/冷却走全局配置）
+            BigDecimal legacy = decimalOf(extra.get("credit_warn_threshold"));
+            if (legacy == null) {
+                // 阈值配置被移除：清掉去抖、冷却与恢复登记，避免残留旧判定
+                creditWarnLowStreak.remove(providerId);
+                creditWarnAlertOpen.remove(providerId);
+                creditWarnLastLevel.remove(providerId);
+                return null;
+            }
+            levels = List.of(new CreditWarnLevel(CREDIT_LEVEL_WARN, legacy, List.of(), null));
         }
+        BigDecimal mildest = levels.get(0).threshold();
         BigDecimal remain = anyOk && total != null ? total.remain() : null;
-        CreditWarn warn = new CreditWarn(threshold, remain, remain != null && remain.compareTo(threshold) <= 0);
+        // 命中最重档：档位已按阈值降序排列，从最重往最轻找第一个「余额 ≤ 阈值」的档
+        CreditWarnLevel hit = null;
+        if (remain != null) {
+            for (int i = levels.size() - 1; i >= 0; i--) {
+                if (remain.compareTo(levels.get(i).threshold()) <= 0) {
+                    hit = levels.get(i);
+                    break;
+                }
+            }
+        }
+        CreditWarn warn = new CreditWarn(hit != null ? hit.threshold() : mildest, remain,
+                hit != null, hit == null ? null : hit.level());
         if (remain == null) {
             // 本轮读数未知：不累计去抖轮数，也不当「已恢复」
             return warn;
         }
-        if (remain.compareTo(threshold) <= 0) {
-            // 低于阈值：连续达到 CREDIT_WARN_STREAK 轮才推送（单轮波动不告警）
+        if (hit != null) {
+            // 低于最低档阈值：连续达到 CREDIT_WARN_STREAK 轮才推送（单轮波动不告警）
             int streak = creditWarnLowStreak.merge(providerId, 1, Integer::sum);
             if (streak < CREDIT_WARN_STREAK) {
                 log.debug("[credit] 供应商 {} 余额 {} 已低于阈值 {}（连续 {} 轮，未达 {} 轮，暂不推送）",
-                        providerId, remain.toPlainString(), threshold.toPlainString(), streak, CREDIT_WARN_STREAK);
+                        providerId, remain.toPlainString(), mildest.toPlainString(), streak, CREDIT_WARN_STREAK);
                 return warn;
             }
             List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
-            if (!creditWarnHasTarget(extra, receivers)) {
-                log.debug("[credit] 供应商 {} 余额 {} 已低于阈值 {}，未配置任何告警接收渠道，跳过推送",
-                        providerId, remain.toPlainString(), threshold.toPlainString());
+            if (!creditWarnHasTarget(extra, hit, receivers)) {
+                log.debug("[credit] 供应商 {} 余额 {} 已低于{}阈值 {}，该档未配置任何告警接收渠道，跳过推送",
+                        providerId, remain.toPlainString(), creditLevelLabel(hit.level()),
+                        hit.threshold().toPlainString());
                 return warn;
             }
             long now = System.currentTimeMillis();
-            Long last = creditWarnLastSent.get(providerId);
-            if (last != null && now - last < CREDIT_WARN_COOLDOWN_MS) {
+            long cooldownMs = hit.cooldownHours() != null
+                    ? hit.cooldownHours() * 60L * 60L * 1000L
+                    : CREDIT_WARN_COOLDOWN_MS;
+            // 升级放行：本次命中档比上次实际推送的档更重时，无视冷却立即推送（升级不等冷却）
+            String lastLevel = creditWarnLastLevel.get(providerId);
+            boolean escalate = lastLevel != null && creditLevelRank(hit.level()) > creditLevelRank(lastLevel);
+            Long last = creditWarnLastSent.get(providerId + "|" + hit.level());
+            if (!escalate && last != null && now - last < cooldownMs) {
                 return warn;
             }
-            if (broadcastCreditWarn(entity, remain, threshold, extra, receivers)) {
-                creditWarnLastSent.put(providerId, now);
-                // 已推送告警且尚未恢复：回升过阈值时补一条恢复通知
+            if (escalate) {
+                log.info("[credit] 供应商 {} 余额告警升级：{} → {}，无视冷却立即推送",
+                        providerId, creditLevelLabel(lastLevel), creditLevelLabel(hit.level()));
+            }
+            if (broadcastCreditWarn(entity, remain, hit, extra, receivers)) {
+                creditWarnLastSent.put(providerId + "|" + hit.level(), now);
+                creditWarnLastLevel.put(providerId, hit.level());
+                // 已推送告警且尚未恢复：回升过最低档阈值时补一条恢复通知
                 creditWarnAlertOpen.add(providerId);
             }
             return warn;
         }
-        // 回升过阈值：若之前推送过低量告警且尚未发过恢复通知，补一条恢复通知收尾
+        // 回升过最低档阈值：若之前推送过低量告警且尚未发过恢复通知，补一条恢复通知收尾
         creditWarnLowStreak.remove(providerId);
+        String lastLevel = creditWarnLastLevel.get(providerId);
         if (creditWarnAlertOpen.remove(providerId)) {
             List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
-            if (!creditWarnHasTarget(extra, receivers)) {
+            // 恢复通知走上次实际推送档的渠道组合（该档已删/未配渠道时回落全局配置）
+            CreditWarnLevel lastCfg = lastLevel == null ? null
+                    : levels.stream().filter(l -> l.level().equals(lastLevel)).findFirst().orElse(null);
+            if (!creditWarnHasTarget(extra, lastCfg, receivers)) {
                 log.debug("[credit] 供应商 {} 余额 {} 已回升过阈值 {}，未配置任何告警接收渠道，跳过恢复通知",
-                        providerId, remain.toPlainString(), threshold.toPlainString());
+                        providerId, remain.toPlainString(), mildest.toPlainString());
                 return warn;
             }
-            if (!broadcastCreditRecovery(entity, remain, threshold, extra, receivers)) {
+            if (!broadcastCreditRecovery(entity, remain, mildest, lastCfg, extra, receivers)) {
                 // 恢复通知投递失败：保留登记，下次实时回源重试
                 creditWarnAlertOpen.add(providerId);
+            } else {
+                creditWarnLastLevel.remove(providerId);
             }
         }
         return warn;
     }
 
     /**
-     * 余额低量告警投递：按 extra.credit_warn_channels 选定的渠道分发
-     * （站内信 / 邮件 / Webhook，未配置时默认站内信，兼容既有行为）。
+     * 余额低量告警投递：按命中档位组织标题与文案，按该档渠道组合分发
+     * （站内信 / 邮件 / Webhook）。
      *
      * <p>任一渠道投递成功即算成功并留痕（记录实际送达的渠道）；
      * 全部失败才不登记冷却——下次实时回源会重试。</p>
      *
      * @return 是否至少一个渠道投递成功
      */
-    private boolean broadcastCreditWarn(SysAccountChannel entity, BigDecimal remain, BigDecimal threshold,
+    private boolean broadcastCreditWarn(SysAccountChannel entity, BigDecimal remain, CreditWarnLevel level,
                                         Map<String, Object> extra, List<Integer> receivers) {
-        String title = "供应商余额低量告警";
+        String label = creditLevelLabel(level.level());
+        String title = "供应商余额低量告警（" + label + "）";
         String content = "供应商「" + entity.getName() + "」(" + entity.getProviderId()
-                + ") 当前余额 " + remain.toPlainString() + "，已低于告警阈值 " + threshold.toPlainString()
-                + "，请及时充值或调整阈值。";
+                + ") 当前余额 " + remain.toPlainString() + "，已达到" + label + "档告警阈值 "
+                + level.threshold().toPlainString() + "，请及时充值或调整阈值。";
         return dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_WARN,
-                remain, threshold, receivers, extra, title, content);
+                remain, level.threshold(), receivers, creditDispatchChannels(extra, level), title, content);
     }
 
     /**
-     * 余额恢复通知投递：余额从「低于阈值」回升到阈值之上时，按告警同款渠道配置
+     * 余额恢复通知投递：余额从「低于阈值」回升到最低档阈值之上时，按告警同款渠道配置
      * 补一条恢复通知收尾，让接收人知道该供应商余额已恢复、上次告警可以不处理了。
      *
      * @return 是否至少一个渠道投递成功
      */
     private boolean broadcastCreditRecovery(SysAccountChannel entity, BigDecimal remain, BigDecimal threshold,
-                                            Map<String, Object> extra, List<Integer> receivers) {
+                                            CreditWarnLevel lastLevel, Map<String, Object> extra, List<Integer> receivers) {
         String title = "供应商余额恢复通知";
         String content = "供应商「" + entity.getName() + "」(" + entity.getProviderId()
                 + ") 当前余额 " + remain.toPlainString() + "，已回升至告警阈值 " + threshold.toPlainString()
                 + " 之上。";
         return dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_RECOVERY,
-                remain, threshold, receivers, extra, title, content);
+                remain, threshold, receivers, creditDispatchChannels(extra, lastLevel), title, content);
     }
 
     /**
@@ -2695,22 +2754,17 @@ public class ApiProviderController {
     }
 
     /**
-     * 按渠道配置分发一条余额告警 / 恢复通知。
+     * 按给定渠道清单分发一条余额告警 / 恢复通知。
      *
-     * <p>渠道清单取 extra.credit_warn_channels（inbox / email / webhook，
-     * 未配置时默认 inbox，兼容既有行为）；逐个渠道投递，任一成功即算成功。
-     * 实际送达的渠道写入留痕的 channels 列；全部失败返回 false，
-     * 由调用方保留登记、下次实时回源重试。</p>
+     * <p>渠道清单由调用方按档位解析（{@link #creditDispatchChannels}）；
+     * 逐个渠道投递，任一成功即算成功。实际送达的渠道写入留痕的 channels 列；
+     * 全部失败返回 false，由调用方保留登记、下次实时回源重试。</p>
      *
      * @return 是否至少一个渠道投递成功
      */
     private boolean dispatchCreditAlert(SysAccountChannel entity, String type, BigDecimal remain, BigDecimal threshold,
-                                        List<Integer> receivers, Map<String, Object> extra,
+                                        List<Integer> receivers, List<String> channels,
                                         String title, String content) {
-        List<String> channels = creditWarnChannels(extra.get("credit_warn_channels"));
-        if (channels.isEmpty()) {
-            channels = List.of("inbox");
-        }
         List<String> emails = creditWarnEmails(extra.get("credit_warn_emails"));
         String webhook = creditWarnWebhook(extra.get("credit_warn_webhook"));
         List<String> delivered = new ArrayList<>(channels.size());
