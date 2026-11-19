@@ -166,6 +166,43 @@ public class AiGitController {
     }
 
     /**
+     * 获取远端更新（fetch，不合并）。
+     *
+     * @param id 会话标识
+     * @return 同步结果
+     */
+    @PostMapping("/fetch")
+    public ReturnResult<GitModels.SyncResult> fetch(@PathVariable("id") String id) {
+        return ReturnResult.ok(gitService.fetch(id));
+    }
+
+    /**
+     * 拉取并合并远端更新（pull）。
+     *
+     * <p>工作区有未提交改动时会被拒绝（409），需要先提交或暂存。</p>
+     *
+     * @param id 会话标识
+     * @return 同步结果
+     */
+    @PostMapping("/pull")
+    public ReturnResult<GitModels.SyncResult> pull(@PathVariable("id") String id) {
+        return ReturnResult.ok(gitService.pull(id));
+    }
+
+    /**
+     * 推送当前分支（push）。
+     *
+     * <p>本服务不保存 Git 凭据：公开仓库可直接推，需要认证时返回明确说明。</p>
+     *
+     * @param id 会话标识
+     * @return 同步结果
+     */
+    @PostMapping("/push")
+    public ReturnResult<GitModels.SyncResult> push(@PathVariable("id") String id) {
+        return ReturnResult.ok(gitService.push(id));
+    }
+
+    /**
      * 文件路径请求。
      *
      * @param paths 文件相对路径列表

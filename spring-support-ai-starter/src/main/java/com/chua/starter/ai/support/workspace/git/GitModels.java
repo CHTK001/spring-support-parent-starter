@@ -159,4 +159,32 @@ public final class GitModels {
             String message
     ) {
     }
+
+    /**
+     * 远程同步结果（fetch / pull / push 共用）。
+     *
+     * @param action    动作：fetch / pull / push
+     * @param remote    远程名（通常是 origin）
+     * @param remoteUrl 远程地址（已掩掉地址里的账号密码）
+     * @param branch    当前分支
+     * @param ahead     领先上游的提交数（操作完成后）
+     * @param behind    落后上游的提交数（操作完成后）
+     * @param upToDate  是否无需同步（push 时无本地提交 / pull 时无远端更新）
+     * @param message   结果说明（可直接展示给用户）
+     * @param status    操作后的仓库状态
+     * @author CH
+     * @since 4.0.0.51
+     */
+    public record SyncResult(
+            String action,
+            String remote,
+            String remoteUrl,
+            String branch,
+            int ahead,
+            int behind,
+            boolean upToDate,
+            String message,
+            Status status
+    ) {
+    }
 }

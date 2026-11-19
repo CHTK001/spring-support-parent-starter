@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
+import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
@@ -24,9 +26,17 @@ import org.eclipse.jgit.dircache.DirCacheIterator;
 import org.eclipse.jgit.treewalk.EmptyTreeIterator;
 import org.eclipse.jgit.treewalk.FileTreeIterator;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
+import org.eclipse.jgit.transport.CredentialItem;
+import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.transport.FetchResult;
+import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.RemoteRefUpdate;
+import org.eclipse.jgit.transport.URIish;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -116,6 +127,38 @@ public class AiGitService {
      * 合法分支名匹配规则
      */
     private static final Pattern BRANCH_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._/-]{0,119}$");
+
+    /**
+     * 默认远程名
+     */
+    private static final String DEFAULT_REMOTE = "origin";
+
+    /**
+     * 远程操作超时（秒）：网络不通时尽快失败，不把请求挂住
+     */
+    private static final int REMOTE_TIMEOUT_SECONDS = 30;
+
+    /**
+     * 不提供任何凭据：匿名可用就用，需要认证时立刻失败并给出说明。
+     *
+     * <p>本服务不保存 Git 凭据，也不能在服务端弹交互式输入（请求会挂住）。</p>
+     */
+    private static final CredentialsProvider NO_CREDENTIALS = new CredentialsProvider() {
+        @Override
+        public boolean isInteractive() {
+            return false;
+        }
+
+        @Override
+        public boolean supports(CredentialItem... items) {
+            return false;
+        }
+
+        @Override
+        public boolean get(URIish uri, CredentialItem... items) {
+            return false;
+        }
+    };
 
     /**
      * 工作目录解析器
@@ -441,6 +484,276 @@ public class AiGitService {
             log.warn("[Git] 查询日志失败 session={}: {}", sessionId, e.getMessage());
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "查询提交日志失败：" + messageOf(e));
         }
+    }
+
+    /**
+     * 拉取远端引用（不合并）。
+     *
+     * @param sessionId 会话标识
+     * @return 同步结果
+     */
+    public GitModels.SyncResult fetch(String sessionId) {
+        WorkspacePaths paths = workspacePaths(sessionId);
+        try (RepositoryHandle handle = openHandle(paths)) {
+            Repository repository = handle.repository();
+            String remote = remoteName(repository);
+            requireRemote(repository, remote);
+            FetchResult result = fetchQuietly(handle, remote);
+            GitModels.Status status = buildStatus(handle, paths.sessionRoot());
+            boolean upToDate = result.getTrackingRefUpdates().isEmpty();
+            return new GitModels.SyncResult(
+                    "fetch",
+                    remote,
+                    maskUrl(remoteUrl(repository, remote)),
+                    status.branch(),
+                    status.ahead(),
+                    status.behind(),
+                    upToDate,
+                    upToDate ? "远端没有新提交" : "已获取远端更新",
+                    status);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[Git] 拉取远端引用失败 session={}: {}", sessionId, e.getMessage());
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "获取远端更新失败：" + remoteMessage(e));
+        }
+    }
+
+    /**
+     * 拉取并合并远端更新。
+     *
+     * <p>先 fetch 再判断是否落后：没有新提交就直接返回，避免无谓的合并动作。
+     * 工作区有未提交改动时拒绝拉取——合并会覆盖这些改动，这里不替用户做决定。</p>
+     *
+     * @param sessionId 会话标识
+     * @return 同步结果
+     */
+    public GitModels.SyncResult pull(String sessionId) {
+        WorkspacePaths paths = workspacePaths(sessionId);
+        try (RepositoryHandle handle = openHandle(paths)) {
+            Repository repository = handle.repository();
+            String remote = remoteName(repository);
+            requireRemote(repository, remote);
+            Status before = handle.git().status().call();
+            if (!before.getAdded().isEmpty() || !before.getChanged().isEmpty()
+                    || !before.getModified().isEmpty() || !before.getRemoved().isEmpty()
+                    || !before.getConflicting().isEmpty()) {
+                throw new ApiException(ApiErrorCode.CONFLICT,
+                        "工作区有未提交的改动，请先提交或暂存后再拉取");
+            }
+            fetchQuietly(handle, remote);
+            GitModels.Status fetched = buildStatus(handle, paths.sessionRoot());
+            if (fetched.behind() == 0) {
+                return new GitModels.SyncResult("pull", remote,
+                        maskUrl(remoteUrl(repository, remote)), fetched.branch(),
+                        fetched.ahead(), fetched.behind(), true, "已是最新，无需拉取", fetched);
+            }
+            PullResult result = handle.git().pull()
+                    .setRemote(remote)
+                    .setCredentialsProvider(NO_CREDENTIALS)
+                    .setTransportConfigCallback(transportTuning())
+                    .call();
+            if (!result.isSuccessful()) {
+                throw new ApiException(ApiErrorCode.CONFLICT, "拉取未完成：远端与本地存在冲突，请手动处理");
+            }
+            GitModels.Status after = buildStatus(handle, paths.sessionRoot());
+            return new GitModels.SyncResult("pull", remote,
+                    maskUrl(remoteUrl(repository, remote)), after.branch(),
+                    after.ahead(), after.behind(), false,
+                    "已合并远端 " + fetched.behind() + " 个提交", after);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[Git] 拉取失败 session={}: {}", sessionId, e.getMessage());
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "拉取失败：" + remoteMessage(e));
+        }
+    }
+
+    /**
+     * 推送当前分支到远端。
+     *
+     * <p>不接任何凭据：匿名能推就推，需要认证时直接给出「本服务不保存 Git 凭据」的说明，
+     * 不走交互式输入，避免请求挂住。</p>
+     *
+     * @param sessionId 会话标识
+     * @return 同步结果
+     */
+    public GitModels.SyncResult push(String sessionId) {
+        WorkspacePaths paths = workspacePaths(sessionId);
+        try (RepositoryHandle handle = openHandle(paths)) {
+            Repository repository = handle.repository();
+            String remote = remoteName(repository);
+            requireRemote(repository, remote);
+            GitModels.Status before = buildStatus(handle, paths.sessionRoot());
+            if (before.ahead() == 0) {
+                return new GitModels.SyncResult("push", remote,
+                        maskUrl(remoteUrl(repository, remote)), before.branch(),
+                        before.ahead(), before.behind(), true, "没有需要推送的本地提交", before);
+            }
+            String branch = repository.getBranch();
+            String target = repository.getConfig().getString("branch", branch, "merge");
+            if (target == null || target.isBlank()) {
+                target = LOCAL_BRANCH_PREFIX + branch;
+            }
+            Iterable<PushResult> results = handle.git().push()
+                    .setRemote(remote)
+                    .setRefSpecs(new RefSpec(LOCAL_BRANCH_PREFIX + branch + ":" + target))
+                    .setCredentialsProvider(NO_CREDENTIALS)
+                    .setTransportConfigCallback(transportTuning())
+                    .call();
+            for (PushResult pushResult : results) {
+                for (RemoteRefUpdate update : pushResult.getRemoteUpdates()) {
+                    RemoteRefUpdate.Status updateStatus = update.getStatus();
+                    if (updateStatus != RemoteRefUpdate.Status.OK
+                            && updateStatus != RemoteRefUpdate.Status.UP_TO_DATE) {
+                        throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
+                                "推送失败：" + pushMessage(updateStatus, update));
+                    }
+                }
+            }
+            GitModels.Status after = buildStatus(handle, paths.sessionRoot());
+            return new GitModels.SyncResult("push", remote,
+                    maskUrl(remoteUrl(repository, remote)), after.branch(),
+                    after.ahead(), after.behind(), false,
+                    "已推送 " + before.ahead() + " 个提交到 " + remote + "/" + branch, after);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[Git] 推送失败 session={}: {}", sessionId, e.getMessage());
+            throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "推送失败：" + remoteMessage(e));
+        }
+    }
+
+    /**
+     * 执行 fetch。
+     *
+     * <p>仓库由 {@code git init + git remote add} 建的时候没有 fetch refspec，
+     * 这时补一条标准映射，否则 fetch 不会更新任何远程分支。</p>
+     *
+     * @param handle 仓库句柄
+     * @param remote 远程名
+     * @return fetch 结果
+     * @throws Exception JGit 抛出的异常，由调用方归类
+     */
+    private FetchResult fetchQuietly(RepositoryHandle handle, String remote) throws Exception {
+        Repository repository = handle.repository();
+        if (repository.getConfig().getStringList("remote", remote, "fetch").length == 0) {
+            return handle.git().fetch()
+                    .setRemote(remote)
+                    .setRefSpecs(new RefSpec("+refs/heads/*:refs/remotes/" + remote + "/*"))
+                    .setCredentialsProvider(NO_CREDENTIALS)
+                    .setTransportConfigCallback(transportTuning())
+                    .call();
+        }
+        return handle.git().fetch()
+                .setRemote(remote)
+                .setCredentialsProvider(NO_CREDENTIALS)
+                .setTransportConfigCallback(transportTuning())
+                .call();
+    }
+
+    /**
+     * 远程传输统一配置：只设超时，不注入任何凭据。
+     *
+     * @return 传输配置回调
+     */
+    private static TransportConfigCallback transportTuning() {
+        return transport -> transport.setTimeout(REMOTE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * 当前分支使用的远程名（未配置时退回 origin）。
+     *
+     * @param repository 仓库
+     * @return 远程名
+     * @throws IOException 读取仓库分支失败
+     */
+    private String remoteName(Repository repository) throws IOException {
+        String branch = repository.getBranch();
+        String remote = branch == null ? null : repository.getConfig().getString("branch", branch, "remote");
+        return remote == null || remote.isBlank() ? DEFAULT_REMOTE : remote;
+    }
+
+    /**
+     * 读取远程地址。
+     *
+     * @param repository 仓库
+     * @param remote     远程名
+     * @return 地址，未配置返回空串
+     */
+    private String remoteUrl(Repository repository, String remote) {
+        String url = repository.getConfig().getString("remote", remote, "url");
+        return url == null ? "" : url;
+    }
+
+    /**
+     * 校验远程已配置。
+     *
+     * @param repository 仓库
+     * @param remote     远程名
+     */
+    private void requireRemote(Repository repository, String remote) {
+        if (remoteUrl(repository, remote).isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM,
+                    "当前仓库没有配置远程仓库（" + remote + "），请先添加 remote 后再同步");
+        }
+    }
+
+    /**
+     * 掩掉地址里的账号密码，避免回显到前端与日志。
+     *
+     * @param url 原始地址
+     * @return 脱敏地址
+     */
+    private static String maskUrl(String url) {
+        int scheme = url.indexOf("://");
+        int at = url.lastIndexOf('@');
+        if (scheme > 0 && at > scheme + 3) {
+            return url.substring(0, scheme + 3) + "***@" + url.substring(at + 1);
+        }
+        return url;
+    }
+
+    /**
+     * 把远端拒绝原因翻译成中文。
+     *
+     * @param status 远端引用状态
+     * @param update 远端引用更新
+     * @return 提示文本
+     */
+    private static String pushMessage(RemoteRefUpdate.Status status, RemoteRefUpdate update) {
+        switch (status) {
+            case REJECTED_NONFASTFORWARD:
+            case REJECTED_REMOTE_CHANGED:
+                return "远端有本地没有的提交，请先拉取再推送";
+            case REJECTED_NODELETE:
+                return "远端拒绝该分支的推送";
+            default:
+                String message = update.getMessage();
+                return message == null || message.isBlank()
+                        ? "远端拒绝了本次推送（" + status + "）" : message;
+        }
+    }
+
+    /**
+     * 远程异常归类：认证、网络、其他。
+     *
+     * @param e 异常
+     * @return 面向用户的原因
+     */
+    private static String remoteMessage(Throwable e) {
+        String raw = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        String lower = raw.toLowerCase(Locale.ROOT);
+        if (lower.contains("not authorized") || lower.contains("authentication")
+                || lower.contains("401") || lower.contains("credentials")) {
+            return "远程仓库需要认证。本服务不保存任何 Git 凭据，请改用公开仓库，"
+                    + "或先在工作目录里用命令行配置好凭据后再同步";
+        }
+        if (lower.contains("unknownhost") || lower.contains("connection refused")
+                || lower.contains("timed out") || lower.contains("unable to access")) {
+            return "连接远程仓库失败（网络不可达或地址错误）";
+        }
+        return raw;
     }
 
     /**

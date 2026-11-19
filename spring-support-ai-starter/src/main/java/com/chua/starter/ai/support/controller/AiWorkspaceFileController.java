@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,15 +23,23 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -134,6 +143,8 @@ public class AiWorkspaceFileController {
             data.put("extension", ext);
             data.put("name", name);
             data.put("size", size);
+            // 编辑保存的乐观锁依据：前端保存时回传它，与当前 mtime 不一致即判定「文件已被改过」
+            data.put("modifiedAt", Files.getLastModifiedTime(target).toMillis());
             return ReturnResult.ok(data);
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "读取失败: " + e.getMessage());
@@ -208,6 +219,105 @@ public class AiWorkspaceFileController {
         result.put("children", children);
         return ReturnResult.ok(result);
     }
+
+    /**
+     * 按文件名在工作区内递归搜索（前端侧栏搜索框）。
+     *
+     * <p>树是懒加载的，光靠前端过滤只能搜到已展开的部分，所以这里做一次有界递归：
+     * 深度上限 12、最多检查 20000 个文件、返回 200 条封顶。{@code .git}、{@code node_modules}
+     * 等依赖/构建目录直接 <b>不进</b>（{@code SKIP_SUBTREE}），否则一个 node_modules
+     * 就能把扫描配额吃光，真正想找的文件反而搜不到。</p>
+     *
+     * <p>无权限的子目录只跳过、不中断整次搜索：搜到一半整单 500 比少几条结果更糟。</p>
+     *
+     * @param id      会话标识
+     * @param keyword 文件名关键字（不区分大小写）
+     * @param limit   返回条数上限
+     * @return {@code {keyword, truncated, items: [{name,path,relativePath,isDirectory,size}]}}
+     */
+    @GetMapping("/{id}/workspace/search")
+    public ReturnResult<Map<String, Object>> workspaceSearch(@PathVariable("id") String id,
+                                                             @RequestParam("keyword") String keyword,
+                                                             @RequestParam(value = "limit", defaultValue = "50") int limit) {
+        Path root = resolveWorkspaceRoot(id);
+        if (root == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "工作目录未配置");
+        }
+        final String needle = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        if (needle.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "keyword 不能为空");
+        }
+        final int safeLimit = Math.max(1, Math.min(limit, 200));
+        final List<Map<String, Object>> items = new ArrayList<>();
+        final int[] checked = {0};
+        final boolean[] truncated = {false};
+        try {
+            Files.walkFileTree(root, EnumSet.noneOf(FileVisitOption.class), SEARCH_MAX_DEPTH,
+                    new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                            if (dir.equals(root)) {
+                                return FileVisitResult.CONTINUE;
+                            }
+                            return SEARCH_IGNORED_DIRECTORIES.contains(dir.getFileName().toString())
+                                    ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                            if (!attrs.isRegularFile()) {
+                                return FileVisitResult.CONTINUE;
+                            }
+                            if (items.size() >= safeLimit || checked[0] >= SEARCH_MAX_SCANNED) {
+                                truncated[0] = true;
+                                return FileVisitResult.TERMINATE;
+                            }
+                            checked[0]++;
+                            if (!file.getFileName().toString().toLowerCase(Locale.ROOT).contains(needle)) {
+                                return FileVisitResult.CONTINUE;
+                            }
+                            Map<String, Object> node = new LinkedHashMap<>(6);
+                            node.put("name", file.getFileName().toString());
+                            node.put("path", file.toString());
+                            node.put("relativePath", root.relativize(file).toString().replace('\\', '/'));
+                            node.put("isDirectory", false);
+                            node.put("size", attrs.size());
+                            items.add(node);
+                            return items.size() >= safeLimit
+                                    ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult visitFileFailed(Path file, IOException exc) {
+                            log.debug("[Workspace] 搜索跳过不可读路径 {}: {}", file, exc.getMessage());
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "搜索失败: " + e.getMessage());
+        }
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("keyword", needle);
+        data.put("truncated", truncated[0]);
+        data.put("items", items);
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 递归搜索的最大深度
+     */
+    private static final int SEARCH_MAX_DEPTH = 12;
+
+    /**
+     * 单次搜索最多扫描的文件数
+     */
+    private static final int SEARCH_MAX_SCANNED = 20000;
+
+    /**
+     * 搜索不进入的目录
+     */
+    private static final Set<String> SEARCH_IGNORED_DIRECTORIES =
+            Set.of(".git", ".svn", "node_modules", "dist", "target", ".venv", "__pycache__", ".idea");
 
     /**
      * 重命名工作区内的文件或目录（前端侧栏右键「重命名」）。
@@ -349,6 +459,72 @@ public class AiWorkspaceFileController {
             }
         }
         return direct;
+    }
+
+    /**
+     * 保存工作区内的文本文件（前端预览面板「编辑 → 保存」）。
+     *
+     * <p>三条约束：只能改已存在的**普通文件**（不能借保存创建新路径，新建走 POST）；
+     * 内容上限 5MB；带 {@code expectedModifiedAt} 时做乐观锁——与当前 mtime 不一致返回 409，
+     * 避免把 AI 刚写入的内容静默覆盖。</p>
+     *
+     * @param id   会话标识
+     * @param body {@code {path, content, expectedModifiedAt}}
+     * @return {@code {success, size, modifiedAt}}
+     */
+    @PutMapping("/{id}/workspace/file")
+    public ReturnResult<Map<String, Object>> workspaceSaveFile(@PathVariable("id") String id,
+                                                               @RequestBody Map<String, Object> body) {
+        Path root = resolveWorkspaceRoot(id);
+        if (root == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "工作目录未配置");
+        }
+        String path = body == null ? null : Objects.toString(body.get("path"), null);
+        String content = body == null ? null : Objects.toString(body.get("content"), null);
+        if (path == null || path.isBlank() || content == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "path 与 content 不能为空");
+        }
+        if (content.length() > 5 * 1024 * 1024) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "内容过大（上限 5MB）");
+        }
+        Path target = resolveInWorkspace(root, id, path);
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "路径越界");
+        }
+        if (!Files.isRegularFile(target)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "只能保存已存在的文本文件（新建请用 POST）");
+        }
+        Object expected = body.get("expectedModifiedAt");
+        long expect = 0L;
+        if (expected != null) {
+            try {
+                expect = Long.parseLong(Objects.toString(expected).trim());
+            } catch (NumberFormatException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "expectedModifiedAt 必须是毫秒时间戳");
+            }
+        }
+        if (expect > 0) {
+            try {
+                long current = Files.getLastModifiedTime(target).toMillis();
+                if (current != expect) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "文件已被修改（可能是 AI 刚写过），请刷新后合并再保存");
+                }
+            } catch (IOException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "读取文件时间失败: " + e.getMessage());
+            }
+        }
+        try {
+            Files.writeString(target, content, StandardCharsets.UTF_8,
+                    StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+            Map<String, Object> data = new LinkedHashMap<>(4);
+            data.put("success", true);
+            data.put("size", Files.size(target));
+            data.put("modifiedAt", Files.getLastModifiedTime(target).toMillis());
+            return ReturnResult.ok(data);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "保存失败: " + e.getMessage());
+        }
     }
 
     /**
