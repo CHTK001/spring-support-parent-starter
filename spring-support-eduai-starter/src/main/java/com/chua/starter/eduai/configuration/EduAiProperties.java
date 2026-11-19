@@ -170,6 +170,16 @@ public class EduAiProperties {
          * 配额充足、版式复杂（多栏/答题框）时再切到 {@code region}。</p>
          */
         private String extractStrategy = "whole";
+
+        /**
+         * 在线交卷宽限秒数：考试时长到期后，仍允许提交的宽限时间（秒）。
+         *
+         * <p>服务端计时按「本人草稿答题卡 create_time + 考试时长」判定超时；
+         * 前端倒计时与服务器时钟存在微小偏差，网络往返也需要时间，踩点交卷
+         * 若不给宽限会被误拒。只约束学生在线提交链路，教师手工录入不受限。</p>
+         */
+        // [P3C A20 豁免]
+        private int submitGraceSeconds = 30;
     }
 
     @Data

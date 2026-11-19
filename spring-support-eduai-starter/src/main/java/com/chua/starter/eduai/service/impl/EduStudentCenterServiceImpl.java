@@ -9,6 +9,8 @@ import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.dimension.mapper.EduClassMapper;
 import com.chua.starter.eduai.dimension.mapper.EduStudentMapper;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
+import com.chua.starter.eduai.configuration.EduAiProperties;
+import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduExamMapper;
 import com.chua.starter.eduai.mapper.EduPaperAssignMapper;
 import com.chua.starter.eduai.mapper.EduPaperMapper;
@@ -17,6 +19,7 @@ import com.chua.starter.eduai.mapper.EduStudentProgressMapper;
 import com.chua.starter.eduai.mapper.EduWrongQuestionMapper;
 import com.chua.starter.eduai.mapper.EduMarkingTaskMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
+import com.chua.starter.eduai.model.EduAnswerSheet;
 import com.chua.starter.eduai.model.EduExam;
 import com.chua.starter.eduai.model.EduMarkingTask;
 import com.chua.starter.eduai.model.EduPaper;
@@ -39,10 +42,12 @@ import com.chua.starter.eduai.service.IEduStudentCenterService;
 import com.chua.starter.eduai.support.util.EduUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
@@ -119,6 +124,16 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
      * 试卷详情：学生端按布置关系授权后取题（不走归属校验）
      */
     private final IEduPaperService paperService;
+
+    /**
+     * 答题卡：在线作答首拉建草稿（草稿创建时间即本人生考试起点），交卷时 upsert 转正
+     */
+    private final EduAnswerSheetMapper answerSheetMapper;
+
+    /**
+     * eduai 配置：交卷宽限秒数等
+     */
+    private final EduAiProperties properties;
 
     @Override
     public List<EduMarkingTask> myMarkingTasks(int limit) {
@@ -230,7 +245,7 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
     @Override
     public PaperVO myAnswerPaper(Long paperId) {
         EduStudent student = requireBoundStudent();
-        requireAssignedPaper(paperId, student);
+        PaperAssignVO assign = requireAssignedPaper(paperId, student);
         PaperVO paper = paperService.getPaperDetailUnchecked(paperId);
         if (paper == null) {
             throw new BusinessException("试卷不存在或已删除");
@@ -242,6 +257,10 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
                         .map(q -> new QuestionVO(q.id(), q.type(), q.stem(), q.options(),
                                 null, null, q.score(), q.questionNo(), q.order(), q.section()))
                         .toList();
+        // 首次拉卷即就位考试与草稿答题卡：草稿的 create_time 是本人生考试起点，
+        // 交卷时限按它计算 —— 异步作业场景不能拿全班第一个拉卷人的时钟
+        Long examId = resolveOrCreateExam(paperId, student.getStudentClassId(), assign.getTeacherAccount());
+        ensureDraftAnswerSheet(examId, EduUserContext.requireUserId(), assign.getTeacherAccount());
         return paper.withQuestions(safeQuestions);
     }
 
@@ -262,9 +281,49 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         // 考试与后续阅卷任务归属记为布置老师，学生交的卷子才会出现在老师的阅卷列表里。
         Long examId = resolveOrCreateExam(paperId, student.getStudentClassId(), assign.getTeacherAccount());
 
+        // 服务端计时：以本人草稿答题卡的创建时间为起点，考试时长内（含宽限）才可交卷。
+        // 只拦提交不拦读卷 —— 已交卷者重进页面看结果不报错。
+        enforceExamDeadline(examId);
+
         // 学生标识用登录账号：与教师端阅卷台按学号录入同一口径（学生端任务按登录账号过滤）
         MarkingSubmitDTO submit = new MarkingSubmitDTO(examId, me, dto.content(), dto.answers());
         return markingService.submitAnswerSheet(submit, assign.getTeacherAccount());
+    }
+
+    @Override
+    public Map<String, Object> myExamTimer(Long paperId) {
+        EduStudent student = requireBoundStudent();
+        PaperAssignVO assign = requireAssignedPaper(paperId, student);
+        Long examId = resolveOrCreateExam(paperId, student.getStudentClassId(), assign.getTeacherAccount());
+        Map<String, Object> result = new HashMap<>();
+        EduExam exam = examMapper.selectById(examId);
+        Integer duration = exam == null ? null : exam.getExamDuration();
+        if (duration == null || duration <= 0) {
+            result.put("timed", false);
+            result.put("durationMinutes", 0);
+            result.put("remainingSeconds", -1L);
+            return result;
+        }
+        EduAnswerSheet sheet = answerSheetMapper.selectOne(new QueryWrapper<EduAnswerSheet>()
+                .eq("answer_sheet_exam_id", examId)
+                .eq("answer_sheet_student_id", EduUserContext.requireUserId())
+                .last("LIMIT 1"));
+        long remaining;
+        if (sheet == null) {
+            // 没有草稿（理论不可达：拉卷时已建）：按整场时长给
+            remaining = duration * 60L;
+        } else if (sheet.getAnswerSheetStatus() != null && sheet.getAnswerSheetStatus() >= 1) {
+            remaining = 0L; // 已交卷：倒计时归零
+        } else if (sheet.getCreateTime() == null) {
+            remaining = duration * 60L;
+        } else {
+            remaining = Math.max(0L, Duration.between(LocalDateTime.now(),
+                    sheet.getCreateTime().plusMinutes(duration)).getSeconds());
+        }
+        result.put("timed", true);
+        result.put("durationMinutes", duration);
+        result.put("remainingSeconds", remaining);
+        return result;
     }
 
     /**
@@ -336,6 +395,76 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
         created.setOwnerUserId(teacherAccount);
         examMapper.insert(created);
         return created.getExamId();
+    }
+
+    /**
+     * 确保该生在该考试下有一份草稿答题卡（status=0，content 为 NULL）。
+     *
+     * <p>草稿的 {@code create_time} 就是这个学生的考试起点：每个学生拉卷时刻不同，
+     * 服务端计时必须按人算。content 留 NULL 绕过 {@code json_valid} 检查约束，
+     * 交卷时由阅卷侧整卡更新转正。并发首拉由 (exam_id, student_id) 唯一键兜底，
+     * 撞键视为草稿已建。</p>
+     *
+     * @param examId      考试标识
+     * @param studentId   学生登录账号
+     * @param ownerUserId 归属用户标识（布置老师，与提交链路的答题卡归属口径一致）
+     */
+    private void ensureDraftAnswerSheet(Long examId, String studentId, String ownerUserId) {
+        Long exists = answerSheetMapper.selectCount(new QueryWrapper<EduAnswerSheet>()
+                .eq("answer_sheet_exam_id", examId)
+                .eq("answer_sheet_student_id", studentId));
+        if (exists != null && exists > 0) {
+            return;
+        }
+        EduAnswerSheet draft = new EduAnswerSheet();
+        draft.setOwnerUserId(ownerUserId);
+        draft.setAnswerSheetExamId(examId);
+        draft.setAnswerSheetStudentId(studentId);
+        draft.setAnswerSheetContent(null);
+        draft.setAnswerSheetStatus(0); // 草稿：未提交
+        draft.setCreateTime(LocalDateTime.now());
+        draft.setUpdateTime(LocalDateTime.now());
+        try {
+            answerSheetMapper.insert(draft);
+        } catch (DuplicateKeyException e) {
+            // 并发首拉撞唯一键：草稿已由另一请求建好，目的达到即可
+            log.info("[EduAi] 学生草稿答题卡并发创建撞唯一键，跳过: examId={}, studentId={}",
+                    examId, studentId);
+        }
+    }
+
+    /**
+     * 校验考试是否仍在作答时限内（仅学生在线提交链路；教师手工录入不限时）。
+     *
+     * <p>时限 = 本人草稿答题卡 create_time + 考试时长（分钟）+ 交卷宽限秒。
+     * 宽限用于吸收前端倒计时与服务器时钟的微小偏差；考试未设时长（不限时）不拦截。
+     * 超时抛业务异常，文案经前端 errText 直达学生。</p>
+     *
+     * @param examId 考试标识
+     */
+    private void enforceExamDeadline(Long examId) {
+        if (examId == null) {
+            return;
+        }
+        EduExam exam = examMapper.selectById(examId);
+        if (exam == null || exam.getExamDuration() == null || exam.getExamDuration() <= 0) {
+            return; // 不限时
+        }
+        EduAnswerSheet sheet = answerSheetMapper.selectOne(new QueryWrapper<EduAnswerSheet>()
+                .eq("answer_sheet_exam_id", examId)
+                .eq("answer_sheet_student_id", EduUserContext.requireUserId())
+                .last("LIMIT 1"));
+        if (sheet == null || sheet.getCreateTime() == null) {
+            return; // 没有计时起点：按新开卷处理，交卷 upsert 会以当前时间建卡
+        }
+        LocalDateTime deadline = sheet.getCreateTime()
+                .plusMinutes(exam.getExamDuration())
+                .plusSeconds(Math.max(0, properties.getMarking().getSubmitGraceSeconds()));
+        if (LocalDateTime.now().isAfter(deadline)) {
+            log.warn("[EduAi] 超时交卷已拦截: examId={}, student={}, deadline={}",
+                    examId, sheet.getAnswerSheetStudentId(), deadline);
+            throw new BusinessException("考试时间已到，不能再提交，请联系老师处理");
+        }
     }
 
     @Override

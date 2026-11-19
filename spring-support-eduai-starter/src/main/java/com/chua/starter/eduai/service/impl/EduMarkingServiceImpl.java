@@ -289,57 +289,99 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return submitAnswerSheet的结果
      */
     public String submitAnswerSheet(MarkingSubmitDTO dto, String ownerUserId) {
-        // 0. 入参体检：答题内容列带 json_valid 检查约束、(考试, 学生) 上有唯一键，
-        //    直接 insert 会以 500 + 数据库原文（含复合主键值）暴露给用户，这里先转成业务提示
+        // 0. 入参体检：答题内容列带 json_valid 检查约束，非 JSON 会以 500 + 数据库原文
+        //    暴露给用户，先转成业务提示；试卷校验：考试存在、试卷已发布、题号落在卷上
         validateSubmitContent(dto.content());
-        rejectDuplicateSheet(dto.examId(), dto.studentId());
-        // 0.5 试卷校验：考试必须存在、关联的试卷必须存在且已发布，答案题号必须落在试卷题项上
         validateExamPaper(dto.examId(), dto.answers());
 
-        // 1. 持久化答题卡
-        EduAnswerSheet sheet = new EduAnswerSheet();
-        sheet.setOwnerUserId(ownerUserId);
-        sheet.setAnswerSheetExamId(dto.examId());
-        sheet.setAnswerSheetStudentId(dto.studentId());
-        sheet.setAnswerSheetContent(dto.content());
-        sheet.setAnswerSheetSubmitTime(LocalDateTime.now());
-        sheet.setAnswerSheetStatus(1); // 已提交
-        sheet.setCreateTime(LocalDateTime.now());
-        sheet.setUpdateTime(LocalDateTime.now());
-        answerSheetMapper.insert(sheet);
+        // 1. 持久化答题卡（upsert：在线首拉已建草稿则原地转正，否则新插；
+        //    已提交过仍拒绝 —— 防重复语义不变）
+        EduAnswerSheet sheet = upsertAnswerSheet(dto, ownerUserId);
 
- // 2. 生成 任务标识 并预占 marking_结果
+        // 2. 建阅卷任务行：此前在线/手工提交只插结果行、从不建任务行，
+        //    学生轮询（getResultForStudent）、已交卷判定、教师阅卷列表全靠任务行
         String taskId = UUID.randomUUID().toString().replace("-", "");
+        EduExam exam = dto.examId() == null ? null : examMapper.selectById(dto.examId());
+        EduMarkingTask task = new EduMarkingTask();
+        task.setMarkingTaskTaskId(taskId);
+        task.setMarkingTaskStatus(EduMarkingTask.STATUS_PENDING);
+        task.setMarkingTaskMode(PaperScanner.MODE_SELF);
+        task.setMarkingTaskPaperId(exam == null ? null : exam.getExamPaperId());
+        task.setMarkingTaskExamId(dto.examId());
+        task.setMarkingTaskStudentId(dto.studentId());
+        task.setMarkingTaskAnswerSheetId(sheet.getAnswerSheetId());
+        task.setMarkingTaskTotal(dto.answers() == null ? 0 : dto.answers().size());
+        task.setMarkingTaskDoneCount(0);
+        task.setMarkingTaskStage("排队中");
+        task.setOwnerUserId(sheet.getOwnerUserId());
+        task.setCreateTime(LocalDateTime.now());
+        task.setUpdateTime(LocalDateTime.now());
+        taskMapper.insert(task);
+
+        // 3. 预占结果行并落基础识别信息（题号/题干/作答/满分，与扫描链路同口径）；
+        //    客观题同步判分（确定性规则，零 AI 成本），只有主观题才进 AI 链路 ——
+        //    updateAiOutcome 会按 (taskId,questionId) 覆盖 score/status，
+        //    客观题若再走一遍会被冲掉这里的同步判分结果
+        Map<Long, EduPaperQuestion> relations = resolvePaperRelations(exam);
+        Map<Long, Integer> fullScores = new HashMap<>();
+        for (Map.Entry<Long, EduPaperQuestion> entry : relations.entrySet()) {
+            if (entry.getValue().getPaperQuestionScore() != null) {
+                fullScores.put(entry.getKey(), entry.getValue().getPaperQuestionScore());
+            }
+        }
+        int fallbackScore = properties.getMarking().getMaxScore();
+        List<MarkingSubmitDTO.AnswerItem> subjective = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
         for (MarkingSubmitDTO.AnswerItem item : dto.answers()) {
+            EduQuestion question = item.questionId() == null ? null
+                    : questionMapper.selectById(item.questionId());
+            int maxScore = fullScores.getOrDefault(item.questionId(), fallbackScore);
             EduMarkingResult result = new EduMarkingResult();
             result.setOwnerUserId(sheet.getOwnerUserId());
             result.setMarkingResultAnswerSheetId(sheet.getAnswerSheetId());
             result.setMarkingResultQuestionId(item.questionId());
             result.setMarkingResultTaskId(taskId);
             result.setMarkingResultStatus(STATUS_PENDING);
-            result.setCreateTime(LocalDateTime.now());
+            result.setMarkingResultDetail(buildOnlineBaseDetail(item, question,
+                    relations.get(item.questionId()), maxScore));
+            result.setCreateTime(now);
+            if (question != null && isObjectiveType(question.getQuestionType())) {
+                PaperAiService.MarkingOutcome outcome = tolerantObjectiveOutcome(question,
+                        item.answer() == null ? "" : item.answer().trim(), maxScore);
+                result.setMarkingResultAiScore(outcome.getScore());
+                result.setMarkingResultAiComment(outcome.getComment());
+                result.setMarkingResultScore(outcome.getScore());
+                result.setMarkingResultComment(outcome.getComment());
+                result.setMarkingResultStatus(STATUS_AI_DONE);
+                result.setMarkingResultDetail(mergeOnlineOutcomeDetail(
+                        result.getMarkingResultDetail(), outcome, maxScore));
+            } else {
+                subjective.add(item);
+            }
             result.setUpdateTime(LocalDateTime.now());
             markingResultMapper.insert(result);
         }
 
-        if (properties.getMarking().isAsync()) {
-            /**
-             * dispatch异步。
-             * @param taskId 任务标识
-             * @param sheet.getAnswerSheetId( sheet.获取answersheetid(
-             */
-            dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.answers());
+        // 4. 主观题进阅卷链路；全部客观题时没有 AI 阶段，直接收口任务
+        if (!subjective.isEmpty()) {
+            if (properties.getMarking().isAsync()) {
+                /**
+                 * dispatch异步（只带主观题）。
+                 */
+                dispatchAsync(taskId, sheet.getAnswerSheetId(), subjective);
+            } else {
+                /**
+                 * mark同步（只判主观题）。
+                 */
+                markSync(taskId, subjective);
+            }
         } else {
-            /**
-             * mark同步。
-             * @param taskId 任务标识
-             * @param dto.getAnswers( dto.获取answers(
-             */
-            markSync(taskId, dto.answers());
+            finishOnlineTask(taskId);
         }
 
-        log.info("[EduAi] 答题卡已提交: taskId={}, student={}, async={}",
-                taskId, dto.studentId(), properties.getMarking().isAsync());
+        log.info("[EduAi] 答题卡已提交: taskId={}, student={}, 题数={}, 主观题={}, async={}",
+                taskId, dto.studentId(), dto.answers() == null ? 0 : dto.answers().size(),
+                subjective.size(), properties.getMarking().isAsync());
         return taskId;
     }
 
@@ -423,23 +465,70 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 同一考试同一学生只允许一份答题卡：唯一键 {@code uk(answer_sheet_exam_id, answer_sheet_student_id)}
-     * 冲突会以 500 + 复合键值暴露，这里先查后插，转成业务提示。
+     * 提交时落答题卡（upsert）。
      *
-     * @param examId    考试 ID，可为空（未绑定考试时不参与唯一键判定）
-     * @param studentId 学生 ID
+     * <p>在线链路首拉试卷时已建草稿（status=0，content 为 NULL），这里原地转正为已提交；
+     * 教师手工链路没有草稿，直接新插。已提交过（status≥1）仍拒绝 —— 唯一键
+     * {@code uk(answer_sheet_exam_id, answer_sheet_student_id)} 的防重复语义不变，
+     * 由原来的 {@code rejectDuplicateSheet} 并入此处，避免 500 + 复合键值暴露。</p>
+     *
+     * @param dto         提交内容
+     * @param ownerUserId 归属用户标识（新插时写入；草稿转正保留原归属）
+     * @return 已落库的答题卡
      */
-    private void rejectDuplicateSheet(Long examId, String studentId) {
-        if (examId == null || StringUtils.isBlank(studentId)) {
-            return;
+    private EduAnswerSheet upsertAnswerSheet(MarkingSubmitDTO dto, String ownerUserId) {
+        EduAnswerSheet exists = null;
+        if (dto.examId() != null && StringUtils.isNotBlank(dto.studentId())) {
+            exists = answerSheetMapper.selectOne(new LambdaQueryWrapper<EduAnswerSheet>()
+                    .eq(EduAnswerSheet::getAnswerSheetExamId, dto.examId())
+                    .eq(EduAnswerSheet::getAnswerSheetStudentId, dto.studentId())
+                    .last("LIMIT 1"));
         }
-        Long exists = answerSheetMapper.selectCount(new LambdaQueryWrapper<EduAnswerSheet>()
-                .eq(EduAnswerSheet::getAnswerSheetExamId, examId)
-                .eq(EduAnswerSheet::getAnswerSheetStudentId, studentId));
-        if (exists != null && exists > 0) {
-            log.warn("[EduAi] 重复提交答题卡已拦截: examId={}, studentId={}", examId, studentId);
-            throw new BusinessException("该考试下该学生已提交过答题卡，请勿重复提交");
+        LocalDateTime now = LocalDateTime.now();
+        if (exists != null) {
+            if (exists.getAnswerSheetStatus() != null && exists.getAnswerSheetStatus() >= 1) {
+                log.warn("[EduAi] 重复提交答题卡已拦截: examId={}, studentId={}",
+                        dto.examId(), dto.studentId());
+                throw new BusinessException("该考试下该学生已提交过答题卡，请勿重复提交");
+            }
+            // 在线首拉建的草稿（status=0）原地转正为已提交
+            exists.setAnswerSheetContent(dto.content());
+            exists.setAnswerSheetSubmitTime(now);
+            exists.setAnswerSheetStatus(1);
+            exists.setUpdateTime(now);
+            answerSheetMapper.updateById(exists);
+            return exists;
         }
+        EduAnswerSheet sheet = new EduAnswerSheet();
+        sheet.setOwnerUserId(ownerUserId);
+        sheet.setAnswerSheetExamId(dto.examId());
+        sheet.setAnswerSheetStudentId(dto.studentId());
+        sheet.setAnswerSheetContent(dto.content());
+        sheet.setAnswerSheetSubmitTime(now);
+        sheet.setAnswerSheetStatus(1); // 已提交
+        sheet.setCreateTime(now);
+        sheet.setUpdateTime(now);
+        answerSheetMapper.insert(sheet);
+        return sheet;
+    }
+
+    /**
+     * 试卷题项映射（题目 -> 卷面题项），用于取卷面分值与卷面题号。
+     *
+     * @param exam 考试（可为空：未挂考试的提交取不到卷面信息，返回空映射）
+     * @return 题目ID -> 卷面题项
+     */
+    private Map<Long, EduPaperQuestion> resolvePaperRelations(EduExam exam) {
+        if (exam == null || exam.getExamPaperId() == null) {
+            return Map.of();
+        }
+        Map<Long, EduPaperQuestion> relations = new HashMap<>();
+        for (EduPaperQuestion relation : paperQuestionMapper.selectByPaperIdForScores(exam.getExamPaperId())) {
+            if (relation.getPaperQuestionQuestionId() != null) {
+                relations.put(relation.getPaperQuestionQuestionId(), relation);
+            }
+        }
+        return relations;
     }
 
     /**
@@ -515,6 +604,29 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             );
             applyOutcome(taskId, question, outcome);
         }
+        // 在线/手工链路收口：任务行置已完成，学生轮询才能拿到 finished=true；
+        // 扫描链路走 processTask 自己的收口，不经过这里
+        finishOnlineTask(taskId);
+    }
+
+    /**
+     * 在线/手工提交链路的任务收口：判分全部落库后把任务置为已完成。
+     *
+     * <p>同步链路（{@link #markSync}）与「全部客观题」的即时判分都会走到这里。
+     * 收口后 {@code getResultForStudent} 才能判定 finished；若队列消息丢失，
+     * {@code resumeUnfinishedTasks} 仍会捞起 PENDING 任务重跑，天然可恢复。
+     * 自动结案开关打开时，与扫描链路同口径顺带登记错题。</p>
+     *
+     * @param taskId 任务业务标识
+     */
+    private void finishOnlineTask(String taskId) {
+        try {
+            int total = markingResultMapper.selectByTaskId(taskId).size();
+            changeStage(taskId, EduMarkingTask.STATUS_DONE, "已完成", total, total, null, true);
+        } catch (Exception e) {
+            log.warn("[EduAi] 在线阅卷任务收口失败: taskId={}, err={}", taskId, e.getMessage());
+        }
+        autoFinishIfEnabled(taskId);
     }
 
     /**
@@ -2235,6 +2347,64 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         detail.put("score", outcome == null ? 0 : outcome.getScore());
         detail.put("correct", outcome != null && maxScore > 0 && outcome.getScore() >= maxScore);
         detail.put("source", outcome == null ? "FALLBACK" : outcome.getSource());
+        return Json.toJson(detail);
+    }
+
+    /**
+     * 在线/手工提交的基础识别信息（判分前随结果行落库）。
+     *
+     * <p>与扫描链路的 {@link #buildScanBaseDetail} 同口径（题号/题干/作答/满分），
+     * 但不带 {@code scan} 标记：结果面板（buildResultVo）与重启续跑
+     * （gradePendingOfTask）都从 detail 还原题目。学生作答是结构化录入的干净文本，
+     * 不需要扫描链路那套 OCR 清洗/剥题干。</p>
+     *
+     * @param item     作答项
+     * @param question 题库题目（可为空：题目被删时仍保留作答痕迹）
+     * @param relation 卷面题项（可为空：未挂考试时取不到卷面题号）
+     * @param maxScore 本题满分
+     * @return 详情 JSON（尚无得分）
+     */
+    private static String buildOnlineBaseDetail(MarkingSubmitDTO.AnswerItem item,
+                                                EduQuestion question,
+                                                EduPaperQuestion relation,
+                                                int maxScore) {
+        var detail = new java.util.LinkedHashMap<String, Object>();
+        String recognizedNo = "";
+        if (relation != null && relation.getPaperQuestionNo() != null) {
+            recognizedNo = relation.getPaperQuestionNo();
+        } else if (relation != null && relation.getPaperQuestionOrder() != null) {
+            recognizedNo = String.valueOf(relation.getPaperQuestionOrder());
+        }
+        detail.put("recognizedNo", recognizedNo);
+        detail.put("stem", question == null ? "" : question.getQuestionStem());
+        detail.put("studentAnswer", item.answer() == null ? "" : item.answer().trim());
+        detail.put("maxScore", maxScore);
+        return Json.toJson(detail);
+    }
+
+    /**
+     * 在线客观题即时判分后的最终详情：基础信息 + 得分/对错/来源。
+     *
+     * @param baseDetail 基础详情 JSON（{@link #buildOnlineBaseDetail} 的产物）
+     * @param outcome    判分结果
+     * @param maxScore   本题满分
+     * @return 详情 JSON
+     */
+    private static String mergeOnlineOutcomeDetail(String baseDetail,
+                                                   PaperAiService.MarkingOutcome outcome,
+                                                   int maxScore) {
+        var detail = new java.util.LinkedHashMap<String, Object>();
+        if (StringUtils.isNotBlank(baseDetail)) {
+            try {
+                detail.putAll(MAPPER.readValue(baseDetail,
+                        new TypeReference<java.util.LinkedHashMap<String, Object>>() { }));
+            } catch (Exception e) {
+                log.warn("[EduAi] 解析在线判分基础详情失败，按空重建: {}", e.getMessage());
+            }
+        }
+        detail.put("score", outcome.getScore());
+        detail.put("correct", maxScore > 0 && outcome.getScore() >= maxScore);
+        detail.put("source", outcome.getSource());
         return Json.toJson(detail);
     }
 

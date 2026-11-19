@@ -121,4 +121,16 @@ public interface IEduStudentCenterService {
      * @return 阅卷任务标识（用 {@code GET /v2/edu/student/marking/result/{taskId}} 轮询）
      */
     String submitMyPaperAnswer(Long paperId, StudentPaperSubmitDTO dto);
+
+    /**
+     * 学生：查询我在某张试卷下的剩余作答时间。
+     *
+     * <p>计时锚点是服务端为本人创建的草稿答题卡时间（首次拉卷即建），客户端时钟不可信；
+     * 交卷时服务端还会再做一次权威校验。考试按（试卷，班级）自动就位。</p>
+     *
+     * @param paperId 试卷标识
+     * @return timed 是否限时；durationMinutes 考试时长（分钟）；
+     *         remainingSeconds 剩余秒数（不限时为 -1，已交卷为 0）
+     */
+    Map<String, Object> myExamTimer(Long paperId);
 }

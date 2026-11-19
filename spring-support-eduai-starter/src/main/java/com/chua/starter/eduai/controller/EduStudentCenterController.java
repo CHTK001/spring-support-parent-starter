@@ -173,6 +173,22 @@ public class EduStudentCenterController {
         return ReturnResult.ok(studentCenterService.submitMyPaperAnswer(paperId, dto));
     }
 
+    /**
+     * 查询我在某张试卷下的剩余作答时间。
+     *
+     * <p>计时锚点是服务端为本人创建的草稿答题卡时间（首次拉卷即建）；前端据此校准
+     * 倒计时，客户端时钟不可信。交卷时服务端还会再做一次权威校验。</p>
+     *
+     * @param paperId 试卷标识
+     * @return timed 是否限时；durationMinutes 考试时长（分钟）；
+     *         remainingSeconds 剩余秒数（不限时 -1，已交卷 0）
+     */
+    @Operation(summary = "我的作答剩余时间")
+    @GetMapping("/papers/{paperId}/timer")
+    public ReturnResult<Map<String, Object>> paperTimer(@PathVariable Long paperId) {
+        return ReturnResult.ok(studentCenterService.myExamTimer(paperId));
+    }
+
     // ==================== 我的错题本 ====================
 
     /**
