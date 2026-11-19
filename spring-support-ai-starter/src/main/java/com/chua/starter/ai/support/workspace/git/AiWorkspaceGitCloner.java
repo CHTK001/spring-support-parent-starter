@@ -96,10 +96,49 @@ public class AiWorkspaceGitCloner {
         } catch (Exception e) {
             // 半成品目录必须回收：否则下次同名创建会直接撞「项目已存在」
             deleteQuietly(target);
-            log.warn("[Workspace] 克隆仓库失败 url={} target={} error={}", normalizedUrl, target, e.getMessage());
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "克隆仓库失败：" + messageOf(e));
+            String raw = messageOf(e);
+            log.warn("[Workspace] 克隆仓库失败 url={} target={} error={}", normalizedUrl, target, e.toString());
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "克隆仓库失败：" + explain(e, raw));
         }
         return target;
+    }
+
+    /**
+     * 把 JGit 的底层异常翻译成用户能处理的原因。
+     *
+     * <p>旧实现直接把最内层异常的英文串拼给前端，用户看到的是
+     * {@code unable to find valid certification path to requested target} 或
+     * {@code Authentication is required but no CredentialsProvider has been registered}，
+     * 既不知道该改哪里，也分不清「私有仓库无权限」与「仓库不存在」
+     * （2026-11-18 验收 G1）。原始串仍写进日志，排查不受影响。</p>
+     *
+     * @param error 原始异常（用于按类型判定）
+     * @param raw   {@link #messageOf(Throwable)} 取到的最内层原因
+     * @return 面向用户的中文原因
+     */
+    private static String explain(Throwable error, String raw) {
+        String text = raw == null ? "" : raw.toLowerCase(Locale.ROOT);
+        for (Throwable cause = error; cause != null && cause.getCause() != cause; cause = cause.getCause()) {
+            text = text + " " + Objects.toString(cause.getClass().getSimpleName(), "").toLowerCase(Locale.ROOT);
+        }
+        if (text.contains("certification path") || text.contains("pkix") || text.contains("sslhandshake")
+                || text.contains("certificate") || text.contains("trust_manager")
+                || text.contains("unable to find valid")) {
+            return "无法验证 github.com 的 HTTPS 证书。本机可能经过代理或企业网关，"
+                    + "请把该网关的根证书导入运行本服务的 JDK 信任库后重启服务，或检查系统代理设置";
+        }
+        if (text.contains("authentication is required") || text.contains("not authorized")
+                || text.contains("credentialsprovider") || text.contains("401") || text.contains("403")) {
+            return "仓库不存在或为私有仓库。目前只支持公开仓库，本服务不会保存任何 Git 凭据";
+        }
+        if (text.contains("not found") || text.contains("404") || text.contains("repository not found")) {
+            return "仓库不存在或已改名，请确认 https://github.com/owner/repo 是否正确";
+        }
+        if (text.contains("unknownhost") || text.contains("connect") || text.contains("timed out")
+                || text.contains("timeout") || text.contains("unreachable") || text.contains("network")) {
+            return "无法连接 github.com，请检查本机网络或代理后重试";
+        }
+        return "请稍后重试；若持续失败，请把后端日志里的原始错误发给管理员";
     }
 
     /**
