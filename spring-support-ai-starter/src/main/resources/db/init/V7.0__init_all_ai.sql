@@ -1,39 +1,34 @@
 -- =====================================================================
--- V6.11__init_all_ai.sql - spring-support-ai-starter 全量表结构
+-- V7.0__init_all_ai.sql - spring-support-ai-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口；本目录 INIT 通道只保留本文件，
---   INITDATA 通道只保留 V6.11__initdata_all_ai.sql。此前分散的
---   V1.0__init_all_ai.sql、V4.0.0.46 ~ V4.0.0.57 的增量脚本，以及
---   V5.2 / V5.3 / V5.6 / V5.7 / V5.8 / V5.9 / V5.10 / V6.1 / V6.2 /
---   V6.4 / V6.5 / V6.6 / V6.7 / V6.8 / V6.9 各增量，均在收敛中并入本文件
---   并删除（V5.6 / V5.8 / V5.9 的数据类 UPDATE 移入 V5.1 initdata）。
--- 版本递进: V6.10 -> V6.11。FlywayLike 按「脚本名 + 版本」记账，命中成功记录
---   即跳过（checksum 变化只做校验、不会触发重跑），故每新增补列都必须递进
---   版本号，否则存量库不会重跑、新列补不进去。
--- 约束: MySQL 专属语法（ENGINE=InnoDB / COMMENT 内联注释 / SET @var + PREPARE 动态 DDL）。
---   MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS、MariaDB 11.8 同样拒绝，
---   故补列一律沿用 information_schema 判存的动态 DDL 写法。
+--   INITDATA 通道只保留 V7.0__initdata_all_ai.sql。此前分散的
+--   V1.0__init_all_ai.sql、V4.0.0.46 ~ V4.0.0.57 的增量脚本，V5.2 ~ V6.9
+--   各增量，以及 V6.11 ~ V6.19 的全量 / 增量脚本，均在历次收敛中并入
+--   本文件并删除。
+-- 版本递进: V6.19 -> V7.0。FlywayLike 按「脚本名 + 版本」记账，命中成功记录
+--   即跳过（checksum 变化只做校验、不会触发重跑）。已执行过 V6.11 ~ V6.19
+--   的存量库，表结构已由旧脚本就位；本文件首次执行时全部语句命中
+--   IF NOT EXISTS，不会重复建表、不改动既有表。
+-- 约束: 本文件只保留通用 SQL，全部语句均为 CREATE TABLE IF NOT EXISTS
+--   （列 / 索引 / 注释内联），不再使用 SET @var + information_schema 判存
+--   + PREPARE / EXECUTE / DEALLOCATE 的动态 DDL；可反复执行。
 -- =====================================================================
 --
--- 本文件分三段：
---   [一] 基础表结构        —— 源自原 V1.0__init_all_ai.sql 的全部 CREATE TABLE，
---                             并已把后续 ALTER 追加的列内联进各自的列定义
---                             （含 V5.2 / V5.3 / V5.6 / V5.8 / V5.9 / V5.10 /
---                             V6.1 / V6.2 / V6.6 / V6.7 / V6.8 / V6.9 的补列）。
---   [二] 增量并入的表结构  —— 源自原 V4.0.0.48 / 49 / 50 / 51 / 52 建表的表，
---                             以及仅由运行期 Java 侧 DDL 落库的 sys_ai_memory。
---                             另含 V5.6 的 sys_ai_world_act、V5.7 的
---                             sys_ai_channel_health、V5.8 的
---                             sys_ai_app_key_topup_log 三张新表。
---   [三] 存量库兼容 ALTER  —— 源自原 V4.0.0.46 / 47 / 48 / 53 / 54 / 55 / 56 / 57
---                             与 V5.2 ~ V6.9 的存量库补丁（含 V6.4 的
---                             DROP sys_ai_service_token），全部改写为
---                             information_schema 判存 + 动态 DDL 的幂等形式。
+-- 本文件内容：
+--   基础业务表            —— provider / model / conversation / usage /
+--                             browser / knowledge / companion / tavern /
+--                             world / terminal 等全部 CREATE TABLE，已把
+--                             历次增量追加的列 / 索引内联进各自的列定义
+--                             （含 V6.14 的 usage_daily token 列扩为 BIGINT、
+--                             V6.16 的 sys_ai_usage_status 列）。
+--   厂商指标系数表        —— sys_ai_provider_metric。
+--   供应商余额            —— sys_ai_provider_credit（含 V6.18 的 extra 列）
+--                             与 sys_ai_provider_credit_history
+--                             （原 V6.17 / V6.18 / V6.19）。
 --
 -- 【幂等性约定】
---   CREATE TABLE 一律带 IF NOT EXISTS；补列 / 建索引 / 删索引一律走
---   SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema....), 'SELECT 1', '<DDL>'))
---   + PREPARE / EXECUTE / DEALLOCATE 四步，避免重复执行报 1060 / 1061 / 1091。
+--   全部语句为 CREATE TABLE IF NOT EXISTS，可反复执行。
 
 -- =====================================================================
 -- [一] 基础表结构
@@ -256,6 +251,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
     `sys_ai_usage_total_tokens_per_second` DOUBLE NULL COMMENT '端到端吞吐(Token/秒)',
   `sys_ai_usage_source` VARCHAR(32) NULL DEFAULT 'third_party' COMMENT '用量来源',
   `sys_ai_usage_estimated_tokens` TINYINT NULL DEFAULT 0 COMMENT 'token是否估算',
+  `sys_ai_usage_status` VARCHAR(16) NULL DEFAULT 'success' COMMENT ' 用量状态: success(成功)/failed(超时截断)',
 
     PRIMARY KEY (`sys_ai_usage_id`),
     KEY `sys_ai_usage_sys_ai_usage_request_id` (`sys_ai_usage_request_id`),
@@ -269,9 +265,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `sys_ai_usage_daily_provider`              VARCHAR(64)  NULL COMMENT '',
     `sys_ai_usage_daily_model`                 VARCHAR(128) NULL COMMENT '',
     `sys_ai_usage_daily_total_calls`           INT          NULL COMMENT '',
-    `sys_ai_usage_daily_total_prompt_tokens`   INT          NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_completion_tokens` INT       NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_tokens`         INT          NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_prompt_tokens`   BIGINT       NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_completion_tokens` BIGINT    NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_tokens`         BIGINT       NULL COMMENT ' Token',
     `sys_ai_usage_daily_total_cost`           DOUBLE       NULL COMMENT '',
     `create_name`                               VARCHAR(64)  NULL COMMENT '',
     `create_by`                                 INT          NULL COMMENT '',
@@ -279,7 +275,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `update_name`                               VARCHAR(64)  NULL COMMENT '',
     `update_by`                                 INT          NULL COMMENT '',
     `update_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    `sys_ai_usage_daily_total_cached_tokens` INT DEFAULT 0 COMMENT '缓存读取 Token 合计',
+    `sys_ai_usage_daily_total_cached_tokens` BIGINT DEFAULT 0 COMMENT '缓存读取 Token 合计',
     `sys_ai_usage_daily_total_latency` BIGINT DEFAULT 0 COMMENT '总耗时(ms)合计',
     `sys_ai_usage_daily_standard_cost` DOUBLE DEFAULT 0 COMMENT '标准费用(官方价格)',
     `sys_ai_usage_daily_total_first_token_latency` BIGINT DEFAULT 0 COMMENT '总首字延迟(ms)合计',
@@ -1523,10 +1519,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_instance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 服务实例（端口/协议开关/用量记录）';
 
 -- ------------------------------------------------------------
--- 存量库兼容 ALTER 已并入本文件末尾的 [三] 段。
---
--- 新增的存量库兼容 DDL 请继续沿用 information_schema 判存 + 动态 DDL 的写法，
--- 追加在 [三] 段内；不要在 [一]/[二] 段末尾另起裸 ALTER。
+-- V7.0 起本文件不再携带存量库兼容 ALTER（动态 DDL 段已随收敛删除）；
+-- 存量库的结构演进由已执行过的历史版本脚本（V6.11 ~ V6.19）负责。
 -- ------------------------------------------------------------
 
 -- =====================================================================
@@ -1815,444 +1809,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_app_key_topup_log` (
     KEY `idx_topup_log_created_at` (`sys_ai_app_key_topup_log_created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AppKey 充值/消费 流水账';
 
--- =====================================================================
--- [三] 存量库兼容 ALTER（幂等动态 DDL）
--- =====================================================================
---
--- 用途：全新库上这些列已写进 [一]/[二] 段的 CREATE TABLE；存量库上是旧表形，
---       需要在这里补齐。每组都是
---         SET @ddl = (SELECT IF(EXISTS(...), 'SELECT 1', '<DDL>'))
---       + PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
---       拆分后每条都是合法 SQL，可被反复执行，不会重复建列 / 建索引 / 删索引。
---
--- 【为什么不用 ADD COLUMN IF NOT EXISTS】
---   那是 MariaDB 语法，MySQL 8.4 不支持（实测 8.4.9 首次执行即报 1064），
---   MariaDB 11.8 同样拒绝该写法。本仓不存在做方言展开的 MysqlScriptConverter，
---   SQL 原样透传给数据库，故一律沿用上面的动态 DDL 判存写法。
---
--- 【执行顺序不可调换】
---   加列 → 建归属索引 → 删旧全局唯一键 → 建复合唯一键。
---   复合键依赖新列；删旧键必须晚于加列、早于建新键，否则中途失败会留下
---   vector_id / code 全局唯一约束，跨账号登记依旧撞键。
-
--- =====================================================================
--- 存量库补列（原 V4.0.0.46__add_library_owner.sql，已并入本文件）
---
--- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
--- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
--- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
--- =====================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND COLUMN_NAME = 'sys_ai_face_library_user_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_face_library` ADD COLUMN `sys_ai_face_library_user_id` VARCHAR(64) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-          AND COLUMN_NAME = 'sys_ai_image_library_user_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_image_library` ADD COLUMN `sys_ai_image_library_user_id` VARCHAR(64) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- =====================================================================
--- 底库归属 + 经纬度（原 V4.0.0.47 系列，已并入本文件）
---
--- 经纬度语义：**非必填**，记录这条档案「登记位置」，用于按地理位置筛选/展示；
--- 与特征向量无关 —— 向量仍只存特征（jvector），本表只存标量元数据。
--- 用 DECIMAL(10,7) 而非 DOUBLE：经纬度需要稳定的小数位比较与索引，
--- 浮点会带来 1e-7 级的表示误差，两个"相同"坐标等值查询可能不命中。
--- =====================================================================
-
--- ---------- 人脸库：经纬度 ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND COLUMN_NAME = 'sys_ai_face_library_lat'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_face_library` ADD COLUMN `sys_ai_face_library_lat` DECIMAL(10,7) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND COLUMN_NAME = 'sys_ai_face_library_lng'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_face_library` ADD COLUMN `sys_ai_face_library_lng` DECIMAL(10,7) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 重识别库：归属账号 ----------
--- 重识别库与其它底库同口径按账号隔离；存量行 user_id 为 NULL 即"无主历史行"，
--- 不设默认值，避免悄悄落到某个账号名下。
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_user_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_user_id` VARCHAR(64) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 重识别库：轨迹与摄像头 ----------
--- 跨帧轨迹不做单独一张表：轨迹是「同一 track_id 的观测按时间汇聚」的结果，
--- 另建表就要维护两份一致的状态（观测迁轨迹、轨迹删观测），而汇聚查询本就是一次 GROUP BY。
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_track_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_track_id` VARCHAR(64) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_camera_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_camera_id` VARCHAR(128) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND INDEX_NAME = 'sys_ai_reid_library_track'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_reid_library_track` ON `sys_ai_reid_library` (`sys_ai_reid_library_track_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 重识别库：经纬度 ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_lat'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_lat` DECIMAL(10,7) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_lng'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_lng` DECIMAL(10,7) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 重识别库：去掉 vector_id 全局唯一键，改按 (账号, vector_id) 唯一 ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND INDEX_NAME = 'sys_ai_reid_library_reid_vector_id'),
-        'ALTER TABLE `sys_ai_reid_library` DROP INDEX `sys_ai_reid_library_reid_vector_id`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND INDEX_NAME = 'sys_ai_reid_library_owner_vector'),
-        'SELECT 1',
-        'CREATE UNIQUE INDEX `sys_ai_reid_library_owner_vector` ON `sys_ai_reid_library` (`sys_ai_reid_library_user_id`, `sys_ai_reid_library_vector_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND INDEX_NAME = 'sys_ai_reid_library_user'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_reid_library_user` ON `sys_ai_reid_library` (`sys_ai_reid_library_user_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 经纬度复合索引（按地理范围筛选） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND INDEX_NAME = 'sys_ai_face_library_geo'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_face_library_geo` ON `sys_ai_face_library` (`sys_ai_face_library_lat`, `sys_ai_face_library_lng`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND INDEX_NAME = 'sys_ai_reid_library_geo'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_reid_library_geo` ON `sys_ai_reid_library` (`sys_ai_reid_library_lat`, `sys_ai_reid_library_lng`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 归属列普通索引（供按账号过滤，全库扫描必须走它） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND INDEX_NAME = 'sys_ai_face_library_user'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_face_library_user` ON `sys_ai_face_library` (`sys_ai_face_library_user_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-          AND INDEX_NAME = 'sys_ai_image_library_user'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_image_library_user` ON `sys_ai_image_library` (`sys_ai_image_library_user_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 去掉 vector_id 全局唯一键 ----------
--- 两种命名都要删：本文件建的是 xxx_vector_id，
--- 而存量库里实际存在的是 uk_*_vector_id（该库并非由当前脚本创建）。
--- 只删一个名字的话，另一套库上旧的全局唯一键会留下，跨账号登记照样撞键。
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND INDEX_NAME = 'sys_ai_face_library_face_vector_id'),
-        'ALTER TABLE `sys_ai_face_library` DROP INDEX `sys_ai_face_library_face_vector_id`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND INDEX_NAME = 'uk_face_vector_id'),
-        'ALTER TABLE `sys_ai_face_library` DROP INDEX `uk_face_vector_id`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-          AND INDEX_NAME = 'sys_ai_image_library_image_vector_id'),
-        'ALTER TABLE `sys_ai_image_library` DROP INDEX `sys_ai_image_library_image_vector_id`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-          AND INDEX_NAME = 'uk_image_vector_id'),
-        'ALTER TABLE `sys_ai_image_library` DROP INDEX `uk_image_vector_id`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 建立（归属, 向量标识）复合唯一键 ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_face_library'
-          AND INDEX_NAME = 'sys_ai_face_library_owner_vector'),
-        'SELECT 1',
-        'CREATE UNIQUE INDEX `sys_ai_face_library_owner_vector` ON `sys_ai_face_library` (`sys_ai_face_library_user_id`, `sys_ai_face_library_vector_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-          AND INDEX_NAME = 'sys_ai_image_library_owner_vector'),
-        'SELECT 1',
-        'CREATE UNIQUE INDEX `sys_ai_image_library_owner_vector` ON `sys_ai_image_library` (`sys_ai_image_library_user_id`, `sys_ai_image_library_vector_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
 
--- =====================================================================
--- 存量库补列（原 V4.0.0.47__add_ai_model_owner_and_task_elapsed.sql，已并入本文件）
---
--- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
--- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
--- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
--- =====================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_generate_task'
-          AND COLUMN_NAME = 'sys_ai_generate_task_elapsed'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_generate_task` ADD COLUMN `sys_ai_generate_task_elapsed` BIGINT NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND COLUMN_NAME = 'sys_ai_model_user_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_model` ADD COLUMN `sys_ai_model_user_id` VARCHAR(64) NULL'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 归属列普通索引（供按账号过滤） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND INDEX_NAME = 'sys_ai_model_user_id'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_model_user_id` ON `sys_ai_model` (`sys_ai_model_user_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 去掉 model_code 的全局唯一键 ----------
--- 两种命名都要删：本脚本建的是 uk_sys_ai_model_owner_code，
--- 而存量库里实际存在的是 uk_sys_ai_model_code（该库并非由当前脚本创建）。
--- MySQL 唯一索引中 NULL 互不相等，故无主历史行之间不受新复合键约束，符合预期。
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND INDEX_NAME = 'sys_ai_model_sys_ai_model_code'),
-        'ALTER TABLE `sys_ai_model` DROP INDEX `sys_ai_model_sys_ai_model_code`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND INDEX_NAME = 'uk_sys_ai_model_code'),
-        'ALTER TABLE `sys_ai_model` DROP INDEX `uk_sys_ai_model_code`',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 建立（归属, code）复合唯一键 ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND INDEX_NAME = 'sys_ai_model_owner_code'),
-        'SELECT 1',
-        'CREATE UNIQUE INDEX `sys_ai_model_owner_code` ON `sys_ai_model` (`sys_ai_model_user_id`, `sys_ai_model_code`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-
--- =====================================================================
--- 存量库补列（原 V4.0.0.53__add_ai_model_latency_test_status.sql，已并入本文件）
---
--- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
--- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
--- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
--- =====================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND COLUMN_NAME = 'sys_ai_model_last_status'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_model` ADD COLUMN `sys_ai_model_last_status` VARCHAR(16) NULL COMMENT ''最近一次连通性测试状态(success/failed)，NULL=未知'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model'
-          AND COLUMN_NAME = 'sys_ai_model_last_error'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_model` ADD COLUMN `sys_ai_model_last_error` VARCHAR(512) NULL COMMENT ''最近一次连通性测试失败原因(错误种类: HTTP状态/超时/连接被拒/Key缺失)'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-
--- =====================================================================
--- 存量库补列（原 V4.0.0.57__add_whatsapp_bot_binding_columns.sql，已并入本文件）
---
--- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
--- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
--- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
--- =====================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
-          AND COLUMN_NAME = 'sys_ai_bot_binding_app_secret'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_app_secret` VARCHAR(512) NULL COMMENT ''平台应用密钥（WhatsApp App Secret，用于验签）'' AFTER `sys_ai_bot_binding_bot_token`'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
-          AND COLUMN_NAME = 'sys_ai_bot_binding_verify_token'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_verify_token` VARCHAR(255) NULL COMMENT ''Webhook 校验令牌（WhatsApp Verify Token）'' AFTER `sys_ai_bot_binding_app_secret`'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_bot_binding'
-          AND COLUMN_NAME = 'sys_ai_bot_binding_role_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_bot_binding` ADD COLUMN `sys_ai_bot_binding_role_id` INT NULL COMMENT ''绑定的 AI 角色ID（sys_ai_role.sys_ai_role_id）'' AFTER `sys_ai_bot_binding_model`'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- 分组默认角色（sys_ai_group_default_role_id）的存量库补列见 V6.12：
--- 本文件（V6.11）已被执行过的库不会再跑第二遍，补列必须放在新版本脚本里。
--- =====================================================================
--- 存量库补列 / 种子（原 V4.0.0.48 / V4.0.0.49 / V4.0.0.54 / V4.0.0.55 / V4.0.0.56，
--- 已并入本文件）
---
--- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
--- MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS（报 1064）、MariaDB 11.8 同样拒绝，
--- 故补列一律用动态 DDL；可反复执行，重复运行只走 SELECT 1 分支。
--- =====================================================================
-
--- ---------- 存量库补列：sys_ai_app_key.provider_id 由 ID 改编码 ----------
--- 该列存的是供应商编码（openai / agnes / onnx），与其它 provider 引用列一致，全是 varchar；
--- 原定义成 BIGINT 是错的。判存条件放在「列仍是 bigint」上：
--- 列已是 varchar 时走 'SELECT 1' 分支，故重复执行不会反复 MODIFY。
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-          AND COLUMN_NAME = 'sys_ai_app_key_provider_id'
-          AND DATA_TYPE = 'bigint'),
-        'ALTER TABLE `sys_ai_app_key` MODIFY COLUMN `sys_ai_app_key_provider_id` VARCHAR(64) DEFAULT NULL COMMENT ''供应商编码（openai/agnes/onnx 等）''',
-        'SELECT 1'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- 存量库补列：sys_ai_usage 的两个吞吐字段 ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_usage'
-          AND COLUMN_NAME = 'sys_ai_usage_tokens_per_second'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_tokens_per_second` DOUBLE NULL COMMENT ''解码速度(Token/秒)'' AFTER `sys_ai_usage_total_latency`'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_usage'
-          AND COLUMN_NAME = 'sys_ai_usage_total_tokens_per_second'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_total_tokens_per_second` DOUBLE NULL COMMENT ''端到端吞吐(Token/秒)'' AFTER `sys_ai_usage_tokens_per_second`'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- 注：sys_ai_bot_binding 的 app_secret / verify_token / role_id 三列已在
--- 上面「存量库补列（原 V4.0.0.57）」一节处理，此处不再重复输出。
-
--- =====================================================================
--- 存量库补列：sys_ai_provider_model 的指标回填字段
---
--- family / knowledge / release_date / last_updated / modalities /
--- open_weights / attachment / reasoning / tool_call / temperature_supported
--- 由价格同步（syncFromIndicator）自动回填，实体列 + metrics JSON 双存。
--- 存量库已建表时补列；可反复执行（判存走 SELECT 1 分支）。
--- =====================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_family'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_family` VARCHAR(255) NULL COMMENT ''模型系列（family）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_knowledge'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_knowledge` VARCHAR(255) NULL COMMENT ''知识截止日期（knowledge）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_release_date'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_release_date` VARCHAR(64) NULL COMMENT ''发布日期（release_date）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_last_updated'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_last_updated` VARCHAR(64) NULL COMMENT ''最后更新时间（last_updated）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_modalities'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_modalities` TEXT NULL COMMENT ''输入/输出模态JSON'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_open_weights'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_open_weights` TINYINT NULL COMMENT ''是否开源权重'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_attachment'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_attachment` TINYINT NULL COMMENT ''是否支持附件'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_reasoning'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_reasoning` TINYINT NULL COMMENT ''是否支持深度思考'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_tool_call'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_tool_call` TINYINT NULL COMMENT ''是否支持工具调用'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_model'
-          AND COLUMN_NAME = 'sys_ai_provider_model_temperature_supported'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_model` ADD COLUMN `sys_ai_provider_model_temperature_supported` TINYINT NULL COMMENT ''是否支持温度调节'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- =====================================================================
 -- 厂商指标系数表（sys_ai_provider_metric，新增）
@@ -2280,23 +1839,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_metric` (
     PRIMARY KEY (`sys_ai_provider_metric_id`),
     UNIQUE KEY `uk_sys_ai_provider_metric_provider` (`sys_ai_provider_metric_provider`)
 ) COMMENT='AI 厂商指标系数表';
-
--- =====================================================================
--- 存量库补列：sys_ai_model_metrics.avg_output_speed_tps
---
--- 本地平均输出速度：按 provider+model 对全部 sys_ai_usage.tokens_per_second
--- 取 AVG，由 UsageAggregationTask 定时回填（历史均值，非 Artificial Analysis
--- 源指标，不入指标快照，也不进手动锁定字段集）。
--- 类型 DOUBLE NULL：无本地用量的模型保持 NULL，前端/计费回退到 AA 输出速度。
--- 写法：查 information_schema.COLUMNS 判存，再用 PREPARE/EXECUTE 执行动态 DDL。
--- 可反复执行，重复运行只走 SELECT 1 分支。
--- =====================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_model_metrics'
-          AND COLUMN_NAME = 'sys_ai_model_metrics_avg_output_speed_tps'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_model_metrics` ADD COLUMN `sys_ai_model_metrics_avg_output_speed_tps` DOUBLE NULL COMMENT ''本地平均输出速度 token/秒'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- =============================================================================
 -- V5.4 —— 模拟（世界沙盒）六张表
@@ -2464,327 +2006,65 @@ CREATE TABLE IF NOT EXISTS `sys_ai_terminal_session` (
     UNIQUE KEY `uk_terminal_user_chat` (`sys_user_id`, `chat_session_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI 终端会话';
 
--- =============================================================================
--- V6.11 —— sys_ai_role 增加「角色来源」，把世界沙盒 AI 生成的模拟 NPC 隔离出角色管理
---
--- 背景：世界沙盒（WorldSimServiceImpl 造角色）复用 sys_ai_role 存放 AI 起草的
---       NPC 人设，code 形如 ws-{worldId}-{时间戳}-{序号}。这些角色是世界里
---       「模拟」出来的临时人物，不属于用户维护的角色库，却会出现在「角色管理」
---       (GET /roles) 与角色下拉里。
---
--- 口径：
---   - 新增列 sys_ai_role_source：'user' = 用户自建 / 市场添加 / 种子角色库（默认），
---     'world-sim' = 世界沙盒 AI 生成的模拟角色。
---   - SysAiRoleServiceImpl 的 list() / listEnabled() 按该列过滤 world-sim；
---     世界沙盒内部按 role_id 直查（selectById）不走列表，读人设不受影响。
---   - 用户通过「加入已有角色」(addNpc) 拉进世界的真实角色 source 仍是 'user'，
---     继续在角色管理里正常显示。
---
--- 存量回填：老库里 AI 生成的 NPC 只能靠 code 前缀 ws- 识别；种子三国角色库
---          （liu-bei / guan-yu / zhuge-liang 等）不带该前缀，不会被误标。
---
--- 写法与本文件 [三] 段一致：information_schema 判存 + 动态 DDL，可重复执行。
--- 列设 NOT NULL DEFAULT 'user'，存量行自动补成 'user'，查询用 <> 不会出现
--- NULL 判不出来的漏网。
--- =============================================================================
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_role'
-          AND COLUMN_NAME = 'sys_ai_role_source'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_role` ADD COLUMN `sys_ai_role_source` VARCHAR(32) NOT NULL DEFAULT ''user'' COMMENT ''角色来源：user 用户角色库；world-sim 世界沙盒 AI 生成的模拟 NPC（角色列表不展示）'' AFTER `sys_ai_role_code`'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- 存量：把 AI 生成的模拟角色标成 world-sim（幂等，重复执行不会反复 UPDATE）
-UPDATE `sys_ai_role`
-SET `sys_ai_role_source` = 'world-sim'
-WHERE `sys_ai_role_code` LIKE 'ws-%'
-  AND `sys_ai_role_source` = 'user';
-
 -- =====================================================================
--- [三]续 存量库兼容（原 V5.3 / V5.6 / V5.8 / V5.9 / V5.10 / V6.1 /
---              V6.4 / V6.5 / V6.6 / V6.7 / V6.8 / V6.9 增量，已并入本文件）
+-- 供应商余额快照表（原 V6.17 / V6.18，已并入本文件）
 --
--- 全新库上这些列/表已写进 [一]/[二] 段的 CREATE TABLE；这里是给旧库补列的
--- 幂等 DDL，写法与上文一致：information_schema 判存 + PREPARE/EXECUTE。
--- 每列/每个索引各自独立一段（MySQL 的 ALTER 是多子句整体生效，一个子句失败
--- 整条都不生效，拆开才能「缺哪补哪」）。
+-- 为什么建表：余额读数原先只存进程内 ConcurrentHashMap（CREDIT_CACHE），
+-- 重启即失；时间轮定时刷新（需求④）也要求读数可持久化、可回看。
+-- 本表按「供应商 + 余额密钥哈希」存每个 Key 的最新一次读数，不存密钥明文。
+--
+-- 写入口径：每次同步（手动 refresh 或时间轮）对该供应商先删后增，
+-- 表内始终只有每个 Key 的最新快照；synced_at 记录本次回源时间。
+-- extra 列（原 V6.18）：按行存 extra 的 JSON 原文（sub2api 订阅明细等），
+-- 快照回放时还原，订阅明细不因进程缓存过期而丢失。
 -- =====================================================================
 
--- ---------- sys_ai_role：可见性（原 V5.3） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_role'
-          AND COLUMN_NAME = 'sys_ai_role_visibility'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_role` ADD COLUMN `sys_ai_role_visibility` INT DEFAULT 1 COMMENT ''1 普通用户可见；2 仅管理员可见（如内置审计角色）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+CREATE TABLE IF NOT EXISTS `sys_ai_provider_credit` (
+    `sys_ai_provider_credit_id`          BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    `sys_ai_provider_credit_provider_id` VARCHAR(128)  NOT NULL COMMENT '供应商 ID',
+    `sys_ai_provider_credit_key_hash`    VARCHAR(64)   NOT NULL COMMENT '余额密钥哈希（SHA-256 十六进制，不存明文）',
+    `sys_ai_provider_credit_key_mask`    VARCHAR(128)  NULL COMMENT '余额密钥掩码（展示用）',
+    `sys_ai_provider_credit_ok`          TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '本次是否查到余额',
+    `sys_ai_provider_credit_remain`      DOUBLE        NULL COMMENT '剩余余额',
+    `sys_ai_provider_credit_used`        DOUBLE        NULL COMMENT '已用余额',
+    `sys_ai_provider_credit_total`       DOUBLE        NULL COMMENT '总额（remain+used）',
+    `sys_ai_provider_credit_currency`    VARCHAR(16)   NULL COMMENT '币种（USD/CNY/%）',
+    `sys_ai_provider_credit_source`      VARCHAR(40)   NULL COMMENT '命中的余额实现（host/openai/moss/...）',
+    `sys_ai_provider_credit_parts`       TEXT          NULL COMMENT '多段读数 JSON（label/amount/currency）',
+    `sys_ai_provider_credit_extra`       TEXT          NULL COMMENT '供应商专属结构化数据 JSON（sub2api 订阅明细等）',
+    `sys_ai_provider_credit_error`       VARCHAR(1000) NULL COMMENT '失败原因（ok=1 时为空）',
+    `sys_ai_provider_credit_synced_at`   BIGINT        NULL COMMENT '本次回源时间（毫秒）',
+    `create_time`                        BIGINT        NULL COMMENT '创建时间（毫秒）',
+    `update_time`                        BIGINT        NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_ai_provider_credit_id`),
+    UNIQUE KEY `uk_ai_provider_credit` (`sys_ai_provider_credit_provider_id`, `sys_ai_provider_credit_key_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='供应商余额快照（按 Key 持久化，时间轮定期刷新）';
 
--- ---------- sys_ai_world_npc：年龄 / 状态 / 性别 / 职业（原 V5.6） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_world_npc'
-          AND COLUMN_NAME = 'age'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_world_npc` ADD COLUMN `age` INT DEFAULT 0 COMMENT ''年龄（虚岁）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+-- =====================================================================
+-- 供应商余额历史表（原 V6.19，已并入本文件）
+--
+-- 为什么建表：sys_ai_provider_credit 只存每个 Key 的「最新一次」快照
+-- （每次同步先删后增），回答不了「这段时间余额怎么变化」。本表按每次
+-- 回源追加一行（手动 refresh 或时间轮定时刷新都写），供余额趋势图取数。
+-- 不存密钥明文，只存哈希与掩码；保留窗口（30 天）外的旧行由服务层清理。
+-- =====================================================================
 
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_world_npc'
-          AND COLUMN_NAME = 'age_enabled'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_world_npc` ADD COLUMN `age_enabled` TINYINT(1) DEFAULT 1 COMMENT ''年龄开关：1=随时间增长，0=冻结'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
+CREATE TABLE IF NOT EXISTS `sys_ai_provider_credit_history` (
+    `sys_ai_provider_credit_history_id`           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+    `sys_ai_provider_credit_history_provider_id`  VARCHAR(128)  NOT NULL COMMENT '供应商 ID',
+    `sys_ai_provider_credit_history_key_hash`     VARCHAR(64)   NOT NULL COMMENT '余额密钥哈希（SHA-256 十六进制，不存明文）',
+    `sys_ai_provider_credit_history_key_mask`     VARCHAR(128)  NULL COMMENT '余额密钥掩码（展示用）',
+    `sys_ai_provider_credit_history_ok`           TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '本次是否查到余额',
+    `sys_ai_provider_credit_history_remain`       DOUBLE        NULL COMMENT '剩余余额',
+    `sys_ai_provider_credit_history_used`         DOUBLE        NULL COMMENT '已用余额',
+    `sys_ai_provider_credit_history_currency`     VARCHAR(32)   NULL COMMENT '币种（USD/CNY/tokens）',
+    `sys_ai_provider_credit_history_source`       VARCHAR(64)   NULL COMMENT '命中的余额实现（host/openai/moss/...）',
+    `sys_ai_provider_credit_history_synced_at`    BIGINT        NOT NULL COMMENT '本次回源时间（毫秒）',
+    `create_time`                                 BIGINT        NULL COMMENT '创建时间（毫秒）',
+    PRIMARY KEY (`sys_ai_provider_credit_history_id`),
+    KEY `idx_credit_history_provider_synced` (`sys_ai_provider_credit_history_provider_id`, `sys_ai_provider_credit_history_synced_at`),
+    KEY `idx_credit_history_synced` (`sys_ai_provider_credit_history_synced_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='供应商余额历史（追加写，供余额趋势图）';
 
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_world_npc'
-          AND COLUMN_NAME = 'status'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_world_npc` ADD COLUMN `status` VARCHAR(16) DEFAULT ''alive'' COMMENT ''NPC状态：alive/dead/birth/away'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_world_npc'
-          AND COLUMN_NAME = 'gender'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_world_npc` ADD COLUMN `gender` VARCHAR(8) DEFAULT NULL COMMENT ''性别：male/female/unknown'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_world_npc'
-          AND COLUMN_NAME = 'profession'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_world_npc` ADD COLUMN `profession` VARCHAR(64) DEFAULT NULL COMMENT ''职业/身份（如 丞相/将军/侍从/学者）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_world_npc'
-          AND INDEX_NAME = 'idx_npc_age'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_world_npc` ADD KEY `idx_npc_age` (`age_enabled`, `age`, `status`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_app_key：密钥计费（原 V5.8，列定义已内联建表） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-          AND COLUMN_NAME = 'sys_ai_app_key_balance'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_app_key` ADD COLUMN `sys_ai_app_key_balance` DECIMAL(12,6) DEFAULT 0.000000 COMMENT ''账户余额（元）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-          AND COLUMN_NAME = 'sys_ai_app_key_plan_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_app_key` ADD COLUMN `sys_ai_app_key_plan_id` BIGINT DEFAULT 0 COMMENT ''所属套餐 ID，0 表示无套餐'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-          AND COLUMN_NAME = 'sys_ai_app_key_overdraft_enabled'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_app_key` ADD COLUMN `sys_ai_app_key_overdraft_enabled` TINYINT DEFAULT 0 COMMENT ''允许透支（0=不允许，1=允许）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-          AND COLUMN_NAME = 'sys_ai_app_key_minute_rate'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_app_key` ADD COLUMN `sys_ai_app_key_minute_rate` DECIMAL(10,6) DEFAULT 0.000000 COMMENT ''每分钟单价'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-          AND COLUMN_NAME = 'sys_ai_app_key_total_cost'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_app_key` ADD COLUMN `sys_ai_app_key_total_cost` DECIMAL(12,6) DEFAULT 0.000000 COMMENT ''累计费用（元）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_channel_health：人工熔断（原 V5.9，列定义已内联建表） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_channel_health'
-          AND COLUMN_NAME = 'circuit_state'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_channel_health` ADD COLUMN `circuit_state` VARCHAR(16) NOT NULL DEFAULT ''AUTO'' COMMENT ''人工熔断状态（AUTO 跟随探针 / OPEN 强制熔断 / CLOSED 强制放行）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_channel_health'
-          AND COLUMN_NAME = 'circuit_reason'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_channel_health` ADD COLUMN `circuit_reason` VARCHAR(512) DEFAULT NULL COMMENT ''人工熔断/放行的原因说明'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_channel_health'
-          AND COLUMN_NAME = 'circuit_updated_at'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_channel_health` ADD COLUMN `circuit_updated_at` BIGINT DEFAULT NULL COMMENT ''人工熔断状态变更时间（毫秒）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_channel_health'
-          AND INDEX_NAME = 'idx_circuit_state'),
-        'SELECT 1',
-        'CREATE INDEX `idx_circuit_state` ON `sys_ai_channel_health` (`circuit_state`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_image_library：分组隔离（原 V5.10） ----------
--- 1) 补列 sys_ai_image_library_group，存量 NULL 行自动归口到 `default`
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-          AND COLUMN_NAME = 'sys_ai_image_library_group'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_image_library` ADD COLUMN `sys_ai_image_library_group` VARCHAR(64) DEFAULT ''default'' COMMENT ''分组（group）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- 2) 历史共迁：user_id=NULL 的重复（vector_id, group）只留 id 最小的一条
---    （旧唯一键（user_id, vector_id）下它们全部成药 default，直接升级唯一键会 1062）
-SET @image_dup_groups := (
-    SELECT COUNT(*) FROM (
-        SELECT 1 FROM sys_ai_image_library
-        WHERE user_id IS NULL
-        GROUP BY vector_id, group
-        HAVING COUNT(*) > 1
-    ) AS keep
-);
-SET @sql_image_dup := IF(@image_dup_groups > 0, CONCAT(
-    'DELETE t FROM sys_ai_image_library t JOIN sys_ai_image_library x ',
-    'ON x.user_id IS NULL AND t.user_id IS NULL ',
-    'AND x.sys_ai_image_library_vector_id = t.sys_ai_image_library_vector_id ',
-    'AND x.sys_ai_image_library_group = t.sys_ai_image_library_group ',
-    'AND x.sys_ai_image_library_id < t.sys_ai_image_library_id'),
-    'SELECT 1');
-PREPARE st FROM @sql_image_dup;
-EXECUTE st;
-DEALLOCATE PREPARE st;
-
--- 3) 拆旧唯一键（（user_id, vector_id），2 列；3 列的已是新口径，0 列的从未建过）
-SET @image_owner_rows := (
-    SELECT COUNT(*) FROM information_schema.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-      AND INDEX_NAME = 'sys_ai_image_library_owner_vector'
-);
-SET @sql_image_drop := IF(@image_owner_rows = 2,
-    'ALTER TABLE `sys_ai_image_library` DROP INDEX `sys_ai_image_library_owner_vector`',
-    'SELECT 1');
-PREPARE st FROM @sql_image_drop;
-EXECUTE st;
-DEALLOCATE PREPARE st;
-
--- 4) 建（user_id, vector_id, group）唯一键
-SET @image_owner := (
-    SELECT COUNT(*) FROM information_schema.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-      AND INDEX_NAME = 'sys_ai_image_library_owner_vector'
-);
-SET @sql_image_owner := IF(@image_owner >= 3, 'SELECT 1',
-    'CREATE UNIQUE INDEX `sys_ai_image_library_owner_vector` ON `sys_ai_image_library` ('
-    || '`sys_ai_image_library_user_id`, `sys_ai_image_library_vector_id`, `sys_ai_image_library_group`)');
-PREPARE st FROM @sql_image_owner;
-EXECUTE st;
-DEALLOCATE PREPARE st;
-
--- 5) 加组索引（只扫组）
-SET @image_group_idx := (
-    SELECT COUNT(*) FROM information_schema.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_image_library'
-      AND INDEX_NAME = 'sys_ai_image_library_image_group'
-);
-SET @sql_image_group_idx := IF(@image_group_idx > 0, 'SELECT 1',
-    'CREATE INDEX `sys_ai_image_library_image_group` ON `sys_ai_image_library` (`sys_ai_image_library_group`)');
-PREPARE st FROM @sql_image_group_idx;
-EXECUTE st;
-DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_service_access_log：AppKey / 路由组（原 V6.1 / V6.8） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_service_access_log'
-          AND COLUMN_NAME = 'app_key'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_service_access_log` ADD COLUMN `app_key` VARCHAR(128) DEFAULT NULL COMMENT ''本次调用使用的 AppKey（老实例令牌调用为空）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_service_access_log'
-          AND INDEX_NAME = 'sys_ai_service_access_log_app_key'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_service_access_log_app_key` ON `sys_ai_service_access_log` (`app_key`, `create_time`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_service_access_log'
-          AND COLUMN_NAME = 'router_group'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_service_access_log` ADD COLUMN `router_group` VARCHAR(64) DEFAULT NULL COMMENT ''本次调用归属的路由组（路由组供应商 ID；控制台直连为空）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_service_access_log'
-          AND INDEX_NAME = 'sys_ai_service_access_log_router_group'),
-        'SELECT 1',
-        'CREATE INDEX `sys_ai_service_access_log_router_group` ON `sys_ai_service_access_log` (`router_group`, `create_time`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_service_token 退役（原 V6.4） ----------
--- 服务实例与网关统一按 AppKey 鉴权后不再签发/校验这条凭证链路，直接删除。
-DROP TABLE IF EXISTS `sys_ai_service_token`;
-
--- ---------- sys_ai_app_key：累计费用精度（原 V6.5） ----------
--- 累计费用与余额/流水同精度 6 位小数，避免每笔 <0.0001 元的费用被四舍五入
--- 导致「流水之和」与「累计费用」对不上账。
-SET @ddl = (SELECT IF(
-    (SELECT COUNT(*) FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_app_key'
-        AND COLUMN_NAME = 'sys_ai_app_key_total_cost'
-        AND NUMERIC_SCALE >= 6) > 0,
-    'SELECT 1',
-    'ALTER TABLE `sys_ai_app_key` MODIFY COLUMN `sys_ai_app_key_total_cost` DECIMAL(12,6) DEFAULT 0.000000 COMMENT ''累计费用（元）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_provider_connection：账号类型（原 V6.6） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_provider_connection'
-          AND COLUMN_NAME = 'sys_ai_provider_connection_account_type'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_provider_connection` ADD COLUMN `sys_ai_provider_connection_account_type` VARCHAR(16) NOT NULL DEFAULT ''FIXED'' COMMENT ''账号类型（FIXED 固定 / TEMPORARY 临时）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_reid_library：双特征（原 V6.7，列定义已内联建表） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_face_vector_id'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_face_vector_id` VARCHAR(96) DEFAULT NULL COMMENT ''人脸特征向量标识（feature_model 产出；与 vector_id 的 ReID 特征分库）'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND COLUMN_NAME = 'sys_ai_reid_library_match_type'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD COLUMN `sys_ai_reid_library_match_type` VARCHAR(16) DEFAULT NULL COMMENT ''入库时的分流结论：FACE=人脸识别 / REID=仅到 ReID 阈值'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_reid_library'
-          AND INDEX_NAME = 'sys_ai_reid_library_face_vector'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_reid_library` ADD KEY `sys_ai_reid_library_face_vector` (`sys_ai_reid_library_user_id`, `sys_ai_reid_library_face_vector_id`)'));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
--- ---------- sys_ai_usage_daily：输出速度（原 V6.9，列定义已内联建表） ----------
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_usage_daily'
-          AND COLUMN_NAME = 'sys_ai_usage_daily_total_tokens_per_second'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_usage_daily`
-             ADD COLUMN `sys_ai_usage_daily_total_tokens_per_second` DOUBLE DEFAULT 0
-                 COMMENT ''输出速度(Token/秒)合计，配合样本数还原均值'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_usage_daily'
-          AND COLUMN_NAME = 'sys_ai_usage_daily_tps_samples'),
-        'SELECT 1',
-        'ALTER TABLE `sys_ai_usage_daily`
-             ADD COLUMN `sys_ai_usage_daily_tps_samples` BIGINT DEFAULT 0
-                 COMMENT ''有实测输出速度的调用数，作为均值权重'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 

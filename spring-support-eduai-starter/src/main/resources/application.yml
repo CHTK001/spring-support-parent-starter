@@ -79,7 +79,7 @@ plugin:
   # eduAuthDataSource / eduAuthJdbcTemplate 的 Hikari 数据源。不配这段时
   # properties 里没有 url，Hikari 初始化直接报：
   #   ERROR HikariPool-2 - dataSource or dataSourceClassName or jdbcUrl is required
-  # 并连带让 DataSourceScriptBeanPostProcessor 无法给它跑建表脚本（V1.0__init_all_api_common_system.sql）。
+  # 并连带让 DataSourceScriptBeanPostProcessor 无法给它跑建表脚本（V1.2__init_all_api_common_system.sql）。
   # 每次启动 6 条 ERROR + 一串 WARN，日志被噪声淹没，真正的错误反而看不见。
   #
   # 本应用是**单库部署**（系统表 sys_user / sys_error_log 与业务表同在 eduai 库），

@@ -1,10 +1,9 @@
 -- =====================================================================
--- V2.4__initdata_all_device.sql - spring-support-device-starter 全量种子
+-- V2.6__initdata_all_device.sql - spring-support-device-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；表结构就位后执行。
--- 说明: 本文件是该模块唯一的种子数据入口。此前分散的
---   V1.0.1__initdata_all_device.sql 与 V1.2__device_task_state_index.sql
---   已在本次收敛中并入本文件并删除。
--- 约束: 全部语句必须幂等（ON DUPLICATE KEY UPDATE），可反复执行。
+-- 版本递进原因: FlywayLike 按「脚本名 + 版本」记账，无成功记录即执行；
+--   本文件收敛取代 V2.4__initdata_all_device.sql，种子内容不变、仅递进版本号。
+-- 约束: 全部语句必须幂等（ON DUPLICATE KEY UPDATE），可反复执行；禁止任何 DDL。
 -- =====================================================================
 
 -- 任务状态种子（幂等）：缺失时补种，避免 shouldRun() 因无状态行而永不执行。

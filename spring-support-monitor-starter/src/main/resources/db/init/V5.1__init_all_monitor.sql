@@ -1,28 +1,37 @@
 -- =====================================================================
--- V5.0__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
+-- V5.1__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
 -- 模块: spring-support-monitor-starter
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口；本目录 INIT 通道只保留本文件，
 --   INITDATA 通道只保留 V5.0__initdata_all_monitor.sql。此前分散的
 --   V1.0__init_all_monitor.sql、V1.5__init_tshark.sql 已在历史收敛中并入，
---   本次收敛又把 V4.0.0.44 / 45 / 52 / 53 / 54 / 55 / 56 / 57 / 58 九个
---   增量并入本文件并删除（V4.0.0.59 为 device 模块表补列，已由 device
---   模块 init 全量承载，直接删除）。
--- 版本递进: V2.1 -> V5.0。FlywayLike 按「脚本名 + 版本」记账，命中成功记录
---   即跳过（checksum 变化只做校验、不会触发重跑），故每新增补列都必须递进
---   版本号，否则存量库不会重跑、新列补不进去。
--- 约束: MySQL 专属语法（ENGINE=InnoDB / COMMENT 内联注释 / SET @var + PREPARE 动态 DDL）。
---   MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS、MariaDB 11.8 同样拒绝，
---   故补列一律沿用 information_schema 判存的动态 DDL 写法。
+--   V4.0.0.44 / 45 / 52 / 53 / 54 / 55 / 56 / 57 / 58 九个增量也已并入
+--   （V4.0.0.59 为 device 模块表补列，已由 device 模块 init 全量承载）。
+-- 版本递进原因: V5.0 -> V5.1。FlywayLike 按「脚本名 + 版本」记账，命中成功
+--   记录即跳过，故本次「动态 DDL 全部移除、列定义内联」的清理必须递进版本号，
+--   存量库与新库才会以新版本重跑本文件。
+-- 迁移口径: 动态 DDL 全部移除、列/索引定义全部内联进 CREATE TABLE——
+--   原文件尾部「查系统表判存 + 会话变量拼 SQL + 预编译执行」的动态补列段
+--   （涉及 ms_tshark_session / ms_tshark_packet /
+--   ms_sync_task_run_log / ms_monitor_alarm_policy / ms_host_metric_history /
+--   ms_server_host）已删除；受守卫保护的列与索引此前均已内联进对应建表语句，
+--   ms_server_host 归 server 模块所有，其网络收发列由 server 模块 init
+--   （server_host_net_rx_kbs / server_host_net_tx_kbs）承载，不再跨模块补列。
+--   本文件只用通用 SQL（CREATE TABLE IF NOT EXISTS + 内联列/索引定义），
+--   不再包含任何动态 DDL、判存补列与改表/删表/改名语句。
+-- 约束: MySQL 专属语法仅保留 ENGINE=InnoDB / CHARSET / COMMENT 内联写法
+--   （MySQL 8.4 / MariaDB 11.8 均不支持「IF NOT EXISTS」式加列，
+--   故一律以内联建表替代判存补列）。
 -- =====================================================================
 --
--- 表归位: ms_monitor_nginx_metric 的实体 MsMonitorNginxMetric 属于
---   spring-support-datasource-hub-starter，本次收敛已把它的建表语句
---   搬到该模块的 V2.0__init_all_datasource_hub.sql（表定义逐字未改）。
+-- 表归位: nginx 时序指标表 datasource_nginx_metric 的实体
+--   MsMonitorNginxMetric 属于 spring-support-datasource-hub-starter，
+--   建表语句在该模块的 V2.0__init_all_datasource_hub.sql（新表名/新列名），
+--   存量库表名/列名迁移见同模块 V3.0__rename_datasource_hub_tables.sql。
 --
 -- 命名规范: 列名使用完整表名作为前缀，如 ms_monitor_name
 -- 数据库: MySQL 8.x / H2 (MySQL 模式) / 达梦 / Oracle 通过方言转换
--- 幂等: 建表 IF NOT EXISTS，补列 IF NOT EXISTS，重复执行安全
+-- 幂等: 建表 IF NOT EXISTS，重复执行安全
 -- =====================================================================
 -- (H2-incompatible) SET NAMES utf8mb4;
 -- (H2-incompatible) SET FOREIGN_KEY_CHECKS = 0;
@@ -385,16 +394,11 @@ CREATE TABLE IF NOT EXISTS ms_server_node (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务管理-协议服务器节点';
 
 -- ============================================================
--- 补列/索引（建表之后统一执行，幂等 IF NOT EXISTS）
--- ============================================================
-
--- MsMonitor 追加探针标识列(Agent 推送鉴权)
--- ms_monitor 追加关联服务器主机 ID 列(ms_server_host.id, 资产联动)
--- 便于按资产查询监控项
-
--- MsMonitorAlarmEvent 追加触发时规则配置快照列
+-- 存量兼容说明: 历史上此处以「查系统表判存 + 动态 SQL」为已存在的表补列；
+--   V5.1 起动态补列段全部移除，相关列
+--   （ms_monitor_agent_key / ms_server_host_id /
+--   ms_monitor_alarm_event_rule_snapshot 等）均已内联进上方 CREATE TABLE。
 -- (H2-incompatible) SET FOREIGN_KEY_CHECKS = 1;
-
 
 -- ============================================================
 -- TShark 抓包建表脚本
@@ -417,8 +421,8 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_session` (
     `ms_tshark_session_interface`   VARCHAR(128) DEFAULT NULL            COMMENT '抓包网卡',
     -- 来源：live=网卡实时抓包 / import=导入的 pcap。两类会话同表，必须能分开查，
     -- 否则「PCAP 分析」页会把实时抓包的历史也列进来。
-    -- 注：存量 MySQL 库因本脚本是 CREATE TABLE IF NOT EXISTS 不会补列，需手工执行
-    --     ALTER TABLE ms_tshark_session ADD COLUMN ms_tshark_session_source VARCHAR(16) DEFAULT 'live';
+    -- 注：该列已内联进本建表语句（新库一次建全）；存量库由 TsharkSchemaGuard
+    --     在启动时按列缺失补 DDL 兜底。
     `ms_tshark_session_source`      VARCHAR(16) DEFAULT 'live'            COMMENT '来源: live 实时抓包 / import 导入 pcap',
     `ms_tshark_session_filter`      VARCHAR(512) DEFAULT NULL            COMMENT 'BPF 过滤器',
     `ms_tshark_session_status`      TINYINT      DEFAULT 0               COMMENT '状态: 0停止 1运行中 2异常',
@@ -479,7 +483,7 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
 -- 说明：stub_status 的 accepts/handled/requests 是「worker 启动以来」的累计计数，
 --      画趋势必须换算成速率（差值 / 间隔），直接画累计值只会得到单调上升的直线。
 --      本表存原始计数，速率在查询侧按相邻两点差值计算。
--- 幂等建表：这里刻意不写 DROP TABLE，改为 CREATE TABLE IF NOT EXISTS。
+-- 幂等建表：这里刻意不写「删表重建」，改为 CREATE TABLE IF NOT EXISTS。
 -- 原先写成「DROP + CREATE」后，一旦 plugin.datasource.script.enable 打开
 -- （或本脚本在 sys_database_version 里被记为 FAILED 而每次启动重跑），
 -- nginx 指标历史会被整体清空——属于静默数据丢失，因此必须改成幂等形态。
@@ -514,7 +518,7 @@ CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
 
 -- ============================================================
 -- 21. 数据同步任务
--- 由 SyncTaskServiceImpl 读写；源/目标均为 ms_datasource 里的 jdbc 类型数据源。
+-- 由 SyncTaskServiceImpl 读写；源/目标均为 datasource_info 里的 jdbc 类型数据源。
 -- 数据面复用本仓 datasync 引擎：JdbcDataSyncAgentSource 读、DefaultFieldMappingConverter 转、
 -- MonitorJdbcSyncSink 写；调度由 Spring ThreadPoolTaskScheduler 驱动（引擎自带调度器有
 -- 「同 topic 只订阅一次」语义，改任务后仍会写旧 Sink，故不采用）。
@@ -524,11 +528,11 @@ CREATE TABLE IF NOT EXISTS `ms_sync_task` (
     `id`                                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     `ms_sync_task_name`                     VARCHAR(128) NOT NULL COMMENT '任务名称',
     `ms_sync_task_source_type`              VARCHAR(16)  NOT NULL DEFAULT 'JDBC' COMMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML',
-    `ms_sync_task_source_datasource_id`     BIGINT       DEFAULT NULL COMMENT '源数据源 ID(ms_datasource.id)，仅 JDBC 源使用',
+    `ms_sync_task_source_datasource_id`     BIGINT       DEFAULT NULL COMMENT '源数据源 ID(datasource_info.id)，仅 JDBC 源使用',
     `ms_sync_task_source_sql`               TEXT         DEFAULT NULL COMMENT '源读取 SQL，必须是 SELECT，仅 JDBC 源使用',
     `ms_sync_task_source_path`              VARCHAR(512) DEFAULT NULL COMMENT '源定位：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址',
     `ms_sync_task_source_options`           TEXT         DEFAULT NULL COMMENT '输入源扩展选项 JSON：文件族 {format,delimiter,sheetIndex,pattern,recursive,afterProcess}；HTTP 族 {method,headers,body,encoding,jsonPath,rowSelector,cellSelector,headerRow,timeoutSeconds}',
-    `ms_sync_task_target_datasource_id`     BIGINT       NOT NULL COMMENT '目标数据源 ID(ms_datasource.id)',
+    `ms_sync_task_target_datasource_id`     BIGINT       NOT NULL COMMENT '目标数据源 ID(datasource_info.id)',
     `ms_sync_task_target_table`             VARCHAR(128) NOT NULL COMMENT '目标表名',
     `ms_sync_task_column_mapping`           TEXT         DEFAULT NULL COMMENT '字段映射 JSON 数组 [{"source":"a","target":"b"}]，空表示按同名匹配',
     `ms_sync_task_write_mode`               VARCHAR(16)  NOT NULL DEFAULT 'INSERT' COMMENT '写入模式 INSERT/REPLACE/UPSERT/OVERWRITE',
@@ -590,52 +594,12 @@ CREATE TABLE IF NOT EXISTS `ms_maintenance_plan` (
 -- ----------------------------------------------------------
 -- 存量库补列：ms_tshark_* 的新增列
 --
--- 上面的 CREATE TABLE IF NOT EXISTS 对**已存在**的表不会补列，故此处在建表之后
--- 用 information_schema 判存补齐（与 ai 模块 init 脚本同一套写法）。
---
--- 这几列原先只靠 TsharkSchemaGuard（Java，启动时按列缺失补 DDL）兜底、
--- 以及文件里的手工 ALTER 提示。现在 FlywayLike 对存量库也会重跑无执行记录的
--- init 脚本，补列可以直接落在 SQL 里 —— 新库一次建全、存量库自动补齐，
--- Java 侧的兜底退化为防御性代码（并行启动等边界仍有价值）。
---
--- 注：SET @ddl = ... 是 MySQL 语法，H2 下会失败；内置迁移器已支持
---     continue-on-error（单条失败记日志继续），故 H2 环境安全跳过这些语句。
+-- 原先这里用「查系统表判存 + 会话变量拼 SQL + 预编译执行」的动态 DDL 为
+-- ms_tshark_session / ms_tshark_packet 补列（source / last_error /
+-- file_size / max_size / frame_no）。V5.1 起动态 DDL 移除：上述列均已
+-- 内联进上方 CREATE TABLE，新库一次建全；存量库的列缺失仍由
+-- TsharkSchemaGuard（Java，启动时按列缺失补 DDL）兜底。
 -- ----------------------------------------------------------
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_tshark_session'
-          AND COLUMN_NAME = 'ms_tshark_session_source'),
-        'SELECT 1',
-        'ALTER TABLE `ms_tshark_session` ADD COLUMN `ms_tshark_session_source` VARCHAR(16) DEFAULT ''live'' COMMENT ''来源: live 实时抓包 / import 导入 pcap'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_tshark_session'
-          AND COLUMN_NAME = 'ms_tshark_session_last_error'),
-        'SELECT 1',
-        'ALTER TABLE `ms_tshark_session` ADD COLUMN `ms_tshark_session_last_error` VARCHAR(2000) DEFAULT NULL COMMENT ''异常原因/停止说明'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_tshark_session'
-          AND COLUMN_NAME = 'ms_tshark_session_file_size'),
-        'SELECT 1',
-        'ALTER TABLE `ms_tshark_session` ADD COLUMN `ms_tshark_session_file_size` BIGINT DEFAULT 0 COMMENT ''pcap 文件大小(字节)'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_tshark_session'
-          AND COLUMN_NAME = 'ms_tshark_session_max_size'),
-        'SELECT 1',
-        'ALTER TABLE `ms_tshark_session` ADD COLUMN `ms_tshark_session_max_size` INT DEFAULT 0 COMMENT ''会话大小上限(MB)，0=不限'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
-
-SET @ddl = (SELECT IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ms_tshark_packet'
-          AND COLUMN_NAME = 'ms_tshark_packet_frame_no'),
-        'SELECT 1',
-        'ALTER TABLE `ms_tshark_packet` ADD COLUMN `ms_tshark_packet_frame_no` BIGINT DEFAULT NULL COMMENT ''tshark 帧号(frame.number)'''));
-PREPARE st FROM @ddl; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================
 -- [二] 增量并入的新表（源自原 V4.0.0.44 / 45 / 52 / 55 / 56）
@@ -789,130 +753,15 @@ CREATE TABLE IF NOT EXISTS `monitor_acme_order` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ACME 订单表';
 
 -- ============================================================
--- [三] 存量库兼容 ALTER（源自原 V4.0.0.45 / 53 / 57 / 58）
+-- [三] 存量库兼容 ALTER 段已随 V5.1 清理移除（原 V4.0.0.45 / 53 / 57 / 58）
 --
--- 上面的 CREATE TABLE IF NOT EXISTS 对**已存在**的表不会补列/补索引，
--- 故此处在建表之后用 information_schema 判存补齐（与 ai 模块 init 脚本
--- 同一套写法，MySQL 8.4 / MariaDB 11.8 均不支持 ADD COLUMN IF NOT EXISTS，
--- 存储过程 + DELIMITER 又会被 FlywayLike 按分号切坏，故用 SET @ddl +
--- PREPARE 动态 DDL；列/索引已存在时执行 DO 0，可重复执行）。
---
--- 注：SET @ddl = ... 是 MySQL 语法，H2 下会失败；内置迁移器已支持
---     continue-on-error（单条失败记日志继续），故 H2 环境安全跳过这些语句。
+-- 原先此处用「查系统表判存 + 会话变量拼 SQL + 预编译执行」的动态 DDL 为
+-- 存量库补列/补索引；V5.1 起动态 DDL 全部移除，处置如下：
+--   ms_sync_task_run_log.read_count / write_count、
+--   ms_monitor_alarm_policy.ms_server_host_id 及 idx_ms_monitor_alarm_policy_host、
+--   ms_host_metric_history.net_rx_kbs / net_tx_kbs
+--   —— 均已内联进上方对应 CREATE TABLE；
+--   ms_server_host.net_rx_kbs / net_tx_kbs
+--   —— 该表归 server 模块所有，列由 server 模块 init 承载
+--   （server_host_net_rx_kbs / server_host_net_tx_kbs），不再跨模块补列。
 -- ============================================================
-
--- ms_sync_task_run_log 读/写行数（V4.0.0.45）
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_sync_task_run_log')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_sync_task_run_log'
-             AND COLUMN_NAME = 'ms_sync_task_run_log_read_count'),
-    'ALTER TABLE `ms_sync_task_run_log` ADD COLUMN `ms_sync_task_run_log_read_count` BIGINT DEFAULT NULL COMMENT ''本轮读取行数（执行结束时从过程日志解析）'' AFTER `ms_sync_task_run_log_line_count`',
-    'DO 0'));
-PREPARE ms_sync_run_log_stmt FROM @ddl;
-EXECUTE ms_sync_run_log_stmt;
-DEALLOCATE PREPARE ms_sync_run_log_stmt;
-
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_sync_task_run_log')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_sync_task_run_log'
-             AND COLUMN_NAME = 'ms_sync_task_run_log_write_count'),
-    'ALTER TABLE `ms_sync_task_run_log` ADD COLUMN `ms_sync_task_run_log_write_count` BIGINT DEFAULT NULL COMMENT ''本轮写入行数（执行结束时从过程日志解析）'' AFTER `ms_sync_task_run_log_read_count`',
-    'DO 0'));
-PREPARE ms_sync_run_log_stmt FROM @ddl;
-EXECUTE ms_sync_run_log_stmt;
-DEALLOCATE PREPARE ms_sync_run_log_stmt;
-
--- ms_monitor_alarm_policy 归属主机列 + 索引（V4.0.0.53 / 58）
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_monitor_alarm_policy')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_monitor_alarm_policy'
-             AND COLUMN_NAME = 'ms_server_host_id'),
-    'ALTER TABLE `ms_monitor_alarm_policy` ADD COLUMN `ms_server_host_id` BIGINT NULL COMMENT ''归属主机ID,空为全局策略''',
-    'DO 0'));
-PREPARE ms_alarm_policy_host_stmt FROM @ddl;
-EXECUTE ms_alarm_policy_host_stmt;
-DEALLOCATE PREPARE ms_alarm_policy_host_stmt;
-
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_monitor_alarm_policy')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.STATISTICS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_monitor_alarm_policy'
-             AND INDEX_NAME = 'idx_ms_monitor_alarm_policy_host'),
-    'ALTER TABLE `ms_monitor_alarm_policy` ADD KEY `idx_ms_monitor_alarm_policy_host` (`ms_server_host_id`)',
-    'DO 0'));
-PREPARE ms_alarm_policy_host_idx_stmt FROM @ddl;
-EXECUTE ms_alarm_policy_host_idx_stmt;
-DEALLOCATE PREPARE ms_alarm_policy_host_idx_stmt;
-
--- ms_host_metric_history 网络收发列（V4.0.0.57）
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_host_metric_history')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_host_metric_history'
-             AND COLUMN_NAME = 'ms_host_metric_history_net_rx_kbs'),
-    'ALTER TABLE `ms_host_metric_history` ADD COLUMN `ms_host_metric_history_net_rx_kbs` DOUBLE DEFAULT NULL',
-    'DO 0'));
-PREPARE ms_host_net_io_stmt FROM @ddl;
-EXECUTE ms_host_net_io_stmt;
-DEALLOCATE PREPARE ms_host_net_io_stmt;
-
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_host_metric_history')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_host_metric_history'
-             AND COLUMN_NAME = 'ms_host_metric_history_net_tx_kbs'),
-    'ALTER TABLE `ms_host_metric_history` ADD COLUMN `ms_host_metric_history_net_tx_kbs` DOUBLE DEFAULT NULL',
-    'DO 0'));
-PREPARE ms_host_net_io_stmt FROM @ddl;
-EXECUTE ms_host_net_io_stmt;
-DEALLOCATE PREPARE ms_host_net_io_stmt;
-
--- ms_server_host 台账网络收发列（V4.0.0.57；表归属 server 模块，此处只为存量库补列）
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_server_host')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_server_host'
-             AND COLUMN_NAME = 'ms_server_host_net_rx_kbs'),
-    'ALTER TABLE `ms_server_host` ADD COLUMN `ms_server_host_net_rx_kbs` DECIMAL(12,2) NULL',
-    'DO 0'));
-PREPARE ms_host_net_io_stmt FROM @ddl;
-EXECUTE ms_host_net_io_stmt;
-DEALLOCATE PREPARE ms_host_net_io_stmt;
-
-SET @ddl = (SELECT IF(
-    EXISTS(SELECT 1 FROM information_schema.TABLES
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_server_host')
-    AND NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS
-           WHERE TABLE_SCHEMA = DATABASE()
-             AND TABLE_NAME = 'ms_server_host'
-             AND COLUMN_NAME = 'ms_server_host_net_tx_kbs'),
-    'ALTER TABLE `ms_server_host` ADD COLUMN `ms_server_host_net_tx_kbs` DECIMAL(12,2) NULL',
-    'DO 0'));
-PREPARE ms_host_net_io_stmt FROM @ddl;
-EXECUTE ms_host_net_io_stmt;
-DEALLOCATE PREPARE ms_host_net_io_stmt;

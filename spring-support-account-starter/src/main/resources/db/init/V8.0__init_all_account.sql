@@ -1,28 +1,34 @@
 -- =====================================================================
--- V7.0__init_all_account.sql - spring-support-account-starter 全量表结构
+-- V8.0__init_all_account.sql - spring-support-account-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口。
 --
--- 合并方式:
---   1. 原来靠 ALTER 补的列，一律折进建表语句 —— 新库一次建全，
---      不再依赖「先建表再补列」的两段式；
---   2. 存量库补列的 ALTER 仍原样保留在文件末尾（information_schema 判存 + 动态 DDL），
---      否则老库缺列；新建库上这些语句会因列已存在而跳过。
+-- 版本递进: V7.0 -> V8.0。FlywayLike 按「脚本名 + 版本」记账，命中成功记录
+--   即跳过（checksum 变化只做校验、不会触发重跑），故本次脚本收敛必须
+--   递进版本号，否则存量库不会重跑、并入的建表不会生效。
 --
--- 版本递进: V2.0 -> V7.0。原 V2.1__add_template_source.sql /
---   V2.4__add_template_source_code.sql / V6.4__add_channel_message_template.sql /
---   V6.5__add_account.sql / V6.6__add_account_secret.sql /
---   V6.7__add_account_secret_type.sql / V6.8__widen_account_secret_type.sql /
---   V6.9__add_credit_config.sql / V6.10__add_credit_config_aksk.sql
---   均在本次收敛中并入本文件并删除。数据类语句（V6.4 内置模板 INSERT、
---   V2.4 存量回填 UPDATE）移入 V7.0__initdata_all_account.sql。
---   FlywayLike 按「脚本名 + 版本」记账，命中成功记录即跳过（checksum 变化
---   只做校验、不会触发重跑），故合并增量必须递进版本号，否则存量库不会
---   重跑、并入的补列与建表不会生效。
+-- 收敛口径（原 V7.2 / V7.3 / V7.4 / V7.5 的处置）:
+--   1. V7.2__migrate_channel_to_account.sql —— 渠道 / 渠道模型 / 渠道连接 /
+--      渠道健康四表的建表部分原样并入本文件；其「INSERT...SELECT 旧
+--      sys_ai_provider* / sys_ai_channel_health 表」的存量数据复制不并入，
+--      那是存量库的一次性搬迁（新库没有旧表），随 V7.2 一并退役。
+--   2. V7.3__drop_legacy_channel_tables.sql —— 旧渠道表（sys_ai_provider /
+--      sys_ai_provider_model / sys_ai_provider_connection /
+--      sys_ai_channel_health）的清表语句不并入：旧表不再自动删除，
+--      需要清理的存量库请手工执行。
+--   3. V7.4__add_account_send_log.sql —— 统一发送日志表
+--      （sys_account_send_log）建表部分原样并入本文件；该脚本无 DML。
+--   4. V7.5__add_channel_health_log.sql —— 渠道健康探针历史表
+--      （sys_account_channel_health_log）建表部分原样并入本文件。
 --
--- 约束: MySQL 专属语法（COMMENT 内联注释 / ENGINE=InnoDB / SET @var + PREPARE 动态 DDL）。
---   MySQL 8.4 不支持 ADD COLUMN IF NOT EXISTS、MariaDB 11.8 同样拒绝，
---   故存量补列一律沿用 information_schema 判存的动态 DDL 写法。
+-- 动态 DDL 移除: 原 V7.0 尾部「先判存、再动态执行补列」的存量兼容段
+--   全部删除 —— 其补列 / 补索引 / 唯一约束迁移（V2.1 / V2.4 /
+--   V6.7 / V6.8 / V6.10）早已内联进对应 CREATE TABLE 的列定义，
+--   新库一次建全。本文件只保留通用 SQL
+--   （CREATE TABLE IF NOT EXISTS + 内联列 / 索引 / 表注释），
+--   不再含任何动态 DDL 语句。
+--
+-- 幂等: 建表 IF NOT EXISTS，可反复执行。
 -- =====================================================================
 
 
@@ -160,12 +166,12 @@ CREATE TABLE IF NOT EXISTS template_log (
 
 -- =====================================================================
 -- [二] 增量并入的表结构（原 V6.4 ~ V6.10 建表部分，已并入本文件；
---       数据类语句移入 V7.0__initdata_all_account.sql）
+--       数据类语句移入 V8.0__initdata_all_account.sql）
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
 -- AI 渠道短信邮件消息模板（原 V6.4__add_channel_message_template.sql 建表）
--- 内置四条模板种子已移入 V7.0__initdata_all_account.sql。
+-- 内置四条模板种子已移入 V8.0__initdata_all_account.sql。
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `sys_ai_channel_message_template` (
     `sys_ai_channel_message_template_id`           VARCHAR(64)  NOT NULL COMMENT '模板标识（UUID / 内置固定值）',
@@ -312,68 +318,190 @@ CREATE TABLE IF NOT EXISTS `sys_account_credit_config` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='上游余额查询配置';
 
 -- =====================================================================
--- [三] 存量库兼容 ALTER（原 V2.1 / V2.4 / V6.7 / V6.8 / V6.10 增量已并入
---       并删除；全部改写为 information_schema 判存 + 动态 DDL 的幂等形式）
---
--- 背景：V2.0 是「唯一建表入口」，但历史演进中 template_info 的补列 /
---   索引变更与账号模块新表曾以独立增量脚本下发；已经被标记执行过 V2.0 的
---   库存不到这些新增内容（表现：模板列表页 / 账号页 500「Unknown column」）。
---
--- 约束：全部语句幂等 —— MySQL 8.4 / MariaDB 11.8 都拒绝 ADD/MODIFY COLUMN
---   IF NOT EXISTS 与 DROP INDEX IF EXISTS，一律走 information_schema 判存 +
---   PREPARE 动态 DDL，新库与老库都可反复执行。
+-- [三] 渠道管理五表（原 V7.2__migrate_channel_to_account.sql 的渠道 /
+--       渠道模型 / 渠道连接 / 渠道健康四表，与 V7.5__add_channel_health_log.sql
+--       的健康历史表，建表部分已并入本文件）
+-- 迁移口径: V7.2 中「INSERT...SELECT 旧 sys_ai_provider* / sys_ai_channel_health
+--       表」的存量数据复制不并入 —— 那是存量库的一次性搬迁（新库没有旧表），
+--       随 V7.2 一并退役；V7.3__drop_legacy_channel_tables.sql 的旧表 DROP
+--       亦不并入，旧表不再自动删除，需要清理的存量库请手工执行。
+-- 约束: 脚本会被重复执行，一律 CREATE TABLE IF NOT EXISTS，
+--       索引随建表语句一起创建，避免二次执行报错。
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- [V2.1] template_info: 来源扩展三列 + 索引 + 唯一约束迁移
--- （数据回填见 V7.0__initdata_all_account.sql —— 本脚本无数据类语句）
+-- 渠道（开关 + 上游信息）
 -- ---------------------------------------------------------------------
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND COLUMN_NAME = 'template_info_source'), 'SELECT 1', 'ALTER TABLE template_info ADD COLUMN template_info_source VARCHAR(32) NOT NULL DEFAULT ''hiprint'' COMMENT ''来源：hiprint(绘制)/message(消息)/paper(组卷)''');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND COLUMN_NAME = 'template_info_source_id'), 'SELECT 1', 'ALTER TABLE template_info ADD COLUMN template_info_source_id VARCHAR(64) COMMENT ''来源行 ID（如短信模板的 sys_message_template.id，与 template_info_id 对应）''');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND COLUMN_NAME = 'template_info_provider'), 'SELECT 1', 'ALTER TABLE template_info ADD COLUMN template_info_provider VARCHAR(64) COMMENT ''来源提供方（消息提供商 ID / 组卷归属用户 ID，与 template_info_id 对应）''');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND INDEX_NAME = 'idx_template_info_source'), 'SELECT 1', 'CREATE INDEX idx_template_info_source ON template_info(template_info_source)');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND INDEX_NAME = 'idx_template_info_source_id'), 'SELECT 1', 'CREATE INDEX idx_template_info_source_id ON template_info(template_info_source_id)');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND INDEX_NAME = 'idx_template_info_provider'), 'SELECT 1', 'CREATE INDEX idx_template_info_provider ON template_info(template_info_provider)');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
--- 原唯一名称约束改为（名称 + 来源）唯一，避免不同来源模板同名
-SET @sql := IF(NOT EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND INDEX_NAME = 'uk_template_info_name'), 'SELECT 1', 'ALTER TABLE template_info DROP INDEX uk_template_info_name');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND INDEX_NAME = 'uk_template_info_name_source'), 'SELECT 1', 'CREATE UNIQUE INDEX uk_template_info_name_source ON template_info (template_info_name, template_info_source)');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+CREATE TABLE IF NOT EXISTS `sys_account_channel` (
+    `sys_account_channel_id`              VARCHAR(64)  NOT NULL COMMENT '渠道ID（UUIDv7）',
+    `sys_account_channel_platform`        VARCHAR(64)  NOT NULL COMMENT '平台类型 / 渠道键（openai/anthropic/google 等）',
+    `sys_account_channel_name`            VARCHAR(255) NOT NULL COMMENT '渠道展示名',
+    `sys_account_channel_base_url`        VARCHAR(512) NOT NULL DEFAULT '' COMMENT 'API 基础地址（免费渠道为空串）',
+    `sys_account_channel_auth_scheme`     VARCHAR(32)  NOT NULL DEFAULT 'api_key' COMMENT '认证方式（api_key/bearer/oauth/none）',
+    `sys_account_channel_credentials`     TEXT         NULL COMMENT '凭证JSON（写入后不回显）',
+    `sys_account_channel_enabled`         TINYINT      NOT NULL DEFAULT 1 COMMENT '渠道是否启用',
+    `sys_account_channel_bedrock_config`  TEXT         NULL COMMENT 'AWS Bedrock配置JSON',
+    `sys_account_channel_extra`           TEXT         NULL COMMENT '扩展配置JSON（如自定义请求头）',
+    `sys_account_channel_proxy`           VARCHAR(512) NULL COMMENT 'HTTP代理地址',
+    `sys_account_channel_sort_order`      INT          NOT NULL DEFAULT 0 COMMENT '排序序号',
+    `sys_account_channel_create_time`     BIGINT       NOT NULL DEFAULT 0 COMMENT '创建时间（毫秒）',
+    `sys_account_channel_update_time`     BIGINT       NOT NULL DEFAULT 0 COMMENT '更新时间（毫秒）',
+    `sys_account_channel_type`            VARCHAR(64)  NULL DEFAULT 'custom' COMMENT '渠道类型（openai/anthropic/gemini/qwen/custom）',
+    `sys_account_channel_api_key`         VARCHAR(512) NULL COMMENT '渠道 API Key（旧列，保留兼容）',
+    `sys_account_channel_logo`            VARCHAR(1024) NULL COMMENT 'Logo 图片地址',
+    `sys_account_channel_models`          TEXT         NULL COMMENT '可用模型列表（JSON 字符串，旧列）',
+    `sys_account_channel_deleted`         INT          NOT NULL DEFAULT 0 COMMENT '逻辑删除标记',
+    `create_name` VARCHAR(64) NULL COMMENT '创建人姓名',
+    `create_by`   INT         NULL COMMENT '创建人',
+    `create_time` DATETIME    NULL COMMENT '创建时间',
+    `update_name` VARCHAR(64) NULL COMMENT '更新人姓名',
+    `update_by`   INT         NULL COMMENT '更新人',
+    `update_time` DATETIME    NULL COMMENT '更新时间',
+    PRIMARY KEY (`sys_account_channel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='渠道管理-渠道';
 
 -- ---------------------------------------------------------------------
--- [V2.4] template_info: 三方模板 ID 列 + 索引
--- （存量回填 UPDATE 已移入 V7.0__initdata_all_account.sql）
+-- 渠道模型（模型级开关）
 -- ---------------------------------------------------------------------
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND COLUMN_NAME = 'template_info_source_code'), 'SELECT 1', 'ALTER TABLE template_info ADD COLUMN template_info_source_code VARCHAR(128) COMMENT ''三方模板 ID（来源侧模板编码，如短信模板 sys_message_template_code；hiprint 自建模板为空）''');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'template_info' AND INDEX_NAME = 'idx_template_info_source_code'), 'SELECT 1', 'CREATE INDEX idx_template_info_source_code ON template_info(template_info_source_code)');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+CREATE TABLE IF NOT EXISTS `sys_account_channel_model` (
+    `sys_account_channel_model_provider_id`        VARCHAR(64)  NOT NULL COMMENT '所属渠道ID',
+    `sys_account_channel_model_model`              VARCHAR(255) NOT NULL COMMENT '模型名称',
+    `sys_account_channel_model_alias`              VARCHAR(128) NULL COMMENT '模型别名',
+    `sys_account_channel_model_enabled`            TINYINT      NOT NULL DEFAULT 0 COMMENT '模型是否启用（同步进来默认关）',
+    `sys_account_channel_model_sort_order`         INT          NOT NULL DEFAULT 0 COMMENT '排序序号',
+    `sys_account_channel_model_description`        TEXT         NULL COMMENT '模型描述',
+    `sys_account_channel_model_capabilities`       TEXT         NULL COMMENT '任务能力JSON数组',
+    `sys_account_channel_model_metrics`            TEXT         NULL COMMENT '模型指标JSON（延迟/智能/输出速度等）',
+    `sys_account_channel_model_context_window`     INT          NULL COMMENT '上下文窗口',
+    `sys_account_channel_model_max_tokens`         INT          NULL COMMENT '最大输出令牌',
+    `sys_account_channel_model_temperature`        DOUBLE       NULL COMMENT '温度',
+    `sys_account_channel_model_top_p`              DOUBLE       NULL COMMENT 'Top-P 采样',
+    `sys_account_channel_model_frequency_penalty`  DOUBLE       NULL COMMENT '频率惩罚',
+    `sys_account_channel_model_family`             VARCHAR(255) NULL COMMENT '模型系列（family）',
+    `sys_account_channel_model_knowledge`          VARCHAR(255) NULL COMMENT '知识截止日期',
+    `sys_account_channel_model_release_date`       VARCHAR(64)  NULL COMMENT '发布日期',
+    `sys_account_channel_model_last_updated`       VARCHAR(64)  NULL COMMENT '最后更新时间',
+    `sys_account_channel_model_modalities`         TEXT         NULL COMMENT '输入/输出模态JSON',
+    `sys_account_channel_model_open_weights`       TINYINT      NULL COMMENT '是否开源权重',
+    `sys_account_channel_model_attachment`         TINYINT      NULL COMMENT '是否支持附件',
+    `sys_account_channel_model_reasoning`          TINYINT      NULL COMMENT '是否支持深度思考',
+    `sys_account_channel_model_tool_call`          TINYINT      NULL COMMENT '是否支持工具调用',
+    `sys_account_channel_model_temperature_supported` TINYINT   NULL COMMENT '是否支持温度调节',
+    `sys_account_channel_model_create_time`        BIGINT       NOT NULL DEFAULT 0 COMMENT '创建时间（毫秒）',
+    `sys_account_channel_model_update_time`        BIGINT       NOT NULL DEFAULT 0 COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_account_channel_model_provider_id`, `sys_account_channel_model_model`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='渠道管理-渠道模型';
 
 -- ---------------------------------------------------------------------
--- [V6.7] sys_account_secret: 密钥类型列 + 索引
+-- 渠道连接（绑定凭据）
 -- ---------------------------------------------------------------------
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_account_secret' AND COLUMN_NAME = 'sys_account_secret_type'), 'SELECT 1', 'ALTER TABLE sys_account_secret ADD COLUMN sys_account_secret_type VARCHAR(32) DEFAULT NULL COMMENT ''密钥类型（sms/storage/payment/mail/api/other）'' AFTER sys_account_secret_provider');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_account_secret' AND INDEX_NAME = 'idx_account_secret_type'), 'SELECT 1', 'ALTER TABLE sys_account_secret ADD KEY idx_account_secret_type (sys_account_secret_type)');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+CREATE TABLE IF NOT EXISTS `sys_account_channel_connection` (
+    `sys_account_channel_connection_id`            VARCHAR(64)  NOT NULL COMMENT '连接ID（UUID）',
+    `sys_account_channel_connection_provider_id`   VARCHAR(64)  NOT NULL COMMENT '所属渠道ID',
+    `sys_account_channel_connection_role`          VARCHAR(64)  NOT NULL DEFAULT 'default' COMMENT '连接角色（default/backup等）',
+    `sys_account_channel_connection_account_type`  VARCHAR(16)  NOT NULL DEFAULT 'FIXED' COMMENT '账号类型（FIXED/TEMPORARY）',
+    `sys_account_channel_connection_label`         VARCHAR(255) NULL COMMENT '连接标签',
+    `sys_account_channel_connection_user_id`       VARCHAR(64)  NULL COMMENT '归属用户（账号隔离）',
+    `sys_account_channel_connection_base_url`      VARCHAR(512) NULL COMMENT '覆盖的基础URL',
+    `sys_account_channel_connection_auth_scheme`   VARCHAR(32)  NULL COMMENT '覆盖的认证方式',
+    `sys_account_channel_connection_credentials`   TEXT         NULL COMMENT '凭证JSON（写入后不回显）',
+    `sys_account_channel_connection_extra`         TEXT         NULL COMMENT '扩展字段JSON',
+    `sys_account_channel_connection_create_time`   BIGINT       NOT NULL DEFAULT 0 COMMENT '创建时间（毫秒）',
+    `sys_account_channel_connection_update_time`   BIGINT       NOT NULL DEFAULT 0 COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_account_channel_connection_id`),
+    KEY `idx_account_channel_conn_pid` (`sys_account_channel_connection_provider_id`),
+    KEY `idx_account_channel_conn_user` (`sys_account_channel_connection_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='渠道管理-渠道连接';
 
 -- ---------------------------------------------------------------------
--- [V6.8] sys_account_secret: 密钥类型放宽为多值（VARCHAR(64)）
+-- 渠道健康（探针状态机，一连接一行的最新态）
 -- ---------------------------------------------------------------------
-SET @sql := IF(NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_account_secret' AND COLUMN_NAME = 'sys_account_secret_type' AND CHARACTER_MAXIMUM_LENGTH >= 64), 'ALTER TABLE sys_account_secret MODIFY COLUMN sys_account_secret_type VARCHAR(64) DEFAULT NULL COMMENT ''密钥类型（多值逗号分隔：sms/mail/storage/payment/api/other）''', 'SELECT 1');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+CREATE TABLE IF NOT EXISTS `sys_account_channel_health` (
+    `sys_account_channel_health_id` VARCHAR(36) NOT NULL COMMENT '健康记录标识',
+    `provider_id`   VARCHAR(64) NOT NULL COMMENT '渠道标识（UUID）',
+    `connection_id` VARCHAR(36)  NOT NULL COMMENT '连接标识（UUID）',
+    `channel`       VARCHAR(64)  NOT NULL COMMENT '渠道键（平台）',
+    `label`         VARCHAR(128) DEFAULT NULL COMMENT '渠道展示名',
+    `state`         VARCHAR(20)  NOT NULL DEFAULT 'UNKNOWN' COMMENT '状态 (UNKNOWN/ONLINE/WARNING/DOWN/RATE_LIMITED)',
+    `circuit_state` VARCHAR(16)  NOT NULL DEFAULT 'AUTO' COMMENT '人工熔断状态（AUTO/OPEN/CLOSED）',
+    `circuit_reason` VARCHAR(512) DEFAULT NULL COMMENT '人工熔断/放行的原因说明',
+    `circuit_updated_at` BIGINT  DEFAULT NULL COMMENT '人工熔断状态变更时间（毫秒）',
+    `failures`      BIGINT NOT NULL DEFAULT 0 COMMENT '累计失败次数',
+    `successes`     BIGINT NOT NULL DEFAULT 0 COMMENT '累计成功次数',
+    `consecutive_failures`  INT NOT NULL DEFAULT 0 COMMENT '连续失败次数',
+    `consecutive_successes` INT NOT NULL DEFAULT 0 COMMENT '连续成功次数',
+    `last_probe_at`      BIGINT DEFAULT NULL COMMENT '最近探针时间（毫秒）',
+    `last_probe_status`  INT    DEFAULT NULL COMMENT '最近探针 HTTP 状态码',
+    `last_probe_latency` INT    DEFAULT NULL COMMENT '最近探针延迟（毫秒）',
+    `last_probe_error`   VARCHAR(512) DEFAULT NULL COMMENT '最近探针错误信息',
+    `average_latency`    INT    DEFAULT NULL COMMENT '平均延迟（毫秒）',
+    `total_failures`     BIGINT DEFAULT 0 COMMENT '计费/熔断口径累计失败次数',
+    `interval_seconds`   INT NOT NULL DEFAULT 0 COMMENT '探针间隔秒（0=走全局设置）',
+    `enabled`            TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用探针',
+    `created_at`         BIGINT DEFAULT NULL COMMENT '创建时间（毫秒）',
+    `updated_at`         BIGINT DEFAULT NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_account_channel_health_id`),
+    UNIQUE KEY `uk_provider_connection` (`provider_id`, `connection_id`),
+    KEY `idx_state` (`state`),
+    KEY `idx_channel` (`channel`),
+    KEY `idx_updated` (`updated_at`),
+    KEY `idx_circuit_state` (`circuit_state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='渠道管理-渠道健康探针记录';
 
 -- ---------------------------------------------------------------------
--- [V6.10] sys_account_credit_config: AK/SK 两列（HMAC 签名类余额接口用）
+-- 渠道健康探针历史（追加式时序表，原 V7.5__add_channel_health_log.sql）
+-- 每次探针落最新态时同事务追加一行，供渠道页「健康」页签画延迟趋势；
+-- 默认保留 7 天，由 ChannelHealthLogCleaner 每日清理过期行。
 -- ---------------------------------------------------------------------
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_account_credit_config' AND COLUMN_NAME = 'sys_account_credit_config_ak'), 'SELECT 1', 'ALTER TABLE sys_account_credit_config ADD COLUMN sys_account_credit_config_ak VARCHAR(512) DEFAULT NULL COMMENT ''Access Key（AK/SK 签名类余额接口用，enc: 前缀密文）''');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-SET @sql := IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_account_credit_config' AND COLUMN_NAME = 'sys_account_credit_config_sk'), 'SELECT 1', 'ALTER TABLE sys_account_credit_config ADD COLUMN sys_account_credit_config_sk VARCHAR(512) DEFAULT NULL COMMENT ''Secret Key（AK/SK 签名类余额接口用，enc: 前缀密文）''');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+CREATE TABLE IF NOT EXISTS `sys_account_channel_health_log` (
+    `sys_account_channel_health_log_id` VARCHAR(36) NOT NULL COMMENT '健康历史标识',
+    `provider_id`   VARCHAR(64) NOT NULL COMMENT '渠道标识（UUID）',
+    `connection_id` VARCHAR(36) NOT NULL COMMENT '连接标识（UUID）',
+    `channel`       VARCHAR(64) DEFAULT NULL COMMENT '渠道键（平台）',
+    `state`         VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN' COMMENT '本次探针结论 (UNKNOWN/ONLINE/WARNING/DOWN/RATE_LIMITED)',
+    `latency_ms`    INT         DEFAULT NULL COMMENT '本次探针延迟（毫秒）',
+    `http_status`   INT         DEFAULT NULL COMMENT '本次探针 HTTP 状态码',
+    `error`         VARCHAR(255) DEFAULT NULL COMMENT '本次探针错误摘要（截断）',
+    `created_at`    BIGINT      NOT NULL COMMENT '记录时间（毫秒）',
+    PRIMARY KEY (`sys_account_channel_health_log_id`),
+    KEY `idx_chlog_conn_time` (`connection_id`, `created_at`),
+    KEY `idx_chlog_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='渠道管理-渠道健康探针历史（保留7天）';
+
+-- =====================================================================
+-- [四] 统一发送日志表（原 V7.4__add_account_send_log.sql，已并入本文件）
+-- 说明: MailboxService 统一发信门面的通道级完整日志（邮件 / 短信）。
+--       发送成功与失败都落一条，异步写入，失败不影响发送主流程。
+--       业务侧留痕（验证码 sys_sms_log / 消息推送 sys_message_log）仍在
+--       各业务表，本表只记录「通道视角」的每一次真实发送。
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS sys_account_send_log (
+
+    sys_account_send_log_id VARCHAR(32) PRIMARY KEY COMMENT '日志主键 ID（UUID）',
+    sys_account_send_log_time DATETIME COMMENT '发送时间',
+    sys_account_send_log_kind VARCHAR(16) COMMENT '账号种类：EMAIL / SMS',
+    sys_account_send_log_account_id VARCHAR(64) COMMENT '发信账号 ID',
+    sys_account_send_log_account_name VARCHAR(128) COMMENT '发信账号名称',
+    sys_account_send_log_provider VARCHAR(64) COMMENT '发送通道：email / alibaba-sms / tencent-sms / baidu-sms',
+    sys_account_send_log_target VARCHAR(255) COMMENT '收件人（邮箱地址 / 手机号）',
+    sys_account_send_log_cc VARCHAR(512) COMMENT '抄送（仅邮件，逗号分隔）',
+    sys_account_send_log_subject VARCHAR(512) COMMENT '主题（邮件）',
+    sys_account_send_log_content MEDIUMTEXT COMMENT '完整正文',
+    sys_account_send_log_template_code VARCHAR(128) COMMENT '模板编码',
+    sys_account_send_log_success TINYINT DEFAULT 0 COMMENT '是否成功：0 失败、1 成功',
+    sys_account_send_log_message_id VARCHAR(255) COMMENT '服务商消息标识',
+    sys_account_send_log_error VARCHAR(2000) COMMENT '失败原因',
+    sys_account_send_log_cost_ms BIGINT COMMENT '耗时（毫秒）',
+    sys_account_send_log_source VARCHAR(64) COMMENT '调用来源：mailbox / system:sms-code / system:message-push',
+    sys_account_send_log_created_at DATETIME COMMENT '写入时间',
+
+    KEY `idx_account_send_log_time` (`sys_account_send_log_time`),
+    KEY `idx_account_send_log_kind` (`sys_account_send_log_kind`),
+    KEY `idx_account_send_log_target` (`sys_account_send_log_target`),
+    KEY `idx_account_send_log_success` (`sys_account_send_log_success`),
+    KEY `idx_account_send_log_account` (`sys_account_send_log_account_id`),
+    KEY `idx_account_send_log_source` (`sys_account_send_log_source`)
+
+) COMMENT '账号发送日志（邮件 / 短信通道级）';
 

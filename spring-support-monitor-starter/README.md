@@ -44,7 +44,7 @@
 | 13 | `ms_monitor_redis_metric` | Redis 时序 |
 | 14 | `ms_monitor_redis_metric_statistics` | Redis 小时聚合 |
 
-同一份 DDL（`V5.0__init_all_monitor.sql`）还建了告警（`ms_monitor_alarm_policy` / `_rule` / `_event` / `_maintenance_window`）、抓包（`ms_tshark_session` / `ms_tshark_packet`）、主机历史（`ms_host_metric_history`）、同步任务（`ms_sync_task`）、维护计划（`ms_maintenance_plan`）、节点（`ms_server_node`），以及并入了操作日志（`ms_server_oper_log` / `ms_apm_oper_log`）、同步执行日志（`ms_sync_task_run_log`）与 ACME 证书管理（`monitor_acme_account` / `_certificate` / `_order`）；原 `V4.0.0.44 ~ V4.0.0.59` 增量脚本已全部并入本文件并删除。
+同一份 DDL（`V5.1__init_all_monitor.sql`）还建了告警（`ms_monitor_alarm_policy` / `_rule` / `_event` / `_maintenance_window`）、抓包（`ms_tshark_session` / `ms_tshark_packet`）、主机历史（`ms_host_metric_history`）、同步任务（`ms_sync_task`）、维护计划（`ms_maintenance_plan`）、节点（`ms_server_node`），以及并入了操作日志（`ms_server_oper_log` / `ms_apm_oper_log`）、同步执行日志（`ms_sync_task_run_log`）与 ACME 证书管理（`monitor_acme_account` / `_certificate` / `_order`）；原 `V4.0.0.44 ~ V4.0.0.59` 增量脚本已全部并入本文件并删除。
 
 **缓存**（`CacheManager` 名 → 典型 key）：
 
@@ -140,7 +140,7 @@
 
 ## 四、快速开始
 
-**第一步**：引入依赖并准备数据库。核心表由 `src/main/resources/db/init/V5.0__init_all_monitor.sql` 建（种子在 `V5.0__initdata_all_monitor.sql`，另有 `db/h2` 的 H2 版本；历史增量脚本已全部并入）。
+**第一步**：引入依赖并准备数据库。核心表由 `src/main/resources/db/init/V5.1__init_all_monitor.sql` 建（种子在 `V5.0__initdata_all_monitor.sql`，另有 `db/h2` 的 H2 版本；历史增量脚本已全部并入）。
 
 **第二步**：配置数据源与（可选的）时序引擎：
 
@@ -283,7 +283,7 @@ com.example.monitor.MyMqHttpProvider
 
 1. **`LOCAL` 只在服务器本机可用**：走 metrics-starter / OSHI 直采，非 SERVER 类型不适用；且**macOS 跳过**。
 2. **`TERMINAL` / `HTTP` / `PROMETHEUS` 依赖外部环境**：SSH 需要账号可达（超时见 `plugin.monitor.ssh.*`），HTTP 需要 exporter 暴露，Prometheus 需要可达的 Prometheus 服务；采集失败是 `CollectResult.fail(...)` 而非抛异常，因此表现为「成功但 `points=0`」，日志里会有 `reason=`。
-3. **建表不会自动补列**：`V5.0__init_all_monitor.sql` 是 `CREATE TABLE IF NOT EXISTS`，对**已存在**的表不会加列；但文件末尾已把历史各增量（V4.0.0.44 ~ V4.0.0.59）的补列改写为 information_schema 判存 + 动态 DDL，版本递进后的 V5.0 重跑会自动补齐，无需再单独执行增量脚本；且框架会注册多个 `DataSource`，`spring.sql.init` 的自动装配会静默退避，所以本模块显式装配 `monitorSchemaInitializer` 才让脚本真正执行。
+3. **建表不会自动补列**：`V5.1__init_all_monitor.sql` 是 `CREATE TABLE IF NOT EXISTS`，对**已存在**的表不会加列；历史各增量（V4.0.0.44 ~ V4.0.0.59）的补列已全部内联进建表语句，新库一次建全。本文件只用通用 SQL，不含 information_schema 判存与动态 DDL；存量库如仍缺列，请按第 2 节表结构手工补列。且框架会注册多个 `DataSource`，`spring.sql.init` 的自动装配会静默退避，所以本模块显式装配 `monitorSchemaInitializer` 才让脚本真正执行。
 4. **时序存储取决于引擎**：默认 `engine=influxdb` 且 `plugin.monitor.influx.enabled` 默认 `false`，不接 InfluxDB 时请显式改成 `datasource`（写 MySQL 明细表）或 `none`（只写明细表、关闭时序双写）。
 5. **缓存是进程内 + 多级，跨实例不自动失效**：`monitor` / `monitorTask` 等缓存由 cache-starter 提供，多实例下依赖共用 Redis；`monitor:metric:latest` 是短时快照，采集写入后不主动 evict，读数可能滞后一个采集周期。
 6. **告警依赖通知通道**：内置只有日志与 Webhook 两种 `NotifySender`；短信厂商实现来自 `utils-support-alibaba-starter` / `-hunyuan-starter` / `-baidu-starter`，宿主不引则发短信会明确报「未安装短信通道」。

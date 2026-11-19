@@ -86,7 +86,7 @@
 
 | 依赖 | 用途 | 缺失时 |
 |---|---|---|
-| MySQL | `sys_ai_*` 配置 / 会话 / 用量 / 任务表（`src/main/resources/db/init/V5.1__init_all_ai.sql` 及 `V5.x` 增量） | 启动失败 |
+| MySQL | `sys_ai_*` 配置 / 会话 / 用量 / 任务表（`src/main/resources/db/init/V7.0__init_all_ai.sql`，历史增量脚本已并入） | 启动失败 |
 | Redis | 设置缓存、用量时间轮、部分限流 | **可降级**：缓存读写失败只打 WARN（见 `CacheResilienceConfiguration`） |
 | 本地模型目录 | ONNX 供应商按 `<模型目录>/<modelId>/model.onnx` 读取 | 对应能力报「未配置」 |
 | Actuator | `ai-*` 只读端点 | 端点不注册，不影响对话 |
@@ -169,7 +169,7 @@ chua:
 
 ## 四、快速开始
 
-**第一步**：准备 MySQL（先跑 `V5.1__init_all_ai.sql`）与 Redis（可降级），引入本模块。
+**第一步**：准备 MySQL（先跑 `V7.0__init_all_ai.sql`）与 Redis（可降级），引入本模块。
 
 **第二步**：至少配一个可用的对话客户端——YAML 声明或页面配置二选一：
 
@@ -352,11 +352,23 @@ public class MyLlmCreditProvider implements ChannelCreditProvider {
 
 | 分类 | 厂商 | 依据 |
 |---|---|---|
-| 已收录 · Bearer（11） | `deepseek` `moonshot` `siliconflow` `openrouter` `novita-ai` `requesty` `llmgateway` `deepinfra` `together` `stepfun` `opencode-go` | 官方端点或探活确认路径，见 `provider-credit-endpoints.json`（`HostCreditQueryProvider` 读它） |
-| 已收录 · AK/SK 签名（4） | `aliyun-bss` `volc-billing` `baidu-bce` `qiniu` | 阿里云 BSS `QueryAccountBalance`、火山 `QueryBalanceAcct`、百度财务 `/v1/finance/cash/balance`、七牛 `/billing-api/v1/account/balance-overview`；签名由 `CreditSigner` 完成，AK/SK 在账户页「余额查询」配置里加密落库 |
+| 已收录 · Bearer（13） | `deepseek` `moonshot` `siliconflow` `openrouter` `novita-ai` `requesty` `llmgateway` `deepinfra` `together` `stepfun` `opencode-go` `opencode` `opencode-console` | 官方端点或探活确认路径，见 `provider-credit-endpoints.json`（`HostCreditQueryProvider` 读它）；`opencode`（Zen）与 Go 共用同一 API Key，由专属实现 `OpenCodeCreditQueryProvider`（kind=`opencode`）聚合官方用量端点与预算端点 `GET /console/api/policies/current-budgets`（403=无 Budgets:Read 权限），Zen 按量余额官方暂无 API（#10448 open）；`opencode-console` 走控制台同源接口 `GET /console/api/billing/status`（非公开文档 API，`__Host-console_session` 会话 Cookie 鉴权、API Key 会 403，1 USD=1e8 microCents），由专属实现 `OpenCodeConsoleCreditQueryProvider`（kind=`opencode-console`）解析出 Zen 现金余额 |
+| 已收录 · AK/SK 签名（4） | `aliyun-bss` `volc-billing` `baidu-bce` `qiniu` | 阿里云 BSS `QueryAccountBalance`、火山 `QueryBalanceAcct`（豆包 / 方舟渠道经 `doubao` / `volcengine` 别名复用）、百度财务 `/v1/finance/cash/balance`、七牛 `/billing-api/v1/account/balance-overview`；签名由 `CreditSigner` 完成，AK/SK 在账户页「余额查询」配置里加密落库 |
 | 不收录 | `zhipu` `zai` `chutes` `fireworks` `helicone` `302ai` `hyper` `kilo` 等 20+ 家 | 官方文档没有余额 / 额度查询端点，不猜地址、不标「支持」；确有余额源的走页面「地址 + 字段表达式」通用配置 |
 
-`opencode-go` 是唯一「路径探活可证、文档无字」的例外（官方只说用量去 Console 看），已在代码注释里标明。
+**火山系合并入口（余额 + 订阅）**：`volcengine` / `doubao` / `volcengine-coding-plan` 合并为「火山引擎」一个入口——
+供应商登记表（`provider-registry.json`）里 `volcengine` 为主条目（`doubao` 是别名，keywords 命中），
+Coding Plan 编程套餐端点（`https://ark.cn-beijing.volces.com/api/coding/v3`）作为主条目的 `variants` 变体保留，
+仍按原 id `volcengine-coding-plan` 命中。余额走 `volc-billing` 预设（IAM AK/SK，`QueryBalanceAcct`）；
+订阅（编程套餐 / AgentForPlan 的套餐状态 + 用量窗口）由专属实现 `VolcenginePlanCreditQueryProvider`
+（kind=`volc-plan`，`@since 4.0.0.61`）聚合方舟统一入口
+`POST https://ark.cn-beijing.volcengineapi.com/?Action=<Action>&Version=2024-01-01`：
+`GetPersonalPlan`（先 CodingPlan 后 AgentPlan，`ResourceNotFound.Plan` 降级「未订阅」）、
+`GetCodingPlanUsage` / `GetAFPUsage`（用量窗口，百分比口径换算为「剩余占比」）。
+与余额共用同一对 AK/SK，不新增凭据类型；候选顺序 `volc-plan` 在 `host` 之前，首个成功胜出。
+
+`opencode-go` 与 `opencode-console` 是「文档无字」的例外：前者路径探活可证（官方只说用量去 Console 看），
+后者是控制台同源接口（非公开文档 API），均已在代码注释与登记表 notes 里标明。
 4 家签名类端点/字段来自官方文档原文，但**未做真链路探活、未绑真 key 验字段**，首次绑真 key 前只显示上游原文；
 字段口径不一致时用 `credit_expression` 覆盖。完备清单与配置方式见 `spring-support-account-starter/README.md` 的「余额查询配置」。
 

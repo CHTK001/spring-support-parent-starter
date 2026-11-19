@@ -1,11 +1,18 @@
 -- =====================================================================
--- V7.0__initdata_all_account.sql - spring-support-account-starter 全量种子
+-- V8.0__initdata_all_account.sql - spring-support-account-starter 全量种子
 -- 通道: INITDATA 虚拟线程异步；表结构就位后执行。
 -- 说明: 本文件是该模块唯一的种子数据入口。原 V6.4__add_channel_message_template.sql
 --   的内置四条模板 INSERT 与原 V2.4__add_template_source_code.sql 的存量回填 UPDATE
---   已在本次收敛中并入本文件，原增量脚本已删除。
+--   已在此前收敛中并入本文件。
+-- 版本递进: V7.0 -> V8.0。FlywayLike 按「文件名 + 版本」记账，无成功记录即执行，
+--   故本次「一个 init + 一个 initdata」脚本收敛必须递进版本号。
+-- 收敛口径: V7.2__migrate_channel_to_account.sql 的存量数据复制
+--   （INSERT...SELECT 旧 sys_ai_provider* / sys_ai_channel_health 表）不并入 ——
+--   引用旧表名，新库没有旧表，属存量库一次性迁移，随 V7.2 一并退役；
+--   V7.4__add_account_send_log.sql / V7.5__add_channel_health_log.sql
+--   只有建表、无种子 DML，建表已并入 V8.0__init_all_account.sql。
 -- 约束: 全部语句必须幂等（INSERT IGNORE 按主键/唯一索引去重；UPDATE 条件流转），
---   可反复执行。
+--   可反复执行；本文件只允许 DML 与注释，禁止任何 DDL。
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

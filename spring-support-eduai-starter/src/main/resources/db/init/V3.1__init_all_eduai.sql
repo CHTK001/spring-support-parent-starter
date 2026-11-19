@@ -1,30 +1,32 @@
 -- =====================================================================
--- V3.0__init_all_eduai.sql - spring-support-eduai-starter 全量表结构
+-- V3.1__init_all_eduai.sql - spring-support-eduai-starter 全量表结构
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口。此前分散的
 --   V1.2 / V1.3 / V1.4 / V1.5 / V1.6 / V1.9 / V1.13 的 init_all
 --   与 V1.14 ~ V1.22 的增量脚本
---   已在本次收敛中并入本文件（结构）与 V2.0__initdata_all_eduai.sql（种子）并删除。
+--   已在历史收敛中并入本文件（结构）与 V3.0__initdata_all_eduai.sql（种子）并删除。
 --
--- 合并方式:
---   1. 原来靠 ALTER 补的列，一律折进建表语句 —— 新库一次建全；
---   2. 存量库补列的 ALTER 仍保留在文件末尾（information_schema 判存 + 动态 DDL），
---      否则老库缺列；新建库上这些语句会因列已存在而跳过。
+-- 版本递进原因: V3.0 -> V3.1。FlywayLike 按「脚本名 + 版本」记账，命中成功
+--   记录即跳过，故本次「动态 DDL 全部移除、列定义内联」的清理必须递进版本号，
+--   存量库与新库才会以新版本重跑本文件。
 --
--- 版本递进: V2.1 -> V3.0。原 V2.7 ~ V2.10 / V2.13 ~ V2.18 增量脚本
---   均在本次收敛中并入本文件。其中两条类型放宽（V2.13 edu_word.word_structure
---   放宽为 LONGTEXT、V2.17 edu_poem 译文/赏析/注释放宽为 MEDIUMTEXT）已折进
---   建表语句（新库一次建宽），并在文件末尾保留存量库兼容 MODIFY；
---   其余 8 条（V2.7 / V2.8 / V2.9 / V2.10 / V2.14 / V2.15 / V2.16 / V2.18）
---   均为数据修复（collect_flow DSL / collect_task 悬挂任务 / edu_fun_config 清理），
---   属数据类语句，移交 V3.0__initdata_all_eduai.sql。
---   FlywayLike 按「脚本名 + 版本」记账，命中成功记录即跳过（checksum 变化
---   只做校验、不会触发重跑），故合并增量必须递进版本号，否则存量库不会
---   重跑、并入的补列与建表不会生效。
+-- 迁移口径: 动态 DDL 全部移除、列/索引定义全部内联进 CREATE TABLE——
+--   原文件末尾「查系统表判存 + 会话变量拼 SQL + 预编译执行」的存量库补列段
+--   （22 个守卫块，涉及 edu_student / edu_teacher / edu_answer_sheet /
+--   edu_marking_task / edu_wrong_question / edu_question / edu_paper_assign /
+--   edu_hanzi / edu_word / edu_poem）已删除：受守卫的列与类型此前均已内联进
+--   对应建表语句，唯一实质变化是 edu_marking_task.marking_task_image_path
+--   由 VARCHAR(512) 内联放宽为 VARCHAR(2000)（多页路径逗号连接所需）。
+--   本文件只用通用 SQL（CREATE TABLE IF NOT EXISTS + 内联列/索引定义），
+--   不再包含任何动态 DDL、判存补列与改表/删表/改名语句。
 --
--- 约束: 含 MySQL 专属语法（SET @var + PREPARE 动态 DDL、COMMENT 内联注释）。
---   MariaDB 11.8 实测不接受 ADD COLUMN IF NOT EXISTS（语句报错、列不会建成），
---   MySQL 虽支持但会告警，故补列一律用「查列 → 不存在才 ALTER」两步走。
+-- 数据类语句口径: 文内 collect_flow 等 INSERT ... WHERE NOT EXISTS 为种子/配置
+--   DML（幂等），不属于结构变更，随本文件一并执行。
+--
+-- 约束: MySQL 专属语法仅保留 COMMENT 内联注释等建表写法。
+--   MariaDB 11.8 实测不接受「IF NOT EXISTS」式加列（语句报错、列不会建成），
+--   MySQL 虽支持但会告警，故 V3.0 时代补列走「查列 → 不存在才变更」两步走，
+--   V3.1 起一律以内联建表替代。
 -- =====================================================================
 
 -- ----------------------------
@@ -278,7 +280,7 @@ CREATE TABLE IF NOT EXISTS edu_answer_sheet (
       --         Column "create_name" not found; SQL statement: SELECT ... FROM edu_collect_task,
       --       （EduCollectTaskServiceImpl#run 启动时做调度对账会立即查 edu_collect_task）,
       -- 说明：,
-      --   1) 既有库历史上已被手工/早期脚本补过这些列，ADD COLUMN IF NOT EXISTS 对它们是空操作；,
+      --   1) 既有库历史上已被手工/早期脚本补过这些列，带「IF NOT EXISTS」的加列对它们是空操作；,
       --      全新库建表后由本段补齐，两条路径统一。,
       --   2) 列类型与既有库实测一致（create_name/update_name VARCHAR(255)，create_by/update_by INT，,
       --      create_time/update_time DATETIME；create_time 带 CURRENT_TIMESTAMP 默认值）。,
@@ -961,9 +963,9 @@ CREATE TABLE IF NOT EXISTS edu_paper_assign (
     KEY edu_paper_assign_teacher (teacher_account)
 ) COMMENT '班级试卷布置';
 
--- 兼容既有库：首次发布（2026-10-04 06:14）建出的 edu_paper_assign 缺 create_time。
--- 上面的 CREATE TABLE 只对全新库生效，既有库必须靠这条 ALTER 补齐，
--- 否则「布置/撤回」会一直 500（这正是本次验收抓到的失败）。
+-- 兼容说明：首次发布（2026-10-04 06:14）建出的 edu_paper_assign 曾缺 create_time，
+-- 原先靠文件末尾的动态补列段为存量库补齐；V3.1 起该列已内联进上方建表语句，
+-- 动态补列段随之移除（「布置/撤回」500 的教训见上）。
 
 
 -- ---------------------------------------------------------------------
@@ -1004,7 +1006,7 @@ CREATE TABLE IF NOT EXISTS edu_marking_task (
     marking_task_exam_id BIGINT COMMENT '考试ID（用于取卷面分值）',
     marking_task_student_id VARCHAR(64) COMMENT '学生ID（留空时由服务端兜底）',
     marking_task_max_score INT COMMENT '任意卷每题满分',
-    marking_task_image_path VARCHAR(512) COMMENT '上传图片的落盘路径（续跑时读取）',
+    marking_task_image_path VARCHAR(2000) COMMENT '上传图片的落盘路径（多页以逗号按页序连接，续跑时读取）',
     marking_task_answer_sheet_id BIGINT COMMENT '生成的答题卡ID',
     marking_task_stage VARCHAR(64) COMMENT '当前阶段（识别中 / 判分中 2/3 等，供前端展示进度）',
     marking_task_total INT DEFAULT 0 COMMENT '识别出的题目数',
@@ -1147,262 +1149,31 @@ CREATE TABLE IF NOT EXISTS edu_marking_sheet_parse (
     KEY idx_parse_student_no (parse_student_no)
 ) COMMENT '试卷解析结果（结构化：姓名/学号/总分/逐题）';
 -- =====================================================================
--- 存量库补列（老库已有旧表形时补列；新库上列已存在，下面的语句会跳过）
---
--- 为何不用 ADD COLUMN IF NOT EXISTS：MariaDB 11.8 实测不接受该语法（语句报错、
--- 列不会建成），MySQL 虽支持但会告警。用「查列 → 不存在才 ALTER」两步走，
--- 在 MariaDB 与 MySQL 上都成立。
---
--- 原来这些补列分散在 V1.3 / V1.4 / V1.6 / V1.13 / V1.17 / V1.18 / V1.21 / V1.22
--- 八个脚本里，本次收敛全部并入本文件末尾。
+-- 存量库兼容说明（V3.1 起动态补列段全部移除）
+-- 原先此处用「查系统表判存 + 会话变量拼 SQL + 预编译执行」的动态 DDL 为
+-- 存量库补列/放宽类型，共 22 个守卫块，涉及：
+--   edu_student（student_password / student_pwd_salt / student_pwd_must_change /
+--     student_avatar / student_id_card）
+--   edu_teacher（teacher_password / teacher_pwd_salt）
+--   edu_answer_sheet（answer_sheet_exam_id 改可空）
+--   edu_marking_task（marking_task_image_path 放宽 VARCHAR(2000) /
+--     marking_task_teacher_finished / marking_task_teacher_finish_time /
+--     marking_task_satisfaction）
+--   edu_wrong_question（wrong_question_paper_id / wrong_question_source_task_id /
+--     wrong_question_corrected / wrong_question_correct_time）
+--   edu_question（question_audit_remark / question_audit_count）
+--   edu_paper_assign（create_time）
+--   edu_hanzi（hanzi_meaning 放宽 TEXT）
+--   edu_word（word_structure 放宽 LONGTEXT）
+--   edu_poem（poem_translation / poem_appreciation / poem_notes 放宽 MEDIUMTEXT）
+-- 上述列与类型现已全部内联进对应 CREATE TABLE（新库一次建全）；
+-- 存量库升级由 V3.0 -> V3.1 版本递进触发本文件整体重跑落地。
 -- =====================================================================
 
--- ---------- edu_student：登录口令三件套 + 头像 + 身份证 ----------
-SET @has_stu_pwd := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_password'
-);
-SET @sql_stu_pwd := IF(@has_stu_pwd > 0, 'SELECT 1',
-    'ALTER TABLE edu_student ADD COLUMN student_password VARCHAR(64) DEFAULT NULL COMMENT ''登录口令摘要 hmacSha256(明文,盐)，非明文''');
-PREPARE stmt_stu_pwd FROM @sql_stu_pwd;
-EXECUTE stmt_stu_pwd;
-DEALLOCATE PREPARE stmt_stu_pwd;
 
-SET @has_stu_salt := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_pwd_salt'
-);
-SET @sql_stu_salt := IF(@has_stu_salt > 0, 'SELECT 1',
-    'ALTER TABLE edu_student ADD COLUMN student_pwd_salt VARCHAR(32) DEFAULT NULL COMMENT ''口令盐（随机十六进制，与 student_password 一一对应）''');
-PREPARE stmt_stu_salt FROM @sql_stu_salt;
-EXECUTE stmt_stu_salt;
-DEALLOCATE PREPARE stmt_stu_salt;
 
-SET @has_stu_must := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_pwd_must_change'
-);
-SET @sql_stu_must := IF(@has_stu_must > 0, 'SELECT 1',
-    'ALTER TABLE edu_student ADD COLUMN student_pwd_must_change TINYINT DEFAULT 0 COMMENT ''是否需引导改密: 0-否 1-是''');
-PREPARE stmt_stu_must FROM @sql_stu_must;
-EXECUTE stmt_stu_must;
-DEALLOCATE PREPARE stmt_stu_must;
 
-SET @has_stu_avatar := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_avatar'
-);
-SET @sql_stu_avatar := IF(@has_stu_avatar > 0, 'SELECT 1',
-    'ALTER TABLE edu_student ADD COLUMN student_avatar VARCHAR(500) COMMENT ''学生头像（URL 或 Base64，与系统用户头像同口径）'' AFTER student_parent_phone');
-PREPARE stmt_stu_avatar FROM @sql_stu_avatar;
-EXECUTE stmt_stu_avatar;
-DEALLOCATE PREPARE stmt_stu_avatar;
 
-SET @has_stu_idcard := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_student' AND COLUMN_NAME = 'student_id_card'
-);
-SET @sql_stu_idcard := IF(@has_stu_idcard > 0, 'SELECT 1',
-    'ALTER TABLE edu_student ADD COLUMN student_id_card VARCHAR(32) COMMENT ''身份证号（仅管理端维护，学生端不可见）'' AFTER student_avatar');
-PREPARE stmt_stu_idcard FROM @sql_stu_idcard;
-EXECUTE stmt_stu_idcard;
-DEALLOCATE PREPARE stmt_stu_idcard;
-
--- ---------- edu_teacher：登录口令两件套 ----------
-SET @has_tea_pwd := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_teacher' AND COLUMN_NAME = 'teacher_password'
-);
-SET @sql_tea_pwd := IF(@has_tea_pwd > 0, 'SELECT 1',
-    'ALTER TABLE edu_teacher ADD COLUMN teacher_password VARCHAR(64) COMMENT ''登录口令摘要 hmacSha256(明文,盐)，非明文''');
-PREPARE stmt_tea_pwd FROM @sql_tea_pwd;
-EXECUTE stmt_tea_pwd;
-DEALLOCATE PREPARE stmt_tea_pwd;
-
-SET @has_tea_salt := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_teacher' AND COLUMN_NAME = 'teacher_pwd_salt'
-);
-SET @sql_tea_salt := IF(@has_tea_salt > 0, 'SELECT 1',
-    'ALTER TABLE edu_teacher ADD COLUMN teacher_pwd_salt VARCHAR(32) COMMENT ''口令盐（随机十六进制，与 teacher_password 一一对应）''');
-PREPARE stmt_tea_salt FROM @sql_tea_salt;
-EXECUTE stmt_tea_salt;
-DEALLOCATE PREPARE stmt_tea_salt;
-
--- ---------- edu_answer_sheet：考试ID 改可空（扫描阅卷未绑定考试时为空） ----------
-SET @has_sheet_exam := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_answer_sheet' AND COLUMN_NAME = 'answer_sheet_exam_id'
-      AND IS_NULLABLE = 'NO'
-);
-SET @sql_sheet_exam := IF(@has_sheet_exam > 0,
-    'ALTER TABLE edu_answer_sheet MODIFY COLUMN answer_sheet_exam_id BIGINT NULL COMMENT ''考试ID（扫描阅卷未绑定考试时为空）''',
-    'SELECT 1');
-PREPARE stmt_sheet_exam FROM @sql_sheet_exam;
-EXECUTE stmt_sheet_exam;
-DEALLOCATE PREPARE stmt_sheet_exam;
-
--- ---------- edu_marking_task：图片路径加长 + 老师阅卷完成标记 ----------
-SET @has_mark_img := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_image_path'
-      AND CHARACTER_MAXIMUM_LENGTH < 2000
-);
-SET @sql_mark_img := IF(@has_mark_img > 0,
-    'ALTER TABLE edu_marking_task MODIFY COLUMN marking_task_image_path VARCHAR(2000) COMMENT ''上传图片的落盘路径（多页以逗号按页序连接，续跑时读取）''',
-    'SELECT 1');
-PREPARE stmt_mark_img FROM @sql_mark_img;
-EXECUTE stmt_mark_img;
-DEALLOCATE PREPARE stmt_mark_img;
-
-SET @has_mark_fin := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_teacher_finished'
-);
-SET @sql_mark_fin := IF(@has_mark_fin > 0, 'SELECT 1',
-    'ALTER TABLE edu_marking_task ADD COLUMN marking_task_teacher_finished TINYINT DEFAULT 0 COMMENT ''老师是否已点「阅卷完成」: 0-未完成 1-已完成''');
-PREPARE stmt_mark_fin FROM @sql_mark_fin;
-EXECUTE stmt_mark_fin;
-DEALLOCATE PREPARE stmt_mark_fin;
-
-SET @has_mark_fin_time := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_teacher_finish_time'
-);
-SET @sql_mark_fin_time := IF(@has_mark_fin_time > 0, 'SELECT 1',
-    'ALTER TABLE edu_marking_task ADD COLUMN marking_task_teacher_finish_time DATETIME COMMENT ''老师点「阅卷完成」的时间''');
-PREPARE stmt_mark_fin_time FROM @sql_mark_fin_time;
-EXECUTE stmt_mark_fin_time;
-DEALLOCATE PREPARE stmt_mark_fin_time;
-
--- ---------- edu_marking_task：完成度 AI 评分（实体 + Mapper 均已引用） ----------
-SET @has_mark_satisfaction := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_marking_task' AND COLUMN_NAME = 'marking_task_satisfaction'
-);
-SET @sql_mark_satisfaction := IF(@has_mark_satisfaction > 0, 'SELECT 1',
-    'ALTER TABLE edu_marking_task ADD COLUMN marking_task_satisfaction INT COMMENT ''AI评分满意度''');
-PREPARE stmt_mark_satisfaction FROM @sql_mark_satisfaction;
-EXECUTE stmt_mark_satisfaction;
-DEALLOCATE PREPARE stmt_mark_satisfaction;
-
--- ---------- edu_wrong_question：试卷ID / 来源任务 / 订正状态 ----------
-SET @has_wq_paper := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_paper_id'
-);
-SET @sql_wq_paper := IF(@has_wq_paper > 0, 'SELECT 1',
-    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_paper_id BIGINT COMMENT ''试卷ID（错题来自哪张卷）''');
-PREPARE stmt_wq_paper FROM @sql_wq_paper;
-EXECUTE stmt_wq_paper;
-DEALLOCATE PREPARE stmt_wq_paper;
-
-SET @has_wq_task := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_source_task_id'
-);
-SET @sql_wq_task := IF(@has_wq_task > 0, 'SELECT 1',
-    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_source_task_id VARCHAR(64) NULL COMMENT ''来源阅卷任务标识（哪次完成登记的，用于撤销）'' AFTER wrong_question_paper_id');
-PREPARE stmt_wq_task FROM @sql_wq_task;
-EXECUTE stmt_wq_task;
-DEALLOCATE PREPARE stmt_wq_task;
-
-SET @has_wq_corr := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_corrected'
-);
-SET @sql_wq_corr := IF(@has_wq_corr > 0, 'SELECT 1',
-    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_corrected TINYINT NOT NULL DEFAULT 0 COMMENT ''订正状态：0 未订正 / 1 已订正'' AFTER wrong_question_source_task_id');
-PREPARE stmt_wq_corr FROM @sql_wq_corr;
-EXECUTE stmt_wq_corr;
-DEALLOCATE PREPARE stmt_wq_corr;
-
-SET @has_wq_corr_time := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_wrong_question' AND COLUMN_NAME = 'wrong_question_correct_time'
-);
-SET @sql_wq_corr_time := IF(@has_wq_corr_time > 0, 'SELECT 1',
-    'ALTER TABLE edu_wrong_question ADD COLUMN wrong_question_correct_time DATETIME NULL COMMENT ''最近订正时间'' AFTER wrong_question_corrected');
-PREPARE stmt_wq_corr_time FROM @sql_wq_corr_time;
-EXECUTE stmt_wq_corr_time;
-DEALLOCATE PREPARE stmt_wq_corr_time;
-
--- ---------- edu_question：审核驳回理由与累计次数 ----------
-SET @has_q_audit_remark := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_question' AND COLUMN_NAME = 'question_audit_remark'
-);
-SET @sql_q_audit_remark := IF(@has_q_audit_remark > 0, 'SELECT 1',
-    'ALTER TABLE edu_question ADD COLUMN question_audit_remark VARCHAR(500) COMMENT ''驳回理由（驳回必填，通过时清空）'' AFTER question_audit_status');
-PREPARE stmt_q_audit_remark FROM @sql_q_audit_remark;
-EXECUTE stmt_q_audit_remark;
-DEALLOCATE PREPARE stmt_q_audit_remark;
-
-SET @has_q_audit_count := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_question' AND COLUMN_NAME = 'question_audit_count'
-);
-SET @sql_q_audit_count := IF(@has_q_audit_count > 0, 'SELECT 1',
-    'ALTER TABLE edu_question ADD COLUMN question_audit_count INT DEFAULT 0 COMMENT ''累计审核次数（每次通过/驳回+1）'' AFTER question_audit_remark');
-PREPARE stmt_q_audit_count FROM @sql_q_audit_count;
-EXECUTE stmt_q_audit_count;
-DEALLOCATE PREPARE stmt_q_audit_count;
-
--- ---------- edu_paper_assign：创建时间 ----------
-SET @has_pa_create := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_paper_assign' AND COLUMN_NAME = 'create_time'
-);
-SET @sql_pa_create := IF(@has_pa_create > 0, 'SELECT 1',
-    'ALTER TABLE edu_paper_assign ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT ''创建时间''');
-PREPARE stmt_pa_create FROM @sql_pa_create;
-EXECUTE stmt_pa_create;
-DEALLOCATE PREPARE stmt_pa_create;
-
--- ---------- edu_hanzi：释义加宽为 TEXT ----------
--- 报错：写入 edu_hanzi（跳过已存在）失败 → Data too long for column 'hanzi_meaning'。
--- 原因：hanzi_meaning 原为 VARCHAR(500)，采集/录入的释义 + 组词可能超过 500 字符，
--- MySQL 严格模式直接拒绝写入；把列加宽为 TEXT 后不再受 500 字符上限约束。
-SET @has_hanzi_meaning_text := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_hanzi' AND COLUMN_NAME = 'hanzi_meaning'
-      AND LOWER(DATA_TYPE) <> 'text'
-);
-SET @sql_hanzi_meaning_text := IF(@has_hanzi_meaning_text > 0,
-    'ALTER TABLE edu_hanzi MODIFY COLUMN hanzi_meaning TEXT NULL COMMENT ''释义 / 常用组词''',
-    'SELECT 1');
-PREPARE stmt_hanzi_meaning_text FROM @sql_hanzi_meaning_text;
-EXECUTE stmt_hanzi_meaning_text;
-DEALLOCATE PREPARE stmt_hanzi_meaning_text;
-
--- ---------- edu_word：结构位放宽为大文本（原 V2.13__widen_edu_word_structure.sql，已并入本文件） ----------
--- 歇后语流程把谜面（最长 41 字）存 word_structure，VARCHAR(32) 会整批拒绝写入。
-SET @has_word_structure_wide := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_word' AND COLUMN_NAME = 'word_structure'
-      AND LOWER(DATA_TYPE) <> 'longtext'
-);
-SET @sql_word_structure_wide := IF(@has_word_structure_wide > 0,
-    'ALTER TABLE edu_word MODIFY COLUMN word_structure LONGTEXT COMMENT ''结构 / 词性，如：偏正式、动宾式、名词（歇后语谜面亦存此处）''',
-    'SELECT 1');
-PREPARE stmt_word_structure_wide FROM @sql_word_structure_wide;
-EXECUTE stmt_word_structure_wide;
-DEALLOCATE PREPARE stmt_word_structure_wide;
-
--- ---------- edu_poem：译文/赏析/注释放宽为 MEDIUMTEXT（原 V2.17__widen_edu_poem_text.sql，已并入本文件） ----------
--- 古文岛详情页长文可超 TEXT 上限（实测单行 116011 字节），三列一并放宽。
-SET @has_poem_text_wide := (
-    SELECT COUNT(*) FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'edu_poem'
-      AND COLUMN_NAME IN ('poem_translation', 'poem_appreciation', 'poem_notes')
-      AND LOWER(DATA_TYPE) <> 'mediumtext'
-);
-SET @sql_poem_text_wide := IF(@has_poem_text_wide > 0,
-    'ALTER TABLE edu_poem MODIFY COLUMN poem_translation MEDIUMTEXT COMMENT ''白话译文'' , MODIFY COLUMN poem_appreciation MEDIUMTEXT COMMENT ''赏析'' , MODIFY COLUMN poem_notes MEDIUMTEXT COMMENT ''注释''',
-    'SELECT 1');
-PREPARE stmt_poem_text_wide FROM @sql_poem_text_wide;
-EXECUTE stmt_poem_text_wide;
-DEALLOCATE PREPARE stmt_poem_text_wide;
 
 -- =====================================================================
 -- V2.3__init_edu_collect_flows.sql - 教育语料采集流程扩充
@@ -1678,12 +1449,12 @@ WHERE NOT EXISTS (
 -- 为什么这里只有 CREATE TABLE、没有任何 ALTER：
 --   本模块同时要跑在 MySQL/MariaDB（生产）与 H2（本地开发/CI）上。
 --   H2 的 ScriptConverter 有两条硬规则会吃掉补列语句：
---     ① `SET @var := (SELECT ...)` 与 `PREPARE/EXECUTE/DEALLOCATE` 整条跳过
+--     ① 会话变量赋值（@var := (SELECT ...)）与预编译执行类语句整条跳过
 --        （DefaultScriptConverter 的「整语句跳过」分支）；
---     ② 非 MySQL 方言下，单列 `ALTER TABLE ... ADD COLUMN` 整条丢弃
+--     ② 非 MySQL 方言下，单列的改表加列语句整条丢弃
 --        （DefaultScriptConverter#rewriteAddColumnAlter：列已由建表语句提供，
---          重复 ADD COLUMN 在 H2 上是硬失败）。
---   而 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` 只被 MariaDB 11.8 拒绝（实测语句报错、
+--          重复加列在 H2 上是硬失败）。
+--   而带「IF NOT EXISTS」的加列写法只被 MariaDB 11.8 拒绝（实测语句报错、
 --   列不会建成）。也就是说：**没有任何一种补列写法能同时安全地跑在这两族库上**。
 --   结论是把「新增字段」做成**新增表**——CREATE TABLE IF NOT EXISTS 两边都支持、都幂等。
 --

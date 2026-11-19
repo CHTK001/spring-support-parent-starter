@@ -27,7 +27,7 @@ public class SysAiRole {
      * 世界沙盒 AI 生成的模拟角色来源值。
      *
      * <p>角色列表（SysAiRoleServiceImpl.list / listEnabled）据此过滤；值必须与
-     * V6.11__init_all_ai.sql 写入与回填的值一致，勿在别处硬编码同一字符串。</p>
+     * V7.0__init_all_ai.sql 写入与回填的值一致，勿在别处硬编码同一字符串。</p>
      */
     public static final String SOURCE_WORLD_SIM = "world-sim";
 
