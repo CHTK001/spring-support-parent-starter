@@ -18,7 +18,7 @@
              需要可执行包时构建传 -Dspring-boot.repackage.skip=false，产物为 *-exec.jar，不替换主构件 -->
         <spring-boot.repackage.skip>false</spring-boot.repackage.skip>
         <!-- 网页解析（HTTP-HTML 数据源）；与 spring-support-ai-starter 保持同版本，避免同进程内两份 -->
-        <jsoup.version>1.23.2</jsoup.version>
+        <jsoup.version>1.24.1</jsoup.version>
     </properties>
 
     <dependencies>
