@@ -266,6 +266,92 @@ public class AiWorkspaceFileController {
     }
 
     /**
+     * 在工作区内新建文件或目录（前端侧栏「新建文件 / 新建目录」）。
+     *
+     * <p>可写范围钉死在工作区根内：{@code path} 只接受工作区内路径（相对根或绝对），
+     * 解析后必须仍在根内；父目录必须已存在；目标已存在返回 409，不静默覆盖。
+     * 新建文件写空内容，避免前端再发一次写请求。</p>
+     *
+     * @param id   会话标识
+     * @param body {@code {path, directory}}
+     * @return {@code {success, path, name, isDirectory}}
+     */
+    @PostMapping("/{id}/workspace/file")
+    public ReturnResult<Map<String, Object>> workspaceCreateFile(@PathVariable("id") String id,
+                                                                 @RequestBody Map<String, Object> body) {
+        Path root = resolveWorkspaceRoot(id);
+        if (root == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "工作目录未配置");
+        }
+        String path = body == null ? null : Objects.toString(body.get("path"), null);
+        if (path == null || path.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "path 不能为空");
+        }
+        boolean directory = body.get("directory") != null
+                && Boolean.parseBoolean(Objects.toString(body.get("directory")));
+        Path target = resolveCreateTarget(root, id, path.trim());
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "路径越界");
+        }
+        if (target.equals(root)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "已存在同名文件或目录");
+        }
+        Path parent = target.getParent();
+        if (parent == null || !Files.isDirectory(parent)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "上级目录不存在");
+        }
+        if (Files.exists(target)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "已存在同名文件或目录");
+        }
+        try {
+            if (directory) {
+                Files.createDirectory(target);
+            } else {
+                Files.createFile(target);
+            }
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "新建失败: " + e.getMessage());
+        }
+        Map<String, Object> data = new LinkedHashMap<>(4);
+        data.put("success", true);
+        data.put("path", target.toString());
+        data.put("name", target.getFileName().toString());
+        data.put("isDirectory", directory);
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 解析「待新建」的目标路径。
+     *
+     * <p>与 {@link #resolveInWorkspace} 的区别：目标还不存在，不能靠 {@code Files.exists}
+     * 判断走哪层口径，所以按**父目录**是否存在来挑：先按工作区根拼，父目录不在再接一层
+     * 会话 id（与读取口径一致）。两条都越界则返回 {@code null}。</p>
+     *
+     * @param root 工作区根
+     * @param id   会话标识
+     * @param path 待新建路径（相对根或工作区内绝对路径）
+     * @return 目标路径；越界时 {@code null}
+     */
+    private Path resolveCreateTarget(Path root, String id, String path) {
+        Path direct = root.resolve(path).normalize();
+        if (!direct.startsWith(root)) {
+            return null;
+        }
+        Path directParent = direct.getParent() == null ? root : direct.getParent();
+        if (Files.isDirectory(directParent)) {
+            return direct;
+        }
+        Path perSession = root.resolve(id).resolve(path).normalize();
+        if (perSession.startsWith(root)) {
+            Path perSessionParent = perSession.getParent() == null ? root : perSession.getParent();
+            if (Files.isDirectory(perSessionParent)) {
+                return perSession;
+            }
+        }
+        return direct;
+    }
+
+    /**
      * 删除工作区内的文件或目录（前端侧栏右键「删除」，已在确认框二次确认）。
      *
      * <p>目录递归删除；工作区根自身不允许删除。</p>
