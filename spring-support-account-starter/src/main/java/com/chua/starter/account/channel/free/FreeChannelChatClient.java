@@ -379,8 +379,9 @@ public class FreeChannelChatClient implements RouterChatClient {
         }
         List<String> accountKeys = target.accountKeys();
         if (accountKeys.isEmpty()) {
-            // 免鉴权上游：以 null key 直连（路由解析阶段已把全局 key 补进 null，这里兜底）
-            accountKeys = List.of((String) null);
+            // 免鉴权上游：以 null key 直连（路由解析阶段已把全局 key 补进 null，这里兜底）。
+            // 注意 List.of 不接受 null 元素，必须用 Arrays.asList 承载「单个 null key」。
+            accountKeys = java.util.Arrays.asList((String) null);
         }
         ChatClient resolved;
         if (accountKeys.size() == 1 || !target.autoSwitchEnabled()) {

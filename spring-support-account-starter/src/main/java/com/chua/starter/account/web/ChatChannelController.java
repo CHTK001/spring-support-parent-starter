@@ -110,7 +110,7 @@ public class ChatChannelController {
             payload.put("elapsedMs", System.currentTimeMillis() - startedAt);
             return ApiResult.ok(payload);
         } catch (Exception e) {
-            log.warn("[channel-chat] 渠道 {} 试对话失败: {}", impl.channel(), e.getMessage());
+            log.warn("[channel-chat] 渠道 {} 试对话失败: {}", impl.channel(), e.getMessage(), e);
             throw new ApiException(ApiErrorCode.UPSTREAM_ERROR,
                     "渠道试对话失败：" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
         }
