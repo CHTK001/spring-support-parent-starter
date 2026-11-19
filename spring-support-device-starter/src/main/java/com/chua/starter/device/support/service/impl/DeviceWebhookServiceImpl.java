@@ -22,6 +22,8 @@ import com.chua.starter.device.support.model.AlarmPush;
 import com.chua.starter.device.support.model.AppKeyCreateRequest;
 import com.chua.starter.device.support.model.AppKeyView;
 import com.chua.starter.device.support.model.WebhookPushResult;
+import com.chua.starter.device.support.realtime.DeviceAlarmEvent;
+import com.chua.starter.device.support.realtime.DeviceRealtimePublisher;
 import com.chua.starter.device.support.service.DeviceWebhookService;
 import com.chua.starter.device.support.timeseries.DeviceSeriesRecorder;
 import lombok.RequiredArgsConstructor;
@@ -87,6 +89,8 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
     private final DeviceAttendanceRecordMapper attendanceMapper;
     /** 生命周期回调发布器 */
     private final DeviceLifecyclePublisher lifecyclePublisher;
+    /** 实时事件发布器（新告警推前端） */
+    private final DeviceRealtimePublisher realtimePublisher;
     /** 时序写入器（门禁/过车推送同时进时序存储） */
     private final DeviceSeriesRecorder seriesRecorder;
 
@@ -249,6 +253,15 @@ public class DeviceWebhookServiceImpl implements DeviceWebhookService {
                 alarmMapper.insert(entity);
                 saveReceipt(source, externalId, TOPIC_ALARM);
                 result.setCreated(result.getCreated() + 1);
+                // 实时通道：新告警推给前端（红点 / 列表首行），失败不影响入库
+                realtimePublisher.publish("alarm", new DeviceAlarmEvent(
+                        entity.getDeviceAlarmId(),
+                        entity.getDeviceAlarmDeviceId(),
+                        entity.getDeviceAlarmType(),
+                        entity.getDeviceAlarmLevel(),
+                        entity.getDeviceAlarmTitle(),
+                        entity.getDeviceAlarmStatus(),
+                        entity.getDeviceAlarmOccurredAt()));
                 // 出站：告警入库后通知全部回调 Bean，由下游决定是否推送到别的系统
                 Map<String, Object> payload = new LinkedHashMap<>();
                 payload.put("alarmId", entity.getDeviceAlarmId());

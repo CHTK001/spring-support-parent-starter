@@ -2,6 +2,7 @@ package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
+import com.chua.starter.device.support.model.DeviceIndexItem;
 import com.chua.starter.device.support.model.DevicePageQuery;
 import com.chua.starter.device.support.model.DeviceSaveRequest;
 import com.chua.starter.device.support.model.DeviceStats;
@@ -115,6 +116,17 @@ public interface DeviceService {
      * @return 设备列表（最多 {@code 20000} 行）
      */
     List<DeviceInfo> listDevices(DevicePageQuery query);
+
+    /**
+     * 查询全量设备轻索引。
+     *
+     * <p>供前端台账左树 / 概览计数 / 快速筛选 / 标签池，以及考勤、过车、
+     * 传感器历史等页面的设备下拉与过滤池使用；只返回轻索引字段，
+     * 不携带连接参数、凭据等冗余信息。</p>
+     *
+     * @return 设备轻索引列表（按更新时间倒序）
+     */
+    List<DeviceIndexItem> listIndex();
 
     /**
      * 按大类查询设备列表

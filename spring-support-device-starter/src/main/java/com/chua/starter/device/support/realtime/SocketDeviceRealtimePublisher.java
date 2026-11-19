@@ -2,6 +2,8 @@ package com.chua.starter.device.support.realtime;
 
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 
@@ -30,9 +32,12 @@ public class SocketDeviceRealtimePublisher implements DeviceRealtimePublisher {
     private static final String TRANSPORT_EVENT = "message";
 
     /**
-     * JSON 序列化
+     * JSON 序列化：注册 JSR-310 模块并按 ISO 字符串输出时间，
+     * 否则 LocalDateTime 会序列化失败、整个事件被 catch 吞掉
      */
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     /**
      * 会话模板提供者（延迟解析）

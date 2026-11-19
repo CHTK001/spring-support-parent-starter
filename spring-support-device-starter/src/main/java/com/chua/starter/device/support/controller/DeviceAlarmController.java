@@ -2,6 +2,7 @@ package com.chua.starter.device.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceAlarm;
+import com.chua.starter.device.support.model.AlarmBatchStatusRequest;
 import com.chua.starter.device.support.model.AlarmQuery;
 import com.chua.starter.device.support.service.DeviceAlarmService;
 import com.chua.starter.mybatis.entity.PageResult;
@@ -61,5 +62,17 @@ public class DeviceAlarmController {
     public ReturnResult<DeviceAlarm> updateStatus(@PathVariable String id,
                                                   @RequestBody Map<String, String> body) {
         return ReturnResult.ok(alarmService.updateStatus(id, body.get("status"), body.get("handler")));
+    }
+
+    /**
+     * 批量更新处理状态。
+     *
+     * @param request ids 告警 ID 集合、status 目标状态、handler 处理人
+     * @return 实际更新条数
+     */
+    @PutMapping("/batch-status")
+    public ReturnResult<Integer> updateStatusBatch(@RequestBody AlarmBatchStatusRequest request) {
+        return ReturnResult.ok(alarmService.updateStatusBatch(request.getIds(),
+                request.getStatus(), request.getHandler()));
     }
 }

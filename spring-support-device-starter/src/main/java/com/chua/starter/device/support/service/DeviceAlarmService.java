@@ -4,6 +4,7 @@ import com.chua.starter.device.support.entity.DeviceAlarm;
 import com.chua.starter.device.support.model.AlarmQuery;
 import com.chua.starter.mybatis.entity.PageResult;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,6 +32,19 @@ public interface DeviceAlarmService {
      * @return 更新后的告警
      */
     DeviceAlarm updateStatus(String id, String status, String handler);
+
+    /**
+     * 批量更新处理状态。
+     *
+     * <p>告警页的批量处理 / 批量忽略入口：一次把选中的多条告警置为同一目标状态，
+     * 处理人与处理时间统一记录。返回实际更新的条数。</p>
+     *
+     * @param ids     告警 ID 集合，非空
+     * @param status  目标状态：unhandled / handling / resolved / ignored
+     * @param handler 处理人，可空
+     * @return 实际更新条数
+     */
+    int updateStatusBatch(List<String> ids, String status, String handler);
 
     /**
      * 概览指标：总数 / 未处理 / 严重 / 今日新增。

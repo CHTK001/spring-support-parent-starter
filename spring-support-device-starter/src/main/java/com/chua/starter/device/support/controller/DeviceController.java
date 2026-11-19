@@ -3,6 +3,7 @@ package com.chua.starter.device.support.controller;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.support.model.DeviceImportResult;
+import com.chua.starter.device.support.model.DeviceIndexItem;
 import com.chua.starter.device.support.model.DevicePageQuery;
 import com.chua.starter.device.support.model.DeviceStats;
 import com.chua.starter.device.support.service.DeviceImportService;
@@ -136,6 +137,20 @@ public class DeviceController {
     @GetMapping("/page")
     public PageResult<DeviceInfo> pageDevices(DevicePageQuery query) {
         return deviceService.pageDevices(query);
+    }
+
+    /**
+     * 设备轻索引。
+     *
+     * <p>返回全量设备的精简行（标识 / 名称 / 编码 / 组织 / 厂商 / 分类 / 在线 /
+     * 状态 / 区域 / 标签 / 维保 / 坐标 / 安装日期 / 更新时间），供前端台账左树、
+     * 概览计数、快速筛选、标签池以及各记录页的设备下拉使用。</p>
+     *
+     * @return 设备轻索引列表（按更新时间倒序）
+     */
+    @GetMapping("/index")
+    public List<DeviceIndexItem> listIndex() {
+        return deviceService.listIndex();
     }
 
     /**

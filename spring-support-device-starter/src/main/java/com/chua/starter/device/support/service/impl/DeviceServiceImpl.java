@@ -9,6 +9,7 @@ import com.chua.starter.device.support.entity.DeviceOrganization;
 import com.chua.starter.device.support.entity.DeviceProviderCredential;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
 import com.chua.starter.device.support.mapper.DeviceOrganizationMapper;
+import com.chua.starter.device.support.model.DeviceIndexItem;
 import com.chua.starter.device.support.model.DevicePageQuery;
 import com.chua.starter.device.support.model.DeviceSaveRequest;
 import com.chua.starter.device.support.service.DeviceService;
@@ -320,6 +321,24 @@ public class DeviceServiceImpl implements DeviceService {
         // 导出上限，避免误点「全部」把整库拉进内存
         LambdaQueryWrapper<DeviceInfo> wrapper = buildFilter(q, "LIMIT " + EXPORT_LIMIT);
         return deviceInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<DeviceIndexItem> listIndex() {
+        // 只取轻索引需要的列，避免把连接参数、凭据等冗余字段一起拖出来
+        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(DeviceInfo::getDeviceInfoId, DeviceInfo::getDeviceInfoName,
+                DeviceInfo::getDeviceInfoCode, DeviceInfo::getDeviceInfoOrgId,
+                DeviceInfo::getDeviceInfoVendor, DeviceInfo::getDeviceInfoCategory,
+                DeviceInfo::getDeviceInfoSubCategory, DeviceInfo::getDeviceInfoOnline,
+                DeviceInfo::getDeviceInfoStatus, DeviceInfo::getDeviceInfoArea,
+                DeviceInfo::getDeviceInfoTags, DeviceInfo::getDeviceInfoWarrantyEnd,
+                DeviceInfo::getDeviceInfoLatitude, DeviceInfo::getDeviceInfoLongitude,
+                DeviceInfo::getDeviceInfoInstallAt, DeviceInfo::getUpdateTime);
+        wrapper.orderByDesc(DeviceInfo::getUpdateTime);
+        return deviceInfoMapper.selectList(wrapper).stream()
+                .map(DeviceIndexItem::from)
+                .toList();
     }
 
     /**

@@ -1,10 +1,13 @@
 package com.chua.starter.device.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.device.support.entity.DeviceAlarm;
 import com.chua.starter.device.support.mapper.DeviceAlarmMapper;
 import com.chua.starter.device.support.model.AlarmQuery;
+import com.chua.starter.device.support.realtime.DeviceAlarmEvent;
+import com.chua.starter.device.support.realtime.DeviceRealtimePublisher;
 import com.chua.starter.device.support.service.DeviceAlarmService;
 import com.chua.starter.mybatis.entity.PageResult;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +44,9 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
     /** 告警映射器 */
     private final DeviceAlarmMapper alarmMapper;
 
+    /** 实时事件发布器（平台自检新告警推前端） */
+    private final DeviceRealtimePublisher realtimePublisher;
+
     @Override
     public PageResult<DeviceAlarm> page(AlarmQuery query) {
         AlarmQuery q = query == null ? new AlarmQuery() : query;
@@ -67,6 +73,23 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
         entity.setDeviceAlarmHandledAt(LocalDateTime.now());
         alarmMapper.updateById(entity);
         return entity;
+    }
+
+    @Override
+    public int updateStatusBatch(List<String> ids, String status, String handler) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("未选择要处理的告警");
+        }
+        if (!VALID_STATUS.contains(status)) {
+            throw new IllegalArgumentException("不支持的处理状态: " + status);
+        }
+        LambdaUpdateWrapper<DeviceAlarm> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.in(DeviceAlarm::getDeviceAlarmId, ids)
+                .set(DeviceAlarm::getDeviceAlarmStatus, status)
+                // handler 空串（前端不传）落 null，避免查「处理人」时出现空壳字符串
+                .set(DeviceAlarm::getDeviceAlarmHandler, StringUtils.hasText(handler) ? handler : null)
+                .set(DeviceAlarm::getDeviceAlarmHandledAt, LocalDateTime.now());
+        return alarmMapper.update(null, wrapper);
     }
 
     @Override
@@ -118,6 +141,15 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
         entity.setDeviceAlarmOccurredAt(now);
         entity.setCreateTime(now);
         alarmMapper.insert(entity);
+        // 实时通道：平台自检新告警推给前端（红点 / 列表首行），失败不影响入库
+        realtimePublisher.publish("alarm", new DeviceAlarmEvent(
+                entity.getDeviceAlarmId(),
+                entity.getDeviceAlarmDeviceId(),
+                entity.getDeviceAlarmType(),
+                entity.getDeviceAlarmLevel(),
+                entity.getDeviceAlarmTitle(),
+                entity.getDeviceAlarmStatus(),
+                entity.getDeviceAlarmOccurredAt()));
         log.info("平台自检告警入库: deviceId={}, type={}, level={}", deviceId, alarmType, entity.getDeviceAlarmLevel());
     }
 
