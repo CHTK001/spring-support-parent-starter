@@ -293,6 +293,7 @@ public class AiWorkspaceFileController {
         }
         boolean directory = Files.isDirectory(target);
         try {
+            makeTreeWritable(target);
             FileSystemUtils.deleteRecursively(target);
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "删除失败: " + e.getMessage());
@@ -301,6 +302,35 @@ public class AiWorkspaceFileController {
         data.put("success", true);
         data.put("isDirectory", directory);
         return ReturnResult.ok(data);
+    }
+
+    /**
+     * 关闭目标树的只读属性。
+     *
+     * <p>JGit 写出的松散对象、以及 {@code git clone} 落盘的 pack/idx 都是**只读**文件；
+     * Windows 上 {@link FileSystemUtils#deleteRecursively(Path)} 遇到只读文件会抛
+     * {@link java.nio.file.AccessDeniedException}，于是「删除工作区里的 Git 仓库」恒 500
+     * （2026-11-19 实测：提交后删除克隆目录报
+     * {@code 删除失败: ...\.git\objects\11\376fc...}，手工去掉只读位后同一请求立即 200）。</p>
+     *
+     * <p>先递归去掉只读位，失败不阻断：真正的删除步骤会给出可读错误。</p>
+     *
+     * @param root 目标文件或目录
+     */
+    private static void makeTreeWritable(Path root) {
+        try (Stream<Path> walk = Files.walk(root)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    if (!Files.isWritable(path)) {
+                        path.toFile().setWritable(true);
+                    }
+                } catch (RuntimeException ignored) {
+                    // 权限不足时忽略，交由删除步骤报错
+                }
+            });
+        } catch (IOException e) {
+            log.warn("[Workspace] 清除只读属性失败 {}: {}", root, e.getMessage());
+        }
     }
 
     /**
