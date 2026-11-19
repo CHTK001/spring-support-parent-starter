@@ -328,8 +328,10 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
      * @return 引擎
      */
     private static SkywalkingOtnlEngine engine(DataSourceVO ds) {
+        // status 语义：0 停用、1 启用；历史数据可能为 NULL，按启用处理，
+        // 避免把「未设置」误判成「已通过配置关闭」导致 APM 工作台整体不可用。
         SkywalkingSettings.apply(oapUrl(ds), ds.username(), ds.password(),
-                TIMEOUT_MS, ds.status() != null && ds.status() == 1);
+                TIMEOUT_MS, ds.status() == null || ds.status() == 1);
         return new SkywalkingOtnlEngine();
     }
 
