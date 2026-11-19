@@ -448,6 +448,45 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         return result;
     }
 
+    @Override
+    public Map<String, Object> invokeSubAgent(String subAgentId, String input) {
+        SysAiAgent sub = requireAgent(subAgentId);
+        if (sub.getParentId() == null || sub.getParentId().isBlank()) {
+            throw new IllegalArgumentException("仅支持调用子 Agent: " + subAgentId);
+        }
+        if (!Boolean.TRUE.equals(sub.getEnabled())) {
+            throw new IllegalStateException("子 Agent 已停用: " + sub.getName());
+        }
+        ChatClient client = buildChatClient(sub);
+        if (client == null) {
+            throw new IllegalStateException("子 Agent 无可用模型/凭证: " + sub.getName());
+        }
+        String prompt = input != null ? input : "";
+        try {
+            if (sub.getSystemPrompt() != null && !sub.getSystemPrompt().isBlank()) {
+                client = client.system(sub.getSystemPrompt());
+            }
+            String output = client.chatSync(prompt);
+            Map<String, Object> result = new LinkedHashMap<>(8);
+            result.put("agentId", subAgentId);
+            result.put("name", sub.getName());
+            result.put("masterId", sub.getParentId());
+            result.put("input", prompt);
+            result.put("output", output != null ? output : "");
+            return result;
+        } catch (Exception e) {
+            log.warn("[Agent] 子 Agent 调用失败 subId={}: {}", subAgentId, e.getMessage());
+            Map<String, Object> result = new LinkedHashMap<>(8);
+            result.put("agentId", subAgentId);
+            result.put("name", sub.getName());
+            result.put("masterId", sub.getParentId());
+            result.put("input", prompt);
+            result.put("output", "");
+            result.put("error", e.getMessage());
+            return result;
+        }
+    }
+
     /**
      * Kahn 拓扑排序：按 edges(source→target) 对节点排序，跳过主节点与未注册子 Agent。
      *

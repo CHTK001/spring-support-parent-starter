@@ -111,6 +111,19 @@ public interface SysAiAgentService {
     Map<String, Object> runOrchestration(String agentId, String input);
 
     /**
+     * 直接调用单个子 Agent（角色子代理手动调用路径）。
+     *
+     * <p>与 {@link #runOrchestration} 的区别：不做拓扑编排，只执行指定的
+     * 子 Agent 一次（用其配置的模型与系统提示词），返回其输出。供会话侧
+     * {@code POST /v2/sessions/{id}/sub-agents/invoke} 使用。</p>
+     *
+     * @param subAgentId 子 Agent 标识（必须是有主 Agent 的子 Agent 且已启用）
+     * @param input      用户输入
+     * @return {agentId, name, masterId, input, output}
+     */
+    Map<String, Object> invokeSubAgent(String subAgentId, String input);
+
+    /**
      * 将 Agent 注册为模型（Agent-as-模型），使其可被对话链路选择。
      *
      * @param agentId   Agent 标识

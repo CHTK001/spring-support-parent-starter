@@ -1193,6 +1193,8 @@ public class ChatStreamOrchestrator {
                     d.setToolCallId(str(dm.get("toolCallId")));
                     Object c = dm.get("confirmed");
                     d.setConfirmed(c != null && Boolean.parseBoolean(String.valueOf(c)));
+                    // 批准方式：once（缺省）/ always（记住该工具，后续同类不再询问）
+                    d.setMode(str(dm.get("mode")));
                     decisions.add(d);
                 }
             }
@@ -2096,6 +2098,8 @@ public class ChatStreamOrchestrator {
                     m.put("toolName", it.getToolName());
                     m.put("title", it.getTitle());
                     m.put("description", it.getDescription());
+                    // 风险等级（low/medium/high/dangerous）：前端据此做风险图标与强确认
+                    m.put("riskLevel", it.getRiskLevel());
                     items.add(m);
                 }
             }

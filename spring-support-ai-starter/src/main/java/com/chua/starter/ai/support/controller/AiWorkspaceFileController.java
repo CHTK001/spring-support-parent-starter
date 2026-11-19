@@ -87,6 +87,10 @@ public class AiWorkspaceFileController {
      * <p>所以先按原样解析，不存在再补一层会话 id 试一次。两条路径**都过同一道围栏**
      * （解析后必须仍在工作区内，否则一律拒绝），不会因为多试一次而放开越权。</p>
      *
+     * <p>围栏是双重的：先做词法判定（normalize 后必须仍以工作区根为前缀，挡住
+     * {@code ../} 穿越），再做真实路径判定（toRealPath 展开符号链接后仍必须落在
+     * 工作区根内，挡住「词法上在内、符号链接指向在外」的逃逸）。</p>
+     *
      * @param root  会话工作区根
      * @param id    会话标识
      * @param path  请求里的路径（相对或绝对）
@@ -97,15 +101,46 @@ public class AiWorkspaceFileController {
             return null;
         }
         Path direct = root.resolve(path).normalize();
-        if (direct.startsWith(root) && Files.exists(direct)) {
+        if (isInsideWorkspace(root, direct) && Files.exists(direct)) {
             return direct;
         }
         Path perSession = root.resolve(id).resolve(path).normalize();
-        if (perSession.startsWith(root) && Files.exists(perSession)) {
+        if (isInsideWorkspace(root, perSession) && Files.exists(perSession)) {
             return perSession;
         }
         // 都不存在：把"越界"和"不存在"区分开，交给调用方给出准确状态码
-        return direct.startsWith(root) ? direct : null;
+        return isInsideWorkspace(root, direct) ? direct : null;
+    }
+
+    /**
+     * 判断候选路径是否真正落在工作区内（会话工作区围栏）。
+     *
+     * <p>两层校验缺一不可：</p>
+     * <ol>
+     *   <li>词法层：normalize 后必须仍以工作区根为前缀（挡 {@code ../} 穿越）；</li>
+     *   <li>真实层：展开符号链接后的真实路径也必须以工作区根为前缀
+     *       （挡软链接把读者带出工作区；对尚不存在的目标按词法层放行，
+     *       交由后续 exists/写入检查兜底）。</li>
+     * </ol>
+     *
+     * @param root      会话工作区根
+     * @param candidate 候选路径（应已 normalize）
+     * @return true 表示可以继续访问
+     */
+    private boolean isInsideWorkspace(Path root, Path candidate) {
+        if (candidate == null) {
+            return false;
+        }
+        Path normalized = candidate.normalize();
+        if (!normalized.startsWith(root)) {
+            return false;
+        }
+        try {
+            return normalized.toRealPath().startsWith(root.toRealPath());
+        } catch (Exception e) {
+            // 目标尚不存在等场景：退回词法判定
+            return true;
+        }
     }
 
     /**
@@ -437,6 +472,10 @@ public class AiWorkspaceFileController {
      * 判断走哪层口径，所以按**父目录**是否存在来挑：先按工作区根拼，父目录不在再接一层
      * 会话 id（与读取口径一致）。两条都越界则返回 {@code null}。</p>
      *
+     * <p>围栏与读取口径同源（{@link #isInsideWorkspace}）：除词法前缀外，还要求
+     * **已存在的父目录**展开符号链接后仍落在工作区根内，防止借软链接把新文件
+     * 建到工作区外。</p>
+     *
      * @param root 工作区根
      * @param id   会话标识
      * @param path 待新建路径（相对根或工作区内绝对路径）
@@ -444,17 +483,17 @@ public class AiWorkspaceFileController {
      */
     private Path resolveCreateTarget(Path root, String id, String path) {
         Path direct = root.resolve(path).normalize();
-        if (!direct.startsWith(root)) {
+        if (!isInsideWorkspace(root, direct)) {
             return null;
         }
         Path directParent = direct.getParent() == null ? root : direct.getParent();
-        if (Files.isDirectory(directParent)) {
+        if (isInsideWorkspace(root, directParent) && Files.isDirectory(directParent)) {
             return direct;
         }
         Path perSession = root.resolve(id).resolve(path).normalize();
-        if (perSession.startsWith(root)) {
+        if (isInsideWorkspace(root, perSession)) {
             Path perSessionParent = perSession.getParent() == null ? root : perSession.getParent();
-            if (Files.isDirectory(perSessionParent)) {
+            if (isInsideWorkspace(root, perSessionParent) && Files.isDirectory(perSessionParent)) {
                 return perSession;
             }
         }
