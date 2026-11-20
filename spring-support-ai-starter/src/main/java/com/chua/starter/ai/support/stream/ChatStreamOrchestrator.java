@@ -21,6 +21,7 @@ import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.log.MdcWrap;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -234,6 +235,14 @@ public class ChatStreamOrchestrator {
             log.info("[ChatStream] 会话级 MCP 服务器: {}", sessionMcpIds);
         }
 
+        // 会话配置的决策模型：settings.decisionProviderId（前端会话配置保存）。
+        // 在准备阶段从会话行读出随请求下发，门面据此把 DecisionsClient 挂到 Agent 上；
+        // 走会话行而不是逐轮参数，断线恢复（resume）也能拿到同一配置。
+        final String decisionProviderId = readSessionSetting(dialogId, "decisionProviderId");
+        if (decisionProviderId != null && !decisionProviderId.isBlank()) {
+            log.info("[ChatStream] 会话决策模型 providerId={}", decisionProviderId);
+        }
+
         // 只在真正带了用户输入时才落库。
         //
         // 重新回答（multi_version）时前端只传 userMessage.id 作为父消息、不传 content，
@@ -325,6 +334,7 @@ public class ChatStreamOrchestrator {
         AiChatRequest request = new AiChatRequest();
         request.setModel(modelToUse);
         request.setProviderId(selectedProviderId);
+        request.setDecisionProviderId(decisionProviderId);
         request.setStream(true);
         final List<String> pickedSkillNames = parseSkillNames(body.get("skillNames"));
         final List<String> roleDefaultSkills = parseSkillNames(roleSettings.get("defaultSkillNames"));
@@ -2160,6 +2170,32 @@ public class ChatStreamOrchestrator {
             log.info("[ChatStream] 首次发送已写入会话 MCP 选择 dialogId={} mcp={}", dialogId, row.getMcpServerIds());
         } catch (Exception e) {
             log.warn("[ChatStream] 写入会话 MCP 失败 dialogId={}: {}", dialogId, e.getMessage());
+        }
+    }
+
+    /**
+     * 读会话 settings JSON 里的单个配置项。
+     *
+     * <p>settings 由前端整体序列化持久化（自由结构），这里按需取键；
+     * 会话不存在、settings 为空或解析失败时返回 null，不影响主流程。</p>
+     *
+     * @param dialogId 会话标识
+     * @param key      配置键
+     * @return 值；缺失时返回 {@code null}
+     */
+    private String readSessionSetting(Long dialogId, String key) {
+        try {
+            com.chua.starter.ai.support.entity.SysAiSession row = sysAiSessionMapper.selectById(dialogId);
+            if (row == null || row.getSettings() == null || row.getSettings().isBlank()) {
+                return null;
+            }
+            Map<String, Object> settings = objectMapper.readValue(row.getSettings(),
+                    new TypeReference<Map<String, Object>>() { });
+            Object v = settings.get(key);
+            return v == null ? null : String.valueOf(v);
+        } catch (Exception e) {
+            log.warn("[ChatStream] 读取会话设置失败 dialogId={} key={}: {}", dialogId, key, e.getMessage());
+            return null;
         }
     }
 

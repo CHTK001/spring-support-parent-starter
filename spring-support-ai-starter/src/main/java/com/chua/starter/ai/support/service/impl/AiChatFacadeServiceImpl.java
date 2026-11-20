@@ -9,6 +9,7 @@ import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.DecisionsClient;
 import com.chua.common.support.ai.chat.ChatMessage;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
@@ -17,6 +18,7 @@ import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.starter.ai.support.chat.ChatSkillSupport;
+import com.chua.starter.ai.support.chat.DecisionClientRegistry;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.entity.SysAiGroup;
@@ -118,6 +120,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiServiceAccessLogMapper accessLogMapper; // 访问日志：路由拓扑页「入站流量」的唯一写入口
     private final SysAiGroupRoleResolver sysAiGroupRoleResolver; // 分组默认角色（分组 → 角色 → 分形态提示词）
     private final SysAiRoleMapper sysAiRoleMapper; // 角色表：把子代理白名单（settings.agents）解析成可路由子 Agent
+    private final DecisionClientRegistry decisionClientRegistry; // 决策能力入口：按会话配置取 DecisionsClient 挂到 Agent
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -1462,6 +1465,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         if (runtime != null) {
             agent.mcpManager(runtime.getManager());
+        }
+        // 会话配置的决策模型：挂到 Agent 上，供决策类工具按选择调用。
+        // 未配置 / 供应商停用 / 客户端构建失败时跳过，不影响对话主流程。
+        if (request.getDecisionProviderId() != null && !request.getDecisionProviderId().isBlank()) {
+            DecisionsClient decisionsClient = decisionClientRegistry.client(request.getDecisionProviderId());
+            if (decisionsClient != null) {
+                agent.decisionsClient(decisionsClient);
+                log.info("[AiChat] 会话决策模型已挂载 providerId={}", request.getDecisionProviderId());
+            } else {
+                log.warn("[AiChat] 决策供应商不可用，忽略会话决策配置 providerId={}", request.getDecisionProviderId());
+            }
         }
         // 角色技能必须注册成 Agent 的技能工具：Agent 运行时以 definition 的 system prompt
         // 为准，不会继承底层 ChatClient 的 skillPrompt，只靠提示词注入等于没生效。

@@ -160,4 +160,13 @@ public class AiChatRequest {
      * （进入 Plan / 读取 AgentState 必需）。
      */
     private String sessionId;
+
+    /**
+     * 会话配置的决策模型供应商标识（{@code sys_account_channel.provider_id}）。
+     *
+     * <p>来自 {@code sys_ai_session.settings.decisionProviderId}，由流式编排准备阶段读出；
+     * 门面据此从 {@code DecisionClientRegistry} 取 {@code DecisionsClient} 挂到 Agent 上，
+     * 供决策类工具按选择调用。为空表示会话未配置决策模型。</p>
+     */
+    private String decisionProviderId;
 }
