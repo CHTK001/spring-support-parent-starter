@@ -2,11 +2,14 @@ package com.chua.starter.common.support.api.configuration;
 import com.chua.common.support.lang.version.Version;
 
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
+import com.chua.starter.common.support.api.decode.ApiRequestDecodeRegister;
+import com.chua.starter.common.support.api.decode.CodecTraceChunkFilter;
 import com.chua.starter.common.support.utils.NonceUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -85,6 +88,27 @@ public class ApiFilterConfiguration  {
         registration.setUrlPatterns(Collections.singletonList("/*"));
         registration.setName("nonceXhrFilter");
         registration.setOrder(Integer.MIN_VALUE + 1);
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+
+    /**
+     * codec 分段传输过滤器（traceId 分片协议）
+     * <p>
+     * 仅对携带 X-Codec-Trace-Id 头的请求生效：分片上传缓冲重组、响应分片拉取。
+     * 请求解码注册器按条件装配（plugin.api.decode.enable），缺失时视为功能关闭。
+     * </p>
+     * @return codecTraceChunk过滤器registration的结果
+     */
+    @Bean("codecTraceChunkFilterRegistration")
+    @ConditionalOnMissingBean(name = "codecTraceChunkFilterRegistration")
+    public FilterRegistrationBean<CodecTraceChunkFilter> codecTraceChunkFilterRegistration(
+            ObjectProvider<ApiRequestDecodeRegister> registerProvider) {
+        var registration = new FilterRegistrationBean<CodecTraceChunkFilter>();
+        registration.setFilter(new CodecTraceChunkFilter(registerProvider.getIfAvailable()));
+        registration.setUrlPatterns(Collections.singletonList("/*"));
+        registration.setName("codecTraceChunkFilter");
+        registration.setOrder(Integer.MIN_VALUE + 2);
         registration.setAsyncSupported(true);
         return registration;
     }

@@ -3,3 +3,5 @@ com.chua.starter.account.mail.impl.EmailPop3InboxProvider
 com.chua.starter.account.mail.impl.TempMailInboxProvider
 com.chua.starter.account.phone.TempPhoneInboxProvider
 com.chua.starter.account.phone.PhoneInboxProvider
+com.chua.starter.account.mail.impl.GuerrillaMailInboxProvider
+com.chua.starter.account.mail.impl.TempMailIoInboxProvider

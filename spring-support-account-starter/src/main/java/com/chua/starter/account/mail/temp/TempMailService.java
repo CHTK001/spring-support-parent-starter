@@ -118,7 +118,8 @@ public class TempMailService {
         List<SysAccount> result = new ArrayList<>();
         List<SysAccount> candidates = accountService.list(AccountKind.EMAIL, null, null);
         for (SysAccount account : candidates) {
-            if (!isTempMail(account)) {
+            // 多供应商后只列自己名下的账号，其它 tempProvider 由各自服务负责
+            if (!owns(account)) {
                 continue;
             }
             if (isExpired(account)) {
@@ -142,11 +143,43 @@ public class TempMailService {
         if (account == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "账号不存在或无权访问");
         }
-        if (!isTempMail(account)) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号不是临时邮箱");
+        if (!owns(account)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "该账号不是 mail-tm 临时邮箱");
         }
         destroyRemote(account);
         return accountService.delete(accountId);
+    }
+
+    /**
+     * 该账号是否归本服务管（tempProvider 精确匹配）。
+     *
+     * @param account 账号
+     * @return 归本服务管返回 {@code true}
+     */
+    public boolean owns(SysAccount account) {
+        return isTempMail(account) && PROVIDER.equalsIgnoreCase(providerOf(account));
+    }
+
+    /**
+     * 指定账号是否归本服务管。
+     *
+     * @param accountId 账号标识
+     * @return 归本服务管返回 {@code true}
+     */
+    public boolean ownsAccount(String accountId) {
+        SysAccount account = accountService.get(accountId);
+        return account != null && owns(account);
+    }
+
+    /**
+     * 账号上的临时邮箱供应商标记（空值视为 mail-tm，兼容历史账号）。
+     *
+     * @param account 账号
+     * @return 供应商标识
+     */
+    public static String providerOf(SysAccount account) {
+        String value = configString(account, CONFIG_PROVIDER);
+        return StringUtils.isBlank(value) ? PROVIDER : value;
     }
 
     /**

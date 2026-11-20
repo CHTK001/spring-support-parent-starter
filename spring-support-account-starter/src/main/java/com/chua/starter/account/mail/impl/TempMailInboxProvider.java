@@ -64,7 +64,9 @@ public class TempMailInboxProvider implements AccountInboxProvider {
      */
     @Override
     public boolean supports(SysAccount account) {
-        return TempMailService.isTempMail(account);
+        // 多供应商后只认 mail-tm 标记，guerrilla-mail / temp-mail-io 由各自实现处理
+        return TempMailService.isTempMail(account)
+                && TempMailService.PROVIDER.equalsIgnoreCase(TempMailService.providerOf(account));
     }
 
     /**

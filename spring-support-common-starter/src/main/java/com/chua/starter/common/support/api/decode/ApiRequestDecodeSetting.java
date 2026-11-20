@@ -24,6 +24,11 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     private String codecRequestKey = null;
 
     /**
+     * 数据库配置别名：codec分段传输打开（traceId 分片）
+     */
+    private boolean codecTraceOpen = false;
+
+    /**
      * 无参构造方法
      */
     public ApiRequestDecodeSetting() {
@@ -56,6 +61,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     public void upgrade(ApiRequestDecodeSetting setting) {
         this.codecRequestOpen = setting.isEnable();
         this.codecRequestKey = setting.getCodecRequestKey();
+        this.codecTraceOpen = setting.isCodecTraceOpen();
     }
     /**
      * 获取 enable
@@ -129,5 +135,31 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
         this.codecRequestKey = codecRequestKey;
     }
 
+    /**
+     * 获取 codec分段传输打开
+     *
+     * @return codecTraceOpen
+     */
+    public boolean getCodecTraceOpen() {
+        return codecTraceOpen;
+    }
+
+    /**
+     * 判断是否开启 codec 分段传输（traceId 分片）
+     *
+     * @return codecTraceOpen
+     */
+    public boolean isCodecTraceOpen() {
+        return codecTraceOpen;
+    }
+
+    /**
+     * 设置 codec分段传输打开
+     *
+     * @param codecTraceOpen codecTraceOpen
+     */
+    public void setCodecTraceOpen(boolean codecTraceOpen) {
+        this.codecTraceOpen = codecTraceOpen;
+    }
 
 }

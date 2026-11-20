@@ -8,7 +8,9 @@ import com.chua.starter.account.mail.SmsTemplateSyncController;
 import com.chua.starter.account.mail.SmsTemplateSyncService;
 import com.chua.starter.account.sendlog.SendLogController;
 import com.chua.starter.account.sendlog.SendLogService;
+import com.chua.starter.account.mail.temp.GuerrillaMailService;
 import com.chua.starter.account.mail.temp.TempMailController;
+import com.chua.starter.account.mail.temp.TempMailIoService;
 import com.chua.starter.account.mail.temp.TempMailService;
 import com.chua.starter.account.schedule.MailNewMessagePoller;
 import com.chua.starter.account.mail.notify.SocketNewMailPublisher;
@@ -16,6 +18,7 @@ import com.chua.starter.account.manage.event.AccountEventController;
 import com.chua.starter.account.manage.event.AccountEventSseService;
 import com.chua.starter.account.schedule.SmsDirectoryPoller;
 import com.chua.starter.account.phone.TempPhoneController;
+import com.chua.starter.account.phone.TempPhonePoolService;
 import com.chua.starter.account.phone.TempPhoneService;
 import com.chua.starter.account.manage.controller.AccountAppKeyController;
 import com.chua.starter.account.manage.controller.AccountController;
@@ -134,8 +137,11 @@ import org.springframework.context.annotation.FilterType;
                         SendLogService.class,
                         TempMailController.class,
                         TempMailService.class,
+                        GuerrillaMailService.class,
+                        TempMailIoService.class,
                         TempPhoneController.class,
                         TempPhoneService.class,
+                        TempPhonePoolService.class,
                         // 短信目录轮询：@ConditionalOnProperty 门控，默认不装配
                         SmsDirectoryPoller.class,
                         // 账号页统一 SSE 事件推送（manage.event 归 manage 包扫描覆盖）

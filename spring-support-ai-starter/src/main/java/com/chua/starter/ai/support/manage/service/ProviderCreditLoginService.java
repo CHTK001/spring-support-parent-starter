@@ -32,6 +32,13 @@ import java.util.regex.Pattern;
  *   <li>{@link CreditQueryProvider#loginStorageKey()}：令牌所在的 localStorage 键名。</li>
  * </ul>
  *
+ * <p>登记表没收录的供应商也能用账密登录：在扩展配置里显式给出 {@code credit_login_url}
+ * （登录页）与任一截获钩子——{@code credit_capture_pattern}（令牌交换接口的地址特征，
+ * 正则）、{@code credit_token_path}（响应体里令牌的 JSON 路径，留空递归找
+ * access_token / token）、{@code credit_cookie_name}（会话 Cookie 键名）、
+ * {@code credit_storage_key}（localStorage 键名）——本服务按同一套轮询逻辑截获令牌。
+ * 显式配置优先于 SPI 默认值。</p>
+ *
  * <p>截获到的令牌回填 {@code extra.credit_key}（与 SPI 契约一致），余额查询、面板、
  * 快照等既有链路零改动复用。账号密码只出现在弹出的浏览器窗口里，不落库。</p>
  *
@@ -120,6 +127,54 @@ public class ProviderCreditLoginService {
     }
 
     /**
+     * 登录 / 续期共用的令牌截获钩子集。
+     *
+     * @param loginUrl       登录页地址（extra.credit_login_url 优先，回落 SPI 登记页）
+     * @param capturePattern 令牌交换接口的地址特征（extra.credit_capture_pattern 优先）
+     * @param tokenPath      响应体里令牌的 JSON 路径（extra.credit_token_path 优先；空为递归找）
+     * @param cookieName     会话 Cookie 键名（extra.credit_cookie_name 优先）
+     * @param storageKey     localStorage 键名（extra.credit_storage_key 优先）
+     */
+    private record LoginHooks(String loginUrl, String capturePattern, String tokenPath,
+                              String cookieName, String storageKey) {
+
+        /**
+         * 是否配置了至少一个令牌截获钩子。
+         *
+         * @return 配了地址特征 / Cookie / localStorage 任一即为 true
+         */
+        boolean hasCaptureHook() {
+            return nonBlank(capturePattern) || nonBlank(cookieName) || nonBlank(storageKey);
+        }
+    }
+
+    /**
+     * 解析登录 / 续期共用的截获钩子：扩展配置显式值优先，回落余额 SPI 的登记默认值。
+     *
+     * <p>候选链里没有可登录实现（SPI 为 null）的供应商，只要在 extra 里配齐
+     * {@code credit_login_url} 与任一截获钩子，即可走同一套 CDP 登录截获链路。</p>
+     *
+     * @param entity 供应商
+     * @param spi    余额 SPI 实现（可为 null）
+     * @param extra  供应商扩展配置
+     * @return 截获钩子集
+     */
+    private LoginHooks hooksFor(SysAccountChannel entity, CreditQueryProvider spi, Map<String, Object> extra) {
+        String baseUrl = entity.getBaseUrl();
+        return new LoginHooks(
+                firstNonBlank(text(extra.get("credit_login_url")),
+                        spi == null ? null : spi.loginPageUrl(baseUrl)),
+                firstNonBlank(text(extra.get("credit_capture_pattern")),
+                        spi == null ? null : spi.loginCaptureUrlPattern()),
+                firstNonBlank(text(extra.get("credit_token_path")),
+                        spi == null ? null : spi.loginTokenJsonPath()),
+                firstNonBlank(text(extra.get("credit_cookie_name")),
+                        spi == null ? null : spi.loginCookieName()),
+                firstNonBlank(text(extra.get("credit_storage_key")),
+                        spi == null ? null : spi.loginStorageKey()));
+    }
+
+    /**
      * 弹出登录窗口，等待用户完成登录并截获会话令牌。
      *
      * <p>用独立有头 CDP 引擎打开登录页（真实浏览器窗口，用户在其中手动输入
@@ -128,20 +183,23 @@ public class ProviderCreditLoginService {
      * 返回带原因的 {@link LoginOutcome}，由调用方决定提示方式。</p>
      *
      * @param entity  供应商
-     * @param spi     余额 SPI 实现（提供登录页与截获钩子；null 且未显式配登录地址时失败）
+     * @param spi     余额 SPI 实现（提供登录页与截获钩子；可为 null——此时按 extra 的通用截获配置执行）
      * @param persist 截获成功后是否把令牌落库（登录按钮 true，试查不弹窗）
      * @return 登录结果
      */
     public LoginOutcome login(SysAccountChannel entity, CreditQueryProvider spi, boolean persist) {
         Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
-        String explicitUrl = text(extra.get("credit_login_url"));
-        String loginUrl = !explicitUrl.isEmpty() ? explicitUrl
-                : spi == null ? null : spi.loginPageUrl(entity.getBaseUrl());
-        if (loginUrl == null || loginUrl.isBlank()) {
-            return new LoginOutcome(false, null, "该供应商没有可用的登录页（未收录登录入口）", null);
+        LoginHooks hooks = hooksFor(entity, spi, extra);
+        String loginUrl = hooks.loginUrl();
+        if (!nonBlank(loginUrl)) {
+            return new LoginOutcome(false, null,
+                    "该供应商没有可用的登录页（未收录登录入口，可在扩展配置 credit_login_url 里指定）", null);
         }
-        if (spi == null) {
-            return new LoginOutcome(false, null, "该供应商未配置可截获令牌的登录实现", loginUrl);
+        if (!hooks.hasCaptureHook()) {
+            return new LoginOutcome(false, null,
+                    "该供应商未配置令牌截获规则：请补 credit_capture_pattern"
+                            + "（令牌接口地址特征）或 credit_cookie_name / credit_storage_key",
+                    loginUrl);
         }
         // 独立有头引擎：进程级参数（无头/视口等）以本引擎首次启动为准，
         // 与共享无头引擎互不影响；用完必须 close 释放浏览器进程
@@ -154,11 +212,11 @@ public class ProviderCreditLoginService {
             return new LoginOutcome(false, null, "无法启动登录浏览器：" + e.getMessage(), loginUrl);
         }
         try (BrowserPage page = engine.openPage(loginUrl)) {
-            String capturePattern = spi.loginCaptureUrlPattern();
-            if (capturePattern != null && !capturePattern.isBlank()) {
+            String capturePattern = hooks.capturePattern();
+            if (nonBlank(capturePattern)) {
                 page.addInitScript(captureScript(capturePattern));
             }
-            String token = awaitToken(page, spi, capturePattern);
+            String token = awaitToken(page, hooks, capturePattern);
             if (token == null || token.isBlank()) {
                 return new LoginOutcome(false, null,
                         "等待登录超时：请在弹出的浏览器窗口内完成上游门户登录后重试", loginUrl);
@@ -189,7 +247,7 @@ public class ProviderCreditLoginService {
      * 不落库——新令牌由调用方与续期状态字段合并后一次写入。</p>
      *
      * @param entity 供应商
-     * @param spi    余额 SPI 实现（提供回访页与截获钩子）
+     * @param spi    余额 SPI 实现（提供回访页与截获钩子；可为 null——此时按 extra 的通用截获配置执行）
      * @return 续期结果
      */
     public RenewOutcome renewByPageVisit(SysAccountChannel entity, CreditQueryProvider spi) {
@@ -198,14 +256,21 @@ public class ProviderCreditLoginService {
         if (oldToken.isEmpty()) {
             return new RenewOutcome(RenewOutcome.REJECTED, null, "没有可续期的余额令牌", null);
         }
-        String renewUrl = spi.renewPageUrl(entity.getBaseUrl());
-        if (renewUrl == null || renewUrl.isBlank()) {
-            renewUrl = spi.loginPageUrl(entity.getBaseUrl());
+        LoginHooks hooks = hooksFor(entity, spi, extra);
+        String renewUrl = spi == null ? null : spi.renewPageUrl(entity.getBaseUrl());
+        if (!nonBlank(renewUrl)) {
+            renewUrl = hooks.loginUrl();
         }
-        if (renewUrl == null || renewUrl.isBlank()) {
+        if (!nonBlank(renewUrl)) {
             return new RenewOutcome(RenewOutcome.REJECTED, null, "该供应商没有可回访的续期页面", null);
         }
-        String capturePattern = spi.loginCaptureUrlPattern();
+        if (!hooks.hasCaptureHook()) {
+            return new RenewOutcome(RenewOutcome.REJECTED, null,
+                    "该供应商未配置令牌截获规则：请补 credit_capture_pattern"
+                            + "（令牌接口地址特征）或 credit_cookie_name / credit_storage_key",
+                    renewUrl);
+        }
+        String capturePattern = hooks.capturePattern();
         // 独立无头引擎：续期无人值守，弹窗没有意义；进程级参数以本引擎首次启动为准，
         // 与共享无头引擎、登录有头引擎互不影响；用完必须 close 释放浏览器进程
         CdpBrowserEngine engine = new CdpBrowserEngine();
@@ -217,15 +282,15 @@ public class ProviderCreditLoginService {
             return new RenewOutcome(RenewOutcome.REJECTED, null, "无法启动续期浏览器：" + e.getMessage(), renewUrl);
         }
         try (BrowserPage page = engine.openPage()) {
-            if (capturePattern != null && !capturePattern.isBlank()) {
+            if (nonBlank(capturePattern)) {
                 page.addInitScript(captureScript(capturePattern));
             }
-            String cookieName = spi.loginCookieName();
-            if (cookieName != null && !cookieName.isBlank()) {
+            String cookieName = hooks.cookieName();
+            if (nonBlank(cookieName)) {
                 page.setCookiesForUrl(Map.of(cookieName, oldToken), renewUrl);
             }
-            String storageKey = spi.loginStorageKey();
-            if (storageKey != null && !storageKey.isBlank()) {
+            String storageKey = hooks.storageKey();
+            if (nonBlank(storageKey)) {
                 page.addInitScript(presetStorageScript(storageKey, oldToken));
             }
             page.navigate(renewUrl);
@@ -234,7 +299,7 @@ public class ProviderCreditLoginService {
             String firstSeen = null;
             long deadline = System.currentTimeMillis() + RENEW_WAIT_MILLIS;
             while (System.currentTimeMillis() < deadline) {
-                String token = peekToken(page, spi, capturePattern);
+                String token = peekToken(page, hooks, capturePattern);
                 if (token != null && !token.isBlank()) {
                     if (firstSeen == null) {
                         firstSeen = token;
@@ -301,17 +366,17 @@ public class ProviderCreditLoginService {
     }
 
     /**
-     * 轮询截获令牌：按 SPI 钩子依次尝试 Cookie / localStorage / 响应截获。
+     * 轮询截获令牌：按钩子依次尝试 Cookie / localStorage / 响应截获。
      *
      * @param page           浏览器页面
-     * @param spi            余额 SPI 实现
+     * @param hooks          截获钩子集
      * @param capturePattern 令牌交换接口地址特征（可为 null）
      * @return 令牌；超时未截获返回 null
      */
-    private String awaitToken(BrowserPage page, CreditQueryProvider spi, String capturePattern) {
+    private String awaitToken(BrowserPage page, LoginHooks hooks, String capturePattern) {
         long deadline = System.currentTimeMillis() + TOKEN_WAIT_MILLIS;
         while (System.currentTimeMillis() < deadline) {
-            String token = peekToken(page, spi, capturePattern);
+            String token = peekToken(page, hooks, capturePattern);
             if (token != null && !token.isBlank()) {
                 return token;
             }
@@ -321,26 +386,26 @@ public class ProviderCreditLoginService {
     }
 
     /**
-     * 单轮令牌嗅探：按 SPI 钩子依次尝试 Cookie / localStorage / 响应截获。
+     * 单轮令牌嗅探：按钩子依次尝试 Cookie / localStorage / 响应截获。
      *
      * <p>登录与静默续期共用同一套钩子读取口径：登录场景轮询到非空即成功；
      * 续期场景需比对「读到的令牌是否与旧值不同」来判定平台是否轮换。</p>
      *
      * @param page           浏览器页面
-     * @param spi            余额 SPI 实现
+     * @param hooks          截获钩子集
      * @param capturePattern 令牌交换接口地址特征（可为 null）
      * @return 本轮读到的令牌；没有返回 null
      */
-    private String peekToken(BrowserPage page, CreditQueryProvider spi, String capturePattern) {
-        String cookieName = spi.loginCookieName();
-        if (cookieName != null && !cookieName.isBlank()) {
+    private String peekToken(BrowserPage page, LoginHooks hooks, String capturePattern) {
+        String cookieName = hooks.cookieName();
+        if (nonBlank(cookieName)) {
             String value = page.cookies().get(cookieName);
             if (value != null && !value.isBlank()) {
                 return value;
             }
         }
-        String storageKey = spi.loginStorageKey();
-        if (storageKey != null && !storageKey.isBlank()) {
+        String storageKey = hooks.storageKey();
+        if (nonBlank(storageKey)) {
             String raw = evaluateQuietly(page,
                     "localStorage.getItem(" + quote(storageKey) + ")");
             String token = unwrapStorageToken(raw);
@@ -348,8 +413,8 @@ public class ProviderCreditLoginService {
                 return token;
             }
         }
-        if (capturePattern != null && !capturePattern.isBlank()) {
-            String token = capturedToken(page, spi.loginTokenJsonPath());
+        if (nonBlank(capturePattern)) {
+            String token = capturedToken(page, hooks.tokenPath());
             if (token != null && !token.isBlank()) {
                 return token;
             }
@@ -603,6 +668,27 @@ public class ProviderCreditLoginService {
      */
     private String text(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    /**
+     * 字符串是否有实际内容（非 null、非纯空白）。
+     *
+     * @param value 原值
+     * @return 有内容为 true
+     */
+    private static boolean nonBlank(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    /**
+     * 取第一个有实际内容的值（显式配置优先、登记默认兜底的通用形式）。
+     *
+     * @param first  显式配置值
+     * @param second 兜底值
+     * @return 第一个非空值；都为空时为 null
+     */
+    private static String firstNonBlank(String first, String second) {
+        return nonBlank(first) ? first : second;
     }
 
     /**

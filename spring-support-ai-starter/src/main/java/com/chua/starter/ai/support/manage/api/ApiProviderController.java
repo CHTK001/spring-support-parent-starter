@@ -4116,7 +4116,15 @@ public class ApiProviderController {
                     loginKinds.add(candidate);
                 }
             }
-            return loginKinds.isEmpty() ? auto : loginKinds;
+            List<String> chain = loginKinds.isEmpty() ? auto : loginKinds;
+            // 显式配了 credit_url / credit_mapping 的（含登记表没收录、没有可登录
+            // SPI 的任意上游）把 custom 追加到链尾：CDP 登录截获的令牌 + 显式地址
+            // 与字段映射，就是这类供应商的通用查询出口
+            if ((str(extra, "credit_url") != null || str(extra, "credit_mapping") != null)
+                    && !chain.contains("custom")) {
+                chain.add("custom");
+            }
+            return chain;
         }
         if (kind != null) {
             return List.of(kind);

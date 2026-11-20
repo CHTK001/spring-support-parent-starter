@@ -113,6 +113,19 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     /**
+     * codec 分段传输（traceId 分片）是否开启
+     *
+     * @return 是否开启
+     */
+    public boolean isTraceOpen() {
+        /**
+         * 检查。
+         */
+        check();
+        return null != decodeSetting && decodeSetting.isCodecTraceOpen();
+    }
+
+    /**
      * 校验
     */
     private void check() {
