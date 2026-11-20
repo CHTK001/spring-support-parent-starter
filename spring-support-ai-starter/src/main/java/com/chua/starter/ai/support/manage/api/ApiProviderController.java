@@ -2500,20 +2500,10 @@ public class ApiProviderController {
         List<String> keys = effectiveCreditKeys(entity, extra);
         // 是否为 AK/SK 占位链路：读数行统一标「AK/SK」，让用户知道走的不是余额令牌
         boolean akSkOnly = keys.size() == 1 && CREDIT_AKSK_KEY.equals(keys.get(0));
-        // 「账号密码登录」（extra.credit_kind = account-login）：余额令牌由自动登录截获。
-        // 没配令牌时先登录拿令牌再查询；登录失败直接把原因随面板返回
+        // 「账号密码登录」（extra.credit_kind = account-login）：余额令牌来自页面上的
+        // 「登录」按钮——弹出内嵌浏览器窗口，用户手动登录后截获回填。查询链路不自动弹窗
+        // （无人值守时窗口没人操作），没令牌时按待登录状态返回，面板据此展示登录按钮
         boolean accountLogin = ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"));
-        if (accountLogin && keys.isEmpty()) {
-            ProviderCreditLoginService.LoginOutcome outcome = providerCreditLoginService.login(
-                    entity, loginSpiFor(entity, extra), true);
-            if (!outcome.ok()) {
-                return ApiResult.ok(new CreditPanelPayload(providerId, baseUrl, kind,
-                        candidateKinds(entity, extra), creditLevel(entity, extra), outcome.loginUrl(),
-                        false, null, null, List.of(), null, null, null,
-                        "自动登录失败：" + outcome.message()));
-            }
-            keys = List.of(outcome.token());
-        }
         // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → Moss 非官方 → 表达式」
         List<String> candidates = candidateKinds(entity, extra);
         // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ uncovered（官方站点但未收录余额接口）/
@@ -2537,7 +2527,9 @@ public class ApiProviderController {
         } else if (keys.isEmpty()) {
             blocked = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level, loginUrl,
                     false, null, null, List.of(), null, null, null,
-                    "未配置余额密钥，不查询余额；可在「编辑供应商 → 更多设置 → 余额 → 密钥」中填写。");
+                    accountLogin
+                            ? "尚未获取会话令牌：点击「登录」按钮打开上游门户完成登录，令牌会自动回填为余额密钥。"
+                            : "未配置余额密钥，不查询余额；可在「编辑供应商 → 更多设置 → 余额 → 密钥」中填写。");
         }
         if (blocked != null) {
             return ApiResult.ok(blocked);
@@ -2559,15 +2551,6 @@ public class ApiProviderController {
             }
         }
         List<CreditReading> rows = queryCreditRows(entity, extra, keys);
-        // 账密登录：全部 Key 都查不到通常是会话令牌过期，自动重登一次再试
-        if (accountLogin && rows.stream().noneMatch(CreditReading::ok)) {
-            ProviderCreditLoginService.LoginOutcome retry = providerCreditLoginService.login(
-                    entity, loginSpiFor(entity, extra), true);
-            if (retry.ok()) {
-                keys = List.of(retry.token());
-                rows = queryCreditRows(entity, extra, keys);
-            }
-        }
         BigDecimal sumRemain = BigDecimal.ZERO;
         BigDecimal sumUsed = BigDecimal.ZERO;
         boolean anyRemain = false;
@@ -2595,8 +2578,11 @@ public class ApiProviderController {
         CreditTotal total = creditTotal(anyRemain ? sumRemain : null, sumUsed);
         // 低量告警只挂实时回源路径：缓存命中 / 快照回放不重复评估，也不重复推送
         CreditWarn warn = evaluateCreditWarn(entity, extra, anyOk, total);
+        // 账密登录且全部读数失败：通常是会话令牌过期，引导回「登录」按钮重新登录
+        String note = accountLogin && !anyOk
+                ? "会话令牌可能已失效：请点击「登录」按钮重新登录后再查询。" : null;
         CreditPanelPayload payload = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level,
-                loginUrl, anyOk, currency, total, rows, false, null, null, null, warn);
+                loginUrl, anyOk, currency, total, rows, false, null, null, note, warn);
         cacheCredit(fingerprint, payload);
         // 按 Key 持久化：重启 / 过期后面板仍能读到最近一次读数，时间轮也复用这张表
         persistCreditSnapshots(providerId, keys, rows);
@@ -3474,26 +3460,19 @@ public class ApiProviderController {
         String kind = configuredKind == null ? "auto" : configuredKind;
         List<String> candidates = candidateKinds(entity, extra);
         String level = creditLevel(entity, extra);
-        // 「账号密码登录」：试查即真登录一次（不落库），用截获的令牌当场查余额，
-        // 验证账号密码与截获链路是否配得通
+        // 「账号密码登录」：令牌来自页面「登录」按钮（弹出内嵌浏览器窗口，用户手动登录）。
+        // 试查不弹窗——没令牌时直接提示先登录，拿到回填的令牌后密钥框自然有值
         boolean accountLogin = ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"));
-        if (accountLogin && keys.isEmpty()) {
-            ProviderCreditLoginService.LoginOutcome outcome = providerCreditLoginService.login(
-                    entity, loginSpiFor(entity, extra), false);
-            if (!outcome.ok()) {
-                return ApiResult.ok(new CreditPanelPayload("test", baseUrl, kind, candidates, level,
-                        outcome.loginUrl(), false, null, null, List.of(), null, null, null,
-                        "自动登录失败：" + outcome.message()));
-            }
-            keys = List.of(outcome.token());
-        }
         CreditPanelPayload blocked = null;
         if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
             blocked = new CreditPanelPayload("test", baseUrl, kind, candidates, level, null,
                     false, null, null, List.of(), null, null, null, "请先填写上游地址再测试");
         } else if (keys.isEmpty()) {
             blocked = new CreditPanelPayload("test", baseUrl, kind, candidates, level, null,
-                    false, null, null, List.of(), null, null, null, "请先填写余额密钥再测试");
+                    false, null, null, List.of(), null, null, null,
+                    accountLogin
+                            ? "账密登录：请先点击「登录」按钮完成上游门户登录（令牌会自动回填为余额密钥），再测试查询。"
+                            : "请先填写余额密钥再测试");
         }
         if (blocked != null) {
             return ApiResult.ok(blocked);
@@ -3528,11 +3507,12 @@ public class ApiProviderController {
     }
 
     /**
-     * 供应商余额「账号密码登录」：立即执行一次自动登录，把截获的会话令牌回填为余额密钥。
+     * 供应商余额「账号密码登录」：弹出内嵌浏览器登录窗口，用户在窗口内完成上游门户
+     * 登录后，把截获的会话令牌回填为余额密钥。
      *
-     * <p>查询类型为 {@code account-login} 时可从编辑页 / 余额面板手动触发
-     * （令牌失效时后端查询链路也会自动重登，这里主要用于配置后的立即验证）。
-     * 令牌只回掩码，不回明文。</p>
+     * <p>查询类型为 {@code account-login} 时可从编辑页 / 余额面板的「登录」按钮触发；
+     * 令牌失效后也可再次点击重新登录。请求会阻塞到登录完成或超时（前端需放长超时）。
+     * 令牌只回掩码，不回明文；账号密码只出现在弹出的浏览器窗口里，不落库。</p>
      *
      * @param providerId 供应商标识
      * @return 登录结果（成功带令牌掩码与登录页地址，失败带原因）

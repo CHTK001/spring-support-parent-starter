@@ -1,7 +1,8 @@
 package com.chua.starter.ai.support.manage.service;
 
+import com.chua.common.support.browser.BrowserOptions;
 import com.chua.common.support.browser.BrowserPage;
-import com.chua.common.support.browser.cdp.Cdp;
+import com.chua.common.support.browser.cdp.CdpBrowserEngine;
 import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
@@ -19,9 +20,10 @@ import java.util.regex.Pattern;
 /**
  * 供应商余额「账号密码登录」执行器。
  *
- * <p>查询类型 {@code extra.credit_kind = account-login} 时，余额令牌不再手工填写，
- * 而是由本服务用内嵌浏览器（CDP 引擎，common 层 {@link Cdp}）打开上游登录页、
- * 自动填入账号密码并提交，再按余额 SPI 的「账号登录」钩子截获会话令牌：</p>
+ * <p>查询类型 {@code extra.credit_kind = account-login} 时，余额令牌不再手工填写：
+ * 页面上的「登录」按钮触发本服务，弹出内嵌浏览器窗口（CDP 引擎，common 层
+ * {@link CdpBrowserEngine}，有头模式），由用户在窗口内自行输入账号密码完成上游门户
+ * 登录；服务端按余额 SPI 的「账号登录」钩子截获会话令牌：</p>
  * <ul>
  *   <li>{@link CreditQueryProvider#loginPageUrl(String)}：登录页地址；</li>
  *   <li>{@link CreditQueryProvider#loginCaptureUrlPattern()}：令牌交换接口的地址特征，
@@ -31,12 +33,12 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * <p>截获到的令牌回填 {@code extra.credit_key}（与 SPI 契约一致），余额查询、面板、
- * 快照等既有链路零改动复用。账号密码来自 {@code extra.credit_username / credit_password}。</p>
+ * 快照等既有链路零改动复用。账号密码只出现在弹出的浏览器窗口里，不落库。</p>
  *
  * <p>实现说明：令牌交换响应的截获在页面上下文完成——注入的初始化脚本覆写
  * {@code fetch} / {@code XMLHttpRequest}，把命中地址特征的响应体暂存到
- * {@code window.__chuaCreditCaptures} 与 sessionStorage，Java 侧轮询读取；
- * 表单填写用原生 value setter 派发 input/change 事件，兼容 React / Vue 受控输入。</p>
+ * {@code window.__chuaCreditCaptures} 与 sessionStorage，Java 侧轮询读取。
+ * 登录窗口使用独立引擎（有头），避免污染共享无头引擎的进程级参数。</p>
  *
  * @author CH
  * @since 4.0.0.55
@@ -57,14 +59,10 @@ public class ProviderCreditLoginService {
     private static final String CAPTURE_STORE = "__chuaCreditCaptures";
 
     /**
-     * 等待登录表单出现的时间上限（毫秒）
+     * 等待用户在弹出窗口里完成登录的时间上限（毫秒）：覆盖打开门户、输入账号密码、
+     * 验证码 / 滑块与登录跳转全程；超时未截获令牌按失败返回，窗口随即关闭
      */
-    private static final long FORM_WAIT_MILLIS = 20_000L;
-
-    /**
-     * 等待令牌截获的时间上限（毫秒）：覆盖慢速登录跳转与令牌交换
-     */
-    private static final long TOKEN_WAIT_MILLIS = 60_000L;
+    private static final long TOKEN_WAIT_MILLIS = 180_000L;
 
     /**
      * 轮询间隔（毫秒）
@@ -90,23 +88,20 @@ public class ProviderCreditLoginService {
     }
 
     /**
-     * 执行一次自动登录并截获会话令牌。
+     * 弹出登录窗口，等待用户完成登录并截获会话令牌。
      *
-     * <p>成功时把令牌回填 {@code extra.credit_key}（persist=true 时落库）；
-     * 失败不抛异常，返回带原因的 {@link LoginOutcome}，由调用方决定提示方式。</p>
+     * <p>用独立有头 CDP 引擎打开登录页（真实浏览器窗口，用户在其中手动输入
+     * 账号密码），轮询 SPI 钩子直到截获令牌或超时。成功时把令牌回填
+     * {@code extra.credit_key}（persist=true 时落库）；失败不抛异常，
+     * 返回带原因的 {@link LoginOutcome}，由调用方决定提示方式。</p>
      *
      * @param entity  供应商
      * @param spi     余额 SPI 实现（提供登录页与截获钩子；null 且未显式配登录地址时失败）
-     * @param persist 截获成功后是否把令牌落库（实时查询链路 true，试查 false）
+     * @param persist 截获成功后是否把令牌落库（登录按钮 true，试查不弹窗）
      * @return 登录结果
      */
     public LoginOutcome login(SysAccountChannel entity, CreditQueryProvider spi, boolean persist) {
         Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
-        String username = text(extra.get("credit_username"));
-        String password = text(extra.get("credit_password"));
-        if (username.isEmpty() || password.isEmpty()) {
-            return new LoginOutcome(false, null, "未配置登录账号或密码", null);
-        }
         String explicitUrl = text(extra.get("credit_login_url"));
         String loginUrl = !explicitUrl.isEmpty() ? explicitUrl
                 : spi == null ? null : spi.loginPageUrl(entity.getBaseUrl());
@@ -116,29 +111,37 @@ public class ProviderCreditLoginService {
         if (spi == null) {
             return new LoginOutcome(false, null, "该供应商未配置可截获令牌的登录实现", loginUrl);
         }
-        try (BrowserPage page = Cdp.open(loginUrl)) {
+        // 独立有头引擎：进程级参数（无头/视口等）以本引擎首次启动为准，
+        // 与共享无头引擎互不影响；用完必须 close 释放浏览器进程
+        CdpBrowserEngine engine = new CdpBrowserEngine();
+        try {
+            engine.start(new BrowserOptions().setHeadless(false).setWidth(1280).setHeight(900));
+        } catch (RuntimeException e) {
+            engine.close();
+            log.warn("[credit-login] 供应商 {} 启动登录浏览器失败: {}", entity.getProviderId(), e.getMessage());
+            return new LoginOutcome(false, null, "无法启动登录浏览器：" + e.getMessage(), loginUrl);
+        }
+        try (BrowserPage page = engine.openPage(loginUrl)) {
             String capturePattern = spi.loginCaptureUrlPattern();
             if (capturePattern != null && !capturePattern.isBlank()) {
                 page.addInitScript(captureScript(capturePattern));
             }
-            String formError = fillLoginForm(page, username, password);
-            if (formError != null) {
-                return new LoginOutcome(false, null, formError, loginUrl);
-            }
             String token = awaitToken(page, spi, capturePattern);
             if (token == null || token.isBlank()) {
                 return new LoginOutcome(false, null,
-                        "登录后未截获会话令牌（该站点可能带验证码 / 滑块，或登录失败）", loginUrl);
+                        "等待登录超时：请在弹出的浏览器窗口内完成上游门户登录后重试", loginUrl);
             }
             if (persist) {
                 persistToken(entity, extra, token);
             }
-            log.info("[credit-login] 供应商 {} 自动登录成功，令牌 {} 已{}回填",
+            log.info("[credit-login] 供应商 {} 登录成功，令牌 {} 已{}回填",
                     entity.getProviderId(), mask(token), persist ? "" : "未");
             return new LoginOutcome(true, token, "登录成功", loginUrl);
         } catch (RuntimeException e) {
-            log.warn("[credit-login] 供应商 {} 自动登录失败: {}", entity.getProviderId(), e.getMessage());
-            return new LoginOutcome(false, null, "自动登录执行失败：" + e.getMessage(), loginUrl);
+            log.warn("[credit-login] 供应商 {} 登录失败: {}", entity.getProviderId(), e.getMessage());
+            return new LoginOutcome(false, null, "登录执行失败：" + e.getMessage(), loginUrl);
+        } finally {
+            engine.close();
         }
     }
 
@@ -164,94 +167,6 @@ public class ProviderCreditLoginService {
             log.warn("[credit-login] 供应商 {} 令牌回填失败（本次仍按截获令牌查询）: {}",
                     entity.getProviderId(), e.getMessage());
         }
-    }
-
-    /**
-     * 打开登录页并自动填写提交。
-     *
-     * @param page     浏览器页面
-     * @param username 登录账号
-     * @param password 登录密码
-     * @return 失败原因；成功提交返回 null
-     */
-    private String fillLoginForm(BrowserPage page, String username, String password) {
-        long deadline = System.currentTimeMillis() + FORM_WAIT_MILLIS;
-        String state = null;
-        while (System.currentTimeMillis() < deadline) {
-            state = evaluateFill(page, username, password);
-            if ("ok".equals(state)) {
-                break;
-            }
-            sleep();
-        }
-        if (!"ok".equals(state)) {
-            return "登录页 " + page.url() + " 上没有找到可填写的密码输入框";
-        }
-        String clicked = page.evaluate(submitScript(), false);
-        if (!"clicked".equals(clicked)) {
-            return "登录页 " + page.url() + " 上没有找到提交按钮";
-        }
-        return null;
-    }
-
-    /**
-     * 在页面里定位账号 / 密码输入框并填值（不提交）。
-     *
-     * <p>用原生 value setter 赋值并派发 input / change 事件，React / Vue 的
-     * 受控输入都能收到；账号框取密码框所在表单里它之前的第一个文本输入。</p>
-     *
-     * @param page     浏览器页面
-     * @param username 登录账号
-     * @param password 登录密码
-     * @return 页面脚本返回的状态：ok / no-password-input
-     */
-    private String evaluateFill(BrowserPage page, String username, String password) {
-        String script = "(function(){"
-                + "var pw = document.querySelector('input[type=password]:not([disabled]):not([readonly])');"
-                + "if (!pw) { return 'no-password-input'; }"
-                + "var scope = pw.closest('form') || document;"
-                + "var inputs = Array.prototype.slice.call(scope.querySelectorAll('input'));"
-                + "var user = null;"
-                + "for (var i = 0; i < inputs.length; i++) {"
-                + "  var el = inputs[i];"
-                + "  if (el === pw) { break; }"
-                + "  var t = (el.type || 'text').toLowerCase();"
-                + "  if (t === 'text' || t === 'email' || t === 'tel' || t === 'username' || t === '') { user = el; break; }"
-                + "}"
-                + "if (!user) { return 'no-username-input'; }"
-                + "var setVal = function(el, v) {"
-                + "  var desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');"
-                + "  if (desc && desc.set) { desc.set.call(el, v); } else { el.value = v; }"
-                + "  el.dispatchEvent(new Event('input', {bubbles: true}));"
-                + "  el.dispatchEvent(new Event('change', {bubbles: true}));"
-                + "};"
-                + "setVal(user, " + quote(username) + ");"
-                + "setVal(pw, " + quote(password) + ");"
-                + "return 'ok';"
-                + "})()";
-        try {
-            return page.evaluate(script, false);
-        } catch (RuntimeException e) {
-            return "no-password-input";
-        }
-    }
-
-    /**
-     * 提交登录表单：优先 type=submit，其次按「登录 / log in / sign in」文本找按钮。
-     *
-     * @return 提交脚本
-     */
-    private String submitScript() {
-        return "(function(){"
-                + "var btn = document.querySelector('button[type=submit],input[type=submit]');"
-                + "if (!btn) {"
-                + "  btn = Array.prototype.slice.call(document.querySelectorAll('button,[role=button]'))"
-                + "    .find(function(b) { return /登录|登陆|log\\s*in|sign\\s*in/i.test(b.textContent || ''); });"
-                + "}"
-                + "if (!btn) { return 'no-button'; }"
-                + "btn.click();"
-                + "return 'clicked';"
-                + "})()";
     }
 
     /**
