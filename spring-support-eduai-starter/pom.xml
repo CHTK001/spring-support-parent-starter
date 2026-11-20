@@ -63,7 +63,7 @@
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>3.36.0</version>
+            <version>4.8.0</version>
         </dependency>
 
         <!-- 消息队列（异步阅卷任务） -->
