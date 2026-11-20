@@ -1171,6 +1171,8 @@ public class ChatStreamOrchestrator {
         AiChatRequest request = new AiChatRequest();
         request.setModel(selectedModel);
         request.setProviderId(selectedProviderId);
+        // 与 prepare 同口径：恢复轮也带上会话配置的决策模型，断线/人工确认恢复不丢配置
+        request.setDecisionProviderId(readSessionSetting(dialogId, "decisionProviderId"));
         request.setStream(true);
         request.setRoleSettings(roleSettings);
         request.setSessionId(sessionId);
