@@ -85,7 +85,10 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("usage_rate_eur", "7.8", "NUMBER", "欧元汇率：1 欧元可兑换的人民币数量（CNY→EUR 时金额除以该值）", 11),
                 // 今日预算阈值：当日费用（按当前区间口径折算到今天）达到该值时前端预警条变色。
                 // 0 = 不启用；只在浏览器侧消费，后端不读。
-                new SettingItem("usage_daily_budget", "0", "NUMBER", "今日预算阈值（元）：当日累计费用达到该值时用量页预警，0 表示不启用", 13)
+                new SettingItem("usage_daily_budget", "0", "NUMBER", "今日预算阈值（元）：当日累计费用达到该值时用量页预警，0 表示不启用", 13),
+                // 余额令牌自动续期（CreditTokenRenewScheduler）：到期前用无头浏览器回访
+                // 上游门户静默续期；仅对账密登录且 SPI 声明可续期的供应商生效。
+                new SettingItem("credit_renew_enabled", "true", "BOOLEAN", "余额令牌自动续期：开启后到期前自动回访上游门户续期令牌，失败推送告警", 14)
         );
     }
 }

@@ -121,4 +121,32 @@ public interface CreditQueryProvider {
     default String loginStorageKey() {
         return null;
     }
+
+    /**
+     * 是否支持余额令牌静默续期。
+     *
+     * <p>可续期的前提：令牌由页面登录态派生（Cookie / localStorage），带令牌回访
+     * 上游门户时页面会话仍然有效，平台轮换令牌后能按登录截获钩子读到新值。
+     * 默认不支持——这类实现的令牌失效后只能人工重新点「登录」。</p>
+     *
+     * @return 支持静默续期时为 true
+     */
+    default boolean supportsTokenRenewal() {
+        return false;
+    }
+
+    /**
+     * 静默续期的回访页地址（按站点根地址解析）。
+     *
+     * <p>续期时内嵌无头浏览器预置旧令牌后打开本页：页面 SDK 认会话，若平台在
+     * 回访时轮换令牌，新令牌按登录截获钩子（Cookie / localStorage / 响应截获）
+     * 读到并回填。默认回落登录页；实现给出更合适的已登录落地页（控制台首页等）
+     * 时覆写它——登录页在会话有效时可能原地不动，不利于触发令牌轮换。</p>
+     *
+     * @param baseUrl 供应商行配置的上游根地址
+     * @return 回访页地址；无法推出时为 null（回落登录页语义由调用方处理）
+     */
+    default String renewPageUrl(String baseUrl) {
+        return loginPageUrl(baseUrl);
+    }
 }

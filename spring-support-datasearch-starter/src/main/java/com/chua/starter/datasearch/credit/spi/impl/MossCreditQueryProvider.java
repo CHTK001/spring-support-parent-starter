@@ -47,6 +47,11 @@ public class MossCreditQueryProvider implements CreditQueryProvider {
     private static final String TOKEN_COOKIE = "moss_studio_prod_access_token";
 
     /**
+     * 静默续期回访页：门户首页（已登录态的落地页，登录页在会话有效时拿不到令牌轮换）
+     */
+    private static final String RENEW_PAGE_URL = "https://platform.moss.cn/";
+
+    /**
      * 按常见字段名依次试探；显式配了表达式时以表达式为准。
      * 首选门户实测字段（2026-11 验证）：一次带出 余额 / 本月已用 / 冻结 / 日均消费 / 预计可用天数，
      * 前一段算剩余、第二段算已用，其余读数按原样展示；data.* 留作兜底
@@ -93,6 +98,28 @@ public class MossCreditQueryProvider implements CreditQueryProvider {
     @Override
     public String loginCookieName() {
         return TOKEN_COOKIE;
+    }
+
+    /**
+     * 支持余额令牌静默续期：令牌是门户登录态 Cookie，预置旧 Cookie 回访门户时
+     * 会话仍被接受；平台轮换令牌后新值仍在同名 Cookie 里，按登录截获钩子读回。
+     *
+     * @return true
+     */
+    @Override
+    public boolean supportsTokenRenewal() {
+        return true;
+    }
+
+    /**
+     * 静默续期的回访页：门户首页（已登录态的落地页）。
+     *
+     * @param baseUrl 供应商行配置的上游根地址（本实现登录态固定在门户主域，忽略该参数）
+     * @return Moss 门户首页
+     */
+    @Override
+    public String renewPageUrl(String baseUrl) {
+        return RENEW_PAGE_URL;
     }
 
     /**

@@ -51,6 +51,11 @@ public class SenseNovaCreditQueryProvider implements CreditQueryProvider {
     private static final String LOGIN_PAGE_URL = "https://platform.sensenova.cn/login";
 
     /**
+     * 静默续期回访页：平台控制台首页（已登录态的落地页，见 {@link #renewPageUrl(String)}）
+     */
+    private static final String RENEW_PAGE_URL = "https://platform.sensenova.cn/";
+
+    /**
      * 登录成功后余额 JWT 所在的 localStorage 键名（前端 SDK 写入的明文键）；
      * 兜底键 NOVA_AUTH:nova:login 由会话管理器按「值里找 JWT」自动覆盖
      */
@@ -98,6 +103,32 @@ public class SenseNovaCreditQueryProvider implements CreditQueryProvider {
     @Override
     public String loginStorageKey() {
         return LOGIN_STORAGE_KEY;
+    }
+
+    /**
+     * 支持余额令牌静默续期：JWT 由平台登录态派生，预置旧 JWT 回访门户时
+     * 页面会话仍被接受；平台轮换令牌后新 JWT 仍写入
+     * {@code localStorage["access_token"]}，按登录截获钩子即可读到。
+     *
+     * @return true
+     */
+    @Override
+    public boolean supportsTokenRenewal() {
+        return true;
+    }
+
+    /**
+     * 静默续期的回访页：平台控制台首页（已登录态的落地页）。
+     *
+     * <p>不用登录页——会话有效时登录页只会原地停留或跳控制台，拿不到
+     * 令牌轮换；控制台首页会正常拉起前端 SDK，轮换令牌时写回 localStorage。</p>
+     *
+     * @param baseUrl 供应商行配置的上游根地址（本实现登录态固定在平台主域，忽略该参数）
+     * @return SenseNova 平台首页
+     */
+    @Override
+    public String renewPageUrl(String baseUrl) {
+        return RENEW_PAGE_URL;
     }
 
     /**

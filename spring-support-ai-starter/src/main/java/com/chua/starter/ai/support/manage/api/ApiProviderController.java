@@ -40,6 +40,7 @@ import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.chat.MagpieRouteSource;
 import com.chua.starter.ai.support.schedule.CreditRefreshScheduler;
+import com.chua.starter.ai.support.schedule.CreditTokenRenewScheduler;
 import com.chua.starter.ai.support.util.AiModelMetricKeys;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.datasearch.provider.limit.ProviderLimitCollector;
@@ -54,6 +55,7 @@ import com.chua.starter.datasearch.credit.model.CreditResult;
 import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
 import com.chua.starter.datasearch.credit.spi.impl.HostCreditQueryProvider;
 import com.chua.starter.datasearch.credit.support.CreditQueries;
+import com.chua.starter.datasearch.credit.support.CreditTokens;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -235,6 +237,11 @@ public class ApiProviderController {
      * 用 ObjectProvider 懒解析打破循环。</p>
      */
     private final ObjectProvider<CreditRefreshScheduler> creditRefreshScheduler;
+
+    /**
+     * 余额令牌自动续期任务（可观测端点回其运行快照；任务未装配时端点降级回空态）
+     */
+    private final ObjectProvider<CreditTokenRenewScheduler> creditTokenRenewScheduler;
 
     /**
      * AK/SK 签名型余额查询的占位 Key：供应商没有余额令牌（extra.credit_key 为空）
@@ -3615,6 +3622,248 @@ public class ApiProviderController {
     record CreditLoginPayload(boolean ok, String message,
                               @JsonProperty("login_url") String loginUrl,
                               @JsonProperty("token_mask") String tokenMask, String kind) {
+    }
+
+    /**
+     * 余额令牌续期状态（可观测端点）：调度器运行快照 + 逐供应商的令牌到期 / 续期
+     * 留痕，让「谁快到期、谁续期失败」在页面上可确认，而不是只进日志。
+     *
+     * <p>只回令牌的到期时间与状态，不回令牌明文 / 掩码。行仅含账密登录口径的
+     * 供应商；JWT 令牌给 {@code expire_at}，非 JWT 令牌该列为 null（按保活周期
+     * 巡检，见调度器 {@link CreditTokenRenewScheduler#isDue}）。</p>
+     *
+     * @return 调度器快照（任务未装配时字段为 null）+ 供应商行
+     */
+    @Permission("admin")
+    @GetMapping("/providers/credit/renew-status")
+    public ApiResult<Map<String, Object>> providerCreditRenewStatus() {
+        Map<String, Object> out = new LinkedHashMap<>(16);
+        CreditTokenRenewScheduler scheduler = creditTokenRenewScheduler.getIfAvailable();
+        if (scheduler == null) {
+            out.put("enabled", false);
+            out.put("running", false);
+            out.put("interval_seconds", null);
+            out.put("last_run_at", null);
+            out.put("last_duration_ms", null);
+            out.put("next_run_at", null);
+            out.put("providers", null);
+            out.put("due", null);
+            out.put("renewed", null);
+            out.put("rejected", null);
+        } else {
+            CreditTokenRenewScheduler.RenewStatus status = scheduler.status();
+            boolean ran = status.lastRunAt() > 0;
+            out.put("enabled", status.enabled());
+            out.put("running", status.running());
+            out.put("interval_seconds", status.intervalSeconds());
+            out.put("last_run_at", ran ? status.lastRunAt() : null);
+            out.put("last_duration_ms", ran ? status.lastDurationMs() : null);
+            out.put("next_run_at", status.nextRunAt() > 0 ? status.nextRunAt() : null);
+            out.put("providers", ran ? status.providers() : null);
+            out.put("due", ran ? status.due() : null);
+            out.put("renewed", ran ? status.renewed() : null);
+            out.put("rejected", ran ? status.rejected() : null);
+        }
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (SysAccountChannel channel : accountChannelService.listEnabled()) {
+            Map<String, Object> extra = channel.getExtra();
+            if (extra == null || !ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"))) {
+                continue;
+            }
+            String token = str(extra, "credit_key");
+            Object renewEnabled = extra.get("credit_renew_enabled");
+            Long expireAt = token == null ? null : CreditTokens.expireAtMs(token);
+            Map<String, Object> row = new LinkedHashMap<>(12);
+            row.put("provider_id", channel.getProviderId());
+            row.put("name", channel.getName());
+            row.put("renew_enabled", renewEnabled == null || Boolean.parseBoolean(String.valueOf(renewEnabled)));
+            row.put("has_token", token != null);
+            row.put("expire_at", expireAt);
+            row.put("due", token != null && CreditTokenRenewScheduler.isDue(extra, now));
+            row.put("last_renew_at", longOf(extra.get("credit_last_renew_at")));
+            row.put("renew_status", str(extra, "credit_renew_status"));
+            row.put("fail_count", intOf(extra.get("credit_renew_fail_count")));
+            rows.add(row);
+        }
+        out.put("rows", rows);
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 供应商余额令牌「手动续期」：立即执行一次无头回访续期，回结果与令牌掩码。
+     *
+     * <p>验证续期链路、不等到期提前换新时使用；与调度器走同一条
+     * {@link #renewProviderCreditToken(SysAccountChannel)} 执行路径。仅账密登录且
+     * SPI 声明可续期的供应商可续，不满足时返回 skipped 与原因；请求会阻塞到
+     * 回访结束（前端需放长超时）。</p>
+     *
+     * @param providerId 供应商标识
+     * @return 续期结果（renewed / valid-no-rotation / rejected / skipped）
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/credit/renew")
+    public ApiResult<CreditRenewReport> providerCreditRenew(@PathVariable("provider_id") String providerId) {
+        SysAccountChannel entity = requireProvider(providerId);
+        return ApiResult.ok(renewProviderCreditToken(entity));
+    }
+
+    /**
+     * 余额令牌续期结果（手动续期接口与调度器共用）。
+     *
+     * @param providerId 供应商标识
+     * @param status     renewed / valid-no-rotation / rejected / skipped
+     * @param message    结果说明（skipped 时为跳过原因）
+     * @param tokenMask  新令牌掩码（仅 renewed 时有值）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record CreditRenewReport(@JsonProperty("provider_id") String providerId, String status,
+                                    String message, @JsonProperty("token_mask") String tokenMask) {
+
+        /** 平台轮换了令牌，新令牌已回填 */
+        public static final String RENEWED = ProviderCreditLoginService.RenewOutcome.RENEWED;
+
+        /** 会话有效，本次回访未轮换令牌 */
+        public static final String VALID_NO_ROTATION = ProviderCreditLoginService.RenewOutcome.VALID_NO_ROTATION;
+
+        /** 续期失败，需人工重登 */
+        public static final String REJECTED = ProviderCreditLoginService.RenewOutcome.REJECTED;
+
+        /** 未参与续期（口径不符 / SPI 不支持 / 无令牌） */
+        public static final String SKIPPED = "skipped";
+
+        /**
+         * 跳过报告。
+         *
+         * @param providerId 供应商标识
+         * @param reason     跳过原因
+         * @return 报告
+         */
+        public static CreditRenewReport skipped(String providerId, String reason) {
+            return new CreditRenewReport(providerId, SKIPPED, reason, null);
+        }
+    }
+
+    /**
+     * 执行一次余额令牌续期（调度器与「手动续期」接口共用）。
+     *
+     * <p>判定链：账密登录口径 → SPI 支持静默续期 → 有令牌；通过后无头回访门户
+     * 续期，把「新令牌（若轮换）+ 续期状态留痕」合并回 extra 一次落库——只经
+     * {@link com.chua.starter.account.channel.service.AccountChannelService#updateExtra}
+     * 走账号模块的命令接口，不触碰渠道表其它字段。续期失败且为首次失败时推一条
+     * 余额告警（复用 credit_warn_* 渠道配置），连续失败不重复推送。</p>
+     *
+     * @param entity 供应商（须为新鲜读取的行，extra 反映当前库值）
+     * @return 续期结果报告
+     */
+    public CreditRenewReport renewProviderCreditToken(SysAccountChannel entity) {
+        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        if (!ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"))) {
+            return CreditRenewReport.skipped(entity.getProviderId(), "非账密登录口径，无需续期");
+        }
+        CreditQueryProvider spi = loginSpiFor(entity, extra);
+        if (spi == null || !spi.supportsTokenRenewal()) {
+            return CreditRenewReport.skipped(entity.getProviderId(), "该供应商不支持静默续期");
+        }
+        if (str(extra, "credit_key") == null) {
+            return CreditRenewReport.skipped(entity.getProviderId(), "无余额令牌，请先登录");
+        }
+        ProviderCreditLoginService.RenewOutcome outcome = providerCreditLoginService.renewByPageVisit(entity, spi);
+        boolean rejected = ProviderCreditLoginService.RenewOutcome.REJECTED.equals(outcome.status());
+        int failCount = intOf(extra.get("credit_renew_fail_count"));
+        failCount = rejected ? failCount + 1 : 0;
+        // 读-合并-写：updateExtra 是整列覆盖，必须带着完整 extra 传；新令牌与状态字段一次写入
+        Map<String, Object> patch = new LinkedHashMap<>(extra);
+        patch.put("credit_last_renew_at", System.currentTimeMillis());
+        patch.put("credit_renew_status", outcome.status());
+        patch.put("credit_renew_fail_count", failCount);
+        String tokenMask = null;
+        if (outcome.token() != null && !outcome.token().isBlank()) {
+            patch.put("credit_key", outcome.token());
+            tokenMask = maskKey(outcome.token());
+        }
+        String tokenForExpire = outcome.token() != null && !outcome.token().isBlank()
+                ? outcome.token() : str(extra, "credit_key");
+        Long expireAt = tokenForExpire == null ? null : CreditTokens.expireAtMs(tokenForExpire);
+        if (expireAt != null) {
+            patch.put("credit_token_expire_at", expireAt);
+        } else {
+            patch.remove("credit_token_expire_at");
+        }
+        try {
+            accountChannelService.updateExtra(entity.getProviderId(), patch);
+            // 同步内存 extra（与实体共享同一 Map），调度器循环里的后续读取与库一致
+            extra.clear();
+            extra.putAll(patch);
+        } catch (RuntimeException e) {
+            log.warn("[credit-renew] 供应商 {} 续期状态回写失败: {}", entity.getProviderId(), e.getMessage());
+        }
+        log.info("[credit-renew] 供应商 {} 续期完成：{}；{}",
+                entity.getProviderId(), outcome.status(), outcome.message());
+        if (rejected && failCount == 1) {
+            notifyCreditTokenRejected(entity, extra, outcome);
+        }
+        return new CreditRenewReport(entity.getProviderId(), outcome.status(), outcome.message(), tokenMask);
+    }
+
+    /**
+     * 续期失败的告警推送：复用余额告警管线（站内信 / 邮件 / Webhook，按
+     * credit_warn_* 配置路由）。仅首次失败（fail_count==1）时调用，连续失败不刷屏；
+     * 人工重登成功或续期恢复后 fail_count 归零，下次失败会再推。
+     *
+     * @param entity  供应商
+     * @param extra   供应商扩展配置
+     * @param outcome 续期结果（取失败原因拼文案）
+     */
+    private void notifyCreditTokenRejected(SysAccountChannel entity, Map<String, Object> extra,
+                                           ProviderCreditLoginService.RenewOutcome outcome) {
+        try {
+            String title = "余额令牌自动续期失败";
+            String content = "供应商「" + entity.getName() + "」的余额令牌自动续期失败：" + outcome.message()
+                    + "。请在供应商编辑页点击「登录」重新完成上游门户登录，否则余额查询将失效。";
+            List<Integer> receivers = creditWarnReceivers(extra.get("credit_warn_receivers"));
+            List<String> channels = creditDispatchChannels(extra, null);
+            boolean ok = dispatchCreditAlert(entity, SysAiProviderCreditAlertLog.TYPE_WARN, null, null,
+                    receivers, channels, extra, title, content);
+            log.info("[credit-renew] 供应商 {} 续期失败告警推送：{}", entity.getProviderId(),
+                    ok ? "已投递" : "无可用渠道或全部投递失败");
+        } catch (Exception e) {
+            log.warn("[credit-renew] 供应商 {} 续期失败告警推送异常: {}", entity.getProviderId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 读扩展配置里的 int 值（缺失 / 非法回落 0）。
+     *
+     * @param v 原值
+     * @return int 值
+     */
+    private static int intOf(Object v) {
+        if (v instanceof Number n) {
+            return n.intValue();
+        }
+        try {
+            return v == null ? 0 : Integer.parseInt(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 读扩展配置里的 long 值（缺失 / 非法回落 null）。
+     *
+     * @param v 原值
+     * @return long 值；解析失败为 null
+     */
+    private static Long longOf(Object v) {
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return v == null ? null : Long.parseLong(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

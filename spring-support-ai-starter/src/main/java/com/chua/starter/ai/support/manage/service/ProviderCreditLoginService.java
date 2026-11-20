@@ -69,6 +69,12 @@ public class ProviderCreditLoginService {
      */
     private static final long POLL_INTERVAL_MILLIS = 800L;
 
+    /**
+     * 静默续期的回访等待上限（毫秒）：无头页面加载 + 平台可能的令牌轮换窗口。
+     * 比人工登录短得多——没有输入环节，页面几十秒内还读不到任何令牌即认为登录态失效
+     */
+    private static final long RENEW_WAIT_MILLIS = 45_000L;
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
@@ -85,6 +91,32 @@ public class ProviderCreditLoginService {
      * @param loginUrl 实际打开的登录页地址
      */
     public record LoginOutcome(boolean ok, String token, String message, String loginUrl) {
+    }
+
+    /**
+     * 静默续期结果。
+     *
+     * @param status   结果状态：{@link #RENEWED} / {@link #VALID_NO_ROTATION} / {@link #REJECTED}
+     * @param token    平台轮换出的新令牌（仅 {@link #RENEWED} 时有值）
+     * @param message  结果说明
+     * @param renewUrl 实际回访的页面地址
+     */
+    public record RenewOutcome(String status, String token, String message, String renewUrl) {
+
+        /**
+         * 平台在回访时轮换了令牌，新令牌已截获
+         */
+        public static final String RENEWED = "renewed";
+
+        /**
+         * 门户会话仍有效，本次回访未轮换令牌（旧令牌继续可用）
+         */
+        public static final String VALID_NO_ROTATION = "valid-no-rotation";
+
+        /**
+         * 回访未读到会话令牌：登录态已失效，需要人工重新登录
+         */
+        public static final String REJECTED = "rejected";
     }
 
     /**
@@ -146,6 +178,105 @@ public class ProviderCreditLoginService {
     }
 
     /**
+     * 静默续期：无头浏览器预置旧令牌回访上游门户，截获轮换出的新令牌。
+     *
+     * <p>与 {@link #login} 的差别：不弹窗、无需用户输入——把旧令牌（Cookie /
+     * localStorage）预置进无头页面后打开「已登录落地页」，页面 SDK 认会话：
+     * 平台若在回访时轮换令牌，新值按登录截获钩子（Cookie / localStorage /
+     * 响应截获）读到并随 {@code renewed} 返回；整窗只见到旧令牌说明会话有效但
+     * 平台未轮换（{@code valid-no-rotation}，旧令牌继续可用）；全程读不到任何
+     * 令牌说明登录态已失效（{@code rejected}，由调用方告警并引导人工重登）。
+     * 不落库——新令牌由调用方与续期状态字段合并后一次写入。</p>
+     *
+     * @param entity 供应商
+     * @param spi    余额 SPI 实现（提供回访页与截获钩子）
+     * @return 续期结果
+     */
+    public RenewOutcome renewByPageVisit(SysAccountChannel entity, CreditQueryProvider spi) {
+        Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
+        String oldToken = text(extra.get("credit_key"));
+        if (oldToken.isEmpty()) {
+            return new RenewOutcome(RenewOutcome.REJECTED, null, "没有可续期的余额令牌", null);
+        }
+        String renewUrl = spi.renewPageUrl(entity.getBaseUrl());
+        if (renewUrl == null || renewUrl.isBlank()) {
+            renewUrl = spi.loginPageUrl(entity.getBaseUrl());
+        }
+        if (renewUrl == null || renewUrl.isBlank()) {
+            return new RenewOutcome(RenewOutcome.REJECTED, null, "该供应商没有可回访的续期页面", null);
+        }
+        String capturePattern = spi.loginCaptureUrlPattern();
+        // 独立无头引擎：续期无人值守，弹窗没有意义；进程级参数以本引擎首次启动为准，
+        // 与共享无头引擎、登录有头引擎互不影响；用完必须 close 释放浏览器进程
+        CdpBrowserEngine engine = new CdpBrowserEngine();
+        try {
+            engine.start(new BrowserOptions().setHeadless(true));
+        } catch (RuntimeException e) {
+            engine.close();
+            log.warn("[credit-renew] 供应商 {} 启动续期浏览器失败: {}", entity.getProviderId(), e.getMessage());
+            return new RenewOutcome(RenewOutcome.REJECTED, null, "无法启动续期浏览器：" + e.getMessage(), renewUrl);
+        }
+        try (BrowserPage page = engine.openPage()) {
+            if (capturePattern != null && !capturePattern.isBlank()) {
+                page.addInitScript(captureScript(capturePattern));
+            }
+            String cookieName = spi.loginCookieName();
+            if (cookieName != null && !cookieName.isBlank()) {
+                page.setCookiesForUrl(Map.of(cookieName, oldToken), renewUrl);
+            }
+            String storageKey = spi.loginStorageKey();
+            if (storageKey != null && !storageKey.isBlank()) {
+                page.addInitScript(presetStorageScript(storageKey, oldToken));
+            }
+            page.navigate(renewUrl);
+            // 整窗轮询：预置的旧令牌首轮就能读到，不能见旧即停——平台可能在页面
+            // 加载数秒后才轮换；读到「与旧令牌不同」的值才算轮换成功
+            String firstSeen = null;
+            long deadline = System.currentTimeMillis() + RENEW_WAIT_MILLIS;
+            while (System.currentTimeMillis() < deadline) {
+                String token = peekToken(page, spi, capturePattern);
+                if (token != null && !token.isBlank()) {
+                    if (firstSeen == null) {
+                        firstSeen = token;
+                    }
+                    if (!token.equals(oldToken)) {
+                        log.info("[credit-renew] 供应商 {} 平台已轮换令牌，新令牌 {}",
+                                entity.getProviderId(), mask(token));
+                        return new RenewOutcome(RenewOutcome.RENEWED, token, "平台已轮换令牌，新令牌已截获", renewUrl);
+                    }
+                }
+                sleep();
+            }
+            if (firstSeen != null) {
+                log.info("[credit-renew] 供应商 {} 门户会话仍有效，本次回访未轮换令牌", entity.getProviderId());
+                return new RenewOutcome(RenewOutcome.VALID_NO_ROTATION, null,
+                        "门户会话仍有效，本次回访未轮换令牌", renewUrl);
+            }
+            log.warn("[credit-renew] 供应商 {} 回访门户未读到会话令牌，登录态可能已失效", entity.getProviderId());
+            return new RenewOutcome(RenewOutcome.REJECTED, null,
+                    "回访门户未读到会话令牌：登录态可能已失效，请人工重新登录", renewUrl);
+        } catch (RuntimeException e) {
+            log.warn("[credit-renew] 供应商 {} 续期回访失败: {}", entity.getProviderId(), e.getMessage());
+            return new RenewOutcome(RenewOutcome.REJECTED, null, "续期回访执行失败：" + e.getMessage(), renewUrl);
+        } finally {
+            engine.close();
+        }
+    }
+
+    /**
+     * 预置 localStorage 令牌的初始化脚本：在页面任何脚本运行前写入旧令牌，
+     * 让页面 SDK 以「已登录」状态启动（登录截获钩子随后可读到轮换出的新值）。
+     *
+     * @param key   localStorage 键名
+     * @param token 旧令牌
+     * @return 初始化脚本
+     */
+    private String presetStorageScript(String key, String token) {
+        return "(function(){ try { localStorage.setItem("
+                + quote(key) + ", " + quote(token) + "); } catch (e) {} })()";
+    }
+
+    /**
      * 回填截获到的令牌：写 {@code extra.credit_key} 并落库。
      *
      * <p>与 {@code promoteCreditKey} 同一通道（{@link AccountChannelService#updateExtra}），
@@ -178,32 +309,50 @@ public class ProviderCreditLoginService {
      * @return 令牌；超时未截获返回 null
      */
     private String awaitToken(BrowserPage page, CreditQueryProvider spi, String capturePattern) {
-        String cookieName = spi.loginCookieName();
-        String storageKey = spi.loginStorageKey();
-        String tokenPath = spi.loginTokenJsonPath();
         long deadline = System.currentTimeMillis() + TOKEN_WAIT_MILLIS;
         while (System.currentTimeMillis() < deadline) {
-            if (cookieName != null && !cookieName.isBlank()) {
-                String value = page.cookies().get(cookieName);
-                if (value != null && !value.isBlank()) {
-                    return value;
-                }
-            }
-            if (storageKey != null && !storageKey.isBlank()) {
-                String raw = evaluateQuietly(page,
-                        "localStorage.getItem(" + quote(storageKey) + ")");
-                String token = unwrapStorageToken(raw);
-                if (token != null && !token.isBlank()) {
-                    return token;
-                }
-            }
-            if (capturePattern != null && !capturePattern.isBlank()) {
-                String token = capturedToken(page, tokenPath);
-                if (token != null && !token.isBlank()) {
-                    return token;
-                }
+            String token = peekToken(page, spi, capturePattern);
+            if (token != null && !token.isBlank()) {
+                return token;
             }
             sleep();
+        }
+        return null;
+    }
+
+    /**
+     * 单轮令牌嗅探：按 SPI 钩子依次尝试 Cookie / localStorage / 响应截获。
+     *
+     * <p>登录与静默续期共用同一套钩子读取口径：登录场景轮询到非空即成功；
+     * 续期场景需比对「读到的令牌是否与旧值不同」来判定平台是否轮换。</p>
+     *
+     * @param page           浏览器页面
+     * @param spi            余额 SPI 实现
+     * @param capturePattern 令牌交换接口地址特征（可为 null）
+     * @return 本轮读到的令牌；没有返回 null
+     */
+    private String peekToken(BrowserPage page, CreditQueryProvider spi, String capturePattern) {
+        String cookieName = spi.loginCookieName();
+        if (cookieName != null && !cookieName.isBlank()) {
+            String value = page.cookies().get(cookieName);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        String storageKey = spi.loginStorageKey();
+        if (storageKey != null && !storageKey.isBlank()) {
+            String raw = evaluateQuietly(page,
+                    "localStorage.getItem(" + quote(storageKey) + ")");
+            String token = unwrapStorageToken(raw);
+            if (token != null && !token.isBlank()) {
+                return token;
+            }
+        }
+        if (capturePattern != null && !capturePattern.isBlank()) {
+            String token = capturedToken(page, spi.loginTokenJsonPath());
+            if (token != null && !token.isBlank()) {
+                return token;
+            }
         }
         return null;
     }
