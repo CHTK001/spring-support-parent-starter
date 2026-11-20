@@ -7866,8 +7866,45 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         echo.put("js_path", "/web-chat/echo-demo.js");
         echo.put("description", "浏览器端推理演示模型：逐字回显输入，用于验证 Web 推理链路；"
                 + "可将 JS 路径替换为自定义推理脚本。");
+
+        Map<String, Object> imageGen = new LinkedHashMap<>(8);
+        imageGen.put("id", "web-image-gen");
+        imageGen.put("name", "浏览器文生图（Image Gen）");
+        imageGen.put("tasks", List.of("image"));
+        imageGen.put("traits", List.of("streaming"));
+        imageGen.put("js_path", "/web-chat/image-gen.js");
+        imageGen.put("description", "浏览器端文生图模型：以提示词为种子经 Canvas 2D 程序化渲染，"
+                + "结果以 Markdown 图片回显，无外部依赖；可将 JS 路径替换为自定义推理脚本。");
+
+        Map<String, Object> ocr = new LinkedHashMap<>(8);
+        ocr.put("id", "web-ocr");
+        ocr.put("name", "浏览器 OCR 识别（Tesseract）");
+        ocr.put("tasks", List.of("ocr"));
+        ocr.put("traits", List.of("streaming"));
+        ocr.put("js_path", "/web-chat/ocr.js");
+        ocr.put("description", "浏览器端 OCR 模型：基于 Tesseract.js（CDN 加载）识别上传图片中的"
+                + "中英文文字，首次运行需下载语言包；可将 JS 路径替换为自定义推理脚本。");
+
+        Map<String, Object> faceDetect = new LinkedHashMap<>(8);
+        faceDetect.put("id", "web-face-detect");
+        faceDetect.put("name", "浏览器人脸检测（Face Detect）");
+        faceDetect.put("tasks", List.of("face"));
+        faceDetect.put("traits", List.of("streaming"));
+        faceDetect.put("js_path", "/web-chat/face-detect.js");
+        faceDetect.put("description", "浏览器端人脸检测模型：基于 face-api.js（CDN 加载）检测上传图片中"
+                + "的人脸数量、置信度与位置，首次运行需下载 tiny 权重；可将 JS 路径替换为自定义推理脚本。");
+
+        Map<String, Object> chatLocal = new LinkedHashMap<>(8);
+        chatLocal.put("id", "web-chat-local");
+        chatLocal.put("name", "浏览器本地对话（Chat Local）");
+        chatLocal.put("tasks", List.of("chat"));
+        chatLocal.put("traits", List.of("streaming"));
+        chatLocal.put("js_path", "/web-chat/chat-local.js");
+        chatLocal.put("description", "浏览器端本地对话模型：基于 transformers.js（CDN 加载）在页面内推理，"
+                + "WebGPU 优先、WASM 兜底，权重按需从镜像下载；可将 JS 路径替换为自定义推理脚本。");
+
         Map<String, Object> out = new LinkedHashMap<>(4);
-        out.put("models", List.of(echo));
+        out.put("models", List.of(echo, imageGen, ocr, faceDetect, chatLocal));
         return out;
     }
 
