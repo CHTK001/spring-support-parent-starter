@@ -322,6 +322,14 @@ public class ApiProviderController {
             com.chua.starter.ai.support.manage.service.OnnxProviderMaterializer.ONNX_PROVIDER_ID;
 
     /**
+     * Web 浏览器推理供应商标识：与 ONNX 同构的「用户自添加」单行供应商，
+     * 平台固定为 {@code web}。模型行由用户在模型表单里登记 JS 路径
+     * （{@code capabilities[0].js_path}），推理发生在浏览器端（前端动态加载
+     * 该 JS 模块），后端只负责供应商/模型目录的管理，不参与对话路由。
+     */
+    private static final String WEB_PROVIDER_ID = "web";
+
+    /**
      * 渠道管理为「内置模型渠道」物化出来的 provider 行前缀。
      *
      * <p>渠道标识形如 {@code chat-duckduckgo}，落库时统一大写成
@@ -394,6 +402,42 @@ public class ApiProviderController {
             return false;
         }
         return isOnnxProvider(provider.getProviderId()) || isOnnxPlatform(provider.getPlatform());
+    }
+
+    /**
+     * 判断供应商标识是否为 Web 浏览器推理供应商。
+     *
+     * @param providerId 供应商标识
+     * @return true=Web 供应商
+     */
+    private static boolean isWebProvider(String providerId) {
+        return providerId != null && WEB_PROVIDER_ID.equalsIgnoreCase(providerId.trim());
+    }
+
+    /**
+     * 判断平台标识是否属于 Web 浏览器推理。
+     *
+     * <p>前端选「浏览器推理（Web）」模板后落的 platform 就是 web；这里用精确比较
+     * （忽略大小写），避免误伤名称里恰好带 web 字样的云端供应商。</p>
+     *
+     * @param platform 平台标识
+     * @return true=Web 平台
+     */
+    private static boolean isWebPlatform(String platform) {
+        return platform != null && WEB_PROVIDER_ID.equalsIgnoreCase(platform.trim());
+    }
+
+    /**
+     * 判断供应商行是否为 Web 浏览器推理供应商（按标识或平台判定）。
+     *
+     * @param provider 供应商行
+     * @return true=Web 供应商
+     */
+    private static boolean isWebRow(SysAccountChannel provider) {
+        if (provider == null) {
+            return false;
+        }
+        return isWebProvider(provider.getProviderId()) || isWebPlatform(provider.getPlatform());
     }
 
     /**
@@ -474,6 +518,19 @@ public class ApiProviderController {
                 }
                 throw new ApiException(ApiErrorCode.CONFLICT,
                         "已有 ONNX 供应商，只允许一行；如需调整请直接编辑该供应商");
+            }
+        }
+        // Web 浏览器推理与 ONNX 同口径：只保留一行，重复添加请直接编辑该供应商
+        if (platformKey.equals(WEB_PROVIDER_ID)) {
+            for (SysAccountChannel candidate : accountChannelService.listAll()) {
+                if (!isWebRow(candidate)) {
+                    continue;
+                }
+                if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
+                    continue;
+                }
+                throw new ApiException(ApiErrorCode.CONFLICT,
+                        "已有浏览器推理供应商，只允许一行；如需调整请直接编辑该供应商");
             }
         }
         accountChannelService.requireNotDuplicate(platform, name, excludeProviderId);
@@ -799,6 +856,11 @@ public class ApiProviderController {
         if (isOnnxPlatform(platform)) {
             providerId = ONNX_PROVIDER_ID;
         }
+        // Web 浏览器推理行统一落成固定标识 'web'：单行语义与本地推理一致，
+        // 模型目录（含每个模型的 JS 路径）都挂在这一行下面。
+        if (isWebPlatform(platform)) {
+            providerId = WEB_PROVIDER_ID;
+        }
         if (providerId == null || providerId.isBlank()) {
             providerId = String.valueOf(System.currentTimeMillis() + (int)(Math.random() * 1000));
         }
@@ -834,6 +896,11 @@ public class ApiProviderController {
             entity.setBaseUrl(onnxBaseUrl == null ? "" : onnxBaseUrl);
             String onnxAuth = str(body, "auth_scheme");
             entity.setAuthScheme(onnxAuth == null || onnxAuth.isBlank() ? "api_key" : onnxAuth);
+        } else if (isWebPlatform(platform)) {
+            // Web 浏览器推理：没有上游地址也没有 Key，base_url 留空、免鉴权；
+            // 真正的推理配置（JS 路径）在每个模型行的 capabilities[0].js_path 里。
+            entity.setBaseUrl("");
+            entity.setAuthScheme("none");
         } else {
             String authScheme = str(body, "auth_scheme");
             // 免费渠道是渠道管理的统一入口：模型与上游地址/凭据都由渠道管理维护，
@@ -1679,6 +1746,11 @@ public class ApiProviderController {
             }
         }
         if (!caps.isEmpty()) {
+            // Web 浏览器推理：目录行顶层的 js_path 随首个能力节点落库（capabilities[0].js_path），
+            // 与模型表单手填路径同一存储位 —— 前端聊天分流按该字段动态 import 推理脚本。
+            if (m.get("js_path") instanceof String jsPath && !jsPath.isBlank()) {
+                caps.get(0).put("js_path", jsPath.trim());
+            }
             input.put("capabilities", caps);
         }
         return input;
@@ -6636,6 +6708,11 @@ public class ApiProviderController {
         map.put("task", cap.get("task"));
         map.put("traits", cap.get("traits") != null ? cap.get("traits") : List.of());
         map.put("protocol", cap.get("protocol"));
+        // Web 浏览器推理的脚本路径：与 protocol 同级显式透传，
+        // 供前端按模型动态 import 对应的推理 JS 模块
+        if (cap.get("js_path") != null) {
+            map.put("js_path", cap.get("js_path"));
+        }
         map.put("connection_role", cap.get("connection_role"));
         // OCR/人脸组合模型细分类型：与 generate 同理，必须显式透传，
         // 否则数据库虽已保存，前端刷新后只能看到粗类型。
@@ -7396,6 +7473,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (platformLower.contains("onnx")) {
             return fetchLocalModelsFromFacade();
         }
+        // Web 浏览器推理：没有远端目录可拉，返回随前端发布的内置演示模型
+        // （含缺省 JS 路径），用户导入后可在模型表单里把 JS 路径改成自己的脚本。
+        if (isWebPlatform(platform)) {
+            return fetchWebModelsCatalog();
+        }
         // 免费渠道是纯路由聚合：模型清单 = 运行时同一份合并路由表（静态 extra.routes +
         // 动态渠道管理里的 OAuth 渠道模型 + Magpie 网关），**绝不真实请求占位 baseUrl 的 /models**。
         // 之前只读 extra.routes，导致「渠道管理里明明有模型，FreeChannel 拉取却看不到」。
@@ -7512,6 +7594,31 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (models.isEmpty()) {
             out.put("hint", "该渠道未提供模型清单");
         }
+        return out;
+    }
+
+    /**
+     * Web 浏览器推理的内置模型清单（不发任何 HTTP 请求）。
+     *
+     * <p>Web 供应商与 ONNX 同构：没有上游地址，「从提供商获取」返回随前端
+     * 发布的演示模型（JS 路径指向前端静态资源目录 {@code /web-chat/}）。
+     * 用户导入后可在模型表单里把 JS 路径改成自己的推理脚本 —— 脚本以
+     * ES Module 形式被前端动态 import，默认导出 {@code createClient(modelInfo)}
+     * 工厂，返回 {@code load/chat/dispose} 客户端。</p>
+     *
+     * @return 与其它供应商同形态的 {@code {models:[...]}}
+     */
+    private Map<String, Object> fetchWebModelsCatalog() {
+        Map<String, Object> echo = new LinkedHashMap<>(8);
+        echo.put("id", "web-echo-demo");
+        echo.put("name", "浏览器回显演示（Echo Demo）");
+        echo.put("tasks", List.of("chat"));
+        echo.put("traits", List.of("streaming"));
+        echo.put("js_path", "/web-chat/echo-demo.js");
+        echo.put("description", "浏览器端推理演示模型：逐字回显输入，用于验证 Web 推理链路；"
+                + "可将 JS 路径替换为自定义推理脚本。");
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("models", List.of(echo));
         return out;
     }
 
