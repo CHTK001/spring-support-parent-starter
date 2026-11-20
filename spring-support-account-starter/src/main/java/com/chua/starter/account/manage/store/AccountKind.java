@@ -36,6 +36,11 @@ public final class AccountKind {
      */
     public static final String PHONE = "PHONE";
 
+    /**
+     * 信用卡（临时虚拟卡号，仅测试用途；卡号存 {@code username}，CVV 存密钥）
+     */
+    public static final String CREDIT_CARD = "CREDIT_CARD";
+
     private AccountKind() {
     }
 
@@ -47,6 +52,6 @@ public final class AccountKind {
      */
     public static boolean supported(String kind) {
         return API_KEY.equals(kind) || EMAIL.equals(kind) || SMS.equals(kind)
-                || TEMP_PHONE.equals(kind) || PHONE.equals(kind);
+                || TEMP_PHONE.equals(kind) || PHONE.equals(kind) || CREDIT_CARD.equals(kind);
     }
 }

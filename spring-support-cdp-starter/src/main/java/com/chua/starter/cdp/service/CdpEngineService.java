@@ -317,7 +317,12 @@ public class CdpEngineService {
             for (String arg : properties.getArgs()) {
                 command.add(arg);
             }
-            command.add("about:blank");
+            // 新 headless（Chrome/Edge 132+）里位置 URL 会与启动初始页构成多目标，
+            // 触发 chrome_main.cc 的 "Multiple targets are not supported in headless mode"
+            // 而直接拒绝启动；页面目标本就由 CDP 按需创建，headless 时不再传位置 URL。
+            if (!properties.isHeadless()) {
+                command.add("about:blank");
+            }
             if (StringUtils.isNotBlank(properties.getUserDataDir()) && !properties.getUserDataDir().isBlank()) {
                 command.add("--auto-open-devtools-for-tabs");
             }

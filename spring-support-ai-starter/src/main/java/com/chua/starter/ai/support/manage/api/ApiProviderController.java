@@ -7948,6 +7948,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 m.put("tasks", inferTasks(key));
                 m.put("traits", List.of("streaming"));
                 m.put("description", describeRouteTarget(key, target));
+                // 免登录渠道路由键即运行时可用集合：路由表只收录已启用的渠道模型
+                // （AccountChannelRouteSource 按 listEnabled() 注册），出现在这里就代表可用。
+                // 导入按启用落库，避免「导入即停用」把模型管理各下拉过滤得只剩手工启用过的模型。
+                m.put("enabled", true);
                 models.add(m);
             }
         }
@@ -7975,6 +7979,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 m.put("description", "Magpie 网关"
                         + (upstream == null ? "" : " · 上游 " + upstream)
                         + (row.get("baseUrl") == null ? "" : " · " + row.get("baseUrl")));
+                // 与路由键行同口径：进入免登录目录即代表可用，导入按启用落库
+                m.put("enabled", true);
                 models.add(m);
             }
         } catch (Exception e) {
@@ -8063,6 +8069,9 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 m.put("traits", row.get("traits") instanceof List<?> traits ? traits : List.of());
                 m.put("description", modelLabel.isEmpty() || modelLabel.equals(id)
                         ? channel.displayName() : channel.displayName() + " · " + modelLabel);
+                // 与路由键行同口径：免登录渠道目录行 = 平台声明的能力集合，导入按启用落库，
+                // 避免出图/出视频/3D 模型「导入即停用」而被模型下拉过滤
+                m.put("enabled", true);
                 models.add(m);
             }
         }

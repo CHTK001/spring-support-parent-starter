@@ -149,6 +149,11 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      */
     @Override
     public SysAiRole save(SysAiRole role) {
+        // 2026-11-20 修复 DEF-02：角色名称必填（此前空名直接落库，前端表单也无校验）。
+        // 批量导入走同一条 save()，逐条 try/catch，空名会成为该条目的导入失败原因，不会中断整批。
+        if (StringUtils.isBlank(role.getName())) {
+            throw new IllegalArgumentException("角色名称不能为空");
+        }
         String userId = AiUserContext.requireUserId();
         role.setUserId(userId);
         if (role.getStatus() == null) {
@@ -200,6 +205,10 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     public boolean update(SysAiRole role) {
         if (role == null || role.getId() == null) {
             return false;
+        }
+        // 2026-11-20 修复 DEF-02：显式把名称改成空白同样拒绝；name 为 null 视为不修改该字段（部分更新）。
+        if (role.getName() != null && StringUtils.isBlank(role.getName())) {
+            throw new IllegalArgumentException("角色名称不能为空");
         }
         SysAiRole existing = sysAiRoleMapper.selectById(role.getId());
         if (!owns(existing)) {

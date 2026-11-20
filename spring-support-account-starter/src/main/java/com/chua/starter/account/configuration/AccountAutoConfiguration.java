@@ -22,6 +22,7 @@ import com.chua.starter.account.manage.controller.AccountController;
 import com.chua.starter.account.manage.controller.AccountCookieController;
 import com.chua.starter.account.manage.controller.AccountCreditConfigController;
 import com.chua.starter.account.manage.controller.AccountSecretController;
+import com.chua.starter.account.manage.controller.AccountMockDraftController;
 import com.chua.starter.account.manage.security.AccountSecretCodec;
 import com.chua.starter.account.manage.service.impl.SysAccountAppKeyServiceImpl;
 import com.chua.starter.account.manage.service.impl.SysAccountCookieServiceImpl;
@@ -116,6 +117,7 @@ import org.springframework.context.annotation.FilterType;
                         AccountCookieController.class,
                         AccountCreditConfigController.class,
                         AccountSecretController.class,
+                        AccountMockDraftController.class,
                         ManageAccountServiceImpl.class,
                         SysAccountAppKeyServiceImpl.class,
                         SysAccountCookieServiceImpl.class,

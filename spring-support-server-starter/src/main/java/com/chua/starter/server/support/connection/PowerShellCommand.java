@@ -148,10 +148,18 @@ public final class PowerShellCommand {
     /**
      * 判断一次失败是否「这个外壳根本起不来」，用于决定是否换外壳重试。
      *
-     * <p>覆盖两类：主机上不存在该外壳（{@code 'pwsh' 不是内部或外部命令} /
-     * {@code 'pwsh' is not recognized}），以及外壳被安全产品按路径拦截
+     * <p>覆盖三类：主机上不存在该外壳（{@code 'pwsh' 不是内部或外部命令} /
+     * {@code 'pwsh' is not recognized}）、外壳被安全产品按路径拦截
      * （{@code Access is denied.} / {@code 拒绝访问}，实测 360 只拦 Windows PowerShell 5.1
-     * 的 canonical 路径，PowerShell 7 不受影响）。</p>
+     * 的 canonical 路径，PowerShell 7 不受影响），以及前两类在中文 Windows 上的
+     * GBK 乱码形态。</p>
+     *
+     * <p>乱码形态（2026-11-20 实测 172.16.9.194，Win11 26200）：cmd 的报错由 cmd.exe
+     * 在系统 OEM 代码页（GBK）下写出，{@code chcp 65001} 前缀管不到它；SSH 客户端按
+     * UTF-8 解码后只剩成片的 U+FFFD 替换符，上面的中英文字面量全部匹配不上，导致
+     * 「优先 pwsh、失败回退 5.1」在这类主机上永远不触发。而 PowerShell 真正跑起来
+     * 之后的脚本错误走的是 chcp 65001 之后的 UTF-8 通道，不会出现这种形态，因此
+     * 「stderr 里出现 ≥3 个 U+FFFD」可以作为 cmd 级失败的判据。</p>
      *
      * @param stderr 远端 stderr
      * @return 像「外壳不可用」时返回 true
@@ -161,8 +169,17 @@ public final class PowerShellCommand {
             return false;
         }
         String s = stderr.toLowerCase(Locale.ROOT);
-        return s.contains("access is denied") || stderr.contains("拒绝访问")
+        if (s.contains("access is denied") || stderr.contains("拒绝访问")
                 || s.contains("is not recognized") || stderr.contains("不是内部或外部命令")
-                || s.contains("cannot find the file") || stderr.contains("系统找不到指定的文件");
+                || s.contains("cannot find the file") || stderr.contains("系统找不到指定的文件")) {
+            return true;
+        }
+        int replacementChars = 0;
+        for (int i = 0; i < stderr.length(); i++) {
+            if (stderr.charAt(i) == '\uFFFD' && ++replacementChars >= 3) {
+                return true;
+            }
+        }
+        return false;
     }
 }

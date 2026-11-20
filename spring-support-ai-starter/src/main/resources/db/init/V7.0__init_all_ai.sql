@@ -1861,6 +1861,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_world` (
   `description` TEXT COMMENT '世界观设定（背景/时代/氛围，注入推进与世界动态上下文）',
   `era` VARCHAR(32) DEFAULT '现代' COMMENT '时代背景：现代/古代/未来/奇幻/武侠…',
   `weather` VARCHAR(32) DEFAULT '晴' COMMENT '当前天气：晴/雨/雪/阴/多云…',
+  `director_model` VARCHAR(128) DEFAULT NULL COMMENT '导演模型：世界的剧本导演用哪个模型写剧本（可空，沿用全局默认）',
+  `actor_roles` TEXT DEFAULT NULL COMMENT '演员/角色配置：每行一个角色名（纯文本，例：「诸葛亮\n曹操」），可空',
   `time_label` VARCHAR(64) DEFAULT '第 1 天 上午' COMMENT '世界当前时间标签（推进时更新）',
   `tick_count` INT DEFAULT 0 COMMENT '累计推进次数',
   `status` INT DEFAULT 1 COMMENT '状态：1 运行中 0 暂停',

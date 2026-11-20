@@ -3,3 +3,4 @@ com.chua.starter.account.spi.impl.EmailKindProvider
 com.chua.starter.account.spi.impl.SmsKindProvider
 com.chua.starter.account.phone.TempPhoneKindProvider
 com.chua.starter.account.phone.PhoneKindProvider
+com.chua.starter.account.creditcard.TempCreditCardKindProvider

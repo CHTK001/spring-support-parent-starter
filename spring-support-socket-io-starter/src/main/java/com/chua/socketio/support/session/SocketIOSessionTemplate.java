@@ -533,6 +533,10 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         configuration.setJsonSupport(new JacksonJsonSupport());
         configuration.setAddVersionHeader(true);
         configuration.setUseLinuxNativeEpoll(properties.isUseLinuxNativeEpoll());
+        // 跨源直连支持：socket.io 客户端握手带自定义头 x-oauth-token，浏览器会先发
+        // OPTIONS 预检。netty-socketio 的预检响应只会回显 Access-Control-Allow-Origin，
+        // Allow-Headers 必须在此显式声明，否则跨源部署（页面源 ≠ socket 端口）预检必败。
+        configuration.setAllowHeaders("x-oauth-token");
         configureAuthorization(configuration);
 
         return configuration;
@@ -559,6 +563,12 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         }
         configuration.setAuthorizationListener(data -> {
             try {
+                // CORS 预检放行：按浏览器规范，OPTIONS 预检不携带任何令牌头，按无令牌
+                // 校验必然 401（且该 401 响应不带任何 CORS 头），跨源部署永远连不上。
+                // 预检本身不产生真实会话，随后的真实握手（GET + x-oauth-token）仍走完整校验。
+                if (data.getHttpHeaders().get("Access-Control-Request-Method") != null) {
+                    return AuthorizationResult.SUCCESSFUL_AUTHORIZATION;
+                }
                 SocketUser user = factory.getUser(toHandshakeData(data));
                 if (user == null || user.getUserId() == null || user.getUserId().isBlank()) {
                     log.warn("[SocketIO] 握手鉴权拒绝: address={}", data.getAddress());
