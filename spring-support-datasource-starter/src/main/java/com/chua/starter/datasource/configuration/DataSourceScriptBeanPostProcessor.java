@@ -1,16 +1,26 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.common.support.lang.datasource.schema.SchemaDriver;
+import com.chua.common.support.lang.datasource.schema.SchemaDriverContext;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
+import org.springframework.core.type.filter.AssignableTypeFilter;
+import org.springframework.util.ClassUtils;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -130,17 +140,24 @@ public class DataSourceScriptBeanPostProcessor implements BeanPostProcessor, Pri
         // 避免重复处理同一个数据源
         if (processedDataSources.add(beanName)) {
             try {
-                log.info("检测到 DataSource [{}] 初始化完成，开始执行数据库脚本...", beanName);
-                // 优先通过 SPI 获取 Flyway 高优先级实现（utils-support-flyway-starter 的 数据源Flyway）；
-                // 获取成功则委托其迁移，否则回退到内置 flywaylikepopulator。
-                DataSourceScriptConfiguration delegate = new DataSourceScriptConfiguration(properties);
-                if (delegate.tryMigrateWithSpiFlyway(ds, beanName)) {
-                    log.info("DataSource [{}] 数据库脚本执行完成（SPI Flyway）", beanName);
+                if (properties.getMode() == DataSourceScriptProperties.Mode.ENTITY) {
+                    // 实体驱动模式：经 SchemaDriver SPI 按实体类初始化表结构，不走 SQL 脚本链路
+                    log.info("检测到 DataSource [{}] 初始化完成，实体驱动模式，开始按实体初始化表结构...", beanName);
+                    migrateWithEntityDriver(ds, properties);
+                    log.info("DataSource [{}] 实体驱动表结构初始化完成", beanName);
                 } else {
-                    DataSourceScriptConfiguration.FlywayLikePopulator populator =
-                            new DataSourceScriptConfiguration.FlywayLikePopulator(ds, properties);
-                    populator.populate();
-                    log.info("DataSource [{}] 数据库脚本执行完成", beanName);
+                    log.info("检测到 DataSource [{}] 初始化完成，开始执行数据库脚本...", beanName);
+                    // 优先通过 SPI 获取 Flyway 高优先级实现（utils-support-flyway-starter 的 数据源Flyway）；
+                    // 获取成功则委托其迁移，否则回退到内置 flywaylikepopulator。
+                    DataSourceScriptConfiguration delegate = new DataSourceScriptConfiguration(properties);
+                    if (delegate.tryMigrateWithSpiFlyway(ds, beanName)) {
+                        log.info("DataSource [{}] 数据库脚本执行完成（SPI Flyway）", beanName);
+                    } else {
+                        DataSourceScriptConfiguration.FlywayLikePopulator populator =
+                                new DataSourceScriptConfiguration.FlywayLikePopulator(ds, properties);
+                        populator.populate();
+                        log.info("DataSource [{}] 数据库脚本执行完成", beanName);
+                    }
                 }
             } catch (Exception e) {
                 log.warn("执行数据库脚本失败: {}", beanName, e);
@@ -157,5 +174,102 @@ public class DataSourceScriptBeanPostProcessor implements BeanPostProcessor, Pri
             }
         }
         return bean;
+    }
+
+    /**
+     * 实体驱动模式执行入口：经 {@link SchemaDriver} SPI 解析 {@code entity} 扩展并执行结构初始化。
+     *
+     * <p>协议名复用 {@link DataSourceScriptConfiguration#resolveProtocol(DataSource)} 的
+     * 产品名映射（同一份实现，避免两套协议判定）；实体类来自
+     * {@code plugin.datasource.script.entity-packages} 配置的包扫描结果。</p>
+     *
+     * @param ds         目标数据源
+     * @param properties 数据源脚本配置属性
+     */
+    private void migrateWithEntityDriver(DataSource ds, DataSourceScriptProperties properties) {
+        SchemaDriver driver = resolveEntitySchemaDriver();
+        List<Class<?>> entityClasses = scanEntityClasses(properties);
+        SchemaDriverContext context = new SchemaDriverContext()
+                .setDataSource(ds)
+                .setProtocol(DataSourceScriptConfiguration.resolveProtocol(ds))
+                .setEntityClasses(entityClasses)
+                .setVerbose(properties.isVerbose());
+        int created = driver.migrate(context);
+        log.info("实体驱动处理 {} 个实体，新建 {} 张表", entityClasses.size(), created);
+    }
+
+    /**
+     * 从 SPI 扩展中解析实体驱动实现（{@code entity} 扩展）。
+     *
+     * @return 实体驱动实例
+     * @throws IllegalStateException classpath 上不存在 entity 扩展时抛出
+     *         （通常为未引入 utils-support-datasource-starter）
+     */
+    private SchemaDriver resolveEntitySchemaDriver() {
+        List<SchemaDriver> extensions
+                = ServiceProvider.of(SchemaDriver.class).getNewExtensions(SchemaDriver.SPI_NAME);
+        if (extensions != null) {
+            for (SchemaDriver candidate : extensions) {
+                if (candidate != null && SchemaDriver.ENTITY.equalsIgnoreCase(candidate.name())) {
+                    return candidate;
+                }
+            }
+        }
+        throw new IllegalStateException(
+                "未找到 SchemaDriver SPI 的 entity 实现，请确认 classpath 已引入 utils-support-datasource-starter");
+    }
+
+    /**
+     * 扫描实体驱动模式下配置的实体包，收集参与建表的实体类。
+     *
+     * <p>仅收集具体类：接口、注解、枚举、抽象类、非静态内部类均不参与建表。
+     * 未配置 {@code entity-packages} 时返回空列表并告警（由驱动侧跳过建表）。</p>
+     *
+     * @param properties 数据源脚本配置属性
+     * @return 实体类列表
+     */
+    private List<Class<?>> scanEntityClasses(DataSourceScriptProperties properties) {
+        List<String> packages = properties.getEntityPackages();
+        if (packages == null || packages.isEmpty()) {
+            log.warn("实体驱动模式已启用，但未配置 [{}]，跳过实体扫描",
+                    DataSourceScriptProperties.PRE + ".entity-packages");
+            return Collections.emptyList();
+        }
+        ClassPathScanningCandidateComponentProvider scanner =
+                new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AssignableTypeFilter(Object.class));
+        ClassLoader classLoader = DataSourceScriptBeanPostProcessor.class.getClassLoader();
+        List<Class<?>> entityClasses = new ArrayList<>();
+        for (String pkg : packages) {
+            if (pkg == null || pkg.isBlank()) {
+                continue;
+            }
+            for (BeanDefinition beanDefinition : scanner.findCandidateComponents(pkg.trim())) {
+                String className = beanDefinition.getBeanClassName();
+                if (className == null) {
+                    continue;
+                }
+                try {
+                    Class<?> clazz = ClassUtils.forName(className, classLoader);
+                    if (isEntityCandidate(clazz)) {
+                        entityClasses.add(clazz);
+                    }
+                } catch (ClassNotFoundException | LinkageError e) {
+                    log.warn("实体类 {} 加载失败，已跳过: {}", className, e.getMessage());
+                }
+            }
+        }
+        return entityClasses;
+    }
+
+    /**
+     * 判断类是否为可建表的实体候选。
+     *
+     * @param clazz 待判定类
+     * @return true 表示可参与建表
+     */
+    private boolean isEntityCandidate(Class<?> clazz) {
+        return !clazz.isInterface() && !clazz.isAnnotation() && !clazz.isEnum()
+                && !clazz.isSynthetic() && !Modifier.isAbstract(clazz.getModifiers());
     }
 }

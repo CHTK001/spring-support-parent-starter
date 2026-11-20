@@ -239,7 +239,7 @@ public class DataSourceScriptConfiguration {
        * @param ds 数据源
        * @return 协议名；无需转换或无法判定时为 {@code null}
        */
-    private String resolveProtocol(DataSource ds) {
+    static String resolveProtocol(DataSource ds) {
         String product;
         try (java.sql.Connection connection = ds.getConnection()) {
             product = connection.getMetaData().getDatabaseProductName();

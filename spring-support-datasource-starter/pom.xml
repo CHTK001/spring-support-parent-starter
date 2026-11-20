@@ -189,11 +189,13 @@
         <!-- 文档模型/渲染抽象：DocumentData / DocumentProvider / DocumentTemplate
              utils-support-common-starter 已在上方默认引入，此处无需重复 -->
 
-        <!-- 数据库文档解析器：DatabaseDocumentParser（type=database） -->
+        <!-- 数据库文档解析器：DatabaseDocumentParser（type=database）。
+             同时承载 SchemaDriver SPI 的 entity 扩展（EntitySchemaDriver）：
+             实体驱动建表（plugin.datasource.script.mode=ENTITY）要求该 jar
+             必须在宿主 classpath 上，否则 SPI 解析不到，故不再 optional -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasource-starter</artifactId>
-            <optional>true</optional>
         </dependency>
 
         

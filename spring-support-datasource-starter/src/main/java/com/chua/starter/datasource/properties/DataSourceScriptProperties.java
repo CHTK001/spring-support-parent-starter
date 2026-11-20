@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -39,6 +41,8 @@ import java.util.Set;
  *       clean-disabled: true                      # 是否禁用清理
  *       release-type: STABLE                       # 允许执行的版本类型(SNAPSHOT/ALPHA/BETA/RC/STABLE/ALL)
  *       allowed-release-types: STABLE,RC           # 允许执行的版本类型集合(可选,覆盖release-type)
+ *       mode: SCRIPT                               # 结构驱动模式: SCRIPT=脚本驱动(默认)/ENTITY=实体驱动
+ *       entity-packages: com.example.entity        # 实体驱动模式下扫描的实体类所在包(可逗号分隔多个)
  * </pre>
  *
  * @since 2025/9/3 9:05
@@ -286,6 +290,32 @@ public class DataSourceScriptProperties {
      * 示例: plugin.datasource.script.exclude-table-前缀=sys_,行为_
      */
     private String[] excludeTablePrefixes = {"sys_"};
+
+    /**
+     * 结构驱动模式
+     * <p>
+     * SCRIPT : 脚本驱动（默认）— 按 {@code V{版本}__{描述}.sql} 规范执行 classpath 下的 SQL 脚本，
+     *          行为与 4.0.0.51 之前完全一致。
+     * ENTITY : 实体驱动 — 扫描 {@link #entityPackages} 下的实体类，按实体注解生成
+     *          {@code CREATE TABLE IF NOT EXISTS} 并执行（幂等，表已存在则跳过）。
+     *          实现经 {@code SchemaDriver} SPI（{@code entity} 扩展）解析，
+     *          由 utils-support-datasource-starter 提供。
+     * </p>
+     * 默认值: SCRIPT
+     * 示例: plugin.datasource.script.mode=ENTITY
+     */
+    private Mode mode = Mode.SCRIPT;
+
+    /**
+     * 实体驱动模式下要扫描的实体类所在包列表
+     * <p>
+     * 支持 {@code @TableName}（MyBatis-Plus 或 utils 自有注解）指定表名；
+     * 未注解时按类名驼峰转下划线推导。仅扫描具体类（接口、抽象类、枚举不参与建表）。
+     * </p>
+     * 默认值: 空（实体驱动模式下未配置则跳过建表并告警）
+     * 示例: plugin.datasource.script.entity-packages=com.example.entity,com.example.biz.entity
+     */
+    private List<String> entityPackages = new ArrayList<>();
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
     /**
@@ -545,6 +575,22 @@ public class DataSourceScriptProperties {
     }
 
     /**
+     * 获取结构驱动模式。
+     * @return 结构驱动模式（SCRIPT/ENTITY）
+     */
+    public Mode getMode() {
+        return mode;
+    }
+
+    /**
+     * 获取实体驱动模式下要扫描的实体类所在包列表。
+     * @return 实体包列表
+     */
+    public List<String> getEntityPackages() {
+        return entityPackages;
+    }
+
+    /**
      * 版本发布类型枚举
      * 用于控制允许执行的脚本版本类型
      *
@@ -682,5 +728,26 @@ public class DataSourceScriptProperties {
          * 每次启动都扫描
          */
         ALWAYS
+    }
+
+    /**
+     * 结构驱动模式枚举
+     * <p>
+     * 与 {@code SchemaDriver} SPI 的扩展模式对应：SCRIPT 由 spring 侧内置脚本链路承载，
+     * ENTITY 由 {@code SchemaDriver} SPI 的 {@code entity} 扩展（EntitySchemaDriver）承载。
+     * </p>
+     *
+     * @author CH
+     * @since 4.0.0.51
+     */
+    public enum Mode {
+        /**
+         * 脚本驱动（默认）：执行 classpath 下的版本化 SQL 脚本
+         */
+        SCRIPT,
+        /**
+         * 实体驱动：按实体类注解生成并执行建表 DDL
+         */
+        ENTITY
     }
 }
