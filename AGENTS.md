@@ -1,0 +1,42 @@
+# AGENTS.md — spring-support-parent-starter
+
+> **模块边界与依赖铁律：[`../规则.md`](../规则.md)（`D:\ch\project\规则.md`），动手前必须先读并遵守。违反 R1/R2 = S0 严重 bug。**
+> 全局规则：`C:\Users\Administrator\.config\opencode\AGENTS.md`；源码编辑红线：`C:\Users\Administrator\.agents\GLOBAL-SOURCE-EDITING-RULES.md`。
+
+## 本仓库定位
+
+后端业务 starter 集合（`spring-support-*-starter`）。每个 starter 是一套**独立、业务完整**的能力，被依赖即带入完整功能。
+
+## 三条铁律（摘要，全文以 `规则.md` 为准）
+
+1. **R1 禁止业务穿插**：A 依赖 B，A 里不得再实现 B 的业务。判定：把 B 的 jar 删掉，A 里还有没有 B 的业务代码？有 → 违规。
+2. **R2 禁止穿透持久层**：不得 `import` 其它业务模块的 `*.mapper`，不得直接读写别人的表；读走查询接口，写走命令接口。共享契约放 `spring-support-common-starter` 或更底层。
+3. **R3 搬接口 ≠ 搬业务**：业务 = 规则判定 + 约束 + 级联 + 事务边界 + 事件发布 + 编排。
+
+## 分层方向
+
+`spring-support-api-*` → `spring-support-parent` → `utils-*`。优先复用底层工具；底层缺能力就下沉扩展，不在上层重造（重复实现 = S0）。
+
+## 渠道管理口径（跨仓库硬约束）
+
+- 渠道管理**整体**属于 `spring-support-account-starter`：表、实体、Mapper、渠道/模型/连接 CRUD、判重、级联、克隆、排序、归属隔离、凭据、模型开关、管理 API。
+- `spring-support-ai-starter` 只是 `FreeChatClient` 的消费方：路由、探针、指标（`sys_ai_provider_metric`）、路由组、ONNX、协议探测属于 ai。
+- 硬指标必须为 0：ai 引 `account.channel.mapper` / ai 写 `sys_account_channel*` / account 引 `com.chua.starter.ai.*`。
+- 方向唯一 `account ← ai`，通过 `ChannelCatalogChangedEvent` 单向通知。
+- 免登录生成类渠道（`image-*` / `video-*` / `model3d-*`）不进 `sys_account_channel_model`：它们的模型由 common-starter 的 `KeylessMediaChannel` 契约声明，ai 侧 `KeylessGenerateCatalog` 读目录、`GenerateClientResolver` 兜底解析到 `free-channel` 聚合行（实现是 account 的 `FreeChannelImageClient`）。不要在 ai 里为它们补库或写渠道表。
+
+## 依赖即带入（R5）
+
+新增 `xxx-starter` 依赖前，先确认对方的 `AutoConfiguration` 会往本服务塞什么 Controller / 定时任务 / 表迁移，是否真的需要。
+
+## 交付闸门
+
+`grep` 跨模块持久层引用 = 0；无反向依赖、无重复实现；`mvn -o -q compile -DskipTests` EXIT=0；编码 `BOM=0 / U+FFFD=0`。任一项不满足不得声称完成。
+
+## SPI 扩展注册（易踩坑）
+
+新增 `@Spi` 扩展实现（如 `GlobalSettingProvider`）且未标 `@AutoSpi` 时，必须手工在 `src/main/resources/META-INF/extensions/<SPI 接口全限定名>` 追加实现类全限定名。该文件是 git 跟踪的源码资源，编译期不会为纯 `@Spi` 类自动生成索引；漏加则编译绿但启动时静默不注册（如设置分组永不初始化）。
+
+## 提交
+
+只提交自己的文件，避开其它会话的在途改动；`_tmp_cleanup/` 不参与构建。
