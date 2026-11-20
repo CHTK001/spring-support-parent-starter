@@ -1,205 +1,158 @@
 # spring-support-hotsport-starter
 
-APM 热点观测后台：基于 `utils-support-runtime-apm` 的 `StorageManager` SPI 作为数据底座，以 REST API（`/api/apm/*`）暴露传输记录、调用链、依赖图、资源泄漏、日志、JVM、告警等观测数据；启动时通过 `spring-support-agent-starter` 对当前 JVM 自注入 Java Agent 完成字节码采集，并托管 `vue-support-hotspot-starter` 前端构建产物（classpath:/static/），可打包为单个可执行 jar 独立部署。
+APM 热点观测后台：以 `utils-support-runtime-apm` 的 `StorageManager` SPI 为数据底座，通过 REST API（`/api/apm/*`，近 70 个端点）暴露传输记录、调用链、依赖拓扑、资源泄漏、日志、JVM、告警等观测数据；启动时经 `spring-support-agent-starter` 对当前 JVM 自注入 Java Agent 完成字节码采集，并托管 `vue-support-hotspot-starter` 前端构建产物（`classpath:/static/`）。在 spring-support 体系中，它是「可独立运行的观测进程」（`HotsportApplication` + spring-boot-maven-plugin repackage），也可作为依赖嵌入宿主 Servlet Web 应用；不依赖任何外部数据库（`HotsportApplication` 显式排除 `DataSourceAutoConfiguration`），数据落库走 `StorageManager` SPI。
 
-- 本模块是**可独立运行的观测进程**（`HotsportApplication` + spring-boot-maven-plugin repackage），也可作为依赖嵌入宿主 Servlet Web 应用提供采集能力。
-- 不依赖任何外部数据库：`HotsportApplication` 显式排除 `DataSourceAutoConfiguration`；数据落库走 `StorageManager` SPI（默认内嵌 sqlite，可选 mysql / inmemory / noop）。
-- 采集能力默认开启：`plugin.hotsport.request-record.enabled`、`plugin.hotsport.log-capture.enabled`、`plugin.agent.enabled` 缺省即生效。
-
-## 一、架构图
-
-### 1.1 生态位置
+## 1. 架构图
 
 ```mermaid
-graph TB
-    HS["spring-support-hotsport-starter<br/>APM 热点观测后台<br/>可独立运行 或 嵌入宿主"]
-    HS --> WEB["spring-boot-starter-web<br/>REST + 静态资源托管"]
-    HS --> COMMON["spring-support-common-starter"]
-    HS --> AGENT["spring-support-agent-starter<br/>AgentAttachService / RuntimeBoot.attachSelf"]
-    HS --> APM["utils-support-runtime-apm<br/>ApmBootstrap + StorageManager SPI + SqliteStorage"]
-    HS --> PROTO["utils-support-runtime-protocol<br/>TransmissionRecord 等协议模型"]
-    HS --> MYSQL["mysql-connector-j 可选<br/>type=mysql 时需要"]
-    HS --> FE["vue-support-hotspot-starter 构建产物<br/>classpath:/static/"]
+flowchart TB
+    subgraph HOST["宿主应用 / 独立观测进程"]
+        APP["HotsportApplication<br/>@SpringBootApplication(exclude=DataSourceAutoConfiguration)<br/>@EnableScheduling"]
+    end
+    subgraph MODULE["spring-support-hotsport-starter 内部分层"]
+        direction TB
+        subgraph AUTO["自动装配层（AutoConfiguration.imports 4 条）"]
+            AC["SlowCallAutoConfiguration / ApmHandlerTimingConfiguration<br/>ApmLogCaptureAutoConfiguration / AgentAttachFallbackConfiguration"]
+        end
+        subgraph CORE["核心服务 / 模板层"]
+            API["ApmController（/api/apm/* REST）"]
+            SVC["ApmQueryService / JvmMetricsService / JvmMemoryService<br/>AlertMonitorService / AlertStore"]
+            CAP["SlowCallFilter / ApmHandlerTimingInterceptor / ApmLogAppender"]
+        end
+        subgraph SPI["SPI / 存储实现"]
+            STO["JdbcStorage（type=mysql，实现 ApmStorage SPI）"]
+        end
+    end
+    subgraph SIBLING["依赖的兄弟模块"]
+        AGENT["spring-support-agent-starter<br/>AgentAutoConfiguration → AgentAttachService"]
+        COMMON["spring-support-common-starter"]
+    end
+    subgraph UTILS["底层 utils"]
+        APM["utils-support-runtime-apm<br/>ApmBootstrap / StorageManager / ApmStorage SPI"]
+        PROTO["utils-support-runtime-protocol<br/>TransmissionEvent / DependencyEdge"]
+        WEB["spring-boot-starter-web"]
+    end
+    APP --> AUTO
+    AUTO --> CAP
+    AUTO --> SVC
+    API --> SVC
+    CAP --> APM
+    SVC --> APM
+    STO --> APM
+    MODULE --> AGENT
+    MODULE --> COMMON
+    MODULE --> PROTO
+    MODULE --> WEB
 ```
 
-### 1.2 内部分层
+## 2. 核心流程图
 
-```mermaid
-graph TB
-    subgraph L1["接入层"]
-        CT["ApmController<br/>/api/apm/* 60 余个端点"]
-        SPA["SpaWebConfig<br/>SPA 路由转发 index.html"]
-    end
-    subgraph L2["服务层"]
-        QS["ApmQueryService<br/>查询编排 / APM 引擎装配"]
-        JV["JvmMetricsService / JvmMemoryService"]
-        AL["AlertMonitorService / AlertStore"]
-    end
-    subgraph L3["采集层"]
-        SCF["SlowCallFilter<br/>慢调用过滤器"]
-        HTI["ApmHandlerTimingInterceptor<br/>控制器耗时"]
-        LAP["ApmLogAppender<br/>应用日志采集"]
-    end
-    subgraph L4["采集引擎与存储"]
-        ATT["AgentAttachService<br/>RuntimeBoot.attachSelf 自注入"]
-        BOOT["ApmBootstrap + 8 个内置 Handler"]
-        SM["StorageManager SPI"]
-        ST["SqliteStorage / JdbcStorage mysql<br/>InMemoryStorage / NoopStorage"]
-    end
-    CT --> QS
-    CT --> JV
-    CT --> AL
-    SCF --> BOOT
-    HTI --> BOOT
-    LAP --> BOOT
-    ATT --> BOOT
-    QS --> SM
-    BOOT --> SM
-    SM --> ST
-```
-
-## 二、核心流程图
-
-### 2.1 启动装配流程
+启动自动装配 + 本进程 APM 引擎装配流程：
 
 ```mermaid
 flowchart TD
-    A["Spring Boot 启动<br/>HotsportApplication<br/>排除 DataSourceAutoConfiguration"] --> B["加载 4 个自动配置<br/>SlowCall / HandlerTiming / LogCapture / AgentAttachFallback"]
+    A["Spring Boot 启动<br/>HotsportApplication（排除 DataSourceAutoConfiguration）"] --> B["加载 AutoConfiguration.imports<br/>装配 4 个自动配置"]
     B --> C["绑定 HotsportProperties<br/>plugin.hotsport.*"]
-    B --> D["AgentAutoConfiguration 生效<br/>注册 AgentAttachService"]
-    C --> E["ApmQueryService @PostConstruct<br/>虚拟线程 hotsport-apm"]
-    E --> F["agentAttachService.attach()<br/>RuntimeBoot.create().attachSelf()"]
-    E --> G["type=mysql 时<br/>JdbcStorage.register()"]
-    E --> H["ApmBootstrap 装配 8 个 Handler<br/>Log/Net/Transmission/DependencyGraph/<br/>HandleLeak/Trace/HttpClient/JdkHttpServer"]
-    H --> I["StorageManager.init<br/>HotsportProperties.toStorageConfig"]
-    I --> J["按条件注册采集组件<br/>SlowCallFilter / 耗时拦截器 / ApmLogAppender"]
+    B --> D["SlowCallAutoConfiguration 生效<br/>@ConditionalOnWebApplication(SERVLET)<br/>@ConditionalOnProperty request-record.enabled（缺省 true）"]
+    B --> E["ApmHandlerTimingConfiguration 生效<br/>addInterceptors 注册耗时拦截器"]
+    B --> F["ApmLogCaptureAutoConfiguration 生效<br/>@ConditionalOnClass(ILoggingEvent)<br/>@ConditionalOnProperty log-capture.enabled（缺省 true）"]
+    B --> G["AgentAttachFallbackConfiguration<br/>仅 @EnableConfigurationProperties(AgentAttachProperties)"]
+    C --> H["ApmQueryService @PostConstruct<br/>虚拟线程 hotsport-apm 异步执行"]
+    H --> I["agentAttachService.attach()<br/>Agent 自注入（不阻塞端口开放）"]
+    H --> J["startLocalApmEngine：<br/>JdbcStorage.register() → new ApmBootstrap<br/>→ storageConfigProvider(currentStorageConfig)<br/>→ 注册 8 个 Handler → start()"]
+    J --> K["StorageManager.init<br/>HotsportProperties.Apm.toStorageConfig"]
+    K --> L["按条件挂载采集组件<br/>SlowCallFilter / 耗时拦截器 / ApmLogAppender"]
 ```
 
-### 2.2 请求与数据链路
-
-```mermaid
-flowchart LR
-    REQ["HTTP 请求"] --> F["SlowCallFilter<br/>MDC hotsportTraceId<br/>超过 threshold-ms 记录慢调用"]
-    F --> I["ApmHandlerTimingInterceptor<br/>写入 apm.handler.* 耗时属性"]
-    I --> C["控制器执行<br/>Logback 事件 → ApmLogAppender"]
-    F --> SM["StorageManager<br/>appendTransmission / appendLeak 等"]
-    I --> SM
-    C --> SM
-    SM --> ST[("ApmStorage<br/>sqlite / mysql / inmemory / noop")]
-    ST --> Q["ApmQueryService 查询"]
-    Q --> API["ApmController /api/apm/*"]
-    API --> UI["SPA 前端面板"]
-```
-
-## 三、能力清单
+## 3. 能力清单
 
 REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 
-| 能力域 | 端点 | 关键类 |
-|:-------|:-----|:-------|
-| 总览统计 | `GET /stats`、`GET /health`、`GET /trend`、`GET /sla` | `ApmQueryService` |
-| 传输记录 | `GET /transmissions`、`GET /export/transmissions` | `StorageManager` |
-| 调用链追踪 | `GET /agent/traces`、`GET /agent/traces/tree`、`GET /traces/summary`、`GET /trace/{traceId}`、`GET /trace/{traceId}/waterfall`、`GET /trace/{traceId}/root-cause` | `TraceHandler`（APM 引擎） |
-| 依赖拓扑 | `GET /dependencies`、`GET /dependencies/aggregated`、`GET /agent/dependencies`、`GET /system/topology`、`GET /services`、`GET /endpoints` | `DependencyGraphHandler`（APM 引擎） |
-| 慢调用 / 慢 SQL | `GET /slow-calls`、`GET /slow-sql`、`GET /error-ranking`、`GET /endpoint-stats`、`GET /protocol-stats` | `SlowCallFilter` |
-| 资源泄漏 | `GET /leaks`、`GET /agent/handles`、`GET /handles/growth`、`GET /export/leaks` | `HandleLeakHandler`（APM 引擎） |
-| 日志 | `GET /logs`、`GET /log-stats`、`GET /agent/system-out`、`GET /export/logs` | `ApmLogAppender`、`LogHandler` |
-| JVM 观测 | `GET /jvm/snapshot`、`GET /jvm/metrics`、`GET /jvm/thread-dump` | `JvmMetricsService`（`@Scheduled` 周期采集） |
-| JVM 内存诊断 | `GET /jvm/memory/pools`、`POST /jvm/gc`、`GET /jvm/class-loading` | `JvmMemoryService`（对象占用 / 手动 GC / 类加载统计） |
-| 线程池 / 连接池 / 资源 | `GET /thread-pools`、`GET /connection-pools`、`GET /resources` | `ApmQueryService` |
-| 告警 | `GET /alerts`、`GET /alerts/history`、`GET /alerts/persistence`、`GET\|POST /alerts/rules`、`POST /alerts/rules/toggle`、`DELETE /alerts/rules/{metric}`、`GET\|POST /alerts/channels`、`DELETE /alerts/channels/{id}`、`POST /alerts/channels/toggle`、`POST /alerts/{id}/acknowledge\|mute\|ignore` | `AlertMonitorService`、`AlertStore` |
-| Agent 管理 | `GET /agent/status`、`GET\|POST /agent/config`、`POST /agent/enabled`、`GET /agent/self`、`GET /agent/trace-hotspots`、`GET /agent/trace-phases`、`GET /agent/skywalking/export` | `AgentAttachService` |
-| 存储管理 | `GET /storage/status`、`POST /storage/config`、`POST /storage/reload` | `StorageManager`、`HotsportProperties` |
-| 运维 | `POST /cleanup`、`GET /diagnostics/bundle` | `ApmQueryService` |
+| 能力域 | 关键类 | 入口 / 触发方式 |
+|:-------|:-------|:----------------|
+| 总览统计 / 趋势 / SLA | `ApmQueryService` | `GET /api/apm/stats`、`/health`、`/trend`、`/sla` |
+| 传输记录 | `StorageManager`（APM SPI） | `GET /transmissions`、`GET /export/transmissions` |
+| 调用链追踪 | `TraceHandler`（APM 引擎） | `GET /agent/traces`、`/agent/traces/tree`、`/traces/summary`、`/trace/{traceId}`、`/trace/{traceId}/waterfall`、`/trace/{traceId}/root-cause` |
+| 依赖拓扑 | `DependencyGraphHandler`（APM 引擎） | `GET /dependencies`、`/dependencies/aggregated`、`/agent/dependencies`、`/system/topology`、`/services`、`/endpoints` |
+| 慢调用 / 慢 SQL / 错误榜 | `SlowCallFilter` | `GET /slow-calls`、`/slow-sql`、`/error-ranking`、`/endpoint-stats`、`/protocol-stats` |
+| 资源泄漏 / 句柄 | `HandleLeakHandler`（APM 引擎） | `GET /leaks`、`/agent/handles`、`/handles/growth`、`/export/leaks` |
+| 应用日志采集 | `ApmLogAppender`（Logback Appender）、`LogHandler` | `GET /logs`、`/log-stats`、`/agent/system-out`、`/export/logs`；实时推送 `GET /stream/logs`（SSE） |
+| JVM 指标 | `JvmMetricsService`（`@Scheduled` 周期采样） | `GET /jvm/snapshot`、`/jvm/metrics`、`/jvm/thread-dump` |
+| JVM 内存诊断 | `JvmMemoryService` | `GET /jvm/memory/pools`、`POST /jvm/gc`、`GET /jvm/class-loading` |
+| 线程池 / 连接池 / 资源 | `ApmQueryService` | `GET /thread-pools`、`/connection-pools`、`/resources` |
+| 告警（规则 / 渠道 / 事件） | `AlertMonitorService`、`AlertStore` | `GET|POST /alerts/rules`、`POST /alerts/rules/toggle`、`DELETE /alerts/rules/{metric}`、`GET|POST /alerts/channels`、`POST /alerts/channels/toggle`、`DELETE /alerts/channels/{id}`、`GET /alerts`、`/alerts/history`、`/alerts/persistence`、`POST /alerts/{id}/acknowledge|mute|ignore` |
+| Agent 管理 | `AgentAttachService`（agent-starter） | `GET /agent/status`、`GET|POST /agent/config`、`POST /agent/enabled`、`GET /agent/self`、`/agent/trace-hotspots`、`/agent/trace-phases`、`GET /agent/skywalking/export` |
+| 存储管理 | `StorageManager`、`HotsportProperties` | `GET /storage/status`、`POST /storage/config`、`POST /storage/reload` |
+| 实时数据流 | `ApmQueryService`（SSE） | `GET /stream`、`GET /stream/logs`（`text/event-stream`） |
+| 运维 | `ApmQueryService` | `POST /cleanup`、`GET /diagnostics/bundle` |
+| SPA 前端托管 | `SpaWebConfig` | 页面路由 `/`、`/dashboard`、`/traces`、`/dependencies`、`/leaks`、`/logs` 转发 `index.html` |
 
-其它能力：SPA 静态托管（`SpaWebConfig`，页面路由 `/`、`/dashboard`、`/traces`、`/dependencies`、`/leaks`、`/logs`）、Agent 自注入（`RuntimeBoot.attachSelf`）。
+## 4. Bean 能力矩阵
 
-## 四、Bean 能力矩阵
+自动装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 共 4 个条目（无 spring.factories）：`SlowCallAutoConfiguration`、`ApmHandlerTimingConfiguration`、`AgentAttachFallbackConfiguration`、`ApmLogCaptureAutoConfiguration`。
 
-自动配置注册表：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 共 4 个条目（无 spring.factories）：
-`SlowCallAutoConfiguration`、`ApmHandlerTimingConfiguration`、`AgentAttachFallbackConfiguration`、`ApmLogCaptureAutoConfiguration`。
+| Bean 名 | 类型 | 装配条件（含默认值） | 可否覆盖 | 典型用途 |
+|:--------|:-----|:---------------------|:---------|:---------|
+| `hotsportProperties` | `HotsportProperties` | `@Component` + `@ConfigurationProperties(prefix="plugin.hotsport")`，组件扫描，无条件 | 可用同类型 `@Bean` + `@Primary` 替换 | 全模块配置入口；存储参数由 `getApm().toStorageConfig()` 展开 |
+| `apmController` | `ApmController`（`@RestController`，`@RequestMapping("/api/apm")`） | 组件扫描，无条件 | 同上 | 观测 REST API |
+| `apmQueryService` | `ApmQueryService`（`@Service`） | 组件扫描，无条件 | 同上 | 查询编排、本进程 APM 引擎装配 |
+| `jvmMetricsService` | `JvmMetricsService`（`@Service`） | 组件扫描，无条件 | 同上 | JVM 指标定时采样 |
+| `jvmMemoryService` | `JvmMemoryService`（`@Service`） | 组件扫描，无条件 | 同上 | JVM 内存诊断 |
+| `alertMonitorService` | `AlertMonitorService`（`@Service`） | 组件扫描，无条件 | 同上 | 告警监控与通知 |
+| `alertStore` | `AlertStore`（`@Component`） | 组件扫描，无条件；内部仅 `type=mysql` 且 url 非空时激活落库 | 同上 | 告警规则/渠道/事件持久化 |
+| `spaWebConfig` | `SpaWebConfig`（`@Configuration` implements `WebMvcConfigurer`） | 组件扫描，无条件 | 同上 | SPA 路由回退到 `index.html` |
+| `slowCallFilter` | `FilterRegistrationBean<SlowCallFilter>` | `@ConditionalOnWebApplication(type=SERVLET)` + `@ConditionalOnProperty(prefix="plugin.hotsport.request-record", name="enabled", havingValue="true", matchIfMissing=true)`；阈值 `@Value("${plugin.hotsport.request-record.threshold-ms:0}")` | 无 `@ConditionalOnMissingBean`；同名覆盖需 `allow-bean-definition-overriding`，常规用开关关闭 | 记录真实 HTTP 请求 |
+| （非 Bean）`ApmHandlerTimingInterceptor` | `WebMvcConfigurer#addInterceptors` 注册，`order(Integer.MAX_VALUE)` | `@AutoConfiguration(after = SlowCallAutoConfiguration.class)` + 同一 `request-record.enabled` 开关 | 通过 `request-record.enabled=false` 整体关闭 | 还原「HTTP → class.method」层级 |
+| `apmLogAppender` | `ApmLogAppender`（`@Bean(destroyMethod="stop")`） | `@ConditionalOnClass(name="ch.qos.logback.classic.spi.ILoggingEvent")` + `@ConditionalOnProperty(prefix="plugin.hotsport.log-capture", name="enabled", havingValue="true", matchIfMissing=true)` | 无 `@ConditionalOnMissingBean`；用 `log-capture.enabled=false` 关闭 | 宿主真实日志入 APM 存储 |
+| `agentAttachService` | `AgentAttachService`（来自 spring-support-agent-starter 的 `AgentAutoConfiguration`，见该模块） | `@ConditionalOnProperty(prefix="plugin.agent", name="enabled", havingValue="true", matchIfMissing=true)` | 有 `@ConditionalOnMissingBean`（见 agent-starter 源码），宿主可自定义实现覆盖 | 对当前 JVM 自注入 Runtime Agent |
+| `disabledAgentAttachService` | `AgentAttachService` | **源码现状**：`AgentAttachFallbackConfiguration#disabledAgentAttachService` 方法未标注 `@Bean`（也无 `@ConditionalOnMissingBean`），Javadoc 描述的「`plugin.agent.enabled=false` 时兜底」语义**当前不生效**，不会注册 Bean | — | 设计意图：关闭 agent 时提供禁用态占位，避免 `ApmQueryService` 依赖缺失导致启动失败 |
+| `hotsportApplication` | `HotsportApplication`（主类） | 独立运行入口 | — | 打包为可执行 jar |
 
-| Bean / 组件 | 类型 | 注册方式 | 生效条件（源码实证） |
-|:------------|:-----|:---------|:---------------------|
-| `hotsportProperties` | `HotsportProperties` | `@Component` + `@ConfigurationProperties(prefix="plugin.hotsport")` | 无条件（组件扫描） |
-| `apmController` | `ApmController`（`@RestController`，`@RequestMapping("/api/apm")`） | 组件扫描 | 无条件 |
-| `apmQueryService` | `ApmQueryService`（`@Service`） | 组件扫描 | 无条件 |
-| `jvmMetricsService` | `JvmMetricsService`（`@Service`） | 组件扫描 | 无条件 |
-| `jvmMemoryService` | `JvmMemoryService`（`@Service`） | 组件扫描 | 无条件 |
-| `alertMonitorService` | `AlertMonitorService`（`@Service`） | 组件扫描 | 无条件 |
-| `alertStore` | `AlertStore`（`@Component`） | 组件扫描 | Bean 无条件注册；内部仅 `type=mysql` 且 url 非空时才落库 |
-| `slowCallFilter` | `SlowCallFilter` | `@Bean`（`SlowCallAutoConfiguration`），阈值 `@Value("${plugin.hotsport.request-record.threshold-ms:0}")` | `@ConditionalOnWebApplication(type=SERVLET)` + `@ConditionalOnProperty(prefix="plugin.hotsport.request-record", name="enabled", havingValue="true", matchIfMissing=true)` |
-| 控制器耗时拦截器 | `ApmHandlerTimingInterceptor` | 非 `@Bean`：`ApmHandlerTimingConfiguration` 标注 `@AutoConfiguration(after = SlowCallAutoConfiguration.class)` 并实现 `WebMvcConfigurer`，在 `addInterceptors` 中 `new ApmHandlerTimingInterceptor()` 注册，`.order(Integer.MAX_VALUE)` | 同上（同一 `plugin.hotsport.request-record.enabled` 开关） |
-| `apmLogAppender` | `ApmLogAppender`（`destroyMethod="stop"`） | `@Bean`（`ApmLogCaptureAutoConfiguration`） | `@ConditionalOnClass(ch.qos.logback.classic.spi.ILoggingEvent)` + `plugin.hotsport.log-capture.enabled=true`（缺省 true） |
-| `agentAttachService` | `AgentAttachService`（来自 spring-support-agent-starter） | `@Bean @ConditionalOnMissingBean`（`AgentAutoConfiguration`） | `@ConditionalOnProperty(prefix="plugin.agent", name="enabled", havingValue="true", matchIfMissing=true)` |
-| `disabledAgentAttachService` | `AgentAttachFallbackConfiguration` 内方法 | — | **源码现状**：该类仅 `@EnableConfigurationProperties(AgentAttachProperties.class)`；`disabledAgentAttachService` 方法**未标注 `@Bean`**，其 Javadoc 描述了 `plugin.agent.enabled=false` 时的条件兜底语义，但按当前代码它不是注册的 Bean |
-| `spaWebConfig` | `SpaWebConfig`（`@Configuration` implements `WebMvcConfigurer`） | 组件扫描 | 无条件 |
-| `hotsportApplication` | `HotsportApplication`（`@SpringBootApplication(exclude=DataSourceAutoConfiguration)` + `@EnableScheduling`） | 主类 | 独立运行入口 |
+> 注意：上表带 `@Component`/`@Service`/`@RestController`/`@Configuration` 的 Bean 依赖**组件扫描**。独立运行（`HotsportApplication`）必然生效；嵌入宿主时，只有宿主启动类的包扫描能覆盖 `com.chua.starter.hotsport.support`（或显式 `@ComponentScan`）才会注册，详见第 6 节。
 
-> 说明：`HotsportProperties` 同时绑定 `plugin.hotsport.agent.*`（enabled/shellPort/options）；`spring-support-agent-starter` 侧的 `AgentAttachProperties` 绑定 `plugin.agent.*`（enabled/shellPort/options/async）并驱动实际自注入行为。
+## 5. 完整配置
 
-## 五、完整配置
+`HotsportProperties` 绑定前缀 `plugin.hotsport`，含 `Agent`、`Apm`（其内 `Storage`）三个嵌套类（单位如无说明为毫秒）：
 
-`HotsportProperties` 仅绑定以下两组子配置（前缀 `plugin.hotsport.*`，单位如无说明为毫秒）：
+| 配置路径 | 类型 | 默认值 | 说明 |
+|:---------|:-----|:-------|:-----|
+| `plugin.hotsport.agent.enabled` | boolean | `true` | hotsport 侧 Agent 自注入开关 |
+| `plugin.hotsport.agent.shell-port` | int | `4567` | Agent Shell 端口 |
+| `plugin.hotsport.agent.options` | String | `""` | 额外 Agent 参数（逗号分隔 Key=值，空串走默认） |
+| `plugin.hotsport.apm.storage.type` | String | `sqlite` | 存储后端：`sqlite` / `mysql` / `inmemory` / `noop` |
+| `plugin.hotsport.apm.storage.retention-ms` | long | `604800000` | 数据保留时长（7 天） |
+| `plugin.hotsport.apm.storage.capacity` | int | `100000` | 单表容量上限（超出按最旧淘汰） |
+| `plugin.hotsport.apm.storage.path` | String | `""` | sqlite 落盘目录（库文件 `<path>/apm.db`；application.yml 默认 `${user.home}/.hotsport/apm`） |
+| `plugin.hotsport.apm.storage.url` | String | `""` | mysql JDBC URL（type=mysql 时必填） |
+| `plugin.hotsport.apm.storage.username` | String | `""` | mysql 用户名 |
+| `plugin.hotsport.apm.storage.password` | String | `""` | mysql 密码 |
+| `plugin.hotsport.apm.storage.pool-size` | int | `4` | 写入线程池大小 |
+| `plugin.hotsport.apm.storage.batch-size` | int | `200` | 单批写入条数 |
+| `plugin.hotsport.apm.storage.async` | Boolean | `null` | 写入模式；`null`（未配置）沿用 APM 侧默认异步 |
+| `plugin.hotsport.apm.storage.maintenance-interval-ms` | long | `0` | 自维护周期（0=实现默认 60 秒，下限 5 秒） |
+| `plugin.hotsport.apm.storage.flush-timeout-ms` | long | `0` | 关闭时等待异步队列落盘时长（0=实现默认） |
 
-| 配置项 | 默认值 | 说明 |
-|:-------|:-------|:-----|
-| `plugin.hotsport.agent.enabled` | `true` | 是否启用 Agent 自注入（hotsport 侧开关） |
-| `plugin.hotsport.agent.shell-port` | `4567` | Agent Shell 端口 |
-| `plugin.hotsport.agent.options` | `""` | Agent 启动参数（空串时由 RuntimeBoot 默认） |
-| `plugin.hotsport.apm.storage.type` | `sqlite` | 存储后端：`sqlite` / `mysql` / `inmemory` / `noop` |
-| `plugin.hotsport.apm.storage.retention-ms` | `604800000` | 数据保留时长（默认 7 天） |
-| `plugin.hotsport.apm.storage.capacity` | `100000` | 容量上限 |
-| `plugin.hotsport.apm.storage.path` | `""` | sqlite 落盘目录（库文件 `<path>/apm.db`；application.yml 默认 `${user.home}/.hotsport/apm`） |
-| `plugin.hotsport.apm.storage.url` | `""` | mysql JDBC URL（type=mysql 时必填） |
-| `plugin.hotsport.apm.storage.username` | `""` | mysql 用户名 |
-| `plugin.hotsport.apm.storage.password` | `""` | mysql 密码 |
-| `plugin.hotsport.apm.storage.pool-size` | `4` | 写入线程池大小 |
-| `plugin.hotsport.apm.storage.batch-size` | `200` | 批量写入条数 |
-| `plugin.hotsport.apm.storage.async` | `null` | 是否异步写（未设置时由实现决定） |
-| `plugin.hotsport.apm.storage.maintenance-interval-ms` | `0` | 自维护线程间隔（0=实现默认） |
-| `plugin.hotsport.apm.storage.flush-timeout-ms` | `0` | 刷盘超时（0=实现默认） |
+以下配置不在 `HotsportProperties` 中，由各自动配置 / 服务以 `@ConditionalOnProperty`、`@Value`、`@Scheduled` 占位符直接绑定：
 
-以下配置**不是** `HotsportProperties` 的字段，由各自动配置 / 服务通过 `@ConditionalOnProperty`、`@Value` 或 `@Scheduled` 占位符直接绑定：
+| 配置路径 | 类型 | 默认值 | 说明 | 绑定位置 |
+|:---------|:-----|:-------|:-----|:---------|
+| `plugin.hotsport.request-record.enabled` | boolean | `true`（matchIfMissing） | 请求采集开关（SlowCallFilter + 耗时拦截器） | 两个自动配置的 `@ConditionalOnProperty` |
+| `plugin.hotsport.request-record.threshold-ms` | long | `0` | 慢调用记录阈值，0=记录全部 | `SlowCallAutoConfiguration#slowCallFilter` 的 `@Value` |
+| `plugin.hotsport.log-capture.enabled` | boolean | `true`（matchIfMissing） | 应用日志采集开关（需 Logback） | `ApmLogCaptureAutoConfiguration` 的 `@ConditionalOnProperty` |
+| `plugin.hotsport.log-capture.min-level` | String | `INFO` | 采集的最低日志级别 | `apmLogAppender` 的 `@Value` |
+| `plugin.hotsport.log-capture.caller-data` | boolean | `true` | 是否采集调用方类名/方法名 | 同上 |
+| `plugin.hotsport.log-capture.max-message-length` | int | `4096` | 单条日志最大长度（截断） | 同上 |
+| `plugin.hotsport.jvm.sample-interval-ms` | long | `5000` | JVM 指标采样间隔 | `JvmMetricsService#recordSample` 的 `@Scheduled(fixedDelayString)` |
 
-| 配置项 | 默认值 | 说明 | 绑定位置（源码） |
-|:-------|:-------|:-----|:-----------------|
-| `plugin.hotsport.request-record.enabled` | `true` | 请求采集开关（SlowCallFilter + 耗时拦截器） | `SlowCallAutoConfiguration` / `ApmHandlerTimingConfiguration` 的 `@ConditionalOnProperty` |
-| `plugin.hotsport.request-record.threshold-ms` | `0` | 慢调用阈值，0=不过滤全部记录 | `SlowCallAutoConfiguration#slowCallFilter` 的 `@Value` |
-| `plugin.hotsport.log-capture.enabled` | `true` | 应用日志采集开关（需 Logback） | `ApmLogCaptureAutoConfiguration` 的 `@ConditionalOnProperty` |
-| `plugin.hotsport.log-capture.min-level` | `INFO` | 采集的最低日志级别 | `ApmLogCaptureAutoConfiguration#apmLogAppender` 的 `@Value` |
-| `plugin.hotsport.log-capture.caller-data` | `true` | 是否采集调用方信息 | 同上 `@Value` |
-| `plugin.hotsport.log-capture.max-message-length` | `4096` | 单条日志最大长度 | 同上 `@Value` |
-| `plugin.hotsport.jvm.sample-interval-ms` | `5000` | JVM 指标采样间隔（毫秒） | `JvmMetricsService#recordSample` 的 `@Scheduled(fixedDelayString)` |
+兄弟模块 `spring-support-agent-starter` 的 `AgentAttachProperties`（前缀 `plugin.agent`，驱动实际自注入行为）：`plugin.agent.enabled=true`、`plugin.agent.shell-port=4567`、`plugin.agent.options=""`、`plugin.agent.async=true`（详见该模块 README）。
 
-`spring-support-agent-starter` 前缀 `plugin.agent.*`（`AgentAttachProperties`）：
+其它运行配置（本模块 `application.yml`，独立运行时生效）：`server.port=8086`、`spring.application.name=hotsport`、`spring.web.resources.static-locations=classpath:/static/`。
 
-| 配置项 | 默认值 | 说明 |
-|:-------|:-------|:-----|
-| `plugin.agent.enabled` | `true` | 是否自注入（false 时 AgentAutoConfiguration 不生效） |
-| `plugin.agent.shell-port` | `4567` | Shell 端口（options 为空时作为默认 options） |
-| `plugin.agent.options` | `""` | Agent 参数 |
-| `plugin.agent.async` | `true` | 是否异步注入（虚拟线程，不阻塞启动） |
+> MySQL 凭据传递链：`ApmQueryService#currentStorageConfig` 把 `plugin.hotsport.apm.storage.url/username/password` 从 provider 中剔除并写入系统属性 `apm.storage.url/username/password`；`ApmBootstrap.resolveStorageConfig` 仅合并系统属性里的 `apm.storage.*` 键。JDBC 连接由 `JdbcStorage` 自管 `DriverManager`，不经 Spring `DataSource`。
 
-其它运行配置（`application.yml`）：`server.port=8086`、`spring.application.name=hotsport`、`spring.web.resources.static-locations=classpath:/static/`。
+## 6. 使用方式
 
-> MySQL 凭据传递：`ApmQueryService` 会把 `plugin.hotsport.apm.storage.url/username/password` 写入系统属性 `apm.storage.*`；`ApmBootstrap` 仅从系统属性合并这几个键。JDBC 写入由 `JdbcStorage` 自管连接，不经过 Spring `DataSource`。
-
-## 六、使用方式
-
-### 6.1 独立运行（推荐）
-
-```bash
-cd spring-support-parent-starter/spring-support-hotsport-starter
-mvn -o package -DskipTests
-java -jar target/spring-support-hotsport-starter-4.0.0.51.jar
-# 页面: http://127.0.0.1:8086/  （/dashboard、/traces、/dependencies、/leaks、/logs）
-# API : http://127.0.0.1:8086/api/apm/stats
-```
-
-一键脚本：`bash run.sh`（后端 8086 + 前端 vite dev 8890，`/api/apm` 代理到 8086）、`bash run.sh stop`、`bash run.sh status`。
-
-### 6.2 作为依赖嵌入宿主应用
+Maven 坐标：
 
 ```xml
 <dependency>
@@ -209,77 +162,81 @@ java -jar target/spring-support-hotsport-starter-4.0.0.51.jar
 </dependency>
 ```
 
-- Servlet Web 应用引入即自动注册 `SlowCallFilter` 与控制器耗时拦截器（`request-record.enabled` 可关）；classpath 含 Logback 时自动挂载 `ApmLogAppender`（`log-capture.enabled` 可关）。
-- 自注入由 `spring-support-agent-starter` 的 `AgentAutoConfiguration` 完成（`plugin.agent.enabled` 可关）。
-- 观测页面与 API 随宿主端口暴露：页面 `/`、`/dashboard` 等，API `/api/apm/*`。
+独立运行（推荐，打成单个可执行 jar）：
 
-### 6.3 切换 MySQL 集中存储
+```bash
+cd spring-support-parent-starter/spring-support-hotsport-starter
+mvn -o package -DskipTests
+java -jar target/spring-support-hotsport-starter-4.0.0.51.jar
+# 页面: http://127.0.0.1:8086/（/dashboard、/traces、/dependencies、/leaks、/logs）
+# API : http://127.0.0.1:8086/api/apm/stats
+```
+
+一键脚本：`bash run.sh`（后端 8086 + 前端 vite dev 8890，`/api/apm` 代理到 8086）、`bash run.sh stop`、`bash run.sh status`。
+
+嵌入宿主 Servlet Web 应用（最小启用示例，零配置即默认开启三项采集）：
 
 ```yaml
 plugin:
   hotsport:
+    request-record:
+      enabled: true        # SlowCallFilter + 控制器耗时拦截器
+      threshold-ms: 0      # 0=记录全部请求
+    log-capture:
+      enabled: true        # Logback 日志采集
     apm:
       storage:
-        type: mysql
-        url: jdbc:mysql://127.0.0.1:3306/hotsport?useSSL=false
-        username: root
-        password: "***"
+        type: sqlite       # 默认，无需外部数据库
+  agent:
+    enabled: true          # Agent 自注入（plugin.agent.* 由 agent-starter 绑定）
 ```
 
-`mysql-connector-j` 为 optional 依赖，需自行引入；`JdbcStorage` 启动时校验连通性并建表，失败则降级 `NoopStorage`（仅记日志，不影响应用）。
+嵌入形态的关键前提：4 个自动配置类**必然**随依赖装配（请求采集、日志采集即生效）；但 `ApmController`、`ApmQueryService` 等注解 Bean 依赖组件扫描——宿主启动类需位于 `com.chua` 包下，或显式 `@ComponentScan("com.chua.starter.hotsport.support")`，否则只有采集、没有查询端点。
 
-## 七、使用场景
+可选依赖说明：
 
-| 场景 | 做法 | 关键点 |
-|:-----|:-----|:-------|
-| 单机观测后台 | 独立 jar 启动，默认 sqlite | 无外部 DB 依赖，数据落盘重启不丢；页面 + API 一体交付 |
-| 宿主应用探针 | 宿主引入依赖 | 自动采集慢调用、控制器耗时、应用日志、调用链；`plugin.agent.enabled` 开关 |
-| 集中观测多实例 | `type=mysql` + JDBC URL | 数据集中落库；告警规则/渠道/事件经 `AlertStore` 同步落库重启回灌 |
-| 慢接口定位 | `threshold-ms` 调低 + `/slow-calls`、`/slow-sql`、`/endpoint-stats` | 结合 MDC `hotsportTraceId` 串联日志 |
-| 链路根因分析 | `/trace/{id}/waterfall`、`/trace/{id}/root-cause`、`/agent/trace-hotspots` | 依赖 APM 引擎 TraceHandler 字节码数据 |
-| 依赖拓扑梳理 | `/dependencies/aggregated`、`/system/topology` | 服务/端点维度聚合 |
-| 资源泄漏排查 | `/leaks`、`/agent/handles`、`/handles/growth` | 句柄增长趋势 |
-| JVM 内存诊断 | `/jvm/memory/pools`、`POST /jvm/gc`、`/jvm/class-loading`、`/jvm/thread-dump` | 类加载器统计辅助定位 classloader 泄漏 |
-| 告警运维 | `/alerts/rules`、`/alerts/channels`、`/alerts/history` | 阈值规则 + 通知渠道（webhook），支持确认/静默/忽略 |
-| 对接已有体系 | `/agent/skywalking/export` | 导出 SkyWalking 兼容数据 |
+- `mysql-connector-j`（optional）：仅 `apm.storage.type=mysql` 时需要，由使用方显式引入；缺驱动或连库失败时 `JdbcStorage.start()` 抛错，`StorageManager.init` 降级为 `NoopStorage`（仅记日志，不影响宿主）。
+- `lombok`（provided）：仅编译期需要，运行期不传递。
+- `spring-support-agent-starter`：传递带入 `utils-support-runtime-starter` / `utils-support-runtime-agent`，提供 `AgentAttachService` 与 `plugin.agent.*` 绑定。
 
-## 八、扩展点
+## 7. 使用场景
 
-| 扩展点 | 位置 | 说明 |
-|:-------|:-----|:-----|
-| 存储后端 SPI | `com.chua.runtime.apm.storage.ApmStorage`（utils-support-runtime-apm） | 实现接口后通过 `StorageManager.register(impl)` 注册（参考 `JdbcStorage.register()`），或放进 `META-INF/services` 由 ServiceLoader 发现。选择策略：SPI 第一个有效实现为默认 → `apm.storage.type` 同名实现 → 找不到则 `NoopStorage` 兜底 |
-| 存储参数 | `HotsportProperties#toStorageConfig()` | 生成 `StorageConfig`；运行期可 `POST /api/apm/storage/config`、`POST /api/apm/storage/reload` 调整 |
-| Agent 参数 | `plugin.agent.options` / `plugin.agent.shell-port` | 透传给 `RuntimeBoot.create()....attachSelf()` |
+适用：
+
+- **单机观测后台**：独立 jar 启动，默认 sqlite 落盘（`<path>/apm.db`，重启不丢），页面 + API 一体交付，无外部 DB 依赖。
+- **宿主应用探针**：宿主引入依赖即自动采集真实 HTTP 请求、控制器耗时、应用日志与调用链，MDC `hotsportTraceId` 串联日志与链路。
+- **多实例集中观测**：`type=mysql` + JDBC URL 集中落库；告警规则/渠道/事件经 `AlertStore` 同步落库、重启回灌。
+- **性能定位与根因分析**：`threshold-ms` 调低配合 `/slow-calls`、`/slow-sql`、`/trace/{id}/waterfall`、`/trace/{id}/root-cause`、`/agent/trace-hotspots` 定位慢接口与调用层级。
+
+不适用 / 慎用：
+
+- **强隔离生产环境的常驻探针**：Agent 自注入会对已加载类做 retransform，在部分 JDK（如 JDK 25）上存在 JVM 退出的风险（`AgentAttachFallbackConfiguration` Javadoc 记录了该事故）；此类环境建议 `plugin.agent.enabled=false`，仅保留 Servlet/日志层采集。
+- **海量长周期数据**：单表 `capacity` 默认 10 万条、按最旧淘汰，不适合替代专业 APM 的长期数据仓库；大数据量请接 mysql 并自行规划容量与清理。
+
+与相邻模块的取舍：本模块是 `utils-support-runtime-apm` 的**展示与查询后台**（Controller/Service/前端托管/采集过滤器），不是采集引擎本身；字节码插桩能力全部来自 `spring-support-agent-starter` 与 utils 层，本模块只做装配与消费。需要纯嵌入式采集（无页面/无 REST）时直接依赖 agent-starter + utils-support-runtime-apm 即可，不必引入本模块。
+
+## 8. 扩展点
+
+| 扩展点 | 位置 | 注册 / 自定义方式 |
+|:-------|:-----|:------------------|
+| 存储后端 SPI | `com.chua.runtime.apm.storage.ApmStorage`（utils-support-runtime-apm） | 实现接口后在初始化前调用 `StorageManager.register(impl)`（参考本模块 `JdbcStorage.register()`）；选择策略：内置类型 → 注册表 → `apm.storage.type` 同名实现 → 找不到则 `NoopStorage` 兜底 |
+| 存储参数热更新 | `HotsportProperties.Apm#toStorageConfig()` → `StorageConfig` | 运行期 `POST /api/apm/storage/config`、`POST /api/apm/storage/reload` 无需重启调整 |
+| Agent 注入参数 | `plugin.agent.options` / `plugin.agent.shell-port` | 透传给 `RuntimeBoot.create()...attachSelf()`；`AgentAttachService` 本身支持 `@ConditionalOnMissingBean` 覆盖（见 agent-starter） |
 | 采集开关 | `plugin.hotsport.request-record.enabled`、`plugin.hotsport.log-capture.enabled`、`plugin.agent.enabled` | 按条件装配/关闭对应 Bean |
-| 告警规则与通知 | `AlertMonitorService` + `AlertStore` | 规则/渠道内存态 + mysql 写穿；webhook 通知 |
-| 前端替换 | `src/main/resources/static/` | 前端工程（`apps/vue-support-hotspot-starter`）构建后把产物以静态文件置于该目录（本模块 pom 仅有 repackage，无前端资源拷贝插件）；替换该目录即可换前端实现 |
-| 采集数据面 | `ApmBootstrap` 内置 8 个 Handler（Log/Net/Transmission/DependencyGraph/HandleLeak/Trace/HttpClient/JdkHttpServer） | 由 `ApmQueryService` 固定装配；新增数据面需扩展 utils-support-runtime-apm 层 |
+| 告警规则与通知 | `AlertMonitorService` + `AlertStore` | 规则/渠道内存态 + mysql 写穿，webhook 通知渠道经 `/api/apm/alerts/channels` 维护 |
+| 前端替换 | `src/main/resources/static/` | `apps/vue-support-hotspot-starter` 构建产物置于该目录（pom 仅有 repackage，无前端资源拷贝插件）；替换目录即可换前端实现 |
+| 采集数据面 | `ApmBootstrap` 内置 8 个 Handler（Log / Net / Transmission / DependencyGraph / HandleLeak / Trace / HttpClient / JdkHttpServer） | 由 `ApmQueryService#startLocalApmEngine` 固定装配；新增数据面需扩展 utils-support-runtime-apm 层，本模块不重复实现 |
 
-## 九、常见问题
+## 9. 常见问题
 
-**Q1：为什么启动不依赖数据库？**
-`HotsportApplication` 显式排除 `DataSourceAutoConfiguration`；观测数据走 `StorageManager` SPI，默认 sqlite 内嵌落盘。mysql 模式由 `JdbcStorage` 自管 JDBC 连接，也不经过 Spring `DataSource`。
+**Q1：引入依赖后为什么没有 `/api/apm/*` 端点？**
+`ApmController`、`ApmQueryService` 等是组件扫描 Bean，不是自动配置注册的。宿主启动类不在 `com.chua` 包下时扫描不到，需 `@ComponentScan("com.chua.starter.hotsport.support")` 或改用独立运行形态；4 个自动配置（过滤器/拦截器/日志采集）不受此影响。
 
-**Q2：存储类型怎么选？**
-`sqlite`（默认）：本地文件 `<path>/apm.db`，重启不丢；`inmemory`：重启归零，仅临时调试；`mysql`：集中存储，需驱动 + URL；`noop`：不持久化。
+**Q2：如何彻底关闭采集，让宿主零开销？**
+依次设 `plugin.hotsport.request-record.enabled=false`（关请求+耗时拦截器）、`plugin.hotsport.log-capture.enabled=false`（关日志采集）、`plugin.agent.enabled=false`（关字节码自注入）。注意：当前源码中 `AgentAttachFallbackConfiguration#disabledAgentAttachService` 未标注 `@Bean`，关闭 agent 后没有兜底 Bean；`ApmQueryService` 强依赖 `AgentAttachService` 时若上下文启动失败，以实际代码为准排查。
 
-**Q3：页面刷新 404？**
-SPA 路由由 `SpaWebConfig` 转发到 `index.html`，仅覆盖 `/`、`/dashboard`、`/traces`、`/dependencies`、`/leaks`、`/logs`；其余未知路径不会兜底。
+**Q3：切换 MySQL 后建表/连接失败会怎样？**
+`JdbcStorage.start()` 抛出的异常会被 `StorageManager.init` 捕获并降级为 `NoopStorage`，宿主照常运行但观测数据不再落库。请核对 `url/username/password` 与 optional 的 `mysql-connector-j` 是否已显式引入；告警持久化（`AlertStore`）同样只在 `type=mysql` 且 url 非空时激活。
 
-**Q4：应用日志没被采集？**
-`ApmLogCaptureAutoConfiguration` 要求 classpath 存在 Logback（`@ConditionalOnClass(ILoggingEvent)`）且 `plugin.hotsport.log-capture.enabled=true`。采集器名 `HOTSPORT_APM_LOG`，默认 `min-level=INFO`、`caller-data=true`、`max-message-length=4096`。
-
-**Q5：慢调用没记录？**
-确认 `plugin.hotsport.request-record.enabled=true`；`threshold-ms=0` 表示全部记录，调大后仅记录超阈值请求。`/api/apm/*`、`/actuator/*`、`/assets/*`、`/health`、`/favicon.ico` 被 `SlowCallFilter` 排除。
-
-**Q6：Agent 自注入失败或想关闭？**
-`attach()` 在虚拟线程异步执行，不阻塞启动；状态看 `GET /api/apm/agent/status`。关闭：`plugin.agent.enabled=false`（同时 `plugin.hotsport.agent.enabled=false`）。注意：`AgentAttachFallbackConfiguration#disabledAgentAttachService` 当前源码未标注 `@Bean`，关闭后不会有兜底 Bean 注册（以代码为准）。
-
-**Q7：MySQL 建表 / 连接失败会怎样？**
-`JdbcStorage.start()` 失败会降级为 `NoopStorage` 并仅记录日志，不影响宿主运行；请核对 `url/username/password` 与 `mysql-connector-j` 依赖（optional，需自行引入）。
-
-**Q8：告警历史重启后丢失？**
-内存态规则/渠道/事件重启即失；仅当 `type=mysql` 且 url 非空时 `AlertStore` 才落库并回灌。
-
-**Q9：端口冲突？**
-后端 HTTP 端口 `server.port=8086`；Agent Shell 端口 `plugin.agent.shell-port=4567`（`options` 非空时以 options 为准）。前端 dev 模式 8890（见 run.sh）。
+**Q4：升级到 Boot 4 / 新版 JDK 需要注意什么？**
+自动装配走 `META-INF/spring/...AutoConfiguration.imports`（无 spring.factories），Boot 4 兼容；`HotsportApplication` 排除了 `DataSourceAutoConfiguration`，嵌入时若宿主自己有 DataSource 不受影响。JDK 25 上 agent retransform 存在 JVM 退出风险（见第 7 节），升级 JDK 前先在隔离环境验证 `plugin.agent.enabled=true` 的行为，必要时保持关闭。
