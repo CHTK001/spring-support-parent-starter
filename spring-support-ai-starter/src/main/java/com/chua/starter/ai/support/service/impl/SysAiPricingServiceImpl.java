@@ -66,6 +66,16 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     @Override
     @Cacheable(cacheNames = CACHE_NAME, key = "#provider + ':' + #model", unless = "#result == null")
     public SysAiPricing getLatestPricing(String provider, String model) {
+        // 0. 人工配置单价最高优先：管理员覆盖后不被快照/同步/估算价冲掉
+        SysAiPricing manual = pricingMapper.selectOne(new LambdaQueryWrapper<SysAiPricing>()
+                .eq(SysAiPricing::getProvider, provider)
+                .eq(SysAiPricing::getModel, model)
+                .eq(SysAiPricing::getSource, SOURCE_MANUAL)
+                .last("limit 1"));
+        if (manual != null) {
+            return manual;
+        }
+
         // 1. 优先从 datasearch 模型目录查找（USD/百万令牌 → USD/千令牌）
         ProviderModelInfo info = ProviderModelMetrics.of(model);
         if (info != null && info.getPriceInputPerMusd() != null && info.getPriceOutputPerMusd() != null) {
@@ -150,12 +160,25 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public void syncOfficialPricing() {
         try {
+            // 人工单价不参与同步覆盖：先留档，清空重插后原样回填
+            List<SysAiPricing> manualRows = pricingMapper.selectList(
+                    new LambdaQueryWrapper<SysAiPricing>()
+                            .eq(SysAiPricing::getSource, SOURCE_MANUAL));
+            java.util.Set<String> manualKeys = new java.util.HashSet<>();
+            for (SysAiPricing m : manualRows) {
+                if (m.getProvider() != null && m.getModel() != null) {
+                    manualKeys.add(m.getProvider().trim().toLowerCase(java.util.Locale.ROOT)
+                            + " " + m.getModel().trim().toLowerCase(java.util.Locale.ROOT));
+                }
+            }
+
             // 逐源加载并按优先级排序，来源优先级高的先写入，同键后者不覆盖前者
             List<com.chua.common.support.ai.chat.ModelDefinition> models =
                     loadBySourcePriority();
             if (models == null || models.isEmpty()) {
-                log.info("[Pricing] 无定价数据可同步，清空旧数据");
+                log.info("[Pricing] 无定价数据可同步，清空旧数据（人工单价 {} 条保留）", manualRows.size());
                 pricingMapper.delete(null);
+                manualRows.forEach(pricingMapper::insert);
                 return;
             }
 
@@ -165,6 +188,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
 
             int inserted = 0;
             int skippedDuplicate = 0;
+            int skippedManual = 0;
             java.util.Set<String> seen = new java.util.HashSet<>();
             LocalDateTime now = LocalDateTime.now();
             for (com.chua.common.support.ai.chat.ModelDefinition md : models) {
@@ -181,6 +205,11 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
                         + model.toLowerCase(java.util.Locale.ROOT);
                 if (!seen.add(key)) {
                     skippedDuplicate++;
+                    continue;
+                }
+                // 该 (厂商, 模型) 已有人工单价，跳过同步价，避免覆盖
+                if (manualKeys.contains(key)) {
+                    skippedManual++;
                     continue;
                 }
                 SysAiPricing pricing = new SysAiPricing();
@@ -201,7 +230,10 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
                 pricingMapper.insert(pricing);
                 inserted++;
             }
-            log.info("[Pricing] 官方定价同步完成，共插入 {} 条，按来源优先级去重 {} 条", inserted, skippedDuplicate);
+            // 回填人工单价（保持原主键与生效时间，避免被同步价冲掉）
+            manualRows.forEach(pricingMapper::insert);
+            log.info("[Pricing] 官方定价同步完成，共插入 {} 条，按来源优先级去重 {} 条，人工覆盖跳过 {} 条",
+                    inserted, skippedDuplicate, skippedManual);
         } catch (Exception e) {
             log.warn("[Pricing] 同步官方定价失败: {}", e.getMessage());
         }
@@ -260,5 +292,101 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             case "openrouter" -> 2;
             default -> 50;
         };
+    }
+
+    /**
+     * 查询人工配置的单价列表（source=manual）。
+     *
+     * @param keyword 厂商/模型关键字（可空）
+     * @return 人工单价列表
+     */
+    @Override
+    public List<SysAiPricing> listManualPricing(String keyword) {
+        LambdaQueryWrapper<SysAiPricing> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiPricing::getSource, SOURCE_MANUAL);
+        if (keyword != null && !keyword.isBlank()) {
+            String kw = keyword.trim();
+            wrapper.and(w -> w.like(SysAiPricing::getProvider, kw)
+                    .or().like(SysAiPricing::getModel, kw));
+        }
+        wrapper.orderByAsc(SysAiPricing::getProvider).orderByAsc(SysAiPricing::getModel);
+        return pricingMapper.selectList(wrapper);
+    }
+
+    /**
+     * 保存人工单价（按 厂商 + 模型 原行覆盖，source 置为 manual）。
+     *
+     * <p>厂商统一归一化为小写；币种缺省 USD。覆盖已有行（无论原来源）时保留原主键，
+     * 仅更新单价/币种/生效时间并把来源改为 manual。保存后清除定价缓存。</p>
+     *
+     * @param input 单价数据（价格单位：币种/千令牌）
+     * @return 保存后的单价行
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public SysAiPricing saveManualPricing(SysAiPricing input) {
+        if (input == null || input.getProvider() == null || input.getProvider().isBlank()
+                || input.getModel() == null || input.getModel().isBlank()) {
+            throw new IllegalArgumentException("服务商与模型名称不能为空");
+        }
+        if (input.getInputPricePer1k() == null && input.getOutputPricePer1k() == null) {
+            throw new IllegalArgumentException("输入单价与输出单价至少填写一项");
+        }
+        String provider = input.getProvider().trim().toLowerCase(java.util.Locale.ROOT);
+        String model = input.getModel().trim();
+        String currency = input.getCurrency() == null || input.getCurrency().isBlank()
+                ? "USD" : input.getCurrency().trim().toUpperCase(java.util.Locale.ROOT);
+        LocalDateTime now = LocalDateTime.now();
+
+        SysAiPricing existing = pricingMapper.selectOne(new LambdaQueryWrapper<SysAiPricing>()
+                .eq(SysAiPricing::getProvider, provider)
+                .eq(SysAiPricing::getModel, model)
+                .last("limit 1"));
+        if (existing == null) {
+            SysAiPricing row = new SysAiPricing();
+            row.setProvider(provider);
+            row.setModel(model);
+            row.setInputPricePer1k(input.getInputPricePer1k());
+            row.setOutputPricePer1k(input.getOutputPricePer1k());
+            row.setCurrency(currency);
+            row.setEffectiveDate(now);
+            row.setSource(SOURCE_MANUAL);
+            pricingMapper.insert(row);
+            log.info("[Pricing] 新增人工单价 {}/{} in={} out={} {}", provider, model,
+                    input.getInputPricePer1k(), input.getOutputPricePer1k(), currency);
+            return row;
+        }
+        existing.setInputPricePer1k(input.getInputPricePer1k());
+        existing.setOutputPricePer1k(input.getOutputPricePer1k());
+        existing.setCurrency(currency);
+        existing.setEffectiveDate(now);
+        existing.setSource(SOURCE_MANUAL);
+        pricingMapper.updateById(existing);
+        log.info("[Pricing] 覆盖人工单价 {}/{} in={} out={} {}", provider, model,
+                input.getInputPricePer1k(), input.getOutputPricePer1k(), currency);
+        return existing;
+    }
+
+    /**
+     * 删除人工单价（仅允许删除 manual 行），删除后该模型恢复同步价/估算价。
+     *
+     * @param id sys_ai_pricing 主键
+     * @return 是否删除成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public boolean deleteManualPricing(Long id) {
+        if (id == null) {
+            return false;
+        }
+        SysAiPricing row = pricingMapper.selectById(id);
+        if (row == null || !SOURCE_MANUAL.equals(row.getSource())) {
+            return false;
+        }
+        pricingMapper.deleteById(id);
+        log.info("[Pricing] 删除人工单价 {}/{}，该模型恢复同步价/估算价", row.getProvider(), row.getModel());
+        return true;
     }
 }

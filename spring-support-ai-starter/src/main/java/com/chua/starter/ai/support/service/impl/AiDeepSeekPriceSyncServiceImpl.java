@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.mapper.SysAiModelSettingMapper;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.service.AiDeepSeekPriceSyncService;
+import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -343,6 +344,11 @@ public class AiDeepSeekPriceSyncServiceImpl implements AiDeepSeekPriceSyncServic
                 .eq(SysAiPricing::getModel, model.model())
                 .orderByDesc(SysAiPricing::getEffectiveDate)
                 .last("limit 1"));
+        // 人工单价不被自动同步覆盖
+        if (pricing != null && SysAiPricingService.SOURCE_MANUAL.equals(pricing.getSource())) {
+            log.info("[Pricing] 模型 {} 已配置人工单价，跳过 {} 同步覆盖", model.model(), PROVIDER);
+            return;
+        }
         boolean fresh = pricing == null;
         if (fresh) {
             pricing = new SysAiPricing();

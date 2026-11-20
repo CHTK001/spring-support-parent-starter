@@ -9,6 +9,7 @@ import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.mapper.SysAiModelSettingMapper;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.service.AiSub2ApiPriceSyncService;
+import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.datasearch.credit.support.CreditHttp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -352,6 +353,11 @@ public class AiSub2ApiPriceSyncServiceImpl implements AiSub2ApiPriceSyncService 
                 .eq(SysAiPricing::getModel, model.model())
                 .orderByDesc(SysAiPricing::getEffectiveDate)
                 .last("limit 1"));
+        // 人工单价不被自动同步覆盖
+        if (pricing != null && SysAiPricingService.SOURCE_MANUAL.equals(pricing.getSource())) {
+            log.info("[Pricing] 模型 {} 已配置人工单价，跳过 {} 同步覆盖", model.model(), PROVIDER);
+            return;
+        }
         boolean fresh = pricing == null;
         if (fresh) {
             pricing = new SysAiPricing();

@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
@@ -13,7 +14,9 @@ import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -211,6 +214,49 @@ public class ApiModelMetricsController {
     }
 
     /**
+     * 查询人工配置的模型单价（source=manual）。
+     *
+     * @param keyword 厂商/模型关键字（可空）
+     * @return 人工单价列表
+     */
+    @GetMapping("/model-metrics/pricing")
+    public ApiResult<List<SysAiPricing>> listManualPricing(
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return ApiResult.ok(pricingService.listManualPricing(keyword));
+    }
+
+    /**
+     * 保存人工单价（按 厂商 + 模型 覆盖，取价优先级高于同步价与估算价）。
+     *
+     * <p>请求体：{@code {provider, model, inputPricePer1k, outputPricePer1k, currency}}。
+     * 价格单位为 币种/千令牌，与 sys_ai_pricing 一致。仅限管理员。</p>
+     *
+     * @param body 单价数据
+     * @return 保存后的单价行
+     */
+    @Permission("admin")
+    @PostMapping("/model-metrics/pricing")
+    public ApiResult<SysAiPricing> saveManualPricing(@RequestBody SysAiPricing body) {
+        try {
+            return ApiResult.ok(pricingService.saveManualPricing(body));
+        } catch (IllegalArgumentException e) {
+            return manualError("400", e.getMessage());
+        }
+    }
+
+    /**
+     * 删除人工单价，该模型恢复为同步价/估算价。仅限管理员。
+     *
+     * @param id sys_ai_pricing 主键
+     * @return 是否删除成功
+     */
+    @Permission("admin")
+    @DeleteMapping("/model-metrics/pricing/{id}")
+    public ApiResult<Boolean> deleteManualPricing(@PathVariable("id") Long id) {
+        return ApiResult.ok(pricingService.deleteManualPricing(id));
+    }
+
+    /**
      * 手动修改指标库字段并锁定。
      *
      * <p>请求体：{@code {key, values:{字段:值}, locked:[字段...]}}。
@@ -278,7 +324,7 @@ public class ApiModelMetricsController {
      * @param msg 字符串
      * @return 返回值
     */
-    private static ApiResult<Map<String, Object>> manualError(String code, String msg) {
+    private static <T> ApiResult<T> manualError(String code, String msg) {
         return new ApiResult<>(false, null, code, msg, null, null);
     }
 
