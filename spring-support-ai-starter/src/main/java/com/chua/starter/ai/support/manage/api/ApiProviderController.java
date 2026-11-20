@@ -31,6 +31,7 @@ import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.manage.service.ProviderCreditAlertLogService;
+import com.chua.starter.ai.support.manage.service.ProviderCreditLoginService;
 import com.chua.starter.ai.support.manage.store.SysAiProviderCredit;
 import com.chua.starter.ai.support.manage.store.SysAiProviderCreditAlertLog;
 import com.chua.starter.ai.support.manage.store.SysAiProviderCreditHistory;
@@ -183,6 +184,12 @@ public class ApiProviderController {
      * 供「上次推送时间」展示与事后核对
      */
     private final ProviderCreditAlertLogService providerCreditAlertLogService;
+
+    /**
+     * 余额「账号密码登录」执行器：查询类型 account-login 时自动登录上游门户、
+     * 按余额 SPI 钩子截获会话令牌并回填余额密钥
+     */
+    private final ProviderCreditLoginService providerCreditLoginService;
 
     /**
      * 用量日汇总 Mapper：余额消耗归因「按模型」维度的取数口（ai 自有表 sys_ai_usage_daily，
@@ -2493,6 +2500,20 @@ public class ApiProviderController {
         List<String> keys = effectiveCreditKeys(entity, extra);
         // 是否为 AK/SK 占位链路：读数行统一标「AK/SK」，让用户知道走的不是余额令牌
         boolean akSkOnly = keys.size() == 1 && CREDIT_AKSK_KEY.equals(keys.get(0));
+        // 「账号密码登录」（extra.credit_kind = account-login）：余额令牌由自动登录截获。
+        // 没配令牌时先登录拿令牌再查询；登录失败直接把原因随面板返回
+        boolean accountLogin = ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"));
+        if (accountLogin && keys.isEmpty()) {
+            ProviderCreditLoginService.LoginOutcome outcome = providerCreditLoginService.login(
+                    entity, loginSpiFor(entity, extra), true);
+            if (!outcome.ok()) {
+                return ApiResult.ok(new CreditPanelPayload(providerId, baseUrl, kind,
+                        candidateKinds(entity, extra), creditLevel(entity, extra), outcome.loginUrl(),
+                        false, null, null, List.of(), null, null, null,
+                        "自动登录失败：" + outcome.message()));
+            }
+            keys = List.of(outcome.token());
+        }
         // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → Moss 非官方 → 表达式」
         List<String> candidates = candidateKinds(entity, extra);
         // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ uncovered（官方站点但未收录余额接口）/
@@ -2537,14 +2558,21 @@ public class ApiProviderController {
                 return ApiResult.ok(persisted);
             }
         }
-        List<CreditReading> rows = new ArrayList<>(keys.size());
+        List<CreditReading> rows = queryCreditRows(entity, extra, keys);
+        // 账密登录：全部 Key 都查不到通常是会话令牌过期，自动重登一次再试
+        if (accountLogin && rows.stream().noneMatch(CreditReading::ok)) {
+            ProviderCreditLoginService.LoginOutcome retry = providerCreditLoginService.login(
+                    entity, loginSpiFor(entity, extra), true);
+            if (retry.ok()) {
+                keys = List.of(retry.token());
+                rows = queryCreditRows(entity, extra, keys);
+            }
+        }
         BigDecimal sumRemain = BigDecimal.ZERO;
         BigDecimal sumUsed = BigDecimal.ZERO;
         boolean anyRemain = false;
         String currency = null;
-        for (int i = 0; i < keys.size(); i++) {
-            CreditReading row = creditOfKey(entity, extra, keys.get(i), i);
-            rows.add(row);
+        for (CreditReading row : rows) {
             if (row.remain() == null) {
                 continue;
             }
@@ -3446,6 +3474,19 @@ public class ApiProviderController {
         String kind = configuredKind == null ? "auto" : configuredKind;
         List<String> candidates = candidateKinds(entity, extra);
         String level = creditLevel(entity, extra);
+        // 「账号密码登录」：试查即真登录一次（不落库），用截获的令牌当场查余额，
+        // 验证账号密码与截获链路是否配得通
+        boolean accountLogin = ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"));
+        if (accountLogin && keys.isEmpty()) {
+            ProviderCreditLoginService.LoginOutcome outcome = providerCreditLoginService.login(
+                    entity, loginSpiFor(entity, extra), false);
+            if (!outcome.ok()) {
+                return ApiResult.ok(new CreditPanelPayload("test", baseUrl, kind, candidates, level,
+                        outcome.loginUrl(), false, null, null, List.of(), null, null, null,
+                        "自动登录失败：" + outcome.message()));
+            }
+            keys = List.of(outcome.token());
+        }
         CreditPanelPayload blocked = null;
         if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
             blocked = new CreditPanelPayload("test", baseUrl, kind, candidates, level, null,
@@ -3457,14 +3498,12 @@ public class ApiProviderController {
         if (blocked != null) {
             return ApiResult.ok(blocked);
         }
-        List<CreditReading> rows = new ArrayList<>(keys.size());
+        List<CreditReading> rows = queryCreditRows(entity, extra, keys);
         BigDecimal sumRemain = BigDecimal.ZERO;
         BigDecimal sumUsed = BigDecimal.ZERO;
         boolean anyRemain = false;
         String currency = null;
-        for (int i = 0; i < keys.size(); i++) {
-            CreditReading row = creditOfKey(entity, extra, keys.get(i), i);
-            rows.add(row);
+        for (CreditReading row : rows) {
             if (row.remain() == null) {
                 continue;
             }
@@ -3486,6 +3525,44 @@ public class ApiProviderController {
         CreditPanelPayload payload = new CreditPanelPayload("test", baseUrl, kind, candidates, level,
                 null, anyOk, currency, creditTotal(anyRemain ? sumRemain : null, sumUsed), rows, false, null, null, null);
         return ApiResult.ok(payload);
+    }
+
+    /**
+     * 供应商余额「账号密码登录」：立即执行一次自动登录，把截获的会话令牌回填为余额密钥。
+     *
+     * <p>查询类型为 {@code account-login} 时可从编辑页 / 余额面板手动触发
+     * （令牌失效时后端查询链路也会自动重登，这里主要用于配置后的立即验证）。
+     * 令牌只回掩码，不回明文。</p>
+     *
+     * @param providerId 供应商标识
+     * @return 登录结果（成功带令牌掩码与登录页地址，失败带原因）
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/credit/login")
+    public ApiResult<CreditLoginPayload> providerCreditLogin(@PathVariable("provider_id") String providerId) {
+        SysAccountChannel entity = requireProvider(providerId);
+        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        ProviderCreditLoginService.LoginOutcome outcome = providerCreditLoginService.login(
+                entity, loginSpiFor(entity, extra), true);
+        String configuredKind = str(extra, "credit_kind");
+        return ApiResult.ok(new CreditLoginPayload(outcome.ok(), outcome.message(), outcome.loginUrl(),
+                outcome.token() == null ? null : maskKey(outcome.token()),
+                configuredKind == null ? "auto" : configuredKind));
+    }
+
+    /**
+     * {@code /credit/login} 登录结果。
+     *
+     * @param ok        是否成功截获并回填令牌
+     * @param message   结果说明（失败时为原因）
+     * @param loginUrl  实际使用的登录页地址
+     * @param tokenMask 令牌掩码（失败时为 null）
+     * @param kind      余额口径（extra.credit_kind，未配置为 auto）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditLoginPayload(boolean ok, String message,
+                              @JsonProperty("login_url") String loginUrl,
+                              @JsonProperty("token_mask") String tokenMask, String kind) {
     }
 
     /**
@@ -3525,6 +3602,44 @@ public class ApiProviderController {
             }
         }
         return null;
+    }
+
+    /**
+     * 找供应商「账号登录」对应的余额 SPI 实现。
+     *
+     * <p>与 {@link #findLoginUrl} 同一套优先级：候选链里第一个给出登录页的实现；
+     * 执行自动登录时用它读取截获钩子（地址特征 / 令牌 JSON 路径 / Cookie /
+     * localStorage 键）。</p>
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 余额 SPI 实现；候选里没有可登录实现时为 null
+     */
+    private CreditQueryProvider loginSpiFor(SysAccountChannel entity, Map<String, Object> extra) {
+        for (String kind : candidateKinds(entity, extra)) {
+            CreditQueryProvider provider = CreditQueries.find(kind);
+            if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
+                return provider;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 逐 Key 查询余额读数（每个 Key 一次独立查询，序号即展示顺序）。
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @param keys   余额密钥列表
+     * @return 读数行（与 keys 等长、按序对应）
+     */
+    private List<CreditReading> queryCreditRows(SysAccountChannel entity, Map<String, Object> extra,
+                                                List<String> keys) {
+        List<CreditReading> rows = new ArrayList<>(keys.size());
+        for (int i = 0; i < keys.size(); i++) {
+            rows.add(creditOfKey(entity, extra, keys.get(i), i));
+        }
+        return rows;
     }
 
     /**
@@ -3569,8 +3684,10 @@ public class ApiProviderController {
         String explicitUrl = str(extra, "credit_url");
         String expression = str(extra, "credit_expression");
         String brand = creditBrand(entity, extra);
-        // 显式指定唯一实现时，候选只有它一条
-        List<String> attempts = kind != null ? List.of(kind) : kinds;
+        // 显式指定唯一实现时，候选只有它一条；「账号密码登录」只是令牌来源，
+        // 真正的查询实现在 candidateKinds 里已按登录页收窄
+        List<String> attempts = kind != null && !ProviderCreditLoginService.KIND.equals(kind)
+                ? List.of(kind) : kinds;
         List<CreditQuery> queries = new ArrayList<>(attempts.size());
         for (String candidate : attempts) {
             CreditQuery query = new CreditQuery();
@@ -3675,7 +3792,7 @@ public class ApiProviderController {
     }
 
     /**
-     * 自动识别时按顺序尝试的实现标识。
+     * 余额实现的候选链（显式口径优先，其次按厂商与地址自动回落）。
      *
      * <p>也是页面「已尝试」链路的唯一来源：查不到余额时把它显示出来，
      * 用户就能判断该换哪条口径（或该去配 credit_url + 表达式）。</p>
@@ -3686,9 +3803,34 @@ public class ApiProviderController {
      */
     private List<String> candidateKinds(SysAccountChannel entity, Map<String, Object> extra) {
         String kind = explicitCreditKind(extra);
+        if (ProviderCreditLoginService.KIND.equals(kind)) {
+            // 「账号密码登录」是令牌来源而非查询实现：真正发请求的是自动链里
+            // 给出登录页的实现（如 DeepSeek / 书生 / sub2api），按它收窄候选链；
+            // 没有可登录实现时保留完整自动链，让「已尝试」链路如实展示失败原因
+            List<String> auto = autoCandidateKinds(entity, extra);
+            List<String> loginKinds = new ArrayList<>(2);
+            for (String candidate : auto) {
+                CreditQueryProvider provider = CreditQueries.find(candidate);
+                if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
+                    loginKinds.add(candidate);
+                }
+            }
+            return loginKinds.isEmpty() ? auto : loginKinds;
+        }
         if (kind != null) {
             return List.of(kind);
         }
+        return autoCandidateKinds(entity, extra);
+    }
+
+    /**
+     * 自动识别（不读显式 credit_kind）时按顺序尝试的实现标识。
+     *
+     * @param entity 供应商
+     * @param extra  供应商扩展配置
+     * @return 实现标识（按尝试顺序）
+     */
+    private List<String> autoCandidateKinds(SysAccountChannel entity, Map<String, Object> extra) {
         List<String> kinds = new ArrayList<>(5);
         String brand = creditBrand(entity, extra);
         // DeepSeek 平台门户余额接口：用「账号登录」截获的门户会话令牌查
