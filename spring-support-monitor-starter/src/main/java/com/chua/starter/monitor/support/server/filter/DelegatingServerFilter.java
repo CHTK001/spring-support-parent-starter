@@ -10,6 +10,7 @@ import com.chua.common.support.network.server.request.ServerRequest;
 import com.chua.common.support.network.server.response.ServerResponse;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -75,6 +76,32 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
 
     @Override
     public void doFilter(ServerRequest request, ServerResponse response, ServerFilterChain chain) throws Exception {
+        if (delegate instanceof ReactiveServerFilter reactive) {
+            // 底层逻辑全在响应式 doFilter（如 FileStorageServerFilter，其阻塞版 doFilter 为纯透传）。
+            // 双接口过滤器经 addFilter 注册后，响应式链按「底层实例」去重时保留的是本类的同步包装面；
+            // 若这里仍直接透传，插件会被彻底架空（所有业务请求落到默认 404 处理器）。
+            // 与下方 reactive→sync 桥接互为镜像：把同步链下游包成响应式链，同步等待完成后返回。
+            CompletionStage<Void> stage = reactive.doFilter(request, response, new ReactiveFilterChain() {
+                @Override
+                public CompletionStage<Void> doFilter(ServerRequest nextRequest, ServerResponse nextResponse) {
+                    try {
+                        chain.doFilter(nextRequest, nextResponse);
+                        return CompletableFuture.completedFuture(null);
+                    } catch (Exception e) {
+                        return CompletableFuture.failedFuture(e);
+                    }
+                }
+            });
+            try {
+                stage.toCompletableFuture().join();
+            } catch (CompletionException e) {
+                if (e.getCause() instanceof Exception ex) {
+                    throw ex;
+                }
+                throw e;
+            }
+            return;
+        }
         delegate.doFilter(request, response, chain);
     }
 
