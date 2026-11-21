@@ -2675,7 +2675,7 @@ public class WorldSimServiceImpl implements WorldSimService {
         }
 
         GenerateService.Request request = new GenerateService.Request(
-                type, model.toString(), prompt, null,
+                type, model.toString(), prompt, null, null,
                 video ? videoSize(model.toString()) : MEDIA_SIZE,
                 MEDIA_COUNT,
                 video ? VIDEO_DURATION : null,
@@ -2696,7 +2696,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             mat.head().put("videoMode", "text2video");
             mat.head().put("videoFallbackReason", reason);
             GenerateService.Request fallback = new GenerateService.Request(
-                    type, model.toString(), prompt, null, videoSize(model.toString()), MEDIA_COUNT,
+                    type, model.toString(), prompt, null, null, videoSize(model.toString()), MEDIA_COUNT,
                     VIDEO_DURATION, null, null, null, null, null, AiUserContext.requireUserId());
             return generateService.create(fallback);
         }

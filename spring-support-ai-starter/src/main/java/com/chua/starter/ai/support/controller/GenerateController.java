@@ -90,9 +90,18 @@ public class GenerateController {
         private String model;
 
         /**
-         * 正向提示词（必填）
+         * 正向提示词（必填，用户原文）
          */
         private String prompt;
+
+        /**
+         * 风格描述文本（可选）。
+         *
+         * <p>风格语义由后端拼接：本字段是「选中风格」对应的描述文案，后端把它与
+         * {@code prompt} 拼成完整提示词，落 {@code sys_ai_generate_task_final_prompt} 列
+         * 并送模型生成；{@code prompt} 列只存用户原文。</p>
+         */
+        private String stylePrompt;
 
         /**
          * 负面提示词
@@ -269,7 +278,7 @@ public class GenerateController {
         String userId = AiUserContext.requireUserId();
         try {
             GenerateService.Request request = new GenerateService.Request(
-                    body.getType(), body.getModel(), body.getPrompt(), body.getNegativePrompt(),
+                    body.getType(), body.getModel(), body.getPrompt(), body.getStylePrompt(), body.getNegativePrompt(),
                     body.getSize(), body.getCount(), body.getDuration(), body.getSeed(),
                     body.getStyle(), body.getQuality(), body.getSteps(), body.getReferenceImage(), userId);
             SysAiGenerateTask task = generateService.create(request);
@@ -495,6 +504,7 @@ public class GenerateController {
         map.put("status", task.getStatus());
         map.put("progress", task.getProgress());
         map.put("prompt", task.getPrompt());
+        map.put("finalPrompt", task.getFinalPrompt());
         map.put("negativePrompt", task.getNegativePrompt());
         map.put("model", task.getModel());
         map.put("size", task.getSize());

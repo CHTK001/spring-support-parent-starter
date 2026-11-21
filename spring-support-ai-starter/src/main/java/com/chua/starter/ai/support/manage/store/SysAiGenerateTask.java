@@ -80,10 +80,19 @@ public class SysAiGenerateTask implements Serializable {
     private Integer progress; // 进度
 
     /**
-     * 正向提示词
+     * 正向提示词（用户原文，不含风格拼接文本）
      */
     @TableField("sys_ai_generate_task_prompt")
     private String prompt; // 提示词
+
+    /**
+     * 拼接后的完整提示词（风格描述 + 用户提示词），实际送模型生成用。
+     *
+     * <p>风格语义由后端拼接：{@link #prompt} 只保留用户原文，
+     * 拼接结果单独落本列，供前端展示与一键复制。无风格时与 {@link #prompt} 同值。</p>
+     */
+    @TableField("sys_ai_generate_task_final_prompt")
+    private String finalPrompt; // 拼接后的完整提示词
 
     /**
      * 负面提示词

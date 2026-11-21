@@ -1,0 +1,142 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
+package com.chua.starter.ai.support.manage.store;
+
+import com.chua.common.support.lang.datasource.dialect.SqlName;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * 生成任务表结构轻量迁移器。
+ *
+ * <p>为 {@code sys_ai_generate_task} 幂等补齐<b>拼接提示词</b>列
+ * {@code sys_ai_generate_task_final_prompt}：风格语义由后端拼接，
+ * {@code prompt} 列只存用户原文，拼接结果（风格描述 + 用户提示词，实际送模型生成）
+ * 单独落本列，供前端展示与一键复制。新库由 {@code db/init/V7.0__init_all_ai.sql}
+ * 建表时直接带上该列，本迁移器只服务存量库。</p>
+ *
+ * <p>应用启动后通过 JDBC 幂等执行；当数据库暂不可达时后台每 30 秒重试，
+ * 成功后自动停止，避免因瞬时连接问题导致列缺失。</p>
+ *
+ * @author CH
+ */
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class GenerateTaskSchemaMigrator implements ApplicationRunner {
+
+    /**
+     * 迁移目标表名
+     */
+    private static final String TABLE = "sys_ai_generate_task";
+
+    /**
+     * 迁移目标列
+     */
+    private static final String COLUMN = "sys_ai_generate_task_final_prompt";
+
+    /**
+     * 列定义（AFTER 定位到用户原文提示词列之后）
+     */
+    private static final String COLUMN_DEF = "TEXT NULL COMMENT '拼接后的完整提示词（风格描述 + 用户提示词），实际送模型生成' AFTER `sys_ai_generate_task_prompt`";
+
+    /**
+     * 数据源
+     */
+    private final DataSource dataSource;
+
+    /**
+     * 重试调度器（懒初始化）
+     */
+    private ScheduledExecutorService retryExecutor;
+
+    @Override
+    public void run(ApplicationArguments args) {
+        tryMigrate();
+    }
+
+    /**
+     * 尝试执行一次迁移，失败则安排重试。
+     *
+     * <p>安全豁免：DDL 的表名、列名来自本类常量；动态列名先经 {@link SqlName#checkSimple(String, String)}
+     * 严格校验，不包含用户输入或用户值。</p>
+     */
+    private synchronized void tryMigrate() {
+        try (Connection connection = dataSource.getConnection()) {
+            final String catalog = connection.getCatalog();
+            final String column = SqlName.checkSimple(COLUMN, "拼接提示词列名");
+            final String table = SqlName.checkSimple(TABLE, "生成任务表名");
+            if (!columnExists(connection, catalog, column)) {
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute("ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + COLUMN_DEF);
+                }
+                log.info("[GenerateTaskSchema] 已添加列 {}.{}", catalog, column);
+            } else {
+                log.debug("[GenerateTaskSchema] 列已存在 {}.{}", catalog, column);
+            }
+            stopRetry();
+        } catch (Exception e) {
+            log.warn("[GenerateTaskSchema] 迁移暂不可用，将在 30 秒后重试: {}", e.getMessage());
+            scheduleRetry();
+        }
+    }
+
+    /**
+     * 判断指定列是否已存在。
+     *
+     * @param connection 数据库连接
+     * @param catalog 目录（数据库名）
+     * @param column 列名
+     * @return 列已存在返回 true
+     * @throws Exception 查询失败时抛出
+     */
+    private static boolean columnExists(Connection connection, String catalog, String column) throws Exception {
+        final String sql = "SELECT 1 FROM information_schema.COLUMNS "
+                + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, catalog);
+            ps.setString(2, TABLE);
+            ps.setString(3, column);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * 安排一次重试（30 秒后），复用单例调度器。
+     */
+    private synchronized void scheduleRetry() {
+        if (retryExecutor == null) {
+// [P3C C1 豁免] 场景化创建线程，需文档化
+            retryExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+// [P3C C1 豁免] 场景化创建线程，需文档化
+                Thread thread = new Thread(r, "generate-task-schema-retry");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        retryExecutor.schedule(this::tryMigrate, 30, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 停止重试并关闭调度器。
+     */
+    private synchronized void stopRetry() {
+        if (retryExecutor != null) {
+            retryExecutor.shutdownNow();
+            retryExecutor = null;
+        }
+    }
+}

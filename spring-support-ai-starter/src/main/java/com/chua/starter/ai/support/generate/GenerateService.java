@@ -279,7 +279,8 @@ public class GenerateService {
        *
        * @param type           任务类型（image / video）
        * @param model          模型名
-       * @param prompt         正向提示词
+       * @param prompt         正向提示词（用户原文）
+       * @param stylePrompt    风格描述文本，由后端拼接到 prompt 前并单独落 finalPrompt 列
        * @param negativePrompt 负面提示词
        * @param size           分辨率（WxH）
        * @param count          请求张数
@@ -295,6 +296,7 @@ public class GenerateService {
             String type,
             String model,
             String prompt,
+            String stylePrompt,
             String negativePrompt,
             String size,
             Integer count,
@@ -379,7 +381,7 @@ public class GenerateService {
               // 看不到「已入队」。这一步是真实可观测的（线程还没接手），因此补一次持久化。
             markProgress(task, PROGRESS_QUEUED);
               // 同步实现：交线程池执行，HTTP 线程立即返回
-            runImageAsync(task, pending.client(), request.prompt());
+            runImageAsync(task, pending.client(), effectivePrompt(task));
         }
         return task;
     }
@@ -750,7 +752,7 @@ public class GenerateService {
                 .size(splitWidth(request.size()), splitHeight(request.size()))
                 .negativePrompt(blankToNull(request.negativePrompt()))
                   // style 不再作为上游参数下发（见 OpenAiImageClient 注释），
-                  // 风格语义由前端拼进 prompt；这里保留透传以兼容仍支持该参数的实现。
+                  // 风格语义由后端拼接进 finalPrompt（风格描述 + 用户原文）并以此出图；这里保留透传以兼容仍支持该参数的实现。
                 .style(blankToNull(request.style()))
                 .quality(blankToNull(request.quality()))
                 .seed(request.seed())
@@ -762,7 +764,7 @@ public class GenerateService {
         try {
               // 上游任务号另存，绝不写回主键：主键在 insert 时就已定下并已返回给前端，
               // 再改它等于让前端拿着一个库里不存在的 id 去轮询（表现为卡片永远 0%）。
-            putProviderTaskId(task, client.createTask(request.prompt()));
+            putProviderTaskId(task, client.createTask(effectivePrompt(task)));
             task.setCount(count);
             task.setStatus(SysAiGenerateTask.STATUS_PENDING);
             return null;
@@ -1255,7 +1257,7 @@ public class GenerateService {
                 .size(splitWidth(request.size()), splitHeight(request.size()))
                 .duration(request.duration())
                 .negativePrompt(blankToNull(request.negativePrompt()))
-                  // 同图像：style 由前端拼进 prompt，这里保留透传以兼容支持的实现
+                  // 同图像：style 由后端拼接进 finalPrompt 并以此出图，这里保留透传以兼容支持的实现
                 .style(blankToNull(request.style()))
                 .quality(blankToNull(request.quality()))
                 .seed(request.seed());
@@ -1271,7 +1273,7 @@ public class GenerateService {
         if (reference != null) {
             client = clientReference(client, reference);
         }
-        String taskId = client.createTask(request.prompt());
+        String taskId = client.createTask(effectivePrompt(task));
           // 同图像：上游任务号另存，主键自 insert 起不再改动
         putProviderTaskId(task, taskId);
         task.setStatus(SysAiGenerateTask.STATUS_PENDING);
@@ -1390,10 +1392,45 @@ public class GenerateService {
        * @param type    任务类型
        * @return 任务行（taskId 待提交后回填）
        */
+    /**
+     * 拼接完整提示词：风格描述在前、用户原文在后，用中文逗号连接。
+     *
+     * <p>用户文本里已包含风格描述时不再重复拼接；风格描述为空时原样返回用户文本。
+     * 拼接结果只落 {@code final_prompt} 列，{@code prompt} 列保持用户原文。</p>
+     *
+     * @param prompt      用户提示词原文
+     * @param stylePrompt 风格描述文本
+     * @return 实际送模型生成的完整提示词
+     */
+    private static String splicePrompt(String prompt, String stylePrompt) {
+        String base = prompt == null ? "" : prompt.trim();
+        String desc = stylePrompt == null ? "" : stylePrompt.trim();
+        if (desc.isEmpty() || base.contains(desc)) {
+            return base;
+        }
+        return base.isEmpty() ? desc : desc + "，" + base;
+    }
+
+    /**
+     * 任务实际送模型生成的提示词：优先取后端拼接的 {@code finalPrompt}；
+     * 存量数据（本列上线前落库、值为空）回退到 {@code prompt} 列。
+     *
+     * @param task 任务行
+     * @return 完整提示词
+     */
+    private static String effectivePrompt(SysAiGenerateTask task) {
+        return task.getFinalPrompt() == null || task.getFinalPrompt().isBlank()
+                ? task.getPrompt() : task.getFinalPrompt();
+    }
+
     private static SysAiGenerateTask buildTask(Request request, String type) {
         SysAiGenerateTask task = new SysAiGenerateTask();
         task.setType(type);
         task.setPrompt(request.prompt());
+          // 风格语义由后端拼接：prompt 列只存用户原文，拼接结果单独落 finalPrompt 列，
+          // 实际出图用 finalPrompt（见 effectivePrompt）。用户文本里已包含风格描述时
+          // 不再重复拼接（「再次生成」回填的旧文本可能已带着描述）。
+        task.setFinalPrompt(splicePrompt(request.prompt(), request.stylePrompt()));
         task.setNegativePrompt(blankToNull(request.negativePrompt()));
         task.setModel(request.model());
         task.setSeed(request.seed());
