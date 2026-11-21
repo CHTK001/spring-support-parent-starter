@@ -9,10 +9,12 @@ import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.RemoteFileStatVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.spi.SectionUnavailableException;
 import com.chua.starter.monitor.support.spi.SshConnectionCache;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
+import com.chua.starter.monitor.support.support.RemoteFileStatProbe;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -795,6 +797,11 @@ public class PosixSshDelegate implements SystemInfoProvider {
     @Override
     public String exec(MsServerHost host, String cmd) {
         return sshCache().exec(host, cmd, 30000);
+    }
+
+    @Override
+    public RemoteFileStatVO statFile(MsServerHost host, String remotePath) {
+        return RemoteFileStatVO.parse(exec(host, RemoteFileStatProbe.posix(shQuote(remotePath))));
     }
 
     @Override

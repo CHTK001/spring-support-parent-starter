@@ -10,11 +10,14 @@ import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.RemoteFileStatVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
+import com.chua.starter.monitor.support.support.RemoteFileStatProbe;
 import com.chua.starter.monitor.support.spi.RowNormalizer;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.support.ShellSupport;
+import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.entity.MsServerHost;
 import lombok.extern.slf4j.Slf4j;
 
@@ -318,6 +321,18 @@ public class AgentProvider implements SystemInfoProvider {
     public String exec(MsServerHost h, String cmd) {
         String url = agentUrl(h) + "/exec?cmd=" + urlEncode(cmd) + "&timeout=" + AGENT_EXEC_TIMEOUT_SECONDS;
         return unwrapExec(body(url, AGENT_EXEC_READ_TIMEOUT));
+    }
+
+    @Override
+    public RemoteFileStatVO statFile(MsServerHost h, String remotePath) {
+        String cmd;
+        if (Platforms.isWindows(platform(h))) {
+            // 与 SSH/WinRM 通道同一套 EncodedCommand 下发，避开 Agent 外壳的引号差异
+            cmd = PowerShellCommand.encoded(RemoteFileStatProbe.windows(RemoteFileStatProbe.psQuote(remotePath)));
+        } else {
+            cmd = RemoteFileStatProbe.posix(RemoteFileStatProbe.shQuote(remotePath));
+        }
+        return RemoteFileStatVO.parse(exec(h, cmd));
     }
 
     /**

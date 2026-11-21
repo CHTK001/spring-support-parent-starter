@@ -12,6 +12,7 @@ import com.chua.starter.monitor.support.model.DriverRowVO;
 import com.chua.starter.monitor.support.model.DeletedFilesVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
 import com.chua.starter.monitor.support.model.FileEntryVO;
+import com.chua.starter.monitor.support.model.RemoteFileStatVO;
 import com.chua.starter.monitor.support.model.FirewallRuleInputVO;
 import com.chua.starter.monitor.support.model.FirewallRuleRowVO;
 import com.chua.starter.monitor.support.model.HostActionVO;
@@ -348,6 +349,21 @@ public interface SystemInfoProvider {
      * @return 成功返回 true
      */
     boolean uploadFile(MsServerHost host, String remotePath, InputStream data, long size);
+
+    /**
+     * 读取远端文件 stat 信息（存在性、大小、最后修改时间、MD5）。
+     *
+     * <p>供上传覆盖判定使用：md5 一致跳过、目标较新拒绝覆盖。默认返回 null 表示通道不支持，
+     * 调用方退回「直接覆盖」的既有行为；实现类应尽力返回结果而不是抛错——stat 失败时
+     * 上传大概率也会失败，不必在这里把可用性打掉。</p>
+     *
+     * @param host       目标主机
+     * @param remotePath 远端文件路径
+     * @return stat 结果；通道不支持或信息不可得时返回 null
+     */
+    default RemoteFileStatVO statFile(MsServerHost host, String remotePath) {
+        return null;
+    }
 
     /**
      * 下载目标主机文件。

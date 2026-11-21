@@ -19,7 +19,9 @@ import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessThreadRowVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.model.SystemListVO;
+import com.chua.starter.monitor.support.model.UploadResultVO;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
+import com.chua.starter.monitor.support.service.HostFileUploadService;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
 import com.chua.starter.monitor.support.support.ShellSupport;
@@ -95,6 +97,12 @@ public class SystemManageController {
      */
     @Autowired
     private SystemInfoProviderRouter providerRouter;
+
+    /**
+     * 上传统一入口：上传前做 md5 + 更新时间覆盖判定
+     */
+    @Autowired
+    private HostFileUploadService uploadService;
 
     /**
      * 主机与其可用通道 Provider 的配对结果。
@@ -810,24 +818,28 @@ public class SystemManageController {
     /**
      * 上传文件到主机。
      *
-     * @param hostId 主机 ID，为空表示管控机本机
-     * @param path   远端目标路径（含文件名）
-     * @param file   上传的文件
-     * @return 操作结果
+     * <p>带覆盖判定：目标存在且 md5 一致时跳过；md5 不一致且目标更新时间较新时拒绝覆盖
+     * （需 force 强制）。判定信息取不到时退回直接覆盖的既有行为。</p>
+     *
+     * @param hostId             主机 ID，为空表示管控机本机
+     * @param path               远端目标路径（含文件名）
+     * @param sourceLastModified 源文件最后修改时间（浏览器 File.lastModified，epoch 毫秒），可为空
+     * @param force              目标较新时是否仍强制覆盖
+     * @param file               上传的文件
+     * @return 判定与上传结果
      */
     @Operation(summary = "上传文件")
     @PostMapping("/files/upload")
-    public Mono<ReturnResult<String>> uploadFile(@RequestParam(required = false) Long hostId,
-                                                 @RequestParam String path,
-                                                 @RequestParam("file") MultipartFile file) {
+    public Mono<ReturnResult<UploadResultVO>> uploadFile(@RequestParam(required = false) Long hostId,
+                                                         @RequestParam String path,
+                                                         @RequestParam(required = false) Long sourceLastModified,
+                                                         @RequestParam(required = false, defaultValue = "false") boolean force,
+                                                         @RequestParam("file") MultipartFile file) {
         return Mono.fromCallable(() -> {
             HostChannel ch = channelOf(hostId);
-            boolean done = ch.provider().uploadFile(ch.host(), path, file.getInputStream(), file.getSize());
-            return done
-                    ? ReturnResult.ok((hostId == null ? "已写入本机: " : "已上传: ") + path)
-                    : ReturnResult.<String>error("上传失败: " + path);
+            return ReturnResult.ok(uploadService.upload(ch.provider(), ch.host(), path, file, sourceLastModified, force));
         }).subscribeOn(Schedulers.boundedElastic())
-          .onErrorResume(e -> Mono.just(ReturnResult.<String>error("上传失败: " + e.getMessage())));
+          .onErrorResume(e -> Mono.just(ReturnResult.<UploadResultVO>error("上传失败: " + e.getMessage())));
     }
 
     /**

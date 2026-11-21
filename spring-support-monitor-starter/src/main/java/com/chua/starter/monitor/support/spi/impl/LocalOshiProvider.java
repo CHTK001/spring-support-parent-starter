@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.spi.impl;
 
 import com.chua.common.support.spi.annotations.Spi;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.monitor.support.model.DiskRowVO;
 import com.chua.starter.monitor.support.model.EnvVarVO;
@@ -10,6 +11,7 @@ import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
+import com.chua.starter.monitor.support.model.RemoteFileStatVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.service.LocalSystemInfoService;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
@@ -27,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -235,6 +238,27 @@ public class LocalOshiProvider implements SystemInfoProvider {
             log.warn("[local] 命令执行失败 cmd={}: {}", cmd, e.getMessage());
             throw new IllegalStateException("本机命令执行失败: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()), e);
         }
+    }
+
+    @Override
+    public RemoteFileStatVO statFile(MsServerHost host, String remotePath) {
+        File f = new File(remotePath);
+        if (!f.isFile()) {
+            return RemoteFileStatVO.missing();
+        }
+        Long mtime = null;
+        try {
+            mtime = Files.getLastModifiedTime(f.toPath()).toMillis();
+        } catch (Exception e) {
+            log.debug("[local] 取 mtime 失败: {}", remotePath);
+        }
+        String md5 = null;
+        try {
+            md5 = DigestUtils.md5Hex(f.toPath());
+        } catch (Exception e) {
+            log.debug("[local] 取 md5 失败: {}", remotePath);
+        }
+        return new RemoteFileStatVO(true, f.length(), mtime, md5);
     }
 
     @Override

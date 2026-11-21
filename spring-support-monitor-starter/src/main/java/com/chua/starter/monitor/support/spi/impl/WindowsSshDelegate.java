@@ -10,10 +10,12 @@ import com.chua.starter.monitor.support.model.HostInfoVO;
 import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
+import com.chua.starter.monitor.support.model.RemoteFileStatVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.monitor.support.spi.RowNormalizer;
 import com.chua.starter.monitor.support.spi.SshConnectionCache;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
+import com.chua.starter.monitor.support.support.RemoteFileStatProbe;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.connection.PowerShellCommand;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -609,6 +611,11 @@ public class WindowsSshDelegate implements SystemInfoProvider {
         }
           // PowerShell 解析期错误不进 try/catch，探针行必须由通道自己补上，否则空输出会被当成成功
         return append(append(r.stdout(), ShellSupport.FAIL_MARK + ":远端退出码 " + r.exitCode()), r.stderr());
+    }
+
+    @Override
+    public RemoteFileStatVO statFile(MsServerHost host, String remotePath) {
+        return RemoteFileStatVO.parse(ps(host, RemoteFileStatProbe.windows(psQuote(remotePath))));
     }
 
       /**

@@ -10,6 +10,7 @@ import com.chua.starter.monitor.support.model.NetProcessRowVO;
 import com.chua.starter.monitor.support.model.NetworkInterfaceRowVO;
 import com.chua.starter.monitor.support.model.ProcessRowVO;
 import com.chua.starter.monitor.support.model.ProcessSummaryVO;
+import com.chua.starter.monitor.support.model.RemoteFileStatVO;
 import com.chua.starter.monitor.support.model.ServiceRowVO;
 import com.chua.starter.datasourcehub.support.spi.Platforms;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
@@ -118,6 +119,11 @@ public class SshProvider implements SystemInfoProvider {
     @Override
     public boolean uploadFile(MsServerHost host, String remotePath, InputStream data, long size) {
         return delegate(host).uploadFile(host, remotePath, data, size);
+    }
+
+    @Override
+    public RemoteFileStatVO statFile(MsServerHost host, String remotePath) {
+        return delegate(host).statFile(host, remotePath);
     }
 
     @Override

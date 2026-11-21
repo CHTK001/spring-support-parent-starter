@@ -4,8 +4,10 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.model.DiskUsageNodeVO;
 import com.chua.starter.monitor.support.model.FileEntryVO;
 import com.chua.starter.monitor.support.model.FilePermVO;
+import com.chua.starter.monitor.support.model.UploadResultVO;
 import com.chua.starter.monitor.support.spi.SystemInfoProvider;
 import com.chua.starter.monitor.support.spi.SystemInfoProviderRouter;
+import com.chua.starter.monitor.support.service.HostFileUploadService;
 import com.chua.starter.monitor.support.support.ShellSupport;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -62,6 +64,11 @@ public class HostFileController {
      * 系统信息 Provider 路由器
      */
     private final SystemInfoProviderRouter providerRouter;
+
+    /**
+     * 上传统一入口：上传前做 md5 + 更新时间覆盖判定
+     */
+    private final HostFileUploadService uploadService;
 
     /**
      * 列出目录。
@@ -234,27 +241,30 @@ public class HostFileController {
     /**
      * 上传文件到指定目录。
      *
-     * @param hostId 主机标识
-     * @param path   目标目录
-     * @param file   上传文件
-     * @return 远端完整路径
+     * <p>带覆盖判定：目标存在且 md5 一致时跳过；md5 不一致且目标更新时间较新时拒绝覆盖
+     * （需 force 强制）。判定信息取不到时退回直接覆盖的既有行为。</p>
+     *
+     * @param hostId              主机标识
+     * @param path                目标目录
+     * @param sourceLastModified  源文件最后修改时间（浏览器 File.lastModified，epoch 毫秒），可为空
+     * @param force               目标较新时是否仍强制覆盖
+     * @param file                上传文件
+     * @return 判定与上传结果
      */
     @Operation(summary = "上传文件")
     @PostMapping("/upload")
-    public ReturnResult<String> upload(@PathVariable Long hostId,
-                                       @RequestParam(required = false) String path,
-                                       @RequestParam("file") MultipartFile file) {
+    public ReturnResult<UploadResultVO> upload(@PathVariable Long hostId,
+                                               @RequestParam(required = false) String path,
+                                               @RequestParam(required = false) Long sourceLastModified,
+                                               @RequestParam(required = false, defaultValue = "false") boolean force,
+                                               @RequestParam("file") MultipartFile file) {
         MsServerHost host = load(hostId);
         if (host == null) {
             return ReturnResult.error("主机不存在: " + hostId);
         }
         try {
             String remote = joinPath(path, file.getOriginalFilename(), host);
-            boolean ok;
-            try (InputStream in = file.getInputStream()) {
-                ok = provider(host).uploadFile(host, remote, in, file.getSize());
-            }
-            return ok ? ReturnResult.success(remote) : ReturnResult.error("上传失败: " + remote);
+            return ReturnResult.success(uploadService.upload(provider(host), host, remote, file, sourceLastModified, force));
         } catch (Exception e) {
             return ReturnResult.error("上传失败: " + e.getMessage());
         }
