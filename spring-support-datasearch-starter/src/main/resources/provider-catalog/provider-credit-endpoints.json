@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-11-18",
-  "source": "HostCreditQueryProvider 的 15 条官方预设迁移为数据；现含 Bearer 官方预设 20 家 + 账户级 AK/SK 签名 6 家（阿里云 / 火山 / 百度 / 七牛 / 腾讯云 / 华为云）",
-  "note": "只登记官方文档明确写了余额 / 额度接口的厂商；未收录的厂商走 OpenAI 兼容探测（billing / new-api / sub2api / 表达式），不在这里猜地址。openrouter 不在登记表：/api/v1/credits 需管理 Key、普通推理 Key 会 403，且剩余=充值−消费不能按两个独立读数展示，已改为专用实现 OpenRouterCreditQueryProvider（403 时回落 /api/v1/key）。opencode-console 为登记口径的例外：Zen 现金余额官方无 API（upstream #10448），登记的是控制台同源接口（非公开文档 API），已在 notes 注明。",
-  "count": 27,
+  "generated_at": "2026-11-21",
+  "source": "HostCreditQueryProvider 的 15 条官方预设迁移为数据；现含 Bearer 官方预设 23 家 + 账户级 AK/SK 签名 6 家（阿里云 / 火山 / 百度 / 七牛 / 腾讯云 / 华为云）",
+  "note": "只登记官方文档明确写了余额 / 额度接口的厂商；未收录的厂商走 OpenAI 兼容探测（billing / new-api / sub2api / 表达式），不在这里猜地址。openrouter 不在登记表：/api/v1/credits 需管理 Key、普通推理 Key 会 403，且剩余=充值−消费不能按两个独立读数展示，已改为专用实现 OpenRouterCreditQueryProvider（403 时回落 /api/v1/key）。opencode-console 为登记口径的例外：Zen 现金余额官方无 API（upstream #10448），登记的是控制台同源接口（非公开文档 API），已在 notes 注明。2026-11-21 新增 zenmux、bai（b.ai）两条：官方文档均明确写了余额接口，本机直连不可达，假令牌经代理 7897 探活分别返回 403 / 401，路由确认存在，verified=true。DigitalOcean（api.digitalocean.com/v2/customers/my/balance）与 Vultr（api.vultr.com/v2/account）官方也有余额接口，但余额域与模型域（inference.do-ai.run / api.vultrinference.com）不同主域，纯 JSON 登记会被同源兜底拦死，暂不登记。",
+  "count": 29,
   "entries": [
     {
       "id": "deepseek",
@@ -474,6 +474,39 @@
       "signType": null,
       "verified": true,
       "notes": "账单接口为非公开文档路由（控制台同源使用），返回 credit_balance 等订阅字段，币种 EUR；Key 需 see_org_inference_usage 权限（403=缺权限）"
+    },
+    {
+      "id": "zenmux",
+      "name": "ZenMux",
+      "aliases": [
+        "zenmux"
+      ],
+      "hosts": [
+        "zenmux.ai"
+      ],
+      "url": "https://zenmux.ai/api/v1/management/payg/balance",
+      "expression": "$data.total_credits; $data.top_up_credits; $data.bonus_credits",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档核对：GET /api/v1/management/payg/balance，鉴权只收 Management API Key（标准推理 Key 会返回不支持）；total_credits = top_up_credits + bonus_credits，单位 USD；余额域与模型域 zenmux.ai 同主域；假令牌探活 403 Invalid API key（本机直连不可达，经代理 7897），路由确认存在"
+    },
+    {
+      "id": "bai",
+      "name": "b.ai",
+      "aliases": [
+        "bai",
+        "b-ai"
+      ],
+      "hosts": [
+        "api.b.ai"
+      ],
+      "url": "https://api.b.ai/v1/balance",
+      "expression": "$data.personal_balance / 1000000; $data.team.team_balance / 1000000",
+      "currency": "usd",
+      "signType": null,
+      "verified": true,
+      "notes": "官方文档核对：GET /v1/balance，鉴权 Bearer 或 x-api-key 均可；个人 Key 返回 data.personal_balance，团队管理员 Key 另有 data.team.team_balance（非管理员无此字段）；官方定价页明确 1 USD = 1,000,000 Credits，表达式已除以 1e6 换算为美元；假令牌探活 401 Invalid api_key format（本机直连不可达，经代理 7897），路由确认存在"
     }
   ]
 }
