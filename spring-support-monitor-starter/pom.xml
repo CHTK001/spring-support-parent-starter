@@ -27,6 +27,15 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+        <!-- 日志中心：plugin.logger.type=both 时本模块既是采集端（自身日志回推）
+             也是服务端（/v2/logger REST/SSE + TCP 19391 接收端）。
+             common-starter 已传递引入本 starter，这里显式声明以固定「monitor 直接承载
+             日志中心」的能力契约，避免上游调整传递关系后静默丢失。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-logger-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- 监控双模式核心：Agent 上报协议（心跳/指标/任务/状态 record）与指标点模型。
              本模块定位为服务端；协议模型与客户端引擎在 core，FQN 不变，存量引用零改动。 -->
         <dependency>

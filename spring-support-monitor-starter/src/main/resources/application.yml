@@ -138,12 +138,12 @@ plugin:
   api:
     request-decode:
       enable: false
-  # 上报客户端（report-client）注册服务端：
-  # 应用侧引入 spring-support-report-client-starter 后，经 SyncClient 连接本服务端并发送
+  # 上报客户端注册服务端：
+  # 客户端应用经 SyncClient 连接本服务端并发送
   #   - sync/client/register  （客户端注册：ip/port/应用名）
   #   - monitor/app/report    （定时应用信息：serviceUrl/JVM/OS/启动时间等）
   # 「节点管理 → 在线节点」与 /ms/monitor/node/discovery 依据这些注册信息展示在线节点。
-  # 端口通过 MONITOR_SYNC_PORT 覆盖（默认 19380，与 report-client 默认服务端端口一致）。
+  # 端口通过 MONITOR_SYNC_PORT 覆盖（默认 19380）。
   # 协议用 tcp：report 客户端的 HttpSyncClient.send 把 topic 当成表单键（服务端按 topic= 解析），
   # http 模式下注册消息会被服务端拒绝；tcp 是两端已对齐且经真实验收的链路。
   sync:
@@ -266,6 +266,17 @@ plugin:
   queue:
     enable: true
     type: local
+  # 日志中心（spring-support-logger-starter）：both = 本进程既采集（logback appender
+  # 回推自身日志）也服务（/v2/logger REST + SSE 查询端点、TCP 接收端）。
+  # 单进程闭环：客户端自动回环 tcp://127.0.0.1:{server.port}，无需独立日志中心部署。
+  logger:
+    type: both
+    server:
+      # logger TCP 接收端口：与 agent 上报 19390 / sync 19380 / socketio 29181 互不相干
+      port: 19391
+    storage:
+      # 复用容器 DataSource（monitordb）：JdbcKvEngine 首次使用时懒建 sys_support_kv，无需手导 SQL
+      engine: datasource-bean
   # 时序存储引擎：datasource / redis / influxdb / questdb / none（默认 datasource）
   # datasource：JDBC 数据库明细表（用 Engine + SqlExecutor）
   # redis：Redis ZSET 简化时序（默认取 spring.data.redis；plugin.monitor.timeseries.url 配成 redis:// 地址时覆盖）
