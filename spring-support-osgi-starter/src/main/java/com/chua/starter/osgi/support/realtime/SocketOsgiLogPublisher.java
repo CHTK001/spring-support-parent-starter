@@ -1,7 +1,7 @@
 package com.chua.starter.osgi.support.realtime;
 
 import com.chua.socket.support.session.SocketSessionTemplate;
-import com.chua.starter.common.support.text.json.Json;
+import com.chua.common.support.lang.json.Json;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 

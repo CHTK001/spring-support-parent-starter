@@ -1,0 +1,404 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
+package com.chua.starter.logger.store;
+
+import com.chua.common.support.lang.datasource.kv.KvEngine;
+import com.chua.common.support.lang.datasource.series.SeriesEngine;
+import com.chua.starter.logger.event.LoggerEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * 持久化日志存储（engine=datasource-bean / redis-bean）：
+ * 原始事件落 {@link KvEngine}（带保留期 TTL），每秒事件速率落 {@link SeriesEngine}
+ * （target=logger_eps），应用/实例登记与计数复用 KvEngine。
+ *
+ * <p>键布局：
+ * <ul>
+ *   <li>事件：{@code logger:{app}:{ts:016d}:{seq:06d}}（字典序即时间序）</li>
+ *   <li>应用登记：{@code logger-app:{app}}</li>
+ *   <li>实例登记：{@code logger-inst:{app}:{instanceHash}}（TTL 2h）</li>
+ *   <li>计数：{@code logger-cnt:{app}:total|error}</li>
+ * </ul></p>
+ *
+ * @author CH
+ * @since 4.0.0.51
+ */
+public class KvLoggerEventStore implements LoggerEventStore {
+
+    /**
+     * JSON 序列化
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * 事件速率指标名
+     */
+    private static final String EPS_TARGET = "logger_eps";
+
+    private final KvEngine kv;
+    private final SeriesEngine series;
+    private final long retentionHours;
+    private final AtomicInteger seq = new AtomicInteger();
+
+    /**
+     * @param kv             KV 引擎（必填）
+     * @param series         时序引擎（可空：无则 eps 由事件扫描聚合）
+     * @param retentionHours 保留时长（小时）
+     */
+    public KvLoggerEventStore(KvEngine kv, SeriesEngine series, long retentionHours) {
+        this.kv = kv;
+        this.series = series;
+        this.retentionHours = retentionHours <= 0 ? 72L : retentionHours;
+    }
+
+    @Override
+    public void append(List<LoggerEvent> events) {
+        if (events == null || events.isEmpty()) {
+            return;
+        }
+        Duration ttl = Duration.ofHours(retentionHours);
+        Map<String, Integer> epsCounts = new HashMap<>();
+        for (LoggerEvent event : events) {
+            String key = eventKey(event);
+            try {
+                String json = MAPPER.writeValueAsString(event);
+                if (kv.supportsTtl()) {
+                    kv.put(key, json, ttl);
+                } else {
+                    kv.put(key, json);
+                }
+            } catch (Exception e) {
+                // 单条写入失败不阻断批次
+                continue;
+            }
+            touchRegistry(event, ttl);
+            epsCounts.merge(String.valueOf(event.getApp()), 1, Integer::sum);
+            String cntKey = "logger-cnt:" + event.getApp() + ":total";
+            String errKey = "logger-cnt:" + event.getApp() + ":error";
+            try {
+                kv.incr(cntKey);
+                if ("ERROR".equalsIgnoreCase(event.getLevel())) {
+                    kv.incr(errKey);
+                }
+            } catch (Exception ignored) {
+                // 计数失败不影响主流程
+            }
+        }
+        writeEps(epsCounts);
+    }
+
+    @Override
+    public LoggerPage query(String app, String instance, String level, String keyword,
+                            Long start, Long end, String cursor, int limit) {
+        Set<String> levels = MemoryLoggerEventStore.levels(level);
+        String kw = keyword == null ? "" : keyword.trim().toLowerCase();
+        String cursorKey = cursor == null ? "" : cursor.trim();
+
+        List<Object[]> matched = new ArrayList<>();
+        String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
+        Map<String, String> all = kv.findAllByPrefix(prefix);
+        List<String> keys = new ArrayList<>(all.keySet());
+        keys.sort(String::compareTo);
+        for (String key : keys) {
+            long[] order = keyOrder(key);
+            if (order == null) {
+                continue;
+            }
+            if (!cursorKey.isEmpty()) {
+                String[] parts = cursorKey.split(":");
+                if (parts.length >= 2) {
+                    long cTs = parse(parts[0]);
+                    long cSeq = parse(parts[1]);
+                    if (order[0] < cTs || (order[0] == cTs && order[1] <= cSeq)) {
+                        continue;
+                    }
+                }
+            }
+            LoggerEvent event = parseEvent(all.get(key));
+            if (event == null) {
+                continue;
+            }
+            if (MemoryLoggerEventStore.match(event, app, instance, levels, kw, start, end)) {
+                if (matched.size() >= limit) {
+                    break;
+                }
+                matched.add(new Object[]{order[0], order[1], event});
+            }
+        }
+        List<LoggerEvent> items = new ArrayList<>();
+        String nextCursor = "";
+        for (Object[] row : matched) {
+            items.add((LoggerEvent) row[2]);
+            nextCursor = row[0] + ":" + row[1];
+        }
+        boolean hasMore = matched.size() >= limit && anyAfter(keys, all, nextCursor, app, instance, levels, kw, start, end);
+        return new LoggerPage(items, hasMore ? nextCursor : "");
+    }
+
+    @Override
+    public Map<String, Object> stats(String app, String instance) {
+        List<LoggerEvent> events = scanEvents(app, 50000);
+        List<LoggerEvent> filtered = new ArrayList<>();
+        for (LoggerEvent e : events) {
+            if (MemoryLoggerEventStore.match(e, app, instance, null, "", null, null)) {
+                filtered.add(e);
+            }
+        }
+        List<List<Object>> eps = epsFromSeries(app);
+        return MemoryLoggerEventStore.StatsCalculator.compute(filtered, eps);
+    }
+
+    @Override
+    public List<Map<String, Object>> apps() {
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+        for (Map.Entry<String, String> en : kv.findAllByPrefix("logger-app:").entrySet()) {
+            Map<String, Object> node = readMap(en.getValue());
+            if (node == null || node.get("app") == null) {
+                continue;
+            }
+            String app = String.valueOf(node.get("app"));
+            Map<String, Object> row = result.computeIfAbsent("app|" + app, k -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("app", app);
+                m.put("lastSeen", 0L);
+                m.put("eventCount", counter(app, "total"));
+                m.put("errorCount", counter(app, "error"));
+                return m;
+            });
+            row.put("lastSeen", Math.max((Long) row.get("lastSeen"), asLong(node.get("lastSeen"))));
+        }
+        for (Map.Entry<String, String> en : kv.findAllByPrefix("logger-inst:").entrySet()) {
+            Map<String, Object> node = readMap(en.getValue());
+            if (node == null || node.get("app") == null || node.get("instance") == null) {
+                continue;
+            }
+            String app = String.valueOf(node.get("app"));
+            Map<String, Object> row = result.get("app|" + app);
+            if (row == null) {
+                continue;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("app", app);
+            m.put("instance", String.valueOf(node.get("instance")));
+            m.put("host", String.valueOf(node.getOrDefault("host", "")));
+            m.put("lastSeen", asLong(node.get("lastSeen")));
+            m.put("eventCount", counter(app, "total"));
+            m.put("errorCount", counter(app, "error"));
+            result.put("inst|" + app + "|" + node.get("instance"), m);
+        }
+        return new ArrayList<>(result.values());
+    }
+
+    @Override
+    public int delete(String app, String instance, Long before) {
+        int removed = 0;
+        String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
+        for (Map.Entry<String, String> en : kv.findAllByPrefix(prefix).entrySet()) {
+            LoggerEvent event = parseEvent(en.getValue());
+            if (event == null) {
+                continue;
+            }
+            if (MemoryLoggerEventStore.match(event, app, instance, null, "", null, before)
+                    && kv.delete(en.getKey())) {
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    private void touchRegistry(LoggerEvent event, Duration ttl) {
+        try {
+            long now = System.currentTimeMillis();
+            String appKey = "logger-app:" + event.getApp();
+            Map<String, Object> appNode = readMap(kv.get(appKey));
+            if (appNode == null || asLong(appNode.get("lastSeen")) < now - 30_000L) {
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("app", event.getApp());
+                node.put("lastSeen", now);
+                kv.put(appKey, MAPPER.writeValueAsString(node));
+            }
+            String instKey = "logger-inst:" + event.getApp() + ":" + shortHash(event.getInstance());
+            Map<String, Object> instNode = readMap(kv.get(instKey));
+            if (instNode == null || asLong(instNode.get("lastSeen")) < now - 30_000L) {
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("app", event.getApp());
+                node.put("instance", event.getInstance());
+                node.put("host", MemoryLoggerEventStore.hostOf(event.getInstance()));
+                node.put("lastSeen", now);
+                if (kv.supportsTtl()) {
+                    kv.put(instKey, MAPPER.writeValueAsString(node), Duration.ofHours(2));
+                } else {
+                    kv.put(instKey, MAPPER.writeValueAsString(node));
+                }
+            }
+        } catch (Exception ignored) {
+            // 登记失败不影响事件写入
+        }
+    }
+
+    private void writeEps(Map<String, Integer> epsCounts) {
+        if (series == null || epsCounts.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, Integer> en : epsCounts.entrySet()) {
+            try {
+                series.writePoint(EPS_TARGET, appId(en.getKey()), "count", en.getValue(), now);
+            } catch (Exception ignored) {
+                // 指标写入失败不影响主流程
+            }
+        }
+    }
+
+    private List<List<Object>> epsFromSeries(String app) {
+        if (series == null) {
+            return null;
+        }
+        try {
+            Long monitorId = app == null || app.isBlank() ? null : appId(app);
+            return series.series(EPS_TARGET, monitorId, "count", 1, "1m");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private List<LoggerEvent> scanEvents(String app, int max) {
+        List<LoggerEvent> events = new ArrayList<>();
+        String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
+        for (String value : kv.findAllByPrefix(prefix).values()) {
+            LoggerEvent event = parseEvent(value);
+            if (event != null) {
+                events.add(event);
+                if (events.size() >= max) {
+                    break;
+                }
+            }
+        }
+        events.sort(MemoryLoggerEventStore.TS_ORDER);
+        return events;
+    }
+
+    private boolean anyAfter(List<String> keys, Map<String, String> all, String cursor,
+                             String app, String instance, Set<String> levels,
+                             String kw, Long start, Long end) {
+        if (cursor == null || cursor.isEmpty()) {
+            return false;
+        }
+        String[] parts = cursor.split(":");
+        if (parts.length < 2) {
+            return false;
+        }
+        long cTs = parse(parts[0]);
+        long cSeq = parse(parts[1]);
+        for (String key : keys) {
+            long[] order = keyOrder(key);
+            if (order == null || order[0] < cTs || (order[0] == cTs && order[1] <= cSeq)) {
+                continue;
+            }
+            LoggerEvent event = parseEvent(all.get(key));
+            if (event != null && MemoryLoggerEventStore.match(event, app, instance, levels, kw, start, end)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private long counter(String app, String type) {
+        try {
+            String value = kv.get("logger-cnt:" + app + ":" + type);
+            return value == null ? 0L : Long.parseLong(value);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private String eventKey(LoggerEvent event) {
+        long ts = event.getTs() <= 0 ? System.currentTimeMillis() : event.getTs();
+        event.setTs(ts);
+        int s = seq.incrementAndGet() & 0xFFFFF;
+        return "logger:" + event.getApp() + ":"
+                + String.format("%016d", ts) + ":" + String.format("%06d", s);
+    }
+
+    /**
+     * 从事件键解析 (ts, seq)；解析失败返回 null
+     */
+    private static long[] keyOrder(String key) {
+        String[] parts = key.split(":");
+        if (parts.length < 4) {
+            return null;
+        }
+        long ts = parse(parts[2]);
+        long seqVal = parse(parts[3]);
+        return new long[]{ts, seqVal};
+    }
+
+    private LoggerEvent parseEvent(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, LoggerEvent.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> readMap(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, Map.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static long parse(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private static long asLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return value == null ? 0L : Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private static Long appId(String app) {
+        return (long) Math.abs(app.hashCode());
+    }
+
+    private static String shortHash(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            byte[] bytes = digest.digest(String.valueOf(value).getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 4; i++) {
+                sb.append(String.format("%02x", bytes[i]));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "00000000";
+        }
+    }
+}

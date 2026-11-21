@@ -9,7 +9,7 @@ import java.util.Map;
  * <p>
  * 在 {@link com.chua.common.support.network.sync.SyncClient} 基础上，
  * 补充面向业务的批量主题订阅、SPI 处理器注册和 映射 数据发布能力，
- * 供 {@code spring-support-report-client-starter} 等上层模块使用。
+ * 供上报客户端等上层模块使用。
  * </p>
  *
  * @since 2026/08/01

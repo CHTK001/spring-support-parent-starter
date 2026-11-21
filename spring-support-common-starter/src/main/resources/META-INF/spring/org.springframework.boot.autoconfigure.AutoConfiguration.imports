@@ -13,10 +13,5 @@ com.chua.starter.common.support.api.configuration.ApiFilterConfiguration
 com.chua.starter.common.support.api.cors.ApiCorsConfiguration
 com.chua.starter.common.support.api.permission.PermissionControlConfiguration
 com.chua.starter.common.support.api.feature.ApiFeatureConfiguration
-com.chua.starter.common.support.log.LogConfiguration
-com.chua.starter.common.support.log.TracePortalConfiguration
-com.chua.starter.common.support.log.MdcReactorPropagationConfiguration
 com.chua.starter.common.support.actuator.ActuatorConfiguration
 com.chua.starter.common.support.configuration.security.RequestFingerprintAutoConfiguration
-com.chua.starter.common.support.serviceinfo.ServiceInfoAutoConfiguration
-com.chua.starter.common.support.serviceinfo.ServiceInfoContributorAutoConfiguration

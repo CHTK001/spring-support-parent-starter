@@ -10,7 +10,7 @@ Spring Boot 通用支撑 Starter：为宿主应用提供 Web 统一响应与全�
 </dependency>
 ```
 
-装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 登记 21 个自动配置类；`META-INF/spring.factories` 登记 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile 环境后处理）；`META-INF/extensions` 登记 4 个 SPI 扩展点；配置绑定由 17 处 `@ConfigurationProperties` 承担。源码分布在两个包根：`com.chua.starter.common.support`（主包：Web / API / 安全 / 日志 / 渠道契约等）与 `com.chua.common.starter.support`、`com.chua.common.support`、`com.chua.mysql.support`、`com.chua.sharding.v5`、`com.chua.spring.support`（次级根：IP 质量、对象结构、物化路由、binlog、分片、Spring 桥接），完整清单见文末「附录：包结构速览」。
+装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 登记 21 个自动配置类；`META-INF/spring.factories` 登记 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile 环境后处理）；`META-INF/extensions` 登记 4 个 SPI 扩展点；配置绑定由 17 处 `@ConfigurationProperties` 承担。源码分布在两个包根：`com.chua.starter.common.support`（主包：Web / API / 安全 / 日志 / 渠道契约等）与 `com.chua.common.starter.support`、`com.chua.common.support`、`com.chua.mysql.support`、`com.chua.sharding.v5`、`com.chua.spring.support`（次级根：IP 质量、对象结构、物化路由、binlog、分片、Spring 桥接），完整清单见文末「附录：包结构速览」。本模块依赖底层 `utils-support-common-starter`——它是**纯 Java 工具模块，不是 Spring starter**；`@Spi` / `ServiceProvider` SPI 设施与 JSON/XML 门面、HTTP 执行器、类型转换、表达式解析等底层契约均来自该模块，本模块只做 Spring 侧桥接与复用。
 
 ## 一、整体架构
 
@@ -68,7 +68,7 @@ flowchart LR
 
 ## 四、渠道契约层（channel 包）
 
-**设计动机**：渠道实现方（account-starter）与消费方（ai-starter）分处两个业务模块，按模块铁律不得反向依赖。渠道能力的**最小契约**因此下沉到本模块：实现方通过 `@Spi` + 各自模块的 `META-INF/extensions/<接口全限定名>` 注册，消费方用 `ServiceProvider.of(契约.class).list() / getExtension(别名)` 发现，双方互不感知。凭据一律是**不透明 Map**（`access_token` / `refresh_token` / `expires_at`…），由调用方持久化，契约不感知字段形态。
+**设计动机**：渠道实现方（account-starter）与消费方（ai-starter）分处两个业务模块，按模块铁律不得反向依赖。渠道能力的**最小契约**因此下沉到本模块：实现方通过 `@Spi` + 各自模块的 `META-INF/extensions/<接口全限定名>` 注册，消费方用 `ServiceProvider.of(契约.class).list() / getExtension(别名)` 发现（`@Spi` / `ServiceProvider` 由底层 `utils-support-common-starter` 提供，非 Spring 设施），双方互不感知。凭据一律是**不透明 Map**（`access_token` / `refresh_token` / `expires_at`…），由调用方持久化，契约不感知字段形态。
 
 | 契约接口 | since | 职责 | 关键方法 |
 | --- | --- | --- | --- |
@@ -121,9 +121,9 @@ flowchart LR
 | Spring 桥接 | `spring.support.*` | `SpringServiceAutowire`：给**非 Spring 创建的 SPI 实例**补字段注入（SPI 实例也能注入 Mapper/Service）、`createBean` 交容器创建；`PluginBeanRegisteredEvent` / `PluginBeanUnregisteredEvent`：插件 Bean 注册/卸载时发布，监听方可做后续处理 |
 | 隧道配置支撑 | `tunnel.*` | `TunnelRecord`（ngrok/cloudflared 能力并集的落盘模型）+ `TunnelFileStore`（一条映射一个 JSON、临时文件+原子替换、SAFE_ID 防目录穿越、全方法 synchronized、坏文件跳过）+ `TunnelView`（叠加 running/publicUrls/error 等内存运行态）+ `TunnelStatusStream`（守护线程定时取快照，以事件名 `tunnels` SSE 广播，页面免轮询） |
 | IP 质量检测 | `common.starter.support.network.quality.*` | 策略接口 `IpQualityDetector`（非 SPI）+ 结果模型 `IpQuality`（proxy/vpn/tor/dataCenter/riskScore 0-100，`isRisky()` 判定）；离线实现 `IP2ProxyLiteIpQualityDetector`（classpath `IP2PROXY-LITE-PX2.BIN`，BIN 缺失降级为不可用、绝不抛异常），在线实现 `ToDetectIpQualityDetector`（todetect.cn）；HTTP 模板基类统一 OkHttp+Jackson、失败降级返回空结果；`IpQualityProbe` 提供命令行探针 |
-| HTTP 执行器适配 | `WebClientHttpClientExecutor` | `@Spi("webclient")` 实现底层 `HttpClientExecutor`，用 Spring WebClient（10MB 内存上限）执行 `ClientRequest`；classpath 无 WebClient 时自动不可用 |
+| HTTP 执行器适配 | `WebClientHttpClientExecutor` | `@Spi("webclient")` 实现底层 `HttpClientExecutor`（接口在 `utils-support-common-starter`），用 Spring WebClient（10MB 内存上限）执行 `ClientRequest`；classpath 无 WebClient 时自动不可用 |
 | UA 解析 | `network.UserAgent` | UA 串 → 浏览器/操作系统枚举，`isCrawler()` 按 bot/spider/python 等关键字判爬虫 |
-| JSON / XML 门面 | `text.json.Json` / `xml.Xml` | 统一 JSON/XML 出入口，全部委托底层 utils 实现；**其他 spring-\* 模块必须经本类复用，禁止重复实现** |
+| JSON / XML 门面 | `text.json.Json` / `xml.Xml` | 统一 JSON/XML 出入口，全部委托底层 `utils-support-common-starter` 实现；**其他 spring-\* 模块必须经本类复用，禁止重复实现** |
 | 请求体可重复读 | `filter.CustomHttpServletRequestWrapper` | 构造时缓存请求体 byte[]，覆盖 getInputStream/getReader 支持多次读取（日志、指纹、验签场景前置） |
 
 ## 七、Bean 装配矩阵
@@ -283,7 +283,7 @@ if (!IdempotentTemplate.tryAcquire(key, 10, TimeUnit.MINUTES)) {
 | --- | --- | --- |
 | `MediaTypeHandler` | `XmlMediaTypeHandler` | 媒体类型处理（另有 `JsonMediaTypeHandler` / `CsvMediaTypeHandler` 按扩展名取用） |
 | `Formatter` | `DateFormatter` / `NoneFormatter`（`@SpiDefault` 兜底） | 媒体内容按字段类型格式化 |
-| `ExpressionParser` | `SpelExpressionParser` | 表达式解析 |
+| `ExpressionParser` | `SpelExpressionParser` | 表达式解析（SPI 接口在 `utils-support-common-starter` 的 `lang.ast` 包） |
 | `Console` | `DefaultConsole` | watch 日志控制台输出 |
 
 > 注意：新增 `@Spi` 扩展实现且未标 `@AutoSpi` 时，必须手工在 `src/main/resources/META-INF/extensions/<SPI 接口全限定名>` 追加实现类全限定名，否则编译绿但启动时静默不注册。
@@ -296,7 +296,7 @@ if (!IdempotentTemplate.tryAcquire(key, 10, TimeUnit.MINUTES)) {
 - **`CaptchaParser`**（`com.chua.captcha.support`）：classpath 提供实现并开启 `plugin.captcha.external.enable`，即可接入自定义打码服务。
 - **`AuthService`**：替换 `defaultAuthService` 即可接入宿主自己的鉴权体系，`@Permission` 拦截器自动使用；`CurrentUser` 提供 `hasPermission` / `hasRole`（支持 `*` 通配）、`isAdmin`、数据权限判断。
 - **`AppKeyAuthenticator`**：AI 模块 appKey 台账的认证契约（`authenticate(appKey, ip)` 返回归属用户名），oauth-client 回退认证只依赖本契约，禁止跨模块直查 `sys_ai_app_key` 表。
-- **`TypeConverter`**：通过底层 SPI 注册自定义转换器，`TypeConverterRegisterConfiguration` 自动桥接进 Spring `ConversionService`。
+- **`TypeConverter`**（接口在 `utils-support-common-starter`）：通过底层 SPI 注册自定义转换器，`TypeConverterRegisterConfiguration` 自动桥接进 Spring `ConversionService`。
 - **`IpQualityDetector`**：策略接口（非 SPI），可直接实现 `detect(ip)` 接入自有风控源；HTTP 类检测继承 `AbstractHttpIpQualityDetector` 只需实现 `buildUrl` / `parseResult`。
 
 ## 十二、常见问题
@@ -348,7 +348,7 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 | `...support.converter` | `BinaryHttpMessageConverter`、`ResultDataHttpMessageConverter`（fastjson 兼容）、String→日期/时间/Long/数组等类型转换器 |
 | `...support.crypto` / `...algorithm.crypto` | 字段加密序列化器（配合 `@Crypto`） |
 | `...support.exception` | `BusinessException`（携带 ResultCode，供全局异常处理转统一响应） |
-| `...support.expression` | `SpelExpressionParser`（语法校验）/ `SpringSpelExpressionParser`（`#{}` 模板求值），实现底层 `ExpressionParser` SPI |
+| `...support.expression` | `SpelExpressionParser`（语法校验）/ `SpringSpelExpressionParser`（`#{}` 模板求值），实现底层 `ExpressionParser` SPI（接口在 `utils-support-common-starter`） |
 | `...support.filter` | 请求体可重复读包装器 |
 | `...support.function` | `Joiner`（Guava 风格拼接）、`Upgrade<T>`（配置升级回调） |
 | `...support.http` | `ChannelHttp` / `ChannelHttpException` / `ContentDisposition` / `ContentType` |

@@ -79,6 +79,14 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- 日志/链路/服务信息支撑类已迁至 spring-support-logger-starter（包名保持
+             com.chua.starter.common.support.* 不变）。common 依赖 logger 并传递给
+             全部使用方，外部 import 无需任何改动；方向：common -> logger，禁止反向 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-logger-starter</artifactId>
+        </dependency>
+
         <!-- Spring Boot JavaMail - 邮件发送支持 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

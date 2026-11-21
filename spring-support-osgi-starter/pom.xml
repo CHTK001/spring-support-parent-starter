@@ -14,9 +14,11 @@
     <description>OSGi Spring Boot Starter：集成 Felix OSGi 框架、Gogo/SSHD 远程管理，暴露实时 ObjectContext</description>
 
     <dependencies>
+        <!-- 本模块只依赖 logger（ServiceInfoContributor 契约）与 utils 层，不依赖 common：
+             依赖方向为 common -> osgi（SPI 注册门面），osgi 不得反向依赖 common -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
+            <artifactId>spring-support-logger-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
