@@ -5,11 +5,13 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.hotsport.support.model.LeakQuery;
 import com.chua.starter.hotsport.support.model.LogQuery;
 import com.chua.starter.hotsport.support.model.TransmissionQuery;
+import com.chua.starter.hotsport.support.service.ApmIngestService;
 import com.chua.starter.hotsport.support.service.ApmQueryService;
 import com.chua.starter.hotsport.support.service.JvmMetricsService;
 import com.chua.starter.hotsport.support.service.JvmMemoryService;
 import com.chua.starter.hotsport.support.service.AlertMonitorService;
 import com.chua.starter.agent.support.service.AgentAttachService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,12 +20,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -75,6 +79,11 @@ public class ApmController {
     private final AlertMonitorService alertMonitorService;
 
     /**
+     * APM 数据上报接入服务（HTTP /ingest → 解析 → 落库）。
+     */
+    private final ApmIngestService apmIngestService;
+
+    /**
      * Agent 自注入服务（状态 / 启停 / 重注入）。
      */
     private final AgentAttachService agentAttachService;
@@ -121,6 +130,28 @@ public class ApmController {
     @GetMapping("/stats")
     public ReturnResult<Map<String, Object>> stats() {
         return ReturnResult.ok(apmQueryService.stats());
+    }
+
+    /**
+     * APM 数据上报入口（仿 logger /ingest）。请求体支持三种形态：
+     * 传输记录数组、单条传输记录对象、
+     * {@code {"transmissions":[...],"dependencies":[...],"leaks":[...],"logs":[...]}}
+     * 混合载荷；单批每类上限 {@code plugin.hotsport.apm.ingest.max-batch}（默认 1000）。
+     *
+     * <p>缺省补齐：traceId（x-trace-id 头 → 自动生成）、spanId（自动生成）、
+     * startTime/endTime/duration（缺省按当前时间互推）、status（按 statusCode/errorType 推断）。
+     * 可选共享密钥：{@code plugin.hotsport.apm.ingest.token} 非空时校验
+     * {@code x-hotsport-token} 请求头。数据落 {@code StorageManager}，
+     * 既有查询 / SSE 轮询自然可见。</p>
+     *
+     * @param request 请求（取鉴权 / 链路 / 应用头）
+     * @param body    上报载荷
+     * @return 各类型接收条数
+     */
+    @PostMapping(value = "/ingest", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ReturnResult<Map<String, Object>> ingest(HttpServletRequest request,
+                                                    @RequestBody(required = false) JsonNode body) {
+        return ReturnResult.ok(apmIngestService.ingest(request, body));
     }
 
     /**

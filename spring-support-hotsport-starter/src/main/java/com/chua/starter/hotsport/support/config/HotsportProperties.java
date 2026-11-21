@@ -156,6 +156,16 @@ public class HotsportProperties {
         private Storage storage = new Storage();
 
         /**
+         * 上报接收配置（HTTP {@code POST /api/apm/ingest}）。
+        */
+        private Ingest ingest = new Ingest();
+
+        /**
+         * TCP 接收端配置（默认关闭）。
+        */
+        private Tcp tcp = new Tcp();
+
+        /**
          * 获取存储配置。
          *
          * @return 存储配置
@@ -172,6 +182,43 @@ public class HotsportProperties {
         public void setStorage(Storage storage) {
             this.storage = storage;
         }
+
+        /**
+         * 获取上报接收配置。
+         *
+         * @return 上报接收配置
+         */
+        public Ingest getIngest() {
+            return ingest;
+        }
+
+        /**
+         * 设置上报接收配置。
+         *
+         * @param ingest 上报接收配置
+         */
+        public void setIngest(Ingest ingest) {
+            this.ingest = ingest;
+        }
+
+        /**
+         * 获取 TCP 接收端配置。
+         *
+         * @return TCP 接收端配置
+         */
+        public Tcp getTcp() {
+            return tcp;
+        }
+
+        /**
+         * 设置 TCP 接收端配置。
+         *
+         * @param tcp TCP 接收端配置
+         */
+        public void setTcp(Tcp tcp) {
+            this.tcp = tcp;
+        }
+
 
         /**
          * 把本配置展开成 APM 存储层可识别的键值对。
@@ -246,6 +293,162 @@ public class HotsportProperties {
                 config.put("apm.storage.flush.timeout.ms", String.valueOf(storage.getFlushTimeoutMs()));
             }
             return config;
+        }
+    }
+
+    /**
+     * 上报接收子配置（HTTP {@code POST /api/apm/ingest}）。
+    */
+    public static class Ingest {
+
+        /**
+         * 共享密钥；为空表示不校验。
+         *
+         * <p>非空时校验请求头 {@code x-hotsport-token}，不匹配返回 401。</p>
+        */
+        private String token = "";
+
+        /**
+         * 单批每种类型最大条数（超出部分截断丢弃）。
+        */
+        // [P3C A20 豁免]
+        private int maxBatch = 1000;
+
+        /**
+         * 获取共享密钥。
+         *
+         * @return 共享密钥；空表示不校验
+         */
+        public String getToken() {
+            return token;
+        }
+
+        /**
+         * 设置共享密钥。
+         *
+         * @param token 共享密钥
+         */
+        public void setToken(String token) {
+            this.token = token;
+        }
+
+        /**
+         * 获取单批每种类型最大条数。
+         *
+         * @return 单批上限
+         */
+        public int getMaxBatch() {
+            return maxBatch;
+        }
+
+        /**
+         * 设置单批每种类型最大条数。
+         *
+         * @param maxBatch 单批上限
+         */
+        public void setMaxBatch(int maxBatch) {
+            this.maxBatch = maxBatch;
+        }
+    }
+
+    /**
+     * TCP 接收端子配置 — 供无法直连 HTTP 的采集端推送 APM 数据。
+     *
+     * <p>默认关闭；启用后监听的端口不属于本机白名单时，注意遵守部署机的端口管控约定。</p>
+    */
+    public static class Tcp {
+
+        /**
+         * 是否启用 TCP 接收端（默认关闭，HTTP /ingest 始终可用）。
+        */
+        private boolean enabled = false;
+
+        /**
+         * 监听地址。
+        */
+        private String host = "0.0.0.0";
+
+        /**
+         * 监听端口。
+        */
+        // [P3C A20 豁免]
+        private int port = 19392;
+
+        /**
+         * 订阅主题名（采集端按主题投递）。
+        */
+        private String topic = "hotsport-events";
+
+        /**
+         * 是否已启用。
+         *
+         * @return 是否已启用
+         */
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        /**
+         * 设置是否启用。
+         *
+         * @param enabled 是否启用
+         */
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        /**
+         * 获取监听地址。
+         *
+         * @return 监听地址
+         */
+        public String getHost() {
+            return host;
+        }
+
+        /**
+         * 设置监听地址。
+         *
+         * @param host 监听地址
+         */
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        /**
+         * 获取监听端口。
+         *
+         * @return 监听端口
+         */
+        public int getPort() {
+            return port;
+        }
+
+        /**
+         * 设置监听端口。
+         *
+         * @param port 监听端口
+         */
+        public void setPort(int port) {
+            this.port = port;
+        }
+
+        /**
+         * 获取订阅主题名。
+         *
+         * @return 主题名
+         */
+        public String getTopic() {
+            return topic;
+        }
+
+        /**
+         * 设置订阅主题名。
+         *
+         * @param topic 主题名
+         */
+        public void setTopic(String topic) {
+            this.topic = topic;
         }
     }
 
