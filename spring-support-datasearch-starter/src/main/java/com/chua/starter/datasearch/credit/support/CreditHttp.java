@@ -175,6 +175,7 @@ public final class CreditHttp {
                 }
             }
         }
+        applyProxy(builder, query, url);
         return builder;
     }
 
@@ -288,6 +289,185 @@ public final class CreditHttp {
             return builder.patch();
         }
         return builder.get();
+    }
+
+    /**
+     * 应用出站代理：请求显式配置优先，其次 JVM 系统属性全局代理。
+     *
+     * <p>Apache HttpClient5 不读取 {@code -Dhttps.proxyHost} 这类 JVM 代理参数，
+     * 这里显式补齐：部署侧配置了全局代理时，余额查询与其余出站流量同口径走代理；
+     * 全局代理命中 {@code http.nonProxyHosts}（或 https 同名属性）时仍直连。</p>
+     *
+     * @param builder 请求构建器
+     * @param query   请求
+     * @param url     完整地址
+     */
+    private static void applyProxy(HttpClientBuilder builder, CreditQuery query, String url) {
+        String proxy = query.getProxy();
+        if (proxy != null && !proxy.isBlank()) {
+            applyProxy(builder, proxy, url);
+            return;
+        }
+        String system = systemProxy(url);
+        if (system != null && !system.isBlank() && !nonProxied(url)) {
+            applyProxy(builder, system, url);
+        }
+    }
+
+    /**
+     * 按给定代理地址配置构建器。
+     *
+     * <p>支持 {@code http://host:port}、{@code https://host:port} 与 {@code host:port}
+     * 三种写法；SOCKS 代理不是 HTTP 代理，这里不处理（保持直连）。</p>
+     *
+     * @param builder 请求构建器
+     * @param proxy   代理地址
+     * @param url     完整地址（缺省端口时按协议取 80 / 443）
+     */
+    private static void applyProxy(HttpClientBuilder builder, String proxy, String url) {
+        String text = proxy.trim();
+        if (text.toLowerCase().startsWith("socks")) {
+            return;
+        }
+        if (text.toLowerCase().startsWith("http://") || text.toLowerCase().startsWith("https://")) {
+            text = text.substring(text.indexOf("://") + 3);
+        }
+        int slash = text.indexOf('/');
+        if (slash >= 0) {
+            text = text.substring(0, slash);
+        }
+        String host;
+        int port;
+        int colon = text.lastIndexOf(':');
+        if (colon > 0) {
+            host = text.substring(0, colon);
+            try {
+                port = Integer.parseInt(text.substring(colon + 1));
+            } catch (NumberFormatException e) {
+                return;
+            }
+        } else {
+            host = text;
+            port = url != null && url.toLowerCase().startsWith("https:") ? 443 : 80;
+        }
+        if (!host.isBlank() && port > 0 && port < 65536) {
+            builder.proxy(host, port);
+        }
+    }
+
+    /**
+     * 读 JVM 系统属性里的全局代理；未配置返回 null。
+     *
+     * @param url 完整地址（决定读 https 还是 http 的属性）
+     * @return 代理地址，如 {@code http://192.168.0.1:7897}；未配置返回 null
+     */
+    private static String systemProxy(String url) {
+        boolean secure = url != null && url.toLowerCase().startsWith("https:");
+        String host = System.getProperty(secure ? "https.proxyHost" : "http.proxyHost");
+        if (host == null || host.isBlank()) {
+            return null;
+        }
+        String port = System.getProperty(secure ? "https.proxyPort" : "http.proxyPort");
+        int value = defaultProxyPort(port, secure);
+        return (secure ? "https://" : "http://") + host.trim() + ":" + value;
+    }
+
+    /**
+     * 解析代理端口，非法或缺省时按协议回落 80 / 443。
+     *
+     * @param port   端口文本
+     * @param secure 是否 HTTPS
+     * @return 端口号
+     */
+    private static int defaultProxyPort(String port, boolean secure) {
+        if (port != null && !port.isBlank()) {
+            try {
+                return Integer.parseInt(port.trim());
+            } catch (NumberFormatException ignored) {
+                // 落到默认端口
+            }
+        }
+        return secure ? 443 : 80;
+    }
+
+    /**
+     * 目标是否命中 JVM 的 nonProxyHosts 名单（命中则直连）。
+     *
+     * <p>匹配语义与 JVM 一致：{@code 127.*} 前缀通配、{@code *.local} 后缀通配、
+     * 其余精确匹配；https 地址优先读 {@code https.nonProxyHosts}，未配置回落
+     * {@code http.nonProxyHosts}。</p>
+     *
+     * @param url 完整地址
+     * @return true 表示不走代理
+     */
+    private static boolean nonProxied(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
+        String text = url.trim().toLowerCase();
+        boolean secure = text.startsWith("https:");
+        String patterns = secure && System.getProperty("https.nonProxyHosts") != null
+                ? System.getProperty("https.nonProxyHosts") : System.getProperty("http.nonProxyHosts");
+        if (patterns == null || patterns.isBlank()) {
+            return false;
+        }
+        String host = hostOf(text);
+        if (host == null) {
+            return false;
+        }
+        for (String pattern : patterns.split("\\|")) {
+            String item = pattern.trim().toLowerCase();
+            if (item.isEmpty()) {
+                continue;
+            }
+            boolean head = item.startsWith("*");
+            boolean tail = item.endsWith("*");
+            String core = head ? item.substring(1) : item;
+            if (tail) {
+                core = core.substring(0, core.length() - 1);
+            }
+            boolean hit;
+            if (head && tail) {
+                hit = host.contains(core);
+            } else if (head) {
+                hit = host.endsWith(core);
+            } else if (tail) {
+                hit = host.startsWith(core);
+            } else {
+                hit = host.equals(core);
+            }
+            if (hit) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 从地址取主机名（小写）。
+     *
+     * @param url 小写的完整地址
+     * @return 主机名；取不到返回 null
+     */
+    private static String hostOf(String url) {
+        int start = url.indexOf("://");
+        start = start < 0 ? 0 : start + 3;
+        int end = url.indexOf('/', start);
+        String authority = end < 0 ? url.substring(start) : url.substring(start, end);
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) {
+            authority = authority.substring(at + 1);
+        }
+        int colon = authority.lastIndexOf(':');
+        if (colon > 0) {
+            try {
+                Integer.parseInt(authority.substring(colon + 1));
+                authority = authority.substring(0, colon);
+            } catch (NumberFormatException ignored) {
+                // IPv6 裸地址等场景不裁剪
+            }
+        }
+        return authority.isEmpty() ? null : authority;
     }
 
     /**

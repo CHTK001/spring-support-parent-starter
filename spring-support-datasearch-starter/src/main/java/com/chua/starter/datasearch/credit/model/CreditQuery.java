@@ -105,6 +105,14 @@ public class CreditQuery implements Serializable {
     private Map<String, String> headers;
 
     /**
+     * HTTP 代理（{@code http://host:port} 或 {@code host:port}）。
+     *
+     * <p>留空时回落 JVM 系统属性（{@code https.proxyHost} / {@code http.proxyHost}），
+     * 便于部署侧用全局代理参数统一出网；两者都没有则直连。</p>
+     */
+    private String proxy;
+
+    /**
      * 自定义字段映射（custom 实现用）：后端字段 → JSONPath / XPath 表达式。
      * 有值时按映射逐字段取数；为空时回落到 {@link #expression}。
      */

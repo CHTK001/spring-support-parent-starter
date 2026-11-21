@@ -39,3 +39,5 @@ com.chua.starter.datasearch.credit.spi.impl.PpioCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.AnthropicCreditQueryProvider
 # xAI 官方预付余额(余额在 Management API,需管理密钥 Bearer 鉴权,推理 Key 查不了;team_id 可经管理密钥校验接口自动发现;total.val 为美分且符号取反)
 com.chua.starter.datasearch.credit.spi.impl.XaiCreditQueryProvider
+# 100milionseek 每日配额(无独立余额端点,GET /v1/models 的响应头 x-quota-* 携带当日 limit/used/remaining,Bearer Key 鉴权)
+com.chua.starter.datasearch.credit.spi.impl.HmilionSeekCreditQueryProvider
