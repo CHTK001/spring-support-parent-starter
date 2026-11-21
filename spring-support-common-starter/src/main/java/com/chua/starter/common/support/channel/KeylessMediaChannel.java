@@ -61,4 +61,36 @@ public interface KeylessMediaChannel {
      * @return 模型列表，每项含 {@code id} / {@code name} / 可选 {@code contextWindow}
      */
     List<Map<String, Object>> listModels();
+
+    /**
+     * 判断渠道是否声明了任一给定任务类型（大小写不敏感）。
+     *
+     * <p>任务匹配口径落在契约上，避免各消费方（目录读取、模型物化、能力标注）
+     * 各自维护一套别名匹配。</p>
+     *
+     * @param channel 免登录生成类渠道，可为 {@code null}
+     * @param wanted  期望的任务类型，如 {@code image_generation}
+     * @return true 表示渠道声明了其中任一任务
+     */
+    static boolean declaresTask(KeylessMediaChannel channel, String... wanted) {
+        if (channel == null || wanted == null || wanted.length == 0) {
+            return false;
+        }
+        List<String> tasks = channel.tasks();
+        if (tasks == null || tasks.isEmpty()) {
+            return false;
+        }
+        for (String task : tasks) {
+            if (task == null) {
+                continue;
+            }
+            String name = task.trim();
+            for (String expect : wanted) {
+                if (expect != null && expect.equalsIgnoreCase(name)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

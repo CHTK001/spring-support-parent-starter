@@ -4,6 +4,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.common.support.channel.KeylessMediaChannel;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -97,6 +98,38 @@ public final class KeylessGenerateCatalog {
     }
 
     /**
+     * 读取全部免登录出图渠道的内置模型，按模型名（小写）建索引。
+     *
+     * <p>同名模型先到先得；调用方一次建索引后在整个请求内复用，
+     * 避免逐行重复做 SPI 发现。</p>
+     *
+     * @return 模型名（小写）→ 目录行；渠道 SPI 未接入时返回空表
+     */
+    public static Map<String, ChannelModel> imageModelMap() {
+        Map<String, ChannelModel> index = new LinkedHashMap<>(16);
+        for (ChannelModel row : imageModels()) {
+            if (row.model() == null) {
+                continue;
+            }
+            index.putIfAbsent(row.model().trim().toLowerCase(Locale.ROOT), row);
+        }
+        return index;
+    }
+
+    /**
+     * 按模型名查免登录出图渠道的目录行。
+     *
+     * @param model 模型名，可为空
+     * @return 目录行；不属于任何免登录出图渠道时返回 {@code null}
+     */
+    public static ChannelModel imageModelOf(String model) {
+        if (blank(model)) {
+            return null;
+        }
+        return imageModelMap().get(model.trim().toLowerCase(Locale.ROOT));
+    }
+
+    /**
      * 判断模型名是否由某个免登录出图渠道声明。
      *
      * <p>只在这个判定成立时，才允许把模型解析到「免费渠道」聚合供应商；
@@ -106,16 +139,7 @@ public final class KeylessGenerateCatalog {
      * @return true 表示该模型属于免登录出图渠道
      */
     public static boolean ownsImageModel(String model) {
-        if (blank(model)) {
-            return false;
-        }
-        String target = model.trim().toLowerCase(Locale.ROOT);
-        for (ChannelModel row : imageModels()) {
-            if (row.model().toLowerCase(Locale.ROOT).equals(target)) {
-                return true;
-            }
-        }
-        return false;
+        return imageModelOf(model) != null;
     }
 
     /**
@@ -125,20 +149,7 @@ public final class KeylessGenerateCatalog {
      * @return true 表示能出图
      */
     private static boolean declaresImageTask(KeylessMediaChannel channel) {
-        List<String> tasks = channel.tasks();
-        if (tasks == null || tasks.isEmpty()) {
-            return false;
-        }
-        for (String task : tasks) {
-            if (task == null) {
-                continue;
-            }
-            String name = task.trim();
-            if (TASK_IMAGE.equalsIgnoreCase(name) || TASK_TEXT_TO_IMAGE.equalsIgnoreCase(name)) {
-                return true;
-            }
-        }
-        return false;
+        return KeylessMediaChannel.declaresTask(channel, TASK_IMAGE, TASK_TEXT_TO_IMAGE);
     }
 
     /**

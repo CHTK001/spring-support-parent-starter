@@ -16,7 +16,6 @@ import com.chua.starter.ai.support.manage.store.SysAiGenerateTask;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.util.AiUserContext;
-import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
@@ -32,11 +31,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 生成任务控制器：文生图 / 文生视频。
@@ -169,9 +167,9 @@ public class GenerateController {
      * 可选生成模型列表（含模型级生成参数）。
      *
      * <p>只返回已启用、且其供应商已具备对应生成实现的模型，避免前端把不可用模型
-     * 渲染出来让用户提交后才失败。免登录出图渠道（如 {@code image-pollinations} 的
-     * {@code flux} / {@code turbo}）没有模型行，但出图链路是通的，由
-     * {@link #appendKeylessImageModels} 从渠道 SPI 补入。</p>
+     * 渲染出来让用户提交后才失败。免登录出图模型（如 {@code flux} / {@code turbo}）
+     * 由账号模块启动时物化成 {@code free-channel} 渠道下的模型行，本接口只读库：
+     * 管理员在模型管理里停用后，模型即从目录消失。</p>
      *
      * @param type 任务类型（image / video），为空返回全部
      * @return 模型列表
@@ -183,7 +181,10 @@ public class GenerateController {
         String kind = type == null || type.isBlank() ? GenerateConfigSupport.TYPE_IMAGE : type;
         boolean video = GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(kind);
         List<Map<String, Object>> result = new ArrayList<>();
-        Set<String> seenModels = new HashSet<>();
+        // 免登录出图模型的物化行按来源渠道标注展示名与 sourceChannel：
+        // 前端 logo 链按「模型 → 上游渠道」兜底，不能落到聚合行名上
+        Map<String, KeylessGenerateCatalog.ChannelModel> keyless = video
+                ? Map.of() : KeylessGenerateCatalog.imageModelMap();
         List<SysAccountChannelModel> rows = channelModelService.listAllEnabled();
         for (SysAccountChannelModel row : rows) {
             if (!matchesTask(row, kind)) {
@@ -206,64 +207,24 @@ public class GenerateController {
             item.put("providerName", provider.getName());
             item.put("type", kind);
             item.put("config", toConfigView(GenerateConfigSupport.read(row, kind)));
+            KeylessGenerateCatalog.ChannelModel source = keyless.get(lower(row.getModel()));
+            if (source != null) {
+                item.put("providerName", source.displayName());
+                item.put("sourceChannel", source.channel());
+            }
             result.add(item);
-            seenModels.add(row.getModel());
-        }
-        // 免登录出图渠道的模型并入目录：它们没有密钥、渠道管理也不会给它们写模型行，
-        // 但出图是通的（免费渠道聚合实现按模型名反查渠道转交），所以这里按渠道 SPI 补行。
-        if (!video) {
-            appendKeylessImageModels(result, seenModels);
         }
         return ReturnResult.success(result);
     }
 
     /**
-     * 把免登录出图渠道的内置模型并入可选列表（仅文生图）。
+     * 模型名归一（小写去空白），与 {@link KeylessGenerateCatalog} 的目录索引同口径。
      *
-     * <p>为什么必须走这里而不是等库里出现模型行：{@code image-pollinations} 这类渠道
-     * 没有账号密钥，渠道管理只在「从供应商获取模型」时把它们挂进<em>目录</em>，
-     * 不会写 {@code sys_account_channel_model}。若只按库里的行出列表，前端永远选不到
-     * flux / turbo（实测 {@code /v2/ai/generate/models?type=image} 只有 1 条 Agnes）。
-     * 它们真正能被执行的原因是账号模块的 {@code FreeChannelImageClient}（SPI
-     * {@code free-channel}）按模型名反查渠道并转交，因此目录行的供应商统一落在
-     * 「免费渠道」聚合行上，提交时自然路由到该实现。</p>
-     *
-     * <p>入库口径不变：本方法只读渠道 SPI，不写任何渠道表（ai 侧不得写
-     * {@code sys_account_channel*}）。</p>
-     *
-     * @param result     已收集的模型行（原地追加）
-     * @param seenModels 已出现的模型标识（原地更新，避免与库里行重复）
+     * @param model 模型名，可为空
+     * @return 归一化后的模型名；入参为空返回空串
      */
-    private void appendKeylessImageModels(List<Map<String, Object>> result, Set<String> seenModels) {
-        if (!GenerateSpiRouter.supportsImage(ProviderRouteTargets.FREE_CHANNEL_PLATFORM)) {
-            return;
-        }
-        SysAccountChannel free = channelService.findByPlatform(ProviderRouteTargets.FREE_CHANNEL_PLATFORM);
-        if (free == null || !Boolean.TRUE.equals(free.getEnabled())) {
-            return;
-        }
-        List<KeylessGenerateCatalog.ChannelModel> channels = KeylessGenerateCatalog.imageModels();
-        if (channels.isEmpty()) {
-            log.debug("[Generate] 免登录出图渠道未接入");
-            return;
-        }
-        Map<String, Object> config = toConfigView(GenerateConfigSupport.read(null, GenerateConfigSupport.TYPE_IMAGE));
-        for (KeylessGenerateCatalog.ChannelModel channelModel : channels) {
-            if (!seenModels.add(channelModel.model())) {
-                continue;
-            }
-            Map<String, Object> item = new LinkedHashMap<>(8);
-            item.put("model", channelModel.model());
-            // 渠道自己给出的展示名（如「Flux（默认）」）放别名位，前端按 aliasing 口径显示
-            item.put("alias", channelModel.name());
-            item.put("providerId", free.getProviderId());
-            item.put("providerName", channelModel.displayName());
-            item.put("type", GenerateConfigSupport.TYPE_IMAGE);
-            item.put("config", config);
-            // 来源渠道：前端与排查都用得到（flux 来自 image-pollinations）
-            item.put("sourceChannel", channelModel.channel());
-            result.add(item);
-        }
+    private static String lower(String model) {
+        return model == null ? "" : model.trim().toLowerCase(Locale.ROOT);
     }
 
     /**

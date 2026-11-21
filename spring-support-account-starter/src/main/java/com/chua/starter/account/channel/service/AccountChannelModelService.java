@@ -174,6 +174,33 @@ public class AccountChannelModelService {
     }
 
     /**
+     * 按模型名取一条模型行（不限启用状态）。
+     *
+     * <p>排序口径与 {@link #findEnabledByModel(String)} 一致（渠道标识升序取第一条），
+     * 但不过滤启用位。供「判断库里是否已有这个模型」的调用方使用：
+     * 模型一旦物化进库，启停即以库为权威 —— 已有行而全部停用时，
+     * 消费方的兜底逻辑不得再放行该模型。</p>
+     *
+     * @param model 模型标识
+     * @return 模型行（含已停用行）；没有匹配行时返回 {@code null}
+     */
+    @Cacheable(cacheNames = AccountChannelModelCache.NAME,
+            cacheResolver = AccountChannelModelCache.RESOLVER,
+            key = "'first-any:' + #model",
+            unless = "#result == null")
+    public SysAccountChannelModel findByModel(String model) {
+        if (model == null || model.isBlank()) {
+            return null;
+        }
+        List<SysAccountChannelModel> rows = modelMapper.selectList(
+                new LambdaQueryWrapper<SysAccountChannelModel>()
+                        .eq(SysAccountChannelModel::getModel, model)
+                        .orderByAsc(SysAccountChannelModel::getProviderId)
+                        .last("LIMIT 1"));
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    /**
      * 指定渠道下排序最靠前的已开启模型。
      *
      * <p>调用方只拿到渠道标识（例如「用这个渠道先跑一下」）时，用哪个模型由账号模块定：

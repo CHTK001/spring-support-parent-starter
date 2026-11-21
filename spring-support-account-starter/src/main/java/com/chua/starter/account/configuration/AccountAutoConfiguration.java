@@ -33,6 +33,7 @@ import com.chua.starter.account.manage.service.impl.SysAccountCreditConfigServic
 import com.chua.starter.account.manage.service.impl.SysAccountSecretServiceImpl;
 import com.chua.starter.account.manage.service.impl.ManageAccountServiceImpl;
 import com.chua.starter.account.manage.support.AccountApiExceptionAdvice;
+import com.chua.starter.account.channel.free.KeylessImageModelMaterializer;
 import com.chua.starter.account.channel.migrator.ChannelConnectionSchemaMigrator;
 import com.chua.starter.account.channel.service.AccountChannelConnectionService;
 import com.chua.starter.account.channel.service.AccountChannelHealthService;
@@ -102,6 +103,8 @@ import org.springframework.context.annotation.FilterType;
                 classes = {
                         ApiChannelAuthController.class,
                         ChannelConnectionSchemaMigrator.class,
+                        // 免登录出图模型物化器：启动时把渠道 SPI 的内置模型写进模型管理
+                        KeylessImageModelMaterializer.class,
                         AccountChannelService.class,
                         AccountChannelModelService.class,
                         AccountChannelConnectionService.class,
