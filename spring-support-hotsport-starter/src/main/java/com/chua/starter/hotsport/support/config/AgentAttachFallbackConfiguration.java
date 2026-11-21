@@ -1,8 +1,10 @@
 package com.chua.starter.hotsport.support.config;
 
 import com.chua.starter.agent.support.config.AgentAttachProperties;
+import com.chua.starter.agent.support.config.AgentAutoConfiguration;
 import com.chua.starter.agent.support.service.AgentAttachService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -34,16 +36,18 @@ import org.springframework.context.annotation.Bean;
  * @since 4.0.0.42
  */
 @AutoConfiguration
+@AutoConfigureAfter(AgentAutoConfiguration.class)
 @EnableConfigurationProperties(AgentAttachProperties.class)
 public class AgentAttachFallbackConfiguration {
 
     /**
      * 禁用态自注入服务 —— 仅当 agent 自动配置未装配（{@code plugin.agent.enabled=false}）时兜底。
-    /**
-     * 禁用态自注入服务 —— 仅当 agent 自动配置未装配（{@code plugin.agent.enabled=false}）时兜底。
+     *
      * @param properties 参数
      * @return 禁用态注入服务实例
-    */
+     */
+    @Bean
+    @ConditionalOnMissingBean
     public AgentAttachService disabledAgentAttachService(AgentAttachProperties properties) {
         // 显式关闭注入（幂等保护在 attach() 内；即便 properties 被外部改回 true，
         // 也只在调用方显式触发时才注入，不自动启动）
