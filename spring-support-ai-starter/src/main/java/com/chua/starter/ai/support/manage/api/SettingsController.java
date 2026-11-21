@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.service.ModelCatalogChecker;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiUserSettingService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -130,6 +131,11 @@ public class SettingsController {
      * Agent 引擎工厂：runtime 状态块里的「实际生效 / 降级 / opencode 可用性」从这里取
      */
     private final AgentProviderFactory agentProviderFactory;
+
+    /**
+     * 模型目录存在性校验：merged 视图给模型字段附加 modelExists 状态用
+     */
+    private final ModelCatalogChecker modelCatalogChecker;
     /**
      * 获取指定分组对本人生效的设置
      *
@@ -394,14 +400,47 @@ public class SettingsController {
         String userId = AiUserContext.requireUserId();
         List<Map<String, Object>> merged = userSettingService.listMerged(userId, group);
         boolean admin = AiUserContext.isAdmin();
+        // 模型字段附加存在性状态：一个响应批次共用一份目录快照
+        ModelCatalogChecker.Catalog catalog = modelCatalogChecker.snapshot();
         for (Map<String, Object> item : merged) {
             if (!admin && Boolean.FALSE.equals(item.get("overridden")) && isSecretField(item.get("field"))) {
                 item.put("value", MASKED);
             }
             item.put("defaultValue", admin || !isSecretField(item.get("field"))
                     ? item.get("defaultValue") : MASKED);
+            attachModelExistence(item, catalog);
         }
         return ApiResult.ok(merged);
+    }
+
+    /**
+     * 给模型字段附加 {@code modelExists} 存在性状态。
+     *
+     * <p>模型字段判定口径与前端一致：字段名含 {@code model}。只校验「有值且不是
+     * 系统种子默认值」的项——SYSTEM_DEFAULT 本来就按「未配置」展示，无需校验。
+     * 状态只作标注不改值：前端据此加删除线、门禁只认存在的配置；旧值仍展示，
+     * 用户能知道原来配的是什么、该去换哪个。</p>
+     *
+     * @param item    合并视图单条
+     * @param catalog 本批次共享的目录快照
+     */
+    private void attachModelExistence(Map<String, Object> item, ModelCatalogChecker.Catalog catalog) {
+        Object field = item.get("field");
+        if (field == null) {
+            return;
+        }
+        String name = String.valueOf(field);
+        // 引擎字段不是模型槽位（与前端 ENGINE_FIELDS 同口径）：rag_embedding_model 存的是
+        // 引擎名（onnx/openai），该字段已废弃并在界面隐藏，不参与存在性标注
+        if ("rag_embedding_model".equals(name) || !name.toLowerCase().contains("model")) {
+            return;
+        }
+        Object value = item.get("value");
+        if (value == null || String.valueOf(value).isBlank()
+                || "SYSTEM_DEFAULT".equals(item.get("origin"))) {
+            return;
+        }
+        item.put("modelExists", modelCatalogChecker.exists(String.valueOf(value), catalog));
     }
 
     /**
