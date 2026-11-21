@@ -8016,8 +8016,18 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         chatLocal.put("description", "浏览器端本地对话模型：基于 transformers.js（CDN 加载）在页面内推理，"
                 + "WebGPU 优先、WASM 兜底，权重按需从镜像下载；可将 JS 路径替换为自定义推理脚本。");
 
+        Map<String, Object> colorize = new LinkedHashMap<>(8);
+        colorize.put("id", "web-colorize");
+        colorize.put("name", "浏览器图片上色（DDColor）");
+        colorize.put("tasks", List.of("image"));
+        colorize.put("traits", List.of("streaming"));
+        colorize.put("js_path", "/web-chat/colorize.js");
+        colorize.put("description", "浏览器端图片上色模型：基于 DDColor fp16 ONNX（onnxruntime-web CDN 加载，"
+                + "WebGPU 优先、WASM 兜底），黑白照片本地还原成彩色，结果以 Markdown 图片回显，"
+                + "首次运行需下载约 108MB 权重；可将 JS 路径替换为自定义推理脚本。");
+
         Map<String, Object> out = new LinkedHashMap<>(4);
-        out.put("models", List.of(echo, imageGen, ocr, faceDetect, chatLocal));
+        out.put("models", List.of(echo, imageGen, ocr, faceDetect, chatLocal, colorize));
         return out;
     }
 
