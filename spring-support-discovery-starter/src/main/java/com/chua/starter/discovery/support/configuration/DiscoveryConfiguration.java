@@ -91,6 +91,35 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
         log.info("[Discovery] 服务状态 [{}]", enabled());
+        if (isServerMode(properties.getType())) {
+            registryHub(registry, properties);
+        } else {
+            registryClient(registry, properties);
+        }
+
+        registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
+                .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR)
+                .getBeanDefinition());
+    }
+
+    /**
+     * 是否为注册中心服务端模式（server=独立注册中心 / embbed=内嵌注册中心）。
+     *
+     * @param type 配置的运行模式
+     * @return true 表示以注册中心服务端身份启动
+     */
+    private boolean isServerMode(String type) {
+        return "server".equalsIgnoreCase(type) || "embbed".equalsIgnoreCase(type);
+    }
+
+    /**
+     * 以客户端身份装配服务发现（默认模式）：按 {@code plugin.discovery.properties[]} 逐项创建发现客户端，
+     * 全部未启用时回落默认实现。
+     *
+     * @param registry   Bean 注册器
+     * @param properties 发现配置
+     */
+    private void registryClient(BeanDefinitionRegistry registry, DiscoveryListProperties properties) {
         List<DiscoveryProperties> properties1 = properties.getProperties();
         boolean hasServiceDiscovery = false;
         for (DiscoveryProperties discoveryProperties : properties1) {
@@ -113,10 +142,57 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                     .setPrimary(true)
                     .getBeanDefinition());
         }
+    }
 
-        registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
-                .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR)
-                .getBeanDefinition());
+    /**
+     * 以注册中心服务端身份装配 {@code registry-hub} 实现。
+     *
+     * <p>{@code server} 模式：独立注册中心进程，只维护服务表并接受远程 {@code registry-client} 接入；
+     * {@code embbed} 模式：注册中心与应用同进程，应用直接以该实例完成注册与查询，
+     * 并按 {@code plugin.discovery.server.node[]} 注册本机种子服务。</p>
+     *
+     * @param registry   Bean 注册器
+     * @param properties 发现配置
+     */
+    private void registryHub(BeanDefinitionRegistry registry, DiscoveryListProperties properties) {
+        DiscoveryListProperties.Server server = properties.getServer();
+        boolean embedded = "embbed".equalsIgnoreCase(properties.getType());
+        String protocol = StringUtils.isEmpty(server.getProtocol()) ? "http" : server.getProtocol();
+        String host = server.getHost();
+        if (StringUtils.isEmpty(host)) {
+            // 独立注册中心要被远程接入，默认监听所有网卡；内嵌注册中心只服务本进程，默认回环地址
+            host = embedded ? "127.0.0.1" : "0.0.0.0";
+        }
+        int port = server.getPort() > 0 ? server.getPort() : 9600;
+        String address = protocol + "://" + host + ":" + port;
+
+        DiscoveryOption discoveryOption = new DiscoveryOption();
+        discoveryOption.setAddress(address);
+        ServiceDiscovery serviceDiscovery = ServiceProvider.of(ServiceDiscovery.class).getNewExtension("registry-hub", discoveryOption);
+
+        String baseBeanName = "serviceDiscovery#registry-hub";
+        String beanName = baseBeanName;
+        int index = 0;
+        while (registry.containsBeanDefinition(beanName)) {
+            beanName = baseBeanName + "#" + index++;
+        }
+        if (null == serviceDiscovery) {
+            log.warn("[Discovery] 未发现 registry-hub 实现, 将使用默认实现");
+            registry.registerBeanDefinition(beanName, BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovery.class, DefaultServiceDiscovery::new)
+                    .setPrimary(true)
+                    .getBeanDefinition());
+            return;
+        }
+
+        List<Discovery> discoveryList = new LinkedList<>();
+        if (embedded) {
+            for (DiscoveryNodeProperties discoveryNodeProperties : server.getNode()) {
+                discoveryList.add(registryNode(discoveryNodeProperties));
+                log.info("[Discovery] 内嵌注册中心本机注册: {} -> {}", highlight(protocol), discoveryNodeProperties.getNamespace());
+            }
+        }
+        log.info("[Discovery] 注册中心启动: 模式={}, 地址={}", highlight(properties.getType()), highlight(address));
+        registry.registerBeanDefinition(beanName, createBeanDefinitionDiscovery(serviceDiscovery, discoveryList, true));
     }
 
     /**
