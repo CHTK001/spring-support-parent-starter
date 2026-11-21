@@ -181,10 +181,11 @@ public class GenerateController {
         String kind = type == null || type.isBlank() ? GenerateConfigSupport.TYPE_IMAGE : type;
         boolean video = GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(kind);
         List<Map<String, Object>> result = new ArrayList<>();
-        // 免登录出图模型的物化行按来源渠道标注展示名与 sourceChannel：
-        // 前端 logo 链按「模型 → 上游渠道」兜底，不能落到聚合行名上
+        // 免登录生成模型（出图 flux / turbo、视频 doubao-video / qwen-video 等）的物化行
+        // 按来源渠道标注展示名与 sourceChannel：前端 logo 链按「模型 → 上游渠道」兜底，
+        // 不能落到聚合行名上
         Map<String, KeylessGenerateCatalog.ChannelModel> keyless = video
-                ? Map.of() : KeylessGenerateCatalog.imageModelMap();
+                ? KeylessGenerateCatalog.videoModelMap() : KeylessGenerateCatalog.imageModelMap();
         List<SysAccountChannelModel> rows = channelModelService.listAllEnabled();
         for (SysAccountChannelModel row : rows) {
             if (!matchesTask(row, kind)) {

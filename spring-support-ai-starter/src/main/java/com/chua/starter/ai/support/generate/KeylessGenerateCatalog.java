@@ -37,6 +37,11 @@ public final class KeylessGenerateCatalog {
     private static final String TASK_TEXT_TO_IMAGE = "text-to-image";
 
     /**
+     * 文生视频任务类型
+     */
+    private static final String TASK_VIDEO = "video_generation";
+
+    /**
      * 工具类不允许实例化
      */
     private KeylessGenerateCatalog() {
@@ -59,6 +64,25 @@ public final class KeylessGenerateCatalog {
      * @return 模型行；渠道 SPI 未接入或单个渠道读取失败时返回已取到的部分
      */
     public static List<ChannelModel> imageModels() {
+        return collect(TASK_IMAGE, TASK_TEXT_TO_IMAGE);
+    }
+
+    /**
+     * 读取全部免登录文生视频渠道的内置模型。
+     *
+     * @return 模型行；渠道 SPI 未接入或单个渠道读取失败时返回已取到的部分
+     */
+    public static List<ChannelModel> videoModels() {
+        return collect(TASK_VIDEO);
+    }
+
+    /**
+     * 读取声明了任一给定任务类型的免登录渠道的内置模型。
+     *
+     * @param wantedTasks 期望的任务类型（如 {@code image_generation} / {@code video_generation}）
+     * @return 模型行；渠道 SPI 未接入或单个渠道读取失败时返回已取到的部分
+     */
+    private static List<ChannelModel> collect(String... wantedTasks) {
         Map<String, KeylessMediaChannel> channels;
         try {
             channels = ServiceProvider.of(KeylessMediaChannel.class).list();
@@ -70,7 +94,8 @@ public final class KeylessGenerateCatalog {
         }
         List<ChannelModel> rows = new ArrayList<>();
         for (KeylessMediaChannel channel : channels.values()) {
-            if (channel == null || blank(channel.channel()) || !declaresImageTask(channel)) {
+            if (channel == null || blank(channel.channel())
+                    || !KeylessMediaChannel.declaresTask(channel, wantedTasks)) {
                 continue;
             }
             List<Map<String, Object>> models;
@@ -106,8 +131,30 @@ public final class KeylessGenerateCatalog {
      * @return 模型名（小写）→ 目录行；渠道 SPI 未接入时返回空表
      */
     public static Map<String, ChannelModel> imageModelMap() {
+        return index(imageModels());
+    }
+
+    /**
+     * 读取全部免登录文生视频渠道的内置模型，按模型名（小写）建索引。
+     *
+     * @return 模型名（小写）→ 目录行；渠道 SPI 未接入时返回空表
+     */
+    public static Map<String, ChannelModel> videoModelMap() {
+        return index(videoModels());
+    }
+
+    /**
+     * 按模型名（小写）建目录索引。
+     *
+     * <p>同名模型先到先得；调用方一次建索引后在整个请求内复用，
+     * 避免逐行重复做 SPI 发现。</p>
+     *
+     * @param rows 目录行
+     * @return 模型名（小写）→ 目录行
+     */
+    private static Map<String, ChannelModel> index(List<ChannelModel> rows) {
         Map<String, ChannelModel> index = new LinkedHashMap<>(16);
-        for (ChannelModel row : imageModels()) {
+        for (ChannelModel row : rows) {
             if (row.model() == null) {
                 continue;
             }
@@ -143,13 +190,29 @@ public final class KeylessGenerateCatalog {
     }
 
     /**
-     * 渠道是否声明了文生图任务。
+     * 按模型名查免登录文生视频渠道的目录行。
      *
-     * @param channel 免登录生成类渠道
-     * @return true 表示能出图
+     * @param model 模型名，可为空
+     * @return 目录行；不属于任何免登录文生视频渠道时返回 {@code null}
      */
-    private static boolean declaresImageTask(KeylessMediaChannel channel) {
-        return KeylessMediaChannel.declaresTask(channel, TASK_IMAGE, TASK_TEXT_TO_IMAGE);
+    public static ChannelModel videoModelOf(String model) {
+        if (blank(model)) {
+            return null;
+        }
+        return videoModelMap().get(model.trim().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * 判断模型名是否由某个免登录文生视频渠道声明。
+     *
+     * <p>只在这个判定成立时，才允许把模型解析到「免费渠道」聚合供应商；
+     * 否则任意未配置的模型名都会被错认成可执行。</p>
+     *
+     * @param model 模型名，可为空
+     * @return true 表示该模型属于免登录文生视频渠道
+     */
+    public static boolean ownsVideoModel(String model) {
+        return videoModelOf(model) != null;
     }
 
     /**

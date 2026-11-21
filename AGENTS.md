@@ -23,7 +23,7 @@
 - `spring-support-ai-starter` 只是 `FreeChatClient` 的消费方：路由、探针、指标（`sys_ai_provider_metric`）、路由组、ONNX、协议探测属于 ai。
 - 硬指标必须为 0：ai 引 `account.channel.mapper` / ai 写 `sys_account_channel*` / account 引 `com.chua.starter.ai.*`。
 - 方向唯一 `account ← ai`，通过 `ChannelCatalogChangedEvent` 单向通知。
-- 免登录生成类渠道（`image-*` / `video-*` / `model3d-*`）的能力由 common-starter 的 `KeylessMediaChannel` 契约声明。免登录出图模型（flux / turbo 等）由 account 模块启动时物化进 `sys_account_channel_model`（`KeylessImageModelMaterializer`，挂 `free-channel` 聚合渠道行下，capabilities 标 `image_generation`）；生图目录（`/v2/ai/generate/models`）以库行为唯一来源，管理员在模型管理里启停即生效。ai 侧不得为它们补库或写渠道表；`GenerateClientResolver` 仅对「库里还没有行」的旧库保留 `free-channel` 兜底，已有行的模型停用即拒。
+- 免登录生成类渠道（`image-*` / `video-*` / `model3d-*`）的能力由 common-starter 的 `KeylessMediaChannel` 契约声明。免登录生成模型（出图 flux / turbo、视频 doubao-video / qwen-video 等）由 account 模块启动时物化进 `sys_account_channel_model`（`KeylessGenerateModelMaterializer`，挂 `free-channel` 聚合渠道行下，capabilities 按渠道声明的任务类型标注）；生成目录（`/v2/ai/generate/models`）以库行为唯一来源，管理员在模型管理里启停即生效。ai 侧不得为它们补库或写渠道表；`GenerateClientResolver` 仅对「库里还没有行」的旧库保留 `free-channel` 兜底（出图 / 视频同口径），已有行的模型停用即拒。
 
 ## 依赖即带入（R5）
 

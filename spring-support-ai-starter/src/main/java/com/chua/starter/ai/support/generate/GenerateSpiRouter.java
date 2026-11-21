@@ -149,7 +149,10 @@ public final class GenerateSpiRouter {
      * {@code alibaba} 尚未落地实现，故<b>刻意不列入</b>——列进去前端会放出视频入口，
      * 用户提交后才失败。</p>
      */
-    private static final Set<String> KNOWN_VIDEO_SPI = Set.of("openai", "agnes", "zhipu");
+    private static final Set<String> KNOWN_VIDEO_SPI = Set.of("openai", "agnes", "zhipu",
+            // 免费渠道聚合：FreeChannelVideoClient（account）按模型转交内置免登录文生视频渠道，
+            // 目录里的 doubao-video / qwen-video 等视频模型必须在这里登记才会进入「可选生成模型」
+            "free-channel");
 
     /**
      * 工具类不允许实例化

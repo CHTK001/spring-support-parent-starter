@@ -3,6 +3,10 @@ package com.chua.starter.account.spi.impl;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.account.spi.VideoChannelProvider;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * 豆包文生视频渠道。
  *
@@ -72,5 +76,22 @@ public class DoubaoVideoChannel implements VideoChannelProvider {
     @Override
     public int priority() {
         return PRIORITY;
+    }
+
+    /**
+     * 渠道支持的视频模型。
+     *
+     * <p>豆包视频生成面板当前只有一个内置模型；底层 proxy 的 {@code generateVideo}
+     * 不消费模型参数（面板固定行为），这里声明模型是为了把它物化进模型管理、
+     * 进入统一生成目录并接受启停管控。</p>
+     *
+     * @return 模型列表
+     */
+    @Override
+    public List<Map<String, Object>> listModels() {
+        Map<String, Object> model = new LinkedHashMap<>(2);
+        model.put("id", "doubao-video");
+        model.put("name", "豆包视频生成");
+        return List.of(model);
     }
 }

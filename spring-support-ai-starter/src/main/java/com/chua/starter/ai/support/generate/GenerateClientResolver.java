@@ -198,10 +198,24 @@ public class GenerateClientResolver {
     public Resolved<VideoClient> resolveVideo(String model, int keyIndex) {
         SysAccountChannel provider = resolveProviderByModel(model);
         if (provider == null) {
+            provider = resolveKeylessVideoProvider(model);
+        }
+        if (provider == null) {
             return new Resolved<>(null, null, null);
         }
         SysAccountChannelModel modelCfg = resolveModelRow(model);
         String spi = GenerateSpiRouter.videoSpi(provider.getPlatform());
+        if ((spi.isEmpty() || !GenerateSpiRouter.supportsVideo(provider.getPlatform()))
+                && KeylessGenerateCatalog.ownsVideoModel(model)) {
+            // 防御回退：免登录视频模型的行可能被渠道页保存路径挂在其它渠道名下
+            //（该渠道并没有视频 SPI 实现），只要免费渠道聚合行可用就仍路由回去，
+            // 避免视频生成被这类脏行劫持。
+            SysAccountChannel free = resolveKeylessVideoProvider(model);
+            if (free != null) {
+                provider = free;
+                spi = GenerateSpiRouter.videoSpi(provider.getPlatform());
+            }
+        }
         if (spi.isEmpty() || !GenerateSpiRouter.supportsVideo(provider.getPlatform())) {
             log.warn("[Generate] 供应商无视频生成实现 platform={} spi={}", provider.getPlatform(), spi);
             return new Resolved<>(null, provider, modelCfg);
@@ -317,6 +331,42 @@ public class GenerateClientResolver {
      */
     private SysAccountChannel resolveKeylessImageProvider(String model) {
         if (!KeylessGenerateCatalog.ownsImageModel(model)) {
+            return null;
+        }
+        if (resolveAnyModelRow(model) != null && resolveModelRow(model) == null) {
+            // 模型已入库且没有已启用行：管理员已停用，兜底不放行
+            log.debug("[Generate] 模型已停用，免登录兜底不放行 model={}", model);
+            return null;
+        }
+        try {
+            SysAccountChannel free = channelService.findByPlatform(ProviderRouteTargets.FREE_CHANNEL_PLATFORM);
+            return free != null && Boolean.TRUE.equals(free.getEnabled()) ? free : null;
+        } catch (Exception e) {
+            log.warn("[Generate] 解析免费渠道失败 model={}: {}", model, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 免登录文生视频模型的兜底供应商解析。
+     *
+     * <p>模型物化进 {@code sys_account_channel_model} 之前（旧库未跑物化器），
+     * {@code video-doubao} / {@code video-qwen} 的内置模型按模型名查不到
+     * 供应商；但生成链路是通的：账号模块的 {@code FreeChannelVideoClient}
+     * （SPI {@code free-channel}）会按模型名反查内置渠道再转交。因此当模型确实
+     * 由某个免登录文生视频渠道声明时，把它解析到「免费渠道」聚合行。</p>
+     *
+     * <p>库里已有该模型的行时以库为权威：全部行都被停用说明管理员已关掉它，
+     * 这里必须拒绝，兜底不得再放行；仅当库里完全没有该模型的行时才走本兜底。</p>
+     *
+     * <p>只在 {@link KeylessGenerateCatalog#ownsVideoModel(String)} 成立时兜底，
+     * 保证任意未配置的模型名不会被误判成可执行。</p>
+     *
+     * @param model 模型名
+     * @return 免费渠道聚合行；不适用时返回 {@code null}
+     */
+    private SysAccountChannel resolveKeylessVideoProvider(String model) {
+        if (!KeylessGenerateCatalog.ownsVideoModel(model)) {
             return null;
         }
         if (resolveAnyModelRow(model) != null && resolveModelRow(model) == null) {
