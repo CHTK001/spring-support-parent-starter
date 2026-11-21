@@ -118,14 +118,21 @@ public class SysAiModelMetricsService {
         }
         long now = System.currentTimeMillis();
         int changed = 0;
+        // 归一化键去重：目录可能同时收录 provider/model 全路径与短 slug 两种 id
+        // （OpenRouter / Pollinations 等），归一化后是同一个键；不去重会让同键
+        // 第二条记录走 INSERT，撞唯一索引 uk_sys_ai_model_metrics_key。
+        Set<String> processed = new HashSet<>(records.size());
         for (ProviderModelInfo r : records) {
             String key = truncate(AiModelMetricKeys.normalizeKey(r.getId()), 160);
-            if (key.isEmpty()) {
+            if (key.isEmpty() || !processed.add(key)) {
                 continue;
             }
             SysAiModelMetrics cur = existing.get(key);
             if (cur == null) {
-                metricsMapper.insert(toEntity(r, key, now));
+                SysAiModelMetrics entity = toEntity(r, key, now);
+                metricsMapper.insert(entity);
+                // 新行回填索引，保证同批次同键记录不再重复 INSERT
+                existing.put(key, entity);
                 changed++;
             } else {
                 Set<String> locked = cur.getManualLocked() == null

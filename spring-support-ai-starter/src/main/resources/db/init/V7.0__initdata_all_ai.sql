@@ -417,6 +417,21 @@ VALUES
      NULL, NULL, 0.8, NULL, 10, 1, 0, 'admin', NOW(), NOW());
 
 -- ---------------------------------------------------------------------
+-- 1.1) 模拟角色来源回填（2026-11-21 修复「助手列表混入模拟人物」）
+--      上面的种子 INSERT 未写 sys_ai_role_source，落库为默认 'user'，
+--      导致三国模拟 NPC 混进助手（角色管理）列表。这里按 user_id + code
+--      幂等回填为 world-sim：新装库在 INSERT 后立即归位，存量库随重启修复。
+--      注意：这批 code 是世界沙盒的固定演员，不要改回助手来源。
+-- ---------------------------------------------------------------------
+UPDATE `sys_ai_role`
+   SET `sys_ai_role_source` = 'world-sim'
+ WHERE `user_id` = @owner_id
+   AND `sys_ai_role_code` IN ('liu-bei', 'guan-yu', 'zhang-fei', 'zhao-yun',
+                              'zhuge-liang', 'huang-yue-ying', 'cao-cao',
+                              'diao-chan', 'sun-quan', 'zhou-yu')
+   AND (`sys_ai_role_source` IS NULL OR `sys_ai_role_source` <> 'world-sim');
+
+-- ---------------------------------------------------------------------
 -- 2) 三国世界（sys_ai_world）
 --    无唯一键 → NOT EXISTS 守卫，杜绝重复建世界。
 -- ---------------------------------------------------------------------

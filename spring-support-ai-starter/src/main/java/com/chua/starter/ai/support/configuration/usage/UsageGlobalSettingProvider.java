@@ -22,6 +22,10 @@ import java.util.List;
  *   <li>{@code credit_refresh_enabled} —— 余额定时刷新开关，驱动
  *       {@link com.chua.starter.ai.support.schedule.CreditRefreshScheduler} 每 5 分钟
  *       刷新已启用供应商的余额快照</li>
+ *   <li>{@code alert_evaluate_enabled} / {@code alert_evaluate_interval} —— 告警规则定时评估
+ *       开关与周期（秒），驱动 {@link com.chua.starter.ai.support.schedule.AlertEvaluateScheduler}</li>
+ *   <li>{@code alert_notify_emails} / {@code alert_notify_webhook} —— 告警推送的
+ *       邮件收件人 / 机器人 Webhook 地址（全局收件配置，供告警规则的邮件 / Webhook 渠道使用）</li>
  * </ul></p>
  *
  * @author CH
@@ -88,7 +92,15 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("usage_daily_budget", "0", "NUMBER", "今日预算阈值（元）：当日累计费用达到该值时用量页预警，0 表示不启用", 13),
                 // 余额令牌自动续期（CreditTokenRenewScheduler）：到期前用无头浏览器回访
                 // 上游门户静默续期；仅对账密登录且 SPI 声明可续期的供应商生效。
-                new SettingItem("credit_renew_enabled", "true", "BOOLEAN", "余额令牌自动续期：开启后到期前自动回访上游门户续期令牌，失败推送告警", 14)
+                new SettingItem("credit_renew_enabled", "true", "BOOLEAN", "余额令牌自动续期：开启后到期前自动回访上游门户续期令牌，失败推送告警", 14),
+                // 告警规则定时评估（AlertEvaluateScheduler）：按周期计算启用的告警规则
+                // （当日费用 / Token / 请求数 / 错误率），命中阈值经站内信 / 邮件 / Webhook
+                // 推送并留痕，同规则同日只推一次。
+                new SettingItem("alert_evaluate_enabled", "true", "BOOLEAN", "告警规则定时评估：开启后按周期评估启用的告警规则并推送", 15),
+                new SettingItem("alert_evaluate_interval", "60", "NUMBER", "告警评估周期（秒），最小 30 秒，默认 60 秒", 16),
+                // 告警推送全局收件配置：规则勾选邮件 / Webhook 渠道时使用。
+                new SettingItem("alert_notify_emails", "", "STRING", "告警邮件收件人：逗号分隔邮箱，供告警规则的邮件渠道使用", 17),
+                new SettingItem("alert_notify_webhook", "", "STRING", "告警 Webhook 地址：钉钉/企微/飞书机器人地址，供告警规则的 Webhook 渠道使用", 18)
         );
     }
 }

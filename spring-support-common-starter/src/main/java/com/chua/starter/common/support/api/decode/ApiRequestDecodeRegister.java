@@ -82,12 +82,47 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     private String requestCodecKey;
 
     /**
+     * 请求codec类型（生效值：sys_setting CodecType 优先，回落 yaml codecType）
+     */
+    private String requestCodecType;
+
+    /**
+     * 当前生效类型是否 keylog
+     */
+    private boolean keylogCodec;
+
+    /**
+     * keylog 服务端长期密钥提供器
+     */
+    private final KeyLogServerKeyProvider keyLogServerKeyProvider;
+
+    /**
+     * 请求帧 attribute 名：decode advice 暂存本次请求的密文帧（k2/hex），
+     * 供响应加密在 keylog 回包时复用请求侧共享密钥。
+     */
+    public static final String REQUEST_CODEC_FRAME_ATTRIBUTE = "API_REQUEST_CODEC_FRAME";
+
+    /**
      * 构造函数
      *
      * @param decodeConfig 解码配置
      */
     public ApiRequestDecodeRegister(ApiProperties.RequestDecodeProperties decodeConfig) {
+        this(decodeConfig, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param decodeConfig            解码配置
+     * @param keyLogServerKeyProvider keylog 服务端长期密钥提供器；null 时按 yaml keylogKeyFile 兜底
+     */
+    public ApiRequestDecodeRegister(ApiProperties.RequestDecodeProperties decodeConfig,
+                                    KeyLogServerKeyProvider keyLogServerKeyProvider) {
         this.decodeConfig = decodeConfig;
+        this.keyLogServerKeyProvider = null != keyLogServerKeyProvider
+                ? keyLogServerKeyProvider
+                : new KeyLogServerKeyProvider(decodeConfig.getKeylogKeyFile());
         this.whiteList = decodeConfig.getWhiteList() != null 
                 ? decodeConfig.getWhiteList() 
                 : Collections.emptyList();
@@ -279,17 +314,25 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     */
     public void upgrade(ApiRequestDecodeSetting setting) {
         this.decodeSetting = setting;
-        String nextRequestCodecKey = null == setting ? null : setting.getCodecRequestKey();
         boolean enable = null != setting && setting.isEnable();
+        String effectiveType = resolveEffectiveCodecType(setting);
+        boolean nextKeylog = "keylog".equalsIgnoreCase(effectiveType);
+        // keylog 的密钥是服务端长期密钥对（pair:pub:priv），与共享密钥 CodecRequestKey 无关
+        String nextRequestCodecKey = nextKeylog
+                ? keyLogServerKeyProvider.getPairSpec()
+                : (null == setting ? null : setting.getCodecRequestKey());
 
         if (null != requestCodec
                 && (!enable
                 || StringUtils.isEmpty(nextRequestCodecKey)
-                || !nextRequestCodecKey.equals(this.requestCodecKey))) {
+                || !nextRequestCodecKey.equals(this.requestCodecKey)
+                || !effectiveType.equals(this.requestCodecType))) {
             requestCodec = null;
         }
 
         this.requestCodecKey = nextRequestCodecKey;
+        this.requestCodecType = effectiveType;
+        this.keylogCodec = nextKeylog;
 
         if (!enable || StringUtils.isEmpty(nextRequestCodecKey)) {
             return;
@@ -299,7 +342,48 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             return;
         }
 
-        requestCodec = Codec.build(decodeConfig.getCodecType(), this.requestCodecKey);
+        requestCodec = Codec.build(effectiveType, this.requestCodecKey);
+    }
+
+    /**
+     * 解析生效的 codec 类型：sys_setting CodecType 优先，空回落 yaml codecType。
+     *
+     * @param setting 当前设置
+     * @return 生效类型（小写）
+     */
+    private String resolveEffectiveCodecType(ApiRequestDecodeSetting setting) {
+        String fallback = decodeConfig.getCodecType();
+        return null == setting ? fallback : setting.effectiveCodecType(fallback);
+    }
+
+    /**
+     * 当前生效 codec 是否 keylog（响应加密据此绑定请求加密）。
+     *
+     * @return 是否 keylog
+     */
+    public boolean isKeylogCodec() {
+        check();
+        return keylogCodec;
+    }
+
+    /**
+     * 接口强制签名开关（sys_setting ApiSignOpen）：开启后缺签名头/坏签名一律拒绝。
+     *
+     * @return 是否强制签名
+     */
+    public boolean isApiSignOpen() {
+        check();
+        return null != decodeSetting && decodeSetting.isApiSignOpen();
+    }
+
+    /**
+     * 当前生效的 codec 类型。
+     *
+     * @return 生效类型（小写），未生效时为 null
+     */
+    public String getRequestCodecType() {
+        check();
+        return requestCodecType;
     }
 
     /**

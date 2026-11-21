@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -109,6 +111,16 @@ public class ExecutorSyncBinder {
     private final AtomicLong lastReconnectAttemptMs = new AtomicLong(0L);
 
     /**
+     * 已处理命令消息 id（有界 FIFO，重放去重用）。
+     */
+    private final Set<String> seenCommandIds = new LinkedHashSet<>();
+
+    /**
+     * 命令消息 id 去重容量上限（超出淘汰最旧）。
+     */
+    private static final int SEEN_COMMAND_CAPACITY = 1024;
+
+    /**
      * 已注册后的心跳重连间隔 (毫秒), 在 tcp同步客户端.是否连接()
      * 永远返回 true 的 pre-existing bug 下作为唯一兜底
      */
@@ -121,6 +133,14 @@ public class ExecutorSyncBinder {
     public void start() {
         cmdHandler = (topic, payload) -> {
  // 简单诊断, 记录 执行器 端 wire 收到的事件
+            String raw = payload == null ? null : String.valueOf(payload);
+            // 断线重连后调度器会补偿重放断线窗口内的命令，按消息 id 幂等去重，避免重复执行
+            String msgId = JobSyncTopics.msgIdOf(raw);
+            if (msgId != null && !rememberCommandId(msgId)) {
+                log.info("[job] EXECUTOR 忽略重复命令 (重放去重) mid={} job={}",
+                        msgId, JobSyncTopics.commandJobName(raw));
+                return;
+            }
             log.info("[job] EXECUTOR wire-recv topic={} payload={}", topic, payload);
             bus.publish(topic, nodeId, payload);
         };
@@ -242,6 +262,9 @@ public class ExecutorSyncBinder {
             syncClient.connect();
             syncClient.send(JobSyncTopics.REGISTER, buildRegisterPayload());
             lastReportedHandlers = currentHandlerNames();
+            // 注册成功即重置心跳计时：否则启动初期陈旧的 0 值会让首个 tick (5s) 判定
+            // "已超过心跳间隔" 而立即强拆重连，制造不必要的断线丢帧窗口
+            lastReconnectAttemptMs.set(System.currentTimeMillis());
             if (registered.compareAndSet(false, true)) {
                 log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={} handlers={}",
                         properties.getSync().getExecutor().getServerUrl(), nodeId, lastReportedHandlers.size());
@@ -275,6 +298,24 @@ public class ExecutorSyncBinder {
         } catch (Throwable ex) {
             log.debug("[job] 处理器清单上报失败 cause={}", ex.getMessage());
         }
+    }
+
+    /**
+     * 记录命令消息 id；id 已存在时返回 false（判定为重放重复命令）。
+     *
+     * @param msgId 命令消息 id
+     * @return 首次出现返回 true，重复返回 false
+     */
+    private synchronized boolean rememberCommandId(String msgId) {
+        if (!seenCommandIds.add(msgId)) {
+            return false;
+        }
+        while (seenCommandIds.size() > SEEN_COMMAND_CAPACITY) {
+            Iterator<String> it = seenCommandIds.iterator();
+            it.next();
+            it.remove();
+        }
+        return true;
     }
 
     /**

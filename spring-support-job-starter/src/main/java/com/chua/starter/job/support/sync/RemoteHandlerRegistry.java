@@ -87,6 +87,20 @@ public class RemoteHandlerRegistry {
     }
 
     /**
+     * 查询某客户端标识对应的执行器节点标识。
+     *
+     * <p>重连后 clientId 会变化，按 clientId 记录的断线信息需要换算成节点级
+     * （nodeId）才能跨连接沿用。</p>
+     *
+     * @param clientId 客户端标识
+     * @return 节点标识，未登记时返回 null
+     */
+    public String nodeIdOf(String clientId) {
+        NodeInfo info = clientId == null ? null : nodesByClient.get(clientId);
+        return info == null ? null : info.nodeId();
+    }
+
+    /**
      * 全部在线执行器上报的处理器名并集。
      *
      * @return 处理器名并集

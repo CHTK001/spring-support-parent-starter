@@ -455,7 +455,7 @@ import java.util.Map;
          * 编解码器类型（sm2/aes/rsa等）
          */
         @NotNull(message = "编解码器类型不能为空")
-        @Pattern(regexp = "^(sm2|aes|rsa|des)$", message = "编解码器类型必须为sm2/aes/rsa/des之一")
+        @Pattern(regexp = "^(sm2|sm4|aes|rsa|des|keylog)$", message = "编解码器类型必须为sm2/sm4/aes/rsa/des/keylog之一")
         /**
          * Codec类型
         */
@@ -589,11 +589,17 @@ import java.util.Map;
          * 解码器类型（sm4/aes等）
          */
         @NotNull(message = "解码器类型不能为空")
-        @Pattern(regexp = "^(sm4|aes|des)$", message = "解码器类型必须为sm4/aes/des之一")
+        @Pattern(regexp = "^(sm4|aes|des|keylog)$", message = "解码器类型必须为sm4/aes/des/keylog之一")
         /**
          * Codec类型
         */
         private String codecType = "aes";
+
+        /**
+         * keylog 服务端长期密钥文件路径（内容 pair:公钥hex:私钥hex）。
+         * 同机多个服务指向同一文件时共用同一对长期密钥；空表示进程内生成。
+         */
+        private String keylogKeyFile;
 
         /**
          * 获取codec类型

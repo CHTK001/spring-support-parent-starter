@@ -2,6 +2,7 @@ package com.chua.starter.job.support.sync;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 自研同步通道使用的 topic 常量。
@@ -51,6 +52,20 @@ public final class JobSyncTopics {
     private static final String MANUAL_PREFIX = "MANUAL|";
 
     /**
+     * 命令消息 id 查询键（含等号）。
+     *
+     * <p>每条出站命令都带唯一 {@code mid}：执行器断线重连后，调度器会把断线窗口内的
+     * 命令补偿重放，重放帧与原始帧共用同一 mid，执行器按 mid 幂等去重，保证
+     * at-least-once 送达语义下不重复执行。</p>
+     */
+    private static final String MSG_ID_KEY = "mid=";
+
+    /**
+     * 命令消息 id 进程内序列（与毫秒时间戳组合保证唯一）。
+     */
+    private static final AtomicLong MSG_ID_SEQ = new AtomicLong(0L);
+
+    /**
      * 创建 作业同步topics 实例
     */
     private JobSyncTopics() {
@@ -84,6 +99,29 @@ public final class JobSyncTopics {
      */
     public static boolean isManualCommand(String payload) {
         return payload != null && payload.startsWith(MANUAL_PREFIX);
+    }
+
+    /**
+     * 轻量提取负载里的命令消息 id（不解析脚本正文等大字段）。
+     *
+     * @param payload 命令负载
+     * @return 消息 id，负载无 mid 时返回 null
+     */
+    public static String msgIdOf(String payload) {
+        if (payload == null) {
+            return null;
+        }
+        int queryIndex = payload.indexOf('?');
+        if (queryIndex < 0) {
+            return null;
+        }
+        for (String pair : payload.substring(queryIndex + 1).split("&")) {
+            if (pair.startsWith(MSG_ID_KEY)) {
+                String value = pair.substring(MSG_ID_KEY.length()).trim();
+                return value.isEmpty() ? null : value;
+            }
+        }
+        return null;
     }
 
     /**
@@ -248,6 +286,8 @@ public final class JobSyncTopics {
         if (concurrentPolicy != null && !concurrentPolicy.isBlank()) {
             append(query, "cc=" + concurrentPolicy.trim().toUpperCase(java.util.Locale.ROOT));
         }
+        // 唯一消息 id：断线重连后的重放补偿依赖它做执行器侧幂等去重
+        append(query, MSG_ID_KEY + "m" + System.currentTimeMillis() + "-" + MSG_ID_SEQ.incrementAndGet());
         if (query.length() > 0) {
             sb.append('?').append(query);
         }
@@ -284,14 +324,15 @@ public final class JobSyncTopics {
      * @param alarmType         失败告警类型（EMAIL/WEBHOOK），null 表示按 EMAIL 处理
      * @param executeParam      台账执行参数（已从 Base64 解码），null 表示无
      * @param concurrentPolicy  并发策略（SKIP/ALLOW），null 表示负载未携带，由执行器用自身默认值
+     * @param msgId             命令唯一消息 id，null 表示旧格式负载未携带
      */
     public record Command(String jobName, boolean manual, Integer failRetry, Integer retryIntervalSec,
                           Integer executeTimeoutSec, String glueType, String glueSource, Long glueUpdatetimeMs,
                           String retryCallbackBean, String exceptionCallbackBean, String alarmEmail,
-                          String alarmType, String executeParam, String concurrentPolicy) {
+                          String alarmType, String executeParam, String concurrentPolicy, String msgId) {
 
         /**
-         * 兼容不携带并发策略的旧版命令（13 参）。
+         * 兼容不携带并发策略与消息 id 的旧版命令（13 参）。
          *
          * @param jobName             任务名
          * @param manual              是否手动派发
@@ -313,7 +354,34 @@ public final class JobSyncTopics {
                        String alarmType, String executeParam) {
             this(jobName, manual, failRetry, retryIntervalSec, executeTimeoutSec, glueType, glueSource,
                     glueUpdatetimeMs, retryCallbackBean, exceptionCallbackBean, alarmEmail, alarmType,
-                    executeParam, null);
+                    executeParam, null, null);
+        }
+
+        /**
+         * 兼容不携带消息 id 的旧版命令（14 参）。
+         *
+         * @param jobName             任务名
+         * @param manual              是否手动派发
+         * @param failRetry           失败重试次数
+         * @param retryIntervalSec    重试间隔秒数
+         * @param executeTimeoutSec   执行超时秒数
+         * @param glueType            执行类型
+         * @param glueSource          脚本正文
+         * @param glueUpdatetimeMs    脚本版本时刻
+         * @param retryCallbackBean   重试前回调处理器名
+         * @param exceptionCallbackBean 异常回调处理器名
+         * @param alarmEmail          失败告警目标
+         * @param alarmType           失败告警类型
+         * @param executeParam        台账执行参数
+         * @param concurrentPolicy    并发策略
+         */
+        public Command(String jobName, boolean manual, Integer failRetry, Integer retryIntervalSec,
+                       Integer executeTimeoutSec, String glueType, String glueSource, Long glueUpdatetimeMs,
+                       String retryCallbackBean, String exceptionCallbackBean, String alarmEmail,
+                       String alarmType, String executeParam, String concurrentPolicy) {
+            this(jobName, manual, failRetry, retryIntervalSec, executeTimeoutSec, glueType, glueSource,
+                    glueUpdatetimeMs, retryCallbackBean, exceptionCallbackBean, alarmEmail, alarmType,
+                    executeParam, concurrentPolicy, null);
         }
     }
 
@@ -340,6 +408,7 @@ public final class JobSyncTopics {
         String alarmType = null;
         String executeParam = null;
         String concurrentPolicy = null;
+        String msgId = null;
         int queryIndex = rest.indexOf('?');
         if (queryIndex >= 0) {
             jobName = rest.substring(0, queryIndex);
@@ -375,6 +444,8 @@ public final class JobSyncTopics {
                         executeParam = decodeSource(value);
                     } else if ("cc".equals(key)) {
                         concurrentPolicy = value;
+                    } else if ("mid".equals(key)) {
+                        msgId = value;
                     }
                 } catch (NumberFormatException ignored) {
                     // 单个键解析失败不影响任务名与其它键
@@ -382,7 +453,7 @@ public final class JobSyncTopics {
             }
         }
         return new Command(jobName, manual, retry, retryInterval, timeout, glueType, glueSource, glueAt,
-                retryCb, excCb, alarm, alarmType, executeParam, concurrentPolicy);
+                retryCb, excCb, alarm, alarmType, executeParam, concurrentPolicy, msgId);
     }
 
     /**

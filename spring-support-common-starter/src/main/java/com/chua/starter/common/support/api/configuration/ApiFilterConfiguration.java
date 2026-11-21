@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.api.configuration;
+import com.chua.common.support.application.GlobalSettingFactory;
 import com.chua.common.support.lang.version.Version;
 
 import com.chua.starter.common.support.configuration.resolver.VersionArgumentResolver;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeRegister;
+import com.chua.starter.common.support.api.decode.ApiRequestDecodeSetting;
 import com.chua.starter.common.support.api.decode.CodecTraceChunkFilter;
 import com.chua.starter.common.support.utils.NonceUtils;
 import jakarta.servlet.*;
@@ -165,6 +167,11 @@ public class ApiFilterConfiguration  {
         private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NonceXhrFilter.class);
 
         /**
+         * 强制签名拒绝报文
+         */
+        private static final String FORBIDDEN_MSG = "{\"code\":403,\"msg\":\"接口已开启强制签名校验，请求缺少签名头\"}";
+
+        /**
          * Reject_msg
         */
         private static final String REJECT_MSG = "{\"code\":400,\"msg\":\"请求校验失败，请勿重放请求\"}";
@@ -180,6 +187,13 @@ public class ApiFilterConfiguration  {
                 return;
             }
             if (!NonceUtils.hasSignHeaders(req)) {
+                if (isApiSignOpen()) {
+                    log.warn("[Nonce][XHR] ApiSignOpen 已开启，请求缺少签名头 uri={}", req.getRequestURI());
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    resp.setContentType("application/json;charset=UTF-8");
+                    resp.getOutputStream().write(FORBIDDEN_MSG.getBytes(StandardCharsets.UTF_8));
+                    return;
+                }
                 chain.doFilter(request, response);
                 return;
             }
@@ -192,6 +206,21 @@ public class ApiFilterConfiguration  {
             }
             req.setAttribute(NonceUtils.REQUEST_SIGN_VALIDATED_ATTRIBUTE, Boolean.TRUE);
             chain.doFilter(request, response);
+        }
+
+        /**
+         * 接口强制签名开关（sys_setting ApiSignOpen，默认关闭）。
+         *
+         * @return 是否强制签名
+         */
+        private boolean isApiSignOpen() {
+            try {
+                ApiRequestDecodeSetting setting = GlobalSettingFactory.getInstance()
+                        .get("config", ApiRequestDecodeSetting.class);
+                return null != setting && setting.isApiSignOpen();
+            } catch (Exception e) {
+                return false;
+            }
         }
     }
 }

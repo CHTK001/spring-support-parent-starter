@@ -4,7 +4,9 @@ import com.chua.common.support.application.GlobalSettingFactory;
 import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.matcher.PathMatcher;
 import com.chua.common.support.lang.algorithm.crypto.Codec;
+import com.chua.common.support.lang.algorithm.crypto.KeyLogCodec;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeSetting;
+import com.chua.starter.common.support.api.decode.KeyLogServerKeyProvider;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import org.springframework.context.ApplicationListener;
 
@@ -48,6 +50,11 @@ public class ApiResponseEncodeRegister
     private ApiResponseEncodeConfiguration apiResponseEncodeConfiguration;
 
     /**
+     * keylog 服务端长期密钥提供器
+     */
+    private final KeyLogServerKeyProvider keyLogServerKeyProvider;
+
+    /**
      * 编解码器类型
      *
      * @param codecType codec类型
@@ -56,6 +63,7 @@ public class ApiResponseEncodeRegister
     private ApiResponseEncodeRegister(String codecType, List<String> whiteList) {
         this.codecType = codecType;
         this.whiteList = whiteList;
+        this.keyLogServerKeyProvider = new KeyLogServerKeyProvider(null);
     }
 
     /**
@@ -64,6 +72,20 @@ public class ApiResponseEncodeRegister
      * @param responseEncodePropertiesConfig 编解码配置
      */
     public ApiResponseEncodeRegister(ApiProperties.ResponseEncodeProperties responseEncodePropertiesConfig) {
+        this(responseEncodePropertiesConfig, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param responseEncodePropertiesConfig 编解码配置
+     * @param keyLogServerKeyProvider        keylog 服务端长期密钥提供器；null 时用进程内密钥兜底
+     */
+    public ApiResponseEncodeRegister(ApiProperties.ResponseEncodeProperties responseEncodePropertiesConfig,
+                                     KeyLogServerKeyProvider keyLogServerKeyProvider) {
+        this.keyLogServerKeyProvider = null != keyLogServerKeyProvider
+                ? keyLogServerKeyProvider
+                : new KeyLogServerKeyProvider(null);
         this.codecType = responseEncodePropertiesConfig.getCodecType();
         this.whiteList = responseEncodePropertiesConfig.getWhiteList() == null
                 ? Collections.emptyList()
@@ -114,6 +136,58 @@ public class ApiResponseEncodeRegister
             log.error("[CodecFactory] 响应加密失败", e);
             throw new IllegalStateException("响应加密失败（不会降级为明文）: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 编码数据（支持 keylog 回包）。
+     *
+     * <p>请求侧为 keylog 时，响应复用该请求的共享密钥：从请求帧（或
+     * x-codec-keylog-pub 头）取客户端临时公钥，用服务端长期密钥对封装回包；
+     * 回包帧以服务端长期公钥为 HKDF 盐与 AAD 绑定域，客户端凭请求侧留存
+     * 的一次性私钥即可解密，服务端不保存任何会话状态。</p>
+     *
+     * <p>请求侧为 keylog 但未携带任何密钥材料（如未加密的登录/无帧请求）时返回
+     * null，调用方跳过加密原样返回——响应加密绑定请求加密。</p>
+     *
+     * @param data           明文
+     * @param keylogMaterial 请求侧密钥材料：完整 k2 帧、纯临时公钥 hex；非 keylog 请求传 null
+     * @return 编码结果；keylog 请求缺少密钥材料时返回 null
+     */
+    public CodecResult encode(String data, String keylogMaterial) {
+        if (!isRequestCodecKeylog()) {
+            return encode(data);
+        }
+        String clientPublicKey = null;
+        if (null != keylogMaterial && !keylogMaterial.isBlank()) {
+            String material = keylogMaterial.trim();
+            clientPublicKey = material.startsWith("k2:")
+                    ? KeyLogCodec.extractEphemeralPublicKey(material)
+                    : material;
+        }
+        if (null == clientPublicKey || clientPublicKey.isBlank()) {
+            // 响应加密绑定请求加密：keylog 请求没有密钥材料时不加密
+            return null;
+        }
+        try {
+            Codec codec = Codec.build("keylog", keyLogServerKeyProvider.getPairSpec());
+            String frame = ((KeyLogCodec) codec).encodeReplyHex(clientPublicKey, data);
+            return new CodecResult(String.valueOf("keylog".length()), frame,
+                    String.valueOf("keylog".length()));
+        } catch (Exception e) {
+            log.error("[CodecFactory] keylog 响应加密失败", e);
+            throw new IllegalStateException("响应加密失败（不会降级为明文）: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 请求侧 codec 是否 keylog（读 sys_setting CodecType，空视为非 keylog）。
+     *
+     * @return 是否 keylog
+     */
+    private boolean isRequestCodecKeylog() {
+        ApiRequestDecodeSetting setting = GlobalSettingFactory.getInstance()
+                .get("config", ApiRequestDecodeSetting.class);
+        return null != setting && "keylog".equalsIgnoreCase(setting.effectiveCodecType(null));
     }
 
     /**

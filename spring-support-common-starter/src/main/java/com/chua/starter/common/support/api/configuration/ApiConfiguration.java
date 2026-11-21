@@ -4,6 +4,7 @@ import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.api.control.ApiVersionRequestMappingHandlerMapping;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeBodyAdvice;
 import com.chua.starter.common.support.api.decode.ApiRequestDecodeRegister;
+import com.chua.starter.common.support.api.decode.KeyLogServerKeyProvider;
 import com.chua.starter.common.support.api.encode.ApiResponseEncodeRegister;
 import com.chua.starter.common.support.api.encode.ApiResponseEncodeResponseBodyAdvice;
 import com.chua.starter.common.support.api.properties.ApiProperties;
@@ -134,21 +135,41 @@ public class ApiConfiguration implements EnvironmentAware  {
     }
 
     /**
+     * keylog 服务端长期密钥提供器（请求/响应两侧共用同一对长期密钥）。
+     *
+     * <p>密钥文件路径取 {@code plugin.api.decode.keylog-key-file}；宿主可自定义
+     * 同名 Bean 覆盖（如接入 KMS）。</p>
+     *
+     * @return keylog服务端密钥提供器
+     */
+    @Bean("keyLogServerKeyProvider")
+    @Lazy
+    @ConditionalOnMissingBean
+    public KeyLogServerKeyProvider keyLogServerKeyProvider() {
+        /**
+         * keylog服务端密钥提供器。
+         * @return keylog服务端密钥提供器的结果
+         */
+        return new KeyLogServerKeyProvider(apiProperties.getDecode().getKeylogKeyFile());
+    }
+
+    /**
      * 响应编码注册器
      *
+     * @param keyLogServerKeyProvider keylog服务端密钥提供器
      * @return 编码注册器
      */
     @Bean("apiResponseEncodeRegister")
     @Lazy
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
-    public ApiResponseEncodeRegister apiResponseEncodeRegister() {
+    public ApiResponseEncodeRegister apiResponseEncodeRegister(KeyLogServerKeyProvider keyLogServerKeyProvider) {
         /**
          * api响应encode注册。
          * @param apiProperties.getEncode( api属性.获取encode(
          * @return api响应encode注册的结果
          */
-        return new ApiResponseEncodeRegister(apiProperties.getEncode());
+        return new ApiResponseEncodeRegister(apiProperties.getEncode(), keyLogServerKeyProvider);
     }
 
     // ==================== 请求解码配置 ====================
@@ -174,19 +195,20 @@ public class ApiConfiguration implements EnvironmentAware  {
     /**
      * 请求解码注册器
      *
+     * @param keyLogServerKeyProvider keylog服务端密钥提供器
      * @return 解码注册器
      */
     @Bean("apiRequestDecodeRegister")
     @Lazy
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
-    public ApiRequestDecodeRegister apiRequestDecodeRegister() {
+    public ApiRequestDecodeRegister apiRequestDecodeRegister(KeyLogServerKeyProvider keyLogServerKeyProvider) {
         /**
          * api请求decode注册。
          * @param apiProperties.getDecode( api属性.获取decode(
          * @return api请求decode注册的结果
          */
-        return new ApiRequestDecodeRegister(apiProperties.getDecode());
+        return new ApiRequestDecodeRegister(apiProperties.getDecode(), keyLogServerKeyProvider);
     }
 
     /**

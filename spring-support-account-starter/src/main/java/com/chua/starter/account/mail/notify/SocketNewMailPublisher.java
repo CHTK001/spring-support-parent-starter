@@ -5,6 +5,7 @@ import com.chua.starter.account.mail.MailboxMessage;
 import com.chua.starter.common.support.text.json.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.stereotype.Component;
 
@@ -19,8 +20,10 @@ import java.util.Map;
  * Notification 与未读徽标使用。</p>
  *
  * <p>整个类被 {@code @ConditionalOnClass(SocketSessionTemplate.class)} 兜底：
- * 宿主未引入 spring-support-socket-starter 时 Bean 不创建，推送静默降级，
- * 不向宿主塞任何 Controller、定时任务或表迁移（R5）。</p>
+ * 宿主未引入 spring-support-socket-starter 时 Bean 不创建；即便引入但未开
+ * {@code plugin.socket.enable}（容器里没有 SocketSessionTemplate bean），经
+ * {@link ObjectProvider} 取不到同样静默降级。不向宿主塞任何 Controller、
+ * 定时任务或表迁移（R5）。</p>
  *
  * @author CH
  * @since 4.0.0.53
@@ -31,7 +34,7 @@ import java.util.Map;
 @ConditionalOnClass(SocketSessionTemplate.class)
 public class SocketNewMailPublisher {
 
-    private final SocketSessionTemplate template;
+    private final ObjectProvider<SocketSessionTemplate> templateProvider;
 
     /**
      * 发布新邮件通知。
@@ -49,6 +52,7 @@ public class SocketNewMailPublisher {
      * @param latest     最新一封（含主题、发件人、发送时间）
      */
     public void publish(String accountId, String accountName, int count, MailboxMessage latest) {
+        SocketSessionTemplate template = templateProvider.getIfAvailable();
         if (template == null) {
             return;
         }

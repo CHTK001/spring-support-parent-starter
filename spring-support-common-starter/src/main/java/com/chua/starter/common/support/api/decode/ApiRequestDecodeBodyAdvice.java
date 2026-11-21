@@ -115,6 +115,10 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         if (!NonceUtils.hasSignHeaders(request)) {
+            if (decodeRegister.isApiSignOpen()) {
+                log.warn("[RequestSign] ApiSignOpen 已开启，请求缺少签名头 uri={}", request.getRequestURI());
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "接口已开启强制签名校验，请求缺少签名头");
+            }
             log.debug("[RequestSign] 未携带完整签名头，跳过校验");
         } else {
             if (Boolean.TRUE.equals(
@@ -231,6 +235,9 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
                */
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请求解密失败: 未找到加密数据");
         }
+
+        // 暂存本次请求的密文帧：keylog 回包加密需要据此取请求侧临时公钥
+        request.setAttribute(ApiRequestDecodeRegister.REQUEST_CODEC_FRAME_ATTRIBUTE, encryptedPayload);
 
         try {
             byte[] decodedBytes = decodeRegister.decodeRequest(encryptedPayload);

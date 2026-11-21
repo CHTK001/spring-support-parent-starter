@@ -84,7 +84,7 @@ function Stop-ByPort([int]$port) {
 }
 
 function Login() {
-    $body = @{ username = "admin"; password = "123456"; loginType = "WEB" } | ConvertTo-Json
+    $body = @{ username = "admin"; password = "admin123"; loginType = "WEB" } | ConvertTo-Json
     $response = Invoke-RestMethod -Uri "$script:base/v2/user/login" -Method Post `
         -ContentType "application/json;charset=UTF-8" -Body $body -TimeoutSec 10
     if ($response.code -ne "00000") { throw "login failed: $($response.msg)" }
@@ -148,7 +148,7 @@ try {
             "--plugin.job.role=SCHEDULER",
             "--plugin.job.sync.scheduler.listen-host=127.0.0.1",
             "--plugin.job.sync.scheduler.listen-port=$SyncPort",
-            "--spring.datasource.url=jdbc:h2:file:./data/sched_h2;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+            "--spring.datasource.url=jdbc:h2:file:./data/sched_h2;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=VALUE"
         ) $schedDir (Join-Path $WorkRoot "accept-sched-out.log") (Join-Path $WorkRoot "accept-sched-err.log") | Out-Null
         if (-not (Wait-Port $SchedulerPort 90)) { throw "scheduler not ready within 90s" }
         Start-Sleep -Seconds 5
@@ -162,7 +162,7 @@ try {
             "--spring.mail.properties.mail.smtp.connectiontimeout=10000",
             "--spring.mail.properties.mail.smtp.timeout=10000",
             "--spring.mail.properties.mail.smtp.writetimeout=10000",
-            "--spring.datasource.url=jdbc:h2:file:./data/exec_h2;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+            "--spring.datasource.url=jdbc:h2:file:./data/exec_h2;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=VALUE"
         ) $execDir (Join-Path $WorkRoot "accept-exec-out.log") (Join-Path $WorkRoot "accept-exec-err.log") | Out-Null
     }
 
@@ -185,6 +185,19 @@ try {
         if ($nodes.data.Count -gt 0) { $node = $nodes.data[0]; break }
     }
     Add-Result "remote-node-register" ($null -ne $node) $(if ($node) { "nodeId=$($node.nodeId) handlers=$($node.handlers -join ',')" } else { "no node within 60s" })
+
+    # Wait until the executor reports the collect-flow handlers and the tcp sync
+    # channel has settled (executor heartbeats force a reconnect right after
+    # startup; a MANUAL cmd broadcast inside that window is silently dropped).
+    for ($i = 0; $i -lt 30; $i++) {
+        Start-Sleep -Seconds 2
+        try {
+            $ns = Api "Get" "/v2/scheduler/nodes"
+            $hs = @($ns.data | ForEach-Object { $_.handlers } | Select-Object -Unique)
+            if ($hs -contains "collect-flow-1") { break }
+        } catch { }
+    }
+    Start-Sleep -Seconds 3
 
     $hookKey = "acc-hook-$stamp"
     [void]$createdKeys.Add($hookKey)

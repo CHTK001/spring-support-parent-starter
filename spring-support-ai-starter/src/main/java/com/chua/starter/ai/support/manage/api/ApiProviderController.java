@@ -2540,6 +2540,111 @@ public class ApiProviderController {
     }
 
     /**
+     * 供应商可用余额查询类型选项（表单「查询类型」下拉的数据源）。
+     *
+     * @param value 实现标识（选中后写入 extra.credit_kind）
+     * @param label 展示名
+     * @param login 是否支持「账号密码登录」截获令牌（true 时表单显示登录入口与自动续期）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditKindOption(String value, String label, Boolean login) {
+    }
+
+    /**
+     * 供应商可用的余额查询类型清单：后端实现了哪些，表单就显示哪些。
+     *
+     * <p>「自定义」（显式余额地址 + 字段映射 + 余额密钥）恒可选且排第一，作为默认口径；
+     * 其余按 {@link #autoCandidateKinds} 的自动候选链展示——登记表收录的厂商、可指纹
+     * 识别的中转网关、OpenAI 兼容计费探测等，只有后端真的实现了才出现在下拉里；
+     * 「账号密码登录」是令牌来源而非查询实现，仅当候选链里存在给出登录页的 SPI
+     * （或已显式配置 credit_login_url）时才可选。本接口只做静态判断，
+     * 不发起任何真实余额查询。</p>
+     *
+     * <p>已保存的行按库里的平台 / 地址 / extra 计算；未保存的新行按用户正在填写的
+     * 平台与上游地址计算（内存临时实体，不落库）。</p>
+     *
+     * @param providerId 供应商标识（已保存的行）
+     * @param baseUrl    上游地址（未保存的新行用）
+     * @param platform   平台标识（未保存的新行用）
+     * @return 可选类型清单（自定义恒在首位）
+     */
+    @Permission("admin")
+    @GetMapping("/providers/credit-kinds")
+    public ApiResult<List<CreditKindOption>> providerCreditKinds(
+            @RequestParam(value = "provider_id", required = false) String providerId,
+            @RequestParam(value = "base_url", required = false) String baseUrl,
+            @RequestParam(value = "platform", required = false) String platform) {
+        SysAccountChannel entity;
+        Map<String, Object> extra;
+        if (providerId != null && !providerId.isBlank()) {
+            entity = requireProvider(providerId.trim());
+            extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        } else {
+            entity = new SysAccountChannel();
+            entity.setPlatform(platform == null ? null : platform.trim());
+            entity.setBaseUrl(baseUrl == null ? null : baseUrl.trim());
+            extra = new HashMap<>(4);
+        }
+        List<String> auto = autoCandidateKinds(entity, extra);
+        List<CreditKindOption> options = new ArrayList<>(auto.size() + 2);
+        options.add(new CreditKindOption("custom", "自定义", null));
+        for (String kind : auto) {
+            // custom 已恒在首位；expression 是旧版整条表达式口径，表单里并入自定义
+            if ("custom".equals(kind) || CreditQueries.KIND_EXPRESSION.equals(kind)) {
+                continue;
+            }
+            options.add(new CreditKindOption(kind, creditKindLabel(kind), null));
+        }
+        // 账密登录仅当候选链里存在可登录 SPI（或已显式配置登录页）时可选
+        boolean canLogin = str(extra, "credit_login_url") != null;
+        if (!canLogin) {
+            for (String kind : auto) {
+                CreditQueryProvider provider = CreditQueries.find(kind);
+                if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
+                    canLogin = true;
+                    break;
+                }
+            }
+        }
+        if (canLogin) {
+            options.add(new CreditKindOption(ProviderCreditLoginService.KIND, "账号密码登录", true));
+        }
+        return ApiResult.ok(options);
+    }
+
+    /**
+     * 余额实现标识的展示名（与余额面板 KIND_LABELS 同一口径）。
+     *
+     * @param kind 实现标识
+     * @return 展示名；未登记的标识原样返回
+     */
+    private String creditKindLabel(String kind) {
+        return switch (kind) {
+            case "host" -> "厂商官方";
+            case "openai" -> "OpenAI 官方";
+            case "billing" -> "OpenAI 兼容计费";
+            case "deepseek" -> "DeepSeek 门户余额";
+            case "opencode" -> "OpenCode 官方用量";
+            case "opencode-console" -> "OpenCode 控制台余额";
+            case "volc-plan" -> "火山方舟订阅聚合";
+            case "agnes" -> "Agnes 官方";
+            case "sensenova" -> "SenseNova 官方";
+            case "shusheng" -> "书生·端砚";
+            case "sub2api" -> "sub2api 订阅";
+            case "minimax-platform" -> "MiniMax 平台余额";
+            case "modelscope" -> "魔搭限流配额";
+            case "zai" -> "z.ai 官方";
+            case "openrouter" -> "OpenRouter 官方";
+            case "ppio" -> "PPIO 派欧云官方";
+            case "anthropic" -> "Anthropic 控制台余额";
+            case "xai" -> "xAI 管理接口余额";
+            case "new-api" -> "new-api 站点额度";
+            case "moss" -> "Moss 门户余额";
+            default -> kind;
+        };
+    }
+
+    /**
      * 供应商余额与用量（只读）。
      *
      * <p>把一个供应商的每个 Key 当成一次独立的余额读数：Key 即令牌（或

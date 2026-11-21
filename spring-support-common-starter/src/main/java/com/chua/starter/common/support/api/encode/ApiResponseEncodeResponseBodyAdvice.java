@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.api.encode;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.common.support.api.decode.ApiRequestDecodeRegister;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import org.springframework.core.MethodParameter;
@@ -107,8 +108,14 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
 
         HttpHeaders headers = serverHttpResponse.getHeaders();
 
-          // 使用主密钥加密（去除OTK）
-        ApiResponseEncodeRegister.CodecResult codecResult = apiResponseEncodeRegister.encode(Json.toJson(o));
+        // keylog 回包：复用请求侧共享密钥（请求帧 attribute 或 x-codec-keylog-pub 头）
+        String keylogMaterial = resolveKeylogMaterial(servletRequest);
+        ApiResponseEncodeRegister.CodecResult codecResult =
+                apiResponseEncodeRegister.encode(Json.toJson(o), keylogMaterial);
+        if (null == codecResult) {
+            // keylog 请求未携带密钥材料（响应加密绑定请求加密）→ 原样返回
+            return o;
+        }
 
           // 设置响应头
         headers.set("access-control-timestamp-user", codecResult.getTimestamp());
@@ -136,6 +143,24 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
                 .body(responseBytes);
     }
 
+
+    /**
+     * 解析 keylog 回包所需的请求侧密钥材料。
+     *
+     * <p>优先取 decode advice 暂存的请求帧（有 body 的请求），其次取
+     * x-codec-keylog-pub 头（无 body 的 keylog 请求也下发临时公钥）。</p>
+     *
+     * @param request 请求
+     * @return 密钥材料；都没有时返回 null
+     */
+    private String resolveKeylogMaterial(HttpServletRequest request) {
+        Object frame = request.getAttribute(ApiRequestDecodeRegister.REQUEST_CODEC_FRAME_ATTRIBUTE);
+        if (frame instanceof String frameText && !frameText.isBlank()) {
+            return frameText;
+        }
+        String pubHeader = request.getHeader("x-codec-keylog-pub");
+        return null == pubHeader || pubHeader.isBlank() ? null : pubHeader.trim();
+    }
 
       /**
        * 将字符串转换为字节数组（使用更真实的二进制转换方法）

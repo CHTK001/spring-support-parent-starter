@@ -4,6 +4,8 @@ import com.chua.starter.common.support.function.Upgrade;
 import lombok.EqualsAndHashCode;
 import org.springframework.context.ApplicationEvent;
 
+import java.util.Locale;
+
 /**
  * 请求解码设置
  *
@@ -27,6 +29,21 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * 数据库配置别名：codec分段传输打开（traceId 分片）
      */
     private boolean codecTraceOpen = false;
+
+    /**
+     * 数据库配置别名：请求/响应 codec 算法类型（aes/sm4/keylog 等）
+     */
+    private String codecType;
+
+    /**
+     * 数据库配置别名：keylog 服务端长期公钥（X.509 SPKI hex，公钥可公开下发）
+     */
+    private String codecServerPublicKey;
+
+    /**
+     * 数据库配置别名：接口强制签名开关（开启后缺签名头/坏签名一律拒绝，白名单除外）
+     */
+    private boolean apiSignOpen = false;
 
     /**
      * 无参构造方法
@@ -62,6 +79,9 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
         this.codecRequestOpen = setting.isEnable();
         this.codecRequestKey = setting.getCodecRequestKey();
         this.codecTraceOpen = setting.isCodecTraceOpen();
+        this.codecType = setting.getCodecType();
+        this.codecServerPublicKey = setting.getCodecServerPublicKey();
+        this.apiSignOpen = setting.isApiSignOpen();
     }
     /**
      * 获取 enable
@@ -160,6 +180,73 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      */
     public void setCodecTraceOpen(boolean codecTraceOpen) {
         this.codecTraceOpen = codecTraceOpen;
+    }
+
+    /**
+     * 获取 codec 算法类型
+     *
+     * @return codecType
+     */
+    public String getCodecType() {
+        return codecType;
+    }
+
+    /**
+     * 设置 codec 算法类型
+     *
+     * @param codecType codecType
+     */
+    public void setCodecType(String codecType) {
+        this.codecType = codecType;
+    }
+
+    /**
+     * 获取 keylog 服务端长期公钥
+     *
+     * @return codecServerPublicKey
+     */
+    public String getCodecServerPublicKey() {
+        return codecServerPublicKey;
+    }
+
+    /**
+     * 设置 keylog 服务端长期公钥
+     *
+     * @param codecServerPublicKey codecServerPublicKey
+     */
+    public void setCodecServerPublicKey(String codecServerPublicKey) {
+        this.codecServerPublicKey = codecServerPublicKey;
+    }
+
+    /**
+     * 判断是否开启接口强制签名
+     *
+     * @return apiSignOpen
+     */
+    public boolean isApiSignOpen() {
+        return apiSignOpen;
+    }
+
+    /**
+     * 设置接口强制签名开关
+     *
+     * @param apiSignOpen apiSignOpen
+     */
+    public void setApiSignOpen(boolean apiSignOpen) {
+        this.apiSignOpen = apiSignOpen;
+    }
+
+    /**
+     * 生效的 codec 算法类型：设置行优先，空回落调用方给定的默认值。
+     *
+     * @param fallback 默认类型（通常来自 yaml codecType）
+     * @return 生效类型（小写）
+     */
+    public String effectiveCodecType(String fallback) {
+        if (null != codecType && !codecType.isBlank()) {
+            return codecType.trim().toLowerCase(Locale.ROOT);
+        }
+        return null == fallback ? null : fallback.trim().toLowerCase(Locale.ROOT);
     }
 
 }
