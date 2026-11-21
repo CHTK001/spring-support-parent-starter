@@ -1076,13 +1076,36 @@ public class FaceStores {
      * @param group    分组名（空值按默认组）
      * @param id       人脸标识
      * @param metadata 新元数据（整体替换；{@code null} 视为空档案）
-     * @return 是否更新成功（条目不存在返回 false）
+     * @return 是否更新成功（快照与 DB 中都不存在该条目时返回 false；
+     *         仅存在于 DB 的记录走 DB-only 兜底，直接更新档案行）
      */
     public boolean updateMetadata(String group, String id, Map<String, Object> metadata) {
         AccountFace st = st(group);
         Entry old = st.snapshot.get(id);
         if (old == null) {
-            return false;
+            // 快照里没有这条，不等于「库里没有这个人」：列表以 DB 为准
+            // （恢复库、换节点、快照丢失、只写过 DB 的历史数据），与 remove() 同理，
+            // 不能提前 return false —— 那会让「列表里看得见、改档案却报条目不存在」。
+            // 快照里没有特征，向量重推无从谈起；但档案本就不由索引承载（见上），只改 DB 行即可。
+            // 注意 updateMeta 是 upsert：DB 里也没有时必须返回 false，
+            // 不能给一个不存在的 id 凭空补建一条没有向量的档案。
+            if (library.find(st.account, id) == null) {
+                return false;
+            }
+            Map<String, Object> withGroupMeta = withGroup(metadata, st.group);
+            boolean dbOnlyOk;
+            try {
+                dbOnlyOk = library.updateMeta(st.account, id, strOf(withGroupMeta, "name"), withGroupMeta, null);
+            } catch (RuntimeException ex) {
+                log.error("[Face] 账号 '{}' 分组 '{}' 仅存于 DB 的记录更新元数据抛异常: id={} -> {}",
+                        st.account, st.group, id, ex.getMessage());
+                dbOnlyOk = false;
+            }
+            if (!dbOnlyOk) {
+                return false;
+            }
+            log.info("[Face] 账号 '{}' 更新的是仅存在于 DB 的记录（快照里没有）: id={}", st.account, id);
+            return true;
         }
         // 复用 put：它会把 feature 拷一份、metadata 拷成新的可变更
         st.put(id, old.feature(), metadata);
