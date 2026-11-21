@@ -76,6 +76,13 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
+        <!-- Spring Boot Web 支持 - 提供运行期数据源管理 REST 接口（optional，宿主按需引入） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- AspectJ AOP支持 - 提供AOP注解和切面支持 -->
         <dependency>
             <groupId>org.aspectj</groupId>
