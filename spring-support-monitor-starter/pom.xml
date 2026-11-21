@@ -27,6 +27,13 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+        <!-- 监控双模式核心：Agent 上报协议（心跳/指标/任务/状态 record）与指标点模型。
+             本模块定位为服务端；协议模型与客户端引擎在 core，FQN 不变，存量引用零改动。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-monitor-core-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- 服务器台账（资产联动 server-hosts 查询） -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -204,7 +211,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 上报客户端（report-client）注册服务端：接收 sync/client/register 与 monitor/app/report，
+        <!-- 上报客户端注册服务端：接收 sync/client/register 与 monitor/app/report，
              为「节点管理 → 在线节点」与 /ms/monitor/discovery 提供在线节点数据。
              不设为 optional：部署端需要该服务端实际接收注册，否则节点列表恒为空 -->
         <dependency>

@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.config;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.autoconfigure.ApplicationDataSourceScriptDatabaseInitializer;
@@ -15,7 +16,7 @@ import javax.sql.DataSource;
 /**
  * 监控模块自动配置
  * <p>
- * 扫描所有 提供者、服务、调度器 组件，自动装配。
+ * 扫描所有 提供者、服务、调度器 组件与 Mapper，自动装配。
  * 开启事务管理和定时调度；注册时序存储配置属性
  * （influxdb 写入器按 {@code plugin.monitor.influx.enabled} 条件装配）。
  * </p>
@@ -25,6 +26,8 @@ import javax.sql.DataSource;
  */
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.monitor.support")
+@MapperScan({"com.chua.starter.monitor.support.mapper",
+        "com.chua.starter.job.support.store"})
 @EnableConfigurationProperties({
     MonitorInfluxProperties.class, MonitorTimeseriesProperties.class,
     SqlInitializationProperties.class

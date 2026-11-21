@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.51</version>
+    </parent>
+
+    <artifactId>spring-support-monitor-core-starter</artifactId>
+    <description>
+        监控双模式核心模块：Agent 上报协议（心跳/指标/任务/状态 record）、指标点模型、
+        Agent 心跳上下文与客户端引擎基座。刻意不依赖持久层与 Web 能力，
+        客户端宿主仅依赖本模块即可向 monitor 服务端推送指标。
+    </description>
+
+    <dependencies>
+        <!-- 协议 record 的 Jackson 注解 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <!-- MonitorAgentContext 的 @Component 等 Spring 原型注解 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <!-- 客户端引擎自动装配（@AutoConfiguration/@ConfigurationProperties/@ConditionalOnXxx） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <!-- 客户端 ReturnResult 信封解析与推送负载序列化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- 默认本机采集器（可选）：缺失时经存在性判断退化为仅心跳，不向宿主传递 -->
+        <dependency>
+            <groupId>com.github.oshi</groupId>
+            <artifactId>oshi-core</artifactId>
+            <version>6.6.5</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <!-- MetricPoint 的 @Data/@Builder；provided 不向下游传递 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>
