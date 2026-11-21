@@ -54,4 +54,17 @@ public record JobAlarmMessage(
         }
         return alarmType.trim().toUpperCase(java.util.Locale.ROOT);
     }
+
+    // ==== 4.0.0.42 宿主二进制兼容（drop-in 补丁场景专用）====
+    // 线上 4.0.0.42 瘦 jar 里的告警通知器（CollectJobEmailAlarmNotifier /
+    // CollectJobWebhookAlarmNotifier）按旧 POJO getter 字节码调用本对象；
+    // record 化后组件访问器改名会让旧字节码在运行期抛 NoSuchMethodError。
+    // 以下 getter 仅为兼容旧调用方保留，工作区代码请继续用组件访问器。
+    public String getJobName() { return jobName; }
+    public String getAlarmType() { return alarmType; }
+    public String getTarget() { return target; }
+    public long getCostMs() { return costMs; }
+    public String getException() { return exception; }
+    public String getNodeId() { return nodeId; }
+    public long getOccurredAtMs() { return occurredAtMs; }
 }

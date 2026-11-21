@@ -9,6 +9,7 @@ import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
 import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobLinkMetricsVO;
 import com.chua.starter.job.support.manage.vo.JobLogContentVO;
 import com.chua.starter.job.support.manage.vo.JobNodeVO;
 import com.chua.starter.job.support.manage.vo.JobLogVO;
@@ -233,5 +234,16 @@ public class JobManageController {
     @GetMapping("/summary")
     public ReturnResult<JobSummaryVO> summary() {
         return governance.summary();
+    }
+
+    /**
+     * 传输链路健康指标: 命令从调度中心到执行器这一段的自愈与损耗计数。
+     *
+     * @return 链路指标
+     */
+    @Operation(summary = "传输链路健康指标")
+    @GetMapping("/metrics")
+    public ReturnResult<JobLinkMetricsVO> linkMetrics() {
+        return governance.linkMetrics();
     }
 }

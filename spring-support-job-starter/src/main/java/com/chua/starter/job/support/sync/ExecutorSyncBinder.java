@@ -9,6 +9,7 @@ import com.chua.starter.job.support.glue.GlueTypes;
 import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.log.JobLogEvent;
+import com.chua.starter.job.support.metrics.JobLinkMetrics;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -137,6 +138,8 @@ public class ExecutorSyncBinder {
             // 断线重连后调度器会补偿重放断线窗口内的命令，按消息 id 幂等去重，避免重复执行
             String msgId = JobSyncTopics.msgIdOf(raw);
             if (msgId != null && !rememberCommandId(msgId)) {
+                // 链路指标: 重放帧与原始帧同 mid, 命中去重说明补偿重放正在发挥作用
+                JobLinkMetrics.instance().recordDedupHit();
                 log.info("[job] EXECUTOR 忽略重复命令 (重放去重) mid={} job={}",
                         msgId, JobSyncTopics.commandJobName(raw));
                 return;
@@ -266,6 +269,8 @@ public class ExecutorSyncBinder {
             // "已超过心跳间隔" 而立即强拆重连，制造不必要的断线丢帧窗口
             lastReconnectAttemptMs.set(System.currentTimeMillis());
             if (registered.compareAndSet(false, true)) {
+                // 链路指标: 连接+注册成功（含首次上线与断线重连）
+                JobLinkMetrics.instance().recordExecutorConnect();
                 log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={} handlers={}",
                         properties.getSync().getExecutor().getServerUrl(), nodeId, lastReportedHandlers.size());
             }

@@ -10,6 +10,7 @@ import com.chua.starter.job.support.cluster.LeaderElector;
 import com.chua.starter.job.support.dispatch.JobQuery;
 import com.chua.starter.job.support.dispatch.JobRuntime;
 import com.chua.starter.job.support.dispatch.JobSpec;
+import com.chua.starter.job.support.execute.JobExecutor;
 import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.handler.BeanJobHandler;
 import com.chua.starter.job.support.handler.JobHandler;
@@ -21,11 +22,13 @@ import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
 import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobLinkMetricsVO;
 import com.chua.starter.job.support.manage.vo.JobLogContentVO;
 import com.chua.starter.job.support.manage.vo.JobLogVO;
 import com.chua.starter.job.support.manage.vo.JobNodeVO;
 import com.chua.starter.job.support.manage.vo.JobRuntimeVO;
 import com.chua.starter.job.support.manage.vo.JobSummaryVO;
+import com.chua.starter.job.support.metrics.JobLinkMetrics;
 import com.chua.starter.job.support.operate.JobOperator;
 import com.chua.starter.job.support.sync.GlueSyncService;
 import com.chua.starter.job.support.sync.RemoteHandlerRegistry;
@@ -41,8 +44,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
@@ -115,6 +120,11 @@ public class JobGovernanceService {
     private final ObjectProvider<GlueSyncService> glueSyncServiceProvider;
 
     /**
+     * 本进程执行器（读处理/丢弃/并发跳过计数，纯调度中心角色下可能未装配）
+     */
+    private final ObjectProvider<JobExecutor> jobExecutorProvider;
+
+    /**
      * 分页查询任务运行态。
      *
      * @param query 查询条件
@@ -136,7 +146,7 @@ public class JobGovernanceService {
         for (JobRuntime runtime : jobOperator.list(group)) {
             rows.add(toVo(runtime));
         }
-        return ReturnResult.ok(rows);
+        return ReturnResult.ok(backfillLastExecution(rows));
     }
 
     /**
@@ -147,7 +157,10 @@ public class JobGovernanceService {
      */
     public ReturnResult<JobRuntimeVO> detail(String jobKey) {
         JobRuntimeVO vo = toVo(jobOperator.runtime(jobKey));
-        return vo == null ? ReturnResult.error("任务不存在: " + jobKey) : ReturnResult.ok(vo);
+        if (vo == null) {
+            return ReturnResult.error("任务不存在: " + jobKey);
+        }
+        return ReturnResult.ok(backfillLastExecution(List.of(vo)).get(0));
     }
 
     /**
@@ -541,10 +554,43 @@ public class JobGovernanceService {
         failure.setGroup(group);
         failure.setStartTime(System.currentTimeMillis() - FAILURE_WINDOW_MS);
         long recentFailures = jobLogRepository.count(failure);
+        // 跳过计数与失败计数同一口径: SKIPPED + 本节点分组 + 24h 窗口。
+        // 不带分组就是把全库的跳过算到自己头上, 与修过的「概览串味」是同一类错。
+        JobLogQuery skipped = new JobLogQuery();
+        skipped.setExecuteCode("SKIPPED");
+        skipped.setGroup(group);
+        skipped.setStartTime(System.currentTimeMillis() - FAILURE_WINDOW_MS);
+        long recentSkipped = jobLogRepository.count(skipped);
         return ReturnResult.ok(new JobSummaryVO(role, nodeId, leader, group, scanIntervalMs, preReadMs,
                 totalJobs, runningJobs, stoppedJobs, localJobs, remoteCount, unregisteredJobs,
-                unclaimedRemoteJobs, registeredHandlers, recentFailures, remoteDispatchOwnedByMe,
-                onlineExecutors));
+                unclaimedRemoteJobs, registeredHandlers, recentFailures, recentSkipped,
+                remoteDispatchOwnedByMe, onlineExecutors));
+    }
+
+    /**
+     * 传输链路健康指标: 同步通道的自愈与损耗计数 + 执行器本体计数。
+     *
+     * <p>链路计数来自各绑定器/日志写入器的原地打点（进程内单例），执行器计数来自本进程
+     * JobExecutor 的累计值；纯调度中心角色下没有执行器，对应三项目前面以 executorOnline=false 标明。</p>
+     *
+     * @return 链路指标
+     */
+    public ReturnResult<JobLinkMetricsVO> linkMetrics() {
+        JobLinkMetrics metrics = JobLinkMetrics.instance();
+        JobExecutor executor = jobExecutorProvider.getIfAvailable();
+        return ReturnResult.ok(new JobLinkMetricsVO(
+                metrics.replayedCommands(),
+                metrics.commandBufferWatermark(),
+                JobLinkMetrics.COMMAND_BUFFER_CAPACITY,
+                JobLinkMetrics.COMMAND_BUFFER_TTL_MS,
+                metrics.missedDispatchRecords(),
+                metrics.executorDedupHits(),
+                metrics.executorConnects(),
+                metrics.logQueueDrops(),
+                executor != null,
+                executor == null ? 0L : executor.processedCount(),
+                executor == null ? 0L : executor.droppedCount(),
+                executor == null ? 0L : executor.concurrentSkippedCount()));
     }
 
     /**
@@ -560,6 +606,7 @@ public class JobGovernanceService {
                 rows.add(toVo(runtime));
             }
         }
+        rows = backfillLastExecution(rows);
         return PageResult.<JobRuntimeVO>builder()
                 .pageNo(source.getPageNo())
                 .pageSize(source.getPageSize())
@@ -567,6 +614,52 @@ public class JobGovernanceService {
                 .total(source.getTotal())
                 .data(rows)
                 .build();
+    }
+
+    /**
+     * 批量回填「最近一次执行结果」。
+     *
+     * <p>运行态快照不携带执行历史；页面要用「最近一次执行失败」给整行标红，这里按本页
+     * 任务键批量取各自的最新一条日志，一次查询完成回填，避免逐行查库把往返放大 N 倍。
+     * 回填失败时保持原行（字段留空），不让辅助信息拖垮列表主流程。</p>
+     *
+     * @param rows 运行态出参
+     * @return 回填后的出参（字段变化处为新实例）
+     */
+    private List<JobRuntimeVO> backfillLastExecution(List<JobRuntimeVO> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return rows;
+        }
+        Set<String> keys = new HashSet<>();
+        for (JobRuntimeVO row : rows) {
+            if (row != null && row.jobKey() != null && !row.jobKey().isBlank()) {
+                keys.add(row.jobKey());
+            }
+        }
+        if (keys.isEmpty()) {
+            return rows;
+        }
+        Map<String, JobLogRecord> latest = new LinkedHashMap<>();
+        try {
+            for (JobLogRecord record : jobLogRepository.latestByJobKeys(keys)) {
+                if (record != null && record.jobKey() != null) {
+                    latest.putIfAbsent(record.jobKey(), record);
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("[job] 回填最近执行结果失败 cause={}", ex.getMessage());
+            return rows;
+        }
+        if (latest.isEmpty()) {
+            return rows;
+        }
+        List<JobRuntimeVO> filled = new ArrayList<>(rows.size());
+        for (JobRuntimeVO row : rows) {
+            JobLogRecord record = row == null ? null : latest.get(row.jobKey());
+            filled.add(record == null ? row
+                    : row.withLastExecution(record.executeCode(), record.triggerTimeMs()));
+        }
+        return filled;
     }
 
     /**

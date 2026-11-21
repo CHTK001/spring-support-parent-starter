@@ -7,6 +7,7 @@ import com.chua.common.support.network.server.SyncServerListener;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.job.support.log.JobLogEvent;
 import com.chua.starter.job.support.log.JobLogSink;
+import com.chua.starter.job.support.metrics.JobLinkMetrics;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -281,6 +282,8 @@ public class SchedulerSyncBinder {
         }
         try {
             logSink.write(JobLogEvent.skipped(jobName, "无在线执行器，命令未派发", nodeId));
+            // 链路指标: 这条 SKIPPED 就是「丢单补记」, 与静默丢失区分开
+            JobLinkMetrics.instance().recordMissedDispatch();
         } catch (Throwable ex) {
             log.warn("[job] 丢单记录写入失败 job={} cause={}", jobName, ex.getMessage());
         }
@@ -299,6 +302,8 @@ public class SchedulerSyncBinder {
             while (recentCommands.size() > RECENT_COMMAND_CAPACITY) {
                 recentCommands.pollFirst();
             }
+            // 链路指标: 记录缓冲水位峰值, 水位长期顶满说明执行器长时间离线
+            JobLinkMetrics.instance().recordBufferDepth(recentCommands.size());
         }
     }
 
@@ -339,6 +344,8 @@ public class SchedulerSyncBinder {
             }
         }
         if (replayed > 0) {
+            // 链路指标: 补偿重放帧数（与原始帧同 mid, 执行器幂等去重, 不会重复执行）
+            JobLinkMetrics.instance().recordReplay(replayed);
             log.info("[job] 断线窗口命令已补偿重放 clientId={} nodeId={} count={}", clientId, nodeId, replayed);
         }
     }

@@ -2,6 +2,9 @@ package com.chua.starter.job.support.log;
 
 import com.chua.common.support.lang.code.PageResult;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * 任务执行日志的读取侧。
  *
@@ -44,5 +47,18 @@ public interface JobLogRepository {
      */
     default int cleanup(int retentionDays) {
         return 0;
+    }
+
+    /**
+     * 取每个任务键最近的一条日志。
+     *
+     * <p>供治理接口把「最近一次执行结果」批量回填到任务运行态: 一次分页通常有几十行,
+     * 逐行查日志会把 N 次往返放大成 N 倍, 这里按任务键批量取各自的最新一条。</p>
+     *
+     * @param jobKeys 任务键集合, 空集合直接返回空
+     * @return 每个任务键的最新一条日志, 无实现时为空
+     */
+    default List<JobLogRecord> latestByJobKeys(Collection<String> jobKeys) {
+        return List.of();
     }
 }

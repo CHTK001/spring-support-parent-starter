@@ -209,9 +209,11 @@ public class JobAutoConfiguration {
                                                       JobLogRepository jobLogRepository,
                                                       LeaderElector jobLeaderElector,
                                                       RemoteHandlerRegistry remoteHandlerRegistry,
-                                                      ObjectProvider<GlueSyncService> glueSyncServiceProvider) {
+                                                      ObjectProvider<GlueSyncService> glueSyncServiceProvider,
+                                                      ObjectProvider<JobExecutor> jobExecutorProvider) {
         return new JobGovernanceService(jobOperator, jobLogRepository, properties,
-                jobLeaderElector, syncServerProvider, remoteHandlerRegistry, glueSyncServiceProvider);
+                jobLeaderElector, syncServerProvider, remoteHandlerRegistry, glueSyncServiceProvider,
+                jobExecutorProvider);
     }
 
     /**

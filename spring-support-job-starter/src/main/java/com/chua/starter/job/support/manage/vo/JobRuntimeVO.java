@@ -39,6 +39,8 @@ import com.chua.starter.job.support.dispatch.JobRuntime;
  * @param exceptionCallbackBean 异常回调处理器名
  * @param alarmEmail           失败告警目标：邮箱（逗号分隔）或 webhook 地址
  * @param alarmType            失败告警类型：EMAIL / WEBHOOK
+ * @param lastExecuteCode      最近一次执行结果码: SUCCESS / FAILURE / SKIPPED, 空表示尚无执行记录
+ * @param lastExecuteTime      最近一次执行的触发时刻 (毫秒时间戳, 空表示尚无执行记录)
  * @since 4.0.0.42
  * @author CH
  */
@@ -70,7 +72,9 @@ public record JobRuntimeVO(
         String retryCallbackBean,
         String exceptionCallbackBean,
         String alarmEmail,
-        String alarmType) {
+        String alarmType,
+        String lastExecuteCode,
+        Long lastExecuteTime) {
 
     /**
      * 由内部运行态快照构造出参。
@@ -110,7 +114,9 @@ public record JobRuntimeVO(
                 runtime.getRetryCallbackBean(),
                 runtime.getExceptionCallbackBean(),
                 runtime.getAlarmEmail(),
-                runtime.getAlarmType());
+                runtime.getAlarmType(),
+                null,
+                null);
     }
 
     /**
@@ -127,6 +133,26 @@ public record JobRuntimeVO(
                 enabled, executeParam, lastFireTime, nextFireTime, registered, dispatchMode,
                 remoteExecutorAddress, author, failRetry, retryInterval, executeTimeout,
                 misfireStrategy, concurrentPolicy, version, glueType, glueSource,
-                glueUpdatetimeMs, retryCallbackBean, exceptionCallbackBean, alarmEmail, alarmType);
+                glueUpdatetimeMs, retryCallbackBean, exceptionCallbackBean, alarmEmail, alarmType,
+                lastExecuteCode, lastExecuteTime);
+    }
+
+    /**
+     * 返回一个「最近一次执行结果」被改写后的副本。
+     *
+     * <p>运行态快照不携带执行历史，最近一次执行的码与时刻由治理层从日志表回填：
+     * record 不可变，必须返回新实例而不是原地改写。</p>
+     *
+     * @param executeCode 最近一次执行结果码, 无记录时为 {@code null}
+     * @param executeTime 最近一次执行触发时刻 (毫秒), 无记录时为 {@code null}
+     * @return 新的运行态出参
+     */
+    public JobRuntimeVO withLastExecution(String executeCode, Long executeTime) {
+        return new JobRuntimeVO(jobNo, jobKey, jobName, desc, group, scheduleType, scheduleTime,
+                enabled, executeParam, lastFireTime, nextFireTime, handlerRegistered, dispatchMode,
+                remoteExecutorAddress, author, failRetry, retryInterval, executeTimeout,
+                misfireStrategy, concurrentPolicy, version, glueType, glueSource,
+                glueUpdatetimeMs, retryCallbackBean, exceptionCallbackBean, alarmEmail, alarmType,
+                executeCode, executeTime);
     }
 }

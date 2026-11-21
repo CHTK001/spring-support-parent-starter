@@ -2,6 +2,7 @@
 package com.chua.starter.job.support.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -15,8 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * MyBatis-Plus 版 {@link JobLogRepository}, 从 {@code sys_job_log} 读执行日志。
@@ -99,6 +103,51 @@ public class MybatisJobLogRepository implements JobLogRepository {
         int deleted = jobLogMapper.delete(wrapper);
         log.info("[job] 执行日志已清理 retentionDays={} deleted={}", retentionDays, deleted);
         return deleted;
+    }
+
+    @Override
+    public List<JobLogRecord> latestByJobKeys(Collection<String> jobKeys) {
+        if (jobKeys == null || jobKeys.isEmpty()) {
+            return List.of();
+        }
+        List<String> keys = jobKeys.stream().filter(key -> key != null && !key.isBlank()).distinct().toList();
+        if (keys.isEmpty()) {
+            return List.of();
+        }
+        try {
+            // 第一段: 每个任务键只取最新一条日志的主键。聚合列用原生列名包装器,
+            // lambda 包装器表达不了 MAX + GROUP BY; 触发键与主键都以台账口径写入, 无歧义。
+            QueryWrapper<JobLogEntity> latest = new QueryWrapper<JobLogEntity>()
+                    .select("MAX(sys_job_log_id)")
+                    .eq("sys_job_log_is_deleted", 0)
+                    .in("sys_job_log_trigger_bean", keys)
+                    .groupBy("sys_job_log_trigger_bean");
+            List<Object> latestIds = jobLogMapper.selectObjs(latest);
+            if (latestIds == null || latestIds.isEmpty()) {
+                return List.of();
+            }
+            List<Long> ids = latestIds.stream()
+                    .filter(Objects::nonNull)
+                    .map(id -> Long.valueOf(String.valueOf(id)))
+                    .toList();
+            if (ids.isEmpty()) {
+                return List.of();
+            }
+            // 第二段: 按主键取回整行并转读取记录; 触发时刻倒序, 让「最近一次」的语义直观可见。
+            List<JobLogEntity> entities = jobLogMapper.selectBatchIds(ids);
+            List<JobLogRecord> rows = new ArrayList<>();
+            if (entities != null) {
+                for (JobLogEntity entity : entities) {
+                    rows.add(toRecord(entity));
+                }
+            }
+            rows.sort(Comparator.comparing(JobLogRecord::triggerTimeMs,
+                    Comparator.nullsLast(Comparator.reverseOrder())));
+            return rows;
+        } catch (Throwable ex) {
+            log.warn("[job] 批量取任务最近日志失败 keys={} cause={}", keys.size(), ex.getMessage());
+            return List.of();
+        }
     }
 
     /**

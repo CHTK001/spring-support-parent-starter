@@ -1,6 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.job.support.log;
 
+import com.chua.starter.job.support.metrics.JobLinkMetrics;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -62,6 +63,8 @@ public class AsyncLogWriter implements JobLogSink {
             return;
         }
         if (!queue.offer(event)) {
+            // 链路指标: 队列满被丢弃的日志条数, 持续增长说明消费端 (JDBC/文件) 已跟不上
+            JobLinkMetrics.instance().recordLogDrop();
             log.warn("[job] AsyncLogWriter 队列已满, 丢弃日志 event={}", event.jobName());
         }
     }

@@ -25,6 +25,7 @@ import java.util.List;
  *                                仅在「本节点是 Leader + 调度中心角色 + 当前零在线执行器」时为非 0
  * @param registeredHandlers      进程内已注册的执行器数量
  * @param recentFailures          近 24 小时执行失败次数
+ * @param recentSkipped           近 24 小时执行跳过次数 (含处理器未注册与丢单补记)
  * @param remoteDispatchOwnedByMe 远程分发是否由本节点下发 (仅调度中心角色为 true)
  * @param onlineExecutors         当前连接上的执行器节点标识 (调度中心角色下才有值)
  * @since 4.0.0.42
@@ -46,6 +47,7 @@ public record JobSummaryVO(
         long unclaimedRemoteJobs,
         int registeredHandlers,
         long recentFailures,
+        long recentSkipped,
         boolean remoteDispatchOwnedByMe,
         List<String> onlineExecutors) {
 
