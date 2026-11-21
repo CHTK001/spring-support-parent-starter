@@ -1,2 +1,4 @@
 # 定价规则实现：新增一种来源（官方价格页 / 渠道账单 / 自建登记表）加一行
 com.chua.starter.datasearch.provider.spi.impl.RegistryProviderPricingProvider
+# 基元律动(TokenRhythm)定价(控制台公开模型目录实时抓取,CNY/百万token;未被models.dev收录)
+com.chua.starter.datasearch.provider.spi.impl.TokenRhythmPricingProvider

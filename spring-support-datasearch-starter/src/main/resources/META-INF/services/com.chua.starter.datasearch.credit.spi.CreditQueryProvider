@@ -41,3 +41,5 @@ com.chua.starter.datasearch.credit.spi.impl.AnthropicCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.XaiCreditQueryProvider
 # 100milionseek 每日配额(无独立余额端点,GET /v1/models 的响应头 x-quota-* 携带当日 limit/used/remaining,Bearer Key 鉴权)
 com.chua.starter.datasearch.credit.spi.impl.HmilionSeekCreditQueryProvider
+# 基元律动(TokenRhythm)控制台余额(tr_session 会话 Cookie 鉴权;sk_xxx 推理 Key 查不了,勿混用)
+com.chua.starter.datasearch.credit.spi.impl.TokenRhythmCreditQueryProvider

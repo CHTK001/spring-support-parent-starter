@@ -1,2 +1,4 @@
 # 模型目录实现：新增一种来源（公开目录 / 厂商控制台 / 本地缓存）加一行
 com.chua.starter.datasearch.provider.spi.impl.ModelsDevCatalogProvider
+# 基元律动(TokenRhythm)模型目录(控制台公开模型目录实时抓取;未被models.dev收录,无此实现目录同步提前返回)
+com.chua.starter.datasearch.provider.spi.impl.TokenRhythmModelCatalogProvider
