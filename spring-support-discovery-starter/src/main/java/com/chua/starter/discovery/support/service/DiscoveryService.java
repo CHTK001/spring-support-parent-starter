@@ -86,6 +86,39 @@ public class DiscoveryService {
     }
 
     /**
+     * 按默认协议注册服务实例。
+     *
+     * @param path      服务路径标识
+     * @param discovery 服务实例信息
+     * @return 当前服务发现实例，支持链式调用
+     */
+    public ServiceDiscovery registerService(String path, Discovery discovery) {
+        return defaultServiceDiscovery.registerService(path, discovery);
+    }
+
+    /**
+     * 按默认协议注销服务实例。
+     *
+     * @param path      服务路径标识
+     * @param discovery 要注销的服务实例信息
+     * @return 当前服务发现实例，支持链式调用
+     */
+    public ServiceDiscovery unregisterService(String path, Discovery discovery) {
+        return defaultServiceDiscovery.unregisterService(path, discovery);
+    }
+
+    /**
+     * 按默认协议按 serverId 注销服务实例。
+     *
+     * @param path     服务路径标识
+     * @param serverId 要注销的服务节点ID
+     * @return 当前服务发现实例，支持链式调用
+     */
+    public ServiceDiscovery unregisterService(String path, String serverId) {
+        return defaultServiceDiscovery.unregisterService(path, serverId);
+    }
+
+    /**
      * 覆盖默认负载均衡策略（默认 "weight"，也可用 -Dchua.discovery.balance 指定）。
      *
      * @param balance 策略名；为空则忽略
