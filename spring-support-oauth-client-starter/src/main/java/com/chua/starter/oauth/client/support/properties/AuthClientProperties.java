@@ -131,6 +131,8 @@ public class AuthClientProperties {
               "/api/extensions/**",
               "/api/workshop/**",
               "/v2/usage/**",
+              "/v2/logger/ingest",
+              "/v2/logger/sdk.js",
              "/api/terminals",
             "/api/terminals/**"
     );

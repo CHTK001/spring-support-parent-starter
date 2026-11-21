@@ -58,7 +58,7 @@ public class LoggerAutoConfiguration {
      * @param environment 容器环境
      * @return 应用名
      */
-    static String resolveAppName(LoggerProperties properties, Environment environment) {
+    public static String resolveAppName(LoggerProperties properties, Environment environment) {
         if (StringUtils.isNotBlank(properties.getAppName())) {
             return properties.getAppName().trim();
         }
@@ -71,7 +71,7 @@ public class LoggerAutoConfiguration {
      *
      * @return 实例标识
      */
-    static String instanceId() {
+    public static String instanceId() {
         try {
             return ManagementFactory.getRuntimeMXBean().getName();
         } catch (Exception e) {
@@ -191,8 +191,12 @@ public class LoggerAutoConfiguration {
         @Bean
         @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
         public LoggerController loggerController(LoggerEventStore loggerEventStore,
-                                                 LoggerSseBroker loggerSseBroker) {
-            return new LoggerController(loggerEventStore, loggerSseBroker);
+                                                 LoggerSseBroker loggerSseBroker,
+                                                 LoggerEventBus loggerEventBus,
+                                                 LoggerProperties properties,
+                                                 Environment environment) {
+            return new LoggerController(loggerEventStore, loggerSseBroker, loggerEventBus,
+                    properties, environment);
         }
     }
 }

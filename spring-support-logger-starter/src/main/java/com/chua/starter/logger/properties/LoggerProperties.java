@@ -110,6 +110,12 @@ public class LoggerProperties {
          * 注册到发现中心的业务分组标识，为空时回落服务名
          */
         private String scatterId = "";
+
+        /**
+         * HTTP 推送（{@code POST /v2/logger/ingest}）共享密钥；为空表示不校验。
+         * 校验方式：请求头 {@code x-logger-token} 必须与该值相等
+         */
+        private String ingestToken = "";
     }
 
     /**

@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +53,7 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
     }
 
     @Override
-    public LoggerPage query(String app, String instance, String level, String keyword,
+    public LoggerPage query(String app, String instance, String level, String keyword, String traceId,
                             Long start, Long end, String cursor, int limit) {
         List<Entry> snapshot = snapshot();
         long cursorSeq = parseCursor(cursor);
@@ -62,7 +63,7 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
         List<LoggerEvent> matched = new ArrayList<>();
         long lastSeq = 0L;
         for (Entry entry : snapshot) {
-            if (entry.seq <= cursorSeq || !match(entry.event, app, instance, levels, kw, start, end)) {
+            if (entry.seq <= cursorSeq || !match(entry.event, app, instance, levels, kw, traceId, start, end)) {
                 continue;
             }
             if (matched.size() >= limit) {
@@ -73,8 +74,18 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
         }
         final long lastSeqValue = lastSeq;
         boolean hasMore = matched.size() >= limit && snapshot.stream().anyMatch(e ->
-                e.seq > lastSeqValue && match(e.event, app, instance, levels, kw, start, end));
+                e.seq > lastSeqValue && match(e.event, app, instance, levels, kw, traceId, start, end));
         return new LoggerPage(matched, hasMore ? String.valueOf(lastSeq) : "");
+    }
+
+    @Override
+    public List<Map<String, Object>> traces(String app, int limit) {
+        List<Entry> snapshot = snapshot();
+        List<LoggerEvent> events = new ArrayList<>(snapshot.size());
+        for (Entry entry : snapshot) {
+            events.add(entry.event);
+        }
+        return summarizeTraces(events, app, limit);
     }
 
     @Override
@@ -82,7 +93,7 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
         List<Entry> snapshot = snapshot();
         List<LoggerEvent> filtered = new ArrayList<>();
         for (Entry entry : snapshot) {
-            if (match(entry.event, app, instance, null, "", null, null)) {
+            if (match(entry.event, app, instance, null, "", null, null, null)) {
                 filtered.add(entry.event);
             }
         }
@@ -120,7 +131,7 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
         int removed = 0;
         synchronized (deque) {
             removed = deque.size();
-            deque.removeIf(entry -> match(entry.event, app, instance, null, "", null, before));
+            deque.removeIf(entry -> match(entry.event, app, instance, null, "", null, null, before));
             removed -= deque.size();
         }
         return removed;
@@ -133,10 +144,10 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
     }
 
     /**
-     * 事件是否命中过滤条件（null/空条件视为不过滤）
+     * 事件是否命中过滤条件（null/空条件视为不过滤）；供 server 包的 SSE 订阅过滤复用
      */
-    static boolean match(LoggerEvent e, String app, String instance, Set<String> levels,
-                         String keyword, Long start, Long end) {
+    public static boolean match(LoggerEvent e, String app, String instance, Set<String> levels,
+                                String keyword, String traceId, Long start, Long end) {
         if (app != null && !app.isBlank() && !app.equals(e.getApp())) {
             return false;
         }
@@ -153,10 +164,59 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
                 return false;
             }
         }
+        if (traceId != null && !traceId.isBlank() && !traceId.equals(e.getTraceId())) {
+            return false;
+        }
         if (start != null && e.getTs() < start) {
             return false;
         }
         return end == null || e.getTs() <= end;
+    }
+
+    /**
+     * 按 traceId 聚合链路摘要（内存/KV 两个存储共用）；无 traceId 的事件不参与聚合
+     */
+    static List<Map<String, Object>> summarizeTraces(List<LoggerEvent> events, String app, int limit) {
+        Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
+        for (LoggerEvent e : events) {
+            String traceId = e.getTraceId();
+            if (traceId == null || traceId.isBlank()) {
+                continue;
+            }
+            if (app != null && !app.isBlank() && !app.equals(e.getApp())) {
+                continue;
+            }
+            Map<String, Object> row = grouped.computeIfAbsent(traceId, k -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("traceId", traceId);
+                m.put("count", 0L);
+                m.put("errorCount", 0L);
+                m.put("firstTs", Long.MAX_VALUE);
+                m.put("lastTs", 0L);
+                m.put("apps", new LinkedHashSet<String>());
+                m.put("instances", new LinkedHashSet<String>());
+                return m;
+            });
+            row.put("count", (Long) row.get("count") + 1);
+            if ("ERROR".equalsIgnoreCase(e.getLevel())) {
+                row.put("errorCount", (Long) row.get("errorCount") + 1);
+            }
+            row.put("firstTs", Math.min((Long) row.get("firstTs"), e.getTs()));
+            row.put("lastTs", Math.max((Long) row.get("lastTs"), e.getTs()));
+            ((Set<String>) row.get("apps")).add(String.valueOf(e.getApp()));
+            ((Set<String>) row.get("instances")).add(String.valueOf(e.getInstance()));
+        }
+        List<Map<String, Object>> result = new ArrayList<>(grouped.values());
+        for (Map<String, Object> row : result) {
+            long firstTs = (Long) row.get("firstTs");
+            long lastTs = (Long) row.get("lastTs");
+            row.put("durationMs", Math.max(0L, lastTs - firstTs));
+            ((Set<String>) row.get("apps")).remove("null");
+            ((Set<String>) row.get("instances")).remove("null");
+        }
+        result.sort((a, b) -> Long.compare((Long) b.get("lastTs"), (Long) a.get("lastTs")));
+        int safeLimit = Math.max(1, Math.min(limit, 200));
+        return result.size() > safeLimit ? new ArrayList<>(result.subList(0, safeLimit)) : result;
     }
 
     static Set<String> levels(String level) {
@@ -170,6 +230,13 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
             }
         }
         return result.isEmpty() ? null : result;
+    }
+
+    /**
+     * 解析逗号分隔级别为集合（null/空返回 null）；供 server 包的 SSE 订阅过滤复用
+     */
+    public static Set<String> levelSet(String level) {
+        return levels(level);
     }
 
     static long parseCursor(String cursor) {

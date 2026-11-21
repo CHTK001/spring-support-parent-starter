@@ -1,5 +1,6 @@
 package com.chua.starter.logger.appender;
 
+import com.chua.starter.common.support.constant.MdcConstant;
 import com.chua.starter.logger.event.LoggerEvent;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
@@ -39,7 +40,8 @@ public class Log4j2BridgeAppender extends AbstractAppender {
                     .setThread(event.getThreadName())
                     .setLogger(event.getLoggerName())
                     .setMessage(event.getMessage() == null ? "" : event.getMessage().getFormattedMessage())
-                    .setMdc(contextData == null || contextData.isEmpty() ? null : new HashMap<>(contextData));
+                    .setMdc(contextData == null || contextData.isEmpty() ? null : new HashMap<>(contextData))
+                    .setTraceId(contextData == null ? null : contextData.get(MdcConstant.TRACE_ID));
             if (event.getThrown() != null) {
                 target.setStacktrace(StackTraces.stacktraceOf(event.getThrown()));
             }

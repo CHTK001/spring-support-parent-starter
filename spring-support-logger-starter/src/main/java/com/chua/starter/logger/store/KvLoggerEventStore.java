@@ -98,7 +98,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
     }
 
     @Override
-    public LoggerPage query(String app, String instance, String level, String keyword,
+    public LoggerPage query(String app, String instance, String level, String keyword, String traceId,
                             Long start, Long end, String cursor, int limit) {
         Set<String> levels = MemoryLoggerEventStore.levels(level);
         String kw = keyword == null ? "" : keyword.trim().toLowerCase();
@@ -128,7 +128,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
             if (event == null) {
                 continue;
             }
-            if (MemoryLoggerEventStore.match(event, app, instance, levels, kw, start, end)) {
+            if (MemoryLoggerEventStore.match(event, app, instance, levels, kw, traceId, start, end)) {
                 if (matched.size() >= limit) {
                     break;
                 }
@@ -141,8 +141,14 @@ public class KvLoggerEventStore implements LoggerEventStore {
             items.add((LoggerEvent) row[2]);
             nextCursor = row[0] + ":" + row[1];
         }
-        boolean hasMore = matched.size() >= limit && anyAfter(keys, all, nextCursor, app, instance, levels, kw, start, end);
+        boolean hasMore = matched.size() >= limit
+                && anyAfter(keys, all, nextCursor, app, instance, levels, kw, traceId, start, end);
         return new LoggerPage(items, hasMore ? nextCursor : "");
+    }
+
+    @Override
+    public List<Map<String, Object>> traces(String app, int limit) {
+        return MemoryLoggerEventStore.summarizeTraces(scanEvents(app, 50000), app, limit);
     }
 
     @Override
@@ -150,7 +156,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
         List<LoggerEvent> events = scanEvents(app, 50000);
         List<LoggerEvent> filtered = new ArrayList<>();
         for (LoggerEvent e : events) {
-            if (MemoryLoggerEventStore.match(e, app, instance, null, "", null, null)) {
+            if (MemoryLoggerEventStore.match(e, app, instance, null, "", null, null, null)) {
                 filtered.add(e);
             }
         }
@@ -208,7 +214,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
             if (event == null) {
                 continue;
             }
-            if (MemoryLoggerEventStore.match(event, app, instance, null, "", null, before)
+            if (MemoryLoggerEventStore.match(event, app, instance, null, "", null, null, before)
                     && kv.delete(en.getKey())) {
                 removed++;
             }
@@ -290,7 +296,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
 
     private boolean anyAfter(List<String> keys, Map<String, String> all, String cursor,
                              String app, String instance, Set<String> levels,
-                             String kw, Long start, Long end) {
+                             String kw, String traceId, Long start, Long end) {
         if (cursor == null || cursor.isEmpty()) {
             return false;
         }
@@ -306,7 +312,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
                 continue;
             }
             LoggerEvent event = parseEvent(all.get(key));
-            if (event != null && MemoryLoggerEventStore.match(event, app, instance, levels, kw, start, end)) {
+            if (event != null && MemoryLoggerEventStore.match(event, app, instance, levels, kw, traceId, start, end)) {
                 return true;
             }
         }

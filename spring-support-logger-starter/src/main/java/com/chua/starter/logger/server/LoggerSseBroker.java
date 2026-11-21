@@ -2,6 +2,7 @@
 package com.chua.starter.logger.server;
 
 import com.chua.starter.logger.event.LoggerEvent;
+import com.chua.starter.logger.store.MemoryLoggerEventStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
@@ -9,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -18,13 +20,16 @@ import java.util.concurrent.TimeUnit;
  * 日志实时推送（SSE）：订阅者经 {@code GET /v2/logger/stream} 建立长连，
  * 服务端每收到一批日志即以 {@code log} 事件推送，另以固定间隔发 {@code heartbeat} 保活。
  *
+ * <p>订阅时可带 app/instance/level/keyword/traceId 过滤条件（与 {@code /events} 同口径），
+ * 服务端按订阅过滤后再推送，避免前端收到并再丢弃不相关事件。</p>
+ *
  * @author CH
  * @since 4.0.0.51
  */
 @Slf4j
 public class LoggerSseBroker implements SmartLifecycle {
 
-    private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Subscription> subscriptions = new CopyOnWriteArrayList<>();
     private final ObjectMapper mapper = new ObjectMapper();
     private final long heartbeatSeconds;
     private ScheduledExecutorService heartbeat;
@@ -62,25 +67,34 @@ public class LoggerSseBroker implements SmartLifecycle {
             heartbeat.shutdownNow();
             heartbeat = null;
         }
-        for (SseEmitter emitter : emitters) {
+        for (Subscription subscription : subscriptions) {
             try {
-                emitter.complete();
+                subscription.emitter().complete();
             } catch (Exception ignored) {
                 // 完成失败忽略
             }
         }
-        emitters.clear();
+        subscriptions.clear();
     }
 
     /**
-     * 建立订阅
+     * 建立订阅（可带过滤条件，空条件 = 全量）
      *
+     * @param app      应用过滤
+     * @param instance 实例过滤
+     * @param level    级别过滤（逗号分隔多值）
+     * @param keyword  关键字过滤（对 message/logger 匹配）
+     * @param traceId  链路追踪标识过滤
      * @return SSE emitter
      */
-    public SseEmitter subscribe() {
+    public SseEmitter subscribe(String app, String instance, String level, String keyword, String traceId) {
         SseEmitter emitter = new SseEmitter(0L);
-        emitters.add(emitter);
-        Runnable remove = () -> emitters.remove(emitter);
+        Subscription subscription = new Subscription(emitter, app, instance,
+                MemoryLoggerEventStore.levelSet(level),
+                keyword == null ? "" : keyword.trim().toLowerCase(),
+                traceId);
+        subscriptions.add(subscription);
+        Runnable remove = () -> subscriptions.remove(subscription);
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);
         emitter.onError(cause -> remove.run());
@@ -93,12 +107,12 @@ public class LoggerSseBroker implements SmartLifecycle {
     }
 
     /**
-     * 推送一条日志事件（{@code log} 事件，载荷为 JSON）
+     * 推送一条日志事件（{@code log} 事件，载荷为 JSON）；仅发给命中订阅条件的订阅者
      *
      * @param event 日志事件
      */
     public void broadcast(LoggerEvent event) {
-        if (emitters.isEmpty() || event == null) {
+        if (subscriptions.isEmpty() || event == null) {
             return;
         }
         String json;
@@ -107,25 +121,28 @@ public class LoggerSseBroker implements SmartLifecycle {
         } catch (Exception e) {
             return;
         }
-        for (SseEmitter emitter : emitters) {
+        for (Subscription subscription : subscriptions) {
+            if (!subscription.matches(event)) {
+                continue;
+            }
             try {
-                emitter.send(SseEmitter.event().name("log").data(json, MediaType.TEXT_PLAIN));
+                subscription.emitter().send(SseEmitter.event().name("log").data(json, MediaType.TEXT_PLAIN));
             } catch (Exception e) {
-                emitters.remove(emitter);
+                subscriptions.remove(subscription);
             }
         }
     }
 
     private void beat() {
-        if (emitters.isEmpty()) {
+        if (subscriptions.isEmpty()) {
             return;
         }
         String ts = String.valueOf(System.currentTimeMillis());
-        for (SseEmitter emitter : emitters) {
+        for (Subscription subscription : subscriptions) {
             try {
-                emitter.send(SseEmitter.event().name("heartbeat").data(ts));
+                subscription.emitter().send(SseEmitter.event().name("heartbeat").data(ts));
             } catch (Exception e) {
-                emitters.remove(emitter);
+                subscriptions.remove(subscription);
             }
         }
     }
@@ -136,11 +153,22 @@ public class LoggerSseBroker implements SmartLifecycle {
      * @return 订阅数
      */
     public int subscribers() {
-        return emitters.size();
+        return subscriptions.size();
     }
 
     @Override
     public boolean isRunning() {
         return running;
+    }
+
+    /**
+     * 一条 SSE 订阅：emitter + 该订阅声明的过滤条件
+     */
+    private record Subscription(SseEmitter emitter, String app, String instance,
+                                Set<String> levels, String keyword, String traceId) {
+
+        boolean matches(LoggerEvent event) {
+            return MemoryLoggerEventStore.match(event, app, instance, levels, keyword, traceId, null, null);
+        }
     }
 }
