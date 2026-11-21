@@ -487,11 +487,12 @@ public class ServerManageServiceImpl implements ServerManageService {
      * HTTP 引擎变体（SPI 注册但不应出现在协议下拉中）。
      *
      * <p>它们是「引擎名」不是「协议名」：{@code jdk/nio/aio} 只是
-     * {@code jdk-http/nio-http/aio-http} 的短名，故从协议列表剔除，
+     * {@code jdk-http/nio-http/aio-http} 的短名，{@code vertx-http} 是
+     * Vert.x 实现的引擎名，故从协议列表剔除，
      * 改由 {@link #httpEngines()} 作为 HTTP 协议的可选引擎下发。</p>
      */
     private static final Set<String> HTTP_ENGINE_ALIASES =
-            Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http");
+            Set.of("jdk", "nio", "aio", "jdk-http", "nio-http", "aio-http", "vertx-http");
 
     /**
      * HTTP 协议的可选引擎（来源：Server SPI 实际注册名）。

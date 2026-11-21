@@ -74,7 +74,7 @@ public class ServerNodeRegistry {
      * 时还要回来改这里（原先白名单只放 jdk/nio/aio，会把 SPI 已注册的
      * {@code jdk-http} 等变体一并拒掉）。</p>
      */
-    private static final Set<String> HTTP_ENGINE_HINT = Set.of("jdk", "nio", "aio");
+    private static final Set<String> HTTP_ENGINE_HINT = Set.of("jdk", "nio", "aio", "vertx-http");
 
     /**
      * 文件存储网关过滤器类型别名（与 {@code ServerFilterFactory} 预设一致）
