@@ -4,6 +4,7 @@ import io.micrometer.context.ThreadLocalAccessor;
 import org.slf4j.MDC;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 
@@ -55,11 +56,14 @@ public class MdcThreadLocalAccessor implements ThreadLocalAccessor<Map<String, S
 
     /**
      * 应用快照：先保存当前现场（供 restore 回滚），再设置快照值。
+     * <p>当前线程无 MDC 现场时以空 Map 入栈占位（{@code ArrayDeque} 不接受
+     * {@code null} 元素），保证嵌套恢复栈的弹出次数与压入次数一致。</p>
      * @param value 订阅线程的 MDC 快照，可为 {@code null}
      */
     @Override
     public void setValue(Map<String, String> value) {
-        previousStack().push(MDC.getCopyOfContextMap());
+        Map<String, String> previous = MDC.getCopyOfContextMap();
+        previousStack().push(previous == null ? Collections.emptyMap() : previous);
         apply(value);
     }
 
