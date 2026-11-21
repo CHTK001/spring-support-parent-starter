@@ -2640,6 +2640,8 @@ public class ApiProviderController {
             case "xai" -> "xAI 管理接口余额";
             case "new-api" -> "new-api 站点额度";
             case "moss" -> "Moss 门户余额";
+            case "100milionseek" -> "100milionseek 每日配额";
+            case "tokenrhythm" -> "基元律动余额";
             default -> kind;
         };
     }
@@ -4367,6 +4369,11 @@ public class ApiProviderController {
         if (isMossProvider(entity)) {
             kinds.add("moss");
         }
+        // 基元律动（TokenRhythm）控制台余额：tr_session 会话 Cookie 鉴权，推理 Key 查不了；
+        // 只对 TokenRhythm 站点有意义，放表达式兜底之前
+        if (isTokenRhythmProvider(entity)) {
+            kinds.add("tokenrhythm");
+        }
         if (str(extra, "credit_expression") != null) {
             kinds.add(CreditQueries.KIND_EXPRESSION);
         }
@@ -4698,10 +4705,11 @@ public class ApiProviderController {
         if ("moss".equals(kind) || "agnes".equals(kind) || "deepseek".equals(kind) || "sub2api".equals(kind)
                 || "minimax-platform".equals(kind) || "zai".equals(kind) || "opencode".equals(kind)
                 || "opencode-console".equals(kind) || "ppio".equals(kind)
-                || "anthropic".equals(kind) || "xai".equals(kind)) {
+                || "anthropic".equals(kind) || "xai".equals(kind) || "tokenrhythm".equals(kind)) {
             // Moss / MiniMax / OpenCode / Anthropic 控制台认 Cookie 会话（opencode-console 为
             // __Host-console_session、anthropic 为 sessionKey，由各自实现包装成 Cookie 头）、
-            // Agnes / DeepSeek / sub2api / z.ai / OpenCode / PPIO / xAI 官方 API 认 Bearer：
+            // Agnes / DeepSeek / sub2api / z.ai / OpenCode / PPIO / xAI 官方 API 认 Bearer、
+            // TokenRhythm 控制台认 tr_session Cookie（由实现包装成 Cookie 头）：
             // 令牌原值交给各自实现 / 请求出口包装，不走渠道鉴权前缀，避免与余额接口的实际口径错位
             query.setToken(key);
             return;
@@ -4811,6 +4819,25 @@ public class ApiProviderController {
         }
         String host = hostOf(entity.getBaseUrl());
         return host != null && host.endsWith("agnes-ai.com");
+    }
+
+    /**
+     * 是否是基元律动（TokenRhythm）站点：只有它才值得试控制台余额接口与「账号登录」。
+     *
+     * <p>TokenRhythm 的对话 API 在 {@code tokenrhythm.studio/v1}，余额接口在
+     * {@code tokenrhythm.studio/api/usage-summary}，同域不同前缀，平台名与域名都认。</p>
+     *
+     * @param entity 供应商
+     * @return TokenRhythm 站点为 true
+     */
+    private static boolean isTokenRhythmProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("tokenrhythm".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("tokenrhythm.studio");
     }
 
     /**
