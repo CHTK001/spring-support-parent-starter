@@ -4,6 +4,7 @@ import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
+import com.chua.starter.ai.support.manage.service.ModelPriceOverviewService;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -99,6 +100,11 @@ public class ApiModelMetricsController {
     private final SysAiPricingService pricingService;
 
     /**
+     * 模型价格总览服务
+     */
+    private final ModelPriceOverviewService priceOverviewService;
+
+    /**
      * 分页查询全量指标库。
      *
      * @param page    当前页
@@ -118,6 +124,33 @@ public class ApiModelMetricsController {
         result.put("size", p.getSize());
         result.put("records", p.getRecords());
         return ApiResult.ok(result);
+    }
+
+    /**
+     * 模型价格总览：按模型聚合各提供商报价，供跨模型 / 跨提供商比价找便宜。
+     *
+     * <p>只返回至少有一档价格（输入或输出）的模型；价格单位 USD/百万 token。
+     * 指标库为主数据源，定价表 USD 行换算并入（同厂商覆盖），CNY 行不参与比较。</p>
+     *
+     * @param page     当前页
+     * @param size     每页条数
+     * @param keyword  模型名/厂商关键字（可空）
+     * @param provider 提供商过滤（可空，精确匹配）
+     * @param band     价格带过滤：economy/value/standard/flagship（可空）
+     * @param sort     排序键：price（默认）/ value（性价比）/ index（智能指数）
+     * @param order    排序方向：asc / desc
+     * @return 分页模型报价与筛选元数据
+     */
+    @GetMapping("/model-metrics/price-overview")
+    public ApiResult<Map<String, Object>> priceOverview(
+            @RequestParam(value = "page", defaultValue = "1") long page,
+            @RequestParam(value = "size", defaultValue = "24") long size,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "provider", required = false) String provider,
+            @RequestParam(value = "band", required = false) String band,
+            @RequestParam(value = "sort", defaultValue = "price") String sort,
+            @RequestParam(value = "order", required = false) String order) {
+        return ApiResult.ok(priceOverviewService.overview(page, size, keyword, provider, band, sort, order));
     }
 
     /**
