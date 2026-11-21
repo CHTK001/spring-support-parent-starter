@@ -204,18 +204,22 @@ public class ProviderCreditLoginService {
         // 独立有头引擎：进程级参数（无头/视口等）以本引擎首次启动为准，
         // 与共享无头引擎互不影响；用完必须 close 释放浏览器进程
         CdpBrowserEngine engine = new CdpBrowserEngine();
+        BrowserOptions browserOptions = new BrowserOptions().setHeadless(false).setWidth(1280).setHeight(900);
         try {
-            engine.start(new BrowserOptions().setHeadless(false).setWidth(1280).setHeight(900));
+            engine.start(browserOptions);
         } catch (RuntimeException e) {
             engine.close();
             log.warn("[credit-login] 供应商 {} 启动登录浏览器失败: {}", entity.getProviderId(), e.getMessage());
             return new LoginOutcome(false, null, "无法启动登录浏览器：" + e.getMessage(), loginUrl);
         }
-        try (BrowserPage page = engine.openPage(loginUrl)) {
+        // 必须先开空白页、注册截获脚本、再导航到登录页：addInitScript 只对「之后加载」的文档生效，
+        // 若先 openPage(loginUrl) 再注册，登录页首屏就发出的令牌交换请求不会被截获（静默续期同序）
+        try (BrowserPage page = engine.openPage(browserOptions)) {
             String capturePattern = hooks.capturePattern();
             if (nonBlank(capturePattern)) {
                 page.addInitScript(captureScript(capturePattern));
             }
+            page.navigate(loginUrl);
             String token = awaitToken(page, hooks, capturePattern);
             if (token == null || token.isBlank()) {
                 return new LoginOutcome(false, null,
