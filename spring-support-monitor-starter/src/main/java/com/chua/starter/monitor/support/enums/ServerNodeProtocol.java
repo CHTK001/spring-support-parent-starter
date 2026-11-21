@@ -23,7 +23,9 @@ public enum ServerNodeProtocol {
     HTTP("HTTP", "http", 18080, "jdk", false, "HTTP 服务器(可挂 ServerFilter 插件)"),
 
     /**
-     * HTTP 反向代理服务器（需要 backend主机/backend端口 后端地址）
+     * HTTP 反向代理服务器（需要 backend主机/backend端口 后端地址）。
+     * <p>实例由 SPI 名 {@code jdk-http-proxy} 创建（字节透传、高吞吐）；HTTP 感知的
+     * vertx 实现仍以 SPI 名 {@code http-proxy} 提供，可经动态协议显式选用。</p>
      */
     HTTP_PROXY("HTTP_PROXY", "http-proxy", 18081, "jdk", true, "HTTP 反向代理服务器"),
 

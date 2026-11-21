@@ -48,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>按 {@link MsServerNode} 定义拉起 common-starter {@link Server} 实例并托管生命周期：</p>
  * <ul>
  *   <li>HTTP：{@code ServerBuilder.type(engine)}（jdk/nio/aio），可挂 ServerFilter 插件</li>
- *   <li>HTTP_PROXY：{@code HttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort）</li>
+ *   <li>HTTP_PROXY：{@code JdkHttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort，字节透传）</li>
  *   <li>TCP_PROXY：{@code TcpProxyServer(setting, backend)}</li>
  *   <li>SIP：{@code SipServer(SipConfig)}（token 取 config.token）</li>
  *   <li>ROOM：{@code RoomServer(setting, RoomProperties)}（房间引擎 + 定向下发）</li>
@@ -435,7 +435,7 @@ public class ServerNodeRegistry {
         }
         return switch (protocol) {
             case HTTP -> buildHttpServer(node, setting, descriptors, managed);
-            case HTTP_PROXY -> buildProxyServer(createProxyServer("http-proxy", setting, resolveBackend(config)), node, descriptors, managed);
+            case HTTP_PROXY -> buildProxyServer(createProxyServer("jdk-http-proxy", setting, resolveBackend(config)), node, descriptors, managed);
             case TCP_PROXY -> buildProxyServer(createProxyServer("tcp-proxy", setting, resolveBackend(config)), node, descriptors, managed);
             case SIP -> buildSipServer(node, config, descriptors, managed);
             case ROOM -> buildRoomServer(node, config, setting, descriptors, managed);
@@ -483,7 +483,7 @@ public class ServerNodeRegistry {
     /**
      * 通过 服务提供者 SPI 创建代理服务器。
      *
-     * @param spiName  SPI 扩展名（http-代理 / tcp-代理）
+     * @param spiName  SPI 扩展名（jdk-http-proxy / tcp-proxy）
      * @param setting 服务器配置
      * @param backend 后端地址
      * @return 代理服务器实例
