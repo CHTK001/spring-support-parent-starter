@@ -586,7 +586,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                     "chat", "tools", "skills", "routing");
             log.info("[Agent] Agent {} 已注册为模型 {}", agent.getName(), resolvedModel);
         } else {
+            // 运行时没建起来（构建异常已在 rebuildAgent 记 ERROR），必须如实失败：
+            // 若仍返回 status=registered，前端会误报成功，而 GET /registered-model 立刻穿帮。
             log.warn("[Agent] Agent 运行时不可用，模型 {} 未注册到对话链路", resolvedModel);
+            throw new IllegalStateException("Agent 运行时构建失败，无法注册为模型（详见服务端日志）");
         }
 
         Map<String, Object> result = new LinkedHashMap<>(4);
@@ -634,6 +637,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             String agentName = agent.getName();
             agentRegistry.unregister(agentName);
 
+            // opencode 运行时禁止 leader 定义（OpencodeServerAgent#validateDefinition 对 isLeader()
+            // 直接抛 UnsupportedOperationException），编排委派交给下方 mode(ROUTER/AUTO)；
+            // 其它运行时维持 leader(true) 原语义。
+            boolean opencodeRuntime = AgentProviderFactory.OPENCODE_SERVER_PROVIDER
+                    .equals(agentProviderFactory.resolveProvider());
+
             ChatClient masterClient = buildChatClient(agent);
             AgentDefinition.Builder masterBuilder = AgentDefinition.builder()
                     .id(agent.getAgentId())
@@ -641,7 +650,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                     .description(agent.getDescription())
                     .role(agent.getRole())
                     .instruction(agent.getInstruction())
-                    .leader(true)
+                    .leader(!opencodeRuntime)
                     .mcp(strategyBool(agent, "mcp", true))
                     .planning(strategyBool(agent, STRATEGY_KEY_PLANNING, false))
                     .memory(strategyBool(agent, STRATEGY_KEY_MEMORY, true));
