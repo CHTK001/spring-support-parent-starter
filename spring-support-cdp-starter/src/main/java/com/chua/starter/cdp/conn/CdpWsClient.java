@@ -103,6 +103,12 @@ public class CdpWsClient implements AutoCloseable {
     }
 
     /**
+     * 共享 HTTP 客户端（仅用于建立 WebSocket 连接；HttpClient 不可变、线程安全，全局复用一个，
+     * 避免每次连接都新建连接池与线程）
+     */
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+
+    /**
      * 连接浏览器的 DevTools 端点
      *
      * @param endpoint  如 {@code ws://127.0.0.1:9222/devtools/browser/<uuid>}
@@ -111,7 +117,7 @@ public class CdpWsClient implements AutoCloseable {
      */
     public static CdpWsClient connect(String endpoint, Duration timeout) {
         AtomicReference<CdpWsClient> reference = new AtomicReference<>();
-        WebSocket socket = HttpClient.newHttpClient()
+        WebSocket socket = HTTP_CLIENT
                 .newWebSocketBuilder()
                 .connectTimeout(timeout)
                 .buildAsync(URI.create(endpoint), new Listener(reference))

@@ -14,9 +14,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,8 +30,13 @@ import java.util.concurrent.TimeUnit;
  * 的绑定：创建会话后让 CDP 浏览器经由代理打开同一地址，从而与 iframe 共享
  * 服务端 Cookie 罐与同一份真实页面状态。</p>
  *
+ * <p>绑定是<b>异步</b>的：{@link #attachCdpTargetAsync(ProxySession)} 在后台完成
+ * CDP 目标创建与经代理的整页导航（浏览器冷启动时可达数十秒），打开会话的调用方
+ * 无需等待，iframe 可立即开始加载；需要无头页面就绪时用
+ * {@link #awaitAttached(ProxySession)} 等待落定。</p>
+ *
  * @author CH
- * @since 4.0.0.52
+ * @since 4.0.0.51
  */
 @Slf4j
 @Service
@@ -50,12 +59,22 @@ public class ProxySessionManager {
     private final Map<String, ProxySession> sessions = new ConcurrentHashMap<>();
 
     /**
+     * 进行中的会话绑定任务（会话标识 -> targetId future；导航前等待其落定）
+     */
+    private final Map<String, CompletableFuture<String>> attachments = new ConcurrentHashMap<>();
+
+    /**
      * TTL 清扫线程
      */
     private ScheduledExecutorService sweeper;
 
     /**
-     * 启动清扫线程
+     * 绑定执行器：无头浏览器页面的创建 / 导航在后台完成，不阻塞打开会话的调用
+     */
+    private ExecutorService attacher;
+
+    /**
+     * 启动清扫与绑定线程
      */
     @PostConstruct
     public void init() {
@@ -65,23 +84,33 @@ public class ProxySessionManager {
             return thread;
         });
         sweeper.scheduleWithFixedDelay(this::sweep, 30, 30, TimeUnit.SECONDS);
+        attacher = new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(), r -> { // [P3C C1 修复] 显式线程池替代 Executors 包装
+            Thread thread = new Thread(r, "cdp-proxy-attach");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     /**
-     * 停止清扫并关闭全部会话
+     * 停止清扫、绑定并关闭全部会话
      */
     @PreDestroy
     public void destroy() {
         if (sweeper != null) {
             sweeper.shutdownNow();
         }
+        if (attacher != null) {
+            attacher.shutdownNow();
+        }
+        attachments.clear();
         for (String id : new ArrayList<>(sessions.keySet())) {
             close(id);
         }
     }
 
     /**
-     * 打开一个代理会话（不创建 CDP 目标，{@link #attachCdpTarget} 负责绑定页面）
+     * 打开一个代理会话（不创建 CDP 目标，{@link #attachCdpTargetAsync(ProxySession)} 负责绑定页面）
      *
      * @param url 初始上游地址
      * @return 会话
@@ -108,6 +137,29 @@ public class ProxySessionManager {
     }
 
     /**
+     * 异步为会话绑定无头浏览器页面
+     *
+     * <p>绑定包含创建 CDP 目标与经代理的整页导航（浏览器冷启动时耗时更长），
+     * 放到后台线程执行，让打开会话的调用立即返回、iframe 立即可加载。
+     * 绑定失败只降级（iframe 侧仍可用，事件 / 截屏能力暂缺），不影响会话本身。</p>
+     *
+     * @param session 会话
+     * @return 绑定结果 future（targetId，失败时为 null）
+     */
+    public CompletableFuture<String> attachCdpTargetAsync(ProxySession session) {
+        CompletableFuture<String> future = new CompletableFuture<>();
+        attachments.put(session.getId(), future);
+        try {
+            attacher.execute(() -> future.complete(attachCdpTarget(session)));
+        } catch (Exception e) {
+            // 执行器不可用（如应用正在关闭）：按绑定失败处理，iframe 侧仍可用
+            log.warn("[cdp-proxy] 绑定任务提交失败（iframe 仍可用）: {}", e.getMessage());
+            future.complete(null);
+        }
+        return future;
+    }
+
+    /**
      * 为会话绑定无头浏览器页面
      *
      * <p>页面 URL 指向本机代理（空路径 = 会话当前地址），浏览器与 iframe 共享会话
@@ -118,17 +170,59 @@ public class ProxySessionManager {
      */
     public String attachCdpTarget(ProxySession session) {
         try {
+            // 绑定期间会话可能已被关闭（收到 DELETE / 被清扫）：不再创建孤儿页面
+            if (sessions.get(session.getId()) != session) {
+                log.debug("[cdp-proxy] 会话 {} 已关闭，跳过无头浏览器绑定", session.getId());
+                return null;
+            }
             Map<String, Object> result = engine.createTarget(Map.of(
                     "url", selfBase() + "/" + session.getId() + "/"));
             String targetId = result == null || result.get("targetId") == null
                     ? null
                     : String.valueOf(result.get("targetId"));
+            if (sessions.get(session.getId()) != session) {
+                // 创建期间会话被关闭：立即回收刚创建的页面，避免孤儿页面常驻无头浏览器
+                if (targetId != null) {
+                    try {
+                        engine.closeTarget(targetId);
+                    } catch (Exception ignore) {
+                        log.debug("[cdp-proxy] 回收孤儿页面失败: {}", targetId);
+                    }
+                }
+                return null;
+            }
             session.setTargetId(targetId);
             return targetId;
         } catch (Exception e) {
             // 无头浏览器不可用时降级：仅 iframe 侧可用，事件/截屏能力暂缺
             log.warn("[cdp-proxy] 绑定无头浏览器页面失败（iframe 仍可用）: {}", e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 等待会话的无头浏览器页面绑定完成（绑定是异步的，导航前需要等它落定）
+     *
+     * @param session 会话
+     * @return targetId；无绑定任务 / 绑定失败 / 超时时返回 {@code null}
+     */
+    public String awaitAttached(ProxySession session) {
+        String attached = session.getTargetId();
+        if (attached != null) {
+            return attached;
+        }
+        CompletableFuture<String> future = attachments.get(session.getId());
+        if (future == null) {
+            return null;
+        }
+        try {
+            // 绑定在后台进行（无头浏览器冷启动可达一分钟），等待只发生在显式导航前；
+            // 下限 60s 保证冷启动场景也能等到绑定落定
+            long waitSeconds = Math.max(properties.getCommandTimeout().getSeconds(), 60);
+            return future.get(waitSeconds, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            // 绑定仍在进行 / 失败：读一次已设置的值（可能刚好完成），仍为空就按降级处理
+            return session.getTargetId();
         }
     }
 
@@ -143,8 +237,9 @@ public class ProxySessionManager {
         URI uri = parseUpstream(trimmed);
         validateUpstream(uri);
         session.setCurrentUrl(uri.toString());
-        if (session.getTargetId() != null) {
-            engine.pageCall(session.getTargetId(), "Page.navigate",
+        String targetId = awaitAttached(session);
+        if (targetId != null) {
+            engine.pageCall(targetId, "Page.navigate",
                     Map.of("url", selfBase() + "/" + session.getId() + "/"));
         }
     }
@@ -179,6 +274,7 @@ public class ProxySessionManager {
      */
     public void close(String id) {
         ProxySession session = sessions.remove(id);
+        attachments.remove(id);
         if (session == null) {
             return;
         }

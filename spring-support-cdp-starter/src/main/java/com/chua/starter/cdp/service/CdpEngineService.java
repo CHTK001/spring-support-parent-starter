@@ -16,8 +16,10 @@ import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -201,6 +203,14 @@ public class CdpEngineService {
     private final Map<String, CdpWsClient> pageClients = new ConcurrentHashMap<>();
 
     /**
+     * 目标地址备忘：页面被 DevTools 通道挂上后，Edge 157 的 {@code GET /json} 不再回填
+     * 该页面的 url（实测恒为空串），前端目标轨道只剩裸 targetId。这里记下各目标的最近
+     * 已知地址（创建地址 / Target.targetChanged / Page.frameNavigated），供
+     * {@link #targets()} 在 /json 给不出地址时回填；目标消失时随列表对账清理。
+     */
+    private final Map<String, String> targetUrlHints = new ConcurrentHashMap<>();
+
+    /**
      * 启动状态
      */
     private volatile Status state = Status.NOT_STARTED;
@@ -274,6 +284,7 @@ public class CdpEngineService {
         }
         state = Status.STARTING;
         try {
+            assertBrowserLaunchable();
             String executable = properties.getExecutable();
             if (StringUtils.isBlank(executable)) {
                 executable = CdpBrowserEngine.locateBrowser(null);
@@ -288,6 +299,13 @@ public class CdpEngineService {
             // 端口若已被别的浏览器占着，新实例会静默绑不上，而 /json/version 读到的是
             // 那个旧进程——后面所有操作都作用在看不见的旧页面上。先抢占校验。
             if (isDebugPortListening()) {
+                // 端口被占 ≠ 必须杀进程：常见情形是上一次会话遗留的「自家无头浏览器」还活着
+                //（后端重启、浏览器级 WS 通道静默断开都会走到这里），它本身完全健康。
+                // 优先凭启动时留下的浏览器指纹直接复用：省一次冷启动，也绕开跨账号
+                // 杀进程被拒的权限坑（NETWORK SERVICE 的 JVM 未必杀得掉别的账号名下进程）。
+                if (tryAdoptExistingBrowser()) {
+                    return state;
+                }
                 killByDebugPort();
                 if (isDebugPortListening()) {
                     throw new IllegalStateException("调试端口 " + properties.getPort()
@@ -346,6 +364,7 @@ public class CdpEngineService {
                 throw new IllegalStateException("未发现浏览器的 DevTools WebSocket 端点: " + Json.toJson(versionMap));
             }
             wsEndpoint = debugUrl;
+            recordBrowserGuid(debugUrl);
             browserClient = CdpWsClient.connect(debugUrl, Duration.ofSeconds(30));
 
             // 需要的时候才启用（延迟到风险最小化）
@@ -374,6 +393,23 @@ public class CdpEngineService {
             // 与已打开的 WS 通道就都留在那里，端口被自己占死，下一次启动必失败。
             cleanupAfterFailedStart();
             throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * 启动前置环境校验
+     *
+     * <p>SYSTEM 令牌下 Chromium/Edge 会在进程创建瞬间静默退出（无头模式亦然，
+     * chrome.log 零输出、无 WER 记录），导致 {@link #waitForRemoteDebugEnabled()}
+     * 固定等待 {@code launchTimeout} 后才超时。此处提前识别，秒级给出可行动的
+     * 错误信息，避免前端与运维对着「等待 DevTools 超时」去排查网络与启动参数。</p>
+     */
+    private void assertBrowserLaunchable() {
+        String user = ProcessHandle.current().info().user().orElse("");
+        if (user.equalsIgnoreCase("SYSTEM") || user.toLowerCase().endsWith("\\system")) {
+            throw new IllegalStateException("后端 JVM 正以 SYSTEM 身份运行，Chromium/Edge 无法在 SYSTEM 令牌下启动"
+                    + "（无头进程会立即静默退出）。请将后端服务改用非 SYSTEM 账号运行"
+                    + "（如 NETWORK SERVICE 或普通管理员账号）后再启用 CDP 调试浏览器。");
         }
     }
 
@@ -492,6 +528,7 @@ public class CdpEngineService {
             Map<String, Object> enriched = new LinkedHashMap<>(msg);
             // Target.* 不是控制台 / 网络事件，缓冲会自行忽略；统一过一遍保持链路一致
             eventBuffer.record(enriched);
+            trackTargetUrlChange(method, enriched);
             List<Consumer<Map<String, Object>>> subs = globalSubscribers.get(method);
             if (subs == null || subs.isEmpty()) {
                 return;
@@ -546,6 +583,9 @@ public class CdpEngineService {
             enriched.putIfAbsent("targetId", targetId);
             // 先写环形缓冲再做订阅者分发：没有 SSE 订阅者在线时，REST 一次性拉取也要有数据
             eventBuffer.record(enriched);
+            if ("Page.frameNavigated".equals(method)) {
+                trackFrameNavigatedUrl(targetId, enriched);
+            }
             List<Consumer<Map<String, Object>>> subs = globalSubscribers.get(method);
             if (subs == null || subs.isEmpty()) {
                 return;
@@ -701,35 +741,240 @@ public class CdpEngineService {
     }
 
     /**
+     * 尝试直接复用调试端口上已存活的浏览器
+     *
+     * <p>后端重启或浏览器级 WebSocket 静默断开时，Edge/Chromium 进程本身仍然健康、
+     * 调试端口仍在监听。此时杀掉重启既浪费一次冷启动，也可能因权限/安全软件拦截
+     * 而杀不掉（194 实测 destroyForcibly / taskkill / Stop-Process 都杀不动），
+     * 把可自愈的故障放大成「端口被占用」导致 CDP 长期不可用——因此复用判定必须
+     * 极度稳健：/json/version 用独立的长超时加重试取回；指纹（devtools browser GUID，
+     * 每次启动随机生成、不重号）一致时直接复用；指纹缺失或不符时，鉴于本端口是
+     * 模块专用调试端口，仍然接管（否则在杀不掉进程的环境里没有第二条路）。</p>
+     *
+     * @return 复用成功返回 true；失败时回收半连接状态并返回 false（调用方继续走清理重启路径）
+     */
+    private boolean tryAdoptExistingBrowser() {
+        int port = properties.getPort();
+        Map<String, Object> versionMap = fetchVersionForAdoption();
+        String debugUrl = versionMap == null ? null : (String) versionMap.get("webSocketDebuggerUrl");
+        if (StringUtils.isBlank(debugUrl)) {
+            // /json/version 都不响应，说明不是（或尚未就绪的）DevTools 端点，不能盲目接管
+            log.info("[cdp] 调试端口 {} 上的进程未响应 DevTools /json/version，不复用", port);
+            return false;
+        }
+        String liveGuid = guidOf(debugUrl);
+        String guid = readRecordedBrowserGuid();
+        if (StringUtils.isBlank(guid)) {
+            log.info("[cdp] 无本模块浏览器指纹记录，调试端口为本模块专用端口，尝试接管既有无头浏览器（现场指纹 {}）", liveGuid);
+        } else if (!guid.equals(liveGuid)) {
+            log.warn("[cdp] 调试端口 {} 上的浏览器与记录指纹不符（记录 {}，现场 {}），仍尝试接管", port, guid, liveGuid);
+        }
+        try {
+            wsEndpoint = debugUrl;
+            browserClient = CdpWsClient.connect(debugUrl, Duration.ofSeconds(30));
+            subscribeEvents();
+            if (StringUtils.isBlank(guid)) {
+                // 接管成功后把指纹补记上，后续重启可走精确匹配
+                recordBrowserGuid(debugUrl);
+            }
+            if (StringUtils.isBlank(version)) {
+                // 复用路径不经过正常启动的版本解析，version 字段此时是缺省 null；
+                // ConcurrentHashMap 不允许 null value，直接 put 会抛 message 为 null 的 NPE
+                // （真实事故：复用判定、WS 连接、事件订阅全部通过，却在收尾一步 NPE，
+                // 被日志记成「复用失败: null」而转入清理重启，复用自愈形同虚设）。
+                Object browserName = versionMap.get("Browser");
+                version = browserName == null ? "" : String.valueOf(browserName);
+            }
+            runtime.put("version", version);
+            runtime.put("port", port);
+            runtime.put("targetCount", 0);
+            runtime.put("startedAt", System.currentTimeMillis());
+            runtime.remove("error");
+            state = Status.STARTED;
+            log.info("[cdp] 已复用调试端口 {} 上的存活无头浏览器（指纹 {}），跳过重启", port, liveGuid);
+            return true;
+        } catch (Exception e) {
+            log.info("[cdp] 复用调试端口 {} 上已有浏览器失败，转入清理重启流程: {}", port, e.getMessage());
+            if (browserClient != null) {
+                try {
+                    browserClient.close();
+                // [P3C F1 豁免]
+                } catch (Exception ignored) {
+                }
+                browserClient = null;
+            }
+            eventsSubscribed = false;
+            browserSubscribed = false;
+            return false;
+        }
+    }
+
+    /**
+     * 供复用判定使用的 /json/version 拉取
+     *
+     * <p>独立于 {@link #version()}：后者 1s 连接超时是为「启动后轮询」设计的，
+     * 在 194 这类内存吃紧、开机即分页抖动的机器上会把健康的浏览器误判成无响应
+     * （真实事故：复用被误判成「指纹不符」而拒绝）。这里用 5s 超时 + 3 次重试。</p>
+     *
+     * @return 版本信息映射；三次都失败返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> fetchVersionForAdoption() {
+        int port = properties.getPort();
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                URL url = new URL("http://127.0.0.1:" + port + "/json/version");
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setConnectTimeout(5_000);
+                con.setReadTimeout(5_000);
+                try {
+                    Object parsed = Json.fromJson(con.getInputStream(), Map.class);
+                    if (parsed instanceof Map) {
+                        return (Map<String, Object>) parsed;
+                    }
+                } finally {
+                    con.disconnect();
+                }
+            } catch (IOException e) {
+                log.info("[cdp] 读取调试端口 {} 的 /json/version 失败（第 {} 次）: {}", port, attempt, e.getMessage());
+            }
+            try {
+                Thread.sleep(2_000L);
+            // [P3C F1 豁免]
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @return DevTools WebSocket 端点里的浏览器指纹（最后一段 GUID）
+     */
+    private String guidOf(String debugUrl) {
+        int idx = debugUrl.lastIndexOf('/');
+        return idx >= 0 ? debugUrl.substring(idx + 1) : debugUrl;
+    }
+
+    /**
+     * 记录本次启动的浏览器指纹（devtools browser GUID），供重启后安全复用
+     *
+     * @param debugUrl 浏览器级 DevTools WebSocket 端点
+     */
+    private void recordBrowserGuid(String debugUrl) {
+        try {
+            Files.write(browserGuidFile(), guidOf(debugUrl).getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            log.warn("[cdp] 记录浏览器指纹失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * @return 启动时记录的浏览器指纹；没有记录返回空串
+     */
+    private String readRecordedBrowserGuid() {
+        try {
+            Path file = browserGuidFile();
+            if (!Files.exists(file)) {
+                return "";
+            }
+            return new String(Files.readAllBytes(file), StandardCharsets.UTF_8).trim();
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
+    private Path browserGuidFile() {
+        return Paths.get(System.getProperty("java.io.tmpdir"), "chua-cdp-browser.guid");
+    }
+
+    /**
      * 清理占用本模块调试端口的浏览器进程
      *
-     * <p>Chromium 在 Windows 上会脱离启动器的父子关系，进程树杀不到它；{@code start()}
-     * 又每次都新建临时 user-data-dir，所以「本次目录」匹配不到历史遗留的孤儿进程。
-     * 唯一稳定的归属标记是命令行里的 {@code --remote-debugging-port=<本模块端口>}。</p>
+     * <p>两个实测约束决定了实现方式：</p>
+     * <ul>
+     *   <li>本机（含管理员上下文）所有进程的 {@code ProcessHandle.info().commandLine()}
+     *       均不可读，按命令行匹配「自家无头浏览器」永远落空；</li>
+     *   <li>PowerShell 冷启动在本机可达数十秒，同步等待它的旧实现会在 PowerShell
+     *       完成前超时，误报「已清理」而端口原封不动。</li>
+     * </ul>
      *
-     * <p>只清理由本模块启动的 headless 浏览器（命令行同时含 {@code --remote-debugging-port}
-     * 与 {@code --headless}），绝不碰用户自己开的日常浏览器。</p>
+     * <p>因此改用 {@code netstat -ano}（秒级）定位监听 pid，核对可读的
+     * {@code command()} 确属 Chromium 系浏览器后定点清除（destroyForcibly +
+     * taskkill /T /F 兜底），再等待端口真正释放。</p>
      *
-     * @return 是否清理掉了占用端口的进程
+     * @return 端口是否已释放
      */
     private boolean killByDebugPort() {
         int port = properties.getPort();
+        // 实测两坑：① 本机（含管理员上下文）所有进程的 ProcessHandle.info().commandLine()
+        // 均不可读，纯 Java 按命令行匹配「自家无头浏览器」永远落空；② 194 内存吃紧时
+        // 连 netstat 都会超过 15s，PowerShell 冷启动可达 45s+——同步等待窗口短了，
+        // 就会误报「已清理」而端口原封不动（真实事故）。
+        // 因此：异步触发 PowerShell 清理（WMI 命令行匹配，只杀带
+        // --remote-debugging-port=<port> 且 --headless 的自家浏览器，不碰日常浏览器），
+        // 由本方法轮询端口释放情况判定结果，窗口拉长到 120s 并周期性补触发。
+        long deadline = System.currentTimeMillis() + 120_000L;
+        long lastFired = 0L;
+        boolean fired = false;
+        while (System.currentTimeMillis() < deadline) {
+            if (!isDebugPortListening()) {
+                if (fired) {
+                    log.info("[cdp] 已清理占用调试端口 {} 的残留无头浏览器", port);
+                }
+                return true;
+            }
+            long now = System.currentTimeMillis();
+            if (now - lastFired >= 40_000L) {
+                fireDebugPortKiller(port);
+                lastFired = now;
+                fired = true;
+            }
+            try {
+                Thread.sleep(3_000L);
+            // [P3C F1 豁免]
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        boolean closed = !isDebugPortListening();
+        if (!closed) {
+            log.warn("[cdp] 清理调试端口 {} 的残留浏览器超时（120s），端口仍被占用", port);
+        }
+        return closed;
+    }
+
+    /**
+     * 异步触发一次「按命令行匹配本模块无头浏览器并强杀」的 PowerShell 清理
+     *
+     * <p>不等待其完成（冷启动可达 45s+），由 {@link #killByDebugPort()} 的端口轮询
+     * 判定实际效果；看护线程在 90s 后仍未退出时强制回收，避免残留 powershell 进程。</p>
+     *
+     * @param port 调试端口
+     */
+    private void fireDebugPortKiller(int port) {
         String script = "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*--remote-debugging-port=" + port
                 + "*' -and $_.CommandLine -like '*--headless*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }";
         try {
             Process killer = new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
                     .redirectErrorStream(true)
                     .start();
-            killer.waitFor(20, java.util.concurrent.TimeUnit.SECONDS);
-            log.info("[cdp] 已清理占用调试端口 {} 的残留无头浏览器", port);
-            // 强杀是异步的：进程退出、端口从内核表里摘掉需要几十到几百毫秒。
-            // 不等就立刻复查，会看到「刚被杀掉的进程」还占着端口，从而误判成
-            // 「端口被别人占用，启动失败」——实测就是这样把 STARTED 变成 FAILED 的。
-            awaitDebugPortClosed(5_000L);
-            return true;
-        } catch (Exception e) {
-            log.warn("[cdp] 按调试端口清理残留进程失败: {}", e.getMessage());
-            return false;
+            Thread reaper = new Thread(() -> {
+                try {
+                    if (!killer.waitFor(90, java.util.concurrent.TimeUnit.SECONDS)) {
+                        killer.destroyForcibly();
+                    }
+                // [P3C F1 豁免]
+                } catch (InterruptedException ignored) {
+                }
+            });
+            reaper.setDaemon(true);
+            reaper.setName("cdp-port-killer-reaper");
+            reaper.start();
+        } catch (IOException e) {
+            log.warn("[cdp] 触发调试端口 {} 清理进程失败: {}", port, e.getMessage());
         }
     }
 
@@ -869,8 +1114,9 @@ public class CdpEngineService {
                 con.setReadTimeout(5000);
                 con.setRequestMethod("GET");
                 try {
-                    return (List<Map<String, Object>>) Json.fromJson(
+                    List<Map<String, Object>> list = (List<Map<String, Object>>) Json.fromJson(
                             con.getInputStream(), new TargetListTypeReference());
+                    return enrichTargetUrls(list);
                 } finally {
                     con.disconnect();
                 }
@@ -885,6 +1131,103 @@ public class CdpEngineService {
             }
         }
         return new ArrayList<>();
+    }
+
+    /**
+     * 从浏览器级 {@code Target.*} 事件里维护目标地址备忘
+     *
+     * <p>{@code targetCreated} / {@code targetChanged} 的 {@code targetInfo.url} 是可靠的
+     * 地址来源；{@code targetDestroyed} / {@code targetCrashed} 顺手清掉对应备忘。</p>
+     *
+     * @param method  事件名
+     * @param message 事件消息（含 params）
+     */
+    private void trackTargetUrlChange(String method, Map<String, Object> message) {
+        Object paramsRaw = message.get("params");
+        if (!(paramsRaw instanceof Map<?, ?> params)) {
+            return;
+        }
+        if ("Target.targetDestroyed".equals(method) || "Target.targetCrashed".equals(method)) {
+            Object destroyedId = params.get("targetId");
+            if (destroyedId != null) {
+                targetUrlHints.remove(String.valueOf(destroyedId));
+            }
+            return;
+        }
+        if ("Target.targetCreated".equals(method) || "Target.targetChanged".equals(method)) {
+            Object infoRaw = params.get("targetInfo");
+            if (infoRaw instanceof Map<?, ?> info) {
+                Object changedId = info.get("targetId");
+                Object url = info.get("url");
+                if (changedId != null && url != null && StringUtils.isNotBlank(String.valueOf(url))) {
+                    targetUrlHints.put(String.valueOf(changedId), String.valueOf(url));
+                }
+            }
+        }
+    }
+
+    /**
+     * 从页面级 {@code Page.frameNavigated} 事件里刷新目标地址备忘（只认主框架）
+     *
+     * @param targetId 页面标识
+     * @param message  事件消息（含 params.frame）
+     */
+    private void trackFrameNavigatedUrl(String targetId, Map<String, Object> message) {
+        Object paramsRaw = message.get("params");
+        if (!(paramsRaw instanceof Map<?, ?> params)) {
+            return;
+        }
+        Object frameRaw = params.get("frame");
+        if (!(frameRaw instanceof Map<?, ?> frame) || frame.get("parentId") != null) {
+            return;
+        }
+        Object url = frame.get("url");
+        if (url != null && StringUtils.isNotBlank(String.valueOf(url))) {
+            targetUrlHints.put(targetId, String.valueOf(url));
+        }
+    }
+
+    /**
+     * 回填目标列表里被浏览器吞掉的 url
+     *
+     * <p>页面被 DevTools 通道挂上后 {@code GET /json} 的 url 恒为空串（Edge 157 实测），
+     * 这里用事件里记下的最近已知地址回填；/json 能给出真实地址时以此为准并回写备忘。
+     * 顺带按当前列表清理已消失目标的备忘，避免映射无限增长。</p>
+     *
+     * @param list 浏览器 /json 原始列表
+     * @return 回填后的列表（原列表不做原地修改）
+     */
+    private List<Map<String, Object>> enrichTargetUrls(List<Map<String, Object>> list) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        Set<String> alive = ConcurrentHashMap.newKeySet();
+        List<Map<String, Object>> result = new ArrayList<>(list.size());
+        for (Map<String, Object> target : list) {
+            Object id = target.get("id");
+            if (id == null) {
+                result.add(target);
+                continue;
+            }
+            String tid = String.valueOf(id);
+            alive.add(tid);
+            Object url = target.get("url");
+            if (url != null && StringUtils.isNotBlank(String.valueOf(url))) {
+                targetUrlHints.put(tid, String.valueOf(url));
+                result.add(target);
+                continue;
+            }
+            String hint = targetUrlHints.get(tid);
+            if (hint == null || hint.isBlank()) {
+                result.add(target);
+                continue;
+            }
+            Map<String, Object> patched = new LinkedHashMap<>(target);
+            patched.put("url", hint);
+            result.add(patched);
+        }
+        targetUrlHints.keySet().retainAll(alive);
+        return result;
     }
 
     /**
@@ -916,24 +1259,75 @@ public class CdpEngineService {
     /**
      * 创建目标
      *
-     * <p>如果浏览器已停止（如 {@code stop()} 之后），先自动恢复浏览器，再创建页面。</p>
+     * <p>优先走 DevTools HTTP 端点 {@code PUT /json/new}（同步导航、返回完整 target）；
+     * 端点不可用时回退浏览器级 WS 命令 {@code Target.createTarget}（此时若浏览器已停止，
+     * {@link #requireBrowserClient()} 会先自动恢复浏览器再创建）。</p>
      *
-     * <p>新建完成后立刻把这个页面接上页面级事件域（{@code Runtime.enable} / {@code Network.enable}）：
-     * 否则用户在没点过这个页面之前，它的 console / network 永远不会出现在面板里。</p>
+     * <p>创建完成后把这个页面接上页面级事件域（{@code Runtime.enable} / {@code Network.enable}）：
+     * 否则用户在没点过这个页面之前，它的 console / network 永远不会出现在面板里。
+     * 事件域挂载较慢且允许失败，异步执行，不阻塞创建响应。</p>
      *
      * @param params 创建目标参数（如 url）
      * @return 创建结果（含 targetId）；失败时可能为 null
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> createTarget(Map<String, Object> params) {
-        CdpWsClient client = requireBrowserClient();
-        Map<String, Object> result = (Map<String, Object>) client.call("Target.createTarget", params,
-                properties.getCommandTimeout());
-        Object targetId = result == null ? null : result.get("targetId");
+        Map<String, Object> safeParams = params == null ? Map.of() : params;
+        String url = String.valueOf(safeParams.getOrDefault("url", "about:blank"));
+        Map<String, Object> result = createTargetViaHttpEndpoint(url);
+        if (result == null) {
+            CdpWsClient client = requireBrowserClient();
+            result = (Map<String, Object>) client.call("Target.createTarget", safeParams,
+                    properties.getCommandTimeout());
+        }
+        Object targetId = result == null ? null : result.getOrDefault("targetId", result.get("id"));
         if (targetId != null) {
-            attachPageEvents(String.valueOf(targetId));
+            String tid = String.valueOf(targetId);
+            result.put("targetId", tid);
+            // 页面通道一挂上，/json 就不再回填 url：先把创建地址记进备忘
+            if (StringUtils.isNotBlank(url)) {
+                targetUrlHints.put(tid, url);
+            }
+            Thread attachThread = new Thread(() -> attachPageEvents(tid), "cdp-attach-" + tid);
+            attachThread.setDaemon(true);
+            attachThread.start();
         }
         return result;
+    }
+
+    /**
+     * 通过 DevTools HTTP 端点 {@code PUT /json/new?<url>} 创建页面
+     *
+     * <p>实测（Edge 157 @194）：走 WS {@code Target.createTarget} 创建的页面，
+     * {@code GET /json} 列表里 url/title 全为空串，前端目标轨道只能显示裸 targetId；
+     * 且该 WS 命令在内存吃紧的宿主上响应可达 30s+，拖到前端请求超时。
+     * {@code /json/new} 同步完成导航并返回完整 target 信息（url 立即可用），响应毫秒级。</p>
+     *
+     * <p>注意：{@code /json/new} 把 {@code ?} 之后的整段 query 当作目标地址本身——
+     * 写成 {@code ?url=...} 或做百分号编码都会被当成非法地址，页面落到 about:blank（实测复现）。
+     * 因此这里直接拼接原始地址，仅把空格转成 {@code %20} 保证 HTTP 请求行合法。</p>
+     *
+     * @param url 初始地址
+     * @return target 信息（id / url / title / webSocketDebuggerUrl）；端点不可用时返回 null
+     */
+    private Map<String, Object> createTargetViaHttpEndpoint(String url) {
+        try {
+            String query = url.replace(" ", "%20");
+            URL endpoint = new URL("http://127.0.0.1:" + properties.getPort() + "/json/new?" + query);
+            HttpURLConnection con = (HttpURLConnection) endpoint.openConnection();
+            con.setRequestMethod("PUT");
+            con.setConnectTimeout(5_000);
+            con.setReadTimeout(15_000);
+            try {
+                Object parsed = Json.fromJson(con.getInputStream(), Map.class);
+                return parsed instanceof Map ? (Map<String, Object>) parsed : null;
+            } finally {
+                con.disconnect();
+            }
+        } catch (Exception e) {
+            log.info("[cdp] /json/new 创建页面失败，回退浏览器级 WS 命令: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -957,6 +1351,7 @@ public class CdpEngineService {
         }
         attachedPages.remove(targetId);
         pageDispatchers.remove(targetId);
+        targetUrlHints.remove(targetId);
         return result;
     }
 

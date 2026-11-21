@@ -381,11 +381,13 @@ public class CdpController {
         }
         try {
             ProxySession session = proxySessions.open(url);
-            String targetId = proxySessions.attachCdpTarget(session);
+            // 无头浏览器页面改为后台绑定：本接口立即返回，iframe 可立刻开始加载；
+            // 绑定含 createTarget + 经代理整页导航（浏览器冷启动时更久），不该阻塞弹窗
+            proxySessions.attachCdpTargetAsync(session);
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("sessionId", session.getId());
             data.put("url", session.getCurrentUrl());
-            data.put("targetId", targetId);
+            data.put("targetId", session.getTargetId());
             data.put("proxyBase", proxyBase(request));
             return ReturnResult.ok(data);
         } catch (IllegalArgumentException e) {

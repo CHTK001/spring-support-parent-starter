@@ -8,6 +8,8 @@ import com.chua.starter.cdp.config.CdpProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
 
 /**
  * 实时页面反向代理过滤器
@@ -134,7 +137,9 @@ public class CdpDebugProxyFilter implements ServerFilter {
         String method = request.getMethod() == null ? "GET" : request.getMethod().name();
         HttpRequest.Builder builder = HttpRequest.newBuilder(upstream)
                 .timeout(Duration.ofSeconds(30))
-                .header("Accept-Encoding", "identity");
+                // 只声明 gzip：绝大多数上游支持，且本代理可解压后注入；不透传客户端的 br/zstd 声明，
+                // 避免拿到无法解压注入的 HTML（非 HTML 响应的压缩体原样透传，由客户端解压）
+                .header("Accept-Encoding", "gzip");
         for (Map.Entry<String, String> entry : request.getHeaders().toMap().entrySet()) {
             String name = entry.getKey();
             if (name == null || REQUEST_HEADER_SKIP.contains(name.toLowerCase(Locale.ROOT))) {
@@ -184,8 +189,25 @@ public class CdpDebugProxyFilter implements ServerFilter {
         }
         byte[] responseBody = upstreamResponse.body();
         boolean head = "HEAD".equalsIgnoreCase(method);
-        if (!head && isHtml(contentType) && properties.getLiveProxy().isInjectScript() && responseBody != null && responseBody.length > 0) {
+        // 上游压缩协商：HTML 注入前解压；其余压缩响应按压缩形态透传（客户端自行解压），大幅减少重页面传输量
+        String contentEncoding = upstreamResponse.headers().firstValue("content-encoding").orElse(null);
+        boolean compressed = contentEncoding != null && !contentEncoding.isBlank()
+                && !"identity".equalsIgnoreCase(contentEncoding);
+        boolean injectable = !head && isHtml(contentType)
+                && properties.getLiveProxy().isInjectScript()
+                && responseBody != null && responseBody.length > 0;
+        if (injectable && compressed) {
+            byte[] plain = "gzip".equalsIgnoreCase(contentEncoding) ? gunzip(responseBody) : null;
+            if (plain != null) {
+                responseBody = inject(session, upstream, host, contentType, plain);
+                compressed = false;
+            }
+            // 解压失败：保持压缩形态透传（页面可用但无钩子），绝不把压缩体当明文发出
+        } else if (injectable) {
             responseBody = inject(session, upstream, host, contentType, responseBody);
+        }
+        if (compressed && contentEncoding != null) {
+            response.setHeader("Content-Encoding", contentEncoding);
         }
         if (responseBody != null && responseBody.length > 0 && !head) {
             response.setBody(responseBody);
@@ -217,6 +239,18 @@ public class CdpDebugProxyFilter implements ServerFilter {
         } catch (Exception e) {
             log.debug("[cdp-proxy] 脚本注入失败: {}", e.getMessage());
             return body;
+        }
+    }
+
+    /**
+     * gzip 解压；失败返回 {@code null}（调用方按压缩形态透传）
+     */
+    private byte[] gunzip(byte[] data) {
+        try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(data))) {
+            return in.readAllBytes();
+        } catch (IOException e) {
+            log.debug("[cdp-proxy] gzip 解压失败，按压缩形态透传: {}", e.getMessage());
+            return null;
         }
     }
 
