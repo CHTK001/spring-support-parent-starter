@@ -1,32 +1,38 @@
-package com.chua.starter.osgi.support.realtime;
+package com.chua.socket.support.bridge;
 
-import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.common.support.lang.json.Json;
+import com.chua.socket.support.session.SocketSessionTemplate;
+import com.chua.starter.logger.event.OsgiLogEvent;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 基于宿主 Socket 会话模板的插件操作日志发布器。
+ * OSGi 插件操作日志 → Socket 广播桥。
+ *
+ * <p>监听 {@link OsgiLogEvent} Spring 应用事件（由 osgi-starter 的日志发布器发布；
+ * 事件契约定义在 logger-starter，避免 osgi 直接依赖 socket 形成
+ * {@code common -> osgi -> socket -> common} 的依赖环），把插件上传 / 安装 / 升级 /
+ * 启停 / 卸载 / 删除 jar 的操作日志广播到全局 socket 连接。</p>
  *
  * <p>走<b>全局 socket 通道</b>：统一以 Socket.IO 的 {@code message} 事件广播，
  * 载荷对齐前端 {@code WsMessage}：{@code {module, event, data, dataId, timestamp}}，
  * 前端 {@code socket.subscribe("osgi", "operation-log", handler)} 即可收到。</p>
  *
- * <p><b>为什么广播而不是只推发起人</b>：插件操作改的是整个运行时的状态，同一控制台里
- * 多人同时看着插件列表时都该看到「谁在升级哪个插件、失败原因是什么」。
- * 需要按人过滤时前端用 {@code data.userId} 自己筛，后端不必为每个观察者维护一份订阅。</p>
- *
- * <p>用 {@link ObjectProvider} 延迟解析会话模板：宿主未启用 socket 时自动退化为
- * 本地 debug 日志，不会因为缺少 Bean 导致启动失败。</p>
+ * <p><b>日志是旁路</b>：序列化 / 广播失败只降级为本地日志，绝不能让插件操作因此失败。</p>
  *
  * @author CH
  * @since 4.0.0.51
  */
 @Slf4j
-public class SocketOsgiLogPublisher implements OsgiLogPublisher {
+@Component
+@RequiredArgsConstructor
+public class SocketOsgiLogBridge {
 
     /**
      * 前端全局 socket 监听的传输事件名。
@@ -44,27 +50,23 @@ public class SocketOsgiLogPublisher implements OsgiLogPublisher {
     public static final String EVENT = "operation-log";
 
     /**
-     * 会话模板提供者（延迟解析）。
+     * Socket 会话模板提供者（延迟解析，socket 未启用时为空）。
      */
     private final ObjectProvider<SocketSessionTemplate> templateProvider;
 
     /**
-     * 创建发布器。
+     * 监听插件操作日志事件并广播到全局 socket 连接。
      *
-     * @param templateProvider 会话模板提供者
+     * @param event 插件操作日志事件
      */
-    public SocketOsgiLogPublisher(ObjectProvider<SocketSessionTemplate> templateProvider) {
-        this.templateProvider = templateProvider;
-    }
-
-    @Override
-    public void publish(OsgiLogEvent event) {
+    @EventListener
+    public void onOsgiLogEvent(OsgiLogEvent event) {
         if (event == null) {
             return;
         }
         SocketSessionTemplate template = templateProvider.getIfAvailable();
         if (template == null) {
-            log.debug("[OSGi][Log] 宿主未启用 socket，跳过推送: action={}, status={}, symbolicName={}",
+            log.debug("[socket-bridge] Socket 未启用，跳过 OSGi 日志广播: action={}, status={}, symbolicName={}",
                     event.action(), event.status(), event.symbolicName());
             return;
         }
@@ -72,7 +74,7 @@ public class SocketOsgiLogPublisher implements OsgiLogPublisher {
         try {
             payload = Json.toJson(toMessage(event));
         } catch (Exception e) {
-            log.warn("[OSGi][Log] 日志序列化失败: action={}, symbolicName={}, reason={}",
+            log.warn("[socket-bridge] OSGi 日志序列化失败: action={}, symbolicName={}, reason={}",
                     event.action(), event.symbolicName(), e.getMessage());
             return;
         }
@@ -80,13 +82,13 @@ public class SocketOsgiLogPublisher implements OsgiLogPublisher {
             template.broadcast(TRANSPORT_EVENT, payload);
         } catch (Exception e) {
             // 日志是旁路：推送失败只降级，绝不能让插件操作因此失败
-            log.debug("[OSGi][Log] 日志广播失败: action={}, symbolicName={}, reason={}",
+            log.debug("[socket-bridge] OSGi 日志广播失败: action={}, symbolicName={}, reason={}",
                     event.action(), event.symbolicName(), e.getMessage());
         }
     }
 
     /**
-     * 组装前端可消费的消息体。
+     * 组装前端可消费的消息体（载荷与原 osgi 侧 SocketOsgiLogPublisher 完全一致）。
      *
      * <p>{@code data} 里同时铺「谁、做了什么、结果如何、花了多久」，前端一套日志组件
      * 就能渲染任意模块的操作流，不必为 OSGi 单独写解析。</p>

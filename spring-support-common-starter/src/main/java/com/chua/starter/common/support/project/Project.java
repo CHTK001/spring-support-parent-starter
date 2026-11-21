@@ -7,7 +7,6 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
-import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.core.env.Environment;
 
@@ -152,10 +151,12 @@ public class Project {
         this.contextPath = environment.resolvePlaceholders("${server.servlet.context-path:}");
         this.endpointsUrl = environment.resolvePlaceholders("${management.endpoints.web.base-path:/actuator}");
         this.endpoints = environment.resolvePlaceholders("${management.endpoints.web.exposure.include:*}");
-        DataSourceProperties dataSourceProperties = Binder.get(environment).bindOrCreate("spring.datasource", DataSourceProperties.class);
-        this.dataSourceUrl = dataSourceProperties.getUrl();
-        this.dataSourceDriver = dataSourceProperties.getDriverClassName();
-        this.dataSourceUsername = dataSourceProperties.getUsername();
+        // 直读 spring.datasource.* 基础配置，避免对 spring-boot-jdbc（DataSourceProperties）的编译依赖，
+        // 使本模块在无 JDBC 宿主中也可安全加载（数据源三要素仅作展示/指纹用途）。
+        Binder dataSourceBinder = Binder.get(environment);
+        this.dataSourceUrl = dataSourceBinder.bind("spring.datasource.url", String.class).orElse(null);
+        this.dataSourceDriver = dataSourceBinder.bind("spring.datasource.driver-class-name", String.class).orElse(null);
+        this.dataSourceUsername = dataSourceBinder.bind("spring.datasource.username", String.class).orElse(null);
         this.clientProtocolEndpointPort = StringUtils.defaultString(environment.resolvePlaceholders("${plugin.report.client.endpoint.port:}"),
             String.valueOf(NumberUtils.toInt(environment.resolvePlaceholders("${server.port:8080}")) + 10000));
         this.clientProtocolEndpointProtocol = environment.resolvePlaceholders("${plugin.report.client.endpoint.protocol:http}");

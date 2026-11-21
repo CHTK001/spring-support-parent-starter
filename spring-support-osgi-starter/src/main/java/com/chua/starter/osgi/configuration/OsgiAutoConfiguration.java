@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -50,13 +51,22 @@ import java.util.Map;
  * <p>远程管理协议：通过 {@code plugin.osgi.shell.protocol} 指定，
  * 支持 {@code ssh}（默认）或 {@code telnet}，同一实例只启用一种。</p>
  *
+ * <p><b>服务器设施门控（P3/P5）</b>：自 common-starter 依赖本模块起，任何宿主都会带上
+ * osgi 自动配置。为避免「依赖即带入」副作用（所有宿主被迫启动 Felix/SSH/热部署等
+ * 服务器设施），本配置需同时满足 {@code plugin.osgi.enabled=true}（存量总开关，默认 true）
+ * 与 {@code plugin.osgi.server.enabled=true}（默认 false）才会装配。使用插件 bundle、
+ * SSH/Gogo 远程管理或源码扩展点的宿主必须显式开启
+ * {@code plugin.osgi.server.enabled=true}。SPI 服务发布门面
+ * （{@code OsgiServicePublisher}，见 {@code OsgiServicePublisherAutoConfiguration}）
+ * 不受此门控，始终可用（框架未运行时为 no-op）。</p>
+ *
  * @since 4.0.0.43
  * @author CH
  */
 @Slf4j
 @AutoConfiguration
 @ConditionalOnClass({FelixOsgiLauncher.class, OsgiLauncher.class})
-@ConditionalOnProperty(prefix = "plugin.osgi", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnExpression("${plugin.osgi.enabled:true} and ${plugin.osgi.server.enabled:false}")
 @EnableConfigurationProperties(OsgiProperties.class)
 public class OsgiAutoConfiguration {
 

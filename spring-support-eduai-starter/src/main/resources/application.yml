@@ -162,6 +162,10 @@ plugin:
   # 不必为调整一条登录规则重新构建 600MB+ 的 fat jar。
   # 源码目录刻意放在 jar 之外（WorkingDirectory 相对路径），fat jar 内的资源不可热改。
   osgi:
+    # P3/P5 门控：Felix/SSH 等 OSGi 服务器设施改由 plugin.osgi.server.enabled 门控（默认关）。
+    # eduai 使用源码扩展点（source.*），需显式开启以保持既有行为。
+    server:
+      enabled: true
     source:
       enabled: true
       directory: ./osgi-source

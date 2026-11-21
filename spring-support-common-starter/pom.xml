@@ -87,11 +87,17 @@
             <artifactId>spring-support-logger-starter</artifactId>
         </dependency>
 
-        <!-- Spring Boot JavaMail - 邮件发送支持 -->
+        <!-- OSGi SPI 注册门面（P3）：方向 common -> osgi，osgi 不得反向依赖 common（R1/R2）。
+             宿主依赖 common 即获得 OsgiServicePublisher 门面（Felix 未运行时 no-op）；
+             Felix/SSH 等服务器设施由 plugin.osgi.server.enabled 门控（默认关），
+             不会随 common 强加给宿主（R5） -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
+
+        <!-- 邮件能力已下线：common 的 MailService 为僵尸代码（多数宿主扫描不到其包，真实发信走 utils 的 EmailPush SPI），
+             spring-boot-starter-mail 不再作为 common 的强依赖，需要的宿主自行引入 -->
 
         <!-- 缓存功能模块 - 由消费方按需引入，避免反向依赖形成循环 -->
         <!-- 如需缓存支持，请直接依赖 spring-support-cache-starter -->
@@ -266,10 +272,12 @@
         <artifactId>spring-boot-webmvc</artifactId>
     </dependency>
 
-    <!-- Spring JDBC - 提供 DataAccessException 等数据访问异常类 -->
+    <!-- Spring JDBC - 仅编译期供 DataAccessExceptionAdvice（@ConditionalOnClass 隔离）使用；
+         optional 不向消费方传递，无 JDBC 的宿主不再被带入 jdbc 全家桶 -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-jdbc</artifactId>
+        <optional>true</optional>
     </dependency>
 
         <dependency>

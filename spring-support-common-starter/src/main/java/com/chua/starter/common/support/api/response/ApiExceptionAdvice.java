@@ -19,9 +19,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -450,24 +447,6 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     public <T> ReturnResult<T> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException e) {
         logWarn("SQL完整性约束违反", e);
         return ReturnResult.error(DATA_CONFLICT.getCode(), extractConstraintMessage(e.getMessage()));
-    }
-
-    @ExceptionHandler(DataAccessException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    /**
-     * 处理数据access异常。
-     * @param e e
-     * @return 处理数据access异常的结果
-     */
-    public <T> ReturnResult<T> handleDataAccessException(DataAccessException e) {
-        logError("数据库访问异常", e);
-        if (e instanceof DuplicateKeyException dke) {
-            String msg = extractConstraintMessage(dke.getMessage());
-            return ReturnResult.error(DATA_ALREADY_EXISTS.getCode(), msg != null ? msg : "数据已存在，请勿重复提交");
-        } else if (e instanceof DataIntegrityViolationException dive) {
-            return ReturnResult.error(DATA_CONFLICT.getCode(), extractConstraintMessage(dive.getMessage()));
-        }
-        return ReturnResult.error(DATABASE_ERROR.getCode(), "数据操作失败，请稍后重试");
     }
 
     // ==================== 网络/远程调用异常 ====================
@@ -1023,9 +1002,6 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         }
         if (cause instanceof TimeoutException) {
             return ReturnResult.error(SYSTEM_EXECUTION_TIMEOUT.getCode(), "操作超时，请稍后重试");
-        }
-        if (cause instanceof DataAccessException dae) {
-            return (ReturnResult<T>) handleDataAccessException(dae);
         }
         logError("异步任务未知异常", cause);
         return ReturnResult.error(SYSTEM_EXECUTION_ERROR.getCode(), "操作处理失败，请稍后重试");

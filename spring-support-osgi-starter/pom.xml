@@ -39,15 +39,10 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- 实时日志（可选，编译期需要 SocketSessionTemplate 类型；运行时按 @ConditionalOnClass 装配）。
-             宿主启用 socket 时，把插件操作日志广播到全局 socket 连接；
-             未引入时由 OsgiRealtimeConfiguration 的空实现兜底，模块仍可独立运行 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-socket-starter</artifactId>
-            <version>${project.version}</version>
-            <optional>true</optional>
-        </dependency>
+        <!-- 实时日志不依赖 socket：插件操作日志（OsgiLogEvent，契约在 logger-starter）
+             经 Spring 事件发布，由 socket-starter 侧的 SocketOsgiLogBridge 监听广播。
+             若本模块依赖 socket（哪怕 optional），common -> osgi -> socket -> common
+             会构成 reactor 依赖环 -->
 
         <!-- 源码扩展点装配的真实行为测试（OsgiSourceConfigurationRealTest）。
              本模块此前没有任何 src/test，junit 需显式引入。 -->

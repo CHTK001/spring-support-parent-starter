@@ -6,7 +6,7 @@ import com.chua.common.support.osgi.OsgiServiceDescriptor;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.osgi.properties.OsgiProperties;
-import com.chua.starter.osgi.support.realtime.OsgiLogEvent;
+import com.chua.starter.logger.event.OsgiLogEvent;
 import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.osgi.framework.Bundle;

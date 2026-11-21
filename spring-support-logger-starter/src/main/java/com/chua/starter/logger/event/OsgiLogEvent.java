@@ -1,4 +1,4 @@
-package com.chua.starter.osgi.support.realtime;
+package com.chua.starter.logger.event;
 
 /**
  * 插件操作日志事件。
@@ -9,6 +9,11 @@ package com.chua.starter.osgi.support.realtime;
  *
  * <p><b>为什么带 {@code duration}</b>：安装 / 升级要落盘、解析 manifest、重启 bundle，
  * 耗时从几百毫秒到几秒不等。有了耗时，「为什么这次装得特别慢」这类问题不用再复现。</p>
+ *
+ * <p><b>契约归属</b>：本事件是 osgi-starter（生产方，经 Spring 应用事件发布）与
+ * socket-starter（消费方，SocketOsgiLogBridge 监听后广播到前端）的共享契约，
+ * 定义在最底层的 logger-starter，避免 osgi 直接依赖 socket 形成
+ * {@code common -> osgi -> socket -> common} 的依赖环。</p>
  *
  * @param level        日志级别：{@code INFO} / {@code WARN} / {@code ERROR}
  * @param status       阶段：{@code start} / {@code success} / {@code failure}
