@@ -9,6 +9,11 @@ import com.chua.starter.osgi.properties.OsgiProperties;
 import com.chua.starter.osgi.support.realtime.OsgiLogEvent;
 import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
 import lombok.extern.slf4j.Slf4j;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkEvent;
+import org.osgi.framework.FrameworkListener;
+import org.osgi.framework.wiring.FrameworkWiring;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +42,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
@@ -167,14 +174,12 @@ public class OsgiMonitorController {
      * 获取单个 bundle 详情。
      *
      * @param symbolicName bundle 符号名
-     * @return bundle 详情，不存在时返回 {@code null}
+     * @return bundle 详情
+     * @throws IllegalArgumentException bundle 不存在时抛出（HTTP 400，消息携带符号名）
      */
     @GetMapping("/bundles/{symbolicName}")
     public Map<String, Object> bundle(@PathVariable String symbolicName) {
-        OsgiBundle bundle = launcher.getBundle(symbolicName);
-        if (bundle == null) {
-            return null;
-        }
+        OsgiBundle bundle = requireBundle(symbolicName);
         Map<String, Object> detail = describe(bundle);
         detail.put("headers", bundle.getHeaders());
         detail.put("registeredServiceTypes", bundle.getRegisteredServiceTypes());
@@ -293,7 +298,14 @@ public class OsgiMonitorController {
                 throw new IllegalArgumentException("插件安装失败: 框架未返回 bundle");
             }
             if (start && !installed.isActive()) {
-                installed.start();
+                try {
+                    installed.start();
+                } catch (RuntimeException ex) {
+                    // bundle 已落框架（安装副作用成功），失败只发生在 start：
+                    // 必须把真实原因带回给页面，而不是落入兜底处理器变成「系统繁忙」
+                    throw new IllegalStateException("插件已安装（" + installed.getSymbolicName()
+                            + ":" + installed.getVersion() + "）但启动失败: " + rootMessage(ex), ex);
+                }
             }
             OsgiBundle fresh = launcher.getBundle(installed.getSymbolicName());
             Map<String, Object> result = describe(fresh == null ? installed : fresh);
@@ -500,6 +512,72 @@ public class OsgiMonitorController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(Files.size(path))
                 .body(new InputStreamResource(input));
+    }
+
+    /**
+     * 刷新框架装配（refresh bundles）。
+     *
+     * <p>bundle 升级/卸载后，受影响的 bundle 需要一次框架刷新才会按新装配关系重新解析。
+     * 本端点发起全量刷新，并可等待完成事件（最多 30 秒），便于升级流程收尾时确认装配已收敛。</p>
+     *
+     * @param wait 是否等待刷新完成事件（默认 true，最多等 30 秒）
+     * @return 刷新结果：initiated=已发起；completed=是否在限时内收到完成事件
+     * @throws InterruptedException 等待完成事件时被中断
+     */
+    @PostMapping("/framework/refresh")
+    public Map<String, Object> refreshFramework(@RequestParam(defaultValue = "true") boolean wait)
+            throws InterruptedException {
+        requireManageEnabled();
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("refresh", "framework"));
+        try {
+            BundleContext bundleContext = frameworkBundleContext();
+            if (bundleContext == null) {
+                throw new IllegalStateException("OSGi 框架未启动或上下文不可用，无法执行 refresh");
+            }
+            Bundle systemBundle = bundleContext.getBundle(0);
+            FrameworkWiring wiring = systemBundle == null ? null : systemBundle.adapt(FrameworkWiring.class);
+            if (wiring == null) {
+                throw new IllegalStateException("当前框架不支持 FrameworkWiring，无法执行 refresh");
+            }
+            CountDownLatch completed = new CountDownLatch(1);
+            wiring.refreshBundles(null, (FrameworkListener) event -> {
+                if (event.getType() == FrameworkEvent.PACKAGES_REFRESHED) {
+                    completed.countDown();
+                }
+            });
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("initiated", true);
+            if (wait) {
+                boolean done = completed.await(30, TimeUnit.SECONDS);
+                result.put("completed", done);
+                if (!done) {
+                    result.put("note", "30 秒内未收到刷新完成事件，刷新可能仍在进行");
+                }
+            }
+            logPublisher.publish(OsgiLogEvent.success("refresh", "framework", startedAt,
+                    "已发起 bundle 装配刷新"));
+            return result;
+        } catch (InterruptedException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("refresh", "framework", startedAt, "刷新等待被中断"));
+            throw ex;
+        } catch (RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("refresh", "framework", startedAt,
+                    "刷新失败: " + rootMessage(ex)));
+            throw ex;
+        }
+    }
+
+    /**
+     * 取框架 BundleContext（非 Felix 实现时不可得）。
+     *
+     * @return 框架 BundleContext，不可用时返回 {@code null}
+     */
+    private BundleContext frameworkBundleContext() {
+        if (launcher instanceof FelixOsgiLauncher felix) {
+            return felix.getFrameworkBundleContext();
+        }
+        return null;
     }
 
     /**

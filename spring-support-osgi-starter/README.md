@@ -90,6 +90,7 @@ flowchart TD
 | POST | `/osgi/bundles/{symbolicName}/update` | 上传新版本原地升级 | `manage-enabled=true` |
 | POST | `/osgi/bundles/{symbolicName}/start` / `/stop` / `/uninstall` | 启动 / 停止 / 卸载（卸载不删 jar） | `manage-enabled=true` |
 | POST | `/osgi/jars/{fileName}/delete` | 删除部署目录 jar（须先卸载） | `manage-enabled=true` |
+| POST | `/osgi/framework/refresh` | 刷新框架装配（bundle 升级/卸载后重新解析），参数 `wait`（默认 true，最多等 30 秒完成事件） | `manage-enabled=true` |
 
 ## 4. Bean 能力矩阵
 
@@ -143,7 +144,9 @@ flowchart TD
 | `plugin.osgi.shell.password` | `String` | 空串 | SSH 密码 |
 | `plugin.osgi.shell.host-key` | `String` | 空串 | 主机密钥路径，留空 `target/osgi-hostkey.ser` 首启自动生成 |
 | `plugin.osgi.shell.allow-empty-credential` | `boolean` | `false` | 允许空凭据登录（等同无认证暴露） |
-| `plugin.osgi.shell.max-auth-attempts` | `int` | `3` | 已声明但运行期未消费（见第 9 节） |
+| `plugin.osgi.shell.max-auth-attempts` | `int` | `3` | 同一连接认证请求总数达到该次数即断开（经 SSHD `max-auth-requests` 生效，最小 1）。注意：客户端一次认证流程内部会发送多个认证请求，实际可容忍的密码试错次数少于该值 |
+| `plugin.osgi.shell.idle-timeout-seconds` | `int` | `600` | SSH 空闲会话超时秒数，超时断开防止半死连接占线程；≤0 用 SSHD 默认（10 分钟） |
+| `plugin.osgi.shell.max-sessions` | `int` | `8` | 并发 SSH shell 会话上限，超限新会话立即被拒；≤0 不限制 |
 | `plugin.osgi.shell.install-framework-sshd-bundles` | `boolean` | `false` | 框架内安装 sshd bundle（sshd 2.13.2 下 sftp/scp 必然解析失败） |
 
 > 框架配置固定先写入 `gosh.args=--noshutdown`（防 Gogo 在 stdin EOF 时停掉整个框架），仍可被 `framework-properties` 覆盖。
@@ -177,8 +180,14 @@ plugin:
 
 ```bash
 ssh -p 8122 admin@127.0.0.1   # 进入 Gogo shell
-g! bundle:list
+g! bundle:list                # bundle 清单
+g! stats                      # 框架统计（状态分布/服务数）
+g! services                   # 服务注册表
+g! bundle:info <符号名>       # bundle 详情
+g! bundle:headers <符号名>    # Manifest 头
+g! help                       # 全部命令
 curl http://127.0.0.1:8080/osgi/stats
+curl -X POST 'http://127.0.0.1:8080/osgi/framework/refresh?wait=true'
 ```
 
 编程式使用：注入 `FelixOsgiLauncher`（或接口 `OsgiLauncher`）做 bundle 操作，注入 `OsgiLogPublisher` 发日志；`OsgiBeanDefinitionRegister` 用 `ObjectProvider` 判空后读快照。
@@ -228,6 +237,9 @@ public class MyExtensions {
 ## 9. 常见问题
 
 1. **引入依赖后没有任何 OSGi Bean，或 `/osgi/**` 404？** 依次检查：`plugin.osgi.enabled` 是否被显式设为 false；classpath 是否真的带有 `utils-support-osgi-starter`（类级 `@ConditionalOnClass` 不满足时整个模块静默不装配）；端点还要求 `plugin.osgi.endpoint.enabled=true`（默认 false）且 classpath 存在 `RestController`。
-2. **8122 没监听 / SSH 启动抛「认证凭据不完整」？** `shell.enabled` 默认 false；SSH 模式 `username` 与 `password` 必须都非空，除非 `allow-empty-credential=true`（等同无认证暴露，仅限受信本地调试）。`max-auth-attempts` 字段存在但运行期未消费，认证失败上限目前交给 SSHD 默认行为。框架启动失败只打 error 日志、不拖垮应用，但此时 SSH 里 `bundle:` 命令仍可用（框架 API 直通），其余 Gogo 命令不可用。
+2. **8122 没监听 / SSH 启动抛「认证凭据不完整」？** `shell.enabled` 默认 false；SSH 模式 `username` 与 `password` 必须都非空，除非 `allow-empty-credential=true`（等同无认证暴露，仅限受信本地调试）。`max-auth-attempts`（默认 3）经 SSHD `max-auth-requests` 生效：同一连接的认证请求总数达到上限即被断开（客户端一次认证流程内部会产生多个认证请求，实际可容忍的密码试错次数少于该值）；另有 `idle-timeout-seconds`（默认 600，空闲会话超时）与 `max-sessions`（默认 8，并发会话上限，超限提示后拒绝）。框架启动失败只打 error 日志、不拖垮应用，但此时 SSH 里 `bundle:` 命令仍可用（框架 API 直通），其余 Gogo 命令不可用。SSH 主机密钥默认写入 `target/osgi-hostkey.ser`，父目录不存在会自动创建，重启后服务端指纹保持稳定。
 3. **框架刚启动就被 shell 停掉？** Gogo shell 在 stdin 到 EOF（systemd/docker 非交互启动）时会停整个框架；模块固定写入 `gosh.args=--noshutdown`（只停 shell 不停框架），需要覆盖时用 `framework-properties`。
 4. **Spring Boot 4 兼容性？** 注册走 `@AutoConfiguration` + `META-INF/spring/...AutoConfiguration.imports`（本模块**没有** `spring.factories`），符合 Boot 3+/4 机制；类级 `@ConditionalOnClass` 用类字面量（`FelixOsgiLauncher` / `OsgiLauncher` 来自必依赖 `utils-support-osgi-starter`，条件按注解元数据判定，缺失时模块静默不装配）；可选依赖（`RestController`、`SocketSessionTemplate`）在 `@Bean` 侧用 name 字符串形式，缺失时不解析方法签名、不会抛 `NoClassDefFoundError`；仓库基线 Boot 4.1.2 / Java 25。
+5. **SSH 里执行 `felix:lb` 等命令看不到输出？** 已修复：`felix:*` 命令的输出在 Gogo 命令**返回值**里（不走 System.out，交互式 gosh 由 Console 负责打印），服务端直连 CommandProcessor 时会把非空返回值回传到 SSH 会话；`bundle:*` 走产品直通打印，行为不变。
+6. **SSH 里敲 `exit` / `shutdown` 会发生什么？** `exit` 只结束当前 SSH 会话（回显 bye 后关闭通道），宿主 JVM 与 OSGi 框架保持运行，可立即重连；`shutdown`、`felix:shutdown`、`system:exit`、`system:shutdown` 会被拒绝并提示走运维停机流程。原因：gosh_profile 把 `System` 注册为 `system:` 命令，裸 `exit` 会解析到 `System.exit(int)`，而 JDK 25 已移除 SecurityManager，无法在框架层拦截，只能在 shell 读取循环里就地处置。
+7. **安装插件返回「插件已安装…但启动失败」？** 安装（落框架）与启动（解析依赖）是两步：启动失败（如缺少 `Import-Package`）时接口返回业务错误并携带 Felix 的真实解析原因（不再是笼统的「系统繁忙」），bundle 仍处于 INSTALLED 状态，可卸载或修复依赖后重装；查询不存在的 bundle 返回 400 与「bundle 不存在: <名字>」，而不是 success=true 空数据。

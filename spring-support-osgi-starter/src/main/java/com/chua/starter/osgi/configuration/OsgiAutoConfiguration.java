@@ -231,6 +231,9 @@ public class OsgiAutoConfiguration {
                 shell.getHost(), port, shell.getUsername(), shell.getPassword(),
                 osgiLauncher.getFrameworkBundleContext(), shell.getHostKey(),
                 shell.isAllowEmptyCredential());
+        server.setMaxAuthAttempts(shell.getMaxAuthAttempts());
+        server.setIdleTimeoutSeconds(shell.getIdleTimeoutSeconds());
+        server.setMaxSessions(shell.getMaxSessions());
         try {
             server.start();
         } catch (IOException e) {

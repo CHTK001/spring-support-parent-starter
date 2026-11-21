@@ -345,8 +345,27 @@ public class OsgiProperties {
 
         /**
          * 单次连接允许的认证失败次数上限，超过则断开连接。
+         *
+         * <p>经 MINA SSHD 的 {@code max-auth-requests} 属性生效：
+         * 同一连接上认证请求达到该次数即被服务端主动断开。</p>
          */
         private int maxAuthAttempts = 3;
+
+        /**
+         * SSH shell 空闲会话超时（秒）。
+         *
+         * <p>会话持续无流量超过该时长即被服务端断开，防止半死连接长期占用线程。
+         * &le;0 表示不设置，使用 SSHD 默认值（10 分钟）。</p>
+         */
+        private int idleTimeoutSeconds = 600;
+
+        /**
+         * 并发 SSH shell 会话上限。
+         *
+         * <p>超出上限的新会话会被立即拒绝并提示，防止远程管理通道被占满。
+         * &le;0 表示不限制。</p>
+         */
+        private int maxSessions = 8;
 
         /**
          * 是否把 Apache SSHD 自身也作为 OSGI bundle 安装到框架内。
