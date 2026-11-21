@@ -56,6 +56,11 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
      */
     private final Map<String, List<String>> cloudCapabilityModels = new LinkedHashMap<>();
 
+    /**
+     * 本地模型文件后缀，与 {@code ModelRegistry#MODEL_SUFFIXES} 保持一致（后者为私有）。
+     */
+    private static final String[] LOCAL_MODEL_SUFFIXES = {".onnx", ".pt", ".pth", ".pdmodel", ".pb", ".safetensors"};
+
     @Override
     /**
      * 列表模型bycapability
@@ -242,7 +247,7 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
             item.put("relativePath", entry.relativePath());
             item.put("downloadUrl", entry.downloadUrl());
 
-            Path resolved = probeAvailablePath(entry.relativePath());
+            Path resolved = probeAvailablePath(entry.modelId(), entry.relativePath());
             boolean available = resolved != null && Files.exists(resolved);
             String localPath = resolved == null ? null : resolved.toAbsolutePath().normalize().toString();
             // 磁盘上找不到时再查一次 classpath 资源：权重构件（utils-support-models-onnx-*）
@@ -311,35 +316,75 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
      * 轻量本地可用性探测：仅检查绝对路径 / 模型根目录 / 工作目录，以及显式 classpath: 引用；
      * 不对下载型条目做昂贵的 classpath 全量扫描（下载由 resolveModelPath 在推理时处理）。
      *
+     * <p>relativePath 未命中时，继续按 {@link ModelRegistry#resolveModelPath} 的本地判定
+     * 口径探测模型根精确形态与外部目录注册，保持「探针判定可用」与「请求时真的能解析到
+     * 本地文件」同口径：命名条目的 relativePath 指向仓库内布局，部署现场往往由
+     * registerExternalDirectory 注册的外部目录供给，只探 relativePath 会把运行时可用的
+     * 模型报成缺失（实测人脸检测 scrfd-face-detector / 特征 faceplugin-face-feature）。
+     * 全程只读文件系统，不触发联网下载。</p>
+     *
+     * @param modelId      注册条目的模型标识
      * @param relativePath 注册条目声明的相对路径
      * @return 本地已存在的路径；不存在返回 空
      */
-    private Path probeAvailablePath(String relativePath) {
-        if (relativePath == null || relativePath.isBlank()) {
-            return null;
-        }
-        String cfg = relativePath.trim();
-        if (cfg.startsWith("classpath:")) {
+    private Path probeAvailablePath(String modelId, String relativePath) {
+        if (relativePath != null && !relativePath.isBlank()) {
+            String cfg = relativePath.trim();
+            if (cfg.startsWith("classpath:")) {
+                try {
+                    return ModelRegistry.resolveConfiguredPath(cfg);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
             try {
-                return ModelRegistry.resolveConfiguredPath(cfg);
+                Path p = Paths.get(cfg);
+                if (p.isAbsolute() && Files.exists(p)) {
+                    return p;
+                }
+                Path underRoot = Paths.get(ModelRegistry.getModelRootDir()).resolve(cfg);
+                if (Files.exists(underRoot)) {
+                    return underRoot;
+                }
+                if (!p.isAbsolute() && Files.exists(p)) {
+                    return p.toAbsolutePath().normalize();
+                }
             } catch (Exception e) {
                 return null;
             }
         }
-        try {
-            Path p = Paths.get(cfg);
-            if (p.isAbsolute() && Files.exists(p)) {
-                return p;
-            }
-            Path underRoot = Paths.get(ModelRegistry.getModelRootDir()).resolve(cfg);
-            if (Files.exists(underRoot)) {
-                return underRoot;
-            }
-            if (!p.isAbsolute() && Files.exists(p)) {
-                return p.toAbsolutePath().normalize();
-            }
-        } catch (Exception e) {
+        return probeAvailableByModelIdShapes(modelId);
+    }
+
+    /**
+     * 按 {@link ModelRegistry#resolveModelPath} 的本地形态探测模型是否在盘上：
+     * 模型根下的精确文件、每模型一目录布局、已注册的外部目录。
+     *
+     * @param modelId 模型标识
+     * @return 本地已存在的路径；不存在返回 空
+     */
+    private Path probeAvailableByModelIdShapes(String modelId) {
+        if (modelId == null || modelId.isBlank()) {
             return null;
+        }
+        try {
+            Path root = Paths.get(ModelRegistry.getModelRootDir());
+            for (String suffix : LOCAL_MODEL_SUFFIXES) {
+                Path exact = root.resolve(modelId + suffix);
+                if (Files.exists(exact)) {
+                    return exact;
+                }
+                Path inModelDir = root.resolve(modelId).resolve("model" + suffix);
+                if (Files.exists(inModelDir)) {
+                    return inModelDir;
+                }
+            }
+            Path external = ModelRegistry.findExternalDirectory(modelId);
+            if (external != null && Files.exists(external)) {
+                return external;
+            }
+        } catch (Exception ignore) {
+            // 探测失败按「不可用」处理，不影响主流程
         }
         return null;
     }
