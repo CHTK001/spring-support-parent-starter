@@ -33,7 +33,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -424,6 +426,24 @@ public class SysAiModelMetricsService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public SyncResult syncFromIndicator(ChatClientIndicator indicator, String providerId) {
+        return syncFromIndicator(indicator, providerId, Set.of());
+    }
+
+    /**
+     * 从 {@link ChatClientIndicator} 同步指标（可按模型 id 白名单过滤）。
+     *
+     * <p>过滤口径：白名单条目先归一化（与指标库 {@code model_key} 同一套
+     * {@link AiModelMetricKeys#normalizeKey}），模型原始 id 的小写形态或归一化键
+     * 任一命中即同步该模型；空白名单 = 同步全部模型。被过滤掉的模型不写指标库、
+     * 也不回写服务商模型行。</p>
+     *
+     * @param indicator        当前服务商的指标实现
+     * @param providerId       服务商 ID（写 provider 列）
+     * @param modelIdWhitelist 模型 id 白名单（空集合 = 不过滤）
+     * @return 同步统计（更新数 / 插入数 / 回写的模型行数）
+     */
+    private SyncResult syncFromIndicator(ChatClientIndicator indicator, String providerId,
+                                         Set<String> modelIdWhitelist) {
         if (indicator == null) {
             return new SyncResult(0, 0, 0);
         }
@@ -431,6 +451,22 @@ public class SysAiModelMetricsService {
         if (modelMetrics == null || modelMetrics.isEmpty()) {
             log.info("[ModelMetrics] indicator={} 无数据，跳过同步", indicator.source());
             return new SyncResult(0, 0, 0);
+        }
+        Set<String> modelFilter = safeLowerSet(modelIdWhitelist);
+        if (!modelFilter.isEmpty()) {
+            Set<String> modelFilterKeys = normalizedWhitelist(modelFilter);
+            Map<String, Map<String, Object>> filtered = new LinkedHashMap<>();
+            for (Map.Entry<String, Map<String, Object>> entry : modelMetrics.entrySet()) {
+                if (modelAllowed(entry.getKey(), modelFilter, modelFilterKeys)) {
+                    filtered.put(entry.getKey(), entry.getValue());
+                }
+            }
+            log.info("[ModelMetrics] indicator={} 模型白名单过滤：{}/{} 个模型在同步范围",
+                    indicator.source(), filtered.size(), modelMetrics.size());
+            if (filtered.isEmpty()) {
+                return new SyncResult(0, 0, 0);
+            }
+            modelMetrics = filtered;
         }
         String source = truncate(indicator.source(), 40);
         Long capturedAt = indicator.capturedAt();
@@ -502,13 +538,44 @@ public class SysAiModelMetricsService {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public int syncFromConfiguredProviders() {
+        return syncFromConfiguredProviders(Set.of(), Set.of());
+    }
+
+    /**
+     * 遍历已配置服务商，按白名单同步其 {@link ChatClientIndicator} 指标到指标库
+     * （时间轮定时链路入口，见 {@code AiSyncTimeWheelTask}）。
+     *
+     * <p>白名单语义：</p>
+     * <ul>
+     *   <li>provider 白名单：条目与渠道主键 {@code providerId} 或平台标识
+     *       {@code platform}（均小写比较）任一命中即同步该服务商；空白名单 = 全部；</li>
+     *   <li>model id 白名单：传递给 {@link #syncFromIndicator}，按模型归一化键过滤，
+     *       只同步命中的模型；空白名单 = 全部模型。</li>
+     * </ul>
+     *
+     * <p>容错语义与无参版本一致：单个服务商解析或同步失败只记录日志，不影响其它服务商；
+     * 无指标端点的服务商（如 Ollama / ONNX）直接跳过，不视为失败。</p>
+     *
+     * @param providerWhitelist provider id / 平台标识白名单（空集合 = 全部服务商）
+     * @param modelIdWhitelist  模型 id 白名单（空集合 = 全部模型）
+     * @return 成功同步的服务商数（有数据落库）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
+    public int syncFromConfiguredProviders(Set<String> providerWhitelist, Set<String> modelIdWhitelist) {
         List<SysAccountChannel> providers = channelService.listAll();
         if (providers.isEmpty()) {
             return 0;
         }
+        Set<String> providerFilter = safeLowerSet(providerWhitelist);
+        Set<String> modelFilter = safeLowerSet(modelIdWhitelist);
         int ok = 0;
         int skipped = 0;
         for (SysAccountChannel provider : providers) {
+            if (!providerAllowed(provider, providerFilter)) {
+                skipped++;
+                continue;
+            }
             ChatClientIndicator indicator;
             try {
                 indicator = resolveIndicator(provider);
@@ -522,7 +589,7 @@ public class SysAiModelMetricsService {
                 continue;
             }
             try {
-                SyncResult result = syncFromIndicator(indicator, provider.getProviderId());
+                SyncResult result = syncFromIndicator(indicator, provider.getProviderId(), modelFilter);
                 if (result.getUpdated() + result.getInserted() > 0) {
                     ok++;
                 }
@@ -530,8 +597,10 @@ public class SysAiModelMetricsService {
                 log.warn("[ModelMetrics] provider={} indicator 同步失败: {}", provider.getProviderId(), e.getMessage());
             }
         }
-        log.info("[ModelMetrics] 已配置服务商 indicator 同步完成：成功 {} 家，跳过 {} 家，共 {} 家",
-                ok, skipped, providers.size());
+        log.info("[ModelMetrics] 已配置服务商 indicator 同步完成：成功 {} 家，跳过 {} 家，共 {} 家（providers={}，modelIds={}）",
+                ok, skipped, providers.size(),
+                providerFilter.isEmpty() ? "*" : providerFilter,
+                modelFilter.isEmpty() ? "*" : modelFilter);
         return ok;
     }
 
@@ -1885,5 +1954,83 @@ public class SysAiModelMetricsService {
         m.put("latency_first_token_seconds", SysAiModelMetrics::getLatencyFirstTokenSeconds);
         m.put("context_window_tokens", SysAiModelMetrics::getContextWindowTokens);
         return Map.copyOf(m);
+    }
+
+    /**
+     * 白名单归一：去空白、转小写；空入参返回不可变空集合（= 不过滤）。
+     *
+     * @param raw 原始白名单
+     * @return 归一化后的白名单
+     */
+    private static Set<String> safeLowerSet(Set<String> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> out = new LinkedHashSet<>();
+        for (String item : raw) {
+            if (item != null && !item.isBlank()) {
+                out.add(item.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 把模型白名单折叠成归一化模型键集合（与指标库 {@code model_key} 同口径），
+     * 使「openai/gpt-4o」「GPT-4o」「gpt-4o」都能命中同一行。
+     *
+     * @param filter 已小写化的白名单
+     * @return 归一化键集合
+     */
+    private static Set<String> normalizedWhitelist(Set<String> filter) {
+        Set<String> out = new HashSet<>();
+        for (String item : filter) {
+            out.add(AiModelMetricKeys.normalizeKey(item));
+        }
+        return out;
+    }
+
+    /**
+     * 服务商是否在白名单内：provider id 与平台标识任一命中即通过；空白名单 = 全部。
+     *
+     * @param provider 服务商行
+     * @param filter   已小写化的 provider 白名单
+     * @return true 表示允许同步
+     */
+    private static boolean providerAllowed(SysAccountChannel provider, Set<String> filter) {
+        if (filter.isEmpty()) {
+            return true;
+        }
+        return filter.contains(lowerSafe(provider.getProviderId()))
+                || filter.contains(lowerSafe(provider.getPlatform()));
+    }
+
+    /**
+     * 模型 id 是否在白名单内：原始小写形态或归一化键任一命中即通过；空白名单 = 全部。
+     *
+     * @param modelId    指标源里的原始模型 id
+     * @param filter     已小写化的模型白名单
+     * @param filterKeys 白名单的归一化键集合
+     * @return true 表示允许同步
+     */
+    private static boolean modelAllowed(String modelId, Set<String> filter, Set<String> filterKeys) {
+        if (filter.isEmpty()) {
+            return true;
+        }
+        if (modelId == null) {
+            return false;
+        }
+        return filter.contains(modelId.trim().toLowerCase(Locale.ROOT))
+                || filterKeys.contains(AiModelMetricKeys.normalizeKey(modelId));
+    }
+
+    /**
+     * 空安全的 toLowerCase（null 返回空串，避免 NPE）。
+     *
+     * @param value 原始值
+     * @return 小写形态
+     */
+    private static String lowerSafe(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 }

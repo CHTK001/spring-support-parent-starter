@@ -22,3 +22,4 @@ com.chua.starter.ai.support.configuration.compose.PaperComposeGlobalSettingProvi
 com.chua.starter.ai.support.configuration.health.ChannelProbeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.input.InputSuggestGlobalSettingProvider
 com.chua.starter.ai.support.configuration.detect.DetectGlobalSettingProvider
+com.chua.starter.ai.support.configuration.timewheel.TimeWheelGlobalSettingProvider
