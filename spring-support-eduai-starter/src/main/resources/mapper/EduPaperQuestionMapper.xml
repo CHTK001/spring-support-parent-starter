@@ -44,4 +44,18 @@
         WHERE paper_question_paper_id = #{paperId}
     </update>
 
+    <!-- 批量插入试卷-题目关联（AI 组卷等一次落多行，替代循环单条 insert 的 N 次往返） -->
+    <insert id="insertBatch">
+        INSERT INTO edu_paper_question
+            (paper_question_paper_id, paper_question_question_id, paper_question_order,
+             paper_question_score, paper_question_no, paper_question_version,
+             paper_question_owner_user_id, create_time)
+        VALUES
+        <foreach collection="relations" item="item" separator=",">
+            (#{item.paperQuestionPaperId}, #{item.paperQuestionQuestionId}, #{item.paperQuestionOrder},
+             #{item.paperQuestionScore}, #{item.paperQuestionNo}, #{item.paperQuestionVersion},
+             #{item.ownerUserId}, #{item.createTime})
+        </foreach>
+    </insert>
+
 </mapper>

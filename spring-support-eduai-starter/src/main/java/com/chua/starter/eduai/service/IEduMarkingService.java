@@ -45,6 +45,23 @@ public interface IEduMarkingService {
     String submitAnswerSheet(MarkingSubmitDTO dto, String ownerUserId);
 
     /**
+     * 阅卷队列名称（同步/异步阅卷共用，队列消费者按此订阅）。
+     */
+    String QUEUE_NAME = "edu.marking";
+
+    /**
+     * 逐题批改并落库（同步执行），完成后把任务收口为已完成。
+     *
+     * <p>同步提交链路与队列消费方（{@code MarkingMessageListener}）共用；
+     * 每题满分取卷面分值（{@code edu_paper_question.paper_question_score}），
+     * 题目不在试卷上时回退 {@code plugin.eduai.marking.max-score}。</p>
+     *
+     * @param taskId  任务标识
+     * @param answers 待批改作答列表
+     */
+    void markSync(String taskId, List<MarkingSubmitDTO.AnswerItem> answers);
+
+    /**
      * 扫描试卷图片并阅卷（支持两类试卷）。
      *
      * <p>流程：版面还原（pp-doc-layout）→ 文字提取（paddleocrv6 检测+识别）→ 结构化 → 判分。</p>

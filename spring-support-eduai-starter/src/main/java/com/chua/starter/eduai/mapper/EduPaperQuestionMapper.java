@@ -66,4 +66,15 @@ public interface EduPaperQuestionMapper extends BaseMapper<EduPaperQuestion> {
      * @return 更新行数
      */
     int updateVersionByPaperId(@Param("paperId") Long paperId, @Param("version") Integer version);
+
+    /**
+     * 批量插入试卷-题目关联（XML 语句 insertBatch，多值单语句一次落库）。
+     *
+     * <p>AI 组卷 / 手动加题等一次性写入多行时使用，替代循环单条 insert
+     * 的 N 次数据库往返。</p>
+     *
+     * @param relations 待插入的关联列表，不能为空
+     * @return 插入行数
+     */
+    int insertBatch(@Param("relations") List<EduPaperQuestion> relations);
 }

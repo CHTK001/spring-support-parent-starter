@@ -113,11 +113,6 @@ import java.util.UUID;
 public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
-     * 阅卷队列名称。
-     */
-    public static final String QUEUE_NAME = "edu.marking";
-
-    /**
      * 阅卷结果状态：待批改
      */
     private static final int STATUS_PENDING = 0;
@@ -332,9 +327,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         int fallbackScore = properties.getMarking().getMaxScore();
         List<MarkingSubmitDTO.AnswerItem> subjective = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
+        // 批量取题：一次查齐本次作答涉及的题目（题干/答案/题型），替代循环内逐题 selectById 的 N+1
+        Map<Long, EduQuestion> questionById = loadQuestions(dto.answers());
         for (MarkingSubmitDTO.AnswerItem item : dto.answers()) {
-            EduQuestion question = item.questionId() == null ? null
-                    : questionMapper.selectById(item.questionId());
+            EduQuestion question = questionById.get(item.questionId());
             int maxScore = fullScores.getOrDefault(item.questionId(), fallbackScore);
             EduMarkingResult result = new EduMarkingResult();
             result.setOwnerUserId(sheet.getOwnerUserId());
@@ -585,12 +581,15 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @param taskId  任务标识
      * @param answers answers
      */
+    @Override
     public void markSync(String taskId, List<MarkingSubmitDTO.AnswerItem> answers) {
         EduAnswerSheet sheet = findSheet(taskId);
         Map<Long, Integer> fullScores = resolveFullScores(sheet);
         int fallbackScore = properties.getMarking().getMaxScore();
+        // 批量取题：一次查齐待批题目，替代循环内逐题 selectById 的 N+1
+        Map<Long, EduQuestion> questionById = loadQuestions(answers);
         for (MarkingSubmitDTO.AnswerItem item : answers) {
-            EduQuestion question = questionMapper.selectById(item.questionId());
+            EduQuestion question = questionById.get(item.questionId());
             if (question == null) {
                 continue;
             }
@@ -662,6 +661,33 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
         }
         return scores;
+    }
+
+    /**
+     * 按题号批量取题目：一次 {@code selectBatchIds} 查齐，替代循环内逐题
+     * {@code selectById} 的 N+1 查询（在线提交预占结果与同步批改两条链路共用）。
+     *
+     * @param answers 作答列表
+     * @return 题号 -> 题目（题库中不存在的题号不映射，调用方按 null 处理，与原逐条查询行为一致）
+     */
+    private Map<Long, EduQuestion> loadQuestions(List<MarkingSubmitDTO.AnswerItem> answers) {
+        if (answers == null || answers.isEmpty()) {
+            return Map.of();
+        }
+        Set<Long> ids = new HashSet<>();
+        for (MarkingSubmitDTO.AnswerItem item : answers) {
+            if (item != null && item.questionId() != null) {
+                ids.add(item.questionId());
+            }
+        }
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, EduQuestion> questionById = new HashMap<>();
+        for (EduQuestion question : questionMapper.selectBatchIds(ids)) {
+            questionById.put(question.getQuestionId(), question);
+        }
+        return questionById;
     }
 
     /**

@@ -1023,7 +1023,20 @@ CREATE TABLE IF NOT EXISTS edu_marking_task (
     marking_task_teacher_finished TINYINT DEFAULT 0 COMMENT '老师是否已点「阅卷完成」: 0-未完成 1-已完成',
     marking_task_teacher_finish_time DATETIME COMMENT '老师点「阅卷完成」的时间',
     marking_task_satisfaction INT COMMENT 'AI评分满意度',
+    -- 防重复任务的数据库兜底（与代码 rejectDuplicateScanTask 同一语义）：
+    -- 同一 (考试, 学生) 只允许一个「未失败」的阅卷任务。FAILED(3) 任务置 NULL 豁免，
+    -- 保住「OCR 失败后可重新扫描补传」的重试口径；考试/学生为空的行同样置 NULL
+    -- 不参与判重（MySQL 唯一索引对 NULL 不去重）。生成列 + 唯一索引 = 部分唯一约束。
+    marking_task_dedupe VARCHAR(96) GENERATED ALWAYS AS (
+        CASE WHEN marking_task_status = 3
+                  OR marking_task_exam_id IS NULL
+                  OR marking_task_student_id IS NULL
+             THEN NULL
+             ELSE CONCAT(marking_task_exam_id, ':', marking_task_student_id)
+        END
+    ) STORED COMMENT '判重键：未失败任务按 (考试,学生) 唯一；失败或缺少考试/学生的行为 NULL',
     UNIQUE KEY uk_edu_marking_task_task_id (marking_task_task_id),
+    UNIQUE KEY uk_edu_marking_task_exam_student (marking_task_dedupe),
     KEY edu_marking_task_status (marking_task_status)
 ) COMMENT '阅卷任务（异步：创建任务→后台处理→可重启续跑）';
 

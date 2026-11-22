@@ -36,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -176,6 +177,11 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * 组卷设置（AI 配置中心「试卷配置 → AI 组卷」，未配置时回落 {@link EduAiProperties.Paper}）
      */
     private final PaperComposeSettingService composeSetting;
+
+    /**
+     * 编程式事务：AI 组卷的落库阶段收口为短事务（选题与 AI 调用在事务外完成）
+     */
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 分页查询试卷：管理端/通用口径，按当前账号归属 scope 隔离。
@@ -325,45 +331,38 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     /**
      * generatepaper
+     *
+     * <p>两段式：选题（含 AI 调用）在事务外完成，落库用 {@link TransactionTemplate}
+     * 收口为短事务。LLM 响应可能要数十秒，放在事务内会长期占用数据库连接并放大锁
+     * 等待风险；选题阶段均为只读查询，无需事务保护。</p>
      *
      * @param dto dto
      * @return generatePaper的结果
      */
     public Long generatePaper(PaperGenerateDTO dto) {
         log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.subject(), dto.knowledgePointIds());
-
-        // 1) 创建试卷草稿
-        EduPaper paper = new EduPaper();
-        paper.setPaperName(dto.name());
-        paper.setPaperSubject(dto.subject());
-        // 学段与手动组卷保持同一口径：库里存中文名（PRIMARY -> 小学）。
-        // 此前 AI 路径直接存前端传来的码值，会让「学段」筛选查不到 AI 组的卷。
-        paper.setPaperGradeLevel(GradeLevels.normalize(dto.gradeLevel()));
-        paper.setPaperGrade(dto.grade());
-        paper.setPaperTotalScore(dto.totalScore() != null ? dto.totalScore() : composeSetting.maxTotalScore());
-        paper.setPaperDuration(dto.duration());
-        paper.setPaperStatus(0); // 草稿
-        paper.setPaperSource("AI");
-        paper.setPaperNo(generatePaperNo());
-        paper.setPaperVersion(1);
-        paper.setPaperPageSize("A4");
-        paper.setPaperPageOrientation("PORTRAIT");
-        paper.setPaperTemplate("default");
-        paper.setPaperSubjectLocked(0);
-        paper.setOwnerUserId(EduUserContext.requireUserId());
-        paper.setCreateTime(LocalDateTime.now());
-        paper.setUpdateTime(LocalDateTime.now());
-        // 与手动组卷同口径：显式写入创建人姓名，供试卷列表「创建人」列展示
-        paper.setCreateName(EduUserContext.currentUsername());
-        baseMapper.insert(paper);
-
         int count = dto.questionCount() != null ? dto.questionCount() : composeSetting.defaultQuestionCount();
         int perScore = dto.scorePerQuestion() != null ? dto.scorePerQuestion() : composeSetting.defaultScorePerQuestion();
+        // 1) 选题（候选筛选 + AI 挑选 + 防御性过滤）：事务外只读完成
+        List<Long> questionIds = selectQuestionIds(dto, count);
+        // 2) 落库（短事务）：试卷行 + 批量题项 + 总分回写 + 历史快照
+        return persistGeneratedPaper(dto, questionIds, perScore);
+    }
 
-        // 2) 候选题目（兜底数据，仅本人题库）：先按学段收敛，学段无题时降级到同学科全集
+    /**
+     * 选题：候选筛选 → 知识点过滤 → AI 挑选 → 防御性收口。
+     *
+     * <p>只读不写库；AI 不可用/返回为空时回退候选前 N 条（保持历史口径）。
+     * 独立成段的原因：AI 调用耗时不可控，必须留在事务外执行。</p>
+     *
+     * @param dto   组卷请求
+     * @param count 目标题数
+     * @return 最终入卷题号（已按候选集过滤、去重、截断）；题库为空时为空列表
+     */
+    private List<Long> selectQuestionIds(PaperGenerateDTO dto, int count) {
+        // 候选题目（兜底数据，仅本人题库）：先按学段收敛，学段无题时降级到同学科全集
         List<EduQuestion> candidates = loadCandidates(dto.subject(), dto.gradeLevel(), count);
         if (candidates.isEmpty() && StringUtils.hasText(dto.gradeLevel())) {
             log.warn("[EduAi] 题库没有 {} 学段的 {} 题目，降级为同学科全部题目组卷", dto.gradeLevel(), dto.subject());
@@ -371,11 +370,10 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         }
         if (candidates.isEmpty()) {
             log.warn("[EduAi] 题库为空，无法组卷: subject={}", dto.subject());
-            writeHistory(paper, List.of(), "CREATE");
-            return paper.getPaperId();
+            return List.of();
         }
 
-        // 3) 知识点评分过滤（如果指定）
+        // 知识点评分过滤（如果指定）
         List<Long> candidateIds = new ArrayList<>();
         if (dto.knowledgePointIds() != null && !dto.knowledgePointIds().isEmpty()) {
             for (EduQuestion q : candidates) {
@@ -397,7 +395,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
             candidateIds = candidates.stream().map(EduQuestion::getQuestionId).collect(Collectors.toList());
         }
 
-        // 4) AI 挑选
+        // AI 挑选
         List<String> types = null;
         if (dto.typeConfigs() != null && !dto.typeConfigs().isEmpty()) {
             types = dto.typeConfigs().stream()
@@ -425,35 +423,83 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         if (safeIds.size() > count) {
             safeIds = safeIds.subList(0, count);
         }
-        aiIds = safeIds;
+        return safeIds;
+    }
 
-        // 5) 入库关联
-        int order = 1;
-        int totalScore = 0;
-        for (Long qid : aiIds) {
-            EduPaperQuestion pq = new EduPaperQuestion();
-            pq.setPaperQuestionPaperId(paper.getPaperId());
-            pq.setPaperQuestionQuestionId(qid);
-            pq.setPaperQuestionOrder(order);
-            pq.setPaperQuestionScore(perScore);
-            pq.setPaperQuestionNo(paper.getPaperNo() + "-" + formatOrder(order));
-            pq.setPaperQuestionVersion(paper.getPaperVersion());
-            pq.setOwnerUserId(paper.getOwnerUserId());
-            pq.setCreateTime(LocalDateTime.now());
-            paperQuestionMapper.insert(pq);
-            totalScore += perScore;
-            order++;
-        }
+    /**
+     * 组卷落库（短事务）：创建试卷行、批量写入题项、回写总分/题数并落历史快照。
+     *
+     * <p>题项走 {@link EduPaperQuestionMapper#insertBatch} 单条多值 SQL，
+     * 替代逐行 insert 的 N 次数据库往返。</p>
+     *
+     * @param dto         组卷请求
+     * @param questionIds 最终入卷题号（来自事务外的选题阶段）
+     * @param perScore    每题分值
+     * @return 试卷标识
+     */
+    private Long persistGeneratedPaper(PaperGenerateDTO dto, List<Long> questionIds, int perScore) {
+        return transactionTemplate.execute(status -> {
+            // 创建试卷草稿
+            EduPaper paper = new EduPaper();
+            paper.setPaperName(dto.name());
+            paper.setPaperSubject(dto.subject());
+            // 学段与手动组卷保持同一口径：库里存中文名（PRIMARY -> 小学）。
+            // 此前 AI 路径直接存前端传来的码值，会让「学段」筛选查不到 AI 组的卷。
+            paper.setPaperGradeLevel(GradeLevels.normalize(dto.gradeLevel()));
+            paper.setPaperGrade(dto.grade());
+            paper.setPaperTotalScore(dto.totalScore() != null ? dto.totalScore() : composeSetting.maxTotalScore());
+            paper.setPaperDuration(dto.duration());
+            paper.setPaperStatus(0); // 草稿
+            paper.setPaperSource("AI");
+            paper.setPaperNo(generatePaperNo());
+            paper.setPaperVersion(1);
+            paper.setPaperPageSize("A4");
+            paper.setPaperPageOrientation("PORTRAIT");
+            paper.setPaperTemplate("default");
+            paper.setPaperSubjectLocked(0);
+            paper.setOwnerUserId(EduUserContext.requireUserId());
+            paper.setCreateTime(LocalDateTime.now());
+            paper.setUpdateTime(LocalDateTime.now());
+            // 与手动组卷同口径：显式写入创建人姓名，供试卷列表「创建人」列展示
+            paper.setCreateName(EduUserContext.currentUsername());
+            baseMapper.insert(paper);
 
-        // 6) 回写试卷总分/题目数
-        paper.setPaperTotalScore(totalScore);
-        paper.setPaperQuestionCount(aiIds.size());
-        paper.setUpdateTime(LocalDateTime.now());
-        baseMapper.updateById(paper);
-        writeHistory(paper, paperQuestionMapper.selectByPaperId(paper.getPaperId()), "CREATE");
+            if (questionIds.isEmpty()) {
+                // 题库为空：保留空白草稿（与历史行为一致），不回写总分/题数
+                writeHistory(paper, List.of(), "CREATE");
+                return paper.getPaperId();
+            }
 
-        log.info("[EduAi] AI 组卷完成: paperId={}, questionCount={}", paper.getPaperId(), aiIds.size());
-        return paper.getPaperId();
+            // 题项批量入库
+            int order = 1;
+            int totalScore = 0;
+            List<EduPaperQuestion> relations = new ArrayList<>(questionIds.size());
+            for (Long qid : questionIds) {
+                EduPaperQuestion pq = new EduPaperQuestion();
+                pq.setPaperQuestionPaperId(paper.getPaperId());
+                pq.setPaperQuestionQuestionId(qid);
+                pq.setPaperQuestionOrder(order);
+                pq.setPaperQuestionScore(perScore);
+                pq.setPaperQuestionNo(paper.getPaperNo() + "-" + formatOrder(order));
+                pq.setPaperQuestionVersion(paper.getPaperVersion());
+                pq.setOwnerUserId(paper.getOwnerUserId());
+                pq.setCreateTime(LocalDateTime.now());
+                relations.add(pq);
+                totalScore += perScore;
+                order++;
+            }
+            paperQuestionMapper.insertBatch(relations);
+
+            // 回写试卷总分/题目数
+            paper.setPaperTotalScore(totalScore);
+            paper.setPaperQuestionCount(questionIds.size());
+            paper.setUpdateTime(LocalDateTime.now());
+            baseMapper.updateById(paper);
+            writeHistory(paper, paperQuestionMapper.selectByPaperId(paper.getPaperId()), "CREATE");
+
+            log.info("[EduAi] AI 组卷完成: paperId={}, questionCount={}", paper.getPaperId(), questionIds.size());
+            return paper.getPaperId();
+        });
     }
 
     /**
