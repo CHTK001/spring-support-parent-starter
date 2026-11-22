@@ -127,11 +127,11 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
     }
 
     @Override
-    public int delete(String app, String instance, Long before) {
+    public int delete(String app, String instance, String level, Long before) {
         int removed = 0;
         synchronized (deque) {
             removed = deque.size();
-            deque.removeIf(entry -> match(entry.event, app, instance, null, "", null, null, before));
+            deque.removeIf(entry -> match(entry.event, app, instance, levels(level), "", null, null, before));
             removed -= deque.size();
         }
         return removed;

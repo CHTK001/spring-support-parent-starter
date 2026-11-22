@@ -71,8 +71,9 @@ public interface LoggerEventStore {
      *
      * @param app      应用过滤，空为全部
      * @param instance 实例过滤，空为全部
+     * @param level    级别过滤（逗号分隔多值），空为全部
      * @param before   删除该时间（毫秒）之前的事件，空为不限
      * @return 删除条数
      */
-    int delete(String app, String instance, Long before);
+    int delete(String app, String instance, String level, Long before);
 }

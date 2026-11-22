@@ -245,20 +245,54 @@ public class KvLoggerEventStore implements LoggerEventStore {
     }
 
     @Override
-    public int delete(String app, String instance, Long before) {
+    public int delete(String app, String instance, String level, Long before) {
         int removed = 0;
         String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
+        Set<String> levelSet = MemoryLoggerEventStore.levels(level);
+        // 被删事件按应用聚合 (total, error) 扣减量：删除是低频管理操作，按批合并扣减避免逐条读改写
+        Map<String, long[]> removedByApp = new HashMap<>();
         for (Map.Entry<String, String> en : kv.findAllByPrefix(prefix).entrySet()) {
             LoggerEvent event = parseEvent(en.getValue());
             if (event == null) {
                 continue;
             }
-            if (MemoryLoggerEventStore.match(event, app, instance, null, "", null, null, before)
+            if (MemoryLoggerEventStore.match(event, app, instance, levelSet, "", null, null, before)
                     && kv.delete(en.getKey())) {
                 removed++;
+                long[] counters = removedByApp.computeIfAbsent(String.valueOf(event.getApp()), k -> new long[2]);
+                counters[0]++;
+                if ("ERROR".equalsIgnoreCase(event.getLevel())) {
+                    counters[1]++;
+                }
             }
         }
+        decrCounters(removedByApp);
         return removed;
+    }
+
+    /**
+     * 计数器批量扣减（{@link KvEngine} 只有 {@code incr}，无 decr）：读-改-写回退。
+     * 计数本身允许短暂漂移（incr 失败仅告警不阻断），这里扣减失败同样只告警，且下限截到 0。
+     */
+    private void decrCounters(Map<String, long[]> removedByApp) {
+        for (Map.Entry<String, long[]> en : removedByApp.entrySet()) {
+            adjustCounter("logger-cnt:" + en.getKey() + ":total", -en.getValue()[0]);
+            if (en.getValue()[1] > 0) {
+                adjustCounter("logger-cnt:" + en.getKey() + ":error", -en.getValue()[1]);
+            }
+        }
+    }
+
+    private void adjustCounter(String key, long delta) {
+        try {
+            String current = kv.get(key);
+            long value = current == null ? 0L : Long.parseLong(current);
+            kv.put(key, String.valueOf(Math.max(0L, value + delta)));
+        } catch (Exception e) {
+            if (counterWriteWarned.compareAndSet(false, true)) {
+                log.warn("[logger] 日志计数扣减失败（本实例仅告警一次），应用计数可能偏大: {}", e.getMessage());
+            }
+        }
     }
 
     private void touchRegistry(LoggerEvent event, Duration ttl) {

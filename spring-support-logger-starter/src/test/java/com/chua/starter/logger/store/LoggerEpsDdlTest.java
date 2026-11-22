@@ -166,6 +166,49 @@ class LoggerEpsDdlTest {
     }
 
     /**
+     * 删除过滤与计数一致性：DELETE /events 的 level 过滤必须真实生效（与 /events、/stream
+     * 同口径，修复前 level 被静默忽略会误删全部级别），且删除后 total/error 计数同步扣减
+     * （否则应用实例页残留旧值）。
+     */
+    @Test
+    void deleteHonorsLevelFilterAndDecrementsCounters() throws Exception {
+        SeriesEngine series = LoggerStores.jdbcSeriesEngine(dataSource);
+        KvLoggerEventStore store = new KvLoggerEventStore(new JdbcKvEngine(dataSource), series, 72);
+
+        long now = System.currentTimeMillis();
+        store.append(List.of(
+                new LoggerEvent().setTs(now).setApp("it-del").setInstance("1@host")
+                        .setLevel("INFO").setThread("t").setLogger("L").setMessage("keep"),
+                new LoggerEvent().setTs(now + 1).setApp("it-del").setInstance("1@host")
+                        .setLevel("ERROR").setThread("t").setLogger("L").setMessage("drop")));
+
+        // 只删 ERROR：INFO 必须留下
+        assertEquals(1, store.delete("it-del", null, "ERROR", null), "level=ERROR 应只删除 1 条");
+        assertEquals(1, store.query("it-del", null, null, null, null, null, null, null, 10)
+                .getItems().size(), "INFO 事件应保留");
+        assertTrue(store.query("it-del", null, "ERROR", null, null, null, null, null, 10)
+                        .getItems().isEmpty(),
+                "ERROR 事件应被删除");
+
+        // 计数同步扣减：total 2→1，error 1→0
+        Map<String, Object> appRow = store.apps().stream()
+                .filter(row -> "it-del".equals(row.get("app")))
+                .findFirst().orElseThrow(() -> new AssertionError("应用登记应包含 it-del"));
+        assertEquals(1L, ((Number) appRow.get("eventCount")).longValue(), "删除后 total 计数应扣减为 1");
+        assertEquals(0L, ((Number) appRow.get("errorCount")).longValue(), "删除后 error 计数应扣减为 0");
+
+        // 无级别条件删除剩余事件（回归：旧行为不破坏，计数扣到 0 为下限）
+        assertEquals(1, store.delete("it-del", null, null, null), "无 level 条件应删除剩余 1 条");
+        assertEquals(0, store.query("it-del", null, null, null, null, null, null, null, 10)
+                .getItems().size(), "全部事件应被删除");
+        Map<String, Object> emptyRow = store.apps().stream()
+                .filter(row -> "it-del".equals(row.get("app")))
+                .findFirst().orElseThrow(() -> new AssertionError("应用登记仍应保留 it-del"));
+        assertEquals(0L, ((Number) emptyRow.get("eventCount")).longValue(), "全部删除后 total 计数应为 0");
+        assertEquals(0L, ((Number) emptyRow.get("errorCount")).longValue(), "全部删除后 error 计数应为 0");
+    }
+
+    /**
      * 统计指定应用的 logger_eps 明细行数。
      */
     private int countRows(long monitorId) throws Exception {

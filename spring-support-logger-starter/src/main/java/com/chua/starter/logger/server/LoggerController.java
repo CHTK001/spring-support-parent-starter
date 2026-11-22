@@ -160,14 +160,16 @@ public class LoggerController {
      *
      * @param app      应用过滤
      * @param instance 实例过滤
+     * @param level    级别过滤（逗号分隔多值）
      * @param before   删除该时间（毫秒）之前的事件
      * @return 删除条数
      */
     @DeleteMapping("/events")
     public ReturnResult<Integer> delete(@RequestParam(required = false) String app,
                                         @RequestParam(required = false) String instance,
+                                        @RequestParam(required = false) String level,
                                         @RequestParam(required = false) Long before) {
-        return ReturnResult.ok(store.delete(app, instance, before));
+        return ReturnResult.ok(store.delete(app, instance, level, before));
     }
 
     /**
