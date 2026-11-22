@@ -1,2 +1,3 @@
 com.chua.starter.account.spi.impl.DuckDuckGoChatChannel
 com.chua.starter.account.spi.impl.PollinationsChatChannel
+com.chua.starter.account.spi.impl.CustomChatChannel
