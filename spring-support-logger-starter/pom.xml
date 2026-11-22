@@ -100,5 +100,19 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+
+        <!-- 单元测试：版本由继承的 spring-boot-dependencies 统一管理 -->
+        <!-- 仅用 JUnit 5，不引 spring-boot-starter-test（它会传递 mockito，项目规约禁用） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- H2（MySQL 兼容模式）：验证 db/init 建表脚本与 SeriesEngine 读写回路 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
