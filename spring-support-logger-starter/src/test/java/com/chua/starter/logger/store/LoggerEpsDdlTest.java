@@ -133,8 +133,36 @@ class LoggerEpsDdlTest {
         assertNotNull(stats);
         assertFalse(stats.isEmpty());
         List<Map<String, Object>> apps = store.apps();
-        assertTrue(apps.stream().anyMatch(row -> "it-app".equals(row.get("app"))),
-                "应用登记应包含 it-app");
+        Map<String, Object> appRow = apps.stream()
+                .filter(row -> "it-app".equals(row.get("app")))
+                .findFirst().orElseThrow(() -> new AssertionError("应用登记应包含 it-app"));
+        assertEquals(2L, ((Number) appRow.get("eventCount")).longValue(), "total 计数应为 2");
+        assertEquals(1L, ((Number) appRow.get("errorCount")).longValue(), "error 计数应为 1");
+    }
+
+    /**
+     * 坏行容错：KV 中损坏的事件 JSON 应被跳过而非炸掉查询/统计（配套 warn-once 留痕）。
+     */
+    @Test
+    void corruptEventJsonIsSkipped() throws Exception {
+        SeriesEngine series = LoggerStores.jdbcSeriesEngine(dataSource);
+        KvLoggerEventStore store = new KvLoggerEventStore(new JdbcKvEngine(dataSource), series, 72);
+
+        long now = System.currentTimeMillis();
+        store.append(List.of(new LoggerEvent().setTs(now).setApp("it-bad").setInstance("1@host")
+                .setLevel("INFO").setThread("t").setLogger("L").setMessage("good")));
+
+        // 模拟存储层损坏：直接把事件值改写成非法 JSON
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.execute(
+                    "UPDATE sys_support_kv SET kv_value = '{broken' WHERE kv_key LIKE 'logger:it-bad:%'");
+        }
+
+        assertEquals(0, store.query("it-bad", null, null, null, null, null, null, null, 10)
+                        .getItems().size(),
+                "坏 JSON 行应被跳过而非抛出");
+        assertNotNull(store.stats("it-bad", null), "存在坏行时统计仍应可用");
     }
 
     /**

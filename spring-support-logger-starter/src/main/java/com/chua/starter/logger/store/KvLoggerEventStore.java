@@ -12,6 +12,7 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,10 @@ public class KvLoggerEventStore implements LoggerEventStore {
     private final AtomicBoolean epsWriteWarned = new AtomicBoolean();
     private final AtomicBoolean epsReadWarned = new AtomicBoolean();
     private final AtomicBoolean epsPurgeWarned = new AtomicBoolean();
+    private final AtomicBoolean counterWriteWarned = new AtomicBoolean();
+    private final AtomicBoolean counterReadWarned = new AtomicBoolean();
+    private final AtomicBoolean registryWarned = new AtomicBoolean();
+    private final AtomicBoolean corruptEventWarned = new AtomicBoolean();
 
     /**
      * 上次 eps 保留期清理时间（毫秒），CAS 防并发重复触发
@@ -91,6 +96,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
         }
         Duration ttl = Duration.ofHours(retentionHours);
         Map<String, Integer> epsCounts = new HashMap<>();
+        Set<String> touched = new HashSet<>();
         for (LoggerEvent event : events) {
             String key = eventKey(event);
             try {
@@ -107,7 +113,10 @@ public class KvLoggerEventStore implements LoggerEventStore {
                 }
                 continue;
             }
-            touchRegistry(event, ttl);
+            // 同一批同 (app, instance) 只探测登记一次，避免逐条 kv.get 的读放大
+            if (touched.add(event.getApp() + "|" + event.getInstance())) {
+                touchRegistry(event, ttl);
+            }
             epsCounts.merge(String.valueOf(event.getApp()), 1, Integer::sum);
             String cntKey = "logger-cnt:" + event.getApp() + ":total";
             String errKey = "logger-cnt:" + event.getApp() + ":error";
@@ -116,8 +125,12 @@ public class KvLoggerEventStore implements LoggerEventStore {
                 if ("ERROR".equalsIgnoreCase(event.getLevel())) {
                     kv.incr(errKey);
                 }
-            } catch (Exception ignored) {
-                // 计数失败不影响主流程
+            } catch (Exception e) {
+                // 计数失败不影响主流程；但必须留痕，否则 total/error 会悄悄失真
+                if (counterWriteWarned.compareAndSet(false, true)) {
+                    log.warn("[logger] 日志计数累加失败（本实例仅告警一次），total/error 计数可能失真: {}",
+                            e.getMessage());
+                }
             }
         }
         writeEps(epsCounts);
@@ -273,8 +286,12 @@ public class KvLoggerEventStore implements LoggerEventStore {
                     kv.put(instKey, MAPPER.writeValueAsString(node));
                 }
             }
-        } catch (Exception ignored) {
-            // 登记失败不影响事件写入
+        } catch (Exception e) {
+            // 登记失败不影响事件写入；但必须留痕，否则应用/实例列表会静默缺员
+            if (registryWarned.compareAndSet(false, true)) {
+                log.warn("[logger] 应用/实例登记失败（本实例仅告警一次），应用列表可能缺员: {}",
+                        e.getMessage());
+            }
         }
     }
 
@@ -382,6 +399,9 @@ public class KvLoggerEventStore implements LoggerEventStore {
             String value = kv.get("logger-cnt:" + app + ":" + type);
             return value == null ? 0L : Long.parseLong(value);
         } catch (Exception e) {
+            if (counterReadWarned.compareAndSet(false, true)) {
+                log.warn("[logger] 日志计数读取失败（本实例仅告警一次），按 0 处理: {}", e.getMessage());
+            }
             return 0L;
         }
     }
@@ -414,6 +434,11 @@ public class KvLoggerEventStore implements LoggerEventStore {
         try {
             return MAPPER.readValue(json, LoggerEvent.class);
         } catch (Exception e) {
+            // 坏行静默丢弃会让「少了几条日志」无从察觉，必须留痕（只记长度防刷屏/注入）
+            if (corruptEventWarned.compareAndSet(false, true)) {
+                log.warn("[logger] 日志事件反序列化失败（本实例仅告警一次），坏行已跳过: 长度={} 原因={}",
+                        json.length(), e.getMessage());
+            }
             return null;
         }
     }

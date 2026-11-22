@@ -1,8 +1,11 @@
 package com.chua.starter.logger.store;
 
 import com.chua.starter.logger.event.LoggerEvent;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -12,9 +15,15 @@ import java.util.function.Consumer;
  * @author CH
  * @since 4.0.0.51
  */
+@Slf4j
 public class LoggerEventBus {
 
     private final List<Consumer<LoggerEvent>> listeners = new CopyOnWriteArrayList<>();
+
+    /**
+     * 已告警过的订阅者（按实现类去重）：订阅者持续失败只告警一次，避免随事件流刷屏
+     */
+    private final Set<Class<?>> warnedListeners = ConcurrentHashMap.newKeySet();
 
     /**
      * 订阅事件；返回取消订阅的 Runnable
@@ -41,7 +50,11 @@ public class LoggerEventBus {
                 try {
                     listener.accept(event);
                 } catch (Exception e) {
-                    // 单个订阅者失败不影响其它订阅者
+                    // 单个订阅者失败不影响其它订阅者；但必须留痕，否则订阅方会静默失联
+                    if (warnedListeners.add(listener.getClass())) {
+                        log.warn("[logger] 事件订阅者 {} 处理失败（该订阅者仅告警一次）: {}",
+                                listener.getClass().getName(), e.getMessage());
+                    }
                 }
             }
         }
