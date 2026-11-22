@@ -5,6 +5,7 @@ import com.chua.common.support.lang.datasource.kv.KvEngine;
 import com.chua.common.support.lang.datasource.series.SeriesEngine;
 import com.chua.starter.logger.event.LoggerEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -15,7 +16,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 持久化日志存储（engine=datasource-bean / redis-bean）：
@@ -33,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author CH
  * @since 4.0.0.51
  */
+@Slf4j
 public class KvLoggerEventStore implements LoggerEventStore {
 
     /**
@@ -45,10 +49,29 @@ public class KvLoggerEventStore implements LoggerEventStore {
      */
     private static final String EPS_TARGET = "logger_eps";
 
+    /**
+     * eps 保留期清理最小间隔：事件 KV 有 TTL，时序表没有，靠本清理兜底防无限增长
+     */
+    private static final long EPS_PURGE_INTERVAL_MILLIS = 3600_000L;
+
     private final KvEngine kv;
     private final SeriesEngine series;
     private final long retentionHours;
     private final AtomicInteger seq = new AtomicInteger();
+
+    /**
+     * 同类失败仅告警一次的开关（实例级）：主链路旁路写入/查询失败若逐条打印，
+     * 会以每秒一批的频率刷屏（缺表事故即因此长期潜伏在静默里）
+     */
+    private final AtomicBoolean kvWriteWarned = new AtomicBoolean();
+    private final AtomicBoolean epsWriteWarned = new AtomicBoolean();
+    private final AtomicBoolean epsReadWarned = new AtomicBoolean();
+    private final AtomicBoolean epsPurgeWarned = new AtomicBoolean();
+
+    /**
+     * 上次 eps 保留期清理时间（毫秒），CAS 防并发重复触发
+     */
+    private final AtomicLong lastEpsPurgeAt = new AtomicLong();
 
     /**
      * @param kv             KV 引擎（必填）
@@ -78,7 +101,10 @@ public class KvLoggerEventStore implements LoggerEventStore {
                     kv.put(key, json);
                 }
             } catch (Exception e) {
-                // 单条写入失败不阻断批次
+                // 单条写入失败不阻断批次；但必须留痕——静默会掩盖缺表/断链等系统性故障
+                if (kvWriteWarned.compareAndSet(false, true)) {
+                    log.warn("[logger] 日志事件 KV 落库失败（本实例仅告警一次）: {}", e.getMessage());
+                }
                 continue;
             }
             touchRegistry(event, ttl);
@@ -260,8 +286,35 @@ public class KvLoggerEventStore implements LoggerEventStore {
         for (Map.Entry<String, Integer> en : epsCounts.entrySet()) {
             try {
                 series.writePoint(EPS_TARGET, appId(en.getKey()), "count", en.getValue(), now);
-            } catch (Exception ignored) {
-                // 指标写入失败不影响主流程
+            } catch (Exception e) {
+                // 指标写入失败不影响主流程；但必须留痕，否则缺表等故障会静默退化成扫描聚合
+                if (epsWriteWarned.compareAndSet(false, true)) {
+                    log.warn("[logger] eps 指标写入失败（本实例仅告警一次），eps 曲线将退化为事件扫描聚合: {}",
+                            e.getMessage());
+                }
+            }
+        }
+        maybePurgeEps();
+    }
+
+    /**
+     * 顺带清理过期 eps 点：事件 KV 有保留期 TTL，而时序表没有，
+     * 不清理会随时间无限增长。每小时至多触发一次，失败不影响写入主流程。
+     */
+    private void maybePurgeEps() {
+        long now = System.currentTimeMillis();
+        long last = lastEpsPurgeAt.get();
+        if (now - last < EPS_PURGE_INTERVAL_MILLIS) {
+            return;
+        }
+        if (!lastEpsPurgeAt.compareAndSet(last, now)) {
+            return;
+        }
+        try {
+            series.purge(EPS_TARGET, null, now - retentionHours * 3600_000L);
+        } catch (Exception e) {
+            if (epsPurgeWarned.compareAndSet(false, true)) {
+                log.warn("[logger] logger_eps 保留期清理失败（本实例仅告警一次）: {}", e.getMessage());
             }
         }
     }
@@ -274,6 +327,11 @@ public class KvLoggerEventStore implements LoggerEventStore {
             Long monitorId = app == null || app.isBlank() ? null : appId(app);
             return series.series(EPS_TARGET, monitorId, "count", 1, "1m");
         } catch (Exception e) {
+            // 查询失败退化为事件扫描聚合（慢路径）；必须留痕，静默会掩盖缺表等故障
+            if (epsReadWarned.compareAndSet(false, true)) {
+                log.warn("[logger] eps 曲线查询失败（本实例仅告警一次），统计退化为事件扫描聚合: {}",
+                        e.getMessage());
+            }
             return null;
         }
     }

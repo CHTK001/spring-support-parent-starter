@@ -91,6 +91,21 @@ class LoggerEpsDdlTest {
     }
 
     /**
+     * 保留期清理：purge 删除过期点、保留未过期点（防时序表无限增长的兜底）。
+     */
+    @Test
+    void purgeRemovesExpiredPoints() throws Exception {
+        SeriesEngine series = LoggerStores.jdbcSeriesEngine(dataSource);
+        long now = System.currentTimeMillis();
+        series.writePoint("logger_eps", 3003L, "count", 1, now - 10 * 3600_000L);
+        series.writePoint("logger_eps", 3003L, "count", 2, now);
+
+        int deleted = series.purge("logger_eps", 3003L, now - 3600_000L);
+        assertEquals(1, deleted, "应清理 1 条过期点");
+        assertEquals(1, countRows(3003L), "清理后应仅剩 1 条未过期点");
+    }
+
+    /**
      * KvLoggerEventStore 全链路：事件落 KV、eps 落时序表、统计与查询可用。
      */
     @Test
