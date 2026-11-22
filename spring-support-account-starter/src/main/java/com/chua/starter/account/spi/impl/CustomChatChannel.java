@@ -14,7 +14,8 @@ import java.util.Map;
  * <p>底层是 {@code com.chua.openai.support.OpenAiChatClient}（{@code ChatClient} SPI 别名含
  * {@code custom}）：与 {@code kilo} / {@code pollinations} 等绑定单一网关的实现不同，
  * {@code custom} 不锁定上游——缺省落 OpenAI 官方地址（{@code https://api.openai.com/v1}），
- * baseUrl 可经 {@code ChatClientSetting} 覆盖到任意 OpenAI 兼容网关。</p>
+ * baseUrl 可经 {@code ChatClientSetting} 覆盖到任意 OpenAI 兼容网关；渠道页试对话
+ * 也可按请求临时携带 {@code baseUrl}（见 {@link #supportsCustomEndpoint()}）。</p>
  *
  * <p>凭据口径：API Key 不落库，试对话时经请求体 {@code token} 临时传入本次调用
  * （标准 {@code Authorization: Bearer} 头），与免登录渠道「不产生连接行、不落凭据」的定位一致。</p>
@@ -97,5 +98,16 @@ public class CustomChatChannel implements ChatChannelProvider, KeylessChatChanne
     @Override
     public List<Map<String, Object>> listModels() {
         return List.of();
+    }
+
+    /**
+     * 支持试对话时临时指定上游地址：自定义提供商的网关地址由使用方自备，
+     * 请求体携带 {@code baseUrl} 即指向任意 OpenAI 兼容网关，未携带时落官方缺省地址。
+     *
+     * @return {@code true}
+     */
+    @Override
+    public boolean supportsCustomEndpoint() {
+        return true;
     }
 }

@@ -6,11 +6,13 @@ import com.chua.common.support.datasearch.usage.spi.UsageParser;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
+import com.chua.starter.ai.support.entity.SysAiUsageDaily;
 import com.chua.starter.ai.support.entity.SysAiUsageSyncLog;
 import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.model.AiUsageDTO;
+import com.chua.starter.ai.support.model.AiUsageDailyImportResult;
 import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
 import com.chua.starter.ai.support.model.vo.AiUsagePageVO;
 import com.chua.starter.ai.support.model.vo.AiUsageParserVO;
@@ -31,11 +33,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -626,7 +630,10 @@ public class UsageController {
     }
 
       /**
-       * 导出用量分布为 CSV 文件。
+       * 导出用量统计 CSV。
+       *
+       * <p>导出的是日汇总统计（按 日期+分组+服务商+模型 一行一条，含调用次数、
+       * Token 用量与费用），不是逐次调用明细；与导入接口同一格式，可导出后再导回。</p>
        *
        * @param model 模型名称，为空时不限定
        * @param startTime 导出开始时间，为空时不限定
@@ -634,35 +641,85 @@ public class UsageController {
        * @param response HTTP 响应对象
        * @throws IOException 写入响应失败时抛出
        */
-    @Operation(summary = "导出用量分布",
-            description = "按 分组+服务商+模型 聚合导出 CSV，与用量分布表同口径；普通用户仅导出本人数据")
+    @Operation(summary = "导出用量统计",
+            description = "按 日期+分组+服务商+模型 导出日汇总统计 CSV（次数/Token 用量/费用），"
+                    + "不含逐次调用明细；仅管理员")
+    @Permission("admin")
     @GetMapping(value = "/export", produces = "text/csv;charset=UTF-8")
     public void export(
             @RequestParam(required = false) String model,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
             HttpServletResponse response) throws IOException {
-        List<AiUsageDTO> rows = usageSummaryService.query(model, startTime, endTime, currentScopeUserId());
+        List<SysAiUsageDaily> rows = usageSummaryService.queryDaily(
+                startTime == null ? null : startTime.toLocalDate(),
+                endTime == null ? null : endTime.toLocalDate(),
+                model);
         response.setCharacterEncoding("UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=\"usage.csv\"");
         Writer writer = response.getWriter();
         StringBuilder line = new StringBuilder();
           // Excel 会按本地编码猜 CSV，前置 BOM 才能稳定识别为 UTF-8
         writer.write('\uFEFF');
-        writer.write("group,provider,model,calls,promptTokens,completionTokens,totalTokens,cost\n");
-        for (AiUsageDTO row : rows) {
+        writer.write("statDate,group,provider,model,calls,promptTokens,completionTokens,cachedTokens,totalTokens,cost\n");
+        for (SysAiUsageDaily row : rows) {
             line.setLength(0);
-            line.append(csvCell(row.group())).append(',')
-                    .append(csvCell(row.provider())).append(',')
-                    .append(csvCell(row.model())).append(',')
-                    .append(row.requests()).append(',')
-                    .append(row.promptTokens()).append(',')
-                    .append(row.completionTokens()).append(',')
-                    .append(row.totalTokens()).append(',')
-                    .append(row.cost()).append('\n');
+            line.append(csvCell(row.getStatDate() == null ? "" : row.getStatDate().toString())).append(',')
+                    .append(csvCell(row.getGroupName())).append(',')
+                    .append(csvCell(row.getProvider())).append(',')
+                    .append(csvCell(row.getModel())).append(',')
+                    .append(nz(row.getTotalCalls())).append(',')
+                    .append(nz(row.getTotalPromptTokens())).append(',')
+                    .append(nz(row.getTotalCompletionTokens())).append(',')
+                    .append(nz(row.getTotalCachedTokens())).append(',')
+                    .append(nz(row.getTotalTokens())).append(',')
+                    .append(nz(row.getTotalCost())).append('\n');
             writer.write(line.toString());
         }
         writer.flush();
+    }
+
+      /**
+       * 导入用量统计 CSV。
+       *
+       * <p>与导出同一格式；校验先行，任一行非法整文件拒绝；
+       * 全部合法时按 日期+分组+服务商+模型 维度覆盖写入日汇总表。</p>
+       *
+       * @param file 上传的 CSV 文件
+       * @return 导入结果（总行数 / 写入行数 / 失败行数 / 失败明细）
+       * @throws IOException 读取上传文件失败
+       */
+    @Operation(summary = "导入用量统计",
+            description = "上传统计 CSV（与导出同格式），按 日期+分组+服务商+模型 覆盖写入日汇总表；"
+                    + "任一行非法则整文件拒绝；仅管理员")
+    @Permission("admin")
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ReturnResult<AiUsageDailyImportResult> importCsv(
+            @RequestParam("file") MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return ReturnResult.error("请选择要导入的 CSV 文件");
+        }
+        return ReturnResult.ok(usageSummaryService.importDailyCsv(file.getInputStream()));
+    }
+
+      /**
+       * 空安全：包装数值还原成基本类型，{@code null} 记 0（导出 CSV 不输出 null）。
+       *
+       * @param value 原始值
+       * @return 非空值
+       */
+    private static long nz(Long value) {
+        return value == null ? 0L : value;
+    }
+
+      /**
+       * 空安全：费用数值，{@code null} 记 0。
+       *
+       * @param value 原始值
+       * @return 非空值
+       */
+    private static double nz(Double value) {
+        return value == null ? 0D : value;
     }
 
       /**

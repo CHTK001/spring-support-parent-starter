@@ -228,7 +228,7 @@ public class ServerLocalProvider implements MetricProvider {
         tags.put("free_bytes", String.valueOf(free));
 
         MetricPoint pt = MetricPoint.builder()
-                .metricName("memory_usage")
+                .metricName("usage_percent")
                 .value(usagePercent)
                 .unit("%")
                 .tags(tags)
@@ -268,7 +268,7 @@ public class ServerLocalProvider implements MetricProvider {
             tags.put("free_bytes", String.valueOf(free));
 
             MetricPoint pt = MetricPoint.builder()
-                    .metricName("disk_usage")
+                    .metricName("usage_percent")
                     .value(usagePercent)
                     .unit("%")
                     .tags(tags)
@@ -305,7 +305,7 @@ public class ServerLocalProvider implements MetricProvider {
                     .value((double) io.getWriteBytes())
                     .unit("bytes")
                     .tags(tags)
-                    .targetTable("ms_monitor_metric_disk")
+                    .targetTable("ms_monitor_metric")
                     .build();
             result.addPoint(pt);
         }
@@ -334,7 +334,7 @@ public class ServerLocalProvider implements MetricProvider {
             tags.put("tx_bytes", String.valueOf(net.getTransmittedBytes()));
 
             MetricPoint pt = MetricPoint.builder()
-                    .metricName("network_rx_bytes")
+                    .metricName("rx_bytes")
                     .value((double) net.getReceivedBytes())
                     .unit("bytes")
                     .tags(tags)

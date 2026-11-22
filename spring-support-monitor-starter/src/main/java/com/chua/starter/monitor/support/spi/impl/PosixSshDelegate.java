@@ -300,28 +300,33 @@ public class PosixSshDelegate implements SystemInfoProvider {
 
     @Override
     public List<ProcessRowVO> processes(MsServerHost host, int page, int pageSize) {
-        String out = sshCache().exec(host, "ps -eo pid,ppid,pcpu,rss,comm,args --no-headers", 30000);
+        // stat 列提供进程状态（R/S/D/T/Z...），僵尸进程靠它识别；macOS 无 GNU --no-headers，沿用既有口径
+        String out = sshCache().exec(host, "ps -eo pid,ppid,stat,pcpu,rss,comm,args --no-headers", 30000);
         List<ProcessRowVO> all = new ArrayList<>();
         if (out == null || out.isBlank()) {
             return all;
         }
         for (String line : out.split("\\r?\\n")) {
-            String[] p = line.trim().split("\\s+", 6);
-            if (p.length < 6) {
+            String[] p = line.trim().split("\\s+", 7);
+            if (p.length < 7) {
                 continue;
             }
             all.add(new ProcessRowVO(
                     toLong(p[0]),
                     toLong(p[1]),
-                    p[4],
+                    p[5],
                     "",
-                    toDouble(p[2]),
-                    toLong(p[3]) / KB,
+                    toDouble(p[3]),
+                    toLong(p[4]) / KB,
                     0,
                     "",
-                    p[5],
-                    ""));
+                    p[6],
+                    "",
+                    p[2].isEmpty() ? "" : p[2].substring(0, 1),
+                    false));
         }
+        // ps -e 为本机全表，无主（父进程已退出）在整表范围判定
+        all = ProcessRowVO.markOrphans(all);
         return pageOf(all, page, pageSize);
     }
 

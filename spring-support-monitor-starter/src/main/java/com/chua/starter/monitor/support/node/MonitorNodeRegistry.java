@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MonitorNodeRegistry {
 
     /**
-     * 应用信息上报 topic（与 report-client 的 MonitorTopics.APP_REPORT 一致）
+     * 应用信息上报 topic
      */
     public static final String TOPIC_APP_REPORT = "monitor/app/report";
 

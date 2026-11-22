@@ -11,12 +11,14 @@ import com.chua.starter.account.spi.ImageChannelProvider;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -81,6 +83,11 @@ public class FreeChannelImageClient implements ImageClient {
     private Integer height;
 
     /**
+     * 参考图字节（图生图）；{@code null} 表示纯文生图。一次性消费，用后即清。
+     */
+    private byte[] referenceImage;
+
+    /**
      * 构造免费渠道图片生成客户端。
      *
      * @param setting 客户端配置
@@ -119,7 +126,57 @@ public class FreeChannelImageClient implements ImageClient {
     }
 
     /**
+     * 设置参考图（字节数组）：图生图模式下随生成请求透传给渠道。
+     *
+     * @param image 参考图字节
+     * @return 当前实例
+     */
+    @Override
+    public ImageClient referenceImage(byte[] image) {
+        this.referenceImage = image == null ? null : image.clone();
+        return this;
+    }
+
+    /**
+     * 设置参考图（BufferedImage）：编码为 PNG 后同上。
+     *
+     * @param image 参考图对象
+     * @return 当前实例
+     */
+    @Override
+    public ImageClient referenceImage(BufferedImage image) {
+        if (image == null) {
+            this.referenceImage = null;
+            return this;
+        }
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", out);
+            this.referenceImage = out.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("参考图编码失败: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    /**
+     * 是否支持参考图：由命中的渠道按模型声明决定。
+     *
+     * @return true 表示当前模型支持图生图
+     * @throws IllegalStateException 模型没有可路由的免费出图渠道时抛出
+     */
+    @Override
+    public boolean supportsReferenceImage() {
+        ImageChannelProvider channel = resolveChannel(model);
+        return channel != null && channel.supportsReferenceImage(model);
+    }
+
+    /**
      * 同步出图：按模型转交内置免登录文生图渠道，再把上游 URL 取回为图片对象。
+     *
+     * <p>带参考图时走渠道的图生图重载，并把渠道行凭据里的 API Key 一并透传
+     * （Pollinations 等渠道的 img2img 接口必须携带 Key）；参考图一次性消费，
+     * 用后即清，避免缓存实例把上一个任务的参考图串进下一个任务。</p>
      *
      * @param prompt 提示词
      * @return 生成的图片
@@ -130,7 +187,18 @@ public class FreeChannelImageClient implements ImageClient {
             throw new IllegalArgumentException("prompt 不能为空");
         }
         ImageChannelProvider channel = resolveChannel(model);
-        ImageGenerationResult result = channel.generate(prompt, null, 1, orZero(width), orZero(height), model);
+        byte[] reference = this.referenceImage;
+        this.referenceImage = null;
+        ImageGenerationResult result;
+        if (reference != null && reference.length > 0) {
+            if (!channel.supportsReferenceImage(model)) {
+                throw new IllegalStateException("模型 " + model + " 所在渠道不支持参考图（图生图）");
+            }
+            result = channel.generate(prompt, null, 1, orZero(width), orZero(height), model,
+                    reference, setting == null ? null : setting.getAppKey());
+        } else {
+            result = channel.generate(prompt, null, 1, orZero(width), orZero(height), model);
+        }
         return download(firstUrl(result));
     }
 
@@ -258,10 +326,16 @@ public class FreeChannelImageClient implements ImageClient {
     /**
      * 下载图片并解码为图片对象。
      *
-     * @param url 图片地址
+     * <p>img2img 上游可能直接返回 base64 内联结果（data URI）而非公网 URL，
+     * {@link HttpClient} 不支持 {@code data:} 协议，需先行解码。</p>
+     *
+     * @param url 图片地址或 data URI
      * @return 图片
      */
     private BufferedImage download(String url) {
+        if (url != null && url.regionMatches(true, 0, "data:", 0, 5)) {
+            return decodeDataUrl(url);
+        }
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(DOWNLOAD_TIMEOUT_SECONDS))
@@ -281,6 +355,31 @@ public class FreeChannelImageClient implements ImageClient {
             throw new IllegalStateException("下载免费出图结果被中断", e);
         } catch (IOException e) {
             throw new IllegalStateException("下载免费出图结果失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 解码 data URI 图片（base64 内联结果）。
+     *
+     * @param url data URI
+     * @return 图片
+     */
+    private static BufferedImage decodeDataUrl(String url) {
+        int comma = url.indexOf(',');
+        if (comma < 0) {
+            throw new IllegalStateException("免费出图渠道返回的 data URI 缺少内容");
+        }
+        try {
+            byte[] bytes = Base64.getDecoder().decode(url.substring(comma + 1));
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (image == null) {
+                throw new IllegalStateException("免费出图渠道返回的内容不是可识别的图片");
+            }
+            return image;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("免费出图渠道返回的 data URI 解码失败: " + e.getMessage(), e);
+        } catch (IOException e) {
+            throw new IllegalStateException("免费出图渠道返回的 data URI 图片读取失败: " + e.getMessage(), e);
         }
     }
 }

@@ -1,17 +1,25 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiUsageDaily;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
+import com.chua.starter.ai.support.model.AiUsageDailyImportResult;
 import com.chua.starter.ai.support.model.AiUsageDTO;
+import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.ai.support.service.settings.AiUsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -218,6 +226,365 @@ public class AiUsageServiceImpl implements AiUsageService {
      */
     private static double zero(Double value) {
         return value == null ? 0D : value;
+    }
+
+    // ==================== 日汇总统计 导出 / 导入 ====================
+
+    /**
+     * CSV 表头列名（与导出列一致；按表头名取列，不依赖列顺序）。
+     */
+    private static final List<String> DAILY_CSV_COLUMNS = List.of(
+            "statDate", "group", "provider", "model", "calls",
+            "promptTokens", "completionTokens", "cachedTokens", "totalTokens", "cost");
+
+    /**
+     * 导入失败明细最多返回的条数，超出只计条数，防止响应被撑爆。
+     */
+    private static final int IMPORT_ERROR_LIMIT = 20;
+
+    /**
+     * 查询日汇总统计（导出用）。
+     *
+     * <p>读日汇总表 {@code sys_ai_usage_daily}，粒度为
+     * 「日期 + 分组 + 服务商 + 模型」一次调用一条统计，不含逐次调用明细。
+     * 同一维度下多个账号的行在此按 SUM 归并成一行：导出 CSV 的维度即
+     * {@link #importDailyCsv} 的覆盖维度，多账号明细直出会让导回时
+     * 同维度行互相覆盖、丢掉其余账号的量。</p>
+     *
+     * @param startDate 开始日期（可选，含）
+     * @param endDate   结束日期（可选，含）
+     * @param model     模型名称（可选）
+     * @return 日汇总行列表，按 日期/分组/服务商/模型 升序
+     */
+    @Override
+    public List<SysAiUsageDaily> queryDaily(LocalDate startDate, LocalDate endDate, String model) {
+        QueryWrapper<SysAiUsageDaily> wrapper = new QueryWrapper<>();
+        // 列别名必须与实体 @TableField 一致，MyBatis-Plus 才能映射回实体字段
+        wrapper.select("sys_ai_usage_daily_stat_date", "sys_ai_usage_daily_group_name",
+                        "sys_ai_usage_daily_provider", "sys_ai_usage_daily_model",
+                        "SUM(sys_ai_usage_daily_total_calls) AS sys_ai_usage_daily_total_calls",
+                        "SUM(sys_ai_usage_daily_total_prompt_tokens) AS sys_ai_usage_daily_total_prompt_tokens",
+                        "SUM(sys_ai_usage_daily_total_completion_tokens) AS sys_ai_usage_daily_total_completion_tokens",
+                        "SUM(sys_ai_usage_daily_total_cached_tokens) AS sys_ai_usage_daily_total_cached_tokens",
+                        "SUM(sys_ai_usage_daily_total_tokens) AS sys_ai_usage_daily_total_tokens",
+                        "SUM(sys_ai_usage_daily_total_cost) AS sys_ai_usage_daily_total_cost");
+        if (startDate != null) {
+            wrapper.ge("sys_ai_usage_daily_stat_date", startDate);
+        }
+        if (endDate != null) {
+            wrapper.le("sys_ai_usage_daily_stat_date", endDate);
+        }
+        if (model != null && !model.isBlank()) {
+            wrapper.eq("sys_ai_usage_daily_model", model);
+        }
+        wrapper.groupBy("sys_ai_usage_daily_stat_date", "sys_ai_usage_daily_group_name",
+                "sys_ai_usage_daily_provider", "sys_ai_usage_daily_model");
+        wrapper.orderByAsc("sys_ai_usage_daily_stat_date", "sys_ai_usage_daily_group_name",
+                "sys_ai_usage_daily_provider", "sys_ai_usage_daily_model");
+        return dailyMapper.selectList(wrapper);
+    }
+
+    /**
+     * 导入用量统计 CSV（与 {@link #queryDaily} 的导出格式一致）。
+     *
+     * <p>校验先行：先整表解析校验，任何一行非法都整文件拒绝入库（不写半截）；
+     * 全部合法时按「日期 + 分组 + 服务商 + 模型」维度覆盖写入日汇总表，
+     * CSV 中同一维度出现多行时先合并累加再写入。
+     * 覆盖是整维替换：该维度下所有账号的既有行都会被导入行替换，
+     * 因为导入数据不带用户维度，保留旧账号行会与导入行重复计量。</p>
+     *
+     * @param in CSV 输入流（UTF-8，允许带 BOM）
+     * @return 导入结果（总行数 / 写入行数 / 失败行数 / 失败明细）
+     * @throws IOException 读取输入流失败
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AiUsageDailyImportResult importDailyCsv(InputStream in) throws IOException {
+        String text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        // 导出侧前置了 UTF-8 BOM（Excel 兼容），导入侧原样剥掉
+        if (text.startsWith("\uFEFF")) {
+            text = text.substring(1);
+        }
+        List<String> lines = new ArrayList<>();
+        for (String raw : text.split("\r\n|\n|\r")) {
+            if (!raw.isBlank()) {
+                lines.add(raw);
+            }
+        }
+        if (lines.size() < 2) {
+            throw new IllegalArgumentException("CSV 至少需要表头和一行数据");
+        }
+        Map<String, Integer> colIndex = resolveCsvColumns(lines.get(0));
+        List<SysAiUsageDaily> parsed = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int failedRows = 0;
+        for (int i = 1; i < lines.size(); i++) {
+            try {
+                parsed.add(parseDailyCsvRow(lines.get(i), colIndex));
+            } catch (Exception e) {
+                failedRows++;
+                if (errors.size() < IMPORT_ERROR_LIMIT) {
+                    errors.add("第 " + (i + 1) + " 行: " + e.getMessage());
+                }
+            }
+        }
+        if (failedRows > 0) {
+            return new AiUsageDailyImportResult(lines.size() - 1, 0, failedRows, List.copyOf(errors));
+        }
+        // 同维度多行先合并累加：导出侧按维度归并过，这里兜住手改/拼装的重复维度行
+        Map<String, SysAiUsageDaily> merged = new LinkedHashMap<>();
+        for (SysAiUsageDaily row : parsed) {
+            merged.merge(dailyRowKey(row), row, AiUsageServiceImpl::accumulateDaily);
+        }
+        for (SysAiUsageDaily row : merged.values()) {
+            dailyMapper.delete(dailyRowScope(row));
+            dailyMapper.insert(row);
+        }
+        log.info("[AiUsage] 用量统计 CSV 导入完成: 共 {} 行, 写入 {} 行", lines.size() - 1, merged.size());
+        return new AiUsageDailyImportResult(lines.size() - 1, merged.size(), 0, List.of());
+    }
+
+    /**
+     * 维度键：日期 + 分组 + 服务商 + 模型，用于导入时合并同维度重复行。
+     *
+     * @param row 日汇总行
+     * @return 维度键
+     */
+    private static String dailyRowKey(SysAiUsageDaily row) {
+        return row.getStatDate() + "|" + row.getGroupName() + "|" + row.getProvider() + "|" + row.getModel();
+    }
+
+    /**
+     * 合并同维度两行：数值列累加，维度与归属以第一行为准。
+     *
+     * @param target 保留并累加的行
+     * @param addend 被并入的行
+     * @return {@code target}
+     */
+    private static SysAiUsageDaily accumulateDaily(SysAiUsageDaily target, SysAiUsageDaily addend) {
+        target.setTotalCalls(zero(target.getTotalCalls()) + zero(addend.getTotalCalls()));
+        target.setTotalPromptTokens(zero(target.getTotalPromptTokens()) + zero(addend.getTotalPromptTokens()));
+        target.setTotalCompletionTokens(zero(target.getTotalCompletionTokens()) + zero(addend.getTotalCompletionTokens()));
+        target.setTotalCachedTokens(zero(target.getTotalCachedTokens()) + zero(addend.getTotalCachedTokens()));
+        target.setTotalTokens(zero(target.getTotalTokens()) + zero(addend.getTotalTokens()));
+        target.setTotalCost(zero(target.getTotalCost()) + zero(addend.getTotalCost()));
+        return target;
+    }
+
+    /**
+     * 解析 CSV 表头，返回 列名 -&gt; 列下标；缺少必需列时直接拒绝。
+     *
+     * @param headerLine 表头行
+     * @return 列名到下标的映射
+     */
+    private static Map<String, Integer> resolveCsvColumns(String headerLine) {
+        Map<String, Integer> colIndex = new LinkedHashMap<>();
+        List<String> cells = splitCsvLine(headerLine);
+        for (int i = 0; i < cells.size(); i++) {
+            String name = cells.get(i).trim();
+            if (!name.isEmpty()) {
+                colIndex.putIfAbsent(name, i);
+            }
+        }
+        for (String col : DAILY_CSV_COLUMNS) {
+            if (!colIndex.containsKey(col)) {
+                throw new IllegalArgumentException("CSV 缺少列: " + col);
+            }
+        }
+        return colIndex;
+    }
+
+    /**
+     * 解析并校验一行日汇总统计。
+     *
+     * @param line     CSV 数据行
+     * @param colIndex 列名到下标的映射
+     * @return 日汇总实体（不含主键，待 insert 生成）
+     */
+    private static SysAiUsageDaily parseDailyCsvRow(String line, Map<String, Integer> colIndex) {
+        List<String> cells = splitCsvLine(line);
+        String statDateRaw = requireCell(cells, colIndex, "statDate");
+        LocalDate statDate;
+        try {
+            statDate = LocalDate.parse(statDateRaw);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("statDate 格式应为 yyyy-MM-dd: " + statDateRaw);
+        }
+        String model = requireCell(cells, colIndex, "model");
+        long calls = parseNonNegativeLong(cell(cells, colIndex, "calls"), "calls");
+        long promptTokens = parseNonNegativeLong(cell(cells, colIndex, "promptTokens"), "promptTokens");
+        long completionTokens = parseNonNegativeLong(cell(cells, colIndex, "completionTokens"), "completionTokens");
+        long cachedTokens = parseNonNegativeLong(cell(cells, colIndex, "cachedTokens"), "cachedTokens");
+        String totalTokensRaw = cell(cells, colIndex, "totalTokens");
+        long totalTokens = totalTokensRaw.isBlank()
+                ? promptTokens + completionTokens
+                : parseNonNegativeLong(totalTokensRaw, "totalTokens");
+        double cost = parseNonNegativeDouble(cell(cells, colIndex, "cost"));
+
+        SysAiUsageDaily daily = new SysAiUsageDaily();
+        daily.setStatDate(statDate);
+        daily.setGroupName(blankToNull(cell(cells, colIndex, "group")));
+        daily.setProvider(blankToNull(cell(cells, colIndex, "provider")));
+        daily.setModel(model);
+        daily.setUserId(SysAiUsageService.resolveOwner(null));
+        daily.setTotalCalls(calls);
+        daily.setTotalPromptTokens(promptTokens);
+        daily.setTotalCompletionTokens(completionTokens);
+        daily.setTotalCachedTokens(cachedTokens);
+        daily.setTotalTokens(totalTokens);
+        daily.setTotalCost(cost);
+        // 导入数据不含耗时/速度维度，落 0 而不是 NULL，保证读取侧均值计算口径稳定
+        daily.setTotalLatency(0L);
+        daily.setTotalFirstTokenLatency(0L);
+        daily.setStandardCost(0D);
+        daily.setTotalTokensPerSecond(0D);
+        daily.setTpsSamples(0L);
+        return daily;
+    }
+
+    /**
+     * 覆盖范围：同 日期+分组+服务商+模型 的既有行全部被导入行替换。
+     *
+     * @param row 导入行（决定维度值）
+     * @return 删除条件
+     */
+    private LambdaQueryWrapper<SysAiUsageDaily> dailyRowScope(SysAiUsageDaily row) {
+        LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysAiUsageDaily::getStatDate, row.getStatDate());
+        if (row.getGroupName() == null) {
+            wrapper.isNull(SysAiUsageDaily::getGroupName);
+        } else {
+            wrapper.eq(SysAiUsageDaily::getGroupName, row.getGroupName());
+        }
+        if (row.getProvider() == null) {
+            wrapper.isNull(SysAiUsageDaily::getProvider);
+        } else {
+            wrapper.eq(SysAiUsageDaily::getProvider, row.getProvider());
+        }
+        wrapper.eq(SysAiUsageDaily::getModel, row.getModel());
+        return wrapper;
+    }
+
+    /**
+     * 取必填单元格，空白即报错。
+     *
+     * @param cells    单元格列表
+     * @param colIndex 列名到下标的映射
+     * @param name     列名
+     * @return 非空单元格文本
+     */
+    private static String requireCell(List<String> cells, Map<String, Integer> colIndex, String name) {
+        String value = cell(cells, colIndex, name);
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException(name + " 不能为空");
+        }
+        return value;
+    }
+
+    /**
+     * 取单元格文本（越界记空串），已去除首尾空白。
+     *
+     * @param cells    单元格列表
+     * @param colIndex 列名到下标的映射
+     * @param name     列名
+     * @return 单元格文本，缺列/越界时为空串
+     */
+    private static String cell(List<String> cells, Map<String, Integer> colIndex, String name) {
+        Integer index = colIndex.get(name);
+        String value = index == null || index >= cells.size() ? "" : cells.get(index).trim();
+        return value == null ? "" : value;
+    }
+
+    /**
+     * 空白转 {@code null}（分组/服务商允许为空，落库与覆盖匹配都要区分空串与 NULL）。
+     *
+     * @param value 原始文本
+     * @return 空白为 {@code null}，否则原文
+     */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    /**
+     * 解析非负整数，空白记 0，负数/非数字报错。
+     *
+     * @param value 原始文本
+     * @param field 列名（报错提示用）
+     * @return 非负整数
+     */
+    private static long parseNonNegativeLong(String value, String field) {
+        if (value == null || value.isBlank()) {
+            return 0L;
+        }
+        long parsed;
+        try {
+            parsed = Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(field + " 不是合法整数: " + value);
+        }
+        if (parsed < 0) {
+            throw new IllegalArgumentException(field + " 不能为负数: " + value);
+        }
+        return parsed;
+    }
+
+    /**
+     * 解析非负数字（费用），空白记 0，负数/非数字报错。
+     *
+     * @param value 原始文本
+     * @return 非负数字
+     */
+    private static double parseNonNegativeDouble(String value) {
+        if (value == null || value.isBlank()) {
+            return 0D;
+        }
+        double parsed;
+        try {
+            parsed = Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("cost 不是合法数字: " + value);
+        }
+        if (!Double.isFinite(parsed) || parsed < 0) {
+            throw new IllegalArgumentException("cost 不能为负数或非有限数字: " + value);
+        }
+        return parsed;
+    }
+
+    /**
+     * 拆一行 CSV：支持双引号包裹与引号转义（{@code ""} -&gt; {@code "}），
+     * 与导出侧的 {@code csvCell} 转义规则对应。
+     *
+     * @param line 单行 CSV 文本
+     * @return 单元格列表（原始文本，未去空白）
+     */
+    private static List<String> splitCsvLine(String line) {
+        List<String> cells = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                        current.append('"');
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    current.append(c);
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == ',') {
+                cells.add(current.toString());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        cells.add(current.toString());
+        return cells;
     }
 
     /**

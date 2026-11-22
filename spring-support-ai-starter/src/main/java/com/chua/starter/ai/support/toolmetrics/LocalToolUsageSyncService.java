@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.toolmetrics;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.datasearch.usage.spi.UsageParser;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -39,6 +41,11 @@ public class LocalToolUsageSyncService {
     private final SysAiUsageMapper sysAiUsageMapper;
 
     /**
+     * 全局设置读取器（解析目录配置 usage_parse_dirs）
+     */
+    private final GlobalSettingReader settingReader;
+
+    /**
      * 同步结果。
      * @param scanned scanned
      * @param inserted 插入
@@ -55,7 +62,7 @@ public class LocalToolUsageSyncService {
     public SyncResult syncAll() {
         int scanned = 0;
         int inserted = 0;
-        for (UsageParser parser : ServiceProvider.of(UsageParser.class).list().values()) {
+        for (UsageParser parser : ServiceProvider.of(UsageParser.class).list(resolveParseHomes()).values()) {
             String source = parser.name();
             try {
                 List<AiUsage> batch = new ArrayList<>();
@@ -81,6 +88,34 @@ public class LocalToolUsageSyncService {
          * @return 同步结果的结果
          */
         return new SyncResult(scanned, inserted);
+    }
+
+    /**
+     * 解析本地用量根目录配置（{@code usage_parse_dirs}）。
+     *
+     * <p>配置值为逗号分隔的附加用户主目录；当前用户主目录（{@code user.home}）
+     * 始终参与解析并排在首位，去重后以逗号分隔串返回，
+     * 供 {@code UsageParser} SPI 的 csv 构造参数使用。</p>
+     *
+     * @return 逗号分隔的解析根目录列表（至少含当前用户主目录）
+     */
+    private String resolveParseHomes() {
+        LinkedHashSet<String> homes = new LinkedHashSet<>();
+        homes.add(System.getProperty("user.home", "."));
+        try {
+            String raw = settingReader.getStr("global", "usage_parse_dirs");
+            if (raw != null && !raw.isBlank()) {
+                for (String part : raw.split("[,，\\n\\r]+")) {
+                    String dir = part.trim();
+                    if (!dir.isEmpty()) {
+                        homes.add(dir);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[LocalUsageSync] 读取解析目录配置失败，仅解析当前用户主目录: {}", e.getMessage());
+        }
+        return String.join(",", homes);
     }
 
     /**

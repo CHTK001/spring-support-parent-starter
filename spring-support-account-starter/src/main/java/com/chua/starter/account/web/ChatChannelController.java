@@ -76,11 +76,13 @@ public class ChatChannelController {
     /**
      * 使用该渠道的某个模型发起一次同步对话。
      *
-     * <p>请求体：{@code {prompt: string, model?: string, system?: string, token?: string}}。
-     * 返回体：{@code {ok, channel, model, answer}}。</p>
+     * <p>请求体：{@code {prompt: string, model?: string, system?: string, token?: string,
+     * baseUrl?: string}}。返回体：{@code {ok, channel, model, answer, elapsedMs}}。</p>
      *
      * <p>{@code token} 用于需要登录态的渠道（如 Trae）：只在本请求内生效，
-     * 不写入渠道配置；缺省时由渠道自己从本机登录态里解析。</p>
+     * 不写入渠道配置；缺省时由渠道自己从本机登录态里解析。
+     * {@code baseUrl} 仅对声明支持自定义上游地址的渠道（{@code chat-custom}）生效：
+     * 指向任意 OpenAI 兼容网关，缺省落渠道自己的缺省地址。</p>
      *
      * @param channel 渠道标识
      * @param body    对话参数
@@ -97,11 +99,12 @@ public class ChatChannelController {
         String model = text(body, "model");
         String system = text(body, "system");
         String token = text(body, "token");
+        String baseUrl = impl.supportsCustomEndpoint() ? text(body, "baseUrl") : "";
         long startedAt = System.currentTimeMillis();
         try {
-            String answer = token.isBlank()
+            String answer = token.isBlank() && baseUrl.isBlank()
                     ? impl.chat(prompt, model, system)
-                    : chatWithToken(impl, token, prompt, model, system);
+                    : chatWithOverrides(impl, token, baseUrl, prompt, model, system);
             Map<String, Object> payload = new LinkedHashMap<>(6);
             payload.put("ok", true);
             payload.put("channel", impl.channel());
@@ -117,20 +120,23 @@ public class ChatChannelController {
     }
 
     /**
-     * 使用请求体临时携带的 token 发起对话。
+     * 按请求级覆盖参数发起对话（临时令牌 / 临时上游地址，至少一项非空）。
      *
-     * <p>与无 token 的路径一致，仍经免费渠道客户端执行，只是把 token 作为本次路由的凭据。</p>
+     * <p>与无覆盖参数的路径一致，仍经免费渠道客户端执行；{@code token} 作为本次路由凭据，
+     * {@code baseUrl} 作为本次路由上游地址（OpenAI 兼容自定义网关），均不落任何存储。</p>
      *
      * @param impl    渠道实现
-     * @param token   临时令牌（如 Trae 的 JWT）
+     * @param token   临时令牌（如 Trae 的 JWT）；可为空
+     * @param baseUrl 临时上游地址；可为空
      * @param prompt  用户输入
      * @param model   模型标识
      * @param system  系统提示词
      * @return 完整回答
      */
-    private String chatWithToken(ChatChannelProvider impl, String token,
+    private String chatWithOverrides(ChatChannelProvider impl, String token, String baseUrl,
             String prompt, String model, String system) {
-        ChatClient client = FreeChannelChatClient.forChannel(impl.extension(), token);
+        ChatClient client = FreeChannelChatClient.forChannel(impl.extension(),
+                token.isBlank() ? null : token, baseUrl.isBlank() ? null : baseUrl);
         try {
             if (model != null && !model.isBlank()) {
                 client.model(model);

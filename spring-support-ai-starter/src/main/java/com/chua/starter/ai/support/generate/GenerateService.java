@@ -342,6 +342,22 @@ public class GenerateService {
           // 故服务端必须自己拦一道。共用额度被打爆、结果互相穿插都源于并发。
         requireNoRunningTask(request.userId());
 
+          // 能力闸门：图像任务带参考图时，解析出的实现必须真的支持图生图。
+          // 必须在 insert 之前拦截，否则会留下一条占并发名额、永不成功的僵死任务；
+          // 旧口径是 applyReference 里「不支持就 warn 后忽略」，用户传了参考图却
+          // 拿到一张纯文生图结果，属于假成功。
+        if (GenerateConfigSupport.TYPE_IMAGE.equalsIgnoreCase(type)
+                && request.referenceImage() != null && !request.referenceImage().isBlank()) {
+            GenerateClientResolver.Resolved<ImageClient> probe = clientResolver.resolveImage(request.model());
+            if (probe == null || !probe.ok()) {
+                throw new IllegalStateException("该模型未配置可用的图像生成实现，请在模型管理中检查供应商与密钥");
+            }
+            if (!probe.client().supportsReferenceImage()) {
+                throw new IllegalStateException("模型 " + model
+                        + " 不支持参考图（图生图）：请去掉参考图，或改选支持参考图的模型");
+            }
+        }
+
         SysAiGenerateTask task = buildTask(request, type);
         // 请求没带模型时用设置中心的默认值落库（buildTask 里取的是请求原值）
         task.setModel(model);
@@ -1587,12 +1603,13 @@ public class GenerateService {
     }
 
       /**
-       * 应用参考图：实现不支持图生图时忽略该参数，不阻断主流程。
+       * 应用参考图：实现不支持图生图时显式失败，绝不静默忽略。
        *
-       * <p>{@code OpenAiImageClient} 等标准实现未开放 img2img，{@code referenceImage}
-       * 会抛 {@link UnsupportedOperationException}；模型侧是否开放参考图由
-       * {@code capabilities[].generate.referenceImage} 声明，本方法只做兜底，
-       * 避免用户多传一张参考图就把整个任务打成 501。</p>
+       * <p>参考图能力已在 {@code create()} 落库前按 {@code supportsReferenceImage()}
+       * 闸门拦截，走到这里的实现都应声明支持图生图。此处仍保留双重校验：
+       * {@code referenceImage} 的默认实现是空操作（UnsupportedOperationException
+       * 都不会抛），仅靠 catch 无法发现「声明与行为不一致」的实现——那种情况
+       * 必须让任务失败，而不是给用户一张完全没用到参考图的图。</p>
        *
        * @param client         图像客户端
        * @param referenceImage 参考图（data URL 或裸 base64）
@@ -1602,11 +1619,10 @@ public class GenerateService {
         if (reference == null) {
             return;
         }
-        try {
-            client.referenceImage(reference);
-        } catch (UnsupportedOperationException e) {
-            log.warn("[Generate] 当前图像实现不支持参考图，已忽略该参数");
+        if (!client.supportsReferenceImage()) {
+            throw new IllegalStateException("当前图像实现不支持参考图（图生图），任务已拒绝");
         }
+        client.referenceImage(reference);
     }
 
       /**

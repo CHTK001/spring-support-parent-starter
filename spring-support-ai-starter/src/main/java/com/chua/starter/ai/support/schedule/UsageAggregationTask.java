@@ -397,6 +397,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final String SETTING_SYNC_PROVIDERS = "usage_sync_providers";
 
     /**
+     * 本地用量解析根目录键（逗号分隔的附加用户主目录；当前用户主目录始终参与）。
+     */
+    private static final String SETTING_PARSE_DIRS = "usage_parse_dirs";
+
+    /**
      * 默认用量上报间隔（秒）——未配置时取 300 秒（5 分钟）。
      */
     private static final int DEFAULT_REPORT_INTERVAL_SEC = 300;
@@ -905,9 +910,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             }
         }
 
-        // 2. SPI 注册的外部工具解析器（opencode/codex 等）
+        // 2. SPI 注册的外部工具解析器（opencode/codex 等），按配置的解析根目录实例化
         try {
-            Map<String, UsageParser> spiParsers = ServiceProvider.of(UsageParser.class).list();
+            Map<String, UsageParser> spiParsers = ServiceProvider.of(UsageParser.class).list(resolveParseHomes());
             if (spiParsers != null) {
                 for (Map.Entry<String, UsageParser> entry : spiParsers.entrySet()) {
                     if (entry.getKey() != null && entry.getValue() != null) {
@@ -919,6 +924,34 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             log.warn("[UsageAggregation] SPI 收集 UsageParser 失败: {}", e.getMessage());
         }
         return allParsers;
+    }
+
+    /**
+     * 解析本地用量根目录配置（{@code usage_parse_dirs}）。
+     *
+     * <p>配置值为逗号分隔的附加用户主目录；当前用户主目录（{@code user.home}）
+     * 始终参与解析并排在首位，无需在配置中重复填写。去重后以逗号分隔串返回，
+     * 供 {@code UsageParser} SPI 的 csv 构造参数使用。</p>
+     *
+     * @return 逗号分隔的解析根目录列表（至少含当前用户主目录）
+     */
+    private String resolveParseHomes() {
+        java.util.LinkedHashSet<String> homes = new java.util.LinkedHashSet<>();
+        homes.add(System.getProperty("user.home", "."));
+        try {
+            String raw = settingReader.getStr(GROUP, SETTING_PARSE_DIRS);
+            if (raw != null && !raw.isBlank()) {
+                for (String part : raw.split("[,，\\n\\r]+")) {
+                    String dir = part.trim();
+                    if (!dir.isEmpty()) {
+                        homes.add(dir);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[UsageAggregation] 读取解析目录配置失败，仅解析当前用户主目录: {}", e.getMessage());
+        }
+        return String.join(",", homes);
     }
 
     /**

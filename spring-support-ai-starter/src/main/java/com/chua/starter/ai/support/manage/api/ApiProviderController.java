@@ -59,6 +59,7 @@ import com.chua.starter.datasearch.credit.support.CreditTokens;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -2301,8 +2302,9 @@ public class ApiProviderController {
     /**
      * 读最近一次落库的按 Key 快照，拼成 /credit 页面载荷。
      *
-     * <p>只在「快照未过期（TTL 内）且 Key 清单与当前完全一致」时可用；
-     * 否则返回 null 走实时回源。汇总口径与实时查询一致：只累加与第一条
+     * <p>只在「快照未过期（TTL 内）、Key 清单与当前完全一致、且至少一个 Key 成功」
+     * 时可用；否则返回 null 走实时回源——全失败快照是上一轮的失败现场，
+     * 不当新鲜读数回放。汇总口径与实时查询一致：只累加与第一条
      * 成功读数同币种的行。</p>
      *
      * @param entity         供应商
@@ -2320,6 +2322,12 @@ public class ApiProviderController {
         long now = System.currentTimeMillis();
         Long syncedAt = snapshots.get(0).getSyncedAt();
         if (syncedAt == null || now - syncedAt > CREDIT_CACHE_TTL_MS) {
+            return null;
+        }
+        // 全失败快照不回放：那是上一轮的失败现场（上游抖动 / 配置未就绪），当缓存
+        // 供出去就是「面板首刷陈旧错误」；返回 null 走实时回源拿当下的真实结果
+        boolean anyOkSnapshot = snapshots.stream().anyMatch(s -> Boolean.TRUE.equals(s.getOk()));
+        if (!anyOkSnapshot) {
             return null;
         }
         Map<String, SysAiProviderCredit> byHash = new HashMap<>(snapshots.size() * 2);
@@ -2662,7 +2670,9 @@ public class ApiProviderController {
      *
      * <p>余额密钥支持多账号（换行 / 逗号 / 分号分隔），逐 Key 查询后分别展示并汇总；
      * 读数带 5 分钟缓存（{@code refresh=true} 强制回源），命中时响应多出
-     * {@code cached / cached_at / age_seconds} 三个字段。</p>
+     * {@code cached / cached_at / age_seconds} 三个字段。失败读数不进缓存：
+     * 全部 Key 都查失败只代表当下（上游抖动 / 配置未就绪），缓存或回放它会让面板
+     * 首刷吃到上一轮的陈旧错误，因此只有至少一个 Key 成功的结果才可缓存复用。</p>
      *
      * @param providerId 供应商标识
      * @param refresh    跳过缓存强制回源
@@ -2769,7 +2779,11 @@ public class ApiProviderController {
                 ? "会话令牌可能已失效：请点击「登录」按钮重新登录后再查询。" : null;
         CreditPanelPayload payload = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level,
                 loginUrl, anyOk, currency, total, rows, false, null, null, note, warn);
-        cacheCredit(fingerprint, payload);
+        // 失败读数不进缓存：全部 Key 都查失败只代表当下，缓存它会让面板在 TTL 内
+        // 反复吃到陈旧错误（只能靠 refresh 翻案）；成功读数才值得缓存复用
+        if (payload.ok()) {
+            cacheCredit(fingerprint, payload);
+        }
         // 按 Key 持久化：重启 / 过期后面板仍能读到最近一次读数，时间轮也复用这张表
         persistCreditSnapshots(providerId, keys, rows);
         return ApiResult.ok(payload);
@@ -3732,12 +3746,127 @@ public class ApiProviderController {
     }
 
     /**
+     * 供应商余额「账号密码登录」实时模式：在服务端起无头浏览器打开上游登录页，
+     * 把浏览器画面推流到前端、用户操作经 CDP 派发回去——登录窗口直接内嵌在管理页
+     * 的弹层里，不再弹在服务端桌面（后端部署在远端机时，用户也能在自己的浏览器里
+     * 看到并操作这个登录窗口）。
+     *
+     * <p>返回的 {@code live_url} 是登录画面的直连地址（按本次请求的 Host 主机名 +
+     * 画面服务端口拼出；经 dev 代理访问时 changeOrigin 已把 Host 改写为后端机，
+     * 浏览器与后端同局域网可直达），前端放进 iframe 即可。随后用
+     * {@link #providerCreditLiveLoginStatus} 轮询登录状态，截获令牌由服务端
+     * <b>追加</b>为余额密钥（多账号追加式，不覆盖已有令牌）。用户关闭弹层时应调用
+     * {@link #providerCreditLiveLoginCancel} 释放服务端浏览器。</p>
+     *
+     * @param providerId 供应商标识
+     * @param request    当前请求（取 Host 主机名拼画面直连地址）
+     * @return 会话创建结果（live_url 供 iframe 嵌入；失败带原因）
+     */
+    @Permission("admin")
+    @PostMapping("/providers/{provider_id}/credit/login/live")
+    public ApiResult<CreditLiveLoginPayload> providerCreditLiveLogin(
+            @PathVariable("provider_id") String providerId, HttpServletRequest request) {
+        SysAccountChannel entity = requireProvider(providerId);
+        Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
+        ProviderCreditLoginService.LiveLoginHandle handle =
+                providerCreditLoginService.startLiveLogin(entity, loginSpiFor(entity, extra));
+        String liveUrl = null;
+        if (handle.ok() && handle.livePath() != null && handle.livePort() > 0) {
+            liveUrl = "http://" + requestHost(request) + ":" + handle.livePort() + handle.livePath();
+        }
+        return ApiResult.ok(new CreditLiveLoginPayload(handle.ok(), handle.message(),
+                handle.sessionToken(), liveUrl, handle.loginUrl()));
+    }
+
+    /**
+     * {@code /credit/login/live} 会话创建结果。
+     *
+     * @param ok           是否成功打开登录画面
+     * @param message      结果说明（失败时为原因）
+     * @param sessionToken 会话标识（轮询状态 / 取消时回传）
+     * @param liveUrl      登录画面直连地址（iframe.src；失败时为 null）
+     * @param loginUrl     实际打开的登录页地址
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditLiveLoginPayload(boolean ok, String message,
+                                  @JsonProperty("session_token") String sessionToken,
+                                  @JsonProperty("live_url") String liveUrl,
+                                  @JsonProperty("login_url") String loginUrl) {
+    }
+
+    /**
+     * 轮询实时登录会话状态：pending（进行中）/ success（令牌已追加为余额密钥）/
+     * failed（失败、超时或已取消）/ unknown（会话不存在或已过期回收）。
+     *
+     * @param providerId   供应商标识
+     * @param sessionToken 会话标识
+     * @return 会话状态（令牌只回掩码，不回明文）
+     */
+    @Permission("admin")
+    @GetMapping("/providers/{provider_id}/credit/login/live/{session_token}/status")
+    public ApiResult<CreditLiveLoginStatusPayload> providerCreditLiveLoginStatus(
+            @PathVariable("provider_id") String providerId,
+            @PathVariable("session_token") String sessionToken) {
+        ProviderCreditLoginService.LiveLoginStatus status =
+                providerCreditLoginService.liveLoginStatus(providerId, sessionToken);
+        return ApiResult.ok(new CreditLiveLoginStatusPayload(status.status(), status.message(), status.tokenMask()));
+    }
+
+    /**
+     * 实时登录会话状态。
+     *
+     * @param status    pending / success / failed / unknown
+     * @param message   结果说明（终态时有值）
+     * @param tokenMask 令牌掩码（success 时有值）
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record CreditLiveLoginStatusPayload(String status, String message,
+                                        @JsonProperty("token_mask") String tokenMask) {
+    }
+
+    /**
+     * 取消实时登录会话：释放服务端登录浏览器（用户关闭弹层时调用，避免无头浏览器
+     * 空转到超时）。
+     *
+     * @param providerId   供应商标识
+     * @param sessionToken 会话标识
+     * @return 是否取消了一个进行中的会话
+     */
+    @Permission("admin")
+    @DeleteMapping("/providers/{provider_id}/credit/login/live/{session_token}")
+    public ApiResult<Map<String, Object>> providerCreditLiveLoginCancel(
+            @PathVariable("provider_id") String providerId,
+            @PathVariable("session_token") String sessionToken) {
+        boolean cancelled = providerCreditLoginService.cancelLiveLogin(providerId, sessionToken);
+        return ApiResult.ok(Map.of("ok", cancelled));
+    }
+
+    /**
+     * 取本次请求的 Host 主机名（去掉端口）：登录画面服务与后端同机，浏览器按访问
+     * 后端 API 的同一台主机直连画面端口。
+     *
+     * @param request 当前请求
+     * @return 主机名（IP 或域名，不含端口）
+     */
+    private static String requestHost(HttpServletRequest request) {
+        String host = request.getHeader("Host");
+        if (host == null || host.isBlank()) {
+            host = request.getServerName();
+        }
+        if (host != null && host.contains(":")) {
+            host = host.substring(0, host.indexOf(':'));
+        }
+        return host == null || host.isBlank() ? "127.0.0.1" : host;
+    }
+
+    /**
      * 余额令牌续期状态（可观测端点）：调度器运行快照 + 逐供应商的令牌到期 / 续期
      * 留痕，让「谁快到期、谁续期失败」在页面上可确认，而不是只进日志。
      *
      * <p>只回令牌的到期时间与状态，不回令牌明文 / 掩码。行仅含账密登录口径的
-     * 供应商；JWT 令牌给 {@code expire_at}，非 JWT 令牌该列为 null（按保活周期
-     * 巡检，见调度器 {@link CreditTokenRenewScheduler#isDue}）。</p>
+     * 供应商；多账号下 {@code key_count} 为余额密钥条数，{@code expire_at} 取
+     * 最早到期的一条（JWT 才有，非 JWT 该列为 null，按保活周期巡检，见调度器
+     * {@link CreditTokenRenewScheduler#isDue}）。</p>
      *
      * @return 调度器快照（任务未装配时字段为 null）+ 供应商行
      */
@@ -3778,16 +3907,17 @@ public class ApiProviderController {
             if (extra == null || !ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"))) {
                 continue;
             }
-            String token = str(extra, "credit_key");
+            List<String> keys = ProviderCreditLoginService.splitCreditKeys(str(extra, "credit_key"));
             Object renewEnabled = extra.get("credit_renew_enabled");
-            Long expireAt = token == null ? null : CreditTokens.expireAtMs(token);
+            Long expireAt = earliestExpireAt(keys);
             Map<String, Object> row = new LinkedHashMap<>(12);
             row.put("provider_id", channel.getProviderId());
             row.put("name", channel.getName());
             row.put("renew_enabled", renewEnabled == null || Boolean.parseBoolean(String.valueOf(renewEnabled)));
-            row.put("has_token", token != null);
+            row.put("has_token", !keys.isEmpty());
+            row.put("key_count", keys.size());
             row.put("expire_at", expireAt);
-            row.put("due", token != null && CreditTokenRenewScheduler.isDue(extra, now));
+            row.put("due", !keys.isEmpty() && CreditTokenRenewScheduler.isDue(extra, now));
             row.put("last_renew_at", longOf(extra.get("credit_last_renew_at")));
             row.put("renew_status", str(extra, "credit_renew_status"));
             row.put("fail_count", intOf(extra.get("credit_renew_fail_count")));
@@ -3872,26 +4002,59 @@ public class ApiProviderController {
         if (spi == null || !spi.supportsTokenRenewal()) {
             return CreditRenewReport.skipped(entity.getProviderId(), "该供应商不支持静默续期");
         }
-        if (str(extra, "credit_key") == null) {
+        List<String> keys = ProviderCreditLoginService.splitCreditKeys(str(extra, "credit_key"));
+        if (keys.isEmpty()) {
             return CreditRenewReport.skipped(entity.getProviderId(), "无余额令牌，请先登录");
         }
-        ProviderCreditLoginService.RenewOutcome outcome = providerCreditLoginService.renewByPageVisit(entity, spi);
-        boolean rejected = ProviderCreditLoginService.RenewOutcome.REJECTED.equals(outcome.status());
+        // 多账号逐令牌续期：每个 Key 独立回访一次，轮换的换新、失效的记失败，互不影响
+        LinkedHashSet<String> merged = new LinkedHashSet<>(keys);
+        int renewedCount = 0;
+        int rejectedCount = 0;
+        String firstRenewedToken = null;
+        StringBuilder failReasons = new StringBuilder();
+        for (String oldKey : keys) {
+            ProviderCreditLoginService.RenewOutcome outcome =
+                    providerCreditLoginService.renewByPageVisit(entity, spi, oldKey);
+            if (ProviderCreditLoginService.RenewOutcome.RENEWED.equals(outcome.status())
+                    && outcome.token() != null && !outcome.token().isBlank()) {
+                merged.remove(oldKey);
+                merged.add(outcome.token());
+                renewedCount++;
+                if (firstRenewedToken == null) {
+                    firstRenewedToken = outcome.token();
+                }
+            } else if (ProviderCreditLoginService.RenewOutcome.REJECTED.equals(outcome.status())) {
+                rejectedCount++;
+                if (failReasons.length() > 0) {
+                    failReasons.append("；");
+                }
+                failReasons.append(outcome.message());
+            }
+            // valid-no-rotation：门户会话仍有效，旧令牌原样保留
+        }
+        boolean anyRejected = rejectedCount > 0;
+        String status = anyRejected ? CreditRenewReport.REJECTED
+                : (renewedCount > 0 ? CreditRenewReport.RENEWED : CreditRenewReport.VALID_NO_ROTATION);
+        String message;
+        if (anyRejected) {
+            message = renewedCount > 0
+                    ? renewedCount + " 个账号令牌已续期，" + rejectedCount + " 个续期失败：" + failReasons
+                    : rejectedCount + " 个账号令牌续期失败：" + failReasons;
+        } else if (renewedCount > 0) {
+            message = renewedCount + " 个账号令牌已轮换续期";
+        } else {
+            message = "门户会话仍有效，本次回访未轮换令牌";
+        }
         int failCount = intOf(extra.get("credit_renew_fail_count"));
-        failCount = rejected ? failCount + 1 : 0;
-        // 读-合并-写：updateExtra 是整列覆盖，必须带着完整 extra 传；新令牌与状态字段一次写入
+        failCount = anyRejected ? failCount + 1 : 0;
+        // 读-合并-写：updateExtra 是整列覆盖，必须带着完整 extra 传；密钥列表与状态字段一次写入
         Map<String, Object> patch = new LinkedHashMap<>(extra);
         patch.put("credit_last_renew_at", System.currentTimeMillis());
-        patch.put("credit_renew_status", outcome.status());
+        patch.put("credit_renew_status", status);
         patch.put("credit_renew_fail_count", failCount);
-        String tokenMask = null;
-        if (outcome.token() != null && !outcome.token().isBlank()) {
-            patch.put("credit_key", outcome.token());
-            tokenMask = maskKey(outcome.token());
-        }
-        String tokenForExpire = outcome.token() != null && !outcome.token().isBlank()
-                ? outcome.token() : str(extra, "credit_key");
-        Long expireAt = tokenForExpire == null ? null : CreditTokens.expireAtMs(tokenForExpire);
+        patch.put("credit_key", String.join("\n", merged));
+        String tokenMask = firstRenewedToken == null ? null : maskKey(firstRenewedToken);
+        Long expireAt = earliestExpireAt(merged);
         if (expireAt != null) {
             patch.put("credit_token_expire_at", expireAt);
         } else {
@@ -3905,12 +4068,30 @@ public class ApiProviderController {
         } catch (RuntimeException e) {
             log.warn("[credit-renew] 供应商 {} 续期状态回写失败: {}", entity.getProviderId(), e.getMessage());
         }
-        log.info("[credit-renew] 供应商 {} 续期完成：{}；{}",
-                entity.getProviderId(), outcome.status(), outcome.message());
-        if (rejected && failCount == 1) {
-            notifyCreditTokenRejected(entity, extra, outcome);
+        log.info("[credit-renew] 供应商 {} 续期完成：{}；{}（{} 个 Key，{} 个轮换，{} 个失败）",
+                entity.getProviderId(), status, message, keys.size(), renewedCount, rejectedCount);
+        if (anyRejected && failCount == 1) {
+            notifyCreditTokenRejected(entity, extra, new ProviderCreditLoginService.RenewOutcome(
+                    ProviderCreditLoginService.RenewOutcome.REJECTED, null, message, null));
         }
-        return new CreditRenewReport(entity.getProviderId(), outcome.status(), outcome.message(), tokenMask);
+        return new CreditRenewReport(entity.getProviderId(), status, message, tokenMask);
+    }
+
+    /**
+     * 取一组令牌里最早的到期时间（多账号下整表关注「最快过期的那一个」）。
+     *
+     * @param tokens 令牌列表
+     * @return 最早到期时间（epoch 毫秒）；都不是 JWT（解不出 exp）时为 null
+     */
+    private static Long earliestExpireAt(Iterable<String> tokens) {
+        Long earliest = null;
+        for (String token : tokens) {
+            Long expireAt = CreditTokens.expireAtMs(token);
+            if (expireAt != null && (earliest == null || expireAt < earliest)) {
+                earliest = expireAt;
+            }
+        }
+        return earliest;
     }
 
     /**
@@ -4116,6 +4297,8 @@ public class ApiProviderController {
                     || "xai".equals(candidate) || "sensenova".equals(candidate);
             String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
             query.setUrl(url);
+            // 出网代理：供应商配了 proxy 按供应商的走；没配时 CreditHttp 回落 JVM 全局代理属性
+            query.setProxy(entity.getProxy());
             if ("custom".equals(candidate)) {
                 // 自定义映射：后端字段 → JSONPath / XPath 表达式
                 query.setMapping(creditMappings(extra));

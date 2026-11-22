@@ -123,6 +123,19 @@ public interface ChatChannelProvider extends ChannelProvider {
     }
 
     /**
+     * 该渠道是否支持在试对话时临时指定上游地址（请求体 {@code baseUrl}）。
+     *
+     * <p>默认 {@code false}：多数免登录渠道的上游地址由实现自身持有（DuckDuckGo / Trae 等），
+     * 不接受调用方改写。OpenAI 兼容的「自定义提供商」渠道覆盖本方法返回 {@code true}，
+     * 允许试对话请求携带 {@code baseUrl} 指向任意兼容网关；未指定时回落渠道缺省地址。</p>
+     *
+     * @return 是否支持试对话时临时指定上游地址
+     */
+    default boolean supportsCustomEndpoint() {
+        return false;
+    }
+
+    /**
      * 渠道内置模型清单（供渠道管理页展示）。
      *
      * <p>默认取 {@link ChatClient#models()}：多数免登录实现是静态模型表，

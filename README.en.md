@@ -116,9 +116,6 @@ Spring Support Parent Starter
 ├── 🌐 Service Discovery & Config
 │   ├── spring-support-discovery-starter       # Service discovery
 │   └── spring-support-configcenter-starter    # Config center
-├── 📊 Monitoring & Logging
-│   ├── spring-support-report-client-starter   # Device report client
-│   └── spring-support-report-client-arthas-starter # Arthas diagnostics
 ├── 📚 API Docs
 │   └── spring-support-swagger-starter         # Swagger API documentation
 ├── 🛠️ Operations & Maintenance
@@ -995,8 +992,6 @@ Thanks to these open-source projects:
 - **[spring-support-discovery-starter](spring-support-discovery-starter/README.md)** - Service discovery
 - **[spring-support-configcenter-starter](spring-support-configcenter-starter/README.md)** - Config center
 - **[spring-support-rpc-starter](spring-support-rpc-starter/README.md)** - RPC
-- **[spring-support-report-client-starter](spring-support-report-client-starter/README.md)** - Report module
-- **[spring-support-report-client-arthas-starter](spring-support-report-client-arthas-starter/README.md)** - Arthas diagnostics
 - **[spring-support-pay-client-starter](spring-support-pay-client-starter/README.md)** - Payment
 - **[spring-support-tencent-starter](spring-support-tencent-starter/README.md)** - Tencent cloud
 - **[spring-support-message-starter](spring-support-message-starter/README.md)** - Message notification

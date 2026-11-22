@@ -80,9 +80,9 @@ public class AgentHostHistoryWriter implements HostAgentHistoryWriter {
             cpuTags.put("cores", String.valueOf(payload.cpuCores()));
         }
         added += addPoint(points, "cpu_usage", payload.cpuUsage(), "ms_monitor_metric_cpu", cpuTags);
-        added += addPoint(points, "memory_usage", payload.memUsage(), "ms_monitor_metric_memory",
+        added += addPoint(points, "usage_percent", payload.memUsage(), "ms_monitor_metric_memory",
                 capacityTags(payload.memoryMb() == null ? null : payload.memoryMb() * MB, payload.memUsage(), true));
-        added += addPoint(points, "disk_usage", payload.diskUsage(), "ms_monitor_metric_disk",
+        added += addPoint(points, "usage_percent", payload.diskUsage(), "ms_monitor_metric_disk",
                 capacityTags(payload.diskGb() == null ? null : payload.diskGb() * GB, payload.diskUsage(), false));
         if (added == 0) {
             return;

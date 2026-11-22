@@ -3,18 +3,27 @@ package com.chua.starter.ai.support.manage.service;
 import com.chua.common.support.browser.BrowserOptions;
 import com.chua.common.support.browser.BrowserPage;
 import com.chua.common.support.browser.cdp.CdpBrowserEngine;
+import com.chua.common.support.browser.cdp.CdpLiveServer;
 import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.datasearch.credit.spi.CreditQueryProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -82,12 +91,47 @@ public class ProviderCreditLoginService {
      */
     private static final long RENEW_WAIT_MILLIS = 45_000L;
 
+    /**
+     * 单供应商余额密钥条数上限：多账号登录不断追加，超过上限时淘汰最早的令牌，
+     * 防止误操作把密钥列表撑爆。
+     */
+    private static final int MAX_CREDIT_KEYS = 50;
+
+    /**
+     * 实时登录会话结束后结果的保留时长（毫秒）：前端轮询到终态前会话必须还在，
+     * 终态后再留一段余量让迟到的轮询也能拿到结果，过期由回收器清理。
+     */
+    private static final long LIVE_RESULT_TTL_MILLIS = 15L * 60L * 1000L;
+
+    /**
+     * 实时登录会话回收周期（秒）
+     */
+    private static final long LIVE_REAPER_PERIOD_SECONDS = 60L;
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
-     * 渠道服务：仅用 updateExtra 回填截获到的令牌（不触碰渠道表其它字段）
+     * 渠道服务：仅用 updateExtra 回填截获到的令牌（不触碰渠道表其它字段）；
+     * 追加合并前用 find 重读最新行，避免登录期间其它保存被旧快照覆盖
      */
     private final AccountChannelService accountChannelService;
+
+    /**
+     * 内嵌实时登录画面服务（懒启动）：把无头登录浏览器的画面以 MJPEG 推流、
+     * 把用户操作经 CDP Input 派发回去，前端一个 iframe 即可「远程操作」服务端
+     * 浏览器——登录窗口不再弹在服务端桌面上，而是嵌进管理页面里。
+     */
+    private volatile CdpLiveServer liveServer;
+
+    /**
+     * 实时登录会话表：sessionToken → 会话（含进行中与已出终态待领取的）
+     */
+    private final Map<String, LiveSession> liveSessions = new ConcurrentHashMap<>();
+
+    /**
+     * 终态会话回收器
+     */
+    private volatile ScheduledThreadPoolExecutor liveReaper;
 
     /**
      * 登录结果。
@@ -226,9 +270,9 @@ public class ProviderCreditLoginService {
                         "等待登录超时：请在弹出的浏览器窗口内完成上游门户登录后重试", loginUrl);
             }
             if (persist) {
-                persistToken(entity, extra, token);
+                persistToken(entity.getProviderId(), token);
             }
-            log.info("[credit-login] 供应商 {} 登录成功，令牌 {} 已{}回填",
+            log.info("[credit-login] 供应商 {} 登录成功，令牌 {} 已{}追加为余额密钥",
                     entity.getProviderId(), mask(token), persist ? "" : "未");
             return new LoginOutcome(true, token, "登录成功", loginUrl);
         } catch (RuntimeException e) {
@@ -256,8 +300,24 @@ public class ProviderCreditLoginService {
      */
     public RenewOutcome renewByPageVisit(SysAccountChannel entity, CreditQueryProvider spi) {
         Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
-        String oldToken = text(extra.get("credit_key"));
-        if (oldToken.isEmpty()) {
+        List<String> keys = splitCreditKeys(text(extra.get("credit_key")));
+        if (keys.isEmpty()) {
+            return new RenewOutcome(RenewOutcome.REJECTED, null, "没有可续期的余额令牌", null);
+        }
+        return renewByPageVisit(entity, spi, keys.get(0));
+    }
+
+    /**
+     * 静默续期（指定令牌）：多账号下逐令牌各回访一次，互不影响。
+     *
+     * @param entity   供应商
+     * @param spi      余额 SPI 实现（提供回访页与截获钩子；可为 null）
+     * @param oldToken 要续期的旧令牌（预置进无头页面作为登录态）
+     * @return 续期结果
+     */
+    public RenewOutcome renewByPageVisit(SysAccountChannel entity, CreditQueryProvider spi, String oldToken) {
+        Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
+        if (oldToken == null || oldToken.isBlank()) {
             return new RenewOutcome(RenewOutcome.REJECTED, null, "没有可续期的余额令牌", null);
         }
         LoginHooks hooks = hooksFor(entity, spi, extra);
@@ -346,27 +406,66 @@ public class ProviderCreditLoginService {
     }
 
     /**
-     * 回填截获到的令牌：写 {@code extra.credit_key} 并落库。
+     * 回填截获到的令牌：以「追加」语义合并进 {@code extra.credit_key} 并落库。
      *
-     * <p>与 {@code promoteCreditKey} 同一通道（{@link AccountChannelService#updateExtra}），
-     * 余额查询、面板、快照等既有链路零改动读到新令牌。</p>
+     * <p>多账号口径：每次登录截获的令牌作为一条新密钥追加进余额密钥列表
+     * （换行分隔、去重、上限 {@link #MAX_CREDIT_KEYS} 条），而不是覆盖——这样
+     * 同一供应商可以登录多个上游账号，逐 Key 查询余额。合并前用
+     * {@link AccountChannelService#find} 重读最新行再整列写回
+     * （{@link AccountChannelService#updateExtra} 是整列覆盖），登录窗口打开的
+     * 这几分钟里若表单已保存过其它配置，不会被登录线程用旧快照冲掉。</p>
      *
-     * @param entity 供应商
-     * @param extra  当前扩展配置
-     * @param token  截获的会话令牌
+     * @param providerId 供应商标识
+     * @param token      截获的会话令牌
      */
-    private void persistToken(SysAccountChannel entity, Map<String, Object> extra, String token) {
+    private void persistToken(String providerId, String token) {
         try {
-            Map<String, Object> patch = new LinkedHashMap<>(extra);
-            patch.put("credit_key", token);
-            accountChannelService.updateExtra(entity.getProviderId(), patch);
-            // 同步内存里的 extra（与调用方共享同一 Map），本次查询的指纹 / 快照立即可见
-            extra.put("credit_key", token);
+            SysAccountChannel fresh = accountChannelService.find(providerId);
+            if (fresh == null) {
+                log.warn("[credit-login] 供应商 {} 已不存在，令牌 {} 放弃回填", providerId, mask(token));
+                return;
+            }
+            Map<String, Object> patch = fresh.getExtra() == null
+                    ? new LinkedHashMap<>(4) : new LinkedHashMap<>(fresh.getExtra());
+            List<String> keys = new ArrayList<>(splitCreditKeys(text(patch.get("credit_key"))));
+            if (!keys.contains(token)) {
+                keys.add(token);
+                if (keys.size() > MAX_CREDIT_KEYS) {
+                    keys = new ArrayList<>(keys.subList(keys.size() - MAX_CREDIT_KEYS, keys.size()));
+                }
+            }
+            String joined = String.join("\n", keys);
+            patch.put("credit_key", joined);
+            accountChannelService.updateExtra(providerId, patch);
+            log.info("[credit-login] 供应商 {} 令牌 {} 已追加为余额密钥（当前共 {} 条）",
+                    providerId, mask(token), keys.size());
         } catch (RuntimeException e) {
             // 回填失败不影响本次查询：令牌仍随结果返回，调用方本次照常使用
             log.warn("[credit-login] 供应商 {} 令牌回填失败（本次仍按截获令牌查询）: {}",
-                    entity.getProviderId(), e.getMessage());
+                    providerId, e.getMessage());
         }
+    }
+
+    /**
+     * 拆分余额密钥列表：多账号下 {@code extra.credit_key} 是「每行一个令牌」的
+     * 多行文本（兼容逗号 / 分号分隔），去空去重保序。登录回填、余额逐 Key 查询、
+     * 续期巡检共用这一个口径，避免各处拆分规则漂移。
+     *
+     * @param raw 余额密钥原文（可多行）
+     * @return 去重后的令牌列表；空原文返回空列表
+     */
+    public static List<String> splitCreditKeys(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        LinkedHashSet<String> keys = new LinkedHashSet<>();
+        for (String piece : raw.split("[\\r\\n,;，；]+")) {
+            String key = piece.trim();
+            if (!key.isBlank()) {
+                keys.add(key);
+            }
+        }
+        return List.copyOf(keys);
     }
 
     /**
@@ -693,6 +792,352 @@ public class ProviderCreditLoginService {
      */
     private static String firstNonBlank(String first, String second) {
         return nonBlank(first) ? first : second;
+    }
+
+    // ===================== 实时登录（画面内嵌到管理页） =====================
+
+    /**
+     * 实时登录会话创建结果。
+     *
+     * @param ok           是否成功打开登录窗口
+     * @param message      结果说明（失败时为原因）
+     * @param sessionToken 会话标识（轮询状态 / 取消时回传）
+     * @param livePath     画面嵌入路径（{@code /live/s/<token>}）
+     * @param livePort     画面服务监听端口（失败时为 0；前端拼 {@code http://<后端主机>:<livePort><livePath>} 放进 iframe）
+     * @param loginUrl     实际打开的登录页地址
+     */
+    public record LiveLoginHandle(boolean ok, String message, String sessionToken,
+                                  String livePath, int livePort, String loginUrl) {
+    }
+
+    /**
+     * 实时登录会话状态。
+     *
+     * @param status    pending / success / failed / unknown
+     * @param message   结果说明（终态时有值）
+     * @param tokenMask 截获令牌的掩码（success 时有值，只回掩码不回明文）
+     */
+    public record LiveLoginStatus(String status, String message, String tokenMask) {
+
+        /** 进行中 */
+        public static final String PENDING = "pending";
+
+        /** 登录成功，令牌已追加为余额密钥 */
+        public static final String SUCCESS = "success";
+
+        /** 登录失败 / 超时 / 已取消 */
+        public static final String FAILED = "failed";
+
+        /** 会话不存在或已过期回收 */
+        public static final String UNKNOWN = "unknown";
+    }
+
+    /**
+     * 开启一局「实时登录」：在服务端起无头浏览器打开上游登录页，把画面经
+     * {@link CdpLiveServer} 推成 MJPEG 流、把用户操作经 CDP Input 派发回去，
+     * 前端用 iframe 嵌入即可在管理页里直接操作；后台线程持续按截获钩子嗅探
+     * 令牌，截获即追加为余额密钥。与 {@link #login} 的区别：浏览器不再弹在
+     * 服务端桌面（部署在远端机时用户根本看不到那个窗口），而是画面直达用户浏览器。
+     *
+     * @param entity 供应商
+     * @param spi    余额 SPI 实现（提供登录页与截获钩子；可为 null——按 extra 的通用截获配置执行）
+     * @return 会话创建结果（含嵌入路径；失败带原因）
+     */
+    public LiveLoginHandle startLiveLogin(SysAccountChannel entity, CreditQueryProvider spi) {
+        Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
+        LoginHooks hooks = hooksFor(entity, spi, extra);
+        String loginUrl = hooks.loginUrl();
+        if (!nonBlank(loginUrl)) {
+            return new LiveLoginHandle(false,
+                    "该供应商没有可用的登录页（未收录登录入口，可在扩展配置 credit_login_url 里指定）", null, null, 0, null);
+        }
+        if (!hooks.hasCaptureHook()) {
+            return new LiveLoginHandle(false,
+                    "该供应商未配置令牌截获规则：请补 credit_capture_pattern"
+                            + "（令牌接口地址特征）或 credit_cookie_name / credit_storage_key",
+                    null, null, 0, loginUrl);
+        }
+        CdpLiveServer server;
+        try {
+            server = liveServer();
+        } catch (RuntimeException e) {
+            log.warn("[credit-live-login] 供应商 {} 启动内嵌画面服务失败: {}", entity.getProviderId(), e.getMessage());
+            return new LiveLoginHandle(false, "无法启动登录画面服务：" + e.getMessage(), null, null, 0, loginUrl);
+        }
+        // 无头引擎：画面经 CDP screencast 推流，不依赖服务端桌面（部署在远端机也能登录）
+        CdpBrowserEngine engine = new CdpBrowserEngine();
+        BrowserOptions browserOptions = new BrowserOptions().setHeadless(true).setWidth(1280).setHeight(900);
+        try {
+            engine.start(browserOptions);
+        } catch (RuntimeException e) {
+            engine.close();
+            log.warn("[credit-live-login] 供应商 {} 启动登录浏览器失败: {}", entity.getProviderId(), e.getMessage());
+            return new LiveLoginHandle(false, "无法启动登录浏览器：" + e.getMessage(), null, null, 0, loginUrl);
+        }
+        String sessionToken = UUID.randomUUID().toString().replace("-", "");
+        try {
+            BrowserPage page = engine.openPage(browserOptions);
+            String capturePattern = hooks.capturePattern();
+            if (nonBlank(capturePattern)) {
+                page.addInitScript(captureScript(capturePattern));
+            }
+            page.navigate(loginUrl);
+            LiveSession session = new LiveSession(sessionToken, entity.getProviderId(),
+                    engine, page, hooks, capturePattern);
+            liveSessions.put(sessionToken, session);
+            // 画面/交互接管：同一 token 重复观看时旧流自动让位；会话空闲 30 分钟自动回收
+            server.view(page, sessionToken);
+            Thread worker = new Thread(() -> awaitLiveToken(session),
+                    "credit-live-login-" + sessionToken.substring(0, 8));
+            worker.setDaemon(true);
+            worker.start();
+            log.info("[credit-live-login] 供应商 {} 实时登录窗口已就绪: {}", entity.getProviderId(), sessionToken);
+            return new LiveLoginHandle(true, "登录窗口已就绪，请在画面中完成上游门户登录",
+                    sessionToken, "/live/s/" + sessionToken, server.port(), loginUrl);
+        } catch (RuntimeException e) {
+            engine.close();
+            log.warn("[credit-live-login] 供应商 {} 打开登录页失败: {}", entity.getProviderId(), e.getMessage());
+            return new LiveLoginHandle(false, "打开登录页失败：" + e.getMessage(), null, null, 0, loginUrl);
+        }
+    }
+
+    /**
+     * 查询实时登录会话状态（前端轮询）。
+     *
+     * @param providerId   供应商标识（校验会话归属，防跨供应商读状态）
+     * @param sessionToken 会话标识
+     * @return 会话状态；会话不存在 / 已过期回收返回 unknown
+     */
+    public LiveLoginStatus liveLoginStatus(String providerId, String sessionToken) {
+        LiveSession session = liveSessions.get(sessionToken);
+        if (session == null || !session.providerId.equals(providerId)) {
+            return new LiveLoginStatus(LiveLoginStatus.UNKNOWN, "登录会话不存在或已过期", null);
+        }
+        return new LiveLoginStatus(session.status, session.message, session.tokenMask);
+    }
+
+    /**
+     * 取消实时登录会话：停掉后台嗅探并关闭服务端浏览器（用户关掉弹窗时调用，
+     * 不让无头浏览器空转到超时）。
+     *
+     * @param providerId   供应商标识（校验会话归属）
+     * @param sessionToken 会话标识
+     * @return 是否取消了一个进行中的会话
+     */
+    public boolean cancelLiveLogin(String providerId, String sessionToken) {
+        LiveSession session = liveSessions.get(sessionToken);
+        if (session == null || !session.providerId.equals(providerId)
+                || !LiveLoginStatus.PENDING.equals(session.status)) {
+            return false;
+        }
+        session.cancelled = true;
+        finish(session, LiveLoginStatus.FAILED, "已取消本次登录", null);
+        closeLiveBrowser(session);
+        log.info("[credit-live-login] 供应商 {} 实时登录已取消: {}", providerId, sessionToken);
+        return true;
+    }
+
+    /**
+     * 后台令牌嗅探：与 {@link #login} 同一套截获钩子轮询，截获即追加落库；
+     * 超时 / 异常按 failed 收尾。会话记录保留 {@link #LIVE_RESULT_TTL_MILLIS}
+     * 供前端领取结果，之后由回收器清理。
+     *
+     * @param session 实时登录会话
+     */
+    private void awaitLiveToken(LiveSession session) {
+        String token = null;
+        try {
+            long deadline = System.currentTimeMillis() + TOKEN_WAIT_MILLIS;
+            while (System.currentTimeMillis() < deadline) {
+                // 已取消（浏览器已被关闭）：直接退出，状态由取消方写好
+                if (session.cancelled || liveSessions.get(session.token) != session) {
+                    return;
+                }
+                token = peekToken(session.page, session.hooks, session.capturePattern);
+                if (token != null && !token.isBlank()) {
+                    break;
+                }
+                Thread.sleep(POLL_INTERVAL_MILLIS);
+            }
+            if (session.cancelled) {
+                return;
+            }
+            if (token != null && !token.isBlank()) {
+                persistToken(session.providerId, token);
+                finish(session, LiveLoginStatus.SUCCESS, "登录成功：会话令牌已追加为余额密钥", mask(token));
+                log.info("[credit-live-login] 供应商 {} 登录成功，令牌 {} 已追加",
+                        session.providerId, session.tokenMask);
+            } else {
+                finish(session, LiveLoginStatus.FAILED, "等待登录超时：请在登录窗口内完成上游门户登录后重试", null);
+                log.warn("[credit-live-login] 供应商 {} 等待登录超时", session.providerId);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            finish(session, LiveLoginStatus.FAILED, "登录轮询被中断", null);
+        } catch (RuntimeException e) {
+            // 用户已主动取消（浏览器已关）时不再覆盖取消结果
+            if (session.cancelled) {
+                return;
+            }
+            finish(session, LiveLoginStatus.FAILED, "登录执行失败：" + e.getMessage(), null);
+            log.warn("[credit-live-login] 供应商 {} 登录失败: {}", session.providerId, e.getMessage());
+        } finally {
+            closeLiveBrowser(session);
+        }
+    }
+
+    /**
+     * 写入终态：状态 + 说明 + 令牌掩码一次落定，并记录终态时间供回收器清理。
+     *
+     * @param session   实时登录会话
+     * @param status    终态状态（success / failed）
+     * @param message   结果说明
+     * @param tokenMask 令牌掩码（success 时有值）
+     */
+    private static void finish(LiveSession session, String status, String message, String tokenMask) {
+        session.status = status;
+        session.message = message;
+        session.tokenMask = tokenMask;
+        session.finishedAt = System.currentTimeMillis();
+    }
+
+    /**
+     * 关闭会话的服务端浏览器（页面随引擎一起释放；会话记录保留供领取结果）。
+     *
+     * @param session 实时登录会话
+     */
+    private void closeLiveBrowser(LiveSession session) {
+        if (liveServer != null) {
+            try {
+                liveServer.close(session.token);
+            } catch (Exception e) {
+                log.debug("[credit-live-login] 移除画面会话失败: {}", e.getMessage());
+            }
+        }
+        CdpBrowserEngine engine = session.engine;
+        session.engine = null;
+        session.page = null;
+        if (engine != null) {
+            try {
+                engine.close();
+            } catch (Exception e) {
+                log.debug("[credit-live-login] 关闭登录浏览器失败: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 懒启动内嵌画面服务，并顺带启动终态会话回收器。
+     *
+     * @return 画面服务实例
+     * @throws IllegalStateException 端口监听失败
+     */
+    private CdpLiveServer liveServer() {
+        CdpLiveServer server = liveServer;
+        if (server != null) {
+            return server;
+        }
+        synchronized (this) {
+            if (liveServer == null) {
+                try {
+                    liveServer = CdpLiveServer.start();
+                } catch (IOException e) {
+                    throw new IllegalStateException("启动登录画面服务失败：" + e.getMessage(), e);
+                }
+                ScheduledThreadPoolExecutor reaper = new ScheduledThreadPoolExecutor(1, runnable -> {
+                    Thread thread = new Thread(runnable, "credit-live-login-reaper");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+                reaper.scheduleWithFixedDelay(this::reapLiveSessions,
+                        LIVE_REAPER_PERIOD_SECONDS, LIVE_REAPER_PERIOD_SECONDS, TimeUnit.SECONDS);
+                liveReaper = reaper;
+                log.info("[credit-live-login] 内嵌登录画面服务已启动: 端口 {}", liveServer.port());
+            }
+            return liveServer;
+        }
+    }
+
+    /**
+     * 回收已出终态且超过保留时长的会话记录（浏览器引擎在出终态时已关闭，
+     * 这里只清记录本身，让迟到的轮询在保留期内仍能拿到结果）。
+     */
+    private void reapLiveSessions() {
+        long deadline = System.currentTimeMillis() - LIVE_RESULT_TTL_MILLIS;
+        for (LiveSession session : liveSessions.values()) {
+            if (!LiveLoginStatus.PENDING.equals(session.status) && session.finishedAt > 0
+                    && session.finishedAt < deadline) {
+                liveSessions.remove(session.token);
+            }
+        }
+    }
+
+    /**
+     * 释放内嵌画面服务与回收器（应用停机时）。
+     */
+    @PreDestroy
+    public void shutdownLiveLogin() {
+        ScheduledThreadPoolExecutor reaper = liveReaper;
+        liveReaper = null;
+        if (reaper != null) {
+            reaper.shutdownNow();
+        }
+        liveSessions.values().forEach(this::closeLiveBrowser);
+        liveSessions.clear();
+        CdpLiveServer server = liveServer;
+        liveServer = null;
+        if (server != null) {
+            server.close();
+        }
+    }
+
+    /**
+     * 一局实时登录会话：持有服务端无头浏览器与截获钩子，状态字段供前端轮询。
+     */
+    private static final class LiveSession {
+
+        /** 会话标识（即画面服务的路径令牌） */
+        final String token;
+
+        /** 供应商标识（状态 / 取消接口校验归属） */
+        final String providerId;
+
+        /** 截获钩子集 */
+        final LoginHooks hooks;
+
+        /** 令牌交换接口地址特征（可为 null） */
+        final String capturePattern;
+
+        /** 服务端无头浏览器引擎（出终态或取消时关闭置 null） */
+        volatile CdpBrowserEngine engine;
+
+        /** 登录页面（随引擎释放） */
+        volatile BrowserPage page;
+
+        /** 状态：pending / success / failed */
+        volatile String status = LiveLoginStatus.PENDING;
+
+        /** 结果说明（终态时有值） */
+        volatile String message = "";
+
+        /** 截获令牌掩码（success 时有值） */
+        volatile String tokenMask;
+
+        /** 是否已被用户取消 */
+        volatile boolean cancelled;
+
+        /** 终态时间（回收器据此清理记录；0 = 未终态） */
+        volatile long finishedAt;
+
+        LiveSession(String token, String providerId, CdpBrowserEngine engine, BrowserPage page,
+                    LoginHooks hooks, String capturePattern) {
+            this.token = token;
+            this.providerId = providerId;
+            this.engine = engine;
+            this.page = page;
+            this.hooks = hooks;
+            this.capturePattern = capturePattern;
+        }
     }
 
     /**

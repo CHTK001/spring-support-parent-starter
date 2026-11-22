@@ -68,6 +68,32 @@ public class MdcThreadLocalAccessor implements ThreadLocalAccessor<Map<String, S
     }
 
     /**
+     * 无快照映射时清理线程变量：提交线程没有 MDC 现场时，context-propagation
+     * 会调用本方法（而非 {@link #setValue(Map)}）清空工作线程的 MDC
+     * （{@code DefaultContextSnapshot.clearThreadLocal} → 无参 {@code setValue()}）。
+     * <p>不实现时落入接口默认 {@code reset()} 抛 {@code IllegalStateException}，
+     * 且异常发生在任务体执行之前，Reactor 调度任务会被 executor 静默吞掉。</p>
+     * <p>与 {@link #setValue(Map)} 同样先压栈当前现场（空现场以空 Map 占位），
+     * 保证与 {@link #restore()} 的压入/弹出次数一致。</p>
+     */
+    @Override
+    public void setValue() {
+        Map<String, String> previous = MDC.getCopyOfContextMap();
+        previousStack().push(previous == null ? Collections.emptyMap() : previous);
+        MDC.clear();
+    }
+
+    /**
+     * 兜底清理：context-propagation 1.2.1 中仅由无参 {@code setValue()} 的接口
+     * 默认实现调用（本类已覆盖该默认），此处保持全量清理语义，防其他路径直达。
+     */
+    @Override
+    public void reset() {
+        PREVIOUS.remove();
+        MDC.clear();
+    }
+
+    /**
      * 信号处理结束：弹出并恢复最近一次 setValue 前的现场。
      */
     @Override

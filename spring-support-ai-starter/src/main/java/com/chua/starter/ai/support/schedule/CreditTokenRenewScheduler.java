@@ -296,6 +296,9 @@ public class CreditTokenRenewScheduler {
     /**
      * 判断令牌是否「该续期了」。
      *
+     * <p>多账号逐 Key 判定：{@code extra.credit_key} 里任一令牌到点即判到点
+     * （执行器会逐 Key 各回访一次，互不影响）。</p>
+     *
      * <p>JWT 令牌（解得出 exp）：到期前 {@code credit_renew_ahead_minutes}（默认 30
      * 分钟）即判到点；已过期的令牌也判到点——门户会话可能仍活着，回访一次还有救，
      * 救不回来会走告警转人工。非 JWT 令牌（解不出 exp）：按上次续期时间 +
@@ -310,18 +313,24 @@ public class CreditTokenRenewScheduler {
         if (extra == null) {
             return false;
         }
-        String token = str(extra, "credit_key");
-        if (token == null) {
+        List<String> keys = ProviderCreditLoginService.splitCreditKeys(str(extra, "credit_key"));
+        if (keys.isEmpty()) {
             return false;
         }
-        Long expireAt = CreditTokens.expireAtMs(token);
-        if (expireAt != null) {
-            long ahead = minutes(extra, "credit_renew_ahead_minutes", DEFAULT_AHEAD_MINUTES);
-            return now >= expireAt - ahead * 60_000L;
-        }
+        long ahead = minutes(extra, "credit_renew_ahead_minutes", DEFAULT_AHEAD_MINUTES);
         long interval = minutes(extra, "credit_renew_interval_minutes", DEFAULT_INTERVAL_MINUTES);
         Long last = longOf(extra.get("credit_last_renew_at"));
-        return last == null || now >= last + interval * 60_000L;
+        for (String token : keys) {
+            Long expireAt = CreditTokens.expireAtMs(token);
+            if (expireAt != null) {
+                if (now >= expireAt - ahead * 60_000L) {
+                    return true;
+                }
+            } else if (last == null || now >= last + interval * 60_000L) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

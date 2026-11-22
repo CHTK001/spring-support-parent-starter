@@ -19,6 +19,16 @@ SET @has_role_source := (
     SELECT COUNT(*) FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_role' AND COLUMN_NAME = 'sys_ai_role_source'
 );
+-- 第 1 步：存量库若由旧版 V7.0 建表（无 sys_ai_role_source 列），先补列再回填；
+-- 列已存在（新版 V7.0 建表 / 重复执行）时跳过，保持幂等。
+SET @sql_role_add_source_column := IF(@has_role_table > 0 AND @has_role_source = 0,
+    CONCAT('ALTER TABLE sys_ai_role',
+           ' ADD COLUMN sys_ai_role_source VARCHAR(32) NOT NULL DEFAULT ''user''',
+           ' COMMENT ''角色来源：user 用户角色库；world-sim 世界沙盒 AI 生成的模拟 NPC（角色列表不展示）'''),
+    'SELECT 1');
+PREPARE stmt_role_add_source_column FROM @sql_role_add_source_column;
+EXECUTE stmt_role_add_source_column;
+DEALLOCATE PREPARE stmt_role_add_source_column;
 -- 归属口径与 V7.0 播种一致：只回填管理员（admin）名下的种子角色，避免误伤
 -- 其它用户自建的同 code 角色；sys_user 不存在（纯 ai 库）时不加归属条件。
 SET @has_user_table := (
@@ -28,7 +38,8 @@ SET @has_user_table := (
 SET @owner_scope := IF(@has_user_table > 0,
     ' AND user_id = COALESCE((SELECT sys_user_id FROM sys_user WHERE sys_user_username = ''admin'' ORDER BY sys_user_id LIMIT 1), user_id)',
     '');
-SET @sql_role_source_backfill := IF(@has_role_table > 0 AND @has_role_source > 0,
+-- 第 2 步：回填种子角色（此时列必然存在：第 1 步已保证），只回填非 world-sim 行
+SET @sql_role_source_backfill := IF(@has_role_table > 0,
     CONCAT('UPDATE sys_ai_role',
            ' SET sys_ai_role_source = ''world-sim''',
            ' WHERE sys_ai_role_source <> ''world-sim''',

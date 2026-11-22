@@ -233,6 +233,22 @@ public class FreeChannelChatClient implements RouterChatClient {
      * @return 对话客户端
      */
     public static ChatClient forChannel(String extension, String apiKey) {
+        return forChannel(extension, apiKey, null);
+    }
+
+    /**
+     * 为渠道管理里的一个对话渠道建客户端，并允许本次请求临时指定上游地址。
+     *
+     * <p>{@code baseUrl} 面向 OpenAI 兼容的自定义网关（如 one-api / vLLM）：
+     * 只挂到本次路由目标上，随 {@link RouteTarget#toSetting(ChatClientSetting)} 落到
+     * 上游客户端；为空时按渠道自身缺省地址解析。令牌与地址都只在本请求内生效，不落任何存储。</p>
+     *
+     * @param extension 渠道底层 {@code ChatClient} 扩展名（如 {@code duckduckgo}）
+     * @param apiKey    本次请求使用的凭据；为空表示免鉴权
+     * @param baseUrl   本次请求的上游地址；为空用渠道缺省地址
+     * @return 对话客户端
+     */
+    public static ChatClient forChannel(String extension, String apiKey, String baseUrl) {
         if (StringUtils.isBlank(extension)) {
             throw new IllegalStateException("渠道未声明 ChatClient 扩展名");
         }
@@ -240,6 +256,7 @@ public class FreeChannelChatClient implements RouterChatClient {
                 ChatClientSetting.builder().provider(EXTENSION).build());
         client.register(DEFAULT_ROUTE, RouteTarget.builder()
                 .provider(extension)
+                .baseUrl(StringUtils.isBlank(baseUrl) ? null : baseUrl)
                 .apiKey(StringUtils.isBlank(apiKey) ? null : apiKey)
                 .authScheme("none")
                 .build());

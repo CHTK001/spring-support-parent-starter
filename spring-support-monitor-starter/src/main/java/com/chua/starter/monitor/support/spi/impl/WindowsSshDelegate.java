@@ -392,7 +392,9 @@ public class WindowsSshDelegate implements SystemInfoProvider {
                     toLong(p.get(7)),
                     p.get(9).trim(),
                     p.get(6).trim(),
-                    p.get(8).trim()));
+                    p.get(8).trim(),
+                    "",
+                    false));
             cpuTimes.add(time(p.get(3)) + time(p.get(4)));
         }
         double sum = cpuTimes.stream().mapToDouble(Double::doubleValue).sum();
@@ -401,6 +403,8 @@ public class WindowsSshDelegate implements SystemInfoProvider {
                 list.set(i, list.get(i).withCpu(Math.round(cpuTimes.get(i) / sum * 1000) / 10.0));
             }
         }
+        // Win32_Process 为本机全表，无主（父进程已退出）在整表范围判定；Windows 无僵尸状态
+        list = ProcessRowVO.markOrphans(list);
         list.sort((a, b) -> Double.compare(b.cpu(), a.cpu()));
         return paginate(list, page, sz);
     }

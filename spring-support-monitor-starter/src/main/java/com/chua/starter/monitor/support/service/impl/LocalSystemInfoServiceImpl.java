@@ -41,9 +41,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -409,6 +411,12 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
             for (OSProcess prev : lastProcesses.get()) {
                 priorByPid.put(prev.getProcessID(), prev);
             }
+            // 无主判定用的 pid 集合：本机通道取的是 CPU 降序快照窗口（SSH/Agent 通道为全表），
+            // 窗口外的低负载父进程存在误判可能，属已知近似
+            Set<Integer> pidSet = new HashSet<>(procs.size() * 2);
+            for (OSProcess cur : procs) {
+                pidSet.add(cur.getProcessID());
+            }
             String kw = keyword == null || keyword.isBlank() ? null : keyword.toLowerCase(Locale.ROOT);
             for (OSProcess p : procs) {
                 if (result.size() >= limit) {
@@ -428,9 +436,10 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                 if (load > 1) {
                     load = 1;
                 }
+                int ppid = p.getParentProcessID();
                 result.add(new ProcessRowVO(
                         p.getProcessID(),
-                        p.getParentProcessID(),
+                        ppid,
                         p.getName(),
                         p.getUser(),
                         round(load * 100),
@@ -438,7 +447,9 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
                         p.getThreadCount(),
                         formatEpoch(p.getStartTime()),
                         p.getCommandLine(),
-                        p.getPath()));
+                        p.getPath(),
+                        stateLetter(p),
+                        ppid > 0 && !pidSet.contains(ppid)));
             }
             // 缓存本次快照供下一周期 between-ticks
             lastProcesses.set(procs);
@@ -446,6 +457,43 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
             log.warn("OSHI 进程采集失败: {}", t.getMessage());
         }
         return result;
+    }
+
+    /**
+     * OSHI 进程状态 → ps 风格状态首字母（R/S/D/T/Z...），与前端状态文案映射对齐。
+     *
+     * <p>用枚举名前缀映射而非 switch 枚举值，避免对 OSHI 版本的枚举成员集合产生编译期依赖。</p>
+     *
+     * @param p OSHI 进程
+     * @return 状态首字母，取不到返回空串
+     */
+    private static String stateLetter(OSProcess p) {
+        if (p == null || p.getState() == null) {
+            return "";
+        }
+        String n = p.getState().name();
+        if (n.startsWith("ZOMBIE")) {
+            return "Z";
+        }
+        if (n.startsWith("RUNNING") || n.startsWith("READY")) {
+            return "R";
+        }
+        if (n.startsWith("SLEEPING") || n.startsWith("INTERRUPTIBLE")) {
+            return "S";
+        }
+        if (n.startsWith("WAITING")) {
+            return "D";
+        }
+        if (n.startsWith("STOPPED") || n.startsWith("TRACED")) {
+            return "T";
+        }
+        if (n.startsWith("TERMINATED")) {
+            return "X";
+        }
+        if (n.startsWith("NEW")) {
+            return "N";
+        }
+        return "";
     }
 
     @Override

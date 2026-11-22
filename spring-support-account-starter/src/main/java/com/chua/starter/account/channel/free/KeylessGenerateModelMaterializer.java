@@ -7,6 +7,7 @@ import com.chua.starter.account.channel.service.AccountChannelModelService;
 import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
+import com.chua.starter.account.spi.ImageChannelProvider;
 import com.chua.starter.common.support.channel.KeylessMediaChannel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -187,6 +188,14 @@ public class KeylessGenerateModelMaterializer implements ApplicationRunner {
             }
             Map<String, Object> cap = new LinkedHashMap<>(2);
             cap.put("task", name);
+            // 模型级生成能力由渠道声明（如 Pollinations kontext 的参考图），
+            // 并入 capabilities[].generate 节点，前端据此展示参考图入口。
+            if (channel instanceof ImageChannelProvider) {
+                Map<String, Object> generate = ((ImageChannelProvider) channel).generateCapability(id);
+                if (generate != null && !generate.isEmpty()) {
+                    cap.put("generate", generate);
+                }
+            }
             caps.add(cap);
         }
         if (caps.isEmpty()) {

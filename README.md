@@ -47,7 +47,7 @@ flowchart TB
         RT["实时通信<br/>socket* / sync / rpc"]
         AI["AI 与观测<br/>ai / ai-training / eduai / ueba<br/>datasearch / apm* / hotsport / agent"]
         DEV["设备与资产<br/>device / server / docker / software<br/>control / cdp / filesystem / ssh"]
-        OPS["运维与监控<br/>monitor / report-client / collect / datasync"]
+        OPS["运维与监控<br/>monitor / collect / datasync"]
         TUN["隧道与云<br/>tunnel* / tencent / aliyun"]
         GOV["任务与治理<br/>job / taskdistribution / discovery<br/>configcenter / osgi / bundle / lowcode / account"]
     end
@@ -78,7 +78,7 @@ flowchart TB
 | 实时通信 | socket、socket-websocket、socket-io、socket-sse、socket-rsocket、sync、rpc | `SocketSessionTemplate`、`SseTemplate`、`SyncServer`/`SyncClient`、`@RpcService`/`@RpcResource` |
 | 任务与治理 | job、taskdistribution、datasync、collect、discovery、configcenter、osgi、bundle、lowcode | `JobOperator`、`DataSyncServer`、`DiscoveryService`、`ConfigCenter`、`BundleManagerService`、`LowFormService` |
 | AI | ai、ai-training、eduai、ueba、datasearch、agent | `ChatClientRegistry`、`AgentRegistry`、`SysAiUsageService`、`UebaEngine`、`AgentAttachService` |
-| 可观测 | apm、apm-skywalking、apm-hotspot、hotsport、monitor、report-client | `ApmRegistry`、`ApmDispatcher`、`ApmQueryService`、`SseSocketSessionTemplate` |
+| 可观测 | apm、apm-skywalking、apm-hotspot、hotsport、monitor | `ApmRegistry`、`ApmDispatcher`、`ApmQueryService`、`SseSocketSessionTemplate` |
 | 设备与资产 | device、server、docker、software、control、cdp、filesystem、ssh | `DeviceProvider`、`DeviceSession`、`FileStorageTemplate`、`FileServerManager`、`SshServerService`、`WebRtcServer` |
 | 隧道与云 | tunnel、tunnel-ngrok、tunnel-cloudflared、tunnel-tailscale、tencent、aliyun | `TunnelProvider`、`TencentWechatPayGateway`、`AliyunAlipayGateway`、`AlipayClient` |
 
@@ -118,7 +118,6 @@ flowchart TB
 | spring-support-aliyun-starter | 支付宝开放平台集成：下单/查单/退款/单笔转账/通知验签 + 支付宝登录（仅支付宝） | [README.md](spring-support-aliyun-starter/README.md) |
 | spring-support-ssh-starter | Apache SSHD 的 SSH 服务端：随应用启动可登录的 SSH/SFTP 服务端（默认关闭） | [README.md](spring-support-ssh-starter/README.md) |
 | spring-support-job-starter | 自研分布式任务调度：`@Job` + `@Scheduled` 双扫描，SCHEDULER/EXECUTOR/SINGLE 三角色 | [README.md](spring-support-job-starter/README.md) |
-| spring-support-report-client-starter | 监控被控端 Agent：定时上报应用/设备指标/URL QPS，接收服务端下发作业与控制指令 | [README.md](spring-support-report-client-starter/README.md) |
 | spring-support-tunnel-starter | 内网穿透统一入口：`TunnelProvider` SPI 折叠 ngrok/cloudflared/tailscale 差异 | [README.md](spring-support-tunnel-starter/README.md) |
 | spring-support-tunnel-ngrok-starter | ngrok 官方 Agent SDK 实现：本机服务自动暴露公网 URL，无需独立 ngrok CLI | [README.md](spring-support-tunnel-ngrok-starter/README.md) |
 | spring-support-tunnel-cloudflared-starter | Cloudflare Tunnel：管理外部 `cloudflared` 子进程，免账号 Quick Tunnel 开箱可用 | [README.md](spring-support-tunnel-cloudflared-starter/README.md) |
@@ -202,7 +201,7 @@ com.chua.starter.redis.support.LockTemplateConfiguration
 
 ### 5.3 spring.factories 扩展点
 
-仓库里另有 **9 个** `spring.factories`（common、datasource、swagger、oauth-client、configcenter、console、report-client、server、taskdistribution），它们**不是自动配置**，只注册 `EnvironmentPostProcessor`、`AdviceResolver`、`Protocol` 等扩展点（配置中心、数据源、Swagger、OAuth 的环境预处理都靠它，早于容器启动）。
+仓库里另有 **8 个** `spring.factories`（common、datasource、swagger、oauth-client、configcenter、console、server、taskdistribution），它们**不是自动配置**，只注册 `EnvironmentPostProcessor`、`AdviceResolver`、`Protocol` 等扩展点（配置中心、数据源、Swagger、OAuth 的环境预处理都靠它，早于容器启动）。
 
 ### 5.4 开关：`enable` 与 `enabled` 并存
 
@@ -218,7 +217,6 @@ com.chua.starter.redis.support.LockTemplateConfiguration
 | socket | `plugin.socket.enable` | 关 |
 | socket-websocket | `plugin.websocket.enable` | 关 |
 | ssh 服务端 | `plugin.ssh.server.enabled` | 关 |
-| report-client | `plugin.report.client.enable` | 关（自动配置另需容器内有 `SyncClient`，见 5.5） |
 | bundle | `plugin.bundle.enabled` | 关 |
 | config-center | `plugin.config-center.enable` | 关 |
 | oauth-client | `plugin.oauth.enable` | 开 |
@@ -243,7 +241,7 @@ com.chua.starter.redis.support.LockTemplateConfiguration
 2. **排除自动配置**：`spring.autoconfigure.exclude=com.chua.starter.xxx.XxxAutoConfiguration`，适合某个类反复抢 Bean；
 3. **同名覆盖**：Boot 默认禁止 Bean 覆盖，必须同时设 `spring.main.allow-bean-definition-overriding=true`，只建议在迁移期临时使用。
 
-`@ConditionalOnClass` 决定“类路径有才装配”：例如 `spring-support-cache-starter` 的 Redis 缓存配置要求 classpath 有 spring-data-redis，`report-client` 要求容器里有 `SyncClient`。加依赖后没生效，先看这两类条件。
+`@ConditionalOnClass` 决定“类路径有才装配”：例如 `spring-support-cache-starter` 的 Redis 缓存配置要求 classpath 有 spring-data-redis。加依赖后没生效，先看这两类条件。
 
 ### 5.6 配置绑定规则
 
@@ -315,7 +313,7 @@ flowchart LR
 | monitor | `plugin.monitor.agent` / `.influx` / `.ssh` / `.timeseries`、`plugin.monitor.tshark`（含 `.retention`） |
 | ai | `plugin.ai.chat`、`plugin.ai.default-model`、`plugin.ai.generate`、`plugin.ai.rag` |
 | ai-training | `plugin.ai.training` |
-| eduai、agent、ueba、apm、apm-skywalking、hotsport、report-client | `plugin.eduai`、`plugin.agent`、`plugin.ueba`、`plugin.apm`、`plugin.apm.skywalking`、`plugin.hotsport`、`plugin.report.client` |
+| eduai、agent、ueba、apm、apm-skywalking、hotsport | `plugin.eduai`、`plugin.agent`、`plugin.ueba`、`plugin.apm`、`plugin.apm.skywalking`、`plugin.hotsport` |
 | discovery、configcenter、console、osgi、bundle、collect、datasync、lowcode | `plugin.discovery`、`plugin.config-center`、`plugin.console`、`plugin.osgi`、`plugin.bundle`、`plugin.collect`、`plugin.datasync`、`plugin.lowcode` |
 | oauth-client、swagger、tunnel、tunnel-ngrok、tunnel-cloudflared、tunnel-tailscale、cdp、tencent、aliyun | `plugin.oauth`、`plugin.swagger`、`plugin.swagger.export`、`plugin.tunnel`、`plugin.ngrok`、`plugin.cloudflared`、`plugin.tailscale`、`spring.cdp`、`plugin.tencent.mini-app` / `.open-platform` / `.wechat-pay`、`plugin.aliyun.alipay` |
 
@@ -358,7 +356,7 @@ flowchart LR
 - **标准 Web 后端**：common + datasource + mybatis + redis + cache + job + swagger + oauth-client——统一响应/异常/线程池 + 数据访问 + 缓存 + 调度 + 文档 + 认证；
 - **账号与消息能力**：基础组合 + account + oauth-client——账号、渠道、消息模板、临时邮箱都在 account；
 - **AI 应用 / 模型网关**：ai + account + redis + cache——ai 负责对话/生成/路由/用量，渠道与凭据由 account 管，经 `ChatClient` SPI 打通（account 侧提供 `FreeChannelChatClient` 等免登录实现）；
-- **设备接入与监控**：device + monitor + socket-websocket + report-client——设备 SPI 接海康/大华/宇视/GB28181/ONVIF，时序与告警走 monitor，实时推送走 WebSocket；
+- **设备接入与监控**：device + monitor + socket-websocket——设备 SPI 接海康/大华/宇视/GB28181/ONVIF，时序与告警走 monitor，实时推送走 WebSocket；
 - **文件与对象存储**：filesystem（需要公网回调时加 tunnel-*）——多 Provider 存储 + 内嵌文件服务器；
 - **数据集成 / 同步**：datasync + datasource + queue——目录/数据库映射同步，队列做削峰与失败重放；
 - **APM 观测**：apm + apm-skywalking（或 apm-hotspot）+ hotsport + agent——门面聚合 Provider，hotsport 提供观测台，agent 做 JVM 自注入；

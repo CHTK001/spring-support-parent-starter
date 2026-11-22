@@ -161,6 +161,71 @@ public interface ImageChannelProvider extends ChannelProvider, KeylessMediaChann
     }
 
     /**
+     * 本渠道是否支持参考图（图生图）。
+     *
+     * <p>默认不支持；具备图生图能力的渠道覆盖本方法返回 {@code true}。</p>
+     *
+     * @return true 表示渠道具备图生图能力
+     */
+    default boolean supportsReferenceImage() {
+        return false;
+    }
+
+    /**
+     * 本渠道对指定模型是否支持参考图（图生图）。
+     *
+     * <p>渠道整体具备图生图能力时，具体模型也可能不支持（如 Pollinations 的
+     * flux / turbo 只能文生图，kontext 等编辑模型才支持）。默认沿用渠道级结论；
+     * 有模型级差异的渠道覆盖本方法。</p>
+     *
+     * @param model 模型标识，可为空
+     * @return true 表示该模型支持参考图
+     */
+    default boolean supportsReferenceImage(String model) {
+        return supportsReferenceImage();
+    }
+
+    /**
+     * 渠道为指定模型声明的生成能力节点（并入免登录模型目录的 capabilities）。
+     *
+     * <p>例如对支持参考图的模型声明 {@code generate.referenceImage=true}，
+     * 前端据此展示参考图入口。返回 {@code null} 表示无额外能力声明。</p>
+     *
+     * @param model 模型标识
+     * @return generate 能力节点，可为 {@code null}
+     */
+    default Map<String, Object> generateCapability(String model) {
+        return null;
+    }
+
+    /**
+     * 生成图片（参考图感知重载）。
+     *
+     * <p>带参考图时走图生图（img2img）；参考图为空时等价于
+     * {@link #generate(String, String, int, int, int, String)}。
+     * 渠道未覆盖本方法时视为不支持参考图，直接抛
+     * {@link UnsupportedOperationException}，由上层在任务落库前给出明确错误，
+     * 绝不允许静默忽略参考图按文生图出图。</p>
+     *
+     * @param prompt         提示词
+     * @param ratio          宽高比（如 {@code 1:1}），可为空
+     * @param n              张数，至少 1
+     * @param width          宽度（0 表示按 ratio）
+     * @param height         高度（0 表示按 ratio）
+     * @param model          出图模型；为空时用渠道默认模型
+     * @param referenceImage 参考图字节，可为空
+     * @param apiKey         渠道 API Key（来自渠道行凭据），可为空
+     * @return 生成结果
+     */
+    default ImageGenerationResult generate(String prompt, String ratio, int n, int width, int height, String model,
+            byte[] referenceImage, String apiKey) {
+        if (referenceImage == null || referenceImage.length == 0) {
+            return generate(prompt, ratio, n, width, height, model);
+        }
+        throw new UnsupportedOperationException("渠道 " + channel() + " 不支持参考图（图生图）");
+    }
+
+    /**
      * 文生图渠道固定为 {@link ChannelKind#IMAGE}。
      *
      * @return {@link ChannelKind#IMAGE}

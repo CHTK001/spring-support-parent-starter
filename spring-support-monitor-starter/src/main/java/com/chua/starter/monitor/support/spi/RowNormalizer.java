@@ -109,9 +109,12 @@ public final class RowNormalizer {
                     first(text(row, "startTime", "StartTime", "started"), ""),
                     first(text(row, "command", "Command", "args", "cmdline", "CommandLine"),
                             text(row, "path", "Path", "executablePath")),
-                    text(row, "path", "Path", "executablePath", "ExecutablePath")));
+                    text(row, "path", "Path", "executablePath", "ExecutablePath"),
+                    first(text(row, "state", "State", "processState", "status"), ""),
+                    false));
         }
-        return out;
+        // Agent 上报的是本机全表，无主（父进程已退出）在整表范围判定
+        return ProcessRowVO.markOrphans(out);
     }
 
     /**
