@@ -8,13 +8,16 @@ import com.chua.starter.job.support.log.JobLogQuery;
 import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
+import com.chua.starter.job.support.manage.vo.JobDurationStatsVO;
 import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobFailureTopVO;
 import com.chua.starter.job.support.manage.vo.JobLinkMetricsVO;
 import com.chua.starter.job.support.manage.vo.JobLogContentVO;
 import com.chua.starter.job.support.manage.vo.JobNodeVO;
 import com.chua.starter.job.support.manage.vo.JobLogVO;
 import com.chua.starter.job.support.manage.vo.JobRuntimeVO;
 import com.chua.starter.job.support.manage.vo.JobSummaryVO;
+import com.chua.starter.job.support.manage.vo.JobTrendPointVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -201,6 +204,71 @@ public class JobManageController {
     @PostMapping("/log/cleanup")
     public ReturnResult<Integer> cleanupLogs(@RequestParam(defaultValue = "30") int retentionDays) {
         return governance.cleanupLogs(retentionDays);
+    }
+
+    /**
+     * 执行日志按小时聚合趋势 (总数 / 成功 / 失败 / 跳过)。
+     *
+     * <p>总览页趋势图走这里取数, 替代把窗口内日志全量拉到前端再本地分桶;
+     * 与采集控制台出口 {@code /v2/scheduler/log/trend} 是同一份实现。</p>
+     *
+     * @param startTime 开始毫秒, 缺省为 24 小时前
+     * @param endTime   结束毫秒, 缺省为当前时刻
+     * @param group     任务分组, 可空
+     * @return 趋势点列表 (按桶起点升序)
+     */
+    @Operation(summary = "执行日志小时趋势")
+    @GetMapping("/log/trend")
+    public ReturnResult<List<JobTrendPointVO>> logTrend(@RequestParam(required = false) Long startTime,
+                                                        @RequestParam(required = false) Long endTime,
+                                                        @RequestParam(required = false) String group) {
+        return governance.logTrend(startTime, endTime, group);
+    }
+
+    /**
+     * 执行失败次数 Top N。
+     *
+     * @param startTime 开始毫秒, 缺省为 24 小时前
+     * @param endTime   结束毫秒, 缺省为当前时刻
+     * @param group     任务分组, 可空
+     * @param limit     最多返回的任务数, 缺省 10, 上限 50
+     * @return 失败排名列表 (按失败次数降序)
+     */
+    @Operation(summary = "执行失败次数 Top N")
+    @GetMapping("/log/failure-top")
+    public ReturnResult<List<JobFailureTopVO>> logFailureTop(@RequestParam(required = false) Long startTime,
+                                                             @RequestParam(required = false) Long endTime,
+                                                             @RequestParam(required = false) String group,
+                                                             @RequestParam(required = false) Integer limit) {
+        return governance.logFailureTop(startTime, endTime, group, limit);
+    }
+
+    /**
+     * 执行耗时统计 (总数 / 平均 / 最大 / P95)。
+     *
+     * @param startTime 开始毫秒, 缺省为 24 小时前
+     * @param endTime   结束毫秒, 缺省为当前时刻
+     * @param group     任务分组, 可空
+     * @return 耗时统计
+     */
+    @Operation(summary = "执行耗时统计")
+    @GetMapping("/log/duration-stats")
+    public ReturnResult<JobDurationStatsVO> logDurationStats(@RequestParam(required = false) Long startTime,
+                                                             @RequestParam(required = false) Long endTime,
+                                                             @RequestParam(required = false) String group) {
+        return governance.logDurationStats(startTime, endTime, group);
+    }
+
+    /**
+     * 预览按保留天数清理将删除的日志条数 (只读, 不执行删除)。
+     *
+     * @param retentionDays 保留天数, 0 表示清空全部
+     * @return 将删除条数
+     */
+    @Operation(summary = "清理日志条数预览")
+    @GetMapping("/log/cleanup/preview")
+    public ReturnResult<Long> cleanupPreview(@RequestParam(defaultValue = "30") int retentionDays) {
+        return governance.cleanupPreview(retentionDays);
     }
 
     /**

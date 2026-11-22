@@ -61,4 +61,55 @@ public interface JobLogRepository {
     default List<JobLogRecord> latestByJobKeys(Collection<String> jobKeys) {
         return List.of();
     }
+
+    /**
+     * 按小时聚合执行趋势 (总数 / 成功 / 失败 / 跳过)。
+     *
+     * <p>供总览页趋势图取数, 替代「把窗口内日志全量拉到前端再本地分桶」。
+     * 条件只认时间窗与分组, 结果按桶起点升序; 窗口内没有日志的桶不在结果里,
+     * 是否补零由调用方决定。</p>
+     *
+     * @param condition 查询条件 (时间窗 + 分组, 其余字段忽略), 可为空
+     * @return 趋势点列表, 无实现时为空
+     */
+    default List<JobLogTrendPoint> hourlyTrend(JobLogQuery condition) {
+        return List.of();
+    }
+
+    /**
+     * 统计窗口内失败次数最多的任务 (Top N)。
+     *
+     * <p>只统计 {@code executeCode=FAILURE} 的日志行, 按失败次数降序; 次数相同时按
+     * 最近失败时刻倒序, 让「刚坏的任务」排在前面。</p>
+     *
+     * @param condition 查询条件 (时间窗 + 分组, 其余字段忽略), 可为空
+     * @param limit     最多返回的任务数
+     * @return 失败排名列表, 无实现时为空
+     */
+    default List<JobLogFailureTop> failureTop(JobLogQuery condition, int limit) {
+        return List.of();
+    }
+
+    /**
+     * 统计窗口内执行耗时 (总数 / 平均 / 最大 / P95)。
+     *
+     * @param condition 查询条件 (时间窗 + 分组, 其余字段忽略), 可为空
+     * @return 耗时统计, 无实现时为全空统计
+     */
+    default JobLogDurationStats durationStats(JobLogQuery condition) {
+        return new JobLogDurationStats(0L, null, null, null);
+    }
+
+    /**
+     * 预览按保留天数清理将删除的日志条数, 不执行删除。
+     *
+     * <p>供清理确认框展示「将会删掉多少条」; 口径与 {@link #cleanup(int)} 完全一致,
+     * {@code retentionDays <= 0} 表示清空全部。</p>
+     *
+     * @param retentionDays 保留天数, 小于等于 0 表示清空全部
+     * @return 将删除条数, 无实现时为 0
+     */
+    default long cleanupPreview(int retentionDays) {
+        return 0L;
+    }
 }

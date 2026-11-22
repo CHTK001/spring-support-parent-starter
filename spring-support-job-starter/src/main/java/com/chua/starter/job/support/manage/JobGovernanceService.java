@@ -15,19 +15,25 @@ import com.chua.starter.job.support.execute.ScriptGlueHandlers;
 import com.chua.starter.job.support.handler.BeanJobHandler;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
+import com.chua.starter.job.support.log.JobLogDurationStats;
+import com.chua.starter.job.support.log.JobLogFailureTop;
 import com.chua.starter.job.support.log.JobLogQuery;
 import com.chua.starter.job.support.log.JobLogRecord;
 import com.chua.starter.job.support.log.JobLogRepository;
+import com.chua.starter.job.support.log.JobLogTrendPoint;
 import com.chua.starter.job.support.manage.dto.JobScheduleDTO;
 import com.chua.starter.job.support.manage.dto.JobSpecDTO;
 import com.chua.starter.job.support.manage.dto.JobStatusDTO;
+import com.chua.starter.job.support.manage.vo.JobDurationStatsVO;
 import com.chua.starter.job.support.manage.vo.JobExecutorVO;
+import com.chua.starter.job.support.manage.vo.JobFailureTopVO;
 import com.chua.starter.job.support.manage.vo.JobLinkMetricsVO;
 import com.chua.starter.job.support.manage.vo.JobLogContentVO;
 import com.chua.starter.job.support.manage.vo.JobLogVO;
 import com.chua.starter.job.support.manage.vo.JobNodeVO;
 import com.chua.starter.job.support.manage.vo.JobRuntimeVO;
 import com.chua.starter.job.support.manage.vo.JobSummaryVO;
+import com.chua.starter.job.support.manage.vo.JobTrendPointVO;
 import com.chua.starter.job.support.metrics.JobLinkMetrics;
 import com.chua.starter.job.support.operate.JobOperator;
 import com.chua.starter.job.support.sync.GlueSyncService;
@@ -75,6 +81,26 @@ public class JobGovernanceService {
      * 统计「最近失败」时回溯的时间窗毫秒
      */
     private static final long FAILURE_WINDOW_MS = 24L * 60L * 60 * 1000L;
+
+    /**
+     * 趋势 / TopN / 耗时统计缺省回溯的时间窗毫秒 (24 小时)
+     */
+    private static final long OBSERVE_WINDOW_MS = 24L * 60L * 60 * 1000L;
+
+    /**
+     * 趋势聚合允许的最大回溯窗口毫秒 (7 天): 小时桶上限 168 个, 再大图表也读不过来
+     */
+    private static final long MAX_OBSERVE_WINDOW_MS = 7L * 24L * 60L * 60 * 1000L;
+
+    /**
+     * 失败 TopN 缺省条数
+     */
+    private static final int FAILURE_TOP_DEFAULT = 10;
+
+    /**
+     * 失败 TopN 条数上限 (与仓储层 FAILURE_TOP_LIMIT 对齐)
+     */
+    private static final int FAILURE_TOP_MAX = 50;
 
     /**
      * 单次执行日志的读取上限（字节）。
@@ -419,6 +445,106 @@ public class JobGovernanceService {
             log.error("[job] 执行日志清理失败 retentionDays={}", retentionDays, ex);
             return ReturnResult.error("清理失败: " + ex.getMessage());
         }
+    }
+
+    /**
+     * 执行日志按小时聚合趋势 (总数 / 成功 / 失败 / 跳过)。
+     *
+     * <p>窗口缺省取「最近 24 小时」, 超过 7 天的窗口会被截到 7 天 (小时桶上限 168 个);
+     * 起点晚于终点时按缺省窗口重算, 不把负窗口透传给聚合查询。</p>
+     *
+     * @param startTime 开始毫秒, 可空
+     * @param endTime   结束毫秒, 可空
+     * @param group     任务分组, 可空
+     * @return 趋势点列表 (按桶起点升序)
+     */
+    public ReturnResult<List<JobTrendPointVO>> logTrend(Long startTime, Long endTime, String group) {
+        JobLogQuery condition = observeWindow(startTime, endTime, group);
+        List<JobTrendPointVO> rows = new ArrayList<>();
+        for (JobLogTrendPoint point : jobLogRepository.hourlyTrend(condition)) {
+            rows.add(JobTrendPointVO.of(point));
+        }
+        return ReturnResult.ok(rows);
+    }
+
+    /**
+     * 执行失败次数 Top N。
+     *
+     * <p>窗口口径与 {@link #logTrend(Long, Long, String)} 一致; 条数缺省 10, 上限 50。</p>
+     *
+     * @param startTime 开始毫秒, 可空
+     * @param endTime   结束毫秒, 可空
+     * @param group     任务分组, 可空
+     * @param limit     最多返回的任务数, 可空
+     * @return 失败排名列表 (按失败次数降序)
+     */
+    public ReturnResult<List<JobFailureTopVO>> logFailureTop(Long startTime, Long endTime, String group, Integer limit) {
+        JobLogQuery condition = observeWindow(startTime, endTime, group);
+        int topN = limit == null || limit < 1 ? FAILURE_TOP_DEFAULT : Math.min(limit, FAILURE_TOP_MAX);
+        List<JobFailureTopVO> rows = new ArrayList<>();
+        for (JobLogFailureTop top : jobLogRepository.failureTop(condition, topN)) {
+            rows.add(JobFailureTopVO.of(top));
+        }
+        return ReturnResult.ok(rows);
+    }
+
+    /**
+     * 执行耗时统计 (总数 / 平均 / 最大 / P95)。
+     *
+     * <p>窗口口径与 {@link #logTrend(Long, Long, String)} 一致。</p>
+     *
+     * @param startTime 开始毫秒, 可空
+     * @param endTime   结束毫秒, 可空
+     * @param group     任务分组, 可空
+     * @return 耗时统计
+     */
+    public ReturnResult<JobDurationStatsVO> logDurationStats(Long startTime, Long endTime, String group) {
+        JobLogQuery condition = observeWindow(startTime, endTime, group);
+        return ReturnResult.ok(JobDurationStatsVO.of(jobLogRepository.durationStats(condition)));
+    }
+
+    /**
+     * 预览按保留天数清理将删除的日志条数, 不执行删除。
+     *
+     * <p>与 {@link #cleanupLogs(int)} 同一口径的只读预览, 供清理确认框展示「将会删掉多少条」;
+     * 负数同样拒绝, 全清必须显式传 0。</p>
+     *
+     * @param retentionDays 保留天数, 0 表示清空全部
+     * @return 将删除条数
+     */
+    public ReturnResult<Long> cleanupPreview(int retentionDays) {
+        if (retentionDays < 0) {
+            return ReturnResult.error("保留天数不能为负数: " + retentionDays + ", 0 表示清空全部");
+        }
+        try {
+            return ReturnResult.ok(jobLogRepository.cleanupPreview(retentionDays));
+        } catch (Exception ex) {
+            log.warn("[job] 执行日志清理预览失败 retentionDays={} cause={}", retentionDays, ex.getMessage());
+            return ReturnResult.error("清理预览失败: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * 构造观测类聚合 (趋势 / TopN / 耗时) 的时间窗条件。
+     *
+     * @param startTime 开始毫秒, 可空
+     * @param endTime   结束毫秒, 可空
+     * @param group     任务分组, 可空
+     * @return 收敛后的查询条件
+     */
+    private JobLogQuery observeWindow(Long startTime, Long endTime, String group) {
+        long end = endTime == null || endTime <= 0L ? System.currentTimeMillis() : endTime;
+        long start = startTime == null || startTime <= 0L ? end - OBSERVE_WINDOW_MS : startTime;
+        if (start > end || end - start > MAX_OBSERVE_WINDOW_MS) {
+            // 起点晚于终点 (负窗口) 或窗口超限时都按「终点前推一个窗口」收敛,
+            // 不把非法区间透传给聚合查询。
+            start = end - OBSERVE_WINDOW_MS;
+        }
+        JobLogQuery condition = new JobLogQuery();
+        condition.setStartTime(start);
+        condition.setEndTime(end);
+        condition.setGroup(group == null || group.isBlank() ? null : group.trim());
+        return condition;
     }
 
     /**

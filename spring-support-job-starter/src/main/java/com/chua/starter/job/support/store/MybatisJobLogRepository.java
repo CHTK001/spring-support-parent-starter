@@ -8,9 +8,12 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.PageResult;
+import com.chua.starter.job.support.log.JobLogDurationStats;
+import com.chua.starter.job.support.log.JobLogFailureTop;
 import com.chua.starter.job.support.log.JobLogQuery;
 import com.chua.starter.job.support.log.JobLogRecord;
 import com.chua.starter.job.support.log.JobLogRepository;
+import com.chua.starter.job.support.log.JobLogTrendPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,6 +23,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -49,6 +53,11 @@ public class MybatisJobLogRepository implements JobLogRepository {
      * 按台账任务名反查时最多带回的编号数, 关键字太短时不至于把整张日志表 OR 进去
      */
     private static final int LEDGER_HIT_LIMIT = 200;
+
+    /**
+     * 失败 TopN 的条数上限, 防止一个离谱的 limit 把聚合结果拉爆
+     */
+    private static final int FAILURE_TOP_LIMIT = 50;
 
     /**
      * 日志映射器
@@ -148,6 +157,246 @@ public class MybatisJobLogRepository implements JobLogRepository {
             log.warn("[job] 批量取任务最近日志失败 keys={} cause={}", keys.size(), ex.getMessage());
             return List.of();
         }
+    }
+
+    @Override
+    public List<JobLogTrendPoint> hourlyTrend(JobLogQuery condition) {
+        JobLogQuery cond = condition == null ? new JobLogQuery() : condition;
+        try {
+            // 桶起点用 UNIX_TIMESTAMP 换算成 epoch 秒再取整, 与 JDBC 读出的毫秒时刻同基准,
+            // 前端拿到的桶起点可直接当毫秒时间戳格式化 (UNIX_TIMESTAMP 为 MySQL 方言,
+            // 换数据库部署时这里会失败并降级为空, 不拖垮页面其余面板)。
+            QueryWrapper<JobLogEntity> wrapper = aggregateCondition(cond)
+                    .select("FLOOR(UNIX_TIMESTAMP(sys_job_log_trigger_time) / 3600) * 3600 AS bucket_start",
+                            "COUNT(*) AS cnt_total",
+                            "SUM(CASE WHEN sys_job_log_execute_code = 'SUCCESS' THEN 1 ELSE 0 END) AS cnt_success",
+                            "SUM(CASE WHEN sys_job_log_execute_code = 'FAILURE' THEN 1 ELSE 0 END) AS cnt_failure",
+                            "SUM(CASE WHEN sys_job_log_execute_code = 'SKIPPED' THEN 1 ELSE 0 END) AS cnt_skipped")
+                    .groupBy("bucket_start")
+                    .orderByAsc("bucket_start");
+            List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
+            if (rows == null || rows.isEmpty()) {
+                return List.of();
+            }
+            List<JobLogTrendPoint> points = new ArrayList<>(rows.size());
+            for (Map<String, Object> row : rows) {
+                Object bucket = row.get("bucket_start");
+                if (bucket == null) {
+                    continue;
+                }
+                points.add(new JobLogTrendPoint(asLong(bucket) * 1000L,
+                        asLong(row.get("cnt_total")),
+                        asLong(row.get("cnt_success")),
+                        asLong(row.get("cnt_failure")),
+                        asLong(row.get("cnt_skipped"))));
+            }
+            return points;
+        } catch (Throwable ex) {
+            log.warn("[job] 小时趋势聚合失败 cause={}", ex.getMessage());
+            return List.of();
+        }
+    }
+
+    @Override
+    public List<JobLogFailureTop> failureTop(JobLogQuery condition, int limit) {
+        JobLogQuery cond = condition == null ? new JobLogQuery() : condition;
+        int topN = Math.max(1, Math.min(limit, FAILURE_TOP_LIMIT));
+        try {
+            // 失败次数相同时按最近失败时刻倒序: 两个任务都失败 3 次, 刚坏的那个更要紧。
+            QueryWrapper<JobLogEntity> wrapper = aggregateCondition(cond)
+                    .select("sys_job_log_trigger_bean AS job_key",
+                            "COUNT(*) AS fail_count",
+                            "MAX(sys_job_log_trigger_time) AS last_failure_time")
+                    .eq("sys_job_log_execute_code", "FAILURE")
+                    .groupBy("sys_job_log_trigger_bean")
+                    .orderByDesc("fail_count", "last_failure_time")
+                    .last("LIMIT " + topN);
+            List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
+            if (rows == null || rows.isEmpty()) {
+                return List.of();
+            }
+            List<JobLogFailureTop> tops = new ArrayList<>(rows.size());
+            for (Map<String, Object> row : rows) {
+                Object key = row.get("job_key");
+                if (key == null || String.valueOf(key).isBlank()) {
+                    continue;
+                }
+                tops.add(new JobLogFailureTop(String.valueOf(key),
+                        asLong(row.get("fail_count")),
+                        asTimeMillis(row.get("last_failure_time"))));
+            }
+            return tops;
+        } catch (Throwable ex) {
+            log.warn("[job] 失败 TopN 聚合失败 cause={}", ex.getMessage());
+            return List.of();
+        }
+    }
+
+    @Override
+    public JobLogDurationStats durationStats(JobLogQuery condition) {
+        JobLogQuery cond = condition == null ? new JobLogQuery() : condition;
+        try {
+            // 平均 / 最大只统计记录了耗时的行; cnt_cost 单独计数, 供 P95 定位分位点,
+            // 避免用「含空耗时行的总数」去算偏移量把分位点推到样本之外。
+            QueryWrapper<JobLogEntity> wrapper = aggregateCondition(cond)
+                    .select("COUNT(*) AS cnt_total",
+                            "COUNT(sys_job_log_cost) AS cnt_cost",
+                            "AVG(sys_job_log_cost) AS avg_cost",
+                            "MAX(sys_job_log_cost) AS max_cost");
+            List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
+            long total = 0L;
+            long costSamples = 0L;
+            Double avg = null;
+            Long max = null;
+            if (rows != null && !rows.isEmpty()) {
+                Map<String, Object> row = rows.get(0);
+                total = asLong(row.get("cnt_total"));
+                costSamples = asLong(row.get("cnt_cost"));
+                avg = asDouble(row.get("avg_cost"));
+                max = asLongOrNull(row.get("max_cost"));
+            }
+            return new JobLogDurationStats(total, avg, max, p95Cost(cond, costSamples));
+        } catch (Throwable ex) {
+            log.warn("[job] 耗时统计聚合失败 cause={}", ex.getMessage());
+            return new JobLogDurationStats(0L, null, null, null);
+        }
+    }
+
+    @Override
+    public long cleanupPreview(int retentionDays) {
+        // 与 cleanup(int) 同一套条件, 只把 delete 换成 count: 预览数必须等于真删数,
+        // 否则确认框展示的「将删除 N 条」就是假的。
+        LambdaQueryWrapper<JobLogEntity> wrapper = Wrappers.<JobLogEntity>lambdaQuery()
+                .gt(JobLogEntity::getSysJobLogId, 0L);
+        if (retentionDays > 0) {
+            wrapper.lt(JobLogEntity::getSysJobLogTriggerTime,
+                    new Date(System.currentTimeMillis() - retentionDays * DAY_MS));
+        }
+        Long counted = jobLogMapper.selectCount(wrapper);
+        return counted == null ? 0L : counted;
+    }
+
+    /**
+     * 计算耗时 P95: 按耗时升序取第 offset 条 (0 基), offset = floor(0.95 * (样本数 - 1))。
+     *
+     * @param condition   查询条件
+     * @param costSamples 记录了耗时的样本数
+     * @return P95 耗时毫秒, 无样本时为 {@code null}
+     */
+    private Long p95Cost(JobLogQuery condition, long costSamples) {
+        if (costSamples <= 0L) {
+            return null;
+        }
+        int offset = (int) Math.floor(0.95D * (costSamples - 1));
+        QueryWrapper<JobLogEntity> wrapper = aggregateCondition(condition)
+                .select("sys_job_log_cost")
+                .isNotNull("sys_job_log_cost")
+                .orderByAsc("sys_job_log_cost")
+                .last("LIMIT 1 OFFSET " + offset);
+        List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        return asLongOrNull(rows.get(0).get("sys_job_log_cost"));
+    }
+
+    /**
+     * 构造聚合查询的公共条件: 未删除 + 时间窗 + 分组收敛。
+     *
+     * <p>分组口径与 {@link #filter(JobLogQuery)} 一致: {@code sys_job_log} 没有分组列,
+     * 经 {@code sys_job_id} 回查台账; 分组查不到任务时用恒假条件收敛, 绝不退化成不过滤。</p>
+     *
+     * @param condition 查询条件
+     * @return 条件包装器 (原生列名)
+     */
+    private QueryWrapper<JobLogEntity> aggregateCondition(JobLogQuery condition) {
+        QueryWrapper<JobLogEntity> wrapper = new QueryWrapper<JobLogEntity>()
+                .eq("sys_job_log_is_deleted", 0);
+        if (condition.getStartTime() != null && condition.getStartTime() > 0L) {
+            wrapper.ge("sys_job_log_trigger_time", new Date(condition.getStartTime()));
+        }
+        if (condition.getEndTime() != null && condition.getEndTime() > 0L) {
+            wrapper.le("sys_job_log_trigger_time", new Date(condition.getEndTime()));
+        }
+        if (isNotBlank(condition.getGroup())) {
+            List<Long> jobIds = ledgerJobIdsByGroup(condition.getGroup().trim());
+            if (jobIds.isEmpty()) {
+                wrapper.eq("sys_job_log_id", -1L);
+            } else {
+                wrapper.in("sys_job_id", jobIds);
+            }
+        }
+        return wrapper;
+    }
+
+    /**
+     * 聚合结果转长整数 (兼容整数 / 小数 / 字符串形态的返回值)。
+     *
+     * @param value 聚合列取值
+     * @return 长整数, 无法解析时为 0
+     */
+    private long asLong(Object value) {
+        Long parsed = asLongOrNull(value);
+        return parsed == null ? 0L : parsed;
+    }
+
+    /**
+     * 聚合结果转可空长整数。
+     *
+     * @param value 聚合列取值
+     * @return 长整数, 空值或无法解析时为 {@code null}
+     */
+    private Long asLongOrNull(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof Date date) {
+            return date.getTime();
+        }
+        try {
+            return new BigDecimal(String.valueOf(value)).longValue();
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 聚合结果转可空双精度 (平均耗时可能带小数)。
+     *
+     * @param value 聚合列取值
+     * @return 双精度, 空值或无法解析时为 {@code null}
+     */
+    private Double asDouble(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 聚合结果转可空毫秒时刻 (MAX(时间列) 通常以 Timestamp 返回)。
+     *
+     * @param value 聚合列取值
+     * @return 毫秒时刻, 空值或无法解析时为 {@code null}
+     */
+    private Long asTimeMillis(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Date date) {
+            return date.getTime();
+        }
+        return asLongOrNull(value);
     }
 
     /**
