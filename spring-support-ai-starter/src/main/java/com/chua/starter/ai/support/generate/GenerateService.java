@@ -390,16 +390,36 @@ public class GenerateService {
         }
 
           // 图像：先落库再执行，让前端能立刻拿到 taskId 轮询。
-        SyncImage pending = prepareImage(task, request);
-        if (pending != null) {
-              // 排队态要落库。prepareImage 只把 PROGRESS_QUEUED 写进了内存对象，
-              // 而这一行早已 insert 完毕，于是前端第一眼看到的就是「模型生成中 30%」——
-              // 看不到「已入队」。这一步是真实可观测的（线程还没接手），因此补一次持久化。
-            markProgress(task, PROGRESS_QUEUED);
-              // 同步实现：交线程池执行，HTTP 线程立即返回
-            runImageAsync(task, pending.client(), effectivePrompt(task));
+          // 落库之后的准备/异步提交一旦失败，必须先收敛为 FAILED 再抛：
+          // 行已 insert，若让异常直接冒泡，会留下 status=PENDING 的幻影行
+          // 永远占着「一次只能有一个未完成任务」的名额——前端既等不到它变，
+          // 也发不出新任务（failStaleBeforeSubmit 只能按超时兜底，兜底晚于此刻）。
+          // 收敛口径与 runImageAsync 的 catch 一致：FAILED + progress=100 + 原因。
+        try {
+            SyncImage pending = prepareImage(task, request);
+            if (pending != null) {
+                  // 排队态要落库。prepareImage 只把 PROGRESS_QUEUED 写进了内存对象，
+                  // 而这一行早已 insert 完毕，于是前端第一眼看到的就是「模型生成中 30%」——
+                  // 看不到「已入队」。这一步是真实可观测的（线程还没接手），因此补一次持久化。
+                markProgress(task, PROGRESS_QUEUED);
+                  // 同步实现：交线程池执行，HTTP 线程立即返回
+                runImageAsync(task, pending.client(), effectivePrompt(task));
+            }
+            return task;
+        } catch (RuntimeException e) {
+              // prepareImage 的 resolver 失败 / 参考图能力不一致 / createTask 抛
+              // 非 UnsupportedOperationException 的异常（限流、Key 失效、网络断开），
+              // 以及 markProgress 落库失败，都会走到这里。runImageAsync 内部的失败
+              // 已自行收敛，不会冒泡到这层。
+            task.setStatus(SysAiGenerateTask.STATUS_FAILED);
+            task.setProgress(100);
+            task.setErrorMessage(e.getMessage());
+            task.setUpdatedAt(System.currentTimeMillis());
+            taskMapper.updateById(task);
+            log.warn("[Generate] 图像任务提交失败，已收敛占位行为 FAILED taskId={}: {}",
+                    task.getTaskId(), e.getMessage());
+            throw e;
         }
-        return task;
     }
 
       /**
