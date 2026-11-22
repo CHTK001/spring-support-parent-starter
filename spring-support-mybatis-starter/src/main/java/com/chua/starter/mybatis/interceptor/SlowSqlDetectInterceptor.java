@@ -51,6 +51,13 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
             .class, CacheKey.class, BoundSql.class}),
 })
 public class SlowSqlDetectInterceptor implements Interceptor {
+
+    /**
+     * 单个参数值序列化后的最大长度：超大参数对象（大 blob / 长文本等）被完整字符串化，
+     * 会显著拖慢日志格式化与事件存储，高负载下还会放大日志 appender 的全局锁竞争
+     * （2026-11-22 线程转储实证），超出即截断。
+     */
+    private static final int MAX_PARAM_VALUE_LENGTH = 2048;
       /**
        * 日志
       */
@@ -151,7 +158,8 @@ public class SlowSqlDetectInterceptor implements Interceptor {
                     traceId,
                     errMsg,
                     sql == null ? "" : ("\nSQL: " + sql),
-                    parameters == null ? "" : ("\n参数: " + String.join(", ", parameters)));
+                    parameters == null ? ""
+                            : ("\n参数: " + truncate(String.join(", ", parameters), properties.getMaxSqlLength())));
         }
     }
 
@@ -215,7 +223,8 @@ public class SlowSqlDetectInterceptor implements Interceptor {
             TypeHandlerRegistry typeHandlerRegistry = configuration.getTypeHandlerRegistry();
             if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
                 sql = sql.replaceFirst("\\?", Matcher.quoteReplacement(getParameterValue(parameterObject)));
-                list.add(parameterObject + "(" + parameterObject.getClass().getSimpleName() + ")");
+                list.add(truncate(String.valueOf(parameterObject), MAX_PARAM_VALUE_LENGTH)
+                        + "(" + parameterObject.getClass().getSimpleName() + ")");
             } else {
                 MetaObject metaObject = configuration.newMetaObject(parameterObject);
                 for (ParameterMapping parameterMapping : mappings) {
@@ -223,11 +232,13 @@ public class SlowSqlDetectInterceptor implements Interceptor {
                     if (metaObject.hasGetter(propertyName)) {
                         Object obj = metaObject.getValue(propertyName);
                         sql = sql.replaceFirst("\\?", Matcher.quoteReplacement(getParameterValue(obj)));
-                        list.add(propertyName + "=" + (obj == null ? "null" : (obj + "(" + obj.getClass().getSimpleName() + ")")));
+                        list.add(propertyName + "=" + (obj == null ? "null"
+                                : (truncate(String.valueOf(obj), MAX_PARAM_VALUE_LENGTH) + "(" + obj.getClass().getSimpleName() + ")")));
                     } else if (boundSql.hasAdditionalParameter(propertyName)) {
                         Object obj = boundSql.getAdditionalParameter(propertyName);
                         sql = sql.replaceFirst("\\?", Matcher.quoteReplacement(getParameterValue(obj)));
-                        list.add(propertyName + "=" + (obj == null ? "null" : (obj + "(" + obj.getClass().getSimpleName() + ")")));
+                        list.add(propertyName + "=" + (obj == null ? "null"
+                                : (truncate(String.valueOf(obj), MAX_PARAM_VALUE_LENGTH) + "(" + obj.getClass().getSimpleName() + ")")));
                     } else {
                         sql = sql.replaceFirst("\\?", "缺失");
                         list.add("缺失");
@@ -271,12 +282,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
             return "null";
         }
         if (obj instanceof String) {
-            return "'" + obj + "'";
+            return truncate("'" + obj + "'", MAX_PARAM_VALUE_LENGTH);
         }
         if (obj instanceof Date) {
             return "'" + DateUtils.format((Date) obj) + "'";
         }
-        return String.valueOf(obj);
+        return truncate(String.valueOf(obj), MAX_PARAM_VALUE_LENGTH);
     }
 
     @Override
