@@ -243,6 +243,13 @@ public class FreeChannelChatClient implements RouterChatClient {
      * 只挂到本次路由目标上，随 {@link RouteTarget#toSetting(ChatClientSetting)} 落到
      * 上游客户端；为空时按渠道自身缺省地址解析。令牌与地址都只在本请求内生效，不落任何存储。</p>
      *
+     * <p>认证语义：显式 {@code baseUrl}（自定义网关）按标准 OpenAI 兼容协议认证——
+     * 给了 {@code apiKey} 即走默认 {@code Authorization: Bearer}（{@code authScheme} 留空；
+     * 不能写 {@code none}，否则 {@link com.chua.common.support.ai.chat.AuthHeaders}
+     * 会把凭据整个吞掉，上游收到 401）；未给 key 则免鉴权。
+     * 未指定 {@code baseUrl} 的既有渠道维持原语义（{@code authScheme=none}，凭据由
+     * 渠道自己的 {@code ChatClient} 扩展处理）。</p>
+     *
      * @param extension 渠道底层 {@code ChatClient} 扩展名（如 {@code duckduckgo}）
      * @param apiKey    本次请求使用的凭据；为空表示免鉴权
      * @param baseUrl   本次请求的上游地址；为空用渠道缺省地址
@@ -252,13 +259,15 @@ public class FreeChannelChatClient implements RouterChatClient {
         if (StringUtils.isBlank(extension)) {
             throw new IllegalStateException("渠道未声明 ChatClient 扩展名");
         }
+        boolean customGateway = StringUtils.isNotBlank(baseUrl);
+        boolean hasKey = StringUtils.isNotBlank(apiKey);
         FreeChannelChatClient client = new FreeChannelChatClient(
                 ChatClientSetting.builder().provider(EXTENSION).build());
         client.register(DEFAULT_ROUTE, RouteTarget.builder()
                 .provider(extension)
-                .baseUrl(StringUtils.isBlank(baseUrl) ? null : baseUrl)
-                .apiKey(StringUtils.isBlank(apiKey) ? null : apiKey)
-                .authScheme("none")
+                .baseUrl(customGateway ? baseUrl : null)
+                .apiKey(hasKey ? apiKey : null)
+                .authScheme(customGateway && hasKey ? null : "none")
                 .build());
         return client;
     }
