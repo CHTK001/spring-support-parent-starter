@@ -8,9 +8,9 @@ import java.util.List;
  * <p>字段：</p>
  * <ul>
  *   <li>{@code taskId} — 任务 ID（提交时返回）</li>
- *   <li>{@code status} — 0 待批改 / 1 AI 已批改 / 2 教师已确认</li>
+ *   <li>{@code status} — 0 待批改 / 1 AI 已批改 / 2 教师已确认 / 3 AI 判分失败（单题状态见 QuestionResult）</li>
  *   <li>{@code total} — 题目总数</li>
- *   <li>{@code finished} — 是否批改完成（前端轮询判断结束条件）</li>
+ *   <li>{@code finished} — 是否批改完成（前端轮询判断结束条件；存在判分失败题时为 false）</li>
  *   <li>{@code totalScore} — 总分</li>
  *   <li>{@code results} — 每题结果（含教师修正）</li>
  * </ul>
@@ -48,10 +48,12 @@ public record MarkingResultVO(
      * @param no             卷面识别题号（任意卷无题库题号，靠它对位；如 "1." "2."）
      * @param studentAnswer  学生作答原文（从识别明细透出，教师对照作答做修正）
      * @param maxScore       该题在试卷上的满分（取自 edu_paper_question 的每题分值），教师修正不得超过此值
-     * @param score          分数
-     * @param comment        评论
+     * @param score          分数（AI 判分失败时为 null —— 得分未知，不是 0 分）
+     * @param comment        评论（判分失败时为失败原因）
      * @param teacherScore   教师分数
      * @param teacherComment 教师评语
+     * @param status         单题状态：0-待批改 1-AI已批改 2-教师已确认 3-AI判分失败
+     *                       （失败题不参与总分与错题登记，需重判或手动给分）
      * @author CH
      * @since 4.0.0
      */
@@ -64,6 +66,7 @@ public record MarkingResultVO(
             Integer score,
             String comment,
             Integer teacherScore,
-            String teacherComment) {
+            String teacherComment,
+            Integer status) {
     }
 }

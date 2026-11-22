@@ -96,4 +96,25 @@ public interface EduMarkingResultMapper extends BaseMapper<EduMarkingResult> {
                               @Param("aiComment") String aiComment,
                               @Param("detail") String detail,
                               @Param("now") LocalDateTime now);
+
+    /**
+     * 把单题标记为「AI 判分失败」（XML 语句 markResultFailed）。
+     *
+     * <p>与 {@link #updateScanOutcomeById} 的本质区别：失败<b>不是</b> 0 分。
+     * 得分与 AI 得分显式置 NULL（得分未知），状态写成 {@code 3}，评语保留失败原因；
+     * 老师后续可「重判失败题」或手动给分（教师修正会把状态改回 2）。</p>
+     *
+     * <p>历史事故：失败题曾按 0 分 + 状态 1（AI 已批改）落库，学生白丢分、
+     * 老师误以为已判过；且完成阅卷时按 0 分误登错题。</p>
+     *
+     * @param resultId 阅卷结果行主键
+     * @param comment  失败原因（写给老师看，不得直出内部异常细节）
+     * @param detail   批改详情 JSON（保留识别到的题干与作答，供重判/人工复核）
+     * @param now      更新时刻
+     * @return 更新行数
+     */
+    int markResultFailed(@Param("resultId") Long resultId,
+                         @Param("comment") String comment,
+                         @Param("detail") String detail,
+                         @Param("now") LocalDateTime now);
 }

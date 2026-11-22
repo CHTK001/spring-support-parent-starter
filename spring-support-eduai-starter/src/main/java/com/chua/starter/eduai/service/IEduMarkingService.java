@@ -94,6 +94,20 @@ public interface IEduMarkingService {
     MarkingResultVO getResult(String taskId);
 
     /**
+     * 重判任务里「AI 判分失败」的题目（状态 3 的行）。
+     *
+     * <p>只重跑失败行：已 AI 批改 / 教师已确认的行不动。任务重新进入判分管线
+     * （超时预算、任务级并发闸门、SSE 进度推送、自动结案口径均不变），
+     * 前端继续用 {@link #getResult} 轮询直到完成。</p>
+     *
+     * @param taskId 任务标识
+     * @return 是否已发起重判
+     * @throws com.chua.starter.common.support.exception.BusinessException
+     *         任务不存在 / 任务正在处理中 / 没有需要重判的失败题
+     */
+    boolean regradeFailed(String taskId);
+
+    /**
      * 学生查看自己的阅卷结果（归属按任务上的学生标识，而非任务归属人）
      *
      * @param taskId    任务标识

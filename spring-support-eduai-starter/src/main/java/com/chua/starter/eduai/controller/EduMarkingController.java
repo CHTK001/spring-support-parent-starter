@@ -220,6 +220,23 @@ public class EduMarkingController {
     }
 
     /**
+     * 重判「AI 判分失败」的题目：只重跑失败行，已批改 / 已确认的题不动。
+     *
+     * <p>失败题得分未知（不是 0 分），老师可先重判；仍失败的再逐题手动给分
+     * （{@code /confirm} 会把行置为教师已确认）。重判走既有判分管线，
+     * 前端继续用 {@code /result/{taskId}} 轮询，进度经 SSE 推送。</p>
+     *
+     * @param taskId 任务业务标识
+     * @return 是否已发起重判
+     */
+    @Operation(summary = "重判 AI 判分失败的题目")
+    @PostMapping("/{taskId}/regrade-failed")
+    @Permission(role = {"ADMIN", "TEACHER"})
+    public ReturnResult<Boolean> regradeFailed(@PathVariable String taskId) {
+        return ReturnResult.ok(markingService.regradeFailed(taskId));
+    }
+
+    /**
      * 阅卷完成预览：按当前判错阈值算出将登记的题目清单。
      *
      * <p>老师点「完成」前先看清单，确认后再传剔除列表调用 {@code /finish}。

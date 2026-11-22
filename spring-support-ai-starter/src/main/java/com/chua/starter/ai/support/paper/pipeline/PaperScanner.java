@@ -1627,6 +1627,8 @@ public class PaperScanner {
                 log.warn("[EduScan] 任意卷判分两次均无评语，转人工复核: no={}", question.no());
                 fallback.setScore(0);
                 fallback.setComment("模型未给出判定依据，请人工复核");
+                // 没有判定依据 = 没有可信得分：标记失败态，由调用方写成「判分失败」而不是 0 分
+                fallback.setUnavailable(true);
                 return fallback;
             }
             int score = node.path("score").asInt(0);
@@ -1642,6 +1644,8 @@ public class PaperScanner {
             // 用户可见评语不得直出内部异常原文（可能带限流/服务/堆栈细节），
             // 真实原因只进服务端日志；界面给出可行动的稳定文案。
             fallback.setComment("AI 判分暂不可用，请人工复核");
+            // 模型调用失败 = 没有可信得分：标记失败态，由调用方写成「判分失败」而不是 0 分
+            fallback.setUnavailable(true);
             return fallback;
         }
     }

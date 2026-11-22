@@ -61,4 +61,18 @@
         WHERE marking_result_id = #{resultId}
     </update>
 
+    <!-- 单题「AI 判分失败」：得分显式置 NULL（得分未知，不是 0 分），状态 3，保留失败原因与识别明细。
+         老师可重判（gradePendingOfTask 会重入 status=3 的行）或手动给分（confirmMarking 置回状态 2）。 -->
+    <update id="markResultFailed">
+        UPDATE edu_marking_result
+        SET marking_result_ai_score = NULL,
+            marking_result_ai_comment = #{comment},
+            marking_result_score = NULL,
+            marking_result_comment = #{comment},
+            marking_result_detail = #{detail},
+            marking_result_status = 3,
+            update_time = #{now}
+        WHERE marking_result_id = #{resultId}
+    </update>
+
 </mapper>

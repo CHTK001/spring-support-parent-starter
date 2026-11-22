@@ -309,7 +309,7 @@ CREATE TABLE IF NOT EXISTS edu_marking_result (
     marking_result_ai_comment VARCHAR(500) COMMENT 'AI评语',
     marking_result_teacher_score INT COMMENT '教师修正后评分',
     marking_result_teacher_comment VARCHAR(500) COMMENT '教师评语',
-    marking_result_status TINYINT DEFAULT 0 COMMENT '状态: 0-待批改 1-AI已批改 2-教师已确认',
+    marking_result_status TINYINT DEFAULT 0 COMMENT '状态: 0-待批改 1-AI已批改 2-教师已确认 3-AI判分失败(得分未知,待重判或人工给分)',
     marking_result_task_id VARCHAR(64) COMMENT '异步任务ID',
     marking_result_create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     marking_result_update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

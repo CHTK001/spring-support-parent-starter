@@ -87,6 +87,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.UUID;
 
 /**
@@ -124,11 +125,26 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * 阅卷结果状态：教师已确认
      */
     private static final int STATUS_TEACHER_DONE = 2;
+    /**
+     * 阅卷结果状态：AI 判分失败（模型不可用 / 限流 / 多次调用均无判定依据）。
+     *
+     * <p>失败<b>不是</b> 0 分：得分未知（score / ai_score 置 NULL），评语保留失败原因。
+     * 该状态可被 {@link #gradePendingOfTask} 重入重判，也可由老师手动给分
+     * （{@link #confirmMarking} 会置回教师已确认）；存在失败行时禁止结案
+     * （{@link #doFinishMarking} 守卫），防止按 0 分误登错题。</p>
+     */
+    private static final int STATUS_AI_FAILED = 3;
 
     /**
      * 题号里的首个数字（用于把「第1题」「1.」「(2)」这类写法折算成卷内顺序）
      */
     private static final java.util.regex.Pattern FIRST_DIGITS = java.util.regex.Pattern.compile("\\d+");
+
+    /**
+     * 判分进度落库 / 推送的串行化锁：并发判分时保证同一任务的 stage 单调递增，
+     * 不因线程交错出现「判分中 5/18」盖过「判分中 6/18」的回退展示。
+     */
+    private final Object gradeProgressLock = new Object();
 
     /**
      * 判定「近似灰度」时单个像素允许的最大通道差（0~255）。
@@ -1552,100 +1568,226 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 判分阶段：对仍为 PENDING 的结果行逐题判分（可重入，已完成的跳过）。
+     * 判分阶段：对仍为「待批改 / AI 判分失败」的结果行逐题判分（可重入）。
+     *
+     * <p>已 AI 批改、教师已确认的行是可信终态，直接跳过；「AI 判分失败」（状态 3）
+     * 的行会在此被重判 —— 教师侧入口见 {@link #regradeFailed}。判分是 IO 密集的
+     * 模型调用，按 {@code plugin.eduai.marking.grade-concurrency}（默认 4）做
+     * 有界并发（虚拟线程 + 信号量），长卷不再逐题串行苦等。</p>
      *
      * @param taskId  任务标识
      * @param anyMode 是否任意卷
-     * @return 已判分题数
+     * @return 已判分题数（含跳过的已完成行）
      */
     private int gradePendingOfTask(String taskId, boolean anyMode) {
         List<EduMarkingResult> rows = markingResultMapper.selectByTaskId(taskId);
         int total = rows.size();
-        int done = 0;
+        // 批量取题：替代循环内逐题 selectById 的 N+1（任意卷题号统一为 0，自然不取）
+        Map<Long, EduQuestion> questionById = loadQuestionMapForResults(rows);
+        AtomicInteger done = new AtomicInteger(0);
+        int concurrency = Math.max(1, properties.getMarking().getGradeConcurrency());
+        Semaphore permits = new Semaphore(concurrency);
+        List<Thread> workers = new ArrayList<>(rows.size());
         for (EduMarkingResult row : rows) {
-            if (row.getMarkingResultStatus() != null && row.getMarkingResultStatus() != STATUS_PENDING) {
-                done++;
+            int rowStatus = row.getMarkingResultStatus() == null ? STATUS_PENDING : row.getMarkingResultStatus();
+            // 可信终态跳过；PENDING 与 AI_FAILED（上轮判分失败）都要（重）判
+            if (rowStatus == STATUS_AI_DONE || rowStatus == STATUS_TEACHER_DONE) {
+                done.incrementAndGet();
                 continue;
             }
-            PaperScanner.ScannedQuestion item = parseScanDetail(row.getMarkingResultDetail());
-            int maxScore = parseDetailMaxScore(row.getMarkingResultDetail());
-            try {
-                // SELF 卷：题库题干已确定，把行规则误收进作答的题干前缀剥掉
-                // （实测 42/43 简答只截到「翻译句子：…」，题干下一行才是学生翻译，
-                // 不剥会把题干整段当真作答，学生实际写的部分被相似度稀释成 0 分）。
-                EduQuestion question = null;
-                if (!anyMode && row.getMarkingResultQuestionId() != null) {
-                    question = questionMapper.selectById(row.getMarkingResultQuestionId());
-                    if (question != null) {
-                        String cleanedAnswer;
-                        String qType = String.valueOf(question.getQuestionType()).trim();
-                        if ("FILL".equalsIgnoreCase(qType)) {
-                            cleanedAnswer = PaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
-                        } else if ("JUDGE".equalsIgnoreCase(qType)) {
-                            // 判断题：题目整段（含尾部页脚污染）一旦被规则切题收进作答，
-                            // stripLeadingStem 的 startsWith 会因尾注不匹配而剥离失败，导致
-                            // 整段题干冒充作答 → 「与标准答案不一致」。判断题的实质作答只有
-                            // 对/错/√/× 符号：剥离题干后仍提取不到判定符号（题干尾段、页脚
-                            // 或空），一律按未作答置空——不依赖题干互含判断（OCR 题干与题库
-                            // 标点/空格常有差异，互含判断会漏）。
-                            cleanedAnswer = PaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
-                            if (PaperAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null) {
-                                cleanedAnswer = "";
-                            }
-                        } else {
-                            cleanedAnswer = PaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
-                        }
-                        item = new PaperScanner.ScannedQuestion(
-                                item.no(), item.stem(), cleanedAnswer, item.score());
-                    }
-                }
-                PaperAiService.MarkingOutcome outcome;
-                if (anyMode) {
-                    // 切分修复：版面把印刷尾段切进了作答（实测第 15 题题干「…它的面积是」、
-                    // 作答「平方厘米。24」）。先把印刷片段回填到题干、原位补一个空位，
-                    // 学生填的 24 才会落回空内；修复后的题干也让严谨模式的空位门禁有据可依。
-                    MarkingBlankRule.Repair repaired =
-                            MarkingBlankRule.repairPrintedSplit(item.stem(), item.answer());
-                    if (!Objects.equals(repaired.stem(), item.stem())
-                            || !Objects.equals(repaired.answer(), item.answer())) {
-                        log.info("[EduAi] 第 {} 题切分修复: 作答「{}」→「{}」，题干「{}」→「{}」",
-                                item.no(), item.answer(), repaired.answer(), item.stem(), repaired.stem());
-                        item = new PaperScanner.ScannedQuestion(
-                                item.no(), repaired.stem(), repaired.answer(), item.score());
-                    }
-                    outcome = paperScanner.markAnyQuestion(item, maxScore);
-                } else {
-                    if (question == null) {
-                        markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), 0,
-                                "题目不在题库", buildScanFinalDetail(item, null, maxScore),
-                                LocalDateTime.now());
-                        done++;
-                        continue;
-                    }
-                    outcome = tolerantObjectiveOutcome(question, item.answer(), maxScore);
-                }
-                // 按【行主键】更新：任意卷 question_id 统一为 0，按 (taskId,questionId) 会命中多行互相覆盖
-                markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), outcome.getScore(),
-                        outcome.getComment(), buildScanFinalDetail(item, outcome, maxScore),
-                        LocalDateTime.now());
-            } catch (Exception e) {
-                // 单题失败不能让该行永久停在 PENDING：否则 finished 永远为 false、老师也看不到哪题出错
-                log.error("[EduAi] 单题判分失败: resultId={}, no={}", row.getMarkingResultId(), item.no(), e);
+            Thread worker = Thread.ofVirtual().name("edu-grade-" + taskId).start(() -> {
                 try {
-                    markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), 0,
-                            "判分失败：" + e.getMessage(), buildScanFinalDetail(item, null, maxScore),
-                            LocalDateTime.now());
-                } catch (Exception ex) {
-                    log.error("[EduAi] 写入判分失败结果也失败: resultId={}", row.getMarkingResultId(), ex);
+                    permits.acquire();
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.warn("[EduAi] 判分等待并发闸门被中断: taskId={}, resultId={}",
+                            taskId, row.getMarkingResultId());
+                    return;
                 }
+                try {
+                    gradeOneRow(taskId, row, anyMode, questionById);
+                } finally {
+                    permits.release();
+                }
+                int d = done.incrementAndGet();
+                // 进度只做展示：并发落库可能乱序，这里串行化保证 stage 单调递增
+                synchronized (gradeProgressLock) {
+                    changeStage(taskId, EduMarkingTask.STATUS_PROCESSING,
+                            "判分中 " + d + "/" + total, total, d, null, false);
+                }
+            });
+            workers.add(worker);
+        }
+        for (Thread worker : workers) {
+            try {
+                worker.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("[EduAi] 等待判分子任务被中断: taskId={}", taskId);
             }
-            done++;
-            changeStage(taskId, EduMarkingTask.STATUS_PROCESSING,
-                    "判分中 " + done + "/" + total, total, done, null, false);
         }
         // 判分完成后再落解析结果：这样姓名/学号/总分/逐题得分一次写全（扫描阶段只有满分、无得分）
         persistParseResults(taskId);
-        return done;
+        return done.get();
+    }
+
+    /**
+     * 重判任务里「AI 判分失败」的题目（教师侧入口，对应
+     * {@code POST /v2/edu/marking/{taskId}/regrade-failed}）。
+     *
+     * <p>只重跑状态 3 的失败行；把任务从终态拉回处理中后复用既有判分管线
+     * （{@link #kickTask} → {@link #runWithTimeout} → {@link #processTask}），
+     * 超时预算、任务级并发闸门、SSE 进度推送、自动结案口径全部不变。</p>
+     *
+     * @param taskId 任务标识
+     * @return 是否已发起重判
+     */
+    @Override
+    public boolean regradeFailed(String taskId) {
+        if (StringUtils.isBlank(taskId)) {
+            throw new BusinessException("任务标识不能为空");
+        }
+        EduMarkingTask task = taskMapper.selectByTaskId(taskId);
+        if (task == null) {
+            throw new BusinessException("任务不存在");
+        }
+        EduUserContext.checkWritable(task.getOwnerUserId());
+        if (Integer.valueOf(EduMarkingTask.STATUS_PROCESSING).equals(task.getMarkingTaskStatus())) {
+            // 判分正在跑：此刻重判会与在途任务重复消费模型，直接拒绝
+            throw new BusinessException("任务正在处理中，请稍后再试");
+        }
+        long failedRows = markingResultMapper.selectByTaskId(taskId).stream()
+                .filter(r -> r.getMarkingResultStatus() != null && r.getMarkingResultStatus() == STATUS_AI_FAILED)
+                .count();
+        if (failedRows == 0) {
+            throw new BusinessException("没有需要重判的失败题目");
+        }
+        // processTask 对「已完成」任务会直接返回，必须先把状态拉回处理中再入队
+        changeStage(taskId, EduMarkingTask.STATUS_PROCESSING, "重判失败题",
+                task.getMarkingTaskTotal(), task.getMarkingTaskDoneCount(), null, false);
+        kickTask(taskId);
+        log.info("[EduAi] 发起重判失败题: taskId={}, failedRows={}", taskId, failedRows);
+        return true;
+    }
+
+    /**
+     * 判分单个结果行并把结论落库。
+     *
+     * <p>成功 → {@code updateScanOutcomeById}（AI 已批改）；模型不可用 / 无判定依据 /
+     * 抛异常 → {@code markResultFailed}（AI 判分失败，得分置 NULL 待重判或人工给分）。
+     * 单题失败绝不冒泡：否则整个任务的判分循环被一题拖垮。</p>
+     *
+     * @param taskId       任务标识（日志定位用）
+     * @param row          结果行
+     * @param anyMode      是否任意卷
+     * @param questionById 题库映射（SELF 卷用，任意卷传空映射）
+     */
+    private void gradeOneRow(String taskId, EduMarkingResult row, boolean anyMode, Map<Long, EduQuestion> questionById) {
+        PaperScanner.ScannedQuestion item = parseScanDetail(row.getMarkingResultDetail());
+        int maxScore = parseDetailMaxScore(row.getMarkingResultDetail());
+        try {
+            // SELF 卷：题库题干已确定，把行规则误收进作答的题干前缀剥掉
+            // （实测 42/43 简答只截到「翻译句子：…」，题干下一行才是学生翻译，
+            // 不剥会把题干整段当真作答，学生实际写的部分被相似度稀释成 0 分）。
+            EduQuestion question = null;
+            if (!anyMode && row.getMarkingResultQuestionId() != null) {
+                question = questionById.get(row.getMarkingResultQuestionId());
+                if (question != null) {
+                    String cleanedAnswer;
+                    String qType = String.valueOf(question.getQuestionType()).trim();
+                    if ("FILL".equalsIgnoreCase(qType)) {
+                        cleanedAnswer = PaperScanner.stripFillStem(item.answer(), question.getQuestionStem());
+                    } else if ("JUDGE".equalsIgnoreCase(qType)) {
+                        // 判断题：题目整段（含尾部页脚污染）一旦被规则切题收进作答，
+                        // stripLeadingStem 的 startsWith 会因尾注不匹配而剥离失败，导致
+                        // 整段题干冒充作答 → 「与标准答案不一致」。判断题的实质作答只有
+                        // 对/错/√/× 符号：剥离题干后仍提取不到判定符号（题干尾段、页脚
+                        // 或空），一律按未作答置空——不依赖题干互含判断（OCR 题干与题库
+                        // 标点/空格常有差异，互含判断会漏）。
+                        cleanedAnswer = PaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                        if (PaperAiService.extractObjectiveAnswer("JUDGE", cleanedAnswer) == null) {
+                            cleanedAnswer = "";
+                        }
+                    } else {
+                        cleanedAnswer = PaperScanner.stripLeadingStem(item.answer(), question.getQuestionStem());
+                    }
+                    item = new PaperScanner.ScannedQuestion(
+                            item.no(), item.stem(), cleanedAnswer, item.score());
+                }
+            }
+            PaperAiService.MarkingOutcome outcome;
+            if (anyMode) {
+                // 切分修复：版面把印刷尾段切进了作答（实测第 15 题题干「…它的面积是」、
+                // 作答「平方厘米。24」）。先把印刷片段回填到题干、原位补一个空位，
+                // 学生填的 24 才会落回空内；修复后的题干也让严谨模式的空位门禁有据可依。
+                MarkingBlankRule.Repair repaired =
+                        MarkingBlankRule.repairPrintedSplit(item.stem(), item.answer());
+                if (!Objects.equals(repaired.stem(), item.stem())
+                        || !Objects.equals(repaired.answer(), item.answer())) {
+                    log.info("[EduAi] 第 {} 题切分修复: 作答「{}」→「{}」，题干「{}」→「{}」",
+                            item.no(), item.answer(), repaired.answer(), item.stem(), repaired.stem());
+                    item = new PaperScanner.ScannedQuestion(
+                            item.no(), repaired.stem(), repaired.answer(), item.score());
+                }
+                outcome = paperScanner.markAnyQuestion(item, maxScore);
+            } else {
+                if (question == null) {
+                    markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), 0,
+                            "题目不在题库", buildScanFinalDetail(item, null, maxScore),
+                            LocalDateTime.now());
+                    return;
+                }
+                outcome = tolerantObjectiveOutcome(question, item.answer(), maxScore);
+            }
+            if (outcome.isUnavailable()) {
+                // 真·判分失败（模型不可用 / 限流 / 无判定依据）：绝不把兜底 0 分当成绩落库
+                //（历史事故：失败题被写成 0 分 +「AI 已批改」，学生白丢分、完成时还按 0 分登记错题）。
+                // 写成显式失败态，等老师重判或手动给分。
+                log.warn("[EduAi] 单题判分不可信，记失败待重判: taskId={}, resultId={}, no={}, reason={}",
+                        taskId, row.getMarkingResultId(), item.no(), outcome.getComment());
+                markingResultMapper.markResultFailed(row.getMarkingResultId(), outcome.getComment(),
+                        buildScanFinalDetail(item, outcome, maxScore), LocalDateTime.now());
+                return;
+            }
+            // 按【行主键】更新：任意卷 question_id 统一为 0，按 (taskId,questionId) 会命中多行互相覆盖
+            markingResultMapper.updateScanOutcomeById(row.getMarkingResultId(), outcome.getScore(),
+                    outcome.getComment(), buildScanFinalDetail(item, outcome, maxScore),
+                    LocalDateTime.now());
+        } catch (Exception e) {
+            // 单题失败不能让该行永久停在 PENDING：否则 finished 永远为 false、老师也看不到哪题出错
+            log.error("[EduAi] 单题判分失败: resultId={}, no={}", row.getMarkingResultId(), item.no(), e);
+            try {
+                markingResultMapper.markResultFailed(row.getMarkingResultId(),
+                        "AI 判分暂不可用，请人工复核", buildScanFinalDetail(item, null, maxScore),
+                        LocalDateTime.now());
+            } catch (Exception ex) {
+                log.error("[EduAi] 写入判分失败结果也失败: resultId={}", row.getMarkingResultId(), ex);
+            }
+        }
+    }
+
+    /**
+     * 按结果行批量取题库题目：一次 {@code selectBatchIds} 查齐，替代逐题
+     * {@code selectById} 的 N+1 查询。任意卷结果行题号统一为 0，不会进查询。
+     *
+     * @param rows 阅卷结果行
+     * @return 题号 -> 题目（题库中不存在的题号不映射，调用方按 null 处理）
+     */
+    private Map<Long, EduQuestion> loadQuestionMapForResults(List<EduMarkingResult> rows) {
+        Set<Long> ids = new HashSet<>();
+        for (EduMarkingResult row : rows) {
+            if (row.getMarkingResultQuestionId() != null && row.getMarkingResultQuestionId() > 0) {
+                ids.add(row.getMarkingResultQuestionId());
+            }
+        }
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, EduQuestion> questionById = new HashMap<>();
+        for (EduQuestion question : questionMapper.selectBatchIds(ids)) {
+            questionById.put(question.getQuestionId(), question);
+        }
+        return questionById;
     }
 
     /**
@@ -2559,6 +2701,8 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             item.put("score", row.getMarkingResultAiScore());
             item.put("teacherScore", row.getMarkingResultTeacherScore());
             item.put("comment", row.getMarkingResultAiComment());
+            // 单题状态透出：3 = AI 判分失败（得分未知，待重判 / 手动给分），前端据此展示失败徽标
+            item.put("status", row.getMarkingResultStatus());
             // 老师评语单独返回：编辑框初值用它（为空时前端回落 AI 评语展示），
             // 保存时显式传 comment 才会覆盖（见 confirmMarking 的非空判断）
             item.put("teacherComment", row.getMarkingResultTeacherComment());
@@ -3322,7 +3466,6 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private MarkingResultVO buildResultVo(String taskId, EduMarkingTask task, List<EduMarkingResult> results) {
         boolean taskFailed = task != null && Integer.valueOf(EduMarkingTask.STATUS_FAILED).equals(task.getMarkingTaskStatus());
-        boolean taskDone = task != null && Integer.valueOf(EduMarkingTask.STATUS_DONE).equals(task.getMarkingTaskStatus());
 
         if (results.isEmpty()) {
             if (task == null) {
@@ -3362,6 +3505,11 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             // 扫描链路 detail 里存的是判分实际采用的卷面满分，优先用它，
             // 避免「得分 10 / 满分 5」这类满分口径错位（教师修正上限同源）
             Integer detailMax = parseDetailMaxScoreOrNull(r.getMarkingResultDetail());
+            int rowStatus = r.getMarkingResultStatus() == null ? STATUS_PENDING : r.getMarkingResultStatus();
+            // 判分失败的题得分未知：不把 NULL 分数伪装成 0 分（历史事故：老师误以为已判过）
+            Integer aiScore = rowStatus == STATUS_AI_FAILED
+                    ? null
+                    : (r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
             MarkingResultVO.QuestionResult qr = new MarkingResultVO.QuestionResult(
                     r.getMarkingResultId(),
                     r.getMarkingResultQuestionId(),
@@ -3369,23 +3517,31 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     answer == null ? null : String.valueOf(answer),
                     detailMax != null ? detailMax
                             : fullScores.getOrDefault(r.getMarkingResultQuestionId(), fallbackScore),
-                    r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore(),
+                    aiScore,
                     r.getMarkingResultAiComment(),
                     r.getMarkingResultTeacherScore(),
-                    r.getMarkingResultTeacherComment());
+                    r.getMarkingResultTeacherComment(),
+                    rowStatus);
             list.add(qr);
-            totalScore += qr.teacherScore() != null ? qr.teacherScore() : qr.score();
-            if (r.getMarkingResultStatus() == null || r.getMarkingResultStatus() < STATUS_AI_DONE) {
+            // 只有 AI 已批改 / 教师已确认算完成；「AI 判分失败」必须等重判或手动给分
+            if (rowStatus != STATUS_AI_DONE && rowStatus != STATUS_TEACHER_DONE) {
                 allDone = false;
             }
+            // 失败题不参与总分：得分未知，按 0 分累计会掩盖「还有题没判出来」
+            if (rowStatus == STATUS_AI_FAILED) {
+                continue;
+            }
+            totalScore += qr.teacherScore() != null ? qr.teacherScore() : (qr.score() == null ? 0 : qr.score());
         }
-        // 完成判定：任务已完结，或所有结果行都已批改（兼容手工提交链路）
+        // 完成判定：所有题都到达可信终态，且任务本身未失败。
+        // 存在判分失败题时 finished=false，前端据此持续展示失败徽标与重判入口。
+        boolean finished = allDone && !taskFailed;
         return new MarkingResultVO(
                 taskId,
                 results.getFirst().getMarkingResultStatus(),
                 totalScore,
                 results.size(),
-                taskDone || allDone,
+                finished,
                 list,
                 task == null ? null : task.getMarkingTaskStatus(),
                 task == null ? null : task.getMarkingTaskStage(),
@@ -3635,6 +3791,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 此时拒绝完成：错题必须落到「对应学生」，否则会生成无主错题。
         if (isUnidentifiedStudent(studentId)) {
             throw new BusinessException("该卷还没有识别到学生，请先用上方「修改学生」设置学号后再点完成");
+        }
+
+        // 存在「AI 判分失败」的题不允许结案：失败题得分未知（不是 0 分），
+        // 按 0 分登记错题会冤枉学生。老师需先「重判失败题」或逐题手动给分
+        // （confirmMarking 会把行置为教师已确认）。自动结案（autoFinishIfEnabled）
+        // 会捕获这里的业务异常并保持「已判分待人工」状态，不会把任务打成失败。
+        long failedRows = listByTask(taskId).stream()
+                .filter(r -> r.getMarkingResultStatus() != null && r.getMarkingResultStatus() == STATUS_AI_FAILED)
+                .count();
+        if (failedRows > 0) {
+            throw new BusinessException("还有 " + failedRows + " 题 AI 判分失败，请先重判失败题或手动给分后再完成");
         }
 
         Long paperId = resolvePaperId(task, sheet);
