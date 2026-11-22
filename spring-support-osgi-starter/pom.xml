@@ -44,7 +44,13 @@
              若本模块依赖 socket（哪怕 optional），common -> osgi -> socket -> common
              会构成 reactor 依赖环 -->
 
-        <!-- 源码扩展点装配的真实行为测试（OsgiSourceConfigurationRealTest）。
-             本模块此前没有任何 src/test，junit 需显式引入。 -->
+        <!-- 控制器单元测试（生命周期锁 / 启停超时 / 上传限额 / 批量端点 / jars 索引）。
+             本模块此前没有 src/test，junit-jupiter 需显式引入；
+             版本由父 pom 的 junit.jupiter.version 统一托管。 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

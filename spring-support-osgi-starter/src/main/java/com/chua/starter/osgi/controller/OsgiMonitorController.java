@@ -17,13 +17,17 @@ import org.osgi.framework.wiring.FrameworkWiring;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,14 +40,17 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /**
@@ -52,10 +59,15 @@ import java.util.stream.Stream;
  * <p>暴露 bundle 清单、服务清单、框架统计与单个 bundle 详情，便于在生产环境
  * 无需进入 SSH/Telnet shell 即可确认插件化运行状态。</p>
  *
- * <p><b>变更类操作</b>：上传安装、升组、启动/停止、卸载与下载也在本控制器，
- * 但需要 {@code plugin.osgi.endpoint.manage-enabled=true}（默认 true）。
- * 端点本身默认关闭，开启后即由既有接口鉴权体系保护；生产环境请确保
- * {@code /osgi/**} 只对管理员开放。</p>
+ * <p><b>变更类操作</b>：上传安装、升级、启动/停止、批量启停/卸载、卸载、jar 删除、
+ * 下载与框架刷新都在本控制器，但需要 {@code plugin.osgi.endpoint.manage-enabled=true}
+ * （默认 true）。端点本身默认关闭，开启后即由既有接口鉴权体系保护；
+ * 生产环境请确保 {@code /osgi/**} 只对管理员开放。</p>
+ *
+ * <p><b>并发语义</b>：所有变更类操作经同一把生命周期锁（{@link #lifecycleLock}）串行执行，
+ * 避免「查重再安装」「查状态再启停」这类复合动作在并发下交错；单个 bundle 的启动/停止
+ * 受 {@code plugin.osgi.endpoint.lifecycle-timeout-seconds} 约束，不会因 activator
+ * 挂死而长期占用请求线程。</p>
  *
  * <p>仅在 {@code plugin.osgi.endpoint.enabled=true} 且 classpath 中存在 spring-web 时装配。</p>
  *
@@ -76,6 +88,9 @@ public class OsgiMonitorController {
     /** OSGi 未声明版本时的缺省版本。 */
     private static final String DEFAULT_BUNDLE_VERSION = "0.0.0";
 
+    /** 批量操作单次允许的最大目标数；防止一次超大批量长期持有生命周期锁。 */
+    private static final int MAX_BATCH_SIZE = 100;
+
     /**
      * osgi 启动器。
      */
@@ -95,6 +110,16 @@ public class OsgiMonitorController {
      * 插件操作日志发布器（实时日志抽屉的数据源）。
      */
     private final OsgiLogPublisher logPublisher;
+
+    /**
+     * 生命周期操作互斥锁：安装/升级/启停/卸载/删文件/刷新/批量串行执行。
+     *
+     * <p>这些操作普遍是「先查重/查状态，再动框架」的复合动作，且 OSGi 框架对
+     * 并发生命周期调用的结果不可依赖：并发上传同一插件可能同时通过查重造成
+     * 重复安装，并发启停同一 bundle 可能交错出不确定状态。统一串行化，
+     * 代价只是管理操作本就低频，完全可接受。</p>
+     */
+    private final Object lifecycleLock = new Object();
 
     /**
      * 构造 osgi 观测端点。
@@ -158,11 +183,13 @@ public class OsgiMonitorController {
             return new ArrayList<>();
         }
         try (Stream<Path> stream = Files.list(dir)) {
+            // 一次遍历建立 location 索引，避免每个 jar 都全量扫描 bundle 清单（O(jar×bundle) → O(jar+bundle)）
+            Map<String, OsgiBundle> byLocation = indexByLocation();
             return stream
                     .filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))
-                    .map(this::describeJar)
+                    .map(path -> describeJar(path, byLocation))
                     .toList();
         } catch (IOException | RuntimeException ex) {
             logPublisher.publish(OsgiLogEvent.warn("jars", "", "读取部署目录失败: " + rootMessage(ex)));
@@ -267,10 +294,25 @@ public class OsgiMonitorController {
     public Map<String, Object> install(@RequestParam("file") MultipartFile file,
                                        @RequestParam(defaultValue = "true") boolean start) throws IOException {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doInstall(file, start);
+        }
+    }
+
+    /**
+     * 执行上传安装/原地升级（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param file  插件 jar
+     * @param start 安装后是否启动
+     * @return 安装后的 bundle 描述
+     * @throws IOException 保存上传文件失败
+     */
+    private Map<String, Object> doInstall(MultipartFile file, boolean start) throws IOException {
         long startedAt = System.currentTimeMillis();
         String fileName = file == null ? "" : String.valueOf(file.getOriginalFilename());
         logPublisher.publish(OsgiLogEvent.start("install", fileName));
         try {
+            requireUploadSizeOk(file);
             BundleHeaders headers = readBundleHeaders(file);
             Path target = targetPath(file);
             String url = target.toUri().toString();
@@ -288,7 +330,7 @@ public class OsgiMonitorController {
             } else {
                 save(file, target);
                 try {
-                    installed = launcher.installBundle(url);
+                    installed = launcher.installBundle(url, start);
                 } catch (RuntimeException ex) {
                     Files.deleteIfExists(target);
                     throw new IllegalArgumentException("插件安装失败: " + rootMessage(ex), ex);
@@ -299,7 +341,7 @@ public class OsgiMonitorController {
             }
             if (start && !installed.isActive()) {
                 try {
-                    installed.start();
+                    runLifecycleWithTimeout("start", installed.getSymbolicName(), installed::start);
                 } catch (RuntimeException ex) {
                     // bundle 已落框架（安装副作用成功），失败只发生在 start：
                     // 必须把真实原因带回给页面，而不是落入兜底处理器变成「系统繁忙」
@@ -331,9 +373,24 @@ public class OsgiMonitorController {
     public Map<String, Object> update(@PathVariable String symbolicName,
                                       @RequestParam("file") MultipartFile file) throws IOException {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doUpdate(symbolicName, file);
+        }
+    }
+
+    /**
+     * 执行原地升级（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param symbolicName bundle 符号名
+     * @param file         新版本 jar
+     * @return 升级后的 bundle 描述
+     * @throws IOException 保存上传文件失败
+     */
+    private Map<String, Object> doUpdate(String symbolicName, MultipartFile file) throws IOException {
         long startedAt = System.currentTimeMillis();
         logPublisher.publish(OsgiLogEvent.start("update", symbolicName));
         try {
+            requireUploadSizeOk(file);
             OsgiBundle existing = requireBundle(symbolicName);
             BundleHeaders headers = readBundleHeaders(file);
             if (!symbolicName.equals(headers.symbolicName())) {
@@ -370,12 +427,24 @@ public class OsgiMonitorController {
     @PostMapping("/bundles/{symbolicName}/start")
     public Map<String, Object> start(@PathVariable String symbolicName) {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doStart(symbolicName);
+        }
+    }
+
+    /**
+     * 执行启动（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param symbolicName bundle 符号名
+     * @return 启动后的 bundle 描述
+     */
+    private Map<String, Object> doStart(String symbolicName) {
         long startedAt = System.currentTimeMillis();
         logPublisher.publish(OsgiLogEvent.start("start", symbolicName));
         try {
             OsgiBundle bundle = requireBundle(symbolicName);
             if (!bundle.isActive()) {
-                bundle.start();
+                runLifecycleWithTimeout("start", symbolicName, bundle::start);
             }
             Map<String, Object> result = describe(bundle);
             logPublisher.publish(OsgiLogEvent.success("start", symbolicName, startedAt, "已启动"));
@@ -396,11 +465,23 @@ public class OsgiMonitorController {
     @PostMapping("/bundles/{symbolicName}/stop")
     public Map<String, Object> stop(@PathVariable String symbolicName) {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doStop(symbolicName);
+        }
+    }
+
+    /**
+     * 执行停止（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param symbolicName bundle 符号名
+     * @return 停止后的 bundle 描述
+     */
+    private Map<String, Object> doStop(String symbolicName) {
         long startedAt = System.currentTimeMillis();
         logPublisher.publish(OsgiLogEvent.start("stop", symbolicName));
         try {
             OsgiBundle bundle = requireBundle(symbolicName);
-            bundle.stop();
+            runLifecycleWithTimeout("stop", symbolicName, bundle::stop);
             Map<String, Object> result = describe(bundle);
             logPublisher.publish(OsgiLogEvent.success("stop", symbolicName, startedAt, "已停止"));
             return result;
@@ -423,6 +504,18 @@ public class OsgiMonitorController {
     @PostMapping("/bundles/{symbolicName}/uninstall")
     public Map<String, Object> uninstall(@PathVariable String symbolicName) {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doUninstall(symbolicName);
+        }
+    }
+
+    /**
+     * 执行卸载（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param symbolicName bundle 符号名
+     * @return 卸载结果
+     */
+    private Map<String, Object> doUninstall(String symbolicName) {
         long startedAt = System.currentTimeMillis();
         logPublisher.publish(OsgiLogEvent.start("uninstall", symbolicName));
         try {
@@ -457,6 +550,18 @@ public class OsgiMonitorController {
     @PostMapping("/jars/{fileName}/delete")
     public Map<String, Object> deleteJar(@PathVariable String fileName) {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doDeleteJar(fileName);
+        }
+    }
+
+    /**
+     * 执行 jar 文件删除（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param fileName 部署目录中的文件名（只取 basename）
+     * @return 删除结果
+     */
+    private Map<String, Object> doDeleteJar(String fileName) {
         String name = Paths.get(fileName).getFileName().toString();
         if (!name.toLowerCase(Locale.ROOT).endsWith(".jar")) {
             throw new IllegalArgumentException("只支持删除 .jar 文件: " + name);
@@ -515,6 +620,65 @@ public class OsgiMonitorController {
     }
 
     /**
+     * 批量启动 bundle。
+     *
+     * <p>逐项尽力执行：某一项失败不影响其余项，结果逐项返回。
+     * 单项的超时与错误语义与单个启动接口一致；已是 ACTIVE 的 bundle 跳过启动。</p>
+     *
+     * @param symbolicNames bundle 符号名列表
+     * @return 逐项结果与汇总计数
+     */
+    @PostMapping("/bundles/batch-start")
+    public Map<String, Object> batchStart(@RequestBody List<String> symbolicNames) {
+        requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doBatch("batch-start", symbolicNames, bundle -> {
+                if (!bundle.isActive()) {
+                    runLifecycleWithTimeout("start", bundle.getSymbolicName(), bundle::start);
+                }
+            });
+        }
+    }
+
+    /**
+     * 批量停止 bundle。
+     *
+     * <p>逐项尽力执行；单项超时/失败不影响其余项。</p>
+     *
+     * @param symbolicNames bundle 符号名列表
+     * @return 逐项结果与汇总计数
+     */
+    @PostMapping("/bundles/batch-stop")
+    public Map<String, Object> batchStop(@RequestBody List<String> symbolicNames) {
+        requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doBatch("batch-stop", symbolicNames,
+                    bundle -> runLifecycleWithTimeout("stop", bundle.getSymbolicName(), bundle::stop));
+        }
+    }
+
+    /**
+     * 批量卸载 bundle。
+     *
+     * <p>语义与单个卸载一致：只把 bundle 从框架里摘掉，不删部署目录里的 jar。
+     * 逐项尽力执行；单项失败不影响其余项。</p>
+     *
+     * @param symbolicNames bundle 符号名列表
+     * @return 逐项结果与汇总计数
+     */
+    @PostMapping("/bundles/batch-uninstall")
+    public Map<String, Object> batchUninstall(@RequestBody List<String> symbolicNames) {
+        requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doBatch("batch-uninstall", symbolicNames, bundle -> {
+                if (!launcher.uninstallBundle(bundle.getSymbolicName())) {
+                    throw new IllegalStateException("bundle 卸载失败: " + bundle.getSymbolicName());
+                }
+            });
+        }
+    }
+
+    /**
      * 刷新框架装配（refresh bundles）。
      *
      * <p>bundle 升级/卸载后，受影响的 bundle 需要一次框架刷新才会按新装配关系重新解析。
@@ -528,6 +692,19 @@ public class OsgiMonitorController {
     public Map<String, Object> refreshFramework(@RequestParam(defaultValue = "true") boolean wait)
             throws InterruptedException {
         requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doRefreshFramework(wait);
+        }
+    }
+
+    /**
+     * 执行框架装配刷新（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param wait 是否等待刷新完成事件（最多 30 秒）
+     * @return 刷新结果：initiated=已发起；completed=是否在限时内收到完成事件
+     * @throws InterruptedException 等待完成事件时被中断
+     */
+    private Map<String, Object> doRefreshFramework(boolean wait) throws InterruptedException {
         long startedAt = System.currentTimeMillis();
         logPublisher.publish(OsgiLogEvent.start("refresh", "framework"));
         try {
@@ -604,6 +781,190 @@ public class OsgiMonitorController {
     }
 
     /**
+     * 上传大小上限校验。
+     *
+     * <p>在读取/落盘前先拒绝超大文件，错误信息直接给出上限配置项，
+     * 便于使用方自行调整。&le;0 表示不限制。</p>
+     *
+     * @param file 上传文件
+     */
+    private void requireUploadSizeOk(MultipartFile file) {
+        long max = properties.getEndpoint().getMaxUploadBytes();
+        if (max <= 0 || file == null) {
+            return;
+        }
+        long size = file.getSize();
+        if (size > max) {
+            throw new IllegalArgumentException("插件文件超过大小上限: " + size + " > " + max
+                    + " 字节（plugin.osgi.endpoint.max-upload-bytes）");
+        }
+    }
+
+    /**
+     * 在独立守护线程上执行生命周期动作，并限时等待。
+     *
+     * <p>为什么不用调用线程直接跑：{@code Bundle#start()} / {@code Bundle#stop()}
+     * 会同步执行 activator，一个等待外部资源的坏插件会把请求线程永久挂住。
+     * 这里把动作放到短命守护线程，调用方最多等
+     * {@code plugin.osgi.endpoint.lifecycle-timeout-seconds} 秒。</p>
+     *
+     * <p><b>超时语义</b>：超时只代表「放弃等待」，会尽力中断工作线程；若框架底层
+     * 调用不响应中断，该 bundle 的真实状态可能仍不确定（例如稍后才启动完成），
+     * 调用方应以查询接口返回的状态为准。</p>
+     *
+     * @param op           操作名（用于线程名与错误信息）
+     * @param symbolicName bundle 符号名（用于线程名与错误信息）
+     * @param action       生命周期动作
+     */
+    private void runLifecycleWithTimeout(String op, String symbolicName, Runnable action) {
+        int timeoutSeconds = properties.getEndpoint().getLifecycleTimeoutSeconds();
+        if (timeoutSeconds <= 0) {
+            action.run();
+            return;
+        }
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Thread worker = new Thread(() -> {
+            try {
+                action.run();
+            } catch (Throwable t) {
+                failure.set(t);
+            }
+        }, "osgi-" + op + "-" + symbolicName);
+        worker.setDaemon(true);
+        worker.start();
+        try {
+            worker.join(timeoutSeconds * 1000L);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(op + " 被中断: " + symbolicName, ex);
+        }
+        if (worker.isAlive()) {
+            worker.interrupt();
+            throw new LifecycleTimeoutException(op + " 超过 " + timeoutSeconds
+                    + "s 未完成，已放弃等待（bundle 状态可能不确定）: " + symbolicName);
+        }
+        Throwable error = failure.get();
+        if (error != null) {
+            if (error instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (error instanceof Error err) {
+                throw err;
+            }
+            throw new IllegalStateException(op + " 失败: " + rootMessage(error), error);
+        }
+    }
+
+    /**
+     * 生命周期操作超时：以 504 返回，与参数类 400 错误区分——
+     * 前者说明插件本身启动过慢/挂死，后者说明调用方请求有误。
+     *
+     * @param ex 超时异常
+     * @return 携带原始错误信息的错误体
+     */
+    @ResponseStatus(HttpStatus.GATEWAY_TIMEOUT)
+    @ExceptionHandler(LifecycleTimeoutException.class)
+    public Map<String, Object> handleLifecycleTimeout(LifecycleTimeoutException ex) {
+        log.warn("[OSGi] 生命周期操作超时: {}", ex.getMessage());
+        return Map.of("error", String.valueOf(ex.getMessage()));
+    }
+
+    /**
+     * 参数/状态类错误统一映射为 400，并把具体原因写进响应体
+     * （如 max-upload-bytes 上限、批量数量上限、bundle 不存在），
+     * 避免落入容器兜底变成无信息的 500。
+     *
+     * @param ex 参数或状态类异常
+     * @return 携带原始错误信息的错误体
+     */
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public Map<String, Object> handleBadRequest(RuntimeException ex) {
+        log.warn("[OSGi] 请求被拒绝: {}", ex.getMessage());
+        return Map.of("error", String.valueOf(ex.getMessage()));
+    }
+
+    /**
+     * 生命周期操作在配置时限内未完成的信号异常。
+     *
+     * <p>单独建类型是为了让 {@code @ExceptionHandler} 能把它与普通
+     * {@link IllegalStateException} 区分开，返回更准确的 504。</p>
+     */
+    private static final class LifecycleTimeoutException extends IllegalStateException {
+        private LifecycleTimeoutException(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * 批量操作通用执行器：逐项尽力执行，单项失败不影响其余项。
+     *
+     * <p>逐项结果（含失败原因）全部返回，调用方无需为「部分成功」再做二次猜测。
+     * 目标列表为空或超过 {@link #MAX_BATCH_SIZE} 时直接拒绝：空列表多半是调用方 bug，
+     * 超大列表则会长期持有生命周期锁。</p>
+     *
+     * @param op            操作名（用于日志）
+     * @param symbolicNames 目标 bundle 符号名
+     * @param action        单项动作
+     * @return 逐项结果与汇总计数
+     */
+    private Map<String, Object> doBatch(String op, List<String> symbolicNames, Consumer<OsgiBundle> action) {
+        List<String> names = symbolicNames == null ? List.of() : symbolicNames;
+        if (names.isEmpty()) {
+            throw new IllegalArgumentException("批量操作目标不能为空");
+        }
+        if (names.size() > MAX_BATCH_SIZE) {
+            throw new IllegalArgumentException("批量操作一次最多 " + MAX_BATCH_SIZE + " 个 bundle: " + names.size());
+        }
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start(op, names.size() + " 个 bundle"));
+        List<Map<String, Object>> items = new ArrayList<>();
+        int success = 0;
+        for (String name : names) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("symbolicName", name);
+            try {
+                OsgiBundle bundle = requireBundle(name);
+                action.accept(bundle);
+                item.put("success", true);
+                success++;
+            } catch (RuntimeException ex) {
+                item.put("success", false);
+                item.put("error", rootMessage(ex));
+            }
+            items.add(item);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", names.size());
+        result.put("successCount", success);
+        result.put("failureCount", names.size() - success);
+        result.put("items", items);
+        logPublisher.publish(OsgiLogEvent.success(op, names.size() + " 个 bundle", startedAt,
+                "成功 " + success + " / 失败 " + (names.size() - success)));
+        return result;
+    }
+
+    /**
+     * 按 location 建立当前 bundle 索引。
+     *
+     * <p>部署目录可能有多个 jar，逐一调用 {@link #findBundleByLocation(String)}
+     * 会退化成 O(jar 数 × bundle 数) 的重复全扫；一次遍历建索引后，
+     * 每个文件只做一次哈希查找。单个 bundle 的按名/按 location 查找
+     * 仍是线性扫描——对一次性查询这就是最优做法。</p>
+     *
+     * @return location -> bundle 索引
+     */
+    private Map<String, OsgiBundle> indexByLocation() {
+        Map<String, OsgiBundle> index = new HashMap<>();
+        for (OsgiBundle bundle : launcher.getBundles()) {
+            if (bundle.getLocation() != null) {
+                index.putIfAbsent(bundle.getLocation(), bundle);
+            }
+        }
+        return index;
+    }
+
+    /**
      * 把上传的 jar 落到部署目录，文件名只取 basename，拒绝路径穿越。
      *
      * @param file 上传文件
@@ -655,7 +1016,7 @@ public class OsgiMonitorController {
             save(file, target);
             OsgiBundle updated = launcher.updateBundle(existing.getSymbolicName(), target.toUri().toString());
             if (updated != null && existing.isActive() && !updated.isActive()) {
-                updated.start();
+                runLifecycleWithTimeout("start", updated.getSymbolicName(), updated::start);
             }
             return updated;
         } catch (IOException | RuntimeException ex) {
@@ -845,16 +1206,17 @@ public class OsgiMonitorController {
      * <p>这里直接带上「是否仍在框架中」：页面据此把「删除」按钮置灰并给出原因，
      * 用户不必点了才收到「请先卸载」的报错。</p>
      *
-     * @param path jar 文件路径
+     * @param path       jar 文件路径
+     * @param byLocation 当前 bundle 的 location 索引（见 {@link #indexByLocation()}）
      * @return 描述信息
      */
-    private Map<String, Object> describeJar(Path path) {
+    private Map<String, Object> describeJar(Path path, Map<String, OsgiBundle> byLocation) {
         Map<String, Object> item = new LinkedHashMap<>();
         String fileName = path.getFileName().toString();
         item.put("fileName", fileName);
         item.put("size", sizeQuietly(path));
         item.put("lastModified", lastModifiedQuietly(path));
-        OsgiBundle installed = findBundleByLocation(path.toUri().toString());
+        OsgiBundle installed = byLocation.get(path.toUri().toString());
         item.put("installed", installed != null);
         item.put("symbolicName", installed == null ? null : installed.getSymbolicName());
         item.put("state", installed == null ? null : installed.getState());

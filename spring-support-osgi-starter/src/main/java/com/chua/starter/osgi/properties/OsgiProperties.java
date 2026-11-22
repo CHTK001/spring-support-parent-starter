@@ -144,12 +144,31 @@ public class OsgiProperties {
         private boolean enabled = false;
 
         /**
-         * 是否允许变更类操作（上传安装、升级、启动、停止、卸载）。
+         * 是否允许变更类操作（上传安装、升级、启动、停止、卸载及批量操作）。
          *
          * <p>默认开启，但只有在 {@link #enabled}=true 时端点才存在。
          * 关闭后仍可在界面上查看 bundle 清单，但不能改；适用于只读观测场景。</p>
          */
         private boolean manageEnabled = true;
+
+        /**
+         * 单个 bundle 启动/停止操作的最长等待时间（秒）。
+         *
+         * <p>bundle 的 activator 可能在 start/stop 里阻塞（例如等待外部资源），
+         * 同步调用会一直占用请求线程。超过该时长仍未返回即放弃等待并报错，
+         * 避免一个坏插件拖死整个管理端点。注意：超时只是放弃等待并尽力中断工作线程，
+         * 若框架底层调用不响应中断，该 bundle 的真实状态可能仍不确定。
+         * &le;0 表示不限制。</p>
+         */
+        private int lifecycleTimeoutSeconds = 60;
+
+        /**
+         * 单个插件 jar 的上传大小上限（字节）。
+         *
+         * <p>超限直接拒绝上传，避免超大文件占满磁盘。仅约束本端点的插件 jar 上传，
+         * 不影响全局 multipart 配置。&le;0 表示不限制。</p>
+         */
+        private long maxUploadBytes = 100L * 1024 * 1024;
     }
 
     /**
