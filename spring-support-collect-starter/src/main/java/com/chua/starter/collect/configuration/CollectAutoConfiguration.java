@@ -6,8 +6,10 @@ import com.chua.starter.collect.mapper.CollectTaskMapper;
 import com.chua.starter.collect.properties.CollectProperties;
 import com.chua.starter.collect.service.CollectFieldService;
 import com.chua.starter.collect.store.CollectDatabaseSinkFactory;
+import com.chua.starter.collect.store.CollectRecordSearchIndex;
 import com.chua.starter.collect.store.CollectSinkFactory;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -69,11 +71,12 @@ public class CollectAutoConfiguration {
      * 采集结果落库通道工厂：默认按 {@code plugin.collect.persistence.type} 提供数据库落库，
      * 宿主注册自己的 {@code CollectSinkFactory} Bean 即可整体替换持久化实现。
      *
-     * @param taskLogMapper 节点日志表访问
-     * @param recordMapper  采集结果表访问
-     * @param taskMapper    任务表访问
-     * @param fieldService  字段定义服务
-     * @param properties    平台配置
+     * @param taskLogMapper       节点日志表访问
+     * @param recordMapper        采集结果表访问
+     * @param taskMapper          任务表访问
+     * @param fieldService        字段定义服务
+     * @param properties          平台配置
+     * @param searchIndexProvider 结果全文索引提供者（未启用时为空）
      * @return 落库通道工厂
      */
     @Bean
@@ -82,7 +85,9 @@ public class CollectAutoConfiguration {
                                                  CollectRecordMapper recordMapper,
                                                  CollectTaskMapper taskMapper,
                                                  CollectFieldService fieldService,
-                                                 CollectProperties properties) {
-        return new CollectDatabaseSinkFactory(taskLogMapper, recordMapper, taskMapper, fieldService, properties);
+                                                 CollectProperties properties,
+                                                 ObjectProvider<CollectRecordSearchIndex> searchIndexProvider) {
+        return new CollectDatabaseSinkFactory(taskLogMapper, recordMapper, taskMapper, fieldService,
+                properties, searchIndexProvider);
     }
 }

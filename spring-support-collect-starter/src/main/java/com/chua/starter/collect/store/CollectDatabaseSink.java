@@ -93,6 +93,11 @@ public class CollectDatabaseSink implements CollectSink {
     private final CollectFieldService fieldService;
 
     /**
+     * 结果全文索引，可为 null（索引未启用或初始化失败时降级）。
+     */
+    private final CollectRecordSearchIndex searchIndex;
+
+    /**
      * 本次任务的上下文，创建后注入。
      */
     private volatile CollectContext context;
@@ -213,6 +218,9 @@ public class CollectDatabaseSink implements CollectSink {
             } else {
                 entity.setCollectRecordId(existsId);
                 recordMapper.updateById(entity);
+            }
+            if (searchIndex != null) {
+                searchIndex.index(entity);
             }
         } catch (Exception ex) {
             log.warn("[collect] 结果写入失败 task={} node={} err={}", taskId, nodeId, ex.getMessage());

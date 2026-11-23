@@ -305,6 +305,23 @@ public class CollectProperties {
          * <p>仅对默认工厂生效；宿主替换工厂 Bean 后本项不再参与选择。</p>
          */
         private String type = "database";
+
+        /**
+         * 是否启用结果记录 Lucene 全文索引。
+         *
+         * <p>开启后 {@code collect_record} 落库/删除会同步维护内嵌 Lucene 索引，
+         * {@code /v2/collect/record/search} 走倒排检索；关闭后检索接口降级为
+         * 数据库 LIKE 模糊查询。索引目录损坏时自动降级为不可用（只告警不阻断采集）。</p>
+         */
+        private boolean searchEnabled = true;
+
+        /**
+         * Lucene 索引目录；留空时使用 {@code ${java.io.tmpdir}/collect-search-index}。
+         *
+         * <p>索引可随时从结果表全量重建（POST /v2/collect/record/search/rebuild），
+         * 因此放在临时目录也不会永久丢数据；生产建议显式指向稳定盘。</p>
+         */
+        private String searchIndexPath = "";
     }
 
 }

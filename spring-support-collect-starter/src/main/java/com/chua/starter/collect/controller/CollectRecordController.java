@@ -117,4 +117,39 @@ public class CollectRecordController {
     public ReturnResult<Long> count(@RequestParam(required = false) Integer flowId) {
         return ReturnResult.ok(recordService.countRecords(flowId));
     }
+
+    /**
+     * 结果全文检索。
+     *
+     * <p>默认走内嵌 Lucene 索引（匹配业务主键、抓取地址与 payload 全部单元格文本），
+     * 索引未启用时降级为数据库模糊查询。</p>
+     *
+     * @param keyword   检索关键词，必填
+     * @param flowId    流程过滤，可空
+     * @param taskId    任务过滤，可空
+     * @param query     分页参数
+     * @return 结果分页
+     */
+    @Operation(summary = "结果全文检索")
+    @GetMapping("/search")
+    public ReturnPageResult<CollectRecordVO> search(@RequestParam String keyword,
+                                                    @RequestParam(required = false) Integer flowId,
+                                                    @RequestParam(required = false) Long taskId,
+                                                    @ParameterObject Query<CollectRecord> query) {
+        CollectRecord condition = new CollectRecord();
+        condition.setCollectRecordFlowId(flowId);
+        condition.setCollectRecordTaskId(taskId);
+        return PageResultUtils.ok(recordService.searchRecords(keyword, condition, query.createPage()));
+    }
+
+    /**
+     * 全量重建结果全文索引。
+     *
+     * @return 重建条数
+     */
+    @Operation(summary = "重建结果全文索引")
+    @PostMapping("/search/rebuild")
+    public ReturnResult<Integer> rebuildSearchIndex() {
+        return ReturnResult.ok(recordService.rebuildSearchIndex());
+    }
 }

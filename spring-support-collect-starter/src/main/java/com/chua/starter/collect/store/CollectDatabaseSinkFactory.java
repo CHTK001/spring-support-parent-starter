@@ -7,6 +7,7 @@ import com.chua.starter.collect.mapper.CollectTaskMapper;
 import com.chua.starter.collect.properties.CollectProperties;
 import com.chua.starter.collect.service.CollectFieldService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 
 /**
  * 默认落库通道工厂。
@@ -56,6 +57,11 @@ public class CollectDatabaseSinkFactory implements CollectSinkFactory {
      */
     private final CollectProperties properties;
 
+    /**
+     * 结果全文索引提供者；未启用/初始化失败时为空，落库通道随之降级为不写索引。
+     */
+    private final ObjectProvider<CollectRecordSearchIndex> searchIndexProvider;
+
     @Override
     public CollectSink create(Integer flowId, Long taskId, boolean persist) {
         String type = properties.getPersistence().getType();
@@ -63,6 +69,7 @@ public class CollectDatabaseSinkFactory implements CollectSinkFactory {
             return new CollectNoopSink();
         }
         return new CollectDatabaseSink(flowId, taskId, persist,
-                taskLogMapper, recordMapper, taskMapper, fieldService);
+                taskLogMapper, recordMapper, taskMapper, fieldService,
+                searchIndexProvider.getIfAvailable());
     }
 }

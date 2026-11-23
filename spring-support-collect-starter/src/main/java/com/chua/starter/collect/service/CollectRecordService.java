@@ -64,4 +64,24 @@ public interface CollectRecordService extends IService<CollectRecord> {
      * @return 记录数
      */
     long countRecords(Integer flowId);
+
+    /**
+     * 全文检索结果。
+     *
+     * <p>默认走内嵌 Lucene 索引（keyword 匹配业务主键、抓取地址与 payload 全部单元格文本），
+     * 命中后按索引顺序回表组装；索引未启用或不可用时降级为数据库 LIKE 模糊查询。</p>
+     *
+     * @param keyword   检索关键词，必填
+     * @param condition 附加过滤条件（流程/任务）
+     * @param page      分页对象
+     * @return 结果分页
+     */
+    IPage<CollectRecordVO> searchRecords(String keyword, CollectRecord condition, IPage<CollectRecord> page);
+
+    /**
+     * 全量重建全文索引（扫描整张结果表）。
+     *
+     * @return 重建条数
+     */
+    int rebuildSearchIndex();
 }
