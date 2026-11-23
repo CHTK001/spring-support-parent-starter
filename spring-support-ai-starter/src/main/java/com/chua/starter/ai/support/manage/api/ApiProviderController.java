@@ -1285,6 +1285,9 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> importAllProviderModels(@PathVariable("provider_id") String providerId,
                                                                   @RequestBody(required = false) Map<String, Object> body) {
         SysAccountChannel entity = requireProvider(providerId);
+        // Web 浏览器推理目录行以真实模型 id 落库（见 modelKeyOf / batchModelInput）：
+        // 勾选过滤、幂等判重、落库必须用同一套键，避免半途换键产生重复行
+        boolean webCatalog = isWebPlatform(entity.getPlatform());
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         Map<String, Object> upstream = fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
                 entity.getCredentials(), UpstreamAuth.of(entity.getAuthScheme(), entity.getExtra()),
@@ -1304,7 +1307,8 @@ public class ApiProviderController {
             if (!wanted.isEmpty()) {
                 List<Map<String, Object>> filtered = new ArrayList<>(wanted.size());
                 for (Map<String, Object> m : upstreamModels) {
-                    if (wanted.contains(batchModelName(m))) {
+                    // 前端勾选键来自 remote_models 的 modelName（web 行=id），与落库键同源
+                    if (wanted.contains(modelKeyOf(m, webCatalog))) {
                         filtered.add(m);
                     }
                 }
@@ -1316,10 +1320,16 @@ public class ApiProviderController {
         // 顺带算出最大排序号，新模型排在既有行之后
         Set<String> seen = new HashSet<>(16);
         Map<String, SysAccountChannelModel> existing = new HashMap<>(16);
+        // 别名索引：web 目录行改口径（id 落 model、展示名退别名）后，
+        // 旧版按展示名落库的存量行靠它保持幂等，不因重复导入多出一行同义模型
+        Map<String, SysAccountChannelModel> existingByAlias = new HashMap<>(8);
         int maxSort = -1;
         for (SysAccountChannelModel row : accountChannelModelService.listAll(providerId)) {
             if (row.getModel() != null) {
                 existing.put(row.getModel(), row);
+            }
+            if (row.getAlias() != null && !row.getAlias().isBlank()) {
+                existingByAlias.putIfAbsent(row.getAlias(), row);
             }
             if (row.getSortOrder() != null && row.getSortOrder() > maxSort) {
                 maxSort = row.getSortOrder();
@@ -1337,13 +1347,25 @@ public class ApiProviderController {
         List<SysAccountChannelModel> candidates = new ArrayList<>(8);
         for (int i = 0; i < upstreamModels.size(); i++) {
             Map<String, Object> m = upstreamModels.get(i);
-            String name = batchModelName(m);
+            String name = modelKeyOf(m, webCatalog);
             // 上游缺模型名的坏条目计入 skipped
             if (name == null) {
                 skipped++;
                 continue;
             }
             SysAccountChannelModel exist = existing.get(name);
+            if (exist == null && webCatalog) {
+                // 旧口径存量行的幂等命中：旧版导入把目录展示名落在 model 列（alias 不写），
+                // 先按 model=展示名 命中，再退 alias=展示名（用户手填过别名的行）。
+                // 命中后不迁移 model 列、不多建行，避免同一脚本出现两行同义模型。
+                String displayName = str(m, "name");
+                if (displayName != null && !displayName.isBlank()) {
+                    exist = existing.get(displayName);
+                    if (exist == null) {
+                        exist = existingByAlias.get(displayName);
+                    }
+                }
+            }
             if (exist != null) {
                 // 已存在：不覆盖用户配置，只补上游真实元数据（仅空列 + metrics 合并）
                 if (mergeUpstreamMetadata(entity, exist, m, now)) {
@@ -1357,7 +1379,7 @@ public class ApiProviderController {
                 skipped++;
                 continue;
             }
-            SysAccountChannelModel row = toModelEntity(providerId, batchModelInput(m, name, sortBase + i), now);
+            SysAccountChannelModel row = toModelEntity(providerId, batchModelInput(m, name, sortBase + i, webCatalog), now);
             enrichFromMetrics(entity, row);
             // 落库交给账号模块的模型业务：幂等补录 + 统一追排序号
             candidates.add(row);
@@ -1682,6 +1704,28 @@ public class ApiProviderController {
     }
 
     /**
+     * 上游条目 → 落库模型键。普通供应商用展示名优先（{@link #batchModelName}）；
+     * Web 浏览器推理目录行改用真实模型 id 优先 —— 会话复合 id（web:&lt;model&gt;）
+     * 与前端脚本反查都以 model 列为准，目录展示名退为别名后不能再当主键。
+     *
+     * @param m          上游条目
+     * @param webCatalog 是否为 Web 浏览器推理目录行
+     * @return 模型键；条目缺失或字段都为空返回 null
+     */
+    private String modelKeyOf(Map<String, Object> m, boolean webCatalog) {
+        if (!webCatalog) {
+            return batchModelName(m);
+        }
+        if (m == null) {
+            return null;
+        }
+        if (m.get("id") instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        return batchModelName(m);
+    }
+
+    /**
      * 上游条目 → 「保存提供者模型」输入（{@link #toModelEntity} 认识的形态）。
      *
      * <p>上游 OpenAI 兼容接口只给 {@code {id,name,tasks,traits}}。这里把它映射成
@@ -1694,13 +1738,22 @@ public class ApiProviderController {
      * 保持「未指定」，由指标库快照或用户手填补上。</p>
      *
      * @param m     上游条目
-     * @param name  模型名（已判空）
+     * @param name  模型名（已判空；web 目录行=真实模型 id）
      * @param sortOrder 排序号（既有行之后的序号，保证不与已有行并列）
+     * @param webCatalog 是否为 Web 浏览器推理目录行
      * @return 模型输入
      */
-    private Map<String, Object> batchModelInput(Map<String, Object> m, String name, int sortOrder) {
+    private Map<String, Object> batchModelInput(Map<String, Object> m, String name, int sortOrder, boolean webCatalog) {
         Map<String, Object> input = new LinkedHashMap<>(24);
         input.put("model", name);
+        if (webCatalog) {
+            // Web 目录行：真实模型 id 落 model 列，目录展示名退为别名 ——
+            // 「浏览器本地对话」这类笼统名只做展示，不再顶掉 web-chat-local 等真实 id
+            String displayName = str(m, "name");
+            if (displayName != null && !displayName.isBlank() && !displayName.equals(name)) {
+                input.put("alias", displayName);
+            }
+        }
         // 开关取自上游行，不预设常量：上游没声明就按「关闭」入库，由管理员在模型管理里开启。
         // 之前写死 true 会把「导入」变成「整批启用」，模型数直接虚高。
         input.put("enabled", bool(m, "enabled", false));
@@ -1802,13 +1855,20 @@ public class ApiProviderController {
                     entity.getProxy(), false, entity.getExtra(), entity.getProviderId());
 
             // 转换格式：data.models[].name → data.items[].modelName
+            // Web 目录行翻转优先级：modelName=真实模型 id（与落库 model 列同源），
+            // 前端「从提供商获取」的勾选键/预填名因此直接拿到 id，展示名走 name/alias 字段
+            boolean webCatalog = isWebPlatform(entity.getPlatform());
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> models = (List<Map<String, Object>>) upstreamResult.get("models");
             List<Map<String, Object>> items = new ArrayList<>();
             if (models != null) {
                 for (Map<String, Object> m : models) {
                     Map<String, Object> item = new LinkedHashMap<>(m);
-                    item.put("modelName", m.get("name") != null ? m.get("name") : m.get("id"));
+                    Object mid = m.get("id");
+                    Object mname = m.get("name");
+                    item.put("modelName", webCatalog
+                            ? (mid != null && !String.valueOf(mid).isBlank() ? mid : mname)
+                            : (mname != null ? mname : mid));
                     // 价格 / 能力已随 metrics 解析出来：这里补挂到行顶层，
                     // 让「从提供商获取」列表能直接标注价格与「免费」，不必再钻 metrics
                     applyUpstreamMetrics(item, uncheckedCast(m.get("metrics")));
