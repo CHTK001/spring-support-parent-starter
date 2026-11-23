@@ -261,12 +261,18 @@ public class ModelPriceOverviewService {
         if (hotOnly) {
             matched.removeIf(group -> group.popularityRank <= 0);
         }
-        // 热门模型 id 清单（供前端「热门优先」置顶排序时跳过置顶判定）
-        List<String> hotModels = new ArrayList<>();
+        // 热门模型 id 清单（供前端「热门 Top」区块）：按排名升序（无排名者不收录）
+        List<ModelGroup> hotRanked = new ArrayList<>();
         for (ModelGroup group : matched) {
             if (group.popularityRank > 0) {
-                hotModels.add(group.model);
+                hotRanked.add(group);
             }
+        }
+        hotRanked.sort(Comparator.comparingInt((ModelGroup g) -> g.popularityRank)
+                .thenComparing(Comparator.comparingLong((ModelGroup g) -> g.popularityTokens).reversed()));
+        List<String> hotModels = new ArrayList<>();
+        for (ModelGroup group : hotRanked) {
+            hotModels.add(group.model);
         }
 
         // 6) 排序 + 分页
