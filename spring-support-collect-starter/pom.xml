@@ -37,6 +37,18 @@
       <artifactId>spring-support-datapool-starter</artifactId>
       <version>${module.version}</version>
     </dependency>
+    <!-- 数据源中心的自动装配在运行期硬性依赖本 jar：datapool 的
+         AutoConfiguration.imports 引用了 DatasourceHubAutoConfiguration，
+         缺它时宿主启动即在自动装配排序阶段报
+         "Unable to read meta-data for class ...DatasourceHubAutoConfiguration"。
+         collect 代码不直接使用 hub 类型，故仅声明 runtime 依赖；
+         按「依赖即带入」由 collect 保证所有消费方的运行时类路径完整。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasource-hub-starter</artifactId>
+      <version>${module.version}</version>
+      <scope>runtime</scope>
+    </dependency>
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-job-starter</artifactId>
