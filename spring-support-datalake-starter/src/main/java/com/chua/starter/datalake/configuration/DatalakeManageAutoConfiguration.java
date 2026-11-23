@@ -7,8 +7,8 @@ import com.chua.starter.datalake.controller.DatalakeManageController;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
 import org.springframework.context.annotation.Bean;
 
@@ -25,9 +25,14 @@ import javax.sql.DataSource;
  *       暴露 {@code /v2/datalake/**} 管理端点。</li>
  * </ol>
  *
- * <p>必须排在 {@code DatalakeAutoConfiguration} 之后处理，否则
- * {@code @ConditionalOnBean(DatalakeServer.class)} 会因 bean 定义尚未登记而恒不命中；
- * 该类位于 api 仓，编译期不可见，故用字符串形式声明排序。</p>
+ * <p>控制器条件用 {@code @ConditionalOnProperty(datalake.enabled=true)}，而不用
+ * {@code @ConditionalOnBean(DatalakeServer.class)}：后者跨自动装配类按「bean 定义
+ * 是否已登记」判定，受解析/注册顺序影响，在本运行时（Spring Boot 4，2026-11-23
+ * 194 实证）恒不命中——jdbcPipelineManager 正常装配、datalakeServer 也已创建，
+ * 控制器却被静默跳过，{@code /v2/datalake/**} 整体 404。属性条件与 bean 注册顺序
+ * 无关；且 {@code datalake.enabled=true} 时 DatalakeServer 必然由 api 仓的
+ * DatalakeAutoConfiguration 装配（本 starter 硬依赖 datalake 类，缺类时属性条件
+ * 也不会通过）。{@code @AutoConfigureAfter} 仍保留，保证解析顺序的确定性。</p>
  *
  * @author CH
  * @since 4.0.0.51
@@ -52,14 +57,15 @@ public class DatalakeManageAutoConfiguration {
     }
 
     /**
-     * 数据中台管理端点：仅当 DatalakeServer 已装配（datalake.enabled=true）时生效；
-     * 未启用时端点整体 404，前端据此呈现未启用空态。
+     * 数据中台管理端点：{@code datalake.enabled=true} 时生效（此时 DatalakeServer
+     * 必已由 DatalakeAutoConfiguration 装配）；未启用时端点整体 404，
+     * 前端据此呈现未启用空态。鉴权沿用宿主统一接口鉴权体系，不设免鉴权白名单。
      *
      * @param server 数据湖服务端
      * @return 管理端点
      */
     @Bean
-    @ConditionalOnBean(DatalakeServer.class)
+    @ConditionalOnProperty(name = "datalake.enabled", havingValue = "true")
     public DatalakeManageController datalakeManageController(DatalakeServer server) {
         return new DatalakeManageController(server);
     }
