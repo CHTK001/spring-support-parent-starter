@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  *                       为空时仍由自动探测决定；{@code local} 方式不使用本字段
  * @param version        服务端大版本（当前 influxdb 使用：2/3）
  * @param topFlag        置顶标记：1 置顶、0 普通；为空按不置顶处理
+ * @param sharedCollect  共享给采集平台：1 已注册、0 未注册；为空按未注册处理
  * @author CH
  * @since 4.0.0.42
  */
@@ -40,6 +41,7 @@ public record DataSourceDTO(
         String controlMode,
         String controlTarget,
         String version,
-        Integer topFlag
+        Integer topFlag,
+        Integer sharedCollect
 ) {
 }

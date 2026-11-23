@@ -276,6 +276,7 @@ public class OsgiAutoConfiguration {
         if (bridge != null) {
             register.setAcceptanceEnabled(bridge.isAcceptanceEnabled());
             register.setInvalidateOnBundleLifecycle(bridge.isInvalidateOnBundleLifecycle());
+            register.setProxyEnabled(bridge.isProxyEnabled());
         }
         register.initialize();
         if (bridge == null || bridge.isInvalidateOnBundleLifecycle()) {

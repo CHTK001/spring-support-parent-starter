@@ -6,6 +6,7 @@ import com.chua.starter.collect.mapper.CollectDatasourceMapper;
 import com.chua.starter.collect.vo.CollectColumnVO;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.datasource.dialect.SqlName;
+import com.chua.datasource.support.url.JdbcDriverUtils;
 import com.chua.starter.datapool.support.model.SchemaColumnVO;
 import com.chua.starter.datapool.support.model.dto.DdlColumn;
 import com.chua.starter.datapool.support.model.dto.TableDdlDTO;
@@ -19,6 +20,9 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -29,14 +33,17 @@ import java.sql.Statement;
 import java.sql.Clob;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HexFormat;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -63,6 +70,11 @@ public class CollectJdbcSupport {
     public static final String APP_DATASOURCE = "app";
 
     /**
+     * 节点内联连接的池缓存键前缀。
+     */
+    private static final String INLINE_PREFIX = "inline:";
+
+    /**
      * 结果表主键列。
      */
     private static final String ID_COLUMN = "collect_export_id";
@@ -86,16 +98,25 @@ public class CollectJdbcSupport {
     private final Map<String, DataSource> pools = new ConcurrentHashMap<>();
 
     /**
+     * 节点内联连接参数，按合成键缓存。
+     *
+     * <p>键由连接串、账号、口令的摘要生成，不含明文口令；同一份连接配置
+     * 在多轮执行间只解析一次、只建一个池。</p>
+     */
+    private final Map<String, CollectDatasourceRegistry.Target> inlineTargets = new ConcurrentHashMap<>();
+
+    /**
      * 数据源解析器，台账读数据源中心。
      */
     private final CollectDatasourceRegistry registry;
 
     /**
-     * 数据源模块（hub）的结构与 DDL 服务。
+     * 数据源模块（hub）的结构与 DDL 服务，可选。
      *
-     * <p>表清单、列元数据、建表/补列都委托它：这些能力归数据源模块，采集侧不再自实现。</p>
+     * <p>表清单、列元数据、建表/补列优先委托它：这些能力归数据源模块，采集侧不重复实现。
+     * 数据中心未启用时按 JDBC 元数据轻量自查，采集器不再强依赖数据中心。</p>
      */
-    private final DatasourceSchemaService schemaService;
+    private final ObjectProvider<DatasourceSchemaService> schemaServiceProvider;
 
     /**
      * 应用自身数据源。
@@ -120,6 +141,32 @@ public class CollectJdbcSupport {
     }
 
     /**
+     * 解析数据源，节点自带内联连接参数时优先直连。
+     *
+     * <p>「自定义连接」让单个节点直连台账之外的库：jdbcUrl 非空时按内联参数
+     * 建池，数据源引用不生效；留空则维持原引用语义。连接池按合成键缓存复用，
+     * 键由连接串、账号、口令的 SHA-256 摘要生成，不落明文口令。</p>
+     *
+     * @param reference 数据源引用（留空或 app 表示应用主库）
+     * @param jdbcUrl   节点内联 JDBC 地址，非空时优先
+     * @param username  内联账号
+     * @param password  内联口令
+     * @return 实际生效的数据源键，后续 jdbc 方法沿用该键
+     */
+    public String prepare(String reference, String jdbcUrl, String username, String password) {
+        String url = jdbcUrl == null ? "" : jdbcUrl.trim();
+        if (url.isEmpty()) {
+            return reference;
+        }
+        String user = username == null ? "" : username.trim();
+        String pass = password == null ? "" : password;
+        String key = INLINE_PREFIX + sha256(url + '\n' + user + '\n' + pass);
+        inlineTargets.putIfAbsent(key, new CollectDatasourceRegistry.Target(
+                url, user, pass, null, "节点内联连接", false));
+        return key;
+    }
+
+    /**
      * 数据源配置变更后丢弃缓存的连接池，应用主库只解除引用不关闭。
      *
      * @param reference 数据源引用
@@ -127,6 +174,7 @@ public class CollectJdbcSupport {
     public void discard(String reference) {
         String key = reference == null || reference.isBlank() ? APP_DATASOURCE : reference.trim();
         DataSource dataSource = pools.remove(key);
+        inlineTargets.remove(key);
         if (!APP_DATASOURCE.equals(key) && dataSource instanceof HikariDataSource hikari) {
             hikari.close();
         }
@@ -210,7 +258,11 @@ public class CollectJdbcSupport {
      * @return 表名列表，已去重并按名称排序
      */
     public List<String> listTables(String reference) {
-        return schemaService.listTables(reference);
+        DatasourceSchemaService service = schemaServiceProvider.getIfAvailable();
+        if (service != null) {
+            return service.listTables(reference);
+        }
+        return listTablesByMetadata(reference);
     }
 
     /**
@@ -224,7 +276,10 @@ public class CollectJdbcSupport {
      * @return 列元数据，按列序号排序
      */
     public List<CollectColumnVO> listColumns(String reference, String table) {
-        List<SchemaColumnVO> columns = schemaService.listColumns(reference, table);
+        DatasourceSchemaService service = schemaServiceProvider.getIfAvailable();
+        List<SchemaColumnVO> columns = service != null
+                ? service.listColumns(reference, table)
+                : listColumnsByMetadata(reference, table);
         List<CollectColumnVO> result = new ArrayList<>(columns.size());
         for (SchemaColumnVO column : columns) {
             result.add(new CollectColumnVO(column.name(), column.label(), column.position(),
@@ -786,7 +841,13 @@ public class CollectJdbcSupport {
         }
         // 建表/补列的方言拼装与"表已存在"策略由数据源模块负责：表不存在则建（自带自增主键 id），
         // 已存在则只补缺失列——与原来 ensureTable 的语义一致，但类型与主键由数据源模块统一决定。
-        schemaService.executeDdl(new TableDdlDTO(reference, name, targets, null, null, "APPEND", Boolean.TRUE));
+        // 数据中心未启用时按 JDBC 元数据做轻量建表/补列，采集器可独立于数据中心运行。
+        DatasourceSchemaService schema = schemaServiceProvider.getIfAvailable();
+        if (schema != null) {
+            schema.executeDdl(new TableDdlDTO(reference, name, targets, null, null, "APPEND", Boolean.TRUE));
+        } else {
+            ensureTableByDdl(reference, name, targets);
+        }
     }
 
     /**
@@ -803,7 +864,12 @@ public class CollectJdbcSupport {
      */
     public void ensureTypedTable(String reference, String table, List<DdlColumn> columns) {
         String name = identifier(table);
-        schemaService.executeDdl(new TableDdlDTO(reference, name, columns, null, null, "APPEND", Boolean.FALSE));
+        DatasourceSchemaService schema = schemaServiceProvider.getIfAvailable();
+        if (schema != null) {
+            schema.executeDdl(new TableDdlDTO(reference, name, columns, null, null, "APPEND", Boolean.FALSE));
+        } else {
+            ensureTableByDdl(reference, name, columns);
+        }
     }
 
     /**
@@ -838,9 +904,9 @@ public class CollectJdbcSupport {
         if (longest.isEmpty()) {
             return;
         }
-        List<SchemaColumnVO> columns = schemaService.listColumns(reference, table);
-        List<SchemaColumnVO> narrow = new ArrayList<>();
-        for (SchemaColumnVO column : columns) {
+        List<CollectColumnVO> columns = listColumns(reference, table);
+        List<CollectColumnVO> narrow = new ArrayList<>();
+        for (CollectColumnVO column : columns) {
             Integer needed = longest.get(String.valueOf(column.name()).toLowerCase(Locale.ROOT));
             if (needed == null || !isBoundedText(column)) {
                 continue;
@@ -856,7 +922,7 @@ public class CollectJdbcSupport {
         }
         String name = identifier(table);
         try (Connection connection = resolve(reference).getConnection()) {
-            for (SchemaColumnVO column : narrow) {
+            for (CollectColumnVO column : narrow) {
                 // 跨方言的 ALTER 语句由数据源模块拼：MySQL 走 MODIFY COLUMN，其余方言依次
                 // 尝试 ALTER COLUMN <类型> / TYPE / MODIFY，只有全部失败才抛错。
                 JdbcDialectSupport.alterColumn(connection, name, identifier(String.valueOf(column.name())),
@@ -877,14 +943,15 @@ public class CollectJdbcSupport {
      * @param column 列元数据
      * @return 需要按取值长度判断是否放宽返回 true
      */
-    private static boolean isBoundedText(SchemaColumnVO column) {
+    private static boolean isBoundedText(CollectColumnVO column) {
         String type = column.typeName() == null ? "" : column.typeName().toUpperCase(Locale.ROOT);
         Integer size = column.size();
         return type.contains("CHAR") && size != null && size > 0 && size < UNBOUNDED_TEXT_SIZE;
     }
 
     /**
-     * 建数据源：应用主库直接取容器里的 DataSource，其余交数据源中心解析后建连接池。
+     * 建数据源：应用主库直接取容器里的 DataSource；节点内联连接按自带参数建池；
+     * 其余交数据源中心解析后建连接池。
      *
      * @param key 数据源引用
      * @return 数据源
@@ -897,8 +964,28 @@ public class CollectJdbcSupport {
             }
             return dataSource;
         }
+        CollectDatasourceRegistry.Target inline = inlineTargets.get(key);
+        if (inline != null) {
+            return new HikariDataSource(registry.config(inline, key, 30000L));
+        }
         CollectDatasourceRegistry.Target target = registry.resolve(key);
         return new HikariDataSource(registry.config(target, key, 30000L));
+    }
+
+    /**
+     * 计算 SHA-256 摘要的十六进制串，用于内联连接的池缓存键。
+     *
+     * @param value 原文
+     * @return 十六进制摘要
+     */
+    private static String sha256(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 摘要算法不可用", ex);
+        }
     }
 
     /**
@@ -945,6 +1032,10 @@ public class CollectJdbcSupport {
         config.setMaxLifetime(1800000L);
         config.setPoolName("collect-ds-" + poolName);
         String driver = entity.getCollectDatasourceDriverClassName();
+        if (driver == null || driver.isBlank()) {
+            // 老台账未填驱动类名时按连接串前缀自动解析
+            driver = JdbcDriverUtils.resolveDriverClass(entity.getCollectDatasourceJdbcUrl());
+        }
         if (driver != null && !driver.isBlank()) {
             config.setDriverClassName(driver.trim());
         }
@@ -1105,6 +1196,215 @@ public class CollectJdbcSupport {
             log.warn("[collect] 读取表 {} 的列失败: {}", table, ex.getMessage());
             return columns;
         }
+    }
+
+    /**
+     * 按连接的 JDBC 元数据列出表与视图，数据中心未启用时的轻量自查。
+     *
+     * @param reference 数据源引用
+     * @return 表名列表，大小写不敏感去重并按名称排序
+     */
+    private List<String> listTablesByMetadata(String reference) {
+        Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        try (Connection connection = resolve(reference).getConnection();
+             ResultSet rs = connection.getMetaData().getTables(null, null, "%", new String[]{"TABLE", "VIEW"})) {
+            while (rs.next()) {
+                String name = rs.getString("TABLE_NAME");
+                if (name != null && !name.isBlank()) {
+                    names.add(name);
+                }
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("读取表清单失败: " + ex.getMessage(), ex);
+        }
+        return new ArrayList<>(names);
+    }
+
+    /**
+     * 按连接的 JDBC 元数据读取列，数据中心未启用时的轻量自查。
+     *
+     * @param reference 数据源引用
+     * @param table     表名
+     * @return 列元数据，按列序号排序
+     */
+    private List<SchemaColumnVO> listColumnsByMetadata(String reference, String table) {
+        Set<String> primaryKeys = new HashSet<>();
+        List<SchemaColumnVO> columns = new ArrayList<>();
+        try (Connection connection = resolve(reference).getConnection()) {
+            DatabaseMetaData meta = connection.getMetaData();
+            try (ResultSet rs = meta.getPrimaryKeys(null, null, table)) {
+                while (rs.next()) {
+                    primaryKeys.add(rs.getString("COLUMN_NAME"));
+                }
+            }
+            try (ResultSet rs = meta.getColumns(null, null, table, null)) {
+                while (rs.next()) {
+                    columns.add(columnByMetadata(rs, primaryKeys));
+                }
+            }
+            if (columns.isEmpty()) {
+                try (ResultSet rs = meta.getColumns(null, null, table.toUpperCase(Locale.ROOT), null)) {
+                    while (rs.next()) {
+                        columns.add(columnByMetadata(rs, primaryKeys));
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("读取表 " + table + " 的列失败: " + ex.getMessage(), ex);
+        }
+        columns.sort(Comparator.comparingInt(column -> column.position() == null ? 0 : column.position()));
+        return columns;
+    }
+
+    /**
+     * 从列元数据结果集取一行。
+     *
+     * @param rs          getColumns 结果集，游标已定位
+     * @param primaryKeys 主键列名集合
+     * @return 列元数据
+     * @throws SQLException 读取失败
+     */
+    private static SchemaColumnVO columnByMetadata(ResultSet rs, Set<String> primaryKeys) throws SQLException {
+        String name = rs.getString("COLUMN_NAME");
+        int size = rs.getInt("COLUMN_SIZE");
+        boolean nullable = rs.getInt("NULLABLE") != DatabaseMetaData.columnNoNulls;
+        return new SchemaColumnVO(name, rs.getString("REMARKS"), rs.getInt("ORDINAL_POSITION"),
+                rs.getString("TYPE_NAME"), rs.wasNull() ? null : size, nullable,
+                name != null && primaryKeys.contains(name));
+    }
+
+    /**
+     * 轻量建表/补列：数据中心未启用时按 JDBC 元数据与标准 DDL 兜底。
+     *
+     * <p>表不存在则按「自增主键 id + 声明列」建表；已存在则只补缺失列。
+     * 类型按目标库产品选择字面量：MySQL 系用 TEXT，其余用 CLOB。
+     * 列名已在上游经 {@link #identifier(String)} 白名单校验。</p>
+     *
+     * @param reference 数据源引用
+     * @param table     已校验的表名
+     * @param columns   列定义
+     */
+    private void ensureTableByDdl(String reference, String table, List<DdlColumn> columns) {
+        try (Connection connection = resolve(reference).getConnection()) {
+            String name = quoted(connection, table);
+            boolean mysqlLike = isMysqlLike(connection);
+            if (!tableExistsByMetadata(connection, table)) {
+                StringBuilder ddl = new StringBuilder("CREATE TABLE ").append(name).append(" (")
+                        .append(keyColumnDdl(mysqlLike));
+                for (DdlColumn column : columns) {
+                    ddl.append(", ").append(quoted(connection, column.name()))
+                            .append(' ').append(ddlType(column, mysqlLike));
+                }
+                ddl.append(')');
+                // [P3C 1.4 豁免] 拼接值为代码内常量/已校验：列名经 identifier() 白名单校验，无外部输入
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate(ddl.toString());
+                }
+                return;
+            }
+            Set<String> existing = existingColumnNames(connection, table);
+            for (DdlColumn column : columns) {
+                if (existing.contains(column.name().toLowerCase(Locale.ROOT))) {
+                    continue;
+                }
+                // [P3C 1.4 豁免] 拼接值为代码内常量/已校验：列名经 identifier() 白名单校验，无外部输入
+                String alter = "ALTER TABLE " + name + " ADD COLUMN "
+                        + quoted(connection, column.name()) + ' ' + ddlType(column, mysqlLike);
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate(alter);
+                }
+            }
+        } catch (SQLException ex) {
+            throw new IllegalStateException("建表或补列 " + table + " 失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * 判断表是否已存在（按 JDBC 元数据，表名做原样与大写两次匹配）。
+     *
+     * @param connection 数据库连接
+     * @param table      表名
+     * @return 存在返回 true
+     * @throws SQLException 读取失败
+     */
+    private static boolean tableExistsByMetadata(Connection connection, String table) throws SQLException {
+        DatabaseMetaData meta = connection.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, table, new String[]{"TABLE"})) {
+            if (rs.next()) {
+                return true;
+            }
+        }
+        try (ResultSet rs = meta.getTables(null, null, table.toUpperCase(Locale.ROOT), new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    /**
+     * 取已存在的列名集合（小写），供补列判断。
+     *
+     * @param connection 数据库连接
+     * @param table      表名
+     * @return 小写列名集合
+     * @throws SQLException 读取失败
+     */
+    private static Set<String> existingColumnNames(Connection connection, String table) throws SQLException {
+        Set<String> names = new HashSet<>();
+        try (ResultSet rs = connection.getMetaData().getColumns(null, null, table, null)) {
+            while (rs.next()) {
+                names.add(rs.getString("COLUMN_NAME").toLowerCase(Locale.ROOT));
+            }
+        }
+        return names;
+    }
+
+    /**
+     * 是否 MySQL 系产品（MySQL / MariaDB），决定文本类型与自增列语法。
+     *
+     * @param connection 数据库连接
+     * @return MySQL 系返回 true
+     * @throws SQLException 读取失败
+     */
+    private static boolean isMysqlLike(Connection connection) throws SQLException {
+        String product = connection.getMetaData().getDatabaseProductName();
+        if (product == null) {
+            return false;
+        }
+        String lower = product.toLowerCase(Locale.ROOT);
+        return lower.contains("mysql") || lower.contains("maria");
+    }
+
+    /**
+     * 自增主键列的 DDL 片段，按产品选择语法。
+     *
+     * @param mysqlLike 是否 MySQL 系
+     * @return 主键列 DDL
+     */
+    private static String keyColumnDdl(boolean mysqlLike) {
+        return mysqlLike
+                ? "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY"
+                : "id BIGSERIAL PRIMARY KEY";
+    }
+
+    /**
+     * 按列定义取 DDL 类型字面量：显式类型优先，否则按来源类型映射。
+     *
+     * @param column    列定义
+     * @param mysqlLike 是否 MySQL 系
+     * @return DDL 类型
+     */
+    private static String ddlType(DdlColumn column, boolean mysqlLike) {
+        if (column.type() != null && !column.type().isBlank()) {
+            return column.type();
+        }
+        String source = column.sourceType() == null ? "" : column.sourceType().toUpperCase(Locale.ROOT);
+        return switch (source) {
+            case "INTEGER", "LONG", "NUMBER" -> "BIGINT";
+            case "DECIMAL", "DOUBLE", "FLOAT" -> "DECIMAL(38,8)";
+            case "BOOLEAN" -> "BOOLEAN";
+            case "DATE" -> "DATE";
+            case "DATETIME", "TIME", "TIMESTAMP" -> "TIMESTAMP";
+            default -> mysqlLike ? "TEXT" : "CLOB";
+        };
     }
 
     /**

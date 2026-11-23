@@ -51,6 +51,21 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
     public static final String DATASOURCE = "datasource";
 
     /**
+     * 节点内联 JDBC 地址参数名。
+     */
+    public static final String JDBC_URL = "jdbcUrl";
+
+    /**
+     * 节点内联账号参数名。
+     */
+    public static final String JDBC_USERNAME = "jdbcUsername";
+
+    /**
+     * 节点内联口令参数名。
+     */
+    public static final String JDBC_PASSWORD = "jdbcPassword";
+
+    /**
      * 目标表参数名。
      */
     public static final String TABLE = "table";
@@ -227,7 +242,14 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
                         "选 stop：任一批写失败即让节点失败（该批事务回滚，后续批次不再写）；"
                                 + "选 continue：记录失败批次与原因、继续写后续批次，节点不失败，"
                                 + "失败批次数看节点摘要与 _failedBatches / _lastBatchError 变量",
-                        BATCH_ERROR_STOP, BATCH_ERROR_CONTINUE));
+                        BATCH_ERROR_STOP, BATCH_ERROR_CONTINUE),
+                CollectShapeMetas.text(JDBC_URL, "自定义 JDBC 地址", "text",
+                        "留空按目标数据库下拉连接；填写后本节点直连该地址，数据源下拉不再生效。"
+                                + "例：jdbc:mysql://127.0.0.1:3306/db"),
+                CollectShapeMetas.text(JDBC_USERNAME, "自定义账号", "text",
+                        "配合自定义 JDBC 地址使用；留空按数据源配置"),
+                CollectShapeMetas.text(JDBC_PASSWORD, "自定义密码", "text",
+                        "配合自定义 JDBC 地址使用；留空按数据源配置"));
     }
 
     @Override
@@ -244,7 +266,8 @@ public class CollectDatabaseExecutor implements CollectShapeExecutor {
         // 主键声明要在动表之前校验：配置写错时不能先建出半张表或写出第一批数据
         List<String> keys = updateKeys(node, columns, mode);
         List<Map<String, Object>> rows = buildRows(node, columns, variables);
-        String datasource = node.param(DATASOURCE);
+        String datasource = jdbc.prepare(node.param(DATASOURCE), node.param(JDBC_URL),
+                node.param(JDBC_USERNAME), node.param(JDBC_PASSWORD));
         if (rows.isEmpty()) {
             // 覆盖写入绝不能拿空集合去清表：上游一个数都没抓到时，
             // 目标表里昨天的数据才是唯一可信的那份，清掉就等于把历史一起丢了。

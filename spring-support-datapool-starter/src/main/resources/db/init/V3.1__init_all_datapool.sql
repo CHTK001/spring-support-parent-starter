@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS `datasource_info`
     `datasource_info_driver_jar_id` BIGINT NULL COMMENT '引用的驱动 jar(datasource_jdbc_driver_jar.id)，空=用内置驱动',
     `datasource_info_top_flag` INT NULL DEFAULT 0 COMMENT '置顶标记 - 1:置顶, 0:普通',
     `datasource_info_driver_class_name` VARCHAR(255) NULL DEFAULT '' COMMENT 'JDBC 驱动类名，jdbc 类型非 MySQL 时可显式指定',
+    `datasource_info_shared_collect` INT NULL DEFAULT 0 COMMENT '共享给采集平台 - 1:已注册, 0:未注册；采集台数据源下拉只列已注册行',
     `create_name`            VARCHAR(64)  NULL DEFAULT NULL COMMENT '创建人姓名',
     `create_by`              INT          NULL DEFAULT NULL COMMENT '创建人',
     `create_time`            DATETIME     NULL DEFAULT NULL COMMENT '创建时间',

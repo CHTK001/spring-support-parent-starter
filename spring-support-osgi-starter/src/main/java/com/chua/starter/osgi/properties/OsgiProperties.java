@@ -121,6 +121,19 @@ public class OsgiProperties {
          * 仅在调试切换行为时需要关闭。</p>
          */
         private boolean invalidateOnBundleLifecycle = true;
+
+        /**
+         * 是否为桥接 Bean 生成动态代理，使在用引用随 OSGi 变化自动切换。
+         *
+         * <p>启用后，容器外发的桥接 Bean 是「每次调用都解析当前生效服务」的
+         * JDK 动态代理：bundle 升级/卸载或更高 {@code service.ranking} 的服务上线后，
+         * 此前持有的引用自动打到新实例，无需重新注入或重新查找；
+         * 服务被卸载且无替代时，业务方法抛 {@link IllegalStateException}。</p>
+         *
+         * <p>服务实例没有可代理接口时退化为直接引用（该实例不随 OSGi 切换）。
+         * 关闭本开关即回到旧口径：桥接 Bean 是裸实例，仅「下次查询」能看到新服务。</p>
+         */
+        private boolean proxyEnabled = true;
     }
 
     /**

@@ -3,6 +3,7 @@ package com.chua.starter.collect.support;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.datasource.support.url.JdbcDriverUtils;
 import com.chua.starter.collect.entity.CollectDatasource;
 import com.chua.starter.collect.mapper.CollectDatasourceMapper;
 import com.chua.starter.datapool.support.constants.DatapoolConstants;
@@ -231,8 +232,13 @@ public class CollectDatasourceRegistry {
         config.setIdleTimeout(600000L);
         config.setMaxLifetime(1800000L);
         config.setPoolName("collect-ds-" + poolName);
-        if (target.driverClass() != null && !target.driverClass().isBlank()) {
-            config.setDriverClassName(target.driverClass());
+        String driverClass = target.driverClass();
+        if (driverClass == null || driverClass.isBlank()) {
+            // 台账未填驱动类名时按连接串前缀自动解析，常见库不必再手工补填
+            driverClass = JdbcDriverUtils.resolveDriverClass(target.jdbcUrl());
+        }
+        if (driverClass != null && !driverClass.isBlank()) {
+            config.setDriverClassName(driverClass);
         }
         return config;
     }

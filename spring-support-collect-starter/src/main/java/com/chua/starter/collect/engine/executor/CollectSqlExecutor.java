@@ -70,6 +70,21 @@ public class CollectSqlExecutor implements CollectShapeExecutor {
     }
 
     /**
+     * 节点内联 JDBC 地址参数名。
+     */
+    public static final String JDBC_URL = "jdbcUrl";
+
+    /**
+     * 节点内联账号参数名。
+     */
+    public static final String JDBC_USERNAME = "jdbcUsername";
+
+    /**
+     * 节点内联口令参数名。
+     */
+    public static final String JDBC_PASSWORD = "jdbcPassword";
+
+    /**
      * 每批行数参数名。
      */
     public static final String BATCH = "batchSize";
@@ -103,7 +118,14 @@ public class CollectSqlExecutor implements CollectShapeExecutor {
                         "默认应用主库；下拉里是 collect_datasource 已启用的数据源"),
                 CollectShapeMetas.outputVariable("SELECT 结果写入的变量名，默认 data"),
                 CollectShapeMetas.text(BATCH, "每批行数", "number",
-                        "IN 列表超过该数量时自动分批执行，默认 " + DEFAULT_BATCH));
+                        "IN 列表超过该数量时自动分批执行，默认 " + DEFAULT_BATCH),
+                CollectShapeMetas.text(JDBC_URL, "自定义 JDBC 地址", "text",
+                        "留空按数据源下拉连接；填写后本节点直连该地址，数据源下拉不再生效。"
+                                + "例：jdbc:mysql://127.0.0.1:3306/db"),
+                CollectShapeMetas.text(JDBC_USERNAME, "自定义账号", "text",
+                        "配合自定义 JDBC 地址使用；留空按数据源配置"),
+                CollectShapeMetas.text(JDBC_PASSWORD, "自定义密码", "text",
+                        "配合自定义 JDBC 地址使用；留空按数据源配置"));
     }
 
     @Override
@@ -122,7 +144,8 @@ public class CollectSqlExecutor implements CollectShapeExecutor {
         }
 
         String sql = CollectExpression.evalText(raw, variables);
-        String datasource = node.param(DATASOURCE);
+        String datasource = jdbc.prepare(node.param(DATASOURCE), node.param(JDBC_URL),
+                node.param(JDBC_USERNAME), node.param(JDBC_PASSWORD));
         if (isQuery(sql)) {
             String output = node.param(OUTPUT).isEmpty() ? DEFAULT_OUTPUT : node.param(OUTPUT);
             List<Map<String, Object>> rows = jdbc.query(datasource, sql);
@@ -186,7 +209,8 @@ public class CollectSqlExecutor implements CollectShapeExecutor {
         boolean query = false;
         List<Map<String, Object>> mergedRows = new ArrayList<>();
         long totalAffected = 0;
-        String datasource = node.param(DATASOURCE);
+        String datasource = jdbc.prepare(node.param(DATASOURCE), node.param(JDBC_URL),
+                node.param(JDBC_USERNAME), node.param(JDBC_PASSWORD));
 
         for (int offset = 0; offset < maxSize; offset += batchSize) {
             String sql = template.toString();

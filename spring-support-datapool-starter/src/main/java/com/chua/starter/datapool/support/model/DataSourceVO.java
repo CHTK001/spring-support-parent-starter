@@ -29,6 +29,7 @@ package com.chua.starter.datapool.support.model;
  * @param fastLoadEnabled 是否支持 CSV 快速导入（LOAD/COPY 直灌）。服务端按 JDBC
  *                        方言自动计算：MySQL / PostgreSQL 为 true，其余类型或无法判断为 null
  * @param topFlag 置顶标记：1 置顶、0 普通；列表按置顶优先排序
+ * @param sharedCollect 共享给采集平台：1 已注册、0 未注册；采集台数据源下拉只列已注册行
  * @author CH
  * @since 4.0.0.42
  */
@@ -56,7 +57,8 @@ public record DataSourceVO(
         String version,
         Boolean passwordSet,
         Boolean fastLoadEnabled,
-        Integer topFlag
+        Integer topFlag,
+        Integer sharedCollect
 ) {
 
     /**

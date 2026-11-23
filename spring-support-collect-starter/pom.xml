@@ -74,6 +74,12 @@
       <artifactId>utils-support-groovy-starter</artifactId>
       <version>${utils.version}</version>
     </dependency>
+    <!-- JDBC 驱动自动解析（JdbcDriverUtils）：数据源卡未填驱动类名时按连接串前缀兜底 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-datasource-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.apache.groovy</groupId>
       <artifactId>groovy</artifactId>

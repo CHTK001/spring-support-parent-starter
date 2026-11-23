@@ -193,4 +193,15 @@ public class MsDatasource extends SysBase {
     @TableField("datasource_info_top_flag")
     @Schema(description = "置顶标记 1置顶 0普通", example = "1")
     private Integer datasourceTopFlag;
+
+    /**
+     * 共享给采集平台标记：1 已注册、0 未注册。
+     *
+     * <p>数据源中心是全平台共享的台账，采集台的数据源下拉只列已注册的行：
+     * 采集流程只应使用明确开放给它的库。未注册的行不影响数据源中心自身的
+     * 管理与其他系统使用。</p>
+     */
+    @TableField("datasource_info_shared_collect")
+    @Schema(description = "共享给采集平台 1已注册 0未注册", example = "0")
+    private Integer datasourceSharedCollect;
 }

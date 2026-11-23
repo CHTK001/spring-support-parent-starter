@@ -137,6 +137,7 @@ flowchart TD
 | `plugin.osgi.source.script-engine` | `String` | `groovy` | 匹配 `ScriptProvider#engineName` |
 | `plugin.osgi.bridge.acceptance-enabled` | `boolean` | `true` | 桥接定义经 `BeanAcceptance` 验收器链 |
 | `plugin.osgi.bridge.invalidate-on-bundle-lifecycle` | `boolean` | `true` | bundle 生命周期变化时失效桥接快照 |
+| `plugin.osgi.bridge.proxy-enabled` | `boolean` | `true` | 桥接 Bean 外发为切换代理：每次调用解析当前生效服务，在用引用随 bundle 升级/卸载自动切换；无接口服务退化为裸实例 |
 | `plugin.osgi.endpoint.enabled` | `boolean` | `false` | `/osgi/**` 端点开关（还需 RestController） |
 | `plugin.osgi.endpoint.manage-enabled` | `boolean` | `true` | 变更类操作开关 |
 | `plugin.osgi.endpoint.lifecycle-timeout-seconds` | `int` | `60` | 单个 start/stop 生命周期动作的等待上限（秒），≤0 不限时；超时以 504 返回，bundle 状态可能不确定 |
@@ -254,7 +255,7 @@ public class ReportService {
 }
 ```
 
-> 桥接细节：投影出的扩展对象 Bean 名 = `服务接口全限定名:服务标识`，OSGi 的 `service.ranking` 贯通为容器 priority（值越大越优先）；插件升级/卸载后快照随 bundle 生命周期事件自动失效，下次查询即反映最新状态。服务引用由框架持有，`releaseServices(Class)` / `releaseAllServices()` 主动释放前保持有效。投影是否准入由 `BeanAcceptance` 验收器链裁决，被拒记录可经 `GET /osgi/snapshot` 排查。
+> 桥接细节：投影出的扩展对象 Bean 名 = `服务接口全限定名:服务标识`，OSGi 的 `service.ranking` 贯通为容器 priority（值越大越优先）；插件升级/卸载后快照随 bundle 生命周期事件自动失效，下次查询即反映最新状态。桥接 Bean 默认外发为**切换代理**（`OsgiServiceProxy`，`plugin.osgi.bridge.proxy-enabled`，默认开）：代理在每次方法调用时解析当前生效服务，因此启动期注入/持有的引用在 bundle 升级、卸载或更高 ranking 服务上线后**自动切到新实例**；服务下线且无替代时业务方法抛 `IllegalStateException`，需要裸实例/真实类时用 `OsgiServiceProxyFactory.unwrap(...)` 或 `getOsgiTarget()` 解包。服务引用由框架持有，`releaseServices(Class)` / `releaseAllServices()` 主动释放前保持有效。投影是否准入由 `BeanAcceptance` 验收器链裁决（验收对象始终是裸实例），被拒记录可经 `GET /osgi/snapshot` 排查。
 
 ### 6.4 管理插件生命周期：注入 OsgiLauncher
 
