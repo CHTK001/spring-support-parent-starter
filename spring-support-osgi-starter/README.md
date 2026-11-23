@@ -89,6 +89,7 @@ flowchart TD
 | POST | `/osgi/bundles/install` | 上传安装（同位置自动转升级），参数 `file`、`start` | `manage-enabled=true` |
 | POST | `/osgi/bundles/{symbolicName}/update` | 上传新版本原地升级 | `manage-enabled=true` |
 | POST | `/osgi/bundles/{symbolicName}/start` / `/stop` / `/uninstall` | 启动 / 停止 / 卸载（卸载不删 jar） | `manage-enabled=true` |
+| POST | `/osgi/bundles/batch-start` / `batch-stop` / `batch-uninstall` | 批量启停/卸载，body 为符号名 JSON 数组（单次 ≤100），逐项尽力执行、逐项返回结果与失败原因 | `manage-enabled=true` |
 | POST | `/osgi/jars/{fileName}/delete` | 删除部署目录 jar（须先卸载） | `manage-enabled=true` |
 | POST | `/osgi/framework/refresh` | 刷新框架装配（bundle 升级/卸载后重新解析），参数 `wait`（默认 true，最多等 30 秒完成事件） | `manage-enabled=true` |
 
@@ -119,7 +120,7 @@ flowchart TD
 | `plugin.osgi.storage` | `String` | `./osgi-cache` | Felix 持久化存储目录 |
 | `plugin.osgi.start-level` | `int` | `4` | 框架初始启动级别 |
 | `plugin.osgi.storage-clean` | `String` | `onFirstInit` | `onFirstInit` / `onInit` / `none`（保留上次 bundle 状态） |
-| `plugin.osgi.auto-start-installed-bundles` | `boolean` | `true` | 安装后自动启动；仅 `shell.enabled=true` 时被读取 |
+| `plugin.osgi.auto-start-installed-bundles` | `boolean` | `true` | 程序化单参 `installBundle(url)` 安装后是否自动启动；REST `/bundles/install` 的 `start` 参数（默认 true）按次覆盖。注意：该值仅在 `shell.enabled=true` 时被装配进 launcher（launcher 自身默认同为 true） |
 | `plugin.osgi.framework-properties` | `Map<String,Object>` | 空 | 透传 Felix 框架属性（如 `org.osgi.framework.system.packages.extra`），可覆盖 `gosh.args` |
 | `plugin.osgi.deploy.enabled` | `boolean` | `false` | 目录热部署开关 |
 | `plugin.osgi.deploy.directory` | `String` | `./osgi-deploy` | 部署目录 |
@@ -136,6 +137,8 @@ flowchart TD
 | `plugin.osgi.bridge.invalidate-on-bundle-lifecycle` | `boolean` | `true` | bundle 生命周期变化时失效桥接快照 |
 | `plugin.osgi.endpoint.enabled` | `boolean` | `false` | `/osgi/**` 端点开关（还需 RestController） |
 | `plugin.osgi.endpoint.manage-enabled` | `boolean` | `true` | 变更类操作开关 |
+| `plugin.osgi.endpoint.lifecycle-timeout-seconds` | `int` | `60` | 单个 start/stop 生命周期动作的等待上限（秒），≤0 不限时；超时以 504 返回，bundle 状态可能不确定 |
+| `plugin.osgi.endpoint.max-upload-bytes` | `long` | `104857600`（100MB） | 上传安装/升级的 jar 大小上限（字节），≤0 不限制；超限以 400 拒绝 |
 | `plugin.osgi.shell.enabled` | `boolean` | `false` | 远程管理开关 |
 | `plugin.osgi.shell.protocol` | `String` | `ssh` | `ssh` / `telnet` 二选一 |
 | `plugin.osgi.shell.port` | `int` | `0` | 0 时按协议取默认：SSH 8122、Telnet 6666 |
@@ -153,6 +156,8 @@ flowchart TD
 
 ## 6. 使用方式
 
+### 6.1 引入依赖
+
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
@@ -161,22 +166,28 @@ flowchart TD
 </dependency>
 ```
 
-最小启用示例（框架本体与源码热重载默认开启，无需写 `enabled`）：
+### 6.2 最小配置
+
+框架本体与源码热重载默认开启（`plugin.osgi.enabled` 与 `source.enabled` 缺省即 true），`auto-start-installed-bundles` 缺省 `true`（安装后自动启动），通常无需显式写。要经页面/接口管理插件时，打开 REST 端点即可：
 
 ```yaml
 plugin:
   osgi:
-    shell:
-      enabled: true          # 远程管理默认关闭，需显式开启
+    auto-start-installed-bundles: true   # 缺省 true；仅影响单参 installBundle(url)，REST install 的 start 参数按次覆盖
+    endpoint:
+      enabled: true                      # /osgi/** 端点缺省关闭，需显式打开
+      manage-enabled: true               # 变更类操作开关（缺省 true）
+      lifecycle-timeout-seconds: 60      # 单个 start/stop 等待上限（秒），超时回 504
+      max-upload-bytes: 104857600        # 上传 jar 上限（字节），<=0 不限
+    shell:                               # 可选：SSH 远程 Gogo shell（缺省关闭）
+      enabled: true
       protocol: ssh
       port: 8122
       username: admin
       password: change-me    # username/password 必须都非空，否则启动抛异常
-    endpoint:
-      enabled: true          # /osgi/** 观测端点默认关闭
 ```
 
-验证：
+SSH 通道验证：
 
 ```bash
 ssh -p 8122 admin@127.0.0.1   # 进入 Gogo shell
@@ -186,13 +197,228 @@ g! services                   # 服务注册表
 g! bundle:info <符号名>       # bundle 详情
 g! bundle:headers <符号名>    # Manifest 头
 g! help                       # 全部命令
-curl http://127.0.0.1:8080/osgi/stats
-curl -X POST 'http://127.0.0.1:8080/osgi/framework/refresh?wait=true'
 ```
 
-编程式使用：注入 `FelixOsgiLauncher`（或接口 `OsgiLauncher`）做 bundle 操作，注入 `OsgiLogPublisher` 发日志；`OsgiBeanDefinitionRegister` 用 `ObjectProvider` 判空后读快照。
+### 6.3 业务代码：注入 OsgiLauncher 管理插件
 
-可选依赖说明：
+业务 Service 直接注入 `OsgiLauncher`（接口位于 `com.chua.common.support.osgi`），不接触任何 Felix/OSGi 原生类型：
+
+```java
+@Service
+public class PluginManager {
+
+    private final OsgiLauncher osgi;
+
+    public PluginManager(OsgiLauncher osgi) {
+        this.osgi = osgi;
+    }
+
+    /** 安装并立即启动（autoStart=true）；autoStart=false 只落框架不启动。 */
+    public OsgiBundle install(String jarUrl) {
+        return osgi.installBundle(jarUrl, true);
+    }
+
+    /** 查询全部插件（含系统 bundle），每项含 bundleId/symbolicName/version/state/location。 */
+    public List<OsgiBundle> list() {
+        return osgi.getBundles();
+    }
+
+    /** 启动 / 停止 / 卸载。卸载只把 bundle 摘出框架，不删部署目录里的 jar。 */
+    public void start(String name) {
+        OsgiBundle b = require(name);
+        if (!b.isActive()) {
+            b.start();
+        }
+    }
+
+    public void stop(String name) {
+        require(name).stop();
+    }
+
+    public void uninstall(String name) {
+        osgi.uninstallBundle(name);
+    }
+
+    /** 原地热升级：保留 bundle 标识与已解析依赖；升级前 ACTIVE 则升级后自动重启。url 传 null 表示沿用原位置。 */
+    public OsgiBundle upgrade(String name, String newJarUrl) {
+        return osgi.updateBundle(name, newJarUrl);
+    }
+
+    private OsgiBundle require(String name) {
+        OsgiBundle b = osgi.getBundle(name);
+        if (b == null) {
+            throw new IllegalArgumentException("bundle 不存在: " + name);
+        }
+        return b;
+    }
+}
+```
+
+### 6.4 业务代码：消费插件注册的服务
+
+插件 bundle 启动后向 OSGi 服务注册表注册接口实现；宿主按接口类型取用，不关心实现来自哪个 jar：
+
+```java
+@Service
+public class ReportService {
+
+    private final OsgiLauncher osgi;
+
+    public ReportService(OsgiLauncher osgi) {
+        this.osgi = osgi;
+    }
+
+    public String render(ReportRequest req) {
+        // 取 service.ranking 最高的一个实现；没有实现或框架未激活时返回 null
+        Exporter exporter = osgi.getService(Exporter.class);
+        if (exporter == null) {
+            throw new IllegalStateException("没有任何插件提供 Exporter 服务");
+        }
+        return exporter.export(req);
+        // 需要全部实现时：List<Exporter> all = osgi.getServices(Exporter.class);
+    }
+}
+```
+
+> 服务引用由框架持有，`releaseServices(Class)` / `releaseAllServices()` 主动释放前保持有效，释放后需重新获取。插件升级/卸载后，桥接快照随 bundle 生命周期事件自动失效，下次查询即反映最新状态。
+>
+> 这些服务同时被 `OsgiBeanDefinitionRegister` 只读投影进 `ObjectContext`（Bean 名 = `接口全限定名:pid`，`service.ranking` 贯通为容器 priority），因此也能通过 `ObjectContext#getBeanOfType(Exporter.class)` 取到。
+
+### 6.5 业务代码：监听插件生命周期事件
+
+```java
+@Component
+public class PluginAuditListener implements BundleLifecycleListener {
+
+    private final FelixOsgiLauncher osgi;
+
+    public PluginAuditListener(FelixOsgiLauncher osgi) {
+        this.osgi = osgi;
+        osgi.addListener(this);   // 需要注销时调用 removeListener(this)
+    }
+
+    @Override public void onBundleInstalled(String name) { audit(name, "installed"); }
+    @Override public void onBundleStarted(String name)   { audit(name, "started"); }
+    @Override public void onBundleStopped(String name)   { audit(name, "stopped"); }
+    @Override public void onBundleUpdated(String name, String version) { audit(name, "updated -> " + version); }
+    @Override public void onBundleUninstalled(String name) { audit(name, "uninstalled"); }
+    @Override public void onBundleResolveFailed(String name, String reason) { audit(name, "resolve-failed: " + reason); }
+}
+```
+
+> 编程式使用的另外两个入口：注入 `OsgiLogPublisher` 发插件操作实时日志；`OsgiBeanDefinitionRegister` 用 `ObjectProvider` 判空后读快照与拒绝记录。
+
+### 6.6 宿主向框架注册服务（BundleApplication）
+
+宿主也可以把 Spring 侧能力反向暴露给插件消费。实现 `BundleApplication` 并标注 `@Spi`，在 `src/main/resources/META-INF/extensions/com.chua.common.support.osgi.BundleApplication` 中登记实现类全限定名（未标 `@AutoSpi` 时必须手工登记，否则启动时静默不注册）：
+
+```java
+@Spi("hostServices")
+public class HostServicePublisher implements BundleApplication {
+
+    @Override
+    public void onBundleStart(BundleContext context) {   // com.chua.common.support.osgi.BundleContext
+        context.registerService(UserQueryApi.class, new UserQueryApiImpl(),
+                Map.of("service.ranking", 100));
+    }
+
+    @Override
+    public void onBundleStop(BundleContext context) {
+        // 框架停止时清理（可选）
+    }
+}
+```
+
+### 6.7 插件（bundle jar）侧写法
+
+插件是标准 OSGi bundle：`META-INF/MANIFEST.MF` 声明 `Bundle-SymbolicName`、`Bundle-Version`、`Bundle-Activator` 与 `Import-Package`，Activator 里把实现注册进自己的 `BundleContext`。用 maven-bundle-plugin（bnd）可免手写 Manifest：
+
+```xml
+<plugin>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>maven-bundle-plugin</artifactId>
+    <extensions>true</extensions>
+    <configuration>
+        <instructions>
+            <Bundle-SymbolicName>com.acme.report.excel</Bundle-SymbolicName>
+            <Bundle-Version>1.0.0</Bundle-Version>
+            <Bundle-Activator>com.acme.report.excel.ExcelActivator</Bundle-Activator>
+            <Import-Package>com.acme.report.api,*</Import-Package>
+        </instructions>
+    </configuration>
+</plugin>
+```
+
+```java
+public class ExcelActivator implements BundleActivator {
+
+    @Override
+    public void start(org.osgi.framework.BundleContext context) {
+        context.registerService(Exporter.class, new ExcelExporter(), null);
+    }
+
+    @Override
+    public void stop(org.osgi.framework.BundleContext context) {
+    }
+}
+```
+
+插件要调用的宿主 API 接口（如 `Exporter`）通过 `plugin.osgi.framework-properties` 的 `org.osgi.framework.system.packages.extra` 导出给框架类空间。
+
+### 6.8 REST 管理端点调用示例
+
+以下响应均取自隔离宿主 E2E 实测（`start=false` 安装、批量混入不存在的名字、2 秒超时宿主），可直接当作联调对照。
+
+查询清单：
+
+```bash
+curl http://127.0.0.1:8080/osgi/bundles
+```
+
+```json
+[{"bundleId":0,"symbolicName":"org.apache.felix.framework","version":"7.0.5","state":"ACTIVE","location":"System Bundle"}]
+```
+
+上传安装（`start=false`：只落框架不启动，先验证再手动启）：
+
+```bash
+curl -F "file=@probe-echo.jar" "http://127.0.0.1:8080/osgi/bundles/install?start=false"
+```
+
+```json
+{"bundleId":1,"symbolicName":"probe.echo","version":"1.0.0","state":"ACTIVE","location":"file:///.../osgi-deploy/probe-echo.jar"}
+```
+
+批量启动（body 为符号名数组，单次 ≤100，逐项尽力执行、逐项返回；`batch-stop` / `batch-uninstall` 结构相同）：
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+     -d '["probe.echo","probe.echo2","missing.x"]' \
+     http://127.0.0.1:8080/osgi/bundles/batch-start
+```
+
+```json
+{"total":3,"successCount":2,"failureCount":1,"items":[
+  {"symbolicName":"probe.echo2","success":true},
+  {"symbolicName":"missing.x","success":false,"error":"bundle 不存在: missing.x"},
+  {"symbolicName":"probe.echo","success":true}]}
+```
+
+其余变更端点：`POST /bundles/{name}/start|stop|uninstall`、`POST /bundles/{name}/update`（multipart 上传新版本）、`POST /jars/{fileName}/delete`（须先卸载）、`POST /framework/refresh?wait=true` → `{"initiated":true,"completed":true}`。
+
+错误原因直接进响应体（不再落入「系统繁忙」兜底）：
+
+```json
+400 {"error":"批量操作目标不能为空"}
+400 {"error":"批量操作一次最多 100 个 bundle: 101"}
+400 {"error":"插件文件超过大小上限: 2099015 > 1000000 字节（plugin.osgi.endpoint.max-upload-bytes）"}
+400 {"error":"bundle 不存在: missing.x"}
+504 {"error":"start 超过 2s 未完成，已放弃等待（bundle 状态可能不确定）: probe.slow"}
+```
+
+400 = 调用方请求有误（参数、上限、目标不存在）；504 = 插件 start/stop 在 `lifecycle-timeout-seconds` 内未完成（插件过慢或挂死），此时 bundle 真实状态可能不确定，以查询接口返回为准。
+
+### 6.9 可选依赖说明
 
 - `utils-support-osgi-starter`（必依赖）：缺失时类级 `@ConditionalOnClass` 不满足，整个模块**静默不装配**；
 - `spring-support-socket-starter`（optional）：引入后日志经 `SocketOsgiLogPublisher` 广播到全局 socket；缺失时 noop 兜底，模块可独立运行；
@@ -243,3 +469,4 @@ public class MyExtensions {
 5. **SSH 里执行 `felix:lb` 等命令看不到输出？** 已修复：`felix:*` 命令的输出在 Gogo 命令**返回值**里（不走 System.out，交互式 gosh 由 Console 负责打印），服务端直连 CommandProcessor 时会把非空返回值回传到 SSH 会话；`bundle:*` 走产品直通打印，行为不变。
 6. **SSH 里敲 `exit` / `shutdown` 会发生什么？** `exit` 只结束当前 SSH 会话（回显 bye 后关闭通道），宿主 JVM 与 OSGi 框架保持运行，可立即重连；`shutdown`、`felix:shutdown`、`system:exit`、`system:shutdown` 会被拒绝并提示走运维停机流程。原因：gosh_profile 把 `System` 注册为 `system:` 命令，裸 `exit` 会解析到 `System.exit(int)`，而 JDK 25 已移除 SecurityManager，无法在框架层拦截，只能在 shell 读取循环里就地处置。
 7. **安装插件返回「插件已安装…但启动失败」？** 安装（落框架）与启动（解析依赖）是两步：启动失败（如缺少 `Import-Package`）时接口返回业务错误并携带 Felix 的真实解析原因（不再是笼统的「系统繁忙」），bundle 仍处于 INSTALLED 状态，可卸载或修复依赖后重装；查询不存在的 bundle 返回 400 与「bundle 不存在: <名字>」，而不是 success=true 空数据。
+8. **批量接口部分失败算成功吗？** 算——批量启停/卸载是「逐项尽力执行」：HTTP 200 + `successCount`/`failureCount` + `items` 里逐项给出 `success` 与失败原因，某项失败不影响其余项；只有参数本身非法（目标列表为空、超过 100 个）才整体 400。批量 `batch-start` 对已 ACTIVE 的项直接记成功；`batch-uninstall` 只摘框架不删 jar，要删文件再调 `POST /osgi/jars/{fileName}/delete`。
